@@ -291,6 +291,7 @@ export function plan(matrixEntry, remote = 'workhub-conan') {
       `conan remote auth ${remote} --force --strict`,
       `conan upload <each-missing-exact-package-revision> --remote ${remote} --check --confirm`,
       `conan list <each-exact-package-revision> --remote ${remote} and assert exact read-back`,
+      `conan list <each-rrev-package-id>#latest --remote ${remote} and bind the remote-current PREV closure`,
     ],
     buildchainInputs: ['SHIFU_CACHE_PROFILE_REF', 'SHIFU_CACHE_PROFILE_DIGEST'],
     publisherSecretInBuildchain: false,
@@ -338,6 +339,49 @@ function remoteHasExactReference(reference, remote) {
   return packageRevisionRefs(payload).includes(reference);
 }
 
+export function bindRemotePackageRevisions(records, remoteReferences) {
+  const byPackage = new Map();
+  for (const reference of remoteReferences) {
+    const packageCoordinate = reference.slice(0, reference.lastIndexOf('#'));
+    if (byPackage.has(packageCoordinate))
+      fail(`remote returned multiple current PREVs for ${packageCoordinate}`);
+    byPackage.set(packageCoordinate, reference);
+  }
+  return records.map((record) => {
+    const packageCoordinate = `${record.reference}#${record.rrev}:${record.packageId}`;
+    const exactReference = byPackage.get(packageCoordinate);
+    if (!exactReference)
+      fail(`remote current PREV is missing for ${packageCoordinate}`);
+    return {
+      ...record,
+      prev: exactReference.slice(exactReference.lastIndexOf('#') + 1),
+      exactReference,
+    };
+  });
+}
+
+function remoteCurrentReference(record, remote) {
+  const packageCoordinate = `${record.reference}#${record.rrev}:${record.packageId}`;
+  const payload = JSON.parse(
+    conanCommand(
+      [
+        'list',
+        `${packageCoordinate}#latest`,
+        '--remote',
+        remote,
+        '--format=json',
+      ],
+      { capture: true },
+    ),
+  );
+  const references = packageRevisionRefs(payload);
+  if (references.length !== 1)
+    fail(
+      `remote current PREV query returned ${references.length} references for ${packageCoordinate}`,
+    );
+  return references[0];
+}
+
 export function execute({ matrixEntry, remote, lockfileFile }) {
   assertExecutionEnvironment(remote);
   if (!lockfileFile) fail('--lockfile-file is required with --execute');
@@ -374,15 +418,15 @@ export function execute({ matrixEntry, remote, lockfileFile }) {
       mode: 0o600,
       flag: 'wx',
     });
-    const expectedRefs = resolvedDependencies.map((row) => row.exactReference);
-    if (expectedRefs.length === 0)
+    const localRefs = resolvedDependencies.map((row) => row.exactReference);
+    if (localRefs.length === 0)
       fail(
         'resolved Core graph contains no exact dependency package revisions',
       );
-    const alreadyPresent = expectedRefs.filter((reference) =>
+    const alreadyPresent = localRefs.filter((reference) =>
       remoteHasExactReference(reference, remote),
     );
-    const missingBefore = expectedRefs.filter(
+    const missingBefore = localRefs.filter(
       (reference) => !alreadyPresent.includes(reference),
     );
     conanCommand(['remote', 'auth', remote, '--force', '--strict']);
@@ -395,11 +439,19 @@ export function execute({ matrixEntry, remote, lockfileFile }) {
         '--check',
         '--confirm',
       ]);
-    const missing = expectedRefs.filter((reference) => {
+    const missing = localRefs.filter((reference) => {
       return !remoteHasExactReference(reference, remote);
     });
     if (missing.length > 0)
       fail(`remote read-back missing package revisions: ${missing.join(', ')}`);
+    const remoteReferences = resolvedDependencies.map((record) =>
+      remoteCurrentReference(record, remote),
+    );
+    const remoteDependencies = bindRemotePackageRevisions(
+      resolvedDependencies,
+      remoteReferences,
+    );
+    const expectedRefs = remoteDependencies.map((row) => row.exactReference);
     return {
       schema: 'shifu.conan-binary-publish-receipt/v1',
       sourceRevision,
@@ -419,7 +471,7 @@ export function execute({ matrixEntry, remote, lockfileFile }) {
       },
       closureDigest: exactClosureDigest(expectedRefs),
       exactReferences: expectedRefs,
-      resolvedDependencies,
+      resolvedDependencies: remoteDependencies,
       alreadyPresent,
       published: missingBefore,
       readBack: expectedRefs,
