@@ -238,7 +238,9 @@ exact identity confidence, and migration eligibility. Migration planning skips
 live, stale, unreadable, corrupt, empty, and identity-ambiguous partitions. It
 also skips legacy download, build, and generator directories because their
 paths do not prove Conan package identity. The plan emits an approval digest
-and an exact follow-up command. Execution additionally requires that digest,
+and an exact follow-up command. The digest binds the remote, storage root,
+eligible partition, and exact RREV/package_id/PREV set while ignoring newly
+created empty mutable partitions. Execution additionally requires that digest,
 the Shifu-managed publisher environment, a clean checkout, and an exclusive
 partition lock; it performs only additive exact uploads and readback. It never
 deletes, overwrites, links, moves, or compacts legacy artifacts.
