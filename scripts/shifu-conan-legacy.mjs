@@ -450,7 +450,7 @@ function remoteContains(reference, remote, packagesRoot) {
         `core.cache:storage_path=${packagesRoot}`,
         '--format=json',
       ],
-      { capture: true },
+      { capture: true, originalPath: true },
     ),
   );
   return packageRevisionRefs(payload).includes(reference);
@@ -537,7 +537,9 @@ export function executeMigration(storageRoot, remote) {
   const plan = migrationPlan(inventory, remote);
   if (process.env.SHIFU_CONAN_MIGRATION_APPROVAL !== plan.approval.digest)
     fail(`migration requires exact approval digest ${plan.approval.digest}`);
-  conanCommand(['remote', 'auth', remote, '--force', '--strict']);
+  conanCommand(['remote', 'auth', remote, '--force', '--strict'], {
+    originalPath: true,
+  });
   const published = [];
   const alreadyPresent = [];
   const byPartition = new Map();
@@ -565,16 +567,19 @@ export function executeMigration(storageRoot, remote) {
             alreadyPresent.push(reference);
             continue;
           }
-          conanCommand([
-            'upload',
-            reference,
-            '--remote',
-            remote,
-            '--check',
-            '--confirm',
-            '-cc',
-            `core.cache:storage_path=${packagesRoot}`,
-          ]);
+          conanCommand(
+            [
+              'upload',
+              reference,
+              '--remote',
+              remote,
+              '--check',
+              '--confirm',
+              '-cc',
+              `core.cache:storage_path=${packagesRoot}`,
+            ],
+            { originalPath: true },
+          );
           if (!remoteContains(reference, remote, packagesRoot))
             fail(`remote read-back missing exact reference: ${reference}`);
           assertStablePartitionRoot(
