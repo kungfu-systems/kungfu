@@ -229,6 +229,7 @@ export function migrationPlan(inventory, remote = 'workhub-conan') {
     impact: {
       inventoryPartitionCount: inventory.partitionCount,
       eligiblePartitionCount: inventory.eligiblePartitionCount,
+      totalSizeBytes: inventory.totalSizeBytes,
       exactReferenceCount: exactReferences.length,
     },
     exactReferences,
