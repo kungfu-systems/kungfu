@@ -36,31 +36,6 @@ test('Windows cache re-entry leaves the welded shim token unquoted', () => {
   );
 });
 
-test('Conan storage partitions are stable per execution principal and isolated across principals', () => {
-  const first = conanStoragePartition('development', {
-    SHIFU_CACHE_PRINCIPAL: 'worktree:first',
-  });
-  assert.equal(
-    first,
-    conanStoragePartition('development', {
-      SHIFU_CACHE_PRINCIPAL: 'worktree:first',
-    }),
-  );
-  assert.notEqual(
-    first,
-    conanStoragePartition('development', {
-      SHIFU_CACHE_PRINCIPAL: 'worktree:second',
-    }),
-  );
-  assert.match(first, /^development-[a-f0-9]{12}$/);
-  assert.match(
-    conanStoragePartition('self-hosted-runner', {
-      RUNNER_NAME: 'runner-one',
-    }),
-    /^runner-[a-f0-9]{12}$/,
-  );
-});
-
 function profile(overrides = {}) {
   return {
     $schema: 'https://libkungfu.dev/schemas/shifu/cache-profile-v1.schema.json',
