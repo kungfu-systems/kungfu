@@ -14,6 +14,7 @@ import {
   packageTreeFingerprint,
   parseLegacyArgs,
   withDisposablePackageStoreForUpload,
+  withPartitionLock,
 } from './shifu-conan-legacy.mjs';
 
 function cachePartition(root, name, rows) {
@@ -138,6 +139,35 @@ test('migration upload shadow is removed when one partition fails', (t) => {
     /simulated upload failure/,
   );
   assert.deepEqual(fs.readdirSync(scratch), []);
+});
+
+test('partition verification reports source mutation even when migration also fails', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'shifu-conan-guard-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const name = 'development-141414141414';
+  const partition = cachePartition(root, name, [
+    {
+      reference: 'rocksdb/6.29.5',
+      rrev: 'recipeRevision',
+      packageId: 'packageId',
+      prev: 'packageRevision',
+    },
+  ]);
+  assert.throws(
+    () =>
+      withPartitionLock(root, name, () => {
+        fs.writeFileSync(path.join(partition, 'packages', 'unexpected'), 'x');
+        throw new Error('simulated migration failure');
+      }),
+    (error) => {
+      assert.equal(error instanceof AggregateError, true);
+      assert.match(error.message, /simulated migration failure/);
+      assert.match(error.message, /legacy package tree changed/);
+      assert.equal(error.errors.length, 2);
+      return true;
+    },
+  );
+  assert.equal(fs.existsSync(path.join(partition, '.shifu-conan.lock')), false);
 });
 
 test('migration plan is additive, exact, dry-run, and approval-bound', (t) => {
