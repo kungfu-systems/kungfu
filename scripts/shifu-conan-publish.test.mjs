@@ -7,6 +7,10 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  conanStorageLayout,
+  conanStoragePartition,
+} from './shifu-cache-runtime.mjs';
+import {
   MATRIX,
   graphPackageRevisionRefs,
   packageRevisionRefs,
@@ -17,6 +21,40 @@ import {
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const script = path.join(here, 'shifu-conan-publish.mjs');
+
+test('Conan storage partitions isolate mutable packages and share downloads', () => {
+  const first = conanStoragePartition('development', {
+    SHIFU_CACHE_PRINCIPAL: 'worktree:first',
+  });
+  assert.equal(
+    first,
+    conanStoragePartition('development', {
+      SHIFU_CACHE_PRINCIPAL: 'worktree:first',
+    }),
+  );
+  assert.notEqual(
+    first,
+    conanStoragePartition('development', {
+      SHIFU_CACHE_PRINCIPAL: 'worktree:second',
+    }),
+  );
+  assert.match(first, /^development-[a-f0-9]{12}$/);
+  assert.match(
+    conanStoragePartition('self-hosted-runner', {
+      RUNNER_NAME: 'runner-one',
+    }),
+    /^runner-[a-f0-9]{12}$/,
+  );
+  const firstLayout = conanStorageLayout('/cache/conan/workhub-v1', first);
+  const secondLayout = conanStorageLayout(
+    '/cache/conan/workhub-v1',
+    conanStoragePartition('development', {
+      SHIFU_CACHE_PRINCIPAL: 'worktree:second',
+    }),
+  );
+  assert.notEqual(firstLayout.packageRoot, secondLayout.packageRoot);
+  assert.equal(firstLayout.downloadRoot, secondLayout.downloadRoot);
+});
 
 test('matrix contract covers the required three platforms', () => {
   assert.deepEqual(Object.keys(MATRIX), [

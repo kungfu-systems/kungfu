@@ -13,7 +13,6 @@ import { optionalAjv2020 } from './readonly-source-toolchain.mjs';
 import {
   CacheProfileError,
   applyCacheProfile,
-  conanStorageLayout,
   conanStoragePartition,
   resolveCacheProfile,
   sha256,
@@ -35,40 +34,6 @@ test('Windows cache re-entry leaves the welded shim token unquoted', () => {
     windowsShifuCommandLine(['install', 'argument with spaces']),
     'shifu.cmd install "argument with spaces"',
   );
-});
-
-test('Conan storage partitions are stable per execution principal and isolated across principals', () => {
-  const first = conanStoragePartition('development', {
-    SHIFU_CACHE_PRINCIPAL: 'worktree:first',
-  });
-  assert.equal(
-    first,
-    conanStoragePartition('development', {
-      SHIFU_CACHE_PRINCIPAL: 'worktree:first',
-    }),
-  );
-  assert.notEqual(
-    first,
-    conanStoragePartition('development', {
-      SHIFU_CACHE_PRINCIPAL: 'worktree:second',
-    }),
-  );
-  assert.match(first, /^development-[a-f0-9]{12}$/);
-  assert.match(
-    conanStoragePartition('self-hosted-runner', {
-      RUNNER_NAME: 'runner-one',
-    }),
-    /^runner-[a-f0-9]{12}$/,
-  );
-  const firstLayout = conanStorageLayout('/cache/conan/workhub-v1', first);
-  const secondLayout = conanStorageLayout(
-    '/cache/conan/workhub-v1',
-    conanStoragePartition('development', {
-      SHIFU_CACHE_PRINCIPAL: 'worktree:second',
-    }),
-  );
-  assert.notEqual(firstLayout.packageRoot, secondLayout.packageRoot);
-  assert.equal(firstLayout.downloadRoot, secondLayout.downloadRoot);
 });
 
 function profile(overrides = {}) {
