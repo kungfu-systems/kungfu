@@ -13,6 +13,7 @@ import {
   migrationPlan,
   packageTreeFingerprint,
   parseLegacyArgs,
+  withDisposablePackageStoreForUpload,
 } from './shifu-conan-legacy.mjs';
 
 function cachePartition(root, name, rows) {
@@ -107,6 +108,36 @@ test('migration upload shadow is independent and leaves the legacy tree unchange
     fs.existsSync(path.join(packages, 'package-0', 'conan_package.tgz')),
     false,
   );
+});
+
+test('migration upload shadow is removed when one partition fails', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'shifu-conan-shadow-'));
+  const scratch = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'shifu-conan-shadow-lifetime-'),
+  );
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  t.after(() => fs.rmSync(scratch, { recursive: true, force: true }));
+  const partition = cachePartition(root, 'development-131313131313', [
+    {
+      reference: 'rocksdb/6.29.5',
+      rrev: 'recipeRevision',
+      packageId: 'packageId',
+      prev: 'packageRevision',
+    },
+  ]);
+  assert.throws(
+    () =>
+      withDisposablePackageStoreForUpload(
+        path.join(partition, 'packages'),
+        scratch,
+        (shadow) => {
+          assert.equal(fs.existsSync(path.join(shadow, 'cache.sqlite3')), true);
+          throw new Error('simulated upload failure');
+        },
+      ),
+    /simulated upload failure/,
+  );
+  assert.deepEqual(fs.readdirSync(scratch), []);
 });
 
 test('migration plan is additive, exact, dry-run, and approval-bound', (t) => {
