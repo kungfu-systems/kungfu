@@ -150,9 +150,11 @@ test('legacy inventory skips a partition that vanishes after discovery', (t) => 
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const vanished = path.join(root, 'development-888888888888');
   fs.mkdirSync(vanished);
-  const originalStatSync = fs.statSync;
-  t.mock.method(fs, 'statSync', (candidate, ...args) => {
-    if (candidate === vanished) {
+  const originalLstatSync = fs.lstatSync;
+  let removed = false;
+  t.mock.method(fs, 'lstatSync', (candidate, ...args) => {
+    if (candidate === vanished && !removed) {
+      removed = true;
       fs.rmSync(vanished, { recursive: true });
       const error = new Error(
         `ENOENT: no such file or directory, stat '${candidate}'`,
@@ -160,7 +162,7 @@ test('legacy inventory skips a partition that vanishes after discovery', (t) => 
       error.code = 'ENOENT';
       throw error;
     }
-    return originalStatSync(candidate, ...args);
+    return originalLstatSync(candidate, ...args);
   });
 
   const inventory = inventoryLegacyPartitions(root);
@@ -215,6 +217,110 @@ test('legacy inventory rejects artifact paths that escape the package root', (t)
   assert.equal(
     inventory.partitions[0].identity.unsafeOrMissingArtifactPaths,
     1,
+  );
+});
+
+test('legacy inventory rejects a packages root symlink outside storage', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'shifu-conan-root-'));
+  const outside = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'shifu-conan-outside-'),
+  );
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  t.after(() => fs.rmSync(outside, { recursive: true, force: true }));
+  const source = cachePartition(outside, 'development-aaaaaaaaaaaa', [
+    {
+      reference: 'rocksdb/6.29.5',
+      rrev: 'recipeRevision',
+      packageId: 'packageId',
+      prev: 'packageRevision',
+    },
+  ]);
+  const partition = path.join(root, 'development-bbbbbbbbbbbb');
+  fs.mkdirSync(partition);
+  fs.symlinkSync(
+    path.join(source, 'packages'),
+    path.join(partition, 'packages'),
+  );
+  const inventory = inventoryLegacyPartitions(root);
+  assert.equal(inventory.eligiblePartitionCount, 0);
+  assert.equal(
+    inventory.partitions[0].migrationEligibility,
+    'skipped-identity-ambiguous',
+  );
+  assert.equal(
+    inventory.partitions[0].identity.unsafeRootReason,
+    'packages-root-not-real-directory',
+  );
+});
+
+test('legacy inventory rejects a symlink storage root', (t) => {
+  const realRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'shifu-conan-real-root-'),
+  );
+  const parent = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'shifu-conan-root-link-'),
+  );
+  const linkedRoot = path.join(parent, 'storage');
+  t.after(() => fs.rmSync(parent, { recursive: true, force: true }));
+  t.after(() => fs.rmSync(realRoot, { recursive: true, force: true }));
+  cachePartition(realRoot, 'development-eeeeeeeeeeee', [
+    {
+      reference: 'rocksdb/6.29.5',
+      rrev: 'recipeRevision',
+      packageId: 'packageId',
+      prev: 'packageRevision',
+    },
+  ]);
+  fs.symlinkSync(realRoot, linkedRoot);
+  assert.throws(
+    () => inventoryLegacyPartitions(linkedRoot),
+    /storage root must be a real directory/,
+  );
+});
+
+test('legacy inventory rejects a partition replaced by a symlink after discovery', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'shifu-conan-race-'));
+  const outside = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'shifu-conan-outside-'),
+  );
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  t.after(() => fs.rmSync(outside, { recursive: true, force: true }));
+  const name = 'development-cccccccccccc';
+  const partition = cachePartition(root, name, [
+    {
+      reference: 'rocksdb/6.29.5',
+      rrev: 'recipeRevision',
+      packageId: 'packageId',
+      prev: 'packageRevision',
+    },
+  ]);
+  const external = cachePartition(outside, 'development-dddddddddddd', [
+    {
+      reference: 'rocksdb/6.29.5',
+      rrev: 'outsideRecipeRevision',
+      packageId: 'outsidePackageId',
+      prev: 'outsidePackageRevision',
+    },
+  ]);
+  const originalLstatSync = fs.lstatSync;
+  let replaced = false;
+  t.mock.method(fs, 'lstatSync', (candidate, ...args) => {
+    if (candidate === partition && !replaced) {
+      replaced = true;
+      fs.rmSync(partition, { recursive: true });
+      fs.symlinkSync(external, partition);
+    }
+    return originalLstatSync(candidate, ...args);
+  });
+  const inventory = inventoryLegacyPartitions(root);
+  assert.equal(inventory.eligiblePartitionCount, 0);
+  assert.equal(
+    inventory.partitions[0].migrationEligibility,
+    'skipped-identity-ambiguous',
+  );
+  assert.equal(
+    inventory.partitions[0].identity.unsafeRootReason,
+    'partition-root-not-real-directory',
   );
 });
 
