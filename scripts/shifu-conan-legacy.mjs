@@ -2,6 +2,7 @@
 
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
@@ -39,6 +40,53 @@ function directorySize(root) {
       pending.push(path.join(current, entry));
   }
   return bytes;
+}
+
+export function packageTreeFingerprint(root) {
+  const records = [];
+  const pending = [[root, '.']];
+  while (pending.length > 0) {
+    const [current, relative] = pending.pop();
+    const stat = fs.lstatSync(current, { bigint: true });
+    let type = 'other';
+    if (stat.isDirectory()) type = 'directory';
+    else if (stat.isFile()) type = 'file';
+    else if (stat.isSymbolicLink()) type = 'symlink';
+    records.push(
+      [
+        relative,
+        type,
+        stat.dev,
+        stat.ino,
+        stat.mode,
+        stat.nlink,
+        stat.size,
+        stat.mtimeNs,
+        type === 'symlink' ? fs.readlinkSync(current) : '',
+      ].join('\0'),
+    );
+    if (!stat.isDirectory()) continue;
+    const entries = fs.readdirSync(current).sort().reverse();
+    for (const entry of entries)
+      pending.push([
+        path.join(current, entry),
+        relative === '.' ? entry : path.join(relative, entry),
+      ]);
+  }
+  return digest(records.sort().join('\n'));
+}
+
+export function copyPackageStoreForUpload(packagesRoot, scratchRoot) {
+  const destination = path.join(scratchRoot, 'packages');
+  fs.cpSync(packagesRoot, destination, {
+    recursive: true,
+    dereference: false,
+    errorOnExist: true,
+    force: false,
+    preserveTimestamps: true,
+    verbatimSymlinks: true,
+  });
+  return destination;
 }
 
 function processState(pid) {
@@ -401,8 +449,10 @@ export function migrationPlan(inventory, remote = 'workhub-conan') {
     operations: [
       'recheck every partition lock and exact local identity',
       'query the remote for each exact reference',
-      'upload only absent exact references with --check and without --force',
+      'copy an eligible package store to disposable scratch only when an exact reference is absent',
+      'upload only absent exact references from scratch with --check and without --force',
       'read back every exact RREV/package_id/PREV',
+      'verify the legacy package-tree metadata fingerprint is unchanged',
       'leave every legacy byte in place',
     ],
     deletion: false,
@@ -438,7 +488,7 @@ export function migrationPlan(inventory, remote = 'workhub-conan') {
   return plan;
 }
 
-function remoteContains(reference, remote, packagesRoot) {
+function remoteContains(reference, remote, queryStorageRoot) {
   const payload = JSON.parse(
     conanCommand(
       [
@@ -447,7 +497,7 @@ function remoteContains(reference, remote, packagesRoot) {
         '--remote',
         remote,
         '-cc',
-        `core.cache:storage_path=${packagesRoot}`,
+        `core.cache:storage_path=${queryStorageRoot}`,
         '--format=json',
       ],
       { capture: true, originalPath: true },
@@ -519,9 +569,16 @@ function withPartitionLock(storageRoot, partition, callback) {
     const identity = cacheIdentity(partitionRoot, storage);
     if (identity.confidence !== 'exact')
       fail(`partition identity became ambiguous: ${partition}`);
+    const packageTreeBefore = packageTreeFingerprint(before.packagesRoot);
     const result = callback(identity, before.fingerprint, storage);
     assertStableStorageRoot(storageRoot, storage);
-    assertStablePartitionRoot(partitionRoot, before.fingerprint, storage);
+    const after = assertStablePartitionRoot(
+      partitionRoot,
+      before.fingerprint,
+      storage,
+    );
+    if (packageTreeFingerprint(after.packagesRoot) !== packageTreeBefore)
+      fail(`legacy package tree changed during migration: ${partition}`);
     return result;
   } finally {
     for (const [signal, handler] of signalHandlers)
@@ -537,74 +594,95 @@ export function executeMigration(storageRoot, remote) {
   const plan = migrationPlan(inventory, remote);
   if (process.env.SHIFU_CONAN_MIGRATION_APPROVAL !== plan.approval.digest)
     fail(`migration requires exact approval digest ${plan.approval.digest}`);
-  conanCommand(['remote', 'auth', remote, '--force', '--strict'], {
-    originalPath: true,
-  });
-  const published = [];
-  const alreadyPresent = [];
-  const byPartition = new Map();
-  for (const candidate of plan.exactReferences) {
-    const values = byPartition.get(candidate.partition) || [];
-    values.push(candidate.reference);
-    byPartition.set(candidate.partition, values);
-  }
-  for (const [partition, references] of byPartition) {
-    withPartitionLock(
-      storageRoot,
-      partition,
-      (identity, fingerprint, storage) => {
-        const exact = new Set(identity.exactReferences);
-        const packagesRoot = path.join(storageRoot, partition, 'packages');
-        for (const reference of references) {
-          assertStablePartitionRoot(
-            path.join(storageRoot, partition),
-            fingerprint,
-            assertStableStorageRoot(storageRoot, storage),
-          );
-          if (!exact.has(reference))
-            fail(`partition no longer contains exact reference: ${reference}`);
-          if (remoteContains(reference, remote, packagesRoot)) {
-            alreadyPresent.push(reference);
-            continue;
+  const scratch = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'shifu-conan-legacy-migrate-'),
+  );
+  try {
+    const queryStorageRoot = path.join(scratch, 'remote-query');
+    fs.mkdirSync(queryStorageRoot);
+    conanCommand(['remote', 'auth', remote, '--force', '--strict'], {
+      originalPath: true,
+    });
+    const published = [];
+    const alreadyPresent = [];
+    const byPartition = new Map();
+    for (const candidate of plan.exactReferences) {
+      const values = byPartition.get(candidate.partition) || [];
+      values.push(candidate.reference);
+      byPartition.set(candidate.partition, values);
+    }
+    for (const [partition, references] of byPartition) {
+      withPartitionLock(
+        storageRoot,
+        partition,
+        (identity, fingerprint, storage) => {
+          const exact = new Set(identity.exactReferences);
+          const missing = [];
+          for (const reference of references) {
+            assertStablePartitionRoot(
+              path.join(storageRoot, partition),
+              fingerprint,
+              assertStableStorageRoot(storageRoot, storage),
+            );
+            if (!exact.has(reference))
+              fail(
+                `partition no longer contains exact reference: ${reference}`,
+              );
+            if (remoteContains(reference, remote, queryStorageRoot))
+              alreadyPresent.push(reference);
+            else missing.push(reference);
           }
-          conanCommand(
-            [
-              'upload',
-              reference,
-              '--remote',
-              remote,
-              '--check',
-              '--confirm',
-              '-cc',
-              `core.cache:storage_path=${packagesRoot}`,
-            ],
-            { originalPath: true },
+          if (missing.length === 0) return;
+          const partitionScratch = path.join(scratch, partition);
+          fs.mkdirSync(partitionScratch);
+          const uploadStorageRoot = copyPackageStoreForUpload(
+            path.join(storageRoot, partition, 'packages'),
+            partitionScratch,
           );
-          if (!remoteContains(reference, remote, packagesRoot))
-            fail(`remote read-back missing exact reference: ${reference}`);
+          for (const reference of missing) {
+            conanCommand(
+              [
+                'upload',
+                reference,
+                '--remote',
+                remote,
+                '--check',
+                '--confirm',
+                '-cc',
+                `core.cache:storage_path=${uploadStorageRoot}`,
+              ],
+              { originalPath: true },
+            );
+            if (!remoteContains(reference, remote, queryStorageRoot))
+              fail(`remote read-back missing exact reference: ${reference}`);
+            published.push(reference);
+          }
           assertStablePartitionRoot(
             path.join(storageRoot, partition),
             fingerprint,
             assertStableStorageRoot(storageRoot, storage),
           );
-          published.push(reference);
-        }
-      },
-    );
+        },
+      );
+    }
+    return {
+      schema: 'shifu.conan-legacy-migration-receipt/v1',
+      sourceRevision,
+      approvalDigest: plan.approval.digest,
+      remote,
+      identity: plan.identity,
+      alreadyPresent,
+      published,
+      retainedLegacyPartitions: inventory.partitionCount,
+      localDeletion: false,
+      localOverwrite: false,
+      localArtifactMutation: false,
+      migrationUploadSource: 'disposable-shadow-package-store',
+      outcome: 'additive-upload-and-exact-read-back',
+    };
+  } finally {
+    fs.rmSync(scratch, { recursive: true, force: true });
   }
-  return {
-    schema: 'shifu.conan-legacy-migration-receipt/v1',
-    sourceRevision,
-    approvalDigest: plan.approval.digest,
-    remote,
-    identity: plan.identity,
-    alreadyPresent,
-    published,
-    retainedLegacyPartitions: inventory.partitionCount,
-    localDeletion: false,
-    localOverwrite: false,
-    outcome: 'additive-upload-and-exact-read-back',
-  };
 }
 
 export function parseLegacyArgs(argv, env = process.env) {

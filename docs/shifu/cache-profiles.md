@@ -263,13 +263,16 @@ created empty mutable partitions. Execution additionally requires that digest,
 the Shifu-managed publisher environment, a clean checkout, and an exclusive
 partition lock. While that lock is held, the migration invokes Conan from the
 original tool PATH instead of recursively entering the managed per-command
-wrapper lock; it performs only additive exact uploads and readback. It never
-deletes, overwrites, links, moves, or compacts legacy artifacts.
+wrapper lock. Remote queries use disposable storage, and any missing exact
+references are uploaded from a temporary copy of the partition package store,
+so Conan's archive generation cannot write into the legacy partition. It
+performs only additive exact uploads and readback. It never deletes,
+overwrites, links, moves, or compacts legacy artifacts.
 Partition roots, `packages`, the SQLite index, and indexed artifact paths must
 all be real in-root objects rather than symlinks. Execution fingerprints the
-partition and package directory before and around every remote operation,
-fails if either changes, and releases its owned temporary lock on normal exit
-or termination signals.
+partition root and complete package-tree metadata before and around every
+remote operation, fails if either changes, and releases its owned temporary
+lock on normal exit or termination signals.
 
 ## Developer operations
 
