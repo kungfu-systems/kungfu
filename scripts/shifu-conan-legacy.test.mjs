@@ -105,8 +105,44 @@ test('migration plan is additive, exact, dry-run, and approval-bound', (t) => {
     },
   ]);
   assert.match(plan.approval.digest, /^sha256:[a-f0-9]{64}$/);
+  assert.equal(
+    plan.approval.schema,
+    'shifu.conan-legacy-migration-approval/v1',
+  );
   assert.match(plan.approval.executeCommand, /SHIFU_CONAN_MIGRATION_APPROVAL=/);
   assert.doesNotMatch(JSON.stringify(plan), new RegExp(root));
+});
+
+test('migration approval ignores empty mutable partition churn', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'shifu-conan-plan-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  cachePartition(root, 'development-555555555555', [
+    {
+      reference: 'nng/1.11.0',
+      rrev: 'recipeRevision',
+      packageId: 'packageId',
+      prev: 'packageRevision',
+    },
+  ]);
+  const before = migrationPlan(inventoryLegacyPartitions(root));
+  fs.mkdirSync(path.join(root, 'development-666666666666'));
+  const afterEmptyPartition = migrationPlan(inventoryLegacyPartitions(root));
+  assert.equal(afterEmptyPartition.impact.inventoryPartitionCount, 2);
+  assert.equal(afterEmptyPartition.approval.digest, before.approval.digest);
+
+  cachePartition(root, 'development-777777777777', [
+    {
+      reference: 'rocksdb/6.29.5',
+      rrev: 'otherRecipeRevision',
+      packageId: 'otherPackageId',
+      prev: 'otherPackageRevision',
+    },
+  ]);
+  const afterEligiblePartition = migrationPlan(inventoryLegacyPartitions(root));
+  assert.notEqual(
+    afterEligiblePartition.approval.digest,
+    before.approval.digest,
+  );
 });
 
 test('legacy inventory rejects artifact paths that escape the package root', (t) => {
