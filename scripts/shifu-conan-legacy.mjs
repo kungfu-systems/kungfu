@@ -89,6 +89,21 @@ export function copyPackageStoreForUpload(packagesRoot, scratchRoot) {
   return destination;
 }
 
+export function withDisposablePackageStoreForUpload(
+  packagesRoot,
+  scratchRoot,
+  callback,
+) {
+  const partitionScratch = fs.mkdtempSync(
+    path.join(scratchRoot, 'package-store-'),
+  );
+  try {
+    return callback(copyPackageStoreForUpload(packagesRoot, partitionScratch));
+  } finally {
+    fs.rmSync(partitionScratch, { recursive: true, force: true });
+  }
+}
+
 function processState(pid) {
   if (!Number.isSafeInteger(pid) || pid <= 0) return 'unknown';
   try {
@@ -633,30 +648,32 @@ export function executeMigration(storageRoot, remote) {
             else missing.push(reference);
           }
           if (missing.length === 0) return;
-          const partitionScratch = path.join(scratch, partition);
-          fs.mkdirSync(partitionScratch);
-          const uploadStorageRoot = copyPackageStoreForUpload(
+          withDisposablePackageStoreForUpload(
             path.join(storageRoot, partition, 'packages'),
-            partitionScratch,
+            scratch,
+            (uploadStorageRoot) => {
+              for (const reference of missing) {
+                conanCommand(
+                  [
+                    'upload',
+                    reference,
+                    '--remote',
+                    remote,
+                    '--check',
+                    '--confirm',
+                    '-cc',
+                    `core.cache:storage_path=${uploadStorageRoot}`,
+                  ],
+                  { originalPath: true },
+                );
+                if (!remoteContains(reference, remote, queryStorageRoot))
+                  fail(
+                    `remote read-back missing exact reference: ${reference}`,
+                  );
+                published.push(reference);
+              }
+            },
           );
-          for (const reference of missing) {
-            conanCommand(
-              [
-                'upload',
-                reference,
-                '--remote',
-                remote,
-                '--check',
-                '--confirm',
-                '-cc',
-                `core.cache:storage_path=${uploadStorageRoot}`,
-              ],
-              { originalPath: true },
-            );
-            if (!remoteContains(reference, remote, queryStorageRoot))
-              fail(`remote read-back missing exact reference: ${reference}`);
-            published.push(reference);
-          }
           assertStablePartitionRoot(
             path.join(storageRoot, partition),
             fingerprint,
