@@ -227,11 +227,22 @@ export function disableBinaryCompatibility() {
   );
 }
 
-export function conanCommand(args, { capture = false } = {}) {
-  const executable = process.env.SHIFU_CONAN_BIN || 'conan';
+export function conanCommand(
+  args,
+  { capture = false, originalPath = false } = {},
+) {
+  const executable =
+    !originalPath && process.env.SHIFU_CONAN_BIN
+      ? process.env.SHIFU_CONAN_BIN
+      : 'conan';
+  const commandPath = originalPath
+    ? process.env.SHIFU_CONAN_ORIGINAL_PATH
+    : process.env.PATH;
+  if (originalPath && !commandPath)
+    fail('original Conan PATH is unavailable inside Shifu cache apply');
   const result = spawnSync(executable, args, {
     cwd: repoRoot,
-    env: process.env,
+    env: { ...process.env, PATH: commandPath },
     encoding: 'utf8',
     stdio: capture ? ['ignore', 'pipe', 'inherit'] : 'inherit',
     shell: process.platform === 'win32' && /\.(?:cmd|bat)$/i.test(executable),
