@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   MATRIX,
+  graphPackageRevisionRefs,
   packageRevisionRefs,
   parseArgs,
   plan,
@@ -32,6 +33,7 @@ test('matrix contract covers the required three platforms', () => {
           arch: 'x86_64',
           compiler: 'gcc',
           'compiler.version': '14',
+          'compiler.cppstd': '23',
         },
       },
     },
@@ -48,6 +50,7 @@ test('matrix contract covers the required three platforms', () => {
               arch: 'x86_64',
               compiler: 'gcc',
               'compiler.version': '13',
+              'compiler.cppstd': '23',
             },
           },
         },
@@ -71,7 +74,12 @@ test('dry-run plan keeps publisher credentials out of Buildchain', () => {
     /remote auth workhub-conan --force --strict/,
   );
   assert.doesNotMatch(JSON.stringify(output), /password/i);
-  assert.match(JSON.stringify(output), /rocksdb\/6\.29\.5#\*:\*#\*/);
+  assert.equal(output.publication, 'additive-only-no-force');
+  assert.equal(
+    output.storage.immutableBinaryAuthority,
+    'hosted-remote-rrev-package-id-prev',
+  );
+  assert.match(JSON.stringify(output), /framework\/core dependency closure/);
 });
 
 test('package revision read-back requires exact recipe and package revisions', () => {
@@ -104,6 +112,48 @@ test('package revision read-back requires exact recipe and package revisions', (
       },
     }),
     [],
+  );
+});
+
+test('resolved graph evidence requires full dependency identity', () => {
+  assert.deepEqual(
+    graphPackageRevisionRefs({
+      graph: {
+        nodes: {
+          0: {
+            recipe: 'Consumer',
+            ref: 'kungfu-core/4.0.0-alpha.1',
+            package_id: 'consumerPackageId',
+          },
+          1: {
+            ref: 'flatbuffers/25.9.23#recipeRevision',
+            package_id: 'packageId',
+            prev: 'packageRevision',
+          },
+          2: {
+            ref: 'rocksdb/6.29.5',
+            rrev: 'rocksRecipeRevision',
+            package_id: 'rocksPackageId',
+            prev: 'rocksPackageRevision',
+          },
+        },
+      },
+    }),
+    [
+      'flatbuffers/25.9.23#recipeRevision:packageId#packageRevision',
+      'rocksdb/6.29.5#rocksRecipeRevision:rocksPackageId#rocksPackageRevision',
+    ],
+  );
+  assert.throws(
+    () =>
+      graphPackageRevisionRefs({
+        graph: {
+          nodes: {
+            1: { ref: 'nng/1.11.0', package_id: 'packageId', prev: '' },
+          },
+        },
+      }),
+    /lacks exact RREV\/package_id\/PREV identity/,
   );
 });
 
