@@ -553,7 +553,7 @@
     "kungfu.runtime_broker.NativeReadinessAuthority",
     "kungfu.runtime_service.ProcessRuntimeHost"
   ],
-  "reportRoot": "sha256:d776c2351fd1abe446b2308fd48d652ef3d1a05b8e4631b9e2fa9986d79aeae3",
+  "reportRoot": "sha256:546018471a450b6190f209f8b1fe3a75a948809a18a7649240f823f7249dc419",
   "schema": "kungfu.abstraction-integrity-report/v1",
   "sourceRoot": "sha256:27a3eb145cc9260e766f976ce7c14dee232ad88a41337fe9bef02d294592ba8c",
   "summary": {
