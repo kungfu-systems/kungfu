@@ -8,8 +8,10 @@ import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
 
 import {
+  copyPackageStoreForUpload,
   inventoryLegacyPartitions,
   migrationPlan,
+  packageTreeFingerprint,
   parseLegacyArgs,
 } from './shifu-conan-legacy.mjs';
 
@@ -78,6 +80,33 @@ test('legacy inventory reads exact identities without changing cache bytes', (t)
     before,
   );
   assert.deepEqual(inventory.mutations, []);
+});
+
+test('migration upload shadow is independent and leaves the legacy tree unchanged', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'shifu-conan-shadow-'));
+  const scratch = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'shifu-conan-shadow-copy-'),
+  );
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  t.after(() => fs.rmSync(scratch, { recursive: true, force: true }));
+  const partition = cachePartition(root, 'development-121212121212', [
+    {
+      reference: 'rocksdb/6.29.5',
+      rrev: 'recipeRevision',
+      packageId: 'packageId',
+      prev: 'packageRevision',
+    },
+  ]);
+  const packages = path.join(partition, 'packages');
+  const before = packageTreeFingerprint(packages);
+  const shadow = copyPackageStoreForUpload(packages, scratch);
+  fs.writeFileSync(path.join(shadow, 'package-0', 'conan_package.tgz'), 'new');
+  assert.equal(packageTreeFingerprint(packages), before);
+  assert.notEqual(packageTreeFingerprint(shadow), before);
+  assert.equal(
+    fs.existsSync(path.join(packages, 'package-0', 'conan_package.tgz')),
+    false,
+  );
 });
 
 test('migration plan is additive, exact, dry-run, and approval-bound', (t) => {
