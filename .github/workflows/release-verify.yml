@@ -17,9 +17,9 @@ jobs:
   try:
     uses: kungfu-systems/workflows/.github/workflows/.release-verify.yml@dev/v1/v1.2
     with:
-      build-runner-linux-labels: '["self-hosted","Linux","X64","agent-120","kungfu-build","linux-x64"]'
-      build-runner-macos-labels: '["self-hosted","macOS","ARM64","mac-studio","kungfu-build","macos-arm64"]'
-      build-runner-windows-labels: '["self-hosted","Windows","X64","darkhero","kungfu-build","windows-x64"]'
+      build-runner-linux-labels: ${{ github.repository == 'kungfu-systems/kungfu' && '["self-hosted","Linux","X64","agent-120","kungfu-build","linux-x64"]' || '' }}
+      build-runner-macos-labels: ${{ github.repository == 'kungfu-systems/kungfu' && '["self-hosted","macOS","ARM64","mac-studio","kungfu-build","macos-arm64"]' || '' }}
+      build-runner-windows-labels: ${{ github.repository == 'kungfu-systems/kungfu' && '["self-hosted","Windows","X64","darkhero","kungfu-build","windows-x64"]' || '' }}
       use-pipenv: true
       build-timeout-minutes: 150
       max-build-attempts: 3
