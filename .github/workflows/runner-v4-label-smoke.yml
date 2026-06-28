@@ -1,0 +1,55 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Runner - V4 Label Smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/runner-v4-label-smoke
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: agent-120 v4 labels
+    runs-on:
+      - self-hosted
+      - Linux
+      - X64
+      - kungfu-build-v4
+      - kungfu-build-v4-linux-x64
+    timeout-minutes: 10
+    steps:
+      - name: Verify runner route
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${RUNNER_NAME}" = "agent-120-kungfu-systems"
+          test "${RUNNER_OS}" = "Linux"
+          test "${RUNNER_ARCH}" = "X64"
+
+      - name: Verify toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          go version | grep -E '^go version go1\.26\.'
+          actionlint -version | grep -E '^1\.7\.'
+          fnm --version | grep -E '^fnm 1\.39\.'
+          conan --version | grep -E '^Conan version 2\.29\.'
+          /usr/bin/python3.13 --version | grep -E '^Python 3\.13\.'
+
+      - name: Write smoke summary
+        shell: bash
+        run: |
+          {
+            echo "runner=${RUNNER_NAME}"
+            echo "os=${RUNNER_OS}"
+            echo "arch=${RUNNER_ARCH}"
+            go version
+            actionlint -version
+            fnm --version
+            conan --version
+            /usr/bin/python3.13 --version
+          } >> "${GITHUB_STEP_SUMMARY}"
