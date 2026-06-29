@@ -1,0 +1,207 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Runner - Three Host Smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mac-studio:
+    name: mac-studio smoke
+    runs-on:
+      - self-hosted
+      - macOS
+      - ARM64
+      - mac-studio
+      - kungfu-build
+      - kungfu-build-v4-macos-arm64
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify runner route
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${RUNNER_NAME}" = "mac-studio-kungfu-systems"
+          test "${RUNNER_OS}" = "macOS"
+          test "${RUNNER_ARCH}" = "ARM64"
+          whoami
+          pwd
+
+      - name: Verify toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          go version | grep -E '^go version go1\.26\.'
+          actionlint -version | grep -E '^1\.7\.'
+          fnm --version
+          node --version | grep -E '^v24\.'
+          yarn --version | grep -E '^1\.2[23]\.'
+          python3 --version
+          uv --version
+          conan --version | grep -E '^Conan version 2\.29\.'
+          cmake --version | head -n 1
+          ninja --version
+          xcode-select -p
+
+      - name: Verify paths and entrypoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d /Users/gha-runner/actions-runner/kungfu-systems/_work
+          test -d /Users/gha-runner/Worktrees/kungfu
+          test -d /Users/gha-runner/.cache/kungfu
+          test -f ./kungfu-code || test -x ./kungfu-code
+          df -Pk /Users/gha-runner | awk 'NR==2 { if ($4 < 120*1024*1024) exit 1; print }'
+
+      - name: Write smoke summary
+        shell: bash
+        run: |
+          {
+            echo "runner=${RUNNER_NAME}"
+            echo "os=${RUNNER_OS}"
+            echo "arch=${RUNNER_ARCH}"
+            go version
+            actionlint -version
+            conan --version
+            node --version
+            python3 --version
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  darkhero:
+    name: darkhero smoke
+    runs-on:
+      - self-hosted
+      - Windows
+      - X64
+      - darkhero
+      - kungfu-build
+      - kungfu-build-v4-windows-x64
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify runner route
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          if ($env:RUNNER_NAME -ne "darkhero-kungfu-systems") { throw "unexpected runner $env:RUNNER_NAME" }
+          if ($env:RUNNER_OS -ne "Windows") { throw "unexpected os $env:RUNNER_OS" }
+          if ($env:RUNNER_ARCH -ne "X64") { throw "unexpected arch $env:RUNNER_ARCH" }
+          whoami
+          Get-Location
+
+      - name: Verify toolchain
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          go version | Select-String '^go version go1\.26\.'
+          actionlint -version | Select-String '^1\.7\.'
+          fnm --version
+          node --version | Select-String '^v24\.'
+          yarn --version | Select-String '^1\.2[23]\.'
+          python --version
+          uv --version
+          conan --version | Select-String '^Conan version 2\.29\.'
+          cmake --version | Select-Object -First 1
+          ninja --version
+
+      - name: Verify paths and entrypoint
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          foreach ($path in @(
+            "C:\actions-runner\kungfu-systems\_work",
+            "C:\Users\gha-runner\Worktrees\kungfu",
+            "C:\kungfu-cache",
+            "C:\tmp"
+          )) {
+            if (-not (Test-Path -LiteralPath $path -PathType Container)) { throw "missing path $path" }
+          }
+          if (-not (Test-Path -LiteralPath ".\kungfu-code.cmd" -PathType Leaf)) { throw "missing kungfu-code.cmd" }
+          $free = (Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'").FreeSpace
+          if ($free -lt 107374182400) { throw "low disk free bytes=$free" }
+          $free
+
+      - name: Write smoke summary
+        shell: pwsh
+        run: |
+          "runner=$env:RUNNER_NAME" >> $env:GITHUB_STEP_SUMMARY
+          "os=$env:RUNNER_OS" >> $env:GITHUB_STEP_SUMMARY
+          "arch=$env:RUNNER_ARCH" >> $env:GITHUB_STEP_SUMMARY
+          go version >> $env:GITHUB_STEP_SUMMARY
+          actionlint -version >> $env:GITHUB_STEP_SUMMARY
+          conan --version >> $env:GITHUB_STEP_SUMMARY
+          node --version >> $env:GITHUB_STEP_SUMMARY
+          python --version >> $env:GITHUB_STEP_SUMMARY
+
+  server-101:
+    name: server-101 smoke
+    runs-on:
+      - self-hosted
+      - Windows
+      - X64
+      - server-101
+      - windows-x64
+      - kungfu-build
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify runner route
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          if ($env:RUNNER_NAME -ne "server-101-kungfu-systems") { throw "unexpected runner $env:RUNNER_NAME" }
+          if ($env:RUNNER_OS -ne "Windows") { throw "unexpected os $env:RUNNER_OS" }
+          if ($env:RUNNER_ARCH -ne "X64") { throw "unexpected arch $env:RUNNER_ARCH" }
+          whoami
+          Get-Location
+
+      - name: Verify toolchain
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          go version | Select-String '^go version go1\.26\.'
+          actionlint -version | Select-String '^1\.7\.'
+          fnm --version
+          node --version | Select-String '^v24\.'
+          yarn --version | Select-String '^1\.2[23]\.'
+          python --version
+          uv --version
+          conan --version | Select-String '^Conan version 2\.29\.'
+          cmake --version | Select-Object -First 1
+          ninja --version
+
+      - name: Verify paths and entrypoint
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          foreach ($path in @(
+            "C:\actions-runner\kungfu-systems\_work",
+            "C:\Users\gha-runner\Worktrees\kungfu",
+            "C:\kungfu-cache",
+            "C:\tmp"
+          )) {
+            if (-not (Test-Path -LiteralPath $path -PathType Container)) { throw "missing path $path" }
+          }
+          if (-not (Test-Path -LiteralPath ".\kungfu-code.cmd" -PathType Leaf)) { throw "missing kungfu-code.cmd" }
+          $free = (Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'").FreeSpace
+          if ($free -lt 107374182400) { throw "low disk free bytes=$free" }
+          $free
+
+      - name: Write smoke summary
+        shell: pwsh
+        run: |
+          "runner=$env:RUNNER_NAME" >> $env:GITHUB_STEP_SUMMARY
+          "os=$env:RUNNER_OS" >> $env:GITHUB_STEP_SUMMARY
+          "arch=$env:RUNNER_ARCH" >> $env:GITHUB_STEP_SUMMARY
+          go version >> $env:GITHUB_STEP_SUMMARY
+          actionlint -version >> $env:GITHUB_STEP_SUMMARY
+          conan --version >> $env:GITHUB_STEP_SUMMARY
+          node --version >> $env:GITHUB_STEP_SUMMARY
+          python --version >> $env:GITHUB_STEP_SUMMARY
