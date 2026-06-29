@@ -23,8 +23,6 @@ jobs:
       - kungfu-build-v4-macos-arm64
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-
       - name: Verify runner route
         shell: bash
         run: |
@@ -58,7 +56,6 @@ jobs:
           test -d /Users/gha-runner/actions-runner/kungfu-systems/_work
           test -d /Users/gha-runner/Worktrees/kungfu
           test -d /Users/gha-runner/.cache/kungfu
-          test -f ./kungfu-code || test -x ./kungfu-code
           df -Pk /Users/gha-runner | awk 'NR==2 { if ($4 < 120*1024*1024) exit 1; print }'
 
       - name: Write smoke summary
@@ -86,8 +83,6 @@ jobs:
       - kungfu-build-v4-windows-x64
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-
       - name: Verify runner route
         shell: pwsh
         run: |
@@ -125,7 +120,6 @@ jobs:
           )) {
             if (-not (Test-Path -LiteralPath $path -PathType Container)) { throw "missing path $path" }
           }
-          if (-not (Test-Path -LiteralPath ".\kungfu-code.cmd" -PathType Leaf)) { throw "missing kungfu-code.cmd" }
           $free = (Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'").FreeSpace
           if ($free -lt 107374182400) { throw "low disk free bytes=$free" }
           $free
@@ -153,8 +147,6 @@ jobs:
       - kungfu-build
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-
       - name: Verify runner route
         shell: pwsh
         run: |
@@ -192,7 +184,6 @@ jobs:
           )) {
             if (-not (Test-Path -LiteralPath $path -PathType Container)) { throw "missing path $path" }
           }
-          if (-not (Test-Path -LiteralPath ".\kungfu-code.cmd" -PathType Leaf)) { throw "missing kungfu-code.cmd" }
           $free = (Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'").FreeSpace
           if ($free -lt 107374182400) { throw "low disk free bytes=$free" }
           $free
