@@ -4,6 +4,9 @@ name: Runner - Three Host Smoke
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feature/runner-smoke-three-hosts
 
 permissions:
   contents: read
