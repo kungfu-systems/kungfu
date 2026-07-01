@@ -54,6 +54,7 @@ option(NNG_TESTS "" OFF)
 option(NNG_TOOLS "" OFF)
 option(NNG_ENABLE_NNGCAT "" OFF)
 option(KUNGFU_WITH_DEBUG_EXAMPLE "" OFF)
+option(KUNGFU_WITH_FACT_LEDGER_SLICE "build the minimal fact-ledger host + export tools" OFF)
 
 ##########################################################################
 
@@ -150,5 +151,12 @@ endif()
 if (KUNGFU_WITH_DEBUG_EXAMPLE)
   message(STATUS "Enabled kungfu_debug_example")
   add_subdirectory(debug-example)
+endif()
+
+# Minimal fact-ledger slice (journal spine embedded without the trading runtime).
+# Needs libkungfu; only wired when the libkungfu target exists.
+if (KUNGFU_WITH_FACT_LEDGER_SLICE AND TARGET ${LIBKUNGFU_NAME})
+  message(STATUS "Enabled fact_ledger_slice")
+  add_subdirectory(fact-ledger-slice)
 endif()
 
