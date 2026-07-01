@@ -1,7 +1,7 @@
 {
   "manifest_version": "1",
   "format_namespace": "libkungfu:fact-ledger",
-  "spec_version": "1.0",
+  "spec_version": "0.1",
   "package": {
     "name": "@kungfu-tech/spec",
     "version": "4.0.0-alpha.0"
@@ -12,7 +12,7 @@
     "generated_at": "1970-01-01T00:00:00Z",
     "platform": "PLACEHOLDER"
   },
-  "docs_url_base": "https://libkungfu.dev/spec/1.0/",
+  "docs_url_base": "https://libkungfu.dev/spec/0.1/",
   "categories": {
     "format_spec": { "path": "format-spec/", "source_package": "framework/spec" },
     "schema_registry": { "path": "registry.json", "source_package": "framework/core" },
@@ -25,19 +25,19 @@
     "kungfu": {
       "path": "handbooks/cli/",
       "binding_version": "0.0.0",
-      "docs_url": "https://libkungfu.dev/spec/1.0/handbooks/cli/",
+      "docs_url": "https://libkungfu.dev/spec/0.1/handbooks/cli/",
       "api_ref_source": "developer/toolchain"
     },
     "pypi": {
       "path": "handbooks/python/",
       "binding_version": "0.0.0",
-      "docs_url": "https://libkungfu.dev/spec/1.0/handbooks/python/",
+      "docs_url": "https://libkungfu.dev/spec/0.1/handbooks/python/",
       "api_ref_source": "framework/core"
     },
     "npm": {
       "path": "handbooks/node/",
       "binding_version": "0.0.0",
-      "docs_url": "https://libkungfu.dev/spec/1.0/handbooks/node/",
+      "docs_url": "https://libkungfu.dev/spec/0.1/handbooks/node/",
       "api_ref_source": "framework/api"
     }
   }

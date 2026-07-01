@@ -19,11 +19,13 @@
     "index.js",
     "schema/",
     "dist/",
-    "README.md"
+    "README.md",
+    "CONSUMING.md"
   ],
   "scripts": {
     "build": "node scripts/aggregate.js",
     "verify": "node scripts/verify.js",
+    "prepublishOnly": "node scripts/aggregate.js && node scripts/verify.js",
     "clean": "rimraf dist"
   },
   "devDependencies": {

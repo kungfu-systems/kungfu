@@ -62,6 +62,10 @@
       "format": "uri",
       "examples": ["https://libkungfu.dev/spec/1.0/"]
     },
+    "overview": {
+      "description": "Optional landing/overview document for the site's front door — human prose that introduces the format and links into the spec and handbooks. Owned by framework/spec. Kept out of the six spec categories so consumers can render a home page without treating it as normative spec payload.",
+      "$ref": "#/$defs/categoryEntry"
+    },
     "categories": {
       "description": "The six machine-addressable payload categories. Each is generated (drift = build fail) and version-pinned. Paths are relative to the bundle root. The generator/owner of each piece is recorded for traceability; this manifest only aggregates — it does not own the content of core/toolchain pieces.",
       "type": "object",

@@ -52,20 +52,28 @@ handbooks** (kungfu/CLI, pypi/python, npm/node), plus a resolvable
 
 ## Scripts (skeleton placeholders)
 
-- `pnpm --filter @kungfu-tech/spec run build` → `scripts/aggregate.js`: will
-  collect the generated pieces and emit `dist/manifest.json`. Currently a no-op
-  that only ensures `dist/` exists.
+- `pnpm --filter @kungfu-tech/spec run build` → `scripts/aggregate.js`: builds a
+  real, schema-valid bundle into `dist/` (`manifest.json` + the six category
+  payloads + three handbook payloads) from `spec.meta.json`, `package.json`, and
+  `docs/format-spec.md`.
 - `pnpm --filter @kungfu-tech/spec run verify` → `scripts/verify.js`: the
-  **integration drift gate** — will assert the bundle is complete and validates
-  against the manifest schema. Currently only checks the contract file is
-  parseable; the gate is not yet active.
+  **integration drift gate**, active. Fails the build if the produced bundle
+  drifts from the manifest contract (missing/extra fields, domain-embedded
+  `format_namespace`, a referenced payload path that does not exist, or a
+  `spec_version` not routed into `docs_url_base`).
 
-Both are intentionally passing no-ops so the build chain stays green while the
-individual flows fill in content.
+This is a **walking skeleton**: the pipeline produces and gates a real bundle,
+but with minimal content. Only `categories.format_spec` carries real prose
+(`docs/format-spec.md`); the five machine categories and three handbooks are
+minimal stubs, each tagged in the manifest with its owning package. See
+[CONSUMING.md](CONSUMING.md) for how `site-libkungfu-dev` consumes the bundle.
 
 ## Not done here (follow-ups)
 
-- The generators and per-piece drift gates (core / toolchain / node / python flows).
-- Real aggregation + activating the integration gate in `verify.js`.
+- Real generators + per-piece drift gates in each owning package
+  (core / toolchain / node / python flows) — they replace the minimal stubs.
+- Full JSON-Schema validation of the manifest via `ajv` (the gate is currently a
+  focused structural check; the schema itself is already the pinned contract).
+- Deep design of the schema registry mechanism.
 - Wiring this package's `verify` into the root `verify` / `buildchain.toml`
-  lifecycle once content exists.
+  lifecycle once content is beyond the walking skeleton.
