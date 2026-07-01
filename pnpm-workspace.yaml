@@ -11,11 +11,11 @@ allowBuilds:
   esbuild: true
   nx: true
   vue-demi: true
-minimumReleaseAgeExclude:
-  - '@kungfu-tech/libnode-win32-x64@22.22.3-kf.0'
-  - '@kungfu-tech/libnode@22.22.3-kf.0'
-  - '@kungfu-tech/libnode-darwin-arm64@22.22.3-kf.0'
-  - '@kungfu-tech/libnode-linux-x64@22.22.3-kf.0'
+# Disable pnpm's default minimum-release-age supply-chain check. We frequently
+# publish first-party @kungfu-tech/libnode platform builds and consume them
+# immediately; the age gate would otherwise block every fresh libnode bump until
+# it ages past the cutoff, forcing a per-version allow-list. 0 = no minimum age.
+minimumReleaseAge: 0
 overrides:
   # node-gyp 9.x cannot detect Visual Studio 2026; 13.x adds VS2026 support, which
   # the Windows build needs to match the prebuilt (MSVC 19.5) conan dependencies.
