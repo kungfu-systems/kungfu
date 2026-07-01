@@ -79,6 +79,56 @@ function copyAppNative(bt) {
   console.log(`[freeze] 补拷 app native：${n}/${APP_NATIVE.length} 项`);
 }
 
+// BFS 查 build 树里首个匹配文件（返回最浅一份，避开 obj/临时深目录里的副本）。
+function findFileShallow(root, re) {
+  const queue = [root];
+  while (queue.length) {
+    const dir = queue.shift();
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch (e) {
+      continue;
+    }
+    const subdirs = [];
+    for (const e of entries) {
+      const full = path.join(dir, e.name);
+      if (e.isFile() && re.test(e.name)) return full;
+      if (e.isDirectory()) subdirs.push(full);
+    }
+    queue.push(...subdirs);
+  }
+  return null;
+}
+
+// Windows only：把 python binding(pykungfu) 与 libnode 运行库补拷进 dist/kfc。
+//
+// 缘由：MSVC 多配置生成器与 Mac/Linux 单配置生成器的产物布局不一致——Win 把
+// pykungfu.<abi>.pyd 产在 build/ 根、libnode.dll 产在 build/<bt>；而 Nuitka freeze 用
+// PYTHONPATH=build/<bt> 跟随 `import pykungfu`，于是在 Win 上既找不到 pykungfu(.pyd 不在
+// build/<bt>)、也不会连带 libnode.dll(非 pykungfu 同目录、Py3.8+ 扩展模块 DLL 依赖也不认
+// PATH)，冻结 kfc 运行时 `import pykungfu` 报 ModuleNotFound / DLL load failed。
+// Mac/Linux 无此问题：pykungfu.so 就在 build/<bt>，其 libnode 依赖经 rpath(@loader_path/
+// $ORIGIN) 解析、Nuitka 依赖扫描连带打包，故 freeze 自洽（本函数在非 Win 直接返回）。
+// 冻结 kfc 可执行会加载与其同目录的 pykungfu.pyd + libnode.dll（已实测通过），故补拷即可。
+function copyPyBindingWin(bt) {
+  if (!isWin) return;
+  const distKfc = path.join(CORE, 'dist', 'kfc');
+  const buildDir = path.join(CORE, 'build');
+  const pyd = findFileShallow(buildDir, /^pykungfu.*\.pyd$/i);
+  const btDll = path.join(buildDir, bt, 'libnode.dll');
+  const dll = fs.existsSync(btDll) ? btDll : findFileShallow(buildDir, /^libnode\.dll$/i);
+  let n = 0;
+  for (const src of [pyd, dll]) {
+    if (!src) continue;
+    fs.copyFileSync(src, path.join(distKfc, path.basename(src)));
+    n++;
+  }
+  if (!pyd) console.error('[freeze] Win 警告：build 树未找到 pykungfu*.pyd');
+  if (!dll) console.error('[freeze] Win 警告：build 树未找到 libnode.dll');
+  console.log(`[freeze] Win：补拷 python binding → dist/kfc：${n} 项`);
+}
+
 // ----------------------------------------------------------------- nuitka
 
 function freezeNuitka(bt) {
@@ -130,6 +180,7 @@ function freezeNuitka(bt) {
   }
 
   copyAppNative(bt);
+  copyPyBindingWin(bt);
   console.log('[freeze] ✅ dist/kfc 就绪（nuitka 扁平产物 + app native）');
 }
 
