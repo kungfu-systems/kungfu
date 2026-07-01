@@ -1,0 +1,32 @@
+{
+  "name": "@kungfu-tech/spec",
+  "author": {
+    "name": "Kungfu",
+    "email": "info@kungfu.link"
+  },
+  "version": "4.0.0-alpha.0",
+  "description": "Kungfu portable fact-ledger format spec: the manifest contract and aggregation package that publishes the versioned spec bundle",
+  "license": "Apache-2.0",
+  "repository": {
+    "url": "https://github.com/kungfu-systems/kungfu.git"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "schema/",
+    "dist/",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node scripts/aggregate.js",
+    "verify": "node scripts/verify.js",
+    "clean": "rimraf dist"
+  },
+  "devDependencies": {
+    "rimraf": "^5.0.0"
+  }
+}
