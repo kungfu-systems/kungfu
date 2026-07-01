@@ -543,8 +543,8 @@ importers:
         version: 1.3.0
     devDependencies:
       '@kungfu-tech/libnode':
-        specifier: 22.22.3-kf.0
-        version: 22.22.3-kf.0
+        specifier: 22.22.3-kf.1
+        version: 22.22.3-kf.1
       '@kungfu-tech/toolchain':
         specifier: workspace:*
         version: link:../../developer/toolchain
@@ -1774,23 +1774,23 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@kungfu-tech/libnode-darwin-arm64@22.22.3-kf.0':
-    resolution: {integrity: sha512-HJhTdTY6Eovbg/6DvjSlNc7QlrxzIJD7DQU3lAAgnmDmX3QmB2ioC00736vX/FEazakqdtrxV98idQF95GP8vQ==}
+  '@kungfu-tech/libnode-darwin-arm64@22.22.3-kf.1':
+    resolution: {integrity: sha512-IJpMSrcxs77vw/unEbI6v0a6BrArQjC9/ZLDW+WKn9Kzk7ZXcBKz3N/F7exldwc67n7R4tp0wOSIGcwjs75M2A==}
     cpu: [arm64]
     os: [darwin]
 
-  '@kungfu-tech/libnode-linux-x64@22.22.3-kf.0':
-    resolution: {integrity: sha512-A7AMfNiGP2pia70ZhOPzzsD5xdnJ2dubh5urAj8PdB0XhfWr355xer+jrwROTNaZXDy9bHtkl8tSaA+MHzun8w==}
+  '@kungfu-tech/libnode-linux-x64@22.22.3-kf.1':
+    resolution: {integrity: sha512-z2lYmVslpiAfsuUEBQRdLU6mXLZm2KKGIJ59noA72m8Re/ewTZpB82I9ZDZBsOdRHKCDKzJ96vszJbuKMikS9A==}
     cpu: [x64]
     os: [linux]
 
-  '@kungfu-tech/libnode-win32-x64@22.22.3-kf.0':
-    resolution: {integrity: sha512-9cMp1BDdpbrMV01ndpybIqdukID+w/DovLb0yYuqnNBEInuRwefCS/Zcpm1zN7hNh/Xfp0iovYAvmumIJC9nYQ==}
+  '@kungfu-tech/libnode-win32-x64@22.22.3-kf.1':
+    resolution: {integrity: sha512-6m/+IjHFyxOzAbMTscApRB5uXbWIJiJ/vvCFrEw5ETF2vjW8KJa287tJp5NIufg1tALCLnArAqf8VxXjHnWFdw==}
     cpu: [x64]
     os: [win32]
 
-  '@kungfu-tech/libnode@22.22.3-kf.0':
-    resolution: {integrity: sha512-UjPPt0YlDu970TkiREvDfgg4MYObxi15IQ+F4NZ86kkHD3PToIM/i6OB8Ba/n0sP8DA9PC1DsuUgsrpF9XEhhQ==}
+  '@kungfu-tech/libnode@22.22.3-kf.1':
+    resolution: {integrity: sha512-4KpxBhR6lzdxIwoapTGn3CmTA1lISNGqiiNIdXHT1yJWlM5S4tGnF4N6+CAjkv+PUP7M8wSPTRGSgMDmd4bpDA==}
 
   '@leichtgewicht/ip-codec@2.0.5':
     resolution: {integrity: sha512-Vo+PSpZG2/fmgmiNzYK9qWRh8h/CHrwD0mo1h1DzL4yzHNSfWYujGTYsWGreD000gcgmZ7K4Ys6Tx9TxtsKdDw==}
@@ -9783,20 +9783,20 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@kungfu-tech/libnode-darwin-arm64@22.22.3-kf.0':
+  '@kungfu-tech/libnode-darwin-arm64@22.22.3-kf.1':
     optional: true
 
-  '@kungfu-tech/libnode-linux-x64@22.22.3-kf.0':
+  '@kungfu-tech/libnode-linux-x64@22.22.3-kf.1':
     optional: true
 
-  '@kungfu-tech/libnode-win32-x64@22.22.3-kf.0':
+  '@kungfu-tech/libnode-win32-x64@22.22.3-kf.1':
     optional: true
 
-  '@kungfu-tech/libnode@22.22.3-kf.0':
+  '@kungfu-tech/libnode@22.22.3-kf.1':
     optionalDependencies:
-      '@kungfu-tech/libnode-darwin-arm64': 22.22.3-kf.0
-      '@kungfu-tech/libnode-linux-x64': 22.22.3-kf.0
-      '@kungfu-tech/libnode-win32-x64': 22.22.3-kf.0
+      '@kungfu-tech/libnode-darwin-arm64': 22.22.3-kf.1
+      '@kungfu-tech/libnode-linux-x64': 22.22.3-kf.1
+      '@kungfu-tech/libnode-win32-x64': 22.22.3-kf.1
 
   '@leichtgewicht/ip-codec@2.0.5': {}
 
