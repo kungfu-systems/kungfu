@@ -598,6 +598,12 @@ importers:
         specifier: ^5.4.0
         version: 5.4.21(@types/node@24.13.2)(less@4.6.7)(terser@5.48.0)
 
+  framework/spec:
+    devDependencies:
+      rimraf:
+        specifier: ^5.0.0
+        version: 5.0.10
+
   framework/tui:
     dependencies:
       '@kungfu-tech/api':
