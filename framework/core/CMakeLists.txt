@@ -54,7 +54,7 @@ option(NNG_TESTS "" OFF)
 option(NNG_TOOLS "" OFF)
 option(NNG_ENABLE_NNGCAT "" OFF)
 option(KUNGFU_WITH_DEBUG_EXAMPLE "" OFF)
-option(KUNGFU_WITH_FACT_LEDGER_SLICE "build the minimal fact-ledger host + export tools" OFF)
+option(KUNGFU_WITH_SLICES "build the capability slices (minimal standalone proofs, see slices/README.md)" OFF)
 
 ##########################################################################
 
@@ -160,10 +160,11 @@ if (KUNGFU_WITH_DEBUG_EXAMPLE)
   add_subdirectory(debug-example)
 endif()
 
-# Minimal fact-ledger slice (journal spine embedded without the trading runtime).
-# Links only the yijinjing core; wired whenever that target exists.
-if (KUNGFU_WITH_FACT_LEDGER_SLICE AND TARGET yijinjing)
-  message(STATUS "Enabled fact_ledger_slice")
-  add_subdirectory(fact-ledger-slice)
+# Capability slices (minimal standalone proofs; see slices/README.md).
+# The fact-ledger slice links only the yijinjing core, so the aggregate is
+# wired whenever that target exists.
+if (KUNGFU_WITH_SLICES AND TARGET yijinjing)
+  message(STATUS "Enabled capability slices")
+  add_subdirectory(slices)
 endif()
 

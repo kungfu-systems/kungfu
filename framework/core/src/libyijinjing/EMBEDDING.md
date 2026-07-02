@@ -47,8 +47,8 @@ as-is and performs no `find_package` of its own.
   `<kungfu/yijinjing/...>`;
 - the full journal write/read surface with a noop bus and noop publisher --
   no master, no event loop, no sockets, no databases. The
-  `fact-ledger-slice/` tools next to this directory are the reference
-  consumers;
+  `slices/fact-ledger/` tools under `framework/core/slices/` are the
+  reference consumers;
 - a dependency-direction guarantee, enforced by `check-deps.sh`: the core
   never includes runtime, transport or storage headers, the trading type
   registry, or any trading type.

@@ -2,18 +2,19 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Drive the minimal fact-ledger slice end to end:
-#   1. run the host (write path); it exits
-#   2. run the independent export tool (read path) on the same directory
-#   3. verify the manifest's whole-segment checksum with the system shasum
+#   1. assert the tools carry no dynamic dependencies beyond the system runtime
+#   2. run the host (write path); it exits
+#   3. run the independent export tool (read path) on the same directory
+#   4. verify the manifest's whole-segment checksum with the system shasum
 #
-# Usage: run_slice.sh [build-dir] [event-count]
-#   build-dir defaults to ../build (relative to framework/core)
+# Usage: run.sh [build-dir] [event-count]
+#   build-dir defaults to ../../build (relative to framework/core)
 #   event-count defaults to 5
 
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-core_dir="$(cd "${here}/.." && pwd)"
+core_dir="$(cd "${here}/../.." && pwd)"
 build_dir="${1:-${core_dir}/build}"
 event_count="${2:-5}"
 
@@ -21,7 +22,7 @@ event_count="${2:-5}"
 # fall back to the per-subdir location for other generators.
 find_bin() {
   local name="$1"
-  for cand in "${build_dir}/Release/${name}" "${build_dir}/fact-ledger-slice/${name}" "${build_dir}/${name}"; do
+  for cand in "${build_dir}/Release/${name}" "${build_dir}/slices/fact-ledger/${name}" "${build_dir}/${name}"; do
     if [[ -x "${cand}" ]]; then
       echo "${cand}"
       return 0
@@ -39,6 +40,32 @@ if [[ -z "${host_bin}" || -z "${export_bin}" ]]; then
   echo "  cmake --build ${build_dir} --target fact_ledger_host fact_ledger_export" >&2
   exit 1
 fi
+
+# The cut-proof itself: the slice tools must link only the yijinjing static
+# core, so their dynamic dependencies are exactly the system C/C++ runtime.
+# Any extra entry means runtime coupling crept back into the journal core.
+assert_no_extra_dylibs() {
+  local bin="$1" deps
+  if command -v otool >/dev/null 2>&1; then
+    deps="$(otool -L "${bin}" | tail -n +2 | awk '{print $1}' | grep -vE '^(/usr/lib/libc\+\+|/usr/lib/libSystem|/usr/lib/libobjc)' || true)"
+  elif command -v ldd >/dev/null 2>&1; then
+    deps="$(ldd "${bin}" | awk '{print $1}' | grep -vE '^(linux-vdso|libc\.|libm\.|libgcc_s|libstdc\+\+|libpthread|libdl\.|librt\.|/lib)' || true)"
+  else
+    echo "  (skip: no otool/ldd on this platform)"
+    return 0
+  fi
+  if [[ -n "${deps}" ]]; then
+    echo "FAIL: unexpected dynamic dependencies in ${bin}:" >&2
+    echo "${deps}" >&2
+    exit 1
+  fi
+  echo "  ${bin##*/}: system runtime only"
+}
+
+echo "== step 0: assert zero extra dynamic dependencies (cut-proof)"
+assert_no_extra_dylibs "${host_bin}"
+assert_no_extra_dylibs "${export_bin}"
+echo
 
 work="$(mktemp -d "${TMPDIR:-/tmp}/fact-ledger-slice.XXXXXX")"
 echo "== journal root: ${work}"

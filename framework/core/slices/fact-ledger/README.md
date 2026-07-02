@@ -1,4 +1,11 @@
-# Minimal fact-ledger slice
+# Fact-ledger slice
+
+**Probe statement.** This slice pins the static-core boundary: the yijinjing
+journal spine stays embeddable without the trading runtime, its on-disk format
+opens without the runtime that produced it, and export preserves causality and
+provenance. A red run means one of those capabilities regressed — most often
+runtime coupling creeping back into the core (the zero-extra-dylib assertion
+in `run.sh` is the canary).
 
 A minimal, verifiable slice that embeds the yijinjing journal spine in a plain
 process **without starting the trading runtime** (no master, no bus drain loop,
@@ -37,7 +44,7 @@ cmake -S . -B build -G Ninja \
   -DCMAKE_TOOLCHAIN_FILE="$(pwd)/build/conan_toolchain.cmake" \
   -DCMAKE_POLICY_DEFAULT_CMP0091=NEW \
   -DCMAKE_BUILD_TYPE=Release \
-  -DKUNGFU_WITH_FACT_LEDGER_SLICE=ON
+  -DKUNGFU_WITH_SLICES=ON
 
 # 3. build only the two tools (pulls the yijinjing core as a dependency)
 cmake --build build --target fact_ledger_host fact_ledger_export -j 8
@@ -50,15 +57,15 @@ bash src/libyijinjing/check-deps.sh
 
 ```bash
 # writes into a fresh temp dir, exports, and checksum-verifies end to end
-fact-ledger-slice/run_slice.sh build 5
+slices/fact-ledger/run.sh build 5
 ```
 
 Or by hand:
 
 ```bash
 work="$(mktemp -d)"
-build/fact-ledger-slice/fact_ledger_host "$work" 5     # writes, then exits
-build/fact-ledger-slice/fact_ledger_export "$work" fact_ledger_slice host "$work/export"
+build/slices/fact-ledger/fact_ledger_host "$work" 5     # writes, then exits
+build/slices/fact-ledger/fact_ledger_export "$work" fact_ledger_slice host "$work/export"
 sha256sum "$work/export.jsonl"                          # matches manifest.event_log.segment_sha256
 ```
 
@@ -92,7 +99,7 @@ link back correctly, so CI can gate on it.
 5. **No uid recompute** — `export.cpp` reads `frame_uid`/`trigger_frame_uid`
    straight off the header; it never calls `writer::current_frame_uid()`
    (ADR-0010 4.6).
-6. **Reproducible build+run** — the commands above, plus `run_slice.sh`.
+6. **Reproducible build+run** — the commands above, plus `run.sh`; `./kungfu-code verify --full` runs the same proof as part of the repository gate.
 
 ## Honest capture boundary (what this slice does NOT claim)
 
