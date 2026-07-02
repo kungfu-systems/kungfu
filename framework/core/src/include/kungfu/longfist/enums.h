@@ -17,111 +17,8 @@
 
 namespace kungfu::longfist::enums {
 
-enum class mode : int8_t { LIVE, DATA, REPLAY, BACKTEST };
-
-KF_JSON_SERIALIZE_ENUM(mode, {
-                                 {mode::LIVE, "LIVE"},
-                                 {mode::DATA, "DATA"},
-                                 {mode::REPLAY, "REPLAY"},
-                                 {mode::BACKTEST, "BACKTEST"},
-                             })
-
-inline std::ostream &operator<<(std::ostream &os, mode t) { return os << int32_t(t); }
-
-inline std::string get_mode_name(mode m) {
-  switch (m) {
-  case mode::LIVE:
-    return "live";
-  case mode::DATA:
-    return "data";
-  case mode::REPLAY:
-    return "replay";
-  case mode::BACKTEST:
-    return "backtest";
-  default:
-    return "live";
-  }
-}
-
-inline mode get_mode_by_name(const std::string &name) {
-  if (name == "live")
-    return mode::LIVE;
-  else if (name == "data")
-    return mode::DATA;
-  else if (name == "replay")
-    return mode::REPLAY;
-  else if (name == "backtest")
-    return mode::BACKTEST;
-
-  return mode::LIVE;
-}
-
-enum class category : int8_t { MD, TD, STRATEGY, SYSTEM, OPERATOR };
-
-KF_JSON_SERIALIZE_ENUM(category, {
-                                     {category::MD, "MD"},
-                                     {category::TD, "TD"},
-                                     {category::STRATEGY, "STRATEGY"},
-                                     {category::SYSTEM, "SYSTEM"},
-                                     {category::OPERATOR, "OPERATOR"},
-                                 })
-
-inline std::ostream &operator<<(std::ostream &os, category t) { return os << int32_t(t); }
-
-inline std::string get_category_name(category c) {
-  switch (c) {
-  case category::MD:
-    return "md";
-  case category::TD:
-    return "td";
-  case category::STRATEGY:
-    return "strategy";
-  case category::OPERATOR:
-    return "operator";
-  case category::SYSTEM:
-  default:
-    return "system";
-  }
-}
-
-inline category get_category_by_name(const std::string &name) {
-  if (name == "md")
-    return category::MD;
-  else if (name == "td")
-    return category::TD;
-  else if (name == "strategy")
-    return category::STRATEGY;
-  else if (name == "operator")
-    return category::OPERATOR;
-  else
-    return category::SYSTEM;
-}
-
-enum class layout : int8_t { JOURNAL, SQLITE, NANOMSG, LOG, MAP };
-
-KF_JSON_SERIALIZE_ENUM(layout, {
-                                   {layout::JOURNAL, "JOURNAL"},
-                                   {layout::SQLITE, "SQLITE"},
-                                   {layout::NANOMSG, "NANOMSG"},
-                                   {layout::LOG, "LOG"},
-                                   {layout::MAP, "MAP"},
-                               })
-
-inline std::string get_layout_name(layout l) {
-  switch (l) {
-  case layout::JOURNAL:
-    return "journal";
-  case layout::SQLITE:
-    return "db";
-  case layout::NANOMSG:
-    return "nn";
-  case layout::MAP:
-    return "map";
-  case layout::LOG:
-  default:
-    return "log";
-  }
-}
+// mode / category / layout moved to the schema leaf kungfu/longfist/core.h
+// (journal-infrastructure enums shared with the yijinjing core). Included above.
 
 // 权限订阅数据类型
 enum class MarketType : int8_t {
@@ -815,19 +712,8 @@ KF_JSON_SERIALIZE_ENUM(OrderTriggerType,
 
 inline std::ostream &operator<<(std::ostream &os, OrderTriggerType t) { return os << int32_t(t); }
 
-enum class Priority : int8_t { Low, Medium, High };
-
-KF_JSON_SERIALIZE_ENUM(Priority, {
-                                     {Priority::Low, "Low"},
-                                     {Priority::Medium, "Medium"},
-                                     {Priority::High, "High"},
-                                 })
-
-inline std::ostream &operator<<(std::ostream &os, Priority t) { return os << int32_t(t); }
-
-inline bool operator<(Priority l, Priority r) { return int8_t(l) < int8_t(r); }
-
-inline bool operator==(Priority l, Priority r) { return int8_t(l) == int8_t(r); }
+// Priority moved to the schema leaf kungfu/longfist/core.h (journal event
+// scheduling priority shared with the yijinjing core). Included above.
 
 enum class SelfDealCheckType : int8_t { No, AccountInternal, AccountInteractive };
 
