@@ -22,10 +22,13 @@ const kfcDir = app.isPackaged
 const bindingPath = path.join(kfcDir, 'kungfu_electron.node');
 
 // Export before the renderer process is created so both processes inherit them.
-// The default runtime directory is a throwaway demo home under out/ so a first
-// launch can exercise the real runtime without touching any user data.
+// The default runtime home must be writable: userData when packaged (never
+// inside the app bundle), a throwaway directory under out/ in development.
 process.env.KF_RUNTIME_DIR =
-  process.env.KF_RUNTIME_DIR || path.join(__dirname, '..', 'demo-runtime');
+  process.env.KF_RUNTIME_DIR ||
+  (app.isPackaged
+    ? path.join(app.getPath('userData'), 'runtime')
+    : path.join(__dirname, '..', 'demo-runtime'));
 process.env.KFE_PATH = process.env.KFE_PATH || bindingPath;
 
 // Prove the frozen runtime CLI runs standalone next to the binding, and hand
