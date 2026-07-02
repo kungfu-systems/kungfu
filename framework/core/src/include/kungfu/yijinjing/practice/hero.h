@@ -12,6 +12,7 @@
 #include <kungfu/yijinjing/io.h>
 #include <kungfu/yijinjing/journal/journal.h>
 #include <kungfu/yijinjing/log.h>
+#include <kungfu/yijinjing/rx.h>
 #include <kungfu/yijinjing/time.h>
 #include <kungfu/yijinjing/util/rocks.h>
 

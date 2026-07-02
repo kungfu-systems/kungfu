@@ -19,7 +19,7 @@ struct noop_publisher : public publisher {
   bool is_usable() override { return true; }
   bool setup() override { return true; }
   int notify() override { return 0; }
-  int publish(const std::string &json_message, int flags = NNG_FLAG_NONBLOCK, bool no_exception = false) override {
+  int publish(const std::string &json_message, int flags = PUBLISH_NONBLOCK, bool no_exception = false) override {
     return 0;
   };
 };

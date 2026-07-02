@@ -3,6 +3,9 @@
 #ifndef KUNGFU_YIJINJING_FRAME_H
 #define KUNGFU_YIJINJING_FRAME_H
 
+// TODO(libyijinjing 1c): drop longfist.h once typed to_string moves out of core;
+// only the AllTypes loop below needs the full type registry
+#include <kungfu/longfist/longfist.h>
 #include <kungfu/yijinjing/journal/common.h>
 
 #include <atomic>

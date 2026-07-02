@@ -22,6 +22,11 @@
 
 #define MAX_MSG_LENGTH (16 * 1024)
 
+// core-side publisher interface uses PUBLISH_NONBLOCK to stay nng-free;
+// weld the mirrored value to the real nng flag here where both are visible
+static_assert(kungfu::yijinjing::PUBLISH_NONBLOCK == NNG_FLAG_NONBLOCK,
+              "PUBLISH_NONBLOCK must equal NNG_FLAG_NONBLOCK");
+
 namespace kungfu::yijinjing::nanomsg {
 enum class protocol : int { UNKNOWN = -1, REPLY, REQUEST, PUSH, PULL, PUBLISH, SUBSCRIBE };
 
