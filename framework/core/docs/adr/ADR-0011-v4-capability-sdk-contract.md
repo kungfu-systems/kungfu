@@ -1,8 +1,9 @@
 # ADR-0011: v4 capability SDK contract — first cut
 
-- Status: proposed (contract ratified 2026-07-02; implementation pending). The
-  shape below is grounded in the reference GUI, the reference TUI, and the two
-  built-in default extensions, which already exercise it internally.
+- Status: accepted (contract ratified and implemented 2026-07-02: the
+  capability module ships in `framework/api/src/capability/` and both
+  reference surfaces — the Electron GUI with its two built-in default
+  extensions, and the terminal TUI — consume it).
 - Date: 2026-07-02
 - Category: (architecture) contract — the capability face of the v4 platform
 - Subsystem: frontend/SDK — `framework/api` (capability SDK), consumed by the
