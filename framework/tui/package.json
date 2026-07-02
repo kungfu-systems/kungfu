@@ -5,7 +5,7 @@
     "email": "info@kungfu.link"
   },
   "version": "4.0.0-alpha.0",
-  "description": "Kungfu App Framework",
+  "description": "Kungfu reference TUI — the platform's shell-native reference surface (Ink)",
   "license": "Apache-2.0",
   "repository": {
     "url": "https://github.com/kungfu-systems/kungfu.git"
@@ -14,42 +14,25 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
-  "binary": {
-    "module_name": "tui",
-    "module_path": "dist/cli",
-    "remote_path": "{module_name}/v{major}/v{version}",
-    "package_name": "{module_name}-v{version}-{platform}-{arch}-{configuration}.tar.gz",
-    "host": "https://prebuilt.libkungfu.cc"
-  },
-  "types": "src/typings/index.d.ts",
-  "main": "lib/index.js",
+  "type": "module",
   "scripts": {
-    "cli": "node lib/dev/cli.dev.js",
-    "dev": "node lib/dev/run.js",
-    "build": "node lib/webpack/build.js",
-    "clean": "rimraf build dist node_modules/.cache/webpack",
-    "install": "node -e \"require('@kungfu-tech/core').prebuilt('install')\"",
-    "package": "node -e \"require('@kungfu-tech/core').prebuilt('package')\"",
-    "lint": "eslint src",
-    "format": "prettier -l -w --config ../core/.prettierrc.js ."
+    "dev": "tsx src/main.tsx",
+    "build": "tsc",
+    "lint": "biome check src",
+    "format": "biome format --write src",
+    "clean": "rimraf dist"
   },
   "dependencies": {
     "@kungfu-tech/core": "workspace:*",
-    "@kungfu-tech/api": "workspace:*",
-    "blessed": "^0.1.81",
-    "core-js": "^3.20.0"
+    "ink": "^5.2.0",
+    "react": "^18.3.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.0.0",
-    "@babel/polyfill": "^7.12.1",
-    "@kungfu-tech/toolchain": "workspace:*",
-    "@types/blessed": "^0.1.19",
-    "colors": "^1.4.0",
-    "commander": "^9.0.0",
-    "console-success": "^1.0.4",
-    "inquirer": "^8.2.0",
-    "inquirer-autocomplete-prompt": "^2.0.0",
-    "inquirer-checkbox-plus-prompt": "^1.4.2",
-    "inquirer-path-pro": "^1.0.0-alpha.5"
+    "@biomejs/biome": "^1.9.4",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.3",
+    "rimraf": "^6.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
   }
 }

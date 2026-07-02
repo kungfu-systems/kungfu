@@ -1,41 +1,13 @@
 {
   "compilerOptions": {
-    "target": "esnext",
-    "module": "esnext",
+    "target": "es2022",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "jsx": "react-jsx",
     "strict": true,
-    "noImplicitAny": false,
-    "noImplicitThis": true,
-    "alwaysStrict": true,
-    "strictFunctionTypes": true,
-    "strictPropertyInitialization": true,
-    "jsx": "preserve",
-    "importHelpers": true,
-    "strictNullChecks": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noImplicitReturns": true,
-    "moduleResolution": "node",
     "skipLibCheck": true,
-    "esModuleInterop": true,
-    "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true,
-
-    "sourceMap": true,
-    "baseUrl": ".",
-    "types": ["jschardet"],
-    "typeRoots": [],
-    "paths": {
-      "@kungfu-tech/api/*": ["../api/src/*"],
-      "@kungfu-tech/tui/*": ["../cli/src/*"]
-    },
-    "lib": ["esnext", "dom", "dom.iterable", "scripthost"]
+    "outDir": "dist",
+    "types": ["node"]
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "src/**/*.vue",
-    "tests/**/*.ts",
-    "tests/**/*.tsx",
-    "../api/src/**/*.ts"
-  ]
+  "include": ["src"]
 }
