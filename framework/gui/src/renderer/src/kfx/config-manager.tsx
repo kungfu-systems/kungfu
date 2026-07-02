@@ -1,17 +1,13 @@
-// Default kfx: configuration management. Location-scoped CRUD over the
-// runtime's config store — real SQLite writes through libkungfu.
+// Default kfx: configuration management. Location-scoped CRUD through the
+// capability SDK's domain-state handle — real SQLite writes via libkungfu.
+import type { ConfigEntry } from '@kungfu-tech/api/capability';
 import React from 'react';
 import type { KfxCapabilities, KfxManifest } from '../kfx';
 import { headingStyle, inputStyle, mono, panelStyle } from '../ui';
 
 function ConfigManagerView({ caps }: { caps: KfxCapabilities }) {
-  const store = React.useMemo(
-    () => new caps.kfe.ConfigStore(caps.runtimeDir),
-    [caps],
-  );
-  const [entries, setEntries] = React.useState<Array<Record<string, unknown>>>(
-    [],
-  );
+  const { domain } = caps;
+  const [entries, setEntries] = React.useState<ConfigEntry[]>([]);
   const [category, setCategory] = React.useState('system');
   const [group, setGroup] = React.useState('demo');
   const [name, setName] = React.useState('hello');
@@ -21,12 +17,12 @@ function ConfigManagerView({ caps }: { caps: KfxCapabilities }) {
 
   const refresh = React.useCallback(() => {
     try {
-      setEntries(Object.values(store.getAllConfig()));
+      setEntries(domain.configs());
       setError('');
     } catch (e) {
       setError((e as Error).message);
     }
-  }, [store]);
+  }, [domain]);
 
   React.useEffect(() => {
     refresh();
@@ -35,33 +31,16 @@ function ConfigManagerView({ caps }: { caps: KfxCapabilities }) {
   const save = () => {
     try {
       JSON.parse(value);
-      store.setConfig(category, group, name, mode, value);
+      domain.setConfig({ category, group, name, mode }, value);
       refresh();
     } catch (e) {
       setError((e as Error).message);
     }
   };
 
-  const remove = (entry: Record<string, unknown>) => {
+  const remove = (entry: ConfigEntry) => {
     try {
-      const categories: Record<string, string> = {
-        '0': 'md',
-        '1': 'td',
-        '2': 'strategy',
-        '3': 'system',
-      };
-      const modes: Record<string, string> = {
-        '0': 'live',
-        '1': 'data',
-        '2': 'replay',
-        '3': 'backtest',
-      };
-      store.removeConfig(
-        categories[String(entry.category)] ?? String(entry.category),
-        String(entry.group),
-        String(entry.name),
-        modes[String(entry.mode)] ?? String(entry.mode),
-      );
+      domain.removeConfig(entry.location);
       refresh();
     } catch (e) {
       setError((e as Error).message);
@@ -71,7 +50,7 @@ function ConfigManagerView({ caps }: { caps: KfxCapabilities }) {
   return (
     <section style={{ ...panelStyle, height: '100%' }}>
       <h2 style={headingStyle}>
-        Config manager · {entries.length} entries · SQLite via libkungfu
+        Config manager · {entries.length} entries · via capability SDK
       </h2>
       <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
         <input
@@ -115,29 +94,26 @@ function ConfigManagerView({ caps }: { caps: KfxCapabilities }) {
       {error && <div style={{ ...mono, color: '#f48771' }}>{error}</div>}
       <table style={{ ...mono, borderCollapse: 'collapse', width: '100%' }}>
         <tbody>
-          {entries.map((entry) => (
-            <tr
-              key={String(entry.uid64)}
-              style={{ borderTop: '1px solid #3c3c3c' }}
-            >
-              <td style={{ padding: '4px 8px', color: '#858585' }}>
-                {String(entry.category)}/{String(entry.group)}/
-                {String(entry.name)}/{String(entry.mode)}
-              </td>
-              <td style={{ padding: '4px 8px', color: '#ce9178' }}>
-                {String(entry.value)}
-              </td>
-              <td style={{ padding: '4px 0', width: 24 }}>
-                <button
-                  type="button"
-                  onClick={() => remove(entry)}
-                  style={{ ...mono, color: '#f48771' }}
-                >
-                  ×
-                </button>
-              </td>
-            </tr>
-          ))}
+          {entries.map((entry) => {
+            const key = `${entry.location.category}/${entry.location.group}/${entry.location.name}/${entry.location.mode}`;
+            return (
+              <tr key={key} style={{ borderTop: '1px solid #3c3c3c' }}>
+                <td style={{ padding: '4px 8px', color: '#858585' }}>{key}</td>
+                <td style={{ padding: '4px 8px', color: '#ce9178' }}>
+                  {entry.value}
+                </td>
+                <td style={{ padding: '4px 0', width: 24 }}>
+                  <button
+                    type="button"
+                    onClick={() => remove(entry)}
+                    style={{ ...mono, color: '#f48771' }}
+                  >
+                    ×
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
           {entries.length === 0 && (
             <tr>
               <td style={{ ...mono, color: '#6a6a6a', padding: 8 }}>

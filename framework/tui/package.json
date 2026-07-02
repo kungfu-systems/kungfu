@@ -23,6 +23,7 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
+    "@kungfu-tech/api": "workspace:*",
     "@kungfu-tech/core": "workspace:*",
     "ink": "^5.2.0",
     "react": "^18.3.1"

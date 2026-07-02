@@ -265,6 +265,9 @@ importers:
 
   framework/gui:
     dependencies:
+      '@kungfu-tech/api':
+        specifier: workspace:*
+        version: link:../api
       '@kungfu-tech/core':
         specifier: workspace:*
         version: link:../core
@@ -314,6 +317,9 @@ importers:
 
   framework/tui:
     dependencies:
+      '@kungfu-tech/api':
+        specifier: workspace:*
+        version: link:../api
       '@kungfu-tech/core':
         specifier: workspace:*
         version: link:../core

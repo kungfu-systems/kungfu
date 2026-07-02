@@ -26,6 +26,7 @@
     "clean": "rimraf out dist node_modules/.vite"
   },
   "dependencies": {
+    "@kungfu-tech/api": "workspace:*",
     "@kungfu-tech/core": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

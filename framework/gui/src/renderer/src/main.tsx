@@ -6,15 +6,16 @@ import { createRoot } from 'react-dom/client';
 import type { KfxCapabilities, KfxManifest } from './kfx';
 import { configManagerKfx } from './kfx/config-manager';
 import { journalManagerKfx } from './kfx/journal-manager';
-import { type Kfe, type Runtime, bootRuntime } from './runtime';
+import { type Runtime, bootRuntime } from './runtime';
 import { headingStyle, mono, panelStyle } from './ui';
 
 const KFX_REGISTRY: KfxManifest[] = [configManagerKfx, journalManagerKfx];
 
 function OverviewView({ runtime }: { runtime: Runtime }) {
-  const kfe = runtime.kfe as Kfe;
+  const binding = runtime.binding;
   const registry = React.useMemo(() => {
-    const lf = new kfe.Longfist();
+    if (!binding?.Longfist) return [];
+    const lf = new binding.Longfist();
     return Object.keys(lf.types).map((name) => {
       let fields: string[] = [];
       try {
@@ -24,7 +25,7 @@ function OverviewView({ runtime }: { runtime: Runtime }) {
       }
       return { name, fields };
     });
-  }, [kfe]);
+  }, [binding]);
   const [selected, setSelected] = React.useState<string | null>(null);
   const current = registry.find((t) => t.name === selected);
 
@@ -113,26 +114,18 @@ function App() {
   const [active, setActive] = React.useState('overview');
 
   React.useEffect(() => {
-    const watcher = runtime.watcher;
-    if (!watcher) return;
-    try {
-      if (!watcher.isStarted()) watcher.start();
-    } catch {
-      // master not reachable — stays offline
-    }
+    const ledger = runtime.ledger;
+    if (!ledger) return;
     const timer = setInterval(() => {
-      try {
-        setLive(watcher.isLive());
-      } catch {
-        setLive(false);
-      }
+      setLive(ledger.health().live);
     }, 2000);
     return () => clearInterval(timer);
-  }, [runtime.watcher]);
+  }, [runtime.ledger]);
 
-  const caps: KfxCapabilities | null = runtime.kfe
-    ? { kfe: runtime.kfe, runtimeDir: runtime.runtimeDir }
-    : null;
+  const caps: KfxCapabilities | null =
+    runtime.ledger && runtime.domain
+      ? { ledger: runtime.ledger, domain: runtime.domain }
+      : null;
   const activeKfx = KFX_REGISTRY.find((k) => k.id === active);
 
   const navButton = (id: string, title: string) => (
@@ -183,7 +176,7 @@ function App() {
       <div style={{ ...mono, color: '#858585' }}>
         core {String(runtime.buildInfo?.version ?? 'unknown')} · kfc{' '}
         {runtime.kfcVersion || 'unavailable'} · electron {versions.electron} ·
-        node {versions.node} · watcher {runtime.watcherState} ·{' '}
+        node {versions.node} · capability SDK ·{' '}
         <span style={{ color: live ? '#4ec9b0' : '#858585' }}>
           {live ? '● live (master connected)' : '○ offline (no master)'}
         </span>
