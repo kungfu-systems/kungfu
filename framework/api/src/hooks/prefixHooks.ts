@@ -1,11 +1,14 @@
-import { FunctionalComponent } from '@vue/runtime-core/dist/runtime-core';
-import { AntdIconProps } from '@ant-design/icons-vue/lib/components/AntdIcon';
 import { kfLogger } from '@kungfu-tech/api/utils/logUtils';
 import { generateLocationCombinations } from '@kungfu-tech/api/hooks/hookUtils';
 
+// An icon prefix is owned by the host UI: the capability SDK stores it as an
+// opaque component reference and never renders it, so no UI-framework type
+// may appear here (ADR-0006 framework-neutral contract).
+export type HostUIComponent = object;
+
 export interface PrefixProps {
   key: string;
-  prefix: string | FunctionalComponent<AntdIconProps>;
+  prefix: string | HostUIComponent;
   prefixType: 'text' | 'icon';
 }
 

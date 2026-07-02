@@ -1,5 +1,5 @@
 import '../config/homePathConfig';
-import { createI18n, I18n } from 'vue-i18n';
+import { createTranslator, Translator } from './translator';
 import zh_CN from './zh-CN';
 import en_US from './en-US';
 import path from 'path';
@@ -94,13 +94,11 @@ export const languageList = [
 const locale = settingLanguage || (extraLanguage ? 'extra' : langDefault); //默认显示的语言
 
 const i18n =
-  (globalThis.i18n as I18n) ??
-  createI18n({
+  (globalThis.i18n as Translator) ??
+  createTranslator({
     locale,
     messages,
     fallbackLocale: langDefault,
-    silentTranslationWarn: true,
-    silentFallbackWarn: true,
   });
 
 if (extraLanguage) {
@@ -130,16 +128,13 @@ export const useLanguage = () => {
   const isLanguageKeyAvailable = (keysStr: string) => {
     if (!keysStr) return false;
 
-    let result: string | undefined;
     const languageData = i18n.global.messages[i18n.global.locale];
-
-    const keysList = keysStr.split('.');
-    if (keysList.length) {
-      result = keysList.reduce<string | undefined>(
-        (res, key) => res?.[key],
-        languageData,
-      );
-    }
+    const result = keysStr.split('.').reduce<unknown>((res, key) => {
+      if (res && typeof res === 'object') {
+        return (res as Record<string, unknown>)[key];
+      }
+      return undefined;
+    }, languageData);
 
     return typeof result === 'string';
   };

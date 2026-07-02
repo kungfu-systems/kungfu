@@ -1,5 +1,5 @@
 import { StartOptions } from 'pm2';
-import { I18n } from 'vue-i18n';
+import { Translator } from '../language/translator';
 import {
   GithubOptions,
   S3Options,
@@ -87,7 +87,7 @@ declare module globalThis {
   const __kfResourcesPath: string;
   const pm2: any;
   const HookKeeper: KfHookKeeper;
-  const i18n: I18n;
+  const i18n: Translator;
   const globalStorage: ExtendedGlobalStorage;
   const rootPackageJson: RootConfigJSON;
 }

@@ -45,9 +45,7 @@
     "glob": "^8.0.3",
     "log4js": "^6.4.0",
     "pm2": "~5.2.2",
-    "regedit": "^5.1.2",
-    "vue": "^3.2.34",
-    "vue-i18n": "9.1.10"
+    "regedit": "^5.1.2"
   },
   "devDependencies": {
     "@types/find-root": "^1.1.2"
