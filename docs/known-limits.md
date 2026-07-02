@@ -60,9 +60,11 @@ infrastructure it would describe (see [`MAP.md`](MAP.md), `provenance.md` —
 
 ## The end-user shell is planned, not shipped
 
-`kfc` is the runtime today. The end-user `kungfu` shell built on it is planned;
-the zero-setup experience is fully real for `kfx` *development* (the runtime
-absorbs the toolchain), and the end-user shell is the part still to come.
+`kfc` is the runtime today, and the `kungfu` command already exists as the
+canonical CLI facade over it (same executable; `kfc` remains a short alias).
+The richer end-user *shell* under that name is still planned; the zero-setup
+experience is fully real for `kfx` *development* (the runtime absorbs the
+toolchain), and the shell is the part still to come.
 
 ## Reference extensions are mid-migration
 

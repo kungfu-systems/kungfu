@@ -15,7 +15,7 @@ the rule. For what each surface guarantees and how to verify it, see
 | `longfist-layout` | longfist binary layout (in-memory == wire == on-disk) | integration + cross-time | [ADR-0008](../framework/core/docs/adr/ADR-0008-longfist-schema-evolution-and-minor-maintenance.md), [`contracts.md`](contracts.md) |
 | `capability-sdk-api` | capability SDK surface (`framework/api`) | integration | [ADR-0006](../framework/core/docs/adr/ADR-0006-v4-frontend-platform-architecture.md) |
 | `kfx-contract` | kfx extension contract (contribution points, load semantics) | integration | [ADR-0006](../framework/core/docs/adr/ADR-0006-v4-frontend-platform-architecture.md), [ADR-0007](../framework/core/docs/adr/ADR-0007-v4-tui-platform-reference-surface.md) |
-| `kfc-cli` | kfc CLI surface (commands, journal subcommand output conventions) | integration | [`debugging.md`](debugging.md) |
+| `kungfu-cli` | kungfu CLI surface (canonical `kungfu` command with `kfc` alias; commands, journal subcommand output conventions) | integration | [`debugging.md`](debugging.md) |
 | `journal-replayability` | cross-version cold-path decode of recorded journals | cross-time | [ADR-0008](../framework/core/docs/adr/ADR-0008-longfist-schema-evolution-and-minor-maintenance.md) |
 
 A surface is registered when consumers bind to it at integration time without
@@ -30,4 +30,5 @@ registered surface was touched.
 
 | Date | Action | Line | Faces | Class | Rationale | PR |
 |---|---|---|---|---|---|---|
+| 2026-07-02 | update | — | kungfu-cli (was kfc-cli) | additive | `kungfu` becomes the canonical CLI command, fronting the `kfc` runtime; `kfc` stays a working alias. Pre-release, no line open, nothing removed | — |
 | 2026-07-02 | register | — | longfist-layout, capability-sdk-api, kfx-contract, kfc-cli, journal-replayability | additive | Initial register established on adopting KFD-1 (ADR-0010) | — |

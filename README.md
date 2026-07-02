@@ -47,9 +47,9 @@ A guiding principle of kungfu is that the machine adapts to the person, not the
 other way around. The `kfc` runtime is batteries-included: it embeds a Python
 and a Node runtime and brings a full Python development lifecycle — dependency
 management, formatting, and ahead-of-time compilation — reachable through
-`kfc engage`. Building a kfx extension does not start by assembling a toolchain:
-most extension development needs no separately installed Python, Node, or
-package manager.
+`kungfu engage`. Building a kfx extension does not start by assembling a
+toolchain: most extension development needs no separately installed Python,
+Node, or package manager.
 
 The runtime deliberately absorbs this complexity so its users do not have to. To
 keep that convenience sustainable rather than bespoke, the absorbed tooling is
@@ -59,8 +59,9 @@ built on mainstream, well-maintained foundations.
 
 - **Core & runtime** — `longfist` (type system) and `yijinjing` (journal
   runtime) with Python and Node bindings, plus the `kfc` runtime, packaged as
-  `@kungfu-tech/core`. `kfc` embeds a Python and a Node runtime and is
-  the base for the planned `kungfu` end-user shell.
+  `@kungfu-tech/core`. `kfc` embeds a Python and a Node runtime and is fronted
+  by the `kungfu` end-user command (`kfc` remains a short alias); the richer
+  end-user shell is planned under the same name.
 - **Capability SDK** — typed, framework-neutral access to journal / state /
   replay (`framework/api`).
 - **Application SDK** — scaffolding to build kfx extensions and assemble
@@ -94,7 +95,7 @@ right document, and is readable by both people and agents.
 
 - [`docs/MAP.md`](docs/MAP.md) — the question-indexed map of all documentation.
 - [`docs/concepts.md`](docs/concepts.md) — the vocabulary in one place
-  (`kfc`/`kfx`/`kfs`, `libkungfu`, `longfist`, `yijinjing`, journal, …).
+  (`kungfu`/`kfc`/`kfx`/`kfs`, `libkungfu`, `longfist`, `yijinjing`, journal, …).
 - [`docs/design-philosophy.md`](docs/design-philosophy.md) — the two first
   principles the whole design follows from, and how the architecture falls out
   of them.

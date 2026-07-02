@@ -11,12 +11,12 @@ to "what is actually in the journal?" — which you can inspect directly.
 
 ## Inspect the journal
 
-`kfc` exposes a `journal` command group (implemented in
+`kungfu` exposes a `journal` command group (implemented in
 [`console/commands/journal.py`](../framework/core/src/python/kungfu/console/commands/journal.py)):
 
-- **List recorded sessions** — `kfc journal sessions` (sortable, multiple table
-  formats). Tells you what was recorded, when, and by which source.
-- **Show a session's frames** — `kfc journal show -i <session_id>`, selecting
+- **List recorded sessions** — `kungfu journal sessions` (sortable, multiple
+  table formats). Tells you what was recorded, when, and by which source.
+- **Show a session's frames** — `kungfu journal show -i <session_id>`, selecting
   input or output frames, with `-o <file>.csv` to export. This is how you see the
   exact frames a component produced or consumed — the direct answer to "did the
   data actually flow?"
@@ -44,7 +44,7 @@ moment that produced it.
 
 | Symptom | Where to look first |
 |---|---|
-| A reader sees no / stale / torn data | The publish/visibility contract is [ADR-0001](../framework/core/docs/adr/ADR-0001-yijinjing-publish-barrier.md); first confirm with `kfc journal show` whether the frame is in the journal at all. |
+| A reader sees no / stale / torn data | The publish/visibility contract is [ADR-0001](../framework/core/docs/adr/ADR-0001-yijinjing-publish-barrier.md); first confirm with `kungfu journal show` whether the frame is in the journal at all. |
 | Data is there but a language binding reads it wrong | The adapter boundary — see [`adapters.md`](adapters.md); the layout is the contract ([`contracts.md`](contracts.md)). |
 | Replay diverges from live | Determinism boundary — see [`contracts.md`](contracts.md) and `known-limits` on cross-version/cross-machine reproduction. |
 | Build / runtime won't start | The build path — see [`buildchain.md`](buildchain.md). |

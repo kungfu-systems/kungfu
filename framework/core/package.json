@@ -16,6 +16,7 @@
     "access": "public"
   },
   "bin": {
+    "kungfu": "lib/kfc.js",
     "kfc": "lib/kfc.js"
   },
   "config": {

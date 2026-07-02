@@ -23,7 +23,7 @@ called, and decided, captured as facts you can replay and verify.
   anatomy, how it stays verifiable and portable.
 - **Handbooks** — get an agent working against kungfu, per runtime:
   - **[kungfu (CLI)](handbooks/cli/)** — produce and inspect ledgers from the
-    command line with `kfc`.
+    command line with `kungfu`.
   - **[Python](handbooks/python/)** — embed recording in a Python script.
   - **[Node](handbooks/node/)** — embed recording in a Node/TypeScript script.
 - **Reference** — machine-addressable data: schema registry, error dictionary,

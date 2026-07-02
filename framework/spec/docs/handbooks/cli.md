@@ -1,22 +1,23 @@
-# kungfu CLI handbook — `kfc`
+# kungfu CLI handbook — `kungfu`
 
-> Pre-release (spec 0.1) · minimal recipe. `kfc` is the current kungfu CLI
-> (`@kungfu-tech/core`). The generated command reference (from the CLI's own
-> definitions) and the agent-first `--json` provenance surface are planned; this
-> page is a hand-written getting-started.
+> Pre-release (spec 0.1) · minimal recipe. `kungfu` is the kungfu CLI
+> (`@kungfu-tech/core`); it fronts the `kfc` runtime, and `kfc` works as a
+> short alias of the same command. The generated command reference (from the
+> CLI's own definitions) and the agent-first `--json` provenance surface are
+> planned; this page is a hand-written getting-started.
 
-`kfc` is how you produce and inspect fact-ledger records from the command line.
-Everything below produces or reads the same portable bundle described in the
-[format spec](../../spec/).
+`kungfu` is how you produce and inspect fact-ledger records from the command
+line. Everything below produces or reads the same portable bundle described in
+the [format spec](../../spec/).
 
 ## Install
 
-`kfc` ships with `@kungfu-tech/core`:
+`kungfu` ships with `@kungfu-tech/core`:
 
 ```bash
 pnpm add @kungfu-tech/core
-# kfc is now on your PATH inside the workspace
-kfc --version
+# kungfu is now on your PATH inside the workspace (kfc is an alias)
+kungfu --version
 ```
 
 ## Produce a record
@@ -26,10 +27,10 @@ fact-ledger you can open afterward:
 
 ```bash
 # execute a workflow and record it
-kfc run --mode backtest --category <category> --name <name>
+kungfu run --mode backtest --category <category> --name <name>
 
 # re-run a previously recorded session deterministically
-kfc run --mode replay --name <name>
+kungfu run --mode replay --name <name>
 ```
 
 `run` modes: `live`, `backtest`, `data`, `replay`. `replay` and `backtest` are
@@ -39,16 +40,16 @@ the record-producing paths.
 
 ```bash
 # inspect recorded data over a time window
-kfc tool --begin <t0> --end <t1> --category <category> --name <name>
+kungfu tool --begin <t0> --end <t1> --category <category> --name <name>
 
 # slice a recorded ledger into a portable extract
-kfc slicetool --begin <t0> --end <t1> --name <name>
+kungfu slicetool --begin <t0> --end <t1> --name <name>
 ```
 
 ## Assemble a bundle
 
 ```bash
-kfc assemble <config.json>
+kungfu assemble <config.json>
 ```
 
 ## All commands
@@ -62,11 +63,11 @@ kfc assemble <config.json>
 | `login` | authenticate an account (for `live` workflows) |
 | `cli` | open the interactive Node CLI |
 
-Run `kfc <command> --help` for the full option list.
+Run `kungfu <command> --help` for the full option list.
 
 ## Planned
 
-- `kfc --json` emitting provenance + the authoritative `docs_url` for the
+- `kungfu --json` emitting provenance + the authoritative `docs_url` for the
   installed version, so an agent can fetch the right doc automatically.
 - A generated command reference kept in lock-step with the CLI definitions
   (drift = build fail).

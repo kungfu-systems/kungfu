@@ -68,5 +68,5 @@ hot path. The boundaries that are **not** zero-copy:
 
 - across processes, frames travel through the mmap journal (still no per-frame
   serialization, but a different mechanism than in-process sharing);
-- any export out of the system (e.g. `kfc journal show -o file.csv`, see
+- any export out of the system (e.g. `kungfu journal show -o file.csv`, see
   [`debugging.md`](debugging.md)) is an explicit, non-zero-copy conversion.

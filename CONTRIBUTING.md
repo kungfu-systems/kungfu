@@ -45,8 +45,10 @@ for how the layers fit together; the main areas:
 
 Three command-line entry points, kept forward-compatible:
 
-- `kfc` — the runtime CLI (`kfc --version`, journal subcommands, …).
-- `kungfu` — reserved for a future end-user CLI.
+- `kungfu` — the end-user CLI command (`kungfu --version`, journal subcommands,
+  …). It fronts the `kfc` runtime; `kfc` works as a short alias of the same
+  command.
+- `kfc` — the runtime binary that `kungfu` fronts, and the short alias.
 - `./kungfu-code` — the development/build orchestrator used while working on the
   repo (see below).
 
