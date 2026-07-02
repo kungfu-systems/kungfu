@@ -6,15 +6,15 @@
 // "content commitment" leg of the fact-ledger slice at the manifest layer (the
 // in-frame content hash of the full design is future work).
 
-#ifndef KUNGFU_FACT_LEDGER_SLICE_SHA256_H
-#define KUNGFU_FACT_LEDGER_SLICE_SHA256_H
+#ifndef KUNGFU_SLICES_COMMON_SHA256_H
+#define KUNGFU_SLICES_COMMON_SHA256_H
 
 #include <array>
 #include <cstdint>
 #include <cstring>
 #include <string>
 
-namespace kungfu::fact_ledger_slice {
+namespace kungfu::slices {
 
 class sha256 {
 public:
@@ -141,6 +141,6 @@ private:
   }
 };
 
-} // namespace kungfu::fact_ledger_slice
+} // namespace kungfu::slices
 
-#endif // KUNGFU_FACT_LEDGER_SLICE_SHA256_H
+#endif // KUNGFU_SLICES_COMMON_SHA256_H

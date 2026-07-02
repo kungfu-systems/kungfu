@@ -23,7 +23,7 @@
 
 #include <nlohmann/json.hpp>
 
-#include "sha256.h"
+#include "../common/sha256.h"
 
 #include <cstdint>
 #include <fstream>
@@ -33,7 +33,7 @@
 
 using namespace kungfu::yijinjing;
 namespace longfist = kungfu::longfist;
-using kungfu::fact_ledger_slice::sha256;
+using kungfu::slices::sha256;
 
 namespace {
 constexpr const char *SPEC_VERSION = "0.1";      // portable-bundle format contract

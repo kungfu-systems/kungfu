@@ -33,12 +33,13 @@ namespace longfist = kungfu::longfist;
 using longfist::enums::FrameDataType;
 
 namespace {
-// Custom application message types for this slice. These are opaque ints on the
+// Custom message types for this slice, from the capability-slice range
+// (docs/msg-type-ranges.md). These are opaque ints on the
 // wire; the export tool carries them through verbatim (a real deployment would
 // resolve them via a schema registry, which this minimal slice does not build).
-constexpr int32_t MSG_OBSERVE = 10001;
-constexpr int32_t MSG_DECIDE = 10002;
-constexpr int32_t MSG_ACT = 10003;
+constexpr int32_t MSG_OBSERVE = 20011;
+constexpr int32_t MSG_DECIDE = 20012;
+constexpr int32_t MSG_ACT = 20013;
 
 // One logical run of the causal chain, tagged onto every frame's stream_id so a
 // consumer can group a bundle by run.
