@@ -7,6 +7,7 @@
   "version": "4.0.0-alpha.0",
   "description": "Kungfu Javascript/Typescript API",
   "license": "Apache-2.0",
+  "type": "module",
   "repository": {
     "url": "https://github.com/kungfu-systems/kungfu.git"
   },
@@ -55,5 +56,9 @@
     "@types/minimist": "^1.2.5",
     "@types/node": "^22.0.0",
     "typescript": "^5.9.3"
+  },
+  "exports": {
+    "./capability": "./src/capability/index.ts",
+    "./*": "./src/*"
   }
 }
