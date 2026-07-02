@@ -53,3 +53,4 @@ run slices.
 | Slice | Proof |
 | --- | --- |
 | `fact-ledger/` | The journal spine (yijinjing static core) is embeddable without the trading runtime: a standalone host writes a causal chain of events, an independent tool reopens the directory and exports a checksummed, provenance-carrying JSONL — with zero dynamic dependencies beyond the system runtime. |
+| `embedding/` | The core's distribution form holds: a standalone CMake project (not part of this build; see its README) consumes `src/libyijinjing` via `add_subdirectory`, builds from scratch, and round-trips a causal chain — pinning the `EMBEDDING.md` contract. Its probe runs through `run.sh` like every other slice, but its targets are deliberately absent from this aggregate. |
