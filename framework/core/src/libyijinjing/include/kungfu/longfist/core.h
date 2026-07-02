@@ -13,7 +13,7 @@
 // the trading schema (goal 2026-07-02: "core 对业务 schema 零依赖").
 //
 // Everything here keeps its type tag and field layout verbatim -- on-disk mmap
-// journals stay byte-compatible. Location stays registered in AllTypes
+// journals stay byte-compatible. Location stays registered in the full type registry
 // (longfist.h) via TYPE_PAIR(Location); only its definition lives here.
 //
 
@@ -263,12 +263,12 @@ KF_DEFINE_PACK_TYPE(                          //
 
 // PageEnd marks the terminal frame of a full journal page so readers roll over
 // to the next page; journal infrastructure, so it lives in the leaf. It keeps
-// type tag 10051 and stays registered in AllTypes (longfist.h) verbatim.
+// type tag 10051 and stays registered in the full type registry (longfist.h) verbatim.
 KF_DEFINE_MARK_TYPE(PageEnd, 10051);
 
 // Location identifies a journal endpoint (mode/category/group/name). The yijinjing
 // core's locator/location model it, so it lives in the leaf. It keeps type tag
-// 10205 and stays registered in AllTypes (longfist.h) verbatim -- only its
+// 10205 and stays registered in the full type registry (longfist.h) verbatim -- only its
 // definition moves here, exactly as frame_header/page_header did.
 KF_DEFINE_DATA_TYPE(                         //
     Location, 10205, PK(uid64), PERPETUAL(), //

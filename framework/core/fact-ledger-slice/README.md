@@ -22,8 +22,8 @@ What it demonstrates in one run:
 ## Build
 
 Everything runs from `framework/core`. Dependencies come from conan 2 (warm
-cache); node and python bindings are skipped so only `libkungfu` and the two
-tools build.
+cache); node and python bindings are skipped so only the `yijinjing` core
+static library and the two tools build (plus `libkungfu`, if you build it).
 
 ```bash
 cd framework/core
@@ -39,8 +39,11 @@ cmake -S . -B build -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
   -DKUNGFU_WITH_FACT_LEDGER_SLICE=ON
 
-# 3. build only the two tools (pulls libkungfu as a dependency)
+# 3. build only the two tools (pulls the yijinjing core as a dependency)
 cmake --build build --target fact_ledger_host fact_ledger_export -j 8
+
+# 4. dependency-direction guard: the core sees no runtime/transport/storage
+bash src/libyijinjing/check-deps.sh
 ```
 
 ## Run
@@ -93,9 +96,12 @@ link back correctly, so CI can gate on it.
 
 ## Honest capture boundary (what this slice does NOT claim)
 
-- **Runtime-decoupled, not link-decoupled.** The build still links the monolithic
-  `libkungfu`; only the *runtime* is cut out (no master/bus/nng). Extracting a
-  pure journal-only core is future work.
+- ~~**Runtime-decoupled, not link-decoupled.**~~ **Closed:** both tools now link
+  ONLY the standalone `yijinjing` static core (`src/libyijinjing`); the binaries
+  carry no shared-library dependency beyond libc++/libSystem, and
+  `src/libyijinjing/check-deps.sh` guards the dependency direction (no
+  practice/wingchun/nng/rxcpp/sqlite/rocksdb, no trading types, no full type
+  registry).
 - **No in-frame content hash yet.** Content commitment lives at the manifest
   layer (checksums over exported payloads), not as a per-frame `payload_hash` in
   the spine (the external hash-blob store of the full design is future work).

@@ -3,7 +3,6 @@
 #ifndef KUNGFU_TRACER_H
 #define KUNGFU_TRACER_H
 
-#include <kungfu/yijinjing/io.h>
 #include <kungfu/yijinjing/journal/journal.h>
 
 namespace kungfu::yijinjing::journal {

@@ -3,7 +3,7 @@
 #ifndef YIJINJING_PAGE_H
 #define YIJINJING_PAGE_H
 
-#include <kungfu/longfist/types.h>
+#include <kungfu/longfist/core.h>
 #include <kungfu/yijinjing/journal/common.h>
 #include <kungfu/yijinjing/journal/frame.h>
 

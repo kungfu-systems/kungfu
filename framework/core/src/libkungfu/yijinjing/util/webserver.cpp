@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <kungfu/common.h>
+#include <kungfu/longfist/longfist.h>
 #include <kungfu/yijinjing/common.h>
 #include <kungfu/yijinjing/nanomsg/webserver.h>
 #include <memory>
