@@ -20,3 +20,11 @@ Within the capability-slice range:
 | `20001` | `slices/embedding` |
 | `20011 – 20013` | `slices/fact-ledger` |
 | `20021 – 20022` | `slices/schema-registry` |
+
+First-party allocations within the open layer (informative — the binding
+authority remains each run's manifest, but first-party products reserve their
+numbers here to avoid colliding with each other):
+
+| Numbers | Product | Schema |
+| --- | --- | --- |
+| `30001 – 30099` | Kungfu Rewind capture events | `src/python/kungfu/rewind/rewind_events.fbs` (30001 RunBegin, 30002 RunEnd, 30003 ModelRequest, 30004 ModelResponse, 30005 ToolCall, 30006 ToolResult, 30007 RetryMarker) |

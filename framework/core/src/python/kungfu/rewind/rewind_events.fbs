@@ -1,0 +1,127 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Kungfu Rewind capture events — the open-layer event schema for `kungfu trace`.
+//
+// Layering: these are application types (msg_type 30001-30099, see
+// docs/msg-type-ranges.md), NOT longfist kernel types. They ride the journal as
+// self-describing open-layer events: the capture supervisor binds each msg_type
+// to this schema's .bfbs in the run manifest (content-addressed, per-run), so a
+// trace bundle decodes through FlatBuffers reflection without the runtime that
+// wrote it — the same mechanism slices/schema-registry pins.
+//
+// Fact model: the frame header already carries the capture skeleton — gen_time
+// (nanosecond event time) and trigger_frame_uid (frame-level causality). These
+// tables add the semantic layer: run identity, span correlation across capture
+// layers, model/tool payloads, status and retry facts. Payload bodies are JSON
+// strings by design: local-first capture keeps full fidelity, structure lives
+// in the fields schema checks assert on, and redaction happens at export time,
+// never at capture time.
+//
+// Evolution rules (same discipline as longfist fb schemas): append new fields
+// at the tail only; never reorder, delete, or reuse field ids; no `required`
+// fields. Schema evolution happens between runs — two runs binding different
+// versions of this schema coexist and both decode.
+
+namespace kungfu.rewind.fb;
+
+// Terminal state of a traced run.
+enum RunStatus : byte {
+  Running = 0,
+  Succeeded = 1,
+  Failed = 2,
+  Interrupted = 3
+}
+
+// Outcome of a single model or tool invocation.
+enum CallStatus : byte {
+  Ok = 0,
+  Error = 1,
+  Timeout = 2,
+  Cancelled = 3
+}
+
+// Which capture layer produced the event. The supervisor is the only journal
+// writer; events arriving through different layers keep their provenance so
+// diagnosis (and the moat gate) can tell wire truth from in-process semantics.
+enum CaptureLayer : byte {
+  Supervisor = 0,
+  ModelWire = 1,
+  InProcessHook = 2,
+  Adapter = 3
+}
+
+// msg_type 30001. Opens a traced run; run_id is supervisor-assigned and shared
+// by every runtime and capture layer in the run — the single-journal anchor.
+table RunBegin {
+  run_id:string;
+  command:string;
+  runtime:string;
+  supervisor_version:string;
+  schema_version:uint;
+}
+
+// msg_type 30002. Closes a traced run.
+table RunEnd {
+  run_id:string;
+  status:RunStatus;
+  exit_code:int;
+}
+
+// msg_type 30003. A model invocation as sent (wire request or hook call).
+table ModelRequest {
+  run_id:string;
+  span_id:string;
+  parent_span_id:string;
+  layer:CaptureLayer;
+  provider:string;
+  model:string;
+  request_body:string;
+  attempt:uint;
+}
+
+// msg_type 30004. The model's answer; span_id matches its ModelRequest.
+table ModelResponse {
+  run_id:string;
+  span_id:string;
+  layer:CaptureLayer;
+  status:CallStatus;
+  response_body:string;
+  error:string;
+  finish_reason:string;
+  input_tokens:long;
+  output_tokens:long;
+  latency_ns:long;
+}
+
+// msg_type 30005. A tool invocation observed in the run.
+table ToolCall {
+  run_id:string;
+  span_id:string;
+  parent_span_id:string;
+  layer:CaptureLayer;
+  tool_name:string;
+  input:string;
+}
+
+// msg_type 30006. The tool's outcome; error facts live here (status + error),
+// span_id matches its ToolCall.
+table ToolResult {
+  run_id:string;
+  span_id:string;
+  layer:CaptureLayer;
+  status:CallStatus;
+  output:string;
+  error:string;
+  latency_ns:long;
+}
+
+// msg_type 30007. Marks a retry edge: attempt N of span retry_of_span_id.
+table RetryMarker {
+  run_id:string;
+  span_id:string;
+  retry_of_span_id:string;
+  attempt:uint;
+  reason:string;
+}
+
+root_type RunBegin;

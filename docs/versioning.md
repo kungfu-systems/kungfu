@@ -17,6 +17,7 @@ the rule. For what each surface guarantees and how to verify it, see
 | `kfx-contract` | kfx extension contract (contribution points, load semantics) | integration | [ADR-0006](../framework/core/docs/adr/ADR-0006-v4-frontend-platform-architecture.md), [ADR-0007](../framework/core/docs/adr/ADR-0007-v4-tui-platform-reference-surface.md) |
 | `kungfu-cli` | kungfu CLI surface (canonical `kungfu` command with `kfc` alias; commands, journal subcommand output conventions) | integration | [`debugging.md`](debugging.md) |
 | `journal-replayability` | cross-version cold-path decode of recorded journals | cross-time | [ADR-0008](../framework/core/docs/adr/ADR-0008-longfist-schema-evolution-and-minor-maintenance.md) |
+| `rewind-event-schema` | Rewind capture event model (open-layer msg_types 30001-30099, `rewind_events.fbs`; trace bundles bind and outlive runs) | integration + cross-time | [`msg-type-ranges.md`](../framework/core/docs/msg-type-ranges.md), [`kungfu/rewind/README.md`](../framework/core/src/python/kungfu/rewind/README.md) |
 
 A surface is registered when consumers bind to it at integration time without
 runtime negotiation, or when its outputs remain depended on after the run.
@@ -30,5 +31,6 @@ registered surface was touched.
 
 | Date | Action | Line | Faces | Class | Rationale | PR |
 |---|---|---|---|---|---|---|
+| 2026-07-02 | register | — | rewind-event-schema | additive | New face: Rewind capture event model as open-layer types (30001-30099) with per-run `.bfbs` manifest bindings; capture skeleton rides the frame header, semantics ride the tables. Nothing existing touched | — |
 | 2026-07-02 | update | — | kungfu-cli (was kfc-cli) | additive | `kungfu` becomes the canonical CLI command, fronting the `kfc` runtime; `kfc` stays a working alias. Pre-release, no line open, nothing removed | #147 |
 | 2026-07-02 | register | — | longfist-layout, capability-sdk-api, kfx-contract, kfc-cli, journal-replayability | additive | Initial register established on adopting KFD-1 (ADR-0010) | — |
