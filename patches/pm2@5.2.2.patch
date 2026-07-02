@@ -1,7 +1,7 @@
-diff --git a/node_modules/pm2/paths.js b/node_modules/pm2/paths.js
+diff --git a/paths.js b/paths.js
 index b1e8382..f8d05fe 100644
---- a/node_modules/pm2/paths.js
-+++ b/node_modules/pm2/paths.js
+--- a/paths.js
++++ b/paths.js
 @@ -7,6 +7,7 @@
  var debug = require('debug')('pm2:paths');
  var p     = require('path');

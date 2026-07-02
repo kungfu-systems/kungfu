@@ -4,10 +4,13 @@ packages:
   - "extensions/*"
   - "examples/*"
   - "artifact"
+patchedDependencies:
+  pm2@5.2.2: patches/pm2@5.2.2.patch
 allowBuilds:
   '@biomejs/biome': true
   '@kungfu-tech/libnode': true
   core-js: true
+  electron: true
   esbuild: true
   nx: true
   vue-demi: true

@@ -30,5 +30,5 @@ registered surface was touched.
 
 | Date | Action | Line | Faces | Class | Rationale | PR |
 |---|---|---|---|---|---|---|
-| 2026-07-02 | update | — | kungfu-cli (was kfc-cli) | additive | `kungfu` becomes the canonical CLI command, fronting the `kfc` runtime; `kfc` stays a working alias. Pre-release, no line open, nothing removed | — |
+| 2026-07-02 | update | — | kungfu-cli (was kfc-cli) | additive | `kungfu` becomes the canonical CLI command, fronting the `kfc` runtime; `kfc` stays a working alias. Pre-release, no line open, nothing removed | #147 |
 | 2026-07-02 | register | — | longfist-layout, capability-sdk-api, kfx-contract, kfc-cli, journal-replayability | additive | Initial register established on adopting KFD-1 (ADR-0010) | — |
