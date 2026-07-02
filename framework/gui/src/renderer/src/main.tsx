@@ -44,7 +44,31 @@ type Kfe = {
     refreshTradingDataBeforeSync: boolean,
     bypassRefreshBook: boolean,
     millisecondsSleepAfterStep: number,
-  ) => { isUsable: () => boolean; isLive: () => boolean };
+  ) => KfWatcher;
+  Assemble: new (
+    runtimeDirs: string[],
+  ) => {
+    dataAvailable: () => boolean;
+    next: () => void;
+    currentFrame: () => KfFrame;
+  };
+  formatTime?: (nano: bigint, format?: string) => string;
+};
+
+type KfWatcher = {
+  isUsable: () => boolean;
+  isLive: () => boolean;
+  isStarted: () => boolean;
+  start: () => void;
+};
+
+type KfFrame = {
+  genTime: () => bigint;
+  triggerTime: () => bigint;
+  msgType: () => number;
+  source: () => number;
+  dest: () => number;
+  dataLength: () => number;
 };
 
 const bigintSafe = (_key: string, value: unknown) =>
@@ -65,6 +89,7 @@ type Runtime = {
   buildInfo: Record<string, unknown> | null;
   exports: string[];
   kfe: Kfe | null;
+  watcher: KfWatcher | null;
   watcherState: string;
 };
 
@@ -77,6 +102,7 @@ function bootRuntime(): Runtime {
     buildInfo: null,
     exports: [],
     kfe: null,
+    watcher: null,
     watcherState: 'not constructed',
   };
   try {
@@ -99,10 +125,12 @@ function bootRuntime(): Runtime {
       buildInfo = null;
     }
     // Constructing a Watcher initializes the runtime home (profile db layout)
-    // so the stores below work against a fresh directory.
+    // so the stores below work against a fresh directory. Starting it makes it
+    // join a live master when one is running.
+    let watcher: KfWatcher | null = null;
     let watcherState = 'not constructed';
     try {
-      const watcher = new kfe.Watcher(
+      watcher = new kfe.Watcher(
         runtimeDir,
         'reference_app',
         true,
@@ -112,7 +140,7 @@ function bootRuntime(): Runtime {
         true,
         50,
       );
-      watcherState = `constructed · usable=${watcher.isUsable()} live=${watcher.isLive()}`;
+      watcherState = `constructed · usable=${watcher.isUsable()}`;
     } catch (e) {
       watcherState = `failed: ${(e as Error).message}`;
     }
@@ -123,6 +151,7 @@ function bootRuntime(): Runtime {
       buildInfo,
       exports: Object.keys(kfe),
       kfe,
+      watcher,
       watcherState,
     };
   } catch (e) {
@@ -359,9 +388,123 @@ function SessionsPanel({ kfe, runtimeDir }: { kfe: Kfe; runtimeDir: string }) {
   );
 }
 
+function JournalPanel({ kfe, runtimeDir }: { kfe: Kfe; runtimeDir: string }) {
+  const [events, setEvents] = React.useState<
+    Array<{
+      genTime: string;
+      msgType: number;
+      source: string;
+      dest: string;
+      length: number;
+    }>
+  >([]);
+  const [error, setError] = React.useState('');
+
+  const formatNano = React.useCallback(
+    (nano: bigint) => {
+      try {
+        if (kfe.formatTime) return kfe.formatTime(nano, '%H:%M:%S.%N');
+      } catch {
+        // fall through to raw nanoseconds
+      }
+      return String(nano);
+    },
+    [kfe],
+  );
+
+  const scan = React.useCallback(() => {
+    try {
+      // Assemble walks every journal under the runtime home, merged in time
+      // order — the same zero-copy frames the runtime itself reads.
+      const asm = new kfe.Assemble([runtimeDir]);
+      const rows = [];
+      while (asm.dataAvailable() && rows.length < 500) {
+        const frame = asm.currentFrame();
+        rows.push({
+          genTime: formatNano(frame.genTime()),
+          msgType: frame.msgType(),
+          source: frame.source().toString(16).padStart(8, '0'),
+          dest: frame.dest().toString(16).padStart(8, '0'),
+          length: frame.dataLength(),
+        });
+        asm.next();
+      }
+      setEvents(rows);
+      setError('');
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }, [kfe, runtimeDir, formatNano]);
+
+  React.useEffect(() => {
+    scan();
+  }, [scan]);
+
+  return (
+    <section style={panelStyle}>
+      <h2 style={headingStyle}>
+        Journal events · {events.length}
+        {events.length >= 500 ? '+' : ''}{' '}
+        <button type="button" onClick={scan} style={{ ...mono, marginLeft: 8 }}>
+          rescan
+        </button>
+      </h2>
+      {error && <div style={{ ...mono, color: '#f48771' }}>{error}</div>}
+      {events.length === 0 && !error && (
+        <div style={{ ...mono, color: '#6a6a6a' }}>
+          no journal frames in this runtime home yet — start a master (`kfc run
+          master`) against it and rescan
+        </div>
+      )}
+      <table style={{ ...mono, borderCollapse: 'collapse', width: '100%' }}>
+        <tbody>
+          {events.map((event, index) => (
+            <tr
+              key={`${event.genTime}-${index}`}
+              style={{ borderTop: '1px solid #3c3c3c' }}
+            >
+              <td style={{ padding: '2px 8px', color: '#858585' }}>
+                {event.genTime}
+              </td>
+              <td style={{ padding: '2px 8px', color: '#9cdcfe' }}>
+                msg {event.msgType}
+              </td>
+              <td style={{ padding: '2px 8px', color: '#ce9178' }}>
+                {event.source} → {event.dest}
+              </td>
+              <td style={{ padding: '2px 8px', color: '#858585' }}>
+                {event.length} B
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
 function App() {
   const [runtime] = React.useState(bootRuntime);
   const versions = window.process.versions;
+  const [live, setLive] = React.useState(false);
+
+  React.useEffect(() => {
+    const watcher = runtime.watcher;
+    if (!watcher) return;
+    try {
+      if (!watcher.isStarted()) watcher.start();
+    } catch {
+      // master not reachable — stays offline
+    }
+    const timer = setInterval(() => {
+      try {
+        setLive(watcher.isLive());
+      } catch {
+        setLive(false);
+      }
+    }, 2000);
+    return () => clearInterval(timer);
+  }, [runtime.watcher]);
 
   return (
     <div
@@ -389,7 +532,10 @@ function App() {
       <div style={{ ...mono, color: '#858585' }}>
         core {String(runtime.buildInfo?.version ?? 'unknown')} · kfc{' '}
         {runtime.kfcVersion || 'unavailable'} · electron {versions.electron} ·
-        node {versions.node} · watcher {runtime.watcherState}
+        node {versions.node} · watcher {runtime.watcherState} ·{' '}
+        <span style={{ color: live ? '#4ec9b0' : '#858585' }}>
+          {live ? '● live (master connected)' : '○ offline (no master)'}
+        </span>
         <br />
         runtime home: {runtime.runtimeDir}
       </div>
@@ -407,24 +553,7 @@ function App() {
           <LongfistPanel kfe={runtime.kfe} />
           <ConfigStorePanel kfe={runtime.kfe} runtimeDir={runtime.runtimeDir} />
           <SessionsPanel kfe={runtime.kfe} runtimeDir={runtime.runtimeDir} />
-          <section style={panelStyle}>
-            <h2 style={headingStyle}>
-              Binding exports · {runtime.exports.length}
-            </h2>
-            <ul
-              style={{
-                ...mono,
-                columns: 2,
-                color: '#9cdcfe',
-                margin: 0,
-                paddingLeft: 16,
-              }}
-            >
-              {runtime.exports.map((name) => (
-                <li key={name}>{name}</li>
-              ))}
-            </ul>
-          </section>
+          <JournalPanel kfe={runtime.kfe} runtimeDir={runtime.runtimeDir} />
         </div>
       ) : (
         <p style={{ ...mono, color: '#f48771' }}>
