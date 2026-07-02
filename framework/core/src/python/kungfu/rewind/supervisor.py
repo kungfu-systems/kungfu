@@ -114,11 +114,18 @@ class Supervisor:
         env[ENV_RUN_ID] = self.run_id
         for key in _OPENAI_ENV + _ANTHROPIC_ENV:
             env[key] = self.proxy.base_url
-        # L2: announce the ingest endpoint and let python's site machinery
-        # pull in the hook (sitecustomize) inside the child interpreter
+        # L2: announce the ingest endpoint and let each runtime's preload
+        # machinery pull in its hook — python via site (sitecustomize on
+        # PYTHONPATH), node via NODE_OPTIONS --require. Both preserve
+        # whatever the environment already had.
         env[ENV_INGEST] = self.ingest.endpoint
         existing = env.get("PYTHONPATH")
         env["PYTHONPATH"] = _HOOK_DIR + os.pathsep + existing if existing else _HOOK_DIR
+        node_require = f"--require {os.path.join(_HOOK_DIR, 'rewind_hook.js')}"
+        node_existing = env.get("NODE_OPTIONS")
+        env["NODE_OPTIONS"] = (
+            f"{node_existing} {node_require}" if node_existing else node_require
+        )
         return env
 
     def bundle_dir(self):

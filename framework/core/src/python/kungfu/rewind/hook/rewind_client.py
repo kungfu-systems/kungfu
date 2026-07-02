@@ -24,6 +24,10 @@ import uuid
 
 ENV_INGEST = "KUNGFU_REWIND_INGEST"
 ENV_RUN_ID = "KUNGFU_REWIND_RUN_ID"
+# carries the active span across process boundaries: child processes spawned
+# inside a tool invocation inherit it, and the other runtime's hook roots its
+# spans under it — one causal chain across runtimes in the same journal
+ENV_PARENT_SPAN = "KUNGFU_REWIND_PARENT_SPAN"
 
 
 class _Emitter:
@@ -127,6 +131,8 @@ class _CallCapture:
     def run(self, fn, input_body, *args, **kwargs):
         tool_call(self.span_id, self.tool_name, input_body, self._parent)
         started = time.monotonic_ns()
+        outer_span = os.environ.get(ENV_PARENT_SPAN)
+        os.environ[ENV_PARENT_SPAN] = self.span_id
         try:
             result = fn(*args, **kwargs)
         except Exception as e:
@@ -137,6 +143,11 @@ class _CallCapture:
                 latency_ns=time.monotonic_ns() - started,
             )
             raise
+        finally:
+            if outer_span is None:
+                os.environ.pop(ENV_PARENT_SPAN, None)
+            else:
+                os.environ[ENV_PARENT_SPAN] = outer_span
         tool_result(
             self.span_id,
             "ok",
