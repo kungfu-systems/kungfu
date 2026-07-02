@@ -15,9 +15,9 @@ a release store; readers gate on it with an acquire load before reading the
 payload.
 
 **Verify.** Two things you can check in this repository: the implementation in
-[`frame.h`](../framework/core/src/include/kungfu/yijinjing/journal/frame.h)
+[`frame.h`](../framework/core/src/libyijinjing/include/kungfu/yijinjing/journal/frame.h)
 (`publish_data_length()` release / `acquire_length()` acquire) and
-[`writer.cpp`](../framework/core/src/libkungfu/yijinjing/journal/writer.cpp); and
+[`writer.cpp`](../framework/core/src/libyijinjing/src/journal/writer.cpp); and
 the decision plus reported stress-test results in
 [ADR-0001](../framework/core/docs/adr/ADR-0001-yijinjing-publish-barrier.md)
 (0 tears across hundreds of millions of reads on arm64 and x86). Note: the
@@ -34,14 +34,14 @@ per the results reported in ADR-0001.
 parsing, and the same bytes are what is persisted to the journal. The layout
 *is* the ABI: a consumer speaks a layout, it does not negotiate one. The schema
 is a declared FlatBuffers definition
-([`*.fbs`](../framework/core/src/include/kungfu/longfist/fb)) generated for all
+([`*.fbs`](../framework/core/src/libkungfu/include/kungfu/longfist/fb)) generated for all
 three languages, not a C++-internal secret.
 
 **Verify.** [ADR-0008](../framework/core/docs/adr/ADR-0008-longfist-schema-evolution-and-minor-maintenance.md)
 (the layout as the true invariant) and
 [ADR-0002](../framework/core/docs/adr/ADR-0002-longfist-flatbuffers-runtime-schema.md)
 (the FlatBuffers migration); the schema files under
-[`longfist/fb/`](../framework/core/src/include/kungfu/longfist/fb).
+[`longfist/fb/`](../framework/core/src/libkungfu/include/kungfu/longfist/fb).
 
 **Maturity.** The layout-as-contract is `stable`. The **enforcement** that lets
 an external consumer rely on a stated compatibility *window* (CI checks against
@@ -58,9 +58,9 @@ nanosecond `gen_time` and the `trigger_frame_uid` causal links in each frame
 (see [`event-model.md`](event-model.md)), a recorded stream reproduces with high
 precision.
 
-**Verify.** [`replay_writer.cpp`](../framework/core/src/libkungfu/yijinjing/journal/replay_writer.cpp)
+**Verify.** [`replay_writer.cpp`](../framework/core/src/libkungfu/src/yijinjing/journal/replay_writer.cpp)
 and the shared journal runtime under
-[`yijinjing/`](../framework/core/src/libkungfu/yijinjing).
+[`yijinjing/`](../framework/core/src/libkungfu/src/yijinjing).
 
 **Maturity.** `stable` for the mechanism (same-runtime replay). The precise
 determinism boundary — what is and is not reproducible across machines and

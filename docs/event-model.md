@@ -15,13 +15,13 @@ single writer appends frames sequentially to memory-mapped pages; many readers
 poll the same pages lock-free, with no serialization on the hot path (zero-copy).
 Every component consumes the same frames rather than inventing its own format.
 
-Source: [`framework/core/src/libkungfu/yijinjing/journal/`](../framework/core/src/libkungfu/yijinjing/journal).
+Source: [`framework/core/src/libyijinjing/src/journal/`](../framework/core/src/libyijinjing/src/journal).
 
 ## The frame
 
 A frame is a fixed-size header followed by a variable-size payload. The header
 fields (defined in
-[`longfist/types.h`](../framework/core/src/include/kungfu/longfist/types.h),
+[`longfist/types.h`](../framework/core/src/libkungfu/include/kungfu/longfist/types.h),
 `frame_header`):
 
 | Field | Type | Meaning |
@@ -68,4 +68,4 @@ a recorded stream reproduces with high precision. The determinism this provides,
 and its boundaries, are stated in [`contracts.md`](contracts.md).
 
 Source: the replay path in
-[`framework/core/src/libkungfu/yijinjing/`](../framework/core/src/libkungfu/yijinjing).
+[`framework/core/src/libkungfu/src/yijinjing/`](../framework/core/src/libkungfu/src/yijinjing).

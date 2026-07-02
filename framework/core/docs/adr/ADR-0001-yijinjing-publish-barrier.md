@@ -144,6 +144,6 @@ prevent lapping):
 
 ## Implementation sites
 
-- `framework/core/src/include/kungfu/longfist/types.h` (frame_header: drop volatile)
-- `framework/core/src/include/kungfu/yijinjing/journal/frame.h` (acquire/publish/copy)
-- `framework/core/src/libkungfu/yijinjing/journal/writer.cpp` (close_frame_lock_free / copy_frame)
+- `framework/core/src/libkungfu/include/kungfu/longfist/types.h` (frame_header: drop volatile)
+- `framework/core/src/libyijinjing/include/kungfu/yijinjing/journal/frame.h` (acquire/publish/copy)
+- `framework/core/src/libyijinjing/src/journal/writer.cpp` (close_frame_lock_free / copy_frame)

@@ -27,7 +27,7 @@ C++ code (including a C++ `kfx` extension) uses `libkungfu` directly: the
 `longfist` types and the `yijinjing` journal API, no binding layer. This is the
 reference boundary the other two mirror.
 
-Source: [`framework/core/src/include/kungfu/`](../framework/core/src/include/kungfu),
+Source: [`framework/core/src/libkungfu/include/kungfu/`](../framework/core/src/libkungfu/include/kungfu),
 [`framework/core/src/libkungfu/`](../framework/core/src/libkungfu).
 
 ## Python — pybind11

@@ -36,7 +36,7 @@ the same code path execute against the same frames.
 ## Read the logs
 
 The runtime logs through spdlog (configured in the `yijinjing` common layer,
-[`framework/core/src/include/kungfu/yijinjing/common.h`](../framework/core/src/include/kungfu/yijinjing/common.h)).
+[`framework/core/src/libyijinjing/include/kungfu/yijinjing/common.h`](../framework/core/src/libyijinjing/include/kungfu/yijinjing/common.h)).
 Use the logs to correlate a wrong frame in the journal with the component and the
 moment that produced it.
 
