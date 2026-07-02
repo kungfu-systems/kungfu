@@ -32,12 +32,17 @@ function freezer() {
 }
 
 // kfc.spec datas 引用 build/include 与 build/libs（仅 pyinstaller 路径需要）。
+// 头文件按 target 归属分布在各库目录下，staging 时合并成单一 include 树。
 function stage() {
-  const srcInc = path.join(CORE, 'src', 'include');
+  const includeRoots = ['libyijinjing', 'libkungfu', 'libwingchun'].map((lib) =>
+    path.join(CORE, 'src', lib, 'include'),
+  );
   const buildInc = path.join(CORE, 'build', 'include');
-  console.log('[freeze] staging: src/include → build/include');
+  console.log('[freeze] staging: src/lib*/include → build/include');
   fs.rmSync(buildInc, { recursive: true, force: true });
-  fs.cpSync(srcInc, buildInc, { recursive: true });
+  for (const inc of includeRoots) {
+    fs.cpSync(inc, buildInc, { recursive: true });
+  }
   fs.mkdirSync(path.join(CORE, 'build', 'libs'), { recursive: true });
 }
 

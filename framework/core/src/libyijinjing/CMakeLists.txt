@@ -43,10 +43,11 @@ if(DEFINED KUNGFU_BUILD_DIR)
 endif()
 target_include_directories(yijinjing PUBLIC ${PROJECT_SOURCE_DIR}/include)
 
-# boost::hana is header-only; the kungfu build puts its vendored copy on the
-# global include path. Standalone, fall back to that same vendored copy when
-# the embedder has not provided <boost/hana.hpp> some other way.
-if(NOT DEFINED KUNGFU_BUILD_DIR AND EXISTS ${PROJECT_SOURCE_DIR}/../../.deps/hana-1.80.0/include)
+# boost::hana is header-only; inside the kungfu build and standalone alike,
+# use the vendored copy next to this tree unless the embedder has provided
+# <boost/hana.hpp> some other way. PUBLIC so every consumer of the core's
+# longfist schema leaf inherits it.
+if(EXISTS ${PROJECT_SOURCE_DIR}/../../.deps/hana-1.80.0/include)
   target_include_directories(yijinjing PUBLIC ${PROJECT_SOURCE_DIR}/../../.deps/hana-1.80.0/include)
 endif()
 

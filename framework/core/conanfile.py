@@ -152,12 +152,14 @@ class KungfuCoreConan(ConanFile):
             self.__show_build_info(build_type)
         else:
             src = self.conanfile_dir
-            copy(
-                self,
-                "*",
-                path.join(src, "src", "include"),
-                path.join(self.package_folder, "include"),
-            )
+            # 头文件按 target 归属分布在各库目录下，打包时合并成单一 include 树
+            for lib in ("libyijinjing", "libkungfu", "libwingchun"):
+                copy(
+                    self,
+                    "*",
+                    path.join(src, "src", lib, "include"),
+                    path.join(self.package_folder, "include"),
+                )
             copy(
                 self,
                 "*",

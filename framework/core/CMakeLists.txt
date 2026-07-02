@@ -58,12 +58,10 @@ option(KUNGFU_WITH_FACT_LEDGER_SLICE "build the minimal fact-ledger host + expor
 
 ##########################################################################
 
-include_directories(.deps/hana-1.80.0/include)
-include_directories(.deps/sqlite_orm-1.7.1/include)
-# core headers first: kungfu/common.h, kungfu/longfist/core.h and the
-# yijinjing journal headers live with the yijinjing static library
-include_directories(src/libyijinjing/include)
-include_directories(src/include)
+# header ownership is target-scoped: each library carries its own include/
+# (src/libyijinjing, src/libkungfu, src/libwingchun) and propagates it via
+# target_include_directories; vendored .deps headers attach to the targets
+# that actually consume them (hana via yijinjing, sqlite_orm via libkungfu)
 
 ##########################################################################
 
@@ -71,8 +69,8 @@ include_directories(src/include)
 # *_generated.h(--cpp --gen-mutable --scoped-enums)+ *.bfbs(-b --schema)，取代手动跑 flatc + 入仓产物
 # (消跨 schema 重跑/漂移)。flatbuffers::flatc 由 conan flatbuffers 的 cmake_build_modules
 # (FlatcTargets.cmake)在 find_package(flatbuffers)时暴露；三平台均 native build(非交叉)，FlatcTargets
-# 用包内 bin/flatc。生成到原 src/include 位置以保 include 路径不变(产物已 gitignore)。
-set(LONGFIST_FB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/include/kungfu/longfist/fb)
+# 用包内 bin/flatc。生成到 libkungfu 的 include 树内以保 include 路径不变(产物已 gitignore)。
+set(LONGFIST_FB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/libkungfu/include/kungfu/longfist/fb)
 add_custom_command(
   OUTPUT ${LONGFIST_FB_DIR}/order_generated.h ${LONGFIST_FB_DIR}/order.bfbs
   COMMAND flatbuffers::flatc --cpp --gen-mutable --scoped-enums -o ${LONGFIST_FB_DIR} ${LONGFIST_FB_DIR}/order.fbs
@@ -130,6 +128,9 @@ endif()
 
 # journal core static library; libkungfu links it, minimal tools can link it alone
 add_subdirectory(src/libyijinjing)
+
+# dormant trading-semantics module: headers only, sources not compiled
+add_subdirectory(src/libwingchun)
 
 if (NOT DEFINED ENV{KUNGFU_BUILD_SKIP_LIBKUNGFU} OR NOT $ENV{KUNGFU_BUILD_SKIP_LIBKUNGFU})
   message(STATUS "Enabled libkungfu")

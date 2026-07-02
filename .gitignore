@@ -44,8 +44,8 @@ debug-example/
 
 # flatc build-time generated files (produced by framework/core/CMakeLists longfist_fb_codegen
 # during the build, not committed; the hand-written sources *.fbs / *_fb_builder.h stay tracked)
-framework/core/src/include/kungfu/longfist/fb/*_generated.h
-framework/core/src/include/kungfu/longfist/fb/*.bfbs
+framework/core/src/libkungfu/include/kungfu/longfist/fb/*_generated.h
+framework/core/src/libkungfu/include/kungfu/longfist/fb/*.bfbs
 
 # Local cache/mirror proxy per-checkout override (optional); the real values and primary config
 # live in the user-global ~/.config/kungfu/build-local.env, not committed
