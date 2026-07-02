@@ -19,22 +19,26 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
-
     "sourceMap": true,
     "baseUrl": ".",
-    "types": ["jschardet"],
-    "typeRoots": [],
+    "types": [
+      "node",
+      "find-root"
+    ],
     "paths": {
-      "@kungfu-tech/api/*": ["./src/*"]
+      "@kungfu-tech/api/*": [
+        "./src/*"
+      ]
     },
-    "lib": ["esnext", "dom", "dom.iterable", "scripthost"]
+    "lib": [
+      "esnext",
+      "dom",
+      "dom.iterable",
+      "scripthost"
+    ]
   },
   "include": [
     "src/**/*.ts",
-    "src/**/*.tsx",
-    "src/**/*.vue",
-    "tests/**/*.ts",
-    "tests/**/*.tsx",
-    "./src/**/*.ts"
+    "src/**/*.tsx"
   ]
 }

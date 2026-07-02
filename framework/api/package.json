@@ -24,12 +24,10 @@
   "types": "./src/typings/index.d.ts",
   "main": "lib/index.js",
   "scripts": {
-    "build": "node lib/webpack/build.js",
-    "clean": "rimraf build dist node_modules/.cache/webpack",
+    "build": "tsc --noEmit",
+    "clean": "rimraf build dist",
     "install": "node -e \"require('@kungfu-tech/core').prebuilt('install')\"",
-    "package": "node -e \"require('@kungfu-tech/core').prebuilt('package')\"",
-    "lint": "eslint src",
-    "format": "prettier -l -w --config ../core/.prettierrc.js ."
+    "package": "node -e \"require('@kungfu-tech/core').prebuilt('package')\""
   },
   "dependencies": {
     "@fast-csv/format": "^4.3.5",
@@ -41,13 +39,20 @@
     "find-process": "^1.4.7",
     "find-root": "^1.1.0",
     "fkill": "~7.2",
+    "fs-extra": "^10.1.0",
     "get-user-locale": "^1.4.0",
     "glob": "^8.0.3",
     "log4js": "^6.4.0",
+    "minimist": "^1.2.6",
     "pm2": "~5.2.2",
-    "regedit": "^5.1.2"
+    "regedit": "^5.1.2",
+    "rxjs": "^7.5.5",
+    "sorted-btree": "1.8.1"
   },
   "devDependencies": {
-    "@types/find-root": "^1.1.2"
+    "@types/find-root": "^1.1.2",
+    "@types/fs-extra": "^9.0.13",
+    "@types/minimist": "^1.2.5",
+    "@types/node": "^22.0.0"
   }
 }
