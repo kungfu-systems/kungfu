@@ -5,9 +5,9 @@
     "email": "info@kungfu.link"
   },
   "version": "4.0.0-alpha.0",
-  "description": "SDK for developing Kungfu Applications",
+  "description": "SDK for assembling Kungfu applications — scaffold a complete app on the platform stack",
   "license": "Apache-2.0",
-  "main": "src/index.js",
+  "type": "module",
   "repository": {
     "url": "https://github.com/kungfu-systems/kungfu.git"
   },
@@ -18,31 +18,14 @@
   "bin": {
     "kfs": "src/kfs.js"
   },
-  "binary": {
-    "module_name": "kungfu-sdk",
-    "module_path": "dist/sdk",
-    "remote_path": "{module_name}/v{major}/v{version}",
-    "package_name": "{module_name}-v{version}-{platform}-{arch}-{configuration}.tar.gz",
-    "host": "https://prebuilt.libkungfu.cc"
-  },
+  "files": ["src", "templates", "README.md"],
   "scripts": {
     "kfs": "node src/kfs.js",
-    "build": "node lib/webpack/build.js && node lib/script/index.js",
-    "clean": "kfs extension clean",
-    "install": "node -e \"require('@kungfu-tech/core').prebuilt('install')\"",
-    "package": "node -e \"require('@kungfu-tech/core').prebuilt('package')\"",
-    "dev": "node lib/dev/run.js",
-    "format": "prettier -l -w --config ../../framework/core/.prettierrc.js ."
-  },
-  "dependencies": {
-    "@kungfu-tech/gui": "workspace:*",
-    "@kungfu-tech/tui": "workspace:*",
-    "@kungfu-tech/core": "workspace:*",
-    "@kungfu-tech/api": "workspace:*",
-    "@mapbox/node-pre-gyp": "^1.0.0"
+    "build": "node --check src/kfs.js",
+    "lint": "biome check src",
+    "format": "biome format --write src"
   },
   "devDependencies": {
-    "ignore": "^5.3.1",
-    "inquirer": "^8.2.4"
+    "@biomejs/biome": "^1.9.4"
   }
 }

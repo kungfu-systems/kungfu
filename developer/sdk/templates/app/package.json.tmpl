@@ -1,0 +1,33 @@
+{
+  "name": "__APP_PACKAGE__",
+  "version": "0.1.0",
+  "private": true,
+  "description": "__APP_NAME__ — a Kungfu application",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "pack": "electron-vite build && electron-builder --dir --config.electronDist=$(node -p \"require('path').dirname(require.resolve('electron'))+'/dist'\")",
+    "dist": "electron-vite build && electron-builder --config.electronDist=$(node -p \"require('path').dirname(require.resolve('electron'))+'/dist'\")",
+    "lint": "biome check src",
+    "format": "biome format --write src",
+    "clean": "rimraf out dist node_modules/.vite"
+  },
+  "dependencies": {
+    "@kungfu-tech/core": "__KF_DEP_VERSION__",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "electron": "42.5.0",
+    "electron-builder": "^24.13.3",
+    "electron-vite": "^2.3.0",
+    "rimraf": "^6.0.0",
+    "typescript": "^5.6.0",
+    "vite": "^5.4.0"
+  }
+}
