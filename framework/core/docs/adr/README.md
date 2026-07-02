@@ -27,6 +27,7 @@ A record's **Status** says where it stands:
 | [0008](ADR-0008-longfist-schema-evolution-and-minor-maintenance.md) | proposed | longfist binary layout as the true compatibility invariant; schema-evolution policy |
 | [0009](ADR-0009-load-bearing-self-bootstrap.md) | accepted | load-bearing self-bootstrap — the adoption path is the validation path |
 | [0010](ADR-0010-adopt-kfd-1-release-versioning.md) | accepted | adopt KFD-1 — welded-surface registers decide patch, minor, and major |
+| [0011](ADR-0011-v4-capability-sdk-contract.md) | proposed | v4 capability SDK contract — two vocabulary domains, runtime-tier declaration, five consumer-driven handles |
 
 ## Reading by theme
 
