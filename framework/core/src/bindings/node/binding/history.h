@@ -29,7 +29,7 @@ private:
   yijinjing::data::locator_ptr locator_;
   yijinjing::data::location_ptr ledger_location_;
   yijinjing::data::location_ptr renderer_location_;
-  yijinjing::cache::profile profile_;
+  cache::profile profile_;
   static Napi::FunctionReference constructor;
   static void cleanup() {
     SPDLOG_INFO("History reset");

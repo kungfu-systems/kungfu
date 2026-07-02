@@ -107,7 +107,7 @@ public:
 };
 
 void bind_broker(pybind11::module &m) {
-  py::class_<BrokerVendor, PyBrokerVendor, kungfu::yijinjing::practice::apprentice, std::shared_ptr<BrokerVendor>>(
+  py::class_<BrokerVendor, PyBrokerVendor, kungfu::practice::apprentice, std::shared_ptr<BrokerVendor>>(
       m, "BrokerVendor")
       .def(py::init<location_ptr, bool, const std::string &>());
 

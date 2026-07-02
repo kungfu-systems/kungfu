@@ -11,14 +11,14 @@
 
 #include <memory>
 
-namespace kungfu::yijinjing::cache {
+namespace kungfu::cache {
 
 // 开放层运行时投影器（与 hana 闭集并存，默认 OFF）；完整定义见 open_layer_projector.h，仅在 cached.cpp include。
 class open_layer_projector;
 
 using ProfileDataTypesType = decltype(longfist::ProfileDataTypes);
 using ProfileStateMapType = decltype(longfist::build_state_map(longfist::ProfileDataTypes));
-typedef yijinjing::cache::typed_bank<ProfileDataTypesType, ProfileStateMapType> ProfileStateBank;
+typedef cache::typed_bank<ProfileDataTypesType, ProfileStateMapType> ProfileStateBank;
 
 class cached {
 public:
@@ -65,17 +65,17 @@ public:
 
   void store_profile_feeds();
 
-  void open_session(const data::location_ptr &location, int64_t open_time);
+  void open_session(const yijinjing::data::location_ptr &location, int64_t open_time);
 
-  void close_session(const data::location_ptr &location, int64_t close_time);
+  void close_session(const yijinjing::data::location_ptr &location, int64_t close_time);
 
   void close_all_sessions(int64_t close_time);
 
-  int64_t find_last_active_time(const data::location_ptr &source_location);
+  int64_t find_last_active_time(const yijinjing::data::location_ptr &source_location);
 
-  void update_session(const journal::frame_ptr &frame);
+  void update_session(const yijinjing::journal::frame_ptr &frame);
 
-  yijinjing::index::SessionMap &get_all_sessions();
+  index::SessionMap &get_all_sessions();
 
   void switch_feed_storage(bool pause_storage);
 
@@ -127,11 +127,11 @@ public:
 private:
   index::session_builder session_builder_;
   std::unordered_map<uint32_t, yijinjing::data::location_ptr> locations_ = {};
-  yijinjing::cache::profile profile_;
+  cache::profile profile_;
   ProfileStateBank profile_feed_bank_ = ProfileStateBank(longfist::ProfileDataTypes);
   ProfileStateBank profile_restore_bank_ = ProfileStateBank(longfist::ProfileDataTypes);
-  std::unordered_map<uint32_t, yijinjing::cache::shift> app_states_shift_ = {};
-  yijinjing::cache::bank states_feed_bank_;
+  std::unordered_map<uint32_t, cache::shift> app_states_shift_ = {};
+  cache::bank states_feed_bank_;
   bool bypass_cached_;
   std::thread store_states_worker_;
   std::thread store_profile_worker_;
@@ -194,6 +194,6 @@ private:
       };
 };
 
-} // namespace kungfu::yijinjing::cache
+} // namespace kungfu::cache
 
 #endif // KUNGFU_CACHED_H

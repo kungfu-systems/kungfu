@@ -12,18 +12,18 @@ using namespace kungfu::longfist;
 using namespace kungfu::longfist::enums;
 using namespace kungfu::longfist::types;
 using namespace kungfu::yijinjing;
-using namespace kungfu::yijinjing::cache;
+using namespace kungfu::cache;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::yijinjing::journal;
 
-namespace kungfu::yijinjing::index {
-std::string get_index_db_file(const io_device_ptr &io_device) {
+namespace kungfu::index {
+std::string get_index_db_file(const yijinjing::io_device_ptr &io_device) {
   auto locator = io_device->get_locator();
   auto index_location = location::make_shared(mode::LIVE, category::SYSTEM, "journal", "index", locator);
   return locator->layout_file(index_location, layout::SQLITE, "index");
 }
 
-session_finder::session_finder(const io_device_ptr &io_device)
+session_finder::session_finder(const yijinjing::io_device_ptr &io_device)
     : io_device_(io_device),
       session_storage_(cache::make_storage_ptr(get_index_db_file(io_device), longfist::SessionDataTypes)) {
   if (not session_storage_->sync_schema_simulate().empty()) {
@@ -33,7 +33,7 @@ session_finder::session_finder(const io_device_ptr &io_device)
 
 session_finder::~session_finder() { io_device_.reset(); }
 
-int64_t session_finder::find_last_active_time(const data::location_ptr &source_location) {
+int64_t session_finder::find_last_active_time(const yijinjing::data::location_ptr &source_location) {
   auto range = where(eq(&Session::location_uid, source_location->uid));
   auto order = order_by(&Session::begin_time).desc();
   auto sessions = session_storage_->get_all<Session>(range, order, limit(1));
@@ -55,7 +55,7 @@ SessionVector session_finder::find_sessions_for(const location_ptr &source_locat
   return session_storage_->get_all<Session>(range, order_by(bt));
 }
 
-session_builder::session_builder(const io_device_ptr &io_device) : session_finder(io_device) {
+session_builder::session_builder(const yijinjing::io_device_ptr &io_device) : session_finder(io_device) {
   std::lock_guard<std::mutex> lock(update_session_mutex_);
   if (not session_storage_->sync_schema_simulate().empty()) {
     session_storage_->sync_schema();
@@ -64,7 +64,7 @@ session_builder::session_builder(const io_device_ptr &io_device) : session_finde
   session_storage_->pragma.synchronous(0);
 }
 
-int64_t session_builder::find_last_active_time(const data::location_ptr &source_location) {
+int64_t session_builder::find_last_active_time(const yijinjing::data::location_ptr &source_location) {
   return session_finder::find_last_active_time(source_location);
 }
 
@@ -214,4 +214,4 @@ SessionMap &session_builder::get_all_sessions() {
   std::lock_guard<std::mutex> lock(update_session_mutex_);
   return live_sessions_;
 }
-} // namespace kungfu::yijinjing::index
+} // namespace kungfu::index

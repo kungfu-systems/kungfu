@@ -15,14 +15,14 @@ using namespace kungfu::rx;
 using namespace kungfu::longfist;
 using namespace kungfu::longfist::types;
 using namespace kungfu::longfist::enums;
-using namespace kungfu::yijinjing::cache;
+using namespace kungfu::cache;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::yijinjing::journal;
 
-namespace kungfu::yijinjing::practice {
+namespace kungfu::practice {
 
 master::master(const location_ptr &home, bool low_latency)
-    : master(std::make_shared<io_device_master>(home, low_latency)) {}
+    : master(std::make_shared<yijinjing::io_device_master>(home, low_latency)) {}
 
 master::master(const yijinjing::io_device_ptr &io_device) : hero(io_device), last_check_(0), cached_(io_device) {}
 
@@ -53,7 +53,7 @@ void master::notify_deregister_on_exit() {
     auto &session = iter.second;
     auto location_from_session = location::make_shared(session, get_locator());
     if (session.location_uid != master_home_location_->uid) {
-      get_writer(location::PUBLIC)->write(time::now_in_nano(), location_from_session->to<Deregister>());
+      get_writer(location::PUBLIC)->write(yijinjing::time::now_in_nano(), location_from_session->to<Deregister>());
     }
   }
 }
@@ -66,7 +66,7 @@ void master::notify_master_deregister_on_exit() {
 
     if (has_writer(session.location_uid)) {
       auto writer = get_writer(session.location_uid);
-      writer->write(time::now_in_nano(), master_home_location_->to<Deregister>());
+      writer->write(yijinjing::time::now_in_nano(), master_home_location_->to<Deregister>());
     } else {
       SPDLOG_WARN("no writer {} {}", session.location_uid, get_location_uname(session.location_uid));
     }
@@ -74,20 +74,20 @@ void master::notify_master_deregister_on_exit() {
 }
 
 void master::mark_session_end_on_exit() {
-  get_writer(location::PUBLIC)->mark(time::now_in_nano(), SessionEnd::tag);
+  get_writer(location::PUBLIC)->mark(yijinjing::time::now_in_nano(), SessionEnd::tag);
   auto &live_sessions = cached_.get_all_sessions();
   for (auto &iter : live_sessions) {
     auto &session = iter.second;
     if (has_writer(session.location_uid)) {
       auto writer = get_writer(session.location_uid);
-      writer->mark(time::now_in_nano(), SessionEnd::tag);
+      writer->mark(yijinjing::time::now_in_nano(), SessionEnd::tag);
     } else {
       SPDLOG_WARN("no writer {} {}", session.location_uid, get_location_uname(session.location_uid));
     }
   }
 
   // have to use new now, ensuring later than all messages
-  cached_.close_all_sessions(time::now_in_nano());
+  cached_.close_all_sessions(yijinjing::time::now_in_nano());
 }
 
 void master::on_notify() { get_io_device()->get_publisher()->notify(); }
@@ -110,7 +110,7 @@ void master::register_app(const event_ptr &event) {
   register_location(event->gen_time(), register_data);
   try_add_location(event->gen_time(), app_location);
 
-  auto now = time::now_in_nano();
+  auto now = yijinjing::time::now_in_nano();
   auto uid_str = fmt::format("{:08x}", app_location->uid);
   auto master_cmd_location =
       location::make_shared(mode::LIVE, category::SYSTEM, "master", uid_str, home->locator, app_location->seed);
@@ -142,7 +142,7 @@ void master::register_app(const event_ptr &event) {
 
   write_time_reset(event->gen_time(), app_cmd_writer);
   app_cmd_writer->mark(event->gen_time(), SessionStart::tag);
-  app_cmd_writer->mark(time::now_in_nano(), RequestStart::tag);
+  app_cmd_writer->mark(yijinjing::time::now_in_nano(), RequestStart::tag);
 
   // have to be at this position, for triggering strategy(other) prepare
   write_locations(event->gen_time(), app_cmd_writer);
@@ -174,7 +174,7 @@ void master::deregister_app(int64_t trigger_time, uint32_t app_location_uid) {
   const Deregister deregister = location->to<Deregister>();
   SPDLOG_DEBUG("Deregister: {}", deregister.to_string());
   get_writer(location::PUBLIC)->write(trigger_time, deregister);
-  cached_.close_session(location, time::now_in_nano());
+  cached_.close_session(location, yijinjing::time::now_in_nano());
 }
 
 void master::on_request_deregister(const event_ptr &event) {
@@ -210,15 +210,15 @@ void master::react() {
   events_ | is(CacheReset::tag) | $([&](const event_ptr &event) { cached_.cache_reset(event); });
   events_ | is(CachedPause::tag) | $$(cached_.switch_feed_storage(true));
   events_ | is(CachedResume::tag) | $$(cached_.switch_feed_storage(false));
-  events_ | instanceof <journal::frame>() | $$(feed(event));
+  events_ | instanceof <yijinjing::journal::frame>() | $$(feed(event));
 
   // have to be at bottom of react, for avoid event still required after reader disjoin
   events_ | is(RequestDeregister::tag) | $$(on_request_deregister(event));
 }
 
 void master::on_active() {
-  auto now = time::now_in_nano();
-  if (last_check_ + time_unit::NANOSECONDS_PER_SECOND < now) {
+  auto now = yijinjing::time::now_in_nano();
+  if (last_check_ + yijinjing::time_unit::NANOSECONDS_PER_SECOND < now) {
     on_interval_check(now);
     last_check_ = now;
   }
@@ -228,7 +228,7 @@ void master::on_active() {
 void master::on_frame() { handle_timer_tasks(); }
 
 void master::handle_timer_tasks() {
-  auto now = time::now_in_nano();
+  auto now = yijinjing::time::now_in_nano();
   for (auto &app : timer_tasks_) {
     uint32_t app_id = app.first;
     auto &app_tasks = app.second;
@@ -262,7 +262,7 @@ void master::feed(const event_ptr &event) {
     return;
   }
 
-  cached_.update_session(std::dynamic_pointer_cast<journal::frame>(event));
+  cached_.update_session(std::dynamic_pointer_cast<yijinjing::journal::frame>(event));
 
   if (event->dest() == location::SYNC) {
     return;
@@ -409,12 +409,12 @@ void master::on_time_request(const event_ptr &event) {
 
 void master::on_new_location(const event_ptr &event) {
   const Location &location = event->data<Location>();
-  try_add_location(event->gen_time(), data::location::make_shared(location, get_locator()));
+  try_add_location(event->gen_time(), yijinjing::data::location::make_shared(location, get_locator()));
   get_writer(location::PUBLIC)->write(event->gen_time(), location);
 }
 
 void master::write_time_reset(int64_t, const writer_ptr &writer) {
-  auto time_base = time::get_base();
+  auto time_base = yijinjing::time::get_base();
   TimeReset &time_reset = writer->open_data<TimeReset>();
   time_reset.system_clock_count = time_base.system_clock_count;
   time_reset.steady_clock_count = time_base.steady_clock_count;
@@ -447,4 +447,4 @@ void master::write_bands(int64_t trigger_time, const writer_ptr &writer) {
 
 bool master::is_reactable(const event_ptr &event) { return not is_custom_event(event); }
 
-} // namespace kungfu::yijinjing::practice
+} // namespace kungfu::practice

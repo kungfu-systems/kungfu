@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #include <kungfu/wingchun/operator/backtest.h>
 
-using namespace kungfu::yijinjing::practice;
+using namespace kungfu::practice;
 using namespace kungfu::rx;
 using namespace kungfu::longfist;
 using namespace kungfu::longfist::types;
@@ -204,7 +204,7 @@ void BacktestContext::subscribe_slice(const location_ptr &slice_location, int64_
       if (slice_location->locator->list_page_id(slice_location, location::PUBLIC).empty()) {
         SPDLOG_WARN("failed to subscribe data between {} and {}, md public journal in locator={}, location={} "
                     "not exists",
-                    time::strftime(nanotime + 1), time::strftime(nanotime + offset),
+                    yijinjing::time::strftime(nanotime + 1), yijinjing::time::strftime(nanotime + offset),
                     slice_location->locator->get_root(), slice_location->uname);
       }
       for (const auto dest_id : slice_location->locator->list_location_dest(slice_location)) {
@@ -218,7 +218,7 @@ void BacktestContext::subscribe_slice(const location_ptr &slice_location, int64_
     default:
       SPDLOG_ERROR(" probably failed to acquire data between {} and {}, public journal in locator={}, location={} "
                    "not exists",
-                   time::strftime(nanotime + 1), time::strftime(nanotime + offset), slice_location->locator->get_root(),
+                   yijinjing::time::strftime(nanotime + 1), yijinjing::time::strftime(nanotime + offset), slice_location->locator->get_root(),
                    slice_location->uname);
       SPDLOG_ERROR("invalid slice state={} with reference count={} at slice data confirm acquiring stage.",
                    static_cast<int>(reference_count.state), reference_count.reference_count);
@@ -238,7 +238,7 @@ void BacktestContext::subscribe_slice(const location_ptr &slice_location, int64_
     case SliceState::Acquired:
       SPDLOG_WARN("slice data between {} and {} is already acquired with reference count={}, public journal in "
                   "locator={}, location={}",
-                  time::strftime(nanotime + 1), time::strftime(nanotime + offset), reference_count.reference_count,
+                  yijinjing::time::strftime(nanotime + 1), yijinjing::time::strftime(nanotime + offset), reference_count.reference_count,
                   slice_location->locator->get_root(), slice_location->uname);
       break;
     default:

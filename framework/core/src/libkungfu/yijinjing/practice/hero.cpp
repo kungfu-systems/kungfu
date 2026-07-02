@@ -18,29 +18,29 @@ using namespace kungfu::longfist::enums;
 using namespace kungfu::longfist::types;
 using namespace kungfu::yijinjing;
 using namespace kungfu::yijinjing::util;
-using namespace kungfu::yijinjing::cache;
+using namespace kungfu::cache;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::yijinjing::journal;
 using namespace kungfu::yijinjing::nanomsg;
 
-namespace kungfu::yijinjing::practice {
+namespace kungfu::practice {
 
-inline std::string encode(const io_device_ptr &io_device) {
+inline std::string encode(const yijinjing::io_device_ptr &io_device) {
   auto home_uid =
       io_device->get_home()->mode == mode::BACKTEST ? io_device->get_home()->uid : io_device->get_live_home()->uid;
   return fmt::format("{:08x}", home_uid);
 }
 
-hero::hero(io_device_ptr io_device)
-    : begin_time_(time::now_in_nano()), end_time_(INT64_MAX),
+hero::hero(yijinjing::io_device_ptr io_device)
+    : begin_time_(yijinjing::time::now_in_nano()), end_time_(INT64_MAX),
       master_home_location_(make_system_location("master", "master", io_device->get_locator())),
       master_cmd_location_(
           make_system_location("master", encode(io_device), io_device->get_locator(), io_device->get_home()->seed)),
       ledger_home_location_(make_system_location("service", "ledger", io_device->get_locator())),
-      io_device_(std::move(io_device)), now_(0), main_thread_id_(util::get_thread_id()) {
+      io_device_(std::move(io_device)), now_(0), main_thread_id_(yijinjing::util::get_thread_id()) {
 
   os::handle_os_signals(this);
-  util::set_error_log_dir(get_locator()->layout_dir(get_home(), layout::LOG));
+  yijinjing::util::set_error_log_dir(get_locator()->layout_dir(get_home(), layout::LOG));
   reader_ = io_device_->open_reader_to_subscribe();
 }
 
@@ -89,7 +89,7 @@ void hero::step(uint32_t step_limit) {
 
 void hero::run(uint32_t step_limit) {
   SPDLOG_INFO("[{:08x}] {} running", get_home_uid(), get_home_uname());
-  SPDLOG_DEBUG("from {} until {}", time::strftime(begin_time_), time::strftime(end_time_));
+  SPDLOG_DEBUG("from {} until {}", yijinjing::time::strftime(begin_time_), yijinjing::time::strftime(end_time_));
   step_limit_ = step_limit;
   pre_setup();
   setup();
@@ -125,7 +125,7 @@ int64_t hero::get_end_time() const { return end_time_; }
 
 const locator_ptr &hero::get_locator() const { return io_device_->get_locator(); }
 
-io_device_ptr hero::get_io_device() const { return io_device_; }
+yijinjing::io_device_ptr hero::get_io_device() const { return io_device_; }
 
 const location_ptr &hero::get_home() const { return get_io_device()->get_home(); }
 
@@ -140,14 +140,14 @@ uint32_t hero::get_live_home_uid() const { return get_io_device()->get_live_home
 reader_ptr hero::get_reader() const { return reader_; }
 
 bool hero::has_writer(uint32_t dest_id) const {
-  if (util::get_thread_id() != main_thread_id_) {
+  if (yijinjing::util::get_thread_id() != main_thread_id_) {
     return has_band_writer(dest_id) or writers_.find(dest_id) != writers_.end();
   }
   return writers_.find(dest_id) != writers_.end();
 }
 
 writer_ptr hero::get_writer(uint32_t dest_id) const {
-  if (util::get_thread_id() != main_thread_id_) {
+  if (yijinjing::util::get_thread_id() != main_thread_id_) {
     try {
       return get_band_writer(dest_id);
     } catch (const std::exception &e) {
@@ -228,7 +228,7 @@ const std::unordered_map<uint64_t, longfist::types::Channel> &hero::get_channels
 
 const std::unordered_map<uint32_t, longfist::types::Register> &hero::get_registry() const { return registry_; }
 
-const std::unordered_map<uint32_t, data::location_ptr> &hero::get_locations() const { return locations_; }
+const std::unordered_map<uint32_t, yijinjing::data::location_ptr> &hero::get_locations() const { return locations_; }
 
 bool hero::has_band(uint32_t source, uint32_t dest) const { return has_band(make_source_dest_hash(source, dest)); }
 
@@ -298,7 +298,7 @@ void hero::add_location(int64_t, const location_ptr &location) {
 }
 
 void hero::add_location(int64_t trigger_time, const Location &location) {
-  add_location(trigger_time, data::location::make_shared(location, get_locator()));
+  add_location(trigger_time, yijinjing::data::location::make_shared(location, get_locator()));
 }
 
 void hero::remove_location(int64_t trigger_time, uint32_t location_uid) { locations_.erase(location_uid); }
@@ -395,7 +395,7 @@ void hero::require_write_to(int64_t trigger_time, uint32_t source_id, uint32_t d
   writer->close_data();
 }
 
-void hero::require_write_to_band(int64_t trigger_time, uint32_t source_id, const data::location_ptr &location,
+void hero::require_write_to_band(int64_t trigger_time, uint32_t source_id, const yijinjing::data::location_ptr &location,
                                  uint64_t page_size) const {
   auto writer = get_writer(source_id);
   RequestWriteToBand msg = {};
@@ -430,7 +430,7 @@ void hero::deal_notice(bool bypass, bool notify, const rx::subscriber<event_ptr>
     return;
 
   const std::string &notice = io_device_->get_observer()->get_notice();
-  now_ = time::now_in_nano();
+  now_ = yijinjing::time::now_in_nano();
   if (notice.length() > 2) {
     const auto frame = std::make_shared<nanomsg_json>(notice);
     io_device_->get_bus()->set_trigger_frame(frame);
@@ -462,12 +462,12 @@ bool hero::drain(const rx::subscriber<event_ptr> &sb) {
       reader_->next();
       cleanup_reader_disjoin();
     } else {
-      SPDLOG_INFO("reached journal end {}", time::strftime(frame->gen_time()));
+      SPDLOG_INFO("reached journal end {}", yijinjing::time::strftime(frame->gen_time()));
       return false;
     }
   }
   if (get_io_device()->get_home()->mode != mode::LIVE and not reader_->data_available()) {
-    SPDLOG_INFO("reached journal end {}", time::strftime(now()));
+    SPDLOG_INFO("reached journal end {}", yijinjing::time::strftime(now()));
     return false;
   }
   return true;
@@ -477,7 +477,7 @@ void hero::delegate_produce(hero *instance, const rx::subscriber<event_ptr> &sub
 #ifdef _WINDOWS
   __try {
     instance->produce(subscriber);
-  } __except (util::print_stack_trace(GetExceptionInformation())) {
+  } __except (yijinjing::util::print_stack_trace(GetExceptionInformation())) {
   }
 #else
   instance->produce(subscriber);
@@ -679,4 +679,4 @@ void hero::read_location_from_rocksdb() {
     }
   }
 }
-} // namespace kungfu::yijinjing::practice
+} // namespace kungfu::practice

@@ -5,7 +5,7 @@
 using namespace kungfu::rx;
 using namespace kungfu::longfist::types;
 using namespace kungfu::longfist::enums;
-using namespace kungfu::yijinjing::practice;
+using namespace kungfu::practice;
 using namespace kungfu::yijinjing;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::yijinjing::journal;
@@ -33,7 +33,7 @@ TraderWriterHook::TraderWriterHook(TraderVendor &vendor) : vendor_(vendor) {}
 void TraderWriterHook::on_open_frame(int64_t trigger_time, frame_ptr frame) {}
 
 void TraderWriterHook::on_close_frame(int64_t gen_time, frame_ptr frame) {
-  auto now = time::now_in_nano();
+  auto now = yijinjing::time::now_in_nano();
   switch (frame->msg_type()) {
   case Order::tag: {
     auto &order = guard_update_time<Order>(frame->data<Order>());
@@ -152,12 +152,12 @@ void TraderVendor::on_start() {
   service_->on_start();
 
   // after recover done, which take some time, then start to try req account
-  add_time_interval(SYNC_ASSET_INTERVAL * time_unit::NANOSECONDS_PER_SECOND,
+  add_time_interval(SYNC_ASSET_INTERVAL * yijinjing::time_unit::NANOSECONDS_PER_SECOND,
                     [&](auto e) { service_->try_req_account(); });
 
   if (get_low_memory_mode()) {
     SPDLOG_WARN("Low memory mode, clear finished order every {}s", ORDER_CLEAN_INTERVAL);
-    add_time_interval(ORDER_CLEAN_INTERVAL * time_unit::NANOSECONDS_PER_SECOND,
+    add_time_interval(ORDER_CLEAN_INTERVAL * yijinjing::time_unit::NANOSECONDS_PER_SECOND,
                       [&](auto e) { service_->clean_finished_orders(); });
   }
 }

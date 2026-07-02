@@ -10,7 +10,7 @@ using namespace kungfu::longfist;
 using namespace kungfu::longfist::enums;
 using namespace kungfu::yijinjing::data;
 
-namespace kungfu::yijinjing::cache {
+namespace kungfu::cache {
 
 std::string default_db_file(const locator_ptr &locator) {
   auto config_location = std::make_shared<location>(mode::LIVE, category::SYSTEM, "etc", "kungfu", locator);
@@ -28,8 +28,8 @@ void profile::setup() {
   storage->sync_schema();
 }
 
-yijinjing::cache::ProfileStoragePtr &profile::get_storage() {
-  static auto storage = yijinjing::cache::make_storage_ptr(profile_db_file_, ProfileDataTypes);
+cache::ProfileStoragePtr &profile::get_storage() {
+  static auto storage = cache::make_storage_ptr(profile_db_file_, ProfileDataTypes);
   return storage;
 }
-} // namespace kungfu::yijinjing::cache
+} // namespace kungfu::cache

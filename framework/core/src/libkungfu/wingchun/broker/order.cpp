@@ -5,14 +5,14 @@ using namespace kungfu::wingchun;
 using namespace kungfu::wingchun::broker;
 using namespace kungfu::longfist::enums;
 using namespace kungfu::longfist::types;
-using namespace kungfu::yijinjing::practice;
+using namespace kungfu::practice;
 using namespace kungfu::yijinjing;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::yijinjing::util;
 
 namespace kungfu::wingchun::broker {
 
-constexpr uint64_t ORDER_CLAEN_THROTTLE = 5 * time_unit::NANOSECONDS_PER_MINUTE;
+constexpr uint64_t ORDER_CLAEN_THROTTLE = 5 * yijinjing::time_unit::NANOSECONDS_PER_MINUTE;
 
 void OrderService::on_order_input(const event_ptr &event) {
   auto &order_input = event->data<OrderInput>();
@@ -86,7 +86,7 @@ void OrderService::lost_orders(bool bypass_recover) {
     Order &order = pair.second.data;
     if (not is_final_status(order.status) and (bypass_recover or order.external_order_id.to_string().empty())) {
       order.status = OrderStatus::Lost;
-      order.update_time = time::now_in_nano();
+      order.update_time = yijinjing::time::now_in_nano();
       vendor_.try_write_to(vendor_.now(), order, pair.second.dest);
     }
   });
@@ -100,13 +100,13 @@ void OrderService::lost_orders(uint32_t source, const OrderInput &order_input, b
   Order order{};
   order_from_input(order_input, order);
   order.status = OrderStatus::Lost;
-  order.update_time = time::now_in_nano();
+  order.update_time = yijinjing::time::now_in_nano();
   vendor_.try_write_to(vendor_.now(), order, source);
 }
 
 void OrderService::clean_finished_orders(uint64_t now) {
   auto before_clean_order_size = orders_.size();
-  auto start = time::now_in_nano();
+  auto start = yijinjing::time::now_in_nano();
   auto iter = orders_.begin();
   while (iter != orders_.end()) {
     auto &state = iter->second;
@@ -117,7 +117,7 @@ void OrderService::clean_finished_orders(uint64_t now) {
     }
   }
   auto after_clean_order_size = orders_.size();
-  auto end = time::now_in_nano();
+  auto end = yijinjing::time::now_in_nano();
   SPDLOG_DEBUG("clean_finished_orders clean size {}, takes {}ns", before_clean_order_size - after_clean_order_size,
                end - start);
 }

@@ -10,7 +10,7 @@
 #include <kungfu/longfist/longfist.h>
 #include <kungfu/yijinjing/journal/journal.h>
 
-namespace kungfu::yijinjing::cache {
+namespace kungfu::cache {
 class bank {
 public:
   template <typename DataType> void operator<<(const state<DataType> &state) {
@@ -44,7 +44,7 @@ public:
     });
   }
 
-  void operator>>(yijinjing::cache::bank &bank) {
+  void operator>>(cache::bank &bank) {
     boost::hana::for_each(longfist::StateDataTypes, [&](auto it) {
       auto type = boost::hana::second(it);
       for (const auto &element : state_map_[type]) {
@@ -110,7 +110,7 @@ public:
     });
   }
 
-  void operator>>(yijinjing::cache::deque_bank &bank) {
+  void operator>>(cache::deque_bank &bank) {
     boost::hana::for_each(longfist::StateDataTypes, [&](auto it) {
       auto type = boost::hana::second(it);
       for (const auto &element : state_map_[type]) {
@@ -195,7 +195,7 @@ public:
     });
   }
 
-  void operator>>(yijinjing::cache::bank &bank) {
+  void operator>>(cache::bank &bank) {
     boost::hana::for_each(types_, [&](auto it) {
       auto type = boost::hana::second(it);
       for (const auto &element : state_map_[type]) {
@@ -221,6 +221,6 @@ private:
   DataTypesMap state_map_;
 };
 
-} // namespace kungfu::yijinjing::cache
+} // namespace kungfu::cache
 
 #endif // KUNGFU_CACHE_RUNTIME_H

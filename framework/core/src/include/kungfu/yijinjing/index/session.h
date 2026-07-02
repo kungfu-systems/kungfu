@@ -14,7 +14,7 @@
 #include <kungfu/yijinjing/journal/journal.h>
 #include <kungfu/yijinjing/time.h>
 
-namespace kungfu::yijinjing::index {
+namespace kungfu::index {
 typedef std::vector<longfist::types::Session> SessionVector;
 typedef std::unordered_map<uint32_t, longfist::types::Session> SessionMap;
 
@@ -24,11 +24,11 @@ public:
 
   virtual ~session_finder();
 
-  virtual int64_t find_last_active_time(const data::location_ptr &source_location);
+  virtual int64_t find_last_active_time(const yijinjing::data::location_ptr &source_location);
 
   SessionVector find_sessions(int64_t from = 0, int64_t to = INT64_MAX);
 
-  SessionVector find_sessions_for(const data::location_ptr &source_location, int64_t from = 0, int64_t to = INT64_MAX);
+  SessionVector find_sessions_for(const yijinjing::data::location_ptr &source_location, int64_t from = 0, int64_t to = INT64_MAX);
 
 protected:
   yijinjing::io_device_ptr io_device_;
@@ -39,15 +39,15 @@ class session_builder : public session_finder {
 public:
   explicit session_builder(const yijinjing::io_device_ptr &io_device);
 
-  int64_t find_last_active_time(const data::location_ptr &source_location) override;
+  int64_t find_last_active_time(const yijinjing::data::location_ptr &source_location) override;
 
-  longfist::types::Session &open_session(const data::location_ptr &source_location, int64_t time);
+  longfist::types::Session &open_session(const yijinjing::data::location_ptr &source_location, int64_t time);
 
-  void close_session(const data::location_ptr &source_location, int64_t time);
+  void close_session(const yijinjing::data::location_ptr &source_location, int64_t time);
 
   void close_all_sessions(int64_t time);
 
-  void update_session(const journal::frame_ptr &frame);
+  void update_session(const yijinjing::journal::frame_ptr &frame);
 
   void rebuild_index_db();
 
@@ -59,6 +59,6 @@ private:
   SessionMap live_sessions_ = {};
   std::mutex update_session_mutex_;
 };
-} // namespace kungfu::yijinjing::index
+} // namespace kungfu::index
 
 #endif // KUNGFU_SESSION_H

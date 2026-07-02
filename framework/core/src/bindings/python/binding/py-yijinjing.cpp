@@ -21,12 +21,12 @@
 using namespace kungfu::longfist;
 using namespace kungfu::longfist::types;
 using namespace kungfu::longfist::enums;
-using namespace kungfu::yijinjing::cache;
+using namespace kungfu::cache;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::yijinjing::index;
+using namespace kungfu::index;
 using namespace kungfu::yijinjing::journal;
 using namespace kungfu::yijinjing::nanomsg;
-using namespace kungfu::yijinjing::practice;
+using namespace kungfu::practice;
 
 namespace py = pybind11;
 
@@ -104,7 +104,7 @@ public:
 
 class PySink : public sink {
 public:
-  void put(const data::location_ptr &location, uint32_t dest_id, const frame_ptr &frame) override {
+  void put(const yijinjing::data::location_ptr &location, uint32_t dest_id, const frame_ptr &frame) override {
     PYBIND11_OVERLOAD_PURE(void, sink, put, location, dest_id, frame);
   }
   void close() override { PYBIND11_OVERLOAD(void, sink, close); }
@@ -142,38 +142,38 @@ void bind(pybind11::module &&m) {
   yijinjing::ensure_sqlite_initilize();
 
   // nanosecond-time related
-  m.def("now_in_nano", &time::now_in_nano);
-  m.def("nano_hashed", &time::nano_hashed);
-  m.def("next_minute", &time::next_minute);
-  m.def("next_trading_day_end", &time::next_trading_day_end);
-  m.def("calendar_day_start", &time::calendar_day_start);
-  m.def("today_start", &time::today_start);
-  m.def("trading_day_start", &time::trading_day_start);
-  m.def("restore_start", &time::restore_start);
-  m.def("strftime", &time::strftime, py::arg("nanotime"), py::arg("format") = KUNGFU_TIMESTAMP_FORMAT);
-  m.def("strptime", py::overload_cast<const std::string &, const std::string &>(&time::strptime), py::arg("timestr"),
+  m.def("now_in_nano", &yijinjing::time::now_in_nano);
+  m.def("nano_hashed", &yijinjing::time::nano_hashed);
+  m.def("next_minute", &yijinjing::time::next_minute);
+  m.def("next_trading_day_end", &yijinjing::time::next_trading_day_end);
+  m.def("calendar_day_start", &yijinjing::time::calendar_day_start);
+  m.def("today_start", &yijinjing::time::today_start);
+  m.def("trading_day_start", &yijinjing::time::trading_day_start);
+  m.def("restore_start", &yijinjing::time::restore_start);
+  m.def("strftime", &yijinjing::time::strftime, py::arg("nanotime"), py::arg("format") = KUNGFU_TIMESTAMP_FORMAT);
+  m.def("strptime", py::overload_cast<const std::string &, const std::string &>(&yijinjing::time::strptime), py::arg("timestr"),
         py::arg("format") = KUNGFU_TIMESTAMP_FORMAT);
-  m.def("strfnow", &time::strfnow, py::arg("format") = KUNGFU_TIMESTAMP_FORMAT);
+  m.def("strfnow", &yijinjing::time::strfnow, py::arg("format") = KUNGFU_TIMESTAMP_FORMAT);
 
   m.def("get_page_path", &page::get_page_path);
 
-  m.def("thread_id", &util::get_thread_id);
-  m.def("in_color_terminal", &util::in_color_terminal);
-  m.def("color_print", &util::color_print);
+  m.def("thread_id", &yijinjing::util::get_thread_id);
+  m.def("in_color_terminal", &yijinjing::util::in_color_terminal);
+  m.def("color_print", &yijinjing::util::color_print);
 
-  m.def("hash_32", &util::hash_32, py::arg("key"), py::arg("length"), py::arg("seed") = KUNGFU_HASH_SEED);
-  m.def("hash_str_32", &util::hash_str_32, py::arg("key"), py::arg("seed") = KUNGFU_HASH_SEED);
+  m.def("hash_32", &yijinjing::util::hash_32, py::arg("key"), py::arg("length"), py::arg("seed") = KUNGFU_HASH_SEED);
+  m.def("hash_str_32", &yijinjing::util::hash_str_32, py::arg("key"), py::arg("seed") = KUNGFU_HASH_SEED);
 
-  m.def("setup_log", &log::setup_log);
-  m.def("emit_log", &log::emit_log);
+  m.def("setup_log", &yijinjing::log::setup_log);
+  m.def("emit_log", &yijinjing::log::emit_log);
 
-  py::enum_<nanomsg::protocol>(m, "protocol", py::arithmetic(), "Nanomsg Protocol")
-      .value("REPLY", nanomsg::protocol::REPLY)
-      .value("REQUEST", nanomsg::protocol::REQUEST)
-      .value("PUSH", nanomsg::protocol::PUSH)
-      .value("PULL", nanomsg::protocol::PULL)
-      .value("PUBLISH", nanomsg::protocol::PUBLISH)
-      .value("SUBSCRIBE", nanomsg::protocol::SUBSCRIBE)
+  py::enum_<yijinjing::nanomsg::protocol>(m, "protocol", py::arithmetic(), "Nanomsg Protocol")
+      .value("REPLY", yijinjing::nanomsg::protocol::REPLY)
+      .value("REQUEST", yijinjing::nanomsg::protocol::REQUEST)
+      .value("PUSH", yijinjing::nanomsg::protocol::PUSH)
+      .value("PULL", yijinjing::nanomsg::protocol::PULL)
+      .value("PUBLISH", yijinjing::nanomsg::protocol::PUBLISH)
+      .value("SUBSCRIBE", yijinjing::nanomsg::protocol::SUBSCRIBE)
       .export_values();
 
   auto event_class = py::class_<event, PyEvent, std::shared_ptr<event>>(m, "event");
@@ -229,7 +229,7 @@ void bind(pybind11::module &&m) {
            py::arg("name") = "*", py::arg("mode") = "*")
       .def("list_location_dest", &locator::list_location_dest);
 
-  py::class_<nanomsg::socket, socket_ptr>(m, "socket")
+  py::class_<yijinjing::nanomsg::socket, socket_ptr>(m, "socket")
       .def(py::init<protocol>(), py::arg("protocol"))
       .def("setsockopt", &socket::setsockopt_str, py::arg("option"), py::arg("value"))
       .def("setsockopt", &socket::setsockopt_int, py::arg("option"), py::arg("value"))
@@ -268,7 +268,7 @@ void bind(pybind11::module &&m) {
 
   auto writer_class = py::class_<writer, writer_ptr>(m, "writer");
   writer_class
-      .def(py::init<const data::location_ptr &, uint32_t, bool, publisher_ptr, bool, const bus_ptr &, uint32_t>())
+      .def(py::init<const yijinjing::data::location_ptr &, uint32_t, bool, publisher_ptr, bool, const bus_ptr &, uint32_t>())
       .def("current_frame_uid", &writer::current_frame_uid)
       .def("get_location", &writer::get_location)
       .def("get_dest", &writer::get_dest)
@@ -295,16 +295,16 @@ void bind(pybind11::module &&m) {
   py::class_<null_sink, sink, std::shared_ptr<null_sink>>(m, "null_sink").def(py::init<>());
 
   py::class_<copy_sink, sink, std::shared_ptr<copy_sink>>(m, "copy_sink")
-      .def(py::init<data::locator_ptr>())
+      .def(py::init<yijinjing::data::locator_ptr>())
       .def("put", &copy_sink::put);
 
   auto assemble_class = py::class_<assemble, assemble_ptr>(m, "assemble");
   assemble_class
-      .def(py::init<const std::vector<data::locator_ptr> &, const std::string &, const std::string &,
+      .def(py::init<const std::vector<yijinjing::data::locator_ptr> &, const std::string &, const std::string &,
                     const std::string &, const std::string &>(),
            py::arg("locators"), py::arg("mode") = "*", py::arg("category") = "*", py::arg("group") = "*",
            py::arg("name") = "*")
-      .def(py::init<const data::location_ptr &, uint32_t, uint32_t, int64_t>(), py::arg("source_location"),
+      .def(py::init<const yijinjing::data::location_ptr &, uint32_t, uint32_t, int64_t>(), py::arg("source_location"),
            py::arg("dest_id"), py::arg("assemble_mode") = longfist::enums::AssembleMode::Channel,
            py::arg("from_time") = 0)
       .def("read_headers", (std::vector<frame_header>(assemble::*)(int32_t, int64_t)) & assemble::read_headers,
@@ -329,7 +329,7 @@ void bind(pybind11::module &&m) {
                        py::arg("data") = DataType{}, py::arg("end_time") = INT64_MAX, py::return_value_policy::move);
   });
 
-  py::class_<io_device, io_device_ptr>(m, "io_device")
+  py::class_<io_device, yijinjing::io_device_ptr>(m, "io_device")
       .def(py::init<location_ptr, bool, bool>(), py::arg("home"), py::arg("low_latency") = false,
            py::arg("lazy") = true)
       .def_property_readonly("publisher", &io_device::get_publisher)
@@ -343,25 +343,25 @@ void bind(pybind11::module &&m) {
       .def("open_reader_to_subscribe", &io_device::open_reader_to_subscribe)
       .def("open_writer", &io_device::open_writer);
 
-  py::class_<io_device_master, io_device, io_device_master_ptr>(m, "io_device_master")
+  py::class_<yijinjing::io_device_master, io_device, io_device_master_ptr>(m, "yijinjing::io_device_master")
       .def(py::init<location_ptr, bool>(), py::arg("home"), py::arg("low_latency"));
 
-  py::class_<io_device_client, io_device, io_device_client_ptr>(m, "io_device_client")
+  py::class_<yijinjing::io_device_client, io_device, io_device_client_ptr>(m, "yijinjing::io_device_client")
       .def(py::init<location_ptr, bool>(), py::arg("home"), py::arg("low_latency"));
 
-  py::class_<io_device_console, io_device, io_device_console_ptr>(m, "io_device_console")
+  py::class_<yijinjing::io_device_console, io_device, io_device_console_ptr>(m, "yijinjing::io_device_console")
       .def(py::init<location_ptr, uint32_t, uint32_t>(), py::arg("home"), py::arg("width"), py::arg("height"))
-      .def("trace", &io_device_console::trace)
-      .def("show", &io_device_console::show);
+      .def("trace", &yijinjing::io_device_console::trace)
+      .def("show", &yijinjing::io_device_console::show);
 
   py::class_<session_finder, std::shared_ptr<session_finder>>(m, "session_finder")
-      .def(py::init<io_device_ptr>())
+      .def(py::init<yijinjing::io_device_ptr>())
       .def("find_sessions", &session_finder::find_sessions, py::arg("from") = 0, py::arg("to") = INT64_MAX)
       .def("find_sessions_for", &session_finder::find_sessions_for, py::arg("source"), py::arg("from") = 0,
            py::arg("to") = INT64_MAX);
 
   py::class_<session_builder, session_finder, std::shared_ptr<session_builder>>(m, "session_builder")
-      .def(py::init<io_device_ptr>())
+      .def(py::init<yijinjing::io_device_ptr>())
       .def("rebuild_index_db", &session_builder::rebuild_index_db)
       .def("update_index_db", &session_builder::update_index_db);
 

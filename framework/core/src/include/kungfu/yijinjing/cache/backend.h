@@ -13,7 +13,7 @@
 #include <kungfu/yijinjing/journal/journal.h>
 #include <kungfu/yijinjing/time.h>
 
-namespace kungfu::yijinjing::cache {
+namespace kungfu::cache {
 template <typename ValueType> std::enable_if_t<std::is_arithmetic_v<ValueType>, ValueType> make_default() { return 0; }
 
 template <typename ValueType> std::enable_if_t<std::is_enum_v<ValueType>, int> make_default() { return 0; }
@@ -58,7 +58,7 @@ constexpr auto make_storage_ptr = [](const std::string &db_file, const auto &typ
     return [&](auto... tables) {
       using storage_type = decltype(sqlite_orm::make_storage(db_file, tables...));
       auto storage_ptr = std::make_shared<storage_type>(sqlite_orm::make_storage(db_file, tables...));
-      storage_ptr->busy_timeout(time_unit::MILLISECONDS_PER_SECOND);
+      storage_ptr->busy_timeout(yijinjing::time_unit::MILLISECONDS_PER_SECOND);
       return storage_ptr;
     };
   };
@@ -217,7 +217,7 @@ private:
     }
   }
 
-  template <typename DataType> void restore(yijinjing::cache::bank &bank, uint32_t dest, StateStoragePtr &storage) {
+  template <typename DataType> void restore(cache::bank &bank, uint32_t dest, StateStoragePtr &storage) {
     auto from = yijinjing::time::restore_start();
     for (auto &data : time_spec<DataType>::get_all(storage, from, INT64_MAX)) {
       bank << state(location_->uid, dest, from, data);
@@ -225,7 +225,7 @@ private:
   }
 
   template <typename DataType>
-  void restore(yijinjing::cache::bank &bank, uint32_t dest, StateStoragePtr &storage, int limit) {
+  void restore(cache::bank &bank, uint32_t dest, StateStoragePtr &storage, int limit) {
     auto from = yijinjing::time::restore_start();
     for (auto &data : time_spec<DataType>::get_all(storage, from, INT64_MAX, limit)) {
       bank << state(location_->uid, dest, from, data);
@@ -234,6 +234,6 @@ private:
 };
 
 DECLARE_PTR(shift)
-} // namespace kungfu::yijinjing::cache
+} // namespace kungfu::cache
 
 #endif // KUNGFU_CACHE_BACKEND_H

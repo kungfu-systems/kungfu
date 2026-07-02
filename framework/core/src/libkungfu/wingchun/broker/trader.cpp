@@ -13,11 +13,11 @@
 using namespace kungfu::rx;
 using namespace kungfu::longfist::types;
 using namespace kungfu::longfist::enums;
-using namespace kungfu::yijinjing::practice;
+using namespace kungfu::practice;
 using namespace kungfu::yijinjing;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::yijinjing::journal;
-using namespace kungfu::yijinjing::cache;
+using namespace kungfu::cache;
 
 namespace kungfu::wingchun::broker {
 
@@ -139,7 +139,7 @@ void Trader::recover() {
 }
 
 void Trader::recover_from_journal() {
-  tracer trc(get_live_home(), false, true, time::restore_start(), time::now_in_nano());
+  tracer trc(get_live_home(), false, true, yijinjing::time::restore_start(), yijinjing::time::now_in_nano());
   SPDLOG_DEBUG("before tracer read");
   int64_t count = 0;
   auto &state_bank = const_cast<cache::bank &>(get_vendor().get_state_bank());
@@ -238,7 +238,7 @@ void Trader::deal_read_frame() {
 
 void Trader::clean_finished_orders() {
   if (state_ == BrokerState::Ready) {
-    get_order_service().clean_finished_orders(time::now_in_nano());
+    get_order_service().clean_finished_orders(yijinjing::time::now_in_nano());
   }
 }
 

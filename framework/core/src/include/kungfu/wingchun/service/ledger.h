@@ -16,7 +16,7 @@
 
 namespace kungfu::wingchun::service {
 
-class Ledger : public yijinjing::practice::apprentice {
+class Ledger : public practice::apprentice {
   typedef std::unordered_map<uint32_t, longfist::types::BrokerStateUpdate> BrokerStateMap;
   typedef std::unordered_map<uint32_t, longfist::types::OperatorStateUpdate> OperatorStateMap;
 

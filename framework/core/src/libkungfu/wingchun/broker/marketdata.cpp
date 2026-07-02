@@ -9,7 +9,7 @@
 using namespace kungfu::rx;
 using namespace kungfu::longfist::types;
 using namespace kungfu::longfist::enums;
-using namespace kungfu::yijinjing::practice;
+using namespace kungfu::practice;
 using namespace kungfu::yijinjing;
 using namespace kungfu::yijinjing::data;
 
@@ -36,7 +36,7 @@ void MarketDataVendor::on_start() {
   events_ | is(Band::tag) | $$(service_->on_band(event));
   service_->on_start();
 
-  add_time_interval(time_unit::NANOSECONDS_PER_SECOND, [&](auto e) { service_->try_subscribe(); });
+  add_time_interval(yijinjing::time_unit::NANOSECONDS_PER_SECOND, [&](auto e) { service_->try_subscribe(); });
 }
 
 BrokerService_ptr MarketDataVendor::get_service() { return service_; }

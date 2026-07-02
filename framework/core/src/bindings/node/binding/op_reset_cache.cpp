@@ -12,7 +12,7 @@ using namespace kungfu::longfist::enums;
 using namespace kungfu::longfist::types;
 using namespace kungfu::yijinjing;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::yijinjing::practice;
+using namespace kungfu::practice;
 
 namespace kungfu::node::serialize {
 JsResetCache::JsResetCache(apprentice &app, Napi::ObjectReference &state) : app_(app), state_(state) {}

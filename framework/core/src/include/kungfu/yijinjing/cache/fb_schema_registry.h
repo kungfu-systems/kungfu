@@ -21,7 +21,7 @@
 #include <string>
 #include <vector>
 
-namespace kungfu::yijinjing::cache::projector {
+namespace kungfu::cache::projector {
 
 class SchemaRegistry {
 public:
@@ -118,6 +118,6 @@ inline void project_frame(sqlite3 *db, const SchemaRegistry::Entry &e, const uin
   sqlite3_finalize(ins);
 }
 
-} // namespace kungfu::yijinjing::cache::projector
+} // namespace kungfu::cache::projector
 
 #endif // KUNGFU_YIJINJING_CACHE_FB_SCHEMA_REGISTRY_H

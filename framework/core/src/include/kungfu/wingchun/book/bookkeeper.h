@@ -27,7 +27,7 @@ DECLARE_PTR(BookListener)
 
 class Bookkeeper {
 public:
-  explicit Bookkeeper(yijinjing::practice::apprentice &app, broker::Client &broker_client, bool bypass_quote = false,
+  explicit Bookkeeper(practice::apprentice &app, broker::Client &broker_client, bool bypass_quote = false,
                       bool bypass_replace_trading_data = false);
 
   virtual ~Bookkeeper() = default;
@@ -50,7 +50,7 @@ public:
   void on_algo_order_input(int64_t update_time, uint32_t source, uint32_t dest,
                            const longfist::types::AlgoOrderInput &input);
 
-  void restore(const yijinjing::cache::bank &state_bank);
+  void restore(const cache::bank &state_bank);
 
   void guard_positions();
 
@@ -148,7 +148,7 @@ public:
   }
 
 private:
-  yijinjing::practice::apprentice &app_;
+  practice::apprentice &app_;
   broker::Client &broker_client_;
   book::StaticData static_data_;
   const bool bypass_quote_;

@@ -12,7 +12,7 @@ using namespace kungfu::longfist::types;
 using namespace kungfu::wingchun::broker;
 using namespace kungfu::yijinjing;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::yijinjing::practice;
+using namespace kungfu::practice;
 
 namespace kungfu::wingchun::strategy {
 
@@ -69,7 +69,7 @@ void Runner::set_time_interval(int64_t time_interval) {
   if (time_interval <= 0) {
     throw wingchun_error(fmt::format("time_interval should be positive other than {}", time_interval_));
   }
-  if (time_interval <= 100 * time_unit::NANOSECONDS_PER_MILLISECOND) {
+  if (time_interval <= 100 * yijinjing::time_unit::NANOSECONDS_PER_MILLISECOND) {
     SPDLOG_WARN("No need to make time_interval smaller than 100ms which will cause to much resource.");
   }
   time_interval_ = time_interval;

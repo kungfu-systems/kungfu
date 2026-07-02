@@ -71,14 +71,14 @@ public:
   std::string get_config() const { return config_; };
 
 private:
-  friend void init_report(Report &report, yijinjing::practice::apprentice *runner, book::Bookkeeper *bookkeeper,
+  friend void init_report(Report &report, practice::apprentice *runner, book::Bookkeeper *bookkeeper,
                           const std::string &config) {
     report.app_ = runner;
     report.bookkeeper_ = bookkeeper;
     report.config_ = config;
   }
 
-  yijinjing::practice::apprentice *app_;
+  practice::apprentice *app_;
   book::Bookkeeper *bookkeeper_;
   std::string config_{"{}"};
 };

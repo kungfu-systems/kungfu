@@ -11,7 +11,7 @@
 
 #include <cstdlib>
 
-// using namespace kungfu::yijinjing::practice;
+// using namespace kungfu::practice;
 using namespace kungfu::rx;
 using namespace kungfu::longfist;
 using namespace kungfu::longfist::types;

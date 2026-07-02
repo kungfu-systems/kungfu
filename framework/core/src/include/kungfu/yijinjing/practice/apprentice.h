@@ -12,7 +12,7 @@
 #include <kungfu/yijinjing/practice/hero.h>
 #include <kungfu/yijinjing/time.h>
 
-namespace kungfu::yijinjing::practice {
+namespace kungfu::practice {
 class apprentice;
 
 class resource_manager {
@@ -37,7 +37,7 @@ private:
 
 class apprentice : public hero {
 public:
-  explicit apprentice(const data::location_ptr &home, bool low_latency = false, std::string arguments = "{}");
+  explicit apprentice(const yijinjing::data::location_ptr &home, bool low_latency = false, std::string arguments = "{}");
 
   explicit apprentice(const yijinjing::io_device_ptr &io_device, std::string arguments = "{}");
 
@@ -59,12 +59,12 @@ public:
 
   void request_read_from_sync(int64_t trigger_time, uint32_t source_id, int64_t from_time, uint64_t page_size = 0);
 
-  void request_read_from_source_to_dest(int64_t trigger_time, const data::location_ptr &source_location,
+  void request_read_from_source_to_dest(int64_t trigger_time, const yijinjing::data::location_ptr &source_location,
                                         uint32_t dest_id, uint64_t page_size = 0);
 
   void request_write_to(int64_t trigger_time, uint32_t dest_id, uint64_t page_size = 0);
 
-  void request_write_to_band(int64_t trigger_time, const data::location_ptr &location, uint64_t page_size = 0);
+  void request_write_to_band(int64_t trigger_time, const yijinjing::data::location_ptr &location, uint64_t page_size = 0);
 
   uint32_t request_band(const std::string &band_name, uint64_t page_size = 0);
 
@@ -169,17 +169,17 @@ public:
 
   void preload_next_page();
 
-  journal::writer_ptr &get_thread_writer(uint64_t page_size = 0);
+  yijinjing::journal::writer_ptr &get_thread_writer(uint64_t page_size = 0);
 
-  journal::writer_ptr &get_public_writer();
+  yijinjing::journal::writer_ptr &get_public_writer();
 
 protected:
   cache::bank state_bank_;
-  journal::writer_ptr master_cmd_writer_for_thread_ = nullptr;
-  journal::writer_ptr public_writer_ = nullptr;
-  inline static thread_local journal::writer_ptr thread_writer_ = nullptr;
+  yijinjing::journal::writer_ptr master_cmd_writer_for_thread_ = nullptr;
+  yijinjing::journal::writer_ptr public_writer_ = nullptr;
+  inline static thread_local yijinjing::journal::writer_ptr thread_writer_ = nullptr;
 
-  friend void add_location(practice::apprentice &app, const data::location_ptr &location) {
+  friend void add_location(practice::apprentice &app, const yijinjing::data::location_ptr &location) {
     app.add_location(app.now(), location);
   }
 
@@ -357,6 +357,6 @@ private:
 };
 
 DECLARE_PTR(apprentice)
-} // namespace kungfu::yijinjing::practice
+} // namespace kungfu::practice
 
 #endif // KUNGFU_APPRENTICE_H

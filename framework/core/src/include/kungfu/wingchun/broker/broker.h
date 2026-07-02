@@ -18,7 +18,7 @@ namespace kungfu::wingchun::broker {
 FORWARD_DECLARE_CLASS_PTR(BrokerVendor)
 FORWARD_DECLARE_CLASS_PTR(BrokerService)
 
-class BrokerVendor : public yijinjing::practice::apprentice {
+class BrokerVendor : public practice::apprentice {
 public:
   typedef yijinjing::data::locator_ptr locator_ptr;
   typedef yijinjing::data::location_ptr location_ptr;
@@ -107,7 +107,7 @@ public:
     vendor_.try_write_raw_to(trigger_time, msg_type, data, length, dest_id);
   }
 
-  [[nodiscard]] const yijinjing::cache::bank &get_state_bank() const;
+  [[nodiscard]] const cache::bank &get_state_bank() const;
 
   [[nodiscard]] bool check_if_stored_instruments(const std::string &trading_day) const;
 

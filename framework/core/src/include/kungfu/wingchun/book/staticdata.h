@@ -9,13 +9,13 @@ namespace kungfu::wingchun::book {
 
 class StaticData {
 public:
-  explicit StaticData(yijinjing::practice::apprentice &app);
+  explicit StaticData(practice::apprentice &app);
 
   virtual ~StaticData() = default;
 
   void on_start(const rx::connectable_observable<event_ptr> &events);
 
-  void restore(const yijinjing::cache::bank &state_bank);
+  void restore(const cache::bank &state_bank);
 
   const map::BasketMap &get_baskets() const { return baskets_; }
 
@@ -28,7 +28,7 @@ public:
   const map::InstrumentFactorMap &get_instrument_factors() const { return instrument_factors_; }
 
 private:
-  yijinjing::practice::apprentice &app_;
+  practice::apprentice &app_;
   map::BasketMap baskets_ = {};
   map::BasketInstrumentMap basket_instruments_ = {};
   map::CommissionMap commissions_ = {};

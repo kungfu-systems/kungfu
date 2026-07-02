@@ -14,7 +14,7 @@ using namespace kungfu::rx;
 using namespace kungfu::longfist;
 using namespace kungfu::longfist::enums;
 using namespace kungfu::longfist::types;
-using namespace kungfu::yijinjing::cache;
+using namespace kungfu::cache;
 using namespace kungfu::yijinjing;
 using namespace kungfu::yijinjing::data;
 
@@ -28,11 +28,11 @@ History::History(const Napi::CallbackInfo &info)
       profile_(locator_) {}
 
 Napi::Value History::SelectPeriod(const Napi::CallbackInfo &info) {
-  auto parse_time = [&](auto i) { return time::strptime(info[i].ToString().Utf8Value(), KUNGFU_HISTORY_DAY_FORMAT); };
+  auto parse_time = [&](auto i) { return yijinjing::time::strptime(info[i].ToString().Utf8Value(), KUNGFU_HISTORY_DAY_FORMAT); };
   try {
     int64_t from = parse_time(0);
-    int64_t to = info.Length() > 1 ? parse_time(1) : from + time_unit::NANOSECONDS_PER_DAY;
-    SPDLOG_INFO("select period from {} to {}", time::strftime(from), time::strftime(to));
+    int64_t to = info.Length() > 1 ? parse_time(1) : from + yijinjing::time_unit::NANOSECONDS_PER_DAY;
+    SPDLOG_INFO("select period from {} to {}", yijinjing::time::strftime(from), yijinjing::time::strftime(to));
     Napi::ObjectReference result_ref = Napi::ObjectReference::New(Napi::Object::New(info.Env()));
     serialize::InitStateMap(info, result_ref, "history");
     for (const auto &config : profile_.get_all(Config{})) {

@@ -104,7 +104,7 @@ void bind_stream_data_batcher(pybind11::module &m) {
 
   py::class_<BackTestStreamDataBatcher, std::shared_ptr<BackTestStreamDataBatcher>, StreamDataBatcher>(
       m, "BackTestStreamDataBatcher")
-      .def(py::init<yijinjing::practice::apprentice &, tool::SliceIndexer_ptr>(), py::arg("app"),
+      .def(py::init<practice::apprentice &, tool::SliceIndexer_ptr>(), py::arg("app"),
            py::arg("from_indexer"));
 
   py::class_<LiveStreamDataBatcher, std::shared_ptr<LiveStreamDataBatcher>, StreamDataBatcher>(m,

@@ -13,14 +13,14 @@
 #include <kungfu/yijinjing/time.h>
 
 using namespace kungfu::rx;
-using namespace kungfu::yijinjing::practice;
+using namespace kungfu::practice;
 using namespace kungfu::longfist;
 using namespace kungfu::longfist::enums;
 using namespace kungfu::longfist::types;
 using namespace kungfu::wingchun::map;
 using namespace kungfu::yijinjing;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::yijinjing::cache;
+using namespace kungfu::cache;
 
 #define DEFAULT_AVG_VALID_VALUE 10000.0
 
@@ -97,11 +97,11 @@ void Ledger::on_start() {
   events_ | is(PositionEnd::tag) | $$(update_account_book(event->gen_time(), event->data<PositionEnd>().holder_uid));
 
   if (sync_asset_) {
-    add_time_interval(time_unit::NANOSECONDS_PER_MINUTE,
+    add_time_interval(yijinjing::time_unit::NANOSECONDS_PER_MINUTE,
                       [&](const event_ptr &e) { request_asset_sync(e->gen_time()); });
   }
   if (sync_position_) {
-    add_time_interval(time_unit::NANOSECONDS_PER_MINUTE,
+    add_time_interval(yijinjing::time_unit::NANOSECONDS_PER_MINUTE,
                       [&](const event_ptr &e) { request_position_sync(e->gen_time()); });
   }
 

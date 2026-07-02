@@ -30,7 +30,7 @@
 #include <thread>
 #include <vector>
 
-namespace kungfu::yijinjing::cache {
+namespace kungfu::cache {
 
 class open_layer_projector {
 public:
@@ -169,6 +169,6 @@ private:
 };
 
 DECLARE_PTR(open_layer_projector)
-} // namespace kungfu::yijinjing::cache
+} // namespace kungfu::cache
 
 #endif // KUNGFU_YIJINJING_CACHE_OPEN_LAYER_PROJECTOR_H

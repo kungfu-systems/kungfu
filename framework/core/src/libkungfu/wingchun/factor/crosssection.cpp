@@ -1,7 +1,7 @@
 #include <kungfu/wingchun/factor/crosssection.h>
 
 using namespace kungfu::yijinjing;
-using namespace kungfu::yijinjing::practice;
+using namespace kungfu::practice;
 using namespace kungfu::longfist::types;
 using namespace kungfu::rx;
 namespace kungfu::wingchun::factor {
@@ -63,7 +63,7 @@ void MultiCrossSectionalFactor::on_quote(const Quote &quote) {
   const double bid1_price = quote.bid_price[0];
   if (ask1_price == 0 || bid1_price == 0) {
     SPDLOG_WARN("Invalid quote in instrument={} at={}, ask1_price={}, bid1_price={}", quote.instrument_id,
-                time::strftime(quote.data_time), ask1_price, bid1_price);
+                yijinjing::time::strftime(quote.data_time), ask1_price, bid1_price);
     return;
   }
   double mid_price = (ask1_price + bid1_price) / 2.0;
@@ -83,9 +83,9 @@ MultiCrossSectionalFactor::generate_cross_sectional_factor(bool clear_price_cach
   std::unordered_map<std::string, double> cross_sectional_prices;
   int64_t _now = now();
   for (const auto &[instrument_key, time_stamp_price] : price_cache_) {
-    if (_now - time_stamp_price.time > 10 * time_unit::NANOSECONDS_PER_SECOND) {
+    if (_now - time_stamp_price.time > 10 * yijinjing::time_unit::NANOSECONDS_PER_SECOND) {
       SPDLOG_WARN("Price is too old, instrument_key={}, last update time={}, now={}", instrument_key,
-                  time::strftime(time_stamp_price.time), time::strftime(_now));
+                  yijinjing::time::strftime(time_stamp_price.time), yijinjing::time::strftime(_now));
     }
     cross_sectional_prices[instrument_key] = time_stamp_price.price;
   }

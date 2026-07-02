@@ -18,10 +18,10 @@ namespace kungfu::wingchun::broker {
  * Policy interface to decide the time point to resume when connecting to a broker.
  */
 struct ResumePolicy {
-  [[nodiscard]] virtual int64_t get_connect_time(const yijinjing::practice::apprentice &app,
+  [[nodiscard]] virtual int64_t get_connect_time(const practice::apprentice &app,
                                                  const longfist::types::Register &target) const;
 
-  [[nodiscard]] virtual int64_t get_resume_time(const yijinjing::practice::apprentice &app,
+  [[nodiscard]] virtual int64_t get_resume_time(const practice::apprentice &app,
                                                 const longfist::types::Register &target) const = 0;
 };
 
@@ -31,7 +31,7 @@ DECLARE_PTR(ResumePolicy);
  * Always resume from the last unread frame, is intended to be used by system services that needs continuity.
  */
 struct StatelessResumePolicy : public ResumePolicy {
-  [[nodiscard]] int64_t get_resume_time(const yijinjing::practice::apprentice &app,
+  [[nodiscard]] int64_t get_resume_time(const practice::apprentice &app,
                                         const longfist::types::Register &target) const override;
 };
 
@@ -39,7 +39,7 @@ struct StatelessResumePolicy : public ResumePolicy {
  * Always resume from the last unread frame, is intended to be used by system services that needs continuity.
  */
 struct ContinuousResumePolicy : public ResumePolicy {
-  [[nodiscard]] int64_t get_resume_time(const yijinjing::practice::apprentice &app,
+  [[nodiscard]] int64_t get_resume_time(const practice::apprentice &app,
                                         const longfist::types::Register &target) const override;
 };
 
@@ -48,15 +48,15 @@ struct ContinuousResumePolicy : public ResumePolicy {
  * This policy ensures the client does not look back data before today, is intended to be used by strategies.
  */
 struct IntradayResumePolicy : public ResumePolicy {
-  [[nodiscard]] int64_t get_resume_time(const yijinjing::practice::apprentice &app,
+  [[nodiscard]] int64_t get_resume_time(const practice::apprentice &app,
                                         const longfist::types::Register &target) const override;
 };
 
 struct FromNowResumePolicy : public ResumePolicy {
-  [[nodiscard]] int64_t get_connect_time(const yijinjing::practice::apprentice &app,
+  [[nodiscard]] int64_t get_connect_time(const practice::apprentice &app,
                                          const longfist::types::Register &target) const override;
 
-  [[nodiscard]] int64_t get_resume_time(const yijinjing::practice::apprentice &app,
+  [[nodiscard]] int64_t get_resume_time(const practice::apprentice &app,
                                         const longfist::types::Register &target) const override;
 };
 
@@ -71,7 +71,7 @@ class Client {
   typedef std::unordered_map<uint32_t, yijinjing::data::location_ptr> InstrumentSourceMap;
 
 public:
-  explicit Client(yijinjing::practice::apprentice &app);
+  explicit Client(practice::apprentice &app);
 
   virtual ~Client() = default;
 
@@ -142,7 +142,7 @@ public:
   [[nodiscard]] bool has_channel(uint32_t source, uint32_t dest) const { return app_.has_channel(source, dest); }
 
 protected:
-  yijinjing::practice::apprentice &app_;
+  practice::apprentice &app_;
 
 private:
   BrokerStateMap broker_states_ = {};
@@ -208,7 +208,7 @@ private:
  */
 class AutoClient : public Client {
 public:
-  explicit AutoClient(yijinjing::practice::apprentice &app);
+  explicit AutoClient(practice::apprentice &app);
 
   [[nodiscard]] ResumePolicy_ptr get_resume_policy() const override;
 
@@ -249,7 +249,7 @@ private:
  */
 class SilentAutoClient : public AutoClient {
 public:
-  explicit SilentAutoClient(yijinjing::practice::apprentice &app);
+  explicit SilentAutoClient(practice::apprentice &app);
 
   // [[nodiscard]] bool is_subscribed(const std::string &exchange_id, const std::string &instrument_id) const override;
 
@@ -267,7 +267,7 @@ class PassiveClient : public Client {
   typedef std::unordered_map<uint32_t, std::vector<longfist::types::CustomSubscribe>> CustomSubscribeMap;
 
 public:
-  explicit PassiveClient(yijinjing::practice::apprentice &app);
+  explicit PassiveClient(practice::apprentice &app);
 
   [[nodiscard]] ResumePolicy_ptr get_resume_policy() const override;
 

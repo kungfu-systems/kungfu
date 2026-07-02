@@ -5,7 +5,7 @@ using namespace kungfu::wingchun;
 using namespace kungfu::wingchun::broker;
 using namespace kungfu::longfist::enums;
 using namespace kungfu::longfist::types;
-using namespace kungfu::yijinjing::practice;
+using namespace kungfu::practice;
 using namespace kungfu::yijinjing;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::yijinjing::util;
@@ -42,7 +42,7 @@ void AlgoOrderService::on_algo_order_input(const event_ptr &event) {
     target_algo_order.volume = algo_order_input.volume;
 
     // waiting_record_local_algo_orders_.insert_or_assign(target_algo_order.order_id, target_algo_order_state);
-    writer->write(time::now_in_nano(), target_algo_order);
+    writer->write(yijinjing::time::now_in_nano(), target_algo_order);
 
     return;
   }
@@ -75,7 +75,7 @@ void AlgoOrderService::on_algo_order_action(const event_ptr &event) {
       algo_order.status = OrderStatus::PartialFilledNotActive;
     }
 
-    vendor_.get_writer(dest)->write(time::now_in_nano(), algo_order);
+    vendor_.get_writer(dest)->write(yijinjing::time::now_in_nano(), algo_order);
   }
 
   state<AlgoOrderAction> algo_order_action_state(event->source(), event->dest(), event->gen_time(), algo_order_action);
@@ -133,7 +133,7 @@ void AlgoOrderService::on_order(int64_t gen_time, uint32_t source, uint32_t dest
       }
     }
   }
-  target_algo_order.update_time = time::now_in_nano();
+  target_algo_order.update_time = yijinjing::time::now_in_nano();
   waiting_record_local_algo_orders_.insert_or_assign(target_algo_order.order_id, target_algo_order_state);
 }
 
@@ -205,7 +205,7 @@ void AlgoOrderService::clean_algo_orders(bool bypass_recover) {
     if (not is_final_status(algo_order.status) and
         (bypass_recover or (not algo_order.is_local and algo_order.external_order_id.to_string().empty()))) {
       algo_order.status = OrderStatus::Lost;
-      algo_order.update_time = time::now_in_nano();
+      algo_order.update_time = yijinjing::time::now_in_nano();
       vendor_.try_write_to(vendor_.now(), algo_order, pair.second.dest);
     }
   });
@@ -219,7 +219,7 @@ void AlgoOrderService::clean_algo_orders(uint32_t source, const AlgoOrderInput &
   AlgoOrder algo_order{};
   algo_order_from_input(algo_order_input, algo_order);
   algo_order.status = OrderStatus::Lost;
-  algo_order.update_time = time::now_in_nano();
+  algo_order.update_time = yijinjing::time::now_in_nano();
   vendor_.try_write_to(vendor_.now(), algo_order, source);
 }
 

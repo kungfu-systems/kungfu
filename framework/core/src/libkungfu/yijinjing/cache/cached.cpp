@@ -12,9 +12,9 @@ using namespace kungfu::longfist;
 using namespace kungfu::longfist::enums;
 using namespace kungfu::longfist::types;
 using namespace kungfu::yijinjing;
-using namespace kungfu::yijinjing::practice;
+using namespace kungfu::practice;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::yijinjing::cache;
+using namespace kungfu::cache;
 
 // https://sqlite.org/limits.html
 // The maximum number of bytes in the text of an SQL statement is limited to SQLITE_MAX_SQL_LENGTH which defaults to
@@ -23,11 +23,11 @@ using namespace kungfu::yijinjing::cache;
 #define STORE_INTERVAL 100
 #define RESTORE_LIMIT 5000
 
-namespace kungfu::yijinjing::cache {
+namespace kungfu::cache {
 
 cached::cached(const yijinjing::io_device_ptr &io_device)
     : session_builder_(io_device), profile_(io_device->get_locator()),
-      ledger_home_location_(yijinjing::practice::make_system_location("service", "ledger", io_device->get_locator())) {
+      ledger_home_location_(practice::make_system_location("service", "ledger", io_device->get_locator())) {
   bypass_cached_ = std::getenv("KF_BYPASS_CACHED") != nullptr;
   profile_.setup();
   profile_get_all(profile_, profile_restore_bank_);
@@ -183,7 +183,7 @@ void cached::restore_states(const yijinjing::data::location_ptr &location,
   }
 }
 
-void cached::restore(const location_ptr &location, const journal::writer_ptr &writer) {
+void cached::restore(const location_ptr &location, const yijinjing::journal::writer_ptr &writer) {
   restore_profile(location, writer);
   restore_states(location, writer);
 }
@@ -305,8 +305,8 @@ void cached::do_store_profile_feeds() {
 }
 
 void cached::store_states_feeds() {
-  yijinjing::cache::location_bank tmp_location_bank = {};
-  auto store_state_data_start_time = time::now_in_nano();
+  cache::location_bank tmp_location_bank = {};
+  auto store_state_data_start_time = yijinjing::time::now_in_nano();
 
   feed_mutex_.lock();
   // tracing-foundation Phase 1: 交易类型拆出闭集 cache,移除 TradingDataTypes transfer(states_feed_bank_
@@ -351,7 +351,7 @@ void cached::store_states_feeds() {
     });
   });
 
-  auto store_state_data_end_time = time::now_in_nano();
+  auto store_state_data_end_time = yijinjing::time::now_in_nano();
   if (trading_data_count + others_data_count > 0) {
     SPDLOG_DEBUG("store states data take {}ns, trading data count {}, others data count {}",
                  store_state_data_end_time - store_state_data_start_time, trading_data_count, others_data_count);
@@ -360,7 +360,7 @@ void cached::store_states_feeds() {
 
 void cached::store_profile_feeds() {
   ProfileStateBank tmp_profile_bank = ProfileStateBank(ProfileDataTypes);
-  auto store_profile_data_start_time = time::now_in_nano();
+  auto store_profile_data_start_time = yijinjing::time::now_in_nano();
 
   feed_mutex_.lock();
   auto count = transfer_from_bank<ProfileStateBank, ProfileStateBank>(
@@ -391,7 +391,7 @@ void cached::store_profile_feeds() {
     profile_store_mutex_.unlock();
   });
 
-  auto store_profile_data_end_time = time::now_in_nano();
+  auto store_profile_data_end_time = yijinjing::time::now_in_nano();
   if (count > 0) {
     SPDLOG_DEBUG("store profile data take {}ns, count {}", store_profile_data_end_time - store_profile_data_start_time,
                  count);
@@ -418,7 +418,7 @@ int64_t cached::find_last_active_time(const location_ptr &location) {
   return session_builder_.find_last_active_time(location);
 }
 
-void cached::update_session(const journal::frame_ptr &frame) {
+void cached::update_session(const yijinjing::journal::frame_ptr &frame) {
   if (bypass_cached_ or storage_pause_) {
     return;
   }
@@ -427,4 +427,4 @@ void cached::update_session(const journal::frame_ptr &frame) {
 
 void cached::switch_feed_storage(bool pause_storage) { storage_pause_ = pause_storage; }
 
-} // namespace kungfu::yijinjing::cache
+} // namespace kungfu::cache

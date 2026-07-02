@@ -28,7 +28,7 @@ private:
   serialize::JsSet set;
   yijinjing::io_device_ptr io_device_;
 
-  Napi::Value ParseSessions(const Napi::CallbackInfo &info, yijinjing::index::SessionVector sessions) {
+  Napi::Value ParseSessions(const Napi::CallbackInfo &info, index::SessionVector sessions) {
     size_t session_size = sessions.size();
     auto list = Napi::Array::New(info.Env(), session_size);
     for (int i = 0; i < session_size; i++) {

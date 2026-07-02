@@ -69,7 +69,7 @@ private:
   friend void init_matcher(Matcher &matcher, book::Bookkeeper *bookkeeper, const std::string &matcher_config);
   friend void add_order_id(Matcher &matcher, uint64_t order_id, uint32_t source, uint32_t dest);
   friend void remove_order_id(Matcher &matcher, uint64_t order_id);
-  yijinjing::practice::apprentice *app_;
+  practice::apprentice *app_;
   book::Bookkeeper *bookkeeper_;
   std::unordered_map<uint64_t, std::pair<uint32_t, uint32_t>> order_ids_; // <order_id, std::pair<source, dest>>
   std::string config_{"{}"};

@@ -13,7 +13,7 @@
 using namespace kungfu::rx;
 using namespace kungfu::longfist::enums;
 using namespace kungfu::longfist::types;
-using namespace kungfu::yijinjing::practice;
+using namespace kungfu::practice;
 using namespace kungfu::yijinjing;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::yijinjing::journal;
@@ -148,7 +148,7 @@ void BrokerService::record_stored_instruments_trading_day(const std::string &tra
 
   // 为了解决夜盘的问题
   TimeKeyValue instrument_stored_trading_day_next_day_tkv = {};
-  instrument_stored_trading_day_next_day_tkv.update_time = time::next_trading_day_end(now());
+  instrument_stored_trading_day_next_day_tkv.update_time = yijinjing::time::next_trading_day_end(now());
   instrument_stored_trading_day_next_day_tkv.key = "instrument_stored_trading_day_next_day";
   instrument_stored_trading_day_next_day_tkv.value = trading_day;
   get_public_writer()->write(now(), instrument_stored_trading_day_next_day_tkv);
@@ -200,7 +200,7 @@ void BrokerService::update_broker_state(BrokerState state) {
   get_public_writer()->close_data();
 }
 
-io_device_ptr BrokerService::get_io_device() const { return get_vendor().get_io_device(); }
+yijinjing::io_device_ptr BrokerService::get_io_device() const { return get_vendor().get_io_device(); }
 
 writer_ptr &BrokerService::get_thread_writer(uint32_t page_size) { return vendor_.get_thread_writer(page_size); }
 

@@ -12,7 +12,7 @@ using namespace kungfu::longfist::enums;
 using namespace kungfu::longfist::types;
 using namespace kungfu::yijinjing;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::yijinjing::practice;
+using namespace kungfu::practice;
 
 namespace kungfu::node::serialize {
 JsRestoreState::JsRestoreState(Napi::ObjectReference &state, location_ptr location)
@@ -21,7 +21,7 @@ JsRestoreState::JsRestoreState(Napi::ObjectReference &state, location_ptr locati
 }
 
 void JsRestoreState::operator()(int64_t from, int64_t to, bool sync_schema) {
-  auto now = time::now_in_nano();
+  auto now = yijinjing::time::now_in_nano();
   auto source = location_->uid;
   auto locator = location_->locator;
 

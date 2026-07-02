@@ -9,14 +9,14 @@
 using namespace kungfu::rx;
 using namespace kungfu::longfist::types;
 using namespace kungfu::longfist::enums;
-using namespace kungfu::yijinjing::practice;
+using namespace kungfu::practice;
 using namespace kungfu::yijinjing;
 using namespace kungfu::yijinjing::data;
 
 namespace kungfu::wingchun::broker {
 int64_t ResumePolicy::get_connect_time(const apprentice &app, const Register &target) const {
   auto target_checkin_time = target.checkin_time;
-  auto target_checkin_time_str = time::strftime(target_checkin_time);
+  auto target_checkin_time_str = yijinjing::time::strftime(target_checkin_time);
   if (app.get_last_active_time() == INT64_MIN) {
     SPDLOG_DEBUG("app has no previous session, connect from target checkin_time {}", target_checkin_time_str);
     return target_checkin_time;
@@ -41,34 +41,34 @@ int64_t ResumePolicy::get_connect_time(const apprentice &app, const Register &ta
 
 int64_t StatelessResumePolicy::get_resume_time(const apprentice &app, const Register &target) const {
   auto resume_time = target.checkin_time;
-  SPDLOG_DEBUG("Stateless resume policy, connect from target checkin_time {}", time::strftime(resume_time));
+  SPDLOG_DEBUG("Stateless resume policy, connect from target checkin_time {}", yijinjing::time::strftime(resume_time));
   return resume_time;
 }
 
 int64_t ContinuousResumePolicy::get_resume_time(const apprentice &app, const Register &target) const {
   auto resume_time = app.get_last_active_time();
-  SPDLOG_DEBUG("Continuous resume policy, connect from app last_active_time {}", time::strftime(resume_time));
+  SPDLOG_DEBUG("Continuous resume policy, connect from app last_active_time {}", yijinjing::time::strftime(resume_time));
   return resume_time;
 }
 
 int64_t IntradayResumePolicy::get_resume_time(const apprentice &app, const Register &target) const {
-  auto resume_time = std::max(app.get_last_active_time(), time::calendar_day_start(app.now()));
+  auto resume_time = std::max(app.get_last_active_time(), yijinjing::time::calendar_day_start(app.now()));
   SPDLOG_DEBUG("Intraday resume policy, connect from max(app last_active_time, today_start) {}",
-               time::strftime(resume_time));
+               yijinjing::time::strftime(resume_time));
   return resume_time;
 }
 
 int64_t FromNowResumePolicy::get_connect_time(const apprentice &app, const Register &target) const {
   if (target.checkin_time >= app.get_checkin_time()) {
     SPDLOG_DEBUG("case[0] target started later than current, connect from target checkin_time {}",
-                 time::strftime(target.checkin_time));
+                 yijinjing::time::strftime(target.checkin_time));
     return target.checkin_time;
   }
   return get_resume_time(app, target);
 }
 
 int64_t FromNowResumePolicy::get_resume_time(const apprentice &app, const Register &target) const {
-  SPDLOG_DEBUG("From now resume policy, connect from now {}", time::strftime(app.now()));
+  SPDLOG_DEBUG("From now resume policy, connect from now {}", yijinjing::time::strftime(app.now()));
   return app.now();
 }
 
@@ -193,7 +193,7 @@ void Client::connect(const event_ptr &event, const Register &register_data) {
     auto resume_time_point = get_resume_policy()->get_connect_time(app_, register_data);
     app_.request_write_to(app_.now(), app_uid);
     app_.request_read_from_public(app_.now(), app_uid, resume_time_point);
-    SPDLOG_INFO("resume {} connection from {}", app_location->uname, time::strftime(resume_time_point));
+    SPDLOG_INFO("resume {} connection from {}", app_location->uname, yijinjing::time::strftime(resume_time_point));
   }
   if (app_location->category == category::TD and should_connect_td(app_location)) {
     auto resume_time_point = get_resume_policy()->get_connect_time(app_, register_data);
@@ -201,14 +201,14 @@ void Client::connect(const event_ptr &event, const Register &register_data) {
     app_.request_read_from(app_.now(), app_uid, resume_time_point);
     app_.request_read_from_public(app_.now(), app_uid, resume_time_point);
     app_.request_read_from_sync(app_.now(), app_uid, resume_time_point);
-    SPDLOG_INFO("resume {} connection from {}", app_location->uname, time::strftime(resume_time_point));
+    SPDLOG_INFO("resume {} connection from {}", app_location->uname, yijinjing::time::strftime(resume_time_point));
   }
   if (app_location->category == category::STRATEGY and should_connect_strategy(app_location)) {
     auto resume_time_point = get_resume_policy()->get_connect_time(app_, register_data);
     app_.request_write_to(app_.now(), app_location->uid);
     app_.request_read_from(app_.now(), app_location->uid, resume_time_point);
     app_.request_read_from_public(app_.now(), app_location->uid, resume_time_point);
-    SPDLOG_INFO("resume {} connection from {}", app_location->uname, time::strftime(resume_time_point));
+    SPDLOG_INFO("resume {} connection from {}", app_location->uname, yijinjing::time::strftime(resume_time_point));
   }
   if (app_location->category == category::OPERATOR and should_connect_operator(app_location)) {
     auto resume_time_point = get_resume_policy()->get_connect_time(app_, register_data);
@@ -217,7 +217,7 @@ void Client::connect(const event_ptr &event, const Register &register_data) {
       app_.request_read_from(app_.now(), app_location->uid, resume_time_point);
     }
     app_.request_read_from_public(app_.now(), app_location->uid, resume_time_point);
-    SPDLOG_INFO("resume {} connection from {}", app_location->uname, time::strftime(resume_time_point));
+    SPDLOG_INFO("resume {} connection from {}", app_location->uname, yijinjing::time::strftime(resume_time_point));
   }
 }
 

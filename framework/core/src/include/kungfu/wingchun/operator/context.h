@@ -17,7 +17,7 @@
 namespace kungfu::wingchun::op {
 class Context : public std::enable_shared_from_this<Context> {
 public:
-  Context(yijinjing::practice::apprentice &app, const rx::connectable_observable<event_ptr> &events);
+  Context(practice::apprentice &app, const rx::connectable_observable<event_ptr> &events);
 
   virtual ~Context() = default;
 
@@ -177,7 +177,7 @@ public:
   virtual std::shared_ptr<wingchun::factor::StreamDataBatcher> batch_streaming() = 0;
 
 protected:
-  yijinjing::practice::apprentice &app_;
+  practice::apprentice &app_;
   const rx::connectable_observable<event_ptr> &events_;
   std::string operator_dir_;
   bool started_ = false;

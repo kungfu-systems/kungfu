@@ -14,7 +14,7 @@
 #include <kungfu/yijinjing/practice/apprentice.h>
 
 namespace kungfu::wingchun::strategy {
-class Runner : public yijinjing::practice::apprentice {
+class Runner : public practice::apprentice {
 public:
   Runner(const yijinjing::data::locator_ptr &locator, const std::string &group, const std::string &name,
          longfist::enums::mode m, bool low_latency, const std::string &arguments = "{}");

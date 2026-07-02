@@ -8,7 +8,7 @@ using namespace kungfu::longfist::enums;
 using namespace kungfu::longfist::types;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::yijinjing::journal;
-using namespace kungfu::yijinjing::practice;
+using namespace kungfu::practice;
 using namespace kungfu::wingchun::service;
 
 namespace py = pybind11;

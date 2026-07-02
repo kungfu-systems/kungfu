@@ -20,10 +20,10 @@
 #define KUNGFU_SETUP_LOG() kungfu::yijinjing::log::copy_log_settings(get_home(), get_home()->name)
 #endif // KUNGFU_SETUP_LOG
 
-namespace kungfu::yijinjing::practice {
+namespace kungfu::practice {
 
 inline yijinjing::data::location_ptr make_system_location(const std::string &group, const std::string &name,
-                                                          const data::locator_ptr &locator,
+                                                          const yijinjing::data::locator_ptr &locator,
                                                           uint32_t seed = KUNGFU_HASH_SEED) {
   return yijinjing::data::location::make_shared(locator->get_dir_mode(), longfist::enums::category::SYSTEM, group, name,
                                                 locator, seed);
@@ -31,7 +31,7 @@ inline yijinjing::data::location_ptr make_system_location(const std::string &gro
 
 typedef std::unordered_map<uint32_t, yijinjing::journal::writer_ptr> WriterMap;
 
-class hero : public resource {
+class hero : public yijinjing::resource {
 public:
   explicit hero(yijinjing::io_device_ptr io_device);
 
@@ -67,7 +67,7 @@ public:
 
   [[nodiscard]] int64_t get_end_time() const;
 
-  [[nodiscard]] const data::locator_ptr &get_locator() const;
+  [[nodiscard]] const yijinjing::data::locator_ptr &get_locator() const;
 
   [[nodiscard]] yijinjing::io_device_ptr get_io_device() const;
 
@@ -155,7 +155,7 @@ public:
 
   virtual void ensure_master_rocksdb();
 
-  void write_location_to_rocksdb(const data::location_ptr &location);
+  void write_location_to_rocksdb(const yijinjing::data::location_ptr &location);
 
   void request_deregister() {
     continual_ = false;
@@ -279,5 +279,5 @@ protected:
 
   static void delegate_produce(hero *instance, const rx::subscriber<event_ptr> &subscriber);
 };
-} // namespace kungfu::yijinjing::practice
+} // namespace kungfu::practice
 #endif // KUNGFU_HERO_H

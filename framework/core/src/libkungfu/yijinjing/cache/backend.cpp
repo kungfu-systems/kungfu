@@ -6,7 +6,7 @@
 
 #include <kungfu/yijinjing/cache/backend.h>
 
-namespace kungfu::yijinjing::cache {
+namespace kungfu::cache {
 
 namespace fs = std::filesystem;
 
@@ -33,4 +33,4 @@ bool shift::check_storage_exists(uint32_t dest) {
   return fs::exists(db_file);
 }
 
-} // namespace kungfu::yijinjing::cache
+} // namespace kungfu::cache

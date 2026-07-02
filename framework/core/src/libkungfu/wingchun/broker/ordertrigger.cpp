@@ -5,7 +5,7 @@ using namespace kungfu::wingchun;
 using namespace kungfu::wingchun::broker;
 using namespace kungfu::longfist::enums;
 using namespace kungfu::longfist::types;
-using namespace kungfu::yijinjing::practice;
+using namespace kungfu::practice;
 using namespace kungfu::yijinjing;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::yijinjing::util;
@@ -45,7 +45,7 @@ void OrderTriggerService::clean_order_triggers(bool bypass_recover) {
     OrderTrigger &trigger = pair.second.data;
     if (not is_final_status(trigger.status) and (bypass_recover or trigger.external_trigger_id.to_string().empty())) {
       trigger.status = OrderStatus::Lost;
-      trigger.update_time = time::now_in_nano();
+      trigger.update_time = yijinjing::time::now_in_nano();
       vendor_.try_write_to(vendor_.now(), trigger, pair.second.dest);
     }
   });
@@ -61,7 +61,7 @@ void OrderTriggerService::clean_order_triggers(uint32_t source,
   OrderTrigger trigger{};
   order_trigger_from_input(order_trigger_input, trigger);
   trigger.status = OrderStatus::Lost;
-  trigger.update_time = time::now_in_nano();
+  trigger.update_time = yijinjing::time::now_in_nano();
   vendor_.try_write_to(vendor_.now(), trigger, source);
 }
 

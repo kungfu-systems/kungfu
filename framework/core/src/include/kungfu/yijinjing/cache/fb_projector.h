@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-namespace kungfu::yijinjing::cache::projector {
+namespace kungfu::cache::projector {
 
 // reflection BaseType -> SQLite 列类型（对齐 sqlite_orm_ext.h 的映射：
 // enum/算术整型 -> INTEGER，float/double -> REAL，string -> TEXT，array/vector/obj -> BLOB）。
@@ -138,6 +138,6 @@ inline std::vector<std::string> alter_add_missing(sqlite3 *db, const reflection:
   return added;
 }
 
-} // namespace kungfu::yijinjing::cache::projector
+} // namespace kungfu::cache::projector
 
 #endif // KUNGFU_YIJINJING_CACHE_FB_PROJECTOR_H

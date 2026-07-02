@@ -8,7 +8,7 @@
 namespace kungfu::wingchun::op {
 class LiveContext : public Context {
 public:
-  explicit LiveContext(yijinjing::practice::apprentice &app, const rx::connectable_observable<event_ptr> &events);
+  explicit LiveContext(practice::apprentice &app, const rx::connectable_observable<event_ptr> &events);
 
   /**
    * checked_ is strated started.

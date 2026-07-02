@@ -11,7 +11,7 @@
 #include "kungfu/longfist/longfist.h"
 #include "kungfu/yijinjing/common.h"
 
-namespace kungfu::yijinjing::cache {
+namespace kungfu::cache {
 class profile {
 public:
   explicit profile(const yijinjing::data::locator_ptr &locator);
@@ -65,10 +65,10 @@ public:
 private:
   const std::string profile_db_file_;
 
-  yijinjing::cache::ProfileStoragePtr &get_storage();
+  cache::ProfileStoragePtr &get_storage();
 
   explicit profile(std::string profile_db_file);
 };
-} // namespace kungfu::yijinjing::cache
+} // namespace kungfu::cache
 
 #endif // KUNGFU_CONFIG_STORE_H

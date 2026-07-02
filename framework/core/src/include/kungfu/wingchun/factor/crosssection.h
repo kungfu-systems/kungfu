@@ -91,9 +91,9 @@ private:
     int64_t time;
     double price;
   };
-  friend void set_runner(MultiCrossSectionalFactor &factor_cache, yijinjing::practice::apprentice *runner);
+  friend void set_runner(MultiCrossSectionalFactor &factor_cache, practice::apprentice *runner);
 
-  yijinjing::practice::apprentice *app_;
+  practice::apprentice *app_;
   std::map<std::string, std::unordered_map<std::string, double>> multi_cross_sectional_factor_cache_;
   std::unordered_map<std::string, TimeStampPrice> price_cache_;
 };

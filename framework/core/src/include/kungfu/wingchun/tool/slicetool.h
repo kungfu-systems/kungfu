@@ -80,7 +80,7 @@ protected:
   std::string name_;
   SliceIndexer_ptr indexer_;
   bool overwrite_;
-  std::unordered_map<yijinjing::data::location, yijinjing::practice::WriterMap> writer_maps_;
+  std::unordered_map<yijinjing::data::location, practice::WriterMap> writer_maps_;
   std::map<int64_t, std::vector<yijinjing::data::location_ptr>> lease_locations_{};
   yijinjing::journal::reader_ptr reader_;
   mutable int64_t last_gen_time_;

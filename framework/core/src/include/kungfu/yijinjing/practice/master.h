@@ -12,7 +12,7 @@
 #include <kungfu/yijinjing/journal/common.h>
 #include <kungfu/yijinjing/practice/hero.h>
 
-namespace kungfu::yijinjing::practice {
+namespace kungfu::practice {
 
 struct timer_task {
   int64_t checkpoint;
@@ -55,7 +55,7 @@ public:
 
 protected:
   int64_t last_check_;
-  yijinjing::cache::cached cached_;
+  cache::cached cached_;
 
   std::unordered_map<uint32_t, uint32_t> app_cmd_locations_ = {};
   std::unordered_map<uint32_t, std::unordered_map<int32_t, timer_task>> timer_tasks_ = {};
@@ -66,7 +66,7 @@ protected:
 
   void on_frame() final;
 
-  void try_add_location(int64_t trigger_time, const data::location_ptr &app_location);
+  void try_add_location(int64_t trigger_time, const yijinjing::data::location_ptr &app_location);
 
 private:
   void handle_timer_tasks();
@@ -93,15 +93,15 @@ private:
 
   void on_new_location(const event_ptr &event);
 
-  static void write_time_reset(int64_t trigger_time, const journal::writer_ptr &writer);
+  static void write_time_reset(int64_t trigger_time, const yijinjing::journal::writer_ptr &writer);
 
-  void write_locations(int64_t trigger_time, const journal::writer_ptr &writer);
+  void write_locations(int64_t trigger_time, const yijinjing::journal::writer_ptr &writer);
 
-  void write_registries(int64_t trigger_time, const journal::writer_ptr &writer);
+  void write_registries(int64_t trigger_time, const yijinjing::journal::writer_ptr &writer);
 
-  void write_channels(int64_t trigger_time, const journal::writer_ptr &writer);
+  void write_channels(int64_t trigger_time, const yijinjing::journal::writer_ptr &writer);
 
-  void write_bands(int64_t trigger_time, const journal::writer_ptr &writer);
+  void write_bands(int64_t trigger_time, const yijinjing::journal::writer_ptr &writer);
 };
-} // namespace kungfu::yijinjing::practice
+} // namespace kungfu::practice
 #endif // KUNGFU_MASTER_H

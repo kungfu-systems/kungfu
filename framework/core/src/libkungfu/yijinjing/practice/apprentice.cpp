@@ -16,14 +16,14 @@ using namespace kungfu::longfist::types;
 using namespace kungfu::longfist::enums;
 using namespace kungfu::yijinjing;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::yijinjing::cache;
+using namespace kungfu::cache;
 using namespace std::chrono;
 namespace fs = std::filesystem;
 
-namespace kungfu::yijinjing::practice {
+namespace kungfu::practice {
 
-apprentice::apprentice(const data::location_ptr &home, bool low_latency, std::string arguments)
-    : apprentice(std::make_shared<io_device_client>(home, low_latency), std::move(arguments)) {}
+apprentice::apprentice(const yijinjing::data::location_ptr &home, bool low_latency, std::string arguments)
+    : apprentice(std::make_shared<yijinjing::io_device_client>(home, low_latency), std::move(arguments)) {}
 
 apprentice::apprentice(const yijinjing::io_device_ptr &io_device, std::string arguments)
     : hero(io_device), manager_(*this), arguments_(std::move(arguments)) {}
@@ -285,7 +285,7 @@ void apprentice::reader_join(uint32_t source_id, uint32_t dest_id, int64_t from_
 }
 
 void apprentice::checkin() {
-  auto now = time::now_in_nano();
+  auto now = yijinjing::time::now_in_nano();
   auto home = get_live_home();
   Register register_data{};
   register_data.mode = home->mode;
@@ -329,7 +329,7 @@ void apprentice::expect_start() {
 }
 
 void apprentice::reset_time(const longfist::types::TimeReset &time_reset) {
-  time::reset(time_reset.system_clock_count, time_reset.steady_clock_count);
+  yijinjing::time::reset(time_reset.system_clock_count, time_reset.steady_clock_count);
 }
 
 std::thread &apprentice::get_resource_management_worker() { return manager_.get_resource_management_worker(); }
@@ -340,9 +340,9 @@ bool apprentice::is_timer_enabled(int32_t timer_id) { return timers_.try_emplace
 
 void apprentice::enable_timer(int32_t timer_id) { timers_.insert_or_assign(timer_id, true); }
 
-journal::writer_ptr &apprentice::get_thread_writer(uint64_t page_size) {
+yijinjing::journal::writer_ptr &apprentice::get_thread_writer(uint64_t page_size) {
   if (not thread_writer_) {
-    uint32_t dest_id = util::get_thread_id();
+    uint32_t dest_id = yijinjing::util::get_thread_id();
     thread_writer_ = get_io_device()->open_writer(dest_id, page_size);
 
     /// join channel in sub-thread will crash, so tell master to ask myself to join
@@ -361,6 +361,6 @@ journal::writer_ptr &apprentice::get_thread_writer(uint64_t page_size) {
   return thread_writer_;
 }
 
-journal::writer_ptr &apprentice::get_public_writer() { return public_writer_; }
+yijinjing::journal::writer_ptr &apprentice::get_public_writer() { return public_writer_; }
 
-} // namespace kungfu::yijinjing::practice
+} // namespace kungfu::practice

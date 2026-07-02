@@ -23,7 +23,7 @@ using namespace kungfu::longfist::types;
 using namespace kungfu::wingchun;
 using namespace kungfu::wingchun::map;
 using namespace kungfu::yijinjing;
-using namespace kungfu::yijinjing::cache;
+using namespace kungfu::cache;
 using namespace kungfu::yijinjing::data;
 
 namespace kungfu::node {
@@ -48,7 +48,7 @@ inline location_ptr GetWatcherLocation(const Napi::CallbackInfo &info) {
   auto name = info[1].As<Napi::String>().Utf8Value();
   auto result =
       std::make_shared<location>(mode::LIVE, category::SYSTEM, "node", name, IODevice::GetRuntimeLocator(runtime_dir));
-  log::copy_log_settings(result, result->name);
+  yijinjing::log::copy_log_settings(result, result->name);
   return result;
 }
 
@@ -85,7 +85,7 @@ Watcher::Watcher(const Napi::CallbackInfo &info)
 
   serialize::InitStateMap(info, ledger_ref_, "ledger");
 
-  auto today = time::restore_start();
+  auto today = yijinjing::time::restore_start();
   auto config_store = ConfigStore::Unwrap(config_ref_.Value());
 
   bool sync_schema = not get_io_device()->is_usable();
@@ -182,7 +182,7 @@ Napi::Value Watcher::GetAppStates(const Napi::CallbackInfo &info) { return app_s
 Napi::Value Watcher::GetStrategyStates(const Napi::CallbackInfo &info) { return strategy_states_ref_.Value(); }
 
 Napi::Value Watcher::Now(const Napi::CallbackInfo &info) {
-  return Napi::BigInt::New(ledger_ref_.Env(), time::now_in_nano());
+  return Napi::BigInt::New(ledger_ref_.Env(), yijinjing::time::now_in_nano());
 }
 
 Napi::Value Watcher::IsUsable(const Napi::CallbackInfo &info) { return Napi::Boolean::New(info.Env(), is_usable()); }
@@ -266,7 +266,7 @@ Napi::Value Watcher::IssueMark(const Napi::CallbackInfo &info) {
   if (not has_writer(target_location->location_uid)) {
     return Napi::Boolean::New(info.Env(), false);
   }
-  get_writer(target_location->location_uid)->mark(time::now_in_nano(), tag);
+  get_writer(target_location->location_uid)->mark(yijinjing::time::now_in_nano(), tag);
   return Napi::Boolean::New(info.Env(), true);
 }
 
@@ -386,7 +386,7 @@ void Watcher::on_react() {
 
 bool Watcher::has_writer(uint32_t dest_id) const { return writers_.find(dest_id) != writers_.end(); }
 
-journal::writer_ptr Watcher::get_writer(uint32_t dest_id) const {
+yijinjing::journal::writer_ptr Watcher::get_writer(uint32_t dest_id) const {
   if (writers_.find(dest_id) == writers_.end()) {
     SPDLOG_ERROR("no writer for {}", get_location_uname(dest_id));
   }
@@ -656,7 +656,7 @@ void Watcher::StartWorker() {
     }
 
     watcher->AfterMasterDown(info);
-    watcher->set_begin_time(time::now_in_nano());
+    watcher->set_begin_time(yijinjing::time::now_in_nano());
     SPDLOG_INFO("Restart watcher uv loop");
     // master may quit within watcher running time,
     // so, once master deregistered, the uv logic in watcher need to be restarte.

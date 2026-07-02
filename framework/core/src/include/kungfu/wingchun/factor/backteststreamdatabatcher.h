@@ -17,7 +17,7 @@ namespace kungfu::wingchun::factor {
 
 class BackTestStreamDataBatcher : public StreamDataBatcher {
 public:
-  BackTestStreamDataBatcher(yijinjing::practice::apprentice &app, tool::SliceIndexer_ptr from_indexer)
+  BackTestStreamDataBatcher(practice::apprentice &app, tool::SliceIndexer_ptr from_indexer)
       : app_(app), from_indexer_(std::move(from_indexer)) {}
   ~BackTestStreamDataBatcher() = default;
 
@@ -129,7 +129,7 @@ protected:
   }
 
 private:
-  yijinjing::practice::apprentice &app_;
+  practice::apprentice &app_;
   tool::SliceIndexer_ptr from_indexer_;
   std::unordered_map<std::string, int64_t> time_stamp_map_;
   int64_t get_begin_time(const std::string instrument_exchange_type_id);

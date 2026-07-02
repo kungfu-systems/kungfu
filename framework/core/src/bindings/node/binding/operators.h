@@ -309,7 +309,7 @@ public:
 
     for (auto dest : locator->list_location_dest_by_db(location_)) {
       auto db_file = locator->layout_file(location_, longfist::enums::layout::SQLITE, fmt::format("{:08x}", dest));
-      auto storage = yijinjing::cache::make_storage_ptr(db_file, longfist::StateDataTypes);
+      auto storage = cache::make_storage_ptr(db_file, longfist::StateDataTypes);
       if (sync_schema) {
         storage->sync_schema();
       }
@@ -320,7 +320,7 @@ public:
           return;
         }
 
-        for (const auto &data : yijinjing::cache::time_spec<DataType>::get_all(storage, from, to)) {
+        for (const auto &data : cache::time_spec<DataType>::get_all(storage, from, to)) {
           try {
             set(data, state_, source, dest, now);
           } catch (const std::exception &e) {
@@ -358,24 +358,24 @@ private:
 
 class JsPublishState {
 public:
-  JsPublishState(yijinjing::practice::apprentice &app, Napi::ObjectReference &state);
+  JsPublishState(practice::apprentice &app, Napi::ObjectReference &state);
 
   void operator()(Napi::Object object);
 
 private:
-  yijinjing::practice::apprentice &app_;
+  practice::apprentice &app_;
   Napi::ObjectReference &state_;
   JsGet get = {};
 };
 
 class JsResetCache {
 public:
-  JsResetCache(yijinjing::practice::apprentice &app, Napi::ObjectReference &state);
+  JsResetCache(practice::apprentice &app, Napi::ObjectReference &state);
 
   void operator()(const state<longfist::types::CacheReset> &state);
 
 private:
-  yijinjing::practice::apprentice &app_;
+  practice::apprentice &app_;
   Napi::ObjectReference &state_;
 };
 

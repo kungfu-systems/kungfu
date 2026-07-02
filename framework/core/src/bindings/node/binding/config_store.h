@@ -35,7 +35,7 @@ public:
 private:
   serialize::JsSet set;
   yijinjing::data::locator_ptr locator_;
-  yijinjing::cache::profile profile_;
+  cache::profile profile_;
 
   static Napi::FunctionReference constructor;
   static void cleanup() {

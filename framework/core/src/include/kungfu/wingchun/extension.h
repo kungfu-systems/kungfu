@@ -19,7 +19,7 @@
   m.def("service",                                                                                                     \
         [&](kungfu::yijinjing::data::locator_ptr locator, const std::string &group, const std::string &name,           \
             kungfu::longfist::enums::mode m, bool low_latency = false, const std::string &arguments = "{}") {          \
-          return std::static_pointer_cast<kungfu::yijinjing::practice::apprentice>(                                    \
+          return std::static_pointer_cast<kungfu::practice::apprentice>(                                    \
               std::make_shared<ServiceType>(locator, group, name, m, low_latency, arguments));                         \
         })
 
