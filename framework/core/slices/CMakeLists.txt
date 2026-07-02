@@ -6,3 +6,4 @@
 # statement, sources and one-command run script.
 
 add_subdirectory(fact-ledger)
+add_subdirectory(schema-registry)

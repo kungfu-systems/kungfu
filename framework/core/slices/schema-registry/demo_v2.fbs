@@ -1,0 +1,13 @@
+// SPDX-License-Identifier: Apache-2.0
+// Demo event schema, version 2: adds a field following the FlatBuffers
+// evolution rules (append only, ids stay stable). Two runs bound to v1 and v2
+// through their manifests prove version coexistence.
+namespace slices.demo.v2;
+
+table SmokeEvent {
+  step: uint32;
+  kind: string;
+  note: string;
+}
+
+root_type SmokeEvent;

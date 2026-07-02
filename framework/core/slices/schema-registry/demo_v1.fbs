@@ -1,0 +1,12 @@
+// SPDX-License-Identifier: Apache-2.0
+// Demo event schema, version 1. The slice's producer builds events with the
+// generated code; the decoder never sees this file — it decodes through the
+// .bfbs carried in the bundle.
+namespace slices.demo.v1;
+
+table SmokeEvent {
+  step: uint32;
+  kind: string;
+}
+
+root_type SmokeEvent;
