@@ -10,6 +10,7 @@ from . import assemble
 from . import login
 from . import backtest
 from . import trace
+from . import rewind
 
 __all__ = [
     "engage",
@@ -22,4 +23,5 @@ __all__ = [
     "login",
     "backtest",
     "trace",
+    "rewind",
 ]
