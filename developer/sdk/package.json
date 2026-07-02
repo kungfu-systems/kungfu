@@ -42,7 +42,6 @@
     "@mapbox/node-pre-gyp": "^1.0.0"
   },
   "devDependencies": {
-    "@kungfu-tech/toolchain": "workspace:*",
     "ignore": "^5.3.1",
     "inquirer": "^8.2.4"
   }
