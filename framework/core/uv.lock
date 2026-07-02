@@ -250,6 +250,14 @@ wheels = [
 ]
 
 [[package]]
+name = "flatbuffers"
+version = "25.12.19"
+source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
+wheels = [
+    { url = "http://192.168.100.222:3141/root/pypi/+f/763/4f50c427838bb/flatbuffers-25.12.19-py2.py3-none-any.whl", hash = "sha256:7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4" },
+]
+
+[[package]]
 name = "h11"
 version = "0.16.0"
 source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
@@ -426,6 +434,7 @@ dependencies = [
     { name = "colorama", marker = "os_name == 'nt'" },
     { name = "cryptography", marker = "sys_platform == 'linux'" },
     { name = "filelock" },
+    { name = "flatbuffers" },
     { name = "importlib-metadata" },
     { name = "jeepney", marker = "sys_platform == 'linux'" },
     { name = "keyring" },
@@ -484,6 +493,7 @@ requires-dist = [
     { name = "colorama", marker = "os_name == 'nt'", specifier = "==0.4.6" },
     { name = "cryptography", marker = "sys_platform == 'linux'", specifier = "==43.0.3" },
     { name = "filelock" },
+    { name = "flatbuffers", specifier = ">=25.2,<26" },
     { name = "importlib-metadata" },
     { name = "jeepney", marker = "sys_platform == 'linux'", specifier = "==0.8.0" },
     { name = "keyring", specifier = "~=25.5.0" },

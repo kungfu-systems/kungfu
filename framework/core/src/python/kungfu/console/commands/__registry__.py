@@ -9,6 +9,7 @@ from . import slicetool
 from . import assemble
 from . import login
 from . import backtest
+from . import trace
 
 __all__ = [
     "engage",
@@ -20,4 +21,5 @@ __all__ = [
     "assemble",
     "login",
     "backtest",
+    "trace",
 ]

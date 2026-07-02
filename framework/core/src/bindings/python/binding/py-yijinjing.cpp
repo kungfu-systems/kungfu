@@ -247,6 +247,11 @@ void bind(pybind11::module &&m) {
       .def("publish", &publisher::publish)
       .def("notify", &publisher::notify);
 
+  // standalone python journal writers (e.g. the rewind capture supervisor)
+  // need the same no-op publisher the C++ slices use
+  py::class_<journal::noop_publisher, publisher, std::shared_ptr<journal::noop_publisher>>(m, "noop_publisher")
+      .def(py::init<>());
+
   py::class_<observer, PyObserver, observer_ptr>(m, "observer")
       .def("wait", &observer::wait)
       .def("get_notice", &observer::get_notice);
