@@ -13,8 +13,17 @@ fixture_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 core_dir="$(CDPATH= cd -- "$fixture_dir/../../../framework/core" && pwd)"
 
 home="$(mktemp -d)"
-trap 'rm -rf "$home"' EXIT
 run_id="fixturehappy$(date +%s)"
+
+# deterministic model upstream: the mock binds an ephemeral port and reports
+# it through a file; the supervisor picks it up as the openai forward target
+port_file="$home/mock-port"
+python3 "$fixture_dir/mock_model.py" "$port_file" &
+mock_pid=$!
+trap 'kill "$mock_pid" 2>/dev/null; rm -rf "$home"' EXIT
+while [ ! -s "$port_file" ]; do sleep 0.1; done
+OPENAI_BASE_URL="http://127.0.0.1:$(cat "$port_file")/v1"
+export OPENAI_BASE_URL
 
 # Dev-python import of pykungfu: its libnode install name is
 # @executable_path-relative (correct for the frozen kfc executable); when the

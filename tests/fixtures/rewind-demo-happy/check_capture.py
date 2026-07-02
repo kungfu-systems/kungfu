@@ -20,7 +20,17 @@ sys.path.insert(0, os.path.join(_core, "dist", "kfc"))
 
 import kungfu
 
-from kungfu.rewind import MSG_RUN_BEGIN, MSG_RUN_END, MSG_TYPE_NAMES
+from kungfu.rewind import (
+    MSG_MODEL_REQUEST,
+    MSG_MODEL_RESPONSE,
+    MSG_RUN_BEGIN,
+    MSG_RUN_END,
+    MSG_TYPE_NAMES,
+)
+from kungfu.rewind.fb.CallStatus import CallStatus
+from kungfu.rewind.fb.CaptureLayer import CaptureLayer
+from kungfu.rewind.fb.ModelRequest import ModelRequest
+from kungfu.rewind.fb.ModelResponse import ModelResponse
 from kungfu.rewind.fb.RunBegin import RunBegin
 from kungfu.rewind.fb.RunEnd import RunEnd
 
@@ -54,6 +64,51 @@ if begin_frames:
         (begin.RunId() or b"").decode(),
     )
     check("RunBegin.gen_time set", header.gen_time > 0)
+
+req_frames = yjj.assemble(location, 0).read_bytes(MSG_MODEL_REQUEST)
+check("ModelRequest frame present", len(req_frames) == 1)
+req_span = None
+if req_frames:
+    _, payload = req_frames[0]
+    req = ModelRequest.GetRootAs(bytes(payload), 0)
+    req_span = (req.SpanId() or b"").decode()
+    check("ModelRequest.run_id matches", (req.RunId() or b"").decode() == run_id)
+    check("ModelRequest.layer == ModelWire", req.Layer() == CaptureLayer.ModelWire)
+    check(
+        "ModelRequest.provider == openai", (req.Provider() or b"").decode() == "openai"
+    )
+    check(
+        "ModelRequest.model == demo-model",
+        (req.Model() or b"").decode() == "demo-model",
+    )
+    req_body = json.loads((req.RequestBody() or b"{}").decode())
+    check("ModelRequest.request_body has messages", bool(req_body.get("messages")))
+
+resp_frames = yjj.assemble(location, 0).read_bytes(MSG_MODEL_RESPONSE)
+check("ModelResponse frame present", len(resp_frames) == 1)
+if resp_frames:
+    _, payload = resp_frames[0]
+    resp = ModelResponse.GetRootAs(bytes(payload), 0)
+    check(
+        "ModelResponse.span_id matches request",
+        req_span and (resp.SpanId() or b"").decode() == req_span,
+    )
+    check("ModelResponse.status == Ok", resp.Status() == CallStatus.Ok)
+    check(
+        "ModelResponse.finish_reason == stop",
+        (resp.FinishReason() or b"").decode() == "stop",
+    )
+    check(
+        "ModelResponse.tokens captured",
+        resp.InputTokens() == 7 and resp.OutputTokens() == 3,
+    )
+    check("ModelResponse.latency_ns > 0", resp.LatencyNs() > 0)
+    resp_body = json.loads((resp.ResponseBody() or b"{}").decode())
+    check(
+        "ModelResponse.response_body has answer",
+        resp_body.get("choices", [{}])[0].get("message", {}).get("content")
+        == "the demo answer",
+    )
 
 asm2 = yjj.assemble(location, 0)
 end_frames = asm2.read_bytes(MSG_RUN_END)
