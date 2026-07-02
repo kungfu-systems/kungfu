@@ -364,37 +364,6 @@ importers:
         specifier: workspace:*
         version: link:../../developer/sdk
 
-  extensions/extension-manager:
-    dependencies:
-      '@kungfu-tech/api':
-        specifier: workspace:*
-        version: link:../../framework/api
-      '@kungfu-tech/core':
-        specifier: workspace:*
-        version: link:../../framework/core
-      '@kungfu-tech/gui':
-        specifier: workspace:*
-        version: link:../../framework/gui
-      '@kungfu-tech/kfx-ui-novice-guide':
-        specifier: workspace:*
-        version: link:../novice-guide
-      '@kungfu-tech/tui':
-        specifier: workspace:*
-        version: link:../../framework/tui
-      pinia:
-        specifier: ~2.0.0
-        version: 2.0.36(typescript@5.9.3)(vue@3.5.39(typescript@5.9.3))
-    devDependencies:
-      '@kungfu-tech/kfx-broker-sim':
-        specifier: workspace:*
-        version: link:../sim
-      '@kungfu-tech/sdk':
-        specifier: workspace:*
-        version: link:../../developer/sdk
-      '@kungfu-tech/toolchain':
-        specifier: workspace:*
-        version: link:../../developer/toolchain
-
   extensions/indexer-live:
     dependencies:
       '@kungfu-tech/core':
@@ -414,37 +383,6 @@ importers:
       '@kungfu-tech/sdk':
         specifier: workspace:*
         version: link:../../developer/sdk
-
-  extensions/novice-guide:
-    dependencies:
-      '@kungfu-tech/api':
-        specifier: workspace:*
-        version: link:../../framework/api
-      '@kungfu-tech/core':
-        specifier: workspace:*
-        version: link:../../framework/core
-      '@kungfu-tech/gui':
-        specifier: workspace:*
-        version: link:../../framework/gui
-      '@kungfu-tech/tui':
-        specifier: workspace:*
-        version: link:../../framework/tui
-      driver.js:
-        specifier: ^1.3.1
-        version: 1.6.0
-    devDependencies:
-      '@kungfu-tech/kfx-broker-sim':
-        specifier: workspace:*
-        version: link:../sim
-      '@kungfu-tech/kfx-operator-bar':
-        specifier: workspace:*
-        version: link:../bar
-      '@kungfu-tech/sdk':
-        specifier: workspace:*
-        version: link:../../developer/sdk
-      '@kungfu-tech/toolchain':
-        specifier: workspace:*
-        version: link:../../developer/toolchain
 
   extensions/sim:
     dependencies:
@@ -4149,9 +4087,6 @@ packages:
   dotenv@9.0.2:
     resolution: {integrity: sha512-I9OvvrHp4pIARv4+x9iuewrWycX6CcZtoAu1XrzPxc5UygMJXJZYmBsynku8IkrJwgypE5DGNjDPmPRhDCptUg==}
     engines: {node: '>=10'}
-
-  driver.js@1.6.0:
-    resolution: {integrity: sha512-gryo9QS7AZhz8J0bmdf42dwaTzcd1BgSJLnaSM7cPJbu8bTW8wIEuiGDy4MoCvB4Sr8wA9g5o2G9EFNVYZGeVQ==}
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -11049,12 +10984,6 @@ snapshots:
       '@vue/shared': 3.5.39
       vue: 3.5.39(typescript@4.5.5)
 
-  '@vue/server-renderer@3.5.39(vue@3.5.39(typescript@5.9.3))':
-    dependencies:
-      '@vue/compiler-ssr': 3.5.39
-      '@vue/shared': 3.5.39
-      vue: 3.5.39(typescript@5.9.3)
-
   '@vue/shared@3.5.39': {}
 
   '@vue/web-component-wrapper@1.3.0': {}
@@ -12560,8 +12489,6 @@ snapshots:
   dotenv@8.6.0: {}
 
   dotenv@9.0.2: {}
-
-  driver.js@1.6.0: {}
 
   dunder-proto@1.0.1:
     dependencies:
@@ -15522,14 +15449,6 @@ snapshots:
     optionalDependencies:
       typescript: 4.5.5
 
-  pinia@2.0.36(typescript@5.9.3)(vue@3.5.39(typescript@5.9.3)):
-    dependencies:
-      '@vue/devtools-api': 6.6.4
-      vue: 3.5.39(typescript@5.9.3)
-      vue-demi: 0.14.10(vue@3.5.39(typescript@5.9.3))
-    optionalDependencies:
-      typescript: 5.9.3
-
   pkg-dir@4.2.0:
     dependencies:
       find-up: 4.1.0
@@ -17037,10 +16956,6 @@ snapshots:
     dependencies:
       vue: 3.5.39(typescript@4.5.5)
 
-  vue-demi@0.14.10(vue@3.5.39(typescript@5.9.3)):
-    dependencies:
-      vue: 3.5.39(typescript@5.9.3)
-
   vue-eslint-parser@8.3.0(eslint@8.57.1):
     dependencies:
       debug: 4.4.3
@@ -17159,16 +17074,6 @@ snapshots:
       '@vue/shared': 3.5.39
     optionalDependencies:
       typescript: 4.5.5
-
-  vue@3.5.39(typescript@5.9.3):
-    dependencies:
-      '@vue/compiler-dom': 3.5.39
-      '@vue/compiler-sfc': 3.5.39
-      '@vue/runtime-dom': 3.5.39
-      '@vue/server-renderer': 3.5.39(vue@3.5.39(typescript@5.9.3))
-      '@vue/shared': 3.5.39
-    optionalDependencies:
-      typescript: 5.9.3
 
   walk-up-path@4.0.0: {}
 
