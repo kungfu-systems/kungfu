@@ -8,7 +8,8 @@
 //
 // Usage (node pinned via the entrypoint; plain `node verify.js` also works):
 //   ./kungfu-code verify              quick: only assert "existing" artifacts (dist/kfc exists + kfc runs + version matches)
-//   ./kungfu-code verify --full       full: rebuild:core + freeze first, then assert (~hundreds of seconds, needs the full toolchain)
+//   ./kungfu-code verify --full       full: rebuild:core + freeze first, then assert; also builds and runs the
+//                                     capability slices (framework/core/slices) + yijinjing dependency guard
 //   ./kungfu-code verify --with-app   also assert the build:app artifact (with --full it builds the app first)
 //   ./kungfu-code verify --help
 //
@@ -148,6 +149,46 @@ function main() {
       pass('build:app artifact exists', path.relative(ROOT, appDist));
     } else {
       fail('build:app artifact exists', `non-empty ${path.relative(ROOT, appDist)} not found (build:app first)`);
+    }
+  }
+
+  // ── Stage 5: capability slices (full mode) ────────────────────────
+  // Each slice under framework/core/slices/ is a standalone proof of a core
+  // capability (see slices/README.md); a red slice means a capability the
+  // repo depends on has regressed. Built and run only in --full so the quick
+  // path keeps its seconds-level semantics.
+  if (doFull) {
+    console.log('\n[verify] stage 5: capability slices');
+    if (isWin) {
+      console.log('  (skipped on Windows: slice probes are bash scripts; not asserted on this platform)');
+    } else {
+      const core = path.join(ROOT, 'framework', 'core');
+      const buildDir = path.join(core, 'build');
+      const slicesDir = path.join(core, 'slices');
+      const cfg = spawnSync('cmake', ['-S', core, '-B', buildDir, '-DKUNGFU_WITH_SLICES=ON'], { stdio: 'inherit' });
+      if (cfg.status !== 0) {
+        fail('slices configure', `cmake -DKUNGFU_WITH_SLICES=ON failed (exit ${cfg.status}); rebuild:core must run first to seed the build tree`);
+        return summarize();
+      }
+      const bld = spawnSync('cmake', ['--build', buildDir], { stdio: 'inherit' });
+      if (bld.status !== 0) {
+        fail('slices build', `cmake --build failed (exit ${bld.status})`);
+        return summarize();
+      }
+      pass('slices build', 'KUNGFU_WITH_SLICES=ON');
+      const tail3 = (r) => `${r.stdout || ''}${r.stderr || ''}`.trim().split('\n').slice(-3).join(' | ').slice(0, 300);
+      const slices = fs
+        .readdirSync(slicesDir)
+        .filter((d) => fs.existsSync(path.join(slicesDir, d, 'run.sh')))
+        .sort();
+      for (const name of slices) {
+        const r = spawnSync('bash', [path.join(slicesDir, name, 'run.sh'), buildDir], { encoding: 'utf8' });
+        if (r.status === 0) pass(`slice ${name}`, 'proof holds');
+        else fail(`slice ${name}`, `run.sh exit ${r.status == null ? 'signal ' + r.signal : r.status}; tail: ${tail3(r)}`);
+      }
+      const guard = spawnSync('bash', [path.join(core, 'src', 'libyijinjing', 'check-deps.sh')], { encoding: 'utf8' });
+      if (guard.status === 0) pass('yijinjing dependency guard', 'check-deps.sh');
+      else fail('yijinjing dependency guard', tail3(guard));
     }
   }
 
