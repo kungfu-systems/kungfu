@@ -12408,6 +12408,12 @@ namespace sqlite_orm {
 
 #endif
             void on_open_internal(sqlite3* db) {
+                //  The user hook runs first so it can configure the fresh
+                //  connection (e.g. sqlite3_busy_timeout) before any pragma
+                //  replay below issues statements that may contend for locks.
+                if(this->on_open) {
+                    this->on_open(db);
+                }
 
 #if SQLITE_VERSION_NUMBER >= 3006019
                 if(this->cachedForeignKeysCount) {
@@ -12447,9 +12453,6 @@ namespace sqlite_orm {
                     try_to_create_function(db, static_cast<aggregate_function_t&>(*functionPointer));
                 }
 
-                if(this->on_open) {
-                    this->on_open(db);
-                }
             }
 
             void delete_function_impl(const std::string& name,

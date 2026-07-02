@@ -58,10 +58,16 @@ constexpr auto make_storage_ptr = [](const std::string &db_file, const auto &typ
     return [&](auto... tables) {
       using storage_type = decltype(sqlite_orm::make_storage(db_file, tables...));
       auto storage_ptr = std::make_shared<storage_type>(sqlite_orm::make_storage(db_file, tables...));
-      // Cross-process write contention (a live master's cached writer vs an
-      // app's config write) routinely outlives one second; five seconds keeps
-      // SQLITE_BUSY an internal wait instead of a caller-visible failure.
-      storage_ptr->busy_timeout(5 * yijinjing::time_unit::MILLISECONDS_PER_SECOND);
+      // storage->busy_timeout() only arms the connection alive at call time,
+      // and sqlite_orm reopens connections per operation — so later
+      // operations ran with no timeout at all and any cross-process
+      // contention surfaced as an SQLITE_BUSY throw (observed escaping
+      // thread/napi boundaries and killing whole processes). Arm every fresh
+      // connection through the on_open hook instead, which our vendored
+      // sqlite_orm invokes before pragma replay.
+      storage_ptr->on_open = [](sqlite3 *db) {
+        sqlite3_busy_timeout(db, 5 * yijinjing::time_unit::MILLISECONDS_PER_SECOND);
+      };
       return storage_ptr;
     };
   };

@@ -107,7 +107,35 @@ Napi::Value ParseTime(const Napi::CallbackInfo &info) {
 
 void Shutdown(const Napi::CallbackInfo &info) { ensure_sqlite_shutdown(); }
 
+#ifndef _MSC_VER
+#include <execinfo.h>
+#endif
+
+// Last-resort diagnostics: when an exception escapes a thread or a noexcept
+// boundary the process dies either way, but without this handler it dies
+// silently. Print the throwing thread's native stack and the exception text
+// first, so field reports carry the actual failure site.
+[[noreturn]] static void terminate_with_backtrace() {
+#ifndef _MSC_VER
+  void *frames[64];
+  int depth = backtrace(frames, 64);
+  backtrace_symbols_fd(frames, depth, 2);
+#endif
+  if (auto captured = std::current_exception()) {
+    try {
+      std::rethrow_exception(captured);
+    } catch (const std::exception &ex) {
+      SPDLOG_CRITICAL("terminating on uncaught exception: {}", ex.what());
+      fprintf(stderr, "terminating on uncaught exception: %s\n", ex.what());
+    } catch (...) {
+      fprintf(stderr, "terminating on uncaught non-std exception\n");
+    }
+  }
+  abort();
+}
+
 Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
+  std::set_terminate(terminate_with_backtrace);
   ensure_sqlite_initilize();
   Longfist::Init(env, exports);
   History::Init(env, exports);
