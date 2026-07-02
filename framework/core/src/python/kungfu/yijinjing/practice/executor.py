@@ -169,7 +169,11 @@ class ServiceLoader(dict):
     def __init__(self, ctx):
         super().__init__()
         self.ctx = ctx
-        self["ledger"] = ServiceExecutor(self.ctx, "ledger", wc.Ledger)
+        # Ledger lives in the carved wingchun trading runtime; keep the service
+        # slot lazy so `kfc run master` boots on the clean core (same
+        # degradation as the wingchun imports above).
+        if hasattr(wc, "Ledger"):
+            self["ledger"] = ServiceExecutor(self.ctx, "ledger", wc.Ledger)
 
     def load_service(self, ctx):
         self[ctx.name] = ServiceExecutor(

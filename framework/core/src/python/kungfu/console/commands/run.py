@@ -173,7 +173,9 @@ def run(
 
     cheatsheet = {
         "master": registry["system"]["master"]["master"],
-        "ledger": registry["system"]["service"]["ledger"],
+        # ledger is absent when the carved wingchun runtime is not linked in;
+        # ServiceLoader registers it only when the binding provides it.
+        **registry["system"]["service"],
     }
 
     ctx.executor = None
