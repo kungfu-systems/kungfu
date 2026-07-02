@@ -11,36 +11,11 @@
 #include <nlohmann/json.hpp>
 #include <spdlog/fmt/ostr.h>
 
-#define KF_JSON_SERIALIZE_ENUM(ENUM_TYPE, ...)                                                                         \
-  template <typename BasicJsonType> inline void to_json(BasicJsonType &j, const ENUM_TYPE &e) {                        \
-    static_assert(std::is_enum<ENUM_TYPE>::value, #ENUM_TYPE " must be an enum!");                                     \
-    static const std::pair<ENUM_TYPE, BasicJsonType> m[] = __VA_ARGS__;                                                \
-    auto it =                                                                                                          \
-        std::find_if(std::begin(m), std::end(m),                                                                       \
-                     [e](const std::pair<ENUM_TYPE, BasicJsonType> &ej_pair) -> bool { return ej_pair.first == e; });  \
-    j = ((it != std::end(m)) ? it : std::begin(m))->second;                                                            \
-  }                                                                                                                    \
-  template <typename BasicJsonType> inline void from_json(const BasicJsonType &j, ENUM_TYPE &e) {                      \
-    static_assert(std::is_enum<ENUM_TYPE>::value, #ENUM_TYPE " must be an enum!");                                     \
-    static const std::pair<ENUM_TYPE, BasicJsonType> m[] = __VA_ARGS__;                                                \
-    if (j.is_number()) {                                                                                               \
-      e = static_cast<ENUM_TYPE>(j.template get<int8_t>());                                                            \
-      return;                                                                                                          \
-    }                                                                                                                  \
-    auto it =                                                                                                          \
-        std::find_if(std::begin(m), std::end(m), [&j](const std::pair<ENUM_TYPE, BasicJsonType> &ej_pair) -> bool {    \
-          return ej_pair.second == j;                                                                                  \
-        });                                                                                                            \
-    e = ((it != std::end(m)) ? it : std::begin(m))->first;                                                             \
-  }
+// KF_JSON_SERIALIZE_ENUM 宏、format_as、以及核心枚举 FrameDataType / PageStatus
+// 均移入 schema 叶子 kungfu/longfist/core.h（供 libyijinjing 单独 include）。
+#include <kungfu/longfist/core.h>
 
 namespace kungfu::longfist::enums {
-// fmt 10 不再隐式格式化枚举；通过 ADL 友元 format_as 把本命名空间所有枚举
-// 按底层整数格式化（与既有 operator<< 输出 int32_t 一致）。
-template <typename E, std::enable_if_t<std::is_enum_v<E>, int> = 0>
-constexpr int32_t format_as(E e) {
-  return static_cast<int32_t>(e);
-}
 
 enum class mode : int8_t { LIVE, DATA, REPLAY, BACKTEST };
 
@@ -784,12 +759,7 @@ template <typename T, typename U> inline T sub_data_bitwise(const T &a, const T 
   return static_cast<T>(static_cast<U>(a) | static_cast<U>(b));
 }
 
-enum class PageStatus : int8_t { Normal, PreOpen };
-
-KF_JSON_SERIALIZE_ENUM(PageStatus, {
-                                       {PageStatus::Normal, "Normal"},
-                                       {PageStatus::PreOpen, "PreOpen"},
-                                   })
+// PageStatus 已移入 kungfu/longfist/core.h（schema 叶子）。
 
 inline std::ostream &operator<<(std::ostream &os, PageStatus t) { return os << int32_t(t); }
 
@@ -802,19 +772,7 @@ KF_JSON_SERIALIZE_ENUM(AccountingMethodType, {
 
 inline std::ostream &operator<<(std::ostream &os, AccountingMethodType t) { return os << int32_t(t); }
 
-enum class FrameDataType : int8_t { Raw, Json, Unknown };
-
-KF_JSON_SERIALIZE_ENUM(FrameDataType, {
-                                          {FrameDataType::Raw, "Raw"},
-                                          {FrameDataType::Json, "Json"},
-                                          {FrameDataType::Unknown, "Unknown"},
-                                      })
-
-inline std::ostream &operator<<(std::ostream &os, FrameDataType t) { return os << int32_t(t); }
-
-inline bool operator==(int8_t type, FrameDataType t) { return type == int8_t(t); }
-
-inline bool operator==(FrameDataType t, int8_t type) { return type == int8_t(t); }
+// FrameDataType 已移入 kungfu/longfist/core.h（schema 叶子）。
 
 enum class OrderTriggerType : int8_t { ///
   Immediately,                         /// 立即
