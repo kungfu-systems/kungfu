@@ -8,8 +8,8 @@
 #include <cstdlib>
 #include <kungfu/common.h>
 #include <kungfu/yijinjing/common.h>
-#include <kungfu/yijinjing/util/rocks.h>
 #include <regex>
+#include <unordered_set>
 
 namespace kungfu::yijinjing::data {
 
@@ -266,12 +266,8 @@ bool location::is_uid_clash() {
 }
 
 std::string location::get_master_kv(const std::string &key) {
-  const std::string rocksdb_dir =
-      locator->layout_directory(es::layout::MAP, es::category::SYSTEM, "master", "master", mode, false);
-  SPDLOG_TRACE("rocksdb_dir: {}", rocksdb_dir);
-  std::string value{};
-  util::rocks::get_kv(key, value, rocksdb_dir);
-  return value;
+  auto provider = master_kv();
+  return provider ? provider(*this, key) : std::string{};
 }
 
 void location::update_seed(uint32_t s) {

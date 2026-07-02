@@ -203,6 +203,18 @@ inline std::ostream &operator<<(std::ostream &os, Priority t) { return os << int
 inline bool operator<(Priority l, Priority r) { return int8_t(l) < int8_t(r); }
 
 inline bool operator==(Priority l, Priority r) { return int8_t(l) == int8_t(r); }
+
+// AssembleMode selects which journals the core assemble reader walks; pure
+// journal-infrastructure flags, so it lives in the leaf.
+class AssembleMode {
+public:
+  inline static const uint32_t Channel = 0b00000001; // read only journal of location to dest_id
+  inline static const uint32_t Write = 0b00000010;   // read all journal from this location
+  inline static const uint32_t Read = 0b00000100;    // read all journal to this dest_id
+  inline static const uint32_t Public = 0b00001000;  // read all journal to location::PUBLIC
+  inline static const uint32_t Sync = 0b00010000;    // read all journal to location::PUBLIC
+  inline static const uint32_t All = 0b00100000;     // read all journal
+};
 } // namespace kungfu::longfist::enums
 
 namespace kungfu::longfist::types {
@@ -248,6 +260,11 @@ KF_DEFINE_PACK_TYPE(                          //
     (longfist::enums::PageStatus, status),    // 0 close 1 preopen 2 open 3 flushing
     (uint64_t, last_frame_position)           //
 );
+
+// PageEnd marks the terminal frame of a full journal page so readers roll over
+// to the next page; journal infrastructure, so it lives in the leaf. It keeps
+// type tag 10051 and stays registered in AllTypes (longfist.h) verbatim.
+KF_DEFINE_MARK_TYPE(PageEnd, 10051);
 
 // Location identifies a journal endpoint (mode/category/group/name). The yijinjing
 // core's locator/location model it, so it lives in the leaf. It keeps type tag

@@ -6,6 +6,7 @@
 
 #include <fstream>
 #include <kungfu/common.h>
+#include <kungfu/longfist/longfist.h>
 #include <kungfu/yijinjing/io.h>
 #include <kungfu/yijinjing/journal/tracer.h>
 #include <kungfu/yijinjing/log.h>

@@ -4,7 +4,7 @@
 #define YIJINJING_JOURNAL_H
 
 #include <kungfu/common.h>
-#include <kungfu/longfist/longfist.h>
+#include <kungfu/longfist/core.h>
 #include <kungfu/yijinjing/journal/bus.h>
 #include <kungfu/yijinjing/journal/common.h>
 #include <kungfu/yijinjing/journal/frame.h>

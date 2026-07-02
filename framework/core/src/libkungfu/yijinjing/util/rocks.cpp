@@ -1,3 +1,4 @@
+#include <kungfu/yijinjing/common.h>
 #include <kungfu/yijinjing/util/rocks.h>
 namespace kungfu::yijinjing::util {
 
@@ -137,5 +138,27 @@ void rocks::clear_rocksdb(rocksdb::DB **db) {
   delete *db;
   *db = nullptr;
 }
+
+// Runtime side of the location master-kv seam: the core's uid-seed
+// verification asks the master's kv map through location::master_kv(); this
+// backs it with the rocksdb MAP layout. Installed on load (static init) and
+// again explicitly from the io_device constructor, so static-library builds
+// that drop unreferenced objects still get it before any runtime lookup.
+void install_master_kv_provider() {
+  data::location::master_kv() = [](const data::location &self, const std::string &key) {
+    namespace es = longfist::enums;
+    const std::string rocksdb_dir =
+        self.locator->layout_directory(es::layout::MAP, es::category::SYSTEM, "master", "master", self.mode, false);
+    SPDLOG_TRACE("rocksdb_dir: {}", rocksdb_dir);
+    std::string value{};
+    rocks::get_kv(key, value, rocksdb_dir);
+    return value;
+  };
+}
+
+static const bool master_kv_provider_installed = [] {
+  install_master_kv_provider();
+  return true;
+}();
 
 } // namespace kungfu::yijinjing::util

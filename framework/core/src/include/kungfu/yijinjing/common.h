@@ -122,6 +122,17 @@ struct location : public std::enable_shared_from_this<location>, public longfist
   static constexpr uint32_t PUBLIC = 0;
   static constexpr uint32_t SYNC = 1;
 
+  // uid-seed verification reads the master's kv map, whose storage backend
+  // belongs to the runtime. The runtime installs a provider here (see
+  // install_master_kv_provider in util/rocks.h); without one, get_master_kv
+  // returns empty and verification degrades to the pure hash path.
+  using master_kv_provider = std::string (*)(const location &self, const std::string &key);
+
+  static master_kv_provider &master_kv() {
+    static master_kv_provider provider = nullptr;
+    return provider;
+  }
+
   const locator_ptr locator;
   const std::string uname;
   uint32_t uid;

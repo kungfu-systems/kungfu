@@ -3,9 +3,7 @@
 #ifndef KUNGFU_YIJINJING_FRAME_H
 #define KUNGFU_YIJINJING_FRAME_H
 
-// TODO(libyijinjing 1c): drop longfist.h once typed to_string moves out of core;
-// only the AllTypes loop below needs the full type registry
-#include <kungfu/longfist/longfist.h>
+#include <kungfu/longfist/core.h>
 #include <kungfu/yijinjing/journal/common.h>
 
 #include <atomic>
@@ -18,6 +16,17 @@ namespace kungfu::yijinjing::journal {
  */
 struct frame : event {
   ~frame() override = default;
+
+  // The core knows nothing beyond the frame/page schema leaf; rendering a raw
+  // (non-json) payload needs the full type registry, which lives with the
+  // runtime. The runtime installs a dumper here (see install_typed_frame_dumper
+  // in libkungfu); without one, to_string() emits header + json payloads only.
+  using typed_dumper = void (*)(const frame &self, nlohmann::json &j);
+
+  static typed_dumper &type_dumper() {
+    static typed_dumper dumper = nullptr;
+    return dumper;
+  }
 
   // ADR-0001: `length` is the frame publication token. Read it with acquire so
   // that, once a non-zero length is observed, all of the writer's prior stores
@@ -64,13 +73,8 @@ struct frame : event {
     auto j = header_->to_json();
     if (is_json()) {
       j["data"] = data_as_string();
-    } else {
-      hana::for_each(longfist::AllTypes, [&](auto pair) {
-        using DataType = typename decltype(+hana::second(pair))::type;
-        if (DataType::tag == msg_type()) {
-          j["data"] = data<DataType>().to_string();
-        }
-      });
+    } else if (auto dumper = type_dumper()) {
+      dumper(*this, j);
     }
     return j.dump(-1, ' ', false, nlohmann::json::basic_json::error_handler_t::replace);
   }

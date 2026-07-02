@@ -50,6 +50,10 @@ private:
   explicit rocks();
 };
 
+// defined in rocks.cpp: installs the rocksdb-backed master-kv provider into
+// the core location's uid-verification seam (idempotent)
+void install_master_kv_provider();
+
 } // namespace kungfu::yijinjing::util
 
 #endif // KUNGFU_ROCKS_H

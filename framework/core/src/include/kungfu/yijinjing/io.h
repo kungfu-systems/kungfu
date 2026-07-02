@@ -11,6 +11,12 @@
 #include <kungfu/yijinjing/nanomsg/socket.h>
 
 namespace kungfu::yijinjing {
+namespace journal {
+// defined in typed_frame_dump.cpp: installs the full-registry raw-payload
+// dumper into the core frame's to_string seam (idempotent)
+void install_typed_frame_dumper();
+} // namespace journal
+
 FORWARD_DECLARE_CLASS_PTR(session)
 
 #define SETUP_TIMEOUT 50

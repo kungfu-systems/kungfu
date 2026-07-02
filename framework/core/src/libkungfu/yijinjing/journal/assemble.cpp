@@ -5,9 +5,7 @@
 // Created by Keren Dong on 2020/5/22.
 //
 
-#include <kungfu/yijinjing/cache/backend.h>
 #include <kungfu/yijinjing/common.h>
-#include <kungfu/yijinjing/io.h>
 #include <kungfu/yijinjing/journal/assemble.h>
 #include <kungfu/yijinjing/journal/bus.h>
 #include <kungfu/yijinjing/time.h>

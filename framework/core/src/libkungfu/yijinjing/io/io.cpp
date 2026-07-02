@@ -5,6 +5,7 @@
 #include <kungfu/yijinjing/journal/bus.h>
 #include <kungfu/yijinjing/log.h>
 #include <kungfu/yijinjing/time.h>
+#include <kungfu/yijinjing/util/rocks.h>
 
 using namespace kungfu::longfist;
 using namespace kungfu::longfist::enums;
@@ -151,6 +152,10 @@ io_device::io_device(data::location_ptr home, const bool low_latency, const bool
       live_home_(location::make_shared(mode::LIVE, home_->category, home_->group, home_->name, home_->locator)),
       low_latency_(low_latency), lazy_(lazy), begin_time_(time::now_in_nano()),
       bus_(std::make_shared<bus>(is_resource_manager_required())) {
+  // keep the guarantees deterministic even when static-library linking drops
+  // the seam installers' load-time static initializers
+  journal::install_typed_frame_dumper();
+  util::install_master_kv_provider();
   if (spdlog::default_logger()->name().empty()) {
     yijinjing::log::setup_log(home_, home_->name);
   }

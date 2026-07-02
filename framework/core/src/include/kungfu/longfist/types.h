@@ -33,7 +33,8 @@ KF_DEFINE_MARK_TYPE(AssetSync, 353);
 KF_DEFINE_MARK_TYPE(PositionSync, 354);
 KF_DEFINE_MARK_TYPE(OrderTriggerRequest, 355);
 KF_DEFINE_MARK_TYPE(ContractRequest, 356);
-KF_DEFINE_MARK_TYPE(PageEnd, 10051);
+// PageEnd (tag 10051) moved to the schema leaf kungfu/longfist/core.h; it stays
+// registered in AllTypes (longfist.h) with the same tag.
 KF_DEFINE_MARK_TYPE(Time, 10052);
 KF_DEFINE_MARK_TYPE(Ping, 10053);
 KF_DEFINE_MARK_TYPE(Pong, 10054);
