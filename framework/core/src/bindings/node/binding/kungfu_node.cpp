@@ -59,6 +59,8 @@ decltype(__pfnDliNotifyHook2) __pfnDliNotifyHook2 = load_exe_hook;
 #include "session_store.h"
 #include "watcher.h"
 
+#include <kungfu/yijinjing/util/stacktrace.h>
+
 using namespace kungfu::longfist;
 using namespace kungfu::longfist::enums;
 using namespace kungfu::longfist::types;
@@ -107,20 +109,13 @@ Napi::Value ParseTime(const Napi::CallbackInfo &info) {
 
 void Shutdown(const Napi::CallbackInfo &info) { ensure_sqlite_shutdown(); }
 
-#ifndef _MSC_VER
-#include <execinfo.h>
-#endif
-
 // Last-resort diagnostics: when an exception escapes a thread or a noexcept
 // boundary the process dies either way, but without this handler it dies
-// silently. Print the throwing thread's native stack and the exception text
-// first, so field reports carry the actual failure site.
+// silently. Print the exception text and the throwing thread's native stack
+// first, so field reports carry the actual failure site. The stack comes
+// from yijinjing's stackwalker, which covers every platform we ship
+// (dbghelp/StackWalker on Windows, execinfo with demangling elsewhere).
 [[noreturn]] static void terminate_with_backtrace() {
-#ifndef _MSC_VER
-  void *frames[64];
-  int depth = backtrace(frames, 64);
-  backtrace_symbols_fd(frames, depth, 2);
-#endif
   if (auto captured = std::current_exception()) {
     try {
       std::rethrow_exception(captured);
@@ -131,6 +126,9 @@ void Shutdown(const Napi::CallbackInfo &info) { ensure_sqlite_shutdown(); }
       fprintf(stderr, "terminating on uncaught non-std exception\n");
     }
   }
+  // No arguments: the parameter differs per platform (FILE* on POSIX,
+  // EXCEPTION_POINTERS* on Windows) and both defaults are what we want.
+  yijinjing::util::print_stack_trace();
   abort();
 }
 
