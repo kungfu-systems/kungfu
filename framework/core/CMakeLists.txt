@@ -60,6 +60,9 @@ option(KUNGFU_WITH_FACT_LEDGER_SLICE "build the minimal fact-ledger host + expor
 
 include_directories(.deps/hana-1.80.0/include)
 include_directories(.deps/sqlite_orm-1.7.1/include)
+# core headers first: kungfu/common.h, kungfu/longfist/core.h and the
+# yijinjing journal headers live with the yijinjing static library
+include_directories(src/libyijinjing/include)
 include_directories(src/include)
 
 ##########################################################################
@@ -125,8 +128,11 @@ endif()
 
 ##########################################################################
 
+# journal core static library; libkungfu links it, minimal tools can link it alone
+add_subdirectory(src/libyijinjing)
+
 if (NOT DEFINED ENV{KUNGFU_BUILD_SKIP_LIBKUNGFU} OR NOT $ENV{KUNGFU_BUILD_SKIP_LIBKUNGFU})
-  message(STATUS "Enabled libkungfu")  
+  message(STATUS "Enabled libkungfu")
   add_subdirectory(src/libkungfu)
   # libkungfu 的 OBJECT 库(编译 matcher.cpp 等 include 生成头的源)须在 flatc codegen 之后再编。
   foreach(_kf_obj kungfu_cache kungfu_optim)
@@ -154,8 +160,8 @@ if (KUNGFU_WITH_DEBUG_EXAMPLE)
 endif()
 
 # Minimal fact-ledger slice (journal spine embedded without the trading runtime).
-# Needs libkungfu; only wired when the libkungfu target exists.
-if (KUNGFU_WITH_FACT_LEDGER_SLICE AND TARGET ${LIBKUNGFU_NAME})
+# Links only the yijinjing core; wired whenever that target exists.
+if (KUNGFU_WITH_FACT_LEDGER_SLICE AND TARGET yijinjing)
   message(STATUS "Enabled fact_ledger_slice")
   add_subdirectory(fact-ledger-slice)
 endif()

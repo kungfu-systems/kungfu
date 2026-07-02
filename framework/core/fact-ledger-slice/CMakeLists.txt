@@ -6,18 +6,13 @@
 #   fact_ledger_host    write path  -- appends a causal chain of Json events
 #   fact_ledger_export  read path   -- reopens the directory, emits JSONL + manifest
 #
-# Both link the existing libkungfu (${LIBKUNGFU_NAME}); the parent CMakeLists
-# already puts src/include and the conan libs on the global include/link path.
+# Both link ONLY the yijinjing journal core -- this is the cut-proof for the
+# static-core boundary: the tools embed the journal spine without libkungfu.
 
 project(fact_ledger_slice)
 
 add_executable(fact_ledger_host host.cpp)
-target_link_libraries(fact_ledger_host ${LIBKUNGFU_NAME})
+target_link_libraries(fact_ledger_host yijinjing)
 
 add_executable(fact_ledger_export export.cpp)
-target_link_libraries(fact_ledger_export ${LIBKUNGFU_NAME})
-
-# Find libkungfu at its build location when running from the build tree.
-set_target_properties(fact_ledger_host fact_ledger_export PROPERTIES
-  BUILD_WITH_INSTALL_RPATH FALSE
-  SKIP_BUILD_RPATH FALSE)
+target_link_libraries(fact_ledger_export yijinjing)

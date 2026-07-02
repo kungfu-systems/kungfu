@@ -26,4 +26,7 @@ endif ()
 set_target_properties(${LIBKUNGFU_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 set_target_properties(${LIBKUNGFU_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${KUNGFU_BUILD_DIR})
 target_compile_options(${LIBKUNGFU_NAME} PRIVATE "$<$<CONFIG:Release>:${COMPILER_OPTIMIZE_ON_OPTIONS}>")
-target_link_libraries(${LIBKUNGFU_NAME} ${CONAN_LIBS})
+# journal core comes from the yijinjing static library (built once in
+# src/libyijinjing, its sources are no longer under this directory's GLOB);
+# PUBLIC so bindings linking libkungfu inherit the core usage requirements
+target_link_libraries(${LIBKUNGFU_NAME} PUBLIC yijinjing ${CONAN_LIBS})
