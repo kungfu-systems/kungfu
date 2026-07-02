@@ -26,6 +26,7 @@ A record's **Status** says where it stands:
 | [0007](ADR-0007-v4-tui-platform-reference-surface.md) | accepted | v4 TUI = the platform's second reference surface |
 | [0008](ADR-0008-longfist-schema-evolution-and-minor-maintenance.md) | proposed | longfist binary layout as the true compatibility invariant; schema-evolution policy |
 | [0009](ADR-0009-load-bearing-self-bootstrap.md) | accepted | load-bearing self-bootstrap — the adoption path is the validation path |
+| [0010](ADR-0010-adopt-kfd-1-release-versioning.md) | accepted | adopt KFD-1 — welded-surface registers decide patch, minor, and major |
 
 ## Reading by theme
 
