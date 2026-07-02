@@ -189,6 +189,24 @@ function main() {
       const guard = spawnSync('bash', [path.join(core, 'src', 'libyijinjing', 'check-deps.sh')], { encoding: 'utf8' });
       if (guard.status === 0) pass('yijinjing dependency guard', 'check-deps.sh');
       else fail('yijinjing dependency guard', tail3(guard));
+
+      // ── Stage 6: rewind capture fixtures (full mode) ──────────────
+      // Each fixture under tests/fixtures/rewind-demo-*/ proves a capture
+      // gate end to end against the built dist/kfc (G2 capture, G3 event
+      // completeness); a red fixture means the capture contract regressed.
+      console.log('\n[verify] stage 6: rewind capture fixtures');
+      const fixturesDir = path.join(ROOT, 'tests', 'fixtures');
+      const fixtures = fs.existsSync(fixturesDir)
+        ? fs
+            .readdirSync(fixturesDir)
+            .filter((d) => d.startsWith('rewind-demo-') && fs.existsSync(path.join(fixturesDir, d, 'run.sh')))
+            .sort()
+        : [];
+      for (const name of fixtures) {
+        const r = spawnSync('bash', [path.join(fixturesDir, name, 'run.sh')], { encoding: 'utf8' });
+        if (r.status === 0) pass(`fixture ${name}`, 'capture facts hold');
+        else fail(`fixture ${name}`, `run.sh exit ${r.status == null ? 'signal ' + r.signal : r.status}; tail: ${tail3(r)}`);
+      }
     }
   }
 

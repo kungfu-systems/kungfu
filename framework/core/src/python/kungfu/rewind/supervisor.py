@@ -35,6 +35,7 @@ from kungfu.rewind import (
 )
 from kungfu.rewind import bundle, events
 from kungfu.rewind.fb.RunStatus import RunStatus
+from kungfu.rewind.ingest import IngestServer
 from kungfu.rewind.proxy import (
     DEFAULT_ANTHROPIC_UPSTREAM,
     DEFAULT_OPENAI_UPSTREAM,
@@ -45,7 +46,10 @@ lf = kungfu.__binding__.longfist
 yjj = kungfu.__binding__.yijinjing
 
 ENV_RUN_ID = "KUNGFU_REWIND_RUN_ID"
+ENV_INGEST = "KUNGFU_REWIND_INGEST"
 PUBLIC_DEST = 0
+
+_HOOK_DIR = os.path.join(os.path.dirname(__file__), "hook")
 
 # base-url variables the proxy takes over in the child environment; the
 # parent's own values (if any) become the forward targets
@@ -80,6 +84,7 @@ class Supervisor:
         self.proxy = ModelWireProxy(
             self.run_id, self.enqueue, upstreams=self._upstreams()
         )
+        self.ingest = IngestServer(self.run_id, self.enqueue)
 
     @staticmethod
     def _upstreams():
@@ -109,6 +114,11 @@ class Supervisor:
         env[ENV_RUN_ID] = self.run_id
         for key in _OPENAI_ENV + _ANTHROPIC_ENV:
             env[key] = self.proxy.base_url
+        # L2: announce the ingest endpoint and let python's site machinery
+        # pull in the hook (sitecustomize) inside the child interpreter
+        env[ENV_INGEST] = self.ingest.endpoint
+        existing = env.get("PYTHONPATH")
+        env["PYTHONPATH"] = _HOOK_DIR + os.pathsep + existing if existing else _HOOK_DIR
         return env
 
     def bundle_dir(self):
@@ -118,6 +128,7 @@ class Supervisor:
         writer_thread = threading.Thread(target=self._drain_events)
         writer_thread.start()
         self.proxy.start()
+        self.ingest.start()
         self.enqueue(
             MSG_RUN_BEGIN,
             events.run_begin(
@@ -141,9 +152,11 @@ class Supervisor:
             exit_code = child.wait()
             status = RunStatus.Interrupted
         finally:
-            # child gone -> no new wire events; stop the proxy before the
-            # RunEnd bracket so every captured event lands inside the run
+            # child gone -> no new wire or hook events; stop the capture
+            # layers before the RunEnd bracket so every event lands inside
+            # the run
             self.proxy.stop()
+            self.ingest.stop()
             self.enqueue(
                 MSG_RUN_END,
                 events.run_end(self.run_id, status, exit_code),

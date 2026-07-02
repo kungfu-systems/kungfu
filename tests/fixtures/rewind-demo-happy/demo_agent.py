@@ -40,4 +40,24 @@ if content != "the demo answer":
     print(f"unexpected model answer: {content}", file=sys.stderr)
     sys.exit(1)
 
-print(f"demo agent got model answer under traced run {run_id}")
+# act on the model's answer with a tool, through the stand-in framework;
+# the first attempt fails to exercise the retry path
+import rewind_demo_toolkit
+
+_attempts = {"n": 0}
+
+
+def flaky_lookup(tool_input):
+    _attempts["n"] += 1
+    if _attempts["n"] == 1:
+        raise ValueError("transient lookup failure")
+    return {"answer": tool_input["query"].upper()}
+
+
+tool = rewind_demo_toolkit.Tool("lookup", flaky_lookup, retries=1)
+result = tool.run({"query": content})
+if result != {"answer": "THE DEMO ANSWER"}:
+    print(f"unexpected tool result: {result}", file=sys.stderr)
+    sys.exit(1)
+
+print(f"demo agent got model answer and tool result under traced run {run_id}")

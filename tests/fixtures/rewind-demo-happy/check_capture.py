@@ -23,16 +23,22 @@ import kungfu
 from kungfu.rewind import (
     MSG_MODEL_REQUEST,
     MSG_MODEL_RESPONSE,
+    MSG_RETRY_MARKER,
     MSG_RUN_BEGIN,
     MSG_RUN_END,
+    MSG_TOOL_CALL,
+    MSG_TOOL_RESULT,
     MSG_TYPE_NAMES,
 )
 from kungfu.rewind.fb.CallStatus import CallStatus
 from kungfu.rewind.fb.CaptureLayer import CaptureLayer
 from kungfu.rewind.fb.ModelRequest import ModelRequest
 from kungfu.rewind.fb.ModelResponse import ModelResponse
+from kungfu.rewind.fb.RetryMarker import RetryMarker
 from kungfu.rewind.fb.RunBegin import RunBegin
 from kungfu.rewind.fb.RunEnd import RunEnd
+from kungfu.rewind.fb.ToolCall import ToolCall
+from kungfu.rewind.fb.ToolResult import ToolResult
 
 lf = kungfu.__binding__.longfist
 yjj = kungfu.__binding__.yijinjing
@@ -108,6 +114,52 @@ if resp_frames:
         "ModelResponse.response_body has answer",
         resp_body.get("choices", [{}])[0].get("message", {}).get("content")
         == "the demo answer",
+    )
+
+call_frames = yjj.assemble(location, 0).read_bytes(MSG_TOOL_CALL)
+check("two ToolCall frames (attempt + retry)", len(call_frames) == 2)
+call_spans = []
+for _, payload in call_frames:
+    call = ToolCall.GetRootAs(bytes(payload), 0)
+    call_spans.append((call.SpanId() or b"").decode())
+    check("ToolCall.run_id matches", (call.RunId() or b"").decode() == run_id)
+    check("ToolCall.layer == InProcessHook", call.Layer() == CaptureLayer.InProcessHook)
+    check("ToolCall.tool_name == lookup", (call.ToolName() or b"").decode() == "lookup")
+    check("ToolCall.input captured", "query" in (call.Input() or b"").decode())
+
+result_frames = yjj.assemble(location, 0).read_bytes(MSG_TOOL_RESULT)
+check("two ToolResult frames", len(result_frames) == 2)
+statuses = {}
+for _, payload in result_frames:
+    result = ToolResult.GetRootAs(bytes(payload), 0)
+    statuses[(result.SpanId() or b"").decode()] = result.Status()
+    check("ToolResult.latency_ns > 0", result.LatencyNs() > 0)
+    if result.Status() == CallStatus.Error:
+        check(
+            "failed attempt has error detail",
+            "transient lookup failure" in (result.Error() or b"").decode(),
+        )
+    else:
+        check(
+            "retried attempt has output",
+            "THE DEMO ANSWER" in (result.Output() or b"").decode(),
+        )
+check(
+    "one attempt errored and one succeeded",
+    sorted(statuses.values()) == sorted([CallStatus.Ok, CallStatus.Error]),
+)
+check("tool results correlate to tool calls", set(statuses) == set(call_spans))
+
+retry_frames = yjj.assemble(location, 0).read_bytes(MSG_RETRY_MARKER)
+check("one RetryMarker frame", len(retry_frames) == 1)
+if retry_frames and len(call_spans) == 2:
+    _, payload = retry_frames[0]
+    marker = RetryMarker.GetRootAs(bytes(payload), 0)
+    check("RetryMarker.attempt == 2", marker.Attempt() == 2)
+    check(
+        "RetryMarker links retry to first attempt",
+        (marker.RetryOfSpanId() or b"").decode() == call_spans[0]
+        and (marker.SpanId() or b"").decode() == call_spans[1],
     )
 
 asm2 = yjj.assemble(location, 0)
