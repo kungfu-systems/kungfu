@@ -25,7 +25,7 @@ using namespace kungfu::cache;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::index;
 using namespace kungfu::yijinjing::journal;
-using namespace kungfu::yijinjing::nanomsg;
+using namespace kungfu::nanomsg;
 using namespace kungfu::practice;
 
 namespace py = pybind11;
@@ -167,13 +167,13 @@ void bind(pybind11::module &&m) {
   m.def("setup_log", &yijinjing::log::setup_log);
   m.def("emit_log", &yijinjing::log::emit_log);
 
-  py::enum_<yijinjing::nanomsg::protocol>(m, "protocol", py::arithmetic(), "Nanomsg Protocol")
-      .value("REPLY", yijinjing::nanomsg::protocol::REPLY)
-      .value("REQUEST", yijinjing::nanomsg::protocol::REQUEST)
-      .value("PUSH", yijinjing::nanomsg::protocol::PUSH)
-      .value("PULL", yijinjing::nanomsg::protocol::PULL)
-      .value("PUBLISH", yijinjing::nanomsg::protocol::PUBLISH)
-      .value("SUBSCRIBE", yijinjing::nanomsg::protocol::SUBSCRIBE)
+  py::enum_<nanomsg::protocol>(m, "protocol", py::arithmetic(), "Nanomsg Protocol")
+      .value("REPLY", nanomsg::protocol::REPLY)
+      .value("REQUEST", nanomsg::protocol::REQUEST)
+      .value("PUSH", nanomsg::protocol::PUSH)
+      .value("PULL", nanomsg::protocol::PULL)
+      .value("PUBLISH", nanomsg::protocol::PUBLISH)
+      .value("SUBSCRIBE", nanomsg::protocol::SUBSCRIBE)
       .export_values();
 
   auto event_class = py::class_<event, PyEvent, std::shared_ptr<event>>(m, "event");
@@ -229,7 +229,7 @@ void bind(pybind11::module &&m) {
            py::arg("name") = "*", py::arg("mode") = "*")
       .def("list_location_dest", &locator::list_location_dest);
 
-  py::class_<yijinjing::nanomsg::socket, socket_ptr>(m, "socket")
+  py::class_<nanomsg::socket, socket_ptr>(m, "socket")
       .def(py::init<protocol>(), py::arg("protocol"))
       .def("setsockopt", &socket::setsockopt_str, py::arg("option"), py::arg("value"))
       .def("setsockopt", &socket::setsockopt_int, py::arg("option"), py::arg("value"))

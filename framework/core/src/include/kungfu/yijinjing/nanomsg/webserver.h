@@ -28,7 +28,7 @@
 #include <arpa/inet.h>
 #endif
 
-namespace kungfu::yijinjing::webserver {
+namespace kungfu::webserver {
 
 template <typename T> struct nng_data {
   char origin_data[sizeof(kungfu::longfist::types::frame_header) + sizeof(T)]{};
@@ -39,7 +39,7 @@ template <typename T> struct nng_data {
     len = sizeof(kungfu::longfist::types::frame_header) + sizeof(T);
     header->length = len;
     header->header_length = sizeof(kungfu::longfist::types::frame_header);
-    header->trigger_time = time::now_in_nano();
+    header->trigger_time = yijinjing::time::now_in_nano();
     header->gen_time = header->trigger_time;
     header->msg_type = msg_type;
     header->source = 0;
@@ -148,7 +148,7 @@ public:
   virtual void cleanup_reader_disjoin();
 
 private:
-  journal::reader_ptr reader_;
+  yijinjing::journal::reader_ptr reader_;
   std::mutex mtx_;            // 子线程竞争
   std::atomic<bool> flag_has; // 子线程和主线程
   std::map<std::pair<kungfu::yijinjing::data::location_ptr, uint32_t>, int64_t> join_channels_ = {};
@@ -174,8 +174,8 @@ protected:
 private:
   uint64_t stream_id_;
   yijinjing::data::location_ptr location_ = nullptr;
-  journal::writer_ptr writer_ = nullptr;
-  journal::frame_ptr current_frame_ = nullptr;
+  yijinjing::journal::writer_ptr writer_ = nullptr;
+  yijinjing::journal::frame_ptr current_frame_ = nullptr;
 };
 DECLARE_PTR(stream)
 
@@ -269,9 +269,9 @@ public:
 
   void on_frame() override;
 
-  void add_join(const data::location_ptr &location, uint32_t dest, int64_t begin_time) override;
+  void add_join(const yijinjing::data::location_ptr &location, uint32_t dest, int64_t begin_time) override;
 
-  void add_disjion(const data::location_ptr &location, uint32_t dest) override;
+  void add_disjion(const yijinjing::data::location_ptr &location, uint32_t dest) override;
 
   void cleanup_reader_join() override;
 
@@ -325,6 +325,6 @@ private:
 };
 DECLARE_PTR(http_server)
 
-} // namespace kungfu::yijinjing::webserver
+} // namespace kungfu::webserver
 
 #endif // KUNGFU_WEBSERVER_H

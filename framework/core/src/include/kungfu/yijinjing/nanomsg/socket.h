@@ -27,7 +27,7 @@
 static_assert(kungfu::yijinjing::PUBLISH_NONBLOCK == NNG_FLAG_NONBLOCK,
               "PUBLISH_NONBLOCK must equal NNG_FLAG_NONBLOCK");
 
-namespace kungfu::yijinjing::nanomsg {
+namespace kungfu::nanomsg {
 enum class protocol : int { UNKNOWN = -1, REPLY, REQUEST, PUSH, PULL, PUBLISH, SUBSCRIBE };
 
 inline std::string get_protocol_name(protocol p) {
@@ -70,9 +70,9 @@ inline protocol get_opposite_protol(protocol p) {
 
 class url_factory {
 public:
-  [[nodiscard]] virtual std::string make_path_listen(data::location_ptr location, protocol p) const = 0;
+  [[nodiscard]] virtual std::string make_path_listen(yijinjing::data::location_ptr location, protocol p) const = 0;
 
-  [[nodiscard]] virtual std::string make_path_dial(data::location_ptr location, protocol p) const = 0;
+  [[nodiscard]] virtual std::string make_path_dial(yijinjing::data::location_ptr location, protocol p) const = 0;
 };
 
 DECLARE_PTR(url_factory)
@@ -209,6 +209,6 @@ private:
 };
 
 DECLARE_PTR(nanomsg_json)
-} // namespace kungfu::yijinjing::nanomsg
+} // namespace kungfu::nanomsg
 
 #endif // KUNGFU_NANOMSG_SOCKET_H

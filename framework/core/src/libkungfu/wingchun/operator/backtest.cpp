@@ -10,7 +10,7 @@ using namespace kungfu::yijinjing;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::yijinjing::util;
 using namespace kungfu::wingchun::tool;
-using kungfu::yijinjing::nanomsg::nanomsg_json;
+using kungfu::nanomsg::nanomsg_json;
 using namespace kungfu::wingchun::factor;
 
 namespace kungfu::wingchun::op {

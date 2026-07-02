@@ -13,7 +13,7 @@ using namespace kungfu::longfist::enums;
 using namespace kungfu::longfist::types;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::yijinjing::journal;
-using namespace kungfu::yijinjing::nanomsg;
+using namespace kungfu::nanomsg;
 
 namespace kungfu::yijinjing {
 class ipc_url_factory : public url_factory {

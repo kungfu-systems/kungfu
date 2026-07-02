@@ -12,7 +12,7 @@ using namespace kungfu::longfist::enums;
 using namespace kungfu::yijinjing::journal;
 using namespace std::literals;
 
-namespace kungfu::yijinjing::webserver {
+namespace kungfu::webserver {
 constexpr uint64_t PAGE_SIZE = 256;
 
 stream::stream(nng_stream *s, bool is_server) : stream_id_(generate_stream_id(s, is_server)) {
@@ -39,7 +39,7 @@ void stream::close_data() {
 }
 
 void stream::open_data(nng_iov &iov) {
-  current_frame_ = writer_->open_frame_lock_free(time::now_in_nano(), SocketData::tag, 1024);
+  current_frame_ = writer_->open_frame_lock_free(yijinjing::time::now_in_nano(), SocketData::tag, 1024);
   iov.iov_buf = const_cast<void *>(current_frame_->data_address());
   iov.iov_len = current_frame_->data_length();
 }
@@ -177,8 +177,8 @@ void websocket_client::start() {
   }
   auto self{this->shared_from_this()};
   session_ = std::make_shared<session>(self, stream, false);
-  //  reader_->join(session_->get_location(), location::PUBLIC, time::now_in_nano());
-  add_join(session_->get_location(), location::PUBLIC, time::now_in_nano());
+  //  reader_->join(session_->get_location(), location::PUBLIC, yijinjing::time::now_in_nano());
+  add_join(session_->get_location(), location::PUBLIC, yijinjing::time::now_in_nano());
   onConnect(session_->get_stream_id());
 }
 void websocket_client::stop() {
@@ -309,7 +309,7 @@ void websocket_server::add_session(nng_stream *stream) {
   std::unique_lock<std::shared_mutex> lock(sessions_mtx_);
   sessions_.emplace(session_p->get_stream_id(), session_p);
   SPDLOG_DEBUG("add_session:{}", session_p->get_stream_id());
-  add_join(session_p->get_location(), location::PUBLIC, time::now_in_nano());
+  add_join(session_p->get_location(), location::PUBLIC, yijinjing::time::now_in_nano());
 }
 
 void websocket_server::remove_session(uint64_t stream_id) {
@@ -535,4 +535,4 @@ bool web_agent::data_available() {
 
 void web_agent::next() { reader_->next(); }
 
-} // namespace kungfu::yijinjing::webserver
+} // namespace kungfu::webserver
