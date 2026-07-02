@@ -58,7 +58,10 @@ constexpr auto make_storage_ptr = [](const std::string &db_file, const auto &typ
     return [&](auto... tables) {
       using storage_type = decltype(sqlite_orm::make_storage(db_file, tables...));
       auto storage_ptr = std::make_shared<storage_type>(sqlite_orm::make_storage(db_file, tables...));
-      storage_ptr->busy_timeout(yijinjing::time_unit::MILLISECONDS_PER_SECOND);
+      // Cross-process write contention (a live master's cached writer vs an
+      // app's config write) routinely outlives one second; five seconds keeps
+      // SQLITE_BUSY an internal wait instead of a caller-visible failure.
+      storage_ptr->busy_timeout(5 * yijinjing::time_unit::MILLISECONDS_PER_SECOND);
       return storage_ptr;
     };
   };

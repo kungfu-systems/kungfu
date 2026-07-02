@@ -66,7 +66,13 @@ inline int GetMillisecondsSleepAfterStep(const Napi::CallbackInfo &info) {
   return info[7].As<Napi::Number>().Int32Value();
 }
 
+// The function-try-block is deliberate: base-class construction (apprentice
+// opens the io device and session index storage) can throw under
+// cross-process contention, and a body-level try cannot catch member
+// initializer exceptions. A plain std::exception escaping this napi callback
+// terminates the whole process; convert to a JS-catchable error instead.
 Watcher::Watcher(const Napi::CallbackInfo &info)
+try
     : ObjectWrap(info),                                    //
       apprentice(GetWatcherLocation(info), true),          //
       bypass_accounting_(GetBool(info, 3)),                //
@@ -110,6 +116,11 @@ Watcher::Watcher(const Napi::CallbackInfo &info)
   RestoreState(ledger_home_location_, today, INT64_MAX, sync_schema);
   // for hidden pos && asset
   // shift(ledger_home_location_) >> state_bank_; // Load positions to restore bookkeeper
+} catch (const Napi::Error &) {
+  throw;
+} catch (const std::exception &ex) {
+  SPDLOG_ERROR("watcher init failed: {}", ex.what());
+  throw Napi::Error::New(info.Env(), ex.what());
 }
 
 Watcher::~Watcher() {
@@ -620,19 +631,27 @@ void Watcher::StartWorker() {
   auto worker = [](uv_work_t *req) {
     auto watcher = static_cast<Watcher *>(req->data);
     while (req->data && watcher->uv_work_live_) {
-
-      if (not watcher->is_live() and not watcher->is_started() and watcher->is_usable()) {
-        watcher->setup();
-      }
-      while (watcher->is_live()) {
-        std::lock_guard<std::mutex> guard(watcher->feed_mutex_);
-
-        if (not watcher->is_step_continually()) {
-          break;
+      // An exception escaping this uv worker thread cannot be caught by any
+      // frame above us and terminates the whole process. Storage contention
+      // (e.g. SQLITE_BUSY when another process holds a write lock past the
+      // busy timeout) is transient by nature: log, back off, and retry on
+      // the next tick instead of dying.
+      try {
+        if (not watcher->is_live() and not watcher->is_started() and watcher->is_usable()) {
+          watcher->setup();
         }
+        while (watcher->is_live()) {
+          std::lock_guard<std::mutex> guard(watcher->feed_mutex_);
 
-        watcher->step(STEP_INTERVAL);
-        watcher->drain_from_trading_data_reader(STEP_INTERVAL);
+          if (not watcher->is_step_continually()) {
+            break;
+          }
+
+          watcher->step(STEP_INTERVAL);
+          watcher->drain_from_trading_data_reader(STEP_INTERVAL);
+        }
+      } catch (const std::exception &ex) {
+        SPDLOG_ERROR("watcher worker error, backing off: {}", ex.what());
       }
       std::this_thread::sleep_for(std::chrono::microseconds(watcher->milliseconds_sleep_after_step_));
     }

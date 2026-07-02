@@ -18,17 +18,31 @@ SessionStore::SessionStore(const Napi::CallbackInfo &info)
 
 SessionStore::~SessionStore() { io_device_.reset(); }
 
+// Session lookups read the index storage, which can throw under
+// cross-process contention (e.g. SQLITE_BUSY past the busy timeout). A plain
+// std::exception escaping a napi callback terminates the whole process;
+// rethrow as a JS-catchable error instead.
 Napi::Value SessionStore::GetAllSessions(const Napi::CallbackInfo &info) {
-  auto session_finder = std::make_shared<index::session_finder>(io_device_);
-  auto sessions = session_finder->find_sessions(time::restore_start(), INT64_MAX);
-  return ParseSessions(info, sessions);
+  try {
+    auto session_finder = std::make_shared<index::session_finder>(io_device_);
+    auto sessions = session_finder->find_sessions(time::restore_start(), INT64_MAX);
+    return ParseSessions(info, sessions);
+  } catch (const std::exception &ex) {
+    SPDLOG_ERROR("failed to GetAllSessions {}", ex.what());
+    throw Napi::Error::New(info.Env(), ex.what());
+  }
 }
 
 Napi::Value SessionStore::GetSessionsForLocation(const Napi::CallbackInfo &info) {
-  auto session_finder = std::make_shared<index::session_finder>(io_device_);
-  auto location = IODevice::ExtractLocation(info, 0, io_device_->get_locator());
-  auto sessions = session_finder->find_sessions_for(location, time::restore_start(), INT64_MAX);
-  return ParseSessions(info, sessions);
+  try {
+    auto session_finder = std::make_shared<index::session_finder>(io_device_);
+    auto location = IODevice::ExtractLocation(info, 0, io_device_->get_locator());
+    auto sessions = session_finder->find_sessions_for(location, time::restore_start(), INT64_MAX);
+    return ParseSessions(info, sessions);
+  } catch (const std::exception &ex) {
+    SPDLOG_ERROR("failed to GetSessionsForLocation {}", ex.what());
+    throw Napi::Error::New(info.Env(), ex.what());
+  }
 }
 
 void SessionStore::Init(Napi::Env env, Napi::Object exports) {
