@@ -19,6 +19,7 @@
 const fs = require('fs');
 const path = require('path');
 const { shell } = require('../lib');
+const { verifyWindowsSymbols } = require('./verify-windows-symbols');
 
 const CORE = path.resolve(__dirname, '..'); // framework/core
 const isWin = process.platform === 'win32';
@@ -71,6 +72,27 @@ const APP_NATIVE = [
   'link_node.node',
 ];
 
+// Ship <binary>.pdb next to a native so Windows field crash reports can resolve
+// kungfu frames to symbols; without it the stackwalker only prints module+offset
+// (see docs/windows-crash-symbols.md). No-op off Windows or when no PDB exists
+// (e.g. third-party natives, or a build without /Z7 + /DEBUG).
+function copyPdbSibling(binPath, destDir) {
+  const dir = path.dirname(binPath);
+  const stem = path.basename(binPath).replace(/\.(node|pyd|dll|exe)$/i, '').split('.')[0];
+  let pdb = binPath.replace(/\.(node|pyd|dll|exe)$/i, '.pdb');
+  if (pdb === binPath || !fs.existsSync(pdb)) {
+    // Fall back to any <stem>*.pdb the linker emitted next to the binary; the
+    // PDB name follows the target output base, which for pykungfu carries an ABI
+    // suffix. Matches the stem check in verify-windows-symbols.js.
+    const cand = fs
+      .readdirSync(dir)
+      .find((f) => /\.pdb$/i.test(f) && f.toLowerCase().startsWith(stem.toLowerCase()));
+    pdb = cand ? path.join(dir, cand) : null;
+  }
+  if (!pdb || !fs.existsSync(pdb)) return;
+  fs.copyFileSync(pdb, path.join(destDir, path.basename(pdb)));
+}
+
 function copyAppNative(bt) {
   const rel = path.join(CORE, 'build', bt);
   const distKfc = path.join(CORE, 'dist', 'kfc');
@@ -79,6 +101,7 @@ function copyAppNative(bt) {
     const from = path.join(rel, f);
     if (!fs.existsSync(from)) continue;
     fs.copyFileSync(from, path.join(distKfc, f));
+    copyPdbSibling(from, distKfc);
     n++;
   }
   console.log(`[freeze] 补拷 app native：${n}/${APP_NATIVE.length} 项`);
@@ -129,6 +152,9 @@ function copyPyBindingWin(bt) {
     fs.copyFileSync(src, path.join(distKfc, path.basename(src)));
     n++;
   }
+  // pykungfu.pdb ships the symbols for the python binding + statically-linked
+  // core; libnode.dll is third-party and carries no PDB of ours.
+  if (pyd) copyPdbSibling(pyd, distKfc);
   if (!pyd) console.error('[freeze] Win 警告：build 树未找到 pykungfu*.pyd');
   if (!dll) console.error('[freeze] Win 警告：build 树未找到 libnode.dll');
   console.log(`[freeze] Win：补拷 python binding → dist/kfc：${n} 项`);
@@ -186,6 +212,7 @@ function freezeNuitka(bt) {
 
   copyAppNative(bt);
   copyPyBindingWin(bt);
+  if (isWin) verifyWindowsSymbols(path.join(CORE, 'dist', 'kfc'));
   console.log('[freeze] ✅ dist/kfc 就绪（nuitka 扁平产物 + app native）');
 }
 
@@ -220,6 +247,7 @@ function freezePyinstaller(bt) {
   );
   mergeKfs();
   promote();
+  if (isWin) verifyWindowsSymbols(path.join(CORE, 'dist', 'kfc'));
   console.log('[freeze] ✅ dist/kfc 就绪（pyinstaller 扁平视图 + _internal 真身）');
 }
 

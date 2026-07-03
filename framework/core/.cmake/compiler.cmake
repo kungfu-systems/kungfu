@@ -62,6 +62,21 @@ if (MSVC)
   add_compile_definitions(_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING)
   set(COMPILER_OPTIMIZE_ON_OPTIONS "/O2")
   set(COMPILER_OPTIMIZE_OFF_OPTIONS "/Od")
+  # Emit debug info as PDBs so Windows crash reports symbolize in the field.
+  # kungfu ships no source on the box and the C++ core is linked statically into
+  # kungfu_node.node / pykungfu.pyd; without the matching PDB next to those
+  # binaries the native stackwalker can only print module+offset. /Z7 keeps the
+  # debug info inside each .obj (sccache-cacheable; /Zi serializes through
+  # mspdbsrv and defeats the MSVC compiler cache). /DEBUG makes the linker emit
+  # <target>.pdb, and /OPT:REF /OPT:ICF restore the size optimizations that
+  # /DEBUG turns off by default so Release binaries stay lean. The release must
+  # ship these PDBs -- see docs/windows-crash-symbols.md, enforced at freeze time
+  # by .gyp/verify-windows-symbols.js.
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Z7")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Z7")
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /DEBUG /OPT:REF /OPT:ICF")
+  set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} /DEBUG /OPT:REF /OPT:ICF")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /DEBUG /OPT:REF /OPT:ICF")
 endif ()
 
 if (${CMAKE_CXX_COMPILER_ID} MATCHES GNU)
