@@ -157,18 +157,28 @@ const KFX_EXTERNALS = [
   '@kungfu-tech/api/capability',
 ];
 
-function readViewDecl() {
+function readManifest() {
   const manifestPath = path.resolve('package.json');
   if (!fs.existsSync(manifestPath)) fail('no package.json in current directory');
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  const view = manifest.kungfuConfig?.config?.view;
-  if (!view)
-    fail('package.json has no kungfuConfig.config.view — not a view extension');
-  return { manifest, view };
+  return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 }
 
 async function kfxBuild() {
-  const { manifest, view } = readViewDecl();
+  const manifest = readManifest();
+  const config = manifest.kungfuConfig?.config ?? {};
+  const view = config.view;
+  if (!view) {
+    // An adapter facet is a runtime extension: it ships source per child
+    // runtime (python/node) and the capture supervisor injects it — there is
+    // nothing to bundle. Succeed so `kfs kfx build` is usable on any kfx.
+    if (config.adapter) {
+      process.stdout.write(
+        `${manifest.name ?? 'adapter extension'}: adapter facet ships source (no bundle step)\n`,
+      );
+      return;
+    }
+    fail('package.json has no kungfuConfig.config.view or .adapter facet');
+  }
   const entry = ['src/view/index.tsx', 'src/view/index.ts'].find((candidate) =>
     fs.existsSync(path.resolve(candidate)),
   );
@@ -192,7 +202,7 @@ async function kfxBuild() {
 }
 
 function kfxClean() {
-  readViewDecl();
+  readManifest();
   fs.rmSync(path.resolve('dist'), { recursive: true, force: true });
   process.stdout.write('cleaned dist\n');
 }

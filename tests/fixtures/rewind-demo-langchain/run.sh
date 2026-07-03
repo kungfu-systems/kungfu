@@ -59,6 +59,13 @@ export OPENAI_API_KEY
 DYLD_FALLBACK_LIBRARY_PATH="$core_dir/dist/kfc${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
 export DYLD_FALLBACK_LIBRARY_PATH
 
+# The LangChain adapter is NOT in core — it is the kfx package under
+# extensions/langchain-adapter. Point the extension root at the workspace
+# extensions tree so the supervisor discovers and injects it; capture of an
+# unmodified langchain run therefore comes from the package, not the kernel.
+KF_EXTENSION_PATH="$core_dir/../../extensions${KF_EXTENSION_PATH:+:$KF_EXTENSION_PATH}"
+export KF_EXTENSION_PATH
+
 cd "$core_dir"
 uv run --frozen python .devtools/kfc.py -H "$home" trace --run-id "$run_id" -- \
   "$agent_py" "$fixture_dir/langchain_agent.py"

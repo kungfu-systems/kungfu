@@ -1,0 +1,18 @@
+{
+  "name": "@kungfu-tech/kfx-adapter-langchain",
+  "version": "0.1.0",
+  "description": "Capture unmodified LangChain agent runs under kungfu trace.",
+  "private": true,
+  "kungfuConfig": {
+    "key": "langchain-adapter",
+    "name": "LangChain adapter",
+    "config": {
+      "adapter": {
+        "targets": ["langchain_core.tools.base", "langchain_core.tools"],
+        "runtimes": ["python"],
+        "entry": { "python": "src/adapter/python/index.py" }
+      }
+    }
+  },
+  "files": ["src"]
+}

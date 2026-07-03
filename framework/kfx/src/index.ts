@@ -51,6 +51,23 @@ export type KfxViewDecl = {
   entry?: string;
 };
 
+// `kungfuConfig.config.adapter` — a runtime facet. Unlike a view (a GUI screen
+// the shell loads), an adapter is capture-side instrumentation: the trace
+// supervisor discovers it, and injects it into the traced child, where it
+// patches a framework's seam so unmodified runs are captured. It ships source
+// per child runtime (nothing to bundle), not a `dist/view` artifact.
+export type KfxAdapterDecl = {
+  // module import names whose import triggers the patch (informative)
+  targets: string[];
+  // child runtimes this adapter instruments
+  runtimes: ('python' | 'node')[];
+  // adapter entry per runtime, relative to the package root
+  entry: { python?: string; node?: string };
+  // capture-side capabilities the adapter needs; undeclared stay absent — the
+  // same permission seam a view's `capabilities` is (reserved for enforcement)
+  capabilities?: string[];
+};
+
 // `kungfuConfig.suite` — a suite groups related kfx for distribution and
 // operation: navigation grouping, enable/disable as a unit, lockstep
 // versioning. Membership is expressed through npm dependencies; `members`

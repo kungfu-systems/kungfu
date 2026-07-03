@@ -232,43 +232,12 @@ def _patch_demo_toolkit(module):
     module.Tool._invoke = traced_invoke
 
 
-def _patch_langchain(module):
-    # LangChain's tool seam: every tool execution — whether an agent's tool
-    # node calls `tool.invoke(...)`, `tool.ainvoke(...)`, or user code calls
-    # `tool.run(...)` — funnels through `BaseTool.run`. `invoke`/`ainvoke`
-    # dispatch to it, and the async path runs the sync `run` in an executor,
-    # so wrapping this one method captures the whole tool call (including the
-    # subclass `_run` beneath it) as a single span across sync and async
-    # agents. The model turns that drive these calls are captured upstream at
-    # the wire proxy, so the in-process adapter only owns tool semantics.
-    base_tool = getattr(module, "BaseTool", None)
-    if base_tool is None or getattr(base_tool, "_kungfu_rewind_patched", False):
-        return
-    original_run = base_tool.run
-
-    def traced_run(self, *args, **kwargs):
-        tool_input = args[0] if args else kwargs.get("tool_input")
-        name = getattr(self, "name", None) or type(self).__name__
-        # root under the ambient span so a langchain tool invoked inside an
-        # outer captured span (including across a runtime boundary) nests
-        capture = _CallCapture(name, parent_span_id=os.environ.get(ENV_PARENT_SPAN))
-        return capture.run(
-            lambda: original_run(self, *args, **kwargs), _render(tool_input)
-        )
-
-    base_tool.run = traced_run
-    base_tool._kungfu_rewind_patched = True
-
-
-# The demo toolkit is the built-in mechanism probe (the seam shape). Real
-# framework adapters ship as kfx packages whose `config.adapter` form the
-# supervisor discovers and injects, registering themselves here at load time.
-# LangChain is still built in transitionally — it migrates to a kfx package in
-# the next stage; keeping it registered means nothing regresses meanwhile.
+# The demo toolkit is the built-in mechanism probe (the seam shape) and the
+# only adapter core carries. Real framework adapters (LangChain, etc.) are kfx
+# packages whose `config.adapter` form the supervisor discovers and injects;
+# they register their patchers here at load time via register_adapter.
 ADAPTERS = {
     "rewind_demo_toolkit": _patch_demo_toolkit,
-    "langchain_core.tools.base": _patch_langchain,  # TODO(kfx-migrate): -> kfx package
-    "langchain_core.tools": _patch_langchain,       # TODO(kfx-migrate): -> kfx package
 }
 
 # module names a kfx adapter file may import as its patch API (they are the

@@ -8,10 +8,13 @@ bottom are the machine-checked proof.
 
 Three words carry the model — keep them apart:
 
-- **facet** — what a package *does*, declared under `kungfuConfig.config`.
-  The shipped facet today is `view` (a GUI screen); runtime facets (trading
-  adapters, operators) exist as earlier-generation examples and are
-  mid-migration (see [status](#runtime-extensions-current-status)).
+- **facet** — what a package *does*, declared under `kungfuConfig.config`. A
+  package may declare more than one; a facet's loader picks up only what it
+  understands. Two are supported: `view` (a GUI screen the shell loads) and
+  `adapter` (a **runtime facet** — capture-side framework instrumentation the
+  trace supervisor loads; the first v4 runtime facet). Older trading adapters
+  and operators are a separate earlier-generation line, still mid-migration
+  (see [status](#runtime-extensions-current-status)).
 - **package (kfx)** — the unit of development and distribution: an npm
   package whose `package.json` carries a `kungfuConfig` manifest. `npm pack`
   of a built package is its complete, offline install unit.
@@ -67,6 +70,10 @@ types `KfxViewDecl` / `KfxSettingDecl` / `KfxSuiteDecl`):
 | `config.view.system` | Shell-owned views (settings, kfx manager, status); not disableable. Third-party packages leave this unset. |
 | `config.view.settings` | Entries (`key` / `label` / `fallback`) this view contributes to the shell Settings view; values persist in the runtime home's ConfigStore. |
 | `config.view.entry` | Bundle path relative to the package root; default `dist/view/index.js`. |
+| `config.adapter.targets` | Module import names whose import triggers the patch (informative — e.g. `langchain_core.tools.base`). |
+| `config.adapter.runtimes` | Child runtimes this adapter instruments (`python`, `node`). The supervisor injects an adapter into a child of a matching runtime. |
+| `config.adapter.entry` | Adapter source per runtime, relative to the package root (e.g. `{ "python": "src/adapter/python/index.py" }`). An adapter ships source — there is no bundle step. |
+| `config.adapter.capabilities` | Capture-side capabilities the adapter needs; the same permission seam as a view's `capabilities` (reserved for enforcement). |
 | `suite.title`, `suite.members` | Marks a suite package; `members` lists member `key`s. Members arrive as their own packages (npm `dependencies`) and install individually. |
 
 The manifest is a welded surface the moment packages are published; until
@@ -94,6 +101,18 @@ The bundle must export `View` (a React component taking
 anything else (verify:
 [`../framework/gui/src/renderer/src/kfx-loader.ts`](../framework/gui/src/renderer/src/kfx-loader.ts)).
 A failing kfx renders its error panel; it cannot take the shell down.
+
+An **adapter facet** has no bundle step — it ships source per child runtime,
+and the capture supervisor injects it into a traced child, where it runs in
+the user's own interpreter. `kfs kfx build` reports this and does nothing for
+an adapter-only package. A python adapter's entry file registers its patcher
+through the capture hook's `register_adapter` (it imports `rewind_client`, the
+dependency-free hook, never `kungfu`), so an unmodified framework run is
+captured with no code change. Discovery and injection live in the supervisor
+(source of truth:
+[`../framework/core/src/python/kungfu/rewind/adapters.py`](../framework/core/src/python/kungfu/rewind/adapters.py)),
+so the hook stays dependency-free. `extensions/langchain-adapter` is the first
+adapter facet.
 
 ## Discovery
 
@@ -132,15 +151,20 @@ evolution notes).
 
 ## Runtime extensions: current status
 
+The first v4 runtime facet has landed: `config.adapter`, a capture-side
+framework adapter the trace supervisor discovers and injects
+(`extensions/langchain-adapter` captures unmodified LangChain runs). It needs
+no bundle step — an adapter ships source per child runtime — so the v4 build
+chain for this facet is "ships source", not a new packager.
+
 Earlier-generation runtime extensions — trading adapters (`td`/`md`),
-operators, strategies — exist under [`../examples/`](../examples) with
-their sources and manifests, but their build surface (`kfs extension
-build`/`package`) predates the v4 SDK and is not provided by it. They are
-kept as reference probes while their coverage role moves to neutral
-replacements (see [`known-limits.md`](known-limits.md), "Reference
-extensions are mid-migration"). The supported extension path today is the
-view kfx documented above; this page will grow the runtime facets when
-their v4 build chain lands, not before.
+operators, strategies — are a separate line: they exist under
+[`../examples/`](../examples) with their sources and manifests, but their
+build surface (`kfs extension build`/`package`) predates the v4 SDK and is not
+provided by it. They are kept as reference probes while their coverage role
+moves to neutral replacements (see [`known-limits.md`](known-limits.md),
+"Reference extensions are mid-migration"). Other runtime facets (operators,
+strategies) will grow on this page when their v4 path lands, not before.
 
 ## Verified by
 
@@ -150,6 +174,10 @@ their v4 build chain lands, not before.
 - [`../tests/fixtures/kfx-demo-install/`](../tests/fixtures/kfx-demo-install)
   — the managed lifecycle against a real shipped view package (double
   install refusal, `--force`, remove).
+- [`../tests/fixtures/rewind-demo-langchain/`](../tests/fixtures/rewind-demo-langchain)
+  — the `adapter` facet: an unmodified LangChain agent, captured under
+  `kungfu trace` by `extensions/langchain-adapter` discovered on the extension
+  root, with no adapter code in the kernel.
 
-Both run in `verify --full` (fixture stage); a red fixture means this page
+All run in `verify --full` (fixture stage); a red fixture means this page
 overclaims.
