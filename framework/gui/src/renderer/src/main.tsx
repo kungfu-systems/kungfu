@@ -1,16 +1,20 @@
 // Reference app shell: boots the in-process runtime, mounts the built-in
-// default kfx (config manager, journal manager) through the minimal kfx
-// shape, and shows runtime/master status. See kfx.ts for the contract note.
+// default kfx through the minimal kfx shape, and shows runtime/master status.
+// The work dashboard is the first screen — the control plane for real-world
+// work; Rewind stays the run-level forensic detail view behind it. See
+// kfx.ts for the contract note.
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import type { KfxCapabilities, KfxManifest } from './kfx';
 import { configManagerKfx } from './kfx/config-manager';
 import { journalManagerKfx } from './kfx/journal-manager';
 import { rewindInspectorKfx } from './kfx/rewind-inspector';
+import { workDashboardKfx } from './kfx/work-dashboard';
 import { type Runtime, bootRuntime } from './runtime';
 import { headingStyle, mono, panelStyle } from './ui';
 
 const KFX_REGISTRY: KfxManifest[] = [
+  workDashboardKfx,
   rewindInspectorKfx,
   configManagerKfx,
   journalManagerKfx,
@@ -116,10 +120,11 @@ function App() {
   const [runtime] = React.useState(bootRuntime);
   const versions = window.process.versions;
   const [live, setLive] = React.useState(false);
-  // deep-link the initial view (demos, QA harnesses, "open straight to the
-  // run I just traced"): KFE_INITIAL_VIEW=<kfx id|overview>
+  // The work dashboard is the default first screen — the control plane for
+  // real-world work. KFE_INITIAL_VIEW deep-links elsewhere (demos, QA
+  // harnesses, "open straight to the run I just traced"): <kfx id|overview>.
   const [active, setActive] = React.useState(
-    window.process.env.KFE_INITIAL_VIEW || 'overview',
+    window.process.env.KFE_INITIAL_VIEW || 'work',
   );
 
   React.useEffect(() => {
@@ -132,11 +137,12 @@ function App() {
   }, [runtime.ledger]);
 
   const caps: KfxCapabilities | null =
-    runtime.ledger && runtime.domain && runtime.rewind
+    runtime.ledger && runtime.domain && runtime.rewind && runtime.work
       ? {
           ledger: runtime.ledger,
           domain: runtime.domain,
           rewind: runtime.rewind,
+          work: runtime.work,
         }
       : null;
   const activeKfx = KFX_REGISTRY.find((k) => k.id === active);

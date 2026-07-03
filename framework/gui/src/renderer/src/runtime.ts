@@ -7,9 +7,11 @@ import {
   type KfNativeBinding,
   type Ledger,
   type Rewind,
+  type Work,
   openDomainState,
   openLedger,
   openRewind,
+  openWork,
 } from '@kungfu-tech/api/capability';
 
 declare global {
@@ -32,6 +34,7 @@ export type Runtime = {
   ledger: Ledger | null;
   domain: DomainState | null;
   rewind: Rewind | null;
+  work: Work | null;
 };
 
 export function bootRuntime(): Runtime {
@@ -46,6 +49,7 @@ export function bootRuntime(): Runtime {
     ledger: null,
     domain: null,
     rewind: null,
+    work: null,
   };
   try {
     const bindingPath = env.KFE_PATH;
@@ -75,6 +79,7 @@ export function bootRuntime(): Runtime {
     });
     const domain = openDomainState({ binding, locator: { runtimeDir } });
     const rewind = openRewind({ binding, locator: { runtimeDir } });
+    const work = openWork({ binding, locator: { runtimeDir } });
     return {
       ...base,
       ok: true,
@@ -85,6 +90,7 @@ export function bootRuntime(): Runtime {
       ledger,
       domain,
       rewind,
+      work,
     };
   } catch (e) {
     return { ...base, ok: false, message: (e as Error).message };
