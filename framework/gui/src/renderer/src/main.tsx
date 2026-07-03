@@ -22,6 +22,7 @@ import { createRoot } from 'react-dom/client';
 import * as jsxRuntime from 'react/jsx-runtime';
 import { type KfxLoadResult, loadKfx } from './kfx-loader';
 import { type Runtime, bootRuntime } from './runtime';
+import { sandboxClient } from './sandbox-client';
 import {
   PROFILES,
   loadShellState,
@@ -85,6 +86,85 @@ function subsetCaps(runtime: Runtime, entry: KfxEntry): KfxCapabilities | null {
   // only declared handles are populated; undeclared access is a kfx bug the
   // error boundary contains
   return subset as unknown as KfxCapabilities;
+}
+
+// The declared capability handles the trusted renderer holds for a sandboxed
+// view. Unlike subsetCaps this never returns null: a missing handle is simply
+// absent, and the trusted host rejects a call to it — the sandboxed view has no
+// direct handle to fault on. These stay in this (trusted) renderer; only invoke
+// results cross to the isolated view.
+function sandboxSubset(
+  runtime: Runtime,
+  entry: KfxEntry,
+): Record<string, Record<string, unknown>> {
+  const full: Record<string, unknown> = {
+    ledger: runtime.ledger,
+    domain: runtime.domain,
+    rewind: runtime.rewind,
+    work: runtime.work,
+  };
+  const subset: Record<string, Record<string, unknown>> = {};
+  for (const key of entry.capabilities) {
+    const handle = full[key];
+    if (handle) subset[key] = handle as Record<string, unknown>;
+  }
+  return subset;
+}
+
+// A sandboxed-ipc view is not mounted in this renderer. The shell registers its
+// trusted capability host, asks main to embed the isolated WebContentsView, and
+// keeps the overlay positioned over this slot's content rect. The slot itself is
+// an empty box; the view renders in its own process, layered above.
+function SandboxSlot({
+  entry,
+  caps,
+}: {
+  entry: KfxEntry;
+  caps: Record<string, Record<string, unknown>>;
+}) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  // caps identity is stable for a given runtime and entry.capabilities is a
+  // property of the same entry; re-embedding keys only on the view identity.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: caps/entry.capabilities are stable per active view; re-embed keys on id + bundlePath only
+  React.useEffect(() => {
+    const id = entry.id;
+    const sync = () => {
+      const el = ref.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      sandboxClient.setBounds(id, {
+        x: Math.round(r.x),
+        y: Math.round(r.y),
+        width: Math.round(r.width),
+        height: Math.round(r.height),
+      });
+    };
+    sandboxClient.registerHost(id, caps, entry.capabilities);
+    let cancelled = false;
+    void sandboxClient
+      .ensure(id, {
+        bundlePath: entry.bundlePath,
+        declared: entry.capabilities,
+      })
+      .then(() => {
+        if (cancelled) return;
+        sync();
+        sandboxClient.show(id);
+      });
+    const ro = new ResizeObserver(sync);
+    if (ref.current) ro.observe(ref.current);
+    window.addEventListener('resize', sync);
+    return () => {
+      cancelled = true;
+      ro.disconnect();
+      window.removeEventListener('resize', sync);
+      sandboxClient.destroy(id);
+      sandboxClient.disposeHost(id);
+    };
+    // re-embed only when the active sandboxed view changes; caps identity is
+    // stable for a given runtime
+  }, [entry.id, entry.bundlePath]);
+  return <div ref={ref} style={{ width: '100%', height: '100%' }} />;
 }
 
 function App() {
@@ -261,7 +341,16 @@ function App() {
             )}
           </nav>
           <div style={{ flex: 1, minHeight: 0 }}>
-            {activeKfx && caps ? (
+            {activeKfx && activeKfx.tier === 'sandboxed-ipc' ? (
+              // isolated third-party view: embedded, not mounted here
+              <KfxErrorBoundary kfxId={activeKfx.id}>
+                <SandboxSlot
+                  key={activeKfx.id}
+                  entry={activeKfx}
+                  caps={sandboxSubset(runtime, activeKfx)}
+                />
+              </KfxErrorBoundary>
+            ) : activeKfx && caps ? (
               <KfxErrorBoundary kfxId={activeKfx.id}>
                 <activeKfx.View caps={caps} shell={shell} />
               </KfxErrorBoundary>

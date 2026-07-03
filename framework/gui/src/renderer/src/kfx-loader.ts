@@ -50,6 +50,7 @@ type NodeFs = {
 type NodePath = {
   join: (...parts: string[]) => string;
   dirname: (p: string) => string;
+  resolve: (...parts: string[]) => string;
   delimiter: string;
 };
 

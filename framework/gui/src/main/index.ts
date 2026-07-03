@@ -6,7 +6,16 @@ import path from 'node:path';
 // environment variables present when the process starts. The renderer process
 // is spawned by this main process, so the runtime directory must be exported
 // here, before any window (and therefore the renderer process) is created.
-import { BrowserWindow, app } from 'electron';
+import { BrowserWindow, WebContentsView, app, ipcMain } from 'electron';
+
+import {
+  DESTROY_CHANNEL,
+  ENSURE_CHANNEL,
+  HIDE_CHANNEL,
+  SET_BOUNDS_CHANNEL,
+  SHOW_CHANNEL,
+} from '../sandbox/channels';
+import { type Rect, SandboxManager } from './sandbox-manager';
 
 // Resolve the kungfu runtime directory (kfc) that holds libkungfu.dylib and the
 // kungfu_electron.node binding. In development it lives in the kungfu-core
@@ -62,6 +71,41 @@ try {
   console.log(`KFE_MAIN_FAIL ${(e as Error).message}`);
 }
 
+// The isolated sandboxed-view harness page. In dev it is served by the renderer
+// dev server; once built it sits beside the main renderer under out/renderer.
+function harnessEntry(): string {
+  return process.env.ELECTRON_RENDERER_URL
+    ? `${process.env.ELECTRON_RENDERER_URL}/sandbox-view-harness/index.html`
+    : `file://${path.join(__dirname, '../renderer/sandbox-view-harness/index.html')}`;
+}
+
+// The embedded-view manager is created per shell window; the ipcMain control
+// handlers are registered once and dispatch to the current manager. This keeps
+// `activate` (which re-runs createWindow) from double-registering a channel.
+let manager: SandboxManager | null = null;
+
+ipcMain.handle(ENSURE_CHANNEL, (_event, payload) => {
+  const { id, bundlePath, declared } = payload as {
+    id: string;
+    bundlePath: string;
+    declared: string[];
+  };
+  manager?.ensureView({ id, bundlePath, declared });
+});
+ipcMain.on(SET_BOUNDS_CHANNEL, (_event, payload) => {
+  const { id, rect } = payload as { id: string; rect: Rect };
+  manager?.setBounds(id, rect);
+});
+ipcMain.on(SHOW_CHANNEL, (_event, payload) => {
+  manager?.show((payload as { id: string }).id);
+});
+ipcMain.on(HIDE_CHANNEL, (_event, payload) => {
+  manager?.hide((payload as { id: string }).id);
+});
+ipcMain.on(DESTROY_CHANNEL, (_event, payload) => {
+  manager?.destroyView((payload as { id: string }).id);
+});
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1280,
@@ -75,6 +119,15 @@ function createWindow() {
       contextIsolation: false,
       sandbox: false,
     },
+  });
+
+  // The trusted renderer holds the real capabilities and runs the capability
+  // host; this manager embeds sandboxed views and relays their invokes to it.
+  manager = new SandboxManager({
+    shell: win,
+    ipcMain,
+    WebContentsView,
+    harnessEntry,
   });
 
   win.on('ready-to-show', () => win.show());
