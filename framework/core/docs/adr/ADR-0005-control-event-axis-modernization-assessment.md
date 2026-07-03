@@ -53,8 +53,45 @@ and the reactive event layer is load-bearing, so changing it is not local.
 - **Full control-axis pass in v4** — treat the control/event axis as in-scope for
   this major, accepting the higher risk and coordination cost.
 
+## Measured baseline (2026-07-03)
+
+The reactive layer now carries a permanent opt-in probe (`KF_DISPATCH_PROBE=1`,
+`hero::drain`) that times each frame's synchronous fan-out through every rx
+filter chain; `tests/bench/` holds the reproducible harness. Numbers from
+macOS arm64 (M-series), 200k typed `Quote` frames through a live master:
+
+| Form | Scenario | Per-frame mean | Max |
+| --- | --- | --- | --- |
+| master (19 chains) | rx only (`KF_BYPASS_CACHED=1`) | 412 ns | 84 µs |
+| master (19 chains) | with storage feed | 488 ns | 147 µs |
+| node watcher | control/state events (n=75) | 36 µs | 465 µs |
+
+Structural findings that bound any optimization upside:
+
+- Both master and the node watcher already pre-filter open-layer events in
+  `is_reactable` before rx — a cheap pre-dispatch that exists today.
+- The watcher's bulk trading data bypasses rx entirely
+  (`drain_from_trading_data_reader`), and market data does not reach the
+  watcher; its rx path carries low-rate control events whose cost is
+  dominated by the N-API/JS handlers, not chain traversal.
+- The single per-frame `dynamic_cast` (the `instanceof` chain, master only)
+  is included in the 412 ns figure; its live semantic role is distinguishing
+  journal frames from socket notice events.
+
+Reading: at ~0.4 µs per frame the full chain scan sustains ~2.4M frames/s
+per core on the only high-rate rx surface (master), two orders of magnitude
+above observed journal ingest rates. If a future trigger (frame-rate growth
+or chain-count growth) changes this, the only optimization shape on the
+table keeps the filter-chain declarations as the single source of truth and
+derives a msg_type index from them for single-tag chain pre-dispatch —
+replacing the rx algebra is off the table (multi-dimensional routing, open
+extension, and the step primitive documented in `rx.h` are load-bearing).
+
 ## Status / progress
 
 Meta and not scheduled; its resolution depends on the outcomes of ADR-0003 and
-ADR-0004 and on a decision about the reactive event layer. This ADR exists to
-keep the v4-scope question explicit and traceable rather than implicit.
+ADR-0004 and on a decision about the reactive event layer. The measured
+baseline above removes the reactive layer's per-frame cost from the list of
+unknowns: the freeze option is now evidence-backed for the event axis. This
+ADR exists to keep the v4-scope question explicit and traceable rather than
+implicit.

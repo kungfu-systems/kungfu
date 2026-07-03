@@ -4,6 +4,11 @@
 // Created by Keren Dong on 2019-06-15.
 //
 
+#include <algorithm>
+#include <chrono>
+#include <cstdlib>
+#include <vector>
+
 #include <kungfu/common.h>
 #include <kungfu/yijinjing/log.h>
 #include <kungfu/yijinjing/nanomsg/socket.h>
@@ -24,6 +29,66 @@ using namespace kungfu::yijinjing::journal;
 using namespace kungfu::nanomsg;
 
 namespace kungfu::practice {
+
+namespace {
+// Dispatch-latency probe for the reactive event layer (evidence for
+// ADR-0005). Each sb.on_next in hero::drain fans a frame synchronously
+// through every rx filter chain subscribed on events_, so timing that call
+// measures the full per-frame chain traversal for whichever form is
+// pumping — master and apprentice via run(), the node watcher via step().
+// Opt-in via KF_DISPATCH_PROBE=1; when disabled the per-frame cost is one
+// predictable branch. thread_local isolates samples per pump thread, which
+// is per hero instance.
+struct dispatch_probe {
+  struct stat {
+    uint64_t count = 0;
+    int64_t total_ns = 0;
+    int64_t max_ns = 0;
+
+    void add(int64_t ns) {
+      count++;
+      total_ns += ns;
+      max_ns = std::max(max_ns, ns);
+    }
+  };
+
+  const bool enabled = std::getenv("KF_DISPATCH_PROBE") != nullptr;
+  uint64_t frames_seen = 0;
+  stat overall = {};
+  std::unordered_map<int32_t, stat> by_msg_type = {};
+  std::chrono::steady_clock::time_point last_report = std::chrono::steady_clock::now();
+
+  void record(int32_t msg_type, int64_t ns) {
+    overall.add(ns);
+    by_msg_type[msg_type].add(ns);
+  }
+
+  [[nodiscard]] bool due(std::chrono::steady_clock::time_point at) const {
+    return at - last_report >= std::chrono::seconds(5);
+  }
+
+  void report(const std::string &uname) {
+    last_report = std::chrono::steady_clock::now();
+    if (overall.count == 0) {
+      return;
+    }
+    SPDLOG_INFO("dispatch probe [{}] frames_seen={} dispatched={} mean={}ns max={}ns total={}us", uname, frames_seen,
+                overall.count, overall.total_ns / static_cast<int64_t>(overall.count), overall.max_ns,
+                overall.total_ns / 1000);
+    std::vector<std::pair<int32_t, stat>> ranked(by_msg_type.begin(), by_msg_type.end());
+    std::sort(ranked.begin(), ranked.end(),
+              [](const auto &a, const auto &b) { return a.second.total_ns > b.second.total_ns; });
+    constexpr std::size_t top = 8;
+    for (std::size_t i = 0; i < ranked.size() and i < top; i++) {
+      const auto &[msg_type, s] = ranked[i];
+      SPDLOG_INFO("dispatch probe [{}] msg_type={:#010x} n={} mean={}ns max={}ns total={}us", uname, msg_type, s.count,
+                  s.total_ns / static_cast<int64_t>(s.count), s.max_ns, s.total_ns / 1000);
+    }
+  }
+};
+
+thread_local dispatch_probe dispatch_probe_ = {};
+} // namespace
 
 inline std::string encode(const yijinjing::io_device_ptr &io_device) {
   auto home_uid =
@@ -461,7 +526,19 @@ bool hero::drain(const rx::subscriber<event_ptr> &sb) {
       if (frame_time > now_) {
         now_ = frame_time;
       }
-      if (is_reactable(frame)) {
+      if (dispatch_probe_.enabled) {
+        dispatch_probe_.frames_seen++;
+        if (is_reactable(frame)) {
+          const auto start = std::chrono::steady_clock::now();
+          sb.on_next(frame);
+          const auto stop = std::chrono::steady_clock::now();
+          dispatch_probe_.record(frame->msg_type(),
+                                 std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count());
+          if (dispatch_probe_.due(stop)) {
+            dispatch_probe_.report(get_home_uname());
+          }
+        }
+      } else if (is_reactable(frame)) {
         sb.on_next(frame);
       }
       on_frame();
@@ -469,11 +546,17 @@ bool hero::drain(const rx::subscriber<event_ptr> &sb) {
       cleanup_reader_disjoin();
     } else {
       SPDLOG_INFO("reached journal end {}", yijinjing::time::strftime(frame->gen_time()));
+      if (dispatch_probe_.enabled) {
+        dispatch_probe_.report(get_home_uname());
+      }
       return false;
     }
   }
   if (get_io_device()->get_home()->mode != mode::LIVE and not reader_->data_available()) {
     SPDLOG_INFO("reached journal end {}", yijinjing::time::strftime(now()));
+    if (dispatch_probe_.enabled) {
+      dispatch_probe_.report(get_home_uname());
+    }
     return false;
   }
   return true;

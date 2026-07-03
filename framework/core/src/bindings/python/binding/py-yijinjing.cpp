@@ -420,6 +420,9 @@ void bind(pybind11::module &&m) {
       .def("setup", &apprentice::setup)
       .def("step", &apprentice::step)
       .def("is_live", &apprentice::is_live)
+      .def("is_started", &apprentice::is_started)
+      .def("has_writer", &apprentice::has_writer)
+      .def("get_writer", &apprentice::get_writer)
       .def("on_exit", &apprentice::on_exit);
 }
 } // namespace kungfu::yijinjing
