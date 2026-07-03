@@ -20,7 +20,7 @@ principles**. This document states them and shows how the architecture falls out
 of them, so you can understand *why* kungfu is built the way it is, not just
 *what* it contains.
 
-For the vocabulary used below (`kfc`, `kfs`, `libkungfu`, `longfist`, journal,
+For the vocabulary used below (`kungfu`, `kfs`, `libkungfu`, `longfist`, journal,
 zero-copy, …), see [`concepts.md`](concepts.md); for how the pieces are layered,
 see [`architecture.md`](architecture.md); for specific decisions and their
 rationale, see the [ADRs](../framework/core/docs/adr).
@@ -28,7 +28,7 @@ rationale, see the [ADRs](../framework/core/docs/adr).
 ## Principle 1 — The machine adapts to the person
 
 Kungfu absorbs toolchain and runtime complexity into the product so its users do
-not have to assemble it themselves. The `kfc` runtime embeds both a Python and a
+not have to assemble it themselves. The `kungfu` runtime embeds both a Python and a
 Node runtime and brings a full development lifecycle, so most extension
 development needs no separately installed language runtimes or package managers.
 The project carries the complexity so the user does not.
@@ -67,7 +67,7 @@ The architecture below is how kungfu makes that test un-skippable.
 ### The build runs on the product
 
 Kungfu's own build is a closed loop that runs on the very capabilities kungfu
-offers: the application SDK (`kfs`) runs on the `kfc` runtime; assembling the
+offers: the application SDK (`kfs`) runs on the `kungfu` runtime; assembling the
 distribution exercises the SDK end to end. If a core capability regresses,
 **building kungfu itself fails first** — so the maker cannot ship a broken core
 without their own work stopping. This is the load-bearing self-bootstrap, set out
@@ -83,7 +83,7 @@ surface where an expert and a novice meet at the level of the senses.** An exper
 can route around a rough library API using knowledge a newcomer lacks; nobody can
 route around the UI — the pixels are the same for everyone. By making the maker
 run through the same interface a user runs through (the TUI even boots through
-`kfc`), the maker's path is forced to converge with the user's, on the surface
+`kungfu`), the maker's path is forced to converge with the user's, on the surface
 where most usability failure actually lives.
 
 This is why kungfu carries `gui`/`tui` in the same repository even though the core

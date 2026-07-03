@@ -7,7 +7,7 @@
 # offline), builds it with `kfs kfx build`, asserts the bundle honors the
 # load contract (View export, shell-injected modules left external), then
 # packs the tgz and runs it through the `kungfu kfx install` lifecycle.
-# Requires the core dev environment (built dist/kfc) and the repository's
+# Requires the core dev environment (built dist/kungfu) and the repository's
 # installed node_modules (the sdk's esbuild).
 #
 # Usage: tests/fixtures/kfx-demo-scaffold/run.sh
@@ -23,7 +23,7 @@ home="$(mktemp -d)"
 packdir="$(mktemp -d)"
 trap 'rm -rf "$work" "$home" "$packdir"' EXIT
 
-DYLD_FALLBACK_LIBRARY_PATH="$core_dir/dist/kfc${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
+DYLD_FALLBACK_LIBRARY_PATH="$core_dir/dist/kungfu${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
 export DYLD_FALLBACK_LIBRARY_PATH
 
 ext_dir="$work/my-view"

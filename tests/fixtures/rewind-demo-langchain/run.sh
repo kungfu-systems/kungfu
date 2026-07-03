@@ -16,7 +16,7 @@
 # by a real framework.
 #
 # Usage: tests/fixtures/rewind-demo-langchain/run.sh
-#   Requires the core dev environment (built dist/kfc) and network on first run
+#   Requires the core dev environment (built dist/kungfu) and network on first run
 #   to install langchain; the run itself uses a deterministic mock model.
 
 set -eu
@@ -56,7 +56,7 @@ export OPENAI_API_KEY
 
 # Dev-python import of pykungfu (supervisor + check side): dyld fallback to the
 # dist dir when the interpreter is uv's python rather than the frozen kfc.
-DYLD_FALLBACK_LIBRARY_PATH="$core_dir/dist/kfc${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
+DYLD_FALLBACK_LIBRARY_PATH="$core_dir/dist/kungfu${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
 export DYLD_FALLBACK_LIBRARY_PATH
 
 # The LangChain adapter is NOT in core — it is the kfx package under

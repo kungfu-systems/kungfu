@@ -14,7 +14,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 _CORE = os.path.abspath(os.path.join(_HERE, "..", "..", "..", "framework", "core"))
 # reach the kungfu package + the built binding (compile_schema lives in libkungfu)
 sys.path.insert(0, os.path.join(_CORE, "src", "python"))
-sys.path.insert(0, os.path.join(_CORE, "dist", "kfc"))
+sys.path.insert(0, os.path.join(_CORE, "dist", "kungfu"))
 
 import flatbuffers
 

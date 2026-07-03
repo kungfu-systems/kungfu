@@ -36,4 +36,4 @@ Options (both `create` targets):
   scaffolding inside the monorepo.
 
 The generated app is self-contained: `pnpm pack` produces a distributable
-bundle with the kungfu runtime under `Resources/kfc`.
+bundle with the kungfu runtime under `Resources/kungfu`.

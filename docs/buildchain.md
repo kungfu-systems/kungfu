@@ -28,7 +28,7 @@ under those pinned tools.
 | `libkungfu` (C++ core: longfist + yijinjing) | `framework/core/src` | CMake + Conan 2; build orchestration in `framework/core/.gyp/` |
 | Python binding (`py_kungfu`) | `framework/core/src/bindings/python` | pybind11, built under the pinned CPython |
 | Node addon (`kungfu_node.node`) | `framework/core/src/bindings/node` | N-API via the `.gyp` build |
-| `kfc` (the frozen runtime) | the above + embedded Python/Node runtimes | `./kungfu-code freeze` |
+| `kungfu` (the frozen runtime) | the above + embedded Python/Node runtimes | `./kungfu-code freeze` |
 | app / artifact bundles | the SDK assembling the above | `./kungfu-code build:app`, the `kfs` packaging |
 
 ## Where the prebuilt binaries come from
@@ -36,7 +36,7 @@ under those pinned tools.
 kungfu distributes prebuilt cross-platform binaries rather than expecting users to
 compile (see [`version-release-design.md`](version-release-design.md)): the native
 artifacts are published via node-pre-gyp (configuration in
-[`framework/core/package.json`](../framework/core/package.json)), and `kfc` is
+[`framework/core/package.json`](../framework/core/package.json)), and the `kungfu` runtime is
 shipped frozen. A tag is bound to its binaries atomically — *tag exists ⇒ the
 matching binaries exist* — which is the trust property the release mechanism
 exists to hold.

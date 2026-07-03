@@ -1,8 +1,7 @@
 # kungfu CLI handbook — `kungfu`
 
 > Pre-release (spec 0.1) · minimal recipe. `kungfu` is the kungfu CLI
-> (`@kungfu-tech/core`); it fronts the `kfc` runtime, and `kfc` works as a
-> short alias of the same command. The generated command reference (from the
+> (`@kungfu-tech/core`) and the runtime it invokes. The generated command reference (from the
 > CLI's own definitions) and the agent-first `--json` provenance surface are
 > planned; this page is a hand-written getting-started.
 
@@ -16,7 +15,7 @@ the [format spec](../../spec/).
 
 ```bash
 pnpm add @kungfu-tech/core
-# kungfu is now on your PATH inside the workspace (kfc is an alias)
+# kungfu is now on your PATH inside the workspace
 kungfu --version
 ```
 

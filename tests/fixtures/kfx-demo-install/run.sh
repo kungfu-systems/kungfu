@@ -5,7 +5,7 @@
 # offline installable unit. Packs the real work-dashboard package, installs
 # the tgz into a clean home through `kungfu kfx install`, and asserts the
 # managed lifecycle: list, double-install refusal, --force replace, remove.
-# Requires the core dev environment (built dist/kfc) and the extension's
+# Requires the core dev environment (built dist/kungfu) and the extension's
 # own build output (dist/view/index.js, from `kfs kfx build`).
 #
 # Usage: tests/fixtures/kfx-demo-install/run.sh
@@ -19,7 +19,7 @@ home="$(mktemp -d)"
 packdir="$(mktemp -d)"
 trap 'rm -rf "$home" "$packdir"' EXIT
 
-DYLD_FALLBACK_LIBRARY_PATH="$core_dir/dist/kfc${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
+DYLD_FALLBACK_LIBRARY_PATH="$core_dir/dist/kungfu${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
 export DYLD_FALLBACK_LIBRARY_PATH
 
 # the distribution unit: a plain npm tgz of the built extension package

@@ -15,7 +15,7 @@ the rule. For what each surface guarantees and how to verify it, see
 | `longfist-layout` | longfist binary layout (in-memory == wire == on-disk) | integration + cross-time | [ADR-0008](../framework/core/docs/adr/ADR-0008-longfist-schema-evolution-and-minor-maintenance.md), [`contracts.md`](contracts.md) |
 | `capability-sdk-api` | capability SDK surface (`framework/api`) | integration | [ADR-0006](../framework/core/docs/adr/ADR-0006-v4-frontend-platform-architecture.md) |
 | `kfx-contract` | kfx extension contract (contribution points, load semantics) | integration | [ADR-0006](../framework/core/docs/adr/ADR-0006-v4-frontend-platform-architecture.md), [ADR-0007](../framework/core/docs/adr/ADR-0007-v4-tui-platform-reference-surface.md) |
-| `kungfu-cli` | kungfu CLI surface (canonical `kungfu` command with `kfc` alias; commands, journal subcommand output conventions) | integration | [`debugging.md`](debugging.md) |
+| `kungfu-cli` | kungfu CLI surface (canonical `kungfu` command; commands, journal subcommand output conventions) | integration | [`debugging.md`](debugging.md) |
 | `journal-replayability` | cross-version cold-path decode of recorded journals | cross-time | [ADR-0008](../framework/core/docs/adr/ADR-0008-longfist-schema-evolution-and-minor-maintenance.md) |
 | `rewind-event-schema` | Rewind capture event model (open-layer msg_types 30001-30099, `rewind_events.fbs`; trace bundles bind and outlive runs) | integration + cross-time | [`msg-type-ranges.md`](../framework/core/docs/msg-type-ranges.md), [`kungfu/rewind/README.md`](../framework/core/src/python/kungfu/rewind/README.md) |
 

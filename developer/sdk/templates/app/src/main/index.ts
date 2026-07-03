@@ -8,7 +8,7 @@ import path from 'node:path';
 // here, before any window (and therefore the renderer process) is created.
 import { BrowserWindow, app } from 'electron';
 
-// Resolve the kungfu runtime directory (kfc) that holds libkungfu.dylib and the
+// Resolve the kungfu runtime directory that holds libkungfu.dylib and the
 // kungfu_electron.node binding. In development it lives in the kungfu-core
 // package; once packaged it is shipped as an extraResource under Resources/kungfu.
 const kungfuDir = app.isPackaged

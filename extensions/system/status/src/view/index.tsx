@@ -38,7 +38,7 @@ function SystemStatusView({
             </span>
           </div>
           <div>core: {String(info.buildInfo?.version ?? 'unknown')}</div>
-          <div>kfc: {info.kungfuVersion || 'unavailable'}</div>
+          <div>kungfu: {info.kungfuVersion || 'unavailable'}</div>
           <div>
             electron: {versions.electron} · node: {versions.node}
           </div>

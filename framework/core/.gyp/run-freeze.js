@@ -9,11 +9,11 @@
 // 两条 freezer 路径（可人 2026-06-17 决策 Nuitka 2.x，不行回退 PyInstaller；
 // .v4 线 Nuitka 三平台已跑通，见 docs/conan2-migration.md §4c）：
 //
-// - nuitka（默认）：编译成 C，产物 kfc.dist 本就扁平（无 _internal），移到 dist/kfc 即可，
+// - nuitka（默认）：编译成 C，产物 kfc.dist 本就扁平（无 _internal），移到 dist/kungfu 即可，
 //   不需要 promote。kfc.py 内嵌 nuitka-project 选项（--standalone 等）。Nuitka 只跟随
 //   kfc.py 的 import，故 app/electron 侧 node native（drone.node / kungfu_node.node /
 //   kungfu_electron.node）需 freeze 后从 build/<type> 补拷（kfc python 进程不 import 它们）。
-// - pyinstaller（fallback）：onedir 把数据/库放进 _internal/，而 app 栈假设 dist/kfc 扁平，
+// - pyinstaller（fallback）：onedir 把数据/库放进 _internal/，而 app 栈假设 dist/kungfu 扁平，
 //   故 freeze 后 promote（_internal/*→顶层，Unix 符号链/Win 拷贝）。
 
 const fs = require('fs');
@@ -64,7 +64,7 @@ function ensureBuildInfo(bt) {
 }
 
 // app/electron 侧 node native：kfc python 进程不 import，Nuitka 不带，需从 build/<type> 补拷。
-// app 栈通过 @kungfu-tech/core/dist/kfc/<x> 解析它们（getKfcDir / webpack require.resolve）。
+// app 栈通过 @kungfu-tech/core/dist/kungfu/<x> 解析它们（getKfcDir / webpack require.resolve）。
 const APP_NATIVE = [
   'drone.node',
   'kungfu_node.node',
@@ -129,7 +129,7 @@ function findFileShallow(root, re) {
   return null;
 }
 
-// Windows only：把 python binding(pykungfu) 与 libnode 运行库补拷进 dist/kfc。
+// Windows only：把 python binding(pykungfu) 与 libnode 运行库补拷进 dist/kungfu。
 //
 // 缘由：MSVC 多配置生成器与 Mac/Linux 单配置生成器的产物布局不一致——Win 把
 // pykungfu.<abi>.pyd 产在 build/ 根、libnode.dll 产在 build/<bt>；而 Nuitka freeze 用
@@ -191,7 +191,7 @@ function freezeNuitka(bt) {
     { cwd: CORE, env: { ...process.env, PYTHONPATH: rel } },
   );
 
-  // Nuitka standalone 产物 kfc.dist 本就扁平 → 直接移到 dist/kfc（无 _internal、无 promote）。
+  // Nuitka standalone 产物 kfc.dist 本就扁平 → 直接移到 dist/kungfu（无 _internal、无 promote）。
   const kfcDist = path.join(out, 'kfc.dist');
   if (!fs.existsSync(kfcDist)) {
     console.error(`[freeze] 错误：未找到 ${kfcDist}（nuitka 产物布局变化？）`);
@@ -252,7 +252,7 @@ function freezePyinstaller(bt) {
   mergeKfs();
   promote();
   if (isWin) verifyWindowsSymbols(path.join(CORE, 'dist', 'kungfu'));
-  console.log('[freeze] ✅ dist/kfc 就绪（pyinstaller 扁平视图 + _internal 真身）');
+  console.log('[freeze] ✅ dist/kungfu 就绪（pyinstaller 扁平视图 + _internal 真身）');
 }
 
 // MERGE 模式下 kfs 与 kfc 共享 _internal，dist/kfs 仅余 kfs 入口，拷进 kfc 后删除。
@@ -270,7 +270,7 @@ function mergeKfs() {
   fs.rmSync(distKfs, { recursive: true, force: true });
 }
 
-// _internal/* 在 dist/kfc 顶层补一层视图，满足 app 栈的扁平布局假设（仅 pyinstaller 路径）。
+// _internal/* 在 dist/kungfu 顶层补一层视图，满足 app 栈的扁平布局假设（仅 pyinstaller 路径）。
 function promote() {
   const distKfc = path.join(CORE, 'dist', 'kungfu');
   const internal = path.join(distKfc, '_internal');

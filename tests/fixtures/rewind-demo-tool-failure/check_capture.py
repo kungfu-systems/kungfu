@@ -13,7 +13,7 @@ _core = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "..", "framework", "core")
 )
 sys.path.insert(0, os.path.join(_core, "src", "python"))
-sys.path.insert(0, os.path.join(_core, "dist", "kfc"))
+sys.path.insert(0, os.path.join(_core, "dist", "kungfu"))
 
 import kungfu
 

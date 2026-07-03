@@ -6,7 +6,7 @@
 # Starts a master, attaches the real node Watcher under plain node
 # (dispatch_watcher_bench.js), drives typed Quote load through a registered
 # apprentice, then prints the probe reports collected on the watcher side.
-# Requires the core dev environment (built dist/kfc) and fnm (repo-pinned
+# Requires the core dev environment (built dist/kungfu) and fnm (repo-pinned
 # node, same bootstrap as ./kungfu-code).
 #
 # Usage: tests/bench/dispatch_bench_watcher.sh [event-count]
@@ -26,7 +26,7 @@ echo "bench home: $home"
 KF_DISPATCH_PROBE=1
 export KF_DISPATCH_PROBE
 
-DYLD_FALLBACK_LIBRARY_PATH="$core_dir/dist/kfc${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
+DYLD_FALLBACK_LIBRARY_PATH="$core_dir/dist/kungfu${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
 export DYLD_FALLBACK_LIBRARY_PATH
 
 cd "$core_dir"

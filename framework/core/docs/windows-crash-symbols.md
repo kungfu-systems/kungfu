@@ -3,7 +3,7 @@
 ## Constraint
 
 Every kungfu-compiled native shipped in a Windows release **must** have its PDB
-next to it in `dist/kfc`:
+next to it in `dist/kungfu`:
 
 | Native | PDB |
 | --- | --- |
@@ -41,7 +41,7 @@ those two PDBs cover the whole native surface — there is no separate
    links with `/DEBUG /OPT:REF /OPT:ICF` (emit `<target>.pdb` while keeping the
    Release size optimizations `/DEBUG` otherwise disables).
 2. **Packaging** — `.gyp/run-freeze.js` copies each native's `.pdb` sibling into
-   `dist/kfc` alongside the binary.
+   `dist/kungfu` alongside the binary.
 3. **Verification** — `.gyp/verify-windows-symbols.js` runs at the end of the
    Windows freeze and `exit(1)`s if any required native lacks a PDB, so a release
    that would ship unsymbolizable crash reports fails the build instead.
@@ -49,7 +49,7 @@ those two PDBs cover the whole native surface — there is no separate
 Run the check standalone against a staged release:
 
 ```
-node .gyp/verify-windows-symbols.js dist/kfc
+node .gyp/verify-windows-symbols.js dist/kungfu
 ```
 
 ## Symbolizing an old report offline

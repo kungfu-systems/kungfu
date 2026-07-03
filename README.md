@@ -44,7 +44,7 @@ demonstrates and exercises these capabilities.
 ## The toolchain comes with the runtime
 
 A guiding principle of kungfu is that the machine adapts to the person, not the
-other way around. The `kfc` runtime is batteries-included: it embeds a Python
+other way around. The `kungfu` runtime is batteries-included: it embeds a Python
 and a Node runtime and brings a full Python development lifecycle — dependency
 management, formatting, and ahead-of-time compilation — reachable through
 `kungfu engage`. Building a kfx extension does not start by assembling a
@@ -58,10 +58,10 @@ built on mainstream, well-maintained foundations.
 ## Components
 
 - **Core & runtime** — `longfist` (type system) and `yijinjing` (journal
-  runtime) with Python and Node bindings, plus the `kfc` runtime, packaged as
-  `@kungfu-tech/core`. `kfc` embeds a Python and a Node runtime and is fronted
-  by the `kungfu` end-user command (`kfc` remains a short alias); the richer
-  end-user shell is planned under the same name.
+  runtime) with Python and Node bindings, plus the `kungfu` runtime, packaged as
+  `@kungfu-tech/core`. It embeds a Python and a Node runtime and is fronted
+  by the `kungfu` end-user command; the richer end-user shell is planned under
+  the same name.
 - **Capability SDK** — typed, framework-neutral access to journal / state /
   replay (`framework/api`).
 - **Application SDK** — scaffolding to build kfx extensions and assemble
@@ -95,7 +95,7 @@ right document, and is readable by both people and agents.
 
 - [`docs/MAP.md`](docs/MAP.md) — the question-indexed map of all documentation.
 - [`docs/concepts.md`](docs/concepts.md) — the vocabulary in one place
-  (`kungfu`/`kfc`/`kfx`/`kfs`, `libkungfu`, `longfist`, `yijinjing`, journal, …).
+  (`kungfu`/`kfx`/`kfs`, `libkungfu`, `longfist`, `yijinjing`, journal, …).
 - [`docs/design-philosophy.md`](docs/design-philosophy.md) — the two first
   principles the whole design follows from, and how the architecture falls out
   of them.

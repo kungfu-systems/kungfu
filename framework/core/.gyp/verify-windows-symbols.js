@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Release constraint: every kungfu-compiled native shipped into dist/kfc on
+// Release constraint: every kungfu-compiled native shipped into dist/kungfu on
 // Windows MUST have its PDB alongside it. Without the PDB the field crash
 // stackwalker can only print module+offset instead of function names and source
 // lines (see docs/windows-crash-symbols.md).

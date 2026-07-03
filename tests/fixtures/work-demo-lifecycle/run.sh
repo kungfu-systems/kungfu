@@ -5,7 +5,7 @@
 # default-profile vocabulary — create, every lifecycle verb, next action,
 # checkpoint, decision, validation, artifact, linked run — and the journal
 # plus the folded projection carry every fact. Asserted by check_lifecycle.py.
-# Requires the core dev environment (built dist/kfc).
+# Requires the core dev environment (built dist/kungfu).
 #
 # Usage: tests/fixtures/work-demo-lifecycle/run.sh
 
@@ -19,7 +19,7 @@ trap 'rm -rf "$home"' EXIT
 # Dev-python import of pykungfu: its libnode install name is
 # @executable_path-relative (correct for the frozen kfc executable); when the
 # interpreter is uv's python instead, give dyld the dist dir as fallback.
-DYLD_FALLBACK_LIBRARY_PATH="$core_dir/dist/kfc${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
+DYLD_FALLBACK_LIBRARY_PATH="$core_dir/dist/kungfu${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
 export DYLD_FALLBACK_LIBRARY_PATH
 
 cd "$core_dir"

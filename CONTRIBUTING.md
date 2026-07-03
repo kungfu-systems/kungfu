@@ -32,7 +32,7 @@ Kungfu is a pnpm-workspaces monorepo. See [`docs/architecture.md`](docs/architec
 for how the layers fit together; the main areas:
 
 - `framework/core` — the C++ core (`longfist` type system, `yijinjing` journal
-  runtime) plus its Python and Node (N-API) bindings and the `kfc` runtime,
+  runtime) plus its Python and Node (N-API) bindings and the `kungfu` runtime,
   packaged as `@kungfu-tech/core`. Build orchestration lives in
   `framework/core/.gyp/`.
 - `framework/api` — the capability SDK (typed access to journal / state / replay).
@@ -43,12 +43,10 @@ for how the layers fit together; the main areas:
 - `extensions/*` — kfx extensions; `examples/*` — samples.
 - `artifact` — the dogfood installer bundling the runtime, reference UIs and SDK.
 
-Three command-line entry points, kept forward-compatible:
+Two command-line entry points, kept forward-compatible:
 
 - `kungfu` — the end-user CLI command (`kungfu --version`, journal subcommands,
-  …). It fronts the `kfc` runtime; `kfc` works as a short alias of the same
-  command.
-- `kfc` — the runtime binary that `kungfu` fronts, and the short alias.
+  …). It fronts the `kungfu` runtime.
 - `./kungfu-code` — the development/build orchestrator used while working on the
   repo (see below).
 
@@ -67,7 +65,7 @@ cd kungfu
 
 ./kungfu-code sync          # install JS dependencies (frozen lockfile)
 ./kungfu-code build         # build all workspaces (C++ core + bindings + app)
-./kungfu-code freeze        # produce the standalone kfc bundle
+./kungfu-code freeze        # produce the standalone kungfu bundle
 ./kungfu-code build:app     # build the desktop app bundle
 ./kungfu-code app           # launch the desktop app
 ```

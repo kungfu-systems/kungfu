@@ -6,7 +6,7 @@
 # Starts a master with the KF_DISPATCH_PROBE instrument enabled, drives it
 # with an open-layer event burst from a registered apprentice
 # (dispatch_load.py), then prints the probe reports collected on the master
-# side. Requires the core dev environment (built dist/kfc).
+# side. Requires the core dev environment (built dist/kungfu).
 #
 # Usage: tests/bench/dispatch_bench.sh [event-count] [load-type]
 #
@@ -34,7 +34,7 @@ export KF_DISPATCH_PROBE
 
 # Dev-python import of pykungfu: give dyld the dist dir as fallback (same as
 # the capture fixtures).
-DYLD_FALLBACK_LIBRARY_PATH="$core_dir/dist/kfc${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
+DYLD_FALLBACK_LIBRARY_PATH="$core_dir/dist/kungfu${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
 export DYLD_FALLBACK_LIBRARY_PATH
 
 cd "$core_dir"

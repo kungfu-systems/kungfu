@@ -6,7 +6,7 @@
 # event lands in the journal, the schema binds into the bundle under the kfx band
 # (40000-49999), and it decodes by reflection with no generated accessor — the
 # run-internal proof of the native-compile open layer. Asserted by check_capture.py.
-# Requires the core dev environment (built dist/kfc, whose python has flatbuffers).
+# Requires the core dev environment (built dist/kungfu, whose python has flatbuffers).
 #
 # Usage: tests/fixtures/rewind-demo-kfx-schema/run.sh
 
@@ -20,7 +20,7 @@ trap 'rm -rf "$home"' EXIT
 
 # dyld fallback so both the supervisor and the kfx child can import pykungfu
 # (compile_schema) when the interpreter is uv's python rather than frozen kfc
-DYLD_FALLBACK_LIBRARY_PATH="$core_dir/dist/kfc${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
+DYLD_FALLBACK_LIBRARY_PATH="$core_dir/dist/kungfu${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
 export DYLD_FALLBACK_LIBRARY_PATH
 
 cd "$core_dir"

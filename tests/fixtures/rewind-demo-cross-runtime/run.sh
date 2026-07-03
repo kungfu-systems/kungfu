@@ -4,7 +4,7 @@
 # Cross-runtime single-journal fixture (gate G7): a python agent calls a Node
 # tool under one traced run; both runtimes' events must land in one journal
 # with a shared run id, a causal edge across the boundary, and one timeline.
-# Requires the core dev environment (built dist/kfc) and node on PATH.
+# Requires the core dev environment (built dist/kungfu) and node on PATH.
 #
 # Usage: tests/fixtures/rewind-demo-cross-runtime/run.sh
 
@@ -30,7 +30,7 @@ while [ ! -s "$port_file" ]; do sleep 0.1; done
 OPENAI_BASE_URL="http://127.0.0.1:$(cat "$port_file")/v1"
 export OPENAI_BASE_URL
 
-DYLD_FALLBACK_LIBRARY_PATH="$core_dir/dist/kfc${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
+DYLD_FALLBACK_LIBRARY_PATH="$core_dir/dist/kungfu${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
 export DYLD_FALLBACK_LIBRARY_PATH
 
 cd "$core_dir"

@@ -4,7 +4,7 @@
 # Happy-path capture fixture (gate G2, L0 slice): one command wraps an
 # unmodified child process and produces a local run store — journal frames
 # bracketing the run plus a self-describing trace bundle. Asserted by
-# check_capture.py. Requires the core dev environment (built dist/kfc).
+# check_capture.py. Requires the core dev environment (built dist/kungfu).
 #
 # Usage: tests/fixtures/rewind-demo-happy/run.sh
 
@@ -33,7 +33,7 @@ export OPENAI_BASE_URL
 # Dev-python import of pykungfu: its libnode install name is
 # @executable_path-relative (correct for the frozen kfc executable); when the
 # interpreter is uv's python instead, give dyld the dist dir as fallback.
-DYLD_FALLBACK_LIBRARY_PATH="$core_dir/dist/kfc${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
+DYLD_FALLBACK_LIBRARY_PATH="$core_dir/dist/kungfu${DYLD_FALLBACK_LIBRARY_PATH:+:$DYLD_FALLBACK_LIBRARY_PATH}"
 export DYLD_FALLBACK_LIBRARY_PATH
 
 cd "$core_dir"

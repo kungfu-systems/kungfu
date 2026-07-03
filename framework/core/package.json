@@ -16,8 +16,7 @@
     "access": "public"
   },
   "bin": {
-    "kungfu": "lib/kfc.js",
-    "kfc": "lib/kfc.js"
+    "kungfu": "lib/kfc.js"
   },
   "config": {
     "build_type": "Release",
@@ -30,7 +29,7 @@
     "module_name": "kungfu_node",
     "module_path": "dist/kungfu",
     "remote_path": "kungfu-core/v{major}/v{version}",
-    "package_name": "kfc-v{version}-{platform}-{arch}-{configuration}.tar.gz",
+    "package_name": "kungfu-v{version}-{platform}-{arch}-{configuration}.tar.gz",
     "host": "https://prebuilt.libkungfu.cc"
   },
   "binaryGithub": {
@@ -53,9 +52,9 @@
     "format:cpp": "node .gyp/run-format-cpp.js src",
     "format:python": "node .gyp/run-format-python.js . src src/*/*.spec .*/*.py",
     "format:js": "node .gyp/run-format-js.js \"(.gyp|lib)/**.js\"",
-    "kfc": "node lib/kfc.js",
+    "kungfu": "node lib/kfc.js",
     "kfs": "node lib/kfs.js",
-    "dev:kfc": "uv run --frozen python .devtools/kfc.py",
+    "dev:kungfu": "uv run --frozen python .devtools/kfc.py",
     "dev:kfs": "uv run --frozen python .devtools/kfs.py"
   },
   "dependencies": {

@@ -78,7 +78,7 @@ function conanBuild() {
 }
 
 // conan2 移除了独立的 `conan package` 本地命令(package() 经 conan create/export-pkg 触发)。
-// Stage C 决定 freeze 脱离 conan：kfc 的 freeze→dist/kfc 已迁到独立入口 `.gyp/run-freeze.js`
+// Stage C 决定 freeze 脱离 conan：kfc 的 freeze→dist/kungfu 已迁到独立入口 `.gyp/run-freeze.js`
 // (pnpm freeze → ./kungfu-code freeze)，见 docs/conan2-migration.md。此处 `package` 子命令
 // 仅保留 conan build(编译)语义，不再承担 freeze。
 function conanPackage() {

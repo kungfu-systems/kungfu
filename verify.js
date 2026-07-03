@@ -7,15 +7,15 @@
 // artifacts" criterion, which also serves as a CI smoke baseline.
 //
 // Usage (node pinned via the entrypoint; plain `node verify.js` also works):
-//   ./kungfu-code verify              quick: only assert "existing" artifacts (dist/kfc exists + kfc runs + version matches)
+//   ./kungfu-code verify              quick: only assert "existing" artifacts (dist/kungfu exists + kfc runs + version matches)
 //   ./kungfu-code verify --full       full: rebuild:core + freeze first, then assert; also builds and runs the
 //                                     capability slices (framework/core/slices) + yijinjing dependency guard
 //   ./kungfu-code verify --with-app   also assert the build:app artifact (with --full it builds the app first)
 //   ./kungfu-code verify --help
 //
 // Assertion targets (all grounded in the build scripts, not guessed):
-//   - framework/core/dist/kfc/                     freeze artifact directory (run-freeze.js renameSync target)
-//   - framework/core/dist/kfc/kfc[.exe]           kfc executable (path resolved by lib/executable.js)
+//   - framework/core/dist/kungfu/                     freeze artifact directory (run-freeze.js renameSync target)
+//   - framework/core/dist/kungfu/kfc[.exe]           kfc executable (path resolved by lib/executable.js)
 //   - `kfc --version` exits 0 and output contains the expected version   frozen Python runtime runs end to end (runtime smoke)
 //   - framework/gui/dist/app/                      (--with-app) build:app webpack artifact
 //
@@ -116,7 +116,7 @@ function main() {
       if (pyProbeBuild.status !== 0) {
         throw new Error(`python probe build failed (exit ${pyProbeBuild.status == null ? 'signal ' + pyProbeBuild.signal : pyProbeBuild.status})`);
       }
-      runPnpm('freeze'); // nuitka → framework/core/dist/kfc
+      runPnpm('freeze'); // nuitka → framework/core/dist/kungfu
       if (withApp) runPnpm('build:app'); // webpack → framework/gui/dist/app
     } catch (e) {
       fail('build stage', e.message);
@@ -130,7 +130,7 @@ function main() {
   const distKfc = path.join(ROOT, 'framework', 'core', 'dist', 'kungfu');
   let kungfuBin = null;
   if (fs.existsSync(distKfc) && fs.statSync(distKfc).isDirectory()) {
-    pass('dist/kfc directory exists', path.relative(ROOT, distKfc));
+    pass('dist/kungfu directory exists', path.relative(ROOT, distKfc));
     kungfuBin = path.join(distKfc, isWin ? 'kungfu.exe' : 'kungfu');
     if (fs.existsSync(kungfuBin) && fs.statSync(kungfuBin).isFile()) {
       let detail = path.relative(ROOT, kungfuBin);
@@ -144,7 +144,7 @@ function main() {
       kungfuBin = null;
     }
   } else {
-    fail('dist/kfc directory exists', `not found ${path.relative(ROOT, distKfc)} (freeze first; in quick mode, confirm it was built)`);
+    fail('dist/kungfu directory exists', `not found ${path.relative(ROOT, distKfc)} (freeze first; in quick mode, confirm it was built)`);
   }
 
   // ── Stage 2b: C++ extension probe artifact ────────────────────────
@@ -248,7 +248,7 @@ function main() {
 
       // ── Stage 6: journal fact fixtures (full mode) ────────────────
       // Each fixture under tests/fixtures/rewind-demo-*/ proves a capture
-      // gate end to end against the built dist/kfc (G2 capture, G3 event
+      // gate end to end against the built dist/kungfu (G2 capture, G3 event
       // completeness); tests/fixtures/work-demo-*/ prove the default work
       // profile the same way (P1 vocabulary, P2 lifecycle), and
       // tests/fixtures/atlas-demo-*/ prove the read-only control-plane

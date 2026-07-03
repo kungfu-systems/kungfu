@@ -22,7 +22,7 @@ pre-dispatched fast path).
 
 ## Runs
 
-Master form (requires built `dist/kfc`):
+Master form (requires built `dist/kungfu`):
 
 ```sh
 KF_BYPASS_CACHED=1 tests/bench/dispatch_bench.sh   # rx-isolated: no storage feed

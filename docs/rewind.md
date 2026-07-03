@@ -36,7 +36,7 @@ cd kungfu
 ./kungfu-code sync && ./kungfu-code build
 ```
 
-Everything below runs from the repository root. `kungfu` (alias `kfc`) is the
+Everything below runs from the repository root. `kungfu` is the
 runtime CLI; the desktop app is the reference GUI.
 
 ## Capture a run
@@ -172,7 +172,7 @@ Each runs standalone: `tests/fixtures/<name>/run.sh`.
   Linux/Windows targets and signing/notarization belong to the release
   pipeline — the next gate before public artifacts.
 - On macOS, run the workspace CLI from `framework/core` with
-  `DYLD_FALLBACK_LIBRARY_PATH=<repo>/framework/core/dist/kfc` exported: the
+  `DYLD_FALLBACK_LIBRARY_PATH=<repo>/framework/core/dist/kungfu` exported: the
   dev-python binding resolves `libnode` relative to the executable, and shell
   wrappers strip `DYLD_*` across re-exec, so exporting it in your own shell
   right before the command is the reliable spelling.

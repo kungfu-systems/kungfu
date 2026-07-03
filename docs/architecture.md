@@ -3,7 +3,7 @@
 How the Kungfu repository is layered, and the principle that shapes it. For the
 two first principles the whole design follows from, see
 [`design-philosophy.md`](design-philosophy.md); for the vocabulary
-(`kfc`/`kfx`/`kfs`, `libkungfu`, `longfist`, `yijinjing`, …) see
+(`kungfu`/`kfx`/`kfs`, `libkungfu`, `longfist`, `yijinjing`, …) see
 [`concepts.md`](concepts.md); for the data-plane concepts
 (journal, zero-copy, replay) see the [README](../README.md); for build and
 contribution see [CONTRIBUTING](../CONTRIBUTING.md); for specific decisions see
@@ -16,7 +16,7 @@ test, not the product* — and how the architecture follows from both are set ou
 in [`design-philosophy.md`](design-philosophy.md).
 
 Kungfu absorbs toolchain and runtime complexity into the product so that its
-users do not have to assemble it themselves. The `kfc` runtime embeds both a
+users do not have to assemble it themselves. The `kungfu` runtime embeds both a
 Python and a Node runtime and bridges a full Python development lifecycle —
 dependency management, formatting, and ahead-of-time compilation — so most
 extension development needs no separately installed language runtimes or package
@@ -67,8 +67,8 @@ group into the following layers.
 
 The foundation: the `longfist` type system and the `yijinjing` append-only
 journal runtime in C++, with Python and Node (N-API) bindings, exposed zero-copy
-in-process. It also produces `kfc`, the runtime that embeds the Python and Node
-runtimes and bridges the development toolchain. `kfc` is the base for the
+in-process. It also produces the `kungfu` runtime, which embeds the Python and
+Node runtimes and bridges the development toolchain; it is the base for the
 planned `kungfu` end-user shell.
 
 ### Capability SDK — `framework/api`
@@ -153,7 +153,7 @@ build` bundles with esbuild.
 
 ```
 framework/
-  core        runtime + core (C++ longfist / yijinjing, bindings, kfc)
+  core        runtime + core (C++ longfist / yijinjing, bindings, kungfu)
   api         capability SDK
   gui         reference GUI (Electron + React)
   tui         reference TUI

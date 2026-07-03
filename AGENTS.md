@@ -42,7 +42,7 @@ layout, and code style.
 ```
 
 `verify` is the single done-check: it asserts the build artifacts and runs a
-`kfc` runtime smoke, rather than trusting a "looks built" impression.
+`kungfu` runtime smoke, rather than trusting a "looks built" impression.
 
 ## Proposing changes
 

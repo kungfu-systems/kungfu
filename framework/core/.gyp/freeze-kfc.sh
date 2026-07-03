@@ -60,6 +60,6 @@ PYTHONPATH="$RELEASE" uv run --frozen python -m nuitka \
   --include-data-files="$BUILDINFO=kungfubuildinfo.json" \
   src/python/kfc.py
 
-BIN="$OUTDIR/kfc.dist/kfc.bin"
+BIN="$OUTDIR/kfc.dist/kungfu.bin"
 echo "[freeze] done: $BIN"
 ls -la "$BIN"

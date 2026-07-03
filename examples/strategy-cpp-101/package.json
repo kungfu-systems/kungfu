@@ -13,10 +13,10 @@
     "build": "kfs extension build",
     "package": "kfs extension package",
     "format": "node ../../framework/core/.gyp/run-format-cpp.js src",
-    "dev:win": "kfc -l trace run -c strategy -g KungfuStrategy101Cpp -n demo ./dist/KungfuStrategy101Cpp/KungfuStrategy101Cpp.cp39-win_amd64.pyd -x",
-    "dev:linux": "kfc -l debug run -c strategy -g KungfuStrategy101Cpp -n demo ./dist/KungfuStrategy101Cpp/KungfuStrategy101Cpp.cpython-39-x86_64-linux-gnu.so -x",
-    "master": "kfc -l debug run -c system -g master -n master",
-    "ledger": "kfc -l debug run -c system -g service -n ledger"
+    "dev:win": "kungfu -l trace run -c strategy -g KungfuStrategy101Cpp -n demo ./dist/KungfuStrategy101Cpp/KungfuStrategy101Cpp.cp39-win_amd64.pyd -x",
+    "dev:linux": "kungfu -l debug run -c strategy -g KungfuStrategy101Cpp -n demo ./dist/KungfuStrategy101Cpp/KungfuStrategy101Cpp.cpython-39-x86_64-linux-gnu.so -x",
+    "master": "kungfu -l debug run -c system -g master -n master",
+    "ledger": "kungfu -l debug run -c system -g service -n ledger"
   },
   "devDependencies": {
     "@kungfu-tech/sdk": "workspace:*"

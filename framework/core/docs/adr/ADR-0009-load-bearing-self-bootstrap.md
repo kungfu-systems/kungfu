@@ -8,7 +8,7 @@
 - Category: (principle) product-layer first principle — names and generalizes
   the property that "the build dogfoods the SDK" (`docs/architecture.md`) was a
   single instance of.
-- Subsystem: whole product — runtime (`framework/core`/`kfc`), capability SDK
+- Subsystem: whole product — runtime (`framework/core`/`kungfu`), capability SDK
   (`framework/api`), application SDK (`developer/sdk`/`kfs`), reference surfaces
   (`framework/gui`, `framework/tui`), distribution (`artifact`).
 - Related: the dynamic counterpart to the version mechanism's
@@ -45,7 +45,7 @@ self-sustaining**.
 ## The engine (three steps, none skippable)
 
 1. **Load-bearing coupling (the precondition).** Each ring genuinely consumes
-   the ring beneath it — `kfs` runs *on* `kfc`; the TUI starts *through* `kfc`'s
+   the ring beneath it — `kfs` runs *on* `kungfu`; the TUI starts *through* `kungfu`'s
    Node runtime. This step is the switch: degrade any ring into a wrapper / mock
    / optional side path and steps 2–3 break at once.
 
@@ -101,34 +101,34 @@ consume (hence validate) the ring beneath:
 
 - **libkungfu** — the polyglot membrane: zero-copy cross-language access plus the
   longfist binary layout. The base everything else bootstraps onto.
-- **kfc** — the first-layer binary. It embeds a Python and a Node runtime and
+- **kungfu** — the first-layer binary. It embeds a Python and a Node runtime and
   loads libkungfu's companion bindings (`py_kungfu`, `kungfu_node.node`)
   in-process. *First bootstrap:* the runtime is itself a consumer of the membrane.
-- **kfx development toolchain** — `kfc` bridges a full Python lifecycle
-  (dependency management, ahead-of-time compilation via `kfc engage`); the
+- **kfx development toolchain** — `kungfu` bridges a full Python lifecycle
+  (dependency management, ahead-of-time compilation via `kungfu engage`); the
   repository's own `kfx` extensions are built through it. *Bootstrap:* the repo's
-  own build is a user of the toolchain `kfc` ships.
+  own build is a user of the toolchain `kungfu` ships.
 - **Reference surfaces (GUI / TUI)** — no paradigm innovation (Electron/React,
   Ink); their job is to let a human *see* libkungfu's capability rather than read
   about it. They load the binding in-process to preserve zero-copy, and the TUI
-  starts through `kfc`'s Node runtime — repeatedly re-exercising `kfc` on every
+  starts through `kungfu`'s Node runtime — repeatedly re-exercising `kungfu` on every
   launch.
 - **Application SDK (`kfs`)** — supports building/packaging extensions, yet `kfs`
-  itself launches on `kfc` as its runtime, so a user develops a `kfx` with no
-  separately installed Node or Python. *Bootstrap:* `kfs` is a consumer of `kfc`.
-- **`artifact`** — bundles `kfc`, the reference surfaces, and `kfx`, and is
+  itself launches on `kungfu` as its runtime, so a user develops a `kfx` with no
+  separately installed Node or Python. *Bootstrap:* `kfs` is a consumer of `kungfu`.
+- **`artifact`** — bundles `kungfu`, the reference surfaces, and `kfx`, and is
   assembled *using* `kfs`. *Bootstrap:* assembling the installer is the real test
   that `kfs` can package a complete application.
 
 Three instances are easy to miss and worth naming explicitly, because they are
 the ones that close the loop:
 
-- **Stage-0 bootstrap (the compiler analogy).** `kfc` *embeds* runtimes for the
-  user, but *building* `kfc` needs a Python/Node toolchain that does not yet
+- **Stage-0 bootstrap (the compiler analogy).** `kungfu` *embeds* runtimes for the
+  user, but *building* `kungfu` needs a Python/Node toolchain that does not yet
   exist inside it — supplied externally by `./kungfu-code` (Node via fnm, Python
   via uv, the package manager via Corepack). There is a handoff: an external
-  stage-0 toolchain produces `kfc`, after which `kfx` development switches to
-  `kfc`'s own embedded toolchain. This is exactly a self-hosting compiler's
+  stage-0 toolchain produces `kungfu`, after which `kfx` development switches to
+  `kungfu`'s own embedded toolchain. This is exactly a self-hosting compiler's
   stage-0 → stage-1: borrow an external compiler once, then self-host.
 - **Single-schema codegen.** The membrane's cross-language identity ("C++,
   Python, and Node read the same layout") is not hand-synchronized; it is
@@ -153,7 +153,7 @@ the engine:
    proof — it is the *opposite* of this principle, not a lighter version of it.
 2. **Bootstrap only toward decreasing change-rate** (the safety constraint). An
    outer, fast-changing ring may bootstrap onto an inner, slower-changing one —
-   UI onto `kfc`, `kfc` onto libkungfu — never the reverse. "One move used many
+   UI onto `kungfu`, `kungfu` onto libkungfu — never the reverse. "One move used many
    times" has a dual: *one broken move breaks many things.* The chain is only
    safe because the things everyone depends on are the things that change least
    (the longfist layout as true invariant, [ADR-0008](ADR-0008-longfist-schema-evolution-and-minor-maintenance.md)).
@@ -192,7 +192,7 @@ exactly what an unguarded "just add a nicer demo" instinct produces.
 
 - **Self-hosting compilers** — stage-0 builds the compiler with an external
   toolchain, after which the compiler compiles itself; a broken core cannot
-  rebuild anything. The kfc/kfx toolchain handoff is the same shape.
+  rebuild anything. The kungfu/kfx toolchain handoff is the same shape.
 - **Dogfooding** as an industry practice — but stated here as a *forcing
   function and a trust-removal*, not merely "use your own product".
 - **Eat-your-own-output validation** — deterministic replay re-consuming the

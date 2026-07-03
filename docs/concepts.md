@@ -9,17 +9,16 @@ principles behind them see [`design-philosophy.md`](design-philosophy.md).
 
 | Name | What it is |
 |---|---|
-| `kfc` | The **kungfu core runtime** binary. It embeds a Python and a Node runtime and exposes the journal/state APIs; it is the runtime everything else runs on. |
 | `kfx` | A **kungfu extension** — a plugin built on the extension contract (the units under `extensions/`). |
 | `kfs` | The **application/extension SDK command**: scaffolds and builds `kfx` extensions, assembles applications, and produces packaged artifacts. |
-| `kungfu` | The **end-user CLI command** — the canonical way to invoke kungfu from the command line. Today it fronts the `kfc` runtime (same executable, two names; `kfc` remains a short alias); the richer end-user shell is planned to grow under this name. |
+| `kungfu` | The **kungfu runtime binary and end-user CLI command** — the canonical way to invoke kungfu from the command line. It embeds a Python and a Node runtime and exposes the journal/state APIs; it is the runtime everything else runs on. The richer end-user shell is planned to grow under this name. |
 | `./kungfu-code` | The **development/build orchestrator** used while working on the repo (pins Node, Python, and the package manager so a fresh clone builds with one command). It is build-time only, not shipped. |
 
 ## Core building blocks
 
 | Term | What it is |
 |---|---|
-| **libkungfu** | The C++ **core library**: the `longfist` type system and the `yijinjing` journal runtime, with C++/Python/Node bindings. This is what the README calls the "zero-copy, multi-language runtime"; it is packaged as `@kungfu-tech/core` and is the foundation `kfc` is built on. |
+| **libkungfu** | The C++ **core library**: the `longfist` type system and the `yijinjing` journal runtime, with C++/Python/Node bindings. This is what the README calls the "zero-copy, multi-language runtime"; it is packaged as `@kungfu-tech/core` and is the foundation the `kungfu` runtime is built on. |
 | **longfist** | The unified **type system / schema** (FlatBuffers-based). Its binary layout *is* the cross-language and on-disk contract — see [ADR-0008](../framework/core/docs/adr/ADR-0008-longfist-schema-evolution-and-minor-maintenance.md). |
 | **yijinjing** | The append-only **journal runtime** — the event bus that carries the data plane. |
 | **journal** | The append-only **event log**: one shared, strongly-typed stream of frames that every component consumes, rather than each inventing its own format. |

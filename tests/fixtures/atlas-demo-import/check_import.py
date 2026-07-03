@@ -12,12 +12,12 @@ import os
 import sys
 
 # Self-contained path bootstrap: the fixture runs outside the dev entry, so it
-# wires the core python package and the built dist/kfc (pykungfu) itself.
+# wires the core python package and the built dist/kungfu (pykungfu) itself.
 _core = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "..", "framework", "core")
 )
 sys.path.insert(0, os.path.join(_core, "src", "python"))
-sys.path.insert(0, os.path.join(_core, "dist", "kfc"))
+sys.path.insert(0, os.path.join(_core, "dist", "kungfu"))
 
 from kungfu.atlas import (  # noqa: E402
     MSG_GOAL_SNAPSHOT,
