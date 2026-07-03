@@ -107,6 +107,12 @@ export type KfxEntry = {
   packageName?: string;
   version?: string;
   source: 'built-in' | string; // extension root the entry was loaded from
+  // resolved trust tier (resolveRuntimeTier). A node-integrated view carries a
+  // loaded View mounted in the shared renderer; a sandboxed-ipc view carries
+  // only its bundlePath, loaded in an isolated renderer, and View is a
+  // placeholder the shell must not mount directly.
+  tier: KfxRuntimeTier;
+  bundlePath: string;
   View: KfxViewComponent;
 };
 

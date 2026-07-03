@@ -11,15 +11,22 @@
 //      `kungfu kfx install` populates)
 // Scanning goes two levels deep so suite members nested under a suite
 // directory (extensions/system/<member>) are found in the workspace layout.
+import { resolveRuntimeTier } from '@kungfu-tech/kfx';
 import type {
   KfxCapabilityKey,
   KfxEntry,
+  KfxRuntimeTier,
   KfxSettingDecl,
   KfxSuiteDecl,
   KfxViewComponent,
 } from '@kungfu-tech/kfx';
 
 export type SharedModules = Record<string, unknown>;
+
+// A sandboxed view is never mounted in the shared renderer — the shell embeds
+// it as an isolated renderer from its bundlePath. This placeholder stands in
+// for its KfxEntry.View so the type stays uniform; mounting it is a shell bug.
+const sandboxedPlaceholder: KfxViewComponent = () => null;
 
 export type KfxLoadFailure = {
   dir: string;
@@ -116,7 +123,15 @@ export function loadKfx(
   const failures: KfxLoadFailure[] = [];
   const seen = new Set<string>();
 
+  // the install root (<home>/extensions) is where `kungfu kfx install` puts
+  // third-party packages; a view loaded from there is installed (untrusted).
+  const installRoot = env.KF_RUNTIME_DIR
+    ? path.resolve(path.join(path.dirname(env.KF_RUNTIME_DIR), 'extensions'))
+    : null;
+
   for (const root of extensionRoots(env)) {
+    const installed =
+      installRoot !== null && path.resolve(root) === installRoot;
     for (const dir of packageDirs(root)) {
       try {
         const manifest = JSON.parse(
@@ -131,6 +146,7 @@ export function loadKfx(
               view?: {
                 title?: string;
                 capabilities?: KfxCapabilityKey[];
+                runtime?: KfxRuntimeTier;
                 system?: boolean;
                 settings?: KfxSettingDecl[];
                 entry?: string;
@@ -148,6 +164,10 @@ export function loadKfx(
         if (seen.has(config.key)) continue; // earlier root wins
         seen.add(config.key);
         const bundlePath = path.join(dir, view.entry ?? 'dist/view/index.js');
+        const tier = resolveRuntimeTier(
+          view,
+          installed ? 'installed' : 'built-in',
+        );
         entries.push({
           id: config.key,
           title: view.title ?? config.key,
@@ -157,7 +177,13 @@ export function loadKfx(
           packageName: manifest.name,
           version: manifest.version,
           source: root,
-          View: loadBundle(bundlePath, shared),
+          tier,
+          bundlePath,
+          // a sandboxed view is loaded in an isolated renderer, never here
+          View:
+            tier === 'sandboxed-ipc'
+              ? sandboxedPlaceholder
+              : loadBundle(bundlePath, shared),
         });
       } catch (e) {
         failures.push({ dir, error: (e as Error).message });
