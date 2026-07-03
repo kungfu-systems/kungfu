@@ -12,6 +12,7 @@ from . import backtest
 from . import trace
 from . import rewind
 from . import work
+from . import atlas
 
 __all__ = [
     "engage",
@@ -26,4 +27,5 @@ __all__ = [
     "trace",
     "rewind",
     "work",
+    "atlas",
 ]
