@@ -18,7 +18,12 @@ run_id="fixturehappy$(date +%s)"
 # deterministic model upstream: the mock binds an ephemeral port and reports
 # it through a file; the supervisor picks it up as the openai forward target
 port_file="$home/mock-port"
-python3 "$fixture_dir/mock_model.py" "$port_file" &
+# The mock detaches from stdio and dies with this script: it must not hold a
+# captured pipe open (a harness reading our output would wait for EOF forever),
+# and the cleanup trap must actually run (no exec below — exec replaces the
+# shell and silently disarms the trap; that leaked mocks and deadlocked
+# verify's stage 6 the first time this ran under spawnSync).
+python3 "$fixture_dir/mock_model.py" "$port_file" >/dev/null 2>&1 &
 mock_pid=$!
 trap 'kill "$mock_pid" 2>/dev/null; rm -rf "$home"' EXIT
 while [ ! -s "$port_file" ]; do sleep 0.1; done
@@ -35,4 +40,4 @@ cd "$core_dir"
 uv run --frozen python .devtools/kfc.py -H "$home" trace --run-id "$run_id" -- \
   python3 "$fixture_dir/demo_agent.py"
 
-exec uv run --frozen python "$fixture_dir/check_capture.py" "$home/runtime" "$run_id"
+uv run --frozen python "$fixture_dir/check_capture.py" "$home/runtime" "$run_id"
