@@ -194,16 +194,19 @@ function main() {
       // Each fixture under tests/fixtures/rewind-demo-*/ proves a capture
       // gate end to end against the built dist/kfc (G2 capture, G3 event
       // completeness); tests/fixtures/work-demo-*/ prove the default work
-      // profile the same way (P1 vocabulary, P2 lifecycle). A red fixture
-      // means the corresponding journal fact contract regressed.
+      // profile the same way (P1 vocabulary, P2 lifecycle), and
+      // tests/fixtures/atlas-demo-*/ prove the read-only control-plane
+      // import profile (P7 dogfood slice). A red fixture means the
+      // corresponding journal fact contract regressed.
       console.log('\n[verify] stage 6: journal fact fixtures');
+      const fixturePrefixes = ['rewind-demo-', 'work-demo-', 'atlas-demo-'];
       const fixturesDir = path.join(ROOT, 'tests', 'fixtures');
       const fixtures = fs.existsSync(fixturesDir)
         ? fs
             .readdirSync(fixturesDir)
             .filter(
               (d) =>
-                (d.startsWith('rewind-demo-') || d.startsWith('work-demo-')) &&
+                fixturePrefixes.some((prefix) => d.startsWith(prefix)) &&
                 fs.existsSync(path.join(fixturesDir, d, 'run.sh')),
             )
             .sort()

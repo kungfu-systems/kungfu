@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "mission_id": "demo-platform",
+  "title": "Demo platform stewardship",
+  "status": "active",
+  "active_lens": "principal-engineer",
+  "current_stage": {"name": "demo-stage", "next_review": "2026-01-15"},
+  "next_action": "review the importer slice",
+  "unknown_future_field": {"ignored": true}
+}
