@@ -116,6 +116,17 @@ static constexpr auto $(ArgN &&...an) -> decltype(subscribe<event_ptr>(std::forw
   return subscribe<event_ptr>(std::forward<ArgN>(an)...);
 }
 
+// steppable/holdon exist to support step mode and are NOT replaceable by
+// rxcpp's publish(). hero::step() drives the event loop by calling
+// events_.connect(cs_) once per tick; upstream multicast wraps its entire
+// on_connect body — including source.subscribe — in an
+// `if (connection.empty())` guard, so with publish() every connect after the
+// first is a silent no-op and stepping stops after one pass. steppable moves
+// only the subject linkage inside that guard (attach subscribers once) and
+// re-subscribes the source on EVERY connect (drive one more produce pass).
+// That one-brace difference is the step primitive both hosts rely on: the
+// node watcher's uv loop and the python coroutine loop each pump the hero
+// through repeated step() calls.
 template <class T, class Observable, class Subject> struct steppable : public operator_base<T> {
   typedef decay_t<Observable> source_type;
   typedef decay_t<Subject> subject_type;
