@@ -28,7 +28,7 @@
   },
   "binary": {
     "module_name": "kungfu_node",
-    "module_path": "dist/kfc",
+    "module_path": "dist/kungfu",
     "remote_path": "kungfu-core/v{major}/v{version}",
     "package_name": "kfc-v{version}-{platform}-{arch}-{configuration}.tar.gz",
     "host": "https://prebuilt.libkungfu.cc"

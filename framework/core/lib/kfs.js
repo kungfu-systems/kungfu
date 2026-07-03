@@ -15,6 +15,6 @@ shell.run(kfs, process.argv.slice(2), true, {
       'sdk',
       'kfs.js',
     ),
-    KFC_PATH: path.join(__dirname, '..', 'dist', 'kfc'),
+    KFC_PATH: path.join(__dirname, '..', 'dist', 'kungfu'),
   },
 });

@@ -95,7 +95,7 @@ function copyPdbSibling(binPath, destDir) {
 
 function copyAppNative(bt) {
   const rel = path.join(CORE, 'build', bt);
-  const distKfc = path.join(CORE, 'dist', 'kfc');
+  const distKfc = path.join(CORE, 'dist', 'kungfu');
   let n = 0;
   for (const f of APP_NATIVE) {
     const from = path.join(rel, f);
@@ -141,7 +141,7 @@ function findFileShallow(root, re) {
 // 冻结 kfc 可执行会加载与其同目录的 pykungfu.pyd + libnode.dll（已实测通过），故补拷即可。
 function copyPyBindingWin(bt) {
   if (!isWin) return;
-  const distKfc = path.join(CORE, 'dist', 'kfc');
+  const distKfc = path.join(CORE, 'dist', 'kungfu');
   const buildDir = path.join(CORE, 'build');
   const pyd = findFileShallow(buildDir, /^pykungfu.*\.pyd$/i);
   const btDll = path.join(buildDir, bt, 'libnode.dll');
@@ -157,7 +157,7 @@ function copyPyBindingWin(bt) {
   if (pyd) copyPdbSibling(pyd, distKfc);
   if (!pyd) console.error('[freeze] Win 警告：build 树未找到 pykungfu*.pyd');
   if (!dll) console.error('[freeze] Win 警告：build 树未找到 libnode.dll');
-  console.log(`[freeze] Win：补拷 python binding → dist/kfc：${n} 项`);
+  console.log(`[freeze] Win：补拷 python binding → dist/kungfu：${n} 项`);
 }
 
 // ----------------------------------------------------------------- nuitka
@@ -165,7 +165,7 @@ function copyPyBindingWin(bt) {
 function freezeNuitka(bt) {
   const rel = path.join(CORE, 'build', bt); // 三 native（pykungfu/libkungfu/libnode）同目录
   const out = path.join(CORE, 'build', 'kfc-nuitka');
-  const distKfc = path.join(CORE, 'dist', 'kfc');
+  const distKfc = path.join(CORE, 'dist', 'kungfu');
   const info = ensureBuildInfo(bt);
 
   console.log(`[freeze] nuitka kfc.py（PYTHONPATH=${path.relative(CORE, rel)}）`);
@@ -201,19 +201,23 @@ function freezeNuitka(bt) {
   fs.mkdirSync(path.dirname(distKfc), { recursive: true });
   fs.renameSync(kfcDist, distKfc);
 
-  // nuitka standalone 入口名为 kfc.bin(Unix)/kfc.exe(Win)；app 栈按 'kfc'(Unix)/'kfc.exe'(Win)
-  // 定位可执行（framework/api pathConfig/processUtils 的 kfcName）。Win 已匹配；Unix 把
-  // kfc.bin 重命名为 kfc（用 rename 不用符号链，保持 nuitka 产物无符号链、electron-builder 打包干净）。
+  // nuitka standalone 入口名为 kfc.bin(Unix)/kfc.exe(Win)；app 栈按 'kungfu'(Unix)/'kungfu.exe'(Win)
+  // 定位可执行（framework/api pathConfig/processUtils 的 kfcName）。把 nuitka 入口重命名为
+  // kungfu（用 rename 不用符号链，保持 nuitka 产物无符号链、electron-builder 打包干净）。
   if (!isWin) {
     const binPath = path.join(distKfc, 'kfc.bin');
-    const kfcPath = path.join(distKfc, 'kfc');
-    if (fs.existsSync(binPath)) fs.renameSync(binPath, kfcPath);
+    const kungfuPath = path.join(distKfc, 'kungfu');
+    if (fs.existsSync(binPath)) fs.renameSync(binPath, kungfuPath);
+  } else {
+    const exePath = path.join(distKfc, 'kfc.exe');
+    const kungfuExe = path.join(distKfc, 'kungfu.exe');
+    if (fs.existsSync(exePath)) fs.renameSync(exePath, kungfuExe);
   }
 
   copyAppNative(bt);
   copyPyBindingWin(bt);
-  if (isWin) verifyWindowsSymbols(path.join(CORE, 'dist', 'kfc'));
-  console.log('[freeze] ✅ dist/kfc 就绪（nuitka 扁平产物 + app native）');
+  if (isWin) verifyWindowsSymbols(path.join(CORE, 'dist', 'kungfu'));
+  console.log('[freeze] ✅ dist/kungfu 就绪（nuitka 扁平产物 + app native）');
 }
 
 // ------------------------------------------------------------- pyinstaller
@@ -253,7 +257,7 @@ function freezePyinstaller(bt) {
 
 // MERGE 模式下 kfs 与 kfc 共享 _internal，dist/kfs 仅余 kfs 入口，拷进 kfc 后删除。
 function mergeKfs() {
-  const distKfc = path.join(CORE, 'dist', 'kfc');
+  const distKfc = path.join(CORE, 'dist', 'kungfu');
   const distKfs = path.join(CORE, 'dist', 'kfs');
   if (!fs.existsSync(distKfs)) return;
   console.log('[freeze] 合并 kfs → kfc');
@@ -268,7 +272,7 @@ function mergeKfs() {
 
 // _internal/* 在 dist/kfc 顶层补一层视图，满足 app 栈的扁平布局假设（仅 pyinstaller 路径）。
 function promote() {
-  const distKfc = path.join(CORE, 'dist', 'kfc');
+  const distKfc = path.join(CORE, 'dist', 'kungfu');
   const internal = path.join(distKfc, '_internal');
   if (!fs.existsSync(internal)) {
     console.error(
