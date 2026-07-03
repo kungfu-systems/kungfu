@@ -144,8 +144,10 @@ module (`kfs kfx build` drives CMake through the core toolchain). The Python
 ahead-of-time path is covered by
 [`extensions/probe-python`](../extensions/probe-python): a neutral probe whose
 dependency is installed with `kungfu engage pdm` and whose module is
-Nuitka-compiled with `kungfu engage nuitka`. The JavaScript / TypeScript
-extension path is still being reinstated.
+Nuitka-compiled with `kungfu engage nuitka`. The JavaScript / TypeScript path is
+covered by the reference view extensions (such as
+[`extensions/rewind-inspector`](../extensions/rewind-inspector)), which `kfs kfx
+build` bundles with esbuild.
 
 ## Repository layout
 
