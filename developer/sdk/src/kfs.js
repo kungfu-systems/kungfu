@@ -6,6 +6,7 @@
 // binding), wired the same way as the reference GUI. The generated app is
 // self-contained; it consumes the platform through published packages, or
 // through the workspace when scaffolded inside the monorepo (--workspace).
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,6 +34,10 @@ function usage(code) {
       'kungfuConfig.config.view); build bundles src/view/ to dist/view/index.js',
       'with react and the capability SDK left external — the shell injects',
       'its own instances at load time.',
+      '',
+      'kfx build also handles adapter facets (ships source) and C++ extensions',
+      '(a package with a CMakeLists.txt): it drives CMake with the core conan',
+      'toolchain to compile src/cpp/ into a native pybind11 module under dist/.',
       '',
     ].join('\n'),
   );
@@ -163,11 +168,78 @@ function readManifest() {
   return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 }
 
+// ── kfx C++ extension build ────────────────────────────────────────────────
+// A C++ kfx compiles src/cpp/*.cpp against the libkungfu API (headers + the
+// built shared library) and its FlatBuffers data structures into a native
+// pybind11 module. The extension's CMakeLists.txt includes a libkungfu-only
+// helper (cmake/kungfu.cmake); this driver invokes CMake with the core's conan
+// toolchain and pins the module to the core's Python so it loads in kfc.
+
+function locateCoreDir(startDir) {
+  let dir = startDir;
+  for (let i = 0; i < 8; i += 1) {
+    const candidate = path.join(dir, 'framework', 'core');
+    if (fs.existsSync(path.join(candidate, 'conanfile.py'))) return candidate;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
+}
+
+function runOrFail(cmd, args) {
+  const result = spawnSync(cmd, args, { stdio: 'inherit' });
+  if (result.error) fail(`${cmd} not runnable: ${result.error.message}`);
+  if (result.status !== 0) {
+    fail(`${cmd} ${args.join(' ')} failed (exit ${result.status ?? `signal ${result.signal}`})`);
+  }
+}
+
+function cppBuild(manifest) {
+  const coreDir = locateCoreDir(process.cwd());
+  if (!coreDir) fail('cannot locate framework/core (a cpp kfx build needs the monorepo core)');
+  const toolchain = path.join(coreDir, 'build', 'conan_toolchain.cmake');
+  if (!fs.existsSync(toolchain)) {
+    fail(`core not built: ${toolchain} is missing. Run \`./kungfu-code rebuild:core\` first.`);
+  }
+  const buildDir = path.resolve('build');
+  const distDir = path.resolve('dist', manifest.kungfuConfig?.key ?? 'cpp');
+  fs.mkdirSync(distDir, { recursive: true });
+  const configureArgs = [
+    '-S',
+    '.',
+    '-B',
+    buildDir,
+    `-DCMAKE_TOOLCHAIN_FILE=${toolchain}`,
+    '-DCMAKE_BUILD_TYPE=Release',
+    `-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=${distDir}`,
+  ];
+  // Pin the module to the core's Python (the uv-managed venv) so it is ABI-
+  // compatible with the runtime and loads alongside pykungfu. Pass both the
+  // classic (FindPythonInterp) and modern (FindPython) hint variables so the
+  // pin holds regardless of which pybind11 lookup mode is active.
+  const corePython = path.join(coreDir, '.venv', 'bin', 'python3');
+  if (fs.existsSync(corePython)) {
+    configureArgs.push(`-DPYTHON_EXECUTABLE=${corePython}`, `-DPython_EXECUTABLE=${corePython}`);
+  }
+  runOrFail('cmake', configureArgs);
+  runOrFail('cmake', ['--build', buildDir, '--config', 'Release']);
+  process.stdout.write(
+    `built ${manifest.name ?? 'cpp extension'} -> ${path.relative(process.cwd(), distDir)}\n`,
+  );
+}
+
 async function kfxBuild() {
   const manifest = readManifest();
   const config = manifest.kungfuConfig?.config ?? {};
   const view = config.view;
   if (!view) {
+    // A C++ extension compiles native code against libkungfu into a pybind11
+    // module. It is detected by a CMakeLists.txt at the package root.
+    if (fs.existsSync(path.resolve('CMakeLists.txt'))) {
+      cppBuild(manifest);
+      return;
+    }
     // An adapter facet is a runtime extension: it ships source per child
     // runtime (python/node) and the capture supervisor injects it — there is
     // nothing to bundle. Succeed so `kfs kfx build` is usable on any kfx.
@@ -177,7 +249,7 @@ async function kfxBuild() {
       );
       return;
     }
-    fail('package.json has no kungfuConfig.config.view or .adapter facet');
+    fail('package.json has no kungfuConfig.config.view or .adapter facet, and no CMakeLists.txt (cpp)');
   }
   const entry = ['src/view/index.tsx', 'src/view/index.ts'].find((candidate) =>
     fs.existsSync(path.resolve(candidate)),
@@ -204,6 +276,8 @@ async function kfxBuild() {
 function kfxClean() {
   readManifest();
   fs.rmSync(path.resolve('dist'), { recursive: true, force: true });
+  // A cpp extension also has a CMake build tree.
+  fs.rmSync(path.resolve('build'), { recursive: true, force: true });
   process.stdout.write('cleaned dist\n');
 }
 

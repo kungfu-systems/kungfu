@@ -1,0 +1,22 @@
+{
+  "name": "@kungfu-tech/kfx-probe-cpp",
+  "author": "kungfu",
+  "version": "4.0.0-alpha.0",
+  "description": "C++ dogfood coverage probe: compiles against libkungfu and its FlatBuffers data structures into a native module, exercising the C++ kfx build path.",
+  "license": "Apache-2.0",
+  "private": true,
+  "kungfuConfig": {
+    "key": "ProbeCpp"
+  },
+  "scripts": {
+    "build": "kfs kfx build",
+    "clean": "kfs kfx clean"
+  },
+  "devDependencies": {
+    "@kungfu-tech/core": "workspace:*",
+    "@kungfu-tech/sdk": "workspace:*"
+  },
+  "repository": {
+    "url": "https://github.com/kungfu-systems/kungfu.git"
+  }
+}

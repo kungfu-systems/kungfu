@@ -137,10 +137,12 @@ exercises a distinct extension path:
 SDK can package a complete application from the runtime, the reference surfaces
 and the extensions. Trading-specific reference extensions from earlier versions
 are being retired, and their coverage role is being handed to neutral
-replacements that exercise the same paths. This is mid-transition: the Python
-path stays covered by a neutral extension (`indexer-live`), while the C++
-probe's neutral replacement is not yet in place — so the C++ extension path is
-temporarily without a dedicated build-time probe until it lands.
+replacements that exercise the same paths. The C++ path is covered by
+[`extensions/probe-cpp`](../extensions/probe-cpp): a neutral probe that compiles
+against the `libkungfu` API and its FlatBuffers data structures into a native
+module (`kfs kfx build` drives CMake through the core toolchain). The remaining
+paths — a Python extension through the bundled ahead-of-time toolchain, and a
+JavaScript / TypeScript extension — are still being reinstated.
 
 ## Repository layout
 

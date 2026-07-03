@@ -94,6 +94,17 @@ function main() {
   if (doFull) {
     try {
       runPnpm('rebuild:core'); // clean + build:conan C++/wheel/native
+      // C++ dogfood probe: compile the reference cpp kfx against the freshly
+      // built libkungfu (headers + shared lib + FlatBuffers) into a native
+      // module. If a core capability regresses, this build breaks here.
+      const probeBuild = spawnSync('pnpm', ['--filter', '@kungfu-tech/kfx-probe-cpp', 'run', 'build'], {
+        cwd: ROOT,
+        stdio: 'inherit',
+        shell: isWin,
+      });
+      if (probeBuild.status !== 0) {
+        throw new Error(`cpp probe build failed (exit ${probeBuild.status == null ? 'signal ' + probeBuild.signal : probeBuild.status})`);
+      }
       runPnpm('freeze'); // nuitka → framework/core/dist/kfc
       if (withApp) runPnpm('build:app'); // webpack → framework/gui/dist/app
     } catch (e) {
@@ -123,6 +134,23 @@ function main() {
     }
   } else {
     fail('dist/kfc directory exists', `not found ${path.relative(ROOT, distKfc)} (freeze first; in quick mode, confirm it was built)`);
+  }
+
+  // ── Stage 2b: C++ extension probe artifact ────────────────────────
+  // The reference cpp kfx (extensions/probe-cpp) compiles against libkungfu and
+  // its FlatBuffers types into a native module; its presence proves the C++
+  // extension build path. Built in Stage 1 under --full.
+  console.log('\n[verify] stage 2b: C++ extension probe artifact');
+  const probeDist = path.join(ROOT, 'extensions', 'probe-cpp', 'dist', 'ProbeCpp');
+  const probeSo = fs.existsSync(probeDist)
+    ? fs.readdirSync(probeDist).find((f) => /^probe_cpp\..*\.(so|dylib|pyd)$/.test(f))
+    : null;
+  if (probeSo) {
+    pass('cpp probe native module built', path.relative(ROOT, path.join(probeDist, probeSo)));
+  } else if (doFull) {
+    fail('cpp probe native module built', `no probe_cpp.*.(so|dylib|pyd) under ${path.relative(ROOT, probeDist)}`);
+  } else {
+    console.log(`  (skipped: no cpp probe artifact; build it with 'pnpm --filter @kungfu-tech/kfx-probe-cpp run build' or --full)`);
   }
 
   // ── Stage 3: kfc runtime smoke ────────────────────────────────────
