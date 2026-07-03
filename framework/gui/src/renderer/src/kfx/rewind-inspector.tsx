@@ -245,7 +245,10 @@ function SpanDetail({ span }: { span: RewindSpan }) {
       {span.retry ? (
         <>
           <Fact name="retry attempt" value={span.retry.attempt} />
-          <Fact name="retry of" value={span.retry.retryOfSpanId?.slice(0, 16)} />
+          <Fact
+            name="retry of"
+            value={span.retry.retryOfSpanId?.slice(0, 16)}
+          />
         </>
       ) : null}
       {close?.error ? (
