@@ -6,7 +6,7 @@ import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 const rootDir = dirname(fileURLToPath(import.meta.url));
 
 // - main: externalize deps so the native binding is never bundled; it is loaded
-//   via require() at runtime from kungfu-core's dist/kfc.
+//   via require() at runtime from kungfu-core's dist/kungfu.
 // - preload: the sandbox preload — the only bridge an isolated sandboxed view
 //   gets (contextBridge exposes __kfxBridge); built as its own entry.
 // - renderer: react; keep electron and the native binding external so the

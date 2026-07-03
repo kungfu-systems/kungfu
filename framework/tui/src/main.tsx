@@ -24,7 +24,7 @@ function boot() {
     path.join(
       path.dirname(nodeRequire.resolve('@kungfu-tech/core/package.json')),
       'dist',
-      'kfc',
+      'kungfu',
     );
   const runtimeDir =
     process.env.KF_RUNTIME_DIR || path.join(process.cwd(), 'demo-runtime');

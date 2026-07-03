@@ -160,7 +160,7 @@ export const forceKillByKeyWords = (
   });
 };
 
-const kfcName = isWin ? 'kfc.exe' : 'kfc';
+const kfcName = isWin ? 'kungfu.exe' : 'kungfu';
 const appDirName = getAppRuntimeDirName();
 const appDirNameRegExp = new RegExp(appDirName, 'i');
 

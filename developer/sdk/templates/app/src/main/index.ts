@@ -10,13 +10,13 @@ import { BrowserWindow, app } from 'electron';
 
 // Resolve the kungfu runtime directory (kfc) that holds libkungfu.dylib and the
 // kungfu_electron.node binding. In development it lives in the kungfu-core
-// package; once packaged it is shipped as an extraResource under Resources/kfc.
+// package; once packaged it is shipped as an extraResource under Resources/kungfu.
 const kfcDir = app.isPackaged
-  ? path.join(process.resourcesPath, 'kfc')
+  ? path.join(process.resourcesPath, 'kungfu')
   : path.join(
       path.dirname(require.resolve('@kungfu-tech/core/package.json')),
       'dist',
-      'kfc',
+      'kungfu',
     );
 
 const bindingPath = path.join(kfcDir, 'kungfu_electron.node');
@@ -34,7 +34,7 @@ process.env.KFE_PATH = process.env.KFE_PATH || bindingPath;
 // Prove the frozen runtime CLI runs standalone next to the binding, and hand
 // the result to the renderer for display.
 try {
-  const kfcBin = path.join(path.dirname(process.env.KFE_PATH), 'kfc');
+  const kfcBin = path.join(path.dirname(process.env.KFE_PATH), 'kungfu');
   const out = execFileSync(kfcBin, ['--version'], { timeout: 10000 });
   process.env.KFC_VERSION = out.toString().trim();
 } catch {

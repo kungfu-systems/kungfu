@@ -200,16 +200,16 @@ process.env.CLI_DIR = CLI_DIR;
 //================== cli end ======================================
 
 //================== kfc start ====================================
-const staticDevKfcDir = path.resolve('..', 'core', 'dist', 'kfc');
+const staticDevKfcDir = path.resolve('..', 'core', 'dist', 'kungfu');
 export const KFC_PARENT_DIR = production
   ? globalThis.__kfResourcesPath
   : path.dirname(process.env.KFC_DIR || staticDevKfcDir);
-export const KFC_DIR = process.env.KFC_DIR || path.join(KFC_PARENT_DIR, 'kfc');
+export const KFC_DIR = process.env.KFC_DIR || path.join(KFC_PARENT_DIR, 'kungfu');
 process.env.KFC_DIR = KFC_DIR;
 
 export const PY_WHL_DIR = path.join(KFC_DIR, 'kungfu-wheel');
 
-export const KFC_EXECUTABLE = process.platform === 'win32' ? 'kfc.exe' : 'kfc';
+export const KFC_EXECUTABLE = process.platform === 'win32' ? 'kungfu.exe' : 'kungfu';
 export const EXTENSION_DIRS: string[] = Array.from(
   new Set(
     production

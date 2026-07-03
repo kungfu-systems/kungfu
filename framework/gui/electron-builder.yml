@@ -1,7 +1,7 @@
 appId: com.kungfu.app
 productName: Kungfu
-# asar:false so the native binding (.node) and kfc dylibs can be require()d
-# directly from Resources/kfc at runtime.
+# asar:false so the native binding (.node) and kungfu dylibs can be require()d
+# directly from Resources/kungfu at runtime.
 asar: false
 npmRebuild: false
 files:
@@ -9,9 +9,9 @@ files:
   - package.json
 extraResources:
   # Ship the kungfu runtime (libkungfu.dylib + kungfu_electron.node) so the
-  # packaged app loads the binding from Resources/kfc, matching its rpath.
-  - from: ../core/dist/kfc
-    to: kfc
+  # packaged app loads the binding from Resources/kungfu, matching its rpath.
+  - from: ../core/dist/kungfu
+    to: kungfu
 mac:
   # dir = the pack verb's unpacked app (fast, CI-friendly); dmg + zip = the
   # dist verb's installable artifacts. Unsigned pre-release (identity: null):

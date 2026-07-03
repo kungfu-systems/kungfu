@@ -44,7 +44,7 @@ if (APPLE)
   set(KFC_INSTALL_RPATH
       "@loader_path"
       "@loader_path/../../"
-      "@executable_path/../../../../Resources/kfc"
+      "@executable_path/../../../../Resources/kungfu"
       )
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations -Wno-unqualified-std-cast-call -Wno-unused-value")
   set(CMAKE_INSTALL_RPATH "${KFC_INSTALL_RPATH}")
