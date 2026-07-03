@@ -199,7 +199,12 @@ function main() {
       // import profile (P7 dogfood slice). A red fixture means the
       // corresponding journal fact contract regressed.
       console.log('\n[verify] stage 6: journal fact fixtures');
-      const fixturePrefixes = ['rewind-demo-', 'work-demo-', 'atlas-demo-'];
+      const fixturePrefixes = [
+        'rewind-demo-',
+        'work-demo-',
+        'atlas-demo-',
+        'kfx-demo-',
+      ];
       const fixturesDir = path.join(ROOT, 'tests', 'fixtures');
       const fixtures = fs.existsSync(fixturesDir)
         ? fs
