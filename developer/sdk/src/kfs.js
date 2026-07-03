@@ -20,13 +20,16 @@ function usage(code) {
   process.stdout.write(
     [
       'usage: kfs create app <directory> [options]',
+      '       kfs create extension <directory> [options]',
       '       kfs kfx build | clean',
       '',
-      'create app options:',
-      '  --name <name>   product name (defaults to the directory basename)',
+      'create options:',
+      '  --name <name>   product/view name (defaults to the directory basename)',
       '  --workspace     wire platform deps as workspace:* (inside the monorepo)',
       '',
-      'kfx commands run inside a view extension package (a package.json with',
+      'create extension scaffolds a view extension package (kfx): src/view/',
+      'exports the View component, package.json carries the kungfuConfig',
+      'manifest. kfx commands run inside such a package (a package.json with',
       'kungfuConfig.config.view); build bundles src/view/ to dist/view/index.js',
       'with react and the capability SDK left external — the shell injects',
       'its own instances at load time.',
@@ -116,6 +119,33 @@ function createApp(directory, options) {
   );
 }
 
+function createExtension(directory, options) {
+  if (!directory) usage(1);
+  const targetDir = path.resolve(directory);
+  if (fs.existsSync(targetDir) && fs.readdirSync(targetDir).length > 0) {
+    fail(`target directory is not empty: ${targetDir}`);
+  }
+  const extName = options.name || path.basename(targetDir);
+  const extKey = extName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  scaffold('extension', targetDir, {
+    __EXT_NAME__: extName,
+    __EXT_KEY__: extKey,
+    __KF_DEP_VERSION__: options.workspace ? 'workspace:*' : '^4.0.0-alpha.0',
+  });
+  process.stdout.write(
+    [
+      `created ${extName} at ${targetDir}`,
+      '',
+      'next steps:',
+      `  cd ${directory}`,
+      '  pnpm install   # or npm/yarn',
+      '  pnpm build     # kfs kfx build -> dist/view/index.js',
+      '  npm pack       # the tgz is the install unit: kungfu kfx install <tgz>',
+      '',
+    ].join('\n'),
+  );
+}
+
 // ── kfx view extension build ──────────────────────────────────────────────
 // Modules that stay external and are injected by the shell at load time; a
 // view extension must never ship its own copy of these.
@@ -172,8 +202,9 @@ const [command, kind, directory] = positional;
 
 if (!command) usage(1);
 if (command === 'create') {
-  if (kind !== 'app') fail(`unknown target: ${kind} (supported: app)`);
-  createApp(directory, options);
+  if (kind === 'app') createApp(directory, options);
+  else if (kind === 'extension') createExtension(directory, options);
+  else fail(`unknown target: ${kind} (supported: app, extension)`);
 } else if (command === 'kfx') {
   if (kind === 'build') await kfxBuild();
   else if (kind === 'clean') kfxClean();

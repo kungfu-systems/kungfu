@@ -1,0 +1,36 @@
+{
+  "name": "__EXT_KEY__",
+  "version": "0.1.0",
+  "description": "__EXT_NAME__ — a Kungfu view extension",
+  "main": "package.json",
+  "files": [
+    "dist",
+    "package.json",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "kfs kfx build",
+    "clean": "kfs kfx clean"
+  },
+  "dependencies": {
+    "@kungfu-tech/api": "__KF_DEP_VERSION__",
+    "@kungfu-tech/kfx": "__KF_DEP_VERSION__"
+  },
+  "devDependencies": {
+    "@kungfu-tech/sdk": "__KF_DEP_VERSION__",
+    "@types/react": "^18.3.3"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1"
+  },
+  "kungfuConfig": {
+    "key": "__EXT_KEY__",
+    "name": "__EXT_NAME__",
+    "config": {
+      "view": {
+        "title": "__EXT_NAME__",
+        "capabilities": []
+      }
+    }
+  }
+}

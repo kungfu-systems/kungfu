@@ -39,7 +39,7 @@ and the map routes a question to whichever doc answers it.
 | What gates must a release pass? | `provenance.md` + [`version-release-design.md`](version-release-design.md) | verify | partial |
 | If kungfu itself misbehaves, how do I localize it? | [`debugging.md`](debugging.md) | verify | stable |
 | How do I record an agent run and find why it failed (Rewind)? | [`rewind.md`](rewind.md) | use | stable · pre-release install path |
-| How do I write an extension (`kfx`)? | `extensions.md` (+ [`../examples/`](../examples)) | use | to write · examples exist |
+| How do I write an extension (`kfx`)? | [`extensions.md`](extensions.md) | use | stable · view kfx; runtime facets mid-migration |
 
 ## Also asking about
 
@@ -59,8 +59,8 @@ route to the row that answers them:
   ([`event-model.md`](event-model.md)).
 - **how do I run it / get started / install** → *source to a binary*
   ([`buildchain.md`](buildchain.md)) and [`../CONTRIBUTING.md`](../CONTRIBUTING.md).
-  (A one-command run-it path is planned — see `extensions.md` status and the
-  build/release work tracked in [`known-limits.md`](known-limits.md).)
+  (A one-command run-it path is planned — see the build/release work tracked
+  in [`known-limits.md`](known-limits.md).)
 - **N-API / pybind11 / bindings / FFI** → *adapter boundaries*
   ([`adapters.md`](adapters.md)).
 - **signature / checksum / supply chain / SBOM** → *verify a release binary*

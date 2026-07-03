@@ -1,0 +1,25 @@
+# __EXT_NAME__
+
+A Kungfu view extension (kfx). One package, one view: `src/view/index.tsx`
+exports the `View` component; everything static about it lives in
+`package.json` under `kungfuConfig`.
+
+## Develop
+
+```sh
+pnpm install
+pnpm build       # kfs kfx build → dist/view/index.js
+```
+
+## Distribute
+
+```sh
+npm pack                          # the tgz is the complete install unit
+kungfu kfx install <tgz>          # extracts into <home>/extensions/__EXT_KEY__
+kungfu kfx list
+kungfu kfx remove __EXT_KEY__
+```
+
+See `docs/extensions.md` in the kungfu repository for the full contract:
+manifest fields, the build externals, discovery roots and the install
+lifecycle.
