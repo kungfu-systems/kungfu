@@ -38,22 +38,22 @@ function spanFailed(span: RewindSpan): boolean {
 }
 
 function spanLabel(span: RewindSpan): { head: string; color: string } {
-  const { open, close } = span;
+  const { open, close, retry } = span;
+  const suffix = retry ? ` (retry #${retry.attempt ?? '?'})` : '';
   if (open.kind === 'ModelRequest') {
     return {
-      head: `model ${open.provider ?? '?'}/${open.model ?? '?'}`,
+      head: `model ${open.provider ?? '?'}/${open.model ?? '?'}${suffix}`,
       color: close?.status === CallStatus.Error ? COLOR.error : COLOR.accent,
     };
   }
-  if (open.kind === 'ToolCall') {
-    return {
-      head: `tool ${open.toolName ?? '?'}`,
-      color: close?.status === CallStatus.Error ? COLOR.error : COLOR.ok,
-    };
-  }
   return {
-    head: `retry #${open.attempt ?? '?'}`,
-    color: COLOR.retry,
+    head: `tool ${open.toolName ?? '?'}${suffix}`,
+    color:
+      close?.status === CallStatus.Error
+        ? COLOR.error
+        : retry
+          ? COLOR.retry
+          : COLOR.ok,
   };
 }
 
@@ -242,10 +242,10 @@ function SpanDetail({ span }: { span: RewindSpan }) {
       {open.kind === 'ToolCall' ? (
         <Fact name="tool" value={open.toolName} />
       ) : null}
-      {open.kind === 'RetryMarker' ? (
+      {span.retry ? (
         <>
-          <Fact name="attempt" value={open.attempt} />
-          <Fact name="retry of" value={open.retryOfSpanId?.slice(0, 16)} />
+          <Fact name="retry attempt" value={span.retry.attempt} />
+          <Fact name="retry of" value={span.retry.retryOfSpanId?.slice(0, 16)} />
         </>
       ) : null}
       {close?.error ? (

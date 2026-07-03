@@ -182,6 +182,7 @@ def causal_tree(runtime_dir, run_id):
     spans = {}
     order = []
     run_facts = {}
+    pending_retry = {}
     for msg_type, header, payload in frames:
         name = MSG_TYPE_NAMES[msg_type]
         facts = decode_native(msg_type, payload)
@@ -190,8 +191,16 @@ def causal_tree(runtime_dir, run_id):
             run_facts[name] = facts
             continue
         span = facts.get("span_id")
-        if name in ("ModelRequest", "ToolCall", "RetryMarker"):
-            spans[span] = {"open": (name, facts), "close": None}
+        if name == "RetryMarker":
+            # a retry is an annotation on the attempt's span, not a node of
+            # its own — the hook gives it the same span_id as the attempt
+            pending_retry[span] = facts
+        elif name in ("ModelRequest", "ToolCall"):
+            spans[span] = {
+                "open": (name, facts),
+                "close": None,
+                "retry": pending_retry.pop(span, None),
+            }
             order.append(span)
         else:
             if span in spans:
@@ -222,10 +231,11 @@ def render_tree(runtime_dir, run_id):
         close = spans[span]["close"]
         if kind == "ModelRequest":
             head = f"model {facts.get('provider')}/{facts.get('model')}"
-        elif kind == "ToolCall":
-            head = f"tool {facts.get('tool_name')}"
         else:
-            head = f"retry attempt {facts.get('attempt')} of {facts.get('retry_of_span_id', '')[:8]}"
+            head = f"tool {facts.get('tool_name')}"
+        retry = spans[span].get("retry")
+        if retry:
+            head += f" (retry #{retry.get('attempt')})"
         if close:
             _, cf = close
             status = "ok" if cf.get("status") == 0 else "✗ error"

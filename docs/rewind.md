@@ -8,11 +8,27 @@
 This page is the complete path: install → capture → diagnose → replay →
 clean up. It assumes nothing beyond a shell.
 
-## Install (pre-release: from a built workspace)
+## Install
 
-Release binaries are not published yet; today Rewind runs from a built
-workspace. Install `fnm` and `uv` once (see [CONTRIBUTING](../CONTRIBUTING.md)),
-then:
+Release binaries are not published yet. Two paths today:
+
+**Desktop app (macOS arm64)** — build the installer once from a workspace:
+
+```sh
+./kungfu-code --filter @kungfu-tech/artifact-kungfu run dist
+```
+
+This produces `framework/gui/dist/Kungfu-<version>-arm64.dmg` (and a zip).
+Mount, drag `Kungfu.app` to Applications, launch. The app is self-contained —
+the kungfu runtime ships inside it. Pre-release builds are unsigned: on first
+launch use right-click → Open, or `xattr -d com.apple.quarantine
+/Applications/Kungfu.app`. Point it at a home with
+`KF_RUNTIME_DIR=<home-dir>/runtime`. Linux (AppImage/deb) and Windows (nsis)
+use the same electron-builder config and get wired up with signing in the
+release pipeline (next gate).
+
+**CLI (pre-release: from a built workspace)** — install `fnm` and `uv` once
+(see [CONTRIBUTING](../CONTRIBUTING.md)), then:
 
 ```sh
 git clone git@github.com:kungfu-systems/kungfu.git
@@ -51,9 +67,9 @@ uv run --frozen python .devtools/kfc.py -H <home-dir> \
   spawned inside a tool inherits its causal parent — one chain, across
   runtimes, in one journal.
 - A run writes two things under `<home-dir>/runtime`: the journal itself
-  (under `system/rewind/<run-id>/` — the recorded frames) and the trace
-  bundle (under `rewind/<run-id>/bundle/` — the schema blob + manifest that
-  make the journal decodable without this runtime).
+  (under `journal/system/rewind/<run-id>/` — the recorded frames) and the
+  trace bundle (under `rewind/<run-id>/bundle/` — the schema blob + manifest
+  that make the journal decodable without this runtime).
 
 ## Diagnose from the command line
 
@@ -80,6 +96,23 @@ replay: the journal is re-read on the same runtime that recorded it, and the
 trace bundle alone must reproduce every fact — tampering or schema drift
 fails loudly.
 
+## Share a run — export, open anywhere
+
+A run exports into one portable file (journal + the self-describing bundle),
+and that file re-opens anywhere — offline, no services, even after the
+original home is gone:
+
+```sh
+# pack:  <run-id>.rewind.zip
+uv run --frozen python .devtools/kfc.py -H <home-dir> rewind export --run <run-id>
+
+# open anywhere: extract, verify the record end to end, print the causal tree
+uv run --frozen python .devtools/kfc.py -H <anything> rewind open <file.rewind.zip>
+```
+
+`open` refuses quietly wrong data: the archive's record must pass the same
+two-path verification as a local run before anything is shown.
+
 ## Diagnose in the app
 
 ```sh
@@ -105,7 +138,8 @@ A run is files under `<home-dir>/runtime` — delete the run's directories and
 it is gone:
 
 ```sh
-rm -r <home-dir>/runtime/system/rewind/<run-id> <home-dir>/runtime/rewind/<run-id>
+rm -r <home-dir>/runtime/journal/system/rewind/<run-id> \
+      <home-dir>/runtime/rewind/<run-id>
 ```
 
 Default mode never uploads anything: capture, storage, diagnosis and replay
@@ -124,13 +158,15 @@ release gates (`./kungfu-code verify --full` runs them all):
 | `rewind-demo-model-drift/` | the model picks a tool that does not exist — the drift is visible in the model node's output, and the consequence in the failing step after it |
 | `rewind-demo-cross-runtime/` | python agent → node tool, one causal chain in one journal |
 | `rewind-demo-forensic-replay/` | re-open + two-path verify + tamper rejection |
+| `rewind-demo-export/` | export one portable file, delete the original, open + verify elsewhere |
 
 Each runs standalone: `tests/fixtures/<name>/run.sh`.
 
 ## Known limits (pre-release)
 
-- Install is workspace-build only; packaged three-platform installers are the
-  next release gate.
+- Installers are built-from-workspace, macOS arm64 only, unsigned. The
+  Linux/Windows targets and signing/notarization belong to the release
+  pipeline — the next gate before public artifacts.
 - On macOS, run the workspace CLI from `framework/core` with
   `DYLD_FALLBACK_LIBRARY_PATH=<repo>/framework/core/dist/kfc` exported: the
   dev-python binding resolves `libnode` relative to the executable, and shell

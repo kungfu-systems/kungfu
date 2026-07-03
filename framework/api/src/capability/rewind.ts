@@ -77,6 +77,8 @@ export type RewindSpan = {
   spanId: string;
   open: RewindEvent;
   close?: RewindEvent;
+  // a retry is an annotation on the attempt's span (same span_id), not a node
+  retry?: RewindEvent;
   children: RewindSpan[];
 };
 
@@ -209,14 +211,20 @@ function decode(msgType: number, bytes: Uint8Array): Omit<RewindEvent, 'genTime'
 function buildTree(events: RewindEvent[]): RewindSpan[] {
   const spans = new Map<string, RewindSpan>();
   const order: string[] = [];
+  const pendingRetry = new Map<string, RewindEvent>();
   for (const event of events) {
     if (!event.spanId) continue;
-    if (
-      event.kind === 'ModelRequest' ||
-      event.kind === 'ToolCall' ||
-      event.kind === 'RetryMarker'
-    ) {
-      spans.set(event.spanId, { spanId: event.spanId, open: event, children: [] });
+    if (event.kind === 'RetryMarker') {
+      // arrives just before the attempt's ToolCall with the same span_id
+      pendingRetry.set(event.spanId, event);
+    } else if (event.kind === 'ModelRequest' || event.kind === 'ToolCall') {
+      spans.set(event.spanId, {
+        spanId: event.spanId,
+        open: event,
+        retry: pendingRetry.get(event.spanId),
+        children: [],
+      });
+      pendingRetry.delete(event.spanId);
       order.push(event.spanId);
     } else {
       const span = spans.get(event.spanId);

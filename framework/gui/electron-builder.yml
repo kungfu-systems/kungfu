@@ -13,5 +13,12 @@ extraResources:
   - from: ../core/dist/kfc
     to: kfc
 mac:
-  target: dir
+  # dir = the pack verb's unpacked app (fast, CI-friendly); dmg + zip = the
+  # dist verb's installable artifacts. Unsigned pre-release (identity: null):
+  # first launch needs right-click-Open or removing the quarantine attribute
+  # — documented in docs/rewind.md.
+  target:
+    - dir
+    - dmg
+    - zip
   identity: null
