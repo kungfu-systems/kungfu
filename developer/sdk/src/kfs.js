@@ -119,7 +119,7 @@ function createApp(directory, options) {
       'next steps:',
       `  cd ${directory}`,
       '  pnpm install   # or npm/yarn',
-      '  pnpm dev       # launch against a built kungfu-core (KFC_DIR to override)',
+      '  pnpm dev       # launch against a built kungfu-core (KUNGFU_DIR to override)',
       '',
     ].join('\n'),
   );

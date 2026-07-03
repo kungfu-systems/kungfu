@@ -19,8 +19,8 @@ import React from 'react';
 const nodeRequire = createRequire(import.meta.url);
 
 function boot() {
-  const kfcDir =
-    process.env.KFC_DIR ||
+  const kungfuDir =
+    process.env.KUNGFU_DIR ||
     path.join(
       path.dirname(nodeRequire.resolve('@kungfu-tech/core/package.json')),
       'dist',
@@ -28,7 +28,7 @@ function boot() {
     );
   const runtimeDir =
     process.env.KF_RUNTIME_DIR || path.join(process.cwd(), 'demo-runtime');
-  const binding = nodeRequire(path.join(kfcDir, 'kungfu_node.node'));
+  const binding = nodeRequire(path.join(kungfuDir, 'kungfu_node.node'));
   const ledger = openLedger({
     binding,
     locator: { runtimeDir },

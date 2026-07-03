@@ -1,6 +1,6 @@
 import {
   CLI_DIR,
-  KFC_DIR,
+  KUNGFU_DIR,
   KF_CONFIG_DIR,
   KF_HOME,
   KF_RUNTIME_DIR,
@@ -44,7 +44,7 @@ if (booleanProcessEnv(globalSetting?.system?.verifyLocation)) {
   process.env.KF_VERIFY_LOCATION = true;
 }
 
-process.env.KFC_DIR = dealSpaceInPath(KFC_DIR);
+process.env.KUNGFU_DIR = dealSpaceInPath(KUNGFU_DIR);
 process.env.CLI_DIR = dealSpaceInPath(CLI_DIR);
 process.env.KF_HOME = dealSpaceInPath(KF_HOME);
 process.env.KF_RUNTIME_DIR = dealSpaceInPath(KF_RUNTIME_DIR);

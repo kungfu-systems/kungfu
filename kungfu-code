@@ -29,7 +29,7 @@ set -eu
 cd "$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 
 # Load local cache proxy config: user-global first, then layer the optional in-repo override (both exported → passed to subprocesses).
-kfc_load_proxy() {
+kungfu_load_proxy() {
   _f="${XDG_CONFIG_HOME:-$HOME/.config}/kungfu/build-local.env"
   # shellcheck disable=SC1090
   [ -f "$_f" ] && . "$_f"
@@ -57,7 +57,7 @@ case "${1:-}" in
 esac
 
 # Normal build/dev task: load proxy config → check the two prerequisites → pin node → corepack pnpm
-kfc_load_proxy
+kungfu_load_proxy
 
 if ! command -v fnm >/dev/null 2>&1; then
   echo "kungfu-code: install fnm once first (node-side prerequisite) — 'arch -arm64 brew install fnm' (or see https://github.com/Schniz/fnm)" >&2

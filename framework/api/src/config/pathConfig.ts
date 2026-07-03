@@ -201,15 +201,15 @@ process.env.CLI_DIR = CLI_DIR;
 
 //================== kfc start ====================================
 const staticDevKfcDir = path.resolve('..', 'core', 'dist', 'kungfu');
-export const KFC_PARENT_DIR = production
+export const KUNGFU_PARENT_DIR = production
   ? globalThis.__kfResourcesPath
-  : path.dirname(process.env.KFC_DIR || staticDevKfcDir);
-export const KFC_DIR = process.env.KFC_DIR || path.join(KFC_PARENT_DIR, 'kungfu');
-process.env.KFC_DIR = KFC_DIR;
+  : path.dirname(process.env.KUNGFU_DIR || staticDevKfcDir);
+export const KUNGFU_DIR = process.env.KUNGFU_DIR || path.join(KUNGFU_PARENT_DIR, 'kungfu');
+process.env.KUNGFU_DIR = KUNGFU_DIR;
 
-export const PY_WHL_DIR = path.join(KFC_DIR, 'kungfu-wheel');
+export const PY_WHL_DIR = path.join(KUNGFU_DIR, 'kungfu-wheel');
 
-export const KFC_EXECUTABLE = process.platform === 'win32' ? 'kungfu.exe' : 'kungfu';
+export const KUNGFU_EXECUTABLE = process.platform === 'win32' ? 'kungfu.exe' : 'kungfu';
 export const EXTENSION_DIRS: string[] = Array.from(
   new Set(
     production
@@ -218,7 +218,7 @@ export const EXTENSION_DIRS: string[] = Array.from(
           ...((process.env.EXTENSION_DIRS || '').split(path.delimiter) || []),
         ]
       : [
-          path.resolve(KFC_PARENT_DIR, '..', '..', '..', 'extensions'),
+          path.resolve(KUNGFU_PARENT_DIR, '..', '..', '..', 'extensions'),
           path.resolve('node_modules', '@kungfu-tech'),
           path.resolve('dist'),
           ...((process.env.EXTENSION_DIRS || '').split(path.delimiter) || []),

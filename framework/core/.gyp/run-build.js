@@ -14,7 +14,7 @@ function cpVsDependencies() {
   // hoist 布局下才解得到）。与 useUvPython() 用 __dirname 的写法一致。
   const core_dir = path.join(__dirname, '..');
   const vs_dir = path.join(core_dir, '.deps', 'vs');
-  const kfc_dist = path.join(core_dir, 'dist', 'kfc');
+  const kfc_dist = path.join(core_dir, 'dist', 'kungfu');
   fs.cpSync(vs_dir, kfc_dist, { recursive: true });
 }
 

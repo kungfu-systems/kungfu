@@ -29,12 +29,12 @@ static FARPROC WINAPI load_exe_hook(unsigned int event, DelayLoadInfo *info) {
   char buf[1024];
   auto length = GetModuleFileNameA(NULL, buf, sizeof(buf));
   std::string main_exe_name(buf);
-  std::regex kfc_exe("kfc.exe");
+  std::regex kungfu_exe("kungfu.exe");
 
-  auto name_end = buf + length - strlen("kfc.exe");
-  auto libnode_dll = std::regex_replace(main_exe_name, kfc_exe, "libnode.dll");
+  auto name_end = buf + length - strlen("kungfu.exe");
+  auto libnode_dll = std::regex_replace(main_exe_name, kungfu_exe, "libnode.dll");
 
-  m = _stricmp(name_end, "kfc.exe") != 0 ? GetModuleHandle(NULL) : GetModuleHandleA(libnode_dll.c_str());
+  m = _stricmp(name_end, "kungfu.exe") != 0 ? GetModuleHandle(NULL) : GetModuleHandleA(libnode_dll.c_str());
   return (FARPROC)m;
 }
 

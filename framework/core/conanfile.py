@@ -113,7 +113,7 @@ class KungfuCoreConan(ConanFile):
     build_info_file = "kungfubuildinfo.json"
     build_dir = path.join(conanfile_dir, "build")
     dist_dir = path.join(conanfile_dir, "dist")
-    kfc_dir = path.join(dist_dir, "kfc")
+    kungfu_dir = path.join(dist_dir, "kungfu")
     kfs_dir = path.join(dist_dir, "kfs")
 
     def config_options(self):
@@ -200,8 +200,8 @@ class KungfuCoreConan(ConanFile):
             copy(
                 self,
                 "*",
-                path.join(src, "dist", "kfc"),
-                path.join(self.package_folder, "kfc"),
+                path.join(src, "dist", "kungfu"),
+                path.join(self.package_folder, "kungfu"),
             )
 
     def package_info(self):
@@ -473,7 +473,7 @@ class KungfuCoreConan(ConanFile):
         from wcmatch import glob as wcglob
 
         for file in wcglob.glob("*kfs*", flags=wcglob.EXTGLOB, root_dir=self.kfs_dir):
-            shutil.copy(path.join(self.kfs_dir, file), self.kfc_dir)
+            shutil.copy(path.join(self.kfs_dir, file), self.kungfu_dir)
         shutil.rmtree(self.kfs_dir)
         self.output.success("PyInstaller done")
 
@@ -489,13 +489,13 @@ class KungfuCoreConan(ConanFile):
         finally:
             os.chdir(cwd)
 
-        kfc_dist_dir = path.join(self.build_dir, "kfc.dist")
-        shutil.copytree(build_type, kfc_dist_dir)
-        shutil.rmtree(self.kfc_dir, ignore_errors=True)
-        shutil.move(kfc_dist_dir, self.kfc_dir)
+        kungfu_dist_dir = path.join(self.build_dir, "kfc.dist")
+        shutil.copytree(build_type, kungfu_dist_dir)
+        shutil.rmtree(self.kungfu_dir, ignore_errors=True)
+        shutil.move(kungfu_dist_dir, self.kungfu_dir)
         self.output.success("Nuitka done")
 
     def __run_freeze(self, build_type):
-        os.environ["KFC_PYI_HOOKS_PATH"] = self.pyi_hooks_dir
+        os.environ["KUNGFU_PYI_HOOKS_PATH"] = self.pyi_hooks_dir
         freeze = {"pyinstaller": self.__run_pyinstaller, "nuitka": self.__run_nuitka}
         freeze[str(self.options.freezer)](build_type)

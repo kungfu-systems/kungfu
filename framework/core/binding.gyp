@@ -22,7 +22,7 @@
       "<@(module_inputs)",
       "<!@(node -p \"require('glob').sync('src/python/**/*.*(py|spec)').join(' ');\")"
     ],
-    "kfc_inputs": [
+    "kungfu_inputs": [
       "<@(wheel_inputs)"
     ]
   },
@@ -150,7 +150,7 @@
         {
           "action_name": "freeze",
           "inputs": [
-            "<@(kfc_inputs)"
+            "<@(kungfu_inputs)"
           ],
           "outputs": [
             "<(module_path)/kungfubuildinfo.json"

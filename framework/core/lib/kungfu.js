@@ -6,22 +6,22 @@ module.exports = function () {
       const moduleName = '@kungfu-tech/core';
       const config = require(`${moduleName}/package.json`);
       const binary = config.binary;
-      const kfcDir =
-        process.env.KFC_DIR || `${moduleName}/${binary.module_path}`;
+      const kungfuDir =
+        process.env.KUNGFU_DIR || `${moduleName}/${binary.module_path}`;
 
       const nodeBinding = require.resolve(
-        `${kfcDir}/${binary.module_name}.node`,
+        `${kungfuDir}/${binary.module_name}.node`,
       );
       const electronBinding = nodeBinding.replace('_node.', '_electron.');
-      const kfcBinding = nodeBinding.replace('_node.', '_kfc.');
+      const kungfuBinding = nodeBinding.replace('_node.', '_cli.');
       const useElectron =
         process.platform !== 'win32' && 'electron' in process.versions;
       const useKfc =
-        process.platform === 'linux' && process.env.KFC_AS_VARIANT === 'node';
+        process.platform === 'linux' && process.env.KUNGFU_AS_VARIANT === 'node';
       const binding_path = useElectron
         ? electronBinding
         : useKfc
-        ? kfcBinding
+        ? kungfuBinding
         : nodeBinding;
       return require(binding_path);
     } catch (e) {

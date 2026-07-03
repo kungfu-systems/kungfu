@@ -100,22 +100,22 @@ def extend_hiddenimports(modules, executable_modules):
 
 
 def get_hookspath():
-    key = "KFC_PYI_HOOKS_PATH"
+    key = "KUNGFU_PYI_HOOKS_PATH"
     return [] if key not in os.environ else os.environ[key].split(os.pathsep)
 
 
 def get_runtimehooks():
-    key = "KFC_PYI_RUNTIME_HOOKS"
+    key = "KUNGFU_PYI_RUNTIME_HOOKS"
     return None if key not in os.environ else os.environ[key].split(",")
 
 
 ###############################################################################
 block_cipher = None
 
-kfc_name = "kfc"
+kungfu_name = "kungfu"
 kfs_name = "kfs"
 
-kfc_a = Analysis(
+kungfu_a = Analysis(
     scripts=["kfc.py"],
     pathex=extra_python_paths,
     binaries=[],
@@ -172,20 +172,20 @@ kfc_a = Analysis(
 )
 kfs_a = Analysis(scripts=["kfs.py"], pathex=extra_python_paths, cipher=block_cipher)
 
-MERGE((kfc_a, kfc_name, kfc_name), (kfs_a, kfs_name, kfs_name))
+MERGE((kungfu_a, kungfu_name, kungfu_name), (kfs_a, kfs_name, kfs_name))
 
-kfc_pyz = PYZ(kfc_a.pure, kfc_a.zipped_data, cipher=block_cipher)
-kfc_exe = EXE(
-    kfc_pyz,
-    kfc_a.scripts,
-    name=kfc_name,
+kungfu_pyz = PYZ(kungfu_a.pure, kungfu_a.zipped_data, cipher=block_cipher)
+kungfu_exe = EXE(
+    kungfu_pyz,
+    kungfu_a.scripts,
+    name=kungfu_name,
     console=True,
     debug=False,
     exclude_binaries=True,
     strip=False,
 )
-kfc_coll = COLLECT(
-    kfc_exe, kfc_a.binaries, kfc_a.zipfiles, kfc_a.datas, name=kfc_name, strip=False
+kungfu_coll = COLLECT(
+    kungfu_exe, kungfu_a.binaries, kungfu_a.zipfiles, kungfu_a.datas, name=kungfu_name, strip=False
 )
 
 kfs_pyz = PYZ(kfs_a.pure, kfs_a.zipped_data, cipher=block_cipher)
@@ -213,12 +213,12 @@ def copy_dll_x64(dll_pattern):
     """
     from wcmatch import glob
 
-    kfc_dir = kfc_coll.name
+    kungfu_dir = kungfu_coll.name
 
     def locate(file):
-        return abspath(make_path(kfc_dir, file))
+        return abspath(make_path(kungfu_dir, file))
 
-    for dll_file in glob.glob(dll_pattern, flags=glob.EXTGLOB, root_dir=kfc_dir):
+    for dll_file in glob.glob(dll_pattern, flags=glob.EXTGLOB, root_dir=kungfu_dir):
         dll_path = pathlib.Path(dll_file)
         x64_dll = make_path(dll_path.parent, dll_path.stem + "-x64" + ".dll")
         logger.info(f"Copying {locate(dll_path)} to {locate(x64_dll)}")

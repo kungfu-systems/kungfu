@@ -2,7 +2,7 @@
 
 from os import environ
 
-ENV_VARIANT_KEY = "KFC_AS_VARIANT"
+ENV_VARIANT_KEY = "KUNGFU_AS_VARIANT"
 
 
 def disable():

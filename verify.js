@@ -127,21 +127,21 @@ function main() {
 
   // ── Stage 2: kfc artifact assertions ──────────────────────────────
   console.log('\n[verify] stage 2: kfc artifact assertions');
-  const distKfc = path.join(ROOT, 'framework', 'core', 'dist', 'kfc');
-  let kfcBin = null;
+  const distKfc = path.join(ROOT, 'framework', 'core', 'dist', 'kungfu');
+  let kungfuBin = null;
   if (fs.existsSync(distKfc) && fs.statSync(distKfc).isDirectory()) {
     pass('dist/kfc directory exists', path.relative(ROOT, distKfc));
-    kfcBin = path.join(distKfc, isWin ? 'kfc.exe' : 'kfc');
-    if (fs.existsSync(kfcBin) && fs.statSync(kfcBin).isFile()) {
-      let detail = path.relative(ROOT, kfcBin);
+    kungfuBin = path.join(distKfc, isWin ? 'kungfu.exe' : 'kungfu');
+    if (fs.existsSync(kungfuBin) && fs.statSync(kungfuBin).isFile()) {
+      let detail = path.relative(ROOT, kungfuBin);
       if (!isWin) {
-        const mode = fs.statSync(kfcBin).mode;
-        if (!(mode & 0o111)) { fail('kfc executable', `${detail} missing executable bit`); kfcBin = null; }
+        const mode = fs.statSync(kungfuBin).mode;
+        if (!(mode & 0o111)) { fail('kfc executable', `${detail} missing executable bit`); kungfuBin = null; }
         else pass('kfc executable exists', detail);
       } else pass('kfc executable exists', detail);
     } else {
-      fail('kfc executable exists', `not found ${path.relative(ROOT, kfcBin)} (freeze first)`);
-      kfcBin = null;
+      fail('kfc executable exists', `not found ${path.relative(ROOT, kungfuBin)} (freeze first)`);
+      kungfuBin = null;
     }
   } else {
     fail('dist/kfc directory exists', `not found ${path.relative(ROOT, distKfc)} (freeze first; in quick mode, confirm it was built)`);
@@ -183,8 +183,8 @@ function main() {
 
   // ── Stage 3: kfc runtime smoke ────────────────────────────────────
   console.log('\n[verify] stage 3: kfc runtime smoke (kfc --version)');
-  if (kfcBin) {
-    const r = spawnSync(kfcBin, ['--version'], { encoding: 'utf8' });
+  if (kungfuBin) {
+    const r = spawnSync(kungfuBin, ['--version'], { encoding: 'utf8' });
     const out = `${r.stdout || ''}${r.stderr || ''}`.trim();
     if (r.status !== 0) {
       fail('kfc --version exits 0', `exit ${r.status == null ? 'signal ' + r.signal : r.status}; output: ${out.slice(0, 200)}`);

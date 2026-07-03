@@ -112,7 +112,7 @@ export type ShellRuntimeInfo = {
   ok: boolean;
   message: string;
   runtimeDir: string;
-  kfcVersion: string;
+  kungfuVersion: string;
   buildInfo: Record<string, unknown> | null;
   exports: string[];
   longfistTypes: { name: string; fields: string[] }[];

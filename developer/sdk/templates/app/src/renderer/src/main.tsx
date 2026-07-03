@@ -126,7 +126,7 @@ function App() {
         <Ledger kfe={state.kfe} runtimeDir={state.runtimeDir} />
       ) : (
         <p style={{ ...mono, color: '#858585' }}>
-          build @kungfu-tech/core (or set KFC_DIR) and relaunch
+          build @kungfu-tech/core (or set KUNGFU_DIR) and relaunch
         </p>
       )}
     </div>

@@ -14,7 +14,7 @@ export function View({ shell }: KfxViewProps) {
     <div style={panelStyle}>
       <h2 style={headingStyle}>__EXT_NAME__</h2>
       <div style={mono}>
-        runtime {shell.info.kfcVersion || 'n/a'} · profile{' '}
+        runtime {shell.info.kungfuVersion || 'n/a'} · profile{' '}
         {shell.state.profileId}
       </div>
     </div>

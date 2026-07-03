@@ -112,7 +112,7 @@ class PrioritizedCommandGroup(click.Group):
         return copy_from_parent
 
 
-@click.group("kfc", invoke_without_command=True, cls=PrioritizedCommandGroup)
+@click.group("kungfu", invoke_without_command=True, cls=PrioritizedCommandGroup)
 @click.option(
     "-H",
     "--home",

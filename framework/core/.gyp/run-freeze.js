@@ -201,15 +201,15 @@ function freezeNuitka(bt) {
   fs.mkdirSync(path.dirname(distKfc), { recursive: true });
   fs.renameSync(kfcDist, distKfc);
 
-  // nuitka standalone 入口名为 kfc.bin(Unix)/kfc.exe(Win)；app 栈按 'kungfu'(Unix)/'kungfu.exe'(Win)
-  // 定位可执行（framework/api pathConfig/processUtils 的 kfcName）。把 nuitka 入口重命名为
+  // nuitka standalone 入口名为 kfc.bin(Unix)/kungfu.exe(Win)；app 栈按 'kungfu'(Unix)/'kungfu.exe'(Win)
+  // 定位可执行（framework/api pathConfig/processUtils 的 kungfuName）。把 nuitka 入口重命名为
   // kungfu（用 rename 不用符号链，保持 nuitka 产物无符号链、electron-builder 打包干净）。
   if (!isWin) {
     const binPath = path.join(distKfc, 'kfc.bin');
     const kungfuPath = path.join(distKfc, 'kungfu');
     if (fs.existsSync(binPath)) fs.renameSync(binPath, kungfuPath);
   } else {
-    const exePath = path.join(distKfc, 'kfc.exe');
+    const exePath = path.join(distKfc, 'kungfu.exe');
     const kungfuExe = path.join(distKfc, 'kungfu.exe');
     if (fs.existsSync(exePath)) fs.renameSync(exePath, kungfuExe);
   }
@@ -245,13 +245,13 @@ function freezePyinstaller(bt) {
       env: {
         ...process.env,
         CMAKE_BUILD_TYPE: bt,
-        KFC_PYI_HOOKS_PATH: path.join(CORE, 'src', 'python', 'pyi-hooks'),
+        KUNGFU_PYI_HOOKS_PATH: path.join(CORE, 'src', 'python', 'pyi-hooks'),
       },
     },
   );
   mergeKfs();
   promote();
-  if (isWin) verifyWindowsSymbols(path.join(CORE, 'dist', 'kfc'));
+  if (isWin) verifyWindowsSymbols(path.join(CORE, 'dist', 'kungfu'));
   console.log('[freeze] ✅ dist/kfc 就绪（pyinstaller 扁平视图 + _internal 真身）');
 }
 

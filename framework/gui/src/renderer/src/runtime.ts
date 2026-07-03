@@ -27,7 +27,7 @@ export type Runtime = {
   ok: boolean;
   message: string;
   runtimeDir: string;
-  kfcVersion: string;
+  kungfuVersion: string;
   buildInfo: Record<string, unknown> | null;
   exports: string[];
   longfistTypes: { name: string; fields: string[] }[];
@@ -59,7 +59,7 @@ export function bootRuntime(): Runtime {
   const runtimeDir = env.KF_RUNTIME_DIR || '';
   const base: Omit<Runtime, 'ok' | 'message'> = {
     runtimeDir,
-    kfcVersion: env.KFC_VERSION || '',
+    kungfuVersion: env.KUNGFU_VERSION || '',
     buildInfo: null,
     exports: [],
     longfistTypes: [],

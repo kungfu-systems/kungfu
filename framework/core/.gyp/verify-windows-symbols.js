@@ -13,7 +13,7 @@
 //   node .gyp/verify-windows-symbols.js [dist-kfc-dir]
 // or from the freeze pipeline:
 //   const { verifyWindowsSymbols } = require('./verify-windows-symbols');
-//   verifyWindowsSymbols(path.join(CORE, 'dist', 'kfc'));
+//   verifyWindowsSymbols(path.join(CORE, 'dist', 'kungfu'));
 
 const fs = require('fs');
 const path = require('path');
@@ -62,6 +62,6 @@ function verifyWindowsSymbols(distKfc) {
 module.exports = { verifyWindowsSymbols };
 
 if (require.main === module) {
-  const dir = process.argv[2] || path.resolve(__dirname, '..', 'dist', 'kfc');
+  const dir = process.argv[2] || path.resolve(__dirname, '..', 'dist', 'kungfu');
   verifyWindowsSymbols(dir);
 }

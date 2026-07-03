@@ -31,7 +31,7 @@ import {
 // Resolve the kungfu runtime directory that holds libkungfu.dylib and the
 // kungfu_electron.node binding. In development it lives in the kungfu-core
 // package; once packaged it is shipped as an extraResource under Resources/kungfu.
-const kfcDir = app.isPackaged
+const kungfuDir = app.isPackaged
   ? path.join(process.resourcesPath, 'kungfu')
   : path.join(
       path.dirname(require.resolve('@kungfu-tech/core/package.json')),
@@ -39,7 +39,7 @@ const kfcDir = app.isPackaged
       'kungfu',
     );
 
-const bindingPath = path.join(kfcDir, 'kungfu_electron.node');
+const bindingPath = path.join(kungfuDir, 'kungfu_electron.node');
 
 // Export before the renderer process is created so both processes inherit them.
 // The default runtime home must be writable: userData when packaged (never
@@ -63,11 +63,11 @@ process.env.KF_EXTENSION_PATH =
 // Prove the frozen runtime CLI runs standalone next to the binding, and hand
 // the result to the renderer for display.
 try {
-  const kfcBin = path.join(path.dirname(process.env.KFE_PATH), 'kungfu');
-  const out = execFileSync(kfcBin, ['--version'], { timeout: 10000 });
-  process.env.KFC_VERSION = out.toString().trim();
+  const kungfuBin = path.join(path.dirname(process.env.KFE_PATH), 'kungfu');
+  const out = execFileSync(kungfuBin, ['--version'], { timeout: 10000 });
+  process.env.KUNGFU_VERSION = out.toString().trim();
 } catch {
-  process.env.KFC_VERSION = '';
+  process.env.KUNGFU_VERSION = '';
 }
 
 // Probe the binding in the main (node) process.

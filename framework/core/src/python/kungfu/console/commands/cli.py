@@ -14,7 +14,7 @@ import os
 @click.option("-v", "--version", is_flag=True, help="show cli version")
 @kfc.pass_context()
 def cli(ctx, commands, list, help, version):
-    os.environ["KFC_AS_VARIANT"] = "node"
+    os.environ["KUNGFU_AS_VARIANT"] = "node"
     cli_prod_path = os.path.abspath(
         os.path.join(
             os.path.dirname(__file__),

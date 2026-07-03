@@ -240,7 +240,7 @@ function App() {
       ok: runtime.ok,
       message: runtime.message,
       runtimeDir: runtime.runtimeDir,
-      kfcVersion: runtime.kfcVersion,
+      kungfuVersion: runtime.kungfuVersion,
       buildInfo: runtime.buildInfo,
       exports: runtime.exports,
       longfistTypes: runtime.longfistTypes,
