@@ -1,0 +1,51 @@
+{
+  "name": "@kungfu-tech/kfx-view-status",
+  "author": {
+    "name": "Kungfu",
+    "email": "info@kungfu.link"
+  },
+  "version": "4.0.0-alpha.0",
+  "description": "Kungfu view extension: Status",
+  "license": "Apache-2.0",
+  "main": "package.json",
+  "repository": {
+    "url": "https://github.com/kungfu-systems/kungfu.git"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "package.json",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "kfs kfx build",
+    "clean": "kfs kfx clean"
+  },
+  "dependencies": {
+    "@kungfu-tech/api": "workspace:*",
+    "@kungfu-tech/kfx": "workspace:*"
+  },
+  "devDependencies": {
+    "@kungfu-tech/sdk": "workspace:*",
+    "@types/react": "^18.3.3"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1"
+  },
+  "kungfuConfig": {
+    "key": "system-status",
+    "name": "Status",
+    "config": {
+      "view": {
+        "title": "Status",
+        "capabilities": [
+          "ledger"
+        ],
+        "system": true
+      }
+    }
+  }
+}

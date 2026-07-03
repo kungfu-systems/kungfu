@@ -1,0 +1,39 @@
+{
+  "name": "@kungfu-tech/kfx-suite-system",
+  "author": {
+    "name": "Kungfu",
+    "email": "info@kungfu.link"
+  },
+  "version": "4.0.0-alpha.0",
+  "description": "Kungfu System Suite — the shell's own faces: settings, kfx manager, status",
+  "license": "Apache-2.0",
+  "main": "package.json",
+  "repository": {
+    "url": "https://github.com/kungfu-systems/kungfu.git"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "files": [
+    "package.json",
+    "README.md"
+  ],
+  "dependencies": {
+    "@kungfu-tech/kfx-view-settings": "workspace:*",
+    "@kungfu-tech/kfx-view-kfx-manager": "workspace:*",
+    "@kungfu-tech/kfx-view-status": "workspace:*"
+  },
+  "kungfuConfig": {
+    "key": "system",
+    "name": "System Suite",
+    "suite": {
+      "title": "System",
+      "members": [
+        "settings",
+        "kfx-manager",
+        "system-status"
+      ]
+    }
+  }
+}
