@@ -260,14 +260,49 @@ def _patch_langchain(module):
     base_tool._kungfu_rewind_patched = True
 
 
+# The demo toolkit is the built-in mechanism probe (the seam shape). Real
+# framework adapters ship as kfx packages whose `config.adapter` form the
+# supervisor discovers and injects, registering themselves here at load time.
+# LangChain is still built in transitionally — it migrates to a kfx package in
+# the next stage; keeping it registered means nothing regresses meanwhile.
 ADAPTERS = {
     "rewind_demo_toolkit": _patch_demo_toolkit,
-    # BaseTool lives in `langchain_core.tools.base`; older layouts exposed it
-    # from the `langchain_core.tools` package itself. Register both — the
-    # patcher no-ops when BaseTool is absent or already wrapped.
-    "langchain_core.tools.base": _patch_langchain,
-    "langchain_core.tools": _patch_langchain,
+    "langchain_core.tools.base": _patch_langchain,  # TODO(kfx-migrate): -> kfx package
+    "langchain_core.tools": _patch_langchain,       # TODO(kfx-migrate): -> kfx package
 }
+
+# module names a kfx adapter file may import as its patch API (they are the
+# capture primitives above; exposed so an out-of-core adapter needs no kungfu
+# import to build spans): register_adapter, _CallCapture, _render, new_span,
+# ENV_PARENT_SPAN.
+ENV_PLUGIN_ADAPTERS = "KUNGFU_REWIND_ADAPTERS"
+
+
+def register_adapter(module_name, patcher):
+    """Bind a post-import patcher to a module name. A kfx adapter file calls
+    this at load time; the meta-path finder applies the patch once that module
+    is imported by the traced program."""
+    ADAPTERS[module_name] = patcher
+
+
+def _load_plugin_adapters():
+    # The supervisor discovers kfx `config.adapter` forms and announces their
+    # python entry files in the environment (pathsep-joined). Import each so it
+    # registers its patchers. Discovery lives in the supervisor (it has kungfu
+    # and reads manifests); this hook stays dependency-free and just loads what
+    # it is told — a bad adapter never breaks the traced program.
+    listed = os.environ.get(ENV_PLUGIN_ADAPTERS, "")
+    for index, path in enumerate(p for p in listed.split(os.pathsep) if p):
+        try:
+            spec = importlib.util.spec_from_file_location(
+                f"_kfx_adapter_{index}", path
+            )
+            if spec is None or spec.loader is None:
+                continue
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+        except Exception:  # noqa: BLE001 — a broken kfx adapter must not break the run
+            continue
 
 
 class _AdapterLoader(importlib.abc.Loader):
@@ -304,4 +339,7 @@ class _AdapterFinder(importlib.abc.MetaPathFinder):
 
 def install_adapters():
     if setup():
+        # load kfx adapter plugins first so their patchers are registered
+        # before any traced import can trigger the finder
+        _load_plugin_adapters()
         sys.meta_path.insert(0, _AdapterFinder())

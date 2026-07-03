@@ -33,7 +33,7 @@ from kungfu.rewind import (
     MSG_RUN_END,
     SCHEMA_VERSION,
 )
-from kungfu.rewind import bundle, events
+from kungfu.rewind import adapters, bundle, events
 from kungfu.rewind.fb.RunStatus import RunStatus
 from kungfu.rewind.ingest import IngestServer
 from kungfu.rewind.schema_registry import register_user_schema
@@ -131,7 +131,16 @@ class Supervisor:
         # whatever the environment already had.
         env[ENV_INGEST] = self.ingest.endpoint
         existing = env.get("PYTHONPATH")
-        env["PYTHONPATH"] = _HOOK_DIR + os.pathsep + existing if existing else _HOOK_DIR
+        # kfx adapter plugins: discover python adapter forms in the extension
+        # roots and announce their entry files to the child hook; put their
+        # package dirs on PYTHONPATH so an adapter can import its own siblings.
+        adapter_entries, adapter_dirs = adapters.discover_python_adapters(self.runtime_dir)
+        if adapter_entries:
+            env[adapters.ENV_PLUGIN_ADAPTERS] = os.pathsep.join(adapter_entries)
+        pythonpath_parts = [_HOOK_DIR, *adapter_dirs]
+        if existing:
+            pythonpath_parts.append(existing)
+        env["PYTHONPATH"] = os.pathsep.join(pythonpath_parts)
         node_require = f"--require {os.path.join(_HOOK_DIR, 'rewind_hook.js')}"
         node_existing = env.get("NODE_OPTIONS")
         env["NODE_OPTIONS"] = (
