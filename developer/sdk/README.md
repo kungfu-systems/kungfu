@@ -17,9 +17,21 @@ pnpm install
 pnpm dev                       # launch against a built @kungfu-tech/core
 ```
 
-Options:
+It also scaffolds view extensions (kfx) — installable view packages the
+reference shell discovers and mounts (see `docs/extensions.md` in the
+repository root for the contract):
 
-- `--name <name>` — product name (defaults to the directory basename).
+```sh
+kfs create extension my-view   # scaffold into ./my-view
+cd my-view
+pnpm install
+pnpm build                     # kfs kfx build → dist/view/index.js
+npm pack                       # the tgz installs via `kungfu kfx install`
+```
+
+Options (both `create` targets):
+
+- `--name <name>` — product/view name (defaults to the directory basename).
 - `--workspace` — wire platform dependencies as `workspace:*` when
   scaffolding inside the monorepo.
 
