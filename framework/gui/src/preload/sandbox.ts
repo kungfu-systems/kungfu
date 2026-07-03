@@ -1,19 +1,23 @@
 // Preload for a sandboxed kfx renderer. This is the ONLY bridge the isolated
-// view gets: it runs with nodeIntegration:false, contextIsolation:true,
-// sandbox:true, so the page has no node, no require, no direct capability
-// binding. contextBridge exposes exactly one thing — the capability object
-// built from the view's declared set, backed by the trusted host over IPC.
-//
-// The transport mapping lives in ../sandbox/transport (electron-free, tested);
-// this file is the thin electron-only glue.
+// view gets. Under nodeIntegration:false / contextIsolation:true / sandbox:true
+// the page has no node, no require. contextBridge can only carry functions and
+// clonable data — not a dynamic Proxy — so the preload exposes a plain bridge
+// (the declared keys + an invoke function + an event subscription), and the
+// sandboxed renderer's own runtime builds the ergonomic capability object over
+// it with createCapabilityGuest (see ../sandbox/transport bridgeChannel). The
+// enforcement is host-side regardless: only declared capabilities resolve.
 import { contextBridge, ipcRenderer } from 'electron';
-import { createCapabilityGuest } from '@kungfu-tech/api/capability';
 
-import { guestChannelOverIpc, readDeclared, type IpcRendererLike } from '../sandbox/transport';
+import { EVENT_CHANNEL, INVOKE_CHANNEL, readDeclared, type SandboxBridge } from '../sandbox/transport';
 
-const declared = readDeclared(process.argv);
-const caps = createCapabilityGuest(
-  declared,
-  guestChannelOverIpc(ipcRenderer as unknown as IpcRendererLike),
-);
-contextBridge.exposeInMainWorld('__kfxCaps', caps);
+const bridge: SandboxBridge = {
+  declared: readDeclared(process.argv),
+  invoke: (cap, method, args) => ipcRenderer.invoke(INVOKE_CHANNEL, { cap, method, args }),
+  on: (fn) => {
+    const listener = (_event: unknown, payload: { callback: number; args: unknown[] }) => fn(payload);
+    ipcRenderer.on(EVENT_CHANNEL, listener);
+    return () => ipcRenderer.removeListener(EVENT_CHANNEL, listener);
+  },
+};
+
+contextBridge.exposeInMainWorld('__kfxBridge', bridge);

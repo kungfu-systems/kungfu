@@ -1,28 +1,26 @@
-// Electron-free transport layer for the sandboxed-ipc capability channel: the
-// channel names and the pure functions that map an ipcRenderer-shaped surface
-// onto the api-level GuestChannel. Kept out of the preload/main electron glue
-// so it can be contract-tested with a mock ipc, without Electron.
+// Electron-free transport for the sandboxed-ipc capability channel: the channel
+// names, the contextBridge-safe bridge shape a preload exposes, and the pure
+// adapter that turns that bridge into the api GuestChannel page-side. Kept out
+// of the preload/main electron glue so it is contract-testable without Electron.
 import type { GuestChannel, HostEvent, HostRequest } from '@kungfu-tech/api/capability';
 
 export const INVOKE_CHANNEL = 'kfx:cap-invoke';
 export const EVENT_CHANNEL = 'kfx:cap-event';
 
-// minimal ipcRenderer surface, so the mapping is testable with a mock
-export type IpcRendererLike = {
-  invoke: (channel: string, payload: unknown) => Promise<unknown>;
-  on: (channel: string, listener: (event: unknown, payload: HostEvent) => void) => void;
-  removeListener: (channel: string, listener: (...args: unknown[]) => void) => void;
+// What contextBridge exposes to a sandboxed page: plain functions + data only
+// (a dynamic Proxy cannot cross contextBridge). The page's own runtime wraps
+// this into the ergonomic capability object with createCapabilityGuest.
+export type SandboxBridge = {
+  declared: string[];
+  invoke: (cap: string, method: string, args: unknown[]) => Promise<unknown>;
+  on: (fn: (event: HostEvent) => void) => () => void;
 };
 
-// A GuestChannel that speaks over an ipcRenderer-shaped surface.
-export function guestChannelOverIpc(ipc: IpcRendererLike): GuestChannel {
+// Page-side: build a GuestChannel over the exposed bridge.
+export function bridgeChannel(bridge: SandboxBridge): GuestChannel {
   return {
-    invoke: (req: HostRequest) => ipc.invoke(INVOKE_CHANNEL, req),
-    onEvent: (fn) => {
-      const listener = (_event: unknown, payload: HostEvent) => fn(payload);
-      ipc.on(EVENT_CHANNEL, listener);
-      return () => ipc.removeListener(EVENT_CHANNEL, listener);
-    },
+    invoke: (req: HostRequest) => bridge.invoke(req.cap, req.method, req.args),
+    onEvent: (fn) => bridge.on(fn),
   };
 }
 
