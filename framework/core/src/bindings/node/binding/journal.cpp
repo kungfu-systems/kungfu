@@ -69,6 +69,13 @@ Napi::Value Frame::DataAsString(const Napi::CallbackInfo &info) {
   return Napi::String::New(info.Env(), result);
 }
 
+Napi::Value Frame::DataBytes(const Napi::CallbackInfo &info) {
+  // raw payload bytes: the decode path for open-layer frames (e.g. rewind
+  // events), whose schemas are not in the compiled longfist registry above
+  return Napi::Buffer<uint8_t>::Copy(info.Env(), reinterpret_cast<const uint8_t *>(frame_->data_address()),
+                                     frame_->data_length());
+}
+
 void Frame::Init(Napi::Env env, Napi::Object exports) {
   Napi::HandleScope scope(env);
   env.AddCleanupHook(cleanup);
@@ -83,7 +90,8 @@ void Frame::Init(Napi::Env env, Napi::Object exports) {
                                         InstanceMethod("dest", &Frame::Dest),                   //
                                         InstanceMethod("initialSource", &Frame::InitialSource), //
                                         InstanceMethod("data", &Frame::Data),                   //
-                                        InstanceMethod("dataAsString", &Frame::DataAsString)    //
+                                        InstanceMethod("dataAsString", &Frame::DataAsString),   //
+                                        InstanceMethod("dataBytes", &Frame::DataBytes)          //
                                     });
 
   constructor = Napi::Persistent(func);

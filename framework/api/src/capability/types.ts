@@ -104,6 +104,9 @@ export type KfNativeFrame = {
   source: () => number;
   dest: () => number;
   dataLength: () => number;
+  // raw payload bytes — the decode path for open-layer frames (e.g. rewind
+  // events), whose schemas live outside the compiled longfist registry
+  dataBytes: () => Uint8Array;
 };
 
 export type KfNativeBinding = {

@@ -6,8 +6,10 @@ import {
   type DomainState,
   type KfNativeBinding,
   type Ledger,
+  type Rewind,
   openDomainState,
   openLedger,
+  openRewind,
 } from '@kungfu-tech/api/capability';
 
 declare global {
@@ -29,6 +31,7 @@ export type Runtime = {
   binding: KfNativeBinding | null;
   ledger: Ledger | null;
   domain: DomainState | null;
+  rewind: Rewind | null;
 };
 
 export function bootRuntime(): Runtime {
@@ -42,6 +45,7 @@ export function bootRuntime(): Runtime {
     binding: null,
     ledger: null,
     domain: null,
+    rewind: null,
   };
   try {
     const bindingPath = env.KFE_PATH;
@@ -70,6 +74,7 @@ export function bootRuntime(): Runtime {
       join: { name: APP_NAME },
     });
     const domain = openDomainState({ binding, locator: { runtimeDir } });
+    const rewind = openRewind({ binding, locator: { runtimeDir } });
     return {
       ...base,
       ok: true,
@@ -79,6 +84,7 @@ export function bootRuntime(): Runtime {
       binding,
       ledger,
       domain,
+      rewind,
     };
   } catch (e) {
     return { ...base, ok: false, message: (e as Error).message };

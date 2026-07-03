@@ -5,7 +5,7 @@
 // contribution declarations) is grown from real consumers, and these two
 // defaults are the first ones. The shape mirrors the intended contract so
 // that externalizing it later is a move, not a rewrite.
-import type { DomainState, Ledger } from '@kungfu-tech/api/capability';
+import type { DomainState, Ledger, Rewind } from '@kungfu-tech/api/capability';
 import type React from 'react';
 
 // Capability handles the host hands to a kfx view (ADR-0011). A kfx never
@@ -13,6 +13,7 @@ import type React from 'react';
 export type KfxCapabilities = {
   ledger: Ledger;
   domain: DomainState;
+  rewind: Rewind;
 };
 
 export type KfxManifest = {

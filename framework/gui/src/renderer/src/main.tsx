@@ -6,10 +6,15 @@ import { createRoot } from 'react-dom/client';
 import type { KfxCapabilities, KfxManifest } from './kfx';
 import { configManagerKfx } from './kfx/config-manager';
 import { journalManagerKfx } from './kfx/journal-manager';
+import { rewindInspectorKfx } from './kfx/rewind-inspector';
 import { type Runtime, bootRuntime } from './runtime';
 import { headingStyle, mono, panelStyle } from './ui';
 
-const KFX_REGISTRY: KfxManifest[] = [configManagerKfx, journalManagerKfx];
+const KFX_REGISTRY: KfxManifest[] = [
+  rewindInspectorKfx,
+  configManagerKfx,
+  journalManagerKfx,
+];
 
 function OverviewView({ runtime }: { runtime: Runtime }) {
   const binding = runtime.binding;
@@ -123,8 +128,12 @@ function App() {
   }, [runtime.ledger]);
 
   const caps: KfxCapabilities | null =
-    runtime.ledger && runtime.domain
-      ? { ledger: runtime.ledger, domain: runtime.domain }
+    runtime.ledger && runtime.domain && runtime.rewind
+      ? {
+          ledger: runtime.ledger,
+          domain: runtime.domain,
+          rewind: runtime.rewind,
+        }
       : null;
   const activeKfx = KFX_REGISTRY.find((k) => k.id === active);
 

@@ -73,6 +73,8 @@ public:
 
   Napi::Value DataAsString(const Napi::CallbackInfo &info);
 
+  Napi::Value DataBytes(const Napi::CallbackInfo &info);
+
   static void Init(Napi::Env env, Napi::Object exports);
 
   static Napi::Value NewInstance(Napi::Value arg);

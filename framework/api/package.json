@@ -40,6 +40,7 @@
     "find-process": "^1.4.7",
     "find-root": "^1.1.0",
     "fkill": "~7.2",
+    "flatbuffers": "^25.2.10",
     "fs-extra": "^10.1.0",
     "get-user-locale": "^1.4.0",
     "glob": "^8.0.3",
