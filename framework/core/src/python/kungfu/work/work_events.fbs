@@ -1,0 +1,99 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Kungfu work items — the open-layer event schema for the default work
+// profile (`kungfu work`).
+//
+// Layering: these are application types (msg_type 30101-30199, see
+// docs/msg-type-ranges.md), NOT longfist kernel types. They ride the journal
+// as self-describing open-layer events: the work store binds each msg_type to
+// this schema's .bfbs in the store manifest (content-addressed), so the work
+// journal decodes through FlatBuffers reflection without the runtime that
+// wrote it — the same mechanism the Rewind capture bundle pins.
+//
+// Fact model: a work item is an event-sourced aggregate. The frame header
+// carries event time (gen_time); these tables carry the semantic layer:
+// item identity, lifecycle status transitions, and the profile vocabulary —
+// next action, checkpoint, decision, validation, artifact, linked run.
+// Current state is always a projection folded from the event stream; the
+// journal remains the fact source.
+//
+// Evolution rules (same discipline as the Rewind and longfist fb schemas):
+// append new fields at the tail only; never reorder, delete, or reuse field
+// ids; no `required` fields.
+
+namespace kungfu.work.fb;
+
+// Lifecycle status of a work item. These five states are the dashboard
+// vocabulary; verbs map onto transitions (create/start/resume -> Active,
+// pause -> Waiting, block -> Blocked, ready -> Ready, done -> Done).
+enum WorkStatus : byte {
+  Active = 0,
+  Waiting = 1,
+  Blocked = 2,
+  Ready = 3,
+  Done = 4
+}
+
+// Outcome of a recorded validation.
+enum ValidationResult : byte {
+  Pass = 0,
+  Fail = 1
+}
+
+// msg_type 30101. Opens a work item; work_id is store-assigned and anchors
+// every later event of the same item. A created item starts Active.
+table WorkItemCreated {
+  work_id:string;
+  title:string;
+  kind:string;
+  summary:string;
+  schema_version:uint;
+}
+
+// msg_type 30102. A lifecycle transition; reason is free text.
+table WorkStatusChanged {
+  work_id:string;
+  status:WorkStatus;
+  reason:string;
+}
+
+// msg_type 30103. Replaces the item's single current next action.
+table NextActionSet {
+  work_id:string;
+  next_action:string;
+}
+
+// msg_type 30104. A recovery note; checkpoints accumulate.
+table CheckpointRecorded {
+  work_id:string;
+  note:string;
+}
+
+// msg_type 30105. A recorded decision; decisions accumulate.
+table DecisionRecorded {
+  work_id:string;
+  decision:string;
+  decided_by:string;
+}
+
+// msg_type 30106. A recorded validation outcome; validations accumulate.
+table ValidationRecorded {
+  work_id:string;
+  result:ValidationResult;
+  command:string;
+  note:string;
+}
+
+// msg_type 30107. A produced or referenced artifact; artifacts accumulate.
+table ArtifactRecorded {
+  work_id:string;
+  ref:string;
+  kind:string;
+}
+
+// msg_type 30108. Links a Rewind run to this item, so the run-level detail
+// view (Rewind) is reachable from the work-level control plane.
+table RunLinked {
+  work_id:string;
+  run_id:string;
+}
