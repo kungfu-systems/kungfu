@@ -58,6 +58,10 @@ importers:
         version: link:../framework/tui
 
   developer/sdk:
+    dependencies:
+      esbuild:
+        specifier: ^0.28.1
+        version: 0.28.1
     devDependencies:
       '@biomejs/biome':
         specifier: ^1.9.4
@@ -119,6 +123,25 @@ importers:
         specifier: workspace:*
         version: link:../../developer/sdk
 
+  extensions/config-manager:
+    dependencies:
+      '@kungfu-tech/api':
+        specifier: workspace:*
+        version: link:../../framework/api
+      '@kungfu-tech/kfx':
+        specifier: workspace:*
+        version: link:../../framework/kfx
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+    devDependencies:
+      '@kungfu-tech/sdk':
+        specifier: workspace:*
+        version: link:../../developer/sdk
+      '@types/react':
+        specifier: ^18.3.3
+        version: 18.3.31
+
   extensions/indexer-live:
     dependencies:
       '@kungfu-tech/core':
@@ -128,6 +151,25 @@ importers:
       '@kungfu-tech/sdk':
         specifier: workspace:*
         version: link:../../developer/sdk
+
+  extensions/journal-manager:
+    dependencies:
+      '@kungfu-tech/api':
+        specifier: workspace:*
+        version: link:../../framework/api
+      '@kungfu-tech/kfx':
+        specifier: workspace:*
+        version: link:../../framework/kfx
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+    devDependencies:
+      '@kungfu-tech/sdk':
+        specifier: workspace:*
+        version: link:../../developer/sdk
+      '@types/react':
+        specifier: ^18.3.3
+        version: 18.3.31
 
   extensions/matcher-101:
     dependencies:
@@ -139,6 +181,25 @@ importers:
         specifier: workspace:*
         version: link:../../developer/sdk
 
+  extensions/rewind-inspector:
+    dependencies:
+      '@kungfu-tech/api':
+        specifier: workspace:*
+        version: link:../../framework/api
+      '@kungfu-tech/kfx':
+        specifier: workspace:*
+        version: link:../../framework/kfx
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+    devDependencies:
+      '@kungfu-tech/sdk':
+        specifier: workspace:*
+        version: link:../../developer/sdk
+      '@types/react':
+        specifier: ^18.3.3
+        version: 18.3.31
+
   extensions/sim:
     dependencies:
       '@kungfu-tech/core':
@@ -148,6 +209,94 @@ importers:
       '@kungfu-tech/sdk':
         specifier: workspace:*
         version: link:../../developer/sdk
+
+  extensions/system:
+    dependencies:
+      '@kungfu-tech/kfx-view-kfx-manager':
+        specifier: workspace:*
+        version: link:kfx-manager
+      '@kungfu-tech/kfx-view-settings':
+        specifier: workspace:*
+        version: link:settings
+      '@kungfu-tech/kfx-view-status':
+        specifier: workspace:*
+        version: link:status
+
+  extensions/system/kfx-manager:
+    dependencies:
+      '@kungfu-tech/api':
+        specifier: workspace:*
+        version: link:../../../framework/api
+      '@kungfu-tech/kfx':
+        specifier: workspace:*
+        version: link:../../../framework/kfx
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+    devDependencies:
+      '@kungfu-tech/sdk':
+        specifier: workspace:*
+        version: link:../../../developer/sdk
+      '@types/react':
+        specifier: ^18.3.3
+        version: 18.3.31
+
+  extensions/system/settings:
+    dependencies:
+      '@kungfu-tech/api':
+        specifier: workspace:*
+        version: link:../../../framework/api
+      '@kungfu-tech/kfx':
+        specifier: workspace:*
+        version: link:../../../framework/kfx
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+    devDependencies:
+      '@kungfu-tech/sdk':
+        specifier: workspace:*
+        version: link:../../../developer/sdk
+      '@types/react':
+        specifier: ^18.3.3
+        version: 18.3.31
+
+  extensions/system/status:
+    dependencies:
+      '@kungfu-tech/api':
+        specifier: workspace:*
+        version: link:../../../framework/api
+      '@kungfu-tech/kfx':
+        specifier: workspace:*
+        version: link:../../../framework/kfx
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+    devDependencies:
+      '@kungfu-tech/sdk':
+        specifier: workspace:*
+        version: link:../../../developer/sdk
+      '@types/react':
+        specifier: ^18.3.3
+        version: 18.3.31
+
+  extensions/work-dashboard:
+    dependencies:
+      '@kungfu-tech/api':
+        specifier: workspace:*
+        version: link:../../framework/api
+      '@kungfu-tech/kfx':
+        specifier: workspace:*
+        version: link:../../framework/kfx
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+    devDependencies:
+      '@kungfu-tech/sdk':
+        specifier: workspace:*
+        version: link:../../developer/sdk
+      '@types/react':
+        specifier: ^18.3.3
+        version: 18.3.31
 
   extensions/xtp:
     dependencies:
@@ -274,6 +423,9 @@ importers:
       '@kungfu-tech/core':
         specifier: workspace:*
         version: link:../core
+      '@kungfu-tech/kfx':
+        specifier: workspace:*
+        version: link:../kfx
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -311,6 +463,25 @@ importers:
       vite:
         specifier: ^5.4.0
         version: 5.4.21(@types/node@24.13.2)(less@4.6.7)(terser@5.48.0)
+
+  framework/kfx:
+    dependencies:
+      '@kungfu-tech/api':
+        specifier: workspace:*
+        version: link:../api
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+    devDependencies:
+      '@biomejs/biome':
+        specifier: ^1.9.4
+        version: 1.9.4
+      '@types/react':
+        specifier: ^18.3.3
+        version: 18.3.31
+      typescript:
+        specifier: ^5.5.4
+        version: 5.9.3
 
   framework/spec:
     devDependencies:

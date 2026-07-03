@@ -2,6 +2,7 @@ packages:
   - "framework/*"
   - "developer/*"
   - "extensions/*"
+  - "extensions/*/*"
   - "examples/*"
   - "artifact"
 patchedDependencies:
