@@ -123,13 +123,25 @@ manifest, extension root and install lifecycle, but different loaders. Full
 contract in [`../../../docs/extensions.md`](../../../docs/extensions.md);
 `extensions/langchain-adapter` is the first adapter facet.
 
-## Evolution notes
+## Trust tiers (ADR-0011)
 
-- External untrusted kfx need the `sandboxed-ipc` runtime tier; the manifest
-  seam exists, the tier does not. Installed kfx currently run
-  node-integrated — installing a kfx is trusting it. This tier will govern
-  adapter facets too (a sandboxed adapter's schema compilation is already
-  bounded; its runtime isolation is the same missing tier).
+A view runs at one of two tiers; `resolveRuntimeTier` (`../../kfx/src/index.ts`)
+is the single source and the install source is authoritative (a manifest may
+ask to stay sandboxed, never to elevate). **node-integrated** (system + built-in
+views) shares the shell's renderer, React and capabilities. **sandboxed-ipc**
+(installed third-party views) runs in an isolated renderer
+(`nodeIntegration:false, contextIsolation:true, sandbox:true`) with no node;
+`contextBridge` exposes only a bridge to the declared capabilities, each call
+round-trips to the trusted host over IPC (`sandbox-host.ts`), and an undeclared
+capability is rejected there — the declaration is an enforced boundary. The
+view's session denies the network and its process is memory-capped
+(`createSandboxedView`). Proven live: in a real sandboxed renderer
+`window.require`/`process`/`Buffer` are absent, a declared call round-trips, an
+undeclared call is rejected. The `adapter` facet stays node-integrated (it runs
+inside the traced program's own process; its schema compilation is bounded
+separately).
+
+## Evolution notes
 - The manifest is a welded surface the moment packages are published. Until
   then it may evolve freely, but every field addition should come with a
   consumer in this repository.
