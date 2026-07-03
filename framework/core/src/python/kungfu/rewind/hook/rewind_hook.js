@@ -124,7 +124,38 @@ if (endpoint) {
     return exports;
   };
 
+  // The demo toolkit is the built-in mechanism probe; real framework adapters
+  // are kfx packages the supervisor discovers and announces.
   const ADAPTERS = { rewind_demo_toolkit: patchDemoToolkit };
+
+  const registerAdapter = (name, patcher) => {
+    ADAPTERS[name] = patcher;
+  };
+
+  // Expose the capture API to plugin adapters loaded later. A node kfx adapter
+  // reads globalThis.__kungfuRewind (it depends on nothing else) and registers
+  // its patcher — the node analogue of the python hook's importable primitives.
+  globalThis.__kungfuRewind = {
+    registerAdapter,
+    captureInvoke,
+    newSpan,
+    render,
+    parentSpan: bootParent,
+  };
+
+  // Load the node kfx adapter plugins the supervisor announced; requiring each
+  // registers its patchers before the require hook below goes live. A broken
+  // adapter must never break the traced program.
+  for (const entry of (process.env.KUNGFU_REWIND_NODE_ADAPTERS || '').split(
+    require('path').delimiter,
+  )) {
+    if (!entry) continue;
+    try {
+      require(entry);
+    } catch (e) {
+      /* best-effort: skip a broken kfx adapter */
+    }
+  }
 
   const originalLoad = Module._load;
   Module._load = function (request, parent, isMain) {

@@ -105,14 +105,24 @@ A failing kfx renders its error panel; it cannot take the shell down.
 An **adapter facet** has no bundle step — it ships source per child runtime,
 and the capture supervisor injects it into a traced child, where it runs in
 the user's own interpreter. `kfs kfx build` reports this and does nothing for
-an adapter-only package. A python adapter's entry file registers its patcher
-through the capture hook's `register_adapter` (it imports `rewind_client`, the
-dependency-free hook, never `kungfu`), so an unmodified framework run is
-captured with no code change. Discovery and injection live in the supervisor
-(source of truth:
+an adapter-only package. To add an adapter for a framework, declare
+`config.adapter` (its `targets` / `runtimes` / `entry`) and write one entry
+file per runtime that registers a patcher — each depends on nothing but the
+runtime's built-ins:
+
+- **python** (`entry.python`): `import rewind_client` (the dependency-free
+  hook, never `kungfu`) and call `rewind_client.register_adapter(module_name,
+  patcher)`; build spans with `rewind_client._CallCapture` / `_render`.
+- **node** (`entry.node`): read `globalThis.__kungfuRewind` (the hook exposes
+  it) and call `registerAdapter(moduleName, patcher)`; build spans with its
+  `captureInvoke` / `render`.
+
+A patcher receives the framework module once it is imported/required and wraps
+its tool seam, so an unmodified run is captured with no code change. Discovery
+and injection live in the supervisor (source of truth:
 [`../framework/core/src/python/kungfu/rewind/adapters.py`](../framework/core/src/python/kungfu/rewind/adapters.py)),
-so the hook stays dependency-free. `extensions/langchain-adapter` is the first
-adapter facet.
+so the hooks stay dependency-free. `extensions/langchain-adapter` is the first
+adapter facet (python); its `src/adapter/python/index.py` is the reference.
 
 ## Discovery
 

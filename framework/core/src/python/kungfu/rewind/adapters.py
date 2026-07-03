@@ -20,8 +20,10 @@ import json
 import os
 
 ENV_EXTENSION_PATH = "KF_EXTENSION_PATH"
-# shared contract string with the child hook (rewind_client.ENV_PLUGIN_ADAPTERS)
+# shared contract strings with the child hooks (per runtime): the python hook
+# reads ENV_PLUGIN_ADAPTERS, the node hook reads ENV_NODE_ADAPTERS.
 ENV_PLUGIN_ADAPTERS = "KUNGFU_REWIND_ADAPTERS"
+ENV_NODE_ADAPTERS = "KUNGFU_REWIND_NODE_ADAPTERS"
 
 
 def _extension_roots(runtime_dir):
@@ -51,10 +53,10 @@ def _scan_packages(root):
                     yield nested
 
 
-def discover_python_adapters(runtime_dir):
-    """Return (entry_files, package_dirs) for kfx packages declaring a python
-    adapter form. First occurrence of a package path wins; missing entry files
-    are skipped."""
+def discover_adapters(runtime_dir, runtime):
+    """Return (entry_files, package_dirs) for kfx packages declaring an adapter
+    form for `runtime` ('python' or 'node'). First occurrence of a package path
+    wins; missing entry files are skipped."""
     entries, dirs, seen = [], [], set()
     for root in _extension_roots(runtime_dir):
         for pkg in _scan_packages(root):
@@ -65,9 +67,9 @@ def discover_python_adapters(runtime_dir):
                 continue
             config = (manifest.get("kungfuConfig") or {}).get("config") or {}
             adapter = config.get("adapter") or {}
-            if "python" not in (adapter.get("runtimes") or []):
+            if runtime not in (adapter.get("runtimes") or []):
                 continue
-            entry = (adapter.get("entry") or {}).get("python")
+            entry = (adapter.get("entry") or {}).get(runtime)
             if not entry:
                 continue
             path = os.path.abspath(os.path.join(pkg, entry))

@@ -131,13 +131,17 @@ class Supervisor:
         # whatever the environment already had.
         env[ENV_INGEST] = self.ingest.endpoint
         existing = env.get("PYTHONPATH")
-        # kfx adapter plugins: discover python adapter forms in the extension
-        # roots and announce their entry files to the child hook; put their
-        # package dirs on PYTHONPATH so an adapter can import its own siblings.
-        adapter_entries, adapter_dirs = adapters.discover_python_adapters(self.runtime_dir)
-        if adapter_entries:
-            env[adapters.ENV_PLUGIN_ADAPTERS] = os.pathsep.join(adapter_entries)
-        pythonpath_parts = [_HOOK_DIR, *adapter_dirs]
+        # kfx adapter plugins: discover adapter forms in the extension roots and
+        # announce their entry files to each runtime's child hook. Python
+        # adapters also put their package dirs on PYTHONPATH so an adapter can
+        # import its own siblings; node adapters are required by absolute path.
+        py_entries, py_dirs = adapters.discover_adapters(self.runtime_dir, "python")
+        node_entries, _ = adapters.discover_adapters(self.runtime_dir, "node")
+        if py_entries:
+            env[adapters.ENV_PLUGIN_ADAPTERS] = os.pathsep.join(py_entries)
+        if node_entries:
+            env[adapters.ENV_NODE_ADAPTERS] = os.pathsep.join(node_entries)
+        pythonpath_parts = [_HOOK_DIR, *py_dirs]
         if existing:
             pythonpath_parts.append(existing)
         env["PYTHONPATH"] = os.pathsep.join(pythonpath_parts)

@@ -109,11 +109,27 @@ the shell depends on any workflow methodology — an opinionated workflow
 arrives as another profile without touching the shell. User-defined event
 schemas and generic core concepts stay out of v1 deliberately.
 
+## Runtime facets: the shell is not the only loader
+
+A kfx facet is declared under `kungfuConfig.config`; a package may carry more
+than one, and each facet has its own loader. The shell loads the `view` facet.
+The `adapter` facet — capture-side framework instrumentation, the first v4
+runtime facet — is loaded by the **trace supervisor**, not the shell: it scans
+the same extension roots, finds packages declaring an adapter for a child
+runtime, and injects the adapter source into the traced child, where the
+dependency-free capture hook loads it. So "installable kfx package" spans both
+planes — a GUI view and a capture-side adapter share one package model,
+manifest, extension root and install lifecycle, but different loaders. Full
+contract in [`../../../docs/extensions.md`](../../../docs/extensions.md);
+`extensions/langchain-adapter` is the first adapter facet.
+
 ## Evolution notes
 
 - External untrusted kfx need the `sandboxed-ipc` runtime tier; the manifest
   seam exists, the tier does not. Installed kfx currently run
-  node-integrated — installing a kfx is trusting it.
+  node-integrated — installing a kfx is trusting it. This tier will govern
+  adapter facets too (a sandboxed adapter's schema compilation is already
+  bounded; its runtime isolation is the same missing tier).
 - The manifest is a welded surface the moment packages are published. Until
   then it may evolve freely, but every field addition should come with a
   consumer in this repository.
