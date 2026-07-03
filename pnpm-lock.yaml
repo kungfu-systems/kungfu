@@ -35,21 +35,9 @@ importers:
       '@kungfu-tech/gui':
         specifier: workspace:*
         version: link:../framework/gui
-      '@kungfu-tech/kfx-broker-sim':
-        specifier: workspace:*
-        version: link:../extensions/sim
-      '@kungfu-tech/kfx-broker-xtp-demo':
-        specifier: workspace:*
-        version: link:../extensions/xtp
       '@kungfu-tech/kfx-indexer-live':
         specifier: workspace:*
         version: link:../extensions/indexer-live
-      '@kungfu-tech/kfx-matcher-101-cpp':
-        specifier: workspace:*
-        version: link:../extensions/matcher-101
-      '@kungfu-tech/kfx-operator-bar':
-        specifier: workspace:*
-        version: link:../extensions/bar
       '@kungfu-tech/sdk':
         specifier: workspace:*
         version: link:../developer/sdk
@@ -113,16 +101,6 @@ importers:
         specifier: workspace:*
         version: link:../../developer/sdk
 
-  extensions/bar:
-    dependencies:
-      '@kungfu-tech/core':
-        specifier: workspace:*
-        version: link:../../framework/core
-    devDependencies:
-      '@kungfu-tech/sdk':
-        specifier: workspace:*
-        version: link:../../developer/sdk
-
   extensions/config-manager:
     dependencies:
       '@kungfu-tech/api':
@@ -171,15 +149,7 @@ importers:
         specifier: ^18.3.3
         version: 18.3.31
 
-  extensions/matcher-101:
-    dependencies:
-      '@kungfu-tech/core':
-        specifier: workspace:*
-        version: link:../../framework/core
-    devDependencies:
-      '@kungfu-tech/sdk':
-        specifier: workspace:*
-        version: link:../../developer/sdk
+  extensions/langchain-adapter: {}
 
   extensions/rewind-inspector:
     dependencies:
@@ -199,16 +169,6 @@ importers:
       '@types/react':
         specifier: ^18.3.3
         version: 18.3.31
-
-  extensions/sim:
-    dependencies:
-      '@kungfu-tech/core':
-        specifier: workspace:*
-        version: link:../../framework/core
-    devDependencies:
-      '@kungfu-tech/sdk':
-        specifier: workspace:*
-        version: link:../../developer/sdk
 
   extensions/system:
     dependencies:
@@ -297,16 +257,6 @@ importers:
       '@types/react':
         specifier: ^18.3.3
         version: 18.3.31
-
-  extensions/xtp:
-    dependencies:
-      '@kungfu-tech/core':
-        specifier: workspace:*
-        version: link:../../framework/core
-    devDependencies:
-      '@kungfu-tech/sdk':
-        specifier: workspace:*
-        version: link:../../developer/sdk
 
   framework/api:
     dependencies:

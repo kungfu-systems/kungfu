@@ -19,11 +19,7 @@
     "clean": "pnpm --filter @kungfu-tech/gui run clean"
   },
   "dependencies": {
-    "@kungfu-tech/kfx-broker-sim": "workspace:*",
-    "@kungfu-tech/kfx-broker-xtp-demo": "workspace:*",
     "@kungfu-tech/kfx-indexer-live": "workspace:*",
-    "@kungfu-tech/kfx-matcher-101-cpp": "workspace:*",
-    "@kungfu-tech/kfx-operator-bar": "workspace:*",
     "@kungfu-tech/gui": "workspace:*",
     "@kungfu-tech/tui": "workspace:*",
     "@kungfu-tech/core": "workspace:*",

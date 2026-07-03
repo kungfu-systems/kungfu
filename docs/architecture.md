@@ -136,8 +136,11 @@ exercises a distinct extension path:
 `artifact` closes the loop at the top: assembling it is the real test that the
 SDK can package a complete application from the runtime, the reference surfaces
 and the extensions. Trading-specific reference extensions from earlier versions
-are being retired, but their coverage role is preserved by neutral replacements
-that exercise the same paths.
+are being retired, and their coverage role is being handed to neutral
+replacements that exercise the same paths. This is mid-transition: the Python
+path stays covered by a neutral extension (`indexer-live`), while the C++
+probe's neutral replacement is not yet in place — so the C++ extension path is
+temporarily without a dedicated build-time probe until it lands.
 
 ## Repository layout
 
