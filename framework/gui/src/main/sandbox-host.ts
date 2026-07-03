@@ -10,9 +10,9 @@
 // invoke/send hooks so it is contract-tested without Electron; the ipcMain and
 // BrowserWindow glue below is the thin electron-only shell.
 import {
-  createCapabilityHost,
   type HostEvent,
   type HostRequest,
+  createCapabilityHost,
 } from '@kungfu-tech/api/capability';
 
 import { EVENT_CHANNEL, INVOKE_CHANNEL } from '../sandbox/transport';
@@ -40,7 +40,10 @@ export function installCapabilityHost(wiring: HostWiring) {
 // testable) outside the main process.
 
 type IpcMainLike = {
-  handle: (channel: string, listener: (event: unknown, payload: HostRequest) => Promise<unknown>) => void;
+  handle: (
+    channel: string,
+    listener: (event: unknown, payload: HostRequest) => Promise<unknown>,
+  ) => void;
   removeHandler: (channel: string) => void;
 };
 type WebContentsLike = { send: (channel: string, payload: HostEvent) => void };
@@ -52,7 +55,8 @@ export function bindElectronHost(
   declared: readonly string[],
 ) {
   const host = installCapabilityHost({
-    onInvoke: (handler) => ipcMain.handle(INVOKE_CHANNEL, (_e, req) => handler(req)),
+    onInvoke: (handler) =>
+      ipcMain.handle(INVOKE_CHANNEL, (_e, req) => handler(req)),
     send: (event) => webContents.send(EVENT_CHANNEL, event),
     caps,
     declared,

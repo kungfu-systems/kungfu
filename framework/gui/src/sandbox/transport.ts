@@ -2,7 +2,11 @@
 // names, the contextBridge-safe bridge shape a preload exposes, and the pure
 // adapter that turns that bridge into the api GuestChannel page-side. Kept out
 // of the preload/main electron glue so it is contract-testable without Electron.
-import type { GuestChannel, HostEvent, HostRequest } from '@kungfu-tech/api/capability';
+import type {
+  GuestChannel,
+  HostEvent,
+  HostRequest,
+} from '@kungfu-tech/api/capability';
 
 export const INVOKE_CHANNEL = 'kfx:cap-invoke';
 export const EVENT_CHANNEL = 'kfx:cap-event';

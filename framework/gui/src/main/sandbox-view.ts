@@ -1,3 +1,4 @@
+import path from 'node:path';
 // The main-process factory for a sandboxed kfx view: a BrowserWindow with node
 // stripped (nodeIntegration:false / contextIsolation:true / sandbox:true), the
 // sandbox preload, and the view's declared capability keys passed as an
@@ -8,8 +9,7 @@
 // renderer window.require/process/Buffer are absent, __kfxBridge carries only
 // the declared keys, a declared call round-trips, and an undeclared call is
 // rejected host-side.
-import { app, BrowserWindow, ipcMain, session } from 'electron';
-import path from 'node:path';
+import { BrowserWindow, app, ipcMain, session } from 'electron';
 
 import { bindElectronHost } from './sandbox-host';
 
@@ -37,13 +37,16 @@ function lockedDownPartition(id: string) {
   const partition = `sandbox:${id}`;
   const ses = session.fromPartition(partition);
   ses.webRequest.onBeforeRequest((details, callback) => {
-    const ok = details.url.startsWith('file:') || details.url.startsWith('devtools:');
+    const ok =
+      details.url.startsWith('file:') || details.url.startsWith('devtools:');
     callback({ cancel: !ok });
   });
   return partition;
 }
 
-export function createSandboxedView(options: SandboxedViewOptions): BrowserWindow {
+export function createSandboxedView(
+  options: SandboxedViewOptions,
+): BrowserWindow {
   const win = new BrowserWindow({
     show: false,
     webPreferences: {
@@ -52,11 +55,18 @@ export function createSandboxedView(options: SandboxedViewOptions): BrowserWindo
       sandbox: true,
       partition: lockedDownPartition(String(Date.now())),
       preload: options.preload ?? path.join(__dirname, '../preload/sandbox.js'),
-      additionalArguments: [`--kfx-declared=${JSON.stringify([...options.declared])}`],
+      additionalArguments: [
+        `--kfx-declared=${JSON.stringify([...options.declared])}`,
+      ],
     },
   });
 
-  const host = bindElectronHost(ipcMain, win.webContents, options.caps, options.declared);
+  const host = bindElectronHost(
+    ipcMain,
+    win.webContents,
+    options.caps,
+    options.declared,
+  );
 
   // resource guard: sample the view's process working set; kill on breach
   const cap = options.memoryCapKb ?? DEFAULT_MEMORY_CAP_KB;

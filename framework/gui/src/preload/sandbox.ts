@@ -8,13 +8,22 @@
 // enforcement is host-side regardless: only declared capabilities resolve.
 import { contextBridge, ipcRenderer } from 'electron';
 
-import { EVENT_CHANNEL, INVOKE_CHANNEL, readDeclared, type SandboxBridge } from '../sandbox/transport';
+import {
+  EVENT_CHANNEL,
+  INVOKE_CHANNEL,
+  type SandboxBridge,
+  readDeclared,
+} from '../sandbox/transport';
 
 const bridge: SandboxBridge = {
   declared: readDeclared(process.argv),
-  invoke: (cap, method, args) => ipcRenderer.invoke(INVOKE_CHANNEL, { cap, method, args }),
+  invoke: (cap, method, args) =>
+    ipcRenderer.invoke(INVOKE_CHANNEL, { cap, method, args }),
   on: (fn) => {
-    const listener = (_event: unknown, payload: { callback: number; args: unknown[] }) => fn(payload);
+    const listener = (
+      _event: unknown,
+      payload: { callback: number; args: unknown[] },
+    ) => fn(payload);
     ipcRenderer.on(EVENT_CHANNEL, listener);
     return () => ipcRenderer.removeListener(EVENT_CHANNEL, listener);
   },
