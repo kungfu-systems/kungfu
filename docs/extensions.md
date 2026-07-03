@@ -153,11 +153,30 @@ A double install without `--force` refuses; `remove` never touches paths
 outside the install root. The CLI and the kfx-manager view operate on the
 same facts.
 
-Installed kfx currently run node-integrated — installing a kfx is trusting
-it. The manifest's capability declaration is the seam for a future
-sandboxed tier; the tier does not exist yet (see
-[`../framework/gui/docs/shell-and-kfx.md`](../framework/gui/docs/shell-and-kfx.md),
-evolution notes).
+## Trust tiers
+
+A view runs at one of two trust tiers (ADR-0011). The decision is
+single-sourced in `resolveRuntimeTier` (`../framework/kfx/src/index.ts`), and
+the install source is authoritative — a manifest can ask to stay sandboxed but
+never to elevate:
+
+- **node-integrated** — system views and built-in (workspace/source) views.
+  They share the shell's renderer, React and capability instances.
+- **sandboxed-ipc** — an installed third-party view. It runs in an isolated
+  renderer (`nodeIntegration:false, contextIsolation:true, sandbox:true`): no
+  node, no `require`, no direct binding. `contextBridge` exposes only a bridge
+  to the capabilities its manifest **declared**; every call round-trips to the
+  trusted host over IPC, and an undeclared capability is rejected there — the
+  capability declaration is now an *enforced* boundary, not advice. The view's
+  session denies the network and its process is killed if it exceeds a memory
+  cap (`createSandboxedView` in `../framework/gui/src/main/sandbox-view.ts`).
+
+The `adapter` runtime facet stays node-integrated: an adapter is instrumentation
+that runs inside the traced program's own process, so a separate renderer
+sandbox does not apply; installing a third-party adapter is a trust decision,
+and its schema compilation is bounded separately (`sandboxed` compile tier,
+see [`rewind.md`](rewind.md)). Third-party adapters should carry an install-time
+trust prompt.
 
 ## Runtime extensions: current status
 

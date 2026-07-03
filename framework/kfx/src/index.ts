@@ -39,10 +39,19 @@ export type KfxSettingDecl = {
 };
 
 // `kungfuConfig.config.view` — the static half of a view extension.
+// ADR-0011 trust tier. `node-integrated` (trusted) shares the shell's renderer,
+// React and capability instances; `sandboxed-ipc` runs the view in an isolated
+// renderer with no node, reaching only its declared capabilities over IPC.
+export type KfxRuntimeTier = 'node-integrated' | 'sandboxed-ipc';
+
 export type KfxViewDecl = {
   title: string;
   // capability handles this view receives; undeclared handles stay absent
   capabilities: KfxCapabilityKey[];
+  // trust tier (default node-integrated). The install source is authoritative
+  // over this hint: a third-party package is never elevated above sandboxed-ipc
+  // just because its manifest asks for node-integrated.
+  runtime?: KfxRuntimeTier;
   // shell-owned views (settings, kfx manager, status); not disableable
   system?: boolean;
   // settings this view contributes to the shell Settings view
@@ -50,6 +59,19 @@ export type KfxViewDecl = {
   // bundle entry relative to the package root (default: dist/view/index.js)
   entry?: string;
 };
+
+// The single source of the trust decision: what tier a loaded view actually
+// runs at. System and built-in (workspace/source) views are trusted; an
+// installed third-party view is sandboxed unless it is trusted by source, and
+// its manifest may only ask to *stay* sandboxed, never to elevate.
+export function resolveRuntimeTier(
+  view: Pick<KfxViewDecl, 'runtime' | 'system'>,
+  source: 'built-in' | 'installed',
+): KfxRuntimeTier {
+  if (view.system || source === 'built-in') return 'node-integrated';
+  // third-party installed: sandboxed by default; the manifest cannot elevate
+  return 'sandboxed-ipc';
+}
 
 // `kungfuConfig.config.adapter` — a runtime facet. Unlike a view (a GUI screen
 // the shell loads), an adapter is capture-side instrumentation: the trace
