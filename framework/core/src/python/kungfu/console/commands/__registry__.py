@@ -11,6 +11,7 @@ from . import login
 from . import backtest
 from . import trace
 from . import rewind
+from . import work
 
 __all__ = [
     "engage",
@@ -24,4 +25,5 @@ __all__ = [
     "backtest",
     "trace",
     "rewind",
+    "work",
 ]
