@@ -13,11 +13,13 @@
 // Thread-safety: DbgHelp (DbgHelp.dll) is documented as single-threaded; all
 // Sym*/StackWalk calls here are serialized by one process-wide mutex.
 //
-// Scope note: this runs from signal handlers and SEH filters and still uses
-// std::ostream and the logging sink, which are not async-signal-safe. Making the
-// crash dump fully signal-safe is a separate, larger change and is intentionally
-// out of scope here; this change fixes correctness (the walk produced garbage
-// frames and no symbols) and thread-safety.
+// Scope note: this runs from SEH filters / the unhandled-exception filter. The
+// spdlog (KF_LOG) echo and per-frame std::ostringstream have been removed from
+// the crash path (see print_native_stack) so the faulting thread can no longer
+// deadlock on the spdlog lock. std::ostream formatting and DbgHelp's own heap use
+// remain (W-A accepted residual, see stacktrace.cpp / docs/windows-crash-symbols.md);
+// full out-of-process capture is future work. Symbol lookups are serialized by a
+// process-wide mutex and warmed up once via prepare_stack_trace().
 //
 
 #include "StackWalker.h"
@@ -25,7 +27,6 @@
 #if defined(_MSC_VER)
 
 #include <kungfu/common.h>
-#include <kungfu/yijinjing/log.h>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -41,7 +42,6 @@
 #include <iomanip>
 #include <mutex>
 #include <process.h>
-#include <sstream>
 #include <string>
 
 #pragma comment(lib, "dbghelp.lib")
@@ -57,7 +57,6 @@ namespace kungfu::yijinjing::util {
 namespace {
 
 constexpr int kMaxFrames = 256;
-constexpr int kConsoleEchoFrames = 16;
 
 // DbgHelp is single-threaded; serialize the whole symbol engine so concurrent
 // crash handlers cannot corrupt it.
@@ -196,13 +195,12 @@ void StackWalker::print_native_stack(std::ostream &st, const void *context) {
   }
 
   for (int i = 0; i < n; ++i) {
-    std::ostringstream frame;
-    format_frame(frame, reinterpret_cast<DWORD64>(frames[i]));
-    const std::string text = frame.str();
-    st << text << std::endl;
-    if (i < kConsoleEchoFrames) {
-      KF_LOG_CRITICAL("{}", text);
-    }
+    // Format straight into the crash-report stream. The previous code built a
+    // std::ostringstream per frame and echoed it through KF_LOG_CRITICAL (spdlog);
+    // both are removed from the crash path -- the per-frame heap allocation and,
+    // more importantly, the spdlog lock the faulting thread may already hold.
+    format_frame(st, reinterpret_cast<DWORD64>(frames[i]));
+    st << std::endl;
   }
   st << std::endl;
 }

@@ -47,7 +47,11 @@ void kf_os_signal_handler(int signum) {
   case SIGSEGV:        // segment violation
   case SIGABRT:        // abnormal termination triggered by abort call
   case SIGABRT_COMPAT: // SIGABRT compatible with other platforms, same as SIGABRT
-    KF_LOG_CRITICAL("kungfu app stopped by signal {}", signum);
+    // Fatal crash path: do NOT call KF_LOG_* (spdlog) here -- it allocates and
+    // locks and can deadlock or double-fault before we reach the dumper. The
+    // real symbolized dump comes from the SEH __except (hero.cpp) and the
+    // top-level filter installed in handle_os_signals(); this contextless
+    // CRT-signal path is only a last resort.
     print_stack_trace(nullptr);
     exit_hero(signum);
     break;
@@ -124,6 +128,16 @@ void kf_os_signal_handler(int signum) {
 
 void disable_os_signals_handler() { signals_handler_enabled = false; }
 
+#ifdef _WINDOWS
+// Process-wide backstop for exceptions raised outside hero::produce's SEH frame
+// (other threads, or before / after the produce loop). It hands the dumper real
+// EXCEPTION_POINTERS, unlike the contextless CRT signal(SIGSEGV) path.
+static LONG WINAPI kf_top_level_filter(EXCEPTION_POINTERS *ep) {
+  print_stack_trace(ep);
+  return EXCEPTION_EXECUTE_HANDLER;
+}
+#endif // _WINDOWS
+
 void handle_os_signals(void *hero) {
   if (hero_instance != nullptr) {
     throw yijinjing_error("kungfu can only have one hero instance per process");
@@ -139,6 +153,12 @@ void handle_os_signals(void *hero) {
   // Warm up the crash dumper once, outside any signal context, so the in-handler
   // path never triggers lazy dynamic-linker / dbghelp initialization.
   prepare_stack_trace();
+
+#ifdef _WINDOWS
+  // Install the process-wide backstop after warm-up so the filter path only does
+  // symbol lookups, never first-time DbgHelp initialization.
+  SetUnhandledExceptionFilter(kf_top_level_filter);
+#endif // _WINDOWS
 
   for (int s = 1; s < NSIG; s++) {
     signal(s, kf_os_signal_handler);

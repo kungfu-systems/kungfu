@@ -5,7 +5,6 @@
 //
 
 #include <kungfu/common.h>
-#include <kungfu/yijinjing/log.h>
 #include <time.h>
 
 #ifdef _WINDOWS
@@ -16,8 +15,9 @@
 #pragma comment(lib, "dbghelp.lib")
 
 #include "StackWalker.h"
-#include <fstream>
-#include <iostream>
+#include <cstring>
+#include <ostream>
+#include <streambuf>
 
 #pragma warning(disable : 4996)
 
@@ -45,113 +45,236 @@ void set_error_log_dir(const std::string &path) { error_log_dir = path; }
 
 #ifdef _WINDOWS
 
-DWORD SehFiler(DWORD code) {
+namespace {
+// Crash-path helpers. On Windows the crash arrives via an SEH __except filter
+// (hero.cpp) or the top-level unhandled-exception filter (signal.cpp), not POSIX
+// signals, but the same hazard applies: the faulting thread may already hold the
+// spdlog, CRT stdio, or C locale lock. So the crash path must avoid KF_LOG_*
+// (spdlog), std::ofstream / stdio, std::localtime and heap-heavy std::string
+// building; it uses Win32 primitives (CreateFileA / WriteFile / GetLocalTime)
+// and preallocated buffers instead.
+//
+// Accepted residual risk (W-A): DbgHelp (Sym*) uses the heap and StackWalker's
+// std::ostream formatting touches locale facets, so this is hardening, not a
+// strict async-signal-safe guarantee. Extreme heap corruption can still defeat
+// DbgHelp; out-of-process / minidump capture (W-B/W-C) is recorded as future
+// work in docs/windows-crash-symbols.md.
+
+// Preallocated crash-report path buffer; never built with std::string in-handler.
+char kf_crash_pathbuf[1024];
+
+// Minimal WriteFile-backed streambuf so StackWalker can keep writing to a
+// std::ostream while bypassing the CRT stdio file lock the faulting thread might
+// hold. INVALID_HANDLE_VALUE turns it into a null sink (used for warm-up).
+class handle_streambuf : public std::streambuf {
+public:
+  explicit handle_streambuf(HANDLE h) : h_(h) {}
+
+protected:
+  std::streamsize xsputn(const char *s, std::streamsize n) override {
+    if (h_ != INVALID_HANDLE_VALUE && n > 0) {
+      DWORD wrote = 0;
+      WriteFile(h_, s, static_cast<DWORD>(n), &wrote, nullptr);
+    }
+    return n;
+  }
+  int overflow(int c) override {
+    if (c != EOF && h_ != INVALID_HANDLE_VALUE) {
+      char ch = static_cast<char>(c);
+      DWORD wrote = 0;
+      WriteFile(h_, &ch, 1, &wrote, nullptr);
+    }
+    return c;
+  }
+
+private:
+  HANDLE h_;
+};
+
+// Append a NUL-terminated string to a fixed buffer; no allocation.
+size_t as_put_str(char *buf, size_t cap, size_t pos, const char *s) {
+  while (*s != '\0' && pos < cap - 1) {
+    buf[pos++] = *s++;
+  }
+  buf[pos] = '\0';
+  return pos;
+}
+
+// Append an unsigned decimal; snprintf is not crash-path-safe, so hand-roll it.
+size_t as_put_uint(char *buf, size_t cap, size_t pos, unsigned long v) {
+  char tmp[24];
+  int i = 0;
+  if (v == 0) {
+    tmp[i++] = '0';
+  }
+  while (v > 0 && i < static_cast<int>(sizeof(tmp))) {
+    tmp[i++] = static_cast<char>('0' + (v % 10));
+    v /= 10;
+  }
+  while (i > 0 && pos < cap - 1) {
+    buf[pos++] = tmp[--i];
+  }
+  buf[pos] = '\0';
+  return pos;
+}
+
+// Append a zero-padded 2-digit value (date/time components).
+size_t as_put_uint2(char *buf, size_t cap, size_t pos, unsigned v) {
+  if (pos + 2 < cap) {
+    buf[pos++] = static_cast<char>('0' + (v / 10) % 10);
+    buf[pos++] = static_cast<char>('0' + v % 10);
+  }
+  buf[pos] = '\0';
+  return pos;
+}
+
+// Statically-allocated human-readable description of an SEH exception code.
+// Returns a string literal, so it is safe to use from the crash path.
+const char *seh_exception_text(DWORD code) {
   switch (code) {
   case EXCEPTION_ACCESS_VIOLATION:
-    KF_LOG_CRITICAL("Access violation,error code: {:#x}", code);
-    break;
+    return "Access violation";
   case EXCEPTION_BREAKPOINT:
-    KF_LOG_CRITICAL("Breakpoint,error code: {:#x}", code);
-    break;
+    return "Breakpoint";
   case EXCEPTION_DATATYPE_MISALIGNMENT:
-    KF_LOG_CRITICAL("Misaligned data,error code: {:#x}", code);
-    break;
+    return "Misaligned data";
   case EXCEPTION_SINGLE_STEP:
-    KF_LOG_CRITICAL("Single instruction,error code: {:#x}", code);
-    break;
+    return "Single step";
   case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
-    KF_LOG_CRITICAL("Out of array bounds,error code: {:#x}", code);
-    break;
+    return "Array bounds exceeded";
   case EXCEPTION_FLT_DENORMAL_OPERAND:
-    KF_LOG_CRITICAL("Denormalized floating-point value,error code: {:#x}", code);
-    break;
+    return "Float denormal operand";
   case EXCEPTION_FLT_DIVIDE_BY_ZERO:
-    KF_LOG_CRITICAL("Floating point divide-by-zero,error code: {:#x}", code);
-    break;
+    return "Float divide by zero";
   case EXCEPTION_FLT_INEXACT_RESULT:
-    KF_LOG_CRITICAL("Inexact floating point value,error code: {:#x}", code);
-    break;
+    return "Float inexact result";
   case EXCEPTION_FLT_INVALID_OPERATION:
-    KF_LOG_CRITICAL("Invalid floating point operation,error code: {:#x}", code);
-    break;
+    return "Float invalid operation";
   case EXCEPTION_FLT_OVERFLOW:
-    KF_LOG_CRITICAL("Floating point overflow,error code: {:#x}", code);
-    break;
+    return "Float overflow";
   case EXCEPTION_FLT_STACK_CHECK:
-    KF_LOG_CRITICAL("Floating point stack overflow,error code: {:#x}", code);
-    break;
+    return "Float stack check";
   case EXCEPTION_FLT_UNDERFLOW:
-    KF_LOG_CRITICAL("Floating point underflow,error code: {:#x}", code);
-    break;
+    return "Float underflow";
   case EXCEPTION_INT_DIVIDE_BY_ZERO:
-    KF_LOG_CRITICAL("Integer divide by zero,error code: {:#x}", code);
-    break;
+    return "Integer divide by zero";
   case EXCEPTION_INT_OVERFLOW:
-    KF_LOG_CRITICAL("Integer overflow,error code: {:#x}", code);
-    break;
+    return "Integer overflow";
   case EXCEPTION_IN_PAGE_ERROR:
-    KF_LOG_CRITICAL("Invalid page access,error code: {:#x}", code);
-    break;
+    return "In-page error";
   case EXCEPTION_ILLEGAL_INSTRUCTION:
-    KF_LOG_CRITICAL("Invalid instruction,error code: {:#x}", code);
-    break;
+    return "Illegal instruction";
   case EXCEPTION_STACK_OVERFLOW:
-    KF_LOG_CRITICAL("Stack overflow,error code: {:#x}", code);
-    break;
+    return "Stack overflow";
   case EXCEPTION_INVALID_HANDLE:
-    KF_LOG_CRITICAL("Invalid handle,error code: {:#x}", code);
-    break;
+    return "Invalid handle";
   default:
-    if (code & (1 << 29)) {
-      KF_LOG_CRITICAL("Custom exception,error code: {:#x}", code);
-    } else {
-      KF_LOG_CRITICAL("Unknown exception,error code: {:#x}", code);
-    }
-    break;
+    return (code & (1u << 29)) ? "Custom exception" : "Unknown exception";
   }
+}
+
+// Write "Exception: <text> (code 0x<hex>)" using only the fixed buffer + WriteFile
+// (plus OutputDebugStringA, which does not take app locks).
+void write_exception_line(HANDLE h, DWORD code) {
+  char line[96];
+  size_t p = as_put_str(line, sizeof(line), 0, "Exception: ");
+  p = as_put_str(line, sizeof(line), p, seh_exception_text(code));
+  p = as_put_str(line, sizeof(line), p, " (code 0x");
+  char hx[16];
+  int hi = 0;
+  DWORD v = code;
+  const char *digits = "0123456789abcdef";
+  if (v == 0) {
+    hx[hi++] = '0';
+  }
+  while (v > 0 && hi < static_cast<int>(sizeof(hx))) {
+    hx[hi++] = digits[v & 0xF];
+    v >>= 4;
+  }
+  while (hi > 0 && p < sizeof(line) - 1) {
+    line[p++] = hx[--hi];
+  }
+  p = as_put_str(line, sizeof(line), p, ")\n");
+  if (h != INVALID_HANDLE_VALUE) {
+    DWORD w = 0;
+    WriteFile(h, line, static_cast<DWORD>(p), &w, nullptr);
+  }
+  OutputDebugStringA(line);
+}
+} // namespace
+
+// Crash dump for the Windows SEH / unhandled-exception path. Keeps returning
+// EXCEPTION_EXECUTE_HANDLER so it can be used directly as an SEH __except filter
+// expression (hero.cpp) and wrapped for SetUnhandledExceptionFilter (signal.cpp).
+//
+// Note: a stack-overflow exception can corrupt the SEH frame chain and defeat
+// this path; that limitation is documented (W-A accepted, see header).
+DWORD print_stack_trace(EXCEPTION_POINTERS *ep) {
+  // Build "<dir>/hs_err_pid<pid>_<YYYYMMDD_HHMMSS>.log" without std::string / CRT.
+  // error_log_dir is resolved at startup; c_str() does not allocate.
+  SYSTEMTIME st;
+  GetLocalTime(&st);
+  size_t pos = as_put_str(kf_crash_pathbuf, sizeof(kf_crash_pathbuf), 0, error_log_dir.c_str());
+  pos = as_put_str(kf_crash_pathbuf, sizeof(kf_crash_pathbuf), pos, "/hs_err_pid");
+  pos = as_put_uint(kf_crash_pathbuf, sizeof(kf_crash_pathbuf), pos, static_cast<unsigned long>(GetCurrentProcessId()));
+  pos = as_put_str(kf_crash_pathbuf, sizeof(kf_crash_pathbuf), pos, "_");
+  pos = as_put_uint(kf_crash_pathbuf, sizeof(kf_crash_pathbuf), pos, st.wYear);
+  pos = as_put_uint2(kf_crash_pathbuf, sizeof(kf_crash_pathbuf), pos, st.wMonth);
+  pos = as_put_uint2(kf_crash_pathbuf, sizeof(kf_crash_pathbuf), pos, st.wDay);
+  pos = as_put_str(kf_crash_pathbuf, sizeof(kf_crash_pathbuf), pos, "_");
+  pos = as_put_uint2(kf_crash_pathbuf, sizeof(kf_crash_pathbuf), pos, st.wHour);
+  pos = as_put_uint2(kf_crash_pathbuf, sizeof(kf_crash_pathbuf), pos, st.wMinute);
+  pos = as_put_uint2(kf_crash_pathbuf, sizeof(kf_crash_pathbuf), pos, st.wSecond);
+  as_put_str(kf_crash_pathbuf, sizeof(kf_crash_pathbuf), pos, ".log");
+
+  HANDLE h = CreateFileA(kf_crash_pathbuf, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS,
+                         FILE_ATTRIBUTE_NORMAL, nullptr);
+
+  const char *header = "\n----- kungfu native crash report (Windows) -----\n";
+  if (h != INVALID_HANDLE_VALUE) {
+    DWORD w = 0;
+    WriteFile(h, header, static_cast<DWORD>(strlen(header)), &w, nullptr);
+  } else {
+    OutputDebugStringA("# kungfu: cannot open crash report file; writing to debugger only\n");
+  }
+  OutputDebugStringA(header);
+
+  if (ep != nullptr) {
+    write_exception_line(h, ep->ExceptionRecord->ExceptionCode);
+  }
+
+  // Symbolized stack goes straight to the file via the WriteFile-backed streambuf.
+  // DbgHelp is warmed up by prepare_stack_trace() at handler-install time, so this
+  // path performs symbol lookups rather than first-time initialization.
+  {
+    handle_streambuf sb(h);
+    std::ostream os(&sb);
+    StackWalker sw;
+    sw.show_callstack(os, ep != nullptr ? ep->ContextRecord : nullptr);
+  }
+
+  if (h != INVALID_HANDLE_VALUE) {
+    const char *tail = "----- end kungfu crash report -----\n";
+    DWORD w = 0;
+    WriteFile(h, tail, static_cast<DWORD>(strlen(tail)), &w, nullptr);
+    CloseHandle(h);
+    OutputDebugStringA("# kungfu crash report saved: ");
+    OutputDebugStringA(kf_crash_pathbuf);
+    OutputDebugStringA("\n");
+  }
+
   return EXCEPTION_EXECUTE_HANDLER;
 }
 
-// 如果是栈溢出类型的异常，会破坏SEH框架，导致SEH失效
-DWORD print_stack_trace(EXCEPTION_POINTERS *ep) {
-  KF_LOG_CRITICAL("Uncaught exception");
-  // KF_LOG_CRITICAL("{}", home->locator->layout_file());
-
-  // std::cout << "path--------->, " << home->locator->layout_file(home,kungfu::longfist::enums::layout::LOG,"123") <<"
-  // \n";
-
-  // ep->ExceptionRecord->ExceptionCode
-  if (ep != nullptr) {
-    SehFiler(ep->ExceptionRecord->ExceptionCode);
-  }
-
+// Warm up the crash dumper once, outside any crash context, so the in-handler
+// path never triggers first-time DbgHelp initialization (SymInitialize enumerates
+// modules and allocates; doing it here keeps the crash path to symbol lookups).
+// Sym state is process-global, so a throwaway walk to a null sink is enough.
+void prepare_stack_trace() {
+  handle_streambuf sb(INVALID_HANDLE_VALUE);
+  std::ostream os(&sb);
   StackWalker sw;
-  struct tm *cur_time = nullptr;
-  time_t nowtime = time(nullptr);
-  cur_time = std::localtime(&nowtime);
-  char buf[128];
-  strftime(buf, sizeof(buf), "hs_err_%Y_%m_%d_%H_%M_%S", cur_time);
-
-  std::string path = error_log_dir + "/" + buf;
-
-  std::ofstream log_file;
-  log_file.open(path, std::ios::in | std::ios::out | std::ios::trunc);
-  if (!log_file.is_open()) {
-    KF_LOG_CRITICAL("# Can not save log file, dump to screen...");
-  }
-  if (ep != nullptr) {
-    sw.show_callstack(log_file, ep->ContextRecord);
-  } else {
-    sw.show_callstack(log_file, nullptr);
-  }
-
-  if (log_file.is_open()) {
-    KF_LOG_CRITICAL("# An error report file with more information is saved as:  {}", path);
-  }
-
-  log_file.close();
-
-  return EXCEPTION_EXECUTE_HANDLER;
+  sw.show_callstack(os, nullptr);
 }
 
 #else
