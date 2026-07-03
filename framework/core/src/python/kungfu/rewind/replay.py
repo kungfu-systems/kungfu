@@ -138,23 +138,41 @@ class BundleDecoder:
         o = table.Offset(offset)
         if base_type == B.String:
             return table.String(o + table.Pos).decode() if o else None
+        # (flags, python-cast, element-width) for every reflection scalar —
+        # the full set so an arbitrary kfx schema decodes, not just the subset
+        # the Rewind capture events happen to use.
         scalars = {
-            B.Bool: (N.BoolFlags, bool),
-            B.Byte: (N.Int8Flags, int),
-            B.UByte: (N.Uint8Flags, int),
-            B.Short: (N.Int16Flags, int),
-            B.UShort: (N.Uint16Flags, int),
-            B.Int: (N.Int32Flags, int),
-            B.UInt: (N.Uint32Flags, int),
-            B.Long: (N.Int64Flags, int),
-            B.ULong: (N.Uint64Flags, int),
+            B.Bool: (N.BoolFlags, bool, 1),
+            B.Byte: (N.Int8Flags, int, 1),
+            B.UByte: (N.Uint8Flags, int, 1),
+            B.Short: (N.Int16Flags, int, 2),
+            B.UShort: (N.Uint16Flags, int, 2),
+            B.Int: (N.Int32Flags, int, 4),
+            B.UInt: (N.Uint32Flags, int, 4),
+            B.Long: (N.Int64Flags, int, 8),
+            B.ULong: (N.Uint64Flags, int, 8),
+            B.Float: (N.Float32Flags, float, 4),
+            B.Double: (N.Float64Flags, float, 8),
         }
         if base_type in scalars:
-            flags, cast = scalars[base_type]
+            flags, cast, _ = scalars[base_type]
             if not o:
-                return cast(field.DefaultInteger())
+                default = field.DefaultReal() if cast is float else field.DefaultInteger()
+                return cast(default)
             return cast(table.Get(flags, o + table.Pos))
-        raise ValueError(f"unsupported base type {base_type} in rewind schema")
+        if base_type == B.Vector:
+            if not o:
+                return []
+            elem = field.Type().Element()
+            start = table.Vector(o)
+            length = table.VectorLen(o)
+            if elem == B.String:
+                return [table.String(start + i * 4).decode() for i in range(length)]
+            if elem in scalars:
+                flags, cast, width = scalars[elem]
+                return [cast(table.Get(flags, start + i * width)) for i in range(length)]
+            raise ValueError(f"unsupported vector element type {elem}")
+        raise ValueError(f"unsupported base type {base_type}")
 
 
 def verify(runtime_dir, run_id, bundle_dir):
