@@ -30,12 +30,29 @@ export type Runtime = {
   kfcVersion: string;
   buildInfo: Record<string, unknown> | null;
   exports: string[];
+  longfistTypes: { name: string; fields: string[] }[];
   binding: KfNativeBinding | null;
   ledger: Ledger | null;
   domain: DomainState | null;
   rewind: Rewind | null;
   work: Work | null;
 };
+
+function readLongfistTypes(
+  binding: KfNativeBinding,
+): { name: string; fields: string[] }[] {
+  if (!binding.Longfist) return [];
+  const lf = new binding.Longfist();
+  return Object.keys(lf.types).map((name) => {
+    let fields: string[] = [];
+    try {
+      fields = Object.keys(lf.types[name]());
+    } catch {
+      fields = [];
+    }
+    return { name, fields };
+  });
+}
 
 export function bootRuntime(): Runtime {
   const env = window.process.env;
@@ -45,6 +62,7 @@ export function bootRuntime(): Runtime {
     kfcVersion: env.KFC_VERSION || '',
     buildInfo: null,
     exports: [],
+    longfistTypes: [],
     binding: null,
     ledger: null,
     domain: null,
@@ -86,6 +104,7 @@ export function bootRuntime(): Runtime {
       message: `in-process binding loaded · ${Object.keys(binding).length} exports`,
       buildInfo,
       exports: Object.keys(binding),
+      longfistTypes: readLongfistTypes(binding),
       binding,
       ledger,
       domain,

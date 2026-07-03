@@ -1,157 +1,164 @@
-// Reference app shell: boots the in-process runtime, mounts the built-in
-// default kfx through the minimal kfx shape, and shows runtime/master status.
-// The work dashboard is the first screen — the control plane for real-world
-// work; Rewind stays the run-level forensic detail view behind it. See
-// kfx.ts for the contract note.
+// Reference app shell: boots the in-process runtime and mounts kfx through
+// the v2 contract. The shell owns system concerns only — kfx registry and
+// lifecycle, capability injection by declaration, navigation with params,
+// the shared refresh bus, shell state (profile / disabled kfx / settings,
+// persisted in the runtime home's ConfigStore) and the per-kfx error
+// boundary. Every user-facing feature is a kfx; the work dashboard stays
+// the default first screen through the default profile. See
+// docs/shell-and-kfx.md.
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import type { KfxCapabilities, KfxManifest } from './kfx';
+import type { KfxCapabilities, KfxManifest, Shell, ShellState } from './kfx';
 import { configManagerKfx } from './kfx/config-manager';
 import { journalManagerKfx } from './kfx/journal-manager';
+import { kfxManagerKfx, wireKfxManagerRegistry } from './kfx/kfx-manager';
 import { rewindInspectorKfx } from './kfx/rewind-inspector';
+import { settingsKfx, wireSettingsRegistry } from './kfx/settings';
+import { systemStatusKfx } from './kfx/system-status';
 import { workDashboardKfx } from './kfx/work-dashboard';
 import { type Runtime, bootRuntime } from './runtime';
-import { headingStyle, mono, panelStyle } from './ui';
+import { loadShellState, profileById, saveShellState } from './shell-state';
+import { mono, panelStyle } from './ui';
 
 const KFX_REGISTRY: KfxManifest[] = [
   workDashboardKfx,
   rewindInspectorKfx,
   configManagerKfx,
   journalManagerKfx,
+  settingsKfx,
+  kfxManagerKfx,
+  systemStatusKfx,
 ];
+wireSettingsRegistry(KFX_REGISTRY);
+wireKfxManagerRegistry(KFX_REGISTRY);
 
-function OverviewView({ runtime }: { runtime: Runtime }) {
-  const binding = runtime.binding;
-  const registry = React.useMemo(() => {
-    if (!binding?.Longfist) return [];
-    const lf = new binding.Longfist();
-    return Object.keys(lf.types).map((name) => {
-      let fields: string[] = [];
-      try {
-        fields = Object.keys(lf.types[name]());
-      } catch {
-        fields = [];
-      }
-      return { name, fields };
-    });
-  }, [binding]);
-  const [selected, setSelected] = React.useState<string | null>(null);
-  const current = registry.find((t) => t.name === selected);
+const SETTING_FALLBACKS: Record<string, string> = Object.fromEntries(
+  KFX_REGISTRY.flatMap((manifest) =>
+    (manifest.settings ?? []).map((decl) => [decl.key, decl.fallback]),
+  ),
+);
 
-  return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: 12,
-        height: '100%',
-        minHeight: 0,
-      }}
-    >
-      <section style={panelStyle}>
-        <h2 style={headingStyle}>Longfist type registry · {registry.length}</h2>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <ul
-            style={{ listStyle: 'none', margin: 0, padding: 0, minWidth: 180 }}
-          >
-            {registry.map((t) => (
-              <li key={t.name}>
-                <button
-                  type="button"
-                  onClick={() => setSelected(t.name)}
-                  style={{
-                    ...mono,
-                    display: 'block',
-                    width: '100%',
-                    textAlign: 'left',
-                    padding: '3px 8px',
-                    margin: 0,
-                    border: 'none',
-                    borderRadius: 4,
-                    cursor: 'pointer',
-                    background: selected === t.name ? '#04395e' : 'transparent',
-                    color: selected === t.name ? '#9cdcfe' : '#cccccc',
-                  }}
-                >
-                  {t.name}
-                </button>
-              </li>
-            ))}
-          </ul>
-          <div style={{ ...mono, color: '#ce9178', flex: 1 }}>
-            {current ? (
-              <>
-                <div style={{ color: '#9cdcfe', marginBottom: 4 }}>
-                  {current.name} · {current.fields.length} fields
-                </div>
-                {current.fields.map((f) => (
-                  <div key={f}>{f}</div>
-                ))}
-              </>
-            ) : (
-              <span style={{ color: '#6a6a6a' }}>
-                select a type — fields come from the live C++ type registry
-              </span>
-            )}
+// One failing kfx renders its error panel; it never takes the shell down.
+class KfxErrorBoundary extends React.Component<
+  { kfxId: string; children: React.ReactNode },
+  { error: Error | null }
+> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  componentDidUpdate(prev: { kfxId: string }) {
+    if (prev.kfxId !== this.props.kfxId && this.state.error) {
+      this.setState({ error: null });
+    }
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <section style={panelStyle}>
+          <div style={{ ...mono, color: '#f48771' }}>
+            kfx `{this.props.kfxId}` failed: {this.state.error.message}
           </div>
-        </div>
-      </section>
-      <section style={panelStyle}>
-        <h2 style={headingStyle}>Binding exports · {runtime.exports.length}</h2>
-        <ul
-          style={{
-            ...mono,
-            columns: 2,
-            color: '#9cdcfe',
-            margin: 0,
-            paddingLeft: 16,
-          }}
-        >
-          {runtime.exports.map((name) => (
-            <li key={name}>{name}</li>
-          ))}
-        </ul>
-      </section>
-    </div>
-  );
+          <div style={{ ...mono, color: '#6a6a6a', marginTop: 4 }}>
+            the shell and other kfx keep running — see the console for the stack
+          </div>
+        </section>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function subsetCaps(
+  runtime: Runtime,
+  manifest: KfxManifest,
+): KfxCapabilities | null {
+  const full = {
+    ledger: runtime.ledger,
+    domain: runtime.domain,
+    rewind: runtime.rewind,
+    work: runtime.work,
+  };
+  const subset: Record<string, unknown> = {};
+  for (const key of manifest.capabilities) {
+    if (!full[key]) return null;
+    subset[key] = full[key];
+  }
+  // only declared handles are populated; undeclared access is a kfx bug the
+  // error boundary contains
+  return subset as KfxCapabilities;
 }
 
 function App() {
   const [runtime] = React.useState(bootRuntime);
-  const versions = window.process.versions;
-  const [live, setLive] = React.useState(false);
-  // The work dashboard is the default first screen — the control plane for
-  // real-world work. KFE_INITIAL_VIEW deep-links elsewhere (demos, QA
-  // harnesses, "open straight to the run I just traced"): <kfx id|overview>.
+  const [state, setState] = React.useState<ShellState>(() =>
+    runtime.domain
+      ? loadShellState(runtime.domain)
+      : { profileId: 'default', disabledKfx: [], settings: {} },
+  );
+  const profile = profileById(state.profileId);
   const [active, setActive] = React.useState(
-    window.process.env.KFE_INITIAL_VIEW || 'work',
+    () => window.process.env.KFE_INITIAL_VIEW || profile.defaultView,
+  );
+  const [params, setParams] = React.useState<Record<string, string>>({});
+
+  // shared refresh bus: one shell-owned timer, kfx subscribe
+  const subscribers = React.useRef(new Set<() => void>());
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      for (const fn of subscribers.current) fn();
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const updateState = React.useCallback(
+    (patch: Partial<ShellState>) => {
+      setState((current) => {
+        const next = { ...current, ...patch };
+        if (runtime.domain) saveShellState(runtime.domain, next);
+        return next;
+      });
+    },
+    [runtime.domain],
   );
 
-  React.useEffect(() => {
-    const ledger = runtime.ledger;
-    if (!ledger) return;
-    const timer = setInterval(() => {
-      setLive(ledger.health().live);
-    }, 2000);
-    return () => clearInterval(timer);
-  }, [runtime.ledger]);
+  const enabled = KFX_REGISTRY.filter(
+    (manifest) =>
+      manifest.system ||
+      (profile.kfx.includes(manifest.id) &&
+        !state.disabledKfx.includes(manifest.id)),
+  );
+  const activeKfx = enabled.find((k) => k.id === active) ?? enabled[0] ?? null;
 
-  const caps: KfxCapabilities | null =
-    runtime.ledger && runtime.domain && runtime.rewind && runtime.work
-      ? {
-          ledger: runtime.ledger,
-          domain: runtime.domain,
-          rewind: runtime.rewind,
-          work: runtime.work,
-        }
-      : null;
-  const activeKfx = KFX_REGISTRY.find((k) => k.id === active);
+  const shell: Shell = {
+    open: (kfxId, nextParams) => {
+      setParams(nextParams ?? {});
+      setActive(kfxId);
+    },
+    params,
+    onRefresh: (fn) => {
+      subscribers.current.add(fn);
+      return () => subscribers.current.delete(fn);
+    },
+    setting: (key) => state.settings[key] ?? SETTING_FALLBACKS[key] ?? '',
+    updateState,
+    state,
+    info: {
+      ok: runtime.ok,
+      message: runtime.message,
+      runtimeDir: runtime.runtimeDir,
+      kfcVersion: runtime.kfcVersion,
+      buildInfo: runtime.buildInfo,
+      exports: runtime.exports,
+      longfistTypes: runtime.longfistTypes,
+    },
+  };
 
   const navButton = (id: string, title: string) => (
     <button
       key={id}
       type="button"
-      onClick={() => setActive(id)}
+      onClick={() => shell.open(id)}
       style={{
         ...mono,
         display: 'block',
@@ -161,13 +168,15 @@ function App() {
         border: 'none',
         borderRadius: 4,
         cursor: 'pointer',
-        background: active === id ? '#04395e' : 'transparent',
-        color: active === id ? '#9cdcfe' : '#cccccc',
+        background: activeKfx?.id === id ? '#04395e' : 'transparent',
+        color: activeKfx?.id === id ? '#9cdcfe' : '#cccccc',
       }}
     >
       {title}
     </button>
   );
+
+  const caps = activeKfx ? subsetCaps(runtime, activeKfx) : null;
 
   return (
     <div
@@ -191,33 +200,37 @@ function App() {
         <span style={{ ...mono, color: runtime.ok ? '#4ec9b0' : '#f48771' }}>
           {runtime.ok ? '●' : '○'} {runtime.message}
         </span>
+        <span style={{ ...mono, color: '#6a6a6a' }}>profile: {profile.id}</span>
       </header>
-      <div style={{ ...mono, color: '#858585' }}>
-        core {String(runtime.buildInfo?.version ?? 'unknown')} · kfc{' '}
-        {runtime.kfcVersion || 'unavailable'} · electron {versions.electron} ·
-        node {versions.node} · capability SDK ·{' '}
-        <span style={{ color: live ? '#4ec9b0' : '#858585' }}>
-          {live ? '● live (master connected)' : '○ offline (no master)'}
-        </span>
-        <br />
-        runtime home: {runtime.runtimeDir}
-      </div>
-      {runtime.ok && caps ? (
+      {runtime.ok ? (
         <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>
           <nav style={{ width: 140, flexShrink: 0 }}>
-            {navButton('overview', 'Overview')}
-            {KFX_REGISTRY.map((kfx) => navButton(kfx.id, kfx.title))}
+            {enabled
+              .filter((k) => !k.system)
+              .map((k) => navButton(k.id, k.title))}
             <div
-              style={{ ...mono, color: '#6a6a6a', marginTop: 12, fontSize: 10 }}
+              style={{
+                ...mono,
+                color: '#6a6a6a',
+                margin: '12px 0 4px',
+                fontSize: 10,
+              }}
             >
-              built-in kfx · node-integrated
+              system
             </div>
+            {enabled
+              .filter((k) => k.system)
+              .map((k) => navButton(k.id, k.title))}
           </nav>
           <div style={{ flex: 1, minHeight: 0 }}>
-            {activeKfx ? (
-              <activeKfx.View caps={caps} />
+            {activeKfx && caps ? (
+              <KfxErrorBoundary kfxId={activeKfx.id}>
+                <activeKfx.View caps={caps} shell={shell} />
+              </KfxErrorBoundary>
             ) : (
-              <OverviewView runtime={runtime} />
+              <p style={{ ...mono, color: '#f48771' }}>
+                no kfx available for this view
+              </p>
             )}
           </div>
         </div>
