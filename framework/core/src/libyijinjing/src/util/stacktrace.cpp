@@ -23,10 +23,9 @@
 
 #else
 
-#include <cerrno>
-#include <cxxabi.h>
 #include <execinfo.h>
-#include <sys/time.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #endif // _WINDOWS
 
@@ -157,127 +156,118 @@ DWORD print_stack_trace(EXCEPTION_POINTERS *ep) {
 
 #else
 
-void print_stack_trace(FILE *out) {
-  unsigned int max_frames = 511;
-  // storage array for stack trace address data
-  void *addrlist[max_frames + 1];
-  char buf[64];
+namespace {
+// Async-signal-safe primitives: no malloc, no stdio, no locale. These are the
+// only building blocks used from inside the crash handler.
 
-  int console_count = 10;
+constexpr unsigned KF_MAX_FRAMES = 512;
+// Preallocated in BSS so the handler never touches the allocator.
+void *kf_crash_addrlist[KF_MAX_FRAMES];
+char kf_crash_pathbuf[1024];
 
-  struct timeval time_val;
-  struct tm *cur_time;
-  gettimeofday(&time_val, NULL);
-  cur_time = localtime(&(time_val.tv_sec));
-
-  // char path[256] = "./";                        //C:\Users\KungfuDeveloper\AppData\Roaming\kungfu\home\logview
-  // 输出格式为: 2022_07_28_20_38_37
-  strftime(buf, sizeof(buf), "hs_err_%Y_%m_%d_%H_%M_%S.log", cur_time);
-
-  std::string path = error_log_dir + "/" + buf;
-  // strcat(path,buf);
-  FILE *log_file = fopen(path.c_str(), "a+");
-
-  if (log_file == NULL) {
-    KF_LOG_CRITICAL("# Can not save log file, dump to screen... ");
+// Append a NUL-terminated string, bounded by cap; returns the new length.
+size_t as_put_str(char *buf, size_t cap, size_t pos, const char *s) {
+  while (*s != '\0' && pos < cap - 1) {
+    buf[pos++] = *s++;
   }
+  buf[pos] = '\0';
+  return pos;
+}
 
-  fprintf(log_file, "-------------------------Native Stack--------------------------\n");
-  // retrieve current stack addresses 返回addrlist的存在的条目数量（存放的是每一级函数被调用函数的返回地址）
-  unsigned int addrlen = backtrace(addrlist, sizeof(addrlist) / sizeof(void *));
+// Append an unsigned decimal; snprintf is not async-signal-safe, so hand-roll it.
+size_t as_put_uint(char *buf, size_t cap, size_t pos, unsigned long v) {
+  char tmp[24];
+  int i = 0;
+  if (v == 0) {
+    tmp[i++] = '0';
+  }
+  while (v > 0 && i < static_cast<int>(sizeof(tmp))) {
+    tmp[i++] = static_cast<char>('0' + (v % 10));
+    v /= 10;
+  }
+  while (i > 0 && pos < cap - 1) {
+    buf[pos++] = tmp[--i];
+  }
+  buf[pos] = '\0';
+  return pos;
+}
 
-  if (addrlen == 0) {
-    fprintf(out, "  \n");
+// write(2) is async-signal-safe; use it for every literal we emit.
+void as_write(int fd, const char *s) {
+  if (fd < 0) {
     return;
   }
-  // resolve addresses into strings containing "filename(function+address)",
-  // Actually it will be ## program address function + offset
-  // this array must be free()-ed 将每一个返回地址转换成”函数名+函数内偏移量+函数返回值”
-  // symbollists是在backtrace_symbols申请的内存，所以最后必须free掉
-  char **symbollist = backtrace_symbols(addrlist, addrlen);
-
-  // iterate over the returned symbol lines. skip the first, it is the
-  // address of this function.
-  for (unsigned int i = 3; i < addrlen; i++) { // 前三项通常是捕获函数，包括信号捕获处理函数等
-    char *begin_name = nullptr;
-    char *begin_offset = nullptr;
-    char *end_offset = nullptr;
-
-    // find parentheses and +address offset surrounding the mangled name
-#ifdef __APPLE__
-    // OSX style stack trace
-    for (char *p = symbollist[i]; *p; ++p) {
-      if ((*p == '_') && (*(p - 1) == ' '))
-        begin_name = p - 1;
-      else if (*p == '+')
-        begin_offset = p - 1;
-    }
-    if (begin_name && begin_offset && (begin_name < begin_offset)) {
-      *begin_name++ = '\0';
-      *begin_offset++ = '\0';
-
-      // mangled name is now in [begin_name, begin_offset) and caller
-      // offset in [begin_offset, end_offset). now apply
-      // __cxa_demangle():
-      int status;
-      size_t funcnamesize = 8192;
-      char funcname[8192];
-      char *ret = abi::__cxa_demangle(begin_name, &funcname[0], &funcnamesize, &status);
-      KF_LOG_CRITICAL(" {:<30} {:<40} {}", symbollist[i], status == 0 ? ret : begin_name, begin_offset);
-      fprintf(log_file, "%s  %s  %s\n", symbollist[i], status == 0 ? ret : begin_name, begin_offset);
-#else  // !__APPLE__ - but is posix
-       // not OSX style
-       // ./module(function+0x15c) [0x8048a6d] <-- format
-    for (char *p = symbollist[i]; *p; ++p) {
-      if (*p == '(')
-        begin_name = p;
-      else if (*p == '+')
-        begin_offset = p;
-      else if (*p == ')' && (begin_offset || begin_name))
-        end_offset = p;
-    }
-    // printf("%c,%c,%c\n",*begin_name++,*begin_offset++,*end_offset++);
-    // printf("%c,%c,%c\n",*begin_name,*begin_offset,*end_offset);
-    // 可能会出现（+0x49） [0x7f4111]的格式
-    char *ptr = begin_name;
-    if (begin_name && end_offset && *(++ptr) != '+') {
-      // if (begin_name && end_offset && (begin_name > end_offset)) {
-      *begin_name++ = '\0';
-      *end_offset++ = '\0';
-      if (begin_offset)
-        *begin_offset++ = '\0';
-      // mangled name is now in [begin_name, begin_offset) and caller
-      // offset in [begin_offset, end_offset). now apply
-      // __cxa_demangle():
-      int status = 0;
-      size_t funcnamesize = 8192;
-      auto funcname = reinterpret_cast<char *>(std::malloc(funcnamesize));
-      char *ret = abi::__cxa_demangle(begin_name, funcname, &funcnamesize, &status);
-      if (console_count >= 0) {
-        KF_LOG_CRITICAL("{:<30} ({:<40}+{}) {}", symbollist[i], status == 0 ? ret : begin_name,
-                        begin_offset ? begin_offset : "", end_offset);
-        console_count--;
-      }
-      fprintf(log_file, "[%s] \t(%s+%s)  %s\n", symbollist[i], status == 0 ? ret : begin_name,
-              begin_offset ? begin_offset : "", end_offset);
-      fflush(log_file);
-      std::free(ret);
-#endif // !DARWIN - but is posix
-    } else {
-      // couldn't parse the line? print the whole line.
-      if (console_count >= 0) {
-        KF_LOG_CRITICAL("{}", symbollist[i]);
-        console_count--;
-      }
-      fprintf(log_file, "%s\n", symbollist[i]);
-      fflush(log_file);
-    }
+  size_t n = 0;
+  while (s[n] != '\0') {
+    n++;
   }
-  if (log_file != NULL) {
-    KF_LOG_CRITICAL("# An error report file with more information is saved as:  {}", path);
+  ssize_t rc = write(fd, s, n);
+  static_cast<void>(rc);
+}
+} // namespace
+
+// Async-signal-safe crash stack dump.
+//
+// Writes "module(mangled_symbol+offset) [address]" for each frame to a
+// preallocated log file and to the console fd, using only async-signal-safe
+// calls. Symbol names stay mangled on purpose: abi::__cxa_demangle() calls
+// malloc and is not async-signal-safe, so demangle offline with c++filt. This
+// keeps the dump reliable even after heap corruption, which is exactly the case
+// where the previous malloc/stdio/localtime path deadlocked or double-faulted.
+void print_stack_trace(FILE *out, int signum) {
+  int console_fd = (out != nullptr) ? fileno(out) : STDERR_FILENO;
+
+  // Build "<dir>/hs_err_pid<pid>_<epoch>.log" with async-signal-safe calls only.
+  // error_log_dir is resolved at startup; c_str() does not allocate.
+  size_t pos = 0;
+  pos = as_put_str(kf_crash_pathbuf, sizeof(kf_crash_pathbuf), pos, error_log_dir.c_str());
+  pos = as_put_str(kf_crash_pathbuf, sizeof(kf_crash_pathbuf), pos, "/hs_err_pid");
+  pos = as_put_uint(kf_crash_pathbuf, sizeof(kf_crash_pathbuf), pos, static_cast<unsigned long>(getpid()));
+  pos = as_put_str(kf_crash_pathbuf, sizeof(kf_crash_pathbuf), pos, "_");
+  pos = as_put_uint(kf_crash_pathbuf, sizeof(kf_crash_pathbuf), pos, static_cast<unsigned long>(time(nullptr)));
+  as_put_str(kf_crash_pathbuf, sizeof(kf_crash_pathbuf), pos, ".log");
+
+  int log_fd = open(kf_crash_pathbuf, O_CREAT | O_WRONLY | O_APPEND, 0644);
+
+  // signum == 0 means this was called from a normal catch-block, not a signal.
+  char head[64];
+  size_t hp = as_put_str(head, sizeof(head), 0, "\n----- kungfu native stack");
+  if (signum != 0) {
+    hp = as_put_str(head, sizeof(head), hp, " (signal ");
+    hp = as_put_uint(head, sizeof(head), hp, static_cast<unsigned long>(signum));
+    hp = as_put_str(head, sizeof(head), hp, ")");
   }
-  fclose(log_file);
-  free(symbollist);
+  as_put_str(head, sizeof(head), hp, " -----\n");
+  as_write(console_fd, head);
+  as_write(log_fd, head);
+
+  int addrlen = backtrace(kf_crash_addrlist, KF_MAX_FRAMES);
+  // Skip the first two frames: this function and the signal trampoline.
+  int skip = addrlen > 2 ? 2 : 0;
+  // backtrace_symbols_fd() writes directly to the fd and does NOT allocate.
+  backtrace_symbols_fd(kf_crash_addrlist + skip, addrlen - skip, console_fd);
+  if (log_fd >= 0) {
+    backtrace_symbols_fd(kf_crash_addrlist + skip, addrlen - skip, log_fd);
+    as_write(log_fd, "----- end (demangle names with c++filt) -----\n");
+    as_write(console_fd, "# crash report saved: ");
+    as_write(console_fd, kf_crash_pathbuf);
+    as_write(console_fd, "\n");
+    close(log_fd);
+  } else {
+    as_write(console_fd, "# could not open crash report file; dumped to console only\n");
+  }
+}
+
+// See header: forces the lazy dynamic-linker resolution behind backtrace() so
+// the in-handler call never hits dlopen/malloc.
+void prepare_stack_trace() {
+  void *probe[4];
+  int n = backtrace(probe, 4);
+  int devnull = open("/dev/null", O_WRONLY);
+  if (devnull >= 0) {
+    backtrace_symbols_fd(probe, n, devnull);
+    close(devnull);
+  }
 }
 #endif // _WINDOWS
 } // namespace kungfu::yijinjing::util

@@ -5,6 +5,7 @@
 //
 
 #include <csignal>
+#include <cstdio>
 #include <kungfu/common.h>
 #include <kungfu/yijinjing/practice/hero.h>
 #include <kungfu/yijinjing/util/stacktrace.h>
@@ -83,13 +84,15 @@ void kf_os_signal_handler(int signum) {
   case SIGXFSZ:   // terminate process    file size limit exceeded (see setrlimit(2))
   case SIGVTALRM: // terminate process    virtual time alarm (see setitimer(2))
   case SIGPROF:   // terminate process    profiling timer alarm (see setitimer(2))
-    KF_LOG_CRITICAL("kungfu app terminated by signal {}", signum);
-    print_stack_trace();
+    // Fatal crash path: do NOT call KF_LOG_* (spdlog) here. It allocates and
+    // locks and can deadlock or double-fault before we reach the dumper,
+    // especially after heap corruption. print_stack_trace() is async-signal-safe
+    // and emits the signal number itself.
+    print_stack_trace(stderr, signum);
     exit_hero(signum);
   case SIGUSR1: // terminate process    User defined signal 1
   case SIGUSR2: // terminate process    User defined signal 2
-    KF_LOG_CRITICAL("kungfu app caught user defined signal {}", signum);
-    print_stack_trace();
+    print_stack_trace(stderr, signum);
     exit_hero(signum);
   case SIGQUIT: // create core image    quit program
   case SIGILL:  // create core image    illegal instruction
@@ -97,16 +100,13 @@ void kf_os_signal_handler(int signum) {
   case SIGABRT: // create core image    abort program (formerly SIGIOT)
   case SIGFPE:  // create core image    floating-point exception
   case SIGBUS:  // create core image    bus error
-    KF_LOG_CRITICAL("bus error");
-    print_stack_trace();
+    print_stack_trace(stderr, signum);
     exit_hero(signum);
   case SIGSEGV: // create core image    segmentation violation
-    KF_LOG_CRITICAL("segmentation violation");
-    print_stack_trace();
+    print_stack_trace(stderr, signum);
     exit_hero(signum);
   case SIGSYS: // create core image    non-existent system call invoked
-    KF_LOG_CRITICAL("kungfu app caught unexpected signal {}", signum);
-    print_stack_trace();
+    print_stack_trace(stderr, signum);
     exit_hero(signum);
 #endif // _WINDOWS
 #ifdef __APPLE__
@@ -114,8 +114,7 @@ void kf_os_signal_handler(int signum) {
     KF_LOG_INFO("kungfu app discard signal {}", signum);
     break;
   case SIGEMT: // create core image    emulate instruction executed
-    KF_LOG_CRITICAL("kungfu app caught unexpected signal {}", signum);
-    print_stack_trace();
+    print_stack_trace(stderr, signum);
     exit_hero(signum);
 #endif // __APPLE__
   default:
@@ -136,6 +135,10 @@ void handle_os_signals(void *hero) {
     KF_LOG_WARN("OS signals hander disabled");
     return;
   }
+
+  // Warm up the crash dumper once, outside any signal context, so the in-handler
+  // path never triggers lazy dynamic-linker / dbghelp initialization.
+  prepare_stack_trace();
 
   for (int s = 1; s < NSIG; s++) {
     signal(s, kf_os_signal_handler);
