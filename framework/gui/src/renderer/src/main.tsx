@@ -1,42 +1,43 @@
-// Reference app shell: boots the in-process runtime and mounts kfx through
-// the v2 contract. The shell owns system concerns only — kfx registry and
-// lifecycle, capability injection by declaration, navigation with params,
-// the shared refresh bus, shell state (profile / disabled kfx / settings,
-// persisted in the runtime home's ConfigStore) and the per-kfx error
-// boundary. Every user-facing feature is a kfx; the work dashboard stays
-// the default first screen through the default profile. See
-// docs/shell-and-kfx.md.
+import * as capability from '@kungfu-tech/api/capability';
+// Reference app shell: boots the in-process runtime and mounts kfx loaded
+// from extension packages. The shell owns system concerns only — extension
+// scanning and lifecycle, capability injection by declaration, navigation
+// with params, the shared refresh bus, shell state (profile / disabled kfx
+// and suites / settings, persisted in the runtime home's ConfigStore) and
+// the per-kfx error boundary. The shell ships no views of its own: every
+// view — including Settings, the kfx manager and Status (the System Suite
+// under extensions/system) — is an installable package; the shell keeps
+// only a minimal failure surface so a broken install still boots to an
+// explanation. See docs/shell-and-kfx.md.
+import type {
+  KfxCapabilities,
+  KfxEntry,
+  Shell,
+  ShellState,
+} from '@kungfu-tech/kfx';
+import { mono, panelStyle } from '@kungfu-tech/kfx';
 import React from 'react';
+import * as ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
-import type { KfxCapabilities, KfxManifest, Shell, ShellState } from './kfx';
-import { configManagerKfx } from './kfx/config-manager';
-import { journalManagerKfx } from './kfx/journal-manager';
-import { kfxManagerKfx, wireKfxManagerRegistry } from './kfx/kfx-manager';
-import { rewindInspectorKfx } from './kfx/rewind-inspector';
-import { settingsKfx, wireSettingsRegistry } from './kfx/settings';
-import { systemStatusKfx } from './kfx/system-status';
-import { workDashboardKfx } from './kfx/work-dashboard';
+import * as jsxRuntime from 'react/jsx-runtime';
+import { type KfxLoadResult, loadKfx } from './kfx-loader';
 import { type Runtime, bootRuntime } from './runtime';
-import { loadShellState, profileById, saveShellState } from './shell-state';
-import { mono, panelStyle } from './ui';
+import {
+  PROFILES,
+  loadShellState,
+  profileById,
+  saveShellState,
+} from './shell-state';
 
-const KFX_REGISTRY: KfxManifest[] = [
-  workDashboardKfx,
-  rewindInspectorKfx,
-  configManagerKfx,
-  journalManagerKfx,
-  settingsKfx,
-  kfxManagerKfx,
-  systemStatusKfx,
-];
-wireSettingsRegistry(KFX_REGISTRY);
-wireKfxManagerRegistry(KFX_REGISTRY);
-
-const SETTING_FALLBACKS: Record<string, string> = Object.fromEntries(
-  KFX_REGISTRY.flatMap((manifest) =>
-    (manifest.settings ?? []).map((decl) => [decl.key, decl.fallback]),
-  ),
-);
+// Modules injected into every kfx bundle (the externals contract of
+// `kfs kfx build`): one React instance, one capability surface.
+const SHARED_MODULES = {
+  react: React,
+  'react/jsx-runtime': jsxRuntime,
+  'react-dom': ReactDOM,
+  '@kungfu-tech/api': capability,
+  '@kungfu-tech/api/capability': capability,
+};
 
 // One failing kfx renders its error panel; it never takes the shell down.
 class KfxErrorBoundary extends React.Component<
@@ -69,32 +70,37 @@ class KfxErrorBoundary extends React.Component<
   }
 }
 
-function subsetCaps(
-  runtime: Runtime,
-  manifest: KfxManifest,
-): KfxCapabilities | null {
+function subsetCaps(runtime: Runtime, entry: KfxEntry): KfxCapabilities | null {
   const full = {
     ledger: runtime.ledger,
     domain: runtime.domain,
     rewind: runtime.rewind,
     work: runtime.work,
-  };
+  } as Record<string, unknown>;
   const subset: Record<string, unknown> = {};
-  for (const key of manifest.capabilities) {
+  for (const key of entry.capabilities) {
     if (!full[key]) return null;
     subset[key] = full[key];
   }
   // only declared handles are populated; undeclared access is a kfx bug the
   // error boundary contains
-  return subset as KfxCapabilities;
+  return subset as unknown as KfxCapabilities;
 }
 
 function App() {
   const [runtime] = React.useState(bootRuntime);
+  const [loaded] = React.useState<KfxLoadResult>(() =>
+    loadKfx(window.process.env, SHARED_MODULES),
+  );
   const [state, setState] = React.useState<ShellState>(() =>
     runtime.domain
       ? loadShellState(runtime.domain)
-      : { profileId: 'default', disabledKfx: [], settings: {} },
+      : {
+          profileId: 'default',
+          disabledKfx: [],
+          disabledSuites: [],
+          settings: {},
+        },
   );
   const profile = profileById(state.profileId);
   const [active, setActive] = React.useState(
@@ -122,11 +128,18 @@ function App() {
     [runtime.domain],
   );
 
-  const enabled = KFX_REGISTRY.filter(
-    (manifest) =>
-      manifest.system ||
-      (profile.kfx.includes(manifest.id) &&
-        !state.disabledKfx.includes(manifest.id)),
+  const settingFallbacks: Record<string, string> = Object.fromEntries(
+    loaded.entries.flatMap((entry) =>
+      entry.settings.map((decl) => [decl.key, decl.fallback]),
+    ),
+  );
+
+  const enabled = loaded.entries.filter(
+    (entry) =>
+      entry.system ||
+      (profile.kfx.includes(entry.id) &&
+        !state.disabledKfx.includes(entry.id) &&
+        !(entry.suite && state.disabledSuites.includes(entry.suite))),
   );
   const activeKfx = enabled.find((k) => k.id === active) ?? enabled[0] ?? null;
 
@@ -140,7 +153,7 @@ function App() {
       subscribers.current.add(fn);
       return () => subscribers.current.delete(fn);
     },
-    setting: (key) => state.settings[key] ?? SETTING_FALLBACKS[key] ?? '',
+    setting: (key) => state.settings[key] ?? settingFallbacks[key] ?? '',
     updateState,
     state,
     info: {
@@ -152,6 +165,9 @@ function App() {
       exports: runtime.exports,
       longfistTypes: runtime.longfistTypes,
     },
+    registry: loaded.entries,
+    suites: loaded.suites,
+    profiles: PROFILES,
   };
 
   const navButton = (id: string, title: string) => (
@@ -177,6 +193,16 @@ function App() {
   );
 
   const caps = activeKfx ? subsetCaps(runtime, activeKfx) : null;
+  const suiteTitle = (entry: KfxEntry) =>
+    entry.suite ? (loaded.suites[entry.suite]?.title ?? entry.suite) : null;
+  const plain = enabled.filter((k) => !k.suite);
+  const suiteGroups = new Map<string, KfxEntry[]>();
+  for (const entry of enabled) {
+    if (!entry.suite) continue;
+    const group = suiteGroups.get(entry.suite) ?? [];
+    group.push(entry);
+    suiteGroups.set(entry.suite, group);
+  }
 
   return (
     <div
@@ -204,23 +230,35 @@ function App() {
       </header>
       {runtime.ok ? (
         <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>
-          <nav style={{ width: 140, flexShrink: 0 }}>
-            {enabled
-              .filter((k) => !k.system)
-              .map((k) => navButton(k.id, k.title))}
-            <div
-              style={{
-                ...mono,
-                color: '#6a6a6a',
-                margin: '12px 0 4px',
-                fontSize: 10,
-              }}
-            >
-              system
-            </div>
-            {enabled
-              .filter((k) => k.system)
-              .map((k) => navButton(k.id, k.title))}
+          <nav style={{ width: 150, flexShrink: 0 }}>
+            {plain.map((k) => navButton(k.id, k.title))}
+            {[...suiteGroups.entries()].map(([key, group]) => (
+              <React.Fragment key={key}>
+                <div
+                  style={{
+                    ...mono,
+                    color: '#6a6a6a',
+                    margin: '12px 0 4px',
+                    fontSize: 10,
+                  }}
+                >
+                  {suiteTitle(group[0]) ?? key}
+                </div>
+                {group.map((k) => navButton(k.id, k.title))}
+              </React.Fragment>
+            ))}
+            {loaded.failures.length > 0 && (
+              <div
+                style={{
+                  ...mono,
+                  color: '#f48771',
+                  marginTop: 12,
+                  fontSize: 10,
+                }}
+              >
+                {loaded.failures.length} kfx failed to load
+              </div>
+            )}
           </nav>
           <div style={{ flex: 1, minHeight: 0 }}>
             {activeKfx && caps ? (
@@ -228,9 +266,22 @@ function App() {
                 <activeKfx.View caps={caps} shell={shell} />
               </KfxErrorBoundary>
             ) : (
-              <p style={{ ...mono, color: '#f48771' }}>
-                no kfx available for this view
-              </p>
+              <section style={panelStyle}>
+                <div style={{ ...mono, color: '#f48771' }}>
+                  no kfx available
+                  {loaded.entries.length === 0
+                    ? ' — no extensions found on the extension path'
+                    : ` for view "${active}"`}
+                </div>
+                {loaded.failures.map((failure) => (
+                  <div
+                    key={failure.dir}
+                    style={{ ...mono, color: '#858585', marginTop: 4 }}
+                  >
+                    {failure.dir}: {failure.error}
+                  </div>
+                ))}
+              </section>
             )}
           </div>
         </div>

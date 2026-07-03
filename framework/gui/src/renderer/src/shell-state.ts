@@ -3,7 +3,7 @@
 // agent APIs read and write the same configuration the GUI shows; the GUI
 // holds no private settings file.
 import type { DomainState } from '@kungfu-tech/api/capability';
-import type { ProfileManifest, ShellState } from './kfx';
+import type { ProfileManifest, ShellState } from '@kungfu-tech/kfx';
 
 export const SHELL_STATE_LOCATION = {
   category: 'system',
@@ -13,15 +13,15 @@ export const SHELL_STATE_LOCATION = {
 } as const;
 
 // Built-in profiles. A profile is a selection of kfx plus a default first
-// view; the default profile is the working surface (work + forensics),
-// the forensics profile shows the same mechanism carrying a different
-// selection. Opinionated workflow profiles arrive here without shell edits.
+// view; the default profile is the working surface, the forensics profile
+// shows the same mechanism carrying a different selection. Opinionated
+// workflow profiles arrive here without shell edits.
 export const PROFILES: ProfileManifest[] = [
   {
     id: 'default',
     title: 'Default — work control plane',
-    kfx: ['work', 'rewind', 'journal-manager', 'config-manager'],
-    defaultView: 'work',
+    kfx: ['work-dashboard', 'rewind', 'journal-manager', 'config-manager'],
+    defaultView: 'work-dashboard',
   },
   {
     id: 'forensics',
@@ -34,6 +34,7 @@ export const PROFILES: ProfileManifest[] = [
 export const DEFAULT_STATE: ShellState = {
   profileId: 'default',
   disabledKfx: [],
+  disabledSuites: [],
   settings: {},
 };
 
@@ -53,14 +54,17 @@ export function loadShellState(domain: DomainState): ShellState {
       );
     if (!entry) return DEFAULT_STATE;
     const parsed = JSON.parse(entry.value) as Partial<ShellState>;
+    const strings = (value: unknown): string[] =>
+      Array.isArray(value)
+        ? value.filter((item): item is string => typeof item === 'string')
+        : [];
     return {
       profileId:
         typeof parsed.profileId === 'string'
           ? parsed.profileId
           : DEFAULT_STATE.profileId,
-      disabledKfx: Array.isArray(parsed.disabledKfx)
-        ? parsed.disabledKfx.filter((id) => typeof id === 'string')
-        : [],
+      disabledKfx: strings(parsed.disabledKfx),
+      disabledSuites: strings(parsed.disabledSuites),
       settings:
         parsed.settings && typeof parsed.settings === 'object'
           ? Object.fromEntries(

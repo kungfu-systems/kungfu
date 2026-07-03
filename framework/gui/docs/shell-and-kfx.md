@@ -1,91 +1,119 @@
 # The shell and its kfx
 
-The reference app splits into a thin shell and pluggable kfx views. The shell
-owns system-level concerns only; every user-facing feature — including the
-ones the app ships with — is a kfx. This page is the internal contract note
-for that split. The kfx contract is deliberately NOT a published API yet: it
-grows from real consumers (the built-in kfx are the first ones), and it is
-kept externalizable so publishing it later is a move, not a rewrite.
+The reference app splits into a thin shell and installable kfx view packages.
+The shell owns system-level concerns only; every user-facing view — including
+the ones the app ships with — is a package under `extensions/`, independently
+developed, built, verified and distributed. This page is the internal
+contract note for that split. The kfx contract is deliberately NOT a
+published API yet: it grows from real consumers (the shipped packages are the
+first ones), and it is kept externalizable so publishing it later is a move,
+not a rewrite.
 
 ## What the shell owns
 
-1. **Kfx registry and lifecycle.** Manifests, enable/disable (persisted),
-   the default first view, and a per-kfx error boundary — a failing kfx
-   renders its error panel, it never takes the shell down.
-2. **Capability injection by declaration.** A kfx declares the capability
-   handles it needs (`ledger`, `domain`, `rewind`, `work`, ...); the shell
-   hands it exactly those. This keeps the door open for a permission and
-   audit surface once external kfx exist.
-3. **Settings.** The shell renders settings; the values live in the runtime
-   home's domain ConfigStore — journal-backed facts, so the CLI and agent
-   APIs read and write the same configuration the GUI shows. Each kfx may
-   contribute its own settings namespace through its manifest.
-4. **System status.** Master liveness, runtime home, versions, journal store
-   overview. The future storage health story (fsck/export) mounts here.
-5. **Navigation.** View switching, the `KFE_INITIAL_VIEW` deep link, and
-   cross-kfx navigation with parameters (`shell.open('rewind', { runId })`),
-   so one kfx can hand the user to another kfx's detail view.
-6. **Refresh coordination.** A shared refresh bus with one timer; kfx
+1. **Extension scanning and lifecycle.** The shell scans the extension roots
+   for packages whose manifest declares a view, mounts their bundles, and
+   keeps a per-kfx error boundary — a failing kfx renders its error panel and
+   a broken install still boots to an explanation; the shell itself ships no
+   views.
+2. **Capability injection by declaration.** A view declares the capability
+   handles it needs in its manifest; the shell hands it exactly those. This
+   is the seam for a permission and audit surface over third-party kfx.
+3. **Shell state.** Profile, disabled kfx/suites and settings persist as one
+   ConfigStore entry in the runtime home — journal-backed facts, so the CLI
+   and agent APIs read and write the same configuration the GUI shows.
+4. **Navigation.** View switching, the `KFE_INITIAL_VIEW` deep link, and
+   cross-kfx navigation with parameters (`shell.open('rewind', { run })`).
+5. **Refresh coordination.** A shared refresh bus with one timer; kfx
    subscribe instead of running their own intervals.
-7. **Profiles.** A profile bundles kfx, a default view and vocabulary labels
-   (see below).
-8. **UI tokens.** The shared dark/dense/monospace style objects. No component
-   library, by design.
+6. **Profiles and suites.** A profile selects kfx and the first screen; a
+   suite groups related kfx for distribution and operation (see below).
 
-Everything else is a kfx. The shell never contains domain logic — it does not
-know what a work item, a run or a config entry means.
+## A view extension is a package
 
-## System kfx
-
-Settings, the kfx manager and system status are themselves kfx, marked
-`system: true` (they cannot be disabled). Shipping the shell's own features
-through the same contract keeps the contract honest — the first consumers of
-every manifest field are in this repository.
-
-## Manifest (v2)
-
-```ts
-type KfxManifest = {
-  id: string;
-  title: string;
-  runtime: 'node-integrated';        // ADR-0011 tier declaration
-  capabilities: (keyof KfxCapabilities)[]; // handles this kfx receives
-  system?: boolean;                  // shell-owned, cannot be disabled
-  settings?: KfxSettingDecl[];       // contributed settings namespace
-  View: React.ComponentType<{ caps: Partial<KfxCapabilities>; shell: Shell }>;
-};
+```
+extensions/work-dashboard/
+├── package.json          # identity + manifest (kungfuConfig)
+└── src/view/index.tsx    # exports exactly one thing: the View component
 ```
 
-`Shell` is the service surface handed to every kfx alongside its capability
-subset:
+The static half lives in the manifest — managers and installers read it
+without executing code:
 
-```ts
-type Shell = {
-  open: (kfxId: string, params?: Record<string, string>) => void;
-  params: Record<string, string>;    // params this view was opened with
-  onRefresh: (fn: () => void) => () => void; // shared bus; returns unsubscribe
-  setting: (key: string) => string | undefined;
-};
+```json
+"kungfuConfig": {
+  "key": "work-dashboard",
+  "name": "Work dashboard",
+  "config": {
+    "view": {
+      "title": "Work dashboard",
+      "capabilities": ["ledger", "work"],
+      "system": false,
+      "settings": []
+    }
+  }
+}
 ```
+
+`kfs kfx build` bundles `src/view/` to `dist/view/index.js` (CommonJS) with
+`react`, `react/jsx-runtime`, `react-dom` and `@kungfu-tech/api` left
+external; the shell injects its own instances through a require shim at load
+time, so every kfx shares one React and one capability surface. The
+`@kungfu-tech/kfx` package (contract types + UI tokens) is bundled in — it is
+types and plain objects, never stateful.
+
+`npm pack` of a built package is its distribution unit: one tgz installs
+offline into any home via `kungfu kfx install <tgz>` (extracted to
+`<home>/extensions/<key>`), and `kungfu kfx list` / `remove` manage it —
+the CLI and the kfx-manager view operate on the same facts.
+
+## Extension roots
+
+The loader scans, in priority order (first occurrence of a key wins):
+
+1. `KF_EXTENSION_PATH` entries — in development this defaults to the
+   workspace `extensions/` tree, so shipped views load from source builds;
+2. `<home>/extensions` next to the runtime dir — the install root that
+   `kungfu kfx install` populates.
+
+Scanning goes two levels deep, so suite members nested under a suite
+directory (`extensions/system/<member>`) are found in the workspace layout.
+
+## Suites
+
+A suite groups related kfx for distribution and operation: navigation
+grouping, enable/disable as a unit, lockstep versioning. Membership is
+expressed through npm `dependencies`; the manifest names the member keys for
+the shell:
+
+```json
+"kungfuConfig": {
+  "key": "system",
+  "suite": { "title": "System", "members": ["settings", "kfx-manager", "system-status"] }
+}
+```
+
+The System Suite (`extensions/system/`) is the first consumer: Settings, the
+kfx manager and Status are ordinary view packages marked `system: true`
+(always available, never disableable), shipped through the same contract as
+everything else. Parts of a composite module do not wire to each other —
+they share journal facts; a suite carries identity and versioning, never RPC
+topology. The word *bundle* is reserved for the self-describing trace/export
+package (see `docs/rewind.md`) and must not be used for kfx groups.
 
 ## Profiles (v1)
 
-A profile is a selection, not a schema: it names the kfx set, the default
-first view, and vocabulary labels. The default profile ships the work
-dashboard and the Rewind inspector as the working surface. Nothing in the
-shell or the default profile depends on any particular workflow methodology;
-an opinionated workflow (different vocabulary, different views over different
-event families) arrives as another profile without touching the shell.
-
-Deliberately out of scope for v1: user-defined event schemas and generic core
-concepts (plan/job/case ...). Those belong to the core/profile evolution after
-the fact layer has proven itself; freezing them now would weld vocabulary
-before the substrate has earned it.
+A profile is a selection, not a schema: it names the kfx set and the default
+first view. The default profile ships the work dashboard first; nothing in
+the shell depends on any workflow methodology — an opinionated workflow
+arrives as another profile without touching the shell. User-defined event
+schemas and generic core concepts stay out of v1 deliberately.
 
 ## Evolution notes
 
-- External kfx loading and a `sandboxed-ipc` runtime tier are declared in the
-  manifest shape but not implemented; the `runtime` field is the seam.
-- The manifest is a welded surface the moment it is published. Until then it
-  may evolve freely, but every field addition should come with a consumer in
-  this repository.
+- External untrusted kfx need the `sandboxed-ipc` runtime tier; the manifest
+  seam exists, the tier does not. Installed kfx currently run
+  node-integrated — installing a kfx is trusting it.
+- The manifest is a welded surface the moment packages are published. Until
+  then it may evolve freely, but every field addition should come with a
+  consumer in this repository.

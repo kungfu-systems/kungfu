@@ -30,6 +30,15 @@ process.env.KF_RUNTIME_DIR =
     ? path.join(app.getPath('userData'), 'runtime')
     : path.join(__dirname, '..', 'demo-runtime'));
 process.env.KFE_PATH = process.env.KFE_PATH || bindingPath;
+// Extension roots for the renderer's kfx loader. Installed extensions live
+// next to the runtime home (<home>/extensions, populated by `kungfu kfx
+// install`); in development the workspace extensions/ tree is the default
+// source so the System Suite and the built-in views load from source builds.
+process.env.KF_EXTENSION_PATH =
+  process.env.KF_EXTENSION_PATH ||
+  (app.isPackaged
+    ? ''
+    : path.join(__dirname, '..', '..', '..', '..', 'extensions'));
 
 // Prove the frozen runtime CLI runs standalone next to the binding, and hand
 // the result to the renderer for display.
