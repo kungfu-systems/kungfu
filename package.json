@@ -28,7 +28,7 @@
     "clean": "pnpm run foreach clean",
     "clean:extensions": "pnpm run foreach:extensions clean",
     "package": "pnpm run foreach package",
-    "rebuild": "pnpm run clean && pnpm run build",
+    "rebuild:all": "pnpm run clean && pnpm run build",
     "rebuild:extensions": "pnpm run clean:extensions && pnpm run build:extensions",
     "sync": "pnpm install --frozen-lockfile",
     "app": "pnpm --filter @kungfu-tech/artifact-kungfu run app",

@@ -4,18 +4,13 @@ const path = require('path');
 const { kfc } = require('./executable');
 const shell = require('./shell');
 
-function getCliDir() {
-  try {
-    return require('@kungfu-tech/api/toolkit/utils').getCliDir();
-  } catch (err) {
-    return '.';
-  }
-}
-
 shell.run(kfc, process.argv.slice(2), true, {
   silent: true,
   env: {
-    KF_CLI_DEV_PATH: path.resolve(getCliDir(), 'lib', 'dev', 'cli.dev.js'),
+    // kept for the runtime's cli command; the webpack-era CLI package this
+    // used to resolve is retired, so the value is the same fallback the old
+    // lookup always produced
+    KF_CLI_DEV_PATH: path.resolve('.', 'lib', 'dev', 'cli.dev.js'),
     KF_LOG_LEVEL: 'trace',
     ...process.env,
   },

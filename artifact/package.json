@@ -6,24 +6,17 @@
     "email": "info@kungfu.link"
   },
   "version": "4.0.0-alpha.0",
-  "description": "Kungfu Artifact",
+  "description": "Kungfu Artifact — the dogfood assembly: the reference desktop app (with its default kfx) as the runnable and packageable product surface. A thin delegation layer: the app itself lives in @kungfu-tech/gui, the terminal surface in @kungfu-tech/tui; this package pins the assembly and forwards the verbs.",
   "license": "Apache-2.0",
   "private": true,
-  "main": "dist/app/main.js",
-  "kungfuCraft": {
-    "productName": "Kungfu",
-    "zipTargetEnable": {
-      "mac": false,
-      "win": false
-    }
-  },
   "scripts": {
-    "build": "pnpm exec kfs craft build",
-    "package": "pnpm exec kfs craft package",
-    "clean": "pnpm exec kfs craft clean",
-    "dev": "pnpm exec kfs craft dev --with-webpack",
-    "app": "pnpm exec kfs craft dev",
-    "cli": "pnpm exec kfs craft cli"
+    "dev": "pnpm --filter @kungfu-tech/gui run dev",
+    "app": "pnpm --filter @kungfu-tech/gui run start",
+    "build": "pnpm --filter @kungfu-tech/gui run build",
+    "package": "pnpm --filter @kungfu-tech/gui run pack",
+    "dist": "pnpm --filter @kungfu-tech/gui run dist",
+    "cli": "pnpm --filter @kungfu-tech/tui run dev",
+    "clean": "pnpm --filter @kungfu-tech/gui run clean"
   },
   "dependencies": {
     "@kungfu-tech/kfx-broker-sim": "workspace:*",
