@@ -65,7 +65,11 @@ uv run --frozen python .devtools/kfc.py -H <home-dir> \
 - Tool calls, results, errors and retries are captured in-process by hooks
   injected through `PYTHONPATH` (python) and `NODE_OPTIONS` (node). A process
   spawned inside a tool inherits its causal parent — one chain, across
-  runtimes, in one journal.
+  runtimes, in one journal. The hook carries an adapter table that patches a
+  framework's tool seam once it imports — **LangChain is captured unmodified**
+  (its `BaseTool.run` seam, covering `.invoke` / `.ainvoke` / agent tool
+  nodes); the demo toolkit stands in for frameworks the table does not yet
+  know.
 - A run writes two things under `<home-dir>/runtime`: the journal itself
   (under `journal/system/rewind/<run-id>/` — the recorded frames) and the
   trace bundle (under `rewind/<run-id>/bundle/` — the schema blob + manifest
@@ -179,5 +183,8 @@ Each runs standalone: `tests/fixtures/<name>/run.sh`.
   token/usage facts.
 - Replay is forensic (re-open, walk, verify); deterministic re-execution is a
   later differentiator gate.
-- Framework auto-instrumentation ships with the demo toolkit adapter;
-  real-framework adapters (LangChain et al.) grow in the same adapter table.
+- Framework auto-instrumentation ships with a real LangChain adapter (and the
+  demo toolkit for the seam shape); further frameworks grow in the same adapter
+  table. The LangChain adapter wraps the synchronous `BaseTool.run` funnel,
+  which also carries `.invoke` and `.ainvoke` for ordinary tools; a tool whose
+  execution runs *only* through the async `_arun` path is not yet covered.

@@ -1,0 +1,2 @@
+# provisioned on demand by run.sh; the real framework install, not source
+.venv-langchain/
