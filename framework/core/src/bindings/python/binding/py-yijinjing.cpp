@@ -15,6 +15,7 @@
 #include <kungfu/yijinjing/nanomsg/socket.h>
 #include <kungfu/yijinjing/practice/apprentice.h>
 #include <kungfu/yijinjing/practice/master.h>
+#include <kungfu/yijinjing/schema/schema_compiler.h>
 #include <kungfu/yijinjing/time.h>
 #include <kungfu/yijinjing/util/util.h>
 
@@ -156,6 +157,21 @@ void bind(pybind11::module &&m) {
   m.def("strfnow", &yijinjing::time::strfnow, py::arg("format") = KUNGFU_TIMESTAMP_FORMAT);
 
   m.def("get_page_path", &page::get_page_path);
+
+  // open-layer schema compilation: a kfx `.fbs` text schema -> `.bfbs`
+  // reflection binary, compiled in-process by the linked FlatBuffers library
+  // (no flatc binary, no subprocess). Returns (bfbs_bytes, error): on success
+  // error is empty; on a parse/policy failure bfbs is empty and error carries
+  // the diagnostic. `sandboxed=True` applies the untrusted-kfx bounds.
+  m.def(
+      "compile_schema",
+      [](const std::string &fbs_text, bool sandboxed) {
+        schema::compile_options opts;
+        opts.tier = sandboxed ? schema::trust_tier::sandboxed : schema::trust_tier::trusted;
+        auto r = schema::compile_fbs(fbs_text, opts);
+        return py::make_tuple(py::bytes(reinterpret_cast<const char *>(r.bfbs.data()), r.bfbs.size()), r.error);
+      },
+      py::arg("fbs_text"), py::arg("sandboxed") = false);
 
   m.def("thread_id", &yijinjing::util::get_thread_id);
   m.def("in_color_terminal", &yijinjing::util::in_color_terminal);

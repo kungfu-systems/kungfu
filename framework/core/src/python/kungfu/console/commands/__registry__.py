@@ -11,6 +11,7 @@ from . import login
 from . import backtest
 from . import trace
 from . import rewind
+from . import schema
 from . import work
 from . import atlas
 
@@ -26,6 +27,7 @@ __all__ = [
     "backtest",
     "trace",
     "rewind",
+    "schema",
     "work",
     "atlas",
 ]
