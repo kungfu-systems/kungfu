@@ -116,7 +116,11 @@ function App() {
   const [runtime] = React.useState(bootRuntime);
   const versions = window.process.versions;
   const [live, setLive] = React.useState(false);
-  const [active, setActive] = React.useState('overview');
+  // deep-link the initial view (demos, QA harnesses, "open straight to the
+  // run I just traced"): KFE_INITIAL_VIEW=<kfx id|overview>
+  const [active, setActive] = React.useState(
+    window.process.env.KFE_INITIAL_VIEW || 'overview',
+  );
 
   React.useEffect(() => {
     const ledger = runtime.ledger;

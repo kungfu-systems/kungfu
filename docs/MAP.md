@@ -38,6 +38,7 @@ and the map routes a question to whichever doc answers it.
 | Where does a release binary come from, and how do I verify it? | `provenance.md` | verify | blocked · needs release infra |
 | What gates must a release pass? | `provenance.md` + [`version-release-design.md`](version-release-design.md) | verify | partial |
 | If kungfu itself misbehaves, how do I localize it? | [`debugging.md`](debugging.md) | verify | stable |
+| How do I record an agent run and find why it failed (Rewind)? | [`rewind.md`](rewind.md) | use | stable · pre-release install path |
 | How do I write an extension (`kfx`)? | `extensions.md` (+ [`../examples/`](../examples)) | use | to write · examples exist |
 
 ## Also asking about

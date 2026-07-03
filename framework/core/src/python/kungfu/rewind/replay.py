@@ -228,8 +228,10 @@ def render_tree(runtime_dir, run_id):
             head = f"retry attempt {facts.get('attempt')} of {facts.get('retry_of_span_id', '')[:8]}"
         if close:
             _, cf = close
-            status = "ok" if cf.get("status") == 0 else f"status={cf.get('status')}"
+            status = "ok" if cf.get("status") == 0 else "✗ error"
             head += f"  [{status}, {cf.get('latency_ns', 0) / 1e6:.1f}ms]"
+            if cf.get("status") != 0 and cf.get("error"):
+                head += f" — {cf.get('error')}"
         return head
 
     def walk(span, depth):
