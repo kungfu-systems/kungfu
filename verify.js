@@ -190,21 +190,27 @@ function main() {
       if (guard.status === 0) pass('yijinjing dependency guard', 'check-deps.sh');
       else fail('yijinjing dependency guard', tail3(guard));
 
-      // ── Stage 6: rewind capture fixtures (full mode) ──────────────
+      // ── Stage 6: journal fact fixtures (full mode) ────────────────
       // Each fixture under tests/fixtures/rewind-demo-*/ proves a capture
       // gate end to end against the built dist/kfc (G2 capture, G3 event
-      // completeness); a red fixture means the capture contract regressed.
-      console.log('\n[verify] stage 6: rewind capture fixtures');
+      // completeness); tests/fixtures/work-demo-*/ prove the default work
+      // profile the same way (P1 vocabulary, P2 lifecycle). A red fixture
+      // means the corresponding journal fact contract regressed.
+      console.log('\n[verify] stage 6: journal fact fixtures');
       const fixturesDir = path.join(ROOT, 'tests', 'fixtures');
       const fixtures = fs.existsSync(fixturesDir)
         ? fs
             .readdirSync(fixturesDir)
-            .filter((d) => d.startsWith('rewind-demo-') && fs.existsSync(path.join(fixturesDir, d, 'run.sh')))
+            .filter(
+              (d) =>
+                (d.startsWith('rewind-demo-') || d.startsWith('work-demo-')) &&
+                fs.existsSync(path.join(fixturesDir, d, 'run.sh')),
+            )
             .sort()
         : [];
       for (const name of fixtures) {
         const r = spawnSync('bash', [path.join(fixturesDir, name, 'run.sh')], { encoding: 'utf8' });
-        if (r.status === 0) pass(`fixture ${name}`, 'capture facts hold');
+        if (r.status === 0) pass(`fixture ${name}`, 'journal facts hold');
         else fail(`fixture ${name}`, `run.sh exit ${r.status == null ? 'signal ' + r.signal : r.status}; tail: ${tail3(r)}`);
       }
     }
