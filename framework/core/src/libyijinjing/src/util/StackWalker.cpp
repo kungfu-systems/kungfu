@@ -206,12 +206,19 @@ void StackWalker::print_native_stack(std::ostream &st, const void *context) {
 }
 
 void StackWalker::show_callstack(std::ostream &os, const void *context) {
+  // Emit the native stack FIRST. It is the most important part of a crash report
+  // and the least heap-hungry to produce (RtlCaptureStackBackTrace / StackWalk64
+  // do not allocate; only symbolization does, and that degrades gracefully to
+  // module+offset). The verbose system-info sections below call GetFileVersionInfo
+  // and enumerate modules, which allocate and can fault on an already-corrupted
+  // heap -- exactly the case (heap-corruption crash) where the stack matters most.
+  // Ordering the stack first means a truncated report still contains it.
+  print_native_stack(os, context);
   print_windows_version(os);
   print_cpu_info(os);
   print_environment_variables(os);
   print_loaded_modules(os);
   print_stack_bound(os);
-  print_native_stack(os, context);
 }
 
 void StackWalker::print_windows_version(std::ostream &st) {
