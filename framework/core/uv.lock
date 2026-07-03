@@ -280,18 +280,22 @@ wheels = [
 
 [[package]]
 name = "hishel"
-version = "0.1.5"
+version = "1.3.0"
 source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
 dependencies = [
-    { name = "anyio" },
-    { name = "anysqlite" },
-    { name = "httpx" },
     { name = "msgpack" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "http://192.168.100.222:3141/root/pypi/+f/9d4/0c682cd94fd6e/hishel-0.1.5.tar.gz", hash = "sha256:9d40c682cd94fd6e1394fb05713ae20a75ed8aeba6f5272380444039ce6257f2" }
+sdist = { url = "http://192.168.100.222:3141/root/pypi/+f/5be/585dca8c03586/hishel-1.3.0.tar.gz", hash = "sha256:5be585dca8c035866cffc745a50dbce6b277a3d1f4b07ef24f77c07f6b31ff92" }
 wheels = [
-    { url = "http://192.168.100.222:3141/root/pypi/+f/0bf/be9a2b9342090/hishel-0.1.5-py3-none-any.whl", hash = "sha256:0bfbe9a2b9342090eba82ba6de88258092e1c4c7b730cd4cb4b570e4b40e44a7" },
+    { url = "http://192.168.100.222:3141/root/pypi/+f/b80/3ad9f1d410085/hishel-1.3.0-py3-none-any.whl", hash = "sha256:b803ad9f1d410085b61459a5dbbd273806215021e672198ba911c7d3db14adaa" },
+]
+
+[package.optional-dependencies]
+httpx = [
+    { name = "anyio" },
+    { name = "anysqlite" },
+    { name = "httpx" },
 ]
 
 [[package]]
@@ -328,6 +332,18 @@ socks = [
 ]
 
 [[package]]
+name = "id"
+version = "1.6.1"
+source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
+dependencies = [
+    { name = "urllib3" },
+]
+sdist = { url = "http://192.168.100.222:3141/root/pypi/+f/d07/32d624fb46fd4/id-1.6.1.tar.gz", hash = "sha256:d0732d624fb46fd4e7bc4e5152f00214450953b9e772c182c1c22964def1a069" }
+wheels = [
+    { url = "http://192.168.100.222:3141/root/pypi/+f/f5e/c41ed2629a508/id-1.6.1-py3-none-any.whl", hash = "sha256:f5ec41ed2629a508f5d0988eda142e190c9c6da971100612c4de9ad9f9b237ca" },
+]
+
+[[package]]
 name = "idna"
 version = "3.18"
 source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
@@ -359,11 +375,11 @@ wheels = [
 
 [[package]]
 name = "installer"
-version = "0.7.0"
+version = "1.0.1"
 source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
-sdist = { url = "http://192.168.100.222:3141/root/pypi/+f/a26/d3e3116289bb0/installer-0.7.0.tar.gz", hash = "sha256:a26d3e3116289bb08216e0d0f7d925fcef0b0194eedfa0c944bcaaa106c4b631" }
+sdist = { url = "http://192.168.100.222:3141/root/pypi/+f/052/c7fc3721d54c6/installer-1.0.1.tar.gz", hash = "sha256:052c7fc3721d54c696e2dea019be67539d7b144e924f559f54beb3121831c364" }
 wheels = [
-    { url = "http://192.168.100.222:3141/root/pypi/+f/05d/1933f0a5ba7d8/installer-0.7.0-py3-none-any.whl", hash = "sha256:05d1933f0a5ba7d8d6296bb6d5018e7c94fa473ceb10cf198a92ccea19c27b53" },
+    { url = "http://192.168.100.222:3141/root/pypi/+f/011/d045df8b954ce/installer-1.0.1-py3-none-any.whl", hash = "sha256:011d045df8b954ced7dde3a7e42ae4418da40ecda7990f2d11d5ed7c146fd98b" },
 ]
 
 [[package]]
@@ -450,7 +466,6 @@ dependencies = [
     { name = "cryptography", marker = "sys_platform == 'linux'" },
     { name = "filelock" },
     { name = "flatbuffers" },
-    { name = "hishel" },
     { name = "importlib-metadata" },
     { name = "jeepney", marker = "sys_platform == 'linux'" },
     { name = "keyring" },
@@ -510,7 +525,6 @@ requires-dist = [
     { name = "cryptography", marker = "sys_platform == 'linux'", specifier = "==43.0.3" },
     { name = "filelock" },
     { name = "flatbuffers", specifier = ">=25.2,<26" },
-    { name = "hishel", specifier = "<1.0" },
     { name = "importlib-metadata" },
     { name = "jeepney", marker = "sys_platform == 'linux'", specifier = "==0.8.0" },
     { name = "keyring", specifier = "~=25.5.0" },
@@ -521,7 +535,7 @@ requires-dist = [
     { name = "ordered-set" },
     { name = "packaging" },
     { name = "pandas", specifier = "~=2.2.0" },
-    { name = "pdm", specifier = "~=2.21.0" },
+    { name = "pdm", specifier = "~=2.28.0" },
     { name = "pdm-pep517", specifier = "~=1.1.0" },
     { name = "pip", specifier = "~=24.3.0" },
     { name = "platformdirs" },
@@ -739,7 +753,7 @@ wheels = [
 
 [[package]]
 name = "pdm"
-version = "2.21.0"
+version = "2.28.0"
 source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
 dependencies = [
     { name = "blinker" },
@@ -747,11 +761,11 @@ dependencies = [
     { name = "dep-logic" },
     { name = "filelock" },
     { name = "findpython" },
-    { name = "hishel" },
+    { name = "hishel", extra = ["httpx"] },
     { name = "httpcore" },
     { name = "httpx", extra = ["socks"] },
+    { name = "id" },
     { name = "installer" },
-    { name = "msgpack" },
     { name = "packaging" },
     { name = "pbs-installer" },
     { name = "platformdirs" },
@@ -765,9 +779,9 @@ dependencies = [
     { name = "unearth" },
     { name = "virtualenv" },
 ]
-sdist = { url = "http://192.168.100.222:3141/root/pypi/+f/9c9/28d6db62d104a/pdm-2.21.0.tar.gz", hash = "sha256:9c928d6db62d104ab86318fe09aaf9bdfc6f616176af407e4df00f59e001930f" }
+sdist = { url = "http://192.168.100.222:3141/root/pypi/+f/ca7/d215489550869/pdm-2.28.0.tar.gz", hash = "sha256:ca7d21548955086985070d2fe4334a55e59093a466b25eebc6bb0769a0539e89" }
 wheels = [
-    { url = "http://192.168.100.222:3141/root/pypi/+f/c01/a50622072a952/pdm-2.21.0-py3-none-any.whl", hash = "sha256:c01a50622072a9529bd9c7f8c1ce8d050b7e340d25d051233bce9fcdd8449614" },
+    { url = "http://192.168.100.222:3141/root/pypi/+f/c17/3f0a5801bccde/pdm-2.28.0-py3-none-any.whl", hash = "sha256:c173f0a5801bccdec73944abe86288acd90ca2eebaeded503d7511586d2b6a27" },
 ]
 
 [[package]]
