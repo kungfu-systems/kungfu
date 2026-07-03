@@ -18,7 +18,11 @@
   "bin": {
     "kfs": "src/kfs.js"
   },
-  "files": ["src", "templates", "README.md"],
+  "files": [
+    "src",
+    "templates",
+    "README.md"
+  ],
   "scripts": {
     "kfs": "node src/kfs.js",
     "build": "node --check src/kfs.js",
@@ -27,5 +31,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4"
+  },
+  "dependencies": {
+    "esbuild": "^0.28.1"
   }
 }

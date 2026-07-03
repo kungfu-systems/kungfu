@@ -20,10 +20,16 @@ function usage(code) {
   process.stdout.write(
     [
       'usage: kfs create app <directory> [options]',
+      '       kfs kfx build | clean',
       '',
-      'options:',
+      'create app options:',
       '  --name <name>   product name (defaults to the directory basename)',
       '  --workspace     wire platform deps as workspace:* (inside the monorepo)',
+      '',
+      'kfx commands run inside a view extension package (a package.json with',
+      'kungfuConfig.config.view); build bundles src/view/ to dist/view/index.js',
+      'with react and the capability SDK left external — the shell injects',
+      'its own instances at load time.',
       '',
     ].join('\n'),
   );
@@ -110,10 +116,68 @@ function createApp(directory, options) {
   );
 }
 
+// ── kfx view extension build ──────────────────────────────────────────────
+// Modules that stay external and are injected by the shell at load time; a
+// view extension must never ship its own copy of these.
+const KFX_EXTERNALS = [
+  'react',
+  'react/jsx-runtime',
+  'react-dom',
+  '@kungfu-tech/api',
+  '@kungfu-tech/api/capability',
+];
+
+function readViewDecl() {
+  const manifestPath = path.resolve('package.json');
+  if (!fs.existsSync(manifestPath)) fail('no package.json in current directory');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const view = manifest.kungfuConfig?.config?.view;
+  if (!view)
+    fail('package.json has no kungfuConfig.config.view — not a view extension');
+  return { manifest, view };
+}
+
+async function kfxBuild() {
+  const { manifest, view } = readViewDecl();
+  const entry = ['src/view/index.tsx', 'src/view/index.ts'].find((candidate) =>
+    fs.existsSync(path.resolve(candidate)),
+  );
+  if (!entry) fail('no src/view/index.tsx (or .ts) entry');
+  const outfile = path.resolve(view.entry || 'dist/view/index.js');
+  const esbuild = await import('esbuild');
+  await esbuild.build({
+    entryPoints: [path.resolve(entry)],
+    outfile,
+    bundle: true,
+    format: 'cjs',
+    platform: 'browser',
+    jsx: 'automatic',
+    external: KFX_EXTERNALS,
+    sourcemap: false,
+    logLevel: 'warning',
+  });
+  process.stdout.write(
+    `built ${manifest.name ?? 'view extension'} -> ${path.relative(process.cwd(), outfile)}\n`,
+  );
+}
+
+function kfxClean() {
+  readViewDecl();
+  fs.rmSync(path.resolve('dist'), { recursive: true, force: true });
+  process.stdout.write('cleaned dist\n');
+}
+
 const { positional, options } = parseArgs(process.argv.slice(2));
 const [command, kind, directory] = positional;
 
 if (!command) usage(1);
-if (command !== 'create') fail(`unknown command: ${command}`);
-if (kind !== 'app') fail(`unknown target: ${kind} (supported: app)`);
-createApp(directory, options);
+if (command === 'create') {
+  if (kind !== 'app') fail(`unknown target: ${kind} (supported: app)`);
+  createApp(directory, options);
+} else if (command === 'kfx') {
+  if (kind === 'build') await kfxBuild();
+  else if (kind === 'clean') kfxClean();
+  else fail(`unknown kfx command: ${kind} (supported: build, clean)`);
+} else {
+  fail(`unknown command: ${command}`);
+}
