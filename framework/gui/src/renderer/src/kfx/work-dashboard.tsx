@@ -7,7 +7,7 @@
 import type { WorkItem } from '@kungfu-tech/api/capability';
 import { WORK_STATUS_NAMES } from '@kungfu-tech/api/capability';
 import React from 'react';
-import type { KfxCapabilities, KfxManifest } from '../kfx';
+import type { KfxCapabilities, KfxManifest, Shell } from '../kfx';
 import { headingStyle, mono, panelStyle } from '../ui';
 
 const STATUS_ORDER = ['active', 'blocked', 'waiting', 'ready', 'done'] as const;
@@ -55,9 +55,11 @@ function FactRows({ label, rows }: { label: string; rows: FactRow[] }) {
 
 function DetailView({
   caps,
+  shell,
   item,
 }: {
   caps: KfxCapabilities;
+  shell: Shell;
   item: WorkItem;
 }) {
   const time = (nanos: bigint) =>
@@ -117,13 +119,32 @@ function DetailView({
           fields: { time: time(row.time), ref: row.ref, kind: row.kind },
         }))}
       />
-      <FactRows
-        label="Linked runs · open in Rewind inspector"
-        rows={item.runs.map((row) => ({
-          key: String(row.time),
-          fields: { time: time(row.time), run: row.runId },
-        }))}
-      />
+      {item.runs.length > 0 && (
+        <div style={{ marginBottom: 8 }}>
+          <h2 style={headingStyle}>Linked runs · {item.runs.length}</h2>
+          {item.runs.map((row) => (
+            <button
+              key={String(row.time)}
+              type="button"
+              onClick={() =>
+                row.runId && shell.open('rewind', { run: row.runId })
+              }
+              style={{
+                ...mono,
+                display: 'block',
+                padding: '2px 0',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                color: '#9cdcfe',
+                textAlign: 'left',
+              }}
+            >
+              {time(row.time)} · {row.runId} → open in Rewind
+            </button>
+          ))}
+        </div>
+      )}
       <h2 style={headingStyle}>History</h2>
       {item.history.map((row) => (
         <div
@@ -142,7 +163,13 @@ function DetailView({
   );
 }
 
-function WorkDashboardView({ caps }: { caps: KfxCapabilities }) {
+function WorkDashboardView({
+  caps,
+  shell,
+}: {
+  caps: KfxCapabilities;
+  shell: Shell;
+}) {
   const [items, setItems] = React.useState<WorkItem[]>(() => caps.work.items());
   const [filter, setFilter] = React.useState<string>('all');
   const [selected, setSelected] = React.useState<string | null>(null);
@@ -152,10 +179,8 @@ function WorkDashboardView({ caps }: { caps: KfxCapabilities }) {
     setItems(caps.work.items());
   }, [caps.work]);
 
-  React.useEffect(() => {
-    const timer = setInterval(reload, 5000);
-    return () => clearInterval(timer);
-  }, [reload]);
+  // the shell owns the refresh timer; this kfx only subscribes
+  React.useEffect(() => shell.onRefresh(reload), [shell, reload]);
 
   const counts = new Map<string, number>();
   for (const item of items) {
@@ -254,7 +279,7 @@ function WorkDashboardView({ caps }: { caps: KfxCapabilities }) {
         )}
       </section>
       {current ? (
-        <DetailView caps={caps} item={current} />
+        <DetailView caps={caps} shell={shell} item={current} />
       ) : (
         <section style={{ ...panelStyle, flex: 1 }}>
           <div style={{ ...mono, color: '#6a6a6a' }}>
@@ -271,5 +296,6 @@ export const workDashboardKfx: KfxManifest = {
   id: 'work',
   title: 'Work dashboard',
   runtime: 'node-integrated',
+  capabilities: ['ledger', 'work'],
   View: WorkDashboardView,
 };

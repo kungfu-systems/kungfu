@@ -4,10 +4,10 @@
 // zero-copy frames the runtime itself uses.
 import type { LedgerRecord, ReplayAnchor } from '@kungfu-tech/api/capability';
 import React from 'react';
-import type { KfxCapabilities, KfxManifest } from '../kfx';
+import type { KfxCapabilities, KfxManifest, Shell } from '../kfx';
 import { headingStyle, inputStyle, mono, panelStyle } from '../ui';
 
-function JournalManagerView({ caps }: { caps: KfxCapabilities }) {
+function JournalManagerView({ caps }: { caps: KfxCapabilities; shell: Shell }) {
   const { ledger, domain } = caps;
   const [msgFilter, setMsgFilter] = React.useState('');
   const [events, setEvents] = React.useState<LedgerRecord[]>([]);
@@ -160,5 +160,6 @@ export const journalManagerKfx: KfxManifest = {
   id: 'journal-manager',
   title: 'Journal',
   runtime: 'node-integrated',
+  capabilities: ['ledger', 'domain'],
   View: JournalManagerView,
 };

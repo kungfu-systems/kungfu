@@ -2,10 +2,10 @@
 // capability SDK's domain-state handle — real SQLite writes via libkungfu.
 import type { ConfigEntry } from '@kungfu-tech/api/capability';
 import React from 'react';
-import type { KfxCapabilities, KfxManifest } from '../kfx';
+import type { KfxCapabilities, KfxManifest, Shell } from '../kfx';
 import { headingStyle, inputStyle, mono, panelStyle } from '../ui';
 
-function ConfigManagerView({ caps }: { caps: KfxCapabilities }) {
+function ConfigManagerView({ caps }: { caps: KfxCapabilities; shell: Shell }) {
   const { domain } = caps;
   const [entries, setEntries] = React.useState<ConfigEntry[]>([]);
   const [category, setCategory] = React.useState('system');
@@ -131,5 +131,6 @@ export const configManagerKfx: KfxManifest = {
   id: 'config-manager',
   title: 'Config',
   runtime: 'node-integrated',
+  capabilities: ['domain'],
   View: ConfigManagerView,
 };

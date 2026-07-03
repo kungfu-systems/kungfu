@@ -11,7 +11,7 @@ import {
   RunStatus,
 } from '@kungfu-tech/api/capability';
 import React from 'react';
-import type { KfxCapabilities, KfxManifest } from '../kfx';
+import type { KfxCapabilities, KfxManifest, Shell } from '../kfx';
 import { headingStyle, mono, panelStyle } from '../ui';
 
 const COLOR = {
@@ -261,7 +261,13 @@ function SpanDetail({ span }: { span: RewindSpan }) {
   );
 }
 
-function RewindInspectorView({ caps }: { caps: KfxCapabilities }) {
+function RewindInspectorView({
+  caps,
+  shell,
+}: {
+  caps: KfxCapabilities;
+  shell: Shell;
+}) {
   const { rewind } = caps;
   const [runs, setRuns] = React.useState<RewindRunSummary[]>([]);
   const [selectedRun, setSelectedRun] = React.useState<string | null>(null);
@@ -269,6 +275,15 @@ function RewindInspectorView({ caps }: { caps: KfxCapabilities }) {
     null,
   );
   const [error, setError] = React.useState('');
+
+  // cross-kfx deep link: another kfx (e.g. the work dashboard) opens this
+  // inspector on a specific run via shell.open('rewind', { run })
+  React.useEffect(() => {
+    if (shell.params.run) {
+      setSelectedRun(shell.params.run);
+      setSelectedSpan(null);
+    }
+  }, [shell.params.run]);
 
   const refresh = React.useCallback(() => {
     try {
@@ -387,5 +402,6 @@ export const rewindInspectorKfx: KfxManifest = {
   id: 'rewind',
   title: 'Rewind',
   runtime: 'node-integrated',
+  capabilities: ['rewind'],
   View: RewindInspectorView,
 };
