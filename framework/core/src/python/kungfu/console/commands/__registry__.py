@@ -13,6 +13,7 @@ from . import trace
 from . import rewind
 from . import work
 from . import atlas
+from . import kfx
 
 __all__ = [
     "engage",
@@ -28,4 +29,5 @@ __all__ = [
     "rewind",
     "work",
     "atlas",
+    "kfx",
 ]
