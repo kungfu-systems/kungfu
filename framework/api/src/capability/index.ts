@@ -5,3 +5,4 @@ export * from './types';
 export * from './ledger';
 export * from './domain';
 export * from './rewind';
+export * from './work';
