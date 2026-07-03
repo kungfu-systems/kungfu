@@ -15,6 +15,7 @@
 #pragma comment(lib, "dbghelp.lib")
 
 #include "StackWalker.h"
+#include <DbgHelp.h>
 #include <cstring>
 #include <ostream>
 #include <streambuf>
@@ -54,14 +55,20 @@ namespace {
 // building; it uses Win32 primitives (CreateFileA / WriteFile / GetLocalTime)
 // and preallocated buffers instead.
 //
-// Accepted residual risk (W-A): DbgHelp (Sym*) uses the heap and StackWalker's
+// Accepted residual risk: DbgHelp (Sym*) uses the heap and StackWalker's
 // std::ostream formatting touches locale facets, so this is hardening, not a
-// strict async-signal-safe guarantee. Extreme heap corruption can still defeat
-// DbgHelp; out-of-process / minidump capture (W-B/W-C) is recorded as future
-// work in docs/windows-crash-symbols.md.
+// strict async-signal-safe guarantee. W-B (below) additionally writes a minidump
+// so most heap-corruption crashes still yield a symbolizable artifact offline,
+// but both the text walk and the in-process minidump can still be defeated by
+// extreme heap corruption or a stack overflow. The out-of-process dumper (W-C)
+// that would remove that residual was evaluated and declined for its permanent
+// maintenance cost; the residual tiers are documented in
+// docs/windows-crash-symbols.md.
 
-// Preallocated crash-report path buffer; never built with std::string in-handler.
-char kf_crash_pathbuf[1024];
+// Preallocated crash-report path buffers; never built with std::string in-handler.
+char kf_crash_pathbuf[1024];     // text hs_err_*.log (W-A)
+char kf_dump_pathbuf[1024];      // minidump hs_err_*.dmp (W-B), same pid/timestamp
+char kf_dumppart_pathbuf[1024];  // ".part" sibling the dump is written to first
 
 // Minimal WriteFile-backed streambuf so StackWalker can keep writing to a
 // std::ostream while bypassing the CRT stdio file lock the faulting thread might
@@ -201,6 +208,74 @@ void write_exception_line(HANDLE h, DWORD code) {
   }
   OutputDebugStringA(line);
 }
+
+// Write a MiniDumpNormal next to the text report, sharing its pid + timestamp so
+// the two artifacts pair up (only the extension differs). MiniDumpNormal keeps
+// the footprint small (thread stacks + module list + handles, not the full
+// working set) so the privacy surface stays bounded, and defers symbolization to
+// offline analysis with the matching .pdb -- it needs no DbgHelp Sym* heap
+// allocation, so it is a more robust artifact under heap corruption than the
+// text stack walk.
+//
+// This runs before the fragile DbgHelp stack walk (which can truncate or fault
+// under extreme heap corruption) but after the cheap header + exception line, so
+// the essential "what/where" is already on disk and the robust dump gets its shot
+// before the risky symbol walk (validated: with the dump written after the walk,
+// heap-corruption crashes that truncated the text to a stub produced no dump at
+// all). Still in-process, so extreme heap corruption or a stack overflow can
+// defeat MiniDumpWriteDump too -- accepted limitation, see
+// docs/windows-crash-symbols.md; the out-of-process dumper (W-C) that would
+// remove it was evaluated and declined for its permanent maintenance cost.
+void write_crash_minidump(EXCEPTION_POINTERS *ep, const SYSTEMTIME &st) {
+  // A stack overflow leaves too little stack to run MiniDumpWriteDump (a heavy
+  // call); attempting it just faults inside the handler. Skip it -- the text path
+  // already recorded the exception, and stack overflow is an accepted limitation.
+  if (ep->ExceptionRecord->ExceptionCode == EXCEPTION_STACK_OVERFLOW) {
+    return;
+  }
+
+  // Final "<dir>/hs_err_pid<pid>_<YYYYMMDD_HHMMSS>.dmp" path (paired with .log).
+  size_t dp = as_put_str(kf_dump_pathbuf, sizeof(kf_dump_pathbuf), 0, error_log_dir.c_str());
+  dp = as_put_str(kf_dump_pathbuf, sizeof(kf_dump_pathbuf), dp, "/hs_err_pid");
+  dp = as_put_uint(kf_dump_pathbuf, sizeof(kf_dump_pathbuf), dp, static_cast<unsigned long>(GetCurrentProcessId()));
+  dp = as_put_str(kf_dump_pathbuf, sizeof(kf_dump_pathbuf), dp, "_");
+  dp = as_put_uint(kf_dump_pathbuf, sizeof(kf_dump_pathbuf), dp, st.wYear);
+  dp = as_put_uint2(kf_dump_pathbuf, sizeof(kf_dump_pathbuf), dp, st.wMonth);
+  dp = as_put_uint2(kf_dump_pathbuf, sizeof(kf_dump_pathbuf), dp, st.wDay);
+  dp = as_put_str(kf_dump_pathbuf, sizeof(kf_dump_pathbuf), dp, "_");
+  dp = as_put_uint2(kf_dump_pathbuf, sizeof(kf_dump_pathbuf), dp, st.wHour);
+  dp = as_put_uint2(kf_dump_pathbuf, sizeof(kf_dump_pathbuf), dp, st.wMinute);
+  dp = as_put_uint2(kf_dump_pathbuf, sizeof(kf_dump_pathbuf), dp, st.wSecond);
+  as_put_str(kf_dump_pathbuf, sizeof(kf_dump_pathbuf), dp, ".dmp");
+
+  // Write to a ".part" sibling and rename only on success, so a .dmp file always
+  // means a complete minidump. If MiniDumpWriteDump faults mid-write under extreme
+  // corruption, the leftover is a clearly-incomplete ".part", not a 0-byte ".dmp"
+  // that looks like real evidence.
+  size_t pn = as_put_str(kf_dumppart_pathbuf, sizeof(kf_dumppart_pathbuf), 0, kf_dump_pathbuf);
+  as_put_str(kf_dumppart_pathbuf, sizeof(kf_dumppart_pathbuf), pn, ".part");
+
+  HANDLE hd = CreateFileA(kf_dumppart_pathbuf, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS,
+                          FILE_ATTRIBUTE_NORMAL, nullptr);
+  if (hd == INVALID_HANDLE_VALUE) {
+    return;
+  }
+  MINIDUMP_EXCEPTION_INFORMATION mei;
+  mei.ThreadId = GetCurrentThreadId();
+  mei.ExceptionPointers = ep;
+  mei.ClientPointers = FALSE;
+  BOOL ok = MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), hd, MiniDumpNormal, &mei, nullptr, nullptr);
+  CloseHandle(hd);
+  if (!ok) {
+    DeleteFileA(kf_dumppart_pathbuf);
+    OutputDebugStringA("# kungfu minidump write failed; removed partial file\n");
+    return;
+  }
+  MoveFileExA(kf_dumppart_pathbuf, kf_dump_pathbuf, MOVEFILE_REPLACE_EXISTING);
+  OutputDebugStringA("# kungfu minidump saved: ");
+  OutputDebugStringA(kf_dump_pathbuf);
+  OutputDebugStringA("\n");
+}
 } // namespace
 
 // Crash dump for the Windows SEH / unhandled-exception path. Keeps returning
@@ -241,6 +316,15 @@ DWORD print_stack_trace(EXCEPTION_POINTERS *ep) {
 
   if (ep != nullptr) {
     write_exception_line(h, ep->ExceptionRecord->ExceptionCode);
+  }
+
+  // Capture the minidump after the cheap header + exception line above (so the
+  // essential fault info is already flushed) but before the fragile DbgHelp stack
+  // walk below (which can truncate/fault under extreme heap corruption). Only real
+  // faults carry an EXCEPTION_POINTERS; the non-fatal print_stack_trace()
+  // diagnostic path (ep == nullptr) stays text-only.
+  if (ep != nullptr) {
+    write_crash_minidump(ep, st);
   }
 
   // Symbolized stack goes straight to the file via the WriteFile-backed streambuf.
