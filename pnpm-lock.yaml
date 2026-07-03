@@ -160,6 +160,15 @@ importers:
         specifier: workspace:*
         version: link:../../developer/sdk
 
+  extensions/probe-python:
+    devDependencies:
+      '@kungfu-tech/core':
+        specifier: workspace:*
+        version: link:../../framework/core
+      '@kungfu-tech/sdk':
+        specifier: workspace:*
+        version: link:../../developer/sdk
+
   extensions/rewind-inspector:
     dependencies:
       '@kungfu-tech/api':

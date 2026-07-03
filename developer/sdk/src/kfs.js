@@ -35,9 +35,10 @@ function usage(code) {
       'with react and the capability SDK left external — the shell injects',
       'its own instances at load time.',
       '',
-      'kfx build also handles adapter facets (ships source) and C++ extensions',
-      '(a package with a CMakeLists.txt): it drives CMake with the core conan',
-      'toolchain to compile src/cpp/ into a native pybind11 module under dist/.',
+      'kfx build also handles adapter facets (ships source), C++ extensions (a',
+      'package with a CMakeLists.txt — CMake via the core conan toolchain), and',
+      'Python AOT extensions (kungfuBuild.python — engage pdm install + engage',
+      'nuitka --module), each producing a native module under dist/.',
       '',
     ].join('\n'),
   );
@@ -187,8 +188,8 @@ function locateCoreDir(startDir) {
   return null;
 }
 
-function runOrFail(cmd, args) {
-  const result = spawnSync(cmd, args, { stdio: 'inherit' });
+function runOrFail(cmd, args, opts = {}) {
+  const result = spawnSync(cmd, args, { stdio: 'inherit', ...opts });
   if (result.error) fail(`${cmd} not runnable: ${result.error.message}`);
   if (result.status !== 0) {
     fail(`${cmd} ${args.join(' ')} failed (exit ${result.status ?? `signal ${result.signal}`})`);
@@ -229,6 +230,56 @@ function cppBuild(manifest) {
   );
 }
 
+// ── kfx Python AOT extension build ─────────────────────────────────────────
+// A Python extension (kungfuBuild.python) installs its declared dependencies
+// through the bundled toolchain (`kungfu engage pdm install`) and is then
+// ahead-of-time compiled into a native module (`kungfu engage nuitka
+// --module`) — exercising the same python development lifecycle kfc ships.
+
+function pythonAotBuild(manifest) {
+  const coreDir = locateCoreDir(process.cwd());
+  if (!coreDir) fail('cannot locate framework/core (a python-AOT kfx build needs the monorepo core)');
+  const py = path.join(coreDir, '.venv', 'bin', 'python3');
+  if (!fs.existsSync(py)) {
+    fail(`core Python not found: ${py}. Run \`./kungfu-code rebuild:core\` first.`);
+  }
+  const pkgRoot = path.resolve('src', 'python');
+  const pkg = fs.existsSync(pkgRoot)
+    ? fs.readdirSync(pkgRoot).find((d) => fs.statSync(path.join(pkgRoot, d)).isDirectory())
+    : null;
+  if (!pkg) fail('no src/python/<Package>/ directory for a python-AOT extension');
+  const distDir = path.resolve('dist', manifest.kungfuConfig?.key ?? 'python');
+  fs.mkdirSync(distDir, { recursive: true });
+  // The dev CLI resolves the `kungfu` package from src/python and its native
+  // binding from build/Release; make both importable for `python -m kungfu`.
+  const env = {
+    ...process.env,
+    PYTHONPATH: [
+      path.join(coreDir, 'src', 'python'),
+      path.join(coreDir, 'build', 'Release'),
+      process.env.PYTHONPATH,
+    ]
+      .filter(Boolean)
+      .join(path.delimiter),
+  };
+  // Install the extension's declared dependencies through the bundled pdm.
+  runOrFail(py, ['-m', 'kungfu', 'engage', 'pdm', 'install'], { env });
+  // AOT-compile just this module: declared deps stay runtime imports, so we do
+  // not --follow-imports (we compile the extension, not its dependency tree).
+  runOrFail(py, [
+    '-m',
+    'kungfu',
+    'engage',
+    'nuitka',
+    '--module',
+    `--output-dir=${distDir}`,
+    path.join('src', 'python', pkg),
+  ], { env });
+  process.stdout.write(
+    `built ${manifest.name ?? 'python extension'} -> ${path.relative(process.cwd(), distDir)}\n`,
+  );
+}
+
 async function kfxBuild() {
   const manifest = readManifest();
   const config = manifest.kungfuConfig?.config ?? {};
@@ -240,6 +291,12 @@ async function kfxBuild() {
       cppBuild(manifest);
       return;
     }
+    // A Python AOT extension declares its dependencies under kungfuBuild.python;
+    // kfs installs them (engage pdm) and compiles src/python (engage nuitka).
+    if (manifest.kungfuBuild?.python) {
+      pythonAotBuild(manifest);
+      return;
+    }
     // An adapter facet is a runtime extension: it ships source per child
     // runtime (python/node) and the capture supervisor injects it — there is
     // nothing to bundle. Succeed so `kfs kfx build` is usable on any kfx.
@@ -249,7 +306,7 @@ async function kfxBuild() {
       );
       return;
     }
-    fail('package.json has no kungfuConfig.config.view or .adapter facet, and no CMakeLists.txt (cpp)');
+    fail('package.json has no view/adapter facet, no CMakeLists.txt (cpp), and no kungfuBuild.python (python-AOT)');
   }
   const entry = ['src/view/index.tsx', 'src/view/index.ts'].find((candidate) =>
     fs.existsSync(path.resolve(candidate)),

@@ -19,6 +19,10 @@ dependencies = [
     "nuitka~=4.1.0",
     "pdm~=2.21.0",
     "pdm-pep517~=1.1.0",
+    # pdm 2.21 imports hishel._serializers (the 0.0.x API); its own bound
+    # (hishel>=0.0.32) is too loose and otherwise resolves to 1.x, which dropped
+    # that module and breaks `engage pdm`.
+    "hishel<1.0",
     "scons~=4.8.0",
     "tomli-w~=1.0.0",
     "tomlkit~=0.13.0",

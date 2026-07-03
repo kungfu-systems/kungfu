@@ -24,6 +24,18 @@ wheels = [
 ]
 
 [[package]]
+name = "anysqlite"
+version = "0.0.5"
+source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
+dependencies = [
+    { name = "anyio" },
+]
+sdist = { url = "http://192.168.100.222:3141/root/pypi/+f/9df/cf87baf6b9342/anysqlite-0.0.5.tar.gz", hash = "sha256:9dfcf87baf6b93426ad1d9118088c41dbf24ef01b445eea4a5d486bac2755cce" }
+wheels = [
+    { url = "http://192.168.100.222:3141/root/pypi/+f/cb3/45dc4f76f6b37/anysqlite-0.0.5-py3-none-any.whl", hash = "sha256:cb345dc4f76f6b37f768d7a0b3e9cf5c700dfcb7a6356af8ab46a11f666edbe7" },
+]
+
+[[package]]
 name = "authing"
 version = "5.1.0"
 source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
@@ -268,15 +280,18 @@ wheels = [
 
 [[package]]
 name = "hishel"
-version = "1.3.0"
+version = "0.1.5"
 source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
 dependencies = [
+    { name = "anyio" },
+    { name = "anysqlite" },
+    { name = "httpx" },
     { name = "msgpack" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "http://192.168.100.222:3141/root/pypi/+f/5be/585dca8c03586/hishel-1.3.0.tar.gz", hash = "sha256:5be585dca8c035866cffc745a50dbce6b277a3d1f4b07ef24f77c07f6b31ff92" }
+sdist = { url = "http://192.168.100.222:3141/root/pypi/+f/9d4/0c682cd94fd6e/hishel-0.1.5.tar.gz", hash = "sha256:9d40c682cd94fd6e1394fb05713ae20a75ed8aeba6f5272380444039ce6257f2" }
 wheels = [
-    { url = "http://192.168.100.222:3141/root/pypi/+f/b80/3ad9f1d410085/hishel-1.3.0-py3-none-any.whl", hash = "sha256:b803ad9f1d410085b61459a5dbbd273806215021e672198ba911c7d3db14adaa" },
+    { url = "http://192.168.100.222:3141/root/pypi/+f/0bf/be9a2b9342090/hishel-0.1.5-py3-none-any.whl", hash = "sha256:0bfbe9a2b9342090eba82ba6de88258092e1c4c7b730cd4cb4b570e4b40e44a7" },
 ]
 
 [[package]]
@@ -435,6 +450,7 @@ dependencies = [
     { name = "cryptography", marker = "sys_platform == 'linux'" },
     { name = "filelock" },
     { name = "flatbuffers" },
+    { name = "hishel" },
     { name = "importlib-metadata" },
     { name = "jeepney", marker = "sys_platform == 'linux'" },
     { name = "keyring" },
@@ -494,6 +510,7 @@ requires-dist = [
     { name = "cryptography", marker = "sys_platform == 'linux'", specifier = "==43.0.3" },
     { name = "filelock" },
     { name = "flatbuffers", specifier = ">=25.2,<26" },
+    { name = "hishel", specifier = "<1.0" },
     { name = "importlib-metadata" },
     { name = "jeepney", marker = "sys_platform == 'linux'", specifier = "==0.8.0" },
     { name = "keyring", specifier = "~=25.5.0" },

@@ -105,6 +105,17 @@ function main() {
       if (probeBuild.status !== 0) {
         throw new Error(`cpp probe build failed (exit ${probeBuild.status == null ? 'signal ' + probeBuild.signal : probeBuild.status})`);
       }
+      // Python AOT dogfood probe: install its dependency (engage pdm) and
+      // Nuitka-compile it (engage nuitka) — exercises the bundled python
+      // toolchain against the freshly built core.
+      const pyProbeBuild = spawnSync('pnpm', ['--filter', '@kungfu-tech/kfx-probe-python', 'run', 'build'], {
+        cwd: ROOT,
+        stdio: 'inherit',
+        shell: isWin,
+      });
+      if (pyProbeBuild.status !== 0) {
+        throw new Error(`python probe build failed (exit ${pyProbeBuild.status == null ? 'signal ' + pyProbeBuild.signal : pyProbeBuild.status})`);
+      }
       runPnpm('freeze'); // nuitka → framework/core/dist/kfc
       if (withApp) runPnpm('build:app'); // webpack → framework/gui/dist/app
     } catch (e) {
@@ -151,6 +162,23 @@ function main() {
     fail('cpp probe native module built', `no probe_cpp.*.(so|dylib|pyd) under ${path.relative(ROOT, probeDist)}`);
   } else {
     console.log(`  (skipped: no cpp probe artifact; build it with 'pnpm --filter @kungfu-tech/kfx-probe-cpp run build' or --full)`);
+  }
+
+  // ── Stage 2c: Python AOT extension probe artifact ─────────────────
+  // The reference python kfx (extensions/probe-python) is Nuitka-compiled into a
+  // native module through the bundled toolchain; its presence proves the
+  // python-AOT extension build path. Built in Stage 1 under --full.
+  console.log('\n[verify] stage 2c: Python AOT extension probe artifact');
+  const pyProbeDist = path.join(ROOT, 'extensions', 'probe-python', 'dist', 'ProbePython');
+  const pyProbeSo = fs.existsSync(pyProbeDist)
+    ? fs.readdirSync(pyProbeDist).find((f) => /^ProbePython\..*\.(so|dylib|pyd)$/.test(f))
+    : null;
+  if (pyProbeSo) {
+    pass('python probe native module built', path.relative(ROOT, path.join(pyProbeDist, pyProbeSo)));
+  } else if (doFull) {
+    fail('python probe native module built', `no ProbePython.*.(so|dylib|pyd) under ${path.relative(ROOT, pyProbeDist)}`);
+  } else {
+    console.log(`  (skipped: no python probe artifact; build it with 'pnpm --filter @kungfu-tech/kfx-probe-python run build' or --full)`);
   }
 
   // ── Stage 3: kfc runtime smoke ────────────────────────────────────

@@ -1,0 +1,29 @@
+{
+  "name": "@kungfu-tech/kfx-probe-python",
+  "author": "kungfu",
+  "version": "4.0.0-alpha.0",
+  "description": "Python AOT dogfood coverage probe: exercises engage pdm (install a dependency) + engage nuitka (--module AOT compile) into a native module.",
+  "license": "Apache-2.0",
+  "private": true,
+  "kungfuConfig": {
+    "key": "ProbePython"
+  },
+  "kungfuBuild": {
+    "python": {
+      "dependencies": {
+        "pydantic": ">=2.0"
+      }
+    }
+  },
+  "scripts": {
+    "build": "kfs kfx build",
+    "clean": "kfs kfx clean"
+  },
+  "devDependencies": {
+    "@kungfu-tech/core": "workspace:*",
+    "@kungfu-tech/sdk": "workspace:*"
+  },
+  "repository": {
+    "url": "https://github.com/kungfu-systems/kungfu.git"
+  }
+}

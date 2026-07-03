@@ -1,0 +1,14 @@
+[project]
+name = "kfx-probe-python"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Kungfu", email = "info@kungfu.link" }]
+dynamic = ["version"]
+requires-python = "~=3.13"
+dependencies = ["pydantic>=2.0"]
+
+[tool.pdm]
+version = { use_scm = true }
+
+[build-system]
+requires = ["pdm-pep517"]
+build-backend = "pdm.pep517.api"

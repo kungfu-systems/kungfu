@@ -140,9 +140,12 @@ are being retired, and their coverage role is being handed to neutral
 replacements that exercise the same paths. The C++ path is covered by
 [`extensions/probe-cpp`](../extensions/probe-cpp): a neutral probe that compiles
 against the `libkungfu` API and its FlatBuffers data structures into a native
-module (`kfs kfx build` drives CMake through the core toolchain). The remaining
-paths — a Python extension through the bundled ahead-of-time toolchain, and a
-JavaScript / TypeScript extension — are still being reinstated.
+module (`kfs kfx build` drives CMake through the core toolchain). The Python
+ahead-of-time path is covered by
+[`extensions/probe-python`](../extensions/probe-python): a neutral probe whose
+dependency is installed with `kungfu engage pdm` and whose module is
+Nuitka-compiled with `kungfu engage nuitka`. The JavaScript / TypeScript
+extension path is still being reinstated.
 
 ## Repository layout
 

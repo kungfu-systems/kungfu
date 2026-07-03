@@ -166,4 +166,7 @@ def main():
             "PDM_USE_VENV": "0",
         }
     )
-    BridgingCore().main()
+    # Pass the forwarded arguments (engage_command_context put them in sys.argv)
+    # explicitly, so the pdm subcommand is honoured rather than defaulting to the
+    # bare help screen.
+    BridgingCore().main(sys.argv[1:])
