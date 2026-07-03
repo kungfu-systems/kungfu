@@ -59,6 +59,12 @@ bool hero::is_usable() { return io_device_->is_usable(); }
 bool hero::setup() {
   io_device_->setup();
   SPDLOG_DEBUG("io setup done");
+  // A subscriber error must stop this loop, not SIGINT the whole process
+  // from the middle of a dispatch: signal_stop() lets produce() complete so
+  // hosts (run(), the node uv loop, the python coroutine loop) unwind
+  // cleanly. The error handler runs on the pump thread, so no extra
+  // synchronization is needed here.
+  rx::loop_interrupter() = [this]() { signal_stop(); };
   events_ = observable<>::create<event_ptr>([this](auto &s) { delegate_produce(this, s); }) | holdon();
   now_ = get_begin_time();
   react();

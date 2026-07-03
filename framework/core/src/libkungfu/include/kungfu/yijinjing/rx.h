@@ -4,6 +4,7 @@
 #define KUNGFU_YIJINJING_RX_H
 
 #include <csignal>
+#include <functional>
 #include <rxcpp/rx.hpp>
 
 #include <kungfu/common.h>
@@ -94,16 +95,28 @@ template <typename... Ts> constexpr decltype(auto) while_to(Ts... arg) {
   return lambda_filter_any<Ts...>(&event::dest)(arg...);
 }
 
+// How a subscriber error takes the event loop down. The loop owner (hero)
+// installs a structured stop at setup, so an error ends the pump cleanly —
+// produce() completes, hosts unwind, destructors run — instead of raising a
+// process-wide SIGINT from the middle of a dispatch. The SIGINT default only
+// covers rx usage outside a hero-owned loop. Failing loud stays: routing
+// chains are load-bearing, and a silently dead chain is worse than a dead
+// loop.
+inline std::function<void()> &loop_interrupter() {
+  static std::function<void()> interrupter = []() { raise(SIGINT); };
+  return interrupter;
+}
+
 static constexpr auto interrupt_on_error = [](const std::exception_ptr &e) {
   try {
     std::rethrow_exception(e);
   } catch (const rx::empty_error &ex) {
     SPDLOG_WARN("{}", ex.what());
   } catch (const std::exception &ex) {
-    SPDLOG_ERROR("Unexpected exception {} by rx:subscriber {}", typeid(ex).name(), ex.what());
+    SPDLOG_CRITICAL("event loop interrupted by rx:subscriber error {}: {}", typeid(ex).name(), ex.what());
     yijinjing::util::print_stack_trace();
   }
-  raise(SIGINT);
+  loop_interrupter()();
 };
 
 template <class Arg>
