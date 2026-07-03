@@ -1,6 +1,7 @@
 # ADR-0005: control / event axis modernization — a meta-assessment
 
-- Status: proposed (meta; aggregates ADR-0003 + ADR-0004 + the reactive event layer)
+- Status: partially decided (2026-07-03: the reactive event layer is **frozen
+  for v4** — see the decision below; ADR-0003 and ADR-0004 remain open)
 - Date: 2026-06-30
 - Category: (b) improvement — meta design question for v4 scope
 - Subsystem: the control and event axes — Python coroutine integration
@@ -87,11 +88,32 @@ derives a msg_type index from them for single-tag chain pre-dispatch —
 replacing the rx algebra is off the table (multi-dimensional routing, open
 extension, and the step primitive documented in `rx.h` are load-bearing).
 
+## Decision: the reactive event layer is frozen for v4 (2026-07-03)
+
+Based on the measured baseline above, the RxCpp-based reactive event layer
+(`hero` / `apprentice` dispatch, the rx routing algebra, and the per-frame
+synchronous fan-out model) ships in v4 unchanged:
+
+- No code changes to the rx layer in the v4 line — including "incidental"
+  optimizations. At ~0.4 µs per frame on the only high-rate surface, the
+  layer is not a bottleneck, and it is load-bearing: touching it buys risk
+  without measurable return.
+- The `KF_DISPATCH_PROBE` instrument and `tests/bench/` harness stay in the
+  tree as the standing sentinel. Freezing is not blindness: any future
+  suspicion is one environment variable away from fresh data.
+- Reopening conditions are pre-declared: measured heat from frame-rate or
+  chain-count growth. If triggered, the only optimization shape on the table
+  is the one recorded above — filter-chain declarations remain the single
+  source of truth, with a derived msg_type index for single-tag chain
+  pre-dispatch; replacing the rx algebra stays off the table.
+
+This decision covers the **event axis only**. ADR-0003 (Python coroutine
+integration) and ADR-0004 (Node watcher snapshot model) are separate
+control-axis questions with their own triggers and remain open.
+
 ## Status / progress
 
-Meta and not scheduled; its resolution depends on the outcomes of ADR-0003 and
-ADR-0004 and on a decision about the reactive event layer. The measured
-baseline above removes the reactive layer's per-frame cost from the list of
-unknowns: the freeze option is now evidence-backed for the event axis. This
-ADR exists to keep the v4-scope question explicit and traceable rather than
-implicit.
+The reactive-event-layer half of this meta-question is decided (frozen for
+v4, evidence-backed). What remains open is the control-axis half: the
+outcomes of ADR-0003 and ADR-0004. This ADR exists to keep the v4-scope
+question explicit and traceable rather than implicit.
