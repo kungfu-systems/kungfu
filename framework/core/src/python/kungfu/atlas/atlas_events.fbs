@@ -1,0 +1,93 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Atlas control-plane import events — the open-layer event schema for
+// `kungfu atlas import` (the Atlas profile's read-only first slice).
+//
+// Layering: these are application types (msg_type 30201-30299, see
+// docs/msg-type-ranges.md), NOT longfist kernel types. They ride the journal
+// as self-describing open-layer events, pinned by the import store's
+// content-addressed .bfbs manifest — the same mechanism the Rewind bundle
+// and the work store use.
+//
+// Fact model: one import = one snapshot batch sharing an import_id, bracketed
+// by ImportBegin/ImportEnd. Each mission / goal / worktree-marker card in the
+// source control plane becomes one snapshot event carrying identifiers,
+// status, and pointer-like coordinates. The projection folds the LATEST
+// completed batch; earlier batches remain in the journal as history. The
+// imported state is a projection of the source repository's files — the
+// source repository remains the authority; this store never writes back.
+//
+// Payload discipline: identifiers, statuses, paths, refs and short summaries
+// only — no secrets, no raw document bodies.
+//
+// Evolution rules (same discipline as the other fb schemas): append new
+// fields at the tail only; never reorder, delete, or reuse field ids; no
+// `required` fields.
+
+namespace kungfu.atlas.fb;
+
+// msg_type 30201. Opens an import batch.
+table ImportBegin {
+  import_id:string;
+  repo_root:string;
+  repo_head:string;
+  schema_version:uint;
+}
+
+// msg_type 30202. One mission registry card.
+table MissionSnapshot {
+  import_id:string;
+  mission_id:string;
+  title:string;
+  status:string;
+  active_lens:string;
+  stage_name:string;
+  next_review:string;
+  next_action:string;
+}
+
+// msg_type 30203. One goal registry card.
+table GoalSnapshot {
+  import_id:string;
+  goal_id:string;
+  status:string;
+  title:string;
+  owner_agent:string;
+  mission_id:string;
+  lens:string;
+  mission_stage:string;
+  source_branch:string;
+  worktree_path:string;
+  external_repo_path:string;
+  external_branch:string;
+  external_head:string;
+  external_ready_ref:string;
+  latest_marker:string;
+  summary:string;
+  next_action:string;
+  archived:bool;
+}
+
+// msg_type 30204. One worktree-status (ready/stage/merged) marker.
+table MarkerSnapshot {
+  import_id:string;
+  branch:string;
+  status:string;
+  ready:bool;
+  ready_scope:string;
+  keep_source_worktree:bool;
+  worktree_path:string;
+  summary:string;
+  risk:string;
+  marker_path:string;
+}
+
+// msg_type 30205. Closes an import batch with counts; warnings counts files
+// that were unreadable or shaped unexpectedly (diagnostic, never fatal).
+table ImportEnd {
+  import_id:string;
+  missions:uint;
+  goals:uint;
+  markers:uint;
+  warnings:uint;
+}

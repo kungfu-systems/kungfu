@@ -29,3 +29,4 @@ numbers here to avoid colliding with each other):
 | --- | --- | --- |
 | `30001 – 30099` | Kungfu Rewind capture events | `src/python/kungfu/rewind/rewind_events.fbs` (30001 RunBegin, 30002 RunEnd, 30003 ModelRequest, 30004 ModelResponse, 30005 ToolCall, 30006 ToolResult, 30007 RetryMarker) |
 | `30101 – 30199` | Kungfu work items (default work profile) | `src/python/kungfu/work/work_events.fbs` (30101 WorkItemCreated, 30102 WorkStatusChanged, 30103 NextActionSet, 30104 CheckpointRecorded, 30105 DecisionRecorded, 30106 ValidationRecorded, 30107 ArtifactRecorded, 30108 RunLinked) |
+| `30201 – 30299` | Kungfu Atlas import profile (read-only control-plane snapshots) | `src/python/kungfu/atlas/atlas_events.fbs` (30201 ImportBegin, 30202 MissionSnapshot, 30203 GoalSnapshot, 30204 MarkerSnapshot, 30205 ImportEnd) |
