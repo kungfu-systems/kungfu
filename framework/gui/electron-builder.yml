@@ -12,6 +12,10 @@ extraResources:
   # packaged app loads the binding from Resources/kungfu, matching its rpath.
   - from: ../core/dist/kungfu
     to: kungfu
+  # The CLI wrapper that "Install 'kungfu' Command in PATH" symlinks into
+  # /usr/local/bin; it resolves the bundled runtime next to it and execs it.
+  - from: resources/cli
+    to: cli
 mac:
   # dir = the pack verb's unpacked app (fast, CI-friendly); dmg + zip = the
   # dist verb's installable artifacts. Unsigned pre-release (identity: null):

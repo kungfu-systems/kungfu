@@ -6,7 +6,14 @@ import path from 'node:path';
 // environment variables present when the process starts. The renderer process
 // is spawned by this main process, so the runtime directory must be exported
 // here, before any window (and therefore the renderer process) is created.
-import { BrowserWindow, WebContentsView, app, ipcMain } from 'electron';
+import {
+  BrowserWindow,
+  Menu,
+  WebContentsView,
+  app,
+  dialog,
+  ipcMain,
+} from 'electron';
 
 import {
   DESTROY_CHANNEL,
@@ -16,6 +23,10 @@ import {
   SHOW_CHANNEL,
 } from '../sandbox/channels';
 import { type Rect, SandboxManager } from './sandbox-manager';
+import {
+  installKungfuCliToPath,
+  uninstallKungfuCliFromPath,
+} from './installCli';
 
 // Resolve the kungfu runtime directory that holds libkungfu.dylib and the
 // kungfu_electron.node binding. In development it lives in the kungfu-core
@@ -106,6 +117,51 @@ ipcMain.on(DESTROY_CHANNEL, (_event, payload) => {
   manager?.destroyView((payload as { id: string }).id);
 });
 
+// Application menu with the VS Code-style "Install 'kungfu' Command in PATH"
+// action, so a real user who installed Kungfu.app can use `kungfu` in a shell.
+function buildMenu() {
+  const cliSubmenu: Electron.MenuItemConstructorOptions[] = [
+    {
+      label: "Install 'kungfu' Command in PATH",
+      click: async () => {
+        const r = installKungfuCliToPath();
+        await dialog.showMessageBox({
+          type: r.ok ? 'info' : 'error',
+          message: r.ok
+            ? "Shell command 'kungfu' installed"
+            : "Could not install 'kungfu' command",
+          detail: r.message,
+        });
+      },
+    },
+    {
+      label: "Uninstall 'kungfu' Command from PATH",
+      click: async () => {
+        const r = uninstallKungfuCliFromPath();
+        await dialog.showMessageBox({
+          type: r.ok ? 'info' : 'error',
+          message: r.ok
+            ? "Shell command 'kungfu' removed"
+            : "Could not remove 'kungfu' command",
+          detail: r.message,
+        });
+      },
+    },
+  ];
+
+  const template: Electron.MenuItemConstructorOptions[] = [
+    ...(process.platform === 'darwin'
+      ? [{ role: 'appMenu' as const }]
+      : []),
+    { label: 'kungfu', submenu: cliSubmenu },
+    { role: 'editMenu' },
+    { role: 'viewMenu' },
+    { role: 'windowMenu' },
+  ];
+
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1280,
@@ -139,7 +195,10 @@ function createWindow() {
   }
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  buildMenu();
+  createWindow();
+});
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();

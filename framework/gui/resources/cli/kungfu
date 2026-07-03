@@ -1,0 +1,26 @@
+#!/bin/sh
+# kungfu — CLI wrapper installed into PATH by the Kungfu app.
+#
+# The app's "Install 'kungfu' Command in PATH" action symlinks
+#   /usr/local/bin/kungfu -> <Kungfu.app>/Contents/Resources/cli/kungfu
+# This script resolves its own real location through that symlink, finds the
+# bundled frozen runtime sitting next to it (../kungfu/kungfu), and execs it.
+# The frozen binary is self-contained (its dylibs load via @loader_path), so the
+# wrapper only needs to point the runtime dir env at the bundle and hand off.
+set -e
+
+# Resolve symlinks to this script's real path (POSIX sh, no realpath dependency).
+target=$0
+while [ -L "$target" ]; do
+  link=$(readlink "$target")
+  case $link in
+    /*) target=$link ;;
+    *) target=$(dirname "$target")/$link ;;
+  esac
+done
+
+here=$(cd "$(dirname "$target")" && pwd)      # <app>/Contents/Resources/cli
+runtime=$(cd "$here/../kungfu" && pwd)        # <app>/Contents/Resources/kungfu
+
+export KFC_DIR="$runtime"
+exec "$runtime/kungfu" "$@"
