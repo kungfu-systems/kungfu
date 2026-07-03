@@ -11,6 +11,7 @@
 # Events go as line-delimited JSON to the local ingest endpoint the
 # supervisor announced in KUNGFU_REWIND_INGEST.
 
+import base64
 import importlib
 import importlib.abc
 import importlib.util
@@ -114,6 +115,37 @@ def retry(span_id, retry_of_span_id, attempt, reason=None):
             "retry_of_span_id": retry_of_span_id,
             "attempt": attempt,
             "reason": reason,
+        }
+    )
+
+
+# ── kfx open-layer events ───────────────────────────────────────────
+#
+# A kfx extension (not the traced agent — kfx code opts into kungfu) compiles
+# its own `.fbs` and emits events of its own msg_type. It registers the schema
+# once so the run's bundle can bind msg_type -> the `.bfbs`, then emits event
+# payloads it built with its own accessors. Bytes are base64 over the JSON
+# channel; the supervisor writes the frames and the schema bindings.
+
+
+def kfx_schema(msg_type, name, bfbs, tier="trusted"):
+    emit(
+        {
+            "event": "kfx_schema",
+            "msg_type": int(msg_type),
+            "name": name,
+            "tier": tier,
+            "bfbs_b64": base64.b64encode(bytes(bfbs)).decode(),
+        }
+    )
+
+
+def kfx_event(msg_type, payload):
+    emit(
+        {
+            "event": "kfx_event",
+            "msg_type": int(msg_type),
+            "payload_b64": base64.b64encode(bytes(payload)).decode(),
         }
     )
 

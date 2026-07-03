@@ -1,0 +1,13 @@
+// A kfx author's own event schema — kungfu ships no accessor for it. It is
+// compiled to a .bfbs at runtime and registered into the run's manifest so
+// every runtime decodes its events by reflection.
+namespace kfx.live;
+
+table KfxEvent {
+  id: uint32;
+  label: string;
+  score: float;
+  tags: [string];
+}
+
+root_type KfxEvent;

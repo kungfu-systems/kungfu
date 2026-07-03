@@ -10,6 +10,7 @@
 # swapped (e.g. to nng) without touching the hook protocol. The supervisor
 # stays the single journal writer: ingest validates, serializes, and enqueues.
 
+import base64
 import json
 import socketserver
 import threading
@@ -46,9 +47,11 @@ class _Handler(socketserver.StreamRequestHandler):
 
 
 class IngestServer:
-    def __init__(self, run_id, sink):
+    def __init__(self, run_id, sink, schema_sink=None):
         self.run_id = run_id
         self.sink = sink
+        # collects kfx open-layer schema registrations; None disables the channel
+        self.schema_sink = schema_sink
         self._server = socketserver.ThreadingTCPServer(
             ("127.0.0.1", 0), _Handler, bind_and_activate=True
         )
@@ -106,4 +109,19 @@ class IngestServer:
                     attempt=int(message.get("attempt") or 0),
                     reason=message.get("reason"),
                 ),
+            )
+        elif kind == "kfx_schema":
+            # register a kfx open-layer schema for this run's bundle bindings
+            if self.schema_sink is not None:
+                self.schema_sink(
+                    int(message["msg_type"]),
+                    message.get("name", ""),
+                    base64.b64decode(message["bfbs_b64"]),
+                    message.get("tier", "trusted"),
+                )
+        elif kind == "kfx_event":
+            # a kfx event: write its payload verbatim under its own msg_type
+            self.sink(
+                int(message["msg_type"]),
+                base64.b64decode(message["payload_b64"]),
             )

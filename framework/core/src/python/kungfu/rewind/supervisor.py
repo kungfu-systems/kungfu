@@ -36,6 +36,7 @@ from kungfu.rewind import (
 from kungfu.rewind import bundle, events
 from kungfu.rewind.fb.RunStatus import RunStatus
 from kungfu.rewind.ingest import IngestServer
+from kungfu.rewind.schema_registry import register_user_schema
 from kungfu.rewind.proxy import (
     DEFAULT_ANTHROPIC_UPSTREAM,
     DEFAULT_OPENAI_UPSTREAM,
@@ -84,7 +85,17 @@ class Supervisor:
         self.proxy = ModelWireProxy(
             self.run_id, self.enqueue, upstreams=self._upstreams()
         )
-        self.ingest = IngestServer(self.run_id, self.enqueue)
+        # kfx open-layer schemas registered during the run: msg_type -> (name,
+        # bfbs, tier). Collected off the ingest threads, bound into the bundle
+        # manifest at finalize. Dict assignment is atomic under CPython; a run's
+        # kfx set is tiny, so no extra lock.
+        self.user_schemas = {}
+        self.ingest = IngestServer(
+            self.run_id, self.enqueue, schema_sink=self._register_kfx_schema
+        )
+
+    def _register_kfx_schema(self, msg_type, name, bfbs, tier):
+        self.user_schemas[int(msg_type)] = (name, bfbs, tier)
 
     @staticmethod
     def _upstreams():
@@ -181,4 +192,14 @@ class Supervisor:
                     "dest": PUBLIC_DEST,
                 },
             )
+            # bind each kfx open-layer schema into the run manifest, on top of
+            # the first-party Rewind bindings. A bad registration must not sink
+            # the run's own bundle.
+            for msg_type, (name, blob, tier) in self.user_schemas.items():
+                try:
+                    register_user_schema(
+                        self.bundle_dir(), blob, msg_type, name, tier=tier
+                    )
+                except ValueError:
+                    continue
         return exit_code, status, manifest_path
