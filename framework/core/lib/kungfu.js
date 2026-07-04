@@ -1,6 +1,42 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
+const {
+  currentPlatformPackage,
+  MODULE_NAME,
+  BINDING_SUBDIR,
+} = require('./platform-packages');
+
+/**
+ * Resolve the directory holding the native addon.
+ *
+ * Order: explicit `KUNGFU_DIR` override → the installed prebuilt platform
+ * package for this platform (`@kungfu-tech/core-{platform}`, via its exported
+ * `bindingDir`) → the in-package build tree for developers who ran
+ * `npm run build`. The platform package's `index.js` also colocates the libnode
+ * shared library next to the addon before returning, so `@loader_path` /
+ * `$ORIGIN` / same-dir-DLL lookup resolves.
+ * @param {string} moduleName
+ * @returns {string}
+ */
+function resolveBindingDir(moduleName) {
+  if (process.env.KUNGFU_DIR) return process.env.KUNGFU_DIR;
+
+  const descriptor = currentPlatformPackage();
+  if (descriptor) {
+    try {
+      const platformPackage = require(descriptor.name);
+      if (platformPackage && platformPackage.bindingDir) {
+        return platformPackage.bindingDir;
+      }
+    } catch (e) {
+      // Platform package not installed (e.g. local source build); fall back.
+    }
+  }
+
+  return `${moduleName}/${BINDING_SUBDIR}`;
+}
+
 /**
  * Load the native kungfu binding and expose its typed factory surface.
  *
@@ -14,14 +50,9 @@ module.exports = function () {
   const binding = (() => {
     try {
       const moduleName = '@kungfu-tech/core';
-      const config = require(`${moduleName}/package.json`);
-      const binary = config.binary;
-      const kungfuDir =
-        process.env.KUNGFU_DIR || `${moduleName}/${binary.module_path}`;
+      const kungfuDir = resolveBindingDir(moduleName);
 
-      const nodeBinding = require.resolve(
-        `${kungfuDir}/${binary.module_name}.node`,
-      );
+      const nodeBinding = require.resolve(`${kungfuDir}/${MODULE_NAME}.node`);
       const electronBinding = nodeBinding.replace('_node.', '_electron.');
       const kungfuBinding = nodeBinding.replace('_node.', '_cli.');
       const useElectron =
