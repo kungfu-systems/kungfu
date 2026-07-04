@@ -48,9 +48,9 @@ export type KfxViewDecl = {
   title: string;
   // capability handles this view receives; undeclared handles stay absent
   capabilities: KfxCapabilityKey[];
-  // trust tier (default node-integrated). The install source is authoritative
-  // over this hint: a third-party package is never elevated above sandboxed-ipc
-  // just because its manifest asks for node-integrated.
+  // trust tier hint (default node-integrated). The source-authority verdict is
+  // authoritative over this hint: an unauthorized package is never elevated
+  // above sandboxed-ipc just because its manifest asks for node-integrated.
   runtime?: KfxRuntimeTier;
   // shell-owned views (settings, kfx manager, status); not disableable
   system?: boolean;
@@ -60,16 +60,46 @@ export type KfxViewDecl = {
   entry?: string;
 };
 
-// The single source of the trust decision: what tier a loaded view actually
-// runs at. System and built-in (workspace/source) views are trusted; an
-// installed third-party view is sandboxed unless it is trusted by source, and
-// its manifest may only ask to *stay* sandboxed, never to elevate.
+// The frozen first-party set (ADR-0013): the build-time record of which
+// extension identities are trusted. It maps a kfx `key` to an integrity pin —
+// a sha256 of the loaded bundle, or `null` when the key is trusted without a
+// content pin (development source builds, whose bundle changes on every
+// rebuild). Trust is granted by membership in this set — a verifiable origin —
+// never by which filesystem root a package happened to load from.
+export type FirstPartyPin = { sha256: string | null };
+export type FirstPartyManifest = {
+  version: 1;
+  keys: Record<string, FirstPartyPin>;
+};
+
+// The source-authority verdict (ADR-0013, decision C): is this package an
+// authorized first-party extension? The frozen-set check below is the first
+// verdict implementation; a signature check can be added as a second without
+// changing `resolveRuntimeTier` or its caller — the verdict is the pluggable
+// seam. A `null` manifest (none shipped) trusts nothing: safe by default, and
+// deliberately NOT a fallback to path-based trust.
+export function authorizeFirstParty(
+  manifest: FirstPartyManifest | null,
+  key: string,
+  contentHash: string | null,
+): boolean {
+  const pin = manifest?.keys[key];
+  if (!pin) return false; // key is not in the frozen first-party set
+  if (pin.sha256 === null) return true; // trusted by key alone (dev / unpinned)
+  return pin.sha256 === contentHash; // pinned: bundle content must match
+}
+
+// The single source of the trust decision: what tier a loaded view runs at. A
+// system view, or a package the source-authority verdict authorized as
+// first-party (`authorizeFirstParty` — never a filesystem path), is
+// node-integrated; everything else is sandboxed. The manifest's `runtime` hint
+// may only keep a view sandboxed, never elevate it.
 export function resolveRuntimeTier(
   view: Pick<KfxViewDecl, 'runtime' | 'system'>,
-  source: 'built-in' | 'installed',
+  trusted: boolean,
 ): KfxRuntimeTier {
-  if (view.system || source === 'built-in') return 'node-integrated';
-  // third-party installed: sandboxed by default; the manifest cannot elevate
+  if (view.system || trusted) return 'node-integrated';
+  // untrusted third-party: sandboxed by default; the manifest cannot elevate
   return 'sandboxed-ipc';
 }
 

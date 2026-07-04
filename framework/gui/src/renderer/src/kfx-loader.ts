@@ -11,8 +11,9 @@
 //      `kungfu kfx install` populates)
 // Scanning goes two levels deep so suite members nested under a suite
 // directory (extensions/system/<member>) are found in the workspace layout.
-import { resolveRuntimeTier } from '@kungfu-tech/kfx';
+import { authorizeFirstParty, resolveRuntimeTier } from '@kungfu-tech/kfx';
 import type {
+  FirstPartyManifest,
   KfxCapabilityKey,
   KfxEntry,
   KfxRuntimeTier,
@@ -54,8 +55,38 @@ type NodePath = {
   delimiter: string;
 };
 
+type NodeCrypto = {
+  createHash: (algo: string) => {
+    update: (data: string) => { digest: (enc: string) => string };
+  };
+};
+
 const fs = window.require('node:fs') as NodeFs;
 const path = window.require('node:path') as NodePath;
+const crypto = window.require('node:crypto') as NodeCrypto;
+
+function sha256(data: string): string {
+  return crypto.createHash('sha256').update(data).digest('hex');
+}
+
+// The frozen first-party set (ADR-0013): trust is granted by membership here —
+// a verifiable origin — never by which extension root a package loaded from.
+// It ships as a build-generated JSON pointed to by KF_FIRST_PARTY_MANIFEST. A
+// missing/unreadable manifest yields `null`, which trusts nothing but the
+// shell's own `system` views (safe by default, never a path fallback).
+export function loadFirstPartyManifest(
+  env: Record<string, string | undefined>,
+): FirstPartyManifest | null {
+  const p = env.KF_FIRST_PARTY_MANIFEST;
+  if (!p || !fs.existsSync(p)) return null;
+  try {
+    const parsed = JSON.parse(fs.readFileSync(p, 'utf8')) as FirstPartyManifest;
+    if (parsed?.version !== 1 || typeof parsed.keys !== 'object') return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
 
 export function extensionRoots(
   env: Record<string, string | undefined>,
@@ -124,15 +155,11 @@ export function loadKfx(
   const failures: KfxLoadFailure[] = [];
   const seen = new Set<string>();
 
-  // the install root (<home>/extensions) is where `kungfu kfx install` puts
-  // third-party packages; a view loaded from there is installed (untrusted).
-  const installRoot = env.KF_RUNTIME_DIR
-    ? path.resolve(path.join(path.dirname(env.KF_RUNTIME_DIR), 'extensions'))
-    : null;
+  // trust is granted by the frozen first-party set (ADR-0013), never by which
+  // root a package loaded from — a KF_EXTENSION_PATH entry no longer confers it.
+  const firstParty = loadFirstPartyManifest(env);
 
   for (const root of extensionRoots(env)) {
-    const installed =
-      installRoot !== null && path.resolve(root) === installRoot;
     for (const dir of packageDirs(root)) {
       try {
         const manifest = JSON.parse(
@@ -165,10 +192,19 @@ export function loadKfx(
         if (seen.has(config.key)) continue; // earlier root wins
         seen.add(config.key);
         const bundlePath = path.join(dir, view.entry ?? 'dist/view/index.js');
-        const tier = resolveRuntimeTier(
-          view,
-          installed ? 'installed' : 'built-in',
+        // hash the bundle only when the key is pinned in the frozen set; an
+        // unpinned or absent key is decided by identity alone (verdict below).
+        const pin = firstParty?.keys[config.key];
+        const contentHash =
+          pin && pin.sha256 !== null && fs.existsSync(bundlePath)
+            ? sha256(fs.readFileSync(bundlePath, 'utf8'))
+            : null;
+        const trusted = authorizeFirstParty(
+          firstParty,
+          config.key,
+          contentHash,
         );
+        const tier = resolveRuntimeTier(view, trusted);
         entries.push({
           id: config.key,
           title: view.title ?? config.key,
