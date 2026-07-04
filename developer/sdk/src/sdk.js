@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// kfs — the Kungfu application assembly CLI.
+// sdk — the Kungfu application assembly CLI, exposed as the `kungfu sdk` subcommand.
 //
 // First cut of the modern SDK surface: scaffold a complete Kungfu desktop app
 // on the platform stack (electron-vite + React + the in-process runtime
@@ -26,9 +26,9 @@ const TEMPLATE_ROOT = path.join(
 function usage(code) {
   process.stdout.write(
     [
-      'usage: kfs create app <directory> [options]',
-      '       kfs create extension <directory> [options]',
-      '       kfs kfx build | clean',
+      'usage: kungfu sdk create app <directory> [options]',
+      '       kungfu sdk create extension <directory> [options]',
+      '       kungfu sdk kfx build | clean',
       '',
       'create options:',
       '  --name <name>   product/view name (defaults to the directory basename)',
@@ -57,7 +57,7 @@ function usage(code) {
  * @returns {never}
  */
 function fail(message) {
-  process.stderr.write(`kfs: ${message}\n`);
+  process.stderr.write(`kungfu sdk: ${message}\n`);
   process.exit(1);
 }
 
@@ -195,7 +195,7 @@ function createExtension(directory, options) {
       'next steps:',
       `  cd ${directory}`,
       '  pnpm install   # or npm/yarn',
-      '  pnpm build     # kfs kfx build -> dist/view/index.js',
+      '  pnpm build     # kungfu sdk kfx build -> dist/view/index.js',
       '  npm pack       # the tgz is the install unit: kungfu kfx install <tgz>',
       '',
     ].join('\n'),
@@ -394,7 +394,7 @@ function pythonAotBuild(manifest) {
 }
 
 /**
- * Dispatch `kfs kfx build` to the right builder for the current package.
+ * Dispatch `kungfu sdk kfx build` to the right builder for the current package.
  * @returns {Promise<void>}
  */
 async function kfxBuild() {
@@ -409,14 +409,14 @@ async function kfxBuild() {
       return;
     }
     // A Python AOT extension declares its dependencies under kungfuBuild.python;
-    // kfs installs them (engage pdm) and compiles src/python (engage nuitka).
+    // the sdk installs them (engage pdm) and compiles src/python (engage nuitka).
     if (manifest.kungfuBuild?.python) {
       pythonAotBuild(manifest);
       return;
     }
     // An adapter facet is a runtime extension: it ships source per child
     // runtime (python/node) and the capture supervisor injects it — there is
-    // nothing to bundle. Succeed so `kfs kfx build` is usable on any kfx.
+    // nothing to bundle. Succeed so `kungfu sdk kfx build` is usable on any kfx.
     if (config.adapter) {
       process.stdout.write(
         `${manifest.name ?? 'adapter extension'}: adapter facet ships source (no bundle step)\n`,
@@ -450,7 +450,7 @@ async function kfxBuild() {
 }
 
 /**
- * Remove the dist/ and build/ trees produced by `kfs kfx build`.
+ * Remove the dist/ and build/ trees produced by `kungfu sdk kfx build`.
  * @returns {void}
  */
 function kfxClean() {

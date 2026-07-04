@@ -15,17 +15,14 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
-  "bin": {
-    "kfs": "src/kfs.js"
-  },
+  "main": "src/sdk.js",
   "files": [
     "src",
     "templates",
     "README.md"
   ],
   "scripts": {
-    "kfs": "node src/kfs.js",
-    "build": "node --check src/kfs.js"
+    "build": "node --check src/sdk.js"
   },
   "dependencies": {
     "esbuild": "^0.28.1"

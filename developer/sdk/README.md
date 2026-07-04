@@ -10,8 +10,11 @@ biome), wired to load the native binding the same way the reference GUI does.
 
 ## Usage
 
+The toolkit is the `kungfu sdk` subcommand of the platform CLI (there is no
+separate `kfs` command):
+
 ```sh
-kfs create app my-app          # scaffold into ./my-app
+kungfu sdk create app my-app   # scaffold into ./my-app
 cd my-app
 pnpm install
 pnpm dev                       # launch against a built @kungfu-tech/core
@@ -22,10 +25,10 @@ reference shell discovers and mounts (see `docs/extensions.md` in the
 repository root for the contract):
 
 ```sh
-kfs create extension my-view   # scaffold into ./my-view
+kungfu sdk create extension my-view   # scaffold into ./my-view
 cd my-view
 pnpm install
-pnpm build                     # kfs kfx build → dist/view/index.js
+pnpm build                     # kungfu sdk kfx build → dist/view/index.js
 npm pack                       # the tgz installs via `kungfu kfx install`
 ```
 
