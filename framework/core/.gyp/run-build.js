@@ -28,16 +28,36 @@ function cpVsDependencies() {
 // colocated at install time from @kungfu-tech/libnode (see design decision (1)).
 function stage() {
   const buildType = shell.getConfigValue('build_type') || 'Release';
-  const buildDir = path.join('build', buildType);
   const distKungfu = path.join('dist', 'kungfu');
   fs.rmSync(distKungfu, { recursive: true, force: true });
   fs.mkdirSync(distKungfu, { recursive: true });
-  // `*.so.*` catches versioned ELF sonames (e.g. libnode.so.127), which is the
-  // name pykungfu's DT_NEEDED references — `*.so` alone would miss it and leave
-  // dist/kungfu unable to load the Python binding on linux.
-  for (const pattern of ['*.node', '*.dylib', '*.so', '*.so.*', '*.dll']) {
-    for (const src of glob.sync(path.join(buildDir, pattern))) {
-      fs.copyFileSync(src, path.join(distKungfu, path.basename(src)));
+  // The CMake addons land in CMAKE_BINARY_DIR, which the conan layout resolves to
+  // build/<buildType> on macOS/Linux but build/ on Windows; run-link-node stages
+  // the libnode runtime into build/<buildType>. Search both so the staged set is
+  // complete on every platform, deduping by basename. Pass the directory via
+  // glob's `cwd` instead of embedding it in the pattern — on Windows path.join
+  // yields backslashes, which glob treats as escapes and would match nothing.
+  // `*.so.*` catches versioned ELF sonames (e.g. libnode.so.127) that pykungfu's
+  // DT_NEEDED references; `*.pyd` catches the Windows Python binding, which is a
+  // `*.so` on posix.
+  const buildDirs = [path.join('build', buildType)];
+  if (process.platform === 'win32') buildDirs.push('build');
+  const staged = new Set();
+  for (const buildDir of buildDirs) {
+    for (const pattern of [
+      '*.node',
+      '*.pyd',
+      '*.dylib',
+      '*.so',
+      '*.so.*',
+      '*.dll',
+    ]) {
+      for (const rel of glob.sync(pattern, { cwd: buildDir })) {
+        const base = path.basename(rel);
+        if (staged.has(base)) continue;
+        staged.add(base);
+        fs.copyFileSync(path.join(buildDir, rel), path.join(distKungfu, base));
+      }
     }
   }
 }
