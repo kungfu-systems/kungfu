@@ -15,18 +15,10 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
-  "binary": {
-    "module_name": "kfx-indexer-live",
-    "module_path": "dist/IndexerLive",
-    "remote_path": "{module_name}/v{major}/v{version}",
-    "package_name": "{module_name}-v{version}-{platform}-{arch}-{configuration}.tar.gz",
-    "host": "https://prebuilt.libkungfu.cc"
-  },
   "scripts": {
     "build": "kfs strategy build",
     "clean": "kfs strategy clean",
     "format": "node ../../framework/core/.gyp/run-format-python.js src",
-    "install": "node -e \"require('@kungfu-tech/core').prebuilt('install')\"",
     "package": "kfs project package"
   },
   "dependencies": {

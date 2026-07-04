@@ -77,11 +77,25 @@ module.exports = require('../lib/sywac')(
   (/** @type {any} */ cli) => {
     cli
       .command('install', () => {
-        const fallbackBuild = process.env.KF_INSTALL_FALLBACK_BUILD === 'true';
-        callPrebuilt(
-          fallbackBuild ? ['install', '--fallback-to-build'] : ['install'],
-          fallbackBuild,
+        // 4.0 publishes no prebuilt binary and the self-hosted download host is
+        // retired, so build the native addon from source when it is missing (a
+        // later install skips the recompile). Set KF_SKIP_INSTALL_BUILD=true to
+        // skip when the build runs as an explicit separate step. Prebuilt
+        // binaries return later via npm platform packages, not a download.
+        if (process.env.KF_SKIP_INSTALL_BUILD === 'true') {
+          return;
+        }
+        const builtAddon = path.join(
+          __dirname,
+          '..',
+          'dist',
+          'kungfu',
+          'kungfu_node.node',
         );
+        if (fs.existsSync(builtAddon)) {
+          return;
+        }
+        build();
       })
       .command('build', () => build())
       .command('clean', () => clean())

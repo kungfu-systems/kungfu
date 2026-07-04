@@ -15,20 +15,11 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
-  "binary": {
-    "module_name": "api",
-    "module_path": "dist/api",
-    "remote_path": "{module_name}/v{major}/v{version}",
-    "package_name": "{module_name}-v{version}-{platform}-{arch}-{configuration}.tar.gz",
-    "host": "https://prebuilt.libkungfu.cc"
-  },
   "types": "./src/typings/index.d.ts",
   "main": "lib/index.js",
   "scripts": {
     "build": "tsc --noEmit",
-    "clean": "rimraf build dist",
-    "install": "node -e \"require('@kungfu-tech/core').prebuilt('install')\"",
-    "package": "node -e \"require('@kungfu-tech/core').prebuilt('package')\""
+    "clean": "rimraf build dist"
   },
   "dependencies": {
     "@fast-csv/format": "^4.3.5",
