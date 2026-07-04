@@ -52,18 +52,6 @@ function rootPackageJson() {
   return readJson('package.json');
 }
 
-function libnodeVersion(sourcePackageJson) {
-  const version =
-    (sourcePackageJson.devDependencies || {})['@kungfu-tech/libnode'] ||
-    (sourcePackageJson.dependencies || {})['@kungfu-tech/libnode'];
-  if (!version) {
-    throw new Error(
-      'Cannot determine @kungfu-tech/libnode version from package.json',
-    );
-  }
-  return version;
-}
-
 function packageDirName(packageName) {
   return packageName.replace(/^@/, '').replace('/', '-');
 }
@@ -110,70 +98,15 @@ function writePackageReadme(packageRoot, packageName, description) {
   );
 }
 
-/**
- * Colocate the libnode shared library next to the core addon. Runs at platform
- * package postinstall AND lazily at runtime (index.js), so it is robust to npm
- * postinstall ordering: whichever fires after `@kungfu-tech/libnode` is present
- * wins, and it is idempotent. libnode remains the single source of the binary
- * (decision (1)); core never bundles a second copy.
- */
-function writeColocateScript(packageRoot) {
-  fs.writeFileSync(
-    path.join(packageRoot, 'ensure-libnode-colocated.js'),
-    [
-      "const fs = require('fs');",
-      "const path = require('path');",
-      '',
-      "const bindingDir = path.join(__dirname, 'dist', 'kungfu');",
-      '',
-      'function libnodeLibpath() {',
-      '  try {',
-      "    return require('@kungfu-tech/libnode').libpath;",
-      '  } catch (error) {',
-      '    return null;', // libnode not resolvable yet; a later trigger will retry
-      '  }',
-      '}',
-      '',
-      'function ensureLibnodeColocated() {',
-      '  const libpath = libnodeLibpath();',
-      '  if (!libpath || !fs.existsSync(libpath)) return false;',
-      '  let colocated = false;',
-      '  for (const entry of fs.readdirSync(libpath)) {',
-      '    if (!/^libnode[.]/.test(entry)) continue;',
-      '    const src = path.join(libpath, entry);',
-      '    if (!fs.statSync(src).isFile()) continue;',
-      '    const dst = path.join(bindingDir, entry);',
-      '    try {',
-      '      if (fs.existsSync(dst)) continue;',
-      "      try { fs.symlinkSync(src, dst, 'file'); }",
-      '      catch (linkError) { fs.copyFileSync(src, dst); }',
-      '      colocated = true;',
-      '    } catch (error) {',
-      "      if (error.code !== 'EEXIST') throw error;",
-      '    }',
-      '  }',
-      '  return colocated;',
-      '}',
-      '',
-      'module.exports = { ensureLibnodeColocated };',
-      '',
-      'if (require.main === module) ensureLibnodeColocated();',
-      '',
-    ].join('\n'),
-  );
-}
-
 function writePlatformIndex(packageRoot) {
   fs.writeFileSync(
     path.join(packageRoot, 'index.js'),
     [
       "const path = require('path');",
-      "const { ensureLibnodeColocated } = require('./ensure-libnode-colocated.js');",
       '',
-      '// Lazy, idempotent colocation guarantees libnode sits next to the addon',
-      '// before the core resolver loads it, regardless of postinstall ordering.',
-      'ensureLibnodeColocated();',
-      '',
+      '// The addon and its full runtime (libkungfu, libnode) are bundled in',
+      '// dist/kungfu by the build (link-node + stage); this package is',
+      '// self-contained and needs no install-time colocation.',
       "exports.bindingDir = path.join(__dirname, 'dist', 'kungfu');",
       '',
     ].join('\n'),
@@ -241,19 +174,9 @@ function preparePlatformPackage(descriptor) {
       `Kungfu core native addon for ${descriptor.key} (${config})`,
     ),
     main: 'index.js',
-    files: [
-      'index.js',
-      'ensure-libnode-colocated.js',
-      'dist/',
-      'LICENSE',
-      'README.md',
-    ],
+    files: ['index.js', 'dist/', 'LICENSE', 'README.md'],
     os: descriptor.os,
     cpu: descriptor.cpu,
-    optionalDependencies: {
-      '@kungfu-tech/libnode': libnodeVersion(sourcePackageJson),
-    },
-    scripts: { postinstall: 'node ensure-libnode-colocated.js' },
   };
 
   writeJson(path.join(packageRoot, 'package.json'), packageJson);
@@ -269,7 +192,6 @@ function preparePlatformPackage(descriptor) {
     packageName,
     `This package contains the Kungfu core native addon for ${descriptor.key} (${config}).`,
   );
-  writeColocateScript(packageRoot);
   writePlatformIndex(packageRoot);
   console.log(
     `prepared ${packageName} from ${path.relative(rootDir, bindingDir)}`,
