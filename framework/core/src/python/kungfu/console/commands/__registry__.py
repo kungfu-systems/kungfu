@@ -11,6 +11,7 @@ from . import assemble
 from . import login
 from . import backtest
 from . import trace
+from . import managed_run
 from . import rewind
 from . import schema
 from . import work
@@ -29,6 +30,7 @@ __all__ = [
     "login",
     "backtest",
     "trace",
+    "managed_run",
     "rewind",
     "schema",
     "work",

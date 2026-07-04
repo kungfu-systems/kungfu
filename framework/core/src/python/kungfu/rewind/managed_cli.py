@@ -45,31 +45,22 @@ def _rule(label=""):
     return f"─ {label} " + "─" * max(0, 44 - len(label))
 
 
-def main(argv=None):
-    ap = argparse.ArgumentParser(prog="kungfu managed-run")
-    ap.add_argument(
-        "--provider", required=True, choices=managed_run.managed_providers()
-    )
-    ap.add_argument("--prompt", required=True, help="the task to run")
-    ap.add_argument("--home", default=None, help="runtime dir for the journal")
-    ap.add_argument("--work-id", default=None, help="work item this run belongs to")
-    args = ap.parse_args(argv)
-
-    runtime = args.home or tempfile.mkdtemp(prefix="kungfu-managed-")
+def run_and_report(provider, prompt, *, runtime_dir, work_id=None):
+    """Run one managed provider run on a journal under runtime_dir and print its
+    cost. Returns the provider's exit code. Shared by the `kungfu managed-run`
+    console command and the `python -m` entry."""
     run_id = uuid.uuid4().hex[:12]
 
-    disc = discover_provider(args.provider)
-    print(
-        f"\033[1m◆ Kungfu managed run\033[0m  provider={args.provider}  run_id={run_id}"
-    )
+    disc = discover_provider(provider)
+    print(f"\033[1m◆ Kungfu managed run\033[0m  provider={provider}  run_id={run_id}")
     if not disc.found:
         print(f"  provider not available: {disc.error}")
         return 2
     print(f"  binary  {disc.path}  ({disc.path_class}, {disc.version})")
-    print(f"  prompt  {args.prompt}")
+    print(f"  prompt  {prompt}")
     print("  running the provider under management …\n")
 
-    writer = _open_journal(runtime, run_id)
+    writer = _open_journal(runtime_dir, run_id)
 
     def emit(msg_type, data):
         writer.write_bytes(0, msg_type, list(data), len(data))
@@ -78,7 +69,7 @@ def main(argv=None):
         MSG_RUN_BEGIN,
         events.run_begin(
             run_id=run_id,
-            command=f"{args.provider} managed-run",
+            command=f"{provider} managed-run",
             runtime=sys.platform,
             supervisor_version=kungfu.__version__,
             schema_version=SCHEMA_VERSION,
@@ -86,12 +77,7 @@ def main(argv=None):
     )
 
     result = managed_run.run_managed(
-        args.provider,
-        disc.path,
-        args.prompt,
-        emit=emit,
-        run_id=run_id,
-        work_id=args.work_id,
+        provider, disc.path, prompt, emit=emit, run_id=run_id, work_id=work_id
     )
 
     status = RunStatus.Succeeded if result.exit_code == 0 else RunStatus.Failed
@@ -100,8 +86,8 @@ def main(argv=None):
     # persist without an explicit flush; the writer releases at function end.
 
     manifest = bundle.emit(
-        os.path.join(runtime, "rewind", run_id, "bundle"),
-        runtime,
+        os.path.join(runtime_dir, "rewind", run_id, "bundle"),
+        runtime_dir,
         {
             "mode": "LIVE",
             "category": "SYSTEM",
@@ -143,6 +129,21 @@ def main(argv=None):
     print(f"  proof        {manifest}")
     print("─" * 46)
     return result.exit_code
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(prog="kungfu managed-run")
+    ap.add_argument(
+        "--provider", required=True, choices=managed_run.managed_providers()
+    )
+    ap.add_argument("--prompt", required=True, help="the task to run")
+    ap.add_argument("--home", default=None, help="runtime dir for the journal")
+    ap.add_argument("--work-id", default=None, help="work item this run belongs to")
+    args = ap.parse_args(argv)
+    runtime = args.home or tempfile.mkdtemp(prefix="kungfu-managed-")
+    return run_and_report(
+        args.provider, args.prompt, runtime_dir=runtime, work_id=args.work_id
+    )
 
 
 if __name__ == "__main__":
