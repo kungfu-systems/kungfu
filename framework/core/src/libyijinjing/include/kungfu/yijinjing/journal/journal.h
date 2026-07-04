@@ -11,6 +11,7 @@
 #include <kungfu/yijinjing/journal/page.h>
 #include <kungfu/yijinjing/time.h>
 #include <mutex>
+#include <queue>
 
 namespace kungfu::yijinjing::journal {
 
