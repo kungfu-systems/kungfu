@@ -15,8 +15,8 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
-  "types": "./src/typings/index.d.ts",
-  "main": "lib/index.js",
+  "types": "./src/capability/index.ts",
+  "main": "./src/capability/index.ts",
   "scripts": {
     "build": "tsc --noEmit",
     "clean": "rimraf build dist"
@@ -49,7 +49,7 @@
     "typescript": "^5.9.3"
   },
   "exports": {
-    "./capability": "./src/capability/index.ts",
-    "./*": "./src/*"
+    ".": "./src/capability/index.ts",
+    "./capability": "./src/capability/index.ts"
   }
 }
