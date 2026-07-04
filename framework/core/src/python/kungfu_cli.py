@@ -25,7 +25,7 @@
 #
 # `kfc engage` 的开发工具桥接(black/pdm/scons/nuitka)：这些工具均为 mypyc 编译包(.so __init__)，
 # Nuitka 4.x 拒绝把 .so 当源码编译；且把 Nuitka/SCons 自身打进冻结 kfc 不合理。bridging 全是函数内
-# 懒加载，不影响 kfc 启动与核心命令(journal/assemble/run/backtest/login/slicetool/tool)。故运行时
+# 懒加载，不影响 kfc 启动与核心命令(journal/trace/rewind/schema/work/kfx)。故运行时
 # 冻结版不跟随编译这些 dev 工具；`kfc engage <tool>` 需开发环境另装这些工具（engage 打包另案处理）。
 # nuitka-project: --nofollow-import-to=black
 # nuitka-project: --nofollow-import-to=pdm

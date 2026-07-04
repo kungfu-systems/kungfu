@@ -5,7 +5,7 @@
 > CLI's own definitions) and the agent-first `--json` provenance surface are
 > planned; this page is a hand-written getting-started.
 
-`kungfu` is how you produce and inspect fact-ledger records from the command
+`kungfu` is how you capture and inspect fact-ledger records from the command
 line. Everything below produces or reads the same portable bundle described in
 the [format spec](../../spec/).
 
@@ -19,48 +19,38 @@ pnpm add @kungfu-tech/core
 kungfu --version
 ```
 
-## Produce a record
+## Capture a record
 
-A run in `replay` or `backtest` mode executes a workflow and writes a
-fact-ledger you can open afterward:
+`trace` captures an agent run into a local trace store — everything the run
+does is recorded into a fact-ledger you can re-open afterward:
 
 ```bash
-# execute a workflow and record it
-kungfu run --mode backtest --category <category> --name <name>
-
-# re-run a previously recorded session deterministically
-kungfu run --mode replay --name <name>
+# capture a run
+kungfu trace -- <command>
 ```
 
-`run` modes: `live`, `backtest`, `data`, `replay`. `replay` and `backtest` are
-the record-producing paths.
+## Re-open a record
 
-## Inspect a record
-
-```bash
-# inspect recorded data over a time window
-kungfu tool --begin <t0> --end <t1> --category <category> --name <name>
-
-# slice a recorded ledger into a portable extract
-kungfu slicetool --begin <t0> --end <t1> --name <name>
-```
-
-## Assemble a bundle
+`rewind` re-opens recorded runs for forensic replay over the trace journal:
 
 ```bash
-kungfu assemble <config.json>
+kungfu rewind <subcommand>
 ```
 
 ## All commands
 
 | Command | What it does |
 | --- | --- |
-| `run` | execute a workflow (`live` / `backtest` / `data` / `replay`); `replay`/`backtest` produce a ledger |
-| `assemble` | assemble / package a workflow from a config |
-| `tool` | inspect recorded data over a window |
-| `slicetool` | slice a recorded ledger into an extract |
-| `login` | authenticate an account (for `live` workflows) |
+| `trace` | capture an agent run into a local trace store |
+| `rewind` | re-open recorded runs: forensic replay over the trace journal |
+| `journal` | read the underlying journal (yijinjing) records |
+| `schema` | compile kfx FlatBuffers schemas into open-layer `.bfbs` (in-process, no flatc) |
+| `work` | manage work items: create, drive the lifecycle, and inspect state |
+| `kfx` | install, list and remove kfx packages for this home |
+| `tui` | open the reference TUI (Ink) |
 | `cli` | open the interactive Node CLI |
+| `atlas` | Atlas repo integration surface |
+| `engage` | developer tooling (formatting and related helpers) |
 
 Run `kungfu <command> --help` for the full option list.
 
