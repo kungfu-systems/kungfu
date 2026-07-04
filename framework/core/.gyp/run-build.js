@@ -49,6 +49,12 @@ function build() {
   const { conanInstall, conanBuild } = require('./run-conan');
   conanInstall();
   conanBuild();
+  // Colocate the libnode runtime into build/<build_type> before staging, so the
+  // staged dist/kungfu is self-contained: pykungfu links @rpath/libnode.*, and
+  // dist/kungfu is the single runtime surface that kfx and the platform package
+  // both depend on. Require lazily (loads @kungfu-tech/libnode) so non-build
+  // commands stay light.
+  require('./run-link-node').main();
   stage();
   cpVsDependencies();
 }
