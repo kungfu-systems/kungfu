@@ -19,6 +19,8 @@
 import json
 import os
 
+from kungfu.rewind import first_party
+
 ENV_EXTENSION_PATH = "KF_EXTENSION_PATH"
 # shared contract strings with the child hooks (per runtime): the python hook
 # reads ENV_PLUGIN_ADAPTERS, the node hook reads ENV_NODE_ADAPTERS.
@@ -54,10 +56,17 @@ def _scan_packages(root):
 
 
 def discover_adapters(runtime_dir, runtime):
-    """Return (entry_files, package_dirs) for kfx packages declaring an adapter
-    form for `runtime` ('python' or 'node'). First occurrence of a package path
-    wins; missing entry files are skipped."""
-    entries, dirs, seen = [], [], set()
+    """Return (entry_files, package_dirs, refused) for kfx packages declaring an
+    adapter form for `runtime` ('python' or 'node'). First occurrence of a
+    package path wins; missing entry files are skipped.
+
+    Trust gate (ADR-0013): an adapter runs in-process inside the traced program
+    and cannot be sandboxed, so only a package whose key is in the frozen
+    first-party set is injected. An untrusted adapter is refused — returned in
+    `refused` as {"key", "package"} so the caller can report it — never injected.
+    """
+    trusted = first_party.first_party_keys()
+    entries, dirs, refused, seen = [], [], [], set()
     for root in _extension_roots(runtime_dir):
         for pkg in _scan_packages(root):
             try:
@@ -65,8 +74,8 @@ def discover_adapters(runtime_dir, runtime):
                     manifest = json.load(f)
             except (OSError, ValueError):
                 continue
-            config = (manifest.get("kungfuConfig") or {}).get("config") or {}
-            adapter = config.get("adapter") or {}
+            kfx = manifest.get("kungfuConfig") or {}
+            adapter = (kfx.get("config") or {}).get("adapter") or {}
             if runtime not in (adapter.get("runtimes") or []):
                 continue
             entry = (adapter.get("entry") or {}).get(runtime)
@@ -76,6 +85,9 @@ def discover_adapters(runtime_dir, runtime):
             if path in seen or not os.path.exists(path):
                 continue
             seen.add(path)
+            if kfx.get("key") not in trusted:
+                refused.append({"key": kfx.get("key"), "package": os.path.abspath(pkg)})
+                continue
             entries.append(path)
             dirs.append(os.path.abspath(pkg))
-    return entries, dirs
+    return entries, dirs, refused

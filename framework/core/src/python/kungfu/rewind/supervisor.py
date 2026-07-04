@@ -135,8 +135,20 @@ class Supervisor:
         # announce their entry files to each runtime's child hook. Python
         # adapters also put their package dirs on PYTHONPATH so an adapter can
         # import its own siblings; node adapters are required by absolute path.
-        py_entries, py_dirs = adapters.discover_adapters(self.runtime_dir, "python")
-        node_entries, _ = adapters.discover_adapters(self.runtime_dir, "node")
+        py_entries, py_dirs, py_refused = adapters.discover_adapters(
+            self.runtime_dir, "python"
+        )
+        node_entries, _, node_refused = adapters.discover_adapters(
+            self.runtime_dir, "node"
+        )
+        for refused in py_refused + node_refused:
+            # an adapter injects into the traced program in-process; an untrusted
+            # one cannot be sandboxed, so it is refused rather than contained.
+            sys.stderr.write(
+                f"[kungfu trace] refusing untrusted adapter "
+                f"{refused['key']!r} at {refused['package']}: only a "
+                f"source-verified first-party adapter may inject.\n"
+            )
         if py_entries:
             env[adapters.ENV_PLUGIN_ADAPTERS] = os.pathsep.join(py_entries)
         if node_entries:
