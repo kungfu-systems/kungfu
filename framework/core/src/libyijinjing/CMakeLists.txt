@@ -56,6 +56,14 @@ target_link_libraries(yijinjing PUBLIC
   $<IF:$<TARGET_EXISTS:spdlog::spdlog_header_only>,spdlog::spdlog_header_only,spdlog::spdlog>
   nlohmann_json::nlohmann_json)
 
+# Windows AppContainer guest launcher (ADR-0014): CreateAppContainerProfile /
+# DeriveAppContainerSidFromAppContainerName live in userenv. The loopback
+# exemption (FirewallAPI, NetworkIsolationSetAppContainerConfig) is added here
+# once wired; it is deferred in app_container.cpp for now.
+if(WIN32)
+  target_link_libraries(yijinjing PUBLIC userenv)
+endif()
+
 if(DEFINED COMPILER_OPTIMIZE_ON_OPTIONS AND NOT "${COMPILER_OPTIMIZE_ON_OPTIONS}" STREQUAL "")
   target_compile_options(yijinjing PRIVATE "$<$<CONFIG:Release>:${COMPILER_OPTIMIZE_ON_OPTIONS}>")
 endif()

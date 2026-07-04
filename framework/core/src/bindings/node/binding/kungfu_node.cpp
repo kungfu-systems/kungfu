@@ -46,6 +46,7 @@ decltype(__pfnDliNotifyHook2) __pfnDliNotifyHook2 = load_exe_hook;
 #include <kungfu/yijinjing/io.h>
 #include <kungfu/yijinjing/util/util.h>
 
+#include "app_container.h"
 #include "basket_instrument_store.h"
 #include "basket_store.h"
 #include "commission_store.h"
@@ -155,6 +156,7 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
   exports.Set("formatTime", Napi::Function::New(env, FormatTime));
   exports.Set("parseTime", Napi::Function::New(env, ParseTime));
   exports.Set("shutdown", Napi::Function::New(env, Shutdown));
+  InitAppContainer(env, exports);
   return exports;
 }
 } // namespace kungfu::node
