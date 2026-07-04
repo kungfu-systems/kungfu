@@ -16,6 +16,10 @@ requires-python = ">=3.13,<3.14"
 dependencies = [
     # Compiler
     "ruff~=0.15.0",
+    # clang-format via PyPI wheel, same uv toolchain lane as ruff. Pinned exactly
+    # (==) because a version bump changes C++ formatting output; an exact pin keeps
+    # the result byte-identical across machines instead of the ambient system one.
+    "clang-format==20.1.8",
     "nuitka~=4.1.0",
     "pdm~=2.28.0",
     "pdm-pep517~=1.1.0",

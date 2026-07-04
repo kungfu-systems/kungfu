@@ -56,13 +56,19 @@ done
 changed=''
 warn() { printf '[kungfu pre-commit] %s\n' "$1" >&2; }
 
-# C++ — clang-format reads the repo-root .clang-format via -style=file.
+# C++ — clang-format reads the repo-root .clang-format via -style=file. Pin the
+# version to framework/core/pyproject.toml (keep both in sync) so output is
+# byte-identical across machines; prefer the uv-provided pin over a system one.
 if [ -n "$cpp" ]; then
-  if command -v clang-format >/dev/null 2>&1; then
+  if command -v uvx >/dev/null 2>&1; then
+    # shellcheck disable=SC2086
+    uvx clang-format@20.1.8 -style=file -i $cpp && changed="$changed $cpp"
+  elif command -v clang-format >/dev/null 2>&1; then
+    warn "using system clang-format ($(clang-format --version | head -1)); may differ from pinned 20.1.8"
     # shellcheck disable=SC2086
     clang-format -style=file -i $cpp && changed="$changed $cpp"
   else
-    warn "clang-format not found; skipped C++:$cpp"
+    warn "clang-format (uv) not found; skipped C++:$cpp"
   fi
 fi
 

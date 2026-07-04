@@ -8,16 +8,21 @@ function main(argv) {
   const cwd = process.cwd().toString();
   process.chdir(path.dirname(__dirname));
 
-  shell.run('clang-format', ['--version'], true, { tolerant: true });
+  // clang-format is pinned in pyproject and provided by the uv venv (same lane as
+  // ruff), so C++ formatting is byte-identical across machines instead of relying
+  // on the ambient system clang-format. Format every file in one uv invocation to
+  // avoid paying the `uv run` startup cost per file.
+  const clangFormat = ['run', '--frozen', 'clang-format'];
+  shell.run('uv', [...clangFormat, '--version'], true, { tolerant: true });
 
-  argv.forEach((dir) =>
+  const files = argv.flatMap((dir) =>
     glob
       .sync('**/*.@(h|hpp|hxx|cpp|c|cc|cxx)', { cwd: path.join(cwd, dir) })
-      .forEach((p) => {
-        const file = path.join(cwd, dir, p);
-        shell.run('clang-format', ['-style=file', '-i', file]);
-      }),
+      .map((p) => path.join(cwd, dir, p)),
   );
+  if (files.length) {
+    shell.run('uv', [...clangFormat, '-style=file', '-i', ...files]);
+  }
 }
 
 module.exports.main = main;
