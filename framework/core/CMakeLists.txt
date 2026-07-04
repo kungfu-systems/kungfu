@@ -150,8 +150,8 @@ endif()
 
 if (NOT DEFINED ENV{KUNGFU_BUILD_SKIP_PYKUNGFU} OR NOT $ENV{KUNGFU_BUILD_SKIP_PYKUNGFU})
   message(STATUS "Enabled pykungfu")
-  # pybind11 由 conan2 提供（find_package 已在顶部声明），取代 vendored .deps/pybind11-2.9.0
-  # （旧版 2.9.0 不支持 Python 3.13；conan 用 2.13.6）。
+  # pybind11 由 conan2 提供（find_package 已在顶部声明，requires pybind11/2.13.6）；
+  # 不再 vendored（旧 2.9.0 不支持 Python 3.13）。
   add_subdirectory(src/bindings/python)
 endif()
 

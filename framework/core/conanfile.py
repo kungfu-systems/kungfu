@@ -172,18 +172,13 @@ class KungfuCoreConan(ConanFile):
                 path.join(src, "src", "libkungfu", build_type),
                 path.join(self.package_folder, "bin"),
             )
-            # kfx 插件开发者交付物：导出 vendored 依赖头（hana / pybind11 / sqlite_orm）与 cmake 模块。
+            # kfx 插件开发者交付物：导出仍 vendored 的依赖头（hana / sqlite_orm）与 cmake 模块。
+            # pybind11 已由 conan 提供（requires pybind11/2.13.6），不再 vendored、不再导出。
             copy(
                 self,
                 "*",
                 glob(path.join(src, ".deps", "hana-*"))[0],
                 path.join(self.package_folder, "deps", "hana"),
-            )
-            copy(
-                self,
-                "*",
-                glob(path.join(src, ".deps", "pybind11-*"))[0],
-                path.join(self.package_folder, "deps", "pybind11"),
             )
             copy(
                 self,
