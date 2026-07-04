@@ -3,6 +3,7 @@
 
 const { spawnSync } = require('child_process');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const GithubBinaryHost = 'https://prebuilt.libkungfu.io';
@@ -231,6 +232,27 @@ const shell = {
   },
 
   /**
+   * Resolve the process exit code for a finished spawnSync result. Uses the
+   * child's own numeric exit status; when the child was terminated by a signal
+   * (`status === null`), maps to the POSIX `128 + signal` convention (e.g.
+   * SIGKILL/OOM → 137, SIGTERM → 143, SIGINT → 130) so a signal kill reports
+   * failure instead of `process.exit(null)` collapsing to a false success (0).
+   * Any other null-status case (e.g. the command failed to spawn) falls back to
+   * a generic failure code (1).
+   * @param {Pick<import('child_process').SpawnSyncReturns<unknown>, 'status' | 'signal'>} result
+   * @returns {number}
+   */
+  exitCode: function (result) {
+    if (result.status !== null && result.status !== undefined) {
+      return result.status;
+    }
+    const signalNumber = result.signal
+      ? os.constants.signals[result.signal]
+      : undefined;
+    return signalNumber ? 128 + signalNumber : 1;
+  },
+
+  /**
    * spawnSync a command with the shell, inheriting stdio, from the real
    * (symlink-resolved) cwd. When `check` is set, exit the process on a non-zero
    * status unless `opts.tolerant` is set.
@@ -251,9 +273,10 @@ const shell = {
       ...opts,
     });
     if (check && result.status !== 0) {
-      // status is null when the child was terminated by a signal; keep the
-      // original runtime behaviour (process.exit(null) === exit code 0).
-      process.exit(opts.tolerant ? 0 : (result.status ?? 0));
+      // status is null when the child was terminated by a signal; shell.exitCode
+      // maps that to 128+signal so a signal kill (SIGKILL/SIGTERM/OOM) reports
+      // failure instead of process.exit(null) collapsing to a false success (0).
+      process.exit(opts.tolerant ? 0 : shell.exitCode(result));
     }
     return result;
   },

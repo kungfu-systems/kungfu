@@ -53,6 +53,7 @@
     "format:python": "node .gyp/run-format-python.js . src src/*/*.spec .*/*.py",
     "kungfu": "node lib/kungfu-cli.js",
     "kfs": "node lib/kfs.js",
+    "test:tooling": "node --test tests/shell-exit-code.test.js",
     "dev:kungfu": "uv run --frozen python .devtools/kungfu_cli.py",
     "dev:kfs": "uv run --frozen python .devtools/kfs.py"
   },

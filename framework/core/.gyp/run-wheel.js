@@ -4,6 +4,9 @@
 const fse = require('fs-extra');
 const path = require('path');
 const { spawnSync } = require('child_process');
+// shell.exitCode only pulls in child_process/fs/os/path — safe to require here
+// even though the wheel may be packaged before the native addon is built.
+const shell = require('../lib/shell');
 
 // npm/pnpm package config always sets build_type when these build scripts run;
 // assert string so path.join accepts it (process.env values are string | undefined).
@@ -39,6 +42,7 @@ const result = spawnSync('uv', uv_args, {
   cwd: wheelDir,
 });
 
-// spawnSync().status is null when the child was terminated by a signal; treat
-// that as a failure (1) instead of letting process.exit(null) report success (0).
-process.exit(result.status ?? 0);
+// spawnSync().status is null when the child was terminated by a signal; map it
+// via shell.exitCode (128+signal) instead of letting process.exit(null) report
+// success (0) — otherwise a SIGKILL/OOM-killed wheel build would falsely pass.
+process.exit(shell.exitCode(result));
