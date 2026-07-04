@@ -55,11 +55,17 @@ layout, and code style.
 - Bugs, feature requests, questions, and documentation issues go through GitHub
   issues; security vulnerabilities use private vulnerability reporting — see
   [`SECURITY.md`](SECURITY.md).
+- Brand, hosted-service, and upstream-provider boundaries are documented in
+  [`TRADEMARK.md`](TRADEMARK.md), [`ACCEPTABLE_USE.md`](ACCEPTABLE_USE.md), and
+  [`PROVIDER_COMPLIANCE.md`](PROVIDER_COMPLIANCE.md).
 
 ## Ground rules
 
 - Never include secrets, credentials, tokens, or private logs in code, commits,
   issues, or pull requests.
+- Do not build or document official integrations that scrape private provider
+  sessions, bypass provider billing or quota systems, or misrepresent usage
+  attribution.
 - Prefer the smallest change that holds, and keep documentation in sync with
   behavior.
 - [`docs/MAP.md`](docs/MAP.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md) are the

@@ -31,6 +31,12 @@ Security reports may cover:
 - dependency or build-chain vulnerabilities;
 - credential, token, or private data exposure.
 
+Service-abuse, provider-compliance, credential-handling, or misleading official
+identity reports may also be security-sensitive. Use private vulnerability
+reporting when public disclosure would expose credentials, provider account
+details, user data, or an exploitable bypass. See `ACCEPTABLE_USE.md`,
+`PROVIDER_COMPLIANCE.md`, and `TRADEMARK.md` for the related policy boundaries.
+
 ## Public disclosure
 
 Please allow maintainers time to investigate and prepare a fix before public

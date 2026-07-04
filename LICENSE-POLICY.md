@@ -38,11 +38,26 @@ Apache-2.0 grants copyright and patent permissions. It does not grant trademark
 rights. Names, logos, domain names, and product marks such as "Kungfu" and
 "Kungfu Tracer" may be governed by separate brand guidelines.
 
+See [TRADEMARK.md](TRADEMARK.md) for the official project mark and fork identity
+boundary.
+
 ## Hosted and commercial services
 
 The open source license covers this repository. Hosted services, team features,
 enterprise support, managed deployments, commercial connectors, or other
 services offered by the project maintainers may use separate terms.
+
+See [ACCEPTABLE_USE.md](ACCEPTABLE_USE.md) for acceptable use of official hosted,
+managed, or maintainer-operated services.
+
+## Upstream provider integrations
+
+Official Kungfu integrations should use documented provider APIs, CLIs,
+telemetry, or other public integration surfaces, and should not bypass provider
+billing, quota, approval, safety, credential, or rate-limit systems.
+
+See [PROVIDER_COMPLIANCE.md](PROVIDER_COMPLIANCE.md) for the official provider
+integration posture.
 
 ## Third-party software
 

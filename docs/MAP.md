@@ -40,6 +40,7 @@ and the map routes a question to whichever doc answers it.
 | If kungfu itself misbehaves, how do I localize it? | [`debugging.md`](debugging.md) | verify | stable |
 | How do I record an agent run and find why it failed (Rewind)? | [`rewind.md`](rewind.md) | use | stable · pre-release install path |
 | How do I write an extension (`kfx`)? | [`extensions.md`](extensions.md) | use | stable · view kfx; runtime facets mid-migration |
+| What license, trademark, service-use, and provider-compliance boundaries apply? | [`../LICENSE-POLICY.md`](../LICENSE-POLICY.md) + [`../TRADEMARK.md`](../TRADEMARK.md) + [`../ACCEPTABLE_USE.md`](../ACCEPTABLE_USE.md) + [`../PROVIDER_COMPLIANCE.md`](../PROVIDER_COMPLIANCE.md) | use | stable |
 
 ## Also asking about
 
@@ -65,6 +66,10 @@ route to the row that answers them:
   ([`adapters.md`](adapters.md)).
 - **signature / checksum / supply chain / SBOM** → *verify a release binary*
   (`provenance.md`, `blocked` — see [`known-limits.md`](known-limits.md)).
+- **trademark / fork / hosted service / provider compliance / cost attribution
+  boundary** → [`../TRADEMARK.md`](../TRADEMARK.md),
+  [`../ACCEPTABLE_USE.md`](../ACCEPTABLE_USE.md), and
+  [`../PROVIDER_COMPLIANCE.md`](../PROVIDER_COMPLIANCE.md).
 
 ## How this map is maintained
 

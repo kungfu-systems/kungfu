@@ -104,6 +104,13 @@ right document, and is readable by both people and agents.
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — toolchain, build, conventions, releases.
 - [`LICENSE-POLICY.md`](LICENSE-POLICY.md) — project licensing, DCO-based
   contributions, third-party notice policy, and commercial boundary.
+- [`TRADEMARK.md`](TRADEMARK.md) — official project mark and fork identity
+  boundary.
+- [`ACCEPTABLE_USE.md`](ACCEPTABLE_USE.md) — acceptable use of official hosted,
+  managed, and maintainer-operated services.
+- [`PROVIDER_COMPLIANCE.md`](PROVIDER_COMPLIANCE.md) — official posture for
+  provider APIs, CLIs, credentials, usage attribution, and anti-bypass
+  boundaries.
 - [`SECURITY.md`](SECURITY.md) — how to report vulnerabilities privately.
 - [`docs/version-release-design.md`](docs/version-release-design.md) — versioning
   and release mechanism rationale.
