@@ -73,12 +73,14 @@ process.env.KF_EXTENSION_PATH =
 //        (bundles change on every rebuild, so they are trusted by key, unpinned).
 //   packaged: point at a build-baked resource with pinned bundle hashes; if the
 //        bake step has not run the manifest is absent and only system views are
-//        trusted (safe by default). Shipping the pinned resource is the
-//        packaging follow-up, tracked with the built-in-extension shipping work.
+//        trusted (safe by default). The pinned resource is baked at build time
+//        by scripts/gen-first-party-manifest.mjs into dist/kungfu, which ships to
+//        Resources/kungfu alongside the runtime.
 if (!process.env.KF_FIRST_PARTY_MANIFEST) {
   if (app.isPackaged) {
     process.env.KF_FIRST_PARTY_MANIFEST = path.join(
       process.resourcesPath,
+      'kungfu',
       'first-party.json',
     );
   } else if (process.env.KF_RUNTIME_DIR) {

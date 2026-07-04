@@ -60,14 +60,17 @@ export function generateFirstPartyManifest(
     const view = config?.config?.view;
     if (!config?.key || !view) continue; // only view facets carry a runtime tier
     if (config.key in keys) continue; // first occurrence wins, like the loader
-    let sha: string | null = null;
     if (opts.pin) {
+      // a pinned build records the bundle hash; a key whose bundle is not built
+      // cannot be pinned, so it is omitted (stays untrusted) rather than trusted
+      // by key alone — an unpinned entry in a shipped manifest would be forgeable.
       const bundlePath = join(dir, view.entry ?? 'dist/view/index.js');
-      sha = existsSync(bundlePath)
-        ? sha256(readFileSync(bundlePath, 'utf8'))
-        : null;
+      if (!existsSync(bundlePath)) continue;
+      keys[config.key] = { sha256: sha256(readFileSync(bundlePath, 'utf8')) };
+    } else {
+      // development: bundles are rebuilt constantly, so trust the key unpinned.
+      keys[config.key] = { sha256: null };
     }
-    keys[config.key] = { sha256: sha };
   }
   return { version: 1, keys };
 }

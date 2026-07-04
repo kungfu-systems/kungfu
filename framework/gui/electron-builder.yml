@@ -4,6 +4,9 @@ productName: Kungfu
 # directly from Resources/kungfu at runtime.
 asar: false
 npmRebuild: false
+# Bake the frozen first-party manifest (ADR-0013) into dist/kungfu before it is
+# shipped to Resources/kungfu, so trust is granted by verifiable source.
+beforePack: ./scripts/before-pack.cjs
 files:
   - out/**/*
   - package.json

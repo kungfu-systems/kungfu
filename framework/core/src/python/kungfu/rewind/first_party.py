@@ -15,12 +15,13 @@
 
 import json
 import os
+import sys
 
 ENV_FIRST_PARTY_MANIFEST = "KF_FIRST_PARTY_MANIFEST"
+BAKED_MANIFEST_NAME = "first-party.json"
 
 
-def _manifest_keys():
-    path = os.environ.get(ENV_FIRST_PARTY_MANIFEST)
+def _read_keys(path):
     if not path or not os.path.isfile(path):
         return None
     try:
@@ -30,6 +31,15 @@ def _manifest_keys():
         return None
     keys = data.get("keys")
     return set(keys) if isinstance(keys, dict) else None
+
+
+def _baked_manifest_path():
+    # A frozen build ships the manifest next to the executable (in dist/kungfu,
+    # which the app also ships to Resources/kungfu); a source interpreter has no
+    # such neighbour, so this is None-ish there and the source scan takes over.
+    return os.path.join(
+        os.path.dirname(os.path.abspath(sys.executable)), BAKED_MANIFEST_NAME
+    )
 
 
 def _source_extensions_root():
@@ -67,8 +77,14 @@ def _scan_keys(root):
 
 
 def first_party_keys():
-    """The set of extension keys the supervisor may trust to inject an adapter."""
-    keys = _manifest_keys()
+    """The set of extension keys the supervisor may trust to inject an adapter.
+    Resolved in order: the explicit KF_FIRST_PARTY_MANIFEST, then the manifest a
+    frozen build bakes next to the executable, then a source-checkout scan of the
+    product's own extensions/ tree."""
+    keys = _read_keys(os.environ.get(ENV_FIRST_PARTY_MANIFEST))
+    if keys is not None:
+        return keys
+    keys = _read_keys(_baked_manifest_path())
     if keys is not None:
         return keys
     return _scan_keys(_source_extensions_root())

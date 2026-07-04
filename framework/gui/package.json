@@ -19,6 +19,7 @@
     "ensure-electron": "node scripts/ensure-electron.mjs",
     "dev": "pnpm run ensure-electron && electron-vite dev",
     "build": "electron-vite build",
+    "gen:first-party-manifest": "node --experimental-transform-types scripts/gen-first-party-manifest.mjs",
     "start": "pnpm run ensure-electron && electron-vite preview",
     "pack": "pnpm --filter @kungfu-tech/tui run bundle && pnpm run ensure-electron && electron-vite build && electron-builder --dir --config.electronDist=$(node -p \"require('path').dirname(require.resolve('electron'))+'/dist'\")",
     "dist": "pnpm --filter @kungfu-tech/tui run bundle && pnpm run ensure-electron && electron-vite build && electron-builder --config.electronDist=$(node -p \"require('path').dirname(require.resolve('electron'))+'/dist'\")",
