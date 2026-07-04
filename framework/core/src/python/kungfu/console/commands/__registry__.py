@@ -2,7 +2,6 @@
 
 from . import engage
 from . import journal
-from . import cli
 from . import tui
 from . import trace
 from . import managed_run
@@ -15,7 +14,6 @@ from . import kfx
 __all__ = [
     "engage",
     "journal",
-    "cli",
     "tui",
     "trace",
     "managed_run",

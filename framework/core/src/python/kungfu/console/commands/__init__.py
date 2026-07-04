@@ -101,7 +101,6 @@ class PrioritizedCommandGroup(click.Group):
                     "config_location",
                     "console_location",
                     "index_location",
-                    "cli_dev_path",
                     "stage",
                 ] + list(keys):
                     ctx.__dict__[key] = ctx.parent.__dict__[key]
@@ -140,9 +139,6 @@ class PrioritizedCommandGroup(click.Group):
     type=str,
     help="name for the process, defaults to command if not set",
 )
-@click.option(
-    "-i", "--cli_dev_path", type=str, help="cli entry path (cli.dev.js or index.js)"
-)
 @click.option("-s", "--stage", type=str, help="stage")
 @click.option(
     "-ENV-verify-location",
@@ -153,9 +149,7 @@ class PrioritizedCommandGroup(click.Group):
 @click.help_option("-h", "--help")
 @click.version_option(kungfu.__version__, "--version", message=kungfu.__version__)
 @click.pass_context
-def kfc(
-    ctx, home, extension_path, log_level, name, cli_dev_path, stage, env_verify_location
-):
+def kfc(ctx, home, extension_path, log_level, name, stage, env_verify_location):
     if env_verify_location:
         os.environ["KF_VERIFY_LOCATION"] = "KF_VERIFY_LOCATION"
 
@@ -207,7 +201,6 @@ def kfc(
     )
 
     ctx.name = name if name else ctx.invoked_subcommand
-    ctx.cli_dev_path = cli_dev_path if cli_dev_path else ""
     ctx.stage = stage if stage else "prod"
 
     if ctx.invoked_subcommand is None:
