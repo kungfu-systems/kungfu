@@ -6,7 +6,12 @@
 // C++ and Python decode a registered kfx event by reflection, and so does the
 // Electron inspector, with no per-schema codegen.
 import * as flatbuffers from 'flatbuffers';
-import { BaseType, Field, Object_, Schema } from './generated/reflection/reflection.js';
+import {
+  BaseType,
+  Field,
+  Object_,
+  Schema,
+} from './generated/reflection/reflection.js';
 
 // (ByteBuffer reader, element width in bytes) per reflection scalar base type.
 type Reader = (bb: flatbuffers.ByteBuffer, pos: number) => unknown;
@@ -57,7 +62,11 @@ export class ReflectionDecoder {
     return out;
   }
 
-  private static readField(bb: flatbuffers.ByteBuffer, pos: number, f: Field): unknown {
+  private static readField(
+    bb: flatbuffers.ByteBuffer,
+    pos: number,
+    f: Field,
+  ): unknown {
     const o = bb.__offset(pos, f.offset());
     const base = f.type()?.baseType();
 
@@ -75,7 +84,9 @@ export class ReflectionDecoder {
       const start = bb.__vector(slot);
       const len = bb.__vector_len(slot);
       if (elem === BaseType.String) {
-        return Array.from({ length: len }, (_, i) => bb.__string(start + i * 4));
+        return Array.from({ length: len }, (_, i) =>
+          bb.__string(start + i * 4),
+        );
       }
       if (elem !== undefined && elem in SCALARS) {
         const [read, w] = SCALARS[elem]!;

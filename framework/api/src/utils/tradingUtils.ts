@@ -343,8 +343,8 @@ export const getKungfuDataByDateRange = (
     dateType == HistoryDateEnum.naturalDate
       ? dayjs(targetDate).format('YYYY-MM-DD HH:mm:ss')
       : isYesterdayBusinessDay
-      ? dayjs(yesterdayDate).format('YYYY-MM-DD HH:mm:ss')
-      : dayjs(fridayDate).format('YYYY-MM-DD HH:mm:ss');
+        ? dayjs(yesterdayDate).format('YYYY-MM-DD HH:mm:ss')
+        : dayjs(fridayDate).format('YYYY-MM-DD HH:mm:ss');
   let to = dayjs(targetDate).add(1, 'day').format('YYYY-MM-DD HH:mm:ss');
 
   if (dateType == HistoryDateEnum.tradingDate) {
@@ -1202,7 +1202,7 @@ export const getOrderResolved = (
     frozen_price: dealKfDecimalPrecision(order.frozen_price, precision),
     avg_price_resolved: latencyData
       ? dealKfNumber(latencyData.avg_price, tickPrecision || precision)
-      : orderStatResolved?.avg_price ?? '--',
+      : (orderStatResolved?.avg_price ?? '--'),
     status_resolved: {
       name: statusData.name,
       color: statusData.color || 'default',

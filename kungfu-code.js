@@ -53,7 +53,10 @@ function readConfig() {
     const m = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
     if (!m) continue;
     let v = m[2].trim();
-    if ((v.startsWith("'") && v.endsWith("'")) || (v.startsWith('"') && v.endsWith('"'))) {
+    if (
+      (v.startsWith("'") && v.endsWith("'")) ||
+      (v.startsWith('"') && v.endsWith('"'))
+    ) {
       v = v.slice(1, -1);
     }
     out[m[1]] = v;
@@ -108,7 +111,9 @@ function main() {
   const argv = process.argv.slice(2);
   const cmd = argv[0];
   if (cmd !== 'proxy' && cmd !== 'config') {
-    console.error(`kungfu-code.js: unknown command ${cmd || '(empty)'} (only proxy/config are supported)`);
+    console.error(
+      `kungfu-code.js: unknown command ${cmd || '(empty)'} (only proxy/config are supported)`,
+    );
     process.exit(2);
   }
   const sub = argv[1] || 'help';
@@ -122,13 +127,17 @@ function main() {
       } else {
         ensureDir();
         fs.copyFileSync(TEMPLATE, CONFIG_FILE);
-        console.error(`Created from template: ${CONFIG_FILE} (edit it or use set to fill values)`);
+        console.error(
+          `Created from template: ${CONFIG_FILE} (edit it or use set to fill values)`,
+        );
       }
       break;
     case 'edit': {
       ensureDir();
       if (!fs.existsSync(CONFIG_FILE)) fs.copyFileSync(TEMPLATE, CONFIG_FILE);
-      const r = spawnSync(process.env.EDITOR || 'vi', [CONFIG_FILE], { stdio: 'inherit' });
+      const r = spawnSync(process.env.EDITOR || 'vi', [CONFIG_FILE], {
+        stdio: 'inherit',
+      });
       process.exit(r.status || 0);
       break;
     }

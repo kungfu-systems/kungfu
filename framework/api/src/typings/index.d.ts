@@ -111,8 +111,8 @@ declare namespace KungfuApi {
   type FunctionOrData<U extends 'func' | 'data', T> = U extends 'func'
     ? () => T
     : U extends 'data'
-    ? T
-    : never;
+      ? T
+      : never;
 
   export type KfConfigItemSupportedTypes =
     | 'str'

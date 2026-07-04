@@ -700,17 +700,20 @@ export const buildObjectFromArray = <T>(
   targetKey: number | string,
   targetValueKey?: number | string,
 ): Record<string | number, T | T[keyof T] | undefined> => {
-  return list.reduce((item1, item2) => {
-    const key: number | string | symbol = (item2 || {})[targetKey] || '';
-    if (key !== '' && key !== undefined) {
-      if (targetValueKey === undefined) {
-        item1[key] = item2;
-      } else {
-        item1[key] = (item2 || {})[targetValueKey];
+  return list.reduce(
+    (item1, item2) => {
+      const key: number | string | symbol = (item2 || {})[targetKey] || '';
+      if (key !== '' && key !== undefined) {
+        if (targetValueKey === undefined) {
+          item1[key] = item2;
+        } else {
+          item1[key] = (item2 || {})[targetValueKey];
+        }
       }
-    }
-    return item1;
-  }, {} as Record<string | number, T | T[keyof T] | undefined>);
+      return item1;
+    },
+    {} as Record<string | number, T | T[keyof T] | undefined>,
+  );
 };
 
 export const timestampToTimeString = (
@@ -838,10 +841,13 @@ export const kfConfigItemsToProcessArgs = (
       .filter((item) => {
         return formState[item.key] !== undefined;
       })
-      .reduce((pre, item) => {
-        pre[item.key] = formState[item.key];
-        return pre;
-      }, {} as Record<string, KungfuApi.KfConfigValue>),
+      .reduce(
+        (pre, item) => {
+          pre[item.key] = formState[item.key];
+          return pre;
+        },
+        {} as Record<string, KungfuApi.KfConfigValue>,
+      ),
   );
 };
 
@@ -1116,8 +1122,8 @@ export const buildTableColumnSorterWithStrike = <T, U = object>(
       let aVal: string | number | NonNullable<T[keyof T]>;
       let bVal: string | number | NonNullable<T[keyof T]>;
       if (transform) {
-        aVal = isNaN(Number(transform(a))) ? '--' : transform(a) ?? '--';
-        bVal = isNaN(Number(transform(b))) ? '--' : transform(b) ?? '--';
+        aVal = isNaN(Number(transform(a))) ? '--' : (transform(a) ?? '--');
+        bVal = isNaN(Number(transform(b))) ? '--' : (transform(b) ?? '--');
       } else {
         aVal = a[dataIndex as keyof T] ?? '--';
         bVal = b[dataIndex as keyof T] ?? '--';
@@ -1149,10 +1155,13 @@ export const omitObject = <T extends object, U extends Array<keyof T>>(
   const strKeys = keys.map((key) => key.toString());
   return Object.keys(obj)
     .filter((key) => !strKeys.includes(key))
-    .reduce((result, key) => {
-      result[key] = obj[key];
-      return result;
-    }, {} as Omit<T, U[number]>);
+    .reduce(
+      (result, key) => {
+        result[key] = obj[key];
+        return result;
+      },
+      {} as Omit<T, U[number]>,
+    );
 };
 
 export const escapeSpecialChar = (str: string) => {

@@ -10,10 +10,7 @@ import {
   CodeTabSetting,
   OrderInputKeySetting,
 } from './tradingConfig';
-import {
-  languageList,
-  langDefault,
-} from '@kungfu-tech/api/language';
+import { languageList, langDefault } from '@kungfu-tech/api/language';
 import VueI18n from '@kungfu-tech/api/language';
 import { readRootPackageJsonSync } from '@kungfu-tech/api/utils/fileUtils';
 import { getDefaultHomeDir } from './homePathConfig';

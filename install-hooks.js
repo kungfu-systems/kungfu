@@ -33,7 +33,10 @@ function main() {
   const force = process.argv.includes('--force');
 
   // Skip in environments that never commit (CI) unless explicitly forced.
-  if (!force && (process.env.KUNGFU_SKIP_INSTALL_HOOKS === '1' || process.env.CI === 'true')) {
+  if (
+    !force &&
+    (process.env.KUNGFU_SKIP_INSTALL_HOOKS === '1' || process.env.CI === 'true')
+  ) {
     log('skipped (CI / KUNGFU_SKIP_INSTALL_HOOKS); pass --force to override');
     return 0;
   }
@@ -74,7 +77,9 @@ function main() {
   // hook when the configured path chains into it (e.g. a managed identity guard).
   const hooksPath = git(['config', '--get', 'core.hooksPath']);
   if (hooksPath) {
-    log(`note: core.hooksPath=${hooksPath} — relies on that guard chaining into the standard hook`);
+    log(
+      `note: core.hooksPath=${hooksPath} — relies on that guard chaining into the standard hook`,
+    );
   }
   return 0;
 }

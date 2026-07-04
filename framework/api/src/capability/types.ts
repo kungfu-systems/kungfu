@@ -113,7 +113,9 @@ export type KfNativeBinding = {
   Longfist?: new () => {
     types: Record<string, () => Record<string, unknown>>;
   };
-  Assemble: new (runtimeDirs: string[]) => {
+  Assemble: new (
+    runtimeDirs: string[],
+  ) => {
     dataAvailable: () => boolean;
     next: () => void;
     currentFrame: () => KfNativeFrame;
@@ -122,7 +124,9 @@ export type KfNativeBinding = {
     location: Record<string, string>,
     runtimeDir: string,
   ) => { getAllSessions: () => unknown };
-  ConfigStore: new (runtimeDir: string) => {
+  ConfigStore: new (
+    runtimeDir: string,
+  ) => {
     setConfig: (
       category: string,
       group: string,

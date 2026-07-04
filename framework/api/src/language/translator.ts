@@ -116,7 +116,10 @@ export const createTranslator = (options: {
     messages: state.messages,
     t,
     mergeLocaleMessage: (locale: string, messages: LocaleMessages) => {
-      state.messages[locale] = deepMerge(state.messages[locale] ?? {}, messages);
+      state.messages[locale] = deepMerge(
+        state.messages[locale] ?? {},
+        messages,
+      );
     },
   };
 

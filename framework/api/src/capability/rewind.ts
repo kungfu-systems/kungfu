@@ -113,7 +113,10 @@ export type OpenRewindOptions = {
 
 const str = (value: string | null | undefined) => value ?? undefined;
 
-function decode(msgType: number, bytes: Uint8Array): Omit<RewindEvent, 'genTime'> | null {
+function decode(
+  msgType: number,
+  bytes: Uint8Array,
+): Omit<RewindEvent, 'genTime'> | null {
   const bb = new flatbuffers.ByteBuffer(bytes);
   switch (msgType) {
     case REWIND_MSG.RunBegin: {
@@ -268,7 +271,9 @@ export function openRewind(options: OpenRewindOptions): Rewind {
       assemble.next();
     }
     for (const events of byRun.values()) {
-      events.sort((a, b) => (a.genTime < b.genTime ? -1 : a.genTime > b.genTime ? 1 : 0));
+      events.sort((a, b) =>
+        a.genTime < b.genTime ? -1 : a.genTime > b.genTime ? 1 : 0,
+      );
     }
     return byRun;
   };
@@ -278,7 +283,10 @@ export function openRewind(options: OpenRewindOptions): Rewind {
     return cache;
   };
 
-  const summarize = (runId: string, events: RewindEvent[]): RewindRunSummary => {
+  const summarize = (
+    runId: string,
+    events: RewindEvent[],
+  ): RewindRunSummary => {
     const begin = events.find((e) => e.kind === 'RunBegin');
     const end = events.find((e) => e.kind === 'RunEnd');
     return {
@@ -307,7 +315,11 @@ export function openRewind(options: OpenRewindOptions): Rewind {
     loadRun: (runId: string) => {
       const events = ensure().get(runId);
       if (!events) return null;
-      return { summary: summarize(runId, events), events, roots: buildTree(events) };
+      return {
+        summary: summarize(runId, events),
+        events,
+        roots: buildTree(events),
+      };
     },
   };
 }

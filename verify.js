@@ -48,7 +48,9 @@ const withApp = args.includes('--with-app');
 
 // expected version: single source of truth is lerna.json (the version maintained by the org repo action-bump-version)
 function expectedVersion() {
-  const lerna = JSON.parse(fs.readFileSync(path.join(ROOT, 'lerna.json'), 'utf8'));
+  const lerna = JSON.parse(
+    fs.readFileSync(path.join(ROOT, 'lerna.json'), 'utf8'),
+  );
   return lerna.version;
 }
 
@@ -65,29 +67,47 @@ function fail(name, detail) {
 // run one pnpm task (via the pnpm dispatched by the current node/corepack); throw on failure
 function runPnpm(task) {
   console.log(`\n[verify] build stage: pnpm ${task}`);
-  const r = spawnSync('pnpm', ['run', task], { cwd: ROOT, stdio: 'inherit', shell: isWin });
+  const r = spawnSync('pnpm', ['run', task], {
+    cwd: ROOT,
+    stdio: 'inherit',
+    shell: isWin,
+  });
   if (r.status !== 0) {
-    throw new Error(`pnpm ${task} failed (exit ${r.status == null ? 'signal ' + r.signal : r.status})`);
+    throw new Error(
+      `pnpm ${task} failed (exit ${r.status == null ? 'signal ' + r.signal : r.status})`,
+    );
   }
 }
 
 function main() {
   const version = expectedVersion();
-  console.log(`[verify] kungfu build-chain verification — expected version ${version}`);
-  console.log(`[verify] mode: ${doFull ? 'full (build first)' : 'quick (assert existing artifacts only)'}${withApp ? ' + app' : ''}`);
+  console.log(
+    `[verify] kungfu build-chain verification — expected version ${version}`,
+  );
+  console.log(
+    `[verify] mode: ${doFull ? 'full (build first)' : 'quick (assert existing artifacts only)'}${withApp ? ' + app' : ''}`,
+  );
 
   // ── Stage 0: toolchain preflight (read-only) ──────────────────────
   console.log('\n[verify] stage 0: toolchain preflight');
   const uv = spawnSync('uv', ['--version'], { encoding: 'utf8', shell: isWin });
   if (uv.status === 0) pass('uv available', (uv.stdout || '').trim());
-  else fail('uv available', 'uv not found (the Python build chain depends on uv); a full build will fail');
+  else
+    fail(
+      'uv available',
+      'uv not found (the Python build chain depends on uv); a full build will fail',
+    );
 
   const nodeVersionFile = path.join(ROOT, '.node-version');
   if (fs.existsSync(nodeVersionFile)) {
     const want = fs.readFileSync(nodeVersionFile, 'utf8').trim();
     const got = process.versions.node;
     if (got === want) pass('node version pinned', `v${got}`);
-    else fail('node version pinned', `current v${got} ≠ .node-version ${want} (run via ./kungfu-code)`);
+    else
+      fail(
+        'node version pinned',
+        `current v${got} ≠ .node-version ${want} (run via ./kungfu-code)`,
+      );
   }
 
   // ── Stage 1: (optional) build ─────────────────────────────────────
@@ -97,24 +117,36 @@ function main() {
       // C++ dogfood probe: compile the reference cpp kfx against the freshly
       // built libkungfu (headers + shared lib + FlatBuffers) into a native
       // module. If a core capability regresses, this build breaks here.
-      const probeBuild = spawnSync('pnpm', ['--filter', '@kungfu-tech/examples-probe-cpp', 'run', 'build'], {
-        cwd: ROOT,
-        stdio: 'inherit',
-        shell: isWin,
-      });
+      const probeBuild = spawnSync(
+        'pnpm',
+        ['--filter', '@kungfu-tech/examples-probe-cpp', 'run', 'build'],
+        {
+          cwd: ROOT,
+          stdio: 'inherit',
+          shell: isWin,
+        },
+      );
       if (probeBuild.status !== 0) {
-        throw new Error(`cpp probe build failed (exit ${probeBuild.status == null ? 'signal ' + probeBuild.signal : probeBuild.status})`);
+        throw new Error(
+          `cpp probe build failed (exit ${probeBuild.status == null ? 'signal ' + probeBuild.signal : probeBuild.status})`,
+        );
       }
       // Python AOT dogfood probe: install its dependency (engage pdm) and
       // Nuitka-compile it (engage nuitka) — exercises the bundled python
       // toolchain against the freshly built core.
-      const pyProbeBuild = spawnSync('pnpm', ['--filter', '@kungfu-tech/examples-probe-python', 'run', 'build'], {
-        cwd: ROOT,
-        stdio: 'inherit',
-        shell: isWin,
-      });
+      const pyProbeBuild = spawnSync(
+        'pnpm',
+        ['--filter', '@kungfu-tech/examples-probe-python', 'run', 'build'],
+        {
+          cwd: ROOT,
+          stdio: 'inherit',
+          shell: isWin,
+        },
+      );
       if (pyProbeBuild.status !== 0) {
-        throw new Error(`python probe build failed (exit ${pyProbeBuild.status == null ? 'signal ' + pyProbeBuild.signal : pyProbeBuild.status})`);
+        throw new Error(
+          `python probe build failed (exit ${pyProbeBuild.status == null ? 'signal ' + pyProbeBuild.signal : pyProbeBuild.status})`,
+        );
       }
       runPnpm('freeze'); // nuitka → framework/core/dist/kungfu
       if (withApp) runPnpm('build:app'); // webpack → framework/gui/dist/app
@@ -136,15 +168,23 @@ function main() {
       let detail = path.relative(ROOT, kungfuBin);
       if (!isWin) {
         const mode = fs.statSync(kungfuBin).mode;
-        if (!(mode & 0o111)) { fail('kfc executable', `${detail} missing executable bit`); kungfuBin = null; }
-        else pass('kfc executable exists', detail);
+        if (!(mode & 0o111)) {
+          fail('kfc executable', `${detail} missing executable bit`);
+          kungfuBin = null;
+        } else pass('kfc executable exists', detail);
       } else pass('kfc executable exists', detail);
     } else {
-      fail('kfc executable exists', `not found ${path.relative(ROOT, kungfuBin)} (freeze first)`);
+      fail(
+        'kfc executable exists',
+        `not found ${path.relative(ROOT, kungfuBin)} (freeze first)`,
+      );
       kungfuBin = null;
     }
   } else {
-    fail('dist/kungfu directory exists', `not found ${path.relative(ROOT, distKfc)} (freeze first; in quick mode, confirm it was built)`);
+    fail(
+      'dist/kungfu directory exists',
+      `not found ${path.relative(ROOT, distKfc)} (freeze first; in quick mode, confirm it was built)`,
+    );
   }
 
   // ── Stage 2b: C++ extension probe artifact ────────────────────────
@@ -152,16 +192,32 @@ function main() {
   // its FlatBuffers types into a native module; its presence proves the C++
   // extension build path. Built in Stage 1 under --full.
   console.log('\n[verify] stage 2b: C++ extension probe artifact');
-  const probeDist = path.join(ROOT, 'examples', 'probe-cpp', 'dist', 'ProbeCpp');
+  const probeDist = path.join(
+    ROOT,
+    'examples',
+    'probe-cpp',
+    'dist',
+    'ProbeCpp',
+  );
   const probeSo = fs.existsSync(probeDist)
-    ? fs.readdirSync(probeDist).find((f) => /^probe_cpp\..*\.(so|dylib|pyd)$/.test(f))
+    ? fs
+        .readdirSync(probeDist)
+        .find((f) => /^probe_cpp\..*\.(so|dylib|pyd)$/.test(f))
     : null;
   if (probeSo) {
-    pass('cpp probe native module built', path.relative(ROOT, path.join(probeDist, probeSo)));
+    pass(
+      'cpp probe native module built',
+      path.relative(ROOT, path.join(probeDist, probeSo)),
+    );
   } else if (doFull) {
-    fail('cpp probe native module built', `no probe_cpp.*.(so|dylib|pyd) under ${path.relative(ROOT, probeDist)}`);
+    fail(
+      'cpp probe native module built',
+      `no probe_cpp.*.(so|dylib|pyd) under ${path.relative(ROOT, probeDist)}`,
+    );
   } else {
-    console.log(`  (skipped: no cpp probe artifact; build it with 'pnpm --filter @kungfu-tech/examples-probe-cpp run build' or --full)`);
+    console.log(
+      `  (skipped: no cpp probe artifact; build it with 'pnpm --filter @kungfu-tech/examples-probe-cpp run build' or --full)`,
+    );
   }
 
   // ── Stage 2c: Python AOT extension probe artifact ─────────────────
@@ -169,16 +225,32 @@ function main() {
   // native module through the bundled toolchain; its presence proves the
   // python-AOT extension build path. Built in Stage 1 under --full.
   console.log('\n[verify] stage 2c: Python AOT extension probe artifact');
-  const pyProbeDist = path.join(ROOT, 'examples', 'probe-python', 'dist', 'ProbePython');
+  const pyProbeDist = path.join(
+    ROOT,
+    'examples',
+    'probe-python',
+    'dist',
+    'ProbePython',
+  );
   const pyProbeSo = fs.existsSync(pyProbeDist)
-    ? fs.readdirSync(pyProbeDist).find((f) => /^ProbePython\..*\.(so|dylib|pyd)$/.test(f))
+    ? fs
+        .readdirSync(pyProbeDist)
+        .find((f) => /^ProbePython\..*\.(so|dylib|pyd)$/.test(f))
     : null;
   if (pyProbeSo) {
-    pass('python probe native module built', path.relative(ROOT, path.join(pyProbeDist, pyProbeSo)));
+    pass(
+      'python probe native module built',
+      path.relative(ROOT, path.join(pyProbeDist, pyProbeSo)),
+    );
   } else if (doFull) {
-    fail('python probe native module built', `no ProbePython.*.(so|dylib|pyd) under ${path.relative(ROOT, pyProbeDist)}`);
+    fail(
+      'python probe native module built',
+      `no ProbePython.*.(so|dylib|pyd) under ${path.relative(ROOT, pyProbeDist)}`,
+    );
   } else {
-    console.log(`  (skipped: no python probe artifact; build it with 'pnpm --filter @kungfu-tech/examples-probe-python run build' or --full)`);
+    console.log(
+      `  (skipped: no python probe artifact; build it with 'pnpm --filter @kungfu-tech/examples-probe-python run build' or --full)`,
+    );
   }
 
   // ── Stage 3: kfc runtime smoke ────────────────────────────────────
@@ -187,9 +259,15 @@ function main() {
     const r = spawnSync(kungfuBin, ['--version'], { encoding: 'utf8' });
     const out = `${r.stdout || ''}${r.stderr || ''}`.trim();
     if (r.status !== 0) {
-      fail('kfc --version exits 0', `exit ${r.status == null ? 'signal ' + r.signal : r.status}; output: ${out.slice(0, 200)}`);
+      fail(
+        'kfc --version exits 0',
+        `exit ${r.status == null ? 'signal ' + r.signal : r.status}; output: ${out.slice(0, 200)}`,
+      );
     } else if (!out.includes(version)) {
-      fail('kfc version matches', `expected to contain ${version}, got: ${out.slice(0, 200)}`);
+      fail(
+        'kfc version matches',
+        `expected to contain ${version}, got: ${out.slice(0, 200)}`,
+      );
     } else {
       pass('kfc runtime smoke', `--version contains ${version}`);
     }
@@ -201,10 +279,17 @@ function main() {
   if (withApp) {
     console.log('\n[verify] stage 4: app build artifact assertion');
     const appDist = path.join(ROOT, 'framework', 'app', 'dist', 'app');
-    if (fs.existsSync(appDist) && fs.statSync(appDist).isDirectory() && fs.readdirSync(appDist).length > 0) {
+    if (
+      fs.existsSync(appDist) &&
+      fs.statSync(appDist).isDirectory() &&
+      fs.readdirSync(appDist).length > 0
+    ) {
       pass('build:app artifact exists', path.relative(ROOT, appDist));
     } else {
-      fail('build:app artifact exists', `non-empty ${path.relative(ROOT, appDist)} not found (build:app first)`);
+      fail(
+        'build:app artifact exists',
+        `non-empty ${path.relative(ROOT, appDist)} not found (build:app first)`,
+      );
     }
   }
 
@@ -216,34 +301,64 @@ function main() {
   if (doFull) {
     console.log('\n[verify] stage 5: capability slices');
     if (isWin) {
-      console.log('  (skipped on Windows: slice probes are bash scripts; not asserted on this platform)');
+      console.log(
+        '  (skipped on Windows: slice probes are bash scripts; not asserted on this platform)',
+      );
     } else {
       const core = path.join(ROOT, 'framework', 'core');
       const buildDir = path.join(core, 'build');
       const slicesDir = path.join(core, 'slices');
-      const cfg = spawnSync('cmake', ['-S', core, '-B', buildDir, '-DKUNGFU_WITH_SLICES=ON'], { stdio: 'inherit' });
+      const cfg = spawnSync(
+        'cmake',
+        ['-S', core, '-B', buildDir, '-DKUNGFU_WITH_SLICES=ON'],
+        { stdio: 'inherit' },
+      );
       if (cfg.status !== 0) {
-        fail('slices configure', `cmake -DKUNGFU_WITH_SLICES=ON failed (exit ${cfg.status}); rebuild:core must run first to seed the build tree`);
+        fail(
+          'slices configure',
+          `cmake -DKUNGFU_WITH_SLICES=ON failed (exit ${cfg.status}); rebuild:core must run first to seed the build tree`,
+        );
         return summarize();
       }
-      const bld = spawnSync('cmake', ['--build', buildDir], { stdio: 'inherit' });
+      const bld = spawnSync('cmake', ['--build', buildDir], {
+        stdio: 'inherit',
+      });
       if (bld.status !== 0) {
         fail('slices build', `cmake --build failed (exit ${bld.status})`);
         return summarize();
       }
       pass('slices build', 'KUNGFU_WITH_SLICES=ON');
-      const tail3 = (r) => `${r.stdout || ''}${r.stderr || ''}`.trim().split('\n').slice(-3).join(' | ').slice(0, 300);
+      const tail3 = (r) =>
+        `${r.stdout || ''}${r.stderr || ''}`
+          .trim()
+          .split('\n')
+          .slice(-3)
+          .join(' | ')
+          .slice(0, 300);
       const slices = fs
         .readdirSync(slicesDir)
         .filter((d) => fs.existsSync(path.join(slicesDir, d, 'run.sh')))
         .sort();
       for (const name of slices) {
-        const r = spawnSync('bash', [path.join(slicesDir, name, 'run.sh'), buildDir], { encoding: 'utf8' });
+        const r = spawnSync(
+          'bash',
+          [path.join(slicesDir, name, 'run.sh'), buildDir],
+          { encoding: 'utf8' },
+        );
         if (r.status === 0) pass(`slice ${name}`, 'proof holds');
-        else fail(`slice ${name}`, `run.sh exit ${r.status == null ? 'signal ' + r.signal : r.status}; tail: ${tail3(r)}`);
+        else
+          fail(
+            `slice ${name}`,
+            `run.sh exit ${r.status == null ? 'signal ' + r.signal : r.status}; tail: ${tail3(r)}`,
+          );
       }
-      const guard = spawnSync('bash', [path.join(core, 'src', 'libyijinjing', 'check-deps.sh')], { encoding: 'utf8' });
-      if (guard.status === 0) pass('yijinjing dependency guard', 'check-deps.sh');
+      const guard = spawnSync(
+        'bash',
+        [path.join(core, 'src', 'libyijinjing', 'check-deps.sh')],
+        { encoding: 'utf8' },
+      );
+      if (guard.status === 0)
+        pass('yijinjing dependency guard', 'check-deps.sh');
       else fail('yijinjing dependency guard', tail3(guard));
 
       // ── Stage 6: journal fact fixtures (full mode) ────────────────
@@ -273,9 +388,15 @@ function main() {
             .sort()
         : [];
       for (const name of fixtures) {
-        const r = spawnSync('bash', [path.join(fixturesDir, name, 'run.sh')], { encoding: 'utf8' });
+        const r = spawnSync('bash', [path.join(fixturesDir, name, 'run.sh')], {
+          encoding: 'utf8',
+        });
         if (r.status === 0) pass(`fixture ${name}`, 'journal facts hold');
-        else fail(`fixture ${name}`, `run.sh exit ${r.status == null ? 'signal ' + r.signal : r.status}; tail: ${tail3(r)}`);
+        else
+          fail(
+            `fixture ${name}`,
+            `run.sh exit ${r.status == null ? 'signal ' + r.signal : r.status}; tail: ${tail3(r)}`,
+          );
       }
     }
   }
@@ -285,9 +406,13 @@ function main() {
 
 function summarize() {
   const failed = results.filter((r) => !r.ok);
-  console.log(`\n[verify] result: ${results.length - failed.length}/${results.length} passed`);
+  console.log(
+    `\n[verify] result: ${results.length - failed.length}/${results.length} passed`,
+  );
   if (failed.length) {
-    console.error(`[verify] ❌ verification failed (${failed.length} item(s)): ${failed.map((r) => r.name).join(', ')}`);
+    console.error(
+      `[verify] ❌ verification failed (${failed.length} item(s)): ${failed.map((r) => r.name).join(', ')}`,
+    );
     process.exit(1);
   }
   console.log('[verify] ✅ build-chain end-to-end verification passed');

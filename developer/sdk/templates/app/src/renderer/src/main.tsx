@@ -20,7 +20,9 @@ type KfFrame = {
 };
 
 type Kfe = {
-  Assemble: new (runtimeDirs: string[]) => {
+  Assemble: new (
+    runtimeDirs: string[],
+  ) => {
     dataAvailable: () => boolean;
     next: () => void;
     currentFrame: () => KfFrame;
@@ -68,7 +70,8 @@ function Ledger({ kfe, runtimeDir }: { kfe: Kfe; runtimeDir: string }) {
           const frame = asm.currentFrame();
           let genTime = String(frame.genTime());
           try {
-            if (kfe.formatTime) genTime = kfe.formatTime(frame.genTime(), '%H:%M:%S.%N');
+            if (kfe.formatTime)
+              genTime = kfe.formatTime(frame.genTime(), '%H:%M:%S.%N');
           } catch {
             // keep raw nanoseconds
           }
@@ -95,7 +98,10 @@ function Ledger({ kfe, runtimeDir }: { kfe: Kfe; runtimeDir: string }) {
         ledger events: {rows.length} · runtime home: {runtimeDir}
       </p>
       {rows.slice(-15).map((row, index) => (
-        <div key={`${row.genTime}-${index}`} style={{ ...mono, color: '#9cdcfe' }}>
+        <div
+          key={`${row.genTime}-${index}`}
+          style={{ ...mono, color: '#9cdcfe' }}
+        >
           {row.genTime} · msg {row.msgType} · {row.length} B
         </div>
       ))}

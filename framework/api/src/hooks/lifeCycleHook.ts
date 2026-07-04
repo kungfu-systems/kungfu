@@ -20,10 +20,13 @@ export class LifeCycleHook {
   }
 
   private buildInitCallbacksMap() {
-    return Object.values(LifeCycleKeys).reduce((map, key) => {
-      map[key] = new Map();
-      return map;
-    }, {} as Record<LifeCycleKeys, Map<string, Array<Callback>>>);
+    return Object.values(LifeCycleKeys).reduce(
+      (map, key) => {
+        map[key] = new Map();
+        return map;
+      },
+      {} as Record<LifeCycleKeys, Map<string, Array<Callback>>>,
+    );
   }
 
   register(

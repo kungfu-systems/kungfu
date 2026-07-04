@@ -111,17 +111,24 @@ export function openWork(options: OpenWorkOptions): Work {
   // Fold the event stream into current items — the same projection the
   // python store computes; state never lives anywhere but the fold.
   const scan = (): Map<string, WorkItem> => {
-    const frames: { genTime: bigint; msgType: number; bytes: Uint8Array }[] = [];
+    const frames: { genTime: bigint; msgType: number; bytes: Uint8Array }[] =
+      [];
     const assemble = new binding.Assemble([runtimeDir]);
     while (assemble.dataAvailable()) {
       const frame = assemble.currentFrame();
       const msgType = frame.msgType();
       if (msgType >= WORK_MSG_MIN && msgType <= WORK_MSG_MAX) {
-        frames.push({ genTime: frame.genTime(), msgType, bytes: frame.dataBytes() });
+        frames.push({
+          genTime: frame.genTime(),
+          msgType,
+          bytes: frame.dataBytes(),
+        });
       }
       assemble.next();
     }
-    frames.sort((a, b) => (a.genTime < b.genTime ? -1 : a.genTime > b.genTime ? 1 : 0));
+    frames.sort((a, b) =>
+      a.genTime < b.genTime ? -1 : a.genTime > b.genTime ? 1 : 0,
+    );
 
     const items = new Map<string, WorkItem>();
     const entry = (workId: string, time: bigint): WorkItem => {
@@ -226,7 +233,11 @@ export function openWork(options: OpenWorkOptions): Work {
     },
     items: () =>
       [...ensure().values()].sort((a, b) =>
-        a.updatedTime < b.updatedTime ? 1 : a.updatedTime > b.updatedTime ? -1 : 0,
+        a.updatedTime < b.updatedTime
+          ? 1
+          : a.updatedTime > b.updatedTime
+            ? -1
+            : 0,
       ),
     item: (workId: string) => ensure().get(workId) ?? null,
   };

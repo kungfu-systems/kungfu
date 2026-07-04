@@ -410,7 +410,9 @@ export const dealDateToNanotimeRange = (
 
   const startTime = (
     isTradingDay
-      ? day.add(dayOfWeek === 1 ? -3 : -1, 'day').hour(15) // last trading day 15:00
+      ? day
+          .add(dayOfWeek === 1 ? -3 : -1, 'day')
+          .hour(15) // last trading day 15:00
       : day.hour(0)
   )
     .minute(0)
@@ -514,15 +516,18 @@ export const dealAppStates = (
     return {} as Record<string, BrokerStateStatusTypes>;
   }
 
-  return Object.keys(appStates || {}).reduce((appStatesResolved, key) => {
-    const kfLocation = watcher.getLocation(key);
-    const processId = getProcessIdByKfLocation(kfLocation);
-    const appStateValue = appStates[key];
-    appStatesResolved[processId] = BrokerStateStatusEnum[
-      appStateValue
-    ] as BrokerStateStatusTypes;
-    return appStatesResolved;
-  }, {} as Record<string, BrokerStateStatusTypes>);
+  return Object.keys(appStates || {}).reduce(
+    (appStatesResolved, key) => {
+      const kfLocation = watcher.getLocation(key);
+      const processId = getProcessIdByKfLocation(kfLocation);
+      const appStateValue = appStates[key];
+      appStatesResolved[processId] = BrokerStateStatusEnum[
+        appStateValue
+      ] as BrokerStateStatusTypes;
+      return appStatesResolved;
+    },
+    {} as Record<string, BrokerStateStatusTypes>,
+  );
 };
 
 export const dealStrategyStates = (
@@ -557,17 +562,20 @@ export const dealAssetsByHolderUID = <T extends KungfuApi.Asset>(
     return {} as Record<string, T>;
   }
 
-  return Object.values(assets).reduce((assetsResolved, asset) => {
-    const { holder_uid } = asset;
-    const kfLocation = watcher.getLocation(holder_uid);
+  return Object.values(assets).reduce(
+    (assetsResolved, asset) => {
+      const { holder_uid } = asset;
+      const kfLocation = watcher.getLocation(holder_uid);
 
-    if (kfLocation) {
-      const processId = getProcessIdByKfLocation(kfLocation);
-      assetsResolved[processId] = asset;
-    }
+      if (kfLocation) {
+        const processId = getProcessIdByKfLocation(kfLocation);
+        assetsResolved[processId] = asset;
+      }
 
-    return assetsResolved;
-  }, {} as Record<string, T>);
+      return assetsResolved;
+    },
+    {} as Record<string, T>,
+  );
 };
 
 export const dealOrderTradingData = <T>(
@@ -844,12 +852,12 @@ export const initFormStateByConfig = (
       return isBoolean
         ? false
         : isNumber
-        ? 0
-        : isTime
-        ? null
-        : isArray
-        ? []
-        : '';
+          ? 0
+          : isTime
+            ? null
+            : isArray
+              ? []
+              : '';
     };
 
     if (typeof item?.default === 'object') {
@@ -880,8 +888,8 @@ export const initFormStateByConfig = (
         defaultValue === 'true'
           ? true
           : defaultValue === 'false'
-          ? false
-          : !!defaultValue;
+            ? false
+            : !!defaultValue;
     } else if (KfConfigValueNumberType.includes(type)) {
       defaultValue = +defaultValue;
     } else if (KfConfigValueArrayType.includes(type)) {

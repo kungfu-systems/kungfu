@@ -128,7 +128,9 @@ function KfxManagerView({ shell }: KfxViewProps) {
                   color: disabled ? '#f48771' : '#4ec9b0',
                 }}
               >
-                {disabled ? 'suite disabled — enable' : 'suite enabled — disable'}
+                {disabled
+                  ? 'suite disabled — enable'
+                  : 'suite enabled — disable'}
               </button>
             )}
           </div>

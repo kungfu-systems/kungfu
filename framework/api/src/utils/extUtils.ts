@@ -188,12 +188,15 @@ export const getKfExtConfigList = async (): Promise<
 
 export const getKfExtOriginConfigsByType = () => {
   return getKfExtConfigList().then((extList) => {
-    return extList.reduce((configsByType, extConfig) => {
-      if (!configsByType[extConfig.type]) configsByType[extConfig.type] = {};
+    return extList.reduce(
+      (configsByType, extConfig) => {
+        if (!configsByType[extConfig.type]) configsByType[extConfig.type] = {};
 
-      configsByType[extConfig.type][extConfig.key] = extConfig;
-      return configsByType;
-    }, {} as Partial<KungfuApi.KfExtOriginConfigs>);
+        configsByType[extConfig.type][extConfig.key] = extConfig;
+        return configsByType;
+      },
+      {} as Partial<KungfuApi.KfExtOriginConfigs>,
+    );
   });
 };
 
@@ -203,13 +206,16 @@ const resolveOrderTriggerConfig = (
   if (originConfig) {
     const orderTriggerOriginConfig = originConfig.td?.order_trigger || {};
     const orderTriggerTypesKeys = Object.keys(OrderTriggerConfigTypeEnum);
-    return Object.keys(orderTriggerOriginConfig).reduce((config, key) => {
-      if (orderTriggerTypesKeys.includes(key)) {
-        config[OrderTriggerConfigTypeEnum[key]] =
-          !!orderTriggerOriginConfig[key];
-      }
-      return config;
-    }, {} as KungfuApi.KfTdExtConfig['orderTrigger']);
+    return Object.keys(orderTriggerOriginConfig).reduce(
+      (config, key) => {
+        if (orderTriggerTypesKeys.includes(key)) {
+          config[OrderTriggerConfigTypeEnum[key]] =
+            !!orderTriggerOriginConfig[key];
+        }
+        return config;
+      },
+      {} as KungfuApi.KfTdExtConfig['orderTrigger'],
+    );
   }
 
   return {} as KungfuApi.KfTdExtConfig['orderTrigger'];
@@ -587,7 +593,7 @@ export const getAvailExtServiceList = async (): Promise<
                 mode: 'live',
                 cwd: config.extPath,
                 script: config.script,
-              } as KungfuApi.KfExtServiceLocation),
+              }) as KungfuApi.KfExtServiceLocation,
           ),
       ];
       return extServiceList;
@@ -620,7 +626,7 @@ export const getAvailCliExtServiceList = async (): Promise<
                 mode: 'live',
                 cwd: config.extPath,
                 script: config.script,
-              } as KungfuApi.KfExtServiceLocation),
+              }) as KungfuApi.KfExtServiceLocation,
           ),
       ];
       return extServiceList;

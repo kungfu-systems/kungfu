@@ -52,7 +52,8 @@ export function createCapabilityHost(
       const id = arg.__sandboxCallback;
       // a forwarding function: when the real capability calls it, ship the
       // arguments back to the guest's registered callback
-      return (...callbackArgs: unknown[]) => emit({ callback: id, args: callbackArgs });
+      return (...callbackArgs: unknown[]) =>
+        emit({ callback: id, args: callbackArgs });
     });
 
   return {
@@ -65,12 +66,16 @@ export function createCapabilityHost(
       if (typeof fn !== 'function') {
         throw new Error(`capability '${cap}' has no method '${method}'`);
       }
-      const result = (fn as (...a: unknown[]) => unknown).apply(handle, revive(args));
+      const result = (fn as (...a: unknown[]) => unknown).apply(
+        handle,
+        revive(args),
+      );
       // a Subscription-shaped result ({ stop }) is retained host-side and
       // referenced by the callback id the guest sent, so the guest can stop it
       if (result && typeof (result as { stop?: unknown }).stop === 'function') {
         const cbId = args.find(isCallbackRef)?.__sandboxCallback;
-        if (cbId !== undefined) subscriptions.set(cbId, result as { stop: () => void });
+        if (cbId !== undefined)
+          subscriptions.set(cbId, result as { stop: () => void });
         return { __sandboxSubscription: cbId };
       }
       return result;

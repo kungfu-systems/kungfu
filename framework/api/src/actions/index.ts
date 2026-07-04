@@ -25,10 +25,7 @@ import {
   getAllKfRiskSettings,
   setAllKfRiskSettings,
 } from '../kungfu/riskSetting';
-import {
-  basketStore,
-  basketInstrumentStore,
-} from '@kungfu-tech/api/kungfu';
+import { basketStore, basketInstrumentStore } from '@kungfu-tech/api/kungfu';
 
 export const getAllKfConfigOriginData = (
   watcher?: KungfuApi.Watcher,

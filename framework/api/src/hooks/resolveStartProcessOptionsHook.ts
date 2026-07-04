@@ -11,6 +11,7 @@ export type ResolveStartOptionsHook = (
   options: StartProcessOptions,
 ) => Promise<StartProcessOptions>;
 
-export default new ResetOptionHook<ResolveStartOptionsHook, StartProcessOptions>(
-  'ResolveStartOptionsHook',
-);
+export default new ResetOptionHook<
+  ResolveStartOptionsHook,
+  StartProcessOptions
+>('ResolveStartOptionsHook');

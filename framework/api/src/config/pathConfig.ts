@@ -204,12 +204,14 @@ const staticDevKfcDir = path.resolve('..', 'core', 'dist', 'kungfu');
 export const KUNGFU_PARENT_DIR = production
   ? globalThis.__kfResourcesPath
   : path.dirname(process.env.KUNGFU_DIR || staticDevKfcDir);
-export const KUNGFU_DIR = process.env.KUNGFU_DIR || path.join(KUNGFU_PARENT_DIR, 'kungfu');
+export const KUNGFU_DIR =
+  process.env.KUNGFU_DIR || path.join(KUNGFU_PARENT_DIR, 'kungfu');
 process.env.KUNGFU_DIR = KUNGFU_DIR;
 
 export const PY_WHL_DIR = path.join(KUNGFU_DIR, 'kungfu-wheel');
 
-export const KUNGFU_EXECUTABLE = process.platform === 'win32' ? 'kungfu.exe' : 'kungfu';
+export const KUNGFU_EXECUTABLE =
+  process.platform === 'win32' ? 'kungfu.exe' : 'kungfu';
 export const EXTENSION_DIRS: string[] = Array.from(
   new Set(
     production

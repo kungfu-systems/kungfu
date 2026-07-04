@@ -74,33 +74,82 @@ function main() {
   // --- machine categories: minimal, with a couple of real seed entries so a
   //     consumer renders real rows rather than empty pages. Real generators
   //     (framework/core) replace these; note marks them as seed. ---
-  writeJson('registry.json', { spec_version: specVersion, note: PENDING, schemas: [] });
+  writeJson('registry.json', {
+    spec_version: specVersion,
+    note: PENDING,
+    schemas: [],
+  });
   writeJson('errors.json', {
     spec_version: specVersion,
     note: `seed entries; full dictionary ${PENDING}`,
     errors: [
-      { code: 'E_PAYLOAD_MISSING', meaning: 'Referenced payload is absent from the blob store.', next: 'Distinguish redacted vs lost vs not-yet-written via the three-state marker.' },
-      { code: 'E_HASH_MISMATCH', meaning: 'Recomputed payload hash does not match the event reference.', next: 'Treat the payload as tampered or corrupted; the manifest commitment is authoritative.' },
-      { code: 'E_SCHEMA_UNKNOWN', meaning: 'Event type has no entry in the schema registry.', next: 'Upgrade the registry, or read the event as opaque with its raw type tag.' },
+      {
+        code: 'E_PAYLOAD_MISSING',
+        meaning: 'Referenced payload is absent from the blob store.',
+        next: 'Distinguish redacted vs lost vs not-yet-written via the three-state marker.',
+      },
+      {
+        code: 'E_HASH_MISMATCH',
+        meaning: 'Recomputed payload hash does not match the event reference.',
+        next: 'Treat the payload as tampered or corrupted; the manifest commitment is authoritative.',
+      },
+      {
+        code: 'E_SCHEMA_UNKNOWN',
+        meaning: 'Event type has no entry in the schema registry.',
+        next: 'Upgrade the registry, or read the event as opaque with its raw type tag.',
+      },
     ],
   });
   writeJson('capabilities.json', {
     spec_version: specVersion,
     note: `seed entries; full table ${PENDING}`,
     capabilities: [
-      { id: 'append_only', since: '0.1', summary: 'Committed events are never rewritten or reordered.' },
-      { id: 'recorded_causality', since: '0.1', summary: 'Each event carries its causal parent at write time.' },
-      { id: 'runtime_free_read', since: '0.1', summary: 'A bundle can be opened and verified without the producing runtime.' },
+      {
+        id: 'append_only',
+        since: '0.1',
+        summary: 'Committed events are never rewritten or reordered.',
+      },
+      {
+        id: 'recorded_causality',
+        since: '0.1',
+        summary: 'Each event carries its causal parent at write time.',
+      },
+      {
+        id: 'runtime_free_read',
+        since: '0.1',
+        summary:
+          'A bundle can be opened and verified without the producing runtime.',
+      },
     ],
   });
-  writeJson('vectors/index.json', { spec_version: specVersion, note: PENDING, vectors: [] });
-  writeJson('conformance.json', { spec_version: specVersion, note: PENDING, implements: [] });
+  writeJson('vectors/index.json', {
+    spec_version: specVersion,
+    note: PENDING,
+    vectors: [],
+  });
+  writeJson('conformance.json', {
+    spec_version: specVersion,
+    note: PENDING,
+    implements: [],
+  });
 
   // --- three handbooks: real minimal recipes (copied from docs/handbooks) ---
   const handbooks = {
-    kungfu: { dir: 'handbooks/cli', src: 'docs/handbooks/cli.md', api_ref_source: 'developer/toolchain' },
-    pypi: { dir: 'handbooks/python', src: 'docs/handbooks/python.md', api_ref_source: 'framework/core' },
-    npm: { dir: 'handbooks/node', src: 'docs/handbooks/node.md', api_ref_source: 'framework/api' },
+    kungfu: {
+      dir: 'handbooks/cli',
+      src: 'docs/handbooks/cli.md',
+      api_ref_source: 'developer/toolchain',
+    },
+    pypi: {
+      dir: 'handbooks/python',
+      src: 'docs/handbooks/python.md',
+      api_ref_source: 'framework/core',
+    },
+    npm: {
+      dir: 'handbooks/node',
+      src: 'docs/handbooks/node.md',
+      api_ref_source: 'framework/api',
+    },
   };
   for (const h of Object.values(handbooks)) {
     copyDoc(h.src, `${h.dir}/index.md`);
@@ -122,11 +171,26 @@ function main() {
     overview: { path: 'overview/', source_package: 'framework/spec' },
     categories: {
       format_spec: { path: 'format-spec/', source_package: 'framework/spec' },
-      schema_registry: { path: 'registry.json', source_package: 'framework/core' },
-      error_dictionary: { path: 'errors.json', source_package: 'framework/core' },
-      capabilities: { path: 'capabilities.json', source_package: 'framework/core' },
-      conformance_vectors: { path: 'vectors/', source_package: 'framework/core' },
-      conformance_map: { path: 'conformance.json', source_package: 'framework/spec' },
+      schema_registry: {
+        path: 'registry.json',
+        source_package: 'framework/core',
+      },
+      error_dictionary: {
+        path: 'errors.json',
+        source_package: 'framework/core',
+      },
+      capabilities: {
+        path: 'capabilities.json',
+        source_package: 'framework/core',
+      },
+      conformance_vectors: {
+        path: 'vectors/',
+        source_package: 'framework/core',
+      },
+      conformance_map: {
+        path: 'conformance.json',
+        source_package: 'framework/spec',
+      },
     },
     handbooks: {
       kungfu: {
@@ -151,8 +215,12 @@ function main() {
   };
   writeJson('manifest.json', manifest);
 
-  log(`built spec ${specVersion} bundle -> dist/ (package ${pkg.name}@${pkg.version})`);
-  log('overview + format_spec + 3 handbooks = real minimal prose; machine categories = seed/stub.');
+  log(
+    `built spec ${specVersion} bundle -> dist/ (package ${pkg.name}@${pkg.version})`,
+  );
+  log(
+    'overview + format_spec + 3 handbooks = real minimal prose; machine categories = seed/stub.',
+  );
   return 0;
 }
 
