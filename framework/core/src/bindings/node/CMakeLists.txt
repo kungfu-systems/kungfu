@@ -22,8 +22,6 @@ endif ()
 
 if (KF_NODE_BINDING_NAME)
   build_node_binding(${KF_NODE_BINDING_NAME} "${SOURCE_FILES_KUNGFU_NODE}")
-  # watcher.cpp 仍用休眠模块 src/libwingchun 的 header-only instrument utils
-  target_link_libraries(${KF_NODE_BINDING_NAME} wingchun_headers)
 endif ()
 
 if ("${KF_NODE_BINDING_NAME}" STREQUAL "kungfu_node")
@@ -32,7 +30,6 @@ endif ()
 
 if ("${NODE_RUNTIME}" STREQUAL "node" AND UNIX AND NOT APPLE)
   build_node_binding(kungfu_kfc "${SOURCE_FILES_KUNGFU_NODE}" ${LIBNODE})
-  target_link_libraries(kungfu_kfc wingchun_headers)
   add_dependencies(kungfu_kfc kungfu_node)
 endif ()
 
