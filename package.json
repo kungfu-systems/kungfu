@@ -21,7 +21,8 @@
   "scripts": {
     "foreach": "wsrun --bin pnpm --serial --exclude-missing --fast-exit",
     "foreach:extensions": "wsrun --bin pnpm --serial --package '@kungfu-tech/kfx-*' --exclude-missing --fast-exit",
-    "format": "wsrun --bin pnpm --serial --exclude-missing format",
+    "format": "pnpm run format:web && wsrun --bin pnpm --serial --exclude-missing format",
+    "format:web": "biome format --write .",
     "prebuild": "node .prebuild.js",
     "build": "pnpm run foreach build",
     "build:extensions": "pnpm run foreach:extensions build",

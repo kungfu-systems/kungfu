@@ -37,8 +37,9 @@ cpp='' py='' web='' corejs=''
 for f in $staged; do
   [ -f "$f" ] || continue          # skip deletions / renamed-away paths
   is_generated "$f" && continue
-  # Dispatch mirrors the packages that define a `format` script; trees without
-  # one (repo-root scripts, framework/api) keep their current coverage.
+  # Repo-wide dispatch: C++ -> clang-format, Python -> ruff, framework/core's own
+  # build scripts -> prettier, everything else JS/TS -> biome (root biome.json,
+  # which ignores generated/, fixtures/, framework/core/ and JSON).
   case "$f" in
     *.h|*.hpp|*.hxx|*.cpp|*.c|*.cc|*.cxx)
       cpp="$cpp $f" ;;
@@ -46,10 +47,8 @@ for f in $staged; do
       py="$py $f" ;;
     framework/core/*.js|framework/core/*.cjs|framework/core/*.mjs)
       corejs="$corejs $f" ;;                 # core build scripts use prettier
-    developer/sdk/*|framework/gui/*|framework/tui/*|framework/kfx/*)
-      case "$f" in                           # biome-managed packages only
-        *.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs|*.json|*.jsonc) web="$web $f" ;;
-      esac ;;
+    *.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs)
+      web="$web $f" ;;                        # all other JS/TS -> biome (root config)
   esac
 done
 
