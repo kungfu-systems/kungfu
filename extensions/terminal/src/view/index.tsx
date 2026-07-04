@@ -31,6 +31,11 @@ import { headingStyle, mono, panelStyle } from '@kungfu-tech/kfx';
 import { FitAddon } from '@xterm/addon-fit';
 import { Terminal as XTerm } from '@xterm/xterm';
 import React from 'react';
+import {
+  loadWorkspaceLayout,
+  saveWorkspaceLayout,
+  type WorkspaceLayout,
+} from './persistence';
 
 async function resolve<T>(value: T | Promise<T>): Promise<T> {
   return await value;
@@ -103,6 +108,11 @@ interface Pane {
   pid: number;
   startedAt: number;
   durable: boolean; // tmux-backed (survives close) vs direct
+  // Retained so the pane can be persisted and re-adopted after a restart; the
+  // surviving tmux session keeps its own process, these only label the record.
+  command?: string;
+  args?: string[];
+  cwd?: string;
 }
 
 function providerChipStyle(provider: string): React.CSSProperties {
@@ -460,11 +470,96 @@ function SessionWorkspace({ caps }: { caps: KfxCapabilities; shell: Shell }) {
   const [panes, setPanes] = React.useState<Pane[]>([]);
   const [recoverable, setRecoverable] = React.useState<TerminalSession[]>([]);
   const [notice, setNotice] = React.useState<string | null>(null);
+  // Persistence is gated on the domain capability; absent it the workspace is
+  // ephemeral. `hydrated` blocks the save effect until the initial restore has
+  // read the stored layout, so mounting never clobbers it with an empty set.
+  const domain = caps.domain;
+  const hydrated = React.useRef(false);
 
   const panedIds = React.useMemo(
     () => new Set(panes.map((p) => p.runId)),
     [panes],
   );
+
+  // Restore on mount (W4): read the persisted layout and re-adopt each durable
+  // session by runId. A session still alive on the tmux socket comes back
+  // attached; a gone one is dropped (direct sessions cannot survive a restart).
+  React.useEffect(() => {
+    if (!domain) {
+      hydrated.current = true;
+      return;
+    }
+    // Read synchronously before the save effect can run, so the stored layout
+    // is captured even though adoption is async.
+    const layout = loadWorkspaceLayout(domain);
+    let cancelled = false;
+    void (async () => {
+      const restored: Pane[] = [];
+      for (const p of [...layout.panes].sort((a, b) => a.order - b.order)) {
+        if (p.backend !== 'tmux') continue;
+        try {
+          const s = await resolve(
+            caps.terminal.adopt({
+              runId: p.runId,
+              provider: p.provider,
+              command: p.command,
+              args: p.args,
+              cwd: p.cwd,
+            }),
+          );
+          if (s.status === 'running') {
+            restored.push({
+              key: s.runId,
+              runId: s.runId,
+              title: p.title,
+              provider: p.provider,
+              pid: s.pid,
+              startedAt: p.startedAt || s.startedAt,
+              durable: true,
+              command: p.command,
+              args: p.args,
+              cwd: p.cwd,
+            });
+          }
+        } catch {
+          // un-adoptable (gone / no tmux) — leave it out of the restored set
+        }
+      }
+      if (!cancelled) {
+        if (restored.length > 0) setPanes(restored);
+        hydrated.current = true;
+        // the pane-set change triggers the tray refresh effect below; no need
+        // to call refresh() here (it is declared later)
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // run once on mount; caps/domain identity is stable for a given runtime
+    // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only restore
+  }, []);
+
+  // Persist on change (W4): once hydrated, mirror the live pane set into the
+  // config-backed layout so a restart can bring the durable sessions back.
+  React.useEffect(() => {
+    if (!domain || !hydrated.current) return;
+    const layout: WorkspaceLayout = {
+      version: 1,
+      workspaceId: 'default',
+      panes: panes.map((p, i) => ({
+        runId: p.runId,
+        provider: p.provider,
+        title: p.title,
+        backend: p.durable ? 'tmux' : 'direct',
+        command: p.command,
+        args: p.args,
+        cwd: p.cwd,
+        startedAt: p.startedAt,
+        order: i,
+      })),
+    };
+    saveWorkspaceLayout(domain, layout);
+  }, [panes, domain]);
 
   const refresh = React.useCallback(async () => {
     try {
@@ -531,6 +626,8 @@ function SessionWorkspace({ caps }: { caps: KfxCapabilities; shell: Shell }) {
           pid: session.pid,
           startedAt: session.startedAt,
           durable,
+          command,
+          args,
         },
       ]);
     },
@@ -580,6 +677,9 @@ function SessionWorkspace({ caps }: { caps: KfxCapabilities; shell: Shell }) {
                   pid: session.pid,
                   startedAt: session.startedAt,
                   durable: true,
+                  command: session.command,
+                  args: session.args,
+                  cwd: session.cwd,
                 },
               ],
         );

@@ -23,7 +23,11 @@ import type React from 'react';
 // place a view imports from, so it should surface these rather than making a
 // view reach into @kungfu-tech/api directly.
 export type {
+  AdoptSpec,
+  ConfigEntry,
   DiscoveredSession,
+  DomainState,
+  KfLocation,
   Terminal,
   TerminalBackend,
   TerminalExit,

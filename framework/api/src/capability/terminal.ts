@@ -225,6 +225,21 @@ export type DiscoveredSession = {
   provider?: string;
 };
 
+// Enough persisted identity to re-adopt a session the host did not create this
+// run — a workspace restoring after an app restart, when the in-memory session
+// map is empty but the tmux session may still be alive on the socket. runId +
+// provider recompute the deterministic tmux name; command/args/cwd only label
+// the restored snapshot (the surviving session keeps its own running process).
+export type AdoptSpec = {
+  runId: string;
+  provider?: string;
+  command?: string;
+  args?: string[];
+  cwd?: string;
+  cols?: number;
+  rows?: number;
+};
+
 export type Terminal = {
   // Start a managed process bound to a run. Returns the session snapshot; the
   // run is addressable by runId for every other method.
@@ -260,6 +275,12 @@ export type Terminal = {
   // has-session so a gone session is never silently recreated (which would
   // re-run the agent command). Requires a tmux binding.
   reattach: (runId: string) => Promise<TerminalSession>;
+  // Re-adopt a persisted session after a restart: register a runId the host did
+  // not create this run and attach to its surviving tmux session. If the tmux
+  // session is gone it returns an 'orphaned' snapshot WITHOUT registering it (so
+  // a caller can drop it), rather than recreating and re-running the command.
+  // Requires a tmux binding.
+  adopt: (spec: AdoptSpec) => Promise<TerminalSession>;
   // All sessions this host knows, running and exited, newest last.
   list: () => TerminalSession[];
   get: (runId: string) => TerminalSession | undefined;
@@ -662,6 +683,84 @@ export function openTerminal(options: OpenTerminalOptions): Terminal {
     return { ...session.meta };
   };
 
+  const adopt: Terminal['adopt'] = async (spec) => {
+    const tmux = requireTmux('adopt');
+    // Already known this run: defer to the normal paths.
+    const existing = sessions.get(spec.runId);
+    if (existing) {
+      if (existing.meta.status === 'running') return { ...existing.meta };
+      return reattach(spec.runId);
+    }
+    const provider = spec.provider ?? 'agent';
+    const tmuxName = tmuxSessionName(provider, spec.runId);
+    const cols = spec.cols ?? 80;
+    const rows = spec.rows ?? 24;
+    const command = spec.command ?? '';
+    const args = spec.args ?? [];
+    const backendDetail: TerminalBackendDetail = {
+      kind: 'tmux',
+      socket: tmux.config.socket,
+      tmuxName,
+    };
+    const has = await tmux.control.run(
+      buildTmuxHasSessionArgs(tmux.config, tmuxName),
+    );
+    if (has.code !== 0) {
+      // Gone: report it as orphaned but do NOT register it, so attach-or-create
+      // never recreates and re-runs the command, and the caller can drop it.
+      return {
+        runId: spec.runId,
+        pid: -1,
+        provider,
+        command,
+        args,
+        cwd: spec.cwd,
+        startedAt: now(),
+        status: 'orphaned',
+        backend: 'tmux',
+        backendDetail,
+      };
+    }
+    // Alive: register the run and attach a fresh client (command ignored on an
+    // existing session).
+    const child = pty.spawn(
+      tmux.config.bin,
+      buildTmuxNewSessionArgs(tmux.config, tmuxName, command, args, cols, rows),
+      {
+        name: 'xterm-color',
+        cols,
+        rows,
+        cwd: spec.cwd,
+        env: buildEnv(),
+      },
+    );
+    const meta: TerminalSession = {
+      runId: spec.runId,
+      pid: child.pid,
+      provider,
+      command,
+      args,
+      cwd: spec.cwd,
+      startedAt: now(),
+      status: 'running',
+      backend: 'tmux',
+      backendDetail,
+    };
+    const session: Session = {
+      meta,
+      pty: child,
+      buffer: '',
+      cols,
+      rows,
+      tmuxName,
+      dataListeners: new Set(),
+      exitListeners: new Set(),
+    };
+    sessions.set(spec.runId, session);
+    wireChild(session, child);
+    return { ...meta };
+  };
+
   const list: Terminal['list'] = () =>
     Array.from(sessions.values()).map((s) => ({ ...s.meta }));
 
@@ -680,6 +779,7 @@ export function openTerminal(options: OpenTerminalOptions): Terminal {
     onExit,
     discover,
     reattach,
+    adopt,
     list,
     get,
   };
