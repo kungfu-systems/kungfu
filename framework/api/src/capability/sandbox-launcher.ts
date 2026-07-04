@@ -102,12 +102,63 @@ function hasBwrap(): boolean {
 
 export type SandboxedCommand = { command: string; args: string[] };
 
+// The Windows confinement spec (ADR-0014): unlike macOS `sandbox-exec` and Linux
+// `bwrap`, Windows has no CLI wrapper that expresses an AppContainer, so the
+// membrane is not a `{command, args}` pair — it is a set of AppContainer
+// properties a native launcher (libkungfu `spawn_app_container`) applies when it
+// CreateProcess-es the guest. This builder maps the same profile/knobs onto that
+// spec, so an extension's source is unchanged and each knob is a transparent
+// narrowing of the AppContainer, not a withdrawn capability:
+//   - permissive grants the network capabilities and lets the guest write
+//     broadly; the launcher also adds the loopback exemption so the relay's
+//     local sockets work (AppContainer blocks loopback by default).
+//   - denyNetwork omits the network capabilities → external sockets are refused
+//     (WSAEACCES).
+//   - denyWrite drops broad write → only the AppContainer's own data folder is
+//     writable; writes elsewhere are refused (ACCESS_DENIED).
+export type AppContainerSpec = {
+  // stable AppContainer profile moniker + human-readable name
+  moniker: string;
+  displayName: string;
+  // capability SID friendly names granted (empty = none); e.g. 'internetClient'
+  capabilities: string[];
+  // permissive: the guest may write outside its container folder
+  allowBroadWrite: boolean;
+  // permissive: add the loopback network-isolation exemption so relay-local
+  // sockets work; denyNetwork leaves it off
+  allowLoopback: boolean;
+};
+
+export function windowsAppContainerSpec(
+  profile: SandboxProfile = { base: 'restrictive' },
+): AppContainerSpec {
+  const resolved = resolveProfile(profile);
+  return {
+    moniker: 'com.kungfu-tech.kfx.guest',
+    displayName: 'Kungfu kfx sandboxed guest',
+    capabilities: resolved.denyNetwork
+      ? []
+      : [
+          'internetClient',
+          'internetClientServer',
+          'privateNetworkClientServer',
+        ],
+    allowBroadWrite: !resolved.denyWrite,
+    allowLoopback: !resolved.denyNetwork,
+  };
+}
+
 export function isOsSandboxSupported(): boolean {
   switch (platform()) {
     case 'darwin':
       return true;
     case 'linux':
       return hasBwrap();
+    case 'win32':
+      // the AppContainer membrane is applied by the injected native launcher
+      // (libkungfu spawn_app_container); availability is confirmed when that
+      // binding is present, checked by the host at launch, not here
+      return true;
     default:
       return false;
   }

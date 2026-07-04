@@ -23,6 +23,7 @@ import {
   launchSandboxedGuest,
 } from '../kungfu-guest';
 import { buildFixtureCaps } from './fixture-caps';
+import { harnessWindowsSpawn } from './win-spawn';
 
 const DIR = import.meta.dirname;
 const RESOLVER = join(DIR, 'ts-resolve.mjs');
@@ -62,6 +63,7 @@ async function jsSandbox(): Promise<Report> {
     caps,
     declared,
     profile: { base: 'permissive' },
+    windowsSpawn: harnessWindowsSpawn(),
   });
   const code = await guest.exited;
   if (code !== 0) throw new Error(`node child exited with code ${code}`);
@@ -94,6 +96,7 @@ async function pySandbox(): Promise<Report> {
     caps,
     declared,
     profile: { base: 'permissive' },
+    windowsSpawn: harnessWindowsSpawn(),
   });
   const code = await guest.exited;
   if (code !== 0) throw new Error(`python child exited with code ${code}`);

@@ -20,7 +20,12 @@
 // The host never hands the guest the native binding: it addresses only the
 // capability surface either way. Undeclared capabilities are absent in both
 // tiers — rejected at the relay host, and never built into the in-process proxy.
-import { type SandboxProfile, osSandboxCommand } from './sandbox-launcher.js';
+import {
+  type AppContainerSpec,
+  type SandboxProfile,
+  osSandboxCommand,
+  windowsAppContainerSpec,
+} from './sandbox-launcher.js';
 import { createCapabilityHost } from './sandbox.js';
 import { serveSubprocessCapabilities } from './subprocess.js';
 
@@ -94,6 +99,20 @@ export type SpawnFn = (
   options: { stdio: ['pipe', 'pipe', 'inherit']; env: NodeJS.ProcessEnv },
 ) => GuestChild;
 
+// The Windows launch seam (ADR-0014): on win32 the confinement is not a command
+// wrapper Node can spawn — an AppContainer must be applied by a native
+// CreateProcess. The host injects this launcher (backed by libkungfu
+// `spawn_app_container`; see guest-windows.ts) so kungfu-guest stays binding-less
+// and the injection point mirrors ADR-0011's capability injection. It returns a
+// GuestChild (the same structural shape the relay serves over), so everything
+// downstream is unchanged.
+export type WindowsSandboxSpawn = (
+  command: string,
+  args: readonly string[],
+  spec: AppContainerSpec,
+  options: { env: NodeJS.ProcessEnv },
+) => Promise<GuestChild>;
+
 // How to boot the child-side guest proxy: the interpreter and its argv, plus any
 // env the child bootstrap reads (e.g. the declared set and the facet entry). The
 // command is wrapped in the OS sandbox before it is spawned.
@@ -112,8 +131,11 @@ export type SandboxedGuestOptions = {
   // OS sandbox profile; defaults to the ADR-0014 permissive first-delivery
   // profile — able to run, not yet restricted. Turn a knob on to narrow it.
   profile?: SandboxProfile;
-  // injectable for tests; defaults to node:child_process spawn
+  // injectable for tests; defaults to node:child_process spawn (unix path)
   spawn?: SpawnFn;
+  // required on win32: the AppContainer launcher (libkungfu-backed). Injected by
+  // the host so kungfu-guest holds no native binding itself.
+  windowsSpawn?: WindowsSandboxSpawn;
 };
 
 export type SandboxedGuest = {
@@ -139,22 +161,43 @@ async function defaultSpawn(
 export async function launchSandboxedGuest(
   opts: SandboxedGuestOptions,
 ): Promise<SandboxedGuest> {
-  const wrapped = osSandboxCommand(
-    opts.runtime.command,
-    opts.runtime.args,
-    opts.profile ?? { base: 'permissive' },
-  );
+  const profile = opts.profile ?? { base: 'permissive' };
   const env: NodeJS.ProcessEnv = { ...process.env, ...opts.runtime.env };
-  const spawnFn = opts.spawn;
-  const child = spawnFn
-    ? spawnFn(wrapped.command, wrapped.args, {
-        stdio: ['pipe', 'pipe', 'inherit'],
-        env,
-      })
-    : await defaultSpawn(wrapped.command, wrapped.args, {
-        stdio: ['pipe', 'pipe', 'inherit'],
-        env,
-      });
+
+  let child: GuestChild;
+  if (process.platform === 'win32') {
+    // Windows: an AppContainer is applied by the injected native launcher; there
+    // is no command wrapper to spawn. The launcher CreateProcess-es the guest
+    // into the AppContainer and returns a GuestChild.
+    if (!opts.windowsSpawn) {
+      throw new Error(
+        'windows sandbox requires a windowsSpawn launcher (libkungfu-backed) ' +
+          'to be injected; refusing to launch an untrusted guest unconfined',
+      );
+    }
+    child = await opts.windowsSpawn(
+      opts.runtime.command,
+      opts.runtime.args,
+      windowsAppContainerSpec(profile),
+      { env },
+    );
+  } else {
+    // macOS / Linux: wrap the command in the OS sandbox CLI, then spawn it.
+    const wrapped = osSandboxCommand(
+      opts.runtime.command,
+      opts.runtime.args,
+      profile,
+    );
+    child = opts.spawn
+      ? opts.spawn(wrapped.command, wrapped.args, {
+          stdio: ['pipe', 'pipe', 'inherit'],
+          env,
+        })
+      : await defaultSpawn(wrapped.command, wrapped.args, {
+          stdio: ['pipe', 'pipe', 'inherit'],
+          env,
+        });
+  }
 
   if (!child.stdout || !child.stdin) {
     throw new Error('sandboxed guest child has no piped stdio to relay over');

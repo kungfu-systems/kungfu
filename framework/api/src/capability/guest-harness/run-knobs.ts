@@ -22,6 +22,7 @@ import { join } from 'node:path';
 import { launchSandboxedGuest } from '../kungfu-guest.js';
 import { type SandboxProfile } from '../sandbox-launcher.js';
 import { buildFixtureCaps } from './fixture-caps';
+import { harnessWindowsSpawn } from './win-spawn';
 
 const DIR = import.meta.dirname;
 const RESOLVER = join(DIR, 'ts-resolve.mjs');
@@ -29,7 +30,11 @@ const NODE_CHILD = join(DIR, 'node-child.mjs');
 const FACET = join(DIR, 'facet-knobs.mjs');
 
 // The network knob's narrowing shows up in a different observable per platform.
-const NET_FIELD = platform() === 'darwin' ? 'loopback' : 'externalNet';
+// macOS Seatbelt and Windows AppContainer refuse the socket itself (loopback
+// included — on Windows the permissive profile re-permits loopback via the
+// network-isolation exemption, so deny-network shows as a refused loopback);
+// Linux --unshare-net leaves loopback up but removes external interfaces.
+const NET_FIELD = platform() === 'linux' ? 'externalNet' : 'loopback';
 
 type KnobCase = {
   label: string;
@@ -72,6 +77,7 @@ async function runCase(
     caps,
     declared,
     profile,
+    windowsSpawn: harnessWindowsSpawn(),
   });
   const code = await guest.exited;
   if (code !== 0) throw new Error(`facet child exited ${code}`);

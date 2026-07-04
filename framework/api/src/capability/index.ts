@@ -26,3 +26,4 @@ export type {
 } from './subprocess.js';
 export * from './guest-node.js';
 export * from './kungfu-guest.js';
+export * from './guest-windows.js';
