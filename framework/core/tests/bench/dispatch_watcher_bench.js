@@ -25,7 +25,9 @@ const coreDir = path.resolve(__dirname, '..', '..');
 // require the binding artifact directly: the lib/kungfu.js loader resolves
 // the '@kungfu-tech/core' package name, which is not self-linked inside this
 // package's own node_modules
-const binding = require(path.join(coreDir, 'dist', 'kungfu', 'kungfu_node.node'));
+const binding = require(
+  path.join(coreDir, 'dist', 'kungfu', 'kungfu_node.node'),
+);
 
 const runtimeDir = path.join(home, 'runtime');
 // bypassRestore=true: no config-db state to restore in a bench home;

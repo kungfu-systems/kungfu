@@ -17,12 +17,13 @@ module.exports = function () {
       const useElectron =
         process.platform !== 'win32' && 'electron' in process.versions;
       const useKfc =
-        process.platform === 'linux' && process.env.KUNGFU_AS_VARIANT === 'node';
+        process.platform === 'linux' &&
+        process.env.KUNGFU_AS_VARIANT === 'node';
       const binding_path = useElectron
         ? electronBinding
         : useKfc
-        ? kungfuBinding
-        : nodeBinding;
+          ? kungfuBinding
+          : nodeBinding;
       return require(binding_path);
     } catch (e) {
       console.error(`Can not find kungfu node binding: ${e}`);

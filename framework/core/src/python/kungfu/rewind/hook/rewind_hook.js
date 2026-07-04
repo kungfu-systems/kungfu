@@ -59,7 +59,12 @@ if (endpoint) {
   const captureInvoke = (toolName, parentSpan, retryOf, attempt, input, fn) => {
     const spanId = newSpan();
     if (retryOf) {
-      emit({ event: 'retry', span_id: spanId, retry_of_span_id: retryOf, attempt });
+      emit({
+        event: 'retry',
+        span_id: spanId,
+        retry_of_span_id: retryOf,
+        attempt,
+      });
     }
     emit({
       event: 'tool_call',
