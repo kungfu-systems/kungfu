@@ -50,6 +50,18 @@ enum CaptureLayer : byte {
   Adapter = 3
 }
 
+// How trustworthy the join between a cost number and a unit of work is — the
+// wire mirror of cost/model.py AttributionLevel, values aligned. Ordered
+// strongest to weakest so the UI never has to guess whether a number is
+// provider-structured truth or a rough account/window delta.
+enum Attribution : byte {
+  ExactRun = 0,
+  ExactSession = 1,
+  ObservedSessionDelta = 2,
+  ObservedWindow = 3,
+  ManualEstimate = 4
+}
+
 // msg_type 30001. Opens a traced run; run_id is supervisor-assigned and shared
 // by every runtime and capture layer in the run — the single-journal anchor.
 table RunBegin {
@@ -122,6 +134,36 @@ table RetryMarker {
   retry_of_span_id:string;
   attempt:uint;
   reason:string;
+}
+
+// msg_type 30008. One normalized cost/usage fact tied to a unit of work — the
+// journal form of cost/model.py CostSnapshot. Token counts ride inline; the
+// attribution label travels with the number so a reader never sees a cost
+// without knowing how it was joined. cost_usd is only meaningful when
+// cost_usd_known is true: tokens-only providers (Codex exec) leave it false
+// rather than reporting a fabricated 0.0. ambiguous_attribution marks a source
+// that cannot separate concurrent work sharing one account/window. layer keeps
+// the same provenance discipline as the sibling events — cost facts are
+// adapter/observed evidence, never the wire-truth moat path.
+table CostSnapshot {
+  run_id:string;
+  work_id:string;
+  session_id:string;
+  layer:CaptureLayer;
+  provider:string;
+  surface:string;
+  model:string;
+  source:string;
+  attribution:Attribution;
+  input_tokens:long;
+  output_tokens:long;
+  cached_input_tokens:long;
+  cache_creation_input_tokens:long;
+  reasoning_tokens:long;
+  cost_usd:double;
+  cost_usd_known:bool;
+  ambiguous_attribution:bool;
+  raw_ref:string;
 }
 
 root_type RunBegin;

@@ -8,6 +8,7 @@
 import flatbuffers
 
 from kungfu.rewind.fb import (
+    CostSnapshot,
     ModelRequest,
     ModelResponse,
     RetryMarker,
@@ -163,6 +164,69 @@ def tool_result(run_id, span_id, layer, status, output, error=None, latency_ns=0
         ToolResult.AddError(b, error_o)
     ToolResult.AddLatencyNs(b, latency_ns)
     b.Finish(ToolResult.End(b))
+    return bytes(b.Output())
+
+
+def cost_snapshot(
+    run_id,
+    work_id,
+    session_id,
+    layer,
+    provider,
+    surface,
+    model,
+    source,
+    attribution,
+    input_tokens=0,
+    output_tokens=0,
+    cached_input_tokens=0,
+    cache_creation_input_tokens=0,
+    reasoning_tokens=0,
+    cost_usd=0.0,
+    cost_usd_known=False,
+    ambiguous_attribution=False,
+    raw_ref=None,
+):
+    # cost_usd is only meaningful when cost_usd_known is True; a tokens-only
+    # provider passes cost_usd_known=False and the 0.0 is a placeholder, not a
+    # claim the run was free. The bridge in cost/wire.py enforces that pairing.
+    b = flatbuffers.Builder(512)
+    run_id_o = _s(b, run_id)
+    work_o = _s(b, work_id)
+    session_o = _s(b, session_id)
+    provider_o = _s(b, provider)
+    surface_o = _s(b, surface)
+    model_o = _s(b, model)
+    source_o = _s(b, source)
+    raw_ref_o = _s(b, raw_ref)
+    CostSnapshot.Start(b)
+    if run_id_o:
+        CostSnapshot.AddRunId(b, run_id_o)
+    if work_o:
+        CostSnapshot.AddWorkId(b, work_o)
+    if session_o:
+        CostSnapshot.AddSessionId(b, session_o)
+    CostSnapshot.AddLayer(b, layer)
+    if provider_o:
+        CostSnapshot.AddProvider(b, provider_o)
+    if surface_o:
+        CostSnapshot.AddSurface(b, surface_o)
+    if model_o:
+        CostSnapshot.AddModel(b, model_o)
+    if source_o:
+        CostSnapshot.AddSource(b, source_o)
+    CostSnapshot.AddAttribution(b, attribution)
+    CostSnapshot.AddInputTokens(b, input_tokens)
+    CostSnapshot.AddOutputTokens(b, output_tokens)
+    CostSnapshot.AddCachedInputTokens(b, cached_input_tokens)
+    CostSnapshot.AddCacheCreationInputTokens(b, cache_creation_input_tokens)
+    CostSnapshot.AddReasoningTokens(b, reasoning_tokens)
+    CostSnapshot.AddCostUsd(b, cost_usd)
+    CostSnapshot.AddCostUsdKnown(b, cost_usd_known)
+    CostSnapshot.AddAmbiguousAttribution(b, ambiguous_attribution)
+    if raw_ref_o:
+        CostSnapshot.AddRawRef(b, raw_ref_o)
+    b.Finish(CostSnapshot.End(b))
     return bytes(b.Output())
 
 

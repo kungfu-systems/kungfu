@@ -5,8 +5,15 @@
 # Layout:
 #   rewind_events.fbs   the event contract (welded surface rewind-event-schema)
 #   rewind_events.bfbs  reflection schema, checked in; regenerate with
-#                       `flatc -b --schema` whenever the .fbs changes
-#   fb/                 flatc --python generated accessors/builders (do not edit)
+#                       `flatc -b --schema --bfbs-filenames . -o . rewind_events.fbs`
+#                       (the `--bfbs-filenames .` keeps the `//rewind_events.fbs`
+#                       decl path stable so the blob only changes on real edits)
+#   fb/                 flatc --python generated accessors/builders (do not edit).
+#                       Regenerate to a scratch dir and copy only fb/*.py back:
+#                       `flatc --python -o "$tmp" rewind_events.fbs` then copy
+#                       "$tmp/kungfu/rewind/fb/*.py" here. Never `-o ../../` in
+#                       place: flatc writes empty namespace __init__.py files and
+#                       would clobber this module and kungfu/__init__.py.
 #   events.py           serializers: python values -> FlatBuffers event bytes
 #   bundle.py           bundle format pieces: content-addressed schema blob +
 #                       run manifest with per-run schema bindings
@@ -20,10 +27,13 @@ MSG_MODEL_RESPONSE = 30004
 MSG_TOOL_CALL = 30005
 MSG_TOOL_RESULT = 30006
 MSG_RETRY_MARKER = 30007
+MSG_COST_SNAPSHOT = 30008
 
 # Event-model version marker carried in RunBegin (belt and braces beside the
-# bundle's schema binding, which remains the decode authority).
-SCHEMA_VERSION = 1
+# bundle's schema binding, which remains the decode authority). Bumped 1->2 when
+# CostSnapshot (msg_type 30008) was appended — an additive change: existing
+# tables are untouched and old runs still decode through their own pinned blob.
+SCHEMA_VERSION = 2
 
 MSG_TYPE_NAMES = {
     MSG_RUN_BEGIN: "RunBegin",
@@ -33,4 +43,5 @@ MSG_TYPE_NAMES = {
     MSG_TOOL_CALL: "ToolCall",
     MSG_TOOL_RESULT: "ToolResult",
     MSG_RETRY_MARKER: "RetryMarker",
+    MSG_COST_SNAPSHOT: "CostSnapshot",
 }

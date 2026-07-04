@@ -18,6 +18,7 @@ writes every event as an open-layer journal frame:
 | 30005 | `ToolCall` | tool name, input, parent span |
 | 30006 | `ToolResult` | status, output, error, latency |
 | 30007 | `RetryMarker` | retry edge (attempt N of span X) |
+| 30008 | `CostSnapshot` | normalized token/cost usage with attribution + confidence |
 
 Allocation is recorded in [`docs/msg-type-ranges.md`](../../../../../../docs/msg-type-ranges.md);
 the schema surface is registered in [`docs/versioning.md`](../../../../../../docs/versioning.md).
