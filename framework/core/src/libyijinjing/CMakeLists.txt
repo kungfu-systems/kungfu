@@ -61,7 +61,10 @@ target_link_libraries(yijinjing PUBLIC
 # exemption (FirewallAPI, NetworkIsolationSetAppContainerConfig) is added here
 # once wired; it is deferred in app_container.cpp for now.
 if(WIN32)
-  target_link_libraries(yijinjing PUBLIC userenv)
+  # userenv: CreateAppContainerProfile / DeriveAppContainerSidFromAppContainerName
+  # advapi32: FreeSid. DeriveCapabilitySidsFromName is resolved dynamically from
+  # KernelBase.dll in app_container.cpp (its import library varies across SDKs).
+  target_link_libraries(yijinjing PUBLIC userenv advapi32)
 endif()
 
 if(DEFINED COMPILER_OPTIMIZE_ON_OPTIONS AND NOT "${COMPILER_OPTIMIZE_ON_OPTIONS}" STREQUAL "")

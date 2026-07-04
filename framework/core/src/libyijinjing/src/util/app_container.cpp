@@ -25,19 +25,14 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
-// AppContainer profile + SID APIs (link: userenv.lib)
+// AppContainer profile + SID APIs (link: userenv.lib); FreeSid is advapi32.lib.
 #include <userenv.h>
 #include <vector>
 
-// DeriveCapabilitySidsFromName is exported by KernelBase but not declared in
-// every SDK's public headers; declare it if the SDK did not. (link: the api-set
-// is resolved via kernel32/onecore.) DARKHERO-verify: on the pinned Win SDK this
-// may already be declared — drop the guard if it conflicts.
-#ifndef KFX_HAS_DERIVE_CAPABILITY_SIDS
-extern "C" BOOL WINAPI DeriveCapabilitySidsFromName(LPCWSTR CapName, PSID **CapabilityGroupSids,
-                                                    DWORD *CapabilityGroupSidCount, PSID **CapabilitySids,
-                                                    DWORD *CapabilitySidCount);
-#endif
+// DeriveCapabilitySidsFromName is declared in securitybaseapi.h (via windows.h)
+// but its import library differs across SDKs, so it is resolved dynamically from
+// KernelBase.dll below rather than linked — keeping the link line to the standard
+// libs (userenv + advapi32).
 
 namespace kungfu::yijinjing::os {
 
@@ -129,6 +124,10 @@ std::shared_ptr<app_container_process> spawn_app_container(const app_container_o
 
   // 2. Capability SIDs from friendly names (e.g. "internetClient"). Fewer names
   //    == a narrower AppContainer; deny-network passes an empty list.
+  using derive_capability_sids_fn = BOOL(WINAPI *)(LPCWSTR, PSID **, DWORD *, PSID **, DWORD *);
+  auto derive_capability_sids = reinterpret_cast<derive_capability_sids_fn>(
+      ::GetProcAddress(::GetModuleHandleW(L"kernelbase.dll"), "DeriveCapabilitySidsFromName"));
+
   std::vector<SID_AND_ATTRIBUTES> capabilities;
   std::vector<PSID *> cap_alloc_to_free;
   for (const auto &name : options.capabilities) {
@@ -137,7 +136,8 @@ std::shared_ptr<app_container_process> spawn_app_container(const app_container_o
     PSID *cap_sids = nullptr;
     DWORD group_count = 0;
     DWORD cap_count = 0;
-    if (DeriveCapabilitySidsFromName(cap.c_str(), &group_sids, &group_count, &cap_sids, &cap_count)) {
+    if (derive_capability_sids &&
+        derive_capability_sids(cap.c_str(), &group_sids, &group_count, &cap_sids, &cap_count)) {
       for (DWORD i = 0; i < cap_count; ++i) {
         SID_AND_ATTRIBUTES attr = {};
         attr.Sid = cap_sids[i];
