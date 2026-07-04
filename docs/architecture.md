@@ -78,6 +78,15 @@ the in-process zero-copy binding. This is the real value of the platform — the
 surface external products consume, independent of any UI framework. See
 [ADR-0006](../framework/core/docs/adr/ADR-0006-v4-frontend-platform-architecture.md).
 
+### Contracts — `framework/kfx`, `framework/spec`
+
+Publishable, framework-neutral contracts others build against, siblings of the
+capability SDK: `kfx` is the view-extension contract (the types and UI tokens
+shared by the shell and view extensions); `spec` is the portable fact-ledger
+format spec — the manifest contract plus the versioned spec bundle — that lets
+external tools decode the journal without the runtime. Like `api`, these are
+surfaces you build *on*, not tools.
+
 ### Application SDK — `developer/sdk` (`@kungfu-tech/sdk`)
 
 Scaffolding that turns the core capabilities into development tooling: building
@@ -116,12 +125,11 @@ The dogfood installer: it bundles the runtime, both reference UIs and the SDK
 into one package, so installing it yields the reference GUI and TUI, the
 `kungfu` shell, and the SDK for zero-setup extension and product development.
 
-### Build tooling — `developer/toolchain`, `kungfu-code`
+### Build tooling — `kungfu-code`
 
-Build-time only: `developer/toolchain` aggregates shared build dependencies, and
-`./kungfu-code` is the development orchestrator that pins the toolchain (Node via
-fnm, Python via uv, the package manager via Corepack) so a fresh clone builds
-with one command.
+Build-time only: `./kungfu-code` is the development orchestrator that pins the
+toolchain (Node via fnm, Python via uv, the package manager via Corepack) so a
+fresh clone builds with one command.
 
 ## The build dogfoods the SDK
 
@@ -160,18 +168,41 @@ build` bundles with esbuild.
 ## Repository layout
 
 ```
-framework/
+framework/    platform + contracts you build ON (imported as a dependency)
   core        runtime + core (C++ longfist / yijinjing, bindings, kungfu)
-  api         capability SDK
+  api         capability SDK (journal / state / replay)
+  kfx         view-extension contract
+  spec        portable fact-ledger format spec
   gui         reference GUI (Electron + React)
   tui         reference TUI
-developer/
-  sdk         application / extension SDK (kfs)
-  toolchain   shared build dependencies
-extensions/   kfx extensions
-examples/     samples
-artifact      dogfood installer
+developer/    build tooling you build WITH (invoked, a devDependency)
+  sdk         application / extension SDK — the kfs CLI
+extensions/   kfx plugins (reference extensions)
+examples/     samples and build-coverage probes
+artifact      dogfood installer (assembles the above)
+kungfu-code   build orchestrator (pins the toolchain)
 ```
+
+### Where a new package goes
+
+Place a package by what it *is*, not where it looks tidy. The dividing line is
+build-*on* (a contract or library others import) versus build-*with* (a tool
+others invoke):
+
+- **`framework/`** — a runtime component, or a publishable, framework-neutral
+  contract/library that others build on and take as a **dependency** (`core`,
+  `api`, `kfx`, `spec`, plus the reference `gui` / `tui`).
+- **`developer/`** — a build-time **tool** you build with: invoked (typically a
+  CLI) and taken as a **devDependency**, never imported at runtime (`sdk` /
+  `kfs`).
+- **`extensions/`** — a kfx plugin built on the extension contract.
+- **`examples/`** — a sample or a build-coverage probe: it demonstrates or
+  exercises the platform but is not shipped as a product.
+- **`artifact`** — the assembly that bundles the platform into an installer.
+
+By this rule a format spec is a contract, so it lives in `framework`; the `kfs`
+build CLI is a tool, so it lives in `developer` — even when that leaves a single
+package there.
 
 ## Direction
 
