@@ -138,13 +138,15 @@ SDK can package a complete application from the runtime, the reference surfaces
 and the extensions. Trading-specific reference extensions from earlier versions
 are being retired, and their coverage role is being handed to neutral
 replacements that exercise the same paths. The C++ path is covered by
-[`extensions/probe-cpp`](../extensions/probe-cpp): a neutral probe that compiles
+[`examples/probe-cpp`](../examples/probe-cpp): a neutral probe that compiles
 against the `libkungfu` API and its FlatBuffers data structures into a native
 module (`kfs kfx build` drives CMake through the core toolchain). The Python
 ahead-of-time path is covered by
-[`extensions/probe-python`](../extensions/probe-python): a neutral probe whose
+[`examples/probe-python`](../examples/probe-python): a neutral probe whose
 dependency is installed with `kungfu engage pdm` and whose module is
-Nuitka-compiled with `kungfu engage nuitka`. The JavaScript / TypeScript path is
+Nuitka-compiled with `kungfu engage nuitka`. These two probes live under
+`examples/` because they exist to exercise the build, not to be installed as
+products. The JavaScript / TypeScript path is
 covered by the reference view extensions (such as
 [`extensions/rewind-inspector`](../extensions/rewind-inspector)), which `kfs kfx
 build` bundles with esbuild.

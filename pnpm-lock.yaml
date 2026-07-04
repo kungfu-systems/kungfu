@@ -55,48 +55,20 @@ importers:
         specifier: ^1.9.4
         version: 1.9.4
 
-  examples/operator-cpp-101:
+  examples/probe-cpp:
     devDependencies:
-      '@kungfu-tech/sdk':
-        specifier: workspace:*
-        version: link:../../developer/sdk
-
-  examples/operator-python-101:
-    devDependencies:
-      '@kungfu-tech/sdk':
-        specifier: workspace:*
-        version: link:../../developer/sdk
-
-  examples/report-cpp-101:
-    devDependencies:
-      '@kungfu-tech/sdk':
-        specifier: workspace:*
-        version: link:../../developer/sdk
-
-  examples/report-python-101:
-    devDependencies:
-      '@kungfu-tech/sdk':
-        specifier: workspace:*
-        version: link:../../developer/sdk
-
-  examples/slicetool-cpp-101:
-    devDependencies:
-      '@kungfu-tech/sdk':
-        specifier: workspace:*
-        version: link:../../developer/sdk
-
-  examples/strategy-cpp-101:
-    devDependencies:
-      '@kungfu-tech/sdk':
-        specifier: workspace:*
-        version: link:../../developer/sdk
-
-  examples/strategy-python-101:
-    dependencies:
       '@kungfu-tech/core':
         specifier: workspace:*
         version: link:../../framework/core
+      '@kungfu-tech/sdk':
+        specifier: workspace:*
+        version: link:../../developer/sdk
+
+  examples/probe-python:
     devDependencies:
+      '@kungfu-tech/core':
+        specifier: workspace:*
+        version: link:../../framework/core
       '@kungfu-tech/sdk':
         specifier: workspace:*
         version: link:../../developer/sdk
@@ -150,24 +122,6 @@ importers:
         version: 18.3.31
 
   extensions/langchain-adapter: {}
-
-  extensions/probe-cpp:
-    devDependencies:
-      '@kungfu-tech/core':
-        specifier: workspace:*
-        version: link:../../framework/core
-      '@kungfu-tech/sdk':
-        specifier: workspace:*
-        version: link:../../developer/sdk
-
-  extensions/probe-python:
-    devDependencies:
-      '@kungfu-tech/core':
-        specifier: workspace:*
-        version: link:../../framework/core
-      '@kungfu-tech/sdk':
-        specifier: workspace:*
-        version: link:../../developer/sdk
 
   extensions/rewind-inspector:
     dependencies:

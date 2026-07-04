@@ -97,7 +97,7 @@ function main() {
       // C++ dogfood probe: compile the reference cpp kfx against the freshly
       // built libkungfu (headers + shared lib + FlatBuffers) into a native
       // module. If a core capability regresses, this build breaks here.
-      const probeBuild = spawnSync('pnpm', ['--filter', '@kungfu-tech/kfx-probe-cpp', 'run', 'build'], {
+      const probeBuild = spawnSync('pnpm', ['--filter', '@kungfu-tech/examples-probe-cpp', 'run', 'build'], {
         cwd: ROOT,
         stdio: 'inherit',
         shell: isWin,
@@ -108,7 +108,7 @@ function main() {
       // Python AOT dogfood probe: install its dependency (engage pdm) and
       // Nuitka-compile it (engage nuitka) — exercises the bundled python
       // toolchain against the freshly built core.
-      const pyProbeBuild = spawnSync('pnpm', ['--filter', '@kungfu-tech/kfx-probe-python', 'run', 'build'], {
+      const pyProbeBuild = spawnSync('pnpm', ['--filter', '@kungfu-tech/examples-probe-python', 'run', 'build'], {
         cwd: ROOT,
         stdio: 'inherit',
         shell: isWin,
@@ -148,11 +148,11 @@ function main() {
   }
 
   // ── Stage 2b: C++ extension probe artifact ────────────────────────
-  // The reference cpp kfx (extensions/probe-cpp) compiles against libkungfu and
+  // The reference cpp example (examples/probe-cpp) compiles against libkungfu and
   // its FlatBuffers types into a native module; its presence proves the C++
   // extension build path. Built in Stage 1 under --full.
   console.log('\n[verify] stage 2b: C++ extension probe artifact');
-  const probeDist = path.join(ROOT, 'extensions', 'probe-cpp', 'dist', 'ProbeCpp');
+  const probeDist = path.join(ROOT, 'examples', 'probe-cpp', 'dist', 'ProbeCpp');
   const probeSo = fs.existsSync(probeDist)
     ? fs.readdirSync(probeDist).find((f) => /^probe_cpp\..*\.(so|dylib|pyd)$/.test(f))
     : null;
@@ -161,15 +161,15 @@ function main() {
   } else if (doFull) {
     fail('cpp probe native module built', `no probe_cpp.*.(so|dylib|pyd) under ${path.relative(ROOT, probeDist)}`);
   } else {
-    console.log(`  (skipped: no cpp probe artifact; build it with 'pnpm --filter @kungfu-tech/kfx-probe-cpp run build' or --full)`);
+    console.log(`  (skipped: no cpp probe artifact; build it with 'pnpm --filter @kungfu-tech/examples-probe-cpp run build' or --full)`);
   }
 
   // ── Stage 2c: Python AOT extension probe artifact ─────────────────
-  // The reference python kfx (extensions/probe-python) is Nuitka-compiled into a
+  // The reference python example (examples/probe-python) is Nuitka-compiled into a
   // native module through the bundled toolchain; its presence proves the
   // python-AOT extension build path. Built in Stage 1 under --full.
   console.log('\n[verify] stage 2c: Python AOT extension probe artifact');
-  const pyProbeDist = path.join(ROOT, 'extensions', 'probe-python', 'dist', 'ProbePython');
+  const pyProbeDist = path.join(ROOT, 'examples', 'probe-python', 'dist', 'ProbePython');
   const pyProbeSo = fs.existsSync(pyProbeDist)
     ? fs.readdirSync(pyProbeDist).find((f) => /^ProbePython\..*\.(so|dylib|pyd)$/.test(f))
     : null;
@@ -178,7 +178,7 @@ function main() {
   } else if (doFull) {
     fail('python probe native module built', `no ProbePython.*.(so|dylib|pyd) under ${path.relative(ROOT, pyProbeDist)}`);
   } else {
-    console.log(`  (skipped: no python probe artifact; build it with 'pnpm --filter @kungfu-tech/kfx-probe-python run build' or --full)`);
+    console.log(`  (skipped: no python probe artifact; build it with 'pnpm --filter @kungfu-tech/examples-probe-python run build' or --full)`);
   }
 
   // ── Stage 3: kfc runtime smoke ────────────────────────────────────
