@@ -23,7 +23,7 @@ DYLD_FALLBACK_LIBRARY_PATH="$core_dir/dist/kungfu${DYLD_FALLBACK_LIBRARY_PATH:+:
 export DYLD_FALLBACK_LIBRARY_PATH
 
 cd "$core_dir"
-kfc="uv run --frozen python .devtools/kfc.py -H $home"
+kfc="uv run --frozen python .devtools/kungfu_cli.py -H $home"
 
 work_id="$($kfc work create 'Fixture lifecycle item' --kind task \
   --summary 'work profile lifecycle fixture' --json \

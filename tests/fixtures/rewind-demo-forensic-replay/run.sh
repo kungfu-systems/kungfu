@@ -37,7 +37,7 @@ DYLD_FALLBACK_LIBRARY_PATH="$core_dir/dist/kungfu${DYLD_FALLBACK_LIBRARY_PATH:+:
 export DYLD_FALLBACK_LIBRARY_PATH
 
 cd "$core_dir"
-kfc() { uv run --frozen python .devtools/kfc.py -H "$home" "$@"; }
+kfc() { uv run --frozen python .devtools/kungfu_cli.py -H "$home" "$@"; }
 
 kfc trace --run-id "$run_id" -- python3 "$fixture_dir/demo_agent.py"
 

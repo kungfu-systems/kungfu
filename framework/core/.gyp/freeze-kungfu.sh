@@ -6,9 +6,9 @@
 # 用户无需另装 Python。
 #
 # 用法:
-#   .gyp/freeze-kfc.sh <pykungfu-release-dir> [output-dir]
+#   .gyp/freeze-kungfu.sh <pykungfu-release-dir> [output-dir]
 #     pykungfu-release-dir : cmake-js 产物目录，含 pykungfu / libkungfu / libnode 原生库
-#     output-dir           : 默认 /tmp/kfc-nuitka
+#     output-dir           : 默认 /tmp/kungfu-nuitka
 #
 # 前置:
 #   - uv 项目 venv 已装 nuitka(4.x) + numpy/pandas/scipy/plotly 数据栈（见 pyproject/uv.lock）
@@ -21,8 +21,8 @@
 #   3. nuitka freeze，并用 --include-data-files 把 buildinfo 放进 dist 根（免 freeze 后手动 cp）
 set -euo pipefail
 
-RELEASE="${1:?用法: freeze-kfc.sh <pykungfu-release-dir> [output-dir]}"
-OUTDIR="${2:-/tmp/kfc-nuitka}"
+RELEASE="${1:?用法: freeze-kungfu.sh <pykungfu-release-dir> [output-dir]}"
+OUTDIR="${2:-/tmp/kungfu-nuitka}"
 
 GYP="$(cd "$(dirname "$0")" && pwd)"
 CORE="$(cd "$GYP/.." && pwd)"
@@ -58,8 +58,8 @@ PYTHONPATH="$RELEASE" uv run --frozen python -m nuitka \
   --assume-yes-for-downloads \
   --include-package-data=certifi \
   --include-data-files="$BUILDINFO=kungfubuildinfo.json" \
-  src/python/kfc.py
+  src/python/kungfu_cli.py
 
-BIN="$OUTDIR/kfc.dist/kungfu.bin"
+BIN="$OUTDIR/kungfu_cli.dist/kungfu.bin"
 echo "[freeze] done: $BIN"
 ls -la "$BIN"

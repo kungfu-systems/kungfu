@@ -31,7 +31,7 @@ export DYLD_FALLBACK_LIBRARY_PATH
 
 cd "$core_dir"
 
-uv run --frozen python .devtools/kfc.py -H "$home" \
+uv run --frozen python .devtools/kungfu_cli.py -H "$home" \
   run -c system -g master -n master -m live \
   >"$home/master.out" 2>&1 &
 master_pid=$!

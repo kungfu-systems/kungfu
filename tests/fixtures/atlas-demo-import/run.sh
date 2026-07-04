@@ -25,7 +25,7 @@ export DYLD_FALLBACK_LIBRARY_PATH
 before="$(find "$fixture_dir/sample-root" -type f -exec cksum {} + | sort)"
 
 cd "$core_dir"
-kfc="uv run --frozen python .devtools/kfc.py -H $home"
+kfc="uv run --frozen python .devtools/kungfu_cli.py -H $home"
 
 $kfc atlas import --repo "$fixture_dir/sample-root"
 second_id="$($kfc atlas import --repo "$fixture_dir/sample-root" --json \

@@ -63,7 +63,7 @@ tgz="$packdir/$tgz"
 [ -f "$tgz" ] || { echo "FAIL: npm pack produced no tgz"; exit 1; }
 
 cd "$core_dir"
-kfc="uv run --frozen python .devtools/kfc.py -H $home"
+kfc="uv run --frozen python .devtools/kungfu_cli.py -H $home"
 
 $kfc kfx install "$tgz"
 $kfc kfx list | grep -q "my-view" || { echo "FAIL: installed kfx not listed"; exit 1; }

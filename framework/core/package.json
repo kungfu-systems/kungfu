@@ -16,7 +16,7 @@
     "access": "public"
   },
   "bin": {
-    "kungfu": "lib/kfc.js"
+    "kungfu": "lib/kungfu-cli.js"
   },
   "config": {
     "build_type": "Release",
@@ -52,9 +52,9 @@
     "format:cpp": "node .gyp/run-format-cpp.js src",
     "format:python": "node .gyp/run-format-python.js . src src/*/*.spec .*/*.py",
     "format:js": "node .gyp/run-format-js.js \"(.gyp|lib)/**.js\"",
-    "kungfu": "node lib/kfc.js",
+    "kungfu": "node lib/kungfu-cli.js",
     "kfs": "node lib/kfs.js",
-    "dev:kungfu": "uv run --frozen python .devtools/kfc.py",
+    "dev:kungfu": "uv run --frozen python .devtools/kungfu_cli.py",
     "dev:kfs": "uv run --frozen python .devtools/kfs.py"
   },
   "dependencies": {

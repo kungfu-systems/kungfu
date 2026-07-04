@@ -67,7 +67,7 @@ KF_EXTENSION_PATH="$core_dir/../../extensions${KF_EXTENSION_PATH:+:$KF_EXTENSION
 export KF_EXTENSION_PATH
 
 cd "$core_dir"
-uv run --frozen python .devtools/kfc.py -H "$home" trace --run-id "$run_id" -- \
+uv run --frozen python .devtools/kungfu_cli.py -H "$home" trace --run-id "$run_id" -- \
   "$agent_py" "$fixture_dir/langchain_agent.py"
 
 uv run --frozen python "$fixture_dir/check_capture.py" "$home/runtime" "$run_id"

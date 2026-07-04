@@ -29,13 +29,13 @@ export DYLD_FALLBACK_LIBRARY_PATH
 cd "$core_dir"
 # the traced run is EXPECTED to fail with exit 1; anything else is a fixture bug
 set +e
-uv run --frozen python .devtools/kfc.py -H "$home" trace --run-id "$run_id" -- \
+uv run --frozen python .devtools/kungfu_cli.py -H "$home" trace --run-id "$run_id" -- \
   python3 "$fixture_dir/demo_agent.py"
 rc=$?
 set -e
 [ "$rc" -eq 1 ] || { echo "FAIL: expected traced run to exit 1, got $rc"; exit 1; }
 
-tree="$(uv run --frozen python .devtools/kfc.py -H "$home" rewind show --run "$run_id")"
+tree="$(uv run --frozen python .devtools/kungfu_cli.py -H "$home" rewind show --run "$run_id")"
 printf '%s\n' "$tree"
 printf '%s' "$tree" | grep -q '✗' || { echo "FAIL: failed node not marked in tree"; exit 1; }
 echo "ok  tree marks the failure"

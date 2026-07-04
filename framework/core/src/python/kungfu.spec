@@ -116,7 +116,7 @@ kungfu_name = "kungfu"
 kfs_name = "kfs"
 
 kungfu_a = Analysis(
-    scripts=["kfc.py"],
+    scripts=["kungfu_cli.py"],
     pathex=extra_python_paths,
     binaries=[],
     datas=extend_datas(

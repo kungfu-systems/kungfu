@@ -26,7 +26,7 @@ export DYLD_FALLBACK_LIBRARY_PATH
 cd "$core_dir"
 # the kfx child is the core's 3.13 interpreter (has flatbuffers); it reaches the
 # kungfu package + binding itself, and the supervisor injects the capture hook.
-uv run --frozen python .devtools/kfc.py -H "$home" trace --run-id "$run_id" -- \
+uv run --frozen python .devtools/kungfu_cli.py -H "$home" trace --run-id "$run_id" -- \
   "$core_dir/.venv/bin/python" "$fixture_dir/kfx_program.py"
 
 uv run --frozen python "$fixture_dir/check_capture.py" "$home/runtime" "$run_id"

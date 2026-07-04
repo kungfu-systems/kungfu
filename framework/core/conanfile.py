@@ -464,7 +464,7 @@ class KungfuCoreConan(ConanFile):
                     f"--distpath={path.join('.', 'dist')}",
                     "--clean",
                     "--noconfirm",
-                    path.join(".", "src", "python", "kfc.spec"),
+                    path.join(".", "src", "python", "kungfu.spec"),
                 ]
             )
         finally:
@@ -484,12 +484,12 @@ class KungfuCoreConan(ConanFile):
             self.__run_pnpm_script(
                 "nuitka",
                 "--output-dir=build",
-                path.join("src", "python", "kfc.py"),
+                path.join("src", "python", "kungfu_cli.py"),
             )
         finally:
             os.chdir(cwd)
 
-        kungfu_dist_dir = path.join(self.build_dir, "kfc.dist")
+        kungfu_dist_dir = path.join(self.build_dir, "kungfu_cli.dist")
         shutil.copytree(build_type, kungfu_dist_dir)
         shutil.rmtree(self.kungfu_dir, ignore_errors=True)
         shutil.move(kungfu_dist_dir, self.kungfu_dir)

@@ -9,9 +9,9 @@
 // 两条 freezer 路径（可人 2026-06-17 决策 Nuitka 2.x，不行回退 PyInstaller；
 // .v4 线 Nuitka 三平台已跑通，见 docs/conan2-migration.md §4c）：
 //
-// - nuitka（默认）：编译成 C，产物 kfc.dist 本就扁平（无 _internal），移到 dist/kungfu 即可，
-//   不需要 promote。kfc.py 内嵌 nuitka-project 选项（--standalone 等）。Nuitka 只跟随
-//   kfc.py 的 import，故 app/electron 侧 node native（drone.node / kungfu_node.node /
+// - nuitka（默认）：编译成 C，产物 kungfu_cli.dist 本就扁平（无 _internal），移到 dist/kungfu 即可，
+//   不需要 promote。kungfu_cli.py 内嵌 nuitka-project 选项（--standalone 等）。Nuitka 只跟随
+//   kungfu_cli.py 的 import，故 app/electron 侧 node native（drone.node / kungfu_node.node /
 //   kungfu_electron.node）需 freeze 后从 build/<type> 补拷（kfc python 进程不 import 它们）。
 // - pyinstaller（fallback）：onedir 把数据/库放进 _internal/，而 app 栈假设 dist/kungfu 扁平，
 //   故 freeze 后 promote（_internal/*→顶层，Unix 符号链/Win 拷贝）。
@@ -32,7 +32,7 @@ function freezer() {
   return shell.getConfigValue('freezer') || 'nuitka';
 }
 
-// kfc.spec datas 引用 build/include 与 build/libs（仅 pyinstaller 路径需要）。
+// kungfu.spec datas 引用 build/include 与 build/libs（仅 pyinstaller 路径需要）。
 // 头文件按 target 归属分布在各库目录下，staging 时合并成单一 include 树。
 function stage() {
   const includeRoots = ['libyijinjing', 'libkungfu', 'libwingchun'].map((lib) =>
@@ -164,11 +164,11 @@ function copyPyBindingWin(bt) {
 
 function freezeNuitka(bt) {
   const rel = path.join(CORE, 'build', bt); // 三 native（pykungfu/libkungfu/libnode）同目录
-  const out = path.join(CORE, 'build', 'kfc-nuitka');
+  const out = path.join(CORE, 'build', 'kungfu-nuitka');
   const distKfc = path.join(CORE, 'dist', 'kungfu');
   const info = ensureBuildInfo(bt);
 
-  console.log(`[freeze] nuitka kfc.py（PYTHONPATH=${path.relative(CORE, rel)}）`);
+  console.log(`[freeze] nuitka kungfu_cli.py（PYTHONPATH=${path.relative(CORE, rel)}）`);
   fs.rmSync(out, { recursive: true, force: true });
   // Linux 强制 clang 后端：gcc 13 编译 nuitka 生成的 scipy 巨型 C 文件会触发 internal
   // compiler error(cfgcleanup.cc try_forward_edges ICE)。Mac 本就默认 clang、不撞，故仅
@@ -183,16 +183,16 @@ function freezeNuitka(bt) {
       '-m',
       'nuitka',
       ...clangOpt,
-      '--output-dir=build/kfc-nuitka',
+      '--output-dir=build/kungfu-nuitka',
       `--include-data-files=${info}=kungfubuildinfo.json`,
-      path.join('src', 'python', 'kfc.py'),
+      path.join('src', 'python', 'kungfu_cli.py'),
     ],
     true,
     { cwd: CORE, env: { ...process.env, PYTHONPATH: rel } },
   );
 
-  // Nuitka standalone 产物 kfc.dist 本就扁平 → 直接移到 dist/kungfu（无 _internal、无 promote）。
-  const kfcDist = path.join(out, 'kfc.dist');
+  // Nuitka standalone 产物 kungfu_cli.dist 本就扁平 → 直接移到 dist/kungfu（无 _internal、无 promote）。
+  const kfcDist = path.join(out, 'kungfu_cli.dist');
   if (!fs.existsSync(kfcDist)) {
     console.error(`[freeze] 错误：未找到 ${kfcDist}（nuitka 产物布局变化？）`);
     process.exit(1);
@@ -201,11 +201,11 @@ function freezeNuitka(bt) {
   fs.mkdirSync(path.dirname(distKfc), { recursive: true });
   fs.renameSync(kfcDist, distKfc);
 
-  // nuitka standalone 入口名为 kfc.bin(Unix)/kungfu.exe(Win)；app 栈按 'kungfu'(Unix)/'kungfu.exe'(Win)
+  // nuitka standalone 入口名为 kungfu_cli.bin(Unix)/kungfu.exe(Win)；app 栈按 'kungfu'(Unix)/'kungfu.exe'(Win)
   // 定位可执行（framework/api pathConfig/processUtils 的 kungfuName）。把 nuitka 入口重命名为
   // kungfu（用 rename 不用符号链，保持 nuitka 产物无符号链、electron-builder 打包干净）。
   if (!isWin) {
-    const binPath = path.join(distKfc, 'kfc.bin');
+    const binPath = path.join(distKfc, 'kungfu_cli.bin');
     const kungfuPath = path.join(distKfc, 'kungfu');
     if (fs.existsSync(binPath)) fs.renameSync(binPath, kungfuPath);
   } else {
@@ -225,7 +225,7 @@ function freezeNuitka(bt) {
 function freezePyinstaller(bt) {
   stage();
   ensureBuildInfo(bt);
-  console.log(`[freeze] pyinstaller kfc.spec (CMAKE_BUILD_TYPE=${bt})`);
+  console.log(`[freeze] pyinstaller kungfu.spec (CMAKE_BUILD_TYPE=${bt})`);
   fs.rmSync(path.join(CORE, 'dist'), { recursive: true, force: true });
   shell.run(
     'uv',
@@ -237,7 +237,7 @@ function freezePyinstaller(bt) {
       '--distpath=dist',
       '--clean',
       '--noconfirm',
-      path.join('src', 'python', 'kfc.spec'),
+      path.join('src', 'python', 'kungfu.spec'),
     ],
     true,
     {
