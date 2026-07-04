@@ -114,7 +114,6 @@ class KungfuCoreConan(ConanFile):
     build_dir = path.join(conanfile_dir, "build")
     dist_dir = path.join(conanfile_dir, "dist")
     kungfu_dir = path.join(dist_dir, "kungfu")
-    kfs_dir = path.join(dist_dir, "kfs")
 
     def config_options(self):
         if _detected_os() != "Windows":
@@ -476,11 +475,6 @@ class KungfuCoreConan(ConanFile):
         finally:
             os.chdir(cwd)
 
-        from wcmatch import glob as wcglob
-
-        for file in wcglob.glob("*kfs*", flags=wcglob.EXTGLOB, root_dir=self.kfs_dir):
-            shutil.copy(path.join(self.kfs_dir, file), self.kungfu_dir)
-        shutil.rmtree(self.kfs_dir)
         self.output.success("PyInstaller done")
 
     def __run_nuitka(self, build_type):

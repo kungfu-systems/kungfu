@@ -17,7 +17,7 @@ from os.path import (
     curdir as cwd,
     join as make_path,
 )
-from PyInstaller.building.api import COLLECT, EXE, PYZ, MERGE
+from PyInstaller.building.api import COLLECT, EXE, PYZ
 from PyInstaller.building.build_main import Analysis
 from PyInstaller.utils.hooks import collect_data_files
 from PyInstaller.utils.hooks import collect_submodules
@@ -113,7 +113,6 @@ def get_runtimehooks():
 block_cipher = None
 
 kungfu_name = "kungfu"
-kfs_name = "kfs"
 
 kungfu_a = Analysis(
     scripts=["kungfu_cli.py"],
@@ -170,10 +169,6 @@ kungfu_a = Analysis(
     runtime_hooks=get_runtimehooks(),
     cipher=block_cipher,
 )
-kfs_a = Analysis(scripts=["kfs.py"], pathex=extra_python_paths, cipher=block_cipher)
-
-MERGE((kungfu_a, kungfu_name, kungfu_name), (kfs_a, kfs_name, kfs_name))
-
 kungfu_pyz = PYZ(kungfu_a.pure, kungfu_a.zipped_data, cipher=block_cipher)
 kungfu_exe = EXE(
     kungfu_pyz,
@@ -186,20 +181,6 @@ kungfu_exe = EXE(
 )
 kungfu_coll = COLLECT(
     kungfu_exe, kungfu_a.binaries, kungfu_a.zipfiles, kungfu_a.datas, name=kungfu_name, strip=False
-)
-
-kfs_pyz = PYZ(kfs_a.pure, kfs_a.zipped_data, cipher=block_cipher)
-kfs_exe = EXE(
-    kfs_pyz,
-    kfs_a.scripts,
-    name=kfs_name,
-    console=True,
-    debug=False,
-    exclude_binaries=True,
-    strip=False,
-)
-kfs_coll = COLLECT(
-    kfs_exe, kfs_a.binaries, kfs_a.zipfiles, kfs_a.datas, name=kfs_name, strip=False
 )
 
 ###############################################################################

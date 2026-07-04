@@ -12,5 +12,4 @@ function resolve(name) {
 
 module.exports = {
   kfc: resolve('kungfu'),
-  kfs: resolve('kfs'),
 };

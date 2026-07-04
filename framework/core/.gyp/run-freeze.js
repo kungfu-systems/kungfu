@@ -298,27 +298,11 @@ function freezePyinstaller(bt) {
       },
     },
   );
-  mergeKfs();
   promote();
   if (isWin) verifyWindowsSymbols(path.join(CORE, 'dist', 'kungfu'));
   console.log(
     '[freeze] ✅ dist/kungfu 就绪（pyinstaller 扁平视图 + _internal 真身）',
   );
-}
-
-// MERGE 模式下 kfs 与 kfc 共享 _internal，dist/kfs 仅余 kfs 入口，拷进 kfc 后删除。
-function mergeKfs() {
-  const distKfc = path.join(CORE, 'dist', 'kungfu');
-  const distKfs = path.join(CORE, 'dist', 'kfs');
-  if (!fs.existsSync(distKfs)) return;
-  console.log('[freeze] 合并 kfs → kfc');
-  for (const f of fs.readdirSync(distKfs)) {
-    if (!f.includes('kfs')) continue;
-    const from = path.join(distKfs, f);
-    if (!fs.statSync(from).isFile()) continue;
-    fs.copyFileSync(from, path.join(distKfc, f));
-  }
-  fs.rmSync(distKfs, { recursive: true, force: true });
 }
 
 // _internal/* 在 dist/kungfu 顶层补一层视图，满足 app 栈的扁平布局假设（仅 pyinstaller 路径）。
@@ -337,7 +321,7 @@ function promote() {
   let n = 0;
   for (const entry of fs.readdirSync(internal)) {
     const top = path.join(distKfc, entry);
-    if (existsLstat(top)) continue; // 跳过 pyinstaller 已放在顶层的项（kfc/kfs exe 等）
+    if (existsLstat(top)) continue; // 跳过 pyinstaller 已放在顶层的项（kfc exe 等）
     if (isWin) {
       fs.cpSync(path.join(internal, entry), top, { recursive: true });
     } else {
