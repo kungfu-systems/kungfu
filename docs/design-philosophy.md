@@ -20,7 +20,7 @@ principles**. This document states them and shows how the architecture falls out
 of them, so you can understand *why* kungfu is built the way it is, not just
 *what* it contains.
 
-For the vocabulary used below (`kungfu`, `kfs`, `libkungfu`, `longfist`, journal,
+For the vocabulary used below (`kungfu`, `sdk`, `libkungfu`, `longfist`, journal,
 zero-copy, …), see [`concepts.md`](concepts.md); for how the pieces are layered,
 see [`architecture.md`](architecture.md); for specific decisions and their
 rationale, see the [ADRs](../framework/core/docs/adr).
@@ -67,7 +67,7 @@ The architecture below is how kungfu makes that test un-skippable.
 ### The build runs on the product
 
 Kungfu's own build is a closed loop that runs on the very capabilities kungfu
-offers: the application SDK (`kfs`) runs on the `kungfu` runtime; assembling the
+offers: the application SDK (`kungfu sdk`) runs on the `kungfu` runtime; assembling the
 distribution exercises the SDK end to end. If a core capability regresses,
 **building kungfu itself fails first** — so the maker cannot ship a broken core
 without their own work stopping. This is the load-bearing self-bootstrap, set out

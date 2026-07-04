@@ -9,7 +9,7 @@
   the property that "the build dogfoods the SDK" (`docs/architecture.md`) was a
   single instance of.
 - Subsystem: whole product — runtime (`framework/core`/`kungfu`), capability SDK
-  (`framework/api`), application SDK (`developer/sdk`/`kfs`), reference surfaces
+  (`framework/api`), application SDK (`developer/sdk`/`kungfu sdk`), reference surfaces
   (`framework/gui`, `framework/tui`), distribution (`artifact`).
 - Related: the dynamic counterpart to the version mechanism's
   weak-centralization (`docs/version-release-design.md` — "un-cheatable
@@ -25,7 +25,7 @@ inseparable clauses:
 
 1. **Structural clause — the adoption path is the validation path.** The path a
    newcomer walks to evaluate the product (install `artifact` → run the GUI/TUI
-   → build a `kfx` → package with `kfs`) is, layer for layer, the same path the
+   → build a `kfx` → package with `kungfu sdk`) is, layer for layer, the same path the
    project walks to validate itself. There is no separate demo, test rig, and
    product: one artifact is all three. Every outer ring must be a **load-bearing
    consumer** of the inner ring, never a wrapper around it.
@@ -45,7 +45,7 @@ self-sustaining**.
 ## The engine (three steps, none skippable)
 
 1. **Load-bearing coupling (the precondition).** Each ring genuinely consumes
-   the ring beneath it — `kfs` runs *on* `kungfu`; the TUI starts *through* `kungfu`'s
+   the ring beneath it — `kungfu sdk` runs *on* `kungfu`; the TUI starts *through* `kungfu`'s
    Node runtime. This step is the switch: degrade any ring into a wrapper / mock
    / optional side path and steps 2–3 break at once.
 
@@ -113,12 +113,12 @@ consume (hence validate) the ring beneath:
   about it. They load the binding in-process to preserve zero-copy, and the TUI
   starts through `kungfu`'s Node runtime — repeatedly re-exercising `kungfu` on every
   launch.
-- **Application SDK (`kfs`)** — supports building/packaging extensions, yet `kfs`
+- **Application SDK (`kungfu sdk`)** — supports building/packaging extensions, yet `kungfu sdk`
   itself launches on `kungfu` as its runtime, so a user develops a `kfx` with no
-  separately installed Node or Python. *Bootstrap:* `kfs` is a consumer of `kungfu`.
+  separately installed Node or Python. *Bootstrap:* `kungfu sdk` is a consumer of `kungfu`.
 - **`artifact`** — bundles `kungfu`, the reference surfaces, and `kfx`, and is
-  assembled *using* `kfs`. *Bootstrap:* assembling the installer is the real test
-  that `kfs` can package a complete application.
+  assembled *using* `kungfu sdk`. *Bootstrap:* assembling the installer is the real test
+  that `kungfu sdk` can package a complete application.
 
 Three instances are easy to miss and worth naming explicitly, because they are
 the ones that close the loop:

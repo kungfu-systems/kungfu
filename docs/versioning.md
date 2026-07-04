@@ -31,6 +31,7 @@ registered surface was touched.
 
 | Date | Action | Line | Faces | Class | Rationale | PR |
 |---|---|---|---|---|---|---|
+| 2026-07-05 | update | — | kungfu-cli | additive | Fold the application-assembly SDK into the CLI as the `kungfu sdk` subcommand (was the standalone `kfs` command); extension/example builds now run `kungfu sdk kfx build`. Pre-release, no line open; `kfs` was never a registered surface | — |
 | 2026-07-04 | update | — | rewind-event-schema | additive | Append `ApprovalDecision` (msg_type 30009): human approve/deny/interrupt/resume decision recorded as a run fact, `SCHEMA_VERSION` 2→3. Tail-only, existing 30001-30008 untouched |
 | 2026-07-04 | update | — | rewind-event-schema | additive | Append `CostSnapshot` (msg_type 30008): normalized token/cost usage with attribution + confidence, `SCHEMA_VERSION` 1→2. Tail-only table, existing 30001-30007 untouched; old runs still decode through their own pinned `.bfbs` | — |
 | 2026-07-02 | register | — | rewind-event-schema | additive | New face: Rewind capture event model as open-layer types (30001-30099) with per-run `.bfbs` manifest bindings; capture skeleton rides the frame header, semantics ride the tables. Nothing existing touched | — |

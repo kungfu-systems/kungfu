@@ -3,7 +3,7 @@
 How the Kungfu repository is layered, and the principle that shapes it. For the
 two first principles the whole design follows from, see
 [`design-philosophy.md`](design-philosophy.md); for the vocabulary
-(`kungfu`/`kfx`/`kfs`, `libkungfu`, `longfist`, `yijinjing`, …) see
+(`kungfu`/`kfx`/`sdk`, `libkungfu`, `longfist`, `yijinjing`, …) see
 [`concepts.md`](concepts.md); for the data-plane concepts
 (journal, zero-copy, replay) see the [README](../README.md); for build and
 contribution see [CONTRIBUTING](../CONTRIBUTING.md); for specific decisions see
@@ -91,7 +91,7 @@ surfaces you build *on*, not tools.
 
 Scaffolding that turns the core capabilities into development tooling: building
 `kfx` extensions, assembling applications, and producing packaged artifacts
-(the `kfs` command).
+(the `kungfu sdk` subcommand).
 
 ### Reference surfaces
 
@@ -176,7 +176,7 @@ framework/    platform + contracts you build ON (imported as a dependency)
   gui         reference GUI (Electron + React)
   tui         reference TUI
 developer/    build tooling you build WITH (invoked, a devDependency)
-  sdk         application / extension SDK — the kfs CLI
+  sdk         application / extension SDK — the `kungfu sdk` subcommand
 extensions/   kfx plugins (reference extensions)
 examples/     samples and build-coverage probes
 artifact      dogfood installer (assembles the above)
@@ -193,14 +193,13 @@ others invoke):
   contract/library that others build on and take as a **dependency** (`core`,
   `api`, `kfx`, `spec`, plus the reference `gui` / `tui`).
 - **`developer/`** — a build-time **tool** you build with: invoked (typically a
-  CLI) and taken as a **devDependency**, never imported at runtime (`sdk` /
-  `kfs`).
+  CLI) and taken as a **devDependency**, never imported at runtime (`sdk`).
 - **`extensions/`** — a kfx plugin built on the extension contract.
 - **`examples/`** — a sample or a build-coverage probe: it demonstrates or
   exercises the platform but is not shipped as a product.
 - **`artifact`** — the assembly that bundles the platform into an installer.
 
-By this rule a format spec is a contract, so it lives in `framework`; the `kfs`
+By this rule a format spec is a contract, so it lives in `framework`; the `sdk`
 build CLI is a tool, so it lives in `developer` — even when that leaves a single
 package there.
 

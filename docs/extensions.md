@@ -31,7 +31,7 @@ Inside the repository (the SDK is pre-release; see
 [`known-limits.md`](known-limits.md) on release infrastructure):
 
 ```sh
-node developer/sdk/src/kfs.js create extension my-view --workspace
+kungfu sdk create extension my-view --workspace
 cd my-view
 pnpm install                 # once published: plain npm/yarn also work
 pnpm build                   # kungfu sdk kfx build → dist/view/index.js
@@ -85,7 +85,7 @@ loader ignores what it does not know, and nothing else will read them.
 `kungfu sdk kfx build` bundles `src/view/index.tsx` (or `.ts`) to a CommonJS
 bundle at `dist/view/index.js`, leaving external (source of truth:
 `KFX_EXTERNALS` in
-[`../developer/sdk/src/kfs.js`](../developer/sdk/src/kfs.js)):
+[`../developer/sdk/src/sdk.js`](../developer/sdk/src/sdk.js)):
 
 - `react`, `react/jsx-runtime`, `react-dom`
 - `@kungfu-tech/api`, `@kungfu-tech/api/capability`

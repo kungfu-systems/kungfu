@@ -38,7 +38,7 @@ for how the layers fit together; the main areas:
 - `framework/api` — the capability SDK (typed access to journal / state / replay).
 - `framework/gui`, `framework/tui` — the two reference UIs: a desktop GUI
   (Electron + React) and a terminal TUI.
-- `developer/sdk` — the application / extension SDK (`kfs`); `developer/toolchain`
+- `developer/sdk` — the application / extension SDK (`kungfu sdk`); `developer/toolchain`
   — shared build dependencies.
 - `extensions/*` — kfx extensions; `examples/*` — samples.
 - `artifact` — the dogfood installer bundling the runtime, reference UIs and SDK.

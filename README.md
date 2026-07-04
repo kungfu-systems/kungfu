@@ -95,7 +95,7 @@ right document, and is readable by both people and agents.
 
 - [`docs/MAP.md`](docs/MAP.md) — the question-indexed map of all documentation.
 - [`docs/concepts.md`](docs/concepts.md) — the vocabulary in one place
-  (`kungfu`/`kfx`/`kfs`, `libkungfu`, `longfist`, `yijinjing`, journal, …).
+  (`kungfu`/`kfx`/`sdk`, `libkungfu`, `longfist`, `yijinjing`, journal, …).
 - [`docs/design-philosophy.md`](docs/design-philosophy.md) — the two first
   principles the whole design follows from, and how the architecture falls out
   of them.

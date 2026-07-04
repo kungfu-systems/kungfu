@@ -29,7 +29,7 @@ under those pinned tools.
 | Python binding (`py_kungfu`) | `framework/core/src/bindings/python` | pybind11, built under the pinned CPython |
 | Node addon (`kungfu_node.node`) | `framework/core/src/bindings/node` | N-API via the `.gyp` build |
 | `kungfu` (the frozen runtime) | the above + embedded Python/Node runtimes | `./kungfu-code freeze` |
-| app / artifact bundles | the SDK assembling the above | `./kungfu-code build:app`, the `kfs` packaging |
+| app / artifact bundles | the SDK assembling the above | `./kungfu-code build:app`, the `kungfu sdk` packaging |
 
 ## Where the prebuilt binaries come from
 

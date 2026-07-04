@@ -10,7 +10,7 @@ principles behind them see [`design-philosophy.md`](design-philosophy.md).
 | Name | What it is |
 |---|---|
 | `kfx` | A **kungfu extension** — a plugin built on the extension contract (the units under `extensions/`). |
-| `kfs` | The **application/extension SDK command**: scaffolds and builds `kfx` extensions, assembles applications, and produces packaged artifacts. |
+| `kungfu sdk` | The **application/extension SDK command**: scaffolds and builds `kfx` extensions, assembles applications, and produces packaged artifacts. |
 | `kungfu` | The **kungfu runtime binary and end-user CLI command** — the canonical way to invoke kungfu from the command line. It embeds a Python and a Node runtime and exposes the journal/state APIs; it is the runtime everything else runs on. The richer end-user shell is planned to grow under this name. |
 | `./kungfu-code` | The **development/build orchestrator** used while working on the repo (pins Node, Python, and the package manager so a fresh clone builds with one command). It is build-time only, not shipped. |
 
@@ -41,7 +41,7 @@ These appear in the control-axis ADRs (0003–0005) and in the code.
 
 - **Capability SDK** — `framework/api`: typed, framework-neutral access to
   journal / state / replay.
-- **Application SDK** — `developer/sdk` (the `kfs` command).
+- **Application SDK** — `developer/sdk` (the `kungfu sdk` subcommand).
 - **Reference surfaces** — `framework/gui` (Electron + React) and `framework/tui`
   (terminal): minimal demonstrators over the capability SDK, not the product.
 - **Distribution** — `artifact`: the installer that bundles the runtime, both
