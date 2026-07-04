@@ -153,7 +153,7 @@ class KungfuCoreConan(ConanFile):
         else:
             src = self.conanfile_dir
             # 头文件按 target 归属分布在各库目录下，打包时合并成单一 include 树
-            for lib in ("libyijinjing", "libkungfu", "libwingchun"):
+            for lib in ("libyijinjing", "libkungfu"):
                 copy(
                     self,
                     "*",

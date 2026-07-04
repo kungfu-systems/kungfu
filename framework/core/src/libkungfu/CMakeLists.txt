@@ -2,9 +2,8 @@ project(${LIBKUNGFU_NAME})
 
 enable_windows_export_all_symbols()
 
-# trading semantics live in src/libwingchun (dormant, not compiled); this
-# directory holds only the yijinjing runtime layer, so the source GLOB needs
-# no exclusion list beyond the cache/optim split
+# this directory holds only the yijinjing runtime layer, so the source GLOB
+# needs no exclusion list beyond the cache/optim split
 file(GLOB_RECURSE KUNGFU_OPTIM_SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 file(GLOB_RECURSE KUNGFU_CACHE_SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/yijinjing/cache/*.cpp)
 list(REMOVE_ITEM KUNGFU_OPTIM_SOURCE_FILES ${KUNGFU_CACHE_SOURCE_FILES})

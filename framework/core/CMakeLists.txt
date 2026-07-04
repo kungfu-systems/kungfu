@@ -59,7 +59,7 @@ option(KUNGFU_WITH_SLICES "build the capability slices (minimal standalone proof
 ##########################################################################
 
 # header ownership is target-scoped: each library carries its own include/
-# (src/libyijinjing, src/libkungfu, src/libwingchun) and propagates it via
+# (src/libyijinjing, src/libkungfu) and propagates it via
 # target_include_directories; vendored .deps headers attach to the targets
 # that actually consume them (hana via yijinjing, sqlite_orm via libkungfu)
 
@@ -128,9 +128,6 @@ endif()
 
 # journal core static library; libkungfu links it, minimal tools can link it alone
 add_subdirectory(src/libyijinjing)
-
-# dormant trading-semantics module: headers only, sources not compiled
-add_subdirectory(src/libwingchun)
 
 if (NOT DEFINED ENV{KUNGFU_BUILD_SKIP_LIBKUNGFU} OR NOT $ENV{KUNGFU_BUILD_SKIP_LIBKUNGFU})
   message(STATUS "Enabled libkungfu")

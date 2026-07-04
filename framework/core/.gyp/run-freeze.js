@@ -36,7 +36,7 @@ function freezer() {
 // kungfu.spec datas 引用 build/include 与 build/libs（仅 pyinstaller 路径需要）。
 // 头文件按 target 归属分布在各库目录下，staging 时合并成单一 include 树。
 function stage() {
-  const includeRoots = ['libyijinjing', 'libkungfu', 'libwingchun'].map((lib) =>
+  const includeRoots = ['libyijinjing', 'libkungfu'].map((lib) =>
     path.join(CORE, 'src', lib, 'include'),
   );
   const buildInc = path.join(CORE, 'build', 'include');
