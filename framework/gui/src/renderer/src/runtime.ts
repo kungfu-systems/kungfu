@@ -39,9 +39,21 @@ const TMUX_SOCKET = 'kungfu-managed';
 function resolveTmuxBinding(win: Window): TmuxBinding | null {
   try {
     const fs = win.require('node:fs');
-    const { execFile } = win.require('node:child_process') as typeof import(
-      'node:child_process',
-    );
+    // Minimal local type for execFile rather than `typeof import('…')`, whose
+    // formatted multiline form is fragile; we only need this one call shape.
+    type ExecFile = (
+      file: string,
+      args: string[],
+      options: { encoding: 'utf8' },
+      cb: (
+        err: (Error & { code?: number }) | null,
+        stdout: string,
+        stderr: string,
+      ) => void,
+    ) => void;
+    const { execFile } = win.require('node:child_process') as {
+      execFile: ExecFile;
+    };
     const socket = win.process.env.KF_TMUX_SOCKET || TMUX_SOCKET;
     const candidates = [
       win.process.env.KF_TMUX_BIN,
