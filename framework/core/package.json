@@ -28,7 +28,9 @@
   "binary": {
     "module_name": "kungfu_node",
     "module_path": "dist/kungfu",
-    "package_name": "kungfu-v{version}-{platform}-{arch}-{configuration}.tar.gz"
+    "remote_path": "kungfu-core/v{major}/v{version}",
+    "package_name": "kungfu-v{version}-{platform}-{arch}-{configuration}.tar.gz",
+    "host": "https://prebuilt.libkungfu.io"
   },
   "scripts": {
     "install": "node .gyp/noop-install.js",

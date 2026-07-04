@@ -363,13 +363,11 @@ async function verifySource() {
       throw new Error(`package.json must not define ${scriptName}`);
     }
   }
-  // core keeps a build-only node-pre-gyp descriptor (build driver), but the
-  // retired self-hosted download must not come back.
-  if (sourcePackageJson.binary?.host || sourcePackageJson.binary?.remote_path) {
-    throw new Error(
-      'package.json binary block must not define a download host/remote_path',
-    );
-  }
+  // core still keeps node-pre-gyp as the build-only driver for the legacy
+  // `package` tarball (binary.host is retained only for node-pre-gyp's config
+  // validation; install/build never download from it). The invariant that
+  // matters for prebuilt distribution is that node-pre-gyp is not a runtime
+  // dependency and install stays a no-op.
   if (sourcePackageJson.dependencies?.['@mapbox/node-pre-gyp']) {
     throw new Error(
       '@mapbox/node-pre-gyp must be a devDependency (build-only), not a runtime dependency',

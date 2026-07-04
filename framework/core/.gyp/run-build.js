@@ -19,9 +19,36 @@ function cpVsDependencies() {
   fs.cpSync(vs_dir, kfc_dist, { recursive: true });
 }
 
+// Stage the freshly built native artifacts into dist/kungfu, the binding
+// directory the runtime resolver (lib/kungfu.js) and the platform-package
+// packer (.gyp/core-platform-package.js) consume. This replaces node-pre-gyp's
+// implicit module_path staging now that install/build no longer drive it: the
+// native addons and their sibling shared libraries move together so the
+// addon's @loader_path lookup resolves. libnode is not staged here — it is
+// colocated at install time from @kungfu-tech/libnode (see design decision (1)).
+function stage() {
+  const buildType = shell.getConfigValue('build_type') || 'Release';
+  const buildDir = path.join('build', buildType);
+  const distKungfu = path.join('dist', 'kungfu');
+  fs.rmSync(distKungfu, { recursive: true, force: true });
+  fs.mkdirSync(distKungfu, { recursive: true });
+  for (const pattern of ['*.node', '*.dylib', '*.so', '*.dll']) {
+    for (const src of glob.sync(path.join(buildDir, pattern))) {
+      fs.copyFileSync(src, path.join(distKungfu, path.basename(src)));
+    }
+  }
+}
+
+// Build the native addon directly through the real builder (run-conan.js →
+// uv/conan2/cmake), not through node-pre-gyp. node-pre-gyp only circled back to
+// run-conan.js; calling it directly removes the host-config detour and lets a
+// clean `install` stay a no-op while `build` owns compilation + staging.
 function build() {
-  shell.showAutoConfig();
-  callPrebuilt(['configure', 'build']).onSuccess(cpVsDependencies);
+  const runConan = path.join(__dirname, 'run-conan.js');
+  shell.run(process.execPath, [runConan, 'install'], true);
+  shell.run(process.execPath, [runConan, 'build'], true);
+  stage();
+  cpVsDependencies();
 }
 
 function clean() {
