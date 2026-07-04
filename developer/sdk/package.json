@@ -25,12 +25,7 @@
   ],
   "scripts": {
     "kfs": "node src/kfs.js",
-    "build": "node --check src/kfs.js",
-    "lint": "biome check src",
-    "format": "biome format --write src"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^1.9.4"
+    "build": "node --check src/kfs.js"
   },
   "dependencies": {
     "esbuild": "^0.28.1"

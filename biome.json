@@ -13,8 +13,7 @@
       "**/build/**",
       "**/.deps/**",
       "**/generated/**",
-      "**/fixtures/**",
-      "framework/core/**"
+      "**/fixtures/**"
     ]
   },
   "formatter": {

@@ -22,8 +22,6 @@
     "start": "pnpm run ensure-electron && electron-vite preview",
     "pack": "pnpm --filter @kungfu-tech/tui run bundle && pnpm run ensure-electron && electron-vite build && electron-builder --dir --config.electronDist=$(node -p \"require('path').dirname(require.resolve('electron'))+'/dist'\")",
     "dist": "pnpm --filter @kungfu-tech/tui run bundle && pnpm run ensure-electron && electron-vite build && electron-builder --config.electronDist=$(node -p \"require('path').dirname(require.resolve('electron'))+'/dist'\")",
-    "lint": "biome check src",
-    "format": "biome format --write src",
     "clean": "rimraf out dist node_modules/.vite"
   },
   "dependencies": {
@@ -34,7 +32,6 @@
     "@kungfu-tech/kfx": "workspace:*"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",

@@ -51,7 +51,6 @@
     "format": "node .gyp/run-format-all.js",
     "format:cpp": "node .gyp/run-format-cpp.js src",
     "format:python": "node .gyp/run-format-python.js . src src/*/*.spec .*/*.py",
-    "format:js": "node .gyp/run-format-js.js \"(.gyp|lib)/**.js\"",
     "kungfu": "node lib/kungfu-cli.js",
     "kfs": "node lib/kfs.js",
     "dev:kungfu": "uv run --frozen python .devtools/kungfu_cli.py",

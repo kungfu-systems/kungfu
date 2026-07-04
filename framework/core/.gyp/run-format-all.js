@@ -9,7 +9,8 @@ function main() {
   try {
     tryFormat('cpp');
     tryFormat('python');
-    tryFormat('js');
+    // JS/TS across the whole tree (including core's .gyp/lib) is handled by the
+    // root biome config via `pnpm run format:web`; core no longer runs prettier.
   } catch (err) {
     console.error(err);
   }

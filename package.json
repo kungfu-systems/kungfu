@@ -23,6 +23,7 @@
     "foreach:extensions": "wsrun --bin pnpm --serial --package '@kungfu-tech/kfx-*' --exclude-missing --fast-exit",
     "format": "pnpm run format:web && wsrun --bin pnpm --serial --exclude-missing format",
     "format:web": "biome format --write .",
+    "lint": "biome check .",
     "prebuild": "node .prebuild.js",
     "build": "pnpm run foreach build",
     "build:extensions": "pnpm run foreach:extensions build",
@@ -51,5 +52,7 @@
     "lerna": "^9.0.0",
     "wsrun": "^5.2.0"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4"
+  }
 }

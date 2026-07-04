@@ -2,7 +2,7 @@
 # kungfu pre-commit hook — format staged files in place, then re-stage them.
 #
 # Scope: only staged (Added/Copied/Modified) files, dispatched by extension to
-# the matching formatter (clang-format / ruff / biome / prettier). Generated
+# the matching formatter (clang-format / ruff / biome). Generated
 # outputs (flatbuffers tables, files carrying a "do not modify" header) are
 # skipped so regeneration stays authoritative.
 #
@@ -33,22 +33,19 @@ is_generated() {
   return 1
 }
 
-cpp='' py='' web='' corejs=''
+cpp='' py='' web=''
 for f in $staged; do
   [ -f "$f" ] || continue          # skip deletions / renamed-away paths
   is_generated "$f" && continue
-  # Repo-wide dispatch: C++ -> clang-format, Python -> ruff, framework/core's own
-  # build scripts -> prettier, everything else JS/TS -> biome (root biome.json,
-  # which ignores generated/, fixtures/, framework/core/ and JSON).
+  # Repo-wide dispatch: C++ -> clang-format, Python -> ruff, all JS/TS -> biome
+  # (single root biome.json, which ignores generated/, fixtures/ and JSON).
   case "$f" in
     *.h|*.hpp|*.hxx|*.cpp|*.c|*.cc|*.cxx)
       cpp="$cpp $f" ;;
     *.py)
       py="$py $f" ;;
-    framework/core/*.js|framework/core/*.cjs|framework/core/*.mjs)
-      corejs="$corejs $f" ;;                 # core build scripts use prettier
     *.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs)
-      web="$web $f" ;;                        # all other JS/TS -> biome (root config)
+      web="$web $f" ;;
   esac
 done
 
@@ -85,8 +82,8 @@ if [ -n "$py" ]; then
   fi
 fi
 
-# TS/JS — biome finds each package's biome.json upward. Pin the version to match
-# the formatting baseline so results do not drift.
+# JS/TS — biome uses the single root biome.json. Pin the version to match the
+# formatting baseline so results do not drift.
 if [ -n "$web" ]; then
   if command -v biome >/dev/null 2>&1; then
     # shellcheck disable=SC2086
@@ -96,20 +93,6 @@ if [ -n "$web" ]; then
     pnpm dlx @biomejs/biome@1.9.4 format --write $web && changed="$changed $web"
   else
     warn "biome/pnpm not found; skipped TS/JS:$web"
-  fi
-fi
-
-# Core build scripts — prettier with framework/core/.prettierrc.js.
-if [ -n "$corejs" ]; then
-  cfg="framework/core/.prettierrc.js"
-  if command -v prettier >/dev/null 2>&1; then
-    # shellcheck disable=SC2086
-    prettier -w --config "$cfg" $corejs && changed="$changed $corejs"
-  elif command -v pnpm >/dev/null 2>&1; then
-    # shellcheck disable=SC2086
-    pnpm dlx prettier@3 -w --config "$cfg" $corejs && changed="$changed $corejs"
-  else
-    warn "prettier/pnpm not found; skipped core scripts:$corejs"
   fi
 fi
 

@@ -18,8 +18,6 @@
   "scripts": {
     "dev": "tsx src/main.tsx",
     "build": "tsc",
-    "lint": "biome check src",
-    "format": "biome format --write src",
     "clean": "rimraf dist",
     "bundle": "node build-bundle.mjs"
   },
@@ -30,7 +28,6 @@
     "react": "^18.3.1"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.3",
     "esbuild": "^0.28.1",
