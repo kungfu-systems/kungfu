@@ -7,8 +7,16 @@
 import { execSync, spawn } from 'node:child_process';
 
 import { createCapabilityHost } from '../../../framework/api/src/capability/sandbox.ts';
-import { osSandboxCommand } from '../../../framework/api/src/capability/sandbox-launcher.ts';
+import {
+  isOsSandboxSupported,
+  osSandboxCommand,
+} from '../../../framework/api/src/capability/sandbox-launcher.ts';
 import { serveSubprocessCapabilities } from '../../../framework/api/src/capability/subprocess.ts';
+
+if (!isOsSandboxSupported()) {
+  console.error('skipped: no os sandbox on this platform (macOS Seatbelt / Linux bwrap)');
+  process.exit(0);
+}
 
 const python = execSync('command -v python3').toString().trim();
 const childScript = new URL('./child.py', import.meta.url).pathname;

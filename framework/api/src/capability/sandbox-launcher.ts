@@ -6,9 +6,13 @@
 // risk, not an absolute guarantee.
 //
 // macOS confines the child with a Seatbelt profile via `sandbox-exec`. Linux
-// (Landlock + seccomp-BPF + user/pid/net namespaces) is not implemented yet and
-// is refused rather than run unconfined: a sandbox that silently does nothing is
-// worse than an explicit, visible gap.
+// confines it with bubblewrap (`bwrap`): a read-only root, unshared network, and
+// its own user/pid/mount namespaces — the practical, unprivileged sandbox on
+// current distributions, where raw namespaces are blocked (e.g. Ubuntu's
+// AppArmor unprivileged-userns restriction) but bwrap is permitted. If bwrap is
+// absent the launch is refused rather than run unconfined: a sandbox that
+// silently does nothing is worse than an explicit, visible gap.
+import { existsSync } from 'node:fs';
 import { platform } from 'node:os';
 
 // Deny by default; allow exec/fork and reads (the interpreter needs its runtime)
@@ -29,10 +33,39 @@ const MACOS_SEATBELT_PROFILE = [
   '(deny network*)',
 ].join('');
 
+// bubblewrap: a read-only view of the whole filesystem (reads work, every write
+// is denied), no network (--unshare-all includes the network namespace), its own
+// user/pid/mount namespaces, and death with the parent. Inherited stdio is
+// untouched, so the capability relay still flows.
+const LINUX_BWRAP_ARGS = [
+  '--unshare-all',
+  '--ro-bind',
+  '/',
+  '/',
+  '--proc',
+  '/proc',
+  '--dev',
+  '/dev',
+  '--die-with-parent',
+];
+
+const BWRAP_PATHS = ['/usr/bin/bwrap', '/bin/bwrap', '/usr/local/bin/bwrap'];
+
+function hasBwrap(): boolean {
+  return BWRAP_PATHS.some((p) => existsSync(p));
+}
+
 export type SandboxedCommand = { command: string; args: string[] };
 
 export function isOsSandboxSupported(): boolean {
-  return platform() === 'darwin';
+  switch (platform()) {
+    case 'darwin':
+      return true;
+    case 'linux':
+      return hasBwrap();
+    default:
+      return false;
+  }
 }
 
 // Wrap a command so it runs inside the OS default-deny sandbox. Throws on a
@@ -49,10 +82,16 @@ export function osSandboxCommand(
         args: ['-p', MACOS_SEATBELT_PROFILE, command, ...args],
       };
     case 'linux':
-      throw new Error(
-        'os sandbox not implemented on linux yet (Landlock + seccomp + namespaces); ' +
-          'refusing to launch an untrusted guest unconfined',
-      );
+      if (!hasBwrap()) {
+        throw new Error(
+          'os sandbox on linux requires bubblewrap (bwrap); ' +
+            'refusing to launch an untrusted guest unconfined',
+        );
+      }
+      return {
+        command: 'bwrap',
+        args: [...LINUX_BWRAP_ARGS, command, ...args],
+      };
     default:
       throw new Error(
         `os sandbox not available on ${platform()}; ` +
