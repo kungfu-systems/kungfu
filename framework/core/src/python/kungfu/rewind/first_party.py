@@ -72,3 +72,9 @@ def first_party_keys():
     if keys is not None:
         return keys
     return _scan_keys(_source_extensions_root())
+
+
+def is_first_party(key):
+    """Whether an extension key is in the frozen first-party set (ADR-0013).
+    Trust follows from the source, not from where the package is installed."""
+    return key is not None and key in first_party_keys()

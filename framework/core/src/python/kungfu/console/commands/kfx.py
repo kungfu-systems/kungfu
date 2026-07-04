@@ -17,6 +17,7 @@ import sys
 import tarfile
 
 from kungfu.console.commands import kfc, PrioritizedCommandGroup
+from kungfu.rewind import first_party
 
 kfx_command_context = kfc.pass_context()
 
@@ -55,6 +56,36 @@ def _kind(manifest):
         return "suite"
     facets = sorted((config.get("config") or {}).keys())
     return "+".join(facets) if facets else "unknown"
+
+
+def _trusted(manifest):
+    return first_party.is_first_party((manifest.get("kungfuConfig") or {}).get("key"))
+
+
+def _trust_notice(manifest):
+    """The install-time trust disclosure (ADR-0013): what tier each declared facet
+    runs at, decided by whether the package is in the frozen first-party set —
+    by verifiable source, never by the install path. Returns display lines."""
+    config = (manifest.get("kungfuConfig") or {}).get("config") or {}
+    trusted = _trusted(manifest)
+    origin = "first-party (trusted)" if trusted else "third-party (untrusted)"
+    lines = [f"[kfx] trust: {origin} — granted by source, not by install path"]
+    if "view" in config:
+        tier = (
+            "node-integrated (shares the shell, full access)"
+            if trusted
+            else "sandboxed-ipc (isolated renderer, only its declared capabilities)"
+        )
+        lines.append(f"[kfx]   view runs {tier}")
+    if "adapter" in config and not trusted:
+        lines.append(
+            "[kfx]   adapter will be REFUSED at trace time: an adapter runs "
+            "in-process in the traced program and cannot be sandboxed, so only a "
+            "source-verified first-party adapter may inject"
+        )
+    elif "adapter" in config:
+        lines.append("[kfx]   adapter may inject into traced runs (in-process)")
+    return lines
 
 
 @kfx.command(help="install a kfx package (npm pack tgz, or a package directory)")
@@ -107,6 +138,8 @@ def install(ctx, source, force):
         f"[kfx] installed {manifest.get('name', key)}@{manifest.get('version', '?')} "
         f"({_kind(manifest)}) -> {dest}"
     )
+    for line in _trust_notice(manifest):
+        click.echo(line)
 
 
 @kfx.command(name="list", help="list kfx installed for this home")
@@ -133,6 +166,7 @@ def list_installed(ctx, as_json):
                     "package": manifest.get("name"),
                     "version": manifest.get("version"),
                     "kind": _kind(manifest),
+                    "trusted": _trusted(manifest),
                     "path": package_dir,
                 }
             )
@@ -146,8 +180,10 @@ def list_installed(ctx, as_json):
         if "error" in row:
             click.echo(f"{row['key']}  !{row['error']}")
         else:
+            trust = "first-party" if row["trusted"] else "third-party"
             click.echo(
-                f"{row['key']}  {row['package']}@{row['version']}  ({row['kind']})"
+                f"{row['key']}  {row['package']}@{row['version']}  "
+                f"({row['kind']}, {trust})"
             )
 
 
