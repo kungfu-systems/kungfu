@@ -1,0 +1,20 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "session_id": "00000000-0000-4000-8000-000000000000",
+  "total_cost_usd": 0.15698,
+  "usage": {
+    "input_tokens": 1,
+    "cache_creation_input_tokens": 15605,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 13
+  },
+  "modelUsage": {
+    "claude-fable-5": {
+      "costUSD": 0.15638,
+      "inputTokens": 1,
+      "outputTokens": 13
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{"type":"session.created","model":"gpt-5-codex"}
+{"type":"turn.started"}
+{"type":"turn.completed","usage":{"input_tokens":36419,"cached_input_tokens":4480,"output_tokens":28,"reasoning_output_tokens":17}}
+{"type":"turn.started"}
+{"type":"turn.completed","usage":{"input_tokens":1200,"cached_input_tokens":800,"output_tokens":45,"reasoning_output_tokens":10}}
+{"type":"turn.failed","error":"synthetic non-usage event, ignored by the adapter"}
