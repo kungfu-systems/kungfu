@@ -18,6 +18,20 @@ import type {
 } from '@kungfu-tech/api/capability';
 import type React from 'react';
 
+// Re-export the terminal session types a view needs to build its own UI (pane
+// snapshots, discovery, spawn options). The view contract package is the one
+// place a view imports from, so it should surface these rather than making a
+// view reach into @kungfu-tech/api directly.
+export type {
+  DiscoveredSession,
+  Terminal,
+  TerminalBackend,
+  TerminalExit,
+  TerminalSession,
+  TerminalSpawnOptions,
+  TerminalStatus,
+} from '@kungfu-tech/api/capability';
+
 // ── capability surface ────────────────────────────────────────────────────
 
 export type KfxCapabilities = {
