@@ -11,7 +11,7 @@ import os
 
 from kungfu.rewind import MSG_TYPE_NAMES, SCHEMA_VERSION
 
-_BFBS_FILE = os.path.join(os.path.dirname(__file__), "rewind_events.bfbs")
+_BFBS_FILE = __import__("kungfu").schema_data_path(__file__, "rewind_events.bfbs")
 
 
 def read_schema_blob():

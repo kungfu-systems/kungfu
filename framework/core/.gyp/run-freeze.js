@@ -185,6 +185,14 @@ function freezeNuitka(bt) {
       ...clangOpt,
       '--output-dir=build/kungfu-nuitka',
       `--include-data-files=${info}=kungfubuildinfo.json`,
+      // Fact-ledger schema blobs: the kungfu package's *_events.bfbs are read at
+      // runtime (rewind/atlas/work) but Nuitka does not follow non-.py package
+      // data, so ship them flat next to the binding where schema_data_path falls
+      // back to when the compiled module dir is not a real directory.
+      ...['rewind', 'atlas', 'work'].map(
+        (m) =>
+          `--include-data-files=${path.join(CORE, 'src', 'python', 'kungfu', m, `${m}_events.bfbs`)}=${m}_events.bfbs`,
+      ),
       path.join('src', 'python', 'kungfu_cli.py'),
     ],
     true,

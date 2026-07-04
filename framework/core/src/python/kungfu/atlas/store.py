@@ -36,7 +36,7 @@ PUBLIC_DEST = 0
 ATLAS_GROUP = "atlas"
 ATLAS_NAME = "import"
 
-_BFBS_FILE = os.path.join(os.path.dirname(__file__), "atlas_events.bfbs")
+_BFBS_FILE = __import__("kungfu").schema_data_path(__file__, "atlas_events.bfbs")
 
 
 def _location(runtime_dir):

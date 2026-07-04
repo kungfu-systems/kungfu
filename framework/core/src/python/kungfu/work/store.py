@@ -51,7 +51,7 @@ PUBLIC_DEST = 0
 WORK_GROUP = "work"
 WORK_NAME = "items"
 
-_BFBS_FILE = os.path.join(os.path.dirname(__file__), "work_events.bfbs")
+_BFBS_FILE = __import__("kungfu").schema_data_path(__file__, "work_events.bfbs")
 
 STATUS_NAMES = {
     WorkStatus.Active: "active",

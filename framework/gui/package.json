@@ -20,8 +20,8 @@
     "dev": "pnpm run ensure-electron && electron-vite dev",
     "build": "electron-vite build",
     "start": "pnpm run ensure-electron && electron-vite preview",
-    "pack": "pnpm run ensure-electron && electron-vite build && electron-builder --dir --config.electronDist=$(node -p \"require('path').dirname(require.resolve('electron'))+'/dist'\")",
-    "dist": "pnpm run ensure-electron && electron-vite build && electron-builder --config.electronDist=$(node -p \"require('path').dirname(require.resolve('electron'))+'/dist'\")",
+    "pack": "pnpm --filter @kungfu-tech/tui run bundle && pnpm run ensure-electron && electron-vite build && electron-builder --dir --config.electronDist=$(node -p \"require('path').dirname(require.resolve('electron'))+'/dist'\")",
+    "dist": "pnpm --filter @kungfu-tech/tui run bundle && pnpm run ensure-electron && electron-vite build && electron-builder --config.electronDist=$(node -p \"require('path').dirname(require.resolve('electron'))+'/dist'\")",
     "lint": "biome check src",
     "format": "biome format --write src",
     "clean": "rimraf out dist node_modules/.vite"

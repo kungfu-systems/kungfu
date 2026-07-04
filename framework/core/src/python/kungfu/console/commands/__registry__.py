@@ -4,6 +4,7 @@ from . import engage
 from . import journal
 from . import run
 from . import cli
+from . import tui
 from . import tool
 from . import slicetool
 from . import assemble
@@ -21,6 +22,7 @@ __all__ = [
     "journal",
     "run",
     "cli",
+    "tui",
     "tool",
     "slicetool",
     "assemble",

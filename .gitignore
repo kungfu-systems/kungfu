@@ -50,3 +50,4 @@ framework/core/src/libkungfu/include/kungfu/longfist/fb/*.bfbs
 # Local cache/mirror proxy per-checkout override (optional); the real values and primary config
 # live in the user-global ~/.config/kungfu/build-local.env, not committed
 /build-local.env
+demo-runtime/

@@ -435,6 +435,9 @@ importers:
       '@types/react':
         specifier: ^18.3.3
         version: 18.3.31
+      esbuild:
+        specifier: ^0.28.1
+        version: 0.28.1
       rimraf:
         specifier: ^6.0.0
         version: 6.1.3
