@@ -9,6 +9,7 @@ import {
   type PtyModule,
   type Rewind,
   type Terminal,
+  type TmuxBinding,
   type Work,
   openDomainState,
   openLedger,
@@ -25,6 +26,65 @@ declare global {
 }
 
 export const APP_NAME = 'reference_app';
+
+// Dedicated tmux socket for Kungfu managed sessions. Every managed tmux command
+// carries `-L <socket>`, so it physically cannot touch the user's own
+// default-socket tmux sessions. Overridable for tests/other hosts.
+const TMUX_SOCKET = 'kungfu-managed';
+
+// A non-interactive shell must not rely on a `tmux` shell-function shim, so we
+// resolve an absolute binary. Candidates cover Homebrew (arm64/x86) and system
+// paths; `KF_TMUX_BIN` overrides. Returns null when no tmux is available, in
+// which case the terminal handle simply runs without a durability backend.
+function resolveTmuxBinding(win: Window): TmuxBinding | null {
+  try {
+    const fs = win.require('node:fs');
+    const { execFile } = win.require('node:child_process') as typeof import(
+      'node:child_process',
+    );
+    const socket = win.process.env.KF_TMUX_SOCKET || TMUX_SOCKET;
+    const candidates = [
+      win.process.env.KF_TMUX_BIN,
+      '/opt/homebrew/bin/tmux',
+      '/usr/local/bin/tmux',
+      '/usr/bin/tmux',
+    ].filter((p): p is string => typeof p === 'string' && p.length > 0);
+    const bin = candidates.find((p) => {
+      try {
+        return fs.existsSync(p);
+      } catch {
+        return false;
+      }
+    });
+    if (!bin) return null;
+    return {
+      config: { socket, bin },
+      control: {
+        run: (args) =>
+          new Promise((resolve) => {
+            execFile(bin, args, { encoding: 'utf8' }, (err, stdout, stderr) => {
+              // A non-zero tmux exit (e.g. has-session miss) arrives as an
+              // error carrying the numeric exit code; surface it as a code,
+              // not a rejection, so callers branch on it.
+              const code =
+                err && typeof (err as { code?: unknown }).code === 'number'
+                  ? (err as { code: number }).code
+                  : err
+                    ? 1
+                    : 0;
+              resolve({
+                code,
+                stdout: stdout ?? '',
+                stderr: stderr ?? '',
+              });
+            });
+          }),
+      },
+    };
+  } catch {
+    return null;
+  }
+}
 
 export type Runtime = {
   ok: boolean;
@@ -109,8 +169,12 @@ export function bootRuntime(): Runtime {
     let terminal: Terminal | null = null;
     try {
       const ptyModule = window.require('node-pty') as PtyModule;
+      // The tmux durability backend is optional: if no tmux binary is present
+      // the terminal still runs sessions directly (backend: 'direct').
+      const tmux = resolveTmuxBinding(window) ?? undefined;
       terminal = openTerminal({
         pty: ptyModule,
+        tmux,
         baseEnv: window.process.env as Record<string, string | undefined>,
       });
     } catch {
