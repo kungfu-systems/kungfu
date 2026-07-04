@@ -161,18 +161,23 @@ std::shared_ptr<app_container_process> spawn_app_container(const app_container_o
 
   // 3. Open the two named pipes as the child's inheritable std handles. The child
   //    READS stdin_pipe and WRITES stdout_pipe; the host holds the other ends
-  //    (the relay). stderr inherits the host's stderr for diagnostics.
-  //    DARKHERO-verify: inheriting the host stderr into an AppContainer may need
-  //    the handle duplicated with explicit inheritance / access; if the child's
-  //    stderr fails, route it to a third pipe or to NUL.
+  //    (the relay).
   SECURITY_ATTRIBUTES inherit = {sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE};
   HANDLE h_stdin = ::CreateFileW(widen(options.stdin_pipe).c_str(), GENERIC_READ, 0, &inherit, OPEN_EXISTING,
                                  FILE_FLAG_OVERLAPPED, nullptr);
   HANDLE h_stdout = ::CreateFileW(widen(options.stdout_pipe).c_str(), GENERIC_WRITE, 0, &inherit, OPEN_EXISTING,
                                   FILE_FLAG_OVERLAPPED, nullptr);
-  HANDLE h_stderr = ::GetStdHandle(STD_ERROR_HANDLE);
   if (h_stdin == INVALID_HANDLE_VALUE || h_stdout == INVALID_HANDLE_VALUE) {
     throw_win32("CreateFile(named pipe)");
+  }
+  // stderr carries the guest's diagnostics. Every handle in the inherit-only
+  // HANDLE_LIST must itself be inheritable — a non-inheritable one makes
+  // CreateProcess fail with ERROR_INVALID_PARAMETER — so duplicate the host
+  // stderr as an inheritable handle, falling back to NUL if the host has none.
+  HANDLE h_stderr = nullptr;
+  if (!::DuplicateHandle(::GetCurrentProcess(), ::GetStdHandle(STD_ERROR_HANDLE), ::GetCurrentProcess(), &h_stderr, 0,
+                         TRUE, DUPLICATE_SAME_ACCESS)) {
+    h_stderr = ::CreateFileW(L"NUL", GENERIC_WRITE, FILE_SHARE_WRITE, &inherit, OPEN_EXISTING, 0, nullptr);
   }
 
   // 4. STARTUPINFOEX carrying the AppContainer (SECURITY_CAPABILITIES) and the
@@ -221,6 +226,9 @@ std::shared_ptr<app_container_process> spawn_app_container(const app_container_o
   ::HeapFree(::GetProcessHeap(), 0, startup.lpAttributeList);
   ::CloseHandle(h_stdin);
   ::CloseHandle(h_stdout);
+  if (h_stderr != nullptr) {
+    ::CloseHandle(h_stderr);
+  }
   for (PSID *sids : cap_alloc_to_free) {
     ::LocalFree(sids);
   }

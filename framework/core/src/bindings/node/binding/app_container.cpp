@@ -50,11 +50,13 @@ private:
 class AppContainerProcess : public Napi::ObjectWrap<AppContainerProcess> {
 public:
   static Napi::Object Init(Napi::Env env, Napi::Object exports) {
+    // Use the callback-pointer overloads (name, &Method), matching the other
+    // bindings in this tree. The template form InstanceMethod<&Method>(...) ICEs
+    // MSVC (C1001 in napi-inl.h) on the pinned toolchain.
     Napi::Function func = DefineClass(env, "AppContainerProcess",
                                       {
-                                          InstanceAccessor<&AppContainerProcess::GetPid>("pid"),
-                                          InstanceMethod<&AppContainerProcess::Wait>("wait"),
-                                          InstanceMethod<&AppContainerProcess::Kill>("kill"),
+                                          InstanceMethod("wait", &AppContainerProcess::Wait),
+                                          InstanceMethod("kill", &AppContainerProcess::Kill),
                                       });
     constructor_ = Napi::Persistent(func);
     constructor_.SuppressDestruct();
@@ -76,10 +78,6 @@ public:
 private:
   static Napi::FunctionReference constructor_;
   std::shared_ptr<os::app_container_process> process_;
-
-  Napi::Value GetPid(const Napi::CallbackInfo &info) {
-    return Napi::Number::New(info.Env(), static_cast<double>(process_->pid()));
-  }
 
   Napi::Value Wait(const Napi::CallbackInfo &info) {
     auto deferred = Napi::Promise::Deferred::New(info.Env());

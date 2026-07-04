@@ -25,7 +25,6 @@ import type { GuestChild, WindowsSandboxSpawn } from './kungfu-guest.js';
 // The native process object libkungfu `spawn_app_container` returns. It owns the
 // Windows process HANDLE; JS never sees a raw handle.
 export type AppContainerProcess = {
-  pid: number;
   // resolves with the exit code when the child exits (async wait in native)
   wait: () => Promise<number>;
   // TerminateProcess
