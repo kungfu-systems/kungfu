@@ -44,7 +44,7 @@ const bridge = window.__kfxBridge;
 // exactly the declared capabilities, each call marshalled over the bridge
 const caps = createCapabilityGuest(bridge.declared, bridgeChannel(bridge));
 
-// The externals a `kfs kfx build` bundle expects, same contract as the shared
+// The externals a `kungfu sdk kfx build` bundle expects, same contract as the shared
 // renderer: one React instance and the capability surface. A sandboxed view that
 // tries to require anything else fails loudly rather than reaching node.
 const shared: Record<string, unknown> = {
@@ -98,7 +98,7 @@ function load(code: string): void {
     const requireShim = (id: string): unknown => {
       if (id in shared) return shared[id];
       throw new Error(
-        `sandboxed bundle requires "${id}" which the harness does not provide — it must be bundled by \`kfs kfx build\` or added to the externals contract`,
+        `sandboxed bundle requires "${id}" which the harness does not provide — it must be bundled by \`kungfu sdk kfx build\` or added to the externals contract`,
       );
     };
     const module = { exports: {} as { View?: KfxViewComponent } };

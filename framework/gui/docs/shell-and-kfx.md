@@ -55,7 +55,7 @@ without executing code:
 }
 ```
 
-`kfs kfx build` bundles `src/view/` to `dist/view/index.js` (CommonJS) with
+`kungfu sdk kfx build` bundles `src/view/` to `dist/view/index.js` (CommonJS) with
 `react`, `react/jsx-runtime`, `react-dom` and `@kungfu-tech/api` left
 external; the shell injects its own instances through a require shim at load
 time, so every kfx shares one React and one capability surface. The

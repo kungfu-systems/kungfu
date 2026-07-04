@@ -31,7 +31,7 @@ import {
 } from './shell-state';
 
 // Modules injected into every kfx bundle (the externals contract of
-// `kfs kfx build`): one React instance, one capability surface.
+// `kungfu sdk kfx build`): one React instance, one capability surface.
 const SHARED_MODULES = {
   react: React,
   'react/jsx-runtime': jsxRuntime,

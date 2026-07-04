@@ -1,6 +1,6 @@
 // Kfx loading: scan extension roots for packages whose manifest declares a
 // view (`kungfuConfig.config.view`) or a suite (`kungfuConfig.suite`), and
-// mount view bundles inside this renderer. Bundles are built by `kfs kfx
+// mount view bundles inside this renderer. Bundles are built by `kungfu sdk kfx
 // build` with react/react-dom/jsx-runtime and the capability SDK left
 // external; the shell injects its own instances through a require shim, so
 // every kfx shares one React and one capability surface.
@@ -128,7 +128,7 @@ function loadBundle(
   const requireShim = (id: string) => {
     if (id in shared) return shared[id];
     throw new Error(
-      `kfx bundle requires "${id}" which the shell does not provide — it must be bundled by \`kfs kfx build\` or added to the externals contract`,
+      `kfx bundle requires "${id}" which the shell does not provide — it must be bundled by \`kungfu sdk kfx build\` or added to the externals contract`,
     );
   };
   const module = { exports: {} as { View?: KfxViewComponent } };

@@ -16,10 +16,10 @@
     "access": "public"
   },
   "scripts": {
-    "build": "kfs strategy build",
-    "clean": "kfs strategy clean",
+    "build": "kungfu sdk strategy build",
+    "clean": "kungfu sdk strategy clean",
     "format": "node ../../framework/core/.gyp/run-format-python.js src",
-    "package": "kfs project package"
+    "package": "kungfu sdk project package"
   },
   "dependencies": {
     "@kungfu-tech/core": "workspace:*"

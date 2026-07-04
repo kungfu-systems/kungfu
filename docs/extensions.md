@@ -34,7 +34,7 @@ Inside the repository (the SDK is pre-release; see
 node developer/sdk/src/kfs.js create extension my-view --workspace
 cd my-view
 pnpm install                 # once published: plain npm/yarn also work
-pnpm build                   # kfs kfx build → dist/view/index.js
+pnpm build                   # kungfu sdk kfx build → dist/view/index.js
 npm pack                     # my-view-0.1.0.tgz — the install unit
 kungfu kfx install my-view-0.1.0.tgz
 kungfu kfx list
@@ -82,7 +82,7 @@ loader ignores what it does not know, and nothing else will read them.
 
 ## The build contract
 
-`kfs kfx build` bundles `src/view/index.tsx` (or `.ts`) to a CommonJS
+`kungfu sdk kfx build` bundles `src/view/index.tsx` (or `.ts`) to a CommonJS
 bundle at `dist/view/index.js`, leaving external (source of truth:
 `KFX_EXTERNALS` in
 [`../developer/sdk/src/kfs.js`](../developer/sdk/src/kfs.js)):
@@ -104,7 +104,7 @@ A failing kfx renders its error panel; it cannot take the shell down.
 
 An **adapter facet** has no bundle step — it ships source per child runtime,
 and the capture supervisor injects it into a traced child, where it runs in
-the user's own interpreter. `kfs kfx build` reports this and does nothing for
+the user's own interpreter. `kungfu sdk kfx build` reports this and does nothing for
 an adapter-only package. To add an adapter for a framework, declare
 `config.adapter` (its `targets` / `runtimes` / `entry`) and write one entry
 file per runtime that registers a patcher — each depends on nothing but the

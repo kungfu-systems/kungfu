@@ -1,10 +1,10 @@
 #!/bin/sh
 # SPDX-License-Identifier: Apache-2.0
 #
-# Kfx scaffold fixture: `kfs create extension` output builds and installs
+# Kfx scaffold fixture: `kungfu sdk create extension` output builds and installs
 # from a clean directory. Scaffolds a view extension into a temp dir, links
 # the workspace contract packages the way pnpm would (the fixture stays
-# offline), builds it with `kfs kfx build`, asserts the bundle honors the
+# offline), builds it with `kungfu sdk kfx build`, asserts the bundle honors the
 # load contract (View export, shell-injected modules left external), then
 # packs the tgz and runs it through the `kungfu kfx install` lifecycle.
 # Requires the core dev environment (built dist/kungfu) and the repository's
@@ -16,7 +16,7 @@ set -eu
 fixture_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 repo_dir="$(CDPATH= cd -- "$fixture_dir/../../.." && pwd)"
 core_dir="$repo_dir/framework/core"
-kfs="$repo_dir/developer/sdk/src/kfs.js"
+sdk="$repo_dir/developer/sdk/src/sdk.js"
 
 work="$(mktemp -d)"
 home="$(mktemp -d)"
@@ -27,7 +27,7 @@ DYLD_FALLBACK_LIBRARY_PATH="$core_dir/dist/kungfu${DYLD_FALLBACK_LIBRARY_PATH:+:
 export DYLD_FALLBACK_LIBRARY_PATH
 
 ext_dir="$work/my-view"
-node "$kfs" create extension "$ext_dir" --workspace
+node "$sdk" create extension "$ext_dir" --workspace
 [ -f "$ext_dir/package.json" ] || { echo "FAIL: no package.json scaffolded"; exit 1; }
 [ -f "$ext_dir/.gitignore" ] || { echo "FAIL: _gitignore not renamed to .gitignore"; exit 1; }
 grep -q '__EXT_' "$ext_dir/package.json" && { echo "FAIL: unreplaced template token"; exit 1; }
@@ -38,9 +38,9 @@ mkdir -p "$ext_dir/node_modules/@kungfu-tech"
 ln -s "$repo_dir/framework/kfx" "$ext_dir/node_modules/@kungfu-tech/kfx"
 ln -s "$repo_dir/framework/api" "$ext_dir/node_modules/@kungfu-tech/api"
 
-(cd "$ext_dir" && node "$kfs" kfx build)
+(cd "$ext_dir" && node "$sdk" kfx build)
 bundle="$ext_dir/dist/view/index.js"
-[ -f "$bundle" ] || { echo "FAIL: kfs kfx build produced no bundle"; exit 1; }
+[ -f "$bundle" ] || { echo "FAIL: kungfu sdk kfx build produced no bundle"; exit 1; }
 
 # the load contract, asserted the way the shell loads it: CommonJS-wrap with
 # a require shim; only shell-provided modules may be required; the bundle

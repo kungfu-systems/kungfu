@@ -6,7 +6,7 @@
 # the tgz into a clean home through `kungfu kfx install`, and asserts the
 # managed lifecycle: list, double-install refusal, --force replace, remove.
 # Requires the core dev environment (built dist/kungfu) and the extension's
-# own build output (dist/view/index.js, from `kfs kfx build`).
+# own build output (dist/view/index.js, from `kungfu sdk kfx build`).
 #
 # Usage: tests/fixtures/kfx-demo-install/run.sh
 
@@ -25,7 +25,7 @@ export DYLD_FALLBACK_LIBRARY_PATH
 # the distribution unit: a plain npm tgz of the built extension package
 ext_dir="$repo_dir/extensions/work-dashboard"
 [ -f "$ext_dir/dist/view/index.js" ] || {
-  echo "FAIL: work-dashboard is not built (run kfs kfx build first)"; exit 1;
+  echo "FAIL: work-dashboard is not built (run kungfu sdk kfx build first)"; exit 1;
 }
 tgz="$(cd "$ext_dir" && npm pack --pack-destination "$packdir" 2>/dev/null | tail -1)"
 tgz="$packdir/$tgz"

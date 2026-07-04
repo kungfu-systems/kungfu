@@ -16,8 +16,8 @@
     }
   },
   "scripts": {
-    "build": "kfs kfx build",
-    "clean": "kfs kfx clean"
+    "build": "kungfu sdk kfx build",
+    "clean": "kungfu sdk kfx clean"
   },
   "devDependencies": {
     "@kungfu-tech/core": "workspace:*",

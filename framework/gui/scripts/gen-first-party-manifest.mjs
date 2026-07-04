@@ -7,7 +7,7 @@
 // single baked manifest lets both grant trust by verifiable source without the
 // source extensions/ tree.
 //
-// Pinned: run AFTER the extension view bundles are built (`kfs kfx build`); a key
+// Pinned: run AFTER the extension view bundles are built (`kungfu sdk kfx build`); a key
 // whose bundle is not built is omitted (stays untrusted) rather than trusted by
 // key alone. Run: node --experimental-transform-types gen-first-party-manifest.mjs
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -37,6 +37,6 @@ console.log(`[first-party] wrote ${n} pinned key(s) -> ${outPath}`);
 if (n === 0) {
   console.warn(
     '[first-party] no pinned keys — build the extension view bundles first ' +
-      '(`kfs kfx build`), or the frozen build will trust only system views',
+      '(`kungfu sdk kfx build`), or the frozen build will trust only system views',
   );
 }
