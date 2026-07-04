@@ -26,10 +26,6 @@ import {
   setAllKfRiskSettings,
 } from '../kungfu/riskSetting';
 import {
-  graceDeleteProcess,
-  Pm2ProcessStatusData,
-} from '../utils/processUtils';
-import {
   basketStore,
   basketInstrumentStore,
 } from '@kungfu-tech/api/kungfu';
@@ -96,16 +92,6 @@ export const deleteAllByKfLocation = async (
   return (isConfig ? removeKfConfig(kfLocation, watcher) : Promise.resolve())
     .then(() => removeKfLocation(kfLocation))
     .then(() => removeLog(kfLocation));
-};
-
-export const ensureRemoveLocation = (
-  watcher: KungfuApi.Watcher,
-  kfLocation: KungfuApi.KfConfig | KungfuApi.KfLocation,
-  processStatus: Pm2ProcessStatusData,
-) => {
-  return graceDeleteProcess(watcher, kfLocation, processStatus).then(() =>
-    deleteAllByKfLocation(kfLocation, watcher),
-  );
 };
 
 export function removeKfLocation(

@@ -1,4 +1,3 @@
-import { StartOptions } from 'pm2';
 import { Translator } from '../language/translator';
 import {
   GithubOptions,
@@ -23,7 +22,6 @@ declare global {
     io: KungfuApi.IODevice;
     fileId: number;
     testCase: Record<string, any>;
-    pm2: any;
     ukeyCacheMap?: Map<string, string>;
   }
 
@@ -53,7 +51,6 @@ declare global {
       BY_PASS_REFRESHBOOK: boolean;
       REFRESH_LEDGER_BEFORE_SYNC: boolean;
       MILLISECONDS_SLEEP_AFTER_STEP: number;
-      PM2_DEBUG: boolean;
     }
 
     interface Process {
@@ -85,16 +82,10 @@ declare module 'dayjs-business-days' {}
 declare module globalThis {
   const __publicResources: string;
   const __kfResourcesPath: string;
-  const pm2: any;
   const HookKeeper: KfHookKeeper;
   const i18n: Translator;
   const globalStorage: ExtendedGlobalStorage;
   const rootPackageJson: RootConfigJSON;
-}
-
-export interface Pm2StartOptions extends StartOptions {
-  name: string;
-  autorestart?: boolean;
 }
 
 export interface T0T1Config {

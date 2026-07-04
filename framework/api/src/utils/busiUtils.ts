@@ -1,4 +1,3 @@
-import path from 'path';
 import dayjs from 'dayjs';
 
 import { ARCHIVE_DIR, KF_HOME } from '../config/pathConfig';
@@ -10,7 +9,6 @@ import {
   InstrumentType,
   KfCategory,
   AppStateStatus,
-  Pm2ProcessStatus,
   Side,
   Direction,
   HedgeFlag,
@@ -47,43 +45,20 @@ import {
 import { kfLogger } from '../utils/logUtils';
 import { formatNumberPrecision } from '../utils/decimalFormatter';
 import {
-  graceDeleteProcess,
-  Pm2ProcessStatusData,
-  Pm2ProcessStatusDetail,
-  Pm2ProcessStatusDetailResolved,
-  Pm2ProcessStatusDetailData,
-  startExtService,
-  startLedger,
-  startMaster,
-  startMd,
-  startOperatorByExt,
-  startStrategyOperator,
-  startTd,
-  listProcessStatus,
-  startTask,
-} from './processUtils';
-import {
-  getIdByKfLocation,
-  getDefaultSystemProcessName,
   getProcessIdByKfLocation,
-  parseTaskSettingsFromEnv,
   deepClone,
   initFormTimePicker,
   dealMillionSencond2NanoSecond,
   dealDateDayOrMonth,
 } from './commonUtils';
-import { getKfExtensionConfig } from './extUtils';
-import { Proc } from 'pm2';
 import {
   readRootPackageJsonSync,
   removeTargetFilesInFolder,
   removeTargetFoldersInFolder,
 } from './fileUtils';
 import minimist from 'minimist';
-import VueI18n from '../language';
 import { getGlobalStorage } from './globalStorage';
 import { getKfGlobalSettingsValue } from '../config/globalSettings';
-const { t } = VueI18n.global;
 
 const globalStorage = getGlobalStorage();
 interface SourceAccountId {
@@ -365,108 +340,6 @@ export const getStateStatusData = (
   return name === undefined ? undefined : AppStateStatus[name];
 };
 
-export const getIfProcessRunning = (
-  processStatusData: Pm2ProcessStatusData,
-  processId: string,
-): boolean => {
-  const statusName = processStatusData[processId] || '';
-  if (statusName) {
-    if ((Pm2ProcessStatus[statusName].level || 0) > 0) {
-      return true;
-    }
-  }
-
-  return false;
-};
-
-export const getIfProcessDeleted = (
-  processStatusData: Pm2ProcessStatusData,
-  processId: string,
-): boolean => {
-  return processStatusData[processId] === undefined;
-};
-
-export const getIfProcessStopping = (
-  processStatusData: Pm2ProcessStatusData,
-  processId: string,
-) => {
-  const statusName = processStatusData[processId] || '';
-  if (statusName) {
-    if (Pm2ProcessStatus[statusName].level === 1) {
-      return true;
-    }
-  }
-
-  return false;
-};
-
-export const getAppStateStatusName = (
-  kfConfig: KungfuApi.KfLocation,
-  processStatusData: Pm2ProcessStatusData,
-  appStates: Record<string, BrokerStateStatusTypes>,
-): ProcessStatusTypes | undefined => {
-  const processId = getProcessIdByKfLocation(kfConfig);
-
-  if (!processStatusData[processId]) {
-    return undefined;
-  }
-
-  if (!getIfProcessRunning(processStatusData, processId)) {
-    return undefined;
-  }
-
-  if (appStates[processId]) {
-    return appStates[processId];
-  }
-
-  const processStatus = processStatusData[processId];
-  return processStatus;
-};
-
-export const getStrategyStateStatusName = (
-  kfConfig: KungfuApi.KfLocation,
-  processStatusData: Pm2ProcessStatusData,
-  strategyStates: Record<string, KungfuApi.StrategyStateData>,
-): ProcessStatusTypes | undefined => {
-  const processId = getProcessIdByKfLocation(kfConfig);
-
-  if (!processStatusData[processId]) {
-    return undefined;
-  }
-
-  if (!getIfProcessRunning(processStatusData, processId)) {
-    return undefined;
-  }
-
-  if (strategyStates[processId]) {
-    return strategyStates[processId].state;
-  }
-
-  const processStatus = processStatusData[processId];
-  return processStatus;
-};
-
-export const getPropertyFromProcessStatusDetailDataByKfLocation = (
-  processStatusDetailData: Pm2ProcessStatusDetailData,
-  kfLocation: KungfuApi.KfLocation,
-): {
-  status: ProcessStatusTypes | undefined;
-  cpu: number;
-  memory: string;
-} => {
-  const processStatusDetail: Pm2ProcessStatusDetail =
-    processStatusDetailData[getProcessIdByKfLocation(kfLocation)] ||
-    ({} as Pm2ProcessStatusDetail);
-  const status = processStatusDetail.status;
-  const monit = processStatusDetail.monit || {};
-
-  return {
-    status,
-    cpu: monit.cpu || 0,
-    memory: Number((monit.memory || 0) / (1024 * 1024)).kfToFixed(2),
-  };
-};
-
 export const buildIdByPrimaryKeysFromKfConfigSettings = (
   kfConfigState: Record<string, KungfuApi.KfConfigValue>,
   keys: string[],
@@ -475,74 +348,6 @@ export const buildIdByPrimaryKeysFromKfConfigSettings = (
     .map((key) => replaceNonAlphaNumericWithSpace(kfConfigState[key]))
     .filter((value) => value !== undefined)
     .join('-');
-};
-
-const startProcessByKfLocation = async (
-  kfLocation: KungfuApi.DerivedKfLocation,
-  force?: boolean,
-) => {
-  try {
-    await globalThis.HookKeeper.getHooks().prestart.trigger(kfLocation);
-  } catch (err) {
-    console.error(err);
-  }
-
-  const isForce = force ?? true;
-  const defaultSystemProcessName = getDefaultSystemProcessName();
-
-  switch (kfLocation.category) {
-    case 'system':
-      if (kfLocation.name === 'master') {
-        return startMaster(isForce);
-      } else if (kfLocation.name === 'ledger') {
-        return startLedger(isForce);
-      } else if (
-        kfLocation.group === 'service' &&
-        defaultSystemProcessName.indexOf(kfLocation.name) === -1
-      ) {
-        startExtService(kfLocation as KungfuApi.KfExtServiceLocation);
-      }
-      break;
-    case 'td':
-      return startTd(getIdByKfLocation(kfLocation), kfLocation);
-    case 'md':
-      return startMd(kfLocation);
-    case 'strategy':
-    case 'operator':
-      // 插件类 operator
-      if (
-        kfLocation.category === 'operator' &&
-        kfLocation.group !== 'default'
-      ) {
-        return startOperatorByExt(kfLocation);
-      }
-
-      // 文件类 strategy 与 operator
-      const filePath =
-        JSON.parse((kfLocation as KungfuApi.KfConfig)?.value || '{}')
-          .file_path || '';
-      if (!filePath) {
-        throw new Error(`Start ${kfLocation.category} without file path`);
-      }
-      return startStrategyOperator(kfLocation, filePath);
-    default:
-      return Promise.resolve();
-  }
-};
-
-export const switchKfLocation = (
-  watcher: KungfuApi.Watcher | null,
-  kfLocation: KungfuApi.DerivedKfLocation,
-  targetStatus: boolean,
-  force = false,
-): Promise<void | Proc> => {
-  if (!watcher) return Promise.reject(new Error('Watcher is NULL'));
-
-  if (!targetStatus) {
-    return graceDeleteProcess(watcher, kfLocation);
-  }
-
-  return startProcessByKfLocation(kfLocation, force);
 };
 
 export const getPriceTypeConfig = (): Record<
@@ -1105,35 +910,6 @@ export const fromProcessArgsToKfConfigItems = (
   return data;
 };
 
-export const getTaskListFromProcessStatusData = (
-  taskPrefixs: string[],
-  psDetail: Pm2ProcessStatusDetailData,
-  sorter?: (a: Pm2ProcessStatusDetail, b: Pm2ProcessStatusDetail) => number,
-): Pm2ProcessStatusDetailResolved[] => {
-  return Object.keys(psDetail)
-    .filter((processId) => {
-      return (
-        taskPrefixs.findIndex((cg) => {
-          return (
-            processId.indexOf(cg) === 0 &&
-            !processId.endsWith('_replay') &&
-            !processId.endsWith('_backtest')
-          );
-        }) !== -1
-      );
-    })
-    .map((processId) => psDetail[processId])
-    .sort(
-      sorter
-        ? sorter
-        : (a, b) => {
-            const aCreateTime = +(a.name?.toKfName() || 0);
-            const bCreateTime = +(b.name?.toKfName() || 0);
-            return aCreateTime - bCreateTime;
-          },
-    );
-};
-
 export const isBrokerStateReady = (state: BrokerStateStatusTypes) => {
   return state === 'Ready' || state === 'Idle';
 };
@@ -1159,87 +935,6 @@ export const isCheckVersionLogicEnable = () => {
   const globalSetting = getKfGlobalSettingsValue();
   return updateVersionLogicEnable && !!globalSetting?.update?.isCheckVersion;
 };
-
-export async function startReplay(
-  location: KungfuApi.KfConfig | KungfuApi.KfLocation,
-  replayConfig: KungfuApi.ReplayConfigOrigin,
-) {
-  switch (location.category) {
-    case 'strategy':
-      if (location.group !== 'default') {
-        const { processStatusWithDetail } = await listProcessStatus();
-        const extConfigs = await getKfExtensionConfig();
-        const extKey = location.group;
-        const extConfig: KungfuApi.KfStrategyExtConfig = (extConfigs[
-          'strategy'
-        ] || {})[extKey];
-        const soPath = path.join(extConfig.extPath, extKey);
-        const processId = getProcessIdByKfLocation({
-          ...location,
-          mode: 'live',
-        });
-
-        const processStatusDetail = processStatusWithDetail[processId];
-        if (!processStatusDetail) {
-          kfLogger.error(`Process ${processId} not found`);
-          return Promise.reject(new Error(t('replay.process_not_found')));
-        }
-        const { args, config_settings } = processStatusDetail;
-        const dealArgs = minimist(args as string[])['a'] || '';
-        const configSettings = parseTaskSettingsFromEnv(
-          config_settings || '[]',
-        );
-        const enableMatcher = replayConfig.enable_matcher;
-        return startTask(
-          {
-            ...location,
-            mode: enableMatcher ? 'backtest' : 'replay',
-          },
-          soPath,
-          dealArgs,
-          configSettings,
-          replayConfig,
-        );
-      } else {
-        const enableMatcher = replayConfig.enable_matcher;
-        return startStrategyOperator(
-          {
-            ...location,
-            mode: enableMatcher ? 'backtest' : 'replay',
-          },
-          '',
-          replayConfig,
-        );
-      }
-    case 'td':
-      return startTd(
-        `${location.group}_${location.name}_${location.mode}`,
-        {
-          ...location,
-          mode: 'replay',
-        },
-        replayConfig,
-      );
-    case 'operator':
-      const enableMatcher = replayConfig.enable_matcher;
-      return startStrategyOperator(
-        {
-          ...location,
-          mode: enableMatcher ? 'backtest' : 'replay',
-        },
-        '',
-        replayConfig,
-      );
-    case 'system':
-      if (location.name === 'ledger') {
-        return startLedger(false, 'replay', replayConfig);
-      } else {
-        return Promise.reject(new Error('Location is not supported to replay'));
-      }
-    default:
-      return Promise.reject(new Error('Location is not supported to replay'));
-  }
-}
 
 export const ifTodayFirstStart = () => {
   const lastStartDateTime = globalStorage.getItem('lastStartDateTime');

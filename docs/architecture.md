@@ -98,6 +98,12 @@ product:
   boundary. See
   [ADR-0007](../framework/core/docs/adr/ADR-0007-v4-tui-platform-reference-surface.md).
 
+The runtime is loaded in-process; there is no external process manager and no
+separate service daemons. Untrusted kfx views are isolated by the shell as
+sandboxed Electron `WebContentsView`s that reach their declared capabilities
+only through an IPC relay, so process lifecycle is Electron's to manage rather
+than a bespoke supervisor's.
+
 ### Extensions (kfx) — `extensions/*`
 
 Plugins built on the extension contract. The repository keeps a small set of

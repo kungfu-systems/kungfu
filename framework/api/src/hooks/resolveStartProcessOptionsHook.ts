@@ -1,11 +1,16 @@
-import { Pm2StartOptions } from '../typings/global';
 import { ResetOptionHook } from './baseHook';
+
+export type StartProcessOptions = {
+  name: string;
+  autorestart?: boolean;
+  [key: string]: unknown;
+};
 
 export type ResolveStartOptionsHook = (
   kfLocation: KungfuApi.DerivedKfLocation,
-  options: Pm2StartOptions,
-) => Promise<Pm2StartOptions>;
+  options: StartProcessOptions,
+) => Promise<StartProcessOptions>;
 
-export default new ResetOptionHook<ResolveStartOptionsHook, Pm2StartOptions>(
+export default new ResetOptionHook<ResolveStartOptionsHook, StartProcessOptions>(
   'ResolveStartOptionsHook',
 );
