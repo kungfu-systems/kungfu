@@ -13,6 +13,7 @@ import type {
   DomainState,
   Ledger,
   Rewind,
+  Terminal,
   Work,
 } from '@kungfu-tech/api/capability';
 import type React from 'react';
@@ -23,6 +24,7 @@ export type KfxCapabilities = {
   ledger: Ledger;
   domain: DomainState;
   rewind: Rewind;
+  terminal: Terminal;
   work: Work;
 };
 

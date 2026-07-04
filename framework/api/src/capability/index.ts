@@ -7,4 +7,5 @@ export * from './domain';
 export * from './rewind';
 export * from './schema';
 export * from './sandbox';
+export * from './terminal';
 export * from './work';

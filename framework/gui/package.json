@@ -27,6 +27,7 @@
   "dependencies": {
     "@kungfu-tech/api": "workspace:*",
     "@kungfu-tech/core": "workspace:*",
+    "node-pty": "^1.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "@kungfu-tech/kfx": "workspace:*"

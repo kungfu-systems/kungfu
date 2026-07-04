@@ -11,6 +11,7 @@ allowBuilds:
   core-js: true
   electron: true
   esbuild: true
+  node-pty: true
   nx: true
   vue-demi: true
 # Disable pnpm's default minimum-release-age supply-chain check. We frequently

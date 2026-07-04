@@ -76,6 +76,7 @@ function subsetCaps(runtime: Runtime, entry: KfxEntry): KfxCapabilities | null {
     ledger: runtime.ledger,
     domain: runtime.domain,
     rewind: runtime.rewind,
+    terminal: runtime.terminal,
     work: runtime.work,
   } as Record<string, unknown>;
   const subset: Record<string, unknown> = {};
@@ -101,6 +102,7 @@ function sandboxSubset(
     ledger: runtime.ledger,
     domain: runtime.domain,
     rewind: runtime.rewind,
+    terminal: runtime.terminal,
     work: runtime.work,
   };
   const subset: Record<string, Record<string, unknown>> = {};

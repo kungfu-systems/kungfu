@@ -20,7 +20,13 @@ export const PROFILES: ProfileManifest[] = [
   {
     id: 'default',
     title: 'Default — work control plane',
-    kfx: ['work-dashboard', 'rewind', 'journal-manager', 'config-manager'],
+    kfx: [
+      'work-dashboard',
+      'rewind',
+      'terminal',
+      'journal-manager',
+      'config-manager',
+    ],
     defaultView: 'work-dashboard',
   },
   {

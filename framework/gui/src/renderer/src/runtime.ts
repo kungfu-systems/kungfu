@@ -6,11 +6,14 @@ import {
   type DomainState,
   type KfNativeBinding,
   type Ledger,
+  type PtyModule,
   type Rewind,
+  type Terminal,
   type Work,
   openDomainState,
   openLedger,
   openRewind,
+  openTerminal,
   openWork,
 } from '@kungfu-tech/api/capability';
 
@@ -35,6 +38,7 @@ export type Runtime = {
   ledger: Ledger | null;
   domain: DomainState | null;
   rewind: Rewind | null;
+  terminal: Terminal | null;
   work: Work | null;
 };
 
@@ -67,6 +71,7 @@ export function bootRuntime(): Runtime {
     ledger: null,
     domain: null,
     rewind: null,
+    terminal: null,
     work: null,
   };
   try {
@@ -98,6 +103,19 @@ export function bootRuntime(): Runtime {
     const domain = openDomainState({ binding, locator: { runtimeDir } });
     const rewind = openRewind({ binding, locator: { runtimeDir } });
     const work = openWork({ binding, locator: { runtimeDir } });
+    // node-pty is a native addon loaded like the kungfu binding; if it is
+    // absent or built for another ABI the terminal handle stays null and the
+    // terminal view surfaces the absence rather than crashing the runtime.
+    let terminal: Terminal | null = null;
+    try {
+      const ptyModule = window.require('node-pty') as PtyModule;
+      terminal = openTerminal({
+        pty: ptyModule,
+        baseEnv: window.process.env as Record<string, string | undefined>,
+      });
+    } catch {
+      terminal = null;
+    }
     return {
       ...base,
       ok: true,
@@ -109,6 +127,7 @@ export function bootRuntime(): Runtime {
       ledger,
       domain,
       rewind,
+      terminal,
       work,
     };
   } catch (e) {
