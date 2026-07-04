@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 // Minimal Electron main process for the kungfu reference app.
 //
@@ -22,6 +23,10 @@ import {
   SET_BOUNDS_CHANNEL,
   SHOW_CHANNEL,
 } from '../sandbox/channels';
+import {
+  firstPartyManifestPath,
+  generateFirstPartyManifest,
+} from './first-party-manifest';
 import { type Rect, SandboxManager } from './sandbox-manager';
 import {
   installKungfuCliToPath,
@@ -59,6 +64,39 @@ process.env.KF_EXTENSION_PATH =
   (app.isPackaged
     ? ''
     : path.join(__dirname, '..', '..', '..', '..', 'extensions'));
+
+// The frozen first-party set (ADR-0013): which extension keys the renderer's
+// loader may trust with node-integrated tier. It is derived from a *fixed
+// first-party root* — never from KF_EXTENSION_PATH, which a user may extend, so
+// dropping a package on the extension path can no longer confer trust.
+//   dev: generate from the workspace extensions/ tree at startup, keys only
+//        (bundles change on every rebuild, so they are trusted by key, unpinned).
+//   packaged: point at a build-baked resource with pinned bundle hashes; if the
+//        bake step has not run the manifest is absent and only system views are
+//        trusted (safe by default). Shipping the pinned resource is the
+//        packaging follow-up, tracked with the built-in-extension shipping work.
+if (!process.env.KF_FIRST_PARTY_MANIFEST) {
+  if (app.isPackaged) {
+    process.env.KF_FIRST_PARTY_MANIFEST = path.join(
+      process.resourcesPath,
+      'first-party.json',
+    );
+  } else if (process.env.KF_RUNTIME_DIR) {
+    const firstPartyRoot = path.join(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      '..',
+      'extensions',
+    );
+    const manifest = generateFirstPartyManifest(firstPartyRoot, { pin: false });
+    const manifestPath = firstPartyManifestPath(process.env.KF_RUNTIME_DIR);
+    mkdirSync(path.dirname(manifestPath), { recursive: true });
+    writeFileSync(manifestPath, JSON.stringify(manifest), 'utf8');
+    process.env.KF_FIRST_PARTY_MANIFEST = manifestPath;
+  }
+}
 
 // Prove the frozen runtime CLI runs standalone next to the binding, and hand
 // the result to the renderer for display.
