@@ -5,10 +5,16 @@
 // that confinement is additive: an extension written against the full surface is
 // not re-adapted when a restriction is enabled.
 //
-// The knobs are OS-level and language-agnostic (a Seatbelt rule on macOS, a
-// bwrap namespace/bind on Linux), so one runtime demonstrates them for both. On
-// Linux the network knob is `--unshare-net`; on macOS it is Seatbelt `(deny
-// network*)`. Run under the TS resolver hook:
+// The knobs are OS-level (a Seatbelt rule on macOS, a bwrap namespace/bind on
+// Linux). The write knob narrows the same way on both. The network knob narrows
+// DIFFERENTLY, so the demo asserts the platform-relevant observable:
+//   - macOS Seatbelt `(deny network*)` refuses every socket, so a loopback
+//     round-trip is refused.
+//   - Linux `--unshare-net` puts the guest in a private network namespace with a
+//     working loopback but no external interface, so loopback still succeeds and
+//     external egress is gone — the absence of an external interface is the
+//     narrowing. (This is why a loopback-only probe would miss it on Linux.)
+// Run under the TS resolver hook:
 //   node --import ./ts-resolve.mjs run-knobs.ts
 import { platform } from 'node:os';
 import { join } from 'node:path';
@@ -20,6 +26,9 @@ const DIR = import.meta.dirname;
 const RESOLVER = join(DIR, 'ts-resolve.mjs');
 const NODE_CHILD = join(DIR, 'node-child.mjs');
 const FACET = join(DIR, 'facet-knobs.mjs');
+
+// The network knob's narrowing shows up in a different observable per platform.
+const NET_FIELD = platform() === 'darwin' ? 'loopback' : 'externalNet';
 
 type KnobCase = {
   label: string;
@@ -73,7 +82,9 @@ function outcome(value: unknown): 'ok' | 'refused' {
 }
 
 async function main() {
-  console.log(`\nkfx restriction-knob demo — platform: ${platform()}\n`);
+  console.log(
+    `\nkfx restriction-knob demo — platform: ${platform()} (network observable: ${NET_FIELD})\n`,
+  );
   console.log('  profile                 fs write     network      verdict');
   console.log('  ' + '-'.repeat(58));
   let failed = 0;
@@ -84,7 +95,7 @@ async function main() {
     try {
       const report = await runCase(c.profile);
       fs = String(report?.fsWrite ?? '—');
-      netv = String(report?.network ?? '—');
+      netv = String(report?.[NET_FIELD] ?? '—');
       const okFacet = report !== null; // the facet still ran and reported
       const fsMatch = outcome(fs) === c.expectFs;
       const netMatch = outcome(netv) === c.expectNet;
@@ -103,8 +114,8 @@ async function main() {
   console.log('  ' + '-'.repeat(58));
   console.log(
     `\n  same facet source in every row: a knob narrows what a capability` +
-      ` reaches (a refused syscall), never removes a method — the facet is not` +
-      ` re-adapted.`,
+      ` reaches (a refused syscall / a removed interface), never removes a` +
+      ` method — the facet is not re-adapted.`,
   );
   console.log(
     `\n  ${failed === 0 ? 'KNOB DEMO GREEN' : `${failed} CASE(S) FAILED`}\n`,
