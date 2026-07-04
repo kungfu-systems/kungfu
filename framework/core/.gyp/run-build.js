@@ -32,7 +32,10 @@ function stage() {
   const distKungfu = path.join('dist', 'kungfu');
   fs.rmSync(distKungfu, { recursive: true, force: true });
   fs.mkdirSync(distKungfu, { recursive: true });
-  for (const pattern of ['*.node', '*.dylib', '*.so', '*.dll']) {
+  // `*.so.*` catches versioned ELF sonames (e.g. libnode.so.127), which is the
+  // name pykungfu's DT_NEEDED references — `*.so` alone would miss it and leave
+  // dist/kungfu unable to load the Python binding on linux.
+  for (const pattern of ['*.node', '*.dylib', '*.so', '*.so.*', '*.dll']) {
     for (const src of glob.sync(path.join(buildDir, pattern))) {
       fs.copyFileSync(src, path.join(distKungfu, path.basename(src)));
     }
