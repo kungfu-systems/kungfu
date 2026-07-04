@@ -43,6 +43,7 @@
     "rebuild:core": "pnpm --filter @kungfu-tech/core run rebuild",
     "package:app": "pnpm --filter @kungfu-tech/artifact-kungfu run package",
     "verify": "node verify.js",
+    "check:types": "tsc -p tsconfig.tools.json",
     "prepare": "node install-hooks.js",
     "hooks:install": "node install-hooks.js --force"
   },
@@ -53,6 +54,10 @@
     "wsrun": "^5.2.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "1.9.4"
+    "@biomejs/biome": "1.9.4",
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^22.0.0",
+    "@types/npmlog": "^7.0.0",
+    "typescript": "^5.6.0"
   }
 }

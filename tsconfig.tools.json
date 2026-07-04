@@ -1,0 +1,38 @@
+{
+  "//": "Type-checks the JS tooling/bootstrap layer via per-file `// @ts-check`.",
+  "//2": "checkJs is off: only files that opt in with `// @ts-check` are checked;",
+  "//3": "product code is TypeScript and has its own build. Run: pnpm run check:types.",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "strict": true,
+    "target": "es2022",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": [
+    "*.js",
+    "*.mjs",
+    "types/**/*.d.ts",
+    "framework/core/.gyp/**/*.js",
+    "framework/core/lib/**/*.js",
+    "framework/core/src/python/kungfu/rewind/hook/*.js",
+    "framework/spec/**/*.js",
+    "developer/sdk/src/**/*.js",
+    "framework/gui/lib/**/*.js",
+    "framework/gui/scripts/**/*.mjs",
+    "framework/tui/*.mjs"
+  ],
+  "exclude": [
+    "**/node_modules",
+    "**/dist",
+    "**/out",
+    "**/build",
+    "**/.deps",
+    "**/generated",
+    "tests/fixtures"
+  ]
+}
