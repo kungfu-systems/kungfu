@@ -10,6 +10,7 @@ from . import schema
 from . import work
 from . import atlas
 from . import kfx
+from . import sdk
 
 __all__ = [
     "engage",
@@ -22,4 +23,5 @@ __all__ = [
     "work",
     "atlas",
     "kfx",
+    "sdk",
 ]
