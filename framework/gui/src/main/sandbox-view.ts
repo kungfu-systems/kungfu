@@ -32,9 +32,17 @@ const SAMPLE_INTERVAL_MS = 2000;
 export function lockedDownPartition(id: string): string {
   const partition = `sandbox:${id}`;
   const ses: Session = session.fromPartition(partition);
+  // In development the harness page is served by the renderer dev server
+  // (ELECTRON_RENDERER_URL, an http origin), so that exact origin is allowed
+  // alongside file:/devtools:. In production ELECTRON_RENDERER_URL is unset and
+  // the harness loads over file:, so only file:/devtools: pass — the network
+  // stays denied.
+  const devOrigin = process.env.ELECTRON_RENDERER_URL;
   ses.webRequest.onBeforeRequest((details, callback) => {
     const ok =
-      details.url.startsWith('file:') || details.url.startsWith('devtools:');
+      details.url.startsWith('file:') ||
+      details.url.startsWith('devtools:') ||
+      (!!devOrigin && details.url.startsWith(devOrigin));
     callback({ cancel: !ok });
   });
   return partition;

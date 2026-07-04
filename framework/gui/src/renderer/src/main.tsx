@@ -217,6 +217,9 @@ function App() {
   const enabled = loaded.entries.filter(
     (entry) =>
       entry.system ||
+      // installed third-party views (sandboxed-ipc) are visible once installed,
+      // independent of the profile's built-in kfx list
+      entry.tier === 'sandboxed-ipc' ||
       (profile.kfx.includes(entry.id) &&
         !state.disabledKfx.includes(entry.id) &&
         !(entry.suite && state.disabledSuites.includes(entry.suite))),

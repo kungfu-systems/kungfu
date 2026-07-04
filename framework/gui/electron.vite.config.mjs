@@ -14,10 +14,10 @@ const rootDir = dirname(fileURLToPath(import.meta.url));
 //   entries: the shell (index) and the isolated sandboxed-view harness.
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
+    plugins: [externalizeDepsPlugin({ exclude: ['@kungfu-tech/api', '@kungfu-tech/kfx'] })],
   },
   preload: {
-    plugins: [externalizeDepsPlugin()],
+    plugins: [externalizeDepsPlugin({ exclude: ['@kungfu-tech/api', '@kungfu-tech/kfx'] })],
     build: {
       rollupOptions: {
         input: {
