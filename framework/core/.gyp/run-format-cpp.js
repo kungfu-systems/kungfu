@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
+// @ts-check
 
 const glob = require('glob');
 const path = require('path');
 const { shell } = require('../lib');
 
+/** @param {string[]} argv */
 function main(argv) {
   const cwd = process.cwd().toString();
   process.chdir(path.dirname(__dirname));
@@ -15,10 +17,10 @@ function main(argv) {
   const clangFormat = ['run', '--frozen', 'clang-format'];
   shell.run('uv', [...clangFormat, '--version'], true, { tolerant: true });
 
-  const files = argv.flatMap((dir) =>
+  const files = argv.flatMap((/** @type {string} */ dir) =>
     glob
       .sync('**/*.@(h|hpp|hxx|cpp|c|cc|cxx)', { cwd: path.join(cwd, dir) })
-      .map((p) => path.join(cwd, dir, p)),
+      .map((/** @type {string} */ p) => path.join(cwd, dir, p)),
   );
   if (files.length) {
     shell.run('uv', [...clangFormat, '-style=file', '-i', ...files]);

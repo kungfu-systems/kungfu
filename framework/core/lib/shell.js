@@ -1,22 +1,32 @@
 // SPDX-License-Identifier: Apache-2.0
+// @ts-check
 
 const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
 const GithubBinaryHost = 'https://prebuilt.libkungfu.io';
+/**
+ * Identity predicate used with Array#filter to drop null/undefined entries.
+ * @template T
+ * @param {T} e
+ * @returns {T}
+ */
 const defined = (e) => e;
 
 const utils = {
+  /** @param {unknown} error */
   exitOnError: function (error) {
     console.error(error);
     process.exit(-1);
   },
 
+  /** @param {string} npmConfigValue @returns {string} */
   getScope: function (npmConfigValue) {
     return npmConfigValue === 'undefined' ? '[package.json]' : '[user]';
   },
 
+  /** @param {string} cmd @param {string[]} argv @param {{ silent?: boolean }} opts */
   trace: function (cmd, argv, opts) {
     if (!opts.silent) {
       console.log(`$ ${cmd} ${argv.join(' ')}`);
@@ -28,12 +38,20 @@ const utils = {
     return local ? '.gyp' : path.resolve(__dirname);
   },
 
+  /** @param {string} key @returns {string} */
   getNpmConfigValue: function (key) {
     return shell.runAndCollect('npm', ['config', 'get', key], { silent: true })
       .out;
   },
 
+  /**
+   * Collect the package names in a package.json's dependency maps that
+   * themselves declare a node-pre-gyp `binary` block.
+   * @param {any} packageJson a parsed package.json (untyped shape)
+   * @returns {string[]}
+   */
   findBinaryDependency: function (packageJson) {
+    /** @param {Record<string, string>} deps */
     const hasBinary = (deps) =>
       Object.keys(deps)
         .map((key) => {
@@ -53,6 +71,7 @@ const utils = {
       .flat();
   },
 
+  /** @param {string} [packageName] */
   setBinaryHostConfig: function (packageName) {
     const packageJson = shell.getPackageJson(packageName);
     if (!packageJson) {
@@ -67,6 +86,7 @@ const utils = {
     }
   },
 
+  /** @param {string} key */
   showProjectConfig: function (key) {
     const packageJson = shell.getPackageJson();
     const projectName = packageJson.name;
@@ -79,6 +99,7 @@ const utils = {
     );
   },
 
+  /** @param {string} [packageName] */
   showBinaryHostConfig: function (packageName) {
     const packageJson = shell.getPackageJson(packageName);
     if (!packageJson) {
@@ -98,8 +119,10 @@ const utils = {
 };
 
 const shell = {
+  /** @returns {string | undefined} */
   getElectronArch: function () {
     try {
+      /** @type {any} electron's main-process require has no bundled types here */
       const electron = require('electron');
       const electronVersionScript = path.resolve(
         path.dirname(__dirname),
@@ -115,6 +138,7 @@ const shell = {
           silent: true,
         },
       ).out;
+      /** @param {string | undefined} arch */
       const resolveHeadless = (arch) => {
         return arch || shell.getTargetArch();
       };
@@ -124,6 +148,7 @@ const shell = {
     }
   },
 
+  /** @returns {string} */
   getTargetArch: function () {
     // tracing-foundation Phase 1: config.arch 未显式设置时回退到宿主架构(process.arch)。
     // 原 config 硬编码 'x64'(x64 时代),在 arm64 机器上会误判;回退使本机构建自动匹配
@@ -133,7 +158,14 @@ const shell = {
     );
   },
 
+  /**
+   * Read and parse a package.json: the current working dir's when no name is
+   * given, otherwise the named package's (resolved via require.resolve).
+   * @param {string} [packageName]
+   * @returns {any} parsed package.json, or undefined if the named one is unresolvable
+   */
   getPackageJson: function (packageName) {
+    /** @param {string} filepath */
     const toJSON = (filepath) => {
       return JSON.parse(fs.readFileSync(filepath, 'utf8').toString());
     };
@@ -147,10 +179,12 @@ const shell = {
     }
   },
 
+  /** @param {string} name @returns {string | undefined} */
   getConfigValue: function (name) {
     return process.env[`npm_package_config_${name}`];
   },
 
+  /** @param {string[]} npmArgs */
   npmCall: function (npmArgs) {
     return shell.run('npm', npmArgs);
   },
@@ -196,6 +230,16 @@ const shell = {
     }
   },
 
+  /**
+   * spawnSync a command with the shell, inheriting stdio, from the real
+   * (symlink-resolved) cwd. When `check` is set, exit the process on a non-zero
+   * status unless `opts.tolerant` is set.
+   * @param {string} cmd
+   * @param {string[]} [argv]
+   * @param {boolean} [check]
+   * @param {import('child_process').SpawnSyncOptions & { silent?: boolean, tolerant?: boolean }} [opts]
+   * @returns {import('child_process').SpawnSyncReturns<string | Buffer>}
+   */
   run: function (cmd, argv = [], check = true, opts = {}) {
     const real_cwd = fs.realpathSync(path.resolve(process.cwd().toString()));
     utils.trace(cmd, argv, opts);
@@ -207,11 +251,21 @@ const shell = {
       ...opts,
     });
     if (check && result.status !== 0) {
-      process.exit(opts.tolerant ? 0 : result.status);
+      // status is null when the child was terminated by a signal; keep the
+      // original runtime behaviour (process.exit(null) === exit code 0).
+      process.exit(opts.tolerant ? 0 : (result.status ?? 0));
     }
     return result;
   },
 
+  /**
+   * Like `run` but pipes stdout and returns it, trimmed, as an extra `out`
+   * field on the spawn result.
+   * @param {string} cmd
+   * @param {string[]} [argv]
+   * @param {import('child_process').SpawnSyncOptions & { silent?: boolean }} [opts]
+   * @returns {import('child_process').SpawnSyncReturns<string | Buffer> & { out: string }}
+   */
   runAndCollect: function (cmd, argv = [], opts = {}) {
     utils.trace(cmd, argv, opts);
     const result = spawnSync(cmd, argv, {
@@ -220,10 +274,17 @@ const shell = {
       windowsHide: true,
       ...opts,
     });
-    result.out = result.stdout.toString().trim();
-    return result;
+    const out = result.stdout.toString().trim();
+    return Object.assign(result, { out });
   },
 
+  /**
+   * Run a command; if it succeeds, exit the process with code 0, otherwise
+   * return the spawn result for the caller to handle.
+   * @param {string} cmd
+   * @param {string[]} [argv]
+   * @param {import('child_process').SpawnSyncOptions & { silent?: boolean, tolerant?: boolean }} [opts]
+   */
   runAndExit: function (cmd, argv = [], opts = {}) {
     const result = shell.run(cmd, argv, false, opts);
     if (result.status === 0) {
@@ -265,6 +326,7 @@ const shell = {
     utils.findBinaryDependency(packageJson).map(utils.showBinaryHostConfig);
   },
 
+  /** @param {string} filename @param {string} [dirname] */
   touch: function (filename, dirname = process.cwd().toString()) {
     const now = new Date();
     const filepath = path.resolve(dirname, filename);

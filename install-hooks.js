@@ -11,6 +11,7 @@
 // Run automatically from the root `prepare` script on install, or manually via
 // `pnpm run hooks:install` (which passes --force). It is idempotent and refuses
 // to clobber a developer's own pre-commit unless --force is given.
+// @ts-check
 'use strict';
 
 const fs = require('fs');
@@ -20,11 +21,17 @@ const { spawnSync } = require('child_process');
 const OURS_MARKER = 'kungfu pre-commit hook';
 const REPLACEABLE = [OURS_MARKER, '#yorkie']; // our own hook, or the dead yorkie shim
 
+/**
+ * Run git with the given args and return trimmed stdout, or null on failure.
+ * @param {string[]} args
+ * @returns {string | null}
+ */
 function git(args) {
   const r = spawnSync('git', args, { encoding: 'utf8' });
   return r.status === 0 ? String(r.stdout).trim() : null;
 }
 
+/** @param {string} msg */
 function log(msg) {
   process.stderr.write(`[install-hooks] ${msg}\n`);
 }

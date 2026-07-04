@@ -1,7 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
+// @ts-check
 
+/**
+ * Build a sywac CLI: wire the caller's `setup`, optional -h/--help and
+ * -v/--version, and parse+exit when run as the main module. Returns the cli
+ * instance so callers can further configure it.
+ * @param {NodeModule} module the caller's `module`, to detect `require.main`
+ * @param {(cli: any) => void} setup callback that registers commands/options
+ * @param {{ silent?: boolean, tolerant?: boolean, help?: boolean, version?: boolean }} [opts]
+ * @returns {any} the configured sywac cli instance
+ */
 module.exports = function (module, setup, opts = {}) {
+  /** @type {any} sywac has no bundled types */
   const cli = require('sywac').strict();
+  /** @param {any} result */
   const exitHandler = (result) => {
     if (result.output) {
       console.log(result.output);
@@ -13,6 +25,7 @@ module.exports = function (module, setup, opts = {}) {
     }
     return result.argv;
   };
+  /** @param {any} error */
   const errorHandler = (error) => {
     console.error(error);
     opts.tolerant || process.exit(-1);

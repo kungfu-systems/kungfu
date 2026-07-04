@@ -6,6 +6,7 @@
 // binding), wired the same way as the reference GUI. The generated app is
 // self-contained; it consumes the platform through published packages, or
 // through the workspace when scaffolded inside the monorepo (--workspace).
+// @ts-check
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -17,6 +18,11 @@ const TEMPLATE_ROOT = path.join(
   'templates',
 );
 
+/**
+ * Print CLI usage and exit with the given status code.
+ * @param {number} code
+ * @returns {never}
+ */
 function usage(code) {
   process.stdout.write(
     [
@@ -45,11 +51,26 @@ function usage(code) {
   process.exit(code);
 }
 
+/**
+ * Print an error to stderr and exit non-zero.
+ * @param {string} message
+ * @returns {never}
+ */
 function fail(message) {
   process.stderr.write(`kfs: ${message}\n`);
   process.exit(1);
 }
 
+/**
+ * Parsed CLI options shared by the create verbs.
+ * @typedef {{ workspace: boolean, name: string }} CreateOptions
+ */
+
+/**
+ * Split argv into positional arguments and named options.
+ * @param {string[]} argv
+ * @returns {{ positional: string[], options: CreateOptions }}
+ */
 function parseArgs(argv) {
   const positional = [];
   const options = { workspace: false, name: '' };
@@ -66,13 +87,30 @@ function parseArgs(argv) {
   return { positional, options };
 }
 
+/**
+ * Derive a reverse-DNS application id from a product name.
+ * @param {string} name
+ * @returns {string}
+ */
 function toAppId(name) {
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
   return `com.kungfu.app.${slug.replace(/-/g, '')}`;
 }
 
+/**
+ * Copy a template tree into targetDir, substituting placeholder tokens.
+ * @param {string} templateName
+ * @param {string} targetDir
+ * @param {Record<string, string>} replacements
+ * @returns {void}
+ */
 function scaffold(templateName, targetDir, replacements) {
   const templateDir = path.join(TEMPLATE_ROOT, templateName);
+  /**
+   * @param {string} from
+   * @param {string} to
+   * @returns {void}
+   */
   const copy = (from, to) => {
     for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
       // npm strips dotfiles from published packages; templates store them
@@ -98,6 +136,12 @@ function scaffold(templateName, targetDir, replacements) {
   copy(templateDir, targetDir);
 }
 
+/**
+ * Scaffold a complete Kungfu desktop app into `directory`.
+ * @param {string | undefined} directory
+ * @param {CreateOptions} options
+ * @returns {void}
+ */
 function createApp(directory, options) {
   if (!directory) usage(1);
   const targetDir = path.resolve(directory);
@@ -125,6 +169,12 @@ function createApp(directory, options) {
   );
 }
 
+/**
+ * Scaffold a view extension package (kfx) into `directory`.
+ * @param {string | undefined} directory
+ * @param {CreateOptions} options
+ * @returns {void}
+ */
 function createExtension(directory, options) {
   if (!directory) usage(1);
   const targetDir = path.resolve(directory);
@@ -163,6 +213,24 @@ const KFX_EXTERNALS = [
   '@kungfu-tech/api/capability',
 ];
 
+/**
+ * The subset of a kfx package.json this driver reads.
+ * @typedef {object} Manifest
+ * @property {string} [name]
+ * @property {{
+ *   key?: string,
+ *   config?: {
+ *     view?: { entry?: string },
+ *     adapter?: unknown,
+ *   },
+ * }} [kungfuConfig]
+ * @property {{ python?: unknown }} [kungfuBuild]
+ */
+
+/**
+ * Read and parse the package.json in the current working directory.
+ * @returns {Manifest}
+ */
 function readManifest() {
   const manifestPath = path.resolve('package.json');
   if (!fs.existsSync(manifestPath))
@@ -177,6 +245,11 @@ function readManifest() {
 // helper (cmake/kungfu.cmake); this driver invokes CMake with the core's conan
 // toolchain and pins the module to the core's Python so it loads in kfc.
 
+/**
+ * Walk up from startDir looking for the monorepo's framework/core.
+ * @param {string} startDir
+ * @returns {string | null} the core directory, or null if not found
+ */
 function locateCoreDir(startDir) {
   let dir = startDir;
   for (let i = 0; i < 8; i += 1) {
@@ -189,6 +262,13 @@ function locateCoreDir(startDir) {
   return null;
 }
 
+/**
+ * Run a child process synchronously, aborting the CLI if it fails.
+ * @param {string} cmd
+ * @param {string[]} args
+ * @param {import('node:child_process').SpawnSyncOptions} [opts]
+ * @returns {void}
+ */
 function runOrFail(cmd, args, opts = {}) {
   const result = spawnSync(cmd, args, { stdio: 'inherit', ...opts });
   if (result.error) fail(`${cmd} not runnable: ${result.error.message}`);
@@ -199,6 +279,11 @@ function runOrFail(cmd, args, opts = {}) {
   }
 }
 
+/**
+ * Configure and build a C++ kfx into a native pybind11 module.
+ * @param {Manifest} manifest
+ * @returns {void}
+ */
 function cppBuild(manifest) {
   const coreDir = locateCoreDir(process.cwd());
   if (!coreDir)
@@ -247,6 +332,11 @@ function cppBuild(manifest) {
 // ahead-of-time compiled into a native module (`kungfu engage nuitka
 // --module`) — exercising the same python development lifecycle kfc ships.
 
+/**
+ * Install deps and AOT-compile a Python kfx into a native module.
+ * @param {Manifest} manifest
+ * @returns {void}
+ */
 function pythonAotBuild(manifest) {
   const coreDir = locateCoreDir(process.cwd());
   if (!coreDir)
@@ -303,6 +393,10 @@ function pythonAotBuild(manifest) {
   );
 }
 
+/**
+ * Dispatch `kfs kfx build` to the right builder for the current package.
+ * @returns {Promise<void>}
+ */
 async function kfxBuild() {
   const manifest = readManifest();
   const config = manifest.kungfuConfig?.config ?? {};
@@ -355,6 +449,10 @@ async function kfxBuild() {
   );
 }
 
+/**
+ * Remove the dist/ and build/ trees produced by `kfs kfx build`.
+ * @returns {void}
+ */
 function kfxClean() {
   readManifest();
   fs.rmSync(path.resolve('dist'), { recursive: true, force: true });

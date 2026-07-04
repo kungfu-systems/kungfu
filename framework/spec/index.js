@@ -5,6 +5,7 @@
 // The bundle's authoritative payload is a set of files (manifest.json + the six
 // categories + three handbooks); this module only exposes stable locators so a
 // consumer can find the contract and, once built, the generated manifest.
+// @ts-check
 
 const path = require('path');
 

@@ -6,6 +6,7 @@
 // await, which the CJS format cannot represent. The kungfu_node binding is
 // loaded at runtime by absolute path (a dynamic require esbuild leaves alone),
 // so it stays external.
+// @ts-check
 
 import esbuild from 'esbuild';
 
@@ -14,6 +15,12 @@ import esbuild from 'esbuild';
 // empty module so the bundle is self-contained.
 const stubDevtools = {
   name: 'stub-react-devtools-core',
+  /**
+   * esbuild plugin setup hook. `build` is esbuild's PluginBuild object; it
+   * is typed as `any` here because esbuild ships no types in this checkout.
+   * @param {any} build
+   * @returns {void}
+   */
   setup(build) {
     build.onResolve({ filter: /^react-devtools-core$/ }, () => ({
       path: 'react-devtools-core',

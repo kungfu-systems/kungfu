@@ -14,6 +14,7 @@
 //   3. all six categories + three handbooks declared, each with required fields
 //   4. every path the manifest references actually exists in the bundle
 //   5. spec_version is consistently routed into docs_url_base
+// @ts-check
 
 const fs = require('fs');
 const path = require('path');
@@ -23,7 +24,12 @@ const distDir = path.join(pkgRoot, 'dist');
 const schemaPath = path.join(pkgRoot, 'schema', 'manifest.schema.json');
 const manifestPath = path.join(distDir, 'manifest.json');
 
+/** @type {string[]} */
 const failures = [];
+/**
+ * @param {unknown} cond
+ * @param {string} msg
+ */
 function check(cond, msg) {
   if (!cond) failures.push(msg);
 }
@@ -35,7 +41,7 @@ function main() {
     schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
   } catch (err) {
     console.error(
-      `[spec:verify] FAIL: cannot read/parse manifest schema: ${err.message}`,
+      `[spec:verify] FAIL: cannot read/parse manifest schema: ${/** @type {Error} */ (err).message}`,
     );
     return 1;
   }
@@ -52,7 +58,7 @@ function main() {
     m = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   } catch (err) {
     console.error(
-      `[spec:verify] FAIL: dist/manifest.json does not parse: ${err.message}`,
+      `[spec:verify] FAIL: dist/manifest.json does not parse: ${/** @type {Error} */ (err).message}`,
     );
     return 1;
   }

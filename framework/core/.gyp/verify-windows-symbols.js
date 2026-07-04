@@ -14,6 +14,7 @@
 // or from the freeze pipeline:
 //   const { verifyWindowsSymbols } = require('./verify-windows-symbols');
 //   verifyWindowsSymbols(path.join(CORE, 'dist', 'kungfu'));
+// @ts-check
 
 const fs = require('fs');
 const path = require('path');
@@ -32,6 +33,12 @@ const REQUIRED = [
 
 // The linker PDB is named after the target's output base, so accept
 // "<module>.pdb" as well as an ABI-suffixed "<module>.<abi>.pdb".
+/**
+ * @param {string} dir
+ * @param {string} binName
+ * @param {string[]} pdbNames
+ * @returns {boolean}
+ */
 function hasSiblingPdb(dir, binName, pdbNames) {
   const stem = binName
     .replace(/\.(node|pyd)$/i, '')
@@ -40,9 +47,11 @@ function hasSiblingPdb(dir, binName, pdbNames) {
   return pdbNames.some((p) => p.toLowerCase().startsWith(stem));
 }
 
+/** @param {string} distKfc */
 function verifyWindowsSymbols(distKfc) {
   const entries = fs.existsSync(distKfc) ? fs.readdirSync(distKfc) : [];
   const pdbNames = entries.filter((f) => /\.pdb$/i.test(f));
+  /** @type {string[]} */
   const missing = [];
   for (const re of REQUIRED) {
     const bin = entries.find((f) => re.test(f));

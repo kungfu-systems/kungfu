@@ -13,6 +13,7 @@
 //
 // The config file lives user-global at ${XDG_CONFIG_HOME:-~/.config}/kungfu/build-local.env: the main repo and all
 // git worktrees share one copy, it is naturally outside the repo (open-source safe), and only needs one sync across intranet machines.
+// @ts-check
 'use strict';
 
 const fs = require('fs');
@@ -47,7 +48,12 @@ function readRaw() {
   }
 }
 
+/**
+ * Parse the config file into a key/value map.
+ * @returns {Record<string, string>}
+ */
 function readConfig() {
+  /** @type {Record<string, string>} */
   const out = {};
   for (const line of readRaw().split('\n')) {
     const m = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
@@ -64,6 +70,11 @@ function readConfig() {
   return out;
 }
 
+/**
+ * Single-quote a value for safe embedding in the shell env file.
+ * @param {string} v
+ * @returns {string}
+ */
 function shQuote(v) {
   return "'" + String(v).replace(/'/g, "'\\''") + "'";
 }
@@ -72,6 +83,11 @@ function ensureDir() {
   fs.mkdirSync(path.dirname(CONFIG_FILE), { recursive: true });
 }
 
+/**
+ * Upsert one KEY=value entry in the config file.
+ * @param {string} key
+ * @param {string} val
+ */
 function setKey(key, val) {
   ensureDir();
   let text = readRaw();
@@ -82,6 +98,10 @@ function setKey(key, val) {
   fs.writeFileSync(CONFIG_FILE, text);
 }
 
+/**
+ * Remove one KEY=value entry from the config file.
+ * @param {string} key
+ */
 function unsetKey(key) {
   const text = readRaw();
   if (!text) return;
@@ -92,6 +112,7 @@ function unsetKey(key) {
 module.exports = { CONFIG_FILE, KEYS, readConfig, setKey, unsetKey };
 
 // ── CLI (entrypoint delegated from L1 sh) ────────────────────────────────────
+/** @param {string} cmd */
 function help(cmd) {
   console.error(
     `kungfu-code ${cmd} — manage local build environment config: mirrors/cache + compile params (user-global build-local.env)\n` +

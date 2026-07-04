@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+// @ts-check
 
 const fs = require('fs');
 const glob = require('glob');
@@ -60,6 +61,10 @@ function useUvPython() {
   }
 }
 
+/**
+ * @param {string[]} args
+ * @param {boolean} [check]
+ */
 function callPrebuilt(args, check = true) {
   useUvPython();
   const buildType = process.env.npm_package_config_build_type;
@@ -67,22 +72,25 @@ function callPrebuilt(args, check = true) {
   return prebuilt(...buildTypeOpt, ...args);
 }
 
-module.exports = require('../lib/sywac')(module, (cli) => {
-  cli
-    .command('install', () => {
-      const fallbackBuild = process.env.KF_INSTALL_FALLBACK_BUILD === 'true';
-      callPrebuilt(
-        fallbackBuild ? ['install', '--fallback-to-build'] : ['install'],
-        fallbackBuild,
-      );
-    })
-    .command('build', () => build())
-    .command('clean', () => clean())
-    .command('rebuild', () => {
-      clean();
-      build();
-    })
-    .command('package', () => {
-      callPrebuilt(['package']).onSuccess(makePackage);
-    });
-});
+module.exports = require('../lib/sywac')(
+  /** @type {NodeModule} */ (module),
+  (/** @type {any} */ cli) => {
+    cli
+      .command('install', () => {
+        const fallbackBuild = process.env.KF_INSTALL_FALLBACK_BUILD === 'true';
+        callPrebuilt(
+          fallbackBuild ? ['install', '--fallback-to-build'] : ['install'],
+          fallbackBuild,
+        );
+      })
+      .command('build', () => build())
+      .command('clean', () => clean())
+      .command('rebuild', () => {
+        clean();
+        build();
+      })
+      .command('package', () => {
+        callPrebuilt(['package']).onSuccess(makePackage);
+      });
+  },
+);

@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
+// @ts-check
 
 const fse = require('fs-extra');
 const path = require('path');
 const { shell } = require('../lib');
 
+/** @param {string[]} cmd */
 function conan(cmd) {
   // uv 接管 env（S1 阶段 A）：在 uv 项目 venv 中运行全局 conan2；--frozen 不偷改 uv.lock。
   const uv_args = ['run', '--frozen', 'conan', ...cmd];
@@ -32,10 +34,12 @@ function getNodeVersionOptions() {
   ];
 }
 
+/** @param {string} name */
 function makeConanSetting(name) {
   return ['-s', `${name}=${shell.getConfigValue(name)}`];
 }
 
+/** @param {string[]} names */
 function makeConanSettings(names) {
   return names.map(makeConanSetting).flat();
 }
@@ -47,10 +51,12 @@ function platformConanSettings() {
   return process.platform === 'win32' ? ['-s', 'compiler.cppstd=17'] : [];
 }
 
+/** @param {string} name */
 function makeConanOption(name) {
   return ['-o', `${name}=${shell.getConfigValue(name)}`];
 }
 
+/** @param {string[]} names */
 function makeConanOptions(names) {
   return names.map(makeConanOption).flat().concat(getNodeVersionOptions());
 }

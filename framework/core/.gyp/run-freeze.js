@@ -15,6 +15,7 @@
 //   kungfu_electron.node）需 freeze 后从 build/<type> 补拷（kfc python 进程不 import 它们）。
 // - pyinstaller（fallback）：onedir 把数据/库放进 _internal/，而 app 栈假设 dist/kungfu 扁平，
 //   故 freeze 后 promote（_internal/*→顶层，Unix 符号链/Win 拷贝）。
+// @ts-check
 
 const fs = require('fs');
 const path = require('path');
@@ -48,6 +49,10 @@ function stage() {
 }
 
 // kungfu/__init__ 读 pykungfu 同目录的 kungfubuildinfo.json 取 version；缺则生成。
+/**
+ * @param {string} bt
+ * @returns {string}
+ */
 function ensureBuildInfo(bt) {
   const dir = path.join(CORE, 'build', bt);
   const info = path.join(dir, 'kungfubuildinfo.json');
@@ -82,12 +87,17 @@ const APP_NATIVE = [
 // kungfu frames to symbols; without it the stackwalker only prints module+offset
 // (see docs/windows-crash-symbols.md). No-op off Windows or when no PDB exists
 // (e.g. third-party natives, or a build without /Z7 + /DEBUG).
+/**
+ * @param {string} binPath
+ * @param {string} destDir
+ */
 function copyPdbSibling(binPath, destDir) {
   const dir = path.dirname(binPath);
   const stem = path
     .basename(binPath)
     .replace(/\.(node|pyd|dll|exe)$/i, '')
     .split('.')[0];
+  /** @type {string | null} */
   let pdb = binPath.replace(/\.(node|pyd|dll|exe)$/i, '.pdb');
   if (pdb === binPath || !fs.existsSync(pdb)) {
     // Fall back to any <stem>*.pdb the linker emitted next to the binary; the
@@ -105,6 +115,7 @@ function copyPdbSibling(binPath, destDir) {
   fs.copyFileSync(pdb, path.join(destDir, path.basename(pdb)));
 }
 
+/** @param {string} bt */
 function copyAppNative(bt) {
   const rel = path.join(CORE, 'build', bt);
   const distKfc = path.join(CORE, 'dist', 'kungfu');
@@ -120,10 +131,16 @@ function copyAppNative(bt) {
 }
 
 // BFS 查 build 树里首个匹配文件（返回最浅一份，避开 obj/临时深目录里的副本）。
+/**
+ * @param {string} root
+ * @param {RegExp} re
+ * @returns {string | null}
+ */
 function findFileShallow(root, re) {
   const queue = [root];
   while (queue.length) {
     const dir = queue.shift();
+    if (dir === undefined) break;
     let entries;
     try {
       entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -151,6 +168,7 @@ function findFileShallow(root, re) {
 // Mac/Linux 无此问题：pykungfu.so 就在 build/<bt>，其 libnode 依赖经 rpath(@loader_path/
 // $ORIGIN) 解析、Nuitka 依赖扫描连带打包，故 freeze 自洽（本函数在非 Win 直接返回）。
 // 冻结 kfc 可执行会加载与其同目录的 pykungfu.pyd + libnode.dll（已实测通过），故补拷即可。
+/** @param {string} bt */
 function copyPyBindingWin(bt) {
   if (!isWin) return;
   const distKfc = path.join(CORE, 'dist', 'kungfu');
@@ -176,6 +194,7 @@ function copyPyBindingWin(bt) {
 
 // ----------------------------------------------------------------- nuitka
 
+/** @param {string} bt */
 function freezeNuitka(bt) {
   const rel = path.join(CORE, 'build', bt); // 三 native（pykungfu/libkungfu/libnode）同目录
   const out = path.join(CORE, 'build', 'kungfu-nuitka');
@@ -251,6 +270,7 @@ function freezeNuitka(bt) {
 
 // ------------------------------------------------------------- pyinstaller
 
+/** @param {string} bt */
 function freezePyinstaller(bt) {
   stage();
   ensureBuildInfo(bt);
@@ -328,6 +348,7 @@ function promote() {
   console.log(`[freeze] promote 完成：${n} 项`);
 }
 
+/** @param {string} p */
 function existsLstat(p) {
   try {
     fs.lstatSync(p);

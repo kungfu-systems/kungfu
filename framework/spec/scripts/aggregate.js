@@ -10,6 +10,7 @@
 // stubs; their real generators (framework/core etc.) replace them later
 // (drift = build fail once that flow lands). Ownership is recorded in the
 // manifest so nothing is silently faked.
+// @ts-check
 
 const fs = require('fs');
 const path = require('path');
@@ -18,20 +19,33 @@ const { execFileSync } = require('child_process');
 const pkgRoot = path.resolve(__dirname, '..');
 const distDir = path.join(pkgRoot, 'dist');
 
+/** @param {string} msg */
 function log(msg) {
   console.log(`[spec:aggregate] ${msg}`);
 }
 
+/**
+ * @param {string} p
+ * @returns {any}
+ */
 function readJson(p) {
   return JSON.parse(fs.readFileSync(p, 'utf8'));
 }
 
+/**
+ * @param {string} rel
+ * @param {unknown} obj
+ */
 function writeJson(rel, obj) {
   const abs = path.join(distDir, rel);
   fs.mkdirSync(path.dirname(abs), { recursive: true });
   fs.writeFileSync(abs, JSON.stringify(obj, null, 2) + '\n');
 }
 
+/**
+ * @param {string} rel
+ * @param {string} text
+ */
 function writeText(rel, text) {
   const abs = path.join(distDir, rel);
   fs.mkdirSync(path.dirname(abs), { recursive: true });
@@ -62,6 +76,10 @@ function main() {
   fs.rmSync(distDir, { recursive: true, force: true });
   fs.mkdirSync(distDir, { recursive: true });
 
+  /**
+   * @param {string} srcRel
+   * @param {string} distRel
+   */
   const copyDoc = (srcRel, distRel) =>
     writeText(distRel, fs.readFileSync(path.join(pkgRoot, srcRel), 'utf8'));
 

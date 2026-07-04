@@ -1,4 +1,5 @@
 'use strict';
+// @ts-check
 
 // Build/dev entry points for the kungfu reference app, kept so the developer/sdk
 // `craft` flow (`require('@kungfu-tech/gui').electronBuild / .devRun`)
@@ -13,6 +14,13 @@ const { spawn } = require('child_process');
 
 const appDir = path.join(__dirname, '..');
 
+/**
+ * Spawn a locally-installed bin (from the app's node_modules/.bin), inheriting
+ * stdio; resolve on exit code 0, reject otherwise.
+ * @param {string} bin
+ * @param {string[]} args
+ * @returns {Promise<void>}
+ */
 function runBin(bin, args) {
   return new Promise((resolve, reject) => {
     const binPath = path.join(

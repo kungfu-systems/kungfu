@@ -1,6 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
+// @ts-check
 
+/**
+ * Load the native kungfu binding and expose its typed factory surface.
+ *
+ * The binding is a dynamically-resolved native addon, so it has no static
+ * type. It is treated as `any` here; the annotations below describe the
+ * public factory API this module hands to callers, not the addon internals.
+ * @returns {Record<string, any>}
+ */
 module.exports = function () {
+  /** @type {any} */
   const binding = (() => {
     try {
       const moduleName = '@kungfu-tech/core';
@@ -42,6 +52,14 @@ module.exports = function () {
     pyEvalFile: binding.pyEvalFile,
     shutdown: binding.shutdown,
     Longfist: () => new binding.Longfist(),
+    /**
+     * @param {any} arg a single location or an array of locations
+     * @param {string} [mode]
+     * @param {string} [category]
+     * @param {string} [group]
+     * @param {string} [name]
+     * @returns {any}
+     */
     Assemble: function (
       arg,
       mode = '*',
@@ -56,34 +74,62 @@ module.exports = function () {
       }
     },
 
+    /** @param {any} home @returns {any} */
     History: function (home) {
       return new binding.History(home);
     },
+    /** @param {any} home @returns {any} */
     ConfigStore: function (home) {
       return new binding.ConfigStore(home);
     },
+    /** @param {any} home @returns {any} */
     RiskSettingStore: function (home) {
       return new binding.RiskSettingStore(home);
     },
+    /** @param {any} home @returns {any} */
     CommissionStore: function (home) {
       return new binding.CommissionStore(home);
     },
+    /** @param {any} home @returns {any} */
     BasketStore: function (home) {
       return new binding.BasketStore(home);
     },
+    /** @param {any} home @returns {any} */
     BasketInstrumentStore: function (home) {
       return new binding.BasketInstrumentStore(home);
     },
+    /** @param {any} location @param {any} home @returns {any} */
     SessionStore: function (location, home) {
       return new binding.SessionStore(location, home);
     },
+    /** @param {any} location @param {any} home @returns {any} */
     IODevice: function (location, home) {
       return new binding.IODevice(location, home);
     },
+    /**
+     * @param {any} location
+     * @param {any} home
+     * @param {boolean} read
+     * @param {boolean} write
+     * @param {number} begin
+     * @param {number} end
+     * @returns {any}
+     */
     tracer: function (location, home, read, write, begin, end) {
       return new binding.Tracer(location, home, read, write, begin, end);
     },
 
+    /**
+     * @param {any} home
+     * @param {string} name
+     * @param {boolean} [bypassRestore]
+     * @param {boolean} [bypassAccounting]
+     * @param {boolean} [bypassTradingData]
+     * @param {boolean} [refreshTradingDataBeforeSync]
+     * @param {boolean} [bypassRefreshBook]
+     * @param {number} [millisecondsSleepAfterStep]
+     * @returns {any}
+     */
     watcher: function (
       home,
       name,

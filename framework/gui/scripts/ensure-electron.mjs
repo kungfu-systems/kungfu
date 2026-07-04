@@ -7,6 +7,7 @@
 // launch/package verb runs this first: present -> no-op in milliseconds,
 // missing -> run electron's own install script in place (ELECTRON_MIRROR and
 // friends come from the environment kungfu-code already loads).
+// @ts-check
 
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';

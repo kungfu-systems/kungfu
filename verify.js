@@ -23,6 +23,7 @@
 // Note: an Electron app's "interactive launch" cannot be asserted in a headless environment, so kfc
 // runtime smoke + app build artifact existence serve as the machine-assertable equivalent; the real
 // window launch is left as a manual / CI-display step.
+// @ts-check
 
 'use strict';
 
@@ -54,17 +55,28 @@ function expectedVersion() {
   return lerna.version;
 }
 
+/** @typedef {{ name: string, ok: boolean, detail: string }} Result */
+/** @type {Result[]} */
 const results = [];
+/**
+ * @param {string} name
+ * @param {string} [detail]
+ */
 function pass(name, detail) {
   results.push({ name, ok: true, detail: detail || '' });
   console.log(`  ✅ ${name}${detail ? ' — ' + detail : ''}`);
 }
+/**
+ * @param {string} name
+ * @param {string} [detail]
+ */
 function fail(name, detail) {
   results.push({ name, ok: false, detail: detail || '' });
   console.error(`  ❌ ${name}${detail ? ' — ' + detail : ''}`);
 }
 
 // run one pnpm task (via the pnpm dispatched by the current node/corepack); throw on failure
+/** @param {string} task */
 function runPnpm(task) {
   console.log(`\n[verify] build stage: pnpm ${task}`);
   const r = spawnSync('pnpm', ['run', task], {
@@ -151,7 +163,7 @@ function main() {
       runPnpm('freeze'); // nuitka → framework/core/dist/kungfu
       if (withApp) runPnpm('build:app'); // webpack → framework/gui/dist/app
     } catch (e) {
-      fail('build stage', e.message);
+      fail('build stage', e instanceof Error ? e.message : String(e));
       return summarize(); // on build failure, wrap up directly and do not assert half-built artifacts
     }
     pass('build stage', 'full chain executed');
@@ -328,6 +340,7 @@ function main() {
         return summarize();
       }
       pass('slices build', 'KUNGFU_WITH_SLICES=ON');
+      /** @param {import('child_process').SpawnSyncReturns<string>} r */
       const tail3 = (r) =>
         `${r.stdout || ''}${r.stderr || ''}`
           .trim()

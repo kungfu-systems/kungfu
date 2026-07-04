@@ -12,6 +12,7 @@
 // it around cross-process tool execution); spans created here root under it,
 // so one causal chain spans both runtimes inside the same journal.
 'use strict';
+// @ts-check
 
 const net = require('net');
 const crypto = require('crypto');
@@ -21,8 +22,10 @@ const endpoint = process.env.KUNGFU_REWIND_INGEST;
 const bootParent = process.env.KUNGFU_REWIND_PARENT_SPAN || null;
 
 if (endpoint) {
+  /** @type {import('net').Socket | null} */
   let sock = null;
   let dead = false;
+  /** @type {string[]} */
   const pending = [];
 
   const [host, port] = (() => {
@@ -31,18 +34,23 @@ if (endpoint) {
   })();
 
   const connect = () => {
-    sock = net.createConnection({ host, port, timeout: 1000 });
-    sock.on('connect', () => {
-      for (const line of pending.splice(0)) sock.write(line);
+    // Hold the created socket in a local so the connect handler writes to this
+    // exact connection even if `sock` is later nulled by the error handler
+    // (also lets @ts-check narrow away the Socket | null union).
+    const s = net.createConnection({ host, port, timeout: 1000 });
+    sock = s;
+    s.on('connect', () => {
+      for (const line of pending.splice(0)) s.write(line);
     });
-    sock.on('error', () => {
+    s.on('error', () => {
       dead = true;
       sock = null;
     });
-    sock.unref(); // never keep the traced process alive
+    s.unref(); // never keep the traced process alive
   };
   connect();
 
+  /** @param {unknown} message */
   const emit = (message) => {
     if (dead) return;
     const line = JSON.stringify(message) + '\n';
@@ -56,6 +64,15 @@ if (endpoint) {
 
   const newSpan = () => crypto.randomBytes(16).toString('hex');
 
+  /**
+   * @param {string} toolName
+   * @param {string | null} parentSpan
+   * @param {string | null} retryOf
+   * @param {number} attempt
+   * @param {string} input
+   * @param {() => any} fn
+   * @returns {{ result: any, spanId: string }}
+   */
   const captureInvoke = (toolName, parentSpan, retryOf, attempt, input, fn) => {
     const spanId = newSpan();
     if (retryOf) {
@@ -74,6 +91,11 @@ if (endpoint) {
       input,
     });
     const started = process.hrtime.bigint();
+    /**
+     * @param {string} status
+     * @param {string | null} output
+     * @param {string | null} error
+     */
     const done = (status, output, error) =>
       emit({
         event: 'tool_result',
@@ -88,11 +110,13 @@ if (endpoint) {
       done('ok', render(result), null);
       return { result, spanId };
     } catch (e) {
-      done('error', null, `${e.name || 'Error'}: ${e.message || e}`);
+      const err = /** @type {Error} */ (e);
+      done('error', null, `${err.name || 'Error'}: ${err.message || err}`);
       throw e;
     }
   };
 
+  /** @param {unknown} value */
   const render = (value) => {
     try {
       return JSON.stringify(value);
@@ -102,18 +126,23 @@ if (endpoint) {
   };
 
   // ── post-require adapters (mini require-in-the-middle) ──────────
+  /**
+   * @param {any} exports the loaded demo-toolkit module (arbitrary shape)
+   * @returns {any}
+   */
   const patchDemoToolkit = (exports) => {
     const originalRun = exports.Tool.prototype.run;
     const originalInvoke = exports.Tool.prototype._invoke;
     let attempt = 0;
+    /** @type {string | null} */
     let prevSpan = null;
 
-    exports.Tool.prototype.run = function (toolInput) {
+    exports.Tool.prototype.run = function (/** @type {any} */ toolInput) {
       attempt = 0;
       prevSpan = null;
       return originalRun.call(this, toolInput);
     };
-    exports.Tool.prototype._invoke = function (toolInput) {
+    exports.Tool.prototype._invoke = function (/** @type {any} */ toolInput) {
       attempt += 1;
       const { result, spanId } = captureInvoke(
         this.name,
@@ -131,8 +160,13 @@ if (endpoint) {
 
   // The demo toolkit is the built-in mechanism probe; real framework adapters
   // are kfx packages the supervisor discovers and announces.
+  /** @type {Record<string, (exports: any) => any>} */
   const ADAPTERS = { rewind_demo_toolkit: patchDemoToolkit };
 
+  /**
+   * @param {string} name
+   * @param {(exports: any) => any} patcher
+   */
   const registerAdapter = (name, patcher) => {
     ADAPTERS[name] = patcher;
   };
@@ -140,7 +174,7 @@ if (endpoint) {
   // Expose the capture API to plugin adapters loaded later. A node kfx adapter
   // reads globalThis.__kungfuRewind (it depends on nothing else) and registers
   // its patcher — the node analogue of the python hook's importable primitives.
-  globalThis.__kungfuRewind = {
+  /** @type {any} */ (globalThis).__kungfuRewind = {
     registerAdapter,
     captureInvoke,
     newSpan,
@@ -162,12 +196,19 @@ if (endpoint) {
     }
   }
 
-  const originalLoad = Module._load;
-  Module._load = function (request, parent, isMain) {
+  // Module._load is an internal, undocumented API absent from @types/node,
+  // so the module object is cast to any to reach it (require-in-the-middle).
+  const ModuleInternal = /** @type {any} */ (Module);
+  const originalLoad = ModuleInternal._load;
+  ModuleInternal._load = function (
+    /** @type {string} */ request,
+    /** @type {any} */ parent,
+    /** @type {boolean} */ isMain,
+  ) {
     const exports = originalLoad.apply(this, arguments);
     try {
       const name = request.replace(/\.js$/, '').split(/[\\/]/).pop();
-      const patcher = ADAPTERS[name];
+      const patcher = name ? ADAPTERS[name] : undefined;
       if (patcher && !exports.__rewind_patched__) {
         Object.defineProperty(exports, '__rewind_patched__', { value: true });
         return patcher(exports);
