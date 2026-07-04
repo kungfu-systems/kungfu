@@ -1,6 +1,6 @@
 # ADR-0014: the extension execution contract — a uniform capability surface across trust tiers
 
-- Status: proposed
+- Status: accepted
 - Date: 2026-07-04
 - Category: (architecture) contract — the developer-facing execution surface for
   runtime extensions
@@ -169,14 +169,26 @@ must preserve.
   per-plane transport duplication the binding-less host removes, and it is where
   a tier-dependent surface creeps back in.
 
-## Next (implementation, follow-up)
+## First delivery — landed
 
-1. Assemble the binding-less guest host from the existing OS-sandbox launcher,
-   child-process transport, and guest proxy; add the missing Node child-side
-   guest proxy.
-2. Present the uniform asynchronous capability surface across tiers, with the
-   trusted tier short-circuiting in-process and returning handles by reference
-   to keep zero-copy.
-3. Author the permissive default-tier profile and run the interpreted forms on
-   macOS and Linux with no restriction, proving the contract before confinement
-   is layered on.
+The three steps below are delivered as the first cut, with the permissive
+default profile and no restriction applied:
+
+1. The binding-less guest host is assembled from the existing OS-sandbox
+   launcher, child-process transport, and guest proxy, and the missing Node
+   child-side guest proxy is added.
+2. The uniform asynchronous capability surface is presented across tiers; the
+   trusted tier short-circuits in-process and returns handles by reference, so
+   zero-copy is preserved under the uniform surface.
+3. The permissive default-tier profile is authored and the interpreted forms
+   (a JavaScript facet and a Python facet) run under it with no restriction on
+   macOS (Seatbelt) and Linux (bubblewrap), the same source unchanged in both
+   trust tiers. The restriction knobs are demonstrated on both platforms:
+   denying filesystem writes and denying the network narrow what the facet
+   reaches without re-adapting it — a refused write, a removed external
+   interface — never a withdrawn method.
+
+Follow-ups remain as recorded in the feasibility map and out-of-scope notes:
+the confinement profiles beyond the permissive default, the
+shadow-reconciliation layer, narrowed reads (Landlock on Linux, profile read
+rules on macOS), resource ceilings, and the native-compiled extension forms.
