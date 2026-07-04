@@ -15,7 +15,15 @@
 //   host  -> child  { "t": "result", "id": n, "ok": true,  "value" }
 //                   { "t": "result", "id": n, "ok": false, "error" }
 //   host  -> child  { "t": "event",  "callback": n, "args" }   (a bridged callback)
+//
+// Every frame crosses the relay serialized: this is the sandbox tier's defining
+// property (ADR-0014). A capability result is a copy, not a live handle — 64-bit
+// identifiers are emitted as decimal strings (bigintSafe), functions and typed
+// arrays do not survive JSON. The trusted co-resident tier keeps those by
+// reference; the relay deliberately does not.
 import { createInterface } from 'node:readline';
+
+import { bigintSafe } from './types';
 
 export type HostRequest = { cap: string; method: string; args: unknown[] };
 export type HostEvent = { callback: number; args: unknown[] };
@@ -43,7 +51,7 @@ export function serveSubprocessCapabilities(
   createHost: (emit: (event: HostEvent) => void) => RelayHost,
 ): SubprocessHost {
   const send = (msg: unknown): void => {
-    child.stdin.write(`${JSON.stringify(msg)}\n`);
+    child.stdin.write(`${JSON.stringify(msg, bigintSafe)}\n`);
   };
   const host = createHost((event) => send({ t: 'event', ...event }));
 
