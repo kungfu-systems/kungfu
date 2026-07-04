@@ -14,7 +14,7 @@ SessionStore::SessionStore(const Napi::CallbackInfo &info)
     : ObjectWrap(info),                                                                                      //
       io_device_(std::make_shared<io_device>(                                                                //
           IODevice::ExtractLocation(info, 0, IODevice::ExtractRuntimeLocatorByIndex(info, 1)), false, true)) //
-      {};
+{};
 
 SessionStore::~SessionStore() { io_device_.reset(); }
 

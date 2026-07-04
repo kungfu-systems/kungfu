@@ -210,7 +210,7 @@ void master::react() {
   events_ | is(CacheReset::tag) | $([&](const event_ptr &event) { cached_.cache_reset(event); });
   events_ | is(CachedPause::tag) | $$(cached_.switch_feed_storage(true));
   events_ | is(CachedResume::tag) | $$(cached_.switch_feed_storage(false));
-  events_ | instanceof <yijinjing::journal::frame>() | $$(feed(event));
+  events_ | instanceof<yijinjing::journal::frame>() | $$(feed(event));
 
   // have to be at bottom of react, for avoid event still required after reader disjoin
   events_ | is(RequestDeregister::tag) | $$(on_request_deregister(event));

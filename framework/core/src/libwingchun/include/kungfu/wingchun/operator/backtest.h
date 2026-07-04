@@ -168,7 +168,7 @@ private:
     int64_t nanotime;
     std::function<void(event_ptr)> call_back;
     TimerTask(int32_t id, int64_t nanotime, std::function<void(event_ptr)> cb)
-        : timer_id(id), nanotime(nanotime), call_back(std::move(cb)){};
+        : timer_id(id), nanotime(nanotime), call_back(std::move(cb)) {};
     bool operator<(const TimerTask &other) const { return other.nanotime < this->nanotime; }
   };
 

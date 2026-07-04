@@ -27,7 +27,7 @@ public:
 
   std::string get_arguments() const { return arguments_; }
 
-  virtual void run(){};
+  virtual void run() {};
 
   template <typename DataType, std::enable_if_t<longfist::is_market_data<DataType>()>...>
   void write_at(int64_t gen_time, int64_t trigger_time, uint32_t dest_id, const DataType &data) {

@@ -39,7 +39,7 @@ class MarketData : public BrokerService {
   friend class MarketDataVendor;
 
 public:
-  explicit MarketData(BrokerVendor &vendor) : BrokerService(vendor){};
+  explicit MarketData(BrokerVendor &vendor) : BrokerService(vendor) {};
 
   virtual bool subscribe(const std::vector<longfist::types::InstrumentKey> &instrument_keys) = 0;
 

@@ -172,9 +172,9 @@ KF_DEFINE_PACK_TYPE(                                                            
 
     (double, margin),       // 保证金(期货)
     (double, position_pnl), // 持仓盈亏(期货), 最新价 - 昨结算, 表示今日的盈亏, 本地不计算改变
-    (double, close_pnl), // 平仓盈亏(期货), 平仓价 - 昨结算, 表示今日的平仓盈亏, 本地不计算改变
+    (double, close_pnl),    // 平仓盈亏(期货), 平仓价 - 昨结算, 表示今日的平仓盈亏, 本地不计算改变
 
-    (double, realized_pnl), // 已实现盈亏, 平仓价 - 昨结算, 表示今日的平仓盈亏, 随着交易被本地计算改变
+    (double, realized_pnl),   // 已实现盈亏, 平仓价 - 昨结算, 表示今日的平仓盈亏, 随着交易被本地计算改变
     (double, unrealized_pnl), // 未实现盈亏, 最新价 - 昨结算, 表示今日的盈亏, 随着交易被本地计算改变
 
     (uint32_t, source_id),   // 来源账户
@@ -234,9 +234,9 @@ KF_DEFINE_PACK_TYPE(                                           //
     (kungfu::array<char, EXTERNAL_ID_LEN>, external_order_id), // 柜台订单id
     (uint64_t, parent_id),                                     // 母单号
 
-    (int64_t, insert_time),  // 订单写入时间
-    (int64_t, update_time),  // 订单更新时间
-    (int64_t, restore_time), // 根据这个时间决定是否要恢复该数据, 主要针对期货夜盘
+    (int64_t, insert_time),                       // 订单写入时间
+    (int64_t, update_time),                       // 订单更新时间
+    (int64_t, restore_time),                      // 根据这个时间决定是否要恢复该数据, 主要针对期货夜盘
     (kungfu::array<char, DATE_LEN>, trading_day), // 针对模拟盘交易日与实际时间不对应
 
     (kungfu::array<char, INSTRUMENT_ID_LEN>, instrument_id), // 合约ID
@@ -276,8 +276,8 @@ KF_DEFINE_PACK_TYPE(                                   //
     (kungfu::array<char, EXTERNAL_ID_LEN>, external_order_id), // 柜台订单id
     (kungfu::array<char, EXTERNAL_ID_LEN>, external_trade_id), // 柜台成交编号id
 
-    (int64_t, trade_time),   // 成交时间
-    (int64_t, restore_time), // 根据这个时间决定是否要恢复该数据, 主要针对期货夜盘
+    (int64_t, trade_time),                        // 成交时间
+    (int64_t, restore_time),                      // 根据这个时间决定是否要恢复该数据, 主要针对期货夜盘
     (kungfu::array<char, DATE_LEN>, trading_day), // 针对模拟盘交易日与实际时间不对应
 
     (kungfu::array<char, INSTRUMENT_ID_LEN>, instrument_id), // 合约ID
@@ -311,13 +311,13 @@ KF_DEFINE_PACK_TYPE(                                                    //
     (kungfu::array<char, EXTERNAL_ID_LEN>, external_order_id), // 撤单原委托柜台订单id, 新生成撤单委托编号不记录
     (uint64_t, order_action_id),                               // 订单操作ID
     (int32_t, error_id),                                       // 错误ID
-    (kungfu::array<char, ERROR_MSG_LEN>, error_msg), // 错误信息
-    (int64_t, insert_time)                           // 写入时间
+    (kungfu::array<char, ERROR_MSG_LEN>, error_msg),           // 错误信息
+    (int64_t, insert_time)                                     // 写入时间
 );
 
 KF_DEFINE_PACK_TYPE(                                         //
     BlockMessage, 206, PK(block_id), TIMESTAMP(insert_time), //
-    (uint64_t, block_id), // 大宗交易信息id, 用于TD从OrderInput找到此数据
+    (uint64_t, block_id),                                    // 大宗交易信息id, 用于TD从OrderInput找到此数据
     (kungfu::array<char, OPPONENT_SEAT_LEN>, opponent_seat), // 对手方席号
     (uint64_t, match_number),                                // 成交约定号
     (bool, is_specific),                                     // 是否受限(特定)股份
@@ -370,9 +370,9 @@ KF_DEFINE_PACK_TYPE(                                             //
     (kungfu::array<char, EXTERNAL_ID_LEN>, external_order_id),   // 柜台订单id
     (enums::OrderTriggerFlag, action_flag),                      // 预埋下单 or 预埋撤单
 
-    (int64_t, insert_time),  // 触发器写入时间
-    (int64_t, update_time),  // 触发器更新时间
-    (int64_t, restore_time), // 根据这个时间决定是否要恢复该数据, 主要针对期货夜盘
+    (int64_t, insert_time),                       // 触发器写入时间
+    (int64_t, update_time),                       // 触发器更新时间
+    (int64_t, restore_time),                      // 根据这个时间决定是否要恢复该数据, 主要针对期货夜盘
     (kungfu::array<char, DATE_LEN>, trading_day), // 针对模拟盘交易日与实际时间不对应
 
     (kungfu::array<char, INSTRUMENT_ID_LEN>, instrument_id), // 合约ID
@@ -410,11 +410,11 @@ KF_DEFINE_PACK_TYPE(                                                            
 KF_DEFINE_PACK_TYPE(                                                                   //
     OrderTriggerActionError, 212, PK(order_trigger_action_id), TIMESTAMP(insert_time), //
     (uint64_t, trigger_id),                                                            // 订单ID
-    (kungfu::array<char, EXTERNAL_ID_LEN>, external_trigger_id), // 要删除的预埋单的ParkedId
-    (uint64_t, order_trigger_action_id),                         // 订单操作ID
-    (int32_t, error_id),                                         // 错误ID
-    (kungfu::array<char, ERROR_MSG_LEN>, error_msg),             // 错误信息
-    (int64_t, insert_time)                                       // 写入时间
+    (kungfu::array<char, EXTERNAL_ID_LEN>, external_trigger_id),                       // 要删除的预埋单的ParkedId
+    (uint64_t, order_trigger_action_id),                                               // 订单操作ID
+    (int32_t, error_id),                                                               // 错误ID
+    (kungfu::array<char, ERROR_MSG_LEN>, error_msg),                                   // 错误信息
+    (int64_t, insert_time)                                                             // 写入时间
 );
 
 KF_DEFINE_DATA_TYPE(                                           //
@@ -454,7 +454,7 @@ KF_DEFINE_PACK_TYPE(                                           //
     (int64_t, update_time),                                    // 更新时间
     (int64_t, begin_time),                                     // 开始时间
     (int64_t, end_time),                                       // 结束时间
-    (int64_t, restore_time), // 根据这个时间决定是否要恢复该数据, 主要针对期货夜盘
+    (int64_t, restore_time),                                   // 根据这个时间决定是否要恢复该数据, 主要针对期货夜盘
 
     (kungfu::array<char, INSTRUMENT_ID_LEN>, instrument_id), // 合约代码
     (kungfu::array<char, EXCHANGE_ID_LEN>, exchange_id),     // 交易所代码

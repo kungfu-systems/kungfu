@@ -17,38 +17,38 @@ public:
 
   // 行情数据更新回调
   //@param quote             行情数据
-  virtual void on_quote(const longfist::types::Quote &quote){};
+  virtual void on_quote(const longfist::types::Quote &quote) {};
 
   // 逐笔委托更新回调
   //@param entrust           逐笔委托数据
-  virtual void on_entrust(const longfist::types::Entrust &entrust){};
+  virtual void on_entrust(const longfist::types::Entrust &entrust) {};
 
   // 逐笔成交更新回调
   //@param transaction       逐笔成交数据
-  virtual void on_transaction(const longfist::types::Transaction &transaction){};
+  virtual void on_transaction(const longfist::types::Transaction &transaction) {};
 
   // 行情数据更新回调
   // @param tree              行情数据
   // @param location          数据来源
-  virtual void on_tree(const longfist::types::Tree &tree){};
+  virtual void on_tree(const longfist::types::Tree &tree) {};
 
   // 行情数据更新回调
   // @param tree              行情数据
   // @param location          数据来源
-  virtual void on_depth(const longfist::types::Depth &depth){};
+  virtual void on_depth(const longfist::types::Depth &depth) {};
 
   // 行情数据更新回调
   // @param tree              行情数据
   // @param location          数据来源
-  virtual void on_tick(const longfist::types::Tick &tick){};
+  virtual void on_tick(const longfist::types::Tick &tick) {};
 
   // 订单信息更新回调
   //@param order             订单信息数据
-  virtual void on_order_input(const longfist::types::OrderInput &order_input){};
+  virtual void on_order_input(const longfist::types::OrderInput &order_input) {};
 
   // 订单操作回调
   //@param order             订单信息数据
-  virtual void on_order_action(const longfist::types::OrderAction &order_action){};
+  virtual void on_order_action(const longfist::types::OrderAction &order_action) {};
 
   void update_order(const longfist::types::Order &order);
 

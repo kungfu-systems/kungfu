@@ -93,7 +93,7 @@ DECLARE_PTR(nn_exception)
 
 class socket {
 public:
-  explicit socket(protocol p) : socket(p, MAX_MSG_LENGTH){};
+  explicit socket(protocol p) : socket(p, MAX_MSG_LENGTH) {};
 
   socket(protocol p, int buffer_size);
 

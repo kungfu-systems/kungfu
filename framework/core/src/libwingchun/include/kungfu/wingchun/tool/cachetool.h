@@ -28,7 +28,7 @@ public:
 
   yijinjing::data::location_ptr get_location() const { return cache_location_; }
 
-  virtual void run(){};
+  virtual void run() {};
 
   template <typename T> void write_at(int64_t gen_time, int64_t trigger_time, uint32_t dest_id, const T &data) {
     valid_time(gen_time, trigger_time);

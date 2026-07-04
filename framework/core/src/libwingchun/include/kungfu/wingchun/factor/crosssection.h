@@ -68,17 +68,17 @@ public:
   virtual void on_start(const rx::connectable_observable<event_ptr> &events);
 
 protected:
-  virtual void on_tick(const longfist::types::Tick &tick){};
+  virtual void on_tick(const longfist::types::Tick &tick) {};
 
   virtual void on_quote(const longfist::types::Quote &quote);
 
-  virtual void on_entrust(const longfist::types::Entrust &entrust){};
+  virtual void on_entrust(const longfist::types::Entrust &entrust) {};
 
-  virtual void on_transaction(const longfist::types::Transaction &transaction){};
+  virtual void on_transaction(const longfist::types::Transaction &transaction) {};
 
-  virtual void on_tree(const longfist::types::Tree &tree){};
+  virtual void on_tree(const longfist::types::Tree &tree) {};
 
-  virtual void on_depth(const longfist::types::Depth &depth){};
+  virtual void on_depth(const longfist::types::Depth &depth) {};
 
   int64_t now() const {
     if (not app_)

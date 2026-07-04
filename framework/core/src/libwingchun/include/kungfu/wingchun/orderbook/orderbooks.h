@@ -95,7 +95,7 @@ public:
   [[nodiscard]] longfist::enums::Side get_side() const { return side_; }
 
 protected:
-  explicit OrderbookSide(longfist::enums::Side side) : side_(side){};
+  explicit OrderbookSide(longfist::enums::Side side) : side_(side) {};
 
 private:
   longfist::enums::Side side_;

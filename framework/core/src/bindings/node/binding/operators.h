@@ -340,7 +340,7 @@ private:
 
 class JsUpdateState {
 public:
-  explicit JsUpdateState(Napi::ObjectReference &state) : state_(state){};
+  explicit JsUpdateState(Napi::ObjectReference &state) : state_(state) {};
 
   template <typename DataType>
   void operator()(int64_t update_time, uint32_t source, uint32_t dest, const DataType &data) {

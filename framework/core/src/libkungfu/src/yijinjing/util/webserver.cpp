@@ -218,8 +218,7 @@ websocket_server::websocket_server(http_server_ptr http_server, const nng_url *b
                                    bool is_text_mode, bool tcp_no_delay, size_t max_num_connections)
     : url_(base_url), is_text_mode_(is_text_mode), tcp_no_delay_(tcp_no_delay), session_max_(max_num_connections),
       http_server_(std::move(http_server)), session_num_(0) {
-  int rv = nng_aio_alloc(
-      &aio_listener_, [](void *arg) { ((websocket_server *)arg)->accept_cb(); }, this);
+  int rv = nng_aio_alloc(&aio_listener_, [](void *arg) { ((websocket_server *)arg)->accept_cb(); }, this);
   if (rv != 0) {
     fatal("nng_aio_alloc", rv);
   }

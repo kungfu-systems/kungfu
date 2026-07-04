@@ -6,7 +6,7 @@ namespace kungfu::yijinjing::journal {
 
 class bus {
 public:
-  explicit bus(const bool on_load_page_required) : on_load_page_required_(on_load_page_required){};
+  explicit bus(const bool on_load_page_required) : on_load_page_required_(on_load_page_required) {};
 
   virtual ~bus() = default;
 

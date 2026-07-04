@@ -64,9 +64,9 @@ using namespace boost::hana::literals;
     static constexpr auto timestamp_key = TIMESTAMP_KEY;                                                               \
     static constexpr bool has_timestamp = boost::hana::is_just(TIMESTAMP_KEY);                                         \
     static constexpr bool has_data = true;                                                                             \
-    NAME(){};                                                                                                          \
+    NAME() {};                                                                                                         \
     explicit NAME(const char *address, const uint32_t length) { parse(address, length); };                             \
-    explicit NAME(const std::string &text) : NAME(text.c_str(), text.length()){};                                      \
+    explicit NAME(const std::string &text) : NAME(text.c_str(), text.length()) {};                                     \
     BOOST_HANA_DEFINE_STRUCT(NAME, __VA_ARGS__);                                                                       \
   }
 

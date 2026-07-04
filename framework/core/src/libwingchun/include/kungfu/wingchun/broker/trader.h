@@ -55,15 +55,15 @@ inline std::pair<bool, bool> get_status(const Orders &orders) {
 
 class BaseService {
 public:
-  explicit BaseService(TraderVendor &vendor) : vendor_(vendor){};
+  explicit BaseService(TraderVendor &vendor) : vendor_(vendor) {};
 
   virtual ~BaseService() = default;
 
   virtual void on_recover() { recover_done_ = true; };
 
-  virtual void on_active(){};
+  virtual void on_active() {};
 
-  virtual void on_frame(){};
+  virtual void on_frame() {};
 
 protected:
   TraderVendor &vendor_;
@@ -280,7 +280,7 @@ class Trader : public BrokerService {
   friend class TraderVendor;
 
 public:
-  explicit Trader(BrokerVendor &vendor) : BrokerService(vendor){};
+  explicit Trader(BrokerVendor &vendor) : BrokerService(vendor) {};
 
   [[nodiscard]] virtual longfist::enums::AccountType get_account_type() const = 0;
 
@@ -374,7 +374,7 @@ public:
 
   void disable_recover();
 
-  virtual void on_recover(){};
+  virtual void on_recover() {};
 
   [[nodiscard]] bool is_sync_account() const { return sync_account_; }
 

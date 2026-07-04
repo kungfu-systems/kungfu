@@ -329,13 +329,12 @@ void bind(pybind11::module &&m) {
       .def(py::init<const yijinjing::data::location_ptr &, uint32_t, uint32_t, int64_t>(), py::arg("source_location"),
            py::arg("dest_id"), py::arg("assemble_mode") = longfist::enums::AssembleMode::Channel,
            py::arg("from_time") = 0)
-      .def("read_headers", (std::vector<frame_header>(assemble::*)(int32_t, int64_t)) & assemble::read_headers,
+      .def("read_headers", (std::vector<frame_header> (assemble::*)(int32_t, int64_t))&assemble::read_headers,
            py::arg("msg_type"), py::arg("end_time") = INT64_MAX, py::return_value_policy::move)
-      .def(
-          "read_bytes",
-          (std::vector<std::pair<longfist::types::frame_header, std::vector<uint8_t>>>(assemble::*)(int32_t, int64_t)) &
-              assemble::read_bytes,
-          py::arg("msg_type"), py::arg("end_time") = INT64_MAX, py::return_value_policy::move)
+      .def("read_bytes",
+           (std::vector<std::pair<longfist::types::frame_header, std::vector<uint8_t>>> (assemble::*)(
+               int32_t, int64_t))&assemble::read_bytes,
+           py::arg("msg_type"), py::arg("end_time") = INT64_MAX, py::return_value_policy::move)
       .def("__plus__", &assemble::operator+)
       .def("__rshift__", &assemble::operator>>);
   boost::hana::for_each(AllDataTypes, [&](auto type) {

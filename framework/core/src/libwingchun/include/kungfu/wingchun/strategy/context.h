@@ -101,7 +101,7 @@ public:
    * @param exchange_id exchange ID
    */
   virtual void unsubscribe(const std::string &source, const std::vector<std::string> &instrument_ids,
-                           const std::string &exchange_id){};
+                           const std::string &exchange_id) {};
 
   /**
    * Subscribe all from given MD
@@ -359,14 +359,14 @@ public:
    * request deregister.
    * @return void
    */
-  virtual void req_deregister(){};
+  virtual void req_deregister() {};
 
   /**
    * Update Strategy State
    * @param state StrategyState
    * @param infos vector<string>, info_a, info_b, info_c.
    */
-  virtual void update_strategy_state(longfist::types::StrategyStateUpdate &state_update){};
+  virtual void update_strategy_state(longfist::types::StrategyStateUpdate &state_update) {};
 
   /**
    *
@@ -380,7 +380,7 @@ public:
    * @param resume_policy
    * @return void
    */
-  virtual void set_resume_policy(longfist::enums::ResumePolicy resume_policy){};
+  virtual void set_resume_policy(longfist::enums::ResumePolicy resume_policy) {};
 
   /**
    *
@@ -414,11 +414,11 @@ protected:
   std::string strategy_dir_;
   bool started_ = false;
 
-  virtual void on_start(){};
+  virtual void on_start() {};
 
   virtual void prepare(const event_ptr &event) = 0;
 
-  virtual void post_stop(){};
+  virtual void post_stop() {};
 
 private:
   bool book_held_ = false;

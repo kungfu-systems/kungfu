@@ -88,7 +88,7 @@ public:
    * @param exchange_id exchange ID
    */
   virtual void unsubscribe(const std::string &source, const std::vector<std::string> &instrument_ids,
-                           const std::string &exchange_id){};
+                           const std::string &exchange_id) {};
 
   /**
    * Subscribe all from given MD
@@ -148,7 +148,7 @@ public:
    * @param resume_policy
    * @return void
    */
-  virtual void set_resume_policy(longfist::enums::ResumePolicy resume_policy){};
+  virtual void set_resume_policy(longfist::enums::ResumePolicy resume_policy) {};
 
   /**
    *
@@ -182,11 +182,11 @@ protected:
   std::string operator_dir_;
   bool started_ = false;
 
-  virtual void on_start(){};
+  virtual void on_start() {};
 
   virtual void prepare(const event_ptr &event) = 0;
 
-  virtual void post_stop(){};
+  virtual void post_stop() {};
 
 private:
   friend void enable(Context &context) { context.on_start(); }
