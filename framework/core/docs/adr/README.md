@@ -29,6 +29,7 @@ A record's **Status** says where it stands:
 | [0010](ADR-0010-adopt-kfd-1-release-versioning.md) | accepted | adopt KFD-1 — welded-surface registers decide patch, minor, and major |
 | [0011](ADR-0011-v4-capability-sdk-contract.md) | accepted | v4 capability SDK contract — two vocabulary domains, runtime-tier declaration, five consumer-driven handles |
 | [0013](ADR-0013-cli-runtime-extension-isolation-trusted-channel.md) | proposed | extension isolation and the trusted channel on the runtime plane — trust by verifiable origin, default-deny OS sandbox, zero-copy only for the trusted channel |
+| [0014](ADR-0014-extension-execution-contract-uniform-capability-surface.md) | proposed | the extension execution contract — one uniform capability surface across trust tiers, restriction as transparent interception, a binding-less guest host |
 
 ## Reading by theme
 
@@ -45,10 +46,14 @@ A record's **Status** says where it stands:
   (platform + reference app), [0007](ADR-0007-v4-tui-platform-reference-surface.md)
   (the TUI reference surface).
 - **Extension trust boundary** — [0011](ADR-0011-v4-capability-sdk-contract.md)
-  (the tier declaration and the zero-copy-vs-serialized split for views) and
+  (the tier declaration and the zero-copy-vs-serialized split for views),
   [0013](ADR-0013-cli-runtime-extension-isolation-trusted-channel.md) (extending
   that boundary to the runtime plane: trust by verifiable origin, an OS sandbox
-  for the default tier, and a trusted channel for zero-copy).
+  for the default tier, and a trusted channel for zero-copy), and
+  [0014](ADR-0014-extension-execution-contract-uniform-capability-surface.md)
+  (how an extension addresses that boundary: one uniform capability surface
+  across tiers, restriction as transparent interception, so one source runs in
+  either tier and a later confinement does not force a rewrite).
 - **Cross-cutting principle** — [0009](ADR-0009-load-bearing-self-bootstrap.md)
   (load-bearing self-bootstrap), which also names the general law that
   [`docs/architecture.md` § The build dogfoods the SDK](../../../../docs/architecture.md)
