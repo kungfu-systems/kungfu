@@ -200,6 +200,11 @@ function freezeNuitka(bt) {
       'nuitka',
       ...clangOpt,
       '--output-dir=build/kungfu-nuitka',
+      // `kungfu trace -- <cmd>` spawns arbitrary child commands; some (e.g.
+      // `sh -c ...`) carry a `-c` argument that Nuitka's deployment mode
+      // mistakes for the frozen binary being asked to self-execute. The runtime
+      // never re-executes itself, so disabling this guard is safe.
+      '--no-deployment-flag=self-execution',
       `--include-data-files=${info}=kungfubuildinfo.json`,
       // Fact-ledger schema blobs: the kungfu package's *_events.bfbs are read at
       // runtime (rewind/atlas/work) but Nuitka does not follow non-.py package
