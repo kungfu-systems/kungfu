@@ -31,6 +31,7 @@ A record's **Status** says where it stands:
 | [0013](ADR-0013-cli-runtime-extension-isolation-trusted-channel.md) | proposed | extension isolation and the trusted channel on the runtime plane — trust by verifiable origin, default-deny OS sandbox, zero-copy only for the trusted channel |
 | [0014](ADR-0014-extension-execution-contract-uniform-capability-surface.md) | proposed | the extension execution contract — one uniform capability surface across trust tiers, restriction as transparent interception, a binding-less guest host |
 | [0015](ADR-0015-kungfu-skill-agent-context-layer.md) | accepted | Kungfu Skill as the agent context layer above kfx |
+| [0015](ADR-0015-managed-session-host-placement.md) | proposed | managed session host placement — move the durable session host to main so multiple OS windows share it |
 
 ## Reading by theme
 
