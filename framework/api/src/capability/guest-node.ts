@@ -16,7 +16,7 @@ import {
   type GuestChannel,
   type HostEvent,
   createCapabilityGuest,
-} from './sandbox';
+} from './sandbox.js';
 
 type ResultFrame = {
   t: 'result';

@@ -23,7 +23,7 @@
 // reference; the relay deliberately does not.
 import { createInterface } from 'node:readline';
 
-import { bigintSafe } from './types';
+import { bigintSafe } from './types.js';
 
 export type HostRequest = { cap: string; method: string; args: unknown[] };
 export type HostEvent = { callback: number; args: unknown[] };

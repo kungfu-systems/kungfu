@@ -19,7 +19,8 @@
 import { platform } from 'node:os';
 import { join } from 'node:path';
 
-import { type SandboxProfile, launchSandboxedGuest } from '../kungfu-guest';
+import { launchSandboxedGuest } from '../kungfu-guest.js';
+import { type SandboxProfile } from '../sandbox-launcher.js';
 import { buildFixtureCaps } from './fixture-caps';
 
 const DIR = import.meta.dirname;

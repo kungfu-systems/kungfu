@@ -20,9 +20,9 @@
 // The host never hands the guest the native binding: it addresses only the
 // capability surface either way. Undeclared capabilities are absent in both
 // tiers — rejected at the relay host, and never built into the in-process proxy.
-import { type SandboxProfile, osSandboxCommand } from './sandbox-launcher';
-import { createCapabilityHost } from './sandbox';
-import { serveSubprocessCapabilities } from './subprocess';
+import { type SandboxProfile, osSandboxCommand } from './sandbox-launcher.js';
+import { createCapabilityHost } from './sandbox.js';
+import { serveSubprocessCapabilities } from './subprocess.js';
 
 // ── trusted tier: in-process async surface, zero-copy by reference ───────────
 

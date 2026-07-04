@@ -38,7 +38,13 @@ export default defineConfig({
     plugins: [react()],
     build: {
       rollupOptions: {
-        external: ['electron'],
+        // The trusted renderer runs under nodeIntegration, so keep electron and
+        // the node builtins external — they are require()d at runtime. The
+        // capability SDK re-exports node-only host modules (the OS-sandbox
+        // launcher, the subprocess relay) that a renderer never invokes; leaving
+        // node: builtins external lets those modules sit in the graph without
+        // the browser build trying to bundle node:fs / node:os.
+        external: ['electron', /^node:/],
         input: {
           index: resolve(rootDir, 'src/renderer/index.html'),
           'sandbox-view-harness': resolve(
