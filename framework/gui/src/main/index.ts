@@ -33,6 +33,10 @@ import {
 } from './installCli';
 import { type Rect, SandboxManager } from './sandbox-manager';
 import { writeGuiSkillContextFile } from './skill-context';
+import {
+  bindElectronTerminalHost,
+  createMainTerminalHost,
+} from './terminal-host';
 
 // Resolve the kungfu runtime directory that holds libkungfu.dylib and the
 // kungfu_electron.node binding. In development it lives in the kungfu-core
@@ -249,6 +253,17 @@ function createWindow() {
 
 app.whenReady().then(() => {
   buildMenu();
+  // ADR-0015 stage 1 (flagged): run the durable session host in main so it
+  // outlives windows. The ipcMain handlers are global, so bind once; events are
+  // sent back to whichever renderer subscribed. Default keeps the in-renderer
+  // host, so the working app is untouched until this path is validated.
+  if (process.env.KF_TERMINAL_HOST === 'main') {
+    try {
+      bindElectronTerminalHost(ipcMain, createMainTerminalHost());
+    } catch (e) {
+      console.log(`KF_TERMINAL_HOST_MAIN_FAIL ${(e as Error).message}`);
+    }
+  }
   createWindow();
 });
 

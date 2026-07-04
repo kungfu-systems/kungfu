@@ -17,6 +17,7 @@ import {
   openTerminal,
   openWork,
 } from '@kungfu-tech/api/capability';
+import { type IpcRendererLike, createTerminalProxy } from './terminal-proxy';
 
 declare global {
   interface Window {
@@ -180,15 +181,25 @@ export function bootRuntime(): Runtime {
     // terminal view surfaces the absence rather than crashing the runtime.
     let terminal: Terminal | null = null;
     try {
-      const ptyModule = window.require('node-pty') as PtyModule;
-      // The tmux durability backend is optional: if no tmux binary is present
-      // the terminal still runs sessions directly (backend: 'direct').
-      const tmux = resolveTmuxBinding(window) ?? undefined;
-      terminal = openTerminal({
-        pty: ptyModule,
-        tmux,
-        baseEnv: window.process.env as Record<string, string | undefined>,
-      });
+      if (env.KF_TERMINAL_HOST === 'main') {
+        // ADR-0015: the durable host runs in the main process; reach it over the
+        // terminal relay. The host outlives windows and (later) is shared by
+        // every window.
+        const ipcRenderer = (
+          window.require('electron') as { ipcRenderer: IpcRendererLike }
+        ).ipcRenderer;
+        terminal = createTerminalProxy(ipcRenderer);
+      } else {
+        // Default: the host runs in this renderer. The tmux durability backend
+        // is optional; without a tmux binary sessions run directly.
+        const ptyModule = window.require('node-pty') as PtyModule;
+        const tmux = resolveTmuxBinding(window) ?? undefined;
+        terminal = openTerminal({
+          pty: ptyModule,
+          tmux,
+          baseEnv: window.process.env as Record<string, string | undefined>,
+        });
+      }
     } catch {
       terminal = null;
     }
