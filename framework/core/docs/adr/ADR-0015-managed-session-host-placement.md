@@ -1,6 +1,6 @@
 # ADR-0015: managed session host placement — a shared durable host for multi-window session workspaces
 
-- Status: proposed
+- Status: accepted
 - Date: 2026-07-05
 - Category: (architecture) process placement — where the terminal/session
   capability host runs, and how multiple GUI windows reach it.
@@ -121,6 +121,34 @@ model still speaks "session", never "tmux".
 - **Neutral.** ADR-0011 is unaffected: journal/state zero-copy stays in the
   trusted renderer. ADR-0014's relay gains a first-party, non-sandbox consumer.
 
-Status remains **proposed** until this placement is accepted; the single-window
-workspace, tmux backend, and layout persistence already on this branch stand on
-their own and do not depend on the decision.
+**Accepted** 2026-07-05: the placement is adopted and the migration proceeds
+stage by stage, each behind a real-machine check. The single-window workspace,
+tmux backend, and layout persistence already on this branch stand on their own
+and were not blocked on this decision.
+
+## Implementation note — the relay does not round-trip a subscription's stop()
+
+The obvious way to reach a main-process host is to reuse the existing capability
+relay (`createCapabilityHost` / `createCapabilityGuest`). That relay does
+marshal callback arguments (an `onData` listener crosses as a callback ref, and
+the host emits events back), but it does **not** round-trip a per-subscription
+`stop()`: the host returns a `{ __sandboxSubscription }` marker and only drops
+subscriptions in bulk when the whole guest disconnects (`host.dispose()`). The
+guest proxy hands that marker straight back, so `sub.stop()` is a no-op on a
+sandboxed view.
+
+That is fine for a view-lifetime capability, but wrong for the terminal host,
+whose subscriptions churn continuously — every pane adds and removes `onData` /
+`onExit`, and a `stop()` that does nothing would leak listeners on a long-lived
+host and keep writing into disposed terminals. So Stage 1 uses a **terminal-
+specific IPC proxy** with an explicit subscribe / unsubscribe protocol
+(subscribe returns a real `{ stop }` that calls back to release the host-side
+subscription), rather than extending the shared relay. Extending the shared
+relay to round-trip `stop()` is a larger change to an ADR-0014 contract module
+and is deferred; the terminal proxy stays self-contained.
+
+Stage 1 lands **behind a flag** (`KF_TERMINAL_HOST=main`): the default keeps the
+in-renderer host, so the working single-window app is untouched and parity is
+preserved by construction, while the main-process path is exercised by flipping
+the flag on a real machine. Promoting it to the default happens only after that
+real-machine parity check passes.
