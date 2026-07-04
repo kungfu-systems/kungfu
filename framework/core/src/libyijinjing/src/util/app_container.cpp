@@ -27,6 +27,8 @@
 #include <windows.h>
 // AppContainer profile + SID APIs (link: userenv.lib); FreeSid is advapi32.lib.
 #include <userenv.h>
+// SetEntriesInAcl (link: advapi32); window-station/desktop ACLs use user32.
+#include <aclapi.h>
 #include <vector>
 
 // DeriveCapabilitySidsFromName is declared in securitybaseapi.h (via windows.h)
@@ -81,6 +83,49 @@ std::wstring build_environment_block(const std::vector<std::string> &env) {
   }
   block.push_back(L'\0');
   return block;
+}
+
+// Add an allow-all ACE for the AppContainer SID to a USER object (window station
+// or desktop). USER32/GDI initialize a connection to the window station in their
+// DllMain; a runtime that imports USER32 (e.g. node.exe, unlike a console-only
+// python.exe) fails DLL init under an AppContainer that cannot reach the window
+// station or desktop (STATUS_DLL_INIT_FAILED). Best-effort — a failure here just
+// leaves the guest without GUI access.
+void grant_user_object(HANDLE object, PSID sid) {
+  SECURITY_INFORMATION info = DACL_SECURITY_INFORMATION;
+  DWORD needed = 0;
+  ::GetUserObjectSecurity(object, &info, nullptr, 0, &needed);
+  if (needed == 0) {
+    return;
+  }
+  std::vector<BYTE> buffer(needed);
+  auto descriptor = reinterpret_cast<PSECURITY_DESCRIPTOR>(buffer.data());
+  if (!::GetUserObjectSecurity(object, &info, descriptor, needed, &needed)) {
+    return;
+  }
+  BOOL present = FALSE;
+  BOOL defaulted = FALSE;
+  PACL old_dacl = nullptr;
+  ::GetSecurityDescriptorDacl(descriptor, &present, &old_dacl, &defaulted);
+
+  EXPLICIT_ACCESSW access = {};
+  access.grfAccessPermissions = GENERIC_ALL;
+  access.grfAccessMode = GRANT_ACCESS;
+  access.grfInheritance = OBJECT_INHERIT_ACE | CONTAINER_INHERIT_ACE;
+  access.Trustee.TrusteeForm = TRUSTEE_IS_SID;
+  access.Trustee.TrusteeType = TRUSTEE_IS_GROUP;
+  access.Trustee.ptstrName = reinterpret_cast<LPWSTR>(sid);
+
+  PACL new_dacl = nullptr;
+  if (::SetEntriesInAclW(1, &access, old_dacl, &new_dacl) != ERROR_SUCCESS) {
+    return;
+  }
+  SECURITY_DESCRIPTOR new_descriptor;
+  if (::InitializeSecurityDescriptor(&new_descriptor, SECURITY_DESCRIPTOR_REVISION) &&
+      ::SetSecurityDescriptorDacl(&new_descriptor, TRUE, new_dacl, FALSE)) {
+    ::SetUserObjectSecurity(object, &info, &new_descriptor);
+  }
+  ::LocalFree(new_dacl);
 }
 } // namespace
 
@@ -212,6 +257,17 @@ std::shared_ptr<app_container_process> spawn_app_container(const app_container_o
   //    DARKHERO-verify: NetworkIsolationSetAppContainerConfig (FirewallAPI.lib)
   //    is the mechanism; wire it here once the SID string is available.
   //    if (options.allow_loopback) { ... }
+
+  // 5b. Grant the AppContainer access to this process's window station and
+  //     desktop. A runtime that imports USER32 (node.exe) fails DLL init under an
+  //     AppContainer that cannot reach them; a console-only runtime (python.exe)
+  //     is unaffected. Best-effort.
+  if (HWINSTA window_station = ::GetProcessWindowStation()) {
+    grant_user_object(window_station, app_container_sid);
+  }
+  if (HDESK desktop = ::GetThreadDesktop(::GetCurrentThreadId())) {
+    grant_user_object(desktop, app_container_sid);
+  }
 
   // 6. Launch into the AppContainer.
   std::wstring command_line = build_command_line(options.command, options.args);

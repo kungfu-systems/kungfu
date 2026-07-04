@@ -18,6 +18,7 @@
 //   node --import ./ts-resolve.mjs run-knobs.ts
 import { platform } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { launchSandboxedGuest } from '../kungfu-guest.js';
 import { type SandboxProfile } from '../sandbox-launcher.js';
@@ -71,7 +72,7 @@ async function runCase(
   const guest = await launchSandboxedGuest({
     runtime: {
       command: process.execPath,
-      args: ['--import', RESOLVER, NODE_CHILD],
+      args: ['--import', pathToFileURL(RESOLVER).href, NODE_CHILD],
       env: { KFX_DECLARED: JSON.stringify(declared), KFX_FACET: FACET },
     },
     caps,

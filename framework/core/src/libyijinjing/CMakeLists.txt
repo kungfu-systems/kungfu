@@ -62,9 +62,11 @@ target_link_libraries(yijinjing PUBLIC
 # once wired; it is deferred in app_container.cpp for now.
 if(WIN32)
   # userenv: CreateAppContainerProfile / DeriveAppContainerSidFromAppContainerName
-  # advapi32: FreeSid. DeriveCapabilitySidsFromName is resolved dynamically from
-  # KernelBase.dll in app_container.cpp (its import library varies across SDKs).
-  target_link_libraries(yijinjing PUBLIC userenv advapi32)
+  # advapi32: FreeSid, SetEntriesInAcl. user32: window-station/desktop ACLs so a
+  # USER32-linked guest (node) can initialize under the AppContainer.
+  # DeriveCapabilitySidsFromName is resolved dynamically from KernelBase.dll in
+  # app_container.cpp (its import library varies across SDKs).
+  target_link_libraries(yijinjing PUBLIC userenv advapi32 user32)
 endif()
 
 if(DEFINED COMPILER_OPTIMIZE_ON_OPTIONS AND NOT "${COMPILER_OPTIMIZE_ON_OPTIONS}" STREQUAL "")

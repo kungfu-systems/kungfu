@@ -57,7 +57,9 @@ async function jsSandbox(): Promise<Report> {
   const guest = await launchSandboxedGuest({
     runtime: {
       command: process.execPath,
-      args: ['--import', RESOLVER, NODE_CHILD],
+      // --import needs a URL specifier; a bare Windows path (C:\...) is read as a
+      // 'c:' URL scheme. pathToFileURL keeps it portable across platforms.
+      args: ['--import', pathToFileURL(RESOLVER).href, NODE_CHILD],
       env: { KFX_DECLARED: JSON.stringify(declared), KFX_FACET: FACET_JS },
     },
     caps,
