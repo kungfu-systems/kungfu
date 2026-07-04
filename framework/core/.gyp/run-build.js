@@ -41,12 +41,14 @@ function stage() {
 
 // Build the native addon directly through the real builder (run-conan.js →
 // uv/conan2/cmake), not through node-pre-gyp. node-pre-gyp only circled back to
-// run-conan.js; calling it directly removes the host-config detour and lets a
+// run-conan.js; calling it in-process removes the host-config detour and lets a
 // clean `install` stay a no-op while `build` owns compilation + staging.
+// In-process (not a node subprocess) so process.execPath with spaces —
+// e.g. Windows `C:\Program Files\nodejs\node.exe` — cannot break the call.
 function build() {
-  const runConan = path.join(__dirname, 'run-conan.js');
-  shell.run(process.execPath, [runConan, 'install'], true);
-  shell.run(process.execPath, [runConan, 'build'], true);
+  const { conanInstall, conanBuild } = require('./run-conan');
+  conanInstall();
+  conanBuild();
   stage();
   cpVsDependencies();
 }

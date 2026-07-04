@@ -121,5 +121,7 @@ async function main() {
 
 module.exports.cli = cli;
 module.exports.main = main;
+module.exports.conanInstall = conanInstall;
+module.exports.conanBuild = conanBuild;
 
 if (require.main === module) main().catch(shell.utils.exitOnError);
