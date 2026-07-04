@@ -11,17 +11,11 @@
 #include <kungfu/yijinjing/cache/cached.h>
 #include <kungfu/yijinjing/util/os.h>
 #include <sstream>
-// tracing-foundation Phase 1:wingchun 交易记账(bookkeeper/Book/broker)已脱出。
-// 仅保留 wingchun/common.h 的 header-only instrument 工具(hash_instrument / get_instrument_type),
-// 它只依赖 core(common/longfist/yijinjing)、无 .cpp 链接符号、不含 book/broker;迁出 wingchun 命名空间留作后续 cleanup。
-#include <kungfu/wingchun/common.h>
 
 using namespace kungfu::rx;
 using namespace kungfu::longfist;
 using namespace kungfu::longfist::enums;
 using namespace kungfu::longfist::types;
-using namespace kungfu::wingchun;
-using namespace kungfu::wingchun::map;
 using namespace kungfu::yijinjing;
 using namespace kungfu::cache;
 using namespace kungfu::yijinjing::data;
@@ -170,21 +164,6 @@ Napi::Value Watcher::GetLocationUID(const Napi::CallbackInfo &info) {
   return Napi::Number::New(info.Env(), target_location->uid);
 }
 
-// TODO: 返回十进制，但需要16进制
-Napi::Value Watcher::GetInstrumentUID(const Napi::CallbackInfo &info) {
-  auto exchange_id = info[0].ToString().Utf8Value();
-  auto instrument_id = info[1].ToString().Utf8Value();
-  auto key = hash_instrument(exchange_id.c_str(), instrument_id.c_str());
-  return Napi::Number::New(info.Env(), key);
-}
-
-Napi::Value Watcher::GetInstrumentType(const Napi::CallbackInfo &info) {
-  auto exchange_id = info[0].ToString().Utf8Value();
-  auto instrument_id = info[1].ToString().Utf8Value();
-  auto instrument_type = get_instrument_type(exchange_id, instrument_id);
-  return Napi::Number::New(info.Env(), int(instrument_type));
-}
-
 Napi::Value Watcher::GetLedger(const Napi::CallbackInfo &info) { return ledger_ref_.Value(); }
 
 Napi::Value Watcher::GetAppStates(const Napi::CallbackInfo &info) { return app_states_ref_.Value(); }
@@ -300,43 +279,6 @@ Napi::Value Watcher::ToggleAlgoOrder(const Napi::CallbackInfo &info) {
   return Napi::BigInt::New(info.Env(), std::uint64_t(0));
 }
 
-Napi::Value Watcher::RequestMarketData(const Napi::CallbackInfo &info) {
-  if (not IsValid(info, 0, &Napi::Value::IsObject)) {
-    return Napi::Boolean::New(info.Env(), false);
-  }
-
-  if (not IsValid(info, 1, &Napi::Value::IsString)) {
-    return Napi::Boolean::New(info.Env(), false);
-  }
-
-  if (not IsValid(info, 2, &Napi::Value::IsString)) {
-    return Napi::Boolean::New(info.Env(), false);
-  }
-
-  auto md_location = IODevice::ExtractLocation(info, 0, get_locator());
-  auto exchange_id = info[1].ToString().Utf8Value();
-  auto instrument_id = info[2].ToString().Utf8Value();
-
-  SPDLOG_INFO("request market data {}@{} from {}", exchange_id, instrument_id, md_location->uname);
-
-  if (not has_writer(md_location->uid)) {
-    return Napi::Boolean::New(info.Env(), false);
-  }
-
-  // Phase 1:broker 直连订阅已移除;仍向 md 写 InstrumentKey 请求(跨进程订阅的 journal 机制)。
-  auto writer = get_writer(md_location->uid);
-  uint32_t key = hash_instrument(exchange_id.c_str(), instrument_id.c_str());
-  InstrumentKey instrument_key = {};
-  instrument_key.key = key;
-  kungfu::copy_string(instrument_key.instrument_id, instrument_id.c_str());
-  kungfu::copy_string(instrument_key.exchange_id, exchange_id.c_str());
-  instrument_key.instrument_type = get_instrument_type(exchange_id, instrument_id);
-  writer->write(now(), instrument_key);
-  subscribed_instruments_.emplace(key, instrument_key);
-
-  return Napi::Boolean::New(info.Env(), true);
-}
-
 void Watcher::Init(Napi::Env env, Napi::Object exports) {
   Napi::HandleScope scope(env);
   env.AddCleanupHook(cleanup);
@@ -352,7 +294,6 @@ void Watcher::Init(Napi::Env env, Napi::Object exports) {
                       InstanceMethod("hasLocation", &Watcher::HasLocation),                             //
                       InstanceMethod("getLocation", &Watcher::GetLocation),                             //
                       InstanceMethod("getLocationUID", &Watcher::GetLocationUID),                       //
-                      InstanceMethod("getInstrumentType", &Watcher::GetInstrumentType),                 //
                       InstanceMethod("publishState", &Watcher::PublishState),                           //
                       InstanceMethod("isReadyToInteract", &Watcher::IsReadyToInteract),                 //
                       InstanceMethod("issueCustomData", &Watcher::IssueCustomData),                     //
@@ -365,7 +306,6 @@ void Watcher::Init(Napi::Env env, Napi::Object exports) {
                       InstanceMethod("cancelAlgoOrder", &Watcher::CancelAlgoOrder),                     //
                       InstanceMethod("cancelOrderTrigger", &Watcher::CancelOrderTrigger),               //
                       InstanceMethod("toggleAlgoOrder", &Watcher::ToggleAlgoOrder),                     //
-                      InstanceMethod("requestMarketData", &Watcher::RequestMarketData),                 //
                       InstanceMethod("requestPosition", &Watcher::RequestPosition),                     //
                       InstanceMethod("start", &Watcher::Start),                                         //
                       InstanceMethod("sync", &Watcher::Sync),                                           //

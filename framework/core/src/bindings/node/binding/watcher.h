@@ -26,8 +26,6 @@ constexpr uint32_t TRANSFER_STATIC_DATA_LIMIT = 2000;
 constexpr uint32_t TRANSFER_TRADING_DATA_LIMIT = 2000;
 
 class Watcher : public Napi::ObjectWrap<Watcher>, public practice::apprentice {
-  typedef std::unordered_map<uint32_t, longfist::types::InstrumentKey> InstrumentKeyMap;
-
 public:
   explicit Watcher(const Napi::CallbackInfo &info);
 
@@ -40,10 +38,6 @@ public:
   Napi::Value GetLocation(const Napi::CallbackInfo &info);
 
   Napi::Value GetLocationUID(const Napi::CallbackInfo &info);
-
-  Napi::Value GetInstrumentUID(const Napi::CallbackInfo &info);
-
-  Napi::Value GetInstrumentType(const Napi::CallbackInfo &info);
 
   Napi::Value GetLedger(const Napi::CallbackInfo &info);
 
@@ -86,8 +80,6 @@ public:
   Napi::Value CancelOrderTrigger(const Napi::CallbackInfo &info);
 
   Napi::Value ToggleAlgoOrder(const Napi::CallbackInfo &info);
-
-  Napi::Value RequestMarketData(const Napi::CallbackInfo &info);
 
   Napi::Value Start(const Napi::CallbackInfo &info);
 
@@ -144,7 +136,6 @@ private:
   cache::bank trading_data_bank_;
   cache::deque_bank trading_data_cached_bank_;
   std::vector<kungfu::state<longfist::types::CacheReset>> reset_cache_states_;
-  InstrumentKeyMap subscribed_instruments_ = {};
   std::unordered_map<uint32_t, int> broker_states_map_ = {};
   std::unordered_map<uint32_t, longfist::types::StrategyStateUpdate> strategy_states_map_ = {};
 
@@ -158,12 +149,6 @@ private:
     return rx::filter([&](const event_ptr &event) {
       return not(app->get_location(event->source())->category == longfist::enums::category::MD and
                  event->msg_type() != longfist::types::Instrument::tag and bypass_quotes);
-    });
-  };
-
-  static constexpr auto is_subscribed = [](const InstrumentKeyMap &subscribed_instruments) {
-    return rx::filter([&](const event_ptr &event) {
-      return subscribed_instruments.find(event->data<longfist::types::Quote>().uid()) != subscribed_instruments.end();
     });
   };
 
