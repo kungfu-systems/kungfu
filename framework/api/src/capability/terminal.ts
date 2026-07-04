@@ -13,7 +13,7 @@
 // node-pty is injected (PtyModule), not imported, so the SDK stays
 // binding-agnostic and testable without a real pty. The trusted renderer wires
 // in `window.require('node-pty')`.
-import type { Subscription } from './types';
+import type { Subscription } from './types.js';
 
 // --- injected node-pty surface (the minimal subset this handle needs) ------
 

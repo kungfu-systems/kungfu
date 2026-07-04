@@ -12,7 +12,7 @@ import {
   categoryName,
   modeName,
   resolveRuntimeDir,
-} from './types';
+} from './types.js';
 
 export type OpenLedgerOptions = {
   binding: KfNativeBinding;

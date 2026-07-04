@@ -9,7 +9,7 @@ import {
   categoryName,
   modeName,
   resolveRuntimeDir,
-} from './types';
+} from './types.js';
 
 export type ConfigEntry = {
   location: KfLocation;

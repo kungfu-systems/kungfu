@@ -21,7 +21,7 @@ import {
   type KfLocator,
   type KfNativeBinding,
   resolveRuntimeDir,
-} from './types';
+} from './types.js';
 
 // the lifecycle vocabulary is part of this handle's surface
 export { ValidationResult, WorkStatus } from './generated/work/fb.js';

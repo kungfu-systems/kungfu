@@ -21,7 +21,7 @@ import {
   type KfLocator,
   type KfNativeBinding,
   resolveRuntimeDir,
-} from './types';
+} from './types.js';
 
 // the event-status vocabulary is part of this handle's surface
 export { CallStatus, CaptureLayer, RunStatus } from './generated/rewind/fb.js';
