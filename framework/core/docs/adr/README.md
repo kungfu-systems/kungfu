@@ -28,6 +28,7 @@ A record's **Status** says where it stands:
 | [0009](ADR-0009-load-bearing-self-bootstrap.md) | accepted | load-bearing self-bootstrap — the adoption path is the validation path |
 | [0010](ADR-0010-adopt-kfd-1-release-versioning.md) | accepted | adopt KFD-1 — welded-surface registers decide patch, minor, and major |
 | [0011](ADR-0011-v4-capability-sdk-contract.md) | accepted | v4 capability SDK contract — two vocabulary domains, runtime-tier declaration, five consumer-driven handles |
+| [0013](ADR-0013-cli-runtime-extension-isolation-trusted-channel.md) | proposed | extension isolation and the trusted channel on the runtime plane — trust by verifiable origin, default-deny OS sandbox, zero-copy only for the trusted channel |
 
 ## Reading by theme
 
@@ -43,6 +44,11 @@ A record's **Status** says where it stands:
 - **Frontend platform** — [0006](ADR-0006-v4-frontend-platform-architecture.md)
   (platform + reference app), [0007](ADR-0007-v4-tui-platform-reference-surface.md)
   (the TUI reference surface).
+- **Extension trust boundary** — [0011](ADR-0011-v4-capability-sdk-contract.md)
+  (the tier declaration and the zero-copy-vs-serialized split for views) and
+  [0013](ADR-0013-cli-runtime-extension-isolation-trusted-channel.md) (extending
+  that boundary to the runtime plane: trust by verifiable origin, an OS sandbox
+  for the default tier, and a trusted channel for zero-copy).
 - **Cross-cutting principle** — [0009](ADR-0009-load-bearing-self-bootstrap.md)
   (load-bearing self-bootstrap), which also names the general law that
   [`docs/architecture.md` § The build dogfoods the SDK](../../../../docs/architecture.md)
