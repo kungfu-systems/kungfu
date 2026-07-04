@@ -85,7 +85,9 @@ check(
     "30008 registered as CostSnapshot",
     MSG_TYPE_NAMES.get(MSG_COST_SNAPSHOT) == "CostSnapshot",
 )
-check("SCHEMA_VERSION bumped to 2", SCHEMA_VERSION == 2, str(SCHEMA_VERSION))
+# CostSnapshot was added at SCHEMA_VERSION 2; later additive events bump it
+# further, so assert the floor, not an exact value that a new event would break.
+check("SCHEMA_VERSION >= 2", SCHEMA_VERSION >= 2, str(SCHEMA_VERSION))
 
 # --- exact_run, tokens-only (Codex exec): cost stays unknown, never 0.0 ------
 codex = CostSnapshot(
@@ -216,7 +218,10 @@ with open(manifest_path) as f:
     manifest = json.load(f)
 binding = manifest.get("schema_bindings", {}).get(str(MSG_COST_SNAPSHOT), {})
 check("manifest binds 30008 -> CostSnapshot", binding.get("name") == "CostSnapshot")
-check("manifest binding schema_version 2", binding.get("schema_version") == 2)
+check(
+    "manifest binding schema_version matches",
+    binding.get("schema_version") == SCHEMA_VERSION,
+)
 check(
     "manifest binding hash matches blob",
     binding.get("schema_hash") == hashlib.sha256(blob).hexdigest(),

@@ -8,6 +8,7 @@
 import flatbuffers
 
 from kungfu.rewind.fb import (
+    ApprovalDecision,
     CostSnapshot,
     ModelRequest,
     ModelResponse,
@@ -227,6 +228,40 @@ def cost_snapshot(
     if raw_ref_o:
         CostSnapshot.AddRawRef(b, raw_ref_o)
     b.Finish(CostSnapshot.End(b))
+    return bytes(b.Output())
+
+
+def approval_decision(
+    run_id,
+    decision,
+    request_id=None,
+    surface=None,
+    decided_by=None,
+    detail=None,
+    reason=None,
+):
+    b = flatbuffers.Builder(256)
+    run_id_o = _s(b, run_id)
+    request_o = _s(b, request_id)
+    surface_o = _s(b, surface)
+    decided_by_o = _s(b, decided_by)
+    detail_o = _s(b, detail)
+    reason_o = _s(b, reason)
+    ApprovalDecision.Start(b)
+    if run_id_o:
+        ApprovalDecision.AddRunId(b, run_id_o)
+    if request_o:
+        ApprovalDecision.AddRequestId(b, request_o)
+    ApprovalDecision.AddDecision(b, decision)
+    if surface_o:
+        ApprovalDecision.AddSurface(b, surface_o)
+    if decided_by_o:
+        ApprovalDecision.AddDecidedBy(b, decided_by_o)
+    if detail_o:
+        ApprovalDecision.AddDetail(b, detail_o)
+    if reason_o:
+        ApprovalDecision.AddReason(b, reason_o)
+    b.Finish(ApprovalDecision.End(b))
     return bytes(b.Output())
 
 

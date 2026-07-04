@@ -28,12 +28,14 @@ MSG_TOOL_CALL = 30005
 MSG_TOOL_RESULT = 30006
 MSG_RETRY_MARKER = 30007
 MSG_COST_SNAPSHOT = 30008
+MSG_APPROVAL_DECISION = 30009
 
 # Event-model version marker carried in RunBegin (belt and braces beside the
-# bundle's schema binding, which remains the decode authority). Bumped 1->2 when
-# CostSnapshot (msg_type 30008) was appended — an additive change: existing
-# tables are untouched and old runs still decode through their own pinned blob.
-SCHEMA_VERSION = 2
+# bundle's schema binding, which remains the decode authority). Bumped on each
+# additive append: 1->2 added CostSnapshot (30008), 2->3 added ApprovalDecision
+# (30009). Existing tables are untouched and old runs still decode through their
+# own pinned blob.
+SCHEMA_VERSION = 3
 
 MSG_TYPE_NAMES = {
     MSG_RUN_BEGIN: "RunBegin",
@@ -44,4 +46,5 @@ MSG_TYPE_NAMES = {
     MSG_TOOL_RESULT: "ToolResult",
     MSG_RETRY_MARKER: "RetryMarker",
     MSG_COST_SNAPSHOT: "CostSnapshot",
+    MSG_APPROVAL_DECISION: "ApprovalDecision",
 }

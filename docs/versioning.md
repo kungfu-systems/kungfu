@@ -31,6 +31,7 @@ registered surface was touched.
 
 | Date | Action | Line | Faces | Class | Rationale | PR |
 |---|---|---|---|---|---|---|
+| 2026-07-04 | update | — | rewind-event-schema | additive | Append `ApprovalDecision` (msg_type 30009): human approve/deny/interrupt/resume decision recorded as a run fact, `SCHEMA_VERSION` 2→3. Tail-only, existing 30001-30008 untouched |
 | 2026-07-04 | update | — | rewind-event-schema | additive | Append `CostSnapshot` (msg_type 30008): normalized token/cost usage with attribution + confidence, `SCHEMA_VERSION` 1→2. Tail-only table, existing 30001-30007 untouched; old runs still decode through their own pinned `.bfbs` | — |
 | 2026-07-02 | register | — | rewind-event-schema | additive | New face: Rewind capture event model as open-layer types (30001-30099) with per-run `.bfbs` manifest bindings; capture skeleton rides the frame header, semantics ride the tables. Nothing existing touched | — |
 | 2026-07-02 | update | — | kungfu-cli (was kfc-cli) | additive | `kungfu` becomes the canonical CLI command, fronting the `kfc` runtime; `kfc` stays a working alias. Pre-release, no line open, nothing removed | #147 |

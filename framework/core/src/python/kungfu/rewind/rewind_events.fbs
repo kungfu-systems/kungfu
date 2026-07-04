@@ -62,6 +62,17 @@ enum Attribution : byte {
   ManualEstimate = 4
 }
 
+// A user's control decision on a managed run. Approve/Deny answer an agent's
+// request to take an action; Interrupt/Resume control the run itself. The label
+// travels on the wire so a run's history shows not just what the agent did but
+// what a human let it do.
+enum Decision : byte {
+  Approve = 0,
+  Deny = 1,
+  Interrupt = 2,
+  Resume = 3
+}
+
 // msg_type 30001. Opens a traced run; run_id is supervisor-assigned and shared
 // by every runtime and capture layer in the run — the single-journal anchor.
 table RunBegin {
@@ -164,6 +175,24 @@ table CostSnapshot {
   cost_usd_known:bool;
   ambiguous_attribution:bool;
   raw_ref:string;
+}
+
+// msg_type 30009. A human control decision recorded during a managed run. It
+// binds to run_id, and to request_id when the provider surfaced a specific
+// request to approve; the frame header's gen_time is the decision time. detail
+// carries what was being decided (a command, a tool call), reason the optional
+// why (especially on Deny). decided_by names the deciding authority — a user, a
+// policy, or an auto-approver — so an audit can tell a human yes from a machine
+// one. This records the decision as a fact; executing it (writing input,
+// signalling the process) is the session driver's job.
+table ApprovalDecision {
+  run_id:string;
+  request_id:string;
+  decision:Decision;
+  surface:string;
+  decided_by:string;
+  detail:string;
+  reason:string;
 }
 
 root_type RunBegin;
