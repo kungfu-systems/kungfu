@@ -24,6 +24,7 @@
   "dependencies": {
     "@kungfu-tech/api": "workspace:*",
     "@kungfu-tech/core": "workspace:*",
+    "@kungfu-tech/kfx": "workspace:*",
     "ink": "^5.2.0",
     "react": "^18.3.1"
   },

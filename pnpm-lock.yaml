@@ -472,6 +472,9 @@ importers:
       '@kungfu-tech/core':
         specifier: workspace:*
         version: link:../core
+      '@kungfu-tech/kfx':
+        specifier: workspace:*
+        version: link:../kfx
       ink:
         specifier: ^5.2.0
         version: 5.2.1(@types/react@18.3.31)(react@18.3.1)
