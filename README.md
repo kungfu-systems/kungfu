@@ -101,6 +101,9 @@ right document, and is readable by both people and agents.
   of them.
 - [`docs/architecture.md`](docs/architecture.md) — how the repository is layered
   (runtime, capability SDK, application SDK, reference surfaces) and why.
+- [`docs/skills.md`](docs/skills.md) — design target for Kungfu Skills:
+  `SKILL.md` as the minimal source, compact agent catalog injection,
+  Node/Python manage modes, and kfx dependency composition.
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — toolchain, build, conventions, releases.
 - [`LICENSE-POLICY.md`](LICENSE-POLICY.md) — project licensing, DCO-based
   contributions, third-party notice policy, and commercial boundary.

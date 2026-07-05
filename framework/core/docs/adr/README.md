@@ -30,6 +30,7 @@ A record's **Status** says where it stands:
 | [0011](ADR-0011-v4-capability-sdk-contract.md) | accepted | v4 capability SDK contract — two vocabulary domains, runtime-tier declaration, five consumer-driven handles |
 | [0013](ADR-0013-cli-runtime-extension-isolation-trusted-channel.md) | proposed | extension isolation and the trusted channel on the runtime plane — trust by verifiable origin, default-deny OS sandbox, zero-copy only for the trusted channel |
 | [0014](ADR-0014-extension-execution-contract-uniform-capability-surface.md) | proposed | the extension execution contract — one uniform capability surface across trust tiers, restriction as transparent interception, a binding-less guest host |
+| [0015](ADR-0015-kungfu-skill-agent-context-layer.md) | accepted | Kungfu Skill as the agent context layer above kfx |
 
 ## Reading by theme
 
@@ -54,6 +55,10 @@ A record's **Status** says where it stands:
   (how an extension addresses that boundary: one uniform capability surface
   across tiers, restriction as transparent interception, so one source runs in
   either tier and a later confinement does not force a rewrite).
+- **Agent capability layer** — [0015](ADR-0015-kungfu-skill-agent-context-layer.md)
+  (Kungfu Skill as the agent-facing layer above kfx: `SKILL.md` as the minimum
+  valid source, compact catalog injection, Node/Python manage modes, and kfx
+  dependency composition without bypassing the kfx trust gate).
 - **Cross-cutting principle** — [0009](ADR-0009-load-bearing-self-bootstrap.md)
   (load-bearing self-bootstrap), which also names the general law that
   [`docs/architecture.md` § The build dogfoods the SDK](../../../../docs/architecture.md)
@@ -66,3 +71,5 @@ A record's **Status** says where it stands:
 - [`docs/version-release-design.md`](../../../../docs/version-release-design.md) —
   the versioning / release mechanism rationale, and the compatibility invariant
   below the tag.
+- [`docs/skills.md`](../../../../docs/skills.md) — the user-facing and
+  implementation-facing design for Kungfu Skills.
