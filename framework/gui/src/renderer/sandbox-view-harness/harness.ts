@@ -95,7 +95,7 @@ function fail(message: string): void {
 
 function load(code: string, css?: string): void {
   try {
-    // `kfs kfx build` emits the view's styles as a sibling index.css that main
+    // `kungfu sdk kfx build` emits the view's styles as a sibling index.css that main
     // reads and hands over here. Inject it before mounting so view CSS (e.g.
     // xterm.css, which positions rows, maps mouse coordinates, and hides the
     // helper textarea) actually applies inside this isolated sandbox document.

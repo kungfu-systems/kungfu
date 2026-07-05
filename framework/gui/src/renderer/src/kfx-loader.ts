@@ -125,7 +125,7 @@ function loadBundle(
   shared: SharedModules,
 ): KfxViewComponent {
   const code = fs.readFileSync(bundlePath, 'utf8');
-  // `kfs kfx build` emits the view's styles as a sibling index.css. The bundle
+  // `kungfu sdk kfx build` emits the view's styles as a sibling index.css. The bundle
   // eval below only runs JS, so without this the view's CSS (e.g. xterm.css,
   // which positions rows, maps mouse coordinates, and hides the helper textarea)
   // never applies. Inject it into this renderer's document once per bundle.

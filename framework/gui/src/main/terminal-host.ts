@@ -1,4 +1,4 @@
-// Main-process managed session host (ADR-0015 stage 1). The durable session
+// Main-process managed session host (ADR-0016 stage 1). The durable session
 // host — node-pty plus the tmux backend — runs here, in the app-lifetime main
 // process, so it outlives any single window and (later) is reachable from every
 // window. Renderers reach it over a terminal-specific relay (see

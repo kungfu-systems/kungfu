@@ -253,7 +253,7 @@ function createWindow() {
 
 app.whenReady().then(() => {
   buildMenu();
-  // ADR-0015 stage 1 (flagged): run the durable session host in main so it
+  // ADR-0016 stage 1 (flagged): run the durable session host in main so it
   // outlives windows. The ipcMain handlers are global, so bind once; events are
   // sent back to whichever renderer subscribed. Default keeps the in-renderer
   // host, so the working app is untouched until this path is validated.

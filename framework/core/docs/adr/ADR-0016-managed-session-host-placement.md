@@ -1,4 +1,4 @@
-# ADR-0015: managed session host placement — a shared durable host for multi-window session workspaces
+# ADR-0016: managed session host placement — a shared durable host for multi-window session workspaces
 
 - Status: accepted
 - Date: 2026-07-05

@@ -14,7 +14,7 @@ export const SHOW_CHANNEL = 'kfx:view-show';
 export const HIDE_CHANNEL = 'kfx:view-hide';
 export const DESTROY_CHANNEL = 'kfx:view-destroy';
 
-// renderer <-> main: the managed session (terminal) host relay (ADR-0015). Its
+// renderer <-> main: the managed session (terminal) host relay (ADR-0016). Its
 // own channels, separate from the sandbox relay, and terminal-specific so a
 // per-subscription stop() round-trips (the shared relay only bulk-disposes).
 export const TERMINAL_CALL_CHANNEL = 'kf-terminal:call';

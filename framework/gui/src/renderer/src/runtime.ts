@@ -182,7 +182,7 @@ export function bootRuntime(): Runtime {
     let terminal: Terminal | null = null;
     try {
       if (env.KF_TERMINAL_HOST === 'main') {
-        // ADR-0015: the durable host runs in the main process; reach it over the
+        // ADR-0016: the durable host runs in the main process; reach it over the
         // terminal relay. The host outlives windows and (later) is shared by
         // every window.
         const ipcRenderer = (

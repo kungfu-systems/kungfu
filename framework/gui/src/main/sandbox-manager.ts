@@ -193,7 +193,7 @@ export class SandboxManager {
         );
         return;
       }
-      // `kfs kfx build` emits the view's styles as a sibling index.css. Ship it
+      // `kungfu sdk kfx build` emits the view's styles as a sibling index.css. Ship it
       // alongside the bundle so the sandboxed view's CSS (xterm.css, which
       // positions rows, maps mouse coordinates, and hides the helper textarea)
       // actually applies inside the isolated page. A view without a stylesheet

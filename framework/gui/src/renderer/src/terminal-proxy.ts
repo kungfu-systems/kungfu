@@ -1,4 +1,4 @@
-// Renderer-side proxy for the main-process managed session host (ADR-0015
+// Renderer-side proxy for the main-process managed session host (ADR-0016
 // stage 1). It presents the same Terminal surface the in-renderer host does,
 // but every method crosses IPC, so calls resolve asynchronously — the terminal
 // view already awaits both shapes through its `resolve()` helper, so it is
