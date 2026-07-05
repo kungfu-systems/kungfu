@@ -18,7 +18,7 @@ sensitive material in issues or pull requests.
 
 ## Prerequisites
 
-- A C++20 toolchain and [CMake](https://cmake.org/) (>= 3.15)
+- A C++23 toolchain and [CMake](https://cmake.org/) (>= 3.20)
 - [Conan 2](https://conan.io/) for C++ dependencies
 - [fnm](https://github.com/Schniz/fnm) (Node is pinned via `.node-version`)
 - [uv](https://docs.astral.sh/uv/) for the Python environment

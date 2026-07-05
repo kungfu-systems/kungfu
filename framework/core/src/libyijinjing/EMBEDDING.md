@@ -21,7 +21,7 @@ target_link_libraries(your_tool yijinjing)
 ```
 
 `<kungfu>` can be a git checkout, a submodule or a FetchContent source
-directory. The target propagates its include directories and C++20
+directory. The target propagates its include directories and C++23
 requirement (`std::atomic_ref` implements the frame publication protocol,
 see ADR-0001), so the consumer needs no extra configuration.
 
