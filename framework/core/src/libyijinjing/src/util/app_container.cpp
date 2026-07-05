@@ -199,10 +199,57 @@ void grant_path_read(const std::wstring &path, PSID sid) {
   set_path_ace(path, ea);
 }
 
+// True if `path`'s DACL already grants ALL APPLICATION PACKAGES (S-1-15-2-1)
+// traverse/execute. A basic (non-LPAC) AppContainer runs with that group SID, so
+// where it is already present the container can traverse the directory without us
+// re-writing the DACL. This matters because re-writing a large user-profile
+// directory's DACL (C:\Users\<user>, its AppData) triggers NTFS to re-propagate
+// inheritable ACEs across the whole subtree — tens of seconds, or effectively a
+// hang for a big profile. System and profile ancestors carry ALL APPLICATION
+// PACKAGES:(RX) by default, so skipping them removes the redundant slow writes
+// that were the real cause of the spawn hang, while still granting any ancestor
+// that genuinely lacks the right.
+bool all_app_packages_can_traverse(const std::wstring &path) {
+  PSID all_app_packages = nullptr;
+  if (!::ConvertStringSidToSidW(L"S-1-15-2-1", &all_app_packages)) {
+    return false;
+  }
+  bool granted = false;
+  PACL dacl = nullptr;
+  PSECURITY_DESCRIPTOR descriptor = nullptr;
+  if (::GetNamedSecurityInfoW(path.c_str(), SE_FILE_OBJECT, DACL_SECURITY_INFORMATION, nullptr, nullptr, &dacl, nullptr,
+                              &descriptor) == ERROR_SUCCESS &&
+      dacl != nullptr) {
+    for (DWORD i = 0; i < dacl->AceCount; ++i) {
+      LPVOID raw = nullptr;
+      if (!::GetAce(dacl, i, &raw)) {
+        continue;
+      }
+      auto *header = static_cast<ACE_HEADER *>(raw);
+      if (header->AceType != ACCESS_ALLOWED_ACE_TYPE) {
+        continue;
+      }
+      auto *allowed = reinterpret_cast<ACCESS_ALLOWED_ACE *>(raw);
+      if (::EqualSid(&allowed->SidStart, all_app_packages) && (allowed->Mask & FILE_TRAVERSE) == FILE_TRAVERSE) {
+        granted = true;
+        break;
+      }
+    }
+  }
+  if (descriptor != nullptr) {
+    ::LocalFree(descriptor);
+  }
+  ::LocalFree(all_app_packages);
+  return granted;
+}
+
 // Grant traverse (list + execute, non-inheritable) on each ancestor directory up
 // to the drive root, so the container SID can walk down to a granted read path.
 // NTFS requires traverse on every parent unless SeChangeNotifyPrivilege bypass
-// applies, which a deny-only / AppContainer token cannot rely on.
+// applies, which a deny-only / AppContainer token cannot rely on. Ancestors that
+// already grant ALL APPLICATION PACKAGES traverse are skipped — see
+// all_app_packages_can_traverse: writing their DACL is both redundant and, for
+// large profile directories, pathologically slow.
 void grant_ancestors_traverse(const std::wstring &path, PSID sid) {
   std::wstring current = path;
   for (;;) {
@@ -219,14 +266,16 @@ void grant_ancestors_traverse(const std::wstring &path, PSID sid) {
     if (target.size() == 2 && target[1] == L':') {
       target += L'\\';
     }
-    EXPLICIT_ACCESSW ea = {};
-    ea.grfAccessPermissions = FILE_TRAVERSE | FILE_LIST_DIRECTORY | READ_CONTROL;
-    ea.grfAccessMode = GRANT_ACCESS;
-    ea.grfInheritance = NO_INHERITANCE;
-    ea.Trustee.TrusteeForm = TRUSTEE_IS_SID;
-    ea.Trustee.TrusteeType = TRUSTEE_IS_GROUP;
-    ea.Trustee.ptstrName = reinterpret_cast<LPWSTR>(sid);
-    set_path_ace(target, ea);
+    if (!all_app_packages_can_traverse(target)) {
+      EXPLICIT_ACCESSW ea = {};
+      ea.grfAccessPermissions = FILE_TRAVERSE | FILE_LIST_DIRECTORY | READ_CONTROL;
+      ea.grfAccessMode = GRANT_ACCESS;
+      ea.grfInheritance = NO_INHERITANCE;
+      ea.Trustee.TrusteeForm = TRUSTEE_IS_SID;
+      ea.Trustee.TrusteeType = TRUSTEE_IS_GROUP;
+      ea.Trustee.ptstrName = reinterpret_cast<LPWSTR>(sid);
+      set_path_ace(target, ea);
+    }
     if (target.size() <= 3) { // reached "C:\"
       break;
     }
