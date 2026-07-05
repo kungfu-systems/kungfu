@@ -113,22 +113,26 @@ function main() {
   );
 
   // ── Stage 0a: cross-platform script guard (read-only) ─────────────
-  // The verification gate drives its fixtures/slices/guards through Node so it
-  // runs on every platform pnpm runs on (Windows included). Reintroducing a
-  // bash `.sh` in these paths silently breaks the gate off-Unix — fail loudly.
+  // Tooling drives its fixtures/slices/guards/benches through Node so it runs on
+  // every platform pnpm runs on (Windows included). A bash `.sh` anywhere in the
+  // tree silently breaks off-Unix — the repo is fully migrated (zero .sh), so
+  // guard the whole tree and fail loudly on any reintroduction. Vendored and
+  // generated dirs (node_modules, .git, build outputs) may carry upstream .sh
+  // and are out of our control, so they are skipped.
   console.log('\n[verify] stage 0a: no-bash script guard');
+  const shSkipDirs = new Set(['node_modules', '.git', 'build', 'dist']);
   const shPaths = [];
   const scanSh = (dir) => {
     if (!fs.existsSync(dir)) return;
     for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-      const p = path.join(dir, e.name);
-      if (e.isDirectory()) scanSh(p);
-      else if (e.name.endsWith('.sh')) shPaths.push(path.relative(ROOT, p));
+      if (e.isDirectory()) {
+        if (!shSkipDirs.has(e.name)) scanSh(path.join(dir, e.name));
+      } else if (e.name.endsWith('.sh')) {
+        shPaths.push(path.relative(ROOT, path.join(dir, e.name)));
+      }
     }
   };
-  scanSh(path.join(ROOT, 'tests', 'fixtures'));
-  scanSh(path.join(ROOT, 'framework', 'core', 'slices'));
-  scanSh(path.join(ROOT, 'framework', 'core', 'src', 'libyijinjing'));
+  scanSh(ROOT);
   if (shPaths.length === 0)
     pass('no-bash script guard', 'gates are Node-only (cross-platform)');
   else
@@ -405,13 +409,10 @@ function main() {
             `${runner.label} exit ${r.status == null ? 'signal ' + r.signal : r.status}; tail: ${tail3(r)}`,
           );
       }
-      const guardDir = path.join(core, 'src', 'libyijinjing');
-      const guardMjs = path.join(guardDir, 'check-deps.mjs');
-      const guard = fs.existsSync(guardMjs)
-        ? spawnSync(process.execPath, [guardMjs], { encoding: 'utf8' })
-        : spawnSync('bash', [path.join(guardDir, 'check-deps.sh')], {
-            encoding: 'utf8',
-          });
+      const guardMjs = path.join(core, 'src', 'libyijinjing', 'check-deps.mjs');
+      const guard = spawnSync(process.execPath, [guardMjs], {
+        encoding: 'utf8',
+      });
       if (guard.status === 0) pass('yijinjing dependency guard', 'check-deps');
       else fail('yijinjing dependency guard', tail3(guard));
 
