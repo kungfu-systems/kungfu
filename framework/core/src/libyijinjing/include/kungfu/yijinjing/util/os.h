@@ -63,6 +63,14 @@ struct app_container_options {
   // permissive adds the loopback network-isolation exemption so relay-local
   // sockets work (AppContainer blocks loopback by default)
   bool allow_loopback = false;
+  // filesystem paths the guest must be able to READ (interpreter dirs, guest
+  // bundle root). Under denyWrite the guest's user SID is deny-only, so reads no
+  // longer resolve through the user's own ACEs — the launcher grants the
+  // AppContainer SID read+execute on these paths (and traverse on their
+  // ancestors) so the interpreter and guest stay readable. This codifies what a
+  // basic AppContainer previously needed manual icacls for; empty leaves file
+  // ACLs untouched (the legacy manual path).
+  std::vector<std::string> read_paths;
   // child environment as "KEY=VALUE" entries
   std::vector<std::string> env;
 };

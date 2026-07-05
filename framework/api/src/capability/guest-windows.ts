@@ -16,8 +16,11 @@
 // kungfu-guest holds no binding itself — the same injection discipline ADR-0011
 // applies to capabilities. The relay never touches stdout/stdin content here; it
 // just gets a GuestChild whose streams happen to be named pipes.
+import { existsSync } from 'node:fs';
 import * as net from 'node:net';
 import type { Server, Socket } from 'node:net';
+import { dirname, isAbsolute } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import type { AppContainerSpec } from './sandbox-launcher.js';
 import type { GuestChild, WindowsSandboxSpawn } from './kungfu-guest.js';
@@ -46,10 +49,44 @@ export type LibkungfuWindowsBinding = {
     capabilities: readonly string[];
     allowBroadWrite: boolean;
     allowLoopback: boolean;
+    // directories the launcher grants the AppContainer SID read+execute on (plus
+    // traverse on their ancestors) so the guest stays readable under denyWrite,
+    // where its user SID is deny-only and reads no longer resolve through the
+    // user's own ACEs. Derived from the interpreter + guest entry paths.
+    readPaths: readonly string[];
     // "KEY=VALUE" pairs
     env: readonly string[];
   }) => AppContainerProcess;
 };
+
+// The directories the guest must be readable from: the interpreter's own
+// directory and the directory of each absolute path passed on its argv (the
+// resolver hook, the child bootstrap, the facet entry). Granting the containing
+// directory — rather than each file — keeps the guest bundle readable as it
+// resolves siblings, and the native launcher adds ancestor traverse. This
+// codifies what a basic AppContainer previously needed manual icacls for.
+function deriveReadPaths(
+  command: string,
+  args: readonly string[],
+): readonly string[] {
+  const dirs = new Set<string>();
+  const addFileDir = (p: string) => {
+    if (isAbsolute(p) && existsSync(p)) dirs.add(dirname(p));
+  };
+  addFileDir(command);
+  for (const arg of args) {
+    let candidate = arg;
+    if (candidate.startsWith('file://')) {
+      try {
+        candidate = fileURLToPath(candidate);
+      } catch {
+        continue;
+      }
+    }
+    addFileDir(candidate);
+  }
+  return [...dirs];
+}
 
 let pipeSeq = 0;
 
@@ -98,6 +135,7 @@ export function createLibkungfuWindowsSpawn(
       capabilities: spec.capabilities,
       allowBroadWrite: spec.allowBroadWrite,
       allowLoopback: spec.allowLoopback,
+      readPaths: deriveReadPaths(command, args),
       env: Object.entries(options.env)
         .filter(([, v]) => v !== undefined)
         .map(([k, v]) => `${k}=${v}`),

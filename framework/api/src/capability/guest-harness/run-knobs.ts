@@ -30,12 +30,23 @@ const RESOLVER = join(DIR, 'ts-resolve.mjs');
 const NODE_CHILD = join(DIR, 'node-child.mjs');
 const FACET = join(DIR, 'facet-knobs.mjs');
 
-// The network knob's narrowing shows up in a different observable per platform.
-// macOS Seatbelt and Windows AppContainer refuse the socket itself (loopback
-// included — on Windows the permissive profile re-permits loopback via the
-// network-isolation exemption, so deny-network shows as a refused loopback);
-// Linux --unshare-net leaves loopback up but removes external interfaces.
-const NET_FIELD = platform() === 'linux' ? 'externalNet' : 'loopback';
+// The network knob's narrowing shows up in a different observable per platform:
+//   - macOS Seatbelt `(deny network*)` refuses every socket, loopback included,
+//     so a refused loopback round-trip is the signal.
+//   - Linux --unshare-net leaves loopback up but removes external interfaces, so
+//     the absence of an external interface is the signal.
+//   - Windows AppContainer gates the network through the internetClient
+//     capability, which controls EXTERNAL egress only — a raw AppContainer
+//     permits loopback regardless (governed by the network-isolation loopback
+//     exemption, not internetClient) and removes no interfaces. So loopback and
+//     externalNet both miss deny-network on Windows; the signal is an external
+//     connect the socket layer refuses (WSAEACCES) without the capability.
+const NET_FIELD =
+  platform() === 'linux'
+    ? 'externalNet'
+    : platform() === 'win32'
+      ? 'externalEgress'
+      : 'loopback';
 
 type KnobCase = {
   label: string;

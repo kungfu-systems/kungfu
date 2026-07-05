@@ -127,6 +127,107 @@ void grant_user_object(HANDLE object, PSID sid) {
   }
   ::LocalFree(new_dacl);
 }
+
+// Merge one allow ACE for `sid` into a filesystem path's DACL, preserving the
+// existing entries. Best-effort: the host runs as the owning user (WRITE_DAC on
+// its own tree), so a path it does not own — e.g. a system directory — fails
+// silently and surfaces as a guest read error rather than a false grant.
+void set_path_ace(const std::wstring &path, EXPLICIT_ACCESSW &ea) {
+  PACL old_dacl = nullptr;
+  PSECURITY_DESCRIPTOR descriptor = nullptr;
+  if (::GetNamedSecurityInfoW(path.c_str(), SE_FILE_OBJECT, DACL_SECURITY_INFORMATION, nullptr, nullptr, &old_dacl,
+                              nullptr, &descriptor) != ERROR_SUCCESS) {
+    return;
+  }
+  PACL new_dacl = nullptr;
+  if (::SetEntriesInAclW(1, &ea, old_dacl, &new_dacl) == ERROR_SUCCESS) {
+    ::SetNamedSecurityInfoW(const_cast<LPWSTR>(path.c_str()), SE_FILE_OBJECT, DACL_SECURITY_INFORMATION, nullptr,
+                            nullptr, new_dacl, nullptr);
+    ::LocalFree(new_dacl);
+  }
+  ::LocalFree(descriptor);
+}
+
+// Grant the AppContainer SID read+execute on a path, inheritable so files and
+// directories beneath it are readable. Under denyWrite the guest's user SID is
+// deny-only, so the interpreter and guest can only be read through the container
+// SID's own ACE — this is what makes deny-write shippable without manual icacls.
+void grant_path_read(const std::wstring &path, PSID sid) {
+  EXPLICIT_ACCESSW ea = {};
+  ea.grfAccessPermissions = GENERIC_READ | GENERIC_EXECUTE;
+  ea.grfAccessMode = GRANT_ACCESS;
+  ea.grfInheritance = OBJECT_INHERIT_ACE | CONTAINER_INHERIT_ACE;
+  ea.Trustee.TrusteeForm = TRUSTEE_IS_SID;
+  ea.Trustee.TrusteeType = TRUSTEE_IS_GROUP;
+  ea.Trustee.ptstrName = reinterpret_cast<LPWSTR>(sid);
+  set_path_ace(path, ea);
+}
+
+// Grant traverse (list + execute, non-inheritable) on each ancestor directory up
+// to the drive root, so the container SID can walk down to a granted read path.
+// NTFS requires traverse on every parent unless SeChangeNotifyPrivilege bypass
+// applies, which a deny-only / AppContainer token cannot rely on.
+void grant_ancestors_traverse(const std::wstring &path, PSID sid) {
+  std::wstring current = path;
+  for (;;) {
+    const size_t slash = current.find_last_of(L"\\/");
+    if (slash == std::wstring::npos) {
+      break;
+    }
+    current = current.substr(0, slash);
+    if (current.empty()) {
+      break;
+    }
+    // a bare drive letter "C:" addresses the root as "C:\".
+    std::wstring target = current;
+    if (target.size() == 2 && target[1] == L':') {
+      target += L'\\';
+    }
+    EXPLICIT_ACCESSW ea = {};
+    ea.grfAccessPermissions = FILE_TRAVERSE | FILE_LIST_DIRECTORY | READ_CONTROL;
+    ea.grfAccessMode = GRANT_ACCESS;
+    ea.grfInheritance = NO_INHERITANCE;
+    ea.Trustee.TrusteeForm = TRUSTEE_IS_SID;
+    ea.Trustee.TrusteeType = TRUSTEE_IS_GROUP;
+    ea.Trustee.ptstrName = reinterpret_cast<LPWSTR>(sid);
+    set_path_ace(target, ea);
+    if (target.size() <= 3) { // reached "C:\"
+      break;
+    }
+  }
+}
+
+// Build a restricted primary token whose user SID is deny-only, so the guest no
+// longer satisfies the allow ACEs the user owns on temp/home. A basic
+// AppContainer runs AS the user, so those user ACEs override the container SID's
+// default-deny and file ACLs alone cannot deny the user's writes (goal decision
+// D2). Deny-only means the user SID is still evaluated for DENY ACEs but never
+// grants access. Returns nullptr on failure; the caller then falls back to the
+// plain launch rather than silently dropping the write restriction.
+HANDLE make_deny_write_token() {
+  HANDLE process_token = nullptr;
+  if (!::OpenProcessToken(::GetCurrentProcess(),
+                          TOKEN_DUPLICATE | TOKEN_ASSIGN_PRIMARY | TOKEN_QUERY | TOKEN_ADJUST_DEFAULT,
+                          &process_token)) {
+    return nullptr;
+  }
+  DWORD needed = 0;
+  ::GetTokenInformation(process_token, TokenUser, nullptr, 0, &needed);
+  HANDLE restricted = nullptr;
+  if (needed > 0) {
+    std::vector<BYTE> buffer(needed);
+    auto user = reinterpret_cast<PTOKEN_USER>(buffer.data());
+    if (::GetTokenInformation(process_token, TokenUser, user, needed, &needed)) {
+      SID_AND_ATTRIBUTES to_disable = {};
+      to_disable.Sid = user->User.Sid;
+      if (!::CreateRestrictedToken(process_token, 0, 1, &to_disable, 0, nullptr, 0, nullptr, &restricted)) {
+        restricted = nullptr;
+      }
+    }
+  }
+  ::CloseHandle(process_token);
+  return restricted;
+}
 } // namespace
 
 app_container_process::app_container_process(void *process_handle, unsigned long pid)
@@ -269,15 +370,43 @@ std::shared_ptr<app_container_process> spawn_app_container(const app_container_o
     grant_user_object(desktop, app_container_sid);
   }
 
-  // 6. Launch into the AppContainer.
+  // 5c. Grant the AppContainer SID read+execute on the guest's read paths, plus
+  //     traverse on their ancestors. Required under denyWrite (the user SID is
+  //     deny-only, so reads cannot resolve through the user's own ACEs); harmless
+  //     and idempotent under permissive. This codifies what previously needed
+  //     manual icacls, so a shipped Windows guest needs no out-of-band ACL setup.
+  for (const auto &read_path : options.read_paths) {
+    const std::wstring wide_path = widen(read_path);
+    grant_path_read(wide_path, app_container_sid);
+    grant_ancestors_traverse(wide_path, app_container_sid);
+  }
+
+  // 6. Launch into the AppContainer. Under denyWrite, launch with a restricted
+  //    token whose user SID is deny-only so the guest cannot write through the
+  //    user's own ACEs (a basic AppContainer runs AS the user; file ACLs alone
+  //    cannot deny the user's writes — goal decision D2). If the restricted token
+  //    cannot be built the launch falls back to the plain path rather than
+  //    silently proceeding, and the demo's fs-write assertion reports the knob as
+  //    not enforced.
   std::wstring command_line = build_command_line(options.command, options.args);
   std::wstring environment = build_environment_block(options.env);
+  LPVOID environment_block = options.env.empty() ? nullptr : environment.data();
+  const DWORD creation_flags = EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT;
   PROCESS_INFORMATION process_info = {};
-  BOOL ok = ::CreateProcessW(
-      nullptr, command_line.data(), nullptr, nullptr, TRUE, EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT,
-      options.env.empty() ? nullptr : environment.data(), nullptr, &startup.StartupInfo, &process_info);
+  HANDLE deny_write_token = options.allow_broad_write ? nullptr : make_deny_write_token();
+  BOOL ok;
+  if (deny_write_token != nullptr) {
+    ok = ::CreateProcessAsUserW(deny_write_token, nullptr, command_line.data(), nullptr, nullptr, TRUE, creation_flags,
+                                environment_block, nullptr, &startup.StartupInfo, &process_info);
+  } else {
+    ok = ::CreateProcessW(nullptr, command_line.data(), nullptr, nullptr, TRUE, creation_flags, environment_block,
+                          nullptr, &startup.StartupInfo, &process_info);
+  }
 
   // cleanup regardless of success
+  if (deny_write_token != nullptr) {
+    ::CloseHandle(deny_write_token);
+  }
   ::DeleteProcThreadAttributeList(startup.lpAttributeList);
   ::HeapFree(::GetProcessHeap(), 0, startup.lpAttributeList);
   ::CloseHandle(h_stdin);
