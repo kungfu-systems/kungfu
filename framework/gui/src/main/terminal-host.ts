@@ -110,8 +110,17 @@ type SubscribeMethod = 'onData' | 'onExit';
 // method; `subscribe` opens an onData/onExit stream whose events are pushed via
 // the per-subscription `emit`; `unsubscribe` releases exactly that stream. The
 // subId is minted by the guest, so stop() on the guest maps back to one stream.
+//
+// Subscriptions are keyed by `<clientKey>:<subId>`, not by subId alone: since
+// ADR-0016 stage 3 the shell and each per-session OS window are separate guest
+// renderers reaching this one host, and each mints its own subId sequence from
+// scratch. Keyed by subId alone, the second guest's subId 1 would evict the
+// first guest's subId 1 (the defensive replace below), silently killing an
+// unrelated live pane. The clientKey (the sender's webContents id, supplied by
+// the glue) namespaces those sequences so guests never collide.
 export function createTerminalRelay(host: Terminal) {
-  const subs = new Map<number, Subscription>();
+  const subs = new Map<string, Subscription>();
+  const subKey = (clientKey: string, subId: number) => `${clientKey}:${subId}`;
   return {
     async call(method: string, args: unknown[]): Promise<unknown> {
       const fn = (host as unknown as Record<string, unknown>)[method];
@@ -121,22 +130,38 @@ export function createTerminalRelay(host: Terminal) {
       return await (fn as (...a: unknown[]) => unknown).apply(host, args);
     },
     subscribe(
+      clientKey: string,
       method: SubscribeMethod,
       runId: string,
       subId: number,
       emit: (args: unknown[]) => void,
     ): void {
-      // replace any prior stream on this subId (defensive; guest ids are unique)
-      subs.get(subId)?.stop();
+      const key = subKey(clientKey, subId);
+      // replace any prior stream on this key (defensive; a guest's ids are
+      // unique within itself, and the clientKey separates guests)
+      subs.get(key)?.stop();
       const sub =
         method === 'onExit'
           ? host.onExit(runId, (exit) => emit([exit]))
           : host.onData(runId, (data) => emit([data]));
-      subs.set(subId, sub);
+      subs.set(key, sub);
     },
-    unsubscribe(subId: number): void {
-      subs.get(subId)?.stop();
-      subs.delete(subId);
+    unsubscribe(clientKey: string, subId: number): void {
+      const key = subKey(clientKey, subId);
+      subs.get(key)?.stop();
+      subs.delete(key);
+    },
+    // Release every stream a guest holds when its webContents goes away without
+    // unsubscribing (a session window closed abruptly): the host must neither
+    // leak the subscriptions nor keep emitting into a destroyed sender.
+    unsubscribeClient(clientKey: string): void {
+      const prefix = `${clientKey}:`;
+      for (const [key, sub] of subs) {
+        if (key.startsWith(prefix)) {
+          sub.stop();
+          subs.delete(key);
+        }
+      }
     },
     dispose(): void {
       for (const sub of subs.values()) sub.stop();
@@ -148,7 +173,16 @@ export function createTerminalRelay(host: Terminal) {
 // ── electron glue ───────────────────────────────────────────────────────────
 
 type TerminalInvokeEvent = {
-  sender: { send: (channel: string, payload: unknown) => void };
+  // The subscribing renderer's webContents. `id` namespaces this guest's subId
+  // sequence in the relay (ADR-0016 stage 3 gives the shell and every session
+  // window their own sequence); `isDestroyed`/`once('destroyed')` let the host
+  // stop emitting into — and release the streams of — a window that closed.
+  sender: {
+    id: number;
+    send: (channel: string, payload: unknown) => void;
+    isDestroyed?: () => boolean;
+    once?: (event: 'destroyed', listener: () => void) => void;
+  };
 };
 
 type IpcMainLike = {
@@ -161,6 +195,8 @@ type IpcMainLike = {
 
 export function bindElectronTerminalHost(ipcMain: IpcMainLike, host: Terminal) {
   const relay = createTerminalRelay(host);
+  // guests we have wired a destroyed-cleanup for, so we register it once each
+  const cleanupWired = new Set<number>();
   ipcMain.handle(TERMINAL_CALL_CHANNEL, (_event, payload) => {
     const { method, args } = payload as { method: string; args: unknown[] };
     return relay.call(method, args);
@@ -171,15 +207,28 @@ export function bindElectronTerminalHost(ipcMain: IpcMainLike, host: Terminal) {
       runId: string;
       subId: number;
     };
+    const sender = event.sender;
+    const clientKey = String(sender.id);
+    // A per-session window can close without its React cleanup running (the
+    // whole webContents is torn down); release every stream it held so the host
+    // stops emitting into a dead sender and does not leak.
+    if (!cleanupWired.has(sender.id)) {
+      cleanupWired.add(sender.id);
+      sender.once?.('destroyed', () => {
+        relay.unsubscribeClient(clientKey);
+        cleanupWired.delete(sender.id);
+      });
+    }
     // events go back to the renderer that subscribed
-    relay.subscribe(method, runId, subId, (args) =>
-      event.sender.send(TERMINAL_EVENT_CHANNEL, { subId, args }),
-    );
+    relay.subscribe(clientKey, method, runId, subId, (args) => {
+      if (sender.isDestroyed?.()) return;
+      sender.send(TERMINAL_EVENT_CHANNEL, { subId, args });
+    });
     return undefined;
   });
-  ipcMain.handle(TERMINAL_UNSUBSCRIBE_CHANNEL, (_event, payload) => {
+  ipcMain.handle(TERMINAL_UNSUBSCRIBE_CHANNEL, (event, payload) => {
     const { subId } = payload as { subId: number };
-    relay.unsubscribe(subId);
+    relay.unsubscribe(String(event.sender.id), subId);
     return undefined;
   });
   return {

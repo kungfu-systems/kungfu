@@ -837,4 +837,116 @@ function SessionWorkspace({
   );
 }
 
-export const View = SessionWorkspace;
+// The content of a per-session OS window (ADR-0016 stage 3): it adopts one
+// already-created session by runId over the shared main-process host and renders
+// a single full-window pane, replacing the stage-2 placeholder page. It owns no
+// launcher, tray, or layout persistence — the in-shell grid owns those; this
+// window is only a view onto one session. Closing the window never ends the
+// session (window identity is separate from session identity, ADR-0016): detach
+// keeps the agent running and kill ends it, and either way the window closes.
+function SingleSessionWindow({
+  caps,
+  runId,
+}: { caps: KfxCapabilities; runId: string }) {
+  const [pane, setPane] = React.useState<Pane | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        // The session already exists on the shared host; just read its snapshot
+        // to label the pane. The pane attaches to the live stream on its own.
+        const session = await resolve(caps.terminal.get(runId));
+        if (cancelled) return;
+        if (!session) {
+          setError(`session ${runId} is not on the host`);
+          return;
+        }
+        setPane({
+          key: session.runId,
+          runId: session.runId,
+          title: `${session.provider ?? 'agent'} · ${session.command}`,
+          provider: session.provider ?? 'agent',
+          pid: session.pid,
+          startedAt: session.startedAt,
+          durable: session.backend === 'tmux',
+          command: session.command,
+          args: session.args,
+          cwd: session.cwd,
+        });
+      } catch (e) {
+        if (!cancelled) setError((e as Error).message);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [caps.terminal, runId]);
+
+  const frame: React.CSSProperties = {
+    height: '100vh',
+    boxSizing: 'border-box',
+    padding: 8,
+    background: '#1e1e1e',
+  };
+
+  if (error) {
+    return (
+      <div style={{ ...frame, ...mono, fontSize: 12, color: '#c46b6b' }}>
+        {error}
+      </div>
+    );
+  }
+  if (!pane) {
+    return (
+      <div style={{ ...frame, ...mono, fontSize: 12, color: '#7a7a7a' }}>
+        attaching to session {runId}…
+      </div>
+    );
+  }
+  return (
+    // one grid cell that stretches the pane to fill the window, the same way the
+    // in-shell grid stretches a cell — SessionPane needs a stretching parent
+    <div
+      style={{
+        ...frame,
+        display: 'grid',
+        gridTemplateColumns: '1fr',
+        gridTemplateRows: '1fr',
+      }}
+    >
+      <SessionPane
+        caps={caps}
+        pane={pane}
+        onDetach={(p) => {
+          try {
+            caps.terminal.detach(p.runId);
+          } catch {
+            // a direct (non-tmux) session has nothing to detach; close anyway
+          }
+          window.close();
+        }}
+        onKill={(p) => {
+          try {
+            caps.terminal.kill(p.runId);
+          } catch {
+            // best-effort; close the window regardless
+          }
+          window.close();
+        }}
+      />
+    </div>
+  );
+}
+
+// The kfx entry. In the shell it renders the full session workspace; opened as a
+// per-session OS window (ADR-0016 stage 3) the renderer passes the target runId
+// through `shell.params.sessionWindowRunId`, and it renders that one session.
+function View({ caps, shell }: { caps: KfxCapabilities; shell: Shell }) {
+  const runId = shell.params?.sessionWindowRunId;
+  if (runId) return <SingleSessionWindow caps={caps} runId={runId} />;
+  return <SessionWorkspace caps={caps} shell={shell} />;
+}
+
+export { View };

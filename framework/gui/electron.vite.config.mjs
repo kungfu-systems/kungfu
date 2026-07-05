@@ -75,8 +75,9 @@ function nodeBuiltinRequireShim() {
 // - preload: the sandbox preload — the only bridge an isolated sandboxed view
 //   gets (contextBridge exposes __kfxBridge); built as its own entry.
 // - renderer: react; keep electron and the native binding external so the
-//   trusted renderer require()s them at runtime under nodeIntegration. Two html
-//   entries: the shell (index) and the isolated sandboxed-view harness.
+//   trusted renderer require()s them at runtime under nodeIntegration. Three html
+//   entries: the shell (index), the isolated sandboxed-view harness, and the
+//   per-session OS window (session-window, ADR-0016 stage 3).
 export default defineConfig({
   main: {
     plugins: [
@@ -111,6 +112,12 @@ export default defineConfig({
           'sandbox-view-harness': resolve(
             rootDir,
             'src/renderer/sandbox-view-harness/index.html',
+          ),
+          // per-session OS window (ADR-0016 stage 3); node-integrated like the
+          // shell, mounts the terminal view against one runId over the relay
+          'session-window': resolve(
+            rootDir,
+            'src/renderer/session-window/index.html',
           ),
         },
       },

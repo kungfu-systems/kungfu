@@ -234,13 +234,23 @@ function App() {
   );
   const activeKfx = enabled.find((k) => k.id === active) ?? enabled[0] ?? null;
 
-  // ADR-0016 stage 2: expose per-session OS window control to views through the
+  // ADR-0016 stage 2/3: expose per-session OS window control to views through the
   // shell so a view stays electron-free. Present only when the flag is on and
   // this (node-integrated) renderer can reach ipc; absent otherwise, so a view
   // feature-detects and hides the affordance. Built once — the ipc handle and
   // flag are stable over the shell's life.
+  //
+  // Also requires the durable host to run in the main process (stage 3): a
+  // popped-out window renders the live terminal by reaching that shared host over
+  // the relay, which is impossible when the host lives in this renderer. So
+  // pop-out is offered only when both flags are on, never a window that cannot
+  // reach its session.
   const sessionWindowShell = React.useMemo<Partial<Shell>>(() => {
-    if (window.process?.env?.KF_SESSION_WINDOWS !== '1') return {};
+    if (
+      window.process?.env?.KF_SESSION_WINDOWS !== '1' ||
+      window.process?.env?.KF_TERMINAL_HOST !== 'main'
+    )
+      return {};
     type SessionWindowIpc = {
       invoke: (channel: string, payload: unknown) => Promise<unknown>;
       on: (

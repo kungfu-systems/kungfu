@@ -7,6 +7,7 @@
 // app exactly as it is (parity by construction); the multi-window path is
 // exercised by flipping the flag on a real machine, the discipline ADR-0016
 // stage 1 used for the main-process host.
+import path from 'node:path';
 import { BrowserWindow, type IpcMain, screen } from 'electron';
 
 import {
@@ -31,41 +32,20 @@ function toDisplayInfo(d: Electron.Display): DisplayInfo {
   return { id: displayKey(d), workArea: d.workArea };
 }
 
-function escapeHtml(s: string): string {
-  return s.replace(/[<>&"]/g, (c) => {
-    switch (c) {
-      case '<':
-        return '&lt;';
-      case '>':
-        return '&gt;';
-      case '&':
-        return '&amp;';
-      case '"':
-        return '&quot;';
-      default:
-        return c;
-    }
-  });
-}
-
-// A minimal placeholder page (ADR-0016 stage 2). What stage 2 proves is the
-// window lifecycle, bounds, F7 restore and persistence; mounting the real
-// terminal view against this window's runId over the host proxy is stage 3,
-// which swaps this data: URL for a session-window renderer entry.
-function placeholderPage(runId: string, windowId: string): string {
-  const r = escapeHtml(runId);
-  const w = escapeHtml(windowId);
-  return [
-    '<!doctype html><meta charset="utf-8">',
-    `<title>Session ${r}</title>`,
-    '<style>html,body{margin:0;height:100%;background:#1e1e1e;color:#ddd;',
-    'font:14px/1.6 -apple-system,system-ui,sans-serif;display:flex;',
-    'align-items:center;justify-content:center}main{text-align:center}',
-    'code{color:#6cf}small{color:#888}</style>',
-    `<main><div>managed session <code>${r}</code></div>`,
-    '<div><small>ADR-0016 stage 2 — window shell (terminal view lands in stage 3)</small></div>',
-    `<div><small>window ${w}</small></div></main>`,
-  ].join('');
+// The per-session window renderer entry, with the runId it should mount (and its
+// windowId, for logging). Dev serves it from the electron-vite dev server; a
+// packaged app loads the built file — the same dev/prod split the shell and the
+// sandbox harness use. Query is percent-encoded, so a runId is safe in the URL.
+function sessionWindowEntry(runId: string, windowId: string): string {
+  const query =
+    `?runId=${encodeURIComponent(runId)}` +
+    `&windowId=${encodeURIComponent(windowId)}`;
+  return process.env.ELECTRON_RENDERER_URL
+    ? `${process.env.ELECTRON_RENDERER_URL}/session-window/index.html${query}`
+    : `file://${path.join(
+        __dirname,
+        '../renderer/session-window/index.html',
+      )}${query}`;
 }
 
 function createSessionWindow(args: {
@@ -82,17 +62,17 @@ function createSessionWindow(args: {
     backgroundColor: '#1e1e1e',
     title: `Session ${args.runId}`,
     webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      sandbox: true,
+      // ADR-0016 stage 3: the window renderer mounts the terminal view and
+      // reaches the main-process host over the relay via ipcRenderer, so it runs
+      // node-integrated like the shell (a first-party window loading a
+      // first-party bundle) rather than the stage-2 sandboxed placeholder.
+      nodeIntegration: true,
+      contextIsolation: false,
+      sandbox: false,
     },
   });
   win.on('ready-to-show', () => win.show());
-  void win.loadURL(
-    `data:text/html;charset=utf-8,${encodeURIComponent(
-      placeholderPage(args.runId, args.windowId),
-    )}`,
-  );
+  void win.loadURL(sessionWindowEntry(args.runId, args.windowId));
   return {
     getBounds: () => win.getBounds(),
     focus: () => {
