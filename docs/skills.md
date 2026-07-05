@@ -268,6 +268,7 @@ kungfu skill catalog [--path <dir>] [--json]
 kungfu skill context [--path <dir>] [--source cli|gui|test] [--manager python|node]
 kungfu skill verify --provider <claude|codex> --path <dir> [--manager python|node]
 kungfu skill read <key-or-path> [--path <dir>]
+kungfu skill audit --run-id <id>
 kungfu skill explain <key-or-path>
 ```
 
@@ -280,7 +281,8 @@ through `managed-run`, asks it to echo the advertised schema, first skill key,
 and `advertisedSkillsHash`, then checks the Rewind `response.json` evidence.
 Use `--manager node` to build the envelope through the Node manager path used
 by the Electron GUI. `read` is the operation the agent tool uses to load the
-full `SKILL.md` after selection.
+full `SKILL.md` after selection. `audit` reads the Skill audit sidecar from a
+managed-run bundle or a standalone audit file.
 
 The SDK may add:
 
@@ -330,6 +332,17 @@ advertisement, full instruction loading, dependency invocation, and trust
 refusal should be recordable by the journal-backed responsibility layer so a
 later user or agent can explain why a skill influenced a work decision.
 
+The first audit slice records:
+
+- `SkillAdvertised` in the managed-run bundle when Python or Node manager
+  envelopes advertise skills to a provider. The bundle manifest points to
+  `skill-audit.json` and records its hash and event types.
+- `SkillLoaded` when `kungfu skill read` loads full `SKILL.md` content. This
+  records the selected skill key, source hash, content hash, source path, source,
+  manager, and optional run id.
+- `kungfu skill audit --run-id <id>` to inspect bundle evidence, plus
+  `--audit-file` for standalone JSON/JSONL audit files.
+
 ## First implementation slice
 
 The first slice proves the context loop before broad execution:
@@ -347,10 +360,9 @@ The first slice proves the context loop before broad execution:
 
 Follow-up slices should:
 
-1. Audit advertised and loaded skills.
-2. Bind declared kfx dependencies through the normal kfx registry without
+1. Bind declared kfx dependencies through the normal kfx registry without
    copying them per skill.
-3. Display installed skills in a first-party `skill-manager` view.
+2. Display installed skills in a first-party `skill-manager` view.
 
 Out of scope for the first slice:
 
@@ -370,12 +382,14 @@ The first implementation slice is verified by:
   fixtures;
 - frozen CLI `skill verify --manager python` and `skill verify --manager node`
   with provider response evidence;
+- `SkillAdvertised` audit sidecars discoverable through
+  `kungfu skill audit --run-id`;
+- `SkillLoaded` audit events from `kungfu skill read`;
 - a skill with two kfx declarations proving the skill object can reference
   multiple kfx packages without granting runtime privilege.
 
 Follow-up verification should add:
 
-- audit records for advertised and loaded skills;
 - kfx dependency installation through the shared registry, with deduplication;
 - a third-party adapter dependency proving that skill composition does not bypass
   the existing runtime trust refusal.

@@ -2,6 +2,14 @@
 
 from .catalog import build_catalog, catalog_entry
 from .context import build_context_envelope
+from .audit import (
+    append_audit_event,
+    read_audit_file,
+    skill_advertised_event,
+    skill_audit_document,
+    skill_loaded_event,
+    write_audit_document,
+)
 from .parser import SkillError, parse_skill
 from .provider import (
     build_skill_context,
@@ -15,6 +23,7 @@ from .registry import discover_skills, find_skill, read_skill_markdown, skill_ro
 
 __all__ = [
     "SkillError",
+    "append_audit_event",
     "build_catalog",
     "build_context_envelope",
     "build_skill_context",
@@ -27,6 +36,11 @@ __all__ = [
     "inject_skill_context",
     "load_skill_context_file",
     "parse_skill",
+    "read_audit_file",
     "read_skill_markdown",
+    "skill_advertised_event",
+    "skill_audit_document",
+    "skill_loaded_event",
     "skill_roots",
+    "write_audit_document",
 ]

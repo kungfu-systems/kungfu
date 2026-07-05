@@ -4,11 +4,17 @@ from pathlib import Path
 import json
 
 from kungfu.skill import (
+    append_audit_event,
     build_catalog,
     build_context_envelope,
     build_skill_context,
     inject_skill_context,
     parse_skill,
+    read_audit_file,
+    skill_advertised_event,
+    skill_audit_document,
+    skill_loaded_event,
+    write_audit_document,
 )
 
 
@@ -95,3 +101,51 @@ def test_provider_builds_and_injects_skill_context():
     assert envelope["catalog"][0]["key"] == "minimal"
     assert "Kungfu Skill context envelope" in injected
     assert injected.endswith("\n\nUser task:\nhello")
+
+
+def test_skill_audit_records_advertised_and_loaded_events(tmp_path):
+    skill = parse_skill(_fixture("minimal"))
+    envelope = build_context_envelope(
+        build_catalog([skill]),
+        {"source": "test", "manager": "python", "agent": "codex"},
+    )
+    advertised = skill_advertised_event(
+        envelope,
+        run_id="run-1",
+        provider="codex",
+        context_file="/tmp/context.json",
+    )
+    markdown = Path(skill["source"]["path"]).read_text(encoding="utf-8")
+    loaded = skill_loaded_event(skill, markdown, run_id="run-1")
+    document = skill_audit_document(
+        run_id="run-1",
+        provider="codex",
+        events=[advertised, loaded],
+    )
+    audit_path = tmp_path / "skill-audit.json"
+    digest = write_audit_document(audit_path, document)
+
+    assert digest
+    assert advertised["type"] == "SkillAdvertised"
+    assert advertised["skills"][0]["key"] == "minimal"
+    assert (
+        advertised["advertisedSkillsHash"] == envelope["audit"]["advertisedSkillsHash"]
+    )
+    assert loaded["type"] == "SkillLoaded"
+    assert loaded["skill"]["sourceHash"] == skill["source"]["hash"]
+    assert loaded["skill"]["contentHash"] == skill["source"]["hash"]
+    assert read_audit_file(audit_path)["event_count"] == 2
+
+
+def test_skill_audit_reads_jsonl_events(tmp_path):
+    skill = parse_skill(_fixture("minimal"))
+    markdown = Path(skill["source"]["path"]).read_text(encoding="utf-8")
+    event = skill_loaded_event(skill, markdown, run_id="run-jsonl")
+    audit_path = tmp_path / "skill-audit.jsonl"
+
+    append_audit_event(audit_path, event)
+
+    document = read_audit_file(audit_path)
+    assert document["schema"] == "kungfu.skill-audit/v1"
+    assert document["run_id"] == "run-jsonl"
+    assert document["events"][0]["skill"]["key"] == "minimal"

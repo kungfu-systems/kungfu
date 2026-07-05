@@ -35,6 +35,9 @@ from kungfu.skill import (
     has_advertised_skills,
     inject_skill_context,
     load_skill_context_file,
+    skill_advertised_event,
+    skill_audit_document,
+    write_audit_document,
 )
 
 lf = kungfu.__binding__.longfist
@@ -49,6 +52,8 @@ class ManagedRunCliReport:
     response_path: str
     manifest_path: str
     response_doc: dict
+    skill_audit_path: str | None
+    skill_audit_doc: dict | None
 
 
 def _open_journal(runtime_dir, run_id):
@@ -99,6 +104,7 @@ def run_and_report(
         print(f"  binary  {disc.path}  ({disc.path_class}, {disc.version})")
     prompt_for_provider = prompt
     envelope = None
+    skill_audit_events = []
     if skill_context:
         context_path = skill_context_file or context_file_from_env()
         if context_path:
@@ -114,6 +120,15 @@ def run_and_report(
             )
         if has_advertised_skills(envelope):
             prompt_for_provider = inject_skill_context(prompt, envelope)
+            skill_audit_events.append(
+                skill_advertised_event(
+                    envelope,
+                    run_id=run_id,
+                    provider=provider,
+                    work_id=work_id,
+                    context_file=context_path,
+                )
+            )
 
     if not quiet:
         print(f"  prompt  {prompt}")
@@ -172,7 +187,36 @@ def run_and_report(
         f.write("\n")
     with open(response_path, "rb") as f:
         response_hash = hashlib.sha256(f.read()).hexdigest()
+    skill_audit_doc = None
+    skill_audit_path = None
+    skill_audit_hash = None
+    if skill_audit_events:
+        skill_audit_path = os.path.join(bundle_dir, "skill-audit.json")
+        skill_audit_doc = skill_audit_document(
+            run_id=run_id,
+            provider=provider,
+            work_id=work_id,
+            events=skill_audit_events,
+        )
+        skill_audit_hash = write_audit_document(skill_audit_path, skill_audit_doc)
 
+    extra = {
+        "managed_run_response": {
+            "schema": response_doc["schema"],
+            "path": "response.json",
+            "sha256": response_hash,
+            "text_known": result.response_text is not None,
+            "error_known": result.response_error is not None,
+        }
+    }
+    if skill_audit_doc:
+        extra["skill_audit"] = {
+            "schema": skill_audit_doc["schema"],
+            "path": "skill-audit.json",
+            "sha256": skill_audit_hash,
+            "event_count": skill_audit_doc["event_count"],
+            "event_types": sorted({row["type"] for row in skill_audit_events}),
+        }
     manifest = bundle.emit(
         bundle_dir,
         runtime_dir,
@@ -183,15 +227,7 @@ def run_and_report(
             "name": run_id,
             "dest": 0,
         },
-        extra={
-            "managed_run_response": {
-                "schema": response_doc["schema"],
-                "path": "response.json",
-                "sha256": response_hash,
-                "text_known": result.response_text is not None,
-                "error_known": result.response_error is not None,
-            }
-        },
+        extra=extra,
     )
     report = ManagedRunCliReport(
         provider=provider,
@@ -200,6 +236,8 @@ def run_and_report(
         response_path=response_path,
         manifest_path=manifest,
         response_doc=response_doc,
+        skill_audit_path=skill_audit_path,
+        skill_audit_doc=skill_audit_doc,
     )
     if report_callback is not None:
         report_callback(report)
@@ -247,6 +285,8 @@ def run_and_report(
         print("  text         — no provider text field found")
     print(f"  run_id       {run_id}")
     print(f"  proof        {manifest}")
+    if skill_audit_path:
+        print(f"  skill_audit  {skill_audit_path}")
     print("─" * 46)
     if print_response and result.response_text:
         print(result.response_text)

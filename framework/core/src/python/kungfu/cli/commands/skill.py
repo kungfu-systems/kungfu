@@ -15,6 +15,7 @@ from kungfu.rewind.managed_cli import run_and_report
 from kungfu.rewind.managed_run import managed_providers
 from kungfu.skill import (
     SkillError,
+    append_audit_event,
     build_catalog,
     build_context_envelope,
     build_skill_context,
@@ -23,7 +24,9 @@ from kungfu.skill import (
     has_advertised_skills,
     load_skill_context_file,
     parse_skill,
+    read_audit_file,
     read_skill_markdown,
+    skill_loaded_event,
 )
 
 skill_command_context = kfc.pass_context()
@@ -100,6 +103,22 @@ def _write_node_envelope_file(ctx, paths, source, profile, agent):
         detail = (proc.stderr or proc.stdout).strip()
         raise SkillError(f"node manager context failed: {detail}")
     return out
+
+
+def _default_skill_audit_log(ctx):
+    return os.path.join(ctx.runtime_dir, "skill-audit.jsonl")
+
+
+def _bundle_audit_path(ctx, run_id, bundle_dir=None, audit_file=None):
+    if audit_file:
+        return audit_file
+    if bundle_dir:
+        return os.path.join(bundle_dir, "skill-audit.json")
+    if run_id:
+        return os.path.join(
+            ctx.runtime_dir, "rewind", run_id, "bundle", "skill-audit.json"
+        )
+    raise SkillError("pass --run-id, --bundle, or --audit-file")
 
 
 def _verify_response_text(text, expected_schema, expected_key, expected_hash):
@@ -340,6 +359,7 @@ def verify(
         "run_id": report.run_id if report else None,
         "response_path": report.response_path if report else None,
         "manifest_path": report.manifest_path if report else None,
+        "skill_audit_path": report.skill_audit_path if report else None,
         "failures": failures,
     }
     if as_json:
@@ -352,6 +372,8 @@ def verify(
         )
         click.echo(f"[skill] response {summary['response_path']}")
         click.echo(f"[skill] proof {summary['manifest_path']}")
+        if summary["skill_audit_path"]:
+            click.echo(f"[skill] audit {summary['skill_audit_path']}")
     else:
         click.echo(f"[skill] verify failed: {', '.join(failures)}", err=True)
     if not ok:
@@ -361,9 +383,17 @@ def verify(
 @skill.command(help="load full SKILL.md by key or path")
 @click.argument("key_or_path", type=str)
 @click.option("--path", "paths", multiple=True, type=click.Path(exists=True))
+@click.option("--run-id", default=None, help="associate this read with a run id")
+@click.option(
+    "--audit-file",
+    type=click.Path(),
+    default=None,
+    help="append SkillLoaded audit event to this JSONL file",
+)
+@click.option("--no-audit", is_flag=True, help="do not write a SkillLoaded event")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @skill_command_context
-def read(ctx, key_or_path, paths, as_json):
+def read(ctx, key_or_path, paths, run_id, audit_file, no_audit, as_json):
     try:
         parsed, markdown = read_skill_markdown(
             ctx.home, key_or_path, _extra_paths(paths)
@@ -371,10 +401,81 @@ def read(ctx, key_or_path, paths, as_json):
     except SkillError as e:
         click.echo(f"[skill] {e}", err=True)
         sys.exit(1)
+    event = skill_loaded_event(
+        parsed,
+        markdown,
+        run_id=run_id,
+        source="cli",
+        manager="python",
+    )
+    audit_path = None
+    if not no_audit:
+        audit_path = audit_file or _default_skill_audit_log(ctx)
+        append_audit_event(audit_path, event)
     if as_json:
-        _json({"skill": parsed, "markdown": markdown})
+        _json(
+            {
+                "skill": parsed,
+                "markdown": markdown,
+                "audit": event,
+                "audit_path": audit_path,
+            }
+        )
     else:
         click.echo(markdown, nl=False)
+
+
+@skill.command(help="inspect Skill audit evidence for a managed run or audit file")
+@click.option("--run-id", default=None, help="managed-run id under this runtime")
+@click.option(
+    "--bundle",
+    "bundle_dir",
+    type=click.Path(exists=True, file_okay=False),
+    default=None,
+    help="bundle directory containing skill-audit.json",
+)
+@click.option(
+    "--audit-file",
+    type=click.Path(exists=True),
+    default=None,
+    help="skill-audit.json or skill-audit.jsonl to inspect",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@skill_command_context
+def audit(ctx, run_id, bundle_dir, audit_file, as_json):
+    try:
+        path = _bundle_audit_path(ctx, run_id, bundle_dir, audit_file)
+        data = read_audit_file(path)
+    except (OSError, SkillError, ValueError) as e:
+        click.echo(f"[skill] audit unavailable: {e}", err=True)
+        sys.exit(1)
+    if as_json:
+        _json(data)
+        return
+    click.echo(f"Skill audit: {data.get('run_id') or 'unscoped'}")
+    for event in data.get("events", []):
+        if event.get("type") == "SkillAdvertised":
+            skills = ", ".join(row["key"] for row in event.get("skills", []))
+            click.echo(
+                "SkillAdvertised "
+                f"run={event.get('run_id')} "
+                f"manager={event.get('manager')} "
+                f"source={event.get('source')} "
+                f"skills={skills} "
+                f"hash={event.get('advertisedSkillsHash')}"
+            )
+        elif event.get("type") == "SkillLoaded":
+            skill_data = event.get("skill", {})
+            click.echo(
+                "SkillLoaded "
+                f"run={event.get('run_id') or '-'} "
+                f"manager={event.get('manager')} "
+                f"source={event.get('source')} "
+                f"skill={skill_data.get('key')} "
+                f"hash={skill_data.get('contentHash')}"
+            )
+        else:
+            click.echo(f"{event.get('type') or 'SkillAuditEvent'} {event}")
 
 
 @skill.command(help="explain a Kungfu Skill without granting runtime privileges")
