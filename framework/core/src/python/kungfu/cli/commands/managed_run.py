@@ -51,6 +51,11 @@ managed_run_command_context = kfc.pass_context()
     is_flag=True,
     help="disable Kungfu Skill context injection",
 )
+@click.option(
+    "--print-response",
+    is_flag=True,
+    help="print the provider response text after the managed-run report",
+)
 @managed_run_command_context
 def managed_run(
     ctx,
@@ -62,6 +67,7 @@ def managed_run(
     agent,
     skill_context_file,
     no_skill_context,
+    print_response,
 ):
     sys.exit(
         run_and_report(
@@ -75,5 +81,6 @@ def managed_run(
             agent=agent,
             skill_context=not no_skill_context,
             skill_context_file=skill_context_file,
+            print_response=print_response,
         )
     )

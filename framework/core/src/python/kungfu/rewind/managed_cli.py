@@ -10,6 +10,8 @@
 # environment (built dist/kungfu) or the packaged runtime.
 
 import argparse
+import hashlib
+import json
 import os
 import sys
 import tempfile
@@ -64,6 +66,7 @@ def run_and_report(
     agent=None,
     skill_context=True,
     skill_context_file=None,
+    print_response=False,
 ):
     """Run one managed provider run on a journal under runtime_dir and print its
     cost. Returns the provider's exit code. Shared by the `kungfu managed-run`
@@ -133,8 +136,26 @@ def run_and_report(
     # frames are written straight to the memory-mapped journal page, so they
     # persist without an explicit flush; the writer releases at function end.
 
+    bundle_dir = os.path.join(runtime_dir, "rewind", run_id, "bundle")
+    os.makedirs(bundle_dir, exist_ok=True)
+    response_path = os.path.join(bundle_dir, "response.json")
+    response_doc = {
+        "schema": "kungfu.managed-run.response/v1",
+        "run_id": run_id,
+        "provider": provider,
+        "exit_code": result.exit_code,
+        "text": result.response_text,
+        "body": json.loads(result.response_body) if result.response_body else None,
+        "error": result.response_error,
+    }
+    with open(response_path, "w", encoding="utf-8") as f:
+        json.dump(response_doc, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    with open(response_path, "rb") as f:
+        response_hash = hashlib.sha256(f.read()).hexdigest()
+
     manifest = bundle.emit(
-        os.path.join(runtime_dir, "rewind", run_id, "bundle"),
+        bundle_dir,
         runtime_dir,
         {
             "mode": "LIVE",
@@ -142,6 +163,15 @@ def run_and_report(
             "group": "rewind",
             "name": run_id,
             "dest": 0,
+        },
+        extra={
+            "managed_run_response": {
+                "schema": response_doc["schema"],
+                "path": "response.json",
+                "sha256": response_hash,
+                "text_known": result.response_text is not None,
+                "error_known": result.response_error is not None,
+            }
         },
     )
 
@@ -173,9 +203,21 @@ def run_and_report(
             f"  no cost reported   emitted={result.emitted}  exit={result.exit_code}"
             + (f"  error={result.error}" if result.error else "")
         )
+    print(_rule("response"))
+    print("  event        ModelResponse (msg_type 30004) written to the journal")
+    print(f"  response     {response_path}")
+    if result.response_text:
+        first_line = result.response_text.splitlines()[0]
+        print(f"  text         {first_line[:120]}")
+    elif result.response_error:
+        print(f"  error        {result.response_error[:120]}")
+    else:
+        print("  text         — no provider text field found")
     print(f"  run_id       {run_id}")
     print(f"  proof        {manifest}")
     print("─" * 46)
+    if print_response and result.response_text:
+        print(result.response_text)
     return result.exit_code
 
 
@@ -205,6 +247,11 @@ def main(argv=None):
         action="store_true",
         help="disable Kungfu Skill context injection",
     )
+    ap.add_argument(
+        "--print-response",
+        action="store_true",
+        help="print the provider response text after the managed-run report",
+    )
     args = ap.parse_args(argv)
     runtime = args.home or tempfile.mkdtemp(prefix="kungfu-managed-")
     return run_and_report(
@@ -218,6 +265,7 @@ def main(argv=None):
         agent=args.agent,
         skill_context=not args.no_skill_context,
         skill_context_file=args.skill_context_file,
+        print_response=args.print_response,
     )
 
 

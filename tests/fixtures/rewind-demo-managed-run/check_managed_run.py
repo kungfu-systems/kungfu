@@ -43,10 +43,12 @@ if "kungfu" not in sys.modules:
     )
     sys.modules["kungfu"] = _m
 
-from kungfu.rewind import MSG_COST_SNAPSHOT, managed_run  # noqa: E402
+from kungfu.rewind import MSG_COST_SNAPSHOT, MSG_MODEL_RESPONSE, managed_run  # noqa: E402
 from kungfu.rewind.fb.Attribution import Attribution as FbAttribution  # noqa: E402
+from kungfu.rewind.fb.CallStatus import CallStatus as FbCallStatus  # noqa: E402
 from kungfu.rewind.fb.CaptureLayer import CaptureLayer as FbCaptureLayer  # noqa: E402
 from kungfu.rewind.fb.CostSnapshot import CostSnapshot as FbCostSnapshot  # noqa: E402
+from kungfu.rewind.fb.ModelResponse import ModelResponse as FbModelResponse  # noqa: E402
 
 failures = []
 
@@ -78,10 +80,20 @@ def sink():
 
 
 def decode(events):
-    assert len(events) == 1, f"expected 1 event, got {len(events)}"
-    msg_type, payload = events[0]
+    cost_events = [row for row in events if row[0] == MSG_COST_SNAPSHOT]
+    assert len(cost_events) == 1, f"expected 1 cost event, got {len(cost_events)}"
+    msg_type, payload = cost_events[0]
     assert msg_type == MSG_COST_SNAPSHOT
     return FbCostSnapshot.GetRootAs(payload, 0)
+
+
+def decode_response(events):
+    response_events = [row for row in events if row[0] == MSG_MODEL_RESPONSE]
+    assert len(response_events) == 1, (
+        f"expected 1 model response event, got {len(response_events)}"
+    )
+    _, payload = response_events[0]
+    return FbModelResponse.GetRootAs(payload, 0)
 
 
 # --- provider registry ------------------------------------------------------
@@ -93,6 +105,21 @@ check(
 # --- codex: two turns accumulate into one EXACT_RUN, tokens-only ------------
 codex_jsonl = "\n".join(
     [
+        json.dumps(
+            {
+                "type": "item.completed",
+                "item": {
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "output_text",
+                            "text": "codex managed response body",
+                        }
+                    ],
+                },
+            }
+        ),
         json.dumps(
             {
                 "type": "turn.completed",
@@ -136,6 +163,16 @@ check(
 )
 check("codex run exit 0", result.exit_code == 0)
 check("codex run emitted", result.emitted is True)
+check(
+    "codex response text captured",
+    result.response_text == "codex managed response body",
+)
+resp = decode_response(events)
+check("codex response event status ok", resp.Status() == FbCallStatus.Ok)
+check(
+    "codex response body has answer",
+    "codex managed response body" in (resp.ResponseBody() or b"").decode(),
+)
 ev = decode(events)
 check(
     "codex event input_tokens accumulated",
@@ -155,6 +192,10 @@ check("codex cost stays unknown", not ev.CostUsdKnown())
 # --- claude: print json carries dollar cost + session ----------------------
 claude_json = json.dumps(
     {
+        "type": "result",
+        "subtype": "success",
+        "is_error": False,
+        "result": "claude managed response body",
         "session_id": "sess-77",
         "total_cost_usd": 0.0231,
         "usage": {
@@ -178,6 +219,16 @@ check(
     str(seen["argv"]),
 )
 check("claude run emitted", result.emitted is True)
+check(
+    "claude response text captured",
+    result.response_text == "claude managed response body",
+)
+resp = decode_response(events)
+check("claude response event status ok", resp.Status() == FbCallStatus.Ok)
+check(
+    "claude response body has answer",
+    "claude managed response body" in (resp.ResponseBody() or b"").decode(),
+)
 ev = decode(events)
 check("claude cost known", bool(ev.CostUsdKnown()))
 check("claude cost value", abs(ev.CostUsd() - 0.0231) < 1e-9, str(ev.CostUsd()))
@@ -193,16 +244,21 @@ result = managed_run.run_managed(
     "codex", "/opt/codex", "noop", emit=emit, run_id="run-empty", runner=run
 )
 check("no-usage run does not emit", result.emitted is False)
-check("no-usage sink stays empty", events == [])
+check(
+    "no-usage emits only response", [row[0] for row in events] == [MSG_MODEL_RESPONSE]
+)
 check("no-usage still returns a snapshot", result.snapshot is not None)
+check("no-usage response text absent", result.response_text is None)
 
-# --- malformed payload fails soft: no event, error recorded ----------------
+# --- malformed payload fails soft: no cost event, response error recorded ---
 run, _ = fake_runner(1, "not json {", "boom")
 emit, events = sink()
 result = managed_run.run_managed(
     "claude", "/opt/claude", "bad", emit=emit, run_id="run-bad", runner=run
 )
 check("malformed run does not emit", result.emitted is False)
+resp = decode_response(events)
+check("malformed response event status error", resp.Status() == FbCallStatus.Error)
 check(
     "malformed run records error",
     result.error is not None and "parse failed" in result.error,

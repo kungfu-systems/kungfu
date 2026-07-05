@@ -22,13 +22,17 @@
 from __future__ import annotations
 
 import dataclasses
+import json
 import subprocess
+import time
 from typing import Callable, List, Optional
 
+from kungfu.rewind import MSG_MODEL_RESPONSE, events
 from kungfu.rewind import cost_wire
 from kungfu.rewind.cost.claude import parse_claude_print_json
 from kungfu.rewind.cost.codex import parse_codex_exec_json_text
 from kungfu.rewind.cost.model import CostSnapshot
+from kungfu.rewind.fb.CallStatus import CallStatus
 from kungfu.rewind.fb.CaptureLayer import CaptureLayer
 
 # Provider -> how to invoke it for structured output and how to parse it back.
@@ -72,11 +76,118 @@ class ManagedRunResult:
     stdout: str
     stderr: str
     error: Optional[str] = None
+    response_text: Optional[str] = None
+    response_body: Optional[str] = None
+    response_error: Optional[str] = None
+    response_emitted: bool = False
 
 
 def _subprocess_runner(argv, env=None):
     proc = subprocess.run(argv, capture_output=True, text=True, env=env)
     return proc.returncode, proc.stdout, proc.stderr
+
+
+def _content_text(value) -> str:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        parts = []
+        for item in value:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict):
+                text = item.get("text") or item.get("content")
+                if isinstance(text, str):
+                    parts.append(text)
+        return "".join(parts)
+    return ""
+
+
+def _codex_assistant_text(event: dict) -> Optional[str]:
+    candidates = []
+    if isinstance(event.get("item"), dict):
+        candidates.append(event["item"])
+    if isinstance(event.get("message"), dict):
+        candidates.append(event["message"])
+    candidates.append(event)
+
+    for candidate in candidates:
+        if candidate.get("role") not in (None, "assistant"):
+            continue
+        text = _content_text(candidate.get("content"))
+        if text:
+            return text
+        text = candidate.get("text") or candidate.get("output_text")
+        if isinstance(text, str) and text:
+            return text
+    return None
+
+
+def _extract_codex_response(stdout: str):
+    texts = []
+    raw = None
+    error = None
+    for line in stdout.splitlines():
+        try:
+            event = json.loads(line)
+        except (TypeError, ValueError):
+            continue
+        if not isinstance(event, dict):
+            continue
+        event_type = event.get("type")
+        if event_type in {"turn.failed", "error"}:
+            found = event.get("error") or event.get("message")
+            if isinstance(found, str):
+                error = found
+        text = _codex_assistant_text(event)
+        if text:
+            texts.append(text)
+            raw = event
+    return "\n".join(texts) if texts else None, raw, error
+
+
+def _extract_claude_response(stdout: str):
+    payload = json.loads(stdout)
+    if not isinstance(payload, dict):
+        raise TypeError("claude response payload must be a JSON object")
+    text = payload.get("result")
+    if not isinstance(text, str):
+        text = (
+            payload.get("message") if isinstance(payload.get("message"), str) else None
+        )
+    error = payload.get("error")
+    if not isinstance(error, str):
+        error = None
+    if bool(payload.get("is_error")) and error is None and text:
+        error = text
+    return text, payload, error
+
+
+def _extract_response(
+    provider: str, surface: str, stdout: str, stderr: str, exit_code: int
+):
+    text = None
+    raw = None
+    error = None
+    try:
+        if provider == "claude":
+            text, raw, error = _extract_claude_response(stdout)
+        elif provider == "codex":
+            text, raw, error = _extract_codex_response(stdout)
+    except Exception as exc:
+        error = f"response parse failed: {exc}"
+
+    if error is None and exit_code != 0 and stderr:
+        error = stderr.strip()
+    body = {
+        "provider": provider,
+        "surface": surface,
+        "text": text,
+        "raw": raw,
+    }
+    if error:
+        body["error"] = error
+    return text, json.dumps(body, ensure_ascii=False, sort_keys=True), error
 
 
 def _has_usage(snapshot: CostSnapshot) -> bool:
@@ -114,7 +225,9 @@ def run_managed(
         raise ValueError(f"unknown managed provider: {provider!r}")
 
     argv = spec["argv"](binary, prompt)
+    started_ns = time.monotonic_ns()
     exit_code, stdout, stderr = runner(argv, env=env)
+    latency_ns = max(0, time.monotonic_ns() - started_ns)
 
     snapshot: Optional[CostSnapshot] = None
     error: Optional[str] = None
@@ -134,6 +247,30 @@ def run_managed(
         emit(msg_type, payload)
         emitted = True
 
+    response_text, response_body, response_error = _extract_response(
+        provider, spec["surface"], stdout, stderr, exit_code
+    )
+    status = CallStatus.Error if exit_code != 0 or response_error else CallStatus.Ok
+    input_tokens = output_tokens = 0
+    if snapshot is not None:
+        input_tokens = snapshot.tokens.input_tokens
+        output_tokens = snapshot.tokens.output_tokens
+    emit(
+        MSG_MODEL_RESPONSE,
+        events.model_response(
+            run_id=run_id,
+            span_id=f"{run_id}:managed-provider",
+            layer=CaptureLayer.Supervisor,
+            status=status,
+            response_body=response_body,
+            error=response_error,
+            finish_reason="provider_exit",
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            latency_ns=latency_ns,
+        ),
+    )
+
     return ManagedRunResult(
         provider=provider,
         exit_code=exit_code,
@@ -142,6 +279,10 @@ def run_managed(
         stdout=stdout,
         stderr=stderr,
         error=error,
+        response_text=response_text,
+        response_body=response_body,
+        response_error=response_error,
+        response_emitted=True,
     )
 
 

@@ -41,6 +41,15 @@ Payload bodies (`request_body`, `input`, ...) are JSON strings: capture keeps
 full local fidelity; redaction is an export-time concern, never a capture-time
 one.
 
+## Managed-run response evidence
+
+`kungfu managed-run` drives provider CLIs through their structured-output
+surfaces (`codex exec --json`, `claude --print --output-format json`). Besides
+the `CostSnapshot` cost fact, it emits a Supervisor-layer `ModelResponse` with
+the provider's response body and writes `response.json` next to the run
+`manifest.json` in the rewind bundle. Use `--print-response` when a smoke test
+needs to assert the provider's answer text directly.
+
 ## Decode without the writer
 
 Rewind events are open-layer: each run's manifest binds these msg_types to the
