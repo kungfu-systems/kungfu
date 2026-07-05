@@ -1,104 +1,22 @@
 #!/bin/sh
-# kungfu pre-commit hook — format staged files in place, then re-stage them.
+# kungfu pre-commit hook — cross-platform shim; all logic lives in precommit.mjs.
 #
-# Scope: only staged (Added/Copied/Modified) files, dispatched by extension to
-# the matching formatter (clang-format / ruff / biome). Generated
-# outputs (flatbuffers tables, files carrying a "do not modify" header) are
-# skipped so regeneration stays authoritative.
+# git must be able to launch the hook file, and POSIX sh is the one interpreter
+# it ships on every platform (incl. Git-for-Windows' bundled bash). So this stays
+# a tiny sh shim that only execs node — no checks live here. precommit.mjs runs
+# the real work (staged .sh guard, format, blocking lint) identically on
+# macOS/Linux/Windows.
 #
-# Installed to $(git --git-common-dir)/hooks/pre-commit by install-hooks.js
-# (root `prepare`, or `pnpm run hooks:install`). It coexists with a managed
-# hooks-path guard: when core.hooksPath points elsewhere, that guard execs this
-# standard hook after its own checks pass, so this file stays the single place
-# that formats staged code.
-#
-# A missing formatter warns and skips (a setup gap must not block a commit); run
-# `./kungfu-code sync` to install the toolchain. Bypass entirely with `git
-# commit -n`.
+# Installed to $(git --git-common-dir)/hooks/pre-commit by install-hooks.js (root
+# `prepare`, or `pnpm run hooks:install`). It coexists with the managed hooks-path
+# guard: when core.hooksPath points elsewhere, that guard execs this standard hook
+# after its own checks. Missing node warns and skips (a setup gap must not block a
+# commit). Bypass entirely with `git commit -n`.
 set -eu
 
-root=$(git rev-parse --show-toplevel)
-cd "$root"
-
-staged=$(git diff --cached --name-only --diff-filter=ACM || true)
-[ -n "$staged" ] || exit 0
-
-# A file is "generated" if its path matches a known generated shape or its head
-# carries a generator marker. Kept in sync with the ruff/biome exclude configs.
-is_generated() {
-  case "$1" in
-    */generated/*|*/fb/[A-Z]*.py|*_fb.py|*_generated.*) return 0 ;;
-  esac
-  head -n 3 "$1" 2>/dev/null | grep -qiE 'automatically generated|do not (edit|modify)' && return 0
-  return 1
-}
-
-cpp='' py='' web=''
-for f in $staged; do
-  [ -f "$f" ] || continue          # skip deletions / renamed-away paths
-  is_generated "$f" && continue
-  # Repo-wide dispatch: C++ -> clang-format, Python -> ruff, all JS/TS -> biome
-  # (single root biome.json, which ignores generated/, fixtures/ and JSON).
-  case "$f" in
-    *.h|*.hpp|*.hxx|*.cpp|*.c|*.cc|*.cxx)
-      cpp="$cpp $f" ;;
-    *.py)
-      py="$py $f" ;;
-    *.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs)
-      web="$web $f" ;;
-  esac
-done
-
-changed=''
-warn() { printf '[kungfu pre-commit] %s\n' "$1" >&2; }
-
-# C++ — clang-format reads the repo-root .clang-format via -style=file. Pin the
-# version to framework/core/pyproject.toml (keep both in sync) so output is
-# byte-identical across machines; prefer the uv-provided pin over a system one.
-if [ -n "$cpp" ]; then
-  if command -v uvx >/dev/null 2>&1; then
-    # shellcheck disable=SC2086
-    uvx clang-format@20.1.8 -style=file -i $cpp && changed="$changed $cpp"
-  elif command -v clang-format >/dev/null 2>&1; then
-    warn "using system clang-format ($(clang-format --version | head -1)); may differ from pinned 20.1.8"
-    # shellcheck disable=SC2086
-    clang-format -style=file -i $cpp && changed="$changed $cpp"
-  else
-    warn "clang-format (uv) not found; skipped C++:$cpp"
-  fi
+root=$(git rev-parse --show-toplevel) || exit 0
+if command -v node >/dev/null 2>&1; then
+  exec node "$root/precommit.mjs"
 fi
-
-# Python — ruff finds framework/core/pyproject.toml per file (line-length 88,
-# generated excludes). Prefer a repo/global ruff, else uv's ephemeral runner.
-if [ -n "$py" ]; then
-  if command -v ruff >/dev/null 2>&1; then
-    # shellcheck disable=SC2086
-    ruff format $py && changed="$changed $py"
-  elif command -v uvx >/dev/null 2>&1; then
-    # shellcheck disable=SC2086
-    uvx ruff format $py && changed="$changed $py"
-  else
-    warn "ruff/uv not found; skipped Python:$py"
-  fi
-fi
-
-# JS/TS — biome uses the single root biome.json. Pin the version to match the
-# formatting baseline so results do not drift.
-if [ -n "$web" ]; then
-  if command -v biome >/dev/null 2>&1; then
-    # shellcheck disable=SC2086
-    biome format --write $web && changed="$changed $web"
-  elif command -v pnpm >/dev/null 2>&1; then
-    # shellcheck disable=SC2086
-    pnpm dlx @biomejs/biome@1.9.4 format --write $web && changed="$changed $web"
-  else
-    warn "biome/pnpm not found; skipped TS/JS:$web"
-  fi
-fi
-
-# Re-stage whatever was reformatted so the commit captures the clean result.
-if [ -n "$changed" ]; then
-  # shellcheck disable=SC2086
-  git add -- $changed
-fi
+printf '[kungfu pre-commit] node not found; skipped format/lint/guard\n' >&2
 exit 0
