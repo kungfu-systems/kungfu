@@ -47,7 +47,7 @@ kungfu rewind <subcommand>
 | `schema` | compile kfx FlatBuffers schemas into open-layer `.bfbs` (in-process, no flatc) |
 | `work` | manage work items: create, drive the lifecycle, and inspect state |
 | `kfx` | install, list and remove kfx packages for this home |
-| `tui` | open the reference TUI (Ink) |
+| `cockpit` | open the cockpit — the terminal operator surface (rendered by the reference TUI, Ink) |
 | `atlas` | Atlas repo integration surface |
 | `engage` | developer tooling (formatting and related helpers) |
 

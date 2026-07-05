@@ -20,7 +20,7 @@ extraResources:
   - from: resources/cli
     to: cli
   # The Ink reference TUI, bundled to a single ES module and run through
-  # kungfu's embedded Node (libnode) via `kungfu tui`.
+  # kungfu's embedded Node (libnode) via `kungfu cockpit`.
   - from: ../tui/dist
     to: tui
 mac:

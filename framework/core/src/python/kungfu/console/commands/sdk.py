@@ -2,8 +2,8 @@
 
 # `kungfu sdk` — the application assembly toolkit: scaffold apps and view
 # extensions, and build/clean kfx packages. It runs the SDK's Node CLI through
-# kungfu's own embedded Node runtime (libnode), the same bridge `kungfu tui`
-# uses — no separate node install. Unlike the TUI, the SDK is a plain Node
+# kungfu's own embedded Node runtime (libnode), the same bridge `kungfu cockpit`
+# uses — no separate node install. Unlike the cockpit, the SDK is a plain Node
 # program (esbuild + fs) that does not load the kungfu_node binding, so it needs
 # no runtime-home wiring.
 

@@ -31,6 +31,7 @@ registered surface was touched.
 
 | Date | Action | Line | Faces | Class | Rationale | PR |
 |---|---|---|---|---|---|---|
+| 2026-07-05 | update | — | kungfu-cli | additive | Rename the terminal reference-surface command `kungfu tui` → `kungfu cockpit` (an operator surface: monitor + config + mission ops). The Ink renderer stays the `tui` substrate (`framework/tui`, `@kungfu-tech/tui`, `tui.mjs`, `Resources/tui`); only the command/experience name changes. Pre-release, no line open | — |
 | 2026-07-05 | update | — | kungfu-cli | additive | Fold the application-assembly SDK into the CLI as the `kungfu sdk` subcommand (was the standalone `kfs` command); extension/example builds now run `kungfu sdk kfx build`. Pre-release, no line open; `kfs` was never a registered surface | — |
 | 2026-07-04 | update | — | rewind-event-schema | additive | Append `ApprovalDecision` (msg_type 30009): human approve/deny/interrupt/resume decision recorded as a run fact, `SCHEMA_VERSION` 2→3. Tail-only, existing 30001-30008 untouched |
 | 2026-07-04 | update | — | rewind-event-schema | additive | Append `CostSnapshot` (msg_type 30008): normalized token/cost usage with attribution + confidence, `SCHEMA_VERSION` 1→2. Tail-only table, existing 30001-30007 untouched; old runs still decode through their own pinned `.bfbs` | — |

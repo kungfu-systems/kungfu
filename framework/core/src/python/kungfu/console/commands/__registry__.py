@@ -2,7 +2,7 @@
 
 from . import engage
 from . import journal
-from . import tui
+from . import cockpit
 from . import trace
 from . import managed_run
 from . import rewind
@@ -15,7 +15,7 @@ from . import sdk
 __all__ = [
     "engage",
     "journal",
-    "tui",
+    "cockpit",
     "trace",
     "managed_run",
     "rewind",

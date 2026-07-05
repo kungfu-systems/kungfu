@@ -34,8 +34,9 @@ def _resolve_tui_entry():
 @kfc.command(help_priority=1)
 @click.argument("commands", nargs=-1, required=False)
 @kfc.pass_context()
-def tui(ctx, commands):
-    """Kungfu reference TUI (Ink) — the shell-native reference surface."""
+def cockpit(ctx, commands):
+    """Kungfu cockpit — the terminal operator surface: monitor and operate the
+    running system (rendered by the reference TUI, Ink)."""
     os.environ["KUNGFU_AS_VARIANT"] = "node"
     # Point the TUI at this runtime's binding directory so it loads
     # kungfu_node.node from the shipped runtime rather than resolving a
