@@ -50,6 +50,11 @@ This creates two pressures:
 The design must preserve the kfx trust boundary while making skills first-class
 agent context objects.
 
+This ADR deliberately distinguishes Kungfu Skills from generic agent skills:
+generic agent skills teach agents how to act; Kungfu Skills make delegated agent
+work accountable through catalog injection, audited loading, kfx trust
+boundaries, and journal-backed proof.
+
 ## Decision
 
 Model Kungfu Skill as the agent-facing capability layer above kfx.
@@ -80,6 +85,8 @@ Kungfu must support two manage modes over the same schemas:
 Both managers discover installed skills, filter them for the session, generate
 the same compact catalog, inject the same context envelope shape, expose the
 same on-demand `kungfu.skill.read` operation, and write the same audit events.
+Those audit events are part of the responsibility trail for the delegated work,
+not merely debug logs for the skill subsystem.
 
 The shared contract home is:
 
@@ -99,6 +106,8 @@ Python under `framework/core/src/python/kungfu/skill`, Node/Electron under
   instruction-only by default and receives no runtime privilege.
 - The agent sees a compact skill catalog first, not every full `SKILL.md`.
   Loading full instructions is explicit, on demand, and audited.
+- The skill layer is accountability-first. It may guide actions, but its root
+  purpose is to help Kungfu explain, verify, recover, and govern delegated work.
 - A skill can depend on multiple kfx packages without copying them per skill.
   Dependencies install into the normal kfx registry and are shared by key.
 - Removing a skill does not remove shared kfx dependencies unless a separate

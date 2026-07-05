@@ -1,8 +1,10 @@
 # Kungfu Skills
 
-Kungfu Skills are the agent-facing capability layer above kfx. A skill tells an
-agent when and how to act; kfx packages remain the governed runtime artifacts
-that execute UI, runtime facets, and future tool surfaces.
+Kungfu Skills are the agent-facing capability layer above kfx. A skill teaches
+Kungfu and the agent context how to manage, verify, explain, and govern a class
+of delegated agent work. It may guide agent actions, but action is not its root
+authority: kfx packages remain the governed runtime artifacts that execute UI,
+runtime facets, and future tool surfaces.
 
 This page is the design contract for the first Kungfu Skill surface. The
 architecture decision is [ADR-0015](../framework/core/docs/adr/ADR-0015-kungfu-skill-agent-context-layer.md).
@@ -32,6 +34,16 @@ SKILL.md -> catalog -> context envelope -> agent
 ```
 
 The agent sees skills. The runtime executes kfx.
+
+This distinction is load-bearing:
+
+```text
+Generic agent skills teach agents how to act.
+Kungfu Skills teach Kungfu how to make delegated agent work accountable.
+```
+
+A Kungfu Skill should therefore keep cost, state, proof, audit, and recovery in
+view even when it contains operational instructions for an agent.
 
 ## Minimal valid skill
 
@@ -305,6 +317,11 @@ Provenance should include source path or source URL, version, source hash, any
 packaged kfx artifact hashes, and the generated catalog hash. When Buildchain
 provenance is available, the skill record should carry the build passport or
 release reference rather than inventing a parallel trust story.
+
+Audit is part of the work fact model, not a loose application log. Skill
+advertisement, full instruction loading, dependency invocation, and trust
+refusal should be recordable by the journal-backed responsibility layer so a
+later user or agent can explain why a skill influenced a work decision.
 
 ## First implementation slice
 
