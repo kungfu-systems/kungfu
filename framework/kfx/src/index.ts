@@ -140,6 +140,35 @@ export type KfxAdapterDecl = {
   capabilities?: string[];
 };
 
+// A service ships a body per runtime; C++ joins Python and Node here — a
+// sandboxed C++ service reaches the host through the capability relay's native
+// guest end (ADR-0017).
+export type KfxServiceRuntime = 'python' | 'node' | 'cpp';
+
+// `kungfuConfig.config.service` — a background-process kfx (ADR-0017). Unlike a
+// view (a rendered screen the shell mounts) or an adapter (capture-side
+// instrumentation injected into *another* process), a service is a kfx's *own*
+// long-lived process in the multi-process runtime, reaching the host only over
+// the capability relay. It follows the shape `adapter` established (`runtimes`,
+// per-runtime `entry`, `capabilities`) with two changes: it drops `targets` (a
+// service runs standalone, it does not inject another process) and it adds C++.
+//
+// There is deliberately NO permission/sandbox field here. Confinement tier
+// (co-resident vs OS-sandbox) is the trust verdict's call, not the manifest's;
+// and how strict a sandbox is (network, write) is GRANTED BY THE USER, never
+// self-declared by the kfx (ADR-0017 open question 1 resolution). A manifest
+// can no more relax its own sandbox than a view manifest can elevate its own
+// tier.
+export type KfxServiceDecl = {
+  // runtimes this service ships a body for
+  runtimes: KfxServiceRuntime[];
+  // service entry per runtime, relative to the package root
+  entry: { python?: string; node?: string; cpp?: string };
+  // kungfu relay capabilities the service needs; undeclared stay absent — the
+  // same permission seam a view's `capabilities` is
+  capabilities?: KfxCapabilityKey[];
+};
+
 // `kungfuConfig.suite` — a suite groups related kfx for distribution and
 // operation: navigation grouping, enable/disable as a unit, lockstep
 // versioning. Membership is expressed through npm dependencies; `members`
@@ -188,6 +217,10 @@ export type KfxPlanDeps = {
 // nothing.
 export type KfxPlanEntry = {
   id: string;
+  // which facet form this entry is. A physical discriminant so a host that
+  // sees a mixed list can narrow without re-reading the manifest; views live
+  // in `KfxLoadPlan.entries`, services in `KfxLoadPlan.services`.
+  facet: 'view';
   title: string;
   capabilities: KfxCapabilityKey[];
   system: boolean;
@@ -203,13 +236,43 @@ export type KfxPlanEntry = {
   bundlePath: string;
 };
 
+// One discovered service kfx after discovery + decision, before any host lands
+// it. Unlike a view plan entry there is no renderer `tier`: a service is not a
+// screen, so the host picks a co-resident child (trusted) or an OS-level
+// sandbox (untrusted) from the trust verdict alone, and the actual landing is a
+// later host concern (ADR-0017). The plan carries only the verdict, the
+// declared capabilities, and where each runtime's body is.
+export type KfxServicePlanEntry = {
+  id: string;
+  facet: 'service';
+  capabilities: KfxCapabilityKey[];
+  // the source-authority verdict (authorizeFirstParty). A service is not tiered
+  // like a view: trusted runs co-resident, untrusted is OS-sandbox confined.
+  trusted: boolean;
+  suite?: string;
+  packageName?: string;
+  version?: string;
+  // the package directory this kfx was discovered in (absolute); a host uses it
+  // to locate the per-runtime body and to report a launch failure.
+  dir: string;
+  source: 'built-in' | string; // extension root the entry was loaded from
+  runtimes: KfxServiceRuntime[];
+  entry: { python?: string; node?: string; cpp?: string };
+};
+
 export type KfxPlanFailure = {
   dir: string;
   error: string;
 };
 
+// The neutral load plan. `entries` are views (each host lands its own way);
+// `services` are background-process kfx a host launches co-resident or in an OS
+// sandbox. They are physically separate lists — not one list narrowed by
+// `facet` — so a host consumes only the facets it lands (the GUI reads
+// `entries`, ignores `services`) without narrowing everywhere.
 export type KfxLoadPlan = {
   entries: KfxPlanEntry[];
+  services: KfxServicePlanEntry[];
   suites: Record<string, KfxSuiteDecl>;
   failures: KfxPlanFailure[];
 };
@@ -293,6 +356,7 @@ export function planKfx(
 ): KfxLoadPlan {
   const { fs, path } = deps;
   const entries: KfxPlanEntry[] = [];
+  const services: KfxServicePlanEntry[] = [];
   const suites: Record<string, KfxSuiteDecl> = {};
   const failures: KfxPlanFailure[] = [];
   const seen = new Set<string>();
@@ -321,6 +385,11 @@ export function planKfx(
                 settings?: KfxSettingDecl[];
                 entry?: string;
               };
+              service?: {
+                runtimes?: KfxServiceRuntime[];
+                entry?: { python?: string; node?: string; cpp?: string };
+                capabilities?: KfxCapabilityKey[];
+              };
             };
           };
         };
@@ -330,50 +399,77 @@ export function planKfx(
           suites[config.key] = config.suite;
         }
         const view = config.config?.view;
-        if (!view) continue;
-        if (seen.has(config.key)) continue; // earlier root wins
+        const service = config.config?.service;
+        if (!view && !service) continue; // suite-only or non-facet package
+        if (seen.has(config.key)) continue; // earlier root wins (one facet/key)
         seen.add(config.key);
-        const bundlePath = path.join(dir, view.entry ?? 'dist/view/index.js');
-        // hash the bundle only when the key is pinned in the frozen set; an
-        // unpinned or absent key is decided by identity alone (verdict below).
-        const pin = firstParty?.keys[config.key];
-        const contentHash =
-          pin && pin.sha256 !== null && fs.existsSync(bundlePath)
-            ? planSha256(deps.crypto, fs.readFileSync(bundlePath, 'utf8'))
-            : null;
-        const trusted = authorizeFirstParty(
-          firstParty,
-          config.key,
-          contentHash,
-        );
-        const tier = resolveRuntimeTier(view, trusted);
-        entries.push({
-          id: config.key,
-          title: view.title ?? config.key,
-          capabilities: view.capabilities ?? [],
-          system: Boolean(view.system),
-          settings: view.settings ?? [],
-          packageName: manifest.name,
-          version: manifest.version,
-          dir,
-          source: root,
-          tier,
-          bundlePath,
-        });
+        if (view) {
+          const bundlePath = path.join(dir, view.entry ?? 'dist/view/index.js');
+          // hash the bundle only when the key is pinned in the frozen set; an
+          // unpinned or absent key is decided by identity alone (verdict below).
+          const pin = firstParty?.keys[config.key];
+          const contentHash =
+            pin && pin.sha256 !== null && fs.existsSync(bundlePath)
+              ? planSha256(deps.crypto, fs.readFileSync(bundlePath, 'utf8'))
+              : null;
+          const trusted = authorizeFirstParty(
+            firstParty,
+            config.key,
+            contentHash,
+          );
+          const tier = resolveRuntimeTier(view, trusted);
+          entries.push({
+            id: config.key,
+            facet: 'view',
+            title: view.title ?? config.key,
+            capabilities: view.capabilities ?? [],
+            system: Boolean(view.system),
+            settings: view.settings ?? [],
+            packageName: manifest.name,
+            version: manifest.version,
+            dir,
+            source: root,
+            tier,
+            bundlePath,
+          });
+        } else if (service) {
+          // A service has no single bundle to content-pin — it ships a body per
+          // runtime — so it is authorized unpinned: authorizeFirstParty with a
+          // null hash trusts an unpinned first-party key, while a key that
+          // *requires* a sha pin fails the null hash and stays untrusted. That
+          // is the default-deny side (ADR-0013): an untrusted service lands in
+          // the OS sandbox, per-runtime content pinning is a follow-up.
+          const trusted = authorizeFirstParty(firstParty, config.key, null);
+          services.push({
+            id: config.key,
+            facet: 'service',
+            capabilities: service.capabilities ?? [],
+            trusted,
+            packageName: manifest.name,
+            version: manifest.version,
+            dir,
+            source: root,
+            runtimes: service.runtimes ?? [],
+            entry: service.entry ?? {},
+          });
+        }
       } catch (e) {
         failures.push({ dir, error: (e as Error).message });
       }
     }
   }
 
-  // join suite membership onto entries
+  // join suite membership onto entries and services
   for (const [key, suite] of Object.entries(suites)) {
     for (const entry of entries) {
       if (suite.members.includes(entry.id)) entry.suite = key;
     }
+    for (const service of services) {
+      if (suite.members.includes(service.id)) service.suite = key;
+    }
   }
 
-  return { entries, suites, failures };
+  return { entries, services, suites, failures };
 }
 
 // ── runtime contract (what the shell hands a mounted view) ────────────────

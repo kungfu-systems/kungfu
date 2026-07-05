@@ -179,12 +179,67 @@ caller for `service · sandboxed`; add the C++ guest capability end and runtime.
   Chromium or OS-sandbox landing. Hosts consume kfx; they do not deposit their
   runtime into it.
 
+## Resolved
+
+- **Service facet naming and fields — resolved.** The name is `config.service`,
+  shaped after `adapter`: `runtimes` (Python, Node, **C++**), per-runtime
+  `entry`, and `capabilities`. It drops `adapter`'s `targets` (a service runs
+  standalone; it does not inject another process). It carries **no
+  permission/sandbox field** — a service cannot declare its own confinement, for
+  the reason below. `KfxServiceDecl` and the plan-side `KfxServicePlanEntry`
+  land in `@kungfu-tech/kfx`; `planKfx` reads `config.service`, dedups a key to a
+  single facet, and produces a separate `plan.services` list so a host consumes
+  only the facets it lands.
+
+- **How a sandboxed service gets network/write — resolved: the user grants it,
+  the kfx never declares it.** This dissolves the tension that a *declared*
+  permission is self-elevation while a *host-fixed* permission leaves the first
+  real service unable to run: what widens the sandbox is the **user**, not the
+  kfx, reusing the existing settings / ConfigStore mechanism rather than
+  inventing a second one. Two lines are welded:
+
+  - **Line 1 — authorization tunes the *profile*, never pierces the *tier*.**
+    Two orthogonal layers: `tier` (may it enter the sandbox at all) is
+    `planKfx`'s first-party verdict and is **not** user-pierceable; `profile`
+    (how strict inside — network, write) is user-adjustable. A user grant can
+    only **loosen** an untrusted service's sandbox; it can **never** promote it
+    to trusted / node-integrated. The trust boundary cannot be punched through
+    by any user configuration.
+  - **Line 2 — allowing an untrusted third party onto the network is the user
+    actively removing default-deny, and demands informed consent.** It is a
+    browser-style permission prompt ("this kfx wants to reach the network / disk
+    — allow?"), not an unremarkable toggle on a settings page. The residual-risk
+    note above ("the service facet widens the attack surface") is the reason.
+
+  **Mechanism (all within existing machinery):** the grant is stored in the
+  runtime-home **ConfigStore** by kfx `key` (the same store that already
+  persists `disabledKfx` / settings). Three layers, later overriding earlier:
+  a **restrictive global default** (deny network + write) → a global allow → a
+  per-kfx override. These are exactly the `profile`/knobs `osSandboxCommand`
+  already exposes (`framework/api/src/capability/sandbox-launcher.ts`); no new
+  enforcement plane is added.
+
+  **Network granularity is coarse and platform-asymmetric — a known limitation.**
+  The grant expresses intent ("allow this service to reach the network"); the
+  host translates it to a platform capability and the user never touches
+  platform details. But the platforms differ: macOS Seatbelt and Linux `bwrap`
+  are all-or-nothing (no "LAN-only" tier), while Windows AppContainer can split
+  `internetClient` (public) from `privateNetworkClientServer` (LAN). "Allow LAN
+  but not the public internet" is therefore unrepresentable on macOS/Linux; it
+  is an ADR-0014 net-scope-narrowing follow-up. Informed consent must state
+  plainly that **on macOS/Linux, allowing the network grants all outbound
+  egress.**
+
 ## Open questions
 
-- **Service facet naming and fields.** `config.service` is the proposed name,
-  shaped after `adapter` (`runtimes` incl. `cpp`, per-runtime `entry`,
-  `capabilities`). To be confirmed before the contract freezes.
 - **Sandboxed view on the CLI.** Whether the TUI ever needs to confine a *view*
   (vs. only services), and if so what its isolation primitive is.
 - **C++ guest capability end.** The shape of the native guest that speaks the
-  capability relay from a sandboxed C++ service.
+  capability relay from a sandboxed C++ service. In particular `entry.cpp`'s
+  meaning — source the host compiles vs. a per-platform prebuilt artifact
+  (which would make `entry.cpp` a `{ darwin?, linux?, win? }` map) — is deferred
+  to this question; the contract reserves `entry.cpp` as a plain string for now.
+- **Per-runtime content pinning for services.** A service has no single bundle
+  to hash, so it is currently authorized unpinned (an unpinned first-party key
+  is trusted; a pinned key with no hash stays untrusted — the default-deny
+  side). Hashing each runtime body is an independent follow-up.
