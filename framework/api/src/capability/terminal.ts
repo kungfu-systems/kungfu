@@ -610,7 +610,12 @@ export function openTerminal(options: OpenTerminalOptions): Terminal {
     for (const session of sessions.values()) {
       if (session.meta.backend !== 'tmux' || !session.tmuxName) continue;
       ownedByName.set(session.tmuxName, session);
-      if (session.meta.status === 'exited') continue;
+      // A 'running' session has a live attached pty client, so its tmux session
+      // is guaranteed to exist; a racing list snapshot taken while the client is
+      // still attaching would not list it yet, and must not orphan it. Only
+      // client-gone sessions ('detached'/'orphaned') need liveSet reconciliation.
+      if (session.meta.status === 'exited' || session.meta.status === 'running')
+        continue;
       if (liveSet.has(session.tmuxName)) {
         // Still on the server. If we'd marked it orphaned on a bad probe, it is
         // actually just detached (reattachable). A 'running' stays 'running'.

@@ -174,8 +174,13 @@ function SessionPane({
     if (!el) return;
 
     const term = new XTerm({
-      fontFamily: 'monospace',
-      fontSize: 12.5,
+      // Concrete font + integer size + explicit lineHeight so FitAddon's cell
+      // measurement matches the actual render height; a fractional size (12.5)
+      // let the two drift, so fit proposed ~2 more rows than fit the box and a
+      // full-screen TUI's bottom rows (tmux's status line) were clipped.
+      fontFamily: 'Menlo, Monaco, monospace',
+      fontSize: 13,
+      lineHeight: 1.2,
       cursorBlink: true,
       theme: { background: '#1a1a1a' },
     });
@@ -229,8 +234,19 @@ function SessionPane({
     })();
 
     // Refit to the grid cell, not just the window: a pane resizes whenever the
-    // canvas reflows (another pane added/removed, panel split moved).
-    const ro = new ResizeObserver(refit);
+    // canvas reflows (another pane added/removed, panel split moved). Observing
+    // fires once with the settled size, which is what syncs the session away
+    // from its spawn size — so a full-screen TUI (tmux) draws its status line at
+    // the real bottom row. The fit's own resize event also propagates, but push
+    // the session size explicitly here so a size that fit() considers unchanged
+    // still reaches the pty.
+    const syncSize = () => {
+      refit();
+      if (term.cols > 0 && term.rows > 0) {
+        void resolve(caps.terminal.resize(pane.runId, term.cols, term.rows));
+      }
+    };
+    const ro = new ResizeObserver(syncSize);
     ro.observe(el);
 
     return () => {
@@ -335,7 +351,10 @@ function SessionPane({
           {ended ? 'Close' : 'Kill'}
         </button>
       </div>
-      <div ref={hostRef} style={{ flex: 1, padding: 6, overflow: 'hidden' }} />
+      <div
+        ref={hostRef}
+        style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}
+      />
     </div>
   );
 }

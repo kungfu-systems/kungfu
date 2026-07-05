@@ -1,9 +1,74 @@
+import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 
 const rootDir = dirname(fileURLToPath(import.meta.url));
+const nodeRequire = createRequire(import.meta.url);
+
+// The trusted renderer runs under nodeIntegration, so node builtins are
+// available via require() at runtime. Marking them `external` alone is not
+// enough: in an ESM browser bundle an external `node:fs` stays an `import` the
+// Chromium loader tries to fetch as a URL (ERR_UNKNOWN_URL_SCHEME), failing the
+// whole chunk. The capability SDK's node-only host modules (the OS-sandbox
+// launcher, the subprocess relay) sit in the renderer graph and are not
+// tree-shaken because the shell injects the whole capability namespace. This
+// plugin resolves every `node:*` (and its bare alias) to a tiny CJS shim that
+// re-exports the real builtin via window.require, so those static imports load
+// (and a renderer that never calls them pays nothing).
+function nodeBuiltinRequireShim() {
+  const PREFIX = '\0kf-node-builtin:';
+  const builtins = new Set([
+    'fs',
+    'os',
+    'path',
+    'child_process',
+    'readline',
+    'util',
+    'events',
+    'stream',
+    'net',
+    'crypto',
+    'url',
+    'assert',
+    'buffer',
+    'tty',
+  ]);
+  const bare = (id) => (id.startsWith('node:') ? id.slice(5) : id);
+  return {
+    name: 'kf-node-builtin-require-shim',
+    enforce: 'pre',
+    resolveId(id) {
+      const name = bare(id);
+      if (id.startsWith('node:') || builtins.has(name)) return PREFIX + name;
+      return null;
+    },
+    load(id) {
+      if (!id.startsWith(PREFIX)) return null;
+      const name = id.slice(PREFIX.length);
+      // Enumerate the real builtin's exports here (the config runs in node), so
+      // the generated ESM re-exports every named import a consumer might use.
+      // The values come from window.require at runtime under nodeIntegration.
+      let keys = [];
+      try {
+        const real = nodeRequire(`node:${name}`);
+        keys = Object.keys(real).filter(
+          (k) => k !== 'default' && /^[A-Za-z_$][\w$]*$/.test(k),
+        );
+      } catch {
+        keys = [];
+      }
+      const spec = JSON.stringify(`node:${name}`);
+      return [
+        `const req = (typeof window !== 'undefined' && window.require) ? window.require : null;`,
+        `const m = req ? req(${spec}) : {};`,
+        'export default m;',
+        ...keys.map((k) => `export const ${k} = m[${JSON.stringify(k)}];`),
+      ].join('\n');
+    },
+  };
+}
 
 // - main: externalize deps so the native binding is never bundled; it is loaded
 //   via require() at runtime from kungfu-core's dist/kungfu.
@@ -35,16 +100,12 @@ export default defineConfig({
     },
   },
   renderer: {
-    plugins: [react()],
+    // nodeBuiltinRequireShim maps node:* to a window.require CJS shim (see its
+    // definition above); electron stays external and is require()d at runtime.
+    plugins: [nodeBuiltinRequireShim(), react()],
     build: {
       rollupOptions: {
-        // The trusted renderer runs under nodeIntegration, so keep electron and
-        // the node builtins external — they are require()d at runtime. The
-        // capability SDK re-exports node-only host modules (the OS-sandbox
-        // launcher, the subprocess relay) that a renderer never invokes; leaving
-        // node: builtins external lets those modules sit in the graph without
-        // the browser build trying to bundle node:fs / node:os.
-        external: ['electron', /^node:/],
+        external: ['electron'],
         input: {
           index: resolve(rootDir, 'src/renderer/index.html'),
           'sandbox-view-harness': resolve(
