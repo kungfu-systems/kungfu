@@ -16,6 +16,7 @@ from kungfu.rewind.managed_run import managed_providers
 from kungfu.skill import (
     SkillError,
     append_audit_event,
+    build_skill_dependency_binding,
     build_catalog,
     build_context_envelope,
     build_skill_context,
@@ -26,7 +27,9 @@ from kungfu.skill import (
     parse_skill,
     read_audit_file,
     read_skill_markdown,
+    skill_dependencies_bound_event,
     skill_loaded_event,
+    write_skill_dependency_binding,
 )
 
 skill_command_context = kfc.pass_context()
@@ -109,6 +112,13 @@ def _default_skill_audit_log(ctx):
     return os.path.join(ctx.runtime_dir, "skill-audit.jsonl")
 
 
+def _copy_skill_source(source, dest):
+    def ignore_kfx_payloads(path, names):
+        return {"kfx"} if path == os.path.abspath(source) and "kfx" in names else set()
+
+    shutil.copytree(source, dest, ignore=ignore_kfx_payloads)
+
+
 def _bundle_audit_path(ctx, run_id, bundle_dir=None, audit_file=None):
     if audit_file:
         return audit_file
@@ -176,8 +186,9 @@ def validate(ctx, path, as_json):
 @skill.command(help="install a Kungfu Skill source directory into this home")
 @click.argument("source", type=click.Path(exists=True))
 @click.option("--force", is_flag=True, help="replace an existing skill install")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @skill_command_context
-def install(ctx, source, force):
+def install(ctx, source, force, as_json):
     try:
         parsed = parse_skill(source)
     except SkillError as e:
@@ -195,8 +206,31 @@ def install(ctx, source, force):
             sys.exit(1)
         shutil.rmtree(dest)
     os.makedirs(root, exist_ok=True)
-    shutil.copytree(source, dest)
-    click.echo(f"[skill] installed {parsed['key']} -> {dest}")
+    _copy_skill_source(os.path.abspath(source), dest)
+    installed = parse_skill(dest)
+    binding_path, binding = write_skill_dependency_binding(ctx.home, installed)
+    append_audit_event(
+        _default_skill_audit_log(ctx),
+        skill_dependencies_bound_event(binding, source="cli", manager="python"),
+    )
+    result = {
+        "skill": installed,
+        "install_path": dest,
+        "binding_path": binding_path,
+        "dependencies": binding,
+    }
+    if as_json:
+        _json(result)
+        return
+    click.echo(f"[skill] installed {installed['key']} -> {dest}")
+    if os.path.exists(os.path.join(os.path.abspath(source), "kfx")):
+        click.echo("[skill] skipped bundled kfx/ payloads; dependencies bind by key")
+    summary = binding["summary"]
+    click.echo(
+        "[skill] kfx bindings "
+        f"{summary['total']} total, {summary['resolved']} resolved, "
+        f"{summary['unresolved']} unresolved -> {binding_path}"
+    )
 
 
 @skill.command(name="list", help="list installed or path-provided Kungfu Skills")
@@ -474,8 +508,54 @@ def audit(ctx, run_id, bundle_dir, audit_file, as_json):
                 f"skill={skill_data.get('key')} "
                 f"hash={skill_data.get('contentHash')}"
             )
+        elif event.get("type") == "SkillDependenciesBound":
+            skill_data = event.get("skill", {})
+            summary = event.get("summary", {})
+            click.echo(
+                "SkillDependenciesBound "
+                f"skill={skill_data.get('key')} "
+                f"total={summary.get('total', 0)} "
+                f"resolved={summary.get('resolved', 0)} "
+                f"unresolved={summary.get('unresolved', 0)}"
+            )
         else:
             click.echo(f"{event.get('type') or 'SkillAuditEvent'} {event}")
+
+
+@skill.command(help="inspect declared kfx dependencies and registry bindings")
+@click.argument("key_or_path", type=str)
+@click.option("--path", "paths", multiple=True, type=click.Path(exists=True))
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@skill_command_context
+def deps(ctx, key_or_path, paths, as_json):
+    try:
+        parsed = find_skill(ctx.home, key_or_path, _extra_paths(paths))
+    except SkillError as e:
+        click.echo(f"[skill] {e}", err=True)
+        sys.exit(1)
+    binding = build_skill_dependency_binding(ctx.home, parsed)
+    if as_json:
+        _json(binding)
+        return
+    summary = binding["summary"]
+    click.echo(
+        f"{parsed['key']} kfx dependencies: "
+        f"{summary['total']} total, {summary['resolved']} resolved, "
+        f"{summary['unresolved']} unresolved"
+    )
+    if not binding["dependencies"]:
+        return
+    for row in binding["dependencies"]:
+        package = row.get("package") or {}
+        label = (
+            f"{package.get('name')}@{package.get('version')}"
+            if package
+            else row.get("reason")
+        )
+        click.echo(
+            f"{row['status']}  {row['kfxKey']}  "
+            f"role={row.get('role') or '-'}  {label}  {row['registryPath']}"
+        )
 
 
 @skill.command(help="explain a Kungfu Skill without granting runtime privileges")
@@ -498,6 +578,7 @@ def explain(ctx, key_or_path, paths, as_json):
         if parsed["kind"] == "instruction-only"
         else "requested-via-kfx-trust-gate",
         "kfx": parsed["kfx"],
+        "dependencies": build_skill_dependency_binding(ctx.home, parsed),
         "capabilities": parsed["capabilities"],
         "trustBoundary": (
             "Skill instructions do not elevate permissions. Any executable "

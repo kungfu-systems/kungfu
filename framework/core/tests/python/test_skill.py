@@ -5,6 +5,7 @@ import json
 
 from kungfu.skill import (
     append_audit_event,
+    build_skill_dependency_binding,
     build_catalog,
     build_context_envelope,
     build_skill_context,
@@ -13,7 +14,9 @@ from kungfu.skill import (
     read_audit_file,
     skill_advertised_event,
     skill_audit_document,
+    skill_dependencies_bound_event,
     skill_loaded_event,
+    write_skill_dependency_binding,
     write_audit_document,
 )
 
@@ -149,3 +152,161 @@ def test_skill_audit_reads_jsonl_events(tmp_path):
     assert document["schema"] == "kungfu.skill-audit/v1"
     assert document["run_id"] == "run-jsonl"
     assert document["events"][0]["skill"]["key"] == "minimal"
+
+
+def test_skill_audit_reads_multi_event_jsonl(tmp_path):
+    skill = parse_skill(_fixture("minimal"))
+    markdown = Path(skill["source"]["path"]).read_text(encoding="utf-8")
+    audit_path = tmp_path / "skill-audit.jsonl"
+
+    append_audit_event(audit_path, skill_loaded_event(skill, markdown, run_id="run-1"))
+    append_audit_event(audit_path, skill_loaded_event(skill, markdown, run_id="run-2"))
+
+    document = read_audit_file(audit_path)
+    assert document["event_count"] == 2
+    assert [event["run_id"] for event in document["events"]] == ["run-1", "run-2"]
+
+
+def test_skill_dependency_binding_resolves_installed_kfx(tmp_path):
+    home = tmp_path / "home"
+    extension = home / "extensions" / "journal-manager"
+    extension.mkdir(parents=True)
+    (extension / "package.json").write_text(
+        json.dumps(
+            {
+                "name": "@kungfu-tech/kfx-view-journal-manager",
+                "version": "4.0.0-alpha.0",
+                "kungfuConfig": {
+                    "key": "journal-manager",
+                    "config": {"view": {}},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    skill = parse_skill(_fixture("with-frontmatter"))
+
+    binding_path, binding = write_skill_dependency_binding(home, skill)
+
+    assert Path(binding_path).name == "trace-failure-investigator.json"
+    assert binding["schema"] == "kungfu.skill-dependencies/v1"
+    assert binding["summary"] == {"total": 2, "resolved": 1, "unresolved": 1}
+    by_key = {row["kfxKey"]: row for row in binding["dependencies"]}
+    assert by_key["journal-manager"]["status"] == "resolved"
+    assert by_key["journal-manager"]["package"]["kind"] == "view"
+    assert by_key["rewind-inspector"]["status"] == "unresolved"
+    assert by_key["rewind-inspector"]["reason"] == "not installed in kfx registry"
+
+
+def test_multiple_skills_bind_one_shared_kfx_without_duplicate_registry(tmp_path):
+    home = tmp_path / "home"
+    extension = home / "extensions" / "shared-view"
+    extension.mkdir(parents=True)
+    (extension / "package.json").write_text(
+        json.dumps(
+            {
+                "name": "@kungfu-tech/kfx-view-shared",
+                "version": "1.2.3",
+                "kungfuConfig": {
+                    "key": "shared-view",
+                    "config": {"view": {}},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    skill_dirs = []
+    for key in ("first-skill", "second-skill"):
+        skill_dir = tmp_path / key
+        skill_dir.mkdir()
+        (skill_dir / "SKILL.md").write_text(
+            "\n".join(
+                [
+                    "---",
+                    f"key: {key}",
+                    "kfx:",
+                    "  - key: shared-view",
+                    "    role: shared-tool",
+                    "---",
+                    "",
+                    f"# {key}",
+                    "",
+                    "Use the shared view.",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        skill_dirs.append(skill_dir)
+
+    bindings = [
+        write_skill_dependency_binding(home, parse_skill(skill_dir))
+        for skill_dir in skill_dirs
+    ]
+
+    assert len(list((home / "extensions").iterdir())) == 1
+    assert bindings[0][0] != bindings[1][0]
+    first = bindings[0][1]["dependencies"][0]
+    second = bindings[1][1]["dependencies"][0]
+    assert first["status"] == "resolved"
+    assert second["status"] == "resolved"
+    assert first["registryPath"] == second["registryPath"]
+    assert first["package"] == second["package"]
+
+
+def test_skill_dependency_binding_marks_version_mismatch_unresolved(tmp_path):
+    home = tmp_path / "home"
+    extension = home / "extensions" / "versioned-view"
+    extension.mkdir(parents=True)
+    (extension / "package.json").write_text(
+        json.dumps(
+            {
+                "name": "@kungfu-tech/kfx-view-versioned",
+                "version": "1.0.0",
+                "kungfuConfig": {
+                    "key": "versioned-view",
+                    "config": {"view": {}},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    skill_dir = tmp_path / "versioned-skill"
+    skill_dir.mkdir()
+    (skill_dir / "SKILL.md").write_text(
+        "\n".join(
+            [
+                "---",
+                "key: versioned-skill",
+                "kfx:",
+                "  - key: versioned-view",
+                "    version: 2.0.0",
+                "    required: false",
+                "---",
+                "",
+                "# versioned-skill",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    binding = build_skill_dependency_binding(home, parse_skill(skill_dir))
+    row = binding["dependencies"][0]
+
+    assert binding["summary"] == {"total": 1, "resolved": 0, "unresolved": 1}
+    assert row["status"] == "unresolved"
+    assert row["required"] is False
+    assert "does not match 2.0.0" in row["reason"]
+
+
+def test_skill_audit_records_dependency_binding_event(tmp_path):
+    skill = parse_skill(_fixture("with-frontmatter"))
+    binding = build_skill_dependency_binding(tmp_path / "home", skill)
+    event = skill_dependencies_bound_event(binding)
+
+    assert event["type"] == "SkillDependenciesBound"
+    assert event["skill"]["key"] == "trace-failure-investigator"
+    assert event["summary"]["total"] == 2
+    assert [row["status"] for row in event["dependencies"]] == [
+        "unresolved",
+        "unresolved",
+    ]

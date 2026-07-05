@@ -2,11 +2,19 @@
 
 from .catalog import build_catalog, catalog_entry
 from .context import build_context_envelope
+from .dependencies import (
+    build_skill_dependency_binding,
+    read_skill_dependency_binding,
+    skill_binding_path,
+    skill_binding_root,
+    write_skill_dependency_binding,
+)
 from .audit import (
     append_audit_event,
     read_audit_file,
     skill_advertised_event,
     skill_audit_document,
+    skill_dependencies_bound_event,
     skill_loaded_event,
     write_audit_document,
 )
@@ -26,6 +34,7 @@ __all__ = [
     "append_audit_event",
     "build_catalog",
     "build_context_envelope",
+    "build_skill_dependency_binding",
     "build_skill_context",
     "catalog_entry",
     "context_file_from_env",
@@ -37,10 +46,15 @@ __all__ = [
     "load_skill_context_file",
     "parse_skill",
     "read_audit_file",
+    "read_skill_dependency_binding",
     "read_skill_markdown",
+    "skill_binding_path",
+    "skill_binding_root",
     "skill_advertised_event",
     "skill_audit_document",
+    "skill_dependencies_bound_event",
     "skill_loaded_event",
     "skill_roots",
     "write_audit_document",
+    "write_skill_dependency_binding",
 ]

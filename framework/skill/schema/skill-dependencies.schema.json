@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kungfu.skill-dependencies/v1",
+  "title": "Kungfu Skill kfx Dependency Bindings",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "skill", "registry", "dependencies", "summary"],
+  "properties": {
+    "schema": { "const": "kungfu.skill-dependencies/v1" },
+    "skill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "title", "kind", "sourceHash", "sourcePath"],
+      "properties": {
+        "key": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["instruction-only", "kfx-backed"] },
+        "sourceHash": { "type": "string", "pattern": "^sha256:" },
+        "sourcePath": { "type": "string" }
+      }
+    },
+    "registry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "root"],
+      "properties": {
+        "type": { "const": "kfx" },
+        "root": { "type": "string" }
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "skillKey",
+          "kfxKey",
+          "status",
+          "registryKey",
+          "registryPath"
+        ],
+        "properties": {
+          "skillKey": { "type": "string", "minLength": 1 },
+          "kfxKey": { "type": "string", "minLength": 1 },
+          "role": { "type": ["string", "null"] },
+          "version": { "type": ["string", "null"] },
+          "required": { "type": "boolean" },
+          "status": { "enum": ["resolved", "unresolved"] },
+          "registryKey": { "type": "string", "minLength": 1 },
+          "registryPath": { "type": "string" },
+          "reason": { "type": "string" },
+          "package": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key", "kind"],
+            "properties": {
+              "key": { "type": "string", "minLength": 1 },
+              "name": { "type": ["string", "null"] },
+              "version": { "type": ["string", "null"] },
+              "kind": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total", "resolved", "unresolved"],
+      "properties": {
+        "total": { "type": "integer", "minimum": 0 },
+        "resolved": { "type": "integer", "minimum": 0 },
+        "unresolved": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

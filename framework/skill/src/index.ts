@@ -71,6 +71,48 @@ export interface SkillContextEnvelope {
   };
 }
 
+export interface SkillDependencyPackage {
+  key: string;
+  name?: string;
+  version?: string;
+  kind: string;
+}
+
+export interface SkillDependencyBindingRow {
+  skillKey: string;
+  kfxKey: string;
+  role?: string;
+  version?: string;
+  required: boolean;
+  status: 'resolved' | 'unresolved';
+  registryKey: string;
+  registryPath: string;
+  reason?: string;
+  package?: SkillDependencyPackage;
+  [key: string]: unknown;
+}
+
+export interface SkillDependencyBinding {
+  schema: 'kungfu.skill-dependencies/v1';
+  skill: {
+    key: string;
+    title: string;
+    kind: SkillKind;
+    sourceHash: string;
+    sourcePath: string;
+  };
+  registry: {
+    type: 'kfx';
+    root: string;
+  };
+  dependencies: SkillDependencyBindingRow[];
+  summary: {
+    total: number;
+    resolved: number;
+    unresolved: number;
+  };
+}
+
 type Frontmatter = Record<string, unknown>;
 
 export interface SkillContextOptions {
@@ -231,6 +273,64 @@ export function writeSkillContextFile(
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, `${JSON.stringify(envelope, null, 2)}\n`, 'utf8');
   return out;
+}
+
+export function skillBindingRoot(home: string): string {
+  return join(home, 'skill-bindings');
+}
+
+export function skillBindingPath(home: string, skillKey: string): string {
+  return join(skillBindingRoot(home), `${skillKey}.json`);
+}
+
+export function buildSkillDependencyBinding(
+  home: string,
+  skill: SkillSource,
+): SkillDependencyBinding {
+  const dependencies = skill.kfx.map((dependency) =>
+    dependencyBindingRow(home, skill, dependency),
+  );
+  const resolved = dependencies.filter(
+    (row) => row.status === 'resolved',
+  ).length;
+  return {
+    schema: 'kungfu.skill-dependencies/v1',
+    skill: {
+      key: skill.key,
+      title: skill.title,
+      kind: skill.kind,
+      sourceHash: skill.source.hash,
+      sourcePath: skill.source.path,
+    },
+    registry: {
+      type: 'kfx',
+      root: kfxRegistryRoot(home),
+    },
+    dependencies,
+    summary: {
+      total: dependencies.length,
+      resolved,
+      unresolved: dependencies.length - resolved,
+    },
+  };
+}
+
+export function writeSkillDependencyBinding(
+  home: string,
+  skill: SkillSource,
+): { path: string; binding: SkillDependencyBinding } {
+  const binding = buildSkillDependencyBinding(home, skill);
+  const out = skillBindingPath(home, skill.key);
+  mkdirSync(dirname(out), { recursive: true });
+  writeFileSync(out, `${JSON.stringify(binding, null, 2)}\n`, 'utf8');
+  return { path: out, binding };
+}
+
+export function readSkillDependencyBinding(
+  home: string,
+  skillKey: string,
+): SkillDependencyBinding {
+  return JSON.parse(readFileSync(skillBindingPath(home, skillKey), 'utf8'));
 }
 
 export function hasAdvertisedSkills(envelope: SkillContextEnvelope): boolean {
@@ -409,4 +509,88 @@ function kfxDependencies(value: unknown): SkillKfxDependency[] {
       return Boolean(item && typeof item === 'object' && stringValue(item.key));
     })
     .map((item) => ({ ...item, key: String(item.key) }));
+}
+
+function dependencyBindingRow(
+  home: string,
+  skill: SkillSource,
+  dependency: SkillKfxDependency,
+): SkillDependencyBindingRow {
+  const key = String(dependency.key);
+  const registryPath = join(kfxRegistryRoot(home), key);
+  const resolved = resolveKfxPackage(registryPath, key);
+  const version =
+    dependency.version === undefined ? undefined : String(dependency.version);
+  let status: SkillDependencyBindingRow['status'] = resolved
+    ? 'resolved'
+    : 'unresolved';
+  let reason: string | undefined = resolved
+    ? undefined
+    : 'not installed in kfx registry';
+  if (resolved && version && resolved.version !== version) {
+    status = 'unresolved';
+    reason = `installed version ${resolved.version} does not match ${version}`;
+  }
+  const row: SkillDependencyBindingRow = {
+    skillKey: skill.key,
+    kfxKey: key,
+    role: typeof dependency.role === 'string' ? dependency.role : undefined,
+    version,
+    required: booleanValue(dependency.required, true),
+    status,
+    registryKey: key,
+    registryPath,
+  };
+  for (const [extraKey, extraValue] of Object.entries(dependency).sort()) {
+    if (!['key', 'role', 'version', 'required'].includes(extraKey)) {
+      row[extraKey] = extraValue;
+    }
+  }
+  if (resolved) row.package = resolved;
+  if (reason) row.reason = reason;
+  return row;
+}
+
+function resolveKfxPackage(
+  packageDir: string,
+  expectedKey: string,
+): SkillDependencyPackage | undefined {
+  const manifestPath = join(packageDir, 'package.json');
+  if (!existsSync(manifestPath)) return undefined;
+  let manifest: Record<string, unknown>;
+  try {
+    manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  } catch {
+    return undefined;
+  }
+  const config = objectValue(manifest.kungfuConfig);
+  const key = stringValue(config?.key) || basename(packageDir);
+  if (key !== expectedKey) return undefined;
+  const facets = Object.keys(objectValue(config?.config) ?? {}).sort();
+  return {
+    key,
+    name: stringValue(manifest.name),
+    version: stringValue(manifest.version),
+    kind: facets.length ? facets.join('+') : 'unknown',
+  };
+}
+
+function kfxRegistryRoot(home: string): string {
+  return join(home, 'extensions');
+}
+
+function objectValue(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === 'object'
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function booleanValue(value: unknown, fallback: boolean): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['true', 'yes', '1'].includes(normalized)) return true;
+    if (['false', 'no', '0'].includes(normalized)) return false;
+  }
+  return fallback;
 }

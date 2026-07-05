@@ -120,8 +120,9 @@ should not be inferred from prose alone.
 A skill can contain or reference multiple kfx packages, but kfx remains
 deduplicated and governed independently:
 
-- Installing a skill installs missing kfx dependencies into the normal kfx
-  registry by `kungfuConfig.key`; the same kfx package is not copied per skill.
+- Installing a skill writes a skill-to-kfx binding document under the Kungfu
+  home. kfx packages are resolved from the normal kfx registry by
+  `kungfuConfig.key`; the same kfx package is not copied per skill.
 - Removing a skill removes the skill binding. It does not remove shared kfx
   dependencies unless an explicit orphan-cleanup command proves they are unused.
 - A kfx package does not gain more authority because a skill referenced it.
@@ -268,21 +269,25 @@ kungfu skill catalog [--path <dir>] [--json]
 kungfu skill context [--path <dir>] [--source cli|gui|test] [--manager python|node]
 kungfu skill verify --provider <claude|codex> --path <dir> [--manager python|node]
 kungfu skill read <key-or-path> [--path <dir>]
+kungfu skill deps <key-or-path> [--path <dir>] [--json]
 kungfu skill audit --run-id <id>
 kungfu skill explain <key-or-path>
 ```
 
 `kungfu skill install` installs the skill source into the Kungfu home skill
-directory, but it does not elevate runtime privileges or install executable kfx
-dependencies in the first slice. `catalog` is the compact agent-visible catalog
-before full skill loading. `context` wraps that catalog in the same envelope
-shape used by Python and Node manage modes. `verify` runs a real provider
-through `managed-run`, asks it to echo the advertised schema, first skill key,
-and `advertisedSkillsHash`, then checks the Rewind `response.json` evidence.
-Use `--manager node` to build the envelope through the Node manager path used
-by the Electron GUI. `read` is the operation the agent tool uses to load the
-full `SKILL.md` after selection. `audit` reads the Skill audit sidecar from a
-managed-run bundle or a standalone audit file.
+directory, writes a kfx dependency binding under `<home>/skill-bindings/`, and
+skips any embedded `kfx/` payload directory so kfx package bodies do not get
+duplicated under each skill. Dependency rows are `resolved` when a matching
+package already exists in `<home>/extensions/<kfx-key>` and `unresolved`
+otherwise. `catalog` is the compact agent-visible catalog before full skill
+loading. `context` wraps that catalog in the same envelope shape used by Python
+and Node manage modes. `deps` prints the binding/resolution state. `verify`
+runs a real provider through `managed-run`, asks it to echo the advertised
+schema, first skill key, and `advertisedSkillsHash`, then checks the Rewind
+`response.json` evidence. Use `--manager node` to build the envelope through
+the Node manager path used by the Electron GUI. `read` is the operation the
+agent tool uses to load the full `SKILL.md` after selection. `audit` reads the
+Skill audit sidecar from a managed-run bundle or a standalone audit file.
 
 The SDK may add:
 
@@ -340,6 +345,9 @@ The first audit slice records:
 - `SkillLoaded` when `kungfu skill read` loads full `SKILL.md` content. This
   records the selected skill key, source hash, content hash, source path, source,
   manager, and optional run id.
+- `SkillDependenciesBound` when `kungfu skill install` writes the kfx dependency
+  binding document. This records the skill key, dependency keys, registry paths,
+  and resolved/unresolved counts without copying kfx package bodies per skill.
 - `kungfu skill audit --run-id <id>` to inspect bundle evidence, plus
   `--audit-file` for standalone JSON/JSONL audit files.
 
@@ -357,12 +365,14 @@ The first slice proves the context loop before broad execution:
 7. Verify Python and Node manager envelopes through `managed-run` response
    evidence.
 8. Scaffold a minimal skill with only `SKILL.md` through the developer SDK.
+9. Bind declared kfx dependencies through `<home>/skill-bindings/<skill>.json`
+   while resolving package bodies only from `<home>/extensions/<kfx-key>`.
 
 Follow-up slices should:
 
-1. Bind declared kfx dependencies through the normal kfx registry without
-   copying them per skill.
-2. Display installed skills in a first-party `skill-manager` view.
+1. Display installed skills in a first-party `skill-manager` view.
+2. Add explicit kfx artifact acquisition for unresolved dependencies, still
+   installing artifacts into the shared kfx registry rather than under a skill.
 
 Out of scope for the first slice:
 
@@ -390,6 +400,6 @@ The first implementation slice is verified by:
 
 Follow-up verification should add:
 
-- kfx dependency installation through the shared registry, with deduplication;
+- kfx dependency binding through the shared registry, with deduplication;
 - a third-party adapter dependency proving that skill composition does not bypass
   the existing runtime trust refusal.

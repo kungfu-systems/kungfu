@@ -68,6 +68,37 @@ def skill_loaded_event(
     }
 
 
+def skill_dependencies_bound_event(
+    binding,
+    *,
+    source="cli",
+    manager="python",
+    agent=None,
+):
+    return {
+        "schema": AUDIT_EVENT_SCHEMA,
+        "type": "SkillDependenciesBound",
+        "at": _now(),
+        "source": source,
+        "manager": manager,
+        "agent": agent,
+        "skill": dict(binding.get("skill") or {}),
+        "summary": dict(binding.get("summary") or {}),
+        "dependencies": [
+            {
+                "kfxKey": row.get("kfxKey"),
+                "role": row.get("role"),
+                "required": row.get("required"),
+                "status": row.get("status"),
+                "registryKey": row.get("registryKey"),
+                "registryPath": row.get("registryPath"),
+                "reason": row.get("reason"),
+            }
+            for row in binding.get("dependencies", [])
+        ],
+    }
+
+
 def skill_audit_document(*, run_id=None, provider=None, work_id=None, events=None):
     rows = list(events or [])
     return {
@@ -101,8 +132,11 @@ def read_audit_file(path):
     if not text:
         return skill_audit_document(events=[])
     if text.startswith("{"):
-        parsed = json.loads(text)
-        if parsed.get("schema") == AUDIT_SCHEMA:
+        try:
+            parsed = json.loads(text)
+        except json.JSONDecodeError:
+            parsed = None
+        if isinstance(parsed, dict) and parsed.get("schema") == AUDIT_SCHEMA:
             return parsed
     events = [json.loads(line) for line in text.splitlines() if line.strip()]
     run_id = events[-1].get("run_id") if events else None
