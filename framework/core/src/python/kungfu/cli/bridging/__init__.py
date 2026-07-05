@@ -16,6 +16,6 @@ def run_module(module_name):
 def run_module_main(module_name):
     module_main = f"{module_name}.__main__"
     try:
-        run_module(f"kungfu.console.bridging.{module_main}")
+        run_module(f"kungfu.cli.bridging.{module_main}")
     except ModuleNotFoundError:
         run_module(module_main)

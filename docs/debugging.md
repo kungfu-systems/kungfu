@@ -12,7 +12,7 @@ to "what is actually in the journal?" — which you can inspect directly.
 ## Inspect the journal
 
 `kungfu` exposes a `journal` command group (implemented in
-[`console/commands/journal.py`](../framework/core/src/python/kungfu/console/commands/journal.py)):
+[`console/commands/journal.py`](../framework/core/src/python/kungfu/cli/commands/journal.py)):
 
 - **List recorded sessions** — `kungfu journal sessions` (sortable, multiple
   table formats). Tells you what was recorded, when, and by which source.

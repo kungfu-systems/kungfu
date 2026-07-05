@@ -7,7 +7,7 @@
 # KF_NO_EXT - disable extensions if set
 ###########################################################
 
-from kungfu.console import available, select
+from kungfu.cli import available, select
 
 
 def main(**kwargs):

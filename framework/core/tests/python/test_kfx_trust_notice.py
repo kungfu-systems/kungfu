@@ -7,7 +7,7 @@
 
 import json
 
-from kungfu.console.commands import kfx
+from kungfu.cli.commands import kfx
 
 
 def _manifest(key, facet):

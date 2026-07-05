@@ -3,7 +3,7 @@
 import click
 import sys
 
-from kungfu.console.commands import (
+from kungfu.cli.commands import (
     CLI,
     PrioritizedCommandGroup,
     get_current_context,
@@ -11,13 +11,13 @@ from kungfu.console.commands import (
     update_wrapper,
     typing,
 )
-from kungfu.console import variants
+from kungfu.cli import variants
 
 
 def engage_command_context():
     def build_bridge(f: CLI) -> CLI:
         def new_func(*args, **kwargs):
-            from kungfu.console.bridging import __registry__
+            from kungfu.cli.bridging import __registry__
 
             ctx = get_current_context()
             ctx.bridging = __registry__
@@ -77,7 +77,7 @@ def scons(ctx):
 def engaged_nuitka_context():
     def nuitka_context(f: CLI) -> CLI:
         def new_func(*args, **kwargs):
-            from kungfu.console.bridging import nuitka
+            from kungfu.cli.bridging import nuitka
 
             nuitka.setup()
             build_bridge = engage_command_context()

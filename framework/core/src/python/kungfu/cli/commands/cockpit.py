@@ -11,7 +11,7 @@ import sys
 import click
 
 import kungfu
-from kungfu.console.commands import kfc
+from kungfu.cli.commands import kfc
 
 
 def _resolve_tui_entry():

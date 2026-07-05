@@ -16,7 +16,7 @@ import shutil
 import sys
 import tarfile
 
-from kungfu.console.commands import kfc, PrioritizedCommandGroup
+from kungfu.cli.commands import kfc, PrioritizedCommandGroup
 from kungfu.rewind import first_party
 
 kfx_command_context = kfc.pass_context()

@@ -140,7 +140,7 @@ directory are found in the workspace layout.
 ## Install lifecycle
 
 `kungfu kfx` manages installs for a home (source of truth:
-[`../framework/core/src/python/kungfu/console/commands/kfx.py`](../framework/core/src/python/kungfu/console/commands/kfx.py)):
+[`../framework/core/src/python/kungfu/cli/commands/kfx.py`](../framework/core/src/python/kungfu/cli/commands/kfx.py)):
 
 ```sh
 kungfu kfx install <tgz-or-directory>    # extract into <home>/extensions/<key>

@@ -6,7 +6,7 @@ import pathlib
 import pkgutil
 import sys
 
-from kungfu.console import variants
+from kungfu.cli import variants
 
 from pdm.core import Core
 from pdm.cli.commands.base import BaseCommand

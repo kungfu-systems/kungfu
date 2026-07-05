@@ -1,6 +1,6 @@
 #  SPDX-License-Identifier: Apache-2.0
 
-from kungfu.console import commands, variants
+from kungfu.cli import commands, variants
 
 __ = [commands, variants, __builtins__]
 

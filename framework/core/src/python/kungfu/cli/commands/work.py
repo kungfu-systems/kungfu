@@ -10,7 +10,7 @@ import click
 import json
 import sys
 
-from kungfu.console.commands import kfc, PrioritizedCommandGroup
+from kungfu.cli.commands import kfc, PrioritizedCommandGroup
 
 work_command_context = kfc.pass_context()
 

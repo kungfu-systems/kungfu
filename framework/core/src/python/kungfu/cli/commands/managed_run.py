@@ -4,7 +4,7 @@ import sys
 
 import click
 
-from kungfu.console.commands import kfc
+from kungfu.cli.commands import kfc
 from kungfu.rewind.managed_cli import run_and_report
 from kungfu.rewind.managed_run import managed_providers
 

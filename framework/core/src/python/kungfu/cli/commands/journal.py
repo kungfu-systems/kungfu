@@ -13,7 +13,7 @@ from collections import deque
 from datetime import datetime, timedelta
 from tabulate import tabulate
 
-from kungfu.console.commands import kfc, PrioritizedCommandGroup
+from kungfu.cli.commands import kfc, PrioritizedCommandGroup
 from kungfu.yijinjing import LOG_PATTERN, ARCHIVE_PREFIX
 from kungfu.yijinjing import journal as kfj
 from kungfu.yijinjing import time as kft

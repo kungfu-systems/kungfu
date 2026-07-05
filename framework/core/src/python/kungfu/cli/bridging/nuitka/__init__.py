@@ -5,7 +5,7 @@ import os
 import sys
 import subprocess
 
-from kungfu.console import site, variants
+from kungfu.cli import site, variants
 from os.path import abspath, dirname
 
 

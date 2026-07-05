@@ -5,7 +5,7 @@ import sys
 
 import kungfu
 
-from kungfu.console.commands import kfc, PrioritizedCommandGroup
+from kungfu.cli.commands import kfc, PrioritizedCommandGroup
 
 
 @kfc.group(

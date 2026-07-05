@@ -7,7 +7,7 @@ import re
 import sys
 import tokenize
 
-from kungfu.console import bridging
+from kungfu.cli import bridging
 
 
 @click.command(

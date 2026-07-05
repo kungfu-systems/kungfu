@@ -4,7 +4,7 @@ import click
 import os
 import sys
 
-from kungfu.console.commands import kfc, PrioritizedCommandGroup
+from kungfu.cli.commands import kfc, PrioritizedCommandGroup
 
 rewind_command_context = kfc.pass_context()
 
