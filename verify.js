@@ -116,29 +116,23 @@ function main() {
   // Tooling drives its fixtures/slices/guards/benches through Node so it runs on
   // every platform pnpm runs on (Windows included). A bash `.sh` anywhere in the
   // tree silently breaks off-Unix — the repo is fully migrated (zero .sh), so
-  // guard the whole tree and fail loudly on any reintroduction. Vendored and
-  // generated dirs (node_modules, .git, build outputs) may carry upstream .sh
-  // and are out of our control, so they are skipped.
+  // fail loudly on any reintroduction. The scan is shared with the pre-commit
+  // hook via no-bash-guard.mjs (single source of truth); run it whole-tree here.
   console.log('\n[verify] stage 0a: no-bash script guard');
-  const shSkipDirs = new Set(['node_modules', '.git', 'build', 'dist']);
-  const shPaths = [];
-  const scanSh = (dir) => {
-    if (!fs.existsSync(dir)) return;
-    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (e.isDirectory()) {
-        if (!shSkipDirs.has(e.name)) scanSh(path.join(dir, e.name));
-      } else if (e.name.endsWith('.sh')) {
-        shPaths.push(path.relative(ROOT, path.join(dir, e.name)));
-      }
-    }
-  };
-  scanSh(ROOT);
-  if (shPaths.length === 0)
+  const noBash = spawnSync(
+    process.execPath,
+    [path.join(ROOT, 'no-bash-guard.mjs')],
+    {
+      encoding: 'utf8',
+    },
+  );
+  if (noBash.status === 0)
     pass('no-bash script guard', 'gates are Node-only (cross-platform)');
   else
     fail(
       'no-bash script guard',
-      `bash scripts must be Node (.mjs) so the gate runs on Windows too:\n  ${shPaths.join('\n  ')}`,
+      `${noBash.stdout || ''}${noBash.stderr || ''}`.trim() ||
+        'bash scripts must be Node (.mjs) so the gate runs on Windows too',
     );
 
   // ── Stage 0: toolchain preflight (read-only) ──────────────────────
