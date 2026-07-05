@@ -22,12 +22,15 @@ pre-dispatched fast path).
 
 ## Runs
 
-Master form (requires built `dist/kungfu`):
+Master form (requires built `dist/kungfu`; run under the repo-pinned node, e.g.
+via `./kungfu-code` or `fnm exec`, so the load binding ABI matches):
 
 ```sh
-KF_BYPASS_CACHED=1 tests/bench/dispatch_bench.sh   # rx-isolated: no storage feed
-tests/bench/dispatch_bench.sh                      # storage-on: deployment shape
+KF_BYPASS_CACHED=1 node tests/bench/dispatch_bench.mjs   # rx-isolated: no storage feed
+node tests/bench/dispatch_bench.mjs                      # storage-on: deployment shape
 ```
+
+The node watcher form is `node tests/bench/dispatch_bench_watcher.mjs`.
 
 The two runs bracket the rx layer's share: the rx-isolated run is chain scan
 + `instanceof` (one `dynamic_cast` per frame, master only) + feed guards;
