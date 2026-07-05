@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kungfu.skill-context/v1",
+  "title": "Kungfu Skill Context Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "session", "catalog", "tools", "audit"],
+  "properties": {
+    "schema": { "const": "kungfu.skill-context/v1" },
+    "session": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["source", "manager"],
+      "properties": {
+        "source": { "enum": ["gui", "cli", "test"] },
+        "manager": { "enum": ["node", "python"] },
+        "profile": { "type": "string" },
+        "agent": { "type": "string" }
+      }
+    },
+    "catalog": { "type": "array" },
+    "tools": { "type": "array" },
+    "audit": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["advertisedSkillsHash"],
+      "properties": {
+        "runId": { "type": "string" },
+        "advertisedSkillsHash": { "type": "string", "pattern": "^sha256:" }
+      }
+    }
+  }
+}

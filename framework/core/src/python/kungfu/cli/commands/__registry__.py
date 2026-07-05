@@ -10,6 +10,7 @@ from . import schema
 from . import work
 from . import atlas
 from . import kfx
+from . import skill
 from . import sdk
 
 __all__ = [
@@ -23,5 +24,6 @@ __all__ = [
     "work",
     "atlas",
     "kfx",
+    "skill",
     "sdk",
 ]

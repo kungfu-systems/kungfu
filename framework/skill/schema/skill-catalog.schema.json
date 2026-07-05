@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kungfu.skill-catalog/v1",
+  "title": "Kungfu Skill Catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "skills"],
+  "properties": {
+    "schema": { "const": "kungfu.skill-catalog/v1" },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "title",
+          "description",
+          "kind",
+          "triggers",
+          "capabilities",
+          "kfx",
+          "loadPolicy",
+          "sourceHash"
+        ],
+        "properties": {
+          "key": { "type": "string" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "kind": { "enum": ["instruction-only", "kfx-backed"] },
+          "triggers": { "type": "array", "items": { "type": "string" } },
+          "capabilities": { "type": "array", "items": { "type": "string" } },
+          "kfx": { "type": "array" },
+          "loadPolicy": { "const": "on-demand" },
+          "sourceHash": { "type": "string", "pattern": "^sha256:" }
+        }
+      }
+    }
+  }
+}

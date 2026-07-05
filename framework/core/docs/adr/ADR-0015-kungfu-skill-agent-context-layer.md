@@ -2,8 +2,10 @@
 
 - Status: accepted
 - Date: 2026-07-05
-- Implementation: not yet landed; this ADR pins the architecture and first
-  delivery target.
+- Implementation: first slice landed. `framework/skill`, the Python CLI manager,
+  shared fixtures/schemas, and SDK `SKILL.md` scaffolding are implemented;
+  GUI-manager wiring, audit persistence, and kfx dependency install binding
+  remain follow-up work.
 - Category: (architecture) agent capability model — skill discovery, context
   injection, and kfx composition
 - Subsystem: `framework/skill` (new shared skill contract), `framework/core`
@@ -111,7 +113,8 @@ Python under `framework/core/src/python/kungfu/skill`, Node/Electron under
 
 ## Repository layout
 
-The first implementation should land in these areas:
+The first implementation lands the shared contract, Python manager, and SDK
+scaffolding in these areas:
 
 ```text
 framework/skill/
@@ -135,12 +138,16 @@ framework/core/src/python/kungfu/skill/
 
 framework/core/src/python/kungfu/cli/commands/skill.py
 
+developer/sdk/templates/skill/
+```
+
+The planned Node/Electron manager and first-party GUI view remain in:
+
+```text
 framework/gui/src/main/skill-manager.ts
 framework/gui/src/main/skill-context.ts
 
 extensions/system/skill-manager/
-
-developer/sdk/templates/skill/
 ```
 
 The first implementation should not put the canonical skill contract inside
@@ -150,17 +157,25 @@ because both Python and Node managers must share the same semantics.
 
 ## First delivery
 
-The first delivery should be intentionally narrow:
+The first delivery is intentionally narrow:
 
 1. Accept `SKILL.md`-only directories as valid instruction-only skills.
 2. Define `skill`, `skill-catalog`, and `skill-context` schemas.
 3. Add shared fixtures for minimal and front-matter skills.
-4. Implement Node and Python catalog builders with fixture equivalence tests.
-5. Add `kungfu skill validate`, `list`, `catalog`, `read`, and `explain`.
-6. Let both Node and Python agent managers inject compact catalogs and expose
-   `kungfu.skill.read`.
-7. Write audit events for catalog advertisement and full skill loading.
-8. Add a first-party `skill-manager` view that shows installed skills, full
+4. Implement TypeScript and Python catalog/context builders over the same
+   fixtures.
+5. Add `kungfu skill validate`, `install`, `list`, `catalog`, `context`,
+   `read`, and `explain`.
+6. Let the Python manager generate compact catalogs and expose the
+   `kungfu.skill.read` contract.
+
+Follow-up deliveries should:
+
+1. Wire Node/Electron manager injection to the same catalog/context contract.
+2. Write audit events for catalog advertisement and full skill loading.
+3. Bind declared kfx dependencies through the normal kfx registry without
+   copying them per skill.
+4. Add a first-party `skill-manager` view that shows installed skills, full
    source, generated catalog, dependency state, trust/provenance and audit.
 
 Explicitly out of scope for the first delivery:
@@ -203,20 +218,24 @@ Explicitly out of scope for the first delivery:
 - Users may expect uninstalling a skill to remove its packaged dependencies.
   The product must make shared dependency ownership explicit and provide a
   separate orphan cleanup flow.
-- The first delivery proves context injection and audit, not arbitrary tool
-  execution. That limitation should stay visible in `docs/known-limits.md` if
-  the implementation lands before executable skill flows.
+- The first slice proves parsing, catalog/context generation, and frozen CLI
+  operation, not arbitrary tool execution or GUI-launched injection.
 
 ## Verification target
 
-When implemented, this decision is verified by:
+The first slice is verified by:
 
-- a `SKILL.md`-only fixture accepted by both Python and Node validators;
-- Python and Node catalog output equivalence over shared fixtures;
-- `kungfu skill catalog --json` matching the catalog injected into a CLI agent
-  session;
+- a `SKILL.md`-only fixture accepted by both Python and TypeScript validators;
+- Python and TypeScript catalog/context output over shared fixtures;
+- frozen `dist/kungfu/kungfu skill validate/catalog/context/read/explain`
+  commands over the shared fixtures;
+- a skill with two declared kfx dependencies proving skill metadata can compose
+  multiple kfx references without granting runtime privilege.
+
+Follow-up verification should add:
+
 - a GUI-launched agent session receiving the same envelope schema;
 - audit entries for advertised skills and on-demand full skill loading;
-- a skill with two kfx dependencies proving deduplicated install/binding;
+- deduplicated kfx install/binding through the kfx registry;
 - a third-party runtime facet dependency proving that skill composition does not
   bypass the existing runtime trust refusal.

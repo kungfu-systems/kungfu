@@ -250,18 +250,20 @@ The first CLI should be explicit and inspectable:
 
 ```sh
 kungfu skill validate <path>
-kungfu skill install <path-or-package>
-kungfu skill list [--json]
-kungfu skill catalog [--profile <name>] [--json]
-kungfu skill read <key>
+kungfu skill install <path>
+kungfu skill list [--path <dir>] [--json]
+kungfu skill catalog [--path <dir>] [--json]
+kungfu skill context [--path <dir>] [--source cli|gui|test] [--manager python|node]
+kungfu skill read <key-or-path> [--path <dir>]
 kungfu skill explain <key-or-path>
-kungfu skill audit <key>
 ```
 
-`kungfu skill install` installs the skill source and any declared kfx
-dependencies, but it does not elevate runtime privileges. `catalog` is the exact
-agent-visible catalog before full skill loading. `read` is the same operation the
-agent tool uses, with the same audit semantics.
+`kungfu skill install` installs the skill source into the Kungfu home skill
+directory, but it does not elevate runtime privileges or install executable kfx
+dependencies in the first slice. `catalog` is the compact agent-visible catalog
+before full skill loading. `context` wraps that catalog in the same envelope
+shape used by Python and Node manage modes. `read` is the operation the agent
+tool uses to load the full `SKILL.md` after selection.
 
 The SDK may add:
 
@@ -308,15 +310,23 @@ release reference rather than inventing a parallel trust story.
 
 ## First implementation slice
 
-The first delivery should prove the context loop before broad execution:
+The first slice proves the context loop before broad execution:
 
 1. Accept `SKILL.md`-only directories as valid instruction-only skills.
 2. Add schema and fixtures under `framework/skill`.
-3. Implement equivalent Node and Python catalog builders over the same fixtures.
-4. Implement `kungfu skill validate/list/catalog/read/explain`.
-5. Inject compact catalogs from both Node and Python manager paths.
-6. Audit advertised and loaded skills.
-7. Display installed skills in a first-party `skill-manager` view.
+3. Implement TypeScript and Python catalog/context builders over the same
+   fixtures.
+4. Implement `kungfu skill validate/install/list/catalog/context/read/explain`.
+5. Generate compact catalogs and context envelopes from the Python CLI manager.
+6. Scaffold a minimal skill with only `SKILL.md` through the developer SDK.
+
+Follow-up slices should:
+
+1. Inject compact catalogs from the Node/Electron GUI manager path.
+2. Audit advertised and loaded skills.
+3. Bind declared kfx dependencies through the normal kfx registry without
+   copying them per skill.
+4. Display installed skills in a first-party `skill-manager` view.
 
 Out of scope for the first slice:
 
@@ -328,13 +338,18 @@ Out of scope for the first slice:
 
 ## Verified by
 
-This page is a design target. The implementation is not yet landed. When it
-lands, the minimum verification set should include:
+The first implementation slice is verified by:
 
-- a `SKILL.md`-only fixture accepted by both Node and Python validators;
-- Node and Python catalog output equivalence over shared fixtures;
-- CLI `catalog` output matching the context envelope injected into an agent run;
+- a `SKILL.md`-only fixture accepted by Python and TypeScript validators;
+- TypeScript and Python catalog/context output over shared fixtures;
+- frozen CLI `validate/catalog/context/read/explain` over shared fixtures;
+- a skill with two kfx declarations proving the skill object can reference
+  multiple kfx packages without granting runtime privilege.
+
+Follow-up verification should add:
+
+- Node/Electron agent injection receiving the same context envelope;
 - audit records for advertised and loaded skills;
-- a skill with two kfx dependencies proving dependency deduplication;
+- kfx dependency installation through the shared registry, with deduplication;
 - a third-party adapter dependency proving that skill composition does not bypass
   the existing runtime trust refusal.

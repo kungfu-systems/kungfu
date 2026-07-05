@@ -28,6 +28,7 @@ function usage(code) {
     [
       'usage: kungfu sdk create app <directory> [options]',
       '       kungfu sdk create extension <directory> [options]',
+      '       kungfu sdk create skill <directory> [options]',
       '       kungfu sdk kfx build | clean',
       '',
       'create options:',
@@ -45,6 +46,10 @@ function usage(code) {
       'package with a CMakeLists.txt — CMake via the core conan toolchain), and',
       'Python AOT extensions (kungfuBuild.python — engage pdm install + engage',
       'nuitka --module), each producing a native module under dist/.',
+      '',
+      'create skill scaffolds the minimum valid Kungfu Skill source: a directory',
+      'containing only SKILL.md. It is instruction-only until it explicitly',
+      'declares kfx dependencies or capabilities.',
       '',
     ].join('\n'),
   );
@@ -197,6 +202,34 @@ function createExtension(directory, options) {
       '  pnpm install   # or npm/yarn',
       '  pnpm build     # kungfu sdk kfx build -> dist/view/index.js',
       '  npm pack       # the tgz is the install unit: kungfu kfx install <tgz>',
+      '',
+    ].join('\n'),
+  );
+}
+
+/**
+ * Scaffold a minimum valid Kungfu Skill source into `directory`.
+ * @param {string | undefined} directory
+ * @param {CreateOptions} options
+ * @returns {void}
+ */
+function createSkill(directory, options) {
+  if (!directory) usage(1);
+  const targetDir = path.resolve(directory);
+  if (fs.existsSync(targetDir) && fs.readdirSync(targetDir).length > 0) {
+    fail(`target directory is not empty: ${targetDir}`);
+  }
+  const skillName = options.name || path.basename(targetDir);
+  scaffold('skill', targetDir, {
+    __SKILL_NAME__: skillName,
+  });
+  process.stdout.write(
+    [
+      `created ${skillName} at ${targetDir}`,
+      '',
+      'next steps:',
+      `  kungfu skill validate ${directory}`,
+      `  kungfu skill catalog --path ${directory} --json`,
       '',
     ].join('\n'),
   );
@@ -468,7 +501,8 @@ if (!command) usage(1);
 if (command === 'create') {
   if (kind === 'app') createApp(directory, options);
   else if (kind === 'extension') createExtension(directory, options);
-  else fail(`unknown target: ${kind} (supported: app, extension)`);
+  else if (kind === 'skill') createSkill(directory, options);
+  else fail(`unknown target: ${kind} (supported: app, extension, skill)`);
 } else if (command === 'kfx') {
   if (kind === 'build') await kfxBuild();
   else if (kind === 'clean') kfxClean();

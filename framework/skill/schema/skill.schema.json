@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kungfu.skill/v1",
+  "title": "Kungfu Skill Source Metadata",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "key", "title", "description", "kind", "source"],
+  "properties": {
+    "schema": { "const": "kungfu.skill/v1" },
+    "key": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "kind": { "enum": ["instruction-only", "kfx-backed"] },
+    "triggers": { "type": "array", "items": { "type": "string" } },
+    "capabilities": { "type": "array", "items": { "type": "string" } },
+    "kfx": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["key"],
+        "properties": {
+          "key": { "type": "string", "minLength": 1 },
+          "role": { "type": "string" },
+          "version": { "type": "string" },
+          "required": { "type": "boolean" }
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "hash"],
+      "properties": {
+        "path": { "type": "string" },
+        "hash": { "type": "string", "pattern": "^sha256:" }
+      }
+    }
+  }
+}
