@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { createHash } from 'node:crypto';
-import { readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 
 export type SkillKind = 'instruction-only' | 'kfx-backed';
@@ -65,6 +65,15 @@ export interface SkillContextEnvelope {
 }
 
 type Frontmatter = Record<string, unknown>;
+
+export interface SkillContextOptions {
+  source: SkillContextEnvelope['session']['source'];
+  manager: SkillContextEnvelope['session']['manager'];
+  profile?: string;
+  agent?: string;
+  extraPaths?: string[];
+  env?: Record<string, string | undefined>;
+}
 
 export function parseSkill(skillDir: string): SkillSource {
   const root = resolve(skillDir);
@@ -140,7 +149,90 @@ export function buildContextEnvelope(
   };
 }
 
-function stableStringify(value: unknown): string {
+export function skillRoots(
+  home: string,
+  extraPaths: string[] = [],
+  env: Record<string, string | undefined> = process.env,
+): string[] {
+  const roots: string[] = [];
+  const envPath = env.KF_SKILL_PATH;
+  if (envPath) {
+    roots.push(...envPath.split(pathDelimiter()).filter(Boolean));
+  }
+  roots.push(...extraPaths);
+  roots.push(join(home, 'skills'));
+  return roots;
+}
+
+export function discoverSkills(
+  home: string,
+  extraPaths: string[] = [],
+  env: Record<string, string | undefined> = process.env,
+): SkillSource[] {
+  const rows: SkillSource[] = [];
+  const seen = new Set<string>();
+  for (const root of skillRoots(home, extraPaths, env)) {
+    for (const skillDir of candidateSkillDirs(root)) {
+      let skill: SkillSource;
+      try {
+        skill = parseSkill(skillDir);
+      } catch {
+        continue;
+      }
+      if (seen.has(skill.key)) continue;
+      seen.add(skill.key);
+      rows.push(skill);
+    }
+  }
+  return rows;
+}
+
+export function buildSkillContext(
+  home: string,
+  options: SkillContextOptions,
+): SkillContextEnvelope {
+  const session: SkillContextEnvelope['session'] = {
+    source: options.source,
+    manager: options.manager,
+  };
+  if (options.profile) session.profile = options.profile;
+  if (options.agent) session.agent = options.agent;
+  return buildContextEnvelope(
+    buildCatalog(
+      discoverSkills(
+        home,
+        options.extraPaths ?? [],
+        options.env ?? process.env,
+      ),
+    ),
+    session,
+  );
+}
+
+export function hasAdvertisedSkills(envelope: SkillContextEnvelope): boolean {
+  return envelope.catalog.length > 0;
+}
+
+export function formatSkillContextPrompt(
+  envelope: SkillContextEnvelope,
+): string {
+  return [
+    'Kungfu Skill context envelope (compact, on-demand instructions):',
+    stableStringify(envelope),
+    'To load full SKILL.md content, ask the Kungfu host for kungfu.skill.read with a skill key.',
+    'Skill instructions do not grant runtime privileges; kfx dependencies remain gated by kfx trust policy.',
+  ].join('\n');
+}
+
+export function injectSkillContext(
+  prompt: string,
+  envelope: SkillContextEnvelope,
+): string {
+  if (!hasAdvertisedSkills(envelope)) return prompt;
+  return `${formatSkillContextPrompt(envelope)}\n\nUser task:\n${prompt}`;
+}
+
+export function stableStringify(value: unknown): string {
   if (Array.isArray(value)) {
     return `[${value.map(stableStringify).join(',')}]`;
   }
@@ -152,6 +244,33 @@ function stableStringify(value: unknown): string {
       .join(',')}}`;
   }
   return JSON.stringify(value);
+}
+
+function candidateSkillDirs(root: string): string[] {
+  if (!root || !existsSync(root)) return [];
+  const absolute = resolve(root);
+  if (existsSync(join(absolute, 'SKILL.md'))) return [absolute];
+  try {
+    if (!statSync(absolute).isDirectory()) return [];
+  } catch {
+    return [];
+  }
+  return readdirSync(absolute)
+    .sort()
+    .map((name) => join(absolute, name))
+    .filter((path) => {
+      try {
+        return (
+          statSync(path).isDirectory() && existsSync(join(path, 'SKILL.md'))
+        );
+      } catch {
+        return false;
+      }
+    });
+}
+
+function pathDelimiter(): string {
+  return process.platform === 'win32' ? ';' : ':';
 }
 
 function splitFrontmatter(markdown: string): {
@@ -179,7 +298,7 @@ function parseSimpleYaml(src: string): Frontmatter {
   let currentObject: Record<string, unknown> | undefined;
   for (const raw of lines) {
     if (!raw.trim() || raw.trim().startsWith('#')) continue;
-    const listMatch = raw.match(/^  -\s+(.*)$/);
+    const listMatch = raw.match(/^ {2}-\s+(.*)$/);
     if (listMatch && currentKey && currentArray) {
       const value = listMatch[1];
       const kv = value.match(/^([A-Za-z0-9_.-]+):\s*(.*)$/);
@@ -192,7 +311,7 @@ function parseSimpleYaml(src: string): Frontmatter {
       }
       continue;
     }
-    const nestedMatch = raw.match(/^    ([A-Za-z0-9_.-]+):\s*(.*)$/);
+    const nestedMatch = raw.match(/^ {4}([A-Za-z0-9_.-]+):\s*(.*)$/);
     if (nestedMatch && currentObject) {
       currentObject[nestedMatch[1]] = stripQuotes(nestedMatch[2]);
       continue;

@@ -360,6 +360,9 @@ importers:
       '@kungfu-tech/kfx':
         specifier: workspace:*
         version: link:../kfx
+      '@kungfu-tech/skill':
+        specifier: workspace:*
+        version: link:../skill
       node-pty:
         specifier: ^1.1.0
         version: 1.1.0

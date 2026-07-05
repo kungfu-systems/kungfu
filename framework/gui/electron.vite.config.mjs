@@ -16,14 +16,14 @@ export default defineConfig({
   main: {
     plugins: [
       externalizeDepsPlugin({
-        exclude: ['@kungfu-tech/api', '@kungfu-tech/kfx'],
+        exclude: ['@kungfu-tech/api', '@kungfu-tech/kfx', '@kungfu-tech/skill'],
       }),
     ],
   },
   preload: {
     plugins: [
       externalizeDepsPlugin({
-        exclude: ['@kungfu-tech/api', '@kungfu-tech/kfx'],
+        exclude: ['@kungfu-tech/api', '@kungfu-tech/kfx', '@kungfu-tech/skill'],
       }),
     ],
     build: {

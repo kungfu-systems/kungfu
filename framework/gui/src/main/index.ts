@@ -27,11 +27,12 @@ import {
   firstPartyManifestPath,
   generateFirstPartyManifest,
 } from './first-party-manifest';
-import { type Rect, SandboxManager } from './sandbox-manager';
 import {
   installKungfuCliToPath,
   uninstallKungfuCliFromPath,
 } from './installCli';
+import { type Rect, SandboxManager } from './sandbox-manager';
+import { writeGuiSkillContextFile } from './skill-context';
 
 // Resolve the kungfu runtime directory that holds libkungfu.dylib and the
 // kungfu_electron.node binding. In development it lives in the kungfu-core
@@ -97,6 +98,19 @@ if (!process.env.KF_FIRST_PARTY_MANIFEST) {
     mkdirSync(path.dirname(manifestPath), { recursive: true });
     writeFileSync(manifestPath, JSON.stringify(manifest), 'utf8');
     process.env.KF_FIRST_PARTY_MANIFEST = manifestPath;
+  }
+}
+
+if (!process.env.KF_SKILL_CONTEXT_FILE && process.env.KF_RUNTIME_DIR) {
+  try {
+    process.env.KF_SKILL_CONTEXT_FILE = writeGuiSkillContextFile({
+      home: process.env.KF_RUNTIME_DIR,
+      profile: 'gui-default',
+      agent: 'managed-run',
+      env: process.env,
+    });
+  } catch (e) {
+    console.log(`KF_SKILL_CONTEXT_FAIL ${(e as Error).message}`);
   }
 }
 

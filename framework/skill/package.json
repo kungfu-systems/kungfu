@@ -19,7 +19,8 @@
   },
   "files": ["src", "schema", "fixtures", "README.md"],
   "scripts": {
-    "build": "tsc --noEmit"
+    "build": "tsc --noEmit",
+    "test:golden": "node --experimental-transform-types scripts/golden.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

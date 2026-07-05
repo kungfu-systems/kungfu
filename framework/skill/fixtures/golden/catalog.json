@@ -1,0 +1,42 @@
+{
+  "schema": "kungfu.skill-catalog/v1",
+  "skills": [
+    {
+      "capabilities": [],
+      "description": "Help an agent inspect a failed trace run, identify likely failure layers, and produce a short audit note.",
+      "key": "minimal",
+      "kfx": [],
+      "kind": "instruction-only",
+      "loadPolicy": "on-demand",
+      "sourceHash": "sha256:46a47055a462c648f52cc915fd1f7c4878043006e9f2c2b1bf76482357651996",
+      "title": "Trace Failure Investigator",
+      "triggers": []
+    },
+    {
+      "capabilities": [
+        "rewind",
+        "ledger"
+      ],
+      "description": "Help an agent inspect a failed trace run, identify likely failure layers, and produce a short audit note.",
+      "key": "trace-failure-investigator",
+      "kfx": [
+        {
+          "key": "rewind-inspector",
+          "role": "trace-view"
+        },
+        {
+          "key": "journal-manager",
+          "role": "evidence-view"
+        }
+      ],
+      "kind": "kfx-backed",
+      "loadPolicy": "on-demand",
+      "sourceHash": "sha256:d9396331d52064d4f75f6ec9cf34f5583e6e932c259ec9e354b17c8badb52d8f",
+      "title": "Trace Failure Investigator",
+      "triggers": [
+        "trace failed",
+        "replay failed"
+      ]
+    }
+  ]
+}

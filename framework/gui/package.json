@@ -28,10 +28,11 @@
   },
   "dependencies": {
     "@kungfu-tech/api": "workspace:*",
+    "@kungfu-tech/kfx": "workspace:*",
+    "@kungfu-tech/skill": "workspace:*",
     "node-pty": "^1.1.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "@kungfu-tech/kfx": "workspace:*"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@kungfu-tech/core": "workspace:*",
