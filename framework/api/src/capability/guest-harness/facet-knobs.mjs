@@ -33,15 +33,18 @@ import { networkInterfaces, homedir } from 'node:os';
 import { join } from 'node:path';
 
 function tryFsWrite() {
-  // Probe a write to an explicit USER-space path (the home directory), not the
-  // OS temp dir. On Windows the guest's node runtime needs a writable temp just
-  // to start, so the launcher redirects the guest's TEMP to the AppContainer's
-  // own writable folder; the deny-write knob must therefore be observed on a
-  // path that is NOT that runtime scratch — a user-owned location a confined
-  // guest should not reach. macOS Seatbelt `(deny file-write*)` and Linux
-  // `--ro-bind /` deny writes globally, so home is refused there too when the
-  // knob is on, and writable under a permissive profile.
-  const path = join(homedir(), `.kfx-knob-write-probe-${process.pid}.tmp`);
+  // Probe a write into a launcher-designated user-space scratch dir. On Windows,
+  // AppContainer write access is governed by the container SID's own ACE (a lowbox
+  // token does not honour the user's ACEs), so the launcher passes KFX_WRITE_PROBE
+  // pointing at a scratch dir it grants the container SID write on under a
+  // permissive profile and leaves ungranted under deny-write — the knob is
+  // observed here. The node runtime's own TEMP is redirected elsewhere (the
+  // AppContainer folder), so this path is purely the facet's write target, not the
+  // runtime scratch. Off-Windows the launcher leaves KFX_WRITE_PROBE unset and the
+  // probe falls back to the home dir, which macOS Seatbelt `(deny file-write*)` and
+  // Linux `--ro-bind /` deny globally when the knob is on and allow when permissive.
+  const dir = process.env.KFX_WRITE_PROBE ?? homedir();
+  const path = join(dir, `.kfx-knob-write-probe-${process.pid}.tmp`);
   try {
     writeFileSync(path, 'kfx');
     try {

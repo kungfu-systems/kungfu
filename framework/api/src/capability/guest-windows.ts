@@ -16,10 +16,11 @@
 // kungfu-guest holds no binding itself — the same injection discipline ADR-0011
 // applies to capabilities. The relay never touches stdout/stdin content here; it
 // just gets a GuestChild whose streams happen to be named pipes.
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import * as net from 'node:net';
 import type { Server, Socket } from 'node:net';
-import { dirname, isAbsolute } from 'node:path';
+import { homedir } from 'node:os';
+import { dirname, isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import type { AppContainerSpec } from './sandbox-launcher.js';
@@ -50,10 +51,14 @@ export type LibkungfuWindowsBinding = {
     allowBroadWrite: boolean;
     allowLoopback: boolean;
     // directories the launcher grants the AppContainer SID read+execute on (plus
-    // traverse on their ancestors) so the guest stays readable under denyWrite,
-    // where its user SID is deny-only and reads no longer resolve through the
-    // user's own ACEs. Derived from the interpreter + guest entry paths.
+    // traverse on their ancestors) so the guest stays readable — AppContainer file
+    // access is governed by the container SID's ACE, not the user's. Derived from
+    // the interpreter + guest entry paths.
     readPaths: readonly string[];
+    // a user-space scratch dir passed to the guest as KFX_WRITE_PROBE. A permissive
+    // profile grants the container SID write on it (so the guest's write succeeds);
+    // denyWrite leaves it ungranted (so the write is refused).
+    writeScratch: string;
     // "KEY=VALUE" pairs
     env: readonly string[];
   }) => AppContainerProcess;
@@ -125,6 +130,25 @@ export function createLibkungfuWindowsSpawn(
     const stdinServer = serveNamedPipe(uniquePipe('in'));
     const stdoutServer = serveNamedPipe(uniquePipe('out'));
 
+    // A per-launch write-probe scratch dir under the home directory — a clean
+    // user-space location the AppContainer inherits no write ACE on. permissive
+    // grants the container SID write here (via writeScratch); denyWrite does not,
+    // so the facet's write is refused. It sits outside the runtime's TEMP (which
+    // the native launcher redirects to the AppContainer folder), so it observes
+    // only the write knob. Removed when the guest exits.
+    pipeSeq += 1;
+    const scratch = join(
+      homedir(),
+      '.kfx-guest-scratch',
+      `${process.pid}-${pipeSeq}`,
+    );
+    mkdirSync(scratch, { recursive: true });
+    const cleanupScratch = () => {
+      try {
+        rmSync(scratch, { recursive: true, force: true });
+      } catch {}
+    };
+
     const proc = binding.spawnAppContainer({
       command,
       args,
@@ -136,6 +160,7 @@ export function createLibkungfuWindowsSpawn(
       allowBroadWrite: spec.allowBroadWrite,
       allowLoopback: spec.allowLoopback,
       readPaths: deriveReadPaths(command, args),
+      writeScratch: scratch,
       env: Object.entries(options.env)
         .filter(([, v]) => v !== undefined)
         .map(([k, v]) => `${k}=${v}`),
@@ -160,6 +185,7 @@ export function createLibkungfuWindowsSpawn(
       .finally(() => {
         stdinServer.close();
         stdoutServer.close();
+        cleanupScratch();
       });
 
     const child: GuestChild = {

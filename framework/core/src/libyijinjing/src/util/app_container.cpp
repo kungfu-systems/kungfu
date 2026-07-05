@@ -233,36 +233,22 @@ void grant_ancestors_traverse(const std::wstring &path, PSID sid) {
   }
 }
 
-// Build a restricted primary token whose user SID is deny-only, so the guest no
-// longer satisfies the allow ACEs the user owns on temp/home. A basic
-// AppContainer runs AS the user, so those user ACEs override the container SID's
-// default-deny and file ACLs alone cannot deny the user's writes (goal decision
-// D2). Deny-only means the user SID is still evaluated for DENY ACEs but never
-// grants access. Returns nullptr on failure; the caller then falls back to the
-// plain launch rather than silently dropping the write restriction.
-HANDLE make_deny_write_token() {
-  HANDLE process_token = nullptr;
-  if (!::OpenProcessToken(::GetCurrentProcess(),
-                          TOKEN_DUPLICATE | TOKEN_ASSIGN_PRIMARY | TOKEN_QUERY | TOKEN_ADJUST_DEFAULT,
-                          &process_token)) {
-    return nullptr;
-  }
-  DWORD needed = 0;
-  ::GetTokenInformation(process_token, TokenUser, nullptr, 0, &needed);
-  HANDLE restricted = nullptr;
-  if (needed > 0) {
-    std::vector<BYTE> buffer(needed);
-    auto user = reinterpret_cast<PTOKEN_USER>(buffer.data());
-    if (::GetTokenInformation(process_token, TokenUser, user, needed, &needed)) {
-      SID_AND_ATTRIBUTES to_disable = {};
-      to_disable.Sid = user->User.Sid;
-      if (!::CreateRestrictedToken(process_token, 0, 1, &to_disable, 0, nullptr, 0, nullptr, &restricted)) {
-        restricted = nullptr;
-      }
-    }
-  }
-  ::CloseHandle(process_token);
-  return restricted;
+// Grant the AppContainer SID write (create/modify/delete) on a path, inheritable
+// so files created beneath it are writable. AppContainer write access is governed
+// by the container SID's own ACE — a lowbox token does not honour the user's own
+// ACEs — so this is what makes a write succeed. permissive grants it on the write
+// probe's scratch dir; deny-write leaves it ungranted so the guest's write is
+// refused (ACCESS_DENIED / EACCES). This is the real deny-write mechanism, in
+// place of a restricted token: the user SID never governed AppContainer writes.
+void grant_path_write(const std::wstring &path, PSID sid) {
+  EXPLICIT_ACCESSW ea = {};
+  ea.grfAccessPermissions = GENERIC_READ | GENERIC_WRITE | GENERIC_EXECUTE | DELETE;
+  ea.grfAccessMode = GRANT_ACCESS;
+  ea.grfInheritance = OBJECT_INHERIT_ACE | CONTAINER_INHERIT_ACE;
+  ea.Trustee.TrusteeForm = TRUSTEE_IS_SID;
+  ea.Trustee.TrusteeType = TRUSTEE_IS_GROUP;
+  ea.Trustee.ptstrName = reinterpret_cast<LPWSTR>(sid);
+  set_path_ace(path, ea);
 }
 } // namespace
 
@@ -407,29 +393,40 @@ std::shared_ptr<app_container_process> spawn_app_container(const app_container_o
   }
 
   // 5c. Grant the AppContainer SID read+execute on the guest's read paths, plus
-  //     traverse on their ancestors. Required under denyWrite (the user SID is
-  //     deny-only, so reads cannot resolve through the user's own ACEs); harmless
-  //     and idempotent under permissive. This codifies what previously needed
-  //     manual icacls, so a shipped Windows guest needs no out-of-band ACL setup.
+  //     traverse on their ancestors. AppContainer access is governed by the
+  //     container SID's own ACE (a lowbox token does not honour the user's ACEs),
+  //     so the interpreter and guest can only be read through this grant. This
+  //     codifies what previously needed manual icacls, so a shipped Windows guest
+  //     needs no out-of-band ACL setup.
   for (const auto &read_path : options.read_paths) {
     const std::wstring wide_path = widen(read_path);
     grant_path_read(wide_path, app_container_sid);
     grant_ancestors_traverse(wide_path, app_container_sid);
   }
 
-  // 6. Launch into the AppContainer. Under denyWrite, launch with a restricted
-  //    token whose user SID is deny-only so the guest cannot write through the
-  //    user's own ACEs (a basic AppContainer runs AS the user; file ACLs alone
-  //    cannot deny the user's writes — goal decision D2). If the restricted token
-  //    cannot be built the launch falls back to the plain path rather than
-  //    silently proceeding, and the demo's fs-write assertion reports the knob as
-  //    not enforced.
-  // Redirect the guest's TEMP/TMP to the AppContainer's own writable folder, so
-  // the node runtime has a writable scratch under every profile without reaching
-  // the user's temp. This lets deny-write refuse the user-space write the facet
-  // performs while the runtime still starts, and removes the need to grant the
-  // container SID write on the user's temp (the manual-icacls path this replaces).
+  // 5d. The write knob. AppContainer write access is governed by the container
+  //     SID's ACE — the user SID never governs it — so deny-write is simply the
+  //     absence of a container-SID write grant. Under a permissive profile, grant
+  //     the container SID write on the write-probe scratch dir (+ ancestor
+  //     traverse) so the guest's write succeeds; deny-write leaves it ungranted so
+  //     the same write is refused (ACCESS_DENIED). The scratch dir is passed to the
+  //     guest as KFX_WRITE_PROBE under every profile so the same facet targets the
+  //     same path either way.
   std::vector<std::string> env = options.env;
+  if (!options.write_scratch.empty()) {
+    env.push_back("KFX_WRITE_PROBE=" + options.write_scratch);
+    if (options.allow_broad_write) {
+      const std::wstring wide_scratch = widen(options.write_scratch);
+      grant_path_write(wide_scratch, app_container_sid);
+      grant_ancestors_traverse(wide_scratch, app_container_sid);
+    }
+  }
+
+  // 6. Redirect the guest's TEMP/TMP to the AppContainer's own writable folder, so
+  //    the node runtime has a writable scratch under every profile without reaching
+  //    the user's temp. Without this the runtime cannot start (it needs a writable
+  //    temp), and it keeps the runtime's scratch separate from the facet's write
+  //    probe so deny-write can refuse the probe while the runtime still runs.
   const std::wstring ac_folder = app_container_folder(app_container_sid);
   if (!ac_folder.empty()) {
     const std::string ac = narrow(ac_folder);
@@ -442,25 +439,16 @@ std::shared_ptr<app_container_process> spawn_app_container(const app_container_o
     env.push_back("TMP=" + ac);
   }
 
+  // 7. Launch into the AppContainer.
   std::wstring command_line = build_command_line(options.command, options.args);
   std::wstring environment = build_environment_block(env);
   LPVOID environment_block = env.empty() ? nullptr : environment.data();
   const DWORD creation_flags = EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT;
   PROCESS_INFORMATION process_info = {};
-  HANDLE deny_write_token = options.allow_broad_write ? nullptr : make_deny_write_token();
-  BOOL ok;
-  if (deny_write_token != nullptr) {
-    ok = ::CreateProcessAsUserW(deny_write_token, nullptr, command_line.data(), nullptr, nullptr, TRUE, creation_flags,
-                                environment_block, nullptr, &startup.StartupInfo, &process_info);
-  } else {
-    ok = ::CreateProcessW(nullptr, command_line.data(), nullptr, nullptr, TRUE, creation_flags, environment_block,
-                          nullptr, &startup.StartupInfo, &process_info);
-  }
+  BOOL ok = ::CreateProcessW(nullptr, command_line.data(), nullptr, nullptr, TRUE, creation_flags, environment_block,
+                             nullptr, &startup.StartupInfo, &process_info);
 
   // cleanup regardless of success
-  if (deny_write_token != nullptr) {
-    ::CloseHandle(deny_write_token);
-  }
   ::DeleteProcThreadAttributeList(startup.lpAttributeList);
   ::HeapFree(::GetProcessHeap(), 0, startup.lpAttributeList);
   ::CloseHandle(h_stdin);

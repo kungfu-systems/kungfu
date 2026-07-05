@@ -64,9 +64,8 @@ if(WIN32)
   # userenv: CreateAppContainerProfile / DeriveAppContainerSidFromAppContainerName
   # + GetAppContainerFolderPath (TEMP redirect to the container's writable folder).
   # advapi32: FreeSid, SetEntriesInAcl, GetNamedSecurityInfo/SetNamedSecurityInfo
-  # (read-path ACLs), CreateRestrictedToken/OpenProcessToken/GetTokenInformation
-  # /CreateProcessAsUser (the denyWrite deny-only-user-SID launch), and
-  # ConvertSidToStringSid. ole32: CoTaskMemFree (frees GetAppContainerFolderPath's
+  # (read/write-path ACLs — the container SID governs AppContainer file access),
+  # and ConvertSidToStringSid. ole32: CoTaskMemFree (frees GetAppContainerFolderPath's
   # path). user32: window-station/desktop ACLs so a USER32-linked guest (node) can
   # initialize under the AppContainer.
   # DeriveCapabilitySidsFromName is resolved dynamically from KernelBase.dll in

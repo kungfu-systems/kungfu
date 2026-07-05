@@ -109,6 +109,9 @@ Napi::Value SpawnAppContainer(const Napi::CallbackInfo &info) {
   options.allow_broad_write = spec.Get("allowBroadWrite").ToBoolean().Value();
   options.allow_loopback = spec.Get("allowLoopback").ToBoolean().Value();
   options.read_paths = to_string_vector(spec.Get("readPaths"));
+  if (spec.Get("writeScratch").IsString()) {
+    options.write_scratch = spec.Get("writeScratch").As<Napi::String>().Utf8Value();
+  }
   options.env = to_string_vector(spec.Get("env"));
 
   try {

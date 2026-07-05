@@ -60,6 +60,13 @@ struct app_container_options {
   std::vector<std::string> capabilities;
   // permissive lets the guest write outside its AppContainer folder
   bool allow_broad_write = false;
+  // a user-space directory the guest's write probe targets, passed to the guest as
+  // KFX_WRITE_PROBE under every profile so the same facet writes the same path.
+  // AppContainer write access is governed by the container SID's ACE (a lowbox
+  // token does not honour the user's own ACEs), so permissive grants the container
+  // SID write here (+ ancestor traverse) and deny-write leaves it ungranted — the
+  // write then succeeds or is refused accordingly. Empty = no probe dir passed.
+  std::string write_scratch;
   // permissive adds the loopback network-isolation exemption so relay-local
   // sockets work (AppContainer blocks loopback by default)
   bool allow_loopback = false;
