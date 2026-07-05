@@ -14,6 +14,8 @@
 # CostSnapshot names are intentionally the same fact at two layers; do not let
 # them drift.
 
+from __future__ import annotations
+
 from kungfu.rewind import MSG_COST_SNAPSHOT, events
 from kungfu.rewind.cost.model import AttributionLevel, CostSnapshot
 from kungfu.rewind.fb.Attribution import Attribution
@@ -38,7 +40,9 @@ def attribution_to_fb(level: AttributionLevel) -> int:
         raise ValueError(f"no wire Attribution for {level!r}") from exc
 
 
-def snapshot_to_event(snapshot: CostSnapshot, layer: int = CaptureLayer.Adapter):
+def snapshot_to_event(
+    snapshot: CostSnapshot, layer: int = CaptureLayer.Adapter
+) -> tuple[int, bytes]:
     """Serialize a parse-layer CostSnapshot into a journal event.
 
     Returns (msg_type, event_bytes) ready for the supervisor's

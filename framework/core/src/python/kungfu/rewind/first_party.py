@@ -13,6 +13,8 @@
 # manifest trusts none — adapters are refused until the manifest ships (tracked
 # with built-in-extension shipping).
 
+from __future__ import annotations
+
 import json
 import os
 import sys
@@ -21,7 +23,7 @@ ENV_FIRST_PARTY_MANIFEST = "KF_FIRST_PARTY_MANIFEST"
 BAKED_MANIFEST_NAME = "first-party.json"
 
 
-def _read_keys(path):
+def _read_keys(path: str | None) -> set[str] | None:
     if not path or not os.path.isfile(path):
         return None
     try:
@@ -33,7 +35,7 @@ def _read_keys(path):
     return set(keys) if isinstance(keys, dict) else None
 
 
-def _baked_manifest_path():
+def _baked_manifest_path() -> str:
     # A frozen build ships the manifest next to the executable (in dist/kungfu,
     # which the app also ships to Resources/kungfu); a source interpreter has no
     # such neighbour, so this is None-ish there and the source scan takes over.
@@ -42,7 +44,7 @@ def _baked_manifest_path():
     )
 
 
-def _source_extensions_root():
+def _source_extensions_root() -> str | None:
     # In a source checkout the product's own extensions/ tree is the first-party
     # root; None in a frozen build, where the baked manifest is authoritative.
     root = os.path.abspath(
@@ -51,7 +53,7 @@ def _source_extensions_root():
     return root if os.path.isdir(root) else None
 
 
-def _package_key(pkg):
+def _package_key(pkg: str) -> str | None:
     try:
         with open(os.path.join(pkg, "package.json")) as f:
             return (json.load(f).get("kungfuConfig") or {}).get("key")
@@ -59,9 +61,9 @@ def _package_key(pkg):
         return None
 
 
-def _scan_keys(root):
+def _scan_keys(root: str | None) -> set[str]:
     # two levels deep, mirroring the loader / adapter discovery scan
-    keys = set()
+    keys: set[str] = set()
     if not root or not os.path.isdir(root):
         return keys
     for name in sorted(os.listdir(root)):
@@ -76,7 +78,7 @@ def _scan_keys(root):
     return keys
 
 
-def first_party_keys():
+def first_party_keys() -> set[str]:
     """The set of extension keys the supervisor may trust to inject an adapter.
     Resolved in order: the explicit KF_FIRST_PARTY_MANIFEST, then the manifest a
     frozen build bakes next to the executable, then a source-checkout scan of the
@@ -90,7 +92,7 @@ def first_party_keys():
     return _scan_keys(_source_extensions_root())
 
 
-def is_first_party(key):
+def is_first_party(key: str | None) -> bool:
     """Whether an extension key is in the frozen first-party set (ADR-0013).
     Trust follows from the source, not from where the package is installed."""
     return key is not None and key in first_party_keys()
