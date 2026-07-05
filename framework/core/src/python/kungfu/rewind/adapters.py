@@ -16,8 +16,11 @@
 #       "entry": { "python": "dist/adapter/python/index.py" }
 #   } } }
 
+from __future__ import annotations
+
 import json
 import os
+from collections.abc import Iterator
 
 from kungfu.rewind import first_party
 
@@ -28,7 +31,7 @@ ENV_PLUGIN_ADAPTERS = "KUNGFU_REWIND_ADAPTERS"
 ENV_NODE_ADAPTERS = "KUNGFU_REWIND_NODE_ADAPTERS"
 
 
-def _extension_roots(runtime_dir):
+def _extension_roots(runtime_dir: str | None) -> list[str]:
     # priority order mirrors framework/gui kfx-loader: KF_EXTENSION_PATH entries
     # (dev override) then <home>/extensions next to the runtime dir.
     roots = []
@@ -40,7 +43,7 @@ def _extension_roots(runtime_dir):
     return roots
 
 
-def _scan_packages(root):
+def _scan_packages(root: str) -> Iterator[str]:
     # two levels deep, so suite members nested under a suite directory are found
     if not os.path.isdir(root):
         return
@@ -55,7 +58,9 @@ def _scan_packages(root):
                     yield nested
 
 
-def discover_adapters(runtime_dir, runtime):
+def discover_adapters(
+    runtime_dir: str | None, runtime: str
+) -> tuple[list[str], list[str], list[dict[str, str | None]]]:
     """Return (entry_files, package_dirs, refused) for kfx packages declaring an
     adapter form for `runtime` ('python' or 'node'). First occurrence of a
     package path wins; missing entry files are skipped.
@@ -66,7 +71,10 @@ def discover_adapters(runtime_dir, runtime):
     `refused` as {"key", "package"} so the caller can report it — never injected.
     """
     trusted = first_party.first_party_keys()
-    entries, dirs, refused, seen = [], [], [], set()
+    entries: list[str] = []
+    dirs: list[str] = []
+    refused: list[dict[str, str | None]] = []
+    seen: set[str] = set()
     for root in _extension_roots(runtime_dir):
         for pkg in _scan_packages(root):
             try:

@@ -14,8 +14,12 @@ license = { text = "Apache-2.0" }
 authors = [{ name = "Kungfu", email = "info@kungfu.link" }]
 requires-python = ">=3.13,<3.14"
 dependencies = [
-    # Compiler
+    # Compiler / checkers
     "ruff~=0.15.0",
+    # static type checker — gradual baseline (see [tool.mypy]); run via
+    # `uv run --frozen mypy` in verify. Lenient by default so untyped modules do
+    # not fail; a module opts into real checking as it gains annotations.
+    "mypy~=1.13",
     # clang-format via PyPI wheel, same uv toolchain lane as ruff. Pinned exactly
     # (==) because a version bump changes C++ formatting output; an exact pin keeps
     # the result byte-identical across machines instead of the ambient system one.
@@ -105,6 +109,32 @@ ignore = ["E501", "F403", "F405"]
 
 [tool.ruff.lint.per-file-ignores]
 "**/__init__.py" = ["F401"]
+
+# Static type checking — gradual/baseline. Python is largely un-annotated today,
+# so mypy runs lenient: untyped defs are skipped (no big-bang wall of errors),
+# and a module gets real checking once its functions are annotated. Native
+# pykungfu and unstubbed third-party libs have no stubs, so missing imports are
+# ignored. Tighten per-module (via [[tool.mypy.overrides]]) as coverage grows.
+[tool.mypy]
+python_version = "3.13"
+ignore_missing_imports = true
+exclude = ['(^|/)(fb|generated)/', '_fb\.py$', '(^|/)\.deps/']
+
+# Baseline snapshot of pre-existing type errors so the gate is green from day one
+# (13 errors across these modules: native pykungfu used without stubs, and
+# partially-typed click-decorator/CLI return types). New code is still checked;
+# drop a module from this list as it is fixed or annotated. Typing follow-up.
+[[tool.mypy.overrides]]
+module = [
+    "kungfu.cli.commands",
+    "kungfu.cli.commands.engage",
+    "kungfu.cli.commands.journal",
+    "kungfu.rewind.managed_run",
+    "kungfu.yijinjing.practice.apprentice",
+    "kungfu.yijinjing.sinks.archive",
+    "kungfu.yijinjing.sinks.csv",
+]
+ignore_errors = true
 
 [tool.uv]
 # 钉 uv 自管 standalone CPython(而非系统/发行版 python)：跨机一致,且根治 nuitka 在

@@ -134,6 +134,33 @@ function main() {
         'bash scripts must be Node (.mjs) so the gate runs on Windows too',
     );
 
+  // ── Stage 0b: python type check (read-only) ───────────────────────
+  // Gradual mypy baseline: annotated modules are type-checked, the un-annotated
+  // bulk is skipped, and a small snapshot of pre-existing errors is ignored (see
+  // [tool.mypy] in framework/core/pyproject.toml). Keeps Python honest as
+  // annotations land, with no big-bang. Read-only; runs in quick and full.
+  console.log('\n[verify] stage 0b: python type check (mypy)');
+  const coreDir = path.join(ROOT, 'framework', 'core');
+  const mypy = spawnSync(
+    'uv',
+    ['run', '--frozen', 'mypy', 'src/python/kungfu'],
+    {
+      cwd: coreDir,
+      encoding: 'utf8',
+      shell: isWin,
+    },
+  );
+  if (mypy.status === 0) pass('python type check', 'mypy baseline clean');
+  else
+    fail(
+      'python type check',
+      `${mypy.stdout || ''}${mypy.stderr || ''}`
+        .trim()
+        .split('\n')
+        .slice(-3)
+        .join(' | ') || `mypy exited ${mypy.status}`,
+    );
+
   // ── Stage 0: toolchain preflight (read-only) ──────────────────────
   console.log('\n[verify] stage 0: toolchain preflight');
   const uv = spawnSync('uv', ['--version'], { encoding: 'utf8', shell: isWin });
@@ -215,7 +242,7 @@ function main() {
     pass('dist/kungfu directory exists', path.relative(ROOT, distKfc));
     kungfuBin = path.join(distKfc, isWin ? 'kungfu.exe' : 'kungfu');
     if (fs.existsSync(kungfuBin) && fs.statSync(kungfuBin).isFile()) {
-      let detail = path.relative(ROOT, kungfuBin);
+      const detail = path.relative(ROOT, kungfuBin);
       if (!isWin) {
         const mode = fs.statSync(kungfuBin).mode;
         if (!(mode & 0o111)) {
