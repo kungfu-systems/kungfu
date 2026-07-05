@@ -22,6 +22,7 @@
   "dependencies": {
     "@kungfu-tech/kfx-view-settings": "workspace:*",
     "@kungfu-tech/kfx-view-kfx-manager": "workspace:*",
+    "@kungfu-tech/kfx-view-skill-manager": "workspace:*",
     "@kungfu-tech/kfx-view-status": "workspace:*"
   },
   "kungfuConfig": {
@@ -32,6 +33,7 @@
       "members": [
         "settings",
         "kfx-manager",
+        "skill-manager",
         "system-status"
       ]
     }

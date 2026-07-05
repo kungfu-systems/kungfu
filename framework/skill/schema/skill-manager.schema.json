@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kungfu.skill-manager/v1",
+  "title": "Kungfu Skill Manager View",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "registry", "skills", "summary"],
+  "properties": {
+    "schema": { "const": "kungfu.skill-manager/v1" },
+    "registry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "root"],
+      "properties": {
+        "type": { "const": "kfx" },
+        "root": { "type": "string" }
+      }
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "title",
+          "description",
+          "kind",
+          "triggers",
+          "capabilities",
+          "sourceHash",
+          "sourcePath",
+          "catalogEntry",
+          "dependencies",
+          "dependencySummary",
+          "hasUnresolvedRequiredDependencies"
+        ],
+        "properties": {
+          "key": { "type": "string", "minLength": 1 },
+          "title": { "type": "string", "minLength": 1 },
+          "description": { "type": "string" },
+          "kind": { "enum": ["instruction-only", "kfx-backed"] },
+          "triggers": { "type": "array", "items": { "type": "string" } },
+          "capabilities": { "type": "array", "items": { "type": "string" } },
+          "sourceHash": { "type": "string", "pattern": "^sha256:" },
+          "sourcePath": { "type": "string" },
+          "catalogEntry": { "$ref": "kungfu.skill-catalog/v1#/properties/skills/items" },
+          "dependencies": { "$ref": "kungfu.skill-dependencies/v1" },
+          "dependencySummary": {
+            "$ref": "kungfu.skill-dependencies/v1#/properties/summary"
+          },
+          "hasUnresolvedRequiredDependencies": { "type": "boolean" }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "skills",
+        "dependencies",
+        "resolved",
+        "unresolved",
+        "unresolvedRequired",
+        "kfxKeys",
+        "unresolvedKfxKeys"
+      ],
+      "properties": {
+        "skills": { "type": "integer", "minimum": 0 },
+        "dependencies": { "type": "integer", "minimum": 0 },
+        "resolved": { "type": "integer", "minimum": 0 },
+        "unresolved": { "type": "integer", "minimum": 0 },
+        "unresolvedRequired": { "type": "integer", "minimum": 0 },
+        "kfxKeys": { "type": "array", "items": { "type": "string" } },
+        "unresolvedKfxKeys": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -105,6 +105,7 @@ export type Runtime = {
   runtimeDir: string;
   kungfuVersion: string;
   buildInfo: Record<string, unknown> | null;
+  skillManager: Record<string, unknown> | null;
   exports: string[];
   longfistTypes: { name: string; fields: string[] }[];
   binding: KfNativeBinding | null;
@@ -138,6 +139,7 @@ export function bootRuntime(): Runtime {
     runtimeDir,
     kungfuVersion: env.KUNGFU_VERSION || '',
     buildInfo: null,
+    skillManager: null,
     exports: [],
     longfistTypes: [],
     binding: null,
@@ -165,6 +167,16 @@ export function bootRuntime(): Runtime {
       );
     } catch {
       buildInfo = null;
+    }
+    let skillManager: Record<string, unknown> | null = null;
+    try {
+      const fs = window.require('node:fs');
+      const managerPath = env.KF_SKILL_MANAGER_FILE;
+      if (managerPath) {
+        skillManager = JSON.parse(fs.readFileSync(managerPath, 'utf8'));
+      }
+    } catch {
+      skillManager = null;
     }
     // Joining initializes a fresh runtime home's layout and connects to a
     // live master when one is running; the domain handle needs the layout.
@@ -208,6 +220,7 @@ export function bootRuntime(): Runtime {
       ok: true,
       message: `in-process binding loaded · ${Object.keys(binding).length} exports`,
       buildInfo,
+      skillManager,
       exports: Object.keys(binding),
       longfistTypes: readLongfistTypes(binding),
       binding,

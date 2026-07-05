@@ -1,7 +1,10 @@
 import {
   type SkillContextEnvelope,
+  type SkillManagerView,
   buildSkillContext,
+  buildSkillManagerView,
   writeSkillContextFile,
+  writeSkillManagerViewFile,
 } from '@kungfu-tech/skill';
 
 export function buildGuiSkillContext(options: {
@@ -30,6 +33,24 @@ export function writeGuiSkillContextFile(options: {
     manager: 'node',
     profile: options.profile,
     agent: options.agent,
+    env: options.env,
+  });
+}
+
+export function buildGuiSkillManagerView(options: {
+  home: string;
+  env?: Record<string, string | undefined>;
+}): SkillManagerView {
+  return buildSkillManagerView(options.home, {
+    env: options.env,
+  });
+}
+
+export function writeGuiSkillManagerViewFile(options: {
+  home: string;
+  env?: Record<string, string | undefined>;
+}): string {
+  return writeSkillManagerViewFile(options.home, {
     env: options.env,
   });
 }

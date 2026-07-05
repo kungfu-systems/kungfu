@@ -113,6 +113,39 @@ export interface SkillDependencyBinding {
   };
 }
 
+export interface SkillManagerEntry {
+  key: string;
+  title: string;
+  description: string;
+  kind: SkillKind;
+  triggers: string[];
+  capabilities: string[];
+  sourceHash: string;
+  sourcePath: string;
+  catalogEntry: SkillCatalogEntry;
+  dependencies: SkillDependencyBinding;
+  dependencySummary: SkillDependencyBinding['summary'];
+  hasUnresolvedRequiredDependencies: boolean;
+}
+
+export interface SkillManagerView {
+  schema: 'kungfu.skill-manager/v1';
+  registry: {
+    type: 'kfx';
+    root: string;
+  };
+  skills: SkillManagerEntry[];
+  summary: {
+    skills: number;
+    dependencies: number;
+    resolved: number;
+    unresolved: number;
+    unresolvedRequired: number;
+    kfxKeys: string[];
+    unresolvedKfxKeys: string[];
+  };
+}
+
 type Frontmatter = Record<string, unknown>;
 
 export interface SkillContextOptions {
@@ -125,6 +158,15 @@ export interface SkillContextOptions {
 }
 
 export interface SkillContextFileOptions extends SkillContextOptions {
+  out?: string;
+}
+
+export interface SkillManagerViewOptions {
+  extraPaths?: string[];
+  env?: Record<string, string | undefined>;
+}
+
+export interface SkillManagerViewFileOptions extends SkillManagerViewOptions {
   out?: string;
 }
 
@@ -331,6 +373,72 @@ export function readSkillDependencyBinding(
   skillKey: string,
 ): SkillDependencyBinding {
   return JSON.parse(readFileSync(skillBindingPath(home, skillKey), 'utf8'));
+}
+
+export function buildSkillManagerView(
+  home: string,
+  options: SkillManagerViewOptions = {},
+): SkillManagerView {
+  const skills = discoverSkills(
+    home,
+    options.extraPaths ?? [],
+    options.env ?? process.env,
+  ).map((skill) => {
+    const dependencies = buildSkillDependencyBinding(home, skill);
+    return {
+      key: skill.key,
+      title: skill.title,
+      description: skill.description,
+      kind: skill.kind,
+      triggers: skill.triggers,
+      capabilities: skill.capabilities,
+      sourceHash: skill.source.hash,
+      sourcePath: skill.source.path,
+      catalogEntry: toCatalogEntry(skill),
+      dependencySummary: dependencies.summary,
+      dependencies,
+      hasUnresolvedRequiredDependencies: dependencies.dependencies.some(
+        (row) => row.required && row.status === 'unresolved',
+      ),
+    };
+  });
+  const allRows = skills.flatMap((skill) => skill.dependencies.dependencies);
+  return {
+    schema: 'kungfu.skill-manager/v1',
+    registry: {
+      type: 'kfx',
+      root: kfxRegistryRoot(home),
+    },
+    skills,
+    summary: {
+      skills: skills.length,
+      dependencies: allRows.length,
+      resolved: allRows.filter((row) => row.status === 'resolved').length,
+      unresolved: allRows.filter((row) => row.status === 'unresolved').length,
+      unresolvedRequired: allRows.filter(
+        (row) => row.required && row.status === 'unresolved',
+      ).length,
+      kfxKeys: uniqueSorted(allRows.map((row) => row.kfxKey)),
+      unresolvedKfxKeys: uniqueSorted(
+        allRows
+          .filter((row) => row.status === 'unresolved')
+          .map((row) => row.kfxKey),
+      ),
+    },
+  };
+}
+
+export function writeSkillManagerViewFile(
+  home: string,
+  options: SkillManagerViewFileOptions = {},
+): string {
+  const view = buildSkillManagerView(home, options);
+  const out = options.out
+    ? resolve(options.out)
+    : join(home, 'skill-manager', 'default.json');
+  mkdirSync(dirname(out), { recursive: true });
+  writeFileSync(out, `${JSON.stringify(view, null, 2)}\n`, 'utf8');
+  return out;
 }
 
 export function hasAdvertisedSkills(envelope: SkillContextEnvelope): boolean {
@@ -593,4 +701,8 @@ function booleanValue(value: unknown, fallback: boolean): boolean {
     if (['false', 'no', '0'].includes(normalized)) return false;
   }
   return fallback;
+}
+
+function uniqueSorted(values: string[]): string[] {
+  return [...new Set(values)].sort();
 }

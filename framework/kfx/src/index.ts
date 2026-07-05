@@ -164,6 +164,7 @@ export type ShellRuntimeInfo = {
   runtimeDir: string;
   kungfuVersion: string;
   buildInfo: Record<string, unknown> | null;
+  skillManager: Record<string, unknown> | null;
   exports: string[];
   longfistTypes: { name: string; fields: string[] }[];
 };

@@ -33,7 +33,10 @@ import {
 } from './installCli';
 import { type Rect, SandboxManager } from './sandbox-manager';
 import { bindSessionWindows } from './session-windows-host';
-import { writeGuiSkillContextFile } from './skill-context';
+import {
+  writeGuiSkillContextFile,
+  writeGuiSkillManagerViewFile,
+} from './skill-context';
 import {
   bindElectronTerminalHost,
   createMainTerminalHost,
@@ -116,6 +119,17 @@ if (!process.env.KF_SKILL_CONTEXT_FILE && process.env.KF_RUNTIME_DIR) {
     });
   } catch (e) {
     console.log(`KF_SKILL_CONTEXT_FAIL ${(e as Error).message}`);
+  }
+}
+
+if (!process.env.KF_SKILL_MANAGER_FILE && process.env.KF_RUNTIME_DIR) {
+  try {
+    process.env.KF_SKILL_MANAGER_FILE = writeGuiSkillManagerViewFile({
+      home: process.env.KF_RUNTIME_DIR,
+      env: process.env,
+    });
+  } catch (e) {
+    console.log(`KF_SKILL_MANAGER_FAIL ${(e as Error).message}`);
   }
 }
 

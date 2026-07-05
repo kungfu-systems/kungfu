@@ -229,6 +229,8 @@ framework/skill/
     skill.schema.json
     skill-catalog.schema.json
     skill-context.schema.json
+    skill-dependencies.schema.json
+    skill-manager.schema.json
   fixtures/
     minimal/SKILL.md
     with-frontmatter/SKILL.md
@@ -245,7 +247,6 @@ framework/core/src/python/kungfu/skill/
 
 framework/core/src/python/kungfu/cli/commands/skill.py
 
-framework/gui/src/main/skill-manager.ts
 framework/gui/src/main/skill-context.ts
 
 extensions/system/skill-manager/
@@ -281,8 +282,12 @@ duplicated under each skill. Dependency rows are `resolved` when a matching
 package already exists in `<home>/extensions/<kfx-key>` and `unresolved`
 otherwise. `catalog` is the compact agent-visible catalog before full skill
 loading. `context` wraps that catalog in the same envelope shape used by Python
-and Node manage modes. `deps` prints the binding/resolution state. `verify`
-runs a real provider through `managed-run`, asks it to echo the advertised
+and Node manage modes. `deps` prints the binding/resolution state. The Node
+manager also builds a `kungfu.skill-manager/v1` document for GUI use, joining
+installed skills with the same kfx dependency binding semantics as the Python
+CLI and summarizing resolved, unresolved, and unresolved-required dependencies
+before an agent process starts. `verify` runs a real provider through
+`managed-run`, asks it to echo the advertised
 schema, first skill key, and `advertisedSkillsHash`, then checks the Rewind
 `response.json` evidence. Use `--manager node` to build the envelope through
 the Node manager path used by the Electron GUI. `read` is the operation the
@@ -304,14 +309,21 @@ which creates only:
 
 ## GUI surface
 
-The GUI should expose a first-party system view, `skill-manager`, rather than
-folding every skill concern into the existing kfx manager. The view should show:
+The GUI exposes a first-party system view, `skill-manager`, rather than folding
+every skill concern into the existing kfx manager. Electron main writes the Node
+manager document to `KF_SKILL_MANAGER_FILE`, and the renderer exposes it through
+`shell.info.skillManager`. The first view slice shows:
 
 - installed skills and their generated catalog entries;
-- full `SKILL.md` for inspection;
 - declared kfx dependencies and whether each dependency is installed;
-- trust/provenance state and source hashes;
+- resolved/unresolved dependency counts, including unresolved required kfx;
+- shared kfx registry paths and package coordinates for resolved dependencies;
 - which capabilities a skill requests;
+
+Later slices should add:
+
+- full `SKILL.md` for inspection;
+- trust/provenance state and source hashes beyond the catalog hash;
 - audit events: advertised, loaded, dependency invoked, and install/update.
 
 The kfx manager remains the extension/package manager. The skill manager is the

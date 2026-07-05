@@ -150,6 +150,9 @@ importers:
       '@kungfu-tech/kfx-view-settings':
         specifier: workspace:*
         version: link:settings
+      '@kungfu-tech/kfx-view-skill-manager':
+        specifier: workspace:*
+        version: link:skill-manager
       '@kungfu-tech/kfx-view-status':
         specifier: workspace:*
         version: link:status
@@ -181,6 +184,28 @@ importers:
       '@kungfu-tech/kfx':
         specifier: workspace:*
         version: link:../../../framework/kfx
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+    devDependencies:
+      '@kungfu-tech/sdk':
+        specifier: workspace:*
+        version: link:../../../developer/sdk
+      '@types/react':
+        specifier: ^18.3.3
+        version: 18.3.31
+
+  extensions/system/skill-manager:
+    dependencies:
+      '@kungfu-tech/api':
+        specifier: workspace:*
+        version: link:../../../framework/api
+      '@kungfu-tech/kfx':
+        specifier: workspace:*
+        version: link:../../../framework/kfx
+      '@kungfu-tech/skill':
+        specifier: workspace:*
+        version: link:../../../framework/skill
       react:
         specifier: ^18.3.1
         version: 18.3.1

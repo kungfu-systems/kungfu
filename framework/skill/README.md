@@ -27,6 +27,19 @@ node --experimental-transform-types framework/skill/scripts/context.mjs \
   --out <context.json>
 ```
 
+Skill Manager and GUI views use the same Node-side dependency binding semantics:
+
+```sh
+node --experimental-transform-types framework/skill/scripts/manager.mjs \
+  --home <kungfu-home> \
+  --path <skill-or-root> \
+  --out <skill-manager.json>
+```
+
+The manager view reports installed skills, catalog entries, declared kfx
+dependencies, shared registry paths, and resolved/unresolved counts before an
+agent is launched.
+
 `fixtures/golden/` pins the catalog and context envelopes used to keep the
 Python and TypeScript implementations schema-equivalent.
 

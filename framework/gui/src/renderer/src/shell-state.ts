@@ -22,6 +22,7 @@ export const PROFILES: ProfileManifest[] = [
     title: 'Default — work control plane',
     kfx: [
       'work-dashboard',
+      'skill-manager',
       'rewind',
       'terminal',
       'journal-manager',

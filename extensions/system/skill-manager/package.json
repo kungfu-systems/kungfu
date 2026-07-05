@@ -1,0 +1,50 @@
+{
+  "name": "@kungfu-tech/kfx-view-skill-manager",
+  "author": {
+    "name": "Kungfu",
+    "email": "info@kungfu.link"
+  },
+  "version": "4.0.0-alpha.0",
+  "description": "Kungfu view extension: Skills",
+  "license": "Apache-2.0",
+  "main": "package.json",
+  "repository": {
+    "url": "https://github.com/kungfu-systems/kungfu.git"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "package.json",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "kungfu sdk kfx build",
+    "clean": "kungfu sdk kfx clean"
+  },
+  "dependencies": {
+    "@kungfu-tech/api": "workspace:*",
+    "@kungfu-tech/kfx": "workspace:*",
+    "@kungfu-tech/skill": "workspace:*"
+  },
+  "devDependencies": {
+    "@kungfu-tech/sdk": "workspace:*",
+    "@types/react": "^18.3.3"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1"
+  },
+  "kungfuConfig": {
+    "key": "skill-manager",
+    "name": "Skills",
+    "config": {
+      "view": {
+        "title": "Skills",
+        "capabilities": [],
+        "system": true
+      }
+    }
+  }
+}
