@@ -41,6 +41,7 @@ and the map routes a question to whichever doc answers it.
 | If kungfu itself misbehaves, how do I localize it? | [`debugging.md`](debugging.md) | verify | stable |
 | How do I record an agent run and find why it failed (Rewind)? | [`rewind.md`](rewind.md) | use | stable · pre-release install path |
 | How do I write an extension (`kfx`)? | [`extensions.md`](extensions.md) | use | stable · view kfx; runtime facets mid-migration |
+| How is a kfx loaded, trusted, and confined? (the topology) | [`kfx-topology.md`](kfx-topology.md) (design: ADR-0017) | use | draft · load plan + `service` facet proposed |
 | How do I write an agent-facing Kungfu Skill? | [`skills.md`](skills.md) (first CLI slice; decided by ADR-0015) | use | draft |
 | What license, trademark, service-use, and provider-compliance boundaries apply? | [`../LICENSE-POLICY.md`](../LICENSE-POLICY.md) + [`../TRADEMARK.md`](../TRADEMARK.md) + [`../ACCEPTABLE_USE.md`](../ACCEPTABLE_USE.md) + [`../PROVIDER_COMPLIANCE.md`](../PROVIDER_COMPLIANCE.md) | use | stable |
 

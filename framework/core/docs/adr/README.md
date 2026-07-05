@@ -32,6 +32,7 @@ A record's **Status** says where it stands:
 | [0014](ADR-0014-extension-execution-contract-uniform-capability-surface.md) | proposed | the extension execution contract — one uniform capability surface across trust tiers, restriction as transparent interception, a binding-less guest host |
 | [0015](ADR-0015-kungfu-skill-agent-context-layer.md) | accepted | Kungfu Skill as the agent context layer above kfx |
 | [0016](ADR-0016-managed-session-host-placement.md) | accepted | managed session host placement — move the durable session host to main so multiple OS windows share it |
+| [0017](ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md) | proposed | dual-host kfx loading — a host-agnostic load plan shared by GUI and CLI, and the background `service` facet as the first OS-sandbox caller |
 
 ## Reading by theme
 
@@ -55,7 +56,10 @@ A record's **Status** says where it stands:
   [0014](ADR-0014-extension-execution-contract-uniform-capability-surface.md)
   (how an extension addresses that boundary: one uniform capability surface
   across tiers, restriction as transparent interception, so one source runs in
-  either tier and a later confinement does not force a rewrite).
+  either tier and a later confinement does not force a rewrite), and
+  [0017](ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md)
+  (who assembles it: one host-agnostic load plan shared by the GUI and CLI, and
+  a background `service` facet as the first production caller of the OS sandbox).
 - **Agent capability layer** — [0015](ADR-0015-kungfu-skill-agent-context-layer.md)
   (Kungfu Skill as the agent-facing layer above kfx: `SKILL.md` as the minimum
   valid source, compact catalog injection, Node/Python manage modes, and kfx

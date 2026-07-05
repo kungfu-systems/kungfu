@@ -3,6 +3,8 @@
 How to write, build and install a kungfu extension. This is the
 developer-facing page (*use* plane); the internal shell/kfx contract note is
 [`../framework/gui/docs/shell-and-kfx.md`](../framework/gui/docs/shell-and-kfx.md).
+For the topology — which host loads a kfx, how it decides trust, and which
+sandbox an untrusted kfx lands in — see [`kfx-topology.md`](kfx-topology.md).
 Per claim, this page says where to verify it; the fixtures named at the
 bottom are the machine-checked proof.
 
