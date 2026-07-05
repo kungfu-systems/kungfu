@@ -16,7 +16,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const SKIP_DIRS = new Set(['node_modules', '.git', 'build', 'dist', 'out']);
+const SKIP_DIRS = new Set([
+  'node_modules',
+  '.git',
+  '.venv',
+  'build',
+  'dist',
+  'out',
+]);
 
 /** Repo-root path via git, or cwd if that fails. */
 export function repoRoot(cwd = process.cwd()) {

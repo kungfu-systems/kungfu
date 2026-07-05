@@ -321,6 +321,7 @@ function App() {
       runtimeDir: runtime.runtimeDir,
       kungfuVersion: runtime.kungfuVersion,
       buildInfo: runtime.buildInfo,
+      skillManager: runtime.skillManager,
       exports: runtime.exports,
       longfistTypes: runtime.longfistTypes,
     },

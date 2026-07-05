@@ -3,12 +3,16 @@
 import { createHash } from 'node:crypto';
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   readFileSync,
   readdirSync,
+  readlinkSync,
+  realpathSync,
   statSync,
   writeFileSync,
 } from 'node:fs';
+import { homedir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 
 export type SkillKind = 'instruction-only' | 'kfx-backed';
@@ -135,6 +139,7 @@ export interface SkillManagerView {
     root: string;
   };
   skills: SkillManagerEntry[];
+  agentInventory: AgentSkillInventory;
   summary: {
     skills: number;
     dependencies: number;
@@ -143,6 +148,97 @@ export interface SkillManagerView {
     unresolvedRequired: number;
     kfxKeys: string[];
     unresolvedKfxKeys: string[];
+  };
+}
+
+export type AgentSkillProvider = 'codex' | 'claude';
+
+export type AgentSkillRootType =
+  | 'user-home'
+  | 'identity-pool'
+  | 'system'
+  | 'repo-local'
+  | 'configured';
+
+export interface AgentSkillInventoryRootInput {
+  provider: AgentSkillProvider;
+  home: string;
+  rootType: AgentSkillRootType;
+  path: string;
+  priority?: number;
+}
+
+export interface AgentSkillInventorySymlink {
+  isSymlink: boolean;
+  target?: string;
+  realPath?: string;
+  broken?: boolean;
+}
+
+export interface AgentSkillInventoryRoot {
+  provider: AgentSkillProvider;
+  home: string;
+  rootType: AgentSkillRootType;
+  path: string;
+  priority: number;
+  exists: boolean;
+  status: 'ok' | 'missing' | 'not-directory' | 'unreadable';
+  symlink?: AgentSkillInventorySymlink;
+  error?: string;
+}
+
+export interface AgentSkillInventoryEntry {
+  key: string;
+  title: string;
+  description: string;
+  provider: AgentSkillProvider;
+  home: string;
+  rootPath: string;
+  rootType: AgentSkillRootType;
+  priority: number;
+  path: string;
+  hash?: string;
+  mtimeMs?: number;
+  parseStatus:
+    | 'ok'
+    | 'missing-skill-md'
+    | 'parse-error'
+    | 'unreadable'
+    | 'not-directory';
+  effective: boolean;
+  shadowedBy?: string;
+  duplicateIndex: number;
+  symlink?: AgentSkillInventorySymlink;
+  error?: string;
+}
+
+export interface AgentSkillInventoryTarget {
+  provider: AgentSkillProvider;
+  home: string;
+  label: string;
+  roots: AgentSkillInventoryRoot[];
+  skills: AgentSkillInventoryEntry[];
+  summary: {
+    roots: number;
+    availableRoots: number;
+    skills: number;
+    effective: number;
+    shadowed: number;
+    errors: number;
+  };
+}
+
+export interface AgentSkillInventory {
+  schema: 'kungfu.agent-skill-inventory/v1';
+  targets: AgentSkillInventoryTarget[];
+  summary: {
+    targets: number;
+    roots: number;
+    availableRoots: number;
+    skills: number;
+    effective: number;
+    shadowed: number;
+    errors: number;
   };
 }
 
@@ -164,6 +260,9 @@ export interface SkillContextFileOptions extends SkillContextOptions {
 export interface SkillManagerViewOptions {
   extraPaths?: string[];
   env?: Record<string, string | undefined>;
+  homeDir?: string;
+  cwd?: string;
+  agentSkillRoots?: AgentSkillInventoryRootInput[];
 }
 
 export interface SkillManagerViewFileOptions extends SkillManagerViewOptions {
@@ -410,6 +509,12 @@ export function buildSkillManagerView(
       root: kfxRegistryRoot(home),
     },
     skills,
+    agentInventory: buildAgentSkillInventory({
+      env: options.env ?? process.env,
+      homeDir: options.homeDir,
+      cwd: options.cwd,
+      extraRoots: options.agentSkillRoots,
+    }),
     summary: {
       skills: skills.length,
       dependencies: allRows.length,
@@ -441,6 +546,40 @@ export function writeSkillManagerViewFile(
   return out;
 }
 
+export function buildAgentSkillInventory(
+  options: {
+    env?: Record<string, string | undefined>;
+    homeDir?: string;
+    cwd?: string;
+    extraRoots?: AgentSkillInventoryRootInput[];
+  } = {},
+): AgentSkillInventory {
+  const env = options.env ?? process.env;
+  const userHome = options.homeDir ?? env.HOME ?? env.USERPROFILE ?? homedir();
+  const cwd = options.cwd ?? process.cwd();
+  const rootInputs = uniqueAgentRootInputs([
+    ...defaultAgentSkillRoots('codex', userHome, cwd, env),
+    ...defaultAgentSkillRoots('claude', userHome, cwd, env),
+    ...(options.extraRoots ?? []),
+  ]);
+  const targets = buildAgentInventoryTargets(rootInputs);
+  const rootRows = targets.flatMap((target) => target.roots);
+  const skillRows = targets.flatMap((target) => target.skills);
+  return {
+    schema: 'kungfu.agent-skill-inventory/v1',
+    targets,
+    summary: {
+      targets: targets.length,
+      roots: rootRows.length,
+      availableRoots: rootRows.filter((root) => root.status === 'ok').length,
+      skills: skillRows.length,
+      effective: skillRows.filter((skill) => skill.effective).length,
+      shadowed: skillRows.filter((skill) => !skill.effective).length,
+      errors: skillRows.filter((skill) => skill.parseStatus !== 'ok').length,
+    },
+  };
+}
+
 export function hasAdvertisedSkills(envelope: SkillContextEnvelope): boolean {
   return envelope.catalog.length > 0;
 }
@@ -462,6 +601,283 @@ export function injectSkillContext(
 ): string {
   if (!hasAdvertisedSkills(envelope)) return prompt;
   return `${formatSkillContextPrompt(envelope)}\n\nUser task:\n${prompt}`;
+}
+
+function defaultAgentSkillRoots(
+  provider: AgentSkillProvider,
+  userHome: string,
+  cwd: string,
+  env: Record<string, string | undefined>,
+): AgentSkillInventoryRootInput[] {
+  const roots: AgentSkillInventoryRootInput[] = [];
+  const upper = provider.toUpperCase();
+  const explicitHome = env[`${upper}_HOME`];
+  const defaultHome = join(userHome, `.${provider}`);
+  for (const home of uniqueSorted(
+    [explicitHome, defaultHome].filter(isString),
+  )) {
+    roots.push({
+      provider,
+      home,
+      rootType: 'user-home',
+      path: join(home, 'skills'),
+      priority: 20,
+    });
+    roots.push({
+      provider,
+      home,
+      rootType: 'system',
+      path: join(home, 'skills', '.system'),
+      priority: 10,
+    });
+  }
+  for (const root of splitEnvPath(env[`KF_${upper}_SKILL_PATH`])) {
+    roots.push({
+      provider,
+      home: dirname(root),
+      rootType: 'configured',
+      path: root,
+      priority: 5,
+    });
+  }
+  roots.push(...identityPoolSkillRoots(provider, userHome));
+  roots.push(...repoLocalSkillRoots(provider, cwd, userHome));
+  return roots;
+}
+
+function identityPoolSkillRoots(
+  provider: AgentSkillProvider,
+  userHome: string,
+): AgentSkillInventoryRootInput[] {
+  const root = join(userHome, '.local', 'share', 'atlas-agent', 'people');
+  const rows: AgentSkillInventoryRootInput[] = [];
+  for (const person of safeDirNames(root)) {
+    const providerRoot = join(root, person, 'identity-pool', provider);
+    for (const slot of safeDirNames(providerRoot)) {
+      const home = join(providerRoot, slot);
+      rows.push({
+        provider,
+        home,
+        rootType: 'identity-pool',
+        path: join(home, 'skills'),
+        priority: 30,
+      });
+      rows.push({
+        provider,
+        home,
+        rootType: 'system',
+        path: join(home, 'skills', '.system'),
+        priority: 10,
+      });
+    }
+  }
+  return rows;
+}
+
+function repoLocalSkillRoots(
+  provider: AgentSkillProvider,
+  cwd: string,
+  userHome: string,
+): AgentSkillInventoryRootInput[] {
+  const rows: AgentSkillInventoryRootInput[] = [];
+  for (const dir of ancestorDirs(cwd)) {
+    if (resolve(dir) === resolve(userHome)) break;
+    const agentsRoot = join(dir, '.agents', 'skills');
+    if (existsSync(agentsRoot)) {
+      rows.push({
+        provider,
+        home: dir,
+        rootType: 'repo-local',
+        path: agentsRoot,
+        priority: 40,
+      });
+    }
+    const providerRoot = join(dir, `.${provider}`, 'skills');
+    if (existsSync(providerRoot)) {
+      rows.push({
+        provider,
+        home: dir,
+        rootType: 'repo-local',
+        path: providerRoot,
+        priority: 40,
+      });
+    }
+  }
+  return rows;
+}
+
+function buildAgentInventoryTargets(
+  inputs: AgentSkillInventoryRootInput[],
+): AgentSkillInventoryTarget[] {
+  const byTarget = new Map<string, AgentSkillInventoryRootInput[]>();
+  for (const input of inputs) {
+    const key = `${input.provider}\0${resolve(input.home)}`;
+    byTarget.set(key, [...(byTarget.get(key) ?? []), input]);
+  }
+  return [...byTarget.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, targetInputs]) => buildAgentInventoryTarget(targetInputs));
+}
+
+function buildAgentInventoryTarget(
+  inputs: AgentSkillInventoryRootInput[],
+): AgentSkillInventoryTarget {
+  const provider = inputs[0]?.provider ?? 'codex';
+  const home = resolve(inputs[0]?.home ?? '');
+  const roots = inputs
+    .map(inspectAgentSkillRoot)
+    .sort((a, b) => a.priority - b.priority || a.path.localeCompare(b.path));
+  const discovered = roots.flatMap((root) =>
+    inspectAgentSkillRootEntries(root),
+  );
+  const skills = markEffectiveAgentSkills(discovered);
+  return {
+    provider,
+    home,
+    label: `${provider}:${home}`,
+    roots,
+    skills,
+    summary: {
+      roots: roots.length,
+      availableRoots: roots.filter((root) => root.status === 'ok').length,
+      skills: skills.length,
+      effective: skills.filter((skill) => skill.effective).length,
+      shadowed: skills.filter((skill) => !skill.effective).length,
+      errors: skills.filter((skill) => skill.parseStatus !== 'ok').length,
+    },
+  };
+}
+
+function inspectAgentSkillRoot(
+  input: AgentSkillInventoryRootInput,
+): AgentSkillInventoryRoot {
+  const path = resolve(input.path);
+  const root: AgentSkillInventoryRoot = {
+    provider: input.provider,
+    home: resolve(input.home),
+    rootType: input.rootType,
+    path,
+    priority: input.priority ?? 50,
+    exists: false,
+    status: 'missing',
+  };
+  try {
+    const meta = inspectSymlink(path);
+    if (meta) root.symlink = meta;
+    if (!existsSync(path)) return root;
+    root.exists = true;
+    if (!statSync(path).isDirectory()) {
+      root.status = 'not-directory';
+      return root;
+    }
+    root.status = 'ok';
+    return root;
+  } catch (e) {
+    root.status = 'unreadable';
+    root.error = (e as Error).message;
+    return root;
+  }
+}
+
+function inspectAgentSkillRootEntries(
+  root: AgentSkillInventoryRoot,
+): AgentSkillInventoryEntry[] {
+  if (root.status !== 'ok') return [];
+  return agentSkillCandidateDirs(root.path).map((skillDir) =>
+    inspectAgentSkillDir(root, skillDir),
+  );
+}
+
+function inspectAgentSkillDir(
+  root: AgentSkillInventoryRoot,
+  skillDir: string,
+): AgentSkillInventoryEntry {
+  const path = resolve(skillDir);
+  const base: AgentSkillInventoryEntry = {
+    key: normalizeKey(basename(path)),
+    title: basename(path),
+    description: '',
+    provider: root.provider,
+    home: root.home,
+    rootPath: root.path,
+    rootType: root.rootType,
+    priority: root.priority,
+    path,
+    parseStatus: 'ok',
+    effective: false,
+    duplicateIndex: 0,
+  };
+  try {
+    const symlink = inspectSymlink(path);
+    if (symlink) base.symlink = symlink;
+    if (!existsSync(path)) {
+      return {
+        ...base,
+        parseStatus: 'unreadable',
+        error: 'path does not exist',
+      };
+    }
+    if (!statSync(path).isDirectory()) {
+      return { ...base, parseStatus: 'not-directory' };
+    }
+    const skillPath = join(path, 'SKILL.md');
+    if (!existsSync(skillPath)) {
+      return { ...base, parseStatus: 'missing-skill-md' };
+    }
+    const markdown = readFileSync(skillPath, 'utf8');
+    const { frontmatter, body } = splitFrontmatter(markdown);
+    const title =
+      stringValue(frontmatter.title) || firstHeading(body) || basename(path);
+    const description =
+      stringValue(frontmatter.description) || firstParagraph(body) || '';
+    const key = stringValue(frontmatter.key) || normalizeKey(basename(path));
+    const stat = statSync(skillPath);
+    return {
+      ...base,
+      key,
+      title,
+      description,
+      hash: `sha256:${createHash('sha256').update(markdown).digest('hex')}`,
+      mtimeMs: stat.mtimeMs,
+      path: skillPath,
+      parseStatus: 'ok',
+    };
+  } catch (e) {
+    return {
+      ...base,
+      parseStatus: 'parse-error',
+      error: (e as Error).message,
+    };
+  }
+}
+
+function markEffectiveAgentSkills(
+  rows: AgentSkillInventoryEntry[],
+): AgentSkillInventoryEntry[] {
+  const counts = new Map<string, number>();
+  const effectiveByKey = new Map<string, AgentSkillInventoryEntry>();
+  return rows
+    .sort(
+      (a, b) =>
+        a.priority - b.priority ||
+        a.rootPath.localeCompare(b.rootPath) ||
+        a.path.localeCompare(b.path),
+    )
+    .map((row) => {
+      const duplicateIndex = counts.get(row.key) ?? 0;
+      counts.set(row.key, duplicateIndex + 1);
+      const effective =
+        row.parseStatus === 'ok' && !effectiveByKey.has(row.key);
+      const shadowedBy = effectiveByKey.get(row.key)?.path;
+      const next: AgentSkillInventoryEntry = {
+        ...row,
+        duplicateIndex,
+        effective,
+      };
+      if (!effective && shadowedBy) next.shadowedBy = shadowedBy;
+      if (effective) effectiveByKey.set(row.key, next);
+      return next;
+    });
 }
 
 export function stableStringify(value: unknown): string {
@@ -499,6 +915,102 @@ function candidateSkillDirs(root: string): string[] {
         return false;
       }
     });
+}
+
+function agentSkillCandidateDirs(root: string): string[] {
+  if (!root || !existsSync(root)) return [];
+  const absolute = resolve(root);
+  if (existsSync(join(absolute, 'SKILL.md'))) return [absolute];
+  try {
+    if (!statSync(absolute).isDirectory()) return [absolute];
+  } catch {
+    return [absolute];
+  }
+  try {
+    return readdirSync(absolute)
+      .sort()
+      .map((name) => join(absolute, name))
+      .filter((path) => {
+        if (basename(path).startsWith('.')) return false;
+        try {
+          const stat = statSync(path);
+          return stat.isDirectory() || lstatSync(path).isSymbolicLink();
+        } catch {
+          return true;
+        }
+      });
+  } catch {
+    return [absolute];
+  }
+}
+
+function uniqueAgentRootInputs(
+  roots: AgentSkillInventoryRootInput[],
+): AgentSkillInventoryRootInput[] {
+  const byPath = new Map<string, AgentSkillInventoryRootInput>();
+  for (const root of roots) {
+    const key = [root.provider, resolve(root.home), resolve(root.path)].join(
+      '\0',
+    );
+    const current = byPath.get(key);
+    if (!current || (root.priority ?? 50) < (current.priority ?? 50)) {
+      byPath.set(key, root);
+    }
+  }
+  return [...byPath.values()];
+}
+
+function splitEnvPath(value: string | undefined): string[] {
+  return value ? value.split(pathDelimiter()).filter(Boolean) : [];
+}
+
+function safeDirNames(path: string): string[] {
+  try {
+    return readdirSync(path)
+      .sort()
+      .filter((name) => {
+        try {
+          return statSync(join(path, name)).isDirectory();
+        } catch {
+          return false;
+        }
+      });
+  } catch {
+    return [];
+  }
+}
+
+function ancestorDirs(start: string): string[] {
+  const rows: string[] = [];
+  let current = resolve(start);
+  for (;;) {
+    rows.push(current);
+    const parent = dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  return rows;
+}
+
+function inspectSymlink(path: string): AgentSkillInventorySymlink | undefined {
+  let linkStat: ReturnType<typeof lstatSync>;
+  try {
+    linkStat = lstatSync(path);
+  } catch {
+    return undefined;
+  }
+  if (!linkStat.isSymbolicLink()) return undefined;
+  const row: AgentSkillInventorySymlink = {
+    isSymlink: true,
+    target: readlinkSync(path),
+  };
+  try {
+    row.realPath = realpathSync(path);
+    row.broken = false;
+  } catch {
+    row.broken = true;
+  }
+  return row;
 }
 
 function pathDelimiter(): string {
@@ -705,4 +1217,8 @@ function booleanValue(value: unknown, fallback: boolean): boolean {
 
 function uniqueSorted(values: string[]): string[] {
   return [...new Set(values)].sort();
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0;
 }

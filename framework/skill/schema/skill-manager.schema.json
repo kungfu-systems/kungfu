@@ -4,7 +4,7 @@
   "title": "Kungfu Skill Manager View",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "registry", "skills", "summary"],
+  "required": ["schema", "registry", "skills", "agentInventory", "summary"],
   "properties": {
     "schema": { "const": "kungfu.skill-manager/v1" },
     "registry": {
@@ -53,6 +53,129 @@
         }
       }
     },
+    "agentInventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "targets", "summary"],
+      "properties": {
+        "schema": { "const": "kungfu.agent-skill-inventory/v1" },
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "provider",
+              "home",
+              "label",
+              "roots",
+              "skills",
+              "summary"
+            ],
+            "properties": {
+              "provider": { "enum": ["codex", "claude"] },
+              "home": { "type": "string" },
+              "label": { "type": "string" },
+              "roots": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "provider",
+                    "home",
+                    "rootType",
+                    "path",
+                    "priority",
+                    "exists",
+                    "status"
+                  ],
+                  "properties": {
+                    "provider": { "enum": ["codex", "claude"] },
+                    "home": { "type": "string" },
+                    "rootType": {
+                      "enum": [
+                        "user-home",
+                        "identity-pool",
+                        "system",
+                        "repo-local",
+                        "configured"
+                      ]
+                    },
+                    "path": { "type": "string" },
+                    "priority": { "type": "integer" },
+                    "exists": { "type": "boolean" },
+                    "status": {
+                      "enum": ["ok", "missing", "not-directory", "unreadable"]
+                    },
+                    "symlink": { "$ref": "#/$defs/symlink" },
+                    "error": { "type": "string" }
+                  }
+                }
+              },
+              "skills": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "key",
+                    "title",
+                    "description",
+                    "provider",
+                    "home",
+                    "rootPath",
+                    "rootType",
+                    "priority",
+                    "path",
+                    "parseStatus",
+                    "effective",
+                    "duplicateIndex"
+                  ],
+                  "properties": {
+                    "key": { "type": "string" },
+                    "title": { "type": "string" },
+                    "description": { "type": "string" },
+                    "provider": { "enum": ["codex", "claude"] },
+                    "home": { "type": "string" },
+                    "rootPath": { "type": "string" },
+                    "rootType": {
+                      "enum": [
+                        "user-home",
+                        "identity-pool",
+                        "system",
+                        "repo-local",
+                        "configured"
+                      ]
+                    },
+                    "priority": { "type": "integer" },
+                    "path": { "type": "string" },
+                    "hash": { "type": "string", "pattern": "^sha256:" },
+                    "mtimeMs": { "type": "number" },
+                    "parseStatus": {
+                      "enum": [
+                        "ok",
+                        "missing-skill-md",
+                        "parse-error",
+                        "unreadable",
+                        "not-directory"
+                      ]
+                    },
+                    "effective": { "type": "boolean" },
+                    "shadowedBy": { "type": "string" },
+                    "duplicateIndex": { "type": "integer", "minimum": 0 },
+                    "symlink": { "$ref": "#/$defs/symlink" },
+                    "error": { "type": "string" }
+                  }
+                }
+              },
+              "summary": { "$ref": "#/$defs/agentInventorySummary" }
+            }
+          }
+        },
+        "summary": { "$ref": "#/$defs/agentInventoryGlobalSummary" }
+      }
+    },
     "summary": {
       "type": "object",
       "additionalProperties": false,
@@ -76,6 +199,62 @@
           "type": "array",
           "items": { "type": "string" }
         }
+      }
+    }
+  },
+  "$defs": {
+    "agentInventorySummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "roots",
+        "availableRoots",
+        "skills",
+        "effective",
+        "shadowed",
+        "errors"
+      ],
+      "properties": {
+        "targets": { "type": "integer", "minimum": 0 },
+        "roots": { "type": "integer", "minimum": 0 },
+        "availableRoots": { "type": "integer", "minimum": 0 },
+        "skills": { "type": "integer", "minimum": 0 },
+        "effective": { "type": "integer", "minimum": 0 },
+        "shadowed": { "type": "integer", "minimum": 0 },
+        "errors": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "agentInventoryGlobalSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "targets",
+        "roots",
+        "availableRoots",
+        "skills",
+        "effective",
+        "shadowed",
+        "errors"
+      ],
+      "properties": {
+        "targets": { "type": "integer", "minimum": 0 },
+        "roots": { "type": "integer", "minimum": 0 },
+        "availableRoots": { "type": "integer", "minimum": 0 },
+        "skills": { "type": "integer", "minimum": 0 },
+        "effective": { "type": "integer", "minimum": 0 },
+        "shadowed": { "type": "integer", "minimum": 0 },
+        "errors": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "symlink": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["isSymlink"],
+      "properties": {
+        "isSymlink": { "type": "boolean" },
+        "target": { "type": "string" },
+        "realPath": { "type": "string" },
+        "broken": { "type": "boolean" }
       }
     }
   }

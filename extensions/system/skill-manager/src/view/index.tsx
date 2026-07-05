@@ -9,6 +9,9 @@ import {
 import type { SkillManagerEntry, SkillManagerView } from '@kungfu-tech/skill';
 import React from 'react';
 
+type AgentSkillTarget = SkillManagerView['agentInventory']['targets'][0];
+type AgentSkillEntry = AgentSkillTarget['skills'][0];
+
 function asSkillManagerView(value: unknown): SkillManagerView | null {
   if (
     value &&
@@ -46,10 +49,61 @@ function packageLabel(
     : (row.reason ?? 'not resolved');
 }
 
+function statusColor(status: string) {
+  if (status === 'ok' || status === 'resolved') return '#4ec9b0';
+  if (status === 'missing') return '#858585';
+  return '#f48771';
+}
+
+function shortHome(path: string) {
+  const home = (
+    window as unknown as { process?: { env?: Record<string, string> } }
+  ).process?.env?.HOME;
+  return home && path.startsWith(home) ? `~${path.slice(home.length)}` : path;
+}
+
+function AgentSkillRow({
+  skill,
+  cell,
+}: {
+  skill: AgentSkillEntry;
+  cell: React.CSSProperties;
+}) {
+  return (
+    <tr>
+      <td style={{ ...cell, color: skill.effective ? '#9cdcfe' : '#858585' }}>
+        {skill.key}
+      </td>
+      <td style={cell}>{skill.rootType}</td>
+      <td style={{ ...cell, color: statusColor(skill.parseStatus) }}>
+        {skill.parseStatus}
+      </td>
+      <td style={cell}>{skill.effective ? 'effective' : 'shadowed'}</td>
+      <td style={{ ...cell, color: '#6a6a6a' }}>
+        {skill.hash ? skill.hash.slice(0, 19) : '-'}
+      </td>
+      <td style={{ ...cell, color: '#6a6a6a' }}>{shortHome(skill.path)}</td>
+    </tr>
+  );
+}
+
 function SkillManagerViewComponent({ shell }: KfxViewProps) {
   const view =
     asSkillManagerView(shell.info.skillManager) ??
     readSkillManagerViewFromEnv();
+  const agentInventory = view?.agentInventory ?? {
+    schema: 'kungfu.agent-skill-inventory/v1' as const,
+    targets: [],
+    summary: {
+      targets: 0,
+      roots: 0,
+      availableRoots: 0,
+      skills: 0,
+      effective: 0,
+      shadowed: 0,
+      errors: 0,
+    },
+  };
   const cell: React.CSSProperties = { padding: '2px 12px 2px 0' };
   if (!view) {
     return (
@@ -152,6 +206,63 @@ function SkillManagerViewComponent({ shell }: KfxViewProps) {
         <div style={{ ...mono, color: '#f48771', marginTop: 8 }}>
           unresolved: {view.summary.unresolvedKfxKeys.join(', ')}
         </div>
+      )}
+      <h2 style={{ ...headingStyle, marginTop: 18 }}>
+        Agent inventory · {agentInventory.summary.targets} targets ·{' '}
+        {agentInventory.summary.effective} effective skills
+      </h2>
+      {agentInventory.targets.length === 0 ? (
+        <div style={{ ...mono, color: '#6a6a6a' }}>
+          no Codex or Claude skill roots discovered
+        </div>
+      ) : (
+        agentInventory.targets.map((target) => (
+          <section key={target.label} style={{ marginTop: 10 }}>
+            <div style={{ ...mono, color: '#cccccc', marginBottom: 4 }}>
+              {target.provider} · {shortHome(target.home)} ·{' '}
+              {target.summary.effective} effective / {target.summary.skills}{' '}
+              scanned
+            </div>
+            <div style={{ ...mono, color: '#6a6a6a', marginBottom: 4 }}>
+              roots:{' '}
+              {target.roots
+                .map(
+                  (root) =>
+                    `${root.rootType}:${shortHome(root.path)}(${root.status})`,
+                )
+                .join(' · ')}
+            </div>
+            {target.skills.length === 0 ? (
+              <div style={{ ...mono, color: '#6a6a6a' }}>
+                no skills found in available roots
+              </div>
+            ) : (
+              <table
+                style={{ ...mono, borderCollapse: 'collapse', minWidth: 900 }}
+              >
+                <thead>
+                  <tr style={{ color: '#858585', textAlign: 'left' }}>
+                    <th style={cell}>skill</th>
+                    <th style={cell}>root</th>
+                    <th style={cell}>parse</th>
+                    <th style={cell}>effective</th>
+                    <th style={cell}>hash</th>
+                    <th style={cell}>path</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {target.skills.map((skill) => (
+                    <AgentSkillRow
+                      key={`${target.label}:${skill.path}:${skill.duplicateIndex}`}
+                      skill={skill}
+                      cell={cell}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
+        ))
       )}
     </section>
   );
