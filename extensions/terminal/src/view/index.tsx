@@ -79,7 +79,10 @@ const INBOX: RunProfile[] = [
 // How to launch a managed run: `kungfu managed-run --provider … --prompt …`.
 // The launcher is `kungfu` on PATH in a packaged runtime; KUNGFU_MANAGED_RUN_CMD
 // overrides it so a source checkout can point at its built runtime.
-function launchCommand(profile: RunProfile): {
+function launchCommand(
+  profile: RunProfile,
+  runId: string,
+): {
   command: string;
   args: string[];
 } {
@@ -96,8 +99,22 @@ function launchCommand(profile: RunProfile): {
       profile.provider,
       '--prompt',
       profile.prompt,
+      // Bind the supervisor's cost/journal run_id to this GUI session's runId so
+      // cost/state/proof facts attribute back to the pane (W6 fact base).
+      '--run-id',
+      runId,
     ],
   };
+}
+
+// A tmux-safe run identity minted GUI-side. It becomes the session runId, the
+// tmux name token, and the supervisor's cost/journal run_id — one id across all
+// three so cost/state/proof facts attribute back to the on-screen session.
+function mintRunId(): string {
+  const raw =
+    globalThis.crypto?.randomUUID?.() ??
+    `${Date.now().toString(16)}-${Math.floor(Math.random() * 0xffffff).toString(16)}`;
+  return `kfr-${raw.replace(/[^a-f0-9]/gi, '').slice(0, 12)}`;
 }
 
 // One pane on the canvas, bound to an already-created session by runId. The
@@ -775,7 +792,10 @@ function SessionWorkspace({
 
   const launch = React.useCallback(
     async (profile: RunProfile) => {
-      const { command, args } = launchCommand(profile);
+      // Mint the run identity here so one id binds the GUI session, the tmux
+      // name, and the supervisor's cost/journal run_id (W6 fact base).
+      const runId = mintRunId();
+      const { command, args } = launchCommand(profile, runId);
       let session: TerminalSession;
       let durable = true;
       try {
@@ -783,6 +803,7 @@ function SessionWorkspace({
           caps.terminal.spawn({
             command,
             args,
+            runId,
             provider: profile.provider,
             backend: 'tmux',
             cols: 80,
@@ -800,6 +821,7 @@ function SessionWorkspace({
           caps.terminal.spawn({
             command,
             args,
+            runId,
             provider: profile.provider,
             cols: 80,
             rows: 24,

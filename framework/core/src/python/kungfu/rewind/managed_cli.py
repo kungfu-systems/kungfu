@@ -76,6 +76,7 @@ def run_and_report(
     *,
     runtime_dir,
     work_id=None,
+    run_id=None,
     home=None,
     skill_paths=None,
     skill_profile=None,
@@ -89,7 +90,10 @@ def run_and_report(
     """Run one managed provider run on a journal under runtime_dir and print its
     cost. Returns the provider's exit code. Shared by the `kungfu managed-run`
     console command and the `python -m` entry."""
-    run_id = uuid.uuid4().hex[:12]
+    # A caller that already owns the run (e.g. the GUI managed-session workspace)
+    # injects run_id so the supervisor's cost/journal facts share one identity
+    # with the on-screen session (W6 fact base); otherwise we mint one here.
+    run_id = run_id or uuid.uuid4().hex[:12]
 
     disc = discover_provider(provider)
     if not quiet:
@@ -302,6 +306,11 @@ def main(argv=None):
     ap.add_argument("--home", default=None, help="runtime dir for the journal")
     ap.add_argument("--work-id", default=None, help="work item this run belongs to")
     ap.add_argument(
+        "--run-id",
+        default=None,
+        help="run identity to bind cost/journal facts to (defaults to a fresh id)",
+    )
+    ap.add_argument(
         "--skill-path",
         action="append",
         default=[],
@@ -331,6 +340,7 @@ def main(argv=None):
         args.prompt,
         runtime_dir=runtime,
         work_id=args.work_id,
+        run_id=args.run_id,
         home=runtime,
         skill_paths=args.skill_path,
         skill_profile=args.skill_profile,
