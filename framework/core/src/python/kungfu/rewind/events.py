@@ -5,6 +5,8 @@
 # optional throughout (the schema forbids `required`), so None simply omits
 # the field.
 
+from __future__ import annotations
+
 import flatbuffers
 
 from kungfu.rewind.fb import (
@@ -20,11 +22,17 @@ from kungfu.rewind.fb import (
 )
 
 
-def _s(builder, value):
+def _s(builder: flatbuffers.Builder, value: str | None) -> int | None:
     return builder.CreateString(value) if value else None
 
 
-def run_begin(run_id, command, runtime, supervisor_version, schema_version):
+def run_begin(
+    run_id: str | None,
+    command: str | None,
+    runtime: str | None,
+    supervisor_version: str | None,
+    schema_version: int,
+) -> bytes:
     b = flatbuffers.Builder(256)
     run_id_o = _s(b, run_id)
     command_o = _s(b, command)
@@ -44,7 +52,7 @@ def run_begin(run_id, command, runtime, supervisor_version, schema_version):
     return bytes(b.Output())
 
 
-def run_end(run_id, status, exit_code):
+def run_end(run_id: str | None, status: int, exit_code: int) -> bytes:
     b = flatbuffers.Builder(64)
     run_id_o = _s(b, run_id)
     RunEnd.Start(b)
@@ -57,8 +65,15 @@ def run_end(run_id, status, exit_code):
 
 
 def model_request(
-    run_id, span_id, parent_span_id, layer, provider, model, request_body, attempt=0
-):
+    run_id: str | None,
+    span_id: str | None,
+    parent_span_id: str | None,
+    layer: int,
+    provider: str | None,
+    model: str | None,
+    request_body: str | None,
+    attempt: int = 0,
+) -> bytes:
     b = flatbuffers.Builder(1024)
     run_id_o = _s(b, run_id)
     span_o = _s(b, span_id)
@@ -86,17 +101,17 @@ def model_request(
 
 
 def model_response(
-    run_id,
-    span_id,
-    layer,
-    status,
-    response_body,
-    error=None,
-    finish_reason=None,
-    input_tokens=0,
-    output_tokens=0,
-    latency_ns=0,
-):
+    run_id: str | None,
+    span_id: str | None,
+    layer: int,
+    status: int,
+    response_body: str | None,
+    error: str | None = None,
+    finish_reason: str | None = None,
+    input_tokens: int = 0,
+    output_tokens: int = 0,
+    latency_ns: int = 0,
+) -> bytes:
     b = flatbuffers.Builder(1024)
     run_id_o = _s(b, run_id)
     span_o = _s(b, span_id)
@@ -123,7 +138,14 @@ def model_response(
     return bytes(b.Output())
 
 
-def tool_call(run_id, span_id, parent_span_id, layer, tool_name, input_body):
+def tool_call(
+    run_id: str | None,
+    span_id: str | None,
+    parent_span_id: str | None,
+    layer: int,
+    tool_name: str | None,
+    input_body: str | None,
+) -> bytes:
     b = flatbuffers.Builder(512)
     run_id_o = _s(b, run_id)
     span_o = _s(b, span_id)
@@ -146,7 +168,15 @@ def tool_call(run_id, span_id, parent_span_id, layer, tool_name, input_body):
     return bytes(b.Output())
 
 
-def tool_result(run_id, span_id, layer, status, output, error=None, latency_ns=0):
+def tool_result(
+    run_id: str | None,
+    span_id: str | None,
+    layer: int,
+    status: int,
+    output: str | None,
+    error: str | None = None,
+    latency_ns: int = 0,
+) -> bytes:
     b = flatbuffers.Builder(512)
     run_id_o = _s(b, run_id)
     span_o = _s(b, span_id)
@@ -169,25 +199,25 @@ def tool_result(run_id, span_id, layer, status, output, error=None, latency_ns=0
 
 
 def cost_snapshot(
-    run_id,
-    work_id,
-    session_id,
-    layer,
-    provider,
-    surface,
-    model,
-    source,
-    attribution,
-    input_tokens=0,
-    output_tokens=0,
-    cached_input_tokens=0,
-    cache_creation_input_tokens=0,
-    reasoning_tokens=0,
-    cost_usd=0.0,
-    cost_usd_known=False,
-    ambiguous_attribution=False,
-    raw_ref=None,
-):
+    run_id: str | None,
+    work_id: str | None,
+    session_id: str | None,
+    layer: int,
+    provider: str | None,
+    surface: str | None,
+    model: str | None,
+    source: str | None,
+    attribution: int,
+    input_tokens: int = 0,
+    output_tokens: int = 0,
+    cached_input_tokens: int = 0,
+    cache_creation_input_tokens: int = 0,
+    reasoning_tokens: int = 0,
+    cost_usd: float = 0.0,
+    cost_usd_known: bool = False,
+    ambiguous_attribution: bool = False,
+    raw_ref: str | None = None,
+) -> bytes:
     # cost_usd is only meaningful when cost_usd_known is True; a tokens-only
     # provider passes cost_usd_known=False and the 0.0 is a placeholder, not a
     # claim the run was free. The bridge in cost/wire.py enforces that pairing.
@@ -232,14 +262,14 @@ def cost_snapshot(
 
 
 def approval_decision(
-    run_id,
-    decision,
-    request_id=None,
-    surface=None,
-    decided_by=None,
-    detail=None,
-    reason=None,
-):
+    run_id: str | None,
+    decision: int,
+    request_id: str | None = None,
+    surface: str | None = None,
+    decided_by: str | None = None,
+    detail: str | None = None,
+    reason: str | None = None,
+) -> bytes:
     b = flatbuffers.Builder(256)
     run_id_o = _s(b, run_id)
     request_o = _s(b, request_id)
@@ -265,7 +295,13 @@ def approval_decision(
     return bytes(b.Output())
 
 
-def retry_marker(run_id, span_id, retry_of_span_id, attempt, reason=None):
+def retry_marker(
+    run_id: str | None,
+    span_id: str | None,
+    retry_of_span_id: str | None,
+    attempt: int,
+    reason: str | None = None,
+) -> bytes:
     b = flatbuffers.Builder(128)
     run_id_o = _s(b, run_id)
     span_o = _s(b, span_id)

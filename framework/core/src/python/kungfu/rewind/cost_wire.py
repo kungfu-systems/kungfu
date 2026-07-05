@@ -71,7 +71,7 @@ def snapshot_to_event(
         cached_input_tokens=tokens.cached_input_tokens,
         cache_creation_input_tokens=tokens.cache_creation_input_tokens,
         reasoning_tokens=tokens.reasoning_tokens,
-        cost_usd=snapshot.cost_usd if cost_known else 0.0,
+        cost_usd=snapshot.cost_usd if snapshot.cost_usd is not None else 0.0,
         cost_usd_known=cost_known,
         ambiguous_attribution=snapshot.ambiguous_attribution,
         raw_ref=snapshot.raw_ref,
