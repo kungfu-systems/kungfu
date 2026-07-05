@@ -43,9 +43,21 @@ function has(cmd) {
   );
 }
 
-/** Run a tool at ROOT, inheriting stdio so its output reaches the committer. */
-function run(cmd, args) {
-  return spawnSync(cmd, args, { cwd: ROOT, stdio: 'inherit' });
+// Run a formatter/linter at ROOT, inheriting stdio. shell:isWin so Windows can
+// launch the .cmd shims that node CLIs (biome/pnpm) resolve to — the same reason
+// verify.mjs uses shell:isWin (residual caveat: on Windows a staged path with a
+// space would be mis-split by the shell; rare in this tree). Returns the spawn
+// result, or null if the tool could not be spawned at all — a setup gap must
+// warn and skip, never block the commit.
+function run(cmd, args, label) {
+  const r = spawnSync(cmd, args, { cwd: ROOT, stdio: 'inherit', shell: isWin });
+  if (r.error) {
+    warn(
+      `${cmd} could not be spawned (${r.error.code || r.error.message}); skipped ${label}`,
+    );
+    return null;
+  }
+  return r;
 }
 
 function isFile(rel) {
@@ -102,12 +114,12 @@ const changed = [];
 // ── 2a. C++ — clang-format, pinned via uvx (byte-identical across machines) ──
 if (cpp.length) {
   if (has('uvx')) {
-    run('uvx', ['clang-format@20.1.8', '-style=file', '-i', ...cpp]);
-    changed.push(...cpp);
+    if (run('uvx', ['clang-format@20.1.8', '-style=file', '-i', ...cpp], 'C++'))
+      changed.push(...cpp);
   } else if (has('clang-format')) {
     warn('using system clang-format; may differ from pinned 20.1.8');
-    run('clang-format', ['-style=file', '-i', ...cpp]);
-    changed.push(...cpp);
+    if (run('clang-format', ['-style=file', '-i', ...cpp], 'C++'))
+      changed.push(...cpp);
   } else {
     warn(`clang-format (uv) not found; skipped C++: ${cpp.join(' ')}`);
   }
@@ -116,11 +128,11 @@ if (cpp.length) {
 // ── 2b. Python — ruff format (--force-exclude honors excludes on explicit args) ─
 if (py.length) {
   if (has('ruff')) {
-    run('ruff', ['format', '--force-exclude', ...py]);
-    changed.push(...py);
+    if (run('ruff', ['format', '--force-exclude', ...py], 'Python'))
+      changed.push(...py);
   } else if (has('uvx')) {
-    run('uvx', ['ruff', 'format', '--force-exclude', ...py]);
-    changed.push(...py);
+    if (run('uvx', ['ruff', 'format', '--force-exclude', ...py], 'Python'))
+      changed.push(...py);
   } else {
     warn(`ruff/uv not found; skipped Python: ${py.join(' ')}`);
   }
@@ -133,10 +145,13 @@ if (py.length) {
 let biomeBlocked = false;
 if (web.length) {
   const biomeArgs = ['check', '--write', '--no-errors-on-unmatched', ...web];
+  const label = 'JS/TS format + lint';
   let r = null;
-  if (has('biome')) r = run('biome', biomeArgs);
-  else if (has('pnpm')) r = run('pnpm', ['exec', 'biome', ...biomeArgs]);
+  if (has('biome')) r = run('biome', biomeArgs, label);
+  else if (has('pnpm')) r = run('pnpm', ['exec', 'biome', ...biomeArgs], label);
   else warn('biome/pnpm not found; skipped JS/TS format + lint');
+  // r is null when the tool could not be spawned (setup gap → skip, not block);
+  // a real non-zero exit means unfixable lint errors remain → block.
   if (r) {
     changed.push(...web);
     if (r.status !== 0) biomeBlocked = true;
