@@ -7,9 +7,15 @@ npmRebuild: false
 # Bake the frozen first-party manifest (ADR-0013) into dist/kungfu before it is
 # shipped to Resources/kungfu, so trust is granted by verifiable source.
 beforePack: ./scripts/before-pack.cjs
+afterPack: ./scripts/after-pack.cjs
 files:
   - out/**/*
   - package.json
+  - "!node_modules/@kungfu-tech/core{,/**}"
+  - "!node_modules/@kungfu-tech/**/node_modules/@kungfu-tech/core{,/**}"
+  - "!node_modules/@kungfu-tech/**/.venv{,/**}"
+  - "!node_modules/@kungfu-tech/**/build{,/**}"
+  - "!node_modules/@kungfu-tech/**/dist/kungfu{,/**}"
 extraResources:
   # Ship the kungfu runtime (libkungfu.dylib + kungfu_electron.node) so the
   # packaged app loads the binding from Resources/kungfu, matching its rpath.

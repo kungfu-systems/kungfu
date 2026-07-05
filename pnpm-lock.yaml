@@ -256,9 +256,6 @@ importers:
       '@fast-csv/format':
         specifier: ^4.3.5
         version: 4.3.5
-      '@kungfu-tech/core':
-        specifier: workspace:*
-        version: link:../core
       cfonts:
         specifier: ^2.10.0
         version: 2.10.1
@@ -360,9 +357,6 @@ importers:
       '@kungfu-tech/api':
         specifier: workspace:*
         version: link:../api
-      '@kungfu-tech/core':
-        specifier: workspace:*
-        version: link:../core
       '@kungfu-tech/kfx':
         specifier: workspace:*
         version: link:../kfx
@@ -376,6 +370,9 @@ importers:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
     devDependencies:
+      '@kungfu-tech/core':
+        specifier: workspace:*
+        version: link:../core
       '@types/react':
         specifier: ^18.3.3
         version: 18.3.31

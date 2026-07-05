@@ -23,7 +23,6 @@
   },
   "dependencies": {
     "@fast-csv/format": "^4.3.5",
-    "@kungfu-tech/core": "workspace:*",
     "cfonts": "^2.10.0",
     "chalk": "^4.1.0",
     "dayjs-business-days": "^1.0.4",

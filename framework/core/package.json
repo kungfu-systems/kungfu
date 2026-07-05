@@ -18,6 +18,11 @@
   "bin": {
     "kungfu": "lib/kungfu-cli.js"
   },
+  "files": [
+    "lib",
+    "dist/kungfu",
+    ".gyp/noop-install.js"
+  ],
   "config": {
     "build_type": "Release",
     "log_level": "trace",
