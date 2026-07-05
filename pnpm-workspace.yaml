@@ -10,6 +10,7 @@ allowBuilds:
   '@kungfu-tech/libnode': true
   core-js: true
   electron: true
+  electron-winstaller: true
   esbuild: true
   node-pty: true
   nx: true
