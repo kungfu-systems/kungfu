@@ -25,13 +25,14 @@
 // window launch is left as a manual / CI-display step.
 // @ts-check
 
-'use strict';
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const fs = require('fs');
-const path = require('path');
-const { spawnSync } = require('child_process');
-
-const ROOT = __dirname;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const ROOT = path.resolve(__dirname, '..'); // repo root (this file lives in scripts/)
 const isWin = process.platform === 'win32';
 
 // Prefer a cross-platform run.mjs (node) over the legacy run.sh (bash) so
@@ -121,10 +122,8 @@ function main() {
   console.log('\n[verify] stage 0a: no-bash script guard');
   const noBash = spawnSync(
     process.execPath,
-    [path.join(ROOT, 'no-bash-guard.mjs')],
-    {
-      encoding: 'utf8',
-    },
+    [path.join(__dirname, 'no-bash-guard.mjs')],
+    { encoding: 'utf8' },
   );
   if (noBash.status === 0)
     pass('no-bash script guard', 'gates are Node-only (cross-platform)');

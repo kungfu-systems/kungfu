@@ -16,7 +16,7 @@ set -eu
 
 root=$(git rev-parse --show-toplevel) || exit 0
 if command -v node >/dev/null 2>&1; then
-  exec node "$root/precommit.mjs"
+  exec node "$root/scripts/precommit.mjs"
 fi
 printf '[kungfu pre-commit] node not found; skipped format/lint/guard\n' >&2
 exit 0

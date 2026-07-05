@@ -4,8 +4,8 @@
 // Shared no-bash guard. The repo is fully migrated off .sh so every gate runs
 // under node on every platform (Windows included); a reintroduced *.sh silently
 // breaks off-Unix. One scan, two consumers:
-//   - verify.js stage 0a   → `node no-bash-guard.mjs`           (whole tree)
-//   - .githooks/pre-commit → imported scanStaged (only staged adds)
+//   - scripts/verify.mjs stage 0a → `node no-bash-guard.mjs`     (whole tree)
+//   - .githooks/pre-commit        → imported scanStaged (staged adds)
 //
 // Vendored/generated dirs may carry upstream .sh out of our control and are
 // skipped. The `.githooks/pre-commit` shim itself has no .sh extension, so it is

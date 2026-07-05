@@ -24,7 +24,7 @@
     "format": "pnpm run format:web && wsrun --bin pnpm --serial --exclude-missing format",
     "format:web": "biome format --write .",
     "lint": "biome check .",
-    "prebuild": "node .prebuild.js",
+    "prebuild": "node scripts/prebuild.mjs",
     "build": "pnpm run foreach build",
     "build:extensions": "pnpm run foreach:extensions build",
     "clean": "pnpm run foreach clean",
@@ -42,10 +42,10 @@
     "freeze": "pnpm --filter @kungfu-tech/core run freeze",
     "rebuild:core": "pnpm --filter @kungfu-tech/core run rebuild",
     "package:app": "pnpm --filter @kungfu-tech/artifact-kungfu run package",
-    "verify": "node verify.js",
+    "verify": "node scripts/verify.mjs",
     "check:types": "tsc -p tsconfig.tools.json",
-    "prepare": "node install-hooks.js",
-    "hooks:install": "node install-hooks.js --force"
+    "prepare": "node scripts/install-hooks.mjs",
+    "hooks:install": "node scripts/install-hooks.mjs --force"
   },
   "dependencies": {
     "core-js": "^3.20.0",

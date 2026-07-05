@@ -7,7 +7,7 @@
 // everywhere, incl. Git-for-Windows bundled bash); no checks live in the shim.
 //
 // On the staged (Added/Copied/Modified) set it, in order:
-//   1. blocks a reintroduced *.sh (shares the scan with verify.js stage 0a);
+//   1. blocks a reintroduced *.sh (shares the scan with scripts/verify.mjs 0a);
 //   2. auto-formats C++ (clang-format), Python (ruff) and re-stages;
 //   3. runs `biome check --write` on staged JS/TS: applies safe format + lint +
 //      import fixes, then BLOCKS on any remaining (unfixable) lint error.

@@ -100,9 +100,10 @@ Windows included. So **automation scripts are Node/JavaScript (`.mjs`/`.js`),
 not shell** (`.sh`): shell scripts do not run on Windows and reintroduce a bash
 dependency the toolchain does not otherwise need. Test fixtures and capability
 slices use a `run.mjs` driver (shared helpers in `tests/fixtures/_harness.mjs`
-and `framework/core/slices/_harness.mjs`); the verification gate (`verify.js`)
-runs them through Node and **fails if a `.sh` reappears** under the fixture,
-slice, or `libyijinjing` guard paths (`stage 0a: no-bash script guard`). Prefer
+and `framework/core/slices/_harness.mjs`); the verification gate
+(`scripts/verify.mjs`) runs them through Node and **fails if a `.sh` reappears**
+anywhere in the tree (`stage 0a: no-bash script guard`, shared with the
+pre-commit hook via `scripts/no-bash-guard.mjs`). Prefer
 pure Node (`node:child_process`, `fs`, `os`, `crypto`) over shelling out to
 platform tools (`grep`, `mktemp`, `shasum`, …).
 

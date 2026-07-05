@@ -12,11 +12,13 @@
 // `pnpm run hooks:install` (which passes --force). It is idempotent and refuses
 // to clobber a developer's own pre-commit unless --force is given.
 // @ts-check
-'use strict';
 
-const fs = require('fs');
-const path = require('path');
-const { spawnSync } = require('child_process');
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const OURS_MARKER = 'kungfu pre-commit hook';
 const REPLACEABLE = [OURS_MARKER, '#yorkie']; // our own hook, or the dead yorkie shim
@@ -54,7 +56,7 @@ function main() {
     return 0; // never fail an install because hooks could not be placed
   }
 
-  const src = path.join(__dirname, '.githooks', 'pre-commit');
+  const src = path.join(__dirname, '..', '.githooks', 'pre-commit');
   if (!fs.existsSync(src)) {
     log(`source hook missing: ${src}`);
     return 0;
