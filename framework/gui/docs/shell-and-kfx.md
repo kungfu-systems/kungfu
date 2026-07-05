@@ -4,10 +4,12 @@ The reference app splits into a thin shell and installable kfx view packages.
 The shell owns system-level concerns only; every user-facing view — including
 the ones the app ships with — is a package under `extensions/`, independently
 developed, built, verified and distributed. This page is the internal
-contract note for that split. The kfx contract is deliberately NOT a
-published API yet: it grows from real consumers (the shipped packages are the
-first ones), and it is kept externalizable so publishing it later is a move,
-not a rewrite.
+contract note for that GUI split. For the broader package topology — runtime
+facets, source-authority trust, the OS-sandbox plane, and the proposed service
+facet — see [`../../../docs/kfx-topology.md`](../../../docs/kfx-topology.md).
+The kfx contract is deliberately NOT a published API yet: it grows from real
+consumers (the shipped packages are the first ones), and it is kept
+externalizable so publishing it later is a move, not a rewrite.
 
 ## What the shell owns
 
@@ -123,23 +125,28 @@ manifest, extension root and install lifecycle, but different loaders. Full
 contract in [`../../../docs/extensions.md`](../../../docs/extensions.md);
 `extensions/langchain-adapter` is the first adapter facet.
 
-## Trust tiers (ADR-0011)
+## Trust tiers (ADR-0011 / ADR-0013 / ADR-0014)
 
-A view runs at one of two tiers; `resolveRuntimeTier` (`../../kfx/src/index.ts`)
-is the single source and the install source is authoritative (a manifest may
-ask to stay sandboxed, never to elevate). **node-integrated** (system + built-in
-views) shares the shell's renderer, React and capabilities. **sandboxed-ipc**
-(installed third-party views) runs in an isolated renderer
-(`nodeIntegration:false, contextIsolation:true, sandbox:true`) with no node;
-`contextBridge` exposes only a bridge to the declared capabilities, each call
-round-trips to the trusted host over IPC (`sandbox-host.ts`), and an undeclared
-capability is rejected there — the declaration is an enforced boundary. The
-view's session denies the network and its process is memory-capped
-(`createSandboxedView`). Proven live: in a real sandboxed renderer
-`window.require`/`process`/`Buffer` are absent, a declared call round-trips, an
-undeclared call is rejected. The `adapter` facet stays node-integrated (it runs
-inside the traced program's own process; its schema compilation is bounded
-separately).
+A view runs at one of two tiers; `resolveRuntimeTier` and the source-authority
+helpers (`../../kfx/src/index.ts`) are the single decision path. Discovery roots
+such as `KF_EXTENSION_PATH` or `<home>/extensions` find packages; they do not
+grant trust. A manifest may ask to stay sandboxed, never to elevate.
+
+**node-integrated** (source-verified first-party/system views) shares the
+shell's renderer, React and capabilities. **sandboxed-ipc** (untrusted views)
+runs in an isolated renderer (`nodeIntegration:false, contextIsolation:true,
+sandbox:true`) with no node; `contextBridge` exposes only a bridge to the
+declared capabilities, each call round-trips to the trusted host over IPC
+(`sandbox-host.ts`), and an undeclared capability is rejected there — the
+declaration is an enforced boundary. The view's session denies the network and
+its process is memory-capped (`createSandboxedView`). Proven live: in a real
+sandboxed renderer `window.require`/`process`/`Buffer` are absent, a declared
+call round-trips, an undeclared call is rejected.
+
+The `adapter` facet is not contained by a renderer sandbox: it runs inside the
+traced program's own process. Per ADR-0013, an untrusted instrumentation adapter
+is refused rather than sandboxed. Independent runtime code belongs on the
+OS-sandbox/service plane described in `kfx-topology.md`.
 
 ## Evolution notes
 - The manifest is a welded surface the moment packages are published. Until

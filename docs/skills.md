@@ -382,7 +382,8 @@ The first slice proves the context loop before broad execution:
 
 Follow-up slices should:
 
-1. Display installed skills in a first-party `skill-manager` view.
+1. Expand the first-party `skill-manager` view with full-source inspection,
+   trust/provenance details, and audit history.
 2. Add explicit kfx artifact acquisition for unresolved dependencies, still
    installing artifacts into the shared kfx registry rather than under a skill.
 

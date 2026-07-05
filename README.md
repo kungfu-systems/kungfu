@@ -65,13 +65,14 @@ built on mainstream, well-maintained foundations.
 
 - **Core & runtime** — `longfist` (type system) and `yijinjing` (journal
   runtime) with Python and Node bindings, plus the `kungfu` runtime, packaged as
-  `@kungfu-tech/core`. It embeds a Python and a Node runtime and is fronted
-  by the `kungfu` end-user command; the richer end-user shell is planned under
-  the same name.
+  `@kungfu-tech/core`. It embeds a Python and a Node runtime and is fronted by
+  the `kungfu` end-user command; operator-facing shell slices such as
+  `kungfu cockpit`, managed runs, and skill context injection grow under the
+  same command.
 - **Capability SDK** — typed, framework-neutral access to journal / state /
   replay (`framework/api`).
-- **Application SDK** — scaffolding to build kfx extensions and assemble
-  applications (`developer/sdk`).
+- **Application SDK** — scaffolding to build kfx extensions, create Kungfu
+  Skills, and assemble applications (`developer/sdk`).
 - **Reference surfaces** — two minimal reference UIs over the same capability
   SDK: a desktop GUI on Electron + React (`framework/gui`) and a terminal TUI
   (`framework/tui`).

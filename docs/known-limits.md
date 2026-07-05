@@ -58,12 +58,62 @@ its tag) is intentionally deferred rather than written ahead of the
 infrastructure it would describe (see [`MAP.md`](MAP.md), `provenance.md` —
 `blocked`).
 
-## The end-user shell is planned, not shipped
+## The end-user shell is partial, not complete
 
-The `kungfu` command is the runtime today and the canonical CLI over it.
-The richer end-user *shell* under that name is still planned; the zero-setup
-experience is fully real for `kfx` *development* (the runtime absorbs the
-toolchain), and the shell is the part still to come.
+The `kungfu` command is the runtime today and the canonical CLI over it. Several
+operator-facing slices have landed — for example `kungfu cockpit`,
+`kungfu managed-run`, Kungfu Skill context injection, and the first skill-manager
+view. That is not yet the same as a complete end-user shell.
+
+What is **not yet guaranteed**:
+
+- a polished one-command user install / launch path for non-contributors;
+- full parity between GUI-launched and CLI-launched managed sessions;
+- all planned multi-window/session workspace behavior being default-on;
+- a final product surface that hides internal implementation terms such as tmux,
+  provider CLI details, or development worktree paths.
+
+Treat these as usable pre-release slices, not a finished shell promise.
+
+## KFX runtime confinement is staged
+
+The trust boundary is decided in
+[ADR-0013](../framework/core/docs/adr/ADR-0013-cli-runtime-extension-isolation-trusted-channel.md)
+and the uniform capability surface is decided in
+[ADR-0014](../framework/core/docs/adr/ADR-0014-extension-execution-contract-uniform-capability-surface.md).
+The first guest-host and sandbox primitives exist, but the ecosystem-facing
+surface is still staged.
+
+What is **not yet guaranteed**:
+
+- the proposed `service` facet is not a stable published extension surface yet
+  ([ADR-0017](../framework/core/docs/adr/ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md));
+- stronger read-scope narrowing, shadow-file reconciliation, and resource
+  ceilings are follow-ups beyond the permissive first delivery;
+- untrusted instrumentation adapters are refused rather than sandboxed, because
+  capture-side instrumentation must run inside the traced process.
+
+So "sandboxed" should be read as a precise tier/property for the relevant host
+and facet, not as a blanket statement that every extension form is safely
+contained.
+
+## Kungfu Skills have a first slice, not a marketplace
+
+Kungfu Skills are accepted as the agent-facing context layer above kfx
+([ADR-0015](../framework/core/docs/adr/ADR-0015-kungfu-skill-agent-context-layer.md)).
+The first slices cover `SKILL.md` parsing, compact catalogs, context envelopes,
+managed-run injection, audit sidecars, SDK scaffolding, and a first skill-manager
+view.
+
+What is **not yet guaranteed**:
+
+- marketplace discovery and remote publishing;
+- automatic permission elevation;
+- kfx artifact acquisition for unresolved skill dependencies;
+- third-party runtime facet execution through a skill wrapper;
+- uninstalling shared kfx dependencies as a side effect of removing a skill.
+
+A skill can request, explain, and compose. It cannot bypass the kfx trust gate.
 
 ## Reference extensions are mid-migration
 

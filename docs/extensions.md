@@ -12,11 +12,14 @@ Three words carry the model — keep them apart:
 
 - **facet** — what a package *does*, declared under `kungfuConfig.config`. A
   package may declare more than one; a facet's loader picks up only what it
-  understands. Two are supported: `view` (a GUI screen the shell loads) and
-  `adapter` (a **runtime facet** — capture-side framework instrumentation the
-  trace supervisor loads; the first v4 runtime facet). Older trading adapters
-  and operators are a separate earlier-generation line, still mid-migration
-  (see [status](#runtime-extensions-current-status)).
+  understands. Two are implemented today: `view` (a GUI screen the shell loads)
+  and `adapter` (a **runtime facet** — capture-side framework instrumentation
+  the trace supervisor loads; the first v4 runtime facet). A background
+  `service` facet is proposed by
+  [ADR-0017](../framework/core/docs/adr/ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md)
+  for kfx-owned long-lived processes. Older trading adapters and operators are
+  a separate earlier-generation line, still mid-migration (see
+  [status](#runtime-extensions-current-status)).
 - **package (kfx)** — the unit of development and distribution: an npm
   package whose `package.json` carries a `kungfuConfig` manifest. `npm pack`
   of a built package is its complete, offline install unit.
@@ -78,9 +81,12 @@ types `KfxViewDecl` / `KfxSettingDecl` / `KfxSuiteDecl`):
 | `config.adapter.capabilities` | Capture-side capabilities the adapter needs; the same permission seam as a view's `capabilities` (reserved for enforcement). |
 | `suite.title`, `suite.members` | Marks a suite package; `members` lists member `key`s. Members arrive as their own packages (npm `dependencies`) and install individually. |
 
-The manifest is a welded surface the moment packages are published; until
-then it evolves with its in-repo consumers. Do not invent fields — the
-loader ignores what it does not know, and nothing else will read them.
+The manifest is a welded surface the moment packages are published; until then
+it evolves with its in-repo consumers. Do not invent fields — the loader ignores
+what it does not know, and nothing else will read them. The proposed `service`
+facet is intentionally documented in [`kfx-topology.md`](kfx-topology.md) and
+ADR-0017, not as a shipped manifest field on this page, until its first
+production loader lands.
 
 ## The build contract
 
@@ -157,13 +163,18 @@ same facts.
 
 ## Trust tiers
 
-A view runs at one of two trust tiers (ADR-0011). The decision is
-single-sourced in `resolveRuntimeTier` (`../framework/kfx/src/index.ts`), and
-the install source is authoritative — a manifest can ask to stay sandboxed but
-never to elevate:
+A view runs at one of two trust tiers (ADR-0011), and the runtime-plane trust
+boundary is extended by ADR-0013/ADR-0014. The decision is single-sourced in
+`resolveRuntimeTier` and related source-authority helpers
+(`../framework/kfx/src/index.ts`). A manifest can ask to stay sandboxed but
+never to elevate. Trust is not granted because a package was found under a
+writable path or an environment-provided development root; those roots only
+control discovery. Trust comes from a source-authority verdict such as the
+frozen first-party set plus content pin described in
+[ADR-0013](../framework/core/docs/adr/ADR-0013-cli-runtime-extension-isolation-trusted-channel.md).
 
-- **node-integrated** — system views and built-in (workspace/source) views.
-  They share the shell's renderer, React and capability instances.
+- **node-integrated** — source-verified first-party/system views. They share the
+  shell's renderer, React and capability instances.
 - **sandboxed-ipc** — an installed third-party view. It runs in an isolated
   renderer (`nodeIntegration:false, contextIsolation:true, sandbox:true`): no
   node, no `require`, no direct binding. `contextBridge` exposes only a bridge
@@ -173,12 +184,17 @@ never to elevate:
   session denies the network and its process is killed if it exceeds a memory
   cap (`createSandboxedView` in `../framework/gui/src/main/sandbox-view.ts`).
 
-The `adapter` runtime facet stays node-integrated: an adapter is instrumentation
-that runs inside the traced program's own process, so a separate renderer
-sandbox does not apply; installing a third-party adapter is a trust decision,
-and its schema compilation is bounded separately (`sandboxed` compile tier,
-see [`rewind.md`](rewind.md)). Third-party adapters should carry an install-time
-trust prompt.
+The `adapter` runtime facet is sharper than a view: an adapter is
+instrumentation that runs inside the traced program's own process. A separate
+renderer sandbox does not apply, and sandboxing an untrusted adapter into a
+separate process would defeat the instrumentation. Per ADR-0013, an untrusted
+adapter is **refused**, not contained. Wrapping an adapter in a Kungfu Skill or
+suite does not elevate it; it must satisfy the same runtime trust policy.
+
+For independent runtime code that is not instrumentation, the proposed `service`
+facet is the long-term OS-sandbox plane: a kfx-owned process talks to the host
+over the same capability relay, with confinement chosen by the host. See
+[`kfx-topology.md`](kfx-topology.md).
 
 ## Runtime extensions: current status
 
@@ -190,12 +206,12 @@ chain for this facet is "ships source", not a new packager.
 
 Earlier-generation runtime extensions — trading adapters (`td`/`md`),
 operators, strategies — are a separate line: they exist under
-[`../examples/`](../examples) with their sources and manifests, but their
-build surface (`kfs extension build`/`package`) predates the v4 SDK and is not
-provided by it. They are kept as reference probes while their coverage role
+[`../examples/`](../examples) with their sources and manifests, but their old
+build surface predates the v4 `kungfu sdk` path and is not the contract
+documented here. They are kept as reference probes while their coverage role
 moves to neutral replacements (see [`known-limits.md`](known-limits.md),
-"Reference extensions are mid-migration"). Other runtime facets (operators,
-strategies) will grow on this page when their v4 path lands, not before.
+"Reference extensions are mid-migration"). Other runtime facets will grow on
+this page when their v4 path lands, not before.
 
 ## Verified by
 

@@ -9,9 +9,10 @@ principles behind them see [`design-philosophy.md`](design-philosophy.md).
 
 | Name | What it is |
 |---|---|
-| `kfx` | A **kungfu extension** — a plugin built on the extension contract (the units under `extensions/`). |
+| `kfx` | A **kungfu extension package** — the governed runtime artifact built on the extension contract. A kfx declares facets such as `view` or `adapter`; proposed `service` facets are documented in [`kfx-topology.md`](kfx-topology.md). |
+| `Kungfu Skill` | The **agent-facing capability object above kfx**. The minimum source is a directory containing `SKILL.md`; Kungfu turns it into a compact skill catalog and context envelope for managed agent runs. Skills may reference kfx packages, but they do not grant those packages runtime authority. |
 | `kungfu sdk` | The **application/extension SDK command**: scaffolds and builds `kfx` extensions, assembles applications, and produces packaged artifacts. |
-| `kungfu` | The **kungfu runtime binary and end-user CLI command** — the canonical way to invoke kungfu from the command line. It embeds a Python and a Node runtime and exposes the journal/state APIs; it is the runtime everything else runs on. The richer end-user shell is planned to grow under this name. |
+| `kungfu` | The **kungfu runtime binary and end-user CLI command** — the canonical way to invoke kungfu from the command line. It embeds a Python and a Node runtime and exposes the journal/state APIs; it is the runtime everything else runs on. Operator-facing slices such as `kungfu cockpit`, managed runs, and skill context injection grow under this command. |
 | `./kungfu-code` | The **development/build orchestrator** used while working on the repo (pins Node, Python, and the package manager so a fresh clone builds with one command). It is build-time only, not shipped. |
 
 ## Core building blocks
@@ -25,6 +26,17 @@ principles behind them see [`design-philosophy.md`](design-philosophy.md).
 | **frame** | A single journal record: a fixed-size header (source / destination / nanosecond timestamp / message type) plus a variable-size payload. |
 | **zero-copy** | The same in-process journal bytes are shared across C++, Python, and Node **without serialization** on the hot path. |
 | **replay** | Re-running recorded journals on the *same* runtime and the *same* semantics as live, so recorded streams reproduce with high precision. |
+
+## Extension and agent-context concepts
+
+| Term | What it is |
+|---|---|
+| **kfx facet** | What a kfx package contributes. Implemented facets include `view` (a GUI screen) and `adapter` (capture-side instrumentation injected into a traced child). A `service` facet is proposed for kfx-owned background processes. |
+| **source authority** | The trust verdict for a kfx. Trust must come from verifiable origin such as the frozen first-party set and content pin, not from the filesystem path or extension root where the package was discovered. |
+| **capability relay** | The host/guest protocol a sandboxed extension uses to reach declared capabilities. GUI views use a Chromium IPC transport; runtime/service guests use a child-process transport. The surface stays uniform across trust tiers. |
+| **skill catalog** | A compact, machine-readable index of installed Kungfu Skills. It is what an agent sees by default before loading any full `SKILL.md`. |
+| **skill context envelope** | The prompt/tool/audit wrapper a manager injects into a managed agent run. It carries the filtered skill catalog, the on-demand `kungfu.skill.read` operation, and audit identifiers. |
+| **skill audit** | Evidence that a skill catalog was advertised, a full skill was loaded, or dependencies were bound. Skill audit is part of the responsibility trail for delegated work, not just a debug log. |
 
 ## Runtime / engine concepts
 
@@ -40,7 +52,11 @@ These appear in the control-axis ADRs (0003–0005) and in the code.
 ## Layers (in brief)
 
 - **Capability SDK** — `framework/api`: typed, framework-neutral access to
-  journal / state / replay.
+  journal / state / replay, plus the capability host/guest relay.
+- **KFX contract** — `framework/kfx`: extension package identity, facets and
+  trust-tier decision helpers.
+- **Skill contract** — `framework/skill`: schemas, fixtures and helpers for
+  skill source parsing, catalogs and context envelopes.
 - **Application SDK** — `developer/sdk` (the `kungfu sdk` subcommand).
 - **Reference surfaces** — `framework/gui` (Electron + React) and `framework/tui`
   (terminal): minimal demonstrators over the capability SDK, not the product.

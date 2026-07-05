@@ -1,9 +1,11 @@
 # Architecture
 
 How the Kungfu repository is layered, and the principle that shapes it. For the
-two first principles the whole design follows from, see
+accountability stance behind the product, see
+[`facts-before-trust.md`](facts-before-trust.md); for the two first principles
+the whole design follows from, see
 [`design-philosophy.md`](design-philosophy.md); for the vocabulary
-(`kungfu`/`kfx`/`sdk`, `libkungfu`, `longfist`, `yijinjing`, …) see
+(`kungfu`/`kfx`/`skill`/`sdk`, `libkungfu`, `longfist`, `yijinjing`, …) see
 [`concepts.md`](concepts.md); for the data-plane concepts
 (journal, zero-copy, replay) see the [README](../README.md); for build and
 contribution see [CONTRIBUTING](../CONTRIBUTING.md); for specific decisions see
@@ -68,8 +70,9 @@ group into the following layers.
 The foundation: the `longfist` type system and the `yijinjing` append-only
 journal runtime in C++, with Python and Node (N-API) bindings, exposed zero-copy
 in-process. It also produces the `kungfu` runtime, which embeds the Python and
-Node runtimes and bridges the development toolchain; it is the base for the
-planned `kungfu` end-user shell.
+Node runtimes and bridges the development toolchain; it is the base for
+operator-facing surfaces such as `kungfu cockpit`, managed runs, skill context
+injection, and the richer end-user shell as it matures.
 
 ### Capability SDK — `framework/api`
 
@@ -78,20 +81,31 @@ the in-process zero-copy binding. This is the real value of the platform — the
 surface external products consume, independent of any UI framework. See
 [ADR-0006](../framework/core/docs/adr/ADR-0006-v4-frontend-platform-architecture.md).
 
-### Contracts — `framework/kfx`, `framework/spec`
+### Contracts — `framework/kfx`, `framework/skill`, `framework/spec`
 
 Publishable, framework-neutral contracts others build against, siblings of the
-capability SDK: `kfx` is the view-extension contract (the types and UI tokens
-shared by the shell and view extensions); `spec` is the portable fact-ledger
-format spec — the manifest contract plus the versioned spec bundle — that lets
-external tools decode the journal without the runtime. Like `api`, these are
-surfaces you build *on*, not tools.
+capability SDK:
+
+- `kfx` is the extension contract: package identity, manifest fields, facets,
+  trust-tier inputs and UI tokens shared by hosts and extensions. Its current
+  shipped facets include `view` and `adapter`; a background `service` facet is
+  proposed in
+  [ADR-0017](../framework/core/docs/adr/ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md).
+- `skill` is the agent-facing contract above kfx: `SKILL.md` parsing, compact
+  catalogs, context envelopes, dependency binding and manager fixtures. A skill
+  may reference kfx packages, but kfx remains the runtime trust artifact. See
+  [ADR-0015](../framework/core/docs/adr/ADR-0015-kungfu-skill-agent-context-layer.md).
+- `spec` is the portable fact-ledger format spec — the manifest contract plus
+  the versioned spec bundle — that lets external tools decode the journal
+  without the runtime.
+
+Like `api`, these are surfaces you build *on*, not tools.
 
 ### Application SDK — `developer/sdk` (`@kungfu-tech/sdk`)
 
 Scaffolding that turns the core capabilities into development tooling: building
-`kfx` extensions, assembling applications, and producing packaged artifacts
-(the `kungfu sdk` subcommand).
+`kfx` extensions, scaffolding Kungfu Skills, assembling applications, and
+producing packaged artifacts (the `kungfu sdk` subcommand).
 
 ### Reference surfaces
 
@@ -107,17 +121,34 @@ product:
   boundary. See
   [ADR-0007](../framework/core/docs/adr/ADR-0007-v4-tui-platform-reference-surface.md).
 
-The runtime is loaded in-process; there is no external process manager and no
-separate service daemons. Untrusted kfx views are isolated by the shell as
+The journal/state runtime stays in-process on the trusted path so the zero-copy
+moat is preserved. Untrusted `view` kfx are isolated by the GUI shell as
 sandboxed Electron `WebContentsView`s that reach their declared capabilities
-only through an IPC relay, so process lifecycle is Electron's to manage rather
-than a bespoke supervisor's.
+only through an IPC relay. Runtime-plane isolation uses the same capability
+protocol over a different host/guest transport: a binding-less guest process
+talks to a trusted capability host over stdio, with the OS sandbox applied by
+the host. The trust boundary and runtime-plane isolation are pinned by
+[ADR-0013](../framework/core/docs/adr/ADR-0013-cli-runtime-extension-isolation-trusted-channel.md);
+the uniform async capability surface is pinned by
+[ADR-0014](../framework/core/docs/adr/ADR-0014-extension-execution-contract-uniform-capability-surface.md).
+See [`kfx-topology.md`](kfx-topology.md) for the current load/sandbox topology.
 
 ### Extensions (kfx) — `extensions/*`
 
-Plugins built on the extension contract. The repository keeps a small set of
-reference extensions that double as build-time coverage probes — see
+Plugins built on the extension contract. A kfx is a package that declares one or
+more facets (`view`, `adapter`, and proposed `service`) under `kungfuConfig`.
+The repository keeps a small set of reference extensions that double as
+build-time coverage probes — see
 [*The build dogfoods the SDK*](#the-build-dogfoods-the-sdk) below.
+
+### Skills — `framework/skill`, `extensions/system/skill-manager`
+
+Kungfu Skills are agent-facing capability objects above kfx. The minimal source
+is a directory containing `SKILL.md`; the runtime derives a compact catalog and
+injects that catalog into managed agent runs, loading the full `SKILL.md` only
+on demand. A skill can reference kfx dependencies, but it cannot grant those
+packages additional runtime authority; the kfx trust gate still decides what
+can execute.
 
 ### Distribution — `artifact` (`@kungfu-tech/artifact-kungfu`)
 
@@ -170,13 +201,14 @@ build` bundles with esbuild.
 ```
 framework/    platform + contracts you build ON (imported as a dependency)
   core        runtime + core (C++ longfist / yijinjing, bindings, kungfu)
-  api         capability SDK (journal / state / replay)
-  kfx         view-extension contract
+  api         capability SDK and host/guest capability relay
+  kfx         extension package/facet/trust contract
+  skill       Kungfu Skill schemas, fixtures and catalog/context helpers
   spec        portable fact-ledger format spec
   gui         reference GUI (Electron + React)
   tui         reference TUI
 developer/    build tooling you build WITH (invoked, a devDependency)
-  sdk         application / extension SDK — the `kungfu sdk` subcommand
+  sdk         application / extension / skill SDK — the `kungfu sdk` subcommand
 extensions/   kfx plugins (reference extensions)
 examples/     samples and build-coverage probes
 artifact      dogfood installer (assembles the above)
@@ -191,7 +223,7 @@ others invoke):
 
 - **`framework/`** — a runtime component, or a publishable, framework-neutral
   contract/library that others build on and take as a **dependency** (`core`,
-  `api`, `kfx`, `spec`, plus the reference `gui` / `tui`).
+  `api`, `kfx`, `skill`, `spec`, plus the reference `gui` / `tui`).
 - **`developer/`** — a build-time **tool** you build with: invoked (typically a
   CLI) and taken as a **devDependency**, never imported at runtime (`sdk`).
 - **`extensions/`** — a kfx plugin built on the extension contract.
