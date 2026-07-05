@@ -6,6 +6,11 @@ load-bearing truth rest on a claim you could fake — weld it to something that
 can't. ([design philosophy](docs/design-philosophy.md); [facts before
 trust](docs/facts-before-trust.md).)
 
+The product goal is to make fact-first responsibility the path of least
+resistance: once a user starts relying on Kungfu, the natural way to use it
+should be to inspect facts, understand responsibility, and make control
+decisions from local proof rather than from opaque claims.
+
 At its core is a low-latency, append-only event journal with a shared,
 strongly-typed schema, exposed zero-copy to C++, Python, and Node. Kungfu
 offers these capabilities — the journal, in-process state, and deterministic

@@ -26,6 +26,28 @@ Each of those statements is cheaper to say than to prove. Kungfu's design bias
 is to turn the statement into a local, inspectable, replayable, or otherwise
 verifiable object.
 
+## Product Goal
+
+Kungfu should make fact-first responsibility the path of least resistance.
+
+Users should not need to adopt a philosophy before the product helps them. They
+may arrive because an agent run failed, a long task is burning tokens, an
+extension needs review, or a release artifact needs proof. But after the first
+use, the easiest reliable path should be the Kungfu path:
+
+```text
+capture the work
+inspect the local facts
+understand the responsibility state
+decide the next action from proof
+keep the record exportable and reviewable
+```
+
+This is how the product carries the principle instead of merely describing it.
+The interface, runtime, extensions, skills, and release evidence should make
+the fact-first path feel cheaper than guessing, asking for summaries, or
+trusting an opaque control plane.
+
 ## Facts Before Trust
 
 A user should not have to trust a dashboard, a hosted service, a maintainer, or

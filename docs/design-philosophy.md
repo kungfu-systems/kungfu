@@ -27,6 +27,13 @@ rationale, see the [ADRs](../framework/core/docs/adr). For the public product
 stance that connects these choices to agent work, release evidence, extension
 trust, and known limits, see [`facts-before-trust.md`](facts-before-trust.md).
 
+The product goal follows directly from this stance: Kungfu should make
+fact-first responsibility the path of least resistance. A user who starts with a
+practical need — inspect an agent run, verify an extension, understand a release,
+recover a failed workflow — should naturally move through local facts,
+responsibility state, and proof-backed control decisions because that is the
+simplest reliable way the product works.
+
 ## Principle 1 — The machine adapts to the person
 
 Kungfu absorbs toolchain and runtime complexity into the product so its users do
