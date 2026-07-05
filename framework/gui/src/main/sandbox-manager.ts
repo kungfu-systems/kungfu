@@ -193,8 +193,22 @@ export class SandboxManager {
         );
         return;
       }
+      // `kfs kfx build` emits the view's styles as a sibling index.css. Ship it
+      // alongside the bundle so the sandboxed view's CSS (xterm.css, which
+      // positions rows, maps mouse coordinates, and hides the helper textarea)
+      // actually applies inside the isolated page. A view without a stylesheet
+      // simply loads no css.
+      let css = '';
+      const cssPath = opts.bundlePath.replace(/\.js$/, '.css');
+      if (cssPath !== opts.bundlePath) {
+        try {
+          css = readFileSync(cssPath, 'utf8');
+        } catch {
+          // no sibling stylesheet — view ships no CSS
+        }
+      }
       void view.webContents.executeJavaScript(
-        `window.${HARNESS_GLOBAL}.load(${JSON.stringify(source)})`,
+        `window.${HARNESS_GLOBAL}.load(${JSON.stringify(source)}, ${JSON.stringify(css)})`,
       );
     });
 
