@@ -166,16 +166,11 @@ export function createLibkungfuWindowsSpawn(
         .map(([k, v]) => `${k}=${v}`),
     });
 
-    // native opened the pipes as the child's stdio; the servers accept those
-    // connections. host WRITES to stdin, READS child stdout.
-    const [stdin, stdout] = await Promise.all([
-      stdinServer.connected,
-      stdoutServer.connected,
-    ]);
-
+    // A single exit wait, shared between the startup guard below and the exit
+    // event wiring.
+    const exited = proc.wait();
     const exitListeners = new Set<(code: number | null) => void>();
-    proc
-      .wait()
+    exited
       .then((code) => {
         for (const cb of exitListeners) cb(code);
       })
@@ -187,6 +182,21 @@ export function createLibkungfuWindowsSpawn(
         stdoutServer.close();
         cleanupScratch();
       });
+
+    // native opened the pipes as the child's stdio; the servers accept those
+    // connections. host WRITES to stdin, READS child stdout. If the guest exits
+    // BEFORE connecting its pipes (a startup failure — e.g. the runtime cannot
+    // initialize under the AppContainer), the connected promises would hang
+    // forever. Race them against the exit so a failed launch surfaces as an error
+    // carrying the exit code instead of a deadlock.
+    const [stdin, stdout] = (await Promise.race([
+      Promise.all([stdinServer.connected, stdoutServer.connected]),
+      exited.then((code) => {
+        throw new Error(
+          `sandboxed guest exited before connecting its relay pipes (exit code ${code})`,
+        );
+      }),
+    ])) as [Socket, Socket];
 
     const child: GuestChild = {
       stdout,
