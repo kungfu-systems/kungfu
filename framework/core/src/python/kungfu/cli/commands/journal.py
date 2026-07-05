@@ -11,7 +11,7 @@ import zipfile
 
 from collections import deque
 from datetime import datetime, timedelta
-from tabulate import tabulate
+from tabulate import tabulate  # type: ignore[import-untyped]  # no stubs
 
 from kungfu.cli.commands import kfc, PrioritizedCommandGroup
 from kungfu.yijinjing import LOG_PATTERN, ARCHIVE_PREFIX
@@ -38,13 +38,13 @@ journal_command_context = kfc.pass_context(
 
 @kfc.group(cls=PrioritizedCommandGroup, help_priority=2)
 @click.option(
-    "-m", "--mode", default="*", type=click.Choice(kfj.MODES.keys()), help="mode"
+    "-m", "--mode", default="*", type=click.Choice(list(kfj.MODES)), help="mode"
 )
 @click.option(
     "-c",
     "--category",
     default="*",
-    type=click.Choice(kfj.CATEGORIES.keys()),
+    type=click.Choice(list(kfj.CATEGORIES)),
     help="category",
 )
 @click.option("-g", "--group", type=str, default="*", help="group")

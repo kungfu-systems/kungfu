@@ -5,9 +5,12 @@ import psutil
 import signal
 import kungfu.yijinjing.io as kfio
 import kungfu.yijinjing.journal as kfj
-from . import os_signal
+from typing import Any
 
-yjj = kungfu.__binding__.yijinjing
+from . import os_signal  # type: ignore[attr-defined]  # native submodule
+
+# native pybind11 binding (no stubs); Any so `yjj.apprentice` is a usable base
+yjj: Any = kungfu.__binding__.yijinjing
 
 
 class Apprentice(yjj.apprentice):

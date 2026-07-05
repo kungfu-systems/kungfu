@@ -25,7 +25,7 @@ def engage_command_context():
             sys.argv = [sys.argv[0], *ctx.args]
             return kfc.pass_context()(f)(*args, **kwargs)
 
-        return update_wrapper(typing.cast(CLI, new_func), f)
+        return typing.cast(CLI, update_wrapper(new_func, f))
 
     return build_bridge
 
@@ -83,7 +83,7 @@ def engaged_nuitka_context():
             build_bridge = engage_command_context()
             return build_bridge(f)(*args, **kwargs)
 
-        return update_wrapper(typing.cast(CLI, new_func), f)
+        return typing.cast(CLI, update_wrapper(new_func, f))
 
     return nuitka_context
 

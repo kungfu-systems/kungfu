@@ -114,27 +114,12 @@ ignore = ["E501", "F403", "F405"]
 # so mypy runs lenient: untyped defs are skipped (no big-bang wall of errors),
 # and a module gets real checking once its functions are annotated. Native
 # pykungfu and unstubbed third-party libs have no stubs, so missing imports are
-# ignored. Tighten per-module (via [[tool.mypy.overrides]]) as coverage grows.
+# ignored. The whole package is error-clean today (no ignore-errors overrides);
+# keep it that way — fix or annotate a module rather than silencing it.
 [tool.mypy]
 python_version = "3.13"
 ignore_missing_imports = true
 exclude = ['(^|/)(fb|generated)/', '_fb\.py$', '(^|/)\.deps/']
-
-# Baseline snapshot of pre-existing type errors so the gate is green from day one
-# (13 errors across these modules: native pykungfu used without stubs, and
-# partially-typed click-decorator/CLI return types). New code is still checked;
-# drop a module from this list as it is fixed or annotated. Typing follow-up.
-[[tool.mypy.overrides]]
-module = [
-    "kungfu.cli.commands",
-    "kungfu.cli.commands.engage",
-    "kungfu.cli.commands.journal",
-    "kungfu.rewind.managed_run",
-    "kungfu.yijinjing.practice.apprentice",
-    "kungfu.yijinjing.sinks.archive",
-    "kungfu.yijinjing.sinks.csv",
-]
-ignore_errors = true
 
 [tool.uv]
 # 钉 uv 自管 standalone CPython(而非系统/发行版 python)：跨机一致,且根治 nuitka 在

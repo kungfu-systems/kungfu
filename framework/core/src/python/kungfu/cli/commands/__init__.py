@@ -106,7 +106,7 @@ class PrioritizedCommandGroup(click.Group):
                     ctx.__dict__[key] = ctx.parent.__dict__[key]
                 return f(ctx, *args, **kwargs)
 
-            return update_wrapper(typing.cast(CLI, new_func), f)
+            return typing.cast(CLI, update_wrapper(new_func, f))
 
         return copy_from_parent
 

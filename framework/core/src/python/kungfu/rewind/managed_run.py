@@ -25,7 +25,7 @@ import dataclasses
 import json
 import subprocess
 import time
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, TypedDict
 
 from kungfu.rewind import MSG_MODEL_RESPONSE, events
 from kungfu.rewind import cost_wire
@@ -35,12 +35,19 @@ from kungfu.rewind.cost.model import CostSnapshot
 from kungfu.rewind.fb.CallStatus import CallStatus
 from kungfu.rewind.fb.CaptureLayer import CaptureLayer
 
+
 # Provider -> how to invoke it for structured output and how to parse it back.
 # argv keeps the provider's own structured-output flags; the prompt is the last
 # positional. The two structured-output paths a managed run supports:
 #   codex exec --json <prompt>              -> turn.completed.usage (tokens only)
 #   claude --print --output-format json ... -> usage + total_cost_usd + session
-_SPECS = {
+class _ProviderSpec(TypedDict):
+    surface: str
+    argv: Callable[[str, str], list[str]]
+    parse: Callable[..., CostSnapshot]
+
+
+_SPECS: dict[str, _ProviderSpec] = {
     "codex": {
         "surface": "exec_json",
         "argv": lambda binary, prompt: [binary, "exec", "--json", prompt],
