@@ -27,3 +27,7 @@ export type {
 export * from './guest-node.js';
 export * from './kungfu-guest.js';
 export * from './guest-windows.js';
+// The service-authorization → sandbox-profile resolver (ADR-0017): the user
+// grant that tunes an untrusted service's OS-sandbox profile without piercing
+// its trust tier, persisted in the same ConfigStore as shell state.
+export * from './service-authz.js';
