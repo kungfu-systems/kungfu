@@ -20,6 +20,24 @@ function asSkillManagerView(value: unknown): SkillManagerView | null {
   return null;
 }
 
+function readSkillManagerViewFromEnv(): SkillManagerView | null {
+  try {
+    const win = window as unknown as {
+      require?: (id: string) => {
+        readFileSync: (p: string, enc: string) => string;
+      };
+      process?: { env?: Record<string, string | undefined> };
+    };
+    const managerPath = win.process?.env?.KF_SKILL_MANAGER_FILE;
+    if (!managerPath || !win.require) return null;
+    return asSkillManagerView(
+      JSON.parse(win.require('node:fs').readFileSync(managerPath, 'utf8')),
+    );
+  } catch {
+    return null;
+  }
+}
+
 function packageLabel(
   row: SkillManagerEntry['dependencies']['dependencies'][0],
 ) {
@@ -29,7 +47,9 @@ function packageLabel(
 }
 
 function SkillManagerViewComponent({ shell }: KfxViewProps) {
-  const view = asSkillManagerView(shell.info.skillManager);
+  const view =
+    asSkillManagerView(shell.info.skillManager) ??
+    readSkillManagerViewFromEnv();
   const cell: React.CSSProperties = { padding: '2px 12px 2px 0' };
   if (!view) {
     return (

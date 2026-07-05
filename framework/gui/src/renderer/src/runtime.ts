@@ -171,9 +171,20 @@ export function bootRuntime(): Runtime {
     let skillManager: Record<string, unknown> | null = null;
     try {
       const fs = window.require('node:fs');
-      const managerPath = env.KF_SKILL_MANAGER_FILE;
-      if (managerPath) {
-        skillManager = JSON.parse(fs.readFileSync(managerPath, 'utf8'));
+      const path = window.require('node:path');
+      const managerPaths = [
+        env.KF_SKILL_MANAGER_FILE,
+        runtimeDir
+          ? path.join(runtimeDir, 'skill-manager', 'default.json')
+          : '',
+      ].filter((p): p is string => Boolean(p));
+      for (const managerPath of managerPaths) {
+        try {
+          skillManager = JSON.parse(fs.readFileSync(managerPath, 'utf8'));
+          break;
+        } catch {
+          skillManager = null;
+        }
       }
     } catch {
       skillManager = null;
