@@ -149,6 +149,233 @@ export type KfxSuiteDecl = {
   members: string[];
 };
 
+// ── load plan: host-agnostic discovery + decision (ADR-0017) ──────────────
+
+// The filesystem/crypto handles `planKfx` needs, injected so the plan stays
+// host-agnostic: the GUI renderer passes its `window.require('node:…')` handles,
+// a CLI host passes the `node:` modules directly. `planKfx` instantiates
+// nothing — no View, no DOM, no Electron — it only discovers packages and
+// decides trust/tier, so the same rule runs in any Node/TS host.
+export type KfxPlanFs = {
+  existsSync: (p: string) => boolean;
+  readFileSync: (p: string, enc: string) => string;
+  readdirSync: (
+    p: string,
+    opts: { withFileTypes: true },
+  ) => { name: string; isDirectory: () => boolean }[];
+};
+export type KfxPlanPath = {
+  join: (...parts: string[]) => string;
+  dirname: (p: string) => string;
+  resolve: (...parts: string[]) => string;
+  delimiter: string;
+};
+export type KfxPlanCrypto = {
+  createHash: (algo: string) => {
+    update: (data: string) => { digest: (enc: string) => string };
+  };
+};
+export type KfxPlanDeps = {
+  fs: KfxPlanFs;
+  path: KfxPlanPath;
+  crypto: KfxPlanCrypto;
+};
+
+// One discovered kfx after discovery + decision, before any host lands it: the
+// neutral load plan. The GUI's `KfxEntry` is exactly this plus a mounted
+// `View`; a CLI host lands its own way. It carries what the decision produced
+// (`tier`) and where the body is (`dir`, `bundlePath`) — but instantiates
+// nothing.
+export type KfxPlanEntry = {
+  id: string;
+  title: string;
+  capabilities: KfxCapabilityKey[];
+  system: boolean;
+  settings: KfxSettingDecl[];
+  suite?: string;
+  packageName?: string;
+  version?: string;
+  // the package directory this kfx was discovered in (absolute); a host uses it
+  // to locate the body and to report a load failure against the right package.
+  dir: string;
+  source: 'built-in' | string; // extension root the entry was loaded from
+  tier: KfxRuntimeTier;
+  bundlePath: string;
+};
+
+export type KfxPlanFailure = {
+  dir: string;
+  error: string;
+};
+
+export type KfxLoadPlan = {
+  entries: KfxPlanEntry[];
+  suites: Record<string, KfxSuiteDecl>;
+  failures: KfxPlanFailure[];
+};
+
+function planSha256(crypto: KfxPlanCrypto, data: string): string {
+  return crypto.createHash('sha256').update(data).digest('hex');
+}
+
+// The frozen first-party set (ADR-0013): trust is granted by membership here —
+// a verifiable origin — never by which extension root a package loaded from. It
+// ships as a build-generated JSON pointed to by KF_FIRST_PARTY_MANIFEST. A
+// missing/unreadable manifest yields `null`, which trusts nothing but the
+// shell's own `system` views (safe by default, never a path fallback).
+export function loadFirstPartyManifest(
+  env: Record<string, string | undefined>,
+  deps: KfxPlanDeps,
+): FirstPartyManifest | null {
+  const p = env.KF_FIRST_PARTY_MANIFEST;
+  if (!p || !deps.fs.existsSync(p)) return null;
+  try {
+    const parsed = JSON.parse(
+      deps.fs.readFileSync(p, 'utf8'),
+    ) as FirstPartyManifest;
+    if (parsed?.version !== 1 || typeof parsed.keys !== 'object') return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+// Extension roots, in priority order (first occurrence of a key wins):
+//   1. KF_EXTENSION_PATH entries (path-separator list; dev override)
+//   2. <home>/extensions next to the runtime dir (the install root that
+//      `kungfu kfx install` populates)
+export function extensionRoots(
+  env: Record<string, string | undefined>,
+  deps: KfxPlanDeps,
+): string[] {
+  const { path } = deps;
+  const roots: string[] = [];
+  for (const entry of (env.KF_EXTENSION_PATH ?? '').split(path.delimiter)) {
+    if (entry) roots.push(entry);
+  }
+  if (env.KF_RUNTIME_DIR) {
+    roots.push(path.join(path.dirname(env.KF_RUNTIME_DIR), 'extensions'));
+  }
+  return roots;
+}
+
+// Scan a root two levels deep so suite members nested under a suite directory
+// (extensions/system/<member>) are found in the workspace layout.
+function packageDirs(root: string, deps: KfxPlanDeps): string[] {
+  const { fs, path } = deps;
+  if (!fs.existsSync(root)) return [];
+  const dirs: string[] = [];
+  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+    if (!entry.isDirectory() || entry.name === 'node_modules') continue;
+    const dir = path.join(root, entry.name);
+    dirs.push(dir);
+    // one more level: suite members live under the suite directory
+    for (const nested of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (!nested.isDirectory() || nested.name === 'node_modules') continue;
+      const nestedDir = path.join(dir, nested.name);
+      if (fs.existsSync(path.join(nestedDir, 'package.json'))) {
+        dirs.push(nestedDir);
+      }
+    }
+  }
+  return dirs.filter((dir) => fs.existsSync(path.join(dir, 'package.json')));
+}
+
+// planKfx: discover packages across the extension roots and decide each one's
+// trust tier, producing a neutral load plan. It is the host-agnostic half of
+// the old `loadKfx` — discovery + decision — with `View` landing removed and
+// filesystem access injected. Both hosts import this same rule, so the GUI and
+// the CLI reach an identical verdict for the same kfx (ADR-0017). Landing (the
+// renderer bundle eval, or the OS-sandbox launch) is each host's own concern.
+export function planKfx(
+  env: Record<string, string | undefined>,
+  deps: KfxPlanDeps,
+): KfxLoadPlan {
+  const { fs, path } = deps;
+  const entries: KfxPlanEntry[] = [];
+  const suites: Record<string, KfxSuiteDecl> = {};
+  const failures: KfxPlanFailure[] = [];
+  const seen = new Set<string>();
+
+  // trust is granted by the frozen first-party set (ADR-0013), never by which
+  // root a package loaded from — a KF_EXTENSION_PATH entry no longer confers it.
+  const firstParty = loadFirstPartyManifest(env, deps);
+
+  for (const root of extensionRoots(env, deps)) {
+    for (const dir of packageDirs(root, deps)) {
+      try {
+        const manifest = JSON.parse(
+          fs.readFileSync(path.join(dir, 'package.json'), 'utf8'),
+        ) as {
+          name?: string;
+          version?: string;
+          kungfuConfig?: {
+            key?: string;
+            suite?: KfxSuiteDecl;
+            config?: {
+              view?: {
+                title?: string;
+                capabilities?: KfxCapabilityKey[];
+                runtime?: KfxRuntimeTier;
+                system?: boolean;
+                settings?: KfxSettingDecl[];
+                entry?: string;
+              };
+            };
+          };
+        };
+        const config = manifest.kungfuConfig;
+        if (!config?.key) continue; // not a kfx package (or not one of ours)
+        if (config.suite && !suites[config.key]) {
+          suites[config.key] = config.suite;
+        }
+        const view = config.config?.view;
+        if (!view) continue;
+        if (seen.has(config.key)) continue; // earlier root wins
+        seen.add(config.key);
+        const bundlePath = path.join(dir, view.entry ?? 'dist/view/index.js');
+        // hash the bundle only when the key is pinned in the frozen set; an
+        // unpinned or absent key is decided by identity alone (verdict below).
+        const pin = firstParty?.keys[config.key];
+        const contentHash =
+          pin && pin.sha256 !== null && fs.existsSync(bundlePath)
+            ? planSha256(deps.crypto, fs.readFileSync(bundlePath, 'utf8'))
+            : null;
+        const trusted = authorizeFirstParty(
+          firstParty,
+          config.key,
+          contentHash,
+        );
+        const tier = resolveRuntimeTier(view, trusted);
+        entries.push({
+          id: config.key,
+          title: view.title ?? config.key,
+          capabilities: view.capabilities ?? [],
+          system: Boolean(view.system),
+          settings: view.settings ?? [],
+          packageName: manifest.name,
+          version: manifest.version,
+          dir,
+          source: root,
+          tier,
+          bundlePath,
+        });
+      } catch (e) {
+        failures.push({ dir, error: (e as Error).message });
+      }
+    }
+  }
+
+  // join suite membership onto entries
+  for (const [key, suite] of Object.entries(suites)) {
+    for (const entry of entries) {
+      if (suite.members.includes(entry.id)) entry.suite = key;
+    }
+  }
+
+  return { entries, suites, failures };
+}
+
 // ── runtime contract (what the shell hands a mounted view) ────────────────
 
 export type ShellState = {
@@ -169,23 +396,13 @@ export type ShellRuntimeInfo = {
   longfistTypes: { name: string; fields: string[] }[];
 };
 
-// One loaded view as the shell sees it: manifest data joined with the code.
-export type KfxEntry = {
-  id: string;
-  title: string;
-  capabilities: KfxCapabilityKey[];
-  system: boolean;
-  settings: KfxSettingDecl[];
-  suite?: string;
-  packageName?: string;
-  version?: string;
-  source: 'built-in' | string; // extension root the entry was loaded from
-  // resolved trust tier (resolveRuntimeTier). A node-integrated view carries a
-  // loaded View mounted in the shared renderer; a sandboxed-ipc view carries
-  // only its bundlePath, loaded in an isolated renderer, and View is a
-  // placeholder the shell must not mount directly.
-  tier: KfxRuntimeTier;
-  bundlePath: string;
+// One loaded view as the GUI shell sees it: a load-plan entry (manifest data +
+// the trust/tier decision) with this renderer's landing added — the mounted
+// `View`. A node-integrated view carries a View evaluated in the shared
+// renderer; a sandboxed-ipc view carries only its `bundlePath`, loaded in an
+// isolated renderer, and `View` is a placeholder the shell must not mount
+// directly. Everything except `View` is the host-agnostic `KfxPlanEntry`.
+export type KfxEntry = KfxPlanEntry & {
   View: KfxViewComponent;
 };
 
