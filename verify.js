@@ -163,6 +163,11 @@ function main() {
   if (doFull) {
     try {
       runPnpm('rebuild:core'); // clean + build:conan C++/wheel/native
+      // Freeze before the dogfood probes: the extension build they run is
+      // `kungfu sdk kfx build`, which launches the frozen kungfu runtime — so
+      // dist/kungfu must exist first. (Before the kfs→`kungfu sdk` move the
+      // probe used a plain-node bin and could run pre-freeze; it can't now.)
+      runPnpm('freeze'); // nuitka → framework/core/dist/kungfu
       // C++ dogfood probe: compile the reference cpp kfx against the freshly
       // built libkungfu (headers + shared lib + FlatBuffers) into a native
       // module. If a core capability regresses, this build breaks here.
@@ -197,7 +202,6 @@ function main() {
           `python probe build failed (exit ${pyProbeBuild.status == null ? 'signal ' + pyProbeBuild.signal : pyProbeBuild.status})`,
         );
       }
-      runPnpm('freeze'); // nuitka → framework/core/dist/kungfu
       if (withApp) runPnpm('build:app'); // webpack → framework/gui/dist/app
     } catch (e) {
       fail('build stage', e instanceof Error ? e.message : String(e));
