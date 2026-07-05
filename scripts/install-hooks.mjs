@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
 //
-// install-hooks.js — install the repo's git hooks into this checkout.
+// install-hooks.mjs — install the repo's git hooks into this checkout.
 //
 // Copies .githooks/pre-commit to $(git --git-common-dir)/hooks/pre-commit (the
 // standard location, shared by the main checkout and every worktree). It does

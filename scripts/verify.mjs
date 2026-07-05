@@ -6,7 +6,7 @@
 // build:app → launch app) with no single criterion — into a reproducible "one command + assert
 // artifacts" criterion, which also serves as a CI smoke baseline.
 //
-// Usage (node pinned via the entrypoint; plain `node verify.js` also works):
+// Usage (node pinned via the entrypoint; plain `node scripts/verify.mjs` works):
 //   ./kungfu-code verify              quick: only assert "existing" artifacts (dist/kungfu exists + kfc runs + version matches)
 //   ./kungfu-code verify --full       full: rebuild:core + freeze first, then assert; also builds and runs the
 //                                     capability slices (framework/core/slices) + yijinjing dependency guard

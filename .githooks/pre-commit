@@ -7,8 +7,8 @@
 # the real work (staged .sh guard, format, blocking lint) identically on
 # macOS/Linux/Windows.
 #
-# Installed to $(git --git-common-dir)/hooks/pre-commit by install-hooks.js (root
-# `prepare`, or `pnpm run hooks:install`). It coexists with the managed hooks-path
+# Installed to $(git --git-common-dir)/hooks/pre-commit by scripts/install-hooks.mjs
+# (root `prepare`, or `pnpm run hooks:install`). It coexists with the managed hooks-path
 # guard: when core.hooksPath points elsewhere, that guard execs this standard hook
 # after its own checks. Missing node warns and skips (a setup gap must not block a
 # commit). Bypass entirely with `git commit -n`.

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
 //
-// kungfu-code.js — the "rich subset" (L2) of the kungfu-code entrypoint.
+// kungfu-code.mjs — the "rich subset" (L2) of the kungfu-code entrypoint.
 //
 // Three-tier subset model:
 //   L1  kungfu-code (sh)        bootstrap simple commands: load env / check fnm+uv / pin node / run pnpm,
 //                               and delegate rich subcommands (proxy/config…) to this file.
-//   L2  kungfu-code.js (node)   rich commands available once fnm is installed (node implementation, pure builtins, no deps).
+//   L2  kungfu-code.mjs (node)  rich commands available once fnm is installed (node implementation, pure builtins, no deps).
 //                               currently: local cache/mirror proxy config management (proxy).
 //   L3  (future) TUI            reuse kungfu's own TUI infrastructure / build-artifact runtime; directly import
 //                               the readConfig/setKey config helpers below instead of reimplementing them.
@@ -135,7 +135,7 @@ function main() {
   const cmd = argv[0];
   if (cmd !== 'proxy' && cmd !== 'config') {
     console.error(
-      `kungfu-code.js: unknown command ${cmd || '(empty)'} (only proxy/config are supported)`,
+      `kungfu-code.mjs: unknown command ${cmd || '(empty)'} (only proxy/config are supported)`,
     );
     process.exit(2);
   }
