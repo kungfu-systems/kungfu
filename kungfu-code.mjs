@@ -14,12 +14,14 @@
 // The config file lives user-global at ${XDG_CONFIG_HOME:-~/.config}/kungfu/build-local.env: the main repo and all
 // git worktrees share one copy, it is naturally outside the repo (open-source safe), and only needs one sync across intranet machines.
 // @ts-check
-'use strict';
 
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const { spawnSync } = require('child_process');
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const KEYS = [
   // mirrors / cache (per upstream)
@@ -109,7 +111,7 @@ function unsetKey(key) {
   fs.writeFileSync(CONFIG_FILE, text.replace(re, ''));
 }
 
-module.exports = { CONFIG_FILE, KEYS, readConfig, setKey, unsetKey };
+export { CONFIG_FILE, KEYS, readConfig, setKey, unsetKey };
 
 // ── CLI (entrypoint delegated from L1 sh) ────────────────────────────────────
 /** @param {string} cmd */
@@ -213,4 +215,4 @@ function main() {
   }
 }
 
-if (require.main === module) main();
+if (import.meta.url === pathToFileURL(process.argv[1]).href) main();

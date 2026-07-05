@@ -9,7 +9,7 @@
 #
 # Three-tier subset model:
 #   L1 this file (sh)         bootstrap: load proxy env / check fnm+uv / pin node / run pnpm; rich subcommands delegate to L2.
-#   L2 kungfu-code.js (node)  rich commands available once fnm is installed (cache config proxy, etc.), pure node builtins.
+#   L2 kungfu-code.mjs (node)  rich commands available once fnm is installed (cache config proxy, etc.), pure node builtins.
 #   L3 (future) TUI           reuse kungfu's own TUI infrastructure / build artifacts; reuse L2's config read/write.
 #
 # Mechanism (dual-driver entrypoint, symmetric node side + python side):
@@ -46,9 +46,9 @@ case "${1:-}" in
   proxy | config)
     if command -v fnm >/dev/null 2>&1; then
       fnm install >/dev/null 2>&1 || true
-      exec fnm exec --using-file -- node ./kungfu-code.js "$@"
+      exec fnm exec --using-file -- node ./kungfu-code.mjs "$@"
     elif command -v node >/dev/null 2>&1; then
-      exec node ./kungfu-code.js "$@"
+      exec node ./kungfu-code.mjs "$@"
     else
       echo "kungfu-code: rich subcommands need node — install fnm (recommended 'arch -arm64 brew install fnm', see https://github.com/Schniz/fnm) or any system node" >&2
       exit 127

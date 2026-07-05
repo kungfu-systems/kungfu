@@ -7,7 +7,7 @@ rem Aligns with the macOS/Linux kungfu-code (sh):
 rem   kungfu-code app | kungfu-code build:core | kungfu-code <any pnpm task>
 rem   kungfu-code proxy ... / config ...   rich subcommands -> delegated to L2 node (not pnpm)
 rem
-rem 3-layer subset: L1 this .cmd (bootstrap + delegate); L2 kungfu-code.js (node rich cmds); L3 (future) TUI.
+rem 3-layer subset: L1 this .cmd (bootstrap + delegate); L2 kungfu-code.mjs (node rich cmds); L3 (future) TUI.
 rem Two one-time prerequisites: fnm (winget install Schniz.fnm) + uv (winget install astral-sh.uv).
 rem Repo has zero LAN/mirror coupling (open-source clone uses official upstreams). For LAN cache /
 rem CN mirror, use `kungfu-code config` to derive build-local.env.example into the user-global file:
@@ -24,11 +24,11 @@ goto bootstrap
 :delegate
 where fnm >nul 2>nul && (
   fnm install >nul 2>nul
-  fnm exec --using-file -- node "%~dp0kungfu-code.js" %*
+  fnm exec --using-file -- node "%~dp0kungfu-code.mjs" %*
   exit /b !errorlevel!
 )
 where node >nul 2>nul && (
-  node "%~dp0kungfu-code.js" %*
+  node "%~dp0kungfu-code.mjs" %*
   exit /b !errorlevel!
 )
 echo kungfu-code: rich subcommand needs node -- install fnm ^(winget install Schniz.fnm^) or any system node 1>&2
