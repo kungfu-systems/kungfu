@@ -34,6 +34,18 @@ const { spawnSync } = require('child_process');
 const ROOT = __dirname;
 const isWin = process.platform === 'win32';
 
+// Prefer a cross-platform run.mjs (node) over the legacy run.sh (bash) so
+// fixtures/slices migrate off the bash dependency incrementally; returns null
+// when a dir carries neither runner.
+function runnerFor(dir) {
+  const mjs = path.join(dir, 'run.mjs');
+  if (fs.existsSync(mjs))
+    return { cmd: process.execPath, args: [mjs], label: 'run.mjs' };
+  const sh = path.join(dir, 'run.sh');
+  if (fs.existsSync(sh)) return { cmd: 'bash', args: [sh], label: 'run.sh' };
+  return null;
+}
+
 const args = process.argv.slice(2);
 if (args.includes('--help') || args.includes('-h')) {
   // print the file header usage block (up to the first blank comment line)
@@ -99,6 +111,31 @@ function main() {
   console.log(
     `[verify] mode: ${doFull ? 'full (build first)' : 'quick (assert existing artifacts only)'}${withApp ? ' + app' : ''}`,
   );
+
+  // ── Stage 0a: cross-platform script guard (read-only) ─────────────
+  // The verification gate drives its fixtures/slices/guards through Node so it
+  // runs on every platform pnpm runs on (Windows included). Reintroducing a
+  // bash `.sh` in these paths silently breaks the gate off-Unix — fail loudly.
+  console.log('\n[verify] stage 0a: no-bash script guard');
+  const shPaths = [];
+  const scanSh = (dir) => {
+    if (!fs.existsSync(dir)) return;
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) scanSh(p);
+      else if (e.name.endsWith('.sh')) shPaths.push(path.relative(ROOT, p));
+    }
+  };
+  scanSh(path.join(ROOT, 'tests', 'fixtures'));
+  scanSh(path.join(ROOT, 'framework', 'core', 'slices'));
+  scanSh(path.join(ROOT, 'framework', 'core', 'src', 'libyijinjing'));
+  if (shPaths.length === 0)
+    pass('no-bash script guard', 'gates are Node-only (cross-platform)');
+  else
+    fail(
+      'no-bash script guard',
+      `bash scripts must be Node (.mjs) so the gate runs on Windows too:\n  ${shPaths.join('\n  ')}`,
+    );
 
   // ── Stage 0: toolchain preflight (read-only) ──────────────────────
   console.log('\n[verify] stage 0: toolchain preflight');
@@ -350,28 +387,28 @@ function main() {
           .slice(0, 300);
       const slices = fs
         .readdirSync(slicesDir)
-        .filter((d) => fs.existsSync(path.join(slicesDir, d, 'run.sh')))
+        .filter((d) => runnerFor(path.join(slicesDir, d)))
         .sort();
       for (const name of slices) {
-        const r = spawnSync(
-          'bash',
-          [path.join(slicesDir, name, 'run.sh'), buildDir],
-          { encoding: 'utf8' },
-        );
+        const runner = runnerFor(path.join(slicesDir, name));
+        const r = spawnSync(runner.cmd, [...runner.args, buildDir], {
+          encoding: 'utf8',
+        });
         if (r.status === 0) pass(`slice ${name}`, 'proof holds');
         else
           fail(
             `slice ${name}`,
-            `run.sh exit ${r.status == null ? 'signal ' + r.signal : r.status}; tail: ${tail3(r)}`,
+            `${runner.label} exit ${r.status == null ? 'signal ' + r.signal : r.status}; tail: ${tail3(r)}`,
           );
       }
-      const guard = spawnSync(
-        'bash',
-        [path.join(core, 'src', 'libyijinjing', 'check-deps.sh')],
-        { encoding: 'utf8' },
-      );
-      if (guard.status === 0)
-        pass('yijinjing dependency guard', 'check-deps.sh');
+      const guardDir = path.join(core, 'src', 'libyijinjing');
+      const guardMjs = path.join(guardDir, 'check-deps.mjs');
+      const guard = fs.existsSync(guardMjs)
+        ? spawnSync(process.execPath, [guardMjs], { encoding: 'utf8' })
+        : spawnSync('bash', [path.join(guardDir, 'check-deps.sh')], {
+            encoding: 'utf8',
+          });
+      if (guard.status === 0) pass('yijinjing dependency guard', 'check-deps');
       else fail('yijinjing dependency guard', tail3(guard));
 
       // ── Stage 6: journal fact fixtures (full mode) ────────────────
@@ -396,19 +433,18 @@ function main() {
             .filter(
               (d) =>
                 fixturePrefixes.some((prefix) => d.startsWith(prefix)) &&
-                fs.existsSync(path.join(fixturesDir, d, 'run.sh')),
+                runnerFor(path.join(fixturesDir, d)),
             )
             .sort()
         : [];
       for (const name of fixtures) {
-        const r = spawnSync('bash', [path.join(fixturesDir, name, 'run.sh')], {
-          encoding: 'utf8',
-        });
+        const runner = runnerFor(path.join(fixturesDir, name));
+        const r = spawnSync(runner.cmd, runner.args, { encoding: 'utf8' });
         if (r.status === 0) pass(`fixture ${name}`, 'journal facts hold');
         else
           fail(
             `fixture ${name}`,
-            `run.sh exit ${r.status == null ? 'signal ' + r.signal : r.status}; tail: ${tail3(r)}`,
+            `${runner.label} exit ${r.status == null ? 'signal ' + r.signal : r.status}; tail: ${tail3(r)}`,
           );
       }
     }
