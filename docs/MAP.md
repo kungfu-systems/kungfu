@@ -25,6 +25,7 @@ and the map routes a question to whichever doc answers it.
 | What is kungfu, in one idea? | [`../README.md`](../README.md) | — | stable |
 | What do the terms mean (`kungfu` / `longfist` / journal …)? | [`concepts.md`](concepts.md) | use | stable |
 | Why is it built this way? What is load-bearing? | [`design-philosophy.md`](design-philosophy.md) | why | stable |
+| Why does Kungfu start from accountability? | [`facts-before-trust.md`](facts-before-trust.md) | why | stable |
 | Why this versioning / release design (don't replace it naively)? | [`version-release-design.md`](version-release-design.md) | why | stable |
 | When must a change open a minor or major (and when must it not)? | [`versioning.md`](versioning.md) (rule: KFD-1, adopted by ADR-0010) | verify | stable |
 | Why was a past decision made? | [`../framework/core/docs/adr/`](../framework/core/docs/adr) | why | stable |
@@ -56,6 +57,8 @@ route to the row that answers them:
 - **determinism / reproducibility / record-and-replay** → *what does it actually
   guarantee* ([`contracts.md`](contracts.md)) and *the event / journal / replay
   model* ([`event-model.md`](event-model.md)).
+- **accountability / facts before trust / local proof before control** → *why
+  does Kungfu start from accountability* ([`facts-before-trust.md`](facts-before-trust.md)).
 - **latency / performance / zero-copy / serialization** → *the membrane*
   ([`architecture.md`](architecture.md)) and *the event model*
   ([`event-model.md`](event-model.md)).

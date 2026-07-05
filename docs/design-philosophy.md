@@ -23,7 +23,9 @@ of them, so you can understand *why* kungfu is built the way it is, not just
 For the vocabulary used below (`kungfu`, `sdk`, `libkungfu`, `longfist`, journal,
 zero-copy, …), see [`concepts.md`](concepts.md); for how the pieces are layered,
 see [`architecture.md`](architecture.md); for specific decisions and their
-rationale, see the [ADRs](../framework/core/docs/adr).
+rationale, see the [ADRs](../framework/core/docs/adr). For the public product
+stance that connects these choices to agent work, release evidence, extension
+trust, and known limits, see [`facts-before-trust.md`](facts-before-trust.md).
 
 ## Principle 1 — The machine adapts to the person
 

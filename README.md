@@ -3,7 +3,8 @@
 Kungfu is a framework and runtime for building journal-first,
 streaming-data applications. It is built on one discipline: never let a
 load-bearing truth rest on a claim you could fake — weld it to something that
-can't. ([design philosophy](docs/design-philosophy.md).)
+can't. ([design philosophy](docs/design-philosophy.md); [facts before
+trust](docs/facts-before-trust.md).)
 
 At its core is a low-latency, append-only event journal with a shared,
 strongly-typed schema, exposed zero-copy to C++, Python, and Node. Kungfu
@@ -99,6 +100,8 @@ right document, and is readable by both people and agents.
 - [`docs/design-philosophy.md`](docs/design-philosophy.md) — the two first
   principles the whole design follows from, and how the architecture falls out
   of them.
+- [`docs/facts-before-trust.md`](docs/facts-before-trust.md) — why Kungfu starts
+  from accountability: facts before trust, local proof before control.
 - [`docs/architecture.md`](docs/architecture.md) — how the repository is layered
   (runtime, capability SDK, application SDK, reference surfaces) and why.
 - [`docs/skills.md`](docs/skills.md) — design target for Kungfu Skills:
