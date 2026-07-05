@@ -188,14 +188,28 @@ export function createLibkungfuWindowsSpawn(
     // BEFORE connecting its pipes (a startup failure — e.g. the runtime cannot
     // initialize under the AppContainer), the connected promises would hang
     // forever. Race them against the exit so a failed launch surfaces as an error
-    // carrying the exit code instead of a deadlock.
-    const [stdin, stdout] = (await Promise.race([
-      Promise.all([stdinServer.connected, stdoutServer.connected]),
-      exited.then((code) => {
+    // carrying the exit code instead of a deadlock. The `connectedOk` flag makes
+    // the exit branch throw ONLY while the pipes are still pending, so a normal
+    // later exit does not reject an already-settled race (an unhandled rejection).
+    let connectedOk = false;
+    const connections = Promise.all([
+      stdinServer.connected,
+      stdoutServer.connected,
+    ]).then((pair) => {
+      connectedOk = true;
+      return pair;
+    });
+    const startupGuard = exited.then((code) => {
+      if (!connectedOk) {
         throw new Error(
           `sandboxed guest exited before connecting its relay pipes (exit code ${code})`,
         );
-      }),
+      }
+      return undefined as never;
+    });
+    const [stdin, stdout] = (await Promise.race([
+      connections,
+      startupGuard,
     ])) as [Socket, Socket];
 
     const child: GuestChild = {
