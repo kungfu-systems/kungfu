@@ -199,21 +199,13 @@ void grant_path_read(const std::wstring &path, PSID sid) {
   set_path_ace(path, ea);
 }
 
-// True if `path`'s DACL already grants ALL APPLICATION PACKAGES (S-1-15-2-1)
-// traverse/execute. A basic (non-LPAC) AppContainer runs with that group SID, so
-// where it is already present the container can traverse the directory without us
-// re-writing the DACL. This matters because re-writing a large user-profile
-// directory's DACL (C:\Users\<user>, its AppData) triggers NTFS to re-propagate
-// inheritable ACEs across the whole subtree — tens of seconds, or effectively a
-// hang for a big profile. System and profile ancestors carry ALL APPLICATION
-// PACKAGES:(RX) by default, so skipping them removes the redundant slow writes
-// that were the real cause of the spawn hang, while still granting any ancestor
-// that genuinely lacks the right.
-bool all_app_packages_can_traverse(const std::wstring &path) {
-  PSID all_app_packages = nullptr;
-  if (!::ConvertStringSidToSidW(L"S-1-15-2-1", &all_app_packages)) {
-    return false;
-  }
+// True if `path`'s DACL already grants `sid` traverse/execute (FILE_TRAVERSE).
+// Used to skip a redundant — and on large profile directories pathologically
+// slow — DACL rewrite: re-writing C:\Users\<user> or its AppData triggers NTFS to
+// re-propagate inheritable ACEs across the whole subtree (tens of seconds, or
+// effectively a hang for a big profile). If the traverse we are about to grant is
+// already present, the write is pure cost with no effect.
+bool dacl_grants_traverse(const std::wstring &path, PSID sid) {
   bool granted = false;
   PACL dacl = nullptr;
   PSECURITY_DESCRIPTOR descriptor = nullptr;
@@ -230,7 +222,7 @@ bool all_app_packages_can_traverse(const std::wstring &path) {
         continue;
       }
       auto *allowed = reinterpret_cast<ACCESS_ALLOWED_ACE *>(raw);
-      if (::EqualSid(&allowed->SidStart, all_app_packages) && (allowed->Mask & FILE_TRAVERSE) == FILE_TRAVERSE) {
+      if (::EqualSid(&allowed->SidStart, sid) && (allowed->Mask & FILE_TRAVERSE) == FILE_TRAVERSE) {
         granted = true;
         break;
       }
@@ -239,6 +231,22 @@ bool all_app_packages_can_traverse(const std::wstring &path) {
   if (descriptor != nullptr) {
     ::LocalFree(descriptor);
   }
+  return granted;
+}
+
+// True if `path`'s DACL already grants ALL APPLICATION PACKAGES (S-1-15-2-1)
+// traverse/execute. A basic (non-LPAC) AppContainer runs with that group SID, so
+// where it is already present the container can traverse the directory without us
+// re-writing the DACL. System and profile ancestors carry ALL APPLICATION
+// PACKAGES:(RX) by default, so skipping them removes the redundant slow writes
+// that were the real cause of the spawn hang, while still granting any ancestor
+// that genuinely lacks the right.
+bool all_app_packages_can_traverse(const std::wstring &path) {
+  PSID all_app_packages = nullptr;
+  if (!::ConvertStringSidToSidW(L"S-1-15-2-1", &all_app_packages)) {
+    return false;
+  }
+  const bool granted = dacl_grants_traverse(path, all_app_packages);
   ::LocalFree(all_app_packages);
   return granted;
 }
@@ -246,10 +254,21 @@ bool all_app_packages_can_traverse(const std::wstring &path) {
 // Grant traverse (list + execute, non-inheritable) on each ancestor directory up
 // to the drive root, so the container SID can walk down to a granted read path.
 // NTFS requires traverse on every parent unless SeChangeNotifyPrivilege bypass
-// applies, which a deny-only / AppContainer token cannot rely on. Ancestors that
-// already grant ALL APPLICATION PACKAGES traverse are skipped — see
-// all_app_packages_can_traverse: writing their DACL is both redundant and, for
-// large profile directories, pathologically slow.
+// applies, which a deny-only / AppContainer token cannot rely on.
+//
+// An ancestor is skipped when it already grants traverse to either:
+//   - ALL APPLICATION PACKAGES (S-1-15-2-1): system/profile ancestors carry it
+//     by default and this container SID is a member; or
+//   - this container SID itself: our moniker derives a stable SID
+//     (DeriveAppContainerSidFromAppContainerName), so a non-inheritable traverse
+//     ACE a previous spawn wrote persists and is reused on the next spawn.
+//     Mid-profile directories such as C:\Users\<user>\AppData\Roaming (an
+//     ancestor of a read path when node lives under it) lack ALL APPLICATION
+//     PACKAGES, so without this second condition every spawn re-wrote their DACL
+//     — ~3.7s each on DARKHERO. The first spawn on a clean profile still pays it
+//     once; steady state is free.
+// In both cases the write would be redundant and, for large profile directories,
+// pathologically slow (NTFS re-propagates inheritable ACEs across the subtree).
 void grant_ancestors_traverse(const std::wstring &path, PSID sid) {
   std::wstring current = path;
   for (;;) {
@@ -266,7 +285,7 @@ void grant_ancestors_traverse(const std::wstring &path, PSID sid) {
     if (target.size() == 2 && target[1] == L':') {
       target += L'\\';
     }
-    if (!all_app_packages_can_traverse(target)) {
+    if (!all_app_packages_can_traverse(target) && !dacl_grants_traverse(target, sid)) {
       EXPLICIT_ACCESSW ea = {};
       ea.grfAccessPermissions = FILE_TRAVERSE | FILE_LIST_DIRECTORY | READ_CONTROL;
       ea.grfAccessMode = GRANT_ACCESS;
