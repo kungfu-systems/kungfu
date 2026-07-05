@@ -29,11 +29,19 @@
 //     asserts it, to avoid regressing the mac/linux signals already proven green.
 import net from 'node:net';
 import { writeFileSync, unlinkSync } from 'node:fs';
-import { networkInterfaces, tmpdir } from 'node:os';
+import { networkInterfaces, homedir } from 'node:os';
 import { join } from 'node:path';
 
 function tryFsWrite() {
-  const path = join(tmpdir(), `kfx-knob-${process.pid}.tmp`);
+  // Probe a write to an explicit USER-space path (the home directory), not the
+  // OS temp dir. On Windows the guest's node runtime needs a writable temp just
+  // to start, so the launcher redirects the guest's TEMP to the AppContainer's
+  // own writable folder; the deny-write knob must therefore be observed on a
+  // path that is NOT that runtime scratch — a user-owned location a confined
+  // guest should not reach. macOS Seatbelt `(deny file-write*)` and Linux
+  // `--ro-bind /` deny writes globally, so home is refused there too when the
+  // knob is on, and writable under a permissive profile.
+  const path = join(homedir(), `.kfx-knob-write-probe-${process.pid}.tmp`);
   try {
     writeFileSync(path, 'kfx');
     try {

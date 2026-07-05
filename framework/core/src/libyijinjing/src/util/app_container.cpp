@@ -29,6 +29,9 @@
 #include <userenv.h>
 // SetEntriesInAcl (link: advapi32); window-station/desktop ACLs use user32.
 #include <aclapi.h>
+// ConvertSidToStringSid (link: advapi32) for GetAppContainerFolderPath (userenv).
+#include <algorithm>
+#include <sddl.h>
 #include <vector>
 
 // DeriveCapabilitySidsFromName is declared in securitybaseapi.h (via windows.h)
@@ -47,6 +50,39 @@ std::wstring widen(const std::string &s) {
   std::wstring w(static_cast<size_t>(n), L'\0');
   ::MultiByteToWideChar(CP_UTF8, 0, s.c_str(), static_cast<int>(s.size()), w.data(), n);
   return w;
+}
+
+std::string narrow(const std::wstring &w) {
+  if (w.empty()) {
+    return std::string();
+  }
+  int n = ::WideCharToMultiByte(CP_UTF8, 0, w.c_str(), static_cast<int>(w.size()), nullptr, 0, nullptr, nullptr);
+  std::string s(static_cast<size_t>(n), '\0');
+  ::WideCharToMultiByte(CP_UTF8, 0, w.c_str(), static_cast<int>(w.size()), s.data(), n, nullptr, nullptr);
+  return s;
+}
+
+// The AppContainer's own writable data folder (%LOCALAPPDATA%\Packages\<moniker>\AC).
+// The container SID owns it, so the guest can write there without being granted
+// the user's temp — which deny-write must refuse. The launcher redirects the
+// guest's TEMP/TMP here so the node runtime has a writable scratch under every
+// profile (including deny-write, where the user's own paths are unreachable). A
+// basic AppContainer runs as the user, but its runtime still needs the container
+// SID's own writable folder to start — the user's temp cannot be that scratch, or
+// deny-write could never bite the write the facet actually performs.
+std::wstring app_container_folder(PSID sid) {
+  LPWSTR sid_str = nullptr;
+  if (!::ConvertSidToStringSidW(sid, &sid_str)) {
+    return std::wstring();
+  }
+  PWSTR path = nullptr;
+  std::wstring result;
+  if (SUCCEEDED(::GetAppContainerFolderPath(sid_str, &path)) && path != nullptr) {
+    result = path;
+    ::CoTaskMemFree(path);
+  }
+  ::LocalFree(sid_str);
+  return result;
 }
 
 [[noreturn]] void throw_win32(const char *context) {
@@ -388,9 +424,27 @@ std::shared_ptr<app_container_process> spawn_app_container(const app_container_o
   //    cannot be built the launch falls back to the plain path rather than
   //    silently proceeding, and the demo's fs-write assertion reports the knob as
   //    not enforced.
+  // Redirect the guest's TEMP/TMP to the AppContainer's own writable folder, so
+  // the node runtime has a writable scratch under every profile without reaching
+  // the user's temp. This lets deny-write refuse the user-space write the facet
+  // performs while the runtime still starts, and removes the need to grant the
+  // container SID write on the user's temp (the manual-icacls path this replaces).
+  std::vector<std::string> env = options.env;
+  const std::wstring ac_folder = app_container_folder(app_container_sid);
+  if (!ac_folder.empty()) {
+    const std::string ac = narrow(ac_folder);
+    auto is_temp_var = [](const std::string &entry) {
+      return entry.rfind("TEMP=", 0) == 0 || entry.rfind("TMP=", 0) == 0 || entry.rfind("temp=", 0) == 0 ||
+             entry.rfind("tmp=", 0) == 0 || entry.rfind("Temp=", 0) == 0 || entry.rfind("Tmp=", 0) == 0;
+    };
+    env.erase(std::remove_if(env.begin(), env.end(), is_temp_var), env.end());
+    env.push_back("TEMP=" + ac);
+    env.push_back("TMP=" + ac);
+  }
+
   std::wstring command_line = build_command_line(options.command, options.args);
-  std::wstring environment = build_environment_block(options.env);
-  LPVOID environment_block = options.env.empty() ? nullptr : environment.data();
+  std::wstring environment = build_environment_block(env);
+  LPVOID environment_block = env.empty() ? nullptr : environment.data();
   const DWORD creation_flags = EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT;
   PROCESS_INFORMATION process_info = {};
   HANDLE deny_write_token = options.allow_broad_write ? nullptr : make_deny_write_token();
