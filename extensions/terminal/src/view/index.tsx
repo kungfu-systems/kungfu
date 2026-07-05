@@ -17,10 +17,12 @@
 // sessions (no durability) and says so per pane. tmux is only a backend — this
 // view speaks "session", never "tmux".
 //
-// Out of scope here (later slices): real OS windows across monitors with saved
-// display bounds (a gui main-process concern), cost/proof badges, and
-// cross-restart layout persistence. This slice delivers in-view concurrency plus
-// detach / discover / reattach against one running app.
+// Popping a session into its own OS window (ADR-0016 stage 2) is offered through
+// the shell: the view stays electron-free and simply asks `shell.popOutSession`,
+// which the node-integrated shell owns; the main process places and persists the
+// window (F7 clamp on restore). Rendering the live terminal *inside* that OS
+// window, rather than the stage-2 placeholder, is the next slice; cost/proof
+// badges are later still.
 //
 // The capability is async at the sandbox boundary (an IPC hop cannot be
 // synchronous); `resolve` awaits both the sync (node-integrated) and Promise
@@ -32,9 +34,10 @@ import { FitAddon } from '@xterm/addon-fit';
 import { Terminal as XTerm } from '@xterm/xterm';
 import React from 'react';
 import {
+  type PersistedWindow,
+  type WorkspaceLayout,
   loadWorkspaceLayout,
   saveWorkspaceLayout,
-  type WorkspaceLayout,
 } from './persistence';
 
 async function resolve<T>(value: T | Promise<T>): Promise<T> {
@@ -158,11 +161,15 @@ function SessionPane({
   pane,
   onDetach,
   onKill,
+  onPopOut,
 }: {
   caps: KfxCapabilities;
   pane: Pane;
   onDetach: (pane: Pane) => void;
   onKill: (pane: Pane) => void;
+  // Present only when the shell can drive OS windows (ADR-0016 stage 2); the
+  // pop-out affordance is hidden otherwise.
+  onPopOut?: () => void;
 }) {
   const hostRef = React.useRef<HTMLDivElement>(null);
   const [status, setStatus] = React.useState<string>('running');
@@ -330,6 +337,16 @@ function SessionPane({
         >
           {status}
         </span>
+        {onPopOut && (
+          <button
+            type="button"
+            onClick={onPopOut}
+            title="Open this session in its own window"
+            style={iconButtonStyle}
+          >
+            Pop out
+          </button>
+        )}
         {!ended && pane.durable && (
           <button
             type="button"
@@ -485,10 +502,21 @@ function RecoverableTray({
   );
 }
 
-function SessionWorkspace({ caps }: { caps: KfxCapabilities; shell: Shell }) {
+function SessionWorkspace({
+  caps,
+  shell,
+}: { caps: KfxCapabilities; shell: Shell }) {
   const [panes, setPanes] = React.useState<Pane[]>([]);
   const [recoverable, setRecoverable] = React.useState<TerminalSession[]>([]);
   const [notice, setNotice] = React.useState<string | null>(null);
+  // The per-session OS window set (ADR-0016 stage 2). Seeded from the persisted
+  // layout, then driven by the main process, which owns the real windows and
+  // pushes a snapshot on every open/close/move; we mirror it back into the
+  // layout. Empty and inert when the shell cannot drive windows (flag off /
+  // sandbox), in which case the persisted windows are preserved untouched.
+  const [windowRecords, setWindowRecords] = React.useState<PersistedWindow[]>(
+    [],
+  );
   // Persistence is gated on the domain capability; absent it the workspace is
   // ephemeral. `hydrated` blocks the save effect until the initial restore has
   // read the stored layout, so mounting never clobbers it with an empty set.
@@ -503,6 +531,7 @@ function SessionWorkspace({ caps }: { caps: KfxCapabilities; shell: Shell }) {
   // Restore on mount (W4): read the persisted layout and re-adopt each durable
   // session by runId. A session still alive on the tmux socket comes back
   // attached; a gone one is dropped (direct sessions cannot survive a restart).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only restore; caps/domain/shell identity is stable per runtime
   React.useEffect(() => {
     if (!domain) {
       hydrated.current = true;
@@ -511,6 +540,9 @@ function SessionWorkspace({ caps }: { caps: KfxCapabilities; shell: Shell }) {
     // Read synchronously before the save effect can run, so the stored layout
     // is captured even though adoption is async.
     const layout = loadWorkspaceLayout(domain);
+    // Seed the window set so the first persist preserves it; the main process
+    // then becomes the source of truth once it restores and emits a snapshot.
+    setWindowRecords(layout.windows);
     let cancelled = false;
     void (async () => {
       const restored: Pane[] = [];
@@ -546,6 +578,14 @@ function SessionWorkspace({ caps }: { caps: KfxCapabilities; shell: Shell }) {
       }
       if (!cancelled) {
         if (restored.length > 0) setPanes(restored);
+        // Restore only windows whose session actually came back; a window for a
+        // gone session cannot show anything, so it is dropped. The main process
+        // clamps each saved rectangle onto a present display (F7).
+        const liveRunIds = new Set(restored.map((r) => r.runId));
+        const liveWindows = layout.windows.filter((w) =>
+          liveRunIds.has(w.runId),
+        );
+        if (liveWindows.length > 0) shell.restoreSessionWindows?.(liveWindows);
         hydrated.current = true;
         // the pane-set change triggers the tray refresh effect below; no need
         // to call refresh() here (it is declared later)
@@ -554,12 +594,20 @@ function SessionWorkspace({ caps }: { caps: KfxCapabilities; shell: Shell }) {
     return () => {
       cancelled = true;
     };
-    // run once on mount; caps/domain identity is stable for a given runtime
-    // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only restore
+    // run once on mount; caps/domain/shell identity is stable for a given runtime
   }, []);
 
-  // Persist on change (W4): once hydrated, mirror the live pane set into the
-  // config-backed layout so a restart can bring the durable sessions back.
+  // Mirror the main process's live window set into our state so the persist
+  // effect writes it into the layout. Inert when the shell cannot drive windows.
+  React.useEffect(() => {
+    return shell.onSessionWindowsSnapshot?.((windows) =>
+      setWindowRecords(windows),
+    );
+  }, [shell]);
+
+  // Persist on change (W4): once hydrated, mirror the live pane set and the
+  // per-session window set into the config-backed layout so a restart can bring
+  // the durable sessions and their windows back.
   React.useEffect(() => {
     if (!domain || !hydrated.current) return;
     const layout: WorkspaceLayout = {
@@ -576,9 +624,10 @@ function SessionWorkspace({ caps }: { caps: KfxCapabilities; shell: Shell }) {
         startedAt: p.startedAt,
         order: i,
       })),
+      windows: windowRecords,
     };
     saveWorkspaceLayout(domain, layout);
-  }, [panes, domain]);
+  }, [panes, domain, windowRecords]);
 
   const refresh = React.useCallback(async () => {
     try {
@@ -775,6 +824,11 @@ function SessionWorkspace({ caps }: { caps: KfxCapabilities; shell: Shell }) {
               pane={pane}
               onDetach={detachPane}
               onKill={killPane}
+              onPopOut={
+                shell.popOutSession
+                  ? () => shell.popOutSession?.(pane.runId)
+                  : undefined
+              }
             />
           ))}
         </div>

@@ -188,6 +188,22 @@ export type KfxEntry = {
   View: KfxViewComponent;
 };
 
+// One per-session OS window as it crosses the shell boundary (ADR-0016 stage 2).
+// Structurally the terminal extension's PersistedWindow, defined here so the
+// shell contract does not import an extension. Window identity is separate from
+// session identity: this references a session by runId, it does not carry
+// terminal state.
+export type SessionWindowRecord = {
+  windowId: string;
+  runId: string;
+  displayId: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  lastSeenAt: number;
+};
+
 export type Shell = {
   // cross-kfx navigation with parameters; params reach the target view
   open: (kfxId: string, params?: Record<string, string>) => void;
@@ -208,6 +224,19 @@ export type Shell = {
   suites: Record<string, KfxSuiteDecl>;
   // available profiles (shell-defined; a profile selects kfx + first screen)
   profiles: ProfileManifest[];
+  // Per-session OS windows (ADR-0016 stage 2). Present only when the shell can
+  // drive main-process windows — the node-integrated gui with KF_SESSION_WINDOWS
+  // on — and absent in a sandbox, where popping a session into its own OS window
+  // has no meaning. A view feature-detects and hides the affordance when absent,
+  // so it stays electron-free: it asks the shell, which owns the ipc.
+  //   popOutSession        pop a session into its own restorable OS window
+  //   restoreSessionWindows re-open the persisted window set on boot (F7 clamp)
+  //   onSessionWindowsSnapshot subscribe to the live window set for persistence
+  popOutSession?: (runId: string) => void;
+  restoreSessionWindows?: (windows: SessionWindowRecord[]) => void;
+  onSessionWindowsSnapshot?: (
+    fn: (windows: SessionWindowRecord[]) => void,
+  ) => () => void;
 };
 
 export type KfxViewProps = { caps: KfxCapabilities; shell: Shell };

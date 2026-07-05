@@ -152,3 +152,32 @@ in-renderer host, so the working single-window app is untouched and parity is
 preserved by construction, while the main-process path is exercised by flipping
 the flag on a real machine. Promoting it to the default happens only after that
 real-machine parity check passes.
+
+## Implementation note — stage 2 windows are driven through the shell, not a capability
+
+Stage 2 adds the per-session OS window: a session can be popped out of the
+in-shell grid into its own restorable window, placed on the display it was last
+on. Three pieces land together — a `windows[]` layer on the persisted
+`WorkspaceLayout` (a window references a session by runId, so window identity
+stays separate from session identity and a closing window never ends the
+session), a pure `placeWindow` geometry that implements F7 (a saved rectangle is
+clamped into a currently-connected display's work area; a display that is gone
+falls back to the primary, so a stale off-screen origin cannot survive), and a
+main-process window registry that owns the BrowserWindows and pushes a layout
+snapshot back to the shell on every open / close / move.
+
+The view stays electron-free. Rather than teach the terminal view about
+`ipcRenderer` — which would break its "runs identically node-integrated or
+sandboxed" property — pop-out is offered as a **shell service**
+(`shell.popOutSession` / `restoreSessionWindows` / `onSessionWindowsSnapshot`),
+present only on the node-integrated shell that can reach main and absent in a
+sandbox, where popping a session into an OS window has no meaning. This keeps the
+window host out of the ADR-0011 / ADR-0014 capability contract: it is a shell
+concern, not a new capability.
+
+Stage 2 lands **behind a flag** (`KF_SESSION_WINDOWS=1`), default off, so the
+single-window app is untouched and parity holds by construction. The window's
+content is a placeholder in stage 2; mounting the live terminal view against the
+window's runId over the host proxy is stage 3. Promotion and the
+terminal-in-window render happen only after a real-machine check of window
+placement, restore, and the IPC output path.

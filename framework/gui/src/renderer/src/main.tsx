@@ -12,6 +12,7 @@ import * as capability from '@kungfu-tech/api/capability';
 import type {
   KfxCapabilities,
   KfxEntry,
+  SessionWindowRecord,
   Shell,
   ShellState,
 } from '@kungfu-tech/kfx';
@@ -20,6 +21,11 @@ import React from 'react';
 import * as ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import * as jsxRuntime from 'react/jsx-runtime';
+import {
+  SESSION_WINDOW_OPEN_CHANNEL,
+  SESSION_WINDOW_RESTORE_CHANNEL,
+  SESSION_WINDOW_SNAPSHOT_CHANNEL,
+} from '../../sandbox/channels';
 import { type KfxLoadResult, loadKfx } from './kfx-loader';
 import { type Runtime, bootRuntime } from './runtime';
 import { sandboxClient } from './sandbox-client';
@@ -228,6 +234,64 @@ function App() {
   );
   const activeKfx = enabled.find((k) => k.id === active) ?? enabled[0] ?? null;
 
+  // ADR-0016 stage 2: expose per-session OS window control to views through the
+  // shell so a view stays electron-free. Present only when the flag is on and
+  // this (node-integrated) renderer can reach ipc; absent otherwise, so a view
+  // feature-detects and hides the affordance. Built once — the ipc handle and
+  // flag are stable over the shell's life.
+  const sessionWindowShell = React.useMemo<Partial<Shell>>(() => {
+    if (window.process?.env?.KF_SESSION_WINDOWS !== '1') return {};
+    type SessionWindowIpc = {
+      invoke: (channel: string, payload: unknown) => Promise<unknown>;
+      on: (
+        channel: string,
+        listener: (event: unknown, payload: unknown) => void,
+      ) => void;
+      removeListener: (
+        channel: string,
+        listener: (event: unknown, payload: unknown) => void,
+      ) => void;
+    };
+    let ipc: SessionWindowIpc | null = null;
+    try {
+      ipc = (window.require('electron') as { ipcRenderer: SessionWindowIpc })
+        .ipcRenderer;
+    } catch {
+      ipc = null;
+    }
+    if (!ipc) return {};
+    const ipcRenderer = ipc;
+    return {
+      popOutSession: (runId) => {
+        const windowId = globalThis.crypto?.randomUUID?.() ?? `w-${runId}`;
+        void ipcRenderer.invoke(SESSION_WINDOW_OPEN_CHANNEL, {
+          windowId,
+          runId,
+        });
+      },
+      restoreSessionWindows: (windows) => {
+        if (windows.length === 0) return;
+        void ipcRenderer.invoke(SESSION_WINDOW_RESTORE_CHANNEL, {
+          windows: windows.map((w) => ({
+            windowId: w.windowId,
+            runId: w.runId,
+            saved: {
+              displayId: w.displayId,
+              bounds: { x: w.x, y: w.y, width: w.width, height: w.height },
+            },
+          })),
+        });
+      },
+      onSessionWindowsSnapshot: (fn) => {
+        const handler = (_event: unknown, payload: unknown) =>
+          fn((payload as { snapshot: SessionWindowRecord[] }).snapshot);
+        ipcRenderer.on(SESSION_WINDOW_SNAPSHOT_CHANNEL, handler);
+        return () =>
+          ipcRenderer.removeListener(SESSION_WINDOW_SNAPSHOT_CHANNEL, handler);
+      },
+    };
+  }, []);
+
   const shell: Shell = {
     open: (kfxId, nextParams) => {
       setParams(nextParams ?? {});
@@ -253,6 +317,7 @@ function App() {
     registry: loaded.entries,
     suites: loaded.suites,
     profiles: PROFILES,
+    ...sessionWindowShell,
   };
 
   const navButton = (id: string, title: string) => (

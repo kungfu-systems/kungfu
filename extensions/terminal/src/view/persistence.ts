@@ -35,14 +35,33 @@ export type PersistedPane = {
   order: number;
 };
 
+// An OS window that shows one session (ADR-0016 stage 2). Window identity is a
+// separate layer from session identity: this record *references* a session by
+// runId — it does not carry terminal state — so the in-shell grid and the OS
+// windows are two views of the same session set, and neither owns the other.
+// `displayId` is the F7 stable display key (see gui window-placement.displayKey)
+// the window was last seen on; on restore the main process clamps the saved
+// rectangle back onto a currently-connected display.
+export type PersistedWindow = {
+  windowId: string;
+  runId: string;
+  displayId: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  lastSeenAt: number;
+};
+
 export type WorkspaceLayout = {
   version: 1;
   workspaceId: string;
   panes: PersistedPane[];
+  windows: PersistedWindow[];
 };
 
 export function emptyLayout(): WorkspaceLayout {
-  return { version: 1, workspaceId: 'default', panes: [] };
+  return { version: 1, workspaceId: 'default', panes: [], windows: [] };
 }
 
 function asStringArray(value: unknown): string[] | undefined {
@@ -69,9 +88,37 @@ function parsePane(value: unknown, index: number): PersistedPane | null {
   };
 }
 
+function parseWindow(value: unknown): PersistedWindow | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const v = value as Record<string, unknown>;
+  if (typeof v.windowId !== 'string' || v.windowId.length === 0) return null;
+  if (typeof v.runId !== 'string' || v.runId.length === 0) return null;
+  if (typeof v.displayId !== 'string' || v.displayId.length === 0) return null;
+  // A window with a non-numeric rectangle cannot be placed, so drop it rather
+  // than restore it at NaN and let the OS decide — same tolerant policy as panes.
+  if (
+    typeof v.x !== 'number' ||
+    typeof v.y !== 'number' ||
+    typeof v.width !== 'number' ||
+    typeof v.height !== 'number'
+  ) {
+    return null;
+  }
+  return {
+    windowId: v.windowId,
+    runId: v.runId,
+    displayId: v.displayId,
+    x: v.x,
+    y: v.y,
+    width: v.width,
+    height: v.height,
+    lastSeenAt: typeof v.lastSeenAt === 'number' ? v.lastSeenAt : 0,
+  };
+}
+
 // Tolerant read (F5): a malformed or partial blob yields an empty layout or
-// drops only the bad panes — it never throws, because the GUI, CLI and agents
-// all read this record and a boot must not hinge on its shape.
+// drops only the bad panes/windows — it never throws, because the GUI, CLI and
+// agents all read this record and a boot must not hinge on its shape.
 export function parseWorkspaceLayout(raw: string): WorkspaceLayout {
   try {
     const obj = JSON.parse(raw) as unknown;
@@ -81,11 +128,16 @@ export function parseWorkspaceLayout(raw: string): WorkspaceLayout {
     const panes = rawPanes
       .map((p, i) => parsePane(p, i))
       .filter((p): p is PersistedPane => p !== null);
+    const rawWindows = Array.isArray(o.windows) ? o.windows : [];
+    const windows = rawWindows
+      .map((w) => parseWindow(w))
+      .filter((w): w is PersistedWindow => w !== null);
     return {
       version: 1,
       workspaceId:
         typeof o.workspaceId === 'string' ? o.workspaceId : 'default',
       panes,
+      windows,
     };
   } catch {
     return emptyLayout();

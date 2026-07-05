@@ -21,3 +21,14 @@ export const TERMINAL_CALL_CHANNEL = 'kf-terminal:call';
 export const TERMINAL_SUBSCRIBE_CHANNEL = 'kf-terminal:subscribe';
 export const TERMINAL_UNSUBSCRIBE_CHANNEL = 'kf-terminal:unsubscribe';
 export const TERMINAL_EVENT_CHANNEL = 'kf-terminal:event';
+
+// shell renderer <-> main: per-session OS window lifecycle (ADR-0016 stage 2).
+// The shell asks main to pop a session out into its own window or to restore
+// the saved set; main pushes a snapshot back on every open-set/bounds change so
+// the shell persists WorkspaceLayout.windows[]. OS window bounds live in main
+// (only it owns the BrowserWindow), but the durable record stays a renderer
+// config fact, so the two exchange it over these channels.
+export const SESSION_WINDOW_OPEN_CHANNEL = 'kf-session-window:open';
+export const SESSION_WINDOW_RESTORE_CHANNEL = 'kf-session-window:restore';
+export const SESSION_WINDOW_CLOSE_CHANNEL = 'kf-session-window:close';
+export const SESSION_WINDOW_SNAPSHOT_CHANNEL = 'kf-session-window:snapshot';

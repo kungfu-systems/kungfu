@@ -32,6 +32,7 @@ import {
   uninstallKungfuCliFromPath,
 } from './installCli';
 import { type Rect, SandboxManager } from './sandbox-manager';
+import { bindSessionWindows } from './session-windows-host';
 import { writeGuiSkillContextFile } from './skill-context';
 import {
   bindElectronTerminalHost,
@@ -153,6 +154,10 @@ function harnessEntry(): string {
 // `activate` (which re-runs createWindow) from double-registering a channel.
 let manager: SandboxManager | null = null;
 
+// The current shell window, tracked so the per-session window host (ADR-0016
+// stage 2) can push layout snapshots back to it for persistence.
+let shellWindow: BrowserWindow | null = null;
+
 ipcMain.handle(ENSURE_CHANNEL, (_event, payload) => {
   const { id, bundlePath, declared } = payload as {
     id: string;
@@ -232,6 +237,7 @@ function createWindow() {
       sandbox: false,
     },
   });
+  shellWindow = win;
 
   // The trusted renderer holds the real capabilities and runs the capability
   // host; this manager embeds sandboxed views and relays their invokes to it.
@@ -262,6 +268,17 @@ app.whenReady().then(() => {
       bindElectronTerminalHost(ipcMain, createMainTerminalHost());
     } catch (e) {
       console.log(`KF_TERMINAL_HOST_MAIN_FAIL ${(e as Error).message}`);
+    }
+  }
+  // ADR-0016 stage 2 (flagged): let a session pop out of the in-shell grid into
+  // its own restorable OS window. The handlers are global, so bind once; the
+  // registry pushes layout snapshots to the current shell window. Default off
+  // keeps the single-window app untouched until this is validated on a machine.
+  if (process.env.KF_SESSION_WINDOWS === '1') {
+    try {
+      bindSessionWindows({ ipcMain, getShellWindow: () => shellWindow });
+    } catch (e) {
+      console.log(`KF_SESSION_WINDOWS_FAIL ${(e as Error).message}`);
     }
   }
   createWindow();
