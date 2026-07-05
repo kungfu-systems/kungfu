@@ -162,6 +162,7 @@ function SessionPane({
   onDetach,
   onKill,
   onPopOut,
+  poppedOut = false,
 }: {
   caps: KfxCapabilities;
   pane: Pane;
@@ -170,11 +171,27 @@ function SessionPane({
   // Present only when the shell can drive OS windows (ADR-0016 stage 2); the
   // pop-out affordance is hidden otherwise.
   onPopOut?: () => void;
+  // ADR-0016 stage 4: true when this session is currently open in its own OS
+  // window, so this in-grid pane is a frozen at-a-glance overview, not the
+  // working surface. A PTY has one size; the working window owns it and resizes
+  // it larger. So this pane freezes on pop-out — it holds its last in-grid frame
+  // and stops rendering the stream (a full-screen TUI redraws for the window's
+  // larger geometry, which this smaller cell would render deformed), never
+  // drives the session size, and never writes input. When the window closes it
+  // un-freezes, reclaims size authority, and goes live again. Absent (false) for
+  // the working window's own pane and whenever the shell cannot drive windows.
+  poppedOut?: boolean;
 }) {
   const hostRef = React.useRef<HTMLDivElement>(null);
   const [status, setStatus] = React.useState<string>('running');
   const [ended, setEnded] = React.useState(false);
   const [nowTs, setNowTs] = React.useState(() => pane.startedAt);
+  // Read the live popped-out flag from inside the xterm effect without tearing
+  // the terminal down when it toggles (the effect keys only on the session).
+  const poppedOutRef = React.useRef(poppedOut);
+  // Re-assert the grid size when this pane reclaims authority (window closed);
+  // set by the xterm effect, called by the toggle effect below.
+  const reassertSizeRef = React.useRef<() => void>(() => {});
 
   React.useEffect(() => {
     const el = hostRef.current;
@@ -194,6 +211,25 @@ function SessionPane({
     const fit = new FitAddon();
     term.loadAddon(fit);
     term.open(el);
+
+    // Cmd+C (mac) / Ctrl+Shift+C copies the current selection to the clipboard.
+    // xterm keeps its own selection rather than a native one, so nothing copies
+    // it without wiring. A frozen (popped-out) tile is a static frame, so its
+    // selection persists and is exactly what a user wants to copy; a live tile
+    // works too between redraws. Ctrl+C is left untouched so it still sends
+    // SIGINT to a live session. navigator.clipboard keeps the view electron-free
+    // (works node-integrated or sandboxed).
+    term.attachCustomKeyEventHandler((e) => {
+      const copyChord =
+        (e.metaKey || (e.ctrlKey && e.shiftKey)) &&
+        (e.key === 'c' || e.key === 'C');
+      if (e.type === 'keydown' && copyChord && term.hasSelection()) {
+        void navigator.clipboard?.writeText(term.getSelection());
+        return false;
+      }
+      return true;
+    });
+
     const refit = () => {
       try {
         fit.fit();
@@ -212,7 +248,19 @@ function SessionPane({
         // attaches to a session already in flight (including a reattach) shows
         // its history before live output.
         dataSub = await resolve(
-          caps.terminal.onData(pane.runId, (data: string) => term.write(data)),
+          caps.terminal.onData(pane.runId, (data: string) => {
+            // Frozen while popped out: hold the last in-grid frame rather than
+            // render the stream the working window has resized the shared pty
+            // to. One pty has one size; the window drives it larger, so a
+            // full-screen TUI redraws for that larger geometry and this smaller
+            // cell would render it deformed. Freezing at pop-out (optimistically
+            // on the click, before the window ever touches the pty size) means
+            // no deformed frame is ever shown; the window is the live surface.
+            // On close the pane un-freezes and re-asserts the cell size, and the
+            // next pty resize redraws it live again.
+            if (poppedOutRef.current) return;
+            term.write(data);
+          }),
         );
         exitSub = await resolve(
           caps.terminal.onExit(pane.runId, (exit) => {
@@ -224,12 +272,18 @@ function SessionPane({
           }),
         );
         term.onData((data) => {
+          // Read-only while popped out: the OS window is the working surface;
+          // this overview pane must not inject input into the shared PTY.
+          if (poppedOutRef.current) return;
           void resolve(caps.terminal.write(pane.runId, data)).catch(() => {
             // writing to an ended session throws; the exit listener already
             // surfaced the end, so swallow the race here
           });
         });
         term.onResize(({ cols, rows }) => {
+          // While popped out this pane does not own the PTY size; refit locally
+          // (xterm still fills its grid cell) but let the window drive the pty.
+          if (poppedOutRef.current) return;
           void resolve(caps.terminal.resize(pane.runId, cols, rows));
         });
       } catch (e) {
@@ -249,10 +303,17 @@ function SessionPane({
     // still reaches the pty.
     const syncSize = () => {
       refit();
+      // Popped out: the window owns the pty size; refit the local xterm to the
+      // cell but do not push the grid size to the shared session.
+      if (poppedOutRef.current) return;
       if (term.cols > 0 && term.rows > 0) {
         void resolve(caps.terminal.resize(pane.runId, term.cols, term.rows));
       }
     };
+    // Expose the sizer so the toggle effect can re-assert the grid size the
+    // moment this pane reclaims authority (the window closed), pulling the pty
+    // back down from the working window's size to the cell.
+    reassertSizeRef.current = syncSize;
     const ro = new ResizeObserver(syncSize);
     ro.observe(el);
 
@@ -263,6 +324,16 @@ function SessionPane({
       term.dispose();
     };
   }, [caps.terminal, pane.runId]);
+
+  // Track the popped-out flag for the effect above, and re-assert the grid size
+  // on the working window → grid transition (true → false) so the pty snaps back
+  // to the cell instead of staying at the closed window's larger size.
+  const wasPoppedOut = React.useRef(poppedOut);
+  React.useEffect(() => {
+    poppedOutRef.current = poppedOut;
+    if (wasPoppedOut.current && !poppedOut) reassertSizeRef.current();
+    wasPoppedOut.current = poppedOut;
+  }, [poppedOut]);
 
   // Elapsed-time tick; stops once the session ends.
   React.useEffect(() => {
@@ -337,15 +408,32 @@ function SessionPane({
         >
           {status}
         </span>
-        {onPopOut && (
-          <button
-            type="button"
-            onClick={onPopOut}
-            title="Open this session in its own window"
-            style={iconButtonStyle}
+        {poppedOut ? (
+          <span
+            title="Open in its own window, which is the live working surface and owns the size. This grid tile is frozen to its last frame to avoid deforming; it goes live again when the window closes."
+            style={{
+              ...mono,
+              fontSize: 10.5,
+              color: '#9cdcfe',
+              border: '1px solid #2b4a5e',
+              borderRadius: 6,
+              padding: '2px 8px',
+              whiteSpace: 'nowrap',
+            }}
           >
-            Pop out
-          </button>
+            ⧉ 已弹出 · 网格已冻结
+          </span>
+        ) : (
+          onPopOut && (
+            <button
+              type="button"
+              onClick={onPopOut}
+              title="Open this session in its own window"
+              style={iconButtonStyle}
+            >
+              Pop out
+            </button>
+          )
         )}
         {!ended && pane.durable && (
           <button
@@ -370,7 +458,16 @@ function SessionPane({
       </div>
       <div
         ref={hostRef}
-        style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflow: 'hidden',
+          // Frozen tiles dim slightly so a static last frame reads as paused,
+          // not stalled — kept light enough that its text stays readable and
+          // selectable for copy (the badge is the primary paused signal).
+          opacity: poppedOut ? 0.65 : 1,
+          transition: 'opacity 120ms ease',
+        }}
       />
     </div>
   );
@@ -517,6 +614,15 @@ function SessionWorkspace({
   const [windowRecords, setWindowRecords] = React.useState<PersistedWindow[]>(
     [],
   );
+  // ADR-0016 stage 4: sessions whose grid tile should freeze *now*, set the
+  // instant Pop out is clicked — before the window opens and resizes the shared
+  // pty — so no deformed frame is ever shown. It is only an optimistic bridge:
+  // the very next window snapshot is authoritative (it will include a session
+  // that opened, or omit one that failed/closed), so this resets on each
+  // snapshot and the durable frozen state comes from `windowRecords`.
+  const [poppingOut, setPoppingOut] = React.useState<Set<string>>(
+    () => new Set(),
+  );
   // Persistence is gated on the domain capability; absent it the workspace is
   // ephemeral. `hydrated` blocks the save effect until the initial restore has
   // read the stored layout, so mounting never clobbers it with an empty set.
@@ -527,6 +633,18 @@ function SessionWorkspace({
     () => new Set(panes.map((p) => p.runId)),
     [panes],
   );
+
+  // ADR-0016 stage 4: the sessions whose grid tile is frozen — those confirmed
+  // open in their own OS window (the durable truth the main process pushes),
+  // plus any just-clicked ones still opening (the optimistic bridge, so the
+  // freeze wins the race against the window's first pty resize). A tile in this
+  // set holds its last frame and yields the pty size to its window (see
+  // SessionPane `poppedOut`).
+  const poppedOutRunIds = React.useMemo(() => {
+    const ids = new Set(windowRecords.map((w) => w.runId));
+    for (const id of poppingOut) ids.add(id);
+    return ids;
+  }, [windowRecords, poppingOut]);
 
   // Restore on mount (W4): read the persisted layout and re-adopt each durable
   // session by runId. A session still alive on the tmux socket comes back
@@ -600,9 +718,13 @@ function SessionWorkspace({
   // Mirror the main process's live window set into our state so the persist
   // effect writes it into the layout. Inert when the shell cannot drive windows.
   React.useEffect(() => {
-    return shell.onSessionWindowsSnapshot?.((windows) =>
-      setWindowRecords(windows),
-    );
+    return shell.onSessionWindowsSnapshot?.((windows) => {
+      setWindowRecords(windows);
+      // The snapshot is authoritative: a session that opened is now in it (stays
+      // frozen via windowRecords), one that failed/closed is not (un-freezes).
+      // Either way the optimistic bridge has served its purpose — clear it.
+      setPoppingOut((prev) => (prev.size ? new Set() : prev));
+    });
   }, [shell]);
 
   // Persist on change (W4): once hydrated, mirror the live pane set and the
@@ -826,9 +948,19 @@ function SessionWorkspace({
               onKill={killPane}
               onPopOut={
                 shell.popOutSession
-                  ? () => shell.popOutSession?.(pane.runId)
+                  ? () => {
+                      // Freeze this tile before the window opens and resizes the
+                      // shared pty, so no deformed frame is ever rendered.
+                      setPoppingOut((prev) => {
+                        const next = new Set(prev);
+                        next.add(pane.runId);
+                        return next;
+                      });
+                      shell.popOutSession?.(pane.runId);
+                    }
                   : undefined
               }
+              poppedOut={poppedOutRunIds.has(pane.runId)}
             />
           ))}
         </div>
