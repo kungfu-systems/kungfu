@@ -35,7 +35,7 @@ file(GLOB_RECURSE YIJINJING_SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 add_library(yijinjing STATIC ${YIJINJING_SOURCE_FILES})
 # the ADR-0001 publication protocol uses std::atomic_ref; a target-level
 # requirement holds even when the embedder's global standard is older
-target_compile_features(yijinjing PUBLIC cxx_std_20)
+target_compile_features(yijinjing PUBLIC cxx_std_23)
 # linked into the SHARED libkungfu on Mac/Linux
 set_target_properties(yijinjing PROPERTIES POSITION_INDEPENDENT_CODE ON)
 if(DEFINED KUNGFU_BUILD_DIR)

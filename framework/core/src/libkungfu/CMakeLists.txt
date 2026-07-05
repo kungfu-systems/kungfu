@@ -13,7 +13,7 @@ add_library_object(kungfu_optim "${KUNGFU_OPTIM_SOURCE_FILES}" "${COMPILER_OPTIM
 
 # the OBJECT libraries compile independently of the final target, so they
 # need the runtime headers, the vendored sqlite_orm, and the yijinjing core
-# usage requirements (headers, hana, cxx_std_20) at their own scope
+# usage requirements (headers, hana, cxx_std_23) at their own scope
 set(LIBKUNGFU_SQLITE_ORM_INCLUDE ${PROJECT_SOURCE_DIR}/../../.deps/sqlite_orm-1.7.1/include)
 foreach(_kf_obj kungfu_cache kungfu_optim)
   target_include_directories(${_kf_obj} PRIVATE ${PROJECT_SOURCE_DIR}/include ${LIBKUNGFU_SQLITE_ORM_INCLUDE})

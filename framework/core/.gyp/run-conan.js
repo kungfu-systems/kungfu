@@ -45,7 +45,9 @@ function makeConanSettings(names) {
 }
 
 // Windows 端口固化：conan profile detect 在 MSVC 上把 compiler.cppstd 探成 14，
-// 但本项目是 C++17，rocksdb 等无 cppstd=14 的 prebuilt(只 17/20/23)，conan install 会失败。
+// 依赖(如 flatbuffers/nng)只有 17/20/23 的 prebuilt,cppstd=14 会让 conan install 失败。
+// 这里钉的是 **依赖 ABI 解析用的 cppstd**,与项目自身的 C++ 标准(.cmake/compiler.cmake,
+// 现为 C++23)解耦——依赖多为 header-only 或 C ABI,17 的 prebuilt 与 23 的项目可共存。
 // 显式钉 17 仅在 Windows 加(Mac/Linux profile 本就 gnu17，强制 17 会改 package id 致缓存失效，故不动)。
 function platformConanSettings() {
   return process.platform === 'win32' ? ['-s', 'compiler.cppstd=17'] : [];
