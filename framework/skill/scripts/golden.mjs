@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -9,6 +10,7 @@ import {
   buildContextEnvelope,
   injectSkillContext,
   parseSkill,
+  writeSkillContextFile,
 } from '../src/index.ts';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -31,5 +33,19 @@ assert.deepEqual(envelope, readJson('fixtures/golden/context-node.json'));
 assert.equal(
   injectSkillContext('hello', envelope).endsWith('\n\nUser task:\nhello'),
   true,
+);
+const out = join(mkdtempSync(join(tmpdir(), 'kungfu-skill-')), 'context.json');
+writeSkillContextFile(root, {
+  source: 'test',
+  manager: 'node',
+  extraPaths: [
+    join(root, 'fixtures', 'minimal'),
+    join(root, 'fixtures', 'with-frontmatter'),
+  ],
+  out,
+});
+assert.deepEqual(
+  readJson('fixtures/golden/context-node.json'),
+  JSON.parse(readFileSync(out, 'utf8')),
 );
 console.log('skill golden fixtures match');

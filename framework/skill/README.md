@@ -16,6 +16,17 @@ Two managers share the same contract:
   write it to `KF_SKILL_CONTEXT_FILE`, and let the managed-run process inject
   that Node-generated envelope.
 
+For dev and verification flows, the same Node manager path is available as:
+
+```sh
+node --experimental-transform-types framework/skill/scripts/context.mjs \
+  --home <kungfu-home> \
+  --source gui \
+  --manager node \
+  --path <skill-or-root> \
+  --out <context.json>
+```
+
 `fixtures/golden/` pins the catalog and context envelopes used to keep the
 Python and TypeScript implementations schema-equivalent.
 

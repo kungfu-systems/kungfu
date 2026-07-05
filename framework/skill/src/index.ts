@@ -1,8 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { basename, join, resolve } from 'node:path';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
+import { basename, dirname, join, resolve } from 'node:path';
 
 export type SkillKind = 'instruction-only' | 'kfx-backed';
 
@@ -73,6 +80,10 @@ export interface SkillContextOptions {
   agent?: string;
   extraPaths?: string[];
   env?: Record<string, string | undefined>;
+}
+
+export interface SkillContextFileOptions extends SkillContextOptions {
+  out?: string;
 }
 
 export function parseSkill(skillDir: string): SkillSource {
@@ -207,6 +218,19 @@ export function buildSkillContext(
     ),
     session,
   );
+}
+
+export function writeSkillContextFile(
+  home: string,
+  options: SkillContextFileOptions,
+): string {
+  const envelope = buildSkillContext(home, options);
+  const out = options.out
+    ? resolve(options.out)
+    : join(home, 'skill-context', `${options.profile || 'default'}.json`);
+  mkdirSync(dirname(out), { recursive: true });
+  writeFileSync(out, `${JSON.stringify(envelope, null, 2)}\n`, 'utf8');
+  return out;
 }
 
 export function hasAdvertisedSkills(envelope: SkillContextEnvelope): boolean {

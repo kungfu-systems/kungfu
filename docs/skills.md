@@ -266,6 +266,7 @@ kungfu skill install <path>
 kungfu skill list [--path <dir>] [--json]
 kungfu skill catalog [--path <dir>] [--json]
 kungfu skill context [--path <dir>] [--source cli|gui|test] [--manager python|node]
+kungfu skill verify --provider <claude|codex> --path <dir> [--manager python|node]
 kungfu skill read <key-or-path> [--path <dir>]
 kungfu skill explain <key-or-path>
 ```
@@ -274,8 +275,12 @@ kungfu skill explain <key-or-path>
 directory, but it does not elevate runtime privileges or install executable kfx
 dependencies in the first slice. `catalog` is the compact agent-visible catalog
 before full skill loading. `context` wraps that catalog in the same envelope
-shape used by Python and Node manage modes. `read` is the operation the agent
-tool uses to load the full `SKILL.md` after selection.
+shape used by Python and Node manage modes. `verify` runs a real provider
+through `managed-run`, asks it to echo the advertised schema, first skill key,
+and `advertisedSkillsHash`, then checks the Rewind `response.json` evidence.
+Use `--manager node` to build the envelope through the Node manager path used
+by the Electron GUI. `read` is the operation the agent tool uses to load the
+full `SKILL.md` after selection.
 
 The SDK may add:
 
@@ -335,15 +340,17 @@ The first slice proves the context loop before broad execution:
    fixtures.
 4. Implement `kungfu skill validate/install/list/catalog/context/read/explain`.
 5. Generate compact catalogs and context envelopes from the Python CLI manager.
-6. Scaffold a minimal skill with only `SKILL.md` through the developer SDK.
+6. Generate the same context envelopes from the Node/Electron manager path.
+7. Verify Python and Node manager envelopes through `managed-run` response
+   evidence.
+8. Scaffold a minimal skill with only `SKILL.md` through the developer SDK.
 
 Follow-up slices should:
 
-1. Inject compact catalogs from the Node/Electron GUI manager path.
-2. Audit advertised and loaded skills.
-3. Bind declared kfx dependencies through the normal kfx registry without
+1. Audit advertised and loaded skills.
+2. Bind declared kfx dependencies through the normal kfx registry without
    copying them per skill.
-4. Display installed skills in a first-party `skill-manager` view.
+3. Display installed skills in a first-party `skill-manager` view.
 
 Out of scope for the first slice:
 
@@ -359,13 +366,15 @@ The first implementation slice is verified by:
 
 - a `SKILL.md`-only fixture accepted by Python and TypeScript validators;
 - TypeScript and Python catalog/context output over shared fixtures;
-- frozen CLI `validate/catalog/context/read/explain` over shared fixtures;
+- frozen CLI `validate/catalog/context/verify/read/explain` over shared
+  fixtures;
+- frozen CLI `skill verify --manager python` and `skill verify --manager node`
+  with provider response evidence;
 - a skill with two kfx declarations proving the skill object can reference
   multiple kfx packages without granting runtime privilege.
 
 Follow-up verification should add:
 
-- Node/Electron agent injection receiving the same context envelope;
 - audit records for advertised and loaded skills;
 - kfx dependency installation through the shared registry, with deduplication;
 - a third-party adapter dependency proving that skill composition does not bypass

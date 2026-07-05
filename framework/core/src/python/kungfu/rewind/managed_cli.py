@@ -10,6 +10,7 @@
 # environment (built dist/kungfu) or the packaged runtime.
 
 import argparse
+from dataclasses import dataclass
 import hashlib
 import json
 import os
@@ -40,6 +41,16 @@ lf = kungfu.__binding__.longfist
 yjj = kungfu.__binding__.yijinjing
 
 
+@dataclass
+class ManagedRunCliReport:
+    provider: str
+    run_id: str
+    exit_code: int
+    response_path: str
+    manifest_path: str
+    response_doc: dict
+
+
 def _open_journal(runtime_dir, run_id):
     loc = yjj.locator(runtime_dir)
     location = yjj.location(
@@ -67,6 +78,8 @@ def run_and_report(
     skill_context=True,
     skill_context_file=None,
     print_response=False,
+    report_callback=None,
+    quiet=False,
 ):
     """Run one managed provider run on a journal under runtime_dir and print its
     cost. Returns the provider's exit code. Shared by the `kungfu managed-run`
@@ -74,11 +87,16 @@ def run_and_report(
     run_id = uuid.uuid4().hex[:12]
 
     disc = discover_provider(provider)
-    print(f"\033[1m◆ Kungfu managed run\033[0m  provider={provider}  run_id={run_id}")
+    if not quiet:
+        print(
+            f"\033[1m◆ Kungfu managed run\033[0m  provider={provider}  run_id={run_id}"
+        )
     if not disc.found:
-        print(f"  provider not available: {disc.error}")
+        if not quiet:
+            print(f"  provider not available: {disc.error}")
         return 2
-    print(f"  binary  {disc.path}  ({disc.path_class}, {disc.version})")
+    if not quiet:
+        print(f"  binary  {disc.path}  ({disc.path_class}, {disc.version})")
     prompt_for_provider = prompt
     envelope = None
     if skill_context:
@@ -97,14 +115,15 @@ def run_and_report(
         if has_advertised_skills(envelope):
             prompt_for_provider = inject_skill_context(prompt, envelope)
 
-    print(f"  prompt  {prompt}")
-    if has_advertised_skills(envelope):
-        print(
-            "  skills  "
-            f"{len(envelope['catalog'])} advertised  "
-            f"{envelope['audit'].get('advertisedSkillsHash', 'sha256:unknown')}"
-        )
-    print("  running the provider under management …\n")
+    if not quiet:
+        print(f"  prompt  {prompt}")
+        if has_advertised_skills(envelope):
+            print(
+                "  skills  "
+                f"{len(envelope['catalog'])} advertised  "
+                f"{envelope['audit'].get('advertisedSkillsHash', 'sha256:unknown')}"
+            )
+        print("  running the provider under management …\n")
 
     writer = _open_journal(runtime_dir, run_id)
 
@@ -174,6 +193,19 @@ def run_and_report(
             }
         },
     )
+    report = ManagedRunCliReport(
+        provider=provider,
+        run_id=run_id,
+        exit_code=result.exit_code,
+        response_path=response_path,
+        manifest_path=manifest,
+        response_doc=response_doc,
+    )
+    if report_callback is not None:
+        report_callback(report)
+
+    if quiet:
+        return result.exit_code
 
     snap = result.snapshot
     print(_rule("cost"))
