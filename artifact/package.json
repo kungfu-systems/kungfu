@@ -19,7 +19,6 @@
     "clean": "pnpm --filter @kungfu-tech/gui run clean"
   },
   "dependencies": {
-    "@kungfu-tech/kfx-indexer-live": "workspace:*",
     "@kungfu-tech/gui": "workspace:*",
     "@kungfu-tech/tui": "workspace:*",
     "@kungfu-tech/core": "workspace:*",

@@ -48,9 +48,6 @@ importers:
       '@kungfu-tech/gui':
         specifier: workspace:*
         version: link:../framework/gui
-      '@kungfu-tech/kfx-indexer-live':
-        specifier: workspace:*
-        version: link:../extensions/indexer-live
       '@kungfu-tech/sdk':
         specifier: workspace:*
         version: link:../developer/sdk
@@ -100,16 +97,6 @@ importers:
       '@types/react':
         specifier: ^18.3.3
         version: 18.3.31
-
-  extensions/indexer-live:
-    dependencies:
-      '@kungfu-tech/core':
-        specifier: workspace:*
-        version: link:../../framework/core
-    devDependencies:
-      '@kungfu-tech/sdk':
-        specifier: workspace:*
-        version: link:../../developer/sdk
 
   extensions/journal-manager:
     dependencies:
