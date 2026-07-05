@@ -71,8 +71,8 @@
   },
   "devDependencies": {
     "@kungfu-tech/libnode": "22.22.3-kf.1",
-    "@mapbox/node-pre-gyp": "^1.0.0",
-    "cmake-js": "^7.0.0",
+    "@mapbox/node-pre-gyp": "^2.0.3",
+    "cmake-js": "^8.0.0",
     "copyfiles": "^2.4.1",
     "electron": "^42.5.0",
     "node-addon-api": "^8.0.0"
