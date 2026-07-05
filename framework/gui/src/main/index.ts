@@ -158,6 +158,10 @@ let manager: SandboxManager | null = null;
 // stage 2) can push layout snapshots back to it for persistence.
 let shellWindow: BrowserWindow | null = null;
 
+// Set once the app is quitting; the session-window host reads it so window
+// closes during shutdown do not overwrite the persisted layout restore needs.
+let appQuitting = false;
+
 ipcMain.handle(ENSURE_CHANNEL, (_event, payload) => {
   const { id, bundlePath, declared } = payload as {
     id: string;
@@ -276,7 +280,11 @@ app.whenReady().then(() => {
   // keeps the single-window app untouched until this is validated on a machine.
   if (process.env.KF_SESSION_WINDOWS === '1') {
     try {
-      bindSessionWindows({ ipcMain, getShellWindow: () => shellWindow });
+      bindSessionWindows({
+        ipcMain,
+        getShellWindow: () => shellWindow,
+        isQuitting: () => appQuitting,
+      });
     } catch (e) {
       console.log(`KF_SESSION_WINDOWS_FAIL ${(e as Error).message}`);
     }
@@ -286,6 +294,12 @@ app.whenReady().then(() => {
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
+});
+
+app.on('before-quit', () => {
+  // Freeze the persisted session-window layout: the window closes that follow
+  // are shutdown, not the user dropping windows, so they must not overwrite it.
+  appQuitting = true;
 });
 
 app.on('window-all-closed', () => {

@@ -115,6 +115,9 @@ function createSessionWindow(args: {
 export function bindSessionWindows(opts: {
   ipcMain: IpcMain;
   getShellWindow: () => BrowserWindow | null;
+  // true once the app is quitting: window closes during shutdown must not be
+  // persisted, or they would wipe the set that restore needs (ADR-0016 stage 2).
+  isQuitting?: () => boolean;
 }): SessionWindowRegistry {
   const registry = createSessionWindowRegistry({
     displays: () => ({
@@ -125,6 +128,10 @@ export function bindSessionWindows(opts: {
       displayKey(screen.getDisplayMatching(bounds)),
     createWindow: createSessionWindow,
     onChange: (snapshot) => {
+      // On app quit every window closes, which would emit an empty snapshot and
+      // overwrite the persisted set; skip persistence during shutdown so the
+      // last live layout survives for restore.
+      if (opts.isQuitting?.()) return;
       const shell = opts.getShellWindow();
       if (shell && !shell.isDestroyed()) {
         shell.webContents.send(SESSION_WINDOW_SNAPSHOT_CHANNEL, { snapshot });
