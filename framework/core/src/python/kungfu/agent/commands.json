@@ -1,0 +1,92 @@
+{
+  "schema": "kungfu.agent-commands/v1",
+  "commands": [
+    {
+      "name": "kungfu agent brief",
+      "maturity": "stable",
+      "purpose": "Print the local onboarding brief."
+    },
+    {
+      "name": "kungfu agent docs",
+      "maturity": "stable",
+      "purpose": "Show where the installed agent pack lives and list its documents."
+    },
+    {
+      "name": "kungfu agent capabilities --json",
+      "maturity": "stable",
+      "purpose": "Print the machine-readable pack index and command catalog."
+    },
+    {
+      "name": "kungfu agent choose-mode --json",
+      "maturity": "stable",
+      "purpose": "Choose brief, report, trace, managed-run, or remote-sync from explicit flags."
+    },
+    {
+      "name": "kungfu agent install-skill --target codex",
+      "maturity": "stable",
+      "purpose": "Preview or explicitly copy the Codex skill file."
+    },
+    {
+      "name": "kungfu agent install-skill --target claude",
+      "maturity": "stable",
+      "purpose": "Preview or explicitly copy the Claude skill file."
+    },
+    {
+      "name": "kungfu trace -- <command>",
+      "maturity": "stable",
+      "purpose": "Capture an existing command into a local Rewind trace."
+    },
+    {
+      "name": "kungfu managed-run --provider <provider> --prompt <task>",
+      "maturity": "experimental",
+      "purpose": "Run a provider CLI under Kungfu supervision, skill context, and cost/audit capture."
+    },
+    {
+      "name": "kungfu work create <title> --json",
+      "maturity": "stable",
+      "purpose": "Create structured work facts in the local journal."
+    },
+    {
+      "name": "kungfu skill catalog --json",
+      "maturity": "stable",
+      "purpose": "Print the compact agent-visible Kungfu Skill catalog."
+    },
+    {
+      "name": "kungfu skill read <key-or-path> --json",
+      "maturity": "stable",
+      "purpose": "Load a full SKILL.md on demand with audit evidence."
+    },
+    {
+      "name": "kungfu kfx install <source>",
+      "maturity": "stable",
+      "purpose": "Install a kfx package through the trust disclosure path."
+    }
+  ],
+  "modes": {
+    "brief": {
+      "maturity": "stable",
+      "next": "kungfu agent brief",
+      "when": "Read local facts before choosing a runtime action."
+    },
+    "report": {
+      "maturity": "stable",
+      "next": "kungfu work create <title> --json",
+      "when": "The useful output is structured work state, decisions, checkpoints, or artifacts."
+    },
+    "trace": {
+      "maturity": "stable",
+      "next": "kungfu trace -- <command>",
+      "when": "An existing command or agent run should be captured without rewriting it."
+    },
+    "managed-run": {
+      "maturity": "experimental",
+      "next": "kungfu managed-run --provider <provider> --prompt <task>",
+      "when": "Kungfu should launch the provider CLI and bind skill context, run evidence, and reported cost."
+    },
+    "remote-sync": {
+      "maturity": "planned",
+      "next": "Use exported bundles and journal facts; remote publishing is not a stable local command yet.",
+      "when": "The main problem is moving evidence across machines or trust boundaries."
+    }
+  }
+}

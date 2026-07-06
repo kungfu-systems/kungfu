@@ -150,6 +150,22 @@ on demand. A skill can reference kfx dependencies, but it cannot grant those
 packages additional runtime authority; the kfx trust gate still decides what
 can execute.
 
+### Agent onboarding pack — `kungfu agent`
+
+The installed runtime also carries a small local Agent Onboarding Pack under the
+core Python package. It is the first fact source for agents choosing whether to
+read, report structured work facts, trace an existing command, run a managed
+provider session, or handle remote evidence. The pack is exposed through
+`kungfu agent brief`, `kungfu agent capabilities --json`, and
+`kungfu agent choose-mode --json`, and it ships with provider-specific
+`SKILL.md` files that can be previewed before explicit installation.
+
+This pack is not another authority layer. It records current commands, maturity
+labels, safety boundaries, and examples so Electron, standalone CLI, npm, and
+PyPI installs do not depend on stale external notes. Future Homebrew, winget,
+container, and kfx channels must pass the same pack validation before claiming
+agent-ready packaging.
+
 ### Distribution — `artifact` (`@kungfu-tech/artifact-kungfu`)
 
 The dogfood installer: it bundles the runtime, both reference UIs and the SDK

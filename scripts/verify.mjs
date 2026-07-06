@@ -77,7 +77,7 @@ const results = [];
  */
 function pass(name, detail) {
   results.push({ name, ok: true, detail: detail || '' });
-  console.log(`  ✅ ${name}${detail ? ' — ' + detail : ''}`);
+  console.log(`  ✅ ${name}${detail ? ` — ${detail}` : ''}`);
 }
 /**
  * @param {string} name
@@ -85,7 +85,7 @@ function pass(name, detail) {
  */
 function fail(name, detail) {
   results.push({ name, ok: false, detail: detail || '' });
-  console.error(`  ❌ ${name}${detail ? ' — ' + detail : ''}`);
+  console.error(`  ❌ ${name}${detail ? ` — ${detail}` : ''}`);
 }
 
 // run one pnpm task (via the pnpm dispatched by the current node/corepack); throw on failure
@@ -99,7 +99,7 @@ function runPnpm(task) {
   });
   if (r.status !== 0) {
     throw new Error(
-      `pnpm ${task} failed (exit ${r.status == null ? 'signal ' + r.signal : r.status})`,
+      `pnpm ${task} failed (exit ${r.status == null ? `signal ${r.signal}` : r.status})`,
     );
   }
 }
@@ -161,6 +161,24 @@ function main() {
         .join(' | ') || `mypy exited ${mypy.status}`,
     );
 
+  // ── Stage 0c: installed agent onboarding pack ────────────────────
+  // The pack is a shipped local fact source. It must be present before any
+  // artifact can honestly claim agent-ready install paths.
+  console.log('\n[verify] stage 0c: agent onboarding pack');
+  const agentPack = spawnSync(
+    process.execPath,
+    [path.join(__dirname, 'verify-agent-pack.mjs')],
+    { encoding: 'utf8' },
+  );
+  if (agentPack.status === 0)
+    pass('agent onboarding pack', (agentPack.stdout || '').trim());
+  else
+    fail(
+      'agent onboarding pack',
+      `${agentPack.stdout || ''}${agentPack.stderr || ''}`.trim() ||
+        `verify-agent-pack exited ${agentPack.status}`,
+    );
+
   // ── Stage 0: toolchain preflight (read-only) ──────────────────────
   console.log('\n[verify] stage 0: toolchain preflight');
   const uv = spawnSync('uv', ['--version'], { encoding: 'utf8', shell: isWin });
@@ -206,7 +224,7 @@ function main() {
       );
       if (probeBuild.status !== 0) {
         throw new Error(
-          `cpp probe build failed (exit ${probeBuild.status == null ? 'signal ' + probeBuild.signal : probeBuild.status})`,
+          `cpp probe build failed (exit ${probeBuild.status == null ? `signal ${probeBuild.signal}` : probeBuild.status})`,
         );
       }
       // Python AOT dogfood probe: install its dependency (engage pdm) and
@@ -223,7 +241,7 @@ function main() {
       );
       if (pyProbeBuild.status !== 0) {
         throw new Error(
-          `python probe build failed (exit ${pyProbeBuild.status == null ? 'signal ' + pyProbeBuild.signal : pyProbeBuild.status})`,
+          `python probe build failed (exit ${pyProbeBuild.status == null ? `signal ${pyProbeBuild.signal}` : pyProbeBuild.status})`,
         );
       }
       if (withApp) runPnpm('build:app'); // webpack → framework/gui/dist/app
@@ -338,7 +356,7 @@ function main() {
     if (r.status !== 0) {
       fail(
         'kfc --version exits 0',
-        `exit ${r.status == null ? 'signal ' + r.signal : r.status}; output: ${out.slice(0, 200)}`,
+        `exit ${r.status == null ? `signal ${r.signal}` : r.status}; output: ${out.slice(0, 200)}`,
       );
     } else if (!out.includes(version)) {
       fail(
@@ -426,7 +444,7 @@ function main() {
         else
           fail(
             `slice ${name}`,
-            `${runner.label} exit ${r.status == null ? 'signal ' + r.signal : r.status}; tail: ${tail3(r)}`,
+            `${runner.label} exit ${r.status == null ? `signal ${r.signal}` : r.status}; tail: ${tail3(r)}`,
           );
       }
       const guardMjs = path.join(core, 'src', 'libyijinjing', 'check-deps.mjs');
@@ -469,7 +487,7 @@ function main() {
         else
           fail(
             `fixture ${name}`,
-            `${runner.label} exit ${r.status == null ? 'signal ' + r.signal : r.status}; tail: ${tail3(r)}`,
+            `${runner.label} exit ${r.status == null ? `signal ${r.signal}` : r.status}; tail: ${tail3(r)}`,
           );
       }
     }

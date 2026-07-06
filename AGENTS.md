@@ -10,7 +10,9 @@ restating them.
   start at the documentation map, [`docs/MAP.md`](docs/MAP.md). It routes any
   question ("what does it guarantee", "how do I localize a failure", "what is the
   journal / replay model") to the document that answers it, and is written to be
-  read by both people and agents.
+  read by both people and agents. In an installed runtime, agents should first
+  read the local pack with `kungfu agent brief` and choose a mode with
+  `kungfu agent choose-mode --json`.
 - **Building or contributing to this repo** — read the rest of this file, then
   [`CONTRIBUTING.md`](CONTRIBUTING.md).
 

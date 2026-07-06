@@ -228,6 +228,31 @@ function buildMenu() {
         });
       },
     },
+    {
+      label: 'Show Agent Onboarding Brief',
+      click: async () => {
+        const kungfuBin = path.join(
+          path.dirname(process.env.KFE_PATH),
+          'kungfu',
+        );
+        try {
+          const out = execFileSync(kungfuBin, ['agent', 'brief'], {
+            timeout: 10000,
+          });
+          await dialog.showMessageBox({
+            type: 'info',
+            message: 'Kungfu Agent Onboarding',
+            detail: out.toString().slice(0, 4000),
+          });
+        } catch (e) {
+          await dialog.showMessageBox({
+            type: 'error',
+            message: 'Could not read Agent Onboarding brief',
+            detail: (e as Error).message,
+          });
+        }
+      },
+    },
   ];
 
   const template: Electron.MenuItemConstructorOptions[] = [

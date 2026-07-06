@@ -81,6 +81,9 @@ function App({ ledger, exportCount }: { ledger: Ledger; exportCount: number }) {
       <Text dimColor>
         runtime home: {ledger.runtimeDir} · runs: {runs} · press q to quit
       </Text>
+      <Text dimColor>
+        agent quickstart: kungfu agent brief · kungfu agent capabilities --json
+      </Text>
       <Box flexDirection="column" borderStyle="round" paddingX={1}>
         <Text dimColor>
           LEDGER · {total} events · tail {tail.length} · via capability SDK

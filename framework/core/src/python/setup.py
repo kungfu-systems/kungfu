@@ -69,7 +69,19 @@ setup(
     url=urls.get("homepage"),
     project_urls={"repository": urls["repository"]} if "repository" in urls else {},
     packages=[""] + find_packages(exclude=["test"]),
-    package_data={"": ["*.dll", "*.dylib", "*.pyd", "*.so", "*.so.*", "*.json"]},
+    package_data={
+        "": [
+            "*.dll",
+            "*.dylib",
+            "*.pyd",
+            "*.so",
+            "*.so.*",
+            "*.json",
+            "*.md",
+            "examples/*.md",
+            "skills/*/SKILL.md",
+        ]
+    },
     include_package_data=True,
     # [project].dependencies 已是 PEP 508 完整约束（含平台 marker），直接作为 wheel
     # 的 install_requires；与旧 poetry 把全部 deps 注入 install_requires 行为等价。

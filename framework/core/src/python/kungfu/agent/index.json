@@ -1,0 +1,37 @@
+{
+  "schema": "kungfu.agent-pack/v1",
+  "title": "Kungfu Agent Onboarding Pack",
+  "summary": "Local facts for agents and people working with an installed Kungfu runtime.",
+  "version": 1,
+  "maturity": "stable",
+  "documents": [
+    { "path": "index.json", "purpose": "pack manifest", "maturity": "stable" },
+    { "path": "brief.md", "purpose": "first-read overview", "maturity": "stable" },
+    { "path": "mode-selection.md", "purpose": "choose the right operating mode", "maturity": "stable" },
+    { "path": "commands.json", "purpose": "machine-readable command and mode catalog", "maturity": "stable" },
+    { "path": "safety.md", "purpose": "fact boundaries and non-goals", "maturity": "stable" },
+    { "path": "examples/report-mode.md", "purpose": "structured work facts without process capture", "maturity": "stable" },
+    { "path": "examples/trace-mode.md", "purpose": "capture an existing command", "maturity": "stable" },
+    { "path": "examples/managed-run.md", "purpose": "supervise a provider CLI run", "maturity": "experimental" },
+    { "path": "examples/remote-sync.md", "purpose": "remote runtime boundary guidance", "maturity": "planned" }
+  ],
+  "skills": [
+    { "target": "codex", "path": "skills/codex/SKILL.md", "maturity": "stable" },
+    { "target": "claude", "path": "skills/claude/SKILL.md", "maturity": "stable" }
+  ],
+  "installChannels": [
+    { "channel": "electron", "includes": "bundled @kungfu-tech/core runtime and CLI", "maturity": "stable" },
+    { "channel": "standalone-cli", "includes": "frozen kungfu runtime", "maturity": "stable" },
+    { "channel": "npm", "includes": "@kungfu-tech/core package files", "maturity": "stable" },
+    { "channel": "pypi", "includes": "kungfu wheel package data", "maturity": "stable" },
+    { "channel": "homebrew", "includes": "future formula packaging check", "maturity": "planned" },
+    { "channel": "winget", "includes": "future installer manifest packaging check", "maturity": "planned" },
+    { "channel": "container", "includes": "future image label and filesystem check", "maturity": "planned" },
+    { "channel": "kfx", "includes": "future extension-package distribution check", "maturity": "planned" }
+  ],
+  "entrypoints": {
+    "human": "kungfu agent brief",
+    "machine": "kungfu agent capabilities --json",
+    "modeChoice": "kungfu agent choose-mode --json"
+  }
+}

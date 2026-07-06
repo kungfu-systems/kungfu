@@ -17,8 +17,8 @@
 //   故 freeze 后 promote（_internal/*→顶层，Unix 符号链/Win 拷贝）。
 // @ts-check
 
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 const { shell } = require('../lib');
 const { verifyWindowsSymbols } = require('./verify-windows-symbols');
 
@@ -233,6 +233,7 @@ function freezeNuitka(bt) {
         (m) =>
           `--include-data-files=${path.join(CORE, 'src', 'python', 'kungfu', m, `${m}_events.bfbs`)}=${m}_events.bfbs`,
       ),
+      '--include-package-data=kungfu.agent',
       path.join('src', 'python', 'kungfu_cli.py'),
     ],
     true,
