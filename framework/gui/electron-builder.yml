@@ -39,3 +39,21 @@ mac:
     - dmg
     - zip
   identity: null
+linux:
+  # executableName is required here: on Linux it otherwise defaults to the
+  # package name (@kungfu-tech/gui), whose '@' and '/' are rejected as an
+  # executable file name and break AppImage/snap packaging. dir = the pack
+  # verb's fast unpacked app; AppImage = the dist verb's portable installer.
+  # snap is intentionally not a target — it needs a snapcraft/mksquashfs
+  # toolchain that is not part of this build host.
+  executableName: kungfu
+  category: Finance
+  target:
+    - dir
+    - AppImage
+win:
+  # nsis = the dist verb's Windows installer; dir = the fast unpacked app.
+  # executableName defaults to productName (Kungfu), already a valid file name.
+  target:
+    - dir
+    - nsis
