@@ -106,6 +106,11 @@ if (commands) {
     'kungfu trace -- <command>',
     'kungfu managed-run --provider <provider> --prompt <task>',
     'kungfu work create <title> --json',
+    'kungfu report run begin --work <work-id> --provider <provider> --json',
+    'kungfu report cost --run <run-id> --provider <provider> --json',
+    'kungfu report run end --run <run-id> --status <status> --json',
+    'kungfu remote add <source-id> --host <host> --home <kf-home> --json',
+    'kungfu remote sync <source-id> --json',
     'kungfu skill catalog --json',
     'kungfu kfx install <source>',
   ]) {
@@ -151,6 +156,8 @@ for (const rel of REQUIRED.filter((p) => p.endsWith('.md'))) {
       bare.startsWith('kungfu trace') ||
       bare.startsWith('kungfu managed-run') ||
       bare.startsWith('kungfu work') ||
+      bare.startsWith('kungfu report') ||
+      bare.startsWith('kungfu remote') ||
       bare.startsWith('kungfu rewind')
     ) {
       const known =

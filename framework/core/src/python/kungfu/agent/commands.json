@@ -47,6 +47,31 @@
       "purpose": "Create structured work facts in the local journal."
     },
     {
+      "name": "kungfu report run begin --work <work-id> --provider <provider> --json",
+      "maturity": "experimental",
+      "purpose": "Open a reported external agent run without changing how the agent is launched."
+    },
+    {
+      "name": "kungfu report cost --run <run-id> --provider <provider> --json",
+      "maturity": "experimental",
+      "purpose": "Append reported token and cost facts to a run journal."
+    },
+    {
+      "name": "kungfu report run end --run <run-id> --status <status> --json",
+      "maturity": "experimental",
+      "purpose": "Close a reported external run and refresh its manifest."
+    },
+    {
+      "name": "kungfu remote add <source-id> --host <host> --home <kf-home> --json",
+      "maturity": "experimental",
+      "purpose": "Register a source runtime for source-scoped evidence sync."
+    },
+    {
+      "name": "kungfu remote sync <source-id> --json",
+      "maturity": "experimental",
+      "purpose": "Mirror source runtime facts under remotes/<source-id>/runtime without mixing them into local truth."
+    },
+    {
       "name": "kungfu skill catalog --json",
       "maturity": "stable",
       "purpose": "Print the compact agent-visible Kungfu Skill catalog."
@@ -70,8 +95,8 @@
     },
     "report": {
       "maturity": "stable",
-      "next": "kungfu work create <title> --json",
-      "when": "The useful output is structured work state, decisions, checkpoints, or artifacts."
+      "next": "kungfu work create <title> --json; use kungfu report run begin when the fact belongs to an external run.",
+      "when": "The useful output is structured work state, decisions, checkpoints, artifacts, or reported external run facts."
     },
     "trace": {
       "maturity": "stable",
@@ -84,9 +109,9 @@
       "when": "Kungfu should launch the provider CLI and bind skill context, run evidence, and reported cost."
     },
     "remote-sync": {
-      "maturity": "planned",
-      "next": "Use exported bundles and journal facts; remote publishing is not a stable local command yet.",
-      "when": "The main problem is moving evidence across machines or trust boundaries."
+      "maturity": "experimental",
+      "next": "kungfu remote add <source-id> --host <host> --home <kf-home> --json; kungfu remote sync <source-id> --json",
+      "when": "The main problem is moving evidence across machines or runtime trust boundaries."
     }
   }
 }
