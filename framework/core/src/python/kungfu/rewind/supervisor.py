@@ -18,6 +18,8 @@
 # capture layers never touch the writer, they enqueue serialized events and one
 # writer thread drains the queue in arrival order.
 
+from __future__ import annotations
+
 import os
 import queue
 import signal
@@ -25,6 +27,7 @@ import subprocess
 import sys
 import threading
 import uuid
+from typing import Any, Iterable
 
 import kungfu
 
@@ -61,7 +64,9 @@ _STOP = object()
 
 
 class Supervisor:
-    def __init__(self, runtime_dir, command, run_id=None):
+    def __init__(
+        self, runtime_dir: str, command: Iterable[str], run_id: str | None = None
+    ) -> None:
         self.runtime_dir = runtime_dir
         self.command = list(command)
         self.run_id = run_id or uuid.uuid4().hex
@@ -81,7 +86,7 @@ class Supervisor:
         self.writer = yjj.writer(
             self.location, PUBLIC_DEST, True, self.publisher, False, self.bus, 0
         )
-        self.events = queue.SimpleQueue()
+        self.events: queue.SimpleQueue[Any] = queue.SimpleQueue()
         self.proxy = ModelWireProxy(
             self.run_id, self.enqueue, upstreams=self._upstreams()
         )
@@ -89,16 +94,18 @@ class Supervisor:
         # bfbs, tier). Collected off the ingest threads, bound into the bundle
         # manifest at finalize. Dict assignment is atomic under CPython; a run's
         # kfx set is tiny, so no extra lock.
-        self.user_schemas = {}
+        self.user_schemas: dict[int, tuple[str, bytes, str]] = {}
         self.ingest = IngestServer(
             self.run_id, self.enqueue, schema_sink=self._register_kfx_schema
         )
 
-    def _register_kfx_schema(self, msg_type, name, bfbs, tier):
+    def _register_kfx_schema(
+        self, msg_type: int, name: str, bfbs: bytes, tier: str
+    ) -> None:
         self.user_schemas[int(msg_type)] = (name, bfbs, tier)
 
     @staticmethod
-    def _upstreams():
+    def _upstreams() -> dict[str, str]:
         openai = next((os.environ[k] for k in _OPENAI_ENV if os.environ.get(k)), None)
         anthropic = next(
             (os.environ[k] for k in _ANTHROPIC_ENV if os.environ.get(k)), None
@@ -108,10 +115,10 @@ class Supervisor:
             "anthropic": anthropic or DEFAULT_ANTHROPIC_UPSTREAM,
         }
 
-    def enqueue(self, msg_type, data):
+    def enqueue(self, msg_type: int, data: bytes) -> None:
         self.events.put((msg_type, data))
 
-    def _drain_events(self):
+    def _drain_events(self) -> None:
         while True:
             item = self.events.get()
             if item is _STOP:
@@ -120,7 +127,7 @@ class Supervisor:
             # the binding takes the payload as a byte sequence (list[int])
             self.writer.write_bytes(0, msg_type, list(data), len(data))
 
-    def child_env(self):
+    def child_env(self) -> dict[str, str]:
         env = dict(os.environ)
         env[ENV_RUN_ID] = self.run_id
         for key in _OPENAI_ENV + _ANTHROPIC_ENV:
@@ -164,10 +171,10 @@ class Supervisor:
         )
         return env
 
-    def bundle_dir(self):
+    def bundle_dir(self) -> str:
         return os.path.join(self.runtime_dir, "rewind", self.run_id, "bundle")
 
-    def run(self):
+    def run(self) -> tuple[int, Any, str]:
         writer_thread = threading.Thread(target=self._drain_events)
         writer_thread.start()
         self.proxy.start()

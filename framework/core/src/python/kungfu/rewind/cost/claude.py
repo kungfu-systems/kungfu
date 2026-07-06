@@ -50,7 +50,7 @@ def _usage_from(usage: dict) -> TokenUsage:
     )
 
 
-def _primary_model(model_usage) -> Optional[str]:
+def _primary_model(model_usage: object) -> Optional[str]:
     """Pick the model that carried most of the cost as the snapshot's model.
 
     `modelUsage` maps model name -> {costUSD, tokens…}. A `--print` run is

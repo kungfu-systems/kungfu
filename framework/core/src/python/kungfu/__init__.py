@@ -1,7 +1,10 @@
 #  SPDX-License-Identifier: Apache-2.0
 
+from __future__ import annotations
+
 import json
 import os
+from typing import Any
 
 # The native binding is imported lazily (PEP 562 module __getattr__) rather than
 # at package import. This lets the pure-stdlib capability guest
@@ -12,11 +15,11 @@ import os
 # use, exactly where it did before; only the paths that never touch it (the guest
 # proxy) no longer pull it in.
 
-_binding = None
-_build_info = None
+_binding: Any = None
+_build_info: dict[str, Any] | None = None
 
 
-def _load_binding():
+def _load_binding() -> Any:
     global _binding
     if _binding is None:
         import pykungfu as binding
@@ -25,7 +28,7 @@ def _load_binding():
     return _binding
 
 
-def _load_build_info():
+def _load_build_info() -> dict[str, Any]:
     global _build_info
     if _build_info is None:
         binding = _load_binding()
@@ -37,7 +40,7 @@ def _load_build_info():
     return _build_info
 
 
-def __getattr__(name):
+def __getattr__(name: str) -> Any:
     if name == "__binding__":
         return _load_binding()
     if name == "__build_info__":
@@ -47,7 +50,7 @@ def __getattr__(name):
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-def schema_data_path(module_file, name):
+def schema_data_path(module_file: str, name: str) -> str:
     """Resolve a package data file (e.g. a *.bfbs schema blob) in both layouts.
 
     In a source checkout the file sits next to its module; in the frozen

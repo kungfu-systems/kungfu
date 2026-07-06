@@ -10,6 +10,8 @@
 # third-party kfx band is 40000-49999. The `sandboxed` trust tier is confined to
 # that band so an untrusted kfx cannot claim a first-party number.
 
+from __future__ import annotations
+
 import hashlib
 import json
 import os
@@ -25,11 +27,11 @@ OPEN_LAYER_MIN = 30000
 _FIRST_PARTY = ((30001, 30099), (30101, 30199), (30201, 30299))
 
 
-def _in(n, lo, hi):
+def _in(n: int, lo: int, hi: int) -> bool:
     return lo <= n <= hi
 
 
-def _validate_msg_type(msg_type, tier):
+def _validate_msg_type(msg_type: int, tier: str) -> None:
     if msg_type < OPEN_LAYER_MIN:
         raise ValueError(
             f"msg_type {msg_type} is below the open layer ({OPEN_LAYER_MIN}); "
@@ -47,7 +49,7 @@ def _validate_msg_type(msg_type, tier):
         )
 
 
-def _root_object_name(bfbs, want):
+def _root_object_name(bfbs: bytes, want: str) -> str:
     """Confirm `bfbs` is a reflection schema that defines table `want`; return
     its fully-qualified name. Rejects a schema whose bound name is absent."""
     schema = reflection_fb.Schema.GetRootAs(bfbs, 0)
@@ -59,8 +61,14 @@ def _root_object_name(bfbs, want):
 
 
 def register_user_schema(
-    bundle_dir, bfbs, msg_type, name, *, tier="trusted", schema_version="user"
-):
+    bundle_dir: str,
+    bfbs: bytes,
+    msg_type: int,
+    name: str,
+    *,
+    tier: str = "trusted",
+    schema_version: str = "user",
+) -> dict[str, str]:
     """Content-address `bfbs` and bind `msg_type` -> it in the run manifest.
 
     bfbs: bytes from compile_schema. name: the event table to bind (its

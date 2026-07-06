@@ -14,6 +14,8 @@
 # Routing: anthropic paths (/v1/messages) go to the anthropic upstream,
 # everything else to the openai-compatible upstream.
 
+from __future__ import annotations
+
 import http.server
 import json
 import threading
@@ -21,6 +23,7 @@ import time
 import urllib.error
 import urllib.request
 import uuid
+from typing import Any, Callable
 
 from kungfu.rewind import MSG_MODEL_REQUEST, MSG_MODEL_RESPONSE
 from kungfu.rewind import events
@@ -34,7 +37,7 @@ DEFAULT_ANTHROPIC_UPSTREAM = "https://api.anthropic.com/v1"
 _SKIP_FORWARD = {"host", "content-length", "connection", "accept-encoding"}
 
 
-def _provider_for(path):
+def _provider_for(path: str) -> str:
     return "anthropic" if path.rstrip("/").endswith("/messages") else "openai"
 
 
@@ -42,11 +45,11 @@ class _Handler(http.server.BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
     # the proxy is capture infrastructure; stay quiet on the child's stderr
-    def log_message(self, format, *args):
+    def log_message(self, format: str, *args: Any) -> None:
         pass
 
-    def do_POST(self):
-        proxy = self.server.rewind_proxy
+    def do_POST(self) -> None:
+        proxy = self.server.rewind_proxy  # type: ignore[attr-defined]
         length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(length) if length else b""
         provider = _provider_for(self.path)
@@ -137,7 +140,13 @@ class _Handler(http.server.BaseHTTPRequestHandler):
 
 
 class ModelWireProxy:
-    def __init__(self, run_id, sink, upstreams=None, timeout=600):
+    def __init__(
+        self,
+        run_id: str,
+        sink: Callable[[int, bytes], None],
+        upstreams: dict[str, str] | None = None,
+        timeout: int = 600,
+    ) -> None:
         self.run_id = run_id
         self.sink = sink
         self.timeout = timeout
@@ -147,18 +156,20 @@ class ModelWireProxy:
             **(upstreams or {}),
         }
         self._server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _Handler)
-        self._server.rewind_proxy = self
+        self._server.rewind_proxy = self  # type: ignore[attr-defined]
         self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
 
     @property
-    def base_url(self):
-        host, port = self._server.server_address
-        return f"http://{host}:{port}/v1"
+    def base_url(self) -> str:
+        # binds loopback IPv4, so server_address is a (host, port) pair
+        addr = self._server.server_address
+        host, port = addr[0], addr[1]
+        return f"http://{host}:{port}/v1"  # type: ignore[str-bytes-safe]
 
-    def start(self):
+    def start(self) -> None:
         self._thread.start()
 
-    def stop(self):
+    def stop(self) -> None:
         self._server.shutdown()
         self._server.server_close()
         self._thread.join(timeout=5)

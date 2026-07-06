@@ -5,21 +5,29 @@
 # Same shape as the schema-registry slice emits and its decoder consumes —
 # one msg_type binds to one schema per run; evolution happens between runs.
 
+from __future__ import annotations
+
 import hashlib
 import json
 import os
+from typing import Any
 
 from kungfu.rewind import MSG_TYPE_NAMES, SCHEMA_VERSION
 
 _BFBS_FILE = __import__("kungfu").schema_data_path(__file__, "rewind_events.bfbs")
 
 
-def read_schema_blob():
+def read_schema_blob() -> bytes:
     with open(_BFBS_FILE, "rb") as f:
         return f.read()
 
 
-def emit(bundle_dir, journal_root, source, extra=None):
+def emit(
+    bundle_dir: str,
+    journal_root: str,
+    source: dict[str, Any],
+    extra: dict[str, Any] | None = None,
+) -> str:
     """Write schemas/<hash>.bfbs and manifest.json under bundle_dir.
 
     source: dict with mode/category/group/name/dest describing the journal
