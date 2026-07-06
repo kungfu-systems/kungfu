@@ -7,12 +7,14 @@ import {
   type KfNativeBinding,
   type Ledger,
   type PtyModule,
+  type RemoteWork,
   type Rewind,
   type Terminal,
   type TmuxBinding,
   type Work,
   openDomainState,
   openLedger,
+  openRemoteWork,
   openRewind,
   openTerminal,
   openWork,
@@ -112,6 +114,7 @@ export type Runtime = {
   ledger: Ledger | null;
   domain: DomainState | null;
   rewind: Rewind | null;
+  remoteWork: RemoteWork | null;
   terminal: Terminal | null;
   work: Work | null;
 };
@@ -146,6 +149,7 @@ export function bootRuntime(): Runtime {
     ledger: null,
     domain: null,
     rewind: null,
+    remoteWork: null,
     terminal: null,
     work: null,
   };
@@ -205,6 +209,12 @@ export function bootRuntime(): Runtime {
       readDir: (d: string) => rewindFs.readdirSync(d),
     });
     const work = openWork({ binding, locator: { runtimeDir } });
+    const remoteWork = openRemoteWork({
+      binding,
+      locator: { runtimeDir },
+      readFile: (p: string) => rewindFs.readFileSync(p),
+      readDir: (d: string) => rewindFs.readdirSync(d),
+    });
     // node-pty is a native addon loaded like the kungfu binding; if it is
     // absent or built for another ABI the terminal handle stays null and the
     // terminal view surfaces the absence rather than crashing the runtime.
@@ -244,6 +254,7 @@ export function bootRuntime(): Runtime {
       ledger,
       domain,
       rewind,
+      remoteWork,
       terminal,
       work,
     };

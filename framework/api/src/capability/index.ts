@@ -5,6 +5,7 @@ export * from './types.js';
 export * from './ledger.js';
 export * from './domain.js';
 export * from './rewind.js';
+export * from './remote.js';
 export * from './schema.js';
 export * from './sandbox.js';
 export * from './terminal.js';

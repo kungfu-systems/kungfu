@@ -104,3 +104,53 @@ def sync(ctx, source_id, as_json):
             f"[remote] {source_id}: {manifest['sync_state']} -> "
             f"{manifest['mirror_runtime']}"
         )
+
+
+@remote.command(name="work", help="list mirrored remote work items with source labels")
+@click.argument("source_id", required=False, type=str)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@remote_command_context
+def work_items(ctx, source_id, as_json):
+    try:
+        items = store.list_work(ctx.runtime_dir, source_id)
+    except KeyError:
+        click.echo(f"[remote] unknown source: {source_id}", err=True)
+        sys.exit(1)
+    payload = {"schema": "kungfu.remote-work/v1", "items": items}
+    if as_json:
+        _json(payload)
+        return
+    if not items:
+        click.echo("[remote] no mirrored work items")
+        return
+    for item in items:
+        next_hint = f"  next: {item['next_action']}" if item["next_action"] else ""
+        click.echo(
+            f"{item['source']}  {item['work_id']}  [{item['status']}]  "
+            f"sync={item['sync_state']}  ({item['kind']})  {item['title']}"
+            f"{next_hint}"
+        )
+
+
+@remote.command(name="runs", help="list mirrored remote Rewind runs with source labels")
+@click.argument("source_id", required=False, type=str)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@remote_command_context
+def runs(ctx, source_id, as_json):
+    try:
+        rows = store.list_runs(ctx.runtime_dir, source_id)
+    except KeyError:
+        click.echo(f"[remote] unknown source: {source_id}", err=True)
+        sys.exit(1)
+    payload = {"schema": "kungfu.remote-runs/v1", "runs": rows}
+    if as_json:
+        _json(payload)
+        return
+    if not rows:
+        click.echo("[remote] no mirrored runs")
+        return
+    for row in rows:
+        click.echo(
+            f"{row['source']}  {row['run_id']}  sync={row['sync_state']}  "
+            f"manifest={row['manifest'] or 'missing'}"
+        )

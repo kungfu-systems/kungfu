@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 // Kungfu reference TUI — the platform's second reference surface (ADR-0007),
 // consuming the capability SDK (ADR-0011).
 //
@@ -11,7 +12,9 @@ import path from 'node:path';
 import {
   type Ledger,
   type LedgerRecord,
+  type RemoteWork,
   openLedger,
+  openRemoteWork,
 } from '@kungfu-tech/api/capability';
 import type { KfxLoadPlan } from '@kungfu-tech/kfx';
 import { Box, Text, render, useApp, useInput, useStdin } from 'ink';
@@ -37,10 +40,21 @@ function boot() {
     locator: { runtimeDir },
     join: { name: 'reference_tui' },
   });
+  const remoteWork = openRemoteWork({
+    binding,
+    locator: { runtimeDir },
+    readFile: (p) => fs.readFileSync(p),
+    readDir: (d) => fs.readdirSync(d),
+  });
   // dual-entry loading (ADR-0017): the TUI discovers + decides kfx with the same
   // planKfx the gui uses, so both hosts reach an identical trust/tier verdict.
   const kfxPlan = loadTuiKfxPlan(process.env);
-  return { ledger, exportCount: Object.keys(binding).length, kfxPlan };
+  return {
+    ledger,
+    remoteWork,
+    exportCount: Object.keys(binding).length,
+    kfxPlan,
+  };
 }
 
 // The discovered-kfx panel: what the TUI loaded through the shared planKfx rule.
@@ -94,10 +108,12 @@ function KfxPanel({ plan }: { plan: KfxLoadPlan }) {
 
 function App({
   ledger,
+  remoteWork,
   exportCount,
   kfxPlan,
 }: {
   ledger: Ledger;
+  remoteWork: RemoteWork;
   exportCount: number;
   kfxPlan: KfxLoadPlan;
 }) {
@@ -106,6 +122,8 @@ function App({
   const [total, setTotal] = React.useState(0);
   const [live, setLive] = React.useState(false);
   const [runs, setRuns] = React.useState(0);
+  const [remoteItems, setRemoteItems] = React.useState(0);
+  const [remoteStates, setRemoteStates] = React.useState('');
 
   const { isRawModeSupported } = useStdin();
   useInput(
@@ -125,12 +143,20 @@ function App({
     const timer = setInterval(() => {
       setLive(ledger.health().live);
       setRuns(ledger.replayAnchors().length);
+      remoteWork.refresh();
+      setRemoteItems(remoteWork.items().length);
+      setRemoteStates(
+        remoteWork
+          .sources()
+          .map((source) => `${source.sourceLabel}:${source.syncState}`)
+          .join(' · '),
+      );
     }, 2000);
     return () => {
       subscription.stop();
       clearInterval(timer);
     };
-  }, [ledger]);
+  }, [ledger, remoteWork]);
 
   return (
     <Box flexDirection="column">
@@ -142,7 +168,9 @@ function App({
         </Text>
       </Box>
       <Text dimColor>
-        runtime home: {ledger.runtimeDir} · runs: {runs} · press q to quit
+        runtime home: {ledger.runtimeDir} · runs: {runs} · remote work:{' '}
+        {remoteItems}
+        {remoteStates ? ` (${remoteStates})` : ''} · press q to quit
       </Text>
       <Text dimColor>
         agent quickstart: kungfu agent brief · kungfu agent capabilities --json
@@ -182,6 +210,7 @@ const booted = boot();
 render(
   <App
     ledger={booted.ledger}
+    remoteWork={booted.remoteWork}
     exportCount={booted.exportCount}
     kfxPlan={booted.kfxPlan}
   />,
