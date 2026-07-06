@@ -100,6 +100,8 @@ Start at the [**documentation map**](docs/MAP.md) — it routes your question
 (why it's built this way / how to trust the artifact / how to use it) to the
 right document, and is readable by both people and agents.
 
+- Installed agent entrypoint: `kungfu agent brief`,
+  `kungfu agent capabilities --json`, and `kungfu agent choose-mode --json`.
 - [`docs/MAP.md`](docs/MAP.md) — the question-indexed map of all documentation.
 - [`docs/concepts.md`](docs/concepts.md) — the vocabulary in one place
   (`kungfu`/`kfx`/`sdk`, `libkungfu`, `longfist`, `yijinjing`, journal, …).

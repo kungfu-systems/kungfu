@@ -18,6 +18,7 @@
 //   Requires the core dev environment (built dist/kungfu) and network on first run
 //   to install langchain; the run itself uses a deterministic mock model.
 
+import fs from 'node:fs';
 import path from 'node:path';
 import {
   locate,
@@ -41,6 +42,7 @@ const agentPy =
     : path.join(venv, 'bin', 'python');
 
 const hasLangchain = () =>
+  fs.existsSync(agentPy) &&
   run(agentPy, ['-c', 'import langchain, langchain_openai'], {
     allowFail: true,
   }).status === 0;

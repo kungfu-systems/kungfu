@@ -40,6 +40,7 @@ and the map routes a question to whichever doc answers it.
 | What gates must a release pass? | `provenance.md` + [`version-release-design.md`](version-release-design.md) | verify | partial |
 | If kungfu itself misbehaves, how do I localize it? | [`debugging.md`](debugging.md) | verify | stable |
 | How do I record an agent run and find why it failed (Rewind)? | [`rewind.md`](rewind.md) | use | stable · pre-release install path |
+| What should an installed agent read first, and which mode should it choose? | installed pack: `kungfu agent brief`, `kungfu agent capabilities --json`, `kungfu agent choose-mode --json` | use | stable |
 | How do I write an extension (`kfx`)? | [`extensions.md`](extensions.md) | use | stable · view kfx; runtime facets mid-migration |
 | Where is global config, and how do agents read it? | [`config.md`](config.md) | use | draft |
 | How is a kfx loaded, trusted, and confined? (the topology) | [`kfx-topology.md`](kfx-topology.md) (design: ADR-0017; trust boundary ADR-0013; uniform capability surface ADR-0014) | use | draft · load plan + `service` facet proposed |
@@ -79,6 +80,9 @@ route to the row that answers them:
 - **SKILL.md / agent skill / skill catalog / context injection / Node manager /
   Python manager / skill audit / skill-manager view / kfx dependency binding** →
   *agent-facing Kungfu Skill* ([`skills.md`](skills.md)).
+- **agent onboarding / mode selection / choose-mode / report mode / trace mode /
+  managed-run / remote sync / local agent facts** → the installed Agent
+  Onboarding Pack (`kungfu agent brief`, `kungfu agent capabilities --json`).
 - **signature / checksum / supply chain / SBOM** → *verify a release binary*
   (`provenance.md`, `blocked` — see [`known-limits.md`](known-limits.md)).
 - **trademark / fork / hosted service / provider compliance / cost attribution

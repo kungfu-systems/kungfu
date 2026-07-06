@@ -17,7 +17,7 @@
 //   - framework/core/dist/kungfu/                     freeze artifact directory (run-freeze.js renameSync target)
 //   - framework/core/dist/kungfu/kfc[.exe]           kfc executable (path resolved by lib/executable.js)
 //   - `kfc --version` exits 0 and output contains the expected version   frozen Python runtime runs end to end (runtime smoke)
-//   - framework/gui/dist/app/                      (--with-app) build:app webpack artifact
+//   - framework/gui/out/                           (--with-app) build:app electron-vite artifact
 //
 // Exit codes: all green 0; any failed assertion 1 (fail-fast prints copy-pastable troubleshooting info).
 // Note: an Electron app's "interactive launch" cannot be asserted in a headless environment, so kfc
@@ -170,6 +170,24 @@ function main() {
         .join(' | ') || `mypy exited ${mypy.status}`,
     );
 
+  // ── Stage 0c: installed agent onboarding pack ────────────────────
+  // The pack is a shipped local fact source. It must be present before any
+  // artifact can honestly claim agent-ready install paths.
+  console.log('\n[verify] stage 0c: agent onboarding pack');
+  const agentPack = spawnSync(
+    process.execPath,
+    [path.join(__dirname, 'verify-agent-pack.mjs')],
+    { encoding: 'utf8' },
+  );
+  if (agentPack.status === 0)
+    pass('agent onboarding pack', (agentPack.stdout || '').trim());
+  else
+    fail(
+      'agent onboarding pack',
+      `${agentPack.stdout || ''}${agentPack.stderr || ''}`.trim() ||
+        `verify-agent-pack exited ${agentPack.status}`,
+    );
+
   // ── Stage 0: toolchain preflight (read-only) ──────────────────────
   console.log('\n[verify] stage 0: toolchain preflight');
   const uv = spawnSync('uv', ['--version'], { encoding: 'utf8', shell: isWin });
@@ -235,7 +253,24 @@ function main() {
           `python probe build failed (exit ${exitLabel(pyProbeBuild.status, pyProbeBuild.signal)})`,
         );
       }
-      if (withApp) runPnpm('build:app'); // webpack → framework/gui/dist/app
+      // KFX distribution fixtures pack/install the real work-dashboard
+      // extension. Build it here so `verify --full` is a complete gate instead
+      // of depending on a manual pre-run `kungfu sdk kfx build`.
+      const workDashboardBuild = spawnSync(
+        'pnpm',
+        ['--filter', '@kungfu-tech/kfx-view-work-dashboard', 'run', 'build'],
+        {
+          cwd: ROOT,
+          stdio: 'inherit',
+          shell: isWin,
+        },
+      );
+      if (workDashboardBuild.status !== 0) {
+        throw new Error(
+          `work-dashboard kfx build failed (exit ${exitLabel(workDashboardBuild.status, workDashboardBuild.signal)})`,
+        );
+      }
+      if (withApp) runPnpm('build:app'); // electron-vite → framework/gui/out
     } catch (e) {
       fail('build stage', e instanceof Error ? e.message : String(e));
       return summarize(); // on build failure, wrap up directly and do not assert half-built artifacts
@@ -429,17 +464,25 @@ function main() {
   // ── Stage 4: (optional) app build artifact ────────────────────────
   if (withApp) {
     console.log('\n[verify] stage 4: app build artifact assertion');
-    const appDist = path.join(ROOT, 'framework', 'app', 'dist', 'app');
+    const appOut = path.join(ROOT, 'framework', 'gui', 'out');
+    const requiredAppArtifacts = [
+      'main/index.js',
+      'preload/sandbox.js',
+      'renderer/index.html',
+    ];
+    const missing = requiredAppArtifacts.filter(
+      (rel) => !fs.existsSync(path.join(appOut, rel)),
+    );
     if (
-      fs.existsSync(appDist) &&
-      fs.statSync(appDist).isDirectory() &&
-      fs.readdirSync(appDist).length > 0
+      missing.length === 0 &&
+      fs.existsSync(appOut) &&
+      fs.statSync(appOut).isDirectory()
     ) {
-      pass('build:app artifact exists', path.relative(ROOT, appDist));
+      pass('build:app artifact exists', path.relative(ROOT, appOut));
     } else {
       fail(
         'build:app artifact exists',
-        `non-empty ${path.relative(ROOT, appDist)} not found (build:app first)`,
+        `missing ${missing.join(', ') || path.relative(ROOT, appOut)} (build:app first)`,
       );
     }
   }

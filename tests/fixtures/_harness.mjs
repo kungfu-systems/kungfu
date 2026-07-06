@@ -161,6 +161,7 @@ export function background(cmd, args, opts = {}) {
       /* already gone */
     }
   });
+  child.unref();
   return child;
 }
 

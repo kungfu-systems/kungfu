@@ -12,6 +12,10 @@ import path from 'node:path';
 import { locate } from '../_harness.mjs';
 
 const { fixtureDir } = locate(import.meta.url);
+const resolver = path.resolve(
+  fixtureDir,
+  '../../../framework/api/src/capability/guest-harness/ts-resolve.mjs',
+);
 
 // parent.mjs is the gate entry: it composes the launcher/transport/host and
 // spawns child.py under the OS sandbox. It self-skips (exit 0) when no OS
@@ -19,7 +23,12 @@ const { fixtureDir } = locate(import.meta.url);
 // under the TS type-stripping flag and surface its exit code verbatim.
 const r = spawnSync(
   process.execPath,
-  ['--experimental-transform-types', path.join(fixtureDir, 'parent.mjs')],
+  [
+    '--import',
+    resolver,
+    '--experimental-transform-types',
+    path.join(fixtureDir, 'parent.mjs'),
+  ],
   { stdio: 'inherit' },
 );
 process.exit(r.status ?? 1);

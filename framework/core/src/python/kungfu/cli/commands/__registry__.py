@@ -13,6 +13,7 @@ from . import work
 from . import atlas
 from . import kfx
 from . import skill
+from . import agent
 from . import sdk
 
 __all__ = [
@@ -29,5 +30,6 @@ __all__ = [
     "atlas",
     "kfx",
     "skill",
+    "agent",
     "sdk",
 ]
