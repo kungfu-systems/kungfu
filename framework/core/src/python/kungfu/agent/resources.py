@@ -1,13 +1,32 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
+import sys
 from importlib import resources
+from pathlib import Path
 
 _PACKAGE = "kungfu.agent"
 
 
 def pack_root():
+    frozen = _frozen_pack_root()
+    if frozen is not None:
+        return frozen
     return resources.files(_PACKAGE)
+
+
+def _frozen_pack_root():
+    candidates = []
+    executable = getattr(sys, "executable", "")
+    if executable:
+        candidates.append(Path(executable).resolve().parent / "agent")
+    argv0 = sys.argv[0] if sys.argv else ""
+    if argv0:
+        candidates.append(Path(argv0).resolve().parent / "agent")
+    for candidate in candidates:
+        if (candidate / "index.json").is_file():
+            return candidate
+    return None
 
 
 def _read_json(name):

@@ -194,8 +194,8 @@ const freeze = fs.readFileSync(
   path.join(ROOT, 'framework', 'core', '.gyp', 'run-freeze.js'),
   'utf8',
 );
-if (!freeze.includes('--include-package-data=kungfu.agent')) {
-  fail('run-freeze.js does not include kungfu.agent package data');
+if (!freeze.includes('agentPackDataArgs()')) {
+  fail('run-freeze.js does not include agent pack data helper');
 }
 
 const gui = fs.readFileSync(

@@ -83,6 +83,26 @@ const APP_NATIVE = [
   'link_node.node',
 ];
 
+function agentPackDataArgs() {
+  const root = path.join(CORE, 'src', 'python', 'kungfu', 'agent');
+  /** @type {string[]} */
+  const args = [];
+  /** @param {string} dir */
+  function walk(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name !== '__pycache__') walk(full);
+      } else if (!entry.name.endsWith('.py')) {
+        const rel = path.relative(root, full);
+        args.push(`--include-data-files=${full}=${path.join('agent', rel)}`);
+      }
+    }
+  }
+  walk(root);
+  return args;
+}
+
 // Ship <binary>.pdb next to a native so Windows field crash reports can resolve
 // kungfu frames to symbols; without it the stackwalker only prints module+offset
 // (see docs/windows-crash-symbols.md). No-op off Windows or when no PDB exists
@@ -233,7 +253,7 @@ function freezeNuitka(bt) {
         (m) =>
           `--include-data-files=${path.join(CORE, 'src', 'python', 'kungfu', m, `${m}_events.bfbs`)}=${m}_events.bfbs`,
       ),
-      '--include-package-data=kungfu.agent',
+      ...agentPackDataArgs(),
       path.join('src', 'python', 'kungfu_cli.py'),
     ],
     true,
