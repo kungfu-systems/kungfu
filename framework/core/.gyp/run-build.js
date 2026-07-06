@@ -88,6 +88,9 @@ function build() {
   // both depend on. Require lazily (loads @kungfu-tech/libnode) so non-build
   // commands stay light.
   require('./run-link-node').main();
+  // With libnode colocated above, pykungfu imports — regenerate its .pyi stubs
+  // from the fresh binding so committed stubs/ track the C++ (see gen-stubs.js).
+  require('./gen-stubs').main();
   stage();
   cpVsDependencies();
 }

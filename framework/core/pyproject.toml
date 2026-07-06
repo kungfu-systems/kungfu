@@ -24,6 +24,10 @@ dependencies = [
     # (==) because a version bump changes C++ formatting output; an exact pin keeps
     # the result byte-identical across machines instead of the ambient system one.
     "clang-format==20.1.8",
+    # Regenerate the native pykungfu .pyi stubs as a build step (.gyp/gen-stubs.js
+    # after the addon compiles + libnode colocates) so committed stubs/ track the
+    # C++ binding instead of drifting. Type-check env uses the committed text stubs.
+    "pybind11-stubgen~=2.5",
     "nuitka~=4.1.0",
     "pdm~=2.28.0",
     "pdm-pep517~=1.1.0",

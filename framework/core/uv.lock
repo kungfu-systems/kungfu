@@ -558,6 +558,7 @@ dependencies = [
     { name = "plotly" },
     { name = "pluggy" },
     { name = "psutil" },
+    { name = "pybind11-stubgen" },
     { name = "pycparser", marker = "sys_platform != 'win32'" },
     { name = "pytest" },
     { name = "pywin32-ctypes", marker = "sys_platform == 'win32'" },
@@ -620,6 +621,7 @@ requires-dist = [
     { name = "plotly", specifier = ">=6.8.0,<7.0.0" },
     { name = "pluggy" },
     { name = "psutil", specifier = "~=6.1.0" },
+    { name = "pybind11-stubgen", specifier = "~=2.5" },
     { name = "pycparser", marker = "sys_platform != 'win32'", specifier = "==2.22" },
     { name = "pytest", specifier = ">=9.0.3,<10.0.0" },
     { name = "pywin32-ctypes", marker = "sys_platform == 'win32'", specifier = "==0.2.3" },
@@ -995,6 +997,15 @@ wheels = [
     { url = "http://192.168.100.222:3141/root/pypi/+f/334/31e84fee02bc8/psutil-6.1.1-cp36-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:33431e84fee02bc84ea36d9e2c4a6d395d479c9dd9bba2376c1f6ee8f3a4e0b3" },
     { url = "http://192.168.100.222:3141/root/pypi/+f/eaa/912e0b11848c4/psutil-6.1.1-cp37-abi3-win32.whl", hash = "sha256:eaa912e0b11848c4d9279a93d7e2783df352b082f40111e078388701fd479e53" },
     { url = "http://192.168.100.222:3141/root/pypi/+f/f35/cfccb065fff93/psutil-6.1.1-cp37-abi3-win_amd64.whl", hash = "sha256:f35cfccb065fff93529d2afb4a2e89e363fe63ca1e4a5da22b603a85833c2649" },
+]
+
+[[package]]
+name = "pybind11-stubgen"
+version = "2.5.5"
+source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
+sdist = { url = "http://192.168.100.222:3141/root/pypi/+f/758/d6d6bbeefc62a/pybind11_stubgen-2.5.5.tar.gz", hash = "sha256:758d6d6bbeefc62ad7f78d5e5bbf357ccf6af83cd4504f5f549403f452942708" }
+wheels = [
+    { url = "http://192.168.100.222:3141/root/pypi/+f/108/24cd2fc5cbbee/pybind11_stubgen-2.5.5-py3-none-any.whl", hash = "sha256:10824cd2fc5cbbee032b8fb39e6f6c08de232deb309bc66d786a6c6e8a4601bd" },
 ]
 
 [[package]]
