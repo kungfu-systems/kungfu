@@ -45,7 +45,8 @@
         "title": "Terminal",
         "capabilities": [
           "terminal",
-          "domain"
+          "domain",
+          "rewind"
         ]
       }
     }
