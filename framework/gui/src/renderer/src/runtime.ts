@@ -12,6 +12,7 @@ import {
   type Terminal,
   type TmuxBinding,
   type Work,
+  managedTmuxSocket,
   openDomainState,
   openLedger,
   openRemoteWork,
@@ -29,11 +30,6 @@ declare global {
 }
 
 export const APP_NAME = 'reference_app';
-
-// Dedicated tmux socket for Kungfu managed sessions. Every managed tmux command
-// carries `-L <socket>`, so it physically cannot touch the user's own
-// default-socket tmux sessions. Overridable for tests/other hosts.
-const TMUX_SOCKET = 'kungfu-managed';
 
 // A non-interactive shell must not rely on a `tmux` shell-function shim, so we
 // resolve an absolute binary. Candidates cover Homebrew (arm64/x86) and system
@@ -57,7 +53,13 @@ function resolveTmuxBinding(win: Window): TmuxBinding | null {
     const { execFile } = win.require('node:child_process') as {
       execFile: ExecFile;
     };
-    const socket = win.process.env.KF_TMUX_SOCKET || TMUX_SOCKET;
+    // Per-home socket (KF_TMUX_SOCKET overrides): a dedicated `-L kungfu-managed-*`
+    // socket that still cannot touch the user's own default-socket tmux, and whose
+    // server belongs to exactly this runtime home so its frozen env never leaks
+    // across homes.
+    const socket =
+      win.process.env.KF_TMUX_SOCKET ||
+      managedTmuxSocket(win.process.env.KF_RUNTIME_DIR ?? '');
     const candidates = [
       win.process.env.KF_TMUX_BIN,
       '/opt/homebrew/bin/tmux',

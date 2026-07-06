@@ -104,6 +104,25 @@ export function tmuxSessionName(provider: string, runId: string): string {
   return `kf_${sanitizeTmuxToken(provider)}_${sanitizeTmuxToken(runId)}`;
 }
 
+// The managed tmux socket, derived from the runtime home. A tmux server freezes
+// its environment at creation, so a single shared socket lets a server started
+// by one runtime home leak its KF_RUNTIME_DIR / launcher into a managed session
+// created later by a *different* home (the session inherits the server's stale
+// env, and cost/journal facts land in the wrong home). Keying the socket on the
+// home makes each server belong to exactly one home, so its frozen env can only
+// ever be that home's. Deterministic, so a restart with the same home reattaches
+// to the same server. An empty home keeps the legacy name. This module is shared
+// browser/node, so the hash is a dependency-free djb2 rather than node:crypto.
+export function managedTmuxSocket(runtimeDir: string): string {
+  const home = runtimeDir.trim();
+  if (!home) return 'kungfu-managed';
+  let hash = 5381;
+  for (let i = 0; i < home.length; i++) {
+    hash = ((hash << 5) + hash + home.charCodeAt(i)) >>> 0;
+  }
+  return `kungfu-managed-${hash.toString(16).padStart(8, '0')}`;
+}
+
 // `new-session -A`: attach-or-create. When the named session already exists this
 // behaves like attach-session (command is ignored — the running agent is
 // untouched), which is exactly the W3 reattach path. Otherwise it creates the

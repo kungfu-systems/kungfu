@@ -18,6 +18,7 @@ import {
   type Subscription,
   type Terminal,
   type TmuxBinding,
+  managedTmuxSocket,
   openTerminal,
 } from '@kungfu-tech/api/capability';
 
@@ -50,7 +51,9 @@ function resolveTmuxBinding(): TmuxBinding | null {
         ) => void,
       ) => void;
     };
-    const socket = process.env.KF_TMUX_SOCKET || 'kungfu-managed';
+    const socket =
+      process.env.KF_TMUX_SOCKET ||
+      managedTmuxSocket(process.env.KF_RUNTIME_DIR ?? '');
     const candidates = [
       process.env.KF_TMUX_BIN,
       '/opt/homebrew/bin/tmux',
