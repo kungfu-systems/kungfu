@@ -28,6 +28,7 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -35,6 +36,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, '..'); // repo root (this file lives in scripts/)
 const isWin = process.platform === 'win32';
+const require = createRequire(import.meta.url);
+const { contractArtifacts } = require('./contract-registry.cjs');
 
 // Prefer a cross-platform run.mjs (node) over the legacy run.sh (bash) so
 // fixtures/slices migrate off the bash dependency incrementally; returns null
@@ -97,26 +100,26 @@ function exitLabel(status, signal) {
   return status == null ? `signal ${signal}` : status;
 }
 
-function assertContractArtifact(distKfc, contract) {
-  const repoContract = path.join(ROOT, ...contract.repo);
-  const distContract = path.join(distKfc, 'config', contract.file);
+function assertContractArtifact(distKfc, artifact) {
+  const repoContract = path.join(ROOT, artifact.source);
+  const distContract = path.join(distKfc, artifact.artifact);
   if (fs.existsSync(distContract)) {
     const repoHash = sha256(repoContract);
     const distHash = sha256(distContract);
     if (repoHash === distHash) {
       pass(
-        `${contract.label} artifact hash`,
+        `${artifact.label} artifact hash`,
         `${path.relative(ROOT, distContract)} sha256:${distHash}`,
       );
     } else {
       fail(
-        `${contract.label} artifact hash`,
+        `${artifact.label} artifact hash`,
         `dist sha256:${distHash} != repo sha256:${repoHash}`,
       );
     }
   } else {
     fail(
-      `${contract.label} artifact exists`,
+      `${artifact.label} artifact exists`,
       `not found ${path.relative(ROOT, distContract)} (build:core/freeze should copy it)`,
     );
   }
@@ -309,16 +312,9 @@ function main() {
   let kungfuBin = null;
   if (fs.existsSync(distKfc) && fs.statSync(distKfc).isDirectory()) {
     pass('dist/kungfu directory exists', path.relative(ROOT, distKfc));
-    assertContractArtifact(distKfc, {
-      label: 'config contract',
-      file: 'kungfu-config.contract.json',
-      repo: ['framework', 'config', 'kungfu-config.contract.json'],
-    });
-    assertContractArtifact(distKfc, {
-      label: 'kfx contract',
-      file: 'kungfu-kfx.contract.json',
-      repo: ['framework', 'kfx', 'kungfu-kfx.contract.json'],
-    });
+    for (const artifact of contractArtifacts()) {
+      assertContractArtifact(distKfc, artifact);
+    }
     kungfuBin = path.join(distKfc, isWin ? 'kungfu.exe' : 'kungfu');
     if (fs.existsSync(kungfuBin) && fs.statSync(kungfuBin).isFile()) {
       const detail = path.relative(ROOT, kungfuBin);
@@ -493,10 +489,85 @@ function main() {
         );
       }
     }
+    const skillContract = spawnSync(
+      kungfuBin,
+      ['skill', 'contract', '--json'],
+      {
+        encoding: 'utf8',
+      },
+    );
+    if (skillContract.status !== 0) {
+      fail(
+        'kfc skill contract smoke',
+        `exit ${exitLabel(skillContract.status, skillContract.signal)}; output: ${`${skillContract.stdout || ''}${skillContract.stderr || ''}`.trim().slice(0, 200)}`,
+      );
+    } else {
+      try {
+        const contract = JSON.parse(skillContract.stdout);
+        const repoContract = path.join(
+          ROOT,
+          'framework',
+          'skill',
+          'kungfu-skill.contract.json',
+        );
+        const expectedHash = `sha256:${sha256(repoContract)}`;
+        if (
+          contract?.id === 'kungfu-skill' &&
+          contract?.hash === expectedHash
+        ) {
+          pass('kfc skill contract smoke', expectedHash);
+        } else {
+          fail(
+            'kfc skill contract smoke',
+            `id ${contract?.id || '<missing>'}, hash ${contract?.hash || '<missing>'} != ${expectedHash}`,
+          );
+        }
+      } catch (e) {
+        fail(
+          'kfc skill contract smoke',
+          `invalid JSON: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
+    }
+    const contractVerify = spawnSync(
+      kungfuBin,
+      ['contract', 'verify', '--json'],
+      {
+        encoding: 'utf8',
+      },
+    );
+    if (contractVerify.status !== 0) {
+      fail(
+        'kfc contract registry smoke',
+        `exit ${exitLabel(contractVerify.status, contractVerify.signal)}; output: ${`${contractVerify.stdout || ''}${contractVerify.stderr || ''}`.trim().slice(0, 200)}`,
+      );
+    } else {
+      try {
+        const verified = JSON.parse(contractVerify.stdout);
+        if (verified?.ok && verified?.contracts?.length >= 3) {
+          pass(
+            'kfc contract registry smoke',
+            `${verified.contracts.length} contracts verified`,
+          );
+        } else {
+          fail(
+            'kfc contract registry smoke',
+            `ok=${String(verified?.ok)} contracts=${String(verified?.contracts?.length ?? '<missing>')}`,
+          );
+        }
+      } catch (e) {
+        fail(
+          'kfc contract registry smoke',
+          `invalid JSON: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
+    }
   } else {
     fail('kfc runtime smoke', 'no kfc executable, skipped');
     fail('kfc config contract smoke', 'no kfc executable, skipped');
     fail('kfc kfx contract smoke', 'no kfc executable, skipped');
+    fail('kfc skill contract smoke', 'no kfc executable, skipped');
+    fail('kfc contract registry smoke', 'no kfc executable, skipped');
   }
 
   // ── Stage 4: (optional) app build artifact ────────────────────────

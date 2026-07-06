@@ -1,16 +1,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import copy
-import hashlib
 import json
 import os
 import platform
-import sys
 from collections.abc import Mapping
-from pathlib import Path
 from typing import Any, cast
 
-from jsonschema import Draft202012Validator
+from kungfu import contract as contract_runtime
 
 
 CONTRACT_SCHEMA = "kungfu.config.contract/v1"
@@ -45,15 +42,7 @@ def load_contract(
     *,
     env: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
-    path = resolve_contract_path(contract_path, env=env)
-    with open(path, encoding="utf-8") as f:
-        contract = json.load(f)
-    if not isinstance(contract, dict):
-        raise ValueError(f"Kungfu config contract must be a JSON object: {path}")
-    if contract.get("schema") != CONTRACT_SCHEMA:
-        raise ValueError(
-            f"Kungfu config contract schema mismatch: {contract.get('schema')!r}"
-        )
+    contract = contract_runtime.load_contract("config", contract_path, env=env)
     _validate_contract_defaults(contract)
     return contract
 
@@ -63,28 +52,7 @@ def resolve_contract_path(
     *,
     env: Mapping[str, str] | None = None,
 ) -> str:
-    env = os.environ if env is None else env
-    explicit = contract_path or env.get(CONTRACT_ENV)
-    if explicit:
-        return os.path.abspath(os.path.expanduser(explicit))
-
-    executable_candidate = (
-        Path(sys.executable).resolve().parent / "config" / CONTRACT_FILE
-    )
-    if executable_candidate.is_file():
-        return str(executable_candidate)
-
-    for start in [Path(__file__).resolve(), Path.cwd().resolve()]:
-        for directory in [start, *start.parents]:
-            for rel in [
-                Path("framework") / "config" / CONTRACT_FILE,
-                Path("config") / CONTRACT_FILE,
-            ]:
-                candidate = directory / rel
-                if candidate.is_file():
-                    return str(candidate)
-
-    raise FileNotFoundError(f"Kungfu config contract not found: {CONTRACT_FILE}")
+    return contract_runtime.resolve_contract_path("config", contract_path, env=env)
 
 
 def contract_metadata(
@@ -92,22 +60,11 @@ def contract_metadata(
     *,
     env: Mapping[str, str] | None = None,
 ) -> dict[str, str | int]:
-    path = resolve_contract_path(contract_path, env=env)
-    contract = load_contract(path, env=env)
-    return {
-        "schema": contract["schema"],
-        "id": contract["id"],
-        "version": contract["version"],
-        "weldedSurface": contract["weldedSurface"],
-        "path": path,
-        "hash": contract_hash(path),
-    }
+    return contract_runtime.contract_metadata("config", contract_path, env=env)
 
 
 def contract_hash(contract_path: str | None = None) -> str:
-    path = resolve_contract_path(contract_path)
-    with open(path, "rb") as f:
-        return "sha256:" + hashlib.sha256(f.read()).hexdigest()
+    return contract_runtime.contract_hash("config", contract_path)
 
 
 def config_schema(
@@ -233,12 +190,7 @@ def validate_config(
     schema = contract["configSchema"]
     if partial:
         schema = _partial_schema(schema)
-    validator = Draft202012Validator(schema)
-    errors = sorted(validator.iter_errors(config), key=lambda e: list(e.path))
-    if errors:
-        error = errors[0]
-        path = ".".join(str(part) for part in error.path) or "<root>"
-        raise ValueError(f"Kungfu config validation failed at {path}: {error.message}")
+    contract_runtime.validate_json_schema(config, schema, "config")
 
 
 def _validate_contract_defaults(contract: dict[str, Any]) -> None:
@@ -257,14 +209,7 @@ def _validate_contract_defaults(contract: dict[str, Any]) -> None:
     contract_schema = contract["contractSchema"]
     if not isinstance(contract_schema, dict):
         raise ValueError("Kungfu config contractSchema must be a JSON object")
-    validator = Draft202012Validator(contract_schema)
-    errors = sorted(validator.iter_errors(contract), key=lambda e: list(e.path))
-    if errors:
-        error = errors[0]
-        path = ".".join(str(part) for part in error.path) or "<root>"
-        raise ValueError(
-            f"Kungfu config contract validation failed at {path}: {error.message}"
-        )
+    contract_runtime.validate_json_schema(contract, contract_schema, "config contract")
     validate_config(contract["defaults"], contract=contract)
 
 

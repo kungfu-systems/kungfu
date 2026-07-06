@@ -29,6 +29,7 @@ from .provider import (
     load_skill_context_file,
 )
 from .registry import discover_skills, find_skill, read_skill_markdown, skill_roots
+from . import contract as skill_contract
 
 __all__ = [
     "SkillError",
@@ -58,6 +59,7 @@ __all__ = [
     "skill_dependencies_bound_event",
     "skill_loaded_event",
     "skill_roots",
+    "skill_contract",
     "write_audit_document",
     "write_skill_dependency_binding",
 ]

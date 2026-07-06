@@ -1,0 +1,105 @@
+{
+  "schema": "kungfu.skill.contract/v1",
+  "id": "kungfu-skill",
+  "version": 1,
+  "weldedSurface": "skill-contract",
+  "description": "Single source for Kungfu Skill source metadata, catalogs, context envelopes, audit-adjacent dependency bindings, and manager views.",
+  "contractSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema",
+      "id",
+      "version",
+      "weldedSurface",
+      "description",
+      "contractSchema",
+      "resolution",
+      "schemaFiles"
+    ],
+    "properties": {
+      "schema": { "type": "string", "const": "kungfu.skill.contract/v1" },
+      "id": { "type": "string", "const": "kungfu-skill" },
+      "version": { "type": "integer", "minimum": 1 },
+      "weldedSurface": { "type": "string", "const": "skill-contract" },
+      "description": { "type": "string" },
+      "contractSchema": { "type": "object" },
+      "resolution": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contractEnv",
+          "skillPathEnv",
+          "installRoot",
+          "sourceFile",
+          "duplicateKeyPolicy",
+          "loadPolicy"
+        ],
+        "properties": {
+          "contractEnv": { "type": "string" },
+          "skillPathEnv": { "type": "string" },
+          "installRoot": { "type": "string" },
+          "sourceFile": { "type": "string" },
+          "duplicateKeyPolicy": { "type": "string" },
+          "loadPolicy": { "type": "string" }
+        }
+      },
+      "schemaFiles": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["schema", "source", "artifact"],
+          "properties": {
+            "schema": { "type": "string" },
+            "source": { "type": "string" },
+            "artifact": { "type": "string" }
+          }
+        },
+        "required": [
+          "source",
+          "catalog",
+          "context",
+          "dependencies",
+          "manager"
+        ]
+      }
+    }
+  },
+  "resolution": {
+    "contractEnv": "KUNGFU_SKILL_CONTRACT",
+    "skillPathEnv": "KF_SKILL_PATH",
+    "installRoot": "${home}/skills",
+    "sourceFile": "SKILL.md",
+    "duplicateKeyPolicy": "first-root-wins",
+    "loadPolicy": "on-demand"
+  },
+  "schemaFiles": {
+    "source": {
+      "schema": "kungfu.skill/v1",
+      "source": "schema/skill.schema.json",
+      "artifact": "skill/schema/skill.schema.json"
+    },
+    "catalog": {
+      "schema": "kungfu.skill-catalog/v1",
+      "source": "schema/skill-catalog.schema.json",
+      "artifact": "skill/schema/skill-catalog.schema.json"
+    },
+    "context": {
+      "schema": "kungfu.skill-context/v1",
+      "source": "schema/skill-context.schema.json",
+      "artifact": "skill/schema/skill-context.schema.json"
+    },
+    "dependencies": {
+      "schema": "kungfu.skill-dependencies/v1",
+      "source": "schema/skill-dependencies.schema.json",
+      "artifact": "skill/schema/skill-dependencies.schema.json"
+    },
+    "manager": {
+      "schema": "kungfu.skill-manager/v1",
+      "source": "schema/skill-manager.schema.json",
+      "artifact": "skill/schema/skill-manager.schema.json"
+    }
+  }
+}

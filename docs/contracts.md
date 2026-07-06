@@ -137,6 +137,64 @@ manifest schema, shared loaders, Python/Node validation, and artifact hash gate
 are intended to be stable before published third-party packages bind to the
 surface.
 
+## The KFD-1 contract registry is the packaging source of truth
+
+**Guarantee.** Registered machine-readable contracts are indexed by
+[`kungfu-contracts.registry.json`](../framework/contract/kungfu-contracts.registry.json).
+Build, freeze, and verify use that registry rather than separate hard-coded
+contract lists. The frozen runtime ships the registry under
+`dist/kungfu/config/kungfu-contracts.registry.json` next to each registered
+contract artifact, so agents and release gates can ask one local entrypoint
+which KFD-1 contract world they are in.
+
+**Verify.** Run:
+
+```sh
+kungfu contract list --json
+kungfu contract show config --json
+kungfu contract show kfx --json
+kungfu contract show skill --json
+kungfu contract verify --json
+./kungfu-code verify
+```
+
+`verify` walks the same registry and compares every shipped contract artifact
+with its source hash. Adding a KFD-1 surface means adding it to the registry,
+not adding another private copy loop in a build script.
+
+**Maturity.** `draft` while more welded surfaces move onto machine-readable
+contracts. The registry/tooling path is intended to be the stable KFD-1
+infrastructure before third-party contract surfaces are published.
+
+## The Skill contract is a single source of truth
+
+**Guarantee.** Kungfu Skill source metadata, compact catalogs, context
+envelopes, kfx dependency binding, and manager documents are governed by
+[`kungfu-skill.contract.json`](../framework/skill/kungfu-skill.contract.json).
+The contract names the schema files under `framework/skill/schema/`; Python and
+Node managers validate their generated outputs against those schemas. Frozen
+products ship both the contract and its schema files from the contract registry.
+
+**Verify.** Run:
+
+```sh
+kungfu skill contract --json
+kungfu skill schema --json
+kungfu skill validate <skill-dir> --json
+kungfu skill context --path <skill-root> --json
+./kungfu-code verify
+```
+
+`verify` checks the frozen Skill contract artifact and smoke-tests that the
+frozen runtime reports the same contract hash through
+`kungfu skill contract --json`.
+The living welded-surface register is [`versioning.md`](versioning.md), surface
+`skill-contract`.
+
+**Maturity.** `draft`. The first slice now has a contract wrapper, schema
+bundle, Python/Node validators, frozen artifact hash gate, and CLI inspection.
+Marketplace acquisition and permission elevation remain outside this contract.
+
 ## How to read a guarantee here
 
 A contract is only as strong as its maturity tag. `stable` means implemented and
