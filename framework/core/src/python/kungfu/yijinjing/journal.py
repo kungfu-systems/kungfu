@@ -106,8 +106,10 @@ def find_sessions(ctx):
 
 
 def find_session(ctx, session_id):
-    all_sessions = find_sessions(ctx)
-    return next(session for session in all_sessions if session["id"] == session_id)
+    for session in find_sessions(ctx):
+        if session["id"] == session_id:
+            return session
+    raise IndexError(f"session {session_id} not found")
 
 
 def make_location_from_dict(ctx, location):

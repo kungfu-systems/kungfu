@@ -23,6 +23,7 @@
 # nuitka-project: --nofollow-import-to=statsmodels
 # nuitka-project: --nofollow-import-to=plotly
 # nuitka-project: --nofollow-import-to=botocore
+# nuitka-project: --nofollow-import-to=boto3
 #
 # nuitka-project: --nofollow-import-to=*.distutils
 # nuitka-project: --nofollow-import-to=*.tests
