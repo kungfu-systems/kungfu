@@ -121,6 +121,18 @@ ignore = ["E501", "F403", "F405"]
 python_version = "3.13"
 ignore_missing_imports = true
 exclude = ['(^|/)(fb|generated)/', '_fb\.py$', '(^|/)\.deps/']
+# The native pykungfu binding is not compiled in the type-check env; type
+# consumers against committed .pyi stubs (stubs/pykungfu/, generated from the
+# compiled binding via pybind11-stubgen) instead of falling back to Any.
+mypy_path = "stubs"
+
+# The stubs are machine-generated from the real binary, so their *types* are
+# accurate; but stubgen emits expression noise (overload dupes, `...` in
+# signatures, forward-ref name-defined). Trust the stub types, do not report the
+# stub's own internal issues. See Atlas goal 2026-07-06-kungfu-pykungfu-stub-typing.
+[[tool.mypy.overrides]]
+module = "pykungfu.*"
+ignore_errors = true
 
 [tool.uv]
 # 钉 uv 自管 standalone CPython(而非系统/发行版 python)：跨机一致,且根治 nuitka 在

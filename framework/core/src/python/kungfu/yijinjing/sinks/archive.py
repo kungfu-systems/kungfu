@@ -3,13 +3,11 @@
 import kungfu
 import os
 
-from typing import Any
 
 from kungfu.yijinjing.time import DAY_IN_NANO
 
 lf = kungfu.__binding__.longfist
-# native pybind11 binding (no stubs); Any so `yjj.sink` is a usable base class
-yjj: Any = kungfu.__binding__.yijinjing
+yjj = kungfu.__binding__.yijinjing
 
 
 class ArchiveSink(yjj.sink):

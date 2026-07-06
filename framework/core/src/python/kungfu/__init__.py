@@ -4,7 +4,18 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    # Type-only: give kungfu.__binding__ the pykungfu module type so consumers
+    # (the yjj.sink base class, yjj.locator/writer/... calls) type-check against
+    # the .pyi stubs. Must be an assignment, not `import pykungfu as __binding__`
+    # (mypy treats a renamed import as a private, non-exported name). At runtime
+    # this block never executes (TYPE_CHECKING is False) and __binding__ is still
+    # provided lazily by the module __getattr__ below — no behavior change.
+    import pykungfu
+
+    __binding__ = pykungfu
 
 # The native binding is imported lazily (PEP 562 module __getattr__) rather than
 # at package import. This lets the pure-stdlib capability guest

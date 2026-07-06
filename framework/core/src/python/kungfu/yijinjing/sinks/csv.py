@@ -5,11 +5,9 @@ import kungfu
 import os
 
 from contextlib import contextmanager
-from typing import Any
 
 lf = kungfu.__binding__.longfist
-# native pybind11 binding (no stubs); Any so `yjj.sink` is a usable base class
-yjj: Any = kungfu.__binding__.yijinjing
+yjj = kungfu.__binding__.yijinjing
 
 
 class CsvSink(yjj.sink):
