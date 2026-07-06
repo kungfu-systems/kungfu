@@ -32,6 +32,7 @@ build/
 build-*/
 cmake-build-debug/
 dist/
+.buildchain/
 
 # Debug related
 debug-example/

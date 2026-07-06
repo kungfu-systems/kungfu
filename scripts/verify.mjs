@@ -216,6 +216,25 @@ function main() {
         `verify-agent-pack exited ${agentPack.status}`,
     );
 
+  // ── Stage 0d: KFD-2 release claims registry ──────────────────────
+  // The release claims are product-owned facts. The verifier checks the source
+  // registry and Buildchain projection without writing generated .buildchain
+  // files.
+  console.log('\n[verify] stage 0d: KFD-2 release claims registry');
+  const kfd2Claims = spawnSync(
+    process.execPath,
+    [path.join(__dirname, 'kfd2-release-claims.mjs'), '--check'],
+    { encoding: 'utf8' },
+  );
+  if (kfd2Claims.status === 0)
+    pass('KFD-2 release claims registry', (kfd2Claims.stdout || '').trim());
+  else
+    fail(
+      'KFD-2 release claims registry',
+      `${kfd2Claims.stdout || ''}${kfd2Claims.stderr || ''}`.trim() ||
+        `kfd2-release-claims exited ${kfd2Claims.status}`,
+    );
+
   // ── Stage 0: toolchain preflight (read-only) ──────────────────────
   console.log('\n[verify] stage 0: toolchain preflight');
   const uv = spawnSync('uv', ['--version'], { encoding: 'utf8', shell: isWin });

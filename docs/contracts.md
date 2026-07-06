@@ -190,6 +190,34 @@ currently named `kfd-1`.
 contracts. The registry/tooling path is intended to be the stable KFD-1
 infrastructure before third-party contract surfaces are published.
 
+## KFD-2 release claims are generated from a product-owned registry
+
+**Guarantee.** Public KFD-2 release trust claims are declared in one tracked
+registry:
+[`kungfu-release-claims.registry.json`](../framework/release/kfd-2/kungfu-release-claims.registry.json).
+The registry binds each claim to source files, machine-readable evidence,
+artifact coordinates, a local verification command, audit boundary,
+responsibility state, and residual risk. Generated files under `.buildchain/`
+are projections for release collection, not the source of truth.
+
+**Verify.** Run:
+
+```sh
+node scripts/kfd2-release-claims.mjs --check
+node scripts/kfd2-release-claims.mjs --write
+```
+
+`--check` validates the registry without writing generated files. `--write`
+emits the KFD canonical wrapper at `.buildchain/kfd-2/release-claims.json` and
+Buildchain v2.8-compatible raw claim files under `.buildchain/kfd-2/claims/`.
+Release collection can pass those raw claim files with Buildchain's
+`--kfd-2-claim-json` input.
+
+**Maturity.** `draft`. The first claim set covers the agent onboarding pack,
+Codex report receipts, and the remote fact boundary. Workflow enforcement is
+not yet enabled; release maintainers can run the generator manually before
+Buildchain release-passport collection.
+
 ## The Skill contract is a single source of truth
 
 **Guarantee.** Kungfu Skill source metadata, compact catalogs, context

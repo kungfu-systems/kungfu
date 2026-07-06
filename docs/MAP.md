@@ -33,6 +33,7 @@ and the map routes a question to whichever doc answers it.
 | What are the known limits / what is *not* yet guaranteed? | [`known-limits.md`](known-limits.md) | verify | stable |
 | How do C++ / Python / Node share data zero-copy (the membrane)? | [`architecture.md`](architecture.md) (membrane diagram) | verify | stable |
 | What does it actually guarantee (layout / replay / compatibility)? | [`contracts.md`](contracts.md) | verify | stable |
+| What KFD-2 release claims can Buildchain audit? | [`contracts.md`](contracts.md) (KFD-2 release claims) + [`kfd-native-sdk-release-gates.md`](kfd-native-sdk-release-gates.md) | verify | draft |
 | What is the event / journal / replay model? | [`event-model.md`](event-model.md) | use | stable |
 | Where are the Python / Node / framework adapter boundaries? | [`adapters.md`](adapters.md) | use | stable |
 | How do I go from source to a binary? | [`buildchain.md`](buildchain.md) (+ [`../CONTRIBUTING.md`](../CONTRIBUTING.md)) | use | stable |

@@ -146,11 +146,59 @@ This still does not change Kungfu release policy by itself. It gives the
 build/release workflow declarative pre-build input that Buildchain can freeze
 and independently compare against post-build artifact bytes.
 
-### Phase 2: KFD-2 Fact Surface Scaffold
+### Phase 2: KFD-2 Release Claims And Fact Surface Scaffold
 
-Add `kungfu sdk add fact-surface <name>` after the evidence vocabulary is
-settled. The scaffold should produce an append-first event schema, projection,
-JSON read API, and append-fold-readback probe following the work/Rewind model.
+The first KFD-2 implementation slice is release-claim projection, not a full
+fact-surface scaffold. Kungfu owns the claim registry:
+
+```text
+framework/release/kfd-2/kungfu-release-claims.registry.json
+```
+
+The registry is the product fact source. Generated files under `.buildchain/`
+are release-time projections and should not become a second source of truth.
+
+Local commands:
+
+```sh
+node scripts/kfd2-release-claims.mjs --check
+node scripts/kfd2-release-claims.mjs --write
+```
+
+`--check` validates the registry, source paths, machine-readable evidence,
+audit boundaries, responsibility state, residual risk arrays, and the
+Buildchain-compatible projection without writing generated files. `--write`
+emits:
+
+```text
+.buildchain/kfd-2/release-claims.json
+.buildchain/kfd-2/claims/<claim-id>.json
+.buildchain/kfd-2/buildchain-claim-args.txt
+```
+
+The first file follows KFD's canonical `kfd-2-release-claims` wrapper. The
+per-claim files are the current Buildchain v2.8 input shape for
+`--kfd-2-claim-json`, because Buildchain accepts one raw claim object per input
+file.
+
+Manual release-passport collection can pass the generated claim files:
+
+```sh
+node scripts/kfd2-release-claims.mjs --write
+buildchain collect github-release \
+  --kfd-2-claim-json .buildchain/kfd-2/claims/agent-onboarding-pack.json \
+  --kfd-2-claim-json .buildchain/kfd-2/claims/codex-report-receipts.json \
+  --kfd-2-claim-json .buildchain/kfd-2/claims/remote-fact-boundary.json
+```
+
+This slice intentionally does not change release policy or workflow wiring.
+Enforcing KFD-2 in every release workflow remains a separate release-policy
+task after the claim vocabulary proves useful.
+
+After this, add `kungfu sdk add fact-surface <name>` once the scaffold
+vocabulary is settled. The scaffold should produce an append-first event
+schema, projection, JSON read API, and append-fold-readback probe following the
+work/Rewind model.
 
 ### Phase 3: KFD-3 Agent Interface Scaffold
 
@@ -175,6 +223,21 @@ Buildchain owns the passport key, formatting policy, pre-build witness digest,
 and post-build artifact byte checks. Kungfu owns only its registry, source
 contracts, policy file, and generated witness. Enforcing this in every release
 workflow remains a separate release-policy task.
+
+Buildchain v2.8 also consumes explicit KFD-2 release claims. Kungfu should
+generate those from its registry, then pass the generated raw-claim projection:
+
+```sh
+node scripts/kfd2-release-claims.mjs --write
+buildchain collect github-release \
+  --kfd-2-claim-json .buildchain/kfd-2/claims/agent-onboarding-pack.json \
+  --kfd-2-claim-json .buildchain/kfd-2/claims/codex-report-receipts.json \
+  --kfd-2-claim-json .buildchain/kfd-2/claims/remote-fact-boundary.json
+```
+
+Buildchain owns the release trust passport audit and pass/downgrade/fail
+classification. Kungfu owns the claim registry, source bindings, evidence
+files, audit boundaries, responsibility state, and residual risk.
 
 ## Non-Goals
 

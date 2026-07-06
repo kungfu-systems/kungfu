@@ -53,6 +53,8 @@
     "dist:dir": "pnpm --filter @kungfu-tech/artifact-kungfu run package",
     "package:app": "pnpm --filter @kungfu-tech/artifact-kungfu run package",
     "verify": "node scripts/verify.mjs",
+    "kfd2:claims": "node scripts/kfd2-release-claims.mjs --write",
+    "kfd2:claims:check": "node scripts/kfd2-release-claims.mjs --check",
     "check:types": "tsc -p tsconfig.tools.json",
     "prepare": "node scripts/install-hooks.mjs",
     "hooks:install": "node scripts/install-hooks.mjs --force"
