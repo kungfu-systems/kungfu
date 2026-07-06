@@ -666,7 +666,8 @@ function main() {
       // Each fixture under tests/fixtures/rewind-demo-*/ proves a capture
       // gate end to end against the built dist/kungfu (G2 capture, G3 event
       // completeness); tests/fixtures/work-demo-*/ prove the default work
-      // profile the same way (P1 vocabulary, P2 lifecycle), and
+      // profile the same way (P1 vocabulary, P2 lifecycle), agent-demo-*
+      // proves onboarding/bootstrap contracts, and
       // tests/fixtures/atlas-demo-*/ prove the read-only control-plane
       // import profile (P7 dogfood slice). A red fixture means the
       // corresponding journal fact contract regressed.
@@ -674,6 +675,7 @@ function main() {
       const fixturePrefixes = [
         'rewind-demo-',
         'work-demo-',
+        'agent-demo-',
         'atlas-demo-',
         'kfx-demo-',
       ];

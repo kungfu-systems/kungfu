@@ -101,6 +101,11 @@ if (commands) {
     'kungfu agent docs',
     'kungfu agent capabilities --json',
     'kungfu agent choose-mode --json',
+    'kungfu agent status --target codex --json',
+    'kungfu agent bootstrap --target codex --mode report',
+    'kungfu agent mode set --target codex --mode managed-run',
+    'kungfu agent unbootstrap --target codex',
+    'kungfu agent uninstall --target codex',
     'kungfu agent install-skill --target codex',
     'kungfu agent install-skill --target claude',
     'kungfu trace -- <command>',
@@ -109,6 +114,8 @@ if (commands) {
     'kungfu report run begin --work <work-id> --provider <provider> --json',
     'kungfu report cost --run <run-id> --provider <provider> --json',
     'kungfu report run end --run <run-id> --status <status> --json',
+    'kungfu codex report-goal --goal-id <goal-id> --status <status> --json',
+    'kungfu codex verify-goal-report --receipt <path> --json',
     'kungfu remote add <source-id> --host <host> --home <kf-home> --json',
     'kungfu remote sync <source-id> --json',
     'kungfu skill catalog --json',
@@ -157,6 +164,7 @@ for (const rel of REQUIRED.filter((p) => p.endsWith('.md'))) {
       bare.startsWith('kungfu managed-run') ||
       bare.startsWith('kungfu work') ||
       bare.startsWith('kungfu report') ||
+      bare.startsWith('kungfu codex') ||
       bare.startsWith('kungfu remote') ||
       bare.startsWith('kungfu rewind')
     ) {

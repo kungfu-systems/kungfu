@@ -8,9 +8,12 @@ triggers:
   - rewind
   - managed-run
   - trace
+  - report-goal
+  - closeout receipt
 capabilities:
   - local-fact-review
   - mode-selection
+  - receipt-verification
 ---
 
 # Kungfu Agent Onboarding
@@ -21,6 +24,7 @@ Before acting in a Kungfu runtime, read local facts from the installed pack:
 kungfu agent brief
 kungfu agent capabilities --json
 kungfu agent choose-mode --json
+kungfu agent status --target claude --json
 ```
 
 Use the smallest mode that preserves evidence:
@@ -31,5 +35,30 @@ Use the smallest mode that preserves evidence:
 - `remote-sync` only when the task is about crossing runtime or machine
   boundaries; stable publishing commands are planned unless the local pack says
   otherwise.
+
+If the work is delegated to a native Codex goal and report mode is enabled,
+closeout is not complete until the Codex-side receipt is reported and verified:
+
+```sh
+kungfu codex report-goal --goal-id <goal-id> --status <status> --json
+kungfu codex verify-goal-report --receipt <receipt-path> --json
+```
+
+Use native goal usage only as observed usage evidence unless the provider gives
+split token fields or an exact dollar cost. Switching to `managed-run` does not
+require disabling report mode; keep the report receipt gate as the fallback for
+native-goal or interrupted work.
+
+For setup or teardown, preview first:
+
+```sh
+kungfu agent bootstrap --target claude --mode report
+kungfu agent mode set --target claude --mode managed-run
+kungfu agent unbootstrap --target claude
+kungfu agent uninstall --target claude
+```
+
+Do not delete Kungfu receipts, work items, or Rewind bundles unless the user
+explicitly asks to archive or remove Kungfu data.
 
 Keep observed, reported, imported, and remote facts distinct.

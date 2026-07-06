@@ -5,7 +5,7 @@ process.
 
 ```sh
 kungfu work create "Inspect failed extension load" --kind investigation --json
-kungfu work checkpoint <work-id> --summary "Reproduced with local bundle" --json
+kungfu work checkpoint <work-id> "Reproduced with local bundle"
 kungfu work ready <work-id> --reason "Evidence attached" --json
 ```
 
@@ -16,6 +16,16 @@ kungfu report run begin --work <work-id> --provider codex --json
 kungfu report cost --run <run-id> --provider codex --model gpt-5 --usd 0.42 --json
 kungfu report run end --run <run-id> --status succeeded --json
 ```
+
+For a native Codex goal, use the adapter so closeout has one receipt to verify:
+
+```sh
+kungfu codex report-goal --goal-id <goal-id> --status succeeded --tokens-used <n> --json
+kungfu codex verify-goal-report --receipt <receipt-path> --json
+```
+
+`tokens-used` is a native observed total. It is recorded as usage evidence. Only
+pass split token fields or `--usd` when that cost attribution is actually known.
 
 Keep facts labeled:
 

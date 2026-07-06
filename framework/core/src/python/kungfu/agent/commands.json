@@ -22,6 +22,31 @@
       "purpose": "Choose brief, report, trace, managed-run, or remote-sync from explicit flags."
     },
     {
+      "name": "kungfu agent status --target codex --json",
+      "maturity": "stable",
+      "purpose": "Show Codex bootstrap mode, report closeout gate, and local policy path."
+    },
+    {
+      "name": "kungfu agent bootstrap --target codex --mode report",
+      "maturity": "stable",
+      "purpose": "Preview or apply the Codex report bootstrap policy and optional skill install."
+    },
+    {
+      "name": "kungfu agent mode set --target codex --mode managed-run",
+      "maturity": "stable",
+      "purpose": "Switch Codex between report, managed-run, trace, brief, or remote-sync policy modes."
+    },
+    {
+      "name": "kungfu agent unbootstrap --target codex",
+      "maturity": "stable",
+      "purpose": "Disable Codex bootstrap policy without deleting receipts, work items, or copied skills."
+    },
+    {
+      "name": "kungfu agent uninstall --target codex",
+      "maturity": "stable",
+      "purpose": "Show complete Codex uninstall steps; dry-run by default and no data deletion."
+    },
+    {
       "name": "kungfu agent install-skill --target codex",
       "maturity": "stable",
       "purpose": "Preview or explicitly copy the Codex skill file."
@@ -62,6 +87,16 @@
       "purpose": "Close a reported external run and refresh its manifest."
     },
     {
+      "name": "kungfu codex report-goal --goal-id <goal-id> --status <status> --json",
+      "maturity": "stable",
+      "purpose": "Report a native Codex goal into Kungfu work/Rewind facts and emit a receipt."
+    },
+    {
+      "name": "kungfu codex verify-goal-report --receipt <path> --json",
+      "maturity": "stable",
+      "purpose": "Verify a Codex goal report receipt before closeout."
+    },
+    {
       "name": "kungfu remote add <source-id> --host <host> --home <kf-home> --json",
       "maturity": "experimental",
       "purpose": "Register a source runtime for source-scoped evidence sync."
@@ -95,7 +130,7 @@
     },
     "report": {
       "maturity": "stable",
-      "next": "kungfu work create <title> --json; use kungfu report run begin when the fact belongs to an external run.",
+      "next": "kungfu work create <title> --json; for native Codex goals prefer kungfu codex report-goal --goal-id <goal-id> --status <status> --json.",
       "when": "The useful output is structured work state, decisions, checkpoints, artifacts, or reported external run facts."
     },
     "trace": {

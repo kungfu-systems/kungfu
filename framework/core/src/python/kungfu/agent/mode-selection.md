@@ -5,7 +5,7 @@ Choose the smallest mode that preserves evidence.
 | Mode | Use when | First command | Maturity |
 |---|---|---|---|
 | brief | You need local facts before acting. | `kungfu agent brief` | stable |
-| report | You need structured work facts, status, decisions, artifacts, or reported external run facts. | `kungfu work create <title> --json` or `kungfu report run begin --work <work-id> --provider <provider> --json` | stable |
+| report | You need structured work facts, status, decisions, artifacts, or reported external run facts. | `kungfu work create <title> --json` or `kungfu codex report-goal --goal-id <goal-id> --status <status> --json` | stable |
 | trace | You already have a command or agent process to capture. | `kungfu trace -- <command>` | stable |
 | managed-run | Kungfu should launch the provider CLI and bind skill context. | `kungfu managed-run --provider <provider> --prompt <task>` | experimental |
 | remote-sync | Evidence must cross machines or runtime trust boundaries. | `kungfu remote add <source-id> --host <host> --home <kf-home> --json` then `kungfu remote sync <source-id> --json` | experimental |
@@ -17,6 +17,12 @@ Rules:
   process.
 - Prefer `report` when no process capture is needed and the durable fact is a
   work item, checkpoint, decision, artifact link, or reported external run fact.
+- For native Codex goals, prefer `kungfu codex report-goal` over hand-assembling
+  `kungfu report` commands; run `kungfu codex verify-goal-report` on the emitted
+  receipt before declaring the goal complete.
+- Switching to `managed-run` does not require disabling report mode. Keep the
+  receipt closeout gate available as a fallback for native-goal or interrupted
+  runs.
 - Treat `remote-sync` as source-scoped import: remote facts stay under
   `remotes/<source-id>/runtime` unless a later command explicitly promotes
   them.
