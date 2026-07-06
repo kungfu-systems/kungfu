@@ -46,7 +46,9 @@ export function scanTree(root) {
     }
     for (const e of entries) {
       if (e.isDirectory()) {
-        if (!SKIP_DIRS.has(e.name)) walk(path.join(dir, e.name));
+        if (!SKIP_DIRS.has(e.name) && !e.name.startsWith('.venv')) {
+          walk(path.join(dir, e.name));
+        }
       } else if (e.name.endsWith('.sh')) {
         hits.push(path.relative(root, path.join(dir, e.name)));
       }

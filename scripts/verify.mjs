@@ -244,6 +244,23 @@ function main() {
           `python probe build failed (exit ${pyProbeBuild.status == null ? `signal ${pyProbeBuild.signal}` : pyProbeBuild.status})`,
         );
       }
+      // KFX distribution fixtures pack/install the real work-dashboard
+      // extension. Build it here so `verify --full` is a complete gate instead
+      // of depending on a manual pre-run `kungfu sdk kfx build`.
+      const workDashboardBuild = spawnSync(
+        'pnpm',
+        ['--filter', '@kungfu-tech/kfx-view-work-dashboard', 'run', 'build'],
+        {
+          cwd: ROOT,
+          stdio: 'inherit',
+          shell: isWin,
+        },
+      );
+      if (workDashboardBuild.status !== 0) {
+        throw new Error(
+          `work-dashboard kfx build failed (exit ${workDashboardBuild.status == null ? `signal ${workDashboardBuild.signal}` : workDashboardBuild.status})`,
+        );
+      }
       if (withApp) runPnpm('build:app'); // webpack → framework/gui/dist/app
     } catch (e) {
       fail('build stage', e instanceof Error ? e.message : String(e));

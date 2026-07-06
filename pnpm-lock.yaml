@@ -273,6 +273,9 @@ importers:
         specifier: ^18.3.1
         version: 18.3.1
     devDependencies:
+      '@kungfu-tech/core':
+        specifier: workspace:*
+        version: link:../../framework/core
       '@kungfu-tech/sdk':
         specifier: workspace:*
         version: link:../../developer/sdk

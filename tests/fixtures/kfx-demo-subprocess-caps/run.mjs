@@ -12,12 +12,21 @@ import path from 'node:path';
 import { locate } from '../_harness.mjs';
 
 const { fixtureDir } = locate(import.meta.url);
+const resolver = path.resolve(
+  fixtureDir,
+  '../../../framework/api/src/capability/guest-harness/ts-resolve.mjs',
+);
 
 // parent.mjs is the gate entry (a Node host that spawns child.py over stdio);
 // run it unchanged under the TS type-stripping flag and surface its exit code.
 const r = spawnSync(
   process.execPath,
-  ['--experimental-transform-types', path.join(fixtureDir, 'parent.mjs')],
+  [
+    '--import',
+    resolver,
+    '--experimental-transform-types',
+    path.join(fixtureDir, 'parent.mjs'),
+  ],
   { stdio: 'inherit' },
 );
 process.exit(r.status ?? 1);

@@ -29,6 +29,7 @@
     "@kungfu-tech/kfx": "workspace:*"
   },
   "devDependencies": {
+    "@kungfu-tech/core": "workspace:*",
     "@kungfu-tech/sdk": "workspace:*",
     "@types/react": "^18.3.3"
   },
