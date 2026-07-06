@@ -173,6 +173,43 @@ const iconButtonStyle: React.CSSProperties = {
 // navigating away or a StrictMode double-mount cannot leak or double-run a
 // session. Unmount only detaches the local listeners and disposes the terminal;
 // the session keeps running behind the capability.
+// The rolled-up cost summary for one run (from caps.rewind.loadRun().summary).
+type RunSummary = NonNullable<
+  ReturnType<KfxCapabilities['rewind']['loadRun']>
+>['summary'];
+
+// Honest per-session cost badge. Shows a $ total only when every CostSnapshot's
+// usd is known; otherwise falls back to a token count (never a fake $0). '~' +
+// amber marks ambiguous attribution (a shared account/window the source could
+// not isolate); a dotted underline marks a weak attribution (observed delta,
+// not exact-run). No cost yet (live run before its bundle is exported) renders
+// nothing.
+function CostBadge({ cost }: { cost: RunSummary }) {
+  const usd = cost.costUsd;
+  const known = cost.costUsdKnown === true && usd !== undefined;
+  const tokens = (cost.inputTokens ?? 0n) + (cost.outputTokens ?? 0n);
+  if (!known && tokens === 0n) return null;
+  const ambiguous = cost.ambiguousAttribution === true;
+  const weak = (cost.attribution ?? 0) >= 2; // ObservedSessionDelta or weaker
+  const color = ambiguous ? '#d0a050' : known ? '#8a8f96' : '#6f7479';
+  const text =
+    known && usd !== undefined
+      ? `${ambiguous ? '~' : ''}$${usd.toFixed(4)}`
+      : `${tokens} tok`;
+  const title = known
+    ? `session cost${ambiguous ? ' — ambiguous attribution (shared account/window)' : ''}${weak ? ' — observed, not exact-run' : ''}`
+    : 'usd unknown for this provider; showing token count';
+  return (
+    <span
+      title={title}
+      style={{ color, textDecoration: weak ? 'underline dotted' : 'none' }}
+    >
+      {' '}
+      · {text}
+    </span>
+  );
+}
+
 function SessionPane({
   caps,
   pane,
@@ -203,6 +240,7 @@ function SessionPane({
   const [status, setStatus] = React.useState<string>('running');
   const [ended, setEnded] = React.useState(false);
   const [nowTs, setNowTs] = React.useState(() => pane.startedAt);
+  const [cost, setCost] = React.useState<RunSummary | null>(null);
   // Read the live popped-out flag from inside the xterm effect without tearing
   // the terminal down when it toggles (the effect keys only on the session).
   const poppedOutRef = React.useRef(poppedOut);
@@ -359,6 +397,26 @@ function SessionPane({
     return () => clearInterval(id);
   }, [ended]);
 
+  // Pull this session's rolled-up cost from the rewind ledger. Cost lands when
+  // the run's bundle is exported (around run end), so poll a few seconds apart
+  // so a just-ended session's cost appears without a manual refresh. (Per-pane
+  // refresh is fine at dogfood scale; a workspace-level shared poll is a
+  // follow-up if session counts grow.)
+  React.useEffect(() => {
+    let alive = true;
+    const pull = () => {
+      if (!alive) return;
+      caps.rewind.refresh();
+      setCost(caps.rewind.loadRun(pane.runId)?.summary ?? null);
+    };
+    pull();
+    const id = setInterval(pull, 5000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, [caps.rewind, pane.runId]);
+
   return (
     <div
       style={{
@@ -413,6 +471,7 @@ function SessionPane({
               {pane.durable ? '● durable' : '○ direct'}
             </span>{' '}
             · {formatElapsed(nowTs - pane.startedAt)}
+            {cost && <CostBadge cost={cost} />}
           </span>
         </div>
         <span
