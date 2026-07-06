@@ -15,6 +15,7 @@
 import json
 import os
 import subprocess
+from typing import Any
 
 
 def _read_json(path, warnings):
@@ -121,7 +122,7 @@ def read_goals(repo_root, warnings):
 
 
 def read_markers(repo_root, warnings):
-    markers = []
+    markers: list[dict[str, Any]] = []
     base = os.path.join(repo_root, "reviews", "worktree-status")
     if not os.path.isdir(base):
         warnings.append(f"{base}: missing directory")
@@ -155,7 +156,7 @@ def read_control_plane(repo_root):
     Returns (missions, goals, markers, warnings); warnings are diagnostic
     strings, never raised.
     """
-    warnings = []
+    warnings: list[str] = []
     missions = read_missions(repo_root, warnings)
     goals = read_goals(repo_root, warnings)
     markers = read_markers(repo_root, warnings)

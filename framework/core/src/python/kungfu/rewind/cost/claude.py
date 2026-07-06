@@ -24,7 +24,7 @@
 from __future__ import annotations
 
 import json
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 from kungfu.rewind.cost.model import AttributionLevel, CostSnapshot, TokenUsage
 
@@ -35,7 +35,7 @@ SOURCE = "claude_print_json"
 _ALLOWED_ATTRIBUTION = (AttributionLevel.EXACT_RUN, AttributionLevel.EXACT_SESSION)
 
 
-def _usage_from(usage: dict) -> TokenUsage:
+def _usage_from(usage: dict[str, Any]) -> TokenUsage:
     """Map Claude's usage object into the normalized TokenUsage.
 
     Claude splits cache into creation vs read: `cache_creation_input_tokens`
@@ -73,7 +73,7 @@ def _primary_model(model_usage: object) -> Optional[str]:
 
 
 def parse_claude_print_json(
-    payload: Union[str, dict],
+    payload: Union[str, dict[str, Any]],
     *,
     run_id: Optional[str] = None,
     work_id: Optional[str] = None,
