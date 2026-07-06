@@ -20,12 +20,14 @@ installation.
 Use the modes this way:
 
 - **brief**: read the local facts; no runtime action.
-- **report**: create or inspect structured work facts with `kungfu work`.
+- **report**: create or inspect structured work facts with `kungfu work`, and
+  append external run facts with `kungfu report`.
 - **trace**: capture an existing command with `kungfu trace -- <command>`.
 - **managed-run**: let Kungfu launch a provider CLI with skill context and run
   evidence; this surface is experimental.
-- **remote-sync**: move or compare evidence across runtime boundaries; stable
-  local publishing commands are still planned.
+- **remote-sync**: mirror evidence across runtime boundaries with source labels;
+  `kungfu remote` is experimental and does not merge remote facts into local
+  authoritative truth.
 
 The pack is included by the Electron artifact, the standalone CLI, npm
 `@kungfu-tech/core`, and the PyPI wheel. Future Homebrew, winget, container, and

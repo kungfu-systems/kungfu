@@ -1,13 +1,14 @@
 # Remote Sync Example
 
-Remote sync is planned as a stable product surface. Until a concrete installed
-command exists, use local exports and explicit provenance.
+Remote sync mirrors a source runtime into a source-scoped local projection.
+It is experimental and does not merge remote facts into local authoritative
+truth.
 
 ```sh
-kungfu rewind export <run-id> --out ./rewind-bundle
-kungfu work artifact <work-id> --path ./rewind-bundle --json
+kungfu remote add ubuntu --host ubuntu.local --home /home/dkr/.kungfu --json
+kungfu remote sync ubuntu --json
 ```
 
 When moving evidence across machines, keep source runtime, export time, bundle
-hash, and receiving runtime separate. Do not treat remote availability as proof
-that the local runtime observed the fact.
+hash when available, and receiving runtime separate. Do not treat remote
+availability as proof that the local runtime observed the fact.

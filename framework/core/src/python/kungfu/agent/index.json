@@ -13,7 +13,7 @@
     { "path": "examples/report-mode.md", "purpose": "structured work facts without process capture", "maturity": "stable" },
     { "path": "examples/trace-mode.md", "purpose": "capture an existing command", "maturity": "stable" },
     { "path": "examples/managed-run.md", "purpose": "supervise a provider CLI run", "maturity": "experimental" },
-    { "path": "examples/remote-sync.md", "purpose": "remote runtime boundary guidance", "maturity": "planned" }
+    { "path": "examples/remote-sync.md", "purpose": "remote runtime boundary guidance", "maturity": "experimental" }
   ],
   "skills": [
     { "target": "codex", "path": "skills/codex/SKILL.md", "maturity": "stable" },

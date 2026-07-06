@@ -81,6 +81,13 @@ export type RewindEvent = {
   workId?: string;
   sessionId?: string;
   surface?: string;
+  // approval facts (ApprovalDecision). `decision` follows the generated
+  // Decision enum (0 Approve, 1 Deny, 2 Interrupt, 3 Resume).
+  requestId?: string;
+  decision?: number;
+  decidedBy?: string;
+  detail?: string;
+  reason?: string;
   // any decoded field not mapped to a typed slot above (kfx events, or new
   // schema fields added before this mapping table learns them).
   extra?: Record<string, unknown>;
@@ -176,6 +183,11 @@ const TYPED_SLOTS = new Set<string>([
   'workId',
   'sessionId',
   'surface',
+  'requestId',
+  'decision',
+  'decidedBy',
+  'detail',
+  'reason',
 ]);
 
 // Map a reflection-decoded record (snake_case fields, null for absent scalars)
