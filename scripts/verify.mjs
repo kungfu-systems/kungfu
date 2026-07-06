@@ -17,7 +17,7 @@
 //   - framework/core/dist/kungfu/                     freeze artifact directory (run-freeze.js renameSync target)
 //   - framework/core/dist/kungfu/kfc[.exe]           kfc executable (path resolved by lib/executable.js)
 //   - `kfc --version` exits 0 and output contains the expected version   frozen Python runtime runs end to end (runtime smoke)
-//   - framework/gui/dist/app/                      (--with-app) build:app webpack artifact
+//   - framework/gui/out/                           (--with-app) build:app electron-vite artifact
 //
 // Exit codes: all green 0; any failed assertion 1 (fail-fast prints copy-pastable troubleshooting info).
 // Note: an Electron app's "interactive launch" cannot be asserted in a headless environment, so kfc
@@ -261,7 +261,7 @@ function main() {
           `work-dashboard kfx build failed (exit ${workDashboardBuild.status == null ? `signal ${workDashboardBuild.signal}` : workDashboardBuild.status})`,
         );
       }
-      if (withApp) runPnpm('build:app'); // webpack → framework/gui/dist/app
+      if (withApp) runPnpm('build:app'); // electron-vite → framework/gui/out
     } catch (e) {
       fail('build stage', e instanceof Error ? e.message : String(e));
       return summarize(); // on build failure, wrap up directly and do not assert half-built artifacts
@@ -390,17 +390,25 @@ function main() {
   // ── Stage 4: (optional) app build artifact ────────────────────────
   if (withApp) {
     console.log('\n[verify] stage 4: app build artifact assertion');
-    const appDist = path.join(ROOT, 'framework', 'app', 'dist', 'app');
+    const appOut = path.join(ROOT, 'framework', 'gui', 'out');
+    const requiredAppArtifacts = [
+      'main/index.js',
+      'preload/sandbox.js',
+      'renderer/index.html',
+    ];
+    const missing = requiredAppArtifacts.filter(
+      (rel) => !fs.existsSync(path.join(appOut, rel)),
+    );
     if (
-      fs.existsSync(appDist) &&
-      fs.statSync(appDist).isDirectory() &&
-      fs.readdirSync(appDist).length > 0
+      missing.length === 0 &&
+      fs.existsSync(appOut) &&
+      fs.statSync(appOut).isDirectory()
     ) {
-      pass('build:app artifact exists', path.relative(ROOT, appDist));
+      pass('build:app artifact exists', path.relative(ROOT, appOut));
     } else {
       fail(
         'build:app artifact exists',
-        `non-empty ${path.relative(ROOT, appDist)} not found (build:app first)`,
+        `missing ${missing.join(', ') || path.relative(ROOT, appOut)} (build:app first)`,
       );
     }
   }
