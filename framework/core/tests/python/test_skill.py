@@ -3,6 +3,7 @@
 from pathlib import Path
 import json
 
+from kungfu.config import contract_hash, load_contract, resolve_config
 from kungfu.skill import (
     append_audit_event,
     build_skill_dependency_binding,
@@ -102,8 +103,140 @@ def test_provider_builds_and_injects_skill_context():
     injected = inject_skill_context("hello", envelope)
 
     assert envelope["catalog"][0]["key"] == "minimal"
+    assert envelope["kungfu"]["schema"] == "kungfu.environment/v1"
+    assert envelope["kungfu"]["environment"] == "test"
+    assert envelope["kungfu"] == {
+        "schema": "kungfu.environment/v1",
+        "environment": "test",
+        "agentEntrypoint": "kungfu agent context --json",
+    }
     assert "Kungfu Skill context envelope" in injected
+    assert "You are running under Kungfu managed-run" in injected
     assert injected.endswith("\n\nUser task:\nhello")
+
+
+def test_provider_injects_environment_when_catalog_is_empty(tmp_path):
+    home = tmp_path / "home"
+    envelope = build_skill_context(str(home), source="cli", manager="python")
+    injected = inject_skill_context("hello", envelope)
+
+    assert envelope["catalog"] == []
+    assert envelope["kungfu"]["environment"] == "managed-run"
+    assert envelope["kungfu"]["agentEntrypoint"] == "kungfu agent context --json"
+    assert "Kungfu Skill context envelope" in injected
+    assert "You are running under Kungfu managed-run" in injected
+    assert injected.endswith("\n\nUser task:\nhello")
+
+
+def test_provider_uses_configured_agent_entrypoint(tmp_path):
+    home = tmp_path / "home"
+    config_home = tmp_path / "config"
+    config_home.mkdir()
+    (config_home / "config.json").write_text(
+        json.dumps({"agent": {"entrypoint": "kungfu agent custom --json"}}),
+        encoding="utf-8",
+    )
+
+    envelope = build_skill_context(
+        str(home),
+        source="cli",
+        manager="python",
+        env={"KF_CONFIG_HOME": str(config_home)},
+    )
+
+    assert envelope["kungfu"]["agentEntrypoint"] == "kungfu agent custom --json"
+
+
+def test_resolved_config_uses_defaults_without_writing_user_file(tmp_path):
+    runtime_home = tmp_path / "runtime-home"
+    config_home = tmp_path / "config-home"
+
+    config = resolve_config(
+        runtime_home=str(runtime_home),
+        config_home=str(config_home),
+        env={},
+    )
+
+    assert config["schema"] == "kungfu.config.resolved/v1"
+    assert config["contract"]["id"] == "kungfu-config"
+    assert config["contract"]["hash"] == contract_hash()
+    assert config["sources"][0]["type"] == "contract"
+    assert config["sources"][0]["hash"] == config["contract"]["hash"]
+    assert config["configHome"] == str(config_home)
+    assert config["configPath"] == str(config_home / "config.json")
+    assert config["sources"][1]["exists"] is False
+    assert not (config_home / "config.json").exists()
+    assert config["config"]["ui"]["fontSize"] == 14
+    assert config["config"]["ui"]["scale"] == 1.0
+    assert config["config"]["agent"]["entrypoint"] == "kungfu agent context --json"
+
+
+def test_resolved_config_merges_user_override(tmp_path):
+    runtime_home = tmp_path / "runtime-home"
+    config_home = tmp_path / "config-home"
+    config_home.mkdir()
+    (config_home / "config.json").write_text(
+        json.dumps(
+            {
+                "schema": "kungfu.config.override/v1",
+                "ui": {"fontSize": 18, "scale": 1.25},
+                "shortcuts": {"commandPalette": "Ctrl+K"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    config = resolve_config(
+        runtime_home=str(runtime_home),
+        config_home=str(config_home),
+        env={},
+    )
+
+    assert config["sources"][1]["exists"] is True
+    assert config["config"]["ui"]["fontSize"] == 18
+    assert config["config"]["ui"]["scale"] == 1.25
+    assert config["config"]["ui"]["fontFamily"] == "system"
+    assert config["config"]["shortcuts"]["commandPalette"] == "Ctrl+K"
+    assert config["config"]["shortcuts"]["quickOpen"] == "Mod+P"
+
+
+def test_resolved_config_rejects_unknown_override_keys(tmp_path):
+    runtime_home = tmp_path / "runtime-home"
+    config_home = tmp_path / "config-home"
+    config_home.mkdir()
+    (config_home / "config.json").write_text(
+        json.dumps({"unknown": True}),
+        encoding="utf-8",
+    )
+
+    try:
+        resolve_config(
+            runtime_home=str(runtime_home),
+            config_home=str(config_home),
+            env={},
+        )
+    except ValueError as e:
+        assert "Additional properties are not allowed" in str(e)
+    else:
+        raise AssertionError("expected invalid config override to fail")
+
+
+def test_config_contract_schema_rejects_missing_resolution_key(tmp_path):
+    contract_path = (
+        _repo_root() / "framework" / "config" / "kungfu-config.contract.json"
+    )
+    contract = json.loads(contract_path.read_text(encoding="utf-8"))
+    del contract["resolution"]["userOverrideFile"]
+    broken = tmp_path / "kungfu-config.contract.json"
+    broken.write_text(json.dumps(contract), encoding="utf-8")
+
+    try:
+        load_contract(str(broken))
+    except ValueError as e:
+        assert "contract validation failed" in str(e)
+        assert "userOverrideFile" in str(e)
+    else:
+        raise AssertionError("expected invalid config contract to fail")
 
 
 def test_skill_audit_records_advertised_and_loaded_events(tmp_path):

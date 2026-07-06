@@ -7,7 +7,7 @@ import os
 import typing
 from click.globals import get_current_context
 from functools import update_wrapper
-from kungfu.yijinjing.utils import get_default_home_dir
+from kungfu.config import default_runtime_home
 
 # click 8.1.7+ 移除了私有 TypeVar F；CLI 仅用于装饰器类型标注，改本地定义不依赖 click 内部符号。
 CLI = typing.TypeVar("CLI", bound=typing.Callable[..., typing.Any])
@@ -116,9 +116,7 @@ class PrioritizedCommandGroup(click.Group):
     "-H",
     "--home",
     type=str,
-    help="kungfu home folder, defaults to APPDATA/kungfu/home/runtime, "
-    "where APPDATA defaults to %APPDATA% on windows, "
-    "~/.config on linux, ~/Library/Application Support on mac",
+    help="kungfu runtime home folder, defaults to the config contract runtime home",
 )
 @click.option(
     "-X",
@@ -153,7 +151,7 @@ def kfc(ctx, home, extension_path, log_level, name, stage, env_verify_location):
     if env_verify_location:
         os.environ["KF_VERIFY_LOCATION"] = "KF_VERIFY_LOCATION"
 
-    home = get_default_home_dir() if not home else home
+    home = default_runtime_home() if not home else home
     ctx.extension_path = extension_path
 
     os.environ["KF_HOME"] = ctx.home = home

@@ -453,6 +453,10 @@ importers:
         version: 5.9.3
 
   framework/skill:
+    dependencies:
+      ajv:
+        specifier: ^8.20.0
+        version: 8.20.0
     devDependencies:
       '@types/node':
         specifier: ^22.0.0

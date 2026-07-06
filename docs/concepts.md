@@ -11,6 +11,7 @@ principles behind them see [`design-philosophy.md`](design-philosophy.md).
 |---|---|
 | `kfx` | A **kungfu extension package** — the governed runtime artifact built on the extension contract. A kfx declares facets such as `view` or `adapter`; proposed `service` facets are documented in [`kfx-topology.md`](kfx-topology.md). |
 | `Kungfu Skill` | The **agent-facing capability object above kfx**. The minimum source is a directory containing `SKILL.md`; Kungfu turns it into a compact skill catalog and context envelope for managed agent runs. Skills may reference kfx packages, but they do not grant those packages runtime authority. |
+| `Kungfu config` | The **agent-facing global JSON configuration** resolved from the `config-contract` defaults plus optional `~/.kungfu/config.json` overrides. Its schema, defaults, and resolution rules live in one KFD-1 contract file. It is separate from `KF_HOME`, which stores runtime data such as journals and local databases. |
 | `kungfu sdk` | The **application/extension SDK command**: scaffolds and builds `kfx` extensions, assembles applications, and produces packaged artifacts. |
 | `kungfu` | The **kungfu runtime binary and end-user CLI command** — the canonical way to invoke kungfu from the command line. It embeds a Python and a Node runtime and exposes the journal/state APIs; it is the runtime everything else runs on. Operator-facing slices such as `kungfu cockpit`, managed runs, and skill context injection grow under this command. |
 | `./kungfu-code` | The **development/build orchestrator** used while working on the repo (pins Node, Python, and the package manager so a fresh clone builds with one command). It is build-time only, not shipped. |
@@ -36,6 +37,7 @@ principles behind them see [`design-philosophy.md`](design-philosophy.md).
 | **capability relay** | The host/guest protocol a sandboxed extension uses to reach declared capabilities. GUI views use a Chromium IPC transport; runtime/service guests use a child-process transport. The surface stays uniform across trust tiers. |
 | **skill catalog** | A compact, machine-readable index of installed Kungfu Skills. It is what an agent sees by default before loading any full `SKILL.md`. |
 | **skill context envelope** | The prompt/tool/audit wrapper a manager injects into a managed agent run. It carries the filtered skill catalog, the on-demand `kungfu.skill.read` operation, and audit identifiers. |
+| **Kungfu agent entrypoint** | The local discovery surface for agents, currently `kungfu agent context --json`. Managed-run envelopes point here instead of embedding config, command inventories, or documentation paths in every prompt. |
 | **skill audit** | Evidence that a skill catalog was advertised, a full skill was loaded, or dependencies were bound. Skill audit is part of the responsibility trail for delegated work, not just a debug log. |
 
 ## Runtime / engine concepts

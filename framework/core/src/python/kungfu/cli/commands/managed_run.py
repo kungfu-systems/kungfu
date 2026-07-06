@@ -1,6 +1,7 @@
 #  SPDX-License-Identifier: Apache-2.0
 
 import sys
+import os
 
 import click
 
@@ -9,6 +10,15 @@ from kungfu.rewind.managed_cli import run_and_report
 from kungfu.rewind.managed_run import managed_providers
 
 managed_run_command_context = kfc.pass_context()
+
+
+def _skill_context_env(ctx):
+    env = dict(os.environ)
+    env["KF_HOME"] = ctx.home
+    env["KF_RUNTIME_DIR"] = ctx.runtime_dir
+    if ctx.extension_path:
+        env["KF_EXTENSION_PATH"] = ctx.extension_path
+    return env
 
 
 @kfc.command(
@@ -81,6 +91,7 @@ def managed_run(
             agent=agent,
             skill_context=not no_skill_context,
             skill_context_file=skill_context_file,
+            skill_context_env=_skill_context_env(ctx),
             print_response=print_response,
         )
     )

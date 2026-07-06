@@ -24,6 +24,14 @@ const { verifyWindowsSymbols } = require('./verify-windows-symbols');
 
 const CORE = path.resolve(__dirname, '..'); // framework/core
 const isWin = process.platform === 'win32';
+const CONFIG_CONTRACT = 'kungfu-config.contract.json';
+
+function copyConfigContract() {
+  const from = path.join(CORE, '..', 'config', CONFIG_CONTRACT);
+  const destDir = path.join(CORE, 'dist', 'kungfu', 'config');
+  fs.mkdirSync(destDir, { recursive: true });
+  fs.copyFileSync(from, path.join(destDir, CONFIG_CONTRACT));
+}
 
 function buildType() {
   return shell.getConfigValue('build_type') || 'Release';
@@ -285,6 +293,7 @@ function freezeNuitka(bt) {
 
   copyAppNative(bt);
   copyPyBindingWin(bt);
+  copyConfigContract();
   if (isWin) verifyWindowsSymbols(path.join(CORE, 'dist', 'kungfu'));
   console.log('[freeze] ✅ dist/kungfu 就绪（nuitka 扁平产物 + app native）');
 }
@@ -320,6 +329,7 @@ function freezePyinstaller(bt) {
     },
   );
   promote();
+  copyConfigContract();
   if (isWin) verifyWindowsSymbols(path.join(CORE, 'dist', 'kungfu'));
   console.log(
     '[freeze] ✅ dist/kungfu 就绪（pyinstaller 扁平视图 + _internal 真身）',

@@ -18,6 +18,16 @@
         "agent": { "type": "string" }
       }
     },
+    "kungfu": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "environment", "agentEntrypoint"],
+      "properties": {
+        "schema": { "const": "kungfu.environment/v1" },
+        "environment": { "enum": ["managed-run", "test"] },
+        "agentEntrypoint": { "type": "string" }
+      }
+    },
     "catalog": { "type": "array" },
     "tools": { "type": "array" },
     "audit": {

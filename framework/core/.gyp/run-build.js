@@ -1,10 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
-const fs = require('fs');
+const fs = require('node:fs');
 const glob = require('glob');
-const path = require('path');
+const path = require('node:path');
 const { prebuilt, shell } = require('../lib');
+
+const CORE = path.join(__dirname, '..');
+const CONFIG_CONTRACT = 'kungfu-config.contract.json';
+
+function copyConfigContract() {
+  const from = path.join(CORE, '..', 'config', CONFIG_CONTRACT);
+  const destDir = path.join(CORE, 'dist', 'kungfu', 'config');
+  fs.mkdirSync(destDir, { recursive: true });
+  fs.copyFileSync(from, path.join(destDir, CONFIG_CONTRACT));
+}
 
 function cpVsDependencies() {
   const isWin = process.platform === 'win32';
@@ -60,6 +70,7 @@ function stage() {
       }
     }
   }
+  copyConfigContract();
 }
 
 // Build the native addon directly through the real builder (run-conan.js →

@@ -8,9 +8,13 @@ import { fileURLToPath } from 'node:url';
 import {
   buildCatalog,
   buildContextEnvelope,
+  buildSkillContext,
   buildSkillManagerView,
   injectSkillContext,
+  kungfuConfigContractHash,
+  loadKungfuConfigContract,
   parseSkill,
+  resolveKungfuConfig,
   writeSkillContextFile,
   writeSkillManagerViewFile,
 } from '../src/index.ts';
@@ -46,9 +50,78 @@ writeSkillContextFile(root, {
   ],
   out,
 });
+const writtenContext = JSON.parse(readFileSync(out, 'utf8'));
 assert.deepEqual(
-  readJson('fixtures/golden/context-node.json'),
-  JSON.parse(readFileSync(out, 'utf8')),
+  readJson('fixtures/golden/context-node.json').catalog,
+  writtenContext.catalog,
+);
+assert.equal(writtenContext.kungfu.schema, 'kungfu.environment/v1');
+assert.equal(writtenContext.kungfu.environment, 'test');
+assert.equal(
+  writtenContext.kungfu.agentEntrypoint,
+  'kungfu agent context --json',
+);
+const emptyHome = mkdtempSync(join(tmpdir(), 'kungfu-skill-empty-'));
+const emptyContext = buildSkillContext(emptyHome, {
+  source: 'cli',
+  manager: 'node',
+  env: {},
+  cwd: emptyHome,
+});
+assert.deepEqual(emptyContext.catalog, []);
+assert.equal(emptyContext.kungfu.environment, 'managed-run');
+assert.equal(
+  emptyContext.kungfu.agentEntrypoint,
+  'kungfu agent context --json',
+);
+assert.equal(
+  injectSkillContext('hello', emptyContext).includes(
+    'You are running under Kungfu managed-run',
+  ),
+  true,
+);
+const configHome = mkdtempSync(join(tmpdir(), 'kungfu-config-'));
+const resolvedConfig = resolveKungfuConfig({
+  runtimeHome: emptyHome,
+  configHome,
+  env: {},
+});
+assert.equal(resolvedConfig.schema, 'kungfu.config.resolved/v1');
+assert.equal(resolvedConfig.contract.id, 'kungfu-config');
+assert.equal(resolvedConfig.contract.hash, kungfuConfigContractHash());
+assert.equal(resolvedConfig.configHome, configHome);
+assert.equal(resolvedConfig.config.ui.fontSize, 14);
+assert.equal(resolvedConfig.config.ui.scale, 1.0);
+assert.equal(
+  resolvedConfig.config.agent.entrypoint,
+  'kungfu agent context --json',
+);
+const contractPath = join(root, '..', 'config', 'kungfu-config.contract.json');
+const brokenContract = JSON.parse(readFileSync(contractPath, 'utf8'));
+brokenContract.resolution.userOverrideFile = undefined;
+const brokenContractPath = join(
+  mkdtempSync(join(tmpdir(), 'kungfu-contract-broken-')),
+  'kungfu-config.contract.json',
+);
+writeFileSync(brokenContractPath, JSON.stringify(brokenContract), 'utf8');
+assert.throws(
+  () => loadKungfuConfigContract({ contractPath: brokenContractPath }),
+  /contract validation failed.*userOverrideFile/s,
+);
+const customConfigHome = mkdtempSync(join(tmpdir(), 'kungfu-config-custom-'));
+writeFileSync(
+  join(customConfigHome, 'config.json'),
+  `${JSON.stringify({ agent: { entrypoint: 'kungfu agent custom --json' } })}\n`,
+  'utf8',
+);
+assert.equal(
+  buildSkillContext(emptyHome, {
+    source: 'cli',
+    manager: 'node',
+    env: { KF_CONFIG_HOME: customConfigHome },
+    cwd: emptyHome,
+  }).kungfu?.agentEntrypoint,
+  'kungfu agent custom --json',
 );
 
 const home = mkdtempSync(join(tmpdir(), 'kungfu-skill-manager-'));

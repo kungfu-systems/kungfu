@@ -42,6 +42,7 @@ and the map routes a question to whichever doc answers it.
 | How do I record an agent run and find why it failed (Rewind)? | [`rewind.md`](rewind.md) | use | stable · pre-release install path |
 | What should an installed agent read first, and which mode should it choose? | installed pack: `kungfu agent brief`, `kungfu agent capabilities --json`, `kungfu agent choose-mode --json` | use | stable |
 | How do I write an extension (`kfx`)? | [`extensions.md`](extensions.md) | use | stable · view kfx; runtime facets mid-migration |
+| Where is global config, and how do agents read it? | [`config.md`](config.md) | use | draft |
 | How is a kfx loaded, trusted, and confined? (the topology) | [`kfx-topology.md`](kfx-topology.md) (design: ADR-0017; trust boundary ADR-0013; uniform capability surface ADR-0014) | use | draft · load plan + `service` facet proposed |
 | How do I write an agent-facing Kungfu Skill? | [`skills.md`](skills.md) (first implementation slice; decided by ADR-0015) | use | draft |
 | What license, trademark, service-use, and provider-compliance boundaries apply? | [`../LICENSE-POLICY.md`](../LICENSE-POLICY.md) + [`../TRADEMARK.md`](../TRADEMARK.md) + [`../ACCEPTABLE_USE.md`](../ACCEPTABLE_USE.md) + [`../PROVIDER_COMPLIANCE.md`](../PROVIDER_COMPLIANCE.md) | use | stable |
@@ -74,6 +75,8 @@ route to the row that answers them:
   capability relay / sandboxed view / OS sandbox / service facet / planKfx** →
   *kfx topology* ([`kfx-topology.md`](kfx-topology.md)) and *extensions*
   ([`extensions.md`](extensions.md)).
+- **config / `~/.kungfu` / `KF_CONFIG_HOME` / `KF_HOME` / UI font / UI scale /
+  shortcuts / agent entrypoint** → *Kungfu config* ([`config.md`](config.md)).
 - **SKILL.md / agent skill / skill catalog / context injection / Node manager /
   Python manager / skill audit / skill-manager view / kfx dependency binding** →
   *agent-facing Kungfu Skill* ([`skills.md`](skills.md)).

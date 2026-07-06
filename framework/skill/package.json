@@ -18,6 +18,9 @@
     "access": "public"
   },
   "files": ["src", "schema", "fixtures", "README.md"],
+  "dependencies": {
+    "ajv": "^8.20.0"
+  },
   "scripts": {
     "build": "tsc --noEmit",
     "test:golden": "node --experimental-transform-types scripts/golden.mjs"

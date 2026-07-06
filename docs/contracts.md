@@ -68,6 +68,38 @@ runtime versions — is not yet written as a tested baseline; treat cross-versio
 cross-machine bit-exactness as unverified until then
 (see [`known-limits.md`](known-limits.md)).
 
+## The config contract is a single source of truth
+
+**Guarantee.** Kungfu global config has one contract source for schema,
+defaults, and resolution rules:
+[`kungfu-config.contract.json`](../framework/config/kungfu-config.contract.json).
+Python, Node, and the frozen product read that contract rather than carrying
+separate defaults. Resolved config output reports the contract hash so users,
+agents, and release gates can identify the exact contract world.
+The contract also carries `contractSchema`, so resolution rules and required
+metadata are schema-validated before defaults or user overrides are accepted.
+
+**Verify.** Run:
+
+```sh
+kungfu config contract --json
+kungfu config schema --json
+kungfu config defaults --json
+kungfu config show --json
+./kungfu-code verify
+```
+
+`verify` checks that the frozen artifact copy under
+`framework/core/dist/kungfu/config/` has the same SHA-256 as the repo contract,
+then confirms the frozen runtime reports that same hash through
+`kungfu config show --json`.
+The living welded-surface register is [`versioning.md`](versioning.md), surface
+`config-contract`.
+
+**Maturity.** `draft` while the GUI preference surface is still being wired.
+The contract source, runtime loader, and artifact hash gate are intended to be
+stable before GUI modules consume config.
+
 ## How to read a guarantee here
 
 A contract is only as strong as its maturity tag. `stable` means implemented and

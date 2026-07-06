@@ -36,6 +36,7 @@ from kungfu.skill import (
     build_skill_context,
     context_file_from_env,
     has_advertised_skills,
+    has_context_envelope_info,
     inject_skill_context,
     load_skill_context_file,
     skill_advertised_event,
@@ -86,6 +87,7 @@ def run_and_report(
     agent: str | None = None,
     skill_context: bool = True,
     skill_context_file: str | None = None,
+    skill_context_env: dict[str, str] | None = None,
     print_response: bool = False,
     report_callback: Callable[[ManagedRunCliReport], None] | None = None,
     quiet: bool = False,
@@ -126,9 +128,12 @@ def run_and_report(
                 profile=skill_profile,
                 agent=agent or provider,
                 extra_paths=skill_paths,
+                runtime_dir=runtime_dir,
+                env=skill_context_env,
             )
-        if has_advertised_skills(envelope):
+        if has_context_envelope_info(envelope):
             prompt_for_provider = inject_skill_context(prompt, envelope)
+        if has_advertised_skills(envelope):
             skill_audit_events.append(
                 skill_advertised_event(
                     envelope,
