@@ -119,11 +119,32 @@ The current local evidence command is intentionally advisory:
 kungfu sdk contract evidence [surface] --json
 ```
 
-It reports the contract registry, source/rendered hashes, canonicalization
-status, artifact paths, extra artifacts, and generated drift fixtures. A future
-Buildchain gate can consume this output together with `kungfu contract verify
---json`, but this stage still does not change release policy or enforce a
-release gate.
+It reports the contract registry, source/rendered hashes, artifact paths, extra
+artifacts, and generated drift fixtures.
+
+The implemented agent-first canonical policy path is:
+
+```sh
+kungfu sdk contract policy --check --json
+kungfu sdk contract witness --json
+kungfu sdk contract audit --json
+```
+
+`policy` renders the agent-readable policy file shipped from
+`framework/contract/kungfu-agent-first-canonical-policy.json` to
+`config/kungfu-agent-first-canonical-policy.json`. The SDK imports KFD standard
+metadata from `@kungfu-tech/kfd` and JSON formatting plus KFD-1 witness
+normalization from `@kungfu-tech/buildchain`; Kungfu does not redefine the
+standard key, schema ids, or release-evidence JSON formatting policy locally.
+
+`witness` emits the declarative KFD-1 contract-world witness Buildchain accepts
+through `--kfd-1-witness-json`. `audit` checks that the policy file, registered
+config/kfx/skill sources, and Buildchain release-gate evidence are current. It
+returns `current` or `mismatched` as machine-readable status.
+
+This still does not change Kungfu release policy by itself. It gives the
+build/release workflow declarative pre-build input that Buildchain can freeze
+and independently compare against post-build artifact bytes.
 
 ### Phase 2: KFD-2 Fact Surface Scaffold
 
@@ -139,9 +160,21 @@ capabilities metadata, command maturity, constraints, and a discovery probe.
 
 ### Phase 4: Buildchain Release Evidence
 
-Only after Kungfu emits stable evidence JSON should Buildchain consume it in
-release passports and downgrade release claims when required evidence is absent.
-This phase requires an explicit release-policy task.
+Buildchain v2.8 consumes KFD-1 contract-world witnesses in release passports.
+Kungfu's release workflow should write the SDK witness before collection and
+pass it as declarative input:
+
+```sh
+mkdir -p .buildchain/kfd-1
+kungfu sdk contract witness --json > .buildchain/kfd-1/contract-world.witness.json
+buildchain collect github-release \
+  --kfd-1-witness-json .buildchain/kfd-1/contract-world.witness.json
+```
+
+Buildchain owns the passport key, formatting policy, pre-build witness digest,
+and post-build artifact byte checks. Kungfu owns only its registry, source
+contracts, policy file, and generated witness. Enforcing this in every release
+workflow remains a separate release-policy task.
 
 ## Non-Goals
 

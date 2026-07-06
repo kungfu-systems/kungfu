@@ -21,12 +21,28 @@
       "firstPartyManifestSchema"
     ],
     "properties": {
-      "schema": { "type": "string", "const": "kungfu.kfx.contract/v1" },
-      "id": { "type": "string", "const": "kungfu-kfx" },
-      "version": { "type": "integer", "minimum": 1 },
-      "weldedSurface": { "type": "string", "const": "kfx-contract" },
-      "description": { "type": "string" },
-      "contractSchema": { "type": "object" },
+      "schema": {
+        "type": "string",
+        "const": "kungfu.kfx.contract/v1"
+      },
+      "id": {
+        "type": "string",
+        "const": "kungfu-kfx"
+      },
+      "version": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "weldedSurface": {
+        "type": "string",
+        "const": "kfx-contract"
+      },
+      "description": {
+        "type": "string"
+      },
+      "contractSchema": {
+        "type": "object"
+      },
       "resolution": {
         "type": "object",
         "additionalProperties": false,
@@ -42,28 +58,52 @@
           "packageManifestFile"
         ],
         "properties": {
-          "contractEnv": { "type": "string" },
-          "extensionPathEnv": { "type": "string" },
-          "runtimeDirEnv": { "type": "string" },
-          "firstPartyManifestEnv": { "type": "string" },
-          "installRoot": { "type": "string" },
-          "viewEntryDefault": { "type": "string" },
+          "contractEnv": {
+            "type": "string"
+          },
+          "extensionPathEnv": {
+            "type": "string"
+          },
+          "runtimeDirEnv": {
+            "type": "string"
+          },
+          "firstPartyManifestEnv": {
+            "type": "string"
+          },
+          "installRoot": {
+            "type": "string"
+          },
+          "viewEntryDefault": {
+            "type": "string"
+          },
           "rootPriority": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "minItems": 1
           },
-          "duplicateKeyPolicy": { "type": "string" },
-          "packageManifestFile": { "type": "string" }
+          "duplicateKeyPolicy": {
+            "type": "string"
+          },
+          "packageManifestFile": {
+            "type": "string"
+          }
         }
       },
       "knownCapabilities": {
         "type": "array",
-        "items": { "type": "string" },
+        "items": {
+          "type": "string"
+        },
         "uniqueItems": true
       },
-      "packageManifestSchema": { "type": "object" },
-      "firstPartyManifestSchema": { "type": "object" }
+      "packageManifestSchema": {
+        "type": "object"
+      },
+      "firstPartyManifestSchema": {
+        "type": "object"
+      }
     }
   },
   "resolution": {
@@ -73,39 +113,66 @@
     "firstPartyManifestEnv": "KF_FIRST_PARTY_MANIFEST",
     "installRoot": "${home}/extensions",
     "viewEntryDefault": "dist/view/index.js",
-    "rootPriority": ["KF_EXTENSION_PATH", "KF_RUNTIME_DIR_HOME_EXTENSIONS"],
+    "rootPriority": [
+      "KF_EXTENSION_PATH",
+      "KF_RUNTIME_DIR_HOME_EXTENSIONS"
+    ],
     "duplicateKeyPolicy": "first-root-wins",
     "packageManifestFile": "package.json"
   },
-  "knownCapabilities": ["domain", "ledger", "rewind", "terminal", "work"],
+  "knownCapabilities": [
+    "domain",
+    "ledger",
+    "rewind",
+    "terminal",
+    "work"
+  ],
   "packageManifestSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "additionalProperties": true,
-    "required": ["kungfuConfig"],
+    "required": [
+      "kungfuConfig"
+    ],
     "properties": {
-      "name": { "type": "string" },
-      "version": { "type": "string" },
+      "name": {
+        "type": "string"
+      },
+      "version": {
+        "type": "string"
+      },
       "kungfuConfig": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["key"],
+        "required": [
+          "key"
+        ],
         "properties": {
           "key": {
             "type": "string",
             "minLength": 1,
             "pattern": "^[A-Za-z0-9._-]+$"
           },
-          "name": { "type": "string" },
+          "name": {
+            "type": "string"
+          },
           "suite": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["title", "members"],
+            "required": [
+              "title",
+              "members"
+            ],
             "properties": {
-              "title": { "type": "string" },
+              "title": {
+                "type": "string"
+              },
               "members": {
                 "type": "array",
-                "items": { "type": "string", "minLength": 1 },
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "uniqueItems": true
               }
             }
@@ -118,31 +185,56 @@
                 "type": "object",
                 "additionalProperties": false,
                 "properties": {
-                  "title": { "type": "string" },
+                  "title": {
+                    "type": "string"
+                  },
                   "capabilities": {
                     "type": "array",
-                    "items": { "type": "string", "minLength": 1 },
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
                     "uniqueItems": true
                   },
                   "runtime": {
                     "type": "string",
-                    "enum": ["node-integrated", "sandboxed-ipc"]
+                    "enum": [
+                      "node-integrated",
+                      "sandboxed-ipc"
+                    ]
                   },
-                  "system": { "type": "boolean" },
+                  "system": {
+                    "type": "boolean"
+                  },
                   "settings": {
                     "type": "array",
                     "items": {
                       "type": "object",
                       "additionalProperties": false,
-                      "required": ["key", "label", "fallback"],
+                      "required": [
+                        "key",
+                        "label",
+                        "fallback"
+                      ],
                       "properties": {
-                        "key": { "type": "string", "minLength": 1 },
-                        "label": { "type": "string", "minLength": 1 },
-                        "fallback": { "type": "string" }
+                        "key": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "label": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "fallback": {
+                          "type": "string"
+                        }
                       }
                     }
                   },
-                  "entry": { "type": "string", "minLength": 1 }
+                  "entry": {
+                    "type": "string",
+                    "minLength": 1
+                  }
                 }
               },
               "adapter": {
@@ -151,25 +243,43 @@
                 "properties": {
                   "targets": {
                     "type": "array",
-                    "items": { "type": "string", "minLength": 1 },
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
                     "uniqueItems": true
                   },
                   "runtimes": {
                     "type": "array",
-                    "items": { "type": "string", "enum": ["python", "node"] },
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "python",
+                        "node"
+                      ]
+                    },
                     "uniqueItems": true
                   },
                   "entry": {
                     "type": "object",
                     "additionalProperties": false,
                     "properties": {
-                      "python": { "type": "string", "minLength": 1 },
-                      "node": { "type": "string", "minLength": 1 }
+                      "python": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "node": {
+                        "type": "string",
+                        "minLength": 1
+                      }
                     }
                   },
                   "capabilities": {
                     "type": "array",
-                    "items": { "type": "string", "minLength": 1 },
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
                     "uniqueItems": true
                   }
                 }
@@ -182,7 +292,11 @@
                     "type": "array",
                     "items": {
                       "type": "string",
-                      "enum": ["python", "node", "cpp"]
+                      "enum": [
+                        "python",
+                        "node",
+                        "cpp"
+                      ]
                     },
                     "uniqueItems": true
                   },
@@ -190,14 +304,26 @@
                     "type": "object",
                     "additionalProperties": false,
                     "properties": {
-                      "python": { "type": "string", "minLength": 1 },
-                      "node": { "type": "string", "minLength": 1 },
-                      "cpp": { "type": "string", "minLength": 1 }
+                      "python": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "node": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "cpp": {
+                        "type": "string",
+                        "minLength": 1
+                      }
                     }
                   },
                   "capabilities": {
                     "type": "array",
-                    "items": { "type": "string", "minLength": 1 },
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
                     "uniqueItems": true
                   }
                 }
@@ -222,20 +348,33 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "additionalProperties": false,
-    "required": ["version", "keys"],
+    "required": [
+      "version",
+      "keys"
+    ],
     "properties": {
-      "version": { "type": "integer", "const": 1 },
+      "version": {
+        "type": "integer",
+        "const": 1
+      },
       "keys": {
         "type": "object",
         "additionalProperties": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["sha256"],
+          "required": [
+            "sha256"
+          ],
           "properties": {
             "sha256": {
               "anyOf": [
-                { "type": "string", "pattern": "^[a-f0-9]{64}$" },
-                { "type": "null" }
+                {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                {
+                  "type": "null"
+                }
               ]
             }
           }

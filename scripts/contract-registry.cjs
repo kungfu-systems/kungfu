@@ -35,7 +35,15 @@ function contractArtifacts() {
       artifact: REGISTRY_ARTIFACT,
     },
   ];
-  for (const contract of loadContractRegistry().contracts) {
+  const registry = loadContractRegistry();
+  if (registry.canonicalPolicy) {
+    rows.push({
+      label: 'agent-first canonical policy',
+      source: registry.canonicalPolicy.source,
+      artifact: registry.canonicalPolicy.artifact,
+    });
+  }
+  for (const contract of registry.contracts) {
     rows.push({
       label: `${contract.surface} contract`,
       surface: contract.surface,

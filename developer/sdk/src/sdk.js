@@ -13,6 +13,14 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  BUILDCHAIN_JSON_FORMATTING_POLICY,
+  createKfd1ReleaseGateEvidence,
+  normalizeKfd1ContractWorldWitness,
+  resolveKfd1Metadata,
+  sha256Json as sha256KfdJson,
+  validateKfd1ReleaseGateEvidence,
+} from '@kungfu-tech/buildchain/kfd-gate';
 
 const TEMPLATE_ROOT = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -25,6 +33,8 @@ const CONTRACT_REGISTRY_FILE = 'kungfu-contracts.registry.json';
 const CONTRACT_REGISTRY_ENV = 'KUNGFU_CONTRACT_REGISTRY';
 const CONTRACT_REGISTRY_SCHEMA = 'kungfu.contract-registry/v1';
 const CONTRACT_FIXTURE_SCHEMA = 'kungfu.sdk.contract-drift-fixture/v1';
+const CANONICAL_POLICY_SCHEMA = 'kungfu.agent-first-canonical-policy/v1';
+const CANONICAL_POLICY_FILE = 'kungfu-agent-first-canonical-policy.json';
 const require = createRequire(import.meta.url);
 
 /**
@@ -41,6 +51,9 @@ function usage(code) {
       '       kungfu sdk contract adopt <surface> [--source <path>] [--json]',
       '       kungfu sdk contract render <surface> [--check | --write] [--json]',
       '       kungfu sdk contract evidence [surface] [--json]',
+      '       kungfu sdk contract policy [--check | --write] [--json]',
+      '       kungfu sdk contract witness [--json]',
+      '       kungfu sdk contract audit [--json]',
       '       kungfu sdk contract add <surface> [--source <path>] [--json]',
       '       kungfu sdk kfx build | clean',
       '',
@@ -73,6 +86,10 @@ function usage(code) {
       'contract adopt/render are the KFD-1 SDK prototype: they adopt an existing',
       'registered contract surface and prove the SDK can reproduce its current',
       'source contract file without writing over it unless --write is explicit.',
+      'contract policy/witness/audit are the agent-first canonical policy path:',
+      'they import KFD metadata and Buildchain release-gate policy, then produce',
+      'one local contract-world witness for config/kfx/skill without duplicating',
+      'standard keys or JSON formatting rules.',
       '',
     ].join('\n'),
   );
@@ -300,7 +317,12 @@ function readJson(file) {
  * @returns {string}
  */
 function renderJson(value) {
-  return `${JSON.stringify(value, null, 2)}\n`;
+  const indentation =
+    Number(BUILDCHAIN_JSON_FORMATTING_POLICY.indentation) || 2;
+  const rendered = JSON.stringify(value, null, indentation);
+  return BUILDCHAIN_JSON_FORMATTING_POLICY.trailingNewline === false
+    ? rendered
+    : `${rendered}\n`;
 }
 
 /**
@@ -473,6 +495,95 @@ function loadContractRegistry(registryPath) {
     fail('contract registry must contain a contracts array');
   }
   return registry;
+}
+
+/**
+ * @param {Record<string, unknown>} registry
+ * @returns {Array<Record<string, unknown>>}
+ */
+function registryContracts(registry) {
+  if (!Array.isArray(registry.contracts)) {
+    fail('contract registry must contain a contracts array');
+  }
+  return /** @type {Array<Record<string, unknown>>} */ (registry.contracts);
+}
+
+/**
+ * @param {string} exportPath
+ * @returns {unknown}
+ */
+function readJsonPackageExport(exportPath) {
+  return JSON.parse(fs.readFileSync(require.resolve(exportPath), 'utf8'));
+}
+
+/**
+ * @param {string} packageName
+ * @returns {{ name: string, version: string }}
+ */
+function packageIdentity(packageName) {
+  const packageJson = readJsonPackageExport(`${packageName}/package.json`);
+  if (!isObject(packageJson)) {
+    fail(`package metadata must be a JSON object: ${packageName}`);
+  }
+  return {
+    name: String(packageJson.name || packageName),
+    version: String(packageJson.version || ''),
+  };
+}
+
+/**
+ * @param {Record<string, unknown>} schema
+ * @returns {string}
+ */
+function schemaContractConst(schema) {
+  const properties = isObject(schema.properties) ? schema.properties : {};
+  const contract = isObject(properties.contract) ? properties.contract : {};
+  const value = contract.const;
+  if (typeof value !== 'string' || value.length === 0) {
+    fail('KFD schema export missing properties.contract.const');
+  }
+  return value;
+}
+
+/**
+ * @param {ReturnType<typeof resolveKfd1Metadata>} metadata
+ * @returns {{ contractWorld: string, witness: string }}
+ */
+function kfd1SchemaConstants(metadata) {
+  const contractWorldSchema = readJsonPackageExport(
+    `@kungfu-tech/kfd/${metadata.schemaPaths.contractWorld}`,
+  );
+  const witnessSchema = readJsonPackageExport(
+    `@kungfu-tech/kfd/${metadata.schemaPaths.witness}`,
+  );
+  if (!isObject(contractWorldSchema) || !isObject(witnessSchema)) {
+    fail('KFD schema exports must be JSON objects');
+  }
+  return {
+    contractWorld: schemaContractConst(contractWorldSchema),
+    witness: schemaContractConst(witnessSchema),
+  };
+}
+
+/**
+ * @param {string} repoRoot
+ * @returns {{ source: string, artifact: string }}
+ */
+function canonicalPolicyPaths(repoRoot) {
+  const registry = loadContractRegistry(resolveContractRegistryPath(repoRoot));
+  const declared = isObject(registry.canonicalPolicy)
+    ? /** @type {Record<string, unknown>} */ (registry.canonicalPolicy)
+    : {};
+  return {
+    source:
+      typeof declared.source === 'string'
+        ? declared.source
+        : path.join('framework', 'contract', CANONICAL_POLICY_FILE),
+    artifact:
+      typeof declared.artifact === 'string'
+        ? declared.artifact
+        : path.join('config', CANONICAL_POLICY_FILE),
+  };
 }
 
 /**
@@ -752,10 +863,11 @@ function contractEvidence(surface, options) {
   const repoRoot = locateRepoRoot(process.cwd());
   const registryPath = resolveContractRegistryPath(repoRoot);
   const registry = loadContractRegistry(registryPath);
+  const metadata = resolveKfd1Metadata();
   const surfaces = surface
     ? [surface]
-    : /** @type {Array<Record<string, unknown>>} */ (registry.contracts).map(
-        (entry) => requiredString(entry, 'surface'),
+    : registryContracts(registry).map((entry) =>
+        requiredString(entry, 'surface'),
       );
   const contracts = surfaces.map((name) =>
     contractEvidenceRow(loadContractSurface(name, options)),
@@ -765,11 +877,17 @@ function contractEvidence(surface, options) {
     ok: true,
     registry: rel(repoRoot, registryPath),
     releaseGate: {
-      kfd: 'KFD-1',
-      claim: 'contracts-must-not-drift',
+      kfd: metadata.label,
+      key: metadata.key,
+      claim: metadata.title,
       role: 'local-evidence',
       sourceOfTruth: rel(repoRoot, registryPath),
       policy: 'advisory-only; this command does not enforce release policy',
+      metadata: {
+        package: metadata.package,
+        schemaIds: metadata.schemaIds,
+        schemaPaths: metadata.schemaPaths,
+      },
     },
     summary: {
       count: contracts.length,
@@ -797,6 +915,388 @@ function contractEvidence(surface, options) {
       '',
     ].join('\n'),
   );
+}
+
+/**
+ * @param {Record<string, unknown>} entry
+ * @returns {{ id: string, surface: string, source: string, artifact: string, contractPath: string, contract: Record<string, unknown>, sourceHash: string, renderedHash: string, byteForByte: boolean }}
+ */
+function contractPolicySurface(entry) {
+  const surface = requiredString(entry, 'surface');
+  const state = loadContractSurface(surface, {
+    workspace: false,
+    name: '',
+    source: '',
+    check: false,
+    write: false,
+    json: true,
+  });
+  const rendered = renderJson(state.contract);
+  return {
+    id: requiredString(entry, 'id'),
+    surface,
+    source: rel(state.repoRoot, state.contractPath),
+    artifact: requiredString(entry, 'artifact'),
+    contractPath: state.contractPath,
+    contract: state.contract,
+    sourceHash: sha256File(state.contractPath),
+    renderedHash: `sha256:${createHash('sha256').update(rendered).digest('hex')}`,
+    byteForByte: state.contractText === rendered,
+  };
+}
+
+/**
+ * @param {string} repoRoot
+ * @param {Record<string, unknown>} registry
+ * @returns {Record<string, unknown>}
+ */
+function buildContractWorld(repoRoot, registry) {
+  const metadata = resolveKfd1Metadata();
+  const constants = kfd1SchemaConstants(metadata);
+  const registryPath = resolveContractRegistryPath(repoRoot);
+  const surfaces = registryContracts(registry).map((entry) => {
+    const surface = contractPolicySurface(entry);
+    return {
+      id: surface.id,
+      class: 'integration-time',
+      description: `${surface.surface} contract source ${surface.source} is copied byte-for-byte to ${surface.artifact}.`,
+    };
+  });
+  return {
+    schemaVersion: 1,
+    contract: constants.contractWorld,
+    standard: metadata.key,
+    factSource: rel(repoRoot, registryPath),
+    surfaces,
+  };
+}
+
+/**
+ * @param {string} repoRoot
+ * @returns {Record<string, unknown>}
+ */
+function buildCanonicalPolicy(repoRoot) {
+  const registryPath = resolveContractRegistryPath(repoRoot);
+  const registry = loadContractRegistry(registryPath);
+  const metadata = resolveKfd1Metadata();
+  const policyPaths = canonicalPolicyPaths(repoRoot);
+  const contractWorld = buildContractWorld(repoRoot, registry);
+  const surfaces = registryContracts(registry).map((entry) => {
+    const surface = contractPolicySurface(entry);
+    return {
+      surface: surface.surface,
+      id: surface.id,
+      recipe: {
+        path: surface.source,
+        generator: 'kungfu sdk contract render',
+        evidence: 'kungfu sdk contract evidence',
+      },
+      source: {
+        path: surface.source,
+        sha256: surface.sourceHash,
+        renderedSha256: surface.renderedHash,
+        byteForByte: surface.byteForByte,
+      },
+      artifact: {
+        path: surface.artifact,
+        expectedSha256: surface.sourceHash,
+      },
+    };
+  });
+  return {
+    schema: CANONICAL_POLICY_SCHEMA,
+    id: 'kungfu-agent-first-canonical-policy',
+    description:
+      'Agent-readable policy for deriving Kungfu KFD-1 contract-world evidence from one registry and upstream KFD/Buildchain metadata.',
+    upstream: {
+      kfd: {
+        package: metadata.package,
+        standard: {
+          key: metadata.key,
+          id: metadata.id,
+          label: metadata.label,
+          title: metadata.title,
+          revision: metadata.revision,
+          status: metadata.status,
+        },
+        schemaIds: metadata.schemaIds,
+        schemaPaths: metadata.schemaPaths,
+      },
+      buildchain: {
+        package: packageIdentity('@kungfu-tech/buildchain'),
+        formatting: BUILDCHAIN_JSON_FORMATTING_POLICY,
+        releaseGate: {
+          witnessInput: '--kfd-1-witness-json',
+          passportKey: metadata.key,
+        },
+      },
+    },
+    sourceOfTruth: {
+      registry: rel(repoRoot, registryPath),
+      registrySchema: registry.schema,
+      policySource: policyPaths.source,
+      policyArtifact: policyPaths.artifact,
+    },
+    generation: {
+      renderer: 'kungfu sdk contract render <surface> --check --json',
+      witness: 'kungfu sdk contract witness --json',
+      audit: 'kungfu sdk contract audit --json',
+      artifactRule:
+        'Each registered source contract is copied byte-for-byte to its declared frozen config artifact.',
+    },
+    contractWorld: {
+      schemaId: metadata.schemaIds.contractWorld,
+      digest: `sha256:${sha256KfdJson(contractWorld)}`,
+      value: contractWorld,
+    },
+    surfaces,
+  };
+}
+
+/**
+ * @param {string} repoRoot
+ * @returns {Record<string, unknown>}
+ */
+function buildContractWorldWitness(repoRoot) {
+  const registryPath = resolveContractRegistryPath(repoRoot);
+  const registry = loadContractRegistry(registryPath);
+  const metadata = resolveKfd1Metadata();
+  const constants = kfd1SchemaConstants(metadata);
+  const policyPaths = canonicalPolicyPaths(repoRoot);
+  const policyPath = path.resolve(repoRoot, policyPaths.source);
+  const contractWorld = buildContractWorld(repoRoot, registry);
+  const policy = buildCanonicalPolicy(repoRoot);
+  return normalizeKfd1ContractWorldWitness(
+    {
+      schemaVersion: 1,
+      contract: constants.witness,
+      id: 'kungfu-contracts',
+      standard: metadata.key,
+      source: {
+        repo: 'kungfu-systems/kungfu',
+        registry: rel(repoRoot, registryPath),
+        policy: policyPaths.source,
+      },
+      contractWorld: {
+        schemaId: metadata.schemaIds.contractWorld,
+        digest: `sha256:${sha256KfdJson(contractWorld)}`,
+      },
+      canonicalPolicy: {
+        path: policyPaths.source,
+        sha256: fs.existsSync(policyPath)
+          ? sha256File(policyPath)
+          : `sha256:${createHash('sha256').update(renderJson(policy)).digest('hex')}`,
+      },
+      registry: {
+        path: rel(repoRoot, registryPath),
+        sha256: sha256File(registryPath),
+      },
+      surfaces: registryContracts(registry).map((entry) => {
+        const surface = contractPolicySurface(entry);
+        return {
+          name: surface.id,
+          sourcePath: surface.source,
+          sourceSha256: surface.sourceHash,
+          artifactPath: surface.artifact,
+          expectedSha256: surface.sourceHash,
+          byteForByte: surface.byteForByte,
+        };
+      }),
+    },
+    { metadata },
+  );
+}
+
+/**
+ * @param {Record<string, unknown>} data
+ * @param {CliOptions} options
+ * @param {string[]} lines
+ * @returns {void}
+ */
+function printContractCommand(data, options, lines) {
+  if (options.json) {
+    process.stdout.write(renderJson(data));
+    return;
+  }
+  process.stdout.write(`${lines.join('\n')}\n`);
+}
+
+/**
+ * @param {CliOptions} options
+ * @returns {void}
+ */
+function contractPolicy(options) {
+  const repoRoot = locateRepoRoot(process.cwd());
+  const policyPaths = canonicalPolicyPaths(repoRoot);
+  const policyPath = path.resolve(repoRoot, policyPaths.source);
+  const policy = buildCanonicalPolicy(repoRoot);
+  const rendered = renderJson(policy);
+  if (options.check && options.write) {
+    fail('contract policy accepts either --check or --write, not both');
+  }
+  if (options.write) {
+    const previousHash = fs.existsSync(policyPath)
+      ? sha256File(policyPath)
+      : '';
+    fs.mkdirSync(path.dirname(policyPath), { recursive: true });
+    fs.writeFileSync(policyPath, rendered);
+    printContractCommand(
+      {
+        schema: 'kungfu.sdk.contract-policy-write/v1',
+        ok: true,
+        source: policyPaths.source,
+        previousHash,
+        hash: sha256File(policyPath),
+        changed: !previousHash || previousHash !== sha256File(policyPath),
+      },
+      options,
+      [
+        `[contract] policy wrote ${policyPaths.source}`,
+        `  hash: ${sha256File(policyPath)}`,
+      ],
+    );
+    return;
+  }
+  if (options.check) {
+    const existing = fs.existsSync(policyPath)
+      ? fs.readFileSync(policyPath, 'utf8')
+      : '';
+    const data = {
+      schema: 'kungfu.sdk.contract-policy-check/v1',
+      ok: existing === rendered,
+      status: existing === rendered ? 'current' : 'mismatched',
+      source: policyPaths.source,
+      hash: fs.existsSync(policyPath) ? sha256File(policyPath) : '',
+      renderedHash: `sha256:${createHash('sha256').update(rendered).digest('hex')}`,
+    };
+    printContractCommand(data, options, [
+      `[contract] policy ${data.status}`,
+      `  source: ${data.source}`,
+    ]);
+    if (!data.ok) process.exit(1);
+    return;
+  }
+  if (options.json) process.stdout.write(rendered);
+  else
+    process.stdout.write(
+      `[contract] policy ${policyPaths.source} (${registryContracts({ contracts: policy.surfaces }).length} surfaces)\n`,
+    );
+}
+
+/**
+ * @param {CliOptions} options
+ * @returns {void}
+ */
+function contractWitness(options) {
+  const repoRoot = locateRepoRoot(process.cwd());
+  const witness = buildContractWorldWitness(repoRoot);
+  if (options.json) {
+    process.stdout.write(renderJson(witness));
+    return;
+  }
+  process.stdout.write(
+    `[contract] witness ${witness.id} surfaces=${Array.isArray(witness.surfaces) ? witness.surfaces.length : 0}\n`,
+  );
+}
+
+/**
+ * @param {CliOptions} options
+ * @returns {void}
+ */
+function contractAudit(options) {
+  const repoRoot = locateRepoRoot(process.cwd());
+  const policyPaths = canonicalPolicyPaths(repoRoot);
+  const policyPath = path.resolve(repoRoot, policyPaths.source);
+  const policy = buildCanonicalPolicy(repoRoot);
+  const renderedPolicy = renderJson(policy);
+  const existingPolicy = fs.existsSync(policyPath)
+    ? fs.readFileSync(policyPath, 'utf8')
+    : '';
+  const witness = buildContractWorldWitness(repoRoot);
+  const metadata = resolveKfd1Metadata();
+  const gate = createKfd1ReleaseGateEvidence({
+    cwd: repoRoot,
+    artifacts: Array.isArray(witness.surfaces)
+      ? witness.surfaces.map((surface) => ({
+          name: surface.artifactPath,
+          sourcePath: path.resolve(repoRoot, surface.sourcePath),
+        }))
+      : [],
+    witnesses: [witness],
+    verifiedAt: '1970-01-01T00:00:00.000Z',
+    metadata,
+  });
+  const gateIssues = validateKfd1ReleaseGateEvidence(gate?.passportSection, {
+    metadata,
+  });
+  const contractRows = /** @type {Array<Record<string, unknown>>} */ (
+    policy.surfaces
+  ).map((surface) => ({
+    surface: surface.surface,
+    status:
+      isObject(surface.source) && surface.source.byteForByte === true
+        ? 'current'
+        : 'mismatched',
+    source: isObject(surface.source) ? surface.source.path : '',
+    artifact: isObject(surface.artifact) ? surface.artifact.path : '',
+    sourceHash: isObject(surface.source) ? surface.source.sha256 : '',
+    artifactExpectedHash: isObject(surface.artifact)
+      ? surface.artifact.expectedSha256
+      : '',
+  }));
+  const failures = [
+    ...(existingPolicy === renderedPolicy
+      ? []
+      : [
+          {
+            code: 'canonical-policy.mismatched',
+            message:
+              'framework/contract canonical policy file differs from SDK-rendered policy',
+          },
+        ]),
+    ...contractRows
+      .filter((row) => row.status !== 'current')
+      .map((row) => ({
+        code: 'contract.render.mismatched',
+        message: `${row.surface} source is not byte-for-byte canonical`,
+      })),
+    .../** @type {Array<{ code: string, message: string }>} */ (gateIssues).map(
+      (issue) => ({
+        code: issue.code,
+        message: issue.message,
+      }),
+    ),
+  ];
+  const data = {
+    schema: 'kungfu.sdk.contract-audit/v1',
+    ok: failures.length === 0,
+    status: failures.length === 0 ? 'current' : 'mismatched',
+    upstream: policy.upstream,
+    policy: {
+      source: policyPaths.source,
+      artifact: policyPaths.artifact,
+      status: existingPolicy === renderedPolicy ? 'current' : 'mismatched',
+      hash: fs.existsSync(policyPath) ? sha256File(policyPath) : '',
+      renderedHash: `sha256:${createHash('sha256').update(renderedPolicy).digest('hex')}`,
+    },
+    witness: {
+      id: witness.id,
+      standard: witness.standard,
+      contractWorldDigest: isObject(witness.contractWorld)
+        ? witness.contractWorld.digest
+        : '',
+      digest: `sha256:${sha256KfdJson(witness)}`,
+    },
+    releaseGate: gate?.passportSection || null,
+    contracts: contractRows,
+    failures,
+  };
+  printContractCommand(data, options, [
+    `[contract] audit ${data.status}`,
+    `  policy: ${data.policy.source}`,
+    `  contracts: ${data.contracts.length}`,
+  ]);
+  if (!data.ok) process.exit(1);
 }
 
 /**
@@ -858,7 +1358,7 @@ function contractAdd(surfaceArg, options) {
   }
   const contract = contractTemplate(surface);
   const entry = registryEntryTemplate(surface, source);
-  registry.contracts.push(entry);
+  registryContracts(registry).push(entry);
   fs.mkdirSync(path.dirname(contractPath), { recursive: true });
   fs.writeFileSync(contractPath, renderJson(contract));
   const fixturePath = path.resolve(
@@ -1285,10 +1785,13 @@ if (command === 'create') {
   if (kind === 'adopt') contractAdopt(directory, options);
   else if (kind === 'render') contractRender(directory, options);
   else if (kind === 'evidence') contractEvidence(directory, options);
+  else if (kind === 'policy') contractPolicy(options);
+  else if (kind === 'witness') contractWitness(options);
+  else if (kind === 'audit') contractAudit(options);
   else if (kind === 'add') contractAdd(directory, options);
   else
     fail(
-      `unknown contract command: ${kind} (supported: adopt, render, evidence, add)`,
+      `unknown contract command: ${kind} (supported: adopt, render, evidence, policy, witness, audit, add)`,
     );
 } else {
   fail(`unknown command: ${command}`);

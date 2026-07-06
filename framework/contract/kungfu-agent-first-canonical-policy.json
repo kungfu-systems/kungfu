@@ -1,0 +1,146 @@
+{
+  "schema": "kungfu.agent-first-canonical-policy/v1",
+  "id": "kungfu-agent-first-canonical-policy",
+  "description": "Agent-readable policy for deriving Kungfu KFD-1 contract-world evidence from one registry and upstream KFD/Buildchain metadata.",
+  "upstream": {
+    "kfd": {
+      "package": {
+        "name": "@kungfu-tech/kfd",
+        "version": "1.0.0-alpha.2",
+        "repository": "git+https://github.com/kungfu-systems/kfd.git"
+      },
+      "standard": {
+        "key": "kfd-1",
+        "id": "KFD-1",
+        "label": "KFD-1",
+        "title": "Contracts must not drift: contract worlds need one fact source",
+        "revision": 1,
+        "status": "active"
+      },
+      "schemaIds": {
+        "metadata": "https://kfd.libkungfu.dev/schemas/kfd-standards.schema.json",
+        "contractWorld": "https://kfd.libkungfu.dev/schemas/kfd-1/contract-world.schema.json",
+        "witness": "https://kfd.libkungfu.dev/schemas/kfd-1/witness.schema.json"
+      },
+      "schemaPaths": {
+        "metadata": "schemas/kfd-standards.schema.json",
+        "contractWorld": "schemas/kfd-1/contract-world.schema.json",
+        "witness": "schemas/kfd-1/witness.schema.json"
+      }
+    },
+    "buildchain": {
+      "package": {
+        "name": "@kungfu-tech/buildchain",
+        "version": "2.8.0"
+      },
+      "formatting": {
+        "name": "buildchain-release-evidence-json-v1",
+        "indentation": 2,
+        "trailingNewline": true,
+        "canonicalDigest": "stable-json-sha256-v1"
+      },
+      "releaseGate": {
+        "witnessInput": "--kfd-1-witness-json",
+        "passportKey": "kfd-1"
+      }
+    }
+  },
+  "sourceOfTruth": {
+    "registry": "framework/contract/kungfu-contracts.registry.json",
+    "registrySchema": "kungfu.contract-registry/v1",
+    "policySource": "framework/contract/kungfu-agent-first-canonical-policy.json",
+    "policyArtifact": "config/kungfu-agent-first-canonical-policy.json"
+  },
+  "generation": {
+    "renderer": "kungfu sdk contract render <surface> --check --json",
+    "witness": "kungfu sdk contract witness --json",
+    "audit": "kungfu sdk contract audit --json",
+    "artifactRule": "Each registered source contract is copied byte-for-byte to its declared frozen config artifact."
+  },
+  "contractWorld": {
+    "schemaId": "https://kfd.libkungfu.dev/schemas/kfd-1/contract-world.schema.json",
+    "digest": "sha256:3aa7446953e91f366d250331e4feb7d6a3608f56e8c5bc12fa01b2fd597ea05d",
+    "value": {
+      "schemaVersion": 1,
+      "contract": "kfd-1-contract-world",
+      "standard": "kfd-1",
+      "factSource": "framework/contract/kungfu-contracts.registry.json",
+      "surfaces": [
+        {
+          "id": "kungfu-config",
+          "class": "integration-time",
+          "description": "config contract source framework/config/kungfu-config.contract.json is copied byte-for-byte to config/kungfu-config.contract.json."
+        },
+        {
+          "id": "kungfu-kfx",
+          "class": "integration-time",
+          "description": "kfx contract source framework/kfx/kungfu-kfx.contract.json is copied byte-for-byte to config/kungfu-kfx.contract.json."
+        },
+        {
+          "id": "kungfu-skill",
+          "class": "integration-time",
+          "description": "skill contract source framework/skill/kungfu-skill.contract.json is copied byte-for-byte to config/kungfu-skill.contract.json."
+        }
+      ]
+    }
+  },
+  "surfaces": [
+    {
+      "surface": "config",
+      "id": "kungfu-config",
+      "recipe": {
+        "path": "framework/config/kungfu-config.contract.json",
+        "generator": "kungfu sdk contract render",
+        "evidence": "kungfu sdk contract evidence"
+      },
+      "source": {
+        "path": "framework/config/kungfu-config.contract.json",
+        "sha256": "sha256:ad21f1f270f47436d7131f2c26524eb882dd67d2c92197aec4c839a7bdac6ecb",
+        "renderedSha256": "sha256:ad21f1f270f47436d7131f2c26524eb882dd67d2c92197aec4c839a7bdac6ecb",
+        "byteForByte": true
+      },
+      "artifact": {
+        "path": "config/kungfu-config.contract.json",
+        "expectedSha256": "sha256:ad21f1f270f47436d7131f2c26524eb882dd67d2c92197aec4c839a7bdac6ecb"
+      }
+    },
+    {
+      "surface": "kfx",
+      "id": "kungfu-kfx",
+      "recipe": {
+        "path": "framework/kfx/kungfu-kfx.contract.json",
+        "generator": "kungfu sdk contract render",
+        "evidence": "kungfu sdk contract evidence"
+      },
+      "source": {
+        "path": "framework/kfx/kungfu-kfx.contract.json",
+        "sha256": "sha256:2e4e41dfb4f8f8a01a81e158ee3ce92ea181c395ea9926dd3ad71f851172d777",
+        "renderedSha256": "sha256:2e4e41dfb4f8f8a01a81e158ee3ce92ea181c395ea9926dd3ad71f851172d777",
+        "byteForByte": true
+      },
+      "artifact": {
+        "path": "config/kungfu-kfx.contract.json",
+        "expectedSha256": "sha256:2e4e41dfb4f8f8a01a81e158ee3ce92ea181c395ea9926dd3ad71f851172d777"
+      }
+    },
+    {
+      "surface": "skill",
+      "id": "kungfu-skill",
+      "recipe": {
+        "path": "framework/skill/kungfu-skill.contract.json",
+        "generator": "kungfu sdk contract render",
+        "evidence": "kungfu sdk contract evidence"
+      },
+      "source": {
+        "path": "framework/skill/kungfu-skill.contract.json",
+        "sha256": "sha256:fb6fbc59557ac8448226f5ed8b97fd71fcf202742e896bb06e2831abeedc2a52",
+        "renderedSha256": "sha256:fb6fbc59557ac8448226f5ed8b97fd71fcf202742e896bb06e2831abeedc2a52",
+        "byteForByte": true
+      },
+      "artifact": {
+        "path": "config/kungfu-skill.contract.json",
+        "expectedSha256": "sha256:fb6fbc59557ac8448226f5ed8b97fd71fcf202742e896bb06e2831abeedc2a52"
+      }
+    }
+  ]
+}

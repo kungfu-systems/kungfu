@@ -61,6 +61,12 @@ importers:
 
   developer/sdk:
     dependencies:
+      '@kungfu-tech/buildchain':
+        specifier: 2.8.0
+        version: 2.8.0
+      '@kungfu-tech/kfd':
+        specifier: 1.0.0-alpha.2
+        version: 1.0.0-alpha.2
       ajv:
         specifier: ^8.20.0
         version: 8.20.0
@@ -1226,6 +1232,14 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@kungfu-tech/buildchain@2.8.0':
+    resolution: {integrity: sha512-xvukZHbaRQNQF+5Bbayd+AF7QkKH/2kJR9YLsckdMnNBm/x2K1gaLYUmpWZL0T8ftVbPFYS5q8yZxVeTr6jjxA==}
+    engines: {node: '>=22.14.0'}
+    hasBin: true
+
+  '@kungfu-tech/kfd@1.0.0-alpha.2':
+    resolution: {integrity: sha512-LJ/mBkBrgWI8WqOFiJa6Ppz59zuYP/KZxbkLRhg+IwAYjvu4Wkn7cn1OMmwdSRdPU7N6ROlsRlnEkHRa0knR7g==}
 
   '@kungfu-tech/libnode-darwin-arm64@22.22.3-kf.1':
     resolution: {integrity: sha512-IJpMSrcxs77vw/unEbI6v0a6BrArQjC9/ZLDW+WKn9Kzk7ZXcBKz3N/F7exldwc67n7R4tp0wOSIGcwjs75M2A==}
@@ -4105,6 +4119,10 @@ packages:
     resolution: {integrity: sha512-dWUG8F5sIIARXih1DTaQAX4SsiTXhInKf1buxdY9DIg4ZYPZK5nGM1VRIYmEbDbsHt7USo99xSLFu5Q1IqTmsg==}
     engines: {node: '>= 18'}
 
+  smol-toml@1.7.0:
+    resolution: {integrity: sha512-aqVvWoyO21L23mb+drl4RmMXbf6N7FdHjAhTRA9ZBL7apWBgfWC16KjrASI+1p9GAroljyMHj6fK67i0UiTNvQ==}
+    engines: {node: '>= 18'}
+
   socks-proxy-agent@8.0.5:
     resolution: {integrity: sha512-HehCEsotFqbPW9sJ8WVYB6UbmIMv7kUUORIF2Nncq4VQvBfNBLibW9YZR5dlYCSUhwcD628pRllm7n+E+YTzJw==}
     engines: {node: '>= 14'}
@@ -5262,6 +5280,13 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
+
+  '@kungfu-tech/buildchain@2.8.0':
+    dependencies:
+      '@kungfu-tech/kfd': 1.0.0-alpha.2
+      smol-toml: 1.7.0
+
+  '@kungfu-tech/kfd@1.0.0-alpha.2': {}
 
   '@kungfu-tech/libnode-darwin-arm64@22.22.3-kf.1':
     optional: true
@@ -8644,6 +8669,8 @@ snapshots:
   smart-buffer@4.2.0: {}
 
   smol-toml@1.6.1: {}
+
+  smol-toml@1.7.0: {}
 
   socks-proxy-agent@8.0.5:
     dependencies:

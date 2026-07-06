@@ -19,12 +19,28 @@
       "schemaFiles"
     ],
     "properties": {
-      "schema": { "type": "string", "const": "kungfu.skill.contract/v1" },
-      "id": { "type": "string", "const": "kungfu-skill" },
-      "version": { "type": "integer", "minimum": 1 },
-      "weldedSurface": { "type": "string", "const": "skill-contract" },
-      "description": { "type": "string" },
-      "contractSchema": { "type": "object" },
+      "schema": {
+        "type": "string",
+        "const": "kungfu.skill.contract/v1"
+      },
+      "id": {
+        "type": "string",
+        "const": "kungfu-skill"
+      },
+      "version": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "weldedSurface": {
+        "type": "string",
+        "const": "skill-contract"
+      },
+      "description": {
+        "type": "string"
+      },
+      "contractSchema": {
+        "type": "object"
+      },
       "resolution": {
         "type": "object",
         "additionalProperties": false,
@@ -37,12 +53,24 @@
           "loadPolicy"
         ],
         "properties": {
-          "contractEnv": { "type": "string" },
-          "skillPathEnv": { "type": "string" },
-          "installRoot": { "type": "string" },
-          "sourceFile": { "type": "string" },
-          "duplicateKeyPolicy": { "type": "string" },
-          "loadPolicy": { "type": "string" }
+          "contractEnv": {
+            "type": "string"
+          },
+          "skillPathEnv": {
+            "type": "string"
+          },
+          "installRoot": {
+            "type": "string"
+          },
+          "sourceFile": {
+            "type": "string"
+          },
+          "duplicateKeyPolicy": {
+            "type": "string"
+          },
+          "loadPolicy": {
+            "type": "string"
+          }
         }
       },
       "schemaFiles": {
@@ -50,11 +78,21 @@
         "additionalProperties": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["schema", "source", "artifact"],
+          "required": [
+            "schema",
+            "source",
+            "artifact"
+          ],
           "properties": {
-            "schema": { "type": "string" },
-            "source": { "type": "string" },
-            "artifact": { "type": "string" }
+            "schema": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "artifact": {
+              "type": "string"
+            }
           }
         },
         "required": [

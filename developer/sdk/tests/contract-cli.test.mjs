@@ -8,6 +8,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
@@ -15,6 +16,8 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const sdk = join(repoRoot, 'developer', 'sdk', 'src', 'sdk.js');
+const require = createRequire(import.meta.url);
+const { contractArtifacts } = require('../../../scripts/contract-registry.cjs');
 
 function runJson(args, cwd = repoRoot) {
   const result = spawnSync(process.execPath, [sdk, ...args], {
@@ -86,6 +89,12 @@ test('emits KFD-1 contract evidence for registered surfaces', () => {
   assert.equal(data.schema, 'kungfu.sdk.contract-evidence/v1');
   assert.equal(data.ok, true);
   assert.equal(data.releaseGate.kfd, 'KFD-1');
+  assert.equal(data.releaseGate.key, 'kfd-1');
+  assert.equal(data.releaseGate.metadata.package.version, '1.0.0-alpha.2');
+  assert.equal(
+    data.releaseGate.metadata.schemaIds.contractWorld,
+    'https://kfd.libkungfu.dev/schemas/kfd-1/contract-world.schema.json',
+  );
   assert.equal(data.releaseGate.role, 'local-evidence');
   assert.deepEqual(data.summary.surfaces, ['config', 'kfx', 'skill']);
   assert.equal(data.summary.count, 3);
@@ -99,6 +108,75 @@ test('emits KFD-1 contract evidence for registered surfaces', () => {
   const skill = runJson(['contract', 'evidence', 'skill', '--json']);
   assert.deepEqual(skill.summary.surfaces, ['skill']);
   assert.equal(skill.contracts[0].surface, 'skill');
+});
+
+test('prints the agent-first canonical policy from upstream KFD and Buildchain metadata', () => {
+  const data = runJson(['contract', 'policy', '--json']);
+  assert.equal(data.schema, 'kungfu.agent-first-canonical-policy/v1');
+  assert.equal(data.upstream.kfd.standard.key, 'kfd-1');
+  assert.equal(data.upstream.kfd.package.version, '1.0.0-alpha.2');
+  assert.equal(data.upstream.buildchain.package.version, '2.8.0');
+  assert.equal(
+    data.upstream.buildchain.formatting.name,
+    'buildchain-release-evidence-json-v1',
+  );
+  assert.equal(data.upstream.buildchain.releaseGate.passportKey, 'kfd-1');
+  assert.deepEqual(
+    data.surfaces.map((surface) => surface.surface),
+    ['config', 'kfx', 'skill'],
+  );
+  for (const surface of data.surfaces) {
+    assert.match(surface.source.sha256, /^sha256:[0-9a-f]{64}$/);
+    assert.equal(surface.source.byteForByte, true);
+    assert.equal(surface.artifact.expectedSha256, surface.source.sha256);
+  }
+});
+
+test('emits a Buildchain KFD-1 contract-world witness for registered surfaces', () => {
+  const data = runJson(['contract', 'witness', '--json']);
+  assert.equal(data.contract, 'kungfu-buildchain-kfd-1-witness-set');
+  assert.equal(data.standard, 'kfd-1');
+  assert.equal(data.metadata.kfdPackage.version, '1.0.0-alpha.2');
+  assert.equal(
+    data.canonicalPolicy.path,
+    'framework/contract/kungfu-agent-first-canonical-policy.json',
+  );
+  assert.match(data.contractWorld.digest, /^sha256:[0-9a-f]{64}$/);
+  assert.deepEqual(
+    data.surfaces.map((surface) => surface.name),
+    ['kungfu-config', 'kungfu-kfx', 'kungfu-skill'],
+  );
+});
+
+test('audits the contract world as current and Buildchain-release-gate compatible', () => {
+  const data = runJson(['contract', 'audit', '--json']);
+  assert.equal(data.schema, 'kungfu.sdk.contract-audit/v1');
+  assert.equal(data.ok, true);
+  assert.equal(data.status, 'current');
+  assert.equal(data.policy.status, 'current');
+  assert.equal(
+    data.releaseGate.contract,
+    'kungfu-buildchain-kfd-1-release-gate',
+  );
+  assert.equal(data.releaseGate.status, 'passed');
+  assert.equal(data.failures.length, 0);
+  assert.deepEqual(
+    data.contracts.map((contract) => contract.status),
+    ['current', 'current', 'current'],
+  );
+});
+
+test('packages the agent-first canonical policy through the contract registry helper', () => {
+  const artifacts = contractArtifacts();
+  assert.ok(
+    artifacts.some(
+      (artifact) =>
+        artifact.label === 'agent-first canonical policy' &&
+        artifact.source ===
+          'framework/contract/kungfu-agent-first-canonical-policy.json' &&
+        artifact.artifact === 'config/kungfu-agent-first-canonical-policy.json',
+    ),
+  );
 });
 
 test('adopt refuses a source path that does not match the registry', () => {
