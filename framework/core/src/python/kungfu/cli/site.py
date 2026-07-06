@@ -37,7 +37,8 @@ def abs_paths():
         ):
             continue  # don't mess with a PEP 302-supplied __file__
         try:
-            m.__file__ = os.path.abspath(m.__file__)
+            # __file__ may be None/absent; the except below is the guard by design
+            m.__file__ = os.path.abspath(m.__file__)  # type: ignore[type-var]
         except (AttributeError, OSError, TypeError):
             pass
         try:
@@ -519,7 +520,7 @@ def get_pypackages_path(root_dir, maxdepth=5):
         return None
 
     if "PEP582_PACKAGES" in os.environ:
-        return os.path.join(os.getenv("PEP582_PACKAGES"), "lib")
+        return os.path.join(os.environ["PEP582_PACKAGES"], "lib")
     find_paths = [root_dir]
     version = bare_version = ".".join(map(str, sys.version_info[:2]))
     if os.name == "nt" and sys.maxsize <= ((2) ** 32):

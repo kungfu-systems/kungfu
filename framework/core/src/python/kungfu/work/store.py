@@ -17,7 +17,7 @@ import hashlib
 import json
 import os
 import uuid
-from typing import Any
+from typing import Any, cast
 
 import kungfu
 
@@ -233,7 +233,7 @@ def load(runtime_dir):
     items: dict[str, Any] = {}
 
     def item(work_id, gen_time):
-        entry = items.setdefault(work_id, _shell(work_id))
+        entry = cast(dict[str, Any], items.setdefault(work_id, _shell(work_id)))
         entry["updated_time"] = gen_time
         return entry
 

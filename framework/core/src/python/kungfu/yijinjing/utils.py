@@ -42,6 +42,6 @@ def get_default_home_dir():
     if osname == "Darwin":
         home = os.path.join(user_home, "Library", "Application Support")
     if osname == "Windows":
-        app_data = os.path.join(os.getenv("USERPROFILE"), "AppData", "Roaming")
+        app_data = os.path.join(os.getenv("USERPROFILE", ""), "AppData", "Roaming")
         home = os.getenv("APPDATA", app_data)
     return os.path.join(home, "kungfu", "home")

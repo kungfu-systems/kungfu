@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
 
 from .catalog import build_catalog
 from .context import build_context_envelope, build_kungfu_environment
@@ -45,7 +45,7 @@ def build_skill_context(
 
 def load_skill_context_file(path: str) -> dict[str, Any]:
     with open(path, encoding="utf-8") as f:
-        return json.load(f)
+        return cast(dict[str, Any], json.load(f))
 
 
 def has_advertised_skills(envelope: Mapping[str, Any] | None) -> bool:

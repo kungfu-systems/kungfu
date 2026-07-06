@@ -8,7 +8,7 @@ import platform
 import sys
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from jsonschema import Draft202012Validator
 
@@ -146,7 +146,7 @@ def default_config(
         contract["resolution"]["placeholders"],
     )
     validate_config(defaults, contract=contract)
-    return defaults
+    return cast(dict[str, Any], defaults)
 
 
 def load_user_config(

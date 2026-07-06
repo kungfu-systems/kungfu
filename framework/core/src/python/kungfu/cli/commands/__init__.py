@@ -18,7 +18,7 @@ class PrioritizedCommandGroup(click.Group):
 
     def __init__(self, *args, **kwargs):
         self.help_priorities = {}
-        self.list_commands = self.list_commands_for_help
+        self.list_commands = self.list_commands_for_help  # type: ignore[method-assign]
         super(PrioritizedCommandGroup, self).__init__(*args, **kwargs)
 
     def get_help(self, ctx):
@@ -27,12 +27,14 @@ class PrioritizedCommandGroup(click.Group):
     def list_commands_for_help(self, ctx):
         """reorder the list of commands when listing the help"""
         commands = super(PrioritizedCommandGroup, self).list_commands(ctx)
-        commands = filter(lambda command: self.help_priorities[command] > 0, commands)
+        prioritized = filter(
+            lambda command: self.help_priorities[command] > 0, commands
+        )
         return (
             c[1]
             for c in sorted(
                 (self.help_priorities.get(command, self.DEFAULT_PRIORITY), command)
-                for command in commands
+                for command in prioritized
             )
         )
 

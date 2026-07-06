@@ -46,7 +46,9 @@ def _read_manifest_from_dir(package_dir):
 def _read_manifest_from_tgz(tgz):
     with tarfile.open(tgz, "r:gz") as archive:
         member = archive.getmember("package/package.json")
-        with archive.extractfile(member) as f:
+        extracted = archive.extractfile(member)
+        assert extracted is not None  # a regular file member always extracts
+        with extracted as f:
             return json.load(f)
 
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import Any, cast
 
 from .parser import SkillError, parse_skill
 
@@ -41,7 +41,7 @@ def find_skill(
     home: str, key_or_path: str, extra_paths: list[str] | None = None
 ) -> dict[str, Any]:
     if os.path.exists(key_or_path):
-        return parse_skill(key_or_path)
+        return cast(dict[str, Any], parse_skill(key_or_path))
     for skill in discover_skills(home, extra_paths):
         if skill["key"] == key_or_path:
             return skill
