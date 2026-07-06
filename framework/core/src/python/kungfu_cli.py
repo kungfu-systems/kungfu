@@ -13,9 +13,17 @@
 # nuitka-project: --warn-unusual-code
 # nuitka-project: --warn-implicit-exceptions
 #
-# nuitka-project: --include-package=numpy
-# nuitka-project: --include-package=pandas
-# nuitka-project: --include-package=plotly
+# 科学计算栈不进冻结核心：plotly / scipy / statsmodels / botocore / boto3 全仓零 import（量化遗留声明），
+# numpy / pandas 此前仅 journal.py find_sessions 用来渲染 sessions 表，已改为纯 stdlib（dict + tabulate）实现，
+# 核心运行时不再依赖。这些包被 --include-package 强行编入使冻结主二进制膨胀 ~235M、散落 C 扩展再占 ~110M；
+# 移除后按需能力应由 kfx（developer/sdk python-AOT）自带，核心只提供 python runtime。
+# nuitka-project: --nofollow-import-to=numpy
+# nuitka-project: --nofollow-import-to=pandas
+# nuitka-project: --nofollow-import-to=scipy
+# nuitka-project: --nofollow-import-to=statsmodels
+# nuitka-project: --nofollow-import-to=plotly
+# nuitka-project: --nofollow-import-to=botocore
+# nuitka-project: --nofollow-import-to=boto3
 #
 # nuitka-project: --nofollow-import-to=*.distutils
 # nuitka-project: --nofollow-import-to=*.tests
