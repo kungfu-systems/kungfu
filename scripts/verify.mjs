@@ -97,6 +97,31 @@ function exitLabel(status, signal) {
   return status == null ? `signal ${signal}` : status;
 }
 
+function assertContractArtifact(distKfc, contract) {
+  const repoContract = path.join(ROOT, ...contract.repo);
+  const distContract = path.join(distKfc, 'config', contract.file);
+  if (fs.existsSync(distContract)) {
+    const repoHash = sha256(repoContract);
+    const distHash = sha256(distContract);
+    if (repoHash === distHash) {
+      pass(
+        `${contract.label} artifact hash`,
+        `${path.relative(ROOT, distContract)} sha256:${distHash}`,
+      );
+    } else {
+      fail(
+        `${contract.label} artifact hash`,
+        `dist sha256:${distHash} != repo sha256:${repoHash}`,
+      );
+    }
+  } else {
+    fail(
+      `${contract.label} artifact exists`,
+      `not found ${path.relative(ROOT, distContract)} (build:core/freeze should copy it)`,
+    );
+  }
+}
+
 // run one pnpm task (via the pnpm dispatched by the current node/corepack); throw on failure
 /** @param {string} task */
 function runPnpm(task) {
@@ -284,37 +309,16 @@ function main() {
   let kungfuBin = null;
   if (fs.existsSync(distKfc) && fs.statSync(distKfc).isDirectory()) {
     pass('dist/kungfu directory exists', path.relative(ROOT, distKfc));
-    const repoContract = path.join(
-      ROOT,
-      'framework',
-      'config',
-      'kungfu-config.contract.json',
-    );
-    const distContract = path.join(
-      distKfc,
-      'config',
-      'kungfu-config.contract.json',
-    );
-    if (fs.existsSync(distContract)) {
-      const repoHash = sha256(repoContract);
-      const distHash = sha256(distContract);
-      if (repoHash === distHash) {
-        pass(
-          'config contract artifact hash',
-          `${path.relative(ROOT, distContract)} sha256:${distHash}`,
-        );
-      } else {
-        fail(
-          'config contract artifact hash',
-          `dist sha256:${distHash} != repo sha256:${repoHash}`,
-        );
-      }
-    } else {
-      fail(
-        'config contract artifact exists',
-        `not found ${path.relative(ROOT, distContract)} (build:core/freeze should copy it)`,
-      );
-    }
+    assertContractArtifact(distKfc, {
+      label: 'config contract',
+      file: 'kungfu-config.contract.json',
+      repo: ['framework', 'config', 'kungfu-config.contract.json'],
+    });
+    assertContractArtifact(distKfc, {
+      label: 'kfx contract',
+      file: 'kungfu-kfx.contract.json',
+      repo: ['framework', 'kfx', 'kungfu-kfx.contract.json'],
+    });
     kungfuBin = path.join(distKfc, isWin ? 'kungfu.exe' : 'kungfu');
     if (fs.existsSync(kungfuBin) && fs.statSync(kungfuBin).isFile()) {
       const detail = path.relative(ROOT, kungfuBin);
@@ -456,9 +460,43 @@ function main() {
         );
       }
     }
+    const kfxContract = spawnSync(kungfuBin, ['kfx', 'contract', '--json'], {
+      encoding: 'utf8',
+    });
+    if (kfxContract.status !== 0) {
+      fail(
+        'kfc kfx contract smoke',
+        `exit ${exitLabel(kfxContract.status, kfxContract.signal)}; output: ${`${kfxContract.stdout || ''}${kfxContract.stderr || ''}`.trim().slice(0, 200)}`,
+      );
+    } else {
+      try {
+        const contract = JSON.parse(kfxContract.stdout);
+        const repoContract = path.join(
+          ROOT,
+          'framework',
+          'kfx',
+          'kungfu-kfx.contract.json',
+        );
+        const expectedHash = `sha256:${sha256(repoContract)}`;
+        if (contract?.id === 'kungfu-kfx' && contract?.hash === expectedHash) {
+          pass('kfc kfx contract smoke', expectedHash);
+        } else {
+          fail(
+            'kfc kfx contract smoke',
+            `id ${contract?.id || '<missing>'}, hash ${contract?.hash || '<missing>'} != ${expectedHash}`,
+          );
+        }
+      } catch (e) {
+        fail(
+          'kfc kfx contract smoke',
+          `invalid JSON: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
+    }
   } else {
     fail('kfc runtime smoke', 'no kfc executable, skipped');
     fail('kfc config contract smoke', 'no kfc executable, skipped');
+    fail('kfc kfx contract smoke', 'no kfc executable, skipped');
   }
 
   // ── Stage 4: (optional) app build artifact ────────────────────────

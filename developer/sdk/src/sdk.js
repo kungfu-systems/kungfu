@@ -11,12 +11,15 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import Ajv2020 from 'ajv/dist/2020.js';
 
 const TEMPLATE_ROOT = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   '..',
   'templates',
 );
+const KFX_CONTRACT_FILE = 'kungfu-kfx.contract.json';
+const KFX_CONTRACT_ENV = 'KUNGFU_KFX_CONTRACT';
 
 /**
  * Print CLI usage and exit with the given status code.
@@ -268,7 +271,93 @@ function readManifest() {
   const manifestPath = path.resolve('package.json');
   if (!fs.existsSync(manifestPath))
     fail('no package.json in current directory');
-  return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  validateKfxManifest(manifest);
+  return manifest;
+}
+
+/**
+ * @param {string} start
+ * @returns {string[]}
+ */
+function ancestorDirs(start) {
+  const dirs = [];
+  let current = path.resolve(start);
+  for (let i = 0; i < 12; i += 1) {
+    dirs.push(current);
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  return dirs;
+}
+
+function resolveKfxContractPath() {
+  const explicit = process.env[KFX_CONTRACT_ENV];
+  if (explicit) return path.resolve(explicit);
+  for (const dir of ancestorDirs(process.cwd())) {
+    for (const rel of [
+      path.join('framework', 'kfx', KFX_CONTRACT_FILE),
+      path.join('kfx', KFX_CONTRACT_FILE),
+      path.join('config', KFX_CONTRACT_FILE),
+      path.join('node_modules', '@kungfu-tech', 'kfx', KFX_CONTRACT_FILE),
+    ]) {
+      const candidate = path.join(dir, rel);
+      if (fs.existsSync(candidate)) return candidate;
+    }
+  }
+  throw new Error(`Kungfu kfx contract not found: ${KFX_CONTRACT_FILE}`);
+}
+
+function loadKfxContract() {
+  const contractPath = resolveKfxContractPath();
+  const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8'));
+  if (!contract || typeof contract !== 'object' || Array.isArray(contract)) {
+    throw new Error(
+      `Kungfu kfx contract must be a JSON object: ${contractPath}`,
+    );
+  }
+  if (contract.schema !== 'kungfu.kfx.contract/v1') {
+    throw new Error(
+      `Kungfu kfx contract schema mismatch: ${String(contract.schema)}`,
+    );
+  }
+  validateWithSchema(contract, contract.contractSchema, 'KFX contract');
+  return contract;
+}
+
+/**
+ * @param {unknown} value
+ * @param {unknown} schema
+ * @param {string} label
+ * @returns {void}
+ */
+function validateWithSchema(value, schema, label) {
+  const AjvCtor =
+    /** @type {new (options: { allErrors: boolean, strict: boolean }) => { compile: (schema: unknown) => { (value: unknown): boolean, errors?: Array<{ instancePath?: string, message?: string }> } }} */ (
+      /** @type {unknown} */ (Ajv2020)
+    );
+  const ajv = new AjvCtor({ allErrors: true, strict: false });
+  const validate = ajv.compile(schema);
+  if (validate(value)) return;
+  const first = validate.errors?.[0];
+  const p = first?.instancePath || '<root>';
+  throw new Error(
+    `${label} validation failed at ${p}: ${first?.message || 'invalid document'}`,
+  );
+}
+
+/**
+ * @param {unknown} manifest
+ * @returns {void}
+ */
+function validateKfxManifest(manifest) {
+  const contract = loadKfxContract();
+  validateWithSchema(
+    manifest,
+    contract.packageManifestSchema,
+    'KFX package manifest',
+  );
 }
 
 // ── kfx C++ extension build ────────────────────────────────────────────────

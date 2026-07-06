@@ -64,6 +64,9 @@ process.env.KF_RUNTIME_DIR =
     ? path.join(app.getPath('userData'), 'runtime')
     : path.join(__dirname, '..', 'demo-runtime'));
 process.env.KFE_PATH = process.env.KFE_PATH || bindingPath;
+process.env.KUNGFU_KFX_CONTRACT =
+  process.env.KUNGFU_KFX_CONTRACT ||
+  path.join(kungfuDir, 'config', 'kungfu-kfx.contract.json');
 // Extension roots for the renderer's kfx loader. Installed extensions live
 // next to the runtime home (<home>/extensions, populated by `kungfu kfx
 // install`); in development the workspace extensions/ tree is the default

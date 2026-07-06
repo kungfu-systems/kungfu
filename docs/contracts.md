@@ -100,6 +100,43 @@ The living welded-surface register is [`versioning.md`](versioning.md), surface
 The contract source, runtime loader, and artifact hash gate are intended to be
 stable before GUI modules consume config.
 
+## The kfx contract is a single source of truth
+
+**Guarantee.** KFX package manifests (`package.json.kungfuConfig`),
+first-party trust manifests, discovery defaults, and build-facet compatibility
+rules have one machine-readable contract source:
+[`kungfu-kfx.contract.json`](../framework/kfx/kungfu-kfx.contract.json).
+Node hosts (`@kungfu-tech/kfx`, GUI, TUI, first-party manifest generation), the
+Python CLI (`kungfu kfx`), Skill dependency binding, and frozen products read
+that contract rather than carrying separate manifest shapes.
+
+The contract carries `contractSchema`, `packageManifestSchema`, and
+`firstPartyManifestSchema`. A package can still use current compatibility
+surfaces such as `kungfuBuild.python` or a package-root `CMakeLists.txt`, but
+the accepted manifest envelope and kind classification are described by this
+contract, not by ad hoc consumers.
+
+**Verify.** Run:
+
+```sh
+kungfu kfx contract --json
+kungfu kfx schema --json
+kungfu kfx inspect <package-dir-or-tgz> --json
+./kungfu-code verify
+```
+
+`verify` checks that the frozen artifact copy under
+`framework/core/dist/kungfu/config/` has the same SHA-256 as the repo contract,
+then confirms the frozen runtime reports the same hash through
+`kungfu kfx contract --json`.
+The living welded-surface register is [`versioning.md`](versioning.md), surface
+`kfx-contract`.
+
+**Maturity.** `draft` while the service facet continues to harden. The
+manifest schema, shared loaders, Python/Node validation, and artifact hash gate
+are intended to be stable before published third-party packages bind to the
+surface.
+
 ## How to read a guarantee here
 
 A contract is only as strong as its maturity tag. `stable` means implemented and

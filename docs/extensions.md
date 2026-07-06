@@ -62,9 +62,12 @@ app).
 ## The manifest (`kungfuConfig`)
 
 The static half of an extension lives in `package.json` — managers and
-installers read it without executing code. Field reference (source of
-truth: [`../framework/kfx/src/index.ts`](../framework/kfx/src/index.ts),
-types `KfxViewDecl` / `KfxSettingDecl` / `KfxSuiteDecl`):
+installers read it without executing code. Field reference source of truth is
+[`../framework/kfx/kungfu-kfx.contract.json`](../framework/kfx/kungfu-kfx.contract.json);
+TypeScript types in [`../framework/kfx/src/index.ts`](../framework/kfx/src/index.ts)
+must follow that contract. The SDK resolves the same contract from
+`KUNGFU_KFX_CONTRACT`, a monorepo checkout, frozen runtime config, or an
+extension project's installed `node_modules/@kungfu-tech/kfx` package:
 
 | Field | Meaning |
 |---|---|
@@ -81,12 +84,11 @@ types `KfxViewDecl` / `KfxSettingDecl` / `KfxSuiteDecl`):
 | `config.adapter.capabilities` | Capture-side capabilities the adapter needs; the same permission seam as a view's `capabilities` (reserved for enforcement). |
 | `suite.title`, `suite.members` | Marks a suite package; `members` lists member `key`s. Members arrive as their own packages (npm `dependencies`) and install individually. |
 
-The manifest is a welded surface the moment packages are published; until then
-it evolves with its in-repo consumers. Do not invent fields — the loader ignores
-what it does not know, and nothing else will read them. The proposed `service`
-facet is intentionally documented in [`kfx-topology.md`](kfx-topology.md) and
-ADR-0017, not as a shipped manifest field on this page, until its first
-production loader lands.
+The manifest is a welded surface. Do not invent fields: `kungfu kfx install`,
+`kungfu kfx inspect`, `@kungfu-tech/kfx`, the GUI/TUI loaders, Skill dependency
+binding, and frozen artifact verification all validate against the same KFX
+contract. The `service` facet is present in the contract as a draft facet while
+ADR-0017's process-hosting path hardens.
 
 ## The build contract
 

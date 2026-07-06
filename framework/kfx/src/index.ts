@@ -16,6 +16,7 @@ import type {
   Terminal,
   Work,
 } from '@kungfu-tech/api/capability';
+import Ajv2020 from 'ajv/dist/2020.js';
 import type React from 'react';
 
 // Re-export the terminal session types a view needs to build its own UI (pane
@@ -295,8 +296,189 @@ export type KfxLoadPlan = {
   failures: KfxPlanFailure[];
 };
 
+const KFX_CONTRACT_FILE = 'kungfu-kfx.contract.json';
+const KFX_CONTRACT_ENV = 'KUNGFU_KFX_CONTRACT';
+
+export type KfxContract = Record<string, unknown>;
+
 function planSha256(crypto: KfxPlanCrypto, data: string): string {
   return crypto.createHash('sha256').update(data).digest('hex');
+}
+
+function objectValue(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function stringValue(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length ? value : undefined;
+}
+
+function ancestorDirs(start: string, deps: KfxPlanDeps): string[] {
+  const dirs = [];
+  let current = deps.path.resolve(start);
+  for (let i = 0; i < 12; i += 1) {
+    dirs.push(current);
+    const parent = deps.path.dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  return dirs;
+}
+
+function validateJsonSchema(
+  value: unknown,
+  schema: unknown,
+  label: string,
+): void {
+  const AjvCtor = Ajv2020 as unknown as new (options: {
+    allErrors: boolean;
+    strict: boolean;
+  }) => {
+    compile: (schema: unknown) => {
+      (value: unknown): boolean;
+      errors?: Array<{ instancePath?: string; message?: string }>;
+    };
+  };
+  const ajv = new AjvCtor({ allErrors: true, strict: false });
+  const validate = ajv.compile(schema);
+  if (validate(value)) return;
+  const first = validate.errors?.[0];
+  const path = first?.instancePath || '<root>';
+  throw new Error(
+    `${label} validation failed at ${path}: ${first?.message || 'invalid document'}`,
+  );
+}
+
+export function resolveKfxContractPath(
+  env: Record<string, string | undefined>,
+  deps: KfxPlanDeps,
+  options: { contractPath?: string; cwd?: string } = {},
+): string {
+  const explicit = options.contractPath || env[KFX_CONTRACT_ENV];
+  if (explicit) return deps.path.resolve(explicit);
+  const candidates: string[] = [];
+  if (env.KUNGFU_DIR) {
+    candidates.push(
+      deps.path.join(env.KUNGFU_DIR, 'config', KFX_CONTRACT_FILE),
+    );
+  }
+  if (env.KF_FIRST_PARTY_MANIFEST) {
+    candidates.push(
+      deps.path.join(
+        deps.path.dirname(env.KF_FIRST_PARTY_MANIFEST),
+        'config',
+        KFX_CONTRACT_FILE,
+      ),
+    );
+  }
+  for (const start of [options.cwd, env.PWD].filter(Boolean) as string[]) {
+    for (const dir of ancestorDirs(start, deps)) {
+      candidates.push(
+        deps.path.join(dir, 'framework', 'kfx', KFX_CONTRACT_FILE),
+        deps.path.join(dir, 'kfx', KFX_CONTRACT_FILE),
+        deps.path.join(dir, 'config', KFX_CONTRACT_FILE),
+        deps.path.join(
+          dir,
+          'node_modules',
+          '@kungfu-tech',
+          'kfx',
+          KFX_CONTRACT_FILE,
+        ),
+      );
+    }
+  }
+  const found = candidates.find((candidate) => deps.fs.existsSync(candidate));
+  if (found) return found;
+  throw new Error(`Kungfu kfx contract not found: ${KFX_CONTRACT_FILE}`);
+}
+
+export function loadKfxContract(
+  env: Record<string, string | undefined>,
+  deps: KfxPlanDeps,
+  options: { contractPath?: string; cwd?: string } = {},
+): KfxContract {
+  const contractPath = resolveKfxContractPath(env, deps, options);
+  const parsed = JSON.parse(
+    deps.fs.readFileSync(contractPath, 'utf8'),
+  ) as unknown;
+  const contract = objectValue(parsed);
+  if (!contract) {
+    throw new Error(
+      `Kungfu kfx contract must be a JSON object: ${contractPath}`,
+    );
+  }
+  if (contract.schema !== 'kungfu.kfx.contract/v1') {
+    throw new Error(
+      `Kungfu kfx contract schema mismatch: ${String(contract.schema)}`,
+    );
+  }
+  validateJsonSchema(contract, contract.contractSchema, 'Kungfu kfx contract');
+  return contract;
+}
+
+export function kfxContractHash(
+  env: Record<string, string | undefined>,
+  deps: KfxPlanDeps,
+  options: { contractPath?: string; cwd?: string } = {},
+): string {
+  const contractPath = resolveKfxContractPath(env, deps, options);
+  return `sha256:${planSha256(
+    deps.crypto,
+    deps.fs.readFileSync(contractPath, 'utf8'),
+  )}`;
+}
+
+export function kfxContractMetadata(
+  env: Record<string, string | undefined>,
+  deps: KfxPlanDeps,
+  options: { contractPath?: string; cwd?: string } = {},
+): Record<string, unknown> {
+  const contractPath = resolveKfxContractPath(env, deps, options);
+  const contract = loadKfxContract(env, deps, {
+    ...options,
+    contractPath,
+  });
+  return {
+    schema: contract.schema,
+    id: contract.id,
+    version: contract.version,
+    weldedSurface: contract.weldedSurface,
+    path: contractPath,
+    hash: kfxContractHash(env, deps, { ...options, contractPath }),
+  };
+}
+
+export function kfxPackageManifestSchema(
+  env: Record<string, string | undefined>,
+  deps: KfxPlanDeps,
+): Record<string, unknown> {
+  return structuredClone(
+    objectValue(loadKfxContract(env, deps).packageManifestSchema) ?? {},
+  );
+}
+
+export function validateKfxPackageManifest(
+  manifest: unknown,
+  contract: KfxContract,
+): void {
+  validateJsonSchema(
+    manifest,
+    objectValue(contract.packageManifestSchema) ?? {},
+    'KFX package manifest',
+  );
+}
+
+function validateFirstPartyManifest(
+  manifest: unknown,
+  contract: KfxContract,
+): void {
+  validateJsonSchema(
+    manifest,
+    objectValue(contract.firstPartyManifestSchema) ?? {},
+    'KFX first-party manifest',
+  );
 }
 
 // The frozen first-party set (ADR-0013): trust is granted by membership here —
@@ -311,9 +493,11 @@ export function loadFirstPartyManifest(
   const p = env.KF_FIRST_PARTY_MANIFEST;
   if (!p || !deps.fs.existsSync(p)) return null;
   try {
+    const contract = loadKfxContract(env, deps);
     const parsed = JSON.parse(
       deps.fs.readFileSync(p, 'utf8'),
     ) as FirstPartyManifest;
+    validateFirstPartyManifest(parsed, contract);
     if (parsed?.version !== 1 || typeof parsed.keys !== 'object') return null;
     return parsed;
   } catch {
@@ -378,17 +562,37 @@ export function planKfx(
   const suites: Record<string, KfxSuiteDecl> = {};
   const failures: KfxPlanFailure[] = [];
   const seen = new Set<string>();
+  let contract: KfxContract;
 
   // trust is granted by the frozen first-party set (ADR-0013), never by which
   // root a package loaded from — a KF_EXTENSION_PATH entry no longer confers it.
+  try {
+    contract = loadKfxContract(env, deps);
+  } catch (e) {
+    return {
+      entries,
+      services,
+      suites,
+      failures: [
+        {
+          dir: '<kfx-contract>',
+          error: (e as Error).message,
+        },
+      ],
+    };
+  }
   const firstParty = loadFirstPartyManifest(env, deps);
 
   for (const root of extensionRoots(env, deps)) {
     for (const dir of packageDirs(root, deps)) {
       try {
-        const manifest = JSON.parse(
+        const parsed = JSON.parse(
           fs.readFileSync(path.join(dir, 'package.json'), 'utf8'),
-        ) as {
+        ) as unknown;
+        const manifestObject = objectValue(parsed);
+        if (!manifestObject?.kungfuConfig) continue; // not a kfx package
+        validateKfxPackageManifest(manifestObject, contract);
+        const manifest = manifestObject as {
           name?: string;
           version?: string;
           kungfuConfig?: {
@@ -416,7 +620,7 @@ export function planKfx(
           };
         };
         const config = manifest.kungfuConfig;
-        if (!config?.key) continue; // not a kfx package (or not one of ours)
+        if (!config?.key) continue; // not one of ours
         if (config.suite && !suites[config.key]) {
           suites[config.key] = config.suite;
         }

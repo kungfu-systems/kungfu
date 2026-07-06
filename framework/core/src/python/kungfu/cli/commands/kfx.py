@@ -16,6 +16,7 @@ import shutil
 import sys
 import tarfile
 
+from kungfu import kfx_contract
 from kungfu.cli.commands import kfc, PrioritizedCommandGroup
 from kungfu.rewind import first_party
 
@@ -38,30 +39,19 @@ def _install_root(ctx):
 
 
 def _read_manifest_from_dir(package_dir):
-    manifest_path = os.path.join(package_dir, "package.json")
-    with open(manifest_path) as f:
-        return json.load(f)
+    return kfx_contract.read_manifest_from_dir(package_dir)
 
 
 def _read_manifest_from_tgz(tgz):
-    with tarfile.open(tgz, "r:gz") as archive:
-        member = archive.getmember("package/package.json")
-        extracted = archive.extractfile(member)
-        assert extracted is not None  # a regular file member always extracts
-        with extracted as f:
-            return json.load(f)
+    return kfx_contract.read_manifest_from_tgz(tgz)
 
 
 def _kind(manifest):
-    config = manifest.get("kungfuConfig", {})
-    if "suite" in config:
-        return "suite"
-    facets = sorted((config.get("config") or {}).keys())
-    return "+".join(facets) if facets else "unknown"
+    return kfx_contract.package_kind(manifest)
 
 
 def _trusted(manifest):
-    return first_party.is_first_party((manifest.get("kungfuConfig") or {}).get("key"))
+    return first_party.is_first_party(kfx_contract.package_key(manifest))
 
 
 def _trust_notice(manifest):
@@ -104,10 +94,10 @@ def install(ctx, source, force):
             if is_tgz
             else _read_manifest_from_dir(source)
         )
-    except (OSError, KeyError, json.JSONDecodeError, tarfile.TarError) as e:
+    except (OSError, KeyError, ValueError, json.JSONDecodeError, tarfile.TarError) as e:
         click.echo(f"[kfx] unreadable package manifest: {e}", err=True)
         sys.exit(1)
-    key = (manifest.get("kungfuConfig") or {}).get("key")
+    key = kfx_contract.package_key(manifest)
     if not key:
         click.echo(
             "[kfx] package.json has no kungfuConfig.key — not a kfx package", err=True
@@ -158,16 +148,16 @@ def list_installed(ctx, as_json):
                 continue
             try:
                 manifest = _read_manifest_from_dir(package_dir)
-            except (OSError, json.JSONDecodeError):
+            except (OSError, ValueError, json.JSONDecodeError):
                 rows.append({"key": name, "error": "unreadable package.json"})
                 continue
-            config = manifest.get("kungfuConfig") or {}
+            key = kfx_contract.package_key(manifest) or name
             rows.append(
                 {
-                    "key": config.get("key", name),
+                    "key": key,
                     "package": manifest.get("name"),
                     "version": manifest.get("version"),
-                    "kind": _kind(manifest),
+                    "kind": kfx_contract.package_kind(manifest, package_dir),
                     "trusted": _trusted(manifest),
                     "path": package_dir,
                 }
@@ -203,3 +193,70 @@ def remove(ctx, key):
         sys.exit(1)
     shutil.rmtree(dest)
     click.echo(f"[kfx] removed {key}")
+
+
+@kfx.command(help="print the kfx contract metadata")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfx_command_context
+def contract(ctx, as_json):
+    try:
+        data = kfx_contract.load_contract()
+        metadata = kfx_contract.contract_metadata()
+        data["path"] = metadata["path"]
+        data["hash"] = metadata["hash"]
+    except (OSError, ValueError, json.JSONDecodeError) as e:
+        click.echo(f"[kfx] failed to load contract: {e}", err=True)
+        sys.exit(1)
+    if as_json:
+        click.echo(json.dumps(data, indent=2, sort_keys=True))
+        return
+    click.echo(json.dumps(data, indent=2, sort_keys=True))
+
+
+@kfx.command(help="print the kfx package manifest JSON schema")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfx_command_context
+def schema(ctx, as_json):
+    try:
+        data = kfx_contract.package_manifest_schema()
+    except (OSError, ValueError, json.JSONDecodeError) as e:
+        click.echo(f"[kfx] failed to load schema: {e}", err=True)
+        sys.exit(1)
+    if as_json:
+        click.echo(json.dumps(data, indent=2, sort_keys=True))
+        return
+    click.echo(json.dumps(data, indent=2, sort_keys=True))
+
+
+@kfx.command(help="inspect and validate a kfx package manifest")
+@click.argument("source", type=click.Path(exists=True))
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfx_command_context
+def inspect(ctx, source, as_json):
+    is_tgz = os.path.isfile(source)
+    try:
+        manifest = (
+            _read_manifest_from_tgz(source)
+            if is_tgz
+            else _read_manifest_from_dir(source)
+        )
+        data = {
+            "schema": "kungfu.kfx.inspect/v1",
+            "contract": kfx_contract.contract_metadata(),
+            "source": os.path.abspath(source),
+            "package": kfx_contract.package_summary(
+                manifest,
+                package_dir=None if is_tgz else source,
+            ),
+        }
+    except (OSError, KeyError, ValueError, json.JSONDecodeError, tarfile.TarError) as e:
+        click.echo(f"[kfx] invalid package manifest: {e}", err=True)
+        sys.exit(1)
+    if as_json:
+        click.echo(json.dumps(data, indent=2, sort_keys=True))
+        return
+    package = data["package"]
+    click.echo(
+        f"{package.get('key')}  {package.get('name')}@{package.get('version')}  "
+        f"({package.get('kind')})"
+    )

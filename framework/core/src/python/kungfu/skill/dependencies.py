@@ -3,6 +3,8 @@
 import json
 import os
 
+from kungfu import kfx_contract
+
 
 DEPENDENCY_SCHEMA = "kungfu.skill-dependencies/v1"
 
@@ -91,25 +93,7 @@ def _dependency_row(home, skill, dep):
 
 
 def _resolve_kfx_package(package_dir, expected_key):
-    manifest_path = os.path.join(package_dir, "package.json")
-    if not os.path.isfile(manifest_path):
-        return None
-    try:
-        with open(manifest_path, encoding="utf-8") as f:
-            manifest = json.load(f)
-    except (OSError, json.JSONDecodeError):
-        return None
-    config = manifest.get("kungfuConfig") or {}
-    key = config.get("key") or os.path.basename(package_dir)
-    if key != expected_key:
-        return None
-    facets = sorted((config.get("config") or {}).keys())
-    return {
-        "key": key,
-        "name": manifest.get("name"),
-        "version": manifest.get("version"),
-        "kind": "+".join(facets) if facets else "unknown",
-    }
+    return kfx_contract.resolve_kfx_package(package_dir, expected_key)
 
 
 def _kfx_registry_root(home):

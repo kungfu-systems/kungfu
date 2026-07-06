@@ -7,13 +7,23 @@ const path = require('node:path');
 const { prebuilt, shell } = require('../lib');
 
 const CORE = path.join(__dirname, '..');
-const CONFIG_CONTRACT = 'kungfu-config.contract.json';
+const CONTRACTS = [
+  {
+    name: 'kungfu-config.contract.json',
+    source: path.join(CORE, '..', 'config', 'kungfu-config.contract.json'),
+  },
+  {
+    name: 'kungfu-kfx.contract.json',
+    source: path.join(CORE, '..', 'kfx', 'kungfu-kfx.contract.json'),
+  },
+];
 
 function copyConfigContract() {
-  const from = path.join(CORE, '..', 'config', CONFIG_CONTRACT);
   const destDir = path.join(CORE, 'dist', 'kungfu', 'config');
   fs.mkdirSync(destDir, { recursive: true });
-  fs.copyFileSync(from, path.join(destDir, CONFIG_CONTRACT));
+  for (const contract of CONTRACTS) {
+    fs.copyFileSync(contract.source, path.join(destDir, contract.name));
+  }
 }
 
 function cpVsDependencies() {

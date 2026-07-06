@@ -10,11 +10,17 @@
 // whose bundles change on every rebuild) records `sha256: null` — trusted by key
 // alone. The hash must be computed exactly as the loader computes it
 // (`sha256(readFileSync(bundlePath, 'utf8'))`) or pinned keys will never match.
-import { createHash } from 'node:crypto';
+import nodeCrypto, { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import nodePath, { dirname, join } from 'node:path';
 
-import type { FirstPartyManifest, FirstPartyPin } from '@kungfu-tech/kfx';
+import {
+  type FirstPartyManifest,
+  type FirstPartyPin,
+  type KfxPlanDeps,
+  loadKfxContract,
+  validateKfxPackageManifest,
+} from '@kungfu-tech/kfx';
 
 function sha256(data: string): string {
   return createHash('sha256').update(data).digest('hex');
@@ -46,6 +52,16 @@ export function generateFirstPartyManifest(
   firstPartyRoot: string,
   opts: { pin: boolean },
 ): FirstPartyManifest {
+  const deps: KfxPlanDeps = {
+    fs: {
+      existsSync,
+      readFileSync: (p, enc) => readFileSync(p, enc as BufferEncoding),
+      readdirSync: (p, opts) => readdirSync(p, opts),
+    },
+    path: nodePath,
+    crypto: nodeCrypto as unknown as KfxPlanDeps['crypto'],
+  };
+  const contract = loadKfxContract(process.env, deps);
   const keys: Record<string, FirstPartyPin> = {};
   for (const dir of packageDirs(firstPartyRoot)) {
     let manifest: ViewManifest;
@@ -57,6 +73,7 @@ export function generateFirstPartyManifest(
       continue;
     }
     const config = manifest.kungfuConfig;
+    if (config) validateKfxPackageManifest(manifest, contract);
     const view = config?.config?.view;
     if (!config?.key || !view) continue; // only view facets carry a runtime tier
     if (config.key in keys) continue; // first occurrence wins, like the loader

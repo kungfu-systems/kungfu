@@ -17,12 +17,18 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
-  "files": ["src", "README.md"],
+  "sideEffects": false,
+  "files": [
+    "src",
+    "README.md",
+    "kungfu-kfx.contract.json"
+  ],
   "scripts": {
     "build": "tsc --noEmit"
   },
   "dependencies": {
-    "@kungfu-tech/api": "workspace:*"
+    "@kungfu-tech/api": "workspace:*",
+    "ajv": "^8.20.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",

@@ -59,6 +59,10 @@ pkg(root, 'untrusted-svc', {
   key: 'fixture.svc.untrusted',
   config: { service: { runtimes: ['node'], entry: { node: 'svc.mjs' } } },
 });
+pkg(root, 'invalid-view', {
+  key: 'fixture.invalid',
+  config: { view: { title: 'Invalid', capabilities: 'ledger' } },
+});
 
 const manifest = join(root, 'first-party.json');
 writeFileSync(
@@ -119,6 +123,14 @@ const tierMap = (p: typeof plan) =>
 ok(
   'loadTuiKfxPlan == planKfx (no host divergence; verdict is the shared rule)',
   tierMap(plan) === tierMap(direct),
+);
+ok(
+  'invalid kfx manifest rejected by contract schema',
+  plan.failures.some(
+    (failure) =>
+      failure.dir.endsWith('invalid-view') &&
+      failure.error.includes('KFX package manifest validation failed'),
+  ),
 );
 
 rmSync(root, { recursive: true, force: true });

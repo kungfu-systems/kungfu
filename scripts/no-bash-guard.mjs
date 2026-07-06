@@ -24,6 +24,14 @@ const SKIP_DIRS = new Set([
   'dist',
   'out',
 ]);
+const SKIP_PREFIXES = ['.venv-', 'venv-', 'env-'];
+
+function shouldSkipDir(name) {
+  return (
+    SKIP_DIRS.has(name) ||
+    SKIP_PREFIXES.some((prefix) => name.startsWith(prefix))
+  );
+}
 
 /** Repo-root path via git, or cwd if that fails. */
 export function repoRoot(cwd = process.cwd()) {
@@ -46,9 +54,7 @@ export function scanTree(root) {
     }
     for (const e of entries) {
       if (e.isDirectory()) {
-        if (!SKIP_DIRS.has(e.name) && !e.name.startsWith('.venv')) {
-          walk(path.join(dir, e.name));
-        }
+        if (!shouldSkipDir(e.name)) walk(path.join(dir, e.name));
       } else if (e.name.endsWith('.sh')) {
         hits.push(path.relative(root, path.join(dir, e.name)));
       }

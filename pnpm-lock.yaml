@@ -61,6 +61,9 @@ importers:
 
   developer/sdk:
     dependencies:
+      ajv:
+        specifier: ^8.20.0
+        version: 8.20.0
       esbuild:
         specifier: ^0.28.1
         version: 0.28.1
@@ -441,6 +444,9 @@ importers:
       '@kungfu-tech/api':
         specifier: workspace:*
         version: link:../api
+      ajv:
+        specifier: ^8.20.0
+        version: 8.20.0
       react:
         specifier: ^18.3.1
         version: 18.3.1

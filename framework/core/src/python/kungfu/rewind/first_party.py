@@ -19,6 +19,8 @@ import json
 import os
 import sys
 
+from kungfu import kfx_contract
+
 ENV_FIRST_PARTY_MANIFEST = "KF_FIRST_PARTY_MANIFEST"
 BAKED_MANIFEST_NAME = "first-party.json"
 
@@ -29,6 +31,8 @@ def _read_keys(path: str | None) -> set[str] | None:
     try:
         with open(path) as f:
             data = json.load(f)
+        if isinstance(data, dict):
+            kfx_contract.validate_first_party_manifest(data)
     except (OSError, ValueError):
         return None
     keys = data.get("keys")
@@ -55,8 +59,7 @@ def _source_extensions_root() -> str | None:
 
 def _package_key(pkg: str) -> str | None:
     try:
-        with open(os.path.join(pkg, "package.json")) as f:
-            return (json.load(f).get("kungfuConfig") or {}).get("key")
+        return kfx_contract.package_key(kfx_contract.read_manifest_from_dir(pkg))
     except (OSError, ValueError):
         return None
 

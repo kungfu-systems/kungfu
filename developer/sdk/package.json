@@ -25,6 +25,7 @@
     "build": "node --check src/sdk.js"
   },
   "dependencies": {
+    "ajv": "^8.20.0",
     "esbuild": "^0.28.1"
   }
 }
