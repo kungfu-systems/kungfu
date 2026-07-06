@@ -36,6 +36,15 @@ wheels = [
 ]
 
 [[package]]
+name = "attrs"
+version = "26.1.0"
+source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
+sdist = { url = "http://192.168.100.222:3141/root/pypi/+f/d03/ceb89cb322a8f/attrs-26.1.0.tar.gz", hash = "sha256:d03ceb89cb322a8fd706d4fb91940737b6642aa36998fe130a9bc96c985eff32" }
+wheels = [
+    { url = "http://192.168.100.222:3141/root/pypi/+f/c64/7aa4a12dfbad9/attrs-26.1.0-py3-none-any.whl", hash = "sha256:c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309" },
+]
+
+[[package]]
 name = "authing"
 version = "5.1.0"
 source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
@@ -470,6 +479,33 @@ wheels = [
 ]
 
 [[package]]
+name = "jsonschema"
+version = "4.25.1"
+source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
+dependencies = [
+    { name = "attrs" },
+    { name = "jsonschema-specifications" },
+    { name = "referencing" },
+    { name = "rpds-py" },
+]
+sdist = { url = "http://192.168.100.222:3141/root/pypi/+f/e4a/9655ce0da0c0b/jsonschema-4.25.1.tar.gz", hash = "sha256:e4a9655ce0da0c0b67a085847e00a3a51449e1157f4f75e9fb5aa545e122eb85" }
+wheels = [
+    { url = "http://192.168.100.222:3141/root/pypi/+f/3fb/a0169e345c717/jsonschema-4.25.1-py3-none-any.whl", hash = "sha256:3fba0169e345c7175110351d456342c364814cfcf3b964ba4587f22915230a63" },
+]
+
+[[package]]
+name = "jsonschema-specifications"
+version = "2025.9.1"
+source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
+dependencies = [
+    { name = "referencing" },
+]
+sdist = { url = "http://192.168.100.222:3141/root/pypi/+f/b54/0987f239e7456/jsonschema_specifications-2025.9.1.tar.gz", hash = "sha256:b540987f239e745613c7a9176f3edb72b832a4ac465cf02712288397832b5e8d" }
+wheels = [
+    { url = "http://192.168.100.222:3141/root/pypi/+f/988/02fee3a11ee76/jsonschema_specifications-2025.9.1-py3-none-any.whl", hash = "sha256:98802fee3a11ee76ecaca44429fda8a41bff98b00a0f2838151b113f210cc6fe" },
+]
+
+[[package]]
 name = "keyring"
 version = "25.5.0"
 source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
@@ -505,6 +541,7 @@ dependencies = [
     { name = "flatbuffers" },
     { name = "importlib-metadata" },
     { name = "jeepney", marker = "sys_platform == 'linux'" },
+    { name = "jsonschema" },
     { name = "keyring" },
     { name = "msgpack" },
     { name = "mypy" },
@@ -566,6 +603,7 @@ requires-dist = [
     { name = "flatbuffers", specifier = ">=25.2,<26" },
     { name = "importlib-metadata" },
     { name = "jeepney", marker = "sys_platform == 'linux'", specifier = "==0.8.0" },
+    { name = "jsonschema", specifier = "~=4.25.0" },
     { name = "keyring", specifier = "~=25.5.0" },
     { name = "msgpack" },
     { name = "mypy", specifier = "~=1.13" },
@@ -1100,6 +1138,19 @@ wheels = [
 ]
 
 [[package]]
+name = "referencing"
+version = "0.37.0"
+source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
+dependencies = [
+    { name = "attrs" },
+    { name = "rpds-py" },
+]
+sdist = { url = "http://192.168.100.222:3141/root/pypi/+f/44a/efc3142c5b842/referencing-0.37.0.tar.gz", hash = "sha256:44aefc3142c5b842538163acb373e24cce6632bd54bdb01b21ad5863489f50d8" }
+wheels = [
+    { url = "http://192.168.100.222:3141/root/pypi/+f/381/329a9f99628c9/referencing-0.37.0-py3-none-any.whl", hash = "sha256:381329a9f99628c9069361716891d34ad94af76e461dcb0335825aecc7692231" },
+]
+
+[[package]]
 name = "requests"
 version = "2.34.2"
 source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
@@ -1134,6 +1185,29 @@ dependencies = [
 sdist = { url = "http://192.168.100.222:3141/root/pypi/+f/edd/07a4824c6b401/rich-15.0.0.tar.gz", hash = "sha256:edd07a4824c6b40189fb7ac9bc4c52536e9780fbbfbddf6f1e2502c31b068c36" }
 wheels = [
     { url = "http://192.168.100.222:3141/root/pypi/+f/33b/d4ef74232fb73/rich-15.0.0-py3-none-any.whl", hash = "sha256:33bd4ef74232fb73fe9279a257718407f169c09b78a87ad3d296f548e27de0bb" },
+]
+
+[[package]]
+name = "rpds-py"
+version = "2026.6.3"
+source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
+sdist = { url = "http://192.168.100.222:3141/root/pypi/+f/1ce/bd1337c242e4e/rpds_py-2026.6.3.tar.gz", hash = "sha256:1cebd1337c242e4ec2293e541f712b2da849b29f48f0c293684b71c0632625d4" }
+wheels = [
+    { url = "http://192.168.100.222:3141/root/pypi/+f/3cf/e765c1da00726/rpds_py-2026.6.3-cp313-cp313-macosx_10_12_x86_64.whl", hash = "sha256:3cfe765c1da0072636ca06628261e0ea05688e160d5c8a03e0217c3854037223" },
+    { url = "http://192.168.100.222:3141/root/pypi/+f/f4d/78253f6996be4/rpds_py-2026.6.3-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:f4d78253f6996be4901669ad25319f842f740eccf4d58e3c7f3dd39e6dde1d8f" },
+    { url = "http://192.168.100.222:3141/root/pypi/+f/54f/45a148e28767b/rpds_py-2026.6.3-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:54f45a148e28767bf343d33a684693c70e451c6f4c0e9904709a723fafbdfc1f" },
+    { url = "http://192.168.100.222:3141/root/pypi/+f/842/e7b0704356222/rpds_py-2026.6.3-cp313-cp313-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:842e7b070435622248c7a2c44ae53fa1440e073cc3023bc919fed570884097a7" },
+    { url = "http://192.168.100.222:3141/root/pypi/+f/802/0133a74bd81b4/rpds_py-2026.6.3-cp313-cp313-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:8020133a74bd81b4572dd8e4be028a6b1ebcd70e6726edc3918008c08bee6ee6" },
+    { url = "http://192.168.100.222:3141/root/pypi/+f/cdc/7e35386f3847d/rpds_py-2026.6.3-cp313-cp313-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:cdc7e35386f3847df728fbcb5e887e2d79c19e2fa1eba9e51b6621d23e3243af" },
+    { url = "http://192.168.100.222:3141/root/pypi/+f/aca/c386b453c2516/rpds_py-2026.6.3-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:acac386b453c2516111b50985d60ce46e7fadb5ea71ae7b25f4c946935bf27cf" },
+    { url = "http://192.168.100.222:3141/root/pypi/+f/425/560c6fa0415f2/rpds_py-2026.6.3-cp313-cp313-manylinux_2_31_riscv64.whl", hash = "sha256:425560c6fa0415f27261727bb20bd097568485e5eb0c121f1949417d1c516885" },
+    { url = "http://192.168.100.222:3141/root/pypi/+f/a55/0fb4950a06dde/rpds_py-2026.6.3-cp313-cp313-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:a550fb4950a06dde3beb4721f5ad4b25bf4513784665b0a8522c792e2bd822a4" },
+    { url = "http://192.168.100.222:3141/root/pypi/+f/4f4/bca01b63096f6/rpds_py-2026.6.3-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:4f4bca01b63096f606e095734dd56e74e175f94cfbf24ff3d63281cec61f7bb7" },
+    { url = "http://192.168.100.222:3141/root/pypi/+f/ccf/fae9a092a00de/rpds_py-2026.6.3-cp313-cp313-musllinux_1_2_i686.whl", hash = "sha256:ccffae9a092a00deb7efd545fe5e2c33c33b88e7c054337e9a74c179347d0b7d" },
+    { url = "http://192.168.100.222:3141/root/pypi/+f/1cf/01971c4f2c555/rpds_py-2026.6.3-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:1cf01971c4f2c5553b772a542e4aaf191789cd331bc2cd4ff0e6e65ba49e1e97" },
+    { url = "http://192.168.100.222:3141/root/pypi/+f/8c3/d1e9c15b9d51c/rpds_py-2026.6.3-cp313-cp313-win32.whl", hash = "sha256:8c3d1e9c15b9d51ca0391e13da1a25a0a4df3c58a37c9dc368e0736cf7f69df0" },
+    { url = "http://192.168.100.222:3141/root/pypi/+f/925/0a9a0a6fd4648/rpds_py-2026.6.3-cp313-cp313-win_amd64.whl", hash = "sha256:9250a9a0a6fd4648b3f868da8d91a4c52b5811a62df58e753d50ae4454a36f80" },
+    { url = "http://192.168.100.222:3141/root/pypi/+f/900/a67df3fd1660b/rpds_py-2026.6.3-cp313-cp313-win_arm64.whl", hash = "sha256:900a67df3fd1660b035a4761c4ce73c382ea6b35f90f9863c36c6fd8bf8b09bb" },
 ]
 
 [[package]]

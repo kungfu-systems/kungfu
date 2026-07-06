@@ -18,7 +18,6 @@ from kungfu.skill import (
     append_audit_event,
     build_skill_dependency_binding,
     build_catalog,
-    build_context_envelope,
     build_skill_context,
     discover_skills,
     find_skill,
@@ -70,6 +69,15 @@ def _write_envelope_file(envelope):
     return path
 
 
+def _skill_context_env(ctx):
+    env = dict(os.environ)
+    env["KF_HOME"] = ctx.home
+    env["KF_RUNTIME_DIR"] = ctx.runtime_dir
+    if ctx.extension_path:
+        env["KF_EXTENSION_PATH"] = ctx.extension_path
+    return env
+
+
 def _write_node_envelope_file(ctx, paths, source, profile, agent):
     node = shutil.which("node")
     if not node:
@@ -101,7 +109,9 @@ def _write_node_envelope_file(ctx, paths, source, profile, agent):
         argv.extend(["--agent", agent])
     for path in paths:
         argv.extend(["--path", path])
-    proc = subprocess.run(argv, text=True, capture_output=True, check=False)
+    proc = subprocess.run(
+        argv, text=True, capture_output=True, check=False, env=_skill_context_env(ctx)
+    )
     if proc.returncode != 0:
         detail = (proc.stderr or proc.stdout).strip()
         raise SkillError(f"node manager context failed: {detail}")
@@ -275,15 +285,22 @@ def catalog(ctx, paths, as_json):
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @skill_command_context
 def context(ctx, paths, source, manager, profile, agent, as_json):
-    session = {"source": source, "manager": manager}
-    if profile:
-        session["profile"] = profile
-    if agent:
-        session["agent"] = agent
-    data = build_context_envelope(
-        build_catalog(discover_skills(ctx.home, _extra_paths(paths))),
-        session,
-    )
+    paths = _extra_paths(paths)
+    if manager == "node":
+        data = load_skill_context_file(
+            _write_node_envelope_file(ctx, paths, source, profile, agent)
+        )
+    else:
+        data = build_skill_context(
+            ctx.home,
+            source=source,
+            manager="python",
+            profile=profile,
+            agent=agent,
+            extra_paths=paths,
+            runtime_dir=ctx.runtime_dir,
+            env=_skill_context_env(ctx),
+        )
     _json(data)
 
 
@@ -341,6 +358,8 @@ def verify(
                 profile=profile,
                 agent=agent or provider,
                 extra_paths=paths,
+                runtime_dir=ctx.runtime_dir,
+                env=_skill_context_env(ctx),
             )
             context_file = _write_envelope_file(envelope)
     except SkillError as e:

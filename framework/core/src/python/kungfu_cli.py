@@ -32,6 +32,7 @@
 # nuitka-project: --nofollow-import-to=SCons
 # nuitka-project: --nofollow-import-to=scons
 # nuitka-project: --nofollow-import-to=nuitka
+# nuitka-project: --nofollow-import-to=mypy
 #
 # nuitka-project: --enable-plugin=pylint-warnings
 #

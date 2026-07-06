@@ -5,6 +5,8 @@ from . import journal
 from . import cockpit
 from . import trace
 from . import managed_run
+from . import config
+from . import agent
 from . import rewind
 from . import schema
 from . import work
@@ -19,6 +21,8 @@ __all__ = [
     "cockpit",
     "trace",
     "managed_run",
+    "config",
+    "agent",
     "rewind",
     "schema",
     "work",

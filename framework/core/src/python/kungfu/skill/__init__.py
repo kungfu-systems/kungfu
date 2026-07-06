@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from .catalog import build_catalog, catalog_entry
-from .context import build_context_envelope
+from .context import build_context_envelope, build_kungfu_environment
 from .dependencies import (
     build_skill_dependency_binding,
     read_skill_dependency_binding,
@@ -24,6 +24,7 @@ from .provider import (
     context_file_from_env,
     format_skill_context_prompt,
     has_advertised_skills,
+    has_context_envelope_info,
     inject_skill_context,
     load_skill_context_file,
 )
@@ -34,6 +35,7 @@ __all__ = [
     "append_audit_event",
     "build_catalog",
     "build_context_envelope",
+    "build_kungfu_environment",
     "build_skill_dependency_binding",
     "build_skill_context",
     "catalog_entry",
@@ -42,6 +44,7 @@ __all__ = [
     "find_skill",
     "format_skill_context_prompt",
     "has_advertised_skills",
+    "has_context_envelope_info",
     "inject_skill_context",
     "load_skill_context_file",
     "parse_skill",

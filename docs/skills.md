@@ -178,6 +178,11 @@ Example shape:
     "profile": "default",
     "agent": "codex"
   },
+  "kungfu": {
+    "schema": "kungfu.environment/v1",
+    "environment": "managed-run",
+    "agentEntrypoint": "kungfu agent context --json"
+  },
   "catalog": [
     {
       "key": "trace-failure-investigator",
@@ -202,6 +207,22 @@ Example shape:
 The default injection is the compact catalog plus the `kungfu.skill.read` tool.
 Full `SKILL.md` content is loaded only when the agent selects a skill. Loading a
 skill is an auditable event.
+
+The `kungfu` field is the managed environment contract, but it must stay small.
+It tells the agent only that it is running under Kungfu and gives the canonical
+local entrypoint for discovery. It does not carry resolved config, command
+lists, document lists, Skill roots, or kfx roots.
+
+Agents that need more information call:
+
+```sh
+kungfu agent context --json
+```
+
+That command is the single local fact source for config, runtime paths, Skill
+and kfx discovery, docs, and future Agent Onboarding Pack data. This keeps every
+managed-run prompt compact while still letting an agent self-serve when it needs
+to implement or debug a Kungfu Skill.
 
 ## Two manage modes
 

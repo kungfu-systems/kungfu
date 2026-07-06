@@ -26,6 +26,7 @@
 // @ts-check
 
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -77,7 +78,7 @@ const results = [];
  */
 function pass(name, detail) {
   results.push({ name, ok: true, detail: detail || '' });
-  console.log(`  ✅ ${name}${detail ? ' — ' + detail : ''}`);
+  console.log(`  ✅ ${name}${detail ? ` — ${detail}` : ''}`);
 }
 /**
  * @param {string} name
@@ -85,7 +86,15 @@ function pass(name, detail) {
  */
 function fail(name, detail) {
   results.push({ name, ok: false, detail: detail || '' });
-  console.error(`  ❌ ${name}${detail ? ' — ' + detail : ''}`);
+  console.error(`  ❌ ${name}${detail ? ` — ${detail}` : ''}`);
+}
+
+function sha256(file) {
+  return createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+}
+
+function exitLabel(status, signal) {
+  return status == null ? `signal ${signal}` : status;
 }
 
 // run one pnpm task (via the pnpm dispatched by the current node/corepack); throw on failure
@@ -99,7 +108,7 @@ function runPnpm(task) {
   });
   if (r.status !== 0) {
     throw new Error(
-      `pnpm ${task} failed (exit ${r.status == null ? 'signal ' + r.signal : r.status})`,
+      `pnpm ${task} failed (exit ${exitLabel(r.status, r.signal)})`,
     );
   }
 }
@@ -206,7 +215,7 @@ function main() {
       );
       if (probeBuild.status !== 0) {
         throw new Error(
-          `cpp probe build failed (exit ${probeBuild.status == null ? 'signal ' + probeBuild.signal : probeBuild.status})`,
+          `cpp probe build failed (exit ${exitLabel(probeBuild.status, probeBuild.signal)})`,
         );
       }
       // Python AOT dogfood probe: install its dependency (engage pdm) and
@@ -223,7 +232,7 @@ function main() {
       );
       if (pyProbeBuild.status !== 0) {
         throw new Error(
-          `python probe build failed (exit ${pyProbeBuild.status == null ? 'signal ' + pyProbeBuild.signal : pyProbeBuild.status})`,
+          `python probe build failed (exit ${exitLabel(pyProbeBuild.status, pyProbeBuild.signal)})`,
         );
       }
       if (withApp) runPnpm('build:app'); // webpack → framework/gui/dist/app
@@ -240,6 +249,37 @@ function main() {
   let kungfuBin = null;
   if (fs.existsSync(distKfc) && fs.statSync(distKfc).isDirectory()) {
     pass('dist/kungfu directory exists', path.relative(ROOT, distKfc));
+    const repoContract = path.join(
+      ROOT,
+      'framework',
+      'config',
+      'kungfu-config.contract.json',
+    );
+    const distContract = path.join(
+      distKfc,
+      'config',
+      'kungfu-config.contract.json',
+    );
+    if (fs.existsSync(distContract)) {
+      const repoHash = sha256(repoContract);
+      const distHash = sha256(distContract);
+      if (repoHash === distHash) {
+        pass(
+          'config contract artifact hash',
+          `${path.relative(ROOT, distContract)} sha256:${distHash}`,
+        );
+      } else {
+        fail(
+          'config contract artifact hash',
+          `dist sha256:${distHash} != repo sha256:${repoHash}`,
+        );
+      }
+    } else {
+      fail(
+        'config contract artifact exists',
+        `not found ${path.relative(ROOT, distContract)} (build:core/freeze should copy it)`,
+      );
+    }
     kungfuBin = path.join(distKfc, isWin ? 'kungfu.exe' : 'kungfu');
     if (fs.existsSync(kungfuBin) && fs.statSync(kungfuBin).isFile()) {
       const detail = path.relative(ROOT, kungfuBin);
@@ -338,7 +378,7 @@ function main() {
     if (r.status !== 0) {
       fail(
         'kfc --version exits 0',
-        `exit ${r.status == null ? 'signal ' + r.signal : r.status}; output: ${out.slice(0, 200)}`,
+        `exit ${exitLabel(r.status, r.signal)}; output: ${out.slice(0, 200)}`,
       );
     } else if (!out.includes(version)) {
       fail(
@@ -348,8 +388,42 @@ function main() {
     } else {
       pass('kfc runtime smoke', `--version contains ${version}`);
     }
+    const config = spawnSync(kungfuBin, ['config', 'show', '--json'], {
+      encoding: 'utf8',
+    });
+    if (config.status !== 0) {
+      fail(
+        'kfc config contract smoke',
+        `exit ${exitLabel(config.status, config.signal)}; output: ${`${config.stdout || ''}${config.stderr || ''}`.trim().slice(0, 200)}`,
+      );
+    } else {
+      try {
+        const resolved = JSON.parse(config.stdout);
+        const repoContract = path.join(
+          ROOT,
+          'framework',
+          'config',
+          'kungfu-config.contract.json',
+        );
+        const expectedHash = `sha256:${sha256(repoContract)}`;
+        if (resolved?.contract?.hash === expectedHash) {
+          pass('kfc config contract smoke', expectedHash);
+        } else {
+          fail(
+            'kfc config contract smoke',
+            `resolved hash ${resolved?.contract?.hash || '<missing>'} != ${expectedHash}`,
+          );
+        }
+      } catch (e) {
+        fail(
+          'kfc config contract smoke',
+          `invalid JSON: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
+    }
   } else {
     fail('kfc runtime smoke', 'no kfc executable, skipped');
+    fail('kfc config contract smoke', 'no kfc executable, skipped');
   }
 
   // ── Stage 4: (optional) app build artifact ────────────────────────
@@ -426,7 +500,7 @@ function main() {
         else
           fail(
             `slice ${name}`,
-            `${runner.label} exit ${r.status == null ? 'signal ' + r.signal : r.status}; tail: ${tail3(r)}`,
+            `${runner.label} exit ${exitLabel(r.status, r.signal)}; tail: ${tail3(r)}`,
           );
       }
       const guardMjs = path.join(core, 'src', 'libyijinjing', 'check-deps.mjs');
@@ -469,7 +543,7 @@ function main() {
         else
           fail(
             `fixture ${name}`,
-            `${runner.label} exit ${r.status == null ? 'signal ' + r.signal : r.status}; tail: ${tail3(r)}`,
+            `${runner.label} exit ${exitLabel(r.status, r.signal)}; tail: ${tail3(r)}`,
           );
       }
     }

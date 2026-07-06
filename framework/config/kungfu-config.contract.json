@@ -1,0 +1,257 @@
+{
+  "schema": "kungfu.config.contract/v1",
+  "id": "kungfu-config",
+  "version": 1,
+  "weldedSurface": "config-contract",
+  "description": "Single source for Kungfu global config schema, defaults, and resolution rules.",
+  "contractSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema",
+      "id",
+      "version",
+      "weldedSurface",
+      "description",
+      "contractSchema",
+      "resolution",
+      "configSchema",
+      "defaults"
+    ],
+    "properties": {
+      "schema": { "type": "string", "const": "kungfu.config.contract/v1" },
+      "id": { "type": "string", "const": "kungfu-config" },
+      "version": { "type": "integer", "minimum": 1 },
+      "weldedSurface": { "type": "string", "const": "config-contract" },
+      "description": { "type": "string" },
+      "contractSchema": { "type": "object" },
+      "resolution": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "configHomeEnv",
+          "runtimeHomeEnv",
+          "defaultConfigHome",
+          "defaultRuntimeHome",
+          "environmentFallbacks",
+          "userOverrideFile",
+          "merge",
+          "placeholders",
+          "overrideSchema",
+          "defaultsSchema",
+          "resolvedSchema"
+        ],
+        "properties": {
+          "configHomeEnv": { "type": "string" },
+          "runtimeHomeEnv": { "type": "string" },
+          "defaultConfigHome": { "type": "string" },
+          "defaultRuntimeHome": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["darwin", "win32", "linux", "default"],
+            "properties": {
+              "darwin": { "type": "string" },
+              "win32": { "type": "string" },
+              "linux": { "type": "string" },
+              "default": { "type": "string" }
+            }
+          },
+          "environmentFallbacks": {
+            "type": "object",
+            "additionalProperties": { "type": "string" },
+            "required": ["APPDATA", "USERPROFILE", "XDG_CONFIG_HOME"]
+          },
+          "userOverrideFile": { "type": "string" },
+          "merge": {
+            "type": "string",
+            "const": "deep-object-replace-array-scalar"
+          },
+          "placeholders": {
+            "type": "array",
+            "items": { "type": "string" },
+            "uniqueItems": true,
+            "allOf": [
+              { "contains": { "const": "configHome" } },
+              { "contains": { "const": "runtimeHome" } }
+            ]
+          },
+          "overrideSchema": {
+            "type": "string",
+            "const": "kungfu.config.override/v1"
+          },
+          "defaultsSchema": {
+            "type": "string",
+            "const": "kungfu.config.defaults/v1"
+          },
+          "resolvedSchema": {
+            "type": "string",
+            "const": "kungfu.config.resolved/v1"
+          }
+        }
+      },
+      "configSchema": { "type": "object" },
+      "defaults": { "type": "object" }
+    }
+  },
+  "resolution": {
+    "configHomeEnv": "KF_CONFIG_HOME",
+    "runtimeHomeEnv": "KF_HOME",
+    "defaultConfigHome": "~/.kungfu",
+    "defaultRuntimeHome": {
+      "darwin": "~/Library/Application Support/kungfu/home",
+      "win32": "${APPDATA}/kungfu/home",
+      "linux": "${XDG_CONFIG_HOME}/kungfu/home",
+      "default": "${XDG_CONFIG_HOME}/kungfu/home"
+    },
+    "environmentFallbacks": {
+      "APPDATA": "${USERPROFILE}/AppData/Roaming",
+      "USERPROFILE": "~",
+      "XDG_CONFIG_HOME": "~/.config"
+    },
+    "userOverrideFile": "config.json",
+    "merge": "deep-object-replace-array-scalar",
+    "placeholders": ["configHome", "runtimeHome"],
+    "overrideSchema": "kungfu.config.override/v1",
+    "defaultsSchema": "kungfu.config.defaults/v1",
+    "resolvedSchema": "kungfu.config.resolved/v1"
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema",
+      "paths",
+      "agent",
+      "managedRun",
+      "ui",
+      "shortcuts"
+    ],
+    "properties": {
+      "schema": {
+        "type": "string",
+        "enum": [
+          "kungfu.config.defaults/v1",
+          "kungfu.config.override/v1"
+        ]
+      },
+      "paths": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["configHome", "runtimeHome", "skills", "kfx"],
+        "properties": {
+          "configHome": { "type": "string" },
+          "runtimeHome": { "type": "string" },
+          "skills": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "kfx": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      },
+      "agent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["entrypoint", "skillInstallRoots"],
+        "properties": {
+          "entrypoint": { "type": "string" },
+          "skillInstallRoots": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["codex", "claude"],
+            "properties": {
+              "codex": { "type": "string" },
+              "claude": { "type": "string" }
+            }
+          }
+        }
+      },
+      "managedRun": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["injectSkillContext", "injectWhenSkillCatalogEmpty"],
+        "properties": {
+          "injectSkillContext": { "type": "boolean" },
+          "injectWhenSkillCatalogEmpty": { "type": "boolean" }
+        }
+      },
+      "ui": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["fontFamily", "fontSize", "scale"],
+        "properties": {
+          "fontFamily": { "type": "string" },
+          "fontSize": {
+            "type": "number",
+            "minimum": 8,
+            "maximum": 48
+          },
+          "scale": {
+            "type": "number",
+            "minimum": 0.5,
+            "maximum": 3
+          }
+        }
+      },
+      "shortcuts": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "commandPalette",
+          "quickOpen",
+          "zoomIn",
+          "zoomOut",
+          "zoomReset",
+          "toggleAgentPanel",
+          "toggleSkillManager"
+        ],
+        "properties": {
+          "commandPalette": { "type": "string" },
+          "quickOpen": { "type": "string" },
+          "zoomIn": { "type": "string" },
+          "zoomOut": { "type": "string" },
+          "zoomReset": { "type": "string" },
+          "toggleAgentPanel": { "type": "string" },
+          "toggleSkillManager": { "type": "string" }
+        }
+      }
+    }
+  },
+  "defaults": {
+    "schema": "kungfu.config.defaults/v1",
+    "paths": {
+      "configHome": "${configHome}",
+      "runtimeHome": "${runtimeHome}",
+      "skills": ["${configHome}/skills", "${runtimeHome}/skills"],
+      "kfx": ["${runtimeHome}/extensions", "${runtimeHome}/runtime/extensions"]
+    },
+    "agent": {
+      "entrypoint": "kungfu agent context --json",
+      "skillInstallRoots": {
+        "codex": "~/.codex/skills",
+        "claude": "~/.claude/skills"
+      }
+    },
+    "managedRun": {
+      "injectSkillContext": true,
+      "injectWhenSkillCatalogEmpty": true
+    },
+    "ui": {
+      "fontFamily": "system",
+      "fontSize": 14,
+      "scale": 1
+    },
+    "shortcuts": {
+      "commandPalette": "Mod+K",
+      "quickOpen": "Mod+P",
+      "zoomIn": "Mod+=",
+      "zoomOut": "Mod+-",
+      "zoomReset": "Mod+0",
+      "toggleAgentPanel": "Mod+Shift+A",
+      "toggleSkillManager": "Mod+Shift+S"
+    }
+  }
+}

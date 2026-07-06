@@ -12,8 +12,10 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs';
-import { homedir } from 'node:os';
+import { homedir, platform } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import Ajv from 'ajv/dist/2020.js';
 
 export type SkillKind = 'instruction-only' | 'kfx-backed';
 
@@ -66,6 +68,7 @@ export interface SkillContextEnvelope {
     agent?: string;
     [key: string]: unknown;
   };
+  kungfu?: KungfuEnvironment;
   catalog: SkillCatalogEntry[];
   tools: Array<{ name: string; description: string }>;
   audit: {
@@ -73,6 +76,22 @@ export interface SkillContextEnvelope {
     advertisedSkillsHash: string;
     [key: string]: unknown;
   };
+}
+
+export interface KungfuEnvironment {
+  schema: 'kungfu.environment/v1';
+  environment: 'managed-run' | 'test';
+  agentEntrypoint: string;
+}
+
+export interface KungfuResolvedConfig {
+  schema: 'kungfu.config.resolved/v1';
+  contract: Record<string, unknown>;
+  configHome: string;
+  configPath: string;
+  runtimeHome: string;
+  sources: Array<Record<string, unknown>>;
+  config: Record<string, unknown>;
 }
 
 export interface SkillDependencyPackage {
@@ -251,6 +270,7 @@ export interface SkillContextOptions {
   agent?: string;
   extraPaths?: string[];
   env?: Record<string, string | undefined>;
+  cwd?: string;
 }
 
 export interface SkillContextFileOptions extends SkillContextOptions {
@@ -323,9 +343,10 @@ export function buildCatalog(skills: SkillSource[]): SkillCatalog {
 export function buildContextEnvelope(
   catalog: SkillCatalog,
   session: SkillContextEnvelope['session'],
+  options: { kungfu?: KungfuEnvironment } = {},
 ): SkillContextEnvelope {
   const advertised = stableStringify(catalog.skills);
-  return {
+  const envelope: SkillContextEnvelope = {
     schema: 'kungfu.skill-context/v1',
     session,
     catalog: catalog.skills,
@@ -341,6 +362,8 @@ export function buildContextEnvelope(
         .digest('hex')}`,
     },
   };
+  if (options.kungfu) envelope.kungfu = options.kungfu;
+  return envelope;
 }
 
 export function skillRoots(
@@ -400,6 +423,14 @@ export function buildSkillContext(
       ),
     ),
     session,
+    {
+      kungfu: buildKungfuEnvironment(home, {
+        source: options.source,
+        extraPaths: options.extraPaths ?? [],
+        env: options.env ?? process.env,
+        cwd: options.cwd,
+      }),
+    },
   );
 }
 
@@ -584,23 +615,294 @@ export function hasAdvertisedSkills(envelope: SkillContextEnvelope): boolean {
   return envelope.catalog.length > 0;
 }
 
+export function hasContextEnvelopeInfo(
+  envelope: SkillContextEnvelope,
+): boolean {
+  return hasAdvertisedSkills(envelope) || Boolean(envelope.kungfu);
+}
+
 export function formatSkillContextPrompt(
   envelope: SkillContextEnvelope,
 ): string {
-  return [
+  const lines = [
     'Kungfu Skill context envelope (compact, on-demand instructions):',
     stableStringify(envelope),
+  ];
+  if (envelope.kungfu) {
+    lines.push(
+      'You are running under Kungfu managed-run. Use the kungfu field only as the pointer to the canonical local Kungfu agent entrypoint. Discover config, docs, commands, skills, and kfx from that entrypoint when needed.',
+    );
+  }
+  lines.push(
     'To load full SKILL.md content, ask the Kungfu host for kungfu.skill.read with a skill key.',
     'Skill instructions do not grant runtime privileges; kfx dependencies remain gated by kfx trust policy.',
-  ].join('\n');
+  );
+  return lines.join('\n');
 }
 
 export function injectSkillContext(
   prompt: string,
   envelope: SkillContextEnvelope,
 ): string {
-  if (!hasAdvertisedSkills(envelope)) return prompt;
+  if (!hasContextEnvelopeInfo(envelope)) return prompt;
   return `${formatSkillContextPrompt(envelope)}\n\nUser task:\n${prompt}`;
+}
+
+export function buildKungfuEnvironment(
+  home: string,
+  options: {
+    source?: SkillContextEnvelope['session']['source'];
+    extraPaths?: string[];
+    env?: Record<string, string | undefined>;
+    cwd?: string;
+  } = {},
+): KungfuEnvironment {
+  const config = resolveKungfuConfig({
+    runtimeHome: home,
+    env: options.env ?? process.env,
+  });
+  return {
+    schema: 'kungfu.environment/v1',
+    environment: options.source === 'test' ? 'test' : 'managed-run',
+    agentEntrypoint: requiredString(
+      objectValue(config.config.agent)?.entrypoint,
+      'config.agent.entrypoint',
+    ),
+  };
+}
+
+export function defaultKungfuConfigHome(
+  env: Record<string, string | undefined> = process.env,
+): string {
+  const contract = loadKungfuConfigContract({ env });
+  const resolution = objectValue(contract.resolution);
+  return resolve(
+    expandUserPath(
+      env[
+        requiredString(resolution?.configHomeEnv, 'resolution.configHomeEnv')
+      ] ||
+        requiredString(
+          resolution?.defaultConfigHome,
+          'resolution.defaultConfigHome',
+        ),
+    ),
+  );
+}
+
+export function defaultKungfuRuntimeHome(
+  env: Record<string, string | undefined> = process.env,
+): string {
+  const contract = loadKungfuConfigContract({ env });
+  const resolution = objectValue(contract.resolution);
+  const runtimeHomeEnv = requiredString(
+    resolution?.runtimeHomeEnv,
+    'resolution.runtimeHomeEnv',
+  );
+  if (env[runtimeHomeEnv]) return resolve(expandUserPath(env[runtimeHomeEnv]));
+  const templates = objectValue(resolution?.defaultRuntimeHome);
+  const template = requiredString(
+    templates?.[platform()] ?? templates?.default,
+    `resolution.defaultRuntimeHome.${platform()}`,
+  );
+  return resolve(
+    expandUserPath(
+      expandEnvironmentTemplate(
+        template,
+        env,
+        requiredObject(
+          resolution?.environmentFallbacks,
+          'resolution.environmentFallbacks',
+        ),
+      ),
+    ),
+  );
+}
+
+export function defaultKungfuConfig(
+  runtimeHome = defaultKungfuRuntimeHome(),
+  options: {
+    configHome?: string;
+    env?: Record<string, string | undefined>;
+    contractPath?: string;
+  } = {},
+): Record<string, unknown> {
+  const env = options.env ?? process.env;
+  const contract = loadKungfuConfigContract({
+    env,
+    contractPath: options.contractPath,
+  });
+  const resolution = objectValue(contract.resolution);
+  const configHome = resolve(
+    expandUserPath(options.configHome || defaultKungfuConfigHome(env)),
+  );
+  const config = expandConfigPlaceholders(
+    structuredClone(objectValue(contract.defaults) ?? {}),
+    {
+      configHome,
+      runtimeHome: resolve(expandUserPath(runtimeHome)),
+    },
+    requiredStringArray(resolution?.placeholders, 'resolution.placeholders'),
+  ) as Record<string, unknown>;
+  validateKungfuConfig(config, contract);
+  return config;
+}
+
+export function resolveKungfuConfig(
+  options: {
+    runtimeHome?: string;
+    configHome?: string;
+    env?: Record<string, string | undefined>;
+  } = {},
+): KungfuResolvedConfig {
+  const env = options.env ?? process.env;
+  const contract = loadKungfuConfigContract({ env });
+  const resolution = objectValue(contract.resolution);
+  const runtimeHomeEnv = requiredString(
+    resolution?.runtimeHomeEnv,
+    'resolution.runtimeHomeEnv',
+  );
+  const overrideFile = requiredString(
+    resolution?.userOverrideFile,
+    'resolution.userOverrideFile',
+  );
+  const runtimeHome = resolve(
+    expandUserPath(
+      options.runtimeHome ||
+        env[runtimeHomeEnv] ||
+        defaultKungfuRuntimeHome(env),
+    ),
+  );
+  const configHome = resolve(
+    expandUserPath(options.configHome || defaultKungfuConfigHome(env)),
+  );
+  const configPath = join(configHome, overrideFile);
+  const override = readKungfuUserConfig(configPath, contract);
+  const config = expandConfigPlaceholders(
+    deepMerge(defaultKungfuConfig(runtimeHome, { configHome, env }), override),
+    { configHome, runtimeHome },
+    requiredStringArray(resolution?.placeholders, 'resolution.placeholders'),
+  ) as Record<string, unknown>;
+  validateKungfuConfig(config, contract);
+  const metadata = kungfuConfigContractMetadata({ env });
+  return {
+    schema: requiredString(
+      resolution?.resolvedSchema,
+      'resolution.resolvedSchema',
+    ) as 'kungfu.config.resolved/v1',
+    contract: metadata,
+    configHome,
+    configPath,
+    runtimeHome,
+    sources: [
+      {
+        type: 'contract',
+        schema: metadata.schema,
+        id: metadata.id,
+        path: metadata.path,
+        hash: metadata.hash,
+      },
+      {
+        type: 'user',
+        schema:
+          stringValue(objectValue(override)?.schema) ||
+          requiredString(
+            resolution?.overrideSchema,
+            'resolution.overrideSchema',
+          ),
+        path: configPath,
+        exists: existsSync(configPath),
+      },
+    ],
+    config,
+  };
+}
+
+const CONFIG_CONTRACT_FILE = 'kungfu-config.contract.json';
+const CONFIG_CONTRACT_ENV = 'KUNGFU_CONFIG_CONTRACT';
+const SKILL_MODULE_DIR = dirname(fileURLToPath(import.meta.url));
+
+export function resolveKungfuConfigContractPath(
+  options: {
+    env?: Record<string, string | undefined>;
+    contractPath?: string;
+    cwd?: string;
+  } = {},
+): string {
+  const env = options.env ?? process.env;
+  const explicit = options.contractPath || env[CONFIG_CONTRACT_ENV];
+  if (explicit) return resolve(expandUserPath(explicit));
+  for (const start of [SKILL_MODULE_DIR, options.cwd ?? process.cwd()]) {
+    for (const directory of ancestorDirs(resolve(start))) {
+      for (const rel of [
+        join('framework', 'config', CONFIG_CONTRACT_FILE),
+        join('config', CONFIG_CONTRACT_FILE),
+      ]) {
+        const candidate = join(directory, rel);
+        if (existsSync(candidate)) return candidate;
+      }
+    }
+  }
+  throw new Error(`Kungfu config contract not found: ${CONFIG_CONTRACT_FILE}`);
+}
+
+export function loadKungfuConfigContract(
+  options: {
+    env?: Record<string, string | undefined>;
+    contractPath?: string;
+    cwd?: string;
+  } = {},
+): Record<string, unknown> {
+  const path = resolveKungfuConfigContractPath(options);
+  const parsed = JSON.parse(readFileSync(path, 'utf8')) as unknown;
+  const contract = objectValue(parsed);
+  if (!contract || Array.isArray(parsed)) {
+    throw new Error(`Kungfu config contract must be a JSON object: ${path}`);
+  }
+  if (contract.schema !== 'kungfu.config.contract/v1') {
+    throw new Error(
+      `Kungfu config contract schema mismatch: ${String(contract.schema)}`,
+    );
+  }
+  validateKungfuConfigContract(contract);
+  validateKungfuConfig(objectValue(contract.defaults) ?? {}, contract);
+  return contract;
+}
+
+export function kungfuConfigContractMetadata(
+  options: {
+    env?: Record<string, string | undefined>;
+    contractPath?: string;
+    cwd?: string;
+  } = {},
+): Record<string, unknown> {
+  const path = resolveKungfuConfigContractPath(options);
+  const contract = loadKungfuConfigContract({ ...options, contractPath: path });
+  return {
+    schema: contract.schema,
+    id: contract.id,
+    version: contract.version,
+    weldedSurface: contract.weldedSurface,
+    path,
+    hash: kungfuConfigContractHash(path),
+  };
+}
+
+export function kungfuConfigContractHash(contractPath?: string): string {
+  const path = resolveKungfuConfigContractPath({ contractPath });
+  return `sha256:${createHash('sha256')
+    .update(readFileSync(path))
+    .digest('hex')}`;
+}
+
+export function kungfuConfigSchema(
+  options: {
+    env?: Record<string, string | undefined>;
+    contractPath?: string;
+  } = {},
+): Record<string, unknown> {
+  return structuredClone(
+    objectValue(loadKungfuConfigContract(options).configSchema) ?? {},
+  );
 }
 
 function defaultAgentSkillRoots(
@@ -1203,6 +1505,206 @@ function objectValue(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === 'object'
     ? (value as Record<string, unknown>)
     : undefined;
+}
+
+function requiredObject(value: unknown, path: string): Record<string, unknown> {
+  const object = objectValue(value);
+  if (!object || Array.isArray(value)) {
+    throw new Error(`Kungfu config contract missing object: ${path}`);
+  }
+  return object;
+}
+
+function requiredString(value: unknown, path: string): string {
+  const string = stringValue(value);
+  if (!string)
+    throw new Error(`Kungfu config contract missing string: ${path}`);
+  return string;
+}
+
+function requiredStringArray(value: unknown, path: string): string[] {
+  const strings = stringArrayValue(value);
+  if (!strings) {
+    throw new Error(`Kungfu config contract missing string array: ${path}`);
+  }
+  return strings;
+}
+
+function readKungfuUserConfig(
+  configPath: string,
+  contract: Record<string, unknown>,
+): Record<string, unknown> {
+  const resolution = objectValue(contract.resolution);
+  if (!existsSync(configPath)) {
+    return {
+      schema: requiredString(
+        resolution?.overrideSchema,
+        'resolution.overrideSchema',
+      ),
+    };
+  }
+  const parsed = JSON.parse(readFileSync(configPath, 'utf8')) as unknown;
+  if (!objectValue(parsed) || Array.isArray(parsed)) {
+    throw new Error(
+      `Kungfu config override must be a JSON object: ${configPath}`,
+    );
+  }
+  validateKungfuConfig(parsed as Record<string, unknown>, contract, true);
+  return parsed as Record<string, unknown>;
+}
+
+function deepMerge(
+  base: Record<string, unknown>,
+  override: Record<string, unknown>,
+): Record<string, unknown> {
+  const result: Record<string, unknown> = structuredClone(base);
+  for (const [key, value] of Object.entries(override)) {
+    if (key === 'schema') continue;
+    const existing = result[key];
+    if (objectValue(existing) && objectValue(value)) {
+      result[key] = deepMerge(
+        existing as Record<string, unknown>,
+        value as Record<string, unknown>,
+      );
+    } else {
+      result[key] = structuredClone(value);
+    }
+  }
+  return result;
+}
+
+function expandConfigPlaceholders(
+  value: unknown,
+  replacements: Record<string, string>,
+  placeholders: string[],
+): unknown {
+  if (typeof value === 'string') {
+    let expanded = value;
+    for (const key of placeholders) {
+      expanded = expanded.replaceAll(`\${${key}}`, replacements[key]);
+    }
+    return expandUserPath(expanded);
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) =>
+      expandConfigPlaceholders(item, replacements, placeholders),
+    );
+  }
+  if (objectValue(value)) {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, item]) => [
+        key,
+        expandConfigPlaceholders(item, replacements, placeholders),
+      ]),
+    );
+  }
+  return value;
+}
+
+function validateKungfuConfig(
+  config: Record<string, unknown>,
+  contract: Record<string, unknown>,
+  partial = false,
+): void {
+  const schema = partial
+    ? partialJsonSchema(objectValue(contract.configSchema) ?? {})
+    : (objectValue(contract.configSchema) ?? {});
+  const AjvCtor = Ajv as unknown as new (options: {
+    allErrors: boolean;
+    strict: boolean;
+  }) => {
+    compile: (schema: unknown) => {
+      (value: unknown): boolean;
+      errors?: Array<{ instancePath?: string; message?: string }>;
+    };
+  };
+  const ajv = new AjvCtor({ allErrors: true, strict: false });
+  const validate = ajv.compile(schema);
+  if (validate(config)) return;
+  const first = validate.errors?.[0];
+  const path = first?.instancePath || '<root>';
+  throw new Error(
+    `Kungfu config validation failed at ${path}: ${first?.message || 'invalid config'}`,
+  );
+}
+
+function validateKungfuConfigContract(contract: Record<string, unknown>): void {
+  const schema = requiredObject(contract.contractSchema, 'contractSchema');
+  const AjvCtor = Ajv as unknown as new (options: {
+    allErrors: boolean;
+    strict: boolean;
+  }) => {
+    compile: (schema: unknown) => {
+      (value: unknown): boolean;
+      errors?: Array<{ instancePath?: string; message?: string }>;
+    };
+  };
+  const ajv = new AjvCtor({ allErrors: true, strict: false });
+  const validate = ajv.compile(schema);
+  if (validate(contract)) return;
+  const first = validate.errors?.[0];
+  const path = first?.instancePath || '<root>';
+  throw new Error(
+    `Kungfu config contract validation failed at ${path}: ${first?.message || 'invalid contract'}`,
+  );
+}
+
+function partialJsonSchema(schema: unknown): unknown {
+  if (Array.isArray(schema))
+    return schema.map((item) => partialJsonSchema(item));
+  if (!objectValue(schema)) return schema;
+  const { required: _required, ...result } = structuredClone(
+    schema as Record<string, unknown>,
+  );
+  const properties = objectValue(result.properties);
+  if (properties) {
+    result.properties = Object.fromEntries(
+      Object.entries(properties).map(([key, value]) => [
+        key,
+        partialJsonSchema(value),
+      ]),
+    );
+  }
+  if ('items' in result) result.items = partialJsonSchema(result.items);
+  return result;
+}
+
+function stringArrayValue(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  if (!value.every((item) => typeof item === 'string')) return undefined;
+  return value as string[];
+}
+
+function expandUserPath(path: string): string {
+  if (path === '~') return homedir();
+  if (path.startsWith('~/')) return join(homedir(), path.slice(2));
+  return path;
+}
+
+function expandEnvironmentTemplate(
+  value: string,
+  env: Record<string, string | undefined>,
+  fallbacks: Record<string, unknown>,
+): string {
+  let expanded = value;
+  for (let i = 0; i < 4; i += 1) {
+    let changed = false;
+    for (const key of Object.keys(fallbacks).sort()) {
+      const token = `\${${key}}`;
+      if (!expanded.includes(token)) continue;
+      expanded = expanded.replaceAll(
+        token,
+        env[key] ||
+          requiredString(
+            fallbacks[key],
+            `resolution.environmentFallbacks.${key}`,
+          ),
+      );
+      changed = true;
+    }
+    if (!changed) break;
+  }
+  return expanded;
 }
 
 function booleanValue(value: unknown, fallback: boolean): boolean {
