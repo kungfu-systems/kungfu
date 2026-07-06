@@ -5,9 +5,9 @@ from . import journal
 from . import cockpit
 from . import trace
 from . import managed_run
-from . import contract
 from . import report
 from . import remote
+from . import contract
 from . import config
 from . import agent
 from . import rewind
@@ -25,9 +25,9 @@ __all__ = [
     "cockpit",
     "trace",
     "managed_run",
-    "contract",
     "report",
     "remote",
+    "contract",
     "config",
     "agent",
     "rewind",
