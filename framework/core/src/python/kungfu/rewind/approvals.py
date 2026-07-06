@@ -18,6 +18,8 @@
 # scope here — a caller that knows its provider passes the exact response
 # strings.
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Callable, Optional
 
@@ -43,7 +45,12 @@ DEFAULT_DENY_INPUT = "n\n"
 INTERRUPT_SIGNAL = "SIGINT"
 
 
-def _action_for(decision, approve_input, deny_input, resume_input) -> ControlAction:
+def _action_for(
+    decision: int,
+    approve_input: str,
+    deny_input: str,
+    resume_input: Optional[str],
+) -> ControlAction:
     if decision == Decision.Interrupt:
         return ControlAction("signal", signal=INTERRUPT_SIGNAL)
     if decision == Decision.Approve:

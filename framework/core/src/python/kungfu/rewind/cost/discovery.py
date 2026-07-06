@@ -15,7 +15,7 @@ import dataclasses
 import shutil
 import subprocess
 import sys
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 # Codex ships a working CLI inside the macOS app bundle even when `codex` is not
 # on the shell PATH (smoke evidence 2026-07-04). Discovery checks it explicitly
@@ -44,7 +44,7 @@ class ProviderDiscovery:
     path: Optional[str] = None
     path_class: Optional[str] = None
     version: Optional[str] = None
-    candidates_checked: list = dataclasses.field(default_factory=list)
+    candidates_checked: list[str] = dataclasses.field(default_factory=list)
     error: Optional[str] = None
 
     def to_dict(self) -> dict:
@@ -75,8 +75,10 @@ def _default_version_probe(path: str) -> Optional[str]:
 
 # Candidate builders: given the resolver, yield (path, path_class) pairs to try
 # in priority order. Each provider owns its own known locations here.
-def _codex_candidates(which, platform):
-    hits = []
+def _codex_candidates(
+    which: Callable[[str], Optional[str]], platform: str
+) -> list[tuple[str, str]]:
+    hits: list[tuple[str, str]] = []
     on_path = which("codex")
     if on_path:
         hits.append((on_path, PATH_CLASS_PATH))
@@ -85,8 +87,10 @@ def _codex_candidates(which, platform):
     return hits
 
 
-def _claude_candidates(which, platform):
-    hits = []
+def _claude_candidates(
+    which: Callable[[str], Optional[str]], platform: str
+) -> list[tuple[str, str]]:
+    hits: list[tuple[str, str]] = []
     on_path = which("claude")
     if on_path:
         hits.append((on_path, PATH_CLASS_PATH))
@@ -145,9 +149,9 @@ def discover_provider(
 
 
 def discover_providers(
-    providers: Optional[list] = None,
-    **kwargs,
-) -> dict:
+    providers: Optional[list[str]] = None,
+    **kwargs: Any,
+) -> dict[str, ProviderDiscovery]:
     """Discover several providers at once; returns {provider: ProviderDiscovery}.
 
     Defaults to the built-in provider set (codex, claude). All keyword args pass

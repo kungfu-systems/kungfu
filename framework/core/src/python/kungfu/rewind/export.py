@@ -6,6 +6,8 @@
 # a fully functional runtime home for that run: show, verify and the app all
 # work against it exactly as against the original.
 
+from __future__ import annotations
+
 import json
 import os
 import zipfile
@@ -19,13 +21,13 @@ EXPORT_META = "rewind-export.json"
 EXPORT_SUFFIX = ".rewind.zip"
 
 
-def _run_paths(runtime_dir, run_id):
+def _run_paths(runtime_dir: str, run_id: str) -> tuple[str, str]:
     journal_dir = os.path.join(runtime_dir, "journal", "system", "rewind", run_id)
     bundle_dir = os.path.join(runtime_dir, "rewind", run_id)
     return journal_dir, bundle_dir
 
 
-def export_run(runtime_dir, run_id, out_path=None):
+def export_run(runtime_dir: str, run_id: str, out_path: str | None = None) -> str:
     """Zip one run's journal + bundle, layout-preserving. Returns the path."""
     journal_dir, bundle_dir = _run_paths(runtime_dir, run_id)
     if not os.path.isdir(journal_dir):
@@ -56,7 +58,7 @@ def export_run(runtime_dir, run_id, out_path=None):
     return out_path
 
 
-def open_export(archive_path, target_dir):
+def open_export(archive_path: str, target_dir: str) -> tuple[str, str]:
     """Extract an export into target_dir; returns (run_id, runtime_dir)."""
     with zipfile.ZipFile(archive_path) as zf:
         meta_raw = zf.read(EXPORT_META)
