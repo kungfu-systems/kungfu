@@ -8,33 +8,37 @@
 # {"__sandboxCallback": id} marker; when the host bridges it back as an event,
 # the registered callback fires.
 
+from __future__ import annotations
+
 import json
 import sys
 import threading
+from collections.abc import Callable, Iterable
+from typing import Any, TextIO
 
 
 class _Channel:
     """Reads host->guest frames on a background thread: results wake the
     invoke() that is waiting on their id; events fire registered callbacks."""
 
-    def __init__(self, read_stream, write_stream):
+    def __init__(self, read_stream: TextIO, write_stream: TextIO) -> None:
         self._read = read_stream
         self._write = write_stream
         self._write_lock = threading.Lock()
         self._cond = threading.Condition()
-        self._results = {}
+        self._results: dict[Any, dict[str, Any]] = {}
         self._seq = 0
-        self._callbacks = {}
+        self._callbacks: dict[int, Callable[..., Any]] = {}
         self._reader = threading.Thread(target=self._read_loop, daemon=True)
         self._reader.start()
 
-    def _send(self, msg):
+    def _send(self, msg: dict[str, Any]) -> None:
         line = json.dumps(msg) + "\n"
         with self._write_lock:
             self._write.write(line)
             self._write.flush()
 
-    def _read_loop(self):
+    def _read_loop(self) -> None:
         while True:
             line = self._read.readline()
             if not line:
@@ -56,8 +60,8 @@ class _Channel:
                 if callback is not None:
                     callback(*msg.get("args", []))
 
-    def _marshal(self, args):
-        out = []
+    def _marshal(self, args: list[Any]) -> list[Any]:
+        out: list[Any] = []
         for arg in args:
             if callable(arg):
                 self._seq += 1
@@ -67,7 +71,7 @@ class _Channel:
                 out.append(arg)
         return out
 
-    def invoke(self, cap, method, args):
+    def invoke(self, cap: str, method: str, args: list[Any]) -> Any:
         self._seq += 1
         ident = self._seq
         self._send(
@@ -89,18 +93,22 @@ class _Channel:
 
 
 class _Capability:
-    def __init__(self, channel, cap):
+    def __init__(self, channel: _Channel, cap: str) -> None:
         self._channel = channel
         self._cap = cap
 
-    def __getattr__(self, method):
-        def call(*args):
+    def __getattr__(self, method: str) -> Callable[..., Any]:
+        def call(*args: Any) -> Any:
             return self._channel.invoke(self._cap, method, list(args))
 
         return call
 
 
-def connect(declared, read_stream=None, write_stream=None):
+def connect(
+    declared: Iterable[str],
+    read_stream: TextIO | None = None,
+    write_stream: TextIO | None = None,
+) -> dict[str, _Capability]:
     """Build the capability object a sandboxed Python child receives: exactly the
     declared capabilities, each forwarded to the host over the channel (the
     child's stdio by default)."""
