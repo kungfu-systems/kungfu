@@ -13,9 +13,16 @@
 # nuitka-project: --warn-unusual-code
 # nuitka-project: --warn-implicit-exceptions
 #
-# nuitka-project: --include-package=numpy
-# nuitka-project: --include-package=pandas
-# nuitka-project: --include-package=plotly
+# 科学计算栈(numpy/pandas/scipy/statsmodels/plotly/botocore)不打进冻结运行时：
+# 全仓核心路径实测零 import(numpy 仅经 pandas 间接依赖，pandas 原仅 journal.py
+# find_sessions 一处，已改为不依赖 DataFrame)。这些包编进冻结体使主二进制膨胀
+# ~235M、散落 C 扩展 ~110M。需要重科学能力的场景由 kfx 自带依赖(engage 工具链)另案落地。
+# nuitka-project: --nofollow-import-to=numpy
+# nuitka-project: --nofollow-import-to=pandas
+# nuitka-project: --nofollow-import-to=scipy
+# nuitka-project: --nofollow-import-to=statsmodels
+# nuitka-project: --nofollow-import-to=plotly
+# nuitka-project: --nofollow-import-to=botocore
 #
 # nuitka-project: --nofollow-import-to=*.distutils
 # nuitka-project: --nofollow-import-to=*.tests

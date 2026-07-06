@@ -62,51 +62,52 @@ def collect_journal_locations(ctx):
     return locations
 
 
+SESSION_COLUMNS = [
+    "id",
+    "mode",
+    "category",
+    "group",
+    "name",
+    "begin_time",
+    "update_time",
+    "end_time",
+    "closed",
+    "duration",
+]
+
+
 def find_sessions(ctx):
     io_device = yjj.io_device(ctx.console_location)
     session_finder = yjj.session_finder(io_device)
     ctx.session_count = 1
-    import pandas
-
-    sessions_df = pandas.DataFrame(
-        columns=[
-            "id",
-            "mode",
-            "category",
-            "group",
-            "name",
-            "begin_time",
-            "update_time",
-            "end_time",
-            "closed",
-            "duration",
-        ]
-    )
     for_app = "app_location" in dir(ctx)
     sessions = (
         session_finder.find_sessions_for(ctx.app_location)
         if for_app
         else session_finder.find_sessions()
     )
+    rows = []
     for session in sessions:
-        sessions_df.loc[len(sessions_df)] = [
-            len(sessions_df) + 1,
-            lf.enums.get_mode_name(session.mode),
-            lf.enums.get_category_name(session.category),
-            session.group,
-            session.name,
-            session.begin_time,
-            session.update_time,
-            session.end_time,
-            session.end_time != 0,
-            abs(session.update_time) - session.begin_time,
-        ]
-    return sessions_df
+        rows.append(
+            {
+                "id": len(rows) + 1,
+                "mode": lf.enums.get_mode_name(session.mode),
+                "category": lf.enums.get_category_name(session.category),
+                "group": session.group,
+                "name": session.name,
+                "begin_time": session.begin_time,
+                "update_time": session.update_time,
+                "end_time": session.end_time,
+                "closed": session.end_time != 0,
+                "duration": abs(session.update_time) - session.begin_time,
+            }
+        )
+    return rows
 
 
 def find_session(ctx, session_id):
     all_sessions = find_sessions(ctx)
-    return all_sessions[all_sessions["id"] == session_id].iloc[0]
+    return next(session for session in all_sessions if session["id"] == session_id)
 
 
 def make_location_from_dict(ctx, location):

@@ -88,22 +88,32 @@ def journal(ctx, mode, category, group, name):
 )
 @journal_command_context
 def sessions(ctx, sortby, ascending, tablefmt):
-    all_sessions = kfj.find_sessions(ctx).sort_values(by=sortby, ascending=ascending)
-    all_sessions["begin_time"] = all_sessions["begin_time"].apply(
-        lambda t: kft.strftime(t, kft.SESSION_DATETIME_FORMAT)
+    all_sessions = sorted(
+        kfj.find_sessions(ctx),
+        key=lambda session: session[sortby],
+        reverse=not ascending,
     )
-    all_sessions["update_time"] = all_sessions["update_time"].apply(
-        lambda t: kft.strftime(abs(t), kft.SESSION_DATETIME_FORMAT)
-    )
-    all_sessions["end_time"] = all_sessions["end_time"].apply(
-        lambda t: kft.strftime(abs(t), kft.SESSION_DATETIME_FORMAT)
-    )
-    all_sessions["duration"] = all_sessions["duration"].apply(
-        lambda t: kft.strftime(t - kft.DURATION_TZ_ADJUST, kft.DURATION_FORMAT)
-    )
+    for session in all_sessions:
+        session["begin_time"] = kft.strftime(
+            session["begin_time"], kft.SESSION_DATETIME_FORMAT
+        )
+        session["update_time"] = kft.strftime(
+            abs(session["update_time"]), kft.SESSION_DATETIME_FORMAT
+        )
+        session["end_time"] = kft.strftime(
+            abs(session["end_time"]), kft.SESSION_DATETIME_FORMAT
+        )
+        session["duration"] = kft.strftime(
+            session["duration"] - kft.DURATION_TZ_ADJUST, kft.DURATION_FORMAT
+        )
 
     table = tabulate(
-        all_sessions.values, headers=all_sessions.columns, tablefmt=tablefmt
+        [
+            [session[column] for column in kfj.SESSION_COLUMNS]
+            for session in all_sessions
+        ],
+        headers=kfj.SESSION_COLUMNS,
+        tablefmt=tablefmt,
     )
 
     (term_width, term_height) = shutil.get_terminal_size()
