@@ -218,6 +218,61 @@ Codex report receipts, and the remote fact boundary. Workflow enforcement is
 not yet enabled; release maintainers can run the generator manually before
 Buildchain release-passport collection.
 
+## The agent-first bridge is Kungfu's current KFD-3 profile
+
+**Guarantee.** The installed runtime carries a local Agent Onboarding Pack and
+machine-readable commands that let an agent start from a minimal artifact-local
+entrypoint instead of guessing from external notes:
+
+```sh
+kungfu agent brief
+kungfu agent capabilities --json
+kungfu agent choose-mode --json
+```
+
+This is Kungfu's current concrete profile of KFD-3: cooperation starts from
+transparent value and constraints. KFD-3 itself is not agent-only; the general
+participant-facing schema belongs in the KFD repository as a collaboration
+interface. Kungfu's first profile is agent-first because agents are the current
+non-human collaborators that need local discovery, mode choice, safety
+boundaries, and receipt/closeout instructions.
+
+The target implementation is a closed participant-facing API surface:
+
+- one Kungfu-owned registry declares public-agent, public-human, experimental,
+  deprecated, internal, and unsupported entrypoints;
+- CLI/help/docs/skills/JSON command catalogs are generated from that registry
+  or explicitly anchored to it in implementation code;
+- Markdown operation manuals are generated or linted against the same registry;
+- reverse audit enumerates the shipped command tree and fails if a reachable
+  entrypoint is not classified;
+- `kungfu agent verify --json` proves the installed artifact can expose the
+  same first-party facts it asks agents to use.
+
+In other words, KFD-3 is not satisfied by "there is documentation." It requires
+proof that the artifact's participant-facing API is discoverable, constraint
+transparent, and closed against hidden usable APIs.
+
+**Verify today.** Run:
+
+```sh
+kungfu agent brief
+kungfu agent capabilities --json
+kungfu agent choose-mode --json
+node scripts/verify-agent-pack.mjs
+```
+
+`verify-agent-pack` is the current packaging gate: it checks the installed pack
+files, command catalog, provider skills, package data, and GUI/TUI pointers.
+The planned KFD-3 closure gate should extend this into registry/code-anchor
+verification, Markdown reference linting, and Buildchain witness generation.
+
+**Maturity.** `draft`. The installed pack and packaging check exist. The
+single-source registry, CLI anchors, reverse command-tree audit,
+`kungfu agent verify --json`, docs projection checks, and Buildchain KFD-3
+witness remain future implementation work. See
+[`kfd-native-sdk-release-gates.md`](kfd-native-sdk-release-gates.md).
+
 ## The Skill contract is a single source of truth
 
 **Guarantee.** Kungfu Skill source metadata, compact catalogs, context
