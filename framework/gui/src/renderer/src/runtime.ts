@@ -197,7 +197,13 @@ export function bootRuntime(): Runtime {
       join: { name: APP_NAME },
     });
     const domain = openDomainState({ binding, locator: { runtimeDir } });
-    const rewind = openRewind({ binding, locator: { runtimeDir } });
+    const rewindFs = window.require('node:fs');
+    const rewind = openRewind({
+      binding,
+      locator: { runtimeDir },
+      readFile: (p: string) => rewindFs.readFileSync(p),
+      readDir: (d: string) => rewindFs.readdirSync(d),
+    });
     const work = openWork({ binding, locator: { runtimeDir } });
     // node-pty is a native addon loaded like the kungfu binding; if it is
     // absent or built for another ABI the terminal handle stays null and the

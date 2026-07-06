@@ -8,8 +8,8 @@
 import * as flatbuffers from 'flatbuffers';
 import {
   BaseType,
-  Field,
-  Object_,
+  type Field,
+  type Object_,
   Schema,
 } from './generated/reflection/reflection.js';
 
@@ -72,9 +72,23 @@ export class ReflectionDecoder {
 
     if (base === BaseType.String) return o ? bb.__string(pos + o) : null;
 
-    if (base !== undefined && base in SCALARS) {
-      const [read, _w] = SCALARS[base]!;
-      return o ? read(bb, pos + o) : null;
+    const scalar = base !== undefined ? SCALARS[base] : undefined;
+    if (scalar) {
+      const [read] = scalar;
+      if (o) return read(bb, pos + o);
+      // Absent scalar: flatbuffers omits default-valued scalars, so recover the
+      // schema default (matching the core's Python BundleDecoder) instead of
+      // null — else a meaningful 0/false (e.g. attribution=ExactRun(0),
+      // ambiguous_attribution=false) is silently dropped. Match the JS type the
+      // non-default reader would have produced for this base_type.
+      if (base === BaseType.Bool) return f.defaultInteger() !== 0n;
+      if (base === BaseType.Float || base === BaseType.Double) {
+        return f.defaultReal();
+      }
+      if (base === BaseType.Long || base === BaseType.ULong) {
+        return f.defaultInteger();
+      }
+      return Number(f.defaultInteger());
     }
 
     if (base === BaseType.Vector) {
@@ -88,8 +102,9 @@ export class ReflectionDecoder {
           bb.__string(start + i * 4),
         );
       }
-      if (elem !== undefined && elem in SCALARS) {
-        const [read, w] = SCALARS[elem]!;
+      const elemScalar = elem !== undefined ? SCALARS[elem] : undefined;
+      if (elemScalar) {
+        const [read, w] = elemScalar;
         return Array.from({ length: len }, (_, i) => read(bb, start + i * w));
       }
       return `<vector-elem:${elem}>`;
