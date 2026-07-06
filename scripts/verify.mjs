@@ -7,7 +7,7 @@
 // artifacts" criterion, which also serves as a CI smoke baseline.
 //
 // Usage (node pinned via the entrypoint; plain `node scripts/verify.mjs` works):
-//   ./kungfu-code verify              quick: only assert "existing" artifacts (dist/kungfu exists + kfc runs + version matches)
+//   ./kungfu-code verify              quick: only assert "existing" artifacts (dist/kungfu exists + kungfu runs + version matches)
 //   ./kungfu-code verify --full       full: rebuild:core + freeze first, then assert; also builds and runs the
 //                                     capability slices (framework/core/slices) + yijinjing dependency guard
 //   ./kungfu-code verify --with-app   also assert the build:app artifact (with --full it builds the app first)
@@ -15,12 +15,12 @@
 //
 // Assertion targets (all grounded in the build scripts, not guessed):
 //   - framework/core/dist/kungfu/                     freeze artifact directory (run-freeze.js renameSync target)
-//   - framework/core/dist/kungfu/kfc[.exe]           kfc executable (path resolved by lib/executable.js)
-//   - `kfc --version` exits 0 and output contains the expected version   frozen Python runtime runs end to end (runtime smoke)
+//   - framework/core/dist/kungfu/kungfu[.exe]           kungfu executable (path resolved by lib/executable.js)
+//   - `kungfu --version` exits 0 and output contains the expected version   frozen Python runtime runs end to end (runtime smoke)
 //   - framework/gui/out/                           (--with-app) build:app electron-vite artifact
 //
 // Exit codes: all green 0; any failed assertion 1 (fail-fast prints copy-pastable troubleshooting info).
-// Note: an Electron app's "interactive launch" cannot be asserted in a headless environment, so kfc
+// Note: an Electron app's "interactive launch" cannot be asserted in a headless environment, so kungfu
 // runtime smoke + app build artifact existence serve as the machine-assertable equivalent; the real
 // window launch is left as a manual / CI-display step.
 // @ts-check
@@ -100,9 +100,9 @@ function exitLabel(status, signal) {
   return status == null ? `signal ${signal}` : status;
 }
 
-function assertContractArtifact(distKfc, artifact) {
+function assertContractArtifact(distDir, artifact) {
   const repoContract = path.join(ROOT, artifact.source);
-  const distContract = path.join(distKfc, artifact.artifact);
+  const distContract = path.join(distDir, artifact.artifact);
   if (fs.existsSync(distContract)) {
     const repoHash = sha256(repoContract);
     const distHash = sha256(distContract);
@@ -306,28 +306,28 @@ function main() {
     pass('build stage', 'full chain executed');
   }
 
-  // ── Stage 2: kfc artifact assertions ──────────────────────────────
-  console.log('\n[verify] stage 2: kfc artifact assertions');
-  const distKfc = path.join(ROOT, 'framework', 'core', 'dist', 'kungfu');
+  // ── Stage 2: kungfu artifact assertions ──────────────────────────────
+  console.log('\n[verify] stage 2: kungfu artifact assertions');
+  const distDir = path.join(ROOT, 'framework', 'core', 'dist', 'kungfu');
   let kungfuBin = null;
-  if (fs.existsSync(distKfc) && fs.statSync(distKfc).isDirectory()) {
-    pass('dist/kungfu directory exists', path.relative(ROOT, distKfc));
+  if (fs.existsSync(distDir) && fs.statSync(distDir).isDirectory()) {
+    pass('dist/kungfu directory exists', path.relative(ROOT, distDir));
     for (const artifact of contractArtifacts()) {
-      assertContractArtifact(distKfc, artifact);
+      assertContractArtifact(distDir, artifact);
     }
-    kungfuBin = path.join(distKfc, isWin ? 'kungfu.exe' : 'kungfu');
+    kungfuBin = path.join(distDir, isWin ? 'kungfu.exe' : 'kungfu');
     if (fs.existsSync(kungfuBin) && fs.statSync(kungfuBin).isFile()) {
       const detail = path.relative(ROOT, kungfuBin);
       if (!isWin) {
         const mode = fs.statSync(kungfuBin).mode;
         if (!(mode & 0o111)) {
-          fail('kfc executable', `${detail} missing executable bit`);
+          fail('kungfu executable', `${detail} missing executable bit`);
           kungfuBin = null;
-        } else pass('kfc executable exists', detail);
-      } else pass('kfc executable exists', detail);
+        } else pass('kungfu executable exists', detail);
+      } else pass('kungfu executable exists', detail);
     } else {
       fail(
-        'kfc executable exists',
+        'kungfu executable exists',
         `not found ${path.relative(ROOT, kungfuBin)} (freeze first)`,
       );
       kungfuBin = null;
@@ -335,7 +335,7 @@ function main() {
   } else {
     fail(
       'dist/kungfu directory exists',
-      `not found ${path.relative(ROOT, distKfc)} (freeze first; in quick mode, confirm it was built)`,
+      `not found ${path.relative(ROOT, distDir)} (freeze first; in quick mode, confirm it was built)`,
     );
   }
 
@@ -405,30 +405,30 @@ function main() {
     );
   }
 
-  // ── Stage 3: kfc runtime smoke ────────────────────────────────────
-  console.log('\n[verify] stage 3: kfc runtime smoke (kfc --version)');
+  // ── Stage 3: kungfu runtime smoke ────────────────────────────────────
+  console.log('\n[verify] stage 3: kungfu runtime smoke (kungfu --version)');
   if (kungfuBin) {
     const r = spawnSync(kungfuBin, ['--version'], { encoding: 'utf8' });
     const out = `${r.stdout || ''}${r.stderr || ''}`.trim();
     if (r.status !== 0) {
       fail(
-        'kfc --version exits 0',
+        'kungfu --version exits 0',
         `exit ${exitLabel(r.status, r.signal)}; output: ${out.slice(0, 200)}`,
       );
     } else if (!out.includes(version)) {
       fail(
-        'kfc version matches',
+        'kungfu version matches',
         `expected to contain ${version}, got: ${out.slice(0, 200)}`,
       );
     } else {
-      pass('kfc runtime smoke', `--version contains ${version}`);
+      pass('kungfu runtime smoke', `--version contains ${version}`);
     }
     const config = spawnSync(kungfuBin, ['config', 'show', '--json'], {
       encoding: 'utf8',
     });
     if (config.status !== 0) {
       fail(
-        'kfc config contract smoke',
+        'kungfu config contract smoke',
         `exit ${exitLabel(config.status, config.signal)}; output: ${`${config.stdout || ''}${config.stderr || ''}`.trim().slice(0, 200)}`,
       );
     } else {
@@ -442,16 +442,16 @@ function main() {
         );
         const expectedHash = `sha256:${sha256(repoContract)}`;
         if (resolved?.contract?.hash === expectedHash) {
-          pass('kfc config contract smoke', expectedHash);
+          pass('kungfu config contract smoke', expectedHash);
         } else {
           fail(
-            'kfc config contract smoke',
+            'kungfu config contract smoke',
             `resolved hash ${resolved?.contract?.hash || '<missing>'} != ${expectedHash}`,
           );
         }
       } catch (e) {
         fail(
-          'kfc config contract smoke',
+          'kungfu config contract smoke',
           `invalid JSON: ${e instanceof Error ? e.message : String(e)}`,
         );
       }
@@ -461,7 +461,7 @@ function main() {
     });
     if (kfxContract.status !== 0) {
       fail(
-        'kfc kfx contract smoke',
+        'kungfu kfx contract smoke',
         `exit ${exitLabel(kfxContract.status, kfxContract.signal)}; output: ${`${kfxContract.stdout || ''}${kfxContract.stderr || ''}`.trim().slice(0, 200)}`,
       );
     } else {
@@ -475,16 +475,16 @@ function main() {
         );
         const expectedHash = `sha256:${sha256(repoContract)}`;
         if (contract?.id === 'kungfu-kfx' && contract?.hash === expectedHash) {
-          pass('kfc kfx contract smoke', expectedHash);
+          pass('kungfu kfx contract smoke', expectedHash);
         } else {
           fail(
-            'kfc kfx contract smoke',
+            'kungfu kfx contract smoke',
             `id ${contract?.id || '<missing>'}, hash ${contract?.hash || '<missing>'} != ${expectedHash}`,
           );
         }
       } catch (e) {
         fail(
-          'kfc kfx contract smoke',
+          'kungfu kfx contract smoke',
           `invalid JSON: ${e instanceof Error ? e.message : String(e)}`,
         );
       }
@@ -498,7 +498,7 @@ function main() {
     );
     if (skillContract.status !== 0) {
       fail(
-        'kfc skill contract smoke',
+        'kungfu skill contract smoke',
         `exit ${exitLabel(skillContract.status, skillContract.signal)}; output: ${`${skillContract.stdout || ''}${skillContract.stderr || ''}`.trim().slice(0, 200)}`,
       );
     } else {
@@ -515,16 +515,16 @@ function main() {
           contract?.id === 'kungfu-skill' &&
           contract?.hash === expectedHash
         ) {
-          pass('kfc skill contract smoke', expectedHash);
+          pass('kungfu skill contract smoke', expectedHash);
         } else {
           fail(
-            'kfc skill contract smoke',
+            'kungfu skill contract smoke',
             `id ${contract?.id || '<missing>'}, hash ${contract?.hash || '<missing>'} != ${expectedHash}`,
           );
         }
       } catch (e) {
         fail(
-          'kfc skill contract smoke',
+          'kungfu skill contract smoke',
           `invalid JSON: ${e instanceof Error ? e.message : String(e)}`,
         );
       }
@@ -538,7 +538,7 @@ function main() {
     );
     if (contractVerify.status !== 0) {
       fail(
-        'kfc contract registry smoke',
+        'kungfu contract registry smoke',
         `exit ${exitLabel(contractVerify.status, contractVerify.signal)}; output: ${`${contractVerify.stdout || ''}${contractVerify.stderr || ''}`.trim().slice(0, 200)}`,
       );
     } else {
@@ -546,28 +546,28 @@ function main() {
         const verified = JSON.parse(contractVerify.stdout);
         if (verified?.ok && verified?.contracts?.length >= 3) {
           pass(
-            'kfc contract registry smoke',
+            'kungfu contract registry smoke',
             `${verified.contracts.length} contracts verified`,
           );
         } else {
           fail(
-            'kfc contract registry smoke',
+            'kungfu contract registry smoke',
             `ok=${String(verified?.ok)} contracts=${String(verified?.contracts?.length ?? '<missing>')}`,
           );
         }
       } catch (e) {
         fail(
-          'kfc contract registry smoke',
+          'kungfu contract registry smoke',
           `invalid JSON: ${e instanceof Error ? e.message : String(e)}`,
         );
       }
     }
   } else {
-    fail('kfc runtime smoke', 'no kfc executable, skipped');
-    fail('kfc config contract smoke', 'no kfc executable, skipped');
-    fail('kfc kfx contract smoke', 'no kfc executable, skipped');
-    fail('kfc skill contract smoke', 'no kfc executable, skipped');
-    fail('kfc contract registry smoke', 'no kfc executable, skipped');
+    fail('kungfu runtime smoke', 'no kungfu executable, skipped');
+    fail('kungfu config contract smoke', 'no kungfu executable, skipped');
+    fail('kungfu kfx contract smoke', 'no kungfu executable, skipped');
+    fail('kungfu skill contract smoke', 'no kungfu executable, skipped');
+    fail('kungfu contract registry smoke', 'no kungfu executable, skipped');
   }
 
   // ── Stage 4: (optional) app build artifact ────────────────────────
