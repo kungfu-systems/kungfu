@@ -31,6 +31,19 @@ if (UNIX)
   set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
   set(COMPILER_OPTIMIZE_ON_OPTIONS "-O3")
   set(COMPILER_OPTIMIZE_OFF_OPTIONS "-O0")
+  # Strip local symbols from Release shared libraries and loadable modules.
+  # libkungfu.dylib, kungfu_node.node, kungfu_electron.node and pykungfu.so each
+  # carry tens of MB of local symbol table in __LINKEDIT (heavy template
+  # instantiation from watcher.cpp + sqlite_orm/boost.hana/rxcpp/flatbuffers).
+  # -Wl,-x discards only local symbols; the global/dynamic symbols that @rpath
+  # linking between these artifacts relies on stay in the table. Release-scoped
+  # so debug builds keep their symbols; UNIX covers macOS and Linux, while the
+  # MSVC path below is left untouched because it deliberately ships PDBs for
+  # field crash symbolization (docs/windows-crash-symbols.md). Release carries no
+  # -g here, so there is no DWARF to preserve in a dSYM -- only local symbol
+  # names are dropped from crash backtraces.
+  set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,-x")
+  set(CMAKE_MODULE_LINKER_FLAGS_RELEASE "${CMAKE_MODULE_LINKER_FLAGS_RELEASE} -Wl,-x")
 endif ()
 if (UNIX AND NOT APPLE)
   set(KFC_INSTALL_RPATH
