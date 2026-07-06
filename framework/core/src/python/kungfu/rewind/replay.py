@@ -19,10 +19,13 @@
 # v1 replay scope: forensic (re-open, walk, verify). Deterministic re-execution
 # is a next-stage differentiator gate, deliberately out of v1.
 
+from __future__ import annotations
+
 import hashlib
 import json
 import os
 import re
+from typing import Any
 
 import flatbuffers
 import flatbuffers.encode
@@ -44,7 +47,7 @@ from kungfu.rewind.fb import (
 lf = kungfu.__binding__.longfist
 yjj = kungfu.__binding__.yijinjing
 
-_GENERATED = {
+_GENERATED: dict[str, Any] = {
     "RunBegin": RunBegin.RunBegin,
     "RunEnd": RunEnd.RunEnd,
     "ModelRequest": ModelRequest.ModelRequest,
@@ -57,13 +60,13 @@ _GENERATED = {
 _SNAKE = re.compile(r"(?<!^)(?=[A-Z])")
 
 
-def read_frames(runtime_dir, run_id):
+def read_frames(runtime_dir: str, run_id: str) -> list[tuple[int, Any, bytes]]:
     """All rewind frames of a run in gen_time order: (msg_type, header, bytes)."""
     locator = yjj.locator(runtime_dir)
     location = yjj.location(
         lf.enums.mode.LIVE, lf.enums.category.SYSTEM, "rewind", run_id, locator
     )
-    frames = []
+    frames: list[tuple[int, Any, bytes]] = []
     for msg_type in MSG_TYPE_NAMES:
         for header, payload in yjj.assemble(location, 0).read_bytes(msg_type):
             frames.append((msg_type, header, bytes(payload)))
@@ -71,7 +74,7 @@ def read_frames(runtime_dir, run_id):
     return frames
 
 
-def decode_native(msg_type, payload):
+def decode_native(msg_type: int, payload: bytes) -> dict[str, Any]:
     """The writer's own decode: flatc-generated accessors."""
     cls = _GENERATED[MSG_TYPE_NAMES[msg_type]]
     root = cls.GetRootAs(payload, 0)
@@ -93,12 +96,12 @@ def decode_native(msg_type, payload):
 class BundleDecoder:
     """The reader-without-the-writer: manifest bindings + .bfbs via reflection."""
 
-    def __init__(self, bundle_dir):
+    def __init__(self, bundle_dir: str) -> None:
         with open(os.path.join(bundle_dir, "manifest.json")) as f:
             self.manifest = json.load(f)
         self.bindings = self.manifest["schema_bindings"]
-        self._schemas = {}
-        self._objects = {}
+        self._schemas: dict[int, Any] = {}
+        self._objects: dict[int, str] = {}
         for msg_type, binding in self.bindings.items():
             blob_path = os.path.join(
                 bundle_dir, "schemas", binding["schema_hash"] + ".bfbs"
@@ -110,7 +113,7 @@ class BundleDecoder:
             self._schemas[int(msg_type)] = reflection_fb.Schema.GetRootAs(blob, 0)
             self._objects[int(msg_type)] = binding["name"]
 
-    def _find_object(self, schema, name):
+    def _find_object(self, schema: Any, name: str) -> Any:
         for i in range(schema.ObjectsLength()):
             obj = schema.Objects(i)
             qualified = obj.Name().decode()
@@ -118,7 +121,7 @@ class BundleDecoder:
                 return obj
         raise KeyError(f"object {name} not in schema")
 
-    def decode(self, msg_type, payload):
+    def decode(self, msg_type: int, payload: bytes) -> dict[str, Any]:
         schema = self._schemas[msg_type]
         obj = self._find_object(schema, self._objects[msg_type])
         n = flatbuffers.encode.Get(flatbuffers.packer.uoffset, payload, 0)
@@ -133,7 +136,7 @@ class BundleDecoder:
         return facts
 
     @staticmethod
-    def _read_field(table, base_type, offset, field):
+    def _read_field(table: Any, base_type: Any, offset: int, field: Any) -> Any:
         B = reflection_fb.BaseType
         o = table.Offset(offset)
         if base_type == B.String:
@@ -179,11 +182,11 @@ class BundleDecoder:
         raise ValueError(f"unsupported base type {base_type}")
 
 
-def verify(runtime_dir, run_id, bundle_dir):
+def verify(runtime_dir: str, run_id: str, bundle_dir: str) -> tuple[int, list[str]]:
     """Diff the two decode paths. Returns (frame_count, differences)."""
     decoder = BundleDecoder(bundle_dir)
     frames = read_frames(runtime_dir, run_id)
-    differences = []
+    differences: list[str] = []
     for index, (msg_type, header, payload) in enumerate(frames):
         native = decode_native(msg_type, payload)
         bundled = decoder.decode(msg_type, payload)
@@ -198,13 +201,15 @@ def verify(runtime_dir, run_id, bundle_dir):
     return len(frames), differences
 
 
-def causal_tree(runtime_dir, run_id):
+def causal_tree(
+    runtime_dir: str, run_id: str
+) -> tuple[dict[str, Any], dict[Any, dict[str, Any]], list[Any]]:
     """Reconstruct the run's causal tree from the journal (native path)."""
     frames = read_frames(runtime_dir, run_id)
-    spans = {}
-    order = []
-    run_facts = {}
-    pending_retry = {}
+    spans: dict[Any, dict[str, Any]] = {}
+    order: list[Any] = []
+    run_facts: dict[str, Any] = {}
+    pending_retry: dict[Any, Any] = {}
     for msg_type, header, payload in frames:
         name = MSG_TYPE_NAMES[msg_type]
         facts = decode_native(msg_type, payload)
@@ -230,7 +235,7 @@ def causal_tree(runtime_dir, run_id):
     return run_facts, spans, order
 
 
-def render_tree(runtime_dir, run_id):
+def render_tree(runtime_dir: str, run_id: str) -> str:
     run_facts, spans, order = causal_tree(runtime_dir, run_id)
     begin = run_facts.get("RunBegin", {})
     end = run_facts.get("RunEnd", {})
@@ -239,8 +244,8 @@ def render_tree(runtime_dir, run_id):
         f"  status: exit_code={end.get('exit_code')}",
     ]
 
-    children = {}
-    roots = []
+    children: dict[Any, list[Any]] = {}
+    roots: list[Any] = []
     for span in order:
         parent = spans[span]["open"][1].get("parent_span_id") or None
         if parent and parent in spans:
@@ -248,7 +253,7 @@ def render_tree(runtime_dir, run_id):
         else:
             roots.append(span)
 
-    def describe(span):
+    def describe(span: Any) -> str:
         kind, facts = spans[span]["open"]
         close = spans[span]["close"]
         if kind == "ModelRequest":
@@ -266,7 +271,7 @@ def render_tree(runtime_dir, run_id):
                 head += f" — {cf.get('error')}"
         return head
 
-    def walk(span, depth):
+    def walk(span: Any, depth: int) -> None:
         lines.append("  " * (depth + 1) + "- " + describe(span))
         for child in children.get(span, []):
             walk(child, depth + 1)

@@ -9,6 +9,8 @@
 # It needs the native binding (the journal writer). Run it in the core dev
 # environment (built dist/kungfu) or the packaged runtime.
 
+from __future__ import annotations
+
 import argparse
 from dataclasses import dataclass
 import hashlib
@@ -17,6 +19,7 @@ import os
 import sys
 import tempfile
 import uuid
+from typing import Any, Callable
 
 import kungfu
 from kungfu.rewind import (
@@ -56,7 +59,7 @@ class ManagedRunCliReport:
     skill_audit_doc: dict | None
 
 
-def _open_journal(runtime_dir, run_id):
+def _open_journal(runtime_dir: str, run_id: str) -> Any:
     loc = yjj.locator(runtime_dir)
     location = yjj.location(
         lf.enums.mode.LIVE, lf.enums.category.SYSTEM, "rewind", run_id, loc
@@ -66,27 +69,27 @@ def _open_journal(runtime_dir, run_id):
     return yjj.writer(location, 0, True, pub, False, bus, 0)
 
 
-def _rule(label=""):
+def _rule(label: str = "") -> str:
     return f"─ {label} " + "─" * max(0, 44 - len(label))
 
 
 def run_and_report(
-    provider,
-    prompt,
+    provider: str,
+    prompt: str,
     *,
-    runtime_dir,
-    work_id=None,
-    run_id=None,
-    home=None,
-    skill_paths=None,
-    skill_profile=None,
-    agent=None,
-    skill_context=True,
-    skill_context_file=None,
-    print_response=False,
-    report_callback=None,
-    quiet=False,
-):
+    runtime_dir: str,
+    work_id: str | None = None,
+    run_id: str | None = None,
+    home: str | None = None,
+    skill_paths: list[str] | None = None,
+    skill_profile: str | None = None,
+    agent: str | None = None,
+    skill_context: bool = True,
+    skill_context_file: str | None = None,
+    print_response: bool = False,
+    report_callback: Callable[[ManagedRunCliReport], None] | None = None,
+    quiet: bool = False,
+) -> int:
     """Run one managed provider run on a journal under runtime_dir and print its
     cost. Returns the provider's exit code. Shared by the `kungfu managed-run`
     console command and the `python -m` entry."""
@@ -104,11 +107,13 @@ def run_and_report(
         if not quiet:
             print(f"  provider not available: {disc.error}")
         return 2
+    # discover_provider sets path together with found; the guard above proves it
+    assert disc.path is not None
     if not quiet:
         print(f"  binary  {disc.path}  ({disc.path_class}, {disc.version})")
     prompt_for_provider = prompt
     envelope = None
-    skill_audit_events = []
+    skill_audit_events: list[Any] = []
     if skill_context:
         context_path = skill_context_file or context_file_from_env()
         if context_path:
@@ -136,7 +141,7 @@ def run_and_report(
 
     if not quiet:
         print(f"  prompt  {prompt}")
-        if has_advertised_skills(envelope):
+        if envelope is not None and has_advertised_skills(envelope):
             print(
                 "  skills  "
                 f"{len(envelope['catalog'])} advertised  "
@@ -146,7 +151,7 @@ def run_and_report(
 
     writer = _open_journal(runtime_dir, run_id)
 
-    def emit(msg_type, data):
+    def emit(msg_type: int, data: bytes) -> None:
         writer.write_bytes(0, msg_type, list(data), len(data))
 
     emit(
@@ -189,8 +194,8 @@ def run_and_report(
     with open(response_path, "w", encoding="utf-8") as f:
         json.dump(response_doc, f, ensure_ascii=False, indent=2)
         f.write("\n")
-    with open(response_path, "rb") as f:
-        response_hash = hashlib.sha256(f.read()).hexdigest()
+    with open(response_path, "rb") as rf:
+        response_hash = hashlib.sha256(rf.read()).hexdigest()
     skill_audit_doc = None
     skill_audit_path = None
     skill_audit_hash = None
@@ -297,7 +302,7 @@ def run_and_report(
     return result.exit_code
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="kungfu managed-run")
     ap.add_argument(
         "--provider", required=True, choices=managed_run.managed_providers()

@@ -25,7 +25,7 @@ import dataclasses
 import json
 import subprocess
 import time
-from typing import Callable, List, Optional, TypedDict
+from typing import Any, Callable, List, Optional, TypedDict
 
 from kungfu.rewind import MSG_MODEL_RESPONSE, events
 from kungfu.rewind import cost_wire
@@ -89,12 +89,14 @@ class ManagedRunResult:
     response_emitted: bool = False
 
 
-def _subprocess_runner(argv, env=None):
+def _subprocess_runner(
+    argv: list[str], env: dict[str, str] | None = None
+) -> tuple[int, str, str]:
     proc = subprocess.run(argv, capture_output=True, text=True, env=env)
     return proc.returncode, proc.stdout, proc.stderr
 
 
-def _content_text(value) -> str:
+def _content_text(value: Any) -> str:
     if isinstance(value, str):
         return value
     if isinstance(value, list):
@@ -130,7 +132,9 @@ def _codex_assistant_text(event: dict) -> Optional[str]:
     return None
 
 
-def _extract_codex_response(stdout: str):
+def _extract_codex_response(
+    stdout: str,
+) -> tuple[Optional[str], Optional[dict], Optional[str]]:
     texts = []
     raw = None
     error = None
@@ -153,7 +157,9 @@ def _extract_codex_response(stdout: str):
     return "\n".join(texts) if texts else None, raw, error
 
 
-def _extract_claude_response(stdout: str):
+def _extract_claude_response(
+    stdout: str,
+) -> tuple[Optional[str], dict, Optional[str]]:
     payload = json.loads(stdout)
     if not isinstance(payload, dict):
         raise TypeError("claude response payload must be a JSON object")
@@ -172,7 +178,7 @@ def _extract_claude_response(stdout: str):
 
 def _extract_response(
     provider: str, surface: str, stdout: str, stderr: str, exit_code: int
-):
+) -> tuple[Optional[str], str, Optional[str]]:
     text = None
     raw = None
     error = None
@@ -218,8 +224,8 @@ def run_managed(
     run_id: str,
     work_id: Optional[str] = None,
     usage_mode: str = "accumulate",
-    runner: Callable = _subprocess_runner,
-    env=None,
+    runner: Callable[..., tuple[int, str, str]] = _subprocess_runner,
+    env: dict[str, str] | None = None,
 ) -> ManagedRunResult:
     """Run a provider under Kungfu management and emit its cost fact.
 
