@@ -1,10 +1,16 @@
 # SPDX-License-Identifier: Apache-2.0
 
+from __future__ import annotations
+
 import hashlib
 import json
+from collections.abc import Mapping
+from typing import Any
 
 
-def build_context_envelope(catalog, session):
+def build_context_envelope(
+    catalog: dict[str, Any], session: Mapping[str, Any]
+) -> dict[str, Any]:
     advertised = json.dumps(
         catalog.get("skills", []),
         sort_keys=True,
