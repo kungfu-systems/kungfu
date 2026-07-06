@@ -5,6 +5,8 @@ import os
 import re
 from typing import Any
 
+from kungfu.skill import contract as skill_contract
+
 
 class SkillError(ValueError):
     pass
@@ -25,7 +27,7 @@ def parse_skill(skill_dir):
     description = _string(frontmatter.get("description")) or _first_paragraph(body)
     capabilities = _string_list(frontmatter.get("capabilities"))
     kfx = _kfx_dependencies(frontmatter.get("kfx"))
-    return {
+    parsed = {
         "schema": "kungfu.skill/v1",
         "key": _string(frontmatter.get("key"))
         or _normalize_key(os.path.basename(root)),
@@ -40,6 +42,8 @@ def parse_skill(skill_dir):
             "hash": "sha256:" + hashlib.sha256(markdown.encode()).hexdigest(),
         },
     }
+    skill_contract.validate_skill_source(parsed)
+    return parsed
 
 
 def _split_frontmatter(markdown):

@@ -1,0 +1,77 @@
+{
+  "schema": "kungfu.contract-registry/v1",
+  "id": "kungfu-contract-registry",
+  "version": 1,
+  "description": "Registry of KFD-1 welded contract artifacts shipped with the Kungfu runtime.",
+  "contracts": [
+    {
+      "surface": "config",
+      "id": "kungfu-config",
+      "schema": "kungfu.config.contract/v1",
+      "weldedSurface": "config-contract",
+      "env": "KUNGFU_CONFIG_CONTRACT",
+      "file": "kungfu-config.contract.json",
+      "source": "framework/config/kungfu-config.contract.json",
+      "artifact": "config/kungfu-config.contract.json",
+      "cli": {
+        "contract": ["config", "contract", "--json"],
+        "schema": ["config", "schema", "--json"]
+      }
+    },
+    {
+      "surface": "kfx",
+      "id": "kungfu-kfx",
+      "schema": "kungfu.kfx.contract/v1",
+      "weldedSurface": "kfx-contract",
+      "env": "KUNGFU_KFX_CONTRACT",
+      "file": "kungfu-kfx.contract.json",
+      "source": "framework/kfx/kungfu-kfx.contract.json",
+      "artifact": "config/kungfu-kfx.contract.json",
+      "cli": {
+        "contract": ["kfx", "contract", "--json"],
+        "schema": ["kfx", "schema", "--json"]
+      }
+    },
+    {
+      "surface": "skill",
+      "id": "kungfu-skill",
+      "schema": "kungfu.skill.contract/v1",
+      "weldedSurface": "skill-contract",
+      "env": "KUNGFU_SKILL_CONTRACT",
+      "file": "kungfu-skill.contract.json",
+      "source": "framework/skill/kungfu-skill.contract.json",
+      "artifact": "config/kungfu-skill.contract.json",
+      "cli": {
+        "contract": ["skill", "contract", "--json"],
+        "schema": ["skill", "schema", "--json"]
+      },
+      "extraArtifacts": [
+        {
+          "label": "skill source schema",
+          "source": "framework/skill/schema/skill.schema.json",
+          "artifact": "config/skill/schema/skill.schema.json"
+        },
+        {
+          "label": "skill catalog schema",
+          "source": "framework/skill/schema/skill-catalog.schema.json",
+          "artifact": "config/skill/schema/skill-catalog.schema.json"
+        },
+        {
+          "label": "skill context schema",
+          "source": "framework/skill/schema/skill-context.schema.json",
+          "artifact": "config/skill/schema/skill-context.schema.json"
+        },
+        {
+          "label": "skill dependency schema",
+          "source": "framework/skill/schema/skill-dependencies.schema.json",
+          "artifact": "config/skill/schema/skill-dependencies.schema.json"
+        },
+        {
+          "label": "skill manager schema",
+          "source": "framework/skill/schema/skill-manager.schema.json",
+          "artifact": "config/skill/schema/skill-manager.schema.json"
+        }
+      ]
+    }
+  ]
+}

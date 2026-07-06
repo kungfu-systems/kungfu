@@ -8,6 +8,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from kungfu.config import resolve_config
+from kungfu.skill import contract as skill_contract
 
 
 def build_context_envelope(
@@ -37,6 +38,7 @@ def build_context_envelope(
     }
     if kungfu:
         envelope["kungfu"] = kungfu
+    skill_contract.validate_context(envelope)
     return envelope
 
 

@@ -905,6 +905,133 @@ export function kungfuConfigSchema(
   );
 }
 
+const SKILL_CONTRACT_FILE = 'kungfu-skill.contract.json';
+const SKILL_CONTRACT_ENV = 'KUNGFU_SKILL_CONTRACT';
+
+export function resolveKungfuSkillContractPath(
+  options: {
+    env?: Record<string, string | undefined>;
+    contractPath?: string;
+    cwd?: string;
+  } = {},
+): string {
+  const env = options.env ?? process.env;
+  const explicit = options.contractPath || env[SKILL_CONTRACT_ENV];
+  if (explicit) return resolve(expandUserPath(explicit));
+  const candidates: string[] = [];
+  if (env.KUNGFU_DIR) {
+    candidates.push(join(env.KUNGFU_DIR, 'config', SKILL_CONTRACT_FILE));
+  }
+  for (const start of [SKILL_MODULE_DIR, options.cwd ?? process.cwd()]) {
+    for (const directory of ancestorDirs(resolve(start))) {
+      candidates.push(
+        join(directory, 'framework', 'skill', SKILL_CONTRACT_FILE),
+        join(directory, 'skill', SKILL_CONTRACT_FILE),
+        join(directory, 'config', SKILL_CONTRACT_FILE),
+        join(
+          directory,
+          'node_modules',
+          '@kungfu-tech',
+          'skill',
+          SKILL_CONTRACT_FILE,
+        ),
+      );
+    }
+  }
+  const found = candidates.find((candidate) => existsSync(candidate));
+  if (found) return found;
+  throw new Error(`Kungfu skill contract not found: ${SKILL_CONTRACT_FILE}`);
+}
+
+export function loadKungfuSkillContract(
+  options: {
+    env?: Record<string, string | undefined>;
+    contractPath?: string;
+    cwd?: string;
+  } = {},
+): Record<string, unknown> {
+  const path = resolveKungfuSkillContractPath(options);
+  const parsed = JSON.parse(readFileSync(path, 'utf8')) as unknown;
+  const contract = objectValue(parsed);
+  if (!contract || Array.isArray(parsed)) {
+    throw new Error(`Kungfu skill contract must be a JSON object: ${path}`);
+  }
+  if (contract.schema !== 'kungfu.skill.contract/v1') {
+    throw new Error(
+      `Kungfu skill contract schema mismatch: ${String(contract.schema)}`,
+    );
+  }
+  validateKungfuSkillContract(contract);
+  const schemaFiles = requiredObject(contract.schemaFiles, 'schemaFiles');
+  for (const name of Object.keys(schemaFiles)) {
+    kungfuSkillSchema(name, { ...options, contractPath: path, contract });
+  }
+  return contract;
+}
+
+export function kungfuSkillContractMetadata(
+  options: {
+    env?: Record<string, string | undefined>;
+    contractPath?: string;
+    cwd?: string;
+  } = {},
+): Record<string, unknown> {
+  const path = resolveKungfuSkillContractPath(options);
+  const contract = loadKungfuSkillContract({ ...options, contractPath: path });
+  return {
+    schema: contract.schema,
+    id: contract.id,
+    version: contract.version,
+    weldedSurface: contract.weldedSurface,
+    path,
+    hash: kungfuSkillContractHash(path),
+  };
+}
+
+export function kungfuSkillContractHash(contractPath?: string): string {
+  const path = resolveKungfuSkillContractPath({ contractPath });
+  return `sha256:${createHash('sha256')
+    .update(readFileSync(path))
+    .digest('hex')}`;
+}
+
+export function kungfuSkillSchema(
+  name = 'source',
+  options: {
+    env?: Record<string, string | undefined>;
+    contractPath?: string;
+    cwd?: string;
+    contract?: Record<string, unknown>;
+  } = {},
+): Record<string, unknown> {
+  const contractPath = resolveKungfuSkillContractPath(options);
+  const contract =
+    options.contract ?? loadKungfuSkillContract({ ...options, contractPath });
+  const row = objectValue(
+    requiredObject(contract.schemaFiles, 'schemaFiles')[name],
+  );
+  if (!row) throw new Error(`Kungfu skill schema is not registered: ${name}`);
+  const source = requiredString(row.source, `schemaFiles.${name}.source`);
+  const artifact = requiredString(row.artifact, `schemaFiles.${name}.artifact`);
+  const expected = requiredString(row.schema, `schemaFiles.${name}.schema`);
+  const base = dirname(contractPath);
+  const candidates = [join(base, source), join(base, artifact)];
+  const schemaPath = candidates.find((candidate) => existsSync(candidate));
+  if (!schemaPath) {
+    throw new Error(`Kungfu skill schema not found: ${source} or ${artifact}`);
+  }
+  const schema = objectValue(JSON.parse(readFileSync(schemaPath, 'utf8')));
+  if (!schema) {
+    throw new Error(`Kungfu skill schema must be a JSON object: ${schemaPath}`);
+  }
+  if (schema.$id !== expected) {
+    throw new Error(
+      `Kungfu skill schema mismatch for ${name}: ${String(schema.$id)}`,
+    );
+  }
+  return structuredClone(schema);
+}
+
 function defaultAgentSkillRoots(
   provider: AgentSkillProvider,
   userHome: string,
@@ -1646,6 +1773,27 @@ function validateKungfuConfigContract(contract: Record<string, unknown>): void {
   const path = first?.instancePath || '<root>';
   throw new Error(
     `Kungfu config contract validation failed at ${path}: ${first?.message || 'invalid contract'}`,
+  );
+}
+
+function validateKungfuSkillContract(contract: Record<string, unknown>): void {
+  const schema = requiredObject(contract.contractSchema, 'contractSchema');
+  const AjvCtor = Ajv as unknown as new (options: {
+    allErrors: boolean;
+    strict: boolean;
+  }) => {
+    compile: (schema: unknown) => {
+      (value: unknown): boolean;
+      errors?: Array<{ instancePath?: string; message?: string }>;
+    };
+  };
+  const ajv = new AjvCtor({ allErrors: true, strict: false });
+  const validate = ajv.compile(schema);
+  if (validate(contract)) return;
+  const first = validate.errors?.[0];
+  const path = first?.instancePath || '<root>';
+  throw new Error(
+    `Kungfu skill contract validation failed at ${path}: ${first?.message || 'invalid contract'}`,
   );
 }
 

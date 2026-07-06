@@ -7,6 +7,7 @@ from . import trace
 from . import managed_run
 from . import report
 from . import remote
+from . import contract
 from . import config
 from . import agent
 from . import rewind
@@ -26,6 +27,7 @@ __all__ = [
     "managed_run",
     "report",
     "remote",
+    "contract",
     "config",
     "agent",
     "rewind",

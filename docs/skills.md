@@ -246,6 +246,7 @@ glue:
 
 ```text
 framework/skill/
+  kungfu-skill.contract.json
   schema/
     skill.schema.json
     skill-catalog.schema.json
@@ -275,9 +276,11 @@ extensions/system/skill-manager/
 developer/sdk/templates/skill/
 ```
 
-`framework/skill` is the language-neutral contract home: schemas, fixtures, and
-the TypeScript reference implementation. Python and Node managers use that
-contract from their natural runtime locations.
+`framework/skill` is the language-neutral contract home: the
+`kungfu-skill.contract.json` wrapper, schema bundle, fixtures, and the
+TypeScript reference implementation. Python and Node managers use that contract
+from their natural runtime locations. Build/freeze copies it through the shared
+KFD-1 contract registry, not through a skill-specific packaging path.
 
 ## CLI surface
 
@@ -285,6 +288,8 @@ The first CLI should be explicit and inspectable:
 
 ```sh
 kungfu skill validate <path>
+kungfu skill contract --json
+kungfu skill schema [--name source|catalog|context|dependencies|manager] --json
 kungfu skill install <path>
 kungfu skill list [--path <dir>] [--json]
 kungfu skill catalog [--path <dir>] [--json]
@@ -314,6 +319,8 @@ schema, first skill key, and `advertisedSkillsHash`, then checks the Rewind
 the Node manager path used by the Electron GUI. `read` is the operation the
 agent tool uses to load the full `SKILL.md` after selection. `audit` reads the
 Skill audit sidecar from a managed-run bundle or a standalone audit file.
+`contract` and `schema` expose the same KFD-1 Skill contract and schema bundle
+that Python and Node managers validate against.
 
 The SDK may add:
 
@@ -422,6 +429,8 @@ The first implementation slice is verified by:
 
 - a `SKILL.md`-only fixture accepted by Python and TypeScript validators;
 - TypeScript and Python catalog/context output over shared fixtures;
+- `kungfu skill contract --json` and `kungfu skill schema --json` over the
+  packaged Skill contract;
 - frozen CLI `validate/catalog/context/verify/read/explain` over shared
   fixtures;
 - frozen CLI `skill verify --manager python` and `skill verify --manager node`

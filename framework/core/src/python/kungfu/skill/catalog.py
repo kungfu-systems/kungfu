@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
+from kungfu.skill import contract as skill_contract
+
 
 def catalog_entry(skill: dict[str, Any]) -> dict[str, Any]:
     return {
@@ -21,7 +23,9 @@ def catalog_entry(skill: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_catalog(skills: Iterable[dict[str, Any]]) -> dict[str, Any]:
-    return {
+    catalog = {
         "schema": "kungfu.skill-catalog/v1",
         "skills": [catalog_entry(skill) for skill in skills],
     }
+    skill_contract.validate_catalog(catalog)
+    return catalog

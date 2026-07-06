@@ -3,16 +3,13 @@
 from __future__ import annotations
 
 import copy
-import hashlib
 import json
 import os
-import sys
 import tarfile
 from collections.abc import Mapping
-from pathlib import Path
 from typing import Any
 
-from jsonschema import Draft202012Validator
+from kungfu import contract as contract_runtime
 
 
 CONTRACT_SCHEMA = "kungfu.kfx.contract/v1"
@@ -25,29 +22,7 @@ def resolve_contract_path(
     *,
     env: Mapping[str, str] | None = None,
 ) -> str:
-    env = os.environ if env is None else env
-    explicit = contract_path or env.get(CONTRACT_ENV)
-    if explicit:
-        return os.path.abspath(os.path.expanduser(explicit))
-
-    executable_candidate = (
-        Path(sys.executable).resolve().parent / "config" / CONTRACT_FILE
-    )
-    if executable_candidate.is_file():
-        return str(executable_candidate)
-
-    for start in [Path(__file__).resolve(), Path.cwd().resolve()]:
-        for directory in [start, *start.parents]:
-            for rel in [
-                Path("framework") / "kfx" / CONTRACT_FILE,
-                Path("kfx") / CONTRACT_FILE,
-                Path("config") / CONTRACT_FILE,
-            ]:
-                candidate = directory / rel
-                if candidate.is_file():
-                    return str(candidate)
-
-    raise FileNotFoundError(f"Kungfu kfx contract not found: {CONTRACT_FILE}")
+    return contract_runtime.resolve_contract_path("kfx", contract_path, env=env)
 
 
 def load_contract(
@@ -55,23 +30,11 @@ def load_contract(
     *,
     env: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
-    path = resolve_contract_path(contract_path, env=env)
-    with open(path, encoding="utf-8") as f:
-        contract = json.load(f)
-    if not isinstance(contract, dict):
-        raise ValueError(f"Kungfu kfx contract must be a JSON object: {path}")
-    if contract.get("schema") != CONTRACT_SCHEMA:
-        raise ValueError(
-            f"Kungfu kfx contract schema mismatch: {contract.get('schema')!r}"
-        )
-    _validate_with_schema(contract, contract.get("contractSchema"), "contract")
-    return contract
+    return contract_runtime.load_contract("kfx", contract_path, env=env)
 
 
 def contract_hash(contract_path: str | None = None) -> str:
-    path = resolve_contract_path(contract_path)
-    with open(path, "rb") as f:
-        return "sha256:" + hashlib.sha256(f.read()).hexdigest()
+    return contract_runtime.contract_hash("kfx", contract_path)
 
 
 def contract_metadata(
@@ -79,16 +42,7 @@ def contract_metadata(
     *,
     env: Mapping[str, str] | None = None,
 ) -> dict[str, str | int]:
-    path = resolve_contract_path(contract_path, env=env)
-    contract = load_contract(path, env=env)
-    return {
-        "schema": contract["schema"],
-        "id": contract["id"],
-        "version": contract["version"],
-        "weldedSurface": contract["weldedSurface"],
-        "path": path,
-        "hash": contract_hash(path),
-    }
+    return contract_runtime.contract_metadata("kfx", contract_path, env=env)
 
 
 def package_manifest_schema(
@@ -206,13 +160,4 @@ def resolve_kfx_package(package_dir: str, expected_key: str) -> dict[str, Any] |
 
 
 def _validate_with_schema(value: Any, schema: Any, label: str) -> None:
-    if not isinstance(schema, dict):
-        raise ValueError(f"Kungfu kfx contract missing object schema: {label}")
-    validator = Draft202012Validator(schema)
-    errors = sorted(validator.iter_errors(value), key=lambda e: list(e.path))
-    if errors:
-        error = errors[0]
-        path = ".".join(str(part) for part in error.path) or "<root>"
-        raise ValueError(
-            f"Kungfu kfx {label} validation failed at {path}: {error.message}"
-        )
+    contract_runtime.validate_json_schema(value, schema, f"kfx {label}")

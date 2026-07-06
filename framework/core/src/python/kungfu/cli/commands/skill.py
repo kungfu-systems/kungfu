@@ -29,6 +29,7 @@ from kungfu.skill import (
     skill_dependencies_bound_event,
     skill_loaded_event,
     write_skill_dependency_binding,
+    skill_contract,
 )
 
 skill_command_context = kfc.pass_context()
@@ -169,6 +170,47 @@ def _verify_response_text(text, expected_schema, expected_key, expected_hash):
         if needle not in text:
             failures.append(f"{label} not found in provider response")
     return failures
+
+
+@skill.command("contract", help="print the Skill contract metadata")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@skill_command_context
+def contract_cmd(ctx, as_json):
+    try:
+        data = skill_contract.load_contract()
+        metadata = skill_contract.contract_metadata()
+        data["path"] = metadata["path"]
+        data["hash"] = metadata["hash"]
+    except (OSError, ValueError, json.JSONDecodeError, KeyError) as e:
+        click.echo(f"[skill] failed to load contract: {e}", err=True)
+        sys.exit(1)
+    if as_json:
+        _json(data)
+        return
+    click.echo(json.dumps(data, indent=2, sort_keys=True))
+
+
+@skill.command("schema", help="print Skill JSON schemas")
+@click.option(
+    "--name",
+    type=click.Choice(["source", "catalog", "context", "dependencies", "manager"]),
+    default=None,
+    help="schema name; omit to print the whole schema bundle",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@skill_command_context
+def schema_cmd(ctx, name, as_json):
+    try:
+        data = (
+            skill_contract.load_schema(name) if name else skill_contract.schema_bundle()
+        )
+    except (OSError, ValueError, json.JSONDecodeError, KeyError) as e:
+        click.echo(f"[skill] failed to load schema: {e}", err=True)
+        sys.exit(1)
+    if as_json:
+        _json(data)
+        return
+    click.echo(json.dumps(data, indent=2, sort_keys=True))
 
 
 @skill.command(help="validate a Kungfu Skill source directory")

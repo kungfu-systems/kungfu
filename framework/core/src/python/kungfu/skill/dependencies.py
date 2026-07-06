@@ -4,6 +4,7 @@ import json
 import os
 
 from kungfu import kfx_contract
+from kungfu.skill import contract as skill_contract
 
 
 DEPENDENCY_SCHEMA = "kungfu.skill-dependencies/v1"
@@ -20,7 +21,7 @@ def skill_binding_path(home, skill_key):
 def build_skill_dependency_binding(home, skill):
     rows = [_dependency_row(home, skill, dep) for dep in skill.get("kfx", [])]
     resolved = sum(1 for row in rows if row["status"] == "resolved")
-    return {
+    binding = {
         "schema": DEPENDENCY_SCHEMA,
         "skill": {
             "key": skill["key"],
@@ -40,6 +41,8 @@ def build_skill_dependency_binding(home, skill):
             "unresolved": len(rows) - resolved,
         },
     }
+    skill_contract.validate_dependencies(binding)
+    return binding
 
 
 def write_skill_dependency_binding(home, skill):

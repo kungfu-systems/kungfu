@@ -17,7 +17,7 @@
     "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
-  "files": ["src", "schema", "fixtures", "README.md"],
+  "files": ["src", "schema", "fixtures", "README.md", "kungfu-skill.contract.json"],
   "dependencies": {
     "ajv": "^8.20.0"
   },
