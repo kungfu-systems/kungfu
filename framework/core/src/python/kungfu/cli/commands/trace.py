@@ -3,7 +3,7 @@
 import click
 import sys
 
-from kungfu.cli.commands import kfc, PrioritizedCommandGroup
+from kungfu.cli.commands import kfc
 from kungfu.rewind.supervisor import Supervisor
 
 trace_command_context = kfc.pass_context()
