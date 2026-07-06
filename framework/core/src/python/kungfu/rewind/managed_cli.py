@@ -339,7 +339,15 @@ def main(argv: list[str] | None = None) -> int:
         help="print the provider response text after the managed-run report",
     )
     args = ap.parse_args(argv)
-    runtime = args.home or tempfile.mkdtemp(prefix="kungfu-managed-")
+    # Journal into the ambient runtime home so cost/journal facts land where the
+    # rest of the runtime (e.g. the GUI session workspace's rewind reader) looks
+    # for them. An explicit --home wins; a run launched inside a Kungfu runtime
+    # inherits KF_RUNTIME_DIR; a truly standalone run falls back to a temp dir.
+    runtime = (
+        args.home
+        or os.environ.get("KF_RUNTIME_DIR")
+        or tempfile.mkdtemp(prefix="kungfu-managed-")
+    )
     return run_and_report(
         args.provider,
         args.prompt,
