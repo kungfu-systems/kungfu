@@ -22,7 +22,7 @@
 from __future__ import annotations
 
 import json
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 
 from kungfu.rewind.cost.model import AttributionLevel, CostSnapshot, TokenUsage
 
@@ -33,7 +33,7 @@ SOURCE = "codex_exec_json"
 _TURN_COMPLETED = "turn.completed"
 
 
-def _usage_from(event_usage: dict) -> TokenUsage:
+def _usage_from(event_usage: dict[str, Any]) -> TokenUsage:
     """Map a codex usage object into the normalized TokenUsage.
 
     `or 0` guards missing/None fields; codex has no cache-creation dimension, so

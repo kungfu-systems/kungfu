@@ -112,7 +112,7 @@ def _content_text(value: Any) -> str:
     return ""
 
 
-def _codex_assistant_text(event: dict) -> Optional[str]:
+def _codex_assistant_text(event: dict[str, Any]) -> Optional[str]:
     candidates = []
     if isinstance(event.get("item"), dict):
         candidates.append(event["item"])
@@ -134,7 +134,7 @@ def _codex_assistant_text(event: dict) -> Optional[str]:
 
 def _extract_codex_response(
     stdout: str,
-) -> tuple[Optional[str], Optional[dict], Optional[str]]:
+) -> tuple[Optional[str], Optional[dict[str, Any]], Optional[str]]:
     texts = []
     raw = None
     error = None
@@ -159,7 +159,7 @@ def _extract_codex_response(
 
 def _extract_claude_response(
     stdout: str,
-) -> tuple[Optional[str], dict, Optional[str]]:
+) -> tuple[Optional[str], dict[str, Any], Optional[str]]:
     payload = json.loads(stdout)
     if not isinstance(payload, dict):
         raise TypeError("claude response payload must be a JSON object")

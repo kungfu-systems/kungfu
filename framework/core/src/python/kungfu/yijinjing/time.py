@@ -55,10 +55,10 @@ def strptimes(
 
 
 def strptime(timestr, format=DATETIME_FORMAT):
-    nano = re.findall(r"\d{9}", timestr)
+    nano_match = re.findall(r"\d{9}", timestr)
     normal_format = format.replace("%N", "")
-    normal_timestr = timestr.replace(nano[0], "") if nano else timestr
-    nano = int(nano[0]) if nano else 0
+    normal_timestr = timestr.replace(nano_match[0], "") if nano_match else timestr
+    nano = int(nano_match[0]) if nano_match else 0
     dt = datetime.strptime(normal_timestr, normal_format)
     second_part = int(
         (dt - EPOCH).total_seconds() * NANO_PER_SECOND

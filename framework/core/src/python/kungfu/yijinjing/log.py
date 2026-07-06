@@ -1,6 +1,8 @@
 #  SPDX-License-Identifier: Apache-2.0
 
 import logging
+from typing import Any
+
 import kungfu
 
 yjj = kungfu.__binding__.yijinjing
@@ -24,7 +26,7 @@ SPDLOG_LOG_LEVELS = {
 }
 
 
-class SpdlogHandler(logging.StreamHandler):
+class SpdlogHandler(logging.StreamHandler[Any]):
     def emit(self, record):
         yjj.emit_log(
             record.filename,

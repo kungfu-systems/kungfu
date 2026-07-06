@@ -55,9 +55,9 @@ class ManagedRunCliReport:
     exit_code: int
     response_path: str
     manifest_path: str
-    response_doc: dict
+    response_doc: dict[str, Any]
     skill_audit_path: str | None
-    skill_audit_doc: dict | None
+    skill_audit_doc: dict[str, Any] | None
 
 
 def _open_journal(runtime_dir: str, run_id: str) -> Any:

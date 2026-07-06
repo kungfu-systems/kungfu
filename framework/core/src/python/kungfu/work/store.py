@@ -17,6 +17,7 @@ import hashlib
 import json
 import os
 import uuid
+from typing import Any
 
 import kungfu
 
@@ -229,7 +230,7 @@ def _shell(work_id):
 
 def load(runtime_dir):
     """Fold the event stream into {work_id: item} (the projection)."""
-    items = {}
+    items: dict[str, Any] = {}
 
     def item(work_id, gen_time):
         entry = items.setdefault(work_id, _shell(work_id))

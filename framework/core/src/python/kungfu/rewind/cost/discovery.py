@@ -47,7 +47,7 @@ class ProviderDiscovery:
     candidates_checked: list[str] = dataclasses.field(default_factory=list)
     error: Optional[str] = None
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return dataclasses.asdict(self)
 
 

@@ -551,7 +551,7 @@ def setup(root_dir=os.getcwd()):
 
     # First, drop site related paths.
     original_sys_path = sys.path[:]
-    known_paths = set()
+    known_paths: set[str] = set()
     addusersitepackages(known_paths)
     addsitepackages(known_paths)
     known_paths = {os.path.normcase(path) for path in known_paths}

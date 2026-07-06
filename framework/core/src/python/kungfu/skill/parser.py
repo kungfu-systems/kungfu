@@ -3,6 +3,7 @@
 import hashlib
 import os
 import re
+from typing import Any
 
 
 class SkillError(ValueError):
@@ -53,7 +54,7 @@ def _split_frontmatter(markdown):
 def _parse_simple_yaml(src):
     root = {}
     current_key = None
-    current_array = None
+    current_array: list[Any] | None = None
     current_object = None
     for raw in src.splitlines():
         if not raw.strip() or raw.strip().startswith("#"):

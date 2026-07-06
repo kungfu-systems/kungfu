@@ -1,6 +1,9 @@
 #  SPDX-License-Identifier: Apache-2.0
 
 import glob
+import os
+from typing import Any
+
 import kungfu
 
 from kungfu.yijinjing import *
@@ -21,7 +24,7 @@ def collect_journal_locations(ctx):
         "*.journal",
     )
     ctx.logger.debug(f"searching journal files in {search_path}")
-    locations = {}
+    locations: dict[Any, Any] = {}
     for journal in glob.glob(search_path):
         ctx.logger.debug(f"{journal}")
         match = JOURNAL_PAGE_PATTERN.match(journal[len(ctx.runtime_dir) + 1 :])

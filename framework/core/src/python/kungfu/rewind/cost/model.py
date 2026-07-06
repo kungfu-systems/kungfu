@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import dataclasses
 import enum
-from typing import Optional
+from typing import Any, Optional
 
 # Language-layer contract version. This is not the wire SCHEMA_VERSION (that
 # lives beside the .fbs and is minted when these facts become journal events
@@ -133,7 +133,7 @@ class TokenUsage:
             reasoning_tokens=self.reasoning_tokens + other.reasoning_tokens,
         )
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return dataclasses.asdict(self)
 
 
@@ -154,7 +154,7 @@ class ProviderRunMetadata:
     run_id: Optional[str] = None
     cli_version: Optional[str] = None
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return dataclasses.asdict(self)
 
 
@@ -201,7 +201,7 @@ class CostSnapshot:
     def confidence(self) -> str:
         return confidence_for(self.attribution)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         d = dataclasses.asdict(self)
         d["attribution"] = self.attribution.value
         d["confidence"] = self.confidence
