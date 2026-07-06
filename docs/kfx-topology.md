@@ -138,7 +138,11 @@ restriction narrows what a capability returns (a refused write, a refused socket
 - A **service** kfx (proposed) is how you ship a pure-Python or pure-C++
   background extension: it runs as its own process in the multi-process runtime,
   confined by the OS sandbox when untrusted, and speaks to the host over the
-  capability relay.
+  capability relay. Python and Node ship *source* (an interpreter loads it); a
+  **C++ service ships a prebuilt per-platform binary** — `entry.cpp` is a
+  `{ darwin?, linux?, win? }` map to the binary you cross-compiled against the
+  guest proxy (`framework/core/src/capability/guest.hpp`), because there is no
+  interpreter to compile it at launch.
 
 ## See also
 

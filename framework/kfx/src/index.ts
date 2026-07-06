@@ -145,6 +145,21 @@ export type KfxAdapterDecl = {
 // guest end (ADR-0017).
 export type KfxServiceRuntime = 'python' | 'node' | 'cpp';
 
+// The C++ service entry is a PREBUILT per-platform binary, not a source path —
+// the shape that resolved ADR-0017's open question. Python and Node ship source
+// an already-resident interpreter loads at launch; C++ has no interpreter, and
+// kfc deliberately does not absorb a C++ toolchain, so the host cannot compile
+// at launch. A C++ service therefore ships a binary its author cross-compiled
+// (linking the guest proxy, framework/core/src/capability/guest.hpp), and
+// `entry.cpp` maps each supported platform to that binary's path, relative to
+// the package root. The host picks the current platform's binary and launches it
+// directly, with no bootstrap; a platform absent from the map is unsupported.
+export type KfxServiceCppEntry = {
+  darwin?: string;
+  linux?: string;
+  win?: string;
+};
+
 // `kungfuConfig.config.service` — a background-process kfx (ADR-0017). Unlike a
 // view (a rendered screen the shell mounts) or an adapter (capture-side
 // instrumentation injected into *another* process), a service is a kfx's *own*
@@ -162,8 +177,11 @@ export type KfxServiceRuntime = 'python' | 'node' | 'cpp';
 export type KfxServiceDecl = {
   // runtimes this service ships a body for
   runtimes: KfxServiceRuntime[];
-  // service entry per runtime, relative to the package root
-  entry: { python?: string; node?: string; cpp?: string };
+  // service entry per runtime, relative to the package root. Python and Node are
+  // a source path (an interpreter loads it); C++ is a per-platform prebuilt
+  // binary map (KfxServiceCppEntry) — no interpreter, so the host launches the
+  // binary directly.
+  entry: { python?: string; node?: string; cpp?: KfxServiceCppEntry };
   // kungfu relay capabilities the service needs; undeclared stay absent — the
   // same permission seam a view's `capabilities` is
   capabilities?: KfxCapabilityKey[];
@@ -257,7 +275,7 @@ export type KfxServicePlanEntry = {
   dir: string;
   source: 'built-in' | string; // extension root the entry was loaded from
   runtimes: KfxServiceRuntime[];
-  entry: { python?: string; node?: string; cpp?: string };
+  entry: { python?: string; node?: string; cpp?: KfxServiceCppEntry };
 };
 
 export type KfxPlanFailure = {
@@ -387,7 +405,11 @@ export function planKfx(
               };
               service?: {
                 runtimes?: KfxServiceRuntime[];
-                entry?: { python?: string; node?: string; cpp?: string };
+                entry?: {
+                  python?: string;
+                  node?: string;
+                  cpp?: KfxServiceCppEntry;
+                };
                 capabilities?: KfxCapabilityKey[];
               };
             };

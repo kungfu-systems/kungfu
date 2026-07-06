@@ -19,6 +19,7 @@
 // The sandboxed child is plain `node`, so it gets the dev TS resolver through
 // NODE_OPTIONS to load the capability SDK source; a packaged app ships built JS
 // and needs neither. Cells that grant the network need outbound connectivity.
+import { spawnSync } from 'node:child_process';
 import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -35,6 +36,7 @@ import { launchDiscoveredService } from './service-host.js';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const BODY_SRC = join(HERE, 'dogfood-service.mjs');
 const KEY = 'dogfood.openclaw';
+const KEY_CPP = 'dogfood.openclaw.cpp';
 
 let pass = 0;
 let fail = 0;
@@ -72,6 +74,110 @@ function buildCaps() {
     caps: caps as unknown as Record<string, Record<string, unknown>>,
     readReport: () => reported,
   };
+}
+
+// Compile the C++ dogfood into a prebuilt binary — what a kfx author's build
+// does, inlined here so this harness stays self-contained (the same reason
+// buildCaps is inline rather than imported from api). A C++ service ships a
+// prebuilt per-platform binary, not source (ADR-0017): with no interpreter, the
+// host launches the binary directly. The api guest-harness has a sibling helper
+// (cpp-build.mjs), kept separate for the same package self-containment.
+const CPP_SOURCE = join(HERE, 'dogfood-service.cpp');
+// framework/tui/src → framework/core/src/capability (the guest proxy include).
+const GUEST_INCLUDE = join(HERE, '..', '..', 'core', 'src', 'capability');
+const CORE_CONANFILE = join(HERE, '..', '..', 'core', 'conanfile.py');
+const CPP_PLATFORM_KEY: Partial<
+  Record<NodeJS.Platform, 'darwin' | 'linux' | 'win'>
+> = { darwin: 'darwin', linux: 'linux', win32: 'win' };
+
+function toolAvailable(tool: string): boolean {
+  const isWin = process.platform === 'win32';
+  return (
+    spawnSync(isWin ? 'where' : 'command', isWin ? [tool] : ['-v', tool], {
+      stdio: 'ignore',
+    }).status === 0
+  );
+}
+
+// Resolve the nlohmann/json include dir via conan (pinned by core/conanfile.py;
+// already cached once core is configured — this only reads the graph).
+function nlohmannInclude(): string {
+  const version = fs
+    .readFileSync(CORE_CONANFILE, 'utf8')
+    .match(/nlohmann_json\/([\d.]+)/)?.[1];
+  if (!version) {
+    throw new Error('cannot find nlohmann_json version in core/conanfile.py');
+  }
+  // Run conan in a throwaway dir: `conan install` writes activation-script
+  // generators into its cwd, which must not leak into the source tree. Only the
+  // JSON graph on stdout is used.
+  const scratch = mkdtempSync(join(tmpdir(), 'kfx-conan-'));
+  let r: ReturnType<typeof spawnSync>;
+  try {
+    r = spawnSync(
+      'conan',
+      ['install', `--requires=nlohmann_json/${version}`, '--format=json'],
+      { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024, cwd: scratch },
+    );
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+  if (r.status !== 0) {
+    throw new Error(
+      `conan install nlohmann_json/${version} failed:\n${r.stderr || r.stdout}`,
+    );
+  }
+  const graph = JSON.parse(r.stdout as string) as {
+    graph: {
+      nodes: Record<string, { name?: string; package_folder?: string }>;
+    };
+  };
+  for (const node of Object.values(graph.graph.nodes)) {
+    if (node.name === 'nlohmann_json' && node.package_folder) {
+      const inc = join(node.package_folder, 'include');
+      if (fs.existsSync(inc)) return inc;
+    }
+  }
+  throw new Error(
+    'nlohmann_json include dir not resolved from the conan graph',
+  );
+}
+
+// Compile CPP_SOURCE into `outFile`. Returns false when a toolchain or conan is
+// absent, so the cpp lane degrades to a clean skip rather than a failure.
+function buildCppDogfood(outFile: string): boolean {
+  const isWin = process.platform === 'win32';
+  const cxx = process.env.CXX ?? (isWin ? 'cl' : 'c++');
+  if (!toolAvailable(cxx) || !toolAvailable('conan')) return false;
+  const inc = nlohmannInclude();
+  const args = isWin
+    ? [
+        '/std:c++17',
+        '/EHsc',
+        '/O2',
+        '/nologo',
+        `/I${GUEST_INCLUDE}`,
+        `/I${inc}`,
+        CPP_SOURCE,
+        `/Fe${outFile}`,
+      ]
+    : [
+        '-std=c++17',
+        '-O2',
+        '-pthread',
+        '-I',
+        GUEST_INCLUDE,
+        '-isystem',
+        inc,
+        CPP_SOURCE,
+        '-o',
+        outFile,
+      ];
+  const r = spawnSync(cxx, args, { encoding: 'utf8' });
+  if (r.status !== 0) {
+    throw new Error(`C++ compile failed (${cxx}):\n${r.stderr || r.stdout}`);
+  }
+  return true;
 }
 
 // Lay down a real service kfx package in a temp extension root and discover it
@@ -153,6 +259,76 @@ async function landDogfood(
   }
 }
 
+// The C++ lane: lay down a service kfx whose body is a PREBUILT cpp binary (not
+// source), discover it with planKfx, and land it. `binary` is compiled once by
+// main and copied into the package where entry.cpp points — the shape a real
+// C++ service ships (ADR-0017). Only the untrusted (OS-sandbox) tier is landed;
+// trusted co-resident cpp is the tier x runtime host-wiring follow-up.
+function discoverDogfoodCpp(binary: string): {
+  plan: KfxLoadPlan;
+  cleanup: () => void;
+} {
+  const platformKey = CPP_PLATFORM_KEY[process.platform];
+  if (!platformKey) {
+    throw new Error(`no cpp entry key for platform '${process.platform}'`);
+  }
+  const root = mkdtempSync(join(tmpdir(), 'kfx-dogfood-cpp-'));
+  const pkgDir = join(root, 'openclaw-cpp');
+  mkdirSync(pkgDir, { recursive: true });
+  // the prebuilt binary ships in the package, exactly where entry.cpp points;
+  // cpSync preserves its executable mode.
+  cpSync(binary, join(pkgDir, 'service-bin'));
+  writeFileSync(
+    join(pkgDir, 'package.json'),
+    JSON.stringify({
+      name: '@dogfood/openclaw-cpp',
+      version: '1.0.0',
+      kungfuConfig: {
+        key: KEY_CPP,
+        config: {
+          service: {
+            runtimes: ['cpp'],
+            entry: { cpp: { [platformKey]: 'service-bin' } },
+            capabilities: ['ledger', 'report'],
+          },
+        },
+      },
+    }),
+  );
+  const env: Record<string, string | undefined> = { KF_EXTENSION_PATH: root };
+  const deps: KfxPlanDeps = {
+    fs: fs as unknown as KfxPlanDeps['fs'],
+    path,
+    crypto: crypto as unknown as KfxPlanDeps['crypto'],
+  };
+  const plan = planKfx(env, deps);
+  return {
+    plan,
+    cleanup: () => rmSync(root, { recursive: true, force: true }),
+  };
+}
+
+async function landDogfoodCpp(
+  binary: string,
+  authz: ServiceAuthz,
+): Promise<Outcome> {
+  const { plan, cleanup } = discoverDogfoodCpp(binary);
+  try {
+    const entry = plan.services.find((s) => s.id === KEY_CPP);
+    if (!entry) throw new Error('planKfx did not discover the cpp dogfood');
+    const { caps, readReport } = buildCaps();
+    // the cpp child is a native binary, not node — no tsx loader needed.
+    const service = await launchDiscoveredService(entry, { caps, authz });
+    const code = await service.done;
+    if (service.tier === 'sandbox' && code !== 0) {
+      throw new Error(`sandboxed cpp service exited ${code}`);
+    }
+    return { tier: service.tier, report: readReport() };
+  } finally {
+    cleanup();
+  }
+}
+
 async function main(): Promise<void> {
   console.log(
     'kfx service dogfood — discover → plan → authorize → land → relay\n',
@@ -185,6 +361,41 @@ async function main(): Promise<void> {
     'co-resident → egress allowed (unconfined)',
     c.report?.reachedNetwork === true,
   );
+
+  // C++ lane: a prebuilt cpp binary discovered by planKfx (entry.cpp map) and
+  // landed through the same untrusted OS-sandbox path as node. Compile once;
+  // skip cleanly where no toolchain is present (a build we cannot do is not a
+  // failed proof).
+  console.log('');
+  const cppWork = mkdtempSync(join(tmpdir(), 'kfx-cpp-build-'));
+  const cppBinary = join(cppWork, 'dogfood-service');
+  try {
+    if (!buildCppDogfood(cppBinary)) {
+      console.log('  skip  cpp lane (no C++ toolchain or conan)');
+    } else {
+      // untrusted + no grant: default-deny sandbox.
+      const d = await landDogfoodCpp(cppBinary, {});
+      ok('cpp untrusted lands in the sandbox tier', d.tier === 'sandbox');
+      ok('cpp no grant → relay flows', d.report?.relayRecordCount === 3);
+      ok(
+        'cpp no grant → external egress refused',
+        d.report?.reachedNetwork === false,
+      );
+
+      // untrusted + network grant: sandbox with egress opened by the grant.
+      const e = await landDogfoodCpp(cppBinary, {
+        perKfx: { [KEY_CPP]: { network: true } },
+      });
+      ok('cpp granted service stays in the sandbox tier', e.tier === 'sandbox');
+      ok('cpp network grant → relay flows', e.report?.relayRecordCount === 3);
+      ok(
+        'cpp network grant → external egress allowed',
+        e.report?.reachedNetwork === true,
+      );
+    }
+  } finally {
+    rmSync(cppWork, { recursive: true, force: true });
+  }
 
   console.log(`\n  ${pass} passed, ${fail} failed`);
   process.exit(fail === 0 ? 0 : 1);

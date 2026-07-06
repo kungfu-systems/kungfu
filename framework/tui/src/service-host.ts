@@ -13,9 +13,12 @@
 //     host only over the stdio relay. A grant can loosen this sandbox; it can
 //     never promote the service to co-resident (the tier is not user-pierceable).
 //
-// This delivery lands the NODE runtime end to end. Python and C++ services carry
-// their own launch shape (a co-resident interpreter subprocess when trusted, an
-// OS-sandboxed interpreter when not) — that per-runtime matrix is the stage-3
+// This delivery lands the NODE runtime and the UNTRUSTED (OS-sandboxed) C++
+// runtime end to end. A C++ service ships a prebuilt per-platform binary
+// (ADR-0017): with no interpreter it needs no bootstrap — the host launches the
+// binary directly and it speaks the relay through its linked guest proxy
+// (framework/core/src/capability/guest.hpp). Trusted co-resident C++/Python
+// (an unsandboxed interpreter/binary subprocess) remains the tier x runtime
 // host-wiring follow-up; an unsupported runtime is refused here rather than
 // mis-launched.
 import { join } from 'node:path';
@@ -62,9 +65,20 @@ export type LaunchedService = {
   networkConsent?: boolean;
 };
 
-// Resolve the interpreter launch for a discovered service. Node runs the shipped
-// bootstrap, which imports the service's node entry and speaks the relay. The
-// entry path is resolved against the package directory planKfx recorded.
+// Map this Node platform to the C++ entry's per-platform key (ADR-0017).
+const CPP_PLATFORM: Partial<
+  Record<NodeJS.Platform, 'darwin' | 'linux' | 'win'>
+> = {
+  darwin: 'darwin',
+  linux: 'linux',
+  win32: 'win',
+};
+
+// Resolve the launch for a discovered service. Node runs the shipped bootstrap,
+// which imports the service's node entry and speaks the relay. C++ has no
+// bootstrap: the prebuilt per-platform binary IS the guest, so the host launches
+// it directly. Every entry path is resolved against the package directory
+// planKfx recorded.
 export function resolveServiceRuntime(
   entry: KfxServicePlanEntry,
   bootstrap: string,
@@ -80,8 +94,25 @@ export function resolveServiceRuntime(
       },
     };
   }
+  if (entry.runtimes.includes('cpp') && entry.entry.cpp) {
+    // The prebuilt-artifact cpp entry: pick this platform's binary and launch it
+    // with no bootstrap or argv — it links the guest proxy and its body into one
+    // image. A platform absent from the map cannot run this service here.
+    const key = CPP_PLATFORM[process.platform];
+    const relBinary = key ? entry.entry.cpp[key] : undefined;
+    if (!relBinary) {
+      throw new Error(
+        `service '${entry.id}' ships no cpp binary for platform '${process.platform}'`,
+      );
+    }
+    return {
+      command: join(entry.dir, relBinary),
+      args: [],
+      env: { KFX_DECLARED: JSON.stringify(declared) },
+    };
+  }
   throw new Error(
-    `service '${entry.id}' declares no node runtime; python/cpp launch is the tier x runtime host-wiring follow-up (stage 3)`,
+    `service '${entry.id}' declares no launchable runtime (node or cpp); a trusted co-resident python/cpp interpreter is the tier x runtime host-wiring follow-up`,
   );
 }
 

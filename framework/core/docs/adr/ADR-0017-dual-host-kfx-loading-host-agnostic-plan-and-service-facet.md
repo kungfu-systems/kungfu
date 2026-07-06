@@ -230,15 +230,45 @@ caller for `service · sandboxed`; add the C++ guest capability end and runtime.
   plainly that **on macOS/Linux, allowing the network grants all outbound
   egress.**
 
+- **C++ guest capability end — resolved: a header-only native guest proxy, and
+  `entry.cpp` is a per-platform *prebuilt binary*, not source.** The native guest
+  that speaks the relay from a sandboxed C++ service is a header-only proxy
+  (`framework/core/src/capability/guest.hpp`, the sibling of `guest-node.ts` and
+  `guest.py`): a background reader thread pulls host→guest frames off stdin,
+  blocking `invoke()` calls wake on their id, and `{ __sandboxCallback }` markers
+  bridge events — the same newline-delimited JSON protocol, a third runtime,
+  depending only on nlohmann/json and the C++ standard library so a service author
+  links it into their own binary.
+
+  `entry.cpp`'s meaning resolves to a **per-platform prebuilt binary map**
+  (`{ darwin?, linux?, win? }`), not a source path — the asymmetry that forces it:
+  Python and Node ship *source* an already-resident interpreter loads at launch;
+  C++ has no interpreter, and kfc deliberately does **not** absorb a C++ toolchain
+  (unlike the Python/Node runtimes and freezers it does absorb). So the host
+  cannot compile at launch without taking on an unmanaged system toolchain —
+  fragile, slow on first launch, against the zero-install principle — and "ship
+  source, host runs it" has no cheap C++ analogue. A C++ service therefore ships a
+  binary its author cross-compiled (linking the guest proxy), and the host
+  launches THAT binary directly: no bootstrap, no argv, `runtime.command =
+  <binary>`. This also aids the still-open per-runtime content pinning — a binary
+  is a single hashable artifact, without a launch-time compile's nondeterminism.
+  Launch-time source compilation is not precluded forever: it becomes available
+  only if kfc later absorbs a C++ compiler (the deferred LLVM question), and until
+  then the prebuilt artifact is the only form consistent with the platform's
+  stance.
+
+  Landing is the node rule minus the interpreter: `resolveServiceRuntime` picks
+  this platform's binary and `launchSandboxedGuest` confines an untrusted C++
+  service exactly as it confines a node one — the OS-sandbox membrane gates its
+  network while the relay (stdio) keeps flowing, proven on hardware by the
+  guest-harness C++ lane and the service dogfood's cpp cells. Trusted co-resident
+  C++ (an unsandboxed binary subprocess) remains the tier × runtime host-wiring
+  follow-up, as it does for Python.
+
 ## Open questions
 
 - **Sandboxed view on the CLI.** Whether the TUI ever needs to confine a *view*
   (vs. only services), and if so what its isolation primitive is.
-- **C++ guest capability end.** The shape of the native guest that speaks the
-  capability relay from a sandboxed C++ service. In particular `entry.cpp`'s
-  meaning — source the host compiles vs. a per-platform prebuilt artifact
-  (which would make `entry.cpp` a `{ darwin?, linux?, win? }` map) — is deferred
-  to this question; the contract reserves `entry.cpp` as a plain string for now.
 - **Per-runtime content pinning for services.** A service has no single bundle
   to hash, so it is currently authorized unpinned (an unpinned first-party key
   is trusted; a pinned key with no hash stays untrusted — the default-deny
