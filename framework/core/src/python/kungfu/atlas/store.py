@@ -77,13 +77,19 @@ class ImportStore:
         # the binding takes the payload as a byte sequence (list[int])
         self.writer.write_bytes(0, msg_type, list(data), len(data))
 
-    def run_import(self, repo_root):
+    def run_import(
+        self,
+        repo_root,
+        *,
+        storage_source_id="atlas",
+        range_filter=None,
+    ):
         """Import one snapshot batch from repo_root. Returns a result dict."""
         repo_root = os.path.abspath(repo_root)
         import_id = "imp" + uuid.uuid4().hex[:8]
         repo_head = importer.repo_head(repo_root)
         missions, goals, markers, source_records, warnings = (
-            importer.read_control_plane_with_sources(repo_root)
+            importer.read_control_plane_with_sources(repo_root, window=range_filter)
         )
         self._append(
             MSG_IMPORT_BEGIN,
@@ -117,12 +123,19 @@ class ImportStore:
                 "goals": len(goals),
                 "markers": len(markers),
             },
+            storage_source_id=storage_source_id,
+            source_type="atlas",
+            range_filter=range_filter,
         )
         self.emit_manifest()
         return {
             "import_id": import_id,
+            "storage_source_id": storage_source_id,
+            "source_type": "atlas",
             "repo_root": repo_root,
             "repo_head": repo_head,
+            "source_head": repo_head,
+            "range": payloads._serialize_range(range_filter),
             "missions": len(missions),
             "goals": len(goals),
             "markers": len(markers),
@@ -289,8 +302,12 @@ def status(runtime_dir):
         "ok": projection is not None,
         "scope": "atlas",
         "import_id": manifest.get("import_id"),
+        "storage_source_id": manifest.get("storage_source_id", "atlas"),
+        "source_type": manifest.get("source_type", "atlas"),
+        "range": manifest.get("range"),
         "repo_root": manifest.get("repo_root"),
         "repo_head": manifest.get("repo_head"),
+        "source_head": manifest.get("source_head", manifest.get("repo_head")),
         "payloads": len(manifest.get("entries", [])),
         "missions": len(projection.get("missions", {})) if projection else 0,
         "goals": len(projection.get("goals", {})) if projection else 0,
@@ -302,25 +319,45 @@ def fsck(runtime_dir):
     return payloads.fsck_import(store_dir(runtime_dir), load(runtime_dir))
 
 
-def export_jsonl(runtime_dir, out_path):
-    records = payloads.export_records(store_dir(runtime_dir))
+def export_jsonl(
+    runtime_dir,
+    out_path,
+    *,
+    range_filter=None,
+    storage_source_id=None,
+):
+    records = payloads.export_records(
+        store_dir(runtime_dir),
+        range_filter=range_filter,
+        storage_source_id=storage_source_id,
+    )
     payloads.write_jsonl(records, out_path)
     return {
         "ok": True,
         "scope": "atlas",
+        "storage_source_id": storage_source_id,
+        "range": payloads._serialize_range(range_filter),
         "format": "jsonl",
         "out": os.path.abspath(out_path),
         "records": len(records),
     }
 
 
-def verify_against_repo(runtime_dir, repo_root):
+def verify_against_repo(
+    runtime_dir, repo_root, *, range_filter=None, storage_source_id=None
+):
     repo_root = os.path.abspath(repo_root)
     _, _, _, source_records, warnings = importer.read_control_plane_with_sources(
-        repo_root
+        repo_root, window=range_filter
     )
-    report = payloads.verify_against_source(store_dir(runtime_dir), source_records)
+    report = payloads.verify_against_source(
+        store_dir(runtime_dir),
+        source_records,
+        storage_source_id=storage_source_id,
+    )
     report["repo_root"] = repo_root
     report["repo_head"] = importer.repo_head(repo_root)
+    report["storage_source_id"] = storage_source_id
+    report["range"] = payloads._serialize_range(range_filter)
     report["warnings"] = warnings
     return report

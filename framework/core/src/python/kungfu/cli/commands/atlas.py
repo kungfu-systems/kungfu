@@ -41,14 +41,34 @@ def _load(ctx):
     return projection
 
 
+def _range_filter(since, from_time, until):
+    from kungfu.sources.store import build_range_filter
+
+    try:
+        return build_range_filter(since=since, from_time=from_time, until=until)
+    except ValueError as e:
+        click.echo(f"[atlas] {e}", err=True)
+        sys.exit(2)
+
+
 @atlas.command(name="import", help="snapshot a control-plane repo into the journal")
 @click.option("--repo", "repo_root", type=str, required=True, help="repo root path")
+@click.option("--source", "storage_source_id", type=str, default="atlas")
+@click.option("--since", type=str, default=None, help="relative window such as 3d/12h")
+@click.option(
+    "--from", "from_time", type=str, default=None, help="inclusive start time"
+)
+@click.option("--until", type=str, default=None, help="inclusive end time")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @atlas_command_context
-def import_cmd(ctx, repo_root, as_json):
+def import_cmd(ctx, repo_root, storage_source_id, since, from_time, until, as_json):
     from kungfu.atlas.store import ImportStore
 
-    result = ImportStore(ctx.runtime_dir).run_import(repo_root)
+    result = ImportStore(ctx.runtime_dir).run_import(
+        repo_root,
+        storage_source_id=storage_source_id,
+        range_filter=_range_filter(since, from_time, until),
+    )
     if as_json:
         _echo_json(result)
         return
@@ -63,12 +83,23 @@ def import_cmd(ctx, repo_root, as_json):
 
 @atlas.command(help="compare the latest Kungfu Atlas import with the source repo")
 @click.option("--repo", "repo_root", type=str, required=True, help="repo root path")
+@click.option("--source", "storage_source_id", type=str, default=None)
+@click.option("--since", type=str, default=None, help="relative window such as 3d/12h")
+@click.option(
+    "--from", "from_time", type=str, default=None, help="inclusive start time"
+)
+@click.option("--until", type=str, default=None, help="inclusive end time")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @atlas_command_context
-def verify(ctx, repo_root, as_json):
+def verify(ctx, repo_root, storage_source_id, since, from_time, until, as_json):
     from kungfu.atlas import store
 
-    result = store.verify_against_repo(ctx.runtime_dir, repo_root)
+    result = store.verify_against_repo(
+        ctx.runtime_dir,
+        repo_root,
+        storage_source_id=storage_source_id,
+        range_filter=_range_filter(since, from_time, until),
+    )
     if as_json:
         _echo_json(result)
     else:

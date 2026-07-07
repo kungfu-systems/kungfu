@@ -22,6 +22,16 @@ def _require_atlas(scope):
         sys.exit(1)
 
 
+def _range_filter(since, from_time, until):
+    from kungfu.sources.store import build_range_filter
+
+    try:
+        return build_range_filter(since=since, from_time=from_time, until=until)
+    except ValueError as e:
+        click.echo(f"[storage] {e}", err=True)
+        sys.exit(2)
+
+
 @kfc.group(
     cls=PrioritizedCommandGroup,
     help_priority=2,
@@ -72,18 +82,43 @@ def fsck(ctx, scope, as_json):
 
 @storage.command(help="export a storage scope")
 @click.option("--scope", type=click.Choice(["atlas"]), required=True)
+@click.option("--source", "storage_source_id", type=str, default=None)
+@click.option("--since", type=str, default=None, help="relative window such as 3d/12h")
+@click.option(
+    "--from", "from_time", type=str, default=None, help="inclusive start time"
+)
+@click.option("--until", type=str, default=None, help="inclusive end time")
 @click.option("--format", "format_", type=click.Choice(["jsonl"]), default="jsonl")
 @click.option("--out", "out_path", type=str, required=True, help="output path")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @storage_command_context
-def export(ctx, scope, format_, out_path, as_json):
+def export(
+    ctx,
+    scope,
+    storage_source_id,
+    since,
+    from_time,
+    until,
+    format_,
+    out_path,
+    as_json,
+):
     _require_atlas(scope)
     from kungfu.atlas import store
 
     if format_ != "jsonl":
         click.echo("[storage] only --format jsonl is implemented", err=True)
         sys.exit(1)
-    result = store.export_jsonl(ctx.runtime_dir, out_path)
+    try:
+        result = store.export_jsonl(
+            ctx.runtime_dir,
+            out_path,
+            storage_source_id=storage_source_id,
+            range_filter=_range_filter(since, from_time, until),
+        )
+    except ValueError as e:
+        click.echo(f"[storage] {e}", err=True)
+        sys.exit(1)
     if as_json:
         _echo_json(result)
         return

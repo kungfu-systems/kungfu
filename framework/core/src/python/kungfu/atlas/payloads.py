@@ -49,6 +49,7 @@ def enrich_source_records(source_records: list[dict[str, Any]]) -> list[dict[str
             "kind": record.get("kind"),
             "source_id": record.get("source_id"),
             "source_path": record.get("source_path"),
+            "source_time": record.get("source_time"),
             "schema_version": record.get("schema_version"),
             "content_type": CONTENT_TYPE_JSON,
             "payload_hash": digest,
@@ -60,6 +61,36 @@ def enrich_source_records(source_records: list[dict[str, Any]]) -> list[dict[str
     return enriched
 
 
+def _serialize_range(range_filter: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not range_filter:
+        return None
+    result = {}
+    for key in ("since", "until", "cursor"):
+        value = range_filter.get(key)
+        if value not in (None, ""):
+            result[key] = str(value)
+    return result or None
+
+
+def _matches_range(entry: dict[str, Any], range_filter: dict[str, Any] | None) -> bool:
+    if not range_filter:
+        return True
+    from kungfu.atlas.importer import parse_timestamp
+
+    since = parse_timestamp(range_filter.get("since"))
+    until = parse_timestamp(range_filter.get("until"))
+    if since is None and until is None:
+        return True
+    stamp = parse_timestamp(entry.get("source_time"))
+    if stamp is None:
+        return False
+    if since is not None and stamp < since:
+        return False
+    if until is not None and stamp > until:
+        return False
+    return True
+
+
 def write_import_payloads(
     store_dir: str | Path,
     *,
@@ -68,6 +99,9 @@ def write_import_payloads(
     repo_head: str | None,
     source_records: list[dict[str, Any]],
     counts: dict[str, int],
+    storage_source_id: str = "atlas",
+    source_type: str = "atlas",
+    range_filter: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     store_dir = Path(store_dir)
     entries = []
@@ -82,8 +116,12 @@ def write_import_payloads(
     manifest = {
         "schema": "kungfu.atlas-import/v1",
         "import_id": import_id,
+        "storage_source_id": storage_source_id,
+        "source_type": source_type,
         "repo_root": repo_root,
         "repo_head": repo_head,
+        "source_head": repo_head,
+        "range": _serialize_range(range_filter),
         "hash_algorithm": "sha256",
         "counts": counts,
         "entries": sorted(
@@ -287,18 +325,28 @@ def fsck_import(
     return report
 
 
-def export_records(store_dir: str | Path) -> list[dict[str, Any]]:
+def export_records(
+    store_dir: str | Path,
+    range_filter: dict[str, Any] | None = None,
+    storage_source_id: str | None = None,
+) -> list[dict[str, Any]]:
     manifest = load_latest_manifest(store_dir)
     if manifest is None:
         raise FileNotFoundError(str(latest_manifest_path(store_dir)))
+    if storage_source_id and manifest.get("storage_source_id") != storage_source_id:
+        raise ValueError(f"source_not_imported: {storage_source_id}")
     records = []
     for entry in manifest.get("entries", []):
+        if not _matches_range(entry, range_filter):
+            continue
         payload, error = _load_payload(store_dir, entry)
         if error:
             raise ValueError(f"{error}: {entry.get('kind')}:{entry.get('source_id')}")
         row = dict(entry)
         row["scope"] = "atlas"
         row["import_id"] = manifest.get("import_id")
+        row["storage_source_id"] = manifest.get("storage_source_id", "atlas")
+        row["source_type"] = manifest.get("source_type", "atlas")
         row["repo_head"] = manifest.get("repo_head")
         row["source_head"] = manifest.get("repo_head")
         row["payload"] = payload
@@ -327,8 +375,12 @@ def write_jsonl(records: list[dict[str, Any]], out_path: str | Path) -> None:
 def verify_against_source(
     store_dir: str | Path,
     source_records: list[dict[str, Any]],
+    storage_source_id: str | None = None,
 ) -> dict[str, Any]:
-    exported = {_entry_key(record): record for record in export_records(store_dir)}
+    exported = {
+        _entry_key(record): record
+        for record in export_records(store_dir, storage_source_id=storage_source_id)
+    }
     source = {
         _entry_key(record): record for record in enrich_source_records(source_records)
     }

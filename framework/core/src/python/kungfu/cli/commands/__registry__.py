@@ -15,6 +15,7 @@ from . import schema
 from . import work
 from . import atlas
 from . import storage
+from . import source
 from . import kfx
 from . import skill
 from . import codex
@@ -36,6 +37,7 @@ __all__ = [
     "work",
     "atlas",
     "storage",
+    "source",
     "kfx",
     "skill",
     "codex",
