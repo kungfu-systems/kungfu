@@ -122,6 +122,48 @@ def load_user_config(
     return data
 
 
+def parse_config_value(value: str) -> Any:
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError:
+        return value
+
+
+def set_user_config_value(
+    key: str,
+    value: Any,
+    *,
+    config_home: str | None = None,
+    runtime_home: str | None = None,
+) -> dict[str, Any]:
+    contract = load_contract()
+    config_home = default_config_home() if config_home is None else config_home
+    config_path = user_config_path(config_home)
+    override = load_user_config(config_path, contract=contract)
+    override.setdefault("schema", contract["resolution"]["overrideSchema"])
+    _set_dotted(override, key, value)
+    validate_config(override, contract=contract, partial=True)
+    _write_user_config(config_path, override)
+    return resolve_config(runtime_home=runtime_home, config_home=config_home)
+
+
+def unset_user_config_value(
+    key: str,
+    *,
+    config_home: str | None = None,
+    runtime_home: str | None = None,
+) -> dict[str, Any]:
+    contract = load_contract()
+    config_home = default_config_home() if config_home is None else config_home
+    config_path = user_config_path(config_home)
+    override = load_user_config(config_path, contract=contract)
+    override.setdefault("schema", contract["resolution"]["overrideSchema"])
+    _unset_dotted(override, key)
+    validate_config(override, contract=contract, partial=True)
+    _write_user_config(config_path, override)
+    return resolve_config(runtime_home=runtime_home, config_home=config_home)
+
+
 def resolve_config(
     *,
     runtime_home: str | None = None,
@@ -239,6 +281,51 @@ def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any
         else:
             result[key] = copy.deepcopy(value)
     return result
+
+
+def _dotted_parts(key: str) -> list[str]:
+    parts = [part for part in key.split(".") if part]
+    if not parts or len(parts) != len(key.split(".")):
+        raise ValueError(f"invalid config key: {key!r}")
+    return parts
+
+
+def _set_dotted(target: dict[str, Any], key: str, value: Any) -> None:
+    parts = _dotted_parts(key)
+    current = target
+    for part in parts[:-1]:
+        existing = current.get(part)
+        if existing is None:
+            existing = {}
+            current[part] = existing
+        if not isinstance(existing, dict):
+            raise ValueError(f"cannot set nested config under scalar key: {part}")
+        current = existing
+    current[parts[-1]] = value
+
+
+def _unset_dotted(target: dict[str, Any], key: str) -> None:
+    parts = _dotted_parts(key)
+    stack: list[tuple[dict[str, Any], str]] = []
+    current = target
+    for part in parts[:-1]:
+        existing = current.get(part)
+        if not isinstance(existing, dict):
+            return
+        stack.append((current, part))
+        current = existing
+    current.pop(parts[-1], None)
+    for parent, part in reversed(stack):
+        child = parent.get(part)
+        if isinstance(child, dict) and not child:
+            parent.pop(part, None)
+
+
+def _write_user_config(config_path: str, data: dict[str, Any]) -> None:
+    os.makedirs(os.path.dirname(config_path), exist_ok=True)
+    with open(config_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, sort_keys=True)
+        f.write("\n")
 
 
 def _expand_placeholders(

@@ -95,6 +95,9 @@ kungfu config contract --json
 kungfu config schema --json
 kungfu config defaults --json
 kungfu config show --json
+kungfu config set ui.fontSize 16 --json
+kungfu config set ui.scale 1.1 --json
+kungfu config unset ui.scale --json
 kungfu agent context --json
 ```
 
@@ -106,6 +109,13 @@ kungfu agent context --json
 defaults, optional user overrides, contract metadata, source metadata,
 `configHome`, `configPath`, and `runtimeHome`. The `contract.hash` field makes
 the exact contract world inspectable by users, agents, and release gates.
+
+`kungfu config set <dotted-key> <json-value>` writes a user override to
+`configPath`, validates it against the same contract, and returns the resolved
+config with `--json`. Plain values that are not JSON decode as strings, so
+`kungfu config set ui.fontFamily system` and
+`kungfu config set ui.fontFamily '"SF Pro Text, system-ui, sans-serif"'` are
+both valid.
 
 `kungfu agent context --json` is the canonical local discovery entrypoint for
 agents. Managed-run envelopes point to this command instead of carrying config,

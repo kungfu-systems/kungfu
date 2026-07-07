@@ -65,6 +65,10 @@ const shell: Shell = {
   setting: () => '',
   updateState: () => {},
   state: { profileId: '', disabledKfx: [], disabledSuites: [], settings: {} },
+  config: null,
+  reloadConfig: () => {},
+  setConfigValue: () => {},
+  unsetConfigValue: () => {},
   info: {
     ok: true,
     message: 'sandboxed',

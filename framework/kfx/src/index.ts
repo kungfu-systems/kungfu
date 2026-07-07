@@ -720,6 +720,38 @@ export type ShellRuntimeInfo = {
   longfistTypes: { name: string; fields: string[] }[];
 };
 
+export type KungfuUiConfig = {
+  fontFamily: string;
+  fontSize: number;
+  scale: number;
+};
+
+export type KungfuResolvedConfig = {
+  schema: 'kungfu.config.resolved/v1';
+  configHome: string;
+  configPath: string;
+  runtimeHome: string;
+  config: {
+    ui: KungfuUiConfig;
+    [key: string]: unknown;
+  };
+  sources: {
+    type: string;
+    path?: string;
+    exists?: boolean;
+    [key: string]: unknown;
+  }[];
+  contract: Record<string, unknown>;
+};
+
+export type KungfuConfigValue =
+  | string
+  | number
+  | boolean
+  | null
+  | Record<string, unknown>
+  | unknown[];
+
 // One loaded view as the GUI shell sees it: a load-plan entry (manifest data +
 // the trust/tier decision) with this renderer's landing added — the mounted
 // `View`. A node-integrated view carries a View evaluated in the shared
@@ -758,6 +790,12 @@ export type Shell = {
   // persist shell state changes; the shell owns the ConfigStore write
   updateState: (patch: Partial<ShellState>) => void;
   state: ShellState;
+  // global Kungfu config, read/written through `kungfu config`
+  config: KungfuResolvedConfig | null;
+  configError?: string;
+  reloadConfig: () => void;
+  setConfigValue: (key: string, value: KungfuConfigValue) => void;
+  unsetConfigValue: (key: string) => void;
   // runtime facts for system views
   info: ShellRuntimeInfo;
   // every loaded kfx (for the manager and settings views)
@@ -809,7 +847,7 @@ export const panelStyle: React.CSSProperties = {
 };
 
 export const headingStyle: React.CSSProperties = {
-  fontSize: 11,
+  fontSize: 'calc(var(--kf-font-size, 14px) - 3px)',
   fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: 1,
@@ -818,8 +856,8 @@ export const headingStyle: React.CSSProperties = {
 };
 
 export const mono: React.CSSProperties = {
-  fontFamily: 'SF Mono, Menlo, monospace',
-  fontSize: 12,
+  fontFamily: 'var(--kf-mono-font-family, SF Mono, Menlo, monospace)',
+  fontSize: 'calc(var(--kf-font-size, 14px) - 2px)',
 };
 
 export const inputStyle: React.CSSProperties = {

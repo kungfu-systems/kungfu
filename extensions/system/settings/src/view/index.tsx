@@ -10,10 +10,11 @@ import {
 } from '@kungfu-tech/kfx';
 import React from 'react';
 
-const tabs = ['profile', 'kfx', 'paths', 'advanced'] as const;
+const tabs = ['appearance', 'profile', 'kfx', 'paths', 'advanced'] as const;
 type SettingsTab = (typeof tabs)[number];
 
 const tabLabels: Record<SettingsTab, string> = {
+  appearance: 'Appearance',
   profile: 'Profile',
   kfx: 'KFX',
   paths: 'Paths',
@@ -34,13 +35,57 @@ const rowStyle: React.CSSProperties = {
   padding: '6px 0',
 };
 
+const customFontValue = '__custom__';
+
+const fontFamilyOptions = [
+  { label: 'System UI', value: 'system' },
+  {
+    label: 'System Mono',
+    value:
+      'ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
+  },
+  {
+    label: 'Common Sans',
+    value:
+      'Arial, Helvetica, "Liberation Sans", "Noto Sans", system-ui, sans-serif',
+  },
+  {
+    label: 'Common Serif',
+    value:
+      'Georgia, "Times New Roman", "Liberation Serif", "Noto Serif", serif',
+  },
+  {
+    label: 'Common Mono',
+    value: 'Consolas, "Liberation Mono", Menlo, "SF Mono", Monaco, monospace',
+  },
+] as const;
+
 function shellEnv(key: string): string {
   return window.process.env[key] || '—';
 }
 
 function SettingsView({ shell }: KfxViewProps) {
   const [drafts, setDrafts] = React.useState<Record<string, string>>({});
-  const [activeTab, setActiveTab] = React.useState<SettingsTab>('profile');
+  const [activeTab, setActiveTab] = React.useState<SettingsTab>('appearance');
+  const ui = shell.config?.config.ui ?? {
+    fontFamily: 'system',
+    fontSize: 14,
+    scale: 1,
+  };
+  const [uiDraft, setUiDraft] = React.useState({
+    fontFamily: ui.fontFamily,
+    fontSize: String(ui.fontSize),
+    scale: String(ui.scale),
+  });
+  const [uiError, setUiError] = React.useState('');
+
+  React.useEffect(() => {
+    setUiDraft({
+      fontFamily: ui.fontFamily,
+      fontSize: String(ui.fontSize),
+      scale: String(ui.scale),
+    });
+  }, [ui.fontFamily, ui.fontSize, ui.scale]);
 
   const declared = shell.registry.flatMap((entry) =>
     entry.settings.map((decl) => ({ owner: entry.title, decl })),
@@ -60,6 +105,163 @@ function SettingsView({ shell }: KfxViewProps) {
   const profile =
     shell.profiles.find((p) => p.id === shell.state.profileId) ??
     shell.profiles[0];
+
+  const saveAppearance = () => {
+    const fontSize = Number(uiDraft.fontSize);
+    const scale = Number(uiDraft.scale);
+    if (!Number.isFinite(fontSize) || fontSize < 8 || fontSize > 48) {
+      setUiError('font size must be between 8 and 48');
+      return;
+    }
+    if (!Number.isFinite(scale) || scale < 0.5 || scale > 3) {
+      setUiError('zoom must be between 50% and 300%');
+      return;
+    }
+    const fontFamily = uiDraft.fontFamily.trim() || 'system';
+    try {
+      shell.setConfigValue('ui.fontFamily', fontFamily);
+      shell.setConfigValue('ui.fontSize', fontSize);
+      shell.setConfigValue('ui.scale', scale);
+      setUiError('');
+    } catch (e) {
+      setUiError((e as Error).message);
+    }
+  };
+
+  const resetAppearance = () => {
+    try {
+      shell.unsetConfigValue('ui.fontFamily');
+      shell.unsetConfigValue('ui.fontSize');
+      shell.unsetConfigValue('ui.scale');
+      shell.reloadConfig();
+      setUiError('');
+    } catch (e) {
+      setUiError((e as Error).message);
+    }
+  };
+
+  const renderAppearance = () => (
+    <section style={sectionStyle}>
+      <h2 style={headingStyle}>Global appearance</h2>
+      {shell.configError && (
+        <div style={{ ...mono, color: '#f48771', marginBottom: 10 }}>
+          {shell.configError}
+        </div>
+      )}
+      <div style={{ display: 'grid', gap: 10, maxWidth: 560 }}>
+        <label style={rowStyle}>
+          <span style={{ color: '#858585' }}>font family</span>
+          <div style={{ display: 'grid', gap: 8 }}>
+            <select
+              style={{ ...inputStyle, width: '100%' }}
+              value={
+                fontFamilyOptions.some(
+                  (option) => option.value === uiDraft.fontFamily,
+                )
+                  ? uiDraft.fontFamily
+                  : customFontValue
+              }
+              onChange={(event) => {
+                const value = event.target.value;
+                setUiDraft((current) => ({
+                  ...current,
+                  fontFamily: value === customFontValue ? '' : value,
+                }));
+              }}
+            >
+              {fontFamilyOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+              <option value={customFontValue}>Custom</option>
+            </select>
+            {!fontFamilyOptions.some(
+              (option) => option.value === uiDraft.fontFamily,
+            ) && (
+              <input
+                style={{ ...inputStyle, width: '100%' }}
+                value={uiDraft.fontFamily}
+                onChange={(event) =>
+                  setUiDraft((current) => ({
+                    ...current,
+                    fontFamily: event.target.value,
+                  }))
+                }
+                placeholder="Inter, system-ui, sans-serif"
+              />
+            )}
+          </div>
+        </label>
+        <label style={rowStyle}>
+          <span style={{ color: '#858585' }}>font size</span>
+          <input
+            type="number"
+            min={8}
+            max={48}
+            step={1}
+            style={{ ...inputStyle, width: 120 }}
+            value={uiDraft.fontSize}
+            onChange={(event) =>
+              setUiDraft((current) => ({
+                ...current,
+                fontSize: event.target.value,
+              }))
+            }
+          />
+        </label>
+        <label style={rowStyle}>
+          <span style={{ color: '#858585' }}>
+            zoom · {Math.round(Number(uiDraft.scale || 1) * 100)}%
+          </span>
+          <input
+            type="range"
+            min={0.5}
+            max={3}
+            step={0.05}
+            value={uiDraft.scale}
+            onChange={(event) =>
+              setUiDraft((current) => ({
+                ...current,
+                scale: event.target.value,
+              }))
+            }
+          />
+        </label>
+        <div style={{ ...mono, color: '#6a6a6a' }}>
+          config: {shell.config?.configPath ?? 'unavailable'}
+        </div>
+        {(uiError || shell.configError) && (
+          <div style={{ ...mono, color: '#f48771' }}>
+            {uiError || shell.configError}
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            type="button"
+            onClick={saveAppearance}
+            style={{ ...mono, padding: '6px 12px' }}
+          >
+            Apply
+          </button>
+          <button
+            type="button"
+            onClick={resetAppearance}
+            style={{ ...mono, padding: '6px 12px' }}
+          >
+            Reset
+          </button>
+          <button
+            type="button"
+            onClick={shell.reloadConfig}
+            style={{ ...mono, padding: '6px 12px' }}
+          >
+            Reload
+          </button>
+        </div>
+      </div>
+    </section>
+  );
 
   const renderProfile = () => (
     <section style={sectionStyle}>
@@ -181,6 +383,7 @@ function SettingsView({ shell }: KfxViewProps) {
   );
 
   const renderActive = () => {
+    if (activeTab === 'appearance') return renderAppearance();
     if (activeTab === 'profile') return renderProfile();
     if (activeTab === 'kfx') return renderKfx();
     if (activeTab === 'paths') return renderPaths();

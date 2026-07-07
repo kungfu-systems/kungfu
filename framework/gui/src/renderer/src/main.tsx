@@ -12,6 +12,8 @@ import * as capability from '@kungfu-tech/api/capability';
 import type {
   KfxCapabilities,
   KfxEntry,
+  KungfuConfigValue,
+  KungfuResolvedConfig,
   SessionWindowRecord,
   Shell,
   ShellState,
@@ -26,6 +28,14 @@ import {
   SESSION_WINDOW_RESTORE_CHANNEL,
   SESSION_WINDOW_SNAPSHOT_CHANNEL,
 } from '../../sandbox/channels';
+import {
+  loadKungfuConfig,
+  normalizedUiConfig,
+  resolvedMonoFontFamily,
+  resolvedUiFontFamily,
+  setKungfuConfigValue,
+  unsetKungfuConfigValue,
+} from './gui-config';
 import { type KfxLoadResult, loadKfx } from './kfx-loader';
 import { type Runtime, bootRuntime } from './runtime';
 import { sandboxClient } from './sandbox-client';
@@ -198,6 +208,8 @@ function App() {
   );
   const [params, setParams] = React.useState<Record<string, string>>({});
   const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const [config, setConfig] = React.useState<KungfuResolvedConfig | null>(null);
+  const [configError, setConfigError] = React.useState('');
 
   // shared refresh bus: one shell-owned timer, kfx subscribe
   const subscribers = React.useRef(new Set<() => void>());
@@ -218,6 +230,56 @@ function App() {
     },
     [runtime.domain],
   );
+
+  const reloadConfig = React.useCallback(() => {
+    try {
+      setConfig(loadKungfuConfig());
+      setConfigError('');
+    } catch (e) {
+      setConfig(null);
+      setConfigError((e as Error).message);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    reloadConfig();
+  }, [reloadConfig]);
+
+  const updateConfigValue = React.useCallback(
+    (key: string, value: KungfuConfigValue) => {
+      try {
+        setConfig(setKungfuConfigValue(key, value));
+        setConfigError('');
+      } catch (e) {
+        setConfigError((e as Error).message);
+        throw e;
+      }
+    },
+    [],
+  );
+
+  const removeConfigValue = React.useCallback((key: string) => {
+    try {
+      setConfig(unsetKungfuConfigValue(key));
+      setConfigError('');
+    } catch (e) {
+      setConfigError((e as Error).message);
+      throw e;
+    }
+  }, []);
+
+  const uiConfig = normalizedUiConfig(config);
+
+  React.useEffect(() => {
+    try {
+      const electron = window.require('electron') as {
+        webFrame?: { setZoomFactor: (factor: number) => void };
+      };
+      electron.webFrame?.setZoomFactor(uiConfig.scale);
+    } catch {
+      // non-electron tests or previews keep CSS sizing without webFrame zoom
+    }
+  }, [uiConfig.scale]);
 
   const settingFallbacks: Record<string, string> = Object.fromEntries(
     loaded.entries.flatMap((entry) =>
@@ -318,6 +380,11 @@ function App() {
     setting: (key) => state.settings[key] ?? settingFallbacks[key] ?? '',
     updateState,
     state,
+    config,
+    configError,
+    reloadConfig,
+    setConfigValue: updateConfigValue,
+    unsetConfigValue: removeConfigValue,
     info: {
       ok: runtime.ok,
       message: runtime.message,
@@ -472,21 +539,25 @@ function App() {
     </div>
   ) : null;
 
+  const appStyle = {
+    '--kf-ui-font-family': resolvedUiFontFamily(uiConfig.fontFamily),
+    '--kf-mono-font-family': resolvedMonoFontFamily(uiConfig.fontFamily),
+    '--kf-font-size': `${uiConfig.fontSize}px`,
+    fontFamily: 'var(--kf-ui-font-family)',
+    fontSize: 'var(--kf-font-size)',
+    color: '#cccccc',
+    background: '#1e1e1e',
+    height: '100vh',
+    margin: 0,
+    padding: 16,
+    boxSizing: 'border-box',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 12,
+  } as React.CSSProperties;
+
   return (
-    <div
-      style={{
-        fontFamily: 'system-ui, sans-serif',
-        color: '#cccccc',
-        background: '#1e1e1e',
-        height: '100vh',
-        margin: 0,
-        padding: 16,
-        boxSizing: 'border-box',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 12,
-      }}
-    >
+    <div style={appStyle}>
       <header style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
         <h1 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>
           Kungfu v4 reference app

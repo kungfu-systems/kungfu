@@ -3,7 +3,13 @@
 from pathlib import Path
 import json
 
-from kungfu.config import contract_hash, load_contract, resolve_config
+from kungfu.config import (
+    contract_hash,
+    load_contract,
+    resolve_config,
+    set_user_config_value,
+    unset_user_config_value,
+)
 from kungfu.skill import (
     append_audit_event,
     build_skill_dependency_binding,
@@ -198,6 +204,57 @@ def test_resolved_config_merges_user_override(tmp_path):
     assert config["config"]["ui"]["fontFamily"] == "system"
     assert config["config"]["shortcuts"]["commandPalette"] == "Ctrl+K"
     assert config["config"]["shortcuts"]["quickOpen"] == "Mod+P"
+
+
+def test_user_config_set_and_unset_dotted_values(tmp_path):
+    runtime_home = tmp_path / "runtime-home"
+    config_home = tmp_path / "config-home"
+
+    set_result = set_user_config_value(
+        "ui.fontSize",
+        18,
+        runtime_home=str(runtime_home),
+        config_home=str(config_home),
+    )
+    set_user_config_value(
+        "ui.scale",
+        1.25,
+        runtime_home=str(runtime_home),
+        config_home=str(config_home),
+    )
+
+    config_path = config_home / "config.json"
+    saved = json.loads(config_path.read_text(encoding="utf-8"))
+    assert saved["schema"] == "kungfu.config.override/v1"
+    assert saved["ui"]["fontSize"] == 18
+    assert saved["ui"]["scale"] == 1.25
+    assert set_result["config"]["ui"]["fontSize"] == 18
+
+    unset_result = unset_user_config_value(
+        "ui.fontSize",
+        runtime_home=str(runtime_home),
+        config_home=str(config_home),
+    )
+
+    saved = json.loads(config_path.read_text(encoding="utf-8"))
+    assert "fontSize" not in saved["ui"]
+    assert saved["ui"]["scale"] == 1.25
+    assert unset_result["config"]["ui"]["fontSize"] == 14
+    assert unset_result["config"]["ui"]["scale"] == 1.25
+
+
+def test_user_config_set_rejects_invalid_contract_value(tmp_path):
+    try:
+        set_user_config_value(
+            "ui.scale",
+            9,
+            runtime_home=str(tmp_path / "runtime-home"),
+            config_home=str(tmp_path / "config-home"),
+        )
+    except ValueError as e:
+        assert "greater than the maximum" in str(e)
+    else:
+        raise AssertionError("expected invalid ui.scale to fail")
 
 
 def test_resolved_config_rejects_unknown_override_keys(tmp_path):
