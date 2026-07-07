@@ -27,6 +27,7 @@ Before acting in a Kungfu runtime, read local facts from the installed pack:
 kungfu agent brief
 kungfu agent capabilities --json
 kungfu agent choose-mode --json
+kungfu agent verify --json
 kungfu agent status --target claude --json
 ```
 

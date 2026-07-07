@@ -6,6 +6,8 @@ from .resources import (
     document_text,
     index,
     pack_root,
+    registry,
+    registry_schema,
     skill_path,
 )
 
@@ -15,5 +17,7 @@ __all__ = [
     "document_text",
     "index",
     "pack_root",
+    "registry",
+    "registry_schema",
     "skill_path",
 ]

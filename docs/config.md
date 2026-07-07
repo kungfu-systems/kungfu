@@ -99,6 +99,7 @@ kungfu config set ui.fontSize 16 --json
 kungfu config set ui.scale 1.1 --json
 kungfu config unset ui.scale --json
 kungfu agent context --json
+kungfu agent verify --json
 ```
 
 `kungfu config contract --json` returns the full
@@ -122,4 +123,7 @@ agents. Managed-run envelopes point to this command instead of carrying config,
 command lists, document lists, skill roots, or kfx roots in every prompt.
 The agent context can then return lightweight interface pointers such as
 `kungfu skill list --json`, `kungfu skill catalog --json`, and
-`kungfu kfx list --json` for on-demand discovery.
+`kungfu kfx list --json` for on-demand discovery. The KFD-3 collaboration
+interface itself is declared in the installed agent pack registry; use
+`kungfu agent verify --json` to check that the packaged command catalog and the
+runtime `kungfu agent` command tree stay aligned with that registry.

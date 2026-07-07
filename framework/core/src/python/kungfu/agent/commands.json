@@ -1,147 +1,188 @@
 {
   "schema": "kungfu.agent-commands/v1",
+  "apiRegistry": {
+    "registryId": "kungfu-agent-first-collaboration-interface",
+    "profile": "agent-first",
+    "standard": "KFD-3",
+    "source": "kfd3_api.registry.json"
+  },
   "commands": [
     {
+      "apiId": "kungfu.agent.brief",
       "name": "kungfu agent brief",
       "maturity": "stable",
       "purpose": "Print the local onboarding brief."
     },
     {
+      "apiId": "kungfu.agent.docs",
       "name": "kungfu agent docs",
       "maturity": "stable",
       "purpose": "Show where the installed agent pack lives and list its documents."
     },
     {
+      "apiId": "kungfu.agent.capabilities",
       "name": "kungfu agent capabilities --json",
       "maturity": "stable",
-      "purpose": "Print the machine-readable pack index and command catalog."
+      "purpose": "Print the machine-readable pack index, command catalog, and KFD-3 registry summary."
     },
     {
+      "apiId": "kungfu.agent.choose-mode",
       "name": "kungfu agent choose-mode --json",
       "maturity": "stable",
       "purpose": "Choose brief, report, atlas-projection, trace, managed-run, or remote-sync from explicit flags."
     },
     {
-      "name": "kungfu agent status --target codex --json",
-      "maturity": "stable",
-      "purpose": "Show Codex bootstrap mode, report closeout gate, and local policy path."
-    },
-    {
-      "name": "kungfu agent bootstrap --target codex --mode report",
-      "maturity": "stable",
-      "purpose": "Preview or apply the Codex report bootstrap policy and optional skill install."
-    },
-    {
-      "name": "kungfu agent mode set --target codex --mode managed-run",
-      "maturity": "stable",
-      "purpose": "Switch Codex between report, atlas-projection, managed-run, trace, brief, or remote-sync policy modes."
-    },
-    {
-      "name": "kungfu agent unbootstrap --target codex",
-      "maturity": "stable",
-      "purpose": "Disable Codex bootstrap policy without deleting receipts, work items, or copied skills."
-    },
-    {
-      "name": "kungfu agent uninstall --target codex",
-      "maturity": "stable",
-      "purpose": "Show complete Codex uninstall steps; dry-run by default and no data deletion."
-    },
-    {
+      "apiId": "kungfu.agent.install-skill",
       "name": "kungfu agent install-skill --target codex",
       "maturity": "stable",
-      "purpose": "Preview or explicitly copy the Codex skill file."
+      "purpose": "Preview or explicitly copy a provider skill file."
     },
     {
+      "apiId": "kungfu.agent.install-skill",
       "name": "kungfu agent install-skill --target claude",
       "maturity": "stable",
-      "purpose": "Preview or explicitly copy the Claude skill file."
+      "purpose": "Preview or explicitly copy a provider skill file."
     },
     {
+      "apiId": "kungfu.agent.status",
+      "name": "kungfu agent status --target codex --json",
+      "maturity": "stable",
+      "purpose": "Show local bootstrap mode, report closeout gate, and policy path."
+    },
+    {
+      "apiId": "kungfu.agent.bootstrap",
+      "name": "kungfu agent bootstrap --target codex --mode report",
+      "maturity": "stable",
+      "purpose": "Preview or apply a provider bootstrap policy and optional skill install."
+    },
+    {
+      "apiId": "kungfu.agent.mode.set",
+      "name": "kungfu agent mode set --target codex --mode managed-run",
+      "maturity": "stable",
+      "purpose": "Switch a provider between report, managed-run, trace, brief, or remote-sync policy modes."
+    },
+    {
+      "apiId": "kungfu.agent.unbootstrap",
+      "name": "kungfu agent unbootstrap --target codex",
+      "maturity": "stable",
+      "purpose": "Disable bootstrap policy without deleting receipts, work items, or copied skills."
+    },
+    {
+      "apiId": "kungfu.agent.uninstall",
+      "name": "kungfu agent uninstall --target codex",
+      "maturity": "stable",
+      "purpose": "Show complete uninstall steps; dry-run by default and no data deletion."
+    },
+    {
+      "apiId": "kungfu.agent.verify",
+      "name": "kungfu agent verify --json",
+      "maturity": "stable",
+      "purpose": "Verify the installed agent-first KFD-3 collaboration-interface closure."
+    },
+    {
+      "apiId": "kungfu.trace.capture",
       "name": "kungfu trace -- <command>",
       "maturity": "stable",
       "purpose": "Capture an existing command into a local Rewind trace."
     },
     {
+      "apiId": "kungfu.managed-run.start",
       "name": "kungfu managed-run --provider <provider> --prompt <task>",
       "maturity": "experimental",
       "purpose": "Run a provider CLI under Kungfu supervision, skill context, and cost/audit capture."
     },
     {
+      "apiId": "kungfu.work.create",
       "name": "kungfu work create <title> --json",
       "maturity": "stable",
       "purpose": "Create structured work facts in the local journal."
     },
     {
+      "apiId": "kungfu.report.run.begin",
       "name": "kungfu report run begin --work <work-id> --provider <provider> --json",
       "maturity": "experimental",
       "purpose": "Open a reported external agent run without changing how the agent is launched."
     },
     {
+      "apiId": "kungfu.report.cost",
       "name": "kungfu report cost --run <run-id> --provider <provider> --json",
       "maturity": "experimental",
       "purpose": "Append reported token and cost facts to a run journal."
     },
     {
+      "apiId": "kungfu.report.run.end",
       "name": "kungfu report run end --run <run-id> --status <status> --json",
       "maturity": "experimental",
       "purpose": "Close a reported external run and refresh its manifest."
     },
     {
+      "apiId": "kungfu.codex.report-goal",
       "name": "kungfu codex report-goal --goal-id <goal-id> --status <status> --json",
       "maturity": "stable",
       "purpose": "Report a native Codex goal into Kungfu work/Rewind facts and emit a receipt."
     },
     {
+      "apiId": "kungfu.codex.verify-goal-report",
       "name": "kungfu codex verify-goal-report --receipt <path> --json",
       "maturity": "stable",
       "purpose": "Verify a Codex goal report receipt before closeout."
     },
     {
+      "apiId": "kungfu.atlas.import",
       "name": "kungfu atlas import --repo <atlas-repo> --json",
       "maturity": "stable",
       "purpose": "Snapshot an Atlas-style control-plane repo into Kungfu's local read-only projection."
     },
     {
+      "apiId": "kungfu.atlas.show.import",
       "name": "kungfu atlas show import --json",
       "maturity": "stable",
       "purpose": "Show the latest Atlas projection batch metadata and source repo head."
     },
     {
+      "apiId": "kungfu.atlas.show.missions",
       "name": "kungfu atlas show missions --json",
       "maturity": "stable",
       "purpose": "List imported Atlas mission cards from the latest projection."
     },
     {
+      "apiId": "kungfu.atlas.show.goals",
       "name": "kungfu atlas show goals --json",
       "maturity": "stable",
       "purpose": "List imported Atlas goal cards from the latest projection."
     },
     {
+      "apiId": "kungfu.atlas.show.markers",
       "name": "kungfu atlas show markers --json",
       "maturity": "stable",
       "purpose": "List imported Atlas worktree-status markers from the latest projection."
     },
     {
+      "apiId": "kungfu.remote.add",
       "name": "kungfu remote add <source-id> --host <host> --home <kf-home> --json",
       "maturity": "experimental",
       "purpose": "Register a source runtime for source-scoped evidence sync."
     },
     {
+      "apiId": "kungfu.remote.sync",
       "name": "kungfu remote sync <source-id> --json",
       "maturity": "experimental",
       "purpose": "Mirror source runtime facts under remotes/<source-id>/runtime without mixing them into local truth."
     },
     {
+      "apiId": "kungfu.skill.catalog",
       "name": "kungfu skill catalog --json",
       "maturity": "stable",
       "purpose": "Print the compact agent-visible Kungfu Skill catalog."
     },
     {
+      "apiId": "kungfu.skill.read",
       "name": "kungfu skill read <key-or-path> --json",
       "maturity": "stable",
       "purpose": "Load a full SKILL.md on demand with audit evidence."
     },
     {
+      "apiId": "kungfu.kfx.install",
       "name": "kungfu kfx install <source>",
       "maturity": "stable",
       "purpose": "Install a kfx package through the trust disclosure path."

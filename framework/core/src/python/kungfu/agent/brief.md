@@ -9,6 +9,7 @@ Start here:
 kungfu agent brief
 kungfu agent capabilities --json
 kungfu agent choose-mode --json
+kungfu agent verify --json
 kungfu agent status --target codex --json
 ```
 
@@ -18,12 +19,21 @@ ambient permission. It is a set of local facts, command contracts, Skill
 instructions, and kfx trust boundaries that must remain inspectable after
 installation.
 
+The KFD-3 collaboration interface is declared in `kfd3_api.registry.json`.
+`commands.json`, this brief, and provider skills are projections of that
+registry. `kungfu agent verify --json` checks the installed runtime command tree
+against the registry so a shipped agent surface cannot quietly expose extra
+`kungfu agent` commands outside the declared interface.
+
 Use the modes this way:
 
 - **brief**: read the local facts; no runtime action.
 - **report**: create or inspect structured work facts with `kungfu work`, and
   append external run facts with `kungfu report`. Native Codex goals should use
   `kungfu codex report-goal` and verify the receipt before closeout.
+- **atlas-projection**: snapshot an Atlas-style control-plane repo with
+  `kungfu atlas import` when the user asks to sync, inspect, or visualize
+  missions, goals, and worktree markers in Kungfu.
 - **trace**: capture an existing command with `kungfu trace -- <command>`.
 - **managed-run**: let Kungfu launch a provider CLI with skill context and run
   evidence; this surface is experimental. Keep the report closeout gate as a
@@ -32,9 +42,8 @@ Use the modes this way:
   `kungfu remote` is experimental and does not merge remote facts into local
   authoritative truth.
 
-Atlas projection is a local import workflow, not an operating mode. When the
-user asks to sync an Atlas-style control-plane repo into Kungfu, snapshot it and
-verify the projection with:
+When the user asks to sync an Atlas-style control-plane repo into Kungfu,
+snapshot it and verify the projection with:
 
 ```sh
 kungfu atlas import --repo <atlas-repo> --json

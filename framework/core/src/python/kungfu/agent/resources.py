@@ -41,6 +41,14 @@ def commands():
     return _read_json("commands.json")
 
 
+def registry():
+    return _read_json("kfd3_api.registry.json")
+
+
+def registry_schema():
+    return _read_json("kfd3_api.schema.json")
+
+
 def document_text(name):
     return (pack_root() / name).read_text(encoding="utf-8")
 

@@ -158,13 +158,20 @@ read, report structured work facts, trace an existing command, run a managed
 provider session, or handle remote evidence. The pack is exposed through
 `kungfu agent brief`, `kungfu agent capabilities --json`, and
 `kungfu agent choose-mode --json`, and it ships with provider-specific
-`SKILL.md` files that can be previewed before explicit installation.
+`SKILL.md` files that can be previewed before explicit installation. The
+agent-facing control surface is declared in `kfd3_api.registry.json`; the Click
+runtime commands under `kungfu agent` anchor to that registry with explicit
+KFD-3 API ids, while `commands.json`, the brief, and provider skills are
+registry projections.
 
 This pack is not another authority layer. It records current commands, maturity
 labels, safety boundaries, and examples so Electron, standalone CLI, npm, and
 PyPI installs do not depend on stale external notes. Future Homebrew, winget,
 container, and kfx channels must pass the same pack validation before claiming
-agent-ready packaging.
+agent-ready packaging. `kungfu agent verify --json` is the installed-runtime
+closure check: it validates the registry shape, confirms the `kungfu agent`
+command tree has no unanchored runtime commands, and checks the command catalog
+does not expose commands outside the declared registry.
 
 ### Distribution — `artifact` (`@kungfu-tech/artifact-kungfu`)
 
