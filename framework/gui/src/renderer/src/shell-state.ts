@@ -42,6 +42,7 @@ export const DEFAULT_STATE: ShellState = {
   profileId: 'default',
   disabledKfx: [],
   disabledSuites: [],
+  sidebarCollapsed: false,
   settings: {},
 };
 
@@ -72,6 +73,10 @@ export function loadShellState(domain: DomainState): ShellState {
           : DEFAULT_STATE.profileId,
       disabledKfx: strings(parsed.disabledKfx),
       disabledSuites: strings(parsed.disabledSuites),
+      sidebarCollapsed:
+        typeof parsed.sidebarCollapsed === 'boolean'
+          ? parsed.sidebarCollapsed
+          : DEFAULT_STATE.sidebarCollapsed,
       settings:
         parsed.settings && typeof parsed.settings === 'object'
           ? Object.fromEntries(

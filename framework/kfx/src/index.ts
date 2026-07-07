@@ -706,6 +706,7 @@ export type ShellState = {
   profileId: string;
   disabledKfx: string[];
   disabledSuites: string[];
+  sidebarCollapsed: boolean;
   settings: Record<string, string>;
 };
 

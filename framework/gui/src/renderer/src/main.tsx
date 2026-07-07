@@ -48,6 +48,7 @@ import { type KfxLoadResult, loadKfx } from './kfx-loader';
 import { type Runtime, bootRuntime } from './runtime';
 import { sandboxClient } from './sandbox-client';
 import {
+  DEFAULT_STATE,
   PROFILES,
   loadShellState,
   profileById,
@@ -507,14 +508,7 @@ function App() {
     loadKfx(window.process.env, SHARED_MODULES),
   );
   const [state, setState] = React.useState<ShellState>(() =>
-    runtime.domain
-      ? loadShellState(runtime.domain)
-      : {
-          profileId: 'default',
-          disabledKfx: [],
-          disabledSuites: [],
-          settings: {},
-        },
+    runtime.domain ? loadShellState(runtime.domain) : DEFAULT_STATE,
   );
   const profile = profileById(state.profileId);
   const [active, setActive] = React.useState(
@@ -829,25 +823,36 @@ function App() {
     ...sessionWindowShell,
   };
 
+  const sidebarCollapsed = state.sidebarCollapsed;
+  const toggleSidebar = React.useCallback(() => {
+    updateState({ sidebarCollapsed: !sidebarCollapsed });
+  }, [sidebarCollapsed, updateState]);
   const navButton = (id: string, title: string) => (
     <button
       key={id}
       type="button"
       onClick={() => shell.open(id)}
+      title={sidebarCollapsed ? title : undefined}
+      aria-label={title}
       style={{
         ...mono,
-        display: 'block',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
         width: '100%',
-        textAlign: 'left',
-        padding: '6px 10px',
+        height: sidebarCollapsed ? 32 : undefined,
+        minHeight: 32,
+        textAlign: sidebarCollapsed ? 'center' : 'left',
+        padding: sidebarCollapsed ? 0 : '6px 10px',
         border: 'none',
-        borderRadius: 4,
+        borderRadius: 5,
         cursor: 'pointer',
         background: activeKfx?.id === id ? '#04395e' : 'transparent',
         color: activeKfx?.id === id ? '#9cdcfe' : '#cccccc',
+        overflow: 'hidden',
       }}
     >
-      {title}
+      {sidebarCollapsed ? title.trim().slice(0, 1).toUpperCase() : title}
     </button>
   );
 
@@ -1294,39 +1299,79 @@ function App() {
             }}
           >
             <nav
+              aria-label="Views"
               style={{
-                width: 150,
+                width: sidebarCollapsed ? 44 : 150,
                 flexShrink: 0,
                 minHeight: 0,
                 overflow: 'auto',
+                overflowX: 'hidden',
+                transition: 'width 120ms ease',
               }}
             >
+              <button
+                type="button"
+                aria-label={
+                  sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'
+                }
+                title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                onClick={toggleSidebar}
+                style={{
+                  ...mono,
+                  width: '100%',
+                  height: 32,
+                  marginBottom: 8,
+                  border: '1px solid #3c3c3c',
+                  borderRadius: 5,
+                  cursor: 'pointer',
+                  background: '#252526',
+                  color: '#cccccc',
+                  fontSize: 14,
+                }}
+              >
+                {sidebarCollapsed ? '›' : '‹'}
+              </button>
               {plain.map((k) => navButton(k.id, k.title))}
               {[...suiteGroups.entries()].map(([key, group]) => (
                 <React.Fragment key={key}>
-                  <div
-                    style={{
-                      ...mono,
-                      color: '#6a6a6a',
-                      margin: '12px 0 4px',
-                      fontSize: 10,
-                    }}
-                  >
-                    {suiteTitle(group[0]) ?? key}
-                  </div>
+                  {sidebarCollapsed ? (
+                    <div
+                      aria-hidden="true"
+                      style={{
+                        height: 1,
+                        margin: '10px 6px 6px',
+                        background: '#3c3c3c',
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        ...mono,
+                        color: '#6a6a6a',
+                        margin: '12px 0 4px',
+                        fontSize: 10,
+                      }}
+                    >
+                      {suiteTitle(group[0]) ?? key}
+                    </div>
+                  )}
                   {group.map((k) => navButton(k.id, k.title))}
                 </React.Fragment>
               ))}
               {loaded.failures.length > 0 && (
                 <div
+                  title={`${loaded.failures.length} kfx failed to load`}
                   style={{
                     ...mono,
                     color: '#f48771',
                     marginTop: 12,
                     fontSize: 10,
+                    textAlign: sidebarCollapsed ? 'center' : 'left',
                   }}
                 >
-                  {loaded.failures.length} kfx failed to load
+                  {sidebarCollapsed
+                    ? '!'
+                    : `${loaded.failures.length} kfx failed to load`}
                 </div>
               )}
             </nav>
