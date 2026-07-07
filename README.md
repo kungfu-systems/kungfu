@@ -1,15 +1,28 @@
 # Kungfu
 
-Kungfu is a framework and runtime for building journal-first,
-streaming-data applications. It is built on one discipline: never let a
-load-bearing truth rest on a claim you could fake — weld it to something that
-can't. ([design philosophy](docs/design-philosophy.md); [facts before
-trust](docs/facts-before-trust.md).)
+Kungfu is the open-source core behind the Kungfu product direction: a
+local-first, journal-first runtime for recording facts, replaying work, and
+building verifiable agent-facing applications.
+
+Facts before trust. In KFD terms, a load-bearing claim should never stand
+alone: bind it to a verifiable source, artifact, manifest, or runtime receipt.
+([KFD](https://kfd.libkungfu.dev/); [design philosophy](docs/design-philosophy.md);
+[facts before trust](docs/facts-before-trust.md).)
+
+Public entrypoints:
+
+- Product home: <https://kungfu.tech>
+- Developer and agent map: <https://libkungfu.dev>
+- Source and open core: this repository
 
 The product goal is to make fact-first responsibility the path of least
 resistance: once a user starts relying on Kungfu, the natural way to use it
 should be to inspect facts, understand responsibility, and make control
 decisions from local proof rather than from opaque claims.
+
+The commercial product surface is coming soon. This repository contains the
+open-source runtime core, SDK surface, and reference applications being prepared
+in public.
 
 At its core is a low-latency, append-only event journal with a shared,
 strongly-typed schema, exposed zero-copy to C++, Python, and Node. Kungfu

@@ -1,15 +1,18 @@
 # Facts Before Trust
 
-Kungfu starts from a simple rule:
+Kungfu starts from the rule KFD makes explicit:
 
 ```text
-Do not ask users to trust a claim when the system can produce a fact.
+A load-bearing claim should never stand alone. Bind it to a verifiable source,
+artifact, manifest, or runtime receipt before treating it as trusted state.
 ```
 
-That rule is why Kungfu is journal-first. It is why replay runs on the same
-runtime as live. It is why known limits are written down instead of hidden. It
-is why release, provenance, extension trust, and agent-facing skills are treated
-as part of the product rather than paperwork around it.
+That rule is the concrete form of facts before trust: do not ask users to trust
+a claim when the system can produce a fact. It is why Kungfu is journal-first.
+It is why replay runs on the same runtime as live. It is why known limits are
+written down instead of hidden. It is why release, provenance, extension trust,
+and agent-facing skills are treated as part of the product rather than
+paperwork around it.
 
 Kungfu is built for work where claims are not enough:
 
