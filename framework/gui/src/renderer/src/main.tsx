@@ -32,6 +32,9 @@ import {
   SESSION_WINDOW_OPEN_CHANNEL,
   SESSION_WINDOW_RESTORE_CHANNEL,
   SESSION_WINDOW_SNAPSHOT_CHANNEL,
+  WINDOW_CHROME_CONTROL_CHANNEL,
+  WINDOW_CHROME_GET_CHANNEL,
+  WINDOW_CHROME_STATE_CHANNEL,
 } from '../../sandbox/channels';
 import {
   loadKungfuConfig,
@@ -214,6 +217,290 @@ function notificationId(): string {
   );
 }
 
+type WindowChromeControl = 'minimize' | 'toggle-maximize' | 'close';
+type WindowChromeConfig = {
+  platform: 'darwin' | 'win32' | 'linux' | 'other';
+  mode: 'native' | 'integrated' | 'custom';
+  customControls: boolean;
+  draggable: boolean;
+  trafficLightInset: number;
+  controlInset: number;
+  maximized: boolean;
+  fullscreen: boolean;
+};
+type ElectronChromeStyle = React.CSSProperties & {
+  WebkitAppRegion?: 'drag' | 'no-drag';
+};
+
+const defaultWindowChrome: WindowChromeConfig = {
+  platform: 'other',
+  mode: 'native',
+  customControls: false,
+  draggable: false,
+  trafficLightInset: 0,
+  controlInset: 0,
+  maximized: false,
+  fullscreen: false,
+};
+
+function readWindowChromeEnv(): WindowChromeConfig {
+  try {
+    const raw = window.process?.env?.KF_WINDOW_CHROME;
+    if (!raw) return defaultWindowChrome;
+    return { ...defaultWindowChrome, ...JSON.parse(raw) };
+  } catch {
+    return defaultWindowChrome;
+  }
+}
+
+function useWindowChrome(): [
+  WindowChromeConfig,
+  (control: WindowChromeControl) => void,
+] {
+  const [chrome, setChrome] =
+    React.useState<WindowChromeConfig>(readWindowChromeEnv);
+  React.useEffect(() => {
+    type ChromeIpc = {
+      invoke: (channel: string, payload?: unknown) => Promise<unknown>;
+      on: (
+        channel: string,
+        listener: (event: unknown, payload: unknown) => void,
+      ) => void;
+      removeListener: (
+        channel: string,
+        listener: (event: unknown, payload: unknown) => void,
+      ) => void;
+    };
+    let ipc: ChromeIpc | null = null;
+    try {
+      ipc = (window.require('electron') as { ipcRenderer: ChromeIpc })
+        .ipcRenderer;
+    } catch {
+      ipc = null;
+    }
+    if (!ipc) return;
+    void ipc.invoke(WINDOW_CHROME_GET_CHANNEL).then((next) => {
+      setChrome((current) => ({ ...current, ...(next as object) }));
+    });
+    const handler = (_event: unknown, payload: unknown) => {
+      setChrome((current) => ({ ...current, ...(payload as object) }));
+    };
+    ipc.on(WINDOW_CHROME_STATE_CHANNEL, handler);
+    return () => ipc?.removeListener(WINDOW_CHROME_STATE_CHANNEL, handler);
+  }, []);
+
+  const control = React.useCallback((next: WindowChromeControl) => {
+    try {
+      const ipc = (
+        window.require('electron') as {
+          ipcRenderer: {
+            invoke: (channel: string, payload: unknown) => Promise<unknown>;
+          };
+        }
+      ).ipcRenderer;
+      void ipc
+        .invoke(WINDOW_CHROME_CONTROL_CHANNEL, { control: next })
+        .then((state) =>
+          setChrome((current) => ({ ...current, ...(state as object) })),
+        );
+    } catch {
+      // Browser previews have no Electron window to control.
+    }
+  }, []);
+
+  return [chrome, control];
+}
+
+function ShellTitleBar({
+  chrome,
+  activeTitle,
+  commandText,
+  commandOptions,
+  settingsOpen,
+  onCommandChange,
+  onCommandSubmit,
+  onOpenSettings,
+  onWindowControl,
+}: {
+  chrome: WindowChromeConfig;
+  activeTitle: string;
+  commandText: string;
+  commandOptions: { id: string; title: string }[];
+  settingsOpen: boolean;
+  onCommandChange: (value: string) => void;
+  onCommandSubmit: () => void;
+  onOpenSettings: () => void;
+  onWindowControl: (control: WindowChromeControl) => void;
+}) {
+  const dragRegion: ElectronChromeStyle = {
+    WebkitAppRegion: chrome.draggable ? 'drag' : undefined,
+  };
+  const interactiveRegion: ElectronChromeStyle = {
+    WebkitAppRegion: 'no-drag',
+  };
+  const leftInset =
+    chrome.mode === 'integrated' ? Math.max(84, chrome.trafficLightInset) : 12;
+  const rightInset = chrome.customControls
+    ? Math.max(138, chrome.controlInset)
+    : 12;
+  const controlButton = (
+    control: WindowChromeControl,
+    label: string,
+    ariaLabel: string,
+    danger = false,
+  ) => (
+    <button
+      type="button"
+      aria-label={ariaLabel}
+      onClick={() => onWindowControl(control)}
+      style={{
+        ...interactiveRegion,
+        width: 46,
+        height: 34,
+        border: 'none',
+        borderRadius: 0,
+        cursor: 'pointer',
+        background: 'transparent',
+        color: danger ? '#ffffff' : '#cccccc',
+        fontSize: 14,
+      }}
+      onMouseEnter={(event) => {
+        event.currentTarget.style.background = danger ? '#c42b1c' : '#343434';
+      }}
+      onMouseLeave={(event) => {
+        event.currentTarget.style.background = 'transparent';
+      }}
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <header
+      style={{
+        ...dragRegion,
+        height: 42,
+        flexShrink: 0,
+        display: 'grid',
+        gridTemplateColumns: `${leftInset}px minmax(160px, 1fr) auto ${rightInset}px`,
+        alignItems: 'center',
+        background: '#1e1e1e',
+        borderBottom: '1px solid #2d2d2d',
+        userSelect: 'none',
+      }}
+    >
+      <div />
+      <div
+        style={{
+          minWidth: 0,
+          display: 'grid',
+          gridTemplateColumns: 'minmax(120px, 220px) minmax(180px, 520px)',
+          alignItems: 'center',
+          gap: 12,
+        }}
+      >
+        <div
+          title={activeTitle}
+          style={{
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            fontSize: 12,
+            color: '#9cdcfe',
+            fontWeight: 600,
+          }}
+        >
+          Kungfu
+        </div>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            onCommandSubmit();
+          }}
+          style={{
+            ...interactiveRegion,
+            minWidth: 0,
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
+          <input
+            aria-label="Search views"
+            list="kf-shell-command-options"
+            value={commandText}
+            onChange={(event) => onCommandChange(event.target.value)}
+            placeholder="Search"
+            style={{
+              width: '100%',
+              height: 26,
+              border: '1px solid #3c3c3c',
+              borderRadius: 6,
+              boxSizing: 'border-box',
+              background: '#252526',
+              color: '#cccccc',
+              padding: '0 10px',
+              outline: 'none',
+              fontSize: 12,
+            }}
+          />
+          <datalist id="kf-shell-command-options">
+            {commandOptions.map((option) => (
+              <option key={option.id} value={option.title} />
+            ))}
+          </datalist>
+        </form>
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          gap: 6,
+          paddingRight: 8,
+        }}
+      >
+        <button
+          type="button"
+          aria-label="Open settings"
+          onClick={onOpenSettings}
+          style={{
+            ...interactiveRegion,
+            ...mono,
+            width: 30,
+            height: 28,
+            border: '1px solid #3c3c3c',
+            borderRadius: 6,
+            cursor: 'pointer',
+            background: settingsOpen ? '#04395e' : '#252526',
+            color: settingsOpen ? '#9cdcfe' : '#cccccc',
+            fontSize: 16,
+            lineHeight: '24px',
+          }}
+        >
+          ⚙
+        </button>
+      </div>
+      <div
+        style={{
+          ...interactiveRegion,
+          height: '100%',
+          display: chrome.customControls ? 'flex' : 'none',
+          alignItems: 'stretch',
+          justifyContent: 'flex-end',
+        }}
+      >
+        {controlButton('minimize', '—', 'Minimize window')}
+        {controlButton(
+          'toggle-maximize',
+          chrome.maximized ? '❐' : '□',
+          chrome.maximized ? 'Restore window' : 'Maximize window',
+        )}
+        {controlButton('close', '×', 'Close window', true)}
+      </div>
+    </header>
+  );
+}
+
 function App() {
   const [runtime] = React.useState(bootRuntime);
   const [loaded] = React.useState<KfxLoadResult>(() =>
@@ -235,6 +522,8 @@ function App() {
   );
   const [params, setParams] = React.useState<Record<string, string>>({});
   const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const [commandText, setCommandText] = React.useState('');
+  const [windowChrome, controlWindow] = useWindowChrome();
   const [config, setConfig] = React.useState<KungfuResolvedConfig | null>(null);
   const [configError, setConfigError] = React.useState('');
   const [masterLive, setMasterLive] = React.useState(
@@ -578,6 +867,29 @@ function App() {
     group.push(entry);
     suiteGroups.set(entry.suite, group);
   }
+  const commandOptions = enabled.map((entry) => ({
+    id: entry.id,
+    title: entry.title,
+  }));
+  const submitCommand = React.useCallback(() => {
+    const query = commandText.trim().toLowerCase();
+    if (!query) return;
+    const match =
+      enabled.find((entry) => entry.title.toLowerCase() === query) ??
+      enabled.find((entry) => entry.id.toLowerCase() === query) ??
+      enabled.find((entry) => entry.title.toLowerCase().includes(query)) ??
+      enabled.find((entry) => entry.id.toLowerCase().includes(query));
+    if (!match) {
+      showNotification({
+        level: 'info',
+        title: 'No matching view',
+        message: commandText,
+      });
+      return;
+    }
+    openKfx(match.id);
+    setCommandText('');
+  }, [commandText, enabled, openKfx, showNotification]);
 
   const systemStatusItems: StatusBarItem[] = [
     {
@@ -949,7 +1261,7 @@ function App() {
   const chromeBodyStyle = {
     flex: 1,
     minHeight: 0,
-    padding: '16px 16px 12px',
+    padding: '14px 16px 12px',
     boxSizing: 'border-box',
     display: 'flex',
     flexDirection: 'column',
@@ -959,39 +1271,18 @@ function App() {
 
   return (
     <div style={appStyle}>
+      <ShellTitleBar
+        chrome={windowChrome}
+        activeTitle={activeKfx?.title ?? 'Kungfu'}
+        commandText={commandText}
+        commandOptions={commandOptions}
+        settingsOpen={settingsOpen}
+        onCommandChange={setCommandText}
+        onCommandSubmit={submitCommand}
+        onOpenSettings={() => setSettingsOpen(true)}
+        onWindowControl={controlWindow}
+      />
       <div style={chromeBodyStyle}>
-        <header
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 16,
-            flexShrink: 0,
-          }}
-        >
-          <h1 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>
-            Kungfu v4 reference app
-          </h1>
-          <button
-            type="button"
-            aria-label="Open settings"
-            onClick={() => setSettingsOpen(true)}
-            style={{
-              ...mono,
-              marginLeft: 'auto',
-              width: 30,
-              height: 30,
-              border: '1px solid #3c3c3c',
-              borderRadius: 6,
-              cursor: 'pointer',
-              background: settingsOpen ? '#04395e' : '#252526',
-              color: settingsOpen ? '#9cdcfe' : '#cccccc',
-              fontSize: 16,
-              lineHeight: '26px',
-            }}
-          >
-            ⚙
-          </button>
-        </header>
         {runtime.ok ? (
           <div
             style={{

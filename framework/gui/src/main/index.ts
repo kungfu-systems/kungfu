@@ -22,6 +22,9 @@ import {
   HIDE_CHANNEL,
   SET_BOUNDS_CHANNEL,
   SHOW_CHANNEL,
+  WINDOW_CHROME_CONTROL_CHANNEL,
+  WINDOW_CHROME_GET_CHANNEL,
+  WINDOW_CHROME_STATE_CHANNEL,
 } from '../sandbox/channels';
 import {
   firstPartyManifestPath,
@@ -57,6 +60,61 @@ const bindingPath = path.join(kungfuDir, 'kungfu_electron.node');
 const firstPartySourceRoot =
   process.env.KF_FIRST_PARTY_SOURCE_ROOT ||
   path.join(__dirname, '..', '..', '..', '..', 'extensions');
+
+type WindowChromePlatform = 'darwin' | 'win32' | 'linux' | 'other';
+type WindowChromeMode = 'native' | 'integrated' | 'custom';
+type WindowChromeControl = 'minimize' | 'toggle-maximize' | 'close';
+
+type WindowChromeConfig = {
+  platform: WindowChromePlatform;
+  mode: WindowChromeMode;
+  customControls: boolean;
+  draggable: boolean;
+  trafficLightInset: number;
+  controlInset: number;
+};
+
+function windowChromePlatform(): WindowChromePlatform {
+  if (process.platform === 'darwin') return 'darwin';
+  if (process.platform === 'win32') return 'win32';
+  if (process.platform === 'linux') return 'linux';
+  return 'other';
+}
+
+function windowChromeConfig(): WindowChromeConfig {
+  const platform = windowChromePlatform();
+  if (platform === 'darwin') {
+    return {
+      platform,
+      mode: 'integrated',
+      customControls: false,
+      draggable: true,
+      trafficLightInset: 84,
+      controlInset: 12,
+    };
+  }
+  if (platform === 'win32') {
+    return {
+      platform,
+      mode: 'custom',
+      customControls: true,
+      draggable: true,
+      trafficLightInset: 0,
+      controlInset: 138,
+    };
+  }
+  return {
+    platform,
+    mode: 'native',
+    customControls: false,
+    draggable: false,
+    trafficLightInset: 0,
+    controlInset: 0,
+  };
+}
+
+const windowChrome = windowChromeConfig();
+process.env.KF_WINDOW_CHROME = JSON.stringify(windowChrome);
 
 // Export before the renderer process is created so both processes inherit them.
 // The default runtime home must be writable: userData when packaged (never
@@ -202,6 +260,41 @@ ipcMain.on(DESTROY_CHANNEL, (_event, payload) => {
   manager?.destroyView((payload as { id: string }).id);
 });
 
+function publishWindowChromeState(win: BrowserWindow) {
+  win.webContents.send(WINDOW_CHROME_STATE_CHANNEL, {
+    maximized: win.isMaximized(),
+    fullscreen: win.isFullScreen(),
+  });
+}
+
+ipcMain.handle(WINDOW_CHROME_GET_CHANNEL, (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  return {
+    ...windowChrome,
+    maximized: win?.isMaximized() ?? false,
+    fullscreen: win?.isFullScreen() ?? false,
+  };
+});
+
+ipcMain.handle(WINDOW_CHROME_CONTROL_CHANNEL, (event, payload) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win) return { ok: false };
+  const control = (payload as { control?: WindowChromeControl }).control;
+  if (control === 'minimize') {
+    win.minimize();
+  } else if (control === 'toggle-maximize') {
+    if (win.isMaximized()) win.unmaximize();
+    else win.maximize();
+  } else if (control === 'close') {
+    win.close();
+  }
+  return {
+    ok: true,
+    maximized: win.isMaximized(),
+    fullscreen: win.isFullScreen(),
+  };
+});
+
 // Application menu with the VS Code-style "Install 'kungfu' Command in PATH"
 // action, so a real user who installed Kungfu.app can use `kungfu` in a shell.
 function buildMenu() {
@@ -275,6 +368,11 @@ function createWindow() {
     width: 1280,
     height: 800,
     show: false,
+    frame: windowChrome.mode !== 'custom',
+    titleBarStyle:
+      windowChrome.mode === 'integrated' ? 'hiddenInset' : 'default',
+    trafficLightPosition:
+      windowChrome.platform === 'darwin' ? { x: 14, y: 14 } : undefined,
     backgroundColor: '#1e1e1e',
     webPreferences: {
       // Moat: in-process zero-copy access to journal/state requires
@@ -285,6 +383,11 @@ function createWindow() {
     },
   });
   shellWindow = win;
+
+  win.on('maximize', () => publishWindowChromeState(win));
+  win.on('unmaximize', () => publishWindowChromeState(win));
+  win.on('enter-full-screen', () => publishWindowChromeState(win));
+  win.on('leave-full-screen', () => publishWindowChromeState(win));
 
   // The trusted renderer holds the real capabilities and runs the capability
   // host; this manager embeds sandboxed views and relays their invokes to it.
