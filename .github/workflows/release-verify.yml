@@ -1,40 +1,23 @@
 # SPDX-License-Identifier: Apache-2.0
 
 name: Release - Verify
+
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, reopened, ready_for_review, synchronize]
     branches:
-      - alpha/*/*
-      - release/*/*
+      - alpha/v*/v*
+      - release/v*/v*
       - main
 
-jobs:
-  try:
-    uses: kungfu-trader/workflows/.github/workflows/.release-verify.yml@v1
-    with:
-      build-runner-linux: kungfu-builder-linux
-      build-runner-windows: kungfu-builder-windows
-      build-runner-macos: macos-12-xl
-      builder-container: docker.io/kungfutrader/kungfu-builder-centos:v1.2.2
-      use-pipenv: true
-      build-timeout-minutes: 150
-      max-build-attempts: 3
-      enable-linux: true
-      enable-macos: true
-      enable-windows: true
-      code-signing-windows: true
-      max-preview-links: 64
-    secrets:
-      AWS_CI_ACCESS_KEY_ID: ${{ secrets.AWS_CI_ACCESS_KEY_ID }}
-      AWS_CI_SECRET_ACCESS_KEY: ${{ secrets.AWS_CI_SECRET_ACCESS_KEY }}
-      AWS_USER_ACCESS_KEY_ID: ${{ secrets.AWS_USER_ACCESS_KEY_ID }}
-      AWS_USER_SECRET_ACCESS_KEY: ${{ secrets.AWS_USER_SECRET_ACCESS_KEY }}
-      WINDOWS_CSC_KEY: ${{ secrets.WINDOWS_CSC_KEY }}
+permissions:
+  contents: read
 
+jobs:
   verify:
-    needs: try
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
-      - name: report
-        run: echo verified
+      - name: Buildchain product build handoff
+        run: |
+          echo "Product build verification is owned by .github/workflows/build.yml."
+          echo "This workflow intentionally does not build artifacts."

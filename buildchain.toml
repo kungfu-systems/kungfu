@@ -10,6 +10,8 @@ schema = 1
 
 [version]
 required = true
+strategy = "semver"
+next = "auto"
 
 [[version.files]]
 type = "json"
@@ -24,7 +26,10 @@ key = "version"
 command = "./kungfu-code sync"
 
 [lifecycle.build]
-command = "./kungfu-code build"
+command = "./kungfu-code dist"
 
 [lifecycle.verify]
 command = "./kungfu-code verify"
+
+[lifecycle.publish]
+command = "node scripts/buildchain-custom-publish-evidence.mjs"

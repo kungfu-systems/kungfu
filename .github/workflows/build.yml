@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Build
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+    branches:
+      - alpha/v*/v*
+      - release/v*/v*
+  workflow_dispatch:
+    inputs:
+      buildchain-ref:
+        description: Optional trusted Buildchain runtime ref for debugging. Empty uses v2 anti-drift runtime resolution.
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  pull-requests: read
+  id-token: write
+
+concurrency:
+  group: kungfu-product-build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v2
+    with:
+      buildchain-ref: ${{ github.event_name == 'workflow_dispatch' && inputs.buildchain-ref || '' }}
+      runner-preset: kungfu-v4-self-hosted
+      artifact-name: kungfu
+      artifact-paths: |
+        artifact/dist
+      expected-artifacts-json: >-
+        {"minFiles":1,"minTotalBytes":1}
+      require-install: true
+      require-build: true
+      require-verify: true
+      release-candidate: ${{ github.event_name == 'pull_request' }}
+      publish-channel: ${{ github.event_name == 'pull_request' && startsWith(github.event.pull_request.base.ref, 'alpha/') && 'alpha' || github.event_name == 'pull_request' && startsWith(github.event.pull_request.base.ref, 'release/') && 'release' || 'none' }}
+      artifact-transfer-mode: s3-to-github-artifacts
+      artifact-retention-days: 14
