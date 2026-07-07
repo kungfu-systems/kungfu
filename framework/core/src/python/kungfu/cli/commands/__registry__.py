@@ -14,9 +14,9 @@ from . import rewind
 from . import schema
 from . import work
 from . import atlas
+from . import storage
 from . import kfx
 from . import skill
-from . import agent
 from . import codex
 from . import sdk
 
@@ -35,9 +35,9 @@ __all__ = [
     "schema",
     "work",
     "atlas",
+    "storage",
     "kfx",
     "skill",
-    "agent",
     "codex",
     "sdk",
 ]

@@ -122,24 +122,25 @@ Trading-specific ones from earlier versions are being retired and their coverage
 role moved to neutral replacements that exercise the same paths; during this
 migration both may be present.
 
-## Runtime storage service is designed, not complete
+## Runtime storage service is only partially implemented
 
 The fact-ledger format direction includes an append-only event spine, payload
 content commitments, a blob store, schema registry, and manifest root
 ([`framework/spec/docs/format-spec.md`](../framework/spec/docs/format-spec.md)).
-The fact-ledger slice proves a minimal causal journal export path, but the
-unified user-data storage service is still a design plan
+The fact-ledger slice proves a minimal causal journal export path, and the Atlas
+scope now has a first payload import/fsck/export/verify loop
 ([`runtime-storage-service.md`](runtime-storage-service.md)).
 
 What is **not yet guaranteed**:
 
 - large payload bodies are not yet uniformly stored behind hash-addressed
-  journal references;
-- `kungfu storage fsck` does not yet verify journal, payloads, schemas, and
-  projections as one semantic unit;
+  references across every runtime scope;
+- `kungfu storage fsck` is currently Atlas-scoped, not a complete semantic check
+  for all journal, schema, projection, and payload classes;
 - range/session/hash import-export is not yet the remote sync substrate;
 - compaction is not yet a manifest-backed checkpoint/archive/GC/vacuum process;
 - Atlas import remains a read-only projection, not an authority migration.
 
-Until these land, treat existing journal archive/clean/rebuild primitives as
-maintenance tools, not as the complete persistence-service contract.
+Until these land, treat existing journal archive/clean/rebuild primitives and
+the Atlas storage commands as useful maintenance tools, not as the complete
+persistence-service contract.

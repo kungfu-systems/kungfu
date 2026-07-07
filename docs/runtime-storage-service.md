@@ -1,6 +1,6 @@
 # Runtime Storage Service
 
-Status: draft design plan.
+Status: draft design plan with an implemented Atlas first slice.
 
 Kungfu's fact ledger is not only an event capture mechanism. Long term, it is
 also the local persistence service for user facts: runs, work items, imported
@@ -90,9 +90,9 @@ kungfu storage fsck --scope atlas --json
 kungfu storage fsck --scope all --since 20d --json
 ```
 
-`fsck` should report degraded facts without rewriting them. A missing payload is
-not repaired by pretending it was absent; it is reported as missing until an
-import, repair, or redaction decision changes that state.
+`fsck` reports degraded facts without rewriting them. A missing payload is not
+repaired by pretending it was absent; it is reported as missing until an import,
+repair, or redaction decision changes that state.
 
 ## Import And Export
 
@@ -191,25 +191,30 @@ This lets `kungfu atlas import` remain safe and one-way while still exercising
 the same payload, manifest, fsck, and rebuild mechanisms required for future
 remote sync and authority migration.
 
-The first useful slice is:
+The implemented first slice is:
 
 ```sh
 kungfu atlas import --repo <atlas-repo> --json
 kungfu storage status --scope atlas --json
 kungfu storage fsck --scope atlas --json
-kungfu storage rebuild-index --scope atlas --json
+kungfu storage export --scope atlas --format jsonl --out atlas.jsonl --json
+kungfu atlas verify --repo <atlas-repo> --json
 ```
 
-Acceptance for that slice:
+Acceptance covered by that slice:
 
 - large Atlas JSON bodies are stored outside mmap frames as hash-addressed
   payloads;
-- journal events carry payload hash, size, content type, and state;
-- import writes a manifest with source head, object count, event range, payload
-  inventory, and projection watermark;
-- `fsck` detects missing payloads, hash mismatches, missing schemas, and
-  projection drift;
-- `rebuild-index` reconstructs the Atlas projection from journal plus payloads.
+- import writes a manifest with source head, object count, payload inventory,
+  and projection watermark;
+- `fsck` detects missing payloads, hash mismatches, malformed payload JSON, and
+  projection drift against the current Atlas projection;
+- `storage export` emits a canonical JSONL record per imported Atlas payload;
+- `atlas verify` recomputes source hashes from the Atlas repo and compares them
+  with the latest imported payload manifest.
+
+The first slice deliberately does not claim generic storage compaction, range
+sync, schema repair, or a complete rebuild-index command yet.
 
 ## Safety Boundaries
 
@@ -237,6 +242,7 @@ Storage service operations must preserve these boundaries:
 
 ## Maturity
 
-This is a draft design plan. It names the service boundary and phased target. It
-does not yet claim that Kungfu can repair arbitrary journal corruption, safely
-compact user data, or replace Atlas as an authority source.
+This is still a phased storage-service plan. The Atlas scope now has a concrete
+payload import, fsck, export, and source-verify loop; Kungfu still does not
+claim that it can repair arbitrary journal corruption, safely compact user data,
+run range/session/hash remote sync, or replace Atlas as an authority source.

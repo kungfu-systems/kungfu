@@ -61,6 +61,25 @@ def import_cmd(ctx, repo_root, as_json):
         click.echo(f"  warning: {warning}", err=True)
 
 
+@atlas.command(help="compare the latest Kungfu Atlas import with the source repo")
+@click.option("--repo", "repo_root", type=str, required=True, help="repo root path")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@atlas_command_context
+def verify(ctx, repo_root, as_json):
+    from kungfu.atlas import store
+
+    result = store.verify_against_repo(ctx.runtime_dir, repo_root)
+    if as_json:
+        _echo_json(result)
+    else:
+        click.echo(f"[atlas] verify {'ok' if result['ok'] else 'failed'}")
+        for key in ("missing", "extra", "hash_mismatch"):
+            for row in result[key]:
+                click.echo(f"  {key}: {row}", err=True)
+    if not result["ok"]:
+        sys.exit(1)
+
+
 @atlas.group(
     cls=PrioritizedCommandGroup,
     help="render the latest completed import (a projection, not the authority)",
