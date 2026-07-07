@@ -41,6 +41,7 @@ and the map routes a question to whichever doc answers it.
 | What gates must a release pass? | `provenance.md` + [`version-release-design.md`](version-release-design.md) | verify | partial |
 | How do KFD-1/2/3 become SDK scaffolds and future release-gate evidence? | [`kfd-native-sdk-release-gates.md`](kfd-native-sdk-release-gates.md) | use, verify | draft |
 | If kungfu itself misbehaves, how do I localize it? | [`debugging.md`](debugging.md) | verify | stable |
+| How does Kungfu persist user facts and maintain storage over time? | [`runtime-storage-service.md`](runtime-storage-service.md) | use, verify | draft |
 | How do I record an agent run and find why it failed (Rewind)? | [`rewind.md`](rewind.md) | use | stable · pre-release install path |
 | What should an installed agent read first, which mode should it choose, and is the agent-facing control surface closed? | installed pack: `kungfu agent brief`, `kungfu agent capabilities --json`, `kungfu agent choose-mode --json`, `kungfu agent verify --json` | use, verify | stable |
 | How do I write an extension (`kfx`)? | [`extensions.md`](extensions.md) | use | stable · view kfx; runtime facets mid-migration |
@@ -85,6 +86,9 @@ route to the row that answers them:
 - **agent onboarding / mode selection / choose-mode / report mode / trace mode /
   managed-run / remote sync / local agent facts** → the installed Agent
   Onboarding Pack (`kungfu agent brief`, `kungfu agent capabilities --json`).
+- **runtime storage / payload store / blob store / fsck / compact / garbage
+  collection / range export / Atlas import storage / projection rebuild** →
+  *runtime storage service* ([`runtime-storage-service.md`](runtime-storage-service.md)).
 - **signature / checksum / supply chain / SBOM** → *verify a release binary*
   (`provenance.md`, `blocked` — see [`known-limits.md`](known-limits.md)).
 - **KFD / SDK scaffold / release gate evidence / contract scaffold / fact
