@@ -64,11 +64,6 @@
     "glob": "^8.0.0",
     "sywac": "^1.3.0"
   },
-  "optionalDependencies": {
-    "@kungfu-tech/core-darwin-arm64": "4.0.0-alpha.0",
-    "@kungfu-tech/core-linux-x64": "4.0.0-alpha.0",
-    "@kungfu-tech/core-win32-x64": "4.0.0-alpha.0"
-  },
   "devDependencies": {
     "@kungfu-tech/libnode": "22.22.3-kf.1",
     "@mapbox/node-pre-gyp": "^2.0.3",

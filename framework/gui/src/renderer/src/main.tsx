@@ -16,7 +16,12 @@ import type {
   KungfuResolvedConfig,
   SessionWindowRecord,
   Shell,
+  ShellCommand,
+  ShellNotification,
+  ShellNotificationInput,
   ShellState,
+  StatusBarItem,
+  StatusBarSeverity,
 } from '@kungfu-tech/kfx';
 import { mono, panelStyle } from '@kungfu-tech/kfx';
 import React from 'react';
@@ -187,6 +192,28 @@ function SandboxSlot({
   return <div ref={ref} style={{ width: '100%', height: '100%' }} />;
 }
 
+function statusColor(severity: StatusBarSeverity | undefined): string {
+  if (severity === 'ok') return '#4ec9b0';
+  if (severity === 'warning') return '#dcdcaa';
+  if (severity === 'error') return '#f48771';
+  return '#cccccc';
+}
+
+function notificationColor(level: ShellNotification['level']): string {
+  if (level === 'success') return '#4ec9b0';
+  if (level === 'warning') return '#dcdcaa';
+  if (level === 'error') return '#f48771';
+  return '#9cdcfe';
+}
+
+let notificationSeq = 0;
+function notificationId(): string {
+  notificationSeq += 1;
+  return (
+    globalThis.crypto?.randomUUID?.() ?? `n-${Date.now()}-${notificationSeq}`
+  );
+}
+
 function App() {
   const [runtime] = React.useState(bootRuntime);
   const [loaded] = React.useState<KfxLoadResult>(() =>
@@ -210,6 +237,16 @@ function App() {
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [config, setConfig] = React.useState<KungfuResolvedConfig | null>(null);
   const [configError, setConfigError] = React.useState('');
+  const [masterLive, setMasterLive] = React.useState(
+    () => runtime.ledger?.health().live ?? false,
+  );
+  const [statusBarItems, setStatusBarItems] = React.useState<
+    Record<string, StatusBarItem>
+  >({});
+  const [notifications, setNotifications] = React.useState<ShellNotification[]>(
+    [],
+  );
+  const notificationTimers = React.useRef(new Map<string, number>());
 
   // shared refresh bus: one shell-owned timer, kfx subscribe
   const subscribers = React.useRef(new Set<() => void>());
@@ -219,6 +256,31 @@ function App() {
     }, 5000);
     return () => clearInterval(timer);
   }, []);
+
+  React.useEffect(() => {
+    const refresh = () => setMasterLive(runtime.ledger?.health().live ?? false);
+    refresh();
+    const timer = setInterval(refresh, 5000);
+    return () => clearInterval(timer);
+  }, [runtime.ledger]);
+
+  React.useEffect(
+    () => () => {
+      for (const timer of notificationTimers.current.values()) {
+        window.clearTimeout(timer);
+      }
+      notificationTimers.current.clear();
+    },
+    [],
+  );
+
+  const openKfx = React.useCallback(
+    (kfxId: string, nextParams?: Record<string, string>) => {
+      setParams(nextParams ?? {});
+      setActive(kfxId);
+    },
+    [],
+  );
 
   const updateState = React.useCallback(
     (patch: Partial<ShellState>) => {
@@ -267,6 +329,80 @@ function App() {
       throw e;
     }
   }, []);
+
+  const setStatusBarItem = React.useCallback((item: StatusBarItem) => {
+    if (!item.id) throw new Error('statusBar item id is required');
+    if (!item.text) throw new Error('statusBar item text is required');
+    setStatusBarItems((current) => ({
+      ...current,
+      [item.id]: {
+        ...item,
+        side: item.side ?? 'left',
+        priority: item.priority ?? 0,
+        severity: item.severity ?? 'info',
+      },
+    }));
+  }, []);
+
+  const clearStatusBarItem = React.useCallback((id: string) => {
+    setStatusBarItems((current) => {
+      const next = { ...current };
+      delete next[id];
+      return next;
+    });
+  }, []);
+
+  const dismissNotification = React.useCallback((id: string) => {
+    const timer = notificationTimers.current.get(id);
+    if (timer !== undefined) {
+      window.clearTimeout(timer);
+      notificationTimers.current.delete(id);
+    }
+    setNotifications((current) => current.filter((item) => item.id !== id));
+  }, []);
+
+  const runShellCommand = React.useCallback(
+    (command: ShellCommand | undefined) => {
+      if (!command) return;
+      if (command.kind === 'open-kfx') {
+        openKfx(command.kfxId, command.params);
+        return;
+      }
+      if (command.kind === 'open-settings') {
+        setSettingsOpen(true);
+        return;
+      }
+      if (command.kind === 'dismiss-notification') {
+        dismissNotification(command.notificationId);
+      }
+    },
+    [dismissNotification, openKfx],
+  );
+
+  const showNotification = React.useCallback(
+    (input: ShellNotificationInput) => {
+      const id = notificationId();
+      const item: ShellNotification = {
+        id,
+        level: input.level ?? 'info',
+        title: input.title,
+        message: input.message,
+        timeoutMs: input.timeoutMs ?? 6000,
+        actions: input.actions ?? [],
+        createdAt: Date.now(),
+      };
+      setNotifications((current) => [item, ...current].slice(0, 5));
+      if (item.timeoutMs !== 0) {
+        const timer = window.setTimeout(
+          () => dismissNotification(id),
+          item.timeoutMs,
+        );
+        notificationTimers.current.set(id, timer);
+      }
+      return id;
+    },
+    [dismissNotification],
+  );
 
   const uiConfig = normalizedUiConfig(config);
 
@@ -368,10 +504,7 @@ function App() {
   }, []);
 
   const shell: Shell = {
-    open: (kfxId, nextParams) => {
-      setParams(nextParams ?? {});
-      setActive(kfxId);
-    },
+    open: openKfx,
     params,
     onRefresh: (fn) => {
       subscribers.current.add(fn);
@@ -380,6 +513,12 @@ function App() {
     setting: (key) => state.settings[key] ?? settingFallbacks[key] ?? '',
     updateState,
     state,
+    statusBar: {
+      set: setStatusBarItem,
+      clear: clearStatusBarItem,
+    },
+    notify: showNotification,
+    dismissNotification,
     config,
     configError,
     reloadConfig,
@@ -439,6 +578,257 @@ function App() {
     group.push(entry);
     suiteGroups.set(entry.suite, group);
   }
+
+  const systemStatusItems: StatusBarItem[] = [
+    {
+      id: 'system.master',
+      text: masterLive ? 'master live' : 'master offline',
+      icon: masterLive ? '●' : '○',
+      severity: masterLive ? 'ok' : 'warning',
+      side: 'left',
+      priority: -100,
+      tooltip: 'Master connection',
+      command: { kind: 'open-kfx', kfxId: 'status' },
+    },
+    {
+      id: 'system.runtime',
+      text: runtime.message || (runtime.ok ? 'runtime ready' : 'runtime down'),
+      icon: runtime.ok ? '●' : '○',
+      severity: runtime.ok ? 'ok' : 'error',
+      side: 'left',
+      priority: -90,
+      tooltip: 'Runtime binding status',
+      command: { kind: 'open-kfx', kfxId: 'status' },
+    },
+    {
+      id: 'system.profile',
+      text: `profile: ${profile.id}`,
+      side: 'right',
+      priority: 90,
+      tooltip: 'Active profile',
+      command: { kind: 'open-settings' },
+    },
+    {
+      id: 'system.kfx-count',
+      text: `${enabled.length} kfx`,
+      side: 'right',
+      priority: 100,
+      tooltip: 'Loaded extension views',
+      command: { kind: 'open-kfx', kfxId: 'kfx-manager' },
+    },
+  ];
+
+  const allStatusItems = [
+    ...systemStatusItems,
+    ...Object.values(statusBarItems),
+  ].sort(
+    (a, b) => (a.priority ?? 0) - (b.priority ?? 0) || a.id.localeCompare(b.id),
+  );
+
+  const renderStatusItem = (item: StatusBarItem) => {
+    const color = statusColor(item.severity);
+    const content = (
+      <>
+        {item.icon ? <span style={{ color }}>{item.icon}</span> : null}
+        <span
+          style={{
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {item.text}
+        </span>
+      </>
+    );
+    const style: React.CSSProperties = {
+      ...mono,
+      height: 24,
+      maxWidth: 260,
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 5,
+      padding: '0 8px',
+      boxSizing: 'border-box',
+      border: 'none',
+      borderRadius: 0,
+      background: 'transparent',
+      color: '#ffffff',
+      cursor: item.command ? 'pointer' : 'default',
+      overflow: 'hidden',
+      flexShrink: 0,
+    };
+    if (!item.command) {
+      return (
+        <span key={item.id} title={item.tooltip} style={style}>
+          {content}
+        </span>
+      );
+    }
+    return (
+      <button
+        key={item.id}
+        type="button"
+        title={item.tooltip}
+        onClick={() => runShellCommand(item.command)}
+        style={style}
+      >
+        {content}
+      </button>
+    );
+  };
+
+  const notificationToasts =
+    notifications.length > 0 ? (
+      <div
+        aria-live="polite"
+        style={{
+          position: 'fixed',
+          right: 16,
+          bottom: 36,
+          zIndex: 900,
+          width: 'min(360px, calc(100vw - 32px))',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          pointerEvents: 'none',
+        }}
+      >
+        {notifications.map((item) => (
+          <section
+            key={item.id}
+            style={{
+              border: '1px solid #3c3c3c',
+              borderLeft: `3px solid ${notificationColor(item.level)}`,
+              borderRadius: 6,
+              background: '#252526',
+              boxShadow: '0 12px 36px rgba(0, 0, 0, 0.36)',
+              pointerEvents: 'auto',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 8,
+                padding: '10px 10px 8px 12px',
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>
+                  {item.title}
+                </div>
+                {item.message ? (
+                  <div
+                    style={{
+                      ...mono,
+                      marginTop: 4,
+                      color: '#cccccc',
+                      whiteSpace: 'pre-wrap',
+                    }}
+                  >
+                    {item.message}
+                  </div>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                aria-label="Dismiss notification"
+                onClick={() => dismissNotification(item.id)}
+                style={{
+                  ...mono,
+                  width: 22,
+                  height: 22,
+                  border: 'none',
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  background: 'transparent',
+                  color: '#cccccc',
+                }}
+              >
+                ×
+              </button>
+            </div>
+            {item.actions && item.actions.length > 0 ? (
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: 8,
+                  padding: '0 10px 10px 12px',
+                }}
+              >
+                {item.actions.map((action) => (
+                  <button
+                    key={action.id}
+                    type="button"
+                    onClick={() => runShellCommand(action.command)}
+                    style={{
+                      ...mono,
+                      border: '1px solid #3c3c3c',
+                      borderRadius: 4,
+                      cursor: 'pointer',
+                      background: '#1e1e1e',
+                      color: '#cccccc',
+                      padding: '4px 8px',
+                    }}
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </section>
+        ))}
+      </div>
+    ) : null;
+
+  const statusBar = (
+    <footer
+      style={{
+        width: '100%',
+        height: 24,
+        padding: '0 8px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+        flexShrink: 0,
+        overflow: 'hidden',
+        boxSizing: 'border-box',
+        borderTop: '1px solid #0e639c',
+        background: '#007acc',
+        color: '#ffffff',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          overflow: 'hidden',
+          minWidth: 0,
+        }}
+      >
+        {allStatusItems
+          .filter((item) => (item.side ?? 'left') === 'left')
+          .map(renderStatusItem)}
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          overflow: 'hidden',
+          minWidth: 0,
+        }}
+      >
+        {allStatusItems
+          .filter((item) => item.side === 'right')
+          .map(renderStatusItem)}
+      </div>
+    </footer>
+  );
 
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -547,118 +937,151 @@ function App() {
     fontSize: 'var(--kf-font-size)',
     color: '#cccccc',
     background: '#1e1e1e',
-    height: '100vh',
+    width: '100%',
+    height: '100%',
     margin: 0,
-    padding: 16,
+    boxSizing: 'border-box',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+  } as React.CSSProperties;
+
+  const chromeBodyStyle = {
+    flex: 1,
+    minHeight: 0,
+    padding: '16px 16px 12px',
     boxSizing: 'border-box',
     display: 'flex',
     flexDirection: 'column',
     gap: 12,
+    overflow: 'hidden',
   } as React.CSSProperties;
 
   return (
     <div style={appStyle}>
-      <header style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        <h1 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>
-          Kungfu v4 reference app
-        </h1>
-        <span style={{ ...mono, color: runtime.ok ? '#4ec9b0' : '#f48771' }}>
-          {runtime.ok ? '●' : '○'} {runtime.message}
-        </span>
-        <span style={{ ...mono, color: '#6a6a6a' }}>profile: {profile.id}</span>
-        <button
-          type="button"
-          aria-label="Open settings"
-          onClick={() => setSettingsOpen(true)}
+      <div style={chromeBodyStyle}>
+        <header
           style={{
-            ...mono,
-            marginLeft: 'auto',
-            width: 30,
-            height: 30,
-            border: '1px solid #3c3c3c',
-            borderRadius: 6,
-            cursor: 'pointer',
-            background: settingsOpen ? '#04395e' : '#252526',
-            color: settingsOpen ? '#9cdcfe' : '#cccccc',
-            fontSize: 16,
-            lineHeight: '26px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 16,
+            flexShrink: 0,
           }}
         >
-          ⚙
-        </button>
-      </header>
-      {runtime.ok ? (
-        <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>
-          <nav style={{ width: 150, flexShrink: 0 }}>
-            {plain.map((k) => navButton(k.id, k.title))}
-            {[...suiteGroups.entries()].map(([key, group]) => (
-              <React.Fragment key={key}>
+          <h1 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>
+            Kungfu v4 reference app
+          </h1>
+          <button
+            type="button"
+            aria-label="Open settings"
+            onClick={() => setSettingsOpen(true)}
+            style={{
+              ...mono,
+              marginLeft: 'auto',
+              width: 30,
+              height: 30,
+              border: '1px solid #3c3c3c',
+              borderRadius: 6,
+              cursor: 'pointer',
+              background: settingsOpen ? '#04395e' : '#252526',
+              color: settingsOpen ? '#9cdcfe' : '#cccccc',
+              fontSize: 16,
+              lineHeight: '26px',
+            }}
+          >
+            ⚙
+          </button>
+        </header>
+        {runtime.ok ? (
+          <div
+            style={{
+              display: 'flex',
+              gap: 12,
+              flex: 1,
+              minHeight: 0,
+              overflow: 'hidden',
+            }}
+          >
+            <nav
+              style={{
+                width: 150,
+                flexShrink: 0,
+                minHeight: 0,
+                overflow: 'auto',
+              }}
+            >
+              {plain.map((k) => navButton(k.id, k.title))}
+              {[...suiteGroups.entries()].map(([key, group]) => (
+                <React.Fragment key={key}>
+                  <div
+                    style={{
+                      ...mono,
+                      color: '#6a6a6a',
+                      margin: '12px 0 4px',
+                      fontSize: 10,
+                    }}
+                  >
+                    {suiteTitle(group[0]) ?? key}
+                  </div>
+                  {group.map((k) => navButton(k.id, k.title))}
+                </React.Fragment>
+              ))}
+              {loaded.failures.length > 0 && (
                 <div
                   style={{
                     ...mono,
-                    color: '#6a6a6a',
-                    margin: '12px 0 4px',
+                    color: '#f48771',
+                    marginTop: 12,
                     fontSize: 10,
                   }}
                 >
-                  {suiteTitle(group[0]) ?? key}
+                  {loaded.failures.length} kfx failed to load
                 </div>
-                {group.map((k) => navButton(k.id, k.title))}
-              </React.Fragment>
-            ))}
-            {loaded.failures.length > 0 && (
-              <div
-                style={{
-                  ...mono,
-                  color: '#f48771',
-                  marginTop: 12,
-                  fontSize: 10,
-                }}
-              >
-                {loaded.failures.length} kfx failed to load
-              </div>
-            )}
-          </nav>
-          <div style={{ flex: 1, minHeight: 0 }}>
-            {activeKfx && activeKfx.tier === 'sandboxed-ipc' ? (
-              // isolated third-party view: embedded, not mounted here
-              <KfxErrorBoundary kfxId={activeKfx.id}>
-                <SandboxSlot
-                  key={activeKfx.id}
-                  entry={activeKfx}
-                  caps={sandboxSubset(runtime, activeKfx)}
-                />
-              </KfxErrorBoundary>
-            ) : activeKfx && caps ? (
-              <KfxErrorBoundary kfxId={activeKfx.id}>
-                <activeKfx.View caps={caps} shell={shell} />
-              </KfxErrorBoundary>
-            ) : (
-              <section style={panelStyle}>
-                <div style={{ ...mono, color: '#f48771' }}>
-                  no kfx available
-                  {loaded.entries.length === 0
-                    ? ' — no extensions found on the extension path'
-                    : ` for view "${active}"`}
-                </div>
-                {loaded.failures.map((failure) => (
-                  <div
-                    key={failure.dir}
-                    style={{ ...mono, color: '#858585', marginTop: 4 }}
-                  >
-                    {failure.dir}: {failure.error}
+              )}
+            </nav>
+            <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+              {activeKfx && activeKfx.tier === 'sandboxed-ipc' ? (
+                // isolated third-party view: embedded, not mounted here
+                <KfxErrorBoundary kfxId={activeKfx.id}>
+                  <SandboxSlot
+                    key={activeKfx.id}
+                    entry={activeKfx}
+                    caps={sandboxSubset(runtime, activeKfx)}
+                  />
+                </KfxErrorBoundary>
+              ) : activeKfx && caps ? (
+                <KfxErrorBoundary kfxId={activeKfx.id}>
+                  <activeKfx.View caps={caps} shell={shell} />
+                </KfxErrorBoundary>
+              ) : (
+                <section style={panelStyle}>
+                  <div style={{ ...mono, color: '#f48771' }}>
+                    no kfx available
+                    {loaded.entries.length === 0
+                      ? ' — no extensions found on the extension path'
+                      : ` for view "${active}"`}
                   </div>
-                ))}
-              </section>
-            )}
+                  {loaded.failures.map((failure) => (
+                    <div
+                      key={failure.dir}
+                      style={{ ...mono, color: '#858585', marginTop: 4 }}
+                    >
+                      {failure.dir}: {failure.error}
+                    </div>
+                  ))}
+                </section>
+              )}
+            </div>
           </div>
-        </div>
-      ) : (
-        <p style={{ ...mono, color: '#f48771' }}>
-          binding unavailable — set KFE_PATH to a built kungfu_electron.node
-        </p>
-      )}
+        ) : (
+          <p style={{ ...mono, color: '#f48771' }}>
+            binding unavailable — set KFE_PATH to a built kungfu_electron.node
+          </p>
+        )}
+      </div>
+      {notificationToasts}
       {settingsOverlay}
+      {statusBar}
     </div>
   );
 }

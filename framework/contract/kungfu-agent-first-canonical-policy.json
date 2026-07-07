@@ -6,14 +6,14 @@
     "kfd": {
       "package": {
         "name": "@kungfu-tech/kfd",
-        "version": "1.0.0-alpha.2",
+        "version": "1.0.0-alpha.16",
         "repository": "git+https://github.com/kungfu-systems/kfd.git"
       },
       "standard": {
         "key": "kfd-1",
         "id": "KFD-1",
         "label": "KFD-1",
-        "title": "Contracts must not drift: contract worlds need one fact source",
+        "title": "Facts must not drift: contract worlds need one fact source",
         "revision": 1,
         "status": "active"
       },
@@ -31,7 +31,7 @@
     "buildchain": {
       "package": {
         "name": "@kungfu-tech/buildchain",
-        "version": "2.8.0"
+        "version": "2.8.8"
       },
       "formatting": {
         "name": "buildchain-release-evidence-json-v1",

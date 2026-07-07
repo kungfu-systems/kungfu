@@ -18,6 +18,8 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const sdk = join(repoRoot, 'developer', 'sdk', 'src', 'sdk.js');
 const require = createRequire(import.meta.url);
 const { contractArtifacts } = require('../../../scripts/contract-registry.cjs');
+const kfdPackage = require('@kungfu-tech/kfd/package.json');
+const buildchainPackage = require('@kungfu-tech/buildchain/package.json');
 
 function runJson(args, cwd = repoRoot) {
   const result = spawnSync(process.execPath, [sdk, ...args], {
@@ -99,7 +101,7 @@ test('emits KFD-1 contract evidence for registered surfaces', () => {
   assert.equal(data.ok, true);
   assert.equal(data.releaseGate.kfd, 'KFD-1');
   assert.equal(data.releaseGate.key, 'kfd-1');
-  assert.equal(data.releaseGate.metadata.package.version, '1.0.0-alpha.2');
+  assert.equal(data.releaseGate.metadata.package.version, kfdPackage.version);
   assert.equal(
     data.releaseGate.metadata.schemaIds.contractWorld,
     'https://kfd.libkungfu.dev/schemas/kfd-1/contract-world.schema.json',
@@ -123,8 +125,11 @@ test('prints the agent-first canonical policy from upstream KFD and Buildchain m
   const data = runJson(['contract', 'policy', '--json']);
   assert.equal(data.schema, 'kungfu.agent-first-canonical-policy/v1');
   assert.equal(data.upstream.kfd.standard.key, 'kfd-1');
-  assert.equal(data.upstream.kfd.package.version, '1.0.0-alpha.2');
-  assert.equal(data.upstream.buildchain.package.version, '2.8.0');
+  assert.equal(data.upstream.kfd.package.version, kfdPackage.version);
+  assert.equal(
+    data.upstream.buildchain.package.version,
+    buildchainPackage.version,
+  );
   assert.equal(
     data.upstream.buildchain.formatting.name,
     'buildchain-release-evidence-json-v1',
@@ -145,7 +150,7 @@ test('emits a Buildchain KFD-1 contract-world witness for registered surfaces', 
   const data = runJson(['contract', 'witness', '--json']);
   assert.equal(data.contract, 'kungfu-buildchain-kfd-1-witness-set');
   assert.equal(data.standard, 'kfd-1');
-  assert.equal(data.metadata.kfdPackage.version, '1.0.0-alpha.2');
+  assert.equal(data.metadata.kfdPackage.version, kfdPackage.version);
   assert.equal(
     data.canonicalPolicy.path,
     'framework/contract/kungfu-agent-first-canonical-policy.json',

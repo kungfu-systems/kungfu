@@ -744,6 +744,53 @@ export type KungfuResolvedConfig = {
   contract: Record<string, unknown>;
 };
 
+export type ShellCommand =
+  | { kind: 'open-kfx'; kfxId: string; params?: Record<string, string> }
+  | { kind: 'open-settings' }
+  | { kind: 'dismiss-notification'; notificationId: string };
+
+export type StatusBarSeverity = 'info' | 'ok' | 'warning' | 'error';
+export type StatusBarSide = 'left' | 'right';
+
+export type StatusBarItem = {
+  id: string;
+  text: string;
+  owner?: string;
+  side?: StatusBarSide;
+  priority?: number;
+  icon?: string;
+  severity?: StatusBarSeverity;
+  tooltip?: string;
+  command?: ShellCommand;
+};
+
+export type ShellStatusBarApi = {
+  set: (item: StatusBarItem) => void;
+  clear: (id: string) => void;
+};
+
+export type ShellNotificationLevel = 'info' | 'success' | 'warning' | 'error';
+
+export type ShellNotificationAction = {
+  id: string;
+  label: string;
+  command?: ShellCommand;
+};
+
+export type ShellNotificationInput = {
+  level?: ShellNotificationLevel;
+  title: string;
+  message?: string;
+  timeoutMs?: number;
+  actions?: ShellNotificationAction[];
+};
+
+export type ShellNotification = ShellNotificationInput & {
+  id: string;
+  level: ShellNotificationLevel;
+  createdAt: number;
+};
+
 export type KungfuConfigValue =
   | string
   | number
@@ -790,6 +837,10 @@ export type Shell = {
   // persist shell state changes; the shell owns the ConfigStore write
   updateState: (patch: Partial<ShellState>) => void;
   state: ShellState;
+  // shell-owned system chrome: persistent status items and transient toasts
+  statusBar: ShellStatusBarApi;
+  notify: (notification: ShellNotificationInput) => string;
+  dismissNotification: (id: string) => void;
   // global Kungfu config, read/written through `kungfu config`
   config: KungfuResolvedConfig | null;
   configError?: string;
