@@ -7,7 +7,7 @@
 //   L1  kungfu-code (sh)        bootstrap simple commands: load env / check fnm+uv / pin node / run pnpm,
 //                               and delegate rich subcommands (proxy/config…) to this file.
 //   L2  kungfu-code.mjs (node)  rich commands available once fnm is installed (node implementation, pure builtins, no deps).
-//                               currently: local cache/mirror proxy config management (proxy).
+//                               currently: bootstrap build/rebuild and local cache/mirror proxy config management.
 //   L3  (future) TUI            reuse kungfu's own TUI infrastructure / build-artifact runtime; directly import
 //                               the readConfig/setKey config helpers below instead of reimplementing them.
 //
@@ -78,7 +78,7 @@ function readConfig() {
  * @returns {string}
  */
 function shQuote(v) {
-  return "'" + String(v).replace(/'/g, "'\\''") + "'";
+  return `'${String(v).replace(/'/g, "'\\''")}'`;
 }
 
 function ensureDir() {
@@ -96,7 +96,7 @@ function setKey(key, val) {
   if (text && !text.endsWith('\n')) text += '\n';
   const re = new RegExp(`^\\s*(?:export\\s+)?${key}=.*$`, 'm');
   const line = `export ${key}=${shQuote(val)}`;
-  text = re.test(text) ? text.replace(re, line) : text + line + '\n';
+  text = re.test(text) ? text.replace(re, line) : `${text + line}\n`;
   fs.writeFileSync(CONFIG_FILE, text);
 }
 
@@ -117,25 +117,45 @@ export { CONFIG_FILE, KEYS, readConfig, setKey, unsetKey };
 /** @param {string} cmd */
 function help(cmd) {
   console.error(
-    `kungfu-code ${cmd} — manage local build environment config: mirrors/cache + compile params (user-global build-local.env)\n` +
-      `  ${cmd} path               print the config file path\n` +
-      `  ${cmd} init               derive the config file from build-local.env.example (if absent)\n` +
-      `  ${cmd} edit               open the config file with $EDITOR (create from template first if absent)\n` +
-      `  ${cmd} list               show the current value of each entry\n` +
-      `  ${cmd} get <KEY>          read one entry\n` +
-      `  ${cmd} set <KEY> <VALUE>  set one entry (written to the user-global file)\n` +
-      `  ${cmd} unset <KEY>        remove one entry\n` +
-      `Known KEYs: ${KEYS.join(' ')}\n` +
-      `The config lives outside the repo (user-global), shared by the main repo and all worktrees, synced once across intranet machines.`,
+    `kungfu-code ${cmd} — manage local build environment config: mirrors/cache + compile params (user-global build-local.env)
+  ${cmd} path               print the config file path
+  ${cmd} init               derive the config file from build-local.env.example (if absent)
+  ${cmd} edit               open the config file with $EDITOR (create from template first if absent)
+  ${cmd} list               show the current value of each entry
+  ${cmd} get <KEY>          read one entry
+  ${cmd} set <KEY> <VALUE>  set one entry (written to the user-global file)
+  ${cmd} unset <KEY>        remove one entry
+Known KEYs: ${KEYS.join(' ')}
+The config lives outside the repo (user-global), shared by the main repo and all worktrees, synced once across intranet machines.`,
   );
+}
+
+/**
+ * Run the repo-local bootstrap build script.
+ * @param {'build' | 'rebuild'} cmd
+ * @param {string[]} rest
+ */
+function runBuildCommand(cmd, rest) {
+  const buildScript = path.join(__dirname, 'scripts', 'build.mjs');
+  const args = cmd === 'rebuild' ? ['--rebuild', ...rest] : rest;
+  const r = spawnSync(process.execPath, [buildScript, ...args], {
+    cwd: __dirname,
+    env: process.env,
+    stdio: 'inherit',
+  });
+  process.exit(r.status ?? 1);
 }
 
 function main() {
   const argv = process.argv.slice(2);
   const cmd = argv[0];
+  if (cmd === 'build' || cmd === 'rebuild') {
+    runBuildCommand(cmd, argv.slice(1));
+    return;
+  }
   if (cmd !== 'proxy' && cmd !== 'config') {
     console.error(
-      `kungfu-code.mjs: unknown command ${cmd || '(empty)'} (only proxy/config are supported)`,
+      `kungfu-code.mjs: unknown command ${cmd || '(empty)'} (supported: build/rebuild/proxy/config)`,
     );
     process.exit(2);
   }

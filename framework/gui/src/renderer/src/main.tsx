@@ -197,6 +197,7 @@ function App() {
     () => window.process.env.KFE_INITIAL_VIEW || profile.defaultView,
   );
   const [params, setParams] = React.useState<Record<string, string>>({});
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
 
   // shared refresh bus: one shell-owned timer, kfx subscribe
   const subscribers = React.useRef(new Set<() => void>());
@@ -356,6 +357,11 @@ function App() {
   );
 
   const caps = activeKfx ? subsetCaps(runtime, activeKfx) : null;
+  const settingsKfx =
+    enabled.find((k) => k.id === 'settings') ??
+    loaded.entries.find((k) => k.id === 'settings') ??
+    null;
+  const settingsCaps = settingsKfx ? subsetCaps(runtime, settingsKfx) : null;
   const suiteTitle = (entry: KfxEntry) =>
     entry.suite ? (loaded.suites[entry.suite]?.title ?? entry.suite) : null;
   const plain = enabled.filter((k) => !k.suite);
@@ -366,6 +372,105 @@ function App() {
     group.push(entry);
     suiteGroups.set(entry.suite, group);
   }
+
+  React.useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && settingsOpen) {
+        event.preventDefault();
+        setSettingsOpen(false);
+        return;
+      }
+      if (event.key === ',' && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
+        setSettingsOpen((open) => !open);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [settingsOpen]);
+
+  const settingsOverlay = settingsOpen ? (
+    <div
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) setSettingsOpen(false);
+      }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+        background: 'rgba(0, 0, 0, 0.42)',
+        boxSizing: 'border-box',
+      }}
+    >
+      <dialog
+        open
+        aria-label="Settings"
+        style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 'min(980px, 100%)',
+          maxHeight: 'min(720px, calc(100vh - 48px))',
+          minHeight: 420,
+          margin: 0,
+          padding: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          border: '1px solid #3c3c3c',
+          borderRadius: 8,
+          background: '#252526',
+          boxShadow: '0 20px 80px rgba(0, 0, 0, 0.45)',
+        }}
+      >
+        <header
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '12px 14px',
+            borderBottom: '1px solid #3c3c3c',
+          }}
+        >
+          <div style={{ fontSize: 14, fontWeight: 600 }}>Settings</div>
+          <button
+            type="button"
+            aria-label="Close settings"
+            onClick={() => setSettingsOpen(false)}
+            style={{
+              ...mono,
+              width: 28,
+              height: 28,
+              border: '1px solid #3c3c3c',
+              borderRadius: 6,
+              cursor: 'pointer',
+              background: '#1e1e1e',
+              color: '#cccccc',
+            }}
+          >
+            ×
+          </button>
+        </header>
+        <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: 14 }}>
+          {settingsKfx && settingsCaps ? (
+            <KfxErrorBoundary kfxId={settingsKfx.id}>
+              <settingsKfx.View caps={settingsCaps} shell={shell} />
+            </KfxErrorBoundary>
+          ) : (
+            <div style={{ ...mono, color: '#f48771' }}>
+              settings kfx unavailable
+            </div>
+          )}
+        </div>
+      </dialog>
+    </div>
+  ) : null;
 
   return (
     <div
@@ -382,7 +487,7 @@ function App() {
         gap: 12,
       }}
     >
-      <header style={{ display: 'flex', alignItems: 'baseline', gap: 16 }}>
+      <header style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
         <h1 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>
           Kungfu v4 reference app
         </h1>
@@ -390,6 +495,26 @@ function App() {
           {runtime.ok ? '●' : '○'} {runtime.message}
         </span>
         <span style={{ ...mono, color: '#6a6a6a' }}>profile: {profile.id}</span>
+        <button
+          type="button"
+          aria-label="Open settings"
+          onClick={() => setSettingsOpen(true)}
+          style={{
+            ...mono,
+            marginLeft: 'auto',
+            width: 30,
+            height: 30,
+            border: '1px solid #3c3c3c',
+            borderRadius: 6,
+            cursor: 'pointer',
+            background: settingsOpen ? '#04395e' : '#252526',
+            color: settingsOpen ? '#9cdcfe' : '#cccccc',
+            fontSize: 16,
+            lineHeight: '26px',
+          }}
+        >
+          ⚙
+        </button>
       </header>
       {runtime.ok ? (
         <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>
@@ -462,6 +587,7 @@ function App() {
           binding unavailable — set KFE_PATH to a built kungfu_electron.node
         </p>
       )}
+      {settingsOverlay}
     </div>
   );
 }

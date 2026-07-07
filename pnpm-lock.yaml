@@ -434,16 +434,6 @@ importers:
       node-addon-api:
         specifier: ^8.0.0
         version: 8.9.0
-    optionalDependencies:
-      '@kungfu-tech/core-darwin-arm64':
-        specifier: 4.0.0-alpha.0
-        version: 4.0.0-alpha.0
-      '@kungfu-tech/core-linux-x64':
-        specifier: 4.0.0-alpha.0
-        version: 4.0.0-alpha.0
-      '@kungfu-tech/core-win32-x64':
-        specifier: 4.0.0-alpha.0
-        version: 4.0.0-alpha.0
 
   framework/gui:
     dependencies:

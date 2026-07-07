@@ -65,6 +65,9 @@ cd kungfu
 
 ./kungfu-code sync          # install JS dependencies (frozen lockfile)
 ./kungfu-code build         # build all workspaces (C++ core + bindings + app)
+./kungfu-code rebuild       # remove generated build outputs, then build
+./kungfu-code check         # changed-scope read-only quality gate
+./kungfu-code fix           # explicit formatting / safe auto-fixes for changed files
 ./kungfu-code product gui dev # run the reference GUI dev loop
 ./kungfu-code product tui dev # run the reference TUI dev loop
 ./kungfu-code dist          # rebuild core, freeze, build all bundled kfx, package artifact/dist
@@ -80,7 +83,7 @@ thin wrapper, so any pnpm task works (`./kungfu-code build:core`, etc.).
 
 ## Code style
 
-Formatting and linting are part of the pre-build flow and CI:
+Formatting and linting are part of the pre-commit, ready/PR, and CI flow:
 
 - **C++** — `clang-format` (config in `.clang-format`).
 - **Python** — [`ruff`](https://docs.astral.sh/ruff/) for both formatting
@@ -92,7 +95,16 @@ Run formatting before committing:
 
 ```sh
 ./kungfu-code format        # all languages
+./kungfu-code fix           # format + safe lint fixes for changed files
+./kungfu-code check         # read-only changed-scope lint/type/test gate
 ```
+
+The installed pre-commit hook runs `./kungfu-code check:staged` semantics via
+Node: it checks staged files without rewriting or re-staging them. If the hook
+reports formatting or fixable lint issues, run `./kungfu-code fix:staged`, review
+the diff, and commit again. CI should run `./kungfu-code check` and the relevant
+build or verify command. `check:all` and `fix:all` are available for deliberate
+whole-tree lint-baseline cleanup.
 
 ### Scripts are JavaScript
 

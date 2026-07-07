@@ -24,6 +24,9 @@ node, conan, or cmake directly — go through it:
 ```sh
 ./kungfu-code sync      # install JS dependencies (frozen lockfile)
 ./kungfu-code build     # build all workspaces (C++ core + bindings + app)
+./kungfu-code rebuild   # clear generated build outputs, then run build
+./kungfu-code check     # changed-scope read-only quality gate (lint/type/tests)
+./kungfu-code fix       # explicit formatting / safe auto-fixes for changed files
 ./kungfu-code product gui dev   # run the reference GUI through the product loop
 ./kungfu-code dist      # build the distributable artifact under artifact/dist
 ./kungfu-code <task>    # any pnpm task, run under the pinned node
@@ -41,12 +44,15 @@ layout, and code style.
 ## Checking your work is green
 
 ```sh
+./kungfu-code check           # changed-scope lint, typecheck and unit/tooling tests
 ./kungfu-code verify          # assert existing build artifacts (quick)
 ./kungfu-code verify --full   # rebuild + freeze, then assert (slow; needs the full toolchain)
 ```
 
-`verify` is the single done-check: it asserts the build artifacts and runs a
-`kungfu` runtime smoke, rather than trusting a "looks built" impression.
+`check` is the source-quality gate for changed files plus shared type/tooling
+tests. `check:all` exists for whole-tree cleanup once the lint baseline is clean.
+`verify` is the runtime/artifact done-check: it asserts the build artifacts and
+runs a `kungfu` runtime smoke, rather than trusting a "looks built" impression.
 
 ## Proposing changes
 

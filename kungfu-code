@@ -5,6 +5,7 @@
 #   ./kungfu-code app          # = pnpm app (launch the Electron build of kungfu)
 #   ./kungfu-code build:core   # = pnpm build:core
 #   ./kungfu-code <any pnpm task/args>
+#   ./kungfu-code rebuild      # rich subcommand: clear generated outputs, then bootstrap build
 #   ./kungfu-code proxy ...    # rich subcommand: manage local cache/mirror proxy config (delegated to L2 node, not passed to pnpm)
 #
 # Three-tier subset model:
@@ -39,11 +40,12 @@ kungfu_load_proxy() {
   return 0
 }
 
-# Rich subcommands delegate to L2 node (not passed to pnpm, no uv needed). L2 is pure node builtins and version-agnostic:
+# Rich subcommands delegate to L2 node (not passed to pnpm). L2 is pure node builtins and version-agnostic:
 # prefer fnm-managed node when available (the normal path once bootstrap is ready); fall back to system node when fnm is
 # not ready, so a developer can still use L2 config first (e.g. set a mirror to in turn help fnm); error only if neither exists.
+kungfu_load_proxy
 case "${1:-}" in
-  proxy | config)
+  build | rebuild | proxy | config)
     if command -v fnm >/dev/null 2>&1; then
       fnm install >/dev/null 2>&1 || true
       exec fnm exec --using-file -- node ./kungfu-code.mjs "$@"
@@ -57,8 +59,6 @@ case "${1:-}" in
 esac
 
 # Normal build/dev task: load proxy config → check the two prerequisites → pin node → corepack pnpm
-kungfu_load_proxy
-
 if ! command -v fnm >/dev/null 2>&1; then
   echo "kungfu-code: install fnm once first (node-side prerequisite) — 'arch -arm64 brew install fnm' (or see https://github.com/Schniz/fnm)" >&2
   exit 127

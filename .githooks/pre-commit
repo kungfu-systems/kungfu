@@ -11,7 +11,8 @@
 # (root `prepare`, or `pnpm run hooks:install`). It coexists with the managed hooks-path
 # guard: when core.hooksPath points elsewhere, that guard execs this standard hook
 # after its own checks. Missing node warns and skips (a setup gap must not block a
-# commit). Bypass entirely with `git commit -n`.
+# commit). The staged gate is read-only; run `./kungfu-code fix:staged` for
+# explicit formatting/fixes. Bypass entirely with `git commit -n`.
 set -eu
 
 root=$(git rev-parse --show-toplevel) || exit 0
