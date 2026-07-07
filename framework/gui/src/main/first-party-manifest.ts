@@ -61,7 +61,12 @@ export function generateFirstPartyManifest(
     path: nodePath,
     crypto: nodeCrypto as unknown as KfxPlanDeps['crypto'],
   };
-  const contract = loadKfxContract(process.env, deps);
+  // Pass cwd explicitly: the contract resolver walks ancestors of options.cwd /
+  // env.PWD to find framework/kfx/kungfu-kfx.contract.json, but cmd.exe does not
+  // set PWD, so on Windows the ancestor search would be empty and the (present)
+  // contract would not be found. process.cwd() (framework/gui at pack time) has
+  // the repo root as an ancestor, matching the POSIX env.PWD behavior.
+  const contract = loadKfxContract(process.env, deps, { cwd: process.cwd() });
   const keys: Record<string, FirstPartyPin> = {};
   for (const dir of packageDirs(firstPartyRoot)) {
     let manifest: ViewManifest;
