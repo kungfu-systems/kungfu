@@ -153,6 +153,7 @@ def kfc(ctx, home, extension_path, log_level, name, stage, env_verify_location):
     if env_verify_location:
         os.environ["KF_VERIFY_LOCATION"] = "KF_VERIFY_LOCATION"
 
+    runtime_dir_override = os.environ.get("KF_RUNTIME_DIR") if not home else None
     home = default_runtime_home() if not home else home
     ctx.extension_path = extension_path
 
@@ -165,7 +166,13 @@ def kfc(ctx, home, extension_path, log_level, name, stage, env_verify_location):
             os.makedirs(target)
         return target
 
-    ctx.runtime_dir = ensure_dir(ctx, "runtime")
+    if runtime_dir_override:
+        ctx.runtime_dir = os.path.abspath(os.path.expanduser(runtime_dir_override))
+        if not os.path.exists(ctx.runtime_dir):
+            os.makedirs(ctx.runtime_dir)
+    else:
+        ctx.runtime_dir = ensure_dir(ctx, "runtime")
+    os.environ["KF_RUNTIME_DIR"] = ctx.runtime_dir
     ctx.archive_dir = ensure_dir(ctx, "archive")
     ctx.dataset_dir = ensure_dir(ctx, "dataset")
     ctx.backtest_dir = ensure_dir(ctx, "backtest")

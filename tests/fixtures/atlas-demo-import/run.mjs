@@ -42,6 +42,27 @@ k(['atlas', 'import', '--repo', sampleRoot]);
 const second = json(k(['atlas', 'import', '--repo', sampleRoot, '--json']));
 const secondId = second.import_id;
 
+const runtimeOverride = path.join(tmpDir('atlas-runtime-dir-'), 'demo-runtime');
+uvPython(
+  coreDir,
+  ['.devtools/kungfu_cli.py', 'atlas', 'import', '--repo', sampleRoot],
+  { env: { KF_RUNTIME_DIR: runtimeOverride } },
+);
+const overrideImport = json(
+  uvPython(
+    coreDir,
+    ['.devtools/kungfu_cli.py', 'atlas', 'import', '--repo', sampleRoot, '--json'],
+    { env: { KF_RUNTIME_DIR: runtimeOverride } },
+  ),
+);
+json(
+  uvPython(
+    coreDir,
+    ['.devtools/kungfu_cli.py', 'atlas', 'show', 'import', '--json'],
+    { env: { KF_RUNTIME_DIR: runtimeOverride } },
+  ),
+);
+
 const after = fingerprint(sampleRoot);
 if (before !== after) fail('source tree was modified');
 
@@ -49,4 +70,9 @@ uvPython(coreDir, [
   path.join(fixtureDir, 'check_import.py'),
   path.join(home, 'runtime'),
   secondId,
+]);
+uvPython(coreDir, [
+  path.join(fixtureDir, 'check_import.py'),
+  runtimeOverride,
+  overrideImport.import_id,
 ]);

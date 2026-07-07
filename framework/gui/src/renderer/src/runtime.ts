@@ -3,6 +3,7 @@
 // (ADR-0011), and hand capability handles to the shell and its kfx. This is
 // the moat: the renderer reaches the runtime directly, no IPC copy.
 import {
+  type Atlas,
   type DomainState,
   type KfNativeBinding,
   type Ledger,
@@ -13,6 +14,7 @@ import {
   type TmuxBinding,
   type Work,
   managedTmuxSocket,
+  openAtlas,
   openDomainState,
   openLedger,
   openRemoteWork,
@@ -119,6 +121,7 @@ export type Runtime = {
   remoteWork: RemoteWork | null;
   terminal: Terminal | null;
   work: Work | null;
+  atlas: Atlas | null;
 };
 
 function readLongfistTypes(
@@ -154,6 +157,7 @@ export function bootRuntime(): Runtime {
     remoteWork: null,
     terminal: null,
     work: null,
+    atlas: null,
   };
   try {
     const bindingPath = env.KFE_PATH;
@@ -161,15 +165,16 @@ export function bootRuntime(): Runtime {
       return { ...base, ok: false, message: 'KFE_PATH not set' };
     }
     const binding = window.require(bindingPath) as KfNativeBinding;
+    const path = window.require('node:path') as {
+      dirname: (p: string) => string;
+      join: (...parts: string[]) => string;
+    };
+    const bindingDir = path.dirname(bindingPath);
     let buildInfo: Record<string, unknown> | null = null;
     try {
       const fs = window.require('node:fs');
-      const path = window.require('node:path');
       buildInfo = JSON.parse(
-        fs.readFileSync(
-          path.join(path.dirname(bindingPath), 'kungfubuildinfo.json'),
-          'utf8',
-        ),
+        fs.readFileSync(path.join(bindingDir, 'kungfubuildinfo.json'), 'utf8'),
       );
     } catch {
       buildInfo = null;
@@ -177,7 +182,6 @@ export function bootRuntime(): Runtime {
     let skillManager: Record<string, unknown> | null = null;
     try {
       const fs = window.require('node:fs');
-      const path = window.require('node:path');
       const managerPaths = [
         env.KF_SKILL_MANAGER_FILE,
         runtimeDir
@@ -211,6 +215,25 @@ export function bootRuntime(): Runtime {
       readDir: (d: string) => rewindFs.readdirSync(d),
     });
     const work = openWork({ binding, locator: { runtimeDir } });
+    const childProcess = window.require('node:child_process') as {
+      execFileSync: (
+        file: string,
+        args: string[],
+        options: { encoding: 'utf8'; env: Record<string, string | undefined> },
+      ) => string;
+    };
+    const atlas = openAtlas({
+      runtimeDir,
+      execFileSync: childProcess.execFileSync,
+      env: window.process.env as Record<string, string | undefined>,
+      bin:
+        env.KUNGFU_CLI_BIN ||
+        env.KUNGFU_BIN ||
+        path.join(
+          bindingDir,
+          process.platform === 'win32' ? 'kungfu.exe' : 'kungfu',
+        ),
+    });
     const remoteWork = openRemoteWork({
       binding,
       locator: { runtimeDir },
@@ -259,6 +282,7 @@ export function bootRuntime(): Runtime {
       remoteWork,
       terminal,
       work,
+      atlas,
     };
   } catch (e) {
     return { ...base, ok: false, message: (e as Error).message };

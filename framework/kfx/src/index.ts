@@ -10,6 +10,7 @@
 // managers and installers read them without executing the extension. The
 // code side exports exactly one thing — the View component.
 import type {
+  Atlas,
   DomainState,
   Ledger,
   Rewind,
@@ -45,6 +46,7 @@ export type KfxCapabilities = {
   rewind: Rewind;
   terminal: Terminal;
   work: Work;
+  atlas?: Atlas;
 };
 
 export type KfxCapabilityKey = keyof KfxCapabilities;

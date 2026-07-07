@@ -121,6 +121,7 @@
     "packageManifestFile": "package.json"
   },
   "knownCapabilities": [
+    "atlas",
     "domain",
     "ledger",
     "rewind",

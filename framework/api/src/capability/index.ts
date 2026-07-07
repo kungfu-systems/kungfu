@@ -10,6 +10,7 @@ export * from './schema.js';
 export * from './sandbox.js';
 export * from './terminal.js';
 export * from './work.js';
+export * from './atlas.js';
 
 // The runtime-plane trust boundary (ADR-0013 / ADR-0014): the OS-sandbox
 // launcher, the child-process relay transport, the Node child-side guest proxy,

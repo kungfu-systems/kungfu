@@ -44,7 +44,8 @@
         "title": "Work dashboard",
         "capabilities": [
           "ledger",
-          "work"
+          "work",
+          "atlas"
         ]
       }
     }

@@ -84,6 +84,7 @@ function subsetCaps(runtime: Runtime, entry: KfxEntry): KfxCapabilities | null {
     rewind: runtime.rewind,
     terminal: runtime.terminal,
     work: runtime.work,
+    atlas: runtime.atlas,
   } as Record<string, unknown>;
   const subset: Record<string, unknown> = {};
   for (const key of entry.capabilities) {
@@ -110,6 +111,7 @@ function sandboxSubset(
     rewind: runtime.rewind,
     terminal: runtime.terminal,
     work: runtime.work,
+    atlas: runtime.atlas,
   };
   const subset: Record<string, Record<string, unknown>> = {};
   for (const key of entry.capabilities) {
