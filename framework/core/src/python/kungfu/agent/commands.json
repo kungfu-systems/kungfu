@@ -19,7 +19,7 @@
     {
       "name": "kungfu agent choose-mode --json",
       "maturity": "stable",
-      "purpose": "Choose brief, report, trace, managed-run, or remote-sync from explicit flags."
+      "purpose": "Choose brief, report, atlas-projection, trace, managed-run, or remote-sync from explicit flags."
     },
     {
       "name": "kungfu agent status --target codex --json",
@@ -34,7 +34,7 @@
     {
       "name": "kungfu agent mode set --target codex --mode managed-run",
       "maturity": "stable",
-      "purpose": "Switch Codex between report, managed-run, trace, brief, or remote-sync policy modes."
+      "purpose": "Switch Codex between report, atlas-projection, managed-run, trace, brief, or remote-sync policy modes."
     },
     {
       "name": "kungfu agent unbootstrap --target codex",
@@ -97,6 +97,31 @@
       "purpose": "Verify a Codex goal report receipt before closeout."
     },
     {
+      "name": "kungfu atlas import --repo <atlas-repo> --json",
+      "maturity": "stable",
+      "purpose": "Snapshot an Atlas-style control-plane repo into Kungfu's local read-only projection."
+    },
+    {
+      "name": "kungfu atlas show import --json",
+      "maturity": "stable",
+      "purpose": "Show the latest Atlas projection batch metadata and source repo head."
+    },
+    {
+      "name": "kungfu atlas show missions --json",
+      "maturity": "stable",
+      "purpose": "List imported Atlas mission cards from the latest projection."
+    },
+    {
+      "name": "kungfu atlas show goals --json",
+      "maturity": "stable",
+      "purpose": "List imported Atlas goal cards from the latest projection."
+    },
+    {
+      "name": "kungfu atlas show markers --json",
+      "maturity": "stable",
+      "purpose": "List imported Atlas worktree-status markers from the latest projection."
+    },
+    {
       "name": "kungfu remote add <source-id> --host <host> --home <kf-home> --json",
       "maturity": "experimental",
       "purpose": "Register a source runtime for source-scoped evidence sync."
@@ -132,6 +157,11 @@
       "maturity": "stable",
       "next": "kungfu work create <title> --json; for native Codex goals prefer kungfu codex report-goal --goal-id <goal-id> --status <status> --json.",
       "when": "The useful output is structured work state, decisions, checkpoints, artifacts, or reported external run facts."
+    },
+    "atlas-projection": {
+      "maturity": "stable",
+      "next": "kungfu atlas import --repo <atlas-repo> --json; kungfu atlas show import --json; kungfu atlas show missions --json; kungfu atlas show goals --json",
+      "when": "The user asks to sync, import, inspect, or visualize an Atlas-style mission/goal/worktree control-plane repo inside Kungfu."
     },
     "trace": {
       "maturity": "stable",

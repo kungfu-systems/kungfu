@@ -32,6 +32,21 @@ Use the modes this way:
   `kungfu remote` is experimental and does not merge remote facts into local
   authoritative truth.
 
+Atlas projection is a local import workflow, not an operating mode. When the
+user asks to sync an Atlas-style control-plane repo into Kungfu, snapshot it and
+verify the projection with:
+
+```sh
+kungfu atlas import --repo <atlas-repo> --json
+kungfu atlas show import --json
+kungfu atlas show missions --json
+kungfu atlas show goals --json
+kungfu atlas show markers --json
+```
+
+The source repo remains the authority. Kungfu stores a read-only projection for
+inspection in CLI, GUI, and kfx work views.
+
 The pack is included by the Electron artifact, the standalone CLI, npm
 `@kungfu-tech/core`, and the PyPI wheel. Future Homebrew, winget, container, and
 kfx packaging must keep the same pack validation gate before claiming support.

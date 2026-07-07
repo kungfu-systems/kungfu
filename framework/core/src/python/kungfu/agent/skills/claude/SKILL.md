@@ -1,9 +1,12 @@
 ---
 key: kungfu-agent-onboarding
 title: Kungfu Agent Onboarding
-description: Use the installed Kungfu agent pack before choosing report, trace, managed-run, or remote-sync mode.
+description: Use the installed Kungfu agent pack before choosing report, atlas-projection, trace, managed-run, or remote-sync mode.
 triggers:
   - kungfu
+  - atlas projection
+  - atlas import
+  - sync atlas
   - kfx
   - rewind
   - managed-run
@@ -30,11 +33,23 @@ kungfu agent status --target claude --json
 Use the smallest mode that preserves evidence:
 
 - `report` for structured work facts.
+- `atlas-projection` when importing an Atlas-style mission/goal/worktree repo
+  into Kungfu for CLI, GUI, or kfx inspection.
 - `trace` for an existing command.
 - `managed-run` when Kungfu launches the provider CLI.
 - `remote-sync` only when the task is about crossing runtime or machine
   boundaries; stable publishing commands are planned unless the local pack says
   otherwise.
+
+For Atlas projection, the source repo remains authoritative. Import and verify:
+
+```sh
+kungfu atlas import --repo <atlas-repo> --json
+kungfu atlas show import --json
+kungfu atlas show missions --json
+kungfu atlas show goals --json
+kungfu atlas show markers --json
+```
 
 If the work is delegated to a native Codex goal and report mode is enabled,
 closeout is not complete until the Codex-side receipt is reported and verified:
