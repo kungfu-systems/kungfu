@@ -22,8 +22,8 @@
     "gen:first-party-manifest": "node --experimental-transform-types scripts/gen-first-party-manifest.mjs",
     "audit:bundle": "node scripts/bundle-core-audit.cjs",
     "start": "pnpm run ensure-electron && electron-vite preview",
-    "pack": "pnpm --filter @kungfu-tech/tui run bundle && pnpm run ensure-electron && electron-vite build && electron-builder --dir --config.electronDist=$(node -p \"require('path').dirname(require.resolve('electron'))+'/dist'\")",
-    "dist": "pnpm --filter @kungfu-tech/tui run bundle && pnpm run ensure-electron && electron-vite build && electron-builder --config.electronDist=$(node -p \"require('path').dirname(require.resolve('electron'))+'/dist'\")",
+    "pack": "pnpm --filter @kungfu-tech/tui run bundle && pnpm run ensure-electron && electron-vite build && node scripts/run-electron-builder.mjs --dir",
+    "dist": "pnpm --filter @kungfu-tech/tui run bundle && pnpm run ensure-electron && electron-vite build && node scripts/run-electron-builder.mjs",
     "clean": "rimraf out dist node_modules/.vite"
   },
   "dependencies": {
