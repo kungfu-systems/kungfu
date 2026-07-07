@@ -111,6 +111,45 @@ defaults, optional user overrides, contract metadata, source metadata,
 `configHome`, `configPath`, and `runtimeHome`. The `contract.hash` field makes
 the exact contract world inspectable by users, agents, and release gates.
 
+## Isolated product instances
+
+Use an instance home when you need to run a second local Kungfu app without
+sharing the default homes:
+
+```sh
+./kungfu-code product gui dev --instance-home ~/kungfu-instances/demo
+```
+
+`--instance-home <path>` also accepts `--home <path>` and `-H <path>`. The
+argument is an instance root; the product launcher keeps config and runtime home
+separate under that root:
+
+```text
+KF_CONFIG_HOME=<path>/config
+KF_HOME=<path>/home
+KF_RUNTIME_DIR=<path>/home/runtime
+```
+
+For the GUI, Electron `userData` also moves under `<path>/userData`, so caches
+and app-window state do not collide with the default instance. The same option
+works with `product tui ...` commands.
+
+When `product gui dev` or `product tui dev` runs from a linked Git worktree and
+no explicit home environment or option is already set, Kungfu chooses an
+instance root automatically under:
+
+```text
+~/.kungfu/instances/worktrees/<worktree-name>-<hash>
+```
+
+Use `--no-instance-home` to disable this auto-selection for a dev launch.
+
+On the first real launch for an instance root, if
+`<path>/config/config.json` does not exist and the machine default
+`~/.kungfu/config.json` exists, the launcher copies that default config file
+into the instance config home. Later launches never overwrite the instance copy,
+so tests can change config without changing the machine default.
+
 `kungfu config set <dotted-key> <json-value>` writes a user override to
 `configPath`, validates it against the same contract, and returns the resolved
 config with `--json`. Plain values that are not JSON decode as strings, so

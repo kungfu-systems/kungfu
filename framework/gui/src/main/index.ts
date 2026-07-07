@@ -61,6 +61,36 @@ const firstPartySourceRoot =
   process.env.KF_FIRST_PARTY_SOURCE_ROOT ||
   path.join(__dirname, '..', '..', '..', '..', 'extensions');
 
+function expandHomePath(value: string): string {
+  if (value === '~') return app.getPath('home');
+  if (value.startsWith('~/') || value.startsWith('~\\')) {
+    return path.join(app.getPath('home'), value.slice(2));
+  }
+  return value;
+}
+
+function resolveHomePath(value: string): string {
+  return path.resolve(expandHomePath(value));
+}
+
+// A product launcher may set KF_INSTANCE_HOME to make a second Kungfu process
+// independent from the default user-global homes. Keep the same mental model as
+// the default install: config and runtime home are separate directories.
+if (process.env.KF_INSTANCE_HOME) {
+  const instanceHome = resolveHomePath(process.env.KF_INSTANCE_HOME);
+  const runtimeHome = path.join(instanceHome, 'home');
+  process.env.KF_INSTANCE_HOME = instanceHome;
+  process.env.KF_HOME = runtimeHome;
+  process.env.KF_CONFIG_HOME = path.join(instanceHome, 'config');
+  process.env.KF_RUNTIME_DIR = path.join(runtimeHome, 'runtime');
+  const userDataHome = path.join(instanceHome, 'userData');
+  mkdirSync(userDataHome, { recursive: true });
+  app.setPath('userData', userDataHome);
+} else if (process.env.KF_HOME && !process.env.KF_RUNTIME_DIR) {
+  process.env.KF_HOME = resolveHomePath(process.env.KF_HOME);
+  process.env.KF_RUNTIME_DIR = path.join(process.env.KF_HOME, 'runtime');
+}
+
 type WindowChromePlatform = 'darwin' | 'win32' | 'linux' | 'other';
 type WindowChromeMode = 'native' | 'integrated' | 'custom';
 type WindowChromeControl = 'minimize' | 'toggle-maximize' | 'close';

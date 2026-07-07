@@ -5,6 +5,9 @@
 // regress to a GUI-only build.
 
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -15,12 +18,17 @@ const isWin = process.platform === 'win32';
 function usage(code) {
   process.stdout.write(
     [
-      'usage: ./kungfu-code product gui dev|build|pack|dist [--dry-run]',
-      '       ./kungfu-code product tui dev|build|bundle|dist [--dry-run]',
+      'usage: ./kungfu-code product gui dev|build|pack|dist [--dry-run] [--instance-home <path>] [--no-instance-home]',
+      '       ./kungfu-code product tui dev|build|bundle|dist [--dry-run] [--instance-home <path>] [--no-instance-home]',
       '',
       'gui build/pack  -> artifact-level unpacked app under artifact/dist',
       'gui dist        -> artifact-level DMG/zip under artifact/dist',
       'tui bundle/dist -> bundled TUI under framework/tui/dist',
+      '',
+      '--instance-home, --home, -H <path>',
+      '  run the product against an isolated Kungfu instance root:',
+      '  KF_HOME=<path>/home, KF_CONFIG_HOME=<path>/config, KF_RUNTIME_DIR=<path>/home/runtime',
+      '  dev commands auto-pick an instance root for linked git worktrees',
       '',
     ].join('\n'),
   );
@@ -38,13 +46,192 @@ function exitLabel(result) {
     : String(result.status);
 }
 
+function expandHomePath(value) {
+  if (!value || !value.trim())
+    fail('--instance-home requires a non-empty path');
+  const raw = value.trim();
+  if (raw === '~') return os.homedir();
+  if (raw.startsWith('~/') || raw.startsWith('~\\')) {
+    return path.join(os.homedir(), raw.slice(2));
+  }
+  return raw;
+}
+
+function resolveInstanceHome(value) {
+  return path.resolve(ROOT, expandHomePath(value));
+}
+
+function sanitizeInstanceName(value) {
+  const name = value
+    .trim()
+    .replace(/[^A-Za-z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return name || 'worktree';
+}
+
+function defaultInstanceRoot(env = process.env) {
+  return path.resolve(
+    expandHomePath(
+      env.KF_AUTO_INSTANCE_ROOT ||
+        path.join(os.homedir(), '.kungfu', 'instances'),
+    ),
+  );
+}
+
+function defaultConfigHome() {
+  return path.resolve(expandHomePath(path.join(os.homedir(), '.kungfu')));
+}
+
+function instanceConfigPath(instanceHome) {
+  return path.join(instanceHome, 'config', 'config.json');
+}
+
+function seedInstanceConfig(instanceHome, options = {}) {
+  const sourceConfigHome = options.sourceConfigHome || defaultConfigHome();
+  const source = path.join(sourceConfigHome, 'config.json');
+  const target = instanceConfigPath(instanceHome);
+  if (existsSync(target)) {
+    return { seeded: false, reason: 'target-exists', source, target };
+  }
+  if (!existsSync(source)) {
+    return { seeded: false, reason: 'source-missing', source, target };
+  }
+  mkdirSync(path.dirname(target), { recursive: true });
+  copyFileSync(source, target);
+  return { seeded: true, source, target };
+}
+
+function instanceHomeForWorktree(worktreeRoot, env = process.env) {
+  const resolvedRoot = path.resolve(worktreeRoot);
+  const name = sanitizeInstanceName(path.basename(resolvedRoot));
+  const hash = createHash('sha256')
+    .update(resolvedRoot)
+    .digest('hex')
+    .slice(0, 10);
+  return path.join(defaultInstanceRoot(env), 'worktrees', `${name}-${hash}`);
+}
+
+function gitOutput(args, cwd = ROOT) {
+  const result = spawnSync('git', args, {
+    cwd,
+    encoding: 'utf8',
+  });
+  if (result.status !== 0) return '';
+  return result.stdout.trim();
+}
+
+function isLinkedGitWorktree(cwd = ROOT) {
+  const gitDir = gitOutput(
+    ['rev-parse', '--path-format=absolute', '--git-dir'],
+    cwd,
+  );
+  const commonDir = gitOutput(
+    ['rev-parse', '--path-format=absolute', '--git-common-dir'],
+    cwd,
+  );
+  return Boolean(
+    gitDir && commonDir && path.resolve(gitDir) !== path.resolve(commonDir),
+  );
+}
+
+function shouldAutoInstanceHome(parsed, surface, verb, env = process.env) {
+  return Boolean(
+    !parsed.noInstanceHome &&
+      !parsed.instanceHome &&
+      !env.KF_INSTANCE_HOME &&
+      !env.KF_HOME &&
+      !env.KF_CONFIG_HOME &&
+      verb === 'dev' &&
+      (surface === 'gui' || surface === 'tui') &&
+      isLinkedGitWorktree(ROOT),
+  );
+}
+
+function instanceEnv(instanceHome, baseEnv = process.env) {
+  if (!instanceHome) return { ...baseEnv };
+  const runtimeHome = path.join(instanceHome, 'home');
+  return {
+    ...baseEnv,
+    KF_INSTANCE_HOME: instanceHome,
+    KF_HOME: runtimeHome,
+    KF_CONFIG_HOME: path.join(instanceHome, 'config'),
+    KF_RUNTIME_DIR: path.join(runtimeHome, 'runtime'),
+  };
+}
+
+function parseArgs(argv) {
+  const parsed = {
+    dryRun: false,
+    instanceHome: '',
+    noInstanceHome: false,
+    positional: [],
+  };
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (arg === '--dry-run') {
+      parsed.dryRun = true;
+    } else if (arg === '--no-instance-home') {
+      parsed.noInstanceHome = true;
+    } else if (arg === '--instance-home' || arg === '--home' || arg === '-H') {
+      i += 1;
+      if (i >= argv.length) fail(`${arg} requires a path`);
+      parsed.instanceHome = resolveInstanceHome(argv[i]);
+    } else if (arg.startsWith('--instance-home=')) {
+      parsed.instanceHome = resolveInstanceHome(
+        arg.slice('--instance-home='.length),
+      );
+    } else if (arg.startsWith('--home=')) {
+      parsed.instanceHome = resolveInstanceHome(arg.slice('--home='.length));
+    } else if (arg.startsWith('-')) {
+      fail(`unknown option: ${arg}`);
+    } else {
+      parsed.positional.push(arg);
+    }
+  }
+  return parsed;
+}
+
+function envDiff(env) {
+  return [
+    ['KF_INSTANCE_HOME', env.KF_INSTANCE_HOME],
+    ['KF_HOME', env.KF_HOME],
+    ['KF_CONFIG_HOME', env.KF_CONFIG_HOME],
+    ['KF_RUNTIME_DIR', env.KF_RUNTIME_DIR],
+  ]
+    .filter(([, value]) => value)
+    .map(([key, value]) => `${key}=${value}`);
+}
+
 function run(label, cmd, args, options = {}) {
   if (options.dryRun) {
+    if (options.autoInstanceHome) {
+      process.stdout.write(
+        `[dry-run] auto-instance-home: ${options.autoInstanceHome}\n`,
+      );
+    }
+    const diff = envDiff(options.env || {});
+    if (diff.length) {
+      process.stdout.write(`[dry-run] env: ${diff.join(' ')}\n`);
+    }
     process.stdout.write(`[dry-run] ${label}: ${[cmd, ...args].join(' ')}\n`);
     return;
   }
+  if (options.instanceHome) {
+    mkdirSync(options.instanceHome, { recursive: true });
+    mkdirSync(path.join(options.instanceHome, 'config'), { recursive: true });
+    mkdirSync(path.join(options.instanceHome, 'home', 'runtime'), {
+      recursive: true,
+    });
+    const seed = seedInstanceConfig(options.instanceHome);
+    if (seed.seeded) {
+      process.stdout.write(
+        `[instance-home] seeded config: ${seed.source} -> ${seed.target}\n`,
+      );
+    }
+  }
   const result = spawnSync(cmd, args, {
     cwd: ROOT,
+    env: options.env || process.env,
     stdio: 'inherit',
     shell: isWin,
   });
@@ -55,52 +242,96 @@ function pnpm(label, args, options) {
   run(label, 'pnpm', args, options);
 }
 
-const args = process.argv.slice(2);
-if (args.includes('--help') || args.includes('-h')) usage(0);
-const dryRun = args.includes('--dry-run');
-const positional = args.filter((arg) => arg !== '--dry-run');
-const [surface, verb] = positional;
+function main(argv = process.argv.slice(2)) {
+  if (argv.includes('--help') || argv.includes('-h')) usage(0);
+  const parsed = parseArgs(argv);
+  const { dryRun, positional } = parsed;
+  const [surface, verb] = positional;
+  const autoInstanceHome = shouldAutoInstanceHome(parsed, surface, verb)
+    ? instanceHomeForWorktree(ROOT)
+    : '';
+  const instanceHome =
+    parsed.instanceHome || process.env.KF_INSTANCE_HOME || autoInstanceHome;
+  const env = instanceEnv(instanceHome);
 
-if (!surface || !verb) usage(1);
+  if (!surface || !verb) usage(1);
 
-if (surface === 'gui') {
-  if (verb === 'dev') {
-    pnpm('gui dev', ['--filter', '@kungfu-tech/gui', 'run', 'dev'], { dryRun });
-  } else if (verb === 'build' || verb === 'pack') {
-    run(
-      'artifact dir build',
-      process.execPath,
-      ['artifact/scripts/dist.mjs', '--dir'],
-      {
+  if (surface === 'gui') {
+    if (verb === 'dev') {
+      pnpm('gui dev', ['--filter', '@kungfu-tech/gui', 'run', 'dev'], {
         dryRun,
-      },
-    );
-  } else if (verb === 'dist') {
-    run(
-      'artifact dist build',
-      process.execPath,
-      ['artifact/scripts/dist.mjs'],
-      {
+        env,
+        instanceHome,
+        autoInstanceHome,
+      });
+    } else if (verb === 'build' || verb === 'pack') {
+      run(
+        'artifact dir build',
+        process.execPath,
+        ['artifact/scripts/dist.mjs', '--dir'],
+        {
+          dryRun,
+          env,
+          instanceHome,
+          autoInstanceHome,
+        },
+      );
+    } else if (verb === 'dist') {
+      run(
+        'artifact dist build',
+        process.execPath,
+        ['artifact/scripts/dist.mjs'],
+        {
+          dryRun,
+          env,
+          instanceHome,
+          autoInstanceHome,
+        },
+      );
+    } else {
+      fail('unknown gui command (supported: dev, build, pack, dist)');
+    }
+  } else if (surface === 'tui') {
+    if (verb === 'dev') {
+      pnpm('tui dev', ['--filter', '@kungfu-tech/tui', 'run', 'dev'], {
         dryRun,
-      },
-    );
+        env,
+        instanceHome,
+        autoInstanceHome,
+      });
+    } else if (verb === 'build') {
+      pnpm('tui build', ['--filter', '@kungfu-tech/tui', 'run', 'build'], {
+        dryRun,
+        env,
+        instanceHome,
+        autoInstanceHome,
+      });
+    } else if (verb === 'bundle' || verb === 'dist') {
+      pnpm('tui bundle', ['--filter', '@kungfu-tech/tui', 'run', 'bundle'], {
+        dryRun,
+        env,
+        instanceHome,
+        autoInstanceHome,
+      });
+    } else {
+      fail('unknown tui command (supported: dev, build, bundle, dist)');
+    }
   } else {
-    fail('unknown gui command (supported: dev, build, pack, dist)');
+    fail('unknown product target (supported: gui, tui)');
   }
-} else if (surface === 'tui') {
-  if (verb === 'dev') {
-    pnpm('tui dev', ['--filter', '@kungfu-tech/tui', 'run', 'dev'], { dryRun });
-  } else if (verb === 'build') {
-    pnpm('tui build', ['--filter', '@kungfu-tech/tui', 'run', 'build'], {
-      dryRun,
-    });
-  } else if (verb === 'bundle' || verb === 'dist') {
-    pnpm('tui bundle', ['--filter', '@kungfu-tech/tui', 'run', 'bundle'], {
-      dryRun,
-    });
-  } else {
-    fail('unknown tui command (supported: dev, build, bundle, dist)');
-  }
-} else {
-  fail('unknown product target (supported: gui, tui)');
 }
+
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  main();
+}
+
+export {
+  instanceEnv,
+  instanceHomeForWorktree,
+  isLinkedGitWorktree,
+  main,
+  parseArgs,
+  resolveInstanceHome,
+  seedInstanceConfig,
+  shouldAutoInstanceHome,
+};
