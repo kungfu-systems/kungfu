@@ -23,6 +23,25 @@ function main() {
   const buildType = shell.getConfigValue('build_type') || 'Release';
   const buildDir = path.resolve('build', buildType);
 
+  // Windows: the MSVC multi-config generator emits pykungfu.<abi>.pyd into build/
+  // root while libnode.dll lands in build/<build_type>. pybind11-stubgen imports
+  // pykungfu, so the .pyd must be on PYTHONPATH *and* able to load libnode.dll —
+  // and Python 3.8+ resolves an extension's dependent DLLs from the extension's
+  // own directory, not PATH. So colocate the .pyd next to libnode.dll in
+  // build/<build_type>; then PYTHONPATH=build/<build_type> both imports it and
+  // resolves the DLL. Mac/Linux keep the .so in build/<build_type> with rpath, so
+  // this is a no-op there. (run-freeze.js colocates the same way for the frozen
+  // runtime; without it stubgen fails with ModuleNotFoundError: pykungfu.)
+  if (process.platform === 'win32') {
+    const buildRoot = path.resolve('build');
+    const [pyd] = glob.sync('pykungfu*.pyd', { cwd: buildRoot });
+    if (pyd) {
+      fs.copyFileSync(path.join(buildRoot, pyd), path.join(buildDir, pyd));
+    } else {
+      console.error('[gen-stubs] Win: pykungfu*.pyd not found in build/ root');
+    }
+  }
+
   // pybind11-stubgen imports pykungfu from build/<build_type>; pass PYTHONPATH to
   // the child only (not this process). Runs in the uv venv (pybind11-stubgen dep).
   const prev = process.env.PYTHONPATH;
