@@ -718,7 +718,7 @@ export type ShellRuntimeInfo = {
   buildInfo: Record<string, unknown> | null;
   skillManager: Record<string, unknown> | null;
   exports: string[];
-  longfistTypes: { name: string; fields: string[] }[];
+  schemaTypes: { name: string; fields: string[] }[];
 };
 
 export type KungfuUiConfig = {

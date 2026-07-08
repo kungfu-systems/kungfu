@@ -1,11 +1,11 @@
 from __future__ import annotations
-import pykungfu.longfist.enums
-import pykungfu.longfist.types
+import pykungfu.yijinjing.enums
+import pykungfu.yijinjing.types
 import typing
 __all__: list[str] = ['PUBLISH', 'PULL', 'PUSH', 'REPLY', 'REQUEST', 'SUBSCRIBE', 'action_record_options', 'action_record_receipt', 'action_recorder', 'apprentice', 'assemble', 'bus', 'calendar_day_start', 'color_print', 'compile_schema', 'copy_sink', 'emit_log', 'event', 'frame', 'get_page_path', 'hash_32', 'hash_str_32', 'history_window_start', 'in_color_terminal', 'io_device', 'location', 'locator', 'master', 'nano_hashed', 'next_minute', 'next_session_boundary', 'noop_publisher', 'now_in_nano', 'null_sink', 'observer', 'profile', 'protocol', 'publisher', 'reader', 'session_builder', 'session_finder', 'session_window_start', 'setup_log', 'sink', 'socket', 'strfnow', 'strftime', 'strptime', 'thread_id', 'today_start', 'writer']
 class action_record_options:
     chain_to_last: bool
-    data_type: pykungfu.longfist.enums.FrameDataType
+    data_type: pykungfu.yijinjing.enums.FrameDataType
     gen_time: int
     parent_frame_uid: int
     stream_id: int
@@ -124,9 +124,9 @@ class assemble:
         ...
     def __rshift__(self, arg0: sink) -> None:
         ...
-    def read_bytes(self, carrier_type: int, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
+    def read_bytes(self, carrier_type: int, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.yijinjing.types.frame_header, list[int]]]:
         ...
-    def read_headers(self, carrier_type: int, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
+    def read_headers(self, carrier_type: int, end_time: int = 9223372036854775807) -> list[pykungfu.yijinjing.types.frame_header]:
         ...
 class bus:
     def __init__(self, arg0: bool) -> None:
@@ -221,21 +221,21 @@ class io_device:
     def publisher(self) -> publisher:
         ...
 class location:
-    def __init__(self, m: pykungfu.longfist.enums.mode, c: pykungfu.longfist.enums.location_role, g: str, n: str, l: ..., default_seed: int = 42) -> None:
+    def __init__(self, m: pykungfu.yijinjing.enums.mode, c: pykungfu.yijinjing.enums.location_role, g: str, n: str, l: ..., default_seed: int = 42) -> None:
         ...
     def __repr__(self) -> str:
         ...
     @typing.overload
-    def to(self, arg0: pykungfu.longfist.types.Config) -> pykungfu.longfist.types.Config:
+    def to(self, arg0: pykungfu.yijinjing.types.Config) -> pykungfu.yijinjing.types.Config:
         ...
     @typing.overload
-    def to(self, arg0: pykungfu.longfist.types.Register) -> pykungfu.longfist.types.Register:
+    def to(self, arg0: pykungfu.yijinjing.types.Register) -> pykungfu.yijinjing.types.Register:
         ...
     @typing.overload
-    def to(self, arg0: pykungfu.longfist.types.Deregister) -> pykungfu.longfist.types.Deregister:
+    def to(self, arg0: pykungfu.yijinjing.types.Deregister) -> pykungfu.yijinjing.types.Deregister:
         ...
     @typing.overload
-    def to(self, arg0: pykungfu.longfist.types.Location) -> pykungfu.longfist.types.Location:
+    def to(self, arg0: pykungfu.yijinjing.types.Location) -> pykungfu.yijinjing.types.Location:
         ...
     @property
     def group(self) -> str:
@@ -244,13 +244,13 @@ class location:
     def locator(self) -> ...:
         ...
     @property
-    def mode(self) -> pykungfu.longfist.enums.mode:
+    def mode(self) -> pykungfu.yijinjing.enums.mode:
         ...
     @property
     def name(self) -> str:
         ...
     @property
-    def role(self) -> pykungfu.longfist.enums.location_role:
+    def role(self) -> pykungfu.yijinjing.enums.location_role:
         ...
     @property
     def uid(self) -> int:
@@ -266,10 +266,10 @@ class locator:
     def __init__(self, arg0: str) -> None:
         ...
     @typing.overload
-    def __init__(self, arg0: str, arg1: pykungfu.longfist.enums.mode) -> None:
+    def __init__(self, arg0: str, arg1: pykungfu.yijinjing.enums.mode) -> None:
         ...
     @typing.overload
-    def __init__(self, mode: pykungfu.longfist.enums.mode, tags: list[str] = []) -> None:
+    def __init__(self, mode: pykungfu.yijinjing.enums.mode, tags: list[str] = []) -> None:
         ...
     def get_env(self, arg0: str) -> str:
         ...
@@ -277,9 +277,9 @@ class locator:
         ...
     def has_env(self, arg0: str) -> bool:
         ...
-    def layout_dir(self, arg0: location, arg1: pykungfu.longfist.enums.layout, arg2: bool) -> str:
+    def layout_dir(self, arg0: location, arg1: pykungfu.yijinjing.enums.layout, arg2: bool) -> str:
         ...
-    def layout_file(self, arg0: location, arg1: pykungfu.longfist.enums.layout, arg2: str) -> str:
+    def layout_file(self, arg0: location, arg1: pykungfu.yijinjing.enums.layout, arg2: str) -> str:
         ...
     def list_location_dest(self, arg0: location) -> list[int]:
         ...
@@ -290,7 +290,7 @@ class locator:
 class master:
     def __init__(self, home: location, low_latency: bool = False) -> None:
         ...
-    def check_register(self, arg0: int, arg1: pykungfu.longfist.types.Register) -> bool:
+    def check_register(self, arg0: int, arg1: pykungfu.yijinjing.types.Register) -> bool:
         ...
     def deregister_app(self, arg0: int, arg1: int) -> None:
         ...
@@ -310,7 +310,7 @@ class master:
         ...
     def on_interval_check(self, arg0: int) -> None:
         ...
-    def on_register(self, arg0: int, arg1: pykungfu.longfist.types.Register) -> None:
+    def on_register(self, arg0: int, arg1: pykungfu.yijinjing.types.Register) -> None:
         ...
     def pre_setup(self) -> None:
         ...
@@ -344,28 +344,28 @@ class profile:
     def __init__(self, arg0: locator) -> None:
         ...
     @typing.overload
-    def get(self, arg0: pykungfu.longfist.types.Config) -> pykungfu.longfist.types.Config:
+    def get(self, arg0: pykungfu.yijinjing.types.Config) -> pykungfu.yijinjing.types.Config:
         ...
     @typing.overload
-    def get(self, arg0: pykungfu.longfist.types.Location) -> pykungfu.longfist.types.Location:
+    def get(self, arg0: pykungfu.yijinjing.types.Location) -> pykungfu.yijinjing.types.Location:
         ...
     @typing.overload
-    def get_all(self, arg0: pykungfu.longfist.types.Config) -> list[pykungfu.longfist.types.Config]:
+    def get_all(self, arg0: pykungfu.yijinjing.types.Config) -> list[pykungfu.yijinjing.types.Config]:
         ...
     @typing.overload
-    def get_all(self, arg0: pykungfu.longfist.types.Location) -> list[pykungfu.longfist.types.Location]:
+    def get_all(self, arg0: pykungfu.yijinjing.types.Location) -> list[pykungfu.yijinjing.types.Location]:
         ...
     @typing.overload
-    def remove(self, arg0: pykungfu.longfist.types.Config) -> None:
+    def remove(self, arg0: pykungfu.yijinjing.types.Config) -> None:
         ...
     @typing.overload
-    def remove(self, arg0: pykungfu.longfist.types.Location) -> None:
+    def remove(self, arg0: pykungfu.yijinjing.types.Location) -> None:
         ...
     @typing.overload
-    def set(self, arg0: pykungfu.longfist.types.Config) -> None:
+    def set(self, arg0: pykungfu.yijinjing.types.Config) -> None:
         ...
     @typing.overload
-    def set(self, arg0: pykungfu.longfist.types.Location) -> None:
+    def set(self, arg0: pykungfu.yijinjing.types.Location) -> None:
         ...
 class protocol:
     """
@@ -446,13 +446,13 @@ class reader:
         ...
     def disjoin_channel(self, arg0: location, arg1: int) -> None:
         ...
-    def join(self, location: location, dest_id: int, from_time: int, page_size: int = 0, priority: pykungfu.longfist.enums.Priority = ...) -> None:
+    def join(self, location: location, dest_id: int, from_time: int, page_size: int = 0, priority: pykungfu.yijinjing.enums.Priority = ...) -> None:
         ...
     def next(self) -> None:
         ...
     def seek_to_time(self, arg0: int) -> None:
         ...
-    def subscribe(self, arg0: location, arg1: int, arg2: int, arg3: int, arg4: pykungfu.longfist.enums.Priority) -> None:
+    def subscribe(self, arg0: location, arg1: int, arg2: int, arg3: int, arg4: pykungfu.yijinjing.enums.Priority) -> None:
         ...
 class session_builder(session_finder):
     def __init__(self, arg0: io_device) -> None:
@@ -464,9 +464,9 @@ class session_builder(session_finder):
 class session_finder:
     def __init__(self, arg0: io_device) -> None:
         ...
-    def find_sessions(self, from_: int = 0, to: int = 9223372036854775807) -> list[pykungfu.longfist.types.Session]:
+    def find_sessions(self, from_: int = 0, to: int = 9223372036854775807) -> list[pykungfu.yijinjing.types.Session]:
         ...
-    def find_sessions_for(self, source: location, from_: int = 0, to: int = 9223372036854775807) -> list[pykungfu.longfist.types.Session]:
+    def find_sessions_for(self, source: location, from_: int = 0, to: int = 9223372036854775807) -> list[pykungfu.yijinjing.types.Session]:
         ...
 class sink:
     def __init__(self) -> None:

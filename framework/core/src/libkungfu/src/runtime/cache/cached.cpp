@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <kungfu/common.h>
-#include <kungfu/longfist/longfist.h>
 #include <kungfu/runtime/cache/cached.h>
 #include <kungfu/runtime/cache/open_layer_projector.h>
 #include <kungfu/runtime/practice/hero.h>
+#include <kungfu/yijinjing/schema/registry.h>
 #include <kungfu/yijinjing/time.h>
 
 using namespace kungfu::rx;
-using namespace kungfu::longfist;
-using namespace kungfu::longfist::enums;
-using namespace kungfu::longfist::types;
+using namespace kungfu::yijinjing;
+using namespace kungfu::yijinjing::enums;
+using namespace kungfu::yijinjing::types;
 using namespace kungfu::runtime;
 using namespace kungfu::runtime::practice;
 using namespace kungfu::yijinjing::data;
@@ -246,17 +246,13 @@ void cached::cache_reset(const event_ptr &event) {
 
 void cached::feed(const event_ptr &event) {
   std::lock_guard<std::mutex> lock(feed_mutex_);
-  // Basket profile payloads are handled by the state path so CacheReset can
-  // address them consistently.
-  if (event->carrier_type() != BasketInstrument::tag and event->carrier_type() != Basket::tag) {
-    feed_profile_data(event, profile_feed_bank_);
-  }
+  feed_profile_data(event, profile_feed_bank_);
 
-  if (not bypass_cached_ and event->carrier_type() != Instrument::tag) {
+  if (not bypass_cached_) {
     feed_state_data(event, states_feed_bank_);
   }
 
-  // 开放层 FB 帧（carrier_type 不在 longfist 闭集）：路由到 FB 投影器；未启用或未注册类型时 no-op，不影响 hana 路径。
+  // Open-layer FlatBuffers frames are projected only when explicitly registered.
   if (open_layer_) {
     open_layer_->feed(event);
   }

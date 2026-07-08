@@ -11,9 +11,9 @@
 #include "data_table.h"
 
 #include <kungfu/common.h>
-#include <kungfu/longfist/longfist.h>
 #include <kungfu/runtime/cache/backend.h>
 #include <kungfu/runtime/practice/apprentice.h>
+#include <kungfu/yijinjing/schema/registry.h>
 #include <kungfu/yijinjing/time.h>
 
 namespace kungfu::node::serialize {
@@ -308,13 +308,13 @@ public:
     auto locator = location_->locator;
 
     for (auto dest : locator->list_location_dest_by_db(location_)) {
-      auto db_file = locator->layout_file(location_, longfist::enums::layout::SQLITE, fmt::format("{:08x}", dest));
-      auto storage = runtime::cache::make_storage_ptr(db_file, longfist::StateDataTypes);
+      auto db_file = locator->layout_file(location_, yijinjing::enums::layout::SQLITE, fmt::format("{:08x}", dest));
+      auto storage = runtime::cache::make_storage_ptr(db_file, yijinjing::StateDataTypes);
       if (sync_schema) {
         storage->sync_schema();
       }
 
-      boost::hana::for_each(longfist::StateDataTypes, [&](auto it) {
+      boost::hana::for_each(yijinjing::StateDataTypes, [&](auto it) {
         using DataType = typename decltype(+boost::hana::second(it))::type;
         if constexpr (type_belong_to<DataType, Ts...>()) {
           return;
@@ -372,7 +372,7 @@ class JsResetCache {
 public:
   JsResetCache(runtime::practice::apprentice &app, Napi::ObjectReference &state);
 
-  void operator()(const state<longfist::types::CacheReset> &state);
+  void operator()(const state<yijinjing::types::CacheReset> &state);
 
 private:
   runtime::practice::apprentice &app_;

@@ -6,7 +6,7 @@ import os
 
 from contextlib import contextmanager
 
-lf = kungfu.__binding__.longfist
+lf = kungfu.__binding__.yijinjing
 yjj = kungfu.__binding__.runtime
 
 

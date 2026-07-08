@@ -9,10 +9,10 @@
 
 #include <kungfu/runtime/common.h>
 
-#include <kungfu/longfist/longfist.h>
 #include <kungfu/runtime/cache/runtime.h>
 #include <kungfu/runtime/cache/sqlite_orm_ext.h>
 #include <kungfu/yijinjing/journal/journal.h>
+#include <kungfu/yijinjing/schema/registry.h>
 #include <kungfu/yijinjing/time.h>
 
 namespace kungfu::runtime::cache {
@@ -77,9 +77,9 @@ constexpr auto make_storage_ptr = [](const std::string &db_file, const auto &typ
   return boost::hana::unpack(tables, storage_ptr_maker(db_file));
 };
 
-using ProfileStoragePtr = decltype(make_storage_ptr(std::string(), longfist::ProfileDataTypes));
-using SessionStoragePtr = decltype(make_storage_ptr(std::string(), longfist::SessionDataTypes));
-using StateStoragePtr = decltype(make_storage_ptr(std::string(), longfist::StateDataTypes));
+using ProfileStoragePtr = decltype(make_storage_ptr(std::string(), yijinjing::ProfileDataTypes));
+using SessionStoragePtr = decltype(make_storage_ptr(std::string(), yijinjing::SessionDataTypes));
+using StateStoragePtr = decltype(make_storage_ptr(std::string(), yijinjing::StateDataTypes));
 
 template <typename, typename = void, bool = true> struct time_spec;
 
@@ -140,7 +140,7 @@ public:
     for (auto dest : location_->locator->list_location_dest_by_db(location_)) {
       ensure_storage(dest);
     }
-    boost::hana::for_each(longfist::StateDataTypes, [&](auto it) {
+    boost::hana::for_each(yijinjing::StateDataTypes, [&](auto it) {
       using DataType = typename decltype(+boost::hana::second(it))::type;
       for (auto &pair : storage_map_) {
         restore<DataType>(target, pair.first, pair.second);
@@ -150,7 +150,7 @@ public:
 
   template <typename TargetType> void restore_to(TargetType &target, uint32_t dest) {
     ensure_storage(dest);
-    boost::hana::for_each(longfist::StateDataTypes, [&](auto it) {
+    boost::hana::for_each(yijinjing::StateDataTypes, [&](auto it) {
       using DataType = typename decltype(+boost::hana::second(it))::type;
       restore<DataType>(target, dest, storage_map_.at(dest));
     });
@@ -158,7 +158,7 @@ public:
 
   template <typename TargetType> void restore_to(TargetType &target, uint32_t dest, int limit) {
     ensure_storage(dest);
-    boost::hana::for_each(longfist::StateDataTypes, [&](auto it) {
+    boost::hana::for_each(yijinjing::StateDataTypes, [&](auto it) {
       using DataType = typename decltype(+boost::hana::second(it))::type;
       restore<DataType>(target, dest, storage_map_.at(dest), limit);
     });

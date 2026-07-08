@@ -13,7 +13,7 @@ what is not.
                   └──────────────┬──────────────┴──────────────┬───────────┘
                                  │  in-process, zero-copy       │
                           ┌──────┴──────────────────────────────┴──────┐
-                          │  libkungfu  —  longfist + yijinjing (C++)   │
+                          │  libkungfu  —  yijinjing schema/journal (C++) │
                           └─────────────────────────────────────────────┘
 ```
 
@@ -24,32 +24,31 @@ serialization (see [`event-model.md`](event-model.md), [`contracts.md`](contract
 ## C++ — the core itself
 
 C++ code (including a C++ `kfx` extension) uses `libkungfu` directly: the
-`longfist` types and the `yijinjing` journal API, no binding layer. This is the
-reference boundary the other two mirror.
+`yijinjing` schema and journal API, no binding layer. This is the reference
+boundary the other two mirror.
 
 Source: [`framework/core/src/libkungfu/include/kungfu/`](../framework/core/src/libkungfu/include/kungfu),
 [`framework/core/src/libkungfu/`](../framework/core/src/libkungfu).
 
 ## Python — pybind11
 
-The Python surface is a pybind11 binding (`py_kungfu`) that exposes longfist
-types/enums and the wingchun book/broker layer to Python, over the same
-in-process core.
+The Python surface is a pybind11 binding (`py_kungfu`) that exposes yijinjing
+schema types/enums and runtime APIs to Python, over the same in-process core.
 
 Source: [`framework/core/src/bindings/python/binding/`](../framework/core/src/bindings/python/binding)
-(`py-longfist*.cpp`, `py-wingchun-*.cpp`).
+(`py-yijinjing*.cpp`, `py-runtime.cpp`, and related binding files).
 
 ## Node — N-API
 
 The Node surface is an N-API addon (`kungfu_node.node`) — entry point
-`kungfu_node.cpp` — exposing the journal, IO, history, longfist, and the in-memory
+`kungfu_node.cpp` — exposing the journal, IO, history, schema registry, and the in-memory
 state stores. The `watcher` (`watcher.cpp`) is the component that consumes the
 journal and presents state to JavaScript for the reference UIs; it is an
 `apprentice` (see [`concepts.md`](concepts.md)). N-API is used as the stability
 layer so the addon is decoupled from V8 ABI churn.
 
 Source: [`framework/core/src/bindings/node/binding/`](../framework/core/src/bindings/node/binding)
-(`kungfu_node.cpp`, `journal.cpp`, `watcher.cpp`, `longfist.cpp`, the `*_store.*`).
+(`kungfu_node.cpp`, `journal.cpp`, `watcher.cpp`, `schema.cpp`, the `*_store.*`).
 
 ## The framework-neutral surface
 

@@ -3,9 +3,9 @@
 #ifndef YIJINJING_PAGE_H
 #define YIJINJING_PAGE_H
 
-#include <kungfu/longfist/core.h>
 #include <kungfu/yijinjing/journal/common.h>
 #include <kungfu/yijinjing/journal/frame.h>
+#include <kungfu/yijinjing/schema/core.h>
 
 namespace kungfu::yijinjing::journal {
 
@@ -27,17 +27,17 @@ public:
   [[nodiscard]] uint32_t get_page_id() const { return page_id_; }
 
   [[nodiscard]] int64_t begin_time() const {
-    return reinterpret_cast<longfist::types::frame_header *>(first_frame_address())->gen_time;
+    return reinterpret_cast<yijinjing::types::frame_header *>(first_frame_address())->gen_time;
   }
 
   [[nodiscard]] int64_t end_time() const {
-    return reinterpret_cast<longfist::types::frame_header *>(last_frame_address())->gen_time;
+    return reinterpret_cast<yijinjing::types::frame_header *>(last_frame_address())->gen_time;
   }
 
   [[nodiscard]] uintptr_t address() const { return reinterpret_cast<uintptr_t>(header_); }
 
   [[nodiscard]] uintptr_t address_border() const {
-    return address() + header_->page_size - sizeof(longfist::types::frame_header);
+    return address() + header_->page_size - sizeof(yijinjing::types::frame_header);
   }
 
   [[nodiscard]] uint64_t get_body_size() const { return size_ - header_->page_header_length; }
@@ -47,11 +47,11 @@ public:
   [[nodiscard]] uintptr_t last_frame_address() const { return address() + header_->last_frame_position; }
 
   [[nodiscard]] bool is_full() const {
-    return last_frame_address() + reinterpret_cast<longfist::types::frame_header *>(last_frame_address())->length >
+    return last_frame_address() + reinterpret_cast<yijinjing::types::frame_header *>(last_frame_address())->length >
            address_border();
   }
 
-  [[nodiscard]] bool is_pre_open() const { return header_->status == longfist::enums::PageStatus::PreOpen; };
+  [[nodiscard]] bool is_pre_open() const { return header_->status == yijinjing::enums::PageStatus::PreOpen; };
 
   /**
    * update page header when new frame added
@@ -83,7 +83,7 @@ protected:
   const bool lazy_;
   const bool is_writing_;
   const size_t size_;
-  const longfist::types::page_header *header_;
+  const yijinjing::types::page_header *header_;
 
   page(data::location_ptr location, uint32_t dest_id, uint32_t page_id, size_t size, bool lazy, bool is_writing,
        uintptr_t address);

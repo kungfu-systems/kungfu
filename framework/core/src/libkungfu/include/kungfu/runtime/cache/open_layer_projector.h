@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// 开放层运行时投影器（生产 reader seam）：把 open-layer FB 帧（carrier_type 不在 longfist 闭集）
+// 开放层运行时投影器（生产 reader seam）：把 open-layer FB 帧（carrier_type 不在 schema 闭集）
 // 按 .bfbs 运行时反射投影到独立 sqlite db。挂在 `cached::feed()` 上，与 hana×sqlite_orm 闭集**并存**：
 //   - feed(event) 只处理已注册的 open-layer carrier_type，其余帧一律 no-op（交给 hana 路径），互不干扰；
 //   - 默认 OFF：cached 仅在环境变量 KF_OPEN_LAYER_SCHEMAS 指向 schemas 目录时才启用本投影器。

@@ -4,8 +4,8 @@
 #
 # The core is the journal spine: frame/page mmap machinery, reader/writer,
 # assemble, locator/location, storage semantic contracts, and the base
-# utilities they stand on. It sees only the longfist schema leaf
-# (kungfu/longfist/core.h) -- never the trading type registry, nng, rxcpp,
+# utilities they stand on. It sees only the yijinjing schema leaf
+# (kungfu/yijinjing/schema/core.h) -- never the trading type registry, nng, rxcpp,
 # sqlite or rocksdb. libkungfu links this target and must not recompile these
 # sources; minimal tools (fact-ledger slice) link only this target.
 #
@@ -46,7 +46,7 @@ target_include_directories(yijinjing PUBLIC ${PROJECT_SOURCE_DIR}/include)
 # boost::hana is header-only; inside the kungfu build and standalone alike,
 # use the vendored copy next to this tree unless the embedder has provided
 # <boost/hana.hpp> some other way. PUBLIC so every consumer of the core's
-# longfist schema leaf inherits it.
+# yijinjing schema leaf inherits it.
 if(EXISTS ${PROJECT_SOURCE_DIR}/../../.deps/hana-1.80.0/include)
   target_include_directories(yijinjing PUBLIC ${PROJECT_SOURCE_DIR}/../../.deps/hana-1.80.0/include)
 endif()

@@ -7,9 +7,9 @@
 #include "operators.h"
 
 using namespace kungfu::rx;
-using namespace kungfu::longfist;
-using namespace kungfu::longfist::enums;
-using namespace kungfu::longfist::types;
+using namespace kungfu::yijinjing;
+using namespace kungfu::yijinjing::enums;
+using namespace kungfu::yijinjing::types;
 using namespace kungfu::runtime;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::runtime::practice;
@@ -27,7 +27,7 @@ void JsRestoreState::operator()(int64_t from, int64_t to, bool sync_schema) {
 
   for (auto dest : locator->list_location_dest_by_db(location_)) {
     auto db_file = locator->layout_file(location_, layout::SQLITE, fmt::format("{:08x}", dest));
-    auto storage = runtime::cache::make_storage_ptr(db_file, longfist::StateDataTypes);
+    auto storage = runtime::cache::make_storage_ptr(db_file, yijinjing::StateDataTypes);
     if (sync_schema) {
       storage->sync_schema();
     }

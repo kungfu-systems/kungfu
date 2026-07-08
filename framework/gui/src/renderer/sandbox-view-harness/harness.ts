@@ -83,7 +83,7 @@ const shell: Shell = {
     buildInfo: null,
     skillManager: null,
     exports: [],
-    longfistTypes: [],
+    schemaTypes: [],
   },
   registry: [],
   suites: {},

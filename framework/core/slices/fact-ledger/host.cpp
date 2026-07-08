@@ -29,8 +29,8 @@
 #include <vector>
 
 using namespace kungfu::runtime;
-namespace longfist = kungfu::longfist;
-using longfist::enums::FrameDataType;
+namespace schema = kungfu::yijinjing;
+using schema::enums::FrameDataType;
 
 namespace {
 // Custom message types for this slice, from the capability-slice range
@@ -86,8 +86,8 @@ int main(int argc, char **argv) {
   const std::string name = "host";
 
   auto locator = std::make_shared<data::locator>(root);
-  auto location =
-      data::location::make_shared(longfist::enums::mode::LIVE, longfist::enums::category::SYSTEM, group, name, locator);
+  auto location = data::location::make_shared(schema::enums::mode::LIVE, schema::enums::location_role::SYSTEM, group,
+                                              name, locator);
 
   // The whole point: a noop bus (no hero/drain loop) and a noop publisher (no
   // nng socket). Nothing here starts the trading runtime.

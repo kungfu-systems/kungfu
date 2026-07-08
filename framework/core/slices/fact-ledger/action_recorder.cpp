@@ -18,7 +18,7 @@
 #include <vector>
 
 using namespace kungfu::runtime;
-namespace longfist = kungfu::longfist;
+namespace schema = kungfu::yijinjing;
 using kungfu::slices::sha256;
 
 namespace {
@@ -46,7 +46,7 @@ std::string payload_hash(const std::vector<uint8_t> &bytes, std::size_t length) 
   return sha256::hex(view);
 }
 
-uint64_t frame_checksum(const longfist::types::frame_header &header, const std::vector<uint8_t> &bytes,
+uint64_t frame_checksum(const schema::types::frame_header &header, const std::vector<uint8_t> &bytes,
                         std::size_t length) {
   return action::checksum_frame(header, bytes.data(), static_cast<uint32_t>(length));
 }
@@ -81,9 +81,9 @@ int main(int argc, char **argv) {
   }
 
   auto locator = std::make_shared<data::locator>(root);
-  auto location =
-      data::location::make_shared(longfist::enums::mode::LIVE, longfist::enums::category::SYSTEM, group, name, locator);
-  journal::assemble reader(location, data::location::PUBLIC, longfist::enums::AssembleMode::Channel, 0);
+  auto location = data::location::make_shared(schema::enums::mode::LIVE, schema::enums::location_role::SYSTEM, group,
+                                              name, locator);
+  journal::assemble reader(location, data::location::PUBLIC, schema::enums::AssembleMode::Channel, 0);
   auto frames = reader.read_bytes(MSG_ACTION_ENVELOPE);
   if (frames.size() != receipts.size()) {
     fail("frame count mismatch");

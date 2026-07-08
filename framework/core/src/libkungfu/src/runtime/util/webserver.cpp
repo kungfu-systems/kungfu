@@ -1,14 +1,14 @@
 #include <algorithm>
 #include <kungfu/common.h>
-#include <kungfu/longfist/longfist.h>
 #include <kungfu/runtime/nanomsg/webserver.h>
 #include <kungfu/yijinjing/common.h>
+#include <kungfu/yijinjing/schema/registry.h>
 #include <memory>
 #include <utility>
 
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::longfist::types;
-using namespace kungfu::longfist::enums;
+using namespace kungfu::yijinjing::types;
+using namespace kungfu::yijinjing::enums;
 using namespace kungfu::runtime::journal;
 using namespace std::literals;
 

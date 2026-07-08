@@ -31,9 +31,9 @@ resolved automatically once `fnm` and `uv` are installed.
 Kungfu is a pnpm-workspaces monorepo. See [`docs/architecture.md`](docs/architecture.md)
 for how the layers fit together; the main areas:
 
-- `framework/core` — the C++ core (`longfist` type system, `yijinjing` journal
-  runtime) plus its Python and Node (N-API) bindings and the `kungfu` runtime,
-  packaged as `@kungfu-tech/core`. Build orchestration lives in
+- `framework/core` — the C++ core (`yijinjing` journal, storage semantics, and
+  runtime schema) plus its Python and Node (N-API) bindings and the `kungfu`
+  runtime, packaged as `@kungfu-tech/core`. Build orchestration lives in
   `framework/core/.gyp/`.
 - `framework/api` — the capability SDK (typed access to journal / state / replay).
 - `framework/gui`, `framework/tui` — the two reference UIs: a desktop GUI

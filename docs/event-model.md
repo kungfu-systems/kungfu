@@ -49,7 +49,7 @@ Source: [`framework/core/src/libyijinjing/src/journal/`](../framework/core/src/l
 
 A frame is a fixed-size header followed by a variable-size payload. The header
 fields (defined in
-[`longfist/types.h`](../framework/core/src/libkungfu/include/kungfu/longfist/types.h),
+[`frame.h`](../framework/core/src/libyijinjing/include/kungfu/yijinjing/journal/frame.h),
 `frame_header`):
 
 | Field | Type | Meaning |
@@ -67,7 +67,7 @@ fields (defined in
 | `trigger_frame_uid` | `uint64` | The reader's current frame when this frame was generated. |
 | `stream_id` | `uint64` | Stream identifier. |
 
-Closed longfist/runtime frames may still identify their payload layout directly
+Closed yijinjing/runtime frames may still identify their payload layout directly
 through `carrier_type`. New v4 business facts should use the generic action
 envelope carrier: the journal header keeps `carrier_type` for filtering and fsck,
 while the payload names the domain action through `action_type` and

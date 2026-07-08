@@ -49,10 +49,10 @@ needs to capture, share, and faithfully replay high-frequency event streams.
 ## Core ideas
 
 - **Journal-first data plane** — one append-only event log
-  ([`yijinjing`](framework/core)) with a unified type system
-  ([`longfist`](framework/core)) carrying source / destination / nanosecond
-  timestamp / message type. Every component consumes the same frames rather than
-  inventing its own format.
+  ([`yijinjing`](framework/core)) with a unified runtime schema
+  (`kungfu/yijinjing/schema`) carrying source / destination / nanosecond
+  timestamp / carrier type metadata. Every component consumes the same frames
+  rather than inventing its own format.
 - **Zero-copy, multi-language runtime** — the same in-process journal data is
   shared across C++, Python, and Node (N-API) without serialization on the hot
   path.
@@ -89,12 +89,11 @@ built on mainstream, well-maintained foundations.
 
 ## Components
 
-- **Core & runtime** — `longfist` (type system) and `yijinjing` (journal
-  runtime) with Python and Node bindings, plus the `kungfu` runtime, packaged as
-  `@kungfu-tech/core`. It embeds a Python and a Node runtime and is fronted by
-  the `kungfu` end-user command; operator-facing shell slices such as
-  `kungfu cockpit`, managed runs, and skill context injection grow under the
-  same command.
+- **Core & runtime** — `yijinjing` (journal, storage semantics, and runtime
+  schema) plus `libkungfu` runtime bindings, packaged as `@kungfu-tech/core`.
+  It embeds a Python and a Node runtime and is fronted by the `kungfu` end-user
+  command; operator-facing shell slices such as `kungfu cockpit`, managed runs,
+  and skill context injection grow under the same command.
 - **Capability SDK** — typed, framework-neutral access to journal / state /
   replay (`framework/api`).
 - **Application SDK** — scaffolding to build kfx extensions, create Kungfu
@@ -130,7 +129,7 @@ right document, and is readable by both people and agents.
   `kungfu agent capabilities --json`, and `kungfu agent choose-mode --json`.
 - [`docs/MAP.md`](docs/MAP.md) — the question-indexed map of all documentation.
 - [`docs/concepts.md`](docs/concepts.md) — the vocabulary in one place
-  (`kungfu`/`kfx`/`sdk`, `libkungfu`, `longfist`, `yijinjing`, journal, …).
+  (`kungfu`/`kfx`/`sdk`, `libkungfu`, `yijinjing`, journal, schema, …).
 - [`docs/design-philosophy.md`](docs/design-philosophy.md) — the two first
   principles the whole design follows from, and how the architecture falls out
   of them.

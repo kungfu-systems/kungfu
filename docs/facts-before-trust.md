@@ -150,7 +150,7 @@ the demo.
 This principle shows up in several concrete places:
 
 - `yijinjing` journals are the append-first fact layer.
-- `longfist` schemas make the binary layout a declared contract.
+- `yijinjing` schema makes the binary layout a declared contract.
 - replay reuses the live runtime instead of inventing a separate replay story.
 - `docs/contracts.md` states guarantees with maturity and verification paths.
 - `docs/known-limits.md` names what is not yet guaranteed.

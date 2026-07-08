@@ -14,7 +14,7 @@ import zipfile
 
 import kungfu
 
-lf = kungfu.__binding__.longfist
+lf = kungfu.__binding__.yijinjing
 yjj = kungfu.__binding__.runtime
 
 EXPORT_META = "rewind-export.json"

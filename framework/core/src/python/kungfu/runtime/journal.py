@@ -8,7 +8,7 @@ import kungfu
 
 from kungfu.runtime import *
 
-lf = kungfu.__binding__.longfist
+lf = kungfu.__binding__.yijinjing
 yjj = kungfu.__binding__.runtime
 types = lf.types
 

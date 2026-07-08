@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
-#include <kungfu/longfist/longfist.h>
 #include <kungfu/runtime/journal/tracer.h>
 #include <kungfu/yijinjing/journal/page.h>
+#include <kungfu/yijinjing/schema/registry.h>
 
-using namespace kungfu::longfist::types;
-using namespace kungfu::longfist::enums;
+using namespace kungfu::yijinjing::types;
+using namespace kungfu::yijinjing::enums;
 using namespace kungfu::runtime;
 using namespace kungfu::runtime::journal;
 using namespace kungfu::yijinjing::data;

@@ -33,7 +33,7 @@ const benchDir = path.dirname(fileURLToPath(import.meta.url));
 const coreDir = path.resolve(benchDir, '..', '..'); // framework/core
 
 const count = Number.parseInt(process.argv[2] || '200000', 10);
-// "quote" (typed longfist frames) by default: both master and the node watcher
+// "quote" (typed schema frames) by default: both master and the node watcher
 // pre-filter open-layer events in is_reactable before rx, so only typed frames
 // actually traverse the filter chains being measured
 const loadType = process.argv[3] || 'quote';

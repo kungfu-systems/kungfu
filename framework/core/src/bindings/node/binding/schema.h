@@ -4,16 +4,16 @@
 // Created by Keren Dong on 2020/2/15.
 //
 
-#ifndef KUNGFU_NODE_LONGFIST_H
-#define KUNGFU_NODE_LONGFIST_H
+#ifndef KUNGFU_NODE_SCHEMA_H
+#define KUNGFU_NODE_SCHEMA_H
 
 #include "common.h"
 #include "operators.h"
 
 namespace kungfu::node {
-class Longfist : public Napi::ObjectWrap<Longfist> {
+class Schema : public Napi::ObjectWrap<Schema> {
 public:
-  explicit Longfist(const Napi::CallbackInfo &info);
+  explicit Schema(const Napi::CallbackInfo &info);
 
   static void Init(Napi::Env env, Napi::Object exports);
 
@@ -33,10 +33,10 @@ private:
 
   static Napi::FunctionReference constructor;
   static void cleanup() {
-    SPDLOG_INFO("Longfist reset");
-    Longfist::constructor.Reset();
+    SPDLOG_INFO("Schema reset");
+    Schema::constructor.Reset();
   }
 };
 } // namespace kungfu::node
 
-#endif // KUNGFU_NODE_LONGFIST_H
+#endif // KUNGFU_NODE_SCHEMA_H

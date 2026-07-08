@@ -5,16 +5,16 @@
 //
 
 #include <kungfu/common.h>
-#include <kungfu/longfist/longfist.h>
 #include <kungfu/runtime/os.h>
 #include <kungfu/runtime/practice/master.h>
 #include <kungfu/yijinjing/journal/frame.h>
+#include <kungfu/yijinjing/schema/registry.h>
 #include <kungfu/yijinjing/time.h>
 
 using namespace kungfu::rx;
-using namespace kungfu::longfist;
-using namespace kungfu::longfist::types;
-using namespace kungfu::longfist::enums;
+using namespace kungfu::yijinjing;
+using namespace kungfu::yijinjing::types;
+using namespace kungfu::yijinjing::enums;
 using namespace kungfu::runtime::cache;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::runtime::journal;
@@ -272,8 +272,7 @@ void master::feed(const event_ptr &event) {
     return;
   }
 
-  if (event->carrier_type() != Instrument::tag and event->carrier_type() != InstrumentFactor::tag and
-      get_location(event->source())->role == location_role::SOURCE) {
+  if (get_location(event->source())->role == location_role::SOURCE) {
     return;
   }
 

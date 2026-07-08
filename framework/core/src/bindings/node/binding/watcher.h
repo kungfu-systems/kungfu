@@ -103,14 +103,14 @@ private:
   serialize::JsUpdateState update_ledger;
   serialize::JsResetCache reset_cache;
   runtime::cache::bank data_bank_;
-  std::vector<kungfu::state<longfist::types::CacheReset>> reset_cache_states_;
+  std::vector<kungfu::state<yijinjing::types::CacheReset>> reset_cache_states_;
 
-  typedef longfist::enums::mode mode;
-  typedef longfist::enums::location_role role;
+  typedef yijinjing::enums::mode mode;
+  typedef yijinjing::enums::location_role role;
 
   static constexpr auto is_static_data = []() {
     return rx::filter([&](const event_ptr &event) {
-      return longfist::StaticDataTags.find(event->carrier_type()) != longfist::StaticDataTags.end();
+      return yijinjing::StaticDataTags.find(event->carrier_type()) != yijinjing::StaticDataTags.end();
     });
   };
 
@@ -118,11 +118,11 @@ private:
 
   yijinjing::data::location_ptr FindLocation(const Napi::CallbackInfo &info);
 
-  void InspectChannel(int64_t trigger_time, const longfist::types::Channel &channel);
+  void InspectChannel(int64_t trigger_time, const yijinjing::types::Channel &channel);
 
-  void OnRegister(int64_t trigger_time, const longfist::types::Register &register_data);
+  void OnRegister(int64_t trigger_time, const yijinjing::types::Register &register_data);
 
-  void OnDeregister(int64_t trigger_time, const longfist::types::Deregister &deregister_data);
+  void OnDeregister(int64_t trigger_time, const yijinjing::types::Deregister &deregister_data);
 
   void SyncLedger();
 
@@ -145,7 +145,7 @@ private:
   template <typename DataType> void UpdateLedger(const boost::hana::basic_type<DataType> &type) {
     using DataTypeMap = std::unordered_map<uint64_t, state<DataType>>;
     auto &target_map = const_cast<DataTypeMap &>(data_bank_[type]);
-    auto is_static_data_type = longfist::StaticDataTags.find(DataType::tag) != longfist::StaticDataTags.end();
+    auto is_static_data_type = yijinjing::StaticDataTags.find(DataType::tag) != yijinjing::StaticDataTags.end();
     auto count = 0;
     auto iter = target_map.begin();
     while (iter != target_map.end()) {
@@ -164,7 +164,7 @@ private:
     try {
       auto target_location = IODevice::ExtractLocation(info, 1, get_locator());
 
-      if (target_location->role == longfist::enums::location_role::SYSTEM && target_location->group == "master") {
+      if (target_location->role == yijinjing::enums::location_role::SYSTEM && target_location->group == "master") {
         target_location = master_cmd_location_;
       }
 

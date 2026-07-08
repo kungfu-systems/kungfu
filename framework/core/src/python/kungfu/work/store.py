@@ -47,7 +47,7 @@ from kungfu.work.fb.WorkItemCreated import WorkItemCreated
 from kungfu.work.fb.WorkStatus import WorkStatus
 from kungfu.work.fb.WorkStatusChanged import WorkStatusChanged
 
-lf = kungfu.__binding__.longfist
+lf = kungfu.__binding__.yijinjing
 yjj = kungfu.__binding__.runtime
 
 PUBLIC_DEST = 0

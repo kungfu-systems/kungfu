@@ -12,9 +12,9 @@
 #include <utility>
 
 using namespace kungfu::rx;
-using namespace kungfu::longfist;
-using namespace kungfu::longfist::types;
-using namespace kungfu::longfist::enums;
+using namespace kungfu::yijinjing;
+using namespace kungfu::yijinjing::types;
+using namespace kungfu::yijinjing::enums;
 using namespace kungfu::runtime;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::runtime::cache;
@@ -329,7 +329,7 @@ void apprentice::expect_start() {
   });
 }
 
-void apprentice::reset_time(const longfist::types::TimeReset &time_reset) {
+void apprentice::reset_time(const yijinjing::types::TimeReset &time_reset) {
   yijinjing::time::reset(time_reset.system_clock_count, time_reset.steady_clock_count);
 }
 

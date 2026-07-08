@@ -8,7 +8,7 @@
 #define KUNGFU_CONFIG_STORE_H
 
 #include "backend.h"
-#include "kungfu/longfist/longfist.h"
+#include "kungfu/yijinjing/schema/registry.h"
 #include <kungfu/runtime/common.h>
 
 namespace kungfu::runtime::cache {

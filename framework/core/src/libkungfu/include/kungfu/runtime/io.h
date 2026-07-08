@@ -52,7 +52,7 @@ public:
   [[nodiscard]] bool is_low_latency() const { return low_latency_; }
 
   [[nodiscard]] bool is_resource_manager_required() const {
-    return low_latency_ && lazy_ && home_->mode == kungfu::longfist::enums::mode::LIVE;
+    return low_latency_ && lazy_ && home_->mode == kungfu::yijinjing::enums::mode::LIVE;
   }
 
   [[nodiscard]] const journal::bus_ptr &get_bus() const { return bus_; }

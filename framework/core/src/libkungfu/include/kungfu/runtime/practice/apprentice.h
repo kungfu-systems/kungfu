@@ -100,8 +100,8 @@ public:
       write_to(trigger_time, data, dest_id);
       callback();
     } else {
-      events_ | rx::is(longfist::types::Channel::tag) | rx::filter([&, dest_id](const event_ptr &event) {
-        const longfist::types::Channel &channel = event->data<longfist::types::Channel>();
+      events_ | rx::is(yijinjing::types::Channel::tag) | rx::filter([&, dest_id](const event_ptr &event) {
+        const yijinjing::types::Channel &channel = event->data<yijinjing::types::Channel>();
         return channel.source_id == get_live_home_uid() and channel.dest_id == dest_id;
       }) | rx::first() |
           rx::$([&, trigger_time, data, dest_id, callback](const event_ptr &event) {
@@ -120,8 +120,8 @@ public:
       write_raw_to(trigger_time, carrier_type, data, length, dest_id);
       callback();
     } else {
-      events_ | rx::is(longfist::types::Channel::tag) | rx::filter([&, dest_id](const event_ptr &event) {
-        const longfist::types::Channel &channel = event->data<longfist::types::Channel>();
+      events_ | rx::is(yijinjing::types::Channel::tag) | rx::filter([&, dest_id](const event_ptr &event) {
+        const yijinjing::types::Channel &channel = event->data<yijinjing::types::Channel>();
         return channel.source_id == get_live_home_uid() and channel.dest_id == dest_id;
       }) | rx::first() |
           rx::$([&, trigger_time, carrier_type, data, length, dest_id](const event_ptr &event) {
@@ -140,8 +140,8 @@ public:
       write_as(trigger_time, data, source_id, dest_id);
       callback();
     } else {
-      events_ | rx::is(longfist::types::Channel::tag) | rx::filter([&, dest_id](const event_ptr &event) {
-        const longfist::types::Channel &channel = event->data<longfist::types::Channel>();
+      events_ | rx::is(yijinjing::types::Channel::tag) | rx::filter([&, dest_id](const event_ptr &event) {
+        const yijinjing::types::Channel &channel = event->data<yijinjing::types::Channel>();
         return channel.source_id == get_live_home_uid() and channel.dest_id == dest_id;
       }) | rx::first() |
           rx::$([&, trigger_time, data, source_id, dest_id](const event_ptr &event) {
@@ -157,7 +157,7 @@ public:
   template <class DataType> std::string make_nano_msg(uint32_t source, uint32_t dest, const DataType &data) const {
     auto now = this->now();
     nlohmann::json request;
-    request["data_type"] = int8_t(longfist::enums::FrameDataType::Json);
+    request["data_type"] = int8_t(yijinjing::enums::FrameDataType::Json);
     request["carrier_type"] = DataType::tag;
     request["gen_time"] = now;
     request["trigger_time"] = now;
@@ -198,7 +198,7 @@ protected:
 
   virtual void on_start();
 
-  virtual void on_register(int64_t trigger_time, const longfist::types::Register &register_data);
+  virtual void on_register(int64_t trigger_time, const yijinjing::types::Register &register_data);
 
   virtual void on_deregister(const event_ptr &event);
 
@@ -224,7 +224,7 @@ protected:
     enable_timer(timer_id);
     auto writer = get_writer(get_master_command_uid());
     int64_t duration_ns = nanotime - now();
-    longfist::types::TimeRequest &r = writer->open_data<longfist::types::TimeRequest>(now());
+    yijinjing::types::TimeRequest &r = writer->open_data<yijinjing::types::TimeRequest>(now());
     r.id = timer_id;
     r.base_time = now();
     r.duration = duration_ns;
@@ -234,7 +234,7 @@ protected:
     timer_checkpoints_[timer_id] = now();
     return [&, duration_ns, timer_id](const rx::observable<event_ptr> &src) {
       return events_ | rx::filter([&, duration_ns, timer_id](const event_ptr &event) {
-               return (event->carrier_type() == longfist::types::Time::tag &&
+               return (event->carrier_type() == yijinjing::types::Time::tag &&
                        event->gen_time() >= timer_checkpoints_[timer_id] + duration_ns);
              }) |
              rx::first() | rx::filter([&, timer_id](const event_ptr &) {
@@ -254,7 +254,7 @@ protected:
     enable_timer(timer_id);
     auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(d).count();
     auto writer = get_writer(get_master_command_uid());
-    longfist::types::TimeRequest &r = writer->open_data<longfist::types::TimeRequest>(now());
+    yijinjing::types::TimeRequest &r = writer->open_data<yijinjing::types::TimeRequest>(now());
     r.id = timer_id;
     r.base_time = now();
     r.duration = duration_ns;
@@ -273,10 +273,10 @@ protected:
                                         return not enabled;
                                       })) |
              rx::filter([&, duration_ns, timer_id](const event_ptr &event) {
-               if (event->carrier_type() == longfist::types::Time::tag &&
+               if (event->carrier_type() == yijinjing::types::Time::tag &&
                    event->gen_time() >= timer_checkpoints_[timer_id] + duration_ns) {
                  auto writer = get_writer(get_master_command_uid());
-                 longfist::types::TimeRequest &r = writer->open_data<longfist::types::TimeRequest>(now());
+                 yijinjing::types::TimeRequest &r = writer->open_data<yijinjing::types::TimeRequest>(now());
                  r.id = timer_id;
                  r.base_time = timer_checkpoints_[timer_id] + duration_ns;
                  r.duration = duration_ns;
@@ -297,7 +297,7 @@ protected:
     enable_timer(timer_id);
     auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(d).count();
     auto writer = get_writer(get_master_command_uid());
-    longfist::types::TimeRequest &r = writer->open_data<longfist::types::TimeRequest>(now());
+    yijinjing::types::TimeRequest &r = writer->open_data<yijinjing::types::TimeRequest>(now());
     r.id = timer_id;
     r.base_time = now();
     r.duration = duration_ns;
@@ -310,9 +310,9 @@ protected:
                                      return not is_timer_enabled(timer_id);
                                    })) |
               rx::filter([&, duration_ns, timer_id](const event_ptr &event) {
-                if (event->carrier_type() != longfist::types::Time::tag) {
+                if (event->carrier_type() != yijinjing::types::Time::tag) {
                   auto writer = get_writer(get_master_command_uid());
-                  longfist::types::TimeRequest &r = writer->open_data<longfist::types::TimeRequest>(now());
+                  yijinjing::types::TimeRequest &r = writer->open_data<yijinjing::types::TimeRequest>(now());
                   r.id = timer_id;
                   r.base_time = now();
                   r.duration = duration_ns;
@@ -354,7 +354,7 @@ private:
     reader_->join(get_location(request.source_id), dest_id, request.from_time);
   }
 
-  static void reset_time(const longfist::types::TimeReset &time_reset);
+  static void reset_time(const yijinjing::types::TimeReset &time_reset);
 
   bool is_timer_enabled(int32_t timer_id);
 

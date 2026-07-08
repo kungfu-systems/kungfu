@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <kungfu/common.h>
-#include <kungfu/longfist/core.h>
 #include <kungfu/yijinjing/common.h>
 #include <kungfu/yijinjing/journal/journal.h>
+#include <kungfu/yijinjing/schema/core.h>
 
 namespace kungfu::yijinjing::journal {
 

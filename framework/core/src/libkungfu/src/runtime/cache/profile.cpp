@@ -6,8 +6,8 @@
 
 #include <kungfu/runtime/cache/profile.h>
 
-using namespace kungfu::longfist;
-using namespace kungfu::longfist::enums;
+using namespace kungfu::yijinjing;
+using namespace kungfu::yijinjing::enums;
 using namespace kungfu::yijinjing::data;
 
 namespace kungfu::runtime::cache {

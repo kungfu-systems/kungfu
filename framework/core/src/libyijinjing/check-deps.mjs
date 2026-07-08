@@ -3,10 +3,10 @@
 // Dependency-direction guard for the yijinjing static core.
 //
 // The core may see only: the C++ standard library, header-only formatting/json
-// (fmt, spdlog, nlohmann, boost::hana via kungfu/common.h) and the longfist
-// schema leaf (kungfu/longfist/core.h). It may define storage semantic
+// (fmt, spdlog, nlohmann, boost::hana via kungfu/common.h) and the yijinjing schema leaf
+// (kungfu/yijinjing/schema/core.h). It may define storage semantic
 // contracts under kungfu/yijinjing/storage, but it must never include runtime,
-// transport or storage-engine headers, the full type registry, or any trading
+// transport or storage-engine headers, the full runtime registry, or any trading
 // type.
 //
 // Include lines are matched instead of bare words so that comments explaining
@@ -25,10 +25,10 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 const forbiddenIncludes =
-  /^\s*#\s*include\s*[<"](nng\/|rxcpp\/|sqlite|rocksdb\/|kungfu\/runtime\/|kungfu\/longfist\/longfist\.h|kungfu\/longfist\/types\.h|kungfu\/longfist\/enums\.h|kungfu\/longfist\/sqlite|kungfu\/yijinjing\/practice\/|kungfu\/yijinjing\/cache\/|kungfu\/yijinjing\/index\/|kungfu\/yijinjing\/nanomsg\/|kungfu\/yijinjing\/socket\/|kungfu\/yijinjing\/io\.h|kungfu\/yijinjing\/rx\.h|kungfu\/yijinjing\/util\/|kungfu\/wingchun\/)/;
+  /^\s*#\s*include\s*[<"](nng\/|rxcpp\/|sqlite|rocksdb\/|kungfu\/runtime\/|kungfu\/longfist\/|kungfu\/yijinjing\/schema\/registry\.h|kungfu\/yijinjing\/practice\/|kungfu\/yijinjing\/cache\/|kungfu\/yijinjing\/index\/|kungfu\/yijinjing\/nanomsg\/|kungfu\/yijinjing\/socket\/|kungfu\/yijinjing\/io\.h|kungfu\/yijinjing\/rx\.h|kungfu\/yijinjing\/util\/|kungfu\/wingchun\/)/;
 
 const forbiddenSymbols =
-  /longfist::types::(Order|Trade|Position)|types::(Order|Trade|Position)[A-Za-z]*\b|LegacyCompiledTypes\b|LegacyCompiledDataTypes\b|LegacyCompiledTypeTags\b|wingchun/;
+  /yijinjing::types::(Order|Trade|Position)|types::(Order|Trade|Position)[A-Za-z]*\b|LegacyCompiledTypes\b|LegacyCompiledDataTypes\b|LegacyCompiledTypeTags\b|wingchun/;
 
 function* walk(dir) {
   if (!fs.existsSync(dir)) return;
@@ -74,7 +74,7 @@ const symbolHits = scan(forbiddenSymbols);
 if (symbolHits.length) {
   console.log(symbolHits.join('\n'));
   console.error(
-    'FAIL: forbidden symbol found (trading types / full type registry)',
+    'FAIL: forbidden symbol found (trading types / full runtime registry)',
   );
   failed = true;
 }

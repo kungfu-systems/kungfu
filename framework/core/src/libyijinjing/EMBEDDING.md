@@ -43,7 +43,7 @@ as-is and performs no `find_package` of its own.
 ## What you get
 
 - target `yijinjing` (STATIC, position-independent), include roots for
-  `<kungfu/common.h>`, `<kungfu/longfist/core.h>` and
+  `<kungfu/common.h>`, `<kungfu/yijinjing/schema/core.h>` and
   `<kungfu/yijinjing/...>`;
 - the full journal write/read surface with a noop bus and noop publisher --
   no master, no event loop, no sockets, no databases. The

@@ -20,11 +20,11 @@ principles behind them see [`design-philosophy.md`](design-philosophy.md).
 
 | Term | What it is |
 |---|---|
-| **libkungfu** | The C++ **runtime library** built above `longfist` and `yijinjing`, with C++/Python/Node bindings, runtime providers, projections, and process wiring. This is what the README calls the "zero-copy, multi-language runtime"; it is packaged as `@kungfu-tech/core` and is the foundation the `kungfu` runtime is built on. |
-| **longfist** | The unified **type system / schema** (FlatBuffers-based). Its binary layout *is* the cross-language and on-disk contract — see [ADR-0008](../framework/core/docs/adr/ADR-0008-longfist-schema-evolution-and-minor-maintenance.md). |
-| **yijinjing** | The append-only **journal and storage-semantic kernel** — frame/page mmap, reader/writer, locator/location, causal event ranges, payload references, manifests, source records, fsck reports, and provider contracts. Runtime backends live above it in `libkungfu`. |
+| **libkungfu** | The C++ **runtime library** built above `yijinjing`, with C++/Python/Node bindings, runtime providers, projections, and process wiring. This is what the README calls the "zero-copy, multi-language runtime"; it is packaged as `@kungfu-tech/core` and is the foundation the `kungfu` runtime is built on. |
+| **yijinjing schema** | The unified **runtime fact schema** under `kungfu/yijinjing/schema`. Its binary layout is the v4 cross-language and on-disk contract for closed runtime facts. |
+| **yijinjing** | The append-only **journal and storage-semantic kernel** — frame/page mmap, reader/writer, locator/location, causal event ranges, payload references, manifests, source records, fsck reports, provider contracts, and the runtime fact schema. Runtime backends live above it in `libkungfu`. |
 | **journal** | The append-only **event log**: one shared, strongly-typed stream of frames that every component consumes, rather than each inventing its own format. |
-| **frame** | A single journal record: a fixed-size header (source / destination / nanosecond timestamp / message type) plus a variable-size payload. |
+| **frame** | A single journal record: a fixed-size header (source / destination / nanosecond timestamp / carrier type) plus a variable-size payload. |
 | **action recorder** | The language-neutral C++ core surface for writing action facts into the journal. Python and Node expose thin bindings over it; they must not implement separate causality, writer, or receipt semantics. See [ADR-0022](../framework/core/docs/adr/ADR-0022-core-action-recording-surface.md). |
 | **location** | A runtime identity/address: role, group, name, mode, locator root, and uid. Locations identify who writes, who reads, and where journals live. |
 | **channel** | A source/destination communication edge between locations. Channels are used for runtime read/write/request paths; they are transport, not fact authority. |

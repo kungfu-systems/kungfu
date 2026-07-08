@@ -38,11 +38,9 @@ the action envelope:
 
 | Number | Owner | Meaning |
 | --- | --- | --- |
-| `0` | yijinjing/longfist core | Internal `frame_header`; not a user event. |
-| `1` | yijinjing/longfist core | Internal `page_header`; not a user event. |
+| `0` | yijinjing core | Internal `frame_header`; not a user event. |
+| `1` | yijinjing core | Internal `page_header`; not a user event. |
 | `1000` | Kungfu action runtime | `kungfu.action-envelope/v1`; business semantics come from `action_type` and `schema_ref`. |
-| `1101` | longfist born-FB bridge | Internal Asset FlatBuffers migration carrier. |
-| `1103` | longfist born-FB bridge | Internal Position FlatBuffers migration carrier. |
 | `10051-10751` | runtime service markers | Existing internal service/control tags such as `PageEnd`, `Time`, `Ping`, `Pong`, cache, and socket markers. |
 
 Rules:
@@ -61,13 +59,11 @@ Rules:
 
 ## Legacy Context
 
-The repository still contains compiled longfist trading tags and earlier
-capability-slice demos. They are historical/runtime compatibility material, not
-the v4 business allocation model.
+The repository still contains earlier capability-slice demos. They are
+historical/runtime compatibility material, not the v4 business allocation model.
 
 | Legacy range | Status | Notes |
 | --- | --- | --- |
-| `101-799` | legacy compiled longfist/trading tags | Kept while code exists, not extended for v4 agent facts. |
 | `20000-29999` | legacy capability-slice demos | May remain in isolated demos until each slice migrates to the v4 action envelope. |
 | `30000+` | deprecated pre-envelope open layer | Earlier profiles allocated one number per event table. New v4 code must not copy this pattern. |
 

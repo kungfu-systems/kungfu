@@ -18,13 +18,13 @@ A record's **Status** says where it stands:
 | ADR | Status | Title |
 |---|---|---|
 | [0001](ADR-0001-yijinjing-publish-barrier.md) | accepted | yijinjing journal publish protocol → `atomic_ref` release/acquire |
-| [0002](ADR-0002-longfist-flatbuffers-runtime-schema.md) | accepted | longfist serialization → a FlatBuffers runtime schema over the zero-copy POD layout |
+| [0002](ADR-0002-yijinjing-schema-runtime-layout.md) | accepted | yijinjing schema serialization → a FlatBuffers runtime schema over the zero-copy POD layout |
 | [0003](ADR-0003-control-axis-python-coroutine-integration.md) | proposed | control axis — the Python coroutine integration layer (continue / redesign / drop) |
 | [0004](ADR-0004-control-axis-node-watcher-snapshot-model.md) | proposed | control axis — the Node watcher snapshot model |
 | [0005](ADR-0005-control-event-axis-modernization-assessment.md) | proposed | control / event axis modernization — a meta-assessment |
 | [0006](ADR-0006-v4-frontend-platform-architecture.md) | accepted | v4 frontend = platform (capability SDK + loose kfx contract) + minimal reference app |
 | [0007](ADR-0007-v4-tui-platform-reference-surface.md) | accepted | v4 TUI = the platform's second reference surface |
-| [0008](ADR-0008-longfist-schema-evolution-and-minor-maintenance.md) | proposed | longfist binary layout as the true compatibility invariant; schema-evolution policy |
+| [0008](ADR-0008-yijinjing-schema-layout-baseline.md) | proposed | yijinjing schema binary layout as the true compatibility invariant; schema-evolution policy |
 | [0009](ADR-0009-load-bearing-self-bootstrap.md) | accepted | load-bearing self-bootstrap — the adoption path is the validation path |
 | [0010](ADR-0010-adopt-kfd-1-release-versioning.md) | accepted | adopt KFD-1 — welded-surface registers decide patch, minor, and major |
 | [0011](ADR-0011-v4-capability-sdk-contract.md) | accepted | v4 capability SDK contract — two vocabulary domains, runtime-tier declaration, five consumer-driven handles |
@@ -42,13 +42,13 @@ A record's **Status** says where it stands:
 | [0024](ADR-0024-location-role-and-journal-page-policy.md) | accepted | location role replaces trading category and journal page size is storage policy |
 | [0025](ADR-0025-carrier-type-and-action-envelope-semantics.md) | accepted | carrier type is transport metadata and business semantics live in action envelopes |
 | [0026](ADR-0026-runtime-greenfield-core-surface.md) | accepted | runtime exposes a greenfield core surface, not trading typed helpers |
-| [0027](ADR-0027-python-longfist-public-core-types.md) | accepted | Python longfist exposes only core public runtime types |
+| [0027](ADR-0027-python-yijinjing-public-core-types.md) | accepted | Python yijinjing schema exposes only core public runtime types |
 
 ## Reading by theme
 
 - **Data axis (the journal & type system)** — [0001](ADR-0001-yijinjing-publish-barrier.md)
-  (publish synchronization), [0002](ADR-0002-longfist-flatbuffers-runtime-schema.md)
-  (FlatBuffers runtime schema), [0008](ADR-0008-longfist-schema-evolution-and-minor-maintenance.md)
+  (publish synchronization), [0002](ADR-0002-yijinjing-schema-runtime-layout.md)
+  (FlatBuffers runtime schema), [0008](ADR-0008-yijinjing-schema-layout-baseline.md)
   (the layout as true invariant and its evolution policy). This axis is
   schema-driven and codegen-validated.
 - **Control / event axis** — [0003](ADR-0003-control-axis-python-coroutine-integration.md)
@@ -97,9 +97,10 @@ A record's **Status** says where it stands:
   [0026](ADR-0026-runtime-greenfield-core-surface.md) (the rule that runtime
   bindings expose neutral raw/envelope/runtime APIs instead of generated
   trading typed helpers), and
-  [0027](ADR-0027-python-longfist-public-core-types.md) (the matching rule that
-  Python `longfist.types` only exposes core public runtime structs, while the
-  full compiled schema registry remains an internal compatibility surface).
+  [0027](ADR-0027-python-yijinjing-public-core-types.md) (the matching rule that
+  Python `pykungfu.yijinjing.types` only exposes core public runtime structs,
+  while the full compiled schema registry stays internal to runtime decode
+  paths).
 - **Cross-cutting principle** — [0009](ADR-0009-load-bearing-self-bootstrap.md)
   (load-bearing self-bootstrap), which also names the general law that
   [`docs/architecture.md` § The build dogfoods the SDK](../../../../docs/architecture.md)

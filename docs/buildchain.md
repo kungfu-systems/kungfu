@@ -25,7 +25,7 @@ under those pinned tools.
 
 | Output | From | Via |
 |---|---|---|
-| `libkungfu` (C++ core: longfist + yijinjing) | `framework/core/src` | CMake + Conan 2; build orchestration in `framework/core/.gyp/` |
+| `libkungfu` (C++ core: yijinjing schema + journal) | `framework/core/src` | CMake + Conan 2; build orchestration in `framework/core/.gyp/` |
 | Python binding (`py_kungfu`) | `framework/core/src/bindings/python` | pybind11, built under the pinned CPython |
 | Node addon (`kungfu_node.node`) | `framework/core/src/bindings/node` | N-API via the `.gyp` build |
 | `kungfu` (the frozen runtime) | the above + embedded Python/Node runtimes | `./kungfu-code freeze` |

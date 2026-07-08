@@ -16,9 +16,9 @@ const stagedOnly = args.includes('--staged');
 const allFiles = args.includes('--all');
 
 const SOURCE_EXT = /\.(c|cc|cpp|cxx|h|hh|hpp|hxx|mjs|js|cjs|ts|tsx|py|pyi)$/;
-const LEGACY_PY_LONGFIST_TYPES =
+const PRE_V4_PY_TRADING_TYPES =
   /\b(AlgoOrder|AlgoOrderAction|AlgoOrderActionError|AlgoOrderInput|Asset|Basket|BasketInstrument|BlockMessage|Commission|Contract|CustomSubscribe|Entrust|HistoryOrder|HistoryTrade|Instrument|InstrumentFactor|InstrumentKey|Order|OrderAction|OrderActionError|OrderInput|OrderStat|OrderTrigger|OrderTriggerAction|OrderTriggerActionError|OrderTriggerInput|Position|PositionEnd|Quote|RequestHistoryOrder|RequestHistoryOrderError|RequestHistoryTrade|RequestHistoryTradeError|RiskSetting|Trade|TradingDay|Transaction|Tree)\b/g;
-const LEGACY_PY_LONGFIST_ENUMS =
+const PRE_V4_PY_TRADING_ENUMS =
   /\b(AccountType|AccountingMethodType|AlgoOrderActionFlag|BasketType|BasketVolumeType|BrokerState|BsFlag|CashReplaceFlag|CloseOutFlag|CommissionRateMode|ContractType|Currency|Direction|ETFStatus|ETFType|ExecType|HedgeFlag|InstrumentType|LedgerCategory|MarketType|Offset|OrderActionFlag|OrderStatus|OrderTriggerFlag|OrderTriggerType|PriceLevel|PriceType|Side|StrategyState|SubscribeDataType|SubscribeInstrumentType|TimeCondition|VolumeCondition)\b/g;
 const LEGACY_NODE_PROFILE_STORES =
   /\b(RiskSettingStore|CommissionStore|BasketStore|BasketInstrumentStore)\b/g;
@@ -93,50 +93,50 @@ const RULES = [
       'Python runtime must expose neutral raw/envelope APIs, not generated business typed helpers.',
   },
   {
-    name: 'python longfist public AllDataTypes binding',
+    name: 'python yijinjing public AllDataTypes binding',
     files: [
-      /^framework\/core\/src\/bindings\/python\/binding\/py-longfist-types\.cpp$/,
+      /^framework\/core\/src\/bindings\/python\/binding\/py-yijinjing-types\.cpp$/,
     ],
     re: /\b(StateDataTypes|LegacyCompiledTypes|LegacyCompiledDataTypes|LegacyCompiledTypeTags)\b|boost::hana::for_each\((StateDataTypes|LegacyCompiledTypes|LegacyCompiledDataTypes)/g,
     message:
-      'Python longfist public types/state must bind CorePublic*DataTypes, not the legacy internal schema sets.',
+      'Python yijinjing public types/state must bind CorePublic*DataTypes, not the internal schema sets.',
   },
   {
     name: 'python profile public internal registry binding',
     files: [
       /^framework\/core\/src\/bindings\/python\/binding\/py-runtime\.cpp$/,
     ],
-    re: /\bProfileDataTypes\b|boost::hana::for_each\(longfist::ProfileDataTypes/g,
+    re: /\bProfileDataTypes\b|boost::hana::for_each\(yijinjing::ProfileDataTypes/g,
     message:
       'Python runtime profile must bind CorePublicProfileDataTypes, not the internal profile schema set.',
   },
   {
-    name: 'node longfist public internal registry binding',
-    files: [/^framework\/core\/src\/bindings\/node\/binding\/longfist\.cpp$/],
+    name: 'node schema public internal registry binding',
+    files: [/^framework\/core\/src\/bindings\/node\/binding\/schema\.cpp$/],
     re: /\b(StateDataTypes|ProfileDataTypes|LegacyCompiledTypes|LegacyCompiledDataTypes|LegacyCompiledTypeTags)\b|boost::hana::for_each\((StateDataTypes|ProfileDataTypes|LegacyCompiledTypes|LegacyCompiledDataTypes)/g,
     message:
-      'Node longfist public types/carrierTypes must bind CorePublic*DataTypes, not the legacy internal schema sets.',
+      'Node schema public types/carrierTypes must bind CorePublic*DataTypes, not the internal schema sets.',
   },
   {
-    name: 'python longfist public trading stubs',
+    name: 'python yijinjing public trading stubs',
     files: [
-      /^framework\/core\/stubs\/pykungfu\/longfist\/types\.pyi$/,
-      /^framework\/core\/stubs\/pykungfu\/longfist\/state\.pyi$/,
+      /^framework\/core\/stubs\/pykungfu\/yijinjing\/types\.pyi$/,
+      /^framework\/core\/stubs\/pykungfu\/yijinjing\/state\.pyi$/,
       /^framework\/core\/stubs\/pykungfu\/runtime\.pyi$/,
     ],
-    re: LEGACY_PY_LONGFIST_TYPES,
+    re: PRE_V4_PY_TRADING_TYPES,
     message:
-      'Python longfist stubs must not expose legacy trading/profile typed classes as public v4 core types.',
+      'Python yijinjing stubs must not expose legacy trading/profile typed classes as public v4 core types.',
   },
   {
-    name: 'python longfist public trading enums',
+    name: 'python yijinjing public trading enums',
     files: [
-      /^framework\/core\/src\/bindings\/python\/binding\/py-longfist-enums\.cpp$/,
-      /^framework\/core\/stubs\/pykungfu\/longfist\/enums\.pyi$/,
+      /^framework\/core\/src\/bindings\/python\/binding\/py-yijinjing-enums\.cpp$/,
+      /^framework\/core\/stubs\/pykungfu\/yijinjing\/enums\.pyi$/,
     ],
-    re: LEGACY_PY_LONGFIST_ENUMS,
+    re: PRE_V4_PY_TRADING_ENUMS,
     message:
-      'Python longfist enums must expose only runtime/core enums, not trading/profile enums.',
+      'Python yijinjing enums must expose only runtime/core enums, not trading/profile enums.',
   },
   {
     name: 'node legacy profile store public surface',
@@ -179,13 +179,13 @@ const RULES = [
       'Use neutral session/window time APIs: next_session_boundary, session_window_start, history_window_start.',
   },
   {
-    name: 'trading closed-set registry',
+    name: 'trading closed-set schema registry',
     files: [
-      /^framework\/core\/src\/libkungfu\/include\/kungfu\/longfist\/longfist\.h$/,
+      /^framework\/core\/src\/libyijinjing\/include\/kungfu\/yijinjing\/schema\/registry\.h$/,
     ],
     re: /\b(TradingDataTypes|TradingDataTags|MarketDataTypes|is_market_data)\b/g,
     message:
-      'Do not keep trading/market closed sets in the v4 longfist core registry.',
+      'Do not keep trading/market closed sets in the v4 yijinjing schema registry.',
   },
   {
     name: 'dead trading feed helper',
@@ -302,7 +302,8 @@ function lineNumber(text, index) {
 
 function corePublicRegistryHits(rel, text) {
   if (
-    rel !== 'framework/core/src/libkungfu/include/kungfu/longfist/longfist.h'
+    rel !==
+    'framework/core/src/libyijinjing/include/kungfu/yijinjing/schema/registry.h'
   ) {
     return [];
   }
@@ -342,8 +343,10 @@ function corePublicRegistryHits(rel, text) {
 
 function directLegacyRegistryNameHits(rel, text) {
   if (
-    rel === 'framework/core/src/libkungfu/include/kungfu/longfist/longfist.h' ||
-    rel === 'framework/core/src/libkungfu/include/kungfu/longfist/types.h' ||
+    rel ===
+      'framework/core/src/libyijinjing/include/kungfu/yijinjing/schema/registry.h' ||
+    rel ===
+      'framework/core/src/libyijinjing/include/kungfu/yijinjing/schema/types.h' ||
     rel === 'framework/core/src/libyijinjing/check-deps.mjs' ||
     rel === 'scripts/check-runtime-greenfield.mjs'
   ) {

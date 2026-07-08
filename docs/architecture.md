@@ -5,7 +5,7 @@ accountability stance behind the product, see
 [`facts-before-trust.md`](facts-before-trust.md); for the two first principles
 the whole design follows from, see
 [`design-philosophy.md`](design-philosophy.md); for the vocabulary
-(`kungfu`/`kfx`/`skill`/`sdk`, `libkungfu`, `longfist`, `yijinjing`, …) see
+(`kungfu`/`kfx`/`skill`/`sdk`, `libkungfu`, `yijinjing`, schema, …) see
 [`concepts.md`](concepts.md); for the data-plane concepts
 (journal, zero-copy, replay) see the [README](../README.md); for build and
 contribution see [CONTRIBUTING](../CONTRIBUTING.md); for specific decisions see
@@ -31,8 +31,8 @@ friction and maintenance burden*, not chase convergence for its own sake.
 
 ## The polyglot membrane
 
-At the bottom sits one C++ core, `libkungfu` (the `longfist` type system + the
-`yijinjing` journal). C++, Python, and Node do not each reimplement it — they are
+At the bottom sits one C++ core, `libkungfu` above the `yijinjing` journal and
+runtime schema. C++, Python, and Node do not each reimplement it — they are
 thin bindings over the *same in-process* core, reading the *same* journal bytes
 with no serialization on the hot path. That shared, zero-copy, cross-language
 surface is the membrane:
@@ -44,7 +44,7 @@ surface is the membrane:
         └──────────────┬──────┴───────────┬──────────────┘
                 ┌───────┴───────────────────┴───────┐
                 │  libkungfu                          │
-                │  longfist (layout) + yijinjing (journal)
+                │  yijinjing (journal + schema layout)
                 └───────────────────┬─────────────────┘
                                     │  mmap MAP_SHARED
                             ┌───────┴────────┐
@@ -54,7 +54,7 @@ surface is the membrane:
 ```
 
 The layout *is* the wire format (see
-[ADR-0008](../framework/core/docs/adr/ADR-0008-longfist-schema-evolution-and-minor-maintenance.md)
+[ADR-0008](../framework/core/docs/adr/ADR-0008-yijinjing-schema-layout-baseline.md)
 and [`contracts.md`](contracts.md)); the binding boundaries are detailed in
 [`adapters.md`](adapters.md). Everything below is how this core is layered
 into a platform.
@@ -67,10 +67,10 @@ group into the following layers.
 
 ### Runtime and core — `framework/core` (`@kungfu-tech/core`)
 
-The foundation: the `longfist` type system and the `yijinjing` append-only
-journal runtime in C++, with Python and Node (N-API) bindings, exposed zero-copy
-in-process. It also produces the `kungfu` runtime, which embeds the Python and
-Node runtimes and bridges the development toolchain; it is the base for
+The foundation: the `yijinjing` append-only journal runtime and schema layout in
+C++, with Python and Node (N-API) bindings, exposed zero-copy in-process. It
+also produces the `kungfu` runtime, which embeds the Python and Node runtimes
+and bridges the development toolchain; it is the base for
 operator-facing surfaces such as `kungfu cockpit`, managed runs, skill context
 injection, and the richer end-user shell as it matures.
 
@@ -209,8 +209,8 @@ and the extensions. Trading-specific reference extensions from earlier versions
 are being retired, and their coverage role is being handed to neutral
 replacements that exercise the same paths. The C++ path is covered by
 [`examples/probe-cpp`](../examples/probe-cpp): a neutral probe that compiles
-against the `libkungfu` API and its FlatBuffers data structures into a native
-module (`kungfu sdk kfx build` drives CMake through the core toolchain). The Python
+against the `libkungfu` API and the public `yijinjing/schema` headers into a
+native module (`kungfu sdk kfx build` drives CMake through the core toolchain). The Python
 ahead-of-time path is covered by
 [`examples/probe-python`](../examples/probe-python): a neutral probe whose
 dependency is installed with `kungfu engage pdm` and whose module is
@@ -225,7 +225,7 @@ build` bundles with esbuild.
 
 ```
 framework/    platform + contracts you build ON (imported as a dependency)
-  core        runtime + core (C++ longfist / yijinjing, bindings, kungfu)
+  core        runtime + core (C++ yijinjing schema/journal, bindings, kungfu)
   api         capability SDK and host/guest capability relay
   kfx         extension package/facet/trust contract
   skill       Kungfu Skill schemas, fixtures and catalog/context helpers

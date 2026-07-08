@@ -19,8 +19,8 @@ void shift::ensure_storage(uint32_t dest) {
     return;
   }
   auto locator = location_->locator;
-  auto db_file = locator->layout_file(location_, longfist::enums::layout::SQLITE, fmt::format("{:08x}", dest));
-  auto storage = make_storage_ptr(db_file, longfist::StateDataTypes);
+  auto db_file = locator->layout_file(location_, yijinjing::enums::layout::SQLITE, fmt::format("{:08x}", dest));
+  auto storage = make_storage_ptr(db_file, yijinjing::StateDataTypes);
   storage->pragma.journal_mode(sqlite_orm::journal_mode::WAL);
   storage->pragma.synchronous(0);
   storage->sync_schema();
@@ -29,7 +29,7 @@ void shift::ensure_storage(uint32_t dest) {
 
 bool shift::check_storage_exists(uint32_t dest) {
   auto locator = location_->locator;
-  auto db_file = locator->layout_file(location_, longfist::enums::layout::SQLITE, fmt::format("{:08x}", dest));
+  auto db_file = locator->layout_file(location_, yijinjing::enums::layout::SQLITE, fmt::format("{:08x}", dest));
   return fs::exists(db_file);
 }
 

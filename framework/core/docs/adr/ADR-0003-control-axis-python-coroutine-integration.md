@@ -7,7 +7,7 @@
   engine's single-threaded loop with Python `asyncio`
 - Related: aggregated with [ADR-0004](ADR-0004-control-axis-node-watcher-snapshot-model.md)
   into the meta-assessment [ADR-0005](ADR-0005-control-event-axis-modernization-assessment.md);
-  orthogonal to the data-axis work in [ADR-0002](ADR-0002-longfist-flatbuffers-runtime-schema.md).
+  orthogonal to the data-axis work in [ADR-0002](ADR-0002-yijinjing-schema-runtime-layout.md).
 
 ## Context
 

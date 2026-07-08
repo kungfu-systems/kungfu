@@ -47,7 +47,7 @@ from kungfu.rewind.proxy import (
     ModelWireProxy,
 )
 
-lf = kungfu.__binding__.longfist
+lf = kungfu.__binding__.yijinjing
 yjj = kungfu.__binding__.runtime
 
 ENV_RUN_ID = "KUNGFU_REWIND_RUN_ID"

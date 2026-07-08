@@ -14,7 +14,7 @@
 namespace kungfu::yijinjing::data {
 
 namespace fs = std::filesystem;
-namespace es = longfist::enums;
+namespace es = yijinjing::enums;
 
 fs::path get_default_root() {
   char *kf_home = std::getenv("KF_HOME");
@@ -78,8 +78,8 @@ bool locator::has_env(const std::string &name) const { return std::getenv(name.c
 
 std::string locator::get_env(const std::string &name) const { return std::getenv(name.c_str()); }
 
-std::string locator::layout_directory(longfist::enums::layout layout, longfist::enums::location_role c,
-                                      const std::string &g, const std::string &n, longfist::enums::mode m,
+std::string locator::layout_directory(yijinjing::enums::layout layout, yijinjing::enums::location_role c,
+                                      const std::string &g, const std::string &n, yijinjing::enums::mode m,
                                       bool create_not_exist) const {
   auto dir = root_ /                         //
              es::get_layout_name(layout) /   //
@@ -217,10 +217,10 @@ bool locator::operator==(const locator &another) const {
   return dir_mode_ == another.dir_mode_ and root_.string() == another.root_.string();
 }
 
-location::location(longfist::enums::mode m, longfist::enums::location_role c, std::string g, std::string n,
+location::location(yijinjing::enums::mode m, yijinjing::enums::location_role c, std::string g, std::string n,
                    locator_ptr l, uint32_t default_seed)
-    : locator(std::move(l)), uname(fmt::format("{}/{}/{}/{}", longfist::enums::get_location_role_name(c), g, n,
-                                               longfist::enums::get_mode_name(m))) {
+    : locator(std::move(l)), uname(fmt::format("{}/{}/{}/{}", yijinjing::enums::get_location_role_name(c), g, n,
+                                               yijinjing::enums::get_mode_name(m))) {
   uid64 = hash_str_64(uname);
   role = c;
   group = std::move(g);

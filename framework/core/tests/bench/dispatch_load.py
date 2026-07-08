@@ -12,7 +12,7 @@
 # Usage: dispatch_load.py <kf-home> <event-count> [payload-bytes] [carrier-type]
 #
 # carrier-type accepts a number and is written via write_bytes as a raw carrier
-# event. The benchmark intentionally avoids generated longfist business types so
+# event. The benchmark intentionally avoids generated trading business types so
 # Python stays on the v4 raw/envelope runtime surface.
 #
 # Runs inside the dev kfc environment (needs pykungfu); bootstraps its own
@@ -28,11 +28,11 @@ sys.path.insert(0, os.path.join(_core, "dist", "kungfu"))
 
 import kungfu  # noqa: E402
 
-lf = kungfu.__binding__.longfist
+lf = kungfu.__binding__.yijinjing
 yjj = kungfu.__binding__.runtime
 
 PUBLIC_DEST = 0
-# Generic action envelope carrier; no longfist tag, so on the master side every
+# Generic action envelope carrier; no closed-schema tag, so on the master side every
 # is(tag) chain rejects it and the cost measured is the pure chain scan plus the
 # instanceof feed chain.
 DEFAULT_CARRIER_TYPE = 1000

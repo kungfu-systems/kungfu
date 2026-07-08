@@ -178,7 +178,7 @@ def kfc(ctx, home, extension_path, log_level, name, stage, env_verify_location):
     ctx.backtest_dir = ensure_dir(ctx, "backtest")
     ctx.inbox_dir = ensure_dir(ctx, "inbox")
 
-    lf = kungfu.__binding__.longfist
+    lf = kungfu.__binding__.yijinjing
     yjj = kungfu.__binding__.runtime
 
     # have to keep locator alive from python side

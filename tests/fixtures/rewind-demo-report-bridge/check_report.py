@@ -16,7 +16,7 @@ from kungfu.rewind.fb.Decision import Decision
 from kungfu.rewind.wire import unwrap_event
 from kungfu.work import store as work_store
 
-lf = kungfu.__binding__.longfist
+schema = kungfu.__binding__.yijinjing
 yjj = kungfu.__binding__.runtime
 
 home, run_id, work_id = sys.argv[1:4]
@@ -36,8 +36,8 @@ if entry:
     check("reported run linked to work", run_id in linked, str(linked))
 
 loc = yjj.location(
-    lf.enums.mode.LIVE,
-    lf.enums.location_role.SYSTEM,
+    schema.enums.mode.LIVE,
+    schema.enums.location_role.SYSTEM,
     "rewind",
     run_id,
     yjj.locator(home),

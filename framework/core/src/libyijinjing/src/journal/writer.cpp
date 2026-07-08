@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <kungfu/common.h>
-#include <kungfu/longfist/core.h>
 #include <kungfu/yijinjing/common.h>
 #include <kungfu/yijinjing/journal/journal.h>
+#include <kungfu/yijinjing/schema/core.h>
 
 namespace kungfu::yijinjing::journal {
-using namespace longfist::types;
+using namespace yijinjing::types;
 
 constexpr uint32_t PAGE_ID_TRANC = 0xFF000000;
 constexpr uint32_t FRAME_ID_TRANC = 0x00FFFFFF;

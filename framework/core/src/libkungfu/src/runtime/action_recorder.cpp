@@ -7,7 +7,7 @@
 #include <cstring>
 #include <type_traits>
 
-using namespace kungfu::longfist::enums;
+using namespace kungfu::yijinjing::enums;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::runtime::journal;
 
@@ -51,7 +51,7 @@ uint64_t checksum_payload(const uint8_t *payload, uint32_t payload_length) {
   return state;
 }
 
-uint64_t checksum_frame(const longfist::types::frame_header &header, const uint8_t *payload, uint32_t payload_length) {
+uint64_t checksum_frame(const yijinjing::types::frame_header &header, const uint8_t *payload, uint32_t payload_length) {
   uint64_t state = FNV1A64_OFFSET;
   checksum_scalar(state, header.length);
   checksum_scalar(state, header.header_length);
@@ -113,7 +113,7 @@ record_receipt action_recorder::record_payload(int32_t carrier_type, const uint8
     std::memcpy(const_cast<void *>(frame->data_address()), payload, payload_length);
   }
   const auto frame_uid = writer_->current_frame_uid();
-  auto checksum_header = *reinterpret_cast<const longfist::types::frame_header *>(frame->address());
+  auto checksum_header = *reinterpret_cast<const yijinjing::types::frame_header *>(frame->address());
   checksum_header.length = checksum_header.header_length + align_frame_payload_length(payload_length);
   checksum_header.gen_time = gen_time;
   checksum_header.frame_uid = frame_uid;

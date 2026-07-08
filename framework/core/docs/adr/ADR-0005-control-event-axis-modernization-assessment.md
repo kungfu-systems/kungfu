@@ -11,13 +11,13 @@
 - Related: aggregates [ADR-0003](ADR-0003-control-axis-python-coroutine-integration.md)
   and [ADR-0004](ADR-0004-control-axis-node-watcher-snapshot-model.md); contrasts
   with the completed data-axis work in
-  [ADR-0002](ADR-0002-longfist-flatbuffers-runtime-schema.md).
+  [ADR-0002](ADR-0002-yijinjing-schema-runtime-layout.md).
 
 ## Context
 
-v4's modernization so far has de-risked the **data axis**: longfist moved to a
+v4's modernization so far has de-risked the **data axis**: yijinjing schema moved to a
 FlatBuffers runtime schema and the transport moved `nanomsg` → `nng`
-([ADR-0002](ADR-0002-longfist-flatbuffers-runtime-schema.md)). That axis is
+([ADR-0002](ADR-0002-yijinjing-schema-runtime-layout.md)). That axis is
 codegen-validated and is the well-understood part of the system.
 
 The **control and event axes** were largely untouched in v4:

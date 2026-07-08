@@ -4,11 +4,11 @@
 #define YIJINJING_JOURNAL_H
 
 #include <kungfu/common.h>
-#include <kungfu/longfist/core.h>
 #include <kungfu/yijinjing/journal/bus.h>
 #include <kungfu/yijinjing/journal/common.h>
 #include <kungfu/yijinjing/journal/frame.h>
 #include <kungfu/yijinjing/journal/page.h>
+#include <kungfu/yijinjing/schema/core.h>
 #include <kungfu/yijinjing/time.h>
 #include <mutex>
 #include <queue>
@@ -49,7 +49,7 @@ class journal {
 public:
   explicit journal(data::location_ptr location, uint32_t dest_id, bool is_writing, bool lazy, bool low_latency,
                    bus_ptr bus, uint64_t page_size,
-                   longfist::enums::Priority priority = longfist::enums::Priority::Medium);
+                   yijinjing::enums::Priority priority = yijinjing::enums::Priority::Medium);
 
   journal(const journal &other);
 
@@ -94,7 +94,7 @@ protected:
   const bool is_writing_;
   const bool lazy_;
   const bool low_latency_;
-  const longfist::enums::Priority priority_;
+  const yijinjing::enums::Priority priority_;
   bus_ptr bus_ = {};
   page_ptr pre_create_page_ = {};
   page_ptr page_ = {};
@@ -142,7 +142,7 @@ public:
    * @param from_time subscribe events after this time, 0 means from start
    */
   virtual void join(const data::location_ptr &location, uint32_t dest_id, int64_t from_time, uint64_t page_size = 0,
-                    longfist::enums::Priority priority = longfist::enums::Priority::Medium);
+                    yijinjing::enums::Priority priority = yijinjing::enums::Priority::Medium);
 
   virtual void disjoin(const data::location_ptr &location);
 

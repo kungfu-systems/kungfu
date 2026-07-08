@@ -1,4 +1,4 @@
-# ADR-0027: Python longfist exposes only core public runtime types
+# ADR-0027: Python yijinjing schema exposes only core public runtime types
 
 ## Status
 
@@ -7,7 +7,7 @@ accepted
 ## Context
 
 ADR-0026 narrowed Python `pykungfu.runtime` to raw/envelope runtime APIs, but
-`pykungfu.longfist.types` still bound every generated `AllDataTypes` class. That
+`pykungfu.yijinjing.types` still bound every generated `AllDataTypes` class. That
 kept old trading and profile schemas visible as first-class Python API:
 `Order`, `Trade`, `Quote`, `Asset`, `Position`, `RiskSetting`, `Commission`,
 `Instrument`, and related request/history types still appeared in committed
@@ -24,17 +24,17 @@ That public shape conflicts with the v4 direction:
 
 ## Decision
 
-Add `longfist::CorePublicDataTypes` as the C++ registry for Python public
-`pykungfu.longfist.types` bindings. It contains only neutral runtime/core data
+Add `yijinjing::CorePublicDataTypes` as the C++ registry for Python public
+`pykungfu.yijinjing.types` bindings. It contains only neutral runtime/core data
 structures such as frame/page headers, location/session/register data,
 channel/read/write requests, cache coordination, state updates, and time values.
 
 Add matching Python-public subsets for state and profile bindings:
 
-- `CorePublicStateDataTypes` for `pykungfu.longfist.state`;
+- `CorePublicStateDataTypes` for `pykungfu.yijinjing.state`;
 - `CorePublicProfileDataTypes` for `pykungfu.runtime.profile`.
 
-Change the Python longfist type binding to iterate `CorePublicDataTypes` instead
+Change the Python yijinjing schema type binding to iterate `CorePublicDataTypes` instead
 of `AllDataTypes`; change the Python state/profile bindings to iterate the new
 core-public subsets instead of the internal cache registries.
 
@@ -45,7 +45,7 @@ code cannot preserve or copy the old compatibility vocabulary.
 
 Remove the old Node profile-store exports (`RiskSettingStore`,
 `CommissionStore`, `BasketStore`, and `BasketInstrumentStore`) and the Python
-longfist enum bindings for trading/profile concepts. The Python public enum
+yijinjing schema enum bindings for trading/profile concepts. The Python public enum
 module now exposes only neutral runtime enums.
 
 Remove the typed trading mode from the dispatch load benchmark so the benchmark
@@ -53,7 +53,7 @@ does not force `Quote` to remain a Python public type.
 
 Extend `scripts/check-runtime-greenfield.mjs` to block:
 
-- Python longfist binding code that returns to `AllDataTypes`;
+- Python yijinjing schema binding code that returns to `AllDataTypes`;
 - committed Python stubs that expose old trading/profile typed classes;
 - benchmark code that depends on Python trading typed bindings.
 

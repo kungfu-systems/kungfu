@@ -81,7 +81,7 @@ export function startMaster(coreDir, home, env) {
 }
 
 // Drive the load synchronously (mirrors the blocking foreground call in run.sh):
-// register a real apprentice and write `count` typed longfist frames in batches
+// register a real apprentice and write `count` typed schema frames in batches
 // of 64. loadType selects the frame kind ("quote" typed frames by default).
 export function runLoad(benchDir, home, count, loadType, env) {
   return spawnSync(

@@ -3,9 +3,9 @@
 #ifndef KUNGFU_YIJINJING_ACTION_RECORDER_H
 #define KUNGFU_YIJINJING_ACTION_RECORDER_H
 
-#include <kungfu/longfist/core.h>
 #include <kungfu/runtime/common.h>
 #include <kungfu/yijinjing/journal/journal.h>
+#include <kungfu/yijinjing/schema/core.h>
 
 #include <cstdint>
 #include <string>
@@ -19,7 +19,7 @@ struct record_options {
   uint64_t parent_frame_uid = 0;
   uint64_t stream_id = 0;
   bool chain_to_last = true;
-  longfist::enums::FrameDataType data_type = longfist::enums::FrameDataType::Raw;
+  yijinjing::enums::FrameDataType data_type = yijinjing::enums::FrameDataType::Raw;
 };
 
 struct record_receipt {
@@ -41,7 +41,7 @@ struct record_receipt {
 
 [[nodiscard]] uint64_t checksum_payload(const uint8_t *payload, uint32_t payload_length);
 
-[[nodiscard]] uint64_t checksum_frame(const longfist::types::frame_header &header, const uint8_t *payload,
+[[nodiscard]] uint64_t checksum_frame(const yijinjing::types::frame_header &header, const uint8_t *payload,
                                       uint32_t payload_length);
 
 class action_recorder {

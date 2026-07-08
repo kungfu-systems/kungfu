@@ -28,27 +28,28 @@ re-running that specific proof from the repo alone is not currently possible.
 **Maturity.** `stable` — implemented, and stress-validated on both architectures
 per the results reported in ADR-0001.
 
-## The longfist binary layout is the cross-language / on-disk contract
+## The yijinjing schema layout is the cross-language / on-disk contract
 
 **Guarantee.** The same in-memory bytes are read by C++, Python, and Node without
 parsing, and the same bytes are what is persisted to the journal. The layout
-*is* the ABI: a consumer speaks a layout, it does not negotiate one. The schema
-is a declared FlatBuffers definition
-([`*.fbs`](../framework/core/src/libkungfu/include/kungfu/longfist/fb)) generated for all
-three languages, not a C++-internal secret.
+*is* the ABI: a consumer speaks a layout, it does not negotiate one. The closed
+runtime schema is declared in
+[`kungfu/yijinjing/schema`](../framework/core/src/libyijinjing/include/kungfu/yijinjing/schema)
+and exposed through generated C++/Python/Node bindings, not a C++-internal
+secret.
 
-**Verify.** [ADR-0008](../framework/core/docs/adr/ADR-0008-longfist-schema-evolution-and-minor-maintenance.md)
-(the layout as the true invariant) and
-[ADR-0002](../framework/core/docs/adr/ADR-0002-longfist-flatbuffers-runtime-schema.md)
-(the FlatBuffers migration); the schema files under
-[`longfist/fb/`](../framework/core/src/libkungfu/include/kungfu/longfist/fb).
+**Verify.** The schema headers under
+[`kungfu/yijinjing/schema`](../framework/core/src/libyijinjing/include/kungfu/yijinjing/schema),
+the Python binding under `pykungfu.yijinjing`, the Node binding exposed as
+`binding.Schema`, and [ADR-0008](../framework/core/docs/adr/ADR-0008-yijinjing-schema-layout-baseline.md).
 
-**Maturity.** The layout-as-contract is `stable`. The **enforcement** that lets
-an external consumer rely on a stated compatibility *window* (CI checks against
-breaking changes, a runtime ≥ schema load gate, cross-version replay tests) is
-**not yet built** — see [`known-limits.md`](known-limits.md#compatibility-governance-is-designed-not-yet-enforced).
-Until then: treat compatibility as per-minor, and verify against the layout, not
-a version number.
+**Maturity.** The v4 greenfield baseline is `stable` as the current contract
+root. Pre-v4 layouts are not compatibility targets. The **enforcement** that
+will let external consumers rely on a stated v4+ compatibility window (schema
+change gates, runtime/schema load checks, cross-version replay/import tests) is
+**not yet built** — see [`known-limits.md`](known-limits.md#v4-schema-compatibility-enforcement-is-designed-not-yet-complete).
+Until then: verify against the current v4 layout and treat breaking pre-release
+schema cleanup as allowed only before the first stable v4 release.
 
 ## Replay runs on the same runtime as live
 

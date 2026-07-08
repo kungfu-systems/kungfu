@@ -113,7 +113,7 @@ export type Runtime = {
   buildInfo: Record<string, unknown> | null;
   skillManager: Record<string, unknown> | null;
   exports: string[];
-  longfistTypes: { name: string; fields: string[] }[];
+  schemaTypes: { name: string; fields: string[] }[];
   binding: KfNativeBinding | null;
   ledger: Ledger | null;
   domain: DomainState | null;
@@ -124,15 +124,15 @@ export type Runtime = {
   atlas: Atlas | null;
 };
 
-function readLongfistTypes(
+function readSchemaTypes(
   binding: KfNativeBinding,
 ): { name: string; fields: string[] }[] {
-  if (!binding.Longfist) return [];
-  const lf = new binding.Longfist();
-  return Object.keys(lf.types).map((name) => {
+  if (!binding.Schema) return [];
+  const schema = new binding.Schema();
+  return Object.keys(schema.types).map((name) => {
     let fields: string[] = [];
     try {
-      fields = Object.keys(lf.types[name]());
+      fields = Object.keys(schema.types[name]());
     } catch {
       fields = [];
     }
@@ -149,7 +149,7 @@ export function bootRuntime(): Runtime {
     buildInfo: null,
     skillManager: null,
     exports: [],
-    longfistTypes: [],
+    schemaTypes: [],
     binding: null,
     ledger: null,
     domain: null,
@@ -274,7 +274,7 @@ export function bootRuntime(): Runtime {
       buildInfo,
       skillManager,
       exports: Object.keys(binding),
-      longfistTypes: readLongfistTypes(binding),
+      schemaTypes: readSchemaTypes(binding),
       binding,
       ledger,
       domain,

@@ -11,7 +11,7 @@
 using namespace kungfu::runtime;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::runtime::journal;
-using namespace kungfu::longfist::types;
+using namespace kungfu::yijinjing::types;
 
 namespace kungfu::node {
 
@@ -61,7 +61,7 @@ Napi::Value Frame::DataType(const Napi::CallbackInfo &info) {
 
 Napi::Value Frame::Data(const Napi::CallbackInfo &info) {
   auto result = Napi::Object::New(info.Env());
-  boost::hana::for_each(longfist::AllDataTypes, [&](auto it) {
+  boost::hana::for_each(yijinjing::AllDataTypes, [&](auto it) {
     using DataType = typename decltype(+boost::hana::second(it))::type;
     if (frame_->carrier_type() == DataType::tag) {
       serialize::JsSet{}(frame_->data<DataType>(), result);
@@ -76,7 +76,7 @@ Napi::Value Frame::Data(const Napi::CallbackInfo &info) {
 
 Napi::Value Frame::DataAsString(const Napi::CallbackInfo &info) {
   std::string result = "";
-  boost::hana::for_each(longfist::AllDataTypes, [&](auto it) {
+  boost::hana::for_each(yijinjing::AllDataTypes, [&](auto it) {
     using DataType = typename decltype(+boost::hana::second(it))::type;
     if (frame_->carrier_type() == DataType::tag) {
       result = frame_->data<DataType>().to_string();
@@ -87,7 +87,7 @@ Napi::Value Frame::DataAsString(const Napi::CallbackInfo &info) {
 
 Napi::Value Frame::DataBytes(const Napi::CallbackInfo &info) {
   // raw payload bytes: the decode path for open-layer frames (e.g. rewind
-  // events), whose schemas are not in the compiled longfist registry above
+  // events), whose schemas are not in the compiled schema registry above
   return Napi::Buffer<uint8_t>::Copy(info.Env(), reinterpret_cast<const uint8_t *>(frame_->data_address()),
                                      frame_->data_length());
 }
@@ -151,10 +151,10 @@ Napi::Value Reader::Next(const Napi::CallbackInfo &info) {
 }
 
 Napi::Value Reader::Join(const Napi::CallbackInfo &info) {
-  auto role = longfist::enums::get_location_role_by_name(info[0].As<Napi::String>().Utf8Value());
+  auto role = yijinjing::enums::get_location_role_by_name(info[0].As<Napi::String>().Utf8Value());
   auto group = info[1].As<Napi::String>().Utf8Value();
   auto name = info[2].As<Napi::String>().Utf8Value();
-  auto mode = longfist::enums::get_mode_by_name(info[3].As<Napi::String>().Utf8Value());
+  auto mode = yijinjing::enums::get_mode_by_name(info[3].As<Napi::String>().Utf8Value());
   uint32_t dest_id = info[4].As<Napi::Number>().Int32Value();
   auto from_time = GetBigInt(info, 5);
   join(std::make_shared<location>(mode, role, group, name, io_device_->get_live_home()->locator), dest_id, from_time);

@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
-#include "py-longfist.h"
+#include "py-yijinjing.h"
 
-#include <kungfu/longfist/longfist.h>
+#include <kungfu/yijinjing/schema/registry.h>
 
-using namespace kungfu::longfist::enums;
+using namespace kungfu::yijinjing::enums;
 
 namespace py = pybind11;
 
-namespace kungfu::longfist::pybind {
+namespace kungfu::yijinjing::pybind {
 
 void bind_enums(py::module &m) {
   auto m_enums = m.def_submodule("enums");
@@ -92,4 +92,4 @@ void bind_enums(py::module &m) {
       .export_values()
       .def("__eq__", [](const Priority &a, int b) { return static_cast<int>(a) == b; });
 }
-} // namespace kungfu::longfist::pybind
+} // namespace kungfu::yijinjing::pybind

@@ -155,7 +155,7 @@ DECLARE_PTR(socket)
 struct nanomsg_json : event {
   explicit nanomsg_json(const std::string &msg)
       : binding_(nlohmann::json::parse(msg)), msg_(msg), data_(get_meta<std::string>("data", "")),
-        header_(longfist::types::frame_header(msg.c_str(), msg.length())) {}
+        header_(yijinjing::types::frame_header(msg.c_str(), msg.length())) {}
 
   [[nodiscard]] int64_t gen_time() const override { return header_.gen_time; }
 
@@ -185,7 +185,7 @@ struct nanomsg_json : event {
 
   [[nodiscard]] int8_t data_type() const override { return int8_t(header_.data_type); }
 
-  [[nodiscard]] bool is_json() const override { return data_type() == longfist::enums::FrameDataType::Json; }
+  [[nodiscard]] bool is_json() const override { return data_type() == yijinjing::enums::FrameDataType::Json; }
 
   [[nodiscard]] uint64_t frame_uid() const override { return header_.frame_uid; }
 
@@ -196,7 +196,7 @@ struct nanomsg_json : event {
 private:
   const nlohmann::json binding_;
   const std::string msg_;
-  const longfist::types::frame_header header_;
+  const yijinjing::types::frame_header header_;
   const std::string data_;
 
   template <typename T> [[nodiscard]] T get_meta(const std::string &name, T default_value) const {

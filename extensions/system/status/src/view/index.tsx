@@ -3,7 +3,7 @@ import { headingStyle, mono, panelStyle } from '@kungfu-tech/kfx';
 import React from 'react';
 
 // System kfx: system status. Runtime facts (master liveness, versions,
-// binding exports, runtime home) plus the core longfist type registry — the
+// binding exports, runtime home) plus the core schema type registry — the
 // diagnostics face of the shell. The future storage health story
 // (fsck/export overview) mounts here.
 
@@ -21,7 +21,7 @@ function SystemStatusView({
   );
 
   const [selected, setSelected] = React.useState<string | null>(null);
-  const registry = shell.info.longfistTypes;
+  const registry = shell.info.schemaTypes;
   const current = registry.find((t) => t.name === selected);
 
   const info = shell.info;
@@ -66,7 +66,7 @@ function SystemStatusView({
         </ul>
       </section>
       <section style={panelStyle}>
-        <h2 style={headingStyle}>Core longfist registry · {registry.length}</h2>
+        <h2 style={headingStyle}>Core schema registry · {registry.length}</h2>
         <div style={{ display: 'flex', gap: 12 }}>
           <ul
             style={{ listStyle: 'none', margin: 0, padding: 0, minWidth: 180 }}

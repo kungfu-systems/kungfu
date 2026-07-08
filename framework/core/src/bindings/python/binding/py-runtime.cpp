@@ -4,7 +4,6 @@
 
 #include <pybind11/stl.h>
 
-#include <kungfu/longfist/longfist.h>
 #include <kungfu/runtime/action_recorder.h>
 #include <kungfu/runtime/cache/profile.h>
 #include <kungfu/runtime/index/session.h>
@@ -19,11 +18,12 @@
 #include <kungfu/yijinjing/journal/frame.h>
 #include <kungfu/yijinjing/journal/journal.h>
 #include <kungfu/yijinjing/log.h>
+#include <kungfu/yijinjing/schema/registry.h>
 #include <kungfu/yijinjing/time.h>
 
-using namespace kungfu::longfist;
-using namespace kungfu::longfist::types;
-using namespace kungfu::longfist::enums;
+using namespace kungfu::yijinjing;
+using namespace kungfu::yijinjing::types;
+using namespace kungfu::yijinjing::enums;
 using namespace kungfu::runtime::cache;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::runtime::index;
@@ -367,12 +367,12 @@ void bind(pybind11::module &&m) {
            py::arg("locators"), py::arg("mode") = "*", py::arg("role") = "*", py::arg("group") = "*",
            py::arg("name") = "*")
       .def(py::init<const yijinjing::data::location_ptr &, uint32_t, uint32_t, int64_t>(), py::arg("source_location"),
-           py::arg("dest_id"), py::arg("assemble_mode") = longfist::enums::AssembleMode::Channel,
+           py::arg("dest_id"), py::arg("assemble_mode") = yijinjing::enums::AssembleMode::Channel,
            py::arg("from_time") = 0)
       .def("read_headers", (std::vector<frame_header> (assemble::*)(int32_t, int64_t))&assemble::read_headers,
            py::arg("carrier_type"), py::arg("end_time") = INT64_MAX, py::return_value_policy::move)
       .def("read_bytes",
-           (std::vector<std::pair<longfist::types::frame_header, std::vector<uint8_t>>> (assemble::*)(
+           (std::vector<std::pair<yijinjing::types::frame_header, std::vector<uint8_t>>> (assemble::*)(
                int32_t, int64_t))&assemble::read_bytes,
            py::arg("carrier_type"), py::arg("end_time") = INT64_MAX, py::return_value_policy::move)
       .def("__plus__", &assemble::operator+)
@@ -417,7 +417,7 @@ void bind(pybind11::module &&m) {
 
   auto profile_class = py::class_<profile, std::shared_ptr<profile>>(m, "profile");
   profile_class.def(py::init<const locator_ptr &>());
-  boost::hana::for_each(longfist::CorePublicProfileDataTypes, [&](auto type) {
+  boost::hana::for_each(yijinjing::CorePublicProfileDataTypes, [&](auto type) {
     using DataType = typename decltype(+boost::hana::second(type))::type;
     profile_class.def("set", &profile::set<DataType>);
     profile_class.def("get", &profile::get<DataType>);

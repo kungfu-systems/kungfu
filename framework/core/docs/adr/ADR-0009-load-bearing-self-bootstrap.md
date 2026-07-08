@@ -13,8 +13,8 @@
   (`framework/gui`, `framework/tui`), distribution (`artifact`).
 - Related: the dynamic counterpart to the version mechanism's
   weak-centralization (`docs/version-release-design.md` — "un-cheatable
-  pipeline", "weak-centralization"); shares the longfist-as-true-invariant
-  ordering with [ADR-0008](ADR-0008-longfist-schema-evolution-and-minor-maintenance.md);
+  pipeline", "weak-centralization"); shares the yijinjing schema-as-true-invariant
+  ordering with [ADR-0008](ADR-0008-yijinjing-schema-layout-baseline.md);
   the build-layer instance is [`docs/architecture.md` § The build dogfoods the
   SDK](../../../../docs/architecture.md).
 
@@ -91,7 +91,7 @@ mechanism that supplies its own energy.
 | "The build dogfoods the SDK" (`docs/architecture.md`) | A single **instance** of this principle at the build layer. This ADR is its general law; that section is now read as one consequence. |
 | Adoption-path identity | The **structural clause** above. On its own it is only an architecture diagram — it needs the dynamic clause to explain why the arrangement produces anything. |
 | Weak-centralization / un-cheatable pipeline (`docs/version-release-design.md`) | A **sibling** in the same family — *replace trust/judgment with structure* — applied to a different object: that one governs release-worthiness, this one governs capability health and the energy of its upkeep. |
-| longfist layout as true invariant ([ADR-0008](ADR-0008-longfist-schema-evolution-and-minor-maintenance.md)) | Supplies the **safety ordering** this principle depends on (see boundary 2): the rings everything bootstraps onto are the ones that change least. |
+| yijinjing schema layout as true invariant ([ADR-0008](ADR-0008-yijinjing-schema-layout-baseline.md)) | Supplies the **safety ordering** this principle depends on (see boundary 2): the rings everything bootstraps onto are the ones that change least. |
 
 ## Instances in the repository today
 
@@ -100,7 +100,7 @@ runs this way. The rings, from the core outward, each both extend capability and
 consume (hence validate) the ring beneath:
 
 - **libkungfu** — the polyglot membrane: zero-copy cross-language access plus the
-  longfist binary layout. The base everything else bootstraps onto.
+  yijinjing schema binary layout. The base everything else bootstraps onto.
 - **kungfu** — the first-layer binary. It embeds a Python and a Node runtime and
   loads libkungfu's companion bindings (`py_kungfu`, `kungfu_node.node`)
   in-process. *First bootstrap:* the runtime is itself a consumer of the membrane.
@@ -132,8 +132,8 @@ the ones that close the loop:
   stage-0 → stage-1: borrow an external compiler once, then self-host.
 - **Single-schema codegen.** The membrane's cross-language identity ("C++,
   Python, and Node read the same layout") is not hand-synchronized; it is
-  *generated* from one source — the longfist `*.fbs` through `flatc` into all
-  three language bindings (see [ADR-0008](ADR-0008-longfist-schema-evolution-and-minor-maintenance.md)).
+  *generated* from one source — the yijinjing schema `*.fbs` through `flatc` into all
+  three language bindings (see [ADR-0008](ADR-0008-yijinjing-schema-layout-baseline.md)).
   Consistency is bootstrapped from a single definition rather than maintained by
   hand in three places.
 - **Deterministic replay (the time axis).** Live and replay run on the *same*
@@ -156,7 +156,7 @@ the engine:
    UI onto `kungfu`, `kungfu` onto libkungfu — never the reverse. "One move used many
    times" has a dual: *one broken move breaks many things.* The chain is only
    safe because the things everyone depends on are the things that change least
-   (the longfist layout as true invariant, [ADR-0008](ADR-0008-longfist-schema-evolution-and-minor-maintenance.md)).
+   (the yijinjing schema layout as true invariant, [ADR-0008](ADR-0008-yijinjing-schema-layout-baseline.md)).
    Bootstrapping the core onto a fast-changing surface pumps fragility *into* the
    core.
 3. **The core sits on the maintainer's daily critical path** (protects step 2,

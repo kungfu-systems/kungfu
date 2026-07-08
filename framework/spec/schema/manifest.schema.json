@@ -84,7 +84,7 @@
           "$ref": "#/$defs/categoryEntry"
         },
         "schema_registry": {
-          "description": "2) Machine-readable schema registry, generated from longfist. Enables decode without the matching compiled binary.",
+          "description": "2) Machine-readable schema registry, generated from yijinjing schema. Enables decode without the matching compiled binary.",
           "$ref": "#/$defs/categoryEntry"
         },
         "error_dictionary": {

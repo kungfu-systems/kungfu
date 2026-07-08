@@ -28,8 +28,8 @@
 #include <vector>
 
 using namespace kungfu::yijinjing;
-namespace longfist = kungfu::longfist;
-using longfist::enums::FrameDataType;
+namespace schema = kungfu::yijinjing;
+using schema::enums::FrameDataType;
 
 namespace {
 constexpr int32_t MSG_SMOKE = 20001;
@@ -57,8 +57,8 @@ int main(int argc, char **argv) {
   std::vector<uint64_t> written_uids;
   {
     auto locator = std::make_shared<data::locator>(root);
-    auto location = data::location::make_shared(longfist::enums::mode::LIVE, longfist::enums::location_role::SYSTEM,
-                                                group, name, locator);
+    auto location = data::location::make_shared(schema::enums::mode::LIVE, schema::enums::location_role::SYSTEM, group,
+                                                name, locator);
     auto bus = std::make_shared<journal::bus>(false);
     auto publisher = std::make_shared<journal::noop_publisher>();
     auto writer = std::make_shared<journal::writer>(location, data::location::PUBLIC, /*lazy=*/true, publisher,
@@ -95,9 +95,9 @@ int main(int argc, char **argv) {
   }
 
   auto locator = std::make_shared<data::locator>(root);
-  auto location = data::location::make_shared(longfist::enums::mode::LIVE, longfist::enums::location_role::SYSTEM,
-                                              group, name, locator);
-  journal::assemble reader(location, data::location::PUBLIC, longfist::enums::AssembleMode::Channel, 0);
+  auto location = data::location::make_shared(schema::enums::mode::LIVE, schema::enums::location_role::SYSTEM, group,
+                                              name, locator);
+  journal::assemble reader(location, data::location::PUBLIC, schema::enums::AssembleMode::Channel, 0);
 
   std::size_t count = 0;
   uint64_t last_uid = 0;

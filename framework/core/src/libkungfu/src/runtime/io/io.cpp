@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <kungfu/common.h>
-#include <kungfu/longfist/longfist.h>
 #include <kungfu/runtime/io.h>
 #include <kungfu/runtime/util/rocks.h>
 #include <kungfu/yijinjing/journal/bus.h>
 #include <kungfu/yijinjing/log.h>
+#include <kungfu/yijinjing/schema/registry.h>
 #include <kungfu/yijinjing/time.h>
 
-using namespace kungfu::longfist;
-using namespace kungfu::longfist::enums;
-using namespace kungfu::longfist::types;
+using namespace kungfu::yijinjing;
+using namespace kungfu::yijinjing::enums;
+using namespace kungfu::yijinjing::types;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::runtime::journal;
 using namespace kungfu::runtime::nanomsg;
@@ -33,7 +33,7 @@ class nanomsg_resource : public resource {
 protected:
   nanomsg_resource(const io_device &io_device, bool low_latency, protocol p)
       : io_device_(io_device), low_latency_(low_latency),
-        location_(std::make_shared<data::location>(mode::LIVE, longfist::enums::location_role::SYSTEM, "master",
+        location_(std::make_shared<data::location>(mode::LIVE, yijinjing::enums::location_role::SYSTEM, "master",
                                                    "master", io_device_.get_live_home()->locator)),
         listen_path_(io_device_.get_url_factory()->make_path_listen(location_, p)),
         dial_path_(io_device_.get_url_factory()->make_path_dial(location_, p)), socket_(p) {}

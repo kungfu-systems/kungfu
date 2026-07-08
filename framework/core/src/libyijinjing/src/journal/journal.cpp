@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <kungfu/common.h>
-#include <kungfu/longfist/core.h>
 #include <kungfu/yijinjing/journal/journal.h>
+#include <kungfu/yijinjing/schema/core.h>
 #include <kungfu/yijinjing/time.h>
 
 namespace kungfu::yijinjing::journal {
 
 journal::journal(data::location_ptr location, uint32_t dest_id, bool is_writing, bool lazy, bool low_latency,
-                 bus_ptr bus, uint64_t page_size, longfist::enums::Priority priority)
+                 bus_ptr bus, uint64_t page_size, yijinjing::enums::Priority priority)
     : location_(std::move(location)), dest_id_(dest_id), is_writing_(is_writing), lazy_(lazy),
       low_latency_(low_latency), bus_(std::move(bus)), frame_(std::shared_ptr<frame>(new frame())), page_frame_nb_(0u),
       page_size_(page_size), priority_(priority), replica_(false) {
@@ -50,7 +50,7 @@ journal::~journal() {
 
 void journal::next() {
   assert(page_.get() != nullptr);
-  if (frame_->carrier_type() == longfist::types::PageEnd::tag) {
+  if (frame_->carrier_type() == yijinjing::types::PageEnd::tag) {
     load_next_page();
     try_load_next_extra_page();
   } else {
@@ -109,7 +109,7 @@ void journal::preload_next_page() {
   std::lock_guard<std::recursive_mutex> lk(load_page_mtx_);
   if ((not low_latency_ or not page_) or                                                   //
       (preload_page_ and preload_page_->get_page_id() == page_->get_page_id() + 1) or      //
-      (page_->header_->status == longfist::enums::PageStatus::PreOpen) or                  //
+      (page_->header_->status == yijinjing::enums::PageStatus::PreOpen) or                 //
       (not page::check_page_existed(location_, page_->dest_id_, page_->get_page_id() + 1)) //
   ) {
     return;
@@ -171,7 +171,7 @@ void journal::close_page(int64_t trigger_time, int64_t last_gen_time) {
   last_page_frame.move_to_next();
   last_page_frame.set_header_length();
   last_page_frame.set_trigger_time(trigger_time);
-  last_page_frame.set_carrier_type(longfist::types::PageEnd::tag);
+  last_page_frame.set_carrier_type(yijinjing::types::PageEnd::tag);
   last_page_frame.set_source(location_->uid);
   last_page_frame.set_dest(dest_id_);
   last_page_frame.set_gen_time(last_gen_time);

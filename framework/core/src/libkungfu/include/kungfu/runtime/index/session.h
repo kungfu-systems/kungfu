@@ -10,15 +10,15 @@
 #include <kungfu/runtime/common.h>
 
 #include <kungfu/common.h>
-#include <kungfu/longfist/longfist.h>
 #include <kungfu/runtime/cache/backend.h>
 #include <kungfu/runtime/io.h>
 #include <kungfu/yijinjing/journal/journal.h>
+#include <kungfu/yijinjing/schema/registry.h>
 #include <kungfu/yijinjing/time.h>
 
 namespace kungfu::runtime::index {
-typedef std::vector<longfist::types::Session> SessionVector;
-typedef std::unordered_map<uint32_t, longfist::types::Session> SessionMap;
+typedef std::vector<yijinjing::types::Session> SessionVector;
+typedef std::unordered_map<uint32_t, yijinjing::types::Session> SessionMap;
 
 class session_finder {
 public:
@@ -44,7 +44,7 @@ public:
 
   int64_t find_last_active_time(const yijinjing::data::location_ptr &source_location) override;
 
-  longfist::types::Session &open_session(const yijinjing::data::location_ptr &source_location, int64_t time);
+  yijinjing::types::Session &open_session(const yijinjing::data::location_ptr &source_location, int64_t time);
 
   void close_session(const yijinjing::data::location_ptr &source_location, int64_t time);
 

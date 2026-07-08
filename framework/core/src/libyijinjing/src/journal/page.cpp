@@ -11,7 +11,7 @@ namespace {
 constexpr uint64_t MIN_PAGE_SIZE_MB = 2;
 constexpr uint64_t DEFAULT_PAGE_SIZE_MB = 16;
 } // namespace
-using namespace longfist::types;
+using namespace yijinjing::types;
 
 page::page(data::location_ptr location, uint32_t dest_id, uint32_t page_id, size_t size, bool lazy, bool is_writing,
            uintptr_t address)
@@ -40,7 +40,7 @@ void page::set_last_frame_position(uint64_t position) {
 
 void page::enable_page() {
   if (is_writing_) {
-    const_cast<page_header *>(header_)->status = longfist::enums::PageStatus::Normal;
+    const_cast<page_header *>(header_)->status = yijinjing::enums::PageStatus::Normal;
   }
 }
 
@@ -72,9 +72,9 @@ page_ptr page::load(const data::location_ptr &location, uint32_t dest_id, uint64
     }
 
     if (pre_open && is_virgin_page) {
-      header->status = longfist::enums::PageStatus::PreOpen;
+      header->status = yijinjing::enums::PageStatus::PreOpen;
     } else if (not pre_open) {
-      header->status = longfist::enums::PageStatus::Normal;
+      header->status = yijinjing::enums::PageStatus::Normal;
     }
   }
 
@@ -101,7 +101,7 @@ page_ptr page::load(const data::location_ptr &location, uint32_t dest_id, uint64
         page_size, s, location->uname, path, dest_id, page_id, is_writing));
   }
 
-  if (header->status != longfist::enums::PageStatus::Normal && !pre_open) {
+  if (header->status != yijinjing::enums::PageStatus::Normal && !pre_open) {
     SPDLOG_WARN("page is still preopen status");
   }
 
@@ -130,7 +130,7 @@ page_ptr page::load_header_and_1st_frame_header(const data::location_ptr &locati
 
 std::string page::get_page_path(const data::location_ptr &location, uint32_t dest_id, uint32_t page_id) {
   auto page_name = fmt::format("{:08x}.{}", dest_id, page_id);
-  return location->locator->layout_file(location, longfist::enums::layout::JOURNAL, page_name);
+  return location->locator->layout_file(location, yijinjing::enums::layout::JOURNAL, page_name);
 }
 
 uint32_t page::find_page_id(const data::location_ptr &location, uint32_t dest_id, int64_t time) {
@@ -145,7 +145,7 @@ uint32_t page::find_page_id(const data::location_ptr &location, uint32_t dest_id
     auto loaded_page = page::load_header_and_1st_frame_header(location, dest_id, page_ids[i], false, true);
     const auto &loaded_page_header = loaded_page->header_;
     if (loaded_page_header->last_frame_position != 0 &&
-        loaded_page_header->status != longfist::enums::PageStatus::PreOpen &&
+        loaded_page_header->status != yijinjing::enums::PageStatus::PreOpen &&
         loaded_page_header->version == __JOURNAL_VERSION__ && loaded_page->begin_time() < time) {
       return page_ids[i];
     }

@@ -20,7 +20,7 @@ principles**. This document states them and shows how the architecture falls out
 of them, so you can understand *why* kungfu is built the way it is, not just
 *what* it contains.
 
-For the vocabulary used below (`kungfu`, `sdk`, `libkungfu`, `longfist`, journal,
+For the vocabulary used below (`kungfu`, `sdk`, `libkungfu`, `yijinjing`, journal,
 zero-copy, …), see [`concepts.md`](concepts.md); for how the pieces are layered,
 see [`architecture.md`](architecture.md); for specific decisions and their
 rationale, see the [ADRs](../framework/core/docs/adr). For the public product
@@ -96,7 +96,7 @@ run through the same interface a user runs through (the TUI even boots through
 where most usability failure actually lives.
 
 This is why kungfu carries `gui`/`tui` in the same repository even though the core
-advantage is the zero-copy core (`libkungfu`) and the `longfist` layout. It looks like
+advantage is the zero-copy core (`libkungfu`) and the `yijinjing` schema layout. It looks like
 monorepo bloat; it is the price of keeping the maker honest about the user's
 felt experience. The criterion it implies: **a component earns its place in the
 bootstrap when it extends the chain to a real user-facing surface** — otherwise it
@@ -121,12 +121,12 @@ for a production incident that a convenient platform would never trigger.
 
 ### A declared, published contract
 
-`longfist` is a declared schema generated for C++, Python, and Node, not a C++
-internal secret. Because the contract is published and the maker's own build
-consumes it, contract failures surface at the SDK boundary the maker themselves
-uses — not when an external consumer cannot read the data. See
-[ADR-0002](../framework/core/docs/adr/ADR-0002-longfist-flatbuffers-runtime-schema.md)
-and [ADR-0008](../framework/core/docs/adr/ADR-0008-longfist-schema-evolution-and-minor-maintenance.md).
+`yijinjing` carries a declared runtime schema exposed to C++, Python, and Node,
+not a C++ internal secret. Because the contract is published and the maker's own
+build consumes it, contract failures surface at the SDK boundary the maker
+themselves uses — not when an external consumer cannot read the data. Historical
+ADR-0002 and ADR-0008 describe the earlier `yijinjing schema` package name and the
+schema-layout invariant it now contributes to `yijinjing`.
 
 ## The two principles are one stance
 
@@ -165,11 +165,11 @@ no way to fake it:
   reveal ([ADR-0001](../framework/core/docs/adr/ADR-0001-yijinjing-publish-barrier.md)).
 - *"It's compatible"* → the layout *is* the ABI, a physical fact, not a version
   number to compare
-  ([ADR-0008](../framework/core/docs/adr/ADR-0008-longfist-schema-evolution-and-minor-maintenance.md)).
+  ([ADR-0008](../framework/core/docs/adr/ADR-0008-yijinjing-schema-layout-baseline.md)).
 - *"This release is good"* → an un-cheatable pipeline decides, not any one person,
   not even the maintainers ([version & release design](version-release-design.md)).
 - *"The contract holds"* → it is a declared schema that the maker's own build
-  consumes ([ADR-0002](../framework/core/docs/adr/ADR-0002-longfist-flatbuffers-runtime-schema.md)).
+  consumes ([ADR-0002](../framework/core/docs/adr/ADR-0002-yijinjing-schema-runtime-layout.md)).
 - *"It's easy to set up"* → the runtime physically absorbs the toolchain, so
   zero-setup is true rather than promised (Principle 1).
 

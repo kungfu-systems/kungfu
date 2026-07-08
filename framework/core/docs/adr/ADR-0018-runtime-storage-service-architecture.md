@@ -8,7 +8,7 @@
   Atlas import storage slice, payload/blob storage, SQLite projections, and the
   user-facing `kungfu storage` command surface.
 - Related: ADR-0001 pins the journal publish barrier; ADR-0002 pins the
-  longfist runtime schema; ADR-0011 pins the capability SDK contract.
+  yijinjing schema runtime schema; ADR-0011 pins the capability SDK contract.
   [`docs/runtime-storage-service.md`](../../../../docs/runtime-storage-service.md)
   is the companion reference page for the staged command surface, fsck/export,
   compaction, and source adapter path. ADR-0019 separately decides the

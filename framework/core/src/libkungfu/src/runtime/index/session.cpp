@@ -8,9 +8,9 @@
 #include <kungfu/runtime/index/session.h>
 
 using namespace sqlite_orm;
-using namespace kungfu::longfist;
-using namespace kungfu::longfist::enums;
-using namespace kungfu::longfist::types;
+using namespace kungfu::yijinjing;
+using namespace kungfu::yijinjing::enums;
+using namespace kungfu::yijinjing::types;
 using namespace kungfu::runtime;
 using namespace kungfu::runtime::cache;
 using namespace kungfu::yijinjing::data;
@@ -25,7 +25,7 @@ std::string get_index_db_file(const kungfu::runtime::io_device_ptr &io_device) {
 
 session_finder::session_finder(const kungfu::runtime::io_device_ptr &io_device)
     : io_device_(io_device),
-      session_storage_(cache::make_storage_ptr(get_index_db_file(io_device), longfist::SessionDataTypes)) {
+      session_storage_(cache::make_storage_ptr(get_index_db_file(io_device), yijinjing::SessionDataTypes)) {
   if (not session_storage_->sync_schema_simulate().empty()) {
     session_storage_->sync_schema();
   }

@@ -6,7 +6,7 @@ import os
 
 from kungfu.runtime.time import DAY_IN_NANO
 
-lf = kungfu.__binding__.longfist
+lf = kungfu.__binding__.yijinjing
 yjj = kungfu.__binding__.runtime
 
 

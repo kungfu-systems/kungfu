@@ -12,8 +12,8 @@
 #include <unordered_set>
 
 namespace kungfu::yijinjing::journal {
-using namespace longfist::enums;
-using namespace longfist::types;
+using namespace yijinjing::enums;
+using namespace yijinjing::types;
 
 sink::sink() : publisher_(std::make_shared<noop_publisher>()), bus_(std::make_shared<bus>(false)) {}
 
@@ -237,9 +237,9 @@ std::vector<frame_header> assemble::read_headers(int32_t carrier_type, int64_t e
   return v;
 }
 
-std::vector<std::pair<longfist::types::frame_header, std::vector<uint8_t>>> assemble::read_bytes(int32_t carrier_type,
-                                                                                                 int64_t end_time) {
-  std::vector<std::pair<longfist::types::frame_header, std::vector<uint8_t>>> v{};
+std::vector<std::pair<yijinjing::types::frame_header, std::vector<uint8_t>>> assemble::read_bytes(int32_t carrier_type,
+                                                                                                  int64_t end_time) {
+  std::vector<std::pair<yijinjing::types::frame_header, std::vector<uint8_t>>> v{};
   while (data_available() and current_frame()->gen_time() < end_time) {
     if (carrier_type == 0 or
         current_frame()->carrier_type() == carrier_type && current_page()->get_version() == __JOURNAL_VERSION__) {

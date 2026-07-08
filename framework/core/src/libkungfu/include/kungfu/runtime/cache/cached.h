@@ -18,8 +18,8 @@ namespace kungfu::runtime::cache {
 // 开放层运行时投影器（与 hana 闭集并存，默认 OFF）；完整定义见 open_layer_projector.h，仅在 cached.cpp include。
 class open_layer_projector;
 
-using ProfileDataTypesType = decltype(longfist::ProfileDataTypes);
-using ProfileStateMapType = decltype(longfist::build_state_map(longfist::ProfileDataTypes));
+using ProfileDataTypesType = decltype(yijinjing::ProfileDataTypes);
+using ProfileStateMapType = decltype(yijinjing::build_state_map(yijinjing::ProfileDataTypes));
 typedef cache::typed_bank<ProfileDataTypesType, ProfileStateMapType> ProfileStateBank;
 
 class cached {
@@ -51,7 +51,7 @@ public:
   void feed(const event_ptr &event);
 
   template <typename DataType>
-  std::enable_if_t<longfist::is_profile_data<DataType>()> feed_profile(const DataType &data) {
+  std::enable_if_t<yijinjing::is_profile_data<DataType>()> feed_profile(const DataType &data) {
     std::lock_guard<std::mutex> lock(feed_mutex_);
     auto s = state(0, 0, 0, data);
     profile_feed_bank_ << s;
@@ -81,26 +81,8 @@ public:
 
   void switch_feed_storage(bool pause_storage);
 
-  template <typename DataType>
-  void restore_continuing_data(const yijinjing::journal::writer_ptr &writer,
-                               const yijinjing::data::location_ptr &location, uint32_t dest) {
-    auto from = yijinjing::time::today_start();
-    ensure_cached_storage(location, dest);
-    auto &state_shift = app_states_shift_.at(location->uid);
-    auto storage = state_shift.get_storage(dest);
-    auto states = storage->get_all<DataType>(sqlite_orm::where(
-        sqlite_orm::and_(sqlite_orm::and_(sqlite_orm::greater_or_equal(&DataType::insert_time, from),
-                                          sqlite_orm::lesser_or_equal(&DataType::insert_time, INT64_MAX)),
-                         sqlite_orm::in(&DataType::status, longfist::enums::CONTINUING_STATUS))
-
-            ));
-    for (auto &data : states) {
-      writer->write_as(0, data, location->uid, dest);
-    }
-  }
-
   static constexpr auto feed_profile_data = [](const event_ptr &event, auto &receiver) {
-    boost::hana::for_each(longfist::ProfileDataTypes, [&](auto it) {
+    boost::hana::for_each(yijinjing::ProfileDataTypes, [&](auto it) {
       using DataType = typename decltype(+boost::hana::second(it))::type;
       if (DataType::tag == event->carrier_type()) {
         receiver << typed_event_ptr<DataType>(event);
@@ -109,7 +91,7 @@ public:
   };
 
   static constexpr auto feed_state_data = [](const event_ptr &event, auto &receiver) {
-    boost::hana::for_each(longfist::StateDataTypes, [&](auto it) {
+    boost::hana::for_each(yijinjing::StateDataTypes, [&](auto it) {
       using DataType = typename decltype(+boost::hana::second(it))::type;
       if (DataType::tag == event->carrier_type()) {
         receiver << typed_event_ptr<DataType>(event);
@@ -121,8 +103,8 @@ private:
   index::session_builder session_builder_;
   std::unordered_map<uint32_t, yijinjing::data::location_ptr> locations_ = {};
   cache::profile profile_;
-  ProfileStateBank profile_feed_bank_ = ProfileStateBank(longfist::ProfileDataTypes);
-  ProfileStateBank profile_restore_bank_ = ProfileStateBank(longfist::ProfileDataTypes);
+  ProfileStateBank profile_feed_bank_ = ProfileStateBank(yijinjing::ProfileDataTypes);
+  ProfileStateBank profile_restore_bank_ = ProfileStateBank(yijinjing::ProfileDataTypes);
   std::unordered_map<uint32_t, cache::shift> app_states_shift_ = {};
   cache::bank states_feed_bank_;
   bool bypass_cached_;
@@ -140,7 +122,7 @@ private:
   std::unique_ptr<open_layer_projector> open_layer_;
 
   static constexpr auto profile_get_all = [](auto &profile, auto &receiver) {
-    boost::hana::for_each(longfist::ProfileDataTypes, [&](auto it) {
+    boost::hana::for_each(yijinjing::ProfileDataTypes, [&](auto it) {
       using DataType = typename decltype(+boost::hana::second(it))::type;
       try {
 

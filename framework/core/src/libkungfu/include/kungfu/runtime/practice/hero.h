@@ -9,13 +9,13 @@
 
 #include <kungfu/runtime/common.h>
 
-#include <kungfu/longfist/longfist.h>
 #include <kungfu/runtime/index/session.h>
 #include <kungfu/runtime/io.h>
 #include <kungfu/runtime/rx.h>
 #include <kungfu/runtime/util/rocks.h>
 #include <kungfu/yijinjing/journal/journal.h>
 #include <kungfu/yijinjing/log.h>
+#include <kungfu/yijinjing/schema/registry.h>
 #include <kungfu/yijinjing/time.h>
 
 #ifndef KUNGFU_SETUP_LOG
@@ -27,7 +27,7 @@ namespace kungfu::runtime::practice {
 inline yijinjing::data::location_ptr make_system_location(const std::string &group, const std::string &name,
                                                           const yijinjing::data::locator_ptr &locator,
                                                           uint32_t seed = KUNGFU_HASH_SEED) {
-  return yijinjing::data::location::make_shared(locator->get_dir_mode(), longfist::enums::location_role::SYSTEM, group,
+  return yijinjing::data::location::make_shared(locator->get_dir_mode(), yijinjing::enums::location_role::SYSTEM, group,
                                                 name, locator, seed);
 }
 
@@ -107,23 +107,23 @@ public:
 
   [[nodiscard]] bool has_channel(uint64_t hash) const;
 
-  [[nodiscard]] const longfist::types::Channel &get_channel(uint32_t source, uint32_t dest) const;
+  [[nodiscard]] const yijinjing::types::Channel &get_channel(uint32_t source, uint32_t dest) const;
 
-  [[nodiscard]] const longfist::types::Channel &get_channel(uint64_t hash) const;
+  [[nodiscard]] const yijinjing::types::Channel &get_channel(uint64_t hash) const;
 
-  [[nodiscard]] const std::unordered_map<uint64_t, longfist::types::Channel> &get_channels() const;
+  [[nodiscard]] const std::unordered_map<uint64_t, yijinjing::types::Channel> &get_channels() const;
 
   [[nodiscard]] bool has_band(uint32_t source, uint32_t dest) const;
 
   [[nodiscard]] bool has_band(uint64_t hash) const;
 
-  [[nodiscard]] const longfist::types::Band &get_band(uint32_t source, uint32_t dest) const;
+  [[nodiscard]] const yijinjing::types::Band &get_band(uint32_t source, uint32_t dest) const;
 
-  [[nodiscard]] const longfist::types::Band &get_band(uint64_t hash) const;
+  [[nodiscard]] const yijinjing::types::Band &get_band(uint64_t hash) const;
 
-  [[nodiscard]] const std::unordered_map<uint64_t, longfist::types::Band> &get_bands() const;
+  [[nodiscard]] const std::unordered_map<uint64_t, yijinjing::types::Band> &get_bands() const;
 
-  [[nodiscard]] const std::unordered_map<uint32_t, longfist::types::Register> &get_registry() const;
+  [[nodiscard]] const std::unordered_map<uint32_t, yijinjing::types::Register> &get_registry() const;
 
   [[nodiscard]] const std::unordered_map<uint32_t, yijinjing::data::location_ptr> &get_locations() const;
 
@@ -200,19 +200,19 @@ protected:
 
   void add_location(int64_t trigger_time, const yijinjing::data::location_ptr &location);
 
-  void add_location(int64_t trigger_time, const longfist::types::Location &location);
+  void add_location(int64_t trigger_time, const yijinjing::types::Location &location);
 
   void remove_location(int64_t trigger_time, uint32_t location_uid);
 
-  void register_location(int64_t trigger_time, const longfist::types::Register &register_data);
+  void register_location(int64_t trigger_time, const yijinjing::types::Register &register_data);
 
   void deregister_location(int64_t trigger_time, uint32_t location_uid);
 
-  void register_channel(int64_t trigger_time, const longfist::types::Channel &channel);
+  void register_channel(int64_t trigger_time, const yijinjing::types::Channel &channel);
 
   void deregister_channel(uint32_t source_id);
 
-  void register_band(int64_t trigger_time, const longfist::types::Band &band);
+  void register_band(int64_t trigger_time, const yijinjing::types::Band &band);
 
   void deregister_band(uint32_t source_id);
 
@@ -248,11 +248,11 @@ protected:
   mutable std::mutex app_db_mtx_ = {};
   inline static const std::string LOCATION_KEYS = "location_uid64";
 
-  std::unordered_map<uint64_t, longfist::types::Band> bands_ = {};
-  std::unordered_map<uint64_t, longfist::types::Channel> channels_ = {};
+  std::unordered_map<uint64_t, yijinjing::types::Band> bands_ = {};
+  std::unordered_map<uint64_t, yijinjing::types::Channel> channels_ = {};
   std::unordered_map<uint32_t, yijinjing::data::location_ptr> locations_ = {};
   std::unordered_map<uint64_t, yijinjing::data::location_ptr> location64s_ = {};
-  std::unordered_map<uint32_t, longfist::types::Register> registry_ = {};
+  std::unordered_map<uint32_t, yijinjing::types::Register> registry_ = {};
   std::set<yijinjing::data::location_ptr> disjoin_locations_ = {};
   std::set<std::pair<yijinjing::data::location_ptr, uint32_t>> disjoin_channels_ = {};
 

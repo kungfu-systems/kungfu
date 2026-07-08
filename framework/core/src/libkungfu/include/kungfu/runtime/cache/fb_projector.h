@@ -4,7 +4,7 @@
 // 这是 v4「FB 替 hana/sqlite_orm」的投影一端：取代 sqlite_orm 编译期模板壳（backend.h make_storage_ptr），
 // 让开放层类型在运行时（.bfbs）定义表/列/绑定，不重编内核。
 //
-// 与 hana×sqlite_orm 闭集**并存**：本层只服务 open-layer 运行时类型，绝不进 longfist 闭集路径。
+// 与 hana×sqlite_orm 闭集**并存**：本层只服务 open-layer 运行时类型，绝不进 schema 闭集路径。
 // 验证见 agent-journal/designs/multiagent-infra/flatbuffers-sqlite-projection-spike-report.md（GO）。
 #ifndef KUNGFU_YIJINJING_CACHE_FB_PROJECTOR_H
 #define KUNGFU_YIJINJING_CACHE_FB_PROJECTOR_H

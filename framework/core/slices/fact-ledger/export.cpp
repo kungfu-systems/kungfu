@@ -32,7 +32,7 @@
 #include <vector>
 
 using namespace kungfu::runtime;
-namespace longfist = kungfu::longfist;
+namespace schema = kungfu::yijinjing;
 using kungfu::slices::sha256;
 
 namespace {
@@ -76,9 +76,9 @@ std::string strip_trailing_nuls(std::string s) {
 
 const char *data_type_name(int8_t dt) {
   switch (dt) {
-  case int8_t(longfist::enums::FrameDataType::Raw):
+  case int8_t(schema::enums::FrameDataType::Raw):
     return "Raw";
-  case int8_t(longfist::enums::FrameDataType::Json):
+  case int8_t(schema::enums::FrameDataType::Json):
     return "Json";
   default:
     return "Unknown";
@@ -100,9 +100,9 @@ int main(int argc, char **argv) {
   // reopen it read-only. assemble uses a noop bus internally; nothing here
   // starts the runtime.
   auto locator = std::make_shared<data::locator>(root);
-  auto location =
-      data::location::make_shared(longfist::enums::mode::LIVE, longfist::enums::category::SYSTEM, group, name, locator);
-  journal::assemble reader(location, data::location::PUBLIC, longfist::enums::AssembleMode::Channel, 0);
+  auto location = data::location::make_shared(schema::enums::mode::LIVE, schema::enums::location_role::SYSTEM, group,
+                                              name, locator);
+  journal::assemble reader(location, data::location::PUBLIC, schema::enums::AssembleMode::Channel, 0);
 
   // Build the JSONL body in memory so the whole-segment checksum is computed
   // over exactly the bytes we write out.

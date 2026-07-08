@@ -4,7 +4,7 @@
 //
 // Decodes a journal directory using ONLY what the bundle carries: the run
 // manifest's schema bindings and the content-addressed .bfbs blobs, accessed
-// through FlatBuffers runtime reflection. No generated code, no longfist type
+// through FlatBuffers runtime reflection. No generated code, no closed schema type
 // registry, no compiled knowledge of the event types. If this program can
 // print named, typed fields, the "opens without a matching binary" promise
 // holds.
@@ -32,7 +32,7 @@
 
 using namespace kungfu::runtime;
 using kungfu::slices::sha256;
-namespace longfist = kungfu::longfist;
+namespace schema = kungfu::yijinjing;
 
 namespace {
 std::string read_file(const std::filesystem::path &path) {
@@ -90,9 +90,9 @@ int main(int argc, char **argv) {
   // ── reopen the journal independently and decode by binding ────────
   const auto &src = manifest.at("source");
   auto locator = std::make_shared<data::locator>(root);
-  auto location = data::location::make_shared(longfist::enums::mode::LIVE, longfist::enums::category::SYSTEM,
+  auto location = data::location::make_shared(schema::enums::mode::LIVE, schema::enums::location_role::SYSTEM,
                                               src.at("group"), src.at("name"), locator);
-  journal::assemble reader(location, data::location::PUBLIC, longfist::enums::AssembleMode::Channel, 0);
+  journal::assemble reader(location, data::location::PUBLIC, schema::enums::AssembleMode::Channel, 0);
 
   std::size_t count = 0;
   uint64_t last_uid = 0;

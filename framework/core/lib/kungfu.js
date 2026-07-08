@@ -82,7 +82,7 @@ module.exports = () => {
     pyEval: binding.pyEval,
     pyEvalFile: binding.pyEvalFile,
     shutdown: binding.shutdown,
-    Longfist: () => new binding.Longfist(),
+    Schema: () => new binding.Schema(),
     /**
      * @param {any} arg a single location or an array of locations
      * @param {string} [mode]

@@ -60,7 +60,7 @@ separate causality, writer, checksum, or receipt semantics.
   Rewind/Work facts are intentionally not compatibility targets.
 - New business code must not add `MSG_* = 300xx/400xx` constants. The
   `check-carrier-action-envelope` gate blocks that pattern.
-- Closed longfist/runtime tags may continue to exist as legacy/internal
+- Closed yijinjing schema/runtime tags may continue to exist as legacy/internal
   carriers while the corresponding compiled schemas exist, but they are not the
   v4 business event model.
 

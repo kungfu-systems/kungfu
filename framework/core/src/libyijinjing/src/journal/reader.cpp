@@ -13,7 +13,7 @@ reader::~reader() {
 }
 
 void reader::join(const data::location_ptr &location, uint32_t dest_id, const int64_t from_time, uint64_t page_size,
-                  longfist::enums::Priority priority) {
+                  yijinjing::enums::Priority priority) {
   SPDLOG_TRACE("join location: {}, dest_id: {}, page_size: {} ", location->to_string(), dest_id, page_size);
   auto key = journal_key(location, dest_id);
   auto size = lazy_ ? find_page_size(location, dest_id) : page::find_page_size(location, dest_id, page_size);

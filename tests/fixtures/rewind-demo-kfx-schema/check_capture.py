@@ -27,7 +27,7 @@ from kungfu.rewind.fb.RunEnd import RunEnd  # noqa: E402
 from kungfu.rewind.replay import BundleDecoder  # noqa: E402
 from kungfu.rewind.wire import unwrap_event  # noqa: E402
 
-lf = kungfu.__binding__.longfist
+schema = kungfu.__binding__.yijinjing
 yjj = kungfu.__binding__.runtime
 
 runtime_dir, run_id = sys.argv[1], sys.argv[2]
@@ -43,7 +43,7 @@ def check(name, ok, detail=""):
 
 locator = yjj.locator(runtime_dir)
 location = yjj.location(
-    lf.enums.mode.LIVE, lf.enums.location_role.SYSTEM, "rewind", run_id, locator
+    schema.enums.mode.LIVE, schema.enums.location_role.SYSTEM, "rewind", run_id, locator
 )
 
 # the kfx event landed in the journal under the generic action carrier

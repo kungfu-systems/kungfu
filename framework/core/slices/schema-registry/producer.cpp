@@ -31,8 +31,8 @@
 
 using namespace kungfu::runtime;
 using kungfu::slices::sha256;
-namespace longfist = kungfu::longfist;
-using longfist::enums::FrameDataType;
+namespace schema = kungfu::yijinjing;
+using schema::enums::FrameDataType;
 
 namespace {
 // docs/msg-type-ranges.md, capability-slice range
@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
   const std::string bfbs_path = argv[4];
 
   auto locator = std::make_shared<data::locator>(root);
-  auto location = data::location::make_shared(longfist::enums::mode::LIVE, longfist::enums::category::SYSTEM,
+  auto location = data::location::make_shared(schema::enums::mode::LIVE, schema::enums::location_role::SYSTEM,
                                               "schema_registry_slice", "producer", locator);
   auto bus = std::make_shared<journal::bus>(false);
   auto publisher = std::make_shared<journal::noop_publisher>();

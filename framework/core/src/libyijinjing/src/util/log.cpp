@@ -84,7 +84,7 @@ std::shared_ptr<spdlog::logger> get_main_logger() { return spdlog::default_logge
 const std::string &setup_log(const data::location_ptr &location, const std::string &name) {
   if (spdlog::default_logger()->name().empty()) {
     std::shared_ptr<emitable_logger> logger;
-    std::string log_file = location->locator->layout_file(location, longfist::enums::layout::LOG, name);
+    std::string log_file = location->locator->layout_file(location, yijinjing::enums::layout::LOG, name);
     auto daily_sink = std::make_shared<spdlog::sinks::daily_file_sink_mt>(log_file, 0, 0);
 
     if (location->group != "node") {

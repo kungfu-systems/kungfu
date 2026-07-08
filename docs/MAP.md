@@ -23,7 +23,7 @@ and the map routes a question to whichever doc answers it.
 | Your question | Document | Plane | Status |
 |---|---|---|---|
 | What is kungfu, in one idea? | [`../README.md`](../README.md) | — | stable |
-| What do the terms mean (`kungfu` / `longfist` / journal …)? | [`concepts.md`](concepts.md) | use | stable |
+| What do the terms mean (`kungfu` / `yijinjing` / journal / schema …)? | [`concepts.md`](concepts.md) | use | stable |
 | Why is it built this way? What is load-bearing? | [`design-philosophy.md`](design-philosophy.md) | why | stable |
 | Why does Kungfu start from accountability? | [`facts-before-trust.md`](facts-before-trust.md) | why | stable |
 | Why this versioning / release design (don't replace it naively)? | [`version-release-design.md`](version-release-design.md) | why | stable |

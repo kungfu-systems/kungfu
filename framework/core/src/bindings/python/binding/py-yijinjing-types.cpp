@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
-#include "py-longfist.h"
+#include "py-yijinjing.h"
 
 #include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
 
 #include <sstream>
 
-#include <kungfu/longfist/longfist.h>
+#include <kungfu/yijinjing/schema/registry.h>
 
 namespace pybind11::detail {
 template <size_t Size> struct type_caster<kungfu::array<char, Size>> {
@@ -65,7 +65,7 @@ template <typename ValueType, size_t Size> struct type_caster<kungfu::array<Valu
 };
 } // namespace pybind11::detail
 
-namespace kungfu::longfist::pybind {
+namespace kungfu::yijinjing::pybind {
 namespace py = pybind11;
 namespace hana = boost::hana;
 
@@ -109,4 +109,4 @@ void bind_types(py::module &m) {
         .def_readonly("data", &kungfu::state<DataType>::data);
   });
 }
-} // namespace kungfu::longfist::pybind
+} // namespace kungfu::yijinjing::pybind

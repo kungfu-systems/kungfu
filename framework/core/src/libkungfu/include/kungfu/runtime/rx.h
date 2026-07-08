@@ -10,8 +10,8 @@
 #include <rxcpp/rx.hpp>
 
 #include <kungfu/common.h>
-#include <kungfu/longfist/longfist.h>
 #include <kungfu/runtime/util/stacktrace.h>
+#include <kungfu/yijinjing/schema/registry.h>
 
 namespace kungfu {
 namespace rx {
@@ -41,7 +41,7 @@ static constexpr auto instanceof =
 
 static constexpr auto is_custom_event = [](const event_ptr &event) -> bool {
   return event->carrier_type() > 0 and
-         longfist::AllTypesTags.find(event->carrier_type()) == longfist::AllTypesTags.end();
+         yijinjing::AllTypesTags.find(event->carrier_type()) == yijinjing::AllTypesTags.end();
 };
 
 static constexpr auto is_custom = []() {

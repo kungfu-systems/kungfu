@@ -45,7 +45,7 @@ from kungfu.skill import (
     write_audit_document,
 )
 
-lf = kungfu.__binding__.longfist
+lf = kungfu.__binding__.yijinjing
 yjj = kungfu.__binding__.runtime
 
 

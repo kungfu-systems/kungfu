@@ -8,16 +8,16 @@ accepted
 
 Kungfu v4 is rebuilding the runtime around action recording, envelopes, storage,
 fsck/export, and replay. The lower journal layer is still able to carry compiled
-longfist frames, but the old v3 convenience surface leaked too much product
+yijinjing frames, but the old v3 convenience surface leaked too much product
 meaning into core APIs:
 
-- Python `pykungfu.runtime.event` exposed one method per generated longfist
+- Python `pykungfu.runtime.event` exposed one method per generated yijinjing schema
   data type, including `Order`, `Trade`, `Quote`, and related trading types.
-- Python `writer` and `assemble` generated one overload per closed longfist data
+- Python `writer` and `assemble` generated one overload per closed yijinjing schema data
   type, making typed business frames look like the default v4 write/read path.
 - The runtime time API named its session window after `trading_day`, even though
   v4 storage restore only needs a deterministic session/history window.
-- `longfist.h` still carried trading/profile closed-set registry names and a
+- `yijinjing schema.h` still carried trading/profile closed-set registry names and a
   broad compiled type set that invited new code to copy the old product model.
 
 This conflicts with ADR-0022 and ADR-0025: the C++ core is the polyglot membrane,
@@ -39,7 +39,7 @@ and JavaScript may still bind core runtime structs such as `Location`,
 those internal compiled schemas, but they should not re-create a broad
 business-typed journal API.
 
-Remove unused trading/profile closed-set registries from the v4 `longfist.h`
+Remove unused trading/profile closed-set registries from the v4 `yijinjing schema.h`
 core registry. `AllTypes`, `AllDataTypes`, and `AllTypesTags` now name the
 current core-only compiled registry, not a compatibility wrapper around the old
 trading surface.
@@ -57,7 +57,7 @@ from returning.
   payload APIs instead of typed trading frame helpers.
 - Future language bindings are less likely to fork core action semantics in
   Python or JavaScript.
-- The old generated longfist schema files are not fully deleted by this ADR.
+- The old generated yijinjing schema files are not fully deleted by this ADR.
   Residual schema definitions may remain in generated headers or historical
   migration spikes until a later schema split removes or moves those definitions
   themselves, but they are no longer part of the core registration or public

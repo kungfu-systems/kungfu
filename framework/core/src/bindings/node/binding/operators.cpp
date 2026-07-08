@@ -7,9 +7,9 @@
 #include "operators.h"
 
 using namespace kungfu::rx;
-using namespace kungfu::longfist;
-using namespace kungfu::longfist::enums;
-using namespace kungfu::longfist::types;
+using namespace kungfu::yijinjing;
+using namespace kungfu::yijinjing::enums;
+using namespace kungfu::yijinjing::types;
 using namespace kungfu::runtime;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::runtime::practice;
@@ -20,7 +20,7 @@ void InitObjectReference(const Napi::CallbackInfo &info, Napi::ObjectReference &
 }
 
 void InitStateMap(const Napi::CallbackInfo &info, Napi::ObjectReference &state, const std::string &name) {
-  boost::hana::for_each(longfist::StateDataTypes, [&](auto it) {
+  boost::hana::for_each(yijinjing::StateDataTypes, [&](auto it) {
     auto name = std::string(boost::hana::first(it).c_str());
     state.Set(name, DataTable::NewInstance(state.Value()));
   });

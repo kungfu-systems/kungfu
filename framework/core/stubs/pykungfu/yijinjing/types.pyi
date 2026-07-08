@@ -1,5 +1,5 @@
 from __future__ import annotations
-import pykungfu.longfist.enums
+import pykungfu.yijinjing.enums
 import typing
 __all__: list[str] = ['Band', 'CacheReset', 'Channel', 'ChannelRequest', 'Config', 'Deregister', 'Location', 'OperatorStateUpdate', 'OutputKey', 'Register', 'RequestCachedDone', 'RequestReadFrom', 'RequestReadFromOthers', 'RequestReadFromPublic', 'RequestReadFromSync', 'RequestWriteTo', 'RequestWriteToBand', 'Session', 'SyntheticData', 'TimeKeyValue', 'TimeRequest', 'TimeReset', 'TimeValue', 'frame_header', 'page_header']
 class Band:
@@ -94,9 +94,9 @@ class Config:
     __tag__: typing.ClassVar[int] = 10201
     group: str
     location_uid: int
-    mode: pykungfu.longfist.enums.mode
+    mode: pykungfu.yijinjing.enums.mode
     name: str
-    role: pykungfu.longfist.enums.location_role
+    role: pykungfu.yijinjing.enums.location_role
     seed: int
     uid64: int
     value: str
@@ -122,9 +122,9 @@ class Deregister:
     __tag__: typing.ClassVar[int] = 10102
     group: str
     location_uid: int
-    mode: pykungfu.longfist.enums.mode
+    mode: pykungfu.yijinjing.enums.mode
     name: str
-    role: pykungfu.longfist.enums.location_role
+    role: pykungfu.yijinjing.enums.location_role
     seed: int
     uid64: int
     def __eq__(self, arg0: Deregister) -> bool:
@@ -149,9 +149,9 @@ class Location:
     __tag__: typing.ClassVar[int] = 10205
     group: str
     location_uid: int
-    mode: pykungfu.longfist.enums.mode
+    mode: pykungfu.yijinjing.enums.mode
     name: str
-    role: pykungfu.longfist.enums.location_role
+    role: pykungfu.yijinjing.enums.location_role
     seed: int
     uid64: int
     def __eq__(self, arg0: Location) -> bool:
@@ -177,7 +177,7 @@ class OperatorStateUpdate:
     info_a: str
     info_b: str
     location_uid: int
-    state: pykungfu.longfist.enums.OperatorState
+    state: pykungfu.yijinjing.enums.OperatorState
     update_time: int
     value: str
     def __eq__(self, arg0: OperatorStateUpdate) -> bool:
@@ -202,9 +202,9 @@ class OutputKey:
     __tag__: typing.ClassVar[int] = 701
     group: str
     location_uid: int
-    mode: pykungfu.longfist.enums.mode
+    mode: pykungfu.yijinjing.enums.mode
     name: str
-    role: pykungfu.longfist.enums.location_role
+    role: pykungfu.yijinjing.enums.location_role
     seed: int
     uid64: int
     def __eq__(self, arg0: OutputKey) -> bool:
@@ -231,10 +231,10 @@ class Register:
     group: str
     last_active_time: int
     location_uid: int
-    mode: pykungfu.longfist.enums.mode
+    mode: pykungfu.yijinjing.enums.mode
     name: str
     pid: int
-    role: pykungfu.longfist.enums.location_role
+    role: pykungfu.yijinjing.enums.location_role
     seed: int
     uid64: int
     def __eq__(self, arg0: Register) -> bool:
@@ -395,10 +395,10 @@ class RequestWriteToBand:
     __tag__: typing.ClassVar[int] = 10307
     group: str
     location_uid: int
-    mode: pykungfu.longfist.enums.mode
+    mode: pykungfu.yijinjing.enums.mode
     name: str
     page_size: int
-    role: pykungfu.longfist.enums.location_role
+    role: pykungfu.yijinjing.enums.location_role
     seed: int
     uid64: int
     def __eq__(self, arg0: RequestWriteToBand) -> bool:
@@ -427,9 +427,9 @@ class Session:
     frame_count: int
     group: str
     location_uid: int
-    mode: pykungfu.longfist.enums.mode
+    mode: pykungfu.yijinjing.enums.mode
     name: str
-    role: pykungfu.longfist.enums.location_role
+    role: pykungfu.yijinjing.enums.location_role
     seed: int
     uid64: int
     update_time: int
@@ -578,7 +578,7 @@ class frame_header:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 0
     carrier_type: int
-    data_type: pykungfu.longfist.enums.FrameDataType
+    data_type: pykungfu.yijinjing.enums.FrameDataType
     dest: int
     frame_uid: int
     gen_time: int
@@ -613,7 +613,7 @@ class page_header:
     last_frame_position: int
     page_header_length: int
     page_size: int
-    status: pykungfu.longfist.enums.PageStatus
+    status: pykungfu.yijinjing.enums.PageStatus
     version: int
     def __eq__(self, arg0: page_header) -> bool:
         ...

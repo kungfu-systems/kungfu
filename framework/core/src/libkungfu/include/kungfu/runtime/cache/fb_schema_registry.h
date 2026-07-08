@@ -9,7 +9,7 @@
 //      reader 读到帧后凭 carrier_type 找到对应 schema/表，运行时新增类型不重编内核。
 //   3. **缓存反射计划** —— 列计划 / CREATE DDL / INSERT SQL 注册时算一次，避免逐帧重反射。
 //
-// 与 hana×sqlite_orm 闭集**并存**：只服务 open-layer 运行时类型，绝不进 longfist 闭集/热路径。
+// 与 hana×sqlite_orm 闭集**并存**：只服务 open-layer 运行时类型，绝不进 schema 闭集/热路径。
 #ifndef KUNGFU_YIJINJING_CACHE_FB_SCHEMA_REGISTRY_H
 #define KUNGFU_YIJINJING_CACHE_FB_SCHEMA_REGISTRY_H
 

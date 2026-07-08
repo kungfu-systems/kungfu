@@ -2,7 +2,7 @@
 #include <kungfu/runtime/practice/apprentice.h>
 
 using namespace kungfu::runtime::practice;
-using namespace kungfu::longfist::enums;
+using namespace kungfu::yijinjing::enums;
 
 namespace kungfu::runtime::practice {
 

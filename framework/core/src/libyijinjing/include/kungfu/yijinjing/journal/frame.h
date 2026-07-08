@@ -3,8 +3,8 @@
 #ifndef KUNGFU_YIJINJING_FRAME_H
 #define KUNGFU_YIJINJING_FRAME_H
 
-#include <kungfu/longfist/core.h>
 #include <kungfu/yijinjing/journal/common.h>
+#include <kungfu/yijinjing/schema/core.h>
 
 #include <atomic>
 #include <cstddef>
@@ -81,7 +81,7 @@ struct frame : event {
 
   [[nodiscard]] int8_t data_type() const override { return int8_t(header_->data_type); }
 
-  [[nodiscard]] bool is_json() const override { return data_type() == longfist::enums::FrameDataType::Json; }
+  [[nodiscard]] bool is_json() const override { return data_type() == yijinjing::enums::FrameDataType::Json; }
 
   [[nodiscard]] uint64_t frame_uid() const override { return header_->frame_uid; }
 
@@ -95,11 +95,11 @@ struct frame : event {
     return length;
   }
 
-  void set_address(uintptr_t address) { header_ = reinterpret_cast<longfist::types::frame_header *>(address); }
+  void set_address(uintptr_t address) { header_ = reinterpret_cast<yijinjing::types::frame_header *>(address); }
 
   void move_to_next() { set_address(address() + frame_length()); }
 
-  void set_header_length() { header_->header_length = sizeof(longfist::types::frame_header); }
+  void set_header_length() { header_->header_length = sizeof(yijinjing::types::frame_header); }
 
   // Non-publishing write of the length field (e.g. to mark a page-end frame as
   // empty with length 0). Does NOT establish release ordering; use
@@ -123,7 +123,7 @@ struct frame : event {
 
   void set_carrier_type(int32_t carrier_type) { header_->carrier_type = carrier_type; }
 
-  void set_data_type(longfist::enums::FrameDataType data_type) { header_->data_type = data_type; }
+  void set_data_type(yijinjing::enums::FrameDataType data_type) { header_->data_type = data_type; }
 
   void set_source(uint32_t source) { header_->source = source; }
 
@@ -143,7 +143,7 @@ struct frame : event {
   // the token ahead of the copied payload. Relies on `length` being the first
   // field of frame_header (offset 0).
   void copy(const frame &source) {
-    static_assert(offsetof(longfist::types::frame_header, length) == 0,
+    static_assert(offsetof(yijinjing::types::frame_header, length) == 0,
                   "length must be frame_header's first field for publish-safe copy");
     auto total = source.frame_length();
     memcpy(reinterpret_cast<char *>(header_) + sizeof(uint32_t),
@@ -153,7 +153,7 @@ struct frame : event {
   frame() = default;
 
 protected:
-  longfist::types::frame_header *header_ = nullptr;
+  yijinjing::types::frame_header *header_ = nullptr;
 
   friend struct cloned_frame;
 
@@ -170,14 +170,14 @@ struct cloned_frame : frame {
   ~cloned_frame() override { free(header_); };
 
   void copy(frame &from) {
-    header_ = reinterpret_cast<longfist::types::frame_header *>(malloc(from.frame_length()));
+    header_ = reinterpret_cast<yijinjing::types::frame_header *>(malloc(from.frame_length()));
     memset(header_, 0, from.frame_length());
     memcpy(header_, from.header_, from.frame_length());
   }
 
   void open(uint32_t data_length) {
-    auto frame_length = sizeof(longfist::types::frame_header) + data_length;
-    header_ = reinterpret_cast<longfist::types::frame_header *>(malloc(frame_length));
+    auto frame_length = sizeof(yijinjing::types::frame_header) + data_length;
+    header_ = reinterpret_cast<yijinjing::types::frame_header *>(malloc(frame_length));
     memset(header_, 0, frame_length);
   }
 };

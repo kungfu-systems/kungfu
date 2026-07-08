@@ -815,7 +815,7 @@ function App() {
       buildInfo: runtime.buildInfo,
       skillManager: runtime.skillManager,
       exports: runtime.exports,
-      longfistTypes: runtime.longfistTypes,
+      schemaTypes: runtime.schemaTypes,
     },
     registry: loaded.entries,
     suites: loaded.suites,

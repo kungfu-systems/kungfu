@@ -27,7 +27,7 @@ from kungfu.rewind.fb.CaptureLayer import CaptureLayer
 from kungfu.rewind.fb.Decision import Decision
 from kungfu.rewind.fb.RunStatus import RunStatus
 
-lf = kungfu.__binding__.longfist
+lf = kungfu.__binding__.yijinjing
 yjj = kungfu.__binding__.runtime
 
 DECISION_BY_NAME = {

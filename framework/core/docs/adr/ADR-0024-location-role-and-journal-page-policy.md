@@ -3,10 +3,10 @@
 - Status: accepted
 - Date: 2026-07-08
 - Category: (architecture) yijinjing location identity and storage policy
-- Subsystem: longfist core schema, yijinjing locator, journal page sizing,
+- Subsystem: yijinjing schema core schema, yijinjing locator, journal page sizing,
   Python and Node bindings, capability SDK.
 - Related: ADR-0001 defines the journal publication barrier. ADR-0008 defines
-  longfist schema compatibility surfaces. ADR-0018 defines runtime storage as a
+  yijinjing schema compatibility surfaces. ADR-0018 defines runtime storage as a
   service. ADR-0022 defines the C++ core as the polyglot action-recording
   membrane.
 

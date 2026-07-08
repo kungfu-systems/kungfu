@@ -4,7 +4,7 @@
 - Date: 2026-06-23
 - Category: (b) improvement + latent bug (concurrency correctness)
 - Subsystem: yijinjing journal — single-writer / multi-reader, mmap `MAP_SHARED` cross-process frame bus
-- Related: independent of ADR-0002 (longfist hana→FlatBuffers); this change touches only the publish-synchronization semantics, not the schema or on-disk format
+- Related: independent of ADR-0002 (yijinjing schema hana→FlatBuffers); this change touches only the publish-synchronization semantics, not the schema or on-disk format
 
 ## Decision
 
@@ -48,7 +48,7 @@ stale frame**.
 ## Today's recommendation (landed)
 
 1. Drop `volatile` from `length` / `msg_type` in `frame_header`
-   (`longfist/types.h`). `length` is promoted to a "publish token" whose
+   (`yijinjing schema/types.h`). `length` is promoted to a "publish token" whose
    semantics are carried by `atomic_ref`.
 2. `frame.h`:
    - `publish_data_length()`:
@@ -144,6 +144,6 @@ prevent lapping):
 
 ## Implementation sites
 
-- `framework/core/src/libkungfu/include/kungfu/longfist/types.h` (frame_header: drop volatile)
+- `framework/core/src/libkungfu/include/kungfu/yijinjing schema/types.h` (frame_header: drop volatile)
 - `framework/core/src/libyijinjing/include/kungfu/yijinjing/journal/frame.h` (acquire/publish/copy)
 - `framework/core/src/libyijinjing/src/journal/writer.cpp` (close_frame_lock_free / copy_frame)

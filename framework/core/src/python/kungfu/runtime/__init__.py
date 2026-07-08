@@ -4,7 +4,7 @@ import kungfu
 import os
 import re
 
-lf = kungfu.__binding__.longfist
+lf = kungfu.__binding__.yijinjing
 yjj = kungfu.__binding__.runtime
 
 os_sep = re.escape(os.sep)

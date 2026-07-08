@@ -1,24 +1,22 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //
-// longfist-core: the schema leaf shared by libyijinjing and libkungfu.
+// yijinjing-schema-core: the schema leaf shared by libyijinjing and libkungfu.
 //
 // Holds the fact-ledger journal schema the yijinjing core needs, and ONLY that:
 //   - frame/page packs: frame_header (tag 0), page_header (tag 1)
 //   - journal enums: FrameDataType, PageStatus, mode, role, layout, Priority
 //   - Location (tag 10205): the journal-endpoint pack (mode/role/group/name)
-// All of the above are journal infrastructure. Business/trading types
-// (Order / Trade / Quote / Position / ...) live in types.h / enums.h and are NOT
-// visible here, so a pure journal core includes only this leaf and never pulls
-// the trading schema (goal 2026-07-02: "core 对业务 schema 零依赖").
+// All of the above are journal infrastructure. Additional runtime fact types live in types.h. Trading-era business
+// types are not part of the v4 schema surface.
 //
 // Everything here keeps its type tag and field layout verbatim -- on-disk mmap
 // journals stay byte-compatible. Location stays registered in the full type registry
-// (longfist.h) via TYPE_PAIR(Location); only its definition lives here.
+// (registry.h) via TYPE_PAIR(Location); only its definition lives here.
 //
 
-#ifndef KUNGFU_LONGFIST_CORE_H
-#define KUNGFU_LONGFIST_CORE_H
+#ifndef KUNGFU_YIJINJING_SCHEMA_CORE_H
+#define KUNGFU_YIJINJING_SCHEMA_CORE_H
 
 #include <fmt/ostream.h>
 #include <nlohmann/json.hpp>
@@ -51,7 +49,7 @@
     e = ((it != std::end(m)) ? it : std::begin(m))->first;                                                             \
   }
 
-namespace kungfu::longfist::enums {
+namespace kungfu::yijinjing::enums {
 // fmt 10 不再隐式格式化枚举；通过 ADL 友元 format_as 把本命名空间所有枚举
 // 按底层整数格式化（与既有 operator<< 输出 int32_t 一致）。
 template <typename E, std::enable_if_t<std::is_enum_v<E>, int> = 0> constexpr int32_t format_as(E e) {
@@ -215,9 +213,9 @@ public:
   inline static const uint32_t Sync = 0b00010000;    // read all journal to location::PUBLIC
   inline static const uint32_t All = 0b00100000;     // read all journal
 };
-} // namespace kungfu::longfist::enums
+} // namespace kungfu::yijinjing::enums
 
-namespace kungfu::longfist::types {
+namespace kungfu::yijinjing::types {
 KF_DEFINE_PACK_TYPE(                                           //
     frame_header, 0, PK(gen_time), TIMESTAMP(gen_time),        //
     /** total frame length (including header and data body);                //
@@ -257,18 +255,18 @@ KF_DEFINE_PACK_TYPE(                          //
     (uint32_t, page_header_length),           //
     (uint64_t, page_size),                    //
     (uint32_t, frame_header_length),          //
-    (longfist::enums::PageStatus, status),    // 0 close 1 preopen 2 open 3 flushing
+    (enums::PageStatus, status),              // 0 close 1 preopen 2 open 3 flushing
     (uint64_t, last_frame_position)           //
 );
 
 // PageEnd marks the terminal frame of a full journal page so readers roll over
 // to the next page; journal infrastructure, so it lives in the leaf. It keeps
-// type tag 10051 and stays registered in the full type registry (longfist.h) verbatim.
+// type tag 10051 and stays registered in the full type registry (registry.h) verbatim.
 KF_DEFINE_MARK_TYPE(PageEnd, 10051);
 
 // Location identifies a journal endpoint (mode/role/group/name). The yijinjing
 // core's locator/location model it, so it lives in the leaf. It keeps type tag
-// 10205 and stays registered in the full type registry (longfist.h) verbatim -- only its
+// 10205 and stays registered in the full type registry (registry.h) verbatim -- only its
 // definition moves here, exactly as frame_header/page_header did.
 KF_DEFINE_DATA_TYPE(                         //
     Location, 10205, PK(uid64), PERPETUAL(), //
@@ -280,6 +278,6 @@ KF_DEFINE_DATA_TYPE(                         //
     (std::string, name),                     //
     (uint32_t, seed)                         //
 );
-} // namespace kungfu::longfist::types
+} // namespace kungfu::yijinjing::types
 
-#endif // KUNGFU_LONGFIST_CORE_H
+#endif // KUNGFU_YIJINJING_SCHEMA_CORE_H

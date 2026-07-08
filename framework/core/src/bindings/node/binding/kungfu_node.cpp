@@ -53,15 +53,15 @@ decltype(__pfnDliNotifyHook2) __pfnDliNotifyHook2 = load_exe_hook;
 #include "history.h"
 #include "io.h"
 #include "journal.h"
-#include "longfist.h"
+#include "schema.h"
 #include "session_store.h"
 #include "watcher.h"
 
 #include <kungfu/runtime/util/stacktrace.h>
 
-using namespace kungfu::longfist;
-using namespace kungfu::longfist::enums;
-using namespace kungfu::longfist::types;
+using namespace kungfu::yijinjing;
+using namespace kungfu::yijinjing::enums;
+using namespace kungfu::yijinjing::types;
 using namespace kungfu::runtime;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::node;
@@ -133,7 +133,7 @@ void Shutdown(const Napi::CallbackInfo &info) { ensure_sqlite_shutdown(); }
 Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
   std::set_terminate(terminate_with_backtrace);
   ensure_sqlite_initilize();
-  Longfist::Init(env, exports);
+  Schema::Init(env, exports);
   History::Init(env, exports);
   ConfigStore::Init(env, exports);
   SessionStore::Init(env, exports);

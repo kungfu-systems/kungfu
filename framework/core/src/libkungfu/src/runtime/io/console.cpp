@@ -6,19 +6,19 @@
 
 #include <fstream>
 #include <kungfu/common.h>
-#include <kungfu/longfist/longfist.h>
 #include <kungfu/runtime/io.h>
 #include <kungfu/runtime/journal/tracer.h>
 #include <kungfu/yijinjing/log.h>
+#include <kungfu/yijinjing/schema/registry.h>
 #include <kungfu/yijinjing/time.h>
 #include <tabulate/table.hpp>
 
 #define TIME_FORMAT "%T.%N"
 
 using namespace tabulate;
-using namespace kungfu::longfist;
-using namespace kungfu::longfist::enums;
-using namespace kungfu::longfist::types;
+using namespace kungfu::yijinjing;
+using namespace kungfu::yijinjing::enums;
+using namespace kungfu::yijinjing::types;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::runtime::journal;
 

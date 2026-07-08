@@ -5,7 +5,7 @@ import re
 
 from datetime import datetime, timedelta
 
-lf = kungfu.__binding__.longfist
+lf = kungfu.__binding__.yijinjing
 yjj = kungfu.__binding__.runtime
 
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%N"

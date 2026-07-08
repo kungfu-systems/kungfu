@@ -65,51 +65,6 @@ option(KUNGFU_WITH_SLICES "build the capability slices (minimal standalone proof
 
 ##########################################################################
 
-# flatc build-time codegen：longfist 开放层 FB schema(.fbs)经 flatbuffers::flatc 在构建期生成
-# *_generated.h(--cpp --gen-mutable --scoped-enums)+ *.bfbs(-b --schema)，取代手动跑 flatc + 入仓产物
-# (消跨 schema 重跑/漂移)。flatbuffers::flatc 由 conan flatbuffers 的 cmake_build_modules
-# (FlatcTargets.cmake)在 find_package(flatbuffers)时暴露；三平台均 native build(非交叉)，FlatcTargets
-# 用包内 bin/flatc。生成到 libkungfu 的 include 树内以保 include 路径不变(产物已 gitignore)。
-set(LONGFIST_FB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/libkungfu/include/kungfu/longfist/fb)
-add_custom_command(
-  OUTPUT ${LONGFIST_FB_DIR}/order_generated.h ${LONGFIST_FB_DIR}/order.bfbs
-  COMMAND flatbuffers::flatc --cpp --gen-mutable --scoped-enums -o ${LONGFIST_FB_DIR} ${LONGFIST_FB_DIR}/order.fbs
-  COMMAND flatbuffers::flatc -b --schema -o ${LONGFIST_FB_DIR} ${LONGFIST_FB_DIR}/order.fbs
-  DEPENDS ${LONGFIST_FB_DIR}/order.fbs
-  COMMENT "flatc: order.fbs -> order_generated.h + order.bfbs"
-  VERBATIM)
-# trade.fbs include order.fbs，故也依赖 order.fbs(改 order schema 一并重生成 trade)。
-add_custom_command(
-  OUTPUT ${LONGFIST_FB_DIR}/trade_generated.h ${LONGFIST_FB_DIR}/trade.bfbs
-  COMMAND flatbuffers::flatc --cpp --gen-mutable --scoped-enums -I ${LONGFIST_FB_DIR} -o ${LONGFIST_FB_DIR} ${LONGFIST_FB_DIR}/trade.fbs
-  COMMAND flatbuffers::flatc -b --schema -I ${LONGFIST_FB_DIR} -o ${LONGFIST_FB_DIR} ${LONGFIST_FB_DIR}/trade.fbs
-  DEPENDS ${LONGFIST_FB_DIR}/trade.fbs ${LONGFIST_FB_DIR}/order.fbs
-  COMMENT "flatc: trade.fbs -> trade_generated.h + trade.bfbs"
-  VERBATIM)
-# position.fbs include order.fbs(复用 InstrumentType),故也依赖 order.fbs。
-add_custom_command(
-  OUTPUT ${LONGFIST_FB_DIR}/position_generated.h ${LONGFIST_FB_DIR}/position.bfbs
-  COMMAND flatbuffers::flatc --cpp --gen-mutable --scoped-enums -I ${LONGFIST_FB_DIR} -o ${LONGFIST_FB_DIR} ${LONGFIST_FB_DIR}/position.fbs
-  COMMAND flatbuffers::flatc -b --schema -I ${LONGFIST_FB_DIR} -o ${LONGFIST_FB_DIR} ${LONGFIST_FB_DIR}/position.fbs
-  DEPENDS ${LONGFIST_FB_DIR}/position.fbs ${LONGFIST_FB_DIR}/order.fbs
-  COMMENT "flatc: position.fbs -> position_generated.h + position.bfbs"
-  VERBATIM)
-# asset.fbs include position.fbs(复用 LedgerCategory),故也依赖 position.fbs(及其 include 的 order.fbs)。
-add_custom_command(
-  OUTPUT ${LONGFIST_FB_DIR}/asset_generated.h ${LONGFIST_FB_DIR}/asset.bfbs
-  COMMAND flatbuffers::flatc --cpp --gen-mutable --scoped-enums -I ${LONGFIST_FB_DIR} -o ${LONGFIST_FB_DIR} ${LONGFIST_FB_DIR}/asset.fbs
-  COMMAND flatbuffers::flatc -b --schema -I ${LONGFIST_FB_DIR} -o ${LONGFIST_FB_DIR} ${LONGFIST_FB_DIR}/asset.fbs
-  DEPENDS ${LONGFIST_FB_DIR}/asset.fbs ${LONGFIST_FB_DIR}/position.fbs ${LONGFIST_FB_DIR}/order.fbs
-  COMMENT "flatc: asset.fbs -> asset_generated.h + asset.bfbs"
-  VERBATIM)
-add_custom_target(longfist_fb_codegen DEPENDS
-  ${LONGFIST_FB_DIR}/order_generated.h ${LONGFIST_FB_DIR}/order.bfbs
-  ${LONGFIST_FB_DIR}/trade_generated.h ${LONGFIST_FB_DIR}/trade.bfbs
-  ${LONGFIST_FB_DIR}/position_generated.h ${LONGFIST_FB_DIR}/position.bfbs
-  ${LONGFIST_FB_DIR}/asset_generated.h ${LONGFIST_FB_DIR}/asset.bfbs)
-
-##########################################################################
-
 
 set(KUNGFU_BUILD_DIR ${CMAKE_BINARY_DIR})
 set(KUNGFU_BUILD_LIBRARY_DIR ${KUNGFU_BUILD_DIR}/${CMAKE_BUILD_TYPE})
@@ -132,12 +87,6 @@ add_subdirectory(src/libyijinjing)
 if (NOT DEFINED ENV{KUNGFU_BUILD_SKIP_LIBKUNGFU} OR NOT $ENV{KUNGFU_BUILD_SKIP_LIBKUNGFU})
   message(STATUS "Enabled libkungfu")
   add_subdirectory(src/libkungfu)
-  # libkungfu 的 OBJECT 库(编译 matcher.cpp 等 include 生成头的源)须在 flatc codegen 之后再编。
-  foreach(_kf_obj kungfu_cache kungfu_optim)
-    if(TARGET ${_kf_obj})
-      add_dependencies(${_kf_obj} longfist_fb_codegen)
-    endif()
-  endforeach()
 endif()
 
 if (NOT DEFINED ENV{KUNGFU_BUILD_SKIP_KUNGFU_NODE} OR NOT $ENV{KUNGFU_BUILD_SKIP_KUNGFU_NODE})
@@ -164,4 +113,3 @@ if (KUNGFU_WITH_SLICES AND TARGET yijinjing)
   message(STATUS "Enabled capability slices")
   add_subdirectory(slices)
 endif()
-

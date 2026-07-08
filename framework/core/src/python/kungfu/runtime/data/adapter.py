@@ -7,7 +7,7 @@ import kungfu
 import shutil
 import os
 
-lf = kungfu.__binding__.longfist
+lf = kungfu.__binding__.yijinjing
 yjj = kungfu.__binding__.runtime
 
 

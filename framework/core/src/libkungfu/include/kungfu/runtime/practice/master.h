@@ -39,9 +39,9 @@ public:
 
   void on_notify() override;
 
-  virtual void on_register(int64_t gen_time, const longfist::types::Register &register_data) = 0;
+  virtual void on_register(int64_t gen_time, const yijinjing::types::Register &register_data) = 0;
 
-  virtual bool check_register(int64_t gen_time, const longfist::types::Register &register_data) = 0;
+  virtual bool check_register(int64_t gen_time, const yijinjing::types::Register &register_data) = 0;
 
   virtual void on_interval_check(int64_t nanotime) = 0;
 

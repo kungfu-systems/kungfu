@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <string>
 
-#include <kungfu/longfist/core.h>
+#include <kungfu/yijinjing/schema/core.h>
 
 namespace kungfu::yijinjing::storage {
 
@@ -40,8 +40,8 @@ struct payload_ref {
 
 struct location_ref {
   uint32_t uid = 0;
-  longfist::enums::mode mode = longfist::enums::mode::LIVE;
-  longfist::enums::location_role role = longfist::enums::location_role::SYSTEM;
+  yijinjing::enums::mode mode = yijinjing::enums::mode::LIVE;
+  yijinjing::enums::location_role role = yijinjing::enums::location_role::SYSTEM;
   std::string group = {};
   std::string name = {};
 };

@@ -31,31 +31,31 @@
 namespace kungfu::webserver {
 
 template <typename T> struct nng_data {
-  char origin_data[sizeof(kungfu::longfist::types::frame_header) + sizeof(T)]{};
+  char origin_data[sizeof(kungfu::yijinjing::types::frame_header) + sizeof(T)]{};
   size_t len;
 
   explicit nng_data(int32_t carrier_type, uint64_t stream_id) {
-    auto *header = reinterpret_cast<kungfu::longfist::types::frame_header *>(origin_data);
-    len = sizeof(kungfu::longfist::types::frame_header) + sizeof(T);
+    auto *header = reinterpret_cast<kungfu::yijinjing::types::frame_header *>(origin_data);
+    len = sizeof(kungfu::yijinjing::types::frame_header) + sizeof(T);
     header->length = len;
-    header->header_length = sizeof(kungfu::longfist::types::frame_header);
+    header->header_length = sizeof(kungfu::yijinjing::types::frame_header);
     header->trigger_time = yijinjing::time::now_in_nano();
     header->gen_time = header->trigger_time;
     header->carrier_type = carrier_type;
     header->source = 0;
     header->dest = 0;
-    header->data_type = kungfu::longfist::enums::FrameDataType::Raw;
+    header->data_type = kungfu::yijinjing::enums::FrameDataType::Raw;
     header->initial_source = 0;
     header->frame_uid = 0;
     header->trigger_frame_uid = 0;
     header->stream_id = stream_id;
   }
 
-  kungfu::longfist::types::frame_header *header() {
-    return reinterpret_cast<kungfu::longfist::types::frame_header *>(origin_data);
+  kungfu::yijinjing::types::frame_header *header() {
+    return reinterpret_cast<kungfu::yijinjing::types::frame_header *>(origin_data);
   }
 
-  T *data() { return reinterpret_cast<T *>(origin_data + sizeof(kungfu::longfist::types::frame_header)); }
+  T *data() { return reinterpret_cast<T *>(origin_data + sizeof(kungfu::yijinjing::types::frame_header)); }
 
   size_t length() { return len; }
 };

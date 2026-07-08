@@ -2,7 +2,7 @@
 //
 // Kungfu Rewind capture events — the open-layer event schema for `kungfu trace`.
 //
-// Layering: these are application payload tables, NOT longfist kernel types.
+// Layering: these are application payload tables, NOT yijinjing kernel types.
 // They ride the journal inside kungfu.action-envelope/v1 frames: the frame
 // header carries the generic action carrier, and the envelope's action_type
 // binds to this schema's .bfbs in the run manifest (content-addressed,
@@ -17,7 +17,7 @@
 // in the fields schema checks assert on, and redaction happens at export time,
 // never at capture time.
 //
-// Evolution rules (same discipline as longfist fb schemas): append new fields
+// Evolution rules (same discipline as yijinjing schema): append new fields
 // at the tail only; never reorder, delete, or reuse field ids; no `required`
 // fields. Schema evolution happens between runs — two runs binding different
 // versions of this schema coexist and both decode.

@@ -1,9 +1,9 @@
 from __future__ import annotations
-import pykungfu.longfist.types
+import pykungfu.yijinjing.types
 __all__: list[str] = ['Config', 'OperatorStateUpdate', 'TimeKeyValue', 'TimeValue']
 class Config:
     @property
-    def data(self) -> pykungfu.longfist.types.Config:
+    def data(self) -> pykungfu.yijinjing.types.Config:
         ...
     @property
     def source(self) -> int:
@@ -13,7 +13,7 @@ class Config:
         ...
 class OperatorStateUpdate:
     @property
-    def data(self) -> pykungfu.longfist.types.OperatorStateUpdate:
+    def data(self) -> pykungfu.yijinjing.types.OperatorStateUpdate:
         ...
     @property
     def source(self) -> int:
@@ -23,7 +23,7 @@ class OperatorStateUpdate:
         ...
 class TimeKeyValue:
     @property
-    def data(self) -> pykungfu.longfist.types.TimeKeyValue:
+    def data(self) -> pykungfu.yijinjing.types.TimeKeyValue:
         ...
     @property
     def source(self) -> int:
@@ -33,7 +33,7 @@ class TimeKeyValue:
         ...
 class TimeValue:
     @property
-    def data(self) -> pykungfu.longfist.types.TimeValue:
+    def data(self) -> pykungfu.yijinjing.types.TimeValue:
         ...
     @property
     def source(self) -> int:

@@ -20,8 +20,8 @@
 #include <kungfu/yijinjing/time.h>
 
 using namespace kungfu::rx;
-using namespace kungfu::longfist::enums;
-using namespace kungfu::longfist::types;
+using namespace kungfu::yijinjing::enums;
+using namespace kungfu::yijinjing::types;
 using namespace kungfu::runtime;
 using namespace kungfu::runtime::util;
 using namespace kungfu::runtime::cache;
@@ -287,7 +287,7 @@ bool hero::has_channel(uint32_t source, uint32_t dest) const {
 
 bool hero::has_channel(uint64_t hash) const { return channels_.find(hash) != channels_.end(); }
 
-const longfist::types::Channel &hero::get_channel(uint32_t source, uint32_t dest) const {
+const yijinjing::types::Channel &hero::get_channel(uint32_t source, uint32_t dest) const {
   return get_channel(make_source_dest_hash(source, dest));
 }
 
@@ -296,9 +296,9 @@ const Channel &hero::get_channel(uint64_t hash) const {
   return channels_.at(hash);
 }
 
-const std::unordered_map<uint64_t, longfist::types::Channel> &hero::get_channels() const { return channels_; }
+const std::unordered_map<uint64_t, yijinjing::types::Channel> &hero::get_channels() const { return channels_; }
 
-const std::unordered_map<uint32_t, longfist::types::Register> &hero::get_registry() const { return registry_; }
+const std::unordered_map<uint32_t, yijinjing::types::Register> &hero::get_registry() const { return registry_; }
 
 const std::unordered_map<uint32_t, yijinjing::data::location_ptr> &hero::get_locations() const { return locations_; }
 
@@ -306,16 +306,16 @@ bool hero::has_band(uint32_t source, uint32_t dest) const { return has_band(make
 
 bool hero::has_band(uint64_t hash) const { return bands_.find(hash) != bands_.end(); }
 
-const longfist::types::Band &hero::get_band(uint32_t source, uint32_t dest) const {
+const yijinjing::types::Band &hero::get_band(uint32_t source, uint32_t dest) const {
   return get_band(make_source_dest_hash(source, dest));
 }
 
-const longfist::types::Band &hero::get_band(uint64_t hash) const {
+const yijinjing::types::Band &hero::get_band(uint64_t hash) const {
   assert(has_band(hash));
   return bands_.at(hash);
 }
 
-const std::unordered_map<uint64_t, longfist::types::Band> &hero::get_bands() const { return bands_; }
+const std::unordered_map<uint64_t, yijinjing::types::Band> &hero::get_bands() const { return bands_; }
 
 void hero::on_notify() {}
 

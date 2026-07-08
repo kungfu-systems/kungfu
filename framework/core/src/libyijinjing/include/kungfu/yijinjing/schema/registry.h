@@ -4,16 +4,16 @@
 // Created by Keren Dong on 2020/1/26.
 //
 
-#ifndef KUNGFU_LONGFIST_H
-#define KUNGFU_LONGFIST_H
+#ifndef KUNGFU_YIJINJING_SCHEMA_REGISTRY_H
+#define KUNGFU_YIJINJING_SCHEMA_REGISTRY_H
 
 #include <deque>
-#include <kungfu/longfist/types.h>
+#include <kungfu/yijinjing/schema/types.h>
 #include <set>
 
 #define TYPE_PAIR(DataType) boost::hana::make_pair(HANA_STR(#DataType), boost::hana::type_c<types::DataType>)
 
-namespace kungfu::longfist {
+namespace kungfu::yijinjing {
 constexpr auto AllTypes = boost::hana::make_map( //
     TYPE_PAIR(frame_header),                     // 0
     TYPE_PAIR(page_header),                      // 1
@@ -185,13 +185,13 @@ constexpr auto build_state_deque_map = [](auto types) {
   return boost::hana::unpack(vectors, boost::hana::make_map);
 };
 
-using ProfileMapType = decltype(build_data_map(longfist::ProfileDataTypes));
+using ProfileMapType = decltype(build_data_map(ProfileDataTypes));
 DECLARE_PTR(ProfileMapType)
 
-using StateMapType = decltype(build_state_map(longfist::StateDataTypes));
+using StateMapType = decltype(build_state_map(StateDataTypes));
 DECLARE_PTR(StateMapType)
 
-using StateDequeMapType = decltype(build_state_deque_map(longfist::StateDataTypes));
+using StateDequeMapType = decltype(build_state_deque_map(StateDataTypes));
 DECLARE_PTR(StateDequeMapType)
 
 template <typename DataType> std::enable_if_t<size_fixed_v<DataType>> copy(DataType &to, const DataType &from) {
@@ -204,6 +204,6 @@ template <typename DataType> std::enable_if_t<not size_fixed_v<DataType>> copy(D
     accessor(to) = accessor(from);
   });
 }
-} // namespace kungfu::longfist
+} // namespace kungfu::yijinjing
 
-#endif // KUNGFU_LONGFIST_H
+#endif // KUNGFU_YIJINJING_SCHEMA_REGISTRY_H

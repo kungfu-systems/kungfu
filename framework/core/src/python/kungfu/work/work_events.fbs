@@ -3,7 +3,7 @@
 // Kungfu work items — the open-layer event schema for the default work
 // profile (`kungfu work`).
 //
-// Layering: these are application payload tables, NOT longfist kernel types.
+// Layering: these are application payload tables, NOT yijinjing kernel types.
 // They ride the journal inside kungfu.action-envelope/v1 frames: the frame
 // header carries the generic action carrier, and the envelope's action_type
 // binds to this schema's .bfbs in the store manifest (content-addressed), so the
@@ -17,7 +17,7 @@
 // Current state is always a projection folded from the event stream; the
 // journal remains the fact source.
 //
-// Evolution rules (same discipline as the Rewind and longfist fb schemas):
+// Evolution rules (same discipline as the Rewind and yijinjing schema):
 // append new fields at the tail only; never reorder, delete, or reuse field
 // ids; no `required` fields.
 

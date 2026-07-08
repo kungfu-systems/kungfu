@@ -7,8 +7,8 @@
 #include <filesystem>
 
 #include <kungfu/common.h>
-#include <kungfu/longfist/core.h>
 #include <kungfu/yijinjing/hash.h>
+#include <kungfu/yijinjing/schema/core.h>
 
 namespace kungfu {
 namespace yijinjing {
@@ -72,9 +72,9 @@ class locator {
 public:
   explicit locator();
 
-  explicit locator(const std::string &root, longfist::enums::mode m);
+  explicit locator(const std::string &root, yijinjing::enums::mode m);
 
-  explicit locator(longfist::enums::mode m, const std::vector<std::string> &tag = {});
+  explicit locator(yijinjing::enums::mode m, const std::vector<std::string> &tag = {});
 
   explicit locator(const std::string &root);
 
@@ -84,14 +84,14 @@ public:
 
   [[nodiscard]] virtual std::string get_env(const std::string &name) const;
 
-  [[nodiscard]] virtual std::string layout_dir(const location_ptr &location, longfist::enums::layout layout,
+  [[nodiscard]] virtual std::string layout_dir(const location_ptr &location, yijinjing::enums::layout layout,
                                                bool create_not_exist = true) const;
 
-  [[nodiscard]] std::string layout_directory(longfist::enums::layout layout, longfist::enums::location_role c,
-                                             const std::string &g, const std::string &n, longfist::enums::mode m,
+  [[nodiscard]] std::string layout_directory(yijinjing::enums::layout layout, yijinjing::enums::location_role c,
+                                             const std::string &g, const std::string &n, yijinjing::enums::mode m,
                                              bool create_not_exist = true) const;
 
-  [[nodiscard]] virtual std::string layout_file(const location_ptr &location, longfist::enums::layout layout,
+  [[nodiscard]] virtual std::string layout_file(const location_ptr &location, yijinjing::enums::layout layout,
                                                 const std::string &name) const;
 
   [[nodiscard]] virtual std::string default_to_system_db(const location_ptr &location, const std::string &name) const;
@@ -106,18 +106,18 @@ public:
 
   [[nodiscard]] virtual std::vector<uint32_t> list_location_dest_by_db(const location_ptr &location) const;
 
-  [[nodiscard]] longfist::enums::mode get_dir_mode() const { return dir_mode_; }
+  [[nodiscard]] yijinjing::enums::mode get_dir_mode() const { return dir_mode_; }
 
   [[nodiscard]] std::string get_root() const { return root_.string(); }
 
   bool operator==(const locator &another) const;
 
   const std::filesystem::path root_;
-  const longfist::enums::mode dir_mode_;
+  const yijinjing::enums::mode dir_mode_;
   const uint32_t locator_uid;
 };
 
-struct location : public std::enable_shared_from_this<location>, public longfist::types::Location {
+struct location : public std::enable_shared_from_this<location>, public yijinjing::types::Location {
   static constexpr uint32_t PUBLIC = 0;
   static constexpr uint32_t SYNC = 1;
 
@@ -136,7 +136,7 @@ struct location : public std::enable_shared_from_this<location>, public longfist
   const std::string uname;
   uint32_t uid;
 
-  location(longfist::enums::mode m, longfist::enums::location_role c, std::string g, std::string n, locator_ptr l,
+  location(yijinjing::enums::mode m, yijinjing::enums::location_role c, std::string g, std::string n, locator_ptr l,
            uint32_t default_seed = KUNGFU_HASH_SEED);
 
   bool static is_verify_location();
@@ -176,7 +176,7 @@ struct location : public std::enable_shared_from_this<location>, public longfist
     return std::make_shared<location>(msg.mode, msg.role, msg.group, msg.name, l, msg.seed);
   }
 
-  static inline location_ptr make_shared(longfist::enums::mode m, longfist::enums::location_role c,
+  static inline location_ptr make_shared(yijinjing::enums::mode m, yijinjing::enums::location_role c,
                                          const std::string &g, const std::string &n, const locator_ptr &l,
                                          uint32_t default_seed = KUNGFU_HASH_SEED) {
     return std::make_shared<location>(m, c, g, n, l, default_seed);
