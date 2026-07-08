@@ -35,6 +35,7 @@ and the map routes a question to whichever doc answers it.
 | What does it actually guarantee (layout / replay / compatibility)? | [`contracts.md`](contracts.md) | verify | stable |
 | What KFD-2 release claims can Buildchain audit? | [`contracts.md`](contracts.md) (KFD-2 release claims) + [`kfd-native-sdk-release-gates.md`](kfd-native-sdk-release-gates.md) | verify | draft |
 | What is the event / journal / replay model? | [`event-model.md`](event-model.md) | use | stable |
+| What does Rewind replay, and what must it never silently re-execute? | [ADR-0020](../framework/core/docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md) + [`rewind.md`](rewind.md) | why, verify | stable |
 | How does Kungfu persist user facts, sync sources, and maintain storage over time? | [`runtime-storage-service.md`](runtime-storage-service.md) | use, verify | draft |
 | Where are the Python / Node / framework adapter boundaries? | [`adapters.md`](adapters.md) | use | stable |
 | How do I go from source to a binary? | [`buildchain.md`](buildchain.md) (+ [`../CONTRIBUTING.md`](../CONTRIBUTING.md)) | use | stable |
@@ -63,6 +64,10 @@ route to the row that answers them:
 - **determinism / reproducibility / record-and-replay** → *what does it actually
   guarantee* ([`contracts.md`](contracts.md)) and *the event / journal / replay
   model* ([`event-model.md`](event-model.md)).
+- **agent action timeline / causal action chain / forensic replay / mocked
+  replay / external side effects / rewind replay boundary** → *what does Rewind
+  replay, and what must it never silently re-execute*
+  ([ADR-0020](../framework/core/docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md)).
 - **accountability / facts before trust / local proof before control** → *why
   does Kungfu start from accountability* ([`facts-before-trust.md`](facts-before-trust.md)).
 - **latency / performance / zero-copy / serialization** → *the membrane*

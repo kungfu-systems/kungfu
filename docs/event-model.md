@@ -8,6 +8,11 @@ makes see [`contracts.md`](contracts.md); for the design rationale see
 
 Every claim below can be verified against the cited source.
 
+The higher-level action-timeline decision is
+[ADR-0020](../framework/core/docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md):
+Kungfu records the causal action chain and attached evidence, not a complete
+snapshot of the outside world.
+
 ## The journal
 
 The data plane is a single, append-only log of **frames** — `yijinjing`. A
@@ -66,6 +71,13 @@ as live: there is no separate replay engine. Because the frames carry
 nanosecond `gen_time`, the `trigger_frame_uid` causal links, and a fixed layout,
 a recorded stream reproduces with high precision. The determinism this provides,
 and its boundaries, are stated in [`contracts.md`](contracts.md).
+
+For agent runs, replay is layered. Forensic replay reopens, decodes, verifies,
+and walks the recorded causal tree without re-executing external effects.
+Mocked replay may substitute recorded receipts for external calls. Any replay
+mode that can repeat real-world side effects must be explicit and confirmed.
+This boundary is pinned by
+[ADR-0020](../framework/core/docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md).
 
 Source: the replay path in
 [`framework/core/src/libkungfu/src/yijinjing/`](../framework/core/src/libkungfu/src/yijinjing).

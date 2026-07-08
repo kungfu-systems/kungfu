@@ -117,6 +117,11 @@ uv run --frozen python .devtools/kfc.py -H <anything> rewind open <file.rewind.z
 `open` refuses quietly wrong data: the archive's record must pass the same
 two-path verification as a local run before anything is shown.
 
+The replay boundary is architectural, not just a CLI behavior:
+[ADR-0020](../framework/core/docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md)
+defines Rewind's default mode as forensic replay. It reopens and verifies the
+recorded action timeline; it does not silently repeat real-world side effects.
+
 ## Diagnose in the app
 
 ```sh
@@ -182,7 +187,8 @@ Each runs standalone: `tests/fixtures/<name>/run.sh`.
 - Streaming (SSE) model responses are captured verbatim, not parsed into
   token/usage facts.
 - Replay is forensic (re-open, walk, verify); deterministic re-execution is a
-  later differentiator gate.
+  later differentiator gate. Any mode that can repeat external side effects
+  must be explicit and confirmed.
 - Framework auto-instrumentation ships with a real LangChain adapter (and the
   demo toolkit for the seam shape); further frameworks grow in the same adapter
   table. The LangChain adapter wraps the synchronous `BaseTool.run` funnel,
