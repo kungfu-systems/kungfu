@@ -29,6 +29,9 @@ endif()
 if(NOT TARGET nlohmann_json::nlohmann_json)
   find_package(nlohmann_json REQUIRED)
 endif()
+if(NOT TARGET xxHash::xxhash)
+  find_package(xxHash REQUIRED)
+endif()
 
 file(GLOB_RECURSE YIJINJING_SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 
@@ -54,7 +57,8 @@ endif()
 target_link_libraries(yijinjing PUBLIC
   $<IF:$<TARGET_EXISTS:fmt::fmt-header-only>,fmt::fmt-header-only,fmt::fmt>
   $<IF:$<TARGET_EXISTS:spdlog::spdlog_header_only>,spdlog::spdlog_header_only,spdlog::spdlog>
-  nlohmann_json::nlohmann_json)
+  nlohmann_json::nlohmann_json
+  xxHash::xxhash)
 
 if(DEFINED COMPILER_OPTIMIZE_ON_OPTIONS AND NOT "${COMPILER_OPTIMIZE_ON_OPTIONS}" STREQUAL "")
   target_compile_options(yijinjing PRIVATE "$<$<CONFIG:Release>:${COMPILER_OPTIMIZE_ON_OPTIONS}>")

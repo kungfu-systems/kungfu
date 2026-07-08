@@ -2,6 +2,8 @@
 
 #include "py-runtime.h"
 
+#include <limits>
+
 #include <pybind11/stl.h>
 
 #include <kungfu/runtime/action_recorder.h>
@@ -178,12 +180,51 @@ void bind(pybind11::module &&m) {
   m.def("in_color_terminal", &runtime::util::in_color_terminal);
   m.def("color_print", &runtime::util::color_print);
 
-  m.def("fast_hash_32", &yijinjing::fast_hash_32, py::arg("key"), py::arg("length"),
-        py::arg("seed") = KUNGFU_HASH_SEED);
+  auto fast_hash_buffer = [](py::buffer payload, uint32_t seed, auto hash_fn) {
+    const auto view = payload.request();
+    const auto byte_length = view.size * view.itemsize;
+    if (byte_length > std::numeric_limits<int32_t>::max()) {
+      throw std::invalid_argument("fast_hash payload is too large");
+    }
+    return hash_fn(static_cast<const unsigned char *>(view.ptr), static_cast<int32_t>(byte_length), seed);
+  };
+
+  m.def(
+      "fast_hash_32",
+      [fast_hash_buffer](py::buffer payload, uint32_t seed) {
+        return fast_hash_buffer(payload, seed, yijinjing::fast_hash_32);
+      },
+      py::arg("payload"), py::arg("seed") = KUNGFU_HASH_SEED);
+  m.def(
+      "fast_hash_64",
+      [fast_hash_buffer](py::buffer payload, uint32_t seed) {
+        return fast_hash_buffer(payload, seed, yijinjing::fast_hash_64);
+      },
+      py::arg("payload"), py::arg("seed") = KUNGFU_HASH_SEED);
   m.def("fast_hash_str_32", &yijinjing::fast_hash_str_32, py::arg("key"), py::arg("seed") = KUNGFU_HASH_SEED);
-  m.def("hash_32", &yijinjing::fast_hash_32, py::arg("key"), py::arg("length"), py::arg("seed") = KUNGFU_HASH_SEED);
+  m.def("fast_hash_str_64", &yijinjing::fast_hash_str_64, py::arg("key"), py::arg("seed") = KUNGFU_HASH_SEED);
+  m.def(
+      "fast_hash_string_32",
+      [](const std::string &key, uint32_t seed) { return py::bytes(yijinjing::fast_hash_string_32(key, seed)); },
+      py::arg("key"), py::arg("seed") = KUNGFU_HASH_SEED);
+  m.def(
+      "fast_hash_string_64",
+      [](const std::string &key, uint32_t seed) { return py::bytes(yijinjing::fast_hash_string_64(key, seed)); },
+      py::arg("key"), py::arg("seed") = KUNGFU_HASH_SEED);
+  m.def(
+      "fast_hash_string_128",
+      [](const std::string &key, uint32_t seed) { return py::bytes(yijinjing::fast_hash_string_128(key, seed)); },
+      py::arg("key"), py::arg("seed") = KUNGFU_HASH_SEED);
+  m.def(
+      "hash_32",
+      [fast_hash_buffer](py::buffer payload, uint32_t seed) {
+        return fast_hash_buffer(payload, seed, yijinjing::fast_hash_32);
+      },
+      py::arg("payload"), py::arg("seed") = KUNGFU_HASH_SEED);
   m.def("hash_str_32", &yijinjing::fast_hash_str_32, py::arg("key"), py::arg("seed") = KUNGFU_HASH_SEED);
   m.attr("FAST_HASH_ALGORITHM") = yijinjing::FAST_HASH_ALGORITHM;
+  m.attr("FAST_HASH_ALGORITHM_64") = yijinjing::FAST_HASH_ALGORITHM_64;
+  m.attr("FAST_HASH_ALGORITHM_128") = yijinjing::FAST_HASH_ALGORITHM_128;
   m.attr("FRAME_INTEGRITY_VERSION_V1") = action::FRAME_INTEGRITY_VERSION_V1;
   m.attr("FRAME_INTEGRITY_VERSION_V2") = action::FRAME_INTEGRITY_VERSION_V2;
   m.attr("DEFAULT_FRAME_INTEGRITY_VERSION") = action::DEFAULT_FRAME_INTEGRITY_VERSION;

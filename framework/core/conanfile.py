@@ -49,6 +49,7 @@ class KungfuCoreConan(ConanFile):
         "spdlog/1.14.1",
         "tabulate/1.4",
         "rocksdb/6.29.5",
+        "xxhash/0.8.3",
         "pybind11/2.13.6",
         "gtest/1.14.0",
     ]

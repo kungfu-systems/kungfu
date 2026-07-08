@@ -83,6 +83,10 @@ const LEGACY_REGISTRY_RE =
   /\b(LegacyCompiledTypes|LegacyCompiledDataTypes|LegacyCompiledTypeTags)\b/g;
 const AMBIGUOUS_HASH_API_RE =
   /\b(hash_32|hash_64|hash_str_32|hash_str_64|hash_string_32|hash_string_64|hash_string_128)\b/g;
+const RETIRED_PRE_V4_FAST_HASH_RE = new RegExp(
+  `\\b(Mur${'mur'}Hash3|mur${'mur'}3)\\b`,
+  'gi',
+);
 
 const RULES = [
   {
@@ -215,9 +219,16 @@ const RULES = [
       /^framework\/core\/src\/libyijinjing\/include\/kungfu\/yijinjing\/storage\//,
       /^framework\/core\/src\/libyijinjing\/src\/storage\//,
     ],
-    re: /\b(fast_hash_|FAST_HASH_ALGORITHM|MurmurHash3)\b/g,
+    re: /\b(fast_hash_|FAST_HASH_ALGORITHM)\b/g,
     message:
       'Storage content hashes must be explicit content hashes such as sha256/blake3, not fast internal ids.',
+  },
+  {
+    name: 'retired pre-v4 fast hash implementation',
+    files: [/^framework\/core\/src\//, /^framework\/core\/stubs\//],
+    re: RETIRED_PRE_V4_FAST_HASH_RE,
+    message:
+      'The retired pre-v4 fast hash implementation must not re-enter active runtime source.',
   },
 ];
 

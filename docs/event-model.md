@@ -80,8 +80,8 @@ Current `frame_header` does not contain an in-frame checksum. New
 receipt fields by reopening the recorded frame. The current checksum algorithm
 is `fnv1a64`: a fast corruption detector, not a cryptographic authenticity
 proof. Content payloads and manifests use explicit content hashes such as
-`sha256`; internal yijinjing uid helpers use `fast_hash_*` / `murmur3` and must
-not be treated as content hashes. The taxonomy is pinned in
+`sha256`; internal yijinjing uid helpers use `fast_hash_*` / `xxh3_64` /
+`xxh3_128` and must not be treated as content hashes. The taxonomy is pinned in
 [ADR-0028](../framework/core/docs/adr/ADR-0028-hash-taxonomy-and-integrity-algorithms.md).
 A full frame trailer or chain root is a future journal format surface, not
 something older journals can be assumed to contain.

@@ -68,6 +68,14 @@ using namespace kungfu::yijinjing::data;
 using namespace kungfu::node;
 
 namespace kungfu::node {
+std::string ToHex(const std::string &bytes) {
+  std::string hex;
+  hex.reserve(bytes.size() * 2);
+  for (const auto byte : bytes) {
+    hex += fmt::format("{:02x}", static_cast<unsigned char>(byte));
+  }
+  return hex;
+}
 
 uint32_t Hash32(const Napi::CallbackInfo &info) {
   if (IsValid(info, 0, &Napi::Value::IsString)) {
@@ -85,8 +93,29 @@ uint32_t Hash32(const Napi::CallbackInfo &info) {
 
 Napi::Value Hash(const Napi::CallbackInfo &info) { return Napi::Number::New(info.Env(), Hash32(info)); }
 
+Napi::Value Hash64(const Napi::CallbackInfo &info) {
+  if (IsValid(info, 0, &Napi::Value::IsString)) {
+    auto arg = info[0].ToString().Utf8Value();
+    return Napi::BigInt::New(info.Env(), fast_hash_str_64(arg));
+  }
+
+  if (IsValid(info, 0, &Napi::Value::IsNumber)) {
+    auto arg = static_cast<const int32_t>(info[0].ToNumber().Int32Value());
+    return Napi::BigInt::New(info.Env(), hash<decltype(arg)>{}(arg));
+  }
+
+  throw Napi::Error::New(info.Env(), "Invalid argument");
+}
+
 Napi::Value FormatStringToHashHex(const Napi::CallbackInfo &info) {
   return Napi::String::New(info.Env(), fmt::format("{:08x}", Hash32(info)));
+}
+
+Napi::Value FormatStringToHash128Hex(const Napi::CallbackInfo &info) {
+  if (!IsValid(info, 0, &Napi::Value::IsString)) {
+    throw Napi::TypeError::New(info.Env(), "formatStringToHash128Hex(string)");
+  }
+  return Napi::String::New(info.Env(), ToHex(fast_hash_string_128(info[0].ToString().Utf8Value())));
 }
 
 std::string ContentBytes(const Napi::CallbackInfo &info, size_t index) {
@@ -221,7 +250,12 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
   Watcher::Init(env, exports);
   Tracer::Init(env, exports);
   exports.Set("hash", Napi::Function::New(env, Hash));
+  exports.Set("hash64", Napi::Function::New(env, Hash64));
   exports.Set("formatStringToHashHex", Napi::Function::New(env, FormatStringToHashHex));
+  exports.Set("formatStringToHash128Hex", Napi::Function::New(env, FormatStringToHash128Hex));
+  exports.Set("FAST_HASH_ALGORITHM", Napi::String::New(env, FAST_HASH_ALGORITHM));
+  exports.Set("FAST_HASH_ALGORITHM_64", Napi::String::New(env, FAST_HASH_ALGORITHM_64));
+  exports.Set("FAST_HASH_ALGORITHM_128", Napi::String::New(env, FAST_HASH_ALGORITHM_128));
   exports.Set("CONTENT_HASH_ALGORITHM_SHA256",
               Napi::String::New(env, yijinjing::storage::CONTENT_HASH_ALGORITHM_SHA256));
   exports.Set("CONTENT_HASH_ALGORITHM_BLAKE3",

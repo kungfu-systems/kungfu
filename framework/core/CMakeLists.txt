@@ -22,6 +22,7 @@ find_package(flatbuffers REQUIRED)
 find_package(rxcpp REQUIRED)
 find_package(SQLite3 REQUIRED)
 find_package(RocksDB REQUIRED)
+find_package(xxHash REQUIRED)
 find_package(tabulate REQUIRED)
 find_package(pybind11 REQUIRED)
 
@@ -34,6 +35,7 @@ set(CONAN_LIBS
     rxcpp::rxcpp
     SQLite::SQLite3
     RocksDB::rocksdb
+    xxHash::xxhash
     tabulate::tabulate)
 
 # conan2 的 object 库靠 target usage-requirement 传播 include；libkungfu 走 OBJECT

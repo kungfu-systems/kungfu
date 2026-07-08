@@ -46,6 +46,7 @@ A record's **Status** says where it stands:
 | [0028](ADR-0028-hash-taxonomy-and-integrity-algorithms.md) | accepted | hash taxonomy separates internal ids, frame checksums, and content hashes |
 | [0029](ADR-0029-frame-checksum-v2-crc32c.md) | accepted | frame checksum v2 uses CRC32C receipt metadata |
 | [0030](ADR-0030-manifest-scoped-sync-root-v1.md) | accepted | manifest-scoped sync root v1 |
+| [0031](ADR-0031-fast-hash-xxh3.md) | accepted | fast internal hashes use XXH3 |
 
 ## Reading by theme
 
@@ -110,7 +111,9 @@ A record's **Status** says where it stands:
   [0029](ADR-0029-frame-checksum-v2-crc32c.md) (the v2 frame receipt checksum
   algorithm selection and fsck metadata rules), and
   [0030](ADR-0030-manifest-scoped-sync-root-v1.md) (the first manifest-scoped
-  sync root that binds payload/action/frame receipt evidence for export/fsck).
+  sync root that binds payload/action/frame receipt evidence for export/fsck),
+  and [0031](ADR-0031-fast-hash-xxh3.md) (the v4 greenfield switch of internal
+  fast hashes to XXH3_64 / XXH3_128).
 - **Cross-cutting principle** — [0009](ADR-0009-load-bearing-self-bootstrap.md)
   (load-bearing self-bootstrap), which also names the general law that
   [`docs/architecture.md` § The build dogfoods the SDK](../../../../docs/architecture.md)

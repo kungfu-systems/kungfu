@@ -11,9 +11,9 @@
 
 ## Context
 
-Kungfu historically used MurmurHash3 through generic names such as `hash_32`
-and `hash_str_32`. That was acceptable for low-latency internal ids, but the v4
-runtime now also stores agent facts, import/export manifests, payload
+Kungfu historically used legacy trading-era fast hash helpers through generic
+names such as `hash_32` and `hash_str_32`. That was acceptable for low-latency
+internal ids, but the v4 runtime now also stores agent facts, import/export manifests, payload
 inventories, fsck reports, and future remote-sync receipts.
 
 Those surfaces need different hash semantics:
@@ -25,15 +25,16 @@ Those surfaces need different hash semantics:
 - future trust proofs need chain/root semantics, not a bare non-keyed checksum.
 
 Using one generic "hash" vocabulary for all of those would make it too easy for
-new code to use MurmurHash3 as a content-addressing or tamper-evidence
-primitive.
+new code to use a fast non-cryptographic helper as a content-addressing or
+tamper-evidence primitive.
 
 ## Decision
 
 Kungfu treats hashes as four separate surfaces:
 
 1. **Fast internal hash**: yijinjing exposes `fast_hash_*` APIs. The current
-   implementation is MurmurHash3 and the algorithm label is `murmur3`. This is
+   implementation is XXH3. The 64-bit algorithm label is `xxh3_64`; the 128-bit
+   algorithm label is `xxh3_128`. This is
    only for internal ids, location uid derivation, in-process keys, and
    deterministic bucketing. It is not a content hash and not a security proof.
 2. **Frame checksum**: action-recorder receipts use versioned non-keyed
@@ -56,7 +57,7 @@ The repository enforces the naming boundary:
 - C++ internal runtime code uses `fast_hash_*`, not generic `hash_*` names.
 - Python keeps `hash_32` / `hash_str_32` as compatibility aliases, while new
   internal Python runtime code uses `fast_hash_str_32`.
-- Storage code must not use MurmurHash3 or `fast_hash_*` for content hashes.
+- Storage code must not use `fast_hash_*` for content hashes.
 - The runtime greenfield gate blocks reintroducing ambiguous C++ hash names in
   changed core files.
 
@@ -69,14 +70,14 @@ The repository enforces the naming boundary:
 - Fsck/export manifests can record both checksum values and the checksum
   algorithm, so a later algorithm change can be detected instead of silently
   recomputed with the wrong function.
-- MurmurHash3 remains available for the job it is good at; it is no longer the
-  implied answer to every hash-shaped problem.
+- XXH3 gives the internal-id path a fast non-cryptographic baseline without
+  making it the implied answer to every hash-shaped problem.
 
 ## Alternatives considered
 
-- **Replace MurmurHash3 with BLAKE3 everywhere.** Rejected. Internal uid and
-  hash-map use does not need a cryptographic hash, and changing uid derivation
-  is a compatibility decision separate from storage integrity.
+- **Use BLAKE3 everywhere.** Rejected. Internal uid and hash-map use does not
+  need a cryptographic hash, and uid derivation remains a runtime identity
+  decision separate from storage integrity.
 - **Use SHA-256 for frame receipts immediately.** Rejected for the first
   receipt slice. The current writer/fsck path needs a cheap corruption detector;
   cryptographic trust belongs to a chain/root design.

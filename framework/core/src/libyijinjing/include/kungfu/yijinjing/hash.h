@@ -12,7 +12,7 @@ namespace kungfu::yijinjing {
  * Fast deterministic non-cryptographic hash for internal ids and in-process
  * keys.
  *
- * The current implementation is MurmurHash3. Do not use this API for content
+ * The current implementation is XXH3. Do not use this API for content
  * addressing, tamper evidence, manifests, or security boundaries; those must
  * use an explicit content-hash algorithm such as sha256/blake3.
  *
@@ -21,7 +21,9 @@ namespace kungfu::yijinjing {
  * @param seed
  * @return hash result
  */
-inline constexpr const char *FAST_HASH_ALGORITHM = "murmur3";
+inline constexpr const char *FAST_HASH_ALGORITHM = "xxh3_64";
+inline constexpr const char *FAST_HASH_ALGORITHM_64 = "xxh3_64";
+inline constexpr const char *FAST_HASH_ALGORITHM_128 = "xxh3_128";
 
 uint32_t fast_hash_32(const unsigned char *key, int32_t length, uint32_t seed = KUNGFU_HASH_SEED);
 
