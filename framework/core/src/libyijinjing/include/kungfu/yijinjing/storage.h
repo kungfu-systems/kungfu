@@ -9,6 +9,7 @@
 #include <kungfu/yijinjing/storage/common.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
 #include <kungfu/yijinjing/storage/fsck.h>
+#include <kungfu/yijinjing/storage/generic_service.h>
 #include <kungfu/yijinjing/storage/provider.h>
 #include <kungfu/yijinjing/storage/range.h>
 #include <kungfu/yijinjing/storage/source.h>

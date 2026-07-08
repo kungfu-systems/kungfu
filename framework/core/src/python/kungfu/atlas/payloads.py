@@ -18,6 +18,7 @@ from kungfu.atlas import (
     ACTION_MARKER_SNAPSHOT,
     ACTION_MISSION_SNAPSHOT,
 )
+from kungfu.storage import service as storage_service
 
 CONTENT_TYPE_JSON = "application/json"
 FRAME_INTEGRITY_VERSION_V1 = 1
@@ -183,20 +184,7 @@ def _serialize_range(range_filter: dict[str, Any] | None) -> dict[str, Any] | No
 def _matches_range(entry: dict[str, Any], range_filter: dict[str, Any] | None) -> bool:
     if not range_filter:
         return True
-    from kungfu.atlas.importer import parse_timestamp
-
-    since = parse_timestamp(range_filter.get("since"))
-    until = parse_timestamp(range_filter.get("until"))
-    if since is None and until is None:
-        return True
-    stamp = parse_timestamp(entry.get("source_time"))
-    if stamp is None:
-        return False
-    if since is not None and stamp < since:
-        return False
-    if until is not None and stamp > until:
-        return False
-    return True
+    return bool(_runtime().filter_storage_manifest_entries([entry], range_filter))
 
 
 def _manifest_entry_sort_key(row: dict[str, Any]) -> tuple[str, str, str]:
@@ -327,6 +315,20 @@ def write_import_payloads(
         "entries": sorted_entries,
         "sync_root": compute_sync_root(sorted_entries),
     }
+    manifest["storage_manifest"] = storage_service.build_import_manifest(
+        {
+            "manifest_id": import_id,
+            "storage_source_id": storage_source_id,
+            "source_type": source_type,
+            "source_coordinate": repo_root,
+            "source_head": repo_head,
+            "scope": "atlas",
+            "range": manifest["range"],
+            "counts": counts,
+            "entries": sorted_entries,
+            "sync_root": manifest["sync_root"],
+        }
+    )
 
     manifest_path = import_manifest_path(store_dir, import_id)
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -675,6 +677,7 @@ def fsck_import(
             "markers": 0,
             "actions": 0,
             "sync_roots": 0,
+            "storage_manifests": 0,
         },
     }
     if manifest is None:
@@ -690,6 +693,18 @@ def fsck_import(
         return report
     manifest_entries = [entry for entry in entries if isinstance(entry, dict)]
     _check_sync_root(report, manifest, manifest_entries)
+    storage_manifest = manifest.get("storage_manifest")
+    if isinstance(storage_manifest, dict):
+        report["checked"]["storage_manifests"] += 1
+        for issue in storage_service.verify_import_manifest(storage_manifest):
+            if issue.get("severity") == "warning":
+                report["warnings"].append(issue)
+            else:
+                report["ok"] = False
+                report["errors"].append(issue)
+    else:
+        report["ok"] = False
+        report["errors"].append({"code": "storage_manifest_missing"})
 
     seen: set[tuple[str, str]] = set()
     for entry in entries:

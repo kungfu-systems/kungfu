@@ -1,6 +1,7 @@
 # Runtime Storage Service
 
-Status: draft design plan with an implemented Atlas first slice.
+Status: draft design plan with implemented Atlas and generic source first
+slices.
 
 Kungfu's fact ledger is not only an event capture mechanism. Long term, it is
 also the local persistence service for user facts: runs, work items, imported
@@ -18,6 +19,8 @@ The architectural decisions are recorded in
 for the local runtime storage service and
 [`ADR-0019`](../framework/core/docs/adr/ADR-0019-git-like-source-sync-over-location-and-channel.md)
 for Git-like source sync over Kungfu `location` and `channel`.
+[`ADR-0032`](../framework/core/docs/adr/ADR-0032-generic-source-service-v1.md)
+records the first generic source service implementation slice.
 
 ## Existing Ground
 
@@ -326,7 +329,7 @@ Atlas remains source of truth.
 Kungfu imports and verifies a local projection.
 ```
 
-The implemented first slice is:
+The implemented Atlas adapter slice is:
 
 ```sh
 kungfu atlas import --repo <atlas-repo> --json
@@ -350,6 +353,56 @@ Acceptance covered by that slice:
 
 The first slice deliberately does not claim generic storage compaction, range
 sync, schema repair, or a complete rebuild-index command yet.
+
+### Generic Source Service First Slice
+
+The next implemented slice makes Atlas one adapter over a generic source
+service instead of a special storage architecture.
+
+The C++ semantic surface now builds and verifies these contracts:
+
+- `kungfu.storage.source-record/v1`;
+- `kungfu.storage.source-registry/v1`;
+- `kungfu.storage.import-manifest/v1`;
+- `kungfu.storage.export-bundle/v1`;
+- `kungfu.storage.accepted-range/v1`;
+- `kungfu.storage.payload-inventory/v1`;
+- `kungfu.storage.schema-inventory/v1`.
+
+The interim runtime store persists:
+
+```text
+runtime/storage/sources.json
+runtime/storage/sources/<source_id>/manifests/latest.json
+runtime/storage/sources/<source_id>/manifests/<manifest_id>.json
+runtime/storage/payloads/<prefix>/<sha256>.json
+```
+
+The user-facing generic commands are:
+
+```sh
+kungfu storage status --scope all --json
+kungfu storage status --scope source --source <source-id> --json
+kungfu storage fsck --scope all --json
+kungfu storage fsck --scope source --source <source-id> --json
+kungfu storage export --scope source --source <source-id> \
+  --format jsonl --out source.jsonl --json
+kungfu storage export --scope source --source <source-id> \
+  --format bundle-json --out source.kfbundle.json --json
+kungfu storage import --from source.kfbundle.json --json
+```
+
+`kungfu source add/list/sync/fsck` uses the same source registry path. Atlas
+sync now writes the adapter-specific Atlas manifest and the generic storage
+manifest; it also mirrors imported payload bodies into the generic payload
+store so `storage fsck/export --scope source` can verify and export the same
+facts.
+
+This slice includes a non-Atlas synthetic fixture that exercises manifest
+construction, accepted ranges, payload inventory, source-scoped fsck,
+range-limited export, bundle creation, and bundle import. It deliberately does
+not implement remote channel transport, conflict policy, destructive GC,
+compaction, repair, or a SQLite/RocksDB provider.
 
 ## Safety Boundaries
 
@@ -382,7 +435,8 @@ Storage service operations must preserve these boundaries:
 This is a phased storage-service plan. The fact-ledger spine, location/channel
 runtime concepts, schema registry direction, and export slice exist as grounded
 building blocks. The Atlas scope now has a concrete payload import, fsck,
-export, and source-verify loop. Kungfu still does not claim that it can repair
-arbitrary journal corruption, safely compact user data, run range/session/hash
-remote sync, or replace Atlas or any other external source as an authority
-source.
+export, source-verify, and generic source-manifest loop. Kungfu also has a
+non-Atlas source fixture and generic bundle import/export proof. Kungfu still
+does not claim that it can repair arbitrary journal corruption, safely compact
+user data, run range/session/hash remote sync, or replace Atlas or any other
+external source as an authority source.

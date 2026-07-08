@@ -6,6 +6,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from kungfu.storage import service as storage_service
+
 
 def now_iso() -> str:
     return _iso(datetime.now(timezone.utc))
@@ -78,8 +80,19 @@ def add_source(
         "last_source_head": previous.get("last_source_head"),
         "last_range": previous.get("last_range"),
     }
+    source["storage_record"] = storage_service.build_source_record(
+        {
+            "source_id": source_id,
+            "source_type": source_type,
+            "source_coordinate": source["repo"],
+            "updated_at": stamp,
+        }
+    )
     sources[source_id] = source
     save_registry(runtime_dir, registry)
+    generic_registry = storage_service.load_registry(runtime_dir)
+    generic_registry["sources"][source_id] = source["storage_record"]
+    storage_service.save_registry(runtime_dir, generic_registry)
     return source
 
 
@@ -162,6 +175,8 @@ def sync_source(
             "last_range": result.get("range"),
         }
     )
+    generic_registry = storage_service.load_registry(runtime_dir)
+    source["storage_record"] = generic_registry["sources"].get(source_id)
     save_registry(runtime_dir, registry)
     return {"ok": True, "source": source, "sync": result}
 
@@ -201,5 +216,8 @@ def fsck_source(
         range_filter=manifest.get("range"),
         storage_source_id=source_id,
     )
+    report["storage"] = storage_service.fsck(runtime_dir, source_id=source_id)
+    if not report["storage"]["ok"]:
+        report["ok"] = False
     report["source"] = source
     return report

@@ -47,6 +47,7 @@ A record's **Status** says where it stands:
 | [0029](ADR-0029-frame-checksum-v2-crc32c.md) | accepted | frame checksum v2 uses CRC32C receipt metadata |
 | [0030](ADR-0030-manifest-scoped-sync-root-v1.md) | accepted | manifest-scoped sync root v1 |
 | [0031](ADR-0031-fast-hash-xxh3.md) | accepted | fast internal hashes use XXH3 |
+| [0032](ADR-0032-generic-source-service-v1.md) | accepted | generic source service v1 |
 
 ## Reading by theme
 
@@ -112,8 +113,10 @@ A record's **Status** says where it stands:
   algorithm selection and fsck metadata rules), and
   [0030](ADR-0030-manifest-scoped-sync-root-v1.md) (the first manifest-scoped
   sync root that binds payload/action/frame receipt evidence for export/fsck),
-  and [0031](ADR-0031-fast-hash-xxh3.md) (the v4 greenfield switch of internal
-  fast hashes to XXH3_64 / XXH3_128).
+  [0031](ADR-0031-fast-hash-xxh3.md) (the v4 greenfield switch of internal
+  fast hashes to XXH3_64 / XXH3_128), and
+  [0032](ADR-0032-generic-source-service-v1.md) (the first generic source
+  registry, accepted-range, bundle import/export, and fsck service slice).
 - **Cross-cutting principle** — [0009](ADR-0009-load-bearing-self-bootstrap.md)
   (load-bearing self-bootstrap), which also names the general law that
   [`docs/architecture.md` § The build dogfoods the SDK](../../../../docs/architecture.md)

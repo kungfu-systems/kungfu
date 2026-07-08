@@ -25,6 +25,7 @@ from kungfu.atlas import (
     payloads,
 )
 from kungfu.action_envelope import decode_action_envelope
+from kungfu.storage import service as storage_service
 
 lf = kungfu.__binding__.yijinjing
 yjj = kungfu.__binding__.runtime
@@ -65,13 +66,27 @@ def _receipt_value(receipt, name, default=None):
     return getattr(receipt, name, default)
 
 
+def _mirror_generic_payloads(runtime_dir, atlas_store_dir, entries):
+    for entry in entries:
+        if entry.get("payload_state") != payloads.PAYLOAD_STATE_PRESENT:
+            continue
+        digest = str(entry.get("payload_hash") or "")
+        if not digest:
+            continue
+        source_path = payloads.payload_path(atlas_store_dir, digest)
+        if source_path.exists():
+            storage_service.write_payload_bytes(
+                runtime_dir, digest, source_path.read_bytes()
+            )
+
+
 class ImportStore:
     """Append side. One instance = one short-lived writer = one batch."""
 
     def __init__(self, runtime_dir):
-        self.runtime_dir = runtime_dir
+        self.runtime_dir = os.fspath(runtime_dir)
         self.recorder = yjj.action_recorder(
-            runtime_dir, ATLAS_GROUP, ATLAS_NAME, PUBLIC_DEST, 0
+            self.runtime_dir, ATLAS_GROUP, ATLAS_NAME, PUBLIC_DEST, 0
         )
 
     def _append_envelope(self, envelope):
@@ -194,6 +209,10 @@ class ImportStore:
             range_filter=range_filter,
             action_receipts=action_receipts,
         )
+        _mirror_generic_payloads(
+            self.runtime_dir, self.store_dir(), manifest.get("entries", [])
+        )
+        storage_service.accept_manifest(self.runtime_dir, manifest["storage_manifest"])
         self.emit_manifest()
         return {
             "import_id": import_id,

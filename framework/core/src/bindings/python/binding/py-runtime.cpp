@@ -23,6 +23,7 @@
 #include <kungfu/yijinjing/log.h>
 #include <kungfu/yijinjing/schema/registry.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
+#include <kungfu/yijinjing/storage/generic_service.h>
 #include <kungfu/yijinjing/storage/sync_root.h>
 #include <kungfu/yijinjing/time.h>
 
@@ -382,6 +383,52 @@ void bind(pybind11::module &&m) {
       },
       py::arg("payload"), py::arg("expected_hash"), py::arg("expected_byte_length"),
       py::arg("algorithm") = yijinjing::storage::CONTENT_HASH_ALGORITHM_SHA256);
+  m.def(
+      "build_storage_source_record",
+      [](py::dict input) { return json_to_py(yijinjing::storage::build_storage_source_record(py_to_json(input))); },
+      py::arg("input"));
+  m.def(
+      "build_storage_import_manifest",
+      [](py::dict input) { return json_to_py(yijinjing::storage::build_storage_import_manifest(py_to_json(input))); },
+      py::arg("input"));
+  m.def(
+      "filter_storage_manifest_entries",
+      [](py::iterable entries, py::dict range_filter) {
+        return json_to_py(
+            yijinjing::storage::filter_storage_manifest_entries(py_to_json(entries), py_to_json(range_filter)));
+      },
+      py::arg("entries"), py::arg("range_filter"));
+  m.def(
+      "verify_storage_import_manifest",
+      [](py::dict manifest) {
+        py::list result;
+        for (const auto &issue : yijinjing::storage::verify_storage_import_manifest(py_to_json(manifest))) {
+          py::dict item;
+          item["severity"] = issue.severity;
+          item["code"] = issue.code;
+          if (!issue.path.empty()) {
+            item["path"] = issue.path;
+          }
+          if (!issue.message.empty()) {
+            item["message"] = issue.message;
+          }
+          if (!issue.expected.is_null()) {
+            item["expected"] = json_to_py(issue.expected);
+          }
+          if (!issue.actual.is_null()) {
+            item["actual"] = json_to_py(issue.actual);
+          }
+          result.append(item);
+        }
+        return result;
+      },
+      py::arg("manifest"));
+  m.def(
+      "build_storage_export_bundle",
+      [](py::dict manifest, py::iterable records) {
+        return json_to_py(yijinjing::storage::build_storage_export_bundle(py_to_json(manifest), py_to_json(records)));
+      },
+      py::arg("manifest"), py::arg("records"));
 
   m.def("setup_log", &yijinjing::log::setup_log);
   m.def("emit_log", &yijinjing::log::emit_log);

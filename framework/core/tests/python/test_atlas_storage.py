@@ -8,6 +8,7 @@ import kungfu
 from kungfu.atlas import importer, payloads
 from kungfu.atlas import CARRIER_ATLAS_ACTION
 from kungfu.sources import store as source_store
+from kungfu.storage import service as storage_service
 
 
 def _write_json(path, data):
@@ -214,6 +215,7 @@ def test_payload_manifest_fsck_export_and_verify(tmp_path):
         "markers": 1,
         "actions": 3,
         "sync_roots": 1,
+        "storage_manifests": 1,
     }
     assert manifest["sync_root"] == payloads.compute_sync_root(manifest["entries"])
     assert manifest["sync_root"]["schema"] == payloads.SYNC_ROOT_SCHEMA
@@ -499,3 +501,100 @@ def test_source_range_builder_supports_relative_since():
     )
 
     assert window == {"since": "2026-07-05T12:00:00Z"}
+
+
+def test_generic_storage_service_handles_non_atlas_source_bundle(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    accepted = storage_service.write_synthetic_source(
+        runtime_dir,
+        source_id="local-synth",
+        manifest_id="imp-synth",
+        source_head="head-1",
+        records=[
+            {
+                "kind": "note",
+                "source_id": "note-a",
+                "source_path": "notes/a.json",
+                "source_time": "2026-07-08T00:00:00Z",
+                "payload": {"title": "A", "body": "alpha"},
+            },
+            {
+                "kind": "note",
+                "source_id": "note-b",
+                "source_path": "notes/b.json",
+                "source_time": "2026-07-09T00:00:00Z",
+                "payload": {"title": "B", "body": "beta"},
+            },
+        ],
+    )
+
+    assert accepted["schema"] == "kungfu.storage.import-manifest/v1"
+    assert accepted["source_id"] == "local-synth"
+    assert accepted["accepted_ranges"][0]["status"] == "ok"
+    assert len(accepted["payload_inventory"]["entries"]) == 2
+    assert storage_service.status(runtime_dir, source_id="local-synth")["ok"]
+    fsck = storage_service.fsck(runtime_dir, source_id="local-synth")
+    assert fsck["ok"]
+    assert fsck["checked"]["sources"] == 1
+    assert fsck["checked"]["manifests"] == 1
+    assert fsck["checked"]["payloads"] == 2
+
+    exported = storage_service.export_records(
+        runtime_dir,
+        source_id="local-synth",
+        range_filter={"since": "2026-07-09T00:00:00Z"},
+    )
+    assert [row["source_id"] for row in exported] == ["note-b"]
+    bundle = storage_service.build_export_bundle(runtime_dir, source_id="local-synth")
+    assert bundle["schema"] == "kungfu.storage.export-bundle/v1"
+    assert len(bundle["records"]) == 2
+
+    range_bundle = storage_service.build_export_bundle(
+        runtime_dir,
+        source_id="local-synth",
+        range_filter={"since": "2026-07-09T00:00:00Z"},
+    )
+    assert len(range_bundle["manifest"]["entries"]) == 1
+    assert len(range_bundle["records"]) == 1
+
+    imported_runtime = tmp_path / "imported-runtime"
+    import_result = storage_service.import_bundle(imported_runtime, bundle)
+    assert import_result == {
+        "ok": True,
+        "scope": "source",
+        "source_id": "local-synth",
+        "manifest_id": "imp-synth",
+        "records": 2,
+    }
+    assert storage_service.fsck(imported_runtime, source_id="local-synth")["ok"]
+
+    imported_range_runtime = tmp_path / "imported-range-runtime"
+    range_import = storage_service.import_bundle(imported_range_runtime, range_bundle)
+    assert range_import["records"] == 1
+    assert storage_service.fsck(imported_range_runtime, source_id="local-synth")["ok"]
+
+
+def test_atlas_import_persists_generic_source_manifest(tmp_path):
+    repo = tmp_path / "atlas"
+    runtime_dir = tmp_path / "runtime"
+    _atlas_fixture(repo)
+
+    result = source_store.add_source(
+        runtime_dir,
+        source_id="atlas-local",
+        source_type="atlas",
+        repo=str(repo),
+    )
+    assert result["storage_record"]["schema"] == "kungfu.storage.source-record/v1"
+
+    sync = source_store.sync_source(runtime_dir, "atlas-local")
+    assert sync["ok"]
+    generic = storage_service.load_latest_manifest(runtime_dir, "atlas-local")
+    assert generic is not None
+    assert generic["schema"] == "kungfu.storage.import-manifest/v1"
+    assert generic["scope"] == "atlas"
+    assert len(generic["payload_inventory"]["entries"]) == 3
+
+    source_fsck = source_store.fsck_source(runtime_dir, "atlas-local")
+    assert source_fsck["ok"]
+    assert source_fsck["storage"]["ok"]
