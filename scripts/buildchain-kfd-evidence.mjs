@@ -8,7 +8,12 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { queryKfd3Capabilities } from '@kungfu-tech/buildchain/kfd-3-surfaces';
+import {
+  KFD3_DEFAULT_REGISTRY_PATH,
+  KFD3_SURFACE_REGISTRY_CONTRACT,
+  queryKfd3Capabilities,
+  readKfd3SurfaceRegistry,
+} from '@kungfu-tech/buildchain/kfd-3-surfaces';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -74,6 +79,7 @@ const SDK_CLI_PATH = path.join(ROOT, 'developer', 'sdk', 'src', 'sdk.js');
 const CORE_PACKAGE_PATH = path.join(ROOT, 'framework', 'core', 'package.json');
 const ARTIFACT_VERIFY_COMMAND =
   'node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json';
+const STRICT_KFD3_MODE = 'strict-buildchain-default-registry';
 
 function usage() {
   return `Usage:
@@ -393,13 +399,20 @@ function fileSurface({ id, name, kind, sourcePath, evidencePath, maturity }) {
     name,
     kind,
     participantProfile: 'agent-or-developer',
+    state: 'declared',
     availability: 'shipped',
     visibility: 'public',
     participantFacing: true,
     public: true,
     sourcePath,
     evidencePath: evidencePath || sourcePath,
+    artifactPath: evidencePath || sourcePath,
     maturity: maturity || 'stable',
+    declaration: {
+      owner: 'kungfu',
+      source: 'scripts/buildchain-kfd-evidence.mjs',
+      sourcePath,
+    },
   };
 }
 
@@ -520,14 +533,46 @@ function buildKfd3Registry(upstreamAggregate = buildUpstreamKfdAggregate()) {
   ]);
   return {
     schemaVersion: 1,
-    contract: 'kungfu-buildchain-kfd-3-surface-registry',
+    contract: KFD3_SURFACE_REGISTRY_CONTRACT,
     product: {
       id: 'kungfu',
       name: 'Kungfu',
       repository: 'kungfu-systems/kungfu',
       package: '@kungfu-tech/artifact-kungfu',
     },
-    registryPath: 'buildchain.kfd3.json',
+    registryPath: KFD3_DEFAULT_REGISTRY_PATH,
+    buildchain: {
+      kfd3: {
+        mode: STRICT_KFD3_MODE,
+        sourceOfTruth: KFD3_DEFAULT_REGISTRY_PATH,
+        generator: 'scripts/buildchain-kfd-evidence.mjs',
+        inputs: [
+          {
+            path: rel(AGENT_REGISTRY_PATH),
+            role: 'kungfu-agent-first-subregistry',
+          },
+          {
+            path: rel(AGENT_COMMANDS_PATH),
+            role: 'kungfu-agent-command-catalog',
+          },
+          {
+            path: rel(SDK_CLI_PATH),
+            role: 'kungfu-sdk-product-entrypoints',
+          },
+          {
+            path: 'artifact/scripts/product.mjs',
+            role: 'kungfu-product-dev-and-build-entrypoints',
+          },
+        ],
+        projections: [
+          'developer/sdk/kfd/buildchain.kfd3.json',
+          '.buildchain/kfd-3/collaboration-interface.prebuild.json',
+          '.buildchain/kfd-3/collaboration-interface.artifact.json',
+          '.buildchain/kfd-3/capability-query.json',
+        ],
+        checkCommand: './kungfu-code kfd:buildchain:check',
+      },
+    },
     upstreamKfd: {
       aggregatePath: 'developer/sdk/kfd/upstream-aggregate.json',
       upstreamCount: upstreamAggregate.summary.upstreamCount,
@@ -537,10 +582,12 @@ function buildKfd3Registry(upstreamAggregate = buildUpstreamKfdAggregate()) {
     },
     surfaces,
     policy: {
+      sourceOfTruth: KFD3_DEFAULT_REGISTRY_PATH,
+      detectedButUnregistered: 'product-specific-audit',
       declaredButMissing: 'fail',
       artifactPublicButUnclassified: 'fail',
-      sourceOfTruth:
-        'framework/core/src/python/kungfu/agent/kfd3_api.registry.json plus SDK/product entrypoints listed here',
+      customSurfaceDetection: 'scripts/buildchain-kfd-evidence.mjs',
+      upstreamSubregistriesMustProjectIntoDefaultRegistry: true,
     },
   };
 }
@@ -548,16 +595,112 @@ function buildKfd3Registry(upstreamAggregate = buildUpstreamKfdAggregate()) {
 function registryDescriptor(registry) {
   return {
     id: registry.product.id,
-    path: 'buildchain.kfd3.json',
+    path: KFD3_DEFAULT_REGISTRY_PATH,
     sha256: sha256File(KFD3_REGISTRY_PATH),
     digest: `sha256:${sha256Json(registry)}`,
   };
 }
 
+function missingSurfaceFields(surface) {
+  return [
+    'id',
+    'kind',
+    'name',
+    'state',
+    'sourcePath',
+    'evidencePath',
+    'artifactPath',
+    'declaration',
+  ].filter((field) => !surface[field]);
+}
+
+function buildStrictBuildchainAudit(registry) {
+  const onDisk = readJson(KFD3_REGISTRY_PATH);
+  const buildchainRegistry = readKfd3SurfaceRegistry({
+    cwd: ROOT,
+    registryPath: KFD3_DEFAULT_REGISTRY_PATH,
+  });
+  const generatedIds = new Set(registry.surfaces.map((surface) => surface.id));
+  const diskIds = new Set(
+    (buildchainRegistry.surfaces || []).map((surface) => surface.id),
+  );
+  const agentIds = new Set(agentApiSurfaces().map((surface) => surface.id));
+  const sdkProductIds = new Set(
+    sdkAndProductSurfaces().map((surface) => surface.id),
+  );
+  const issues = [];
+
+  if (KFD3_DEFAULT_REGISTRY_PATH !== 'buildchain.kfd3.json') {
+    issues.push(
+      `Buildchain default registry path changed: ${KFD3_DEFAULT_REGISTRY_PATH}`,
+    );
+  }
+  if (onDisk.contract !== KFD3_SURFACE_REGISTRY_CONTRACT) {
+    issues.push(`registry contract is ${onDisk.contract}`);
+  }
+  if (onDisk.registryPath !== KFD3_DEFAULT_REGISTRY_PATH) {
+    issues.push(`registryPath is ${onDisk.registryPath}`);
+  }
+  if (onDisk.policy?.sourceOfTruth !== KFD3_DEFAULT_REGISTRY_PATH) {
+    issues.push('policy.sourceOfTruth must be buildchain.kfd3.json');
+  }
+  if (onDisk.buildchain?.kfd3?.mode !== STRICT_KFD3_MODE) {
+    issues.push(`buildchain.kfd3.mode must be ${STRICT_KFD3_MODE}`);
+  }
+  for (const id of generatedIds) {
+    if (!diskIds.has(id))
+      issues.push(`generated surface missing on disk: ${id}`);
+  }
+  for (const id of diskIds) {
+    if (!generatedIds.has(id)) issues.push(`disk surface not generated: ${id}`);
+  }
+  for (const id of agentIds) {
+    if (!diskIds.has(id))
+      issues.push(`agent registry API not projected: ${id}`);
+  }
+  for (const id of sdkProductIds) {
+    if (!diskIds.has(id)) {
+      issues.push(`SDK/product surface not projected: ${id}`);
+    }
+  }
+  for (const surface of buildchainRegistry.surfaces || []) {
+    const missing = missingSurfaceFields(surface);
+    if (missing.length) {
+      issues.push(
+        `surface ${surface.id || '<missing-id>'} missing ${missing.join(', ')}`,
+      );
+    }
+  }
+
+  return {
+    schemaVersion: 1,
+    contract: 'kungfu-buildchain-kfd-3-strict-registry-audit',
+    ok: issues.length === 0,
+    mode: STRICT_KFD3_MODE,
+    registryPath: KFD3_DEFAULT_REGISTRY_PATH,
+    sourceOfTruth: onDisk.policy?.sourceOfTruth || '',
+    contractName: onDisk.contract || '',
+    summary: {
+      surfaceCount: buildchainRegistry.surfaces.length,
+      agentApiCount: agentIds.size,
+      sdkProductSurfaceCount: sdkProductIds.size,
+      issueCount: issues.length,
+    },
+    issues,
+  };
+}
+
+function assertStrictBuildchainAudit(audit) {
+  if (audit.ok) return;
+  throw new Error(
+    `Buildchain strict KFD-3 registry audit failed:\n${audit.issues.join('\n')}`,
+  );
+}
+
 function buildCollaborationInterface(registry) {
   return {
     schemaVersion: 1,
-    contract: 'kungfu-buildchain-kfd-3-surface-registry',
+    contract: KFD3_SURFACE_REGISTRY_CONTRACT,
     product: registry.product,
     upstreamKfd: registry.upstreamKfd,
     surfaces: registry.surfaces,
@@ -581,7 +724,7 @@ function buildKfd3PrebuildWitness(registry) {
     source: {
       cwd: ROOT,
       sourceSha: gitValue(['rev-parse', 'HEAD']) || '',
-      registryPath: 'buildchain.kfd3.json',
+      registryPath: KFD3_DEFAULT_REGISTRY_PATH,
       registryDigest: `sha256:${sha256Json(registry)}`,
     },
     sourceRegistry: registryDescriptor(registry),
@@ -593,9 +736,9 @@ function buildKfd3PrebuildWitness(registry) {
     collaborationInterface,
     declaredSurfaces: registry.surfaces,
     auditBoundary: {
-      mode: 'closed-world',
+      mode: STRICT_KFD3_MODE,
       scope:
-        'Kungfu participant-facing agent, SDK, kfx, product build/dev-run, and Buildchain KFD evidence surfaces declared in buildchain.kfd3.json.',
+        'Kungfu participant-facing agent, SDK, kfx, product build/dev-run, and Buildchain KFD evidence surfaces declared in the Buildchain default registry.',
       reachableSurfaceMode: 'declared-boundary',
       unclassifiedPolicy: 'fail',
       nonExhaustivelyEnumerableSurfaces: [],
@@ -689,8 +832,8 @@ function registryCapabilityQuery(registry, { warning = '' } = {}) {
     product: 'Kungfu',
     source: {
       type: 'kungfu-buildchain-kfd3-registry',
-      path: 'buildchain.kfd3.json',
-      note: 'Kungfu projects custom agent/SDK/product surfaces into Buildchain KFD-3 witnesses; Buildchain 2.10 standard detectors are intentionally conservative.',
+      path: KFD3_DEFAULT_REGISTRY_PATH,
+      note: 'Kungfu declares agent/SDK/product surfaces in the Buildchain default KFD-3 registry; Buildchain 2.10 standard detectors are intentionally conservative for product-specific surfaces.',
     },
     status: 'declared',
     warning,
@@ -698,15 +841,16 @@ function registryCapabilityQuery(registry, { warning = '' } = {}) {
       id: surface.id,
       kind: surface.kind,
       name: surface.name,
-      state: surface.availability,
+      state: surface.state || surface.availability || 'declared',
       detected: true,
-      enforced: true,
+      enforced:
+        surface.state === 'enforced' || surface.enforcement === 'enforced',
       sourcePath: surface.sourcePath,
-      artifactPath: surface.evidencePath,
+      artifactPath: surface.artifactPath || surface.evidencePath,
       kfd1Basis: {
-        registryPath: 'buildchain.kfd3.json',
+        registryPath: KFD3_DEFAULT_REGISTRY_PATH,
         sourcePath: surface.sourcePath,
-        artifactPath: surface.evidencePath,
+        artifactPath: surface.artifactPath || surface.evidencePath,
         digest: `sha256:${sha256Json(surface)}`,
       },
       kfd2Trust: {
@@ -729,12 +873,12 @@ async function buildQuery(registry) {
     const query = await queryKfd3Capabilities({
       cwd: ROOT,
       product: 'kungfu',
-      registryPath: 'buildchain.kfd3.json',
+      registryPath: KFD3_DEFAULT_REGISTRY_PATH,
     });
     if (query.status === 'failed' || query.kfd?.kfd3 === 'failed') {
       return registryCapabilityQuery(registry, {
         warning:
-          'Buildchain standard detector could not cover Kungfu custom declared surfaces; using Kungfu registry projection.',
+          'Buildchain standard detector could not cover Kungfu product-specific declared surfaces; using the Buildchain default registry projection.',
       });
     }
     return query;
@@ -751,6 +895,7 @@ function buildSummary({
   kfd1Witness,
   kfd2Summary,
   prebuildWitness,
+  strictAudit,
 }) {
   return {
     schemaVersion: 1,
@@ -780,7 +925,13 @@ function buildSummary({
       claimCount: kfd2Summary.buildchainProjection?.claimCount || 0,
     },
     kfd3: {
-      registry: 'buildchain.kfd3.json',
+      registry: KFD3_DEFAULT_REGISTRY_PATH,
+      registryMode: strictAudit.mode,
+      strictRegistryAudit: {
+        ok: strictAudit.ok,
+        issueCount: strictAudit.summary.issueCount,
+        sourceOfTruth: strictAudit.sourceOfTruth,
+      },
       upstreamAggregate: 'developer/sdk/kfd/upstream-aggregate.json',
       upstreamCount: upstreamAggregate.summary.upstreamCount,
       prebuildWitness: rel(KFD3_PREBUILD_WITNESS_PATH),
@@ -796,6 +947,8 @@ function buildSummary({
 async function runArtifactWitness(options) {
   const upstreamAggregate = buildUpstreamKfdAggregate();
   const registry = buildKfd3Registry(upstreamAggregate);
+  assertCurrent(KFD3_REGISTRY_PATH, registry, 'Buildchain KFD-3 registry');
+  assertStrictBuildchainAudit(buildStrictBuildchainAudit(registry));
   const witness = buildKfd3ArtifactWitness(registry, { runVerify: true });
   if (options.json) process.stdout.write(renderJson(witness));
   else
@@ -826,6 +979,8 @@ async function runCheckOrWrite(options) {
       'SDK packaged upstream KFD aggregate',
     );
   }
+  const strictAudit = buildStrictBuildchainAudit(registry);
+  assertStrictBuildchainAudit(strictAudit);
   const prebuildWitness = buildKfd3PrebuildWitness(registry);
   const artifactWitness = buildKfd3ArtifactWitness(registry, {
     runVerify: true,
@@ -837,6 +992,7 @@ async function runCheckOrWrite(options) {
     kfd1Witness,
     kfd2Summary,
     prebuildWitness,
+    strictAudit,
   });
 
   if (options.write) {
@@ -853,10 +1009,13 @@ async function runCheckOrWrite(options) {
     registry: {
       path: 'buildchain.kfd3.json',
       packagedPath: 'developer/sdk/kfd/buildchain.kfd3.json',
+      mode: strictAudit.mode,
+      sourceOfTruth: strictAudit.sourceOfTruth,
       surfaceCount: registry.surfaces.length,
       sha256: options.write
         ? sha256File(KFD3_REGISTRY_PATH)
         : sha256Text(renderJson(registry)),
+      strictAudit,
     },
     summary,
   };

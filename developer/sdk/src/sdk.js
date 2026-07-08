@@ -2652,15 +2652,16 @@ function registryCapabilityQuery(registry, registryPath, warning = '') {
         id: surface.id,
         kind: surface.kind,
         name: surface.name,
-        state: surface.availability,
+        state: surface.state || surface.availability || 'declared',
         detected: true,
-        enforced: true,
+        enforced:
+          surface.state === 'enforced' || surface.enforcement === 'enforced',
         sourcePath: surface.sourcePath,
-        artifactPath: surface.evidencePath,
+        artifactPath: surface.artifactPath || surface.evidencePath,
         kfd1Basis: {
           registryPath: path.relative(process.cwd(), registryPath) || '.',
           sourcePath: surface.sourcePath,
-          artifactPath: surface.evidencePath,
+          artifactPath: surface.artifactPath || surface.evidencePath,
           digest: `sha256:${sha256KfdJson(surface)}`,
         },
         kfd2Trust: {
@@ -2770,6 +2771,12 @@ async function kfd(command, options) {
         surfaceCount: Array.isArray(registry.surfaces)
           ? registry.surfaces.length
           : 0,
+        strict: {
+          mode: registry.buildchain?.kfd3?.mode || '',
+          sourceOfTruth: registry.policy?.sourceOfTruth || '',
+          registryPath: registry.registryPath || '',
+          contract: registry.contract || '',
+        },
       },
       upstreamAggregate: {
         path: path.relative(process.cwd(), aggregatePath) || '.',

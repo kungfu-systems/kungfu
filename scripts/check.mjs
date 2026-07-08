@@ -224,6 +224,29 @@ function checkRuntimeGreenfield(scopeArgs = []) {
   ]);
 }
 
+function touchesBuildchainKfdEvidence(files) {
+  return files.some(
+    (file) =>
+      file === 'buildchain.kfd3.json' ||
+      file === 'developer/sdk/kfd/buildchain.kfd3.json' ||
+      file === 'developer/sdk/kfd/upstream-aggregate.json' ||
+      file === 'developer/sdk/src/sdk.js' ||
+      file === 'scripts/buildchain-kfd-evidence.mjs' ||
+      file === 'scripts/kfd2-release-claims.mjs' ||
+      file.startsWith('framework/core/src/python/kungfu/agent/') ||
+      file.startsWith('.github/workflows/') ||
+      file.startsWith('docs/kfd-'),
+  );
+}
+
+function checkBuildchainKfdEvidence(files = [], { force = false } = {}) {
+  if (!force && !touchesBuildchainKfdEvidence(files)) {
+    log('[check] no Buildchain KFD evidence inputs changed');
+    return;
+  }
+  run('Buildchain KFD evidence check', 'pnpm', ['run', 'kfd:buildchain:check']);
+}
+
 function checkStaged() {
   checkNoBashStaged();
   checkCarrierActionEnvelope(['--staged']);
@@ -290,6 +313,7 @@ function checkStaged() {
   }
 
   checkBiomeFiles('staged', files);
+  checkBuildchainKfdEvidence(files);
 
   log('\n[check] staged gate passed');
 }
@@ -314,7 +338,9 @@ function checkChanged() {
   checkNoBashTree();
   checkCarrierActionEnvelope();
   checkRuntimeGreenfield();
-  checkBiomeFiles('changed', changedFiles());
+  const files = changedFiles();
+  checkBiomeFiles('changed', files);
+  checkBuildchainKfdEvidence(files);
   checkShared();
   log('\n[check] changed-scope gate passed');
 }
@@ -324,6 +350,7 @@ function checkAll() {
   checkCarrierActionEnvelope(['--all']);
   checkRuntimeGreenfield(['--all']);
   run('repo lint + format check', 'pnpm', ['run', 'lint']);
+  checkBuildchainKfdEvidence([], { force: true });
   checkShared();
   log('\n[check] whole-tree gate passed');
 }
