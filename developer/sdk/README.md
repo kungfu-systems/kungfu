@@ -63,6 +63,26 @@ Options (both `create` targets):
 The generated app is self-contained: `pnpm pack` produces a distributable
 bundle with the kungfu runtime under `Resources/kungfu`.
 
+## KFD Capability Queries
+
+The SDK also carries Kungfu's Buildchain-facing KFD-3 registry projection, so an
+installed runtime can answer capability questions without asking users to
+install the `buildchain` executable separately:
+
+```sh
+kungfu kfd query --json
+kungfu kfd check --json
+kungfu kfd witness --json
+
+kungfu sdk kfd query --json
+kungfu sdk kfd check --json
+kungfu sdk kfd witness --json
+```
+
+`kungfu kfd ...` is the installed CLI bridge. It delegates to the SDK-distributed
+implementation and returns the same machine-readable capability facts as
+`kungfu sdk kfd ...`.
+
 ## KFD-1 Contract Prototype
 
 The first KFD-native SDK slice adopts existing contract source files without

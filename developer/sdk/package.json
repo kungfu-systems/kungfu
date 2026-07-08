@@ -18,6 +18,7 @@
   "main": "src/sdk.js",
   "files": [
     "src",
+    "kfd",
     "templates",
     "README.md"
   ],

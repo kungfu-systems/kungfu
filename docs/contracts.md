@@ -224,15 +224,23 @@ the raw claim inputs to the Buildchain 2.10 release gate.
 passport inputs:
 
 ```sh
+kungfu kfd query --json
+kungfu sdk kfd query --json
 ./kungfu-code kfd:buildchain
 ./kungfu-code kfd:buildchain:check
 ./kungfu-code kfd:query
 node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json
 ```
 
+`kungfu kfd ...` is the installed-runtime bridge for users and agents;
+`kungfu sdk kfd ...` exposes the same SDK-distributed Buildchain bridge directly.
+The `./kungfu-code kfd:*` commands are the repository development and release
+evidence generators.
+
 The generator writes a tracked Buildchain-facing KFD-3 registry at
-[`buildchain.kfd3.json`](../buildchain.kfd3.json), then writes ignored release
-evidence under `.buildchain/`:
+[`buildchain.kfd3.json`](../buildchain.kfd3.json), writes a packaged SDK copy at
+`developer/sdk/kfd/buildchain.kfd3.json`, then writes ignored release evidence
+under `.buildchain/`:
 
 ```text
 .buildchain/kfd-1/contract-world.witness.json

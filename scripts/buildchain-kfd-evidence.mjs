@@ -21,6 +21,13 @@ const KFD1_WITNESS_PATH = path.join(
 const KFD2_OUTPUT_DIR = path.join(BUILDCHAIN_DIR, 'kfd-2');
 const KFD3_OUTPUT_DIR = path.join(BUILDCHAIN_DIR, 'kfd-3');
 const KFD3_REGISTRY_PATH = path.join(ROOT, 'buildchain.kfd3.json');
+const SDK_KFD3_REGISTRY_PATH = path.join(
+  ROOT,
+  'developer',
+  'sdk',
+  'kfd',
+  'buildchain.kfd3.json',
+);
 const KFD3_PREBUILD_WITNESS_PATH = path.join(
   KFD3_OUTPUT_DIR,
   'collaboration-interface.prebuild.json',
@@ -67,6 +74,7 @@ function usage() {
 
 Writes:
   buildchain.kfd3.json
+  developer/sdk/kfd/buildchain.kfd3.json
   .buildchain/kfd-1/contract-world.witness.json
   .buildchain/kfd-2/claims/<claim-id>.json
   .buildchain/kfd-3/collaboration-interface.prebuild.json
@@ -201,6 +209,22 @@ function agentApiSurfaces() {
 
 function sdkAndProductSurfaces() {
   return [
+    fileSurface({
+      id: 'kungfu.kfd.query',
+      name: 'kungfu kfd query|check|witness',
+      kind: 'cli',
+      sourcePath: 'framework/core/src/python/kungfu/cli/commands/kfd.py',
+      evidencePath: 'developer/sdk/kfd/buildchain.kfd3.json',
+      maturity: 'stable',
+    }),
+    fileSurface({
+      id: 'kungfu.sdk.kfd.query',
+      name: 'kungfu sdk kfd query|check|witness',
+      kind: 'cli',
+      sourcePath: 'developer/sdk/src/sdk.js',
+      evidencePath: 'developer/sdk/kfd/buildchain.kfd3.json',
+      maturity: 'stable',
+    }),
     fileSurface({
       id: 'kungfu.sdk.contract.witness',
       name: 'kungfu sdk contract witness --json',
@@ -556,8 +580,14 @@ async function runCheckOrWrite(options) {
   const kfd2Summary = buildKfd2Claims({ write: options.write });
   if (options.write) {
     writeIfChanged(KFD3_REGISTRY_PATH, registry);
+    writeIfChanged(SDK_KFD3_REGISTRY_PATH, registry);
   } else {
     assertCurrent(KFD3_REGISTRY_PATH, registry, 'Buildchain KFD-3 registry');
+    assertCurrent(
+      SDK_KFD3_REGISTRY_PATH,
+      registry,
+      'SDK packaged KFD-3 registry',
+    );
   }
   const prebuildWitness = buildKfd3PrebuildWitness(registry);
   const artifactWitness = buildKfd3ArtifactWitness(registry, {
@@ -584,6 +614,7 @@ async function runCheckOrWrite(options) {
     mode: options.write ? 'write' : 'check',
     registry: {
       path: 'buildchain.kfd3.json',
+      packagedPath: 'developer/sdk/kfd/buildchain.kfd3.json',
       surfaceCount: registry.surfaces.length,
       sha256: options.write
         ? sha256File(KFD3_REGISTRY_PATH)

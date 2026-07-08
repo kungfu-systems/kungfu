@@ -20,6 +20,7 @@ from . import kfx
 from . import skill
 from . import codex
 from . import sdk
+from . import kfd
 
 __all__ = [
     "engage",
@@ -42,4 +43,5 @@ __all__ = [
     "skill",
     "codex",
     "sdk",
+    "kfd",
 ]

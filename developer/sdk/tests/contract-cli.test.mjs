@@ -254,6 +254,32 @@ test('product gui dist dry-run supports an artifact product directory', () => {
   assert.match(output, /electron-builder\.yml/);
 });
 
+test('kfd query exposes Kungfu KFD-3 capability facts', () => {
+  const data = runJson(['kfd', 'query', '--json']);
+  assert.equal(data.contract, 'kungfu-buildchain-kfd-3-capability-query');
+  assert.equal(data.product, 'Kungfu');
+  assert.ok(data.capabilities.length >= 1);
+  assert.ok(data.capabilities.some((row) => row.id === 'kungfu.sdk.kfd.query'));
+  assert.equal(data.kfd.kfd3, 'declared');
+});
+
+test('kfd check verifies the packaged KFD-3 registry projection', () => {
+  const data = runJson(['kfd', 'check', '--json']);
+  assert.equal(data.schema, 'kungfu.sdk.kfd-check/v1');
+  assert.equal(data.ok, true);
+  assert.match(data.registry.sha256, /^sha256:[0-9a-f]{64}$/);
+  assert.ok(data.registry.surfaceCount >= 1);
+  assert.equal(data.query.kfd.kfd3, 'declared');
+});
+
+test('kfd witness emits an installed SDK KFD-3 witness', () => {
+  const data = runJson(['kfd', 'witness', '--json']);
+  assert.equal(data.id, 'kungfu-sdk-kfd3-capability-witness');
+  assert.equal(data.standard, 'kfd-3');
+  assert.equal(data.witnessKind, 'installed-sdk-query');
+  assert.ok(data.exposedSurfaces.some((row) => row.id === 'kungfu.kfd.query'));
+});
+
 test('adopt refuses a source path that does not match the registry', () => {
   const result = spawnSync(
     process.execPath,

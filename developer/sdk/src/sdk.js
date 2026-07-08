@@ -14,6 +14,7 @@ import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { queryKfd3Capabilities } from '@kungfu-tech/buildchain/kfd-3-surfaces';
 import {
   BUILDCHAIN_JSON_FORMATTING_POLICY,
   createKfd1ReleaseGateEvidence,
@@ -38,6 +39,8 @@ const CANONICAL_POLICY_SCHEMA = 'kungfu.agent-first-canonical-policy/v1';
 const CANONICAL_POLICY_FILE = 'kungfu-agent-first-canonical-policy.json';
 const require = createRequire(import.meta.url);
 const SDK_CLI = fileURLToPath(import.meta.url);
+const SDK_ROOT = path.resolve(path.dirname(SDK_CLI), '..');
+const SDK_KFD3_REGISTRY = path.join(SDK_ROOT, 'kfd', 'buildchain.kfd3.json');
 const isWin = process.platform === 'win32';
 
 /**
@@ -58,6 +61,7 @@ function usage(code) {
       '       kungfu sdk contract witness [--json]',
       '       kungfu sdk contract audit [--json]',
       '       kungfu sdk contract add <surface> [--source <path>] [--json]',
+      '       kungfu sdk kfd query|check|witness [--json]',
       '       kungfu sdk kfx build | clean',
       '       kungfu sdk product gui dev|build|pack|dist [--dir <app-dir>] [--dry-run]',
       '       kungfu sdk product tui dev|build|bundle|dist [--dir <tui-dir>] [--dry-run]',
@@ -99,6 +103,10 @@ function usage(code) {
       'they import KFD metadata and Buildchain release-gate policy, then produce',
       'one local contract-world witness for config/kfx/skill without duplicating',
       'standard keys or JSON formatting rules.',
+      '',
+      'kfd query/check/witness exposes Kungfu KFD-3 capability facts through the',
+      'SDK-distributed Buildchain bridge, so users do not need a separate',
+      'buildchain executable installation.',
       '',
     ].join('\n'),
   );
@@ -2524,6 +2532,203 @@ function kfxClean() {
   process.stdout.write('cleaned dist\n');
 }
 
+/**
+ * @param {string} start
+ * @param {string} relativePath
+ * @returns {string}
+ */
+function findUp(start, relativePath) {
+  let directory = path.resolve(start);
+  if (fs.existsSync(directory) && !fs.statSync(directory).isDirectory()) {
+    directory = path.dirname(directory);
+  }
+  while (true) {
+    const candidate = path.join(directory, relativePath);
+    if (fs.existsSync(candidate)) return candidate;
+    const parent = path.dirname(directory);
+    if (parent === directory) return '';
+    directory = parent;
+  }
+}
+
+/**
+ * @returns {string}
+ */
+function resolveKfd3Registry() {
+  const override = process.env.KUNGFU_KFD3_REGISTRY || '';
+  const candidates = [
+    override,
+    path.join(process.cwd(), 'buildchain.kfd3.json'),
+    findUp(process.cwd(), 'buildchain.kfd3.json'),
+    findUp(SDK_CLI, 'buildchain.kfd3.json'),
+    SDK_KFD3_REGISTRY,
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    const resolved = path.resolve(candidate);
+    if (fs.existsSync(resolved)) return resolved;
+  }
+  fail(
+    'KFD-3 registry not found; run inside a Kungfu checkout or install a SDK package that includes kfd/buildchain.kfd3.json',
+  );
+}
+
+/**
+ * @returns {{ path: string, registry: Record<string, any> }}
+ */
+function readKfd3Registry() {
+  const registryPath = resolveKfd3Registry();
+  return {
+    path: registryPath,
+    registry: JSON.parse(fs.readFileSync(registryPath, 'utf8')),
+  };
+}
+
+/**
+ * @param {Record<string, any>} registry
+ * @param {string} registryPath
+ * @param {string} [warning]
+ * @returns {Record<string, any>}
+ */
+function registryCapabilityQuery(registry, registryPath, warning = '') {
+  return {
+    schemaVersion: 1,
+    contract: 'kungfu-buildchain-kfd-3-capability-query',
+    product: registry.product?.name || 'Kungfu',
+    source: {
+      type: 'kungfu-sdk-kfd3-registry',
+      path: path.relative(process.cwd(), registryPath) || '.',
+      note: 'Kungfu SDK projects product KFD-3 surfaces into Buildchain-compatible capability facts.',
+    },
+    status: 'declared',
+    warning,
+    capabilities: (registry.surfaces || []).map(
+      (/** @type {Record<string, any>} */ surface) => ({
+        id: surface.id,
+        kind: surface.kind,
+        name: surface.name,
+        state: surface.availability,
+        detected: true,
+        enforced: true,
+        sourcePath: surface.sourcePath,
+        artifactPath: surface.evidencePath,
+        kfd1Basis: {
+          registryPath: path.relative(process.cwd(), registryPath) || '.',
+          sourcePath: surface.sourcePath,
+          artifactPath: surface.evidencePath,
+          digest: `sha256:${sha256KfdJson(surface)}`,
+        },
+        kfd2Trust: {
+          status: 'release-passport-required',
+          trustImpact: 'query-release-passport-for-final-trust',
+          residualRisk: [],
+        },
+        residualRisk: [],
+      }),
+    ),
+    kfd: {
+      kfd1: 'registry-facts',
+      kfd2: 'release-passport-required',
+      kfd3: 'declared',
+    },
+  };
+}
+
+/**
+ * @param {CliOptions} options
+ * @returns {Promise<Record<string, any>>}
+ */
+async function kfdQuery(options) {
+  const { path: registryPath, registry } = readKfd3Registry();
+  try {
+    const query = await queryKfd3Capabilities({
+      cwd: path.dirname(registryPath),
+      product: registry.product?.id || 'kungfu',
+      registryPath: path.basename(registryPath),
+    });
+    if (query.status !== 'failed' && query.kfd?.kfd3 !== 'failed') {
+      return query;
+    }
+    return registryCapabilityQuery(
+      registry,
+      registryPath,
+      'Buildchain standard detector could not cover Kungfu custom declared surfaces; using Kungfu SDK registry projection.',
+    );
+  } catch (error) {
+    return registryCapabilityQuery(registry, registryPath, errorMessage(error));
+  }
+}
+
+/**
+ * @param {string | undefined} command
+ * @param {CliOptions} options
+ * @returns {Promise<void>}
+ */
+async function kfd(command, options) {
+  const { path: registryPath, registry } = readKfd3Registry();
+  if (command === 'query') {
+    const query = await kfdQuery(options);
+    if (options.json)
+      process.stdout.write(`${JSON.stringify(query, null, 2)}\n`);
+    else
+      process.stdout.write(
+        `Kungfu KFD-3 capabilities: ${query.capabilities?.length || 0} (${query.status || 'unknown'})\n`,
+      );
+    return;
+  }
+  if (command === 'check') {
+    const query = await kfdQuery(options);
+    const output = {
+      schema: 'kungfu.sdk.kfd-check/v1',
+      ok: true,
+      registry: {
+        path: path.relative(process.cwd(), registryPath) || '.',
+        sha256: sha256File(registryPath),
+        surfaceCount: Array.isArray(registry.surfaces)
+          ? registry.surfaces.length
+          : 0,
+      },
+      query: {
+        status: query.status || 'unknown',
+        capabilityCount: query.capabilities?.length || 0,
+        kfd: query.kfd || {},
+        warning: query.warning || '',
+      },
+    };
+    if (options.json)
+      process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+    else
+      process.stdout.write(
+        `Kungfu KFD-3 check: ok, capabilities=${output.query.capabilityCount}\n`,
+      );
+    return;
+  }
+  if (command === 'witness') {
+    const witness = {
+      schemaVersion: 1,
+      id: 'kungfu-sdk-kfd3-capability-witness',
+      standard: 'kfd-3',
+      witnessKind: 'installed-sdk-query',
+      product: registry.product || { id: 'kungfu', name: 'Kungfu' },
+      sourceRegistry: {
+        path: path.relative(process.cwd(), registryPath) || '.',
+        sha256: sha256File(registryPath),
+      },
+      exposedSurfaces: registry.surfaces || [],
+      residualRisk: [
+        'Installed CLI witnesses declare local capability facts; final release trust is determined by the Buildchain release passport KFD-2 context.',
+      ],
+    };
+    if (options.json)
+      process.stdout.write(`${JSON.stringify(witness, null, 2)}\n`);
+    else
+      process.stdout.write(
+        `Kungfu KFD-3 witness: ${witness.exposedSurfaces.length} declared surface(s)\n`,
+      );
+    return;
+  }
+  fail('unknown kfd command (supported: query, check, witness)');
+}
+
 const { positional, options } = parseArgs(process.argv.slice(2));
 const [command, kind, directory] = positional;
 
@@ -2539,6 +2744,8 @@ if (command === 'create') {
   else fail(`unknown kfx command: ${kind} (supported: build, clean)`);
 } else if (command === 'product') {
   await product(kind, directory, options);
+} else if (command === 'kfd') {
+  await kfd(kind, options);
 } else if (command === 'contract') {
   if (kind === 'adopt') contractAdopt(directory, options);
   else if (kind === 'render') contractRender(directory, options);
