@@ -42,6 +42,21 @@ shipped frozen. A tag is bound to its binaries atomically — *tag exists ⇒ th
 matching binaries exist* — which is the trust property the release mechanism
 exists to hold.
 
+## CI source checkout cache
+
+The release-candidate build uses Buildchain's locked source checkout cache in
+`auto` mode. Self-hosted runners first try the trusted local/LAN Git object cache
+declared by repository or organization variables, then fall back to GitHub if the
+cache is unavailable:
+
+- `BUILDCHAIN_CHECKOUT_CACHE_MIRROR_URL_TEMPLATE`
+- `BUILDCHAIN_CHECKOUT_CACHE_REFERENCE_REPOSITORY_TEMPLATE`
+
+These values are intentionally not checked into this repository. They describe
+private runner or local-network topology. Buildchain still resolves and verifies
+the immutable source commit and tree before running lifecycle commands, and it
+writes sanitized `source-checkout.json` diagnostics into the platform artifacts.
+
 ## Maturity
 
 The local build path (`./kungfu-code sync && ./kungfu-code build`) is real and is
