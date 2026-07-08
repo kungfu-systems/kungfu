@@ -8,6 +8,21 @@
     "package": "@kungfu-tech/artifact-kungfu"
   },
   "registryPath": "buildchain.kfd3.json",
+  "upstreamKfd": {
+    "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
+    "upstreamCount": 3,
+    "kfdAwareUpstreams": [
+      "kfd",
+      "libnode",
+      "buildchain"
+    ],
+    "packageVersions": {
+      "kfd": "1.0.0-alpha.17",
+      "libnode": "22.22.3-kf.3-alpha.16",
+      "buildchain": "2.10.0"
+    },
+    "digest": "sha256:5aae0a00943e5273505d984cbd5a01ef0d87973fcfd9d1086fa447ce7f84ba15"
+  },
   "surfaces": [
     {
       "id": "kungfu.agent",
@@ -297,7 +312,7 @@
     },
     {
       "id": "kungfu.kfd.query",
-      "name": "kungfu kfd query|check|witness",
+      "name": "kungfu kfd query|check|witness|upstream|aggregate",
       "kind": "cli",
       "participantProfile": "agent-or-developer",
       "availability": "shipped",
@@ -305,7 +320,7 @@
       "participantFacing": true,
       "public": true,
       "sourcePath": "framework/core/src/python/kungfu/cli/commands/kfd.py",
-      "evidencePath": "developer/sdk/kfd/buildchain.kfd3.json",
+      "evidencePath": "developer/sdk/kfd/upstream-aggregate.json",
       "maturity": "stable"
     },
     {
@@ -453,7 +468,7 @@
     },
     {
       "id": "kungfu.sdk.kfd.query",
-      "name": "kungfu sdk kfd query|check|witness",
+      "name": "kungfu sdk kfd query|check|witness|upstream|aggregate",
       "kind": "cli",
       "participantProfile": "agent-or-developer",
       "availability": "shipped",
@@ -461,7 +476,7 @@
       "participantFacing": true,
       "public": true,
       "sourcePath": "developer/sdk/src/sdk.js",
-      "evidencePath": "developer/sdk/kfd/buildchain.kfd3.json",
+      "evidencePath": "developer/sdk/kfd/upstream-aggregate.json",
       "maturity": "stable"
     },
     {

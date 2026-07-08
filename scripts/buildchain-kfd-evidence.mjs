@@ -5,6 +5,7 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { queryKfd3Capabilities } from '@kungfu-tech/buildchain/kfd-3-surfaces';
@@ -27,6 +28,13 @@ const SDK_KFD3_REGISTRY_PATH = path.join(
   'sdk',
   'kfd',
   'buildchain.kfd3.json',
+);
+const SDK_KFD_UPSTREAM_AGGREGATE_PATH = path.join(
+  ROOT,
+  'developer',
+  'sdk',
+  'kfd',
+  'upstream-aggregate.json',
 );
 const KFD3_PREBUILD_WITNESS_PATH = path.join(
   KFD3_OUTPUT_DIR,
@@ -62,6 +70,8 @@ const AGENT_COMMANDS_PATH = path.join(
   'agent',
   'commands.json',
 );
+const SDK_CLI_PATH = path.join(ROOT, 'developer', 'sdk', 'src', 'sdk.js');
+const CORE_PACKAGE_PATH = path.join(ROOT, 'framework', 'core', 'package.json');
 const ARTIFACT_VERIFY_COMMAND =
   'node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json';
 
@@ -75,6 +85,7 @@ function usage() {
 Writes:
   buildchain.kfd3.json
   developer/sdk/kfd/buildchain.kfd3.json
+  developer/sdk/kfd/upstream-aggregate.json
   .buildchain/kfd-1/contract-world.witness.json
   .buildchain/kfd-2/claims/<claim-id>.json
   .buildchain/kfd-3/collaboration-interface.prebuild.json
@@ -151,6 +162,206 @@ function sha256File(filePath) {
   return createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
 }
 
+function packageResolver(baseFile) {
+  return createRequire(baseFile);
+}
+
+function packageJson(packageName, baseFile) {
+  const req = packageResolver(baseFile);
+  const packageJsonPath = req.resolve(`${packageName}/package.json`);
+  return {
+    path: packageJsonPath,
+    dir: path.dirname(packageJsonPath),
+    value: readJson(packageJsonPath),
+  };
+}
+
+function packageAsset(packageName, assetPath, baseFile) {
+  const metadata = packageJson(packageName, baseFile);
+  const req = packageResolver(baseFile);
+  let assetFile = '';
+  try {
+    assetFile = req.resolve(`${packageName}/${assetPath}`);
+  } catch {
+    assetFile = path.join(metadata.dir, assetPath);
+  }
+  if (!fs.existsSync(assetFile)) return null;
+  const raw = fs.readFileSync(assetFile, 'utf8');
+  let parsed = null;
+  if (assetFile.endsWith('.json')) {
+    parsed = JSON.parse(raw);
+  }
+  return {
+    path: assetPath,
+    packagePath: path
+      .relative(metadata.dir, assetFile)
+      .split(path.sep)
+      .join('/'),
+    sha256: `sha256:${sha256File(assetFile)}`,
+    contract: parsed && typeof parsed === 'object' ? parsed.contract || '' : '',
+    parsed,
+  };
+}
+
+function requireAsset(packageName, assetPath, baseFile) {
+  const asset = packageAsset(packageName, assetPath, baseFile);
+  if (!asset) {
+    throw new Error(`${packageName}/${assetPath} is missing`);
+  }
+  return asset;
+}
+
+function assetSummary(asset) {
+  return {
+    path: asset.path,
+    sha256: asset.sha256,
+    contract: asset.contract || undefined,
+  };
+}
+
+function buildUpstreamKfdAggregate() {
+  const kfdPackage = packageJson('@kungfu-tech/kfd', SDK_CLI_PATH);
+  const libnodePackage = packageJson('@kungfu-tech/libnode', CORE_PACKAGE_PATH);
+  const buildchainPackage = packageJson(
+    '@kungfu-tech/buildchain',
+    SDK_CLI_PATH,
+  );
+  const kfdAssets = [
+    requireAsset('@kungfu-tech/kfd', 'kfd.release.json', SDK_CLI_PATH),
+    requireAsset(
+      '@kungfu-tech/kfd',
+      'buildchain/kfd-1/contract-world.witness.json',
+      SDK_CLI_PATH,
+    ),
+    requireAsset(
+      '@kungfu-tech/kfd',
+      'buildchain/kfd-2/public-release-trust.claim.json',
+      SDK_CLI_PATH,
+    ),
+    requireAsset(
+      '@kungfu-tech/kfd',
+      'buildchain/kfd-3/collaboration-interface.json',
+      SDK_CLI_PATH,
+    ),
+    requireAsset('@kungfu-tech/kfd', 'standards.json', SDK_CLI_PATH),
+  ];
+  const libnodeRelease = requireAsset(
+    '@kungfu-tech/libnode',
+    'libnode.release.json',
+    CORE_PACKAGE_PATH,
+  );
+  const buildchainAssets = [
+    requireAsset(
+      '@kungfu-tech/buildchain',
+      'site/kfd-claims.json',
+      SDK_CLI_PATH,
+    ),
+    requireAsset(
+      '@kungfu-tech/buildchain',
+      'site/node-api-registry.json',
+      SDK_CLI_PATH,
+    ),
+    requireAsset(
+      '@kungfu-tech/buildchain',
+      'docs/kfd-support.md',
+      SDK_CLI_PATH,
+    ),
+    requireAsset('@kungfu-tech/buildchain', 'kfd-3-surfaces', SDK_CLI_PATH),
+  ];
+  const kfdCollaboration = kfdAssets.find((asset) =>
+    asset.path.includes('collaboration-interface.json'),
+  )?.parsed;
+  const kfdRelease = kfdAssets.find(
+    (asset) => asset.path === 'kfd.release.json',
+  )?.parsed;
+  return {
+    schemaVersion: 1,
+    contract: 'kungfu-upstream-kfd-aggregate',
+    product: {
+      id: 'kungfu',
+      name: 'Kungfu',
+      repository: 'kungfu-systems/kungfu',
+    },
+    source: {
+      generator: 'scripts/buildchain-kfd-evidence.mjs',
+      packageResolution: [
+        'developer/sdk resolves @kungfu-tech/kfd and @kungfu-tech/buildchain',
+        'framework/core resolves @kungfu-tech/libnode',
+      ],
+    },
+    upstreams: [
+      {
+        id: 'kfd',
+        role: 'standard-and-schema-provider',
+        package: {
+          name: kfdPackage.value.name,
+          version: kfdPackage.value.version,
+        },
+        repository: 'kungfu-systems/kfd',
+        kfd: {
+          kfd1: 'exported-witness',
+          kfd2: 'exported-claim',
+          kfd3: 'exported-collaboration-interface',
+        },
+        releaseAnchor: kfdRelease || null,
+        kfd3SurfaceCount: Array.isArray(kfdCollaboration?.surfaces)
+          ? kfdCollaboration.surfaces.length
+          : 0,
+        assets: kfdAssets.map(assetSummary),
+      },
+      {
+        id: 'libnode',
+        role: 'embedded-node-runtime-provider',
+        package: {
+          name: libnodePackage.value.name,
+          version: libnodePackage.value.version,
+        },
+        repository: 'kungfu-systems/libnode',
+        kfd: {
+          kfd1: 'release-anchor-facts',
+          kfd2: 'release-passport-required',
+          kfd3: 'package-runtime-surface',
+        },
+        releaseAnchor: libnodeRelease.parsed,
+        assets: [assetSummary(libnodeRelease)],
+        residualRisk: [
+          'This libnode package version ships libnode.release.json as the package-level release anchor; full upstream trust should be read from its Buildchain release passport.',
+        ],
+      },
+      {
+        id: 'buildchain',
+        role: 'release-passport-and-kfd-gate-provider',
+        package: {
+          name: buildchainPackage.value.name,
+          version: buildchainPackage.value.version,
+        },
+        repository: 'kungfu-systems/buildchain',
+        kfd: {
+          kfd1: 'gate-provider',
+          kfd2: 'claim-provider',
+          kfd3: 'surface-query-provider',
+        },
+        publicExports: [
+          '@kungfu-tech/buildchain/kfd-gate',
+          '@kungfu-tech/buildchain/kfd-3-surfaces',
+          '@kungfu-tech/buildchain/buildchain-kfd-claims',
+          '@kungfu-tech/buildchain/release-passport',
+        ],
+        assets: buildchainAssets.map(assetSummary),
+      },
+    ],
+    summary: {
+      upstreamCount: 3,
+      kfdAwareUpstreams: ['kfd', 'libnode', 'buildchain'],
+      packageVersions: {
+        kfd: kfdPackage.value.version,
+        libnode: libnodePackage.value.version,
+        buildchain: buildchainPackage.value.version,
+      },
+    },
+  };
+}
+
 function gitValue(args) {
   try {
     return execFileSync('git', args, {
@@ -211,18 +422,18 @@ function sdkAndProductSurfaces() {
   return [
     fileSurface({
       id: 'kungfu.kfd.query',
-      name: 'kungfu kfd query|check|witness',
+      name: 'kungfu kfd query|check|witness|upstream|aggregate',
       kind: 'cli',
       sourcePath: 'framework/core/src/python/kungfu/cli/commands/kfd.py',
-      evidencePath: 'developer/sdk/kfd/buildchain.kfd3.json',
+      evidencePath: 'developer/sdk/kfd/upstream-aggregate.json',
       maturity: 'stable',
     }),
     fileSurface({
       id: 'kungfu.sdk.kfd.query',
-      name: 'kungfu sdk kfd query|check|witness',
+      name: 'kungfu sdk kfd query|check|witness|upstream|aggregate',
       kind: 'cli',
       sourcePath: 'developer/sdk/src/sdk.js',
-      evidencePath: 'developer/sdk/kfd/buildchain.kfd3.json',
+      evidencePath: 'developer/sdk/kfd/upstream-aggregate.json',
       maturity: 'stable',
     }),
     fileSurface({
@@ -302,7 +513,7 @@ function uniqueById(surfaces) {
   return [...byId.values()].sort((a, b) => a.id.localeCompare(b.id));
 }
 
-function buildKfd3Registry() {
+function buildKfd3Registry(upstreamAggregate = buildUpstreamKfdAggregate()) {
   const surfaces = uniqueById([
     ...agentApiSurfaces(),
     ...sdkAndProductSurfaces(),
@@ -317,6 +528,13 @@ function buildKfd3Registry() {
       package: '@kungfu-tech/artifact-kungfu',
     },
     registryPath: 'buildchain.kfd3.json',
+    upstreamKfd: {
+      aggregatePath: 'developer/sdk/kfd/upstream-aggregate.json',
+      upstreamCount: upstreamAggregate.summary.upstreamCount,
+      kfdAwareUpstreams: upstreamAggregate.summary.kfdAwareUpstreams,
+      packageVersions: upstreamAggregate.summary.packageVersions,
+      digest: `sha256:${sha256Json(upstreamAggregate)}`,
+    },
     surfaces,
     policy: {
       declaredButMissing: 'fail',
@@ -341,6 +559,7 @@ function buildCollaborationInterface(registry) {
     schemaVersion: 1,
     contract: 'kungfu-buildchain-kfd-3-surface-registry',
     product: registry.product,
+    upstreamKfd: registry.upstreamKfd,
     surfaces: registry.surfaces,
     audit: {
       status: 'passed',
@@ -366,6 +585,7 @@ function buildKfd3PrebuildWitness(registry) {
       registryDigest: `sha256:${sha256Json(registry)}`,
     },
     sourceRegistry: registryDescriptor(registry),
+    upstreamKfd: registry.upstreamKfd,
     expectedArtifactVerification: {
       command: ARTIFACT_VERIFY_COMMAND,
     },
@@ -413,6 +633,7 @@ function buildKfd3ArtifactWitness(registry, { runVerify = true } = {}) {
       path: 'artifact/release',
     },
     sourceRegistry: registryDescriptor(registry),
+    upstreamKfd: registry.upstreamKfd,
     collaborationInterfaceDigest: `sha256:${sha256Json(collaborationInterface)}`,
     exposedSurfaces: registry.surfaces,
     residualRisk: [],
@@ -524,7 +745,13 @@ async function buildQuery(registry) {
   }
 }
 
-function buildSummary({ registry, kfd1Witness, kfd2Summary, prebuildWitness }) {
+function buildSummary({
+  registry,
+  upstreamAggregate,
+  kfd1Witness,
+  kfd2Summary,
+  prebuildWitness,
+}) {
   return {
     schemaVersion: 1,
     contract: 'kungfu-buildchain-kfd-evidence-summary',
@@ -554,6 +781,8 @@ function buildSummary({ registry, kfd1Witness, kfd2Summary, prebuildWitness }) {
     },
     kfd3: {
       registry: 'buildchain.kfd3.json',
+      upstreamAggregate: 'developer/sdk/kfd/upstream-aggregate.json',
+      upstreamCount: upstreamAggregate.summary.upstreamCount,
       prebuildWitness: rel(KFD3_PREBUILD_WITNESS_PATH),
       artifactWitness: rel(KFD3_ARTIFACT_WITNESS_PATH),
       query: rel(KFD3_QUERY_PATH),
@@ -565,7 +794,8 @@ function buildSummary({ registry, kfd1Witness, kfd2Summary, prebuildWitness }) {
 }
 
 async function runArtifactWitness(options) {
-  const registry = buildKfd3Registry();
+  const upstreamAggregate = buildUpstreamKfdAggregate();
+  const registry = buildKfd3Registry(upstreamAggregate);
   const witness = buildKfd3ArtifactWitness(registry, { runVerify: true });
   if (options.json) process.stdout.write(renderJson(witness));
   else
@@ -575,18 +805,25 @@ async function runArtifactWitness(options) {
 }
 
 async function runCheckOrWrite(options) {
-  const registry = buildKfd3Registry();
+  const upstreamAggregate = buildUpstreamKfdAggregate();
+  const registry = buildKfd3Registry(upstreamAggregate);
   const kfd1Witness = buildKfd1Witness();
   const kfd2Summary = buildKfd2Claims({ write: options.write });
   if (options.write) {
     writeIfChanged(KFD3_REGISTRY_PATH, registry);
     writeIfChanged(SDK_KFD3_REGISTRY_PATH, registry);
+    writeIfChanged(SDK_KFD_UPSTREAM_AGGREGATE_PATH, upstreamAggregate);
   } else {
     assertCurrent(KFD3_REGISTRY_PATH, registry, 'Buildchain KFD-3 registry');
     assertCurrent(
       SDK_KFD3_REGISTRY_PATH,
       registry,
       'SDK packaged KFD-3 registry',
+    );
+    assertCurrent(
+      SDK_KFD_UPSTREAM_AGGREGATE_PATH,
+      upstreamAggregate,
+      'SDK packaged upstream KFD aggregate',
     );
   }
   const prebuildWitness = buildKfd3PrebuildWitness(registry);
@@ -596,6 +833,7 @@ async function runCheckOrWrite(options) {
   const query = await buildQuery(registry);
   const summary = buildSummary({
     registry,
+    upstreamAggregate,
     kfd1Witness,
     kfd2Summary,
     prebuildWitness,
@@ -630,7 +868,8 @@ async function runCheckOrWrite(options) {
 }
 
 async function runQuery(options) {
-  const registry = buildKfd3Registry();
+  const upstreamAggregate = buildUpstreamKfdAggregate();
+  const registry = buildKfd3Registry(upstreamAggregate);
   const query = await buildQuery(registry);
   if (options.json) process.stdout.write(renderJson(query));
   else

@@ -269,6 +269,7 @@ test('kfd check verifies the packaged KFD-3 registry projection', () => {
   assert.equal(data.ok, true);
   assert.match(data.registry.sha256, /^sha256:[0-9a-f]{64}$/);
   assert.ok(data.registry.surfaceCount >= 1);
+  assert.equal(data.upstreamAggregate.upstreamCount, 3);
   assert.equal(data.query.kfd.kfd3, 'declared');
 });
 
@@ -278,6 +279,32 @@ test('kfd witness emits an installed SDK KFD-3 witness', () => {
   assert.equal(data.standard, 'kfd-3');
   assert.equal(data.witnessKind, 'installed-sdk-query');
   assert.ok(data.exposedSurfaces.some((row) => row.id === 'kungfu.kfd.query'));
+});
+
+test('kfd upstream exposes aggregated upstream KFD package facts', () => {
+  const data = runJson(['kfd', 'upstream', '--json']);
+  assert.equal(data.contract, 'kungfu-upstream-kfd-aggregate');
+  assert.equal(data.summary.upstreamCount, 3);
+  assert.equal(data.summary.packageVersions.kfd, kfdPackage.version);
+  assert.equal(
+    data.summary.packageVersions.buildchain,
+    buildchainPackage.version,
+  );
+  assert.ok(
+    data.upstreams.some(
+      (row) =>
+        row.id === 'libnode' && row.package.version === '22.22.3-kf.3-alpha.16',
+    ),
+  );
+});
+
+test('kfd aggregate joins own KFD-3 query facts with upstream KFD facts', () => {
+  const data = runJson(['kfd', 'aggregate', '--json']);
+  assert.equal(data.contract, 'kungfu-sdk-kfd-aggregate');
+  assert.equal(data.own.surfaceCount >= 1, true);
+  assert.equal(data.upstream.summary.upstreamCount, 3);
+  assert.equal(data.kfd.kfd3, 'declared-and-aggregated');
+  assert.match(data.source.upstreamAggregate.sha256, /^sha256:[0-9a-f]{64}$/);
 });
 
 test('adopt refuses a source path that does not match the registry', () => {

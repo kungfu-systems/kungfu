@@ -65,7 +65,7 @@ Git.
 |---|---|---|---|---|---|
 | KFD-1: contracts must not drift | `kungfu sdk add contract <surface>` | Contract source, schema/version metadata, registry entry, versioning/register prompt, drift fixture, known-limits stub | `kungfu contract verify --json`; `kungfu contract show <surface> --json`; packaged contract hash list | `scripts/buildchain-kfd-evidence.mjs` emits `.buildchain/kfd-1/contract-world.witness.json`, and the release workflow passes it to Buildchain 2.10 | Downgrade if the surface is not registered, dev/runtime/frozen artifacts disagree, or known limits are missing |
 | KFD-2: trust starts from facts | `kungfu sdk add fact-surface <name>` | Event schema or `.fbs`, msg type allocation, append helper, projection/store stub, `show/list --json` API, append-fold-readback fixture | Local append -> fold -> readback probe; manifest with schema hash and responsibility fields such as status, next action, decision, validation, artifact, and linked run | `scripts/kfd2-release-claims.mjs` emits raw claim files under `.buildchain/kfd-2/claims/`, and the release workflow passes them to Buildchain 2.10 | Downgrade if the claim is only prose, no local readback exists, responsibility fields are absent, or cost/attribution certainty is ambiguous |
-| KFD-3: cooperation starts from transparent value | Current first slice: `kfd3_api.registry.json` + `@kfd3_api("<api-id>")`; SDK/product surfaces are projected into `buildchain.kfd3.json` and the SDK-packaged copy | Agent docs entry, capabilities/commands metadata, mode-selection or onboarding hook, constraint declaration, CLI/API examples, known-limits stub, and local registry/schema | `kungfu agent capabilities --json`; `kungfu agent choose-mode --json`; `kungfu agent verify --json`; `kungfu kfd query --json`; `kungfu sdk kfd query --json`; `./kungfu-code kfd:query`; probe that an agent can discover value, boundary, next action, known limits, and the declared control surface | `scripts/buildchain-kfd-evidence.mjs` emits KFD-3 prebuild and artifact witnesses; the release workflow passes the prebuild witness and artifact verify command to Buildchain 2.10 | Downgrade if the surface is GUI-only, prose-only, stale, hides constraints, has no machine-readable entrypoint, or exposes runtime commands not declared in the registry |
+| KFD-3: cooperation starts from transparent value | Current first slice: `kfd3_api.registry.json` + `@kfd3_api("<api-id>")`; SDK/product surfaces are projected into `buildchain.kfd3.json`, the SDK-packaged copy, and `developer/sdk/kfd/upstream-aggregate.json` | Agent docs entry, capabilities/commands metadata, mode-selection or onboarding hook, constraint declaration, CLI/API examples, known-limits stub, local registry/schema, and upstream KFD aggregate | `kungfu agent capabilities --json`; `kungfu agent choose-mode --json`; `kungfu agent verify --json`; `kungfu kfd query --json`; `kungfu kfd upstream --json`; `kungfu kfd aggregate --json`; `kungfu sdk kfd query --json`; `./kungfu-code kfd:query`; probe that an agent can discover value, boundary, next action, known limits, upstream KFD facts, and the declared control surface | `scripts/buildchain-kfd-evidence.mjs` emits KFD-3 prebuild and artifact witnesses; the release workflow passes the prebuild witness and artifact verify command to Buildchain 2.10 | Downgrade if the surface is GUI-only, prose-only, stale, hides constraints, has no machine-readable entrypoint, or exposes runtime commands not declared in the registry |
 
 ## First Implementation Decision
 
@@ -253,9 +253,13 @@ SDK tooling:
   kungfu kfd query --json
   kungfu kfd check --json
   kungfu kfd witness --json
+  kungfu kfd upstream --json
+  kungfu kfd aggregate --json
   kungfu sdk kfd query --json
   kungfu sdk kfd check --json
   kungfu sdk kfd witness --json
+  kungfu sdk kfd upstream --json
+  kungfu sdk kfd aggregate --json
   ./kungfu-code kfd:buildchain
   ./kungfu-code kfd:buildchain:check
   ./kungfu-code kfd:query
@@ -391,7 +395,11 @@ Kungfu exposes one local command set:
 
 ```sh
 kungfu kfd query --json
+kungfu kfd upstream --json
+kungfu kfd aggregate --json
 kungfu sdk kfd query --json
+kungfu sdk kfd upstream --json
+kungfu sdk kfd aggregate --json
 ./kungfu-code kfd:buildchain
 ./kungfu-code kfd:buildchain:check
 ./kungfu-code kfd:query
@@ -401,13 +409,16 @@ node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json
 The installed `kungfu kfd` command delegates to the SDK-distributed bridge, so a
 user or agent can query KFD-3 capability facts from a packaged Kungfu runtime
 without separately installing Buildchain. The `kungfu-code` commands remain the
-repository-side evidence generation and release-gate entrypoints.
+repository-side evidence generation and release-gate entrypoints. The
+`upstream`/`aggregate` commands expose the SDK-packaged upstream KFD aggregate
+for KFD, libnode, and Buildchain.
 
 `kfd:buildchain` writes:
 
 ```text
 buildchain.kfd3.json
 developer/sdk/kfd/buildchain.kfd3.json
+developer/sdk/kfd/upstream-aggregate.json
 .buildchain/kfd-1/contract-world.witness.json
 .buildchain/kfd-2/claims/*.json
 .buildchain/kfd-3/collaboration-interface.prebuild.json

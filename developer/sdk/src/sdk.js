@@ -41,6 +41,11 @@ const require = createRequire(import.meta.url);
 const SDK_CLI = fileURLToPath(import.meta.url);
 const SDK_ROOT = path.resolve(path.dirname(SDK_CLI), '..');
 const SDK_KFD3_REGISTRY = path.join(SDK_ROOT, 'kfd', 'buildchain.kfd3.json');
+const SDK_KFD_UPSTREAM_AGGREGATE = path.join(
+  SDK_ROOT,
+  'kfd',
+  'upstream-aggregate.json',
+);
 const isWin = process.platform === 'win32';
 
 /**
@@ -61,7 +66,7 @@ function usage(code) {
       '       kungfu sdk contract witness [--json]',
       '       kungfu sdk contract audit [--json]',
       '       kungfu sdk contract add <surface> [--source <path>] [--json]',
-      '       kungfu sdk kfd query|check|witness [--json]',
+      '       kungfu sdk kfd query|check|witness|upstream|aggregate [--json]',
       '       kungfu sdk kfx build | clean',
       '       kungfu sdk product gui dev|build|pack|dist [--dir <app-dir>] [--dry-run]',
       '       kungfu sdk product tui dev|build|bundle|dist [--dir <tui-dir>] [--dry-run]',
@@ -104,9 +109,10 @@ function usage(code) {
       'one local contract-world witness for config/kfx/skill without duplicating',
       'standard keys or JSON formatting rules.',
       '',
-      'kfd query/check/witness exposes Kungfu KFD-3 capability facts through the',
-      'SDK-distributed Buildchain bridge, so users do not need a separate',
-      'buildchain executable installation.',
+      'kfd query/check/witness exposes Kungfu KFD-3 capability facts; upstream',
+      'and aggregate expose the SDK-packaged KFD view of Kungfu plus upstream',
+      'KFD/libnode/Buildchain package facts, without a separate buildchain',
+      'executable installation.',
       '',
     ].join('\n'),
   );
@@ -2573,6 +2579,35 @@ function resolveKfd3Registry() {
 }
 
 /**
+ * @returns {string}
+ */
+function resolveKfdUpstreamAggregate() {
+  const override = process.env.KUNGFU_KFD_UPSTREAM_AGGREGATE || '';
+  const candidates = [
+    override,
+    path.join(
+      process.cwd(),
+      'developer',
+      'sdk',
+      'kfd',
+      'upstream-aggregate.json',
+    ),
+    findUp(
+      process.cwd(),
+      path.join('developer', 'sdk', 'kfd', 'upstream-aggregate.json'),
+    ),
+    SDK_KFD_UPSTREAM_AGGREGATE,
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    const resolved = path.resolve(candidate);
+    if (fs.existsSync(resolved)) return resolved;
+  }
+  fail(
+    'KFD upstream aggregate not found; run ./kungfu-code kfd:buildchain or install a SDK package that includes kfd/upstream-aggregate.json',
+  );
+}
+
+/**
  * @returns {{ path: string, registry: Record<string, any> }}
  */
 function readKfd3Registry() {
@@ -2580,6 +2615,17 @@ function readKfd3Registry() {
   return {
     path: registryPath,
     registry: JSON.parse(fs.readFileSync(registryPath, 'utf8')),
+  };
+}
+
+/**
+ * @returns {{ path: string, aggregate: Record<string, any> }}
+ */
+function readKfdUpstreamAggregate() {
+  const aggregatePath = resolveKfdUpstreamAggregate();
+  return {
+    path: aggregatePath,
+    aggregate: JSON.parse(fs.readFileSync(aggregatePath, 'utf8')),
   };
 }
 
@@ -2659,6 +2705,43 @@ async function kfdQuery(options) {
 }
 
 /**
+ * @param {CliOptions} options
+ * @returns {Promise<Record<string, any>>}
+ */
+async function kfdAggregate(options) {
+  const { path: registryPath, registry } = readKfd3Registry();
+  const { path: aggregatePath, aggregate } = readKfdUpstreamAggregate();
+  const query = await kfdQuery(options);
+  return {
+    schemaVersion: 1,
+    contract: 'kungfu-sdk-kfd-aggregate',
+    product: registry.product || { id: 'kungfu', name: 'Kungfu' },
+    source: {
+      registry: {
+        path: path.relative(process.cwd(), registryPath) || '.',
+        sha256: sha256File(registryPath),
+      },
+      upstreamAggregate: {
+        path: path.relative(process.cwd(), aggregatePath) || '.',
+        sha256: sha256File(aggregatePath),
+      },
+    },
+    own: {
+      query,
+      surfaceCount: Array.isArray(registry.surfaces)
+        ? registry.surfaces.length
+        : 0,
+    },
+    upstream: aggregate,
+    kfd: {
+      kfd1: 'registry-and-upstream-facts',
+      kfd2: 'release-passport-required',
+      kfd3: 'declared-and-aggregated',
+    },
+  };
+}
+
+/**
  * @param {string | undefined} command
  * @param {CliOptions} options
  * @returns {Promise<void>}
@@ -2677,6 +2760,7 @@ async function kfd(command, options) {
   }
   if (command === 'check') {
     const query = await kfdQuery(options);
+    const { path: aggregatePath, aggregate } = readKfdUpstreamAggregate();
     const output = {
       schema: 'kungfu.sdk.kfd-check/v1',
       ok: true,
@@ -2686,6 +2770,11 @@ async function kfd(command, options) {
         surfaceCount: Array.isArray(registry.surfaces)
           ? registry.surfaces.length
           : 0,
+      },
+      upstreamAggregate: {
+        path: path.relative(process.cwd(), aggregatePath) || '.',
+        sha256: sha256File(aggregatePath),
+        upstreamCount: aggregate.summary?.upstreamCount || 0,
       },
       query: {
         status: query.status || 'unknown',
@@ -2699,6 +2788,26 @@ async function kfd(command, options) {
     else
       process.stdout.write(
         `Kungfu KFD-3 check: ok, capabilities=${output.query.capabilityCount}\n`,
+      );
+    return;
+  }
+  if (command === 'upstream') {
+    const { aggregate } = readKfdUpstreamAggregate();
+    if (options.json)
+      process.stdout.write(`${JSON.stringify(aggregate, null, 2)}\n`);
+    else
+      process.stdout.write(
+        `Kungfu upstream KFD aggregate: ${aggregate.summary?.upstreamCount || 0} upstream(s)\n`,
+      );
+    return;
+  }
+  if (command === 'aggregate') {
+    const aggregate = await kfdAggregate(options);
+    if (options.json)
+      process.stdout.write(`${JSON.stringify(aggregate, null, 2)}\n`);
+    else
+      process.stdout.write(
+        `Kungfu KFD aggregate: own=${aggregate.own.surfaceCount}, upstream=${aggregate.upstream.summary?.upstreamCount || 0}\n`,
       );
     return;
   }
@@ -2726,7 +2835,9 @@ async function kfd(command, options) {
       );
     return;
   }
-  fail('unknown kfd command (supported: query, check, witness)');
+  fail(
+    'unknown kfd command (supported: query, check, witness, upstream, aggregate)',
+  );
 }
 
 const { positional, options } = parseArgs(process.argv.slice(2));

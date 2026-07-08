@@ -6,7 +6,7 @@
     "kfd": {
       "package": {
         "name": "@kungfu-tech/kfd",
-        "version": "1.0.0-alpha.16",
+        "version": "1.0.0-alpha.17",
         "repository": "git+https://github.com/kungfu-systems/kfd.git"
       },
       "standard": {

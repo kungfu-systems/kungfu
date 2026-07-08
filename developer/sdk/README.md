@@ -73,15 +73,22 @@ install the `buildchain` executable separately:
 kungfu kfd query --json
 kungfu kfd check --json
 kungfu kfd witness --json
+kungfu kfd upstream --json
+kungfu kfd aggregate --json
 
 kungfu sdk kfd query --json
 kungfu sdk kfd check --json
 kungfu sdk kfd witness --json
+kungfu sdk kfd upstream --json
+kungfu sdk kfd aggregate --json
 ```
 
 `kungfu kfd ...` is the installed CLI bridge. It delegates to the SDK-distributed
 implementation and returns the same machine-readable capability facts as
-`kungfu sdk kfd ...`.
+`kungfu sdk kfd ...`. `query` stays focused on Kungfu's own declared capability
+facts; `upstream` shows the SDK-packaged KFD aggregate for KFD, libnode, and
+Buildchain; `aggregate` joins both views for an agent that wants the final
+product plus upstream trust surface in one response.
 
 ## KFD-1 Contract Prototype
 

@@ -225,7 +225,11 @@ passport inputs:
 
 ```sh
 kungfu kfd query --json
+kungfu kfd upstream --json
+kungfu kfd aggregate --json
 kungfu sdk kfd query --json
+kungfu sdk kfd upstream --json
+kungfu sdk kfd aggregate --json
 ./kungfu-code kfd:buildchain
 ./kungfu-code kfd:buildchain:check
 ./kungfu-code kfd:query
@@ -235,12 +239,15 @@ node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json
 `kungfu kfd ...` is the installed-runtime bridge for users and agents;
 `kungfu sdk kfd ...` exposes the same SDK-distributed Buildchain bridge directly.
 The `./kungfu-code kfd:*` commands are the repository development and release
-evidence generators.
+evidence generators. `query` reports Kungfu's own declared surfaces, while
+`upstream` and `aggregate` expose the packaged KFD/libnode/Buildchain upstream
+KFD aggregate.
 
 The generator writes a tracked Buildchain-facing KFD-3 registry at
 [`buildchain.kfd3.json`](../buildchain.kfd3.json), writes a packaged SDK copy at
-`developer/sdk/kfd/buildchain.kfd3.json`, then writes ignored release evidence
-under `.buildchain/`:
+`developer/sdk/kfd/buildchain.kfd3.json`, writes the SDK-packaged upstream
+aggregate at `developer/sdk/kfd/upstream-aggregate.json`, then writes ignored
+release evidence under `.buildchain/`:
 
 ```text
 .buildchain/kfd-1/contract-world.witness.json
