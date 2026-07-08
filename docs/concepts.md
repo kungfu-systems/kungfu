@@ -29,6 +29,7 @@ principles behind them see [`design-philosophy.md`](design-philosophy.md).
 | **channel** | A source/destination communication edge between locations. Channels are used for runtime read/write/request paths; they are transport, not fact authority. |
 | **source** | A logical storage-sync registry entry: a local profile, imported bundle, remote Kungfu runtime, or adapter that can enumerate facts for import. |
 | **manifest** | The trust root for a portable fact-ledger bundle or accepted segment: format version, capture boundary, source metadata, payload inventory, schema bindings, and checksums. |
+| **observer timeline projection** | A deterministic user-visible order over accepted facts from one or more sources, produced from an explicit observer policy rather than a claimed universal clock. Causal links dominate policy; concurrent facts may be ordered by source priority and tie-breakers. |
 | **zero-copy** | The same in-process journal bytes are shared across C++, Python, and Node **without serialization** on the hot path. |
 | **replay** | Re-running recorded journals on the *same* runtime and the *same* semantics as live, so recorded streams reproduce with high precision. |
 

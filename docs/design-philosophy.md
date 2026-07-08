@@ -140,6 +140,13 @@ Every ADR is a decision in service of these two principles. Reading the
 [ADRs](../framework/core/docs/adr) in that light shows the architecture as a
 single, coherent answer rather than a sequence of unrelated calls.
 
+For distributed timelines, the same stance means Kungfu does not pretend to own
+an impossible global clock. It records facts, causality, source provenance, and
+the observer policy used to project concurrent facts into a stable view. The
+load-bearing truth is not "this wall-clock order is reality"; it is "this view
+can be reproduced from declared facts and policy." See
+[ADR-0021](../framework/core/docs/adr/ADR-0021-observer-relative-timeline-projection.md).
+
 ## One move, used everywhere
 
 Step back from the individual decisions and they collapse into a single act. Each

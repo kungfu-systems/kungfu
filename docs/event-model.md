@@ -13,6 +13,12 @@ The higher-level action-timeline decision is
 Kungfu records the causal action chain and attached evidence, not a complete
 snapshot of the outside world.
 
+For multi-machine views, frame time is not treated as a universal clock.
+[ADR-0021](../framework/core/docs/adr/ADR-0021-observer-relative-timeline-projection.md)
+pins the rule: Kungfu stores causal facts, source provenance, accepted ranges,
+and payload evidence; a user-visible mixed-source timeline is a deterministic
+projection from an explicit observer policy. Causal links dominate that policy.
+
 ## The journal
 
 The data plane is a single, append-only log of **frames** — `yijinjing`. A
@@ -71,6 +77,11 @@ as live: there is no separate replay engine. Because the frames carry
 nanosecond `gen_time`, the `trigger_frame_uid` causal links, and a fixed layout,
 a recorded stream reproduces with high precision. The determinism this provides,
 and its boundaries, are stated in [`contracts.md`](contracts.md).
+
+Across sources or machines, replay and inspection should prefer causal links,
+accepted ranges, and observer projection metadata over wall-clock order alone.
+Two observers may keep different stable projections of concurrent facts; the
+view is trustworthy when its policy is explicit and reproducible.
 
 For agent runs, replay is layered. Forensic replay reopens, decodes, verifies,
 and walks the recorded causal tree without re-executing external effects.

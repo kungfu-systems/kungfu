@@ -33,6 +33,10 @@ A record's **Status** says where it stands:
 | [0015](ADR-0015-kungfu-skill-agent-context-layer.md) | accepted | Kungfu Skill as the agent context layer above kfx |
 | [0016](ADR-0016-managed-session-host-placement.md) | accepted | managed session host placement — move the durable session host to main so multiple OS windows share it |
 | [0017](ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md) | proposed | dual-host kfx loading — a host-agnostic load plan shared by GUI and CLI, and the background `service` facet as the first OS-sandbox caller |
+| [0018](ADR-0018-runtime-storage-service-architecture.md) | accepted | runtime storage service as the persistence contract above journal, payloads, and projections |
+| [0019](ADR-0019-git-like-source-sync-over-location-and-channel.md) | accepted | Git-like source sync over Kungfu location and channel |
+| [0020](ADR-0020-agent-action-timeline-and-replay-boundary.md) | accepted | agent action timeline and rewind/replay boundary |
+| [0021](ADR-0021-observer-relative-timeline-projection.md) | accepted | observer-relative timeline projection over causal facts |
 
 ## Reading by theme
 
@@ -64,6 +68,15 @@ A record's **Status** says where it stands:
   (Kungfu Skill as the agent-facing layer above kfx: `SKILL.md` as the minimum
   valid source, compact catalog injection, Node/Python manage modes, and kfx
   dependency composition without bypassing the kfx trust gate).
+- **Runtime facts, storage, sync, and replay** —
+  [0018](ADR-0018-runtime-storage-service-architecture.md) (the storage service
+  above journal, payloads and projections),
+  [0019](ADR-0019-git-like-source-sync-over-location-and-channel.md)
+  (source sync over `location` and `channel`),
+  [0020](ADR-0020-agent-action-timeline-and-replay-boundary.md) (the causal
+  action timeline and replay boundary), and
+  [0021](ADR-0021-observer-relative-timeline-projection.md) (stable
+  observer-relative timeline projection without a universal global clock).
 - **Cross-cutting principle** — [0009](ADR-0009-load-bearing-self-bootstrap.md)
   (load-bearing self-bootstrap), which also names the general law that
   [`docs/architecture.md` § The build dogfoods the SDK](../../../../docs/architecture.md)
@@ -78,3 +91,6 @@ A record's **Status** says where it stands:
   below the tag.
 - [`docs/skills.md`](../../../../docs/skills.md) — the user-facing and
   implementation-facing design for Kungfu Skills.
+- [`docs/runtime-storage-service.md`](../../../../docs/runtime-storage-service.md) —
+  the staged storage command surface, fsck/export path, and source-adapter
+  direction.
