@@ -21,6 +21,7 @@ from typing import Any, cast
 
 import kungfu
 
+from kungfu.action_envelope import CONTENT_HASH_ALGORITHM_SHA256
 from kungfu.work import (
     ACTION_ARTIFACT_RECORDED,
     ACTION_CHECKPOINT_RECORDED,
@@ -181,7 +182,7 @@ class WorkStore:
                 "name": WORK_NAME,
                 "dest": PUBLIC_DEST,
             },
-            "hash_algorithm": "sha256",
+            "hash_algorithm": CONTENT_HASH_ALGORITHM_SHA256,
             "schema_bindings": {
                 action_type: {
                     "schema_kind": "flatbuffers",

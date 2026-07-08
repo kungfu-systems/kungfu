@@ -12,6 +12,7 @@ ACTION_ENVELOPE_SCHEMA = "kungfu.action-envelope/v1"
 PAYLOAD_ENCODING_FLATBUFFERS = "flatbuffers"
 PAYLOAD_ENCODING_JSON = "json"
 CONTENT_TRANSFER_BASE64 = "base64"
+CONTENT_HASH_ALGORITHM_SHA256 = "sha256"
 
 
 def canonical_json_bytes(value: Any) -> bytes:

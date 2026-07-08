@@ -90,6 +90,11 @@ class ImportStore:
             "data_length": receipt.data_length,
             "data_type": receipt.data_type,
             "integrity_version": _receipt_value(receipt, "integrity_version", 0),
+            "checksum_algorithm": getattr(
+                yjj,
+                "FRAME_CHECKSUM_ALGORITHM_FNV1A64",
+                payloads.FRAME_CHECKSUM_ALGORITHM_FNV1A64,
+            ),
             "payload_checksum": _receipt_value(receipt, "payload_checksum", 0),
             "frame_checksum": _receipt_value(receipt, "frame_checksum", 0),
             "journal_payload_hash": payloads.payload_hash(data),
@@ -143,7 +148,7 @@ class ImportStore:
                         "content_type": entry.get(
                             "content_type", payloads.CONTENT_TYPE_JSON
                         ),
-                        "hash_algorithm": "sha256",
+                        "hash_algorithm": payloads.CONTENT_HASH_ALGORITHM_SHA256,
                         "hash": entry.get("payload_hash"),
                         "byte_len": entry.get("byte_len"),
                         "state": entry.get(
@@ -217,7 +222,7 @@ class ImportStore:
                 "name": ATLAS_NAME,
                 "dest": PUBLIC_DEST,
             },
-            "hash_algorithm": "sha256",
+            "hash_algorithm": payloads.CONTENT_HASH_ALGORITHM_SHA256,
             "schema_bindings": {
                 str(carrier_type): {
                     "schema_kind": "json",

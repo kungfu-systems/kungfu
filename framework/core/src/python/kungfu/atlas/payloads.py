@@ -6,6 +6,7 @@ from typing import Any, cast
 
 from kungfu.action_envelope import (
     ACTION_ENVELOPE_SCHEMA,
+    CONTENT_HASH_ALGORITHM_SHA256,
     build_action_envelope as build_common_action_envelope,
     canonical_json_bytes,
     payload_hash,
@@ -17,6 +18,7 @@ from kungfu.atlas import (
 )
 
 CONTENT_TYPE_JSON = "application/json"
+FRAME_CHECKSUM_ALGORITHM_FNV1A64 = "fnv1a64"
 PAYLOAD_STATE_PRESENT = "present"
 
 ACTION_SCHEMA_REFS = {
@@ -135,7 +137,7 @@ def _action_envelope(
         },
         payload={
             "content_type": entry.get("content_type", CONTENT_TYPE_JSON),
-            "hash_algorithm": "sha256",
+            "hash_algorithm": CONTENT_HASH_ALGORITHM_SHA256,
             "hash": entry.get("payload_hash"),
             "byte_len": entry.get("byte_len"),
             "state": entry.get("payload_state", PAYLOAD_STATE_PRESENT),
@@ -221,7 +223,7 @@ def write_import_payloads(
         "repo_head": repo_head,
         "source_head": repo_head,
         "range": _serialize_range(range_filter),
-        "hash_algorithm": "sha256",
+        "hash_algorithm": CONTENT_HASH_ALGORITHM_SHA256,
         "counts": counts,
         "entries": sorted(
             entries,
@@ -408,6 +410,21 @@ def _check_action_frame(
                 expected=journal.get("journal_payload_hash"),
                 actual=actual_hash,
             )
+        checksum_algorithm = journal.get("checksum_algorithm")
+        if (
+            checksum_algorithm
+            and checksum_algorithm != FRAME_CHECKSUM_ALGORITHM_FNV1A64
+        ):
+            _append_action_error(
+                report,
+                "action_frame_mismatch",
+                entry,
+                field="checksum_algorithm",
+                frame_uid=frame_uid,
+                expected=FRAME_CHECKSUM_ALGORITHM_FNV1A64,
+                actual=checksum_algorithm,
+            )
+            return
         payload_checksum = journal.get("payload_checksum")
         if isinstance(payload_checksum, int) and payload_checksum:
             checksum_for = frame.get("_payload_checksum_for")

@@ -13,6 +13,9 @@
 
 namespace kungfu::runtime::action {
 
+inline constexpr uint32_t FRAME_INTEGRITY_VERSION_V1 = 1;
+inline constexpr const char *FRAME_CHECKSUM_ALGORITHM_FNV1A64 = "fnv1a64";
+
 struct record_options {
   int64_t gen_time = 0;
   int64_t trigger_time = 0;

@@ -190,6 +190,11 @@ It should check:
 - source manifests, channel cursors, and accepted ranges are internally
   consistent.
 
+Hash verification follows the ADR-0028 taxonomy: storage payloads and manifests
+use explicit content-hash algorithms such as `sha256`; frame receipts use the
+recorded checksum algorithm such as `fnv1a64`; yijinjing `fast_hash_*` ids are
+not valid payload or manifest hashes.
+
 Example target:
 
 ```sh
@@ -328,7 +333,7 @@ Acceptance covered by that slice:
 - large Atlas JSON bodies are stored outside mmap frames as hash-addressed
   payloads;
 - import writes a manifest with source head, object count, payload inventory,
-  and projection watermark;
+  hash algorithm, frame checksum algorithm, and projection watermark;
 - `fsck` detects missing payloads, hash mismatches, malformed payload JSON, and
   projection drift against the current Atlas projection;
 - `storage export` emits a canonical JSONL record per imported Atlas payload;

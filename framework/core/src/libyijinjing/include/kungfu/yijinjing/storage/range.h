@@ -29,7 +29,7 @@ struct hash_inventory_entry {
 };
 
 struct hash_inventory {
-  std::string algorithm = "sha256";
+  std::string algorithm = CONTENT_HASH_ALGORITHM_SHA256;
   std::vector<hash_inventory_entry> entries = {};
 };
 

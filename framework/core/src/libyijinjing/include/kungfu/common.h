@@ -111,7 +111,7 @@ using namespace boost::hana::literals;
   DECLARE_PTR(X) /** forward defile smart ptr */
 
 namespace kungfu {
-uint32_t hash_32(const unsigned char *key, int32_t length);
+uint32_t fast_hash_32(const unsigned char *key, int32_t length);
 
 template <typename V, size_t N, typename = void> struct array_to_string;
 
@@ -297,7 +297,9 @@ template <typename T> struct hash<T, std::enable_if_t<std::is_integral_v<T> and 
 };
 
 template <typename T> struct hash<T, std::enable_if_t<std::is_pointer_v<T>>> {
-  uint64_t operator()(const T &value) { return hash_32(reinterpret_cast<const unsigned char *>(value), sizeof(value)); }
+  uint64_t operator()(const T &value) {
+    return fast_hash_32(reinterpret_cast<const unsigned char *>(value), sizeof(value));
+  }
 };
 
 template <typename T> struct hash<T, std::enable_if_t<is_enum_class_v<T>>> {
@@ -306,19 +308,19 @@ template <typename T> struct hash<T, std::enable_if_t<is_enum_class_v<T>>> {
 
 template <> struct hash<std::string> {
   uint64_t operator()(const std::string &value) {
-    return hash_32(reinterpret_cast<const unsigned char *>(value.c_str()), value.length());
+    return fast_hash_32(reinterpret_cast<const unsigned char *>(value.c_str()), value.length());
   }
 };
 
 template <size_t N> struct hash<array<char, N>> {
   uint64_t operator()(const array<char, N> &value) {
-    return hash_32(reinterpret_cast<const unsigned char *>(value.value), strlen(value));
+    return fast_hash_32(reinterpret_cast<const unsigned char *>(value.value), strlen(value));
   }
 };
 
 template <typename T, size_t N> struct hash<array<T, N>> {
   uint64_t operator()(const array<T, N> &value) {
-    return hash_32(reinterpret_cast<const unsigned char *>(value.value), sizeof(value));
+    return fast_hash_32(reinterpret_cast<const unsigned char *>(value.value), sizeof(value));
   }
 };
 

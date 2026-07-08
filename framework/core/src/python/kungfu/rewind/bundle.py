@@ -12,6 +12,7 @@ import json
 import os
 from typing import Any
 
+from kungfu.action_envelope import CONTENT_HASH_ALGORITHM_SHA256
 from kungfu.rewind import ACTION_TYPE_NAMES, SCHEMA_VERSION
 
 _BFBS_FILE = __import__("kungfu").schema_data_path(__file__, "rewind_events.bfbs")
@@ -56,7 +57,7 @@ def emit(
     manifest = {
         "spec_version": "0.1",
         "source": {"root": journal_root, **source},
-        "hash_algorithm": "sha256",
+        "hash_algorithm": CONTENT_HASH_ALGORITHM_SHA256,
         "schema_bindings": bindings,
         "capture_boundary": "schema bindings cover this run's Rewind capture "
         "events only; frames of other action types in the same journal are out "

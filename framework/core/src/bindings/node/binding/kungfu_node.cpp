@@ -71,7 +71,7 @@ namespace kungfu::node {
 uint32_t Hash32(const Napi::CallbackInfo &info) {
   if (IsValid(info, 0, &Napi::Value::IsString)) {
     auto arg = info[0].ToString().Utf8Value();
-    return hash_32(reinterpret_cast<const unsigned char *>(arg.c_str()), arg.length());
+    return fast_hash_32(reinterpret_cast<const unsigned char *>(arg.c_str()), arg.length());
   }
 
   if (IsValid(info, 0, &Napi::Value::IsNumber)) {

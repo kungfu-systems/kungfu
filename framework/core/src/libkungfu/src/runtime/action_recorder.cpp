@@ -14,7 +14,6 @@ using namespace kungfu::runtime::journal;
 namespace kungfu::runtime::action {
 
 namespace {
-constexpr uint32_t FRAME_INTEGRITY_VERSION = 1;
 constexpr uint64_t FNV1A64_OFFSET = 14695981039346656037ull;
 constexpr uint64_t FNV1A64_PRIME = 1099511628211ull;
 
@@ -135,7 +134,7 @@ record_receipt action_recorder::record_payload(int32_t carrier_type, const uint8
   receipt.dest = dest_id_;
   receipt.data_length = payload_length;
   receipt.data_type = static_cast<int8_t>(options.data_type);
-  receipt.integrity_version = FRAME_INTEGRITY_VERSION;
+  receipt.integrity_version = FRAME_INTEGRITY_VERSION_V1;
   receipt.payload_checksum = payload_checksum;
   receipt.frame_checksum = frame_checksum;
   last_frame_uid_ = receipt.frame_uid;

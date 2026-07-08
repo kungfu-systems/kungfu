@@ -10,6 +10,9 @@
 
 namespace kungfu::yijinjing::storage {
 
+inline constexpr const char *CONTENT_HASH_ALGORITHM_SHA256 = "sha256";
+inline constexpr const char *CONTENT_HASH_ALGORITHM_BLAKE3 = "blake3";
+
 enum class payload_state : uint8_t { Present, Redacted, Absent, Missing };
 
 enum class verification_status : uint8_t { Ok, Degraded, Failed };
@@ -21,7 +24,7 @@ enum class source_kind : uint8_t { Local, ImportedBundle, KungfuRuntime, Adapter
 enum class channel_request_kind : uint8_t { Fetch, Import, Export, Repair };
 
 struct content_hash {
-  std::string algorithm = "sha256";
+  std::string algorithm = CONTENT_HASH_ALGORITHM_SHA256;
   std::string value = {};
 
   [[nodiscard]] bool empty() const { return value.empty(); }

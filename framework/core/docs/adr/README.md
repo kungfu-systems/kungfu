@@ -43,6 +43,7 @@ A record's **Status** says where it stands:
 | [0025](ADR-0025-carrier-type-and-action-envelope-semantics.md) | accepted | carrier type is transport metadata and business semantics live in action envelopes |
 | [0026](ADR-0026-runtime-greenfield-core-surface.md) | accepted | runtime exposes a greenfield core surface, not trading typed helpers |
 | [0027](ADR-0027-python-yijinjing-public-core-types.md) | accepted | Python yijinjing schema exposes only core public runtime types |
+| [0028](ADR-0028-hash-taxonomy-and-integrity-algorithms.md) | accepted | hash taxonomy separates internal ids, frame checksums, and content hashes |
 
 ## Reading by theme
 
@@ -100,7 +101,10 @@ A record's **Status** says where it stands:
   [0027](ADR-0027-python-yijinjing-public-core-types.md) (the matching rule that
   Python `pykungfu.yijinjing.types` only exposes core public runtime structs,
   while the full compiled schema registry stays internal to runtime decode
-  paths).
+  paths), and
+  [0028](ADR-0028-hash-taxonomy-and-integrity-algorithms.md) (the rule that
+  fast internal hashes, frame checksums, content hashes, and future trust roots
+  are separate algorithm surfaces).
 - **Cross-cutting principle** — [0009](ADR-0009-load-bearing-self-bootstrap.md)
   (load-bearing self-bootstrap), which also names the general law that
   [`docs/architecture.md` § The build dogfoods the SDK](../../../../docs/architecture.md)

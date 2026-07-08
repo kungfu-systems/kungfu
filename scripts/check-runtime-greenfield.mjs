@@ -81,6 +81,8 @@ const CORE_PUBLIC_REGISTRIES = [
 ];
 const LEGACY_REGISTRY_RE =
   /\b(LegacyCompiledTypes|LegacyCompiledDataTypes|LegacyCompiledTypeTags)\b/g;
+const AMBIGUOUS_HASH_API_RE =
+  /\b(hash_32|hash_64|hash_str_32|hash_str_64|hash_string_32|hash_string_64|hash_string_128)\b/g;
 
 const RULES = [
   {
@@ -195,6 +197,27 @@ const RULES = [
     re: /\bfeed_trading_data\b/g,
     message:
       'Closed-set trading feed helpers must not live in the v4 cache API.',
+  },
+  {
+    name: 'ambiguous fast hash api',
+    files: [
+      /^framework\/core\/src\/libyijinjing\//,
+      /^framework\/core\/src\/libkungfu\//,
+      /^framework\/core\/src\/bindings\//,
+    ],
+    re: AMBIGUOUS_HASH_API_RE,
+    message:
+      'Use fast_hash_* for internal non-cryptographic ids; content integrity must use tagged content hashes.',
+  },
+  {
+    name: 'storage content hash misuse',
+    files: [
+      /^framework\/core\/src\/libyijinjing\/include\/kungfu\/yijinjing\/storage\//,
+      /^framework\/core\/src\/libyijinjing\/src\/storage\//,
+    ],
+    re: /\b(fast_hash_|FAST_HASH_ALGORITHM|MurmurHash3)\b/g,
+    message:
+      'Storage content hashes must be explicit content hashes such as sha256/blake3, not fast internal ids.',
   },
 ];
 
@@ -371,6 +394,12 @@ function directLegacyRegistryNameHits(rel, text) {
 }
 
 function isAllowedRuleSelfReference(rel, rule) {
+  if (
+    rule.name === 'ambiguous fast hash api' &&
+    rel === 'framework/core/src/bindings/python/binding/py-runtime.cpp'
+  ) {
+    return true;
+  }
   return (
     rule.name === 'legacy compiled registry names' &&
     rel === 'framework/core/src/libyijinjing/check-deps.mjs'

@@ -2,7 +2,7 @@ from __future__ import annotations
 import pykungfu.yijinjing.enums
 import pykungfu.yijinjing.types
 import typing
-__all__: list[str] = ['PUBLISH', 'PULL', 'PUSH', 'REPLY', 'REQUEST', 'SUBSCRIBE', 'action_record_options', 'action_record_receipt', 'action_recorder', 'apprentice', 'assemble', 'bus', 'calendar_day_start', 'color_print', 'compile_schema', 'copy_sink', 'emit_log', 'event', 'frame', 'get_page_path', 'hash_32', 'hash_str_32', 'history_window_start', 'in_color_terminal', 'io_device', 'location', 'locator', 'master', 'nano_hashed', 'next_minute', 'next_session_boundary', 'noop_publisher', 'now_in_nano', 'null_sink', 'observer', 'profile', 'protocol', 'publisher', 'reader', 'session_builder', 'session_finder', 'session_window_start', 'setup_log', 'sink', 'socket', 'strfnow', 'strftime', 'strptime', 'thread_id', 'today_start', 'writer']
+__all__: list[str] = ['FAST_HASH_ALGORITHM', 'FRAME_CHECKSUM_ALGORITHM_FNV1A64', 'PUBLISH', 'PULL', 'PUSH', 'REPLY', 'REQUEST', 'SUBSCRIBE', 'action_record_options', 'action_record_receipt', 'action_recorder', 'apprentice', 'assemble', 'bus', 'calendar_day_start', 'color_print', 'compile_schema', 'copy_sink', 'emit_log', 'event', 'fast_hash_32', 'fast_hash_str_32', 'frame', 'get_page_path', 'hash_32', 'hash_str_32', 'history_window_start', 'in_color_terminal', 'io_device', 'location', 'locator', 'master', 'nano_hashed', 'next_minute', 'next_session_boundary', 'noop_publisher', 'now_in_nano', 'null_sink', 'observer', 'profile', 'protocol', 'publisher', 'reader', 'session_builder', 'session_finder', 'session_window_start', 'setup_log', 'sink', 'socket', 'strfnow', 'strftime', 'strptime', 'thread_id', 'today_start', 'writer']
 class action_record_options:
     chain_to_last: bool
     data_type: pykungfu.yijinjing.enums.FrameDataType
@@ -538,6 +538,10 @@ def compile_schema(fbs_text: str, sandboxed: bool = False) -> tuple:
     ...
 def emit_log(arg0: str, arg1: int, arg2: str, arg3: str, arg4: int, arg5: str) -> None:
     ...
+def fast_hash_32(key: int, length: int, seed: int = 42) -> int:
+    ...
+def fast_hash_str_32(key: str, seed: int = 42) -> int:
+    ...
 def get_page_path(arg0: ..., arg1: int, arg2: int) -> str:
     ...
 def hash_32(key: int, length: int, seed: int = 42) -> int:
@@ -570,6 +574,8 @@ def thread_id() -> int:
     ...
 def today_start() -> int:
     ...
+FAST_HASH_ALGORITHM: str = 'murmur3'
+FRAME_CHECKSUM_ALGORITHM_FNV1A64: str = 'fnv1a64'
 PUBLISH: protocol  # value = <protocol.PUBLISH: 4>
 PULL: protocol  # value = <protocol.PULL: 3>
 PUSH: protocol  # value = <protocol.PUSH: 2>

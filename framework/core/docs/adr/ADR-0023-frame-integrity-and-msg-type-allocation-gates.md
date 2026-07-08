@@ -43,13 +43,15 @@ Frame integrity begins in the C++ action-recorder membrane:
 
 - `action_recorder` computes a fast payload checksum and frame checksum when it
   writes a frame.
-- The receipt exposes `integrity_version`, `payload_checksum`, and
-  `frame_checksum` through C++, Python, and Node.
+- The receipt exposes `integrity_version`, `checksum_algorithm`,
+  `payload_checksum`, and `frame_checksum` through C++, Python, and Node.
 - Higher layers that persist receipts, such as the Atlas import manifest, can
   run fsck by reopening journal frames and recomputing those checksums.
 
 The first checksum algorithm is a fast non-keyed 64-bit FNV-1a implementation.
 This is a corruption detector, not a cryptographic authenticity proof.
+ADR-0028 names this algorithm `fnv1a64` and separates it from content hashes
+such as `sha256` and internal yijinjing `fast_hash_*` ids.
 
 ## Trailer and hash-chain direction
 

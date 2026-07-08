@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 
+from kungfu.action_envelope import CONTENT_HASH_ALGORITHM_SHA256
 from kungfu.rewind import reflection_fb
 
 _RESERVED_ACTION_PREFIXES = ("rewind.", "work.", "atlas.", "kungfu.")
@@ -76,7 +77,7 @@ def register_user_schema(
     else:
         manifest = {
             "spec_version": "0.1",
-            "hash_algorithm": "sha256",
+            "hash_algorithm": CONTENT_HASH_ALGORITHM_SHA256,
             "schema_bindings": {},
         }
     bindings = manifest.setdefault("schema_bindings", {})

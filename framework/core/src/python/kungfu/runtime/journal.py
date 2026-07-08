@@ -36,7 +36,7 @@ def collect_journal_locations(ctx):
             dest = match.group(5)
             page_id = match.group(6)
             uname = "{}/{}/{}/{}".format(role, group, name, mode)
-            uid = yjj.hash_str_32(uname)
+            uid = yjj.fast_hash_str_32(uname)
             if uid in locations:
                 if dest in locations[uid]["readers"]:
                     locations[uid]["readers"][dest].append(page_id)
@@ -49,7 +49,7 @@ def collect_journal_locations(ctx):
                     "name": name,
                     "mode": mode,
                     "uname": uname,
-                    "uid": yjj.hash_str_32(uname),
+                    "uid": yjj.fast_hash_str_32(uname),
                     "readers": {dest: [page_id]},
                 }
             ctx.logger.debug(
@@ -127,7 +127,7 @@ def read_session(ctx, session_id, io_type):
     uname = "{}/{}/{}/{}".format(
         session["role"], session["group"], session["name"], session["mode"]
     )
-    uid = yjj.hash_str_32(uname)
+    uid = yjj.fast_hash_str_32(uname)
     ctx.role = "*"
     ctx.group = "*"
     ctx.name = "*"

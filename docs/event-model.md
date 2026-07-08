@@ -75,10 +75,16 @@ while the payload names the domain action through `action_type` and
 per-language causality logic (see [`contracts.md`](contracts.md)).
 
 Current `frame_header` does not contain an in-frame checksum. New
-`action_recorder` receipts carry `integrity_version`, `payload_checksum`, and
-`frame_checksum`; fsck can persist and verify those receipt fields by reopening
-the recorded frame. A full frame trailer or chain root is a future journal
-format surface, not something older journals can be assumed to contain.
+`action_recorder` receipts carry `integrity_version`, `checksum_algorithm`,
+`payload_checksum`, and `frame_checksum`; fsck can persist and verify those
+receipt fields by reopening the recorded frame. The current checksum algorithm
+is `fnv1a64`: a fast corruption detector, not a cryptographic authenticity
+proof. Content payloads and manifests use explicit content hashes such as
+`sha256`; internal yijinjing uid helpers use `fast_hash_*` / `murmur3` and must
+not be treated as content hashes. The taxonomy is pinned in
+[ADR-0028](../framework/core/docs/adr/ADR-0028-hash-taxonomy-and-integrity-algorithms.md).
+A full frame trailer or chain root is a future journal format surface, not
+something older journals can be assumed to contain.
 
 ## Routing: source and dest
 

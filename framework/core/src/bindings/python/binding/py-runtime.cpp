@@ -177,8 +177,13 @@ void bind(pybind11::module &&m) {
   m.def("in_color_terminal", &runtime::util::in_color_terminal);
   m.def("color_print", &runtime::util::color_print);
 
-  m.def("hash_32", &yijinjing::hash_32, py::arg("key"), py::arg("length"), py::arg("seed") = KUNGFU_HASH_SEED);
-  m.def("hash_str_32", &yijinjing::hash_str_32, py::arg("key"), py::arg("seed") = KUNGFU_HASH_SEED);
+  m.def("fast_hash_32", &yijinjing::fast_hash_32, py::arg("key"), py::arg("length"),
+        py::arg("seed") = KUNGFU_HASH_SEED);
+  m.def("fast_hash_str_32", &yijinjing::fast_hash_str_32, py::arg("key"), py::arg("seed") = KUNGFU_HASH_SEED);
+  m.def("hash_32", &yijinjing::fast_hash_32, py::arg("key"), py::arg("length"), py::arg("seed") = KUNGFU_HASH_SEED);
+  m.def("hash_str_32", &yijinjing::fast_hash_str_32, py::arg("key"), py::arg("seed") = KUNGFU_HASH_SEED);
+  m.attr("FAST_HASH_ALGORITHM") = yijinjing::FAST_HASH_ALGORITHM;
+  m.attr("FRAME_CHECKSUM_ALGORITHM_FNV1A64") = action::FRAME_CHECKSUM_ALGORITHM_FNV1A64;
 
   m.def("setup_log", &yijinjing::log::setup_log);
   m.def("emit_log", &yijinjing::log::emit_log);
