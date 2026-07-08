@@ -210,10 +210,6 @@ export type KfNativeBinding = {
     runtimeDir: string,
     name: string,
     bypassRestore: boolean,
-    bypassAccounting: boolean,
-    bypassTradingData: boolean,
-    refreshTradingDataBeforeSync: boolean,
-    bypassRefreshBook: boolean,
     millisecondsSleepAfterStep: number,
   ) => {
     isUsable: () => boolean;

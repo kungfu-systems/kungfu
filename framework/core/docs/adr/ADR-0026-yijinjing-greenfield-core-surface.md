@@ -40,9 +40,9 @@ those internal compiled schemas, but they should not re-create a broad
 business-typed journal API.
 
 Remove unused `TradingDataTypes` / `MarketDataTypes` closed-set registries from
-the v4 `longfist.h` core registry. The remaining `LegacyRefreshDataTypes` name
-is explicit technical debt for the existing Node watcher compatibility path, not
-a v4 product-domain model.
+the v4 `longfist.h` core registry. The Node watcher no longer carries the old
+trading-data refresh path; it maintains only the neutral state cache required by
+the runtime view.
 
 Add `scripts/check-yijinjing-greenfield.mjs` to prevent these specific patterns
 from returning.

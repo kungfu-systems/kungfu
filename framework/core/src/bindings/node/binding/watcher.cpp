@@ -23,7 +23,6 @@ using namespace kungfu::yijinjing::data;
 namespace kungfu::node {
 
 constexpr uint32_t STEP_INTERVAL = 10;
-constexpr uint32_t LEGACY_REFRESH_DATA_LIMIT_BY_SYNC = 3000;
 
 inline std::string format(uint32_t uid) { return fmt::format("{:08x}", uid); }
 
@@ -54,10 +53,10 @@ inline bool GetBypassRestore(const Napi::CallbackInfo &info) {
 }
 
 inline int GetMillisecondsSleepAfterStep(const Napi::CallbackInfo &info) {
-  if (not IsValid(info, 7, &Napi::Value::IsNumber)) {
+  if (not IsValid(info, 3, &Napi::Value::IsNumber)) {
     throw Napi::Error::New(info.Env(), "Invalid millisecondsSleepAfterStep argument");
   }
-  return info[7].As<Napi::Number>().Int32Value();
+  return info[3].As<Napi::Number>().Int32Value();
 }
 
 // The function-try-block is deliberate: base-class construction (apprentice
@@ -66,15 +65,9 @@ inline int GetMillisecondsSleepAfterStep(const Napi::CallbackInfo &info) {
 // initializer exceptions. A plain std::exception escaping this napi callback
 // terminates the whole process; convert to a JS-catchable error instead.
 Watcher::Watcher(const Napi::CallbackInfo &info) try
-    : ObjectWrap(info),                                   //
-      apprentice(GetWatcherLocation(info), true),         //
-      bypass_accounting_(GetBool(info, 3)),               //
-      bypass_legacy_data_(GetBool(info, 4)),              //
-      refresh_legacy_data_before_sync_(GetBool(info, 5)), //
-      bypass_refresh_book_(GetBool(info, 6)),             //
-      milliseconds_sleep_after_step_(GetNumber(info, 7)), //
-      legacy_data_reader_(std::make_shared<yijinjing::journal::reader>(
-          true, false, std::make_shared<yijinjing::journal::bus>(false))),                        //
+    : ObjectWrap(info),                                                                           //
+      apprentice(GetWatcherLocation(info), true),                                                 //
+      milliseconds_sleep_after_step_(GetNumber(info, 3)),                                         //
       ledger_ref_(Napi::ObjectReference::New(Napi::Object::New(info.Env()), 1)),                  //
       app_states_ref_(Napi::ObjectReference::New(Napi::Object::New(info.Env()), 1)),              //
       strategy_states_ref_(Napi::ObjectReference::New(Napi::Object::New(info.Env()), 1)),         //
@@ -95,7 +88,7 @@ Watcher::Watcher(const Napi::CallbackInfo &info) try
   SPDLOG_INFO("Watcher created for {}", get_home_uname());
 
   // byPassRestore will be true after ui browserWindow reopen by crashed
-  if (GetBypassRestore(info) or bypass_legacy_data_) {
+  if (GetBypassRestore(info)) {
     return;
   }
 
@@ -180,15 +173,6 @@ Napi::Value Watcher::IsLive(const Napi::CallbackInfo &info) { return Napi::Boole
 
 Napi::Value Watcher::IsStarted(const Napi::CallbackInfo &info) { return Napi::Boolean::New(info.Env(), is_started()); }
 
-Napi::Value Watcher::RequestPosition(const Napi::CallbackInfo &info) {
-  if (not has_writer(ledger_home_location_->uid)) {
-    return Napi::Boolean::New(info.Env(), false);
-  }
-
-  get_writer(ledger_home_location_->uid)->mark(now(), PositionRequest::tag);
-  return Napi::Boolean::New(info.Env(), true);
-}
-
 Napi::Value Watcher::RequestStop(const Napi::CallbackInfo &info) {
   auto app_location = IODevice::ExtractLocation(info, 0, get_locator());
 
@@ -226,28 +210,6 @@ Napi::Value Watcher::IssueCustomData(const Napi::CallbackInfo &info) {
   return InteractWithLocation<TimeKeyValue>(info, info[0].ToObject());
 }
 
-// Legacy command handlers are kept as no-op compatibility shims until the next
-// Watcher rebuild exposes neutral agent-event commands.
-Napi::Value Watcher::IssueBlockMessage(const Napi::CallbackInfo &info) {
-  SPDLOG_INFO("issue block message ignored (legacy command shim)");
-  return Napi::BigInt::New(info.Env(), std::uint64_t(0));
-}
-
-Napi::Value Watcher::IssueOrderTrigger(const Napi::CallbackInfo &info) {
-  SPDLOG_INFO("issue order trigger ignored (legacy command shim)");
-  return Napi::BigInt::New(info.Env(), std::uint64_t(0));
-}
-
-Napi::Value Watcher::IssueOrder(const Napi::CallbackInfo &info) {
-  SPDLOG_INFO("issue order ignored (legacy command shim)");
-  return Napi::BigInt::New(info.Env(), std::uint64_t(0));
-}
-
-Napi::Value Watcher::IssueAlgoOrder(const Napi::CallbackInfo &info) {
-  SPDLOG_INFO("issue algo order ignored (legacy command shim)");
-  return Napi::BigInt::New(info.Env(), std::uint64_t(0));
-}
-
 Napi::Value Watcher::IssueMark(const Napi::CallbackInfo &info) {
   SPDLOG_INFO("issue mark");
   uint32_t tag = GetNumber(info, 0);
@@ -257,26 +219,6 @@ Napi::Value Watcher::IssueMark(const Napi::CallbackInfo &info) {
   }
   get_writer(target_location->location_uid)->mark(yijinjing::time::now_in_nano(), tag);
   return Napi::Boolean::New(info.Env(), true);
-}
-
-Napi::Value Watcher::CancelOrder(const Napi::CallbackInfo &info) {
-  SPDLOG_INFO("cancel order ignored (legacy command shim)");
-  return Napi::BigInt::New(info.Env(), std::uint64_t(0));
-}
-
-Napi::Value Watcher::CancelAlgoOrder(const Napi::CallbackInfo &info) {
-  SPDLOG_INFO("cancel algo order ignored (legacy command shim)");
-  return Napi::BigInt::New(info.Env(), std::uint64_t(0));
-}
-
-Napi::Value Watcher::CancelOrderTrigger(const Napi::CallbackInfo &info) {
-  SPDLOG_INFO("cancel order trigger ignored (legacy command shim)");
-  return Napi::BigInt::New(info.Env(), std::uint64_t(0));
-}
-
-Napi::Value Watcher::ToggleAlgoOrder(const Napi::CallbackInfo &info) {
-  SPDLOG_INFO("toggle algo order ignored (legacy command shim)");
-  return Napi::BigInt::New(info.Env(), std::uint64_t(0));
 }
 
 void Watcher::Init(Napi::Env env, Napi::Object exports) {
@@ -297,16 +239,7 @@ void Watcher::Init(Napi::Env env, Napi::Object exports) {
                       InstanceMethod("publishState", &Watcher::PublishState),                           //
                       InstanceMethod("isReadyToInteract", &Watcher::IsReadyToInteract),                 //
                       InstanceMethod("issueCustomData", &Watcher::IssueCustomData),                     //
-                      InstanceMethod("issueBlockMessage", &Watcher::IssueBlockMessage),                 //
-                      InstanceMethod("issueOrderTrigger", &Watcher::IssueOrderTrigger),                 //
-                      InstanceMethod("issueOrder", &Watcher::IssueOrder),                               //
-                      InstanceMethod("issueAlgoOrder", &Watcher::IssueAlgoOrder),                       //
                       InstanceMethod("issueMark", &Watcher::IssueMark),                                 //
-                      InstanceMethod("cancelOrder", &Watcher::CancelOrder),                             //
-                      InstanceMethod("cancelAlgoOrder", &Watcher::CancelAlgoOrder),                     //
-                      InstanceMethod("cancelOrderTrigger", &Watcher::CancelOrderTrigger),               //
-                      InstanceMethod("toggleAlgoOrder", &Watcher::ToggleAlgoOrder),                     //
-                      InstanceMethod("requestPosition", &Watcher::RequestPosition),                     //
                       InstanceMethod("start", &Watcher::Start),                                         //
                       InstanceMethod("sync", &Watcher::Sync),                                           //
                       InstanceMethod("quit", &Watcher::Quit),                                           //
@@ -326,12 +259,8 @@ void Watcher::on_react() {
 
   events_ | is(Register::tag) | $$(OnRegister(event->gen_time(), event->data<Register>()));
   events_ | is(Deregister::tag) | $$(OnDeregister(event->gen_time(), event->data<Deregister>()));
-  // for receive history data
   auto before_start_events = events_ | take_until(events_ | is(RequestStart::tag));
-  // accept legacy data from cached state, so even if ui reload, history data is able to be shown
-  before_start_events | is_legacy_data() | skip_while(while_is(OrderInput::tag)) |
-      $$(cached::feed_state_data(event, legacy_data_cached_bank_));
-  before_start_events | not_legacy_data() | $$(cached::feed_state_data(event, data_bank_));
+  before_start_events | $$(cached::feed_state_data(event, data_bank_));
 }
 
 bool Watcher::has_writer(uint32_t dest_id) const { return writers_.find(dest_id) != writers_.end(); }
@@ -344,12 +273,7 @@ yijinjing::journal::writer_ptr Watcher::get_writer(uint32_t dest_id) const {
 }
 
 void Watcher::on_start() {
-  // This Watcher only maintains the neutral state cache used by the ledger
-  // view. Legacy domain replay stays isolated until the agent-event Watcher
-  // rebuild lands.
-  if (not bypass_legacy_data_) {
-    events_ | not_legacy_data() | skip_while(while_is(Position::tag)) | $$(cached::feed_state_data(event, data_bank_));
-  }
+  events_ | skip_while(while_is(Position::tag)) | $$(cached::feed_state_data(event, data_bank_));
 
   events_ | is(Channel::tag) | $$(InspectChannel(event->gen_time(), event->data<Channel>()));
   events_ | is(BrokerStateUpdate::tag) |
@@ -381,34 +305,10 @@ void Watcher::Sync(const Napi::CallbackInfo &info) {
   SyncAppStates();
   SyncStrategyStates();
   SyncLedger();
-  TryRefreshLegacyData();
-  SyncLegacyDataFromCached();
-  SyncLegacyData();
-  ResetLegacyDataCount();
 }
 
 void Watcher::SyncLedger() {
-  boost::hana::for_each(StateDataTypes, [&](auto it) {
-    // cause legacy data saved in legacy_data_bank, no need to filter at this point
-    UpdateLedger(+boost::hana::second(it));
-  });
-}
-
-void Watcher::TryRefreshLegacyData() {
-  if (not refresh_legacy_data_before_sync_) {
-    return;
-  }
-
-  serialize::RefreshLegacyDataInStateMap(ledger_ref_, "ledger");
-}
-
-void Watcher::SyncLegacyData() {
-  // Legacy typed data is no longer part of StateDataTypes, so this compatibility
-  // shim intentionally stays a no-op.
-}
-
-void Watcher::SyncLegacyDataFromCached() {
-  // See SyncLegacyData().
+  boost::hana::for_each(StateDataTypes, [&](auto it) { UpdateLedger(+boost::hana::second(it)); });
 }
 
 void Watcher::SyncAppStates() {
@@ -486,30 +386,8 @@ location_ptr Watcher::FindLocation(const Napi::CallbackInfo &info) {
 }
 
 void Watcher::InspectChannel(int64_t trigger_time, const Channel &channel) {
-  if (bypass_legacy_data_) {
-    return;
-  }
-
   if (channel.source_id != get_live_home_uid() and channel.dest_id != get_live_home_uid()) {
     reader_join(channel.source_id, channel.dest_id, trigger_time);
-  }
-
-  if (has_location(channel.source_id) && has_location(channel.dest_id)) {
-    auto source_location = get_location(channel.source_id);
-    auto dest_location = get_location(channel.dest_id);
-
-    if (source_location->role == location_role::SINK) {
-      if (dest_location->group == "node") { // for as soon as possible to get legacy data made by renderer process;
-        legacy_data_reader_->join(source_location, channel.dest_id, get_begin_time(), 0, Priority::High);
-      } else {
-        legacy_data_reader_->join(source_location, channel.dest_id, get_begin_time());
-      }
-    }
-
-    // for order stat
-    if (source_location->uid == ledger_home_location_->uid) {
-      legacy_data_reader_->join(source_location, channel.dest_id, get_begin_time());
-    }
   }
 }
 
@@ -544,10 +422,6 @@ void Watcher::OnRegister(int64_t trigger_time, const Register &register_data) {
 
   if (app_location->role == location_role::SOURCE and app_location->mode == mode::LIVE) {
     MonitorSourceHeartbeat(trigger_time, app_location);
-  }
-
-  if (app_location->role == location_role::SINK) {
-    legacy_data_reader_->join(app_location, location::PUBLIC, get_begin_time());
   }
 }
 
@@ -587,7 +461,6 @@ void Watcher::StartWorker() {
           }
 
           watcher->step(STEP_INTERVAL);
-          watcher->drain_from_legacy_data_reader(STEP_INTERVAL);
         }
       } catch (const std::exception &ex) {
         SPDLOG_ERROR("watcher worker error, backing off: {}", ex.what());
@@ -648,7 +521,6 @@ void Watcher::AfterMasterDown(const Napi::CallbackInfo &info) {
   Napi::HandleScope scope(info.Env());
   //  disjoin(get_master_command_uid());
   reader_->clear();
-  legacy_data_reader_->clear();
   writers_.clear();
   band_writers_.clear();
   serialize::InitObjectReference(info, app_states_ref_);
@@ -667,37 +539,9 @@ bool Watcher::is_reactable(const event_ptr &event) {
     return false;
   }
 
-  // is_started() is supposed to be accpeted LegacyRefreshDataTags from cached
-  if ((bypass_legacy_data_ or (bypass_accounting_ and is_started())) and
-      longfist::LegacyRefreshDataTags.find(event->carrier_type()) != longfist::LegacyRefreshDataTags.end()) {
-    return false;
-  }
-
-  // Legacy broker-owned event routing has been removed from this Watcher.
   return not is_custom_event(event);
 }
 
-void Watcher::drain_from_legacy_data_reader(uint32_t step_limit) {
-  std::size_t step_count = 0;
-  while ((step_limit == 0 || step_count < step_limit) and
-         legacy_data_count_by_step_ < LEGACY_REFRESH_DATA_LIMIT_BY_SYNC and legacy_data_reader_->data_available()) {
-    const yijinjing::journal::frame_ptr frame = legacy_data_reader_->current_frame();
-
-    if (longfist::LegacyRefreshDataTags.find(frame->carrier_type()) != longfist::LegacyRefreshDataTags.end() and
-        frame->carrier_type() != OrderInput::tag) {
-      cached::feed_state_data(frame, legacy_data_bank_);
-      legacy_data_count_by_step_++;
-    }
-    step_count++;
-    legacy_data_reader_->next();
-  }
-}
-
-bool Watcher::is_step_continually() {
-  bool default_reader_available = reader_->data_available();
-  bool legacy_data_reader_available = legacy_data_reader_->data_available();
-  bool is_read_enough = legacy_data_count_by_step_ >= LEGACY_REFRESH_DATA_LIMIT_BY_SYNC;
-  return default_reader_available || (legacy_data_reader_available && not is_read_enough);
-}
+bool Watcher::is_step_continually() { return reader_->data_available(); }
 
 } // namespace kungfu::node

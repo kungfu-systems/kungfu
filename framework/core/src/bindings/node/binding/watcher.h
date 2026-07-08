@@ -23,7 +23,6 @@ namespace kungfu::node {
 constexpr uint64_t ID_TRANC = 0x00000000FFFFFFFF;
 constexpr uint32_t PAGE_ID_MASK = 0x80000000;
 constexpr uint32_t TRANSFER_STATIC_DATA_LIMIT = 2000;
-constexpr uint32_t TRANSFER_LEGACY_DATA_LIMIT = 2000;
 
 class Watcher : public Napi::ObjectWrap<Watcher>, public practice::apprentice {
 public:
@@ -55,31 +54,13 @@ public:
 
   Napi::Value RequestStop(const Napi::CallbackInfo &info);
 
-  Napi::Value RequestPosition(const Napi::CallbackInfo &info);
-
   Napi::Value PublishState(const Napi::CallbackInfo &info);
 
   Napi::Value IsReadyToInteract(const Napi::CallbackInfo &info);
 
   Napi::Value IssueCustomData(const Napi::CallbackInfo &info);
 
-  Napi::Value IssueBlockMessage(const Napi::CallbackInfo &info);
-
-  Napi::Value IssueOrderTrigger(const Napi::CallbackInfo &info);
-
-  Napi::Value IssueOrder(const Napi::CallbackInfo &info);
-
-  Napi::Value IssueAlgoOrder(const Napi::CallbackInfo &info);
-
   Napi::Value IssueMark(const Napi::CallbackInfo &info);
-
-  Napi::Value CancelOrder(const Napi::CallbackInfo &info);
-
-  Napi::Value CancelAlgoOrder(const Napi::CallbackInfo &info);
-
-  Napi::Value CancelOrderTrigger(const Napi::CallbackInfo &info);
-
-  Napi::Value ToggleAlgoOrder(const Napi::CallbackInfo &info);
 
   Napi::Value Start(const Napi::CallbackInfo &info);
 
@@ -99,15 +80,9 @@ public:
 
   bool is_reactable(const event_ptr &event) override;
 
-  void drain_from_legacy_data_reader(uint32_t step_limit = 0);
-
   bool is_step_continually();
 
 protected:
-  const bool bypass_accounting_;
-  const bool bypass_legacy_data_;
-  const bool refresh_legacy_data_before_sync_;
-  const bool bypass_refresh_book_;
   const int milliseconds_sleep_after_step_;
   std::mutex feed_mutex_;
 
@@ -133,14 +108,9 @@ private:
   serialize::JsUpdateState update_ledger;
   serialize::JsResetCache reset_cache;
   cache::bank data_bank_;
-  cache::bank legacy_data_bank_;
-  cache::deque_bank legacy_data_cached_bank_;
   std::vector<kungfu::state<longfist::types::CacheReset>> reset_cache_states_;
   std::unordered_map<uint32_t, int> broker_states_map_ = {};
   std::unordered_map<uint32_t, longfist::types::StrategyStateUpdate> strategy_states_map_ = {};
-
-  yijinjing::journal::reader_ptr legacy_data_reader_;
-  uint32_t legacy_data_count_by_step_ = 0;
 
   typedef longfist::enums::mode mode;
   typedef longfist::enums::location_role role;
@@ -149,18 +119,6 @@ private:
     return rx::filter([&](const event_ptr &event) {
       return not(app->get_location(event->source())->role == longfist::enums::location_role::SOURCE and
                  event->carrier_type() != longfist::types::Instrument::tag and bypass_quotes);
-    });
-  };
-
-  static constexpr auto is_legacy_data = []() {
-    return rx::filter([&](const event_ptr &event) {
-      return longfist::LegacyRefreshDataTags.find(event->carrier_type()) != longfist::LegacyRefreshDataTags.end();
-    });
-  };
-
-  static constexpr auto not_legacy_data = []() {
-    return rx::filter([&](const event_ptr &event) {
-      return longfist::LegacyRefreshDataTags.find(event->carrier_type()) == longfist::LegacyRefreshDataTags.end();
     });
   };
 
@@ -195,12 +153,6 @@ private:
 
   void SyncLedger();
 
-  void TryRefreshLegacyData();
-
-  void SyncLegacyData();
-
-  void SyncLegacyDataFromCached();
-
   void SyncAppStates();
 
   void SyncStrategyStates();
@@ -212,8 +164,6 @@ private:
   void StartWorker();
 
   void CancelWorker();
-
-  void ResetLegacyDataCount() { legacy_data_count_by_step_ = 0; };
 
   uint64_t MakeInstructionUID(yijinjing::journal::writer_ptr &writer, uint32_t dest, uint32_t client_id = 0) {
     uint64_t id_left = (uint64_t)(client_id xor dest) << 32u;
@@ -237,9 +187,6 @@ private:
       }
     }
   }
-
-  // Legacy typed state refresh is intentionally separated from StateDataTypes.
-  // A future Watcher should rebuild this path on top of neutral agent events.
 
   template <typename Instruction>
   Napi::Value InteractWithLocation(const Napi::CallbackInfo &info, const Napi::Object &instruction_object) {

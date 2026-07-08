@@ -26,7 +26,7 @@ function resolveBindingDir(moduleName) {
   if (descriptor) {
     try {
       const platformPackage = require(descriptor.name);
-      if (platformPackage && platformPackage.bindingDir) {
+      if (platformPackage?.bindingDir) {
         return platformPackage.bindingDir;
       }
     } catch (e) {
@@ -45,7 +45,7 @@ function resolveBindingDir(moduleName) {
  * public factory API this module hands to callers, not the addon internals.
  * @returns {Record<string, any>}
  */
-module.exports = function () {
+module.exports = () => {
   /** @type {any} */
   const binding = (() => {
     try {
@@ -91,52 +91,29 @@ module.exports = function () {
      * @param {string} [name]
      * @returns {any}
      */
-    Assemble: function (
-      arg,
-      mode = '*',
-      category = '*',
-      group = '*',
-      name = '*',
-    ) {
+    Assemble: (arg, mode = '*', category = '*', group = '*', name = '*') => {
       if (Array.isArray(arg)) {
         return new binding.Assemble(arg, mode, category, group, name);
-      } else {
-        return new binding.Assemble([arg], mode, category, group, name);
       }
+      return new binding.Assemble([arg], mode, category, group, name);
     },
 
     /** @param {any} home @returns {any} */
-    History: function (home) {
-      return new binding.History(home);
-    },
+    History: (home) => new binding.History(home),
     /** @param {any} home @returns {any} */
-    ConfigStore: function (home) {
-      return new binding.ConfigStore(home);
-    },
+    ConfigStore: (home) => new binding.ConfigStore(home),
     /** @param {any} home @returns {any} */
-    RiskSettingStore: function (home) {
-      return new binding.RiskSettingStore(home);
-    },
+    RiskSettingStore: (home) => new binding.RiskSettingStore(home),
     /** @param {any} home @returns {any} */
-    CommissionStore: function (home) {
-      return new binding.CommissionStore(home);
-    },
+    CommissionStore: (home) => new binding.CommissionStore(home),
     /** @param {any} home @returns {any} */
-    BasketStore: function (home) {
-      return new binding.BasketStore(home);
-    },
+    BasketStore: (home) => new binding.BasketStore(home),
     /** @param {any} home @returns {any} */
-    BasketInstrumentStore: function (home) {
-      return new binding.BasketInstrumentStore(home);
-    },
+    BasketInstrumentStore: (home) => new binding.BasketInstrumentStore(home),
     /** @param {any} location @param {any} home @returns {any} */
-    SessionStore: function (location, home) {
-      return new binding.SessionStore(location, home);
-    },
+    SessionStore: (location, home) => new binding.SessionStore(location, home),
     /** @param {any} location @param {any} home @returns {any} */
-    IODevice: function (location, home) {
-      return new binding.IODevice(location, home);
-    },
+    IODevice: (location, home) => new binding.IODevice(location, home),
     /**
      * @param {any} location
      * @param {any} home
@@ -146,41 +123,27 @@ module.exports = function () {
      * @param {number} end
      * @returns {any}
      */
-    tracer: function (location, home, read, write, begin, end) {
-      return new binding.Tracer(location, home, read, write, begin, end);
-    },
+    tracer: (location, home, read, write, begin, end) =>
+      new binding.Tracer(location, home, read, write, begin, end),
 
     /**
      * @param {any} home
      * @param {string} name
      * @param {boolean} [bypassRestore]
-     * @param {boolean} [bypassAccounting]
-     * @param {boolean} [bypassTradingData]
-     * @param {boolean} [refreshTradingDataBeforeSync]
-     * @param {boolean} [bypassRefreshBook]
      * @param {number} [millisecondsSleepAfterStep]
      * @returns {any}
      */
-    watcher: function (
+    watcher: (
       home,
       name,
       bypassRestore = false,
-      bypassAccounting = false,
-      bypassTradingData = false,
-      refreshTradingDataBeforeSync = false,
-      bypassRefreshBook = false,
       millisecondsSleepAfterStep = 50,
-    ) {
-      return new binding.Watcher(
+    ) =>
+      new binding.Watcher(
         home,
         name,
         bypassRestore,
-        bypassAccounting,
-        bypassTradingData,
-        refreshTradingDataBeforeSync,
-        bypassRefreshBook,
         millisecondsSleepAfterStep,
-      );
-    },
+      ),
   };
 };

@@ -272,13 +272,6 @@ constexpr auto StaticDataTypes = boost::hana::make_map( //
 // tracing-foundation Phase 1: OrderStat(交易统计)拆死源,本闭集清空(restore_to 迭代 no-op)。
 constexpr auto StatisticDataTypes = boost::hana::make_map();
 
-constexpr auto LegacyRefreshDataTypes = boost::hana::make_map( //
-    TYPE_PAIR(OrderInput),                                     // 201
-    TYPE_PAIR(Order),                                          // 202
-    TYPE_PAIR(Trade),                                          // 203
-    TYPE_PAIR(OrderStat)                                       // 207
-);
-
 template <typename T> constexpr bool is_in_types(auto types) { return boost::hana::contains(types, T::type_name); }
 
 template <typename DataType> constexpr bool is_profile_data() { return is_in_types<DataType>(ProfileDataTypes); };
@@ -296,7 +289,6 @@ const auto LegacyCompiledTypeTags = build_data_set(LegacyCompiledTypes);
 const auto AllTypesTags = LegacyCompiledTypeTags;
 const auto ProfileDataTags = build_data_set(ProfileDataTypes);
 const auto StaticDataTags = build_data_set(StaticDataTypes);
-const auto LegacyRefreshDataTags = build_data_set(LegacyRefreshDataTypes);
 
 constexpr auto build_data_map = [](auto types) {
   auto maps = boost::hana::transform(boost::hana::values(types), [](auto value) {

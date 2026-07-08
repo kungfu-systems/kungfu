@@ -12,10 +12,10 @@
 //
 // Usage: node tests/bench/dispatch_watcher_bench.js <kf-home> <seconds>
 
-const path = require('path');
+const path = require('node:path');
 
 const home = process.argv[2];
-const seconds = parseInt(process.argv[3] || '30', 10);
+const seconds = Number.parseInt(process.argv[3] || '30', 10);
 if (!home) {
   console.error('usage: dispatch_watcher_bench.js <kf-home> <seconds>');
   process.exit(2);
@@ -36,10 +36,6 @@ const watcher = new binding.Watcher(
   runtimeDir,
   'dispatch_bench',
   true, // bypassRestore
-  false, // bypassAccounting
-  false, // bypassTradingData
-  true, // refreshTradingDataBeforeSync
-  false, // bypassRefreshBook
   2, // millisecondsSleepAfterStep
 );
 
