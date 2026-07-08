@@ -68,6 +68,9 @@ export type LedgerRecord = {
   dest: number;
   dataLength: number;
   dataType: number;
+  integrityVersion?: number;
+  payloadChecksum?: bigint;
+  frameChecksum?: bigint;
 };
 
 export type RecordFilter = {

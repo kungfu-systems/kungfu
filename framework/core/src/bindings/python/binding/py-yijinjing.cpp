@@ -239,7 +239,10 @@ void bind(pybind11::module &&m) {
       .def_readonly("initial_source", &action::record_receipt::initial_source)
       .def_readonly("dest", &action::record_receipt::dest)
       .def_readonly("data_length", &action::record_receipt::data_length)
-      .def_readonly("data_type", &action::record_receipt::data_type);
+      .def_readonly("data_type", &action::record_receipt::data_type)
+      .def_readonly("integrity_version", &action::record_receipt::integrity_version)
+      .def_readonly("payload_checksum", &action::record_receipt::payload_checksum)
+      .def_readonly("frame_checksum", &action::record_receipt::frame_checksum);
 
   py::class_<action::action_recorder, action::action_recorder_ptr>(m, "action_recorder")
       .def(py::init<const std::string &, const std::string &, const std::string &, uint32_t, uint64_t>(),

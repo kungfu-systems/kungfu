@@ -87,6 +87,9 @@ Napi::Object to_receipt_object(Napi::Env env, const record_receipt &receipt) {
   object.Set("dest", Napi::Number::New(env, receipt.dest));
   object.Set("dataLength", Napi::Number::New(env, receipt.data_length));
   object.Set("dataType", Napi::Number::New(env, receipt.data_type));
+  object.Set("integrityVersion", Napi::Number::New(env, receipt.integrity_version));
+  object.Set("payloadChecksum", Napi::BigInt::New(env, receipt.payload_checksum));
+  object.Set("frameChecksum", Napi::BigInt::New(env, receipt.frame_checksum));
   return object;
 }
 

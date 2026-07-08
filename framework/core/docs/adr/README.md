@@ -38,6 +38,7 @@ A record's **Status** says where it stands:
 | [0020](ADR-0020-agent-action-timeline-and-replay-boundary.md) | accepted | agent action timeline and rewind/replay boundary |
 | [0021](ADR-0021-observer-relative-timeline-projection.md) | accepted | observer-relative timeline projection over causal facts |
 | [0022](ADR-0022-core-action-recording-surface.md) | accepted | core action-recording surface lives in the C++ polyglot membrane |
+| [0023](ADR-0023-frame-integrity-and-msg-type-allocation-gates.md) | accepted | frame integrity starts at the C++ recorder and raw msg_type allocation is gated |
 
 ## Reading by theme
 
@@ -79,7 +80,10 @@ A record's **Status** says where it stands:
   [0021](ADR-0021-observer-relative-timeline-projection.md) (stable
   observer-relative timeline projection without a universal global clock), and
   [0022](ADR-0022-core-action-recording-surface.md) (the C++ core
-  action-recording surface that Python/Node bindings wrap).
+  action-recording surface that Python/Node bindings wrap), and
+  [0023](ADR-0023-frame-integrity-and-msg-type-allocation-gates.md) (the first
+  frame-integrity receipt slice plus the source gate that prevents new raw
+  business msg_type allocations).
 - **Cross-cutting principle** — [0009](ADR-0009-load-bearing-self-bootstrap.md)
   (load-bearing self-bootstrap), which also names the general law that
   [`docs/architecture.md` § The build dogfoods the SDK](../../../../docs/architecture.md)

@@ -3,7 +3,7 @@
 import hashlib
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from kungfu.atlas import (
     ACTION_GOAL_SNAPSHOT,
@@ -423,6 +423,38 @@ def _check_action_frame(
                 expected=journal.get("journal_payload_hash"),
                 actual=actual_hash,
             )
+        payload_checksum = journal.get("payload_checksum")
+        if isinstance(payload_checksum, int) and payload_checksum:
+            checksum_for = frame.get("_payload_checksum_for")
+            actual_checksum = (
+                checksum_for(expected_length) if callable(checksum_for) else None
+            )
+            if actual_checksum != payload_checksum:
+                _append_action_error(
+                    report,
+                    "action_frame_mismatch",
+                    entry,
+                    field="payload_checksum",
+                    frame_uid=frame_uid,
+                    expected=payload_checksum,
+                    actual=actual_checksum,
+                )
+        frame_checksum = journal.get("frame_checksum")
+        if isinstance(frame_checksum, int) and frame_checksum:
+            checksum_for = frame.get("_frame_checksum_for")
+            actual_checksum = (
+                checksum_for(expected_length) if callable(checksum_for) else None
+            )
+            if actual_checksum != frame_checksum:
+                _append_action_error(
+                    report,
+                    "action_frame_mismatch",
+                    entry,
+                    field="frame_checksum",
+                    frame_uid=frame_uid,
+                    expected=frame_checksum,
+                    actual=actual_checksum,
+                )
 
 
 def _check_action(
@@ -464,7 +496,7 @@ def fsck_import(
     action_frames: dict[Any, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     manifest = load_latest_manifest(store_dir)
-    report = {
+    report: dict[str, Any] = {
         "ok": True,
         "scope": "atlas",
         "import_id": None,
@@ -496,13 +528,17 @@ def fsck_import(
             report["ok"] = False
             report["errors"].append({"code": "manifest_entry_invalid"})
             continue
-        key = _entry_key(entry)
-        if key in seen:
+        entry_key = _entry_key(entry)
+        if entry_key in seen:
             report["ok"] = False
             report["errors"].append(
-                {"code": "duplicate_source", "kind": key[0], "source_id": key[1]}
+                {
+                    "code": "duplicate_source",
+                    "kind": entry_key[0],
+                    "source_id": entry_key[1],
+                }
             )
-        seen.add(key)
+        seen.add(entry_key)
 
         kind = str(entry.get("kind") or "")
         if kind in ("mission", "goal", "marker"):
@@ -532,17 +568,18 @@ def fsck_import(
             )
         _check_action(report, entry, action_frames)
 
-    counts = manifest.get("counts") if isinstance(manifest.get("counts"), dict) else {}
-    for key in ("missions", "goals", "markers"):
-        expected = counts.get(key)
-        if expected is not None and expected != report["checked"][key]:
+    raw_counts = manifest.get("counts")
+    counts = cast(dict[str, Any], raw_counts) if isinstance(raw_counts, dict) else {}
+    for section in ("missions", "goals", "markers"):
+        expected = counts.get(section)
+        if expected is not None and expected != report["checked"][section]:
             report["ok"] = False
             report["errors"].append(
                 {
                     "code": "manifest_count_mismatch",
-                    "kind": key,
+                    "kind": section,
                     "expected": expected,
-                    "actual": report["checked"][key],
+                    "actual": report["checked"][section],
                 }
             )
 
@@ -559,35 +596,35 @@ def fsck_import(
             "goals": {key for key in seen if key[0] == "goal"},
             "markers": {key for key in seen if key[0] == "marker"},
         }
-        for key in ("missions", "goals", "markers"):
-            actual = len(projection_keys[key])
-            expected = len(manifest_keys[key])
+        for section in ("missions", "goals", "markers"):
+            actual = len(projection_keys[section])
+            expected = len(manifest_keys[section])
             if actual != expected:
                 report["ok"] = False
                 report["errors"].append(
                     {
                         "code": "projection_count_mismatch",
-                        "kind": key,
+                        "kind": section,
                         "expected": expected,
                         "actual": actual,
                     }
                 )
-            if projection_keys[key] != manifest_keys[key]:
+            if projection_keys[section] != manifest_keys[section]:
                 report["ok"] = False
                 report["errors"].append(
                     {
                         "code": "projection_id_mismatch",
-                        "kind": key,
+                        "kind": section,
                         "missing_in_projection": [
                             {"kind": kind, "source_id": source_id}
                             for kind, source_id in sorted(
-                                manifest_keys[key] - projection_keys[key]
+                                manifest_keys[section] - projection_keys[section]
                             )
                         ],
                         "extra_in_projection": [
                             {"kind": kind, "source_id": source_id}
                             for kind, source_id in sorted(
-                                projection_keys[key] - manifest_keys[key]
+                                projection_keys[section] - manifest_keys[section]
                             )
                         ],
                     }

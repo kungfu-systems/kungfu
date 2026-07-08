@@ -23,6 +23,9 @@ class action_record_receipt:
     def dest(self) -> int:
         ...
     @property
+    def frame_checksum(self) -> int:
+        ...
+    @property
     def frame_uid(self) -> int:
         ...
     @property
@@ -32,7 +35,13 @@ class action_record_receipt:
     def initial_source(self) -> int:
         ...
     @property
+    def integrity_version(self) -> int:
+        ...
+    @property
     def msg_type(self) -> int:
+        ...
+    @property
+    def payload_checksum(self) -> int:
         ...
     @property
     def source(self) -> int:

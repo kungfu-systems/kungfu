@@ -52,6 +52,8 @@ Rules:
   name a business action. Add an `action_type` / schema binding instead.
 - `msg_type` may appear in fsck/export/debug output as `journal.msg_type`, but
   GUI/KFX/domain APIs should treat it as implementation metadata.
+- `scripts/check-msg-type-allocations.mjs` enforces this rule by blocking new
+  raw `300xx` / `400xx` allocations outside reviewed legacy paths.
 
 ## Legacy / Migration Context
 

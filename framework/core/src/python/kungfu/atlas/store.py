@@ -7,6 +7,7 @@
 
 import json
 import os
+import struct
 import uuid
 
 import kungfu
@@ -59,6 +60,10 @@ def _journal_payload(envelope):
     return payloads.canonical_json_bytes(envelope)
 
 
+def _receipt_value(receipt, name, default=None):
+    return getattr(receipt, name, default)
+
+
 class ImportStore:
     """Append side. One instance = one short-lived writer = one batch."""
 
@@ -83,6 +88,9 @@ class ImportStore:
             "dest": receipt.dest,
             "data_length": receipt.data_length,
             "data_type": receipt.data_type,
+            "integrity_version": _receipt_value(receipt, "integrity_version", 0),
+            "payload_checksum": _receipt_value(receipt, "payload_checksum", 0),
+            "frame_checksum": _receipt_value(receipt, "frame_checksum", 0),
             "journal_payload_hash": payloads.payload_hash(data),
         }
 
@@ -267,6 +275,43 @@ def _frame_data_type_value(header):
         return 0 if name == "raw" else str(value)
 
 
+def _fnv1a64_update(state, data):
+    for value in bytes(data):
+        state ^= value
+        state = (state * 1099511628211) & 0xFFFFFFFFFFFFFFFF
+    return state
+
+
+def _checksum_payload(data):
+    return _fnv1a64_update(14695981039346656037, data)
+
+
+def _pack_scalar(fmt, value):
+    return struct.pack("<" + fmt, value)
+
+
+def _checksum_frame(header, data, payload_length):
+    state = 14695981039346656037
+    fields = [
+        ("I", int(getattr(header, "length", 0))),
+        ("I", int(getattr(header, "header_length", 0))),
+        ("q", int(header.gen_time)),
+        ("q", int(header.trigger_time)),
+        ("i", int(header.msg_type)),
+        ("I", int(header.source)),
+        ("I", int(header.dest)),
+        ("b", int(_frame_data_type_value(header))),
+        ("I", int(header.initial_source)),
+        ("Q", int(header.frame_uid)),
+        ("Q", int(header.trigger_frame_uid)),
+        ("Q", int(header.stream_id)),
+        ("I", int(payload_length)),
+    ]
+    for fmt, value in fields:
+        state = _fnv1a64_update(state, _pack_scalar(fmt, value))
+    return _fnv1a64_update(state, data[:payload_length])
+
+
 def read_action_frame_index(runtime_dir):
     """Action frame identity index keyed by (frame_uid, gen_time)."""
     location = _location(runtime_dir)
@@ -286,10 +331,18 @@ def read_action_frame_index(runtime_dir):
                 "source": header.source,
                 "initial_source": header.initial_source,
                 "dest": header.dest,
+                "frame_length": getattr(header, "length", 0),
+                "header_length": getattr(header, "header_length", 0),
                 "data_length": len(data),
                 "data_type": _frame_data_type_value(header),
                 "journal_payload_hash": payloads.payload_hash(data),
                 "_payload": data,
+                "_payload_checksum_for": lambda payload_length, d=data: (
+                    _checksum_payload(d[:payload_length])
+                ),
+                "_frame_checksum_for": lambda payload_length, h=header, d=data: (
+                    _checksum_frame(h, d, payload_length)
+                ),
             }
     except (RuntimeError, ValueError, FileNotFoundError):
         pass

@@ -19,6 +19,10 @@ architecture-level recording semantics live in the C++ core. Python and Node may
 wrap the recorder and build payloads, but they must not own independent
 causality, writer, timeline, or receipt logic.
 
+Frame integrity starts at the same C++ boundary. [ADR-0023](../framework/core/docs/adr/ADR-0023-frame-integrity-and-msg-type-allocation-gates.md)
+defines the first receipt-based checksum slice and the rule that new v4 business
+facts must not allocate raw `300xx` / `400xx` `msg_type` numbers.
+
 For multi-machine views, frame time is not treated as a universal clock.
 [ADR-0021](../framework/core/docs/adr/ADR-0021-observer-relative-timeline-projection.md)
 pins the rule: Kungfu stores causal facts, source provenance, accepted ranges,
@@ -62,6 +66,12 @@ envelope carrier: the journal header keeps `msg_type` for filtering and fsck,
 while the payload names the domain action through `action_type` and
 `schema_ref`. The same bytes are read by C++, Python, and Node without inventing
 per-language causality logic (see [`contracts.md`](contracts.md)).
+
+Current `frame_header` does not contain an in-frame checksum. New
+`action_recorder` receipts carry `integrity_version`, `payload_checksum`, and
+`frame_checksum`; fsck can persist and verify those receipt fields by reopening
+the recorded frame. A full frame trailer or chain root is a future journal
+format surface, not something older journals can be assumed to contain.
 
 ## Routing: source and dest
 

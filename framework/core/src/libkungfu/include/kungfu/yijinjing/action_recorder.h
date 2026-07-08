@@ -34,7 +34,15 @@ struct record_receipt {
   uint32_t dest = 0;
   uint32_t data_length = 0;
   int8_t data_type = 0;
+  uint32_t integrity_version = 0;
+  uint64_t payload_checksum = 0;
+  uint64_t frame_checksum = 0;
 };
+
+[[nodiscard]] uint64_t checksum_payload(const uint8_t *payload, uint32_t payload_length);
+
+[[nodiscard]] uint64_t checksum_frame(const longfist::types::frame_header &header, const uint8_t *payload,
+                                      uint32_t payload_length);
 
 class action_recorder {
 public:

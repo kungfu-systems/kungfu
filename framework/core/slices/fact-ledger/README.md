@@ -109,9 +109,10 @@ link back correctly, so CI can gate on it.
   `src/libyijinjing/check-deps.sh` guards the dependency direction (no
   practice/wingchun/nng/rxcpp/sqlite/rocksdb, no trading types, no full type
   registry).
-- **No in-frame content hash yet.** Content commitment lives at the manifest
-  layer (checksums over exported payloads), not as a per-frame `payload_hash` in
-  the spine (the external hash-blob store of the full design is future work).
+- **Frame integrity is receipt-scoped in this slice.** The action-recorder smoke
+  verifies the C++ receipt's `payload_checksum` and `frame_checksum`, including
+  a payload-mutation negative check. Full journal-native trailer / hash-chain
+  integrity is still future work.
 - **`msg_type` is a carrier int.** The v4 action-recorder smoke uses the generic
   action-envelope carrier (`1000`); domain semantics are carried by the JSON
   payload's `action_type` / schema fields. No full self-describing schema

@@ -46,6 +46,11 @@ std::string payload_hash(const std::vector<uint8_t> &bytes, std::size_t length) 
   return sha256::hex(view);
 }
 
+uint64_t frame_checksum(const longfist::types::frame_header &header, const std::vector<uint8_t> &bytes,
+                        std::size_t length) {
+  return action::checksum_frame(header, bytes.data(), static_cast<uint32_t>(length));
+}
+
 void fail(const std::string &message) { std::cerr << "fact_ledger_action_recorder: " << message << "\n"; }
 } // namespace
 
@@ -96,10 +101,20 @@ int main(int argc, char **argv) {
         receipt.trigger_frame_uid != header.trigger_frame_uid || receipt.trigger_frame_uid != expected_parent ||
         receipt.data_length != payloads[i].size() || bytes.size() < payloads[i].size() ||
         !padding_is_zero(bytes, payloads[i].size()) ||
-        payload_hash(bytes, payloads[i].size()) != payload_hash(payloads[i], payloads[i].size())) {
+        payload_hash(bytes, payloads[i].size()) != payload_hash(payloads[i], payloads[i].size()) ||
+        receipt.integrity_version != 1 ||
+        receipt.payload_checksum != action::checksum_payload(bytes.data(), static_cast<uint32_t>(payloads[i].size())) ||
+        receipt.frame_checksum != frame_checksum(header, bytes, payloads[i].size())) {
       fail("receipt/readback mismatch at step " + std::to_string(i));
       return 1;
     }
+  }
+
+  auto tampered = frames[0].second;
+  tampered[0] ^= 0x01;
+  if (receipts[0].frame_checksum == frame_checksum(frames[0].first, tampered, payloads[0].size())) {
+    fail("frame checksum did not detect payload mutation");
+    return 1;
   }
 
   nlohmann::json out = {
@@ -108,6 +123,7 @@ int main(int argc, char **argv) {
       {"name", name},
       {"event_count", receipts.size()},
       {"causal_chain_verified", true},
+      {"frame_integrity_verified", true},
       {"record_surface", "kungfu::yijinjing::action::action_recorder"},
   };
   std::cout << out.dump(2) << "\n";
