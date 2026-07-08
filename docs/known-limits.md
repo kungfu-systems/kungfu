@@ -75,6 +75,32 @@ What is **not yet guaranteed**:
 
 Treat these as usable pre-release slices, not a finished shell promise.
 
+## Runtime storage service is designed, not complete
+
+Kungfu has the grounded pieces for a local runtime fact ledger: append-only
+journals, frame provenance, location/channel runtime identity, portable export
+direction, schema registry direction, SQLite projections, and a first
+Atlas-scoped payload import/fsck/export/verify loop. The unified storage service
+described in [`runtime-storage-service.md`](runtime-storage-service.md) is still
+staged.
+
+What is **not yet guaranteed**:
+
+- large payload bodies are not yet uniformly stored behind hash-addressed
+  references across every runtime scope;
+- generic `kungfu source sync` across machines by range/session/hash inventory;
+- complete `storage fsck` coverage for all journal, payload, manifest, schema,
+  projection, and remote cursor classes;
+- range/session/hash import-export is not yet the remote sync substrate;
+- destructive-safe `gc` / `compact` with archive and rollback reporting;
+- repair of arbitrary journal corruption;
+- an authority migration path where an imported source becomes the single source
+  of truth.
+
+Treat current journal archive/clean/rebuild primitives, Atlas storage commands,
+and source import/export slices as proof surfaces for the storage contract, not
+as a completed distributed storage protocol.
+
 ## KFX runtime confinement is staged
 
 The trust boundary is decided in
@@ -121,26 +147,3 @@ The repository's reference extensions double as build-time coverage probes.
 Trading-specific ones from earlier versions are being retired and their coverage
 role moved to neutral replacements that exercise the same paths; during this
 migration both may be present.
-
-## Runtime storage service is only partially implemented
-
-The fact-ledger format direction includes an append-only event spine, payload
-content commitments, a blob store, schema registry, and manifest root
-([`framework/spec/docs/format-spec.md`](../framework/spec/docs/format-spec.md)).
-The fact-ledger slice proves a minimal causal journal export path, and the Atlas
-scope now has a first payload import/fsck/export/verify loop
-([`runtime-storage-service.md`](runtime-storage-service.md)).
-
-What is **not yet guaranteed**:
-
-- large payload bodies are not yet uniformly stored behind hash-addressed
-  references across every runtime scope;
-- `kungfu storage fsck` is currently Atlas-scoped, not a complete semantic check
-  for all journal, schema, projection, and payload classes;
-- range/session/hash import-export is not yet the remote sync substrate;
-- compaction is not yet a manifest-backed checkpoint/archive/GC/vacuum process;
-- Atlas import remains a read-only projection, not an authority migration.
-
-Until these land, treat existing journal archive/clean/rebuild primitives and
-the Atlas storage commands as useful maintenance tools, not as the complete
-persistence-service contract.
