@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Guard v4 yijinjing against reintroducing trading-era public runtime surfaces.
-// This is intentionally scoped to core exposure points, not to historical
-// generated schemas that still exist while the legacy longfist files are split.
 // @ts-check
 
 import { spawnSync } from 'node:child_process';
@@ -20,6 +18,10 @@ const allFiles = args.includes('--all');
 const SOURCE_EXT = /\.(c|cc|cpp|cxx|h|hh|hpp|hxx|mjs|js|cjs|ts|tsx|py|pyi)$/;
 const LEGACY_PY_LONGFIST_TYPES =
   /\b(AlgoOrder|AlgoOrderAction|AlgoOrderActionError|AlgoOrderInput|Asset|Basket|BasketInstrument|BlockMessage|Commission|Contract|CustomSubscribe|Entrust|HistoryOrder|HistoryTrade|Instrument|InstrumentFactor|InstrumentKey|Order|OrderAction|OrderActionError|OrderInput|OrderStat|OrderTrigger|OrderTriggerAction|OrderTriggerActionError|OrderTriggerInput|Position|PositionEnd|Quote|RequestHistoryOrder|RequestHistoryOrderError|RequestHistoryTrade|RequestHistoryTradeError|RiskSetting|Trade|TradingDay|Transaction|Tree)\b/g;
+const LEGACY_PY_LONGFIST_ENUMS =
+  /\b(AccountType|AccountingMethodType|AlgoOrderActionFlag|BasketType|BasketVolumeType|BrokerState|BsFlag|CashReplaceFlag|CloseOutFlag|CommissionRateMode|ContractType|Currency|Direction|ETFStatus|ETFType|ExecType|HedgeFlag|InstrumentType|LedgerCategory|MarketType|Offset|OrderActionFlag|OrderStatus|OrderTriggerFlag|OrderTriggerType|PriceLevel|PriceType|Side|StrategyState|SubscribeDataType|SubscribeInstrumentType|TimeCondition|VolumeCondition)\b/g;
+const LEGACY_NODE_PROFILE_STORES =
+  /\b(RiskSettingStore|CommissionStore|BasketStore|BasketInstrumentStore)\b/g;
 const LEGACY_CORE_PUBLIC_TYPES = [
   'AlgoOrder',
   'AlgoOrderAction',
@@ -77,9 +79,8 @@ const CORE_PUBLIC_REGISTRIES = [
   'CorePublicStateDataTypes',
   'CorePublicProfileDataTypes',
 ];
-const INTERNAL_LEGACY_REGISTRY_RE =
-  /\b(AllTypes|AllDataTypes|AllTypesTags|LegacyCompiledTypes|LegacyCompiledDataTypes|LegacyCompiledTypeTags)\b/g;
-const DIRECT_LEGACY_REGISTRY_RE = /\b(AllTypes|AllDataTypes|AllTypesTags)\b/g;
+const LEGACY_REGISTRY_RE =
+  /\b(LegacyCompiledTypes|LegacyCompiledDataTypes|LegacyCompiledTypeTags)\b/g;
 
 const RULES = [
   {
@@ -87,7 +88,7 @@ const RULES = [
     files: [
       /^framework\/core\/src\/bindings\/python\/binding\/py-yijinjing\.cpp$/,
     ],
-    re: INTERNAL_LEGACY_REGISTRY_RE,
+    re: LEGACY_REGISTRY_RE,
     message:
       'Python yijinjing must expose neutral raw/envelope APIs, not generated business typed helpers.',
   },
@@ -96,7 +97,7 @@ const RULES = [
     files: [
       /^framework\/core\/src\/bindings\/python\/binding\/py-longfist-types\.cpp$/,
     ],
-    re: /\b(AllDataTypes|StateDataTypes|LegacyCompiledTypes|LegacyCompiledDataTypes|LegacyCompiledTypeTags)\b|boost::hana::for_each\((AllDataTypes|StateDataTypes|LegacyCompiledTypes|LegacyCompiledDataTypes)/g,
+    re: /\b(StateDataTypes|LegacyCompiledTypes|LegacyCompiledDataTypes|LegacyCompiledTypeTags)\b|boost::hana::for_each\((StateDataTypes|LegacyCompiledTypes|LegacyCompiledDataTypes)/g,
     message:
       'Python longfist public types/state must bind CorePublic*DataTypes, not the legacy internal schema sets.',
   },
@@ -112,7 +113,7 @@ const RULES = [
   {
     name: 'node longfist public internal registry binding',
     files: [/^framework\/core\/src\/bindings\/node\/binding\/longfist\.cpp$/],
-    re: /\b(AllTypes|AllDataTypes|StateDataTypes|ProfileDataTypes|LegacyCompiledTypes|LegacyCompiledDataTypes|LegacyCompiledTypeTags)\b|boost::hana::for_each\((AllTypes|AllDataTypes|StateDataTypes|ProfileDataTypes|LegacyCompiledTypes|LegacyCompiledDataTypes)/g,
+    re: /\b(StateDataTypes|ProfileDataTypes|LegacyCompiledTypes|LegacyCompiledDataTypes|LegacyCompiledTypeTags)\b|boost::hana::for_each\((StateDataTypes|ProfileDataTypes|LegacyCompiledTypes|LegacyCompiledDataTypes)/g,
     message:
       'Node longfist public types/carrierTypes must bind CorePublic*DataTypes, not the legacy internal schema sets.',
   },
@@ -126,6 +127,37 @@ const RULES = [
     re: LEGACY_PY_LONGFIST_TYPES,
     message:
       'Python longfist stubs must not expose legacy trading/profile typed classes as public v4 core types.',
+  },
+  {
+    name: 'python longfist public trading enums',
+    files: [
+      /^framework\/core\/src\/bindings\/python\/binding\/py-longfist-enums\.cpp$/,
+      /^framework\/core\/stubs\/pykungfu\/longfist\/enums\.pyi$/,
+    ],
+    re: LEGACY_PY_LONGFIST_ENUMS,
+    message:
+      'Python longfist enums must expose only runtime/core enums, not trading/profile enums.',
+  },
+  {
+    name: 'node legacy profile store public surface',
+    files: [
+      /^framework\/core\/src\/bindings\/node\/binding\/kungfu_node\.cpp$/,
+      /^framework\/core\/lib\/kungfu\.js$/,
+    ],
+    re: LEGACY_NODE_PROFILE_STORES,
+    message:
+      'Node binding must not expose trading-era profile stores as v4 core API.',
+  },
+  {
+    name: 'legacy compiled registry names',
+    files: [
+      /^framework\/core\/src\/bindings\//,
+      /^framework\/core\/src\/libkungfu\//,
+      /^framework\/core\/src\/libyijinjing\//,
+    ],
+    re: LEGACY_REGISTRY_RE,
+    message:
+      'LegacyCompiled* registries were removed; use the current core registry only.',
   },
   {
     name: 'python dispatch bench typed trading dependency',
@@ -321,18 +353,25 @@ function directLegacyRegistryNameHits(rel, text) {
     return [];
   }
   const hits = [];
-  DIRECT_LEGACY_REGISTRY_RE.lastIndex = 0;
-  for (const match of text.matchAll(DIRECT_LEGACY_REGISTRY_RE)) {
+  LEGACY_REGISTRY_RE.lastIndex = 0;
+  for (const match of text.matchAll(LEGACY_REGISTRY_RE)) {
     hits.push({
       file: rel,
       line: lineNumber(text, match.index || 0),
-      rule: 'direct legacy registry compatibility alias',
+      rule: 'legacy compiled registry',
       message:
-        'Use LegacyCompiled* names for internal compiled-schema compatibility paths; keep AllTypes/AllDataTypes as compatibility aliases only.',
+        'LegacyCompiled* registries must not return; use the current core registry only.',
       text: match[0],
     });
   }
   return hits;
+}
+
+function isAllowedRuleSelfReference(rel, rule) {
+  return (
+    rule.name === 'legacy compiled registry names' &&
+    rel === 'framework/core/src/libyijinjing/check-deps.mjs'
+  );
 }
 
 const hits = [];
@@ -341,6 +380,7 @@ for (const rel of selectedFiles()) {
   if (!rules.length) continue;
   const text = fs.readFileSync(path.join(ROOT, rel), 'utf8');
   for (const rule of rules) {
+    if (isAllowedRuleSelfReference(rel, rule)) continue;
     rule.re.lastIndex = 0;
     for (const match of text.matchAll(rule.re)) {
       hits.push({

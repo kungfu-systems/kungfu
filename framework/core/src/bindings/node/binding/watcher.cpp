@@ -5,7 +5,6 @@
 //
 
 #include "watcher.h"
-#include "commission_store.h"
 #include "config_store.h"
 #include "history.h"
 #include <kungfu/yijinjing/cache/cached.h>
@@ -70,7 +69,6 @@ Watcher::Watcher(const Napi::CallbackInfo &info) try
       milliseconds_sleep_after_step_(GetNumber(info, 3)),                                         //
       ledger_ref_(Napi::ObjectReference::New(Napi::Object::New(info.Env()), 1)),                  //
       app_states_ref_(Napi::ObjectReference::New(Napi::Object::New(info.Env()), 1)),              //
-      strategy_states_ref_(Napi::ObjectReference::New(Napi::Object::New(info.Env()), 1)),         //
       config_ref_(Napi::ObjectReference::New(ConfigStore::NewInstance({info[0]}).ToObject(), 1)), //
       update_ledger(ledger_ref_),                                                                 //
       reset_cache(*this, ledger_ref_) {                                                           //
@@ -96,12 +94,8 @@ Watcher::Watcher(const Napi::CallbackInfo &info) try
     auto saved_location = location::make_shared(item, get_locator());
     add_location(now(), saved_location);
     RestoreState(saved_location, from, INT64_MAX, sync_schema);
-    // for hidden pos && asset
-    // shift(saved_location) >> state_bank_;
   }
   RestoreState(ledger_home_location_, from, INT64_MAX, sync_schema);
-  // for hidden pos && asset
-  // shift(ledger_home_location_) >> state_bank_; // Load positions to restore bookkeeper
 } catch (const Napi::Error &) {
   throw;
 } catch (const std::exception &ex) {
@@ -112,7 +106,6 @@ Watcher::Watcher(const Napi::CallbackInfo &info) try
 Watcher::~Watcher() {
   SPDLOG_INFO("~Watcher");
   uv_work_.data = nullptr;
-  strategy_states_ref_.Reset();
   config_ref_.Reset();
   app_states_ref_.Reset();
   ledger_ref_.Reset();
@@ -160,8 +153,6 @@ Napi::Value Watcher::GetLocationUID(const Napi::CallbackInfo &info) {
 Napi::Value Watcher::GetLedger(const Napi::CallbackInfo &info) { return ledger_ref_.Value(); }
 
 Napi::Value Watcher::GetAppStates(const Napi::CallbackInfo &info) { return app_states_ref_.Value(); }
-
-Napi::Value Watcher::GetStrategyStates(const Napi::CallbackInfo &info) { return strategy_states_ref_.Value(); }
 
 Napi::Value Watcher::Now(const Napi::CallbackInfo &info) {
   return Napi::BigInt::New(ledger_ref_.Env(), yijinjing::time::now_in_nano());
@@ -225,28 +216,26 @@ void Watcher::Init(Napi::Env env, Napi::Object exports) {
   Napi::HandleScope scope(env);
   env.AddCleanupHook(cleanup);
 
-  Napi::Function func =
-      DefineClass(env, "Watcher",
-                  {
-                      InstanceMethod("now", &Watcher::Now),                                             //
-                      InstanceMethod("isUsable", &Watcher::IsUsable),                                   //
-                      InstanceMethod("isLive", &Watcher::IsLive),                                       //
-                      InstanceMethod("isStarted", &Watcher::IsStarted),                                 //
-                      InstanceMethod("requestStop", &Watcher::RequestStop),                             //
-                      InstanceMethod("hasLocation", &Watcher::HasLocation),                             //
-                      InstanceMethod("getLocation", &Watcher::GetLocation),                             //
-                      InstanceMethod("getLocationUID", &Watcher::GetLocationUID),                       //
-                      InstanceMethod("publishState", &Watcher::PublishState),                           //
-                      InstanceMethod("isReadyToInteract", &Watcher::IsReadyToInteract),                 //
-                      InstanceMethod("issueCustomData", &Watcher::IssueCustomData),                     //
-                      InstanceMethod("issueMark", &Watcher::IssueMark),                                 //
-                      InstanceMethod("start", &Watcher::Start),                                         //
-                      InstanceMethod("sync", &Watcher::Sync),                                           //
-                      InstanceMethod("quit", &Watcher::Quit),                                           //
-                      InstanceAccessor("ledger", &Watcher::GetLedger, &Watcher::NoSet),                 //
-                      InstanceAccessor("appStates", &Watcher::GetAppStates, &Watcher::NoSet),           //
-                      InstanceAccessor("strategyStates", &Watcher::GetStrategyStates, &Watcher::NoSet), //
-                  });
+  Napi::Function func = DefineClass(env, "Watcher",
+                                    {
+                                        InstanceMethod("now", &Watcher::Now),                                   //
+                                        InstanceMethod("isUsable", &Watcher::IsUsable),                         //
+                                        InstanceMethod("isLive", &Watcher::IsLive),                             //
+                                        InstanceMethod("isStarted", &Watcher::IsStarted),                       //
+                                        InstanceMethod("requestStop", &Watcher::RequestStop),                   //
+                                        InstanceMethod("hasLocation", &Watcher::HasLocation),                   //
+                                        InstanceMethod("getLocation", &Watcher::GetLocation),                   //
+                                        InstanceMethod("getLocationUID", &Watcher::GetLocationUID),             //
+                                        InstanceMethod("publishState", &Watcher::PublishState),                 //
+                                        InstanceMethod("isReadyToInteract", &Watcher::IsReadyToInteract),       //
+                                        InstanceMethod("issueCustomData", &Watcher::IssueCustomData),           //
+                                        InstanceMethod("issueMark", &Watcher::IssueMark),                       //
+                                        InstanceMethod("start", &Watcher::Start),                               //
+                                        InstanceMethod("sync", &Watcher::Sync),                                 //
+                                        InstanceMethod("quit", &Watcher::Quit),                                 //
+                                        InstanceAccessor("ledger", &Watcher::GetLedger, &Watcher::NoSet),       //
+                                        InstanceAccessor("appStates", &Watcher::GetAppStates, &Watcher::NoSet), //
+                                    });
 
   constructor = Napi::Persistent(func);
   constructor.SuppressDestruct();
@@ -273,24 +262,15 @@ yijinjing::journal::writer_ptr Watcher::get_writer(uint32_t dest_id) const {
 }
 
 void Watcher::on_start() {
-  events_ | skip_while(while_is(Position::tag)) | $$(cached::feed_state_data(event, data_bank_));
+  events_ | $$(cached::feed_state_data(event, data_bank_));
 
   events_ | is(Channel::tag) | $$(InspectChannel(event->gen_time(), event->data<Channel>()));
-  events_ | is(BrokerStateUpdate::tag) |
-      $$(UpdateBrokerOperatorState<BrokerStateUpdate>(event->source(), event->dest(),
-                                                      event->data<BrokerStateUpdate>()));
-  events_ | is(OperatorStateUpdate::tag) |
-      $$(UpdateBrokerOperatorState<OperatorStateUpdate>(event->source(), event->dest(),
-                                                        event->data<OperatorStateUpdate>()));
-  events_ | is(StrategyStateUpdate::tag) | $$(UpdateStrategyState(event->source(), event->data<StrategyStateUpdate>()));
   events_ | is(CacheReset::tag) | $$(UpdateEventCache(event));
 }
 
 void Watcher::RestoreState(const location_ptr &state_location, int64_t from, int64_t to, bool sync_schema) {
   add_location(0, state_location);
-  // serialize::JsRestoreState(ledger_ref_, state_location)(from, to, sync_schema);
-  // for hidden pos && asset
-  serialize::JsRestoreState(ledger_ref_, state_location).filter_no<Position, Asset, Contract>(from, to, sync_schema);
+  serialize::JsRestoreState(ledger_ref_, state_location)(from, to, sync_schema);
 }
 
 Napi::Value Watcher::Start(const Napi::CallbackInfo &info) {
@@ -303,7 +283,6 @@ void Watcher::Sync(const Napi::CallbackInfo &info) {
   std::lock_guard<std::mutex> guard(feed_mutex_);
   SyncEventCache();
   SyncAppStates();
-  SyncStrategyStates();
   SyncLedger();
 }
 
@@ -311,27 +290,7 @@ void Watcher::SyncLedger() {
   boost::hana::for_each(StateDataTypes, [&](auto it) { UpdateLedger(+boost::hana::second(it)); });
 }
 
-void Watcher::SyncAppStates() {
-  for (auto &s : broker_states_map_) {
-    auto app_state = Napi::Number::New(app_states_ref_.Env(), s.second);
-    app_states_ref_.Set(format(s.first), app_state);
-  }
-  broker_states_map_.clear();
-}
-
-void Watcher::SyncStrategyStates() {
-  for (auto &s : strategy_states_map_) {
-    auto strategy_state_obj = Napi::Object::New(strategy_states_ref_.Env());
-    strategy_state_obj.Set("state", Napi::Number::New(strategy_states_ref_.Env(), int(s.second.state)));
-    strategy_state_obj.Set("update_time", Napi::Number::New(strategy_states_ref_.Env(), s.second.update_time));
-    strategy_state_obj.Set("info_a", Napi::String::New(strategy_states_ref_.Env(), s.second.info_a));
-    strategy_state_obj.Set("info_b", Napi::String::New(strategy_states_ref_.Env(), s.second.info_b));
-    strategy_state_obj.Set("info_c", Napi::String::New(strategy_states_ref_.Env(), s.second.info_c));
-    strategy_state_obj.Set("value", Napi::String::New(strategy_states_ref_.Env(), s.second.value));
-    strategy_states_ref_.Set(format(s.first), strategy_state_obj);
-  }
-  strategy_states_map_.clear();
-}
+void Watcher::SyncAppStates() {}
 
 void Watcher::SyncEventCache() {
   if (reset_cache_states_.size()) {
@@ -391,47 +350,15 @@ void Watcher::InspectChannel(int64_t trigger_time, const Channel &channel) {
   }
 }
 
-void Watcher::MonitorSourceHeartbeat(int64_t trigger_time, const location_ptr &source_location) {
-  //  events_ | is(Quote::tag) | from(source_location->uid) | first() |
-  //      $(
-  //          [&, trigger_time, source_location](const event_ptr &event) {
-  //            broker_states_map_.insert_or_assign(source_location->uid, int(BrokerState::Ready));
-  //            events_ | from(source_location->uid) | is(Quote::tag) |
-  //                timeout(std::chrono::seconds(15), get_timer_usage_count()) |
-  //                $(noop_event_handler(), [&, trigger_time, source_location](std::exception_ptr e) {
-  //                  if (is_location_live(source_location->uid)) {
-  //                    broker_states_map_.insert_or_assign(source_location->uid, int(BrokerState::Idle));
-  //                    MonitorSourceHeartbeat(trigger_time, source_location);
-  //                  }
-  //                });
-  //          },
-  //          error_handler_log(fmt::format("monitor source {}", source_location->uname)));
-}
-
 void Watcher::OnRegister(int64_t trigger_time, const Register &register_data) {
   auto app_uid = register_data.location_uid;
   if (app_uid == get_live_home_uid()) {
     return;
   }
-
-  auto app_location = get_location(app_uid);
-  if (app_location->role == location_role::SOURCE or app_location->role == location_role::SINK or
-      app_location->role == location_role::SERVICE) {
-    broker_states_map_.insert_or_assign(app_location->uid, int(BrokerState::Pending));
-  }
-
-  if (app_location->role == location_role::SOURCE and app_location->mode == mode::LIVE) {
-    MonitorSourceHeartbeat(trigger_time, app_location);
-  }
 }
 
 void Watcher::OnDeregister(int64_t trigger_time, const Deregister &deregister_data) {
   auto app_location = location::make_shared(deregister_data, get_locator());
-  if (app_location->role == location_role::SOURCE or app_location->role == location_role::SINK or
-      app_location->role == location_role::SERVICE) {
-    broker_states_map_.insert_or_assign(app_location->uid, int(BrokerState::Pending));
-  }
-
   if (app_location->role == location_role::SYSTEM and app_location->group == "master" and
       app_location->name == "master") {
     CancelWorker();
@@ -524,23 +451,10 @@ void Watcher::AfterMasterDown(const Napi::CallbackInfo &info) {
   writers_.clear();
   band_writers_.clear();
   serialize::InitObjectReference(info, app_states_ref_);
-  serialize::InitObjectReference(info, strategy_states_ref_);
   serialize::InitStateMap(info, ledger_ref_, "ledger");
 }
 
-void Watcher::UpdateStrategyState(uint32_t strategy_uid, const StrategyStateUpdate &state) {
-  auto app_location = get_location(strategy_uid);
-  strategy_states_map_.insert_or_assign(app_location->uid, state);
-}
-
-bool Watcher::is_reactable(const event_ptr &event) {
-  if (event->carrier_type() == Transaction::tag or event->carrier_type() == Entrust::tag or
-      event->carrier_type() == Tree::tag or event->carrier_type() == Tick::tag or event->carrier_type() == Depth::tag) {
-    return false;
-  }
-
-  return not is_custom_event(event);
-}
+bool Watcher::is_reactable(const event_ptr &event) { return not is_custom_event(event); }
 
 bool Watcher::is_step_continually() { return reader_->data_available(); }
 

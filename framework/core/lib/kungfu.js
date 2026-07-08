@@ -102,14 +102,6 @@ module.exports = () => {
     History: (home) => new binding.History(home),
     /** @param {any} home @returns {any} */
     ConfigStore: (home) => new binding.ConfigStore(home),
-    /** @param {any} home @returns {any} */
-    RiskSettingStore: (home) => new binding.RiskSettingStore(home),
-    /** @param {any} home @returns {any} */
-    CommissionStore: (home) => new binding.CommissionStore(home),
-    /** @param {any} home @returns {any} */
-    BasketStore: (home) => new binding.BasketStore(home),
-    /** @param {any} home @returns {any} */
-    BasketInstrumentStore: (home) => new binding.BasketInstrumentStore(home),
     /** @param {any} location @param {any} home @returns {any} */
     SessionStore: (location, home) => new binding.SessionStore(location, home),
     /** @param {any} location @param {any} home @returns {any} */

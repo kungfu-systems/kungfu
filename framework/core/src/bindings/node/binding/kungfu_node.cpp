@@ -48,16 +48,12 @@ decltype(__pfnDliNotifyHook2) __pfnDliNotifyHook2 = load_exe_hook;
 
 #include "action_recorder.h"
 #include "app_container.h"
-#include "basket_instrument_store.h"
-#include "basket_store.h"
-#include "commission_store.h"
 #include "config_store.h"
 #include "data_table.h"
 #include "history.h"
 #include "io.h"
 #include "journal.h"
 #include "longfist.h"
-#include "risk_setting_store.h"
 #include "session_store.h"
 #include "watcher.h"
 
@@ -140,10 +136,6 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
   Longfist::Init(env, exports);
   History::Init(env, exports);
   ConfigStore::Init(env, exports);
-  RiskSettingStore::Init(env, exports);
-  CommissionStore::Init(env, exports);
-  BasketStore::Init(env, exports);
-  BasketInstrumentStore::Init(env, exports);
   SessionStore::Init(env, exports);
   Frame::Init(env, exports);
   Reader::Init(env, exports);

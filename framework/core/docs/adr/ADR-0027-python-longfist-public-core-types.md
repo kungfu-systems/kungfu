@@ -17,8 +17,8 @@ That public shape conflicts with the v4 direction:
 
 - action/business semantics belong in envelopes, not one Python class per old
   product-domain schema;
-- `AllTypes` and `AllDataTypes` are legacy compiled registries that still serve
-  diagnostics, raw journal decoding, and staged Node compatibility paths;
+- `AllTypes` and `AllDataTypes` must represent the current core-only compiled
+  registry, not a back door for old trading/profile schemas;
 - Python bindings should wrap the C++ core action-recording surface, not rebuild
   a trading-specific API layer above it.
 
@@ -38,10 +38,15 @@ Change the Python longfist type binding to iterate `CorePublicDataTypes` instead
 of `AllDataTypes`; change the Python state/profile bindings to iterate the new
 core-public subsets instead of the internal cache registries.
 
-Keep `AllTypes` and `AllDataTypes` in C++ for now, but treat them as legacy
-compiled schema registries rather than a public language API. The Node journal
-decoder, replay writer, console dump, and staged watcher compatibility path may
-continue to use them until those internals are split or replaced.
+Keep `AllTypes` and `AllDataTypes` in C++, but redefine them as the current
+core-only registry used by the Node journal decoder, replay writer, console
+dump, and raw frame restore paths. Remove the `LegacyCompiled*` aliases so new
+code cannot preserve or copy the old compatibility vocabulary.
+
+Remove the old Node profile-store exports (`RiskSettingStore`,
+`CommissionStore`, `BasketStore`, and `BasketInstrumentStore`) and the Python
+longfist enum bindings for trading/profile concepts. The Python public enum
+module now exposes only neutral runtime enums.
 
 Remove the typed trading mode from the dispatch load benchmark so the benchmark
 does not force `Quote` to remain a Python public type.
@@ -58,21 +63,23 @@ Extend `scripts/check-yijinjing-greenfield.mjs` to block:
   polyglot membrane, not the historical trading domain object model.
 - Raw frame transport and action envelopes remain the Python path for business
   facts.
-- Node/diagnostic compatibility is not broken by this slice.
+- Node/diagnostic compatibility uses the narrowed core registry and raw frame
+  primitives, not old profile-store exports.
 - Generated stubs now act as a regression surface: if a future build exposes the
   legacy types again, the greenfield gate fails.
-- The internal profile/cache storage registries stay available to C++/Node while
-  Python stops presenting old profile tables as a general public typed API.
+- The internal profile/cache public surface is removed from Python and Node.
+  Future config APIs should be defined as neutral v4 runtime contracts instead
+  of reviving old trading tables.
 
 ## Alternatives Considered
 
-- **Delete `AllDataTypes` immediately.** Rejected for this slice because Node
-  raw frame decode, replay writer matching, and console dumps still depend on
-  the full compiled schema set.
-- **Expose profile/cache schemas because state cache still stores them.**
-  Rejected for Python public API. The profile/cache closed sets are internal
-  runtime storage details unless a future ADR defines a neutral public config
-  surface.
+- **Delete `AllDataTypes` immediately.** Rejected because raw frame decode,
+  replay writer matching, and console dumps still need a compiled core registry.
+  The chosen path is to make that registry core-only instead of deleting the
+  registry abstraction.
+- **Expose profile/cache schemas because old state cache code once stored
+  them.** Rejected for public API. Future config/state storage should define
+  neutral v4 contracts rather than preserve historical trading tables.
 - **Leave the benchmark in typed mode.** Rejected because test utilities shape
   developer expectations; keeping `Quote` there would preserve the exact API we
   are retiring.

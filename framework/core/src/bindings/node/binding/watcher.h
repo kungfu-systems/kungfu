@@ -14,8 +14,6 @@
 #include "io.h"
 #include "journal.h"
 #include "operators.h"
-// tracing-foundation Phase 1(goal 2026-06-25): the legacy book/broker stack is no longer owned here.
-// A future Watcher should expose agent events through the neutral action-recording surface.
 #include <kungfu/yijinjing/cache/runtime.h>
 #include <kungfu/yijinjing/practice/apprentice.h>
 
@@ -41,8 +39,6 @@ public:
   Napi::Value GetLedger(const Napi::CallbackInfo &info);
 
   Napi::Value GetAppStates(const Napi::CallbackInfo &info);
-
-  Napi::Value GetStrategyStates(const Napi::CallbackInfo &info);
 
   Napi::Value Now(const Napi::CallbackInfo &info);
 
@@ -103,24 +99,14 @@ private:
 
   Napi::ObjectReference ledger_ref_;
   Napi::ObjectReference app_states_ref_;
-  Napi::ObjectReference strategy_states_ref_;
   Napi::ObjectReference config_ref_;
   serialize::JsUpdateState update_ledger;
   serialize::JsResetCache reset_cache;
   cache::bank data_bank_;
   std::vector<kungfu::state<longfist::types::CacheReset>> reset_cache_states_;
-  std::unordered_map<uint32_t, int> broker_states_map_ = {};
-  std::unordered_map<uint32_t, longfist::types::StrategyStateUpdate> strategy_states_map_ = {};
 
   typedef longfist::enums::mode mode;
   typedef longfist::enums::location_role role;
-
-  static constexpr auto bypass = [](practice::apprentice *app, bool bypass_quotes) {
-    return rx::filter([&](const event_ptr &event) {
-      return not(app->get_location(event->source())->role == longfist::enums::location_role::SOURCE and
-                 event->carrier_type() != longfist::types::Instrument::tag and bypass_quotes);
-    });
-  };
 
   static constexpr auto is_static_data = []() {
     return rx::filter([&](const event_ptr &event) {
@@ -134,28 +120,13 @@ private:
 
   void InspectChannel(int64_t trigger_time, const longfist::types::Channel &channel);
 
-  void MonitorSourceHeartbeat(int64_t trigger_time, const yijinjing::data::location_ptr &source_location);
-
   void OnRegister(int64_t trigger_time, const longfist::types::Register &register_data);
 
   void OnDeregister(int64_t trigger_time, const longfist::types::Deregister &deregister_data);
 
-  template <typename DataType>
-  void UpdateBrokerOperatorState(uint32_t source_id, uint32_t dest_id, const DataType &state) {
-    auto source_location = get_location(state.location_uid);
-    if (source_location->role == role::SINK or source_location->role == role::SOURCE or
-        source_location->role == role::SERVICE) {
-      broker_states_map_.insert_or_assign(source_location->uid, int(state.state));
-    }
-  };
-
-  void UpdateStrategyState(uint32_t strategy_uid, const longfist::types::StrategyStateUpdate &state);
-
   void SyncLedger();
 
   void SyncAppStates();
-
-  void SyncStrategyStates();
 
   void UpdateEventCache(const event_ptr &event);
 

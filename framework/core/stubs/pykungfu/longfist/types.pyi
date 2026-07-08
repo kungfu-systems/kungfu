@@ -1,35 +1,13 @@
 from __future__ import annotations
 import pykungfu.longfist.enums
 import typing
-__all__: list[str] = ['Band', 'BrokerStateUpdate', 'CacheReset', 'Channel', 'ChannelRequest', 'Config', 'Deregister', 'Location', 'OperatorStateUpdate', 'OutputKey', 'Register', 'RequestCachedDone', 'RequestReadFrom', 'RequestReadFromOthers', 'RequestReadFromPublic', 'RequestReadFromSync', 'RequestWriteTo', 'RequestWriteToBand', 'Session', 'StrategyStateUpdate', 'SyntheticData', 'TimeKeyValue', 'TimeRequest', 'TimeReset', 'TimeValue', 'frame_header', 'page_header']
+__all__: list[str] = ['Band', 'CacheReset', 'Channel', 'ChannelRequest', 'Config', 'Deregister', 'Location', 'OperatorStateUpdate', 'OutputKey', 'Register', 'RequestCachedDone', 'RequestReadFrom', 'RequestReadFromOthers', 'RequestReadFromPublic', 'RequestReadFromSync', 'RequestWriteTo', 'RequestWriteToBand', 'Session', 'SyntheticData', 'TimeKeyValue', 'TimeRequest', 'TimeReset', 'TimeValue', 'frame_header', 'page_header']
 class Band:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 10308
     dest_id: int
     source_id: int
     def __eq__(self, arg0: Band) -> bool:
-        ...
-    def __hash__(self) -> int:
-        ...
-    @typing.overload
-    def __init__(self) -> None:
-        ...
-    @typing.overload
-    def __init__(self, arg0: str) -> None:
-        ...
-    def __parse__(self, arg0: str) -> None:
-        ...
-    def __repr__(self) -> str:
-        ...
-    @property
-    def __uid__(self) -> int:
-        ...
-class BrokerStateUpdate:
-    __has_data__: typing.ClassVar[bool] = True
-    __tag__: typing.ClassVar[int] = 10106
-    location_uid: int
-    state: pykungfu.longfist.enums.BrokerState
-    def __eq__(self, arg0: BrokerStateUpdate) -> bool:
         ...
     def __hash__(self) -> int:
         ...
@@ -456,32 +434,6 @@ class Session:
     uid64: int
     update_time: int
     def __eq__(self, arg0: Session) -> bool:
-        ...
-    def __hash__(self) -> int:
-        ...
-    @typing.overload
-    def __init__(self) -> None:
-        ...
-    @typing.overload
-    def __init__(self, arg0: str) -> None:
-        ...
-    def __parse__(self, arg0: str) -> None:
-        ...
-    def __repr__(self) -> str:
-        ...
-    @property
-    def __uid__(self) -> int:
-        ...
-class StrategyStateUpdate:
-    __has_data__: typing.ClassVar[bool] = True
-    __tag__: typing.ClassVar[int] = 10104
-    info_a: str
-    info_b: str
-    info_c: str
-    state: pykungfu.longfist.enums.StrategyState
-    update_time: int
-    value: str
-    def __eq__(self, arg0: StrategyStateUpdate) -> bool:
         ...
     def __hash__(self) -> int:
         ...

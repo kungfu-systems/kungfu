@@ -26,7 +26,7 @@ const forbiddenIncludes =
   /^\s*#\s*include\s*[<"](nng\/|rxcpp\/|sqlite|rocksdb\/|kungfu\/longfist\/longfist\.h|kungfu\/longfist\/types\.h|kungfu\/longfist\/enums\.h|kungfu\/longfist\/sqlite|kungfu\/yijinjing\/practice\/|kungfu\/yijinjing\/cache\/|kungfu\/yijinjing\/index\/|kungfu\/yijinjing\/nanomsg\/|kungfu\/yijinjing\/socket\/|kungfu\/yijinjing\/io\.h|kungfu\/yijinjing\/rx\.h|kungfu\/yijinjing\/util\/rocks\.h|kungfu\/wingchun\/)/;
 
 const forbiddenSymbols =
-  /longfist::types::(Order|Trade|Position)|types::(Order|Trade|Position)[A-Za-z]*\b|AllTypes\b|AllDataTypes\b|AllTypesTags\b|LegacyCompiledTypes\b|LegacyCompiledDataTypes\b|LegacyCompiledTypeTags\b|wingchun/;
+  /longfist::types::(Order|Trade|Position)|types::(Order|Trade|Position)[A-Za-z]*\b|LegacyCompiledTypes\b|LegacyCompiledDataTypes\b|LegacyCompiledTypeTags\b|wingchun/;
 
 function* walk(dir) {
   if (!fs.existsSync(dir)) return;

@@ -1,6 +1,6 @@
 from __future__ import annotations
 import pykungfu.longfist.types
-__all__: list[str] = ['Config', 'OperatorStateUpdate', 'StrategyStateUpdate', 'TimeKeyValue', 'TimeValue']
+__all__: list[str] = ['Config', 'OperatorStateUpdate', 'TimeKeyValue', 'TimeValue']
 class Config:
     @property
     def data(self) -> pykungfu.longfist.types.Config:
@@ -14,16 +14,6 @@ class Config:
 class OperatorStateUpdate:
     @property
     def data(self) -> pykungfu.longfist.types.OperatorStateUpdate:
-        ...
-    @property
-    def source(self) -> int:
-        ...
-    @property
-    def update_time(self) -> int:
-        ...
-class StrategyStateUpdate:
-    @property
-    def data(self) -> pykungfu.longfist.types.StrategyStateUpdate:
         ...
     @property
     def source(self) -> int:
