@@ -50,6 +50,46 @@ def _atlas_fixture(root):
     )
 
 
+def _action_receipts(source_records):
+    receipts = {}
+    for index, record in enumerate(
+        payloads.enrich_source_records(source_records), start=1
+    ):
+        journal_payload = f"journal-payload-{index}".encode("utf-8")
+        receipts[(record["kind"], record["source_id"])] = {
+            "frame_uid": index,
+            "trigger_frame_uid": index - 1,
+            "stream_id": 0,
+            "gen_time": 1000 + index,
+            "trigger_time": 0,
+            "msg_type": 9000 + index,
+            "source": 101,
+            "initial_source": 101,
+            "dest": 0,
+            "data_length": len(journal_payload),
+            "data_type": 0,
+            "journal_payload_hash": payloads.payload_hash(journal_payload),
+        }
+    return receipts
+
+
+def _action_frames_from_manifest(manifest):
+    frames = {}
+    for entry in manifest["entries"]:
+        if "action" not in entry:
+            continue
+        journal = dict(entry["action"]["journal"])
+        journal["_payload"] = f"journal-payload-{journal['frame_uid']}".encode("utf-8")
+        frames[
+            (
+                entry["action"]["journal"]["frame_uid"],
+                entry["action"]["journal"]["msg_type"],
+                entry["action"]["journal"]["gen_time"],
+            )
+        ] = journal
+    return frames
+
+
 def test_atlas_source_records_keep_full_payloads(tmp_path):
     repo = tmp_path / "atlas"
     _atlas_fixture(repo)
@@ -133,7 +173,7 @@ def test_payload_manifest_fsck_export_and_verify(tmp_path):
         importer.read_control_plane_with_sources(str(repo))
     )
 
-    payloads.write_import_payloads(
+    manifest = payloads.write_import_payloads(
         store,
         import_id="imp-test",
         repo_root=str(repo),
@@ -146,15 +186,19 @@ def test_payload_manifest_fsck_export_and_verify(tmp_path):
         },
         storage_source_id="atlas-local",
         range_filter={"since": "2026-07-01T00:00:00Z"},
+        action_receipts=_action_receipts(source_records),
     )
 
-    report = payloads.fsck_import(store)
+    report = payloads.fsck_import(
+        store, action_frames=_action_frames_from_manifest(manifest)
+    )
     assert report["ok"]
     assert report["checked"] == {
         "payloads": 3,
         "missions": 1,
         "goals": 1,
         "markers": 1,
+        "actions": 3,
     }
 
     records = payloads.export_records(store)
@@ -164,6 +208,16 @@ def test_payload_manifest_fsck_export_and_verify(tmp_path):
     assert goal["repo_head"] == "abc123"
     assert goal["storage_source_id"] == "atlas-local"
     assert goal["source_time"] == "2026-07-08T01:00:00Z"
+    assert goal["action"]["schema"] == payloads.ACTION_ENVELOPE_SCHEMA
+    assert goal["action"]["action_type"] == "atlas.goal.snapshot"
+    assert goal["action"]["payload"]["hash"] == goal["payload_hash"]
+    assert goal["action"]["journal"]["frame_uid"] > 0
+
+    missing_frame = payloads.fsck_import(store, action_frames={})
+    assert not missing_frame["ok"]
+    assert any(
+        error["code"] == "action_frame_missing" for error in missing_frame["errors"]
+    )
 
     verify = payloads.verify_against_source(store, source_records)
     assert verify == {

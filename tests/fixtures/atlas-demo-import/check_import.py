@@ -139,5 +139,51 @@ if os.path.exists(manifest_path):
                 hashlib.sha256(blob).hexdigest() == schema_hash,
             )
 
+# ── payload manifest: every imported source record is an action envelope ──
+payload_manifest_path = os.path.join(store_dir, "imports", "latest.json")
+check("payload manifest exists", os.path.exists(payload_manifest_path))
+if os.path.exists(payload_manifest_path):
+    with open(payload_manifest_path) as f:
+        payload_manifest = json.load(f)
+    entries = payload_manifest.get("entries", [])
+    action_entries = [
+        entry for entry in entries if isinstance(entry.get("action"), dict)
+    ]
+    check(
+        "all source records have action envelopes", len(action_entries) == len(entries)
+    )
+
+    frame_index = store.read_action_frame_index(runtime_dir)
+    check("journal action frame index is populated", len(frame_index) >= len(entries))
+    for entry in action_entries:
+        action = entry["action"]
+        journal = action.get("journal", {})
+        frame = frame_index.get(
+            (
+                journal.get("frame_uid"),
+                journal.get("msg_type"),
+                journal.get("gen_time"),
+            )
+        )
+        check(
+            f"action frame exists for {entry.get('kind')}:{entry.get('source_id')}",
+            frame is not None,
+        )
+        if frame is not None:
+            payload = frame.get("_payload", b"")
+            payload = payload[: journal.get("data_length", len(payload))]
+            check(
+                f"action frame hash matches {entry.get('kind')}:{entry.get('source_id')}",
+                hashlib.sha256(payload).hexdigest()
+                == journal.get("journal_payload_hash"),
+            )
+        check(
+            f"action payload hash matches {entry.get('kind')}:{entry.get('source_id')}",
+            action.get("payload", {}).get("hash") == entry.get("payload_hash"),
+        )
+
+    fsck = store.fsck(runtime_dir)
+    check("atlas store fsck passes", fsck.get("ok"), json.dumps(fsck.get("errors")))
+
 print(f"[atlas-demo-import] {len(failures)} failure(s)")
 sys.exit(1 if failures else 0)

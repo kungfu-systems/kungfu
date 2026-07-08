@@ -377,4 +377,4 @@ def read_control_plane_with_sources(repo_root, window=None):
         missions, goals, markers = _filter_projection(
             missions, goals, markers, source_records
         )
-    return missions, goals, markers, source_records, warnings
+    return missions, goals, markers, source_records, list(dict.fromkeys(warnings))

@@ -7,6 +7,7 @@ from typing import Any
 
 CONTENT_TYPE_JSON = "application/json"
 PAYLOAD_STATE_PRESENT = "present"
+ACTION_ENVELOPE_SCHEMA = "kungfu.action-envelope/v1"
 
 
 def canonical_json_bytes(value: Any) -> bytes:
@@ -61,6 +62,45 @@ def enrich_source_records(source_records: list[dict[str, Any]]) -> list[dict[str
     return enriched
 
 
+def _action_type(kind: str) -> str:
+    return f"atlas.{kind}.snapshot"
+
+
+def _action_envelope(
+    *,
+    import_id: str,
+    storage_source_id: str,
+    source_type: str,
+    entry: dict[str, Any],
+    receipt: dict[str, Any],
+) -> dict[str, Any]:
+    kind = str(entry.get("kind") or "")
+    return {
+        "schema": ACTION_ENVELOPE_SCHEMA,
+        "session": {"import_id": import_id},
+        "actor": {
+            "storage_source_id": storage_source_id,
+            "source_type": source_type,
+        },
+        "action_type": _action_type(kind),
+        "source": {
+            "kind": kind,
+            "source_id": entry.get("source_id"),
+            "source_path": entry.get("source_path"),
+            "source_time": entry.get("source_time"),
+            "schema_version": entry.get("schema_version"),
+        },
+        "payload": {
+            "content_type": entry.get("content_type", CONTENT_TYPE_JSON),
+            "hash_algorithm": "sha256",
+            "hash": entry.get("payload_hash"),
+            "byte_len": entry.get("byte_len"),
+            "state": entry.get("payload_state", PAYLOAD_STATE_PRESENT),
+        },
+        "journal": dict(receipt),
+    }
+
+
 def _serialize_range(range_filter: dict[str, Any] | None) -> dict[str, Any] | None:
     if not range_filter:
         return None
@@ -102,6 +142,7 @@ def write_import_payloads(
     storage_source_id: str = "atlas",
     source_type: str = "atlas",
     range_filter: dict[str, Any] | None = None,
+    action_receipts: dict[tuple[str, str], dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     store_dir = Path(store_dir)
     entries = []
@@ -111,7 +152,17 @@ def write_import_payloads(
         path.parent.mkdir(parents=True, exist_ok=True)
         if not path.exists():
             path.write_bytes(raw)
-        entries.append({k: v for k, v in record.items() if k != "payload"})
+        entry = {k: v for k, v in record.items() if k != "payload"}
+        receipt = (action_receipts or {}).get(_entry_key(entry))
+        if receipt is not None:
+            entry["action"] = _action_envelope(
+                import_id=import_id,
+                storage_source_id=storage_source_id,
+                source_type=source_type,
+                entry=entry,
+                receipt=receipt,
+            )
+        entries.append(entry)
 
     manifest = {
         "schema": "kungfu.atlas-import/v1",
@@ -181,9 +232,160 @@ def _load_payload(
     return data, None
 
 
+def _append_action_error(
+    report: dict[str, Any],
+    code: str,
+    entry: dict[str, Any],
+    **extra: Any,
+) -> None:
+    report["ok"] = False
+    error = {
+        "code": code,
+        "kind": entry.get("kind"),
+        "source_id": entry.get("source_id"),
+    }
+    error.update(extra)
+    report["errors"].append(error)
+
+
+def _check_action_payload(
+    report: dict[str, Any],
+    entry: dict[str, Any],
+    action: dict[str, Any],
+) -> None:
+    payload = action.get("payload")
+    if not isinstance(payload, dict):
+        _append_action_error(report, "action_payload_invalid", entry)
+        return
+    expectations = {
+        "hash": entry.get("payload_hash"),
+        "byte_len": entry.get("byte_len"),
+        "state": entry.get("payload_state"),
+    }
+    for field, expected in expectations.items():
+        if payload.get(field) != expected:
+            _append_action_error(
+                report,
+                "action_payload_mismatch",
+                entry,
+                field=field,
+                expected=expected,
+                actual=payload.get(field),
+            )
+
+
+def _check_action_frame(
+    report: dict[str, Any],
+    entry: dict[str, Any],
+    action: dict[str, Any],
+    action_frames: dict[Any, dict[str, Any]] | None,
+) -> None:
+    journal = action.get("journal")
+    if not isinstance(journal, dict):
+        _append_action_error(report, "action_journal_invalid", entry)
+        return
+    if action_frames is None:
+        return
+    frame_uid = journal.get("frame_uid")
+    frame = action_frames.get(
+        (frame_uid, journal.get("msg_type"), journal.get("gen_time"))
+    )
+    if frame is None:
+        _append_action_error(report, "action_frame_missing", entry, frame_uid=frame_uid)
+        return
+    for field in (
+        "trigger_frame_uid",
+        "stream_id",
+        "gen_time",
+        "trigger_time",
+        "msg_type",
+        "source",
+        "initial_source",
+        "dest",
+        "data_type",
+    ):
+        if frame.get(field) != journal.get(field):
+            _append_action_error(
+                report,
+                "action_frame_mismatch",
+                entry,
+                field=field,
+                frame_uid=frame_uid,
+                expected=journal.get(field),
+                actual=frame.get(field),
+            )
+    payload = frame.get("_payload")
+    expected_length = journal.get("data_length")
+    if isinstance(payload, bytes) and isinstance(expected_length, int):
+        if len(payload) < expected_length:
+            _append_action_error(
+                report,
+                "action_frame_mismatch",
+                entry,
+                field="data_length",
+                frame_uid=frame_uid,
+                expected=expected_length,
+                actual=len(payload),
+            )
+        elif any(payload[expected_length:]):
+            _append_action_error(
+                report,
+                "action_frame_nonzero_padding",
+                entry,
+                frame_uid=frame_uid,
+                expected=expected_length,
+                actual=len(payload),
+            )
+        actual_hash = payload_hash(payload[:expected_length])
+        if actual_hash != journal.get("journal_payload_hash"):
+            _append_action_error(
+                report,
+                "action_frame_mismatch",
+                entry,
+                field="journal_payload_hash",
+                frame_uid=frame_uid,
+                expected=journal.get("journal_payload_hash"),
+                actual=actual_hash,
+            )
+
+
+def _check_action(
+    report: dict[str, Any],
+    entry: dict[str, Any],
+    action_frames: dict[Any, dict[str, Any]] | None,
+) -> None:
+    action = entry.get("action")
+    if action is None:
+        return
+    report["checked"]["actions"] += 1
+    if not isinstance(action, dict):
+        _append_action_error(report, "action_invalid", entry)
+        return
+    if action.get("schema") != ACTION_ENVELOPE_SCHEMA:
+        _append_action_error(
+            report,
+            "action_schema_mismatch",
+            entry,
+            expected=ACTION_ENVELOPE_SCHEMA,
+            actual=action.get("schema"),
+        )
+    kind = str(entry.get("kind") or "")
+    if action.get("action_type") != _action_type(kind):
+        _append_action_error(
+            report,
+            "action_type_mismatch",
+            entry,
+            expected=_action_type(kind),
+            actual=action.get("action_type"),
+        )
+    _check_action_payload(report, entry, action)
+    _check_action_frame(report, entry, action, action_frames)
+
+
 def fsck_import(
     store_dir: str | Path,
     projection: dict[str, Any] | None = None,
+    action_frames: dict[Any, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     manifest = load_latest_manifest(store_dir)
     report = {
@@ -197,6 +399,7 @@ def fsck_import(
             "missions": 0,
             "goals": 0,
             "markers": 0,
+            "actions": 0,
         },
     }
     if manifest is None:
@@ -251,6 +454,7 @@ def fsck_import(
                     "payload_hash": entry.get("payload_hash"),
                 }
             )
+        _check_action(report, entry, action_frames)
 
     counts = manifest.get("counts") if isinstance(manifest.get("counts"), dict) else {}
     for key in ("missions", "goals", "markers"):

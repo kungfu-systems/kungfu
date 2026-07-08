@@ -64,18 +64,26 @@ class ImportStore:
 
     def __init__(self, runtime_dir):
         self.runtime_dir = runtime_dir
-        self.location = _location(runtime_dir)
-        # keep every piece alive on self — the writer borrows them without
-        # owning their lifetime (same as the work store)
-        self.publisher = yjj.noop_publisher()
-        self.bus = yjj.bus(False)
-        self.writer = yjj.writer(
-            self.location, PUBLIC_DEST, True, self.publisher, False, self.bus, 0
+        self.recorder = yjj.action_recorder(
+            runtime_dir, ATLAS_GROUP, ATLAS_NAME, PUBLIC_DEST, 0
         )
 
     def _append(self, msg_type, data):
-        # the binding takes the payload as a byte sequence (list[int])
-        self.writer.write_bytes(0, msg_type, list(data), len(data))
+        receipt = self.recorder.record_bytes(msg_type, data)
+        return {
+            "frame_uid": receipt.frame_uid,
+            "trigger_frame_uid": receipt.trigger_frame_uid,
+            "stream_id": receipt.stream_id,
+            "gen_time": receipt.gen_time,
+            "trigger_time": receipt.trigger_time,
+            "msg_type": receipt.msg_type,
+            "source": receipt.source,
+            "initial_source": receipt.initial_source,
+            "dest": receipt.dest,
+            "data_length": receipt.data_length,
+            "data_type": receipt.data_type,
+            "journal_payload_hash": payloads.payload_hash(data),
+        }
 
     def run_import(
         self,
@@ -91,6 +99,7 @@ class ImportStore:
         missions, goals, markers, source_records, warnings = (
             importer.read_control_plane_with_sources(repo_root, window=range_filter)
         )
+        action_receipts = {}
         self._append(
             MSG_IMPORT_BEGIN,
             events.import_begin(
@@ -101,11 +110,17 @@ class ImportStore:
             ),
         )
         for card in missions:
-            self._append(MSG_MISSION_SNAPSHOT, events.mission_snapshot(import_id, card))
+            action_receipts[("mission", card["mission_id"])] = self._append(
+                MSG_MISSION_SNAPSHOT, events.mission_snapshot(import_id, card)
+            )
         for card in goals:
-            self._append(MSG_GOAL_SNAPSHOT, events.goal_snapshot(import_id, card))
+            action_receipts[("goal", card["goal_id"])] = self._append(
+                MSG_GOAL_SNAPSHOT, events.goal_snapshot(import_id, card)
+            )
         for card in markers:
-            self._append(MSG_MARKER_SNAPSHOT, events.marker_snapshot(import_id, card))
+            action_receipts[("marker", card["branch"])] = self._append(
+                MSG_MARKER_SNAPSHOT, events.marker_snapshot(import_id, card)
+            )
         self._append(
             MSG_IMPORT_END,
             events.import_end(
@@ -126,6 +141,7 @@ class ImportStore:
             storage_source_id=storage_source_id,
             source_type="atlas",
             range_filter=range_filter,
+            action_receipts=action_receipts,
         )
         self.emit_manifest()
         return {
@@ -201,6 +217,43 @@ def read_frames(runtime_dir):
             continue
     frames.sort(key=lambda f: f[0])
     return frames
+
+
+def _frame_data_type_value(header):
+    value = getattr(header, "data_type", 0)
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        name = str(value).split(".")[-1].lower()
+        return 0 if name == "raw" else str(value)
+
+
+def read_action_frame_index(runtime_dir):
+    """Action frame identity index keyed by (frame_uid, msg_type, gen_time)."""
+    location = _location(runtime_dir)
+    index = {}
+    for msg_type in MSG_TYPE_NAMES:
+        try:
+            for header, frame_payload in yjj.assemble(location, 0).read_bytes(msg_type):
+                data = bytes(frame_payload)
+                index[(header.frame_uid, header.msg_type, header.gen_time)] = {
+                    "frame_uid": header.frame_uid,
+                    "trigger_frame_uid": header.trigger_frame_uid,
+                    "stream_id": header.stream_id,
+                    "gen_time": header.gen_time,
+                    "trigger_time": header.trigger_time,
+                    "msg_type": header.msg_type,
+                    "source": header.source,
+                    "initial_source": header.initial_source,
+                    "dest": header.dest,
+                    "data_length": len(data),
+                    "data_type": _frame_data_type_value(header),
+                    "journal_payload_hash": payloads.payload_hash(data),
+                    "_payload": data,
+                }
+        except (RuntimeError, ValueError, FileNotFoundError):
+            continue
+    return index
 
 
 def load(runtime_dir):
@@ -316,7 +369,11 @@ def status(runtime_dir):
 
 
 def fsck(runtime_dir):
-    return payloads.fsck_import(store_dir(runtime_dir), load(runtime_dir))
+    return payloads.fsck_import(
+        store_dir(runtime_dir),
+        load(runtime_dir),
+        action_frames=read_action_frame_index(runtime_dir),
+    )
 
 
 def export_jsonl(
