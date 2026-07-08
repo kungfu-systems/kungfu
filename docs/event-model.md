@@ -117,4 +117,4 @@ This boundary is pinned by
 [ADR-0020](../framework/core/docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md).
 
 Source: the replay path in
-[`framework/core/src/libkungfu/src/yijinjing/`](../framework/core/src/libkungfu/src/yijinjing).
+[`framework/core/src/libkungfu/src/runtime/`](../framework/core/src/libkungfu/src/runtime).

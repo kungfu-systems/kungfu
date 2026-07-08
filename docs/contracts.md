@@ -58,9 +58,9 @@ nanosecond `gen_time` and the `trigger_frame_uid` causal links in each frame
 (see [`event-model.md`](event-model.md)), a recorded stream reproduces with high
 precision.
 
-**Verify.** [`replay_writer.cpp`](../framework/core/src/libkungfu/src/yijinjing/journal/replay_writer.cpp)
+**Verify.** [`replay_writer.cpp`](../framework/core/src/libkungfu/src/runtime/journal/replay_writer.cpp)
 and the shared journal runtime under
-[`yijinjing/`](../framework/core/src/libkungfu/src/yijinjing).
+[`runtime/`](../framework/core/src/libkungfu/src/runtime).
 
 **Maturity.** `stable` for the mechanism (same-runtime replay). The precise
 determinism boundary — what is and is not reproducible across machines and

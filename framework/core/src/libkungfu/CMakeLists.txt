@@ -2,10 +2,11 @@ project(${LIBKUNGFU_NAME})
 
 enable_windows_export_all_symbols()
 
-# this directory holds only the yijinjing runtime layer, so the source GLOB
-# needs no exclusion list beyond the cache/optim split
+# this directory holds the libkungfu runtime layer above the standalone
+# yijinjing journal core, so the source GLOB needs no exclusion list beyond the
+# cache/optim split
 file(GLOB_RECURSE KUNGFU_OPTIM_SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp)
-file(GLOB_RECURSE KUNGFU_CACHE_SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/yijinjing/cache/*.cpp)
+file(GLOB_RECURSE KUNGFU_CACHE_SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/runtime/cache/*.cpp)
 list(REMOVE_ITEM KUNGFU_OPTIM_SOURCE_FILES ${KUNGFU_CACHE_SOURCE_FILES})
 
 add_library_object(kungfu_cache "${KUNGFU_CACHE_SOURCE_FILES}" "${COMPILER_OPTIMIZE_OFF_OPTIONS}" "${KUNGFU_BUILD_DIR}")
