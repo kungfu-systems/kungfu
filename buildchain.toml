@@ -33,3 +33,12 @@ command = "node scripts/buildchain-run-kungfu-code.mjs verify"
 
 [lifecycle.publish]
 command = "node scripts/buildchain-custom-publish-evidence.mjs"
+
+[badges]
+release_passport = "https://github.com/kungfu-systems/kungfu/releases/latest/download/buildchain.release.json"
+kfd_standards = "developer/sdk/node_modules/@kungfu-tech/kfd/standards.json"
+kfd_1 = "declared"
+kfd_2 = "declared"
+kfd_3 = "declared"
+platforms = ["macOS", "Linux", "Windows"]
+workflows = ["buildchain-validate.yml", "dco.yml"]
