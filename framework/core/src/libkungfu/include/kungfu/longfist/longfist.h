@@ -180,6 +180,53 @@ constexpr auto AllDataTypes = boost::hana::make_map( //
     TYPE_PAIR(TimeKeyValue)                          // 10602
 );
 
+// Public Python longfist types are limited to v4 runtime/core schemas. The
+// broader AllTypes/AllDataTypes registries are legacy compiled schema sets used
+// by diagnostics, raw journal decoding, and staged compatibility paths; they
+// are not the language-neutral action-recording surface.
+constexpr auto CorePublicDataTypes = boost::hana::make_map( //
+    TYPE_PAIR(frame_header),                                // 0
+    TYPE_PAIR(page_header),                                 // 1
+    TYPE_PAIR(SyntheticData),                               // 601
+    TYPE_PAIR(OutputKey),                                   // 701
+    TYPE_PAIR(Register),                                    // 10101
+    TYPE_PAIR(Deregister),                                  // 10102
+    TYPE_PAIR(Session),                                     // 10103
+    TYPE_PAIR(StrategyStateUpdate),                         // 10104
+    TYPE_PAIR(OperatorStateUpdate),                         // 10105
+    TYPE_PAIR(BrokerStateUpdate),                           // 10106
+    TYPE_PAIR(Config),                                      // 10201
+    TYPE_PAIR(Location),                                    // 10205
+    TYPE_PAIR(CacheReset),                                  // 10208
+    TYPE_PAIR(RequestCachedDone),                           // 10209
+    TYPE_PAIR(RequestReadFrom),                             // 10301
+    TYPE_PAIR(RequestReadFromPublic),                       // 10302
+    TYPE_PAIR(RequestReadFromSync),                         // 10303
+    TYPE_PAIR(RequestWriteTo),                              // 10304
+    TYPE_PAIR(Channel),                                     // 10305
+    TYPE_PAIR(ChannelRequest),                              // 10306
+    TYPE_PAIR(RequestWriteToBand),                          // 10307
+    TYPE_PAIR(Band),                                        // 10308
+    TYPE_PAIR(RequestReadFromOthers),                       // 10309
+    TYPE_PAIR(TimeRequest),                                 // 10501
+    TYPE_PAIR(TimeReset),                                   // 10502
+    TYPE_PAIR(TimeValue),                                   // 10601
+    TYPE_PAIR(TimeKeyValue)                                 // 10602
+);
+
+constexpr auto CorePublicProfileDataTypes = boost::hana::make_map( //
+    TYPE_PAIR(Config),                                             // 10201
+    TYPE_PAIR(Location)                                            // 10205
+);
+
+constexpr auto CorePublicStateDataTypes = boost::hana::make_map( //
+    TYPE_PAIR(StrategyStateUpdate),                              // 10104
+    TYPE_PAIR(OperatorStateUpdate),                              // 10105
+    TYPE_PAIR(Config),                                           // 10201
+    TYPE_PAIR(TimeValue),                                        // 10601
+    TYPE_PAIR(TimeKeyValue)                                      // 10602
+);
+
 constexpr auto ProfileDataTypes = boost::hana::make_map( //
     TYPE_PAIR(Config),                                   // 10201
     TYPE_PAIR(RiskSetting),                              // 10202

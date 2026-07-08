@@ -42,6 +42,7 @@ A record's **Status** says where it stands:
 | [0024](ADR-0024-location-role-and-journal-page-policy.md) | accepted | location role replaces trading category and journal page size is storage policy |
 | [0025](ADR-0025-carrier-type-and-action-envelope-semantics.md) | accepted | carrier type is transport metadata and business semantics live in action envelopes |
 | [0026](ADR-0026-yijinjing-greenfield-core-surface.md) | accepted | yijinjing exposes a greenfield core surface, not trading typed helpers |
+| [0027](ADR-0027-python-longfist-public-core-types.md) | accepted | Python longfist exposes only core public runtime types |
 
 ## Reading by theme
 
@@ -95,7 +96,10 @@ A record's **Status** says where it stands:
   in action envelopes), and
   [0026](ADR-0026-yijinjing-greenfield-core-surface.md) (the rule that yijinjing
   bindings expose neutral raw/envelope/runtime APIs instead of generated
-  trading typed helpers).
+  trading typed helpers), and
+  [0027](ADR-0027-python-longfist-public-core-types.md) (the matching rule that
+  Python `longfist.types` only exposes core public runtime structs, while the
+  full compiled schema registry remains an internal compatibility surface).
 - **Cross-cutting principle** — [0009](ADR-0009-load-bearing-self-bootstrap.md)
   (load-bearing self-bootstrap), which also names the general law that
   [`docs/architecture.md` § The build dogfoods the SDK](../../../../docs/architecture.md)

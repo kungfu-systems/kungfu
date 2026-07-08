@@ -415,7 +415,7 @@ void bind(pybind11::module &&m) {
 
   auto profile_class = py::class_<profile, std::shared_ptr<profile>>(m, "profile");
   profile_class.def(py::init<const locator_ptr &>());
-  boost::hana::for_each(longfist::ProfileDataTypes, [&](auto type) {
+  boost::hana::for_each(longfist::CorePublicProfileDataTypes, [&](auto type) {
     using DataType = typename decltype(+boost::hana::second(type))::type;
     profile_class.def("set", &profile::set<DataType>);
     profile_class.def("get", &profile::get<DataType>);

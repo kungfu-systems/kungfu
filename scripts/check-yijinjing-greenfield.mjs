@@ -18,6 +18,8 @@ const stagedOnly = args.includes('--staged');
 const allFiles = args.includes('--all');
 
 const SOURCE_EXT = /\.(c|cc|cpp|cxx|h|hh|hpp|hxx|mjs|js|cjs|ts|tsx|py|pyi)$/;
+const LEGACY_PY_LONGFIST_TYPES =
+  /\b(AlgoOrder|AlgoOrderAction|AlgoOrderActionError|AlgoOrderInput|Asset|Basket|BasketInstrument|BlockMessage|Commission|Contract|CustomSubscribe|Entrust|HistoryOrder|HistoryTrade|Instrument|InstrumentFactor|InstrumentKey|Order|OrderAction|OrderActionError|OrderInput|OrderStat|OrderTrigger|OrderTriggerAction|OrderTriggerActionError|OrderTriggerInput|Position|PositionEnd|Quote|RequestHistoryOrder|RequestHistoryOrderError|RequestHistoryTrade|RequestHistoryTradeError|RiskSetting|Trade|TradingDay|Transaction|Tree)\b/g;
 
 const RULES = [
   {
@@ -28,6 +30,42 @@ const RULES = [
     re: /\bAllDataTypes\b|boost::hana::for_each\(AllDataTypes/g,
     message:
       'Python yijinjing must expose neutral raw/envelope APIs, not generated business typed helpers.',
+  },
+  {
+    name: 'python longfist public AllDataTypes binding',
+    files: [
+      /^framework\/core\/src\/bindings\/python\/binding\/py-longfist-types\.cpp$/,
+    ],
+    re: /\b(AllDataTypes|StateDataTypes)\b|boost::hana::for_each\((AllDataTypes|StateDataTypes)/g,
+    message:
+      'Python longfist public types/state must bind CorePublic*DataTypes, not the legacy internal schema sets.',
+  },
+  {
+    name: 'python profile public internal registry binding',
+    files: [
+      /^framework\/core\/src\/bindings\/python\/binding\/py-yijinjing\.cpp$/,
+    ],
+    re: /\bProfileDataTypes\b|boost::hana::for_each\(longfist::ProfileDataTypes/g,
+    message:
+      'Python yijinjing profile must bind CorePublicProfileDataTypes, not the internal profile schema set.',
+  },
+  {
+    name: 'python longfist public trading stubs',
+    files: [
+      /^framework\/core\/stubs\/pykungfu\/longfist\/types\.pyi$/,
+      /^framework\/core\/stubs\/pykungfu\/longfist\/state\.pyi$/,
+      /^framework\/core\/stubs\/pykungfu\/yijinjing\.pyi$/,
+    ],
+    re: LEGACY_PY_LONGFIST_TYPES,
+    message:
+      'Python longfist stubs must not expose legacy trading/profile typed classes as public v4 core types.',
+  },
+  {
+    name: 'python dispatch bench typed trading dependency',
+    files: [/^framework\/core\/tests\/bench\/dispatch_load\.py$/],
+    re: /\b(lf\.types\.Quote|use_quote|quote)\b/g,
+    message:
+      'Dispatch load bench must use raw carrier payloads, not Python trading typed bindings.',
   },
   {
     name: 'legacy trading time API',

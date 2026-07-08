@@ -96,12 +96,12 @@ void bind_types(py::module &m) {
   auto m_types = m.def_submodule("types");
   auto m_state = m.def_submodule("state");
 
-  hana::for_each(AllDataTypes, [&](auto pair) {
+  hana::for_each(CorePublicDataTypes, [&](auto pair) {
     using DataType = typename decltype(+hana::second(pair))::type;
     bind_data_type<DataType>(m_types, hana::first(pair).c_str());
   });
 
-  hana::for_each(StateDataTypes, [&](auto pair) {
+  hana::for_each(CorePublicStateDataTypes, [&](auto pair) {
     using DataType = typename decltype(+hana::second(pair))::type;
     py::class_<kungfu::state<DataType>>(m_state, hana::first(pair).c_str())
         .def_readonly("source", &kungfu::state<DataType>::source)

@@ -11,10 +11,9 @@
 #
 # Usage: dispatch_load.py <kf-home> <event-count> [payload-bytes] [carrier-type]
 #
-# carrier-type accepts a number (written via write_bytes as a raw carrier event)
-# or the literal "quote" (writes typed longfist Quote frames — these pass the
-# node watcher's is_reactable pre-filter and exercise its state-bank feed,
-# unlike action-envelope events which the watcher pre-filters out).
+# carrier-type accepts a number and is written via write_bytes as a raw carrier
+# event. The benchmark intentionally avoids generated longfist business types so
+# Python stays on the v4 raw/envelope runtime surface.
 #
 # Runs inside the dev kfc environment (needs pykungfu); bootstraps its own
 # sys.path the same way the capture fixtures do.
@@ -52,8 +51,7 @@ def main():
     count = int(sys.argv[2])
     payload_bytes = int(sys.argv[3]) if len(sys.argv) > 3 else 64
     raw_type = sys.argv[4] if len(sys.argv) > 4 else str(DEFAULT_CARRIER_TYPE)
-    use_quote = raw_type == "quote"
-    carrier_type = lf.types.Quote.__tag__ if use_quote else int(raw_type)
+    carrier_type = int(raw_type)
 
     runtime_dir = os.path.join(home, "runtime")
     locator = yjj.locator(runtime_dir)
@@ -76,13 +74,9 @@ def main():
 
     writer = app.get_writer(PUBLIC_DEST)
     payload = [0] * payload_bytes  # binding takes list[int] (vector<uint8_t>)
-    quote = lf.types.Quote() if use_quote else None
     started_at = time.time()
     for i in range(count):
-        if use_quote:
-            writer.write(yjj.now_in_nano(), quote)
-        else:
-            writer.write_bytes(yjj.now_in_nano(), carrier_type, payload, payload_bytes)
+        writer.write_bytes(yjj.now_in_nano(), carrier_type, payload, payload_bytes)
         if i % 10000 == 0:
             app.step(100)  # keep consuming master feedback while loading
     elapsed = time.time() - started_at
@@ -96,10 +90,7 @@ def main():
         app.step(1000)
         time.sleep(0.01)
     for _ in range(max(1000, count // 100)):
-        if use_quote:
-            writer.write(yjj.now_in_nano(), quote)
-        else:
-            writer.write_bytes(yjj.now_in_nano(), carrier_type, payload, payload_bytes)
+        writer.write_bytes(yjj.now_in_nano(), carrier_type, payload, payload_bytes)
     settle_until = time.time() + 2
     while time.time() < settle_until:
         app.step(1000)
