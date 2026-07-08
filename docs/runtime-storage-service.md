@@ -13,6 +13,12 @@ journal maintenance commands, Atlas import, source sync, remote sync, and the
 missing storage operations such as `fsck`, import/export, garbage collection,
 and compaction.
 
+The architectural decisions are recorded in
+[`ADR-0018`](../framework/core/docs/adr/ADR-0018-runtime-storage-service-architecture.md)
+for the local runtime storage service and
+[`ADR-0019`](../framework/core/docs/adr/ADR-0019-git-like-source-sync-over-location-and-channel.md)
+for Git-like source sync over Kungfu `location` and `channel`.
+
 ## Existing Ground
 
 The lower-level contract already exists in pieces:
