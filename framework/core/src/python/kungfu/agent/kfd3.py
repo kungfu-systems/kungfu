@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
-import hashlib
+from kungfu.content_hash import compute_content_hash_value
 
 
 _API_ATTR = "__kungfu_kfd3_api__"
@@ -24,7 +24,7 @@ def registry_digest():
     from kungfu import agent as agent_pack
 
     data = agent_pack.document_text(_REGISTRY_FILE).encode("utf-8")
-    return hashlib.sha256(data).hexdigest()
+    return compute_content_hash_value(data)
 
 
 def kfd3_api(api_id):

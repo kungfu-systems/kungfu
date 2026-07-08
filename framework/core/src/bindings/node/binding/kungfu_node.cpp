@@ -45,6 +45,7 @@ decltype(__pfnDliNotifyHook2) __pfnDliNotifyHook2 = load_exe_hook;
 #include <kungfu/common.h>
 #include <kungfu/runtime/io.h>
 #include <kungfu/yijinjing/hash.h>
+#include <kungfu/yijinjing/storage/content_hash.h>
 
 #include "action_recorder.h"
 #include "app_container.h"
@@ -86,6 +87,80 @@ Napi::Value Hash(const Napi::CallbackInfo &info) { return Napi::Number::New(info
 
 Napi::Value FormatStringToHashHex(const Napi::CallbackInfo &info) {
   return Napi::String::New(info.Env(), fmt::format("{:08x}", Hash32(info)));
+}
+
+std::string ContentBytes(const Napi::CallbackInfo &info, size_t index) {
+  if (info.Length() <= index || info[index].IsEmpty() || info[index].IsUndefined()) {
+    throw Napi::TypeError::New(info.Env(), "payload must be a string, Buffer, or Uint8Array");
+  }
+
+  auto value = info[index];
+  if (value.IsString()) {
+    return value.As<Napi::String>().Utf8Value();
+  }
+  if (value.IsBuffer()) {
+    auto buffer = value.As<Napi::Buffer<uint8_t>>();
+    return {reinterpret_cast<const char *>(buffer.Data()), buffer.Length()};
+  }
+  if (value.IsTypedArray()) {
+    auto typed_array = value.As<Napi::TypedArray>();
+    if (typed_array.TypedArrayType() == napi_uint8_array) {
+      auto uint8_array = value.As<Napi::Uint8Array>();
+      auto data = static_cast<uint8_t *>(uint8_array.ArrayBuffer().Data()) + uint8_array.ByteOffset();
+      return {reinterpret_cast<const char *>(data), uint8_array.ByteLength()};
+    }
+  }
+
+  throw Napi::TypeError::New(info.Env(), "payload must be a string, Buffer, or Uint8Array");
+}
+
+std::string ContentAlgorithm(const Napi::CallbackInfo &info, size_t index) {
+  return IsValid(info, index, &Napi::Value::IsString) ? info[index].As<Napi::String>().Utf8Value()
+                                                      : yijinjing::storage::CONTENT_HASH_ALGORITHM_SHA256;
+}
+
+Napi::Value ComputeContentHashValue(const Napi::CallbackInfo &info) {
+  auto payload = ContentBytes(info, 0);
+  return Napi::String::New(info.Env(),
+                           yijinjing::storage::compute_content_hash_value(payload, ContentAlgorithm(info, 1)));
+}
+
+Napi::Value ComputeContentHash(const Napi::CallbackInfo &info) {
+  auto payload = ContentBytes(info, 0);
+  return Napi::String::New(info.Env(), yijinjing::storage::format_content_hash(yijinjing::storage::compute_content_hash(
+                                           payload, ContentAlgorithm(info, 1))));
+}
+
+Napi::Value ParseContentHash(const Napi::CallbackInfo &info) {
+  if (!IsValid(info, 0, &Napi::Value::IsString)) {
+    throw Napi::TypeError::New(info.Env(), "parseContentHash(formatted)");
+  }
+  const auto parsed = yijinjing::storage::parse_content_hash(info[0].As<Napi::String>().Utf8Value());
+  auto object = Napi::Object::New(info.Env());
+  object.Set("algorithm", Napi::String::New(info.Env(), parsed.algorithm));
+  object.Set("value", Napi::String::New(info.Env(), parsed.value));
+  return object;
+}
+
+Napi::Value FormatContentHash(const Napi::CallbackInfo &info) {
+  if (!IsValid(info, 0, &Napi::Value::IsString) || !IsValid(info, 1, &Napi::Value::IsString)) {
+    throw Napi::TypeError::New(info.Env(), "formatContentHash(algorithm, value)");
+  }
+  auto hash = yijinjing::storage::make_content_hash(info[1].As<Napi::String>().Utf8Value(),
+                                                    info[0].As<Napi::String>().Utf8Value());
+  return Napi::String::New(info.Env(), yijinjing::storage::format_content_hash(hash));
+}
+
+Napi::Value VerifyContentHash(const Napi::CallbackInfo &info) {
+  auto payload = ContentBytes(info, 0);
+  if (!IsValid(info, 1, &Napi::Value::IsString)) {
+    throw Napi::TypeError::New(info.Env(), "verifyContentHash(payload, expected, algorithm?)");
+  }
+  const auto expected = info[1].As<Napi::String>().Utf8Value();
+  const auto parsed = IsValid(info, 2, &Napi::Value::IsString)
+                          ? yijinjing::storage::make_content_hash(expected, info[2].As<Napi::String>().Utf8Value())
+                          : yijinjing::storage::parse_content_hash(expected);
+  return Napi::Boolean::New(info.Env(), yijinjing::storage::verify_content_hash(payload, parsed));
 }
 
 Napi::Value FormatTime(const Napi::CallbackInfo &info) {
@@ -147,6 +222,15 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
   Tracer::Init(env, exports);
   exports.Set("hash", Napi::Function::New(env, Hash));
   exports.Set("formatStringToHashHex", Napi::Function::New(env, FormatStringToHashHex));
+  exports.Set("CONTENT_HASH_ALGORITHM_SHA256",
+              Napi::String::New(env, yijinjing::storage::CONTENT_HASH_ALGORITHM_SHA256));
+  exports.Set("CONTENT_HASH_ALGORITHM_BLAKE3",
+              Napi::String::New(env, yijinjing::storage::CONTENT_HASH_ALGORITHM_BLAKE3));
+  exports.Set("computeContentHashValue", Napi::Function::New(env, ComputeContentHashValue));
+  exports.Set("computeContentHash", Napi::Function::New(env, ComputeContentHash));
+  exports.Set("parseContentHash", Napi::Function::New(env, ParseContentHash));
+  exports.Set("formatContentHash", Napi::Function::New(env, FormatContentHash));
+  exports.Set("verifyContentHash", Napi::Function::New(env, VerifyContentHash));
   exports.Set("formatTime", Napi::Function::New(env, FormatTime));
   exports.Set("parseTime", Napi::Function::New(env, ParseTime));
   exports.Set("shutdown", Napi::Function::New(env, Shutdown));

@@ -7,6 +7,7 @@
 #include <kungfu/yijinjing/storage/bundle.h>
 #include <kungfu/yijinjing/storage/channel.h>
 #include <kungfu/yijinjing/storage/common.h>
+#include <kungfu/yijinjing/storage/content_hash.h>
 #include <kungfu/yijinjing/storage/fsck.h>
 #include <kungfu/yijinjing/storage/provider.h>
 #include <kungfu/yijinjing/storage/range.h>

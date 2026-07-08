@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
-import hashlib
 import json
 import os
 import sys
@@ -22,6 +21,7 @@ import uuid
 from typing import Any, Callable
 
 import kungfu
+from kungfu.content_hash import compute_content_hash_value
 from kungfu.rewind import (
     ACTION_RUN_BEGIN,
     ACTION_RUN_END,
@@ -202,7 +202,7 @@ def run_and_report(
         json.dump(response_doc, f, ensure_ascii=False, indent=2)
         f.write("\n")
     with open(response_path, "rb") as rf:
-        response_hash = hashlib.sha256(rf.read()).hexdigest()
+        response_hash = compute_content_hash_value(rf.read())
     skill_audit_doc = None
     skill_audit_path = None
     skill_audit_hash = None

@@ -7,12 +7,14 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 from typing import Any
 
-from kungfu.action_envelope import CONTENT_HASH_ALGORITHM_SHA256
+from kungfu.content_hash import (
+    CONTENT_HASH_ALGORITHM_SHA256,
+    compute_content_hash_value,
+)
 from kungfu.rewind import ACTION_TYPE_NAMES, SCHEMA_VERSION
 
 _BFBS_FILE = __import__("kungfu").schema_data_path(__file__, "rewind_events.bfbs")
@@ -35,7 +37,7 @@ def emit(
     location the run was written to. Returns the manifest path.
     """
     blob = read_schema_blob()
-    schema_hash = hashlib.sha256(blob).hexdigest()
+    schema_hash = compute_content_hash_value(blob)
 
     schemas_dir = os.path.join(bundle_dir, "schemas")
     os.makedirs(schemas_dir, exist_ok=True)

@@ -8,11 +8,13 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 
-from kungfu.action_envelope import CONTENT_HASH_ALGORITHM_SHA256
+from kungfu.content_hash import (
+    CONTENT_HASH_ALGORITHM_SHA256,
+    compute_content_hash_value,
+)
 from kungfu.rewind import reflection_fb
 
 _RESERVED_ACTION_PREFIXES = ("rewind.", "work.", "atlas.", "kungfu.")
@@ -62,7 +64,7 @@ def register_user_schema(
     _validate_action_type(action_type, tier)
     qualified = _root_object_name(bytes(bfbs), name)
 
-    schema_hash = hashlib.sha256(bytes(bfbs)).hexdigest()
+    schema_hash = compute_content_hash_value(bytes(bfbs))
     schemas_dir = os.path.join(bundle_dir, "schemas")
     os.makedirs(schemas_dir, exist_ok=True)
     blob_path = os.path.join(schemas_dir, schema_hash + ".bfbs")

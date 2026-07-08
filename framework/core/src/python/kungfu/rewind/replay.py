@@ -21,7 +21,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import re
@@ -33,6 +32,7 @@ import flatbuffers.number_types as N
 import kungfu
 
 from kungfu.action_envelope import CARRIER_ACTION_ENVELOPE
+from kungfu.content_hash import verify_content_hash_value
 from kungfu.rewind import ACTION_TYPE_NAMES
 from kungfu.rewind import reflection_fb
 from kungfu.rewind.fb import (
@@ -120,7 +120,7 @@ class BundleDecoder:
             )
             with open(blob_path, "rb") as f:
                 blob = f.read()
-            if hashlib.sha256(blob).hexdigest() != binding["schema_hash"]:
+            if not verify_content_hash_value(blob, binding["schema_hash"]):
                 raise ValueError(
                     f"schema blob hash mismatch for action_type {action_type}"
                 )

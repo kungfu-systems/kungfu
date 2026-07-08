@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
-import hashlib
 import os
 import re
 from typing import Any
 
+from kungfu.content_hash import compute_content_hash
 from kungfu.skill import contract as skill_contract
 
 
@@ -39,7 +39,7 @@ def parse_skill(skill_dir):
         "kfx": kfx,
         "source": {
             "path": skill_path,
-            "hash": "sha256:" + hashlib.sha256(markdown.encode()).hexdigest(),
+            "hash": compute_content_hash(markdown),
         },
     }
     skill_contract.validate_skill_source(parsed)

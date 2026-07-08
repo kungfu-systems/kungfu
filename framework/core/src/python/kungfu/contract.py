@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import sys
@@ -11,6 +10,8 @@ from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator
+
+from kungfu.content_hash import compute_content_hash
 
 
 REGISTRY_SCHEMA = "kungfu.contract-registry/v1"
@@ -132,7 +133,7 @@ def load_contract(
 def contract_hash(surface: str, contract_path: str | None = None) -> str:
     path = resolve_contract_path(surface, contract_path)
     with open(path, "rb") as f:
-        return "sha256:" + hashlib.sha256(f.read()).hexdigest()
+        return compute_content_hash(f.read())
 
 
 def contract_metadata(

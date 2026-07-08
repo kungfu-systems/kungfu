@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 import base64
-import hashlib
 import json
 from typing import Any
+
+from kungfu.content_hash import (
+    compute_content_hash_value,
+    verify_content_hash_value,
+)
 
 CARRIER_ACTION_ENVELOPE = 1000
 ACTION_ENVELOPE_SCHEMA = "kungfu.action-envelope/v1"
 PAYLOAD_ENCODING_FLATBUFFERS = "flatbuffers"
 PAYLOAD_ENCODING_JSON = "json"
 CONTENT_TRANSFER_BASE64 = "base64"
-CONTENT_HASH_ALGORITHM_SHA256 = "sha256"
 
 
 def canonical_json_bytes(value: Any) -> bytes:
@@ -25,7 +28,7 @@ def canonical_json_bytes(value: Any) -> bytes:
 
 
 def payload_hash(payload: bytes) -> str:
-    return hashlib.sha256(payload).hexdigest()
+    return compute_content_hash_value(payload)
 
 
 def flatbuffer_payload(payload: bytes) -> dict[str, Any]:
@@ -50,7 +53,7 @@ def decode_flatbuffer_payload(payload: dict[str, Any]) -> bytes:
         )
     data = base64.b64decode(str(payload.get("data") or ""), validate=True)
     expected = payload.get("sha256")
-    if expected and payload_hash(data) != expected:
+    if expected and not verify_content_hash_value(data, str(expected)):
         raise ValueError("action envelope payload hash mismatch")
     return data
 

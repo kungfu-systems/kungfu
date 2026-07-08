@@ -13,7 +13,6 @@
 # a content-addressed .bfbs plus action_type bindings (manifest.json), so the
 # work journal decodes through FlatBuffers reflection without this runtime.
 
-import hashlib
 import json
 import os
 import uuid
@@ -21,7 +20,10 @@ from typing import Any, cast
 
 import kungfu
 
-from kungfu.action_envelope import CONTENT_HASH_ALGORITHM_SHA256
+from kungfu.content_hash import (
+    CONTENT_HASH_ALGORITHM_SHA256,
+    compute_content_hash_value,
+)
 from kungfu.work import (
     ACTION_ARTIFACT_RECORDED,
     ACTION_CHECKPOINT_RECORDED,
@@ -163,7 +165,7 @@ class WorkStore:
         """Pin the store's schema bindings (content-addressed .bfbs + manifest)."""
         with open(_BFBS_FILE, "rb") as f:
             blob = f.read()
-        schema_hash = hashlib.sha256(blob).hexdigest()
+        schema_hash = compute_content_hash_value(blob)
 
         schemas_dir = os.path.join(self.store_dir(), "schemas")
         os.makedirs(schemas_dir, exist_ok=True)

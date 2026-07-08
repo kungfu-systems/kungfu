@@ -19,6 +19,7 @@
 #include <kungfu/yijinjing/journal/journal.h>
 #include <kungfu/yijinjing/log.h>
 #include <kungfu/yijinjing/schema/registry.h>
+#include <kungfu/yijinjing/storage/content_hash.h>
 #include <kungfu/yijinjing/time.h>
 
 using namespace kungfu::yijinjing;
@@ -184,6 +185,51 @@ void bind(pybind11::module &&m) {
   m.def("hash_str_32", &yijinjing::fast_hash_str_32, py::arg("key"), py::arg("seed") = KUNGFU_HASH_SEED);
   m.attr("FAST_HASH_ALGORITHM") = yijinjing::FAST_HASH_ALGORITHM;
   m.attr("FRAME_CHECKSUM_ALGORITHM_FNV1A64") = action::FRAME_CHECKSUM_ALGORITHM_FNV1A64;
+  m.attr("CONTENT_HASH_ALGORITHM_SHA256") = yijinjing::storage::CONTENT_HASH_ALGORITHM_SHA256;
+  m.attr("CONTENT_HASH_ALGORITHM_BLAKE3") = yijinjing::storage::CONTENT_HASH_ALGORITHM_BLAKE3;
+  m.def("is_supported_content_hash_algorithm", &yijinjing::storage::is_supported_content_hash_algorithm,
+        py::arg("algorithm"));
+  m.def("normalize_content_hash_algorithm", &yijinjing::storage::normalize_content_hash_algorithm,
+        py::arg("algorithm"));
+  m.def(
+      "compute_content_hash_value",
+      [](py::buffer payload, const std::string &algorithm) {
+        const auto view = payload.request();
+        return yijinjing::storage::compute_content_hash_value(view.ptr, static_cast<size_t>(view.size * view.itemsize),
+                                                              algorithm);
+      },
+      py::arg("payload"), py::arg("algorithm") = yijinjing::storage::CONTENT_HASH_ALGORITHM_SHA256);
+  m.def(
+      "compute_content_hash",
+      [](py::buffer payload, const std::string &algorithm) {
+        const auto view = payload.request();
+        return yijinjing::storage::format_content_hash(yijinjing::storage::compute_content_hash(
+            view.ptr, static_cast<size_t>(view.size * view.itemsize), algorithm));
+      },
+      py::arg("payload"), py::arg("algorithm") = yijinjing::storage::CONTENT_HASH_ALGORITHM_SHA256);
+  m.def(
+      "format_content_hash",
+      [](const std::string &algorithm, const std::string &value) {
+        return yijinjing::storage::format_content_hash(yijinjing::storage::make_content_hash(value, algorithm));
+      },
+      py::arg("algorithm"), py::arg("value"));
+  m.def(
+      "parse_content_hash",
+      [](const std::string &formatted) {
+        const auto parsed = yijinjing::storage::parse_content_hash(formatted);
+        return py::make_tuple(parsed.algorithm, parsed.value);
+      },
+      py::arg("formatted"));
+  m.def(
+      "verify_content_hash",
+      [](py::buffer payload, const std::string &expected, const std::string &algorithm) {
+        const auto parsed = algorithm.empty() ? yijinjing::storage::parse_content_hash(expected)
+                                              : yijinjing::storage::make_content_hash(expected, algorithm);
+        const auto view = payload.request();
+        return yijinjing::storage::verify_content_hash(view.ptr, static_cast<size_t>(view.size * view.itemsize),
+                                                       parsed);
+      },
+      py::arg("payload"), py::arg("expected"), py::arg("algorithm") = "");
 
   m.def("setup_log", &yijinjing::log::setup_log);
   m.def("emit_log", &yijinjing::log::emit_log);
