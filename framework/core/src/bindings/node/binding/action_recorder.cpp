@@ -88,7 +88,7 @@ Napi::Object to_receipt_object(Napi::Env env, const record_receipt &receipt) {
   object.Set("dataLength", Napi::Number::New(env, receipt.data_length));
   object.Set("dataType", Napi::Number::New(env, receipt.data_type));
   object.Set("integrityVersion", Napi::Number::New(env, receipt.integrity_version));
-  object.Set("checksumAlgorithm", Napi::String::New(env, runtime::action::FRAME_CHECKSUM_ALGORITHM_FNV1A64));
+  object.Set("checksumAlgorithm", Napi::String::New(env, receipt.checksum_algorithm));
   object.Set("payloadChecksum", Napi::BigInt::New(env, receipt.payload_checksum));
   object.Set("frameChecksum", Napi::BigInt::New(env, receipt.frame_checksum));
   return object;
@@ -159,8 +159,16 @@ void ActionRecorder::Init(Napi::Env env, Napi::Object exports) {
   constructor = Napi::Persistent(func);
   constructor.SuppressDestruct();
   exports.Set("ActionRecorder", func);
+  exports.Set("FRAME_INTEGRITY_VERSION_V1", Napi::Number::New(env, runtime::action::FRAME_INTEGRITY_VERSION_V1));
+  exports.Set("FRAME_INTEGRITY_VERSION_V2", Napi::Number::New(env, runtime::action::FRAME_INTEGRITY_VERSION_V2));
+  exports.Set("DEFAULT_FRAME_INTEGRITY_VERSION",
+              Napi::Number::New(env, runtime::action::DEFAULT_FRAME_INTEGRITY_VERSION));
   exports.Set("FRAME_CHECKSUM_ALGORITHM_FNV1A64",
               Napi::String::New(env, runtime::action::FRAME_CHECKSUM_ALGORITHM_FNV1A64));
+  exports.Set("FRAME_CHECKSUM_ALGORITHM_CRC32C",
+              Napi::String::New(env, runtime::action::FRAME_CHECKSUM_ALGORITHM_CRC32C));
+  exports.Set("DEFAULT_FRAME_CHECKSUM_ALGORITHM",
+              Napi::String::New(env, runtime::action::DEFAULT_FRAME_CHECKSUM_ALGORITHM));
 }
 
 } // namespace kungfu::node

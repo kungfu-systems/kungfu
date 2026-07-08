@@ -90,10 +90,14 @@ class ImportStore:
             "data_length": receipt.data_length,
             "data_type": receipt.data_type,
             "integrity_version": _receipt_value(receipt, "integrity_version", 0),
-            "checksum_algorithm": getattr(
-                yjj,
-                "FRAME_CHECKSUM_ALGORITHM_FNV1A64",
-                payloads.FRAME_CHECKSUM_ALGORITHM_FNV1A64,
+            "checksum_algorithm": _receipt_value(
+                receipt,
+                "checksum_algorithm",
+                getattr(
+                    yjj,
+                    "DEFAULT_FRAME_CHECKSUM_ALGORITHM",
+                    payloads.DEFAULT_FRAME_CHECKSUM_ALGORITHM,
+                ),
             ),
             "payload_checksum": _receipt_value(receipt, "payload_checksum", 0),
             "frame_checksum": _receipt_value(receipt, "frame_checksum", 0),
@@ -277,7 +281,28 @@ def _fnv1a64_update(state, data):
     return state
 
 
-def _checksum_payload(data):
+def _crc32c_table():
+    table = []
+    for i in range(256):
+        crc = i
+        for _ in range(8):
+            crc = (crc >> 1) ^ (0x82F63B78 if crc & 1 else 0)
+        table.append(crc & 0xFFFFFFFF)
+    return table
+
+
+_CRC32C_TABLE = _crc32c_table()
+
+
+def _crc32c_update(state, data):
+    for value in bytes(data):
+        state = (state >> 8) ^ _CRC32C_TABLE[(state ^ value) & 0xFF]
+    return state & 0xFFFFFFFF
+
+
+def _checksum_payload(data, algorithm=payloads.DEFAULT_FRAME_CHECKSUM_ALGORITHM):
+    if algorithm == payloads.FRAME_CHECKSUM_ALGORITHM_CRC32C:
+        return _crc32c_update(0xFFFFFFFF, data) ^ 0xFFFFFFFF
     return _fnv1a64_update(14695981039346656037, data)
 
 
@@ -285,8 +310,9 @@ def _pack_scalar(fmt, value):
     return struct.pack("<" + fmt, value)
 
 
-def _checksum_frame(header, data, payload_length):
-    state = 14695981039346656037
+def _checksum_frame(
+    header, data, payload_length, algorithm=payloads.DEFAULT_FRAME_CHECKSUM_ALGORITHM
+):
     fields = [
         ("I", int(getattr(header, "length", 0))),
         ("I", int(getattr(header, "header_length", 0))),
@@ -302,6 +328,12 @@ def _checksum_frame(header, data, payload_length):
         ("Q", int(header.stream_id)),
         ("I", int(payload_length)),
     ]
+    if algorithm == payloads.FRAME_CHECKSUM_ALGORITHM_CRC32C:
+        state = 0xFFFFFFFF
+        for fmt, value in fields:
+            state = _crc32c_update(state, _pack_scalar(fmt, value))
+        return _crc32c_update(state, data[:payload_length]) ^ 0xFFFFFFFF
+    state = 14695981039346656037
     for fmt, value in fields:
         state = _fnv1a64_update(state, _pack_scalar(fmt, value))
     return _fnv1a64_update(state, data[:payload_length])
@@ -332,11 +364,11 @@ def read_action_frame_index(runtime_dir):
                 "data_type": _frame_data_type_value(header),
                 "journal_payload_hash": payloads.payload_hash(data),
                 "_payload": data,
-                "_payload_checksum_for": lambda payload_length, d=data: (
-                    _checksum_payload(d[:payload_length])
+                "_payload_checksum_for": lambda payload_length, algorithm=payloads.DEFAULT_FRAME_CHECKSUM_ALGORITHM, d=data: (
+                    _checksum_payload(d[:payload_length], algorithm)
                 ),
-                "_frame_checksum_for": lambda payload_length, h=header, d=data: (
-                    _checksum_frame(h, d, payload_length)
+                "_frame_checksum_for": lambda payload_length, algorithm=payloads.DEFAULT_FRAME_CHECKSUM_ALGORITHM, h=header, d=data: (
+                    _checksum_frame(h, d, payload_length, algorithm)
                 ),
             }
     except (RuntimeError, ValueError, FileNotFoundError):

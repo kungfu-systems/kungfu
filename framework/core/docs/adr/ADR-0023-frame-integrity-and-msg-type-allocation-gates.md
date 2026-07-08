@@ -48,10 +48,11 @@ Frame integrity begins in the C++ action-recorder membrane:
 - Higher layers that persist receipts, such as the Atlas import manifest, can
   run fsck by reopening journal frames and recomputing those checksums.
 
-The first checksum algorithm is a fast non-keyed 64-bit FNV-1a implementation.
-This is a corruption detector, not a cryptographic authenticity proof.
-ADR-0028 names this algorithm `fnv1a64` and separates it from content hashes
-such as `sha256` and internal yijinjing `fast_hash_*` ids.
+The v1 checksum algorithm is a fast non-keyed 64-bit FNV-1a implementation,
+labelled `fnv1a64`. ADR-0029 moves new receipts to v2 CRC32C, labelled
+`crc32c`. Both are corruption detectors, not cryptographic authenticity proofs.
+ADR-0028 separates these frame checksums from content hashes such as `sha256`
+and internal yijinjing `fast_hash_*` ids.
 
 ## Trailer and hash-chain direction
 
@@ -103,10 +104,10 @@ later stage after the receipt-based slice proves the API and fsck flow.
 
 - Receipt-based integrity is only as durable as the layer that persists the
   receipt. Full journal-native trailer integrity is still future work.
-- The v1 receipt checksum defines an implementation-level scalar order for the
+- The receipt checksum defines an implementation-level scalar order for the
   current writer/fsck path. A future journal-native trailer must freeze a
   portable byte encoding as part of the format contract.
-- FNV-1a is not cryptographic. Do not describe it as security against a capable
-  attacker.
+- FNV-1a and CRC32C are not cryptographic. Do not describe them as security
+  against a capable attacker.
 - Legacy open-layer ranges are still present. The gate prevents new accidental
   allocations but does not migrate old surfaces by itself.

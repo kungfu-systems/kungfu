@@ -184,7 +184,25 @@ void bind(pybind11::module &&m) {
   m.def("hash_32", &yijinjing::fast_hash_32, py::arg("key"), py::arg("length"), py::arg("seed") = KUNGFU_HASH_SEED);
   m.def("hash_str_32", &yijinjing::fast_hash_str_32, py::arg("key"), py::arg("seed") = KUNGFU_HASH_SEED);
   m.attr("FAST_HASH_ALGORITHM") = yijinjing::FAST_HASH_ALGORITHM;
+  m.attr("FRAME_INTEGRITY_VERSION_V1") = action::FRAME_INTEGRITY_VERSION_V1;
+  m.attr("FRAME_INTEGRITY_VERSION_V2") = action::FRAME_INTEGRITY_VERSION_V2;
+  m.attr("DEFAULT_FRAME_INTEGRITY_VERSION") = action::DEFAULT_FRAME_INTEGRITY_VERSION;
   m.attr("FRAME_CHECKSUM_ALGORITHM_FNV1A64") = action::FRAME_CHECKSUM_ALGORITHM_FNV1A64;
+  m.attr("FRAME_CHECKSUM_ALGORITHM_CRC32C") = action::FRAME_CHECKSUM_ALGORITHM_CRC32C;
+  m.attr("DEFAULT_FRAME_CHECKSUM_ALGORITHM") = action::DEFAULT_FRAME_CHECKSUM_ALGORITHM;
+  m.def("is_supported_frame_checksum_algorithm", &action::is_supported_frame_checksum_algorithm, py::arg("algorithm"));
+  m.def("frame_checksum_algorithm_for_integrity_version", &action::frame_checksum_algorithm_for_integrity_version,
+        py::arg("integrity_version"));
+  m.def("frame_integrity_version_for_checksum_algorithm", &action::frame_integrity_version_for_checksum_algorithm,
+        py::arg("algorithm"));
+  m.def(
+      "checksum_payload",
+      [](py::buffer payload, const std::string &algorithm) {
+        const auto view = payload.request();
+        return action::checksum_payload(static_cast<const uint8_t *>(view.ptr),
+                                        static_cast<uint32_t>(view.size * view.itemsize), algorithm);
+      },
+      py::arg("payload"), py::arg("algorithm") = action::DEFAULT_FRAME_CHECKSUM_ALGORITHM);
   m.attr("CONTENT_HASH_ALGORITHM_SHA256") = yijinjing::storage::CONTENT_HASH_ALGORITHM_SHA256;
   m.attr("CONTENT_HASH_ALGORITHM_BLAKE3") = yijinjing::storage::CONTENT_HASH_ALGORITHM_BLAKE3;
   m.def("is_supported_content_hash_algorithm", &yijinjing::storage::is_supported_content_hash_algorithm,
@@ -287,6 +305,7 @@ void bind(pybind11::module &&m) {
       .def_readonly("data_length", &action::record_receipt::data_length)
       .def_readonly("data_type", &action::record_receipt::data_type)
       .def_readonly("integrity_version", &action::record_receipt::integrity_version)
+      .def_readonly("checksum_algorithm", &action::record_receipt::checksum_algorithm)
       .def_readonly("payload_checksum", &action::record_receipt::payload_checksum)
       .def_readonly("frame_checksum", &action::record_receipt::frame_checksum);
 

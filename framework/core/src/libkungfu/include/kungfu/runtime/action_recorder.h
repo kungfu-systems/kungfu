@@ -14,7 +14,11 @@
 namespace kungfu::runtime::action {
 
 inline constexpr uint32_t FRAME_INTEGRITY_VERSION_V1 = 1;
+inline constexpr uint32_t FRAME_INTEGRITY_VERSION_V2 = 2;
+inline constexpr uint32_t DEFAULT_FRAME_INTEGRITY_VERSION = FRAME_INTEGRITY_VERSION_V2;
 inline constexpr const char *FRAME_CHECKSUM_ALGORITHM_FNV1A64 = "fnv1a64";
+inline constexpr const char *FRAME_CHECKSUM_ALGORITHM_CRC32C = "crc32c";
+inline constexpr const char *DEFAULT_FRAME_CHECKSUM_ALGORITHM = FRAME_CHECKSUM_ALGORITHM_CRC32C;
 
 struct record_options {
   int64_t gen_time = 0;
@@ -38,14 +42,23 @@ struct record_receipt {
   uint32_t data_length = 0;
   int8_t data_type = 0;
   uint32_t integrity_version = 0;
+  std::string checksum_algorithm = {};
   uint64_t payload_checksum = 0;
   uint64_t frame_checksum = 0;
 };
 
-[[nodiscard]] uint64_t checksum_payload(const uint8_t *payload, uint32_t payload_length);
+[[nodiscard]] bool is_supported_frame_checksum_algorithm(const std::string &algorithm);
+
+[[nodiscard]] std::string frame_checksum_algorithm_for_integrity_version(uint32_t integrity_version);
+
+[[nodiscard]] uint32_t frame_integrity_version_for_checksum_algorithm(const std::string &algorithm);
+
+[[nodiscard]] uint64_t checksum_payload(const uint8_t *payload, uint32_t payload_length,
+                                        const std::string &algorithm = DEFAULT_FRAME_CHECKSUM_ALGORITHM);
 
 [[nodiscard]] uint64_t checksum_frame(const yijinjing::types::frame_header &header, const uint8_t *payload,
-                                      uint32_t payload_length);
+                                      uint32_t payload_length,
+                                      const std::string &algorithm = DEFAULT_FRAME_CHECKSUM_ALGORITHM);
 
 class action_recorder {
 public:

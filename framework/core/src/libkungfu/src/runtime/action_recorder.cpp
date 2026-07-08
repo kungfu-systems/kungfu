@@ -4,7 +4,10 @@
 #include <kungfu/runtime/io.h>
 #include <kungfu/yijinjing/time.h>
 
+#include <array>
 #include <cstring>
+#include <stdexcept>
+#include <string>
 #include <type_traits>
 
 using namespace kungfu::yijinjing::enums;
@@ -16,6 +19,9 @@ namespace kungfu::runtime::action {
 namespace {
 constexpr uint64_t FNV1A64_OFFSET = 14695981039346656037ull;
 constexpr uint64_t FNV1A64_PRIME = 1099511628211ull;
+constexpr uint32_t CRC32C_INITIAL = 0xffffffffu;
+constexpr uint32_t CRC32C_XOR_OUT = 0xffffffffu;
+constexpr uint32_t CRC32C_REVERSED_POLY = 0x82f63b78u;
 
 uint32_t align_frame_payload_length(uint32_t length) {
   return static_cast<uint32_t>((length + (sizeof(uintptr_t) - 1)) & ~(sizeof(uintptr_t) - 1));
@@ -40,9 +46,82 @@ template <typename T> void checksum_scalar(uint64_t &state, const T &value) {
     checksum_byte(state, static_cast<uint8_t>((raw >> (i * 8)) & 0xffu));
   }
 }
+
+const std::array<uint32_t, 256> &crc32c_table() {
+  static const auto table = [] {
+    std::array<uint32_t, 256> result{};
+    for (uint32_t i = 0; i < result.size(); ++i) {
+      uint32_t crc = i;
+      for (int bit = 0; bit < 8; ++bit) {
+        crc = (crc >> 1u) ^ ((crc & 1u) != 0u ? CRC32C_REVERSED_POLY : 0u);
+      }
+      result[i] = crc;
+    }
+    return result;
+  }();
+  return table;
+}
+
+void checksum_crc32c_bytes(uint32_t &state, const uint8_t *data, size_t size) {
+  const auto &table = crc32c_table();
+  for (size_t i = 0; i < size; ++i) {
+    state = (state >> 8u) ^ table[(state ^ data[i]) & 0xffu];
+  }
+}
+
+template <typename T> void checksum_crc32c_scalar(uint32_t &state, const T &value) {
+  static_assert(std::is_integral_v<T>);
+  using unsigned_t = std::make_unsigned_t<T>;
+  auto raw = static_cast<unsigned_t>(value);
+  for (size_t i = 0; i < sizeof(T); ++i) {
+    const auto byte = static_cast<uint8_t>((raw >> (i * 8)) & 0xffu);
+    checksum_crc32c_bytes(state, &byte, 1);
+  }
+}
+
+uint64_t finalize_crc32c(uint32_t state) { return static_cast<uint64_t>(state ^ CRC32C_XOR_OUT); }
+
+bool is_fnv1a64(const std::string &algorithm) { return algorithm == FRAME_CHECKSUM_ALGORITHM_FNV1A64; }
+
+bool is_crc32c(const std::string &algorithm) { return algorithm == FRAME_CHECKSUM_ALGORITHM_CRC32C; }
 } // namespace
 
-uint64_t checksum_payload(const uint8_t *payload, uint32_t payload_length) {
+bool is_supported_frame_checksum_algorithm(const std::string &algorithm) {
+  return is_fnv1a64(algorithm) || is_crc32c(algorithm);
+}
+
+std::string frame_checksum_algorithm_for_integrity_version(uint32_t integrity_version) {
+  switch (integrity_version) {
+  case FRAME_INTEGRITY_VERSION_V1:
+    return FRAME_CHECKSUM_ALGORITHM_FNV1A64;
+  case FRAME_INTEGRITY_VERSION_V2:
+    return FRAME_CHECKSUM_ALGORITHM_CRC32C;
+  default:
+    throw std::invalid_argument("unsupported frame integrity version: " + std::to_string(integrity_version));
+  }
+}
+
+uint32_t frame_integrity_version_for_checksum_algorithm(const std::string &algorithm) {
+  if (is_fnv1a64(algorithm)) {
+    return FRAME_INTEGRITY_VERSION_V1;
+  }
+  if (is_crc32c(algorithm)) {
+    return FRAME_INTEGRITY_VERSION_V2;
+  }
+  throw std::invalid_argument("unsupported frame checksum algorithm: " + algorithm);
+}
+
+uint64_t checksum_payload(const uint8_t *payload, uint32_t payload_length, const std::string &algorithm) {
+  if (is_crc32c(algorithm)) {
+    uint32_t state = CRC32C_INITIAL;
+    if (payload != nullptr and payload_length > 0) {
+      checksum_crc32c_bytes(state, payload, payload_length);
+    }
+    return finalize_crc32c(state);
+  }
+  if (!is_fnv1a64(algorithm)) {
+    throw std::invalid_argument("unsupported frame checksum algorithm: " + algorithm);
+  }
   uint64_t state = FNV1A64_OFFSET;
   if (payload != nullptr and payload_length > 0) {
     checksum_bytes(state, payload, payload_length);
@@ -50,7 +129,32 @@ uint64_t checksum_payload(const uint8_t *payload, uint32_t payload_length) {
   return state;
 }
 
-uint64_t checksum_frame(const yijinjing::types::frame_header &header, const uint8_t *payload, uint32_t payload_length) {
+uint64_t checksum_frame(const yijinjing::types::frame_header &header, const uint8_t *payload, uint32_t payload_length,
+                        const std::string &algorithm) {
+  if (is_crc32c(algorithm)) {
+    uint32_t state = CRC32C_INITIAL;
+    checksum_crc32c_scalar(state, header.length);
+    checksum_crc32c_scalar(state, header.header_length);
+    checksum_crc32c_scalar(state, header.gen_time);
+    checksum_crc32c_scalar(state, header.trigger_time);
+    checksum_crc32c_scalar(state, header.carrier_type);
+    checksum_crc32c_scalar(state, header.source);
+    checksum_crc32c_scalar(state, header.dest);
+    const auto data_type = static_cast<int8_t>(header.data_type);
+    checksum_crc32c_scalar(state, data_type);
+    checksum_crc32c_scalar(state, header.initial_source);
+    checksum_crc32c_scalar(state, header.frame_uid);
+    checksum_crc32c_scalar(state, header.trigger_frame_uid);
+    checksum_crc32c_scalar(state, header.stream_id);
+    checksum_crc32c_scalar(state, payload_length);
+    if (payload != nullptr and payload_length > 0) {
+      checksum_crc32c_bytes(state, payload, payload_length);
+    }
+    return finalize_crc32c(state);
+  }
+  if (!is_fnv1a64(algorithm)) {
+    throw std::invalid_argument("unsupported frame checksum algorithm: " + algorithm);
+  }
   uint64_t state = FNV1A64_OFFSET;
   checksum_scalar(state, header.length);
   checksum_scalar(state, header.header_length);
@@ -117,8 +221,9 @@ record_receipt action_recorder::record_payload(int32_t carrier_type, const uint8
   checksum_header.gen_time = gen_time;
   checksum_header.frame_uid = frame_uid;
   checksum_header.trigger_frame_uid = parent_frame_uid;
-  const auto payload_checksum = checksum_payload(payload, payload_length);
-  const auto frame_checksum = checksum_frame(checksum_header, payload, payload_length);
+  const auto checksum_algorithm = frame_checksum_algorithm_for_integrity_version(DEFAULT_FRAME_INTEGRITY_VERSION);
+  const auto payload_checksum = checksum_payload(payload, payload_length, checksum_algorithm);
+  const auto frame_checksum = checksum_frame(checksum_header, payload, payload_length, checksum_algorithm);
   writer_->close_frame(payload_length, gen_time);
   bus::set_trigger_frame_uid(0);
 
@@ -134,7 +239,8 @@ record_receipt action_recorder::record_payload(int32_t carrier_type, const uint8
   receipt.dest = dest_id_;
   receipt.data_length = payload_length;
   receipt.data_type = static_cast<int8_t>(options.data_type);
-  receipt.integrity_version = FRAME_INTEGRITY_VERSION_V1;
+  receipt.integrity_version = DEFAULT_FRAME_INTEGRITY_VERSION;
+  receipt.checksum_algorithm = checksum_algorithm;
   receipt.payload_checksum = payload_checksum;
   receipt.frame_checksum = frame_checksum;
   last_frame_uid_ = receipt.frame_uid;

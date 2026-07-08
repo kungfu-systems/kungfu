@@ -36,10 +36,11 @@ Kungfu treats hashes as four separate surfaces:
    implementation is MurmurHash3 and the algorithm label is `murmur3`. This is
    only for internal ids, location uid derivation, in-process keys, and
    deterministic bucketing. It is not a content hash and not a security proof.
-2. **Frame checksum**: the first action-recorder receipt integrity slice uses
-   non-keyed 64-bit FNV-1a, labelled `fnv1a64`. It detects accidental
-   corruption or uncoordinated mutation in the writer/fsck path. It is not a
-   cryptographic authenticity proof.
+2. **Frame checksum**: action-recorder receipts use versioned non-keyed
+   corruption detectors. V1 is 64-bit FNV-1a, labelled `fnv1a64`; v2 is CRC32C,
+   labelled `crc32c` (ADR-0029). They detect accidental corruption or
+   uncoordinated mutation in the writer/fsck path. They are not cryptographic
+   authenticity proofs.
 3. **Content hash**: storage manifests, payload references, schema inventories,
    and import/export payload bodies use explicit content hash algorithms.
    `sha256` is the default v4 portable baseline; `blake3` is reserved as a
@@ -89,7 +90,8 @@ The repository enforces the naming boundary:
 
 - Python compatibility aliases still exist. They should be treated as stable
   compatibility surface, not the recommended internal API.
-- `fnv1a64` is a receipt checksum, not a security claim. Documentation and fsck
-  output must continue to avoid describing it as tamper-proof.
+- `fnv1a64` and `crc32c` are receipt checksums, not security claims.
+  Documentation and fsck output must continue to avoid describing them as
+  tamper-proof.
 - Full tamper evidence still requires a chain/root design and journal-format or
   remote-sync compatibility work.

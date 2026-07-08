@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timezone
 
 from kungfu.atlas import importer, payloads
-from kungfu.atlas import MSG_ACTION_ENVELOPE
+from kungfu.atlas import CARRIER_ATLAS_ACTION
 from kungfu.sources import store as source_store
 
 
@@ -63,7 +63,7 @@ def _action_receipts(source_records):
             "stream_id": 0,
             "gen_time": 1000 + index,
             "trigger_time": 0,
-            "msg_type": MSG_ACTION_ENVELOPE,
+            "carrier_type": CARRIER_ATLAS_ACTION,
             "source": 101,
             "initial_source": 101,
             "dest": 0,
@@ -87,6 +87,18 @@ def _action_frames_from_manifest(manifest):
                 entry["action"]["journal"]["gen_time"],
             )
         ] = journal
+    return frames
+
+
+def _action_frames_with_checksums(manifest, payload_checksum, frame_checksum):
+    frames = _action_frames_from_manifest(manifest)
+    for frame in frames.values():
+        frame["_payload_checksum_for"] = (
+            lambda _length, _algorithm, checksum=payload_checksum: checksum
+        )
+        frame["_frame_checksum_for"] = (
+            lambda _length, _algorithm, checksum=frame_checksum: checksum
+        )
     return frames
 
 
@@ -213,7 +225,7 @@ def test_payload_manifest_fsck_export_and_verify(tmp_path):
     assert goal["action"]["schema_ref"]["id"] == "kungfu.atlas.GoalSnapshot"
     assert goal["action"]["payload"]["hash"] == goal["payload_hash"]
     assert goal["action"]["journal"]["frame_uid"] > 0
-    assert goal["action"]["journal"]["msg_type"] == MSG_ACTION_ENVELOPE
+    assert goal["action"]["journal"]["carrier_type"] == CARRIER_ATLAS_ACTION
 
     missing_frame = payloads.fsck_import(store, action_frames={})
     assert not missing_frame["ok"]
@@ -230,6 +242,120 @@ def test_payload_manifest_fsck_export_and_verify(tmp_path):
         "extra": [],
         "hash_mismatch": [],
     }
+
+
+def test_payload_fsck_verifies_versioned_frame_checksums(tmp_path):
+    repo = tmp_path / "atlas"
+    store = tmp_path / "store"
+    _atlas_fixture(repo)
+    _, _, _, source_records, _ = importer.read_control_plane_with_sources(str(repo))
+    receipts = _action_receipts(source_records)
+    payload_checksum = 1234
+    frame_checksum = 5678
+    for receipt in receipts.values():
+        receipt.update(
+            {
+                "integrity_version": payloads.FRAME_INTEGRITY_VERSION_V2,
+                "checksum_algorithm": payloads.FRAME_CHECKSUM_ALGORITHM_CRC32C,
+                "payload_checksum": payload_checksum,
+                "frame_checksum": frame_checksum,
+            }
+        )
+    manifest = payloads.write_import_payloads(
+        store,
+        import_id="imp-checksum-v2",
+        repo_root=str(repo),
+        repo_head="abc123",
+        source_records=source_records,
+        counts={"missions": 1, "goals": 1, "markers": 1},
+        action_receipts=receipts,
+    )
+
+    report = payloads.fsck_import(
+        store,
+        action_frames=_action_frames_with_checksums(
+            manifest, payload_checksum, frame_checksum
+        ),
+    )
+    assert report["ok"]
+
+    for receipt in receipts.values():
+        receipt["integrity_version"] = payloads.FRAME_INTEGRITY_VERSION_V1
+        receipt["checksum_algorithm"] = payloads.FRAME_CHECKSUM_ALGORITHM_FNV1A64
+    manifest = payloads.write_import_payloads(
+        store,
+        import_id="imp-checksum-v1",
+        repo_root=str(repo),
+        repo_head="abc123",
+        source_records=source_records,
+        counts={"missions": 1, "goals": 1, "markers": 1},
+        action_receipts=receipts,
+    )
+    report = payloads.fsck_import(
+        store,
+        action_frames=_action_frames_with_checksums(
+            manifest, payload_checksum, frame_checksum
+        ),
+    )
+    assert report["ok"]
+
+
+def test_payload_fsck_rejects_unknown_or_mismatched_frame_checksum_metadata(
+    tmp_path,
+):
+    repo = tmp_path / "atlas"
+    store = tmp_path / "store"
+    _atlas_fixture(repo)
+    _, _, _, source_records, _ = importer.read_control_plane_with_sources(str(repo))
+    receipts = _action_receipts(source_records)
+    for receipt in receipts.values():
+        receipt.update(
+            {
+                "integrity_version": payloads.FRAME_INTEGRITY_VERSION_V2,
+                "checksum_algorithm": payloads.FRAME_CHECKSUM_ALGORITHM_FNV1A64,
+                "payload_checksum": 1234,
+                "frame_checksum": 5678,
+            }
+        )
+    manifest = payloads.write_import_payloads(
+        store,
+        import_id="imp-checksum-mismatch",
+        repo_root=str(repo),
+        repo_head="abc123",
+        source_records=source_records,
+        counts={"missions": 1, "goals": 1, "markers": 1},
+        action_receipts=receipts,
+    )
+    report = payloads.fsck_import(
+        store, action_frames=_action_frames_with_checksums(manifest, 1234, 5678)
+    )
+    assert not report["ok"]
+    assert any(
+        error.get("field") == "checksum_algorithm"
+        and error.get("expected") == payloads.FRAME_CHECKSUM_ALGORITHM_CRC32C
+        for error in report["errors"]
+    )
+
+    for receipt in receipts.values():
+        receipt["checksum_algorithm"] = "mystery64"
+    manifest = payloads.write_import_payloads(
+        store,
+        import_id="imp-checksum-unknown",
+        repo_root=str(repo),
+        repo_head="abc123",
+        source_records=source_records,
+        counts={"missions": 1, "goals": 1, "markers": 1},
+        action_receipts=receipts,
+    )
+    report = payloads.fsck_import(
+        store, action_frames=_action_frames_with_checksums(manifest, 1234, 5678)
+    )
+    assert not report["ok"]
+    assert any(
+        error.get("field") == "checksum_algorithm"
+        and error.get("actual") == "mystery64"
+        for error in report["errors"]
+    )
 
 
 def test_payload_fsck_reports_missing_payload(tmp_path):

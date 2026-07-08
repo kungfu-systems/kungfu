@@ -6,11 +6,11 @@ from typing import Any, cast
 
 from kungfu.action_envelope import (
     ACTION_ENVELOPE_SCHEMA,
-    CONTENT_HASH_ALGORITHM_SHA256,
     build_action_envelope as build_common_action_envelope,
     canonical_json_bytes,
     payload_hash,
 )
+from kungfu.content_hash import CONTENT_HASH_ALGORITHM_SHA256
 from kungfu.atlas import (
     ACTION_GOAL_SNAPSHOT,
     ACTION_MARKER_SNAPSHOT,
@@ -18,7 +18,17 @@ from kungfu.atlas import (
 )
 
 CONTENT_TYPE_JSON = "application/json"
+FRAME_INTEGRITY_VERSION_V1 = 1
+FRAME_INTEGRITY_VERSION_V2 = 2
+DEFAULT_FRAME_INTEGRITY_VERSION = FRAME_INTEGRITY_VERSION_V2
 FRAME_CHECKSUM_ALGORITHM_FNV1A64 = "fnv1a64"
+FRAME_CHECKSUM_ALGORITHM_CRC32C = "crc32c"
+DEFAULT_FRAME_CHECKSUM_ALGORITHM = FRAME_CHECKSUM_ALGORITHM_CRC32C
+FRAME_CHECKSUM_ALGORITHMS_BY_VERSION = {
+    FRAME_INTEGRITY_VERSION_V1: FRAME_CHECKSUM_ALGORITHM_FNV1A64,
+    FRAME_INTEGRITY_VERSION_V2: FRAME_CHECKSUM_ALGORITHM_CRC32C,
+}
+SUPPORTED_FRAME_CHECKSUM_ALGORITHMS = set(FRAME_CHECKSUM_ALGORITHMS_BY_VERSION.values())
 PAYLOAD_STATE_PRESENT = "present"
 
 ACTION_SCHEMA_REFS = {
@@ -309,6 +319,71 @@ def _append_action_error(
     report["errors"].append(error)
 
 
+def _frame_checksum_algorithm_for_journal(
+    report: dict[str, Any],
+    entry: dict[str, Any],
+    journal: dict[str, Any],
+) -> str | None:
+    integrity_version = journal.get("integrity_version")
+    checksum_algorithm = journal.get("checksum_algorithm")
+    if not integrity_version and not checksum_algorithm:
+        return None
+    if not isinstance(integrity_version, int) or integrity_version <= 0:
+        _append_action_error(
+            report,
+            "action_frame_mismatch",
+            entry,
+            field="integrity_version",
+            expected=sorted(FRAME_CHECKSUM_ALGORITHMS_BY_VERSION),
+            actual=integrity_version,
+        )
+        return None
+    expected_algorithm = FRAME_CHECKSUM_ALGORITHMS_BY_VERSION.get(integrity_version)
+    if expected_algorithm is None:
+        _append_action_error(
+            report,
+            "action_frame_mismatch",
+            entry,
+            field="integrity_version",
+            expected=sorted(FRAME_CHECKSUM_ALGORITHMS_BY_VERSION),
+            actual=integrity_version,
+        )
+        return None
+    if not checksum_algorithm:
+        if integrity_version == FRAME_INTEGRITY_VERSION_V1:
+            return expected_algorithm
+        _append_action_error(
+            report,
+            "action_frame_mismatch",
+            entry,
+            field="checksum_algorithm",
+            expected=expected_algorithm,
+            actual=checksum_algorithm,
+        )
+        return None
+    if checksum_algorithm not in SUPPORTED_FRAME_CHECKSUM_ALGORITHMS:
+        _append_action_error(
+            report,
+            "action_frame_mismatch",
+            entry,
+            field="checksum_algorithm",
+            expected=sorted(SUPPORTED_FRAME_CHECKSUM_ALGORITHMS),
+            actual=checksum_algorithm,
+        )
+        return None
+    if checksum_algorithm != expected_algorithm:
+        _append_action_error(
+            report,
+            "action_frame_mismatch",
+            entry,
+            field="checksum_algorithm",
+            expected=expected_algorithm,
+            actual=checksum_algorithm,
+        )
+        return None
+    return checksum_algorithm
+
+
 def _check_action_payload(
     report: dict[str, Any],
     entry: dict[str, Any],
@@ -410,26 +485,20 @@ def _check_action_frame(
                 expected=journal.get("journal_payload_hash"),
                 actual=actual_hash,
             )
-        checksum_algorithm = journal.get("checksum_algorithm")
+        checksum_algorithm = _frame_checksum_algorithm_for_journal(
+            report, entry, journal
+        )
+        payload_checksum = journal.get("payload_checksum")
         if (
             checksum_algorithm
-            and checksum_algorithm != FRAME_CHECKSUM_ALGORITHM_FNV1A64
+            and isinstance(payload_checksum, int)
+            and payload_checksum
         ):
-            _append_action_error(
-                report,
-                "action_frame_mismatch",
-                entry,
-                field="checksum_algorithm",
-                frame_uid=frame_uid,
-                expected=FRAME_CHECKSUM_ALGORITHM_FNV1A64,
-                actual=checksum_algorithm,
-            )
-            return
-        payload_checksum = journal.get("payload_checksum")
-        if isinstance(payload_checksum, int) and payload_checksum:
             checksum_for = frame.get("_payload_checksum_for")
             actual_checksum = (
-                checksum_for(expected_length) if callable(checksum_for) else None
+                checksum_for(expected_length, checksum_algorithm)
+                if callable(checksum_for)
+                else None
             )
             if actual_checksum != payload_checksum:
                 _append_action_error(
@@ -442,10 +511,12 @@ def _check_action_frame(
                     actual=actual_checksum,
                 )
         frame_checksum = journal.get("frame_checksum")
-        if isinstance(frame_checksum, int) and frame_checksum:
+        if checksum_algorithm and isinstance(frame_checksum, int) and frame_checksum:
             checksum_for = frame.get("_frame_checksum_for")
             actual_checksum = (
-                checksum_for(expected_length) if callable(checksum_for) else None
+                checksum_for(expected_length, checksum_algorithm)
+                if callable(checksum_for)
+                else None
             )
             if actual_checksum != frame_checksum:
                 _append_action_error(

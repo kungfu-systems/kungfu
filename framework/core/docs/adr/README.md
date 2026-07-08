@@ -44,6 +44,7 @@ A record's **Status** says where it stands:
 | [0026](ADR-0026-runtime-greenfield-core-surface.md) | accepted | runtime exposes a greenfield core surface, not trading typed helpers |
 | [0027](ADR-0027-python-yijinjing-public-core-types.md) | accepted | Python yijinjing schema exposes only core public runtime types |
 | [0028](ADR-0028-hash-taxonomy-and-integrity-algorithms.md) | accepted | hash taxonomy separates internal ids, frame checksums, and content hashes |
+| [0029](ADR-0029-frame-checksum-v2-crc32c.md) | accepted | frame checksum v2 uses CRC32C receipt metadata |
 
 ## Reading by theme
 
@@ -104,7 +105,9 @@ A record's **Status** says where it stands:
   paths), and
   [0028](ADR-0028-hash-taxonomy-and-integrity-algorithms.md) (the rule that
   fast internal hashes, frame checksums, content hashes, and future trust roots
-  are separate algorithm surfaces).
+  are separate algorithm surfaces), and
+  [0029](ADR-0029-frame-checksum-v2-crc32c.md) (the v2 frame receipt checksum
+  algorithm selection and fsck metadata rules).
 - **Cross-cutting principle** — [0009](ADR-0009-load-bearing-self-bootstrap.md)
   (load-bearing self-bootstrap), which also names the general law that
   [`docs/architecture.md` § The build dogfoods the SDK](../../../../docs/architecture.md)

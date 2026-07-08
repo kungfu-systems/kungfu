@@ -3,7 +3,7 @@ import pykungfu.yijinjing.enums
 import pykungfu.yijinjing.types
 import typing
 import typing_extensions
-__all__: list[str] = ['CONTENT_HASH_ALGORITHM_BLAKE3', 'CONTENT_HASH_ALGORITHM_SHA256', 'FAST_HASH_ALGORITHM', 'FRAME_CHECKSUM_ALGORITHM_FNV1A64', 'PUBLISH', 'PULL', 'PUSH', 'REPLY', 'REQUEST', 'SUBSCRIBE', 'action_record_options', 'action_record_receipt', 'action_recorder', 'apprentice', 'assemble', 'bus', 'calendar_day_start', 'color_print', 'compile_schema', 'compute_content_hash', 'compute_content_hash_value', 'copy_sink', 'emit_log', 'event', 'fast_hash_32', 'fast_hash_str_32', 'format_content_hash', 'frame', 'get_page_path', 'hash_32', 'hash_str_32', 'history_window_start', 'in_color_terminal', 'io_device', 'is_supported_content_hash_algorithm', 'location', 'locator', 'master', 'nano_hashed', 'next_minute', 'next_session_boundary', 'noop_publisher', 'normalize_content_hash_algorithm', 'now_in_nano', 'null_sink', 'observer', 'parse_content_hash', 'profile', 'protocol', 'publisher', 'reader', 'session_builder', 'session_finder', 'session_window_start', 'setup_log', 'sink', 'socket', 'strfnow', 'strftime', 'strptime', 'thread_id', 'today_start', 'verify_content_hash', 'writer']
+__all__: list[str] = ['CONTENT_HASH_ALGORITHM_BLAKE3', 'CONTENT_HASH_ALGORITHM_SHA256', 'DEFAULT_FRAME_CHECKSUM_ALGORITHM', 'DEFAULT_FRAME_INTEGRITY_VERSION', 'FAST_HASH_ALGORITHM', 'FRAME_CHECKSUM_ALGORITHM_CRC32C', 'FRAME_CHECKSUM_ALGORITHM_FNV1A64', 'FRAME_INTEGRITY_VERSION_V1', 'FRAME_INTEGRITY_VERSION_V2', 'PUBLISH', 'PULL', 'PUSH', 'REPLY', 'REQUEST', 'SUBSCRIBE', 'action_record_options', 'action_record_receipt', 'action_recorder', 'apprentice', 'assemble', 'bus', 'calendar_day_start', 'checksum_payload', 'color_print', 'compile_schema', 'compute_content_hash', 'compute_content_hash_value', 'copy_sink', 'emit_log', 'event', 'fast_hash_32', 'fast_hash_str_32', 'format_content_hash', 'frame', 'frame_checksum_algorithm_for_integrity_version', 'frame_integrity_version_for_checksum_algorithm', 'get_page_path', 'hash_32', 'hash_str_32', 'history_window_start', 'in_color_terminal', 'io_device', 'is_supported_content_hash_algorithm', 'is_supported_frame_checksum_algorithm', 'location', 'locator', 'master', 'nano_hashed', 'next_minute', 'next_session_boundary', 'noop_publisher', 'normalize_content_hash_algorithm', 'now_in_nano', 'null_sink', 'observer', 'parse_content_hash', 'profile', 'protocol', 'publisher', 'reader', 'session_builder', 'session_finder', 'session_window_start', 'setup_log', 'sink', 'socket', 'strfnow', 'strftime', 'strptime', 'thread_id', 'today_start', 'verify_content_hash', 'writer']
 class action_record_options:
     chain_to_last: bool
     data_type: pykungfu.yijinjing.enums.FrameDataType
@@ -16,6 +16,9 @@ class action_record_options:
 class action_record_receipt:
     @property
     def carrier_type(self) -> int:
+        ...
+    @property
+    def checksum_algorithm(self) -> str:
         ...
     @property
     def data_length(self) -> int:
@@ -533,6 +536,8 @@ class writer:
         ...
 def calendar_day_start(arg0: int) -> int:
     ...
+def checksum_payload(payload: typing_extensions.Buffer, algorithm: str = 'crc32c') -> int:
+    ...
 def color_print(arg0: str, arg1: str) -> None:
     ...
 def compile_schema(fbs_text: str, sandboxed: bool = False) -> tuple:
@@ -549,6 +554,10 @@ def fast_hash_str_32(key: str, seed: int = 42) -> int:
     ...
 def format_content_hash(algorithm: str, value: str) -> str:
     ...
+def frame_checksum_algorithm_for_integrity_version(integrity_version: int) -> str:
+    ...
+def frame_integrity_version_for_checksum_algorithm(algorithm: str) -> int:
+    ...
 def get_page_path(arg0: ..., arg1: int, arg2: int) -> str:
     ...
 def hash_32(key: int, length: int, seed: int = 42) -> int:
@@ -560,6 +569,8 @@ def history_window_start() -> int:
 def in_color_terminal() -> bool:
     ...
 def is_supported_content_hash_algorithm(algorithm: str) -> bool:
+    ...
+def is_supported_frame_checksum_algorithm(algorithm: str) -> bool:
     ...
 def nano_hashed(arg0: int) -> int:
     ...
@@ -591,8 +602,13 @@ def verify_content_hash(payload: typing_extensions.Buffer, expected: str, algori
     ...
 CONTENT_HASH_ALGORITHM_BLAKE3: str = 'blake3'
 CONTENT_HASH_ALGORITHM_SHA256: str = 'sha256'
+DEFAULT_FRAME_CHECKSUM_ALGORITHM: str = 'crc32c'
+DEFAULT_FRAME_INTEGRITY_VERSION: int = 2
 FAST_HASH_ALGORITHM: str = 'murmur3'
+FRAME_CHECKSUM_ALGORITHM_CRC32C: str = 'crc32c'
 FRAME_CHECKSUM_ALGORITHM_FNV1A64: str = 'fnv1a64'
+FRAME_INTEGRITY_VERSION_V1: int = 1
+FRAME_INTEGRITY_VERSION_V2: int = 2
 PUBLISH: protocol  # value = <protocol.PUBLISH: 4>
 PULL: protocol  # value = <protocol.PULL: 3>
 PUSH: protocol  # value = <protocol.PUSH: 2>
