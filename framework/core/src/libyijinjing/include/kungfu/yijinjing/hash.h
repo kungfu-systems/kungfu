@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//
-// Created by Keren Dong on 2019-06-04.
-//
-
-#ifndef KUNGFU_YIJINJING_UTIL_H
-#define KUNGFU_YIJINJING_UTIL_H
-
-#define KUNGFU_HASH_SEED 42
+#ifndef KUNGFU_YIJINJING_HASH_H
+#define KUNGFU_YIJINJING_HASH_H
 
 #include <kungfu/common.h>
 
-namespace kungfu::yijinjing::util {
+#define KUNGFU_HASH_SEED 42
+
+namespace kungfu::yijinjing {
 /**
  * Murmur Hash 2
  * @param key content to be hashed
@@ -32,12 +28,6 @@ std::string hash_string_32(const std::string &key, uint32_t seed = KUNGFU_HASH_S
 std::string hash_string_64(const std::string &key, uint32_t seed = KUNGFU_HASH_SEED);
 
 std::string hash_string_128(const std::string &key, uint32_t seed = KUNGFU_HASH_SEED);
+} // namespace kungfu::yijinjing
 
-void color_print(const std::string &level, const std::string &log);
-
-bool in_color_terminal();
-
-size_t get_thread_id();
-} // namespace kungfu::yijinjing::util
-
-#endif // KUNGFU_YIJINJING_UTIL_H
+#endif // KUNGFU_YIJINJING_HASH_H

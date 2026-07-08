@@ -11,7 +11,7 @@
 // method. This translation unit follows the codebase convention (mmap.cpp /
 // signal.cpp): one file, win32 body under _WIN32, a throwing fallback otherwise.
 
-#include <kungfu/yijinjing/util/os.h>
+#include <kungfu/runtime/sandbox/app_container.h>
 
 #include <stdexcept>
 #include <string>
@@ -39,7 +39,7 @@
 // KernelBase.dll below rather than linked — keeping the link line to the standard
 // libs (userenv + advapi32).
 
-namespace kungfu::yijinjing::os {
+namespace kungfu::runtime::sandbox {
 
 namespace {
 std::wstring widen(const std::string &s) {
@@ -537,11 +537,11 @@ std::shared_ptr<app_container_process> spawn_app_container(const app_container_o
   ::CloseHandle(process_info.hThread);
   return std::make_shared<app_container_process>(static_cast<void *>(process_info.hProcess), process_info.dwProcessId);
 }
-} // namespace kungfu::yijinjing::os
+} // namespace kungfu::runtime::sandbox
 
 #else // non-Windows: the AppContainer membrane is Win32-only.
 
-namespace kungfu::yijinjing::os {
+namespace kungfu::runtime::sandbox {
 app_container_process::app_container_process(void *, unsigned long pid) : handle_(nullptr), pid_(pid) {}
 app_container_process::~app_container_process() {}
 int app_container_process::wait() { return -1; }
@@ -550,6 +550,6 @@ void app_container_process::kill() {}
 std::shared_ptr<app_container_process> spawn_app_container(const app_container_options &) {
   throw std::runtime_error("AppContainer sandbox is only available on Windows");
 }
-} // namespace kungfu::yijinjing::os
+} // namespace kungfu::runtime::sandbox
 
 #endif

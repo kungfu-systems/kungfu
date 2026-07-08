@@ -3,13 +3,13 @@
 #ifndef KUNGFU_RUNTIME_COMMON_H
 #define KUNGFU_RUNTIME_COMMON_H
 
+#include <kungfu/runtime/os.h>
+#include <kungfu/runtime/util/terminal.h>
 #include <kungfu/yijinjing/common.h>
 #include <kungfu/yijinjing/journal/journal.h>
 #include <kungfu/yijinjing/log.h>
 #include <kungfu/yijinjing/storage.h>
 #include <kungfu/yijinjing/time.h>
-#include <kungfu/yijinjing/util/os.h>
-#include <kungfu/yijinjing/util/util.h>
 
 namespace kungfu::runtime {
 
@@ -35,11 +35,11 @@ using namespace yijinjing::journal;
 }
 
 namespace os {
-using namespace yijinjing::os;
+using namespace ::kungfu::runtime::os;
 }
 
 namespace util {
-using namespace yijinjing::util;
+using namespace ::kungfu::runtime::util;
 }
 
 } // namespace kungfu::runtime

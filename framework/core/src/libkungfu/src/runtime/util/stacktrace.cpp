@@ -9,7 +9,7 @@
 
 #ifdef _WINDOWS
 
-#include <kungfu/yijinjing/util/stacktrace.h>
+#include <kungfu/runtime/util/stacktrace.h>
 
 #pragma comment(lib, "psapi.lib")
 #pragma comment(lib, "dbghelp.lib")
@@ -30,7 +30,7 @@
 
 #endif // _WINDOWS
 
-namespace kungfu::yijinjing::util {
+namespace kungfu::runtime::util {
 
 std::string get_default_error_log_dir() {
   char *kf_home = std::getenv("KF_HOME");
@@ -477,4 +477,4 @@ void prepare_stack_trace() {
   }
 }
 #endif // _WINDOWS
-} // namespace kungfu::yijinjing::util
+} // namespace kungfu::runtime::util

@@ -8,7 +8,6 @@
 #include "config_store.h"
 #include "history.h"
 #include <kungfu/runtime/cache/cached.h>
-#include <kungfu/yijinjing/util/os.h>
 #include <sstream>
 
 using namespace kungfu::rx;

@@ -56,23 +56,6 @@ target_link_libraries(yijinjing PUBLIC
   $<IF:$<TARGET_EXISTS:spdlog::spdlog_header_only>,spdlog::spdlog_header_only,spdlog::spdlog>
   nlohmann_json::nlohmann_json)
 
-# Windows AppContainer guest launcher (ADR-0014): CreateAppContainerProfile /
-# DeriveAppContainerSidFromAppContainerName live in userenv. The loopback
-# exemption (FirewallAPI, NetworkIsolationSetAppContainerConfig) is added here
-# once wired; it is deferred in app_container.cpp for now.
-if(WIN32)
-  # userenv: CreateAppContainerProfile / DeriveAppContainerSidFromAppContainerName
-  # + GetAppContainerFolderPath (TEMP redirect to the container's writable folder).
-  # advapi32: FreeSid, SetEntriesInAcl, GetNamedSecurityInfo/SetNamedSecurityInfo
-  # (read/write-path ACLs — the container SID governs AppContainer file access),
-  # and ConvertSidToStringSid. ole32: CoTaskMemFree (frees GetAppContainerFolderPath's
-  # path). user32: window-station/desktop ACLs so a USER32-linked guest (node) can
-  # initialize under the AppContainer.
-  # DeriveCapabilitySidsFromName is resolved dynamically from KernelBase.dll in
-  # app_container.cpp (its import library varies across SDKs).
-  target_link_libraries(yijinjing PUBLIC userenv advapi32 user32 ole32)
-endif()
-
 if(DEFINED COMPILER_OPTIMIZE_ON_OPTIONS AND NOT "${COMPILER_OPTIMIZE_ON_OPTIONS}" STREQUAL "")
   target_compile_options(yijinjing PRIVATE "$<$<CONFIG:Release>:${COMPILER_OPTIMIZE_ON_OPTIONS}>")
 endif()

@@ -7,12 +7,13 @@
 #include <csignal>
 #include <cstdio>
 #include <kungfu/common.h>
+#include <kungfu/runtime/os.h>
 #include <kungfu/runtime/practice/hero.h>
-#include <kungfu/yijinjing/util/stacktrace.h>
+#include <kungfu/runtime/util/stacktrace.h>
 
 using namespace kungfu::runtime::util;
 
-namespace kungfu::yijinjing::os {
+namespace kungfu::runtime::os {
 static kungfu::runtime::practice::hero *hero_instance = {};
 static bool signals_handler_enabled = true;
 
@@ -167,4 +168,4 @@ void handle_os_signals(void *hero) {
 
 void reset_hero_instance() { hero_instance = nullptr; }
 
-} // namespace kungfu::yijinjing::os
+} // namespace kungfu::runtime::os

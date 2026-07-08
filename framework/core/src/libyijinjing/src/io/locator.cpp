@@ -66,8 +66,7 @@ std::string get_root_dir(es::mode m, const std::vector<std::string> &tags) {
   }
 }
 
-locator::locator(const std::string &root, es::mode m)
-    : root_(root), dir_mode_(m), locator_uid(util::hash_str_32(root)) {}
+locator::locator(const std::string &root, es::mode m) : root_(root), dir_mode_(m), locator_uid(hash_str_32(root)) {}
 
 locator::locator(const std::string &root) : locator(root, es::mode::LIVE) {}
 
@@ -222,13 +221,13 @@ location::location(longfist::enums::mode m, longfist::enums::location_role c, st
                    locator_ptr l, uint32_t default_seed)
     : locator(std::move(l)), uname(fmt::format("{}/{}/{}/{}", longfist::enums::get_location_role_name(c), g, n,
                                                longfist::enums::get_mode_name(m))) {
-  uid64 = util::hash_str_64(uname);
+  uid64 = hash_str_64(uname);
   role = c;
   group = std::move(g);
   name = std::move(n);
   mode = m;
   seed = default_seed == 0 ? KUNGFU_HASH_SEED : default_seed;
-  uid = util::hash_str_32(uname, seed);
+  uid = hash_str_32(uname, seed);
   location_uid = uid;
   verify_location_uid();
 }
@@ -272,7 +271,7 @@ std::string location::get_master_kv(const std::string &key) {
 
 void location::update_seed(uint32_t s) {
   seed = s;
-  uid = util::hash_str_32(uname, seed);
+  uid = hash_str_32(uname, seed);
   location_uid = uid;
   SPDLOG_TRACE("{}", this->to_string());
 }

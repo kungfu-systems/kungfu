@@ -13,12 +13,13 @@
 #include <kungfu/runtime/practice/apprentice.h>
 #include <kungfu/runtime/practice/master.h>
 #include <kungfu/runtime/schema/schema_compiler.h>
+#include <kungfu/runtime/util/terminal.h>
+#include <kungfu/yijinjing/hash.h>
 #include <kungfu/yijinjing/journal/assemble.h>
 #include <kungfu/yijinjing/journal/frame.h>
 #include <kungfu/yijinjing/journal/journal.h>
 #include <kungfu/yijinjing/log.h>
 #include <kungfu/yijinjing/time.h>
-#include <kungfu/yijinjing/util/util.h>
 
 using namespace kungfu::longfist;
 using namespace kungfu::longfist::types;
@@ -172,12 +173,12 @@ void bind(pybind11::module &&m) {
       },
       py::arg("fbs_text"), py::arg("sandboxed") = false);
 
-  m.def("thread_id", &yijinjing::util::get_thread_id);
-  m.def("in_color_terminal", &yijinjing::util::in_color_terminal);
-  m.def("color_print", &yijinjing::util::color_print);
+  m.def("thread_id", &runtime::util::get_thread_id);
+  m.def("in_color_terminal", &runtime::util::in_color_terminal);
+  m.def("color_print", &runtime::util::color_print);
 
-  m.def("hash_32", &yijinjing::util::hash_32, py::arg("key"), py::arg("length"), py::arg("seed") = KUNGFU_HASH_SEED);
-  m.def("hash_str_32", &yijinjing::util::hash_str_32, py::arg("key"), py::arg("seed") = KUNGFU_HASH_SEED);
+  m.def("hash_32", &yijinjing::hash_32, py::arg("key"), py::arg("length"), py::arg("seed") = KUNGFU_HASH_SEED);
+  m.def("hash_str_32", &yijinjing::hash_str_32, py::arg("key"), py::arg("seed") = KUNGFU_HASH_SEED);
 
   m.def("setup_log", &yijinjing::log::setup_log);
   m.def("emit_log", &yijinjing::log::emit_log);

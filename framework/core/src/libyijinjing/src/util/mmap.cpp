@@ -18,11 +18,11 @@
 
 #include <kungfu/common.h>
 #include <kungfu/yijinjing/journal/common.h>
-#include <kungfu/yijinjing/util/os.h>
+#include <kungfu/yijinjing/platform/mmap.h>
 
 using namespace kungfu::yijinjing::journal;
 
-namespace kungfu::yijinjing::os {
+namespace kungfu::yijinjing::platform {
 
 uintptr_t load_mmap_buffer(const std::string &path, size_t size, bool is_writing, bool lazy) {
 #ifdef _WINDOWS
@@ -126,4 +126,4 @@ bool release_mmap_buffer(uintptr_t address, size_t size, bool lazy) {
   return true;
 }
 
-} // namespace kungfu::yijinjing::os
+} // namespace kungfu::yijinjing::platform

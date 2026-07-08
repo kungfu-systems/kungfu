@@ -7,13 +7,13 @@
 #include "MurmurHash3.h"
 #include <string>
 
-#include <kungfu/yijinjing/util/util.h>
+#include <kungfu/yijinjing/hash.h>
 
 namespace kungfu {
-uint32_t hash_32(const unsigned char *key, int32_t length) { return kungfu::yijinjing::util::hash_32(key, length); }
+uint32_t hash_32(const unsigned char *key, int32_t length) { return kungfu::yijinjing::hash_32(key, length); }
 } // namespace kungfu
 
-namespace kungfu::yijinjing::util {
+namespace kungfu::yijinjing {
 uint32_t hash_32(const unsigned char *key, int32_t length, uint32_t seed) {
   uint32_t h;
   MurmurHash3_x86_32(key, length, seed, &h);
@@ -51,4 +51,4 @@ std::string hash_string_128(const std::string &key, uint32_t seed) {
   MurmurHash3_x86_128(key.c_str(), key.length(), seed, &h);
   return std::string{h, 128};
 }
-} // namespace kungfu::yijinjing::util
+} // namespace kungfu::yijinjing

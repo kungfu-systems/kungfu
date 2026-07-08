@@ -2,8 +2,8 @@
 
 #include <kungfu/common.h>
 #include <kungfu/yijinjing/journal/page.h>
+#include <kungfu/yijinjing/platform/mmap.h>
 #include <kungfu/yijinjing/time.h>
-#include <kungfu/yijinjing/util/os.h>
 
 namespace kungfu::yijinjing::journal {
 
@@ -22,14 +22,14 @@ page::page(data::location_ptr location, uint32_t dest_id, uint32_t page_id, size
 
 page::~page() {
   SPDLOG_TRACE("release page {}/{:08x}.{}.journal, is_writing_ {}", location_->uname, dest_id_, page_id_, is_writing_);
-  if (not os::release_mmap_buffer(address(), size_, lazy_)) {
+  if (not platform::release_mmap_buffer(address(), size_, lazy_)) {
     SPDLOG_ERROR("can not release page {}/{:08x}.{}.journal", location_->uname, dest_id_, page_id_);
   }
 }
 
 void page::flush() {
   SPDLOG_TRACE("flush page {}/{:08x}.{}.journal", location_->uname, dest_id_, page_id_);
-  if (not os::flush_mmap_buffer(address(), size_, lazy_)) {
+  if (not platform::flush_mmap_buffer(address(), size_, lazy_)) {
     SPDLOG_ERROR("can not flush page {}/{:08x}.{}.journal", location_->uname, dest_id_, page_id_);
   }
 }
@@ -47,7 +47,7 @@ void page::enable_page() {
 page_ptr page::load(const data::location_ptr &location, uint32_t dest_id, uint64_t page_size, uint32_t page_id,
                     bool is_writing, bool lazy, bool pre_open) {
   std::string path = get_page_path(location, dest_id, page_id);
-  uintptr_t address = os::load_mmap_buffer(path, page_size, is_writing, lazy);
+  uintptr_t address = platform::load_mmap_buffer(path, page_size, is_writing, lazy);
 
   if (address == 0) {
     throw journal_error("unable to load page for " + path);
@@ -114,7 +114,7 @@ page_ptr page::load_header_and_1st_frame_header(const data::location_ptr &locati
   uint32_t frame_header_size = sizeof(frame_header);
   uint32_t sliced_page_size = page_header_size + frame_header_size;
   std::string path = get_page_path(location, dest_id, page_id);
-  uintptr_t address = os::load_mmap_buffer(path, sliced_page_size, is_writing, lazy);
+  uintptr_t address = platform::load_mmap_buffer(path, sliced_page_size, is_writing, lazy);
 
   if (address == 0) {
     throw journal_error("unable to load page for " + path);

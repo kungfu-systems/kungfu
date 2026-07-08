@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 const forbiddenIncludes =
-  /^\s*#\s*include\s*[<"](nng\/|rxcpp\/|sqlite|rocksdb\/|kungfu\/longfist\/longfist\.h|kungfu\/longfist\/types\.h|kungfu\/longfist\/enums\.h|kungfu\/longfist\/sqlite|kungfu\/yijinjing\/practice\/|kungfu\/yijinjing\/cache\/|kungfu\/yijinjing\/index\/|kungfu\/yijinjing\/nanomsg\/|kungfu\/yijinjing\/socket\/|kungfu\/yijinjing\/io\.h|kungfu\/yijinjing\/rx\.h|kungfu\/yijinjing\/util\/rocks\.h|kungfu\/wingchun\/)/;
+  /^\s*#\s*include\s*[<"](nng\/|rxcpp\/|sqlite|rocksdb\/|kungfu\/runtime\/|kungfu\/longfist\/longfist\.h|kungfu\/longfist\/types\.h|kungfu\/longfist\/enums\.h|kungfu\/longfist\/sqlite|kungfu\/yijinjing\/practice\/|kungfu\/yijinjing\/cache\/|kungfu\/yijinjing\/index\/|kungfu\/yijinjing\/nanomsg\/|kungfu\/yijinjing\/socket\/|kungfu\/yijinjing\/io\.h|kungfu\/yijinjing\/rx\.h|kungfu\/yijinjing\/util\/|kungfu\/wingchun\/)/;
 
 const forbiddenSymbols =
   /longfist::types::(Order|Trade|Position)|types::(Order|Trade|Position)[A-Za-z]*\b|LegacyCompiledTypes\b|LegacyCompiledDataTypes\b|LegacyCompiledTypeTags\b|wingchun/;
@@ -80,4 +80,6 @@ if (symbolHits.length) {
 }
 
 if (failed) process.exit(1);
-console.log('OK: core includes only the schema leaf and base utilities.');
+console.log(
+  'OK: core includes only the schema leaf, storage contracts, hash, mmap and base utilities.',
+);

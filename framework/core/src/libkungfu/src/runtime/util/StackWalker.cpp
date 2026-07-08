@@ -52,7 +52,7 @@
 // GetFileVersionInfo / _dupenv_s deprecation noise from strict SDKs.
 #pragma warning(disable : 4996)
 
-namespace kungfu::yijinjing::util {
+namespace kungfu::runtime::util {
 
 namespace {
 
@@ -395,6 +395,6 @@ void StackWalker::print_stack_bound(std::ostream &st) {
      << std::endl;
 }
 
-} // namespace kungfu::yijinjing::util
+} // namespace kungfu::runtime::util
 
 #endif // defined(_MSC_VER)

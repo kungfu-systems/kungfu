@@ -6,6 +6,8 @@
 
 #include <sstream>
 
+#include <kungfu/runtime/util/stacktrace.h>
+
 #include "history.h"
 #include "io.h"
 #include "operators.h"
@@ -46,7 +48,7 @@ Napi::Value History::SelectPeriod(const Napi::CallbackInfo &info) {
     return result_ref.Value();
   } catch (const std::exception &ex) {
     SPDLOG_ERROR("failed to select: {}", ex.what());
-    yijinjing::util::print_stack_trace();
+    runtime::util::print_stack_trace();
     return Napi::Boolean::New(info.Env(), false);
   }
 }

@@ -3,7 +3,7 @@
 // Created by Keren Dong on 2019-06-10.
 //
 
-#include <kungfu/yijinjing/util/util.h>
+#include <kungfu/runtime/util/terminal.h>
 // borrowed from <spdlog/details/os-inl.h> begin
 
 #ifdef _WIN32
@@ -159,7 +159,7 @@ UnixColor color_printer;
 #endif
 // borrowed from <spdlog/sinks/wincolor_sink-inl.h> end
 
-namespace kungfu::yijinjing::util {
+namespace kungfu::runtime::util {
 void color_print(const std::string &level, const std::string &log) { color_printer.print(level, log); }
 
 bool in_color_terminal() { return is_terminal(stdout) && is_color_terminal(); }
@@ -168,4 +168,4 @@ size_t get_thread_id() {
   static thread_local const size_t tid = _thread_id();
   return tid;
 }
-} // namespace kungfu::yijinjing::util
+} // namespace kungfu::runtime::util

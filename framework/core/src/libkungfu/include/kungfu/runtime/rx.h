@@ -11,7 +11,7 @@
 
 #include <kungfu/common.h>
 #include <kungfu/longfist/longfist.h>
-#include <kungfu/yijinjing/util/stacktrace.h>
+#include <kungfu/runtime/util/stacktrace.h>
 
 namespace kungfu {
 namespace rx {
@@ -117,7 +117,7 @@ static constexpr auto interrupt_on_error = [](const std::exception_ptr &e) {
     SPDLOG_WARN("{}", ex.what());
   } catch (const std::exception &ex) {
     SPDLOG_CRITICAL("event loop interrupted by rx:subscriber error {}: {}", typeid(ex).name(), ex.what());
-    yijinjing::util::print_stack_trace();
+    runtime::util::print_stack_trace();
   }
   loop_interrupter()();
 };

@@ -40,3 +40,13 @@ target_compile_options(${LIBKUNGFU_NAME} PRIVATE "$<$<CONFIG:Release>:${COMPILER
 # sources include the cache/practice headers directly.
 target_include_directories(${LIBKUNGFU_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include ${LIBKUNGFU_SQLITE_ORM_INCLUDE})
 target_link_libraries(${LIBKUNGFU_NAME} PUBLIC yijinjing ${CONAN_LIBS})
+
+# Windows AppContainer guest launcher (ADR-0014) lives in the runtime sandbox
+# layer, not the standalone yijinjing core.
+if(WIN32)
+  # userenv: CreateAppContainerProfile / DeriveAppContainerSidFromAppContainerName
+  # + GetAppContainerFolderPath. advapi32: FreeSid, SetEntriesInAcl,
+  # GetNamedSecurityInfo/SetNamedSecurityInfo and ConvertSidToStringSid. ole32:
+  # CoTaskMemFree. user32: window-station/desktop ACLs for USER32-linked guests.
+  target_link_libraries(${LIBKUNGFU_NAME} PUBLIC userenv advapi32 user32 ole32)
+endif()

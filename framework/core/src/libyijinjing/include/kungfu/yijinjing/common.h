@@ -8,8 +8,7 @@
 
 #include <kungfu/common.h>
 #include <kungfu/longfist/core.h>
-#include <kungfu/yijinjing/util/stacktrace.h>
-#include <kungfu/yijinjing/util/util.h>
+#include <kungfu/yijinjing/hash.h>
 
 namespace kungfu {
 namespace yijinjing {
@@ -194,7 +193,7 @@ struct location : public std::enable_shared_from_this<location>, public longfist
 namespace std {
 template <> struct hash<kungfu::yijinjing::data::location> {
   std::size_t operator()(const kungfu::yijinjing::data::location &l) const {
-    return (static_cast<uint64_t>(kungfu::yijinjing::util::hash_str_32(l.locator->get_root())) << 32) ^
+    return (static_cast<uint64_t>(kungfu::yijinjing::hash_str_32(l.locator->get_root())) << 32) ^
            static_cast<uint32_t>(l.uid);
   }
 };

@@ -6,10 +6,10 @@
 
 #include <kungfu/common.h>
 #include <kungfu/longfist/longfist.h>
+#include <kungfu/runtime/os.h>
 #include <kungfu/runtime/practice/master.h>
 #include <kungfu/yijinjing/journal/frame.h>
 #include <kungfu/yijinjing/time.h>
-#include <kungfu/yijinjing/util/os.h>
 
 using namespace kungfu::rx;
 using namespace kungfu::longfist;

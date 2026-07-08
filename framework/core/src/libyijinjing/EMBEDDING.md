@@ -49,14 +49,18 @@ as-is and performs no `find_package` of its own.
   no master, no event loop, no sockets, no databases. The
   `slices/fact-ledger/` tools under `framework/core/slices/` are the
   reference consumers;
+- the core primitives required by that surface: deterministic hash helpers
+  (`<kungfu/yijinjing/hash.h>`) and page mmap helpers
+  (`<kungfu/yijinjing/platform/mmap.h>`);
 - the storage semantic contracts under `<kungfu/yijinjing/storage...>`:
   payload references, range selectors, source heads, channel requests/cursors,
   manifests, hash/schema inventories, accepted segments, fsck reports, and
   provider interfaces. These are contracts only; no RocksDB, SQLite, transport,
   or runtime process implementation is included;
 - a dependency-direction guarantee, enforced by `check-deps.sh`: the core
-  never includes runtime, transport or storage-engine headers, the trading
-  type registry, or any trading type.
+  never includes runtime, transport or storage-engine headers, the legacy
+  `kungfu/yijinjing/util/...` surface, the trading type registry, or any
+  trading type.
 
 ## Deliberately not offered
 
@@ -67,6 +71,10 @@ as-is and performs no `find_package` of its own.
 - **Package-manager artifacts** (conan/vcpkg/npm/homebrew packages of the
   core alone). Publishing infrastructure before there is an external
   consumer inverts the demand direction.
+- **Runtime process utilities.** Stack traces, OS signal handling, terminal
+  presentation, thread IDs exposed to language bindings, and Windows
+  AppContainer launch are libkungfu runtime concerns. They are intentionally
+  absent from the embeddable core.
 
 Escalation criteria -- revisit the distribution form when any of these is
 actually true, not before:

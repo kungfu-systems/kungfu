@@ -11,12 +11,13 @@
 
 #include <kungfu/common.h>
 #include <kungfu/runtime/nanomsg/socket.h>
+#include <kungfu/runtime/os.h>
 #include <kungfu/runtime/practice/hero.h>
 #include <kungfu/runtime/util/rocks.h>
+#include <kungfu/runtime/util/stacktrace.h>
+#include <kungfu/runtime/util/terminal.h>
 #include <kungfu/yijinjing/log.h>
 #include <kungfu/yijinjing/time.h>
-#include <kungfu/yijinjing/util/os.h>
-#include <kungfu/yijinjing/util/util.h>
 
 using namespace kungfu::rx;
 using namespace kungfu::longfist::enums;
@@ -102,10 +103,10 @@ hero::hero(kungfu::runtime::io_device_ptr io_device)
       master_cmd_location_(
           make_system_location("master", encode(io_device), io_device->get_locator(), io_device->get_home()->seed)),
       ledger_home_location_(make_system_location("service", "ledger", io_device->get_locator())),
-      io_device_(std::move(io_device)), now_(0), main_thread_id_(yijinjing::util::get_thread_id()) {
+      io_device_(std::move(io_device)), now_(0), main_thread_id_(util::get_thread_id()) {
 
   os::handle_os_signals(this);
-  yijinjing::util::set_error_log_dir(get_locator()->layout_dir(get_home(), layout::LOG));
+  util::set_error_log_dir(get_locator()->layout_dir(get_home(), layout::LOG));
   reader_ = io_device_->open_reader_to_subscribe();
 }
 
@@ -211,14 +212,14 @@ uint32_t hero::get_live_home_uid() const { return get_io_device()->get_live_home
 reader_ptr hero::get_reader() const { return reader_; }
 
 bool hero::has_writer(uint32_t dest_id) const {
-  if (yijinjing::util::get_thread_id() != main_thread_id_) {
+  if (util::get_thread_id() != main_thread_id_) {
     return has_band_writer(dest_id) or writers_.find(dest_id) != writers_.end();
   }
   return writers_.find(dest_id) != writers_.end();
 }
 
 writer_ptr hero::get_writer(uint32_t dest_id) const {
-  if (yijinjing::util::get_thread_id() != main_thread_id_) {
+  if (util::get_thread_id() != main_thread_id_) {
     try {
       return get_band_writer(dest_id);
     } catch (const std::exception &e) {
@@ -566,7 +567,7 @@ void hero::delegate_produce(hero *instance, const rx::subscriber<event_ptr> &sub
 #ifdef _WINDOWS
   __try {
     instance->produce(subscriber);
-  } __except (yijinjing::util::print_stack_trace(GetExceptionInformation())) {
+  } __except (util::print_stack_trace(GetExceptionInformation())) {
   }
 #else
   instance->produce(subscriber);

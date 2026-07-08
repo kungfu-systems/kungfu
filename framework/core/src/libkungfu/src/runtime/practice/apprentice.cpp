@@ -6,8 +6,9 @@
 
 #include <kungfu/common.h>
 #include <kungfu/runtime/cache/cached.h>
+#include <kungfu/runtime/os.h>
 #include <kungfu/runtime/practice/apprentice.h>
-#include <kungfu/yijinjing/util/os.h>
+#include <kungfu/runtime/util/terminal.h>
 #include <utility>
 
 using namespace kungfu::rx;
@@ -342,7 +343,7 @@ void apprentice::enable_timer(int32_t timer_id) { timers_.insert_or_assign(timer
 
 yijinjing::journal::writer_ptr &apprentice::get_thread_writer(uint64_t page_size) {
   if (not thread_writer_) {
-    uint32_t dest_id = yijinjing::util::get_thread_id();
+    uint32_t dest_id = util::get_thread_id();
     thread_writer_ = get_io_device()->open_writer(dest_id, page_size);
 
     /// join channel in sub-thread will crash, so tell master to ask myself to join

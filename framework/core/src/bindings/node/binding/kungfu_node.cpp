@@ -44,7 +44,7 @@ decltype(__pfnDliNotifyHook2) __pfnDliNotifyHook2 = load_exe_hook;
 
 #include <kungfu/common.h>
 #include <kungfu/runtime/io.h>
-#include <kungfu/yijinjing/util/util.h>
+#include <kungfu/yijinjing/hash.h>
 
 #include "action_recorder.h"
 #include "app_container.h"
@@ -57,7 +57,7 @@ decltype(__pfnDliNotifyHook2) __pfnDliNotifyHook2 = load_exe_hook;
 #include "session_store.h"
 #include "watcher.h"
 
-#include <kungfu/yijinjing/util/stacktrace.h>
+#include <kungfu/runtime/util/stacktrace.h>
 
 using namespace kungfu::longfist;
 using namespace kungfu::longfist::enums;
@@ -126,7 +126,7 @@ void Shutdown(const Napi::CallbackInfo &info) { ensure_sqlite_shutdown(); }
   }
   // No arguments: the parameter differs per platform (FILE* on POSIX,
   // EXCEPTION_POINTERS* on Windows) and both defaults are what we want.
-  yijinjing::util::print_stack_trace();
+  runtime::util::print_stack_trace();
   abort();
 }
 

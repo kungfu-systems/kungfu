@@ -17,7 +17,7 @@
 
 #include <ostream>
 
-namespace kungfu::yijinjing::util {
+namespace kungfu::runtime::util {
 
 class StackWalker {
 public:
@@ -41,7 +41,7 @@ private:
   void print_native_stack(std::ostream &st, const void *context);
 };
 
-} // namespace kungfu::yijinjing::util
+} // namespace kungfu::runtime::util
 
 #endif // defined(_MSC_VER)
 
