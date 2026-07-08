@@ -32,3 +32,6 @@ jobs:
       release-candidate: true
       artifact-transfer-mode: s3-to-github-artifacts
       artifact-retention-days: 14
+      buildchain-contract-lock-path: buildchain.contract-lock.json
+      buildchain-contract-compatibility-policy: major-compatible
+      buildchain-contract-drift-issue-mode: compatible-and-breaking
