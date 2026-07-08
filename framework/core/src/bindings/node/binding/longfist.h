@@ -17,9 +17,9 @@ public:
 
   static void Init(Napi::Env env, Napi::Object exports);
 
-  Napi::Value GetMsgTypes(const Napi::CallbackInfo &info);
+  Napi::Value GetCarrierTypes(const Napi::CallbackInfo &info);
 
-  void InitMsgTypes(const Napi::CallbackInfo &info);
+  void InitCarrierTypes(const Napi::CallbackInfo &info);
 
   Napi::Value GetTypes(const Napi::CallbackInfo &info);
 
@@ -29,7 +29,7 @@ public:
 
 private:
   Napi::ObjectReference types_ref_;
-  Napi::ObjectReference msg_types_ref_;
+  Napi::ObjectReference carrier_types_ref_;
 
   static Napi::FunctionReference constructor;
   static void cleanup() {

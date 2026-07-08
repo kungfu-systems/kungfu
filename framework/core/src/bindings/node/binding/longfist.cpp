@@ -16,22 +16,23 @@ namespace kungfu::node {
 Napi::FunctionReference Longfist::constructor = {};
 
 Longfist::Longfist(const Napi::CallbackInfo &info)
-    : ObjectWrap(info),                                                              //
-      types_ref_(Napi::ObjectReference::New(Napi::Object::New(info.Env()), 1)),      //
-      msg_types_ref_(Napi::ObjectReference::New(Napi::Object::New(info.Env()), 1)) { //
+    : ObjectWrap(info),                                                                  //
+      types_ref_(Napi::ObjectReference::New(Napi::Object::New(info.Env()), 1)),          //
+      carrier_types_ref_(Napi::ObjectReference::New(Napi::Object::New(info.Env()), 1)) { //
   InitTypes(info);
-  InitMsgTypes(info);
+  InitCarrierTypes(info);
 }
 
 void Longfist::Init(Napi::Env env, Napi::Object exports) {
   Napi::HandleScope scope(env);
   env.AddCleanupHook(cleanup);
 
-  Napi::Function func = DefineClass(env, "Longfist",
-                                    {
-                                        InstanceAccessor("types", &Longfist::GetTypes, &Longfist::NoSet),       //
-                                        InstanceAccessor("msgTypes", &Longfist::GetMsgTypes, &Longfist::NoSet), //
-                                    });
+  Napi::Function func =
+      DefineClass(env, "Longfist",
+                  {
+                      InstanceAccessor("types", &Longfist::GetTypes, &Longfist::NoSet),               //
+                      InstanceAccessor("carrierTypes", &Longfist::GetCarrierTypes, &Longfist::NoSet), //
+                  });
 
   constructor = Napi::Persistent(func);
   constructor.SuppressDestruct();
@@ -39,12 +40,12 @@ void Longfist::Init(Napi::Env env, Napi::Object exports) {
   exports.Set("Longfist", func);
 }
 
-Napi::Value Longfist::GetMsgTypes(const Napi::CallbackInfo &info) { return msg_types_ref_.Value(); }
+Napi::Value Longfist::GetCarrierTypes(const Napi::CallbackInfo &info) { return carrier_types_ref_.Value(); }
 
-void Longfist::InitMsgTypes(const Napi::CallbackInfo &info) {
+void Longfist::InitCarrierTypes(const Napi::CallbackInfo &info) {
   boost::hana::for_each(AllTypes, [&](auto it) {
     using DataType = typename decltype(+boost::hana::second(it))::type;
-    msg_types_ref_.Set(int(DataType::tag), Napi::String::New(info.Env(), DataType::type_name.c_str()));
+    carrier_types_ref_.Set(int(DataType::tag), Napi::String::New(info.Env(), DataType::type_name.c_str()));
   });
 }
 

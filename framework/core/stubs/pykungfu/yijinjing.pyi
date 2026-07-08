@@ -14,6 +14,9 @@ class action_record_options:
         ...
 class action_record_receipt:
     @property
+    def carrier_type(self) -> int:
+        ...
+    @property
     def data_length(self) -> int:
         ...
     @property
@@ -38,9 +41,6 @@ class action_record_receipt:
     def integrity_version(self) -> int:
         ...
     @property
-    def msg_type(self) -> int:
-        ...
-    @property
     def payload_checksum(self) -> int:
         ...
     @property
@@ -58,11 +58,11 @@ class action_record_receipt:
 class action_recorder:
     def __init__(self, runtime_dir: str, group: str, name: str, dest_id: int = 0, stream_id: int = 0) -> None:
         ...
-    def mark(self, msg_type: int, options: action_record_options = ...) -> action_record_receipt:
+    def mark(self, carrier_type: int, options: action_record_options = ...) -> action_record_receipt:
         ...
-    def record_bytes(self, msg_type: int, payload: bytes, options: action_record_options = ...) -> action_record_receipt:
+    def record_bytes(self, carrier_type: int, payload: bytes, options: action_record_options = ...) -> action_record_receipt:
         ...
-    def record_json(self, msg_type: int, json_payload: str, options: action_record_options = ...) -> action_record_receipt:
+    def record_json(self, carrier_type: int, json_payload: str, options: action_record_options = ...) -> action_record_receipt:
         ...
     @property
     def last_frame_uid(self) -> int:
@@ -320,10 +320,10 @@ class assemble:
     def read_all(self, data: pykungfu.longfist.types.TimeKeyValue, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.TimeKeyValue]:
         ...
     @typing.overload
-    def read_bytes(self, msg_type: int, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
+    def read_bytes(self, carrier_type: int, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
         ...
     @typing.overload
-    def read_bytes(self, data: pykungfu.longfist.types.frame_header = {"data_type":"Raw","dest":0,"frame_uid":0,"gen_time":0,"header_length":0,"initial_source":0,"length":0,"msg_type":0,"source":0,"stream_id":0,"trigger_frame_uid":0,"trigger_time":0}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
+    def read_bytes(self, data: pykungfu.longfist.types.frame_header = {"carrier_type":0,"data_type":"Raw","dest":0,"frame_uid":0,"gen_time":0,"header_length":0,"initial_source":0,"length":0,"source":0,"stream_id":0,"trigger_frame_uid":0,"trigger_time":0}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
         ...
     @typing.overload
     def read_bytes(self, data: pykungfu.longfist.types.page_header = {"frame_header_length":0,"last_frame_position":0,"page_header_length":0,"page_size":0,"status":"Normal","version":0}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
@@ -470,7 +470,7 @@ class assemble:
     def read_bytes(self, data: pykungfu.longfist.types.BasketInstrument = ..., end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
         ...
     @typing.overload
-    def read_bytes(self, data: pykungfu.longfist.types.CacheReset = {"msg_type":0}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
+    def read_bytes(self, data: pykungfu.longfist.types.CacheReset = {"carrier_type":0}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
         ...
     @typing.overload
     def read_bytes(self, data: pykungfu.longfist.types.RequestCachedDone = {"dest_id":0}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
@@ -713,10 +713,10 @@ class assemble:
     def read_header_data(self, data: pykungfu.longfist.types.TimeKeyValue, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, pykungfu.longfist.types.TimeKeyValue]]:
         ...
     @typing.overload
-    def read_headers(self, msg_type: int, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
+    def read_headers(self, carrier_type: int, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
         ...
     @typing.overload
-    def read_headers(self, data: pykungfu.longfist.types.frame_header = {"data_type":"Raw","dest":0,"frame_uid":0,"gen_time":0,"header_length":0,"initial_source":0,"length":0,"msg_type":0,"source":0,"stream_id":0,"trigger_frame_uid":0,"trigger_time":0}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
+    def read_headers(self, data: pykungfu.longfist.types.frame_header = {"carrier_type":0,"data_type":"Raw","dest":0,"frame_uid":0,"gen_time":0,"header_length":0,"initial_source":0,"length":0,"source":0,"stream_id":0,"trigger_frame_uid":0,"trigger_time":0}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
         ...
     @typing.overload
     def read_headers(self, data: pykungfu.longfist.types.page_header = {"frame_header_length":0,"last_frame_position":0,"page_header_length":0,"page_size":0,"status":"Normal","version":0}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
@@ -863,7 +863,7 @@ class assemble:
     def read_headers(self, data: pykungfu.longfist.types.BasketInstrument = ..., end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
         ...
     @typing.overload
-    def read_headers(self, data: pykungfu.longfist.types.CacheReset = {"msg_type":0}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
+    def read_headers(self, data: pykungfu.longfist.types.CacheReset = {"carrier_type":0}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
         ...
     @typing.overload
     def read_headers(self, data: pykungfu.longfist.types.RequestCachedDone = {"dest_id":0}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
@@ -1054,6 +1054,9 @@ class event:
     def to_string(self) -> str:
         ...
     @property
+    def carrier_type(self) -> int:
+        ...
+    @property
     def data_as_byte_array(self) -> list[int]:
         ...
     @property
@@ -1082,9 +1085,6 @@ class event:
         ...
     @property
     def is_json(self) -> bool:
-        ...
-    @property
-    def msg_type(self) -> int:
         ...
     @property
     def source(self) -> int:
@@ -1342,19 +1342,19 @@ class profile:
 class protocol:
     """
     Nanomsg Protocol
-    
+
     Members:
-    
+
       REPLY
-    
+
       REQUEST
-    
+
       PUSH
-    
+
       PULL
-    
+
       PUBLISH
-    
+
       SUBSCRIBE
     """
     PUBLISH: typing.ClassVar[protocol]  # value = <protocol.PUBLISH: 4>
@@ -1501,199 +1501,199 @@ class writer:
     def mark_at(self, arg0: int, arg1: int, arg2: int) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.frame_header, msg_type: int = 0) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.frame_header, carrier_type: int = 0) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.page_header, msg_type: int = 1) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.page_header, carrier_type: int = 1) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.Asset, msg_type: int = 101) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.Asset, carrier_type: int = 101) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.Contract, msg_type: int = 102) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.Contract, carrier_type: int = 102) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.Position, msg_type: int = 103) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.Position, carrier_type: int = 103) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.PositionEnd, msg_type: int = 104) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.PositionEnd, carrier_type: int = 104) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.InstrumentFactor, msg_type: int = 105) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.InstrumentFactor, carrier_type: int = 105) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.OrderInput, msg_type: int = 201) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.OrderInput, carrier_type: int = 201) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.Order, msg_type: int = 202) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.Order, carrier_type: int = 202) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.Trade, msg_type: int = 203) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.Trade, carrier_type: int = 203) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.OrderAction, msg_type: int = 204) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.OrderAction, carrier_type: int = 204) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.OrderActionError, msg_type: int = 205) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.OrderActionError, carrier_type: int = 205) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.BlockMessage, msg_type: int = 206) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.BlockMessage, carrier_type: int = 206) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.OrderStat, msg_type: int = 207) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.OrderStat, carrier_type: int = 207) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.OrderTriggerInput, msg_type: int = 209) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.OrderTriggerInput, carrier_type: int = 209) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.OrderTrigger, msg_type: int = 210) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.OrderTrigger, carrier_type: int = 210) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.OrderTriggerAction, msg_type: int = 211) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.OrderTriggerAction, carrier_type: int = 211) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.OrderTriggerActionError, msg_type: int = 212) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.OrderTriggerActionError, carrier_type: int = 212) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.AlgoOrderInput, msg_type: int = 213) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.AlgoOrderInput, carrier_type: int = 213) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.AlgoOrder, msg_type: int = 214) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.AlgoOrder, carrier_type: int = 214) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.AlgoOrderAction, msg_type: int = 215) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.AlgoOrderAction, carrier_type: int = 215) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.AlgoOrderActionError, msg_type: int = 216) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.AlgoOrderActionError, carrier_type: int = 216) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.RequestHistoryOrder, msg_type: int = 301) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.RequestHistoryOrder, carrier_type: int = 301) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.RequestHistoryTrade, msg_type: int = 302) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.RequestHistoryTrade, carrier_type: int = 302) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.HistoryOrder, msg_type: int = 303) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.HistoryOrder, carrier_type: int = 303) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.HistoryTrade, msg_type: int = 304) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.HistoryTrade, carrier_type: int = 304) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.RequestHistoryOrderError, msg_type: int = 305) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.RequestHistoryOrderError, carrier_type: int = 305) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.RequestHistoryTradeError, msg_type: int = 306) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.RequestHistoryTradeError, carrier_type: int = 306) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.Quote, msg_type: int = 401) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.Quote, carrier_type: int = 401) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.Entrust, msg_type: int = 402) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.Entrust, carrier_type: int = 402) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.Transaction, msg_type: int = 403) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.Transaction, carrier_type: int = 403) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.Tree, msg_type: int = 404) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.Tree, carrier_type: int = 404) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.InstrumentKey, msg_type: int = 501) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.InstrumentKey, carrier_type: int = 501) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.CustomSubscribe, msg_type: int = 502) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.CustomSubscribe, carrier_type: int = 502) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.SyntheticData, msg_type: int = 601) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.SyntheticData, carrier_type: int = 601) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.OutputKey, msg_type: int = 701) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.OutputKey, carrier_type: int = 701) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.Register, msg_type: int = 10101) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.Register, carrier_type: int = 10101) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.Deregister, msg_type: int = 10102) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.Deregister, carrier_type: int = 10102) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.StrategyStateUpdate, msg_type: int = 10104) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.StrategyStateUpdate, carrier_type: int = 10104) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.Session, msg_type: int = 10103) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.Session, carrier_type: int = 10103) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.OperatorStateUpdate, msg_type: int = 10105) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.OperatorStateUpdate, carrier_type: int = 10105) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.BrokerStateUpdate, msg_type: int = 10106) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.BrokerStateUpdate, carrier_type: int = 10106) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.Config, msg_type: int = 10201) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.Config, carrier_type: int = 10201) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.RiskSetting, msg_type: int = 10202) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.RiskSetting, carrier_type: int = 10202) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.Commission, msg_type: int = 10203) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.Commission, carrier_type: int = 10203) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.Instrument, msg_type: int = 10204) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.Instrument, carrier_type: int = 10204) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.Location, msg_type: int = 10205) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.Location, carrier_type: int = 10205) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.Basket, msg_type: int = 10206) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.Basket, carrier_type: int = 10206) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.BasketInstrument, msg_type: int = 10207) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.BasketInstrument, carrier_type: int = 10207) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.CacheReset, msg_type: int = 10208) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.CacheReset, carrier_type: int = 10208) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.RequestCachedDone, msg_type: int = 10209) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.RequestCachedDone, carrier_type: int = 10209) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.RequestReadFrom, msg_type: int = 10301) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.RequestReadFrom, carrier_type: int = 10301) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.RequestReadFromPublic, msg_type: int = 10302) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.RequestReadFromPublic, carrier_type: int = 10302) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.RequestReadFromSync, msg_type: int = 10303) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.RequestReadFromSync, carrier_type: int = 10303) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.RequestWriteTo, msg_type: int = 10304) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.RequestWriteTo, carrier_type: int = 10304) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.Channel, msg_type: int = 10305) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.Channel, carrier_type: int = 10305) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.ChannelRequest, msg_type: int = 10306) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.ChannelRequest, carrier_type: int = 10306) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.RequestWriteToBand, msg_type: int = 10307) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.RequestWriteToBand, carrier_type: int = 10307) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.Band, msg_type: int = 10308) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.Band, carrier_type: int = 10308) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.RequestReadFromOthers, msg_type: int = 10309) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.RequestReadFromOthers, carrier_type: int = 10309) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.TimeRequest, msg_type: int = 10501) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.TimeRequest, carrier_type: int = 10501) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.TimeReset, msg_type: int = 10502) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.TimeReset, carrier_type: int = 10502) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.TradingDay, msg_type: int = 10503) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.TradingDay, carrier_type: int = 10503) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.TimeValue, msg_type: int = 10601) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.TimeValue, carrier_type: int = 10601) -> None:
         ...
     @typing.overload
-    def write(self, trigger_time: int, data: pykungfu.longfist.types.TimeKeyValue, msg_type: int = 10602) -> None:
+    def write(self, trigger_time: int, data: pykungfu.longfist.types.TimeKeyValue, carrier_type: int = 10602) -> None:
         ...
     @typing.overload
     def write_at(self, gen_time: int, trigger_time: int, data: pykungfu.longfist.types.frame_header) -> None:

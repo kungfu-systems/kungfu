@@ -81,7 +81,7 @@ Napi::Object to_receipt_object(Napi::Env env, const record_receipt &receipt) {
   object.Set("streamId", Napi::BigInt::New(env, receipt.stream_id));
   object.Set("genTime", Napi::BigInt::New(env, receipt.gen_time));
   object.Set("triggerTime", Napi::BigInt::New(env, receipt.trigger_time));
-  object.Set("msgType", Napi::Number::New(env, receipt.msg_type));
+  object.Set("carrierType", Napi::Number::New(env, receipt.carrier_type));
   object.Set("source", Napi::Number::New(env, receipt.source));
   object.Set("initialSource", Napi::Number::New(env, receipt.initial_source));
   object.Set("dest", Napi::Number::New(env, receipt.dest));
@@ -112,31 +112,31 @@ ActionRecorder::ActionRecorder(const Napi::CallbackInfo &info) : ObjectWrap(info
 
 Napi::Value ActionRecorder::RecordBytes(const Napi::CallbackInfo &info) {
   if (!IsValid(info, 0, &Napi::Value::IsNumber)) {
-    throw Napi::TypeError::New(info.Env(), "recordBytes(msgType, payload, options?)");
+    throw Napi::TypeError::New(info.Env(), "recordBytes(carrierType, payload, options?)");
   }
-  const auto msg_type = info[0].As<Napi::Number>().Int32Value();
+  const auto carrier_type = info[0].As<Napi::Number>().Int32Value();
   const auto payload = read_bytes(info, 1);
   const auto options = read_options(info, 2);
-  return to_receipt_object(info.Env(), recorder_->record_bytes(msg_type, payload, options));
+  return to_receipt_object(info.Env(), recorder_->record_bytes(carrier_type, payload, options));
 }
 
 Napi::Value ActionRecorder::RecordJson(const Napi::CallbackInfo &info) {
   if (!IsValid(info, 0, &Napi::Value::IsNumber) || !IsValid(info, 1, &Napi::Value::IsString)) {
-    throw Napi::TypeError::New(info.Env(), "recordJson(msgType, jsonPayload, options?)");
+    throw Napi::TypeError::New(info.Env(), "recordJson(carrierType, jsonPayload, options?)");
   }
-  const auto msg_type = info[0].As<Napi::Number>().Int32Value();
+  const auto carrier_type = info[0].As<Napi::Number>().Int32Value();
   const auto payload = info[1].As<Napi::String>().Utf8Value();
   const auto options = read_options(info, 2);
-  return to_receipt_object(info.Env(), recorder_->record_json(msg_type, payload, options));
+  return to_receipt_object(info.Env(), recorder_->record_json(carrier_type, payload, options));
 }
 
 Napi::Value ActionRecorder::Mark(const Napi::CallbackInfo &info) {
   if (!IsValid(info, 0, &Napi::Value::IsNumber)) {
-    throw Napi::TypeError::New(info.Env(), "mark(msgType, options?)");
+    throw Napi::TypeError::New(info.Env(), "mark(carrierType, options?)");
   }
-  const auto msg_type = info[0].As<Napi::Number>().Int32Value();
+  const auto carrier_type = info[0].As<Napi::Number>().Int32Value();
   const auto options = read_options(info, 1);
-  return to_receipt_object(info.Env(), recorder_->mark(msg_type, options));
+  return to_receipt_object(info.Env(), recorder_->mark(carrier_type, options));
 }
 
 Napi::Value ActionRecorder::LastFrameUid(const Napi::CallbackInfo &info) {

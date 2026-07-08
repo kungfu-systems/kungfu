@@ -17,7 +17,7 @@ thread_local uint64_t trigger_frame_uid = 0;
 thread_local uint32_t trigger_initial_source_id_ = 0;
 thread_local uint32_t trigger_source_id = 0;
 thread_local uint32_t trigger_dest_id = 0;
-thread_local int32_t trigger_msg_type = 0;
+thread_local int32_t trigger_carrier_type = 0;
 thread_local bool exception_log_frame = false;
 
 void disable_signal_log() { signal_log = false; }
@@ -40,7 +40,7 @@ public:
     if (is_log_frame() or exception_log_frame) {
       spdlog::details::fmt_helper::append_string_view(
           fmt::format("[{:>10}:{:>10}->{:<10}:{:<10}:{:<20}]", get_trigger_initial_source_id(), get_trigger_source_id(),
-                      get_trigger_dest_id(), get_trigger_msg_type(), get_trigger_frame_uid()),
+                      get_trigger_dest_id(), get_trigger_carrier_type(), get_trigger_frame_uid()),
           dest);
       exception_log_frame = false;
     }
@@ -129,7 +129,7 @@ void set_trigger_source_id(uint32_t source_id) { trigger_source_id = source_id; 
 
 void set_trigger_dest_id(uint32_t dest_id) { trigger_dest_id = dest_id; }
 
-void set_trigger_msg_type(int32_t msg_type) { trigger_msg_type = msg_type; }
+void set_trigger_carrier_type(int32_t carrier_type) { trigger_carrier_type = carrier_type; }
 
 uint64_t get_trigger_frame_uid() { return trigger_frame_uid; }
 
@@ -139,7 +139,7 @@ uint32_t get_trigger_source_id() { return trigger_source_id; }
 
 uint32_t get_trigger_dest_id() { return trigger_dest_id; }
 
-int32_t get_trigger_msg_type() { return trigger_msg_type; }
+int32_t get_trigger_carrier_type() { return trigger_carrier_type; }
 
 void enable_exception_log_frame() { exception_log_frame = true; }
 

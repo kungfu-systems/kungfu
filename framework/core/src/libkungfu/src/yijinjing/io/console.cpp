@@ -33,9 +33,9 @@ struct console_table {
   console_table(int32_t console_width, int32_t console_height, bool is_show = false)
       : width(console_width), height(console_height), show(is_show), rows_count(0) {
     if (!is_show) {
-      table.add_row({"gen_time", "trigger_time", "source", "dest", "msg_type", "data"});
+      table.add_row({"gen_time", "trigger_time", "source", "dest", "carrier_type", "data"});
     } else {
-      table.add_row({"gen_time", "trigger_time", "source", "dest", "msg_type", "frame_length", "data_length"});
+      table.add_row({"gen_time", "trigger_time", "source", "dest", "carrier_type", "frame_length", "data_length"});
     }
     rows_count = 1;
   }
@@ -97,7 +97,7 @@ void io_device_console::trace(int64_t begin_time, int64_t end_time, bool in, boo
            << ","
            << "dest"
            << ","
-           << "msg_type"
+           << "carrier_type"
            << ","
            << "frame_length"
            << ","
@@ -112,7 +112,7 @@ void io_device_console::trace(int64_t begin_time, int64_t end_time, bool in, boo
     bool type_found = false;
     boost::hana::for_each(AllTypes, [&](auto type) {
       using DataType = typename decltype(+boost::hana::second(type))::type;
-      if (frame->msg_type() == DataType::tag) {
+      if (frame->carrier_type() == DataType::tag) {
         table.add_row({
             time::strftime(frame->gen_time(), TIME_FORMAT),     //
             time::strftime(frame->trigger_time(), TIME_FORMAT), //
@@ -135,7 +135,7 @@ void io_device_console::trace(int64_t begin_time, int64_t end_time, bool in, boo
     if (not type_found) {
       auto location_uname = tracer->current_page()->get_location()->uname;
       auto dest_id = tracer->current_page()->get_dest_id();
-      SPDLOG_WARN("{}/{:08x} msg_type {} not found", location_uname, dest_id, frame->msg_type());
+      SPDLOG_WARN("{}/{:08x} carrier_type {} not found", location_uname, dest_id, frame->carrier_type());
     }
 
     tracer->next();
@@ -163,7 +163,7 @@ void io_device_console::show(int64_t begin_time, int64_t end_time, bool in, bool
            << ","
            << "dest"
            << ","
-           << "msg_type"
+           << "carrier_type"
            << ","
            << "data" << std::endl;
   }
@@ -176,7 +176,7 @@ void io_device_console::show(int64_t begin_time, int64_t end_time, bool in, bool
     bool type_found = false;
     boost::hana::for_each(AllTypes, [&](auto type) {
       using DataType = typename decltype(+boost::hana::second(type))::type;
-      if (frame->msg_type() == DataType::tag) {
+      if (frame->carrier_type() == DataType::tag) {
         table.add_row({
             time::strftime(frame->gen_time(), TIME_FORMAT),     //
             time::strftime(frame->trigger_time(), TIME_FORMAT), //
@@ -199,7 +199,7 @@ void io_device_console::show(int64_t begin_time, int64_t end_time, bool in, bool
     if (not type_found) {
       auto location_uname = tracer->current_page()->get_location()->uname;
       auto dest_id = tracer->current_page()->get_dest_id();
-      SPDLOG_WARN("{}/{:08x} msg_type {} not found", location_uname, dest_id, frame->msg_type());
+      SPDLOG_WARN("{}/{:08x} carrier_type {} not found", location_uname, dest_id, frame->carrier_type());
     }
 
     tracer->next();

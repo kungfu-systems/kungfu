@@ -28,7 +28,7 @@ struct record_receipt {
   uint64_t stream_id = 0;
   int64_t gen_time = 0;
   int64_t trigger_time = 0;
-  int32_t msg_type = 0;
+  int32_t carrier_type = 0;
   uint32_t source = 0;
   uint32_t initial_source = 0;
   uint32_t dest = 0;
@@ -49,18 +49,18 @@ public:
   action_recorder(const std::string &runtime_dir, const std::string &group, const std::string &name,
                   uint32_t dest_id = yijinjing::data::location::PUBLIC, uint64_t stream_id = 0);
 
-  record_receipt record_bytes(int32_t msg_type, const std::vector<uint8_t> &payload, record_options options = {});
+  record_receipt record_bytes(int32_t carrier_type, const std::vector<uint8_t> &payload, record_options options = {});
 
-  record_receipt record_json(int32_t msg_type, const std::string &json_payload, record_options options = {});
+  record_receipt record_json(int32_t carrier_type, const std::string &json_payload, record_options options = {});
 
-  record_receipt mark(int32_t msg_type, record_options options = {});
+  record_receipt mark(int32_t carrier_type, record_options options = {});
 
   [[nodiscard]] uint64_t last_frame_uid() const { return last_frame_uid_; }
 
   [[nodiscard]] const data::location_ptr &get_location() const { return location_; }
 
 private:
-  record_receipt record_payload(int32_t msg_type, const uint8_t *payload, uint32_t payload_length,
+  record_receipt record_payload(int32_t carrier_type, const uint8_t *payload, uint32_t payload_length,
                                 record_options options);
 
   data::locator_ptr locator_;

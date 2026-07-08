@@ -34,14 +34,14 @@ template <typename T> struct nng_data {
   char origin_data[sizeof(kungfu::longfist::types::frame_header) + sizeof(T)]{};
   size_t len;
 
-  explicit nng_data(int32_t msg_type, uint64_t stream_id) {
+  explicit nng_data(int32_t carrier_type, uint64_t stream_id) {
     auto *header = reinterpret_cast<kungfu::longfist::types::frame_header *>(origin_data);
     len = sizeof(kungfu::longfist::types::frame_header) + sizeof(T);
     header->length = len;
     header->header_length = sizeof(kungfu::longfist::types::frame_header);
     header->trigger_time = yijinjing::time::now_in_nano();
     header->gen_time = header->trigger_time;
-    header->msg_type = msg_type;
+    header->carrier_type = carrier_type;
     header->source = 0;
     header->dest = 0;
     header->data_type = kungfu::longfist::enums::FrameDataType::Raw;

@@ -50,7 +50,7 @@ journal::~journal() {
 
 void journal::next() {
   assert(page_.get() != nullptr);
-  if (frame_->msg_type() == longfist::types::PageEnd::tag) {
+  if (frame_->carrier_type() == longfist::types::PageEnd::tag) {
     load_next_page();
     try_load_next_extra_page();
   } else {
@@ -171,7 +171,7 @@ void journal::close_page(int64_t trigger_time, int64_t last_gen_time) {
   last_page_frame.move_to_next();
   last_page_frame.set_header_length();
   last_page_frame.set_trigger_time(trigger_time);
-  last_page_frame.set_msg_type(longfist::types::PageEnd::tag);
+  last_page_frame.set_carrier_type(longfist::types::PageEnd::tag);
   last_page_frame.set_source(location_->uid);
   last_page_frame.set_dest(dest_id_);
   last_page_frame.set_gen_time(last_gen_time);

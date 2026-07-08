@@ -23,7 +23,7 @@ void JsResetCache::operator()(const state<CacheReset> &state) {
   const auto &request = state.data;
   boost::hana::for_each(StateDataTypes, [&](auto it) {
     using DataType = typename decltype(+boost::hana::second(it))::type;
-    if (DataType::tag == request.msg_type) {
+    if (DataType::tag == request.carrier_type) {
       auto type_name = DataType::type_name.c_str();
       auto table = state_.Get(type_name).ToObject();
       auto names = table.GetPropertyNames();

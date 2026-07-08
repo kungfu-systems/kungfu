@@ -234,7 +234,7 @@ KF_DEFINE_PACK_TYPE(                                           //
     (int64_t, trigger_time),                                   //
     /** msg type of the data in frame (ADR-0001: no longer volatile;          //
      *  visibility is guaranteed by the length release/acquire token) */      //
-    (int32_t, msg_type),                                       //
+    (int32_t, carrier_type),                                       //
     /** source of this frame */                                //
     (uint32_t, source),                                        //
     /** dest of this frame */                                  //

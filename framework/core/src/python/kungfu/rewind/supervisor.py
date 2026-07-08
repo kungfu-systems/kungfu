@@ -32,14 +32,15 @@ from typing import Any, Iterable
 import kungfu
 
 from kungfu.rewind import (
-    MSG_RUN_BEGIN,
-    MSG_RUN_END,
+    ACTION_RUN_BEGIN,
+    ACTION_RUN_END,
     SCHEMA_VERSION,
 )
 from kungfu.rewind import adapters, bundle, events
 from kungfu.rewind.fb.RunStatus import RunStatus
 from kungfu.rewind.ingest import IngestServer
 from kungfu.rewind.schema_registry import register_user_schema
+from kungfu.rewind.wire import wrap_event
 from kungfu.rewind.proxy import (
     DEFAULT_ANTHROPIC_UPSTREAM,
     DEFAULT_OPENAI_UPSTREAM,
@@ -90,19 +91,19 @@ class Supervisor:
         self.proxy = ModelWireProxy(
             self.run_id, self.enqueue, upstreams=self._upstreams()
         )
-        # kfx open-layer schemas registered during the run: msg_type -> (name,
+        # kfx action schemas registered during the run: action_type -> (name,
         # bfbs, tier). Collected off the ingest threads, bound into the bundle
         # manifest at finalize. Dict assignment is atomic under CPython; a run's
         # kfx set is tiny, so no extra lock.
-        self.user_schemas: dict[int, tuple[str, bytes, str]] = {}
+        self.user_schemas: dict[str, tuple[str, bytes, str]] = {}
         self.ingest = IngestServer(
             self.run_id, self.enqueue, schema_sink=self._register_kfx_schema
         )
 
     def _register_kfx_schema(
-        self, msg_type: int, name: str, bfbs: bytes, tier: str
+        self, action_type: str, name: str, bfbs: bytes, tier: str
     ) -> None:
-        self.user_schemas[int(msg_type)] = (name, bfbs, tier)
+        self.user_schemas[str(action_type)] = (name, bfbs, tier)
 
     @staticmethod
     def _upstreams() -> dict[str, str]:
@@ -115,17 +116,18 @@ class Supervisor:
             "anthropic": anthropic or DEFAULT_ANTHROPIC_UPSTREAM,
         }
 
-    def enqueue(self, msg_type: int, data: bytes) -> None:
-        self.events.put((msg_type, data))
+    def enqueue(self, action_type: str, data: bytes) -> None:
+        self.events.put((action_type, data))
 
     def _drain_events(self) -> None:
         while True:
             item = self.events.get()
             if item is _STOP:
                 return
-            msg_type, data = item
+            action_type, data = item
+            carrier_type, envelope = wrap_event(action_type, data, run_id=self.run_id)
             # the binding takes the payload as a byte sequence (list[int])
-            self.writer.write_bytes(0, msg_type, list(data), len(data))
+            self.writer.write_bytes(0, carrier_type, list(envelope), len(envelope))
 
     def child_env(self) -> dict[str, str]:
         env = dict(os.environ)
@@ -180,7 +182,7 @@ class Supervisor:
         self.proxy.start()
         self.ingest.start()
         self.enqueue(
-            MSG_RUN_BEGIN,
+            ACTION_RUN_BEGIN,
             events.run_begin(
                 run_id=self.run_id,
                 command=subprocess.list2cmdline(self.command),
@@ -208,7 +210,7 @@ class Supervisor:
             self.proxy.stop()
             self.ingest.stop()
             self.enqueue(
-                MSG_RUN_END,
+                ACTION_RUN_END,
                 events.run_end(self.run_id, status, exit_code),
             )
             self.events.put(_STOP)
@@ -227,10 +229,10 @@ class Supervisor:
             # bind each kfx open-layer schema into the run manifest, on top of
             # the first-party Rewind bindings. A bad registration must not sink
             # the run's own bundle.
-            for msg_type, (name, blob, tier) in self.user_schemas.items():
+            for action_type, (name, blob, tier) in self.user_schemas.items():
                 try:
                     register_user_schema(
-                        self.bundle_dir(), blob, msg_type, name, tier=tier
+                        self.bundle_dir(), blob, action_type, name, tier=tier
                     )
                 except ValueError:
                     continue

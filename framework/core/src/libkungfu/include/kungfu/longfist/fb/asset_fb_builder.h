@@ -19,8 +19,8 @@
 
 namespace kungfu::longfist::fb {
 
-// born-FB Asset 迁移 msg_type(>0,区分 POD Asset longfist tag 101,迁移期并存)。
-static constexpr int32_t ASSET_FB_TAG = 30101;
+// born-FB Asset migration carrier (>0, distinct from POD Asset longfist tag 101).
+static constexpr int32_t ASSET_FB_CARRIER = 1101;
 
 // 把 POD Asset 全字段构造成 born-FB Asset 载荷;返回 FB 字节,可直接 write_raw。CreateAsset 参数顺序=table 字段声明序。
 inline std::string build_fb_asset(const kungfu::longfist::types::Asset &a) {

@@ -12,7 +12,7 @@
 //
 //   KF_BYPASS_CACHED=1 node tests/bench/dispatch_bench.mjs   # rx-isolated run
 //   node tests/bench/dispatch_bench.mjs                      # storage-on run
-//   node tests/bench/dispatch_bench.mjs 200000 30001         # open-layer control run
+//   node tests/bench/dispatch_bench.mjs 200000 1000          # action-envelope control run
 
 import fs from 'node:fs';
 import path from 'node:path';

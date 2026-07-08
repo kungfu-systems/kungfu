@@ -18,7 +18,7 @@
 
 namespace kungfu::longfist::fb {
 
-// born-FB Order 迁移 msg_type(>0,区分 POD Order longfist tag 202,迁移期并存)。
+// born-FB Order 迁移 carrier_type(>0,区分 POD Order longfist tag 202,迁移期并存)。
 static constexpr int32_t ORDER_FB_TAG = 30202;
 
 // 把 POD Order 全字段构造成 born-FB Order 载荷;返回 FB 字节,可直接 write_raw。

@@ -12,12 +12,12 @@
 # truth. This profile imports snapshots into a local journal so Kungfu can
 # display and query them; it never writes back to the source repository.
 
-# v4 msg_type allocation — docs/msg-type-ranges.md.
-#
-# The journal still needs a positive wire-level msg_type, but Atlas business
-# semantics live in the JSON action envelope's action_type/schema metadata.
-# Do not allocate one msg_type per Atlas business event.
-MSG_ACTION_ENVELOPE = 1000
+# v4 carrier allocation: the journal header keeps one generic carrier and
+# Atlas business semantics live in the JSON action envelope's action_type/schema
+# metadata. Do not allocate one carrier per Atlas business event.
+from kungfu.action_envelope import CARRIER_ACTION_ENVELOPE
+
+CARRIER_ATLAS_ACTION = CARRIER_ACTION_ENVELOPE
 
 ACTION_IMPORT_BEGIN = "atlas.import.begin"
 ACTION_MISSION_SNAPSHOT = "atlas.mission.snapshot"
@@ -29,8 +29,8 @@ ACTION_IMPORT_END = "atlas.import.end"
 # the store manifest's schema binding, which remains decode authority).
 SCHEMA_VERSION = 1
 
-MSG_TYPE_NAMES = {
-    MSG_ACTION_ENVELOPE: "ActionEnvelope",
+CARRIER_TYPE_NAMES = {
+    CARRIER_ATLAS_ACTION: "ActionEnvelope",
 }
 
 ACTION_TYPE_NAMES = {

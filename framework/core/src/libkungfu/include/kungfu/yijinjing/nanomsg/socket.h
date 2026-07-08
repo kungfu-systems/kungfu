@@ -161,7 +161,7 @@ struct nanomsg_json : event {
 
   [[nodiscard]] int64_t trigger_time() const override { return header_.trigger_time; }
 
-  [[nodiscard]] int32_t msg_type() const override { return header_.msg_type; }
+  [[nodiscard]] int32_t carrier_type() const override { return header_.carrier_type; }
 
   [[nodiscard]] uint32_t source() const override { return header_.source; }
 

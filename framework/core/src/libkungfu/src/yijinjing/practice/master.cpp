@@ -272,7 +272,7 @@ void master::feed(const event_ptr &event) {
     return;
   }
 
-  if (event->msg_type() != Instrument::tag and event->msg_type() != InstrumentFactor::tag and
+  if (event->carrier_type() != Instrument::tag and event->carrier_type() != InstrumentFactor::tag and
       get_location(event->source())->role == location_role::SOURCE) {
     return;
   }

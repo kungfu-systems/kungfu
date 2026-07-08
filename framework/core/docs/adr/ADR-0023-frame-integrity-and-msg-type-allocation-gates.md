@@ -1,4 +1,4 @@
-# ADR-0023: frame integrity starts at the C++ recorder and raw msg_type allocation is gated
+# ADR-0023: frame integrity starts at the C++ recorder and raw carrier_type allocation is gated
 
 - Status: accepted
 - Date: 2026-07-08
@@ -7,7 +7,9 @@
   Rewind, Work, KFX schema registration, CI/source-quality gates.
 - Related: ADR-0001 defines the publish barrier. ADR-0018 defines runtime
   storage as the persistence contract. ADR-0022 defines the C++ action recorder
-  as the polyglot membrane.
+  as the polyglot membrane. ADR-0025 supersedes the terminology and dispatch
+  rule: the header field is `carrier_type`, and business semantics live in
+  action envelopes.
 
 ## Context
 
@@ -21,21 +23,21 @@ The v4 agent/runtime use case changes the tradeoff. Agent facts are durable
 evidence. They need low-cost integrity checks even when the full cryptographic
 or multi-machine sync story is staged later.
 
-At the same time, earlier dogfood slices used pre-envelope open-layer msg_type
+At the same time, earlier dogfood slices used pre-envelope open-layer carrier_type
 allocations (`300xx`, `301xx`, `400xx`). Those ranges remain useful historical
 compatibility material, but copying that pattern into new v4 work would
 re-couple business semantics to raw journal integers.
 
 ## Decision
 
-New v4 business facts must not allocate raw business `msg_type` numbers. They
-use the action-envelope carrier (`msg_type=1000`) and put business semantics in
+New v4 business facts must not allocate raw business `carrier_type` numbers. They
+use the action-envelope carrier (`carrier_type=1000`) and put business semantics in
 `action_type` plus `schema_ref`.
 
 The repository enforces this with a source-quality gate. New raw `300xx` /
-`400xx` allocations fail unless the file is in an explicit legacy allowlist.
-The allowlist is for preserving existing Rewind/Work/KFX surfaces, not for
-expanding the model.
+`400xx` allocations fail. ADR-0025 removes the earlier pre-envelope legacy
+allowlist for first-party Rewind/Work/KFX business facts by migrating them to
+action envelopes.
 
 Frame integrity begins in the C++ action-recorder membrane:
 
@@ -71,11 +73,10 @@ later stage after the receipt-based slice proves the API and fsck flow.
 
 ## Consequences
 
-- Future agents must add action schemas, not raw `msg_type` constants, for new
+- Future agents must add action schemas, not raw `carrier_type` constants, for new
   product/runtime facts.
-- Rewind and Work remain pre-envelope compatibility surfaces until deliberately
-  migrated.
-- KFX dynamic schema examples remain legacy; sandboxed extensions should not
+- Rewind and Work must use action envelopes for first-party business facts.
+- KFX dynamic schemas bind by action type; sandboxed extensions should not
   treat `40000-49999` as the preferred v4 business event model.
 - fsck can detect changed action-envelope payload/header facts when the receipt
   has integrity fields.

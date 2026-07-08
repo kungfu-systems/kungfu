@@ -23,13 +23,14 @@ from typing import Any, Callable
 
 import kungfu
 from kungfu.rewind import (
-    MSG_RUN_BEGIN,
-    MSG_RUN_END,
+    ACTION_RUN_BEGIN,
+    ACTION_RUN_END,
     SCHEMA_VERSION,
     bundle,
     events,
     managed_run,
 )
+from kungfu.rewind.wire import wrap_event
 from kungfu.rewind.cost import confidence_for, discover_provider
 from kungfu.rewind.fb.RunStatus import RunStatus
 from kungfu.skill import (
@@ -156,11 +157,12 @@ def run_and_report(
 
     writer = _open_journal(runtime_dir, run_id)
 
-    def emit(msg_type: int, data: bytes) -> None:
-        writer.write_bytes(0, msg_type, list(data), len(data))
+    def emit(action_type: str, data: bytes) -> None:
+        carrier_type, envelope = wrap_event(action_type, data, run_id=run_id)
+        writer.write_bytes(0, carrier_type, list(envelope), len(envelope))
 
     emit(
-        MSG_RUN_BEGIN,
+        ACTION_RUN_BEGIN,
         events.run_begin(
             run_id=run_id,
             command=f"{provider} managed-run",
@@ -180,7 +182,7 @@ def run_and_report(
     )
 
     status = RunStatus.Succeeded if result.exit_code == 0 else RunStatus.Failed
-    emit(MSG_RUN_END, events.run_end(run_id, status, result.exit_code))
+    emit(ACTION_RUN_END, events.run_end(run_id, status, result.exit_code))
     # frames are written straight to the memory-mapped journal page, so they
     # persist without an explicit flush; the writer releases at function end.
 
@@ -281,14 +283,14 @@ def run_and_report(
         print(
             f"  attribution  {snap.attribution.value}   confidence {confidence_for(snap.attribution)}{ambiguous}"
         )
-        print("  event        CostSnapshot (msg_type 30008) written to the journal")
+        print("  event        rewind.cost.snapshot written to the journal")
     else:
         print(
             f"  no cost reported   emitted={result.emitted}  exit={result.exit_code}"
             + (f"  error={result.error}" if result.error else "")
         )
     print(_rule("response"))
-    print("  event        ModelResponse (msg_type 30004) written to the journal")
+    print("  event        rewind.model.response written to the journal")
     print(f"  response     {response_path}")
     if result.response_text:
         first_line = result.response_text.splitlines()[0]

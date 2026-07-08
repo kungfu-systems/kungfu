@@ -21,7 +21,10 @@ causality, writer, timeline, or receipt logic.
 
 Frame integrity starts at the same C++ boundary. [ADR-0023](../framework/core/docs/adr/ADR-0023-frame-integrity-and-msg-type-allocation-gates.md)
 defines the first receipt-based checksum slice and the rule that new v4 business
-facts must not allocate raw `300xx` / `400xx` `msg_type` numbers.
+facts must not allocate raw `300xx` / `400xx` `carrier_type` numbers.
+[ADR-0025](../framework/core/docs/adr/ADR-0025-carrier-type-and-action-envelope-semantics.md)
+then completes that rename: `carrier_type` is transport metadata, and business
+semantics live in `kungfu.action-envelope/v1`.
 
 Location identity uses neutral roles, not trading categories. [ADR-0024](../framework/core/docs/adr/ADR-0024-location-role-and-journal-page-policy.md)
 defines `source`, `sink`, `actor`, `system`, and `service`, and keeps journal
@@ -55,7 +58,7 @@ fields (defined in
 | `header_length` | `uint32` | Header size. |
 | `gen_time` | `int64` | When the frame was generated (nanoseconds). |
 | `trigger_time` | `int64` | Trigger time, for latency statistics. |
-| `msg_type` | `int32` | Wire-level carrier type. In v4 business facts normally use the generic action-envelope carrier and put semantics in `action_type` / `schema_ref`. |
+| `carrier_type` | `int32` | Wire-level carrier type. In v4 business facts normally use the generic action-envelope carrier and put semantics in `action_type` / `schema_ref`. |
 | `source` | `uint32` | Source of the frame. |
 | `dest` | `uint32` | Destination of the frame. |
 | `data_type` | enum | Payload encoding (raw struct vs json). |
@@ -65,8 +68,8 @@ fields (defined in
 | `stream_id` | `uint64` | Stream identifier. |
 
 Closed longfist/runtime frames may still identify their payload layout directly
-through `msg_type`. New v4 business facts should use the generic action
-envelope carrier: the journal header keeps `msg_type` for filtering and fsck,
+through `carrier_type`. New v4 business facts should use the generic action
+envelope carrier: the journal header keeps `carrier_type` for filtering and fsck,
 while the payload names the domain action through `action_type` and
 `schema_ref`. The same bytes are read by C++, Python, and Node without inventing
 per-language causality logic (see [`contracts.md`](contracts.md)).

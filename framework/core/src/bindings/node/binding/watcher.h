@@ -148,25 +148,25 @@ private:
   static constexpr auto bypass = [](practice::apprentice *app, bool bypass_quotes) {
     return rx::filter([&](const event_ptr &event) {
       return not(app->get_location(event->source())->role == longfist::enums::location_role::SOURCE and
-                 event->msg_type() != longfist::types::Instrument::tag and bypass_quotes);
+                 event->carrier_type() != longfist::types::Instrument::tag and bypass_quotes);
     });
   };
 
   static constexpr auto is_trading_data = []() {
     return rx::filter([&](const event_ptr &event) {
-      return longfist::RefreshRequiredDataTags.find(event->msg_type()) != longfist::RefreshRequiredDataTags.end();
+      return longfist::RefreshRequiredDataTags.find(event->carrier_type()) != longfist::RefreshRequiredDataTags.end();
     });
   };
 
   static constexpr auto not_trading_data = []() {
     return rx::filter([&](const event_ptr &event) {
-      return longfist::RefreshRequiredDataTags.find(event->msg_type()) == longfist::RefreshRequiredDataTags.end();
+      return longfist::RefreshRequiredDataTags.find(event->carrier_type()) == longfist::RefreshRequiredDataTags.end();
     });
   };
 
   static constexpr auto is_static_data = []() {
     return rx::filter([&](const event_ptr &event) {
-      return longfist::StaticDataTags.find(event->msg_type()) != longfist::StaticDataTags.end();
+      return longfist::StaticDataTags.find(event->carrier_type()) != longfist::StaticDataTags.end();
     });
   };
 

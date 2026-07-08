@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Guard v4 against copying the pre-envelope open-layer allocation pattern.
-// Existing Rewind/Work/KFX files remain as reviewed legacy surfaces; new v4
-// business facts must use msg_type=1000 plus action_type/schema_ref.
+// Business facts must use carrier_type=1000 plus action_type/schema_ref.
 // @ts-check
 
 import { spawnSync } from 'node:child_process';
@@ -19,27 +18,22 @@ const allFiles = args.includes('--all');
 
 const SOURCE_EXT = /\.(c|cc|cpp|cxx|h|hh|hpp|hxx|mjs|js|cjs|ts|tsx|py|fbs)$/;
 
-const LEGACY_ALLOWLIST = [
-  'framework/api/src/capability/work.ts',
-  'framework/core/tests/bench/dispatch_load.py',
-  'framework/core/src/python/kungfu/rewind/',
-  'framework/core/src/python/kungfu/work/',
-  'tests/fixtures/rewind-demo-',
-  'tests/fixtures/work-demo-lifecycle/',
-];
-
 const ALLOCATION_PATTERNS = [
   {
     name: 'raw constant allocation',
     re: /\b(?:MSG_[A-Z0-9_]*|[A-Z0-9_]*MSG_TYPE|KFX_MSG_TYPE|WORK_MSG_(?:MIN|MAX))\b\s*(?::[^=\n]+)?=\s*(3\d{4}|4\d{4})\b/g,
   },
   {
-    name: 'raw msg_type comment contract',
-    re: /\bmsg_type\b[^\n]{0,40}\b(3\d{4}|4\d{4})\b/g,
+    name: 'raw carrier/comment contract',
+    re: /\b(?:msg_type|carrier_type)\b[^\n]{0,60}\b(3\d{4}|4\d{4})\b/g,
   },
   {
     name: 'open-layer range constant',
     re: /\b(?:OPEN_LAYER_MIN|KFX_MSGTYPE_(?:MIN|MAX))\b\s*(?::[^=\n]+)?=\s*(3\d{4}|4\d{4})\b/g,
+  },
+  {
+    name: 'business header vocabulary',
+    re: /\bMSG_[A-Z0-9_]+\b/g,
   },
 ];
 
@@ -157,14 +151,6 @@ function selectedFiles() {
   );
 }
 
-function isLegacyAllowed(rel) {
-  return LEGACY_ALLOWLIST.some((entry) =>
-    entry.endsWith('/') || entry.endsWith('-')
-      ? rel.startsWith(entry)
-      : rel === entry,
-  );
-}
-
 function lineNumber(text, index) {
   let line = 1;
   for (let i = 0; i < index; i += 1) {
@@ -175,9 +161,18 @@ function lineNumber(text, index) {
 
 const hits = [];
 for (const rel of selectedFiles()) {
-  if (isLegacyAllowed(rel)) continue;
+  const businessEnvelopeSurface =
+    rel.startsWith('framework/core/src/python/kungfu/rewind/') ||
+    rel.startsWith('framework/core/src/python/kungfu/work/') ||
+    rel.startsWith('framework/core/src/python/kungfu/atlas/');
   const text = fs.readFileSync(path.join(ROOT, rel), 'utf8');
   for (const pattern of ALLOCATION_PATTERNS) {
+    if (
+      pattern.name === 'business header vocabulary' &&
+      !businessEnvelopeSurface
+    ) {
+      continue;
+    }
     pattern.re.lastIndex = 0;
     for (const match of text.matchAll(pattern.re)) {
       hits.push({
@@ -191,12 +186,14 @@ for (const rel of selectedFiles()) {
 }
 
 if (hits.length) {
-  console.error('[msg-type] raw open-layer msg_type allocation is blocked.');
   console.error(
-    '[msg-type] New v4 facts must use msg_type=1000 with action_type/schema_ref.',
+    '[carrier-action] raw open-layer business allocation is blocked.',
   );
   console.error(
-    '[msg-type] Move legacy exceptions into a reviewed allowlist only when preserving an existing surface.',
+    '[carrier-action] New v4 facts must use carrier_type=1000 with action_type/schema_ref.',
+  );
+  console.error(
+    '[carrier-action] Keep business semantics in the action envelope, not the frame header.',
   );
   for (const hit of hits) {
     console.error(`  ${hit.file}:${hit.line} (${hit.pattern}) ${hit.text}`);
@@ -204,4 +201,4 @@ if (hits.length) {
   process.exit(1);
 }
 
-console.log('[msg-type] allocation gate passed');
+console.log('[carrier-action] envelope gate passed');

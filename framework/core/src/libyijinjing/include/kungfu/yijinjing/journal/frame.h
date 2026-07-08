@@ -33,7 +33,7 @@ struct frame : event {
   // (payload, gen_time, frame_uid, the zeroed next-frame header) are visible.
   // This replaces the previous `volatile` field, which gave no cross-thread
   // ordering on weak-memory (ARM) targets.
-  [[nodiscard]] bool has_data() const { return acquire_length() > 0 && header_->msg_type > 0; }
+  [[nodiscard]] bool has_data() const { return acquire_length() > 0 && header_->carrier_type > 0; }
 
   [[nodiscard]] uintptr_t address() const { return reinterpret_cast<uintptr_t>(header_); }
 
@@ -47,7 +47,7 @@ struct frame : event {
 
   [[nodiscard]] int64_t trigger_time() const override { return header_->trigger_time; }
 
-  [[nodiscard]] int32_t msg_type() const override { return header_->msg_type; }
+  [[nodiscard]] int32_t carrier_type() const override { return header_->carrier_type; }
 
   [[nodiscard]] uint32_t source() const override { return header_->source; }
 
@@ -121,7 +121,7 @@ struct frame : event {
 
   void set_trigger_time(int64_t trigger_time) { header_->trigger_time = trigger_time; }
 
-  void set_msg_type(int32_t msg_type) { header_->msg_type = msg_type; }
+  void set_carrier_type(int32_t carrier_type) { header_->carrier_type = carrier_type; }
 
   void set_data_type(longfist::enums::FrameDataType data_type) { header_->data_type = data_type; }
 

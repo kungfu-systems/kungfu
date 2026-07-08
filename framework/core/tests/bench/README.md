@@ -10,7 +10,7 @@ the evidence feed for
 `hero::drain` pushes every reactable journal frame through `sb.on_next`,
 which fans it synchronously through **all** rx filter chains subscribed on
 `events_`. The `KF_DISPATCH_PROBE=1` instrument in `hero.cpp` times exactly
-that call per frame and aggregates count / mean / max per `msg_type`,
+that call per frame and aggregates count / mean / max per `carrier_type`,
 reporting through the process log every 5 seconds and at journal end. The
 probe is opt-in; when the env var is unset the per-frame cost is a single
 predictable branch.
@@ -43,7 +43,7 @@ runtime forms already pre-filter open-layer events before rx: master's
 events too. Open-layer traffic therefore never touches the filter chains —
 an existing cheap pre-dispatch worth noting as ADR-0005 evidence in its own
 right (`frames_seen` vs `dispatched` in the probe report quantifies it; use
-load-type `30001` as a control run to see it).
+load-type `1000` as a control run to see it).
 
 ## Reading the result for ADR-0005
 
@@ -51,7 +51,7 @@ load-type `30001` as a control run to see it).
   and the storage delta, the rx algebra is not the hot layer: **freeze**.
 - If it is material, the only optimization shape on the table keeps the
   filter-chain declarations as the single source of truth and derives a
-  msg_type index from them for single-tag chain pre-dispatch. Replacing the
+  carrier index from them for single-tag chain pre-dispatch. Replacing the
   rx algebra is off the table: the multi-dimensional routing (`is`/`from`/
   `to` composition), open extension, and subscription-lifetime semantics it
   provides are load-bearing (see the notes in `rx.h` — `steppable`/`holdon`

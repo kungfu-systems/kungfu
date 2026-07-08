@@ -980,9 +980,9 @@ KF_DEFINE_PACK_TYPE(                                                            
     (bool, close_today_first)                                                         // 优先平今
 );
 
-KF_DEFINE_PACK_TYPE(                              //
-    CacheReset, 10208, PK(msg_type), PERPETUAL(), //
-    (int32_t, msg_type)                           //
+KF_DEFINE_PACK_TYPE(                                  //
+    CacheReset, 10208, PK(carrier_type), PERPETUAL(), //
+    (int32_t, carrier_type)                           //
 );
 
 KF_DEFINE_PACK_TYPE(                                    //

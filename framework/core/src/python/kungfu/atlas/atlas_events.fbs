@@ -2,9 +2,9 @@
 //
 // Legacy Atlas control-plane import events.
 //
-// v4 no longer writes one journal msg_type per Atlas business event. The active
+// v4 no longer writes one journal carrier per Atlas business event. The active
 // import path writes `kungfu.action-envelope/v1` JSON frames under
-// `MSG_ACTION_ENVELOPE` and uses `action_type` / `schema_ref` for business
+// `CARRIER_ACTION_ENVELOPE` and uses `action_type` / `schema_ref` for business
 // semantics. This FlatBuffers schema is retained only as pre-envelope history
 // while old generated files remain in-tree.
 //

@@ -210,16 +210,16 @@ function checkNoBashTree() {
   );
 }
 
-function checkMsgTypeAllocations(scopeArgs = []) {
-  run('msg_type allocation gate', 'node', [
-    path.join('scripts', 'check-msg-type-allocations.mjs'),
+function checkCarrierActionEnvelope(scopeArgs = []) {
+  run('carrier/action-envelope gate', 'node', [
+    path.join('scripts', 'check-carrier-action-envelope.mjs'),
     ...scopeArgs,
   ]);
 }
 
 function checkStaged() {
   checkNoBashStaged();
-  checkMsgTypeAllocations(['--staged']);
+  checkCarrierActionEnvelope(['--staged']);
   const files = stagedFiles();
   if (!files.length) {
     log('[check] no staged source files');
@@ -304,7 +304,7 @@ function checkShared() {
 
 function checkChanged() {
   checkNoBashTree();
-  checkMsgTypeAllocations();
+  checkCarrierActionEnvelope();
   checkBiomeFiles('changed', changedFiles());
   checkShared();
   log('\n[check] changed-scope gate passed');
@@ -312,7 +312,7 @@ function checkChanged() {
 
 function checkAll() {
   checkNoBashTree();
-  checkMsgTypeAllocations(['--all']);
+  checkCarrierActionEnvelope(['--all']);
   run('repo lint + format check', 'pnpm', ['run', 'lint']);
   checkShared();
   log('\n[check] whole-tree gate passed');

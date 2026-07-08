@@ -241,10 +241,10 @@ void cached::cache_reset(const event_ptr &event) {
 
   std::lock_guard<std::mutex> lock(states_store_mutex_);
   auto cache_reset = event->data<CacheReset>();
-  auto msg_type = cache_reset.msg_type;
+  auto carrier_type = cache_reset.carrier_type;
   boost::hana::for_each(StateDataTypes, [&](auto it) {
     using DataType = typename decltype(+boost::hana::second(it))::type;
-    if (DataType::tag == msg_type) {
+    if (DataType::tag == carrier_type) {
       if (app_states_shift_.find(event->source()) != app_states_shift_.end()) {
         app_states_shift_[event->source()] -= typed_event_ptr<DataType>(event);
       }
@@ -258,15 +258,15 @@ void cached::cache_reset(const event_ptr &event) {
 void cached::feed(const event_ptr &event) {
   std::lock_guard<std::mutex> lock(feed_mutex_);
   // only etf related data will be stored by cached, these data should be only store in td public.db, for CachedReset
-  if (event->msg_type() != BasketInstrument::tag and event->msg_type() != Basket::tag) {
+  if (event->carrier_type() != BasketInstrument::tag and event->carrier_type() != Basket::tag) {
     feed_profile_data(event, profile_feed_bank_);
   }
 
-  if (not bypass_cached_ and event->msg_type() != Instrument::tag) {
+  if (not bypass_cached_ and event->carrier_type() != Instrument::tag) {
     feed_state_data(event, states_feed_bank_);
   }
 
-  // 开放层 FB 帧（msg_type 不在 longfist 闭集）：路由到 FB 投影器；未启用或未注册类型时 no-op，不影响 hana 路径。
+  // 开放层 FB 帧（carrier_type 不在 longfist 闭集）：路由到 FB 投影器；未启用或未注册类型时 no-op，不影响 hana 路径。
   if (open_layer_) {
     open_layer_->feed(event);
   }

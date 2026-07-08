@@ -18,12 +18,13 @@ from kungfu.atlas import (
     ACTION_IMPORT_END,
     ACTION_MARKER_SNAPSHOT,
     ACTION_MISSION_SNAPSHOT,
-    MSG_ACTION_ENVELOPE,
-    MSG_TYPE_NAMES,
+    CARRIER_ATLAS_ACTION,
+    CARRIER_TYPE_NAMES,
     SCHEMA_VERSION,
     importer,
     payloads,
 )
+from kungfu.action_envelope import decode_action_envelope
 
 lf = kungfu.__binding__.longfist
 yjj = kungfu.__binding__.yijinjing
@@ -75,14 +76,14 @@ class ImportStore:
 
     def _append_envelope(self, envelope):
         data = _journal_payload(envelope)
-        receipt = self.recorder.record_json(MSG_ACTION_ENVELOPE, data.decode("utf-8"))
+        receipt = self.recorder.record_json(CARRIER_ATLAS_ACTION, data.decode("utf-8"))
         return {
             "frame_uid": receipt.frame_uid,
             "trigger_frame_uid": receipt.trigger_frame_uid,
             "stream_id": receipt.stream_id,
             "gen_time": receipt.gen_time,
             "trigger_time": receipt.trigger_time,
-            "msg_type": receipt.msg_type,
+            "carrier_type": receipt.carrier_type,
             "source": receipt.source,
             "initial_source": receipt.initial_source,
             "dest": receipt.dest,
@@ -218,15 +219,15 @@ class ImportStore:
             },
             "hash_algorithm": "sha256",
             "schema_bindings": {
-                str(msg_type): {
+                str(carrier_type): {
                     "schema_kind": "json",
                     "name": name,
                     "schema": payloads.ACTION_ENVELOPE_SCHEMA,
                     "schema_version": 1,
                 }
-                for msg_type, name in MSG_TYPE_NAMES.items()
+                for carrier_type, name in CARRIER_TYPE_NAMES.items()
             },
-            "msg_type_epoch": "v4",
+            "carrier_type_epoch": "v4",
             "semantic_dispatch": "action_type",
             "authority_boundary": "this store is a read-only projection of an "
             "external control-plane repository; that repository's files remain "
@@ -238,26 +239,15 @@ class ImportStore:
         return manifest_path
 
 
-def _decode_action_envelope(data):
-    raw = bytes(data).rstrip(b"\0")
-    if not raw:
-        return None
-    try:
-        envelope = json.loads(raw.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError):
-        return None
-    return envelope if isinstance(envelope, dict) else None
-
-
 def read_frames(runtime_dir):
     """All import action frames in gen_time order: (gen_time, action_type, envelope)."""
     location = _location(runtime_dir)
     frames = []
     try:
         for header, frame_payload in yjj.assemble(location, 0).read_bytes(
-            MSG_ACTION_ENVELOPE
+            CARRIER_ATLAS_ACTION
         ):
-            envelope = _decode_action_envelope(frame_payload)
+            envelope = decode_action_envelope(frame_payload)
             if envelope is not None:
                 frames.append((header.gen_time, envelope.get("action_type"), envelope))
     except (RuntimeError, ValueError, FileNotFoundError):
@@ -297,7 +287,7 @@ def _checksum_frame(header, data, payload_length):
         ("I", int(getattr(header, "header_length", 0))),
         ("q", int(header.gen_time)),
         ("q", int(header.trigger_time)),
-        ("i", int(header.msg_type)),
+        ("i", int(header.carrier_type)),
         ("I", int(header.source)),
         ("I", int(header.dest)),
         ("b", int(_frame_data_type_value(header))),
@@ -318,7 +308,7 @@ def read_action_frame_index(runtime_dir):
     index = {}
     try:
         for header, frame_payload in yjj.assemble(location, 0).read_bytes(
-            MSG_ACTION_ENVELOPE
+            CARRIER_ATLAS_ACTION
         ):
             data = bytes(frame_payload)
             index[(header.frame_uid, header.gen_time)] = {
@@ -327,7 +317,7 @@ def read_action_frame_index(runtime_dir):
                 "stream_id": header.stream_id,
                 "gen_time": header.gen_time,
                 "trigger_time": header.trigger_time,
-                "msg_type": header.msg_type,
+                "carrier_type": header.carrier_type,
                 "source": header.source,
                 "initial_source": header.initial_source,
                 "dest": header.dest,

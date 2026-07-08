@@ -6,11 +6,11 @@
 // Events are decoded by reflection over each run's manifest-bound `.bfbs` —
 // the same "decodable by reflection alone, no generated code" contract that
 // C++ and Python honour (see kungfu.rewind README / replay.py). The shared
-// ReflectionDecoder walks the schema; raw payload bytes come from the native
-// journal frame via dataBytes(), and the schema bytes + msg_type→table binding
-// come from the run's bundle (manifest.json + schemas/<hash>.bfbs), read
-// through injected fs primitives. Adding a new event type (e.g. CostSnapshot)
-// needs no change here: bind it in the schema, and reflection decodes it.
+// ReflectionDecoder walks the schema; raw payload bytes come from the action
+// envelope, and the schema bytes + action_type→table binding come from the
+// run's bundle (manifest.json + schemas/<hash>.bfbs), read through injected fs
+// primitives. Adding a new event type (e.g. CostSnapshot) needs no change here:
+// bind it in the schema, and reflection decodes it.
 import {
   CallStatus,
   type CaptureLayer,
@@ -144,6 +144,44 @@ export type OpenRewindOptions = {
 };
 
 const decoder = new TextDecoder();
+const ACTION_ENVELOPE_CARRIER = 1000;
+
+type ActionEnvelope = {
+  schema?: string;
+  action_type?: string;
+  payload?: {
+    encoding?: string;
+    content_transfer_encoding?: string;
+    data?: string;
+  };
+};
+
+function decodeEnvelope(bytes: Uint8Array): {
+  actionType: string;
+  payload: Uint8Array;
+} | null {
+  const jsonText = Buffer.from(bytes).toString('utf8').replace(/\0+$/u, '');
+  if (!jsonText) return null;
+  let envelope: ActionEnvelope;
+  try {
+    envelope = JSON.parse(jsonText) as ActionEnvelope;
+  } catch {
+    return null;
+  }
+  if (
+    envelope.schema !== 'kungfu.action-envelope/v1' ||
+    typeof envelope.action_type !== 'string' ||
+    envelope.payload?.encoding !== 'flatbuffers' ||
+    envelope.payload.content_transfer_encoding !== 'base64' ||
+    typeof envelope.payload.data !== 'string'
+  ) {
+    return null;
+  }
+  return {
+    actionType: envelope.action_type,
+    payload: new Uint8Array(Buffer.from(envelope.payload.data, 'base64')),
+  };
+}
 
 // snake_case (reflection field name) -> camelCase (RewindEvent slot). The
 // decode is otherwise field-name agnostic; only the causal/cost slots we type
@@ -293,17 +331,15 @@ export function openRewind(options: OpenRewindOptions): Rewind {
 
   let cache: Map<string, RewindEvent[]> | null = null;
 
-  // Build msgType -> {kind, decoder} from every run's bundle manifest.
+  // Build action_type -> {kind, decoder} from every run's bundle manifest.
   // First-party schemas are content-addressed, so all runs bind the same
-  // `.bfbs`; decoders are deduped by schema hash. (A per-run kfx schema reusing
-  // one msgType with different bytes across runs would collide here — the
-  // first-party rewind events this surface renders do not.)
+  // `.bfbs`; decoders are deduped by schema hash.
   const loadBinders = (): Map<
-    number,
+    string,
     { kind: string; decoder: ReflectionDecoder }
   > => {
     const binders = new Map<
-      number,
+      string,
       { kind: string; decoder: ReflectionDecoder }
     >();
     const byHash = new Map<string, ReflectionDecoder>();
@@ -325,11 +361,10 @@ export function openRewind(options: OpenRewindOptions): Rewind {
       } catch {
         continue; // no bundle yet (e.g. a live run not exported), skip
       }
-      for (const [mt, binding_] of Object.entries(
+      for (const [actionType, binding_] of Object.entries(
         manifest.schema_bindings ?? {},
       )) {
-        const msgType = Number(mt);
-        if (binders.has(msgType)) continue;
+        if (binders.has(actionType)) continue;
         let dec = byHash.get(binding_.schema_hash);
         if (!dec) {
           try {
@@ -341,7 +376,7 @@ export function openRewind(options: OpenRewindOptions): Rewind {
           }
           byHash.set(binding_.schema_hash, dec);
         }
-        binders.set(msgType, { kind: binding_.name, decoder: dec });
+        binders.set(actionType, { kind: binding_.name, decoder: dec });
       }
     }
     return binders;
@@ -353,9 +388,18 @@ export function openRewind(options: OpenRewindOptions): Rewind {
     const assemble = new binding.Assemble([runtimeDir]);
     while (assemble.dataAvailable()) {
       const frame = assemble.currentFrame();
-      const bound = binders.get(frame.msgType());
-      if (bound) {
-        const raw = bound.decoder.decode(frame.dataBytes(), bound.kind);
+      if (frame.carrierType() === ACTION_ENVELOPE_CARRIER) {
+        const envelope = decodeEnvelope(frame.dataBytes());
+        if (!envelope) {
+          assemble.next();
+          continue;
+        }
+        const bound = binders.get(envelope.actionType);
+        if (!bound) {
+          assemble.next();
+          continue;
+        }
+        const raw = bound.decoder.decode(envelope.payload, bound.kind);
         const event = toEvent(bound.kind, frame.genTime(), raw);
         const bucket = byRun.get(event.runId);
         if (bucket) bucket.push(event);

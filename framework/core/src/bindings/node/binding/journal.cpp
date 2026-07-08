@@ -43,7 +43,9 @@ Napi::Value Frame::StreamId(const Napi::CallbackInfo &info) {
   return Napi::BigInt::New(info.Env(), frame_->stream_id());
 }
 
-Napi::Value Frame::MsgType(const Napi::CallbackInfo &info) { return Napi::Number::New(info.Env(), frame_->msg_type()); }
+Napi::Value Frame::CarrierType(const Napi::CallbackInfo &info) {
+  return Napi::Number::New(info.Env(), frame_->carrier_type());
+}
 
 Napi::Value Frame::Source(const Napi::CallbackInfo &info) { return Napi::Number::New(info.Env(), frame_->source()); }
 
@@ -62,7 +64,7 @@ Napi::Value Frame::Data(const Napi::CallbackInfo &info) {
   // have to be AllDataTypes, for data size is not 0
   boost::hana::for_each(longfist::AllDataTypes, [&](auto it) {
     using DataType = typename decltype(+boost::hana::second(it))::type;
-    if (frame_->msg_type() == DataType::tag) {
+    if (frame_->carrier_type() == DataType::tag) {
       serialize::JsSet{}(frame_->data<DataType>(), result);
       result.DefineProperties({
           Napi::PropertyDescriptor::Value("tag", Napi::Number::New(result.Env(), DataType::tag)),
@@ -78,7 +80,7 @@ Napi::Value Frame::DataAsString(const Napi::CallbackInfo &info) {
   // have to be AllDataTypes, for data size is not 0
   boost::hana::for_each(longfist::AllDataTypes, [&](auto it) {
     using DataType = typename decltype(+boost::hana::second(it))::type;
-    if (frame_->msg_type() == DataType::tag) {
+    if (frame_->carrier_type() == DataType::tag) {
       result = frame_->data<DataType>().to_string();
     }
   });
@@ -104,7 +106,7 @@ void Frame::Init(Napi::Env env, Napi::Object exports) {
                                         InstanceMethod("frameUid", &Frame::FrameUid),               //
                                         InstanceMethod("triggerFrameUid", &Frame::TriggerFrameUid), //
                                         InstanceMethod("streamId", &Frame::StreamId),               //
-                                        InstanceMethod("msgType", &Frame::MsgType),                 //
+                                        InstanceMethod("carrierType", &Frame::CarrierType),         //
                                         InstanceMethod("source", &Frame::Source),                   //
                                         InstanceMethod("dest", &Frame::Dest),                       //
                                         InstanceMethod("initialSource", &Frame::InitialSource),     //

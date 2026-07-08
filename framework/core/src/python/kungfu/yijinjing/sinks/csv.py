@@ -19,9 +19,9 @@ class CsvSink(yjj.sink):
         self.writers = {}
 
     def put(self, location, dest_id, frame):
-        if frame.msg_type not in self.tagged_types:
+        if frame.carrier_type not in self.tagged_types:
             return
-        data_type = self.tagged_types[frame.msg_type]
+        data_type = self.tagged_types[frame.carrier_type]
         header = [m for m in vars(data_type) if not m.startswith("_")]
         location_part = f"{lf.enums.get_location_role_name(location.role)}.{location.group}.{location.name}"
         output = os.path.join(

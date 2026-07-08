@@ -20,7 +20,7 @@
 
 namespace kungfu::longfist::fb {
 
-// born-FB Trade 迁移 msg_type(>0,区分 POD Trade longfist tag 203,迁移期并存)。
+// born-FB Trade 迁移 carrier_type(>0,区分 POD Trade longfist tag 203,迁移期并存)。
 static constexpr int32_t TRADE_FB_TAG = 30203;
 
 // 把 POD Trade 全字段构造成 born-FB Trade 载荷;返回 FB 字节,可直接 write_raw。

@@ -2,8 +2,9 @@
 // default work profile — as the same folded projection the `kungfu work` CLI
 // renders. Additive module beside the ADR-0011 five handles — same factory
 // style, no import-time side effects. Decoding uses the flatc-generated
-// accessors for the work event schema (open-layer msg types 30101-30199);
-// the raw payload bytes come from the native frame via dataBytes().
+// accessors for the work event schema. Business dispatch comes from
+// kungfu.action-envelope/v1 action_type; the frame header only carries the
+// generic action carrier.
 import * as flatbuffers from 'flatbuffers';
 import {
   ArtifactRecorded,
@@ -12,7 +13,7 @@ import {
   NextActionSet,
   RunLinked,
   ValidationRecorded,
-  ValidationResult,
+  type ValidationResult,
   WorkItemCreated,
   WorkStatus,
   WorkStatusChanged,
@@ -26,19 +27,18 @@ import {
 // the lifecycle vocabulary is part of this handle's surface
 export { ValidationResult, WorkStatus } from './generated/work/fb.js';
 
-export const WORK_MSG = {
-  WorkItemCreated: 30101,
-  WorkStatusChanged: 30102,
-  NextActionSet: 30103,
-  CheckpointRecorded: 30104,
-  DecisionRecorded: 30105,
-  ValidationRecorded: 30106,
-  ArtifactRecorded: 30107,
-  RunLinked: 30108,
+export const WORK_ACTION = {
+  WorkItemCreated: 'work.item.created',
+  WorkStatusChanged: 'work.status.changed',
+  NextActionSet: 'work.next_action.set',
+  CheckpointRecorded: 'work.checkpoint.recorded',
+  DecisionRecorded: 'work.decision.recorded',
+  ValidationRecorded: 'work.validation.recorded',
+  ArtifactRecorded: 'work.artifact.recorded',
+  RunLinked: 'work.run.linked',
 } as const;
 
-const WORK_MSG_MIN = 30101;
-const WORK_MSG_MAX = 30108;
+const ACTION_ENVELOPE_CARRIER = 1000;
 
 export const WORK_STATUS_NAMES: Record<WorkStatus, string> = {
   [WorkStatus.Active]: 'active',
@@ -91,6 +91,43 @@ export type OpenWorkOptions = {
 
 const str = (value: string | null | undefined) => value ?? undefined;
 
+type ActionEnvelope = {
+  schema?: string;
+  action_type?: string;
+  payload?: {
+    encoding?: string;
+    content_transfer_encoding?: string;
+    data?: string;
+  };
+};
+
+function decodeEnvelope(bytes: Uint8Array): {
+  actionType: string;
+  payload: Uint8Array;
+} | null {
+  const jsonText = Buffer.from(bytes).toString('utf8').replace(/\0+$/u, '');
+  if (!jsonText) return null;
+  let envelope: ActionEnvelope;
+  try {
+    envelope = JSON.parse(jsonText) as ActionEnvelope;
+  } catch {
+    return null;
+  }
+  if (
+    envelope.schema !== 'kungfu.action-envelope/v1' ||
+    typeof envelope.action_type !== 'string' ||
+    envelope.payload?.encoding !== 'flatbuffers' ||
+    envelope.payload.content_transfer_encoding !== 'base64' ||
+    typeof envelope.payload.data !== 'string'
+  ) {
+    return null;
+  }
+  return {
+    actionType: envelope.action_type,
+    payload: new Uint8Array(Buffer.from(envelope.payload.data, 'base64')),
+  };
+}
+
 export function openWork(options: OpenWorkOptions): Work {
   const { binding } = options;
   const runtimeDir = resolveRuntimeDir(options.locator);
@@ -111,18 +148,20 @@ export function openWork(options: OpenWorkOptions): Work {
   // Fold the event stream into current items — the same projection the
   // python store computes; state never lives anywhere but the fold.
   const scan = (): Map<string, WorkItem> => {
-    const frames: { genTime: bigint; msgType: number; bytes: Uint8Array }[] =
+    const frames: { genTime: bigint; actionType: string; bytes: Uint8Array }[] =
       [];
     const assemble = new binding.Assemble([runtimeDir]);
     while (assemble.dataAvailable()) {
       const frame = assemble.currentFrame();
-      const msgType = frame.msgType();
-      if (msgType >= WORK_MSG_MIN && msgType <= WORK_MSG_MAX) {
-        frames.push({
-          genTime: frame.genTime(),
-          msgType,
-          bytes: frame.dataBytes(),
-        });
+      if (frame.carrierType() === ACTION_ENVELOPE_CARRIER) {
+        const event = decodeEnvelope(frame.dataBytes());
+        if (event?.actionType.startsWith('work.')) {
+          frames.push({
+            genTime: frame.genTime(),
+            actionType: event.actionType,
+            bytes: event.payload,
+          });
+        }
       }
       assemble.next();
     }
@@ -141,10 +180,10 @@ export function openWork(options: OpenWorkOptions): Work {
       return item;
     };
 
-    for (const { genTime, msgType, bytes } of frames) {
+    for (const { genTime, actionType, bytes } of frames) {
       const bb = new flatbuffers.ByteBuffer(bytes);
-      switch (msgType) {
-        case WORK_MSG.WorkItemCreated: {
+      switch (actionType) {
+        case WORK_ACTION.WorkItemCreated: {
           const e = WorkItemCreated.getRootAsWorkItemCreated(bb);
           const item = entry(e.workId() ?? '', genTime);
           item.title = str(e.title());
@@ -155,7 +194,7 @@ export function openWork(options: OpenWorkOptions): Work {
           item.history.push({ time: genTime, event: 'created' });
           break;
         }
-        case WORK_MSG.WorkStatusChanged: {
+        case WORK_ACTION.WorkStatusChanged: {
           const e = WorkStatusChanged.getRootAsWorkStatusChanged(bb);
           const item = entry(e.workId() ?? '', genTime);
           item.status = e.status();
@@ -167,12 +206,12 @@ export function openWork(options: OpenWorkOptions): Work {
           });
           break;
         }
-        case WORK_MSG.NextActionSet: {
+        case WORK_ACTION.NextActionSet: {
           const e = NextActionSet.getRootAsNextActionSet(bb);
           entry(e.workId() ?? '', genTime).nextAction = str(e.nextAction());
           break;
         }
-        case WORK_MSG.CheckpointRecorded: {
+        case WORK_ACTION.CheckpointRecorded: {
           const e = CheckpointRecorded.getRootAsCheckpointRecorded(bb);
           entry(e.workId() ?? '', genTime).checkpoints.push({
             time: genTime,
@@ -180,7 +219,7 @@ export function openWork(options: OpenWorkOptions): Work {
           });
           break;
         }
-        case WORK_MSG.DecisionRecorded: {
+        case WORK_ACTION.DecisionRecorded: {
           const e = DecisionRecorded.getRootAsDecisionRecorded(bb);
           entry(e.workId() ?? '', genTime).decisions.push({
             time: genTime,
@@ -189,7 +228,7 @@ export function openWork(options: OpenWorkOptions): Work {
           });
           break;
         }
-        case WORK_MSG.ValidationRecorded: {
+        case WORK_ACTION.ValidationRecorded: {
           const e = ValidationRecorded.getRootAsValidationRecorded(bb);
           entry(e.workId() ?? '', genTime).validations.push({
             time: genTime,
@@ -199,7 +238,7 @@ export function openWork(options: OpenWorkOptions): Work {
           });
           break;
         }
-        case WORK_MSG.ArtifactRecorded: {
+        case WORK_ACTION.ArtifactRecorded: {
           const e = ArtifactRecorded.getRootAsArtifactRecorded(bb);
           entry(e.workId() ?? '', genTime).artifacts.push({
             time: genTime,
@@ -208,7 +247,7 @@ export function openWork(options: OpenWorkOptions): Work {
           });
           break;
         }
-        case WORK_MSG.RunLinked: {
+        case WORK_ACTION.RunLinked: {
           const e = RunLinked.getRootAsRunLinked(bb);
           entry(e.workId() ?? '', genTime).runs.push({
             time: genTime,

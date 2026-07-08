@@ -5,8 +5,8 @@
 //   1. **own .bfbs 字节** —— reflection::GetSchema 返回的是 .bfbs 缓冲区的视图（不拷贝）；
 //      若 .bfbs 字节先于 Schema* 析构 -> use-after-free。注册表把字节 move 进稳定 node 后再取视图，
 //      令 schema 与其字节生命周期绑定（Step 2 spike 实测过的真实坑）。
-//   2. **多类型按 msg_type 路由** —— 每个开放层类型用一个保留的 open-layer msg_type(>0) 注册；
-//      reader 读到帧后凭 msg_type 找到对应 schema/表，运行时新增类型不重编内核。
+//   2. **多类型按 carrier_type 路由** —— 每个开放层类型用一个保留的 open-layer carrier_type(>0) 注册；
+//      reader 读到帧后凭 carrier_type 找到对应 schema/表，运行时新增类型不重编内核。
 //   3. **缓存反射计划** —— 列计划 / CREATE DDL / INSERT SQL 注册时算一次，避免逐帧重反射。
 //
 // 与 hana×sqlite_orm 闭集**并存**：只服务 open-layer 运行时类型，绝不进 longfist 闭集/热路径。
@@ -27,7 +27,7 @@ class SchemaRegistry {
 public:
   // 一个已注册的开放层类型。schema 是 bfbs 的视图，二者生命周期绑定 -> Entry 禁拷贝、地址恒定。
   struct Entry {
-    int32_t msg_type = 0;
+    int32_t carrier_type = 0;
     std::string table;
     std::string bfbs;                           // 接管的 .bfbs 字节（真相所有者）
     const reflection::Schema *schema = nullptr; // bfbs 的视图
@@ -41,13 +41,13 @@ public:
     Entry &operator=(const Entry &) = delete;
   };
 
-  // 注册一个开放层类型；bfbs_bytes 被 move 接管。重复 msg_type 抛错。返回稳定 Entry 引用。
-  const Entry &add(int32_t msg_type, std::string table, std::string bfbs_bytes, bool thin) {
-    auto [it, ok] = entries_.try_emplace(msg_type); // map node 地址稳定
+  // 注册一个开放层类型；bfbs_bytes 被 move 接管。重复 carrier_type 抛错。返回稳定 Entry 引用。
+  const Entry &add(int32_t carrier_type, std::string table, std::string bfbs_bytes, bool thin) {
+    auto [it, ok] = entries_.try_emplace(carrier_type); // map node 地址稳定
     if (!ok)
-      throw std::runtime_error("SchemaRegistry: duplicate msg_type " + std::to_string(msg_type));
+      throw std::runtime_error("SchemaRegistry: duplicate carrier_type " + std::to_string(carrier_type));
     Entry &e = it->second;
-    e.msg_type = msg_type;
+    e.carrier_type = carrier_type;
     e.table = std::move(table);
     e.bfbs = std::move(bfbs_bytes);
     e.thin = thin;
@@ -62,10 +62,10 @@ public:
   // 演进已注册类型到新 .bfbs（FB 兼容规则：字段尾部追加、不重排/删 id）。接管新字节、刷新
   // 视图与缓存计划；Entry 地址不变（map node 稳定），但旧 schema 视图随旧字节释放而失效——
   // 注册表是单一所有者，外部不得跨 evolve 缓存裸 schema 指针。表结构经 reconcile_all 跟上。
-  const Entry &evolve(int32_t msg_type, std::string new_bfbs) {
-    auto it = entries_.find(msg_type);
+  const Entry &evolve(int32_t carrier_type, std::string new_bfbs) {
+    auto it = entries_.find(carrier_type);
     if (it == entries_.end())
-      throw std::runtime_error("SchemaRegistry: evolve unknown msg_type " + std::to_string(msg_type));
+      throw std::runtime_error("SchemaRegistry: evolve unknown carrier_type " + std::to_string(carrier_type));
     Entry &e = it->second;
     e.bfbs = std::move(new_bfbs); // 释放旧字节、接管新字节（Entry 地址不变）
     e.schema = reflection::GetSchema(e.bfbs.c_str());
@@ -75,9 +75,9 @@ public:
     return e;
   }
 
-  // 凭 msg_type 路由到已注册类型；未注册返回 nullptr。
-  [[nodiscard]] const Entry *find(int32_t msg_type) const {
-    auto it = entries_.find(msg_type);
+  // 凭 carrier_type 路由到已注册类型；未注册返回 nullptr。
+  [[nodiscard]] const Entry *find(int32_t carrier_type) const {
+    auto it = entries_.find(carrier_type);
     return it == entries_.end() ? nullptr : &it->second;
   }
 

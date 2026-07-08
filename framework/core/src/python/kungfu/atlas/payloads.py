@@ -1,10 +1,15 @@
 # SPDX-License-Identifier: Apache-2.0
 
-import hashlib
 import json
 from pathlib import Path
 from typing import Any, cast
 
+from kungfu.action_envelope import (
+    ACTION_ENVELOPE_SCHEMA,
+    build_action_envelope as build_common_action_envelope,
+    canonical_json_bytes,
+    payload_hash,
+)
 from kungfu.atlas import (
     ACTION_GOAL_SNAPSHOT,
     ACTION_MARKER_SNAPSHOT,
@@ -13,7 +18,6 @@ from kungfu.atlas import (
 
 CONTENT_TYPE_JSON = "application/json"
 PAYLOAD_STATE_PRESENT = "present"
-ACTION_ENVELOPE_SCHEMA = "kungfu.action-envelope/v1"
 
 ACTION_SCHEMA_REFS = {
     "atlas.import.begin": {"id": "kungfu.atlas.ImportBegin", "version": 1},
@@ -28,19 +32,6 @@ KIND_ACTION_TYPES = {
     "goal": ACTION_GOAL_SNAPSHOT,
     "marker": ACTION_MARKER_SNAPSHOT,
 }
-
-
-def canonical_json_bytes(value: Any) -> bytes:
-    return json.dumps(
-        value,
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode("utf-8")
-
-
-def payload_hash(payload: bytes) -> str:
-    return hashlib.sha256(payload).hexdigest()
 
 
 def payload_path(store_dir: str | Path, digest: str) -> Path:
@@ -106,25 +97,19 @@ def build_action_envelope(
     batch: dict[str, Any] | None = None,
     journal: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    envelope: dict[str, Any] = {
-        "schema": ACTION_ENVELOPE_SCHEMA,
-        "schema_ref": _schema_ref(action_type),
-        "session": {"import_id": import_id},
-        "actor": {
+    return build_common_action_envelope(
+        action_type=action_type,
+        schema_ref=_schema_ref(action_type),
+        session={"import_id": import_id},
+        actor={
             "storage_source_id": storage_source_id,
             "source_type": source_type,
         },
-        "action_type": action_type,
-    }
-    if source is not None:
-        envelope["source"] = source
-    if payload is not None:
-        envelope["payload"] = payload
-    if batch is not None:
-        envelope["batch"] = batch
-    if journal is not None:
-        envelope["journal"] = dict(journal)
-    return envelope
+        source=source,
+        payload=payload,
+        batch=batch,
+        journal=journal,
+    )
 
 
 def _action_envelope(
@@ -364,7 +349,7 @@ def _check_action_frame(
     frame = action_frames.get((frame_uid, journal.get("gen_time")))
     if frame is None:
         frame = action_frames.get(
-            (frame_uid, journal.get("msg_type"), journal.get("gen_time"))
+            (frame_uid, journal.get("carrier_type"), journal.get("gen_time"))
         )
     if frame is None:
         _append_action_error(report, "action_frame_missing", entry, frame_uid=frame_uid)
@@ -374,7 +359,7 @@ def _check_action_frame(
         "stream_id",
         "gen_time",
         "trigger_time",
-        "msg_type",
+        "carrier_type",
         "source",
         "initial_source",
         "dest",

@@ -38,7 +38,8 @@ static constexpr auto instanceof =
     []() { return filter([](const event_ptr &event) { return dynamic_cast<EventType *>(event.get()) != nullptr; }); };
 
 static constexpr auto is_custom_event = [](const event_ptr &event) -> bool {
-  return event->msg_type() > 0 and longfist::AllTypesTags.find(event->msg_type()) == longfist::AllTypesTags.end();
+  return event->carrier_type() > 0 and
+         longfist::AllTypesTags.find(event->carrier_type()) == longfist::AllTypesTags.end();
 };
 
 static constexpr auto is_custom = []() {
@@ -72,11 +73,11 @@ static constexpr auto lambda_filter_any = [](auto member) {
 };
 
 template <typename... Ts> constexpr decltype(auto) is(Ts... arg) {
-  return event_filter_any<Ts...>(&event::msg_type)(arg...);
+  return event_filter_any<Ts...>(&event::carrier_type)(arg...);
 }
 
 template <typename... Ts> constexpr decltype(auto) while_is(Ts... arg) {
-  return lambda_filter_any<Ts...>(&event::msg_type)(arg...);
+  return lambda_filter_any<Ts...>(&event::carrier_type)(arg...);
 }
 
 template <typename... Ts> constexpr decltype(auto) from(Ts... arg) {

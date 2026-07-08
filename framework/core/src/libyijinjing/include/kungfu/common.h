@@ -430,7 +430,7 @@ struct event {
 
   [[nodiscard]] virtual int64_t trigger_time() const = 0;
 
-  [[nodiscard]] virtual int32_t msg_type() const = 0;
+  [[nodiscard]] virtual int32_t carrier_type() const = 0;
 
   [[nodiscard]] virtual uint32_t source() const = 0;
 

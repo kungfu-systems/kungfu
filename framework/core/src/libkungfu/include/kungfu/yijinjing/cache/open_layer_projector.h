@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// 开放层运行时投影器（生产 reader seam）：把 open-layer FB 帧（msg_type 不在 longfist 闭集）
+// 开放层运行时投影器（生产 reader seam）：把 open-layer FB 帧（carrier_type 不在 longfist 闭集）
 // 按 .bfbs 运行时反射投影到独立 sqlite db。挂在 `cached::feed()` 上，与 hana×sqlite_orm 闭集**并存**：
-//   - feed(event) 只处理已注册的 open-layer msg_type，其余帧一律 no-op（交给 hana 路径），互不干扰；
+//   - feed(event) 只处理已注册的 open-layer carrier_type，其余帧一律 no-op（交给 hana 路径），互不干扰；
 //   - 默认 OFF：cached 仅在环境变量 KF_OPEN_LAYER_SCHEMAS 指向 schemas 目录时才启用本投影器。
-// schemas 来源（本切片口径）：KF_OPEN_LAYER_SCHEMAS 目录下 `manifest.txt`，每行 `msg_type table bfbs_file`
+// schemas 来源（本切片口径）：KF_OPEN_LAYER_SCHEMAS 目录下 `manifest.txt`，每行 `carrier_type table bfbs_file`
 //   （`#` 开头为注释），逐行 own .bfbs 字节注册进 SchemaRegistry。真正配置格式待后续定。
 //
 // **批量/异步（镜像 cached 后台 worker 模式）**：feed() 不在 reader 热路径上同步写 sqlite——只把帧字节
@@ -64,26 +64,26 @@ public:
       if (b == std::string::npos || line[b] == '#')
         continue; // 空行 / 注释
       std::istringstream iss(line.substr(b));
-      int32_t msg_type = 0;
+      int32_t carrier_type = 0;
       std::string table, bfbs_file;
-      if (!(iss >> msg_type >> table >> bfbs_file))
+      if (!(iss >> carrier_type >> table >> bfbs_file))
         continue;
       std::string bfbs;
       if (!flatbuffers::LoadFile((schemas_dir + "/" + bfbs_file).c_str(), /*binary*/ true, &bfbs))
         throw std::runtime_error("open_layer_projector: cannot read bfbs " + bfbs_file);
-      registry_.add(msg_type, table, std::move(bfbs), /*thin*/ true);
+      registry_.add(carrier_type, table, std::move(bfbs), /*thin*/ true);
     }
     registry_.reconcile_all(db_);
     return registry_.size();
   }
 
-  // 投影一帧：已注册 msg_type -> **拷贝帧字节进内存缓冲**（不碰 sqlite，不在 reader 热路径上同步写）；
+  // 投影一帧：已注册 carrier_type -> **拷贝帧字节进内存缓冲**（不碰 sqlite，不在 reader 热路径上同步写）；
   // 未注册 -> no-op（留给 hana 路径）。返回是否纳入缓冲。
   bool feed(const event_ptr &event) {
-    if (registry_.find(event->msg_type()) == nullptr)
+    if (registry_.find(event->carrier_type()) == nullptr)
       return false;
     pending p;
-    p.msg_type = event->msg_type();
+    p.carrier_type = event->carrier_type();
     p.gen_time = event->gen_time();
     p.frame_uid = event->frame_uid();
     p.stream_id = event->stream_id();
@@ -105,7 +105,7 @@ public:
     std::lock_guard<std::mutex> lk(flush_mtx_); // 串行化 db_ 访问（worker vs 显式 flush）
     sqlite3_exec(db_, "BEGIN", nullptr, nullptr, nullptr);
     for (auto &p : batch) {
-      const auto *entry = registry_.find(p.msg_type);
+      const auto *entry = registry_.find(p.carrier_type);
       if (entry == nullptr)
         continue;
       projector::project_frame(db_, *entry, reinterpret_cast<const uint8_t *>(p.payload.data()), p.gen_time,
@@ -151,7 +151,7 @@ public:
 private:
   // 缓冲一帧：拷出 FB 字节 + journal 坐标（journal mmap 帧之后会被回收，故必须拷贝）。
   struct pending {
-    int32_t msg_type = 0;
+    int32_t carrier_type = 0;
     int64_t gen_time = 0;
     uint64_t frame_uid = 0;
     uint64_t stream_id = 0;

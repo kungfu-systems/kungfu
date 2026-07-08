@@ -21,23 +21,23 @@ replay_writer::replay_writer(const data::location_ptr &location, uint32_t dest_i
   }
 }
 
-frame_ptr replay_writer::open_frame(int64_t trigger_time, int32_t msg_type, size_t length, uint64_t stream_id) {
+frame_ptr replay_writer::open_frame(int64_t trigger_time, int32_t carrier_type, size_t length, uint64_t stream_id) {
   while (reader_for_write_->data_available()) {
     auto frame = reader_for_write_->current_frame();
-    if (frame->msg_type() == msg_type) {
+    if (frame->carrier_type() == carrier_type) {
       break;
     }
     reader_for_write_->next();
   }
 
   if (not reader_for_write_->data_available()) {
-    SPDLOG_WARN("no more data available for msg_type {} trigger_time {}, from {} to {}", msg_type,
+    SPDLOG_WARN("no more data available for carrier_type {} trigger_time {}, from {} to {}", carrier_type,
                 time::strftime(trigger_time), get_location()->uname, get_dest());
     raise(SIGINT);
     cloned_frame_->open(length);
     cloned_frame_->set_header_length();
     cloned_frame_->set_trigger_time(trigger_time);
-    cloned_frame_->set_msg_type(msg_type);
+    cloned_frame_->set_carrier_type(carrier_type);
     cloned_frame_->set_source(journal_->location_->uid);
     cloned_frame_->set_initial_source(journal_->location_->uid);
     cloned_frame_->set_dest(journal_->dest_id_);
@@ -61,7 +61,7 @@ uint64_t replay_writer::current_frame_uid() {
   auto frame = reader_for_write_->current_frame();
   boost::hana::for_each(longfist::AllDataTypes, [&](auto it) {
     using DataType = typename decltype(+boost::hana::second(it))::type;
-    if (frame->msg_type() == DataType::tag) {
+    if (frame->carrier_type() == DataType::tag) {
       uid = frame->data<DataType>().uid();
     }
   });

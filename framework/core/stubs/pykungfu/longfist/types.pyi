@@ -334,7 +334,7 @@ class BrokerStateUpdate:
 class CacheReset:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 10208
-    msg_type: int
+    carrier_type: int
     def __eq__(self, arg0: CacheReset) -> bool:
         ...
     def __hash__(self) -> int:
@@ -1880,6 +1880,7 @@ class Tree:
 class frame_header:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 0
+    carrier_type: int
     data_type: pykungfu.longfist.enums.FrameDataType
     dest: int
     frame_uid: int
@@ -1887,7 +1888,6 @@ class frame_header:
     header_length: int
     initial_source: int
     length: int
-    msg_type: int
     source: int
     stream_id: int
     trigger_frame_uid: int

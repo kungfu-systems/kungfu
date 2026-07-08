@@ -5,6 +5,8 @@
 #
 # Usage: check_capture.py <runtime-dir> <run-id>
 
+# ruff: noqa: E402
+
 import hashlib
 import json
 import os
@@ -21,15 +23,17 @@ sys.path.insert(0, os.path.join(_core, "dist", "kungfu"))
 import kungfu
 
 from kungfu.rewind import (
-    MSG_MODEL_REQUEST,
-    MSG_MODEL_RESPONSE,
-    MSG_RETRY_MARKER,
-    MSG_RUN_BEGIN,
-    MSG_RUN_END,
-    MSG_TOOL_CALL,
-    MSG_TOOL_RESULT,
-    MSG_TYPE_NAMES,
+    ACTION_MODEL_REQUEST,
+    ACTION_MODEL_RESPONSE,
+    ACTION_RETRY_MARKER,
+    ACTION_RUN_BEGIN,
+    ACTION_RUN_END,
+    ACTION_TOOL_CALL,
+    ACTION_TOOL_RESULT,
+    ACTION_TYPE_NAMES,
+    CARRIER_REWIND_ACTION,
 )
+from kungfu.rewind.wire import unwrap_event
 from kungfu.rewind.fb.CallStatus import CallStatus
 from kungfu.rewind.fb.CaptureLayer import CaptureLayer
 from kungfu.rewind.fb.ModelRequest import ModelRequest
@@ -55,11 +59,23 @@ def check(name, ok, detail=""):
 
 locator = yjj.locator(runtime_dir)
 location = yjj.location(
-    lf.enums.mode.LIVE, lf.enums.category.SYSTEM, "rewind", run_id, locator
+    lf.enums.mode.LIVE, lf.enums.location_role.SYSTEM, "rewind", run_id, locator
 )
-asm = yjj.assemble(location, 0)
 
-begin_frames = asm.read_bytes(MSG_RUN_BEGIN)
+
+def frames(action_type):
+    result = []
+    for header, payload in yjj.assemble(location, 0).read_bytes(CARRIER_REWIND_ACTION):
+        event = unwrap_event(payload)
+        if event is None:
+            continue
+        current_action_type, event_payload = event
+        if current_action_type == action_type:
+            result.append((header, event_payload))
+    return result
+
+
+begin_frames = frames(ACTION_RUN_BEGIN)
 check("RunBegin frame present", len(begin_frames) == 1)
 if begin_frames:
     header, payload = begin_frames[0]
@@ -71,7 +87,7 @@ if begin_frames:
     )
     check("RunBegin.gen_time set", header.gen_time > 0)
 
-req_frames = yjj.assemble(location, 0).read_bytes(MSG_MODEL_REQUEST)
+req_frames = frames(ACTION_MODEL_REQUEST)
 check("ModelRequest frame present", len(req_frames) == 1)
 req_span = None
 if req_frames:
@@ -90,7 +106,7 @@ if req_frames:
     req_body = json.loads((req.RequestBody() or b"{}").decode())
     check("ModelRequest.request_body has messages", bool(req_body.get("messages")))
 
-resp_frames = yjj.assemble(location, 0).read_bytes(MSG_MODEL_RESPONSE)
+resp_frames = frames(ACTION_MODEL_RESPONSE)
 check("ModelResponse frame present", len(resp_frames) == 1)
 if resp_frames:
     _, payload = resp_frames[0]
@@ -116,7 +132,7 @@ if resp_frames:
         == "the demo answer",
     )
 
-call_frames = yjj.assemble(location, 0).read_bytes(MSG_TOOL_CALL)
+call_frames = frames(ACTION_TOOL_CALL)
 check("two ToolCall frames (attempt + retry)", len(call_frames) == 2)
 call_spans = []
 for _, payload in call_frames:
@@ -127,7 +143,7 @@ for _, payload in call_frames:
     check("ToolCall.tool_name == lookup", (call.ToolName() or b"").decode() == "lookup")
     check("ToolCall.input captured", "query" in (call.Input() or b"").decode())
 
-result_frames = yjj.assemble(location, 0).read_bytes(MSG_TOOL_RESULT)
+result_frames = frames(ACTION_TOOL_RESULT)
 check("two ToolResult frames", len(result_frames) == 2)
 statuses = {}
 for _, payload in result_frames:
@@ -150,7 +166,7 @@ check(
 )
 check("tool results correlate to tool calls", set(statuses) == set(call_spans))
 
-retry_frames = yjj.assemble(location, 0).read_bytes(MSG_RETRY_MARKER)
+retry_frames = frames(ACTION_RETRY_MARKER)
 check("one RetryMarker frame", len(retry_frames) == 1)
 if retry_frames and len(call_spans) == 2:
     _, payload = retry_frames[0]
@@ -162,8 +178,7 @@ if retry_frames and len(call_spans) == 2:
         and (marker.SpanId() or b"").decode() == call_spans[1],
     )
 
-asm2 = yjj.assemble(location, 0)
-end_frames = asm2.read_bytes(MSG_RUN_END)
+end_frames = frames(ACTION_RUN_END)
 check("RunEnd frame present", len(end_frames) == 1)
 if end_frames:
     _, payload = end_frames[0]
@@ -179,8 +194,8 @@ if os.path.exists(manifest_path):
         manifest = json.load(f)
     bindings = manifest.get("schema_bindings", {})
     check(
-        "all rewind msg_types bound",
-        set(bindings.keys()) == {str(t) for t in MSG_TYPE_NAMES},
+        "all rewind action_types bound",
+        set(bindings.keys()) == set(ACTION_TYPE_NAMES),
     )
     hashes = {b["schema_hash"] for b in bindings.values()}
     check("single schema hash across bindings", len(hashes) == 1)

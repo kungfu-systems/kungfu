@@ -112,7 +112,7 @@ frame_ptr tracer::current_frame() const {
 }
 
 void tracer::join_for_in(const yijinjing::journal::frame_ptr &frame) const {
-  if (frame->dest() == home_->uid and frame->msg_type() == RequestReadFrom::tag) {
+  if (frame->dest() == home_->uid and frame->carrier_type() == RequestReadFrom::tag) {
     auto request = frame->data<RequestReadFrom>();
     if (locations_.find(request.source_id) == locations_.end()) {
       SPDLOG_WARN("RequestReadFrom no location {}", (uint32_t)request.source_id);
@@ -125,7 +125,7 @@ void tracer::join_for_in(const yijinjing::journal::frame_ptr &frame) const {
       SPDLOG_WARN("page not existed, source_location: {}, dest: {}", source_location->uname, (uint32_t)home_->uid);
     }
   }
-  if (frame->dest() == home_->uid and frame->msg_type() == RequestReadFromPublic::tag) {
+  if (frame->dest() == home_->uid and frame->carrier_type() == RequestReadFromPublic::tag) {
     auto request = frame->data<RequestReadFromPublic>();
     if (locations_.find(request.source_id) == locations_.end()) {
       SPDLOG_WARN("RequestReadFromPublic no location {}", (uint32_t)request.source_id);
@@ -138,7 +138,7 @@ void tracer::join_for_in(const yijinjing::journal::frame_ptr &frame) const {
       SPDLOG_WARN("page not existed, source_location: {}, dest: {}", source_location->uname, location::PUBLIC);
     }
   }
-  if (frame->dest() == home_->uid and frame->msg_type() == RequestReadFromSync::tag) {
+  if (frame->dest() == home_->uid and frame->carrier_type() == RequestReadFromSync::tag) {
     auto request = frame->data<RequestReadFromSync>();
     if (locations_.find(request.source_id) == locations_.end()) {
       SPDLOG_WARN("RequestReadFromSync no location {}", (uint32_t)request.source_id);
@@ -155,7 +155,7 @@ void tracer::join_for_in(const yijinjing::journal::frame_ptr &frame) const {
   // This step is quite special because "RequestReadFromOthers" is sent after joining the journal. To leave a trace, it
   // should be processed at the time of sending, not waiting for the master to return.
   if ((frame->dest() == home_->uid or frame->source() == home_->uid) and
-      frame->msg_type() == RequestReadFromOthers::tag) {
+      frame->carrier_type() == RequestReadFromOthers::tag) {
     auto request = frame->data<RequestReadFromOthers>();
     if (locations_.find(request.source_id) == locations_.end()) {
       SPDLOG_WARN("RequestReadFromOthers no location {}", (uint32_t)request.source_id);
@@ -168,7 +168,7 @@ void tracer::join_for_in(const yijinjing::journal::frame_ptr &frame) const {
       SPDLOG_WARN("page not existed, source_location: {}, dest: {}", source_location->uname, (uint32_t)request.dest_id);
     }
   }
-  if (frame->dest() == home_->uid and frame->msg_type() == Deregister::tag) {
+  if (frame->dest() == home_->uid and frame->carrier_type() == Deregister::tag) {
     reader_->disjoin(location::make_shared(frame->data<Deregister>(), get_locator()));
   }
 };

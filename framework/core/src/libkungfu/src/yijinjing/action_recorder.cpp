@@ -57,7 +57,7 @@ uint64_t checksum_frame(const longfist::types::frame_header &header, const uint8
   checksum_scalar(state, header.header_length);
   checksum_scalar(state, header.gen_time);
   checksum_scalar(state, header.trigger_time);
-  checksum_scalar(state, header.msg_type);
+  checksum_scalar(state, header.carrier_type);
   checksum_scalar(state, header.source);
   checksum_scalar(state, header.dest);
   const auto data_type = static_cast<int8_t>(header.data_type);
@@ -81,24 +81,25 @@ action_recorder::action_recorder(const std::string &runtime_dir, const std::stri
       writer_(std::make_shared<writer>(location_, dest_id, true, publisher_, false, bus_)), dest_id_(dest_id),
       default_stream_id_(stream_id) {}
 
-record_receipt action_recorder::record_bytes(int32_t msg_type, const std::vector<uint8_t> &payload,
+record_receipt action_recorder::record_bytes(int32_t carrier_type, const std::vector<uint8_t> &payload,
                                              record_options options) {
   options.data_type = FrameDataType::Raw;
-  return record_payload(msg_type, payload.data(), static_cast<uint32_t>(payload.size()), options);
+  return record_payload(carrier_type, payload.data(), static_cast<uint32_t>(payload.size()), options);
 }
 
-record_receipt action_recorder::record_json(int32_t msg_type, const std::string &json_payload, record_options options) {
+record_receipt action_recorder::record_json(int32_t carrier_type, const std::string &json_payload,
+                                            record_options options) {
   options.data_type = FrameDataType::Json;
-  return record_payload(msg_type, reinterpret_cast<const uint8_t *>(json_payload.data()),
+  return record_payload(carrier_type, reinterpret_cast<const uint8_t *>(json_payload.data()),
                         static_cast<uint32_t>(json_payload.size()), options);
 }
 
-record_receipt action_recorder::mark(int32_t msg_type, record_options options) {
+record_receipt action_recorder::mark(int32_t carrier_type, record_options options) {
   options.data_type = FrameDataType::Raw;
-  return record_payload(msg_type, nullptr, 0, options);
+  return record_payload(carrier_type, nullptr, 0, options);
 }
 
-record_receipt action_recorder::record_payload(int32_t msg_type, const uint8_t *payload, uint32_t payload_length,
+record_receipt action_recorder::record_payload(int32_t carrier_type, const uint8_t *payload, uint32_t payload_length,
                                                record_options options) {
   const auto parent_frame_uid =
       options.parent_frame_uid != 0 ? options.parent_frame_uid : (options.chain_to_last ? last_frame_uid_ : 0);
@@ -106,7 +107,7 @@ record_receipt action_recorder::record_payload(int32_t msg_type, const uint8_t *
   const auto gen_time = options.gen_time != 0 ? options.gen_time : time::now_in_nano();
 
   bus::set_trigger_frame_uid(parent_frame_uid);
-  auto frame = writer_->open_frame(options.trigger_time, msg_type, payload_length, stream_id);
+  auto frame = writer_->open_frame(options.trigger_time, carrier_type, payload_length, stream_id);
   frame->set_data_type(options.data_type);
   if (payload_length > 0) {
     std::memcpy(const_cast<void *>(frame->data_address()), payload, payload_length);
@@ -128,7 +129,7 @@ record_receipt action_recorder::record_payload(int32_t msg_type, const uint8_t *
   receipt.stream_id = stream_id;
   receipt.gen_time = gen_time;
   receipt.trigger_time = options.trigger_time;
-  receipt.msg_type = msg_type;
+  receipt.carrier_type = carrier_type;
   receipt.source = location_->uid;
   receipt.initial_source = location_->uid;
   receipt.dest = dest_id_;

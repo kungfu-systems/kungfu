@@ -51,7 +51,8 @@ uint64_t writer::current_frame_uid() {
   return frame_id_base_ | ((page_part | frame_part) xor writer_start_time_32int_);
 }
 
-frame_ptr writer::open_frame_lock_free(int64_t trigger_time, int32_t msg_type, size_t data_length, uint64_t stream_id) {
+frame_ptr writer::open_frame_lock_free(int64_t trigger_time, int32_t carrier_type, size_t data_length,
+                                       uint64_t stream_id) {
   data_length = verify_cpu_word_length(data_length);
   int64_t start_time = time::now_in_nano();
   assert(sizeof(frame_header) + data_length + sizeof(frame_header) <= journal_->page_->get_page_size());
@@ -61,7 +62,7 @@ frame_ptr writer::open_frame_lock_free(int64_t trigger_time, int32_t msg_type, s
   auto frame = journal_->current_frame();
   frame->set_header_length();
   frame->set_trigger_time(trigger_time);
-  frame->set_msg_type(msg_type);
+  frame->set_carrier_type(carrier_type);
   frame->set_source(journal_->location_->uid);
   frame->set_initial_source(journal_->location_->uid);
   frame->set_dest(journal_->dest_id_);
@@ -70,14 +71,14 @@ frame_ptr writer::open_frame_lock_free(int64_t trigger_time, int32_t msg_type, s
   return frame;
 }
 
-frame_ptr writer::open_frame(int64_t trigger_time, int32_t msg_type, size_t data_length, uint64_t stream_id) {
+frame_ptr writer::open_frame(int64_t trigger_time, int32_t carrier_type, size_t data_length, uint64_t stream_id) {
   int64_t start_time = time::now_in_nano();
   while (not writer_mtx_.try_lock()) {
     if (time::now_in_nano() - start_time > 30 * time_unit::NANOSECONDS_PER_SECOND) {
       throw journal_error("Can not lock writer for " + journal_->location_->uname);
     }
   }
-  return open_frame_lock_free(trigger_time, msg_type, data_length, stream_id);
+  return open_frame_lock_free(trigger_time, carrier_type, data_length, stream_id);
 }
 
 void writer::close_frame_lock_free(size_t data_length, int64_t gen_time) {
@@ -125,31 +126,32 @@ void writer::copy_frame(const frame_ptr &source) {
   publisher_->notify();
 }
 
-void writer::mark(int64_t trigger_time, int32_t msg_type) {
-  open_frame(trigger_time, msg_type, 0);
+void writer::mark(int64_t trigger_time, int32_t carrier_type) {
+  open_frame(trigger_time, carrier_type, 0);
   close_frame(0);
 }
 
-void writer::mark_at(int64_t gen_time, int64_t trigger_time, int32_t msg_type) {
-  open_frame(trigger_time, msg_type, 0);
+void writer::mark_at(int64_t gen_time, int64_t trigger_time, int32_t carrier_type) {
+  open_frame(trigger_time, carrier_type, 0);
   close_frame(0, gen_time);
 }
 
-void writer::write_raw(int64_t trigger_time, int32_t msg_type, uintptr_t data, uint32_t length) {
-  auto frame = open_frame(trigger_time, msg_type, length);
+void writer::write_raw(int64_t trigger_time, int32_t carrier_type, uintptr_t data, uint32_t length) {
+  auto frame = open_frame(trigger_time, carrier_type, length);
   memcpy(const_cast<void *>(frame->data_address()), reinterpret_cast<void *>(data), length);
   close_frame(length);
 }
 
-void writer::write_bytes(int64_t trigger_time, int32_t msg_type, const std::vector<uint8_t> &data, uint32_t length) {
-  auto frame = open_frame(trigger_time, msg_type, length);
+void writer::write_bytes(int64_t trigger_time, int32_t carrier_type, const std::vector<uint8_t> &data,
+                         uint32_t length) {
+  auto frame = open_frame(trigger_time, carrier_type, length);
   memcpy(const_cast<void *>(frame->data_address()), data.data(), length);
   close_frame(length);
 }
 
-void writer::write_raw_at_as(int64_t gen_time, int64_t trigger_time, uint32_t source, uint32_t dest, int32_t msg_type,
-                             uintptr_t data, uint32_t length) {
-  auto frame = open_frame(trigger_time, msg_type, length);
+void writer::write_raw_at_as(int64_t gen_time, int64_t trigger_time, uint32_t source, uint32_t dest,
+                             int32_t carrier_type, uintptr_t data, uint32_t length) {
+  auto frame = open_frame(trigger_time, carrier_type, length);
   frame->set_source(source);
   frame->set_dest(dest);
   memcpy(const_cast<void *>(frame->data_address()), reinterpret_cast<void *>(data), length);

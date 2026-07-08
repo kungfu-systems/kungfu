@@ -3,7 +3,7 @@
 # Bundle format pieces for a traced run: the content-addressed schema blob
 # (schemas/<sha256>.bfbs) and the run manifest with per-run schema bindings.
 # Same shape as the schema-registry slice emits and its decoder consumes —
-# one msg_type binds to one schema per run; evolution happens between runs.
+# one action_type binds to one schema per run; evolution happens between runs.
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ import json
 import os
 from typing import Any
 
-from kungfu.rewind import MSG_TYPE_NAMES, SCHEMA_VERSION
+from kungfu.rewind import ACTION_TYPE_NAMES, SCHEMA_VERSION
 
 _BFBS_FILE = __import__("kungfu").schema_data_path(__file__, "rewind_events.bfbs")
 
@@ -44,13 +44,13 @@ def emit(
             f.write(blob)
 
     bindings = {
-        str(msg_type): {
+        action_type: {
             "schema_kind": "flatbuffers",
             "name": name,
             "schema_version": SCHEMA_VERSION,
             "schema_hash": schema_hash,
         }
-        for msg_type, name in MSG_TYPE_NAMES.items()
+        for action_type, name in ACTION_TYPE_NAMES.items()
     }
 
     manifest = {
@@ -59,7 +59,7 @@ def emit(
         "hash_algorithm": "sha256",
         "schema_bindings": bindings,
         "capture_boundary": "schema bindings cover this run's Rewind capture "
-        "events only; frames of other msg_types in the same journal are out "
+        "events only; frames of other action types in the same journal are out "
         "of scope for this bundle",
     }
     if extra:

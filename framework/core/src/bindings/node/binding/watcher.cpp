@@ -446,7 +446,7 @@ void Watcher::UpdateEventCache(const event_ptr &event) {
   const auto &request = event->data<CacheReset>();
   boost::hana::for_each(StateDataTypes, [&](auto it) {
     using DataType = typename decltype(+boost::hana::second(it))::type;
-    if (DataType::tag == request.msg_type) {
+    if (DataType::tag == request.carrier_type) {
       auto hana_type = boost::hana::type_c<DataType>;
       using DelMap = std::unordered_map<uint64_t, state<DataType>>;
       auto &del_map = const_cast<DelMap &>(data_bank_[hana_type]);
@@ -662,14 +662,14 @@ void Watcher::UpdateStrategyState(uint32_t strategy_uid, const StrategyStateUpda
 }
 
 bool Watcher::is_reactable(const event_ptr &event) {
-  if (event->msg_type() == Transaction::tag or event->msg_type() == Entrust::tag or event->msg_type() == Tree::tag or
-      event->msg_type() == Tick::tag or event->msg_type() == Depth::tag) {
+  if (event->carrier_type() == Transaction::tag or event->carrier_type() == Entrust::tag or
+      event->carrier_type() == Tree::tag or event->carrier_type() == Tick::tag or event->carrier_type() == Depth::tag) {
     return false;
   }
 
   // is_started() is supposed to be accpeted RefreshRequiredDataTags from cached
   if ((bypass_trading_data_ or (bypass_accounting_ and is_started())) and
-      longfist::RefreshRequiredDataTags.find(event->msg_type()) != longfist::RefreshRequiredDataTags.end()) {
+      longfist::RefreshRequiredDataTags.find(event->carrier_type()) != longfist::RefreshRequiredDataTags.end()) {
     return false;
   }
 
@@ -683,8 +683,8 @@ void Watcher::drain_from_trading_data_reader(uint32_t step_limit) {
          trading_data_count_by_step_ < REFRESH_REQUIRED_DATA_LIMIT_BY_SYNC and trading_data_reader_->data_available()) {
     const yijinjing::journal::frame_ptr frame = trading_data_reader_->current_frame();
 
-    if (longfist::RefreshRequiredDataTags.find(frame->msg_type()) != longfist::RefreshRequiredDataTags.end() and
-        frame->msg_type() != OrderInput::tag) {
+    if (longfist::RefreshRequiredDataTags.find(frame->carrier_type()) != longfist::RefreshRequiredDataTags.end() and
+        frame->carrier_type() != OrderInput::tag) {
       cached::feed_state_data(frame, trading_data_bank_);
       trading_data_count_by_step_++;
     }

@@ -79,7 +79,7 @@ public:
 
   [[nodiscard]] int64_t trigger_time() const override { PYBIND11_OVERLOAD_PURE(int64_t, event, trigger_time); }
 
-  [[nodiscard]] int32_t msg_type() const override { PYBIND11_OVERLOAD_PURE(int64_t, event, msg_type); }
+  [[nodiscard]] int32_t carrier_type() const override { PYBIND11_OVERLOAD_PURE(int64_t, event, carrier_type); }
 
   [[nodiscard]] uint32_t source() const override { PYBIND11_OVERLOAD_PURE(int64_t, event, source); }
 
@@ -202,7 +202,7 @@ void bind(pybind11::module &&m) {
       .def_property_readonly("source", &event::source)
       .def_property_readonly("initial_source", &event::initial_source)
       .def_property_readonly("dest", &event::dest)
-      .def_property_readonly("msg_type", &event::msg_type)
+      .def_property_readonly("carrier_type", &event::carrier_type)
       .def_property_readonly("data_length", &event::data_length)
       .def_property_readonly("data_type", &event::data_type)
       .def_property_readonly("is_json", &event::is_json)
@@ -234,7 +234,7 @@ void bind(pybind11::module &&m) {
       .def_readonly("stream_id", &action::record_receipt::stream_id)
       .def_readonly("gen_time", &action::record_receipt::gen_time)
       .def_readonly("trigger_time", &action::record_receipt::trigger_time)
-      .def_readonly("msg_type", &action::record_receipt::msg_type)
+      .def_readonly("carrier_type", &action::record_receipt::carrier_type)
       .def_readonly("source", &action::record_receipt::source)
       .def_readonly("initial_source", &action::record_receipt::initial_source)
       .def_readonly("dest", &action::record_receipt::dest)
@@ -250,15 +250,16 @@ void bind(pybind11::module &&m) {
            py::arg("dest_id") = yijinjing::data::location::PUBLIC, py::arg("stream_id") = 0)
       .def(
           "record_bytes",
-          [](action::action_recorder &recorder, int32_t msg_type, py::bytes payload, action::record_options options) {
+          [](action::action_recorder &recorder, int32_t carrier_type, py::bytes payload,
+             action::record_options options) {
             std::string bytes = payload;
-            return recorder.record_bytes(msg_type, std::vector<uint8_t>(bytes.begin(), bytes.end()), options);
+            return recorder.record_bytes(carrier_type, std::vector<uint8_t>(bytes.begin(), bytes.end()), options);
           },
-          py::arg("msg_type"), py::arg("payload"),
+          py::arg("carrier_type"), py::arg("payload"),
           py::arg_v("options", action::record_options{}, "action_record_options()"))
-      .def("record_json", &action::action_recorder::record_json, py::arg("msg_type"), py::arg("json_payload"),
+      .def("record_json", &action::action_recorder::record_json, py::arg("carrier_type"), py::arg("json_payload"),
            py::arg_v("options", action::record_options{}, "action_record_options()"))
-      .def("mark", &action::action_recorder::mark, py::arg("msg_type"),
+      .def("mark", &action::action_recorder::mark, py::arg("carrier_type"),
            py::arg_v("options", action::record_options{}, "action_record_options()"))
       .def_property_readonly("last_frame_uid", &action::action_recorder::last_frame_uid);
 
@@ -352,7 +353,7 @@ void bind(pybind11::module &&m) {
   boost::hana::for_each(AllDataTypes, [&](auto type) {
     using DataType = typename decltype(+boost::hana::second(type))::type;
     writer_class.def("write", py::overload_cast<int64_t, const DataType &, int32_t>(&writer::write<DataType>),
-                     py::arg("trigger_time"), py::arg("data"), py::arg("msg_type") = DataType::tag);
+                     py::arg("trigger_time"), py::arg("data"), py::arg("carrier_type") = DataType::tag);
     writer_class.def("write_at", py::overload_cast<int64_t, int64_t, const DataType &>(&writer::write_at<DataType>),
                      py::arg("gen_time"), py::arg("trigger_time"), py::arg("data"));
   });
@@ -381,11 +382,11 @@ void bind(pybind11::module &&m) {
            py::arg("dest_id"), py::arg("assemble_mode") = longfist::enums::AssembleMode::Channel,
            py::arg("from_time") = 0)
       .def("read_headers", (std::vector<frame_header> (assemble::*)(int32_t, int64_t))&assemble::read_headers,
-           py::arg("msg_type"), py::arg("end_time") = INT64_MAX, py::return_value_policy::move)
+           py::arg("carrier_type"), py::arg("end_time") = INT64_MAX, py::return_value_policy::move)
       .def("read_bytes",
            (std::vector<std::pair<longfist::types::frame_header, std::vector<uint8_t>>> (assemble::*)(
                int32_t, int64_t))&assemble::read_bytes,
-           py::arg("msg_type"), py::arg("end_time") = INT64_MAX, py::return_value_policy::move)
+           py::arg("carrier_type"), py::arg("end_time") = INT64_MAX, py::return_value_policy::move)
       .def("__plus__", &assemble::operator+)
       .def("__rshift__", &assemble::operator>>);
   boost::hana::for_each(AllDataTypes, [&](auto type) {

@@ -81,8 +81,9 @@ public:
   }
 
   template <typename DataType>
-  void write_raw_to(int64_t trigger_time, int32_t msg_type, const DataType &data, uint32_t length, uint32_t dest_id) {
-    get_writer(dest_id)->write_raw(trigger_time, msg_type, reinterpret_cast<uintptr_t>(&data), length);
+  void write_raw_to(int64_t trigger_time, int32_t carrier_type, const DataType &data, uint32_t length,
+                    uint32_t dest_id) {
+    get_writer(dest_id)->write_raw(trigger_time, carrier_type, reinterpret_cast<uintptr_t>(&data), length);
   }
 
   template <typename DataType>
@@ -111,18 +112,18 @@ public:
 
   template <typename DataType>
   void try_write_raw_to(
-      int64_t trigger_time, int32_t msg_type, const DataType &data, uint32_t length, uint32_t dest_id,
+      int64_t trigger_time, int32_t carrier_type, const DataType &data, uint32_t length, uint32_t dest_id,
       const std::function<void()> &callback = []() {}) {
     if (has_writer(dest_id)) {
-      write_raw_to(trigger_time, msg_type, data, length, dest_id);
+      write_raw_to(trigger_time, carrier_type, data, length, dest_id);
       callback();
     } else {
       events_ | rx::is(longfist::types::Channel::tag) | rx::filter([&, dest_id](const event_ptr &event) {
         const longfist::types::Channel &channel = event->data<longfist::types::Channel>();
         return channel.source_id == get_live_home_uid() and channel.dest_id == dest_id;
       }) | rx::first() |
-          rx::$([&, trigger_time, msg_type, data, length, dest_id](const event_ptr &event) {
-            write_raw_to(trigger_time, msg_type, data, length, dest_id);
+          rx::$([&, trigger_time, carrier_type, data, length, dest_id](const event_ptr &event) {
+            write_raw_to(trigger_time, carrier_type, data, length, dest_id);
             callback();
           });
       try_write_dest_ids_.emplace(dest_id);
@@ -155,7 +156,7 @@ public:
     auto now = this->now();
     nlohmann::json request;
     request["data_type"] = int8_t(longfist::enums::FrameDataType::Json);
-    request["msg_type"] = DataType::tag;
+    request["carrier_type"] = DataType::tag;
     request["gen_time"] = now;
     request["trigger_time"] = now;
     request["initial_source"] = get_live_home_uid();
@@ -231,7 +232,7 @@ protected:
     timer_checkpoints_[timer_id] = now();
     return [&, duration_ns, timer_id](const rx::observable<event_ptr> &src) {
       return events_ | rx::filter([&, duration_ns, timer_id](const event_ptr &event) {
-               return (event->msg_type() == longfist::types::Time::tag &&
+               return (event->carrier_type() == longfist::types::Time::tag &&
                        event->gen_time() >= timer_checkpoints_[timer_id] + duration_ns);
              }) |
              rx::first() | rx::filter([&, timer_id](const event_ptr &) {
@@ -270,7 +271,7 @@ protected:
                                         return not enabled;
                                       })) |
              rx::filter([&, duration_ns, timer_id](const event_ptr &event) {
-               if (event->msg_type() == longfist::types::Time::tag &&
+               if (event->carrier_type() == longfist::types::Time::tag &&
                    event->gen_time() >= timer_checkpoints_[timer_id] + duration_ns) {
                  auto writer = get_writer(get_master_command_uid());
                  longfist::types::TimeRequest &r = writer->open_data<longfist::types::TimeRequest>(now());
@@ -307,7 +308,7 @@ protected:
                                      return not is_timer_enabled(timer_id);
                                    })) |
               rx::filter([&, duration_ns, timer_id](const event_ptr &event) {
-                if (event->msg_type() != longfist::types::Time::tag) {
+                if (event->carrier_type() != longfist::types::Time::tag) {
                   auto writer = get_writer(get_master_command_uid());
                   longfist::types::TimeRequest &r = writer->open_data<longfist::types::TimeRequest>(now());
                   r.id = timer_id;

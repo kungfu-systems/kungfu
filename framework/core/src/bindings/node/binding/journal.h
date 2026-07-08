@@ -67,7 +67,7 @@ public:
 
   Napi::Value StreamId(const Napi::CallbackInfo &info);
 
-  Napi::Value MsgType(const Napi::CallbackInfo &info);
+  Napi::Value CarrierType(const Napi::CallbackInfo &info);
 
   Napi::Value Source(const Napi::CallbackInfo &info);
 

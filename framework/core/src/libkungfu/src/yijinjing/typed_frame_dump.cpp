@@ -16,7 +16,7 @@ void install_typed_frame_dumper() {
   frame::type_dumper() = [](const frame &self, nlohmann::json &j) {
     hana::for_each(longfist::AllTypes, [&](auto pair) {
       using DataType = typename decltype(+hana::second(pair))::type;
-      if (DataType::tag == self.msg_type()) {
+      if (DataType::tag == self.carrier_type()) {
         j["data"] = self.data<DataType>().to_string();
       }
     });

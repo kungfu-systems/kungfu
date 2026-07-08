@@ -20,8 +20,8 @@
 
 namespace kungfu::longfist::fb {
 
-// born-FB Position 迁移 msg_type(>0,区分 POD Position longfist tag 103,迁移期并存)。
-static constexpr int32_t POSITION_FB_TAG = 30103;
+// born-FB Position migration carrier (>0, distinct from POD Position longfist tag 103).
+static constexpr int32_t POSITION_FB_CARRIER = 1103;
 
 // 把 POD Position 全字段构造成 born-FB Position 载荷;返回 FB 字节,可直接 write_raw。
 inline std::string build_fb_position(const kungfu::longfist::types::Position &p) {

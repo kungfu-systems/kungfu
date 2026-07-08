@@ -226,9 +226,10 @@ public:
 
   virtual uint64_t current_frame_uid();
 
-  virtual frame_ptr open_frame(int64_t trigger_time, int32_t msg_type, size_t length, uint64_t stream_id = 0);
+  virtual frame_ptr open_frame(int64_t trigger_time, int32_t carrier_type, size_t length, uint64_t stream_id = 0);
 
-  virtual frame_ptr open_frame_lock_free(int64_t trigger_time, int32_t msg_type, size_t length, uint64_t stream_id = 0);
+  virtual frame_ptr open_frame_lock_free(int64_t trigger_time, int32_t carrier_type, size_t length,
+                                         uint64_t stream_id = 0);
 
   virtual void close_frame(size_t data_length, int64_t gen_time = time::now_in_nano());
 
@@ -240,22 +241,23 @@ public:
 
   virtual void preload_next_page();
 
-  virtual void mark(int64_t trigger_time, int32_t msg_type);
+  virtual void mark(int64_t trigger_time, int32_t carrier_type);
 
-  virtual void mark_at(int64_t gen_time, int64_t trigger_time, int32_t msg_type);
+  virtual void mark_at(int64_t gen_time, int64_t trigger_time, int32_t carrier_type);
 
-  virtual void write_raw(int64_t trigger_time, int32_t msg_type, uintptr_t data, uint32_t length);
+  virtual void write_raw(int64_t trigger_time, int32_t carrier_type, uintptr_t data, uint32_t length);
 
-  virtual void write_bytes(int64_t trigger_time, int32_t msg_type, const std::vector<uint8_t> &data, uint32_t length);
+  virtual void write_bytes(int64_t trigger_time, int32_t carrier_type, const std::vector<uint8_t> &data,
+                           uint32_t length);
 
-  virtual void write_raw_at_as(int64_t gen_time, int64_t trigger_time, uint32_t source, uint32_t dest, int32_t msg_type,
-                               uintptr_t data, uint32_t length);
+  virtual void write_raw_at_as(int64_t gen_time, int64_t trigger_time, uint32_t source, uint32_t dest,
+                               int32_t carrier_type, uintptr_t data, uint32_t length);
 
   /**
    * Using auto with the return mess up the reference with the undlerying memory address, DO NOT USE it.
    * @tparam T
    * @param trigger_time
-   * @param msg_type
+   * @param carrier_type
    * @return a casted reference to the underlying memory address in mmap file
    */
   template <typename T> std::enable_if_t<size_fixed_v<T>, T &> open_data(int64_t trigger_time = 0) {
@@ -263,25 +265,25 @@ public:
     return const_cast<T &>(frame->template data<T>());
   }
 
-  template <typename T> T &open_custom_data(int32_t msg_type, int64_t trigger_time = 0) {
-    auto frame = open_frame(trigger_time, msg_type, sizeof(T));
+  template <typename T> T &open_custom_data(int32_t carrier_type, int64_t trigger_time = 0) {
+    auto frame = open_frame(trigger_time, carrier_type, sizeof(T));
     return const_cast<T &>(*reinterpret_cast<const T *>(frame->data_address()));
   }
 
   virtual void close_data(int64_t gen_time = time::now_in_nano());
 
   template <typename T>
-  std::enable_if_t<size_fixed_v<T>> write(int64_t trigger_time, const T &data, int32_t msg_type = T::tag) {
-    auto frame = open_frame(trigger_time, msg_type, sizeof(T));
+  std::enable_if_t<size_fixed_v<T>> write(int64_t trigger_time, const T &data, int32_t carrier_type = T::tag) {
+    auto frame = open_frame(trigger_time, carrier_type, sizeof(T));
     auto size = frame->copy_data(data);
     close_frame(size);
   }
 
   template <typename T>
-  std::enable_if_t<size_unfixed_v<T>> write(int64_t trigger_time, const T &data, int32_t msg_type = T::tag) {
+  std::enable_if_t<size_unfixed_v<T>> write(int64_t trigger_time, const T &data, int32_t carrier_type = T::tag) {
     auto s = data.to_string();
     auto size = s.length();
-    auto frame = open_frame(trigger_time, msg_type, size);
+    auto frame = open_frame(trigger_time, carrier_type, size);
     memcpy(const_cast<void *>(frame->data_address()), s.c_str(), size);
     close_frame(size);
   }
@@ -352,7 +354,7 @@ public:
                            bool low_latency, const bus_ptr &bus, uint64_t page_size, writer_hook_ptr hook)
       : writer(location, dest_id, lazy, std::move(publisher), low_latency, bus, page_size), hook_(std::move(hook)) {}
 
-  frame_ptr open_frame(int64_t trigger_time, int32_t msg_type, size_t length, uint64_t stream_id = 0) override;
+  frame_ptr open_frame(int64_t trigger_time, int32_t carrier_type, size_t length, uint64_t stream_id = 0) override;
 
   void close_frame(size_t data_length, int64_t gen_time) override;
 
@@ -365,7 +367,7 @@ public:
   explicit replay_writer(const data::location_ptr &location, uint32_t dest_id, publisher_ptr publisher,
                          const bus_ptr &bus, uint64_t page_size, int64_t begin_time);
 
-  frame_ptr open_frame(int64_t trigger_time, int32_t msg_type, size_t length, uint64_t stream_id = 0) override;
+  frame_ptr open_frame(int64_t trigger_time, int32_t carrier_type, size_t length, uint64_t stream_id = 0) override;
 
   void close_frame(size_t data_length, int64_t gen_time) override;
 

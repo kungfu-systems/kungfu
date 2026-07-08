@@ -32,9 +32,12 @@ import flatbuffers.encode
 import flatbuffers.number_types as N
 import kungfu
 
-from kungfu.rewind import MSG_TYPE_NAMES
+from kungfu.action_envelope import CARRIER_ACTION_ENVELOPE
+from kungfu.rewind import ACTION_TYPE_NAMES
 from kungfu.rewind import reflection_fb
 from kungfu.rewind.fb import (
+    ApprovalDecision,
+    CostSnapshot,
     ModelRequest,
     ModelResponse,
     RetryMarker,
@@ -43,6 +46,7 @@ from kungfu.rewind.fb import (
     ToolCall,
     ToolResult,
 )
+from kungfu.rewind.wire import unwrap_event
 
 lf = kungfu.__binding__.longfist
 yjj = kungfu.__binding__.yijinjing
@@ -55,28 +59,36 @@ _GENERATED: dict[str, Any] = {
     "ToolCall": ToolCall.ToolCall,
     "ToolResult": ToolResult.ToolResult,
     "RetryMarker": RetryMarker.RetryMarker,
+    "CostSnapshot": CostSnapshot.CostSnapshot,
+    "ApprovalDecision": ApprovalDecision.ApprovalDecision,
 }
 
 _SNAKE = re.compile(r"(?<!^)(?=[A-Z])")
 
 
-def read_frames(runtime_dir: str, run_id: str) -> list[tuple[int, Any, bytes]]:
-    """All rewind frames of a run in gen_time order: (msg_type, header, bytes)."""
+def read_frames(runtime_dir: str, run_id: str) -> list[tuple[str, Any, bytes]]:
+    """All rewind frames of a run in gen_time order: (action_type, header, bytes)."""
     locator = yjj.locator(runtime_dir)
     location = yjj.location(
         lf.enums.mode.LIVE, lf.enums.location_role.SYSTEM, "rewind", run_id, locator
     )
-    frames: list[tuple[int, Any, bytes]] = []
-    for msg_type in MSG_TYPE_NAMES:
-        for header, payload in yjj.assemble(location, 0).read_bytes(msg_type):
-            frames.append((msg_type, header, bytes(payload)))
+    frames: list[tuple[str, Any, bytes]] = []
+    for header, payload in yjj.assemble(location, 0).read_bytes(
+        CARRIER_ACTION_ENVELOPE
+    ):
+        event = unwrap_event(payload)
+        if event is None:
+            continue
+        action_type, event_payload = event
+        if action_type in ACTION_TYPE_NAMES:
+            frames.append((action_type, header, event_payload))
     frames.sort(key=lambda f: f[1].gen_time)
     return frames
 
 
-def decode_native(msg_type: int, payload: bytes) -> dict[str, Any]:
+def decode_native(action_type: str, payload: bytes) -> dict[str, Any]:
     """The writer's own decode: flatc-generated accessors."""
-    cls = _GENERATED[MSG_TYPE_NAMES[msg_type]]
+    cls = _GENERATED[ACTION_TYPE_NAMES[action_type]]
     root = cls.GetRootAs(payload, 0)
     facts = {}
     for name in dir(root):
@@ -100,18 +112,20 @@ class BundleDecoder:
         with open(os.path.join(bundle_dir, "manifest.json")) as f:
             self.manifest = json.load(f)
         self.bindings = self.manifest["schema_bindings"]
-        self._schemas: dict[int, Any] = {}
-        self._objects: dict[int, str] = {}
-        for msg_type, binding in self.bindings.items():
+        self._schemas: dict[str, Any] = {}
+        self._objects: dict[str, str] = {}
+        for action_type, binding in self.bindings.items():
             blob_path = os.path.join(
                 bundle_dir, "schemas", binding["schema_hash"] + ".bfbs"
             )
             with open(blob_path, "rb") as f:
                 blob = f.read()
             if hashlib.sha256(blob).hexdigest() != binding["schema_hash"]:
-                raise ValueError(f"schema blob hash mismatch for msg_type {msg_type}")
-            self._schemas[int(msg_type)] = reflection_fb.Schema.GetRootAs(blob, 0)
-            self._objects[int(msg_type)] = binding["name"]
+                raise ValueError(
+                    f"schema blob hash mismatch for action_type {action_type}"
+                )
+            self._schemas[action_type] = reflection_fb.Schema.GetRootAs(blob, 0)
+            self._objects[action_type] = binding["name"]
 
     def _find_object(self, schema: Any, name: str) -> Any:
         for i in range(schema.ObjectsLength()):
@@ -121,9 +135,9 @@ class BundleDecoder:
                 return obj
         raise KeyError(f"object {name} not in schema")
 
-    def decode(self, msg_type: int, payload: bytes) -> dict[str, Any]:
-        schema = self._schemas[msg_type]
-        obj = self._find_object(schema, self._objects[msg_type])
+    def decode(self, action_type: str, payload: bytes) -> dict[str, Any]:
+        schema = self._schemas[action_type]
+        obj = self._find_object(schema, self._objects[action_type])
         n = flatbuffers.encode.Get(flatbuffers.packer.uoffset, payload, 0)
         table = flatbuffers.table.Table(payload, n)
         facts = {}
@@ -187,15 +201,15 @@ def verify(runtime_dir: str, run_id: str, bundle_dir: str) -> tuple[int, list[st
     decoder = BundleDecoder(bundle_dir)
     frames = read_frames(runtime_dir, run_id)
     differences: list[str] = []
-    for index, (msg_type, header, payload) in enumerate(frames):
-        native = decode_native(msg_type, payload)
-        bundled = decoder.decode(msg_type, payload)
+    for index, (action_type, header, payload) in enumerate(frames):
+        native = decode_native(action_type, payload)
+        bundled = decoder.decode(action_type, payload)
         if native != bundled:
             keys = sorted(set(native) | set(bundled))
             for key in keys:
                 if native.get(key) != bundled.get(key):
                     differences.append(
-                        f"frame {index} ({MSG_TYPE_NAMES[msg_type]}).{key}: "
+                        f"frame {index} ({ACTION_TYPE_NAMES[action_type]}).{key}: "
                         f"native={native.get(key)!r} bundle={bundled.get(key)!r}"
                     )
     return len(frames), differences
@@ -210,9 +224,9 @@ def causal_tree(
     order: list[Any] = []
     run_facts: dict[str, Any] = {}
     pending_retry: dict[Any, Any] = {}
-    for msg_type, header, payload in frames:
-        name = MSG_TYPE_NAMES[msg_type]
-        facts = decode_native(msg_type, payload)
+    for action_type, header, payload in frames:
+        name = ACTION_TYPE_NAMES[action_type]
+        facts = decode_native(action_type, payload)
         facts["_gen_time"] = header.gen_time
         if name in ("RunBegin", "RunEnd"):
             run_facts[name] = facts

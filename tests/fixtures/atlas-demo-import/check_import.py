@@ -26,7 +26,7 @@ from kungfu.atlas import (  # noqa: E402
     ACTION_MARKER_SNAPSHOT,
     ACTION_MISSION_SNAPSHOT,
     ACTION_TYPE_NAMES,
-    MSG_ACTION_ENVELOPE,
+    CARRIER_ATLAS_ACTION,
 )
 from kungfu.atlas import store  # noqa: E402
 
@@ -40,7 +40,7 @@ def check(name, ok, detail=""):
         failures.append(name)
 
 
-# ── journal: two complete batches, one v4 envelope msg_type ───────────────
+# ── journal: two complete batches, one v4 action envelope carrier ─────────
 frames = store.read_frames(runtime_dir)
 counts = {}
 for _gen_time, action_type, _payload in frames:
@@ -124,8 +124,8 @@ if os.path.exists(manifest_path):
     bindings = manifest.get("schema_bindings", {})
     check("manifest binds the v4 action envelope", len(bindings) == 1)
     check(
-        "manifest uses the reset envelope msg_type",
-        str(MSG_ACTION_ENVELOPE) in bindings,
+        "manifest uses the action envelope carrier",
+        str(CARRIER_ATLAS_ACTION) in bindings,
     )
     check(
         "manifest states the authority boundary",
@@ -178,8 +178,8 @@ if os.path.exists(payload_manifest_path):
             action.get("payload", {}).get("hash") == entry.get("payload_hash"),
         )
         check(
-            f"action journal uses envelope msg_type for {entry.get('kind')}:{entry.get('source_id')}",
-            journal.get("msg_type") == MSG_ACTION_ENVELOPE,
+            f"action journal uses envelope carrier for {entry.get('kind')}:{entry.get('source_id')}",
+            journal.get("carrier_type") == CARRIER_ATLAS_ACTION,
         )
 
     fsck = store.fsck(runtime_dir)

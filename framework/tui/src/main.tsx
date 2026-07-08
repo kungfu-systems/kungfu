@@ -189,7 +189,9 @@ function App({
           <Text key={`${record.genTime}-${index}`}>
             <Text dimColor>{ledger.formatNanos(record.genTime)}</Text>
             {'  '}
-            <Text color="cyan">msg {String(record.msgType).padStart(5)}</Text>
+            <Text color="cyan">
+              carrier {String(record.carrierType).padStart(5)}
+            </Text>
             {'  '}
             <Text color="yellow">
               {record.source.toString(16).padStart(8, '0')} →{' '}

@@ -67,9 +67,10 @@ export function openLedger(options: OpenLedgerOptions): Ledger {
     while (assemble.dataAvailable() && result.length < limit) {
       const frame = assemble.currentFrame();
       const genTime = frame.genTime();
-      const msgType = frame.msgType();
+      const carrierType = frame.carrierType();
       const wanted =
-        (filter?.msgType === undefined || msgType === filter.msgType) &&
+        (filter?.carrierType === undefined ||
+          carrierType === filter.carrierType) &&
         (filter?.sinceNanos === undefined || genTime > filter.sinceNanos);
       if (wanted) {
         result.push({
@@ -78,7 +79,7 @@ export function openLedger(options: OpenLedgerOptions): Ledger {
           frameUid: frame.frameUid(),
           triggerFrameUid: frame.triggerFrameUid(),
           streamId: frame.streamId(),
-          msgType,
+          carrierType,
           source: frame.source(),
           initialSource: frame.initialSource(),
           dest: frame.dest(),

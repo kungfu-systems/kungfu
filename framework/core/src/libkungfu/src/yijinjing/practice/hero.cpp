@@ -55,12 +55,12 @@ struct dispatch_probe {
   const bool enabled = std::getenv("KF_DISPATCH_PROBE") != nullptr;
   uint64_t frames_seen = 0;
   stat overall = {};
-  std::unordered_map<int32_t, stat> by_msg_type = {};
+  std::unordered_map<int32_t, stat> by_carrier_type = {};
   std::chrono::steady_clock::time_point last_report = std::chrono::steady_clock::now();
 
-  void record(int32_t msg_type, int64_t ns) {
+  void record(int32_t carrier_type, int64_t ns) {
     overall.add(ns);
-    by_msg_type[msg_type].add(ns);
+    by_carrier_type[carrier_type].add(ns);
   }
 
   [[nodiscard]] bool due(std::chrono::steady_clock::time_point at) const {
@@ -75,14 +75,14 @@ struct dispatch_probe {
     SPDLOG_INFO("dispatch probe [{}] frames_seen={} dispatched={} mean={}ns max={}ns total={}us", uname, frames_seen,
                 overall.count, overall.total_ns / static_cast<int64_t>(overall.count), overall.max_ns,
                 overall.total_ns / 1000);
-    std::vector<std::pair<int32_t, stat>> ranked(by_msg_type.begin(), by_msg_type.end());
+    std::vector<std::pair<int32_t, stat>> ranked(by_carrier_type.begin(), by_carrier_type.end());
     std::sort(ranked.begin(), ranked.end(),
               [](const auto &a, const auto &b) { return a.second.total_ns > b.second.total_ns; });
     constexpr std::size_t top = 8;
     for (std::size_t i = 0; i < ranked.size() and i < top; i++) {
-      const auto &[msg_type, s] = ranked[i];
-      SPDLOG_INFO("dispatch probe [{}] msg_type={:#010x} n={} mean={}ns max={}ns total={}us", uname, msg_type, s.count,
-                  s.total_ns / static_cast<int64_t>(s.count), s.max_ns, s.total_ns / 1000);
+      const auto &[carrier_type, s] = ranked[i];
+      SPDLOG_INFO("dispatch probe [{}] carrier_type={:#010x} n={} mean={}ns max={}ns total={}us", uname, carrier_type,
+                  s.count, s.total_ns / static_cast<int64_t>(s.count), s.max_ns, s.total_ns / 1000);
     }
   }
 };
@@ -532,7 +532,7 @@ bool hero::drain(const rx::subscriber<event_ptr> &sb) {
           const auto start = std::chrono::steady_clock::now();
           sb.on_next(frame);
           const auto stop = std::chrono::steady_clock::now();
-          dispatch_probe_.record(frame->msg_type(),
+          dispatch_probe_.record(frame->carrier_type(),
                                  std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count());
           if (dispatch_probe_.due(stop)) {
             dispatch_probe_.report(get_home_uname());

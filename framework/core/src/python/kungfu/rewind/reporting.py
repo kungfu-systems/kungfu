@@ -13,15 +13,15 @@ from typing import Any
 
 import kungfu
 from kungfu.rewind import (
-    MSG_APPROVAL_DECISION,
-    MSG_COST_SNAPSHOT,
-    MSG_RUN_BEGIN,
-    MSG_RUN_END,
+    ACTION_APPROVAL_DECISION,
+    ACTION_RUN_BEGIN,
+    ACTION_RUN_END,
     SCHEMA_VERSION,
     bundle,
     cost_wire,
     events,
 )
+from kungfu.rewind.wire import wrap_event
 from kungfu.rewind.cost.model import AttributionLevel, CostSnapshot, TokenUsage
 from kungfu.rewind.fb.CaptureLayer import CaptureLayer
 from kungfu.rewind.fb.Decision import Decision
@@ -99,9 +99,10 @@ def emit_manifest(
     )
 
 
-def emit_event(runtime_dir: str, run_id: str, msg_type: int, payload: bytes) -> None:
+def emit_event(runtime_dir: str, run_id: str, action_type: str, payload: bytes) -> None:
     writer = _open_journal(runtime_dir, run_id)
-    writer.write_bytes(0, msg_type, list(payload), len(payload))
+    carrier_type, envelope = wrap_event(action_type, payload, run_id=run_id)
+    writer.write_bytes(0, carrier_type, list(envelope), len(envelope))
 
 
 def begin_run(
@@ -118,7 +119,7 @@ def begin_run(
     emit_event(
         runtime_dir,
         run_id,
-        MSG_RUN_BEGIN,
+        ACTION_RUN_BEGIN,
         events.run_begin(
             run_id=run_id,
             command=command_text,
@@ -138,7 +139,7 @@ def end_run(runtime_dir: str, *, run_id: str, status: str, exit_code: int) -> st
     emit_event(
         runtime_dir,
         run_id,
-        MSG_RUN_END,
+        ACTION_RUN_END,
         events.run_end(run_id, RUN_STATUS_BY_NAME[status], exit_code),
     )
     return emit_manifest(runtime_dir, run_id, extra={"status": status})
@@ -182,9 +183,8 @@ def report_cost(
         cost_usd=cost_usd,
         raw_ref=raw_ref,
     )
-    msg_type, payload = cost_wire.snapshot_to_event(snapshot, CaptureLayer.Adapter)
-    assert msg_type == MSG_COST_SNAPSHOT
-    emit_event(runtime_dir, run_id, msg_type, payload)
+    action_type, payload = cost_wire.snapshot_to_event(snapshot, CaptureLayer.Adapter)
+    emit_event(runtime_dir, run_id, action_type, payload)
     return emit_manifest(
         runtime_dir,
         run_id,
@@ -210,7 +210,7 @@ def report_approval(
     emit_event(
         runtime_dir,
         run_id,
-        MSG_APPROVAL_DECISION,
+        ACTION_APPROVAL_DECISION,
         events.approval_decision(
             run_id=run_id,
             request_id=request_id,

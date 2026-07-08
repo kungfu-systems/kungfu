@@ -1,14 +1,10 @@
 #  SPDX-License-Identifier: Apache-2.0
 #
-# Register a runtime-compiled kfx schema into a run's open-layer registry: the
-# `.bfbs` produced by `compile_schema` is content-addressed and bound to a
-# msg_type in the per-run manifest, exactly like the first-party Rewind/work/
-# atlas schemas (bundle.py). Once bound, every runtime (C++/Python/Node) decodes
-# events of that msg_type by reflection over the `.bfbs` — no generated code.
-#
-# msg_type allocation (docs/msg-type-ranges.md): the open layer is 30000+; the
-# third-party kfx band is 40000-49999. The `sandboxed` trust tier is confined to
-# that band so an untrusted kfx cannot claim a first-party number.
+# Register a runtime-compiled kfx schema into a run's action registry: the
+# `.bfbs` produced by `compile_schema` is content-addressed and bound to an
+# action_type in the per-run manifest. Once bound, every runtime
+# (C++/Python/Node) decodes events of that action_type by reflection over the
+# `.bfbs` — no generated code.
 
 from __future__ import annotations
 
@@ -18,34 +14,17 @@ import os
 
 from kungfu.rewind import reflection_fb
 
-# third-party kfx dynamic schema band (docs/msg-type-ranges.md)
-KFX_MSGTYPE_MIN = 40000
-KFX_MSGTYPE_MAX = 49999
-OPEN_LAYER_MIN = 30000
-
-# first-party open-layer sub-ranges no kfx registration may claim
-_FIRST_PARTY = ((30001, 30099), (30101, 30199), (30201, 30299))
+_RESERVED_ACTION_PREFIXES = ("rewind.", "work.", "atlas.", "kungfu.")
 
 
-def _in(n: int, lo: int, hi: int) -> bool:
-    return lo <= n <= hi
-
-
-def _validate_msg_type(msg_type: int, tier: str) -> None:
-    if msg_type < OPEN_LAYER_MIN:
+def _validate_action_type(action_type: str, tier: str) -> None:
+    if not action_type or "." not in action_type:
+        raise ValueError("kfx action_type must be a dotted namespace string")
+    if tier == "sandboxed" and not action_type.startswith("kfx."):
+        raise ValueError("sandboxed kfx action_type must use the kfx.* namespace")
+    if tier != "first_party" and action_type.startswith(_RESERVED_ACTION_PREFIXES):
         raise ValueError(
-            f"msg_type {msg_type} is below the open layer ({OPEN_LAYER_MIN}); "
-            "runtime kfx schemas live in the open layer"
-        )
-    if any(_in(msg_type, lo, hi) for lo, hi in _FIRST_PARTY):
-        raise ValueError(
-            f"msg_type {msg_type} is a reserved first-party number; "
-            f"kfx schemas use the {KFX_MSGTYPE_MIN}-{KFX_MSGTYPE_MAX} band"
-        )
-    if tier == "sandboxed" and not _in(msg_type, KFX_MSGTYPE_MIN, KFX_MSGTYPE_MAX):
-        raise ValueError(
-            f"sandboxed kfx msg_type {msg_type} must be within "
-            f"{KFX_MSGTYPE_MIN}-{KFX_MSGTYPE_MAX}"
+            f"action_type {action_type!r} is reserved for first-party schemas"
         )
 
 
@@ -63,23 +42,23 @@ def _root_object_name(bfbs: bytes, want: str) -> str:
 def register_user_schema(
     bundle_dir: str,
     bfbs: bytes,
-    msg_type: int,
+    action_type: str,
     name: str,
     *,
     tier: str = "trusted",
     schema_version: str = "user",
 ) -> dict[str, str]:
-    """Content-address `bfbs` and bind `msg_type` -> it in the run manifest.
+    """Content-address `bfbs` and bind `action_type` -> it in the run manifest.
 
     bfbs: bytes from compile_schema. name: the event table to bind (its
     fully-qualified name is resolved from the schema). tier: 'trusted' |
-    'sandboxed' (bounds the msg_type band). Returns the binding dict.
+    'sandboxed' | 'first_party'. Returns the binding dict.
 
-    Idempotent for an identical (msg_type, hash); raises on a conflicting
-    rebinding, a bad band, or a schema missing `name`.
+    Idempotent for an identical (action_type, hash); raises on a conflicting
+    rebinding, a bad namespace, or a schema missing `name`.
     """
-    msg_type = int(msg_type)
-    _validate_msg_type(msg_type, tier)
+    action_type = str(action_type)
+    _validate_action_type(action_type, tier)
     qualified = _root_object_name(bytes(bfbs), name)
 
     schema_hash = hashlib.sha256(bytes(bfbs)).hexdigest()
@@ -102,10 +81,10 @@ def register_user_schema(
         }
     bindings = manifest.setdefault("schema_bindings", {})
 
-    existing = bindings.get(str(msg_type))
+    existing = bindings.get(action_type)
     if existing and existing.get("schema_hash") != schema_hash:
         raise ValueError(
-            f"msg_type {msg_type} already bound to a different schema "
+            f"action_type {action_type} already bound to a different schema "
             f"({existing.get('name')}); rebinding is not allowed within a run"
         )
 
@@ -117,7 +96,7 @@ def register_user_schema(
         "origin": "kfx",
         "trust_tier": tier,
     }
-    bindings[str(msg_type)] = binding
+    bindings[action_type] = binding
 
     with open(manifest_path, "w") as f:
         json.dump(manifest, f, indent=2)

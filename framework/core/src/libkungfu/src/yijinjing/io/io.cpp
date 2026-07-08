@@ -87,7 +87,7 @@ public:
     nlohmann::json ping = {};
     ping["gen_time"] = time::now_in_nano();
     ping["trigger_time"] = 0;
-    ping["msg_type"] = Ping::tag;
+    ping["carrier_type"] = Ping::tag;
     ping["source"] = io_device_.get_home()->uid;
     ping["dest"] = 0;
     ping["data"] = "";

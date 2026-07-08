@@ -65,7 +65,7 @@ export type LedgerRecord = {
   // recorded causal anchor of the event pair.
   genTime: bigint;
   triggerTime: bigint;
-  msgType: number;
+  carrierType: number;
   frameUid: bigint;
   triggerFrameUid: bigint;
   streamId: bigint;
@@ -80,7 +80,7 @@ export type LedgerRecord = {
 };
 
 export type RecordFilter = {
-  msgType?: number;
+  carrierType?: number;
   sinceNanos?: bigint;
   limit?: number;
 };
@@ -117,7 +117,7 @@ export type KfNativeFrame = {
   frameUid: () => bigint;
   triggerFrameUid: () => bigint;
   streamId: () => bigint;
-  msgType: () => number;
+  carrierType: () => number;
   source: () => number;
   initialSource: () => number;
   dest: () => number;
@@ -147,7 +147,7 @@ export type KfNativeBinding = {
     streamId?: bigint | number,
   ) => {
     recordBytes: (
-      msgType: number,
+      carrierType: number,
       payload: Uint8Array,
       options?: {
         genTime?: bigint | number;
@@ -158,7 +158,7 @@ export type KfNativeBinding = {
       },
     ) => LedgerRecord;
     recordJson: (
-      msgType: number,
+      carrierType: number,
       jsonPayload: string,
       options?: {
         genTime?: bigint | number;
@@ -169,7 +169,7 @@ export type KfNativeBinding = {
       },
     ) => LedgerRecord;
     mark: (
-      msgType: number,
+      carrierType: number,
       options?: {
         genTime?: bigint | number;
         triggerTime?: bigint | number;

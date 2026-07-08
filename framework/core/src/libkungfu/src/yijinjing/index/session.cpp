@@ -167,9 +167,9 @@ void session_builder::rebuild_index_db() {
     }
 
     try {
-      if (frame->msg_type() == SessionStart::tag) {
+      if (frame->carrier_type() == SessionStart::tag) {
         open_session(formatstr_to_locations.at(uid_str), frame->gen_time());
-      } else if (frame->msg_type() == SessionEnd::tag) {
+      } else if (frame->carrier_type() == SessionEnd::tag) {
         close_session(formatstr_to_locations.at(uid_str), frame->gen_time());
       } else if (location->role != location_role::SYSTEM or location->group != "master") {
         update_session(frame);

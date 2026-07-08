@@ -3,13 +3,13 @@
 // locations, and the merged event stream, read in-process through the same
 // zero-copy frames the runtime itself uses.
 import type { LedgerRecord, ReplayAnchor } from '@kungfu-tech/api/capability';
-import React from 'react';
 import type { KfxCapabilities, Shell } from '@kungfu-tech/kfx';
 import { headingStyle, inputStyle, mono, panelStyle } from '@kungfu-tech/kfx';
+import React from 'react';
 
 function JournalManagerView({ caps }: { caps: KfxCapabilities; shell: Shell }) {
   const { ledger, domain } = caps;
-  const [msgFilter, setMsgFilter] = React.useState('');
+  const [carrierFilter, setCarrierFilter] = React.useState('');
   const [events, setEvents] = React.useState<LedgerRecord[]>([]);
   const [error, setError] = React.useState('');
 
@@ -31,18 +31,18 @@ function JournalManagerView({ caps }: { caps: KfxCapabilities; shell: Shell }) {
 
   const scan = React.useCallback(() => {
     try {
-      const filter = msgFilter.trim();
+      const filter = carrierFilter.trim();
       setEvents(
         ledger.records({
           limit: 1000,
-          msgType: filter ? Number(filter) : undefined,
+          carrierType: filter ? Number(filter) : undefined,
         }),
       );
       setError('');
     } catch (e) {
       setError((e as Error).message);
     }
-  }, [ledger, msgFilter]);
+  }, [ledger, carrierFilter]);
 
   React.useEffect(() => {
     scan();
@@ -107,9 +107,9 @@ function JournalManagerView({ caps }: { caps: KfxCapabilities; shell: Shell }) {
           Events · {events.length}
           {events.length >= 1000 ? '+' : ''}
           <input
-            value={msgFilter}
-            onChange={(e) => setMsgFilter(e.target.value)}
-            placeholder="msg type filter"
+            value={carrierFilter}
+            onChange={(e) => setCarrierFilter(e.target.value)}
+            placeholder="carrier filter"
             style={{ ...inputStyle, width: 110, marginLeft: 12 }}
           />
           <button
@@ -138,7 +138,7 @@ function JournalManagerView({ caps }: { caps: KfxCapabilities; shell: Shell }) {
                   {ledger.formatNanos(event.genTime)}
                 </td>
                 <td style={{ padding: '2px 8px', color: '#9cdcfe' }}>
-                  msg {event.msgType}
+                  carrier {event.carrierType}
                 </td>
                 <td style={{ padding: '2px 8px', color: '#ce9178' }}>
                   {event.source.toString(16).padStart(8, '0')} →{' '}
