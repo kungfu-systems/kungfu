@@ -32,7 +32,12 @@ build/
 build-*/
 cmake-build-debug/
 dist/
-.buildchain/
+.buildchain/*
+!.buildchain/buildchain.toml
+!.buildchain/contract-lock.json
+!.buildchain/kfd/
+.buildchain/kfd/*
+!.buildchain/kfd/kfd-3-surfaces.json
 
 # Debug related
 debug-example/

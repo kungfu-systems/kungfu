@@ -75,5 +75,5 @@ minimal stubs, each tagged in the manifest with its owning package. See
 - Full JSON-Schema validation of the manifest via `ajv` (the gate is currently a
   focused structural check; the schema itself is already the pinned contract).
 - Deep design of the schema registry mechanism.
-- Wiring this package's `verify` into the root `verify` / `buildchain.toml`
+- Wiring this package's `verify` into the root `verify` / `.buildchain/buildchain.toml`
   lifecycle once content is beyond the walking skeleton.

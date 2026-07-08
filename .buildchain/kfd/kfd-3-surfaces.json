@@ -7,11 +7,11 @@
     "repository": "kungfu-systems/kungfu",
     "package": "@kungfu-tech/artifact-kungfu"
   },
-  "registryPath": "buildchain.kfd3.json",
+  "registryPath": ".buildchain/kfd/kfd-3-surfaces.json",
   "buildchain": {
     "kfd3": {
-      "mode": "strict-buildchain-default-registry",
-      "sourceOfTruth": "buildchain.kfd3.json",
+      "mode": "strict-buildchain-managed-registry",
+      "sourceOfTruth": ".buildchain/kfd/kfd-3-surfaces.json",
       "generator": "scripts/buildchain-kfd-evidence.mjs",
       "inputs": [
         {
@@ -32,7 +32,7 @@
         }
       ],
       "projections": [
-        "developer/sdk/kfd/buildchain.kfd3.json",
+        "developer/sdk/kfd/kfd-3-surfaces.json",
         ".buildchain/kfd-3/collaboration-interface.prebuild.json",
         ".buildchain/kfd-3/collaboration-interface.artifact.json",
         ".buildchain/kfd-3/capability-query.json"
@@ -51,9 +51,9 @@
     "packageVersions": {
       "kfd": "1.0.0-alpha.17",
       "libnode": "22.22.3-kf.3-alpha.16",
-      "buildchain": "2.10.0"
+      "buildchain": "2.10.7"
     },
-    "digest": "sha256:5aae0a00943e5273505d984cbd5a01ef0d87973fcfd9d1086fa447ce7f84ba15"
+    "digest": "sha256:4267ac49182534d034aadcbdea6f809e0b402c236c28830f23932856029dc9a1"
   },
   "surfaces": [
     {
@@ -447,8 +447,8 @@
       "participantFacing": true,
       "public": true,
       "sourcePath": "scripts/buildchain-kfd-evidence.mjs",
-      "evidencePath": "buildchain.kfd3.json",
-      "artifactPath": "buildchain.kfd3.json",
+      "evidencePath": ".buildchain/kfd/kfd-3-surfaces.json",
+      "artifactPath": ".buildchain/kfd/kfd-3-surfaces.json",
       "maturity": "stable",
       "declaration": {
         "owner": "kungfu",
@@ -898,7 +898,7 @@
     }
   ],
   "policy": {
-    "sourceOfTruth": "buildchain.kfd3.json",
+    "sourceOfTruth": ".buildchain/kfd/kfd-3-surfaces.json",
     "detectedButUnregistered": "product-specific-audit",
     "declaredButMissing": "fail",
     "artifactPublicButUnclassified": "fail",

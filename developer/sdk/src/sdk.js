@@ -14,7 +14,8 @@ import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { queryKfd3Capabilities } from '@kungfu-tech/buildchain/kfd-3-surfaces';
+import { BUILDCHAIN_KFD3_SURFACE_REGISTRY_PATH } from '@kungfu-tech/buildchain/buildchain-layout';
+import { kfd3 } from '@kungfu-tech/buildchain/kfd';
 import {
   BUILDCHAIN_JSON_FORMATTING_POLICY,
   createKfd1ReleaseGateEvidence,
@@ -38,9 +39,14 @@ const CONTRACT_FIXTURE_SCHEMA = 'kungfu.sdk.contract-drift-fixture/v1';
 const CANONICAL_POLICY_SCHEMA = 'kungfu.agent-first-canonical-policy/v1';
 const CANONICAL_POLICY_FILE = 'kungfu-agent-first-canonical-policy.json';
 const require = createRequire(import.meta.url);
+const { queryCapabilities: queryKfd3Capabilities } = kfd3;
 const SDK_CLI = fileURLToPath(import.meta.url);
 const SDK_ROOT = path.resolve(path.dirname(SDK_CLI), '..');
-const SDK_KFD3_REGISTRY = path.join(SDK_ROOT, 'kfd', 'buildchain.kfd3.json');
+const SDK_KFD3_CANONICAL_REGISTRY = path.join(
+  SDK_ROOT,
+  'kfd',
+  'kfd-3-surfaces.json',
+);
 const SDK_KFD_UPSTREAM_AGGREGATE = path.join(
   SDK_ROOT,
   'kfd',
@@ -2564,18 +2570,36 @@ function resolveKfd3Registry() {
   const override = process.env.KUNGFU_KFD3_REGISTRY || '';
   const candidates = [
     override,
-    path.join(process.cwd(), 'buildchain.kfd3.json'),
-    findUp(process.cwd(), 'buildchain.kfd3.json'),
-    findUp(SDK_CLI, 'buildchain.kfd3.json'),
-    SDK_KFD3_REGISTRY,
+    path.join(process.cwd(), BUILDCHAIN_KFD3_SURFACE_REGISTRY_PATH),
+    findUp(process.cwd(), BUILDCHAIN_KFD3_SURFACE_REGISTRY_PATH),
+    findUp(SDK_CLI, BUILDCHAIN_KFD3_SURFACE_REGISTRY_PATH),
+    SDK_KFD3_CANONICAL_REGISTRY,
   ].filter(Boolean);
   for (const candidate of candidates) {
     const resolved = path.resolve(candidate);
     if (fs.existsSync(resolved)) return resolved;
   }
   fail(
-    'KFD-3 registry not found; run inside a Kungfu checkout or install a SDK package that includes kfd/buildchain.kfd3.json',
+    'KFD-3 registry not found; run inside a Kungfu checkout or install a SDK package that includes kfd/kfd-3-surfaces.json',
   );
+}
+
+/**
+ * @param {string} registryPath
+ * @returns {{cwd: string, registryPath: string}}
+ */
+function kfd3RegistryQueryContext(registryPath) {
+  const canonicalSuffix = `${path.sep}${BUILDCHAIN_KFD3_SURFACE_REGISTRY_PATH.replace(/\//g, path.sep)}`;
+  if (registryPath.endsWith(canonicalSuffix)) {
+    return {
+      cwd: registryPath.slice(0, -canonicalSuffix.length),
+      registryPath: BUILDCHAIN_KFD3_SURFACE_REGISTRY_PATH,
+    };
+  }
+  return {
+    cwd: path.dirname(registryPath),
+    registryPath: path.basename(registryPath),
+  };
 }
 
 /**
@@ -2687,10 +2711,11 @@ function registryCapabilityQuery(registry, registryPath, warning = '') {
 async function kfdQuery(options) {
   const { path: registryPath, registry } = readKfd3Registry();
   try {
+    const queryContext = kfd3RegistryQueryContext(registryPath);
     const query = await queryKfd3Capabilities({
-      cwd: path.dirname(registryPath),
+      cwd: queryContext.cwd,
       product: registry.product?.id || 'kungfu',
-      registryPath: path.basename(registryPath),
+      registryPath: queryContext.registryPath,
     });
     if (query.status !== 'failed' && query.kfd?.kfd3 !== 'failed') {
       return query;

@@ -31,7 +31,7 @@
     "buildchain": {
       "package": {
         "name": "@kungfu-tech/buildchain",
-        "version": "2.10.0"
+        "version": "2.10.7"
       },
       "formatting": {
         "name": "buildchain-release-evidence-json-v1",

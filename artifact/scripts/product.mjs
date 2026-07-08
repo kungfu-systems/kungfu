@@ -14,7 +14,12 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const ROOT = path.resolve(path.dirname(__filename), '..', '..');
 const isWin = process.platform === 'win32';
-const KFD3_REGISTRY = path.join(ROOT, 'buildchain.kfd3.json');
+const KFD3_REGISTRY = path.join(
+  ROOT,
+  '.buildchain',
+  'kfd',
+  'kfd-3-surfaces.json',
+);
 const KFD_UPSTREAM_AGGREGATE = path.join(
   ROOT,
   'developer',

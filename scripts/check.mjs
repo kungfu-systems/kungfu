@@ -227,8 +227,8 @@ function checkRuntimeGreenfield(scopeArgs = []) {
 function touchesBuildchainKfdEvidence(files) {
   return files.some(
     (file) =>
-      file === 'buildchain.kfd3.json' ||
-      file === 'developer/sdk/kfd/buildchain.kfd3.json' ||
+      file === '.buildchain/kfd/kfd-3-surfaces.json' ||
+      file === 'developer/sdk/kfd/kfd-3-surfaces.json' ||
       file === 'developer/sdk/kfd/upstream-aggregate.json' ||
       file === 'developer/sdk/src/sdk.js' ||
       file === 'scripts/buildchain-kfd-evidence.mjs' ||
