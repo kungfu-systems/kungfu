@@ -39,7 +39,7 @@ static constexpr auto instanceof =
 
 static constexpr auto is_custom_event = [](const event_ptr &event) -> bool {
   return event->carrier_type() > 0 and
-         longfist::AllTypesTags.find(event->carrier_type()) == longfist::AllTypesTags.end();
+         longfist::LegacyCompiledTypeTags.find(event->carrier_type()) == longfist::LegacyCompiledTypeTags.end();
 };
 
 static constexpr auto is_custom = []() {

@@ -61,8 +61,8 @@ Napi::Value Frame::DataType(const Napi::CallbackInfo &info) {
 
 Napi::Value Frame::Data(const Napi::CallbackInfo &info) {
   auto result = Napi::Object::New(info.Env());
-  // have to be AllDataTypes, for data size is not 0
-  boost::hana::for_each(longfist::AllDataTypes, [&](auto it) {
+  // Legacy compiled payload decoder; open-layer frames should use dataBytes().
+  boost::hana::for_each(longfist::LegacyCompiledDataTypes, [&](auto it) {
     using DataType = typename decltype(+boost::hana::second(it))::type;
     if (frame_->carrier_type() == DataType::tag) {
       serialize::JsSet{}(frame_->data<DataType>(), result);
@@ -77,8 +77,8 @@ Napi::Value Frame::Data(const Napi::CallbackInfo &info) {
 
 Napi::Value Frame::DataAsString(const Napi::CallbackInfo &info) {
   std::string result = "";
-  // have to be AllDataTypes, for data size is not 0
-  boost::hana::for_each(longfist::AllDataTypes, [&](auto it) {
+  // Legacy compiled payload decoder; open-layer frames should use dataBytes().
+  boost::hana::for_each(longfist::LegacyCompiledDataTypes, [&](auto it) {
     using DataType = typename decltype(+boost::hana::second(it))::type;
     if (frame_->carrier_type() == DataType::tag) {
       result = frame_->data<DataType>().to_string();

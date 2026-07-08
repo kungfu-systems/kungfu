@@ -77,6 +77,9 @@ const CORE_PUBLIC_REGISTRIES = [
   'CorePublicStateDataTypes',
   'CorePublicProfileDataTypes',
 ];
+const INTERNAL_LEGACY_REGISTRY_RE =
+  /\b(AllTypes|AllDataTypes|AllTypesTags|LegacyCompiledTypes|LegacyCompiledDataTypes|LegacyCompiledTypeTags)\b/g;
+const DIRECT_LEGACY_REGISTRY_RE = /\b(AllTypes|AllDataTypes|AllTypesTags)\b/g;
 
 const RULES = [
   {
@@ -84,7 +87,7 @@ const RULES = [
     files: [
       /^framework\/core\/src\/bindings\/python\/binding\/py-yijinjing\.cpp$/,
     ],
-    re: /\bAllDataTypes\b|boost::hana::for_each\(AllDataTypes/g,
+    re: INTERNAL_LEGACY_REGISTRY_RE,
     message:
       'Python yijinjing must expose neutral raw/envelope APIs, not generated business typed helpers.',
   },
@@ -93,7 +96,7 @@ const RULES = [
     files: [
       /^framework\/core\/src\/bindings\/python\/binding\/py-longfist-types\.cpp$/,
     ],
-    re: /\b(AllDataTypes|StateDataTypes)\b|boost::hana::for_each\((AllDataTypes|StateDataTypes)/g,
+    re: /\b(AllDataTypes|StateDataTypes|LegacyCompiledTypes|LegacyCompiledDataTypes|LegacyCompiledTypeTags)\b|boost::hana::for_each\((AllDataTypes|StateDataTypes|LegacyCompiledTypes|LegacyCompiledDataTypes)/g,
     message:
       'Python longfist public types/state must bind CorePublic*DataTypes, not the legacy internal schema sets.',
   },
@@ -109,7 +112,7 @@ const RULES = [
   {
     name: 'node longfist public internal registry binding',
     files: [/^framework\/core\/src\/bindings\/node\/binding\/longfist\.cpp$/],
-    re: /\b(AllTypes|AllDataTypes|StateDataTypes|ProfileDataTypes)\b|boost::hana::for_each\((AllTypes|AllDataTypes|StateDataTypes|ProfileDataTypes)/g,
+    re: /\b(AllTypes|AllDataTypes|StateDataTypes|ProfileDataTypes|LegacyCompiledTypes|LegacyCompiledDataTypes|LegacyCompiledTypeTags)\b|boost::hana::for_each\((AllTypes|AllDataTypes|StateDataTypes|ProfileDataTypes|LegacyCompiledTypes|LegacyCompiledDataTypes)/g,
     message:
       'Node longfist public types/carrierTypes must bind CorePublic*DataTypes, not the legacy internal schema sets.',
   },
@@ -305,6 +308,33 @@ function corePublicRegistryHits(rel, text) {
   return hits;
 }
 
+function directLegacyRegistryNameHits(rel, text) {
+  if (
+    rel === 'framework/core/src/libkungfu/include/kungfu/longfist/longfist.h' ||
+    rel === 'framework/core/src/libkungfu/include/kungfu/longfist/types.h' ||
+    rel === 'framework/core/src/libyijinjing/check-deps.mjs' ||
+    rel === 'scripts/check-yijinjing-greenfield.mjs'
+  ) {
+    return [];
+  }
+  if (!/^framework\/core\/src\/(bindings|libkungfu|libyijinjing)\//.test(rel)) {
+    return [];
+  }
+  const hits = [];
+  DIRECT_LEGACY_REGISTRY_RE.lastIndex = 0;
+  for (const match of text.matchAll(DIRECT_LEGACY_REGISTRY_RE)) {
+    hits.push({
+      file: rel,
+      line: lineNumber(text, match.index || 0),
+      rule: 'direct legacy registry compatibility alias',
+      message:
+        'Use LegacyCompiled* names for internal compiled-schema compatibility paths; keep AllTypes/AllDataTypes as compatibility aliases only.',
+      text: match[0],
+    });
+  }
+  return hits;
+}
+
 const hits = [];
 for (const rel of selectedFiles()) {
   const rules = RULES.filter((rule) => rule.files.some((re) => re.test(rel)));
@@ -323,6 +353,7 @@ for (const rel of selectedFiles()) {
     }
   }
   hits.push(...corePublicRegistryHits(rel, text));
+  hits.push(...directLegacyRegistryNameHits(rel, text));
 }
 
 if (hits.length) {

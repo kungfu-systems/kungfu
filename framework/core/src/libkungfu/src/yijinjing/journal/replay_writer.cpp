@@ -59,7 +59,7 @@ void replay_writer::close_frame(size_t data_length, int64_t gen_time) {
 uint64_t replay_writer::current_frame_uid() {
   uint64_t uid = 0;
   auto frame = reader_for_write_->current_frame();
-  boost::hana::for_each(longfist::AllDataTypes, [&](auto it) {
+  boost::hana::for_each(longfist::LegacyCompiledDataTypes, [&](auto it) {
     using DataType = typename decltype(+boost::hana::second(it))::type;
     if (frame->carrier_type() == DataType::tag) {
       uid = frame->data<DataType>().uid();

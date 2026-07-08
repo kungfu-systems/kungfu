@@ -110,7 +110,7 @@ void io_device_console::trace(int64_t begin_time, int64_t end_time, bool in, boo
                      : location::SYNC                  ? "sync"
                                                        : locations.at(frame->dest())->uname;
     bool type_found = false;
-    boost::hana::for_each(AllTypes, [&](auto type) {
+    boost::hana::for_each(LegacyCompiledTypes, [&](auto type) {
       using DataType = typename decltype(+boost::hana::second(type))::type;
       if (frame->carrier_type() == DataType::tag) {
         table.add_row({
@@ -174,7 +174,7 @@ void io_device_console::show(int64_t begin_time, int64_t end_time, bool in, bool
                      : location::SYNC                  ? "sync"
                                                        : locations.at(frame->dest())->uname;
     bool type_found = false;
-    boost::hana::for_each(AllTypes, [&](auto type) {
+    boost::hana::for_each(LegacyCompiledTypes, [&](auto type) {
       using DataType = typename decltype(+boost::hana::second(type))::type;
       if (frame->carrier_type() == DataType::tag) {
         table.add_row({
