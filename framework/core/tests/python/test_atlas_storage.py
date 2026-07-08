@@ -211,7 +211,14 @@ def test_payload_manifest_fsck_export_and_verify(tmp_path):
         "goals": 1,
         "markers": 1,
         "actions": 3,
+        "sync_roots": 1,
     }
+    assert manifest["sync_root"] == payloads.compute_sync_root(manifest["entries"])
+    assert manifest["sync_root"]["schema"] == payloads.SYNC_ROOT_SCHEMA
+    assert (
+        manifest["sync_root"]["scope"] == payloads.SYNC_ROOT_SCOPE_ATLAS_IMPORT_MANIFEST
+    )
+    assert manifest["sync_root"]["value"].startswith("sha256:")
 
     records = payloads.export_records(store)
     assert len(records) == 3
@@ -384,6 +391,59 @@ def test_payload_fsck_reports_missing_payload(tmp_path):
 
     assert not report["ok"]
     assert any(error["code"] == "payload_missing" for error in report["errors"])
+
+
+def test_payload_fsck_rejects_missing_sync_root(tmp_path):
+    repo = tmp_path / "atlas"
+    store = tmp_path / "store"
+    _atlas_fixture(repo)
+    _, _, _, source_records, _ = importer.read_control_plane_with_sources(str(repo))
+    manifest = payloads.write_import_payloads(
+        store,
+        import_id="imp-test",
+        repo_root=str(repo),
+        repo_head="abc123",
+        source_records=source_records,
+        counts={"missions": 1, "goals": 1, "markers": 1},
+    )
+    del manifest["sync_root"]
+    payloads.latest_manifest_path(store).write_text(
+        json.dumps(manifest, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    report = payloads.fsck_import(store)
+
+    assert not report["ok"]
+    assert any(error["code"] == "sync_root_missing" for error in report["errors"])
+
+
+def test_payload_fsck_rejects_sync_root_entry_mutation(tmp_path):
+    repo = tmp_path / "atlas"
+    store = tmp_path / "store"
+    _atlas_fixture(repo)
+    _, _, _, source_records, _ = importer.read_control_plane_with_sources(str(repo))
+    manifest = payloads.write_import_payloads(
+        store,
+        import_id="imp-test",
+        repo_root=str(repo),
+        repo_head="abc123",
+        source_records=source_records,
+        counts={"missions": 1, "goals": 1, "markers": 1},
+    )
+    manifest["entries"][0]["source_path"] = "tampered.json"
+    payloads.latest_manifest_path(store).write_text(
+        json.dumps(manifest, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    report = payloads.fsck_import(store)
+
+    assert not report["ok"]
+    assert any(
+        error["code"] == "sync_root_mismatch" and error["field"] == "value"
+        for error in report["errors"]
+    )
 
 
 def test_source_range_builder_supports_relative_since():

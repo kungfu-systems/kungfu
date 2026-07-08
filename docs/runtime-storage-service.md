@@ -195,6 +195,14 @@ use explicit content-hash algorithms such as `sha256`; frame receipts use the
 recorded checksum algorithm such as `fnv1a64`; yijinjing `fast_hash_*` ids are
 not valid payload or manifest hashes.
 
+The first trust-proof surface is the manifest-scoped sync root from
+[`ADR-0030`](../framework/core/docs/adr/ADR-0030-manifest-scoped-sync-root-v1.md).
+For Atlas imports, `fsck` recomputes `kungfu.sync-root/v1` from the manifest's
+ordered entries and reports missing or mismatched root data as a storage
+failure. This root binds payload references, source coordinates, action
+envelopes, and frame receipt metadata for the accepted segment. It is local
+tamper evidence, not a signature, MAC, or non-repudiation proof.
+
 Example target:
 
 ```sh

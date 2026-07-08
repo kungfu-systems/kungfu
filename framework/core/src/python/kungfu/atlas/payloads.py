@@ -11,6 +11,7 @@ from kungfu.action_envelope import (
     payload_hash,
 )
 from kungfu.content_hash import CONTENT_HASH_ALGORITHM_SHA256
+from kungfu.content_hash import compute_content_hash
 from kungfu.atlas import (
     ACTION_GOAL_SNAPSHOT,
     ACTION_MARKER_SNAPSHOT,
@@ -30,6 +31,13 @@ FRAME_CHECKSUM_ALGORITHMS_BY_VERSION = {
 }
 SUPPORTED_FRAME_CHECKSUM_ALGORITHMS = set(FRAME_CHECKSUM_ALGORITHMS_BY_VERSION.values())
 PAYLOAD_STATE_PRESENT = "present"
+SYNC_ROOT_SCHEMA = "kungfu.sync-root/v1"
+SYNC_ROOT_SCOPE_ATLAS_IMPORT_MANIFEST = "atlas.import.manifest"
+SYNC_ROOT_CHAIN_LINK_SCHEMA = "kungfu.sync-chain-link/v1"
+SYNC_ROOT_PROOF_LINEAR_CHAIN_V1 = "linear-chain-v1"
+SYNC_ROOT_ORDERING_POLICY_MANIFEST_ENTRY_SORT_V1 = "manifest-entry-sort-v1"
+SYNC_ROOT_INITIAL = f"{CONTENT_HASH_ALGORITHM_SHA256}:{'0' * 64}"
+SYNC_ROOT_ENTRY_ORDER_FIELDS = ["kind", "source_id", "source_path"]
 
 ACTION_SCHEMA_REFS = {
     "atlas.import.begin": {"id": "kungfu.atlas.ImportBegin", "version": 1},
@@ -186,6 +194,122 @@ def _matches_range(entry: dict[str, Any], range_filter: dict[str, Any] | None) -
     return True
 
 
+def _manifest_entry_sort_key(row: dict[str, Any]) -> tuple[str, str, str]:
+    return (
+        str(row.get("kind") or ""),
+        str(row.get("source_id") or ""),
+        str(row.get("source_path") or ""),
+    )
+
+
+def _sync_root_entry_commitment(entry: dict[str, Any]) -> dict[str, Any]:
+    fields = (
+        "kind",
+        "source_id",
+        "source_path",
+        "source_time",
+        "schema_version",
+        "content_type",
+        "payload_hash",
+        "byte_len",
+        "payload_state",
+        "action",
+    )
+    return {field: entry[field] for field in fields if field in entry}
+
+
+def compute_sync_root(entries: list[dict[str, Any]]) -> dict[str, Any]:
+    previous = SYNC_ROOT_INITIAL
+    for index, entry in enumerate(entries):
+        entry_hash = compute_content_hash(
+            canonical_json_bytes(_sync_root_entry_commitment(entry))
+        )
+        previous = compute_content_hash(
+            canonical_json_bytes(
+                {
+                    "schema": SYNC_ROOT_CHAIN_LINK_SCHEMA,
+                    "index": index,
+                    "previous": previous,
+                    "entry": entry_hash,
+                }
+            )
+        )
+    return {
+        "schema": SYNC_ROOT_SCHEMA,
+        "scope": SYNC_ROOT_SCOPE_ATLAS_IMPORT_MANIFEST,
+        "proof": SYNC_ROOT_PROOF_LINEAR_CHAIN_V1,
+        "algorithm": CONTENT_HASH_ALGORITHM_SHA256,
+        "value": previous,
+        "entry_count": len(entries),
+        "initial": SYNC_ROOT_INITIAL,
+        "ordering": {
+            "policy": SYNC_ROOT_ORDERING_POLICY_MANIFEST_ENTRY_SORT_V1,
+            "fields": list(SYNC_ROOT_ENTRY_ORDER_FIELDS),
+        },
+    }
+
+
+def _append_sync_root_error(
+    report: dict[str, Any],
+    code: str,
+    *,
+    field: str | None = None,
+    expected: Any = None,
+    actual: Any = None,
+) -> None:
+    report["ok"] = False
+    error = {"code": code}
+    if field is not None:
+        error["field"] = field
+    if expected is not None:
+        error["expected"] = expected
+    if actual is not None:
+        error["actual"] = actual
+    report["errors"].append(error)
+
+
+def _check_sync_root(
+    report: dict[str, Any], manifest: dict[str, Any], entries: list[dict[str, Any]]
+) -> None:
+    report["checked"]["sync_roots"] += 1
+    actual = manifest.get("sync_root")
+    if actual is None:
+        _append_sync_root_error(report, "sync_root_missing")
+        return
+    if not isinstance(actual, dict):
+        _append_sync_root_error(report, "sync_root_invalid", actual=actual)
+        return
+    expected = compute_sync_root(entries)
+    for field, expected_value in expected.items():
+        actual_value = actual.get(field)
+        if actual_value != expected_value:
+            _append_sync_root_error(
+                report,
+                "sync_root_mismatch",
+                field=field,
+                expected=expected_value,
+                actual=actual_value,
+            )
+
+
+def export_sync_root(
+    store_dir: str | Path,
+    range_filter: dict[str, Any] | None = None,
+    storage_source_id: str | None = None,
+) -> dict[str, Any]:
+    manifest = load_latest_manifest(store_dir)
+    if manifest is None:
+        raise FileNotFoundError(str(latest_manifest_path(store_dir)))
+    if storage_source_id and manifest.get("storage_source_id") != storage_source_id:
+        raise ValueError(f"source_not_imported: {storage_source_id}")
+    entries = [
+        entry
+        for entry in manifest.get("entries", [])
+        if isinstance(entry, dict) and _matches_range(entry, range_filter)
+    ]
+    return compute_sync_root(entries)
+
+
 def write_import_payloads(
     store_dir: str | Path,
     *,
@@ -224,6 +348,7 @@ def write_import_payloads(
             )
         entries.append(entry)
 
+    sorted_entries = sorted(entries, key=_manifest_entry_sort_key)
     manifest = {
         "schema": "kungfu.atlas-import/v1",
         "import_id": import_id,
@@ -235,14 +360,8 @@ def write_import_payloads(
         "range": _serialize_range(range_filter),
         "hash_algorithm": CONTENT_HASH_ALGORITHM_SHA256,
         "counts": counts,
-        "entries": sorted(
-            entries,
-            key=lambda row: (
-                str(row.get("kind") or ""),
-                str(row.get("source_id") or ""),
-                str(row.get("source_path") or ""),
-            ),
-        ),
+        "entries": sorted_entries,
+        "sync_root": compute_sync_root(sorted_entries),
     }
 
     manifest_path = import_manifest_path(store_dir, import_id)
@@ -581,6 +700,7 @@ def fsck_import(
             "goals": 0,
             "markers": 0,
             "actions": 0,
+            "sync_roots": 0,
         },
     }
     if manifest is None:
@@ -594,6 +714,8 @@ def fsck_import(
         report["ok"] = False
         report["errors"].append({"code": "manifest_entries_invalid"})
         return report
+    manifest_entries = [entry for entry in entries if isinstance(entry, dict)]
+    _check_sync_root(report, manifest, manifest_entries)
 
     seen: set[tuple[str, str]] = set()
     for entry in entries:
@@ -741,13 +863,7 @@ def export_records(
         row["source_head"] = manifest.get("repo_head")
         row["payload"] = payload
         records.append(row)
-    records.sort(
-        key=lambda row: (
-            str(row.get("kind") or ""),
-            str(row.get("source_id") or ""),
-            str(row.get("source_path") or ""),
-        )
-    )
+    records.sort(key=_manifest_entry_sort_key)
     return records
 
 

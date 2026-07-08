@@ -178,7 +178,7 @@ class ImportStore:
                 },
             )
         )
-        payloads.write_import_payloads(
+        manifest = payloads.write_import_payloads(
             self.store_dir(),
             import_id=import_id,
             repo_root=repo_root,
@@ -203,6 +203,7 @@ class ImportStore:
             "repo_head": repo_head,
             "source_head": repo_head,
             "range": payloads._serialize_range(range_filter),
+            "sync_root": manifest.get("sync_root"),
             "missions": len(missions),
             "goals": len(goals),
             "markers": len(markers),
@@ -505,6 +506,7 @@ def status(runtime_dir):
         "repo_root": manifest.get("repo_root"),
         "repo_head": manifest.get("repo_head"),
         "source_head": manifest.get("source_head", manifest.get("repo_head")),
+        "sync_root": manifest.get("sync_root"),
         "payloads": len(manifest.get("entries", [])),
         "missions": len(projection.get("missions", {})) if projection else 0,
         "goals": len(projection.get("goals", {})) if projection else 0,
@@ -538,6 +540,11 @@ def export_jsonl(
         "scope": "atlas",
         "storage_source_id": storage_source_id,
         "range": payloads._serialize_range(range_filter),
+        "sync_root": payloads.export_sync_root(
+            store_dir(runtime_dir),
+            range_filter=range_filter,
+            storage_source_id=storage_source_id,
+        ),
         "format": "jsonl",
         "out": os.path.abspath(out_path),
         "records": len(records),
