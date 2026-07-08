@@ -16,10 +16,43 @@ SOURCE_REGISTRY_SCHEMA = "kungfu.storage.source-registry/v1"
 PROJECTION_SOURCE_REGISTRY = "source-registry"
 PROJECTION_SQLITE = "sqlite"
 PROJECTION_ATLAS_JOURNAL_FOLD = "atlas-journal-fold"
+RUNTIME_STORAGE_SERVICE_SCHEMA = "kungfu.runtime.storage-service/v1"
 
 
 def _runtime():
     return kungfu.__binding__.runtime
+
+
+def service_capabilities() -> dict[str, Any]:
+    return dict(_runtime().storage_service_capabilities())
+
+
+def _runtime_service_request(
+    operation: str,
+    runtime_dir: str | Path,
+    *,
+    scope: str = "all",
+    source_id: str | None = None,
+    dry_run: bool = True,
+    verify: bool = True,
+    range_filter: dict[str, Any] | None = None,
+    artifact_uri: str | None = None,
+) -> dict[str, Any]:
+    request = _runtime().make_storage_service_request(
+        operation,
+        str(runtime_dir),
+        {
+            "scope": scope,
+            "source_id": source_id,
+            "dry_run": dry_run,
+            "verify": verify,
+            "range": range_filter or {},
+            "artifact_uri": artifact_uri or "",
+        },
+    )
+    if request.get("schema") != RUNTIME_STORAGE_SERVICE_SCHEMA:
+        raise RuntimeError(f"invalid runtime storage service request: {request}")
+    return dict(request)
 
 
 def root_dir(runtime_dir: str | Path) -> Path:
@@ -281,6 +314,12 @@ def status(
     *,
     source_id: str | None = None,
 ) -> dict[str, Any]:
+    _runtime_service_request(
+        "status",
+        runtime_dir,
+        scope="source" if source_id else "all",
+        source_id=source_id,
+    )
     sources = [
         source
         for source in list_sources(runtime_dir)
@@ -344,6 +383,12 @@ def fsck(
     *,
     source_id: str | None = None,
 ) -> dict[str, Any]:
+    _runtime_service_request(
+        "fsck",
+        runtime_dir,
+        scope="source" if source_id else "all",
+        source_id=source_id,
+    )
     try:
         registry = load_registry(runtime_dir)
     except (OSError, json.JSONDecodeError, ValueError) as e:
@@ -486,6 +531,13 @@ def rebuild_index(
 ) -> dict[str, Any]:
     """Rebuild the source registry projection from accepted manifests."""
 
+    _runtime_service_request(
+        "rebuild_index",
+        runtime_dir,
+        scope="source" if source_id else "all",
+        source_id=source_id,
+        dry_run=dry_run,
+    )
     try:
         old_registry = load_registry(runtime_dir)
     except (OSError, json.JSONDecodeError, ValueError):
@@ -567,6 +619,13 @@ def gc_plan(
     source_id: str | None = None,
     dry_run: bool = True,
 ) -> dict[str, Any]:
+    _runtime_service_request(
+        "gc_plan",
+        runtime_dir,
+        scope="source" if source_id else "all",
+        source_id=source_id,
+        dry_run=dry_run,
+    )
     if not dry_run:
         raise ValueError("storage_gc_requires_dry_run")
     referenced = _referenced_payload_hashes(runtime_dir, source_id)
@@ -612,6 +671,13 @@ def compact_plan(
     source_id: str | None = None,
     dry_run: bool = True,
 ) -> dict[str, Any]:
+    _runtime_service_request(
+        "compact_plan",
+        runtime_dir,
+        scope="source" if source_id else "all",
+        source_id=source_id,
+        dry_run=dry_run,
+    )
     if not dry_run:
         raise ValueError("storage_compact_requires_dry_run")
     rebuild = rebuild_index(runtime_dir, source_id=source_id, dry_run=True)
@@ -666,6 +732,12 @@ def verify_local_sync(
     *,
     source_id: str,
 ) -> dict[str, Any]:
+    _runtime_service_request(
+        "verify_sync",
+        runtime_dir,
+        scope="source",
+        source_id=source_id,
+    )
     source_report = fsck(runtime_dir, source_id=source_id)
     if not source_report["ok"]:
         return {
@@ -795,6 +867,13 @@ def build_export_bundle(
     source_id: str,
     range_filter: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    _runtime_service_request(
+        "export_bundle",
+        runtime_dir,
+        scope="source",
+        source_id=source_id,
+        range_filter=range_filter,
+    )
     manifest = load_latest_manifest(runtime_dir, source_id)
     if manifest is None:
         raise FileNotFoundError(str(latest_manifest_path(runtime_dir, source_id)))
@@ -827,6 +906,14 @@ def import_bundle(
     *,
     verify: bool = True,
 ) -> dict[str, Any]:
+    source_id = str(bundle.get("source_id") or "")
+    _runtime_service_request(
+        "import_bundle",
+        runtime_dir,
+        scope="source" if source_id else "all",
+        source_id=source_id or None,
+        verify=verify,
+    )
     manifest = bundle.get("manifest")
     if not isinstance(manifest, dict):
         raise ValueError("bundle_manifest_missing")

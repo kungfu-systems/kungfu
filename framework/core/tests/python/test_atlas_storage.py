@@ -299,6 +299,103 @@ def test_storage_core_binding_owns_sync_root_and_payload_checks(tmp_path):
     )
 
 
+def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
+    runtime = kungfu.__binding__.runtime
+    capabilities = storage_service.service_capabilities()
+
+    assert capabilities["schema"] == "kungfu.runtime.storage-service/v1"
+    assert capabilities["owner"] == "libkungfu"
+    assert set(capabilities["operations"]) == {
+        "status",
+        "fsck",
+        "export_bundle",
+        "import_bundle",
+        "rebuild_index",
+        "gc_plan",
+        "compact_plan",
+        "verify_sync",
+    }
+
+    request = runtime.make_storage_service_request(
+        "status",
+        str(tmp_path),
+        {"scope": "source", "source_id": "local-synth", "dry_run": True},
+    )
+    assert request == {
+        "schema": "kungfu.runtime.storage-service/v1",
+        "owner": "libkungfu",
+        "operation": "status",
+        "runtime_dir": str(tmp_path),
+        "scope": "source",
+        "source_id": "local-synth",
+        "dry_run": True,
+        "verify": True,
+        "range": {},
+        "artifact_uri": "",
+    }
+
+
+def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monkeypatch):
+    runtime_dir = tmp_path / "runtime"
+    accepted = storage_service.write_synthetic_source(
+        runtime_dir,
+        source_id="local-synth",
+        manifest_id="imp-synth",
+        source_head="head-1",
+        records=[
+            {
+                "kind": "note",
+                "source_id": "note-a",
+                "source_path": "notes/a.json",
+                "source_time": "2026-07-08T00:00:00Z",
+                "payload": {"title": "A", "body": "alpha"},
+            }
+        ],
+    )
+    assert accepted["source_id"] == "local-synth"
+
+    calls = []
+
+    def spy_request(operation, runtime_dir_arg, options):
+        calls.append((operation, runtime_dir_arg, dict(options)))
+        return {
+            "schema": "kungfu.runtime.storage-service/v1",
+            "owner": "libkungfu",
+            "operation": operation,
+            "runtime_dir": runtime_dir_arg,
+        }
+
+    monkeypatch.setattr(
+        kungfu.__binding__.runtime,
+        "make_storage_service_request",
+        spy_request,
+    )
+
+    storage_service.status(runtime_dir, source_id="local-synth")
+    storage_service.fsck(runtime_dir, source_id="local-synth")
+    storage_service.rebuild_index(runtime_dir, source_id="local-synth", dry_run=True)
+    storage_service.gc_plan(runtime_dir, dry_run=True)
+    storage_service.compact_plan(runtime_dir, dry_run=True)
+    storage_service.build_export_bundle(runtime_dir, source_id="local-synth")
+    storage_service.import_bundle(
+        tmp_path / "imported-runtime",
+        storage_service.build_export_bundle(runtime_dir, source_id="local-synth"),
+    )
+    storage_service.verify_local_sync(runtime_dir, source_id="local-synth")
+
+    entered = {operation for operation, _, _ in calls}
+    assert {
+        "status",
+        "fsck",
+        "rebuild_index",
+        "gc_plan",
+        "compact_plan",
+        "export_bundle",
+        "import_bundle",
+        "verify_sync",
+    } <= entered
+
+
 def test_payload_fsck_verifies_versioned_frame_checksums(tmp_path):
     repo = tmp_path / "atlas"
     store = tmp_path / "store"

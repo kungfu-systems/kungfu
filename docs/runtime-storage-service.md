@@ -76,11 +76,24 @@ Implementation boundary:
 - `libkungfu` owns runtime implementation and adapters on top of that kernel:
   RocksDB-backed providers, SQLite projections, transport/process wiring,
   typed schema dumping, Python/Node bindings, and product command surfaces.
+- Python and Node are command, binding, UI, or adapter layers. They may own
+  file parsing and temporary glue while a backend is being migrated, but the
+  stable storage service surface belongs in `libkungfu` so every language calls
+  the same runtime contract.
 
 This keeps storage facts portable across C++, Python, and Node without making
 Python or JavaScript responsible for their own storage semantics. It also keeps
 backend choices replaceable: a backend can change without changing the
 `yijinjing` contract or the product vocabulary.
+
+The first `libkungfu` slice exposes
+`kungfu::runtime::storage_service_api::storage_service` and the
+`kungfu.runtime.storage-service/v1` operation request surface for `status`,
+`fsck`, `export_bundle`, `import_bundle`, `rebuild_index`, `gc_plan`,
+`compact_plan`, and `verify_sync`. Python storage commands enter that C++
+surface before running the interim content-addressed file backend. The next
+provider slice moves the file backend and maintenance behavior behind the same
+C++ service instead of adding another Python-only contract.
 
 The first C++ contract surface is intentionally header-only vocabulary under
 `<kungfu/yijinjing/storage...>`:

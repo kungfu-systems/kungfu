@@ -15,6 +15,7 @@
 #include <kungfu/runtime/practice/apprentice.h>
 #include <kungfu/runtime/practice/master.h>
 #include <kungfu/runtime/schema/schema_compiler.h>
+#include <kungfu/runtime/storage/service.h>
 #include <kungfu/runtime/util/terminal.h>
 #include <kungfu/yijinjing/hash.h>
 #include <kungfu/yijinjing/journal/assemble.h>
@@ -429,6 +430,15 @@ void bind(pybind11::module &&m) {
         return json_to_py(yijinjing::storage::build_storage_export_bundle(py_to_json(manifest), py_to_json(records)));
       },
       py::arg("manifest"), py::arg("records"));
+  m.def("storage_service_capabilities",
+        []() { return json_to_py(storage_service_api::storage_service_capabilities()); });
+  m.def(
+      "make_storage_service_request",
+      [](const std::string &operation, const std::string &runtime_dir, py::dict options) {
+        return json_to_py(
+            storage_service_api::make_storage_service_request(operation, runtime_dir, py_to_json(options)));
+      },
+      py::arg("operation"), py::arg("runtime_dir"), py::arg("options") = py::dict());
 
   m.def("setup_log", &yijinjing::log::setup_log);
   m.def("emit_log", &yijinjing::log::emit_log);
