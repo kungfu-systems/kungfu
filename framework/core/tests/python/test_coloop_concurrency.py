@@ -19,7 +19,7 @@ import pathlib
 
 _COLOOP = (
     pathlib.Path(__file__).resolve().parents[2]
-    / "src/python/kungfu/yijinjing/practice/coloop.py"
+    / "src/python/kungfu/runtime/practice/coloop.py"
 )
 
 

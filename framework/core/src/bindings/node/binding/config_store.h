@@ -7,8 +7,8 @@
 #ifndef KUNGFU_NODE_CONFIGURATION_H
 #define KUNGFU_NODE_CONFIGURATION_H
 
-#include <kungfu/yijinjing/cache/profile.h>
-#include <kungfu/yijinjing/io.h>
+#include <kungfu/runtime/cache/profile.h>
+#include <kungfu/runtime/io.h>
 
 #include "common.h"
 #include "operators.h"
@@ -35,7 +35,7 @@ public:
 private:
   serialize::JsSet set;
   yijinjing::data::locator_ptr locator_;
-  cache::profile profile_;
+  runtime::cache::profile profile_;
 
   static Napi::FunctionReference constructor;
   static void cleanup() {

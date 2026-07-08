@@ -31,13 +31,13 @@
 #include <string>
 #include <vector>
 
-using namespace kungfu::yijinjing;
+using namespace kungfu::runtime;
 namespace longfist = kungfu::longfist;
 using kungfu::slices::sha256;
 
 namespace {
-constexpr const char *SPEC_VERSION = "0.1";      // portable-bundle format contract
-constexpr const char *FORMAT_VERSION = "0.1";    // event-log line schema
+constexpr const char *SPEC_VERSION = "0.1";   // portable-bundle format contract
+constexpr const char *FORMAT_VERSION = "0.1"; // event-log line schema
 constexpr const char *PRODUCER = "fact_ledger_export/0.1.0";
 constexpr const char *HASH_ALGORITHM = "sha256";
 
@@ -100,8 +100,8 @@ int main(int argc, char **argv) {
   // reopen it read-only. assemble uses a noop bus internally; nothing here
   // starts the runtime.
   auto locator = std::make_shared<data::locator>(root);
-  auto location = data::location::make_shared(longfist::enums::mode::LIVE, longfist::enums::category::SYSTEM, group, name,
-                                              locator);
+  auto location =
+      data::location::make_shared(longfist::enums::mode::LIVE, longfist::enums::category::SYSTEM, group, name, locator);
   journal::assemble reader(location, data::location::PUBLIC, longfist::enums::AssembleMode::Channel, 0);
 
   // Build the JSONL body in memory so the whole-segment checksum is computed
@@ -117,7 +117,7 @@ int main(int argc, char **argv) {
   while (reader.data_available()) {
     auto frame = reader.current_frame();
 
-    const uint64_t frame_uid = frame->frame_uid();               // read verbatim, never recomputed
+    const uint64_t frame_uid = frame->frame_uid();                 // read verbatim, never recomputed
     const uint64_t trigger_frame_uid = frame->trigger_frame_uid(); // read verbatim
     const std::string payload_raw = frame->is_json() ? strip_trailing_nuls(frame->data_as_string()) : std::string{};
     const std::string payload_sha = sha256::hex(payload_raw);
@@ -183,7 +183,13 @@ int main(int argc, char **argv) {
       {"producer", PRODUCER},
       {"platform", {{"os", platform_os()}, {"arch", platform_arch()}}},
       {"hash_algorithm", HASH_ALGORITHM},
-      {"source", {{"root", root}, {"mode", "LIVE"}, {"category", "SYSTEM"}, {"group", group}, {"name", name}, {"dest", data::location::PUBLIC}}},
+      {"source",
+       {{"root", root},
+        {"mode", "LIVE"},
+        {"category", "SYSTEM"},
+        {"group", group},
+        {"name", name},
+        {"dest", data::location::PUBLIC}}},
       {"event_count", count},
       {"event_log", {{"path", jsonl_path}, {"segment_sha256", segment_sha}}},
       {"event_checksums", event_digests},

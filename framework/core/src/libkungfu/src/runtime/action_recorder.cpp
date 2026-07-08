@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
-#include <kungfu/yijinjing/action_recorder.h>
-#include <kungfu/yijinjing/io.h>
+#include <kungfu/runtime/action_recorder.h>
+#include <kungfu/runtime/io.h>
 #include <kungfu/yijinjing/time.h>
 
 #include <cstring>
@@ -9,9 +9,9 @@
 
 using namespace kungfu::longfist::enums;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::yijinjing::journal;
+using namespace kungfu::runtime::journal;
 
-namespace kungfu::yijinjing::action {
+namespace kungfu::runtime::action {
 
 namespace {
 constexpr uint32_t FRAME_INTEGRITY_VERSION = 1;
@@ -142,4 +142,4 @@ record_receipt action_recorder::record_payload(int32_t carrier_type, const uint8
   return receipt;
 }
 
-} // namespace kungfu::yijinjing::action
+} // namespace kungfu::runtime::action

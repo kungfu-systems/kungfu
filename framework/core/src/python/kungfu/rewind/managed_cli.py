@@ -46,7 +46,7 @@ from kungfu.skill import (
 )
 
 lf = kungfu.__binding__.longfist
-yjj = kungfu.__binding__.yijinjing
+yjj = kungfu.__binding__.runtime
 
 
 @dataclass

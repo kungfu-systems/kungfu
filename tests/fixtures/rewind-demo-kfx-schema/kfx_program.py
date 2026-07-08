@@ -31,7 +31,7 @@ if not run_id:
 # 1. compile this kfx's schema to a .bfbs in-process (no flatc binary)
 with open(os.path.join(_HERE, "kfx_event.fbs"), "r", encoding="utf-8") as f:
     fbs_text = f.read()
-bfbs, error = kungfu.__binding__.yijinjing.compile_schema(fbs_text)
+bfbs, error = kungfu.__binding__.runtime.compile_schema(fbs_text)
 if error:
     print(f"kfx schema compile failed: {error}", file=sys.stderr)
     sys.exit(1)

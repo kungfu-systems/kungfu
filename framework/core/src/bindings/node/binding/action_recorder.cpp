@@ -4,8 +4,8 @@
 
 #include <vector>
 
-using kungfu::yijinjing::action::record_options;
-using kungfu::yijinjing::action::record_receipt;
+using kungfu::runtime::action::record_options;
+using kungfu::runtime::action::record_receipt;
 
 namespace kungfu::node {
 
@@ -107,7 +107,7 @@ ActionRecorder::ActionRecorder(const Napi::CallbackInfo &info) : ObjectWrap(info
   const auto dest_id =
       IsValid(info, 3) ? static_cast<uint32_t>(read_uint64(info[3])) : yijinjing::data::location::PUBLIC;
   const auto stream_id = IsValid(info, 4) ? read_uint64(info[4]) : 0;
-  recorder_ = std::make_unique<yijinjing::action::action_recorder>(runtime_dir, group, name, dest_id, stream_id);
+  recorder_ = std::make_unique<runtime::action::action_recorder>(runtime_dir, group, name, dest_id, stream_id);
 }
 
 Napi::Value ActionRecorder::RecordBytes(const Napi::CallbackInfo &info) {

@@ -64,6 +64,35 @@ tables, or a mix. That choice must remain behind the storage service. Public
 commands and SDKs should talk about events, payload references, manifests,
 watermarks, bundles, projections, source locations, and verification.
 
+Implementation boundary:
+
+- `libyijinjing` owns the language-neutral storage semantic kernel:
+  journal/location identity, event ranges, range selectors, payload references,
+  manifests, source records, channel requests/cursors, accepted segments,
+  hash/schema inventories, fsck reports, and provider interfaces.
+- `libkungfu` owns runtime implementation and adapters on top of that kernel:
+  RocksDB-backed providers, SQLite projections, transport/process wiring,
+  typed schema dumping, Python/Node bindings, and product command surfaces.
+
+This keeps storage facts portable across C++, Python, and Node without making
+Python or JavaScript responsible for their own storage semantics. It also keeps
+backend choices replaceable: a backend can change without changing the
+`yijinjing` contract or the product vocabulary.
+
+The first C++ contract surface is intentionally header-only vocabulary under
+`<kungfu/yijinjing/storage...>`:
+
+| Header | Contract role |
+| --- | --- |
+| `common.h` | Stable primitive enums and references: payload state, verification status, content hash, location, event range. |
+| `range.h` | Range selectors and hash inventories for partial fetch/export. |
+| `source.h` | Source identity, heads, accepted ranges, and registry snapshots. |
+| `bundle.h` | Manifest, payload inventory, schema inventory, and bundle root. |
+| `channel.h` | Channel refs, cursors, and request envelopes. |
+| `acceptance.h` | Accepted segments plus import/export/sync result records. |
+| `fsck.h` | Read-only verification options, issue taxonomy, and reports. |
+| `provider.h` | Abstract service/provider interfaces implemented above the kernel. |
+
 ## Source, Location, And Channel
 
 Runtime storage sync should build on Kungfu's native runtime concepts instead

@@ -217,9 +217,9 @@ function checkCarrierActionEnvelope(scopeArgs = []) {
   ]);
 }
 
-function checkYijinjingGreenfield(scopeArgs = []) {
-  run('yijinjing greenfield gate', 'node', [
-    path.join('scripts', 'check-yijinjing-greenfield.mjs'),
+function checkRuntimeGreenfield(scopeArgs = []) {
+  run('runtime greenfield gate', 'node', [
+    path.join('scripts', 'check-runtime-greenfield.mjs'),
     ...scopeArgs,
   ]);
 }
@@ -227,7 +227,7 @@ function checkYijinjingGreenfield(scopeArgs = []) {
 function checkStaged() {
   checkNoBashStaged();
   checkCarrierActionEnvelope(['--staged']);
-  checkYijinjingGreenfield(['--staged']);
+  checkRuntimeGreenfield(['--staged']);
   const files = stagedFiles();
   if (!files.length) {
     log('[check] no staged source files');
@@ -313,7 +313,7 @@ function checkShared() {
 function checkChanged() {
   checkNoBashTree();
   checkCarrierActionEnvelope();
-  checkYijinjingGreenfield();
+  checkRuntimeGreenfield();
   checkBiomeFiles('changed', changedFiles());
   checkShared();
   log('\n[check] changed-scope gate passed');
@@ -322,7 +322,7 @@ function checkChanged() {
 function checkAll() {
   checkNoBashTree();
   checkCarrierActionEnvelope(['--all']);
-  checkYijinjingGreenfield(['--all']);
+  checkRuntimeGreenfield(['--all']);
   run('repo lint + format check', 'pnpm', ['run', 'lint']);
   checkShared();
   log('\n[check] whole-tree gate passed');

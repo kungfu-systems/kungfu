@@ -3,7 +3,7 @@
 // C++ action_recorder smoke: record a causal chain through the core recorder,
 // reopen it with assemble, and verify receipts against the journal bytes.
 
-#include <kungfu/yijinjing/action_recorder.h>
+#include <kungfu/runtime/action_recorder.h>
 #include <kungfu/yijinjing/common.h>
 #include <kungfu/yijinjing/journal/assemble.h>
 
@@ -17,7 +17,7 @@
 #include <string>
 #include <vector>
 
-using namespace kungfu::yijinjing;
+using namespace kungfu::runtime;
 namespace longfist = kungfu::longfist;
 using kungfu::slices::sha256;
 
@@ -124,7 +124,7 @@ int main(int argc, char **argv) {
       {"event_count", receipts.size()},
       {"causal_chain_verified", true},
       {"frame_integrity_verified", true},
-      {"record_surface", "kungfu::yijinjing::action::action_recorder"},
+      {"record_surface", "kungfu::runtime::action::action_recorder"},
   };
   std::cout << out.dump(2) << "\n";
   return 0;

@@ -3,7 +3,7 @@
 using namespace kungfu::longfist;
 using namespace kungfu::longfist::types;
 using namespace kungfu::longfist::enums;
-using namespace kungfu::yijinjing;
+using namespace kungfu::runtime;
 using namespace kungfu::yijinjing::data;
 
 namespace kungfu::node {
@@ -24,7 +24,7 @@ SessionStore::~SessionStore() { io_device_.reset(); }
 // rethrow as a JS-catchable error instead.
 Napi::Value SessionStore::GetAllSessions(const Napi::CallbackInfo &info) {
   try {
-    auto session_finder = std::make_shared<index::session_finder>(io_device_);
+    auto session_finder = std::make_shared<runtime::index::session_finder>(io_device_);
     auto sessions = session_finder->find_sessions(time::history_window_start(), INT64_MAX);
     return ParseSessions(info, sessions);
   } catch (const std::exception &ex) {
@@ -35,7 +35,7 @@ Napi::Value SessionStore::GetAllSessions(const Napi::CallbackInfo &info) {
 
 Napi::Value SessionStore::GetSessionsForLocation(const Napi::CallbackInfo &info) {
   try {
-    auto session_finder = std::make_shared<index::session_finder>(io_device_);
+    auto session_finder = std::make_shared<runtime::index::session_finder>(io_device_);
     auto location = IODevice::ExtractLocation(info, 0, io_device_->get_locator());
     auto sessions = session_finder->find_sessions_for(location, time::history_window_start(), INT64_MAX);
     return ParseSessions(info, sessions);

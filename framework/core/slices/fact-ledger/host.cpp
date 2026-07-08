@@ -28,7 +28,7 @@
 #include <string>
 #include <vector>
 
-using namespace kungfu::yijinjing;
+using namespace kungfu::runtime;
 namespace longfist = kungfu::longfist;
 using longfist::enums::FrameDataType;
 
@@ -86,18 +86,17 @@ int main(int argc, char **argv) {
   const std::string name = "host";
 
   auto locator = std::make_shared<data::locator>(root);
-  auto location = data::location::make_shared(longfist::enums::mode::LIVE, longfist::enums::category::SYSTEM, group, name,
-                                              locator);
+  auto location =
+      data::location::make_shared(longfist::enums::mode::LIVE, longfist::enums::category::SYSTEM, group, name, locator);
 
   // The whole point: a noop bus (no hero/drain loop) and a noop publisher (no
   // nng socket). Nothing here starts the trading runtime.
   auto bus = std::make_shared<journal::bus>(false);
   auto publisher = std::make_shared<journal::noop_publisher>();
-  auto writer =
-      std::make_shared<journal::writer>(location, data::location::PUBLIC, /*lazy=*/true, publisher,
-                                        /*low_latency=*/false, bus);
+  auto writer = std::make_shared<journal::writer>(location, data::location::PUBLIC, /*lazy=*/true, publisher,
+                                                  /*low_latency=*/false, bus);
 
-  uint64_t prev_uid = 0;   // 0 == root cause (no parent) for the first event
+  uint64_t prev_uid = 0; // 0 == root cause (no parent) for the first event
   int64_t prev_gen_time = 0;
 
   std::vector<nlohmann::json> chain; // for a human-readable stderr trace only
@@ -135,14 +134,10 @@ int main(int argc, char **argv) {
   // locate the journal. Authoritative verification is done by the independent
   // export tool re-deriving these from disk, not from this print.
   nlohmann::json out = {
-      {"root", root},
-      {"mode", "LIVE"},
-      {"category", "SYSTEM"},
-      {"group", group},
-      {"name", name},
-      {"dest", data::location::PUBLIC},
-      {"event_count", n},
-      {"expected_chain", chain},
+      {"root", root},         {"mode", "LIVE"},
+      {"category", "SYSTEM"}, {"group", group},
+      {"name", name},         {"dest", data::location::PUBLIC},
+      {"event_count", n},     {"expected_chain", chain},
   };
   std::cout << out.dump(2) << std::endl;
   return 0;

@@ -5,9 +5,9 @@
 //
 
 #include <kungfu/common.h>
-#include <kungfu/yijinjing/nanomsg/socket.h>
+#include <kungfu/runtime/nanomsg/socket.h>
 
-namespace kungfu::nanomsg {
+namespace kungfu::runtime::nanomsg {
 
 const char *nn_exception::what() const throw() { return nng_strerror(errno_); }
 
@@ -182,4 +182,4 @@ nlohmann::json socket::recv_json(int flags) {
     return nlohmann::json{};
   }
 }
-} // namespace kungfu::nanomsg
+} // namespace kungfu::runtime::nanomsg

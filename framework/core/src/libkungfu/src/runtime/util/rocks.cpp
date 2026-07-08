@@ -1,6 +1,6 @@
+#include <kungfu/runtime/util/rocks.h>
 #include <kungfu/yijinjing/common.h>
-#include <kungfu/yijinjing/util/rocks.h>
-namespace kungfu::yijinjing::util {
+namespace kungfu::runtime::util {
 
 rocksdb::Status rocks::open_db(const std::string &dir, rocksdb::DB **db, bool is_writing) {
   if (is_writing) {
@@ -161,4 +161,4 @@ static const bool master_kv_provider_installed = [] {
   return true;
 }();
 
-} // namespace kungfu::yijinjing::util
+} // namespace kungfu::runtime::util

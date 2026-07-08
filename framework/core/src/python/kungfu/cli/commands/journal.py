@@ -14,12 +14,12 @@ from datetime import datetime, timedelta
 from tabulate import tabulate  # type: ignore[import-untyped]  # no stubs
 
 from kungfu.cli.commands import kfc, PrioritizedCommandGroup
-from kungfu.yijinjing import LOG_PATTERN, ARCHIVE_PREFIX
-from kungfu.yijinjing import journal as kfj
-from kungfu.yijinjing import time as kft
-from kungfu.yijinjing.log import create_logger
-from kungfu.yijinjing.sinks.archive import ArchiveSink
-from kungfu.yijinjing.utils import prune_layout_files, prue_layout_dirs_before_timestamp
+from kungfu.runtime import LOG_PATTERN, ARCHIVE_PREFIX
+from kungfu.runtime import journal as kfj
+from kungfu.runtime import time as kft
+from kungfu.runtime.log import create_logger
+from kungfu.runtime.sinks.archive import ArchiveSink
+from kungfu.runtime.utils import prune_layout_files, prue_layout_dirs_before_timestamp
 
 
 SESSION_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -30,7 +30,7 @@ DURATION_TZ_ADJUST = int(
 )
 
 lf = kungfu.__binding__.longfist
-yjj = kungfu.__binding__.yijinjing
+yjj = kungfu.__binding__.runtime
 journal_command_context = kfc.pass_context(
     "logger", "location", "console_width", "console_height"
 )

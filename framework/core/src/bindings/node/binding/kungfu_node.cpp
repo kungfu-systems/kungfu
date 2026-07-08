@@ -43,7 +43,7 @@ decltype(__pfnDliNotifyHook2) __pfnDliNotifyHook2 = load_exe_hook;
 #endif // _MSC_VER
 
 #include <kungfu/common.h>
-#include <kungfu/yijinjing/io.h>
+#include <kungfu/runtime/io.h>
 #include <kungfu/yijinjing/util/util.h>
 
 #include "action_recorder.h"
@@ -62,7 +62,7 @@ decltype(__pfnDliNotifyHook2) __pfnDliNotifyHook2 = load_exe_hook;
 using namespace kungfu::longfist;
 using namespace kungfu::longfist::enums;
 using namespace kungfu::longfist::types;
-using namespace kungfu::yijinjing;
+using namespace kungfu::runtime;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::node;
 

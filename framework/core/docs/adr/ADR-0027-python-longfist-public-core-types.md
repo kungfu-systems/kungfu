@@ -6,7 +6,7 @@ accepted
 
 ## Context
 
-ADR-0026 narrowed Python `pykungfu.yijinjing` to raw/envelope runtime APIs, but
+ADR-0026 narrowed Python `pykungfu.runtime` to raw/envelope runtime APIs, but
 `pykungfu.longfist.types` still bound every generated `AllDataTypes` class. That
 kept old trading and profile schemas visible as first-class Python API:
 `Order`, `Trade`, `Quote`, `Asset`, `Position`, `RiskSetting`, `Commission`,
@@ -32,7 +32,7 @@ channel/read/write requests, cache coordination, state updates, and time values.
 Add matching Python-public subsets for state and profile bindings:
 
 - `CorePublicStateDataTypes` for `pykungfu.longfist.state`;
-- `CorePublicProfileDataTypes` for `pykungfu.yijinjing.profile`.
+- `CorePublicProfileDataTypes` for `pykungfu.runtime.profile`.
 
 Change the Python longfist type binding to iterate `CorePublicDataTypes` instead
 of `AllDataTypes`; change the Python state/profile bindings to iterate the new
@@ -51,7 +51,7 @@ module now exposes only neutral runtime enums.
 Remove the typed trading mode from the dispatch load benchmark so the benchmark
 does not force `Quote` to remain a Python public type.
 
-Extend `scripts/check-yijinjing-greenfield.mjs` to block:
+Extend `scripts/check-runtime-greenfield.mjs` to block:
 
 - Python longfist binding code that returns to `AllDataTypes`;
 - committed Python stubs that expose old trading/profile typed classes;

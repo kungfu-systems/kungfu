@@ -8,9 +8,9 @@
 #include "io.h"
 #include <cmath>
 
-using namespace kungfu::yijinjing;
+using namespace kungfu::runtime;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::yijinjing::journal;
+using namespace kungfu::runtime::journal;
 using namespace kungfu::longfist::types;
 
 namespace kungfu::node {

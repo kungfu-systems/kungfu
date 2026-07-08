@@ -10,9 +10,9 @@ using namespace kungfu::rx;
 using namespace kungfu::longfist;
 using namespace kungfu::longfist::enums;
 using namespace kungfu::longfist::types;
-using namespace kungfu::yijinjing;
+using namespace kungfu::runtime;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::practice;
+using namespace kungfu::runtime::practice;
 
 namespace kungfu::node::serialize {
 void InitObjectReference(const Napi::CallbackInfo &info, Napi::ObjectReference &data) {

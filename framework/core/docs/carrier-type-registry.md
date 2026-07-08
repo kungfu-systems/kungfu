@@ -43,7 +43,7 @@ the action envelope:
 | `1000` | Kungfu action runtime | `kungfu.action-envelope/v1`; business semantics come from `action_type` and `schema_ref`. |
 | `1101` | longfist born-FB bridge | Internal Asset FlatBuffers migration carrier. |
 | `1103` | longfist born-FB bridge | Internal Position FlatBuffers migration carrier. |
-| `10051-10751` | yijinjing runtime service markers | Existing internal service/control tags such as `PageEnd`, `Time`, `Ping`, `Pong`, cache, and socket markers. |
+| `10051-10751` | runtime service markers | Existing internal service/control tags such as `PageEnd`, `Time`, `Ping`, `Pong`, cache, and socket markers. |
 
 Rules:
 

@@ -29,7 +29,7 @@
 #include <iostream>
 #include <string>
 
-using namespace kungfu::yijinjing;
+using namespace kungfu::runtime;
 using kungfu::slices::sha256;
 namespace longfist = kungfu::longfist;
 using longfist::enums::FrameDataType;
@@ -89,8 +89,8 @@ int main(int argc, char **argv) {
     if (version == 1) {
       fbb.Finish(slices::demo::v1::CreateSmokeEventDirect(fbb, static_cast<uint32_t>(i), kind_for(i).c_str()));
     } else {
-      fbb.Finish(slices::demo::v2::CreateSmokeEventDirect(fbb, static_cast<uint32_t>(i), kind_for(i).c_str(),
-                                                          "added in v2"));
+      fbb.Finish(
+          slices::demo::v2::CreateSmokeEventDirect(fbb, static_cast<uint32_t>(i), kind_for(i).c_str(), "added in v2"));
     }
     append(MSG_DEMO_FB, FrameDataType::Raw, fbb.GetBufferPointer(), fbb.GetSize());
   }
@@ -128,18 +128,16 @@ int main(int argc, char **argv) {
           {"name", "SmokeEvent"},
           {"schema_version", version},
           {"schema_hash", schema_hash}}},
-        {std::to_string(MSG_DEMO_JSON),
-         {{"schema_kind", "json"}, {"name", "RunSummary"}, {"schema_version", 1}}}}},
-      {"capture_boundary",
-       "schema bindings cover this run's FB and Json events only; legacy closed-set POD frames "
-       "are not decodable from the bundle and are out of scope by design"},
+        {std::to_string(MSG_DEMO_JSON), {{"schema_kind", "json"}, {"name", "RunSummary"}, {"schema_version", 1}}}}},
+      {"capture_boundary", "schema bindings cover this run's FB and Json events only; legacy closed-set POD frames "
+                           "are not decodable from the bundle and are out of scope by design"},
   };
   {
     std::ofstream out(bundle / "manifest.json");
     out << manifest.dump(2) << std::endl;
   }
 
-  std::cout << "OK: wrote " << FB_EVENT_COUNT << " FB events (schema v" << version
-            << ", hash " << schema_hash.substr(0, 12) << "...) + 1 Json event; bundle at " << bundle << std::endl;
+  std::cout << "OK: wrote " << FB_EVENT_COUNT << " FB events (schema v" << version << ", hash "
+            << schema_hash.substr(0, 12) << "...) + 1 Json event; bundle at " << bundle << std::endl;
   return 0;
 }

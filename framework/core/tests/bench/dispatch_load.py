@@ -29,7 +29,7 @@ sys.path.insert(0, os.path.join(_core, "dist", "kungfu"))
 import kungfu  # noqa: E402
 
 lf = kungfu.__binding__.longfist
-yjj = kungfu.__binding__.yijinjing
+yjj = kungfu.__binding__.runtime
 
 PUBLIC_DEST = 0
 # Generic action envelope carrier; no longfist tag, so on the master side every

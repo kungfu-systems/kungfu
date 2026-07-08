@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
-#include <kungfu/yijinjing/schema/schema_compiler.h>
+#include <kungfu/runtime/schema/schema_compiler.h>
 
 #include <flatbuffers/idl.h>
 
-namespace kungfu::yijinjing::schema {
+namespace kungfu::runtime::schema {
 
 compile_result compile_fbs(const std::string &fbs_text, const compile_options &opts) {
   compile_result result;
@@ -47,4 +47,4 @@ compile_result compile_fbs(const std::string &fbs_text, const compile_options &o
   return result;
 }
 
-} // namespace kungfu::yijinjing::schema
+} // namespace kungfu::runtime::schema

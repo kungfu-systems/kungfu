@@ -4,9 +4,9 @@
 // Created by Keren Dong on 2020/3/27.
 //
 
-#include <kungfu/yijinjing/cache/backend.h>
+#include <kungfu/runtime/cache/backend.h>
 
-namespace kungfu::cache {
+namespace kungfu::runtime::cache {
 
 namespace fs = std::filesystem;
 
@@ -33,4 +33,4 @@ bool shift::check_storage_exists(uint32_t dest) {
   return fs::exists(db_file);
 }
 
-} // namespace kungfu::cache
+} // namespace kungfu::runtime::cache

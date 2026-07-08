@@ -16,6 +16,7 @@
 #include <kungfu/yijinjing/common.h>
 #include <kungfu/yijinjing/journal/assemble.h>
 #include <kungfu/yijinjing/journal/journal.h>
+#include <kungfu/yijinjing/storage.h>
 #include <kungfu/yijinjing/time.h>
 
 #include <nlohmann/json.hpp>
@@ -56,8 +57,8 @@ int main(int argc, char **argv) {
   std::vector<uint64_t> written_uids;
   {
     auto locator = std::make_shared<data::locator>(root);
-    auto location = data::location::make_shared(longfist::enums::mode::LIVE, longfist::enums::category::SYSTEM, group,
-                                                name, locator);
+    auto location = data::location::make_shared(longfist::enums::mode::LIVE, longfist::enums::location_role::SYSTEM,
+                                                group, name, locator);
     auto bus = std::make_shared<journal::bus>(false);
     auto publisher = std::make_shared<journal::noop_publisher>();
     auto writer = std::make_shared<journal::writer>(location, data::location::PUBLIC, /*lazy=*/true, publisher,
@@ -81,9 +82,21 @@ int main(int argc, char **argv) {
   } // writer closed; from here on the process only reads the format
 
   // ── read side: reconstruct the identity, reopen, assert the chain ──
+  storage::manifest_ref manifest{};
+  manifest.source.id = "embedding_slice";
+  manifest.source.kind = storage::source_kind::Local;
+  manifest.location.group = group;
+  manifest.location.name = name;
+  manifest.range.first_frame_uid = written_uids.front();
+  manifest.range.last_frame_uid = written_uids.back();
+  if (!manifest.range.has_frame_bounds()) {
+    std::cerr << "FAIL: storage manifest contract did not preserve frame bounds\n";
+    return 1;
+  }
+
   auto locator = std::make_shared<data::locator>(root);
-  auto location =
-      data::location::make_shared(longfist::enums::mode::LIVE, longfist::enums::category::SYSTEM, group, name, locator);
+  auto location = data::location::make_shared(longfist::enums::mode::LIVE, longfist::enums::location_role::SYSTEM,
+                                              group, name, locator);
   journal::assemble reader(location, data::location::PUBLIC, longfist::enums::AssembleMode::Channel, 0);
 
   std::size_t count = 0;

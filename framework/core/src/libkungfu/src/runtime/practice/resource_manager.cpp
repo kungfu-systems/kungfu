@@ -1,10 +1,10 @@
 
-#include <kungfu/yijinjing/practice/apprentice.h>
+#include <kungfu/runtime/practice/apprentice.h>
 
-using namespace kungfu::practice;
+using namespace kungfu::runtime::practice;
 using namespace kungfu::longfist::enums;
 
-namespace kungfu::practice {
+namespace kungfu::runtime::practice {
 
 resource_manager::resource_manager(apprentice &app) : app_(app) {}
 
@@ -46,4 +46,4 @@ resource_manager::~resource_manager() {
   }
 }
 
-} // namespace kungfu::practice
+} // namespace kungfu::runtime::practice

@@ -10,25 +10,25 @@
 #include <vector>
 
 #include <kungfu/common.h>
+#include <kungfu/runtime/nanomsg/socket.h>
+#include <kungfu/runtime/practice/hero.h>
+#include <kungfu/runtime/util/rocks.h>
 #include <kungfu/yijinjing/log.h>
-#include <kungfu/yijinjing/nanomsg/socket.h>
-#include <kungfu/yijinjing/practice/hero.h>
 #include <kungfu/yijinjing/time.h>
 #include <kungfu/yijinjing/util/os.h>
-#include <kungfu/yijinjing/util/rocks.h>
 #include <kungfu/yijinjing/util/util.h>
 
 using namespace kungfu::rx;
 using namespace kungfu::longfist::enums;
 using namespace kungfu::longfist::types;
-using namespace kungfu::yijinjing;
-using namespace kungfu::yijinjing::util;
-using namespace kungfu::cache;
+using namespace kungfu::runtime;
+using namespace kungfu::runtime::util;
+using namespace kungfu::runtime::cache;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::yijinjing::journal;
-using namespace kungfu::nanomsg;
+using namespace kungfu::runtime::journal;
+using namespace kungfu::runtime::nanomsg;
 
-namespace kungfu::practice {
+namespace kungfu::runtime::practice {
 
 namespace {
 // Dispatch-latency probe for the reactive event layer (evidence for
@@ -90,13 +90,13 @@ struct dispatch_probe {
 thread_local dispatch_probe dispatch_probe_ = {};
 } // namespace
 
-inline std::string encode(const yijinjing::io_device_ptr &io_device) {
+inline std::string encode(const kungfu::runtime::io_device_ptr &io_device) {
   auto home_uid =
       io_device->get_home()->mode == mode::BACKTEST ? io_device->get_home()->uid : io_device->get_live_home()->uid;
   return fmt::format("{:08x}", home_uid);
 }
 
-hero::hero(yijinjing::io_device_ptr io_device)
+hero::hero(kungfu::runtime::io_device_ptr io_device)
     : begin_time_(yijinjing::time::now_in_nano()), end_time_(INT64_MAX),
       master_home_location_(make_system_location("master", "master", io_device->get_locator())),
       master_cmd_location_(
@@ -196,7 +196,7 @@ int64_t hero::get_end_time() const { return end_time_; }
 
 const locator_ptr &hero::get_locator() const { return io_device_->get_locator(); }
 
-yijinjing::io_device_ptr hero::get_io_device() const { return io_device_; }
+kungfu::runtime::io_device_ptr hero::get_io_device() const { return io_device_; }
 
 const location_ptr &hero::get_home() const { return get_io_device()->get_home(); }
 
@@ -768,4 +768,4 @@ void hero::read_location_from_rocksdb() {
     }
   }
 }
-} // namespace kungfu::practice
+} // namespace kungfu::runtime::practice

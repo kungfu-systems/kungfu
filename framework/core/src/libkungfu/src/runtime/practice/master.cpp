@@ -6,8 +6,8 @@
 
 #include <kungfu/common.h>
 #include <kungfu/longfist/longfist.h>
+#include <kungfu/runtime/practice/master.h>
 #include <kungfu/yijinjing/journal/frame.h>
-#include <kungfu/yijinjing/practice/master.h>
 #include <kungfu/yijinjing/time.h>
 #include <kungfu/yijinjing/util/os.h>
 
@@ -15,16 +15,16 @@ using namespace kungfu::rx;
 using namespace kungfu::longfist;
 using namespace kungfu::longfist::types;
 using namespace kungfu::longfist::enums;
-using namespace kungfu::cache;
+using namespace kungfu::runtime::cache;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::yijinjing::journal;
+using namespace kungfu::runtime::journal;
 
-namespace kungfu::practice {
+namespace kungfu::runtime::practice {
 
 master::master(const location_ptr &home, bool low_latency)
-    : master(std::make_shared<yijinjing::io_device_master>(home, low_latency)) {}
+    : master(std::make_shared<kungfu::runtime::io_device_master>(home, low_latency)) {}
 
-master::master(const yijinjing::io_device_ptr &io_device) : hero(io_device), last_check_(0), cached_(io_device) {}
+master::master(const kungfu::runtime::io_device_ptr &io_device) : hero(io_device), last_check_(0), cached_(io_device) {}
 
 void master::pre_setup() {
   hero::pre_setup();
@@ -447,4 +447,4 @@ void master::write_bands(int64_t trigger_time, const writer_ptr &writer) {
 
 bool master::is_reactable(const event_ptr &event) { return not is_custom_event(event); }
 
-} // namespace kungfu::practice
+} // namespace kungfu::runtime::practice

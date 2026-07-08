@@ -4,8 +4,8 @@
 #include "common.h"
 #include "io.h"
 #include "operators.h"
-#include <kungfu/yijinjing/index/session.h>
-#include <kungfu/yijinjing/io.h>
+#include <kungfu/runtime/index/session.h>
+#include <kungfu/runtime/io.h>
 #include <kungfu/yijinjing/time.h>
 
 namespace kungfu::node {
@@ -26,9 +26,9 @@ public:
 
 private:
   serialize::JsSet set;
-  yijinjing::io_device_ptr io_device_;
+  kungfu::runtime::io_device_ptr io_device_;
 
-  Napi::Value ParseSessions(const Napi::CallbackInfo &info, index::SessionVector sessions) {
+  Napi::Value ParseSessions(const Napi::CallbackInfo &info, runtime::index::SessionVector sessions) {
     size_t session_size = sessions.size();
     auto list = Napi::Array::New(info.Env(), session_size);
     for (int i = 0; i < session_size; i++) {

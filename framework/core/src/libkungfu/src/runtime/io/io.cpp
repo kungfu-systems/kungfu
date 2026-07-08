@@ -2,20 +2,20 @@
 
 #include <kungfu/common.h>
 #include <kungfu/longfist/longfist.h>
-#include <kungfu/yijinjing/io.h>
+#include <kungfu/runtime/io.h>
+#include <kungfu/runtime/util/rocks.h>
 #include <kungfu/yijinjing/journal/bus.h>
 #include <kungfu/yijinjing/log.h>
 #include <kungfu/yijinjing/time.h>
-#include <kungfu/yijinjing/util/rocks.h>
 
 using namespace kungfu::longfist;
 using namespace kungfu::longfist::enums;
 using namespace kungfu::longfist::types;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::yijinjing::journal;
-using namespace kungfu::nanomsg;
+using namespace kungfu::runtime::journal;
+using namespace kungfu::runtime::nanomsg;
 
-namespace kungfu::yijinjing {
+namespace kungfu::runtime {
 class ipc_url_factory : public url_factory {
 public:
   virtual ~ipc_url_factory() {}
@@ -253,4 +253,4 @@ bool io_device_client::setup() {
 
   return true;
 }
-} // namespace kungfu::yijinjing
+} // namespace kungfu::runtime

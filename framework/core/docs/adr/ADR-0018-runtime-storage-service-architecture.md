@@ -45,6 +45,19 @@ The public contract talks about facts, payload references, manifests, schemas,
 projections, watermarks, source metadata, and verification results; it does not
 promise a specific backend such as RocksDB, SQLite, mmap frames, or files.
 
+The storage semantic contract belongs to `libyijinjing`, the journal/fact-ledger
+kernel. Runtime code may implement the contract with RocksDB, content-addressed
+files, SQLite projections, or other backends, but those implementations sit in
+`libkungfu` above the kernel. Python and Node expose bindings over the C++
+surface; they do not own independent storage semantics.
+
+The `libyijinjing` storage contract must expose the Git-like synchronization
+vocabulary as C++ data contracts, not as Python-only or JavaScript-only helper
+records: source refs, source heads, range selectors, hash inventories, channel
+requests/cursors, bundle manifests, accepted segments, import/export/sync
+results, and fsck issue/report records. `libkungfu` may bind and implement those
+interfaces, but it must not redefine the architecture-level vocabulary.
+
 The architecture has these roles:
 
 | Part | Role | Authority |
@@ -78,6 +91,11 @@ execution.
 - Backend choices stay replaceable. RocksDB, content-addressed files, SQLite
   blob tables, mmap frames, or hybrids can be adopted per slice without changing
   the product vocabulary.
+- `libyijinjing` remains the language-neutral storage contract surface, while
+  `libkungfu` remains the runtime/provider/projection/binding layer above it.
+- Future Python, Node, and C++ action-recording users share the same storage
+  vocabulary; language bindings call the C++ contract surface instead of
+  inventing independent import/export/fsck models.
 - Large payloads are not stored by making journal frames arbitrarily large. The
   journal carries commitments and metadata; the payload store carries bodies.
 - SQLite is a projection facility, not the authority root. It may be rebuilt

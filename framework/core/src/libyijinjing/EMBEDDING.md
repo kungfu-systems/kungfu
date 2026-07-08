@@ -1,10 +1,10 @@
 # Embedding the yijinjing journal core
 
-`yijinjing` is the journal spine of kungfu -- frame/page mmap machinery,
-reader/writer, assemble, locator/location and the base utilities they stand
-on -- built as a standalone static library (`libyijinjing.a`). This document
-is the embedding contract: what you get, what you must provide, and what is
-deliberately not offered.
+`yijinjing` is the journal and storage-semantic spine of kungfu -- frame/page
+mmap machinery, reader/writer, assemble, locator/location, the storage service
+contracts, and the base utilities they stand on -- built as a standalone static
+library (`libyijinjing.a`). This document is the embedding contract: what you
+get, what you must provide, and what is deliberately not offered.
 
 ## Distribution form
 
@@ -49,9 +49,14 @@ as-is and performs no `find_package` of its own.
   no master, no event loop, no sockets, no databases. The
   `slices/fact-ledger/` tools under `framework/core/slices/` are the
   reference consumers;
+- the storage semantic contracts under `<kungfu/yijinjing/storage...>`:
+  payload references, range selectors, source heads, channel requests/cursors,
+  manifests, hash/schema inventories, accepted segments, fsck reports, and
+  provider interfaces. These are contracts only; no RocksDB, SQLite, transport,
+  or runtime process implementation is included;
 - a dependency-direction guarantee, enforced by `check-deps.sh`: the core
-  never includes runtime, transport or storage headers, the trading type
-  registry, or any trading type.
+  never includes runtime, transport or storage-engine headers, the trading
+  type registry, or any trading type.
 
 ## Deliberately not offered
 

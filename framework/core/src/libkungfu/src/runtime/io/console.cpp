@@ -7,8 +7,8 @@
 #include <fstream>
 #include <kungfu/common.h>
 #include <kungfu/longfist/longfist.h>
-#include <kungfu/yijinjing/io.h>
-#include <kungfu/yijinjing/journal/tracer.h>
+#include <kungfu/runtime/io.h>
+#include <kungfu/runtime/journal/tracer.h>
 #include <kungfu/yijinjing/log.h>
 #include <kungfu/yijinjing/time.h>
 #include <tabulate/table.hpp>
@@ -20,9 +20,9 @@ using namespace kungfu::longfist;
 using namespace kungfu::longfist::enums;
 using namespace kungfu::longfist::types;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::yijinjing::journal;
+using namespace kungfu::runtime::journal;
 
-namespace kungfu::yijinjing {
+namespace kungfu::runtime {
 struct console_table {
   Table table = {};
   int32_t width;
@@ -82,7 +82,7 @@ io_device_console::io_device_console(data::location_ptr home, int32_t console_wi
 
 void io_device_console::trace(int64_t begin_time, int64_t end_time, bool in, bool out, std::string csv) {
   SPDLOG_INFO("trace begin_time {} end_time {}", begin_time, end_time);
-  auto tracer = std::make_shared<yijinjing::journal::tracer>(home_, in, out, begin_time, end_time);
+  auto tracer = std::make_shared<runtime::journal::tracer>(home_, in, out, begin_time, end_time);
   auto &locations = tracer->get_all_locations();
 
   console_table table(console_width_, console_height_);
@@ -148,7 +148,7 @@ void io_device_console::trace(int64_t begin_time, int64_t end_time, bool in, boo
 
 void io_device_console::show(int64_t begin_time, int64_t end_time, bool in, bool out, std::string csv) {
   SPDLOG_INFO("show begin_time {} end_time {}", begin_time, end_time);
-  auto tracer = std::make_shared<yijinjing::journal::tracer>(home_, in, out, begin_time, end_time);
+  auto tracer = std::make_shared<runtime::journal::tracer>(home_, in, out, begin_time, end_time);
   auto &locations = tracer->get_all_locations();
 
   console_table table(console_width_, console_height_, true);
@@ -209,4 +209,4 @@ void io_device_console::show(int64_t begin_time, int64_t end_time, bool in, bool
     of_csv.close();
   }
 }
-} // namespace kungfu::yijinjing
+} // namespace kungfu::runtime

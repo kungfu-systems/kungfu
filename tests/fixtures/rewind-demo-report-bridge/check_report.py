@@ -17,7 +17,7 @@ from kungfu.rewind.wire import unwrap_event
 from kungfu.work import store as work_store
 
 lf = kungfu.__binding__.longfist
-yjj = kungfu.__binding__.yijinjing
+yjj = kungfu.__binding__.runtime
 
 home, run_id, work_id = sys.argv[1:4]
 failures = []

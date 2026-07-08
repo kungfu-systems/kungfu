@@ -5,7 +5,7 @@
 
 #include "common.h"
 
-#include <kungfu/yijinjing/action_recorder.h>
+#include <kungfu/runtime/action_recorder.h>
 
 #include <memory>
 
@@ -32,7 +32,7 @@ private:
     ActionRecorder::constructor.Reset();
   }
 
-  std::unique_ptr<yijinjing::action::action_recorder> recorder_;
+  std::unique_ptr<runtime::action::action_recorder> recorder_;
 };
 
 } // namespace kungfu::node

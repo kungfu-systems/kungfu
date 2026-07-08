@@ -20,9 +20,9 @@ principles behind them see [`design-philosophy.md`](design-philosophy.md).
 
 | Term | What it is |
 |---|---|
-| **libkungfu** | The C++ **core library**: the `longfist` type system and the `yijinjing` journal runtime, with C++/Python/Node bindings. This is what the README calls the "zero-copy, multi-language runtime"; it is packaged as `@kungfu-tech/core` and is the foundation the `kungfu` runtime is built on. |
+| **libkungfu** | The C++ **runtime library** built above `longfist` and `yijinjing`, with C++/Python/Node bindings, runtime providers, projections, and process wiring. This is what the README calls the "zero-copy, multi-language runtime"; it is packaged as `@kungfu-tech/core` and is the foundation the `kungfu` runtime is built on. |
 | **longfist** | The unified **type system / schema** (FlatBuffers-based). Its binary layout *is* the cross-language and on-disk contract — see [ADR-0008](../framework/core/docs/adr/ADR-0008-longfist-schema-evolution-and-minor-maintenance.md). |
-| **yijinjing** | The append-only **journal runtime** — the event bus that carries the data plane. |
+| **yijinjing** | The append-only **journal and storage-semantic kernel** — frame/page mmap, reader/writer, locator/location, causal event ranges, payload references, manifests, source records, fsck reports, and provider contracts. Runtime backends live above it in `libkungfu`. |
 | **journal** | The append-only **event log**: one shared, strongly-typed stream of frames that every component consumes, rather than each inventing its own format. |
 | **frame** | A single journal record: a fixed-size header (source / destination / nanosecond timestamp / message type) plus a variable-size payload. |
 | **action recorder** | The language-neutral C++ core surface for writing action facts into the journal. Python and Node expose thin bindings over it; they must not implement separate causality, writer, or receipt semantics. See [ADR-0022](../framework/core/docs/adr/ADR-0022-core-action-recording-surface.md). |
@@ -52,7 +52,7 @@ These appear in the control-axis ADRs (0003–0005) and in the code.
 
 | Term | What it is |
 |---|---|
-| **hero** | The reactive **engine core** (`yijinjing::practice::hero`): a participant on the journal bus that drives a single-threaded event loop and exposes journal events as an RxCpp observable stream. It is the base of the practice layer. |
+| **hero** | The reactive **engine core** (`runtime::practice::hero`): a participant on the journal bus that drives a single-threaded event loop and exposes journal events as an RxCpp observable stream. It is the base of the practice layer. |
 | **apprentice** | A `hero` specialized as a **client/peer** (`apprentice : public hero`): the typical participant that attaches to the bus to consume and produce events. |
 | **watcher** | The **Node (N-API) binding** (`Watcher : public apprentice`): it consumes the journal/state and exposes it to JavaScript for the reference UIs. |
 | **coloop** | The **Python event-loop integration** (`KungfuEventLoop`): fuses the engine loop with Python `asyncio` on a single thread — see [ADR-0003](../framework/core/docs/adr/ADR-0003-control-axis-python-coroutine-integration.md). |

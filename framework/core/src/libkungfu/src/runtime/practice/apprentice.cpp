@@ -5,8 +5,8 @@
 //
 
 #include <kungfu/common.h>
-#include <kungfu/yijinjing/cache/cached.h>
-#include <kungfu/yijinjing/practice/apprentice.h>
+#include <kungfu/runtime/cache/cached.h>
+#include <kungfu/runtime/practice/apprentice.h>
 #include <kungfu/yijinjing/util/os.h>
 #include <utility>
 
@@ -14,18 +14,18 @@ using namespace kungfu::rx;
 using namespace kungfu::longfist;
 using namespace kungfu::longfist::types;
 using namespace kungfu::longfist::enums;
-using namespace kungfu::yijinjing;
+using namespace kungfu::runtime;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::cache;
+using namespace kungfu::runtime::cache;
 using namespace std::chrono;
 namespace fs = std::filesystem;
 
-namespace kungfu::practice {
+namespace kungfu::runtime::practice {
 
 apprentice::apprentice(const yijinjing::data::location_ptr &home, bool low_latency, std::string arguments)
-    : apprentice(std::make_shared<yijinjing::io_device_client>(home, low_latency), std::move(arguments)) {}
+    : apprentice(std::make_shared<kungfu::runtime::io_device_client>(home, low_latency), std::move(arguments)) {}
 
-apprentice::apprentice(const yijinjing::io_device_ptr &io_device, std::string arguments)
+apprentice::apprentice(const kungfu::runtime::io_device_ptr &io_device, std::string arguments)
     : hero(io_device), manager_(*this), arguments_(std::move(arguments)) {}
 
 bool apprentice::is_started() const { return started_; }
@@ -363,4 +363,4 @@ yijinjing::journal::writer_ptr &apprentice::get_thread_writer(uint64_t page_size
 
 yijinjing::journal::writer_ptr &apprentice::get_public_writer() { return public_writer_; }
 
-} // namespace kungfu::practice
+} // namespace kungfu::runtime::practice

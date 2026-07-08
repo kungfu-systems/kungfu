@@ -2,19 +2,19 @@
 
 #include <kungfu/common.h>
 #include <kungfu/longfist/longfist.h>
-#include <kungfu/yijinjing/cache/cached.h>
-#include <kungfu/yijinjing/cache/open_layer_projector.h>
-#include <kungfu/yijinjing/practice/hero.h>
+#include <kungfu/runtime/cache/cached.h>
+#include <kungfu/runtime/cache/open_layer_projector.h>
+#include <kungfu/runtime/practice/hero.h>
 #include <kungfu/yijinjing/time.h>
 
 using namespace kungfu::rx;
 using namespace kungfu::longfist;
 using namespace kungfu::longfist::enums;
 using namespace kungfu::longfist::types;
-using namespace kungfu::yijinjing;
-using namespace kungfu::practice;
+using namespace kungfu::runtime;
+using namespace kungfu::runtime::practice;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::cache;
+using namespace kungfu::runtime::cache;
 
 // https://sqlite.org/limits.html
 // The maximum number of bytes in the text of an SQL statement is limited to SQLITE_MAX_SQL_LENGTH which defaults to
@@ -23,9 +23,9 @@ using namespace kungfu::cache;
 #define STORE_INTERVAL 100
 #define RESTORE_LIMIT 5000
 
-namespace kungfu::cache {
+namespace kungfu::runtime::cache {
 
-cached::cached(const yijinjing::io_device_ptr &io_device)
+cached::cached(const kungfu::runtime::io_device_ptr &io_device)
     : session_builder_(io_device), profile_(io_device->get_locator()),
       ledger_home_location_(practice::make_system_location("service", "ledger", io_device->get_locator())) {
   bypass_cached_ = std::getenv("KF_BYPASS_CACHED") != nullptr;
@@ -414,4 +414,4 @@ void cached::update_session(const yijinjing::journal::frame_ptr &frame) {
 
 void cached::switch_feed_storage(bool pause_storage) { storage_pause_ = pause_storage; }
 
-} // namespace kungfu::cache
+} // namespace kungfu::runtime::cache

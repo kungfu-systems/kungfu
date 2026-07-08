@@ -7,13 +7,13 @@
 #include <csignal>
 #include <cstdio>
 #include <kungfu/common.h>
-#include <kungfu/yijinjing/practice/hero.h>
+#include <kungfu/runtime/practice/hero.h>
 #include <kungfu/yijinjing/util/stacktrace.h>
 
-using namespace kungfu::yijinjing::util;
+using namespace kungfu::runtime::util;
 
 namespace kungfu::yijinjing::os {
-static practice::hero *hero_instance = {};
+static kungfu::runtime::practice::hero *hero_instance = {};
 static bool signals_handler_enabled = true;
 
 void stop_hero() {
@@ -143,7 +143,7 @@ void handle_os_signals(void *hero) {
     throw yijinjing_error("kungfu can only have one hero instance per process");
   }
 
-  hero_instance = static_cast<practice::hero *>(hero);
+  hero_instance = static_cast<kungfu::runtime::practice::hero *>(hero);
 
   if (not signals_handler_enabled) {
     KF_LOG_WARN("OS signals hander disabled");

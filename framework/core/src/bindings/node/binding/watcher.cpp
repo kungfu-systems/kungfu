@@ -7,7 +7,7 @@
 #include "watcher.h"
 #include "config_store.h"
 #include "history.h"
-#include <kungfu/yijinjing/cache/cached.h>
+#include <kungfu/runtime/cache/cached.h>
 #include <kungfu/yijinjing/util/os.h>
 #include <sstream>
 
@@ -15,8 +15,8 @@ using namespace kungfu::rx;
 using namespace kungfu::longfist;
 using namespace kungfu::longfist::enums;
 using namespace kungfu::longfist::types;
-using namespace kungfu::yijinjing;
-using namespace kungfu::cache;
+using namespace kungfu::runtime;
+using namespace kungfu::runtime::cache;
 using namespace kungfu::yijinjing::data;
 
 namespace kungfu::node {

@@ -50,7 +50,7 @@ from kungfu.rewind.fb.ToolCall import ToolCall
 from kungfu.rewind.fb.ToolResult import ToolResult
 
 lf = kungfu.__binding__.longfist
-yjj = kungfu.__binding__.yijinjing
+yjj = kungfu.__binding__.runtime
 
 runtime_dir, run_id = sys.argv[1], sys.argv[2]
 failures = []

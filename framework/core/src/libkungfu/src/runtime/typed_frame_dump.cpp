@@ -7,10 +7,12 @@
 #include <kungfu/longfist/longfist.h>
 #include <kungfu/yijinjing/journal/frame.h>
 
-namespace kungfu::yijinjing::journal {
+namespace core_journal = kungfu::yijinjing::journal;
+
+namespace kungfu::runtime::journal {
 
 void install_typed_frame_dumper() {
-  frame::type_dumper() = [](const frame &self, nlohmann::json &j) {
+  core_journal::frame::type_dumper() = [](const core_journal::frame &self, nlohmann::json &j) {
     hana::for_each(longfist::AllTypes, [&](auto pair) {
       using DataType = typename decltype(+hana::second(pair))::type;
       if (DataType::tag == self.carrier_type()) {
@@ -25,4 +27,4 @@ static const bool typed_frame_dumper_installed = [] {
   return true;
 }();
 
-} // namespace kungfu::yijinjing::journal
+} // namespace kungfu::runtime::journal

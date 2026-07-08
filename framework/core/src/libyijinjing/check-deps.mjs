@@ -4,8 +4,10 @@
 //
 // The core may see only: the C++ standard library, header-only formatting/json
 // (fmt, spdlog, nlohmann, boost::hana via kungfu/common.h) and the longfist
-// schema leaf (kungfu/longfist/core.h). It must never include runtime,
-// transport or storage headers, the full type registry, or any trading type.
+// schema leaf (kungfu/longfist/core.h). It may define storage semantic
+// contracts under kungfu/yijinjing/storage, but it must never include runtime,
+// transport or storage-engine headers, the full type registry, or any trading
+// type.
 //
 // Include lines are matched instead of bare words so that comments explaining
 // a seam (e.g. "mirrors NNG_FLAG_NONBLOCK") do not trip the guard; trading
@@ -63,7 +65,7 @@ const includeHits = scan(forbiddenIncludes);
 if (includeHits.length) {
   console.log(includeHits.join('\n'));
   console.error(
-    'FAIL: forbidden include found (runtime/transport/storage/full registry)',
+    'FAIL: forbidden include found (runtime/transport/storage-engine/full registry)',
   );
   failed = true;
 }

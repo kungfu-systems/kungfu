@@ -48,7 +48,7 @@ from kungfu.work.fb.WorkStatus import WorkStatus
 from kungfu.work.fb.WorkStatusChanged import WorkStatusChanged
 
 lf = kungfu.__binding__.longfist
-yjj = kungfu.__binding__.yijinjing
+yjj = kungfu.__binding__.runtime
 
 PUBLIC_DEST = 0
 WORK_GROUP = "work"

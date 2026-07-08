@@ -3,11 +3,11 @@
 # yijinjing journal core as a standalone static library (libyijinjing.a).
 #
 # The core is the journal spine: frame/page mmap machinery, reader/writer,
-# assemble, locator/location, and the base utilities they stand on. It sees
-# only the longfist schema leaf (kungfu/longfist/core.h) -- never the trading
-# type registry, nng, rxcpp, sqlite or rocksdb. libkungfu links this target
-# and must not recompile these sources; minimal tools (fact-ledger slice)
-# link only this target.
+# assemble, locator/location, storage semantic contracts, and the base
+# utilities they stand on. It sees only the longfist schema leaf
+# (kungfu/longfist/core.h) -- never the trading type registry, nng, rxcpp,
+# sqlite or rocksdb. libkungfu links this target and must not recompile these
+# sources; minimal tools (fact-ledger slice) link only this target.
 #
 # This file is self-sufficient on purpose: inside the kungfu build the parent
 # provides toolchain, dependency targets and output conventions, and every

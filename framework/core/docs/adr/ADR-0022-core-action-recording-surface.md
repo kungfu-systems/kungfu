@@ -35,7 +35,7 @@ runtime. Bindings are adapters over that membrane, not separate products.
 
 Architecture-level action-recording semantics live in the C++ core.
 
-The first-class action-recording surface is `yijinjing::action::action_recorder`
+The first-class action-recording surface is `runtime::action::action_recorder`
 in `libkungfu`. It owns:
 
 - construction of the writer location and channel;
@@ -82,7 +82,7 @@ timeline model: `frame_uid`, `trigger_frame_uid`, `stream_id`,
 
 The first delivery adds:
 
-- C++ `yijinjing::action::action_recorder`;
+- C++ `runtime::action::action_recorder`;
 - Python binding classes for `action_recorder`, `action_record_options`, and
   `action_record_receipt`;
 - Node `ActionRecorder` binding;

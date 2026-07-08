@@ -49,7 +49,7 @@ from kungfu.rewind.fb import (
 from kungfu.rewind.wire import unwrap_event
 
 lf = kungfu.__binding__.longfist
-yjj = kungfu.__binding__.yijinjing
+yjj = kungfu.__binding__.runtime
 
 _GENERATED: dict[str, Any] = {
     "RunBegin": RunBegin.RunBegin,

@@ -8,11 +8,11 @@
 #include <kungfu/yijinjing/common.h>
 #include <sqlite3.h>
 
-namespace kungfu::yijinjing {
+namespace kungfu::runtime {
 void handle_sql_error(int rc, const std::string &error_tip) {
   if (SQLITE_OK != rc) {
     SPDLOG_ERROR("sqlite3 rc {}", rc);
-    throw yijinjing_error(error_tip);
+    throw yijinjing::yijinjing_error(error_tip);
   }
 }
 
@@ -45,4 +45,4 @@ struct sqlite_shutdown {
 void ensure_sqlite_initilize() { static sqlite_initilize instance{}; }
 
 void ensure_sqlite_shutdown() { static sqlite_shutdown instance{}; }
-} // namespace kungfu::yijinjing
+} // namespace kungfu::runtime

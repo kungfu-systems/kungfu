@@ -14,15 +14,15 @@
 #include "io.h"
 #include "journal.h"
 #include "operators.h"
-#include <kungfu/yijinjing/cache/runtime.h>
-#include <kungfu/yijinjing/practice/apprentice.h>
+#include <kungfu/runtime/cache/runtime.h>
+#include <kungfu/runtime/practice/apprentice.h>
 
 namespace kungfu::node {
 constexpr uint64_t ID_TRANC = 0x00000000FFFFFFFF;
 constexpr uint32_t PAGE_ID_MASK = 0x80000000;
 constexpr uint32_t TRANSFER_STATIC_DATA_LIMIT = 2000;
 
-class Watcher : public Napi::ObjectWrap<Watcher>, public practice::apprentice {
+class Watcher : public Napi::ObjectWrap<Watcher>, public runtime::practice::apprentice {
 public:
   explicit Watcher(const Napi::CallbackInfo &info);
 
@@ -102,7 +102,7 @@ private:
   Napi::ObjectReference config_ref_;
   serialize::JsUpdateState update_ledger;
   serialize::JsResetCache reset_cache;
-  cache::bank data_bank_;
+  runtime::cache::bank data_bank_;
   std::vector<kungfu::state<longfist::types::CacheReset>> reset_cache_states_;
 
   typedef longfist::enums::mode mode;

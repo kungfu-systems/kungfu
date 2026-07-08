@@ -179,7 +179,7 @@ def kfc(ctx, home, extension_path, log_level, name, stage, env_verify_location):
     ctx.inbox_dir = ensure_dir(ctx, "inbox")
 
     lf = kungfu.__binding__.longfist
-    yjj = kungfu.__binding__.yijinjing
+    yjj = kungfu.__binding__.runtime
 
     # have to keep locator alive from python side
     # https://github.com/pybind/pybind11/issues/1546

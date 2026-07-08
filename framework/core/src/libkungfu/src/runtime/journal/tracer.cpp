@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <kungfu/longfist/longfist.h>
+#include <kungfu/runtime/journal/tracer.h>
 #include <kungfu/yijinjing/journal/page.h>
-#include <kungfu/yijinjing/journal/tracer.h>
 
 using namespace kungfu::longfist::types;
 using namespace kungfu::longfist::enums;
-using namespace kungfu::yijinjing;
-using namespace kungfu::yijinjing::journal;
+using namespace kungfu::runtime;
+using namespace kungfu::runtime::journal;
 using namespace kungfu::yijinjing::data;
 
-namespace kungfu::yijinjing::journal {
+namespace kungfu::runtime::journal {
 
 tracer::tracer(const location_ptr location, bool in, bool out, int64_t begin, int64_t end)
     : home_(location), reader_(std::make_shared<reader>(true, false, std::make_shared<bus>(false))),
@@ -173,4 +173,4 @@ void tracer::join_for_in(const yijinjing::journal::frame_ptr &frame) const {
   }
 };
 
-} // namespace kungfu::yijinjing::journal
+} // namespace kungfu::runtime::journal

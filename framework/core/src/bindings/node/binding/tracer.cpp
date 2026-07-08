@@ -1,9 +1,9 @@
 #include "io.h"
 #include "journal.h"
 
-using namespace kungfu::yijinjing;
+using namespace kungfu::runtime;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::yijinjing::journal;
+using namespace kungfu::runtime::journal;
 using namespace kungfu::longfist::types;
 using namespace kungfu::longfist::enums;
 

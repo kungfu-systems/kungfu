@@ -48,7 +48,7 @@ from kungfu.rewind.proxy import (
 )
 
 lf = kungfu.__binding__.longfist
-yjj = kungfu.__binding__.yijinjing
+yjj = kungfu.__binding__.runtime
 
 ENV_RUN_ID = "KUNGFU_REWIND_RUN_ID"
 ENV_INGEST = "KUNGFU_REWIND_INGEST"

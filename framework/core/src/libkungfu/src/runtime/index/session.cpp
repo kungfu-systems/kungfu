@@ -5,25 +5,25 @@
 //
 
 #include <fstream>
-#include <kungfu/yijinjing/index/session.h>
+#include <kungfu/runtime/index/session.h>
 
 using namespace sqlite_orm;
 using namespace kungfu::longfist;
 using namespace kungfu::longfist::enums;
 using namespace kungfu::longfist::types;
-using namespace kungfu::yijinjing;
-using namespace kungfu::cache;
+using namespace kungfu::runtime;
+using namespace kungfu::runtime::cache;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::yijinjing::journal;
+using namespace kungfu::runtime::journal;
 
-namespace kungfu::index {
-std::string get_index_db_file(const yijinjing::io_device_ptr &io_device) {
+namespace kungfu::runtime::index {
+std::string get_index_db_file(const kungfu::runtime::io_device_ptr &io_device) {
   auto locator = io_device->get_locator();
   auto index_location = location::make_shared(mode::LIVE, location_role::SYSTEM, "journal", "index", locator);
   return locator->layout_file(index_location, layout::SQLITE, "index");
 }
 
-session_finder::session_finder(const yijinjing::io_device_ptr &io_device)
+session_finder::session_finder(const kungfu::runtime::io_device_ptr &io_device)
     : io_device_(io_device),
       session_storage_(cache::make_storage_ptr(get_index_db_file(io_device), longfist::SessionDataTypes)) {
   if (not session_storage_->sync_schema_simulate().empty()) {
@@ -55,7 +55,7 @@ SessionVector session_finder::find_sessions_for(const location_ptr &source_locat
   return session_storage_->get_all<Session>(range, order_by(bt));
 }
 
-session_builder::session_builder(const yijinjing::io_device_ptr &io_device) : session_finder(io_device) {
+session_builder::session_builder(const kungfu::runtime::io_device_ptr &io_device) : session_finder(io_device) {
   std::lock_guard<std::mutex> lock(update_session_mutex_);
   if (not session_storage_->sync_schema_simulate().empty()) {
     session_storage_->sync_schema();
@@ -214,4 +214,4 @@ SessionMap &session_builder::get_all_sessions() {
   std::lock_guard<std::mutex> lock(update_session_mutex_);
   return live_sessions_;
 }
-} // namespace kungfu::index
+} // namespace kungfu::runtime::index

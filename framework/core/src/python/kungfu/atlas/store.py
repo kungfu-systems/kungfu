@@ -27,7 +27,7 @@ from kungfu.atlas import (
 from kungfu.action_envelope import decode_action_envelope
 
 lf = kungfu.__binding__.longfist
-yjj = kungfu.__binding__.yijinjing
+yjj = kungfu.__binding__.runtime
 
 PUBLIC_DEST = 0
 ATLAS_GROUP = "atlas"

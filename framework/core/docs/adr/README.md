@@ -41,7 +41,7 @@ A record's **Status** says where it stands:
 | [0023](ADR-0023-frame-integrity-and-msg-type-allocation-gates.md) | accepted | frame integrity starts at the C++ recorder and raw carrier_type allocation is gated |
 | [0024](ADR-0024-location-role-and-journal-page-policy.md) | accepted | location role replaces trading category and journal page size is storage policy |
 | [0025](ADR-0025-carrier-type-and-action-envelope-semantics.md) | accepted | carrier type is transport metadata and business semantics live in action envelopes |
-| [0026](ADR-0026-yijinjing-greenfield-core-surface.md) | accepted | yijinjing exposes a greenfield core surface, not trading typed helpers |
+| [0026](ADR-0026-runtime-greenfield-core-surface.md) | accepted | runtime exposes a greenfield core surface, not trading typed helpers |
 | [0027](ADR-0027-python-longfist-public-core-types.md) | accepted | Python longfist exposes only core public runtime types |
 
 ## Reading by theme
@@ -94,7 +94,7 @@ A record's **Status** says where it stands:
   [0025](ADR-0025-carrier-type-and-action-envelope-semantics.md) (the rename
   from `msg_type` to `carrier_type` and the rule that business semantics live
   in action envelopes), and
-  [0026](ADR-0026-yijinjing-greenfield-core-surface.md) (the rule that yijinjing
+  [0026](ADR-0026-runtime-greenfield-core-surface.md) (the rule that runtime
   bindings expose neutral raw/envelope/runtime APIs instead of generated
   trading typed helpers), and
   [0027](ADR-0027-python-longfist-public-core-types.md) (the matching rule that

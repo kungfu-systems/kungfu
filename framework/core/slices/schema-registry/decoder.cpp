@@ -30,7 +30,7 @@
 #include <map>
 #include <string>
 
-using namespace kungfu::yijinjing;
+using namespace kungfu::runtime;
 using kungfu::slices::sha256;
 namespace longfist = kungfu::longfist;
 
@@ -51,10 +51,10 @@ std::string strip_trailing_nuls(std::string s) {
 }
 
 struct Binding {
-  std::string kind;    // "flatbuffers" | "json"
+  std::string kind; // "flatbuffers" | "json"
   std::string name;
   int version = 0;
-  std::string bfbs;    // owned bytes (schema view binds to them)
+  std::string bfbs; // owned bytes (schema view binds to them)
   const reflection::Schema *schema = nullptr;
 };
 } // namespace
