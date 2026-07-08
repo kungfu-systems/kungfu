@@ -5,7 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@kungfu-tech/buildchain>@kungfu-tech/kfd': 1.0.0-alpha.17
+  '@kungfu-tech/buildchain>@kungfu-tech/kfd': 1.0.0-alpha.21
   node-gyp: ^13.0.0
   cosmiconfig>js-yaml: 4.3.0
   lerna>js-yaml: 4.3.0
@@ -33,8 +33,8 @@ importers:
         specifier: 1.9.4
         version: 1.9.4
       '@kungfu-tech/buildchain':
-        specifier: 2.10.7
-        version: 2.10.7
+        specifier: 2.10.8
+        version: 2.10.8
       '@types/fs-extra':
         specifier: ^11.0.4
         version: 11.0.4
@@ -97,14 +97,14 @@ importers:
         version: link:../framework/tui
     devDependencies:
       '@kungfu-tech/buildchain':
-        specifier: 2.10.7
-        version: 2.10.7
+        specifier: 2.10.8
+        version: 2.10.8
 
   developer/sdk:
     dependencies:
       '@kungfu-tech/buildchain':
-        specifier: 2.10.7
-        version: 2.10.7
+        specifier: 2.10.8
+        version: 2.10.8
       '@kungfu-tech/core':
         specifier: workspace:*
         version: link:../../framework/core
@@ -112,8 +112,8 @@ importers:
         specifier: workspace:*
         version: link:../../framework/gui
       '@kungfu-tech/kfd':
-        specifier: 1.0.0-alpha.17
-        version: 1.0.0-alpha.17
+        specifier: 1.0.0-alpha.21
+        version: 1.0.0-alpha.21
       '@kungfu-tech/tui':
         specifier: workspace:*
         version: link:../../framework/tui
@@ -1283,13 +1283,13 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@kungfu-tech/buildchain@2.10.7':
-    resolution: {integrity: sha512-7cLW6kaTaVm9dneZiSMiVT0fl066mZqfZ2XxxAw40CO4HUNPZbO2M56Ei2Urtj2FH4aclfg2d+LjKnlnaqCitg==}
+  '@kungfu-tech/buildchain@2.10.8':
+    resolution: {integrity: sha512-0fPYGJDDCBUJGtxTYHERncPFJCG/DFn8ePJ2bZmgzzqAyKPJ8BwvEXSdioXJ1lmi6MuCFQbnYI7588b72By1xw==}
     engines: {node: '>=22.14.0'}
     hasBin: true
 
-  '@kungfu-tech/kfd@1.0.0-alpha.17':
-    resolution: {integrity: sha512-/jy1vbhEogvdRyxOauhIGlIMo4dfM356t2RxtlX7ChFBQaT8admCEZDxaherMVF7J6IKTOPXZXPC/jyBWUuicQ==}
+  '@kungfu-tech/kfd@1.0.0-alpha.21':
+    resolution: {integrity: sha512-lsr3aJ93pUaO9gxnGBsrTJkTkvpIHPHp9Rxug7WvdS4Zkte3AdFvyCl1DgwQN+/38FAXf8fBozyGkHxxXaN7Dg==}
 
   '@kungfu-tech/libnode-darwin-arm64@22.22.3-kf.3-alpha.16':
     resolution: {integrity: sha512-arC7Vm85nBSRS4Vj5L5RL4XXb5c4xrLmldcf+zA0Qs0d01GW0ZHecthZTK/vf/syFtb4u1CFoHBviOwT3YFazQ==}
@@ -5331,12 +5331,12 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@kungfu-tech/buildchain@2.10.7':
+  '@kungfu-tech/buildchain@2.10.8':
     dependencies:
-      '@kungfu-tech/kfd': 1.0.0-alpha.17
+      '@kungfu-tech/kfd': 1.0.0-alpha.21
       smol-toml: 1.7.0
 
-  '@kungfu-tech/kfd@1.0.0-alpha.17': {}
+  '@kungfu-tech/kfd@1.0.0-alpha.21': {}
 
   '@kungfu-tech/libnode-darwin-arm64@22.22.3-kf.3-alpha.16':
     optional: true

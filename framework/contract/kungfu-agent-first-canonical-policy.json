@@ -6,7 +6,7 @@
     "kfd": {
       "package": {
         "name": "@kungfu-tech/kfd",
-        "version": "1.0.0-alpha.17",
+        "version": "1.0.0-alpha.21",
         "repository": "git+https://github.com/kungfu-systems/kfd.git"
       },
       "standard": {
@@ -31,7 +31,7 @@
     "buildchain": {
       "package": {
         "name": "@kungfu-tech/buildchain",
-        "version": "2.10.7"
+        "version": "2.10.8"
       },
       "formatting": {
         "name": "buildchain-release-evidence-json-v1",

@@ -49,11 +49,11 @@
       "buildchain"
     ],
     "packageVersions": {
-      "kfd": "1.0.0-alpha.17",
+      "kfd": "1.0.0-alpha.21",
       "libnode": "22.22.3-kf.3-alpha.16",
-      "buildchain": "2.10.7"
+      "buildchain": "2.10.8"
     },
-    "digest": "sha256:4267ac49182534d034aadcbdea6f809e0b402c236c28830f23932856029dc9a1"
+    "digest": "sha256:ff46f99bd15d4495f7890d04577ba91cd8bcb95605fa921313dcd272490182d4"
   },
   "surfaces": [
     {
@@ -498,7 +498,7 @@
     },
     {
       "id": "kungfu.kfd.query",
-      "name": "kungfu kfd query|check|witness|upstream|aggregate",
+      "name": "kungfu kfd status|schema|1|2|4|query|check|witness|upstream|aggregate",
       "kind": "cli",
       "participantProfile": "agent-or-developer",
       "state": "declared",
@@ -738,7 +738,7 @@
     },
     {
       "id": "kungfu.sdk.kfd.query",
-      "name": "kungfu sdk kfd query|check|witness|upstream|aggregate",
+      "name": "kungfu sdk kfd status|schema|1|2|4|query|check|witness|upstream|aggregate",
       "kind": "cli",
       "participantProfile": "agent-or-developer",
       "state": "declared",

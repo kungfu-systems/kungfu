@@ -284,6 +284,40 @@ test('kfd check verifies the packaged KFD-3 registry projection', () => {
   );
   assert.equal(data.upstreamAggregate.upstreamCount, 3);
   assert.equal(data.query.kfd.kfd3, 'declared');
+  assert.equal(data.query.kfd.kfd4, 'schema-only');
+  assert.equal(data.standards['kfd-1'].status, 'supported');
+  assert.equal(data.standards['kfd-2'].status, 'supported');
+  assert.equal(data.standards['kfd-4'].status, 'schema-only');
+});
+
+test('kfd status exposes KFD-1/2/3/4 support facts', () => {
+  const data = runJson(['kfd', 'status', '--json']);
+  assert.equal(data.contract, 'kungfu-sdk-kfd-standards-status');
+  assert.equal(data.packages.kfd, kfdPackage.version);
+  assert.equal(data.packages.buildchain, buildchainPackage.version);
+  assert.equal(data.standards['kfd-1'].status, 'supported');
+  assert.equal(data.standards['kfd-2'].mode, 'release-claims');
+  assert.equal(data.standards['kfd-3'].status, 'supported');
+  assert.equal(data.standards['kfd-4'].status, 'schema-only');
+  assert.ok(data.standards['kfd-4'].schemaCount >= 1);
+});
+
+test('kfd standard commands expose KFD-1, KFD-2, and KFD-4 facts', () => {
+  const kfd1 = runJson(['kfd', '1', 'witness', '--json']);
+  assert.equal(kfd1.contract, 'kungfu-sdk-kfd-1-support-witness');
+  assert.equal(kfd1.standard, 'kfd-1');
+  assert.ok(kfd1.surfaces.length >= 1);
+
+  const kfd2 = runJson(['kfd', '2', 'claims', '--json']);
+  assert.equal(kfd2.contract, 'kungfu-sdk-kfd-2-release-claims');
+  assert.equal(kfd2.standard, 'kfd-2');
+  assert.equal(kfd2.source.claimCount, 3);
+  assert.equal(kfd2.releaseGate.passportInput, '--kfd-2-claim-json');
+
+  const kfd4 = runJson(['kfd', '4', 'schema', '--json']);
+  assert.equal(kfd4.contract, 'kungfu-buildchain-kfd-schema');
+  assert.equal(kfd4.standard, 'kfd-4');
+  assert.equal(typeof kfd4.schema, 'object');
 });
 
 test('kfd witness emits an installed SDK KFD-3 witness', () => {
@@ -309,6 +343,9 @@ test('kfd upstream exposes aggregated upstream KFD package facts', () => {
         row.id === 'libnode' && row.package.version === '22.22.3-kf.3-alpha.16',
     ),
   );
+  assert.equal(data.ownKfd.kfd1.status, 'supported');
+  assert.equal(data.ownKfd.kfd2.claimCount, 3);
+  assert.equal(data.ownKfd.kfd4.status, 'schema-only');
 });
 
 test('kfd aggregate joins own KFD-3 query facts with upstream KFD facts', () => {
@@ -317,6 +354,7 @@ test('kfd aggregate joins own KFD-3 query facts with upstream KFD facts', () => 
   assert.equal(data.own.surfaceCount >= 1, true);
   assert.equal(data.upstream.summary.upstreamCount, 3);
   assert.equal(data.kfd.kfd3, 'declared-and-aggregated');
+  assert.equal(data.kfd.kfd4, 'schema-only');
   assert.match(data.source.upstreamAggregate.sha256, /^sha256:[0-9a-f]{64}$/);
 });
 

@@ -19,13 +19,14 @@
       "role": "standard-and-schema-provider",
       "package": {
         "name": "@kungfu-tech/kfd",
-        "version": "1.0.0-alpha.17"
+        "version": "1.0.0-alpha.21"
       },
       "repository": "kungfu-systems/kfd",
       "kfd": {
         "kfd1": "exported-witness",
         "kfd2": "exported-claim",
-        "kfd3": "exported-collaboration-interface"
+        "kfd3": "exported-collaboration-interface",
+        "kfd4": "schema-metadata"
       },
       "releaseAnchor": {
         "schemaVersion": 1,
@@ -33,36 +34,36 @@
         "line": "v1.0",
         "channel": "alpha",
         "npmPackage": "@kungfu-tech/kfd",
-        "npmVersion": "1.0.0-alpha.17",
+        "npmVersion": "1.0.0-alpha.21",
         "source": {
           "repository": "kungfu-systems/kfd",
           "branch": "alpha/v1/v1.0"
         },
         "rationale": "KFD uses an anchored/manual Buildchain mode: the public package version is an explicit release fact, while the outer KFD line remains v1.0."
       },
-      "kfd3SurfaceCount": 16,
+      "kfd3SurfaceCount": 18,
       "assets": [
         {
           "path": "kfd.release.json",
-          "sha256": "sha256:8ac38cf084ab11875d35ad6d374290c2fe13623ae754521b63a391d3a585f8a6",
+          "sha256": "sha256:bfb302c839b6cb45204d541b5af5b1c211568efb16fb3eebbb04dc65f7de83d2",
           "contract": "kfd-release-anchor"
         },
         {
           "path": "buildchain/kfd-1/contract-world.witness.json",
-          "sha256": "sha256:1f839c8e7c55a30e2115e0a25e6be769e584a37284d7787a25ada7cb2b58f1df"
+          "sha256": "sha256:542fe5b730f2e4782655d096ec04a5dd82a88d4fc9e8701ee235eb111a06dab6"
         },
         {
           "path": "buildchain/kfd-2/public-release-trust.claim.json",
-          "sha256": "sha256:cb4a3318e41c245d98006af69922cfd26362efd10bf3e68c2c27755d02fe2966"
+          "sha256": "sha256:3780b47472762b5ce9575250da73ee800af71dd194a9b0a3f61a063569311237"
         },
         {
           "path": "buildchain/kfd-3/collaboration-interface.json",
-          "sha256": "sha256:e32f2196399d37db202ccc656386bddc346871243c3db6782d26b5a88f831595",
+          "sha256": "sha256:fa41128be4ee57a4a40b76d4d7a063c01d7c2e5c53aec2b9c6db819c7a27b22b",
           "contract": "kfd-3-collaboration-interface"
         },
         {
           "path": "standards.json",
-          "sha256": "sha256:7cd61143eabec5b83c5ba37312d791935f2321d246f61bec790c4a6d5d4cf839",
+          "sha256": "sha256:4ee9e5fc732eef1b43c75a146125496e0dbd859ef5a11d0c637c41e9091c677f",
           "contract": "kfd-standards-metadata"
         }
       ]
@@ -78,7 +79,8 @@
       "kfd": {
         "kfd1": "release-anchor-facts",
         "kfd2": "release-passport-required",
-        "kfd3": "package-runtime-surface"
+        "kfd3": "package-runtime-surface",
+        "kfd4": "not-declared"
       },
       "releaseAnchor": {
         "schema": 1,
@@ -103,13 +105,14 @@
       "role": "release-passport-and-kfd-gate-provider",
       "package": {
         "name": "@kungfu-tech/buildchain",
-        "version": "2.10.7"
+        "version": "2.10.8"
       },
       "repository": "kungfu-systems/buildchain",
       "kfd": {
         "kfd1": "gate-provider",
         "kfd2": "claim-provider",
-        "kfd3": "surface-query-provider"
+        "kfd3": "surface-query-provider",
+        "kfd4": "schema-provider"
       },
       "publicExports": [
         "@kungfu-tech/buildchain/kfd-gate",
@@ -120,25 +123,61 @@
       "assets": [
         {
           "path": "site/kfd-claims.json",
-          "sha256": "sha256:39815c50902a335f730d725baf4cd5b0a51b17f6f02d4513491d42197723dd43",
+          "sha256": "sha256:a314e2b26474a273430c0b0a3743712ca4de5e47596bf4714360f83a46d1bfb7",
           "contract": "kungfu-buildchain-kfd-claim-registry"
         },
         {
           "path": "site/node-api-registry.json",
-          "sha256": "sha256:1d012a0a8f04a4c91abb0a6546103031584247fff028c4066e491ace8afab49d",
+          "sha256": "sha256:46c5938144888f76be429af2c10a16ead94c046c8c6f35965e4d8db647e3c08c",
           "contract": "kungfu-buildchain-node-api-registry"
         },
         {
           "path": "docs/kfd-support.md",
-          "sha256": "sha256:704efbf7be24d641d8b119737eb33b3e98fea8c55cf434f7f475160809f4e3a4"
+          "sha256": "sha256:d1fdec0890884340e4e8108c17b62866c08dc95771075e3e285532b5a7b0ee5a"
         },
         {
           "path": "kfd",
-          "sha256": "sha256:908a171399090cf3d2f43a1e01fa312a1a47861dfc9874d32f5e8a9d4ac53899"
+          "sha256": "sha256:e9170c1e56d2729cf530f953df9ade21963faa9a756ba5fbd0cdd03d8b781cb3"
         }
       ]
     }
   ],
+  "ownKfd": {
+    "kfd1": {
+      "status": "supported",
+      "mode": "contract-world",
+      "source": "framework/contract/kungfu-contracts.registry.json",
+      "sha256": "sha256:19c8d64633b14b805bebb7f7028ddfb69062564b939dd97cd22fe86b5e93422d",
+      "contractCount": 3,
+      "witnessCommand": "kungfu sdk contract witness --json",
+      "releasePassportInput": "--kfd-1-witness-json"
+    },
+    "kfd2": {
+      "status": "supported",
+      "mode": "release-claims",
+      "source": "framework/release/kfd-2/kungfu-release-claims.registry.json",
+      "sha256": "sha256:ebf949f99ed5f0d01e9ba22fbc340848144f12f8e126dba586f16bbc786f5952",
+      "claimCount": 3,
+      "claimsCommand": "kungfu sdk kfd 2 claims --json",
+      "releasePassportInput": "--kfd-2-claim-json"
+    },
+    "kfd3": {
+      "status": "supported",
+      "mode": "strict-buildchain-managed-registry",
+      "source": ".buildchain/kfd/kfd-3-surfaces.json",
+      "queryCommand": "kungfu sdk kfd query --json"
+    },
+    "kfd4": {
+      "status": "schema-only",
+      "mode": "schema-only",
+      "source": "@kungfu-tech/kfd/standards.json",
+      "schemaCount": 2,
+      "schemaCommand": "kungfu sdk kfd 4 schema --json",
+      "residualRisk": [
+        "Buildchain 2.10.8 exposes KFD-4 as schema-only; no release verification protocol is claimed."
+      ]
+    }
+  },
   "summary": {
     "upstreamCount": 3,
     "kfdAwareUpstreams": [
@@ -147,9 +186,9 @@
       "buildchain"
     ],
     "packageVersions": {
-      "kfd": "1.0.0-alpha.17",
+      "kfd": "1.0.0-alpha.21",
       "libnode": "22.22.3-kf.3-alpha.16",
-      "buildchain": "2.10.7"
+      "buildchain": "2.10.8"
     }
   }
 }

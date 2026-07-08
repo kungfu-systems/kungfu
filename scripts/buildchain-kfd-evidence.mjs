@@ -79,6 +79,19 @@ const AGENT_COMMANDS_PATH = path.join(
   'commands.json',
 );
 const SDK_CLI_PATH = path.join(ROOT, 'developer', 'sdk', 'src', 'sdk.js');
+const CONTRACT_REGISTRY_PATH = path.join(
+  ROOT,
+  'framework',
+  'contract',
+  'kungfu-contracts.registry.json',
+);
+const KFD2_REGISTRY_PATH = path.join(
+  ROOT,
+  'framework',
+  'release',
+  'kfd-2',
+  'kungfu-release-claims.registry.json',
+);
 const CORE_PACKAGE_PATH = path.join(ROOT, 'framework', 'core', 'package.json');
 const ARTIFACT_VERIFY_COMMAND =
   'node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json';
@@ -228,6 +241,65 @@ function assetSummary(asset) {
   };
 }
 
+function readOptionalJson(filePath) {
+  if (!fs.existsSync(filePath)) return null;
+  return readJson(filePath);
+}
+
+function buildOwnKfdFacts() {
+  const contractRegistry = readOptionalJson(CONTRACT_REGISTRY_PATH);
+  const kfd2Registry = readOptionalJson(KFD2_REGISTRY_PATH);
+  const kfd4Schemas = packageAsset(
+    '@kungfu-tech/kfd',
+    'standards.json',
+    SDK_CLI_PATH,
+  )?.parsed?.standards?.['kfd-4'];
+  return {
+    kfd1: {
+      status: 'supported',
+      mode: 'contract-world',
+      source: rel(CONTRACT_REGISTRY_PATH),
+      sha256: fs.existsSync(CONTRACT_REGISTRY_PATH)
+        ? `sha256:${sha256File(CONTRACT_REGISTRY_PATH)}`
+        : '',
+      contractCount: Array.isArray(contractRegistry?.contracts)
+        ? contractRegistry.contracts.length
+        : 0,
+      witnessCommand: 'kungfu sdk contract witness --json',
+      releasePassportInput: '--kfd-1-witness-json',
+    },
+    kfd2: {
+      status: 'supported',
+      mode: 'release-claims',
+      source: rel(KFD2_REGISTRY_PATH),
+      sha256: fs.existsSync(KFD2_REGISTRY_PATH)
+        ? `sha256:${sha256File(KFD2_REGISTRY_PATH)}`
+        : '',
+      claimCount: Array.isArray(kfd2Registry?.claims)
+        ? kfd2Registry.claims.length
+        : 0,
+      claimsCommand: 'kungfu sdk kfd 2 claims --json',
+      releasePassportInput: '--kfd-2-claim-json',
+    },
+    kfd3: {
+      status: 'supported',
+      mode: STRICT_KFD3_MODE,
+      source: KFD3_DEFAULT_REGISTRY_PATH,
+      queryCommand: 'kungfu sdk kfd query --json',
+    },
+    kfd4: {
+      status: 'schema-only',
+      mode: 'schema-only',
+      source: '@kungfu-tech/kfd/standards.json',
+      schemaCount: Object.keys(kfd4Schemas?.schemaPaths || {}).length,
+      schemaCommand: 'kungfu sdk kfd 4 schema --json',
+      residualRisk: [
+        'Buildchain 2.10.8 exposes KFD-4 as schema-only; no release verification protocol is claimed.',
+      ],
+    },
+  };
+}
+
 function buildUpstreamKfdAggregate() {
   const kfdPackage = packageJson('@kungfu-tech/kfd', SDK_CLI_PATH);
   const libnodePackage = packageJson('@kungfu-tech/libnode', CORE_PACKAGE_PATH);
@@ -311,6 +383,7 @@ function buildUpstreamKfdAggregate() {
           kfd1: 'exported-witness',
           kfd2: 'exported-claim',
           kfd3: 'exported-collaboration-interface',
+          kfd4: 'schema-metadata',
         },
         releaseAnchor: kfdRelease || null,
         kfd3SurfaceCount: Array.isArray(kfdCollaboration?.surfaces)
@@ -330,6 +403,7 @@ function buildUpstreamKfdAggregate() {
           kfd1: 'release-anchor-facts',
           kfd2: 'release-passport-required',
           kfd3: 'package-runtime-surface',
+          kfd4: 'not-declared',
         },
         releaseAnchor: libnodeRelease.parsed,
         assets: [assetSummary(libnodeRelease)],
@@ -349,6 +423,7 @@ function buildUpstreamKfdAggregate() {
           kfd1: 'gate-provider',
           kfd2: 'claim-provider',
           kfd3: 'surface-query-provider',
+          kfd4: 'schema-provider',
         },
         publicExports: [
           '@kungfu-tech/buildchain/kfd-gate',
@@ -359,6 +434,7 @@ function buildUpstreamKfdAggregate() {
         assets: buildchainAssets.map(assetSummary),
       },
     ],
+    ownKfd: buildOwnKfdFacts(),
     summary: {
       upstreamCount: 3,
       kfdAwareUpstreams: ['kfd', 'libnode', 'buildchain'],
@@ -438,7 +514,7 @@ function sdkAndProductSurfaces() {
   return [
     fileSurface({
       id: 'kungfu.kfd.query',
-      name: 'kungfu kfd query|check|witness|upstream|aggregate',
+      name: 'kungfu kfd status|schema|1|2|4|query|check|witness|upstream|aggregate',
       kind: 'cli',
       sourcePath: 'framework/core/src/python/kungfu/cli/commands/kfd.py',
       evidencePath: 'developer/sdk/kfd/upstream-aggregate.json',
@@ -446,7 +522,7 @@ function sdkAndProductSurfaces() {
     }),
     fileSurface({
       id: 'kungfu.sdk.kfd.query',
-      name: 'kungfu sdk kfd query|check|witness|upstream|aggregate',
+      name: 'kungfu sdk kfd status|schema|1|2|4|query|check|witness|upstream|aggregate',
       kind: 'cli',
       sourcePath: 'developer/sdk/src/sdk.js',
       evidencePath: 'developer/sdk/kfd/upstream-aggregate.json',
@@ -900,11 +976,12 @@ function buildSummary({
     contract: 'kungfu-buildchain-kfd-evidence-summary',
     product: registry.product,
     buildchain: {
-      minimumVersion: '2.10.7',
+      minimumVersion: '2.10.8',
       releasePassportInputs: {
         kfd1WitnessJsons: [rel(KFD1_WITNESS_PATH)],
         kfd2ClaimJsons: (kfd2Summary.buildchainProjection?.claims || []).map(
-          (claim) => claim.path,
+          (claim) =>
+            claim.path || `${rel(KFD2_OUTPUT_DIR)}/claims/${claim.id}.json`,
         ),
         kfd3PrebuildWitnessJsons: [rel(KFD3_PREBUILD_WITNESS_PATH)],
         kfd3ArtifactVerifyCommand: ARTIFACT_VERIFY_COMMAND,
@@ -938,6 +1015,13 @@ function buildSummary({
       surfaceCount: registry.surfaces.length,
       collaborationInterfaceDigest:
         prebuildWitness.collaborationInterfaceDigest,
+    },
+    kfd4: {
+      status: 'schema-only',
+      source: '@kungfu-tech/kfd/standards.json',
+      schemaCommand: 'kungfu sdk kfd 4 schema --json',
+      residualRisk:
+        'Buildchain 2.10.8 exposes KFD-4 as schema-only; no release verification protocol is claimed.',
     },
   };
 }
