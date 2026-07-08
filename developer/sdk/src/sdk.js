@@ -3012,67 +3012,6 @@ function buildKfdStandardsStatus(registry, registryPath, aggregate) {
 }
 
 /**
- * @param {Record<string, any>} registry
- * @param {string} registryPath
- * @param {Record<string, any>} aggregate
- * @returns {Record<string, any>}
- */
-function kfd1SupportWitness(registry, registryPath, aggregate) {
-  return {
-    schemaVersion: 1,
-    contract: 'kungfu-sdk-kfd-1-support-witness',
-    standard: 'kfd-1',
-    witnessKind: 'installed-sdk-contract-world-summary',
-    metadata: kfd1.resolveMetadata(),
-    product: registry.product || { id: 'kungfu', name: 'Kungfu' },
-    sourceRegistry: {
-      path: path.relative(process.cwd(), registryPath) || '.',
-      sha256: sha256File(registryPath),
-    },
-    contractWorld: aggregate.ownKfd?.kfd1 || null,
-    surfaces: (registry.surfaces || []).map(
-      (/** @type {Record<string, any>} */ surface) => ({
-        id: surface.id,
-        kind: surface.kind,
-        sourcePath: surface.sourcePath,
-        artifactPath: surface.artifactPath || surface.evidencePath,
-        digest: `sha256:${sha256KfdJson(surface)}`,
-      }),
-    ),
-    releaseGate: {
-      passportInput: '--kfd-1-witness-json',
-      finalTrust: 'query-buildchain-release-passport',
-    },
-  };
-}
-
-/**
- * @param {Record<string, any>} aggregate
- * @returns {Record<string, any>}
- */
-function kfd2ClaimSummary(aggregate) {
-  return {
-    schemaVersion: 1,
-    contract: 'kungfu-sdk-kfd-2-release-claims',
-    standard: 'kfd-2',
-    metadata: kfd2.resolveMetadata(),
-    product: aggregate.product || {
-      id: 'kungfu',
-      name: 'Kungfu',
-      repository: 'kungfu-systems/kungfu',
-    },
-    source: aggregate.ownKfd?.kfd2 || null,
-    releaseGate: {
-      passportInput: '--kfd-2-claim-json',
-      finalTrust: 'query-buildchain-release-passport',
-    },
-    residualRisk: [
-      'Installed SDK claim summaries are packaged facts; release trust depends on the Buildchain release passport for the exact artifact.',
-    ],
-  };
-}
-
-/**
  * @param {Record<string, any>} document
  * @param {string} source
  * @returns {Record<string, any>}
