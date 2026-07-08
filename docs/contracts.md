@@ -209,14 +209,63 @@ node scripts/kfd2-release-claims.mjs --write
 
 `--check` validates the registry without writing generated files. `--write`
 emits the KFD canonical wrapper at `.buildchain/kfd-2/release-claims.json` and
-Buildchain v2.8-compatible raw claim files under `.buildchain/kfd-2/claims/`.
+Buildchain 2.10-compatible raw claim files under `.buildchain/kfd-2/claims/`.
 Release collection can pass those raw claim files with Buildchain's
 `--kfd-2-claim-json` input.
 
 **Maturity.** `draft`. The first claim set covers the agent onboarding pack,
-Codex report receipts, and the remote fact boundary. Workflow enforcement is
-not yet enabled; release maintainers can run the generator manually before
-Buildchain release-passport collection.
+Codex report receipts, and the remote fact boundary. The release workflow now
+generates these files before Buildchain release-passport collection and passes
+the raw claim inputs to the Buildchain 2.10 release gate.
+
+## Buildchain KFD release evidence is generated from Kungfu facts
+
+**Guarantee.** Kungfu exposes one root command set for Buildchain KFD release
+passport inputs:
+
+```sh
+./kungfu-code kfd:buildchain
+./kungfu-code kfd:buildchain:check
+./kungfu-code kfd:query
+node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json
+```
+
+The generator writes a tracked Buildchain-facing KFD-3 registry at
+[`buildchain.kfd3.json`](../buildchain.kfd3.json), then writes ignored release
+evidence under `.buildchain/`:
+
+```text
+.buildchain/kfd-1/contract-world.witness.json
+.buildchain/kfd-2/claims/*.json
+.buildchain/kfd-3/collaboration-interface.prebuild.json
+.buildchain/kfd-3/collaboration-interface.artifact.json
+.buildchain/kfd-3/capability-query.json
+```
+
+`buildchain.kfd3.json` is generated from Kungfu's installed agent KFD-3
+registry plus SDK/product entrypoints. The `.buildchain/` files are generated
+release evidence, not a second source of truth.
+
+**Verify.** Run:
+
+```sh
+./kungfu-code kfd:buildchain:check
+./kungfu-code verify
+```
+
+The release workflow runs `node scripts/buildchain-custom-publish-evidence.mjs`;
+that script generates KFD evidence before writing custom publish evidence.
+Buildchain 2.10 then collects:
+
+- KFD-1 witness `.buildchain/kfd-1/contract-world.witness.json`;
+- KFD-2 raw claims under `.buildchain/kfd-2/claims/`;
+- KFD-3 prebuild witness `.buildchain/kfd-3/collaboration-interface.prebuild.json`;
+- KFD-3 artifact witness from
+  `node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json`.
+
+**Maturity.** `draft` for the breadth of the declared interface, because the
+current surface set is agent/SDK/product focused. The Buildchain release
+passport wiring is active and is now part of `./kungfu-code verify`.
 
 ## The agent-first bridge is Kungfu's current KFD-3 profile
 

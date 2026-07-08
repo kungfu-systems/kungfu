@@ -53,6 +53,9 @@
     "dist:dir": "pnpm --filter @kungfu-tech/artifact-kungfu run package",
     "package:app": "pnpm --filter @kungfu-tech/artifact-kungfu run package",
     "verify": "node scripts/verify.mjs",
+    "kfd:buildchain": "node scripts/buildchain-kfd-evidence.mjs --write",
+    "kfd:buildchain:check": "node scripts/buildchain-kfd-evidence.mjs --check",
+    "kfd:query": "node scripts/buildchain-kfd-evidence.mjs --query",
     "kfd2:claims": "node scripts/kfd2-release-claims.mjs --write",
     "kfd2:claims:check": "node scripts/kfd2-release-claims.mjs --check",
     "check:types": "tsc -p tsconfig.tools.json",
@@ -67,6 +70,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
+    "@kungfu-tech/buildchain": "2.10.0",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.0.0",
     "@types/npmlog": "^7.0.0",

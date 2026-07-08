@@ -246,6 +246,28 @@ function main() {
         `kfd2-release-claims exited ${kfd2Claims.status}`,
     );
 
+  // ── Stage 0e: Buildchain KFD release evidence ───────────────────
+  // The release workflow consumes KFD-1/2/3 evidence through Buildchain 2.10.
+  // Keep the tracked KFD-3 registry and generated witness inputs aligned with
+  // Kungfu's local contract, trust-claim, and collaboration-interface facts.
+  console.log('\n[verify] stage 0e: Buildchain KFD release evidence');
+  const buildchainKfd = spawnSync(
+    process.execPath,
+    [path.join(__dirname, 'buildchain-kfd-evidence.mjs'), '--check'],
+    { encoding: 'utf8' },
+  );
+  if (buildchainKfd.status === 0)
+    pass(
+      'Buildchain KFD release evidence',
+      (buildchainKfd.stdout || '').trim(),
+    );
+  else
+    fail(
+      'Buildchain KFD release evidence',
+      `${buildchainKfd.stdout || ''}${buildchainKfd.stderr || ''}`.trim() ||
+        `buildchain-kfd-evidence exited ${buildchainKfd.status}`,
+    );
+
   // ── Stage 0: toolchain preflight (read-only) ──────────────────────
   console.log('\n[verify] stage 0: toolchain preflight');
   const uv = spawnSync('uv', ['--version'], { encoding: 'utf8', shell: isWin });

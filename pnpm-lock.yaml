@@ -31,6 +31,9 @@ importers:
       '@biomejs/biome':
         specifier: 1.9.4
         version: 1.9.4
+      '@kungfu-tech/buildchain':
+        specifier: 2.10.0
+        version: 2.10.0
       '@types/fs-extra':
         specifier: ^11.0.4
         version: 11.0.4
@@ -93,14 +96,14 @@ importers:
         version: link:../framework/tui
     devDependencies:
       '@kungfu-tech/buildchain':
-        specifier: 2.8.17
-        version: 2.8.17
+        specifier: 2.10.0
+        version: 2.10.0
 
   developer/sdk:
     dependencies:
       '@kungfu-tech/buildchain':
-        specifier: 2.8.17
-        version: 2.8.17
+        specifier: 2.10.0
+        version: 2.10.0
       '@kungfu-tech/core':
         specifier: workspace:*
         version: link:../../framework/core
@@ -1279,8 +1282,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@kungfu-tech/buildchain@2.8.17':
-    resolution: {integrity: sha512-I2OpuVDKgexWONSV3k1nLWPvR3cR80zBvYC32USBX2sEiHcwc+JqnSCSC3Jqu2RGyVdLBz4Njrs+qNpmbxJocA==}
+  '@kungfu-tech/buildchain@2.10.0':
+    resolution: {integrity: sha512-ItBDfruK2PIN7/mby0i2BAi0UK5PrY1iJiVuupJWEESSa7s8Hdru5I+rkilQ6CvFMGA4yss7S/WupB+jaszDXA==}
     engines: {node: '>=22.14.0'}
     hasBin: true
 
@@ -5327,7 +5330,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@kungfu-tech/buildchain@2.8.17':
+  '@kungfu-tech/buildchain@2.10.0':
     dependencies:
       '@kungfu-tech/kfd': 1.0.0-alpha.16
       smol-toml: 1.7.0
