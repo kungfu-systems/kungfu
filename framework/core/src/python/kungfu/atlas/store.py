@@ -5,7 +5,6 @@
 # import. Same construction as the work store — standalone single writer,
 # content-addressed schema manifest, state lives only in the fold.
 
-import hashlib
 import json
 import os
 import uuid
@@ -13,22 +12,17 @@ import uuid
 import kungfu
 
 from kungfu.atlas import (
-    MSG_GOAL_SNAPSHOT,
-    MSG_IMPORT_BEGIN,
-    MSG_IMPORT_END,
-    MSG_MARKER_SNAPSHOT,
-    MSG_MISSION_SNAPSHOT,
+    ACTION_GOAL_SNAPSHOT,
+    ACTION_IMPORT_BEGIN,
+    ACTION_IMPORT_END,
+    ACTION_MARKER_SNAPSHOT,
+    ACTION_MISSION_SNAPSHOT,
+    MSG_ACTION_ENVELOPE,
     MSG_TYPE_NAMES,
     SCHEMA_VERSION,
-    events,
     importer,
     payloads,
 )
-from kungfu.atlas.fb.GoalSnapshot import GoalSnapshot
-from kungfu.atlas.fb.ImportBegin import ImportBegin
-from kungfu.atlas.fb.ImportEnd import ImportEnd
-from kungfu.atlas.fb.MarkerSnapshot import MarkerSnapshot
-from kungfu.atlas.fb.MissionSnapshot import MissionSnapshot
 
 lf = kungfu.__binding__.longfist
 yjj = kungfu.__binding__.yijinjing
@@ -36,8 +30,6 @@ yjj = kungfu.__binding__.yijinjing
 PUBLIC_DEST = 0
 ATLAS_GROUP = "atlas"
 ATLAS_NAME = "import"
-
-_BFBS_FILE = __import__("kungfu").schema_data_path(__file__, "atlas_events.bfbs")
 
 
 def _location(runtime_dir):
@@ -56,7 +48,15 @@ def store_dir(runtime_dir):
 
 
 def _text(value):
-    return value.decode() if value is not None else None
+    if value is None:
+        return None
+    text = value.decode() if isinstance(value, bytes) else str(value)
+    text = text.strip()
+    return text or None
+
+
+def _journal_payload(envelope):
+    return payloads.canonical_json_bytes(envelope)
 
 
 class ImportStore:
@@ -68,8 +68,9 @@ class ImportStore:
             runtime_dir, ATLAS_GROUP, ATLAS_NAME, PUBLIC_DEST, 0
         )
 
-    def _append(self, msg_type, data):
-        receipt = self.recorder.record_bytes(msg_type, data)
+    def _append_envelope(self, envelope):
+        data = _journal_payload(envelope)
+        receipt = self.recorder.record_json(MSG_ACTION_ENVELOPE, data.decode("utf-8"))
         return {
             "frame_uid": receipt.frame_uid,
             "trigger_frame_uid": receipt.trigger_frame_uid,
@@ -99,40 +100,72 @@ class ImportStore:
         missions, goals, markers, source_records, warnings = (
             importer.read_control_plane_with_sources(repo_root, window=range_filter)
         )
+        enriched_records = payloads.enrich_source_records(source_records)
         action_receipts = {}
-        self._append(
-            MSG_IMPORT_BEGIN,
-            events.import_begin(
-                import_id,
-                repo_root,
-                repo_head,
-                SCHEMA_VERSION,
-            ),
+        self._append_envelope(
+            payloads.build_action_envelope(
+                import_id=import_id,
+                storage_source_id=storage_source_id,
+                source_type="atlas",
+                action_type=ACTION_IMPORT_BEGIN,
+                batch={
+                    "repo_root": repo_root,
+                    "repo_head": repo_head,
+                    "schema_version": SCHEMA_VERSION,
+                },
+            )
         )
-        for card in missions:
-            action_receipts[("mission", card["mission_id"])] = self._append(
-                MSG_MISSION_SNAPSHOT, events.mission_snapshot(import_id, card)
+        for entry in enriched_records:
+            action_type = payloads.action_type_for_kind(str(entry.get("kind") or ""))
+            receipt = self._append_envelope(
+                payloads.build_action_envelope(
+                    import_id=import_id,
+                    storage_source_id=storage_source_id,
+                    source_type="atlas",
+                    action_type=action_type,
+                    source={
+                        "kind": entry.get("kind"),
+                        "source_id": entry.get("source_id"),
+                        "source_path": entry.get("source_path"),
+                        "source_time": entry.get("source_time"),
+                        "schema_version": entry.get("schema_version"),
+                    },
+                    payload={
+                        "content_type": entry.get(
+                            "content_type", payloads.CONTENT_TYPE_JSON
+                        ),
+                        "hash_algorithm": "sha256",
+                        "hash": entry.get("payload_hash"),
+                        "byte_len": entry.get("byte_len"),
+                        "state": entry.get(
+                            "payload_state", payloads.PAYLOAD_STATE_PRESENT
+                        ),
+                    },
+                )
             )
-        for card in goals:
-            action_receipts[("goal", card["goal_id"])] = self._append(
-                MSG_GOAL_SNAPSHOT, events.goal_snapshot(import_id, card)
+            action_receipts[
+                (str(entry.get("kind") or ""), str(entry.get("source_id") or ""))
+            ] = receipt
+        self._append_envelope(
+            payloads.build_action_envelope(
+                import_id=import_id,
+                storage_source_id=storage_source_id,
+                source_type="atlas",
+                action_type=ACTION_IMPORT_END,
+                batch={
+                    "missions": len(missions),
+                    "goals": len(goals),
+                    "markers": len(markers),
+                    "warnings": len(warnings),
+                },
             )
-        for card in markers:
-            action_receipts[("marker", card["branch"])] = self._append(
-                MSG_MARKER_SNAPSHOT, events.marker_snapshot(import_id, card)
-            )
-        self._append(
-            MSG_IMPORT_END,
-            events.import_end(
-                import_id, len(missions), len(goals), len(markers), len(warnings)
-            ),
         )
         payloads.write_import_payloads(
             self.store_dir(),
             import_id=import_id,
             repo_root=repo_root,
             repo_head=repo_head,
-            source_records=source_records,
+            source_records=enriched_records,
             counts={
                 "missions": len(missions),
                 "goals": len(goals),
@@ -163,17 +196,7 @@ class ImportStore:
         return store_dir(self.runtime_dir)
 
     def emit_manifest(self):
-        """Pin the store's schema bindings (content-addressed .bfbs + manifest)."""
-        with open(_BFBS_FILE, "rb") as f:
-            blob = f.read()
-        schema_hash = hashlib.sha256(blob).hexdigest()
-
-        schemas_dir = os.path.join(self.store_dir(), "schemas")
-        os.makedirs(schemas_dir, exist_ok=True)
-        blob_path = os.path.join(schemas_dir, schema_hash + ".bfbs")
-        if not os.path.exists(blob_path):
-            with open(blob_path, "wb") as f:
-                f.write(blob)
+        """Pin this store's v4 action-envelope binding."""
 
         manifest = {
             "spec_version": "0.1",
@@ -188,13 +211,15 @@ class ImportStore:
             "hash_algorithm": "sha256",
             "schema_bindings": {
                 str(msg_type): {
-                    "schema_kind": "flatbuffers",
+                    "schema_kind": "json",
                     "name": name,
-                    "schema_version": SCHEMA_VERSION,
-                    "schema_hash": schema_hash,
+                    "schema": payloads.ACTION_ENVELOPE_SCHEMA,
+                    "schema_version": 1,
                 }
                 for msg_type, name in MSG_TYPE_NAMES.items()
             },
+            "msg_type_epoch": "v4",
+            "semantic_dispatch": "action_type",
             "authority_boundary": "this store is a read-only projection of an "
             "external control-plane repository; that repository's files remain "
             "the source of truth",
@@ -205,16 +230,30 @@ class ImportStore:
         return manifest_path
 
 
+def _decode_action_envelope(data):
+    raw = bytes(data).rstrip(b"\0")
+    if not raw:
+        return None
+    try:
+        envelope = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    return envelope if isinstance(envelope, dict) else None
+
+
 def read_frames(runtime_dir):
-    """All import frames in gen_time order: (gen_time, msg_type, bytes)."""
+    """All import action frames in gen_time order: (gen_time, action_type, envelope)."""
     location = _location(runtime_dir)
     frames = []
-    for msg_type in MSG_TYPE_NAMES:
-        try:
-            for header, payload in yjj.assemble(location, 0).read_bytes(msg_type):
-                frames.append((header.gen_time, msg_type, bytes(payload)))
-        except (RuntimeError, ValueError, FileNotFoundError):
-            continue
+    try:
+        for header, frame_payload in yjj.assemble(location, 0).read_bytes(
+            MSG_ACTION_ENVELOPE
+        ):
+            envelope = _decode_action_envelope(frame_payload)
+            if envelope is not None:
+                frames.append((header.gen_time, envelope.get("action_type"), envelope))
+    except (RuntimeError, ValueError, FileNotFoundError):
+        pass
     frames.sort(key=lambda f: f[0])
     return frames
 
@@ -229,31 +268,82 @@ def _frame_data_type_value(header):
 
 
 def read_action_frame_index(runtime_dir):
-    """Action frame identity index keyed by (frame_uid, msg_type, gen_time)."""
+    """Action frame identity index keyed by (frame_uid, gen_time)."""
     location = _location(runtime_dir)
     index = {}
-    for msg_type in MSG_TYPE_NAMES:
-        try:
-            for header, frame_payload in yjj.assemble(location, 0).read_bytes(msg_type):
-                data = bytes(frame_payload)
-                index[(header.frame_uid, header.msg_type, header.gen_time)] = {
-                    "frame_uid": header.frame_uid,
-                    "trigger_frame_uid": header.trigger_frame_uid,
-                    "stream_id": header.stream_id,
-                    "gen_time": header.gen_time,
-                    "trigger_time": header.trigger_time,
-                    "msg_type": header.msg_type,
-                    "source": header.source,
-                    "initial_source": header.initial_source,
-                    "dest": header.dest,
-                    "data_length": len(data),
-                    "data_type": _frame_data_type_value(header),
-                    "journal_payload_hash": payloads.payload_hash(data),
-                    "_payload": data,
-                }
-        except (RuntimeError, ValueError, FileNotFoundError):
-            continue
+    try:
+        for header, frame_payload in yjj.assemble(location, 0).read_bytes(
+            MSG_ACTION_ENVELOPE
+        ):
+            data = bytes(frame_payload)
+            index[(header.frame_uid, header.gen_time)] = {
+                "frame_uid": header.frame_uid,
+                "trigger_frame_uid": header.trigger_frame_uid,
+                "stream_id": header.stream_id,
+                "gen_time": header.gen_time,
+                "trigger_time": header.trigger_time,
+                "msg_type": header.msg_type,
+                "source": header.source,
+                "initial_source": header.initial_source,
+                "dest": header.dest,
+                "data_length": len(data),
+                "data_type": _frame_data_type_value(header),
+                "journal_payload_hash": payloads.payload_hash(data),
+                "_payload": data,
+            }
+    except (RuntimeError, ValueError, FileNotFoundError):
+        pass
     return index
+
+
+def _mission_card(payload):
+    stage = payload.get("current_stage")
+    stage = stage if isinstance(stage, dict) else {}
+    return {
+        "mission_id": _text(payload.get("mission_id")),
+        "title": _text(payload.get("title")),
+        "status": _text(payload.get("status")),
+        "active_lens": _text(payload.get("active_lens")),
+        "stage_name": _text(stage.get("name")),
+        "next_review": _text(stage.get("next_review")),
+        "next_action": _text(payload.get("next_action")),
+    }
+
+
+def _goal_card(payload):
+    return {
+        "goal_id": _text(payload.get("goal_id")),
+        "status": _text(payload.get("status")),
+        "title": _text(payload.get("title")),
+        "owner_agent": _text(payload.get("owner_agent")),
+        "mission_id": _text(payload.get("mission_id")),
+        "lens": _text(payload.get("lens")),
+        "mission_stage": _text(payload.get("mission_stage")),
+        "source_branch": _text(payload.get("source_branch")),
+        "worktree_path": _text(payload.get("worktree_path")),
+        "external_repo_path": _text(payload.get("external_repo_path")),
+        "external_branch": _text(payload.get("external_branch")),
+        "external_head": _text(payload.get("external_head")),
+        "external_ready_ref": _text(payload.get("external_ready_ref")),
+        "latest_marker": _text(payload.get("latest_marker")),
+        "summary": _text(payload.get("summary")),
+        "next_action": _text(payload.get("next_action")),
+        "archived": bool(payload.get("archived")),
+    }
+
+
+def _marker_card(payload, source):
+    return {
+        "branch": _text(payload.get("branch")),
+        "status": _text(payload.get("status")),
+        "ready": bool(payload.get("ready")),
+        "ready_scope": _text(payload.get("ready_scope")),
+        "keep_source_worktree": bool(payload.get("keep_source_worktree")),
+        "worktree_path": _text(payload.get("worktree_path")),
+        "summary": _text(payload.get("summary")),
+        "risk": _text(payload.get("risk")),
+        "marker_path": _text(source.get("source_path") or payload.get("marker_path")),
+    }
 
 
 def load(runtime_dir):
@@ -264,76 +354,50 @@ def load(runtime_dir):
     """
     batches = {}
     completed = []
-    for gen_time, msg_type, payload in read_frames(runtime_dir):
-        if msg_type == MSG_IMPORT_BEGIN:
-            event = ImportBegin.GetRootAs(payload, 0)
-            import_id = _text(event.ImportId())
+    data_dir = store_dir(runtime_dir)
+    for gen_time, action_type, envelope in read_frames(runtime_dir):
+        session = envelope.get("session")
+        session = session if isinstance(session, dict) else {}
+        batch_info = envelope.get("batch")
+        batch_info = batch_info if isinstance(batch_info, dict) else {}
+        import_id = _text(session.get("import_id"))
+        if action_type == ACTION_IMPORT_BEGIN and import_id:
             batches[import_id] = {
                 "import_id": import_id,
-                "repo_root": _text(event.RepoRoot()),
-                "repo_head": _text(event.RepoHead()),
+                "repo_root": _text(batch_info.get("repo_root")),
+                "repo_head": _text(batch_info.get("repo_head")),
                 "time": gen_time,
                 "missions": {},
                 "goals": {},
                 "markers": {},
             }
-        elif msg_type == MSG_MISSION_SNAPSHOT:
-            event = MissionSnapshot.GetRootAs(payload, 0)
-            batch = batches.get(_text(event.ImportId()))
-            if batch is not None:
-                card = {
-                    "mission_id": _text(event.MissionId()),
-                    "title": _text(event.Title()),
-                    "status": _text(event.Status()),
-                    "active_lens": _text(event.ActiveLens()),
-                    "stage_name": _text(event.StageName()),
-                    "next_review": _text(event.NextReview()),
-                    "next_action": _text(event.NextAction()),
-                }
+        elif action_type == ACTION_MISSION_SNAPSHOT and import_id:
+            batch = batches.get(import_id)
+            descriptor = envelope.get("payload")
+            descriptor = descriptor if isinstance(descriptor, dict) else {}
+            source_payload, _ = payloads.load_payload_descriptor(data_dir, descriptor)
+            if batch is not None and source_payload is not None:
+                card = _mission_card(source_payload)
                 batch["missions"][card["mission_id"]] = card
-        elif msg_type == MSG_GOAL_SNAPSHOT:
-            event = GoalSnapshot.GetRootAs(payload, 0)
-            batch = batches.get(_text(event.ImportId()))
-            if batch is not None:
-                card = {
-                    "goal_id": _text(event.GoalId()),
-                    "status": _text(event.Status()),
-                    "title": _text(event.Title()),
-                    "owner_agent": _text(event.OwnerAgent()),
-                    "mission_id": _text(event.MissionId()),
-                    "lens": _text(event.Lens()),
-                    "mission_stage": _text(event.MissionStage()),
-                    "source_branch": _text(event.SourceBranch()),
-                    "worktree_path": _text(event.WorktreePath()),
-                    "external_repo_path": _text(event.ExternalRepoPath()),
-                    "external_branch": _text(event.ExternalBranch()),
-                    "external_head": _text(event.ExternalHead()),
-                    "external_ready_ref": _text(event.ExternalReadyRef()),
-                    "latest_marker": _text(event.LatestMarker()),
-                    "summary": _text(event.Summary()),
-                    "next_action": _text(event.NextAction()),
-                    "archived": bool(event.Archived()),
-                }
+        elif action_type == ACTION_GOAL_SNAPSHOT and import_id:
+            batch = batches.get(import_id)
+            descriptor = envelope.get("payload")
+            descriptor = descriptor if isinstance(descriptor, dict) else {}
+            source_payload, _ = payloads.load_payload_descriptor(data_dir, descriptor)
+            if batch is not None and source_payload is not None:
+                card = _goal_card(source_payload)
                 batch["goals"][card["goal_id"]] = card
-        elif msg_type == MSG_MARKER_SNAPSHOT:
-            event = MarkerSnapshot.GetRootAs(payload, 0)
-            batch = batches.get(_text(event.ImportId()))
-            if batch is not None:
-                card = {
-                    "branch": _text(event.Branch()),
-                    "status": _text(event.Status()),
-                    "ready": bool(event.Ready()),
-                    "ready_scope": _text(event.ReadyScope()),
-                    "keep_source_worktree": bool(event.KeepSourceWorktree()),
-                    "worktree_path": _text(event.WorktreePath()),
-                    "summary": _text(event.Summary()),
-                    "risk": _text(event.Risk()),
-                    "marker_path": _text(event.MarkerPath()),
-                }
+        elif action_type == ACTION_MARKER_SNAPSHOT and import_id:
+            batch = batches.get(import_id)
+            descriptor = envelope.get("payload")
+            descriptor = descriptor if isinstance(descriptor, dict) else {}
+            source = envelope.get("source")
+            source = source if isinstance(source, dict) else {}
+            source_payload, _ = payloads.load_payload_descriptor(data_dir, descriptor)
+            if batch is not None and source_payload is not None:
+                card = _marker_card(source_payload, source)
                 batch["markers"][card["branch"]] = card
-        elif msg_type == MSG_IMPORT_END:
-            event = ImportEnd.GetRootAs(payload, 0)
-            import_id = _text(event.ImportId())
+        elif action_type == ACTION_IMPORT_END and import_id:
             if import_id in batches:
                 completed.append((gen_time, import_id))
     if not completed:

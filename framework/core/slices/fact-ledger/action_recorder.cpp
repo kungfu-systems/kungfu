@@ -22,12 +22,13 @@ namespace longfist = kungfu::longfist;
 using kungfu::slices::sha256;
 
 namespace {
-constexpr int32_t MSG_ACTION = 20031;
+constexpr int32_t MSG_ACTION_ENVELOPE = 1000;
 constexpr uint64_t STREAM_ID = 7001;
 
 std::vector<uint8_t> bytes_for_step(std::size_t step) {
   nlohmann::json payload = {
       {"schema", "kungfu.fact-ledger-action/v1"},
+      {"msg_schema", "kungfu.action-envelope/v1"},
       {"step", step},
       {"action_type", "slice.fact.record"},
   };
@@ -71,14 +72,14 @@ int main(int argc, char **argv) {
   for (std::size_t i = 0; i < n; ++i) {
     auto payload = bytes_for_step(i);
     payloads.push_back(payload);
-    receipts.push_back(recorder.record_bytes(MSG_ACTION, payload));
+    receipts.push_back(recorder.record_bytes(MSG_ACTION_ENVELOPE, payload));
   }
 
   auto locator = std::make_shared<data::locator>(root);
   auto location =
       data::location::make_shared(longfist::enums::mode::LIVE, longfist::enums::category::SYSTEM, group, name, locator);
   journal::assemble reader(location, data::location::PUBLIC, longfist::enums::AssembleMode::Channel, 0);
-  auto frames = reader.read_bytes(MSG_ACTION);
+  auto frames = reader.read_bytes(MSG_ACTION_ENVELOPE);
   if (frames.size() != receipts.size()) {
     fail("frame count mismatch");
     return 1;

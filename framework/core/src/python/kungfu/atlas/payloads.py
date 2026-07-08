@@ -5,9 +5,29 @@ import json
 from pathlib import Path
 from typing import Any
 
+from kungfu.atlas import (
+    ACTION_GOAL_SNAPSHOT,
+    ACTION_MARKER_SNAPSHOT,
+    ACTION_MISSION_SNAPSHOT,
+)
+
 CONTENT_TYPE_JSON = "application/json"
 PAYLOAD_STATE_PRESENT = "present"
 ACTION_ENVELOPE_SCHEMA = "kungfu.action-envelope/v1"
+
+ACTION_SCHEMA_REFS = {
+    "atlas.import.begin": {"id": "kungfu.atlas.ImportBegin", "version": 1},
+    ACTION_MISSION_SNAPSHOT: {"id": "kungfu.atlas.MissionSnapshot", "version": 1},
+    ACTION_GOAL_SNAPSHOT: {"id": "kungfu.atlas.GoalSnapshot", "version": 1},
+    ACTION_MARKER_SNAPSHOT: {"id": "kungfu.atlas.MarkerSnapshot", "version": 1},
+    "atlas.import.end": {"id": "kungfu.atlas.ImportEnd", "version": 1},
+}
+
+KIND_ACTION_TYPES = {
+    "mission": ACTION_MISSION_SNAPSHOT,
+    "goal": ACTION_GOAL_SNAPSHOT,
+    "marker": ACTION_MARKER_SNAPSHOT,
+}
 
 
 def canonical_json_bytes(value: Any) -> bytes:
@@ -62,8 +82,49 @@ def enrich_source_records(source_records: list[dict[str, Any]]) -> list[dict[str
     return enriched
 
 
-def _action_type(kind: str) -> str:
-    return f"atlas.{kind}.snapshot"
+def action_type_for_kind(kind: str) -> str:
+    return KIND_ACTION_TYPES.get(kind, f"atlas.{kind}.snapshot")
+
+
+def _schema_ref(action_type: str) -> dict[str, Any]:
+    return dict(
+        ACTION_SCHEMA_REFS.get(
+            action_type,
+            {"id": action_type, "version": 1},
+        )
+    )
+
+
+def build_action_envelope(
+    *,
+    import_id: str,
+    storage_source_id: str,
+    source_type: str,
+    action_type: str,
+    source: dict[str, Any] | None = None,
+    payload: dict[str, Any] | None = None,
+    batch: dict[str, Any] | None = None,
+    journal: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    envelope: dict[str, Any] = {
+        "schema": ACTION_ENVELOPE_SCHEMA,
+        "schema_ref": _schema_ref(action_type),
+        "session": {"import_id": import_id},
+        "actor": {
+            "storage_source_id": storage_source_id,
+            "source_type": source_type,
+        },
+        "action_type": action_type,
+    }
+    if source is not None:
+        envelope["source"] = source
+    if payload is not None:
+        envelope["payload"] = payload
+    if batch is not None:
+        envelope["batch"] = batch
+    if journal is not None:
+        envelope["journal"] = dict(journal)
+    return envelope
 
 
 def _action_envelope(
@@ -75,30 +136,27 @@ def _action_envelope(
     receipt: dict[str, Any],
 ) -> dict[str, Any]:
     kind = str(entry.get("kind") or "")
-    return {
-        "schema": ACTION_ENVELOPE_SCHEMA,
-        "session": {"import_id": import_id},
-        "actor": {
-            "storage_source_id": storage_source_id,
-            "source_type": source_type,
-        },
-        "action_type": _action_type(kind),
-        "source": {
+    return build_action_envelope(
+        import_id=import_id,
+        storage_source_id=storage_source_id,
+        source_type=source_type,
+        action_type=action_type_for_kind(kind),
+        source={
             "kind": kind,
             "source_id": entry.get("source_id"),
             "source_path": entry.get("source_path"),
             "source_time": entry.get("source_time"),
             "schema_version": entry.get("schema_version"),
         },
-        "payload": {
+        payload={
             "content_type": entry.get("content_type", CONTENT_TYPE_JSON),
             "hash_algorithm": "sha256",
             "hash": entry.get("payload_hash"),
             "byte_len": entry.get("byte_len"),
             "state": entry.get("payload_state", PAYLOAD_STATE_PRESENT),
         },
-        "journal": dict(receipt),
-    }
+        journal=receipt,
+    )
 
 
 def _serialize_range(range_filter: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -146,7 +204,12 @@ def write_import_payloads(
 ) -> dict[str, Any]:
     store_dir = Path(store_dir)
     entries = []
-    for record in enrich_source_records(source_records):
+    records = (
+        source_records
+        if all("payload_hash" in record for record in source_records)
+        else enrich_source_records(source_records)
+    )
+    for record in records:
         raw = canonical_json_bytes(record["payload"])
         path = payload_path(store_dir, record["payload_hash"])
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -232,6 +295,17 @@ def _load_payload(
     return data, None
 
 
+def load_payload_descriptor(
+    store_dir: str | Path,
+    descriptor: dict[str, Any],
+) -> tuple[dict[str, Any] | None, str | None]:
+    entry = {
+        "payload_hash": descriptor.get("hash"),
+        "byte_len": descriptor.get("byte_len"),
+    }
+    return _load_payload(store_dir, entry)
+
+
 def _append_action_error(
     report: dict[str, Any],
     code: str,
@@ -287,9 +361,11 @@ def _check_action_frame(
     if action_frames is None:
         return
     frame_uid = journal.get("frame_uid")
-    frame = action_frames.get(
-        (frame_uid, journal.get("msg_type"), journal.get("gen_time"))
-    )
+    frame = action_frames.get((frame_uid, journal.get("gen_time")))
+    if frame is None:
+        frame = action_frames.get(
+            (frame_uid, journal.get("msg_type"), journal.get("gen_time"))
+        )
     if frame is None:
         _append_action_error(report, "action_frame_missing", entry, frame_uid=frame_uid)
         return
@@ -370,12 +446,12 @@ def _check_action(
             actual=action.get("schema"),
         )
     kind = str(entry.get("kind") or "")
-    if action.get("action_type") != _action_type(kind):
+    if action.get("action_type") != action_type_for_kind(kind):
         _append_action_error(
             report,
             "action_type_mismatch",
             entry,
-            expected=_action_type(kind),
+            expected=action_type_for_kind(kind),
             actual=action.get("action_type"),
         )
     _check_action_payload(report, entry, action)

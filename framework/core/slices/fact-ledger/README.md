@@ -112,8 +112,10 @@ link back correctly, so CI can gate on it.
 - **No in-frame content hash yet.** Content commitment lives at the manifest
   layer (checksums over exported payloads), not as a per-frame `payload_hash` in
   the spine (the external hash-blob store of the full design is future work).
-- **`msg_type` is an opaque int.** No self-describing schema registry is bundled;
-  decoding still assumes the reader knows the meaning of a type.
+- **`msg_type` is a carrier int.** The v4 action-recorder smoke uses the generic
+  action-envelope carrier (`1000`); domain semantics are carried by the JSON
+  payload's `action_type` / schema fields. No full self-describing schema
+  registry is bundled in this slice yet.
 - **`frame_uid` is stable within a bundle and across re-reads, but not
   reproducible across separate write runs** (per-writer nano-hash low bits;
   ADR-0010 8.2.3 determinism not adopted).

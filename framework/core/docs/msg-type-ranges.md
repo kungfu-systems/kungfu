@@ -1,33 +1,71 @@
-# Message Type Ranges
+---
+status: draft
+period: 2026-07-08
+theme: kungfu-v4-msg-type-registry
+doc_type: design
+source_level: local-files
+confidence: high
+sensitivity: internal
+evidence_grade: B
+review_state: active
+last_reviewed: 2026-07-08
+ai_provenance:
+  generated_by: Codex
+  product: Codex CLI
+  generated_at: 2026-07-08T10:55:00+08:00
+  visible_context: local Kungfu source tree and current user consensus
+  invisible_context: exact model build and hidden system implementation are unknown
+---
 
-`msg_type` is a wire-level welded surface: the numbers travel inside journal
-frames across processes, languages and years, so allocation needs a single
-source of truth. This file is that source. Adding a type means taking a number
-from the right range here — duplicate registrations are also rejected at
-runtime by the schema registry, but the range discipline is what keeps
-independent lines from colliding in the first place.
+# Message Type Registry
 
-| Range | Owner | Notes |
+`msg_type` remains a wire-level journal header field. It must stay positive for
+published frames and it is still useful for low-level filtering, frame
+validation, and compatibility with the yijinjing reader APIs.
+
+v4 resets the business allocation rule: **new product/runtime facts do not get
+one `msg_type` per business event.** They use a small carrier set at the journal
+layer, and put domain semantics in the payload envelope:
+
+```json
+{
+  "schema": "kungfu.action-envelope/v1",
+  "action_type": "atlas.goal.snapshot",
+  "schema_ref": {"id": "kungfu.atlas.GoalSnapshot", "version": 1}
+}
+```
+
+## v4 Allocations
+
+| Number | Owner | Meaning |
 | --- | --- | --- |
-| `0 – 19999` | longfist closed set | Kernel and trading type registry (`kungfu/longfist`). Currently occupies `0 – 799` and `10051 – 10751`; the whole range is reserved for it. |
-| `20000 – 29999` | capability slices | Demo/probe types used by `slices/*` (see `slices/README.md`). Never consumed by products. |
-| `30000` and above | open layer | Application types registered at runtime with a self-describing schema (`.bfbs`); governed by the schema registry and per-run manifest bindings, not by this repository's compiled registry. |
+| `0` | yijinjing/longfist core | Internal `frame_header`; not a user event. |
+| `1` | yijinjing/longfist core | Internal `page_header`; not a user event. |
+| `1000` | Kungfu v4 action runtime | `kungfu.action-envelope/v1`; business semantics come from `action_type` and `schema_ref`, not from `msg_type`. |
+| `10051 – 10751` | yijinjing runtime service markers | Existing internal service/control tags such as `PageEnd`, `Time`, `Ping`, `Pong`, cache and socket markers. |
 
-Within the capability-slice range:
+Rules:
 
-| Numbers | Slice |
-| --- | --- |
-| `20001` | `slices/embedding` |
-| `20011 – 20013` | `slices/fact-ledger` |
-| `20021 – 20022` | `slices/schema-registry` |
+- New v4 business features should use `1000` unless they can prove a separate
+  carrier type is needed at the journal adapter layer.
+- KFX and first-party features must not allocate a new raw `msg_type` merely to
+  name a business action. Add an `action_type` / schema binding instead.
+- `msg_type` may appear in fsck/export/debug output as `journal.msg_type`, but
+  GUI/KFX/domain APIs should treat it as implementation metadata.
 
-First-party allocations within the open layer (informative — the binding
-authority remains each run's manifest, but first-party products reserve their
-numbers here to avoid colliding with each other):
+## Legacy / Migration Context
 
-| Numbers | Product | Schema |
+The repository still contains compiled longfist trading tags and earlier
+capability-slice demos. They are historical/runtime compatibility material, not
+the v4 business allocation model.
+
+| Legacy range | Status | Notes |
 | --- | --- | --- |
-| `30001 – 30099` | Kungfu Rewind capture events | `src/python/kungfu/rewind/rewind_events.fbs` (30001 RunBegin, 30002 RunEnd, 30003 ModelRequest, 30004 ModelResponse, 30005 ToolCall, 30006 ToolResult, 30007 RetryMarker, 30008 CostSnapshot, 30009 ApprovalDecision) |
-| `30101 – 30199` | Kungfu work items (default work profile) | `src/python/kungfu/work/work_events.fbs` (30101 WorkItemCreated, 30102 WorkStatusChanged, 30103 NextActionSet, 30104 CheckpointRecorded, 30105 DecisionRecorded, 30106 ValidationRecorded, 30107 ArtifactRecorded, 30108 RunLinked) |
-| `30201 – 30299` | Kungfu Atlas import profile (read-only control-plane snapshots) | `src/python/kungfu/atlas/atlas_events.fbs` (30201 ImportBegin, 30202 MissionSnapshot, 30203 GoalSnapshot, 30204 MarkerSnapshot, 30205 ImportEnd) |
-| `40000 – 49999` | Third-party kfx dynamic event schemas | No first-party `.fbs` — a kfx author compiles its own schema at runtime (`kungfu schema compile` / `pykungfu.yijinjing.compile_schema`) and registers the `.bfbs` into a run's manifest under a number in this band. The `sandboxed` trust tier is *constrained* to this band so an untrusted kfx cannot claim a first-party number (e.g. masquerade as `30005 ToolCall`); the `trusted` (node-integrated) tier may use any open-layer number but should still avoid the first-party sub-ranges above. |
+| `101 – 799` | legacy compiled longfist/trading tags | Kept while code exists, not extended for v4 agent facts. |
+| `20000 – 29999` | legacy capability-slice demos | May remain in isolated demos until each slice migrates to the v4 action envelope. |
+| `30000` and above | pre-envelope open layer | Earlier rewind/work/atlas profiles allocated one number per event table. New v4 code should not copy that pattern. |
+
+The Atlas import profile was migrated first: its former `30201 – 30205` event
+numbers are replaced by `msg_type = 1000` plus `action_type` values
+`atlas.import.begin`, `atlas.mission.snapshot`, `atlas.goal.snapshot`,
+`atlas.marker.snapshot`, and `atlas.import.end`.

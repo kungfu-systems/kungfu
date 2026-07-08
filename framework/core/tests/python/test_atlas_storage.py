@@ -4,6 +4,7 @@ import json
 from datetime import datetime, timezone
 
 from kungfu.atlas import importer, payloads
+from kungfu.atlas import MSG_ACTION_ENVELOPE
 from kungfu.sources import store as source_store
 
 
@@ -62,7 +63,7 @@ def _action_receipts(source_records):
             "stream_id": 0,
             "gen_time": 1000 + index,
             "trigger_time": 0,
-            "msg_type": 9000 + index,
+            "msg_type": MSG_ACTION_ENVELOPE,
             "source": 101,
             "initial_source": 101,
             "dest": 0,
@@ -83,7 +84,6 @@ def _action_frames_from_manifest(manifest):
         frames[
             (
                 entry["action"]["journal"]["frame_uid"],
-                entry["action"]["journal"]["msg_type"],
                 entry["action"]["journal"]["gen_time"],
             )
         ] = journal
@@ -210,8 +210,10 @@ def test_payload_manifest_fsck_export_and_verify(tmp_path):
     assert goal["source_time"] == "2026-07-08T01:00:00Z"
     assert goal["action"]["schema"] == payloads.ACTION_ENVELOPE_SCHEMA
     assert goal["action"]["action_type"] == "atlas.goal.snapshot"
+    assert goal["action"]["schema_ref"]["id"] == "kungfu.atlas.GoalSnapshot"
     assert goal["action"]["payload"]["hash"] == goal["payload_hash"]
     assert goal["action"]["journal"]["frame_uid"] > 0
+    assert goal["action"]["journal"]["msg_type"] == MSG_ACTION_ENVELOPE
 
     missing_frame = payloads.fsck_import(store, action_frames={})
     assert not missing_frame["ok"]

@@ -19,7 +19,8 @@ the rule. For what each surface guarantees and how to verify it, see
 | `config-contract` | Kungfu global config contract: schema, defaults, resolution rules, resolved output metadata, and packaged contract hash | integration + cross-time | [`config.md`](config.md), [`../framework/config/kungfu-config.contract.json`](../framework/config/kungfu-config.contract.json) |
 | `kungfu-cli` | kungfu CLI surface (canonical `kungfu` command; commands, journal subcommand output conventions) | integration | [`debugging.md`](debugging.md) |
 | `journal-replayability` | cross-version cold-path decode of recorded journals | cross-time | [ADR-0008](../framework/core/docs/adr/ADR-0008-longfist-schema-evolution-and-minor-maintenance.md) |
-| `rewind-event-schema` | Rewind capture event model (open-layer msg_types 30001-30099, `rewind_events.fbs`; trace bundles bind and outlive runs) | integration + cross-time | [`msg-type-ranges.md`](../framework/core/docs/msg-type-ranges.md), [`kungfu/rewind/README.md`](../framework/core/src/python/kungfu/rewind/README.md) |
+| `v4-action-envelope` | Generic journal carrier for v4 runtime facts (`msg_type=1000`, semantics in `action_type` / `schema_ref`) | integration + cross-time | [`msg-type-ranges.md`](../framework/core/docs/msg-type-ranges.md), [ADR-0022](../framework/core/docs/adr/ADR-0022-core-action-recording-surface.md) |
+| `rewind-event-schema` | Rewind capture event model (pre-envelope open-layer msg_types 30001-30099, `rewind_events.fbs`; trace bundles bind and outlive runs) | integration + cross-time | [`msg-type-ranges.md`](../framework/core/docs/msg-type-ranges.md), [`kungfu/rewind/README.md`](../framework/core/src/python/kungfu/rewind/README.md) |
 
 A surface is registered when consumers bind to it at integration time without
 runtime negotiation, or when its outputs remain depended on after the run.
@@ -33,6 +34,7 @@ registered surface was touched.
 
 | Date | Action | Line | Faces | Class | Rationale | PR |
 |---|---|---|---|---|---|---|
+| 2026-07-08 | register | — | v4-action-envelope | behavioral | Reset v4 business msg_type allocation: new runtime facts use `msg_type=1000` as the action-envelope carrier and put business semantics in `action_type` / `schema_ref`; Atlas import migrates off 30201-30205. Pre-release, no compatibility promise for the pre-envelope Atlas journal profile | — |
 | 2026-07-06 | update | — | config-contract, kfx-contract, skill-contract | additive | Add a shared KFD-1 contract registry/runtime: config, kfx, and skill contracts are registry-addressed, copied into frozen artifacts by one tool, verified by one artifact hash gate, and inspectable through `kungfu contract`. Pre-release, no line open | — |
 | 2026-07-06 | update | — | kfx-contract | additive | Weld the KFX manifest/config mechanism to a single machine-readable contract: package manifest schema, first-party manifest schema, Python/Node validation, frozen artifact hash evidence, and CLI inspection. Pre-release, no line open | — |
 | 2026-07-06 | register | — | config-contract | additive | Register the Kungfu config contract as a KFD-1 welded surface: one source for schema/defaults/resolution rules, with resolved output and frozen artifact hash evidence. Pre-release, no line open | — |

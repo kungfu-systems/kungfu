@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Atlas control-plane import events — the open-layer event schema for
-// `kungfu atlas import` (the Atlas profile's read-only first slice).
+// Legacy Atlas control-plane import events.
 //
-// Layering: these are application types (msg_type 30201-30299, see
-// docs/msg-type-ranges.md), NOT longfist kernel types. They ride the journal
-// as self-describing open-layer events, pinned by the import store's
-// content-addressed .bfbs manifest — the same mechanism the Rewind bundle
-// and the work store use.
+// v4 no longer writes one journal msg_type per Atlas business event. The active
+// import path writes `kungfu.action-envelope/v1` JSON frames under
+// `MSG_ACTION_ENVELOPE` and uses `action_type` / `schema_ref` for business
+// semantics. This FlatBuffers schema is retained only as pre-envelope history
+// while old generated files remain in-tree.
 //
 // Fact model: one import = one snapshot batch sharing an import_id, bracketed
 // by ImportBegin/ImportEnd. Each mission / goal / worktree-marker card in the
@@ -26,7 +25,7 @@
 
 namespace kungfu.atlas.fb;
 
-// msg_type 30201. Opens an import batch.
+// Legacy: opened an import batch.
 table ImportBegin {
   import_id:string;
   repo_root:string;
@@ -34,7 +33,7 @@ table ImportBegin {
   schema_version:uint;
 }
 
-// msg_type 30202. One mission registry card.
+// Legacy: one mission registry card.
 table MissionSnapshot {
   import_id:string;
   mission_id:string;
@@ -46,7 +45,7 @@ table MissionSnapshot {
   next_action:string;
 }
 
-// msg_type 30203. One goal registry card.
+// Legacy: one goal registry card.
 table GoalSnapshot {
   import_id:string;
   goal_id:string;
@@ -68,7 +67,7 @@ table GoalSnapshot {
   archived:bool;
 }
 
-// msg_type 30204. One worktree-status (ready/stage/merged) marker.
+// Legacy: one worktree-status (ready/stage/merged) marker.
 table MarkerSnapshot {
   import_id:string;
   branch:string;
@@ -82,7 +81,7 @@ table MarkerSnapshot {
   marker_path:string;
 }
 
-// msg_type 30205. Closes an import batch with counts; warnings counts files
+// Legacy: closes an import batch with counts; warnings counts files
 // that were unreadable or shaped unexpectedly (diagnostic, never fatal).
 table ImportEnd {
   import_id:string;

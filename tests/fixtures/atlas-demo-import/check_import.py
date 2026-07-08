@@ -20,14 +20,15 @@ sys.path.insert(0, os.path.join(_core, "src", "python"))
 sys.path.insert(0, os.path.join(_core, "dist", "kungfu"))
 
 from kungfu.atlas import (  # noqa: E402
-    MSG_GOAL_SNAPSHOT,
-    MSG_IMPORT_BEGIN,
-    MSG_IMPORT_END,
-    MSG_MARKER_SNAPSHOT,
-    MSG_MISSION_SNAPSHOT,
+    ACTION_GOAL_SNAPSHOT,
+    ACTION_IMPORT_BEGIN,
+    ACTION_IMPORT_END,
+    ACTION_MARKER_SNAPSHOT,
+    ACTION_MISSION_SNAPSHOT,
+    ACTION_TYPE_NAMES,
+    MSG_ACTION_ENVELOPE,
 )
 from kungfu.atlas import store  # noqa: E402
-from kungfu.atlas.fb.ImportEnd import ImportEnd  # noqa: E402
 
 runtime_dir, latest_import_id = sys.argv[1], sys.argv[2]
 failures = []
@@ -39,36 +40,36 @@ def check(name, ok, detail=""):
         failures.append(name)
 
 
-# ── journal: two complete batches, counts double the single batch ─────────
+# ── journal: two complete batches, one v4 envelope msg_type ───────────────
 frames = store.read_frames(runtime_dir)
 counts = {}
-for _gen_time, msg_type, _payload in frames:
-    counts[msg_type] = counts.get(msg_type, 0) + 1
+for _gen_time, action_type, _payload in frames:
+    counts[action_type] = counts.get(action_type, 0) + 1
 
 expected = {
-    MSG_IMPORT_BEGIN: 2,
-    MSG_MISSION_SNAPSHOT: 2,  # 1 mission x 2 imports
-    MSG_GOAL_SNAPSHOT: 4,  # 2 goals x 2 imports
-    MSG_MARKER_SNAPSHOT: 2,  # 1 valid marker x 2 imports
-    MSG_IMPORT_END: 2,
+    ACTION_IMPORT_BEGIN: 2,
+    ACTION_MISSION_SNAPSHOT: 2,  # 1 mission x 2 imports
+    ACTION_GOAL_SNAPSHOT: 4,  # 2 goals x 2 imports
+    ACTION_MARKER_SNAPSHOT: 2,  # 1 valid marker x 2 imports
+    ACTION_IMPORT_END: 2,
 }
-for msg_type, want in expected.items():
+for action_type, want in expected.items():
     check(
-        f"{store.MSG_TYPE_NAMES[msg_type]} x{want}",
-        counts.get(msg_type, 0) == want,
-        f"got {counts.get(msg_type, 0)}",
+        f"{ACTION_TYPE_NAMES[action_type]} x{want}",
+        counts.get(action_type, 0) == want,
+        f"got {counts.get(action_type, 0)}",
     )
 
 # warnings are diagnostic and counted: broken.json in the marker dir
 ends = [
-    ImportEnd.GetRootAs(payload, 0)
-    for _gen_time, msg_type, payload in frames
-    if msg_type == MSG_IMPORT_END
+    envelope
+    for _gen_time, action_type, envelope in frames
+    if action_type == ACTION_IMPORT_END
 ]
 check(
     "each batch counted one warning (broken.json)",
-    all(e.Warnings() == 1 for e in ends),
-    f"got {[e.Warnings() for e in ends]}",
+    all(e.get("batch", {}).get("warnings") == 1 for e in ends),
+    f"got {[e.get('batch', {}).get('warnings') for e in ends]}",
 )
 
 # ── projection: the fold picks the LATEST completed batch ─────────────────
@@ -121,23 +122,19 @@ if os.path.exists(manifest_path):
     with open(manifest_path) as f:
         manifest = json.load(f)
     bindings = manifest.get("schema_bindings", {})
-    check("manifest binds all five event types", len(bindings) == 5)
+    check("manifest binds the v4 action envelope", len(bindings) == 1)
+    check(
+        "manifest uses the reset envelope msg_type",
+        str(MSG_ACTION_ENVELOPE) in bindings,
+    )
     check(
         "manifest states the authority boundary",
         "authority_boundary" in manifest,
     )
-    hashes = {binding["schema_hash"] for binding in bindings.values()}
-    if len(hashes) == 1:
-        schema_hash = hashes.pop()
-        blob_path = os.path.join(store_dir, "schemas", schema_hash + ".bfbs")
-        check("schema blob exists", os.path.exists(blob_path))
-        if os.path.exists(blob_path):
-            with open(blob_path, "rb") as f:
-                blob = f.read()
-            check(
-                "schema blob content-addressed",
-                hashlib.sha256(blob).hexdigest() == schema_hash,
-            )
+    check(
+        "manifest dispatches business semantics by action_type",
+        manifest.get("semantic_dispatch") == "action_type",
+    )
 
 # ── payload manifest: every imported source record is an action envelope ──
 payload_manifest_path = os.path.join(store_dir, "imports", "latest.json")
@@ -161,7 +158,6 @@ if os.path.exists(payload_manifest_path):
         frame = frame_index.get(
             (
                 journal.get("frame_uid"),
-                journal.get("msg_type"),
                 journal.get("gen_time"),
             )
         )
@@ -180,6 +176,10 @@ if os.path.exists(payload_manifest_path):
         check(
             f"action payload hash matches {entry.get('kind')}:{entry.get('source_id')}",
             action.get("payload", {}).get("hash") == entry.get("payload_hash"),
+        )
+        check(
+            f"action journal uses envelope msg_type for {entry.get('kind')}:{entry.get('source_id')}",
+            journal.get("msg_type") == MSG_ACTION_ENVELOPE,
         )
 
     fsck = store.fsck(runtime_dir)

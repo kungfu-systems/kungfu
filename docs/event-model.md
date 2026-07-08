@@ -47,7 +47,7 @@ fields (defined in
 | `header_length` | `uint32` | Header size. |
 | `gen_time` | `int64` | When the frame was generated (nanoseconds). |
 | `trigger_time` | `int64` | Trigger time, for latency statistics. |
-| `msg_type` | `int32` | Message type of the payload. |
+| `msg_type` | `int32` | Wire-level carrier type. In v4 business facts normally use the generic action-envelope carrier and put semantics in `action_type` / `schema_ref`. |
 | `source` | `uint32` | Source of the frame. |
 | `dest` | `uint32` | Destination of the frame. |
 | `data_type` | enum | Payload encoding (raw struct vs json). |
@@ -56,9 +56,12 @@ fields (defined in
 | `trigger_frame_uid` | `uint64` | The reader's current frame when this frame was generated. |
 | `stream_id` | `uint64` | Stream identifier. |
 
-The payload's type is identified by `msg_type` and laid out per the `longfist`
-schema — the same bytes are read by C++, Python, and Node without parsing (see
-[`contracts.md`](contracts.md)).
+Closed longfist/runtime frames may still identify their payload layout directly
+through `msg_type`. New v4 business facts should use the generic action
+envelope carrier: the journal header keeps `msg_type` for filtering and fsck,
+while the payload names the domain action through `action_type` and
+`schema_ref`. The same bytes are read by C++, Python, and Node without inventing
+per-language causality logic (see [`contracts.md`](contracts.md)).
 
 ## Routing: source and dest
 
