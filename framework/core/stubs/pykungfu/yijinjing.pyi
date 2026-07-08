@@ -2,7 +2,62 @@ from __future__ import annotations
 import pykungfu.longfist.enums
 import pykungfu.longfist.types
 import typing
-__all__: list[str] = ['PUBLISH', 'PULL', 'PUSH', 'REPLY', 'REQUEST', 'SUBSCRIBE', 'apprentice', 'assemble', 'bus', 'calendar_day_start', 'color_print', 'compile_schema', 'copy_sink', 'emit_log', 'event', 'frame', 'get_page_path', 'hash_32', 'hash_str_32', 'in_color_terminal', 'io_device', 'location', 'locator', 'master', 'nano_hashed', 'next_minute', 'next_trading_day_end', 'noop_publisher', 'now_in_nano', 'null_sink', 'observer', 'profile', 'protocol', 'publisher', 'reader', 'restore_start', 'session_builder', 'session_finder', 'setup_log', 'sink', 'socket', 'strfnow', 'strftime', 'strptime', 'thread_id', 'today_start', 'trading_day_start', 'writer']
+__all__: list[str] = ['PUBLISH', 'PULL', 'PUSH', 'REPLY', 'REQUEST', 'SUBSCRIBE', 'action_record_options', 'action_record_receipt', 'action_recorder', 'apprentice', 'assemble', 'bus', 'calendar_day_start', 'color_print', 'compile_schema', 'copy_sink', 'emit_log', 'event', 'frame', 'get_page_path', 'hash_32', 'hash_str_32', 'in_color_terminal', 'io_device', 'location', 'locator', 'master', 'nano_hashed', 'next_minute', 'next_trading_day_end', 'noop_publisher', 'now_in_nano', 'null_sink', 'observer', 'profile', 'protocol', 'publisher', 'reader', 'restore_start', 'session_builder', 'session_finder', 'setup_log', 'sink', 'socket', 'strfnow', 'strftime', 'strptime', 'thread_id', 'today_start', 'trading_day_start', 'writer']
+class action_record_options:
+    chain_to_last: bool
+    data_type: pykungfu.longfist.enums.FrameDataType
+    gen_time: int
+    parent_frame_uid: int
+    stream_id: int
+    trigger_time: int
+    def __init__(self) -> None:
+        ...
+class action_record_receipt:
+    @property
+    def data_length(self) -> int:
+        ...
+    @property
+    def data_type(self) -> int:
+        ...
+    @property
+    def dest(self) -> int:
+        ...
+    @property
+    def frame_uid(self) -> int:
+        ...
+    @property
+    def gen_time(self) -> int:
+        ...
+    @property
+    def initial_source(self) -> int:
+        ...
+    @property
+    def msg_type(self) -> int:
+        ...
+    @property
+    def source(self) -> int:
+        ...
+    @property
+    def stream_id(self) -> int:
+        ...
+    @property
+    def trigger_frame_uid(self) -> int:
+        ...
+    @property
+    def trigger_time(self) -> int:
+        ...
+class action_recorder:
+    def __init__(self, runtime_dir: str, group: str, name: str, dest_id: int = 0, stream_id: int = 0) -> None:
+        ...
+    def mark(self, msg_type: int, options: action_record_options = ...) -> action_record_receipt:
+        ...
+    def record_bytes(self, msg_type: int, payload: bytes, options: action_record_options = ...) -> action_record_receipt:
+        ...
+    def record_json(self, msg_type: int, json_payload: str, options: action_record_options = ...) -> action_record_receipt:
+        ...
+    @property
+    def last_frame_uid(self) -> int:
+        ...
 class apprentice:
     def __init__(self, home: location, low_latency: bool = False, arguments: str = '{}') -> None:
         ...
@@ -1002,16 +1057,34 @@ class event:
     def data_length(self) -> int:
         ...
     @property
+    def data_type(self) -> int:
+        ...
+    @property
     def dest(self) -> int:
         ...
     @property
+    def frame_uid(self) -> int:
+        ...
+    @property
     def gen_time(self) -> int:
+        ...
+    @property
+    def initial_source(self) -> int:
+        ...
+    @property
+    def is_json(self) -> bool:
         ...
     @property
     def msg_type(self) -> int:
         ...
     @property
     def source(self) -> int:
+        ...
+    @property
+    def stream_id(self) -> int:
+        ...
+    @property
+    def trigger_frame_uid(self) -> int:
         ...
     @property
     def trigger_time(self) -> int:

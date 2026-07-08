@@ -1,0 +1,127 @@
+# ADR-0022: Core action-recording surface lives in the C++ polyglot membrane
+
+- Status: accepted
+- Date: 2026-07-08
+- Category: (architecture) polyglot runtime surface -- where action-recording
+  semantics must live
+- Subsystem: libkungfu, yijinjing journal writer, Python bindings, Node
+  bindings, capability SDK, Rewind, runtime storage service, and future
+  multi-agent action capture.
+- Related: ADR-0009 defines `libkungfu` as the load-bearing polyglot membrane.
+  ADR-0018 defines runtime storage as the persistence contract. ADR-0020
+  defines the action timeline and replay boundary. ADR-0021 defines
+  observer-relative timeline projection.
+
+## Context
+
+Kungfu must record actions from agents and user code written in C++, Python,
+Node/JavaScript, and future language bindings. The action timeline is
+architecture-level state: it decides causal parents, frame identity, stream
+identity, timestamps, payload type, source/dest identity, and the receipt a
+caller can trust after writing.
+
+Early product slices exposed much of this through Python-first paths because
+that was the fastest route to dogfood Rewind and Atlas import. That is useful
+for delivery, but it is the wrong long-term ownership boundary. If Python and
+JavaScript each grow independent writer logic, Kungfu loses the very property
+the journal is meant to provide: one physical fact surface shared by all
+languages.
+
+The load-bearing membrane is C++. `libkungfu` owns the journal layout, writer
+semantics, location identity, publish barrier, and zero-copy cross-language
+runtime. Bindings are adapters over that membrane, not separate products.
+
+## Decision
+
+Architecture-level action-recording semantics live in the C++ core.
+
+The first-class action-recording surface is `yijinjing::action::action_recorder`
+in `libkungfu`. It owns:
+
+- construction of the writer location and channel;
+- selection of `source`, `dest`, `initial_source`, and `stream_id`;
+- parent selection through `trigger_frame_uid`;
+- optional chaining to the last recorded frame;
+- payload data type (`Raw` or `Json`);
+- generation and trigger timestamps;
+- frame publication through the yijinjing writer;
+- the record receipt returned to the caller.
+
+Python and Node expose thin bindings over this C++ surface. They may:
+
+- translate language-native payload containers to bytes or strings;
+- translate option names into the C++ `record_options`;
+- translate the C++ `record_receipt` into language-native objects;
+- build domain payloads above the recorder.
+
+They must not own independent architecture-level writer, causality, timeline,
+or receipt semantics. A feature that changes action recording, replay
+causality, storage sync semantics, or cross-language frame identity must be
+implemented in C++ first and then surfaced through bindings.
+
+Read-side bindings must also expose the complete frame identity needed by the
+timeline model: `frame_uid`, `trigger_frame_uid`, `stream_id`,
+`initial_source`, and `data_type`, not only timestamps and msg type.
+
+## Consequences
+
+- Python/JS APIs remain convenient, but they are wrappers. They cannot drift
+  from C++ causality or receipt rules.
+- Future agents implementing storage, Rewind, sync, fsck, export, or replay
+  should search for the C++ core surface before adding Python or TypeScript
+  logic.
+- Capability SDK types may describe the surface, but they do not define the
+  source of truth. The native binding is the contract executor.
+- Language-specific managers can still build payload schemas, validation, and
+  UI/domain helpers. Those are above the recorder and do not decide causal
+  frame semantics.
+- Tests for new action-recording features should verify at least one binding
+  path, but the core invariant belongs to C++.
+
+## First delivery
+
+The first delivery adds:
+
+- C++ `yijinjing::action::action_recorder`;
+- Python binding classes for `action_recorder`, `action_record_options`, and
+  `action_record_receipt`;
+- Node `ActionRecorder` binding;
+- full frame identity exposure in Python and Node frame/event bindings;
+- capability SDK type updates so higher layers can read the same identity
+  fields.
+
+This is still a narrow write surface. It does not yet define domain-specific
+agent action schemas, storage compaction, multi-source projection policy
+objects, or conflict resolution. Those features should build on this recorder
+rather than reimplementing it per language.
+
+## Explicitly out of scope
+
+- Moving all domain payload construction into C++.
+- Removing Python Rewind or Node UI helpers.
+- Making Python or JavaScript unable to write any payloads.
+- Defining every future action schema in this ADR.
+- Solving multi-writer conflict resolution.
+
+## Alternatives considered
+
+- **Keep Python as the action-recording implementation.** Rejected. It works
+  for the first dogfood loop but fails the polyglot requirement. C++ and Node
+  users would either lose first-class recording or duplicate semantics.
+- **Implement one recorder per language.** Rejected. This would create
+  semantic drift in parent selection, timestamps, payload typing, receipts, and
+  frame identity.
+- **Expose only raw yijinjing writer APIs.** Rejected for product-level action
+  capture. Raw writer access is still useful, but architecture-level action
+  recording needs a stable receipt and causal policy.
+
+## Residual risk
+
+- Existing Python-first Rewind code may still contain action semantics that
+  should migrate down. New work should shrink that surface rather than expand
+  it.
+- If bindings add convenience APIs that silently choose different defaults, the
+  membrane can still drift. Binding tests should assert receipt/header parity.
+- If documentation only names the binding APIs, future agents may miss the C++
+  ownership boundary. Concepts, map, and Atlas mission docs must point back to
+  this ADR.

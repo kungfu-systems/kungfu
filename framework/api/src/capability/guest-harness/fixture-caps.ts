@@ -1,3 +1,4 @@
+import { type Ledger, openLedger } from '../ledger';
 // The trusted host's real capability surface for the guest-host harness, built
 // from an injected in-memory binding (ADR-0011: the SDK never loads the native
 // binding; the host injects it). This exercises the real ledger capability code
@@ -14,12 +15,29 @@
 // `report` is the harness output sink: a facet delivers its result by calling
 // report.result(obj) in BOTH tiers, so its source never branches on the tier.
 import type { KfNativeBinding } from '../types';
-import { type Ledger, openLedger } from '../ledger';
 
 const FIXTURE_FRAMES = [
-  { genTime: 1_700_000_000_000_000_001n, msgType: 101, source: 11, dest: 21 },
-  { genTime: 1_700_000_000_000_000_002n, msgType: 102, source: 12, dest: 22 },
-  { genTime: 1_700_000_000_000_000_003n, msgType: 103, source: 13, dest: 23 },
+  {
+    genTime: 1_700_000_000_000_000_001n,
+    frameUid: 1n,
+    msgType: 101,
+    source: 11,
+    dest: 21,
+  },
+  {
+    genTime: 1_700_000_000_000_000_002n,
+    frameUid: 2n,
+    msgType: 102,
+    source: 12,
+    dest: 22,
+  },
+  {
+    genTime: 1_700_000_000_000_000_003n,
+    frameUid: 3n,
+    msgType: 103,
+    source: 13,
+    dest: 23,
+  },
 ];
 
 // A minimal KfNativeBinding: only Assemble is exercised (records()); the other
@@ -28,7 +46,9 @@ function fixtureBinding(): KfNativeBinding {
   class Assemble {
     private i = 0;
     private readonly frames = FIXTURE_FRAMES;
-    constructor(_runtimeDirs: string[]) {}
+    constructor(runtimeDirs: string[]) {
+      void runtimeDirs;
+    }
     dataAvailable(): boolean {
       return this.i < this.frames.length;
     }
@@ -40,10 +60,15 @@ function fixtureBinding(): KfNativeBinding {
       return {
         genTime: () => f.genTime,
         triggerTime: () => f.genTime,
+        frameUid: () => f.frameUid,
+        triggerFrameUid: () => f.frameUid - 1n,
+        streamId: () => 0n,
         msgType: () => f.msgType,
         source: () => f.source,
+        initialSource: () => f.source,
         dest: () => f.dest,
         dataLength: () => 0,
+        dataType: () => 0,
         dataBytes: () => new Uint8Array(0),
       };
     }

@@ -75,10 +75,15 @@ export function openLedger(options: OpenLedgerOptions): Ledger {
         result.push({
           genTime,
           triggerTime: frame.triggerTime(),
+          frameUid: frame.frameUid(),
+          triggerFrameUid: frame.triggerFrameUid(),
+          streamId: frame.streamId(),
           msgType,
           source: frame.source(),
+          initialSource: frame.initialSource(),
           dest: frame.dest(),
           dataLength: frame.dataLength(),
+          dataType: frame.dataType(),
         });
       }
       assemble.next();

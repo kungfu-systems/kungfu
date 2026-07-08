@@ -61,6 +61,12 @@ public:
 
   Napi::Value TriggerTime(const Napi::CallbackInfo &info);
 
+  Napi::Value FrameUid(const Napi::CallbackInfo &info);
+
+  Napi::Value TriggerFrameUid(const Napi::CallbackInfo &info);
+
+  Napi::Value StreamId(const Napi::CallbackInfo &info);
+
   Napi::Value MsgType(const Napi::CallbackInfo &info);
 
   Napi::Value Source(const Napi::CallbackInfo &info);
@@ -68,6 +74,8 @@ public:
   Napi::Value Dest(const Napi::CallbackInfo &info);
 
   Napi::Value InitialSource(const Napi::CallbackInfo &info);
+
+  Napi::Value DataType(const Napi::CallbackInfo &info);
 
   Napi::Value Data(const Napi::CallbackInfo &info);
 

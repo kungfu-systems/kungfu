@@ -38,6 +38,7 @@ and the map routes a question to whichever doc answers it.
 | What does Rewind replay, and what must it never silently re-execute? | [ADR-0020](../framework/core/docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md) + [`rewind.md`](rewind.md) | why, verify | stable |
 | How does Kungfu persist user facts, sync sources, and maintain storage over time? | [`runtime-storage-service.md`](runtime-storage-service.md) | use, verify | draft |
 | How can a multi-machine timeline stay stable without one global clock? | [ADR-0021](../framework/core/docs/adr/ADR-0021-observer-relative-timeline-projection.md) + [`event-model.md`](event-model.md) | why, verify | stable |
+| Where must action-recording semantics live across C++ / Python / Node? | [ADR-0022](../framework/core/docs/adr/ADR-0022-core-action-recording-surface.md) + [`event-model.md`](event-model.md) | why, use | stable |
 | Where are the Python / Node / framework adapter boundaries? | [`adapters.md`](adapters.md) | use | stable |
 | How do I go from source to a binary? | [`buildchain.md`](buildchain.md) (+ [`../CONTRIBUTING.md`](../CONTRIBUTING.md)) | use | stable |
 | Where does a release binary come from, and how do I verify it? | `provenance.md` | verify | blocked · needs release infra |
@@ -69,6 +70,10 @@ route to the row that answers them:
   replay / external side effects / rewind replay boundary** → *what does Rewind
   replay, and what must it never silently re-execute*
   ([ADR-0020](../framework/core/docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md)).
+- **action recorder / action recording / Python recorder / Node recorder /
+  JS recorder / C++ recorder / polyglot action surface / binding-only logic** →
+  *where must action-recording semantics live across C++ / Python / Node*
+  ([ADR-0022](../framework/core/docs/adr/ADR-0022-core-action-recording-surface.md)).
 - **observer-relative timeline / timeline projection / source priority /
   global clock / multi-machine ordering / perspective / concurrent facts** →
   *how can a multi-machine timeline stay stable without one global clock*

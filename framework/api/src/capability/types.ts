@@ -60,9 +60,14 @@ export type LedgerRecord = {
   genTime: bigint;
   triggerTime: bigint;
   msgType: number;
+  frameUid: bigint;
+  triggerFrameUid: bigint;
+  streamId: bigint;
   source: number;
+  initialSource: number;
   dest: number;
   dataLength: number;
+  dataType: number;
 };
 
 export type RecordFilter = {
@@ -100,10 +105,15 @@ export type Subscription = {
 export type KfNativeFrame = {
   genTime: () => bigint;
   triggerTime: () => bigint;
+  frameUid: () => bigint;
+  triggerFrameUid: () => bigint;
+  streamId: () => bigint;
   msgType: () => number;
   source: () => number;
+  initialSource: () => number;
   dest: () => number;
   dataLength: () => number;
+  dataType: () => number;
   // raw payload bytes — the decode path for open-layer frames (e.g. rewind
   // events), whose schemas live outside the compiled longfist registry
   dataBytes: () => Uint8Array;
@@ -119,6 +129,47 @@ export type KfNativeBinding = {
     dataAvailable: () => boolean;
     next: () => void;
     currentFrame: () => KfNativeFrame;
+  };
+  ActionRecorder?: new (
+    runtimeDir: string,
+    group: string,
+    name: string,
+    destId?: number,
+    streamId?: bigint | number,
+  ) => {
+    recordBytes: (
+      msgType: number,
+      payload: Uint8Array,
+      options?: {
+        genTime?: bigint | number;
+        triggerTime?: bigint | number;
+        parentFrameUid?: bigint | number;
+        streamId?: bigint | number;
+        chainToLast?: boolean;
+      },
+    ) => LedgerRecord;
+    recordJson: (
+      msgType: number,
+      jsonPayload: string,
+      options?: {
+        genTime?: bigint | number;
+        triggerTime?: bigint | number;
+        parentFrameUid?: bigint | number;
+        streamId?: bigint | number;
+        chainToLast?: boolean;
+      },
+    ) => LedgerRecord;
+    mark: (
+      msgType: number,
+      options?: {
+        genTime?: bigint | number;
+        triggerTime?: bigint | number;
+        parentFrameUid?: bigint | number;
+        streamId?: bigint | number;
+        chainToLast?: boolean;
+      },
+    ) => LedgerRecord;
+    lastFrameUid: () => bigint;
   };
   SessionStore: new (
     location: Record<string, string>,

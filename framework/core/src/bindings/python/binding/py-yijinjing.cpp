@@ -5,6 +5,7 @@
 #include <pybind11/stl.h>
 
 #include <kungfu/longfist/longfist.h>
+#include <kungfu/yijinjing/action_recorder.h>
 #include <kungfu/yijinjing/cache/profile.h>
 #include <kungfu/yijinjing/index/session.h>
 #include <kungfu/yijinjing/io.h>
@@ -195,10 +196,16 @@ void bind(pybind11::module &&m) {
   auto event_class = py::class_<event, PyEvent, std::shared_ptr<event>>(m, "event");
   event_class.def_property_readonly("gen_time", &event::gen_time)
       .def_property_readonly("trigger_time", &event::trigger_time)
+      .def_property_readonly("frame_uid", &event::frame_uid)
+      .def_property_readonly("trigger_frame_uid", &event::trigger_frame_uid)
+      .def_property_readonly("stream_id", &event::stream_id)
       .def_property_readonly("source", &event::source)
+      .def_property_readonly("initial_source", &event::initial_source)
       .def_property_readonly("dest", &event::dest)
       .def_property_readonly("msg_type", &event::msg_type)
       .def_property_readonly("data_length", &event::data_length)
+      .def_property_readonly("data_type", &event::data_type)
+      .def_property_readonly("is_json", &event::is_json)
       .def_property_readonly("data_as_bytes", &event::data_as_bytes)
       .def_property_readonly("data_as_byte_array", &event::data_as_byte_array)
       .def_property_readonly("data_as_string", &event::data_as_string)
@@ -211,6 +218,46 @@ void bind(pybind11::module &&m) {
   py::class_<frame, event, frame_ptr>(m, "frame")
       .def_property_readonly("frame_length", &frame::frame_length)
       .def("has_data", &frame::has_data);
+
+  py::class_<action::record_options>(m, "action_record_options")
+      .def(py::init<>())
+      .def_readwrite("gen_time", &action::record_options::gen_time)
+      .def_readwrite("trigger_time", &action::record_options::trigger_time)
+      .def_readwrite("parent_frame_uid", &action::record_options::parent_frame_uid)
+      .def_readwrite("stream_id", &action::record_options::stream_id)
+      .def_readwrite("chain_to_last", &action::record_options::chain_to_last)
+      .def_readwrite("data_type", &action::record_options::data_type);
+
+  py::class_<action::record_receipt>(m, "action_record_receipt")
+      .def_readonly("frame_uid", &action::record_receipt::frame_uid)
+      .def_readonly("trigger_frame_uid", &action::record_receipt::trigger_frame_uid)
+      .def_readonly("stream_id", &action::record_receipt::stream_id)
+      .def_readonly("gen_time", &action::record_receipt::gen_time)
+      .def_readonly("trigger_time", &action::record_receipt::trigger_time)
+      .def_readonly("msg_type", &action::record_receipt::msg_type)
+      .def_readonly("source", &action::record_receipt::source)
+      .def_readonly("initial_source", &action::record_receipt::initial_source)
+      .def_readonly("dest", &action::record_receipt::dest)
+      .def_readonly("data_length", &action::record_receipt::data_length)
+      .def_readonly("data_type", &action::record_receipt::data_type);
+
+  py::class_<action::action_recorder, action::action_recorder_ptr>(m, "action_recorder")
+      .def(py::init<const std::string &, const std::string &, const std::string &, uint32_t, uint64_t>(),
+           py::arg("runtime_dir"), py::arg("group"), py::arg("name"),
+           py::arg("dest_id") = yijinjing::data::location::PUBLIC, py::arg("stream_id") = 0)
+      .def(
+          "record_bytes",
+          [](action::action_recorder &recorder, int32_t msg_type, py::bytes payload, action::record_options options) {
+            std::string bytes = payload;
+            return recorder.record_bytes(msg_type, std::vector<uint8_t>(bytes.begin(), bytes.end()), options);
+          },
+          py::arg("msg_type"), py::arg("payload"),
+          py::arg_v("options", action::record_options{}, "action_record_options()"))
+      .def("record_json", &action::action_recorder::record_json, py::arg("msg_type"), py::arg("json_payload"),
+           py::arg_v("options", action::record_options{}, "action_record_options()"))
+      .def("mark", &action::action_recorder::mark, py::arg("msg_type"),
+           py::arg_v("options", action::record_options{}, "action_record_options()"))
+      .def_property_readonly("last_frame_uid", &action::action_recorder::last_frame_uid);
 
   auto location_class = py::class_<location, location_ptr>(m, "location");
   location_class

@@ -46,6 +46,7 @@ decltype(__pfnDliNotifyHook2) __pfnDliNotifyHook2 = load_exe_hook;
 #include <kungfu/yijinjing/io.h>
 #include <kungfu/yijinjing/util/util.h>
 
+#include "action_recorder.h"
 #include "app_container.h"
 #include "basket_instrument_store.h"
 #include "basket_store.h"
@@ -147,6 +148,7 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
   Frame::Init(env, exports);
   Reader::Init(env, exports);
   Assemble::Init(env, exports);
+  ActionRecorder::Init(env, exports);
   IODevice::Init(env, exports);
   DataTable::Init(env, exports);
   Watcher::Init(env, exports);

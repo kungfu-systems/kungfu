@@ -31,6 +31,18 @@ Napi::Value Frame::TriggerTime(const Napi::CallbackInfo &info) {
   return Napi::BigInt::New(info.Env(), frame_->trigger_time());
 }
 
+Napi::Value Frame::FrameUid(const Napi::CallbackInfo &info) {
+  return Napi::BigInt::New(info.Env(), frame_->frame_uid());
+}
+
+Napi::Value Frame::TriggerFrameUid(const Napi::CallbackInfo &info) {
+  return Napi::BigInt::New(info.Env(), frame_->trigger_frame_uid());
+}
+
+Napi::Value Frame::StreamId(const Napi::CallbackInfo &info) {
+  return Napi::BigInt::New(info.Env(), frame_->stream_id());
+}
+
 Napi::Value Frame::MsgType(const Napi::CallbackInfo &info) { return Napi::Number::New(info.Env(), frame_->msg_type()); }
 
 Napi::Value Frame::Source(const Napi::CallbackInfo &info) { return Napi::Number::New(info.Env(), frame_->source()); }
@@ -39,6 +51,10 @@ Napi::Value Frame::Dest(const Napi::CallbackInfo &info) { return Napi::Number::N
 
 Napi::Value Frame::InitialSource(const Napi::CallbackInfo &info) {
   return Napi::Number::New(info.Env(), frame_->initial_source());
+}
+
+Napi::Value Frame::DataType(const Napi::CallbackInfo &info) {
+  return Napi::Number::New(info.Env(), frame_->data_type());
 }
 
 Napi::Value Frame::Data(const Napi::CallbackInfo &info) {
@@ -82,16 +98,20 @@ void Frame::Init(Napi::Env env, Napi::Object exports) {
 
   Napi::Function func = DefineClass(env, "Frame",
                                     {
-                                        InstanceMethod("dataLength", &Frame::DataLength),       //
-                                        InstanceMethod("genTime", &Frame::GenTime),             //
-                                        InstanceMethod("triggerTime", &Frame::TriggerTime),     //
-                                        InstanceMethod("msgType", &Frame::MsgType),             //
-                                        InstanceMethod("source", &Frame::Source),               //
-                                        InstanceMethod("dest", &Frame::Dest),                   //
-                                        InstanceMethod("initialSource", &Frame::InitialSource), //
-                                        InstanceMethod("data", &Frame::Data),                   //
-                                        InstanceMethod("dataAsString", &Frame::DataAsString),   //
-                                        InstanceMethod("dataBytes", &Frame::DataBytes)          //
+                                        InstanceMethod("dataLength", &Frame::DataLength),           //
+                                        InstanceMethod("genTime", &Frame::GenTime),                 //
+                                        InstanceMethod("triggerTime", &Frame::TriggerTime),         //
+                                        InstanceMethod("frameUid", &Frame::FrameUid),               //
+                                        InstanceMethod("triggerFrameUid", &Frame::TriggerFrameUid), //
+                                        InstanceMethod("streamId", &Frame::StreamId),               //
+                                        InstanceMethod("msgType", &Frame::MsgType),                 //
+                                        InstanceMethod("source", &Frame::Source),                   //
+                                        InstanceMethod("dest", &Frame::Dest),                       //
+                                        InstanceMethod("initialSource", &Frame::InitialSource),     //
+                                        InstanceMethod("dataType", &Frame::DataType),               //
+                                        InstanceMethod("data", &Frame::Data),                       //
+                                        InstanceMethod("dataAsString", &Frame::DataAsString),       //
+                                        InstanceMethod("dataBytes", &Frame::DataBytes)              //
                                     });
 
   constructor = Napi::Persistent(func);

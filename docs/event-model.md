@@ -13,6 +13,12 @@ The higher-level action-timeline decision is
 Kungfu records the causal action chain and attached evidence, not a complete
 snapshot of the outside world.
 
+The action-recording implementation boundary is
+[ADR-0022](../framework/core/docs/adr/ADR-0022-core-action-recording-surface.md):
+architecture-level recording semantics live in the C++ core. Python and Node may
+wrap the recorder and build payloads, but they must not own independent
+causality, writer, timeline, or receipt logic.
+
 For multi-machine views, frame time is not treated as a universal clock.
 [ADR-0021](../framework/core/docs/adr/ADR-0021-observer-relative-timeline-projection.md)
 pins the rule: Kungfu stores causal facts, source provenance, accepted ranges,
