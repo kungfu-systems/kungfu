@@ -3,6 +3,8 @@
 import json
 from datetime import datetime, timezone
 
+import kungfu
+
 from kungfu.atlas import importer, payloads
 from kungfu.atlas import CARRIER_ATLAS_ACTION
 from kungfu.sources import store as source_store
@@ -249,6 +251,50 @@ def test_payload_manifest_fsck_export_and_verify(tmp_path):
         "extra": [],
         "hash_mismatch": [],
     }
+
+
+def test_storage_core_binding_owns_sync_root_and_payload_checks(tmp_path):
+    repo = tmp_path / "atlas"
+    store = tmp_path / "store"
+    _atlas_fixture(repo)
+    _, _, _, source_records, _ = importer.read_control_plane_with_sources(str(repo))
+
+    manifest = payloads.write_import_payloads(
+        store,
+        import_id="imp-runtime-core",
+        repo_root=str(repo),
+        repo_head="abc123",
+        source_records=source_records,
+        counts={"missions": 1, "goals": 1, "markers": 1},
+    )
+    runtime = kungfu.__binding__.runtime
+
+    assert (
+        runtime.compute_storage_sync_root(manifest["entries"]) == manifest["sync_root"]
+    )
+    assert (
+        runtime.verify_storage_sync_root(manifest["sync_root"], manifest["entries"])
+        == []
+    )
+
+    tampered = dict(manifest["sync_root"])
+    tampered["value"] = payloads.SYNC_ROOT_INITIAL
+    issues = runtime.verify_storage_sync_root(tampered, manifest["entries"])
+    assert issues[0]["code"] == "sync_root_mismatch"
+    assert issues[0]["field"] == "value"
+
+    first = manifest["entries"][0]
+    raw = payloads.payload_path(store, first["payload_hash"]).read_bytes()
+    assert (
+        runtime.verify_storage_payload(raw, first["payload_hash"], first["byte_len"])
+        == ""
+    )
+    assert (
+        runtime.verify_storage_payload(
+            raw + b"extra", first["payload_hash"], first["byte_len"]
+        )
+        == "byte_len_mismatch"
+    )
 
 
 def test_payload_fsck_verifies_versioned_frame_checksums(tmp_path):

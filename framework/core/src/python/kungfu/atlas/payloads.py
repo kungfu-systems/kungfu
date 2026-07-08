@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from typing import Any, cast
 
+import kungfu
+
 from kungfu.action_envelope import (
     ACTION_ENVELOPE_SCHEMA,
     build_action_envelope as build_common_action_envelope,
@@ -11,7 +13,6 @@ from kungfu.action_envelope import (
     payload_hash,
 )
 from kungfu.content_hash import CONTENT_HASH_ALGORITHM_SHA256
-from kungfu.content_hash import compute_content_hash
 from kungfu.atlas import (
     ACTION_GOAL_SNAPSHOT,
     ACTION_MARKER_SNAPSHOT,
@@ -52,6 +53,10 @@ KIND_ACTION_TYPES = {
     "goal": ACTION_GOAL_SNAPSHOT,
     "marker": ACTION_MARKER_SNAPSHOT,
 }
+
+
+def _runtime():
+    return kungfu.__binding__.runtime
 
 
 def payload_path(store_dir: str | Path, digest: str) -> Path:
@@ -203,50 +208,11 @@ def _manifest_entry_sort_key(row: dict[str, Any]) -> tuple[str, str, str]:
 
 
 def _sync_root_entry_commitment(entry: dict[str, Any]) -> dict[str, Any]:
-    fields = (
-        "kind",
-        "source_id",
-        "source_path",
-        "source_time",
-        "schema_version",
-        "content_type",
-        "payload_hash",
-        "byte_len",
-        "payload_state",
-        "action",
-    )
-    return {field: entry[field] for field in fields if field in entry}
+    return dict(_runtime().storage_sync_root_entry_commitment(entry))
 
 
 def compute_sync_root(entries: list[dict[str, Any]]) -> dict[str, Any]:
-    previous = SYNC_ROOT_INITIAL
-    for index, entry in enumerate(entries):
-        entry_hash = compute_content_hash(
-            canonical_json_bytes(_sync_root_entry_commitment(entry))
-        )
-        previous = compute_content_hash(
-            canonical_json_bytes(
-                {
-                    "schema": SYNC_ROOT_CHAIN_LINK_SCHEMA,
-                    "index": index,
-                    "previous": previous,
-                    "entry": entry_hash,
-                }
-            )
-        )
-    return {
-        "schema": SYNC_ROOT_SCHEMA,
-        "scope": SYNC_ROOT_SCOPE_ATLAS_IMPORT_MANIFEST,
-        "proof": SYNC_ROOT_PROOF_LINEAR_CHAIN_V1,
-        "algorithm": CONTENT_HASH_ALGORITHM_SHA256,
-        "value": previous,
-        "entry_count": len(entries),
-        "initial": SYNC_ROOT_INITIAL,
-        "ordering": {
-            "policy": SYNC_ROOT_ORDERING_POLICY_MANIFEST_ENTRY_SORT_V1,
-            "fields": list(SYNC_ROOT_ENTRY_ORDER_FIELDS),
-        },
-    }
+    return dict(_runtime().compute_storage_sync_root(entries))
 
 
 def _append_sync_root_error(
@@ -279,17 +245,15 @@ def _check_sync_root(
     if not isinstance(actual, dict):
         _append_sync_root_error(report, "sync_root_invalid", actual=actual)
         return
-    expected = compute_sync_root(entries)
-    for field, expected_value in expected.items():
-        actual_value = actual.get(field)
-        if actual_value != expected_value:
-            _append_sync_root_error(
-                report,
-                "sync_root_mismatch",
-                field=field,
-                expected=expected_value,
-                actual=actual_value,
-            )
+    for issue in _runtime().verify_storage_sync_root(actual, entries):
+        issue = dict(issue)
+        _append_sync_root_error(
+            report,
+            str(issue.get("code") or "sync_root_mismatch"),
+            field=issue.get("field"),
+            expected=issue.get("expected"),
+            actual=issue.get("actual"),
+        )
 
 
 def export_sync_root(
@@ -398,10 +362,20 @@ def _load_payload(
     if not path.exists():
         return None, "payload_missing"
     raw = path.read_bytes()
-    if len(raw) != entry.get("byte_len"):
+    expected_len = entry.get("byte_len")
+    if not isinstance(expected_len, int) or expected_len < 0:
         return None, "byte_len_mismatch"
-    if payload_hash(raw) != digest:
+    try:
+        error = _runtime().verify_storage_payload(
+            raw,
+            digest,
+            expected_len,
+            CONTENT_HASH_ALGORITHM_SHA256,
+        )
+    except ValueError:
         return None, "hash_mismatch"
+    if error:
+        return None, str(error)
     try:
         data = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError):

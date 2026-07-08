@@ -4,6 +4,7 @@
 
 #include <limits>
 
+#include <nlohmann/json.hpp>
 #include <pybind11/stl.h>
 
 #include <kungfu/runtime/action_recorder.h>
@@ -22,6 +23,7 @@
 #include <kungfu/yijinjing/log.h>
 #include <kungfu/yijinjing/schema/registry.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
+#include <kungfu/yijinjing/storage/sync_root.h>
 #include <kungfu/yijinjing/time.h>
 
 using namespace kungfu::yijinjing;
@@ -35,6 +37,55 @@ using namespace kungfu::runtime::nanomsg;
 using namespace kungfu::runtime::practice;
 
 namespace py = pybind11;
+
+namespace {
+
+nlohmann::json py_to_json(py::handle value) {
+  if (value.is_none()) {
+    return nullptr;
+  }
+  if (py::isinstance<py::bool_>(value)) {
+    return value.cast<bool>();
+  }
+  if (py::isinstance<py::int_>(value)) {
+    return value.cast<int64_t>();
+  }
+  if (py::isinstance<py::float_>(value)) {
+    return value.cast<double>();
+  }
+  if (py::isinstance<py::str>(value)) {
+    return value.cast<std::string>();
+  }
+  if (py::isinstance<py::dict>(value)) {
+    nlohmann::json object = nlohmann::json::object();
+    for (const auto item : py::reinterpret_borrow<py::dict>(value)) {
+      object[item.first.cast<std::string>()] = py_to_json(item.second);
+    }
+    return object;
+  }
+  if (py::isinstance<py::list>(value) || py::isinstance<py::tuple>(value)) {
+    nlohmann::json array = nlohmann::json::array();
+    for (const auto item : py::reinterpret_borrow<py::iterable>(value)) {
+      array.push_back(py_to_json(item));
+    }
+    return array;
+  }
+  throw std::invalid_argument("unsupported JSON value type");
+}
+
+std::vector<nlohmann::json> py_entries_to_json(py::iterable entries) {
+  std::vector<nlohmann::json> result;
+  for (const auto entry : entries) {
+    result.emplace_back(py_to_json(entry));
+  }
+  return result;
+}
+
+py::object json_to_py(const nlohmann::json &value) {
+  return py::module_::import("json").attr("loads")(value.dump(-1, ' ', false));
+}
+
+} // namespace
 
 namespace kungfu::runtime {
 class PyLocator : public locator {
@@ -289,6 +340,48 @@ void bind(pybind11::module &&m) {
                                                        parsed);
       },
       py::arg("payload"), py::arg("expected"), py::arg("algorithm") = "");
+  m.def(
+      "storage_sync_root_entry_commitment",
+      [](py::dict entry) { return json_to_py(yijinjing::storage::make_sync_root_entry_commitment(py_to_json(entry))); },
+      py::arg("entry"));
+  m.def(
+      "compute_storage_sync_root",
+      [](py::iterable entries) {
+        return json_to_py(yijinjing::storage::compute_linear_sync_root(py_entries_to_json(entries)));
+      },
+      py::arg("entries"));
+  m.def(
+      "verify_storage_sync_root",
+      [](py::object actual, py::iterable entries) {
+        py::list result;
+        for (const auto &issue :
+             yijinjing::storage::verify_linear_sync_root(py_to_json(actual), py_entries_to_json(entries))) {
+          py::dict item;
+          item["code"] = issue.code;
+          if (!issue.field.empty()) {
+            item["field"] = issue.field;
+          }
+          if (!issue.expected.is_null()) {
+            item["expected"] = json_to_py(issue.expected);
+          }
+          if (!issue.actual.is_null()) {
+            item["actual"] = json_to_py(issue.actual);
+          }
+          result.append(item);
+        }
+        return result;
+      },
+      py::arg("actual"), py::arg("entries"));
+  m.def(
+      "verify_storage_payload",
+      [](py::buffer payload, const std::string &expected_hash, uint64_t expected_byte_length,
+         const std::string &algorithm) {
+        const auto view = payload.request();
+        return yijinjing::storage::verify_payload_ref(view.ptr, static_cast<size_t>(view.size * view.itemsize),
+                                                      expected_hash, expected_byte_length, algorithm);
+      },
+      py::arg("payload"), py::arg("expected_hash"), py::arg("expected_byte_length"),
+      py::arg("algorithm") = yijinjing::storage::CONTENT_HASH_ALGORITHM_SHA256);
 
   m.def("setup_log", &yijinjing::log::setup_log);
   m.def("emit_log", &yijinjing::log::emit_log);

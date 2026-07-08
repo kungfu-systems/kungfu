@@ -12,5 +12,6 @@
 #include <kungfu/yijinjing/storage/provider.h>
 #include <kungfu/yijinjing/storage/range.h>
 #include <kungfu/yijinjing/storage/source.h>
+#include <kungfu/yijinjing/storage/sync_root.h>
 
 #endif // KUNGFU_YIJINJING_STORAGE_H
