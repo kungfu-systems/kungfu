@@ -13,7 +13,7 @@ using namespace kungfu::yijinjing::data;
 namespace kungfu::cache {
 
 std::string default_db_file(const locator_ptr &locator) {
-  auto config_location = std::make_shared<location>(mode::LIVE, category::SYSTEM, "etc", "kungfu", locator);
+  auto config_location = std::make_shared<location>(mode::LIVE, location_role::SYSTEM, "etc", "kungfu", locator);
   return locator->layout_file(config_location, enums::layout::SQLITE, "config");
 }
 

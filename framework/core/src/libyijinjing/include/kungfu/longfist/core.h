@@ -5,8 +5,8 @@
 //
 // Holds the fact-ledger journal schema the yijinjing core needs, and ONLY that:
 //   - frame/page packs: frame_header (tag 0), page_header (tag 1)
-//   - journal enums: FrameDataType, PageStatus, mode, category, layout, Priority
-//   - Location (tag 10205): the journal-endpoint pack (mode/category/group/name)
+//   - journal enums: FrameDataType, PageStatus, mode, role, layout, Priority
+//   - Location (tag 10205): the journal-endpoint pack (mode/role/group/name)
 // All of the above are journal infrastructure. Business/trading types
 // (Order / Trade / Quote / Position / ...) live in types.h / enums.h and are NOT
 // visible here, so a pure journal core includes only this leaf and never pulls
@@ -80,7 +80,7 @@ KF_JSON_SERIALIZE_ENUM(PageStatus, {
                                    })
 
 // Journal-infrastructure enums the yijinjing core (locator / journal) needs.
-// These describe where/how a journal lives (mode / category / layout) and event
+// These describe where/how a journal lives (mode / role / layout) and event
 // scheduling priority -- pure journal schema, NOT trading types. They live here
 // (the leaf) so a pure journal core includes only core.h. Their integer values,
 // json names and helper mappings are moved verbatim from enums.h.
@@ -123,45 +123,45 @@ inline mode get_mode_by_name(const std::string &name) {
   return mode::LIVE;
 }
 
-enum class category : int8_t { MD, TD, STRATEGY, SYSTEM, OPERATOR };
+enum class location_role : int8_t { SOURCE, SINK, ACTOR, SYSTEM, SERVICE };
 
-KF_JSON_SERIALIZE_ENUM(category, {
-                                     {category::MD, "MD"},
-                                     {category::TD, "TD"},
-                                     {category::STRATEGY, "STRATEGY"},
-                                     {category::SYSTEM, "SYSTEM"},
-                                     {category::OPERATOR, "OPERATOR"},
-                                 })
+KF_JSON_SERIALIZE_ENUM(location_role, {
+                                          {location_role::SOURCE, "SOURCE"},
+                                          {location_role::SINK, "SINK"},
+                                          {location_role::ACTOR, "ACTOR"},
+                                          {location_role::SYSTEM, "SYSTEM"},
+                                          {location_role::SERVICE, "SERVICE"},
+                                      })
 
-inline std::ostream &operator<<(std::ostream &os, category t) { return os << int32_t(t); }
+inline std::ostream &operator<<(std::ostream &os, location_role t) { return os << int32_t(t); }
 
-inline std::string get_category_name(category c) {
-  switch (c) {
-  case category::MD:
-    return "md";
-  case category::TD:
-    return "td";
-  case category::STRATEGY:
-    return "strategy";
-  case category::OPERATOR:
-    return "operator";
-  case category::SYSTEM:
+inline std::string get_location_role_name(location_role role) {
+  switch (role) {
+  case location_role::SOURCE:
+    return "source";
+  case location_role::SINK:
+    return "sink";
+  case location_role::ACTOR:
+    return "actor";
+  case location_role::SERVICE:
+    return "service";
+  case location_role::SYSTEM:
   default:
     return "system";
   }
 }
 
-inline category get_category_by_name(const std::string &name) {
-  if (name == "md")
-    return category::MD;
-  else if (name == "td")
-    return category::TD;
-  else if (name == "strategy")
-    return category::STRATEGY;
-  else if (name == "operator")
-    return category::OPERATOR;
+inline location_role get_location_role_by_name(const std::string &name) {
+  if (name == "source")
+    return location_role::SOURCE;
+  else if (name == "sink")
+    return location_role::SINK;
+  else if (name == "actor")
+    return location_role::ACTOR;
+  else if (name == "service")
+    return location_role::SERVICE;
   else
-    return category::SYSTEM;
+    return location_role::SYSTEM;
 }
 
 enum class layout : int8_t { JOURNAL, SQLITE, NANOMSG, LOG, MAP };
@@ -266,7 +266,7 @@ KF_DEFINE_PACK_TYPE(                          //
 // type tag 10051 and stays registered in the full type registry (longfist.h) verbatim.
 KF_DEFINE_MARK_TYPE(PageEnd, 10051);
 
-// Location identifies a journal endpoint (mode/category/group/name). The yijinjing
+// Location identifies a journal endpoint (mode/role/group/name). The yijinjing
 // core's locator/location model it, so it lives in the leaf. It keeps type tag
 // 10205 and stays registered in the full type registry (longfist.h) verbatim -- only its
 // definition moves here, exactly as frame_header/page_header did.
@@ -274,7 +274,7 @@ KF_DEFINE_DATA_TYPE(                         //
     Location, 10205, PK(uid64), PERPETUAL(), //
     (uint64_t, uid64),                       //
     (uint32_t, location_uid),                //
-    (enums::category, category),             //
+    (enums::location_role, role),            //
     (enums::mode, mode),                     //
     (std::string, group),                    //
     (std::string, name),                     //

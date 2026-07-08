@@ -30,7 +30,7 @@ def emit(
 ) -> str:
     """Write schemas/<hash>.bfbs and manifest.json under bundle_dir.
 
-    source: dict with mode/category/group/name/dest describing the journal
+    source: dict with mode/role/group/name/dest describing the journal
     location the run was written to. Returns the manifest path.
     """
     blob = read_schema_blob()

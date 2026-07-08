@@ -25,7 +25,7 @@ class ArchiveSink(yjj.sink):
             if dest_id not in writers:
                 target_location = yjj.location(
                     location.mode,
-                    location.category,
+                    location.role,
                     location.group,
                     location.name,
                     self.locator,

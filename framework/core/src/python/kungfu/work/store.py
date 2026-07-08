@@ -78,7 +78,7 @@ def _location(runtime_dir):
     locator = yjj.locator(runtime_dir)
     return yjj.location(
         lf.enums.mode.LIVE,
-        lf.enums.category.SYSTEM,
+        lf.enums.location_role.SYSTEM,
         WORK_GROUP,
         WORK_NAME,
         locator,
@@ -169,7 +169,7 @@ class WorkStore:
             "source": {
                 "root": self.runtime_dir,
                 "mode": "live",
-                "category": "system",
+                "role": "system",
                 "group": WORK_GROUP,
                 "name": WORK_NAME,
                 "dest": PUBLIC_DEST,

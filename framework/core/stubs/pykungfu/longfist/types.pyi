@@ -427,11 +427,11 @@ class Commission:
 class Config:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 10201
-    category: pykungfu.longfist.enums.category
     group: str
     location_uid: int
     mode: pykungfu.longfist.enums.mode
     name: str
+    role: pykungfu.longfist.enums.location_role
     seed: int
     uid64: int
     value: str
@@ -514,11 +514,11 @@ class CustomSubscribe:
 class Deregister:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 10102
-    category: pykungfu.longfist.enums.category
     group: str
     location_uid: int
     mode: pykungfu.longfist.enums.mode
     name: str
+    role: pykungfu.longfist.enums.location_role
     seed: int
     uid64: int
     def __eq__(self, arg0: Deregister) -> bool:
@@ -750,11 +750,11 @@ class InstrumentKey:
 class Location:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 10205
-    category: pykungfu.longfist.enums.category
     group: str
     location_uid: int
     mode: pykungfu.longfist.enums.mode
     name: str
+    role: pykungfu.longfist.enums.location_role
     seed: int
     uid64: int
     def __eq__(self, arg0: Location) -> bool:
@@ -1101,11 +1101,11 @@ class OrderTriggerInput:
 class OutputKey:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 701
-    category: pykungfu.longfist.enums.category
     group: str
     location_uid: int
     mode: pykungfu.longfist.enums.mode
     name: str
+    role: pykungfu.longfist.enums.location_role
     seed: int
     uid64: int
     def __eq__(self, arg0: OutputKey) -> bool:
@@ -1244,7 +1244,6 @@ class Quote:
 class Register:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 10101
-    category: pykungfu.longfist.enums.category
     checkin_time: int
     group: str
     last_active_time: int
@@ -1252,6 +1251,7 @@ class Register:
     mode: pykungfu.longfist.enums.mode
     name: str
     pid: int
+    role: pykungfu.longfist.enums.location_role
     seed: int
     uid64: int
     def __eq__(self, arg0: Register) -> bool:
@@ -1500,12 +1500,12 @@ class RequestWriteTo:
 class RequestWriteToBand:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 10307
-    category: pykungfu.longfist.enums.category
     group: str
     location_uid: int
     mode: pykungfu.longfist.enums.mode
     name: str
     page_size: int
+    role: pykungfu.longfist.enums.location_role
     seed: int
     uid64: int
     def __eq__(self, arg0: RequestWriteToBand) -> bool:
@@ -1528,13 +1528,13 @@ class RequestWriteToBand:
 class RiskSetting:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 10202
-    category: pykungfu.longfist.enums.category
     group: str
     location_uid: int
     mode: pykungfu.longfist.enums.mode
     name: str
     risk_check: bool
     risk_name: str
+    role: pykungfu.longfist.enums.location_role
     seed: int
     self_deal_check_type: ...
     uid64: int
@@ -1560,7 +1560,6 @@ class Session:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 10103
     begin_time: int
-    category: pykungfu.longfist.enums.category
     data_size: int
     end_time: int
     frame_count: int
@@ -1568,6 +1567,7 @@ class Session:
     location_uid: int
     mode: pykungfu.longfist.enums.mode
     name: str
+    role: pykungfu.longfist.enums.location_role
     seed: int
     uid64: int
     update_time: int

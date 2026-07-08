@@ -187,21 +187,21 @@ def kfc(ctx, home, extension_path, log_level, name, stage, env_verify_location):
     ctx.backtest_locator = yjj.locator(lf.enums.mode.BACKTEST)
     ctx.config_location = yjj.location(
         lf.enums.mode.LIVE,
-        lf.enums.category.SYSTEM,
+        lf.enums.location_role.SYSTEM,
         "etc",
         "kungfu",
         ctx.runtime_locator,
     )
     ctx.console_location = yjj.location(
         lf.enums.mode.LIVE,
-        lf.enums.category.SYSTEM,
+        lf.enums.location_role.SYSTEM,
         "service",
         "console",
         ctx.runtime_locator,
     )
     ctx.index_location = yjj.location(
         lf.enums.mode.LIVE,
-        lf.enums.category.SYSTEM,
+        lf.enums.location_role.SYSTEM,
         "journal",
         "index",
         ctx.runtime_locator,

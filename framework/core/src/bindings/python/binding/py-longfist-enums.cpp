@@ -22,15 +22,15 @@ void bind_enums(py::module &m) {
   m_enums.def("get_mode_name", &get_mode_name);
   m_enums.def("get_mode_by_name", &get_mode_by_name);
 
-  py::enum_<category>(m_enums, "category", py::arithmetic(), "Kungfu Data Category")
-      .value("MD", category::MD)
-      .value("TD", category::TD)
-      .value("STRATEGY", category::STRATEGY)
-      .value("SYSTEM", category::SYSTEM)
-      .value("OPERATOR", category::OPERATOR)
+  py::enum_<location_role>(m_enums, "location_role", py::arithmetic(), "Kungfu Location Role")
+      .value("SOURCE", location_role::SOURCE)
+      .value("SINK", location_role::SINK)
+      .value("ACTOR", location_role::ACTOR)
+      .value("SYSTEM", location_role::SYSTEM)
+      .value("SERVICE", location_role::SERVICE)
       .export_values();
-  m_enums.def("get_category_name", &get_category_name);
-  m_enums.def("get_category_by_name", &get_category_by_name);
+  m_enums.def("get_location_role_name", &get_location_role_name);
+  m_enums.def("get_location_role_by_name", &get_location_role_by_name);
 
   py::enum_<layout>(m_enums, "layout", py::arithmetic(), "Kungfu Data Layout")
       .value("JOURNAL", layout::JOURNAL)

@@ -23,7 +23,7 @@ to "what is actually in the journal?" — which you can inspect directly.
 - **Rebuild / update the index** — if `sessions` looks wrong or incomplete, the
   index can be rebuilt from the journal files.
 
-Filters (`--mode`, `--category`, `--group`, `--name`) scope the view to the part
+Filters (`--mode`, `--role`, `--group`, `--name`) scope the view to the part
 of the system you are investigating.
 
 ## Reproduce with replay

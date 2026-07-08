@@ -55,7 +55,7 @@ def new_run_id() -> str:
 def _open_journal(runtime_dir: str, run_id: str) -> Any:
     loc = yjj.locator(runtime_dir)
     location = yjj.location(
-        lf.enums.mode.LIVE, lf.enums.category.SYSTEM, "rewind", run_id, loc
+        lf.enums.mode.LIVE, lf.enums.location_role.SYSTEM, "rewind", run_id, loc
     )
     pub = yjj.noop_publisher()
     bus = yjj.bus(False)
@@ -65,7 +65,7 @@ def _open_journal(runtime_dir: str, run_id: str) -> Any:
 def _source(run_id: str, runtime_dir: str) -> dict[str, Any]:
     return {
         "mode": "LIVE",
-        "category": "SYSTEM",
+        "role": "SYSTEM",
         "group": "rewind",
         "name": run_id,
         "dest": 0,

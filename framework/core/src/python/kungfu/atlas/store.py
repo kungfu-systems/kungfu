@@ -37,7 +37,7 @@ def _location(runtime_dir):
     locator = yjj.locator(runtime_dir)
     return yjj.location(
         lf.enums.mode.LIVE,
-        lf.enums.category.SYSTEM,
+        lf.enums.location_role.SYSTEM,
         ATLAS_GROUP,
         ATLAS_NAME,
         locator,
@@ -211,7 +211,7 @@ class ImportStore:
             "source": {
                 "root": self.runtime_dir,
                 "mode": "live",
-                "category": "system",
+                "role": "system",
                 "group": ATLAS_GROUP,
                 "name": ATLAS_NAME,
                 "dest": PUBLIC_DEST,

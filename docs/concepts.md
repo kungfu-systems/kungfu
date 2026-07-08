@@ -26,7 +26,7 @@ principles behind them see [`design-philosophy.md`](design-philosophy.md).
 | **journal** | The append-only **event log**: one shared, strongly-typed stream of frames that every component consumes, rather than each inventing its own format. |
 | **frame** | A single journal record: a fixed-size header (source / destination / nanosecond timestamp / message type) plus a variable-size payload. |
 | **action recorder** | The language-neutral C++ core surface for writing action facts into the journal. Python and Node expose thin bindings over it; they must not implement separate causality, writer, or receipt semantics. See [ADR-0022](../framework/core/docs/adr/ADR-0022-core-action-recording-surface.md). |
-| **location** | A runtime identity/address: category, group, name, mode, locator root, and uid. Locations identify who writes, who reads, and where journals live. |
+| **location** | A runtime identity/address: role, group, name, mode, locator root, and uid. Locations identify who writes, who reads, and where journals live. |
 | **channel** | A source/destination communication edge between locations. Channels are used for runtime read/write/request paths; they are transport, not fact authority. |
 | **source** | A logical storage-sync registry entry: a local profile, imported bundle, remote Kungfu runtime, or adapter that can enumerate facts for import. |
 | **manifest** | The trust root for a portable fact-ledger bundle or accepted segment: format version, capture boundary, source metadata, payload inventory, schema bindings, and checksums. |

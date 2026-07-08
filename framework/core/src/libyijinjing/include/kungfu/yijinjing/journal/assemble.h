@@ -51,9 +51,9 @@ private:
 class assemble {
 public:
   explicit assemble(const std::vector<data::locator_ptr> &locators, const std::string &mode = "*",
-                    const std::string &category = "*", const std::string &group = "*", const std::string &name = "*");
+                    const std::string &role = "*", const std::string &group = "*", const std::string &name = "*");
 
-  explicit assemble(const data::locator_ptr &locator, const std::string &mode = "*", const std::string &category = "*",
+  explicit assemble(const data::locator_ptr &locator, const std::string &mode = "*", const std::string &role = "*",
                     const std::string &group = "*", const std::string &name = "*");
 
   explicit assemble(const data::location_ptr &source_location, uint32_t dest_id,
@@ -143,7 +143,7 @@ protected:
 
 private:
   const std::string mode_;
-  const std::string category_;
+  const std::string role_;
   const std::string group_;
   const std::string name_;
   publisher_ptr publisher_;

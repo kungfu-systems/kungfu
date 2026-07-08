@@ -98,16 +98,16 @@ void cached::restore_states(const yijinjing::data::location_ptr &location,
     SPDLOG_ERROR("failed to write cache {} {} {}", location->uid, location->uname, ex.what());
   }
 
-  const bool IS_NODE = location->category == category::SYSTEM and location->group == "node";
+  const bool IS_NODE = location->role == location_role::SYSTEM and location->group == "node";
   const bool IS_LEDGER = location->uid == ledger_home_location_->uid;
-  const bool IS_TD = location->category == category::TD;
-  const bool IS_STRATEGY = location->category == category::STRATEGY;
-  const bool IS_OPERATOR = location->category == category::OPERATOR;
-  const bool IS_SYSTEM = location->category == category::SYSTEM;
+  const bool IS_SINK = location->role == location_role::SINK;
+  const bool IS_ACTOR = location->role == location_role::ACTOR;
+  const bool IS_SERVICE = location->role == location_role::SERVICE;
+  const bool IS_SYSTEM = location->role == location_role::SYSTEM;
 
-  if (IS_TD or IS_STRATEGY) {
+  if (IS_SINK or IS_ACTOR) {
     for (const auto &other_location : location->locator->list_locations("*", "*", "*", "*")) {
-      if (other_location->category == category::SYSTEM) {
+      if (other_location->role == location_role::SYSTEM) {
         continue;
       }
 
@@ -126,41 +126,41 @@ void cached::restore_states(const yijinjing::data::location_ptr &location,
     }
   }
 
-  // static data in td
-  if (IS_STRATEGY or IS_OPERATOR or IS_SYSTEM) {
-    for (const auto &td_location : location->locator->list_locations("td", "*", "*", "live")) {
-      auto dests = location->locator->list_location_dest_by_db(td_location);
+  // static data published by sinks
+  if (IS_ACTOR or IS_SERVICE or IS_SYSTEM) {
+    for (const auto &sink_location : location->locator->list_locations("sink", "*", "*", "live")) {
+      auto dests = location->locator->list_location_dest_by_db(sink_location);
       if (std::find(dests.begin(), dests.end(), location::PUBLIC) != dests.end()) {
         try {
-          if (not check_cached_storage_exists(td_location, location::PUBLIC)) {
+          if (not check_cached_storage_exists(sink_location, location::PUBLIC)) {
             continue;
           }
-          ensure_cached_storage(td_location, location::PUBLIC);
-          app_states_shift_.at(td_location->uid).restore_to(StaticDataTypes, writer, location::PUBLIC);
+          ensure_cached_storage(sink_location, location::PUBLIC);
+          app_states_shift_.at(sink_location->uid).restore_to(StaticDataTypes, writer, location::PUBLIC);
 
           // for trading task starting as quick as possible
-          if (IS_STRATEGY and location->group != "default" and is_otc_) {
+          if (IS_ACTOR and location->group != "default" and is_otc_) {
             break;
           }
         } catch (const std::exception &ex) {
-          SPDLOG_ERROR("failed to write static data {} {} {} for target {}", td_location->uname, location::PUBLIC,
+          SPDLOG_ERROR("failed to write static data {} {} {} for target {}", sink_location->uname, location::PUBLIC,
                        ex.what(), location->uname);
         }
       }
     }
   }
 
-  // restore all trading data from tds, including static data in td
+  // restore all trading data from sinks, including static data
   if (IS_SYSTEM) {
-    for (const auto &td_location : location->locator->list_locations("td", "*", "*", "live")) {
-      for (auto dest : location->locator->list_location_dest_by_db(td_location)) {
+    for (const auto &sink_location : location->locator->list_locations("sink", "*", "*", "live")) {
+      for (auto dest : location->locator->list_location_dest_by_db(sink_location)) {
         try {
-          ensure_cached_storage(td_location, dest);
+          ensure_cached_storage(sink_location, dest);
           // tracing-foundation Phase 1: Order/AlgoOrder(交易)拆出闭集 cache,移除其专属 restore;
           // 保留对非交易 StateDataTypes 的泛型 restore。
-          app_states_shift_.at(td_location->uid).restore_to(writer, dest, RESTORE_LIMIT);
+          app_states_shift_.at(sink_location->uid).restore_to(writer, dest, RESTORE_LIMIT);
         } catch (const std::exception &ex) {
-          SPDLOG_ERROR("failed to write cache {} {} {} for target {}", td_location->uname, dest, ex.what(),
+          SPDLOG_ERROR("failed to write cache {} {} {} for target {}", sink_location->uname, dest, ex.what(),
                        location->uname);
         }
       }

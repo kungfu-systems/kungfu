@@ -62,10 +62,10 @@ class PyLocator : public locator {
     PYBIND11_OVERLOAD(std::vector<uint32_t>, locator, list_page_id, location, dest_id);
   }
 
-  [[nodiscard]] std::vector<location_ptr> list_locations(const std::string &category, const std::string &group,
+  [[nodiscard]] std::vector<location_ptr> list_locations(const std::string &role, const std::string &group,
                                                          const std::string &name,
                                                          const std::string &mode) const override {
-    PYBIND11_OVERLOAD(std::vector<location_ptr>, locator, list_locations, category, group, name, mode);
+    PYBIND11_OVERLOAD(std::vector<location_ptr>, locator, list_locations, role, group, name, mode);
   }
 
   [[nodiscard]] std::vector<uint32_t> list_location_dest(const location_ptr &location) const override {
@@ -264,10 +264,11 @@ void bind(pybind11::module &&m) {
 
   auto location_class = py::class_<location, location_ptr>(m, "location");
   location_class
-      .def(py::init<mode, category, const std::string &, const std::string &, locator_ptr, uint32_t>(), py::arg("m"),
-           py::arg("c"), py::arg("g"), py::arg("n"), py::arg("l"), py::arg("default_seed") = KUNGFU_HASH_SEED)
+      .def(py::init<mode, location_role, const std::string &, const std::string &, locator_ptr, uint32_t>(),
+           py::arg("m"), py::arg("c"), py::arg("g"), py::arg("n"), py::arg("l"),
+           py::arg("default_seed") = KUNGFU_HASH_SEED)
       .def_readonly("mode", &location::mode)
-      .def_readonly("category", &location::category)
+      .def_readonly("role", &location::role)
       .def_readonly("group", &location::group)
       .def_readonly("name", &location::name)
       .def_readonly("uname", &location::uname)
@@ -291,7 +292,7 @@ void bind(pybind11::module &&m) {
       .def("layout_file", &locator::layout_file)
       .def("get_root", &locator::get_root)
       .def("list_page_id", &locator::list_page_id)
-      .def("list_locations", &locator::list_locations, py::arg("category") = "*", py::arg("group") = "*",
+      .def("list_locations", &locator::list_locations, py::arg("role") = "*", py::arg("group") = "*",
            py::arg("name") = "*", py::arg("mode") = "*")
       .def("list_location_dest", &locator::list_location_dest);
 
@@ -374,7 +375,7 @@ void bind(pybind11::module &&m) {
   assemble_class
       .def(py::init<const std::vector<yijinjing::data::locator_ptr> &, const std::string &, const std::string &,
                     const std::string &, const std::string &>(),
-           py::arg("locators"), py::arg("mode") = "*", py::arg("category") = "*", py::arg("group") = "*",
+           py::arg("locators"), py::arg("mode") = "*", py::arg("role") = "*", py::arg("group") = "*",
            py::arg("name") = "*")
       .def(py::init<const yijinjing::data::location_ptr &, uint32_t, uint32_t, int64_t>(), py::arg("source_location"),
            py::arg("dest_id"), py::arg("assemble_mode") = longfist::enums::AssembleMode::Channel,

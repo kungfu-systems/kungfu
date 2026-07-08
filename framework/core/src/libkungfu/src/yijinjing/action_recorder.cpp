@@ -76,7 +76,7 @@ uint64_t checksum_frame(const longfist::types::frame_header &header, const uint8
 action_recorder::action_recorder(const std::string &runtime_dir, const std::string &group, const std::string &name,
                                  uint32_t dest_id, uint64_t stream_id)
     : locator_(std::make_shared<locator>(runtime_dir, mode::LIVE)),
-      location_(location::make_shared(mode::LIVE, category::SYSTEM, group, name, locator_)),
+      location_(location::make_shared(mode::LIVE, location_role::SYSTEM, group, name, locator_)),
       publisher_(std::make_shared<noop_publisher>()), bus_(std::make_shared<bus>(false)),
       writer_(std::make_shared<writer>(location_, dest_id, true, publisher_, false, bus_)), dest_id_(dest_id),
       default_stream_id_(stream_id) {}

@@ -147,8 +147,8 @@ void rocks::clear_rocksdb(rocksdb::DB **db) {
 void install_master_kv_provider() {
   data::location::master_kv() = [](const data::location &self, const std::string &key) {
     namespace es = longfist::enums;
-    const std::string rocksdb_dir =
-        self.locator->layout_directory(es::layout::MAP, es::category::SYSTEM, "master", "master", self.mode, false);
+    const std::string rocksdb_dir = self.locator->layout_directory(es::layout::MAP, es::location_role::SYSTEM, "master",
+                                                                   "master", self.mode, false);
     SPDLOG_TRACE("rocksdb_dir: {}", rocksdb_dir);
     std::string value{};
     rocks::get_kv(key, value, rocksdb_dir);

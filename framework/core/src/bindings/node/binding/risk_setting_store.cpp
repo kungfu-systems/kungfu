@@ -24,7 +24,7 @@ inline RiskSetting getConfigFromJs(const Napi::CallbackInfo &info, const locator
   auto config_location = IODevice::ExtractLocation(info, 0, locator);
   if (config_location) {
     query.location_uid = config_location->uid;
-    query.category = config_location->category;
+    query.role = config_location->role;
     query.group = config_location->group;
     query.name = config_location->name;
     query.mode = config_location->mode;
@@ -71,14 +71,14 @@ Napi::Value RiskSettingStore::SetAllRiskSetting(const Napi::CallbackInfo &info) 
       for (int i = 0; i < args.Length(); i++) {
         auto location =
             location::make_shared(get_mode_by_name(args.Get(i).ToObject().Get("mode").ToString().Utf8Value()),
-                                  get_category_by_name(args.Get(i).ToObject().Get("category").ToString().Utf8Value()),
+                                  get_location_role_by_name(args.Get(i).ToObject().Get("role").ToString().Utf8Value()),
                                   args.Get(i).ToObject().Get("group").ToString().Utf8Value(),
                                   args.Get(i).ToObject().Get("name").ToString().Utf8Value(), locator_);
 
         if (location) {
           RiskSetting risk_setting = {};
           risk_setting.location_uid = location->uid;
-          risk_setting.category = location->category;
+          risk_setting.role = location->role;
           risk_setting.group = location->group;
           risk_setting.name = location->name;
           risk_setting.mode = location->mode;

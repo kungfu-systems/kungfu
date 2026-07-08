@@ -73,7 +73,7 @@ class Supervisor:
         self.locator = yjj.locator(runtime_dir)
         self.location = yjj.location(
             lf.enums.mode.LIVE,
-            lf.enums.category.SYSTEM,
+            lf.enums.location_role.SYSTEM,
             "rewind",
             self.run_id,
             self.locator,
@@ -218,7 +218,7 @@ class Supervisor:
                 self.runtime_dir,
                 {
                     "mode": "LIVE",
-                    "category": "SYSTEM",
+                    "role": "SYSTEM",
                     "group": "rewind",
                     "name": self.run_id,
                     "dest": PUBLIC_DEST,

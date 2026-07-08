@@ -42,23 +42,23 @@ journal_command_context = kfc.pass_context(
 )
 @click.option(
     "-c",
-    "--category",
+    "--role",
     default="*",
-    type=click.Choice(list(kfj.CATEGORIES)),
-    help="category",
+    type=click.Choice(list(kfj.ROLES)),
+    help="role",
 )
 @click.option("-g", "--group", type=str, default="*", help="group")
 @click.option("-n", "--name", type=str, default="*", help="name")
 @click.help_option("-h", "--help")
 @kfc.pass_context()
-def journal(ctx, mode, category, group, name):
+def journal(ctx, mode, role, group, name):
     ctx.low_latency = False
     ctx.mode = mode
-    ctx.category = category
+    ctx.role = role
     ctx.group = group
     ctx.name = name
     ctx.location = yjj.location(
-        kfj.MODES[mode], kfj.CATEGORIES[category], group, name, ctx.runtime_locator
+        kfj.MODES[mode], kfj.ROLES[role], group, name, ctx.runtime_locator
     )
     ctx.logger = create_logger("journal", ctx.log_level, ctx.console_location)
 
@@ -72,7 +72,7 @@ def journal(ctx, mode, category, group, name):
     "--sortby",
     default="begin_time",
     type=click.Choice(
-        ["begin_time", "end_time", "duration", "mode", "category", "group", "name"]
+        ["begin_time", "end_time", "duration", "mode", "role", "group", "name"]
     ),
     help="sorting method",
 )
@@ -298,14 +298,12 @@ def export_logs(ctx, src_dir, dst_dir):
     for log_file in glob.glob(search_path):
         match = LOG_PATTERN.match(log_file[len(src_dir) + 1 :])
         if match:
-            category = match.group(1)
+            role = match.group(1)
             group = match.group(2)
             name = match.group(3)
             mode = match.group(4)
             date = match.group(6)
-            archive_path = os.path.join(
-                dst_dir, date, category, group, name, "log", mode
-            )
+            archive_path = os.path.join(dst_dir, date, role, group, name, "log", mode)
             if not os.path.exists(archive_path):
                 os.makedirs(archive_path)
             archive_log = os.path.join(archive_path, os.path.basename(log_file))
@@ -332,7 +330,7 @@ def make_archive(ctx, archive_format, archive_date):
 def update_index_db(ctx):
     index_location = yjj.location(
         lf.enums.mode.LIVE,
-        lf.enums.category.SYSTEM,
+        lf.enums.location_role.SYSTEM,
         "journal",
         "index",
         ctx.runtime_locator,

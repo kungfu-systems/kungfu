@@ -40,8 +40,8 @@ inline location_ptr GetWatcherLocation(const Napi::CallbackInfo &info) {
 
   auto runtime_dir = info[0].As<Napi::String>().Utf8Value();
   auto name = info[1].As<Napi::String>().Utf8Value();
-  auto result =
-      std::make_shared<location>(mode::LIVE, category::SYSTEM, "node", name, IODevice::GetRuntimeLocator(runtime_dir));
+  auto result = std::make_shared<location>(mode::LIVE, location_role::SYSTEM, "node", name,
+                                           IODevice::GetRuntimeLocator(runtime_dir));
   yijinjing::log::copy_log_settings(result, result->name);
   return result;
 }
@@ -150,7 +150,7 @@ Napi::Value Watcher::GetLocation(const Napi::CallbackInfo &info) {
     return {};
   }
   auto locationObj = Napi::Object::New(info.Env());
-  locationObj.Set("category", Napi::String::New(info.Env(), get_category_name(location->category)));
+  locationObj.Set("role", Napi::String::New(info.Env(), get_location_role_name(location->role)));
   locationObj.Set("group", Napi::String::New(info.Env(), location->group));
   locationObj.Set("name", Napi::String::New(info.Env(), location->name));
   locationObj.Set("mode", Napi::String::New(info.Env(), get_mode_name(location->mode)));
@@ -193,7 +193,7 @@ Napi::Value Watcher::RequestStop(const Napi::CallbackInfo &info) {
   auto app_location = IODevice::ExtractLocation(info, 0, get_locator());
 
   // stop master
-  if (app_location->category == category::SYSTEM && app_location->group == "master") {
+  if (app_location->role == location_role::SYSTEM && app_location->group == "master") {
     if (not has_writer(get_master_command_uid())) {
       return Napi::Boolean::New(info.Env(), false);
     }
@@ -498,7 +498,7 @@ void Watcher::InspectChannel(int64_t trigger_time, const Channel &channel) {
     auto source_location = get_location(channel.source_id);
     auto dest_location = get_location(channel.dest_id);
 
-    if (source_location->category == category::TD) {
+    if (source_location->role == location_role::SINK) {
       if (dest_location->group == "node") { // for as soon as possible to get trading data made by renderer process;
         trading_data_reader_->join(source_location, channel.dest_id, get_begin_time(), 0, Priority::High);
       } else {
@@ -537,28 +537,28 @@ void Watcher::OnRegister(int64_t trigger_time, const Register &register_data) {
   }
 
   auto app_location = get_location(app_uid);
-  if (app_location->category == category::MD or app_location->category == category::TD or
-      app_location->category == category::OPERATOR) {
+  if (app_location->role == location_role::SOURCE or app_location->role == location_role::SINK or
+      app_location->role == location_role::SERVICE) {
     broker_states_map_.insert_or_assign(app_location->uid, int(BrokerState::Pending));
   }
 
-  if (app_location->category == category::MD and app_location->mode == mode::LIVE) {
+  if (app_location->role == location_role::SOURCE and app_location->mode == mode::LIVE) {
     MonitorMarketData(trigger_time, app_location);
   }
 
-  if (app_location->category == category::TD) {
+  if (app_location->role == location_role::SINK) {
     trading_data_reader_->join(app_location, location::PUBLIC, get_begin_time());
   }
 }
 
 void Watcher::OnDeregister(int64_t trigger_time, const Deregister &deregister_data) {
   auto app_location = location::make_shared(deregister_data, get_locator());
-  if (app_location->category == category::MD or app_location->category == category::TD or
-      app_location->category == category::OPERATOR) {
+  if (app_location->role == location_role::SOURCE or app_location->role == location_role::SINK or
+      app_location->role == location_role::SERVICE) {
     broker_states_map_.insert_or_assign(app_location->uid, int(BrokerState::Pending));
   }
 
-  if (app_location->category == category::SYSTEM and app_location->group == "master" and
+  if (app_location->role == location_role::SYSTEM and app_location->group == "master" and
       app_location->name == "master") {
     CancelWorker();
   }

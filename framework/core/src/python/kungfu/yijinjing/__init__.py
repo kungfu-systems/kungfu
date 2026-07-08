@@ -13,7 +13,7 @@ LAYOUT_LOCATION_REGEX = "{}{}{}{}{}{}{}{}{}{}{}".format(
     r"layout",
     os_sep,  # layout
     r"(.*)",
-    os_sep,  # category
+    os_sep,  # role
     r"(.*)",
     os_sep,  # group
     r"(.*)",
@@ -28,7 +28,7 @@ JOURNAL_LOCATION_REGEX = "{}{}{}{}{}{}{}{}{}".format(
     r"journal",
     os_sep,
     r"(.*)",
-    os_sep,  # category
+    os_sep,  # role
     r"(.*)",
     os_sep,  # group
     r"(.*)",
@@ -41,7 +41,7 @@ JOURNAL_PAGE_REGEX = "{}{}{}{}{}{}{}{}{}{}{}".format(
     r"journal",
     os_sep,  # mode
     r"(.*)",
-    os_sep,  # category
+    os_sep,  # role
     r"(.*)",
     os_sep,  # group
     r"(.*)",
@@ -56,7 +56,7 @@ LOG_REGEX = "{}{}{}{}{}{}{}{}{}{}{}".format(
     r"log",
     os_sep,
     r"(.*)",
-    os_sep,  # category
+    os_sep,  # role
     r"(.*)",
     os_sep,  # group
     r"(.*)",
@@ -78,13 +78,13 @@ MODES = {
     "*": lf.enums.mode.LIVE,
 }
 
-CATEGORIES = {
-    "md": lf.enums.category.MD,
-    "td": lf.enums.category.TD,
-    "strategy": lf.enums.category.STRATEGY,
-    "system": lf.enums.category.SYSTEM,
-    "operator": lf.enums.category.OPERATOR,
-    "*": lf.enums.category.SYSTEM,
+ROLES = {
+    "source": lf.enums.location_role.SOURCE,
+    "sink": lf.enums.location_role.SINK,
+    "actor": lf.enums.location_role.ACTOR,
+    "system": lf.enums.location_role.SYSTEM,
+    "service": lf.enums.location_role.SERVICE,
+    "*": lf.enums.location_role.SYSTEM,
 }
 
 ARCHIVE_PREFIX = "KFA"

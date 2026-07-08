@@ -33,8 +33,8 @@ class nanomsg_resource : public resource {
 protected:
   nanomsg_resource(const io_device &io_device, bool low_latency, protocol p)
       : io_device_(io_device), low_latency_(low_latency),
-        location_(std::make_shared<data::location>(mode::LIVE, longfist::enums::category::SYSTEM, "master", "master",
-                                                   io_device_.get_live_home()->locator)),
+        location_(std::make_shared<data::location>(mode::LIVE, longfist::enums::location_role::SYSTEM, "master",
+                                                   "master", io_device_.get_live_home()->locator)),
         listen_path_(io_device_.get_url_factory()->make_path_listen(location_, p)),
         dial_path_(io_device_.get_url_factory()->make_path_dial(location_, p)), socket_(p) {}
 
@@ -150,7 +150,7 @@ public:
 
 io_device::io_device(data::location_ptr home, const bool low_latency, const bool lazy)
     : home_(std::move(home)),
-      live_home_(location::make_shared(mode::LIVE, home_->category, home_->group, home_->name, home_->locator)),
+      live_home_(location::make_shared(mode::LIVE, home_->role, home_->group, home_->name, home_->locator)),
       low_latency_(low_latency), lazy_(lazy), begin_time_(time::now_in_nano()),
       bus_(std::make_shared<bus>(is_resource_manager_required())) {
   // keep the guarantees deterministic even when static-library linking drops

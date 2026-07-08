@@ -1,14 +1,14 @@
 from __future__ import annotations
 import typing
-__all__: list[str] = ['Account', 'AccountType', 'AccountingMethodType', 'AlgoOrderActionFlag', 'All', 'Allow', 'Any', 'Arbitrage', 'AskPriceGreaterEqualStopPrice', 'AskPriceGreaterThanStopPrice', 'AskPriceLesserEqualStopPrice', 'AskPriceLesserThanStopPrice', 'AssembleMode', 'AtAuction', 'AtAuctionLimit', 'BACKTEST', 'BSE', 'BadDebtInterest', 'BasketType', 'BasketVolumeType', 'BidPriceGreaterEqualStopPrice', 'BidPriceGreaterThanStopPrice', 'BidPriceLesserEqualStopPrice', 'BidPriceLesserThanStopPrice', 'Bond', 'BrokerState', 'BsFlag', 'Buy', 'ByAmount', 'ByVolume', 'CEN', 'CFFEX', 'CNH', 'CNY', 'CZCE', 'Cancel', 'Cancelled', 'Cancelling', 'CapitalOccupationFee', 'CapitalRightsCompensation', 'CashBondETF', 'CashRepayMargin', 'CashReplaceFlag', 'Close', 'CloseOut', 'CloseOutFlag', 'CloseToday', 'CloseYesterday', 'CommissionRateMode', 'CommodityETF', 'Connected', 'Continuous', 'ContractType', 'Covered', 'CrdBuyContract', 'CrdBuyInterest', 'CrdSellContract', 'CrdSellFee', 'Credit', 'CrossCountryETF', 'CrossMarketETF', 'Crypto', 'CryptoFuture', 'CryptoUFuture', 'Currency', 'CurrencyETF', 'Custom', 'DATA', 'DCE', 'Default', 'Depth', 'Direction', 'DisConnected', 'Drop', 'ETF', 'ETFStatus', 'ETFType', 'EUR', 'EnReplace', 'EnhancedLimit', 'Entrust', 'Error', 'Exec', 'ExecType', 'Fak', 'FakBest5', 'Filled', 'Fok', 'Forbid', 'ForwardBest', 'FrameDataType', 'Fund', 'Future', 'FutureOption', 'GBP', 'GFA', 'GFD', 'GFS', 'GTC', 'GTD', 'GuaranteeStockBuy', 'GuaranteeStockSell', 'GuaranteeStockTransferIn', 'GuaranteeStockTransferOut', 'HKD', 'HKT', 'Hedge', 'HedgeFlag', 'High', 'HistoryDataType', 'INE', 'IOC', 'Idle', 'Immediately', 'Index', 'InitNotCloseOut', 'InstrumentType', 'Intraday', 'JOURNAL', 'JPY', 'Json', 'LIVE', 'LOG', 'Last', 'LastPriceGreaterEqualStopPrice', 'LastPriceGreaterThanStopPrice', 'LastPriceLesserEqualStopPrice', 'LastPriceLesserThanStopPrice', 'LedgerCategory', 'Limit', 'LocalETF', 'Lock', 'LoggedIn', 'LoginFailed', 'Long', 'Lost', 'Low', 'MD', 'MYR', 'ManagementFee', 'MarginTrade', 'MarketType', 'Medium', 'Merge', 'Min', 'MustReplace', 'NANOMSG', 'Normal', 'NotCloseOut', 'Now', 'OPERATOR', 'OTC', 'Offset', 'Open', 'OperatorState', 'Opposing1', 'Opposing2', 'Opposing3', 'Opposing4', 'Opposing5', 'OrderActionFlag', 'OrderStatus', 'OrderTriggerFlag', 'OrderTriggerType', 'OverdueInterest', 'Own1', 'Own2', 'Own3', 'Own4', 'Own5', 'PageEnd', 'PageStatus', 'ParkedOrder', 'PartialFilledActive', 'PartialFilledNotActive', 'Pending', 'PendingSettlement', 'PhysicalBondETF', 'PreOpen', 'PriceLevel', 'PriceType', 'Priority', 'Proportion', 'Purchase', 'PurchaseOnly', 'Quantity', 'REPLAY', 'Raw', 'Ready', 'Redemption', 'RedemptionOnly', 'RepayMargin', 'RepayStock', 'Repo', 'ResumePolicy', 'ReverseBest', 'SGD', 'SHFE', 'SQLITE', 'SSE', 'STRATEGY', 'SYSTEM', 'SZE', 'Sell', 'ShareRightsCompensation', 'Short', 'ShortSell', 'Side', 'Snapshot', 'Speculation', 'Split', 'Start', 'Stateless', 'Stock', 'StockOption', 'StockRepayStock', 'Stop', 'Strategy', 'StrategyState', 'Submitted', 'SubscribeDataType', 'SubscribeInstrumentType', 'SurplusStockTransfer', 'TD', 'TechStock', 'Tick', 'TimeCondition', 'TotalEnd', 'Touch', 'TouchProfit', 'Trade', 'Transaction', 'Tree', 'TriggerCancel', 'TriggerInsert', 'USD', 'UnHKMustReplace', 'UnHKReplace', 'UnReplace', 'UnSSEMustReplace', 'UnSSEReplace', 'UnSSESZEMustReplace', 'UnSSESZEReplace', 'Unknown', 'Unlock', 'UpperLimitPrice', 'VolumeCondition', 'Warn', 'category', 'get_category_by_name', 'get_category_name', 'get_layout_name', 'get_mode_by_name', 'get_mode_name', 'layout', 'lowerLimitPrice', 'mode']
+__all__: list[str] = ['ACTOR', 'Account', 'AccountType', 'AccountingMethodType', 'AlgoOrderActionFlag', 'All', 'Allow', 'Any', 'Arbitrage', 'AskPriceGreaterEqualStopPrice', 'AskPriceGreaterThanStopPrice', 'AskPriceLesserEqualStopPrice', 'AskPriceLesserThanStopPrice', 'AssembleMode', 'AtAuction', 'AtAuctionLimit', 'BACKTEST', 'BSE', 'BadDebtInterest', 'BasketType', 'BasketVolumeType', 'BidPriceGreaterEqualStopPrice', 'BidPriceGreaterThanStopPrice', 'BidPriceLesserEqualStopPrice', 'BidPriceLesserThanStopPrice', 'Bond', 'BrokerState', 'BsFlag', 'Buy', 'ByAmount', 'ByVolume', 'CEN', 'CFFEX', 'CNH', 'CNY', 'CZCE', 'Cancel', 'Cancelled', 'Cancelling', 'CapitalOccupationFee', 'CapitalRightsCompensation', 'CashBondETF', 'CashRepayMargin', 'CashReplaceFlag', 'Close', 'CloseOut', 'CloseOutFlag', 'CloseToday', 'CloseYesterday', 'CommissionRateMode', 'CommodityETF', 'Connected', 'Continuous', 'ContractType', 'Covered', 'CrdBuyContract', 'CrdBuyInterest', 'CrdSellContract', 'CrdSellFee', 'Credit', 'CrossCountryETF', 'CrossMarketETF', 'Crypto', 'CryptoFuture', 'CryptoUFuture', 'Currency', 'CurrencyETF', 'Custom', 'DATA', 'DCE', 'Default', 'Depth', 'Direction', 'DisConnected', 'Drop', 'ETF', 'ETFStatus', 'ETFType', 'EUR', 'EnReplace', 'EnhancedLimit', 'Entrust', 'Error', 'Exec', 'ExecType', 'Fak', 'FakBest5', 'Filled', 'Fok', 'Forbid', 'ForwardBest', 'FrameDataType', 'Fund', 'Future', 'FutureOption', 'GBP', 'GFA', 'GFD', 'GFS', 'GTC', 'GTD', 'GuaranteeStockBuy', 'GuaranteeStockSell', 'GuaranteeStockTransferIn', 'GuaranteeStockTransferOut', 'HKD', 'HKT', 'Hedge', 'HedgeFlag', 'High', 'HistoryDataType', 'INE', 'IOC', 'Idle', 'Immediately', 'Index', 'InitNotCloseOut', 'InstrumentType', 'Intraday', 'JOURNAL', 'JPY', 'Json', 'LIVE', 'LOG', 'Last', 'LastPriceGreaterEqualStopPrice', 'LastPriceGreaterThanStopPrice', 'LastPriceLesserEqualStopPrice', 'LastPriceLesserThanStopPrice', 'LedgerCategory', 'Limit', 'LocalETF', 'Lock', 'LoggedIn', 'LoginFailed', 'Long', 'Lost', 'Low', 'MYR', 'ManagementFee', 'MarginTrade', 'MarketType', 'Medium', 'Merge', 'Min', 'MustReplace', 'NANOMSG', 'Normal', 'NotCloseOut', 'Now', 'OTC', 'Offset', 'Open', 'OperatorState', 'Opposing1', 'Opposing2', 'Opposing3', 'Opposing4', 'Opposing5', 'OrderActionFlag', 'OrderStatus', 'OrderTriggerFlag', 'OrderTriggerType', 'OverdueInterest', 'Own1', 'Own2', 'Own3', 'Own4', 'Own5', 'PageEnd', 'PageStatus', 'ParkedOrder', 'PartialFilledActive', 'PartialFilledNotActive', 'Pending', 'PendingSettlement', 'PhysicalBondETF', 'PreOpen', 'PriceLevel', 'PriceType', 'Priority', 'Proportion', 'Purchase', 'PurchaseOnly', 'Quantity', 'REPLAY', 'Raw', 'Ready', 'Redemption', 'RedemptionOnly', 'RepayMargin', 'RepayStock', 'Repo', 'ResumePolicy', 'ReverseBest', 'SERVICE', 'SGD', 'SHFE', 'SINK', 'SOURCE', 'SQLITE', 'SSE', 'SYSTEM', 'SZE', 'Sell', 'ShareRightsCompensation', 'Short', 'ShortSell', 'Side', 'Snapshot', 'Speculation', 'Split', 'Start', 'Stateless', 'Stock', 'StockOption', 'StockRepayStock', 'Stop', 'Strategy', 'StrategyState', 'Submitted', 'SubscribeDataType', 'SubscribeInstrumentType', 'SurplusStockTransfer', 'TechStock', 'Tick', 'TimeCondition', 'TotalEnd', 'Touch', 'TouchProfit', 'Trade', 'Transaction', 'Tree', 'TriggerCancel', 'TriggerInsert', 'USD', 'UnHKMustReplace', 'UnHKReplace', 'UnReplace', 'UnSSEMustReplace', 'UnSSEReplace', 'UnSSESZEMustReplace', 'UnSSESZEReplace', 'Unknown', 'Unlock', 'UpperLimitPrice', 'VolumeCondition', 'Warn', 'get_layout_name', 'get_location_role_by_name', 'get_location_role_name', 'get_mode_by_name', 'get_mode_name', 'layout', 'location_role', 'lowerLimitPrice', 'mode']
 class AccountType:
     """
     Members:
-    
+
       Stock
-    
+
       Credit
-    
+
       Future
     """
     Credit: typing.ClassVar[AccountType]  # value = <AccountType.Credit: 1>
@@ -56,9 +56,9 @@ class AccountType:
 class AccountingMethodType:
     """
     Members:
-    
+
       Default
-    
+
       OTC
     """
     Default: typing.ClassVar[AccountingMethodType]  # value = <AccountingMethodType.Default: 0>
@@ -105,11 +105,11 @@ class AccountingMethodType:
 class AlgoOrderActionFlag:
     """
     Members:
-    
+
       Cancel
-    
+
       Start
-    
+
       Stop
     """
     Cancel: typing.ClassVar[AlgoOrderActionFlag]  # value = <AlgoOrderActionFlag.Cancel: 0>
@@ -166,9 +166,9 @@ class AssembleMode:
 class BasketType:
     """
     Members:
-    
+
       Custom
-    
+
       ETF
     """
     Custom: typing.ClassVar[BasketType]  # value = <BasketType.Custom: 0>
@@ -215,11 +215,11 @@ class BasketType:
 class BasketVolumeType:
     """
     Members:
-    
+
       Unknown
-    
+
       Quantity
-    
+
       Proportion
     """
     Proportion: typing.ClassVar[BasketVolumeType]  # value = <BasketVolumeType.Proportion: 2>
@@ -267,19 +267,19 @@ class BasketVolumeType:
 class BrokerState:
     """
     Members:
-    
+
       Pending
-    
+
       Idle
-    
+
       DisConnected
-    
+
       Connected
-    
+
       LoggedIn
-    
+
       LoginFailed
-    
+
       Ready
     """
     Connected: typing.ClassVar[BrokerState]  # value = <BrokerState.Connected: 3>
@@ -331,11 +331,11 @@ class BrokerState:
 class BsFlag:
     """
     Members:
-    
+
       Unknown
-    
+
       Buy
-    
+
       Sell
     """
     Buy: typing.ClassVar[BsFlag]  # value = <BsFlag.Buy: 1>
@@ -383,25 +383,25 @@ class BsFlag:
 class CashReplaceFlag:
     """
     Members:
-    
+
       UnReplace
-    
+
       EnReplace
-    
+
       MustReplace
-    
+
       UnSSEReplace
-    
+
       UnSSEMustReplace
-    
+
       UnSSESZEReplace
-    
+
       UnSSESZEMustReplace
-    
+
       UnHKReplace
-    
+
       UnHKMustReplace
-    
+
       Unknown
     """
     EnReplace: typing.ClassVar[CashReplaceFlag]  # value = <CashReplaceFlag.EnReplace: 1>
@@ -456,11 +456,11 @@ class CashReplaceFlag:
 class CloseOutFlag:
     """
     Members:
-    
+
       NotCloseOut
-    
+
       CloseOut
-    
+
       InitNotCloseOut
     """
     CloseOut: typing.ClassVar[CloseOutFlag]  # value = <CloseOutFlag.CloseOut: 1>
@@ -508,9 +508,9 @@ class CloseOutFlag:
 class CommissionRateMode:
     """
     Members:
-    
+
       ByAmount
-    
+
       ByVolume
     """
     ByAmount: typing.ClassVar[CommissionRateMode]  # value = <CommissionRateMode.ByAmount: 0>
@@ -557,25 +557,25 @@ class CommissionRateMode:
 class ContractType:
     """
     Members:
-    
+
       CrdBuyContract
-    
+
       CrdSellContract
-    
+
       CrdBuyInterest
-    
+
       CrdSellFee
-    
+
       CapitalRightsCompensation
-    
+
       ShareRightsCompensation
-    
+
       OverdueInterest
-    
+
       BadDebtInterest
-    
+
       CapitalOccupationFee
-    
+
       ManagementFee
     """
     BadDebtInterest: typing.ClassVar[ContractType]  # value = <ContractType.BadDebtInterest: 7>
@@ -630,27 +630,27 @@ class ContractType:
 class Currency:
     """
     Members:
-    
+
       Unknown
-    
+
       CNY
-    
+
       HKD
-    
+
       USD
-    
+
       JPY
-    
+
       GBP
-    
+
       EUR
-    
+
       CNH
-    
+
       SGD
-    
+
       MYR
-    
+
       CEN
     """
     CEN: typing.ClassVar[Currency]  # value = <Currency.CEN: 10>
@@ -706,9 +706,9 @@ class Currency:
 class Direction:
     """
     Members:
-    
+
       Long
-    
+
       Short
     """
     Long: typing.ClassVar[Direction]  # value = <Direction.Long: 0>
@@ -755,15 +755,15 @@ class Direction:
 class ETFStatus:
     """
     Members:
-    
+
       Forbid
-    
+
       Allow
-    
+
       PurchaseOnly
-    
+
       RedemptionOnly
-    
+
       Unknown
     """
     Allow: typing.ClassVar[ETFStatus]  # value = <ETFStatus.Allow: 1>
@@ -813,21 +813,21 @@ class ETFStatus:
 class ETFType:
     """
     Members:
-    
+
       LocalETF
-    
+
       CrossCountryETF
-    
+
       CrossMarketETF
-    
+
       CurrencyETF
-    
+
       PhysicalBondETF
-    
+
       CommodityETF
-    
+
       CashBondETF
-    
+
       Unknown
     """
     CashBondETF: typing.ClassVar[ETFType]  # value = <ETFType.CashBondETF: 6>
@@ -880,11 +880,11 @@ class ETFType:
 class ExecType:
     """
     Members:
-    
+
       Unknown
-    
+
       Cancel
-    
+
       Trade
     """
     Cancel: typing.ClassVar[ExecType]  # value = <ExecType.Cancel: 1>
@@ -932,11 +932,11 @@ class ExecType:
 class FrameDataType:
     """
     Members:
-    
+
       Raw
-    
+
       Json
-    
+
       Unknown
     """
     Json: typing.ClassVar[FrameDataType]  # value = <FrameDataType.Json: 1>
@@ -984,13 +984,13 @@ class FrameDataType:
 class HedgeFlag:
     """
     Members:
-    
+
       Speculation
-    
+
       Arbitrage
-    
+
       Hedge
-    
+
       Covered
     """
     Arbitrage: typing.ClassVar[HedgeFlag]  # value = <HedgeFlag.Arbitrage: 1>
@@ -1039,11 +1039,11 @@ class HedgeFlag:
 class HistoryDataType:
     """
     Members:
-    
+
       Normal
-    
+
       PageEnd
-    
+
       TotalEnd
     """
     Normal: typing.ClassVar[HistoryDataType]  # value = <HistoryDataType.Normal: 0>
@@ -1091,29 +1091,29 @@ class HistoryDataType:
 class InstrumentType:
     """
     Members:
-    
+
       Unknown
-    
+
       Stock
-    
+
       Future
-    
+
       Bond
-    
+
       StockOption
-    
+
       TechStock
-    
+
       Fund
-    
+
       Index
-    
+
       Repo
-    
+
       Crypto
-    
+
       CryptoFuture
-    
+
       CryptoUFuture
     """
     Bond: typing.ClassVar[InstrumentType]  # value = <InstrumentType.Bond: 5>
@@ -1170,9 +1170,9 @@ class InstrumentType:
 class LedgerCategory:
     """
     Members:
-    
+
       Account
-    
+
       Strategy
     """
     Account: typing.ClassVar[LedgerCategory]  # value = <LedgerCategory.Account: 0>
@@ -1219,23 +1219,23 @@ class LedgerCategory:
 class MarketType:
     """
     Members:
-    
+
       All
-    
+
       BSE
-    
+
       SHFE
-    
+
       CFFEX
-    
+
       DCE
-    
+
       CZCE
-    
+
       INE
-    
+
       SSE
-    
+
       SZE
     """
     All: typing.ClassVar[MarketType]  # value = <MarketType.All: 0>
@@ -1289,13 +1289,13 @@ class MarketType:
 class Offset:
     """
     Members:
-    
+
       Open
-    
+
       Close
-    
+
       CloseToday
-    
+
       CloseYesterday
     """
     Close: typing.ClassVar[Offset]  # value = <Offset.Close: 1>
@@ -1344,13 +1344,13 @@ class Offset:
 class OperatorState:
     """
     Members:
-    
+
       Pending
-    
+
       DisConnected
-    
+
       Connected
-    
+
       Ready
     """
     Connected: typing.ClassVar[OperatorState]  # value = <OperatorState.Connected: 3>
@@ -1399,9 +1399,9 @@ class OperatorState:
 class OrderActionFlag:
     """
     Members:
-    
+
       Cancel
-    
+
       TriggerCancel
     """
     Cancel: typing.ClassVar[OrderActionFlag]  # value = <OrderActionFlag.Cancel: 0>
@@ -1448,27 +1448,27 @@ class OrderActionFlag:
 class OrderStatus:
     """
     Members:
-    
+
       Unknown
-    
+
       Submitted
-    
+
       Pending
-    
+
       Cancelled
-    
+
       Error
-    
+
       Filled
-    
+
       PartialFilledNotActive
-    
+
       PartialFilledActive
-    
+
       Lost
-    
+
       Cancelling
-    
+
       PendingSettlement
     """
     Cancelled: typing.ClassVar[OrderStatus]  # value = <OrderStatus.Cancelled: 3>
@@ -1524,9 +1524,9 @@ class OrderStatus:
 class OrderTriggerFlag:
     """
     Members:
-    
+
       TriggerInsert
-    
+
       TriggerCancel
     """
     TriggerCancel: typing.ClassVar[OrderTriggerFlag]  # value = <OrderTriggerFlag.TriggerCancel: 1>
@@ -1573,37 +1573,37 @@ class OrderTriggerFlag:
 class OrderTriggerType:
     """
     Members:
-    
+
       Immediately
-    
+
       Touch
-    
+
       TouchProfit
-    
+
       ParkedOrder
-    
+
       LastPriceGreaterThanStopPrice
-    
+
       LastPriceGreaterEqualStopPrice
-    
+
       LastPriceLesserThanStopPrice
-    
+
       LastPriceLesserEqualStopPrice
-    
+
       AskPriceGreaterThanStopPrice
-    
+
       AskPriceGreaterEqualStopPrice
-    
+
       AskPriceLesserThanStopPrice
-    
+
       AskPriceLesserEqualStopPrice
-    
+
       BidPriceGreaterThanStopPrice
-    
+
       BidPriceGreaterEqualStopPrice
-    
+
       BidPriceLesserThanStopPrice
-    
+
       BidPriceLesserEqualStopPrice
     """
     AskPriceGreaterEqualStopPrice: typing.ClassVar[OrderTriggerType]  # value = <OrderTriggerType.AskPriceGreaterEqualStopPrice: 9>
@@ -1664,9 +1664,9 @@ class OrderTriggerType:
 class PageStatus:
     """
     Members:
-    
+
       Normal
-    
+
       PreOpen
     """
     Normal: typing.ClassVar[PageStatus]  # value = <PageStatus.Normal: 0>
@@ -1713,33 +1713,33 @@ class PageStatus:
 class PriceLevel:
     """
     Members:
-    
+
       Last
-    
+
       Opposing5
-    
+
       Opposing4
-    
+
       Opposing3
-    
+
       Opposing2
-    
+
       Opposing1
-    
+
       Own1
-    
+
       Own2
-    
+
       Own3
-    
+
       Own4
-    
+
       Own5
-    
+
       UpperLimitPrice
-    
+
       lowerLimitPrice
-    
+
       Unknown
     """
     Last: typing.ClassVar[PriceLevel]  # value = <PriceLevel.Last: 0>
@@ -1798,27 +1798,27 @@ class PriceLevel:
 class PriceType:
     """
     Members:
-    
+
       Any
-    
+
       FakBest5
-    
+
       Fak
-    
+
       Fok
-    
+
       Limit
-    
+
       ForwardBest
-    
+
       ReverseBest
-    
+
       EnhancedLimit
-    
+
       AtAuctionLimit
-    
+
       AtAuction
-    
+
       Unknown
     """
     Any: typing.ClassVar[PriceType]  # value = <PriceType.Any: 1>
@@ -1874,11 +1874,11 @@ class PriceType:
 class Priority:
     """
     Members:
-    
+
       Low
-    
+
       Medium
-    
+
       High
     """
     High: typing.ClassVar[Priority]  # value = <Priority.High: 2>
@@ -1926,13 +1926,13 @@ class Priority:
 class ResumePolicy:
     """
     Members:
-    
+
       Now
-    
+
       Intraday
-    
+
       Stateless
-    
+
       Continuous
     """
     Continuous: typing.ClassVar[ResumePolicy]  # value = <ResumePolicy.Continuous: 3>
@@ -1981,49 +1981,49 @@ class ResumePolicy:
 class Side:
     """
     Members:
-    
+
       Buy
-    
+
       Sell
-    
+
       Lock
-    
+
       Unlock
-    
+
       Exec
-    
+
       Drop
-    
+
       Purchase
-    
+
       Redemption
-    
+
       Split
-    
+
       Merge
-    
+
       MarginTrade
-    
+
       ShortSell
-    
+
       RepayMargin
-    
+
       RepayStock
-    
+
       CashRepayMargin
-    
+
       StockRepayStock
-    
+
       SurplusStockTransfer
-    
+
       GuaranteeStockTransferIn
-    
+
       GuaranteeStockTransferOut
-    
+
       GuaranteeStockBuy
-    
+
       GuaranteeStockSell
-    
+
       Unknown
     """
     Buy: typing.ClassVar[Side]  # value = <Side.Buy: 0>
@@ -2090,11 +2090,11 @@ class Side:
 class StrategyState:
     """
     Members:
-    
+
       Normal
-    
+
       Warn
-    
+
       Error
     """
     Error: typing.ClassVar[StrategyState]  # value = <StrategyState.Error: 2>
@@ -2142,19 +2142,19 @@ class StrategyState:
 class SubscribeDataType:
     """
     Members:
-    
+
       All
-    
+
       Snapshot
-    
+
       Transaction
-    
+
       Entrust
-    
+
       Tree
-    
+
       Depth
-    
+
       Tick
     """
     All: typing.ClassVar[SubscribeDataType]  # value = <SubscribeDataType.All: 0>
@@ -2208,23 +2208,23 @@ class SubscribeDataType:
 class SubscribeInstrumentType:
     """
     Members:
-    
+
       All
-    
+
       Stock
-    
+
       Future
-    
+
       Bond
-    
+
       StockOption
-    
+
       FutureOption
-    
+
       Fund
-    
+
       Index
-    
+
       HKT
     """
     All: typing.ClassVar[SubscribeInstrumentType]  # value = <SubscribeInstrumentType.All: 0>
@@ -2280,19 +2280,19 @@ class SubscribeInstrumentType:
 class TimeCondition:
     """
     Members:
-    
+
       IOC
-    
+
       GFD
-    
+
       GTC
-    
+
       GFS
-    
+
       GTD
-    
+
       GFA
-    
+
       Unknown
     """
     GFA: typing.ClassVar[TimeCondition]  # value = <TimeCondition.GFA: 5>
@@ -2344,11 +2344,11 @@ class TimeCondition:
 class VolumeCondition:
     """
     Members:
-    
+
       Any
-    
+
       Min
-    
+
       All
     """
     All: typing.ClassVar[VolumeCondition]  # value = <VolumeCondition.All: 2>
@@ -2393,74 +2393,18 @@ class VolumeCondition:
     @property
     def value(self) -> int:
         ...
-class category:
-    """
-    Kungfu Data Category
-    
-    Members:
-    
-      MD
-    
-      TD
-    
-      STRATEGY
-    
-      SYSTEM
-    
-      OPERATOR
-    """
-    MD: typing.ClassVar[category]  # value = <category.MD: 0>
-    OPERATOR: typing.ClassVar[category]  # value = <category.OPERATOR: 4>
-    STRATEGY: typing.ClassVar[category]  # value = <category.STRATEGY: 2>
-    SYSTEM: typing.ClassVar[category]  # value = <category.SYSTEM: 3>
-    TD: typing.ClassVar[category]  # value = <category.TD: 1>
-    __members__: typing.ClassVar[dict[str, category]]  # value = {'MD': <category.MD: 0>, 'TD': <category.TD: 1>, 'STRATEGY': <category.STRATEGY: 2>, 'SYSTEM': <category.SYSTEM: 3>, 'OPERATOR': <category.OPERATOR: 4>}
-    def __eq__(self, other: typing.Any) -> bool:
-        ...
-    def __ge__(self, other: typing.Any) -> bool:
-        ...
-    def __getstate__(self) -> int:
-        ...
-    def __gt__(self, other: typing.Any) -> bool:
-        ...
-    def __hash__(self) -> int:
-        ...
-    def __index__(self) -> int:
-        ...
-    def __init__(self, value: int) -> None:
-        ...
-    def __int__(self) -> int:
-        ...
-    def __le__(self, other: typing.Any) -> bool:
-        ...
-    def __lt__(self, other: typing.Any) -> bool:
-        ...
-    def __ne__(self, other: typing.Any) -> bool:
-        ...
-    def __repr__(self) -> str:
-        ...
-    def __setstate__(self, state: int) -> None:
-        ...
-    def __str__(self) -> str:
-        ...
-    @property
-    def name(self) -> str:
-        ...
-    @property
-    def value(self) -> int:
-        ...
 class layout:
     """
     Kungfu Data Layout
-    
+
     Members:
-    
+
       JOURNAL
-    
+
       SQLITE
-    
+
       NANOMSG
-    
+
       LOG
     """
     JOURNAL: typing.ClassVar[layout]  # value = <layout.JOURNAL: 0>
@@ -2502,18 +2446,74 @@ class layout:
     @property
     def value(self) -> int:
         ...
+class location_role:
+    """
+    Kungfu Location Role
+
+    Members:
+
+      SOURCE
+
+      SINK
+
+      ACTOR
+
+      SYSTEM
+
+      SERVICE
+    """
+    ACTOR: typing.ClassVar[location_role]  # value = <location_role.ACTOR: 2>
+    SERVICE: typing.ClassVar[location_role]  # value = <location_role.SERVICE: 4>
+    SINK: typing.ClassVar[location_role]  # value = <location_role.SINK: 1>
+    SOURCE: typing.ClassVar[location_role]  # value = <location_role.SOURCE: 0>
+    SYSTEM: typing.ClassVar[location_role]  # value = <location_role.SYSTEM: 3>
+    __members__: typing.ClassVar[dict[str, location_role]]  # value = {'SOURCE': <location_role.SOURCE: 0>, 'SINK': <location_role.SINK: 1>, 'ACTOR': <location_role.ACTOR: 2>, 'SYSTEM': <location_role.SYSTEM: 3>, 'SERVICE': <location_role.SERVICE: 4>}
+    def __eq__(self, other: typing.Any) -> bool:
+        ...
+    def __ge__(self, other: typing.Any) -> bool:
+        ...
+    def __getstate__(self) -> int:
+        ...
+    def __gt__(self, other: typing.Any) -> bool:
+        ...
+    def __hash__(self) -> int:
+        ...
+    def __index__(self) -> int:
+        ...
+    def __init__(self, value: int) -> None:
+        ...
+    def __int__(self) -> int:
+        ...
+    def __le__(self, other: typing.Any) -> bool:
+        ...
+    def __lt__(self, other: typing.Any) -> bool:
+        ...
+    def __ne__(self, other: typing.Any) -> bool:
+        ...
+    def __repr__(self) -> str:
+        ...
+    def __setstate__(self, state: int) -> None:
+        ...
+    def __str__(self) -> str:
+        ...
+    @property
+    def name(self) -> str:
+        ...
+    @property
+    def value(self) -> int:
+        ...
 class mode:
     """
     Kungfu Run Mode
-    
+
     Members:
-    
+
       LIVE
-    
+
       DATA
-    
+
       REPLAY
-    
+
       BACKTEST
     """
     BACKTEST: typing.ClassVar[mode]  # value = <mode.BACKTEST: 3>
@@ -2555,16 +2555,17 @@ class mode:
     @property
     def value(self) -> int:
         ...
-def get_category_by_name(arg0: str) -> category:
-    ...
-def get_category_name(arg0: category) -> str:
-    ...
 def get_layout_name(arg0: layout) -> str:
+    ...
+def get_location_role_by_name(arg0: str) -> location_role:
+    ...
+def get_location_role_name(arg0: location_role) -> str:
     ...
 def get_mode_by_name(arg0: str) -> mode:
     ...
 def get_mode_name(arg0: mode) -> str:
     ...
+ACTOR: location_role  # value = <location_role.ACTOR: 2>
 Account: LedgerCategory  # value = <LedgerCategory.Account: 0>
 All: SubscribeInstrumentType  # value = <SubscribeInstrumentType.All: 0>
 Allow: ETFStatus  # value = <ETFStatus.Allow: 1>
@@ -2680,7 +2681,6 @@ LoginFailed: BrokerState  # value = <BrokerState.LoginFailed: 5>
 Long: Direction  # value = <Direction.Long: 0>
 Lost: OrderStatus  # value = <OrderStatus.Lost: 8>
 Low: Priority  # value = <Priority.Low: 0>
-MD: category  # value = <category.MD: 0>
 MYR: Currency  # value = <Currency.MYR: 9>
 ManagementFee: ContractType  # value = <ContractType.ManagementFee: 9>
 MarginTrade: Side  # value = <Side.MarginTrade: 10>
@@ -2692,7 +2692,6 @@ NANOMSG: layout  # value = <layout.NANOMSG: 2>
 Normal: PageStatus  # value = <PageStatus.Normal: 0>
 NotCloseOut: CloseOutFlag  # value = <CloseOutFlag.NotCloseOut: 0>
 Now: ResumePolicy  # value = <ResumePolicy.Now: 0>
-OPERATOR: category  # value = <category.OPERATOR: 4>
 OTC: AccountingMethodType  # value = <AccountingMethodType.OTC: 1>
 Open: Offset  # value = <Offset.Open: 0>
 Opposing1: PriceLevel  # value = <PriceLevel.Opposing1: 5>
@@ -2727,12 +2726,14 @@ RepayMargin: Side  # value = <Side.RepayMargin: 12>
 RepayStock: Side  # value = <Side.RepayStock: 13>
 Repo: InstrumentType  # value = <InstrumentType.Repo: 8>
 ReverseBest: PriceType  # value = <PriceType.ReverseBest: 4>
+SERVICE: location_role  # value = <location_role.SERVICE: 4>
 SGD: Currency  # value = <Currency.SGD: 8>
 SHFE: MarketType  # value = <MarketType.SHFE: 2>
+SINK: location_role  # value = <location_role.SINK: 1>
+SOURCE: location_role  # value = <location_role.SOURCE: 0>
 SQLITE: layout  # value = <layout.SQLITE: 1>
 SSE: MarketType  # value = <MarketType.SSE: 7>
-STRATEGY: category  # value = <category.STRATEGY: 2>
-SYSTEM: category  # value = <category.SYSTEM: 3>
+SYSTEM: location_role  # value = <location_role.SYSTEM: 3>
 SZE: MarketType  # value = <MarketType.SZE: 8>
 Sell: BsFlag  # value = <BsFlag.Sell: 2>
 ShareRightsCompensation: ContractType  # value = <ContractType.ShareRightsCompensation: 5>
@@ -2750,7 +2751,6 @@ Stop: AlgoOrderActionFlag  # value = <AlgoOrderActionFlag.Stop: 2>
 Strategy: LedgerCategory  # value = <LedgerCategory.Strategy: 1>
 Submitted: OrderStatus  # value = <OrderStatus.Submitted: 1>
 SurplusStockTransfer: Side  # value = <Side.SurplusStockTransfer: 16>
-TD: category  # value = <category.TD: 1>
 TechStock: InstrumentType  # value = <InstrumentType.TechStock: 3>
 Tick: SubscribeDataType  # value = <SubscribeDataType.Tick: 22>
 TotalEnd: HistoryDataType  # value = <HistoryDataType.TotalEnd: 2>

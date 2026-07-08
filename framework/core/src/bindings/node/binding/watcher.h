@@ -143,11 +143,11 @@ private:
   uint32_t trading_data_count_by_step_ = 0;
 
   typedef longfist::enums::mode mode;
-  typedef longfist::enums::category category;
+  typedef longfist::enums::location_role role;
 
   static constexpr auto bypass = [](practice::apprentice *app, bool bypass_quotes) {
     return rx::filter([&](const event_ptr &event) {
-      return not(app->get_location(event->source())->category == longfist::enums::category::MD and
+      return not(app->get_location(event->source())->role == longfist::enums::location_role::SOURCE and
                  event->msg_type() != longfist::types::Instrument::tag and bypass_quotes);
     });
   };
@@ -185,8 +185,8 @@ private:
   template <typename DataType>
   void UpdateBrokerOperatorState(uint32_t source_id, uint32_t dest_id, const DataType &state) {
     auto source_location = get_location(state.location_uid);
-    if (source_location->category == category::TD or source_location->category == category::MD or
-        source_location->category == category::OPERATOR) {
+    if (source_location->role == role::SINK or source_location->role == role::SOURCE or
+        source_location->role == role::SERVICE) {
       broker_states_map_.insert_or_assign(source_location->uid, int(state.state));
     }
   };
@@ -246,7 +246,7 @@ private:
     try {
       auto target_location = IODevice::ExtractLocation(info, 1, get_locator());
 
-      if (target_location->category == longfist::enums::category::SYSTEM && target_location->group == "master") {
+      if (target_location->role == longfist::enums::location_role::SYSTEM && target_location->group == "master") {
         target_location = master_cmd_location_;
       }
 

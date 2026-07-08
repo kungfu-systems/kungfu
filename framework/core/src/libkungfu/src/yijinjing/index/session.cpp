@@ -19,7 +19,7 @@ using namespace kungfu::yijinjing::journal;
 namespace kungfu::index {
 std::string get_index_db_file(const yijinjing::io_device_ptr &io_device) {
   auto locator = io_device->get_locator();
-  auto index_location = location::make_shared(mode::LIVE, category::SYSTEM, "journal", "index", locator);
+  auto index_location = location::make_shared(mode::LIVE, location_role::SYSTEM, "journal", "index", locator);
   return locator->layout_file(index_location, layout::SQLITE, "index");
 }
 
@@ -74,7 +74,7 @@ Session &session_builder::open_session(const location_ptr &source_location, int6
   auto &session = pair.first->second;
   if (pair.second) {
     session.location_uid = source_location->uid;
-    session.category = source_location->category;
+    session.role = source_location->role;
     session.group = source_location->group;
     session.name = source_location->name;
     session.mode = source_location->mode;
@@ -143,11 +143,11 @@ void session_builder::rebuild_index_db() {
   for (const auto &location : locator->list_locations("*", "*", "*", "*")) {
     SPDLOG_TRACE("investigating journal for [{:08x}] {}", location->uid, location->uname);
 
-    if (location->category != category::SYSTEM or location->group != "master") {
+    if (location->role != location_role::SYSTEM or location->group != "master") {
       formatstr_to_locations.emplace(fmt::format("{:08x}", location->uid), location);
     }
 
-    if (location->category == category::SYSTEM and location->group == "master" and location->name == "master") {
+    if (location->role == location_role::SYSTEM and location->group == "master" and location->name == "master") {
       formatstr_to_locations.emplace(location->name, location);
     }
 
@@ -171,9 +171,9 @@ void session_builder::rebuild_index_db() {
         open_session(formatstr_to_locations.at(uid_str), frame->gen_time());
       } else if (frame->msg_type() == SessionEnd::tag) {
         close_session(formatstr_to_locations.at(uid_str), frame->gen_time());
-      } else if (location->category != category::SYSTEM or location->group != "master") {
+      } else if (location->role != location_role::SYSTEM or location->group != "master") {
         update_session(frame);
-      } else if (location->category == category::SYSTEM and location->group == "master" and
+      } else if (location->role == location_role::SYSTEM and location->group == "master" and
                  location->name == "master") {
         update_session(frame);
       }

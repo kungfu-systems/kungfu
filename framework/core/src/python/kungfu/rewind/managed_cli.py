@@ -63,7 +63,7 @@ class ManagedRunCliReport:
 def _open_journal(runtime_dir: str, run_id: str) -> Any:
     loc = yjj.locator(runtime_dir)
     location = yjj.location(
-        lf.enums.mode.LIVE, lf.enums.category.SYSTEM, "rewind", run_id, loc
+        lf.enums.mode.LIVE, lf.enums.location_role.SYSTEM, "rewind", run_id, loc
     )
     pub = yjj.noop_publisher()
     bus = yjj.bus(False)
@@ -236,7 +236,7 @@ def run_and_report(
         runtime_dir,
         {
             "mode": "LIVE",
-            "category": "SYSTEM",
+            "role": "SYSTEM",
             "group": "rewind",
             "name": run_id,
             "dest": 0,

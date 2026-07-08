@@ -64,7 +64,7 @@ def read_frames(runtime_dir: str, run_id: str) -> list[tuple[int, Any, bytes]]:
     """All rewind frames of a run in gen_time order: (msg_type, header, bytes)."""
     locator = yjj.locator(runtime_dir)
     location = yjj.location(
-        lf.enums.mode.LIVE, lf.enums.category.SYSTEM, "rewind", run_id, locator
+        lf.enums.mode.LIVE, lf.enums.location_role.SYSTEM, "rewind", run_id, locator
     )
     frames: list[tuple[int, Any, bytes]] = []
     for msg_type in MSG_TYPE_NAMES:

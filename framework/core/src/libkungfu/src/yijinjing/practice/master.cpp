@@ -113,7 +113,7 @@ void master::register_app(const event_ptr &event) {
   auto now = yijinjing::time::now_in_nano();
   auto uid_str = fmt::format("{:08x}", app_location->uid);
   auto master_cmd_location =
-      location::make_shared(mode::LIVE, category::SYSTEM, "master", uid_str, home->locator, app_location->seed);
+      location::make_shared(mode::LIVE, location_role::SYSTEM, "master", uid_str, home->locator, app_location->seed);
   SPDLOG_INFO("registering location {} uname {} uid {}, master_cmd_location {} uid {}", uid_str, app_location->uname,
               app_location->uid, master_cmd_location->uname, master_cmd_location->uid);
   try_add_location(event->gen_time(), master_cmd_location);
@@ -196,7 +196,7 @@ void master::react() {
     auto dest = event->dest();
     if (has_location(dest)) {
       auto dest_location = get_location(dest);
-      if (dest_location->category == category::SYSTEM and dest_location->group == "master") {
+      if (dest_location->role == location_role::SYSTEM and dest_location->group == "master") {
         return true;
       }
     }
@@ -268,12 +268,12 @@ void master::feed(const event_ptr &event) {
     return;
   }
 
-  if (get_location(event->source())->category == category::OPERATOR) {
+  if (get_location(event->source())->role == location_role::SERVICE) {
     return;
   }
 
   if (event->msg_type() != Instrument::tag and event->msg_type() != InstrumentFactor::tag and
-      get_location(event->source())->category == category::MD) {
+      get_location(event->source())->role == location_role::SOURCE) {
     return;
   }
 

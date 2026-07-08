@@ -39,6 +39,7 @@ and the map routes a question to whichever doc answers it.
 | How does Kungfu persist user facts, sync sources, and maintain storage over time? | [`runtime-storage-service.md`](runtime-storage-service.md) | use, verify | draft |
 | How can a multi-machine timeline stay stable without one global clock? | [ADR-0021](../framework/core/docs/adr/ADR-0021-observer-relative-timeline-projection.md) + [`event-model.md`](event-model.md) | why, verify | stable |
 | Where must action-recording semantics live across C++ / Python / Node? | [ADR-0022](../framework/core/docs/adr/ADR-0022-core-action-recording-surface.md) + [`event-model.md`](event-model.md) | why, use | stable |
+| What is a location role, and why does it not decide journal page size? | [ADR-0024](../framework/core/docs/adr/ADR-0024-location-role-and-journal-page-policy.md) + [`event-model.md`](event-model.md) | why, use | stable |
 | Where are the Python / Node / framework adapter boundaries? | [`adapters.md`](adapters.md) | use | stable |
 | How do I go from source to a binary? | [`buildchain.md`](buildchain.md) (+ [`../CONTRIBUTING.md`](../CONTRIBUTING.md)) | use | stable |
 | Where does a release binary come from, and how do I verify it? | `provenance.md` | verify | blocked · needs release infra |
@@ -74,6 +75,10 @@ route to the row that answers them:
   JS recorder / C++ recorder / polyglot action surface / binding-only logic** →
   *where must action-recording semantics live across C++ / Python / Node*
   ([ADR-0022](../framework/core/docs/adr/ADR-0022-core-action-recording-surface.md)).
+- **location role / source / sink / actor / service / journal page size /
+  mmap size / storage policy** → *what is a location role, and why does it not
+  decide journal page size*
+  ([ADR-0024](../framework/core/docs/adr/ADR-0024-location-role-and-journal-page-policy.md)).
 - **observer-relative timeline / timeline projection / source priority /
   global clock / multi-machine ordering / perspective / concurrent facts** →
   *how can a multi-machine timeline stay stable without one global clock*

@@ -17,7 +17,7 @@ constexpr uint64_t PAGE_SIZE = 256;
 
 stream::stream(nng_stream *s, bool is_server) : stream_id_(generate_stream_id(s, is_server)) {
   const std::string group = is_server ? "webserver" : "webclient";
-  location_ = location::make_shared(mode::LIVE, category::SYSTEM, group, std::to_string(stream_id_),
+  location_ = location::make_shared(mode::LIVE, location_role::SYSTEM, group, std::to_string(stream_id_),
                                     std::make_shared<locator>(mode::LIVE));
   writer_ = std::make_shared<writer>(location_, location::PUBLIC, false, std::make_shared<noop_publisher>(), true,
                                      std::make_shared<bus>(false), PAGE_SIZE);

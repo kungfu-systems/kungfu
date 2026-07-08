@@ -23,6 +23,10 @@ Frame integrity starts at the same C++ boundary. [ADR-0023](../framework/core/do
 defines the first receipt-based checksum slice and the rule that new v4 business
 facts must not allocate raw `300xx` / `400xx` `msg_type` numbers.
 
+Location identity uses neutral roles, not trading categories. [ADR-0024](../framework/core/docs/adr/ADR-0024-location-role-and-journal-page-policy.md)
+defines `source`, `sink`, `actor`, `system`, and `service`, and keeps journal
+page sizing as storage policy rather than role-derived behavior.
+
 For multi-machine views, frame time is not treated as a universal clock.
 [ADR-0021](../framework/core/docs/adr/ADR-0021-observer-relative-timeline-projection.md)
 pins the rule: Kungfu stores causal facts, source provenance, accepted ranges,

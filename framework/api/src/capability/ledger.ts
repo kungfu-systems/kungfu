@@ -9,9 +9,9 @@ import {
   type RecordFilter,
   type ReplayAnchor,
   type Subscription,
-  categoryName,
   modeName,
   resolveRuntimeDir,
+  roleName,
 } from './types.js';
 
 export type OpenLedgerOptions = {
@@ -112,7 +112,7 @@ export function openLedger(options: OpenLedgerOptions): Ledger {
 
   const replayAnchors = (): ReplayAnchor[] => {
     const store = new binding.SessionStore(
-      { category: 'system', group: 'capability', name: 'ledger', mode: 'live' },
+      { role: 'system', group: 'capability', name: 'ledger', mode: 'live' },
       runtimeDir,
     );
     const all = store.getAllSessions();
@@ -121,7 +121,7 @@ export function openLedger(options: OpenLedgerOptions): Ledger {
       const record = row as Record<string, unknown>;
       return {
         location: {
-          category: categoryName(record.category as number),
+          role: roleName(record.role as number),
           group: String(record.group),
           name: String(record.name),
           mode: modeName(record.mode as number),

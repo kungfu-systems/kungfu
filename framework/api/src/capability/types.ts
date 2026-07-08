@@ -19,14 +19,20 @@ export function resolveRuntimeDir(locator: KfLocator): string {
 // --- enum mapping ------------------------------------------------------
 // Enum-to-name mapping lives in the SDK, not in each consumer (ADR-0011 §4).
 
-export const CATEGORY_NAMES = ['md', 'td', 'strategy', 'system'] as const;
+export const ROLE_NAMES = [
+  'source',
+  'sink',
+  'actor',
+  'system',
+  'service',
+] as const;
 export const MODE_NAMES = ['live', 'data', 'replay', 'backtest'] as const;
 
-export type KfCategory = (typeof CATEGORY_NAMES)[number];
+export type KfRole = (typeof ROLE_NAMES)[number];
 export type KfMode = (typeof MODE_NAMES)[number];
 
-export function categoryName(value: number | string): string {
-  return CATEGORY_NAMES[Number(value)] ?? String(value);
+export function roleName(value: number | string): string {
+  return ROLE_NAMES[Number(value)] ?? String(value);
 }
 
 export function modeName(value: number | string): string {
@@ -34,7 +40,7 @@ export function modeName(value: number | string): string {
 }
 
 export type KfLocation = {
-  category: KfCategory | string;
+  role: KfRole | string;
   group: string;
   name: string;
   mode: KfMode | string;
@@ -182,14 +188,14 @@ export type KfNativeBinding = {
     runtimeDir: string,
   ) => {
     setConfig: (
-      category: string,
+      role: string,
       group: string,
       name: string,
       mode: string,
       value: string,
     ) => boolean;
     removeConfig: (
-      category: string,
+      role: string,
       group: string,
       name: string,
       mode: string,

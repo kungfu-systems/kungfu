@@ -19,7 +19,7 @@ class Apprentice(yjj.apprentice):
             self,
             yjj.location(
                 kfj.MODES[ctx.mode],
-                kfj.CATEGORIES[ctx.category],
+                kfj.ROLES[ctx.role],
                 ctx.group,
                 ctx.name,
                 ctx.runtime_locator,

@@ -115,7 +115,7 @@ class apprentice:
         ...
 class assemble:
     @typing.overload
-    def __init__(self, locators: list[locator], mode: str = '*', category: str = '*', group: str = '*', name: str = '*') -> None:
+    def __init__(self, locators: list[locator], mode: str = '*', role: str = '*', group: str = '*', name: str = '*') -> None:
         ...
     @typing.overload
     def __init__(self, source_location: location, dest_id: int, assemble_mode: int = 1, from_time: int = 0) -> None:
@@ -428,19 +428,19 @@ class assemble:
     def read_bytes(self, data: pykungfu.longfist.types.SyntheticData = {"key":"","tag_a":"","tag_b":"","tag_c":"","update_time":0,"value":""}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
         ...
     @typing.overload
-    def read_bytes(self, data: pykungfu.longfist.types.OutputKey = {"category":"MD","group":"","location_uid":0,"mode":"LIVE","name":"","seed":0,"uid64":0}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
+    def read_bytes(self, data: pykungfu.longfist.types.OutputKey = {"group":"","location_uid":0,"mode":"LIVE","name":"","role":"SOURCE","seed":0,"uid64":0}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
         ...
     @typing.overload
-    def read_bytes(self, data: pykungfu.longfist.types.Register = {"category":"MD","checkin_time":0,"group":"","last_active_time":0,"location_uid":0,"mode":"LIVE","name":"","pid":0,"seed":0,"uid64":0}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
+    def read_bytes(self, data: pykungfu.longfist.types.Register = {"checkin_time":0,"group":"","last_active_time":0,"location_uid":0,"mode":"LIVE","name":"","pid":0,"role":"SOURCE","seed":0,"uid64":0}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
         ...
     @typing.overload
-    def read_bytes(self, data: pykungfu.longfist.types.Deregister = {"category":"MD","group":"","location_uid":0,"mode":"LIVE","name":"","seed":0,"uid64":0}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
+    def read_bytes(self, data: pykungfu.longfist.types.Deregister = {"group":"","location_uid":0,"mode":"LIVE","name":"","role":"SOURCE","seed":0,"uid64":0}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
         ...
     @typing.overload
     def read_bytes(self, data: pykungfu.longfist.types.StrategyStateUpdate = {"info_a":"","info_b":"","info_c":"","state":"Normal","update_time":0,"value":""}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
         ...
     @typing.overload
-    def read_bytes(self, data: pykungfu.longfist.types.Session = {"begin_time":0,"category":"MD","data_size":0,"end_time":0,"frame_count":0,"group":"","location_uid":0,"mode":"LIVE","name":"","seed":0,"uid64":0,"update_time":0}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
+    def read_bytes(self, data: pykungfu.longfist.types.Session = {"begin_time":0,"data_size":0,"end_time":0,"frame_count":0,"group":"","location_uid":0,"mode":"LIVE","name":"","role":"SOURCE","seed":0,"uid64":0,"update_time":0}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
         ...
     @typing.overload
     def read_bytes(self, data: pykungfu.longfist.types.OperatorStateUpdate = {"info_a":"","info_b":"","location_uid":0,"state":"Pending","update_time":0,"value":""}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
@@ -449,7 +449,7 @@ class assemble:
     def read_bytes(self, data: pykungfu.longfist.types.BrokerStateUpdate = {"location_uid":0,"state":"Pending"}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
         ...
     @typing.overload
-    def read_bytes(self, data: pykungfu.longfist.types.Config = {"category":"MD","group":"","location_uid":0,"mode":"LIVE","name":"","seed":0,"uid64":0,"value":""}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
+    def read_bytes(self, data: pykungfu.longfist.types.Config = {"group":"","location_uid":0,"mode":"LIVE","name":"","role":"SOURCE","seed":0,"uid64":0,"value":""}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
         ...
     @typing.overload
     def read_bytes(self, data: pykungfu.longfist.types.RiskSetting = ..., end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
@@ -461,7 +461,7 @@ class assemble:
     def read_bytes(self, data: pykungfu.longfist.types.Instrument = {"contract_multiplier":0,"create_date":"","currency":"Unknown","delivery_month":0,"delivery_year":0,"exchange_id":"","expire_date":"","instrument_id":"","instrument_type":"Unknown","open_date":"","price_tick":0.0,"product_id":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"quantity_unit":0.0}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
         ...
     @typing.overload
-    def read_bytes(self, data: pykungfu.longfist.types.Location = {"category":"MD","group":"","location_uid":0,"mode":"LIVE","name":"","seed":0,"uid64":0}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
+    def read_bytes(self, data: pykungfu.longfist.types.Location = {"group":"","location_uid":0,"mode":"LIVE","name":"","role":"SOURCE","seed":0,"uid64":0}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
         ...
     @typing.overload
     def read_bytes(self, data: pykungfu.longfist.types.Basket = {"basket_type":"Custom","cash_difference":0.0,"etf_status":"Forbid","etf_type":"LocalETF","etf_value":0.0,"exchange_id":"","id":0,"instrument_id":"","max_cash_ratio":0.0,"max_purchase_volume":0.0,"max_redemption_volume":0.0,"min_volume":0.0,"name":"","net_unit_value":0.0,"total_amount":0.0,"volume_type":"Unknown"}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
@@ -494,7 +494,7 @@ class assemble:
     def read_bytes(self, data: pykungfu.longfist.types.ChannelRequest = {"dest_id":0,"source_id":0}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
         ...
     @typing.overload
-    def read_bytes(self, data: pykungfu.longfist.types.RequestWriteToBand = {"category":"MD","group":"","location_uid":0,"mode":"LIVE","name":"","page_size":0,"seed":0,"uid64":0}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
+    def read_bytes(self, data: pykungfu.longfist.types.RequestWriteToBand = {"group":"","location_uid":0,"mode":"LIVE","name":"","page_size":0,"role":"SOURCE","seed":0,"uid64":0}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
         ...
     @typing.overload
     def read_bytes(self, data: pykungfu.longfist.types.Band = {"dest_id":0,"source_id":0}, end_time: int = 9223372036854775807) -> list[tuple[pykungfu.longfist.types.frame_header, list[int]]]:
@@ -821,19 +821,19 @@ class assemble:
     def read_headers(self, data: pykungfu.longfist.types.SyntheticData = {"key":"","tag_a":"","tag_b":"","tag_c":"","update_time":0,"value":""}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
         ...
     @typing.overload
-    def read_headers(self, data: pykungfu.longfist.types.OutputKey = {"category":"MD","group":"","location_uid":0,"mode":"LIVE","name":"","seed":0,"uid64":0}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
+    def read_headers(self, data: pykungfu.longfist.types.OutputKey = {"group":"","location_uid":0,"mode":"LIVE","name":"","role":"SOURCE","seed":0,"uid64":0}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
         ...
     @typing.overload
-    def read_headers(self, data: pykungfu.longfist.types.Register = {"category":"MD","checkin_time":0,"group":"","last_active_time":0,"location_uid":0,"mode":"LIVE","name":"","pid":0,"seed":0,"uid64":0}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
+    def read_headers(self, data: pykungfu.longfist.types.Register = {"checkin_time":0,"group":"","last_active_time":0,"location_uid":0,"mode":"LIVE","name":"","pid":0,"role":"SOURCE","seed":0,"uid64":0}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
         ...
     @typing.overload
-    def read_headers(self, data: pykungfu.longfist.types.Deregister = {"category":"MD","group":"","location_uid":0,"mode":"LIVE","name":"","seed":0,"uid64":0}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
+    def read_headers(self, data: pykungfu.longfist.types.Deregister = {"group":"","location_uid":0,"mode":"LIVE","name":"","role":"SOURCE","seed":0,"uid64":0}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
         ...
     @typing.overload
     def read_headers(self, data: pykungfu.longfist.types.StrategyStateUpdate = {"info_a":"","info_b":"","info_c":"","state":"Normal","update_time":0,"value":""}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
         ...
     @typing.overload
-    def read_headers(self, data: pykungfu.longfist.types.Session = {"begin_time":0,"category":"MD","data_size":0,"end_time":0,"frame_count":0,"group":"","location_uid":0,"mode":"LIVE","name":"","seed":0,"uid64":0,"update_time":0}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
+    def read_headers(self, data: pykungfu.longfist.types.Session = {"begin_time":0,"data_size":0,"end_time":0,"frame_count":0,"group":"","location_uid":0,"mode":"LIVE","name":"","role":"SOURCE","seed":0,"uid64":0,"update_time":0}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
         ...
     @typing.overload
     def read_headers(self, data: pykungfu.longfist.types.OperatorStateUpdate = {"info_a":"","info_b":"","location_uid":0,"state":"Pending","update_time":0,"value":""}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
@@ -842,7 +842,7 @@ class assemble:
     def read_headers(self, data: pykungfu.longfist.types.BrokerStateUpdate = {"location_uid":0,"state":"Pending"}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
         ...
     @typing.overload
-    def read_headers(self, data: pykungfu.longfist.types.Config = {"category":"MD","group":"","location_uid":0,"mode":"LIVE","name":"","seed":0,"uid64":0,"value":""}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
+    def read_headers(self, data: pykungfu.longfist.types.Config = {"group":"","location_uid":0,"mode":"LIVE","name":"","role":"SOURCE","seed":0,"uid64":0,"value":""}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
         ...
     @typing.overload
     def read_headers(self, data: pykungfu.longfist.types.RiskSetting = ..., end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
@@ -854,7 +854,7 @@ class assemble:
     def read_headers(self, data: pykungfu.longfist.types.Instrument = {"contract_multiplier":0,"create_date":"","currency":"Unknown","delivery_month":0,"delivery_year":0,"exchange_id":"","expire_date":"","instrument_id":"","instrument_type":"Unknown","open_date":"","price_tick":0.0,"product_id":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"quantity_unit":0.0}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
         ...
     @typing.overload
-    def read_headers(self, data: pykungfu.longfist.types.Location = {"category":"MD","group":"","location_uid":0,"mode":"LIVE","name":"","seed":0,"uid64":0}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
+    def read_headers(self, data: pykungfu.longfist.types.Location = {"group":"","location_uid":0,"mode":"LIVE","name":"","role":"SOURCE","seed":0,"uid64":0}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
         ...
     @typing.overload
     def read_headers(self, data: pykungfu.longfist.types.Basket = {"basket_type":"Custom","cash_difference":0.0,"etf_status":"Forbid","etf_type":"LocalETF","etf_value":0.0,"exchange_id":"","id":0,"instrument_id":"","max_cash_ratio":0.0,"max_purchase_volume":0.0,"max_redemption_volume":0.0,"min_volume":0.0,"name":"","net_unit_value":0.0,"total_amount":0.0,"volume_type":"Unknown"}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
@@ -887,7 +887,7 @@ class assemble:
     def read_headers(self, data: pykungfu.longfist.types.ChannelRequest = {"dest_id":0,"source_id":0}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
         ...
     @typing.overload
-    def read_headers(self, data: pykungfu.longfist.types.RequestWriteToBand = {"category":"MD","group":"","location_uid":0,"mode":"LIVE","name":"","page_size":0,"seed":0,"uid64":0}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
+    def read_headers(self, data: pykungfu.longfist.types.RequestWriteToBand = {"group":"","location_uid":0,"mode":"LIVE","name":"","page_size":0,"role":"SOURCE","seed":0,"uid64":0}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
         ...
     @typing.overload
     def read_headers(self, data: pykungfu.longfist.types.Band = {"dest_id":0,"source_id":0}, end_time: int = 9223372036854775807) -> list[pykungfu.longfist.types.frame_header]:
@@ -1133,7 +1133,7 @@ class io_device:
     def publisher(self) -> publisher:
         ...
 class location:
-    def __init__(self, m: pykungfu.longfist.enums.mode, c: pykungfu.longfist.enums.category, g: str, n: str, l: ..., default_seed: int = 42) -> None:
+    def __init__(self, m: pykungfu.longfist.enums.mode, c: pykungfu.longfist.enums.location_role, g: str, n: str, l: ..., default_seed: int = 42) -> None:
         ...
     def __repr__(self) -> str:
         ...
@@ -1150,9 +1150,6 @@ class location:
     def to(self, arg0: pykungfu.longfist.types.Location) -> pykungfu.longfist.types.Location:
         ...
     @property
-    def category(self) -> pykungfu.longfist.enums.category:
-        ...
-    @property
     def group(self) -> str:
         ...
     @property
@@ -1163,6 +1160,9 @@ class location:
         ...
     @property
     def name(self) -> str:
+        ...
+    @property
+    def role(self) -> pykungfu.longfist.enums.location_role:
         ...
     @property
     def uid(self) -> int:
@@ -1195,7 +1195,7 @@ class locator:
         ...
     def list_location_dest(self, arg0: location) -> list[int]:
         ...
-    def list_locations(self, category: str = '*', group: str = '*', name: str = '*', mode: str = '*') -> list[location]:
+    def list_locations(self, role: str = '*', group: str = '*', name: str = '*', mode: str = '*') -> list[location]:
         ...
     def list_page_id(self, arg0: location, arg1: int) -> list[int]:
         ...

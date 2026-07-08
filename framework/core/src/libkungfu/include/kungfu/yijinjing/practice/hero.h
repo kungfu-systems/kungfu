@@ -25,8 +25,8 @@ namespace kungfu::practice {
 inline yijinjing::data::location_ptr make_system_location(const std::string &group, const std::string &name,
                                                           const yijinjing::data::locator_ptr &locator,
                                                           uint32_t seed = KUNGFU_HASH_SEED) {
-  return yijinjing::data::location::make_shared(locator->get_dir_mode(), longfist::enums::category::SYSTEM, group, name,
-                                                locator, seed);
+  return yijinjing::data::location::make_shared(locator->get_dir_mode(), longfist::enums::location_role::SYSTEM, group,
+                                                name, locator, seed);
 }
 
 typedef std::unordered_map<uint32_t, yijinjing::journal::writer_ptr> WriterMap;

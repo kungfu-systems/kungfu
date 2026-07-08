@@ -155,7 +155,7 @@ function partB(): void {
 
   // a hostile blob (non-boolean grant fields) is sanitized to default-deny.
   domain.setConfig(
-    { category: 'system', group: 'shell', name: 'service-authz', mode: 'live' },
+    { role: 'system', group: 'shell', name: 'service-authz', mode: 'live' },
     JSON.stringify({ perKfx: { [KEY]: { network: 'yes', write: 1 } } }),
   );
   const dirty = resolveServiceLanding(loadServiceAuthz(domain), KEY, false);

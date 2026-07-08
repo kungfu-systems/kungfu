@@ -88,7 +88,7 @@ public:
   [[nodiscard]] virtual std::string layout_dir(const location_ptr &location, longfist::enums::layout layout,
                                                bool create_not_exist = true) const;
 
-  [[nodiscard]] std::string layout_directory(longfist::enums::layout layout, longfist::enums::category c,
+  [[nodiscard]] std::string layout_directory(longfist::enums::layout layout, longfist::enums::location_role c,
                                              const std::string &g, const std::string &n, longfist::enums::mode m,
                                              bool create_not_exist = true) const;
 
@@ -99,7 +99,7 @@ public:
 
   [[nodiscard]] virtual std::vector<uint32_t> list_page_id(const location_ptr &location, uint32_t dest_id) const;
 
-  [[nodiscard]] virtual std::vector<location_ptr> list_locations(const std::string &category, const std::string &group,
+  [[nodiscard]] virtual std::vector<location_ptr> list_locations(const std::string &role, const std::string &group,
                                                                  const std::string &name,
                                                                  const std::string &mode) const;
 
@@ -137,7 +137,7 @@ struct location : public std::enable_shared_from_this<location>, public longfist
   const std::string uname;
   uint32_t uid;
 
-  location(longfist::enums::mode m, longfist::enums::category c, std::string g, std::string n, locator_ptr l,
+  location(longfist::enums::mode m, longfist::enums::location_role c, std::string g, std::string n, locator_ptr l,
            uint32_t default_seed = KUNGFU_HASH_SEED);
 
   bool static is_verify_location();
@@ -155,7 +155,7 @@ struct location : public std::enable_shared_from_this<location>, public longfist
     t.uid64 = uid64;
     t.location_uid = location_uid;
     t.mode = mode;
-    t.category = category;
+    t.role = role;
     t.group = group;
     t.name = name;
     t.seed = seed;
@@ -166,7 +166,7 @@ struct location : public std::enable_shared_from_this<location>, public longfist
     t.uid64 = uid64;
     t.location_uid = location_uid;
     t.mode = mode;
-    t.category = category;
+    t.role = role;
     t.group = group;
     t.name = name;
     t.seed = seed;
@@ -174,17 +174,17 @@ struct location : public std::enable_shared_from_this<location>, public longfist
   }
 
   template <typename T> static inline location_ptr make_shared(T msg, locator_ptr l) {
-    return std::make_shared<location>(msg.mode, msg.category, msg.group, msg.name, l, msg.seed);
+    return std::make_shared<location>(msg.mode, msg.role, msg.group, msg.name, l, msg.seed);
   }
 
-  static inline location_ptr make_shared(longfist::enums::mode m, longfist::enums::category c, const std::string &g,
-                                         const std::string &n, const locator_ptr &l,
+  static inline location_ptr make_shared(longfist::enums::mode m, longfist::enums::location_role c,
+                                         const std::string &g, const std::string &n, const locator_ptr &l,
                                          uint32_t default_seed = KUNGFU_HASH_SEED) {
     return std::make_shared<location>(m, c, g, n, l, default_seed);
   }
   bool operator==(const location &another) const {
-    return locator->get_root() == another.locator->get_root() and category == another.category and
-           group == another.group and name == another.name and mode == another.mode;
+    return locator->get_root() == another.locator->get_root() and role == another.role and group == another.group and
+           name == another.name and mode == another.mode;
   }
 };
 } // namespace data

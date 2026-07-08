@@ -17,7 +17,7 @@
 
 namespace kungfu::longfist::enums {
 
-// mode / category / layout moved to the schema leaf kungfu/longfist/core.h
+// mode / role / layout moved to the schema leaf kungfu/longfist/core.h
 // (journal-infrastructure enums shared with the yijinjing core). Included above.
 
 // 权限订阅数据类型

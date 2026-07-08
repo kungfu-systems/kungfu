@@ -39,6 +39,7 @@ A record's **Status** says where it stands:
 | [0021](ADR-0021-observer-relative-timeline-projection.md) | accepted | observer-relative timeline projection over causal facts |
 | [0022](ADR-0022-core-action-recording-surface.md) | accepted | core action-recording surface lives in the C++ polyglot membrane |
 | [0023](ADR-0023-frame-integrity-and-msg-type-allocation-gates.md) | accepted | frame integrity starts at the C++ recorder and raw msg_type allocation is gated |
+| [0024](ADR-0024-location-role-and-journal-page-policy.md) | accepted | location role replaces trading category and journal page size is storage policy |
 
 ## Reading by theme
 
@@ -83,7 +84,10 @@ A record's **Status** says where it stands:
   action-recording surface that Python/Node bindings wrap), and
   [0023](ADR-0023-frame-integrity-and-msg-type-allocation-gates.md) (the first
   frame-integrity receipt slice plus the source gate that prevents new raw
-  business msg_type allocations).
+  business msg_type allocations), and
+  [0024](ADR-0024-location-role-and-journal-page-policy.md) (neutral location
+  roles and the rule that journal page size is storage policy, not role
+  identity).
 - **Cross-cutting principle** — [0009](ADR-0009-load-bearing-self-bootstrap.md)
   (load-bearing self-bootstrap), which also names the general law that
   [`docs/architecture.md` § The build dogfoods the SDK](../../../../docs/architecture.md)
