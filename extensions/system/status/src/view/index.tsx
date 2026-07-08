@@ -1,10 +1,11 @@
-// System kfx: system status. Runtime facts (master liveness, versions,
-// binding exports, runtime home) plus the live longfist type registry — the
-// diagnostics face of the shell. The future storage health story
-// (fsck/export overview) mounts here.
-import React from 'react';
 import type { KfxCapabilities, Shell } from '@kungfu-tech/kfx';
 import { headingStyle, mono, panelStyle } from '@kungfu-tech/kfx';
+import React from 'react';
+
+// System kfx: system status. Runtime facts (master liveness, versions,
+// binding exports, runtime home) plus the core longfist type registry — the
+// diagnostics face of the shell. The future storage health story
+// (fsck/export overview) mounts here.
 
 function SystemStatusView({
   caps,
@@ -65,7 +66,7 @@ function SystemStatusView({
         </ul>
       </section>
       <section style={panelStyle}>
-        <h2 style={headingStyle}>Longfist type registry · {registry.length}</h2>
+        <h2 style={headingStyle}>Core longfist registry · {registry.length}</h2>
         <div style={{ display: 'flex', gap: 12 }}>
           <ul
             style={{ listStyle: 'none', margin: 0, padding: 0, minWidth: 180 }}
@@ -105,7 +106,7 @@ function SystemStatusView({
               </>
             ) : (
               <span style={{ color: '#6a6a6a' }}>
-                select a type — fields come from the live C++ type registry
+                select a type — fields come from the public C++ core registry
               </span>
             )}
           </div>

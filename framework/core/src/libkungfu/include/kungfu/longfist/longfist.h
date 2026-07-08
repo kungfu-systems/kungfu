@@ -180,10 +180,10 @@ constexpr auto AllDataTypes = boost::hana::make_map( //
     TYPE_PAIR(TimeKeyValue)                          // 10602
 );
 
-// Public Python longfist types are limited to v4 runtime/core schemas. The
-// broader AllTypes/AllDataTypes registries are legacy compiled schema sets used
-// by diagnostics, raw journal decoding, and staged compatibility paths; they
-// are not the language-neutral action-recording surface.
+// Public language bindings are limited to v4 runtime/core schemas. The broader
+// AllTypes/AllDataTypes registries are legacy compiled schema sets used by
+// diagnostics, raw journal decoding, and staged compatibility paths; they are
+// not the language-neutral action-recording surface.
 constexpr auto CorePublicDataTypes = boost::hana::make_map( //
     TYPE_PAIR(frame_header),                                // 0
     TYPE_PAIR(page_header),                                 // 1

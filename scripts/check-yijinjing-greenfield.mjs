@@ -20,6 +20,63 @@ const allFiles = args.includes('--all');
 const SOURCE_EXT = /\.(c|cc|cpp|cxx|h|hh|hpp|hxx|mjs|js|cjs|ts|tsx|py|pyi)$/;
 const LEGACY_PY_LONGFIST_TYPES =
   /\b(AlgoOrder|AlgoOrderAction|AlgoOrderActionError|AlgoOrderInput|Asset|Basket|BasketInstrument|BlockMessage|Commission|Contract|CustomSubscribe|Entrust|HistoryOrder|HistoryTrade|Instrument|InstrumentFactor|InstrumentKey|Order|OrderAction|OrderActionError|OrderInput|OrderStat|OrderTrigger|OrderTriggerAction|OrderTriggerActionError|OrderTriggerInput|Position|PositionEnd|Quote|RequestHistoryOrder|RequestHistoryOrderError|RequestHistoryTrade|RequestHistoryTradeError|RiskSetting|Trade|TradingDay|Transaction|Tree)\b/g;
+const LEGACY_CORE_PUBLIC_TYPES = [
+  'AlgoOrder',
+  'AlgoOrderAction',
+  'AlgoOrderActionError',
+  'AlgoOrderInput',
+  'Asset',
+  'AssetRequest',
+  'AssetSync',
+  'Basket',
+  'BasketInstrument',
+  'BlockMessage',
+  'Commission',
+  'Contract',
+  'ContractRequest',
+  'CustomSubscribe',
+  'Depth',
+  'Entrust',
+  'HistoryOrder',
+  'HistoryTrade',
+  'Instrument',
+  'InstrumentFactor',
+  'InstrumentKey',
+  'KeepPositionsRequest',
+  'MirrorPositionsRequest',
+  'Order',
+  'OrderAction',
+  'OrderActionError',
+  'OrderInput',
+  'OrderStat',
+  'OrderTrigger',
+  'OrderTriggerAction',
+  'OrderTriggerActionError',
+  'OrderTriggerInput',
+  'OrderTriggerRequest',
+  'Position',
+  'PositionEnd',
+  'PositionRequest',
+  'PositionSync',
+  'Quote',
+  'RebuildPositionsRequest',
+  'RequestHistoryOrder',
+  'RequestHistoryOrderError',
+  'RequestHistoryTrade',
+  'RequestHistoryTradeError',
+  'ResetBookRequest',
+  'RiskSetting',
+  'Tick',
+  'Trade',
+  'TradingDay',
+  'Transaction',
+  'Tree',
+];
+const CORE_PUBLIC_REGISTRIES = [
+  'CorePublicDataTypes',
+  'CorePublicStateDataTypes',
+  'CorePublicProfileDataTypes',
+];
 
 const RULES = [
   {
@@ -48,6 +105,13 @@ const RULES = [
     re: /\bProfileDataTypes\b|boost::hana::for_each\(longfist::ProfileDataTypes/g,
     message:
       'Python yijinjing profile must bind CorePublicProfileDataTypes, not the internal profile schema set.',
+  },
+  {
+    name: 'node longfist public internal registry binding',
+    files: [/^framework\/core\/src\/bindings\/node\/binding\/longfist\.cpp$/],
+    re: /\b(AllTypes|AllDataTypes|StateDataTypes|ProfileDataTypes)\b|boost::hana::for_each\((AllTypes|AllDataTypes|StateDataTypes|ProfileDataTypes)/g,
+    message:
+      'Node longfist public types/carrierTypes must bind CorePublic*DataTypes, not the legacy internal schema sets.',
   },
   {
     name: 'python longfist public trading stubs',
@@ -201,6 +265,46 @@ function lineNumber(text, index) {
   return line;
 }
 
+function corePublicRegistryHits(rel, text) {
+  if (
+    rel !== 'framework/core/src/libkungfu/include/kungfu/longfist/longfist.h'
+  ) {
+    return [];
+  }
+  const hits = [];
+  for (const registry of CORE_PUBLIC_REGISTRIES) {
+    const blockRe = new RegExp(
+      `constexpr auto ${registry} = boost::hana::make_map\\([\\s\\S]*?\\n\\);`,
+      'm',
+    );
+    const block = blockRe.exec(text);
+    if (!block) {
+      hits.push({
+        file: rel,
+        line: 1,
+        rule: `${registry} exists`,
+        message: `${registry} must stay explicit so public binding checks can audit it.`,
+        text: registry,
+      });
+      continue;
+    }
+    for (const typeName of LEGACY_CORE_PUBLIC_TYPES) {
+      const typeRe = new RegExp(`\\bTYPE_PAIR\\(${typeName}\\)\\b`);
+      const typeMatch = typeRe.exec(block[0]);
+      if (!typeMatch) continue;
+      hits.push({
+        file: rel,
+        line: lineNumber(text, block.index + typeMatch.index),
+        rule: `${registry} legacy type`,
+        message:
+          'CorePublic*DataTypes must stay runtime/core-only; legacy trading/profile schemas belong to internal compatibility registries.',
+        text: typeName,
+      });
+    }
+  }
+  return hits;
+}
+
 const hits = [];
 for (const rel of selectedFiles()) {
   const rules = RULES.filter((rule) => rule.files.some((re) => re.test(rel)));
@@ -218,6 +322,7 @@ for (const rel of selectedFiles()) {
       });
     }
   }
+  hits.push(...corePublicRegistryHits(rel, text));
 }
 
 if (hits.length) {

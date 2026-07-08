@@ -43,7 +43,7 @@ void Longfist::Init(Napi::Env env, Napi::Object exports) {
 Napi::Value Longfist::GetCarrierTypes(const Napi::CallbackInfo &info) { return carrier_types_ref_.Value(); }
 
 void Longfist::InitCarrierTypes(const Napi::CallbackInfo &info) {
-  boost::hana::for_each(AllTypes, [&](auto it) {
+  boost::hana::for_each(CorePublicDataTypes, [&](auto it) {
     using DataType = typename decltype(+boost::hana::second(it))::type;
     carrier_types_ref_.Set(int(DataType::tag), Napi::String::New(info.Env(), DataType::type_name.c_str()));
   });
@@ -52,7 +52,7 @@ void Longfist::InitCarrierTypes(const Napi::CallbackInfo &info) {
 Napi::Value Longfist::GetTypes(const Napi::CallbackInfo &info) { return types_ref_.Value(); }
 
 void Longfist::InitTypes(const Napi::CallbackInfo &info) {
-  boost::hana::for_each(StateDataTypes, [&](auto it) {
+  boost::hana::for_each(CorePublicDataTypes, [&](auto it) {
     auto name = boost::hana::first(it);
     using DataType = typename decltype(+boost::hana::second(it))::type;
     static const auto make = serialize::JsMake<DataType>(name.c_str());
