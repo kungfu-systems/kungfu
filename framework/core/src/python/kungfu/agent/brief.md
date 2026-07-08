@@ -47,6 +47,8 @@ snapshot it and verify the projection with:
 
 ```sh
 kungfu atlas import --repo <atlas-repo> --json
+kungfu storage fsck --scope all --json
+kungfu storage verify-sync --source <source-id> --json
 kungfu atlas show import --json
 kungfu atlas show missions --json
 kungfu atlas show goals --json

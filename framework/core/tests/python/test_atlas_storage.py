@@ -574,6 +574,64 @@ def test_generic_storage_service_handles_non_atlas_source_bundle(tmp_path):
     assert storage_service.fsck(imported_range_runtime, source_id="local-synth")["ok"]
 
 
+def test_storage_maintenance_rebuild_gc_compact_and_sync_check(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    accepted = storage_service.write_synthetic_source(
+        runtime_dir,
+        source_id="local-synth",
+        manifest_id="imp-synth",
+        source_head="head-1",
+        records=[
+            {
+                "kind": "note",
+                "source_id": "note-a",
+                "source_path": "notes/a.json",
+                "source_time": "2026-07-08T00:00:00Z",
+                "payload": {"title": "A", "body": "alpha"},
+            }
+        ],
+    )
+    status = storage_service.status(runtime_dir, source_id="local-synth")
+    assert status["source_status"][0]["accepted_cursor"]["source_head"] == "head-1"
+    assert status["source_status"][0]["sync_root"] == accepted["sync_root"]
+
+    storage_service.registry_path(runtime_dir).unlink()
+    dry_rebuild = storage_service.rebuild_index(
+        runtime_dir, source_id="local-synth", dry_run=True
+    )
+    assert dry_rebuild["ok"]
+    assert dry_rebuild["would_write"]
+    assert not storage_service.registry_path(runtime_dir).exists()
+
+    rebuild = storage_service.rebuild_index(runtime_dir, source_id="local-synth")
+    assert rebuild["ok"]
+    assert rebuild["written"]
+    assert storage_service.status(runtime_dir, source_id="local-synth")["ok"]
+
+    orphan_hash = "0" * 64
+    storage_service.write_payload_bytes(runtime_dir, orphan_hash, b'{"orphan":true}')
+    gc = storage_service.gc_plan(runtime_dir, dry_run=True)
+    assert gc["candidate_count"] == 1
+    assert gc["candidates"][0]["payload_hash"] == orphan_hash
+    assert gc["candidates"][0]["safe_to_delete"] is True
+    assert storage_service.payload_path(runtime_dir, orphan_hash).exists()
+
+    compact = storage_service.compact_plan(runtime_dir, dry_run=True)
+    assert compact["ok"]
+    assert compact["gc"]["candidate_count"] == 1
+    assert any(row["name"] == "backend-compact" for row in compact["unsupported"])
+
+    fsck = storage_service.fsck(runtime_dir)
+    assert fsck["ok"]
+    assert fsck["checked"]["orphan_payloads"] == 1
+    assert any(warning["code"] == "orphan_payload" for warning in fsck["warnings"])
+
+    sync_check = storage_service.verify_local_sync(runtime_dir, source_id="local-synth")
+    assert sync_check["ok"]
+    assert sync_check["sync_roots_match"]
+    assert sync_check["exported_records"] == 1
+
+
 def test_atlas_import_persists_generic_source_manifest(tmp_path):
     repo = tmp_path / "atlas"
     runtime_dir = tmp_path / "runtime"

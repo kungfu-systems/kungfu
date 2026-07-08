@@ -158,6 +158,42 @@
       "purpose": "List imported Atlas worktree-status markers from the latest projection."
     },
     {
+      "apiId": "kungfu.storage.status",
+      "name": "kungfu storage status --scope all --json",
+      "maturity": "stable",
+      "purpose": "Inspect source manifests, accepted cursors, sync roots, and storage projection status."
+    },
+    {
+      "apiId": "kungfu.storage.fsck",
+      "name": "kungfu storage fsck --scope all --json",
+      "maturity": "stable",
+      "purpose": "Verify generic storage manifests, payload hashes, source registry drift, and orphan payload candidates."
+    },
+    {
+      "apiId": "kungfu.storage.rebuild-index",
+      "name": "kungfu storage rebuild-index --scope all --dry-run --json",
+      "maturity": "stable",
+      "purpose": "Preview or rebuild the derived source registry from accepted latest manifests."
+    },
+    {
+      "apiId": "kungfu.storage.gc",
+      "name": "kungfu storage gc --scope all --dry-run --json",
+      "maturity": "stable",
+      "purpose": "Plan unreachable payload garbage collection without deleting payloads."
+    },
+    {
+      "apiId": "kungfu.storage.compact",
+      "name": "kungfu storage compact --scope all --dry-run --json",
+      "maturity": "stable",
+      "purpose": "Plan fact-ledger compaction without archiving, deleting, vacuuming, or rewriting facts."
+    },
+    {
+      "apiId": "kungfu.storage.verify-sync",
+      "name": "kungfu storage verify-sync --source <source-id> --json",
+      "maturity": "stable",
+      "purpose": "Simulate manifest-backed local export/import/fsck and compare sync roots."
+    },
+    {
       "apiId": "kungfu.remote.add",
       "name": "kungfu remote add <source-id> --host <host> --home <kf-home> --json",
       "maturity": "experimental",
@@ -201,7 +237,7 @@
     },
     "atlas-projection": {
       "maturity": "stable",
-      "next": "kungfu atlas import --repo <atlas-repo> --json; kungfu atlas show import --json; kungfu atlas show missions --json; kungfu atlas show goals --json",
+      "next": "kungfu atlas import --repo <atlas-repo> --json; kungfu storage fsck --scope all --json; kungfu storage verify-sync --source <source-id> --json; kungfu atlas show missions --json; kungfu atlas show goals --json",
       "when": "The user asks to sync, import, inspect, or visualize an Atlas-style mission/goal/worktree control-plane repo inside Kungfu."
     },
     "trace": {

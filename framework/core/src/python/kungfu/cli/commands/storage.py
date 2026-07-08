@@ -30,6 +30,13 @@ def _range_filter(since, from_time, until):
         sys.exit(2)
 
 
+def _source_for_scope(scope, storage_source_id):
+    if scope == "source":
+        _require_source(storage_source_id)
+        return storage_source_id
+    return None
+
+
 @kfc.group(
     cls=PrioritizedCommandGroup,
     help_priority=2,
@@ -186,3 +193,146 @@ def import_cmd(ctx, from_path, no_verify, as_json):
     click.echo(
         f"[storage] imported {result['records']} records for {result['source_id']}"
     )
+
+
+@storage.command(name="rebuild-index", help="rebuild derived storage indexes")
+@click.option("--scope", type=click.Choice(["atlas", "source", "all"]), required=True)
+@click.option("--source", "storage_source_id", type=str, default=None)
+@click.option(
+    "--dry-run",
+    "dry_run",
+    is_flag=True,
+    help="show registry changes without writing the derived index",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@storage_command_context
+def rebuild_index(ctx, scope, storage_source_id, dry_run, as_json):
+    from kungfu.storage import service
+
+    if scope == "atlas":
+        result = {
+            "ok": True,
+            "scope": "atlas",
+            "dry_run": True,
+            "projection": {
+                "name": "atlas-journal-fold",
+                "rebuildable": False,
+                "reason": (
+                    "Atlas cards are folded from journal frames at read time; "
+                    "there is no standalone SQLite projection to rebuild."
+                ),
+            },
+        }
+    else:
+        result = service.rebuild_index(
+            ctx.runtime_dir,
+            source_id=_source_for_scope(scope, storage_source_id),
+            dry_run=dry_run,
+        )
+    if as_json:
+        _echo_json(result)
+        return
+    click.echo(
+        f"[storage] rebuild-index {scope}: "
+        f"{'would write' if result.get('would_write') else 'up to date'}"
+    )
+    for error in result.get("errors", []):
+        click.echo(f"  error: {error}", err=True)
+    if not result["ok"]:
+        sys.exit(1)
+
+
+@storage.command(help="plan unreachable payload garbage collection")
+@click.option("--scope", type=click.Choice(["source", "all"]), required=True)
+@click.option("--source", "storage_source_id", type=str, default=None)
+@click.option(
+    "--dry-run",
+    "dry_run",
+    is_flag=True,
+    help="required; no payloads are deleted",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@storage_command_context
+def gc(ctx, scope, storage_source_id, dry_run, as_json):
+    from kungfu.storage import service
+
+    if not dry_run:
+        click.echo("[storage] gc requires --dry-run in this release", err=True)
+        sys.exit(2)
+    try:
+        result = service.gc_plan(
+            ctx.runtime_dir,
+            source_id=_source_for_scope(scope, storage_source_id),
+            dry_run=True,
+        )
+    except ValueError as e:
+        click.echo(f"[storage] {e}", err=True)
+        sys.exit(2)
+    if as_json:
+        _echo_json(result)
+        return
+    click.echo(
+        f"[storage] gc dry-run {scope}: {result['candidate_count']} candidates, "
+        f"{result['candidate_bytes']} bytes"
+    )
+
+
+@storage.command(help="plan fact-ledger compaction without rewriting storage")
+@click.option("--scope", type=click.Choice(["source", "all"]), required=True)
+@click.option("--source", "storage_source_id", type=str, default=None)
+@click.option(
+    "--dry-run",
+    "dry_run",
+    is_flag=True,
+    help="required; no storage files are rewritten",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@storage_command_context
+def compact(ctx, scope, storage_source_id, dry_run, as_json):
+    from kungfu.storage import service
+
+    if not dry_run:
+        click.echo("[storage] compact requires --dry-run in this release", err=True)
+        sys.exit(2)
+    try:
+        result = service.compact_plan(
+            ctx.runtime_dir,
+            source_id=_source_for_scope(scope, storage_source_id),
+            dry_run=True,
+        )
+    except ValueError as e:
+        click.echo(f"[storage] {e}", err=True)
+        sys.exit(2)
+    if as_json:
+        _echo_json(result)
+        return
+    click.echo(
+        f"[storage] compact dry-run {scope}: "
+        f"{len(result['retained_manifests'])} retained manifests, "
+        f"{result['gc']['candidate_count']} gc candidates"
+    )
+    if not result["ok"]:
+        sys.exit(1)
+
+
+@storage.command(name="verify-sync", help="simulate local bundle export/import/fsck")
+@click.option("--source", "storage_source_id", type=str, required=True)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@storage_command_context
+def verify_sync(ctx, storage_source_id, as_json):
+    from kungfu.storage import service
+
+    try:
+        result = service.verify_local_sync(ctx.runtime_dir, source_id=storage_source_id)
+    except (FileNotFoundError, ValueError) as e:
+        click.echo(f"[storage] {e}", err=True)
+        sys.exit(1)
+    if as_json:
+        _echo_json(result)
+    else:
+        click.echo(
+            f"[storage] verify-sync {storage_source_id} "
+            f"{'ok' if result['ok'] else 'failed'}"
+        )
+    if not result["ok"]:
+        sys.exit(1)

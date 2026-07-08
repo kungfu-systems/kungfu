@@ -284,6 +284,66 @@
       "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
     },
     {
+      "id": "kungfu.storage.status",
+      "surface": "cli",
+      "name": "kungfu storage status --scope all --json",
+      "purpose": "Inspect source manifests, accepted cursors, sync roots, and storage projection status.",
+      "maturity": "stable",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.storage.fsck",
+      "surface": "cli",
+      "name": "kungfu storage fsck --scope all --json",
+      "purpose": "Verify generic storage manifests, payload hashes, source registry drift, and orphan payload candidates.",
+      "maturity": "stable",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.storage.rebuild-index",
+      "surface": "cli",
+      "name": "kungfu storage rebuild-index --scope all --dry-run --json",
+      "purpose": "Preview or rebuild the derived source registry from accepted latest manifests.",
+      "maturity": "stable",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.storage.gc",
+      "surface": "cli",
+      "name": "kungfu storage gc --scope all --dry-run --json",
+      "purpose": "Plan unreachable payload garbage collection without deleting payloads.",
+      "maturity": "stable",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.storage.compact",
+      "surface": "cli",
+      "name": "kungfu storage compact --scope all --dry-run --json",
+      "purpose": "Plan fact-ledger compaction without archiving, deleting, vacuuming, or rewriting facts.",
+      "maturity": "stable",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.storage.verify-sync",
+      "surface": "cli",
+      "name": "kungfu storage verify-sync --source <source-id> --json",
+      "purpose": "Simulate manifest-backed local export/import/fsck and compare sync roots.",
+      "maturity": "stable",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
       "id": "kungfu.remote.add",
       "surface": "cli",
       "name": "kungfu remote add <source-id> --host <host> --home <kf-home> --json",

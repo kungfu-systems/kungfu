@@ -390,6 +390,11 @@ kungfu storage export --scope source --source <source-id> \
 kungfu storage export --scope source --source <source-id> \
   --format bundle-json --out source.kfbundle.json --json
 kungfu storage import --from source.kfbundle.json --json
+kungfu storage rebuild-index --scope all --json
+kungfu storage rebuild-index --scope source --source <source-id> --json
+kungfu storage gc --scope all --dry-run --json
+kungfu storage compact --scope all --dry-run --json
+kungfu storage verify-sync --source <source-id> --json
 ```
 
 `kungfu source add/list/sync/fsck` uses the same source registry path. Atlas
@@ -403,6 +408,38 @@ construction, accepted ranges, payload inventory, source-scoped fsck,
 range-limited export, bundle creation, and bundle import. It deliberately does
 not implement remote channel transport, conflict policy, destructive GC,
 compaction, repair, or a SQLite/RocksDB provider.
+
+### Maintenance And Sync-Readiness Slice
+
+The first maintenance slice keeps destructive operations out of scope while
+making storage health and sync readiness inspectable:
+
+- `storage status --scope all|source` now reports each source's latest manifest,
+  accepted ranges, manifest sync root, payload/schema inventory counts, and a
+  cursor-like accepted head for future channel fetch.
+- `storage fsck --scope all|source` checks the generic source registry, latest
+  manifests, source-record drift, accepted ranges, sync roots, payload
+  presence/hash/length, payload inventory counts, schema inventory counts, and
+  all-scope orphan payload candidates.
+- `storage rebuild-index` rebuilds the derived
+  `runtime/storage/sources.json` source registry from accepted latest manifests.
+  This command may write only that derived registry unless `--dry-run` is used.
+- `storage gc --dry-run` scans payload files and reports unreachable candidates.
+  All-scope candidates are unreferenced by retained storage manifests. Source
+  scope is informational only because the interim payload store is shared.
+- `storage compact --dry-run` composes a reviewable plan: retained manifests,
+  rebuild-index preview, gc preview, and unsupported backend/history actions.
+  It does not archive, delete, vacuum, compact, or rewrite any facts.
+- `storage verify-sync --source <source-id>` exports a manifest-backed bundle,
+  imports it into a temporary local runtime, runs fsck there, and compares sync
+  roots. This simulates the proof path future remote sync will use without a
+  real remote.
+
+The current generic store still has no generic SQLite/RocksDB projection.
+Therefore `rebuild-index` explicitly reports SQLite as unsupported rather than
+pretending to rebuild a projection that does not exist. Atlas's user-facing
+cards remain a journal-folded projection; this slice does not add a standalone
+Atlas SQLite projection.
 
 ## Safety Boundaries
 

@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +12,10 @@ from kungfu.content_hash import CONTENT_HASH_ALGORITHM_SHA256
 
 PAYLOAD_STATE_PRESENT = "present"
 CONTENT_TYPE_JSON = "application/json"
+SOURCE_REGISTRY_SCHEMA = "kungfu.storage.source-registry/v1"
+PROJECTION_SOURCE_REGISTRY = "source-registry"
+PROJECTION_SQLITE = "sqlite"
+PROJECTION_ATLAS_JOURNAL_FOLD = "atlas-journal-fold"
 
 
 def _runtime():
@@ -27,6 +32,10 @@ def registry_path(runtime_dir: str | Path) -> Path:
 
 def payload_path(runtime_dir: str | Path, digest: str) -> Path:
     return root_dir(runtime_dir) / "payloads" / digest[:2] / f"{digest}.json"
+
+
+def _payload_root(runtime_dir: str | Path) -> Path:
+    return root_dir(runtime_dir) / "payloads"
 
 
 def write_payload_bytes(runtime_dir: str | Path, digest: str, raw: bytes) -> Path:
@@ -48,14 +57,60 @@ def manifest_path(runtime_dir: str | Path, source_id: str, manifest_id: str) -> 
     return source_manifest_dir(runtime_dir, source_id) / f"{manifest_id}.json"
 
 
+def _read_json(path: Path) -> dict[str, Any] | None:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return data if isinstance(data, dict) else None
+
+
+def _manifest_paths(
+    runtime_dir: str | Path, source_id: str | None = None
+) -> list[Path]:
+    base = root_dir(runtime_dir) / "sources"
+    if source_id:
+        roots = [base / source_id / "manifests"]
+    else:
+        roots = (
+            sorted(path / "manifests" for path in base.iterdir())
+            if base.exists()
+            else []
+        )
+    paths: list[Path] = []
+    for manifest_dir in roots:
+        if manifest_dir.exists():
+            paths.extend(sorted(manifest_dir.glob("*.json")))
+    return paths
+
+
+def _latest_manifest_paths(
+    runtime_dir: str | Path, source_id: str | None = None
+) -> list[Path]:
+    base = root_dir(runtime_dir) / "sources"
+    if source_id:
+        paths = [base / source_id / "manifests" / "latest.json"]
+    else:
+        paths = sorted(base.glob("*/manifests/latest.json")) if base.exists() else []
+    return [path for path in paths if path.exists()]
+
+
+def _all_payload_paths(runtime_dir: str | Path) -> list[Path]:
+    payload_root = _payload_root(runtime_dir)
+    if not payload_root.exists():
+        return []
+    return sorted(path for path in payload_root.glob("*/*.json") if path.is_file())
+
+
+def _payload_digest_from_path(path: Path) -> str:
+    return path.stem
+
+
 def load_registry(runtime_dir: str | Path) -> dict[str, Any]:
     path = registry_path(runtime_dir)
     if not path.exists():
-        return {"schema": "kungfu.storage.source-registry/v1", "sources": {}}
+        return {"schema": SOURCE_REGISTRY_SCHEMA, "sources": {}}
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict) or not isinstance(data.get("sources"), dict):
         raise ValueError(f"invalid storage source registry: {path}")
-    data.setdefault("schema", "kungfu.storage.source-registry/v1")
+    data.setdefault("schema", SOURCE_REGISTRY_SCHEMA)
     return data
 
 
@@ -118,6 +173,101 @@ def load_latest_manifest(
     return data if isinstance(data, dict) else None
 
 
+def _referenced_payload_hashes(
+    runtime_dir: str | Path, source_id: str | None = None
+) -> set[str]:
+    hashes: set[str] = set()
+    seen_manifests: set[tuple[str, str]] = set()
+    for path in _manifest_paths(runtime_dir, source_id):
+        try:
+            manifest = _read_json(path)
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not manifest:
+            continue
+        key = (
+            str(manifest.get("source_id") or ""),
+            str(manifest.get("manifest_id") or path.name),
+        )
+        if key in seen_manifests:
+            continue
+        seen_manifests.add(key)
+        for entry in _entries_for_manifest(manifest):
+            digest = str(entry.get("payload_hash") or "")
+            if digest:
+                hashes.add(digest)
+    return hashes
+
+
+def _source_projection_from_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
+    source = manifest.get("source")
+    if isinstance(source, dict):
+        return source
+    return build_source_record(
+        {
+            "source_id": manifest.get("source_id"),
+            "source_type": manifest.get("source_type"),
+            "source_head": manifest.get("source_head"),
+            "range": manifest.get("range"),
+            "manifest_id": manifest.get("manifest_id"),
+            "sync_root": manifest.get("sync_root"),
+            "accepted_ranges": manifest.get("accepted_ranges", []),
+        }
+    )
+
+
+def _accepted_cursor(manifest: dict[str, Any]) -> dict[str, Any]:
+    accepted_ranges = manifest.get("accepted_ranges", [])
+    last_range = accepted_ranges[-1] if accepted_ranges else {}
+    last_range = last_range if isinstance(last_range, dict) else {}
+    return {
+        "schema": "kungfu.storage.channel-cursor/v1",
+        "source_id": manifest.get("source_id"),
+        "manifest_id": manifest.get("manifest_id"),
+        "source_head": manifest.get("source_head") or last_range.get("source_head"),
+        "range": manifest.get("range") or last_range.get("range") or {},
+        "sync_root": manifest.get("sync_root") or last_range.get("sync_root"),
+        "entry_count": len(_entries_for_manifest(manifest)),
+    }
+
+
+def _source_manifest_status(
+    runtime_dir: str | Path, source: dict[str, Any]
+) -> dict[str, Any]:
+    source_id = str(source.get("source_id") or "")
+    manifest = load_latest_manifest(runtime_dir, source_id)
+    if manifest is None:
+        return {
+            "source_id": source_id,
+            "ok": False,
+            "projection": PROJECTION_SOURCE_REGISTRY,
+            "reason": "manifest_missing",
+            "source": source,
+        }
+    entries = _entries_for_manifest(manifest)
+    payload_inventory = manifest.get("payload_inventory", {})
+    schema_inventory = manifest.get("schema_inventory", {})
+    return {
+        "source_id": source_id,
+        "ok": True,
+        "projection": PROJECTION_SOURCE_REGISTRY,
+        "manifest_id": manifest.get("manifest_id"),
+        "source_type": manifest.get("source_type"),
+        "source_head": manifest.get("source_head"),
+        "accepted_ranges": manifest.get("accepted_ranges", []),
+        "accepted_cursor": _accepted_cursor(manifest),
+        "sync_root": manifest.get("sync_root"),
+        "entries": len(entries),
+        "payload_inventory": len(payload_inventory.get("entries", []))
+        if isinstance(payload_inventory, dict)
+        else 0,
+        "schema_inventory": len(schema_inventory.get("entries", []))
+        if isinstance(schema_inventory, dict)
+        else 0,
+        "source_record": source,
+    }
+
+
 def list_sources(runtime_dir: str | Path) -> list[dict[str, Any]]:
     registry = load_registry(runtime_dir)
     return sorted(
@@ -136,12 +286,19 @@ def status(
         for source in list_sources(runtime_dir)
         if source_id is None or source.get("source_id") == source_id
     ]
+    source_status = [_source_manifest_status(runtime_dir, source) for source in sources]
     return {
         "ok": bool(sources) if source_id else True,
         "scope": "source" if source_id else "all",
         "source_id": source_id,
         "sources": sources,
         "source_count": len(sources),
+        "projection": {
+            "name": PROJECTION_SOURCE_REGISTRY,
+            "path": str(registry_path(runtime_dir)),
+            "rebuildable": True,
+        },
+        "source_status": source_status,
     }
 
 
@@ -187,7 +344,30 @@ def fsck(
     *,
     source_id: str | None = None,
 ) -> dict[str, Any]:
-    sources = list_sources(runtime_dir)
+    try:
+        registry = load_registry(runtime_dir)
+    except (OSError, json.JSONDecodeError, ValueError) as e:
+        return {
+            "ok": False,
+            "scope": "source" if source_id else "all",
+            "source_id": source_id,
+            "errors": [{"code": "source_registry_invalid", "error": str(e)}],
+            "warnings": [],
+            "checked": {
+                "sources": 0,
+                "manifests": 0,
+                "payloads": 0,
+                "schemas": 0,
+                "accepted_ranges": 0,
+                "source_records": 0,
+                "projection_indexes": 0,
+                "orphan_payloads": 0,
+            },
+        }
+    sources = sorted(
+        registry["sources"].values(),
+        key=lambda source: str(source.get("source_id") or ""),
+    )
     if source_id:
         sources = [source for source in sources if source.get("source_id") == source_id]
     report: dict[str, Any] = {
@@ -202,6 +382,9 @@ def fsck(
             "payloads": 0,
             "schemas": 0,
             "accepted_ranges": 0,
+            "source_records": 0,
+            "projection_indexes": 1,
+            "orphan_payloads": 0,
         },
     }
     if source_id and not sources:
@@ -218,6 +401,18 @@ def fsck(
             )
             continue
         report["checked"]["manifests"] += 1
+        report["checked"]["source_records"] += 1
+        projected_source = _source_projection_from_manifest(manifest)
+        if projected_source != source:
+            report["ok"] = False
+            report["errors"].append(
+                {
+                    "code": "source_registry_drift",
+                    "source_id": current_source_id,
+                    "expected": projected_source,
+                    "actual": source,
+                }
+            )
         for issue in verify_import_manifest(manifest):
             row = dict(issue)
             row["source_id"] = current_source_id
@@ -230,6 +425,20 @@ def fsck(
         report["checked"]["schemas"] += len(
             manifest.get("schema_inventory", {}).get("entries", [])
         )
+        payload_inventory = manifest.get("payload_inventory", {})
+        if isinstance(payload_inventory, dict):
+            inventory_count = len(payload_inventory.get("entries", []))
+            entry_count = len(_entries_for_manifest(manifest))
+            if inventory_count != entry_count:
+                report["ok"] = False
+                report["errors"].append(
+                    {
+                        "code": "payload_inventory_mismatch",
+                        "source_id": current_source_id,
+                        "expected": entry_count,
+                        "actual": inventory_count,
+                    }
+                )
         for entry in _entries_for_manifest(manifest):
             report["checked"]["payloads"] += 1
             if entry.get("payload_state") != PAYLOAD_STATE_PRESENT:
@@ -254,7 +463,238 @@ def fsck(
                         "payload_hash": entry.get("payload_hash"),
                     }
                 )
+    if source_id is None:
+        referenced = _referenced_payload_hashes(runtime_dir)
+        for path in _all_payload_paths(runtime_dir):
+            if _payload_digest_from_path(path) not in referenced:
+                report["checked"]["orphan_payloads"] += 1
+                report["warnings"].append(
+                    {
+                        "code": "orphan_payload",
+                        "path": str(path),
+                        "payload_hash": _payload_digest_from_path(path),
+                    }
+                )
     return report
+
+
+def rebuild_index(
+    runtime_dir: str | Path,
+    *,
+    source_id: str | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Rebuild the source registry projection from accepted manifests."""
+
+    try:
+        old_registry = load_registry(runtime_dir)
+    except (OSError, json.JSONDecodeError, ValueError):
+        old_registry = {"schema": SOURCE_REGISTRY_SCHEMA, "sources": {}}
+
+    old_sources = old_registry.get("sources", {})
+    old_sources = old_sources if isinstance(old_sources, dict) else {}
+    if source_id:
+        new_sources = dict(old_sources)
+    else:
+        new_sources = {}
+
+    changes = []
+    errors = []
+    rebuilt = 0
+    for path in _latest_manifest_paths(runtime_dir, source_id):
+        try:
+            manifest = _read_json(path)
+        except (OSError, json.JSONDecodeError) as e:
+            errors.append(
+                {"code": "manifest_read_error", "path": str(path), "error": str(e)}
+            )
+            continue
+        if not manifest:
+            errors.append({"code": "manifest_invalid", "path": str(path)})
+            continue
+        current_source_id = str(manifest.get("source_id") or "")
+        if not current_source_id:
+            errors.append({"code": "source_id_missing", "path": str(path)})
+            continue
+        projected = _source_projection_from_manifest(manifest)
+        previous = old_sources.get(current_source_id)
+        if previous != projected:
+            changes.append(
+                {
+                    "source_id": current_source_id,
+                    "action": "update" if previous is not None else "add",
+                    "manifest_id": manifest.get("manifest_id"),
+                }
+            )
+        new_sources[current_source_id] = projected
+        rebuilt += 1
+
+    if source_id and rebuilt == 0:
+        errors.append({"code": "source_manifest_missing", "source_id": source_id})
+
+    new_registry = {"schema": SOURCE_REGISTRY_SCHEMA, "sources": new_sources}
+    would_write = old_registry != new_registry
+    if would_write and not dry_run:
+        save_registry(runtime_dir, new_registry)
+
+    return {
+        "ok": not errors,
+        "scope": "source" if source_id else "all",
+        "source_id": source_id,
+        "projection": {
+            "name": PROJECTION_SOURCE_REGISTRY,
+            "path": str(registry_path(runtime_dir)),
+            "rebuilt_from": "accepted latest manifests",
+        },
+        "dry_run": dry_run,
+        "would_write": would_write,
+        "written": would_write and not dry_run,
+        "sources_rebuilt": rebuilt,
+        "changes": changes,
+        "errors": errors,
+        "unsupported": [
+            {
+                "name": PROJECTION_SQLITE,
+                "reason": "no generic SQLite projection exists in this storage slice",
+            }
+        ],
+    }
+
+
+def gc_plan(
+    runtime_dir: str | Path,
+    *,
+    source_id: str | None = None,
+    dry_run: bool = True,
+) -> dict[str, Any]:
+    if not dry_run:
+        raise ValueError("storage_gc_requires_dry_run")
+    referenced = _referenced_payload_hashes(runtime_dir, source_id)
+    payloads = _all_payload_paths(runtime_dir)
+    candidates = []
+    for path in payloads:
+        digest = _payload_digest_from_path(path)
+        if digest in referenced:
+            continue
+        candidates.append(
+            {
+                "payload_hash": digest,
+                "path": str(path),
+                "bytes": path.stat().st_size,
+                "safe_to_delete": source_id is None,
+            }
+        )
+    return {
+        "ok": True,
+        "scope": "source" if source_id else "all",
+        "source_id": source_id,
+        "dry_run": True,
+        "payloads_scanned": len(payloads),
+        "referenced_payloads": len(referenced),
+        "candidate_count": len(candidates),
+        "candidate_bytes": sum(row["bytes"] for row in candidates),
+        "candidates": candidates,
+        "notes": [
+            "No payloads were deleted.",
+            (
+                "Source scope candidates are not globally safe to delete because "
+                "the interim payload store is shared."
+            )
+            if source_id
+            else "All-scope candidates are unreferenced by retained storage manifests.",
+        ],
+    }
+
+
+def compact_plan(
+    runtime_dir: str | Path,
+    *,
+    source_id: str | None = None,
+    dry_run: bool = True,
+) -> dict[str, Any]:
+    if not dry_run:
+        raise ValueError("storage_compact_requires_dry_run")
+    rebuild = rebuild_index(runtime_dir, source_id=source_id, dry_run=True)
+    garbage = gc_plan(runtime_dir, source_id=source_id, dry_run=True)
+    manifests = []
+    for path in _manifest_paths(runtime_dir, source_id):
+        try:
+            manifest = _read_json(path)
+        except (OSError, json.JSONDecodeError):
+            continue
+        if manifest:
+            manifests.append(
+                {
+                    "source_id": manifest.get("source_id"),
+                    "manifest_id": manifest.get("manifest_id"),
+                    "path": str(path),
+                    "entries": len(_entries_for_manifest(manifest)),
+                    "sync_root": manifest.get("sync_root"),
+                }
+            )
+    return {
+        "ok": rebuild["ok"] and garbage["ok"],
+        "scope": "source" if source_id else "all",
+        "source_id": source_id,
+        "dry_run": True,
+        "retained_manifests": manifests,
+        "rebuild_index": rebuild,
+        "gc": garbage,
+        "unsupported": [
+            {
+                "name": "history-archive",
+                "reason": "archive bundles are not implemented in this slice",
+            },
+            {
+                "name": PROJECTION_SQLITE,
+                "reason": "no generic SQLite projection exists in this storage slice",
+            },
+            {
+                "name": "backend-compact",
+                "reason": "the interim backend is content-addressed files",
+            },
+        ],
+        "notes": [
+            "No manifests, payloads, journal frames, or projections were rewritten.",
+            "This is a reviewable compaction plan, not destructive compaction.",
+        ],
+    }
+
+
+def verify_local_sync(
+    runtime_dir: str | Path,
+    *,
+    source_id: str,
+) -> dict[str, Any]:
+    source_report = fsck(runtime_dir, source_id=source_id)
+    if not source_report["ok"]:
+        return {
+            "ok": False,
+            "scope": "source",
+            "source_id": source_id,
+            "errors": [{"code": "source_fsck_failed", "fsck": source_report}],
+        }
+    bundle = build_export_bundle(runtime_dir, source_id=source_id)
+    with tempfile.TemporaryDirectory(prefix="kungfu-storage-sync-") as temp_dir:
+        import_result = import_bundle(temp_dir, bundle)
+        imported_report = fsck(temp_dir, source_id=source_id)
+        imported_manifest = load_latest_manifest(temp_dir, source_id)
+    local_manifest = load_latest_manifest(runtime_dir, source_id)
+    local_root = local_manifest.get("sync_root") if local_manifest else None
+    imported_root = imported_manifest.get("sync_root") if imported_manifest else None
+    roots_match = local_root == imported_root
+    return {
+        "ok": imported_report["ok"] and roots_match,
+        "scope": "source",
+        "source_id": source_id,
+        "exported_records": len(bundle.get("records", [])),
+        "import": import_result,
+        "local_sync_root": local_root,
+        "imported_sync_root": imported_root,
+        "sync_roots_match": roots_match,
+        "source_fsck": source_report,
+        "imported_fsck": imported_report,
+    }
 
 
 def write_jsonl(records: list[dict[str, Any]], out_path: str | Path) -> None:
