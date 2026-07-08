@@ -6,10 +6,11 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BUILDCHAIN_KFD3_SURFACE_REGISTRY_PATH as KFD3_DEFAULT_REGISTRY_PATH } from '@kungfu-tech/buildchain/buildchain-layout';
-import { kfd3 } from '@kungfu-tech/buildchain/kfd';
+import { kfd1, kfd3 } from '@kungfu-tech/buildchain/kfd';
 
 const KFD3_SURFACE_REGISTRY_CONTRACT =
   'kungfu-buildchain-kfd-3-surface-registry';
@@ -26,6 +27,16 @@ const KFD1_WITNESS_PATH = path.join(
   BUILDCHAIN_DIR,
   'kfd-1',
   'contract-world.witness.json',
+);
+const KFD1_RELEASE_GATE_PATH = path.join(
+  BUILDCHAIN_DIR,
+  'kfd-1',
+  'release-gate.json',
+);
+const KFD1_VERIFY_RESULT_PATH = path.join(
+  BUILDCHAIN_DIR,
+  'kfd-1',
+  'verify-result.json',
 );
 const KFD2_OUTPUT_DIR = path.join(BUILDCHAIN_DIR, 'kfd-2');
 const KFD3_OUTPUT_DIR = path.join(BUILDCHAIN_DIR, 'kfd-3');
@@ -44,6 +55,20 @@ const SDK_KFD_UPSTREAM_AGGREGATE_PATH = path.join(
   'kfd',
   'upstream-aggregate.json',
 );
+const SDK_KFD1_OUTPUT_DIR = path.join(ROOT, 'developer', 'sdk', 'kfd', 'kfd-1');
+const SDK_KFD1_WITNESS_PATH = path.join(
+  SDK_KFD1_OUTPUT_DIR,
+  'contract-world.witness.json',
+);
+const SDK_KFD1_RELEASE_GATE_PATH = path.join(
+  SDK_KFD1_OUTPUT_DIR,
+  'release-gate.json',
+);
+const SDK_KFD1_VERIFY_RESULT_PATH = path.join(
+  SDK_KFD1_OUTPUT_DIR,
+  'verify-result.json',
+);
+const SDK_KFD2_OUTPUT_DIR = path.join(ROOT, 'developer', 'sdk', 'kfd', 'kfd-2');
 const KFD3_PREBUILD_WITNESS_PATH = path.join(
   KFD3_OUTPUT_DIR,
   'collaboration-interface.prebuild.json',
@@ -96,6 +121,8 @@ const CORE_PACKAGE_PATH = path.join(ROOT, 'framework', 'core', 'package.json');
 const ARTIFACT_VERIFY_COMMAND =
   'node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json';
 const STRICT_KFD3_MODE = 'strict-buildchain-managed-registry';
+const KFD_EVIDENCE_SOURCE_SHA =
+  process.env.KUNGFU_KFD_SOURCE_SHA || 'local-dev-snapshot';
 
 function usage() {
   return `Usage:
@@ -109,7 +136,15 @@ Writes:
   developer/sdk/kfd/kfd-3-surfaces.json
   developer/sdk/kfd/upstream-aggregate.json
   .buildchain/kfd-1/contract-world.witness.json
+  .buildchain/kfd-1/release-gate.json
+  .buildchain/kfd-1/verify-result.json
   .buildchain/kfd-2/claims/<claim-id>.json
+  .buildchain/kfd-2/release-claims.json
+  developer/sdk/kfd/kfd-1/contract-world.witness.json
+  developer/sdk/kfd/kfd-1/release-gate.json
+  developer/sdk/kfd/kfd-1/verify-result.json
+  developer/sdk/kfd/kfd-2/release-claims.json
+  developer/sdk/kfd/kfd-2/claims/<claim-id>.json
   .buildchain/kfd-3/collaboration-interface.prebuild.json
   .buildchain/kfd-3/collaboration-interface.artifact.json
   .buildchain/kfd-3/capability-query.json
@@ -182,6 +217,10 @@ function sha256Json(value) {
 
 function sha256File(filePath) {
   return createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+}
+
+function sha256RenderedJson(value) {
+  return sha256Text(renderJson(value));
 }
 
 function packageResolver(baseFile) {
@@ -266,7 +305,11 @@ function buildOwnKfdFacts() {
         ? contractRegistry.contracts.length
         : 0,
       witnessCommand: 'kungfu sdk contract witness --json',
+      gateCommand: 'kungfu sdk kfd 1 gate --json',
+      verifyCommand: 'kungfu sdk kfd 1 verify --json',
       releasePassportInput: '--kfd-1-witness-json',
+      releaseGate: rel(SDK_KFD1_RELEASE_GATE_PATH),
+      verifyResult: rel(SDK_KFD1_VERIFY_RESULT_PATH),
     },
     kfd2: {
       status: 'supported',
@@ -280,6 +323,8 @@ function buildOwnKfdFacts() {
         : 0,
       claimsCommand: 'kungfu sdk kfd 2 claims --json',
       releasePassportInput: '--kfd-2-claim-json',
+      releaseClaims: `${rel(SDK_KFD2_OUTPUT_DIR)}/release-claims.json`,
+      buildchainClaimArgs: `${rel(SDK_KFD2_OUTPUT_DIR)}/buildchain-claim-args.txt`,
     },
     kfd3: {
       status: 'supported',
@@ -882,6 +927,17 @@ function assertCurrent(filePath, value, label) {
   }
 }
 
+function assertSameFile(expectedPath, actualPath, label) {
+  if (!fs.existsSync(actualPath)) {
+    throw new Error(`${label} is missing: ${rel(actualPath)}`);
+  }
+  const expected = fs.readFileSync(expectedPath, 'utf8');
+  const actual = fs.readFileSync(actualPath, 'utf8');
+  if (expected !== actual) {
+    throw new Error(`${label} is stale: ${rel(actualPath)}`);
+  }
+}
+
 function buildKfd1Witness() {
   return runNodeScript([
     'developer/sdk/src/sdk.js',
@@ -891,12 +947,98 @@ function buildKfd1Witness() {
   ]);
 }
 
-function buildKfd2Claims({ write }) {
+function buildKfd1ReleaseGate(kfd1Witness) {
+  return kfd1.createReleaseGateEvidence({
+    cwd: ROOT,
+    artifacts: (kfd1Witness.surfaces || []).map((surface) => ({
+      name: surface.artifactPath,
+      sourcePath: path.resolve(ROOT, surface.sourcePath),
+    })),
+    witnesses: [kfd1Witness],
+    verifiedAt: '1970-01-01T00:00:00.000Z',
+  })?.passportSection;
+}
+
+function buildKfd1VerifyResult(kfd1Gate) {
+  const issues = kfd1.validateReleaseGateEvidence(kfd1Gate);
+  return {
+    schemaVersion: 1,
+    contract: 'kungfu-buildchain-kfd-1-verify-result',
+    ok: issues.length === 0,
+    issues,
+  };
+}
+
+function buildKfd2Claims({ write, outputDir = KFD2_OUTPUT_DIR }) {
   return runNodeScript([
     'scripts/kfd2-release-claims.mjs',
     write ? '--write' : '--check',
+    '--output-dir',
+    outputDir,
+    '--source-sha',
+    KFD_EVIDENCE_SOURCE_SHA,
     '--json',
   ]);
+}
+
+function writeKfd2PackagedOutputs(outputDir) {
+  return buildKfd2Claims({ write: true, outputDir });
+}
+
+function assertCurrentKfd2Output(outputDir, label) {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-kfd2-check-'));
+  try {
+    const expected = writeKfd2PackagedOutputs(tmpDir);
+    const releaseClaimsPath = path.join(outputDir, 'release-claims.json');
+    assertSameFile(
+      path.join(tmpDir, 'release-claims.json'),
+      releaseClaimsPath,
+      `${label} release claims`,
+    );
+    for (const claim of expected.buildchainProjection?.claims || []) {
+      const fileName = `${claim.id}.json`;
+      assertSameFile(
+        path.join(tmpDir, 'claims', fileName),
+        path.join(outputDir, 'claims', fileName),
+        `${label} claim ${claim.id}`,
+      );
+    }
+    const expectedArgs = (expected.buildchainProjection?.claims || [])
+      .map(
+        (claim) =>
+          `--kfd-2-claim-json ${rel(path.join(outputDir, 'claims', `${claim.id}.json`))}`,
+      )
+      .join('\n');
+    const actualArgsPath = path.join(outputDir, 'buildchain-claim-args.txt');
+    if (!fs.existsSync(actualArgsPath)) {
+      throw new Error(
+        `${label} Buildchain claim args is missing: ${rel(actualArgsPath)}`,
+      );
+    }
+    const actualArgs = fs.readFileSync(actualArgsPath, 'utf8').trimEnd();
+    if (actualArgs !== expectedArgs) {
+      throw new Error(
+        `${label} Buildchain claim args is stale: ${rel(actualArgsPath)}`,
+      );
+    }
+    return {
+      ...expected,
+      outputDir: rel(outputDir),
+      releaseClaims: {
+        ...expected.releaseClaims,
+        path: rel(releaseClaimsPath),
+      },
+      buildchainProjection: {
+        ...expected.buildchainProjection,
+        claims: (expected.buildchainProjection?.claims || []).map((claim) => ({
+          ...claim,
+          path: `${rel(outputDir)}/claims/${claim.id}.json`,
+        })),
+      },
+    };
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
 }
 
 function registryCapabilityQuery(registry, { warning = '' } = {}) {
@@ -967,6 +1109,8 @@ function buildSummary({
   registry,
   upstreamAggregate,
   kfd1Witness,
+  kfd1Gate,
+  kfd1VerifyResult,
   kfd2Summary,
   prebuildWitness,
   strictAudit,
@@ -979,9 +1123,12 @@ function buildSummary({
       minimumVersion: '2.10.8',
       releasePassportInputs: {
         kfd1WitnessJsons: [rel(KFD1_WITNESS_PATH)],
+        kfd1ReleaseGate: rel(KFD1_RELEASE_GATE_PATH),
         kfd2ClaimJsons: (kfd2Summary.buildchainProjection?.claims || []).map(
           (claim) =>
-            claim.path || `${rel(KFD2_OUTPUT_DIR)}/claims/${claim.id}.json`,
+            claim.path
+              ? rel(claim.path)
+              : `${rel(KFD2_OUTPUT_DIR)}/claims/${claim.id}.json`,
         ),
         kfd3PrebuildWitnessJsons: [rel(KFD3_PREBUILD_WITNESS_PATH)],
         kfd3ArtifactVerifyCommand: ARTIFACT_VERIFY_COMMAND,
@@ -989,15 +1136,27 @@ function buildSummary({
     },
     kfd1: {
       witness: rel(KFD1_WITNESS_PATH),
+      packagedWitness: rel(SDK_KFD1_WITNESS_PATH),
+      releaseGate: rel(KFD1_RELEASE_GATE_PATH),
+      packagedReleaseGate: rel(SDK_KFD1_RELEASE_GATE_PATH),
+      verifyResult: rel(KFD1_VERIFY_RESULT_PATH),
+      packagedVerifyResult: rel(SDK_KFD1_VERIFY_RESULT_PATH),
       id: kfd1Witness.id,
       standard: kfd1Witness.standard,
+      status: kfd1Gate.status,
+      verifyOk: kfd1VerifyResult.ok,
+      releaseGateSha256: `sha256:${sha256RenderedJson(kfd1Gate)}`,
       surfaces: Array.isArray(kfd1Witness.surfaces)
         ? kfd1Witness.surfaces.length
         : 0,
     },
     kfd2: {
       outputDir: rel(KFD2_OUTPUT_DIR),
+      packagedOutputDir: rel(SDK_KFD2_OUTPUT_DIR),
+      releaseClaims: `${rel(KFD2_OUTPUT_DIR)}/release-claims.json`,
+      packagedReleaseClaims: `${rel(SDK_KFD2_OUTPUT_DIR)}/release-claims.json`,
       claimCount: kfd2Summary.buildchainProjection?.claimCount || 0,
+      releaseClaimsSha256: `sha256:${kfd2Summary.releaseClaims?.sha256 || ''}`,
     },
     kfd3: {
       registry: KFD3_DEFAULT_REGISTRY_PATH,
@@ -1043,11 +1202,26 @@ async function runCheckOrWrite(options) {
   const upstreamAggregate = buildUpstreamKfdAggregate();
   const registry = buildKfd3Registry(upstreamAggregate);
   const kfd1Witness = buildKfd1Witness();
-  const kfd2Summary = buildKfd2Claims({ write: options.write });
+  const kfd1Gate = buildKfd1ReleaseGate(kfd1Witness);
+  const kfd1VerifyResult = buildKfd1VerifyResult(kfd1Gate);
+  if (!kfd1VerifyResult.ok) {
+    throw new Error(
+      `KFD-1 release gate verification failed:\n${kfd1VerifyResult.issues
+        .map((issue) => `- ${issue.code || 'kfd-1'}: ${issue.message || issue}`)
+        .join('\n')}`,
+    );
+  }
+  const kfd2Summary = options.write
+    ? writeKfd2PackagedOutputs(KFD2_OUTPUT_DIR)
+    : assertCurrentKfd2Output(KFD2_OUTPUT_DIR, 'Buildchain KFD-2 output');
   if (options.write) {
     writeIfChanged(KFD3_REGISTRY_PATH, registry);
     writeIfChanged(SDK_KFD3_CANONICAL_REGISTRY_PATH, registry);
     writeIfChanged(SDK_KFD_UPSTREAM_AGGREGATE_PATH, upstreamAggregate);
+    writeJson(SDK_KFD1_WITNESS_PATH, kfd1Witness);
+    writeJson(SDK_KFD1_RELEASE_GATE_PATH, kfd1Gate);
+    writeJson(SDK_KFD1_VERIFY_RESULT_PATH, kfd1VerifyResult);
+    writeKfd2PackagedOutputs(SDK_KFD2_OUTPUT_DIR);
   } else {
     assertCurrent(KFD3_REGISTRY_PATH, registry, 'Buildchain KFD-3 registry');
     assertCurrent(
@@ -1060,6 +1234,33 @@ async function runCheckOrWrite(options) {
       upstreamAggregate,
       'SDK packaged upstream KFD aggregate',
     );
+    assertCurrent(KFD1_WITNESS_PATH, kfd1Witness, 'Buildchain KFD-1 witness');
+    assertCurrent(
+      KFD1_RELEASE_GATE_PATH,
+      kfd1Gate,
+      'Buildchain KFD-1 release gate',
+    );
+    assertCurrent(
+      KFD1_VERIFY_RESULT_PATH,
+      kfd1VerifyResult,
+      'Buildchain KFD-1 verify result',
+    );
+    assertCurrent(
+      SDK_KFD1_WITNESS_PATH,
+      kfd1Witness,
+      'SDK packaged KFD-1 witness',
+    );
+    assertCurrent(
+      SDK_KFD1_RELEASE_GATE_PATH,
+      kfd1Gate,
+      'SDK packaged KFD-1 release gate',
+    );
+    assertCurrent(
+      SDK_KFD1_VERIFY_RESULT_PATH,
+      kfd1VerifyResult,
+      'SDK packaged KFD-1 verify result',
+    );
+    assertCurrentKfd2Output(SDK_KFD2_OUTPUT_DIR, 'SDK packaged KFD-2 output');
   }
   const strictAudit = buildStrictBuildchainAudit(registry);
   assertStrictBuildchainAudit(strictAudit);
@@ -1072,6 +1273,8 @@ async function runCheckOrWrite(options) {
     registry,
     upstreamAggregate,
     kfd1Witness,
+    kfd1Gate,
+    kfd1VerifyResult,
     kfd2Summary,
     prebuildWitness,
     strictAudit,
@@ -1079,6 +1282,8 @@ async function runCheckOrWrite(options) {
 
   if (options.write) {
     writeJson(KFD1_WITNESS_PATH, kfd1Witness);
+    writeJson(KFD1_RELEASE_GATE_PATH, kfd1Gate);
+    writeJson(KFD1_VERIFY_RESULT_PATH, kfd1VerifyResult);
     writeJson(KFD3_PREBUILD_WITNESS_PATH, prebuildWitness);
     writeJson(KFD3_ARTIFACT_WITNESS_PATH, artifactWitness);
     writeJson(KFD3_QUERY_PATH, query);

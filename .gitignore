@@ -35,6 +35,10 @@ dist/
 .buildchain/*
 !.buildchain/buildchain.toml
 !.buildchain/contract-lock.json
+!.buildchain/kfd-1/
+!.buildchain/kfd-1/**
+!.buildchain/kfd-2/
+!.buildchain/kfd-2/**
 !.buildchain/kfd/
 .buildchain/kfd/*
 !.buildchain/kfd/kfd-3-surfaces.json

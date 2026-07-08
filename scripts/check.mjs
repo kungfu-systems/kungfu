@@ -228,6 +228,10 @@ function touchesBuildchainKfdEvidence(files) {
   return files.some(
     (file) =>
       file === '.buildchain/kfd/kfd-3-surfaces.json' ||
+      file.startsWith('.buildchain/kfd-1/') ||
+      file.startsWith('.buildchain/kfd-2/') ||
+      file.startsWith('developer/sdk/kfd/kfd-1/') ||
+      file.startsWith('developer/sdk/kfd/kfd-2/') ||
       file === 'developer/sdk/kfd/kfd-3-surfaces.json' ||
       file === 'developer/sdk/kfd/upstream-aggregate.json' ||
       file === 'developer/sdk/src/sdk.js' ||

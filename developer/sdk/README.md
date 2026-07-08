@@ -73,6 +73,8 @@ answer standard and capability questions without asking users to install the
 kungfu kfd status --json
 kungfu kfd schema kfd-4 --json
 kungfu kfd 1 witness --json
+kungfu kfd 1 gate --json
+kungfu kfd 1 verify --json
 kungfu kfd 2 claims --json
 kungfu kfd 4 schema --json
 kungfu kfd query --json
@@ -84,6 +86,8 @@ kungfu kfd aggregate --json
 kungfu sdk kfd status --json
 kungfu sdk kfd schema kfd-4 --json
 kungfu sdk kfd 1 witness --json
+kungfu sdk kfd 1 gate --json
+kungfu sdk kfd 1 verify --json
 kungfu sdk kfd 2 claims --json
 kungfu sdk kfd 4 schema --json
 kungfu sdk kfd query --json
@@ -102,6 +106,10 @@ the SDK-packaged KFD aggregate for Kungfu plus KFD, libnode, and Buildchain;
 `aggregate` joins both views for an agent that wants the final product plus
 upstream trust surface in one response. KFD-4 is intentionally reported as
 schema-only until Buildchain/KFD defines a release verification protocol for it.
+KFD-1 is exposed as the actual Buildchain contract-world witness, release gate,
+and verify result. KFD-2 `claims` returns the packaged canonical
+`release-claims.json` plus the per-claim Buildchain projection files that feed
+the release passport through `--kfd-2-claim-json`.
 
 ## KFD-1 Contract Prototype
 

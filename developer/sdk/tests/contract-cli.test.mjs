@@ -304,14 +304,27 @@ test('kfd status exposes KFD-1/2/3/4 support facts', () => {
 
 test('kfd standard commands expose KFD-1, KFD-2, and KFD-4 facts', () => {
   const kfd1 = runJson(['kfd', '1', 'witness', '--json']);
-  assert.equal(kfd1.contract, 'kungfu-sdk-kfd-1-support-witness');
+  assert.equal(kfd1.contract, 'kungfu-buildchain-kfd-1-witness-set');
   assert.equal(kfd1.standard, 'kfd-1');
   assert.ok(kfd1.surfaces.length >= 1);
+
+  const kfd1Gate = runJson(['kfd', '1', 'gate', '--json']);
+  assert.equal(kfd1Gate.contract, 'kungfu-buildchain-kfd-1-release-gate');
+  assert.equal(kfd1Gate.status, 'passed');
+  assert.equal(kfd1Gate.contractWorlds.length, 1);
+
+  const kfd1Verify = runJson(['kfd', '1', 'verify', '--json']);
+  assert.equal(kfd1Verify.contract, 'kungfu-buildchain-kfd-1-verify-result');
+  assert.equal(kfd1Verify.ok, true);
+  assert.deepEqual(kfd1Verify.issues, []);
 
   const kfd2 = runJson(['kfd', '2', 'claims', '--json']);
   assert.equal(kfd2.contract, 'kungfu-sdk-kfd-2-release-claims');
   assert.equal(kfd2.standard, 'kfd-2');
-  assert.equal(kfd2.source.claimCount, 3);
+  assert.equal(kfd2.releaseClaims.contract, 'kfd-2-release-claims');
+  assert.equal(kfd2.releaseClaims.claims.length, 3);
+  assert.equal(kfd2.buildchainProjection.claimCount, 3);
+  assert.equal(kfd2.buildchainProjection.claims.length, 3);
   assert.equal(kfd2.releaseGate.passportInput, '--kfd-2-claim-json');
 
   const kfd4 = runJson(['kfd', '4', 'schema', '--json']);

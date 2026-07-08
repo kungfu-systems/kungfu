@@ -1,0 +1,240 @@
+{
+  "schemaVersion": 1,
+  "contract": "kfd-2-release-claims",
+  "standard": "kfd-2",
+  "product": {
+    "name": "Kungfu",
+    "repository": "kungfu-systems/kungfu",
+    "package": "@kungfu-tech/artifact-kungfu"
+  },
+  "release": {
+    "version": "4.0.0-alpha.0",
+    "channel": "dev/v4/v4.0",
+    "tag": "v4.0.0-alpha.0",
+    "sourceSha": "local-dev-snapshot"
+  },
+  "claims": [
+    {
+      "id": "agent-onboarding-pack",
+      "statement": "Kungfu releases declare an installed agent onboarding pack with machine-readable command and mode metadata, safety boundaries, examples, and verifier coverage.",
+      "category": "kfd-2",
+      "source": {
+        "kind": "file",
+        "path": "framework/core/src/python/kungfu/agent/index.json",
+        "sha256": "c6ba4dd9b1c3e97bd6e7853555e4534ed5cdcfdea8fda0d3798a7a545331c62c"
+      },
+      "evidence": [
+        {
+          "type": "file",
+          "pointer": {
+            "kind": "file",
+            "path": "framework/core/src/python/kungfu/agent/commands.json",
+            "sha256": "0fadbb02d0e2b49f6bd982a744f9c58448794e7606b9edeb6f2457c28c8404ab"
+          },
+          "description": "Machine-readable command catalog and mode maturity metadata."
+        },
+        {
+          "type": "file",
+          "pointer": {
+            "kind": "file",
+            "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
+            "sha256": "51f32b7c4b5e1eb49cf05a4386b1134c8f019aca984c6a7842b8bec5f972bee2"
+          },
+          "description": "Human and agent-readable mode selection rules."
+        },
+        {
+          "type": "file",
+          "pointer": {
+            "kind": "file",
+            "path": "framework/core/src/python/kungfu/agent/safety.md",
+            "sha256": "7d79f580d229ff16821568b5200746cc17abd68fa7ec533ca8ff2c49b7e7e8c7"
+          },
+          "description": "Fact labels and safety boundaries for observed, reported, imported, and remote evidence."
+        },
+        {
+          "type": "file",
+          "pointer": {
+            "kind": "file",
+            "path": "scripts/verify-agent-pack.mjs",
+            "sha256": "5939f9bc8a6c37c9712db5d31c84b08cbf60416e0a1c5437460629000d3aa4c0"
+          },
+          "description": "Read-only verifier for installed agent pack completeness and command/doc consistency."
+        }
+      ],
+      "verification": {
+        "command": "node scripts/verify-agent-pack.mjs && node scripts/kfd2-release-claims.mjs --check",
+        "expectedResult": "pass"
+      },
+      "auditBoundary": {
+        "scope": "The committed agent onboarding pack files listed in this claim and the verifier checks that enumerate required docs, skills, command catalog entries, safety labels, package data, GUI hint, and TUI hint.",
+        "enumerability": "closed-world",
+        "exclusions": [
+          "Provider CLI behavior outside Kungfu",
+          "User-specific bootstrap policy files under local home directories",
+          "Runtime data and receipts produced after installation"
+        ]
+      },
+      "residualRisk": [],
+      "responsibility": {
+        "sourceOwner": "kungfu",
+        "verificationOwner": "kungfu verify",
+        "releaseDecisionOwner": "kungfu release maintainer",
+        "escalation": "Downgrade the claim if the pack verifier fails or a new public agent command is added without command catalog coverage."
+      },
+      "status": "audited"
+    },
+    {
+      "id": "codex-report-receipts",
+      "statement": "Kungfu report mode exposes a native Codex goal adapter with a verifiable receipt path, and token-only or unknown cost is represented as unknown rather than fabricated zero-dollar cost.",
+      "category": "kfd-2",
+      "source": {
+        "kind": "file",
+        "path": "framework/core/src/python/kungfu/cli/commands/codex.py",
+        "sha256": "54dc1ae6436427df7a15551c897c3111a88b529c610f1dd0f16673199e2dec14"
+      },
+      "evidence": [
+        {
+          "type": "file",
+          "pointer": {
+            "kind": "file",
+            "path": "framework/core/src/python/kungfu/cli/commands/codex.py",
+            "sha256": "54dc1ae6436427df7a15551c897c3111a88b529c610f1dd0f16673199e2dec14"
+          },
+          "description": "Codex goal report adapter and receipt verifier CLI implementation."
+        },
+        {
+          "type": "file",
+          "pointer": {
+            "kind": "file",
+            "path": "framework/core/src/python/kungfu/rewind/cost/codex.py",
+            "sha256": "859526f1e21f9596d064388b365019858436026aad9628706cabd1d6fe078699"
+          },
+          "description": "Codex cost adapter: tokens are reported, dollar cost remains unknown when not provided by the provider."
+        },
+        {
+          "type": "file",
+          "pointer": {
+            "kind": "file",
+            "path": "framework/core/src/python/kungfu/rewind/cost_wire.py",
+            "sha256": "76887d0ba61675be4fd9e7f11cabce1d1be952f07370a156095b0423d01aba2c"
+          },
+          "description": "Cost wire model preserving known/unknown cost distinction."
+        },
+        {
+          "type": "file",
+          "pointer": {
+            "kind": "file",
+            "path": "framework/core/src/python/kungfu/agent/examples/report-mode.md",
+            "sha256": "ef62de93bb8c9b29e50c18429a6d5c006b19a57bd730768d4d5768a175a5d70c"
+          },
+          "description": "Report-mode user and agent procedure including Codex receipt verification."
+        },
+        {
+          "type": "file",
+          "pointer": {
+            "kind": "file",
+            "path": "framework/core/src/python/kungfu/agent/skills/codex/SKILL.md",
+            "sha256": "5de3db86c56124d952b6732133c9c1c0411951f0c9df4685f629edaee1269d07"
+          },
+          "description": "Codex-side report closeout gate instructions shipped in the agent pack."
+        }
+      ],
+      "verification": {
+        "command": "node scripts/verify-agent-pack.mjs && node scripts/kfd2-release-claims.mjs --check",
+        "expectedResult": "pass"
+      },
+      "auditBoundary": {
+        "scope": "The committed Codex report adapter, receipt verifier, cost wire model, report-mode docs, and shipped Codex skill instructions listed in this claim.",
+        "enumerability": "closed-world",
+        "exclusions": [
+          "Provider-side billing pages or private sessions",
+          "Future Codex API fields not emitted to the user or agent",
+          "Human-entered cost overrides outside the receipt verifier"
+        ]
+      },
+      "residualRisk": [],
+      "responsibility": {
+        "sourceOwner": "kungfu",
+        "verificationOwner": "kungfu verify",
+        "releaseDecisionOwner": "kungfu release maintainer",
+        "escalation": "Downgrade the claim if receipt verification stops binding the run id, work id, goal id, status, and reported usage fields."
+      },
+      "status": "audited"
+    },
+    {
+      "id": "remote-fact-boundary",
+      "statement": "Kungfu distinguishes local observed facts from reported, imported, and remote facts in the agent pack and remote-sync command surface instead of silently promoting remote evidence into local truth.",
+      "category": "kfd-2",
+      "source": {
+        "kind": "file",
+        "path": "framework/core/src/python/kungfu/agent/safety.md",
+        "sha256": "7d79f580d229ff16821568b5200746cc17abd68fa7ec533ca8ff2c49b7e7e8c7"
+      },
+      "evidence": [
+        {
+          "type": "file",
+          "pointer": {
+            "kind": "file",
+            "path": "framework/core/src/python/kungfu/agent/safety.md",
+            "sha256": "7d79f580d229ff16821568b5200746cc17abd68fa7ec533ca8ff2c49b7e7e8c7"
+          },
+          "description": "Fact labels for observed, reported, imported, and remote evidence."
+        },
+        {
+          "type": "file",
+          "pointer": {
+            "kind": "file",
+            "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
+            "sha256": "51f32b7c4b5e1eb49cf05a4386b1134c8f019aca984c6a7842b8bec5f972bee2"
+          },
+          "description": "Remote-sync mode rule requiring source-scoped import."
+        },
+        {
+          "type": "file",
+          "pointer": {
+            "kind": "file",
+            "path": "framework/core/src/python/kungfu/agent/commands.json",
+            "sha256": "0fadbb02d0e2b49f6bd982a744f9c58448794e7606b9edeb6f2457c28c8404ab"
+          },
+          "description": "Remote add/sync command declarations and mode metadata."
+        },
+        {
+          "type": "file",
+          "pointer": {
+            "kind": "file",
+            "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
+            "sha256": "d8c195502f678bc34be690769f29c1c8b223fe5ae65ad142fa656e9b3c849b16"
+          },
+          "description": "Agent command surface including mode selection and bootstrap status."
+        }
+      ],
+      "verification": {
+        "command": "node scripts/verify-agent-pack.mjs && node scripts/kfd2-release-claims.mjs --check",
+        "expectedResult": "pass"
+      },
+      "auditBoundary": {
+        "scope": "The committed agent safety and mode-selection documents, machine-readable commands catalog, and agent CLI command implementation listed in this claim.",
+        "enumerability": "declared-open",
+        "exclusions": [
+          "Actual network transport availability",
+          "Remote host identity outside locally recorded source metadata",
+          "User decisions to manually promote imported evidence"
+        ]
+      },
+      "residualRisk": [
+        "Remote evidence freshness and identity depend on the configured source runtime and must remain source-scoped until a later command explicitly promotes it."
+      ],
+      "responsibility": {
+        "sourceOwner": "kungfu",
+        "verificationOwner": "kungfu verify",
+        "releaseDecisionOwner": "kungfu release maintainer",
+        "escalation": "Keep this claim downgraded or human-reviewed while remote-sync remains an experimental surface."
+      },
+      "status": "audited"
+    }
+  ],
+  "schemaEvolution": {
+    "interfaceVersion": 1,
+    "compatibilityRule": "Compatible additions may keep schemaVersion 1; required-field or semantic changes require a new KFD-owned interface version."
+  }
+}

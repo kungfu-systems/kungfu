@@ -59,6 +59,37 @@ const SDK_KFD_UPSTREAM_AGGREGATE = path.join(
   'kfd',
   'upstream-aggregate.json',
 );
+const SDK_KFD1_WITNESS = path.join(
+  SDK_ROOT,
+  'kfd',
+  'kfd-1',
+  'contract-world.witness.json',
+);
+const SDK_KFD1_RELEASE_GATE = path.join(
+  SDK_ROOT,
+  'kfd',
+  'kfd-1',
+  'release-gate.json',
+);
+const SDK_KFD1_VERIFY_RESULT = path.join(
+  SDK_ROOT,
+  'kfd',
+  'kfd-1',
+  'verify-result.json',
+);
+const SDK_KFD2_RELEASE_CLAIMS = path.join(
+  SDK_ROOT,
+  'kfd',
+  'kfd-2',
+  'release-claims.json',
+);
+const SDK_KFD2_CLAIMS_DIR = path.join(SDK_ROOT, 'kfd', 'kfd-2', 'claims');
+const SDK_KFD2_CLAIM_ARGS = path.join(
+  SDK_ROOT,
+  'kfd',
+  'kfd-2',
+  'buildchain-claim-args.txt',
+);
 const isWin = process.platform === 'win32';
 
 /**
@@ -81,7 +112,7 @@ function usage(code) {
       '       kungfu sdk contract add <surface> [--source <path>] [--json]',
       '       kungfu sdk kfd status [--json]',
       '       kungfu sdk kfd schema <kfd-1|kfd-2|kfd-3|kfd-4> [--schema <name>] [--json]',
-      '       kungfu sdk kfd 1 status|schema|witness [--json]',
+      '       kungfu sdk kfd 1 status|schema|witness|gate|verify [--json]',
       '       kungfu sdk kfd 2 status|schema|claims|trust-claims|trust-assessment [--json]',
       '       kungfu sdk kfd 4 status|schema [--json]',
       '       kungfu sdk kfd query|check|witness|upstream|aggregate [--json]',
@@ -2732,6 +2763,151 @@ function kfdSchemaSummary() {
 }
 
 /**
+ * @returns {string}
+ */
+function resolvePackagedKfd1Witness() {
+  if (fs.existsSync(SDK_KFD1_WITNESS)) return SDK_KFD1_WITNESS;
+  fail(
+    'SDK packaged KFD-1 witness not found; run ./kungfu-code kfd:buildchain in the Kungfu checkout before packaging',
+  );
+}
+
+/**
+ * @returns {string}
+ */
+function resolvePackagedKfd1ReleaseGate() {
+  if (fs.existsSync(SDK_KFD1_RELEASE_GATE)) return SDK_KFD1_RELEASE_GATE;
+  fail(
+    'SDK packaged KFD-1 release gate not found; run ./kungfu-code kfd:buildchain in the Kungfu checkout before packaging',
+  );
+}
+
+/**
+ * @returns {string}
+ */
+function resolvePackagedKfd1VerifyResult() {
+  if (fs.existsSync(SDK_KFD1_VERIFY_RESULT)) return SDK_KFD1_VERIFY_RESULT;
+  fail(
+    'SDK packaged KFD-1 verify result not found; run ./kungfu-code kfd:buildchain in the Kungfu checkout before packaging',
+  );
+}
+
+/**
+ * @returns {Record<string, any>}
+ */
+function readKfd1Witness() {
+  try {
+    return buildContractWorldWitness(locateRepoRoot(process.cwd()));
+  } catch {
+    return /** @type {Record<string, any>} */ (
+      readJson(resolvePackagedKfd1Witness())
+    );
+  }
+}
+
+/**
+ * @param {Record<string, any>} witness
+ * @returns {Record<string, any>}
+ */
+function buildKfd1ReleaseGate(witness) {
+  const repoRoot = (() => {
+    try {
+      return locateRepoRoot(process.cwd());
+    } catch {
+      return '';
+    }
+  })();
+  if (!repoRoot) {
+    return /** @type {Record<string, any>} */ (
+      readJson(resolvePackagedKfd1ReleaseGate())
+    );
+  }
+  const gate = createKfd1ReleaseGateEvidence({
+    cwd: repoRoot,
+    artifacts: Array.isArray(witness.surfaces)
+      ? witness.surfaces.map((surface) => ({
+          name: surface.artifactPath,
+          sourcePath: path.resolve(repoRoot, surface.sourcePath),
+        }))
+      : [],
+    witnesses: [witness],
+    verifiedAt: '1970-01-01T00:00:00.000Z',
+  })?.passportSection;
+  if (!gate) fail('KFD-1 release gate could not be created from the witness');
+  return gate;
+}
+
+/**
+ * @param {Record<string, any>} releaseGate
+ * @returns {Record<string, any>}
+ */
+function buildKfd1VerifyResult(releaseGate) {
+  const issues = validateKfd1ReleaseGateEvidence(releaseGate);
+  return {
+    schemaVersion: 1,
+    contract: 'kungfu-buildchain-kfd-1-verify-result',
+    ok: issues.length === 0,
+    issues,
+  };
+}
+
+/**
+ * @returns {Record<string, any>}
+ */
+function readKfd2ClaimsDocument() {
+  if (!fs.existsSync(SDK_KFD2_RELEASE_CLAIMS)) {
+    fail(
+      'SDK packaged KFD-2 release claims not found; run ./kungfu-code kfd:buildchain in the Kungfu checkout before packaging',
+    );
+  }
+  const releaseClaims = /** @type {Record<string, any>} */ (
+    readJson(SDK_KFD2_RELEASE_CLAIMS)
+  );
+  const claims = fs.existsSync(SDK_KFD2_CLAIMS_DIR)
+    ? fs
+        .readdirSync(SDK_KFD2_CLAIMS_DIR)
+        .filter((name) => name.endsWith('.json'))
+        .sort()
+        .map((name) => {
+          const file = path.join(SDK_KFD2_CLAIMS_DIR, name);
+          return {
+            path: path.relative(process.cwd(), file) || '.',
+            sha256: sha256File(file),
+            document: readJson(file),
+          };
+        })
+    : [];
+  return {
+    schemaVersion: 1,
+    contract: 'kungfu-sdk-kfd-2-release-claims',
+    standard: 'kfd-2',
+    metadata: kfd2.resolveMetadata(),
+    source: {
+      releaseClaims: {
+        path: path.relative(process.cwd(), SDK_KFD2_RELEASE_CLAIMS) || '.',
+        sha256: sha256File(SDK_KFD2_RELEASE_CLAIMS),
+      },
+      buildchainClaimArgs: fs.existsSync(SDK_KFD2_CLAIM_ARGS)
+        ? {
+            path: path.relative(process.cwd(), SDK_KFD2_CLAIM_ARGS) || '.',
+            sha256: sha256File(SDK_KFD2_CLAIM_ARGS),
+          }
+        : null,
+    },
+    releaseClaims,
+    buildchainProjection: {
+      claimInput: '--kfd-2-claim-json',
+      claimCount: claims.length,
+      claims,
+    },
+    releaseGate: {
+      passportInput: '--kfd-2-claim-json',
+      finalTrust: 'query-buildchain-release-passport',
+    },
+  };
+}
+
+/**
  * @param {Record<string, any>} registry
  * @param {string} registryPath
  * @param {Record<string, any>} aggregate
@@ -2767,6 +2943,8 @@ function buildKfdStandardsStatus(registry, registryPath, aggregate) {
           'kungfu sdk contract witness --json',
           'kungfu sdk contract audit --json',
           'kungfu sdk kfd 1 witness --json',
+          'kungfu sdk kfd 1 gate --json',
+          'kungfu sdk kfd 1 verify --json',
         ],
         schemaCount: schemas.standards['kfd-1']?.length || 0,
         source: ownKfd.kfd1 || {
@@ -2818,7 +2996,7 @@ function buildKfdStandardsStatus(registry, registryPath, aggregate) {
       },
     },
     support: {
-      'kfd-1': ['status', 'schema', 'witness'],
+      'kfd-1': ['status', 'schema', 'witness', 'gate', 'verify'],
       'kfd-2': [
         'status',
         'schema',
@@ -3079,17 +3257,38 @@ async function kfd(command, args, options) {
       return;
     }
     if (action === 'witness') {
-      const { aggregate } = readKfdUpstreamAggregate();
-      const witness = kfd1SupportWitness(registry, registryPath, aggregate);
+      const witness = readKfd1Witness();
       if (options.json)
         process.stdout.write(`${JSON.stringify(witness, null, 2)}\n`);
       else
         process.stdout.write(
-          `Kungfu KFD-1 witness: ${witness.surfaces.length} surface(s)\n`,
+          `Kungfu KFD-1 witness: ${witness.surfaces?.length || 0} surface(s)\n`,
         );
       return;
     }
-    fail('unknown kfd 1 command (supported: status, schema, witness)');
+    if (action === 'gate') {
+      const gate = buildKfd1ReleaseGate(readKfd1Witness());
+      if (options.json)
+        process.stdout.write(`${JSON.stringify(gate, null, 2)}\n`);
+      else process.stdout.write(`Kungfu KFD-1 gate: ${gate.status}\n`);
+      return;
+    }
+    if (action === 'verify') {
+      const result = buildKfd1VerifyResult(
+        buildKfd1ReleaseGate(readKfd1Witness()),
+      );
+      if (options.json)
+        process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      else
+        process.stdout.write(
+          `Kungfu KFD-1 verify: ${result.ok ? 'ok' : 'failed'}\n`,
+        );
+      if (!result.ok) process.exitCode = 1;
+      return;
+    }
+    fail(
+      'unknown kfd 1 command (supported: status, schema, witness, gate, verify)',
+    );
   }
   if (['2', 'kfd-2'].includes(String(command || '').toLowerCase())) {
     const action = args[0] || 'status';
@@ -3110,11 +3309,13 @@ async function kfd(command, args, options) {
       return;
     }
     if (action === 'claims') {
-      const { aggregate } = readKfdUpstreamAggregate();
-      const claims = kfd2ClaimSummary(aggregate);
+      const claims = readKfd2ClaimsDocument();
       if (options.json)
         process.stdout.write(`${JSON.stringify(claims, null, 2)}\n`);
-      else process.stdout.write('Kungfu KFD-2 claims: packaged\n');
+      else
+        process.stdout.write(
+          `Kungfu KFD-2 claims: ${claims.buildchainProjection.claimCount} packaged claim(s)\n`,
+        );
       return;
     }
     if (action === 'trust-claims') {

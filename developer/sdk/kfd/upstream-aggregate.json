@@ -150,7 +150,11 @@
       "sha256": "sha256:19c8d64633b14b805bebb7f7028ddfb69062564b939dd97cd22fe86b5e93422d",
       "contractCount": 3,
       "witnessCommand": "kungfu sdk contract witness --json",
-      "releasePassportInput": "--kfd-1-witness-json"
+      "gateCommand": "kungfu sdk kfd 1 gate --json",
+      "verifyCommand": "kungfu sdk kfd 1 verify --json",
+      "releasePassportInput": "--kfd-1-witness-json",
+      "releaseGate": "developer/sdk/kfd/kfd-1/release-gate.json",
+      "verifyResult": "developer/sdk/kfd/kfd-1/verify-result.json"
     },
     "kfd2": {
       "status": "supported",
@@ -159,7 +163,9 @@
       "sha256": "sha256:ebf949f99ed5f0d01e9ba22fbc340848144f12f8e126dba586f16bbc786f5952",
       "claimCount": 3,
       "claimsCommand": "kungfu sdk kfd 2 claims --json",
-      "releasePassportInput": "--kfd-2-claim-json"
+      "releasePassportInput": "--kfd-2-claim-json",
+      "releaseClaims": "developer/sdk/kfd/kfd-2/release-claims.json",
+      "buildchainClaimArgs": "developer/sdk/kfd/kfd-2/buildchain-claim-args.txt"
     },
     "kfd3": {
       "status": "supported",
