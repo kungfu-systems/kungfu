@@ -15,6 +15,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
+  devKfdEnv,
   instanceEnv,
   instanceHomeForWorktree,
   parseArgs,
@@ -23,6 +24,7 @@ import {
 } from './product.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
+const ROOT = path.resolve(path.dirname(__filename), '..', '..');
 
 test('parses an isolated instance home for product commands', () => {
   const parsed = parseArgs([
@@ -142,6 +144,44 @@ test('dry-run shows instance env without creating the home', () => {
   } finally {
     rmSync(parent, { recursive: true, force: true });
   }
+});
+
+test('dev product commands expose local KFD metadata to kungfu kfd', () => {
+  const result = spawnSync(
+    process.execPath,
+    [__filename.replace(/\.test\.mjs$/, '.mjs'), 'gui', 'dev', '--dry-run'],
+    { encoding: 'utf8' },
+  );
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(
+    result.stdout,
+    new RegExp(
+      `KUNGFU_SDK_ENTRY=${escapeRegExp(path.join(ROOT, 'developer', 'sdk', 'src', 'sdk.js'))}`,
+    ),
+  );
+  assert.match(
+    result.stdout,
+    new RegExp(
+      `KUNGFU_KFD3_REGISTRY=${escapeRegExp(path.join(ROOT, 'buildchain.kfd3.json'))}`,
+    ),
+  );
+  assert.match(
+    result.stdout,
+    new RegExp(
+      `KUNGFU_KFD_UPSTREAM_AGGREGATE=${escapeRegExp(path.join(ROOT, 'developer', 'sdk', 'kfd', 'upstream-aggregate.json'))}`,
+    ),
+  );
+});
+
+test('dev KFD environment preserves explicit user overrides', () => {
+  const env = devKfdEnv({
+    KUNGFU_SDK_ENTRY: '/custom/sdk.js',
+    KUNGFU_KFD3_REGISTRY: '/custom/kfd3.json',
+    KUNGFU_KFD_UPSTREAM_AGGREGATE: '/custom/upstream.json',
+  });
+  assert.equal(env.KUNGFU_SDK_ENTRY, '/custom/sdk.js');
+  assert.equal(env.KUNGFU_KFD3_REGISTRY, '/custom/kfd3.json');
+  assert.equal(env.KUNGFU_KFD_UPSTREAM_AGGREGATE, '/custom/upstream.json');
 });
 
 function escapeRegExp(value) {

@@ -413,6 +413,12 @@ repository-side evidence generation and release-gate entrypoints. The
 `upstream`/`aggregate` commands expose the SDK-packaged upstream KFD aggregate
 for KFD, libnode, and Buildchain.
 
+For repository dev runs, `./kungfu-code product gui dev` and `./kungfu-code
+product tui dev` inject `KUNGFU_SDK_ENTRY`, `KUNGFU_KFD3_REGISTRY`, and
+`KUNGFU_KFD_UPSTREAM_AGGREGATE` into the launched process. That makes the same
+`kungfu kfd` bridge resolve the working tree's development KFD facts before a
+release artifact exists.
+
 `kfd:buildchain` writes:
 
 ```text

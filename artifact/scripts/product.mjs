@@ -14,6 +14,15 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const ROOT = path.resolve(path.dirname(__filename), '..', '..');
 const isWin = process.platform === 'win32';
+const KFD3_REGISTRY = path.join(ROOT, 'buildchain.kfd3.json');
+const KFD_UPSTREAM_AGGREGATE = path.join(
+  ROOT,
+  'developer',
+  'sdk',
+  'kfd',
+  'upstream-aggregate.json',
+);
+const SDK_ENTRY = path.join(ROOT, 'developer', 'sdk', 'src', 'sdk.js');
 
 function usage(code) {
   process.stdout.write(
@@ -159,6 +168,23 @@ function instanceEnv(instanceHome, baseEnv = process.env) {
   };
 }
 
+function devKfdEnv(baseEnv = process.env) {
+  const env = { ...baseEnv };
+  if (!env.KUNGFU_SDK_ENTRY && existsSync(SDK_ENTRY)) {
+    env.KUNGFU_SDK_ENTRY = SDK_ENTRY;
+  }
+  if (!env.KUNGFU_KFD3_REGISTRY && existsSync(KFD3_REGISTRY)) {
+    env.KUNGFU_KFD3_REGISTRY = KFD3_REGISTRY;
+  }
+  if (
+    !env.KUNGFU_KFD_UPSTREAM_AGGREGATE &&
+    existsSync(KFD_UPSTREAM_AGGREGATE)
+  ) {
+    env.KUNGFU_KFD_UPSTREAM_AGGREGATE = KFD_UPSTREAM_AGGREGATE;
+  }
+  return env;
+}
+
 function parseArgs(argv) {
   const parsed = {
     dryRun: false,
@@ -197,6 +223,9 @@ function envDiff(env) {
     ['KF_HOME', env.KF_HOME],
     ['KF_CONFIG_HOME', env.KF_CONFIG_HOME],
     ['KF_RUNTIME_DIR', env.KF_RUNTIME_DIR],
+    ['KUNGFU_SDK_ENTRY', env.KUNGFU_SDK_ENTRY],
+    ['KUNGFU_KFD3_REGISTRY', env.KUNGFU_KFD3_REGISTRY],
+    ['KUNGFU_KFD_UPSTREAM_AGGREGATE', env.KUNGFU_KFD_UPSTREAM_AGGREGATE],
   ]
     .filter(([, value]) => value)
     .map(([key, value]) => `${key}=${value}`);
@@ -252,7 +281,11 @@ function main(argv = process.argv.slice(2)) {
     : '';
   const instanceHome =
     parsed.instanceHome || process.env.KF_INSTANCE_HOME || autoInstanceHome;
-  const env = instanceEnv(instanceHome);
+  const baseEnv = instanceEnv(instanceHome);
+  const env =
+    verb === 'dev' && (surface === 'gui' || surface === 'tui')
+      ? devKfdEnv(baseEnv)
+      : baseEnv;
 
   if (!surface || !verb) usage(1);
 
@@ -326,6 +359,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
 }
 
 export {
+  devKfdEnv,
   instanceEnv,
   instanceHomeForWorktree,
   isLinkedGitWorktree,

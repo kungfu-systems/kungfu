@@ -243,6 +243,12 @@ evidence generators. `query` reports Kungfu's own declared surfaces, while
 `upstream` and `aggregate` expose the packaged KFD/libnode/Buildchain upstream
 KFD aggregate.
 
+During `./kungfu-code product gui dev` and `./kungfu-code product tui dev`, the
+product wrapper exports `KUNGFU_SDK_ENTRY`, `KUNGFU_KFD3_REGISTRY`, and
+`KUNGFU_KFD_UPSTREAM_AGGREGATE` for the launched dev process. This lets a local
+dev run query the working tree's KFD facts through the normal `kungfu kfd`
+bridge instead of waiting for a packaged release artifact.
+
 The generator writes a tracked Buildchain-facing KFD-3 registry at
 [`buildchain.kfd3.json`](../buildchain.kfd3.json), writes a packaged SDK copy at
 `developer/sdk/kfd/buildchain.kfd3.json`, writes the SDK-packaged upstream
