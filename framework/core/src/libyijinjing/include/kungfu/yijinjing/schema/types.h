@@ -62,6 +62,27 @@ KF_JSON_SERIALIZE_ENUM(EpisodeRefKind, {
 
 inline std::ostream &operator<<(std::ostream &os, EpisodeRefKind t) { return os << int32_t(t); }
 
+enum class SourceKind : int8_t { Local = 1, ImportedBundle = 2, KungfuRuntime = 3, Adapter = 4 };
+
+KF_JSON_SERIALIZE_ENUM(SourceKind, {
+                                       {SourceKind::Local, "Local"},
+                                       {SourceKind::ImportedBundle, "ImportedBundle"},
+                                       {SourceKind::KungfuRuntime, "KungfuRuntime"},
+                                       {SourceKind::Adapter, "Adapter"},
+                                   })
+
+inline std::ostream &operator<<(std::ostream &os, SourceKind t) { return os << int32_t(t); }
+
+enum class SourceVerificationStatus : int8_t { Ok = 1, Degraded = 2, Failed = 3 };
+
+KF_JSON_SERIALIZE_ENUM(SourceVerificationStatus, {
+                                                     {SourceVerificationStatus::Ok, "Ok"},
+                                                     {SourceVerificationStatus::Degraded, "Degraded"},
+                                                     {SourceVerificationStatus::Failed, "Failed"},
+                                                 })
+
+inline std::ostream &operator<<(std::ostream &os, SourceVerificationStatus t) { return os << int32_t(t); }
+
 } // namespace kungfu::yijinjing::enums
 
 namespace kungfu::yijinjing::types {
@@ -297,6 +318,52 @@ KF_DEFINE_PACK_TYPE(                                           //
     (uint64_t, last_frame_uid),                                //
     (uint64_t, frame_count),                                   //
     (array<char, 64>, reason)                                  //
+);
+
+// Storage source-registry records (ADR-0037): Hana-core kernel metadata for the
+// ADR-0018 storage-service source family, written to an append-only yijinjing
+// journal and folded into a current view. JSON is an edge projection only.
+KF_DEFINE_PACK_TYPE(                                                   //
+    SourceRegistered, 10901, PK(source_uid), TIMESTAMP(register_time), //
+    (uint32_t, schema_version),                                        //
+    (uint64_t, source_uid),                                            //
+    (enums::SourceKind, kind),                                         //
+    (uint32_t, location_uid),                                          //
+    (int64_t, register_time),                                          //
+    (array<char, 128>, source_id),                                     //
+    (array<char, 256>, coordinate),                                    //
+    (array<char, 128>, head)                                           //
+);
+
+KF_DEFINE_PACK_TYPE(                                                               //
+    SourceHeadUpdated, 10902, PK(source_uid, update_time), TIMESTAMP(update_time), //
+    (uint32_t, schema_version),                                                    //
+    (uint64_t, source_uid),                                                        //
+    (uint32_t, location_uid),                                                      //
+    (int64_t, update_time),                                                        //
+    (uint64_t, first_frame_uid),                                                   //
+    (uint64_t, last_frame_uid),                                                    //
+    (int64_t, since),                                                              //
+    (int64_t, until),                                                              //
+    (array<char, 128>, head),                                                      //
+    (array<char, 16>, inventory_hash_algo),                                        //
+    (array<char, 128>, inventory_hash)                                             //
+);
+
+KF_DEFINE_PACK_TYPE(                                                                    //
+    AcceptedRangeRecorded, 10903, PK(source_uid, manifest_uid), TIMESTAMP(accept_time), //
+    (uint32_t, schema_version),                                                         //
+    (uint64_t, source_uid),                                                             //
+    (uint64_t, manifest_uid),                                                           //
+    (uint32_t, location_uid),                                                           //
+    (int64_t, accept_time),                                                             //
+    (uint64_t, first_frame_uid),                                                        //
+    (uint64_t, last_frame_uid),                                                         //
+    (int64_t, since),                                                                   //
+    (int64_t, until),                                                                   //
+    (enums::SourceVerificationStatus, status),                                          //
+    (array<char, 128>, source_id),                                                      //
+    (array<char, 128>, manifest_id)                                                     //
 );
 
 KF_DEFINE_PACK_TYPE(                                                   //

@@ -59,7 +59,10 @@ constexpr auto AllTypes = boost::hana::make_map( //
     TYPE_PAIR(EpisodeHeartbeat),                 // 10802
     TYPE_PAIR(EpisodeFrameAttached),             // 10803
     TYPE_PAIR(EpisodeRefAttached),               // 10804
-    TYPE_PAIR(EpisodeClosed)                     // 10805
+    TYPE_PAIR(EpisodeClosed),                    // 10805
+    TYPE_PAIR(SourceRegistered),                 // 10901
+    TYPE_PAIR(SourceHeadUpdated),                // 10902
+    TYPE_PAIR(AcceptedRangeRecorded)             // 10903
 );
 
 constexpr auto AllDataTypes = boost::hana::make_map( //
@@ -92,7 +95,10 @@ constexpr auto AllDataTypes = boost::hana::make_map( //
     TYPE_PAIR(EpisodeHeartbeat),                     // 10802
     TYPE_PAIR(EpisodeFrameAttached),                 // 10803
     TYPE_PAIR(EpisodeRefAttached),                   // 10804
-    TYPE_PAIR(EpisodeClosed)                         // 10805
+    TYPE_PAIR(EpisodeClosed),                        // 10805
+    TYPE_PAIR(SourceRegistered),                     // 10901
+    TYPE_PAIR(SourceHeadUpdated),                    // 10902
+    TYPE_PAIR(AcceptedRangeRecorded)                 // 10903
 );
 
 constexpr auto CorePublicDataTypes = boost::hana::make_map( //
@@ -125,7 +131,10 @@ constexpr auto CorePublicDataTypes = boost::hana::make_map( //
     TYPE_PAIR(EpisodeHeartbeat),                            // 10802
     TYPE_PAIR(EpisodeFrameAttached),                        // 10803
     TYPE_PAIR(EpisodeRefAttached),                          // 10804
-    TYPE_PAIR(EpisodeClosed)                                // 10805
+    TYPE_PAIR(EpisodeClosed),                               // 10805
+    TYPE_PAIR(SourceRegistered),                            // 10901
+    TYPE_PAIR(SourceHeadUpdated),                           // 10902
+    TYPE_PAIR(AcceptedRangeRecorded)                        // 10903
 );
 
 constexpr auto CorePublicProfileDataTypes = boost::hana::make_map( //
