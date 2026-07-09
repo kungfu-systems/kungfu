@@ -52,6 +52,7 @@ A record's **Status** says where it stands:
 | [0034](ADR-0034-yijinjing-episode-manifest-journal.md) | accepted | Episode manifest records live in the yijinjing journal format |
 | [0035](ADR-0035-workspace-local-kungfu-data-home.md) | accepted | Workspace-local `.kungfu` is the default fact ledger home |
 | [0036](ADR-0036-supervisor-and-workspace-master-topology.md) | accepted | Per-user supervisor manages per-data-root masters |
+| [0037](ADR-0037-storage-records-hana-core-kernel-metadata.md) | proposed | ADR-0018 storage-service records are Hana-core kernel metadata; JSON is an edge projection, not the contract |
 
 ## Reading by theme
 
@@ -132,7 +133,13 @@ A record's **Status** says where it stands:
   as the user config home and `KF_HOME` retained as machine fallback), and
   [0036](ADR-0036-supervisor-and-workspace-master-topology.md) (a per-user
   supervisor routes CLI/GUI/TUI entrypoints to per-data-root masters while
-  storage remains daemonless).
+  storage remains daemonless), and
+  [0037](ADR-0037-storage-records-hana-core-kernel-metadata.md) (the ADR-0018
+  storage-service record family — source registry, import/export manifest,
+  fsck report, accepted range — are Hana-core kernel metadata like the Episode
+  manifest of ADR-0034, journal-backed and delta-append; the current JSON
+  service surface and unconsumed heap structs are retired to an edge projection,
+  and payload bodies are opaque content-addressed bytes, not `.json` text).
 - **Cross-cutting principle** — [0009](ADR-0009-load-bearing-self-bootstrap.md)
   (load-bearing self-bootstrap), which also names the general law that
   [`docs/architecture.md` § The build dogfoods the SDK](../../../../docs/architecture.md)
