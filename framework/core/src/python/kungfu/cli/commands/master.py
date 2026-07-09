@@ -19,6 +19,7 @@ def _json(payload):
 
 def _plain_status(payload):
     click.echo(f"status: {payload['status']}")
+    click.echo(f"lifecycle: {payload.get('lifecycle', {}).get('state', '-')}")
     click.echo(f"config: {payload['configHome']}")
     click.echo(f"data root: {payload['dataRoot']}")
     click.echo(f"runtime: {payload['runtimeDir']}")
@@ -33,6 +34,9 @@ def _plain_status(payload):
             f"{payload['master']['pid'] or '-'} "
             f"({'running' if payload['master']['running'] else 'stopped'})"
         )
+    warnings = payload.get("lifecycle", {}).get("warnings") or []
+    if warnings:
+        click.echo(f"warnings: {', '.join(warnings)}")
 
 
 @kfc.group(

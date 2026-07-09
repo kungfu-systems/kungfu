@@ -209,10 +209,15 @@ type MasterStatusPayload = {
   configHome?: string;
   dataRoot?: string;
   runtimeDir?: string;
+  lifecycle?: {
+    state?: string;
+    healthy?: boolean;
+    warnings?: string[];
+  };
   supervisor?: { pid?: number | null; running?: boolean };
   master?: { pid?: number | null; running?: boolean };
-  route?: { routeId?: string; registered?: boolean };
-  routes?: { count?: number };
+  route?: { routeId?: string; registered?: boolean; stale?: boolean };
+  routes?: { count?: number; staleCount?: number };
 };
 
 type MasterStatusResult = {
@@ -225,6 +230,11 @@ type MasterStatusResult = {
 function masterStatusText(status: MasterStatusResult | null): string {
   if (!status) return 'master checking';
   if (!status.ok || !status.payload) return 'master unavailable';
+  const lifecycle = status.payload.lifecycle?.state || status.payload.status;
+  if (lifecycle === 'stale-route') return 'master stale route';
+  if (lifecycle === 'degraded') return 'master degraded';
+  if (lifecycle === 'dead') return 'master dead pid';
+  if (lifecycle === 'orphan-master') return 'master orphan';
   const supervisor = status.payload.supervisor?.running;
   const master = status.payload.master?.running;
   if (supervisor && master) return 'master live';
@@ -236,6 +246,9 @@ function masterStatusText(status: MasterStatusResult | null): string {
 function supervisorStatusText(status: MasterStatusResult | null): string {
   if (!status) return 'supervisor checking';
   if (!status.ok || !status.payload) return 'supervisor unavailable';
+  const lifecycle = status.payload.lifecycle?.state || status.payload.status;
+  if (lifecycle === 'dead') return 'supervisor dead pid';
+  if (lifecycle === 'stale-route') return 'supervisor stale route';
   return status.payload.supervisor?.running
     ? 'supervisor live'
     : 'supervisor stopped';
@@ -248,12 +261,15 @@ function statusTooltip(status: MasterStatusResult | null): string {
   const payload = status.payload;
   return [
     `Status: ${payload.status || '-'}`,
+    `Lifecycle: ${payload.lifecycle?.state || '-'}`,
+    `Warnings: ${payload.lifecycle?.warnings?.join(', ') || '-'}`,
     `Config: ${payload.configHome || '-'}`,
     `Data root: ${payload.dataRoot || '-'}`,
     `Runtime: ${payload.runtimeDir || '-'}`,
     `Route: ${payload.route?.routeId || '-'}${
       payload.route?.registered ? ' registered' : ' not registered'
-    }`,
+    }${payload.route?.stale ? ' stale' : ''}`,
+    `Stale routes: ${String(payload.routes?.staleCount ?? 0)}`,
   ].join('\n');
 }
 
@@ -994,9 +1010,17 @@ function App() {
   const masterRunning =
     masterStatus?.payload?.master?.running === true ||
     (!masterStatus?.ok && masterLive);
-  const masterSeverity: StatusBarSeverity = masterRunning
+  const lifecycleState =
+    masterStatus?.payload?.lifecycle?.state || masterStatus?.payload?.status;
+  const lifecycleHealthy = masterStatus?.payload?.lifecycle?.healthy === true;
+  const lifecycleDegraded =
+    lifecycleState === 'stale-route' ||
+    lifecycleState === 'degraded' ||
+    lifecycleState === 'dead' ||
+    lifecycleState === 'orphan-master';
+  const masterSeverity: StatusBarSeverity = lifecycleHealthy
     ? 'ok'
-    : supervisorRunning
+    : lifecycleDegraded || supervisorRunning
       ? 'warning'
       : 'error';
   const systemStatusItems: StatusBarItem[] = [
@@ -1004,7 +1028,12 @@ function App() {
       id: 'system.supervisor',
       text: supervisorStatusText(masterStatus),
       icon: supervisorRunning ? '●' : '○',
-      severity: supervisorRunning ? 'ok' : 'warning',
+      severity:
+        lifecycleState === 'dead'
+          ? 'error'
+          : supervisorRunning
+            ? 'ok'
+            : 'warning',
       side: 'left',
       priority: -110,
       tooltip: statusTooltip(masterStatus),

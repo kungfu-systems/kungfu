@@ -283,10 +283,15 @@ type MasterStatusPayload = {
   configHome?: string;
   dataRoot?: string;
   runtimeDir?: string;
+  lifecycle?: {
+    state?: string;
+    healthy?: boolean;
+    warnings?: string[];
+  };
   supervisor?: { pid?: number | null; running?: boolean };
   master?: { pid?: number | null; running?: boolean };
-  route?: { routeId?: string; registered?: boolean };
-  routes?: { count?: number };
+  route?: { routeId?: string; registered?: boolean; stale?: boolean };
+  routes?: { count?: number; staleCount?: number };
 };
 
 type MasterStatusResult = {
@@ -347,6 +352,11 @@ function ensureMasterForGuiStartup() {
 
 function masterStatusLabel(result = lastMasterStatus ?? readMasterStatus()) {
   if (!result.ok || !result.payload) return 'Master: unavailable';
+  const lifecycle = result.payload.lifecycle?.state || result.payload.status;
+  if (lifecycle === 'stale-route') return 'Master: stale route';
+  if (lifecycle === 'degraded') return 'Master: degraded';
+  if (lifecycle === 'dead') return 'Master: dead pid';
+  if (lifecycle === 'orphan-master') return 'Master: orphan';
   const supervisor = result.payload.supervisor?.running;
   const master = result.payload.master?.running;
   if (supervisor && master) return 'Master: running';
@@ -451,7 +461,9 @@ function buildTrayMenu() {
   const payload = status.payload;
   const statusDetail =
     status.ok && payload
-      ? `Data root: ${payload.dataRoot || '-'}`
+      ? `Lifecycle: ${payload.lifecycle?.state || payload.status || '-'} · Data root: ${
+          payload.dataRoot || '-'
+        }`
       : status.error || 'Status unavailable';
   tray.setContextMenu(
     Menu.buildFromTemplate([

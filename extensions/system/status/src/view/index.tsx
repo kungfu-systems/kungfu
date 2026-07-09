@@ -33,10 +33,20 @@ function SystemStatusView({
         configHome?: string;
         dataRoot?: string;
         runtimeDir?: string;
+        lifecycle?: {
+          state?: string;
+          healthy?: boolean;
+          warnings?: string[];
+        };
         supervisor?: { running?: boolean; pid?: number | null };
         master?: { running?: boolean; pid?: number | null };
-        route?: { routeId?: string; registered?: boolean };
-        routes?: { count?: number };
+        route?: {
+          routeId?: string;
+          registered?: boolean;
+          stale?: boolean;
+          freshness?: { ageSeconds?: number | null; ttlSeconds?: number };
+        };
+        routes?: { count?: number; staleCount?: number };
       }
     | null
     | undefined;
@@ -61,6 +71,22 @@ function SystemStatusView({
             </span>
           </div>
           <div>service status: {masterPayload?.status ?? 'unknown'}</div>
+          <div>
+            lifecycle:{' '}
+            <span
+              style={{
+                color: masterPayload?.lifecycle?.healthy
+                  ? '#4ec9b0'
+                  : '#dcdcaa',
+              }}
+            >
+              {masterPayload?.lifecycle?.state ?? 'unknown'}
+            </span>
+          </div>
+          <div>
+            lifecycle warnings:{' '}
+            {masterPayload?.lifecycle?.warnings?.join(', ') || '-'}
+          </div>
           <div>core: {String(info.buildInfo?.version ?? 'unknown')}</div>
           <div>kungfu: {info.kungfuVersion || 'unavailable'}</div>
           <div>
@@ -74,8 +100,18 @@ function SystemStatusView({
           <div>
             route: {masterPayload?.route?.routeId ?? 'unknown'} ·{' '}
             {masterPayload?.route?.registered ? 'registered' : 'not registered'}
+            {masterPayload?.route?.stale ? ' · stale' : ''}
           </div>
-          <div>routes: {String(masterPayload?.routes?.count ?? 'unknown')}</div>
+          <div>
+            route lease age:{' '}
+            {masterPayload?.route?.freshness?.ageSeconds == null
+              ? 'unknown'
+              : `${masterPayload.route.freshness.ageSeconds.toFixed(1)}s`}
+          </div>
+          <div>
+            routes: {String(masterPayload?.routes?.count ?? 'unknown')} · stale:{' '}
+            {String(masterPayload?.routes?.staleCount ?? 0)}
+          </div>
           <div style={{ color: info.ok ? '#4ec9b0' : '#f48771' }}>
             binding: {info.message}
           </div>

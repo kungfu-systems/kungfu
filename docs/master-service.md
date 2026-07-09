@@ -100,6 +100,28 @@ The `status --json` command reads process-control state and verifies whether
 the recorded PIDs are still alive. Runtime-state files are not durable facts and
 must not be treated as the source of truth.
 
+The route registry also carries a narrow v1 lifecycle lease for each workspace
+master route:
+
+- `leaseTtlSeconds` is the freshness window for the route heartbeat.
+- `leaseUpdatedAt` is refreshed when a route is registered or re-registered.
+- `heartbeatAt`, `supervisorPid`, and `masterPid` are refreshed by the live
+  supervisor loop while it actively owns that route.
+- `status --json` reports `lifecycle.state`, `lifecycle.healthy`,
+  `lifecycle.warnings`, `route.freshness`, `route.stale`, and
+  `routes.staleCount`.
+
+The lifecycle state is deterministic from the route lease and pid probes:
+
+- `running`: supervisor and workspace master are both live and the route is
+  fresh.
+- `degraded`: the supervisor is live but the workspace master is not yet live.
+- `stale-route`: the route heartbeat is older than its lease TTL.
+- `orphan-master`: the workspace master is live without a live supervisor.
+- `dead`: at least one recorded pid file points to a dead process.
+- `registered`: the route is registered but not currently live.
+- `stopped`: no live supervisor or master is recorded.
+
 ## Service Plans
 
 `kungfu master service plan --json` prints the platform-specific file that
@@ -122,6 +144,11 @@ intentionally left as an explicit user operation after the file is installed.
   running, active workspace masters may remain alive.
 - `kungfu master ensure` registers the current data root in the supervisor
   route registry and starts or reuses the corresponding workspace master.
+- Before starting or reusing a master, `kungfu master ensure` performs a narrow
+  repair pass: dead pid files are removed, stale routes are refreshed, and an
+  orphan workspace master is terminated before the supervisor is started so the
+  supervisor does not duplicate it. The JSON result includes a `repairs` array
+  when this pass changed or attempted to repair local process-control state.
 - `kungfu master stop` stops the per-user supervisor and its supervised
   workspace masters.
 - `kungfu master service uninstall --execute` removes the user service file; it
@@ -157,4 +184,6 @@ The shell bottom status bar and the System Status view read the same
 `kungfu master status --json` payload through the Electron main process. They
 surface supervisor liveness, workspace master liveness, config home, data root,
 runtime directory, and route registration without introducing a second process
-control path.
+control path. Lifecycle health comes from the core status payload, not from GUI
+pid or route reimplementation, so stale and degraded states stay consistent
+between CLI, tray, status bar, and the System Status view.

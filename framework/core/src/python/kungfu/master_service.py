@@ -27,6 +27,7 @@ SCHEMA_RESULT = "kungfu.master-service.result/v1"
 SCHEMA_ROUTES = "kungfu.master-service.routes/v1"
 SERVICE_ID = "tech.kungfu.supervisor"
 SERVICE_NAME = "Kungfu Supervisor"
+ROUTE_LEASE_TTL_SECONDS = 30.0
 
 
 def _now() -> float:
@@ -57,6 +58,12 @@ def _is_pid_running(pid: int | None) -> bool:
         return True
     except OSError:
         return False
+
+
+def _pid_state(pid: int | None) -> str:
+    if not pid or pid <= 0:
+        return "missing"
+    return "running" if _is_pid_running(pid) else "dead"
 
 
 def _signal_pid(pid: int, sig: int) -> None:
@@ -122,13 +129,20 @@ def route_id(home: str, runtime_dir: str) -> str:
 def route_record(home: str, runtime_dir: str) -> dict[str, Any]:
     home = resolve_runtime_home(home)
     runtime_dir = resolve_runtime_dir(home, runtime_dir)
+    now = _now()
     return {
         "routeId": route_id(home, runtime_dir),
         "dataRoot": home,
         "home": home,
         "runtimeDir": runtime_dir,
         "desired": True,
-        "updatedAt": _now(),
+        "leaseTtlSeconds": ROUTE_LEASE_TTL_SECONDS,
+        "leaseUpdatedAt": now,
+        "heartbeatAt": None,
+        "supervisorPid": None,
+        "masterPid": None,
+        "createdAt": now,
+        "updatedAt": now,
     }
 
 
@@ -273,9 +287,153 @@ def upsert_route(
 ) -> dict[str, Any]:
     route = route_record(home, runtime_dir)
     payload = read_routes(config_home)
+    previous = payload["routes"].get(route["routeId"])
+    if isinstance(previous, dict):
+        route["createdAt"] = previous.get("createdAt", route["createdAt"])
     payload["routes"][route["routeId"]] = route
     write_routes(config_home, payload)
     return route
+
+
+def touch_route_heartbeat(
+    config_home: str | None,
+    route_id_: str,
+    *,
+    supervisor_pid: int | None,
+    master_pid: int | None,
+) -> dict[str, Any] | None:
+    payload = read_routes(config_home)
+    route = payload["routes"].get(route_id_)
+    if not isinstance(route, dict):
+        return None
+    now = _now()
+    route["heartbeatAt"] = now
+    route["leaseTtlSeconds"] = route.get("leaseTtlSeconds", ROUTE_LEASE_TTL_SECONDS)
+    route["supervisorPid"] = supervisor_pid
+    route["masterPid"] = master_pid
+    route["updatedAt"] = now
+    payload["routes"][route_id_] = route
+    write_routes(config_home, payload)
+    return route
+
+
+def _route_freshness(
+    route: dict[str, Any] | None,
+    *,
+    registered: bool,
+    now: float,
+) -> dict[str, Any]:
+    if not registered or not isinstance(route, dict):
+        return {
+            "state": "unregistered",
+            "stale": False,
+            "ageSeconds": None,
+            "expiresAt": None,
+            "ttlSeconds": ROUTE_LEASE_TTL_SECONDS,
+        }
+    ttl = float(route.get("leaseTtlSeconds") or ROUTE_LEASE_TTL_SECONDS)
+    heartbeat = route.get("heartbeatAt")
+    lease_updated = route.get("leaseUpdatedAt")
+    anchor = heartbeat if isinstance(heartbeat, (int, float)) else lease_updated
+    if not isinstance(anchor, (int, float)):
+        return {
+            "state": "pending",
+            "stale": False,
+            "ageSeconds": None,
+            "expiresAt": None,
+            "ttlSeconds": ttl,
+        }
+    age = max(0.0, now - float(anchor))
+    stale = age > ttl
+    return {
+        "state": "stale" if stale else "fresh",
+        "stale": stale,
+        "ageSeconds": age,
+        "expiresAt": float(anchor) + ttl,
+        "ttlSeconds": ttl,
+    }
+
+
+def _lifecycle_status(
+    *,
+    registered: bool,
+    route_freshness: dict[str, Any],
+    supervisor_pid: int | None,
+    supervisor_running: bool,
+    master_pid: int | None,
+    master_running: bool,
+) -> dict[str, Any]:
+    warnings: list[str] = []
+    supervisor_state = _pid_state(supervisor_pid)
+    master_state = _pid_state(master_pid)
+    route_stale = bool(route_freshness.get("stale"))
+    if route_stale:
+        warnings.append("route-stale")
+    if supervisor_state == "dead":
+        warnings.append("supervisor-dead-pid")
+    if master_state == "dead":
+        warnings.append("master-dead-pid")
+
+    state = "stopped"
+    if route_stale:
+        state = "stale-route"
+    elif master_running and not supervisor_running:
+        state = "orphan-master"
+        warnings.append("orphan-master")
+    elif supervisor_running and master_running:
+        state = "running"
+    elif supervisor_running and not master_running:
+        state = "degraded"
+        warnings.append("master-not-running")
+    elif supervisor_state == "dead" or master_state == "dead":
+        state = "dead"
+    elif registered:
+        state = "registered"
+
+    healthy = state == "running"
+    return {
+        "state": state,
+        "healthy": healthy,
+        "warnings": warnings,
+        "supervisorProcess": supervisor_state,
+        "masterProcess": master_state,
+        "routeFreshness": route_freshness,
+    }
+
+
+def _terminate_and_wait(pid: int, timeout: float = 2.0) -> bool:
+    _terminate_pid(pid)
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if not _is_pid_running(pid):
+            return True
+        time.sleep(0.1)
+    return not _is_pid_running(pid)
+
+
+def repair_route_state(
+    home: str,
+    runtime_dir: str,
+    config_home: str | None = None,
+) -> list[str]:
+    current = route_status(home, runtime_dir, config_home)
+    repairs: list[str] = []
+    master_pid = current["master"]["pid"]
+    if current["lifecycle"]["supervisorProcess"] == "dead":
+        unlink_if_exists(supervisor_pid_path(config_home))
+        repairs.append("removed-dead-supervisor-pid")
+    if current["lifecycle"]["masterProcess"] == "dead":
+        unlink_if_exists(master_pid_path(runtime_dir))
+        repairs.append("removed-dead-master-pid")
+    if current["lifecycle"]["state"] == "orphan-master" and master_pid:
+        if _terminate_and_wait(master_pid):
+            unlink_if_exists(master_pid_path(runtime_dir))
+            repairs.append("terminated-orphan-master")
+        else:
+            repairs.append("orphan-master-still-running")
+    if current["route"].get("freshness", {}).get("stale"):
+        repairs.append("refreshed-stale-route")
+    return repairs
 
 
 class Master(yjj.master):
@@ -345,16 +503,28 @@ def route_status(
     state = _json_read(state_path(runtime_dir))
     supervisor_state = _json_read(supervisor_state_path(config_home))
     routes = read_routes(config_home)
+    registered_route = routes["routes"].get(route["routeId"])
+    registered = isinstance(registered_route, dict)
     supervisor_running = _is_pid_running(supervisor_pid)
     master_running = _is_pid_running(master_pid)
-    status_name = "running" if supervisor_running else "stopped"
-    if master_running and not supervisor_running:
-        status_name = "orphan-master"
-    elif supervisor_running and not master_running:
-        status_name = "supervisor-running"
+    now = _now()
+    route_freshness = _route_freshness(
+        registered_route if registered else None,
+        registered=registered,
+        now=now,
+    )
+    lifecycle = _lifecycle_status(
+        registered=registered,
+        route_freshness=route_freshness,
+        supervisor_pid=supervisor_pid,
+        supervisor_running=supervisor_running,
+        master_pid=master_pid,
+        master_running=master_running,
+    )
+    route_payload = registered_route if registered else route
     return {
         "schema": SCHEMA_STATUS,
-        "status": status_name,
+        "status": lifecycle["state"],
         "configHome": config_home,
         "dataRoot": home,
         "home": home,
@@ -362,24 +532,38 @@ def route_status(
         "supervisorStateDir": str(supervisor_state_dir(config_home)),
         "stateDir": str(state_dir(runtime_dir)),
         "route": {
-            **route,
-            "registered": route["routeId"] in routes["routes"],
+            **route_payload,
+            "registered": registered,
+            "freshness": route_freshness,
+            "stale": route_freshness["stale"],
         },
+        "lifecycle": lifecycle,
         "supervisor": {
             "pid": supervisor_pid,
             "running": supervisor_running,
+            "processState": lifecycle["supervisorProcess"],
             "pidFile": str(supervisor_pid_path(config_home)),
             "log": str(supervisor_log_path(config_home)),
         },
         "master": {
             "pid": master_pid,
             "running": master_running,
+            "processState": lifecycle["masterProcess"],
             "pidFile": str(master_pid_path(runtime_dir)),
             "log": str(master_log_path(runtime_dir)),
         },
         "routes": {
             "path": str(routes_path(config_home)),
             "count": len(routes["routes"]),
+            "staleCount": sum(
+                1
+                for item in routes["routes"].values()
+                if _route_freshness(
+                    item if isinstance(item, dict) else None,
+                    registered=isinstance(item, dict),
+                    now=now,
+                )["stale"]
+            ),
         },
         "lastSupervisorState": supervisor_state,
         "lastState": state,
@@ -433,6 +617,12 @@ def run_supervisor(
             for route_id_, route in desired_routes.items():
                 child = children.get(route_id_)
                 if child and child.poll() is None:
+                    touch_route_heartbeat(
+                        config_home,
+                        route_id_,
+                        supervisor_pid=os.getpid(),
+                        master_pid=child.pid,
+                    )
                     continue
                 route_home = str(route["home"])
                 route_runtime_dir = str(route["runtimeDir"])
@@ -454,6 +644,12 @@ def run_supervisor(
                     )
                 children[route_id_] = child
                 write_pid(master_pid_path(route_runtime_dir), child.pid)
+                touch_route_heartbeat(
+                    config_home,
+                    route_id_,
+                    supervisor_pid=os.getpid(),
+                    master_pid=child.pid,
+                )
             _json_write(
                 supervisor_state_path(config_home),
                 {
@@ -510,11 +706,12 @@ def ensure_master(
     config_home = resolve_config_home(config_home)
     home = resolve_runtime_home(home)
     runtime_dir = resolve_runtime_dir(home, runtime_dir)
+    repairs = repair_route_state(home, runtime_dir, config_home)
     route = upsert_route(config_home, home, runtime_dir)
     current = route_status(home, runtime_dir, config_home)
     if current["supervisor"]["running"]:
         return _wait_for_master(
-            home, runtime_dir, config_home, changed=False, route=route
+            home, runtime_dir, config_home, changed=False, route=route, repairs=repairs
         )
     supervisor_state_dir(config_home).mkdir(parents=True, exist_ok=True)
     command = supervisor_command(
@@ -546,6 +743,7 @@ def ensure_master(
         changed=True,
         command=command,
         route=route,
+        repairs=repairs,
     )
 
 
@@ -556,13 +754,20 @@ def _wait_for_master(
     *,
     changed: bool,
     route: dict[str, Any],
+    repairs: list[str] | None = None,
     command: list[str] | None = None,
 ) -> dict[str, Any]:
     deadline = time.time() + 5
     while time.time() < deadline:
         current = route_status(home, runtime_dir, config_home)
         if current["supervisor"]["running"] and current["master"]["running"]:
-            payload = {**current, "changed": changed, "route": route}
+            payload = {
+                **current,
+                "changed": changed,
+                "route": {**route, **current.get("route", {})},
+            }
+            if repairs is not None:
+                payload["repairs"] = repairs
             if command:
                 payload["command"] = command
             return payload
@@ -570,8 +775,10 @@ def _wait_for_master(
     payload = {
         **route_status(home, runtime_dir, config_home),
         "changed": changed,
-        "route": route,
     }
+    payload["route"] = {**route, **payload.get("route", {})}
+    if repairs is not None:
+        payload["repairs"] = repairs
     if command:
         payload["command"] = command
     return payload
