@@ -304,6 +304,16 @@
       "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
     },
     {
+      "id": "kungfu.storage.repair",
+      "surface": "cli",
+      "name": "kungfu storage repair --scope episode --episode-id <id> --plan --dry-run --json",
+      "purpose": "Convert degraded storage and Episode fsck diagnostics into machine-readable repair candidates without mutating facts.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
       "id": "kungfu.storage.rebuild-index",
       "surface": "cli",
       "name": "kungfu storage rebuild-index --scope all --dry-run --json",

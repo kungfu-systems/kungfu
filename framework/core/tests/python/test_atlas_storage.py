@@ -364,6 +364,7 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
     assert set(capabilities["operations"]) == {
         "status",
         "fsck",
+        "repair_plan",
         "export_bundle",
         "import_bundle",
         "rebuild_index",
@@ -489,6 +490,7 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
     storage_service.status(runtime_dir, source_id="local-synth")
     storage_service.layout(runtime_dir)
     storage_service.fsck(runtime_dir, source_id="local-synth")
+    storage_service.repair_plan(runtime_dir, source_id="local-synth", dry_run=True)
     storage_service.rebuild_index(runtime_dir, source_id="local-synth", dry_run=True)
     storage_service.rebuild_index(runtime_dir, source_id="local-synth", dry_run=False)
     storage_service.gc_plan(runtime_dir, dry_run=True)
@@ -516,6 +518,7 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
         "status",
         "layout",
         "fsck",
+        "repair_plan",
         "rebuild_index",
         "gc_plan",
         "compact_plan",
@@ -709,6 +712,37 @@ def test_episode_fsck_reports_degraded_causal_dependencies(tmp_path):
     assert bundle["degraded"] is True
     assert bundle["causal_graph"]["degraded"] is True
     assert bundle["dependency_count"] == len(bundle["dependencies"])
+
+    imported = storage_service.import_bundle(tmp_path / "imported-runtime", bundle)
+    assert imported["schema"] == "kungfu.storage.episode-import/v1"
+    assert imported["scope"] == "episode"
+    assert imported["accepted"] is False
+    assert imported["degraded"] is True
+    assert imported["causal_graph"]["degraded"] is True
+    assert imported["dependency_count"] == len(bundle["dependencies"])
+
+    repair = storage_service.repair_plan(runtime_dir, episode_id=7, dry_run=True)
+    assert repair["schema"] == "kungfu.storage.repair-plan/v1"
+    assert repair["scope"] == "episode"
+    assert repair["episode_id"] == 7
+    assert repair["dry_run"] is True
+    assert repair["plan_only"] is True
+    assert repair["status"] == "degraded"
+    assert repair["degraded"] is True
+    assert repair["candidate_count"] >= 4
+    candidate_codes = {candidate["code"] for candidate in repair["candidates"]}
+    assert "repair_episode_dependency" in candidate_codes
+    assert "repair_episode_root_trigger_frame" in candidate_codes
+    assert "repair_episode_trigger_frame" in candidate_codes
+    assert "repair_episode_payload_ref" in candidate_codes
+    assert {candidate["kind"] for candidate in repair["candidates"]} >= {
+        "episode",
+        "frame",
+        "payload",
+    }
+    assert all(
+        candidate["safe_to_apply"] is False for candidate in repair["candidates"]
+    )
 
 
 def test_payload_fsck_verifies_versioned_frame_checksums(tmp_path):
@@ -1200,6 +1234,15 @@ def test_storage_fsck_reports_degraded_status_for_recorded_payload_states(tmp_pa
     }
     assert withheld["note:note-missing"] == ("missing", False)
     assert withheld["note:note-redacted"] == ("redacted", True)
+
+    repair = storage_service.repair_plan(
+        runtime_dir, source_id="degraded-synth", dry_run=True
+    )
+    assert repair["schema"] == "kungfu.storage.repair-plan/v1"
+    assert repair["status"] == "degraded"
+    assert repair["candidate_count"] == 1
+    assert repair["candidates"][0]["code"] == "repair_source_payload"
+    assert repair["candidates"][0]["subject"] == "note:note-missing"
 
     # A fully present source verifies as ok with an ok verdict.
     healthy_dir = tmp_path / "healthy"

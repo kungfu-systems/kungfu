@@ -316,6 +316,17 @@ status while keeping `ok: true` when the manifest itself is readable. This gives
 repair/sync code a precise target without making the Episode disappear from
 inspection or export.
 
+`kungfu.storage.repair-plan/v1` is the first repair-facing projection over that
+diagnostic set. It maps the Episode warnings to read-only candidates such as
+`repair_episode_dependency`, `repair_episode_trigger_frame`, and
+`repair_episode_payload_ref`. Each candidate carries the original issue code,
+target kind, role, Episode/frame/payload id fields, and a suggested action. The
+plan is not authority and does not mutate storage; authority remains the
+yijinjing Episode manifest journal plus the referenced payload/frame evidence.
+Episode bundle import v1 similarly validates `kungfu.storage.episode-bundle/v1`
+and returns the folded causal graph, dependencies, and degraded evidence without
+materializing missing data into the local manifest journal.
+
 ## Migration Plan
 
 The migration can be staged without pretending the physical layout is already

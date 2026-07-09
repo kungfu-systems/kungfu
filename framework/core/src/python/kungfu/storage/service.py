@@ -26,6 +26,16 @@ def _u64(value: int | None) -> str:
     return str(value or 0)
 
 
+def _binding_json(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {key: _binding_json(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_binding_json(item) for item in value]
+    if isinstance(value, int) and not isinstance(value, bool) and value > 2**63 - 1:
+        return str(value)
+    return value
+
+
 def service_capabilities() -> dict[str, Any]:
     return dict(_runtime().storage_service_capabilities())
 
@@ -382,6 +392,28 @@ def fsck(
                 "scope": scope,
                 "source_id": source_id,
                 "episode_id": _u64(episode_id),
+            },
+        )
+    )
+
+
+def repair_plan(
+    runtime_dir: str | Path,
+    *,
+    source_id: str | None = None,
+    episode_id: int | None = None,
+    dry_run: bool = True,
+) -> dict[str, Any]:
+    scope = "episode" if episode_id else ("source" if source_id else "all")
+    return dict(
+        _runtime().run_storage_service_operation(
+            "repair_plan",
+            str(runtime_dir),
+            {
+                "scope": scope,
+                "source_id": source_id,
+                "episode_id": _u64(episode_id),
+                "dry_run": dry_run,
             },
         )
     )
@@ -805,15 +837,21 @@ def import_bundle(
     verify: bool = True,
 ) -> dict[str, Any]:
     source_id = str(bundle.get("source_id") or "")
+    scope = (
+        "episode"
+        if bundle.get("schema") == "kungfu.storage.episode-bundle/v1"
+        else "source"
+    )
     return dict(
         _runtime().run_storage_service_operation(
             "import_bundle",
             str(runtime_dir),
             {
-                "scope": "source" if source_id else "all",
+                "scope": scope if source_id or scope == "episode" else "all",
                 "source_id": source_id or None,
+                "episode_id": _u64(bundle.get("episode_id")),
                 "verify": verify,
-                "bundle": bundle,
+                "bundle": _binding_json(bundle),
             },
         )
     )

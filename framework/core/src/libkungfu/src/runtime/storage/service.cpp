@@ -1481,6 +1481,130 @@ nlohmann::json episode_export_bundle_impl(const storage_service_options &options
           {"dependency_count", dependencies.size()}};
 }
 
+nlohmann::json fsck_impl(const storage_service_options &options);
+
+nlohmann::json repair_candidate_common(const nlohmann::json &warning, const std::string &code, const std::string &kind,
+                                       const std::string &role, const std::string &action,
+                                       nlohmann::json required_inputs) {
+  nlohmann::json candidate = {
+      {"code", code},           {"issue_code", text_or(warning, "code")},
+      {"kind", kind},           {"role", role},
+      {"action", action},       {"suggested_action", action},
+      {"safe_to_apply", false}, {"requires", std::move(required_inputs)},
+      {"warning", warning},
+  };
+  for (const auto *field : {"episode_id", "dependency_episode_id", "frame_uid", "dependent_frame_uid", "ref_id",
+                            "ref_hash", "source_id", "subject", "state", "path", "payload_hash"}) {
+    if (warning.contains(field) && !warning.at(field).is_null()) {
+      candidate[field] = warning.at(field);
+    }
+  }
+  return candidate;
+}
+
+nlohmann::json repair_candidate_from_warning(const nlohmann::json &warning) {
+  const auto code = text_or(warning, "code");
+  if (code == "episode_dependency_missing") {
+    return repair_candidate_common(warning, "repair_episode_dependency", "episode", text_or(warning, "role", "ref"),
+                                   "fetch_episode", nlohmann::json::array({"source_or_episode_bundle"}));
+  }
+  if (code == "episode_root_trigger_frame_missing") {
+    return repair_candidate_common(warning, "repair_episode_root_trigger_frame", "frame", "root_trigger",
+                                   "fetch_frame_or_declare_external_input",
+                                   nlohmann::json::array({"source_or_episode_bundle"}));
+  }
+  if (code == "episode_trigger_frame_missing") {
+    return repair_candidate_common(warning, "repair_episode_trigger_frame", "frame", "trigger",
+                                   "fetch_frame_or_declare_external_input",
+                                   nlohmann::json::array({"source_or_episode_bundle"}));
+  }
+  if (code == "episode_payload_ref_missing") {
+    return repair_candidate_common(warning, "repair_episode_payload_ref", "payload", "payload_ref",
+                                   "fetch_payload_by_hash", nlohmann::json::array({"payload_store_or_episode_bundle"}));
+  }
+  if (code == "payload_not_present") {
+    if (bool_or(warning, "intentional", true)) {
+      return nullptr;
+    }
+    return repair_candidate_common(warning, "repair_source_payload", "payload", "source_record",
+                                   "fetch_payload_by_hash", nlohmann::json::array({"source_or_bundle"}));
+  }
+  return nullptr;
+}
+
+nlohmann::json repair_plan_impl(const storage_service_options &options) {
+  if (!options.dry_run) {
+    throw std::invalid_argument("storage_repair_requires_dry_run");
+  }
+  const auto report = fsck_impl(options);
+  nlohmann::json candidates = nlohmann::json::array();
+  nlohmann::json unsupported = nlohmann::json::array();
+  for (const auto &warning : array_or_empty(report, "warnings")) {
+    const auto candidate = repair_candidate_from_warning(warning);
+    if (candidate.is_null()) {
+      unsupported.push_back(warning);
+    } else {
+      candidates.push_back(candidate);
+    }
+  }
+  return {{"ok", report.value("ok", false)},
+          {"schema", "kungfu.storage.repair-plan/v1"},
+          {"scope", report.value("scope", options.scope.empty() ? "all" : options.scope)},
+          {"source_id", report.contains("source_id") ? report.at("source_id") : nlohmann::json(nullptr)},
+          {"episode_id", report.contains("episode_id") ? report.at("episode_id") : nlohmann::json(nullptr)},
+          {"dry_run", true},
+          {"plan_only", true},
+          {"status", report.value("status", report.value("ok", false) ? "ok" : "failed")},
+          {"degraded", report.value("degraded", false)},
+          {"candidate_count", candidates.size()},
+          {"candidates", candidates},
+          {"unsupported", unsupported},
+          {"fsck", report},
+          {"notes", nlohmann::json::array({
+                        "Repair plan v1 is read-only and never fetches, deletes, compacts, or mutates storage.",
+                        "Candidates describe missing facts that a future importer or remote sync source may provide.",
+                    })}};
+}
+
+nlohmann::json episode_import_bundle_impl(const storage_service_options &options) {
+  if (!options.bundle.is_object() || text_or(options.bundle, "schema") != "kungfu.storage.episode-bundle/v1") {
+    throw std::invalid_argument("episode_bundle_invalid");
+  }
+  const auto manifest = object_or_empty(options.bundle, "manifest");
+  if (manifest.empty()) {
+    throw std::invalid_argument("episode_bundle_manifest_missing");
+  }
+  const auto causal_graph = object_or_empty(options.bundle, "causal_graph");
+  if (causal_graph.empty()) {
+    throw std::invalid_argument("episode_bundle_causal_graph_missing");
+  }
+  const auto records = array_or_empty(options.bundle, "records");
+  const auto frames = array_or_empty(options.bundle, "frames");
+  const auto refs = array_or_empty(options.bundle, "refs");
+  const auto dependencies = array_or_empty(options.bundle, "dependencies");
+  return {{"ok", true},
+          {"schema", "kungfu.storage.episode-import/v1"},
+          {"scope", "episode"},
+          {"episode_id", uint64_or(options.bundle, "episode_id", uint64_or(manifest, "episode_id"))},
+          {"dry_run", true},
+          {"accepted", false},
+          {"status", "validated"},
+          {"authority", "yijinjing-journal"},
+          {"degraded", bool_or(options.bundle, "degraded", bool_or(causal_graph, "degraded", false))},
+          {"manifest", manifest},
+          {"causal_graph", causal_graph},
+          {"dependencies", dependencies},
+          {"records", records.size()},
+          {"frames", frames.size()},
+          {"refs", refs.size()},
+          {"dependency_count", dependencies.size()},
+          {"notes",
+           nlohmann::json::array({
+               "Episode bundle import v1 validates and preserves causal evidence without writing the local manifest.",
+               "A later repair/import stage may materialize missing frames, payloads, or dependent Episodes.",
+           })}};
+}
+
 nlohmann::json replace_string_subtree(nlohmann::json value, const std::string &needle, const std::string &replacement) {
   if (needle.empty()) {
     return value;
@@ -2131,6 +2255,10 @@ public:
     return fsck_impl(options);
   }
 
+  [[nodiscard]] nlohmann::json repair_plan(const storage_service_options &options) const override {
+    return repair_plan_impl(options);
+  }
+
   [[nodiscard]] nlohmann::json export_bundle(const storage_service_options &options) const override {
     if (options.scope == "episode") {
       return episode_export_bundle_impl(options);
@@ -2178,6 +2306,9 @@ public:
   [[nodiscard]] nlohmann::json import_bundle(const storage_service_options &options) const override {
     if (!options.bundle.is_object()) {
       throw std::invalid_argument("bundle_manifest_missing");
+    }
+    if (options.scope == "episode" || text_or(options.bundle, "schema") == "kungfu.storage.episode-bundle/v1") {
+      return episode_import_bundle_impl(options);
     }
     const auto manifest = object_or_empty(options.bundle, "manifest");
     if (manifest.empty()) {
@@ -2356,6 +2487,7 @@ std::vector<std::string> storage_operation_names() {
   return {
       storage_operation_name(storage_operation::Status),
       storage_operation_name(storage_operation::Fsck),
+      storage_operation_name(storage_operation::RepairPlan),
       storage_operation_name(storage_operation::ExportBundle),
       storage_operation_name(storage_operation::ImportBundle),
       storage_operation_name(storage_operation::RebuildIndex),
@@ -2381,6 +2513,8 @@ std::string storage_operation_name(storage_operation operation) {
     return "status";
   case storage_operation::Fsck:
     return "fsck";
+  case storage_operation::RepairPlan:
+    return "repair_plan";
   case storage_operation::ExportBundle:
     return "export_bundle";
   case storage_operation::ImportBundle:
@@ -2423,6 +2557,9 @@ storage_operation parse_storage_operation(const std::string &operation) {
   }
   if (operation == "fsck") {
     return storage_operation::Fsck;
+  }
+  if (operation == "repair_plan") {
+    return storage_operation::RepairPlan;
   }
   if (operation == "export_bundle") {
     return storage_operation::ExportBundle;
@@ -2534,6 +2671,8 @@ nlohmann::json run_storage_service_operation(const std::string &operation, const
     return storage_service_instance().status(parsed_options);
   case storage_operation::Fsck:
     return storage_service_instance().fsck(parsed_options);
+  case storage_operation::RepairPlan:
+    return storage_service_instance().repair_plan(parsed_options);
   case storage_operation::ExportBundle:
     return storage_service_instance().export_bundle(parsed_options);
   case storage_operation::ImportBundle:

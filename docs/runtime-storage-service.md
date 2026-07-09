@@ -96,8 +96,8 @@ backend choices replaceable: a backend can change without changing the
 The first `libkungfu` provider slice exposes
 `kungfu::runtime::storage_service_api::storage_service` and the
 `kungfu.runtime.storage-service/v1` operation surface for `status`, `fsck`,
-`export_bundle`, `import_bundle`, `rebuild_index`, `gc_plan`, `compact_plan`,
-`verify_sync`, and read-only `query`. The current default backend is a content-addressed file
+`repair_plan`, `export_bundle`, `import_bundle`, `rebuild_index`, `gc_plan`,
+`compact_plan`, `verify_sync`, and read-only `query`. The current default backend is a content-addressed file
 provider implemented in C++ under the runtime service. A second C++ provider
 stores the same source registry, manifests, and payload bodies in RocksDB behind
 the identical service operations. Python storage commands are now compatibility
@@ -267,6 +267,13 @@ kungfu source fsck atlas-local --since 20d --json
 `fsck` reports degraded facts without rewriting them. A missing payload is not
 repaired by pretending it was absent; it is reported as missing until an import,
 repair, or redaction decision changes that state.
+
+`storage repair --plan --dry-run` is the read-only follow-up to fsck. It turns
+known degraded diagnostics into `kungfu.storage.repair-plan/v1` candidates with
+stable issue code, target kind, role, target id/hash fields, and suggested
+action. V1 deliberately does not fetch remote data, delete local data, compact
+providers, or mutate manifests. It only gives a future importer or remote sync
+source precise missing Episode, frame, or payload targets.
 
 ## Import And Export
 
@@ -488,6 +495,8 @@ kungfu storage status --scope all --json
 kungfu storage status --scope source --source <source-id> --json
 kungfu storage fsck --scope all --json
 kungfu storage fsck --scope source --source <source-id> --json
+kungfu storage repair --scope episode --episode-id <episode-id> \
+  --plan --dry-run --json
 kungfu storage export --scope source --source <source-id> \
   --format jsonl --out source.jsonl --json
 kungfu storage export --scope source --source <source-id> \
@@ -518,7 +527,7 @@ This slice includes a non-Atlas synthetic fixture that exercises manifest
 construction, accepted ranges, payload inventory, source-scoped fsck,
 range-limited export, bundle creation, and bundle import. It deliberately does
 not implement remote channel transport, conflict policy, destructive GC,
-compaction, repair, or a SQLite/RocksDB provider.
+automatic repair, or destructive compaction.
 
 ### Episode-Owned Storage Slice V1
 
@@ -534,6 +543,12 @@ selector in the runtime storage service:
   emits `kungfu.storage.episode-bundle/v1`, a folded export/debug bundle with
   the Episode manifest summary, manifest records, frame attachments, refs, and
   declared Episode dependencies.
+- `storage repair --scope episode --episode-id <id> --plan --dry-run --json`
+  maps degraded Episode causal graph warnings to read-only repair candidates.
+- `storage import --from episode.kfbundle.json --json` validates
+  `kungfu.storage.episode-bundle/v1` and preserves its causal graph,
+  dependencies, and degraded evidence in the import result. V1 does not yet
+  materialize that bundle into the local Episode manifest journal.
 
 This slice still does not move event mmap pages into Episode-owned physical
 directories. Frame membership is authoritative through

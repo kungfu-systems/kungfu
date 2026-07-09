@@ -170,6 +170,12 @@
       "purpose": "Verify generic storage manifests, payload hashes, source registry drift, and orphan payload candidates."
     },
     {
+      "apiId": "kungfu.storage.repair",
+      "name": "kungfu storage repair --scope episode --episode-id <id> --plan --dry-run --json",
+      "maturity": "experimental",
+      "purpose": "Convert degraded storage and Episode fsck diagnostics into machine-readable repair candidates without mutating facts."
+    },
+    {
       "apiId": "kungfu.storage.rebuild-index",
       "name": "kungfu storage rebuild-index --scope all --dry-run --json",
       "maturity": "stable",

@@ -10,8 +10,8 @@
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "e696672e2ec55508d7b5777dee4f547bcccccdde9bed12d10962fa66c858d095",
-    "digest": "sha256:db19c80c37a6fd3283e8dea4ac8912f0e6b1185cb7813a61b18b44d6538e48fe"
+    "sha256": "2b182dcd56f312201cc2db008eadfa2e452d0e042a82b631acf02535499a0d89",
+    "digest": "sha256:86af49982c7b19d05e5e77de6b1f0869cfb20fe309258a8a4c0c37e5527f89cb"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -28,7 +28,7 @@
     },
     "digest": "sha256:aaa0a429cd6211f6469bf16255172c0fcc26259da290ae7858704ca732d849e0"
   },
-  "collaborationInterfaceDigest": "sha256:e0c157538be41d310e8f812855f734a87102e8bed91e6b698392e7b7f41a11f0",
+  "collaborationInterfaceDigest": "sha256:d09798cf600bc7e6f9b0ae0f714ad9aec00aa27c01af989e145b1814fd4dd132",
   "exposedSurfaces": [
     {
       "id": "kungfu.agent",
@@ -1004,6 +1004,26 @@
       "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
       "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
       "maturity": "stable",
+      "declaration": {
+        "owner": "kungfu",
+        "source": "scripts/buildchain-kfd-evidence.mjs",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+      }
+    },
+    {
+      "id": "kungfu.storage.repair",
+      "name": "kungfu storage repair --scope episode --episode-id <id> --plan --dry-run --json",
+      "kind": "cli",
+      "participantProfile": "agent-or-developer",
+      "state": "declared",
+      "availability": "shipped",
+      "visibility": "public",
+      "participantFacing": true,
+      "public": true,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "maturity": "experimental",
       "declaration": {
         "owner": "kungfu",
         "source": "scripts/buildchain-kfd-evidence.mjs",

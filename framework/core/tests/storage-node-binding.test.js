@@ -114,6 +114,11 @@ function selectedNodeResults(runtimeDir) {
       scope: 'source',
       source_id: 'node-synth',
     }),
+    repair: kungfu.runStorageServiceOperation('repair_plan', runtimeDir, {
+      scope: 'source',
+      source_id: 'node-synth',
+      dry_run: true,
+    }),
     exported: kungfu.exportStorageRecords(runtimeDir, 'node-synth', {
       since: '2026-07-09T00:00:00Z',
     }),
@@ -185,6 +190,7 @@ out = {
         config_home=str(Path(runtime_dir).parent / "config"),
     ),
     "fsck": service.fsck(runtime_dir, source_id="node-synth"),
+    "repair": service.repair_plan(runtime_dir, source_id="node-synth", dry_run=True),
     "exported": service.export_records(
         runtime_dir,
         source_id="node-synth",
@@ -311,6 +317,11 @@ for (const providerCase of providerCases) {
               : 'stateless-filesystem',
           );
           assert.equal(nodeResults.fsck.ok, true);
+          assert.equal(
+            nodeResults.repair.schema,
+            'kungfu.storage.repair-plan/v1',
+          );
+          assert.equal(nodeResults.repair.candidate_count, 0);
           assert.equal(nodeResults.bundle.records.length, 2);
           assert.equal(nodeResults.exported.length, 1);
           assert.equal(nodeResults.query.row_count, 2);

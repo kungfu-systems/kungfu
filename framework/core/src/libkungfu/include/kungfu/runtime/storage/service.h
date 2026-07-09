@@ -16,6 +16,7 @@ inline constexpr const char *RUNTIME_STORAGE_SERVICE_OWNER = "libkungfu";
 enum class storage_operation {
   Status,
   Fsck,
+  RepairPlan,
   ExportBundle,
   ImportBundle,
   RebuildIndex,
@@ -60,6 +61,8 @@ public:
   [[nodiscard]] virtual nlohmann::json status(const storage_service_options &options) const = 0;
 
   [[nodiscard]] virtual nlohmann::json fsck(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json repair_plan(const storage_service_options &options) const = 0;
 
   [[nodiscard]] virtual nlohmann::json export_bundle(const storage_service_options &options) const = 0;
 

@@ -136,6 +136,55 @@ def fsck(ctx, scope, storage_source_id, episode_id, as_json):
         sys.exit(1)
 
 
+@storage.command(help="plan read-only repairs for degraded runtime storage")
+@click.option("--scope", type=click.Choice(["source", "episode", "all"]), required=True)
+@click.option("--source", "storage_source_id", type=str, default=None)
+@click.option("--episode-id", type=int, default=0)
+@click.option("--plan", "plan_only", is_flag=True, help="emit a read-only repair plan")
+@click.option(
+    "--dry-run",
+    "dry_run",
+    is_flag=True,
+    help="required in v1; do not fetch, delete, compact, or mutate storage",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@storage_command_context
+def repair(ctx, scope, storage_source_id, episode_id, plan_only, dry_run, as_json):
+    from kungfu.storage import service
+
+    if not plan_only:
+        click.echo("[storage] repair v1 requires --plan", err=True)
+        sys.exit(2)
+    if not dry_run:
+        click.echo("[storage] repair v1 requires --dry-run", err=True)
+        sys.exit(2)
+    if scope == "source":
+        _require_source(storage_source_id)
+    if scope == "episode" and not episode_id:
+        click.echo("[storage] --episode-id is required for --scope episode", err=True)
+        sys.exit(2)
+    result = service.repair_plan(
+        ctx.runtime_dir,
+        source_id=storage_source_id if scope == "source" else None,
+        episode_id=episode_id if scope == "episode" else None,
+        dry_run=dry_run,
+    )
+    if as_json:
+        _echo_json(result)
+        return
+    click.echo(
+        f"[storage] repair plan {scope}: "
+        f"{result.get('candidate_count', 0)} candidates, status={result.get('status')}"
+    )
+    for candidate in result.get("candidates", []):
+        click.echo(
+            "  candidate: "
+            f"{candidate.get('code')} -> {candidate.get('suggested_action')}"
+        )
+    if not result["ok"]:
+        sys.exit(1)
+
+
 @storage.command(help="export a storage scope")
 @click.option(
     "--scope", type=click.Choice(["atlas", "source", "episode"]), required=True
