@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
@@ -58,11 +59,24 @@ struct accepted_range_options {
   yijinjing::enums::SourceVerificationStatus status = yijinjing::enums::SourceVerificationStatus::Ok;
 };
 
+// Typed POD records folded off the journal, in append order. The store stays
+// the journal authority: higher layers (e.g. the libkungfu SQLite projection)
+// read POD records through here rather than re-opening the journal themselves.
+struct source_registry_journal_records {
+  std::vector<yijinjing::types::SourceRegistered> registered = {};
+  std::vector<yijinjing::types::SourceHeadUpdated> head_updates = {};
+  std::vector<yijinjing::types::AcceptedRangeRecorded> accepted_ranges = {};
+};
+
 class source_registry_store {
 public:
   explicit source_registry_store(std::string runtime_dir);
 
   [[nodiscard]] std::string runtime_dir() const { return runtime_dir_; }
+
+  // Read the journal back as typed POD records (append order). Authority for
+  // rebuildable projections such as the SQLite cache.
+  [[nodiscard]] source_registry_journal_records read_typed_records() const;
 
   // Append-only writers. Each writes one POD record to the journal and returns
   // its JSON edge projection.

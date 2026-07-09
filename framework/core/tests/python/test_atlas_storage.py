@@ -389,6 +389,7 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
         "source_list",
         "source_inspect",
         "source_registry_fsck",
+        "source_registry_rebuild",
     }
 
     request = runtime.make_storage_service_request(
@@ -1532,3 +1533,120 @@ def test_source_registry_fsck_flags_dangling_head_without_registration(tmp_path)
     assert fsck["ok"] is False
     assert fsck["status"] == "failed"
     assert any(err["code"] == "source_registration_missing" for err in fsck["errors"])
+
+
+def test_source_registry_sqlite_projection_rebuilds_from_journal(tmp_path):
+    # ADR-0037 slice 2: the source-registry journal projects to a rebuildable
+    # SQLite cache via the compile-time Hana -> SQLite path. The journal stays
+    # the authority; the projection is derived and fsck verifies it against the
+    # journal fold.
+    runtime = kungfu.__binding__.runtime
+    runtime_dir = str(tmp_path)
+
+    runtime.run_storage_service_operation(
+        "source_register",
+        runtime_dir,
+        {"source_id": "atlas-local", "kind": "adapter", "register_time": 1000},
+    )
+    runtime.run_storage_service_operation(
+        "source_register",
+        runtime_dir,
+        {"source_id": "runtime-b", "kind": "kungfu_runtime", "register_time": 1001},
+    )
+    runtime.run_storage_service_operation(
+        "source_update_head",
+        runtime_dir,
+        {"source_id": "atlas-local", "head": "h1", "update_time": 2000},
+    )
+    runtime.run_storage_service_operation(
+        "source_record_accepted_range",
+        runtime_dir,
+        {"source_id": "atlas-local", "manifest_id": "m1", "accept_time": 3000},
+    )
+
+    projection_db = tmp_path / "storage" / "projections" / "source-registry.sqlite"
+
+    # Before any rebuild, fsck honestly reports the projection is absent (records
+    # exist but no projection is built) without failing the journal check.
+    pre = runtime.run_storage_service_operation("source_registry_fsck", runtime_dir, {})
+    assert pre["ok"]
+    assert pre["projection"]["projection_present"] is False
+    assert pre["projection"]["status"] == "absent"
+    assert not projection_db.exists()
+
+    rebuilt = runtime.run_storage_service_operation(
+        "source_registry_rebuild", runtime_dir, {}
+    )
+    assert rebuilt["ok"]
+    assert rebuilt["authority"] == "yijinjing-journal"
+    assert rebuilt["rows"] == {
+        "source_registered": 2,
+        "source_head_updated": 1,
+        "accepted_range_recorded": 1,
+    }
+    assert projection_db.exists()
+
+    # The projection is a real, query-able SQLite database with typed tables
+    # derived straight from the POD records. The kind column holds the POD enum
+    # value (SourceKind::Adapter == 4, KungfuRuntime == 3), not the JSON edge
+    # name — the projection mirrors the kernel record, the same way the profile /
+    # session / state caches store their enums as integers.
+    with sqlite3.connect(projection_db) as conn:
+        registered = conn.execute(
+            "SELECT source_id, kind FROM SourceRegistered ORDER BY source_id"
+        ).fetchall()
+    assert registered == [("atlas-local", 4), ("runtime-b", 3)]
+
+    post = runtime.run_storage_service_operation(
+        "source_registry_fsck", runtime_dir, {}
+    )
+    assert post["ok"]
+    assert post["status"] == "ok"
+    assert post["projection"]["projection_present"] is True
+    assert post["projection"]["status"] == "ok"
+    assert post["projection"]["rows"] == {
+        "source_registered": 2,
+        "source_head_updated": 1,
+        "accepted_range_recorded": 1,
+    }
+
+
+def test_source_registry_projection_fsck_detects_drift(tmp_path):
+    # A projection that has fallen behind the journal is degraded, not failed:
+    # the journal is intact, the derived cache just needs a rebuild.
+    runtime = kungfu.__binding__.runtime
+    runtime_dir = str(tmp_path)
+
+    runtime.run_storage_service_operation(
+        "source_register",
+        runtime_dir,
+        {"source_id": "s1", "register_time": 1000},
+    )
+    runtime.run_storage_service_operation("source_registry_rebuild", runtime_dir, {})
+
+    # New journal record after the rebuild: projection now lags the journal.
+    runtime.run_storage_service_operation(
+        "source_register",
+        runtime_dir,
+        {"source_id": "s2", "register_time": 1001},
+    )
+
+    fsck = runtime.run_storage_service_operation(
+        "source_registry_fsck", runtime_dir, {}
+    )
+    assert fsck["ok"] is False
+    assert fsck["status"] == "degraded"
+    projection = fsck["projection"]
+    assert projection["status"] == "degraded"
+    assert projection["degraded"] is True
+    drift = {row["table"]: row for row in projection["drift"]}
+    assert drift["source_registered"]["projection_rows"] == 1
+    assert drift["source_registered"]["journal_distinct"] == 2
+
+    # Rebuilding reconciles the projection back to the journal.
+    runtime.run_storage_service_operation("source_registry_rebuild", runtime_dir, {})
+    healed = runtime.run_storage_service_operation(
+        "source_registry_fsck", runtime_dir, {}
+    )
+    assert healed["ok"]
+    assert healed["projection"]["status"] == "ok"

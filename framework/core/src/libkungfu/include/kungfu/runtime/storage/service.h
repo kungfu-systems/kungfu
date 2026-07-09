@@ -41,6 +41,7 @@ enum class storage_operation {
   SourceList,
   SourceInspect,
   SourceRegistryFsck,
+  SourceRegistryRebuild,
 };
 
 struct storage_service_options {
@@ -119,6 +120,8 @@ public:
   [[nodiscard]] virtual nlohmann::json source_inspect(const storage_service_options &options) const = 0;
 
   [[nodiscard]] virtual nlohmann::json source_registry_fsck(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json source_registry_rebuild(const storage_service_options &options) const = 0;
 };
 
 [[nodiscard]] std::vector<std::string> storage_operation_names();

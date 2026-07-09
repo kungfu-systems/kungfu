@@ -167,17 +167,27 @@ or a sibling catalog-plane journal, not diverge into two incompatible layouts.
   `source_record_accepted_range` / `source_list` / `source_inspect` /
   `source_registry_fsck`).
 - Project it to SQLite via the Hana → SQLite path; store any body as
-  content-addressed bytes. **(pending, slice 2)** — the source-registry slice
-  folds directly from the journal (as the Episode manifest slice does); the
-  SQLite projection and content-addressed payload bodies are the next sub-slice
-  and reuse the existing Hana → SQLite path, not new machinery.
+  content-addressed bytes. **(SQLite projection done, slice 2)** — the
+  source-registry records project to a rebuildable SQLite cache through
+  `cache::make_storage_ptr` over `SourceRegistryDataTypes` (the same compile-time
+  Hana closed-set → SQLite column path the profile / session / state caches use,
+  not the hand-written raw-SQL projection that serves the JSON manifest layer and
+  not the `.bfbs` reflection projector). `source_registry_rebuild` replays the
+  journal into the typed tables; the journal stays the authority and the
+  projection is fully rebuildable. **Content-addressed payload bodies remain
+  deferred**: source-registry records carry no large payload bodies, so the
+  `.json`-envelope → raw-bytes change belongs with the payload / import-manifest
+  slice, not here.
 - Keep `storage status` / `storage export` as the JSON edge projection over the
-  record; `fsck` verifies journal + payload + projection. **(done, slice 1 for
+  record; `fsck` verifies journal + payload + projection. **(done, slice 1–2 for
   the source registry)** — `source_list` / `source_inspect` return JSON edge
-  projections labelled `authority: yijinjing-journal`, and `source_registry_fsck`
+  projections labelled `authority: yijinjing-journal`; `source_registry_fsck`
   reopens journal frames to check fold consistency (missing / duplicate
-  registration, dangling head). Payload/projection verification arrives with
-  slice 2.
+  registration, dangling head) **and now also verifies the SQLite projection
+  against the journal fold** — projection drift is reported as `degraded` (the
+  journal is intact, the derived cache just needs a rebuild), a missing
+  projection as a distinct honest state. Payload verification arrives with the
+  payload slice.
 - Then migrate the remaining storage-service records and retire the
   JSON-as-contract path and the unconsumed heap structs / `provider.h`.
   **(later)** — import manifest, export bundle, and channel cursor still use the

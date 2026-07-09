@@ -165,6 +165,16 @@ constexpr auto StateDataTypes = boost::hana::make_map( //
     TYPE_PAIR(TimeKeyValue)                            // 10602
 );
 
+// ADR-0037: the source-registry kernel records project to SQLite through the
+// same compile-time Hana closed-set -> SQLite column path (make_storage_ptr)
+// used by the profile / session / state caches, not the hand-written raw-SQL
+// projection that serves the JSON manifest layer.
+constexpr auto SourceRegistryDataTypes = boost::hana::make_map( //
+    TYPE_PAIR(SourceRegistered),                                // 10901
+    TYPE_PAIR(SourceHeadUpdated),                               // 10902
+    TYPE_PAIR(AcceptedRangeRecorded)                            // 10903
+);
+
 constexpr auto StaticDataTypes = boost::hana::make_map();
 constexpr auto StatisticDataTypes = boost::hana::make_map();
 

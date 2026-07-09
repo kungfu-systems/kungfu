@@ -15,6 +15,7 @@
 #include <utility>
 #include <vector>
 
+#include <kungfu/runtime/storage/source_registry_projection.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
 #include <kungfu/yijinjing/storage/episode_manifest.h>
 #include <kungfu/yijinjing/storage/generic_service.h>
@@ -3117,7 +3118,26 @@ public:
   }
 
   [[nodiscard]] nlohmann::json source_registry_fsck(const storage_service_options &options) const override {
-    return source_registry_store(options).fsck(text_or(options.operation_options, "source_id", options.source_id));
+    const auto source_id = text_or(options.operation_options, "source_id", options.source_id);
+    auto report = source_registry_store(options).fsck(source_id);
+    // ADR-0037: fsck verifies journal + projection. The journal is the
+    // authority; a rebuildable projection that has drifted from it is degraded,
+    // not failed.
+    auto projection = source_registry_projection(options.runtime_dir).verify();
+    report["projection"] = projection;
+    const bool journal_ok = report.value("ok", false);
+    const bool projection_degraded = projection.value("status", std::string("ok")) == "degraded";
+    report["ok"] = journal_ok && !projection_degraded;
+    if (!journal_ok) {
+      report["status"] = "failed";
+    } else if (projection_degraded) {
+      report["status"] = "degraded";
+    }
+    return report;
+  }
+
+  [[nodiscard]] nlohmann::json source_registry_rebuild(const storage_service_options &options) const override {
+    return source_registry_projection(options.runtime_dir).rebuild();
   }
 };
 
@@ -3174,6 +3194,7 @@ std::vector<std::string> storage_operation_names() {
       storage_operation_name(storage_operation::SourceList),
       storage_operation_name(storage_operation::SourceInspect),
       storage_operation_name(storage_operation::SourceRegistryFsck),
+      storage_operation_name(storage_operation::SourceRegistryRebuild),
   };
 }
 
@@ -3233,6 +3254,8 @@ std::string storage_operation_name(storage_operation operation) {
     return "source_inspect";
   case storage_operation::SourceRegistryFsck:
     return "source_registry_fsck";
+  case storage_operation::SourceRegistryRebuild:
+    return "source_registry_rebuild";
   }
   throw std::invalid_argument("unknown storage operation");
 }
@@ -3318,6 +3341,9 @@ storage_operation parse_storage_operation(const std::string &operation) {
   }
   if (operation == "source_registry_fsck") {
     return storage_operation::SourceRegistryFsck;
+  }
+  if (operation == "source_registry_rebuild") {
+    return storage_operation::SourceRegistryRebuild;
   }
   throw std::invalid_argument("unsupported storage operation: " + operation);
 }
@@ -3431,6 +3457,8 @@ nlohmann::json run_storage_service_operation(const std::string &operation, const
     return storage_service_instance().source_inspect(parsed_options);
   case storage_operation::SourceRegistryFsck:
     return storage_service_instance().source_registry_fsck(parsed_options);
+  case storage_operation::SourceRegistryRebuild:
+    return storage_service_instance().source_registry_rebuild(parsed_options);
   }
   throw std::invalid_argument("unknown storage operation");
 }

@@ -217,6 +217,34 @@ std::map<uint64_t, source_fold> fold_records(const std::vector<nlohmann::json> &
 
 source_registry_store::source_registry_store(std::string runtime_dir) : runtime_dir_(std::move(runtime_dir)) {}
 
+source_registry_journal_records source_registry_store::read_typed_records() const {
+  source_registry_journal_records records;
+  const auto location = registry_location(runtime_dir_);
+  if (location->locator->list_page_id(location, location::PUBLIC).empty()) {
+    return records;
+  }
+  auto reader = std::make_shared<kungfu::yijinjing::journal::reader>(true, false, std::make_shared<bus>(false));
+  reader->join(location, location::PUBLIC, 0);
+  while (reader->data_available()) {
+    const auto frame = reader->current_frame();
+    switch (frame->carrier_type()) {
+    case SourceRegistered::tag:
+      records.registered.push_back(frame->data<SourceRegistered>());
+      break;
+    case SourceHeadUpdated::tag:
+      records.head_updates.push_back(frame->data<SourceHeadUpdated>());
+      break;
+    case AcceptedRangeRecorded::tag:
+      records.accepted_ranges.push_back(frame->data<AcceptedRangeRecorded>());
+      break;
+    default:
+      break;
+    }
+    reader->next();
+  }
+  return records;
+}
+
 nlohmann::json source_registry_store::register_source(const source_register_options &options) const {
   if (options.source_id.empty()) {
     throw std::invalid_argument("source_id is required");

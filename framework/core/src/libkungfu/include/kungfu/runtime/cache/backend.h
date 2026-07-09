@@ -80,6 +80,7 @@ constexpr auto make_storage_ptr = [](const std::string &db_file, const auto &typ
 using ProfileStoragePtr = decltype(make_storage_ptr(std::string(), yijinjing::ProfileDataTypes));
 using SessionStoragePtr = decltype(make_storage_ptr(std::string(), yijinjing::SessionDataTypes));
 using StateStoragePtr = decltype(make_storage_ptr(std::string(), yijinjing::StateDataTypes));
+using SourceRegistryStoragePtr = decltype(make_storage_ptr(std::string(), yijinjing::SourceRegistryDataTypes));
 
 template <typename, typename = void, bool = true> struct time_spec;
 
