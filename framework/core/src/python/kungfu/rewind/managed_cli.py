@@ -239,7 +239,7 @@ def run_and_report(
         {
             "mode": "LIVE",
             "role": "SYSTEM",
-            "group": "rewind",
+            "namespace": "rewind",
             "name": run_id,
             "dest": 0,
         },

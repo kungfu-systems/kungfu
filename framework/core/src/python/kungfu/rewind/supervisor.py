@@ -221,7 +221,7 @@ class Supervisor:
                 {
                     "mode": "LIVE",
                     "role": "SYSTEM",
-                    "group": "rewind",
+                    "namespace": "rewind",
                     "name": self.run_id,
                     "dest": PUBLIC_DEST,
                 },

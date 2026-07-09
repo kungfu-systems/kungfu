@@ -25,10 +25,10 @@ def _install_fake_pykungfu():
     fake.runtime = types.SimpleNamespace(
         master=_FakeMaster,
         locator=lambda runtime_dir: {"runtime_dir": runtime_dir},
-        location=lambda mode, role, group, name, locator: {
+        location=lambda mode, role, namespace, name, locator: {
             "mode": mode,
             "role": role,
-            "group": group,
+            "namespace": namespace,
             "name": name,
             "locator": locator,
         },

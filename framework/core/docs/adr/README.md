@@ -53,6 +53,7 @@ A record's **Status** says where it stands:
 | [0035](ADR-0035-workspace-local-kungfu-data-home.md) | accepted | Workspace-local `.kungfu` is the default fact ledger home |
 | [0036](ADR-0036-supervisor-and-workspace-master-topology.md) | accepted | Per-user supervisor manages per-data-root masters |
 | [0037](ADR-0037-storage-records-hana-core-kernel-metadata.md) | proposed | ADR-0018 storage-service records are Hana-core kernel metadata; JSON is an edge projection, not the contract |
+| [0038](ADR-0038-location-namespace-terminology.md) | accepted | Location middle identity segment is namespace |
 
 ## Reading by theme
 

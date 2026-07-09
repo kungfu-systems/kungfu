@@ -75,7 +75,7 @@ Session &session_builder::open_session(const location_ptr &source_location, int6
   if (pair.second) {
     session.location_uid = source_location->uid;
     session.role = source_location->role;
-    session.group = source_location->group;
+    session.namespace_ = source_location->namespace_;
     session.name = source_location->name;
     session.mode = source_location->mode;
   }
@@ -143,11 +143,11 @@ void session_builder::rebuild_index_db() {
   for (const auto &location : locator->list_locations("*", "*", "*", "*")) {
     SPDLOG_TRACE("investigating journal for [{:08x}] {}", location->uid, location->uname);
 
-    if (location->role != location_role::SYSTEM or location->group != "master") {
+    if (location->role != location_role::SYSTEM or location->namespace_ != "master") {
       formatstr_to_locations.emplace(fmt::format("{:08x}", location->uid), location);
     }
 
-    if (location->role == location_role::SYSTEM and location->group == "master" and location->name == "master") {
+    if (location->role == location_role::SYSTEM and location->namespace_ == "master" and location->name == "master") {
       formatstr_to_locations.emplace(location->name, location);
     }
 
@@ -171,9 +171,9 @@ void session_builder::rebuild_index_db() {
         open_session(formatstr_to_locations.at(uid_str), frame->gen_time());
       } else if (frame->carrier_type() == SessionEnd::tag) {
         close_session(formatstr_to_locations.at(uid_str), frame->gen_time());
-      } else if (location->role != location_role::SYSTEM or location->group != "master") {
+      } else if (location->role != location_role::SYSTEM or location->namespace_ != "master") {
         update_session(frame);
-      } else if (location->role == location_role::SYSTEM and location->group == "master" and
+      } else if (location->role == location_role::SYSTEM and location->namespace_ == "master" and
                  location->name == "master") {
         update_session(frame);
       }

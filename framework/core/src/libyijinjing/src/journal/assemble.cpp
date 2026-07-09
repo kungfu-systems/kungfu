@@ -40,12 +40,12 @@ void copy_sink::put(const data::location_ptr &location, uint32_t dest_id, const 
 }
 
 assemble::assemble(const data::locator_ptr &locator, const std::string &mode, const std::string &role,
-                   const std::string &group, const std::string &name)
-    : mode_(mode), role_(role), group_(group), name_(name), publisher_(std::make_shared<noop_publisher>()) {
+                   const std::string &namespace_, const std::string &name)
+    : mode_(mode), role_(role), namespace_(namespace_), name_(name), publisher_(std::make_shared<noop_publisher>()) {
   locators_.push_back(locator);
   readers_.push_back(std::make_shared<reader>(true, false, std::make_shared<bus>(false)));
   auto reader = readers_.back();
-  for (auto &location : locator->list_locations(role, group, name, mode)) {
+  for (auto &location : locator->list_locations(role, namespace_, name, mode)) {
     for (auto dest_id : locator->list_location_dest(location)) {
       reader->join(location, dest_id, 0);
     }
@@ -54,13 +54,13 @@ assemble::assemble(const data::locator_ptr &locator, const std::string &mode, co
 }
 
 assemble::assemble(const std::vector<data::locator_ptr> &locators, const std::string &mode, const std::string &role,
-                   const std::string &group, const std::string &name)
-    : mode_(mode), role_(role), group_(group), name_(name), publisher_(std::make_shared<noop_publisher>()) {
+                   const std::string &namespace_, const std::string &name)
+    : mode_(mode), role_(role), namespace_(namespace_), name_(name), publisher_(std::make_shared<noop_publisher>()) {
   for (auto &locator : locators) {
     locators_.push_back(locator);
     readers_.push_back(std::make_shared<reader>(true, false, std::make_shared<bus>(false)));
     auto reader = readers_.back();
-    for (auto &location : locator->list_locations(role, group, name, mode)) {
+    for (auto &location : locator->list_locations(role, namespace_, name, mode)) {
       for (auto dest_id : locator->list_location_dest(location)) {
         reader->join(location, dest_id, 0);
       }
@@ -71,7 +71,7 @@ assemble::assemble(const std::vector<data::locator_ptr> &locators, const std::st
 
 assemble::assemble(const data::location_ptr &source_location, uint32_t dest_id, uint32_t assemble_mode,
                    int64_t from_time)
-    : mode_("*"), role_("*"), group_("*"), name_("*"), publisher_(std::make_shared<noop_publisher>()) {
+    : mode_("*"), role_("*"), namespace_("*"), name_("*"), publisher_(std::make_shared<noop_publisher>()) {
   from_time_ = from_time;
   locators_.clear();
   readers_.clear();
@@ -116,15 +116,15 @@ assemble::assemble(const data::location_ptr &source_location, uint32_t dest_id, 
 }
 
 assemble assemble::operator+(assemble &other) {
-  if (mode_ != other.mode_ or role_ != other.role_ or group_ != other.group_ or name_ != other.name_) {
-    auto msg = fmt::format("assemble incompatible: {}/{}/{}/{}, {}/{}/{}/{}", role_, group_, name_, mode_, other.role_,
-                           other.group_, other.name_, other.mode_);
+  if (mode_ != other.mode_ or role_ != other.role_ or namespace_ != other.namespace_ or name_ != other.name_) {
+    auto msg = fmt::format("assemble incompatible: {}/{}/{}/{}, {}/{}/{}/{}", role_, namespace_, name_, mode_,
+                           other.role_, other.namespace_, other.name_, other.mode_);
     throw assemble_exception(msg);
   }
   std::vector<data::locator_ptr> merged_locators = {};
   merged_locators.insert(merged_locators.end(), locators_.begin(), locators_.end());
   merged_locators.insert(merged_locators.end(), other.locators_.begin(), other.locators_.end());
-  return assemble(merged_locators, mode_, role_, group_, name_);
+  return assemble(merged_locators, mode_, role_, namespace_, name_);
 }
 
 assemble &assemble::operator+=(const assemble &other) {

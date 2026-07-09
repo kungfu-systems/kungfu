@@ -6,7 +6,7 @@
 // Holds the fact-ledger journal schema the yijinjing core needs, and ONLY that:
 //   - frame/page packs: frame_header (tag 0), page_header (tag 1)
 //   - journal enums: FrameDataType, PageStatus, mode, role, layout, Priority
-//   - Location (tag 10205): the journal-endpoint pack (mode/role/group/name)
+//   - Location (tag 10205): the journal-endpoint pack (role/namespace/name/mode)
 // All of the above are journal infrastructure. Additional runtime fact types live in types.h. Trading-era business
 // types are not part of the v4 schema surface.
 //
@@ -264,7 +264,7 @@ KF_DEFINE_PACK_TYPE(                          //
 // type tag 10051 and stays registered in the full type registry (registry.h) verbatim.
 KF_DEFINE_MARK_TYPE(PageEnd, 10051);
 
-// Location identifies a journal endpoint (mode/role/group/name). The yijinjing
+// Location identifies a journal endpoint (role/namespace/name/mode). The yijinjing
 // core's locator/location model it, so it lives in the leaf. It keeps type tag
 // 10205 and stays registered in the full type registry (registry.h) verbatim -- only its
 // definition moves here, exactly as frame_header/page_header did.
@@ -274,7 +274,7 @@ KF_DEFINE_DATA_TYPE(                         //
     (uint32_t, location_uid),                //
     (enums::location_role, role),            //
     (enums::mode, mode),                     //
-    (std::string, group),                    //
+    (std::string, namespace_),               //
     (std::string, name),                     //
     (uint32_t, seed)                         //
 );

@@ -32,9 +32,10 @@ public:
     });
     boost::hana::for_each(boost::hana::accessors<DataType>(), [&](auto it) {
       auto name = boost::hana::first(it);
+      auto public_name = kungfu::public_field_name(name.c_str());
       auto accessor = boost::hana::second(it);
       using ValueType = std::decay_t<std::invoke_result_t<decltype(accessor), const DataType &>>;
-      InitValue<ValueType>(object, name.c_str());
+      InitValue<ValueType>(object, public_name.c_str());
     });
     return object;
   }
@@ -100,8 +101,9 @@ public:
   template <typename DataType> void operator()(const DataType &data, Napi::Object &object) {
     boost::hana::for_each(boost::hana::accessors<DataType>(), [&](auto it) {
       auto name = boost::hana::first(it);
+      auto public_name = kungfu::public_field_name(name.c_str());
       auto accessor = boost::hana::second(it);
-      Set(object, name.c_str(), accessor(data));
+      Set(object, public_name.c_str(), accessor(data));
     });
   }
 
@@ -206,9 +208,12 @@ public:
   template <typename DataType> void operator()(const Napi::Object &object, DataType &data) {
     boost::hana::for_each(boost::hana::accessors<DataType>(), [&](auto it) {
       auto name = boost::hana::first(it);
+      auto public_name = kungfu::public_field_name(name.c_str());
+      auto legacy_name = kungfu::legacy_field_name(name.c_str());
+      const auto field_name = object.Has(public_name) ? public_name : legacy_name;
       auto accessor = boost::hana::second(it);
       using ValueType = std::decay_t<std::invoke_result_t<decltype(accessor), const DataType &>>;
-      Get(const_cast<ValueType &>(accessor(data)), name.c_str(), object);
+      Get(const_cast<ValueType &>(accessor(data)), field_name.c_str(), object);
     });
   }
 

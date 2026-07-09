@@ -45,7 +45,7 @@ struct location_ref {
   uint32_t uid = 0;
   yijinjing::enums::mode mode = yijinjing::enums::mode::LIVE;
   yijinjing::enums::location_role role = yijinjing::enums::location_role::SYSTEM;
-  std::string group = {};
+  std::string namespace_ = {};
   std::string name = {};
 };
 

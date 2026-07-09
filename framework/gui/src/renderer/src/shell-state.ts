@@ -6,8 +6,8 @@ import type { DomainState } from '@kungfu-tech/api/capability';
 import type { ProfileManifest, ShellState } from '@kungfu-tech/kfx';
 
 export const SHELL_STATE_LOCATION = {
-  category: 'system',
-  group: 'shell',
+  role: 'system',
+  namespace: 'shell',
   name: 'state',
   mode: 'live',
 } as const;
@@ -56,8 +56,8 @@ export function loadShellState(domain: DomainState): ShellState {
       .configs()
       .find(
         (row) =>
-          row.location.category === SHELL_STATE_LOCATION.category &&
-          row.location.group === SHELL_STATE_LOCATION.group &&
+          row.location.role === SHELL_STATE_LOCATION.role &&
+          row.location.namespace === SHELL_STATE_LOCATION.namespace &&
           row.location.name === SHELL_STATE_LOCATION.name,
       );
     if (!entry) return DEFAULT_STATE;

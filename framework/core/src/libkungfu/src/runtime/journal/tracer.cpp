@@ -33,7 +33,7 @@ tracer::tracer(const location_ptr location, bool in, bool out, int64_t begin, in
       }
     } else {
       for (auto target_location : get_locator()->list_locations("*", "*", "*", "*")) {
-        if (target_location->role == location_role::SYSTEM and target_location->group == "master") {
+        if (target_location->role == location_role::SYSTEM and target_location->namespace_ == "master") {
           continue;
         }
         for (auto dest_id : get_locator()->list_location_dest(target_location)) {

@@ -15,7 +15,7 @@
 // writer::current_frame_uid() or otherwise regenerate an id on the read path --
 // doing so would break the causal graph the spine records.
 //
-// Usage:  fact_ledger_export <journal-root-dir> [group] [name] [out-prefix]
+// Usage:  fact_ledger_export <journal-root-dir> [namespace] [name] [out-prefix]
 
 #include <kungfu/yijinjing/common.h>
 #include <kungfu/yijinjing/journal/assemble.h>
@@ -88,11 +88,11 @@ const char *data_type_name(int8_t dt) {
 
 int main(int argc, char **argv) {
   if (argc < 2) {
-    std::cerr << "usage: fact_ledger_export <journal-root-dir> [group] [name] [out-prefix]\n";
+    std::cerr << "usage: fact_ledger_export <journal-root-dir> [namespace] [name] [out-prefix]\n";
     return 2;
   }
   const std::string root = argv[1];
-  const std::string group = argc >= 3 ? argv[2] : "fact_ledger_slice";
+  const std::string namespace_ = argc >= 3 ? argv[2] : "fact_ledger_slice";
   const std::string name = argc >= 4 ? argv[3] : "host";
   const std::string out_prefix = argc >= 5 ? argv[4] : (root + "/export");
 
@@ -100,8 +100,8 @@ int main(int argc, char **argv) {
   // reopen it read-only. assemble uses a noop bus internally; nothing here
   // starts the runtime.
   auto locator = std::make_shared<data::locator>(root);
-  auto location = data::location::make_shared(schema::enums::mode::LIVE, schema::enums::location_role::SYSTEM, group,
-                                              name, locator);
+  auto location = data::location::make_shared(schema::enums::mode::LIVE, schema::enums::location_role::SYSTEM,
+                                              namespace_, name, locator);
   journal::assemble reader(location, data::location::PUBLIC, schema::enums::AssembleMode::Channel, 0);
 
   // Build the JSONL body in memory so the whole-segment checksum is computed
@@ -186,8 +186,8 @@ int main(int argc, char **argv) {
       {"source",
        {{"root", root},
         {"mode", "LIVE"},
-        {"category", "SYSTEM"},
-        {"group", group},
+        {"role", "SYSTEM"},
+        {"namespace", namespace_},
         {"name", name},
         {"dest", data::location::PUBLIC}}},
       {"event_count", count},

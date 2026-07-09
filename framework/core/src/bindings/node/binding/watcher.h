@@ -164,7 +164,7 @@ private:
     try {
       auto target_location = IODevice::ExtractLocation(info, 1, get_locator());
 
-      if (target_location->role == yijinjing::enums::location_role::SYSTEM && target_location->group == "master") {
+      if (target_location->role == yijinjing::enums::location_role::SYSTEM && target_location->namespace_ == "master") {
         target_location = master_cmd_location_;
       }
 

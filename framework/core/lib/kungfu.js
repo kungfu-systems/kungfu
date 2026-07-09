@@ -98,16 +98,16 @@ module.exports = () => {
     /**
      * @param {any} arg a single location or an array of locations
      * @param {string} [mode]
-     * @param {string} [category]
-     * @param {string} [group]
+     * @param {string} [role]
+     * @param {string} [namespace]
      * @param {string} [name]
      * @returns {any}
      */
-    Assemble: (arg, mode = '*', category = '*', group = '*', name = '*') => {
+    Assemble: (arg, mode = '*', role = '*', namespace = '*', name = '*') => {
       if (Array.isArray(arg)) {
-        return new binding.Assemble(arg, mode, category, group, name);
+        return new binding.Assemble(arg, mode, role, namespace, name);
       }
-      return new binding.Assemble([arg], mode, category, group, name);
+      return new binding.Assemble([arg], mode, role, namespace, name);
     },
 
     /** @param {any} home @returns {any} */

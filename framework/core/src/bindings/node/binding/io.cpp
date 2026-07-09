@@ -55,7 +55,7 @@ Napi::Value IODevice::GetAllLocations(const Napi::CallbackInfo &info) {
     auto uid = fmt::format("{:016x}", location->uid);
     auto locationObj = Napi::Object::New(info.Env());
     locationObj.Set("role", Napi::String::New(info.Env(), get_location_role_name(location->role)));
-    locationObj.Set("group", Napi::String::New(info.Env(), location->group));
+    locationObj.Set("namespace", Napi::String::New(info.Env(), location->namespace_));
     locationObj.Set("name", Napi::String::New(info.Env(), location->name));
     locationObj.Set("mode", Napi::String::New(info.Env(), get_mode_name(location->mode)));
     locationObj.Set("uname", Napi::String::New(info.Env(), location->uname));
@@ -70,9 +70,10 @@ location_ptr IODevice::ExtractLocation(const Napi::CallbackInfo &info, int index
   try {
     if (info[index].IsObject()) {
       auto obj = info[index].ToObject();
+      auto namespace_value = obj.Has("namespace") ? obj.Get("namespace") : obj.Get("group");
       return location::make_shared(get_mode_by_name(obj.Get("mode").ToString().Utf8Value()),
                                    get_location_role_by_name(obj.Get("role").ToString().Utf8Value()),
-                                   obj.Get("group").ToString().Utf8Value(), obj.Get("name").ToString().Utf8Value(),
+                                   namespace_value.ToString().Utf8Value(), obj.Get("name").ToString().Utf8Value(),
                                    locator);
     } else {
       return location::make_shared(get_mode_by_name(info[index + 3].As<Napi::String>().Utf8Value()),

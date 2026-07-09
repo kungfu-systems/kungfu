@@ -50,15 +50,15 @@ int main(int argc, char **argv) {
     return 2;
   }
   const std::string root = argv[1];
-  const std::string group = "embedding_slice";
+  const std::string namespace_ = "embedding_slice";
   const std::string name = "smoke";
 
   // ── write side ────────────────────────────────────────────────────
   std::vector<uint64_t> written_uids;
   {
     auto locator = std::make_shared<data::locator>(root);
-    auto location = data::location::make_shared(schema::enums::mode::LIVE, schema::enums::location_role::SYSTEM, group,
-                                                name, locator);
+    auto location = data::location::make_shared(schema::enums::mode::LIVE, schema::enums::location_role::SYSTEM,
+                                                namespace_, name, locator);
     auto bus = std::make_shared<journal::bus>(false);
     auto publisher = std::make_shared<journal::noop_publisher>();
     auto writer = std::make_shared<journal::writer>(location, data::location::PUBLIC, /*lazy=*/true, publisher,
@@ -85,7 +85,7 @@ int main(int argc, char **argv) {
   storage::manifest_ref manifest{};
   manifest.source.id = "embedding_slice";
   manifest.source.kind = storage::source_kind::Local;
-  manifest.location.group = group;
+  manifest.location.namespace_ = namespace_;
   manifest.location.name = name;
   manifest.range.first_frame_uid = written_uids.front();
   manifest.range.last_frame_uid = written_uids.back();
@@ -95,8 +95,8 @@ int main(int argc, char **argv) {
   }
 
   auto locator = std::make_shared<data::locator>(root);
-  auto location = data::location::make_shared(schema::enums::mode::LIVE, schema::enums::location_role::SYSTEM, group,
-                                              name, locator);
+  auto location = data::location::make_shared(schema::enums::mode::LIVE, schema::enums::location_role::SYSTEM,
+                                              namespace_, name, locator);
   journal::assemble reader(location, data::location::PUBLIC, schema::enums::AssembleMode::Channel, 0);
 
   std::size_t count = 0;

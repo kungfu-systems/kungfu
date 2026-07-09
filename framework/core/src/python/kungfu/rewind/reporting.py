@@ -66,7 +66,7 @@ def _source(run_id: str, runtime_dir: str) -> dict[str, Any]:
     return {
         "mode": "LIVE",
         "role": "SYSTEM",
-        "group": "rewind",
+        "namespace": "rewind",
         "name": run_id,
         "dest": 0,
     }

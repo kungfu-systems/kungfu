@@ -92,10 +92,10 @@ class ChannelRequest:
 class Config:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 10201
-    group: str
     location_uid: int
     mode: pykungfu.yijinjing.enums.mode
     name: str
+    namespace: str
     role: pykungfu.yijinjing.enums.location_role
     seed: int
     uid64: int
@@ -120,10 +120,10 @@ class Config:
 class Deregister:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 10102
-    group: str
     location_uid: int
     mode: pykungfu.yijinjing.enums.mode
     name: str
+    namespace: str
     role: pykungfu.yijinjing.enums.location_role
     seed: int
     uid64: int
@@ -294,10 +294,10 @@ class EpisodeRefAttached:
 class Location:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 10205
-    group: str
     location_uid: int
     mode: pykungfu.yijinjing.enums.mode
     name: str
+    namespace: str
     role: pykungfu.yijinjing.enums.location_role
     seed: int
     uid64: int
@@ -347,10 +347,10 @@ class OperatorStateUpdate:
 class OutputKey:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 701
-    group: str
     location_uid: int
     mode: pykungfu.yijinjing.enums.mode
     name: str
+    namespace: str
     role: pykungfu.yijinjing.enums.location_role
     seed: int
     uid64: int
@@ -375,11 +375,11 @@ class Register:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 10101
     checkin_time: int
-    group: str
     last_active_time: int
     location_uid: int
     mode: pykungfu.yijinjing.enums.mode
     name: str
+    namespace: str
     pid: int
     role: pykungfu.yijinjing.enums.location_role
     seed: int
@@ -540,10 +540,10 @@ class RequestWriteTo:
 class RequestWriteToBand:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 10307
-    group: str
     location_uid: int
     mode: pykungfu.yijinjing.enums.mode
     name: str
+    namespace: str
     page_size: int
     role: pykungfu.yijinjing.enums.location_role
     seed: int
@@ -572,10 +572,10 @@ class Session:
     data_size: int
     end_time: int
     frame_count: int
-    group: str
     location_uid: int
     mode: pykungfu.yijinjing.enums.mode
     name: str
+    namespace: str
     role: pykungfu.yijinjing.enums.location_role
     seed: int
     uid64: int

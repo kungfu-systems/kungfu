@@ -80,12 +80,12 @@ bool locator::has_env(const std::string &name) const { return std::getenv(name.c
 std::string locator::get_env(const std::string &name) const { return std::getenv(name.c_str()); }
 
 std::string locator::layout_directory(yijinjing::enums::layout layout, yijinjing::enums::location_role c,
-                                      const std::string &g, const std::string &n, yijinjing::enums::mode m,
+                                      const std::string &namespace_, const std::string &n, yijinjing::enums::mode m,
                                       bool create_not_exist) const {
   auto dir = root_ /                         //
              es::get_layout_name(layout) /   //
              es::get_location_role_name(c) / //
-             g /                             //
+             namespace_ /                    //
              n /                             //
              es::get_mode_name(m);
   if (create_not_exist && not fs::exists(dir)) {
@@ -95,7 +95,8 @@ std::string locator::layout_directory(yijinjing::enums::layout layout, yijinjing
 }
 
 std::string locator::layout_dir(const location_ptr &location, es::layout layout, bool create_not_exist) const {
-  return layout_directory(layout, location->role, location->group, location->name, location->mode, create_not_exist);
+  return layout_directory(layout, location->role, location->namespace_, location->name, location->mode,
+                          create_not_exist);
 }
 
 std::string locator::layout_file(const location_ptr &location, es::layout layout, const std::string &name) const {
@@ -110,7 +111,7 @@ std::string locator::default_to_system_db(const location_ptr &location, const st
     auto system_db_file = root_ /                                      //
                           es::get_layout_name(sqlite_layout) /         //
                           es::get_location_role_name(location->role) / //
-                          location->group /                            //
+                          location->namespace_ /                       //
                           location->name /                             //
                           es::get_mode_name(location->mode);
     fs::copy(system_db_file, db_file);
@@ -140,9 +141,9 @@ static constexpr auto lambda_w = [](const std::string &pattern) { return pattern
 
 static constexpr auto lambda_g = [](const std::string &pattern) { return fmt::format("({})", lambda_w(pattern)); };
 
-std::vector<location_ptr> locator::list_locations(const std::string &role, const std::string &group,
+std::vector<location_ptr> locator::list_locations(const std::string &role, const std::string &namespace_,
                                                   const std::string &name, const std::string &mode) const {
-  fs::path search_path = root_ / ".*" / lambda_g(role) / lambda_g(group) / lambda_g(name) / lambda_g(mode);
+  fs::path search_path = root_ / ".*" / lambda_g(role) / lambda_g(namespace_) / lambda_g(name) / lambda_g(mode);
   std::string pattern = std::regex_replace(search_path.string(), std::regex("\\\\"), "\\\\");
   std::regex search_regex(pattern);
   std::unordered_map<uint32_t, location_ptr> avoid_repeat_locations = {};
@@ -218,13 +219,13 @@ bool locator::operator==(const locator &another) const {
   return dir_mode_ == another.dir_mode_ and root_.string() == another.root_.string();
 }
 
-location::location(yijinjing::enums::mode m, yijinjing::enums::location_role c, std::string g, std::string n,
+location::location(yijinjing::enums::mode m, yijinjing::enums::location_role c, std::string namespace_, std::string n,
                    locator_ptr l, uint32_t default_seed)
-    : locator(std::move(l)), uname(fmt::format("{}/{}/{}/{}", yijinjing::enums::get_location_role_name(c), g, n,
-                                               yijinjing::enums::get_mode_name(m))) {
+    : locator(std::move(l)), uname(fmt::format("{}/{}/{}/{}", yijinjing::enums::get_location_role_name(c), namespace_,
+                                               n, yijinjing::enums::get_mode_name(m))) {
   uid64 = fast_hash_str_64(uname);
   role = c;
-  group = std::move(g);
+  this->namespace_ = std::move(namespace_);
   name = std::move(n);
   mode = m;
   seed = default_seed == 0 ? KUNGFU_HASH_SEED : default_seed;

@@ -99,16 +99,16 @@ Napi::Object to_receipt_object(Napi::Env env, const record_receipt &receipt) {
 ActionRecorder::ActionRecorder(const Napi::CallbackInfo &info) : ObjectWrap(info) {
   if (!IsValid(info, 0, &Napi::Value::IsString) || !IsValid(info, 1, &Napi::Value::IsString) ||
       !IsValid(info, 2, &Napi::Value::IsString)) {
-    throw Napi::TypeError::New(info.Env(), "ActionRecorder(runtimeDir, group, name, destId?, streamId?)");
+    throw Napi::TypeError::New(info.Env(), "ActionRecorder(runtimeDir, namespace, name, destId?, streamId?)");
   }
 
   const auto runtime_dir = info[0].As<Napi::String>().Utf8Value();
-  const auto group = info[1].As<Napi::String>().Utf8Value();
+  const auto namespace_ = info[1].As<Napi::String>().Utf8Value();
   const auto name = info[2].As<Napi::String>().Utf8Value();
   const auto dest_id =
       IsValid(info, 3) ? static_cast<uint32_t>(read_uint64(info[3])) : yijinjing::data::location::PUBLIC;
   const auto stream_id = IsValid(info, 4) ? read_uint64(info[4]) : 0;
-  recorder_ = std::make_unique<runtime::action::action_recorder>(runtime_dir, group, name, dest_id, stream_id);
+  recorder_ = std::make_unique<runtime::action::action_recorder>(runtime_dir, namespace_, name, dest_id, stream_id);
 }
 
 Napi::Value ActionRecorder::RecordBytes(const Napi::CallbackInfo &info) {

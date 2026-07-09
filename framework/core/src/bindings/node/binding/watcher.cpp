@@ -136,7 +136,7 @@ Napi::Value Watcher::GetLocation(const Napi::CallbackInfo &info) {
   }
   auto locationObj = Napi::Object::New(info.Env());
   locationObj.Set("role", Napi::String::New(info.Env(), get_location_role_name(location->role)));
-  locationObj.Set("group", Napi::String::New(info.Env(), location->group));
+  locationObj.Set("namespace", Napi::String::New(info.Env(), location->namespace_));
   locationObj.Set("name", Napi::String::New(info.Env(), location->name));
   locationObj.Set("mode", Napi::String::New(info.Env(), get_mode_name(location->mode)));
   locationObj.Set("uname", Napi::String::New(info.Env(), location->uname));
@@ -167,7 +167,7 @@ Napi::Value Watcher::RequestStop(const Napi::CallbackInfo &info) {
   auto app_location = IODevice::ExtractLocation(info, 0, get_locator());
 
   // stop master
-  if (app_location->role == location_role::SYSTEM && app_location->group == "master") {
+  if (app_location->role == location_role::SYSTEM && app_location->namespace_ == "master") {
     if (not has_writer(get_master_command_uid())) {
       return Napi::Boolean::New(info.Env(), false);
     }
@@ -358,7 +358,7 @@ void Watcher::OnRegister(int64_t trigger_time, const Register &register_data) {
 
 void Watcher::OnDeregister(int64_t trigger_time, const Deregister &deregister_data) {
   auto app_location = location::make_shared(deregister_data, get_locator());
-  if (app_location->role == location_role::SYSTEM and app_location->group == "master" and
+  if (app_location->role == location_role::SYSTEM and app_location->namespace_ == "master" and
       app_location->name == "master") {
     CancelWorker();
   }

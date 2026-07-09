@@ -23,7 +23,7 @@ class CsvSink(yjj.sink):
             return
         data_type = self.tagged_types[frame.carrier_type]
         header = [m for m in vars(data_type) if not m.startswith("_")]
-        location_part = f"{lf.enums.get_location_role_name(location.role)}.{location.group}.{location.name}"
+        location_part = f"{lf.enums.get_location_role_name(location.role)}.{location.namespace}.{location.name}"
         output = os.path.join(
             self.ctx.inbox_dir, f"{location_part}.{data_type.__name__}.csv"
         )

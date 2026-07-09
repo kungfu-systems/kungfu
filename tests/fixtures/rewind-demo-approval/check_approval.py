@@ -185,8 +185,8 @@ manifest_path = bundle.emit(
     "/fake/journal/root",
     {
         "mode": "LIVE",
-        "category": "SYSTEM",
-        "group": "rewind",
+        "role": "SYSTEM",
+        "namespace": "rewind",
         "name": "run-1",
         "dest": 0,
     },

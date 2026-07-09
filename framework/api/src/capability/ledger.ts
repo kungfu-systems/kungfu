@@ -104,7 +104,7 @@ export function openLedger(options: OpenLedgerOptions): Ledger {
 
   const replayAnchors = (): ReplayAnchor[] => {
     const store = new binding.SessionStore(
-      { role: 'system', group: 'capability', name: 'ledger', mode: 'live' },
+      { role: 'system', namespace: 'capability', name: 'ledger', mode: 'live' },
       runtimeDir,
     );
     const all = store.getAllSessions();
@@ -114,7 +114,7 @@ export function openLedger(options: OpenLedgerOptions): Ledger {
       return {
         location: {
           role: roleName(record.role as number),
-          group: String(record.group),
+          namespace: String(record.namespace ?? record.group),
           name: String(record.name),
           mode: modeName(record.mode as number),
         },

@@ -38,7 +38,7 @@ export function openDomainState(options: OpenDomainStateOptions): DomainState {
     Object.values(store.getAllConfig()).map((row) => ({
       location: {
         role: roleName(row.role as number),
-        group: String(row.group),
+        namespace: String((row.namespace ?? row.group) as string),
         name: String(row.name),
         mode: modeName(row.mode as number),
       },
@@ -48,7 +48,7 @@ export function openDomainState(options: OpenDomainStateOptions): DomainState {
   const setConfig = (location: KfLocation, value: string): boolean =>
     store.setConfig(
       String(location.role),
-      location.group,
+      location.namespace,
       location.name,
       String(location.mode),
       value,
@@ -57,19 +57,19 @@ export function openDomainState(options: OpenDomainStateOptions): DomainState {
   const removeConfig = (location: KfLocation): boolean =>
     store.removeConfig(
       String(location.role),
-      location.group,
+      location.namespace,
       location.name,
       String(location.mode),
     );
 
   const locations = (): KfLocation[] => {
     const io = new binding.IODevice(
-      { role: 'system', group: 'capability', name: 'domain', mode: 'live' },
+      { role: 'system', namespace: 'capability', name: 'domain', mode: 'live' },
       runtimeDir,
     );
     return Object.values(io.getAllLocations()).map((row) => ({
       role: String(row.role),
-      group: String(row.group),
+      namespace: String(row.namespace ?? row.group),
       name: String(row.name),
       mode: String(row.mode),
     }));

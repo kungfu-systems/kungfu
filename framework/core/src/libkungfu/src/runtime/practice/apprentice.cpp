@@ -71,7 +71,7 @@ void apprentice::request_write_to_band(int64_t trigger_time, const location_ptr 
 uint32_t apprentice::request_band(const std::string &band_name, uint64_t page_size) {
   auto io_device = get_io_device();
   auto home = io_device->get_live_home();
-  auto band_location = location::make_shared(home->mode, home->role, home->group, band_name, get_locator());
+  auto band_location = location::make_shared(home->mode, home->role, home->namespace_, band_name, get_locator());
   request_write_to_band(now(), band_location, page_size);
   return band_location->uid;
 }
@@ -291,7 +291,7 @@ void apprentice::checkin() {
   Register register_data{};
   register_data.mode = home->mode;
   register_data.role = home->role;
-  register_data.group = home->group;
+  register_data.namespace_ = home->namespace_;
   register_data.name = home->name;
   register_data.seed = home->seed;
   register_data.location_uid = home->uid;

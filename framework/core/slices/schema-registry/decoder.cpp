@@ -89,9 +89,11 @@ int main(int argc, char **argv) {
 
   // ── reopen the journal independently and decode by binding ────────
   const auto &src = manifest.at("source");
+  const auto namespace_ =
+      src.contains("namespace") ? src.at("namespace").get<std::string>() : src.at("group").get<std::string>();
   auto locator = std::make_shared<data::locator>(root);
   auto location = data::location::make_shared(schema::enums::mode::LIVE, schema::enums::location_role::SYSTEM,
-                                              src.at("group"), src.at("name"), locator);
+                                              namespace_, src.at("name"), locator);
   journal::assemble reader(location, data::location::PUBLIC, schema::enums::AssembleMode::Channel, 0);
 
   std::size_t count = 0;

@@ -15,7 +15,7 @@ LAYOUT_LOCATION_REGEX = "{}{}{}{}{}{}{}{}{}{}{}".format(
     r"(.*)",
     os_sep,  # role
     r"(.*)",
-    os_sep,  # group
+    os_sep,  # namespace
     r"(.*)",
     os_sep,  # name
     r"(.*)",
@@ -30,7 +30,7 @@ JOURNAL_LOCATION_REGEX = "{}{}{}{}{}{}{}{}{}".format(
     r"(.*)",
     os_sep,  # role
     r"(.*)",
-    os_sep,  # group
+    os_sep,  # namespace
     r"(.*)",
     os_sep,  # name
     r"(.*)",  # mode
@@ -43,7 +43,7 @@ JOURNAL_PAGE_REGEX = "{}{}{}{}{}{}{}{}{}{}{}".format(
     r"(.*)",
     os_sep,  # role
     r"(.*)",
-    os_sep,  # group
+    os_sep,  # namespace
     r"(.*)",
     os_sep,  # name
     r"(.*)",
@@ -58,7 +58,7 @@ LOG_REGEX = "{}{}{}{}{}{}{}{}{}{}{}".format(
     r"(.*)",
     os_sep,  # role
     r"(.*)",
-    os_sep,  # group
+    os_sep,  # namespace
     r"(.*)",
     os_sep,  # name
     r"(.*)",

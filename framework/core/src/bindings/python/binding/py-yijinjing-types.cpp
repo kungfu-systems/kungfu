@@ -76,8 +76,9 @@ template <typename DataType> void bind_data_type(pybind11::module &m_types, cons
 
   hana::for_each(hana::accessors<DataType>(), [&](auto it) {
     auto name = hana::first(it);
+    auto public_name = kungfu::public_field_name(name.c_str());
     auto accessor = hana::second(it);
-    py_class.def_readwrite(name.c_str(), member_pointer_trait<decltype(accessor)>().pointer());
+    py_class.def_readwrite(public_name.c_str(), member_pointer_trait<decltype(accessor)>().pointer());
   });
 
   py_class.def_readonly_static("__tag__", &DataType::tag);

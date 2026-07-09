@@ -51,10 +51,10 @@ private:
 class assemble {
 public:
   explicit assemble(const std::vector<data::locator_ptr> &locators, const std::string &mode = "*",
-                    const std::string &role = "*", const std::string &group = "*", const std::string &name = "*");
+                    const std::string &role = "*", const std::string &namespace_ = "*", const std::string &name = "*");
 
   explicit assemble(const data::locator_ptr &locator, const std::string &mode = "*", const std::string &role = "*",
-                    const std::string &group = "*", const std::string &name = "*");
+                    const std::string &namespace_ = "*", const std::string &name = "*");
 
   explicit assemble(const data::location_ptr &source_location, uint32_t dest_id,
                     uint32_t assemble_mode = yijinjing::enums::AssembleMode::Channel, int64_t from_time = 0);
@@ -144,7 +144,7 @@ protected:
 private:
   const std::string mode_;
   const std::string role_;
-  const std::string group_;
+  const std::string namespace_;
   const std::string name_;
   publisher_ptr publisher_;
   std::vector<data::locator_ptr> locators_ = {};

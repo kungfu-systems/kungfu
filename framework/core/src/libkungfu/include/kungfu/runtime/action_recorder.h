@@ -62,7 +62,7 @@ struct record_receipt {
 
 class action_recorder {
 public:
-  action_recorder(const std::string &runtime_dir, const std::string &group, const std::string &name,
+  action_recorder(const std::string &runtime_dir, const std::string &namespace_, const std::string &name,
                   uint32_t dest_id = yijinjing::data::location::PUBLIC, uint64_t stream_id = 0);
 
   record_receipt record_bytes(int32_t carrier_type, const std::vector<uint8_t> &payload, record_options options = {});

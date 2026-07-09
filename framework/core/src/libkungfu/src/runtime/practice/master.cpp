@@ -196,7 +196,7 @@ void master::react() {
     auto dest = event->dest();
     if (has_location(dest)) {
       auto dest_location = get_location(dest);
-      if (dest_location->role == location_role::SYSTEM and dest_location->group == "master") {
+      if (dest_location->role == location_role::SYSTEM and dest_location->namespace_ == "master") {
         return true;
       }
     }

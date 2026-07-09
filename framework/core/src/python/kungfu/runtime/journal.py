@@ -18,7 +18,7 @@ def collect_journal_locations(ctx):
         ctx.runtime_dir,
         "journal",
         ctx.role,
-        ctx.group,
+        ctx.namespace,
         ctx.name,
         ctx.mode,
         "*.journal",
@@ -30,12 +30,12 @@ def collect_journal_locations(ctx):
         match = JOURNAL_PAGE_PATTERN.match(journal[len(ctx.runtime_dir) + 1 :])
         if match:
             role = match.group(1)
-            group = match.group(2)
+            namespace = match.group(2)
             name = match.group(3)
             mode = match.group(4)
             dest = match.group(5)
             page_id = match.group(6)
-            uname = "{}/{}/{}/{}".format(role, group, name, mode)
+            uname = "{}/{}/{}/{}".format(role, namespace, name, mode)
             uid = yjj.fast_hash_str_32(uname)
             if uid in locations:
                 if dest in locations[uid]["readers"]:
@@ -45,7 +45,7 @@ def collect_journal_locations(ctx):
             else:
                 locations[uid] = {
                     "role": role,
-                    "group": group,
+                    "namespace": namespace,
                     "name": name,
                     "mode": mode,
                     "uname": uname,
@@ -53,7 +53,7 @@ def collect_journal_locations(ctx):
                     "readers": {dest: [page_id]},
                 }
             ctx.logger.debug(
-                f"found journal {MODES[mode]} {ROLES[role]} {group} {name}"
+                f"found journal {MODES[mode]} {ROLES[role]} {namespace} {name}"
             )
         else:
             ctx.logger.warn(
@@ -66,7 +66,7 @@ SESSION_COLUMNS = [
     "id",
     "mode",
     "role",
-    "group",
+    "namespace",
     "name",
     "begin_time",
     "update_time",
@@ -93,7 +93,7 @@ def find_sessions(ctx):
                 "id": len(rows) + 1,
                 "mode": lf.enums.get_mode_name(session.mode),
                 "role": lf.enums.get_location_role_name(session.role),
-                "group": session.group,
+                "namespace": session.namespace,
                 "name": session.name,
                 "begin_time": session.begin_time,
                 "update_time": session.update_time,
@@ -113,10 +113,11 @@ def find_session(ctx, session_id):
 
 
 def make_location_from_dict(ctx, location):
+    namespace = location.get("namespace", location.get("group"))
     return yjj.location(
         MODES[location["mode"]],
         ROLES[location["role"]],
-        location["group"],
+        namespace,
         location["name"],
         ctx.runtime_locator,
     )
@@ -125,11 +126,11 @@ def make_location_from_dict(ctx, location):
 def read_session(ctx, session_id, io_type):
     session = find_session(ctx, session_id)
     uname = "{}/{}/{}/{}".format(
-        session["role"], session["group"], session["name"], session["mode"]
+        session["role"], session["namespace"], session["name"], session["mode"]
     )
     uid = yjj.fast_hash_str_32(uname)
     ctx.role = "*"
-    ctx.group = "*"
+    ctx.namespace = "*"
     ctx.name = "*"
     ctx.mode = "*"
     locations = collect_journal_locations(ctx)
@@ -139,7 +140,7 @@ def read_session(ctx, session_id, io_type):
 
     show_in = (io_type == "in" or io_type == "all") and not (
         io_device.home.role == lf.enums.location_role.SYSTEM
-        and io_device.home.group == "master"
+        and io_device.home.namespace == "master"
         and io_device.home.name == "master"
     )
     show_out = io_type == "out" or io_type == "all"

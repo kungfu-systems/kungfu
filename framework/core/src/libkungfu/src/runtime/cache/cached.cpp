@@ -91,7 +91,7 @@ void cached::restore_states(const yijinjing::data::location_ptr &location,
     SPDLOG_ERROR("failed to write cache {} {} {}", location->uid, location->uname, ex.what());
   }
 
-  const bool IS_NODE = location->role == location_role::SYSTEM and location->group == "node";
+  const bool IS_NODE = location->role == location_role::SYSTEM and location->namespace_ == "node";
   const bool IS_LEDGER = location->uid == ledger_home_location_->uid;
   const bool IS_SINK = location->role == location_role::SINK;
   const bool IS_ACTOR = location->role == location_role::ACTOR;

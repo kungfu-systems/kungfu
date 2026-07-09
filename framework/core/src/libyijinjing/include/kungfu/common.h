@@ -113,6 +113,12 @@ using namespace boost::hana::literals;
 namespace kungfu {
 uint32_t fast_hash_32(const unsigned char *key, int32_t length);
 
+inline std::string public_field_name(const char *name) {
+  return std::string(name) == "namespace_" ? "namespace" : name;
+}
+
+inline std::string legacy_field_name(const char *name) { return std::string(name) == "namespace_" ? "group" : name; }
+
 template <typename V, size_t N, typename = void> struct array_to_string;
 
 template <typename V, size_t N> struct array_to_string<V, N, std::enable_if_t<std::is_same_v<V, char>>> {
@@ -362,9 +368,12 @@ template <typename DataType> struct data {
     boost::hana::for_each(boost::hana::accessors<DataType>(), [&, this](auto it) {
       auto name = boost::hana::first(it);
       auto accessor = boost::hana::second(it);
-      if (not jobj.contains(name.c_str()))
+      auto public_name = public_field_name(name.c_str());
+      auto legacy_name = legacy_field_name(name.c_str());
+      const auto *field_name = jobj.contains(public_name) ? &public_name : &legacy_name;
+      if (not jobj.contains(*field_name))
         return;
-      auto &j = jobj[name.c_str()];
+      auto &j = jobj[*field_name];
       auto &v = accessor(*const_cast<DataType *>(reinterpret_cast<const DataType *>(this)));
       restore_from_json(j, v);
     });
@@ -375,7 +384,8 @@ template <typename DataType> struct data {
     boost::hana::for_each(boost::hana::accessors<DataType>(), [&, this](auto it) {
       auto name = boost::hana::first(it);
       auto accessor = boost::hana::second(it);
-      j[name.c_str()] = accessor(*reinterpret_cast<const DataType *>(this));
+      auto public_name = public_field_name(name.c_str());
+      j[public_name] = accessor(*reinterpret_cast<const DataType *>(this));
     });
     return j;
   }

@@ -100,7 +100,7 @@ export function resolveServiceLanding(
 // private grants file.
 export const SERVICE_AUTHZ_LOCATION = {
   role: 'system',
-  group: 'shell',
+  namespace: 'shell',
   name: 'service-authz',
   mode: 'live',
 } as const;
@@ -126,7 +126,7 @@ export function loadServiceAuthz(domain: DomainState): ServiceAuthz {
       .find(
         (row) =>
           row.location.role === SERVICE_AUTHZ_LOCATION.role &&
-          row.location.group === SERVICE_AUTHZ_LOCATION.group &&
+          row.location.namespace === SERVICE_AUTHZ_LOCATION.namespace &&
           row.location.name === SERVICE_AUTHZ_LOCATION.name,
       );
     if (!entry) return EMPTY_AUTHZ;

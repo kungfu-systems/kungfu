@@ -242,7 +242,7 @@ class ImportStore:
                 "root": self.runtime_dir,
                 "mode": "live",
                 "role": "system",
-                "group": ATLAS_GROUP,
+                "namespace": ATLAS_GROUP,
                 "name": ATLAS_NAME,
                 "dest": PUBLIC_DEST,
             },

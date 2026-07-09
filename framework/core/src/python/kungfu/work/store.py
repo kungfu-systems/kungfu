@@ -180,7 +180,7 @@ class WorkStore:
                 "root": self.runtime_dir,
                 "mode": "live",
                 "role": "system",
-                "group": WORK_GROUP,
+                "namespace": WORK_GROUP,
                 "name": WORK_NAME,
                 "dest": PUBLIC_DEST,
             },

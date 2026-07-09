@@ -47,18 +47,21 @@ journal_command_context = kfc.pass_context(
     type=click.Choice(list(kfj.ROLES)),
     help="role",
 )
-@click.option("-g", "--group", type=str, default="*", help="group")
+@click.option("-g", "--namespace", "namespace", type=str, default="*", help="namespace")
+@click.option("--group", "legacy_group", type=str, default=None, hidden=True)
 @click.option("-n", "--name", type=str, default="*", help="name")
 @click.help_option("-h", "--help")
 @kfc.pass_context()
-def journal(ctx, mode, role, group, name):
+def journal(ctx, mode, role, namespace, legacy_group, name):
+    if legacy_group is not None:
+        namespace = legacy_group
     ctx.low_latency = False
     ctx.mode = mode
     ctx.role = role
-    ctx.group = group
+    ctx.namespace = namespace
     ctx.name = name
     ctx.location = yjj.location(
-        kfj.MODES[mode], kfj.ROLES[role], group, name, ctx.runtime_locator
+        kfj.MODES[mode], kfj.ROLES[role], namespace, name, ctx.runtime_locator
     )
     ctx.logger = create_logger("journal", ctx.log_level, ctx.console_location)
 
@@ -72,7 +75,7 @@ def journal(ctx, mode, role, group, name):
     "--sortby",
     default="begin_time",
     type=click.Choice(
-        ["begin_time", "end_time", "duration", "mode", "role", "group", "name"]
+        ["begin_time", "end_time", "duration", "mode", "role", "namespace", "name"]
     ),
     help="sorting method",
 )
@@ -299,11 +302,13 @@ def export_logs(ctx, src_dir, dst_dir):
         match = LOG_PATTERN.match(log_file[len(src_dir) + 1 :])
         if match:
             role = match.group(1)
-            group = match.group(2)
+            namespace = match.group(2)
             name = match.group(3)
             mode = match.group(4)
             date = match.group(6)
-            archive_path = os.path.join(dst_dir, date, role, group, name, "log", mode)
+            archive_path = os.path.join(
+                dst_dir, date, role, namespace, name, "log", mode
+            )
             if not os.path.exists(archive_path):
                 os.makedirs(archive_path)
             archive_log = os.path.join(archive_path, os.path.basename(log_file))

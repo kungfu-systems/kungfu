@@ -67,10 +67,10 @@ int main(int argc, char **argv) {
     return 2;
   }
 
-  const std::string group = "fact_ledger_slice";
+  const std::string namespace_ = "fact_ledger_slice";
   const std::string name = "action_recorder";
 
-  action::action_recorder recorder(root, group, name, data::location::PUBLIC, STREAM_ID);
+  action::action_recorder recorder(root, namespace_, name, data::location::PUBLIC, STREAM_ID);
   std::vector<action::record_receipt> receipts;
   std::vector<std::vector<uint8_t>> payloads;
 
@@ -81,8 +81,8 @@ int main(int argc, char **argv) {
   }
 
   auto locator = std::make_shared<data::locator>(root);
-  auto location = data::location::make_shared(schema::enums::mode::LIVE, schema::enums::location_role::SYSTEM, group,
-                                              name, locator);
+  auto location = data::location::make_shared(schema::enums::mode::LIVE, schema::enums::location_role::SYSTEM,
+                                              namespace_, name, locator);
   journal::assemble reader(location, data::location::PUBLIC, schema::enums::AssembleMode::Channel, 0);
   auto frames = reader.read_bytes(MSG_ACTION_ENVELOPE);
   if (frames.size() != receipts.size()) {
@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
 
   nlohmann::json out = {
       {"root", root},
-      {"group", group},
+      {"namespace", namespace_},
       {"name", name},
       {"event_count", receipts.size()},
       {"causal_chain_verified", true},

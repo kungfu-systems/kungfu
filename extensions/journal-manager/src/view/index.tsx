@@ -74,11 +74,11 @@ function JournalManagerView({ caps }: { caps: KfxCapabilities; shell: Shell }) {
             </div>
           )}
           {anchors.map((anchor) => {
-            const key = `${anchor.location.group}/${anchor.location.name}/${anchor.beginTime}`;
+            const key = `${anchor.location.namespace}/${anchor.location.name}/${anchor.beginTime}`;
             return (
               <div key={key} style={{ ...mono, marginBottom: 6 }}>
                 <div style={{ color: '#9cdcfe' }}>
-                  {anchor.location.category}/{anchor.location.group}/
+                  {anchor.location.role}/{anchor.location.namespace}/
                   {anchor.location.name}/{anchor.location.mode}
                 </div>
                 <div style={{ color: '#858585' }}>
@@ -96,7 +96,7 @@ function JournalManagerView({ caps }: { caps: KfxCapabilities; shell: Shell }) {
           <h2 style={headingStyle}>Locations · {locations.length}</h2>
           <ul style={{ ...mono, color: '#9cdcfe', margin: 0, paddingLeft: 16 }}>
             {locations.map((location) => {
-              const key = `${location.category}/${location.group}/${location.name}/${location.mode}`;
+              const key = `${location.role}/${location.namespace}/${location.name}/${location.mode}`;
               return <li key={key}>{key}</li>;
             })}
           </ul>

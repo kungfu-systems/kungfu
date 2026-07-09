@@ -26,7 +26,7 @@ class ArchiveSink(yjj.sink):
                 target_location = yjj.location(
                     location.mode,
                     location.role,
-                    location.group,
+                    location.namespace,
                     location.name,
                     self.locator,
                 )

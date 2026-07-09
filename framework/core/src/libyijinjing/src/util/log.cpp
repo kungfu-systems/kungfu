@@ -87,7 +87,7 @@ const std::string &setup_log(const data::location_ptr &location, const std::stri
     std::string log_file = location->locator->layout_file(location, yijinjing::enums::layout::LOG, name);
     auto daily_sink = std::make_shared<spdlog::sinks::daily_file_sink_mt>(log_file, 0, 0);
 
-    if (location->group != "node") {
+    if (location->namespace_ != "node") {
       auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
       spdlog::sinks_init_list log_sinks = {console_sink, daily_sink};
       logger = std::make_shared<emitable_logger>(name, log_sinks);

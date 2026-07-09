@@ -88,8 +88,8 @@ public:
                                                bool create_not_exist = true) const;
 
   [[nodiscard]] std::string layout_directory(yijinjing::enums::layout layout, yijinjing::enums::location_role c,
-                                             const std::string &g, const std::string &n, yijinjing::enums::mode m,
-                                             bool create_not_exist = true) const;
+                                             const std::string &namespace_, const std::string &n,
+                                             yijinjing::enums::mode m, bool create_not_exist = true) const;
 
   [[nodiscard]] virtual std::string layout_file(const location_ptr &location, yijinjing::enums::layout layout,
                                                 const std::string &name) const;
@@ -98,7 +98,7 @@ public:
 
   [[nodiscard]] virtual std::vector<uint32_t> list_page_id(const location_ptr &location, uint32_t dest_id) const;
 
-  [[nodiscard]] virtual std::vector<location_ptr> list_locations(const std::string &role, const std::string &group,
+  [[nodiscard]] virtual std::vector<location_ptr> list_locations(const std::string &role, const std::string &namespace_,
                                                                  const std::string &name,
                                                                  const std::string &mode) const;
 
@@ -136,8 +136,8 @@ struct location : public std::enable_shared_from_this<location>, public yijinjin
   const std::string uname;
   uint32_t uid;
 
-  location(yijinjing::enums::mode m, yijinjing::enums::location_role c, std::string g, std::string n, locator_ptr l,
-           uint32_t default_seed = KUNGFU_HASH_SEED);
+  location(yijinjing::enums::mode m, yijinjing::enums::location_role c, std::string namespace_, std::string n,
+           locator_ptr l, uint32_t default_seed = KUNGFU_HASH_SEED);
 
   bool static is_verify_location();
 
@@ -155,7 +155,7 @@ struct location : public std::enable_shared_from_this<location>, public yijinjin
     t.location_uid = location_uid;
     t.mode = mode;
     t.role = role;
-    t.group = group;
+    t.namespace_ = namespace_;
     t.name = name;
     t.seed = seed;
     return t;
@@ -166,24 +166,24 @@ struct location : public std::enable_shared_from_this<location>, public yijinjin
     t.location_uid = location_uid;
     t.mode = mode;
     t.role = role;
-    t.group = group;
+    t.namespace_ = namespace_;
     t.name = name;
     t.seed = seed;
     return t;
   }
 
   template <typename T> static inline location_ptr make_shared(T msg, locator_ptr l) {
-    return std::make_shared<location>(msg.mode, msg.role, msg.group, msg.name, l, msg.seed);
+    return std::make_shared<location>(msg.mode, msg.role, msg.namespace_, msg.name, l, msg.seed);
   }
 
   static inline location_ptr make_shared(yijinjing::enums::mode m, yijinjing::enums::location_role c,
-                                         const std::string &g, const std::string &n, const locator_ptr &l,
+                                         const std::string &namespace_, const std::string &n, const locator_ptr &l,
                                          uint32_t default_seed = KUNGFU_HASH_SEED) {
-    return std::make_shared<location>(m, c, g, n, l, default_seed);
+    return std::make_shared<location>(m, c, namespace_, n, l, default_seed);
   }
   bool operator==(const location &another) const {
-    return locator->get_root() == another.locator->get_root() and role == another.role and group == another.group and
-           name == another.name and mode == another.mode;
+    return locator->get_root() == another.locator->get_root() and role == another.role and
+           namespace_ == another.namespace_ and name == another.name and mode == another.mode;
   }
 };
 } // namespace data
@@ -205,7 +205,10 @@ using namespace boost::hana;
 
 template <typename T> nlohmann::json to_json(T &obj) {
   nlohmann::json j{};
-  hana::for_each(hana::accessors<T>(), [&](auto t) { j[hana::first(t).c_str()] = hana::second(t)(obj); });
+  hana::for_each(hana::accessors<T>(), [&](auto t) {
+    auto name = hana::first(t);
+    j[public_field_name(name.c_str())] = hana::second(t)(obj);
+  });
   return j;
 }
 } // namespace hana

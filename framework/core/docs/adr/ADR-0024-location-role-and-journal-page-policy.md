@@ -8,7 +8,8 @@
 - Related: ADR-0001 defines the journal publication barrier. ADR-0008 defines
   yijinjing schema compatibility surfaces. ADR-0018 defines runtime storage as a
   service. ADR-0022 defines the C++ core as the polyglot action-recording
-  membrane.
+  membrane. ADR-0038 renames the middle location segment from `group` to
+  `namespace`.
 
 ## Context
 
@@ -34,7 +35,7 @@ from the v4 design instead of preserving trading-era names.
 `category` is removed from the v4 location contract. The location identity is:
 
 ```text
-role / group / name / mode
+role / namespace / name / mode
 ```
 
 The core enum is `location_role`:
@@ -50,12 +51,13 @@ The core enum is `location_role`:
 The existing path shape remains stable as:
 
 ```text
-<layout>/<role>/<group>/<name>/<mode>
+<layout>/<role>/<namespace>/<name>/<mode>
 ```
 
 The field name in `Location`, `Register`, `Session`, `Config`,
 `RequestWriteToBand`, capability SDK location objects, Python bindings, and Node
-bindings is `role`.
+bindings uses `role` for the first semantic segment and `namespace` for the
+middle identity segment.
 
 Journal page size is no longer derived from location role. The default page
 size is a storage policy constant. Callers that need a different page size must

@@ -150,7 +150,7 @@ public:
 
 io_device::io_device(data::location_ptr home, const bool low_latency, const bool lazy)
     : home_(std::move(home)),
-      live_home_(location::make_shared(mode::LIVE, home_->role, home_->group, home_->name, home_->locator)),
+      live_home_(location::make_shared(mode::LIVE, home_->role, home_->namespace_, home_->name, home_->locator)),
       low_latency_(low_latency), lazy_(lazy), begin_time_(time::now_in_nano()),
       bus_(std::make_shared<bus>(is_resource_manager_required())) {
   // keep the guarantees deterministic even when static-library linking drops

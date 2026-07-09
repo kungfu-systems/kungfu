@@ -53,13 +53,13 @@ class Adapter:
                 if len(name_list) != 4:
                     self.ctx.logger.error(f"invalid csv name {filename}")
                     continue
-                role, group, name, type_name = name_list
-                writer_key = role + group + name
+                role, namespace, name, type_name = name_list
+                writer_key = role + namespace + name
                 if writer_key not in writers:
                     home = yjj.location(
                         lf.enums.mode.DATA,
                         lf.enums.get_location_role_by_name(role),
-                        group,
+                        namespace,
                         name,
                         output_locator,
                     )

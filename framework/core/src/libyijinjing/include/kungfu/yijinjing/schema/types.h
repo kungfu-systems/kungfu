@@ -97,7 +97,7 @@ KF_DEFINE_DATA_TYPE(                                          //
     (uint32_t, location_uid),                                 //
     (enums::location_role, role),                             //
     (enums::mode, mode),                                      //
-    (std::string, group),                                     //
+    (std::string, namespace_),                                //
     (std::string, name),                                      //
     (uint32_t, seed)                                          //
 );
@@ -108,7 +108,7 @@ KF_DEFINE_DATA_TYPE(                                //
     (uint32_t, location_uid),                       //
     (enums::location_role, role),                   //
     (enums::mode, mode),                            //
-    (std::string, group),                           //
+    (std::string, namespace_),                      //
     (std::string, name),                            //
     (uint32_t, seed),                               //
     (int32_t, pid),                                 //
@@ -122,7 +122,7 @@ KF_DEFINE_DATA_TYPE(                                  //
     (uint32_t, location_uid),                         //
     (enums::location_role, role),                     //
     (enums::mode, mode),                              //
-    (std::string, group),                             //
+    (std::string, namespace_),                        //
     (std::string, name),                              //
     (uint32_t, seed)                                  //
 );
@@ -133,7 +133,7 @@ KF_DEFINE_DATA_TYPE(                                                     //
     (uint32_t, location_uid),                                            //
     (enums::location_role, role),                                        //
     (enums::mode, mode),                                                 //
-    (std::string, group),                                                //
+    (std::string, namespace_),                                           //
     (std::string, name),                                                 //
     (uint32_t, seed),                                                    //
     (int64_t, begin_time),                                               //
@@ -158,7 +158,7 @@ KF_DEFINE_DATA_TYPE(                              //
     (uint64_t, uid64),                            //
     (uint32_t, location_uid),                     //
     (enums::location_role, role),                 //
-    (std::string, group),                         //
+    (std::string, namespace_),                    //
     (std::string, name),                          //
     (uint32_t, seed),                             //
     (enums::mode, mode),                          //
@@ -220,7 +220,7 @@ KF_DEFINE_DATA_TYPE(                                          //
     (uint32_t, location_uid),                                 //
     (enums::location_role, role),                             //
     (enums::mode, mode),                                      //
-    (std::string, group),                                     //
+    (std::string, namespace_),                                //
     (std::string, name),                                      //
     (uint32_t, seed),                                         //
     (uint64_t, page_size)                                     //

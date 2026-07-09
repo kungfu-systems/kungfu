@@ -41,7 +41,7 @@ export function modeName(value: number | string): string {
 
 export type KfLocation = {
   role: KfRole | string;
-  group: string;
+  namespace: string;
   name: string;
   mode: KfMode | string;
 };
@@ -141,7 +141,7 @@ export type KfNativeBinding = {
   };
   ActionRecorder?: new (
     runtimeDir: string,
-    group: string,
+    namespace: string,
     name: string,
     destId?: number,
     streamId?: bigint | number,
@@ -189,14 +189,14 @@ export type KfNativeBinding = {
   ) => {
     setConfig: (
       role: string,
-      group: string,
+      namespace: string,
       name: string,
       mode: string,
       value: string,
     ) => boolean;
     removeConfig: (
       role: string,
-      group: string,
+      namespace: string,
       name: string,
       mode: string,
     ) => boolean;
