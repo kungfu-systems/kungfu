@@ -105,7 +105,7 @@
       "role": "release-passport-and-kfd-gate-provider",
       "package": {
         "name": "@kungfu-tech/buildchain",
-        "version": "2.10.8"
+        "version": "2.11.1"
       },
       "repository": "kungfu-systems/buildchain",
       "kfd": {
@@ -123,21 +123,21 @@
       "assets": [
         {
           "path": "site/kfd-claims.json",
-          "sha256": "sha256:a314e2b26474a273430c0b0a3743712ca4de5e47596bf4714360f83a46d1bfb7",
+          "sha256": "sha256:dd865c9571d6b1c261c7f09271aca9c3341382bd6c3fe20d4e40de7f8898f035",
           "contract": "kungfu-buildchain-kfd-claim-registry"
         },
         {
           "path": "site/node-api-registry.json",
-          "sha256": "sha256:46c5938144888f76be429af2c10a16ead94c046c8c6f35965e4d8db647e3c08c",
+          "sha256": "sha256:2ce4d36547980b7cf1edc4bf5577ca9ec362f2a50ccc34594f9cca23db3a9e39",
           "contract": "kungfu-buildchain-node-api-registry"
         },
         {
           "path": "docs/kfd-support.md",
-          "sha256": "sha256:d1fdec0890884340e4e8108c17b62866c08dc95771075e3e285532b5a7b0ee5a"
+          "sha256": "sha256:ce1bbf5c085a69649ee2e6ae76a52419eef94304e59efc0d0dcd4466c714709e"
         },
         {
           "path": "kfd",
-          "sha256": "sha256:e9170c1e56d2729cf530f953df9ade21963faa9a756ba5fbd0cdd03d8b781cb3"
+          "sha256": "sha256:25b6fbfff04b9b8848bd73f7b3faad5b8fd2a3b452356f2c095ea3095c9f1ad5"
         }
       ]
     }
@@ -170,7 +170,7 @@
     "kfd3": {
       "status": "supported",
       "mode": "strict-buildchain-managed-registry",
-      "source": ".buildchain/kfd/kfd-3-surfaces.json",
+      "source": ".buildchain/kfd/kfd-3/surfaces.json",
       "queryCommand": "kungfu sdk kfd query --json"
     },
     "kfd4": {
@@ -194,7 +194,7 @@
     "packageVersions": {
       "kfd": "1.0.0-alpha.21",
       "libnode": "22.22.3-kf.3-alpha.16",
-      "buildchain": "2.10.8"
+      "buildchain": "2.11.1"
     }
   }
 }

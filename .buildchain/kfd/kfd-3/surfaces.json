@@ -7,11 +7,11 @@
     "repository": "kungfu-systems/kungfu",
     "package": "@kungfu-tech/product-kungfu"
   },
-  "registryPath": ".buildchain/kfd/kfd-3-surfaces.json",
+  "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
   "buildchain": {
     "kfd3": {
       "mode": "strict-buildchain-managed-registry",
-      "sourceOfTruth": ".buildchain/kfd/kfd-3-surfaces.json",
+      "sourceOfTruth": ".buildchain/kfd/kfd-3/surfaces.json",
       "generator": "scripts/buildchain-kfd-evidence.mjs",
       "inputs": [
         {
@@ -45,9 +45,9 @@
       ],
       "projections": [
         "developer/sdk/kfd/kfd-3-surfaces.json",
-        ".buildchain/kfd-3/collaboration-interface.prebuild.json",
-        ".buildchain/kfd-3/collaboration-interface.artifact.json",
-        ".buildchain/kfd-3/capability-query.json"
+        ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+        ".buildchain/kfd/kfd-3/collaboration-interface.artifact.json",
+        ".buildchain/kfd/kfd-3/capability-query.json"
       ],
       "checkCommand": "./kungfu-code kfd:buildchain:check"
     }
@@ -63,9 +63,9 @@
     "packageVersions": {
       "kfd": "1.0.0-alpha.21",
       "libnode": "22.22.3-kf.3-alpha.16",
-      "buildchain": "2.10.8"
+      "buildchain": "2.11.1"
     },
-    "digest": "sha256:5f11358614b6bc64808e2a555081392b9a114afee933325a4258ebccce937cdf"
+    "digest": "sha256:aaa0a429cd6211f6469bf16255172c0fcc26259da290ae7858704ca732d849e0"
   },
   "surfaces": [
     {
@@ -459,8 +459,8 @@
       "participantFacing": true,
       "public": true,
       "sourcePath": "scripts/buildchain-kfd-evidence.mjs",
-      "evidencePath": ".buildchain/kfd/kfd-3-surfaces.json",
-      "artifactPath": ".buildchain/kfd/kfd-3-surfaces.json",
+      "evidencePath": ".buildchain/kfd/kfd-3/surfaces.json",
+      "artifactPath": ".buildchain/kfd/kfd-3/surfaces.json",
       "maturity": "stable",
       "declaration": {
         "owner": "kungfu",
@@ -1130,7 +1130,7 @@
     }
   ],
   "policy": {
-    "sourceOfTruth": ".buildchain/kfd/kfd-3-surfaces.json",
+    "sourceOfTruth": ".buildchain/kfd/kfd-3/surfaces.json",
     "detectedButUnregistered": "product-specific-audit",
     "declaredButMissing": "fail",
     "artifactPublicButUnclassified": "fail",

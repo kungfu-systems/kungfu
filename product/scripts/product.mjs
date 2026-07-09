@@ -10,15 +10,14 @@ import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { BUILDCHAIN_KFD3_SURFACE_REGISTRY_PATH } from '@kungfu-tech/buildchain/buildchain-layout';
 
 const __filename = fileURLToPath(import.meta.url);
 const ROOT = path.resolve(path.dirname(__filename), '..', '..');
 const isWin = process.platform === 'win32';
 const KFD3_REGISTRY = path.join(
   ROOT,
-  '.buildchain',
-  'kfd',
-  'kfd-3-surfaces.json',
+  ...BUILDCHAIN_KFD3_SURFACE_REGISTRY_PATH.split('/'),
 );
 const KFD_UPSTREAM_AGGREGATE = path.join(
   ROOT,

@@ -23,6 +23,9 @@ jobs:
       channel: ${{ startsWith(github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}
       target-ref: ${{ github.event.pull_request.base.ref }}
       target-sha: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+      buildchain-contract-lock-path: .buildchain/contract-lock.json
+      buildchain-contract-compatibility-policy: major-compatible
+      buildchain-contract-drift-issue-mode: compatible-and-breaking
       package-manager: custom
       artifact-name: kungfu
       release-candidate-workflow-file: build.yml
@@ -42,13 +45,13 @@ jobs:
       release-passport: true
       release-passport-product-name: Kungfu Episodes
       release-passport-kfd-1-witness-jsons: |
-        .buildchain/kfd-1/contract-world.witness.json
+        .buildchain/kfd/kfd-1/contract-world.witness.json
       release-passport-kfd-2-claim-jsons: |
-        .buildchain/kfd-2/claims/agent-onboarding-pack.json
-        .buildchain/kfd-2/claims/codex-report-receipts.json
-        .buildchain/kfd-2/claims/remote-fact-boundary.json
+        .buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json
+        .buildchain/kfd/kfd-2/claims/codex-report-receipts.json
+        .buildchain/kfd/kfd-2/claims/remote-fact-boundary.json
       release-passport-kfd-3-prebuild-witness-jsons: |
-        .buildchain/kfd-3/collaboration-interface.prebuild.json
+        .buildchain/kfd/kfd-3/collaboration-interface.prebuild.json
       release-passport-kfd-3-artifact-verify-command: node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json
     secrets:
       BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}

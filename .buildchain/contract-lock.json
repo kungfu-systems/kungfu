@@ -3,13 +3,13 @@
   "contract": "kungfu-buildchain-contract-lock",
   "buildchain": {
     "ref": "v2",
-    "resolvedSha": "aa039c39e7d5a5a74d078025a21a47676fadca82",
+    "resolvedSha": "1ddb0408433cba98f668410776d8b4bb65eb2452",
     "contract": "kungfu-buildchain-runtime-contract-world",
-    "contractDigest": "sha256:7b2fed2dacdf37234ca03e656904611b9c3dd48a4f229be387c7c1393f57fc5b",
-    "compatibilityDigest": "sha256:36421b592a782decbfe31a7d8d42d70ce1100a56a2c4f4a0ccc21f0617dc72bf",
+    "contractDigest": "sha256:3492a69ad5e95953d78aa3f4418b205c551e75430afcf5f00f8d5da356bc5207",
+    "compatibilityDigest": "sha256:967df7e854fdf582294ddfb6403eff25c00db9518a24051e7d47cbd75527c785",
     "majorLine": "v2",
     "compatibilityPolicy": "major-compatible",
-    "acceptedAt": "2026-07-08T01:58:03.118Z",
+    "acceptedAt": "2026-07-09T14:23:53.705Z",
     "surfaces": [
       {
         "id": "reusable-build",
@@ -22,9 +22,14 @@
         "breakingDigest": "sha256:403d2fcdb0c5eabe749e89102defad69745f70a1556707bec7831fcc2e9fa8f8"
       },
       {
+        "id": "web-surface",
+        "kind": "workflow",
+        "breakingDigest": "sha256:82ee63cb336e40d832dfff4a1c5e6cbfa221a4fc8b2359990033bc931bffc43a"
+      },
+      {
         "id": "promote-buildchain-ref-action",
         "kind": "action",
-        "breakingDigest": "sha256:347b65aecd38bc671d8f697eabd15254f905b6f745389d7b26d7595a904a720c"
+        "breakingDigest": "sha256:0c5896590c8c9a44dfecbe060bcef1b43d3a9556737309dbe7e5f2bf83bfee6c"
       },
       {
         "id": "report-buildchain-issue-action",
@@ -54,7 +59,17 @@
       {
         "id": "buildchain-cli",
         "kind": "cli",
-        "breakingDigest": "sha256:097db3e67509bedda8c6548bf1edfbfcf57f7b5510520b6a7b7e078d7ec087c8"
+        "breakingDigest": "sha256:90a73892b2d6c214048448d5f45df75639bdf7b7e8fefd9c596e04b087407bcc"
+      },
+      {
+        "id": "homebrew-distribution-index",
+        "kind": "node-api",
+        "breakingDigest": "sha256:148c0387ff4cea76433bbde80cd9d77c5aa67e1a29856ced33e4d819366f2213"
+      },
+      {
+        "id": "readme-badge-facts",
+        "kind": "node-api",
+        "breakingDigest": "sha256:bcd72ad6dfba8013c96f8b2f7b0a307d2e7713972a1219348f0d5ecc493939a0"
       },
       {
         "id": "agent-manual-registry",

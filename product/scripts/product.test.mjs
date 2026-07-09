@@ -261,7 +261,7 @@ test('dev product commands expose local KFD metadata to kungfu kfd', () => {
   assert.match(
     result.stdout,
     new RegExp(
-      `KUNGFU_KFD3_REGISTRY=${escapeRegExp(path.join(ROOT, '.buildchain', 'kfd', 'kfd-3-surfaces.json'))}`,
+      `KUNGFU_KFD3_REGISTRY=${escapeRegExp(path.join(ROOT, '.buildchain', 'kfd', 'kfd-3', 'surfaces.json'))}`,
     ),
   );
   assert.match(

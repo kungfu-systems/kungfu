@@ -32,7 +32,7 @@ The implementation builds on surfaces that already exist:
   more general KFD-3 collaboration interface.
 
 This means the SDK should not invent a second source of truth. The tracked root
-`.buildchain/kfd/kfd-3-surfaces.json` file is Kungfu's Buildchain-managed KFD-3 registry and
+`.buildchain/kfd/kfd-3/surfaces.json` file is Kungfu's Buildchain-managed KFD-3 registry and
 the Buildchain-facing source of truth for participant-facing surfaces. Kungfu's
 agent registry, SDK entrypoints, and product entrypoints are inputs that must
 project into that root registry. Generated `.buildchain/` files are release-time
@@ -64,9 +64,9 @@ evidence and are ignored by Git.
 
 | KFD | SDK entrypoint | Generated files and contracts | Runtime/API proof | Buildchain/release evidence | Maturity downgrade |
 |---|---|---|---|---|---|
-| KFD-1: contracts must not drift | `kungfu sdk add contract <surface>` | Contract source, schema/version metadata, registry entry, versioning/register prompt, drift fixture, known-limits stub | `kungfu contract verify --json`; `kungfu contract show <surface> --json`; packaged contract hash list | `scripts/buildchain-kfd-evidence.mjs` emits `.buildchain/kfd-1/contract-world.witness.json`, and the release workflow passes it to Buildchain 2.10 | Downgrade if the surface is not registered, dev/runtime/frozen artifacts disagree, or known limits are missing |
-| KFD-2: trust starts from facts | `kungfu sdk add fact-surface <name>` | Event schema or `.fbs`, msg type allocation, append helper, projection/store stub, `show/list --json` API, append-fold-readback fixture | Local append -> fold -> readback probe; manifest with schema hash and responsibility fields such as status, next action, decision, validation, artifact, and linked run | `scripts/kfd2-release-claims.mjs` emits raw claim files under `.buildchain/kfd-2/claims/`, and the release workflow passes them to Buildchain 2.10 | Downgrade if the claim is only prose, no local readback exists, responsibility fields are absent, or cost/attribution certainty is ambiguous |
-| KFD-3: cooperation starts from transparent value | Strict Buildchain mode: `.buildchain/kfd/kfd-3-surfaces.json` is the root Buildchain-managed registry; `kfd3_api.registry.json` + `@kfd3_api("<api-id>")` and SDK/product entrypoints are checked inputs that must project into it | Agent docs entry, capabilities/commands metadata, mode-selection or onboarding hook, constraint declaration, CLI/API examples, known-limits stub, local registry/schema, per-surface declaration metadata, and upstream KFD aggregate | `kungfu agent capabilities --json`; `kungfu agent choose-mode --json`; `kungfu agent verify --json`; `kungfu kfd query --json`; `kungfu kfd check --json`; `kungfu kfd upstream --json`; `kungfu kfd aggregate --json`; `kungfu sdk kfd query --json`; `./kungfu-code kfd:query`; probe that an agent can discover value, boundary, next action, known limits, upstream KFD facts, and the declared control surface | `scripts/buildchain-kfd-evidence.mjs` emits KFD-3 prebuild and artifact witnesses and fails if the root registry drifts from Buildchain-managed strict mode; the release workflow passes the prebuild witness and artifact verify command to Buildchain 2.10 | Downgrade if the surface is GUI-only, prose-only, stale, hides constraints, has no machine-readable entrypoint, lacks registry declaration metadata, or exposes runtime commands not declared in the registry |
+| KFD-1: contracts must not drift | `kungfu sdk add contract <surface>` | Contract source, schema/version metadata, registry entry, versioning/register prompt, drift fixture, known-limits stub | `kungfu contract verify --json`; `kungfu contract show <surface> --json`; packaged contract hash list | `scripts/buildchain-kfd-evidence.mjs` emits `.buildchain/kfd/kfd-1/contract-world.witness.json`, and the release workflow passes it to Buildchain 2.10 | Downgrade if the surface is not registered, dev/runtime/frozen artifacts disagree, or known limits are missing |
+| KFD-2: trust starts from facts | `kungfu sdk add fact-surface <name>` | Event schema or `.fbs`, msg type allocation, append helper, projection/store stub, `show/list --json` API, append-fold-readback fixture | Local append -> fold -> readback probe; manifest with schema hash and responsibility fields such as status, next action, decision, validation, artifact, and linked run | `scripts/kfd2-release-claims.mjs` emits raw claim files under `.buildchain/kfd/kfd-2/claims/`, and the release workflow passes them to Buildchain 2.10 | Downgrade if the claim is only prose, no local readback exists, responsibility fields are absent, or cost/attribution certainty is ambiguous |
+| KFD-3: cooperation starts from transparent value | Strict Buildchain mode: `.buildchain/kfd/kfd-3/surfaces.json` is the root Buildchain-managed registry; `kfd3_api.registry.json` + `@kfd3_api("<api-id>")` and SDK/product entrypoints are checked inputs that must project into it | Agent docs entry, capabilities/commands metadata, mode-selection or onboarding hook, constraint declaration, CLI/API examples, known-limits stub, local registry/schema, per-surface declaration metadata, and upstream KFD aggregate | `kungfu agent capabilities --json`; `kungfu agent choose-mode --json`; `kungfu agent verify --json`; `kungfu kfd query --json`; `kungfu kfd check --json`; `kungfu kfd upstream --json`; `kungfu kfd aggregate --json`; `kungfu sdk kfd query --json`; `./kungfu-code kfd:query`; probe that an agent can discover value, boundary, next action, known limits, upstream KFD facts, and the declared control surface | `scripts/buildchain-kfd-evidence.mjs` emits KFD-3 prebuild and artifact witnesses and fails if the root registry drifts from Buildchain-managed strict mode; the release workflow passes the prebuild witness and artifact verify command to Buildchain 2.10 | Downgrade if the surface is GUI-only, prose-only, stale, hides constraints, has no machine-readable entrypoint, lacks registry declaration metadata, or exposes runtime commands not declared in the registry |
 
 ## First Implementation Decision
 
@@ -185,9 +185,9 @@ Buildchain-compatible projection without writing generated files. `--write`
 emits:
 
 ```text
-.buildchain/kfd-2/release-claims.json
-.buildchain/kfd-2/claims/<claim-id>.json
-.buildchain/kfd-2/buildchain-claim-args.txt
+.buildchain/kfd/kfd-2/release-claims.json
+.buildchain/kfd/kfd-2/claims/<claim-id>.json
+.buildchain/kfd/kfd-2/buildchain-claim-args.txt
 ```
 
 The first file follows KFD's canonical `kfd-2-release-claims` wrapper. The
@@ -200,9 +200,9 @@ Manual release-passport collection can pass the generated claim files:
 ```sh
 node scripts/kfd2-release-claims.mjs --write
 buildchain collect github-release \
-  --kfd-2-claim-json .buildchain/kfd-2/claims/agent-onboarding-pack.json \
-  --kfd-2-claim-json .buildchain/kfd-2/claims/codex-report-receipts.json \
-  --kfd-2-claim-json .buildchain/kfd-2/claims/remote-fact-boundary.json
+  --kfd-2-claim-json .buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json \
+  --kfd-2-claim-json .buildchain/kfd/kfd-2/claims/codex-report-receipts.json \
+  --kfd-2-claim-json .buildchain/kfd/kfd-2/claims/remote-fact-boundary.json
 ```
 
 Release workflow wiring is now enabled through
@@ -231,7 +231,7 @@ KFD-owned schema:
   kfd-3 collaboration-interface + witness
 
 Kungfu-owned Buildchain fact source:
-  .buildchain/kfd/kfd-3-surfaces.json
+  .buildchain/kfd/kfd-3/surfaces.json
 
 Kungfu-owned input registries:
   framework/agent/kungfu-agent-api.registry.json
@@ -247,8 +247,8 @@ Generated / checked projections:
   framework/core/src/python/kungfu/agent/brief.md
   framework/core/src/python/kungfu/agent/mode-selection.md
   framework/core/src/python/kungfu/agent/safety.md
-  .buildchain/kfd-3/collaboration-interface.prebuild.json
-  .buildchain/kfd-3/collaboration-interface.artifact.json
+  .buildchain/kfd/kfd-3/collaboration-interface.prebuild.json
+  .buildchain/kfd/kfd-3/collaboration-interface.artifact.json
   provider SKILL.md files
   docs/MAP.md and operation-manual command references
 
@@ -274,7 +274,7 @@ SDK tooling:
   kungfu sdk collaboration-interface witness --json
 ```
 
-The root `.buildchain/kfd/kfd-3-surfaces.json` registry is the single Buildchain-facing fact
+The root `.buildchain/kfd/kfd-3/surfaces.json` registry is the single Buildchain-facing fact
 source for participant-facing Kungfu APIs. It should classify every shipped
 entrypoint that a participant can call or depend on:
 
@@ -372,7 +372,7 @@ node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json
 
 That witness records registry hashes, participant profiles, minimal entrypoints,
 and the agent-pack audit result. Buildchain freezes the witness and verifies the
-artifact-side witness, while Kungfu's root `.buildchain/kfd/kfd-3-surfaces.json` remains the
+artifact-side witness, while Kungfu's root `.buildchain/kfd/kfd-3/surfaces.json` remains the
 product-owned registry that those witnesses must match.
 
 The first implementation should be a narrow agent-first slice:
@@ -425,14 +425,14 @@ release artifact exists.
 `kfd:buildchain` writes:
 
 ```text
-.buildchain/kfd/kfd-3-surfaces.json
+.buildchain/kfd/kfd-3/surfaces.json
 developer/sdk/kfd/kfd-3-surfaces.json
 developer/sdk/kfd/upstream-aggregate.json
-.buildchain/kfd-1/contract-world.witness.json
-.buildchain/kfd-2/claims/*.json
-.buildchain/kfd-3/collaboration-interface.prebuild.json
-.buildchain/kfd-3/collaboration-interface.artifact.json
-.buildchain/kfd-3/capability-query.json
+.buildchain/kfd/kfd-1/contract-world.witness.json
+.buildchain/kfd/kfd-2/claims/*.json
+.buildchain/kfd/kfd-3/collaboration-interface.prebuild.json
+.buildchain/kfd/kfd-3/collaboration-interface.artifact.json
+.buildchain/kfd/kfd-3/capability-query.json
 ```
 
 The release workflow passes the KFD-1 witness, KFD-2 raw claim files, KFD-3
@@ -442,7 +442,7 @@ release passport.
 
 Buildchain owns the passport key, formatting policy, pre-build witness digest,
 and post-build artifact byte checks. Kungfu owns its root
-`.buildchain/kfd/kfd-3-surfaces.json` registry, source contracts, KFD-2 claim registry,
+`.buildchain/kfd/kfd-3/surfaces.json` registry, source contracts, KFD-2 claim registry,
 checked input registries, and generated witnesses.
 
 Buildchain owns the release trust passport audit and pass/downgrade/fail

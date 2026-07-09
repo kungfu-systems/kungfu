@@ -283,11 +283,11 @@ test('kfd check verifies the packaged KFD-3 registry projection', () => {
   assert.ok(data.registry.surfaceCount >= 1);
   assert.equal(
     data.registry.strict.registryPath,
-    '.buildchain/kfd/kfd-3-surfaces.json',
+    '.buildchain/kfd/kfd-3/surfaces.json',
   );
   assert.equal(
     data.registry.strict.sourceOfTruth,
-    '.buildchain/kfd/kfd-3-surfaces.json',
+    '.buildchain/kfd/kfd-3/surfaces.json',
   );
   assert.equal(data.registry.strict.mode, 'strict-buildchain-managed-registry');
   assert.equal(

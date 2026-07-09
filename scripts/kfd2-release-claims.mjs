@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { BUILDCHAIN_KFD2_DIR } from '@kungfu-tech/buildchain/buildchain-layout';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,7 +18,7 @@ const REGISTRY_PATH = path.join(
   'kfd-2',
   'kungfu-release-claims.registry.json',
 );
-const DEFAULT_OUTPUT_DIR = path.join(ROOT, '.buildchain', 'kfd-2');
+const DEFAULT_OUTPUT_DIR = path.join(ROOT, BUILDCHAIN_KFD2_DIR);
 const CLAIM_ID_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const CANONICAL_STATUSES = new Set([
   'declared',

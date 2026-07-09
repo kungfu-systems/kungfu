@@ -1,56 +1,17 @@
 {
   "schemaVersion": 1,
-  "contract": "kungfu-buildchain-kfd-3-surface-registry",
-  "product": {
-    "id": "kungfu",
-    "name": "Kungfu Episodes",
-    "repository": "kungfu-systems/kungfu",
-    "package": "@kungfu-tech/product-kungfu"
+  "id": "kungfu-collaboration-interface",
+  "standard": "kfd-3",
+  "witnessKind": "artifact",
+  "artifact": {
+    "name": "kungfu-product",
+    "path": "product/release"
   },
-  "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-  "buildchain": {
-    "kfd3": {
-      "mode": "strict-buildchain-managed-registry",
-      "sourceOfTruth": ".buildchain/kfd/kfd-3/surfaces.json",
-      "generator": "scripts/buildchain-kfd-evidence.mjs",
-      "inputs": [
-        {
-          "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-          "role": "kungfu-agent-first-subregistry"
-        },
-        {
-          "path": "framework/core/src/python/kungfu/agent/commands.json",
-          "role": "kungfu-agent-command-catalog"
-        },
-        {
-          "path": "developer/sdk/src/sdk.js",
-          "role": "kungfu-sdk-product-entrypoints"
-        },
-        {
-          "path": "framework/core/src/python/kungfu/cli/commands/master.py",
-          "role": "kungfu-master-service-entrypoints"
-        },
-        {
-          "path": "framework/core/src/python/kungfu/master_service.py",
-          "role": "kungfu-master-service-supervisor-runtime"
-        },
-        {
-          "path": "framework/gui/src/main/index.ts",
-          "role": "kungfu-gui-master-tray-surface"
-        },
-        {
-          "path": "product/scripts/product.mjs",
-          "role": "kungfu-product-dev-and-build-entrypoints"
-        }
-      ],
-      "projections": [
-        "developer/sdk/kfd/kfd-3-surfaces.json",
-        ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
-        ".buildchain/kfd/kfd-3/collaboration-interface.artifact.json",
-        ".buildchain/kfd/kfd-3/capability-query.json"
-      ],
-      "checkCommand": "./kungfu-code kfd:buildchain:check"
-    }
+  "sourceRegistry": {
+    "id": "kungfu",
+    "path": ".buildchain/kfd/kfd-3/surfaces.json",
+    "sha256": "e696672e2ec55508d7b5777dee4f547bcccccdde9bed12d10962fa66c858d095",
+    "digest": "sha256:db19c80c37a6fd3283e8dea4ac8912f0e6b1185cb7813a61b18b44d6538e48fe"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -67,7 +28,8 @@
     },
     "digest": "sha256:aaa0a429cd6211f6469bf16255172c0fcc26259da290ae7858704ca732d849e0"
   },
-  "surfaces": [
+  "collaborationInterfaceDigest": "sha256:e0c157538be41d310e8f812855f734a87102e8bed91e6b698392e7b7f41a11f0",
+  "exposedSurfaces": [
     {
       "id": "kungfu.agent",
       "name": "kungfu agent",
@@ -1129,12 +1091,9 @@
       }
     }
   ],
-  "policy": {
-    "sourceOfTruth": ".buildchain/kfd/kfd-3/surfaces.json",
-    "detectedButUnregistered": "product-specific-audit",
-    "declaredButMissing": "fail",
-    "artifactPublicButUnclassified": "fail",
-    "customSurfaceDetection": "scripts/buildchain-kfd-evidence.mjs",
-    "upstreamSubregistriesMustProjectIntoDefaultRegistry": true
+  "residualRisk": [],
+  "verifier": {
+    "command": "node scripts/verify-agent-pack.mjs",
+    "result": "passed"
   }
 }

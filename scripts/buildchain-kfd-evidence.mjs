@@ -9,7 +9,14 @@ import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { BUILDCHAIN_KFD3_SURFACE_REGISTRY_PATH as KFD3_DEFAULT_REGISTRY_PATH } from '@kungfu-tech/buildchain/buildchain-layout';
+import {
+  BUILDCHAIN_KFD1_CONTRACT_WORLD_WITNESS_PATH,
+  BUILDCHAIN_KFD1_RELEASE_GATE_PATH,
+  BUILDCHAIN_KFD1_VERIFY_RESULT_PATH,
+  BUILDCHAIN_KFD2_DIR,
+  BUILDCHAIN_KFD3_DIR,
+  BUILDCHAIN_KFD3_SURFACE_REGISTRY_PATH as KFD3_DEFAULT_REGISTRY_PATH,
+} from '@kungfu-tech/buildchain/buildchain-layout';
 import { kfd1, kfd3 } from '@kungfu-tech/buildchain/kfd';
 
 const KFD3_SURFACE_REGISTRY_CONTRACT =
@@ -24,22 +31,19 @@ const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, '..');
 const BUILDCHAIN_DIR = path.join(ROOT, '.buildchain');
 const KFD1_WITNESS_PATH = path.join(
-  BUILDCHAIN_DIR,
-  'kfd-1',
-  'contract-world.witness.json',
+  ROOT,
+  BUILDCHAIN_KFD1_CONTRACT_WORLD_WITNESS_PATH,
 );
 const KFD1_RELEASE_GATE_PATH = path.join(
-  BUILDCHAIN_DIR,
-  'kfd-1',
-  'release-gate.json',
+  ROOT,
+  BUILDCHAIN_KFD1_RELEASE_GATE_PATH,
 );
 const KFD1_VERIFY_RESULT_PATH = path.join(
-  BUILDCHAIN_DIR,
-  'kfd-1',
-  'verify-result.json',
+  ROOT,
+  BUILDCHAIN_KFD1_VERIFY_RESULT_PATH,
 );
-const KFD2_OUTPUT_DIR = path.join(BUILDCHAIN_DIR, 'kfd-2');
-const KFD3_OUTPUT_DIR = path.join(BUILDCHAIN_DIR, 'kfd-3');
+const KFD2_OUTPUT_DIR = path.join(ROOT, BUILDCHAIN_KFD2_DIR);
+const KFD3_OUTPUT_DIR = path.join(ROOT, BUILDCHAIN_KFD3_DIR);
 const KFD3_REGISTRY_PATH = path.join(ROOT, KFD3_DEFAULT_REGISTRY_PATH);
 const SDK_KFD3_CANONICAL_REGISTRY_PATH = path.join(
   ROOT,
@@ -153,22 +157,22 @@ function usage() {
   node scripts/buildchain-kfd-evidence.mjs --query [--json]
 
 Writes:
-  .buildchain/kfd/kfd-3-surfaces.json
+  .buildchain/kfd/kfd-3/surfaces.json
   developer/sdk/kfd/kfd-3-surfaces.json
   developer/sdk/kfd/upstream-aggregate.json
-  .buildchain/kfd-1/contract-world.witness.json
-  .buildchain/kfd-1/release-gate.json
-  .buildchain/kfd-1/verify-result.json
-  .buildchain/kfd-2/claims/<claim-id>.json
-  .buildchain/kfd-2/release-claims.json
+  .buildchain/kfd/kfd-1/contract-world.witness.json
+  .buildchain/kfd/kfd-1/release-gate.json
+  .buildchain/kfd/kfd-1/verify-result.json
+  .buildchain/kfd/kfd-2/claims/<claim-id>.json
+  .buildchain/kfd/kfd-2/release-claims.json
   developer/sdk/kfd/kfd-1/contract-world.witness.json
   developer/sdk/kfd/kfd-1/release-gate.json
   developer/sdk/kfd/kfd-1/verify-result.json
   developer/sdk/kfd/kfd-2/release-claims.json
   developer/sdk/kfd/kfd-2/claims/<claim-id>.json
-  .buildchain/kfd-3/collaboration-interface.prebuild.json
-  .buildchain/kfd-3/collaboration-interface.artifact.json
-  .buildchain/kfd-3/capability-query.json
+  .buildchain/kfd/kfd-3/collaboration-interface.prebuild.json
+  .buildchain/kfd/kfd-3/collaboration-interface.artifact.json
+  .buildchain/kfd/kfd-3/capability-query.json
   .buildchain/kfd/buildchain-kfd-summary.json
 `;
 }
@@ -762,9 +766,9 @@ function buildKfd3Registry(upstreamAggregate = buildUpstreamKfdAggregate()) {
         ],
         projections: [
           'developer/sdk/kfd/kfd-3-surfaces.json',
-          '.buildchain/kfd-3/collaboration-interface.prebuild.json',
-          '.buildchain/kfd-3/collaboration-interface.artifact.json',
-          '.buildchain/kfd-3/capability-query.json',
+          '.buildchain/kfd/kfd-3/collaboration-interface.prebuild.json',
+          '.buildchain/kfd/kfd-3/collaboration-interface.artifact.json',
+          '.buildchain/kfd/kfd-3/capability-query.json',
         ],
         checkCommand: './kungfu-code kfd:buildchain:check',
       },
