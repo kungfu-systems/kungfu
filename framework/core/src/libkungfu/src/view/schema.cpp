@@ -95,7 +95,12 @@ std::vector<col_plan> schema_handle::plan_columns(bool thin) const {
   return cols;
 }
 
-int schema_handle::bind_frame(sqlite3_stmt *st, const std::vector<col_plan> &cols, const uint8_t *buf) const {
+std::optional<int> schema_handle::bind_frame(sqlite3_stmt *st, const std::vector<col_plan> &cols, const uint8_t *buf,
+                                             size_t len) const {
+  // Bounds-check the whole table graph against the schema before any field
+  // access — a malformed/truncated frame is skipped, never dereferenced.
+  if (!verify_table(buf, len))
+    return std::nullopt;
   const reflection::Schema *s = schema_of(*bfbs_);
   const auto *fields = s->root_table()->fields();
   const flatbuffers::Table *root = flatbuffers::GetAnyRoot(buf);

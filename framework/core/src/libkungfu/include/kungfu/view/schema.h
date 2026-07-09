@@ -26,6 +26,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -83,13 +84,22 @@ public:
   // (pk)/(ts)/(status)-attributed columns (the thin index); full projects all.
   [[nodiscard]] std::vector<col_plan> plan_columns(bool thin) const;
 
-  // Bind one zero-copy frame's projected columns into a prepared statement,
-  // reflecting each field's value by BaseType. `buf` points at the FlatBuffers
-  // table root. Returns the next 1-based placeholder index.
-  int bind_frame(sqlite3_stmt *st, const std::vector<col_plan> &cols, const uint8_t *buf) const;
+  // Verify then bind one frame's projected columns into a prepared statement.
+  // `buf`/`len` delimit the FlatBuffers table buffer; this runs
+  // flatbuffers::Verify against the schema *before* any field access, so a
+  // malformed or truncated frame cannot drive an out-of-bounds reflection read
+  // (spatial safety at the access boundary, not left to the caller). On a
+  // buffer that fails verification returns std::nullopt and binds nothing; on
+  // success reflects each field by BaseType and returns the next 1-based
+  // placeholder index. This is the only way to read a frame through the handle;
+  // there is no unchecked variant (the open-layer projection path is cold, so
+  // per-frame verification is negligible next to the SQLite write).
+  [[nodiscard]] std::optional<int> bind_frame(sqlite3_stmt *st, const std::vector<col_plan> &cols, const uint8_t *buf,
+                                              size_t len) const;
 
-  // Verify a data FlatBuffers table buffer against this schema before access.
-  // For untrusted frame buffers; returns false on any bounds violation.
+  // Verify a data FlatBuffers table buffer against this schema (bounds-check the
+  // whole table graph). bind_frame runs this internally; exposed for callers
+  // that want to validate a buffer without binding.
   [[nodiscard]] bool verify_table(const uint8_t *buf, size_t len) const;
 
 private:

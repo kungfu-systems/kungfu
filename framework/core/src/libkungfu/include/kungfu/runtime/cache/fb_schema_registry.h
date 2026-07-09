@@ -21,6 +21,7 @@
 
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <sqlite3.h>
 #include <stdexcept>
 #include <string>
@@ -101,18 +102,25 @@ private:
 
 // 把一帧零拷贝投影入库：经 handle 反射 bind 业务列；thin 模式追加 journal 回环坐标
 // (kf_gen_time/kf_frame_uid/kf_stream_id)，列序与 kungfu::view::insert_sql 一致。
-inline void project_frame(sqlite3 *db, const SchemaRegistry::Entry &e, const uint8_t *buf, int64_t gen_time,
-                          uint64_t frame_uid, uint64_t stream_id) {
+// 把一帧零拷贝投影入库：handle.bind_frame 先按 schema verify 再 bind 业务列，坏帧(verify 失败)
+// 直接跳过、不入库并返回 false；thin 模式追加 journal 回环坐标。返回是否成功投影。
+[[nodiscard]] inline bool project_frame(sqlite3 *db, const SchemaRegistry::Entry &e, const uint8_t *buf, size_t len,
+                                        int64_t gen_time, uint64_t frame_uid, uint64_t stream_id) {
   sqlite3_stmt *ins = nullptr;
   sqlite3_prepare_v2(db, e.insert_sql.c_str(), -1, &ins, nullptr);
-  int next = e.handle.bind_frame(ins, e.cols, buf);
+  const std::optional<int> next = e.handle.bind_frame(ins, e.cols, buf, len);
+  if (!next) { // 坏/截断 buffer：一列都不 bind，跳过该帧
+    sqlite3_finalize(ins);
+    return false;
+  }
   if (e.thin) {
-    sqlite3_bind_int64(ins, next, gen_time);
-    sqlite3_bind_int64(ins, next + 1, static_cast<int64_t>(frame_uid));
-    sqlite3_bind_int64(ins, next + 2, static_cast<int64_t>(stream_id));
+    sqlite3_bind_int64(ins, *next, gen_time);
+    sqlite3_bind_int64(ins, *next + 1, static_cast<int64_t>(frame_uid));
+    sqlite3_bind_int64(ins, *next + 2, static_cast<int64_t>(stream_id));
   }
   sqlite3_step(ins);
   sqlite3_finalize(ins);
+  return true;
 }
 
 } // namespace kungfu::runtime::cache::projector

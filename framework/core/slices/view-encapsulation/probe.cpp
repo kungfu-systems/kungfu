@@ -104,10 +104,11 @@ int main() {
   auto ins = view::insert_sql(thin, "quote", true);
   sqlite3_stmt *st = nullptr;
   assert(sqlite3_prepare_v2(db, ins.c_str(), -1, &st, nullptr) == SQLITE_OK);
-  int next = h.bind_frame(st, thin, dbuf);
-  sqlite3_bind_int64(st, next, 1000);
-  sqlite3_bind_int64(st, next + 1, 7);
-  sqlite3_bind_int64(st, next + 2, 9);
+  auto next = h.bind_frame(st, thin, dbuf, data.size());
+  assert(next.has_value()); // valid frame verifies + binds
+  sqlite3_bind_int64(st, *next, 1000);
+  sqlite3_bind_int64(st, *next + 1, 7);
+  sqlite3_bind_int64(st, *next + 2, 9);
   assert(sqlite3_step(st) == SQLITE_DONE);
   sqlite3_finalize(st);
   assert(sqlite3_prepare_v2(db, "SELECT id, ts_ns, state, kf_gen_time, kf_frame_uid, kf_stream_id FROM quote", -1, &st,
@@ -126,13 +127,21 @@ int main() {
   assert(sqlite3_exec(db, ddl2.c_str(), nullptr, nullptr, nullptr) == SQLITE_OK);
   auto ins2 = view::insert_sql(full, "quote_full", false);
   assert(sqlite3_prepare_v2(db, ins2.c_str(), -1, &st, nullptr) == SQLITE_OK);
-  h.bind_frame(st, full, dbuf);
+  assert(h.bind_frame(st, full, dbuf, data.size()).has_value());
   assert(sqlite3_step(st) == SQLITE_DONE);
   sqlite3_finalize(st);
   assert(sqlite3_prepare_v2(db, "SELECT price, symbol FROM quote_full", -1, &st, nullptr) == SQLITE_OK);
   assert(sqlite3_step(st) == SQLITE_ROW);
   assert(sqlite3_column_double(st, 0) == 3.5);
   assert(std::string(reinterpret_cast<const char *>(sqlite3_column_text(st, 1))) == "AAPL");
+  sqlite3_finalize(st);
+
+  // spatial safety: a malformed/truncated frame is verified-and-skipped, never
+  // dereferenced — bind_frame returns nullopt and binds nothing.
+  assert(sqlite3_prepare_v2(db, ins.c_str(), -1, &st, nullptr) == SQLITE_OK);
+  assert(!h.bind_frame(st, thin, dbuf, 4).has_value()); // truncated
+  const uint8_t garbage[16] = {0xff, 0xff, 0xff, 0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  assert(!h.bind_frame(st, thin, garbage, sizeof(garbage)).has_value()); // bad offsets
   sqlite3_finalize(st);
 
   // schema evolution: co-owned bytes swap, re-plan, ALTER picks up the new column

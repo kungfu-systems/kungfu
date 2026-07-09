@@ -112,12 +112,24 @@ public:
       const auto *entry = registry_.find(p.carrier_type);
       if (entry == nullptr)
         continue;
-      projector::project_frame(db_, *entry, reinterpret_cast<const uint8_t *>(p.payload.data()), p.gen_time,
-                               p.frame_uid, p.stream_id);
+      // project_frame verifies the frame against its schema before binding; a
+      // malformed/truncated frame is skipped (not inserted) rather than driving
+      // an out-of-bounds reflection read. Count + warn so a bad producer is
+      // observable without aborting the whole batch.
+      const bool ok = projector::project_frame(db_, *entry, reinterpret_cast<const uint8_t *>(p.payload.data()),
+                                               p.payload.size(), p.gen_time, p.frame_uid, p.stream_id);
+      if (!ok) {
+        ++skipped_frames_;
+        SPDLOG_WARN("open-layer projector: skipped malformed frame (carrier_type={}, gen_time={}, {} bytes)",
+                    p.carrier_type, p.gen_time, p.payload.size());
+      }
     }
     sqlite3_exec(db_, "COMMIT", nullptr, nullptr, nullptr);
     return batch.size();
   }
+
+  // 累计因 verify 失败被跳过的坏帧数（诊断用；flush_mtx_ 下累加）。
+  [[nodiscard]] uint64_t skipped_frames() const { return skipped_frames_; }
 
   // 启动后台 flush worker（生产异步模式）。幂等：已启动则忽略。
   void start_worker(int64_t interval_ms = 100) {
@@ -170,6 +182,7 @@ private:
   std::thread worker_;
   std::atomic<bool> worker_running_{false};
   std::atomic<bool> quit_{false};
+  uint64_t skipped_frames_ = 0; // verify 失败被跳过的坏帧数（flush_mtx_ 下累加）
 };
 
 DECLARE_PTR(open_layer_projector)
