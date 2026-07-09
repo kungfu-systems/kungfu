@@ -78,6 +78,22 @@ def _source_payload(record: dict[str, Any]) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
+def _source_refs(record: dict[str, Any]) -> list[dict[str, str]]:
+    payload = _source_payload(record)
+    refs: list[dict[str, str]] = []
+    if record.get("kind") == "goal":
+        mission_id = str(payload.get("mission_id") or "").strip()
+        if mission_id:
+            refs.append(
+                {
+                    "kind": "mission",
+                    "source_id": mission_id,
+                    "role": "context",
+                }
+            )
+    return refs
+
+
 def enrich_source_records(source_records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     enriched = []
     for record in source_records:
@@ -95,6 +111,9 @@ def enrich_source_records(source_records: list[dict[str, Any]]) -> list[dict[str
             "payload_state": PAYLOAD_STATE_PRESENT,
             "payload": _source_payload(record),
         }
+        refs = _source_refs(record)
+        if refs:
+            row["source_refs"] = refs
         enriched.append(row)
     return enriched
 
@@ -187,6 +206,60 @@ def _matches_range(entry: dict[str, Any], range_filter: dict[str, Any] | None) -
     return bool(_runtime().filter_storage_manifest_entries([entry], range_filter))
 
 
+def _context_keys_from_entry(
+    store_dir: str | Path,
+    entry: dict[str, Any],
+) -> set[tuple[str, str]]:
+    keys: set[tuple[str, str]] = set()
+    refs = entry.get("source_refs")
+    if isinstance(refs, list):
+        for ref in refs:
+            if not isinstance(ref, dict):
+                continue
+            kind = str(ref.get("kind") or "").strip()
+            source_id = str(ref.get("source_id") or "").strip()
+            if kind and source_id:
+                keys.add((kind, source_id))
+    if keys or entry.get("kind") != "goal":
+        return keys
+
+    payload, error = _load_payload(store_dir, entry)
+    if error or payload is None:
+        return keys
+    mission_id = str(payload.get("mission_id") or "").strip()
+    if mission_id:
+        keys.add(("mission", mission_id))
+    return keys
+
+
+def _entries_for_range(
+    store_dir: str | Path,
+    entries: list[Any],
+    range_filter: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    manifest_entries = [entry for entry in entries if isinstance(entry, dict)]
+    if not range_filter:
+        return manifest_entries
+
+    selected = [
+        entry for entry in manifest_entries if _matches_range(entry, range_filter)
+    ]
+    selected_keys = {_entry_key(entry) for entry in selected}
+    context_keys: set[tuple[str, str]] = set()
+    for entry in selected:
+        context_keys.update(_context_keys_from_entry(store_dir, entry))
+
+    expanded = list(selected)
+    for entry in manifest_entries:
+        key = _entry_key(entry)
+        if key in selected_keys:
+            continue
+        if key in context_keys:
+            expanded.append(entry)
+            selected_keys.add(key)
+    return sorted(expanded, key=_manifest_entry_sort_key)
+
+
 def _manifest_entry_sort_key(row: dict[str, Any]) -> tuple[str, str, str]:
     return (
         str(row.get("kind") or ""),
@@ -254,11 +327,7 @@ def export_sync_root(
         raise FileNotFoundError(str(latest_manifest_path(store_dir)))
     if storage_source_id and manifest.get("storage_source_id") != storage_source_id:
         raise ValueError(f"source_not_imported: {storage_source_id}")
-    entries = [
-        entry
-        for entry in manifest.get("entries", [])
-        if isinstance(entry, dict) and _matches_range(entry, range_filter)
-    ]
+    entries = _entries_for_range(store_dir, manifest.get("entries", []), range_filter)
     return compute_sync_root(entries)
 
 
@@ -837,9 +906,9 @@ def export_records(
     if storage_source_id and manifest.get("storage_source_id") != storage_source_id:
         raise ValueError(f"source_not_imported: {storage_source_id}")
     records = []
-    for entry in manifest.get("entries", []):
-        if not _matches_range(entry, range_filter):
-            continue
+    for entry in _entries_for_range(
+        store_dir, manifest.get("entries", []), range_filter
+    ):
         payload, error = _load_payload(store_dir, entry)
         if error:
             raise ValueError(f"{error}: {entry.get('kind')}:{entry.get('source_id')}")

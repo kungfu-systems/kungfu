@@ -55,6 +55,37 @@ def _atlas_fixture(root):
     )
 
 
+def _atlas_window_context_fixture(root):
+    _write_json(
+        root / "agent-journal/goals/registry/archive/goal-old.json",
+        {
+            "goal_id": "goal-old",
+            "status": "done",
+            "updated_at": "2026-06-01T00:00:00Z",
+            "title": "Old Goal",
+        },
+    )
+    _write_json(
+        root / "agent-journal/missions/registry/archive/mission-b.json",
+        {
+            "mission_id": "mission-b",
+            "title": "Mission B",
+            "status": "active",
+            "updated_at": "2026-06-01T00:00:00Z",
+        },
+    )
+    _write_json(
+        root / "agent-journal/goals/registry/active/goal-b.json",
+        {
+            "goal_id": "goal-b",
+            "status": "active",
+            "updated_at": "2026-07-08T00:00:00Z",
+            "title": "Goal B",
+            "mission_id": "mission-b",
+        },
+    )
+
+
 def _action_receipts(source_records):
     receipts = {}
     for index, record in enumerate(
@@ -134,34 +165,7 @@ def test_atlas_source_records_keep_full_payloads(tmp_path):
 def test_atlas_source_records_filter_by_window(tmp_path):
     repo = tmp_path / "atlas"
     _atlas_fixture(repo)
-    _write_json(
-        repo / "agent-journal/goals/registry/archive/goal-old.json",
-        {
-            "goal_id": "goal-old",
-            "status": "done",
-            "updated_at": "2026-06-01T00:00:00Z",
-            "title": "Old Goal",
-        },
-    )
-    _write_json(
-        repo / "agent-journal/missions/registry/archive/mission-b.json",
-        {
-            "mission_id": "mission-b",
-            "title": "Mission B",
-            "status": "active",
-            "updated_at": "2026-06-01T00:00:00Z",
-        },
-    )
-    _write_json(
-        repo / "agent-journal/goals/registry/active/goal-b.json",
-        {
-            "goal_id": "goal-b",
-            "status": "active",
-            "updated_at": "2026-07-08T00:00:00Z",
-            "title": "Goal B",
-            "mission_id": "mission-b",
-        },
-    )
+    _atlas_window_context_fixture(repo)
 
     missions, goals, _, source_records, warnings = (
         importer.read_control_plane_with_sources(
@@ -179,6 +183,45 @@ def test_atlas_source_records_filter_by_window(tmp_path):
     assert ("mission", "mission-b") in {
         (record["kind"], record["source_id"]) for record in source_records
     }
+
+
+def test_atlas_range_export_preserves_context_closure(tmp_path):
+    repo = tmp_path / "atlas"
+    store = tmp_path / "store"
+    window = {"since": "2026-07-01T00:00:00Z"}
+    _atlas_fixture(repo)
+    _atlas_window_context_fixture(repo)
+
+    missions, goals, markers, source_records, warnings = (
+        importer.read_control_plane_with_sources(str(repo), window=window)
+    )
+    assert warnings == []
+
+    manifest = payloads.write_import_payloads(
+        store,
+        import_id="imp-range-closure",
+        repo_root=str(repo),
+        repo_head="abc123",
+        source_records=source_records,
+        counts={
+            "missions": len(missions),
+            "goals": len(goals),
+            "markers": len(markers),
+        },
+        range_filter=window,
+        action_receipts=_action_receipts(source_records),
+    )
+
+    exported = payloads.export_records(store, range_filter=window)
+    exported_keys = {(row["kind"], row["source_id"]) for row in exported}
+    source_keys = {(row["kind"], row["source_id"]) for row in source_records}
+
+    assert exported_keys == source_keys
+    assert ("mission", "mission-b") in exported_keys
+    assert (
+        payloads.export_sync_root(store, range_filter=window) == manifest["sync_root"]
+    )
+    assert payloads.verify_against_source(store, source_records)["ok"]
 
 
 def test_payload_manifest_fsck_export_and_verify(tmp_path):

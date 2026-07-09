@@ -392,6 +392,16 @@ kungfu storage export --scope atlas --format jsonl --out atlas.jsonl --json
 kungfu atlas verify --repo <atlas-repo> --json
 ```
 
+Range-limited Atlas imports preserve the control-plane context needed to make
+the selected records meaningful. For example, if a goal updated inside
+`--from` references a mission whose own card was last updated before that
+window, the import includes that mission as context. `storage export --scope
+atlas` applies the same closure rule: a range export keeps those context
+records instead of re-filtering them away. To export the exact latest imported
+batch, omit range flags; to export a subrange from the latest import, pass
+`--since` / `--from` / `--until` and expect a JSONL stream containing the
+selected records plus required context records.
+
 Acceptance covered by that slice:
 
 - large Atlas JSON bodies are stored outside mmap frames as hash-addressed
