@@ -31,7 +31,7 @@
 #include <string>
 #include <vector>
 
-using namespace kungfu::runtime;
+using namespace kungfu::yijinjing;
 namespace schema = kungfu::yijinjing;
 using kungfu::slices::sha256;
 
@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
         {"trigger_frame_uid", trigger_frame_uid},
         {"gen_time", frame->gen_time()},
         {"trigger_time", frame->trigger_time()},
-        {"msg_type", frame->msg_type()},
+        {"msg_type", frame->carrier_type()},
         {"source", frame->source()},
         {"initial_source", frame->initial_source()},
         {"dest", frame->dest()},

@@ -28,7 +28,7 @@
 #include <string>
 #include <vector>
 
-using namespace kungfu::runtime;
+using namespace kungfu::yijinjing;
 namespace schema = kungfu::yijinjing;
 using schema::enums::FrameDataType;
 

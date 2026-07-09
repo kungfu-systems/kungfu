@@ -29,7 +29,7 @@
 #include <iostream>
 #include <string>
 
-using namespace kungfu::runtime;
+using namespace kungfu::yijinjing;
 using kungfu::slices::sha256;
 namespace schema = kungfu::yijinjing;
 using schema::enums::FrameDataType;

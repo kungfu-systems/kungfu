@@ -30,7 +30,7 @@
 #include <map>
 #include <string>
 
-using namespace kungfu::runtime;
+using namespace kungfu::yijinjing;
 using kungfu::slices::sha256;
 namespace schema = kungfu::yijinjing;
 
@@ -100,9 +100,9 @@ int main(int argc, char **argv) {
   uint64_t last_uid = 0;
   while (reader.data_available()) {
     auto frame = reader.current_frame();
-    const auto it = bindings.find(frame->msg_type());
+    const auto it = bindings.find(frame->carrier_type());
     if (it == bindings.end()) {
-      std::cerr << "FAIL: no schema binding for msg_type " << frame->msg_type() << "\n";
+      std::cerr << "FAIL: no schema binding for msg_type " << frame->carrier_type() << "\n";
       return 1;
     }
     const Binding &b = it->second;
@@ -140,7 +140,7 @@ int main(int argc, char **argv) {
 
     nlohmann::json line = {
         {"seq", count},
-        {"msg_type", frame->msg_type()},
+        {"msg_type", frame->carrier_type()},
         {"type_name", b.name},
         {"schema_kind", b.kind},
         {"schema_version", b.version},
