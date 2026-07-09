@@ -86,14 +86,14 @@ Python or JavaScript responsible for their own storage semantics. It also keeps
 backend choices replaceable: a backend can change without changing the
 `yijinjing` contract or the product vocabulary.
 
-The first `libkungfu` slice exposes
+The first `libkungfu` provider slice exposes
 `kungfu::runtime::storage_service_api::storage_service` and the
-`kungfu.runtime.storage-service/v1` operation request surface for `status`,
-`fsck`, `export_bundle`, `import_bundle`, `rebuild_index`, `gc_plan`,
-`compact_plan`, and `verify_sync`. Python storage commands enter that C++
-surface before running the interim content-addressed file backend. The next
-provider slice moves the file backend and maintenance behavior behind the same
-C++ service instead of adding another Python-only contract.
+`kungfu.runtime.storage-service/v1` operation surface for `status`, `fsck`,
+`export_bundle`, `import_bundle`, `rebuild_index`, `gc_plan`, `compact_plan`,
+and `verify_sync`. The current backend is a content-addressed file provider
+implemented in C++ under the runtime service. Python storage commands are now
+compatibility shims over that service instead of a second implementation of the
+provider semantics.
 
 The first C++ contract surface is intentionally header-only vocabulary under
 `<kungfu/yijinjing/storage...>`:

@@ -439,6 +439,39 @@ void bind(pybind11::module &&m) {
             storage_service_api::make_storage_service_request(operation, runtime_dir, py_to_json(options)));
       },
       py::arg("operation"), py::arg("runtime_dir"), py::arg("options") = py::dict());
+  m.def(
+      "run_storage_service_operation",
+      [](const std::string &operation, const std::string &runtime_dir, py::dict options) {
+        return json_to_py(
+            storage_service_api::run_storage_service_operation(operation, runtime_dir, py_to_json(options)));
+      },
+      py::arg("operation"), py::arg("runtime_dir"), py::arg("options") = py::dict());
+  m.def(
+      "accept_storage_manifest",
+      [](const std::string &runtime_dir, py::dict manifest) {
+        return json_to_py(storage_service_api::accept_storage_manifest(runtime_dir, py_to_json(manifest)));
+      },
+      py::arg("runtime_dir"), py::arg("manifest"));
+  m.def(
+      "load_storage_latest_manifest",
+      [](const std::string &runtime_dir, const std::string &source_id) {
+        return json_to_py(storage_service_api::load_storage_latest_manifest(runtime_dir, source_id));
+      },
+      py::arg("runtime_dir"), py::arg("source_id"));
+  m.def(
+      "export_storage_records",
+      [](const std::string &runtime_dir, const std::string &source_id, py::dict range_filter) {
+        return json_to_py(
+            storage_service_api::export_storage_records(runtime_dir, source_id, py_to_json(range_filter)));
+      },
+      py::arg("runtime_dir"), py::arg("source_id"), py::arg("range_filter") = py::dict());
+  m.def(
+      "write_storage_payload_bytes",
+      [](const std::string &runtime_dir, const std::string &digest, py::bytes payload) {
+        const std::string raw = payload;
+        return storage_service_api::write_storage_payload_bytes(runtime_dir, digest, raw);
+      },
+      py::arg("runtime_dir"), py::arg("digest"), py::arg("payload"));
 
   m.def("setup_log", &yijinjing::log::setup_log);
   m.def("emit_log", &yijinjing::log::emit_log);

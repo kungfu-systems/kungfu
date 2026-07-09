@@ -305,6 +305,7 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
 
     assert capabilities["schema"] == "kungfu.runtime.storage-service/v1"
     assert capabilities["owner"] == "libkungfu"
+    assert capabilities["backend"] == "content-addressed-file"
     assert set(capabilities["operations"]) == {
         "status",
         "fsck",
@@ -333,6 +334,14 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
         "range": {},
         "artifact_uri": "",
     }
+    status = runtime.run_storage_service_operation(
+        "status",
+        str(tmp_path),
+        {"scope": "all"},
+    )
+    assert status["ok"]
+    assert status["backend"] == "content-addressed-file"
+    assert status["sources"] == []
 
 
 def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monkeypatch):
@@ -354,21 +363,18 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
     )
     assert accepted["source_id"] == "local-synth"
 
+    runtime = kungfu.__binding__.runtime
+    original_operation = runtime.run_storage_service_operation
     calls = []
 
-    def spy_request(operation, runtime_dir_arg, options):
+    def spy_operation(operation, runtime_dir_arg, options):
         calls.append((operation, runtime_dir_arg, dict(options)))
-        return {
-            "schema": "kungfu.runtime.storage-service/v1",
-            "owner": "libkungfu",
-            "operation": operation,
-            "runtime_dir": runtime_dir_arg,
-        }
+        return original_operation(operation, runtime_dir_arg, options)
 
     monkeypatch.setattr(
-        kungfu.__binding__.runtime,
-        "make_storage_service_request",
-        spy_request,
+        runtime,
+        "run_storage_service_operation",
+        spy_operation,
     )
 
     storage_service.status(runtime_dir, source_id="local-synth")
@@ -671,6 +677,67 @@ def test_generic_storage_service_handles_non_atlas_source_bundle(tmp_path):
     assert storage_service.fsck(imported_range_runtime, source_id="local-synth")["ok"]
 
 
+def test_runtime_storage_service_operations_own_file_provider(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    storage_service.write_synthetic_source(
+        runtime_dir,
+        source_id="local-synth",
+        manifest_id="imp-synth",
+        source_head="head-1",
+        records=[
+            {
+                "kind": "note",
+                "source_id": "note-a",
+                "source_path": "notes/a.json",
+                "source_time": "2026-07-08T00:00:00Z",
+                "payload": {"title": "A", "body": "alpha"},
+            }
+        ],
+    )
+
+    runtime = kungfu.__binding__.runtime
+    status = runtime.run_storage_service_operation(
+        "status",
+        str(runtime_dir),
+        {"scope": "source", "source_id": "local-synth"},
+    )
+    assert status["ok"]
+    assert status["source_status"][0]["source_id"] == "local-synth"
+
+    fsck = runtime.run_storage_service_operation(
+        "fsck",
+        str(runtime_dir),
+        {"scope": "source", "source_id": "local-synth"},
+    )
+    assert fsck["ok"]
+    assert fsck["checked"]["payloads"] == 1
+
+    bundle = runtime.run_storage_service_operation(
+        "export_bundle",
+        str(runtime_dir),
+        {"scope": "source", "source_id": "local-synth"},
+    )
+    assert bundle["schema"] == "kungfu.storage.export-bundle/v1"
+    assert len(bundle["records"]) == 1
+
+    imported_runtime = tmp_path / "imported-runtime"
+    imported = runtime.run_storage_service_operation(
+        "import_bundle",
+        str(imported_runtime),
+        {"scope": "source", "source_id": "local-synth", "bundle": bundle},
+    )
+    assert imported["ok"]
+    assert imported["records"] == 1
+
+    verify = runtime.run_storage_service_operation(
+        "verify_sync",
+        str(imported_runtime),
+        {"scope": "source", "source_id": "local-synth"},
+    )
+    assert verify["ok"]
+    assert verify["sync_roots_match"]
+
+
 def test_storage_maintenance_rebuild_gc_compact_and_sync_check(tmp_path):
     runtime_dir = tmp_path / "runtime"
     accepted = storage_service.write_synthetic_source(
@@ -705,8 +772,9 @@ def test_storage_maintenance_rebuild_gc_compact_and_sync_check(tmp_path):
     assert rebuild["written"]
     assert storage_service.status(runtime_dir, source_id="local-synth")["ok"]
 
-    orphan_hash = "0" * 64
-    storage_service.write_payload_bytes(runtime_dir, orphan_hash, b'{"orphan":true}')
+    orphan_raw = b'{"orphan":true}'
+    orphan_hash = payloads.payload_hash(orphan_raw)
+    storage_service.write_payload_bytes(runtime_dir, orphan_hash, orphan_raw)
     gc = storage_service.gc_plan(runtime_dir, dry_run=True)
     assert gc["candidate_count"] == 1
     assert gc["candidates"][0]["payload_hash"] == orphan_hash

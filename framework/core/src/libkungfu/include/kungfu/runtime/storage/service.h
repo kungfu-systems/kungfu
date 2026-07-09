@@ -32,6 +32,8 @@ struct storage_service_options {
   bool verify = true;
   nlohmann::json range = nlohmann::json::object();
   std::string artifact_uri = {};
+  nlohmann::json bundle = nlohmann::json::object();
+  nlohmann::json manifest = nlohmann::json::object();
 };
 
 class storage_service {
@@ -66,6 +68,19 @@ public:
 
 [[nodiscard]] nlohmann::json make_storage_service_request(const std::string &operation, const std::string &runtime_dir,
                                                           const nlohmann::json &options = nlohmann::json::object());
+
+[[nodiscard]] nlohmann::json run_storage_service_operation(const std::string &operation, const std::string &runtime_dir,
+                                                           const nlohmann::json &options = nlohmann::json::object());
+
+[[nodiscard]] nlohmann::json accept_storage_manifest(const std::string &runtime_dir, const nlohmann::json &manifest);
+
+[[nodiscard]] nlohmann::json load_storage_latest_manifest(const std::string &runtime_dir, const std::string &source_id);
+
+[[nodiscard]] nlohmann::json export_storage_records(const std::string &runtime_dir, const std::string &source_id,
+                                                    const nlohmann::json &range = nlohmann::json::object());
+
+[[nodiscard]] std::string write_storage_payload_bytes(const std::string &runtime_dir, const std::string &digest,
+                                                      const std::string &raw);
 
 [[nodiscard]] nlohmann::json storage_service_capabilities();
 
