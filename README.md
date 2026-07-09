@@ -13,9 +13,13 @@
 
 ![Status: Coming soon](https://img.shields.io/badge/status-coming%20soon-orange.svg)
 
-Kungfu is the open-source core behind the Kungfu product direction: a
-local-first, journal-first runtime for recording facts, replaying work, and
-building verifiable agent-facing applications.
+Kungfu is an open-source monorepo for real-world agent work: a local-first,
+journal-first runtime for recording facts, replaying work, and building
+verifiable agent-facing applications.
+
+The user-facing desktop and CLI distributions are released as Kungfu Episodes.
+The repository, runtime, command, SDKs, and extension system use the Kungfu,
+libkungfu, and kfx names.
 
 Facts before trust. In KFD terms, a load-bearing claim should never stand
 alone: bind it to a verifiable source, artifact, manifest, or runtime receipt.
@@ -26,16 +30,16 @@ Public entrypoints:
 
 - Product home: <https://kungfu.tech>
 - Developer and agent map: <https://libkungfu.dev>
-- Source and open core: this repository
+- Source and open monorepo: this repository
 
 The product goal is to make fact-first responsibility the path of least
 resistance: once a user starts relying on Kungfu, the natural way to use it
 should be to inspect facts, understand responsibility, and make control
 decisions from local proof rather than from opaque claims.
 
-The commercial product surface is coming soon. This repository contains the
-open-source runtime core, SDK surface, and reference applications being prepared
-in public.
+The commercial product surface is prepared in this repository as part of the
+same open-source monorepo. Public release artifacts use the Kungfu Episodes
+name; the underlying runtime and developer-facing surfaces remain Kungfu.
 
 At its core is a low-latency, append-only event journal with a shared,
 strongly-typed schema, exposed zero-copy to C++, Python, and Node. Kungfu
