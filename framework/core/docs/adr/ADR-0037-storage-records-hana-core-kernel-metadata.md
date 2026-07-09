@@ -1,6 +1,7 @@
 # ADR-0037: ADR-0018 storage-service records are Hana-core kernel metadata; JSON is an edge projection, not the contract
 
-- Status: proposed
+- Status: accepted (the decision is validated by the source-registry slice; see
+  "First delivery" below for what has landed vs. what remains staged)
 - Date: 2026-07-09
 - Category: (architecture) storage-service record representation and schema
   ownership — which substrate defines source registry, manifest, and fsck
@@ -155,13 +156,33 @@ or a sibling catalog-plane journal, not diverge into two incompatible layouts.
   define it as a POD Hana-core type with a kernel `carrier_type` id (a core type
   like `Channel`, registered in the closed-set — not a raw business allocation of
   the kind ADR-0023 gates), and write/read it through a storage/catalog-plane
-  journal.
+  journal. **(done, slice 1)** — the source registry landed as three POD records
+  `SourceRegistered` (10901), `SourceHeadUpdated` (10902), `AcceptedRangeRecorded`
+  (10903), registered in the closed-set alongside the Episode manifest family.
+  `source_registry_store` writes them to an append-only yijinjing SYSTEM journal
+  (namespace `storage`, name `source-registry`) and folds frames into the current
+  view; variable-length growth (accepted ranges) is modeled as append-only delta
+  records, not inline arrays. Exposed through the libkungfu runtime storage
+  service (`source_register` / `source_update_head` /
+  `source_record_accepted_range` / `source_list` / `source_inspect` /
+  `source_registry_fsck`).
 - Project it to SQLite via the Hana → SQLite path; store any body as
-  content-addressed bytes.
+  content-addressed bytes. **(pending, slice 2)** — the source-registry slice
+  folds directly from the journal (as the Episode manifest slice does); the
+  SQLite projection and content-addressed payload bodies are the next sub-slice
+  and reuse the existing Hana → SQLite path, not new machinery.
 - Keep `storage status` / `storage export` as the JSON edge projection over the
-  record; `fsck` verifies journal + payload + projection.
+  record; `fsck` verifies journal + payload + projection. **(done, slice 1 for
+  the source registry)** — `source_list` / `source_inspect` return JSON edge
+  projections labelled `authority: yijinjing-journal`, and `source_registry_fsck`
+  reopens journal frames to check fold consistency (missing / duplicate
+  registration, dangling head). Payload/projection verification arrives with
+  slice 2.
 - Then migrate the remaining storage-service records and retire the
   JSON-as-contract path and the unconsumed heap structs / `provider.h`.
+  **(later)** — import manifest, export bundle, and channel cursor still use the
+  `generic_service` JSON path; they are migrated after the source-registry slice
+  proves the pattern.
 
 ## Explicitly out of scope
 
