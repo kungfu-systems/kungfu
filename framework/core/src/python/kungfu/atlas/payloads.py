@@ -61,8 +61,12 @@ def _runtime():
 
 
 def payload_path(store_dir: str | Path, digest: str) -> Path:
+    # ADR-0037: payload bodies are opaque content-addressed bytes named by the
+    # content hash alone, with no format-implying extension. The body format is
+    # orthogonal to the record schema; content_type / length / hash live on the
+    # manifest entry, not in the file name.
     root = Path(store_dir) / "payloads" / digest[:2]
-    return root / f"{digest}.json"
+    return root / digest
 
 
 def latest_manifest_path(store_dir: str | Path) -> Path:

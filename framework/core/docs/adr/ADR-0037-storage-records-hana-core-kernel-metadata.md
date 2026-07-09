@@ -174,10 +174,14 @@ or a sibling catalog-plane journal, not diverge into two incompatible layouts.
   not the hand-written raw-SQL projection that serves the JSON manifest layer and
   not the `.bfbs` reflection projector). `source_registry_rebuild` replays the
   journal into the typed tables; the journal stays the authority and the
-  projection is fully rebuildable. **Content-addressed payload bodies remain
-  deferred**: source-registry records carry no large payload bodies, so the
-  `.json`-envelope → raw-bytes change belongs with the payload / import-manifest
-  slice, not here.
+  projection is fully rebuildable. **Content-addressed payload bodies done
+  (payload slice)** — payload bodies are now stored as opaque bytes named by the
+  content hash alone (`storage/payloads/<hash-prefix>/<sha256>`, no
+  format-implying extension), in both the C++ runtime storage service and the
+  Python atlas importer. Body format is orthogonal to the record schema; the
+  manifest entry commits to the body by hash, length, and `content_type`
+  metadata. This decouples and precedes the import-manifest migration, whose
+  entries reference payloads by hash.
 - Keep `storage status` / `storage export` as the JSON edge projection over the
   record; `fsck` verifies journal + payload + projection. **(done, slice 1–2 for
   the source registry)** — `source_list` / `source_inspect` return JSON edge

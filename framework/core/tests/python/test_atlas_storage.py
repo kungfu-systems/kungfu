@@ -1650,3 +1650,48 @@ def test_source_registry_projection_fsck_detects_drift(tmp_path):
     )
     assert healed["ok"]
     assert healed["projection"]["status"] == "ok"
+
+
+def test_payload_bodies_are_opaque_content_addressed_bytes(tmp_path):
+    # ADR-0037 point 6: payload bodies are opaque content-addressed bytes with no
+    # format-implying extension. The body format is orthogonal to the record
+    # schema; the manifest entry commits to the body by hash, length, and
+    # content_type metadata, not by the file name.
+    repo = tmp_path / "atlas"
+    store = tmp_path / "store"
+    _atlas_fixture(repo)
+    _, _, _, source_records, _ = importer.read_control_plane_with_sources(str(repo))
+
+    manifest = payloads.write_import_payloads(
+        store,
+        import_id="imp-opaque",
+        repo_root=str(repo),
+        repo_head="abc123",
+        source_records=source_records,
+        counts={"missions": 1, "goals": 1, "markers": 1},
+    )
+
+    entry = manifest["entries"][0]
+    digest = entry["payload_hash"]
+    body_path = store / "payloads" / digest[:2] / digest
+
+    # The body is stored at the hash-addressed path with no extension...
+    assert body_path.exists()
+    assert body_path.suffix == ""
+    # ...and the legacy .json-envelope path is gone.
+    assert not (store / "payloads" / digest[:2] / f"{digest}.json").exists()
+
+    # The stored bytes are exactly the opaque body, content-addressed: the file
+    # name is the sha256 of its contents.
+    raw = body_path.read_bytes()
+    import hashlib
+
+    assert hashlib.sha256(raw).hexdigest() == digest
+    assert len(raw) == entry["byte_len"]
+
+    # Format lives on the record as metadata, not in the file name.
+    assert entry["content_type"] == payloads.CONTENT_TYPE_JSON
+
+    # The runtime still verifies the body by hash + length regardless of naming.
+    runtime = kungfu.__binding__.runtime
+    assert runtime.verify_storage_payload(raw, digest, entry["byte_len"]) == ""

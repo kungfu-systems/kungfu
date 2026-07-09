@@ -77,7 +77,10 @@ def registry_path(runtime_dir: str | Path) -> Path:
 
 
 def payload_path(runtime_dir: str | Path, digest: str) -> Path:
-    return root_dir(runtime_dir) / "payloads" / digest[:2] / f"{digest}.json"
+    # ADR-0037: payload bodies are opaque content-addressed bytes named by the
+    # content hash alone (no format-implying extension). Must match the C++
+    # runtime storage service payload_path.
+    return root_dir(runtime_dir) / "payloads" / digest[:2] / digest
 
 
 def _payload_root(runtime_dir: str | Path) -> Path:

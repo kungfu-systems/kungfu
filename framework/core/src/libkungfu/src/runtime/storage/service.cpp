@@ -348,7 +348,11 @@ fs::path sqlite_projection_path(const std::string &runtime_dir) {
 }
 
 fs::path payload_path(const std::string &runtime_dir, const std::string &digest) {
-  return payload_root(runtime_dir) / digest.substr(0, std::min<size_t>(2, digest.size())) / (digest + ".json");
+  // ADR-0037: payload bodies are opaque content-addressed bytes. The file is
+  // named by the content hash alone, with no format-implying extension — the
+  // body format is orthogonal to the record schema, which commits to the body
+  // by hash, length, and payload state (content_type is record metadata).
+  return payload_root(runtime_dir) / digest.substr(0, std::min<size_t>(2, digest.size())) / digest;
 }
 
 fs::path source_manifest_dir(const std::string &runtime_dir, const std::string &source_id) {
@@ -490,7 +494,7 @@ public:
     return {
         {"source_registry", "storage/sources.json"},
         {"source_manifests", "storage/sources/<source-id>/manifests/*.json"},
-        {"payloads", "storage/payloads/<hash-prefix>/<sha256>.json"},
+        {"payloads", "storage/payloads/<hash-prefix>/<sha256>"},
     };
   }
 
@@ -849,7 +853,7 @@ nlohmann::json workspace_episode_layout(const storage_service_options &options, 
   const auto episode_manifest_dir =
       journal_dir / "system" / yy_storage::EPISODE_MANIFEST_NAMESPACE / yy_storage::EPISODE_MANIFEST_NAME / "live";
   const auto source_manifest_pattern = storage_dir / "sources" / "<source-id>" / "manifests" / "*.json";
-  const auto payload_pattern = storage_dir / "payloads" / "<hash-prefix>" / "<sha256>.json";
+  const auto payload_pattern = storage_dir / "payloads" / "<hash-prefix>" / "<sha256>";
 
   return {
       {"schema", "kungfu.workspace.episode-layout/v1"},
@@ -983,7 +987,9 @@ std::vector<fs::path> all_payload_paths(const std::string &runtime_dir) {
       continue;
     }
     for (const auto &entry : fs::directory_iterator(prefix.path())) {
-      if (entry.is_regular_file() && entry.path().extension() == ".json") {
+      // Payload bodies are opaque content-addressed files named by hash, with no
+      // extension (ADR-0037); every regular file under a prefix is a body.
+      if (entry.is_regular_file()) {
         paths.emplace_back(entry.path());
       }
     }
@@ -992,7 +998,11 @@ std::vector<fs::path> all_payload_paths(const std::string &runtime_dir) {
   return paths;
 }
 
-std::string payload_digest_from_path(const fs::path &path) { return path.stem().string(); }
+std::string payload_digest_from_path(const fs::path &path) {
+  // Bodies are named by the full content hash with no extension; the whole
+  // filename is the digest.
+  return path.filename().string();
+}
 
 nlohmann::json source_projection_from_manifest(const nlohmann::json &manifest) {
   if (manifest.contains("source") && manifest.at("source").is_object()) {
