@@ -19,12 +19,11 @@
 #include <kungfu/common.h>
 #include <kungfu/runtime/cache/fb_schema_registry.h>
 
-#include <flatbuffers/util.h>
-
 #include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <fstream>
+#include <iterator>
 #include <mutex>
 #include <sstream>
 #include <stdexcept>
@@ -70,9 +69,12 @@ public:
       std::string table, bfbs_file;
       if (!(iss >> carrier_type >> table >> bfbs_file))
         continue;
-      std::string bfbs;
-      if (!flatbuffers::LoadFile((schemas_dir + "/" + bfbs_file).c_str(), /*binary*/ true, &bfbs))
+      // 读 .bfbs 原始字节（纯文件 IO，无 FlatBuffers）；registry_.add 内部经
+      // kungfu::view::schema_handle::from_bytes 验证并接管字节（ADR-0039：验证在 view 边界）。
+      std::ifstream bf(schemas_dir + "/" + bfbs_file, std::ios::binary);
+      if (!bf)
         throw std::runtime_error("open_layer_projector: cannot read bfbs " + bfbs_file);
+      std::string bfbs((std::istreambuf_iterator<char>(bf)), std::istreambuf_iterator<char>());
       registry_.add(carrier_type, table, std::move(bfbs), /*thin*/ true);
     }
     registry_.reconcile_all(db_);

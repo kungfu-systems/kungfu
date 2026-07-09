@@ -7,3 +7,4 @@
 
 add_subdirectory(fact-ledger)
 add_subdirectory(schema-registry)
+add_subdirectory(view-encapsulation)

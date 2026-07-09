@@ -714,6 +714,20 @@ function main() {
       if (guard.status === 0) pass('yijinjing dependency guard', 'check-deps');
       else fail('yijinjing dependency guard', tail3(guard));
 
+      // ADR-0039: all FlatBuffers/reflection access is confined to kungfu::view.
+      const viewGuardMjs = path.join(
+        core,
+        'src',
+        'libkungfu',
+        'check-view-boundary.mjs',
+      );
+      const viewGuard = spawnSync(process.execPath, [viewGuardMjs], {
+        encoding: 'utf8',
+      });
+      if (viewGuard.status === 0)
+        pass('kungfu::view FB boundary guard', 'check-view-boundary');
+      else fail('kungfu::view FB boundary guard', tail3(viewGuard));
+
       // ── Stage 6: journal fact fixtures (full mode) ────────────────
       // Each fixture under tests/fixtures/rewind-demo-*/ proves a capture
       // gate end to end against the built dist/kungfu (G2 capture, G3 event
