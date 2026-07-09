@@ -10,6 +10,7 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 from xml.sax.saxutils import escape as xml_escape
@@ -23,8 +24,9 @@ yjj = kungfu.__binding__.runtime
 SCHEMA_STATUS = "kungfu.master-service.status/v1"
 SCHEMA_PLAN = "kungfu.master-service.plan/v1"
 SCHEMA_RESULT = "kungfu.master-service.result/v1"
-SERVICE_ID = "tech.kungfu.master"
-SERVICE_NAME = "Kungfu Master"
+SCHEMA_ROUTES = "kungfu.master-service.routes/v1"
+SERVICE_ID = "tech.kungfu.supervisor"
+SERVICE_NAME = "Kungfu Supervisor"
 
 
 def _now() -> float:
@@ -90,12 +92,56 @@ def _systemd_env_line(key: str, value: str) -> str:
     return f'Environment="{key}={escaped}"'
 
 
+def _canonical_path(value: str) -> str:
+    return str(Path(value).expanduser().resolve())
+
+
+def resolve_config_home(config_home: str | None = None) -> str:
+    return _canonical_path(
+        config_home or os.environ.get("KF_CONFIG_HOME") or "~/.kungfu-config"
+    )
+
+
+def resolve_runtime_home(home: str) -> str:
+    return _canonical_path(home)
+
+
+def resolve_runtime_dir(home: str, runtime_dir: str | None = None) -> str:
+    return _canonical_path(runtime_dir or str(Path(home).expanduser() / "runtime"))
+
+
+def route_id(home: str, runtime_dir: str) -> str:
+    digest = sha256(
+        f"{resolve_runtime_home(home)}\0{resolve_runtime_dir(home, runtime_dir)}".encode(
+            "utf-8"
+        )
+    ).hexdigest()
+    return digest[:16]
+
+
+def route_record(home: str, runtime_dir: str) -> dict[str, Any]:
+    home = resolve_runtime_home(home)
+    runtime_dir = resolve_runtime_dir(home, runtime_dir)
+    return {
+        "routeId": route_id(home, runtime_dir),
+        "dataRoot": home,
+        "home": home,
+        "runtimeDir": runtime_dir,
+        "desired": True,
+        "updatedAt": _now(),
+    }
+
+
+def supervisor_state_dir(config_home: str | None = None) -> Path:
+    return Path(resolve_config_home(config_home)) / "runtime" / "supervisor"
+
+
 def state_dir(runtime_dir: str) -> Path:
-    return Path(runtime_dir).expanduser().resolve() / "service" / "master"
+    return Path(runtime_dir).expanduser().resolve() / "master"
 
 
-def supervisor_pid_path(runtime_dir: str) -> Path:
-    return state_dir(runtime_dir) / "supervisor.pid"
+def supervisor_pid_path(config_home: str | None = None) -> Path:
+    return supervisor_state_dir(config_home) / "supervisor.pid"
 
 
 def master_pid_path(runtime_dir: str) -> Path:
@@ -106,8 +152,16 @@ def state_path(runtime_dir: str) -> Path:
     return state_dir(runtime_dir) / "state.json"
 
 
-def supervisor_log_path(runtime_dir: str) -> Path:
-    return state_dir(runtime_dir) / "supervisor.log"
+def supervisor_state_path(config_home: str | None = None) -> Path:
+    return supervisor_state_dir(config_home) / "state.json"
+
+
+def routes_path(config_home: str | None = None) -> Path:
+    return supervisor_state_dir(config_home) / "routes.json"
+
+
+def supervisor_log_path(config_home: str | None = None) -> Path:
+    return supervisor_state_dir(config_home) / "supervisor.log"
 
 
 def master_log_path(runtime_dir: str) -> Path:
@@ -140,10 +194,16 @@ def entry_command() -> list[str]:
     return [sys.executable, "-m", "kungfu"]
 
 
-def command_env(home: str, runtime_dir: str, log_level: str) -> dict[str, str]:
+def command_env(
+    home: str,
+    runtime_dir: str,
+    log_level: str,
+    config_home: str | None = None,
+) -> dict[str, str]:
     env = dict(os.environ)
     env["KF_HOME"] = home
     env["KF_RUNTIME_DIR"] = runtime_dir
+    env["KF_CONFIG_HOME"] = resolve_config_home(config_home)
     env["KF_LOG_LEVEL"] = log_level
     return env
 
@@ -163,7 +223,12 @@ def master_run_command(home: str, runtime_dir: str, log_level: str) -> list[str]
 
 
 def supervisor_command(
-    home: str, runtime_dir: str, log_level: str, *, foreground: bool = True
+    config_home: str | None,
+    log_level: str,
+    *,
+    home: str | None = None,
+    runtime_dir: str | None = None,
+    foreground: bool = True,
 ) -> list[str]:
     command = [
         *entry_command(),
@@ -171,14 +236,46 @@ def supervisor_command(
         log_level,
         "master",
         "supervise",
-        "--runtime-dir",
-        runtime_dir,
-        "--home",
-        home,
+        "--config-home",
+        resolve_config_home(config_home),
     ]
+    if home:
+        command.extend(["--home", resolve_runtime_home(home)])
+    if runtime_dir:
+        command.extend(["--runtime-dir", resolve_runtime_dir(home or "", runtime_dir)])
     if foreground:
         command.append("--foreground")
     return command
+
+
+def _empty_routes() -> dict[str, Any]:
+    return {"schema": SCHEMA_ROUTES, "routes": {}}
+
+
+def read_routes(config_home: str | None = None) -> dict[str, Any]:
+    payload = _json_read(routes_path(config_home))
+    if payload.get("schema") != SCHEMA_ROUTES or not isinstance(
+        payload.get("routes"), dict
+    ):
+        return _empty_routes()
+    return payload
+
+
+def write_routes(config_home: str | None, payload: dict[str, Any]) -> None:
+    payload.setdefault("schema", SCHEMA_ROUTES)
+    payload.setdefault("routes", {})
+    payload["updatedAt"] = _now()
+    _json_write(routes_path(config_home), payload)
+
+
+def upsert_route(
+    config_home: str | None, home: str, runtime_dir: str
+) -> dict[str, Any]:
+    route = route_record(home, runtime_dir)
+    payload = read_routes(config_home)
+    payload["routes"][route["routeId"]] = route
+    write_routes(config_home, payload)
+    return route
 
 
 class Master(yjj.master):
@@ -206,6 +303,8 @@ class Master(yjj.master):
 
 
 def run_master(home: str, runtime_dir: str, low_latency: bool = False) -> int:
+    home = resolve_runtime_home(home)
+    runtime_dir = resolve_runtime_dir(home, runtime_dir)
     service_state_dir = state_dir(runtime_dir)
     service_state_dir.mkdir(parents=True, exist_ok=True)
     write_pid(master_pid_path(runtime_dir), os.getpid())
@@ -229,25 +328,48 @@ def run_master(home: str, runtime_dir: str, low_latency: bool = False) -> int:
 
 
 def status(home: str, runtime_dir: str) -> dict[str, Any]:
-    supervisor_pid = read_pid(supervisor_pid_path(runtime_dir))
+    return route_status(home, runtime_dir)
+
+
+def route_status(
+    home: str,
+    runtime_dir: str,
+    config_home: str | None = None,
+) -> dict[str, Any]:
+    config_home = resolve_config_home(config_home)
+    home = resolve_runtime_home(home)
+    runtime_dir = resolve_runtime_dir(home, runtime_dir)
+    route = route_record(home, runtime_dir)
+    supervisor_pid = read_pid(supervisor_pid_path(config_home))
     master_pid = read_pid(master_pid_path(runtime_dir))
     state = _json_read(state_path(runtime_dir))
+    supervisor_state = _json_read(supervisor_state_path(config_home))
+    routes = read_routes(config_home)
     supervisor_running = _is_pid_running(supervisor_pid)
     master_running = _is_pid_running(master_pid)
     status_name = "running" if supervisor_running else "stopped"
     if master_running and not supervisor_running:
         status_name = "orphan-master"
+    elif supervisor_running and not master_running:
+        status_name = "supervisor-running"
     return {
         "schema": SCHEMA_STATUS,
         "status": status_name,
+        "configHome": config_home,
+        "dataRoot": home,
         "home": home,
         "runtimeDir": runtime_dir,
+        "supervisorStateDir": str(supervisor_state_dir(config_home)),
         "stateDir": str(state_dir(runtime_dir)),
+        "route": {
+            **route,
+            "registered": route["routeId"] in routes["routes"],
+        },
         "supervisor": {
             "pid": supervisor_pid,
             "running": supervisor_running,
-            "pidFile": str(supervisor_pid_path(runtime_dir)),
-            "log": str(supervisor_log_path(runtime_dir)),
+            "pidFile": str(supervisor_pid_path(config_home)),
+            "log": str(supervisor_log_path(config_home)),
         },
         "master": {
             "pid": master_pid,
@@ -255,28 +377,38 @@ def status(home: str, runtime_dir: str) -> dict[str, Any]:
             "pidFile": str(master_pid_path(runtime_dir)),
             "log": str(master_log_path(runtime_dir)),
         },
+        "routes": {
+            "path": str(routes_path(config_home)),
+            "count": len(routes["routes"]),
+        },
+        "lastSupervisorState": supervisor_state,
         "lastState": state,
     }
 
 
 def run_supervisor(
-    home: str,
-    runtime_dir: str,
     log_level: str,
     *,
+    config_home: str | None = None,
+    home: str | None = None,
+    runtime_dir: str | None = None,
     restart_delay: float = 2.0,
 ) -> int:
-    service_state_dir = state_dir(runtime_dir)
+    config_home = resolve_config_home(config_home)
+    service_state_dir = supervisor_state_dir(config_home)
     service_state_dir.mkdir(parents=True, exist_ok=True)
-    write_pid(supervisor_pid_path(runtime_dir), os.getpid())
+    write_pid(supervisor_pid_path(config_home), os.getpid())
+    if home and runtime_dir:
+        upsert_route(config_home, home, runtime_dir)
     stopping = False
-    child: subprocess.Popen[Any] | None = None
+    children: dict[str, subprocess.Popen[Any]] = {}
 
     def request_stop(signum: int, frame: Any) -> None:
         nonlocal stopping
         stopping = True
-        if child and child.poll() is None:
-            child.terminate()
+        for child in children.values():
+            if child.poll() is None:
+                child.terminate()
 
     signal.signal(signal.SIGTERM, request_stop)
     if platform.system() != "Windows":
@@ -284,77 +416,117 @@ def run_supervisor(
 
     try:
         while not stopping:
-            command = master_run_command(home, runtime_dir, log_level)
-            with master_log_path(runtime_dir).open("ab") as log:
-                child = subprocess.Popen(
-                    command,
-                    env=command_env(home, runtime_dir, log_level),
-                    stdout=log,
-                    stderr=log,
+            routes = read_routes(config_home)
+            desired_routes = {
+                route_id_: route
+                for route_id_, route in routes["routes"].items()
+                if isinstance(route, dict) and route.get("desired") is True
+            }
+            for route_id_, child in list(children.items()):
+                if child.poll() is not None or route_id_ not in desired_routes:
+                    route = desired_routes.get(route_id_)
+                    if route:
+                        unlink_if_exists(master_pid_path(str(route["runtimeDir"])))
+                    if route_id_ not in desired_routes and child.poll() is None:
+                        child.terminate()
+                    children.pop(route_id_, None)
+            for route_id_, route in desired_routes.items():
+                child = children.get(route_id_)
+                if child and child.poll() is None:
+                    continue
+                route_home = str(route["home"])
+                route_runtime_dir = str(route["runtimeDir"])
+                command = master_run_command(route_home, route_runtime_dir, log_level)
+                master_log_path(route_runtime_dir).parent.mkdir(
+                    parents=True, exist_ok=True
                 )
-            write_pid(master_pid_path(runtime_dir), child.pid)
+                with master_log_path(route_runtime_dir).open("ab") as log:
+                    child = subprocess.Popen(
+                        command,
+                        env=command_env(
+                            route_home,
+                            route_runtime_dir,
+                            log_level,
+                            config_home,
+                        ),
+                        stdout=log,
+                        stderr=log,
+                    )
+                children[route_id_] = child
+                write_pid(master_pid_path(route_runtime_dir), child.pid)
             _json_write(
-                state_path(runtime_dir),
+                supervisor_state_path(config_home),
                 {
                     "schema": SCHEMA_STATUS,
                     "status": "running",
-                    "home": home,
-                    "runtimeDir": runtime_dir,
+                    "configHome": config_home,
                     "supervisorPid": os.getpid(),
-                    "masterPid": child.pid,
-                    "masterCommand": command,
+                    "routes": {
+                        route_id_: {
+                            "home": route["home"],
+                            "runtimeDir": route["runtimeDir"],
+                            "masterPid": children[route_id_].pid
+                            if route_id_ in children
+                            else None,
+                        }
+                        for route_id_, route in desired_routes.items()
+                    },
                     "updatedAt": _now(),
                 },
             )
-            while not stopping and child.poll() is None:
-                time.sleep(0.5)
-            return_code = child.poll()
-            unlink_if_exists(master_pid_path(runtime_dir))
-            _json_write(
-                state_path(runtime_dir),
-                {
-                    "schema": SCHEMA_STATUS,
-                    "status": "stopping" if stopping else "restarting",
-                    "home": home,
-                    "runtimeDir": runtime_dir,
-                    "supervisorPid": os.getpid(),
-                    "lastMasterReturnCode": return_code,
-                    "updatedAt": _now(),
-                },
-            )
-            if not stopping:
-                time.sleep(restart_delay)
+            time.sleep(restart_delay)
         return 0
     finally:
-        if child and child.poll() is None:
+        for route_id_, child in list(children.items()):
+            if child.poll() is None:
+                child.terminate()
+        for route_id_, child in list(children.items()):
             child.terminate()
             try:
                 child.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 child.kill()
-        unlink_if_exists(supervisor_pid_path(runtime_dir))
-        unlink_if_exists(master_pid_path(runtime_dir))
+        for route in read_routes(config_home)["routes"].values():
+            if isinstance(route, dict) and route.get("runtimeDir"):
+                unlink_if_exists(master_pid_path(str(route["runtimeDir"])))
+        unlink_if_exists(supervisor_pid_path(config_home))
         _json_write(
-            state_path(runtime_dir),
+            supervisor_state_path(config_home),
             {
                 "schema": SCHEMA_STATUS,
                 "status": "stopped",
-                "home": home,
-                "runtimeDir": runtime_dir,
+                "configHome": config_home,
                 "updatedAt": _now(),
             },
         )
 
 
-def start_supervisor(home: str, runtime_dir: str, log_level: str) -> dict[str, Any]:
-    current = status(home, runtime_dir)
+def ensure_master(
+    home: str,
+    runtime_dir: str,
+    log_level: str,
+    config_home: str | None = None,
+) -> dict[str, Any]:
+    config_home = resolve_config_home(config_home)
+    home = resolve_runtime_home(home)
+    runtime_dir = resolve_runtime_dir(home, runtime_dir)
+    route = upsert_route(config_home, home, runtime_dir)
+    current = route_status(home, runtime_dir, config_home)
     if current["supervisor"]["running"]:
-        return {**current, "changed": False}
-    state_dir(runtime_dir).mkdir(parents=True, exist_ok=True)
-    command = supervisor_command(home, runtime_dir, log_level, foreground=True)
-    with supervisor_log_path(runtime_dir).open("ab") as log:
+        return _wait_for_master(
+            home, runtime_dir, config_home, changed=False, route=route
+        )
+    supervisor_state_dir(config_home).mkdir(parents=True, exist_ok=True)
+    command = supervisor_command(
+        config_home,
+        log_level,
+        home=home,
+        runtime_dir=runtime_dir,
+        foreground=True,
+    )
+    with supervisor_log_path(config_home).open("ab") as log:
         kwargs: dict[str, Any] = {
-            "env": command_env(home, runtime_dir, log_level),
+            "env": command_env(home, runtime_dir, log_level, config_home),
             "stdout": log,
             "stderr": log,
         }
@@ -367,30 +539,84 @@ def start_supervisor(home: str, runtime_dir: str, log_level: str) -> dict[str, A
         else:
             kwargs["start_new_session"] = True
         subprocess.Popen(command, **kwargs)
+    return _wait_for_master(
+        home,
+        runtime_dir,
+        config_home,
+        changed=True,
+        command=command,
+        route=route,
+    )
+
+
+def _wait_for_master(
+    home: str,
+    runtime_dir: str,
+    config_home: str,
+    *,
+    changed: bool,
+    route: dict[str, Any],
+    command: list[str] | None = None,
+) -> dict[str, Any]:
     deadline = time.time() + 5
     while time.time() < deadline:
-        current = status(home, runtime_dir)
-        if current["supervisor"]["running"]:
-            return {**current, "changed": True, "command": command}
+        current = route_status(home, runtime_dir, config_home)
+        if current["supervisor"]["running"] and current["master"]["running"]:
+            payload = {**current, "changed": changed, "route": route}
+            if command:
+                payload["command"] = command
+            return payload
         time.sleep(0.2)
-    return {**status(home, runtime_dir), "changed": False, "command": command}
+    payload = {
+        **route_status(home, runtime_dir, config_home),
+        "changed": changed,
+        "route": route,
+    }
+    if command:
+        payload["command"] = command
+    return payload
 
 
 def stop_supervisor(
-    home: str, runtime_dir: str, timeout: float = 10.0
+    config_home: str | None = None, timeout: float = 10.0
 ) -> dict[str, Any]:
-    current = status(home, runtime_dir)
+    config_home = resolve_config_home(config_home)
+    current = supervisor_status(config_home)
     pid = current["supervisor"]["pid"]
     if not current["supervisor"]["running"] or not pid:
         return {**current, "changed": False}
     _terminate_pid(pid)
     deadline = time.time() + timeout
     while time.time() < deadline:
-        current = status(home, runtime_dir)
+        current = supervisor_status(config_home)
         if not current["supervisor"]["running"]:
             return {**current, "changed": True}
         time.sleep(0.2)
-    return {**status(home, runtime_dir), "changed": False, "error": "timeout"}
+    return {**supervisor_status(config_home), "changed": False, "error": "timeout"}
+
+
+def supervisor_status(config_home: str | None = None) -> dict[str, Any]:
+    config_home = resolve_config_home(config_home)
+    supervisor_pid = read_pid(supervisor_pid_path(config_home))
+    routes = read_routes(config_home)
+    return {
+        "schema": SCHEMA_STATUS,
+        "status": "running" if _is_pid_running(supervisor_pid) else "stopped",
+        "configHome": config_home,
+        "supervisorStateDir": str(supervisor_state_dir(config_home)),
+        "supervisor": {
+            "pid": supervisor_pid,
+            "running": _is_pid_running(supervisor_pid),
+            "pidFile": str(supervisor_pid_path(config_home)),
+            "log": str(supervisor_log_path(config_home)),
+        },
+        "routes": {
+            "path": str(routes_path(config_home)),
+            "count": len(routes["routes"]),
+            "items": list(routes["routes"].values()),
+        },
+        "lastSupervisorState": _json_read(supervisor_state_path(config_home)),
+    }
 
 
 @dataclass(frozen=True)
@@ -412,10 +638,24 @@ class ServicePlan:
         }
 
 
-def service_plan(home: str, runtime_dir: str, log_level: str) -> ServicePlan:
+def service_plan(
+    home: str,
+    runtime_dir: str,
+    log_level: str,
+    config_home: str | None = None,
+) -> ServicePlan:
+    config_home = resolve_config_home(config_home)
+    home = resolve_runtime_home(home)
+    runtime_dir = resolve_runtime_dir(home, runtime_dir)
     system = platform.system()
-    command = supervisor_command(home, runtime_dir, log_level, foreground=True)
-    env = command_env(home, runtime_dir, log_level)
+    command = supervisor_command(
+        config_home,
+        log_level,
+        home=home,
+        runtime_dir=runtime_dir,
+        foreground=True,
+    )
+    env = command_env(home, runtime_dir, log_level, config_home)
     if system == "Darwin":
         path = Path.home() / "Library" / "LaunchAgents" / f"{SERVICE_ID}.plist"
         args = "\n".join(f"    <string>{xml_escape(arg)}</string>" for arg in command)
@@ -433,6 +673,8 @@ def service_plan(home: str, runtime_dir: str, log_level: str) -> ServicePlan:
   <dict>
     <key>KF_HOME</key>
     <string>{xml_escape(home)}</string>
+    <key>KF_CONFIG_HOME</key>
+    <string>{xml_escape(config_home)}</string>
     <key>KF_RUNTIME_DIR</key>
     <string>{xml_escape(runtime_dir)}</string>
     <key>KF_LOG_LEVEL</key>
@@ -443,9 +685,9 @@ def service_plan(home: str, runtime_dir: str, log_level: str) -> ServicePlan:
   <key>KeepAlive</key>
   <true/>
   <key>StandardOutPath</key>
-  <string>{xml_escape(str(supervisor_log_path(runtime_dir)))}</string>
+  <string>{xml_escape(str(supervisor_log_path(config_home)))}</string>
   <key>StandardErrorPath</key>
-  <string>{xml_escape(str(supervisor_log_path(runtime_dir)))}</string>
+  <string>{xml_escape(str(supervisor_log_path(config_home)))}</string>
 </dict>
 </plist>
 """
@@ -457,7 +699,9 @@ def service_plan(home: str, runtime_dir: str, log_level: str) -> ServicePlan:
             f"run: launchctl bootout gui/$(id -u) {shlex_quote(str(path))}; then remove {path}",
         )
     if system == "Linux":
-        path = Path.home() / ".config" / "systemd" / "user" / "kungfu-master.service"
+        path = (
+            Path.home() / ".config" / "systemd" / "user" / "kungfu-supervisor.service"
+        )
         content = f"""[Unit]
 Description={SERVICE_NAME}
 After=default.target
@@ -465,6 +709,7 @@ After=default.target
 [Service]
 Type=simple
 {_systemd_env_line("KF_HOME", home)}
+{_systemd_env_line("KF_CONFIG_HOME", config_home)}
 {_systemd_env_line("KF_RUNTIME_DIR", runtime_dir)}
 {_systemd_env_line("KF_LOG_LEVEL", log_level)}
 ExecStart={_shell_join(command)}
@@ -478,8 +723,8 @@ WantedBy=default.target
             system,
             path,
             content,
-            "write the unit; then run: systemctl --user daemon-reload && systemctl --user enable --now kungfu-master.service",
-            "run: systemctl --user disable --now kungfu-master.service; then remove the unit",
+            "write the unit; then run: systemctl --user daemon-reload && systemctl --user enable --now kungfu-supervisor.service",
+            "run: systemctl --user disable --now kungfu-supervisor.service; then remove the unit",
         )
     startup = (
         Path(os.environ.get("APPDATA", str(Path.home())))
@@ -488,11 +733,12 @@ WantedBy=default.target
         / "Start Menu"
         / "Programs"
         / "Startup"
-        / "kungfu-master.cmd"
+        / "kungfu-supervisor.cmd"
     )
     lines = [
         "@echo off",
         f'set "KF_HOME={env["KF_HOME"]}"',
+        f'set "KF_CONFIG_HOME={env["KF_CONFIG_HOME"]}"',
         f'set "KF_RUNTIME_DIR={env["KF_RUNTIME_DIR"]}"',
         f'set "KF_LOG_LEVEL={env["KF_LOG_LEVEL"]}"',
         _shell_join(command),
@@ -507,8 +753,13 @@ WantedBy=default.target
     )
 
 
-def install_service(home: str, runtime_dir: str, log_level: str) -> dict[str, Any]:
-    plan = service_plan(home, runtime_dir, log_level)
+def install_service(
+    home: str,
+    runtime_dir: str,
+    log_level: str,
+    config_home: str | None = None,
+) -> dict[str, Any]:
+    plan = service_plan(home, runtime_dir, log_level, config_home)
     plan.path.parent.mkdir(parents=True, exist_ok=True)
     plan.path.write_text(plan.content, "utf-8")
     return {
@@ -519,8 +770,13 @@ def install_service(home: str, runtime_dir: str, log_level: str) -> dict[str, An
     }
 
 
-def uninstall_service(home: str, runtime_dir: str, log_level: str) -> dict[str, Any]:
-    plan = service_plan(home, runtime_dir, log_level)
+def uninstall_service(
+    home: str,
+    runtime_dir: str,
+    log_level: str,
+    config_home: str | None = None,
+) -> dict[str, Any]:
+    plan = service_plan(home, runtime_dir, log_level, config_home)
     existed = plan.path.exists()
     if existed:
         plan.path.unlink()
@@ -532,8 +788,16 @@ def uninstall_service(home: str, runtime_dir: str, log_level: str) -> dict[str, 
     }
 
 
-def service_status(home: str, runtime_dir: str, log_level: str) -> dict[str, Any]:
-    plan = service_plan(home, runtime_dir, log_level)
+def service_status(
+    home: str,
+    runtime_dir: str,
+    log_level: str,
+    config_home: str | None = None,
+) -> dict[str, Any]:
+    config_home = resolve_config_home(config_home)
+    home = resolve_runtime_home(home)
+    runtime_dir = resolve_runtime_dir(home, runtime_dir)
+    plan = service_plan(home, runtime_dir, log_level, config_home)
     installed = plan.path.exists()
     actual = ""
     if installed:
@@ -543,6 +807,7 @@ def service_status(home: str, runtime_dir: str, log_level: str) -> dict[str, Any
             actual = ""
     return {
         "schema": SCHEMA_STATUS,
+        "configHome": config_home,
         "home": home,
         "runtimeDir": runtime_dir,
         "service": {
@@ -552,5 +817,5 @@ def service_status(home: str, runtime_dir: str, log_level: str) -> dict[str, Any
             "installed": installed,
             "matchesPlan": installed and actual == plan.content,
         },
-        "supervisor": status(home, runtime_dir),
+        "supervisor": route_status(home, runtime_dir, config_home),
     }

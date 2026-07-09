@@ -154,7 +154,7 @@
   "resolution": {
     "configHomeEnv": "KF_CONFIG_HOME",
     "runtimeHomeEnv": "KF_HOME",
-    "defaultConfigHome": "~/.kungfu",
+    "defaultConfigHome": "~/.kungfu-config",
     "defaultRuntimeHome": {
       "darwin": "~/Library/Application Support/kungfu/home",
       "win32": "${APPDATA}/kungfu/home",

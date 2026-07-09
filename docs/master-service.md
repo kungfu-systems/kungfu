@@ -37,6 +37,7 @@ surface is:
 
 ```sh
 kungfu master status --json
+kungfu master ensure --json
 kungfu master start --json
 kungfu master stop --json
 kungfu master restart --json
@@ -87,13 +88,6 @@ data root:
 <kungfu-data-root>/runtime/master/
 ```
 
-In the current implementation slice the combined service state may still appear
-under:
-
-```text
-<KF_RUNTIME_DIR>/service/master/
-```
-
 Files in these runtime-state directories include:
 
 - `supervisor.pid`
@@ -111,9 +105,10 @@ must not be treated as the source of truth.
 `kungfu master service plan --json` prints the platform-specific file that
 would be installed:
 
-- macOS: `~/Library/LaunchAgents/tech.kungfu.master.plist`
-- Linux: `~/.config/systemd/user/kungfu-master.service`
-- Windows: the current user's Startup folder command file
+- macOS: `~/Library/LaunchAgents/tech.kungfu.supervisor.plist`
+- Linux: `~/.config/systemd/user/kungfu-supervisor.service`
+- Windows: the current user's Startup folder `kungfu-supervisor.cmd` command
+  file
 
 The generated service starts the supervisor loop and lets the supervisor keep
 workspace masters alive as needed. Loading/enabling the service manager is
@@ -125,9 +120,10 @@ intentionally left as an explicit user operation after the file is installed.
   supervisor or a still-active workspace master.
 - Quitting the GUI should exit Electron. If the service is installed and
   running, active workspace masters may remain alive.
-- `kungfu master stop` stops the current implementation's supervisor and child
-  master. In the target topology, stop semantics should distinguish stopping a
-  selected data-root master from stopping the per-user supervisor.
+- `kungfu master ensure` registers the current data root in the supervisor
+  route registry and starts or reuses the corresponding workspace master.
+- `kungfu master stop` stops the per-user supervisor and its supervised
+  workspace masters.
 - `kungfu master service uninstall --execute` removes the user service file; it
   does not delete runtime journals or other user data.
 - When a workspace master has no active leases and the idle grace period has

@@ -95,7 +95,9 @@ function defaultInstanceRoot(env = process.env) {
 }
 
 function defaultConfigHome() {
-  return path.resolve(expandHomePath(path.join(os.homedir(), '.kungfu')));
+  return path.resolve(
+    expandHomePath(path.join(os.homedir(), '.kungfu-config')),
+  );
 }
 
 function instanceConfigPath(instanceHome) {

@@ -19,17 +19,20 @@ def _json(payload):
 
 def _plain_status(payload):
     click.echo(f"status: {payload['status']}")
+    click.echo(f"config: {payload['configHome']}")
+    click.echo(f"data root: {payload['dataRoot']}")
     click.echo(f"runtime: {payload['runtimeDir']}")
     click.echo(
         "supervisor: "
         f"{payload['supervisor']['pid'] or '-'} "
         f"({'running' if payload['supervisor']['running'] else 'stopped'})"
     )
-    click.echo(
-        "master: "
-        f"{payload['master']['pid'] or '-'} "
-        f"({'running' if payload['master']['running'] else 'stopped'})"
-    )
+    if "master" in payload:
+        click.echo(
+            "master: "
+            f"{payload['master']['pid'] or '-'} "
+            f"({'running' if payload['master']['running'] else 'stopped'})"
+        )
 
 
 @kfc.group(
@@ -47,18 +50,39 @@ def master(ctx):
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @master_command_context
 def master_status(ctx, as_json):
-    payload = master_service.status(ctx.home, ctx.runtime_dir)
+    payload = master_service.route_status(ctx.home, ctx.runtime_dir, ctx.config_home)
     if as_json:
         _json(payload)
         return
     _plain_status(payload)
 
 
+@master.command(help="ensure the current data-root master via the user supervisor")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@master_command_context
+def ensure(ctx, as_json):
+    payload = master_service.ensure_master(
+        ctx.home,
+        ctx.runtime_dir,
+        ctx.log_level,
+        ctx.config_home,
+    )
+    if as_json:
+        _json(payload)
+        return
+    click.echo("started" if payload.get("changed") else "already running")
+
+
 @master.command(help="start the resident master supervisor")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @master_command_context
 def start(ctx, as_json):
-    payload = master_service.start_supervisor(ctx.home, ctx.runtime_dir, ctx.log_level)
+    payload = master_service.ensure_master(
+        ctx.home,
+        ctx.runtime_dir,
+        ctx.log_level,
+        ctx.config_home,
+    )
     if as_json:
         _json(payload)
         return
@@ -69,7 +93,7 @@ def start(ctx, as_json):
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @master_command_context
 def stop(ctx, as_json):
-    payload = master_service.stop_supervisor(ctx.home, ctx.runtime_dir)
+    payload = master_service.stop_supervisor(ctx.config_home)
     if as_json:
         _json(payload)
         return
@@ -82,10 +106,15 @@ def stop(ctx, as_json):
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @master_command_context
 def restart(ctx, as_json):
-    stopped = master_service.stop_supervisor(ctx.home, ctx.runtime_dir)
+    stopped = master_service.stop_supervisor(ctx.config_home)
     if stopped.get("error"):
         raise click.ClickException(str(stopped["error"]))
-    started = master_service.start_supervisor(ctx.home, ctx.runtime_dir, ctx.log_level)
+    started = master_service.ensure_master(
+        ctx.home,
+        ctx.runtime_dir,
+        ctx.log_level,
+        ctx.config_home,
+    )
     payload = {
         "schema": "kungfu.master-service.restart/v1",
         "stop": stopped,
@@ -120,25 +149,32 @@ def run(runtime_home, runtime_dir, low_latency):
 @click.option(
     "--home",
     "runtime_home",
-    required=True,
+    required=False,
     hidden=True,
     help="runtime home passed by the service manager",
 )
 @click.option(
     "--runtime-dir",
-    required=True,
+    required=False,
     hidden=True,
     help="runtime directory passed by the service manager",
 )
+@click.option(
+    "--config-home",
+    required=False,
+    hidden=True,
+    help="config home passed by the service manager",
+)
 @click.option("--foreground", is_flag=True, hidden=True)
-def supervise(runtime_home, runtime_dir, foreground):
+def supervise(runtime_home, runtime_dir, config_home, foreground):
     callable(foreground)
     root = click.get_current_context().parent.parent
     sys.exit(
         master_service.run_supervisor(
-            runtime_home,
-            runtime_dir,
             getattr(root, "log_level", "warning"),
+            config_home=config_home,
+            home=runtime_home,
+            runtime_dir=runtime_dir,
         )
     )
 
@@ -158,7 +194,7 @@ def service(ctx):
 @master_command_context
 def plan(ctx, as_json):
     payload = master_service.service_plan(
-        ctx.home, ctx.runtime_dir, ctx.log_level
+        ctx.home, ctx.runtime_dir, ctx.log_level, ctx.config_home
     ).as_dict()
     if as_json:
         _json(payload)
@@ -171,7 +207,12 @@ def plan(ctx, as_json):
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @master_command_context
 def service_status(ctx, as_json):
-    payload = master_service.service_status(ctx.home, ctx.runtime_dir, ctx.log_level)
+    payload = master_service.service_status(
+        ctx.home,
+        ctx.runtime_dir,
+        ctx.log_level,
+        ctx.config_home,
+    )
     if as_json:
         _json(payload)
         return
@@ -193,7 +234,10 @@ def service_status(ctx, as_json):
 def install(ctx, execute, as_json):
     if execute:
         payload = master_service.install_service(
-            ctx.home, ctx.runtime_dir, ctx.log_level
+            ctx.home,
+            ctx.runtime_dir,
+            ctx.log_level,
+            ctx.config_home,
         )
     else:
         payload = {
@@ -202,7 +246,10 @@ def install(ctx, execute, as_json):
             "changed": False,
             "dryRun": True,
             "plan": master_service.service_plan(
-                ctx.home, ctx.runtime_dir, ctx.log_level
+                ctx.home,
+                ctx.runtime_dir,
+                ctx.log_level,
+                ctx.config_home,
             ).as_dict(),
         }
     if as_json:
@@ -223,7 +270,10 @@ def install(ctx, execute, as_json):
 def uninstall(ctx, execute, as_json):
     if execute:
         payload = master_service.uninstall_service(
-            ctx.home, ctx.runtime_dir, ctx.log_level
+            ctx.home,
+            ctx.runtime_dir,
+            ctx.log_level,
+            ctx.config_home,
         )
     else:
         payload = {
@@ -232,7 +282,10 @@ def uninstall(ctx, execute, as_json):
             "changed": False,
             "dryRun": True,
             "plan": master_service.service_plan(
-                ctx.home, ctx.runtime_dir, ctx.log_level
+                ctx.home,
+                ctx.runtime_dir,
+                ctx.log_level,
+                ctx.config_home,
             ).as_dict(),
         }
     if as_json:
