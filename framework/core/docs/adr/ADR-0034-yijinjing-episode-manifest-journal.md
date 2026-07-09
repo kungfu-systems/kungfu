@@ -107,16 +107,54 @@ metadata; it does not become a revived trading-era business schema registry.
 
 ## First delivery
 
-This ADR is a design commitment. The first implementation slice should add C++
-Episode manifest record vocabulary in the yijinjing schema/storage layer before
-adding Python or Node convenience APIs.
+This ADR is implemented by the v1 manifest slice. The first implementation
+adds yijinjing schema records and a C++ manifest store before adding Python or
+Node convenience APIs.
+
+The v1 authority location is:
+
+```text
+journal/system/storage/episode-manifest/live/*.journal
+```
+
+The v1 yijinjing schema records are:
+
+| Record | Tag | Role |
+| --- | ---: | --- |
+| `EpisodeOpen` | `10801` | Opens an Episode and records identity/provenance metadata. |
+| `EpisodeHeartbeat` | `10802` | Records progress and last-frame watermarks. |
+| `EpisodeFrameAttached` | `10803` | Associates an action/runtime frame receipt with an Episode. |
+| `EpisodeRefAttached` | `10804` | Records compact input, payload, schema, or Episode refs. |
+| `EpisodeClosed` | `10805` | Seals the Episode as ended, aborted, or tombstoned. |
+
+The C++ runtime storage service exposes:
+
+```text
+episode_begin
+episode_heartbeat
+episode_attach_frame
+episode_attach_ref
+episode_end
+episode_abort
+episode_list
+episode_inspect
+```
+
+Python, Node, and CLI use this C++ service path. They may render JSON folded
+views, but they do not own the manifest authority.
+
+V1 intentionally associates frames to Episodes by appending
+`EpisodeFrameAttached` records. It does not add fields to `frame_header` or
+force a physical mmap re-layout. That keeps the implementation small while
+making Episode a durable first-class object and giving future Episode-aware
+page/segment allocation a stable compatibility target.
 
 Documentation is updated to avoid presenting `manifest.json` as the intended
 local authority. JSON remains valid for export/debug/folded views.
 
 ## Explicitly out of scope
 
-- Implementing the full manifest journal writer in this ADR.
+- Implementing the full Episode-aware mmap page allocation domain.
 - Replacing Rewind or action-envelope domain payload schemas with Hana records.
 - Making every business data type a yijinjing core type.
 - Removing JSON export or diagnostic output.

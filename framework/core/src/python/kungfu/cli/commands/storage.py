@@ -300,6 +300,248 @@ def query(
         click.echo(json.dumps(row, sort_keys=True))
 
 
+@storage.group(help="manage yijinjing-backed Episode manifests")
+@storage_command_context
+def episode(ctx):
+    pass
+
+
+@episode.command(help="begin an Episode manifest")
+@click.option("--title", type=str, default="")
+@click.option("--actor", type=str, default="")
+@click.option("--source", type=str, default="")
+@click.option("--episode-id", type=int, default=0)
+@click.option("--parent-episode-id", type=int, default=0)
+@click.option("--root-trigger-frame-uid", type=int, default=0)
+@click.option("--location-uid", type=int, default=0)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@storage_command_context
+def begin(
+    ctx,
+    title,
+    actor,
+    source,
+    episode_id,
+    parent_episode_id,
+    root_trigger_frame_uid,
+    location_uid,
+    as_json,
+):
+    from kungfu.storage import service
+
+    result = service.episode_begin(
+        ctx.runtime_dir,
+        title=title,
+        actor=actor,
+        source=source,
+        episode_id=episode_id,
+        parent_episode_id=parent_episode_id,
+        root_trigger_frame_uid=root_trigger_frame_uid,
+        location_uid=location_uid,
+    )
+    if as_json:
+        _echo_json(result)
+        return
+    click.echo(f"[storage] episode {result['episode_id']} begun")
+
+
+@episode.command(help="append an Episode heartbeat")
+@click.option("--episode-id", type=int, required=True)
+@click.option("--last-frame-uid", type=int, default=0)
+@click.option("--frame-count", type=int, default=0)
+@click.option("--note", type=str, default="")
+@click.option("--location-uid", type=int, default=0)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@storage_command_context
+def heartbeat(
+    ctx, episode_id, last_frame_uid, frame_count, note, location_uid, as_json
+):
+    from kungfu.storage import service
+
+    result = service.episode_heartbeat(
+        ctx.runtime_dir,
+        episode_id=episode_id,
+        last_frame_uid=last_frame_uid,
+        frame_count=frame_count,
+        note=note,
+        location_uid=location_uid,
+    )
+    if as_json:
+        _echo_json(result)
+        return
+    click.echo(f"[storage] episode {episode_id} heartbeat appended")
+
+
+@episode.command(name="attach-frame", help="attach a frame receipt to an Episode")
+@click.option("--episode-id", type=int, required=True)
+@click.option("--frame-uid", type=int, required=True)
+@click.option("--trigger-frame-uid", type=int, default=0)
+@click.option("--stream-id", type=int, default=0)
+@click.option("--carrier-type", type=int, default=0)
+@click.option("--source", type=int, default=0)
+@click.option("--dest", type=int, default=0)
+@click.option("--data-length", type=int, default=0)
+@click.option("--location-uid", type=int, default=0)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@storage_command_context
+def attach_frame(
+    ctx,
+    episode_id,
+    frame_uid,
+    trigger_frame_uid,
+    stream_id,
+    carrier_type,
+    source,
+    dest,
+    data_length,
+    location_uid,
+    as_json,
+):
+    from kungfu.storage import service
+
+    result = service.episode_attach_frame(
+        ctx.runtime_dir,
+        episode_id=episode_id,
+        frame_uid=frame_uid,
+        trigger_frame_uid=trigger_frame_uid,
+        stream_id=stream_id,
+        carrier_type=carrier_type,
+        source=source,
+        dest=dest,
+        data_length=data_length,
+        location_uid=location_uid,
+    )
+    if as_json:
+        _echo_json(result)
+        return
+    click.echo(f"[storage] episode {episode_id} attached frame {frame_uid}")
+
+
+@episode.command(name="attach-ref", help="attach an external reference to an Episode")
+@click.option("--episode-id", type=int, required=True)
+@click.option(
+    "--ref-kind",
+    type=click.Choice(["input_frame", "payload", "schema", "episode"]),
+    default="input_frame",
+    show_default=True,
+)
+@click.option("--ref-uid", type=int, default=0)
+@click.option("--ref-id", type=str, default="")
+@click.option("--ref-hash", type=str, default="")
+@click.option("--location-uid", type=int, default=0)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@storage_command_context
+def attach_ref(
+    ctx, episode_id, ref_kind, ref_uid, ref_id, ref_hash, location_uid, as_json
+):
+    from kungfu.storage import service
+
+    result = service.episode_attach_ref(
+        ctx.runtime_dir,
+        episode_id=episode_id,
+        ref_kind=ref_kind,
+        ref_uid=ref_uid,
+        ref_id=ref_id,
+        ref_hash=ref_hash,
+        location_uid=location_uid,
+    )
+    if as_json:
+        _echo_json(result)
+        return
+    click.echo(f"[storage] episode {episode_id} attached {ref_kind} ref")
+
+
+@episode.command(name="end", help="seal an Episode as ended")
+@click.option("--episode-id", type=int, required=True)
+@click.option("--last-frame-uid", type=int, default=0)
+@click.option("--frame-count", type=int, default=0)
+@click.option("--reason", type=str, default="")
+@click.option("--location-uid", type=int, default=0)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@storage_command_context
+def episode_end(
+    ctx, episode_id, last_frame_uid, frame_count, reason, location_uid, as_json
+):
+    from kungfu.storage import service
+
+    result = service.episode_end(
+        ctx.runtime_dir,
+        episode_id=episode_id,
+        last_frame_uid=last_frame_uid,
+        frame_count=frame_count,
+        reason=reason,
+        location_uid=location_uid,
+    )
+    if as_json:
+        _echo_json(result)
+        return
+    click.echo(f"[storage] episode {episode_id} ended")
+
+
+@episode.command(name="abort", help="seal an Episode as aborted")
+@click.option("--episode-id", type=int, required=True)
+@click.option("--last-frame-uid", type=int, default=0)
+@click.option("--frame-count", type=int, default=0)
+@click.option("--reason", type=str, default="")
+@click.option("--location-uid", type=int, default=0)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@storage_command_context
+def episode_abort(
+    ctx, episode_id, last_frame_uid, frame_count, reason, location_uid, as_json
+):
+    from kungfu.storage import service
+
+    result = service.episode_abort(
+        ctx.runtime_dir,
+        episode_id=episode_id,
+        last_frame_uid=last_frame_uid,
+        frame_count=frame_count,
+        reason=reason,
+        location_uid=location_uid,
+    )
+    if as_json:
+        _echo_json(result)
+        return
+    click.echo(f"[storage] episode {episode_id} aborted")
+
+
+@episode.command(name="list", help="list Episodes")
+@click.option("--location-uid", type=int, default=0)
+@click.option("--limit", type=click.IntRange(min=0), default=100, show_default=True)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@storage_command_context
+def episode_list(ctx, location_uid, limit, as_json):
+    from kungfu.storage import service
+
+    result = service.episode_list(
+        ctx.runtime_dir, location_uid=location_uid, limit=limit
+    )
+    if as_json:
+        _echo_json(result)
+        return
+    click.echo(f"[storage] episodes: {result['episode_count']}")
+    for item in result["episodes"]:
+        click.echo(json.dumps(item, sort_keys=True))
+
+
+@episode.command(name="inspect", help="inspect one Episode")
+@click.option("--episode-id", type=int, required=True)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@storage_command_context
+def episode_inspect(ctx, episode_id, as_json):
+    from kungfu.storage import service
+
+    result = service.episode_inspect(ctx.runtime_dir, episode_id=episode_id)
+    if as_json:
+        _echo_json(result)
+        return
+    if not result["ok"]:
+        for error in result.get("errors", []):
+            click.echo(f"  error: {error}", err=True)
+        sys.exit(1)
+    click.echo(json.dumps(result["episode"], sort_keys=True))
+
+
 @storage.command(help="plan unreachable payload garbage collection")
 @click.option("--scope", type=click.Choice(["source", "all"]), required=True)
 @click.option("--source", "storage_source_id", type=str, default=None)

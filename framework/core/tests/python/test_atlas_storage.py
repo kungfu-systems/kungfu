@@ -328,6 +328,14 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
         "compact_plan",
         "verify_sync",
         "query",
+        "episode_begin",
+        "episode_heartbeat",
+        "episode_end",
+        "episode_abort",
+        "episode_attach_frame",
+        "episode_attach_ref",
+        "episode_list",
+        "episode_inspect",
     }
 
     request = runtime.make_storage_service_request(
@@ -439,6 +447,67 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
         "verify_sync",
         "query",
     } <= entered
+
+
+def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    episode = storage_service.episode_begin(
+        runtime_dir,
+        episode_id=42,
+        title="test episode",
+        actor="pytest",
+        source="unit-test",
+        begin_time=1000,
+    )
+    assert episode["schema"] == "kungfu.episode.manifest/v1"
+    assert episode["record_kind"] == "episode_open"
+    assert episode["episode_id"] == 42
+
+    attached = storage_service.episode_attach_frame(
+        runtime_dir,
+        episode_id=42,
+        frame_uid=100,
+        trigger_frame_uid=99,
+        stream_id=7,
+        gen_time=1100,
+        carrier_type=10803,
+        source=1,
+        dest=0,
+        data_length=12,
+        integrity_version=2,
+        payload_checksum=123,
+        frame_checksum=456,
+    )
+    assert attached["record_kind"] == "episode_frame_attached"
+    assert attached["frame_uid"] == 100
+
+    ended = storage_service.episode_end(
+        runtime_dir,
+        episode_id=42,
+        end_time=1200,
+        last_frame_uid=100,
+        frame_count=1,
+        reason="done",
+    )
+    assert ended["status"] == "ended"
+
+    listed = storage_service.episode_list(runtime_dir)
+    assert listed["authority"] == "yijinjing-journal"
+    assert listed["episode_count"] == 1
+    assert listed["episodes"][0]["episode_id"] == 42
+    assert listed["episodes"][0]["frame_count"] == 1
+
+    inspected = storage_service.episode_inspect(runtime_dir, episode_id=42)
+    assert inspected["ok"]
+    assert inspected["episode"]["status"] == "ended"
+    assert len(inspected["records"]) == 3
+    assert inspected["frames"][0]["frame_uid"] == 100
+
+    fsck = storage_service.fsck(runtime_dir)
+    assert fsck["ok"]
+    assert fsck["checked"]["episode_manifest_records"] == 3
+    assert fsck["checked"]["episodes"] == 1
+    assert fsck["episode_manifest"]["authority"] == "yijinjing-journal"
 
 
 def test_payload_fsck_verifies_versioned_frame_checksums(tmp_path):

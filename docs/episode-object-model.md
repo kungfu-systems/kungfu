@@ -1,8 +1,11 @@
 # Episode Object Model
 
-Status: accepted design direction. The term and invariants are accepted by
-[ADR-0033](../framework/core/docs/adr/ADR-0033-episode-causal-segment-object.md);
-the physical storage layout is not fully implemented yet.
+Status: accepted design direction with v1 implementation. The term and
+invariants are accepted by
+[ADR-0033](../framework/core/docs/adr/ADR-0033-episode-causal-segment-object.md).
+[ADR-0034](../framework/core/docs/adr/ADR-0034-yijinjing-episode-manifest-journal.md)
+defines the append-only yijinjing manifest journal. The full Episode-aware
+physical journal layout is still future work.
 
 Kungfu needs a storage object that matches the way users and agents reason about
 work. Raw mmap pages are append blocks. A source is a provenance and sync
@@ -179,6 +182,50 @@ JSON may be emitted as an export/debug/folded view, but Python, Node, CLI, and
 GUI code should treat the C++/yijinjing manifest journal as the local source of
 truth.
 
+## V1 Implementation
+
+Episode manifest v1 is implemented as a system catalog journal at:
+
+```text
+journal/system/storage/episode-manifest/live/*.journal
+```
+
+The authority records are yijinjing Hana/POD schema records:
+
+| Record | Tag | Purpose |
+| --- | ---: | --- |
+| `EpisodeOpen` | `10801` | Opens an Episode and records title, actor, source, location, parent Episode, and root trigger frame. |
+| `EpisodeHeartbeat` | `10802` | Appends progress metadata such as frame count and last frame uid. |
+| `EpisodeFrameAttached` | `10803` | Associates a runtime frame receipt with an Episode without changing the frame header. |
+| `EpisodeRefAttached` | `10804` | Records compact external refs for input frames, payloads, schemas, or Episode dependencies. |
+| `EpisodeClosed` | `10805` | Seals an Episode as ended, aborted, or tombstoned. |
+
+The runtime storage service exposes the first operation slice through the C++
+core service and existing Node/Python binding path:
+
+```text
+episode_begin
+episode_heartbeat
+episode_attach_frame
+episode_attach_ref
+episode_end
+episode_abort
+episode_list
+episode_inspect
+```
+
+`storage fsck` folds the manifest journal and reports
+`episode_manifest_records`, `episodes`, and manifest-level errors such as
+missing open records, duplicate opens, duplicate closes, and malformed frame
+attachments.
+
+V1 deliberately does not add an Episode field to `frame_header`. New writes are
+associated with Episodes by appending `EpisodeFrameAttached` records from the
+C++ service using the action recorder's frame receipt. This keeps current mmap
+pages byte-compatible while establishing Episode as the durable semantic object.
+Future physical-layout work can move from manifest association to Episode-aware
+allocation domains without changing the product-facing API.
+
 ## Core Operations
 
 Episode-native storage should expose these operations through the C++ core
@@ -224,9 +271,9 @@ complete:
 
 1. **Documentation and contracts** — accept ADR-0033, publish this design, and
    add C++ vocabulary types for Episode ids, manifests, dependencies, and fsck
-   issues.
+   issues. Done.
 2. **Manifest journal records** — add yijinjing first-class Episode manifest
-   record types in C++ before adding Python/Node convenience APIs.
+   record types in C++ before adding Python/Node convenience APIs. Done for v1.
 3. **Logical Episode index** — let current storage manifests and source imports
    name Episodes, even if the frames still live in existing journal pages.
 4. **Episode-aware writer** — make the C++ action recorder/storage writer open,
@@ -254,8 +301,10 @@ for the Episode object.
 
 ## Maturity
 
-Episode is currently an accepted architecture direction and documentation
-surface. Existing storage commands still operate on sources, manifests, scopes,
-and ranges. The next implementation work is to add C++ Episode vocabulary and
-logical manifests, then move the writer/provider surfaces toward Episode-aware
+Episode is now an accepted architecture direction with a v1 manifest journal.
+Existing source/range storage commands still operate on sources, manifests,
+scopes, and ranges. Episode operations exist as the first C++ storage-service
+surface and can be called through Python/Node bindings and the CLI. The next
+implementation work is to make the action recorder automatically open/current/
+seal Episodes and move writer/provider surfaces toward Episode-aware
 allocation and fsck.

@@ -1,7 +1,7 @@
 from __future__ import annotations
 import pykungfu.yijinjing.enums
 import typing
-__all__: list[str] = ['Band', 'CacheReset', 'Channel', 'ChannelRequest', 'Config', 'Deregister', 'Location', 'OperatorStateUpdate', 'OutputKey', 'Register', 'RequestCachedDone', 'RequestReadFrom', 'RequestReadFromOthers', 'RequestReadFromPublic', 'RequestReadFromSync', 'RequestWriteTo', 'RequestWriteToBand', 'Session', 'SyntheticData', 'TimeKeyValue', 'TimeRequest', 'TimeReset', 'TimeValue', 'frame_header', 'page_header']
+__all__: list[str] = ['Band', 'CacheReset', 'Channel', 'ChannelRequest', 'Config', 'Deregister', 'EpisodeClosed', 'EpisodeFrameAttached', 'EpisodeHeartbeat', 'EpisodeOpen', 'EpisodeRefAttached', 'Location', 'OperatorStateUpdate', 'OutputKey', 'Register', 'RequestCachedDone', 'RequestReadFrom', 'RequestReadFromOthers', 'RequestReadFromPublic', 'RequestReadFromSync', 'RequestWriteTo', 'RequestWriteToBand', 'Session', 'SyntheticData', 'TimeKeyValue', 'TimeRequest', 'TimeReset', 'TimeValue', 'frame_header', 'page_header']
 class Band:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 10308
@@ -128,6 +128,153 @@ class Deregister:
     seed: int
     uid64: int
     def __eq__(self, arg0: Deregister) -> bool:
+        ...
+    def __hash__(self) -> int:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: str) -> None:
+        ...
+    def __parse__(self, arg0: str) -> None:
+        ...
+    def __repr__(self) -> str:
+        ...
+    @property
+    def __uid__(self) -> int:
+        ...
+class EpisodeClosed:
+    __has_data__: typing.ClassVar[bool] = True
+    __tag__: typing.ClassVar[int] = 10805
+    end_time: int
+    episode_id: int
+    frame_count: int
+    last_frame_uid: int
+    location_uid: int
+    reason: str
+    schema_version: int
+    status: pykungfu.yijinjing.enums.EpisodeStatus
+    def __eq__(self, arg0: EpisodeClosed) -> bool:
+        ...
+    def __hash__(self) -> int:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: str) -> None:
+        ...
+    def __parse__(self, arg0: str) -> None:
+        ...
+    def __repr__(self) -> str:
+        ...
+    @property
+    def __uid__(self) -> int:
+        ...
+class EpisodeFrameAttached:
+    __has_data__: typing.ClassVar[bool] = True
+    __tag__: typing.ClassVar[int] = 10803
+    carrier_type: int
+    data_length: int
+    dest: int
+    episode_id: int
+    frame_checksum: int
+    frame_uid: int
+    gen_time: int
+    integrity_version: int
+    location_uid: int
+    payload_checksum: int
+    schema_version: int
+    source: int
+    stream_id: int
+    trigger_frame_uid: int
+    trigger_time: int
+    def __eq__(self, arg0: EpisodeFrameAttached) -> bool:
+        ...
+    def __hash__(self) -> int:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: str) -> None:
+        ...
+    def __parse__(self, arg0: str) -> None:
+        ...
+    def __repr__(self) -> str:
+        ...
+    @property
+    def __uid__(self) -> int:
+        ...
+class EpisodeHeartbeat:
+    __has_data__: typing.ClassVar[bool] = True
+    __tag__: typing.ClassVar[int] = 10802
+    episode_id: int
+    frame_count: int
+    last_frame_uid: int
+    location_uid: int
+    note: str
+    schema_version: int
+    update_time: int
+    def __eq__(self, arg0: EpisodeHeartbeat) -> bool:
+        ...
+    def __hash__(self) -> int:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: str) -> None:
+        ...
+    def __parse__(self, arg0: str) -> None:
+        ...
+    def __repr__(self) -> str:
+        ...
+    @property
+    def __uid__(self) -> int:
+        ...
+class EpisodeOpen:
+    __has_data__: typing.ClassVar[bool] = True
+    __tag__: typing.ClassVar[int] = 10801
+    actor: str
+    begin_time: int
+    episode_id: int
+    location_uid: int
+    parent_episode_id: int
+    root_trigger_frame_uid: int
+    schema_version: int
+    source: str
+    title: str
+    def __eq__(self, arg0: EpisodeOpen) -> bool:
+        ...
+    def __hash__(self) -> int:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: str) -> None:
+        ...
+    def __parse__(self, arg0: str) -> None:
+        ...
+    def __repr__(self) -> str:
+        ...
+    @property
+    def __uid__(self) -> int:
+        ...
+class EpisodeRefAttached:
+    __has_data__: typing.ClassVar[bool] = True
+    __tag__: typing.ClassVar[int] = 10804
+    episode_id: int
+    location_uid: int
+    ref_hash: str
+    ref_id: str
+    ref_kind: pykungfu.yijinjing.enums.EpisodeRefKind
+    ref_uid: int
+    schema_version: int
+    update_time: int
+    def __eq__(self, arg0: EpisodeRefAttached) -> bool:
         ...
     def __hash__(self) -> int:
         ...

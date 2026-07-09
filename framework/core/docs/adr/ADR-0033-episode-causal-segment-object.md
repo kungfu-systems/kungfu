@@ -120,17 +120,22 @@ retention and archive policy permits."
 
 ## First delivery
 
-This ADR is a design commitment. The first delivery is documentation-level:
+This ADR started as a design commitment and now has a v1 implementation slice:
 
-- accept the `Episode` term and invariants;
-- add the companion design document;
-- route docs for storage, event model, and documentation map to the Episode
-  object model.
+- the `Episode` term and invariants are accepted;
+- the companion design document is published;
+- yijinjing defines first-class Episode manifest records;
+- the runtime storage service exposes `episode_*` operations through the C++
+  core surface;
+- Python, Node, and CLI surfaces call the C++ service instead of owning
+  separate Episode logic;
+- `storage fsck` includes basic Episode manifest consistency checks.
 
-No on-disk journal layout change is claimed by this ADR. Existing storage
-commands still operate on sources, manifests, scopes, and ranges. Future
-implementation slices should move those surfaces toward Episode-native
-selectors and manifests.
+No full physical journal re-layout is claimed by this ADR. V1 associates
+current frames to Episodes through append-only `EpisodeFrameAttached` manifest
+records. Existing source/range storage commands still operate on sources,
+manifests, scopes, and ranges. Future implementation slices should move those
+surfaces toward Episode-native selectors and physical allocation domains.
 
 ## Explicitly out of scope
 

@@ -15,6 +15,7 @@
 #include <vector>
 
 #include <kungfu/yijinjing/storage/content_hash.h>
+#include <kungfu/yijinjing/storage/episode_manifest.h>
 #include <kungfu/yijinjing/storage/generic_service.h>
 #include <kungfu/yijinjing/storage/sync_root.h>
 #include <rocksdb/db.h>
@@ -25,6 +26,7 @@ namespace kungfu::runtime::storage_service_api {
 
 namespace fs = std::filesystem;
 namespace yy_storage = kungfu::yijinjing::storage;
+namespace yy_enums = kungfu::yijinjing::enums;
 
 namespace {
 
@@ -106,6 +108,136 @@ uint64_t uint64_or(const nlohmann::json &object, const std::string &field, uint6
     return static_cast<uint64_t>(value.get<int64_t>());
   }
   return fallback;
+}
+
+int64_t int64_or(const nlohmann::json &object, const std::string &field, int64_t fallback = 0) {
+  if (!object.is_object() || !object.contains(field)) {
+    return fallback;
+  }
+  const auto &value = object.at(field);
+  if (value.is_number_integer()) {
+    return value.get<int64_t>();
+  }
+  if (value.is_number_unsigned()) {
+    return static_cast<int64_t>(value.get<uint64_t>());
+  }
+  return fallback;
+}
+
+uint32_t uint32_or(const nlohmann::json &object, const std::string &field, uint32_t fallback = 0) {
+  return static_cast<uint32_t>(uint64_or(object, field, fallback));
+}
+
+int32_t int32_or(const nlohmann::json &object, const std::string &field, int32_t fallback = 0) {
+  return static_cast<int32_t>(int64_or(object, field, fallback));
+}
+
+yy_enums::EpisodeStatus episode_status_or(const nlohmann::json &object, const std::string &field,
+                                          yy_enums::EpisodeStatus fallback) {
+  const auto value = text_or(object, field);
+  if (value.empty() || value == "ended" || value == "end" || value == "Ended") {
+    return fallback;
+  }
+  if (value == "aborted" || value == "abort" || value == "Aborted") {
+    return yy_enums::EpisodeStatus::Aborted;
+  }
+  if (value == "tombstoned" || value == "tombstone" || value == "Tombstoned") {
+    return yy_enums::EpisodeStatus::Tombstoned;
+  }
+  if (value == "open" || value == "Open") {
+    return yy_enums::EpisodeStatus::Open;
+  }
+  return fallback;
+}
+
+yy_enums::EpisodeRefKind episode_ref_kind_or(const nlohmann::json &object, const std::string &field,
+                                             yy_enums::EpisodeRefKind fallback) {
+  const auto value = text_or(object, field);
+  if (value.empty() || value == "input_frame" || value == "input" || value == "InputFrame") {
+    return fallback;
+  }
+  if (value == "payload" || value == "Payload") {
+    return yy_enums::EpisodeRefKind::Payload;
+  }
+  if (value == "schema" || value == "Schema") {
+    return yy_enums::EpisodeRefKind::Schema;
+  }
+  if (value == "episode" || value == "Episode") {
+    return yy_enums::EpisodeRefKind::Episode;
+  }
+  return fallback;
+}
+
+yy_storage::episode_manifest_store episode_store(const storage_service_options &options) {
+  return yy_storage::episode_manifest_store(options.runtime_dir);
+}
+
+yy_storage::episode_begin_options parse_episode_begin_options(const nlohmann::json &value) {
+  yy_storage::episode_begin_options parsed{};
+  parsed.episode_id = uint64_or(value, "episode_id");
+  parsed.parent_episode_id = uint64_or(value, "parent_episode_id");
+  parsed.root_trigger_frame_uid = uint64_or(value, "root_trigger_frame_uid");
+  parsed.location_uid = uint32_or(value, "location_uid");
+  parsed.begin_time = int64_or(value, "begin_time");
+  parsed.title = text_or(value, "title");
+  parsed.actor = text_or(value, "actor");
+  parsed.source = text_or(value, "source");
+  return parsed;
+}
+
+yy_storage::episode_heartbeat_options parse_episode_heartbeat_options(const nlohmann::json &value) {
+  yy_storage::episode_heartbeat_options parsed{};
+  parsed.episode_id = uint64_or(value, "episode_id");
+  parsed.location_uid = uint32_or(value, "location_uid");
+  parsed.update_time = int64_or(value, "update_time");
+  parsed.last_frame_uid = uint64_or(value, "last_frame_uid");
+  parsed.frame_count = uint64_or(value, "frame_count");
+  parsed.note = text_or(value, "note");
+  return parsed;
+}
+
+yy_storage::episode_close_options parse_episode_close_options(const nlohmann::json &value,
+                                                              yy_enums::EpisodeStatus fallback_status) {
+  yy_storage::episode_close_options parsed{};
+  parsed.episode_id = uint64_or(value, "episode_id");
+  parsed.location_uid = uint32_or(value, "location_uid");
+  parsed.status = episode_status_or(value, "status", fallback_status);
+  parsed.end_time = int64_or(value, "end_time");
+  parsed.last_frame_uid = uint64_or(value, "last_frame_uid");
+  parsed.frame_count = uint64_or(value, "frame_count");
+  parsed.reason = text_or(value, "reason");
+  return parsed;
+}
+
+yy_storage::episode_frame_attach_options parse_episode_frame_attach_options(const nlohmann::json &value) {
+  yy_storage::episode_frame_attach_options parsed{};
+  parsed.episode_id = uint64_or(value, "episode_id");
+  parsed.location_uid = uint32_or(value, "location_uid");
+  parsed.frame_uid = uint64_or(value, "frame_uid");
+  parsed.trigger_frame_uid = uint64_or(value, "trigger_frame_uid");
+  parsed.stream_id = uint64_or(value, "stream_id");
+  parsed.gen_time = int64_or(value, "gen_time");
+  parsed.trigger_time = int64_or(value, "trigger_time");
+  parsed.carrier_type = int32_or(value, "carrier_type");
+  parsed.source = uint32_or(value, "source");
+  parsed.dest = uint32_or(value, "dest");
+  parsed.data_length = uint32_or(value, "data_length");
+  parsed.integrity_version = uint32_or(value, "integrity_version");
+  parsed.payload_checksum = uint64_or(value, "payload_checksum");
+  parsed.frame_checksum = uint64_or(value, "frame_checksum");
+  return parsed;
+}
+
+yy_storage::episode_ref_attach_options parse_episode_ref_attach_options(const nlohmann::json &value) {
+  yy_storage::episode_ref_attach_options parsed{};
+  parsed.episode_id = uint64_or(value, "episode_id");
+  parsed.location_uid = uint32_or(value, "location_uid");
+  parsed.ref_kind = episode_ref_kind_or(value, "ref_kind", yy_enums::EpisodeRefKind::InputFrame);
+  parsed.ref_uid = uint64_or(value, "ref_uid");
+  parsed.update_time = int64_or(value, "update_time");
+  parsed.ref_id = text_or(value, "ref_id");
+  parsed.ref_hash = text_or(value, "ref_hash");
+  return parsed;
 }
 
 fs::path root_dir(const std::string &runtime_dir) { return fs::path(runtime_dir) / "storage"; }
@@ -1395,6 +1527,8 @@ nlohmann::json fsck_error_report(const storage_service_options &options, const s
            {"projection_indexes", 0},
            {"sqlite_projection_rows", 0},
            {"orphan_payloads", 0},
+           {"episode_manifest_records", 0},
+           {"episodes", 0},
        }},
   };
 }
@@ -1435,6 +1569,8 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
            {"projection_indexes", fs::exists(sqlite_projection_path(options.runtime_dir)) ? 2 : 1},
            {"sqlite_projection_rows", 0},
            {"orphan_payloads", 0},
+           {"episode_manifest_records", 0},
+           {"episodes", 0},
        }},
   };
   if (!options.source_id.empty() && sources.empty()) {
@@ -1517,6 +1653,23 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
         report["warnings"].push_back({{"code", "orphan_payload"}, {"path", payload.uri}, {"payload_hash", digest}});
       }
     }
+  }
+
+  const auto episode_report = episode_store(options).fsck();
+  const auto episode_checked = object_or_empty(episode_report, "checked");
+  report["checked"]["episode_manifest_records"] = episode_checked.value("episode_manifest_records", 0);
+  report["checked"]["episodes"] = episode_checked.value("episodes", 0);
+  report["episode_manifest"] = episode_report;
+  for (const auto &error : array_or_empty(episode_report, "errors")) {
+    auto row = error;
+    row["projection"] = "episode-manifest";
+    report["ok"] = false;
+    report["errors"].push_back(row);
+  }
+  for (const auto &warning : array_or_empty(episode_report, "warnings")) {
+    auto row = warning;
+    row["projection"] = "episode-manifest";
+    report["warnings"].push_back(row);
   }
 
   const auto sqlite_projection_status = sqlite_projection_json(options.runtime_dir, options.source_id);
@@ -1887,6 +2040,40 @@ public:
   [[nodiscard]] nlohmann::json query(const storage_service_options &options) const override {
     return query_sqlite_projection(options);
   }
+
+  [[nodiscard]] nlohmann::json episode_begin(const storage_service_options &options) const override {
+    return episode_store(options).begin(parse_episode_begin_options(options.operation_options));
+  }
+
+  [[nodiscard]] nlohmann::json episode_heartbeat(const storage_service_options &options) const override {
+    return episode_store(options).heartbeat(parse_episode_heartbeat_options(options.operation_options));
+  }
+
+  [[nodiscard]] nlohmann::json episode_end(const storage_service_options &options) const override {
+    return episode_store(options).end(
+        parse_episode_close_options(options.operation_options, yy_enums::EpisodeStatus::Ended));
+  }
+
+  [[nodiscard]] nlohmann::json episode_abort(const storage_service_options &options) const override {
+    return episode_store(options).abort(
+        parse_episode_close_options(options.operation_options, yy_enums::EpisodeStatus::Aborted));
+  }
+
+  [[nodiscard]] nlohmann::json episode_attach_frame(const storage_service_options &options) const override {
+    return episode_store(options).attach_frame(parse_episode_frame_attach_options(options.operation_options));
+  }
+
+  [[nodiscard]] nlohmann::json episode_attach_ref(const storage_service_options &options) const override {
+    return episode_store(options).attach_ref(parse_episode_ref_attach_options(options.operation_options));
+  }
+
+  [[nodiscard]] nlohmann::json episode_list(const storage_service_options &options) const override {
+    return episode_store(options).list(uint64_or(options.operation_options, "location_uid"), options.limit);
+  }
+
+  [[nodiscard]] nlohmann::json episode_inspect(const storage_service_options &options) const override {
+    return episode_store(options).inspect(uint64_or(options.operation_options, "episode_id"));
+  }
 };
 
 const file_storage_service &storage_service_instance() {
@@ -1915,11 +2102,23 @@ nlohmann::json make_request(storage_operation operation, const storage_service_o
 
 std::vector<std::string> storage_operation_names() {
   return {
-      storage_operation_name(storage_operation::Status),       storage_operation_name(storage_operation::Fsck),
-      storage_operation_name(storage_operation::ExportBundle), storage_operation_name(storage_operation::ImportBundle),
-      storage_operation_name(storage_operation::RebuildIndex), storage_operation_name(storage_operation::GcPlan),
-      storage_operation_name(storage_operation::CompactPlan),  storage_operation_name(storage_operation::VerifySync),
+      storage_operation_name(storage_operation::Status),
+      storage_operation_name(storage_operation::Fsck),
+      storage_operation_name(storage_operation::ExportBundle),
+      storage_operation_name(storage_operation::ImportBundle),
+      storage_operation_name(storage_operation::RebuildIndex),
+      storage_operation_name(storage_operation::GcPlan),
+      storage_operation_name(storage_operation::CompactPlan),
+      storage_operation_name(storage_operation::VerifySync),
       storage_operation_name(storage_operation::Query),
+      storage_operation_name(storage_operation::EpisodeBegin),
+      storage_operation_name(storage_operation::EpisodeHeartbeat),
+      storage_operation_name(storage_operation::EpisodeEnd),
+      storage_operation_name(storage_operation::EpisodeAbort),
+      storage_operation_name(storage_operation::EpisodeAttachFrame),
+      storage_operation_name(storage_operation::EpisodeAttachRef),
+      storage_operation_name(storage_operation::EpisodeList),
+      storage_operation_name(storage_operation::EpisodeInspect),
   };
 }
 
@@ -1943,6 +2142,22 @@ std::string storage_operation_name(storage_operation operation) {
     return "verify_sync";
   case storage_operation::Query:
     return "query";
+  case storage_operation::EpisodeBegin:
+    return "episode_begin";
+  case storage_operation::EpisodeHeartbeat:
+    return "episode_heartbeat";
+  case storage_operation::EpisodeEnd:
+    return "episode_end";
+  case storage_operation::EpisodeAbort:
+    return "episode_abort";
+  case storage_operation::EpisodeAttachFrame:
+    return "episode_attach_frame";
+  case storage_operation::EpisodeAttachRef:
+    return "episode_attach_ref";
+  case storage_operation::EpisodeList:
+    return "episode_list";
+  case storage_operation::EpisodeInspect:
+    return "episode_inspect";
   }
   throw std::invalid_argument("unknown storage operation");
 }
@@ -1975,6 +2190,30 @@ storage_operation parse_storage_operation(const std::string &operation) {
   if (operation == "query") {
     return storage_operation::Query;
   }
+  if (operation == "episode_begin") {
+    return storage_operation::EpisodeBegin;
+  }
+  if (operation == "episode_heartbeat") {
+    return storage_operation::EpisodeHeartbeat;
+  }
+  if (operation == "episode_end") {
+    return storage_operation::EpisodeEnd;
+  }
+  if (operation == "episode_abort") {
+    return storage_operation::EpisodeAbort;
+  }
+  if (operation == "episode_attach_frame") {
+    return storage_operation::EpisodeAttachFrame;
+  }
+  if (operation == "episode_attach_ref") {
+    return storage_operation::EpisodeAttachRef;
+  }
+  if (operation == "episode_list") {
+    return storage_operation::EpisodeList;
+  }
+  if (operation == "episode_inspect") {
+    return storage_operation::EpisodeInspect;
+  }
   throw std::invalid_argument("unsupported storage operation: " + operation);
 }
 
@@ -1992,6 +2231,7 @@ storage_service_options parse_storage_service_options(const std::string &runtime
   parsed.artifact_uri = text_or(options, "artifact_uri");
   parsed.bundle = object_or_empty(options, "bundle");
   parsed.manifest = object_or_empty(options, "manifest");
+  parsed.operation_options = options;
   parsed.query = text_or(options, "query", "entries");
   parsed.kind = text_or(options, "kind");
   parsed.limit = uint64_or(options, "limit", 100);
@@ -2007,6 +2247,14 @@ nlohmann::json make_storage_service_request(const std::string &operation, const 
     request["query"] = parsed_options.query;
     request["kind"] = parsed_options.kind.empty() ? nlohmann::json(nullptr) : nlohmann::json(parsed_options.kind);
     request["limit"] = parsed_options.limit;
+  }
+  if (parsed_operation == storage_operation::EpisodeList) {
+    request["location_uid"] = uint64_or(options, "location_uid");
+    request["limit"] = parsed_options.limit;
+  } else if (parsed_operation == storage_operation::EpisodeInspect) {
+    request["episode_id"] = uint64_or(options, "episode_id");
+  } else if (storage_operation_name(parsed_operation).rfind("episode_", 0) == 0) {
+    request["episode"] = parsed_options.operation_options;
   }
   return request;
 }
@@ -2034,6 +2282,22 @@ nlohmann::json run_storage_service_operation(const std::string &operation, const
     return storage_service_instance().verify_sync(parsed_options);
   case storage_operation::Query:
     return storage_service_instance().query(parsed_options);
+  case storage_operation::EpisodeBegin:
+    return storage_service_instance().episode_begin(parsed_options);
+  case storage_operation::EpisodeHeartbeat:
+    return storage_service_instance().episode_heartbeat(parsed_options);
+  case storage_operation::EpisodeEnd:
+    return storage_service_instance().episode_end(parsed_options);
+  case storage_operation::EpisodeAbort:
+    return storage_service_instance().episode_abort(parsed_options);
+  case storage_operation::EpisodeAttachFrame:
+    return storage_service_instance().episode_attach_frame(parsed_options);
+  case storage_operation::EpisodeAttachRef:
+    return storage_service_instance().episode_attach_ref(parsed_options);
+  case storage_operation::EpisodeList:
+    return storage_service_instance().episode_list(parsed_options);
+  case storage_operation::EpisodeInspect:
+    return storage_service_instance().episode_inspect(parsed_options);
   }
   throw std::invalid_argument("unknown storage operation");
 }
@@ -2135,7 +2399,12 @@ nlohmann::json storage_service_capabilities() {
              {"authority", "derived"},
              {"path", "storage/projections/storage.sqlite"},
              {"tables", nlohmann::json::array({"storage_sources", "storage_manifests", "storage_entries"})},
-             {"rebuildable", true}}})},
+             {"rebuildable", true}},
+            {{"name", "episode-manifest"},
+             {"schema", yy_storage::EPISODE_MANIFEST_SCHEMA_V1},
+             {"authority", "yijinjing-journal"},
+             {"path", "journal/system/storage/episode-manifest/live/*.journal"},
+             {"rebuildable", false}}})},
       {"notes",
        nlohmann::json::array({
            "The runtime storage service surface and providers are owned by libkungfu.",

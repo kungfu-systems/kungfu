@@ -40,6 +40,28 @@ KF_JSON_SERIALIZE_ENUM(ResumePolicy, {
 
 inline std::ostream &operator<<(std::ostream &os, ResumePolicy t) { return os << int8_t(t); }
 
+enum class EpisodeStatus : int8_t { Open = 1, Ended = 2, Aborted = 3, Tombstoned = 4 };
+
+KF_JSON_SERIALIZE_ENUM(EpisodeStatus, {
+                                          {EpisodeStatus::Open, "Open"},
+                                          {EpisodeStatus::Ended, "Ended"},
+                                          {EpisodeStatus::Aborted, "Aborted"},
+                                          {EpisodeStatus::Tombstoned, "Tombstoned"},
+                                      })
+
+inline std::ostream &operator<<(std::ostream &os, EpisodeStatus t) { return os << int32_t(t); }
+
+enum class EpisodeRefKind : int8_t { InputFrame = 1, Payload = 2, Schema = 3, Episode = 4 };
+
+KF_JSON_SERIALIZE_ENUM(EpisodeRefKind, {
+                                           {EpisodeRefKind::InputFrame, "InputFrame"},
+                                           {EpisodeRefKind::Payload, "Payload"},
+                                           {EpisodeRefKind::Schema, "Schema"},
+                                           {EpisodeRefKind::Episode, "Episode"},
+                                       })
+
+inline std::ostream &operator<<(std::ostream &os, EpisodeRefKind t) { return os << int32_t(t); }
+
 } // namespace kungfu::yijinjing::enums
 
 namespace kungfu::yijinjing::types {
@@ -208,6 +230,73 @@ KF_DEFINE_PACK_TYPE(                                  //
     Band, 10308, PK(source_id, dest_id), PERPETUAL(), //
     (uint32_t, source_id),                            //
     (uint32_t, dest_id)                               //
+);
+
+KF_DEFINE_PACK_TYPE(                                           //
+    EpisodeOpen, 10801, PK(episode_id), TIMESTAMP(begin_time), //
+    (uint32_t, schema_version),                                //
+    (uint64_t, episode_id),                                    //
+    (uint64_t, parent_episode_id),                             //
+    (uint64_t, root_trigger_frame_uid),                        //
+    (uint32_t, location_uid),                                  //
+    (int64_t, begin_time),                                     //
+    (array<char, 64>, title),                                  //
+    (array<char, 64>, actor),                                  //
+    (array<char, 64>, source)                                  //
+);
+
+KF_DEFINE_PACK_TYPE(                                                              //
+    EpisodeHeartbeat, 10802, PK(episode_id, update_time), TIMESTAMP(update_time), //
+    (uint32_t, schema_version),                                                   //
+    (uint64_t, episode_id),                                                       //
+    (uint32_t, location_uid),                                                     //
+    (int64_t, update_time),                                                       //
+    (uint64_t, last_frame_uid),                                                   //
+    (uint64_t, frame_count),                                                      //
+    (array<char, 64>, note)                                                       //
+);
+
+KF_DEFINE_PACK_TYPE(                                                             //
+    EpisodeFrameAttached, 10803, PK(episode_id, frame_uid), TIMESTAMP(gen_time), //
+    (uint32_t, schema_version),                                                  //
+    (uint64_t, episode_id),                                                      //
+    (uint32_t, location_uid),                                                    //
+    (uint64_t, frame_uid),                                                       //
+    (uint64_t, trigger_frame_uid),                                               //
+    (uint64_t, stream_id),                                                       //
+    (int64_t, gen_time),                                                         //
+    (int64_t, trigger_time),                                                     //
+    (int32_t, carrier_type),                                                     //
+    (uint32_t, source),                                                          //
+    (uint32_t, dest),                                                            //
+    (uint32_t, data_length),                                                     //
+    (uint32_t, integrity_version),                                               //
+    (uint64_t, payload_checksum),                                                //
+    (uint64_t, frame_checksum)                                                   //
+);
+
+KF_DEFINE_PACK_TYPE(                                                                      //
+    EpisodeRefAttached, 10804, PK(episode_id, ref_kind, ref_uid), TIMESTAMP(update_time), //
+    (uint32_t, schema_version),                                                           //
+    (uint64_t, episode_id),                                                               //
+    (uint32_t, location_uid),                                                             //
+    (enums::EpisodeRefKind, ref_kind),                                                    //
+    (uint64_t, ref_uid),                                                                  //
+    (int64_t, update_time),                                                               //
+    (array<char, 128>, ref_id),                                                           //
+    (array<char, 128>, ref_hash)                                                          //
+);
+
+KF_DEFINE_PACK_TYPE(                                           //
+    EpisodeClosed, 10805, PK(episode_id), TIMESTAMP(end_time), //
+    (uint32_t, schema_version),                                //
+    (uint64_t, episode_id),                                    //
+    (uint32_t, location_uid),                                  //
+    (enums::EpisodeStatus, status),                            //
+    (int64_t, end_time),                                       //
+    (uint64_t, last_frame_uid),                                //
+    (uint64_t, frame_count),                                   //
+    (array<char, 64>, reason)                                  //
 );
 
 KF_DEFINE_PACK_TYPE(                                                   //

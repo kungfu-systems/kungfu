@@ -85,6 +85,22 @@ void bind_enums(py::module &m) {
       .export_values()
       .def("__eq__", [](const ResumePolicy &a, int b) { return static_cast<int>(a) == b; });
 
+  py::enum_<EpisodeStatus>(m_enums, "EpisodeStatus", py::arithmetic())
+      .value("Open", EpisodeStatus::Open)
+      .value("Ended", EpisodeStatus::Ended)
+      .value("Aborted", EpisodeStatus::Aborted)
+      .value("Tombstoned", EpisodeStatus::Tombstoned)
+      .export_values()
+      .def("__eq__", [](const EpisodeStatus &a, int b) { return static_cast<int>(a) == b; });
+
+  py::enum_<EpisodeRefKind>(m_enums, "EpisodeRefKind", py::arithmetic())
+      .value("InputFrame", EpisodeRefKind::InputFrame)
+      .value("Payload", EpisodeRefKind::Payload)
+      .value("Schema", EpisodeRefKind::Schema)
+      .value("Episode", EpisodeRefKind::Episode)
+      .export_values()
+      .def("__eq__", [](const EpisodeRefKind &a, int b) { return static_cast<int>(a) == b; });
+
   py::enum_<Priority>(m_enums, "Priority", py::arithmetic())
       .value("Low", Priority::Low)
       .value("Medium", Priority::Medium)

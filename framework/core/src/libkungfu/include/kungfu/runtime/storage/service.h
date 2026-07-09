@@ -23,6 +23,14 @@ enum class storage_operation {
   CompactPlan,
   VerifySync,
   Query,
+  EpisodeBegin,
+  EpisodeHeartbeat,
+  EpisodeEnd,
+  EpisodeAbort,
+  EpisodeAttachFrame,
+  EpisodeAttachRef,
+  EpisodeList,
+  EpisodeInspect,
 };
 
 struct storage_service_options {
@@ -37,6 +45,7 @@ struct storage_service_options {
   std::string artifact_uri = {};
   nlohmann::json bundle = nlohmann::json::object();
   nlohmann::json manifest = nlohmann::json::object();
+  nlohmann::json operation_options = nlohmann::json::object();
   std::string query = {};
   std::string kind = {};
   uint64_t limit = 100;
@@ -63,6 +72,22 @@ public:
   [[nodiscard]] virtual nlohmann::json verify_sync(const storage_service_options &options) const = 0;
 
   [[nodiscard]] virtual nlohmann::json query(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json episode_begin(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json episode_heartbeat(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json episode_end(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json episode_abort(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json episode_attach_frame(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json episode_attach_ref(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json episode_list(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json episode_inspect(const storage_service_options &options) const = 0;
 };
 
 [[nodiscard]] std::vector<std::string> storage_operation_names();

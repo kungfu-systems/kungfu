@@ -8,6 +8,7 @@
 #include <kungfu/yijinjing/storage/channel.h>
 #include <kungfu/yijinjing/storage/common.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
+#include <kungfu/yijinjing/storage/episode_manifest.h>
 #include <kungfu/yijinjing/storage/fsck.h>
 #include <kungfu/yijinjing/storage/generic_service.h>
 #include <kungfu/yijinjing/storage/provider.h>
