@@ -96,7 +96,7 @@ backend choices replaceable: a backend can change without changing the
 The first `libkungfu` provider slice exposes
 `kungfu::runtime::storage_service_api::storage_service` and the
 `kungfu.runtime.storage-service/v1` operation surface for `status`, `fsck`,
-`repair_plan`, `export_bundle`, `import_bundle`, `rebuild_index`, `gc_plan`,
+`repair_plan`, `repair_fetch`, `export_bundle`, `import_bundle`, `rebuild_index`, `gc_plan`,
 `compact_plan`, `verify_sync`, and read-only `query`. The current default backend is a content-addressed file
 provider implemented in C++ under the runtime service. A second C++ provider
 stores the same source registry, manifests, and payload bodies in RocksDB behind
@@ -274,6 +274,15 @@ stable issue code, target kind, role, target id/hash fields, and suggested
 action. V1 deliberately does not fetch remote data, delete local data, compact
 providers, or mutate manifests. It only gives a future importer or remote sync
 source precise missing Episode, frame, or payload targets.
+
+`storage repair --fetch --out <json> --dry-run` is the local evidence collection
+step between plan and apply. It consumes the current repair plan, searches the
+current runtime plus already registered local remote mirrors under
+`runtime/remotes/<source-id>/runtime`, and emits
+`kungfu.storage.repair-material/v1` containing Episode bundles or source export
+bundles. Fetch writes a material artifact only when `--out` is explicit. It does
+not perform network sync, apply material, delete facts, compact providers, or
+mark anything repaired.
 
 `storage repair --apply --from <json>` is the explicit local-material follow-up
 to that plan. It consumes a validated `kungfu.storage.episode-bundle/v1` or
@@ -559,6 +568,9 @@ selector in the runtime storage service:
   declared Episode dependencies.
 - `storage repair --scope episode --episode-id <id> --plan --dry-run --json`
   maps degraded Episode causal graph warnings to read-only repair candidates.
+- `storage repair --scope episode --episode-id <id> --fetch --out <material>
+  --dry-run --json` searches only local runtime/mirror evidence and writes a
+  `kungfu.storage.repair-material/v1` artifact for later validation or apply.
 - `storage repair --scope episode --episode-id <id> --apply --from <bundle>
   --dry-run|--execute --json` validates local Episode material and, only with
   `--execute`, appends missing Episode manifest records while skipping records

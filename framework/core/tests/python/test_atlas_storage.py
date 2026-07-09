@@ -365,6 +365,7 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
         "status",
         "fsck",
         "repair_plan",
+        "repair_fetch",
         "repair_apply",
         "export_bundle",
         "import_bundle",
@@ -492,6 +493,7 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
     storage_service.layout(runtime_dir)
     storage_service.fsck(runtime_dir, source_id="local-synth")
     storage_service.repair_plan(runtime_dir, source_id="local-synth", dry_run=True)
+    storage_service.repair_fetch(runtime_dir, source_id="local-synth", dry_run=True)
     storage_service.repair_apply(
         runtime_dir,
         storage_service.build_export_bundle(runtime_dir, source_id="local-synth"),
@@ -526,6 +528,7 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
         "layout",
         "fsck",
         "repair_plan",
+        "repair_fetch",
         "repair_apply",
         "rebuild_index",
         "gc_plan",
@@ -752,7 +755,7 @@ def test_episode_fsck_reports_degraded_causal_dependencies(tmp_path):
         candidate["safe_to_apply"] is False for candidate in repair["candidates"]
     )
 
-    donor_dir = tmp_path / "donor-runtime"
+    donor_dir = runtime_dir / "remotes" / "donor" / "runtime"
     storage_service.episode_begin(
         donor_dir,
         episode_id=7,
@@ -813,10 +816,24 @@ def test_episode_fsck_reports_degraded_causal_dependencies(tmp_path):
         frame_count=2,
         reason="done",
     )
-    repair_bundle = storage_service.build_export_bundle(donor_dir, episode_id=7)
+    fetch_out = tmp_path / "episode-repair-material.json"
+    fetched = storage_service.repair_fetch(
+        runtime_dir, episode_id=7, out_path=fetch_out, dry_run=True
+    )
+    assert fetched["schema"] == "kungfu.storage.repair-fetch/v1"
+    assert fetched["dry_run"] is True
+    assert fetched["read_only"] is True
+    assert fetched["written"] is True
+    assert fetch_out.exists()
+    assert fetched["matched_count"] >= 2
+    assert fetched["material"]["schema"] == "kungfu.storage.repair-material/v1"
+    assert fetched["material"]["episode_bundles"]
+    assert any(
+        row["evidence_source"] == "remote-mirror:donor" for row in fetched["matched"]
+    )
 
     dry_apply = storage_service.repair_apply(
-        runtime_dir, repair_bundle, episode_id=7, dry_run=True
+        runtime_dir, fetched["material"], episode_id=7, dry_run=True
     )
     assert dry_apply["schema"] == "kungfu.storage.repair-apply/v1"
     assert dry_apply["dry_run"] is True
@@ -825,7 +842,7 @@ def test_episode_fsck_reports_degraded_causal_dependencies(tmp_path):
     assert storage_service.fsck(runtime_dir, episode_id=7)["status"] == "degraded"
 
     applied = storage_service.repair_apply(
-        runtime_dir, repair_bundle, episode_id=7, dry_run=False
+        runtime_dir, fetched["material"], episode_id=7, dry_run=False
     )
     assert applied["schema"] == "kungfu.storage.repair-apply/v1"
     assert applied["applied"] is True
@@ -1338,11 +1355,19 @@ def test_storage_fsck_reports_degraded_status_for_recorded_payload_states(tmp_pa
     assert repair["candidates"][0]["subject"] == "note:note-missing"
     assert repair["candidates"][0]["payload_hash"]
 
-    material = storage_service.build_export_bundle(
-        runtime_dir, source_id="degraded-synth"
+    fetch_out = tmp_path / "source-repair-material.json"
+    fetched = storage_service.repair_fetch(
+        runtime_dir, source_id="degraded-synth", out_path=fetch_out, dry_run=True
     )
+    assert fetched["schema"] == "kungfu.storage.repair-fetch/v1"
+    assert fetched["ok"]
+    assert fetched["written"] is True
+    assert fetch_out.exists()
+    assert fetched["matched_count"] == 1
+    assert fetched["material"]["source_bundles"]
+
     dry_apply = storage_service.repair_apply(
-        runtime_dir, material, source_id="degraded-synth", dry_run=True
+        runtime_dir, fetched["material"], source_id="degraded-synth", dry_run=True
     )
     assert dry_apply["schema"] == "kungfu.storage.repair-apply/v1"
     assert dry_apply["dry_run"] is True
@@ -1354,7 +1379,7 @@ def test_storage_fsck_reports_degraded_status_for_recorded_payload_states(tmp_pa
     )
 
     applied = storage_service.repair_apply(
-        runtime_dir, material, source_id="degraded-synth", dry_run=False
+        runtime_dir, fetched["material"], source_id="degraded-synth", dry_run=False
     )
     assert applied["applied"] is True
     assert applied["applied_count"] >= 1

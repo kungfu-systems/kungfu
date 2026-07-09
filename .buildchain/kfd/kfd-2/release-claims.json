@@ -29,7 +29,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/commands.json",
-            "sha256": "ef564727f7c6eed86ef01cbb5d64806012ba137a5cb867d1d32d3cd0d306b263"
+            "sha256": "55efae97c6dfe6d5640ff8fb569dcb20f758a70d6cf50b3f1da5613e510dc6f9"
           },
           "description": "Machine-readable command catalog and mode maturity metadata."
         },
@@ -134,7 +134,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/skills/codex/SKILL.md",
-            "sha256": "5abf198330bc42bff0ee486b36fd89701f6bd59964422d4e28e7b17b4cfb8576"
+            "sha256": "bab74a980ae981a0d6a7608e507fb5cdb4357c08b114cb8aa84c4e4d19174894"
           },
           "description": "Codex-side report closeout gate instructions shipped in the agent pack."
         }
@@ -194,7 +194,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/commands.json",
-            "sha256": "ef564727f7c6eed86ef01cbb5d64806012ba137a5cb867d1d32d3cd0d306b263"
+            "sha256": "55efae97c6dfe6d5640ff8fb569dcb20f758a70d6cf50b3f1da5613e510dc6f9"
           },
           "description": "Remote add/sync command declarations and mode metadata."
         },

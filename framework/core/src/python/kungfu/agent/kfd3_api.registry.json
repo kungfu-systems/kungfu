@@ -314,6 +314,16 @@
       "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
     },
     {
+      "id": "kungfu.storage.repair.fetch",
+      "surface": "cli",
+      "name": "kungfu storage repair --scope episode --episode-id <id> --fetch --out repair-material.json --dry-run --json",
+      "purpose": "Collect local repair material from the runtime and registered remote mirrors into a JSON artifact without applying it.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
       "id": "kungfu.storage.repair.apply",
       "surface": "cli",
       "name": "kungfu storage repair --scope episode --episode-id <id> --apply --from <bundle.json> --dry-run --json",

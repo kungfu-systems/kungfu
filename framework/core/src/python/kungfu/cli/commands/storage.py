@@ -136,11 +136,19 @@ def fsck(ctx, scope, storage_source_id, episode_id, as_json):
         sys.exit(1)
 
 
-@storage.command(help="plan read-only repairs for degraded runtime storage")
+@storage.command(
+    help="plan, fetch, or apply local repairs for degraded runtime storage"
+)
 @click.option("--scope", type=click.Choice(["source", "episode", "all"]), required=True)
 @click.option("--source", "storage_source_id", type=str, default=None)
 @click.option("--episode-id", type=int, default=0)
 @click.option("--plan", "plan_only", is_flag=True, help="emit a read-only repair plan")
+@click.option(
+    "--fetch",
+    "fetch_requested",
+    is_flag=True,
+    help="collect local repair material from runtime mirrors",
+)
 @click.option(
     "--apply",
     "apply_requested",
@@ -149,6 +157,13 @@ def fsck(ctx, scope, storage_source_id, episode_id, as_json):
 )
 @click.option(
     "--from", "from_path", type=str, default=None, help="repair material JSON path"
+)
+@click.option(
+    "--out",
+    "out_path",
+    type=str,
+    default=None,
+    help="write fetched repair material JSON",
 )
 @click.option(
     "--dry-run",
@@ -167,19 +182,22 @@ def repair(
     storage_source_id,
     episode_id,
     plan_only,
+    fetch_requested,
     apply_requested,
     from_path,
+    out_path,
     dry_run,
     execute,
     as_json,
 ):
     from kungfu.storage import service
 
-    if plan_only and apply_requested:
-        click.echo("[storage] choose either --plan or --apply", err=True)
+    selected = sum(1 for item in (plan_only, fetch_requested, apply_requested) if item)
+    if selected > 1:
+        click.echo("[storage] choose only one of --plan, --fetch, or --apply", err=True)
         sys.exit(2)
-    if not plan_only and not apply_requested:
-        click.echo("[storage] repair v1 requires --plan or --apply", err=True)
+    if selected == 0:
+        click.echo("[storage] repair v1 requires --plan, --fetch, or --apply", err=True)
         sys.exit(2)
     if scope == "source":
         _require_source(storage_source_id)
@@ -194,6 +212,23 @@ def repair(
             ctx.runtime_dir,
             source_id=storage_source_id if scope == "source" else None,
             episode_id=episode_id if scope == "episode" else None,
+            dry_run=True,
+        )
+    elif fetch_requested:
+        if execute:
+            click.echo(
+                "[storage] repair fetch is read-only; --execute is not supported",
+                err=True,
+            )
+            sys.exit(2)
+        if not dry_run:
+            click.echo("[storage] repair fetch requires --dry-run", err=True)
+            sys.exit(2)
+        result = service.repair_fetch(
+            ctx.runtime_dir,
+            source_id=storage_source_id if scope == "source" else None,
+            episode_id=episode_id if scope == "episode" else None,
+            out_path=out_path,
             dry_run=True,
         )
     else:
@@ -229,6 +264,13 @@ def repair(
                 "  candidate: "
                 f"{candidate.get('code')} -> {candidate.get('suggested_action')}"
             )
+    elif fetch_requested:
+        out = result.get("artifact_uri") or "<memory>"
+        click.echo(
+            f"[storage] repair fetch {scope}: "
+            f"matched={result.get('matched_count', 0)} "
+            f"missing={result.get('missing_count', 0)} out={out}"
+        )
     else:
         click.echo(
             f"[storage] repair apply {scope}: "

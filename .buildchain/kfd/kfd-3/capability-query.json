@@ -1133,6 +1133,28 @@
       "residualRisk": []
     },
     {
+      "id": "kungfu.storage.repair.fetch",
+      "kind": "cli",
+      "name": "kungfu storage repair --scope episode --episode-id <id> --fetch --out repair-material.json --dry-run --json",
+      "state": "declared",
+      "detected": true,
+      "enforced": false,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "kfd1Basis": {
+        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+        "digest": "sha256:62efd4eadd21ec5f8423dde21170316f8e597f1325fab0aebcdbf1b0dd4e6d1c"
+      },
+      "kfd2Trust": {
+        "status": "release-passport-required",
+        "trustImpact": "query-release-passport-for-final-trust",
+        "residualRisk": []
+      },
+      "residualRisk": []
+    },
+    {
       "id": "kungfu.storage.status",
       "kind": "cli",
       "name": "kungfu storage status --scope all --json",

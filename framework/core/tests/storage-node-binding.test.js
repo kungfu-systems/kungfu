@@ -127,6 +127,11 @@ function selectedNodeResults(runtimeDir) {
       source_id: 'node-synth',
       dry_run: true,
     }),
+    repairFetch: kungfu.runStorageServiceOperation('repair_fetch', runtimeDir, {
+      scope: 'source',
+      source_id: 'node-synth',
+      dry_run: true,
+    }),
     repairApply: kungfu.runStorageServiceOperation('repair_apply', runtimeDir, {
       scope: 'source',
       source_id: 'node-synth',
@@ -203,6 +208,7 @@ out = {
     ),
     "fsck": service.fsck(runtime_dir, source_id="node-synth"),
     "repair": service.repair_plan(runtime_dir, source_id="node-synth", dry_run=True),
+    "repairFetch": service.repair_fetch(runtime_dir, source_id="node-synth", dry_run=True),
     "repairApply": service.repair_apply(
         runtime_dir,
         bundle,
@@ -340,6 +346,12 @@ for (const providerCase of providerCases) {
             'kungfu.storage.repair-plan/v1',
           );
           assert.equal(nodeResults.repair.candidate_count, 0);
+          assert.equal(
+            nodeResults.repairFetch.schema,
+            'kungfu.storage.repair-fetch/v1',
+          );
+          assert.equal(nodeResults.repairFetch.read_only, true);
+          assert.equal(nodeResults.repairFetch.matched_count, 0);
           assert.equal(
             nodeResults.repairApply.schema,
             'kungfu.storage.repair-apply/v1',

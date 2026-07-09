@@ -1846,6 +1846,276 @@ nlohmann::json repair_apply_impl(const storage_service_options &options) {
                     })}};
 }
 
+struct repair_evidence_runtime {
+  std::string source = {};
+  fs::path runtime_dir = {};
+};
+
+std::string normalized_runtime_key(const fs::path &path) {
+  std::error_code ec;
+  auto normalized = fs::weakly_canonical(path, ec);
+  if (ec) {
+    normalized = fs::absolute(path, ec);
+  }
+  return normalized.lexically_normal().string();
+}
+
+void push_evidence_runtime(std::vector<repair_evidence_runtime> &runtimes, const std::string &source,
+                           const fs::path &runtime_dir) {
+  if (runtime_dir.empty()) {
+    return;
+  }
+  const auto key = normalized_runtime_key(runtime_dir);
+  for (const auto &existing : runtimes) {
+    if (normalized_runtime_key(existing.runtime_dir) == key) {
+      return;
+    }
+  }
+  runtimes.push_back({source, runtime_dir});
+}
+
+std::vector<repair_evidence_runtime> repair_evidence_runtimes(const storage_service_options &options) {
+  std::vector<repair_evidence_runtime> runtimes;
+  push_evidence_runtime(runtimes, "local-runtime", options.runtime_dir);
+  const auto remotes_dir = fs::path(options.runtime_dir) / "remotes";
+  std::error_code ec;
+  if (fs::exists(remotes_dir, ec) && fs::is_directory(remotes_dir, ec)) {
+    for (const auto &entry : fs::directory_iterator(remotes_dir, ec)) {
+      if (ec) {
+        break;
+      }
+      if (!entry.is_directory(ec)) {
+        continue;
+      }
+      const auto runtime_dir = entry.path() / "runtime";
+      if (fs::exists(runtime_dir, ec) && fs::is_directory(runtime_dir, ec)) {
+        push_evidence_runtime(runtimes, "remote-mirror:" + entry.path().filename().string(), runtime_dir);
+      }
+    }
+  }
+  for (const auto &extra : array_or_empty(options.operation_options, "candidate_runtime_dirs")) {
+    if (extra.is_string()) {
+      push_evidence_runtime(runtimes, "explicit-runtime", extra.get<std::string>());
+    }
+  }
+  return runtimes;
+}
+
+bool source_bundle_has_payload(const nlohmann::json &bundle, const std::string &payload_hash) {
+  if (payload_hash.empty()) {
+    return !array_or_empty(bundle, "records").empty();
+  }
+  for (const auto &record : array_or_empty(bundle, "records")) {
+    if (text_or(record, "payload_hash") == payload_hash && record.contains("payload")) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool episode_bundle_has_frame(const nlohmann::json &bundle, uint64_t frame_uid) {
+  if (frame_uid == 0) {
+    return !array_or_empty(bundle, "records").empty();
+  }
+  for (const auto &frame : array_or_empty(bundle, "frames")) {
+    if (uint64_or(frame, "frame_uid") == frame_uid) {
+      return true;
+    }
+  }
+  for (const auto &record : array_or_empty(bundle, "records")) {
+    if (text_or(record, "record_kind") == "episode_frame_attached" && uint64_or(record, "frame_uid") == frame_uid) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool episode_bundle_has_ref_hash(const nlohmann::json &bundle, const std::string &ref_hash) {
+  if (ref_hash.empty()) {
+    return !array_or_empty(bundle, "records").empty();
+  }
+  for (const auto &ref : array_or_empty(bundle, "refs")) {
+    if (text_or(ref, "ref_hash") == ref_hash) {
+      return true;
+    }
+  }
+  for (const auto &record : array_or_empty(bundle, "records")) {
+    if (text_or(record, "record_kind") == "episode_ref_attached" && text_or(record, "ref_hash") == ref_hash) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool episode_bundle_satisfies_candidate(const nlohmann::json &candidate, const nlohmann::json &bundle) {
+  const auto code = text_or(candidate, "code");
+  if (code == "repair_episode_root_trigger_frame" || code == "repair_episode_trigger_frame") {
+    return episode_bundle_has_frame(bundle, uint64_or(candidate, "frame_uid"));
+  }
+  if (code == "repair_episode_payload_ref") {
+    return episode_bundle_has_ref_hash(bundle, text_or(candidate, "ref_hash"));
+  }
+  if (code == "repair_episode_dependency") {
+    const auto dependency_episode_id = uint64_or(candidate, "dependency_episode_id");
+    return dependency_episode_id == 0 || uint64_or(bundle, "episode_id") == dependency_episode_id ||
+           uint64_or(object_or_empty(bundle, "manifest"), "episode_id") == dependency_episode_id;
+  }
+  return false;
+}
+
+void push_unique_bundle(nlohmann::json &bundles, std::vector<std::string> &seen, const nlohmann::json &bundle) {
+  const auto key = text_or(bundle, "schema") + ":" + text_or(bundle, "bundle_id", canonical_json(bundle));
+  if (std::find(seen.begin(), seen.end(), key) != seen.end()) {
+    return;
+  }
+  seen.push_back(key);
+  bundles.push_back(bundle);
+}
+
+nlohmann::json repair_fetch_impl(const storage_service_options &options, const storage_service &service) {
+  if (!options.dry_run) {
+    throw std::invalid_argument("storage_repair_fetch_is_read_only");
+  }
+  auto plan_options = options;
+  plan_options.dry_run = true;
+  const auto plan = repair_plan_impl(plan_options);
+  const auto runtimes = repair_evidence_runtimes(options);
+  nlohmann::json material = {
+      {"schema", "kungfu.storage.repair-material/v1"},
+      {"generated_by", "kungfu.storage.repair-fetch/v1"},
+      {"episode_bundles", nlohmann::json::array()},
+      {"source_bundles", nlohmann::json::array()},
+  };
+  std::vector<std::string> seen_episode_bundles;
+  std::vector<std::string> seen_source_bundles;
+  nlohmann::json matched = nlohmann::json::array();
+  nlohmann::json skipped = nlohmann::json::array();
+  nlohmann::json missing = nlohmann::json::array();
+
+  for (const auto &candidate : array_or_empty(plan, "candidates")) {
+    const auto code = text_or(candidate, "code");
+    bool found = false;
+    if (code == "repair_source_payload") {
+      const auto source_id = text_or(candidate, "source_id", options.source_id);
+      const auto payload_hash = text_or(candidate, "payload_hash");
+      for (const auto &runtime : runtimes) {
+        try {
+          auto candidate_options = options;
+          candidate_options.runtime_dir = runtime.runtime_dir.string();
+          candidate_options.scope = "source";
+          candidate_options.source_id = source_id;
+          const auto bundle = service.export_bundle(candidate_options);
+          if (!source_bundle_has_payload(bundle, payload_hash)) {
+            skipped.push_back({{"candidate", candidate},
+                               {"evidence_source", runtime.source},
+                               {"runtime_dir", runtime.runtime_dir.string()},
+                               {"reason", "payload_not_in_bundle"}});
+            continue;
+          }
+          push_unique_bundle(material["source_bundles"], seen_source_bundles, bundle);
+          matched.push_back({{"candidate", candidate},
+                             {"evidence_source", runtime.source},
+                             {"runtime_dir", runtime.runtime_dir.string()},
+                             {"material", "source_bundle"}});
+          found = true;
+          break;
+        } catch (const std::exception &e) {
+          skipped.push_back({{"candidate", candidate},
+                             {"evidence_source", runtime.source},
+                             {"runtime_dir", runtime.runtime_dir.string()},
+                             {"reason", e.what()}});
+        }
+      }
+    } else if (text_or(candidate, "kind") == "episode" || text_or(candidate, "kind") == "frame" ||
+               code == "repair_episode_payload_ref") {
+      std::vector<uint64_t> episode_ids;
+      const auto requested_episode_id = uint64_or(candidate, "episode_id", options.episode_id);
+      if (requested_episode_id != 0) {
+        episode_ids.push_back(requested_episode_id);
+      }
+      const auto dependency_episode_id = uint64_or(candidate, "dependency_episode_id");
+      if (dependency_episode_id != 0 &&
+          std::find(episode_ids.begin(), episode_ids.end(), dependency_episode_id) == episode_ids.end()) {
+        episode_ids.push_back(dependency_episode_id);
+      }
+      for (const auto &runtime : runtimes) {
+        for (const auto episode_id : episode_ids) {
+          try {
+            auto candidate_options = options;
+            candidate_options.runtime_dir = runtime.runtime_dir.string();
+            candidate_options.scope = "episode";
+            candidate_options.episode_id = episode_id;
+            const auto bundle = service.export_bundle(candidate_options);
+            if (!episode_bundle_satisfies_candidate(candidate, bundle)) {
+              skipped.push_back({{"candidate", candidate},
+                                 {"evidence_source", runtime.source},
+                                 {"runtime_dir", runtime.runtime_dir.string()},
+                                 {"episode_id", episode_id},
+                                 {"reason", "episode_evidence_not_in_bundle"}});
+              continue;
+            }
+            push_unique_bundle(material["episode_bundles"], seen_episode_bundles, bundle);
+            matched.push_back({{"candidate", candidate},
+                               {"evidence_source", runtime.source},
+                               {"runtime_dir", runtime.runtime_dir.string()},
+                               {"episode_id", episode_id},
+                               {"material", "episode_bundle"}});
+            found = true;
+            break;
+          } catch (const std::exception &e) {
+            skipped.push_back({{"candidate", candidate},
+                               {"evidence_source", runtime.source},
+                               {"runtime_dir", runtime.runtime_dir.string()},
+                               {"episode_id", episode_id},
+                               {"reason", e.what()}});
+          }
+        }
+        if (found) {
+          break;
+        }
+      }
+    }
+    if (!found) {
+      missing.push_back(candidate);
+    }
+  }
+
+  const auto written = !options.artifact_uri.empty();
+  if (written) {
+    write_json_file(options.artifact_uri, material);
+  }
+  return {
+      {"ok", missing.empty()},
+      {"schema", "kungfu.storage.repair-fetch/v1"},
+      {"scope", options.scope.empty() ? "all" : options.scope},
+      {"source_id", options.source_id.empty() ? nlohmann::json(nullptr) : nlohmann::json(options.source_id)},
+      {"episode_id", options.episode_id == 0 ? nlohmann::json(nullptr) : nlohmann::json(options.episode_id)},
+      {"dry_run", true},
+      {"read_only", true},
+      {"artifact_uri", options.artifact_uri.empty() ? nlohmann::json(nullptr) : nlohmann::json(options.artifact_uri)},
+      {"written", written},
+      {"plan", plan},
+      {"evidence_runtimes",
+       [&] {
+         nlohmann::json rows = nlohmann::json::array();
+         for (const auto &runtime : runtimes) {
+           rows.push_back({{"source", runtime.source}, {"runtime_dir", runtime.runtime_dir.string()}});
+         }
+         return rows;
+       }()},
+      {"material", material},
+      {"matched", matched},
+      {"matched_count", matched.size()},
+      {"skipped", skipped},
+      {"missing", missing},
+      {"missing_count", missing.size()},
+      {"notes", nlohmann::json::array({
+                    "Repair fetch v1 only searches local runtime evidence and registered remote mirror runtimes.",
+                    "It writes a local material artifact only when artifact_uri/--out is explicitly supplied.",
+                    "It never applies material, deletes, compacts, garbage-collects, or performs network fetch.",
+                })}};
+}
+
 nlohmann::json episode_import_bundle_impl(const storage_service_options &options) {
   if (!options.bundle.is_object() || text_or(options.bundle, "schema") != "kungfu.storage.episode-bundle/v1") {
     throw std::invalid_argument("episode_bundle_invalid");
@@ -2540,6 +2810,10 @@ public:
     return repair_plan_impl(options);
   }
 
+  [[nodiscard]] nlohmann::json repair_fetch(const storage_service_options &options) const override {
+    return repair_fetch_impl(options, *this);
+  }
+
   [[nodiscard]] nlohmann::json repair_apply(const storage_service_options &options) const override {
     return repair_apply_impl(options);
   }
@@ -2773,6 +3047,7 @@ std::vector<std::string> storage_operation_names() {
       storage_operation_name(storage_operation::Status),
       storage_operation_name(storage_operation::Fsck),
       storage_operation_name(storage_operation::RepairPlan),
+      storage_operation_name(storage_operation::RepairFetch),
       storage_operation_name(storage_operation::RepairApply),
       storage_operation_name(storage_operation::ExportBundle),
       storage_operation_name(storage_operation::ImportBundle),
@@ -2801,6 +3076,8 @@ std::string storage_operation_name(storage_operation operation) {
     return "fsck";
   case storage_operation::RepairPlan:
     return "repair_plan";
+  case storage_operation::RepairFetch:
+    return "repair_fetch";
   case storage_operation::RepairApply:
     return "repair_apply";
   case storage_operation::ExportBundle:
@@ -2848,6 +3125,9 @@ storage_operation parse_storage_operation(const std::string &operation) {
   }
   if (operation == "repair_plan") {
     return storage_operation::RepairPlan;
+  }
+  if (operation == "repair_fetch") {
+    return storage_operation::RepairFetch;
   }
   if (operation == "repair_apply") {
     return storage_operation::RepairApply;
@@ -2964,6 +3244,8 @@ nlohmann::json run_storage_service_operation(const std::string &operation, const
     return storage_service_instance().fsck(parsed_options);
   case storage_operation::RepairPlan:
     return storage_service_instance().repair_plan(parsed_options);
+  case storage_operation::RepairFetch:
+    return storage_service_instance().repair_fetch(parsed_options);
   case storage_operation::RepairApply:
     return storage_service_instance().repair_apply(parsed_options);
   case storage_operation::ExportBundle:

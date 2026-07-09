@@ -324,6 +324,13 @@ target kind, role, Episode/frame/payload id fields, and a suggested action. The
 plan is not authority and does not mutate storage; authority remains the
 yijinjing Episode manifest journal plus the referenced payload/frame evidence.
 
+`kungfu.storage.repair-fetch/v1` is the read-only material discovery step. It
+consumes the repair plan, checks the local runtime and registered local remote
+mirror runtimes for matching Episode/source evidence, and emits
+`kungfu.storage.repair-material/v1` with Episode bundles and source bundles. It
+may write that material to an explicit output path, but it does not network
+fetch, apply, delete, compact, or mark a candidate repaired.
+
 `kungfu.storage.repair-apply/v1` is the first mutation-capable repair receipt,
 but it is still local-material only. It consumes an already available
 `kungfu.storage.episode-bundle/v1` or source export bundle, validates the

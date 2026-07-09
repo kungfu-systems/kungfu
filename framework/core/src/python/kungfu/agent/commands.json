@@ -176,6 +176,12 @@
       "purpose": "Convert degraded storage and Episode fsck diagnostics into machine-readable repair candidates without mutating facts."
     },
     {
+      "apiId": "kungfu.storage.repair.fetch",
+      "name": "kungfu storage repair --scope episode --episode-id <id> --fetch --out repair-material.json --dry-run --json",
+      "maturity": "experimental",
+      "purpose": "Collect local repair material from the runtime and registered remote mirrors into a JSON artifact without applying it."
+    },
+    {
       "apiId": "kungfu.storage.repair.apply",
       "name": "kungfu storage repair --scope episode --episode-id <id> --apply --from <bundle.json> --dry-run --json",
       "maturity": "experimental",

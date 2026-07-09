@@ -10,8 +10,8 @@
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "cb5d10119888907da6f4cc32f9e3a5b3d77f07acff9e8ede2b1a93b7db2109ea",
-    "digest": "sha256:99f3698a746d07e6f9f323efb4e01adbfeb1742d1141c27876df4df7dd32a45f"
+    "sha256": "192bc86ac09d2eb59b10b842571eefbf78ee157458764018670ef6d8b9269e17",
+    "digest": "sha256:cacffca0d9ee7c8a2f67506df944e37067e24f2638d1ae3d3a66ef7fe336de93"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -28,7 +28,7 @@
     },
     "digest": "sha256:aaa0a429cd6211f6469bf16255172c0fcc26259da290ae7858704ca732d849e0"
   },
-  "collaborationInterfaceDigest": "sha256:ecd975ab0e39218014c40b62489972b90c02ee676f9ab6cbc7821eb74f24c627",
+  "collaborationInterfaceDigest": "sha256:390d0b96e93e87f518367fb64f009c0fb301ba4ea46b1639ba32b68d87b37825",
   "exposedSurfaces": [
     {
       "id": "kungfu.agent",
@@ -1033,6 +1033,26 @@
     {
       "id": "kungfu.storage.repair.apply",
       "name": "kungfu storage repair --scope episode --episode-id <id> --apply --from <bundle.json> --dry-run --json",
+      "kind": "cli",
+      "participantProfile": "agent-or-developer",
+      "state": "declared",
+      "availability": "shipped",
+      "visibility": "public",
+      "participantFacing": true,
+      "public": true,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "maturity": "experimental",
+      "declaration": {
+        "owner": "kungfu",
+        "source": "scripts/buildchain-kfd-evidence.mjs",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+      }
+    },
+    {
+      "id": "kungfu.storage.repair.fetch",
+      "name": "kungfu storage repair --scope episode --episode-id <id> --fetch --out repair-material.json --dry-run --json",
       "kind": "cli",
       "participantProfile": "agent-or-developer",
       "state": "declared",

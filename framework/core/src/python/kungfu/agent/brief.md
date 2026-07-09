@@ -49,6 +49,7 @@ snapshot it and verify the projection with:
 kungfu atlas import --repo <atlas-repo> --json
 kungfu storage fsck --scope all --json
 kungfu storage repair --scope episode --episode-id <id> --plan --dry-run --json
+kungfu storage repair --scope episode --episode-id <id> --fetch --out repair-material.json --dry-run --json
 kungfu storage repair --scope episode --episode-id <id> --apply --from <bundle.json> --dry-run --json
 kungfu storage verify-sync --source <source-id> --json
 kungfu atlas show import --json

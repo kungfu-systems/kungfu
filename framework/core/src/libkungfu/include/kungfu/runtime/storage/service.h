@@ -17,6 +17,7 @@ enum class storage_operation {
   Status,
   Fsck,
   RepairPlan,
+  RepairFetch,
   RepairApply,
   ExportBundle,
   ImportBundle,
@@ -64,6 +65,8 @@ public:
   [[nodiscard]] virtual nlohmann::json fsck(const storage_service_options &options) const = 0;
 
   [[nodiscard]] virtual nlohmann::json repair_plan(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json repair_fetch(const storage_service_options &options) const = 0;
 
   [[nodiscard]] virtual nlohmann::json repair_apply(const storage_service_options &options) const = 0;
 
