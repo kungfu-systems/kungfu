@@ -11,6 +11,7 @@
   "private": true,
   "kungfuProduct": {
     "type": "product",
+    "displayName": "Kungfu Episodes",
     "extensions": "dependencies",
     "surfaces": [
       "gui",

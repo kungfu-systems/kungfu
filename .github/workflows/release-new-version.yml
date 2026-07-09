@@ -40,7 +40,7 @@ jobs:
       runner-preset: kungfu-v4-self-hosted
       required-artifact-count: 3
       release-passport: true
-      release-passport-product-name: Kungfu
+      release-passport-product-name: Kungfu Episodes
       release-passport-kfd-1-witness-jsons: |
         .buildchain/kfd-1/contract-world.witness.json
       release-passport-kfd-2-claim-jsons: |

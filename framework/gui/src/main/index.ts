@@ -48,6 +48,8 @@ import {
   createMainTerminalHost,
 } from './terminal-host';
 
+const PRODUCT_NAME = 'Kungfu Episodes';
+
 // Resolve the kungfu runtime directory that holds libkungfu.dylib and the
 // kungfu_electron.node binding. In development it lives in the kungfu-core
 // package; once packaged it is shipped as an extraResource under Resources/kungfu.
@@ -477,7 +479,7 @@ function buildTrayMenu() {
       },
       { type: 'separator' },
       {
-        label: 'Show Kungfu',
+        label: `Show ${PRODUCT_NAME}`,
         enabled: !visible,
         click: showShellWindow,
       },
@@ -530,7 +532,7 @@ function buildTrayMenu() {
 function createTray() {
   if (tray) return;
   tray = new Tray(trayIcon());
-  tray.setToolTip('Kungfu');
+  tray.setToolTip(PRODUCT_NAME);
   tray.on('click', () => {
     const visible =
       shellWindow && !shellWindow.isDestroyed()
@@ -602,7 +604,7 @@ ipcMain.handle(WINDOW_CHROME_CONTROL_CHANNEL, (event, payload) => {
 ipcMain.handle(MASTER_STATUS_GET_CHANNEL, () => readMasterStatus());
 
 // Application menu with the VS Code-style "Install 'kungfu' Command in PATH"
-// action, so a real user who installed Kungfu.app can use `kungfu` in a shell.
+// action, so a real user who installed Kungfu Episodes.app can use `kungfu` in a shell.
 function buildMenu() {
   const cliSubmenu: Electron.MenuItemConstructorOptions[] = [
     {
@@ -730,6 +732,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  app.setName(PRODUCT_NAME);
   ensureMasterForGuiStartup();
   buildMenu();
   createTray();

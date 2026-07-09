@@ -1,5 +1,5 @@
 appId: com.kungfu.app
-productName: Kungfu
+productName: Kungfu Episodes
 directories:
   output: ../../product/dist/desktop
 # asar:false so the native binding (.node), kungfu dylibs, and bundled first-party

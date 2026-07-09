@@ -18,11 +18,11 @@ Release binaries are not published yet. Two paths today:
 ./kungfu-code dist
 ```
 
-This produces `product/release/desktop/Kungfu-<version>-arm64.dmg` (and a zip).
-Mount, drag `Kungfu.app` to Applications, launch. The app is self-contained:
+This produces `product/release/desktop/Kungfu Episodes-<version>-arm64.dmg` (and a zip).
+Mount, drag `Kungfu Episodes.app` to Applications, launch. The app is self-contained:
 the kungfu runtime and first-party kfx ship inside it. Pre-release builds are
 unsigned: on first launch use right-click → Open, or `xattr -d com.apple.quarantine
-/Applications/Kungfu.app`. Point it at a home with
+/Applications/Kungfu\ Episodes.app`. Point it at a home with
 `KF_RUNTIME_DIR=<home-dir>/runtime`. Linux (AppImage/deb) and Windows (nsis)
 use the same electron-builder config and get wired up with signing in the
 release pipeline (next gate).

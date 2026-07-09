@@ -3,7 +3,7 @@
   "contract": "kfd-2-release-claims",
   "standard": "kfd-2",
   "product": {
-    "name": "Kungfu",
+    "name": "Kungfu Episodes",
     "repository": "kungfu-systems/kungfu",
     "package": "@kungfu-tech/product-kungfu"
   },

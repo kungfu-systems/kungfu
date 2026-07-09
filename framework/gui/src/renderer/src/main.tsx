@@ -481,7 +481,7 @@ function ShellTitleBar({
             fontWeight: 600,
           }}
         >
-          Kungfu
+          Kungfu Episodes
         </div>
         <form
           onSubmit={(event) => {
@@ -1420,7 +1420,7 @@ function App() {
     <div style={appStyle}>
       <ShellTitleBar
         chrome={windowChrome}
-        activeTitle={activeKfx?.title ?? 'Kungfu'}
+        activeTitle={activeKfx?.title ?? 'Kungfu Episodes'}
         commandText={commandText}
         commandOptions={commandOptions}
         settingsOpen={settingsOpen}

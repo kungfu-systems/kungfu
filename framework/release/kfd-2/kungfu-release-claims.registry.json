@@ -2,7 +2,7 @@
   "schema": "kungfu.kfd-2-release-claims.registry/v1",
   "description": "Kungfu-owned source registry for public KFD-2 release trust claims. Generated release claim files are projections of this registry, not the source of truth.",
   "product": {
-    "name": "Kungfu",
+    "name": "Kungfu Episodes",
     "repository": "kungfu-systems/kungfu",
     "package": "@kungfu-tech/product-kungfu"
   },

@@ -104,6 +104,7 @@ const AGENT_COMMANDS_PATH = path.join(
   'commands.json',
 );
 const SDK_CLI_PATH = path.join(ROOT, 'developer', 'sdk', 'src', 'sdk.js');
+const PRODUCT_PACKAGE_PATH = path.join(ROOT, 'product', 'package.json');
 const MASTER_CLI_PATH = path.join(
   ROOT,
   'framework',
@@ -208,6 +209,19 @@ function parseArgs(argv) {
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+function productDisplayName() {
+  const pkg = readJson(PRODUCT_PACKAGE_PATH);
+  return String(pkg.kungfuProduct?.displayName || 'Kungfu');
+}
+
+function productIdentity() {
+  return {
+    id: 'kungfu',
+    name: productDisplayName(),
+    repository: 'kungfu-systems/kungfu',
+  };
 }
 
 function renderJson(value) {
@@ -423,11 +437,7 @@ function buildUpstreamKfdAggregate() {
   return {
     schemaVersion: 1,
     contract: 'kungfu-upstream-kfd-aggregate',
-    product: {
-      id: 'kungfu',
-      name: 'Kungfu',
-      repository: 'kungfu-systems/kungfu',
-    },
+    product: productIdentity(),
     source: {
       generator: 'scripts/buildchain-kfd-evidence.mjs',
       packageResolution: [
@@ -711,9 +721,7 @@ function buildKfd3Registry(upstreamAggregate = buildUpstreamKfdAggregate()) {
     schemaVersion: 1,
     contract: KFD3_SURFACE_REGISTRY_CONTRACT,
     product: {
-      id: 'kungfu',
-      name: 'Kungfu',
-      repository: 'kungfu-systems/kungfu',
+      ...productIdentity(),
       package: '@kungfu-tech/product-kungfu',
     },
     registryPath: KFD3_DEFAULT_REGISTRY_PATH,
@@ -1109,7 +1117,7 @@ function registryCapabilityQuery(registry, { warning = '' } = {}) {
   return {
     schemaVersion: 1,
     contract: 'kungfu-buildchain-kfd-3-capability-query',
-    product: 'Kungfu',
+    product: productDisplayName(),
     source: {
       type: 'kungfu-buildchain-kfd3-registry',
       path: KFD3_DEFAULT_REGISTRY_PATH,

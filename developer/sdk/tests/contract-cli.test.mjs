@@ -269,7 +269,7 @@ test('product cli dist dry-run supports a product assembly directory', () => {
 test('kfd query exposes Kungfu KFD-3 capability facts', () => {
   const data = runJson(['kfd', 'query', '--json']);
   assert.equal(data.contract, 'kungfu-buildchain-kfd-3-capability-query');
-  assert.equal(data.product, 'Kungfu');
+  assert.equal(data.product, 'Kungfu Episodes');
   assert.ok(data.capabilities.length >= 1);
   assert.ok(data.capabilities.some((row) => row.id === 'kungfu.sdk.kfd.query'));
   assert.equal(data.kfd.kfd3, 'declared');
