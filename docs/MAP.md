@@ -100,8 +100,12 @@ route to the row that answers them:
   capability relay / sandboxed view / OS sandbox / service facet / planKfx** →
   *kfx topology* ([`kfx-topology.md`](kfx-topology.md)) and *extensions*
   ([`extensions.md`](extensions.md)).
-- **config / `~/.kungfu` / `KF_CONFIG_HOME` / `KF_HOME` / UI font / UI scale /
+- **config / `.kungfu` / `~/.kungfu-config` / `KF_CONFIG_HOME` / `KF_HOME` / UI font / UI scale /
   shortcuts / agent entrypoint** → *Kungfu config* ([`config.md`](config.md)).
+- **workspace data home / `.kungfu/` / data root / Git worktree data /
+  machine fallback / config home rename** → *Kungfu config*
+  ([`config.md`](config.md)) and
+  [ADR-0035](../framework/core/docs/adr/ADR-0035-workspace-local-kungfu-data-home.md).
 - **SKILL.md / agent skill / skill catalog / context injection / Node manager /
   Python manager / skill audit / skill-manager view / kfx dependency binding** →
   *agent-facing Kungfu Skill* ([`skills.md`](skills.md)).

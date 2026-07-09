@@ -1,19 +1,23 @@
 # Kungfu Config
 
-Kungfu has two separate local homes:
+Kungfu separates local state into workspace data, user config, and machine data
+fallback. The architecture decision is
+[ADR-0035](../framework/core/docs/adr/ADR-0035-workspace-local-kungfu-data-home.md).
 
-- `KF_HOME` is the runtime data home. It stores journals, runtime databases,
-  archives, datasets, and other state produced by Kungfu itself. Its default is
-  platform-native: `~/Library/Application Support/kungfu/home` on macOS,
-  `${XDG_CONFIG_HOME:-~/.config}/kungfu/home` on Linux, and
-  `%APPDATA%/kungfu/home` on Windows.
+- Workspace `.kungfu/` is the default fact-ledger home when a workspace boundary
+  exists. It stores Episodes, the Episode manifest journal, payload bodies,
+  projections, source registry, and workspace-local runtime facts.
 - `KF_CONFIG_HOME` is the agent-facing global configuration home. Its default is
-  `~/.kungfu`. The first user override file is
-  `~/.kungfu/config.json`.
+  `~/.kungfu-config`; the first user override file is
+  `~/.kungfu-config/config.json`.
+- `KF_HOME` remains the explicit or machine-level runtime data fallback when no
+  workspace `.kungfu/` applies. It stores machine-level runtime state, global
+  catalog/cache/service state, and non-workspace facts.
 
-The split is intentional. Runtime data can be large and stateful; global config
-is small, agent-maintained, and safe to inspect without reading journals or
-provider credentials.
+The split is intentional. Runtime data can be large and stateful; workspace
+facts should live near the project they describe; global config is small,
+agent-maintained, and safe to inspect without reading journals or provider
+credentials.
 
 ## Contract, defaults, and overrides
 
@@ -30,7 +34,7 @@ That contract contains:
 - the JSON Schema for valid config;
 - the default config values;
 - resolution rules such as `KF_CONFIG_HOME`, `KF_HOME`, `config.json`,
-  placeholder expansion, and merge behavior.
+  placeholder expansion, workspace data home discovery, and merge behavior.
 
 Python, Node, and the frozen product load the same contract. The frozen product
 ships it at:
@@ -45,7 +49,7 @@ that the runtime-reported contract hash is the same. Defaults, resolution rules,
 and schema must not be redefined in Python, Node, GUI, or other feature
 modules.
 
-A user config file is optional. If `~/.kungfu/config.json` does not exist,
+A user config file is optional. If `~/.kungfu-config/config.json` does not exist,
 config resolution still succeeds and no file is created as a side effect.
 
 The user file is a JSON object that overrides only the keys it needs:
@@ -74,7 +78,8 @@ validated as a complete config against the same contract schema.
 
 The first config slice includes:
 
-- paths: config home, runtime home, skill roots, and kfx roots;
+- paths: workspace data home, machine data home, config home, skill roots, and
+  kfx roots;
 - agent entrypoint: `kungfu agent context --json`;
 - managed-run behavior flags;
 - GUI font family, font size, and whole-UI scale;
@@ -134,21 +139,18 @@ For the GUI, Electron `userData` also moves under `<path>/userData`, so caches
 and app-window state do not collide with the default instance. The same option
 works with `product tui ...` commands.
 
-When `product gui dev` or `product tui dev` runs from a linked Git worktree and
-no explicit home environment or option is already set, Kungfu chooses an
-instance root automatically under:
-
-```text
-~/.kungfu/instances/worktrees/<worktree-name>-<hash>
-```
-
-Use `--no-instance-home` to disable this auto-selection for a dev launch.
+When `product gui dev` or `product tui dev` runs from a workspace and no
+explicit home environment or option is already set, the accepted target is to
+prefer the workspace `.kungfu/` data home. If a Git root exists, the default
+workspace home is `<git-root>/.kungfu/`; otherwise an existing ancestor
+`.kungfu/` wins before falling back to machine-level `KF_HOME`. Use
+`--no-instance-home` to disable dev-launch instance selection where supported.
 
 On the first real launch for an instance root, if
 `<path>/config/config.json` does not exist and the machine default
-`~/.kungfu/config.json` exists, the launcher copies that default config file
-into the instance config home. Later launches never overwrite the instance copy,
-so tests can change config without changing the machine default.
+`~/.kungfu-config/config.json` exists, the launcher can copy that default config
+file into the instance config home. Later launches never overwrite the instance
+copy, so tests can change config without changing the machine default.
 
 `kungfu config set <dotted-key> <json-value>` writes a user override to
 `configPath`, validates it against the same contract, and returns the resolved

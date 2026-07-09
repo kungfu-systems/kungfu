@@ -50,6 +50,7 @@ A record's **Status** says where it stands:
 | [0032](ADR-0032-generic-source-service-v1.md) | accepted | generic source service v1 |
 | [0033](ADR-0033-episode-causal-segment-object.md) | accepted | Episode is the first-class causal segment object |
 | [0034](ADR-0034-yijinjing-episode-manifest-journal.md) | accepted | Episode manifest records live in the yijinjing journal format |
+| [0035](ADR-0035-workspace-local-kungfu-data-home.md) | accepted | Workspace-local `.kungfu` is the default fact ledger home |
 
 ## Reading by theme
 
@@ -124,7 +125,10 @@ A record's **Status** says where it stands:
   projection), and
   [0034](ADR-0034-yijinjing-episode-manifest-journal.md) (Episode manifest
   records as yijinjing first-class data structures in a manifest journal, with
-  JSON only as export/debug/folded view).
+  JSON only as export/debug/folded view), and
+  [0035](ADR-0035-workspace-local-kungfu-data-home.md) (workspace-local
+  `.kungfu/` as the default Episode/fact ledger home, with `~/.kungfu-config`
+  as the user config home and `KF_HOME` retained as machine fallback).
 - **Cross-cutting principle** — [0009](ADR-0009-load-bearing-self-bootstrap.md)
   (load-bearing self-bootstrap), which also names the general law that
   [`docs/architecture.md` § The build dogfoods the SDK](../../../../docs/architecture.md)
