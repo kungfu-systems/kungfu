@@ -18,6 +18,7 @@
 #include <kungfu/yijinjing/storage/content_hash.h>
 #include <kungfu/yijinjing/storage/episode_manifest.h>
 #include <kungfu/yijinjing/storage/generic_service.h>
+#include <kungfu/yijinjing/storage/source_registry.h>
 #include <kungfu/yijinjing/storage/sync_root.h>
 #include <rocksdb/db.h>
 #include <rocksdb/iterator.h>
@@ -251,6 +252,83 @@ yy_storage::episode_ref_attach_options parse_episode_ref_attach_options(const nl
   parsed.update_time = int64_or(value, "update_time");
   parsed.ref_id = text_or(value, "ref_id");
   parsed.ref_hash = text_or(value, "ref_hash");
+  return parsed;
+}
+
+yy_enums::SourceKind source_kind_or(const nlohmann::json &object, const std::string &field,
+                                    yy_enums::SourceKind fallback) {
+  const auto value = text_or(object, field);
+  if (value == "imported_bundle" || value == "ImportedBundle") {
+    return yy_enums::SourceKind::ImportedBundle;
+  }
+  if (value == "kungfu_runtime" || value == "KungfuRuntime") {
+    return yy_enums::SourceKind::KungfuRuntime;
+  }
+  if (value == "adapter" || value == "Adapter") {
+    return yy_enums::SourceKind::Adapter;
+  }
+  if (value == "local" || value == "Local") {
+    return yy_enums::SourceKind::Local;
+  }
+  return fallback;
+}
+
+yy_enums::SourceVerificationStatus source_verification_status_or(const nlohmann::json &object, const std::string &field,
+                                                                 yy_enums::SourceVerificationStatus fallback) {
+  const auto value = text_or(object, field);
+  if (value == "degraded" || value == "Degraded") {
+    return yy_enums::SourceVerificationStatus::Degraded;
+  }
+  if (value == "failed" || value == "Failed") {
+    return yy_enums::SourceVerificationStatus::Failed;
+  }
+  if (value == "ok" || value == "Ok") {
+    return yy_enums::SourceVerificationStatus::Ok;
+  }
+  return fallback;
+}
+
+yy_storage::source_registry_store source_registry_store(const storage_service_options &options) {
+  return yy_storage::source_registry_store(options.runtime_dir);
+}
+
+yy_storage::source_register_options parse_source_register_options(const nlohmann::json &value) {
+  yy_storage::source_register_options parsed{};
+  parsed.source_id = text_or(value, "source_id");
+  parsed.kind = source_kind_or(value, "kind", yy_enums::SourceKind::Local);
+  parsed.coordinate = text_or(value, "coordinate");
+  parsed.head = text_or(value, "head");
+  parsed.location_uid = uint32_or(value, "location_uid");
+  parsed.register_time = int64_or(value, "register_time");
+  return parsed;
+}
+
+yy_storage::source_head_update_options parse_source_head_update_options(const nlohmann::json &value) {
+  yy_storage::source_head_update_options parsed{};
+  parsed.source_id = text_or(value, "source_id");
+  parsed.location_uid = uint32_or(value, "location_uid");
+  parsed.update_time = int64_or(value, "update_time");
+  parsed.first_frame_uid = uint64_or(value, "first_frame_uid");
+  parsed.last_frame_uid = uint64_or(value, "last_frame_uid");
+  parsed.since = int64_or(value, "since");
+  parsed.until = int64_or(value, "until");
+  parsed.head = text_or(value, "head");
+  parsed.inventory_hash_algo = text_or(value, "inventory_hash_algo");
+  parsed.inventory_hash = text_or(value, "inventory_hash");
+  return parsed;
+}
+
+yy_storage::accepted_range_options parse_accepted_range_options(const nlohmann::json &value) {
+  yy_storage::accepted_range_options parsed{};
+  parsed.source_id = text_or(value, "source_id");
+  parsed.manifest_id = text_or(value, "manifest_id");
+  parsed.location_uid = uint32_or(value, "location_uid");
+  parsed.accept_time = int64_or(value, "accept_time");
+  parsed.first_frame_uid = uint64_or(value, "first_frame_uid");
+  parsed.last_frame_uid = uint64_or(value, "last_frame_uid");
+  parsed.since = int64_or(value, "since");
+  parsed.until = int64_or(value, "until");
+  parsed.status = source_verification_status_or(value, "status", yy_enums::SourceVerificationStatus::Ok);
   return parsed;
 }
 
@@ -2457,6 +2535,31 @@ public:
   [[nodiscard]] nlohmann::json episode_inspect(const storage_service_options &options) const override {
     return episode_store(options).inspect(uint64_or(options.operation_options, "episode_id"));
   }
+
+  [[nodiscard]] nlohmann::json source_register(const storage_service_options &options) const override {
+    return source_registry_store(options).register_source(parse_source_register_options(options.operation_options));
+  }
+
+  [[nodiscard]] nlohmann::json source_update_head(const storage_service_options &options) const override {
+    return source_registry_store(options).update_head(parse_source_head_update_options(options.operation_options));
+  }
+
+  [[nodiscard]] nlohmann::json source_record_accepted_range(const storage_service_options &options) const override {
+    return source_registry_store(options).record_accepted_range(
+        parse_accepted_range_options(options.operation_options));
+  }
+
+  [[nodiscard]] nlohmann::json source_list(const storage_service_options &options) const override {
+    return source_registry_store(options).list();
+  }
+
+  [[nodiscard]] nlohmann::json source_inspect(const storage_service_options &options) const override {
+    return source_registry_store(options).inspect(text_or(options.operation_options, "source_id", options.source_id));
+  }
+
+  [[nodiscard]] nlohmann::json source_registry_fsck(const storage_service_options &options) const override {
+    return source_registry_store(options).fsck(text_or(options.operation_options, "source_id", options.source_id));
+  }
 };
 
 const file_storage_service &storage_service_instance() {
@@ -2504,6 +2607,12 @@ std::vector<std::string> storage_operation_names() {
       storage_operation_name(storage_operation::EpisodeAttachRef),
       storage_operation_name(storage_operation::EpisodeList),
       storage_operation_name(storage_operation::EpisodeInspect),
+      storage_operation_name(storage_operation::SourceRegister),
+      storage_operation_name(storage_operation::SourceUpdateHead),
+      storage_operation_name(storage_operation::SourceRecordAcceptedRange),
+      storage_operation_name(storage_operation::SourceList),
+      storage_operation_name(storage_operation::SourceInspect),
+      storage_operation_name(storage_operation::SourceRegistryFsck),
   };
 }
 
@@ -2547,6 +2656,18 @@ std::string storage_operation_name(storage_operation operation) {
     return "episode_list";
   case storage_operation::EpisodeInspect:
     return "episode_inspect";
+  case storage_operation::SourceRegister:
+    return "source_register";
+  case storage_operation::SourceUpdateHead:
+    return "source_update_head";
+  case storage_operation::SourceRecordAcceptedRange:
+    return "source_record_accepted_range";
+  case storage_operation::SourceList:
+    return "source_list";
+  case storage_operation::SourceInspect:
+    return "source_inspect";
+  case storage_operation::SourceRegistryFsck:
+    return "source_registry_fsck";
   }
   throw std::invalid_argument("unknown storage operation");
 }
@@ -2608,6 +2729,24 @@ storage_operation parse_storage_operation(const std::string &operation) {
   }
   if (operation == "episode_inspect") {
     return storage_operation::EpisodeInspect;
+  }
+  if (operation == "source_register") {
+    return storage_operation::SourceRegister;
+  }
+  if (operation == "source_update_head") {
+    return storage_operation::SourceUpdateHead;
+  }
+  if (operation == "source_record_accepted_range") {
+    return storage_operation::SourceRecordAcceptedRange;
+  }
+  if (operation == "source_list") {
+    return storage_operation::SourceList;
+  }
+  if (operation == "source_inspect") {
+    return storage_operation::SourceInspect;
+  }
+  if (operation == "source_registry_fsck") {
+    return storage_operation::SourceRegistryFsck;
   }
   throw std::invalid_argument("unsupported storage operation: " + operation);
 }
@@ -2705,6 +2844,18 @@ nlohmann::json run_storage_service_operation(const std::string &operation, const
     return storage_service_instance().episode_list(parsed_options);
   case storage_operation::EpisodeInspect:
     return storage_service_instance().episode_inspect(parsed_options);
+  case storage_operation::SourceRegister:
+    return storage_service_instance().source_register(parsed_options);
+  case storage_operation::SourceUpdateHead:
+    return storage_service_instance().source_update_head(parsed_options);
+  case storage_operation::SourceRecordAcceptedRange:
+    return storage_service_instance().source_record_accepted_range(parsed_options);
+  case storage_operation::SourceList:
+    return storage_service_instance().source_list(parsed_options);
+  case storage_operation::SourceInspect:
+    return storage_service_instance().source_inspect(parsed_options);
+  case storage_operation::SourceRegistryFsck:
+    return storage_service_instance().source_registry_fsck(parsed_options);
   }
   throw std::invalid_argument("unknown storage operation");
 }

@@ -33,6 +33,12 @@ enum class storage_operation {
   EpisodeAttachRef,
   EpisodeList,
   EpisodeInspect,
+  SourceRegister,
+  SourceUpdateHead,
+  SourceRecordAcceptedRange,
+  SourceList,
+  SourceInspect,
+  SourceRegistryFsck,
 };
 
 struct storage_service_options {
@@ -95,6 +101,18 @@ public:
   [[nodiscard]] virtual nlohmann::json episode_list(const storage_service_options &options) const = 0;
 
   [[nodiscard]] virtual nlohmann::json episode_inspect(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json source_register(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json source_update_head(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json source_record_accepted_range(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json source_list(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json source_inspect(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json source_registry_fsck(const storage_service_options &options) const = 0;
 };
 
 [[nodiscard]] std::vector<std::string> storage_operation_names();

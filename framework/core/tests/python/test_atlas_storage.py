@@ -381,6 +381,12 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
         "episode_attach_ref",
         "episode_list",
         "episode_inspect",
+        "source_register",
+        "source_update_head",
+        "source_record_accepted_range",
+        "source_list",
+        "source_inspect",
+        "source_registry_fsck",
     }
 
     request = runtime.make_storage_service_request(
@@ -1262,3 +1268,118 @@ def test_storage_fsck_reports_degraded_status_for_recorded_payload_states(tmp_pa
     healthy = storage_service.fsck(healthy_dir, source_id="healthy-synth")
     assert healthy["ok"]
     assert healthy["status"] == "ok"
+
+
+def test_source_registry_records_round_trip_through_journal(tmp_path):
+    # ADR-0037: source-registry records are Hana-core kernel metadata written to
+    # an append-only yijinjing journal; JSON is only an edge projection. This
+    # drives the runtime service surface end to end and asserts the journal
+    # (not any JSON file) is the authority.
+    runtime = kungfu.__binding__.runtime
+    runtime_dir = str(tmp_path)
+
+    registered = runtime.run_storage_service_operation(
+        "source_register",
+        runtime_dir,
+        {
+            "source_id": "atlas-local",
+            "kind": "adapter",
+            "coordinate": "/repo/atlas",
+            "head": "head-0",
+            "register_time": 1000,
+        },
+    )
+    assert registered["record_kind"] == "source_registered"
+    assert registered["source_id"] == "atlas-local"
+    assert registered["kind"] == "adapter"
+    source_uid = registered["source_uid"]
+    assert source_uid != 0
+
+    # A second, independent source proves per-source folding.
+    runtime.run_storage_service_operation(
+        "source_register",
+        runtime_dir,
+        {"source_id": "runtime-b", "kind": "kungfu_runtime", "register_time": 1001},
+    )
+
+    # Head moves forward via an append-only delta record.
+    updated = runtime.run_storage_service_operation(
+        "source_update_head",
+        runtime_dir,
+        {
+            "source_id": "atlas-local",
+            "head": "head-1",
+            "first_frame_uid": 10,
+            "last_frame_uid": 42,
+            "inventory_hash_algo": "sha256",
+            "inventory_hash": "abc123",
+            "update_time": 2000,
+        },
+    )
+    assert updated["record_kind"] == "source_head_updated"
+    assert updated["head"] == "head-1"
+
+    accepted = runtime.run_storage_service_operation(
+        "source_record_accepted_range",
+        runtime_dir,
+        {
+            "source_id": "atlas-local",
+            "manifest_id": "manifest-1",
+            "first_frame_uid": 10,
+            "last_frame_uid": 42,
+            "status": "ok",
+            "accept_time": 3000,
+        },
+    )
+    assert accepted["record_kind"] == "accepted_range_recorded"
+    assert accepted["manifest_id"] == "manifest-1"
+
+    listed = runtime.run_storage_service_operation("source_list", runtime_dir, {})
+    assert listed["ok"]
+    assert listed["authority"] == "yijinjing-journal"
+    assert listed["source_count"] == 2
+    by_uid = {source["source_uid"]: source for source in listed["sources"]}
+    folded = by_uid[source_uid]
+    # Current view folds the latest head delta over the registration.
+    assert folded["head"] == "head-1"
+    assert folded["registered"] is True
+    assert folded["accepted_range_count"] == 1
+
+    inspected = runtime.run_storage_service_operation(
+        "source_inspect", runtime_dir, {"source_id": "atlas-local"}
+    )
+    assert inspected["ok"]
+    assert inspected["authority"] == "yijinjing-journal"
+    assert len(inspected["accepted_ranges"]) == 1
+    assert inspected["accepted_ranges"][0]["manifest_id"] == "manifest-1"
+
+    fsck = runtime.run_storage_service_operation(
+        "source_registry_fsck", runtime_dir, {}
+    )
+    assert fsck["ok"]
+    assert fsck["status"] == "ok"
+    assert fsck["authority"] == "yijinjing-journal"
+    assert fsck["checked"]["sources"] == 2
+
+    # Authority is the append-only journal, not a JSON registry file. The legacy
+    # JSON registry path (storage/sources.json) is not what these records use.
+    assert not (tmp_path / "storage" / "sources.json").exists()
+
+
+def test_source_registry_fsck_flags_dangling_head_without_registration(tmp_path):
+    # A head update for a source that was never registered is dangling producer
+    # output; fsck must record it honestly rather than silently dropping it.
+    runtime = kungfu.__binding__.runtime
+    runtime_dir = str(tmp_path)
+
+    runtime.run_storage_service_operation(
+        "source_update_head",
+        runtime_dir,
+        {"source_id": "ghost", "head": "h", "update_time": 5000},
+    )
+    fsck = runtime.run_storage_service_operation(
+        "source_registry_fsck", runtime_dir, {}
+    )
+    assert fsck["ok"] is False
+    assert fsck["status"] == "failed"
+    assert any(err["code"] == "source_registration_missing" for err in fsck["errors"])
