@@ -21,14 +21,11 @@ from kungfu.rewind import (
     cost_wire,
     events,
 )
-from kungfu.rewind.wire import wrap_event
 from kungfu.rewind.cost.model import AttributionLevel, CostSnapshot, TokenUsage
 from kungfu.rewind.fb.CaptureLayer import CaptureLayer
 from kungfu.rewind.fb.Decision import Decision
 from kungfu.rewind.fb.RunStatus import RunStatus
-
-lf = kungfu.__binding__.yijinjing
-yjj = kungfu.__binding__.runtime
+from kungfu.storage.episode_lifecycle import RuntimeEpisodeLifecycle
 
 DECISION_BY_NAME = {
     "approve": Decision.Approve,
@@ -50,16 +47,6 @@ ATTRIBUTION_BY_NAME = {level.value: level for level in AttributionLevel}
 
 def new_run_id() -> str:
     return uuid.uuid4().hex[:12]
-
-
-def _open_journal(runtime_dir: str, run_id: str) -> Any:
-    loc = yjj.locator(runtime_dir)
-    location = yjj.location(
-        lf.enums.mode.LIVE, lf.enums.location_role.SYSTEM, "rewind", run_id, loc
-    )
-    pub = yjj.noop_publisher()
-    bus = yjj.bus(False)
-    return yjj.writer(location, 0, True, pub, False, bus, 0)
 
 
 def _source(run_id: str, runtime_dir: str) -> dict[str, Any]:
@@ -99,10 +86,21 @@ def emit_manifest(
     )
 
 
+def _episode(
+    runtime_dir: str, run_id: str, *, actor: str = "report"
+) -> RuntimeEpisodeLifecycle:
+    return RuntimeEpisodeLifecycle.resume_or_begin(
+        runtime_dir,
+        namespace="rewind",
+        name=run_id,
+        title=f"reported run {run_id}",
+        actor=actor,
+        source=f"rewind:{run_id}",
+    )
+
+
 def emit_event(runtime_dir: str, run_id: str, action_type: str, payload: bytes) -> None:
-    writer = _open_journal(runtime_dir, run_id)
-    carrier_type, envelope = wrap_event(action_type, payload, run_id=run_id)
-    writer.write_bytes(0, carrier_type, list(envelope), len(envelope))
+    _episode(runtime_dir, run_id).record_event(action_type, payload, run_id=run_id)
 
 
 def begin_run(
@@ -116,9 +114,8 @@ def begin_run(
 ) -> str:
     command_text = command or f"{provider} reported-run"
     runtime = f"reported:{cwd}" if cwd else "reported"
-    emit_event(
-        runtime_dir,
-        run_id,
+    episode = _episode(runtime_dir, run_id, actor=provider)
+    episode.record_event(
         ACTION_RUN_BEGIN,
         events.run_begin(
             run_id=run_id,
@@ -127,22 +124,28 @@ def begin_run(
             supervisor_version=kungfu.__version__,
             schema_version=SCHEMA_VERSION,
         ),
+        run_id=run_id,
     )
-    return emit_manifest(
+    manifest = emit_manifest(
         runtime_dir,
         run_id,
         extra={"provider": provider, "work_id": work_id, "cwd": cwd},
     )
+    episode.attach_payload_ref(manifest)
+    return manifest
 
 
 def end_run(runtime_dir: str, *, run_id: str, status: str, exit_code: int) -> str:
-    emit_event(
-        runtime_dir,
-        run_id,
+    episode = _episode(runtime_dir, run_id)
+    episode.record_event(
         ACTION_RUN_END,
         events.run_end(run_id, RUN_STATUS_BY_NAME[status], exit_code),
+        run_id=run_id,
     )
-    return emit_manifest(runtime_dir, run_id, extra={"status": status})
+    manifest = emit_manifest(runtime_dir, run_id, extra={"status": status})
+    episode.attach_payload_ref(manifest)
+    episode.close(ok=status == "succeeded", reason=f"reported-run {status}")
+    return manifest
 
 
 def report_cost(

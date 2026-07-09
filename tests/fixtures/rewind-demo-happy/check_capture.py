@@ -43,6 +43,7 @@ from kungfu.rewind.fb.RunBegin import RunBegin
 from kungfu.rewind.fb.RunEnd import RunEnd
 from kungfu.rewind.fb.ToolCall import ToolCall
 from kungfu.rewind.fb.ToolResult import ToolResult
+from kungfu.storage import service as storage_service
 
 schema = kungfu.__binding__.yijinjing
 yjj = kungfu.__binding__.runtime
@@ -209,6 +210,46 @@ if os.path.exists(manifest_path):
                     "schema blob content-addressed",
                     hashlib.sha256(f.read()).hexdigest() == schema_hash,
                 )
+
+episodes = storage_service.episode_list(runtime_dir, limit=0)
+matching_episodes = [
+    row
+    for row in episodes.get("episodes", [])
+    if row.get("source") == f"rewind:{run_id}"
+]
+check("Episode created for traced run", len(matching_episodes) == 1)
+if matching_episodes:
+    episode = matching_episodes[0]
+    check("Episode status ended", episode.get("status") == "ended", str(episode))
+    check("Episode actor is trace", episode.get("actor") == "kungfu trace")
+    inspected = storage_service.episode_inspect(
+        runtime_dir, episode_id=int(episode["episode_id"])
+    )
+    attached_uids = {row.get("frame_uid") for row in inspected.get("frames", [])}
+    expected_uids = {
+        row[0].frame_uid
+        for rows in (
+            begin_frames,
+            req_frames,
+            resp_frames,
+            call_frames,
+            result_frames,
+            retry_frames,
+            end_frames,
+        )
+        for row in rows
+    }
+    check("Episode attached every run frame", attached_uids == expected_uids)
+    check("Episode has payload refs", len(inspected.get("refs", [])) >= 1)
+    fsck = storage_service.fsck(runtime_dir, episode_id=int(episode["episode_id"]))
+    check("Episode fsck ok", fsck.get("ok") is True, str(fsck.get("errors", [])))
+    exported = storage_service.build_export_bundle(
+        runtime_dir, episode_id=int(episode["episode_id"])
+    )
+    check("Episode export bundle ok", exported.get("scope") == "episode")
+    check(
+        "Episode export has frames", exported.get("frame_count") == len(expected_uids)
+    )
 
 if failures:
     print(f"capture check failed: {failures}")

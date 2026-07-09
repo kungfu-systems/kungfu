@@ -30,9 +30,9 @@ from kungfu.rewind import (
     events,
     managed_run,
 )
-from kungfu.rewind.wire import wrap_event
 from kungfu.rewind.cost import confidence_for, discover_provider
 from kungfu.rewind.fb.RunStatus import RunStatus
+from kungfu.storage.episode_lifecycle import RuntimeEpisodeLifecycle
 from kungfu.skill import (
     build_skill_context,
     context_file_from_env,
@@ -45,9 +45,6 @@ from kungfu.skill import (
     write_audit_document,
 )
 
-lf = kungfu.__binding__.yijinjing
-yjj = kungfu.__binding__.runtime
-
 
 @dataclass
 class ManagedRunCliReport:
@@ -59,16 +56,6 @@ class ManagedRunCliReport:
     response_doc: dict[str, Any]
     skill_audit_path: str | None
     skill_audit_doc: dict[str, Any] | None
-
-
-def _open_journal(runtime_dir: str, run_id: str) -> Any:
-    loc = yjj.locator(runtime_dir)
-    location = yjj.location(
-        lf.enums.mode.LIVE, lf.enums.location_role.SYSTEM, "rewind", run_id, loc
-    )
-    pub = yjj.noop_publisher()
-    bus = yjj.bus(False)
-    return yjj.writer(location, 0, True, pub, False, bus, 0)
 
 
 def _rule(label: str = "") -> str:
@@ -155,36 +142,44 @@ def run_and_report(
             )
         print("  running the provider under management …\n")
 
-    writer = _open_journal(runtime_dir, run_id)
+    episode = RuntimeEpisodeLifecycle(
+        runtime_dir=runtime_dir,
+        namespace="rewind",
+        name=run_id,
+        title=f"managed run {run_id}",
+        actor=provider,
+        source=f"rewind:{run_id}",
+    )
 
     def emit(action_type: str, data: bytes) -> None:
-        carrier_type, envelope = wrap_event(action_type, data, run_id=run_id)
-        writer.write_bytes(0, carrier_type, list(envelope), len(envelope))
+        episode.record_event(action_type, data, run_id=run_id)
 
-    emit(
-        ACTION_RUN_BEGIN,
-        events.run_begin(
+    try:
+        emit(
+            ACTION_RUN_BEGIN,
+            events.run_begin(
+                run_id=run_id,
+                command=f"{provider} managed-run",
+                runtime=sys.platform,
+                supervisor_version=kungfu.__version__,
+                schema_version=SCHEMA_VERSION,
+            ),
+        )
+
+        result = managed_run.run_managed(
+            provider,
+            disc.path,
+            prompt_for_provider,
+            emit=emit,
             run_id=run_id,
-            command=f"{provider} managed-run",
-            runtime=sys.platform,
-            supervisor_version=kungfu.__version__,
-            schema_version=SCHEMA_VERSION,
-        ),
-    )
+            work_id=work_id,
+        )
 
-    result = managed_run.run_managed(
-        provider,
-        disc.path,
-        prompt_for_provider,
-        emit=emit,
-        run_id=run_id,
-        work_id=work_id,
-    )
-
-    status = RunStatus.Succeeded if result.exit_code == 0 else RunStatus.Failed
-    emit(ACTION_RUN_END, events.run_end(run_id, status, result.exit_code))
-    # frames are written straight to the memory-mapped journal page, so they
-    # persist without an explicit flush; the writer releases at function end.
+        status = RunStatus.Succeeded if result.exit_code == 0 else RunStatus.Failed
+        emit(ACTION_RUN_END, events.run_end(run_id, status, result.exit_code))
+    except Exception as exc:
+        episode.close(ok=False, reason=f"managed-run exception: {exc}")
+        raise
 
     bundle_dir = os.path.join(runtime_dir, "rewind", run_id, "bundle")
     os.makedirs(bundle_dir, exist_ok=True)
@@ -203,6 +198,7 @@ def run_and_report(
         f.write("\n")
     with open(response_path, "rb") as rf:
         response_hash = compute_content_hash_value(rf.read())
+    episode.attach_payload_ref(response_path, content_hash=response_hash)
     skill_audit_doc = None
     skill_audit_path = None
     skill_audit_hash = None
@@ -244,6 +240,11 @@ def run_and_report(
             "dest": 0,
         },
         extra=extra,
+    )
+    episode.attach_payload_ref(manifest)
+    episode.close(
+        ok=status == RunStatus.Succeeded,
+        reason=f"managed-run exit_code={result.exit_code}",
     )
     report = ManagedRunCliReport(
         provider=provider,

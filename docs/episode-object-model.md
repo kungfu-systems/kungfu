@@ -239,6 +239,22 @@ pages byte-compatible while establishing Episode as the durable semantic object.
 Future physical-layout work can move from manifest association to Episode-aware
 allocation domains without changing the product-facing API.
 
+The first runtime lifecycle slice wires real Rewind actions into this manifest
+authority:
+
+- `kungfu trace` opens one Episode for the traced run, records all run frames
+  through the C++ action recorder, attaches the returned frame receipts, records
+  bundle payload refs, and ends or aborts the Episode with the process result.
+- `kungfu managed-run` uses the same lifecycle helper around provider-managed
+  runs after provider discovery succeeds.
+- `kungfu report run begin/end` supports the lower-fidelity reported workflow by
+  reopening the open Episode by `source=rewind:<run_id>` across separate CLI
+  invocations, then closing it on `run end`.
+
+The helper is intentionally thin. Python owns command orchestration and process
+flow; the load-bearing facts remain the C++ `action_recorder` receipts and the
+C++ runtime storage service's yijinjing Episode manifest operations.
+
 ## Core Operations
 
 Episode-native storage should expose these operations through the C++ core

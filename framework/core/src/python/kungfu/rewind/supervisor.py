@@ -40,15 +40,12 @@ from kungfu.rewind import adapters, bundle, events
 from kungfu.rewind.fb.RunStatus import RunStatus
 from kungfu.rewind.ingest import IngestServer
 from kungfu.rewind.schema_registry import register_user_schema
-from kungfu.rewind.wire import wrap_event
 from kungfu.rewind.proxy import (
     DEFAULT_ANTHROPIC_UPSTREAM,
     DEFAULT_OPENAI_UPSTREAM,
     ModelWireProxy,
 )
-
-lf = kungfu.__binding__.yijinjing
-yjj = kungfu.__binding__.runtime
+from kungfu.storage.episode_lifecycle import RuntimeEpisodeLifecycle
 
 ENV_RUN_ID = "KUNGFU_REWIND_RUN_ID"
 ENV_INGEST = "KUNGFU_REWIND_INGEST"
@@ -71,21 +68,13 @@ class Supervisor:
         self.runtime_dir = runtime_dir
         self.command = list(command)
         self.run_id = run_id or uuid.uuid4().hex
-        self.locator = yjj.locator(runtime_dir)
-        self.location = yjj.location(
-            lf.enums.mode.LIVE,
-            lf.enums.location_role.SYSTEM,
-            "rewind",
-            self.run_id,
-            self.locator,
-        )
-        # standalone single-writer journal, same shape as the C++ slices:
-        # no master, no-op publisher, private bus. Keep every piece alive on
-        # self — the writer borrows them without owning their lifetime.
-        self.publisher = yjj.noop_publisher()
-        self.bus = yjj.bus(False)
-        self.writer = yjj.writer(
-            self.location, PUBLIC_DEST, True, self.publisher, False, self.bus, 0
+        self.episode = RuntimeEpisodeLifecycle(
+            runtime_dir=runtime_dir,
+            namespace="rewind",
+            name=self.run_id,
+            title=f"rewind trace {self.run_id}",
+            actor="kungfu trace",
+            source=f"rewind:{self.run_id}",
         )
         self.events: queue.SimpleQueue[Any] = queue.SimpleQueue()
         self.proxy = ModelWireProxy(
@@ -125,9 +114,7 @@ class Supervisor:
             if item is _STOP:
                 return
             action_type, data = item
-            carrier_type, envelope = wrap_event(action_type, data, run_id=self.run_id)
-            # the binding takes the payload as a byte sequence (list[int])
-            self.writer.write_bytes(0, carrier_type, list(envelope), len(envelope))
+            self.episode.record_event(action_type, data, run_id=self.run_id)
 
     def child_env(self) -> dict[str, str]:
         env = dict(os.environ)
@@ -236,4 +223,9 @@ class Supervisor:
                     )
                 except ValueError:
                     continue
+            self.episode.attach_payload_ref(manifest_path)
+            self.episode.close(
+                ok=status == RunStatus.Succeeded,
+                reason=f"trace exit_code={exit_code}",
+            )
         return exit_code, status, manifest_path

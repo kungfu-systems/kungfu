@@ -22,6 +22,10 @@ def _runtime():
     return kungfu.__binding__.runtime
 
 
+def _u64(value: int | None) -> str:
+    return str(value or 0)
+
+
 def service_capabilities() -> dict[str, Any]:
     return dict(_runtime().storage_service_capabilities())
 
@@ -377,7 +381,7 @@ def fsck(
             {
                 "scope": scope,
                 "source_id": source_id,
-                "episode_id": episode_id or 0,
+                "episode_id": _u64(episode_id),
             },
         )
     )
@@ -477,7 +481,7 @@ def query_projection(
             {
                 "scope": scope,
                 "source_id": source_id,
-                "episode_id": episode_id or 0,
+                "episode_id": _u64(episode_id),
                 "query": query,
                 "kind": kind,
                 "range": range_filter or {},
@@ -504,9 +508,9 @@ def episode_begin(
             "episode_begin",
             str(runtime_dir),
             {
-                "episode_id": episode_id,
-                "parent_episode_id": parent_episode_id,
-                "root_trigger_frame_uid": root_trigger_frame_uid,
+                "episode_id": _u64(episode_id),
+                "parent_episode_id": _u64(parent_episode_id),
+                "root_trigger_frame_uid": _u64(root_trigger_frame_uid),
                 "location_uid": location_uid,
                 "begin_time": begin_time,
                 "title": title,
@@ -532,11 +536,11 @@ def episode_heartbeat(
             "episode_heartbeat",
             str(runtime_dir),
             {
-                "episode_id": episode_id,
+                "episode_id": _u64(episode_id),
                 "location_uid": location_uid,
                 "update_time": update_time,
-                "last_frame_uid": last_frame_uid,
-                "frame_count": frame_count,
+                "last_frame_uid": _u64(last_frame_uid),
+                "frame_count": _u64(frame_count),
                 "note": note,
             },
         )
@@ -566,11 +570,11 @@ def episode_attach_frame(
             "episode_attach_frame",
             str(runtime_dir),
             {
-                "episode_id": episode_id,
+                "episode_id": _u64(episode_id),
                 "location_uid": location_uid,
-                "frame_uid": frame_uid,
-                "trigger_frame_uid": trigger_frame_uid,
-                "stream_id": stream_id,
+                "frame_uid": _u64(frame_uid),
+                "trigger_frame_uid": _u64(trigger_frame_uid),
+                "stream_id": _u64(stream_id),
                 "gen_time": gen_time,
                 "trigger_time": trigger_time,
                 "carrier_type": carrier_type,
@@ -578,8 +582,8 @@ def episode_attach_frame(
                 "dest": dest,
                 "data_length": data_length,
                 "integrity_version": integrity_version,
-                "payload_checksum": payload_checksum,
-                "frame_checksum": frame_checksum,
+                "payload_checksum": _u64(payload_checksum),
+                "frame_checksum": _u64(frame_checksum),
             },
         )
     )
@@ -601,10 +605,10 @@ def episode_attach_ref(
             "episode_attach_ref",
             str(runtime_dir),
             {
-                "episode_id": episode_id,
+                "episode_id": _u64(episode_id),
                 "location_uid": location_uid,
                 "ref_kind": ref_kind,
-                "ref_uid": ref_uid,
+                "ref_uid": _u64(ref_uid),
                 "ref_id": ref_id,
                 "ref_hash": ref_hash,
                 "update_time": update_time,
@@ -628,11 +632,11 @@ def episode_end(
             "episode_end",
             str(runtime_dir),
             {
-                "episode_id": episode_id,
+                "episode_id": _u64(episode_id),
                 "location_uid": location_uid,
                 "end_time": end_time,
-                "last_frame_uid": last_frame_uid,
-                "frame_count": frame_count,
+                "last_frame_uid": _u64(last_frame_uid),
+                "frame_count": _u64(frame_count),
                 "reason": reason,
             },
         )
@@ -654,11 +658,11 @@ def episode_abort(
             "episode_abort",
             str(runtime_dir),
             {
-                "episode_id": episode_id,
+                "episode_id": _u64(episode_id),
                 "location_uid": location_uid,
                 "end_time": end_time,
-                "last_frame_uid": last_frame_uid,
-                "frame_count": frame_count,
+                "last_frame_uid": _u64(last_frame_uid),
+                "frame_count": _u64(frame_count),
                 "reason": reason,
             },
         )
@@ -685,7 +689,7 @@ def episode_inspect(runtime_dir: str | Path, *, episode_id: int) -> dict[str, An
         _runtime().run_storage_service_operation(
             "episode_inspect",
             str(runtime_dir),
-            {"episode_id": episode_id},
+            {"episode_id": _u64(episode_id)},
         )
     )
 
@@ -787,7 +791,7 @@ def build_export_bundle(
             {
                 "scope": scope,
                 "source_id": source_id,
-                "episode_id": episode_id or 0,
+                "episode_id": _u64(episode_id),
                 "range": range_filter or {},
             },
         )

@@ -3,6 +3,7 @@
 #include <kungfu/runtime/storage/service.h>
 
 #include <algorithm>
+#include <charconv>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -109,6 +110,16 @@ uint64_t uint64_or(const nlohmann::json &object, const std::string &field, uint6
   }
   if (value.is_number_integer()) {
     return static_cast<uint64_t>(value.get<int64_t>());
+  }
+  if (value.is_string()) {
+    const auto text = value.get<std::string>();
+    uint64_t parsed = 0;
+    const auto *begin = text.data();
+    const auto *end = begin + text.size();
+    const auto [ptr, error] = std::from_chars(begin, end, parsed);
+    if (error == std::errc{} && ptr == end) {
+      return parsed;
+    }
   }
   return fallback;
 }

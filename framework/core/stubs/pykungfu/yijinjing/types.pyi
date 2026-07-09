@@ -152,7 +152,7 @@ class EpisodeClosed:
     frame_count: int
     last_frame_uid: int
     location_uid: int
-    reason: str
+    reason: String[str[64]]
     schema_version: int
     status: pykungfu.yijinjing.enums.EpisodeStatus
     def __eq__(self, arg0: EpisodeClosed) -> bool:
@@ -214,7 +214,7 @@ class EpisodeHeartbeat:
     frame_count: int
     last_frame_uid: int
     location_uid: int
-    note: str
+    note: String[str[64]]
     schema_version: int
     update_time: int
     def __eq__(self, arg0: EpisodeHeartbeat) -> bool:
@@ -237,15 +237,15 @@ class EpisodeHeartbeat:
 class EpisodeOpen:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 10801
-    actor: str
+    actor: String[str[64]]
     begin_time: int
     episode_id: int
     location_uid: int
     parent_episode_id: int
     root_trigger_frame_uid: int
     schema_version: int
-    source: str
-    title: str
+    source: String[str[64]]
+    title: String[str[64]]
     def __eq__(self, arg0: EpisodeOpen) -> bool:
         ...
     def __hash__(self) -> int:
@@ -268,8 +268,8 @@ class EpisodeRefAttached:
     __tag__: typing.ClassVar[int] = 10804
     episode_id: int
     location_uid: int
-    ref_hash: str
-    ref_id: str
+    ref_hash: String[str[128]]
+    ref_id: String[str[128]]
     ref_kind: pykungfu.yijinjing.enums.EpisodeRefKind
     ref_uid: int
     schema_version: int
