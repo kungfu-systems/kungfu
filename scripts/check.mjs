@@ -190,6 +190,49 @@ function checkBiomeFiles(label, files) {
   ]);
 }
 
+// Python format + lint check on an explicit file list, so the changed-scope
+// gate carries the same ruff coverage the staged gate already has (a pre-commit
+// hook is only developer-local; changed-scope is the gate CONTRIBUTING points CI
+// at). Read-only: `ruff format --check` never rewrites (fixes live in fix.mjs),
+// `ruff check` lints per framework/core [tool.ruff.lint] (select E/F). Scoped to
+// the passed files, so pre-existing lint debt in untouched files does not block.
+function checkPythonFiles(label, files) {
+  const py = files.filter((file) => /\.py$/.test(file));
+  if (!py.length) {
+    log(`[check] no ${label} Python files`);
+    return;
+  }
+  if (has('ruff')) {
+    run(`${label} Python format check`, 'ruff', [
+      'format',
+      '--check',
+      '--force-exclude',
+      ...py,
+    ]);
+    run(`${label} Python lint check`, 'ruff', [
+      'check',
+      '--force-exclude',
+      ...py,
+    ]);
+  } else if (has('uvx')) {
+    run(`${label} Python format check`, 'uvx', [
+      'ruff',
+      'format',
+      '--check',
+      '--force-exclude',
+      ...py,
+    ]);
+    run(`${label} Python lint check`, 'uvx', [
+      'ruff',
+      'check',
+      '--force-exclude',
+      ...py,
+    ]);
+  } else {
+    warn(`ruff/uvx not found; skipped Python check: ${py.join(' ')}`);
+  }
+}
+
 function checkNoBashStaged() {
   const hits = scanStaged(ROOT);
   if (!hits.length) return;
@@ -262,7 +305,6 @@ function checkStaged() {
   }
 
   const cpp = files.filter((file) => /\.(h|hpp|hxx|cpp|c|cc|cxx)$/.test(file));
-  const py = files.filter((file) => /\.py$/.test(file));
 
   if (cpp.length) {
     if (has('uvx')) {
@@ -288,33 +330,7 @@ function checkStaged() {
     }
   }
 
-  if (py.length) {
-    if (has('ruff')) {
-      run('Python format check', 'ruff', [
-        'format',
-        '--check',
-        '--force-exclude',
-        ...py,
-      ]);
-      run('Python lint check', 'ruff', ['check', '--force-exclude', ...py]);
-    } else if (has('uvx')) {
-      run('Python format check', 'uvx', [
-        'ruff',
-        'format',
-        '--check',
-        '--force-exclude',
-        ...py,
-      ]);
-      run('Python lint check', 'uvx', [
-        'ruff',
-        'check',
-        '--force-exclude',
-        ...py,
-      ]);
-    } else {
-      warn(`ruff/uvx not found; skipped Python check: ${py.join(' ')}`);
-    }
-  }
+  checkPythonFiles('staged', files);
 
   checkBiomeFiles('staged', files);
   checkBuildchainKfdEvidence(files);
@@ -343,6 +359,7 @@ function checkChanged() {
   checkCarrierActionEnvelope();
   checkRuntimeGreenfield();
   const files = changedFiles();
+  checkPythonFiles('changed', files);
   checkBiomeFiles('changed', files);
   checkBuildchainKfdEvidence(files);
   checkShared();

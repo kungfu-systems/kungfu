@@ -100,7 +100,8 @@ repository = "https://github.com/kungfu-systems/kungfu.git"
 dev = ["pyinstaller~=6.11.0"]
 
 # python 预检：ruff（S1 = ruff format，替代 black；line-length 88 对齐 black 默认风格）。
-# ruff check（lint）留 S2 评估后再启用，当前不开 lint。
+# ruff check（lint）已在 staged + changed-scope 门启用（scripts/check.mjs，select E/F 见
+# [tool.ruff.lint]）；whole-tree 门（check:all）暂缓，待现存 lint 基线清零后再纳入。
 [tool.ruff]
 line-length = 88
 target-version = "py313"
