@@ -13,6 +13,12 @@ The higher-level action-timeline decision is
 Kungfu records the causal action chain and attached evidence, not a complete
 snapshot of the outside world.
 
+The first-class storage object for bounded causal work is an Episode:
+[ADR-0033](../framework/core/docs/adr/ADR-0033-episode-causal-segment-object.md)
+defines Episode as the causal-closure container and the future
+export/import/fsck/timeline-slicing unit. Raw mmap pages are append blocks;
+Episodes are the semantic objects projected into user-visible timelines.
+
 The action-recording implementation boundary is
 [ADR-0022](../framework/core/docs/adr/ADR-0022-core-action-recording-surface.md):
 architecture-level recording semantics live in the C++ core. Python and Node may
@@ -114,6 +120,11 @@ Across sources or machines, replay and inspection should prefer causal links,
 accepted ranges, and observer projection metadata over wall-clock order alone.
 Two observers may keep different stable projections of concurrent facts; the
 view is trustworthy when its policy is explicit and reproducible.
+
+As the storage layer becomes Episode-aware, replay and inspection should select
+Episodes first and then walk the closed frame-level causal chains inside them.
+Cross-Episode influence should appear as declared Episode dependencies, not as
+an undeclared frame-level chain that silently leaves the selected object.
 
 For agent runs, replay is layered. Forensic replay reopens, decodes, verifies,
 and walks the recorded causal tree without re-executing external effects.

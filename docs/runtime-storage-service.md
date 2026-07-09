@@ -21,6 +21,9 @@ for the local runtime storage service and
 for Git-like source sync over Kungfu `location` and `channel`.
 [`ADR-0032`](../framework/core/docs/adr/ADR-0032-generic-source-service-v1.md)
 records the first generic source service implementation slice.
+[`ADR-0033`](../framework/core/docs/adr/ADR-0033-episode-causal-segment-object.md)
+defines Episode as the first-class causal segment object that future storage,
+sync, fsck, import/export, and timeline slicing should address directly.
 
 ## Existing Ground
 
@@ -61,6 +64,7 @@ Internal roles:
 | SQLite projections | Query/index/cache views | Derived and rebuildable |
 | Manifest/schema registry | Capture boundary, provenance, schemas, versioning | Trust and decode root for bundles |
 | Source registry | Known sources, locations, heads, accepted ranges, watermarks | Local record of what has been accepted |
+| Episode manifest | Bounded causal segment, frame coordinates, dependencies, payload/schema inventories, projection refs, and verification roots | First-class object boundary for export/import/fsck/timeline selection |
 
 The first runtime backend may use RocksDB, content-addressed files, SQLite blob
 tables, or a mix. That choice must remain behind the storage service. Public
@@ -128,6 +132,11 @@ The first C++ contract surface is intentionally header-only vocabulary under
 | `fsck.h` | Read-only verification options, issue taxonomy, and reports. |
 | `provider.h` | Abstract service/provider interfaces implemented above the kernel. |
 
+The next storage-contract layer should add Episode vocabulary under the same
+C++ ownership boundary. Episode is not a Python/Node convenience term: it is the
+causal segment object that providers, fsck, export/import, and timeline
+projection must agree on.
+
 ## Source, Location, And Channel
 
 Runtime storage sync should build on Kungfu's native runtime concepts instead
@@ -183,6 +192,11 @@ causal runtime fact ledger, not a snapshot tree database. The first sync stages
 can assume a single accepted timeline and avoid conflict resolution; if forks,
 authority-root changes, or conflicts appear later, they must become explicit
 accept/reject/rebase policy rather than implicit directory layout.
+
+Episode is the Kungfu analogue of a distributable object, but for causal
+segments instead of filesystem snapshots. A remote fetch should eventually
+accept verified Episodes into the local fact set; the observer timeline then
+projects the selected Episode set under declared policy.
 
 ## Command Surface
 
@@ -262,6 +276,7 @@ Import/export should become the shared mechanism for:
 
 Filters should support at least:
 
+- episode id or Episode selector;
 - source id;
 - scope/profile, such as `atlas`, `work`, `rewind`, or `all`;
 - session or run id;
@@ -271,6 +286,8 @@ Filters should support at least:
 
 The bundle must carry:
 
+- Episode manifest, dependencies, and selected projection policy if the export
+  claims a projected timeline;
 - manifest and capture boundary;
 - event segment;
 - payload inventory with present/redacted/absent/missing state;

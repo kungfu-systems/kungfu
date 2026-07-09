@@ -48,6 +48,7 @@ A record's **Status** says where it stands:
 | [0030](ADR-0030-manifest-scoped-sync-root-v1.md) | accepted | manifest-scoped sync root v1 |
 | [0031](ADR-0031-fast-hash-xxh3.md) | accepted | fast internal hashes use XXH3 |
 | [0032](ADR-0032-generic-source-service-v1.md) | accepted | generic source service v1 |
+| [0033](ADR-0033-episode-causal-segment-object.md) | accepted | Episode is the first-class causal segment object |
 
 ## Reading by theme
 
@@ -116,7 +117,10 @@ A record's **Status** says where it stands:
   [0031](ADR-0031-fast-hash-xxh3.md) (the v4 greenfield switch of internal
   fast hashes to XXH3_64 / XXH3_128), and
   [0032](ADR-0032-generic-source-service-v1.md) (the first generic source
-  registry, accepted-range, bundle import/export, and fsck service slice).
+  registry, accepted-range, bundle import/export, and fsck service slice), and
+  [0033](ADR-0033-episode-causal-segment-object.md) (Episode as the first-class
+  causal segment object for storage, sync, fsck, import/export, and timeline
+  projection).
 - **Cross-cutting principle** — [0009](ADR-0009-load-bearing-self-bootstrap.md)
   (load-bearing self-bootstrap), which also names the general law that
   [`docs/architecture.md` § The build dogfoods the SDK](../../../../docs/architecture.md)
@@ -133,4 +137,7 @@ A record's **Status** says where it stands:
   implementation-facing design for Kungfu Skills.
 - [`docs/runtime-storage-service.md`](../../../../docs/runtime-storage-service.md) —
   the staged storage command surface, fsck/export path, and source-adapter
+  direction.
+- [`docs/episode-object-model.md`](../../../../docs/episode-object-model.md) —
+  the Episode object model, causal closure invariant, and storage migration
   direction.
