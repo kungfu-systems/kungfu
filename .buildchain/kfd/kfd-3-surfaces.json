@@ -5,7 +5,7 @@
     "id": "kungfu",
     "name": "Kungfu",
     "repository": "kungfu-systems/kungfu",
-    "package": "@kungfu-tech/artifact-kungfu"
+    "package": "@kungfu-tech/product-kungfu"
   },
   "registryPath": ".buildchain/kfd/kfd-3-surfaces.json",
   "buildchain": {
@@ -27,7 +27,7 @@
           "role": "kungfu-sdk-product-entrypoints"
         },
         {
-          "path": "artifact/scripts/product.mjs",
+          "path": "product/scripts/product.mjs",
           "role": "kungfu-product-dev-and-build-entrypoints"
         }
       ],
@@ -53,7 +53,7 @@
       "libnode": "22.22.3-kf.3-alpha.16",
       "buildchain": "2.10.8"
     },
-    "digest": "sha256:f0eb882f9f2e011f7dd89b5fb41a30f62883560480822c3e71c633b60e43fe2e"
+    "digest": "sha256:cf02c46bae9c06abffa91eb0eb636e31e6f9cba8d500a4fb0d56d730fb0dfe69"
   },
   "surfaces": [
     {
@@ -557,6 +557,26 @@
       }
     },
     {
+      "id": "kungfu.product.cli-release-build",
+      "name": "./kungfu-code product cli dist",
+      "kind": "cli",
+      "participantProfile": "agent-or-developer",
+      "state": "declared",
+      "availability": "shipped",
+      "visibility": "public",
+      "participantFacing": true,
+      "public": true,
+      "sourcePath": "product/scripts/product.mjs",
+      "evidencePath": "product/package.json",
+      "artifactPath": "product/package.json",
+      "maturity": "stable",
+      "declaration": {
+        "owner": "kungfu",
+        "source": "scripts/buildchain-kfd-evidence.mjs",
+        "sourcePath": "product/scripts/product.mjs"
+      }
+    },
+    {
       "id": "kungfu.product.dev-run",
       "name": "./kungfu-code product",
       "kind": "cli",
@@ -566,14 +586,14 @@
       "visibility": "public",
       "participantFacing": true,
       "public": true,
-      "sourcePath": "artifact/scripts/product.mjs",
-      "evidencePath": "artifact/package.json",
-      "artifactPath": "artifact/package.json",
+      "sourcePath": "product/scripts/product.mjs",
+      "evidencePath": "product/package.json",
+      "artifactPath": "product/package.json",
       "maturity": "stable",
       "declaration": {
         "owner": "kungfu",
         "source": "scripts/buildchain-kfd-evidence.mjs",
-        "sourcePath": "artifact/scripts/product.mjs"
+        "sourcePath": "product/scripts/product.mjs"
       }
     },
     {
@@ -586,14 +606,14 @@
       "visibility": "public",
       "participantFacing": true,
       "public": true,
-      "sourcePath": "artifact/scripts/dist.mjs",
-      "evidencePath": "artifact/package.json",
-      "artifactPath": "artifact/package.json",
+      "sourcePath": "product/scripts/dist.mjs",
+      "evidencePath": "product/package.json",
+      "artifactPath": "product/package.json",
       "maturity": "stable",
       "declaration": {
         "owner": "kungfu",
         "source": "scripts/buildchain-kfd-evidence.mjs",
-        "sourcePath": "artifact/scripts/dist.mjs"
+        "sourcePath": "product/scripts/dist.mjs"
       }
     },
     {
@@ -769,6 +789,26 @@
       "sourcePath": "developer/sdk/src/sdk.js",
       "evidencePath": "framework/kfx/kungfu-kfx.contract.json",
       "artifactPath": "framework/kfx/kungfu-kfx.contract.json",
+      "maturity": "stable",
+      "declaration": {
+        "owner": "kungfu",
+        "source": "scripts/buildchain-kfd-evidence.mjs",
+        "sourcePath": "developer/sdk/src/sdk.js"
+      }
+    },
+    {
+      "id": "kungfu.sdk.product.cli",
+      "name": "kungfu sdk product cli dist",
+      "kind": "cli",
+      "participantProfile": "agent-or-developer",
+      "state": "declared",
+      "availability": "shipped",
+      "visibility": "public",
+      "participantFacing": true,
+      "public": true,
+      "sourcePath": "developer/sdk/src/sdk.js",
+      "evidencePath": "developer/sdk/src/sdk.js",
+      "artifactPath": "developer/sdk/src/sdk.js",
       "maturity": "stable",
       "declaration": {
         "owner": "kungfu",

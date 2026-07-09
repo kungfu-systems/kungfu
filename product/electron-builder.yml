@@ -1,7 +1,7 @@
 appId: com.kungfu.app
 productName: Kungfu
 directories:
-  output: ../../artifact/dist
+  output: ../../product/dist/desktop
 # asar:false so the native binding (.node), kungfu dylibs, and bundled first-party
 # kfx can be loaded directly from Resources.
 asar: false
@@ -23,7 +23,7 @@ extraResources:
     to: cli
   - from: ../tui/dist
     to: tui
-  - from: ../../artifact/extensions
+  - from: ../../product/extensions
     to: extensions
 mac:
   target:

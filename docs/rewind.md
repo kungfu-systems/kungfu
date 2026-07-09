@@ -18,7 +18,7 @@ Release binaries are not published yet. Two paths today:
 ./kungfu-code dist
 ```
 
-This produces `artifact/dist/Kungfu-<version>-arm64.dmg` (and a zip).
+This produces `product/release/desktop/Kungfu-<version>-arm64.dmg` (and a zip).
 Mount, drag `Kungfu.app` to Applications, launch. The app is self-contained:
 the kungfu runtime and first-party kfx ship inside it. Pre-release builds are
 unsigned: on first launch use right-click → Open, or `xattr -d com.apple.quarantine

@@ -29,8 +29,8 @@ under those pinned tools.
 | Python binding (`py_kungfu`) | `framework/core/src/bindings/python` | pybind11, built under the pinned CPython |
 | Node addon (`kungfu_node.node`) | `framework/core/src/bindings/node` | N-API via the `.gyp` build |
 | `kungfu` (the frozen runtime) | the above + embedded Python/Node runtimes | `./kungfu-code freeze` |
-| distributable artifact | frozen runtime + GUI/TUI + all artifact-declared first-party kfx | `./kungfu-code dist` |
-| product loops | SDK-distributed GUI/TUI dev/build verbs | single kfx: `kungfu sdk product gui dev`; artifact product: `kungfu sdk product gui dist`; repo dogfood via `./kungfu-code product ...` |
+| distributable products | frozen runtime + GUI/TUI/CLI + all product-declared first-party kfx | `./kungfu-code dist` |
+| product loops | SDK-distributed GUI/TUI/CLI dev/build verbs | single kfx: `kungfu sdk product gui dev`; product assembly: `kungfu sdk product gui dist`; repo dogfood via `./kungfu-code product ...` |
 
 ## Where the prebuilt binaries come from
 

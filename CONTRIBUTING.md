@@ -41,7 +41,8 @@ for how the layers fit together; the main areas:
 - `developer/sdk` — the application / extension SDK (`kungfu sdk`); `developer/toolchain`
   — shared build dependencies.
 - `extensions/*` — kfx extensions; `examples/*` — samples.
-- `artifact` — the dogfood installer bundling the runtime, reference UIs and SDK.
+- `product` — the dogfood product assembly bundling the runtime, reference UIs,
+  SDK, first-party kfx, desktop installers, and CLI archives.
 
 Two command-line entry points, kept forward-compatible:
 
@@ -70,7 +71,8 @@ cd kungfu
 ./kungfu-code fix           # explicit formatting / safe auto-fixes for changed files
 ./kungfu-code product gui dev # run the reference GUI dev loop
 ./kungfu-code product tui dev # run the reference TUI dev loop
-./kungfu-code dist          # rebuild core, freeze, build all bundled kfx, package artifact/dist
+./kungfu-code product cli dist # build the CLI product archive
+./kungfu-code dist          # rebuild core, freeze, build bundled products under product/release
 ./kungfu-code app           # launch the desktop app
 ```
 

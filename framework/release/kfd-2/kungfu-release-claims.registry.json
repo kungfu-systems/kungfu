@@ -4,7 +4,7 @@
   "product": {
     "name": "Kungfu",
     "repository": "kungfu-systems/kungfu",
-    "package": "@kungfu-tech/artifact-kungfu"
+    "package": "@kungfu-tech/product-kungfu"
   },
   "releaseDefaults": {
     "channel": "dev/v4/v4.0",

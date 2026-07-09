@@ -173,13 +173,14 @@ closure check: it validates the registry shape, confirms the `kungfu agent`
 command tree has no unanchored runtime commands, and checks the command catalog
 does not expose commands outside the declared registry.
 
-### Distribution — `artifact` (`@kungfu-tech/artifact-kungfu`)
+### Distribution — `product` (`@kungfu-tech/product-kungfu`)
 
 The dogfood installer: it bundles the runtime, both reference UIs, the SDK and
-all first-party kfx declared by `artifact/package.json` into one package.
-Installing it yields the reference GUI and TUI, the `kungfu` shell, and the SDK
-for zero-setup extension and product development. `./kungfu-code dist` is the
-single source-to-installer command; its outputs live under `artifact/dist`.
+all first-party kfx declared by `product/package.json` into desktop and CLI
+products. Installing the desktop product yields the reference GUI and TUI, the
+`kungfu` shell, and the SDK for zero-setup extension and product development.
+`./kungfu-code dist` is the single source-to-product command; its outputs live
+under `product/release`.
 
 ### Build tooling — `kungfu-code`
 
@@ -203,11 +204,11 @@ exercises a distinct extension path:
 - a C++ extension, against the `libkungfu` API directly;
 - a JavaScript / TypeScript extension.
 
-`artifact` closes the loop at the top: assembling it is the real test that the
-SDK can package a complete application from the runtime, the reference surfaces
-and the extensions. Trading-specific reference extensions from earlier versions
-are being retired, and their coverage role is being handed to neutral
-replacements that exercise the same paths. The C++ path is covered by
+`product` closes the loop at the top: assembling it is the real test that the
+SDK can package complete desktop and CLI products from the runtime, the
+reference surfaces and the extensions. Trading-specific reference extensions
+from earlier versions are being retired, and their coverage role is being
+handed to neutral replacements that exercise the same paths. The C++ path is covered by
 [`examples/probe-cpp`](../examples/probe-cpp): a neutral probe that compiles
 against the `libkungfu` API and the public `yijinjing/schema` headers into a
 native module (`kungfu sdk kfx build` drives CMake through the core toolchain). The Python
@@ -236,7 +237,7 @@ developer/    build tooling you build WITH (invoked, a devDependency)
   sdk         application / extension / skill SDK — the `kungfu sdk` subcommand
 extensions/   kfx plugins (reference extensions)
 examples/     samples and build-coverage probes
-artifact      dogfood installer (assembles the above)
+product       dogfood desktop and CLI products (assemble the above)
 kungfu-code   build orchestrator (pins the toolchain)
 ```
 
@@ -254,7 +255,8 @@ others invoke):
 - **`extensions/`** — a kfx plugin built on the extension contract.
 - **`examples/`** — a sample or a build-coverage probe: it demonstrates or
   exercises the platform but is not shipped as a product.
-- **`artifact`** — the assembly that bundles the platform into an installer.
+- **`product`** — the assembly that bundles the platform into distributable
+  desktop and CLI products.
 
 By this rule a format spec is a contract, so it lives in `framework`; the `sdk`
 build CLI is a tool, so it lives in `developer` — even when that leaves a single

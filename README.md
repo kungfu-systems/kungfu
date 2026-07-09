@@ -101,8 +101,8 @@ built on mainstream, well-maintained foundations.
 - **Reference surfaces** — two minimal reference UIs over the same capability
   SDK: a desktop GUI on Electron + React (`framework/gui`) and a terminal TUI
   (`framework/tui`).
-- **Distribution** — a dogfood installer bundling the runtime, both reference
-  UIs and the SDK (`artifact`).
+- **Product assembly** — dogfood desktop and CLI products bundling the runtime,
+  both reference UIs, the SDK and first-party kfx (`product`).
 
 Runs on Windows, macOS, and Linux (including arm64). See
 [`docs/architecture.md`](docs/architecture.md) for how these pieces are layered.

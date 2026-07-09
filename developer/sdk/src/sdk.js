@@ -119,6 +119,7 @@ function usage(code) {
       '       kungfu sdk kfx build | clean',
       '       kungfu sdk product gui dev|build|pack|dist [--dir <app-dir>] [--dry-run]',
       '       kungfu sdk product tui dev|build|bundle|dist [--dir <tui-dir>] [--dry-run]',
+      '       kungfu sdk product cli dist [--dir <product-dir>] [--dry-run]',
       '',
       'create options:',
       '  --name <name>   product/view name (defaults to the directory basename)',
@@ -443,7 +444,7 @@ function isKfxManifest(pkg) {
  * @param {Record<string, unknown>} pkg
  * @returns {boolean}
  */
-function isProductArtifactManifest(pkg) {
+function isProductAssemblyManifest(pkg) {
   if (isObject(pkg.kungfuProduct)) return true;
   const deps = dependencyMap(pkg);
   return (
@@ -608,6 +609,31 @@ function runSdkCommand(cwd, args, options, runOptions = {}) {
   if (result.status !== 0) {
     fail(
       `kungfu sdk ${args.join(' ')} failed (exit ${result.status ?? `signal ${result.signal}`})`,
+    );
+  }
+}
+
+/**
+ * @param {string} cwd
+ * @param {string} file
+ * @param {string[]} args
+ * @param {CliOptions} options
+ * @returns {void}
+ */
+function runNodeFile(cwd, file, args, options) {
+  if (options.dryRun) {
+    process.stdout.write(
+      `[dry-run] cd ${cwd}\n[dry-run] ${shellLine([process.execPath, file, ...args])}\n`,
+    );
+    return;
+  }
+  const result = spawnSync(process.execPath, [file, ...args], {
+    cwd,
+    stdio: 'inherit',
+  });
+  if (result.status !== 0) {
+    fail(
+      `${path.relative(cwd, file)} failed (exit ${result.status ?? `signal ${result.signal}`})`,
     );
   }
 }
@@ -857,7 +883,7 @@ function productKfxGui(cwd, verb, options) {
   }
   if (verb !== 'dev') {
     fail(
-      'kfx product gui supports dev and build; use an artifact product for pack/dist',
+      'kfx product gui supports dev and build; use a product assembly for pack/dist',
     );
   }
   runSdkCommand(cwd, ['kfx', 'build'], options);
@@ -882,7 +908,7 @@ function productKfxGui(cwd, verb, options) {
  * @param {CliOptions} options
  * @returns {void}
  */
-function productArtifactGui(cwd, verb, options) {
+function productAssemblyGui(cwd, verb, options) {
   const kfxPackages = declaredKfxDependencies(cwd);
   for (const name of kfxPackages) {
     const packageDir = resolvePackageDir(cwd, name);
@@ -929,7 +955,7 @@ function productArtifactGui(cwd, verb, options) {
 
   const config = path.join(cwd, 'electron-builder.yml');
   if (!fs.existsSync(config)) {
-    fail(`artifact product config not found: ${config}`);
+    fail(`product config not found: ${config}`);
   }
   const builderScript = path.join(
     guiDir,
@@ -965,9 +991,9 @@ function productArtifactGui(cwd, verb, options) {
  * @param {CliOptions} options
  * @returns {Promise<void>}
  */
-async function productArtifactTui(cwd, verb, options) {
+async function productAssemblyTui(cwd, verb, options) {
   const tuiDir = resolvePackageDir(cwd, '@kungfu-tech/tui');
-  if (!tuiDir) fail('artifact product does not declare @kungfu-tech/tui');
+  if (!tuiDir) fail('product assembly does not declare @kungfu-tech/tui');
   if (verb === 'dev') {
     runPackageScript(tuiDir, 'dev', options);
     return;
@@ -984,6 +1010,34 @@ async function productArtifactTui(cwd, verb, options) {
 }
 
 /**
+ * @param {string} cwd
+ * @param {string} verb
+ * @param {CliOptions} options
+ * @returns {void}
+ */
+function productAssemblyCli(cwd, verb, options) {
+  if (verb !== 'dist') {
+    fail('unknown product cli command (supported: dist)');
+  }
+  const pkg = readPackageJson(cwd);
+  const scripts = scriptsOf(pkg);
+  if (scripts['dist:cli']) {
+    runPackageScript(cwd, 'dist:cli', options);
+    return;
+  }
+  if (scripts['cli:dist']) {
+    runPackageScript(cwd, 'cli:dist', options);
+    return;
+  }
+  const distScript = path.join(cwd, 'scripts', 'dist.mjs');
+  if (fs.existsSync(distScript)) {
+    runNodeFile(cwd, distScript, ['--product', 'cli'], options);
+    return;
+  }
+  fail('product assembly has no dist:cli script or scripts/dist.mjs');
+}
+
+/**
  * @param {string} verb
  * @param {CliOptions} options
  * @returns {void}
@@ -995,8 +1049,8 @@ function productGui(verb, options) {
     productKfxGui(cwd, verb, options);
     return;
   }
-  if (isProductArtifactManifest(pkg)) {
-    productArtifactGui(cwd, verb, options);
+  if (isProductAssemblyManifest(pkg)) {
+    productAssemblyGui(cwd, verb, options);
     return;
   }
   if (verb === 'dev') {
@@ -1077,8 +1131,8 @@ async function productTuiBundle(options) {
 async function productTui(verb, options) {
   const cwd = productCwd(options.dir);
   const pkg = readPackageJson(cwd);
-  if (isProductArtifactManifest(pkg)) {
-    await productArtifactTui(cwd, verb, options);
+  if (isProductAssemblyManifest(pkg)) {
+    await productAssemblyTui(cwd, verb, options);
     return;
   }
   if (verb === 'dev') {
@@ -1097,6 +1151,21 @@ async function productTui(verb, options) {
 }
 
 /**
+ * @param {string} verb
+ * @param {CliOptions} options
+ * @returns {void}
+ */
+function productCli(verb, options) {
+  const cwd = productCwd(options.dir);
+  const pkg = readPackageJson(cwd);
+  if (isProductAssemblyManifest(pkg)) {
+    productAssemblyCli(cwd, verb, options);
+    return;
+  }
+  fail('product cli requires a product assembly package');
+}
+
+/**
  * @param {string | undefined} surface
  * @param {string | undefined} verb
  * @param {CliOptions} options
@@ -1112,7 +1181,11 @@ async function product(surface, verb, options) {
     await productTui(verb, options);
     return;
   }
-  fail('unknown product target (supported: gui, tui)');
+  if (surface === 'cli') {
+    productCli(verb, options);
+    return;
+  }
+  fail('unknown product target (supported: gui, tui, cli)');
 }
 
 // ── KFD-1 contract prototype ───────────────────────────────────────────────

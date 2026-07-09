@@ -4,7 +4,7 @@ packages:
   - "extensions/*"
   - "extensions/*/*"
   - "examples/*"
-  - "artifact"
+  - "product"
 allowBuilds:
   '@biomejs/biome': true
   '@kungfu-tech/libnode': true

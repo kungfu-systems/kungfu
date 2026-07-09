@@ -101,8 +101,8 @@ function listKfxPackages() {
   return packages.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function artifactKfxDependencies() {
-  const pkg = readJson(path.join(ROOT, 'artifact', 'package.json'));
+function productKfxDependencies() {
+  const pkg = readJson(path.join(ROOT, 'product', 'package.json'));
   return new Set(
     Object.keys(pkg.dependencies || {}).filter((name) =>
       name.startsWith('@kungfu-tech/kfx-'),
@@ -111,14 +111,14 @@ function artifactKfxDependencies() {
 }
 
 function assertDeclaredKfx(packages) {
-  const declared = artifactKfxDependencies();
+  const declared = productKfxDependencies();
   const actual = new Set(packages.map((pkg) => pkg.name));
   const missing = [...actual].filter((name) => !declared.has(name)).sort();
   const stale = [...declared].filter((name) => !actual.has(name)).sort();
   if (missing.length || stale.length) {
     throw new Error(
       [
-        'artifact/package.json must declare every first-party kfx dependency',
+        'product/package.json must declare every first-party kfx dependency',
         missing.length ? `missing: ${missing.join(', ')}` : '',
         stale.length ? `stale: ${stale.join(', ')}` : '',
       ]
@@ -138,8 +138,8 @@ function cleanOutputs(packages) {
     path.join(ROOT, 'framework', 'gui', 'dist'),
     path.join(ROOT, 'framework', 'gui', 'node_modules', '.vite'),
     path.join(ROOT, 'framework', 'tui', 'dist'),
-    path.join(ROOT, 'artifact', 'dist'),
-    path.join(ROOT, 'artifact', 'extensions'),
+    path.join(ROOT, 'product', 'dist'),
+    path.join(ROOT, 'product', 'extensions'),
   ]) {
     removeGenerated(target);
   }

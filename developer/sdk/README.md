@@ -18,7 +18,8 @@ kungfu sdk create app my-app   # scaffold into ./my-app
 cd my-app
 pnpm install
 kungfu sdk product gui dev       # launch against a built @kungfu-tech/core
-kungfu sdk product gui dist      # build a distributable Electron artifact
+kungfu sdk product gui dist      # build a distributable Electron product
+kungfu sdk product cli dist      # build a distributable CLI product
 ```
 
 It also scaffolds view extensions (kfx) — installable view packages the
@@ -49,10 +50,13 @@ print the underlying electron-vite/electron-builder/tsx/tsc/esbuild command.
   `kungfu sdk kfx build`, then launches the reference GUI with
   `KF_EXTENSION_PATH` pointed at the package so the view can be inspected in the
   shell.
-- inside an artifact/product package, `kungfu sdk product gui dist` resolves the
+- inside a product assembly package, `kungfu sdk product gui dist` resolves the
   declared `@kungfu-tech/kfx-*` dependencies, builds and assembles them under
   `extensions/`, bundles the TUI when present, builds the GUI, and runs
-  electron-builder from the artifact's `electron-builder.yml`.
+  electron-builder from the product assembly's `electron-builder.yml`.
+- inside a product assembly package, `kungfu sdk product cli dist` runs the
+  package's CLI product dist script and emits the archive defined by that
+  product.
 
 Options (both `create` targets):
 

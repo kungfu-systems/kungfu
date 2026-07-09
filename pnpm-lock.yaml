@@ -48,58 +48,6 @@ importers:
         specifier: ^5.6.0
         version: 5.9.3
 
-  artifact:
-    dependencies:
-      '@kungfu-tech/core':
-        specifier: workspace:*
-        version: link:../framework/core
-      '@kungfu-tech/gui':
-        specifier: workspace:*
-        version: link:../framework/gui
-      '@kungfu-tech/kfx-adapter-langchain':
-        specifier: workspace:*
-        version: link:../extensions/langchain-adapter
-      '@kungfu-tech/kfx-suite-system':
-        specifier: workspace:*
-        version: link:../extensions/system
-      '@kungfu-tech/kfx-view-config-manager':
-        specifier: workspace:*
-        version: link:../extensions/config-manager
-      '@kungfu-tech/kfx-view-journal-manager':
-        specifier: workspace:*
-        version: link:../extensions/journal-manager
-      '@kungfu-tech/kfx-view-kfx-manager':
-        specifier: workspace:*
-        version: link:../extensions/system/kfx-manager
-      '@kungfu-tech/kfx-view-rewind-inspector':
-        specifier: workspace:*
-        version: link:../extensions/rewind-inspector
-      '@kungfu-tech/kfx-view-settings':
-        specifier: workspace:*
-        version: link:../extensions/system/settings
-      '@kungfu-tech/kfx-view-skill-manager':
-        specifier: workspace:*
-        version: link:../extensions/system/skill-manager
-      '@kungfu-tech/kfx-view-status':
-        specifier: workspace:*
-        version: link:../extensions/system/status
-      '@kungfu-tech/kfx-view-terminal':
-        specifier: workspace:*
-        version: link:../extensions/terminal
-      '@kungfu-tech/kfx-view-work-dashboard':
-        specifier: workspace:*
-        version: link:../extensions/work-dashboard
-      '@kungfu-tech/sdk':
-        specifier: workspace:*
-        version: link:../developer/sdk
-      '@kungfu-tech/tui':
-        specifier: workspace:*
-        version: link:../framework/tui
-    devDependencies:
-      '@kungfu-tech/buildchain':
-        specifier: 2.10.8
-        version: 2.10.8
-
   developer/sdk:
     dependencies:
       '@kungfu-tech/buildchain':
@@ -569,6 +517,58 @@ importers:
       typescript:
         specifier: ^5.6.0
         version: 5.9.3
+
+  product:
+    dependencies:
+      '@kungfu-tech/core':
+        specifier: workspace:*
+        version: link:../framework/core
+      '@kungfu-tech/gui':
+        specifier: workspace:*
+        version: link:../framework/gui
+      '@kungfu-tech/kfx-adapter-langchain':
+        specifier: workspace:*
+        version: link:../extensions/langchain-adapter
+      '@kungfu-tech/kfx-suite-system':
+        specifier: workspace:*
+        version: link:../extensions/system
+      '@kungfu-tech/kfx-view-config-manager':
+        specifier: workspace:*
+        version: link:../extensions/config-manager
+      '@kungfu-tech/kfx-view-journal-manager':
+        specifier: workspace:*
+        version: link:../extensions/journal-manager
+      '@kungfu-tech/kfx-view-kfx-manager':
+        specifier: workspace:*
+        version: link:../extensions/system/kfx-manager
+      '@kungfu-tech/kfx-view-rewind-inspector':
+        specifier: workspace:*
+        version: link:../extensions/rewind-inspector
+      '@kungfu-tech/kfx-view-settings':
+        specifier: workspace:*
+        version: link:../extensions/system/settings
+      '@kungfu-tech/kfx-view-skill-manager':
+        specifier: workspace:*
+        version: link:../extensions/system/skill-manager
+      '@kungfu-tech/kfx-view-status':
+        specifier: workspace:*
+        version: link:../extensions/system/status
+      '@kungfu-tech/kfx-view-terminal':
+        specifier: workspace:*
+        version: link:../extensions/terminal
+      '@kungfu-tech/kfx-view-work-dashboard':
+        specifier: workspace:*
+        version: link:../extensions/work-dashboard
+      '@kungfu-tech/sdk':
+        specifier: workspace:*
+        version: link:../developer/sdk
+      '@kungfu-tech/tui':
+        specifier: workspace:*
+        version: link:../framework/tui
+    devDependencies:
+      '@kungfu-tech/buildchain':
+        specifier: 2.10.8
+        version: 2.10.8
 
 packages:
 

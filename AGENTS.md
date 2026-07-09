@@ -28,7 +28,8 @@ node, conan, or cmake directly — go through it:
 ./kungfu-code check     # changed-scope read-only quality gate (lint/type/tests)
 ./kungfu-code fix       # explicit formatting / safe auto-fixes for changed files
 ./kungfu-code product gui dev   # run the reference GUI through the product loop
-./kungfu-code dist      # build the distributable artifact under artifact/dist
+./kungfu-code product cli dist  # build the CLI product archive
+./kungfu-code dist      # build distributable products under product/release
 ./kungfu-code <task>    # any pnpm task, run under the pinned node
 ```
 
@@ -51,7 +52,7 @@ layout, and code style.
 
 `check` is the source-quality gate for changed files plus shared type/tooling
 tests. `check:all` exists for whole-tree cleanup once the lint baseline is clean.
-`verify` is the runtime/artifact done-check: it asserts the build artifacts and
+`verify` is the runtime/product done-check: it asserts the build artifacts and
 runs a `kungfu` runtime smoke, rather than trusting a "looks built" impression.
 
 ## Proposing changes

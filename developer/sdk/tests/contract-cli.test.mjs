@@ -237,13 +237,13 @@ test('product gui dev dry-run supports a single kfx package directory', (t) => {
   assert.match(output, /run dev/);
 });
 
-test('product gui dist dry-run supports an artifact product directory', () => {
+test('product gui dist dry-run supports a product assembly directory', () => {
   const output = runText([
     'product',
     'gui',
     'dist',
     '--dir',
-    join(repoRoot, 'artifact'),
+    join(repoRoot, 'product'),
     '--dry-run',
   ]);
   assert.match(output, /system\/status/);
@@ -252,6 +252,18 @@ test('product gui dist dry-run supports an artifact product directory', () => {
   assert.match(output, /framework\/gui/);
   assert.match(output, /run-electron-builder\.mjs/);
   assert.match(output, /electron-builder\.yml/);
+});
+
+test('product cli dist dry-run supports a product assembly directory', () => {
+  const output = runText([
+    'product',
+    'cli',
+    'dist',
+    '--dir',
+    join(repoRoot, 'product'),
+    '--dry-run',
+  ]);
+  assert.match(output, /run dist:cli/);
 });
 
 test('kfd query exposes Kungfu KFD-3 capability facts', () => {

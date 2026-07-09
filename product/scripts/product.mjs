@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Repo-local dogfood product entry. The SDK owns the generic external-project
 // `kungfu sdk product` verbs; this wrapper maps the same vocabulary to Kungfu's
-// artifact-level assembly so `./kungfu-code product gui build` does not silently
+// product-level assembly so `./kungfu-code product gui build` does not silently
 // regress to a GUI-only build.
 
 import { spawnSync } from 'node:child_process';
@@ -34,10 +34,12 @@ function usage(code) {
     [
       'usage: ./kungfu-code product gui dev|build|pack|dist [--dry-run] [--instance-home <path>] [--no-instance-home]',
       '       ./kungfu-code product tui dev|build|bundle|dist [--dry-run] [--instance-home <path>] [--no-instance-home]',
+      '       ./kungfu-code product cli dist [--dry-run] [--instance-home <path>] [--no-instance-home]',
       '',
-      'gui build/pack  -> artifact-level unpacked app under artifact/dist',
-      'gui dist        -> artifact-level DMG/zip under artifact/dist',
+      'gui build/pack  -> desktop product unpacked app under product/dist/desktop',
+      'gui dist        -> desktop product installer assets under product/release/desktop',
       'tui bundle/dist -> bundled TUI under framework/tui/dist',
+      'cli dist        -> CLI product archive under product/release/cli',
       '',
       '--instance-home, --home, -H <path>',
       '  run the product against an isolated Kungfu instance root:',
@@ -304,9 +306,9 @@ function main(argv = process.argv.slice(2)) {
       });
     } else if (verb === 'build' || verb === 'pack') {
       run(
-        'artifact dir build',
+        'desktop product dir build',
         process.execPath,
-        ['artifact/scripts/dist.mjs', '--dir'],
+        ['product/scripts/dist.mjs', '--product', 'desktop', '--dir'],
         {
           dryRun,
           env,
@@ -316,9 +318,9 @@ function main(argv = process.argv.slice(2)) {
       );
     } else if (verb === 'dist') {
       run(
-        'artifact dist build',
+        'desktop product dist build',
         process.execPath,
-        ['artifact/scripts/dist.mjs'],
+        ['product/scripts/dist.mjs', '--product', 'desktop'],
         {
           dryRun,
           env,
@@ -354,8 +356,24 @@ function main(argv = process.argv.slice(2)) {
     } else {
       fail('unknown tui command (supported: dev, build, bundle, dist)');
     }
+  } else if (surface === 'cli') {
+    if (verb === 'dist') {
+      run(
+        'cli product dist build',
+        process.execPath,
+        ['product/scripts/dist.mjs', '--product', 'cli'],
+        {
+          dryRun,
+          env,
+          instanceHome,
+          autoInstanceHome,
+        },
+      );
+    } else {
+      fail('unknown cli command (supported: dist)');
+    }
   } else {
-    fail('unknown product target (supported: gui, tui)');
+    fail('unknown product target (supported: gui, tui, cli)');
   }
 }
 

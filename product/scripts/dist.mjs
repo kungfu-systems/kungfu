@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
-// Build the distributable Kungfu artifact from source in one command:
+// Build distributable Kungfu products from source in one command:
 // dependency sync -> core rebuild -> freeze -> all declared first-party kfx ->
-// artifact assembly -> TUI/GUI build -> electron-builder output under artifact/dist.
+// product assembly -> TUI bundle -> desktop installer and/or CLI archive under
+// product/release.
 // Run through the repo entrypoint so Node is pinned:
 //   ./kungfu-code dist
 
@@ -14,28 +15,68 @@ import {
   createBuildchainLogger,
   verifyBuildchainLogEvents,
 } from '@kungfu-tech/buildchain/logging';
+import { writeTarGz, writeZip } from './archive.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ARTIFACT_DIR = path.resolve(__dirname, '..');
-const ROOT = path.resolve(ARTIFACT_DIR, '..');
+const PRODUCT_DIR = path.resolve(__dirname, '..');
+const ROOT = path.resolve(PRODUCT_DIR, '..');
 const GUI_DIR = path.join(ROOT, 'framework', 'gui');
+const TUI_DIR = path.join(ROOT, 'framework', 'tui');
 const CORE_DIST = path.join(ROOT, 'framework', 'core', 'dist', 'kungfu');
+const SDK_DIR = path.join(ROOT, 'developer', 'sdk');
 const EXTENSIONS_ROOT = path.join(ROOT, 'extensions');
-const ASSEMBLED_EXTENSIONS = path.join(ARTIFACT_DIR, 'extensions');
-const DIST_DIR = path.join(ARTIFACT_DIR, 'dist');
-const RELEASE_DIR = path.join(ARTIFACT_DIR, 'release');
+const ASSEMBLED_EXTENSIONS = path.join(PRODUCT_DIR, 'extensions');
+const DIST_DIR = path.join(PRODUCT_DIR, 'dist');
+const DESKTOP_DIST_DIR = path.join(DIST_DIR, 'desktop');
+const CLI_DIST_DIR = path.join(DIST_DIR, 'cli');
+const RELEASE_DIR = path.join(PRODUCT_DIR, 'release');
+const DESKTOP_RELEASE_DIR = path.join(RELEASE_DIR, 'desktop');
+const CLI_RELEASE_DIR = path.join(RELEASE_DIR, 'cli');
 const isWin = process.platform === 'win32';
 const require = createRequire(import.meta.url);
 const buildchainLogger = createBuildchainLogger({
   source: 'user',
-  component: 'kungfu-artifact',
+  component: 'kungfu-product',
   attributes: {
-    package: '@kungfu-tech/artifact-kungfu',
+    package: '@kungfu-tech/product-kungfu',
   },
 });
 
-const builderArgs = process.argv.slice(2);
+const parsedArgs = parseArgs(process.argv.slice(2));
+const builderArgs = parsedArgs.builderArgs;
+const productTarget = parsedArgs.product;
+
+function parseArgs(argv) {
+  const parsed = {
+    product: 'all',
+    builderArgs: [],
+  };
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (arg === '--product') {
+      i += 1;
+      if (i >= argv.length) throw new Error('--product requires a value');
+      parsed.product = argv[i];
+    } else if (arg.startsWith('--product=')) {
+      parsed.product = arg.slice('--product='.length);
+    } else {
+      parsed.builderArgs.push(arg);
+    }
+  }
+  if (!['all', 'desktop', 'cli'].includes(parsed.product)) {
+    throw new Error(`unsupported product target: ${parsed.product}`);
+  }
+  return parsed;
+}
+
+function wantsDesktop() {
+  return productTarget === 'all' || productTarget === 'desktop';
+}
+
+function wantsCli() {
+  return productTarget === 'all' || productTarget === 'cli';
+}
 
 function rel(p) {
   return path.relative(ROOT, p) || '.';
@@ -47,7 +88,7 @@ function exitLabel(status, signal) {
 
 function run(label, cmd, args, options = {}) {
   const cwd = options.cwd || ROOT;
-  const event = options.event || `artifact.command.${labelSlug(label)}`;
+  const event = options.event || `product.command.${labelSlug(label)}`;
   return buildchainLogger.spanSync(
     event,
     {
@@ -61,8 +102,8 @@ function run(label, cmd, args, options = {}) {
       },
     },
     () => {
-      console.log(`\n[artifact] ${label}`);
-      console.log(`[artifact] $ ${[cmd, ...args].join(' ')}`);
+      console.log(`\n[product] ${label}`);
+      console.log(`[product] $ ${[cmd, ...args].join(' ')}`);
       const result = spawnSync(cmd, args, {
         cwd,
         env: options.env || process.env,
@@ -206,7 +247,7 @@ function ensureNoOptionalPlatformPackage({
       ],
       {
         phase: 'dependencies',
-        event: `artifact.${kind}.platform.install`,
+        event: `product.${kind}.platform.install`,
         attributes: {
           packageName,
           version,
@@ -214,7 +255,7 @@ function ensureNoOptionalPlatformPackage({
       },
     );
   } else {
-    buildchainLogger.mark(`artifact.${kind}.platform.cached`, {
+    buildchainLogger.mark(`product.${kind}.platform.cached`, {
       phase: 'dependencies',
       attributes: {
         packageName,
@@ -223,7 +264,7 @@ function ensureNoOptionalPlatformPackage({
     });
   }
 
-  buildchainLogger.mark(`artifact.${kind}.platform.ready`, {
+  buildchainLogger.mark(`product.${kind}.platform.ready`, {
     phase: 'dependencies',
     attributes: {
       packageName,
@@ -235,7 +276,7 @@ function ensureNoOptionalPlatformPackage({
 
 function buildchainSourceBuildEnv() {
   if (process.env.KUNGFU_BUILDCHAIN_NO_OPTIONAL !== '1') {
-    buildchainLogger.mark('artifact.libnode.platform.optional', {
+    buildchainLogger.mark('product.libnode.platform.optional', {
       phase: 'dependencies',
       attributes: {
         noOptional: false,
@@ -252,7 +293,7 @@ function buildchainSourceBuildEnv() {
   }
   const nodePaths = [];
   if (canResolve(packageName)) {
-    buildchainLogger.mark('artifact.libnode.platform.resolved', {
+    buildchainLogger.mark('product.libnode.platform.resolved', {
       phase: 'dependencies',
       attributes: {
         packageName,
@@ -293,7 +334,7 @@ function buildchainSourceBuildEnv() {
     );
   }
   if (canResolveFrom(rollupPackageName, rollupPackagePathsFromGui())) {
-    buildchainLogger.mark('artifact.rollup.platform.resolved', {
+    buildchainLogger.mark('product.rollup.platform.resolved', {
       phase: 'dependencies',
       attributes: {
         packageName: rollupPackageName,
@@ -349,8 +390,8 @@ function listKfxPackages() {
   return packages.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function artifactKfxDependencies() {
-  const pkg = readJson(path.join(ARTIFACT_DIR, 'package.json'));
+function productKfxDependencies() {
+  const pkg = readJson(path.join(PRODUCT_DIR, 'package.json'));
   return new Set(
     Object.keys(pkg.dependencies || {}).filter((name) =>
       name.startsWith('@kungfu-tech/kfx-'),
@@ -359,14 +400,14 @@ function artifactKfxDependencies() {
 }
 
 function assertDeclaredKfx(packages) {
-  const declared = artifactKfxDependencies();
+  const declared = productKfxDependencies();
   const actual = new Set(packages.map((pkg) => pkg.name));
   const missing = [...actual].filter((name) => !declared.has(name)).sort();
   const stale = [...declared].filter((name) => !actual.has(name)).sort();
   if (missing.length || stale.length) {
     throw new Error(
       [
-        'artifact/package.json must declare every first-party kfx dependency',
+        'product/package.json must declare every first-party kfx dependency',
         missing.length ? `missing: ${missing.join(', ')}` : '',
         stale.length ? `stale: ${stale.join(', ')}` : '',
       ]
@@ -374,8 +415,8 @@ function assertDeclaredKfx(packages) {
         .join('\n'),
     );
   }
-  console.log(`[artifact] declared kfx dependencies: ${packages.length}`);
-  buildchainLogger.mark('artifact.kfx.dependencies.declared', {
+  console.log(`[product] declared kfx dependencies: ${packages.length}`);
+  buildchainLogger.mark('product.kfx.dependencies.declared', {
     phase: 'prepare',
     attributes: {
       packageCount: packages.length,
@@ -385,9 +426,13 @@ function assertDeclaredKfx(packages) {
 
 function assertSafeGeneratedDir(dir) {
   const resolved = path.resolve(dir);
+  const relDir = path.relative(PRODUCT_DIR, resolved);
+  const first = relDir.split(path.sep)[0];
   if (
-    !resolved.startsWith(`${ARTIFACT_DIR}${path.sep}`) ||
-    !['extensions', 'release'].includes(path.basename(resolved))
+    resolved === PRODUCT_DIR ||
+    relDir.startsWith('..') ||
+    path.isAbsolute(relDir) ||
+    !['extensions', 'dist', 'release'].includes(first)
   ) {
     throw new Error(`refusing to clean unexpected directory: ${resolved}`);
   }
@@ -421,8 +466,8 @@ function buildKfx(packages, baseEnv = process.env) {
   };
   for (const pkg of packages) {
     if (!pkg.scripts.build) {
-      console.log(`[artifact] skip ${pkg.name}: no build script`);
-      buildchainLogger.mark('artifact.kfx.build.skipped', {
+      console.log(`[product] skip ${pkg.name}: no build script`);
+      buildchainLogger.mark('product.kfx.build.skipped', {
         phase: 'extensions',
         attributes: {
           packageName: pkg.name,
@@ -434,7 +479,7 @@ function buildKfx(packages, baseEnv = process.env) {
     runPnpm(`build kfx ${pkg.name}`, ['--filter', pkg.name, 'run', 'build'], {
       env,
       phase: 'extensions',
-      event: 'artifact.kfx.build',
+      event: 'product.kfx.build',
       attributes: {
         packageName: pkg.name,
       },
@@ -451,7 +496,7 @@ function buildKfx(packages, baseEnv = process.env) {
 
 function assembleKfx(packages) {
   buildchainLogger.spanSync(
-    'artifact.kfx.assemble',
+    'product.kfx.assemble',
     {
       phase: 'extensions',
       attributes: {
@@ -467,49 +512,59 @@ function assembleKfx(packages) {
         copyPackageDir(pkg.dir, path.join(ASSEMBLED_EXTENSIONS, pkg.relDir));
       }
       console.log(
-        `[artifact] assembled kfx packages -> ${rel(ASSEMBLED_EXTENSIONS)}`,
+        `[product] assembled kfx packages -> ${rel(ASSEMBLED_EXTENSIONS)}`,
       );
     },
   );
 }
 
-function stageReleaseArtifacts() {
+function stageTopLevelFiles({ sourceDir, releaseDir, label }) {
   buildchainLogger.spanSync(
-    'artifact.release.stage',
+    `product.${label}.release.stage`,
     {
       phase: 'package',
       attributes: {
-        source: rel(DIST_DIR),
-        output: rel(RELEASE_DIR),
+        source: rel(sourceDir),
+        output: rel(releaseDir),
       },
     },
     () => {
-      if (!fs.existsSync(DIST_DIR)) {
-        throw new Error(`electron-builder did not produce ${rel(DIST_DIR)}`);
+      if (!fs.existsSync(sourceDir)) {
+        throw new Error(`${label} product did not produce ${rel(sourceDir)}`);
       }
-      assertSafeGeneratedDir(RELEASE_DIR);
-      fs.rmSync(RELEASE_DIR, { recursive: true, force: true });
-      fs.mkdirSync(RELEASE_DIR, { recursive: true });
+      assertSafeGeneratedDir(releaseDir);
+      fs.rmSync(releaseDir, { recursive: true, force: true });
+      fs.mkdirSync(releaseDir, { recursive: true });
 
       const stagedFiles = [];
-      for (const entry of fs.readdirSync(DIST_DIR, { withFileTypes: true })) {
+      for (const entry of fs.readdirSync(sourceDir, { withFileTypes: true })) {
         if (!entry.isFile()) {
           continue;
         }
-        const source = path.join(DIST_DIR, entry.name);
-        const target = path.join(RELEASE_DIR, entry.name);
+        const source = path.join(sourceDir, entry.name);
+        const target = path.join(releaseDir, entry.name);
         fs.copyFileSync(source, target);
         stagedFiles.push(entry.name);
       }
       if (!stagedFiles.length) {
-        throw new Error(`no top-level release files found in ${rel(DIST_DIR)}`);
+        throw new Error(
+          `no top-level release files found in ${rel(sourceDir)}`,
+        );
       }
       stagedFiles.sort();
       console.log(
-        `[artifact] staged release files -> ${rel(RELEASE_DIR)} (${stagedFiles.join(', ')})`,
+        `[product] staged ${label} release files -> ${rel(releaseDir)} (${stagedFiles.join(', ')})`,
       );
     },
   );
+}
+
+function stageDesktopRelease() {
+  stageTopLevelFiles({
+    sourceDir: DESKTOP_DIST_DIR,
+    releaseDir: DESKTOP_RELEASE_DIR,
+    label: 'desktop',
+  });
 }
 
 function assertCoreFrozen() {
@@ -519,20 +574,144 @@ function assertCoreFrozen() {
   }
 }
 
+function platformId() {
+  const platform =
+    {
+      darwin: 'darwin',
+      linux: 'linux',
+      win32: 'windows',
+    }[process.platform] || process.platform;
+  const arch =
+    {
+      x64: 'x64',
+      arm64: 'arm64',
+    }[process.arch] || process.arch;
+  return `${platform}-${arch}`;
+}
+
+function copyTree(source, target, options = {}) {
+  if (!fs.existsSync(source)) {
+    if (options.optional) return false;
+    throw new Error(`required product input not found: ${rel(source)}`);
+  }
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.cpSync(source, target, {
+    recursive: true,
+    dereference: false,
+    filter: (src) => {
+      const base = path.basename(src);
+      return ![
+        'node_modules',
+        'build',
+        '.venv',
+        '__pycache__',
+        '.DS_Store',
+      ].includes(base);
+    },
+  });
+  return true;
+}
+
+function bundleSdkForCli(stageRoot) {
+  const esbuild = require(
+    require.resolve('esbuild', {
+      paths: [TUI_DIR, GUI_DIR, ROOT],
+    }),
+  );
+  const sdkOut = path.join(stageRoot, 'sdk', 'sdk.js');
+  fs.mkdirSync(path.dirname(sdkOut), { recursive: true });
+  esbuild.buildSync({
+    entryPoints: [path.join(SDK_DIR, 'src', 'sdk.js')],
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    target: 'node20',
+    outfile: sdkOut,
+    logLevel: 'silent',
+  });
+  copyTree(path.join(SDK_DIR, 'kfd'), path.join(stageRoot, 'kfd'));
+  copyTree(path.join(SDK_DIR, 'templates'), path.join(stageRoot, 'templates'));
+}
+
+function writeCliManifest(stageRoot, archiveName) {
+  fs.writeFileSync(
+    path.join(stageRoot, 'product.json'),
+    `${JSON.stringify(
+      {
+        schema: 'kungfu.product.cli/v1',
+        product: 'cli',
+        platform: platformId(),
+        archive: archiveName,
+        entries: {
+          kungfu: isWin ? 'kungfu/kungfu.exe' : 'kungfu/kungfu',
+          sdk: 'sdk/sdk.js',
+          tui: 'tui/tui.mjs',
+          extensions: 'extensions',
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+}
+
+function buildCliProduct() {
+  buildchainLogger.spanSync(
+    'product.cli.archive',
+    {
+      phase: 'package',
+      attributes: {
+        platform: platformId(),
+        output: rel(CLI_RELEASE_DIR),
+      },
+    },
+    () => {
+      const platform = platformId();
+      const archiveBase = `kungfu-cli-${platform}`;
+      const archiveName = isWin
+        ? `${archiveBase}.zip`
+        : `${archiveBase}.tar.gz`;
+      const stageRoot = path.join(CLI_DIST_DIR, archiveBase);
+      const archivePath = path.join(CLI_RELEASE_DIR, archiveName);
+
+      assertSafeGeneratedDir(CLI_DIST_DIR);
+      assertSafeGeneratedDir(CLI_RELEASE_DIR);
+      fs.rmSync(CLI_DIST_DIR, { recursive: true, force: true });
+      fs.rmSync(CLI_RELEASE_DIR, { recursive: true, force: true });
+      fs.mkdirSync(stageRoot, { recursive: true });
+      fs.mkdirSync(CLI_RELEASE_DIR, { recursive: true });
+
+      copyTree(CORE_DIST, path.join(stageRoot, 'kungfu'));
+      copyTree(ASSEMBLED_EXTENSIONS, path.join(stageRoot, 'extensions'));
+      copyTree(path.join(TUI_DIR, 'dist'), path.join(stageRoot, 'tui'));
+      bundleSdkForCli(stageRoot);
+      writeCliManifest(stageRoot, archiveName);
+
+      if (isWin) {
+        writeZip({ sourceDir: CLI_DIST_DIR, outputFile: archivePath });
+      } else {
+        writeTarGz({ sourceDir: CLI_DIST_DIR, outputFile: archivePath });
+      }
+      console.log(`[product] CLI archive -> ${rel(archivePath)}`);
+    },
+  );
+}
+
 function main() {
   buildchainLogger.spanSync(
-    'artifact.dist',
+    'product.dist',
     {
       phase: 'package',
       attributes: {
         platform: process.platform,
         arch: process.arch,
+        product: productTarget,
         builderArgCount: builderArgs.length,
       },
     },
     () => {
       const kfxPackages = buildchainLogger.spanSync(
-        'artifact.kfx.discover',
+        'product.kfx.discover',
         {
           phase: 'prepare',
           attributes: {
@@ -546,7 +725,7 @@ function main() {
       const buildEnv = buildchainSourceBuildEnv();
       runPnpm('sync dependencies', installArgs(), {
         phase: 'dependencies',
-        event: 'artifact.dependencies.sync',
+        event: 'product.dependencies.sync',
       });
       runPnpm(
         'rebuild core',
@@ -554,7 +733,7 @@ function main() {
         {
           env: buildEnv,
           phase: 'core',
-          event: 'artifact.core.rebuild',
+          event: 'product.core.rebuild',
         },
       );
       runPnpm(
@@ -562,7 +741,7 @@ function main() {
         ['--filter', '@kungfu-tech/core', 'run', 'freeze'],
         {
           phase: 'core',
-          event: 'artifact.core.freeze',
+          event: 'product.core.freeze',
         },
       );
       assertCoreFrozen();
@@ -573,43 +752,48 @@ function main() {
       runPnpm('bundle tui', ['--filter', '@kungfu-tech/tui', 'run', 'bundle'], {
         env: buildEnv,
         phase: 'ui',
-        event: 'artifact.tui.bundle',
+        event: 'product.tui.bundle',
       });
-      runPnpm(
-        'ensure electron',
-        ['--filter', '@kungfu-tech/gui', 'run', 'ensure-electron'],
-        {
+      if (wantsDesktop()) {
+        runPnpm(
+          'ensure electron',
+          ['--filter', '@kungfu-tech/gui', 'run', 'ensure-electron'],
+          {
+            env: buildEnv,
+            phase: 'ui',
+            event: 'product.gui.ensure-electron',
+          },
+        );
+        runPnpm('build gui', ['--filter', '@kungfu-tech/gui', 'run', 'build'], {
           env: buildEnv,
           phase: 'ui',
-          event: 'artifact.gui.ensure-electron',
-        },
-      );
-      runPnpm('build gui', ['--filter', '@kungfu-tech/gui', 'run', 'build'], {
-        env: buildEnv,
-        phase: 'ui',
-        event: 'artifact.gui.build',
-      });
-      run(
-        'electron-builder artifact',
-        process.execPath,
-        [
-          path.join(GUI_DIR, 'scripts', 'run-electron-builder.mjs'),
-          `--config=${path.join(ARTIFACT_DIR, 'electron-builder.yml')}`,
-          ...builderArgs,
-        ],
-        {
-          cwd: GUI_DIR,
-          env: {
-            ...buildEnv,
-            KF_FIRST_PARTY_SOURCE_ROOT: ASSEMBLED_EXTENSIONS,
+          event: 'product.gui.build',
+        });
+        run(
+          'electron-builder desktop product',
+          process.execPath,
+          [
+            path.join(GUI_DIR, 'scripts', 'run-electron-builder.mjs'),
+            `--config=${path.join(PRODUCT_DIR, 'electron-builder.yml')}`,
+            ...builderArgs,
+          ],
+          {
+            cwd: GUI_DIR,
+            env: {
+              ...buildEnv,
+              KF_FIRST_PARTY_SOURCE_ROOT: ASSEMBLED_EXTENSIONS,
+            },
+            phase: 'package',
+            event: 'product.desktop.electron-builder',
           },
-          phase: 'package',
-          event: 'artifact.electron-builder',
-        },
-      );
-      stageReleaseArtifacts();
+        );
+        stageDesktopRelease();
+      }
+      if (wantsCli()) {
+        buildCliProduct();
+      }
 
-      console.log(`\n[artifact] output -> ${rel(RELEASE_DIR)}`);
+      console.log(`\n[product] output -> ${rel(RELEASE_DIR)}`);
     },
   );
 }
@@ -618,10 +802,24 @@ function verifyObservability() {
   if (!buildchainLogger.path) {
     return;
   }
+  const requiredEvents = [
+    'product.dist.start',
+    'product.kfx.dependencies.declared',
+    'product.dependencies.sync.start',
+    'product.core.rebuild.start',
+    'product.core.freeze.start',
+    'product.dist.end',
+  ];
+  if (wantsDesktop()) {
+    requiredEvents.push('product.desktop.electron-builder.start');
+  }
+  if (wantsCli()) {
+    requiredEvents.push('product.cli.archive.start');
+  }
   const report = verifyBuildchainLogEvents({
     path: buildchainLogger.path,
     minEvents: 12,
-    requireComponents: ['kungfu-artifact'],
+    requireComponents: ['kungfu-product'],
     requirePhases: [
       'prepare',
       'dependencies',
@@ -630,15 +828,7 @@ function verifyObservability() {
       'ui',
       'package',
     ],
-    requireEvents: [
-      'artifact.dist.start',
-      'artifact.kfx.dependencies.declared',
-      'artifact.dependencies.sync.start',
-      'artifact.core.rebuild.start',
-      'artifact.core.freeze.start',
-      'artifact.electron-builder.start',
-      'artifact.dist.end',
-    ],
+    requireEvents: requiredEvents,
   });
   if (!report.ok) {
     throw new Error(
@@ -648,7 +838,7 @@ function verifyObservability() {
     );
   }
   console.log(
-    `[artifact] buildchain observability events: ${report.summary.components['kungfu-artifact']?.count ?? 0}`,
+    `[product] buildchain observability events: ${report.summary.components['kungfu-product']?.count ?? 0}`,
   );
 }
 
@@ -657,7 +847,7 @@ try {
   verifyObservability();
 } catch (error) {
   console.error(
-    `[artifact] failed: ${error instanceof Error ? error.message : String(error)}`,
+    `[product] failed: ${error instanceof Error ? error.message : String(error)}`,
   );
   process.exit(1);
 }

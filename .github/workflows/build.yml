@@ -23,7 +23,7 @@ jobs:
       runner-preset: kungfu-v4-self-hosted
       artifact-name: kungfu
       artifact-paths: |
-        artifact/release
+        product/release
       expected-artifacts-json: >-
         {"minFiles":1,"minTotalBytes":1}
       require-install: true
