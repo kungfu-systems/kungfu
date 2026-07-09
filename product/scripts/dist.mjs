@@ -9,13 +9,14 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   createBuildchainLogger,
   verifyBuildchainLogEvents,
 } from '@kungfu-tech/buildchain/logging';
-import { writeTarGz, writeZip } from './archive.mjs';
+import { extractTarGz, extractZip, writeTarGz, writeZip } from './archive.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -364,6 +365,20 @@ function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
 }
 
+function parseJsonOutput(output, label) {
+  const text = output.trim();
+  try {
+    return JSON.parse(text);
+  } catch {
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      return JSON.parse(text.slice(start, end + 1));
+    }
+    throw new Error(`${label} did not produce JSON output`);
+  }
+}
+
 function listKfxPackages() {
   const packages = [];
   const visit = (dir, depth) => {
@@ -629,8 +644,26 @@ function bundleSdkForCli(stageRoot) {
     outfile: sdkOut,
     logLevel: 'silent',
   });
+  fs.writeFileSync(
+    path.join(stageRoot, 'sdk', 'package.json'),
+    `${JSON.stringify({ private: true, type: 'module' }, null, 2)}\n`,
+  );
   copyTree(path.join(SDK_DIR, 'kfd'), path.join(stageRoot, 'kfd'));
   copyTree(path.join(SDK_DIR, 'templates'), path.join(stageRoot, 'templates'));
+  copySdkRuntimePackageForCli(stageRoot, '@kungfu-tech/kfd');
+}
+
+function copySdkRuntimePackageForCli(stageRoot, packageName) {
+  const packageJson = require.resolve(`${packageName}/package.json`, {
+    paths: [SDK_DIR, ROOT],
+  });
+  const source = path.dirname(packageJson);
+  const target = path.join(
+    stageRoot,
+    'node_modules',
+    ...packageName.split('/'),
+  );
+  copyTree(source, target);
 }
 
 function writeCliManifest(stageRoot, archiveName) {
@@ -645,13 +678,208 @@ function writeCliManifest(stageRoot, archiveName) {
         entries: {
           kungfu: isWin ? 'kungfu/kungfu.exe' : 'kungfu/kungfu',
           sdk: 'sdk/sdk.js',
+          sdkPackage: 'sdk/package.json',
+          kfd3Registry: 'kfd/kfd-3-surfaces.json',
+          kfdUpstreamAggregate: 'kfd/upstream-aggregate.json',
+          kfdPackage: 'node_modules/@kungfu-tech/kfd/package.json',
           tui: 'tui/tui.mjs',
           extensions: 'extensions',
+          templates: 'templates',
         },
       },
       null,
       2,
     )}\n`,
+  );
+}
+
+function assertFile(file, label) {
+  if (!fs.existsSync(file) || !fs.statSync(file).isFile()) {
+    throw new Error(`${label} not found: ${file}`);
+  }
+}
+
+function assertDirectory(dir, label) {
+  if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) {
+    throw new Error(`${label} not found: ${dir}`);
+  }
+}
+
+function entryPath(installRoot, entries, key) {
+  const entry = entries?.[key];
+  if (!entry) throw new Error(`CLI product manifest missing entries.${key}`);
+  return path.join(installRoot, ...entry.split('/'));
+}
+
+function listInstalledKfxPackages(extensionsRoot) {
+  const names = new Set();
+  const visit = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (!entry.isDirectory() || entry.name === 'node_modules') continue;
+      const pkgPath = path.join(full, 'package.json');
+      if (fs.existsSync(pkgPath)) {
+        const pkg = readJson(pkgPath);
+        if (pkg.name?.startsWith('@kungfu-tech/kfx-')) {
+          names.add(pkg.name);
+        }
+      }
+      visit(full);
+    }
+  };
+  visit(extensionsRoot);
+  return names;
+}
+
+function assertSameSet(label, expected, actual) {
+  const missing = [...expected].filter((name) => !actual.has(name)).sort();
+  const stale = [...actual].filter((name) => !expected.has(name)).sort();
+  if (missing.length || stale.length) {
+    throw new Error(
+      [
+        `${label} mismatch`,
+        missing.length ? `missing: ${missing.join(', ')}` : '',
+        stale.length ? `stale: ${stale.join(', ')}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    );
+  }
+}
+
+function runInstalledKungfuKfdSmoke({
+  installRoot,
+  kungfuBin,
+  sdkEntry,
+  kfd3Registry,
+  kfdUpstreamAggregate,
+  extensionsRoot,
+}) {
+  const result = spawnSync(kungfuBin, ['kfd', 'status', '--json'], {
+    cwd: installRoot,
+    env: {
+      ...process.env,
+      KUNGFU_SDK_ENTRY: sdkEntry,
+      KUNGFU_KFD3_REGISTRY: kfd3Registry,
+      KUNGFU_KFD_UPSTREAM_AGGREGATE: kfdUpstreamAggregate,
+      KF_FIRST_PARTY_SOURCE_ROOT: extensionsRoot,
+    },
+    encoding: 'utf8',
+    shell: isWin,
+  });
+  if (result.status !== 0) {
+    throw new Error(
+      [
+        `installed kungfu kfd smoke failed (exit ${exitLabel(result.status, result.signal)})`,
+        result.stdout?.trim() ? `stdout:\n${result.stdout.trim()}` : '',
+        result.stderr?.trim() ? `stderr:\n${result.stderr.trim()}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    );
+  }
+  const data = parseJsonOutput(result.stdout || '', 'kungfu kfd status');
+  if (data.contract !== 'kungfu-sdk-kfd-standards-status') {
+    throw new Error(`unexpected kfd status contract: ${data.contract}`);
+  }
+  if (data.standards?.['kfd-3']?.status !== 'supported') {
+    throw new Error('installed kungfu kfd status did not report KFD-3 support');
+  }
+}
+
+function smokeCliProductArchive({ archivePath, archiveBase }) {
+  buildchainLogger.spanSync(
+    'product.cli.smoke',
+    {
+      phase: 'package',
+      attributes: {
+        archive: rel(archivePath),
+      },
+    },
+    () => {
+      const tempRoot = fs.mkdtempSync(
+        path.join(os.tmpdir(), 'kungfu-cli-product-smoke-'),
+      );
+      try {
+        if (archivePath.endsWith('.zip')) {
+          extractZip({ archiveFile: archivePath, targetDir: tempRoot });
+        } else {
+          extractTarGz({ archiveFile: archivePath, targetDir: tempRoot });
+        }
+        const installRoot = path.join(tempRoot, archiveBase);
+        assertDirectory(installRoot, 'extracted CLI product root');
+        const manifestPath = path.join(installRoot, 'product.json');
+        assertFile(manifestPath, 'CLI product manifest');
+        const manifest = readJson(manifestPath);
+        if (manifest.schema !== 'kungfu.product.cli/v1') {
+          throw new Error(`unexpected CLI product schema: ${manifest.schema}`);
+        }
+        if (manifest.product !== 'cli' || manifest.platform !== platformId()) {
+          throw new Error('CLI product manifest does not match this platform');
+        }
+
+        const kungfuBin = entryPath(installRoot, manifest.entries, 'kungfu');
+        const sdkEntry = entryPath(installRoot, manifest.entries, 'sdk');
+        const sdkPackage = entryPath(
+          installRoot,
+          manifest.entries,
+          'sdkPackage',
+        );
+        const kfd3Registry = entryPath(
+          installRoot,
+          manifest.entries,
+          'kfd3Registry',
+        );
+        const kfdUpstreamAggregate = entryPath(
+          installRoot,
+          manifest.entries,
+          'kfdUpstreamAggregate',
+        );
+        const kfdPackage = entryPath(
+          installRoot,
+          manifest.entries,
+          'kfdPackage',
+        );
+        const tuiEntry = entryPath(installRoot, manifest.entries, 'tui');
+        const extensionsRoot = entryPath(
+          installRoot,
+          manifest.entries,
+          'extensions',
+        );
+        const templatesRoot = entryPath(
+          installRoot,
+          manifest.entries,
+          'templates',
+        );
+        assertFile(kungfuBin, 'installed kungfu runtime');
+        assertFile(sdkEntry, 'installed Kungfu SDK entry');
+        assertFile(sdkPackage, 'installed Kungfu SDK package metadata');
+        assertFile(kfd3Registry, 'installed KFD-3 registry');
+        assertFile(kfdUpstreamAggregate, 'installed KFD upstream aggregate');
+        assertFile(kfdPackage, 'installed KFD package metadata');
+        assertFile(tuiEntry, 'installed TUI entry');
+        assertDirectory(extensionsRoot, 'installed kfx extensions');
+        assertDirectory(templatesRoot, 'installed SDK templates');
+
+        assertSameSet(
+          'installed kfx package set',
+          productKfxDependencies(),
+          listInstalledKfxPackages(extensionsRoot),
+        );
+
+        runInstalledKungfuKfdSmoke({
+          installRoot,
+          kungfuBin,
+          sdkEntry,
+          kfd3Registry,
+          kfdUpstreamAggregate,
+          extensionsRoot,
+        });
+        console.log('[product] CLI installed-layout smoke passed');
+      } finally {
+        fs.rmSync(tempRoot, { recursive: true, force: true });
+      }
+    },
   );
 }
 
@@ -692,6 +920,7 @@ function buildCliProduct() {
       } else {
         writeTarGz({ sourceDir: CLI_DIST_DIR, outputFile: archivePath });
       }
+      smokeCliProductArchive({ archivePath, archiveBase });
       console.log(`[product] CLI archive -> ${rel(archivePath)}`);
     },
   );
@@ -815,6 +1044,7 @@ function verifyObservability() {
   }
   if (wantsCli()) {
     requiredEvents.push('product.cli.archive.start');
+    requiredEvents.push('product.cli.smoke.start');
   }
   const report = verifyBuildchainLogEvents({
     path: buildchainLogger.path,

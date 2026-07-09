@@ -13,6 +13,34 @@ function normalizePath(value) {
   return value.split(path.sep).join('/');
 }
 
+function unsafeArchivePath(name) {
+  return (
+    !name ||
+    name.includes('\\') ||
+    path.isAbsolute(name) ||
+    /^[a-zA-Z]:/.test(name) ||
+    name
+      .split('/')
+      .filter(Boolean)
+      .some((part) => part === '..')
+  );
+}
+
+function extractPath(targetDir, name) {
+  if (unsafeArchivePath(name)) {
+    throw new Error(`unsafe archive path: ${name}`);
+  }
+  const resolved = path.resolve(targetDir, ...name.split('/').filter(Boolean));
+  const targetRoot = path.resolve(targetDir);
+  if (
+    resolved !== targetRoot &&
+    !resolved.startsWith(`${targetRoot}${path.sep}`)
+  ) {
+    throw new Error(`archive path escapes target: ${name}`);
+  }
+  return resolved;
+}
+
 function collectFiles(root) {
   const files = [];
   const visit = (dir) => {
@@ -94,6 +122,58 @@ export function writeTarGz({ sourceDir, outputFile }) {
     outputFile,
     zlib.gzipSync(Buffer.concat(chunks), { level: 9 }),
   );
+}
+
+function readTarString(buffer, offset, length) {
+  const end = buffer.indexOf(0, offset);
+  const sliceEnd =
+    end >= offset && end < offset + length ? end : offset + length;
+  return buffer.toString('utf8', offset, sliceEnd).replace(/\0.*$/, '');
+}
+
+function readTarOctal(buffer, offset, length) {
+  const value = readTarString(buffer, offset, length).trim();
+  return value ? Number.parseInt(value, 8) : 0;
+}
+
+function chmodIfPossible(file, mode) {
+  try {
+    fs.chmodSync(file, mode);
+  } catch {
+    // Some filesystems/platforms do not preserve POSIX modes.
+  }
+}
+
+export function extractTarGz({ archiveFile, targetDir }) {
+  const buffer = zlib.gunzipSync(fs.readFileSync(archiveFile));
+  fs.mkdirSync(targetDir, { recursive: true });
+  let offset = 0;
+  while (offset + TAR_BLOCK <= buffer.length) {
+    const header = buffer.subarray(offset, offset + TAR_BLOCK);
+    offset += TAR_BLOCK;
+    if (header.every((byte) => byte === 0)) break;
+
+    const name = readTarString(header, 0, 100);
+    const prefix = readTarString(header, 345, 155);
+    const entryName = prefix ? `${prefix}/${name}` : name;
+    const size = readTarOctal(header, 124, 12);
+    const mode = readTarOctal(header, 100, 8) || 0o644;
+    const type = readTarString(header, 156, 1) || '0';
+    const body = buffer.subarray(offset, offset + size);
+    offset += size + (size % TAR_BLOCK ? TAR_BLOCK - (size % TAR_BLOCK) : 0);
+
+    const target = extractPath(targetDir, entryName);
+    if (type === '5') {
+      fs.mkdirSync(target, { recursive: true });
+      continue;
+    }
+    if (type !== '0') {
+      throw new Error(`unsupported tar entry type ${type} for ${entryName}`);
+    }
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, body);
+    chmodIfPossible(target, mode);
+  }
 }
 
 let crcTable;
@@ -202,4 +282,42 @@ export function writeZip({ sourceDir, outputFile }) {
   footer.writeUInt16LE(0, 20);
   fs.mkdirSync(path.dirname(outputFile), { recursive: true });
   fs.writeFileSync(outputFile, Buffer.concat([...local, ...central, footer]));
+}
+
+export function extractZip({ archiveFile, targetDir }) {
+  const buffer = fs.readFileSync(archiveFile);
+  fs.mkdirSync(targetDir, { recursive: true });
+  let offset = 0;
+  while (offset + 4 <= buffer.length) {
+    const signature = buffer.readUInt32LE(offset);
+    if (signature === 0x02014b50 || signature === 0x06054b50) break;
+    if (signature !== 0x04034b50) {
+      throw new Error(`unsupported zip signature at ${offset}: ${signature}`);
+    }
+    const method = buffer.readUInt16LE(offset + 8);
+    const compressedSize = buffer.readUInt32LE(offset + 18);
+    const uncompressedSize = buffer.readUInt32LE(offset + 22);
+    const nameLength = buffer.readUInt16LE(offset + 26);
+    const extraLength = buffer.readUInt16LE(offset + 28);
+    const nameStart = offset + 30;
+    const name = buffer.toString('utf8', nameStart, nameStart + nameLength);
+    const bodyStart = nameStart + nameLength + extraLength;
+    const bodyEnd = bodyStart + compressedSize;
+    if (method !== 0) {
+      throw new Error(
+        `unsupported zip compression method ${method} for ${name}`,
+      );
+    }
+    if (compressedSize !== uncompressedSize) {
+      throw new Error(`zip entry size mismatch for ${name}`);
+    }
+    const target = extractPath(targetDir, name);
+    if (name.endsWith('/')) {
+      fs.mkdirSync(target, { recursive: true });
+    } else {
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.writeFileSync(target, buffer.subarray(bodyStart, bodyEnd));
+    }
+    offset = bodyEnd;
+  }
 }
