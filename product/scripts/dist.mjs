@@ -34,6 +34,7 @@ const CLI_DIST_DIR = path.join(DIST_DIR, 'cli');
 const RELEASE_DIR = path.join(PRODUCT_DIR, 'release');
 const DESKTOP_RELEASE_DIR = path.join(RELEASE_DIR, 'desktop');
 const CLI_RELEASE_DIR = path.join(RELEASE_DIR, 'cli');
+const CLI_ARCHIVE_PREFIX = 'kungfu-episodes-cli';
 const isWin = process.platform === 'win32';
 const require = createRequire(import.meta.url);
 const buildchainLogger = createBuildchainLogger({
@@ -693,6 +694,10 @@ function writeCliManifest(stageRoot, archiveName) {
   );
 }
 
+export function cliArchiveBase(platform) {
+  return `${CLI_ARCHIVE_PREFIX}-${platform}`;
+}
+
 function assertFile(file, label) {
   if (!fs.existsSync(file) || !fs.statSync(file).isFile()) {
     throw new Error(`${label} not found: ${file}`);
@@ -895,7 +900,7 @@ function buildCliProduct() {
     },
     () => {
       const platform = platformId();
-      const archiveBase = `kungfu-cli-${platform}`;
+      const archiveBase = cliArchiveBase(platform);
       const archiveName = isWin
         ? `${archiveBase}.zip`
         : `${archiveBase}.tar.gz`;
@@ -1072,12 +1077,14 @@ function verifyObservability() {
   );
 }
 
-try {
-  main();
-  verifyObservability();
-} catch (error) {
-  console.error(
-    `[product] failed: ${error instanceof Error ? error.message : String(error)}`,
-  );
-  process.exit(1);
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  try {
+    main();
+    verifyObservability();
+  } catch (error) {
+    console.error(
+      `[product] failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    process.exit(1);
+  }
 }
