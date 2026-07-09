@@ -14,6 +14,13 @@ fallback. The architecture decision is
   workspace `.kungfu/` applies. It stores machine-level runtime state, global
   catalog/cache/service state, and non-workspace facts.
 
+The matching live process topology is
+[ADR-0036](../framework/core/docs/adr/ADR-0036-supervisor-and-workspace-master-topology.md):
+a per-user `supervisor` is a router/process manager, while each resolved
+workspace or fallback data root can have its own `master`. The supervisor may
+keep small routing/runtime state under the user config area; workspace master
+process-control state belongs under the resolved data root.
+
 The split is intentional. Runtime data can be large and stateful; workspace
 facts should live near the project they describe; global config is small,
 agent-maintained, and safe to inspect without reading journals or provider

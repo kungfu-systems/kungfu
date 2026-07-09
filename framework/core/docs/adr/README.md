@@ -51,6 +51,7 @@ A record's **Status** says where it stands:
 | [0033](ADR-0033-episode-causal-segment-object.md) | accepted | Episode is the first-class causal segment object |
 | [0034](ADR-0034-yijinjing-episode-manifest-journal.md) | accepted | Episode manifest records live in the yijinjing journal format |
 | [0035](ADR-0035-workspace-local-kungfu-data-home.md) | accepted | Workspace-local `.kungfu` is the default fact ledger home |
+| [0036](ADR-0036-supervisor-and-workspace-master-topology.md) | accepted | Per-user supervisor manages per-data-root masters |
 
 ## Reading by theme
 
@@ -128,7 +129,10 @@ A record's **Status** says where it stands:
   JSON only as export/debug/folded view), and
   [0035](ADR-0035-workspace-local-kungfu-data-home.md) (workspace-local
   `.kungfu/` as the default Episode/fact ledger home, with `~/.kungfu-config`
-  as the user config home and `KF_HOME` retained as machine fallback).
+  as the user config home and `KF_HOME` retained as machine fallback), and
+  [0036](ADR-0036-supervisor-and-workspace-master-topology.md) (a per-user
+  supervisor routes CLI/GUI/TUI entrypoints to per-data-root masters while
+  storage remains daemonless).
 - **Cross-cutting principle** — [0009](ADR-0009-load-bearing-self-bootstrap.md)
   (load-bearing self-bootstrap), which also names the general law that
   [`docs/architecture.md` § The build dogfoods the SDK](../../../../docs/architecture.md)

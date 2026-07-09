@@ -38,7 +38,7 @@ and the map routes a question to whichever doc answers it.
 | What does Rewind replay, and what must it never silently re-execute? | [ADR-0020](../framework/core/docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md) + [`rewind.md`](rewind.md) | why, verify | stable |
 | How does Kungfu persist user facts, sync sources, and maintain storage over time? | [`runtime-storage-service.md`](runtime-storage-service.md) | use, verify | draft |
 | What is an Episode, and why is it the unit of export/import/fsck/timeline slicing? | [`episode-object-model.md`](episode-object-model.md) + [ADR-0033](../framework/core/docs/adr/ADR-0033-episode-causal-segment-object.md) + [ADR-0034](../framework/core/docs/adr/ADR-0034-yijinjing-episode-manifest-journal.md) | why, use, verify | draft |
-| How can the master stay alive after the GUI closes, and how do I manage the user service? | [`master-service.md`](master-service.md) | use, verify | draft |
+| What is the supervisor/master topology, and how can the master stay alive after the GUI closes? | [`master-service.md`](master-service.md) + [ADR-0036](../framework/core/docs/adr/ADR-0036-supervisor-and-workspace-master-topology.md) | use, verify | draft |
 | How can a multi-machine timeline stay stable without one global clock? | [ADR-0021](../framework/core/docs/adr/ADR-0021-observer-relative-timeline-projection.md) + [`event-model.md`](event-model.md) | why, verify | stable |
 | Where must action-recording semantics live across C++ / Python / Node? | [ADR-0022](../framework/core/docs/adr/ADR-0022-core-action-recording-surface.md) + [`event-model.md`](event-model.md) | why, use | stable |
 | What is a location role, and why does it not decide journal page size? | [ADR-0024](../framework/core/docs/adr/ADR-0024-location-role-and-journal-page-policy.md) + [`event-model.md`](event-model.md) | why, use | stable |
@@ -106,6 +106,10 @@ route to the row that answers them:
   machine fallback / config home rename** → *Kungfu config*
   ([`config.md`](config.md)) and
   [ADR-0035](../framework/core/docs/adr/ADR-0035-workspace-local-kungfu-data-home.md).
+- **supervisor / per-user supervisor / workspace master / data-root master /
+  master singleton / live registry / idle shutdown / daemonless storage** →
+  *Kungfu supervisor and master service* ([`master-service.md`](master-service.md))
+  and [ADR-0036](../framework/core/docs/adr/ADR-0036-supervisor-and-workspace-master-topology.md).
 - **SKILL.md / agent skill / skill catalog / context injection / Node manager /
   Python manager / skill audit / skill-manager view / kfx dependency binding** →
   *agent-facing Kungfu Skill* ([`skills.md`](skills.md)).
