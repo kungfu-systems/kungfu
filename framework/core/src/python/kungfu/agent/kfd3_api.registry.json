@@ -314,6 +314,16 @@
       "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
     },
     {
+      "id": "kungfu.storage.repair.apply",
+      "surface": "cli",
+      "name": "kungfu storage repair --scope episode --episode-id <id> --apply --from <bundle.json> --dry-run --json",
+      "purpose": "Validate local repair material and preview Episode manifest or payload restoration; use --execute only for explicit writes.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
       "id": "kungfu.storage.rebuild-index",
       "surface": "cli",
       "name": "kungfu storage rebuild-index --scope all --dry-run --json",

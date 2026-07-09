@@ -91,6 +91,14 @@ function writeNodeFixture(runtimeDir) {
 }
 
 function selectedNodeResults(runtimeDir) {
+  const bundle = kungfu.runStorageServiceOperation(
+    'export_bundle',
+    runtimeDir,
+    {
+      scope: 'source',
+      source_id: 'node-synth',
+    },
+  );
   return {
     capabilities: kungfu.storageServiceCapabilities(),
     optionRequest: kungfu.makeStorageServiceRequest('status', runtimeDir, {
@@ -119,13 +127,16 @@ function selectedNodeResults(runtimeDir) {
       source_id: 'node-synth',
       dry_run: true,
     }),
+    repairApply: kungfu.runStorageServiceOperation('repair_apply', runtimeDir, {
+      scope: 'source',
+      source_id: 'node-synth',
+      dry_run: true,
+      bundle,
+    }),
     exported: kungfu.exportStorageRecords(runtimeDir, 'node-synth', {
       since: '2026-07-09T00:00:00Z',
     }),
-    bundle: kungfu.runStorageServiceOperation('export_bundle', runtimeDir, {
-      scope: 'source',
-      source_id: 'node-synth',
-    }),
+    bundle,
     query: kungfu.runStorageServiceOperation('query', runtimeDir, {
       scope: 'source',
       source_id: 'node-synth',
@@ -171,6 +182,7 @@ sys.path.insert(0, str(core_dir / "dist" / "kungfu"))
 
 from kungfu.storage import service
 
+bundle = service.build_export_bundle(runtime_dir, source_id="node-synth")
 out = {
     "capabilities": service.service_capabilities(),
     "optionRequest": service._runtime().make_storage_service_request(
@@ -191,12 +203,18 @@ out = {
     ),
     "fsck": service.fsck(runtime_dir, source_id="node-synth"),
     "repair": service.repair_plan(runtime_dir, source_id="node-synth", dry_run=True),
+    "repairApply": service.repair_apply(
+        runtime_dir,
+        bundle,
+        source_id="node-synth",
+        dry_run=True,
+    ),
     "exported": service.export_records(
         runtime_dir,
         source_id="node-synth",
         range_filter={"since": "2026-07-09T00:00:00Z"},
     ),
-    "bundle": service.build_export_bundle(runtime_dir, source_id="node-synth"),
+    "bundle": bundle,
     "query": service.query_projection(
         runtime_dir,
         query="entries",
@@ -322,6 +340,11 @@ for (const providerCase of providerCases) {
             'kungfu.storage.repair-plan/v1',
           );
           assert.equal(nodeResults.repair.candidate_count, 0);
+          assert.equal(
+            nodeResults.repairApply.schema,
+            'kungfu.storage.repair-apply/v1',
+          );
+          assert.equal(nodeResults.repairApply.dry_run, true);
           assert.equal(nodeResults.bundle.records.length, 2);
           assert.equal(nodeResults.exported.length, 1);
           assert.equal(nodeResults.query.row_count, 2);

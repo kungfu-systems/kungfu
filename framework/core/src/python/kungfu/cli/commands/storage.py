@@ -142,44 +142,100 @@ def fsck(ctx, scope, storage_source_id, episode_id, as_json):
 @click.option("--episode-id", type=int, default=0)
 @click.option("--plan", "plan_only", is_flag=True, help="emit a read-only repair plan")
 @click.option(
+    "--apply",
+    "apply_requested",
+    is_flag=True,
+    help="validate or apply local repair material",
+)
+@click.option(
+    "--from", "from_path", type=str, default=None, help="repair material JSON path"
+)
+@click.option(
     "--dry-run",
     "dry_run",
     is_flag=True,
-    help="required in v1; do not fetch, delete, compact, or mutate storage",
+    help="do not fetch, delete, compact, or mutate storage",
+)
+@click.option(
+    "--execute", "execute", is_flag=True, help="write validated local repair material"
 )
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @storage_command_context
-def repair(ctx, scope, storage_source_id, episode_id, plan_only, dry_run, as_json):
+def repair(
+    ctx,
+    scope,
+    storage_source_id,
+    episode_id,
+    plan_only,
+    apply_requested,
+    from_path,
+    dry_run,
+    execute,
+    as_json,
+):
     from kungfu.storage import service
 
-    if not plan_only:
-        click.echo("[storage] repair v1 requires --plan", err=True)
+    if plan_only and apply_requested:
+        click.echo("[storage] choose either --plan or --apply", err=True)
         sys.exit(2)
-    if not dry_run:
-        click.echo("[storage] repair v1 requires --dry-run", err=True)
+    if not plan_only and not apply_requested:
+        click.echo("[storage] repair v1 requires --plan or --apply", err=True)
         sys.exit(2)
     if scope == "source":
         _require_source(storage_source_id)
     if scope == "episode" and not episode_id:
         click.echo("[storage] --episode-id is required for --scope episode", err=True)
         sys.exit(2)
-    result = service.repair_plan(
-        ctx.runtime_dir,
-        source_id=storage_source_id if scope == "source" else None,
-        episode_id=episode_id if scope == "episode" else None,
-        dry_run=dry_run,
-    )
+    if plan_only:
+        if not dry_run:
+            click.echo("[storage] repair plan requires --dry-run", err=True)
+            sys.exit(2)
+        result = service.repair_plan(
+            ctx.runtime_dir,
+            source_id=storage_source_id if scope == "source" else None,
+            episode_id=episode_id if scope == "episode" else None,
+            dry_run=True,
+        )
+    else:
+        if not from_path:
+            click.echo("[storage] repair apply requires --from <json>", err=True)
+            sys.exit(2)
+        if dry_run and execute:
+            click.echo("[storage] choose either --dry-run or --execute", err=True)
+            sys.exit(2)
+        try:
+            with open(from_path, encoding="utf-8") as f:
+                repair_input = json.load(f)
+        except (OSError, ValueError) as e:
+            click.echo(f"[storage] {e}", err=True)
+            sys.exit(1)
+        result = service.repair_apply(
+            ctx.runtime_dir,
+            repair_input,
+            source_id=storage_source_id if scope == "source" else None,
+            episode_id=episode_id if scope == "episode" else None,
+            dry_run=not execute,
+        )
     if as_json:
         _echo_json(result)
         return
-    click.echo(
-        f"[storage] repair plan {scope}: "
-        f"{result.get('candidate_count', 0)} candidates, status={result.get('status')}"
-    )
-    for candidate in result.get("candidates", []):
+    if plan_only:
         click.echo(
-            "  candidate: "
-            f"{candidate.get('code')} -> {candidate.get('suggested_action')}"
+            f"[storage] repair plan {scope}: "
+            f"{result.get('candidate_count', 0)} candidates, status={result.get('status')}"
+        )
+        for candidate in result.get("candidates", []):
+            click.echo(
+                "  candidate: "
+                f"{candidate.get('code')} -> {candidate.get('suggested_action')}"
+            )
+    else:
+        click.echo(
+            f"[storage] repair apply {scope}: "
+            f"applied={result.get('applied_count', 0)} "
+            f"skipped={result.get('skipped_count', 0)} "
+            f"rejected={result.get('rejected_count', 0)} "
+            f"status={result.get('status')}"
         )
     if not result["ok"]:
         sys.exit(1)

@@ -5,16 +5,16 @@
   "witnessKind": "prebuild",
   "supportLevel": "release",
   "source": {
-    "cwd": "/Users/dkr/Worktrees/kungfu/feature/episode-repair-import-v1",
-    "sourceSha": "1151ac1575ac3815fb02fe163dde4fbf16b7a504",
+    "cwd": "/Users/dkr/Worktrees/kungfu/feature/episode-repair-apply-v1",
+    "sourceSha": "02f78ae593a3ed0bef5d7323bec29a11b045d852",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-    "registryDigest": "sha256:86af49982c7b19d05e5e77de6b1f0869cfb20fe309258a8a4c0c37e5527f89cb"
+    "registryDigest": "sha256:99f3698a746d07e6f9f323efb4e01adbfeb1742d1141c27876df4df7dd32a45f"
   },
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "2b182dcd56f312201cc2db008eadfa2e452d0e042a82b631acf02535499a0d89",
-    "digest": "sha256:86af49982c7b19d05e5e77de6b1f0869cfb20fe309258a8a4c0c37e5527f89cb"
+    "sha256": "cb5d10119888907da6f4cc32f9e3a5b3d77f07acff9e8ede2b1a93b7db2109ea",
+    "digest": "sha256:99f3698a746d07e6f9f323efb4e01adbfeb1742d1141c27876df4df7dd32a45f"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -34,7 +34,7 @@
   "expectedArtifactVerification": {
     "command": "node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json"
   },
-  "collaborationInterfaceDigest": "sha256:d09798cf600bc7e6f9b0ae0f714ad9aec00aa27c01af989e145b1814fd4dd132",
+  "collaborationInterfaceDigest": "sha256:ecd975ab0e39218014c40b62489972b90c02ee676f9ab6cbc7821eb74f24c627",
   "collaborationInterface": {
     "schemaVersion": 1,
     "contract": "kungfu-buildchain-kfd-3-surface-registry",
@@ -1061,6 +1061,26 @@
         }
       },
       {
+        "id": "kungfu.storage.repair.apply",
+        "name": "kungfu storage repair --scope episode --episode-id <id> --apply --from <bundle.json> --dry-run --json",
+        "kind": "cli",
+        "participantProfile": "agent-or-developer",
+        "state": "declared",
+        "availability": "shipped",
+        "visibility": "public",
+        "participantFacing": true,
+        "public": true,
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+        "maturity": "experimental",
+        "declaration": {
+          "owner": "kungfu",
+          "source": "scripts/buildchain-kfd-evidence.mjs",
+          "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+        }
+      },
+      {
         "id": "kungfu.storage.status",
         "name": "kungfu storage status --scope all --json",
         "kind": "cli",
@@ -1143,8 +1163,8 @@
     ],
     "audit": {
       "status": "passed",
-      "declared": 54,
-      "artifactPublic": 54,
+      "declared": 55,
+      "artifactPublic": 55,
       "policy": {
         "sourceOfTruth": ".buildchain/kfd/kfd-3/surfaces.json",
         "detectedButUnregistered": "product-specific-audit",
@@ -2139,6 +2159,26 @@
     {
       "id": "kungfu.storage.repair",
       "name": "kungfu storage repair --scope episode --episode-id <id> --plan --dry-run --json",
+      "kind": "cli",
+      "participantProfile": "agent-or-developer",
+      "state": "declared",
+      "availability": "shipped",
+      "visibility": "public",
+      "participantFacing": true,
+      "public": true,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "maturity": "experimental",
+      "declaration": {
+        "owner": "kungfu",
+        "source": "scripts/buildchain-kfd-evidence.mjs",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+      }
+    },
+    {
+      "id": "kungfu.storage.repair.apply",
+      "name": "kungfu storage repair --scope episode --episode-id <id> --apply --from <bundle.json> --dry-run --json",
       "kind": "cli",
       "participantProfile": "agent-or-developer",
       "state": "declared",

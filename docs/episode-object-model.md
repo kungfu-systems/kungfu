@@ -323,9 +323,22 @@ diagnostic set. It maps the Episode warnings to read-only candidates such as
 target kind, role, Episode/frame/payload id fields, and a suggested action. The
 plan is not authority and does not mutate storage; authority remains the
 yijinjing Episode manifest journal plus the referenced payload/frame evidence.
-Episode bundle import v1 similarly validates `kungfu.storage.episode-bundle/v1`
-and returns the folded causal graph, dependencies, and degraded evidence without
-materializing missing data into the local manifest journal.
+
+`kungfu.storage.repair-apply/v1` is the first mutation-capable repair receipt,
+but it is still local-material only. It consumes an already available
+`kungfu.storage.episode-bundle/v1` or source export bundle, validates the
+material, defaults to dry-run, and writes only under `--execute`. For Episodes,
+it appends missing manifest records through the C++ yijinjing manifest store and
+skips already identified open/close/frame/ref records. For source payloads, it
+restores missing payload bodies only when the bytes match the manifest hash and
+length. It does not fetch remote evidence, delete data, compact providers, or
+rewrite intentional redaction/absence decisions.
+
+Episode bundle import v1 validates `kungfu.storage.episode-bundle/v1` and
+returns the folded causal graph, dependencies, and degraded evidence without
+materializing missing data into the local manifest journal. Materialization is a
+separate repair-apply operation so fsck, import, preview, and mutation remain
+auditable steps.
 
 ## Migration Plan
 

@@ -1482,6 +1482,8 @@ nlohmann::json episode_export_bundle_impl(const storage_service_options &options
 }
 
 nlohmann::json fsck_impl(const storage_service_options &options);
+nlohmann::json episode_import_bundle_impl(const storage_service_options &options);
+nlohmann::json load_latest_manifest_impl(const storage_provider &provider, const std::string &source_id);
 
 nlohmann::json repair_candidate_common(const nlohmann::json &warning, const std::string &code, const std::string &kind,
                                        const std::string &role, const std::string &action,
@@ -1563,6 +1565,284 @@ nlohmann::json repair_plan_impl(const storage_service_options &options) {
           {"notes", nlohmann::json::array({
                         "Repair plan v1 is read-only and never fetches, deletes, compacts, or mutates storage.",
                         "Candidates describe missing facts that a future importer or remote sync source may provide.",
+                    })}};
+}
+
+bool episode_record_kind_supported(const std::string &kind) {
+  return kind == "episode_open" || kind == "episode_heartbeat" || kind == "episode_frame_attached" ||
+         kind == "episode_ref_attached" || kind == "episode_closed";
+}
+
+std::string episode_record_identity_key(const nlohmann::json &record) {
+  const auto kind = text_or(record, "record_kind");
+  const auto episode_id = std::to_string(uint64_or(record, "episode_id"));
+  if (kind == "episode_open" || kind == "episode_closed") {
+    return kind + ":" + episode_id;
+  }
+  if (kind == "episode_frame_attached") {
+    return kind + ":" + episode_id + ":" + std::to_string(uint64_or(record, "frame_uid"));
+  }
+  if (kind == "episode_ref_attached") {
+    return kind + ":" + episode_id + ":" + text_or(record, "ref_kind") + ":" +
+           std::to_string(uint64_or(record, "ref_uid")) + ":" + text_or(record, "ref_id") + ":" +
+           text_or(record, "ref_hash");
+  }
+  return canonical_json(record);
+}
+
+nlohmann::json episode_apply_record(const storage_service_options &options, const nlohmann::json &record) {
+  const auto kind = text_or(record, "record_kind");
+  if (kind == "episode_open") {
+    return episode_store(options).begin(parse_episode_begin_options(record));
+  }
+  if (kind == "episode_heartbeat") {
+    return episode_store(options).heartbeat(parse_episode_heartbeat_options(record));
+  }
+  if (kind == "episode_frame_attached") {
+    return episode_store(options).attach_frame(parse_episode_frame_attach_options(record));
+  }
+  if (kind == "episode_ref_attached") {
+    return episode_store(options).attach_ref(parse_episode_ref_attach_options(record));
+  }
+  if (kind == "episode_closed") {
+    return episode_store(options).end(parse_episode_close_options(record, yy_enums::EpisodeStatus::Ended));
+  }
+  return nullptr;
+}
+
+nlohmann::json apply_episode_bundle_material(const storage_service_options &options, const nlohmann::json &bundle,
+                                             bool write) {
+  auto validation_options = options;
+  validation_options.scope = "episode";
+  validation_options.dry_run = true;
+  validation_options.bundle = bundle;
+  const auto validated = episode_import_bundle_impl(validation_options);
+  const auto bundle_episode_id =
+      uint64_or(bundle, "episode_id", uint64_or(object_or_empty(bundle, "manifest"), "episode_id"));
+  nlohmann::json existing_keys = nlohmann::json::array();
+  std::vector<std::string> seen;
+  if (bundle_episode_id != 0) {
+    const auto inspected = episode_store(options).inspect(bundle_episode_id);
+    for (const auto &existing : array_or_empty(inspected, "records")) {
+      const auto key = episode_record_identity_key(existing);
+      seen.push_back(key);
+      existing_keys.push_back(key);
+    }
+  }
+  nlohmann::json applied = nlohmann::json::array();
+  nlohmann::json skipped = nlohmann::json::array();
+  nlohmann::json rejected = nlohmann::json::array();
+  if (write) {
+    for (const auto &record : array_or_empty(bundle, "records")) {
+      const auto kind = text_or(record, "record_kind");
+      if (kind.empty()) {
+        rejected.push_back({{"kind", "episode_record"}, {"reason", "record_kind_missing"}, {"record", record}});
+      } else if (!episode_record_kind_supported(kind)) {
+        rejected.push_back({{"kind", "episode_record"}, {"reason", "unsupported_record_kind"}, {"record_kind", kind}});
+      }
+    }
+    if (!rejected.empty()) {
+      return {{"kind", "episode_bundle"},
+              {"schema", text_or(bundle, "schema")},
+              {"episode_id", bundle_episode_id == 0 ? nlohmann::json(nullptr) : nlohmann::json(bundle_episode_id)},
+              {"validated", validated},
+              {"existing_record_keys", existing_keys},
+              {"applied", applied},
+              {"skipped", skipped},
+              {"rejected", rejected}};
+    }
+  }
+  for (const auto &record : array_or_empty(bundle, "records")) {
+    const auto key = episode_record_identity_key(record);
+    if (std::find(seen.begin(), seen.end(), key) != seen.end()) {
+      skipped.push_back({{"kind", "episode_record"}, {"reason", "already_present"}, {"record", record}});
+      continue;
+    }
+    const auto kind = text_or(record, "record_kind");
+    if (kind.empty()) {
+      rejected.push_back({{"kind", "episode_record"}, {"reason", "record_kind_missing"}, {"record", record}});
+      continue;
+    }
+    if (write) {
+      const auto written = episode_apply_record(options, record);
+      if (written.is_null()) {
+        rejected.push_back({{"kind", "episode_record"}, {"reason", "unsupported_record_kind"}, {"record_kind", kind}});
+        continue;
+      }
+      applied.push_back({{"kind", "episode_record"}, {"record_kind", kind}, {"record", written}});
+    } else {
+      if (!episode_record_kind_supported(kind)) {
+        rejected.push_back({{"kind", "episode_record"}, {"reason", "unsupported_record_kind"}, {"record_kind", kind}});
+        continue;
+      }
+      applied.push_back({{"kind", "episode_record"}, {"record_kind", kind}, {"record", record}, {"dry_run", true}});
+    }
+  }
+  return {{"kind", "episode_bundle"},
+          {"schema", text_or(bundle, "schema")},
+          {"episode_id", bundle_episode_id == 0 ? nlohmann::json(nullptr) : nlohmann::json(bundle_episode_id)},
+          {"validated", validated},
+          {"existing_record_keys", existing_keys},
+          {"applied", applied},
+          {"skipped", skipped},
+          {"rejected", rejected}};
+}
+
+nlohmann::json apply_source_bundle_material(const storage_service_options &options, const nlohmann::json &bundle,
+                                            bool write) {
+  auto source_id = options.source_id.empty() ? text_or(bundle, "source_id") : options.source_id;
+  if (source_id.empty()) {
+    source_id = text_or(object_or_empty(bundle, "manifest"), "source_id");
+  }
+  if (source_id.empty()) {
+    throw std::invalid_argument("repair_apply_source_id_required");
+  }
+  const auto provider = make_provider(options);
+  auto manifest = load_latest_manifest_impl(*provider, source_id);
+  if (manifest.is_null()) {
+    throw std::runtime_error("manifest not found: " + source_id);
+  }
+  auto entries = entries_for_manifest(manifest);
+  nlohmann::json applied = nlohmann::json::array();
+  nlohmann::json skipped = nlohmann::json::array();
+  nlohmann::json rejected = nlohmann::json::array();
+  bool manifest_changed = false;
+  for (const auto &record : array_or_empty(bundle, "records")) {
+    if (!record.is_object() || !record.contains("payload")) {
+      skipped.push_back({{"kind", "payload"}, {"reason", "payload_missing_in_material"}, {"record", record}});
+      continue;
+    }
+    const auto raw = canonical_json(record.at("payload"));
+    auto digest = text_or(record, "payload_hash");
+    if (digest.empty()) {
+      digest = yy_storage::compute_content_hash_value(raw, yy_storage::CONTENT_HASH_ALGORITHM_SHA256);
+    }
+    const auto error =
+        yy_storage::verify_payload_ref(raw, digest, raw.size(), yy_storage::CONTENT_HASH_ALGORITHM_SHA256);
+    if (!error.empty()) {
+      rejected.push_back({{"kind", "payload"}, {"reason", error}, {"payload_hash", digest}});
+      continue;
+    }
+    bool matched = false;
+    for (auto &entry : entries) {
+      if (!entry.is_object() || text_or(entry, "payload_hash") != digest) {
+        continue;
+      }
+      matched = true;
+      if (text_or(entry, "payload_state") == PAYLOAD_STATE_PRESENT && provider->payload_exists(digest)) {
+        skipped.push_back({{"kind", "payload"}, {"reason", "already_present"}, {"payload_hash", digest}});
+        continue;
+      }
+      if (text_or(entry, "payload_state") == PAYLOAD_STATE_REDACTED ||
+          text_or(entry, "payload_state") == PAYLOAD_STATE_ABSENT) {
+        skipped.push_back({{"kind", "payload"}, {"reason", "intentional_non_present_state"}, {"payload_hash", digest}});
+        continue;
+      }
+      if (write) {
+        provider->write_payload(digest, raw);
+      }
+      entry["payload_state"] = PAYLOAD_STATE_PRESENT;
+      entry["byte_len"] = raw.size();
+      if (text_or(entry, "content_type").empty()) {
+        entry["content_type"] = CONTENT_TYPE_JSON;
+      }
+      manifest_changed = true;
+      applied.push_back({{"kind", "payload"},
+                         {"payload_hash", digest},
+                         {"subject", text_or(entry, "kind") + ":" + text_or(entry, "source_id")},
+                         {"dry_run", !write}});
+    }
+    if (!matched) {
+      rejected.push_back({{"kind", "payload"}, {"reason", "manifest_entry_missing"}, {"payload_hash", digest}});
+    }
+  }
+  nlohmann::json accepted = nullptr;
+  if (write && manifest_changed) {
+    auto repaired_input = manifest;
+    repaired_input["entries"] = entries;
+    repaired_input.erase("sync_root");
+    repaired_input.erase("accepted_ranges");
+    repaired_input.erase("payload_inventory");
+    repaired_input["manifest_id"] = text_or(manifest, "manifest_id") + ".repair";
+    accepted = yy_storage::build_storage_import_manifest(repaired_input);
+    provider->write_manifest(source_id, text_or(accepted, "manifest_id"), accepted);
+    provider->write_latest_manifest(source_id, accepted);
+    auto registry = provider->load_registry();
+    registry["sources"][source_id] = accepted.at("source");
+    provider->save_registry(registry);
+  }
+  return {{"kind", "source_bundle"},
+          {"schema", text_or(bundle, "schema")},
+          {"source_id", source_id},
+          {"manifest_changed", manifest_changed},
+          {"accepted_manifest", accepted},
+          {"applied", applied},
+          {"skipped", skipped},
+          {"rejected", rejected}};
+}
+
+nlohmann::json repair_apply_impl(const storage_service_options &options) {
+  const auto write = !options.dry_run;
+  auto plan_options = options;
+  plan_options.dry_run = true;
+  const auto plan = repair_plan_impl(plan_options);
+  auto material = options.bundle;
+  if (material.empty()) {
+    material = object_or_empty(options.operation_options, "repair_input");
+  }
+  if (material.empty()) {
+    material = object_or_empty(options.operation_options, "material");
+  }
+  if (material.empty()) {
+    throw std::invalid_argument("repair_apply_material_required");
+  }
+  nlohmann::json groups = nlohmann::json::array();
+  const auto apply_one = [&](const nlohmann::json &item) {
+    const auto schema = text_or(item, "schema");
+    if (schema == "kungfu.storage.episode-bundle/v1") {
+      return apply_episode_bundle_material(options, item, write);
+    }
+    if (schema == yy_storage::STORAGE_EXPORT_BUNDLE_SCHEMA_V1) {
+      return apply_source_bundle_material(options, item, write);
+    }
+    return nlohmann::json{{"kind", "unknown"},
+                          {"schema", schema},
+                          {"rejected", nlohmann::json::array({{{"reason", "unsupported_material_schema"}}})}};
+  };
+  if (material.contains("episode_bundles") || material.contains("source_bundles")) {
+    for (const auto &bundle : array_or_empty(material, "episode_bundles")) {
+      groups.push_back(apply_one(bundle));
+    }
+    for (const auto &bundle : array_or_empty(material, "source_bundles")) {
+      groups.push_back(apply_one(bundle));
+    }
+  } else {
+    groups.push_back(apply_one(material));
+  }
+  size_t applied_count = 0;
+  size_t skipped_count = 0;
+  size_t rejected_count = 0;
+  for (const auto &group : groups) {
+    applied_count += array_or_empty(group, "applied").size();
+    skipped_count += array_or_empty(group, "skipped").size();
+    rejected_count += array_or_empty(group, "rejected").size();
+  }
+  return {{"ok", rejected_count == 0},
+          {"schema", "kungfu.storage.repair-apply/v1"},
+          {"scope", options.scope.empty() ? "all" : options.scope},
+          {"source_id", options.source_id.empty() ? nlohmann::json(nullptr) : nlohmann::json(options.source_id)},
+          {"episode_id", options.episode_id == 0 ? nlohmann::json(nullptr) : nlohmann::json(options.episode_id)},
+          {"dry_run", options.dry_run},
+          {"applied", write},
+          {"status", rejected_count == 0 ? (write ? "applied" : "validated") : "rejected"},
+          {"plan", plan},
+          {"groups", groups},
+          {"applied_count", applied_count},
+          {"skipped_count", skipped_count},
+          {"rejected_count", rejected_count},
+          {"notes", nlohmann::json::array({
+                        "Repair apply v1 only consumes locally supplied material.",
+                        "It never fetches remote data, deletes, compacts, or garbage-collects storage.",
                     })}};
 }
 
@@ -1990,6 +2270,7 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
         report["warnings"].push_back({{"code", "payload_not_present"},
                                       {"source_id", current_source_id},
                                       {"subject", text_or(entry, "kind") + ":" + text_or(entry, "source_id")},
+                                      {"payload_hash", text_or(entry, "payload_hash")},
                                       {"state", payload_state},
                                       {"intentional", intentional}});
         continue;
@@ -2259,6 +2540,10 @@ public:
     return repair_plan_impl(options);
   }
 
+  [[nodiscard]] nlohmann::json repair_apply(const storage_service_options &options) const override {
+    return repair_apply_impl(options);
+  }
+
   [[nodiscard]] nlohmann::json export_bundle(const storage_service_options &options) const override {
     if (options.scope == "episode") {
       return episode_export_bundle_impl(options);
@@ -2488,6 +2773,7 @@ std::vector<std::string> storage_operation_names() {
       storage_operation_name(storage_operation::Status),
       storage_operation_name(storage_operation::Fsck),
       storage_operation_name(storage_operation::RepairPlan),
+      storage_operation_name(storage_operation::RepairApply),
       storage_operation_name(storage_operation::ExportBundle),
       storage_operation_name(storage_operation::ImportBundle),
       storage_operation_name(storage_operation::RebuildIndex),
@@ -2515,6 +2801,8 @@ std::string storage_operation_name(storage_operation operation) {
     return "fsck";
   case storage_operation::RepairPlan:
     return "repair_plan";
+  case storage_operation::RepairApply:
+    return "repair_apply";
   case storage_operation::ExportBundle:
     return "export_bundle";
   case storage_operation::ImportBundle:
@@ -2560,6 +2848,9 @@ storage_operation parse_storage_operation(const std::string &operation) {
   }
   if (operation == "repair_plan") {
     return storage_operation::RepairPlan;
+  }
+  if (operation == "repair_apply") {
+    return storage_operation::RepairApply;
   }
   if (operation == "export_bundle") {
     return storage_operation::ExportBundle;
@@ -2673,6 +2964,8 @@ nlohmann::json run_storage_service_operation(const std::string &operation, const
     return storage_service_instance().fsck(parsed_options);
   case storage_operation::RepairPlan:
     return storage_service_instance().repair_plan(parsed_options);
+  case storage_operation::RepairApply:
+    return storage_service_instance().repair_apply(parsed_options);
   case storage_operation::ExportBundle:
     return storage_service_instance().export_bundle(parsed_options);
   case storage_operation::ImportBundle:

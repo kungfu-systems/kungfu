@@ -419,6 +419,30 @@ def repair_plan(
     )
 
 
+def repair_apply(
+    runtime_dir: str | Path,
+    repair_input: dict[str, Any],
+    *,
+    source_id: str | None = None,
+    episode_id: int | None = None,
+    dry_run: bool = True,
+) -> dict[str, Any]:
+    scope = "episode" if episode_id else ("source" if source_id else "all")
+    return dict(
+        _runtime().run_storage_service_operation(
+            "repair_apply",
+            str(runtime_dir),
+            {
+                "scope": scope,
+                "source_id": source_id,
+                "episode_id": _u64(episode_id),
+                "dry_run": dry_run,
+                "bundle": _binding_json(repair_input),
+            },
+        )
+    )
+
+
 def rebuild_index(
     runtime_dir: str | Path,
     *,

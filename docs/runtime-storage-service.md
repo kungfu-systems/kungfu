@@ -275,6 +275,16 @@ action. V1 deliberately does not fetch remote data, delete local data, compact
 providers, or mutate manifests. It only gives a future importer or remote sync
 source precise missing Episode, frame, or payload targets.
 
+`storage repair --apply --from <json>` is the explicit local-material follow-up
+to that plan. It consumes a validated `kungfu.storage.episode-bundle/v1` or
+`kungfu.storage.export-bundle/v1` that the caller already has on disk. The
+command defaults to dry-run and reports `kungfu.storage.repair-apply/v1`; only
+`--execute` writes. V1 may append missing Episode manifest records or restore
+missing source payload bodies whose content hash and length match the local
+manifest. It still does not contact remotes, invent missing data, delete facts,
+compact providers, garbage collect payloads, or override intentional
+`redacted`/`absent` states.
+
 ## Import And Export
 
 Import/export should become the shared mechanism for:
@@ -497,6 +507,10 @@ kungfu storage fsck --scope all --json
 kungfu storage fsck --scope source --source <source-id> --json
 kungfu storage repair --scope episode --episode-id <episode-id> \
   --plan --dry-run --json
+kungfu storage repair --scope episode --episode-id <episode-id> \
+  --apply --from episode.kfbundle.json --dry-run --json
+kungfu storage repair --scope episode --episode-id <episode-id> \
+  --apply --from episode.kfbundle.json --execute --json
 kungfu storage export --scope source --source <source-id> \
   --format jsonl --out source.jsonl --json
 kungfu storage export --scope source --source <source-id> \
@@ -545,10 +559,15 @@ selector in the runtime storage service:
   declared Episode dependencies.
 - `storage repair --scope episode --episode-id <id> --plan --dry-run --json`
   maps degraded Episode causal graph warnings to read-only repair candidates.
+- `storage repair --scope episode --episode-id <id> --apply --from <bundle>
+  --dry-run|--execute --json` validates local Episode material and, only with
+  `--execute`, appends missing Episode manifest records while skipping records
+  already identified by the manifest.
 - `storage import --from episode.kfbundle.json --json` validates
   `kungfu.storage.episode-bundle/v1` and preserves its causal graph,
-  dependencies, and degraded evidence in the import result. V1 does not yet
-  materialize that bundle into the local Episode manifest journal.
+  dependencies, and degraded evidence in the import result. Materialization is
+  intentionally routed through the separate repair-apply command so mutation
+  remains explicit and previewable.
 
 This slice still does not move event mmap pages into Episode-owned physical
 directories. Frame membership is authoritative through

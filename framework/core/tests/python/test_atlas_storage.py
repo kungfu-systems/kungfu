@@ -365,6 +365,7 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
         "status",
         "fsck",
         "repair_plan",
+        "repair_apply",
         "export_bundle",
         "import_bundle",
         "rebuild_index",
@@ -491,6 +492,12 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
     storage_service.layout(runtime_dir)
     storage_service.fsck(runtime_dir, source_id="local-synth")
     storage_service.repair_plan(runtime_dir, source_id="local-synth", dry_run=True)
+    storage_service.repair_apply(
+        runtime_dir,
+        storage_service.build_export_bundle(runtime_dir, source_id="local-synth"),
+        source_id="local-synth",
+        dry_run=True,
+    )
     storage_service.rebuild_index(runtime_dir, source_id="local-synth", dry_run=True)
     storage_service.rebuild_index(runtime_dir, source_id="local-synth", dry_run=False)
     storage_service.gc_plan(runtime_dir, dry_run=True)
@@ -519,6 +526,7 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
         "layout",
         "fsck",
         "repair_plan",
+        "repair_apply",
         "rebuild_index",
         "gc_plan",
         "compact_plan",
@@ -743,6 +751,91 @@ def test_episode_fsck_reports_degraded_causal_dependencies(tmp_path):
     assert all(
         candidate["safe_to_apply"] is False for candidate in repair["candidates"]
     )
+
+    donor_dir = tmp_path / "donor-runtime"
+    storage_service.episode_begin(
+        donor_dir,
+        episode_id=7,
+        parent_episode_id=999,
+        root_trigger_frame_uid=77,
+        title="degraded episode",
+        actor="pytest",
+        source="unit-test",
+        begin_time=1000,
+    )
+    storage_service.episode_attach_frame(
+        donor_dir,
+        episode_id=7,
+        frame_uid=77,
+        stream_id=7,
+        gen_time=1050,
+        carrier_type=10803,
+        source=1,
+        dest=0,
+        data_length=8,
+        integrity_version=2,
+        payload_checksum=111,
+        frame_checksum=222,
+    )
+    storage_service.episode_attach_frame(
+        donor_dir,
+        episode_id=7,
+        frame_uid=101,
+        trigger_frame_uid=77,
+        stream_id=7,
+        gen_time=1100,
+        carrier_type=10803,
+        source=1,
+        dest=0,
+        data_length=12,
+        integrity_version=2,
+        payload_checksum=123,
+        frame_checksum=456,
+    )
+    storage_service.episode_attach_ref(
+        donor_dir,
+        episode_id=7,
+        ref_kind="payload",
+        ref_id="missing/payload.json",
+        ref_hash="sha256:missing",
+    )
+    storage_service.episode_attach_ref(
+        donor_dir,
+        episode_id=7,
+        ref_kind="episode",
+        ref_uid=998,
+    )
+    storage_service.episode_end(
+        donor_dir,
+        episode_id=7,
+        end_time=1200,
+        last_frame_uid=101,
+        frame_count=2,
+        reason="done",
+    )
+    repair_bundle = storage_service.build_export_bundle(donor_dir, episode_id=7)
+
+    dry_apply = storage_service.repair_apply(
+        runtime_dir, repair_bundle, episode_id=7, dry_run=True
+    )
+    assert dry_apply["schema"] == "kungfu.storage.repair-apply/v1"
+    assert dry_apply["dry_run"] is True
+    assert dry_apply["applied"] is False
+    assert dry_apply["applied_count"] >= 1
+    assert storage_service.fsck(runtime_dir, episode_id=7)["status"] == "degraded"
+
+    applied = storage_service.repair_apply(
+        runtime_dir, repair_bundle, episode_id=7, dry_run=False
+    )
+    assert applied["schema"] == "kungfu.storage.repair-apply/v1"
+    assert applied["applied"] is True
+    assert applied["applied_count"] >= 1
+    repaired_warning_codes = {
+        warning["code"]
+        for warning in storage_service.fsck(runtime_dir, episode_id=7)["warnings"]
+    }
+    assert "episode_root_trigger_frame_missing" not in repaired_warning_codes
+    assert "episode_trigger_frame_missing" not in repaired_warning_codes
 
 
 def test_payload_fsck_verifies_versioned_frame_checksums(tmp_path):
@@ -1243,6 +1336,37 @@ def test_storage_fsck_reports_degraded_status_for_recorded_payload_states(tmp_pa
     assert repair["candidate_count"] == 1
     assert repair["candidates"][0]["code"] == "repair_source_payload"
     assert repair["candidates"][0]["subject"] == "note:note-missing"
+    assert repair["candidates"][0]["payload_hash"]
+
+    material = storage_service.build_export_bundle(
+        runtime_dir, source_id="degraded-synth"
+    )
+    dry_apply = storage_service.repair_apply(
+        runtime_dir, material, source_id="degraded-synth", dry_run=True
+    )
+    assert dry_apply["schema"] == "kungfu.storage.repair-apply/v1"
+    assert dry_apply["dry_run"] is True
+    assert dry_apply["applied"] is False
+    assert dry_apply["applied_count"] >= 1
+    assert (
+        storage_service.fsck(runtime_dir, source_id="degraded-synth")["status"]
+        == "degraded"
+    )
+
+    applied = storage_service.repair_apply(
+        runtime_dir, material, source_id="degraded-synth", dry_run=False
+    )
+    assert applied["applied"] is True
+    assert applied["applied_count"] >= 1
+    repaired = storage_service.fsck(runtime_dir, source_id="degraded-synth")
+    assert repaired["ok"]
+    assert repaired["status"] == "ok"
+    warning_subjects = {
+        warning["subject"]
+        for warning in repaired["warnings"]
+        if warning["code"] == "payload_not_present"
+    }
+    assert "note:note-missing" not in warning_subjects
 
     # A fully present source verifies as ok with an ok verdict.
     healthy_dir = tmp_path / "healthy"
