@@ -1,6 +1,6 @@
 # ADR-0039: a single kungfu view interface is the sole FlatBuffers access point; raw FB is not called elsewhere
 
-- Status: proposed
+- Status: accepted
 - Date: 2026-07-09
 - Category: (architecture) memory-safety mechanism — how zero-copy views over
   FlatBuffers buffers are made temporally safe by construction instead of by
@@ -100,18 +100,26 @@ Enforcement is a mechanism, not a rule:
 
 ## First delivery (staged)
 
-1. **Map** the current raw-FB files and call sites (done: ~4 files, ~25 sites in
-   `runtime/cache` + `runtime/schema`; kernel is FB-free).
-2. **Define `kungfu::view`** — the zero-cost POD accessor (wrapping
-   `frame->data<T>()`), the owning FB handle (co-owns its buffer), and the
-   verifier-on-untrusted entry.
-3. **Migrate one first slice** — the `fb_projector.h` reflection path (the
-   `.bfbs`-bug zone) — through the interface; prove zero-cost POD, safe
-   reflection, green build/tests, and no hot-path perf regression (benchmark).
-4. **Add the CI gate** allowlisting the view module and failing elsewhere.
-5. **Migrate the rest** (`fb_schema_registry`, `open_layer_projector`,
-   `schema_compiler`, the `py-runtime` consumer) incrementally, then flip the gate
-   to strict.
+1. **Map** the current raw-FB files and call sites (done: 4 files, 25 sites in
+   `runtime/cache` + `runtime/schema`; kernel is FB-free). Confirmed against live
+   `dev/v4/v4.0`.
+2. **Define `kungfu::view`** (done, slice 1) — `pod.h` zero-cost POD accessor
+   (wraps `frame->data<T>()`; proven to compile to the identical
+   pointer-plus-offset load); `schema_handle` co-owns its `.bfbs` bytes
+   (`shared_ptr<const std::string>`) and keeps `reflection::Schema *` private, so
+   no bare view escapes; `col_plan` is reflection-free; `VerifySchemaBuffer` runs
+   at the `.bfbs` load boundary and `verify_table` guards data frames.
+3. **Migrate the first slice** (done, slice 1) — `fb_projector.h` (retired) and
+   `fb_schema_registry` onto the handle, plus `open_layer_projector`'s file load;
+   full core build green, the projection roundtrip (thin/full/evolve/verify)
+   matches the pre-migration behavior, and the POD hot path is unchanged.
+4. **Add the CI gate** (done, slice 1) — `check-view-boundary.mjs` (include- and
+   symbol-level) wired into `verify.mjs`; allowlists the view module and fails
+   elsewhere. `runtime/schema/schema_compiler.cpp` is temporarily allowlisted.
+   A `slices/view-encapsulation` probe proves the roundtrip + boundary.
+5. **Migrate the rest** — `schema_compiler` (behind `kungfu::view::compile_schema`)
+   and the `py-runtime` consumer incrementally, then remove the schema_compiler
+   allowlist to flip the gate strict.
 
 ## Explicitly out of scope
 
