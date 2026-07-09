@@ -125,6 +125,11 @@ defaults, optional user overrides, contract metadata, source metadata,
 a compact `kungfu.config.path/v1` payload. The `contract.hash` field makes the
 exact contract world inspectable by users, agents, and release gates.
 
+Use `kungfu storage layout --json` when the question is not "which config wins"
+but "where do workspace Episode journals, payloads, provider state, and
+projections live under the resolved data home". That layout is reported by the
+C++ storage service and keeps `KF_CONFIG_HOME` separate from workspace data.
+
 ## Isolated product instances
 
 Use an instance home when you need to run a second local Kungfu app without

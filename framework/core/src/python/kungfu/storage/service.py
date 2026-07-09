@@ -305,6 +305,27 @@ def status(
     )
 
 
+def layout(
+    runtime_dir: str | Path,
+    *,
+    runtime_home: str | Path | None = None,
+    config_home: str | Path | None = None,
+    provider: str | None = None,
+) -> dict[str, Any]:
+    return dict(
+        _runtime().run_storage_service_operation(
+            "layout",
+            str(runtime_dir),
+            {
+                "scope": "all",
+                "runtime_home": str(runtime_home) if runtime_home is not None else None,
+                "config_home": str(config_home) if config_home is not None else None,
+                "provider": provider,
+            },
+        )
+    )
+
+
 def _entries_for_manifest(
     manifest: dict[str, Any], range_filter: dict[str, Any] | None = None
 ) -> list[dict[str, Any]]:

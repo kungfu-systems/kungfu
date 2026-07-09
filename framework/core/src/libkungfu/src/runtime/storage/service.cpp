@@ -273,6 +273,26 @@ fs::path manifest_path(const std::string &runtime_dir, const std::string &source
   return source_manifest_dir(runtime_dir, source_id) / (manifest_id + ".json");
 }
 
+fs::path absolute_normalized(fs::path path) { return fs::absolute(std::move(path)).lexically_normal(); }
+
+fs::path runtime_home_path(const storage_service_options &options) {
+  const auto explicit_runtime_home = text_or(options.operation_options, "runtime_home");
+  if (!explicit_runtime_home.empty()) {
+    return absolute_normalized(explicit_runtime_home);
+  }
+  const auto runtime = absolute_normalized(options.runtime_dir);
+  return runtime.filename() == "runtime" ? runtime.parent_path() : runtime;
+}
+
+std::string runtime_home_source(const storage_service_options &options) {
+  return text_or(options.operation_options, "runtime_home").empty() ? "inferred-from-runtime-dir" : "option";
+}
+
+std::string optional_absolute_path(const nlohmann::json &object, const std::string &field) {
+  const auto value = text_or(object, field);
+  return value.empty() ? std::string{} : absolute_normalized(value).string();
+}
+
 std::vector<fs::path> manifest_paths(const std::string &runtime_dir, const std::string &source_id = {});
 std::vector<fs::path> latest_manifest_paths(const std::string &runtime_dir, const std::string &source_id = {});
 std::vector<fs::path> all_payload_paths(const std::string &runtime_dir);
@@ -729,6 +749,72 @@ std::unique_ptr<storage_provider> make_provider(const std::string &runtime_dir) 
   storage_service_options options;
   options.runtime_dir = runtime_dir;
   return make_provider(options);
+}
+
+nlohmann::json workspace_episode_layout(const storage_service_options &options, const storage_provider &provider) {
+  const auto runtime = absolute_normalized(options.runtime_dir);
+  const auto home = runtime_home_path(options);
+  const auto journal_dir = runtime / "journal";
+  const auto storage_dir = runtime / "storage";
+  const auto episode_manifest_dir =
+      journal_dir / "system" / yy_storage::EPISODE_MANIFEST_NAMESPACE / yy_storage::EPISODE_MANIFEST_NAME / "live";
+  const auto source_manifest_pattern = storage_dir / "sources" / "<source-id>" / "manifests" / "*.json";
+  const auto payload_pattern = storage_dir / "payloads" / "<hash-prefix>" / "<sha256>.json";
+
+  return {
+      {"schema", "kungfu.workspace.episode-layout/v1"},
+      {"owner", RUNTIME_STORAGE_SERVICE_OWNER},
+      {"layout_version", 1},
+      {"runtime_home", home.string()},
+      {"workspace_data_home", home.string()},
+      {"runtime_home_source", runtime_home_source(options)},
+      {"runtime_dir", runtime.string()},
+      {"runtime_dir_is_standard_child", runtime.filename() == "runtime"},
+      {"config_home", optional_absolute_path(options.operation_options, "config_home")},
+      {"provider", provider.name()},
+      {"provider_layout", provider.layout()},
+      {"paths",
+       {{"data_home", home.string()},
+        {"runtime_dir", runtime.string()},
+        {"archive_dir", (home / "archive").string()},
+        {"dataset_dir", (home / "dataset").string()},
+        {"inbox_dir", (home / "inbox").string()},
+        {"journal_dir", journal_dir.string()},
+        {"storage_dir", storage_dir.string()},
+        {"source_registry", registry_path(runtime.string()).string()},
+        {"source_manifests", source_manifest_pattern.string()},
+        {"payloads", payload_pattern.string()},
+        {"rocksdb", rocksdb_root(runtime.string()).string()},
+        {"sqlite_projection", sqlite_projection_path(runtime.string()).string()},
+        {"episode_manifest_journal_dir", episode_manifest_dir.string()},
+        {"episode_manifest_journal", (episode_manifest_dir / "*.journal").string()},
+        {"master_state", (runtime / "master").string()},
+        {"remote_mirrors", (runtime / "remotes" / "<source-id>" / "runtime").string()},
+        {"atlas_store", (runtime / "atlas" / "store").string()}}},
+      {"episodes",
+       {{"authority", "yijinjing-journal"},
+        {"schema", yy_storage::EPISODE_MANIFEST_SCHEMA_V1},
+        {"manifest_namespace", yy_storage::EPISODE_MANIFEST_NAMESPACE},
+        {"manifest_name", yy_storage::EPISODE_MANIFEST_NAME},
+        {"manifest_journal", (episode_manifest_dir / "*.journal").string()},
+        {"query_tables", nlohmann::json::array({"episodes", "episode_records", "episode_frames", "episode_refs"})},
+        {"export_schema", "kungfu.storage.episode-bundle/v1"}}},
+      {"ownership",
+       {{"journal_dir", "append-only yijinjing frames owned by the resolved runtime"},
+        {"episode_manifest_journal", "append-only yijinjing manifest records; not loose JSON authority"},
+        {"storage_dir", "runtime storage service area for manifests, payloads, provider databases, and projections"},
+        {"source_registry", "derived source catalog that can be rebuilt from accepted manifests"},
+        {"payloads", "provider-owned content-addressed payload bodies"},
+        {"sqlite_projection", "derived rebuildable query projection"},
+        {"rocksdb", "optional provider-owned large-payload/key-value backend"},
+        {"config_home", "user config home; intentionally outside workspace data"}}},
+      {"notes", nlohmann::json::array({
+                    "This layout describes the resolved local data root; it is an inspection contract, not a second "
+                    "fact source.",
+                    "Episode authority remains the yijinjing manifest journal under the runtime journal tree.",
+                    "Provider-specific paths are implementation details behind the runtime storage service API.",
+                })},
+  };
 }
 
 nlohmann::json entries_for_manifest(const nlohmann::json &manifest, const nlohmann::json &range_filter = {}) {
@@ -2188,6 +2274,11 @@ public:
     return query_sqlite_projection(options);
   }
 
+  [[nodiscard]] nlohmann::json layout(const storage_service_options &options) const override {
+    const auto provider = make_provider(options);
+    return workspace_episode_layout(options, *provider);
+  }
+
   [[nodiscard]] nlohmann::json episode_begin(const storage_service_options &options) const override {
     return episode_store(options).begin(parse_episode_begin_options(options.operation_options));
   }
@@ -2258,6 +2349,7 @@ std::vector<std::string> storage_operation_names() {
       storage_operation_name(storage_operation::CompactPlan),
       storage_operation_name(storage_operation::VerifySync),
       storage_operation_name(storage_operation::Query),
+      storage_operation_name(storage_operation::Layout),
       storage_operation_name(storage_operation::EpisodeBegin),
       storage_operation_name(storage_operation::EpisodeHeartbeat),
       storage_operation_name(storage_operation::EpisodeEnd),
@@ -2289,6 +2381,8 @@ std::string storage_operation_name(storage_operation operation) {
     return "verify_sync";
   case storage_operation::Query:
     return "query";
+  case storage_operation::Layout:
+    return "layout";
   case storage_operation::EpisodeBegin:
     return "episode_begin";
   case storage_operation::EpisodeHeartbeat:
@@ -2336,6 +2430,9 @@ storage_operation parse_storage_operation(const std::string &operation) {
   }
   if (operation == "query") {
     return storage_operation::Query;
+  }
+  if (operation == "layout") {
+    return storage_operation::Layout;
   }
   if (operation == "episode_begin") {
     return storage_operation::EpisodeBegin;
@@ -2395,6 +2492,10 @@ nlohmann::json make_storage_service_request(const std::string &operation, const 
     request["query"] = parsed_options.query;
     request["kind"] = parsed_options.kind.empty() ? nlohmann::json(nullptr) : nlohmann::json(parsed_options.kind);
     request["limit"] = parsed_options.limit;
+  } else if (parsed_operation == storage_operation::Layout) {
+    request["runtime_home"] = runtime_home_path(parsed_options).string();
+    request["runtime_home_source"] = runtime_home_source(parsed_options);
+    request["config_home"] = optional_absolute_path(parsed_options.operation_options, "config_home");
   }
   if (parsed_options.episode_id != 0) {
     request["episode_id"] = parsed_options.episode_id;
@@ -2433,6 +2534,8 @@ nlohmann::json run_storage_service_operation(const std::string &operation, const
     return storage_service_instance().verify_sync(parsed_options);
   case storage_operation::Query:
     return storage_service_instance().query(parsed_options);
+  case storage_operation::Layout:
+    return storage_service_instance().layout(parsed_options);
   case storage_operation::EpisodeBegin:
     return storage_service_instance().episode_begin(parsed_options);
   case storage_operation::EpisodeHeartbeat:

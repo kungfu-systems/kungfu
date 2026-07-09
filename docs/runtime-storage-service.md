@@ -442,6 +442,27 @@ runtime/storage/payloads/<prefix>/<sha256>.json
 runtime/storage/projections/storage.sqlite
 ```
 
+When the resolved data home is a workspace `.kungfu/`, those paths live under
+the workspace root as:
+
+```text
+.kungfu/runtime/journal/system/storage/episode-manifest/live/*.journal
+.kungfu/runtime/storage/sources.json
+.kungfu/runtime/storage/sources/<source_id>/manifests/*.json
+.kungfu/runtime/storage/payloads/<prefix>/<sha256>.json
+.kungfu/runtime/storage/rocksdb/
+.kungfu/runtime/storage/projections/storage.sqlite
+```
+
+`kungfu storage layout --json` is the v1 inspection surface for this resolved
+layout. It enters through the C++ `kungfu.runtime.storage-service/v1` operation
+`layout`, so Python, Node, CLI, and GUI code can inspect the same paths without
+redefining path rules. The returned JSON is an inspection contract, not a fact
+source: Episode authority remains the yijinjing manifest journal, source
+authority remains accepted manifests plus content-addressed payloads, and
+SQLite/RocksDB remain provider/projection implementation details behind the
+storage service API.
+
 `runtime/storage/projections/storage.sqlite` is the first generic SQLite
 projection. It is owned by the C++ storage service, rebuilt by
 `storage rebuild-index`, and contains query tables for accepted source records,
@@ -462,6 +483,7 @@ rebuildable cache, not a source of authority.
 The user-facing generic commands are:
 
 ```sh
+kungfu storage layout --json
 kungfu storage status --scope all --json
 kungfu storage status --scope source --source <source-id> --json
 kungfu storage fsck --scope all --json

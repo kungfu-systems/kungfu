@@ -371,6 +371,7 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
         "compact_plan",
         "verify_sync",
         "query",
+        "layout",
         "episode_begin",
         "episode_heartbeat",
         "episode_end",
@@ -420,6 +421,37 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
     assert request["provider"] == "rocksdb"
     assert request["provider_config_source"] == "option"
 
+    workspace_home = tmp_path / ".kungfu"
+    runtime_dir = workspace_home / "runtime"
+    config_home = tmp_path / ".kungfu-config"
+    layout = storage_service.layout(
+        runtime_dir,
+        runtime_home=workspace_home,
+        config_home=config_home,
+    )
+    assert layout["schema"] == "kungfu.workspace.episode-layout/v1"
+    assert layout["owner"] == "libkungfu"
+    assert layout["workspace_data_home"] == str(workspace_home)
+    assert layout["runtime_home"] == str(workspace_home)
+    assert layout["runtime_home_source"] == "option"
+    assert layout["runtime_dir"] == str(runtime_dir)
+    assert layout["config_home"] == str(config_home)
+    assert layout["paths"]["data_home"] == str(workspace_home)
+    assert layout["paths"]["storage_dir"] == str(runtime_dir / "storage")
+    assert layout["paths"]["sqlite_projection"] == str(
+        runtime_dir / "storage/projections/storage.sqlite"
+    )
+    assert layout["paths"]["episode_manifest_journal"] == str(
+        runtime_dir / "journal/system/storage/episode-manifest/live/*.journal"
+    )
+    assert layout["episodes"]["authority"] == "yijinjing-journal"
+    assert layout["episodes"]["query_tables"] == [
+        "episodes",
+        "episode_records",
+        "episode_frames",
+        "episode_refs",
+    ]
+
 
 def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monkeypatch):
     runtime_dir = tmp_path / "runtime"
@@ -455,6 +487,7 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
     )
 
     storage_service.status(runtime_dir, source_id="local-synth")
+    storage_service.layout(runtime_dir)
     storage_service.fsck(runtime_dir, source_id="local-synth")
     storage_service.rebuild_index(runtime_dir, source_id="local-synth", dry_run=True)
     storage_service.rebuild_index(runtime_dir, source_id="local-synth", dry_run=False)
@@ -481,6 +514,7 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
     entered = {operation for operation, _, _ in calls}
     assert {
         "status",
+        "layout",
         "fsck",
         "rebuild_index",
         "gc_plan",

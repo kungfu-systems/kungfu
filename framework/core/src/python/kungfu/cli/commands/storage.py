@@ -48,6 +48,32 @@ def storage(ctx):
     pass
 
 
+@storage.command(help="show the resolved workspace Episode storage layout")
+@click.option(
+    "--provider", type=click.Choice(["content-addressed-file", "rocksdb"]), default=None
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@storage_command_context
+def layout(ctx, provider, as_json):
+    from kungfu.storage import service
+
+    result = service.layout(
+        ctx.runtime_dir,
+        runtime_home=ctx.home,
+        config_home=ctx.config_home,
+        provider=provider,
+    )
+    if as_json:
+        _echo_json(result)
+        return
+    click.echo(f"[storage] data home: {result['workspace_data_home']}")
+    click.echo(f"[storage] runtime dir: {result['runtime_dir']}")
+    click.echo(
+        f"[storage] episode manifest: {result['paths']['episode_manifest_journal']}"
+    )
+    click.echo(f"[storage] provider: {result['provider']}")
+
+
 @storage.command(help="summarize a storage scope")
 @click.option("--scope", type=click.Choice(["atlas", "source", "all"]), required=True)
 @click.option("--source", "storage_source_id", type=str, default=None)

@@ -190,6 +190,19 @@ Episode manifest v1 is implemented as a system catalog journal at:
 journal/system/storage/episode-manifest/live/*.journal
 ```
 
+In the workspace data-home layout this resolves to:
+
+```text
+.kungfu/runtime/journal/system/storage/episode-manifest/live/*.journal
+```
+
+Use `kungfu storage layout --json` to inspect the fully resolved absolute path
+for the current process. That command reports the workspace data home, runtime
+dir, storage provider paths, SQLite projection path, and Episode manifest
+journal path through the C++ storage service. The JSON output is intentionally
+only an inspection view; the append-only yijinjing manifest journal remains the
+Episode authority.
+
 The authority records are yijinjing Hana/POD schema records:
 
 | Record | Tag | Purpose |

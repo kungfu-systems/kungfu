@@ -105,6 +105,11 @@ function selectedNodeResults(runtimeDir) {
       scope: 'source',
       source_id: 'node-synth',
     }),
+    layout: kungfu.runStorageServiceOperation('layout', runtimeDir, {
+      scope: 'all',
+      runtime_home: path.dirname(runtimeDir),
+      config_home: path.join(path.dirname(runtimeDir), 'config'),
+    }),
     fsck: kungfu.runStorageServiceOperation('fsck', runtimeDir, {
       scope: 'source',
       source_id: 'node-synth',
@@ -174,6 +179,11 @@ out = {
         {"scope": "source", "source_id": "node-synth"},
     ),
     "status": service.status(runtime_dir, source_id="node-synth"),
+    "layout": service.layout(
+        runtime_dir,
+        runtime_home=str(Path(runtime_dir).parent),
+        config_home=str(Path(runtime_dir).parent / "config"),
+    ),
     "fsck": service.fsck(runtime_dir, source_id="node-synth"),
     "exported": service.export_records(
         runtime_dir,
@@ -261,6 +271,30 @@ for (const providerCase of providerCases) {
           assert.equal(
             nodeResults.status.provider,
             providerCase.expectedProvider,
+          );
+          assert.equal(
+            nodeResults.layout.schema,
+            'kungfu.workspace.episode-layout/v1',
+          );
+          assert.equal(
+            nodeResults.layout.paths.storage_dir,
+            path.join(runtimeDir, 'storage'),
+          );
+          assert.equal(
+            nodeResults.layout.paths.episode_manifest_journal,
+            path.join(
+              runtimeDir,
+              'journal',
+              'system',
+              'storage',
+              'episode-manifest',
+              'live',
+              '*.journal',
+            ),
+          );
+          assert.equal(
+            nodeResults.layout.config_home,
+            path.join(path.dirname(runtimeDir), 'config'),
           );
           assert.equal(
             nodeResults.optionRequest.provider,

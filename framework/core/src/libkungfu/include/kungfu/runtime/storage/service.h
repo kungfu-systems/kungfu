@@ -23,6 +23,7 @@ enum class storage_operation {
   CompactPlan,
   VerifySync,
   Query,
+  Layout,
   EpisodeBegin,
   EpisodeHeartbeat,
   EpisodeEnd,
@@ -73,6 +74,8 @@ public:
   [[nodiscard]] virtual nlohmann::json verify_sync(const storage_service_options &options) const = 0;
 
   [[nodiscard]] virtual nlohmann::json query(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json layout(const storage_service_options &options) const = 0;
 
   [[nodiscard]] virtual nlohmann::json episode_begin(const storage_service_options &options) const = 0;
 
