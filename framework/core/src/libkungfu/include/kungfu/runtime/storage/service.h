@@ -48,6 +48,7 @@ struct storage_service_options {
   nlohmann::json operation_options = nlohmann::json::object();
   std::string query = {};
   std::string kind = {};
+  uint64_t episode_id = 0;
   uint64_t limit = 100;
 };
 

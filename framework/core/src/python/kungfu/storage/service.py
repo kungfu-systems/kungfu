@@ -346,14 +346,17 @@ def fsck(
     runtime_dir: str | Path,
     *,
     source_id: str | None = None,
+    episode_id: int | None = None,
 ) -> dict[str, Any]:
+    scope = "episode" if episode_id else ("source" if source_id else "all")
     return dict(
         _runtime().run_storage_service_operation(
             "fsck",
             str(runtime_dir),
             {
-                "scope": "source" if source_id else "all",
+                "scope": scope,
                 "source_id": source_id,
+                "episode_id": episode_id or 0,
             },
         )
     )
@@ -440,17 +443,20 @@ def query_projection(
     *,
     query: str = "entries",
     source_id: str | None = None,
+    episode_id: int | None = None,
     kind: str | None = None,
     range_filter: dict[str, Any] | None = None,
     limit: int = 100,
 ) -> dict[str, Any]:
+    scope = "episode" if episode_id else ("source" if source_id else "all")
     return dict(
         _runtime().run_storage_service_operation(
             "query",
             str(runtime_dir),
             {
-                "scope": "source" if source_id else "all",
+                "scope": scope,
                 "source_id": source_id,
+                "episode_id": episode_id or 0,
                 "query": query,
                 "kind": kind,
                 "range": range_filter or {},
@@ -720,17 +726,23 @@ def export_bundle_json(
     runtime_dir: str | Path,
     out_path: str | Path,
     *,
-    source_id: str,
+    source_id: str | None = None,
+    episode_id: int | None = None,
     range_filter: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     bundle = build_export_bundle(
-        runtime_dir, source_id=source_id, range_filter=range_filter
+        runtime_dir,
+        source_id=source_id,
+        episode_id=episode_id,
+        range_filter=range_filter,
     )
     _write_json(Path(out_path), bundle)
+    scope = "episode" if episode_id else "source"
     return {
         "ok": True,
-        "scope": "source",
+        "scope": scope,
         "source_id": source_id,
+        "episode_id": episode_id,
         "range": range_filter,
         "sync_root": bundle.get("manifest", {}).get("sync_root"),
         "format": "bundle-json",
@@ -742,16 +754,19 @@ def export_bundle_json(
 def build_export_bundle(
     runtime_dir: str | Path,
     *,
-    source_id: str,
+    source_id: str | None = None,
+    episode_id: int | None = None,
     range_filter: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    scope = "episode" if episode_id else "source"
     return dict(
         _runtime().run_storage_service_operation(
             "export_bundle",
             str(runtime_dir),
             {
-                "scope": "source",
+                "scope": scope,
                 "source_id": source_id,
+                "episode_id": episode_id or 0,
                 "range": range_filter or {},
             },
         )

@@ -304,7 +304,10 @@ for the Episode object.
 Episode is now an accepted architecture direction with a v1 manifest journal.
 Existing source/range storage commands still operate on sources, manifests,
 scopes, and ranges. Episode operations exist as the first C++ storage-service
-surface and can be called through Python/Node bindings and the CLI. The next
+surface and can be called through Python/Node bindings and the CLI. Episode is
+also addressable through the generic storage service as `scope=episode` for
+fsck/export and through storage query tables such as `episodes`,
+`episode_frames`, `episode_refs`, and `episode_records`. The next
 implementation work is to make the action recorder automatically open/current/
 seal Episodes and move writer/provider surfaces toward Episode-aware
-allocation and fsck.
+allocation.

@@ -140,8 +140,18 @@ episode_list
 episode_inspect
 ```
 
-Python, Node, and CLI use this C++ service path. They may render JSON folded
-views, but they do not own the manifest authority.
+Python, Node, and CLI use this C++ service path. The generic storage service
+also accepts Episode as a first-class selector for fsck, query, and
+bundle export:
+
+```text
+storage fsck --scope episode
+storage query --table episodes|episode_records|episode_frames|episode_refs
+storage export --scope episode --format bundle-json
+```
+
+These commands render folded JSON views, but they do not own the manifest
+authority.
 
 V1 intentionally associates frames to Episodes by appending
 `EpisodeFrameAttached` records. It does not add fields to `frame_header` or

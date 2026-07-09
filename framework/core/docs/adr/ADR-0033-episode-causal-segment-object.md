@@ -129,7 +129,10 @@ This ADR started as a design commitment and now has a v1 implementation slice:
   core surface;
 - Python, Node, and CLI surfaces call the C++ service instead of owning
   separate Episode logic;
-- `storage fsck` includes basic Episode manifest consistency checks.
+- `storage fsck` includes basic Episode manifest consistency checks;
+- `storage fsck --scope episode`, `storage query --table episodes` and
+  `storage export --scope episode` make Episode an addressable storage-service
+  selector without requiring the physical mmap layout to move first.
 
 No full physical journal re-layout is claimed by this ADR. V1 associates
 current frames to Episodes through append-only `EpisodeFrameAttached` manifest

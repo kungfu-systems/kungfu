@@ -66,7 +66,7 @@ const char *ref_kind_name(EpisodeRefKind kind) {
 
 location_ptr manifest_location(const std::string &runtime_dir) {
   auto locator = std::make_shared<kungfu::yijinjing::data::locator>(runtime_dir, mode::LIVE);
-  return location::make_shared(mode::LIVE, location_role::SYSTEM, EPISODE_MANIFEST_GROUP, EPISODE_MANIFEST_NAME,
+  return location::make_shared(mode::LIVE, location_role::SYSTEM, EPISODE_MANIFEST_NAMESPACE, EPISODE_MANIFEST_NAME,
                                locator);
 }
 

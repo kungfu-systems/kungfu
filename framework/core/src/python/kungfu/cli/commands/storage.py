@@ -73,11 +73,14 @@ def status(ctx, scope, storage_source_id, as_json):
 
 
 @storage.command(help="verify runtime storage integrity for a scope")
-@click.option("--scope", type=click.Choice(["atlas", "source", "all"]), required=True)
+@click.option(
+    "--scope", type=click.Choice(["atlas", "source", "episode", "all"]), required=True
+)
 @click.option("--source", "storage_source_id", type=str, default=None)
+@click.option("--episode-id", type=int, default=0)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @storage_command_context
-def fsck(ctx, scope, storage_source_id, as_json):
+def fsck(ctx, scope, storage_source_id, episode_id, as_json):
     if scope == "atlas":
         from kungfu.atlas import store
 
@@ -85,9 +88,15 @@ def fsck(ctx, scope, storage_source_id, as_json):
     else:
         from kungfu.storage import service
 
+        if scope == "episode" and not episode_id:
+            click.echo(
+                "[storage] --episode-id is required for --scope episode", err=True
+            )
+            sys.exit(2)
         result = service.fsck(
             ctx.runtime_dir,
             source_id=storage_source_id if scope == "source" else None,
+            episode_id=episode_id if scope == "episode" else None,
         )
     if as_json:
         _echo_json(result)
@@ -102,8 +111,11 @@ def fsck(ctx, scope, storage_source_id, as_json):
 
 
 @storage.command(help="export a storage scope")
-@click.option("--scope", type=click.Choice(["atlas", "source"]), required=True)
+@click.option(
+    "--scope", type=click.Choice(["atlas", "source", "episode"]), required=True
+)
 @click.option("--source", "storage_source_id", type=str, default=None)
+@click.option("--episode-id", type=int, default=0)
 @click.option("--since", type=str, default=None, help="relative window such as 3d/12h")
 @click.option(
     "--from", "from_time", type=str, default=None, help="inclusive start time"
@@ -123,6 +135,7 @@ def export(
     ctx,
     scope,
     storage_source_id,
+    episode_id,
     since,
     from_time,
     until,
@@ -132,6 +145,11 @@ def export(
 ):
     if scope == "atlas" and format_ != "jsonl":
         click.echo("[storage] --scope atlas supports only --format jsonl", err=True)
+        sys.exit(1)
+    if scope == "episode" and format_ != "bundle-json":
+        click.echo(
+            "[storage] --scope episode supports only --format bundle-json", err=True
+        )
         sys.exit(1)
     try:
         if scope == "atlas":
@@ -146,8 +164,21 @@ def export(
         else:
             from kungfu.storage import service
 
-            _require_source(storage_source_id)
-            if format_ == "bundle-json":
+            if scope == "episode":
+                if not episode_id:
+                    click.echo(
+                        "[storage] --episode-id is required for --scope episode",
+                        err=True,
+                    )
+                    sys.exit(2)
+                result = service.export_bundle_json(
+                    ctx.runtime_dir,
+                    out_path,
+                    episode_id=episode_id,
+                    range_filter=_range_filter(since, from_time, until),
+                )
+            elif format_ == "bundle-json":
+                _require_source(storage_source_id)
                 result = service.export_bundle_json(
                     ctx.runtime_dir,
                     out_path,
@@ -155,6 +186,7 @@ def export(
                     range_filter=_range_filter(since, from_time, until),
                 )
             else:
+                _require_source(storage_source_id)
                 result = service.export_jsonl(
                     ctx.runtime_dir,
                     out_path,
@@ -246,12 +278,23 @@ def rebuild_index(ctx, scope, storage_source_id, dry_run, as_json):
 @click.option(
     "--table",
     "query_table",
-    type=click.Choice(["sources", "manifests", "entries"]),
+    type=click.Choice(
+        [
+            "sources",
+            "manifests",
+            "entries",
+            "episodes",
+            "episode_records",
+            "episode_frames",
+            "episode_refs",
+        ]
+    ),
     default="entries",
     show_default=True,
 )
-@click.option("--scope", type=click.Choice(["source", "all"]), default="all")
+@click.option("--scope", type=click.Choice(["source", "episode", "all"]), default="all")
 @click.option("--source", "storage_source_id", type=str, default=None)
+@click.option("--episode-id", type=int, default=0)
 @click.option("--kind", type=str, default=None, help="filter entry rows by kind")
 @click.option("--since", type=str, default=None, help="relative window such as 3d/12h")
 @click.option(
@@ -266,6 +309,7 @@ def query(
     query_table,
     scope,
     storage_source_id,
+    episode_id,
     kind,
     since,
     from_time,
@@ -277,10 +321,17 @@ def query(
 
     if scope == "source":
         _require_source(storage_source_id)
+    if scope == "episode" and query_table != "episodes" and not episode_id:
+        click.echo(
+            f"[storage] --episode-id is required for --table {query_table}",
+            err=True,
+        )
+        sys.exit(2)
     result = service.query_projection(
         ctx.runtime_dir,
         query=query_table,
         source_id=storage_source_id if scope == "source" else None,
+        episode_id=episode_id if scope == "episode" else None,
         kind=kind,
         range_filter=_range_filter(since, from_time, until),
         limit=limit,

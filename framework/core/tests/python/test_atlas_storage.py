@@ -509,6 +509,39 @@ def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
     assert fsck["checked"]["episodes"] == 1
     assert fsck["episode_manifest"]["authority"] == "yijinjing-journal"
 
+    episode_fsck = storage_service.fsck(runtime_dir, episode_id=42)
+    assert episode_fsck["ok"]
+    assert episode_fsck["scope"] == "episode"
+    assert episode_fsck["episode_id"] == 42
+    assert episode_fsck["checked"]["episodes"] == 1
+
+    episode_rows = storage_service.query_projection(
+        runtime_dir,
+        query="episodes",
+        episode_id=42,
+    )
+    assert episode_rows["ok"]
+    assert episode_rows["projection"]["authority"] == "yijinjing-journal"
+    assert episode_rows["row_count"] == 1
+    assert episode_rows["rows"][0]["episode_id"] == 42
+
+    frame_rows = storage_service.query_projection(
+        runtime_dir,
+        query="episode_frames",
+        episode_id=42,
+    )
+    assert frame_rows["ok"]
+    assert frame_rows["row_count"] == 1
+    assert frame_rows["rows"][0]["frame_uid"] == 100
+
+    bundle = storage_service.build_export_bundle(runtime_dir, episode_id=42)
+    assert bundle["schema"] == "kungfu.storage.episode-bundle/v1"
+    assert bundle["scope"] == "episode"
+    assert bundle["episode_id"] == 42
+    assert bundle["manifest"]["episode_id"] == 42
+    assert bundle["record_count"] == 3
+    assert bundle["frame_count"] == 1
+
 
 def test_payload_fsck_verifies_versioned_frame_checksums(tmp_path):
     repo = tmp_path / "atlas"

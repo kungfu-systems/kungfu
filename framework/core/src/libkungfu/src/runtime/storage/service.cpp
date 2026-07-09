@@ -1227,6 +1227,62 @@ nlohmann::json sqlite_projection_json(const std::string &runtime_dir, const std:
 
 nlohmann::json query_sqlite_projection(const storage_service_options &options) {
   const auto query = options.query.empty() ? std::string("entries") : options.query;
+  if (query == "episodes" || query == "episode_records" || query == "episode_frames" || query == "episode_refs") {
+    nlohmann::json rows = nlohmann::json::array();
+    if (query == "episodes") {
+      if (options.episode_id == 0) {
+        rows = episode_store(options).list(0, options.limit).value("episodes", nlohmann::json::array());
+      } else {
+        const auto inspected = episode_store(options).inspect(options.episode_id);
+        if (inspected.value("ok", false)) {
+          rows.push_back(inspected.at("episode"));
+        }
+      }
+    } else {
+      if (options.episode_id == 0) {
+        throw std::invalid_argument("episode_id is required for " + query);
+      }
+      const auto inspected = episode_store(options).inspect(options.episode_id);
+      if (!inspected.value("ok", false)) {
+        return {{"ok", false},
+                {"scope", "episode"},
+                {"episode_id", options.episode_id},
+                {"projection",
+                 {{"name", "episode-manifest"},
+                  {"schema", yy_storage::EPISODE_MANIFEST_SCHEMA_V1},
+                  {"authority", "yijinjing-journal"},
+                  {"rebuildable", false}}},
+                {"query", query},
+                {"limit", options.limit},
+                {"rows", nlohmann::json::array()},
+                {"row_count", 0},
+                {"errors", inspected.value("errors", nlohmann::json::array())}};
+      }
+      const auto field = query == "episode_records"
+                             ? std::string("records")
+                             : (query == "episode_frames" ? std::string("frames") : std::string("refs"));
+      rows = inspected.value(field, nlohmann::json::array());
+      if (options.limit != 0 && rows.is_array() && rows.size() > options.limit) {
+        nlohmann::json limited = nlohmann::json::array();
+        for (size_t index = 0; index < std::min<size_t>(rows.size(), options.limit); ++index) {
+          limited.push_back(rows.at(index));
+        }
+        rows = limited;
+      }
+    }
+    return {{"ok", true},
+            {"scope", "episode"},
+            {"episode_id", options.episode_id == 0 ? nlohmann::json(nullptr) : nlohmann::json(options.episode_id)},
+            {"projection",
+             {{"name", "episode-manifest"},
+              {"schema", yy_storage::EPISODE_MANIFEST_SCHEMA_V1},
+              {"authority", "yijinjing-journal"},
+              {"rebuildable", false}}},
+            {"query", query},
+            {"limit", options.limit},
+            {"rows", rows},
+            {"row_count", rows.size()}};
+  }
   const auto path = sqlite_projection_path(options.runtime_dir);
   nlohmann::json result = {
       {"ok", true},
@@ -1262,6 +1318,70 @@ nlohmann::json query_sqlite_projection(const storage_service_options &options) {
   }
   result["row_count"] = result.at("rows").size();
   return result;
+}
+
+nlohmann::json episode_fsck_impl(const storage_service_options &options) {
+  const auto episode_report = episode_store(options).fsck(options.episode_id);
+  const auto checked = object_or_empty(episode_report, "checked");
+  nlohmann::json report = {
+      {"ok", episode_report.value("ok", false)},
+      {"status", episode_report.value("ok", false) ? "ok" : "failed"},
+      {"scope", "episode"},
+      {"episode_id", options.episode_id == 0 ? nlohmann::json(nullptr) : nlohmann::json(options.episode_id)},
+      {"errors", episode_report.value("errors", nlohmann::json::array())},
+      {"warnings", episode_report.value("warnings", nlohmann::json::array())},
+      {"checked",
+       {{"sources", 0},
+        {"manifests", 0},
+        {"payloads", 0},
+        {"schemas", 0},
+        {"accepted_ranges", 0},
+        {"source_records", 0},
+        {"projection_indexes", 1},
+        {"sqlite_projection_rows", 0},
+        {"orphan_payloads", 0},
+        {"episode_manifest_records", checked.value("episode_manifest_records", 0)},
+        {"episodes", checked.value("episodes", 0)}}},
+      {"episode_manifest", episode_report},
+      {"projections", nlohmann::json::array({{{"name", "episode-manifest"},
+                                              {"schema", yy_storage::EPISODE_MANIFEST_SCHEMA_V1},
+                                              {"authority", "yijinjing-journal"},
+                                              {"path", "journal/system/storage/episode-manifest/live/*.journal"},
+                                              {"rebuildable", false}}})}};
+  return report;
+}
+
+nlohmann::json episode_export_bundle_impl(const storage_service_options &options) {
+  if (options.episode_id == 0) {
+    throw std::invalid_argument("episode_id is required for episode export");
+  }
+  const auto inspected = episode_store(options).inspect(options.episode_id);
+  if (!inspected.value("ok", false)) {
+    throw std::runtime_error("episode not found: " + std::to_string(options.episode_id));
+  }
+  const auto episode = object_or_empty(inspected, "episode");
+  const auto records = inspected.value("records", nlohmann::json::array());
+  const auto frames = inspected.value("frames", nlohmann::json::array());
+  const auto refs = inspected.value("refs", nlohmann::json::array());
+  nlohmann::json dependencies = nlohmann::json::array();
+  for (const auto &ref : refs) {
+    if (text_or(ref, "ref_kind") == "episode") {
+      dependencies.push_back(ref);
+    }
+  }
+  return {{"schema", "kungfu.storage.episode-bundle/v1"},
+          {"bundle_id", "episode:" + std::to_string(options.episode_id)},
+          {"scope", "episode"},
+          {"episode_id", options.episode_id},
+          {"authority", "yijinjing-journal"},
+          {"manifest", episode},
+          {"records", records},
+          {"frames", frames},
+          {"refs", refs},
+          {"dependencies", dependencies},
+          {"record_count", records.size()},
+          {"frame_count", frames.size()},
+          {"ref_count", refs.size()}};
 }
 
 nlohmann::json replace_string_subtree(nlohmann::json value, const std::string &needle, const std::string &replacement) {
@@ -1537,6 +1657,9 @@ nlohmann::json fsck_error_report(const storage_service_options &options, const s
 }
 
 nlohmann::json fsck_impl(const storage_service_options &options) {
+  if (options.scope == "episode") {
+    return episode_fsck_impl(options);
+  }
   const auto provider = make_provider(options);
   nlohmann::json registry;
   try {
@@ -1909,6 +2032,9 @@ public:
   }
 
   [[nodiscard]] nlohmann::json export_bundle(const storage_service_options &options) const override {
+    if (options.scope == "episode") {
+      return episode_export_bundle_impl(options);
+    }
     const auto provider = make_provider(options);
     const auto manifest = load_latest_manifest_impl(*provider, options.source_id);
     if (manifest.is_null()) {
@@ -2255,6 +2381,7 @@ storage_service_options parse_storage_service_options(const std::string &runtime
   parsed.operation_options = options;
   parsed.query = text_or(options, "query", "entries");
   parsed.kind = text_or(options, "kind");
+  parsed.episode_id = uint64_or(options, "episode_id");
   parsed.limit = uint64_or(options, "limit", 100);
   return parsed;
 }
@@ -2268,6 +2395,9 @@ nlohmann::json make_storage_service_request(const std::string &operation, const 
     request["query"] = parsed_options.query;
     request["kind"] = parsed_options.kind.empty() ? nlohmann::json(nullptr) : nlohmann::json(parsed_options.kind);
     request["limit"] = parsed_options.limit;
+  }
+  if (parsed_options.episode_id != 0) {
+    request["episode_id"] = parsed_options.episode_id;
   }
   if (parsed_operation == storage_operation::EpisodeList) {
     request["location_uid"] = uint64_or(options, "location_uid");
@@ -2425,6 +2555,8 @@ nlohmann::json storage_service_capabilities() {
              {"schema", yy_storage::EPISODE_MANIFEST_SCHEMA_V1},
              {"authority", "yijinjing-journal"},
              {"path", "journal/system/storage/episode-manifest/live/*.journal"},
+             {"query_tables", nlohmann::json::array({"episodes", "episode_records", "episode_frames", "episode_refs"})},
+             {"export_schema", "kungfu.storage.episode-bundle/v1"},
              {"rebuildable", false}}})},
       {"notes",
        nlohmann::json::array({

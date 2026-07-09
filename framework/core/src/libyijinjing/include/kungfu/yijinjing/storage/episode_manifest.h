@@ -14,7 +14,7 @@
 namespace kungfu::yijinjing::storage {
 
 inline constexpr const char *EPISODE_MANIFEST_SCHEMA_V1 = "kungfu.episode.manifest/v1";
-inline constexpr const char *EPISODE_MANIFEST_GROUP = "storage";
+inline constexpr const char *EPISODE_MANIFEST_NAMESPACE = "storage";
 inline constexpr const char *EPISODE_MANIFEST_NAME = "episode-manifest";
 
 struct episode_begin_options {

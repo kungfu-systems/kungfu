@@ -468,6 +468,12 @@ kungfu storage compact --scope all --dry-run --json
 kungfu storage verify-sync --source <source-id> --json
 kungfu storage query --table entries --scope source --source <source-id> \
   --kind goal --since 20d --json
+kungfu storage query --table episodes --scope episode --json
+kungfu storage query --table episode_frames --scope episode \
+  --episode-id <episode-id> --json
+kungfu storage fsck --scope episode --episode-id <episode-id> --json
+kungfu storage export --scope episode --episode-id <episode-id> \
+  --format bundle-json --out episode.kfbundle.json --json
 ```
 
 `kungfu source add/list/sync/fsck` uses the same source registry path. Atlas
@@ -481,6 +487,26 @@ construction, accepted ranges, payload inventory, source-scoped fsck,
 range-limited export, bundle creation, and bundle import. It deliberately does
 not implement remote channel transport, conflict policy, destructive GC,
 compaction, repair, or a SQLite/RocksDB provider.
+
+### Episode-Owned Storage Slice V1
+
+Episode-owned storage v1 makes the yijinjing Episode manifest journal a normal
+selector in the runtime storage service:
+
+- `storage fsck --scope episode --episode-id <id>` verifies one Episode through
+  the same `libkungfu` service surface as source/all fsck.
+- `storage query --table episodes|episode_records|episode_frames|episode_refs`
+  reads the yijinjing-backed Episode manifest journal through the service
+  rather than treating SQLite as authority.
+- `storage export --scope episode --episode-id <id> --format bundle-json`
+  emits `kungfu.storage.episode-bundle/v1`, a folded export/debug bundle with
+  the Episode manifest summary, manifest records, frame attachments, refs, and
+  declared Episode dependencies.
+
+This slice still does not move event mmap pages into Episode-owned physical
+directories. Frame membership is authoritative through
+`EpisodeFrameAttached` records in the manifest journal. The physical allocation
+domain can change later without changing the product-facing Episode selector.
 
 ### Maintenance And Sync-Readiness Slice
 
