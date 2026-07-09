@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 // Minimal Electron main process for the kungfu reference app.
 //
@@ -10,10 +10,12 @@ import path from 'node:path';
 import {
   BrowserWindow,
   Menu,
+  Tray,
   WebContentsView,
   app,
   dialog,
   ipcMain,
+  nativeImage,
 } from 'electron';
 
 import {
@@ -263,10 +265,176 @@ let manager: SandboxManager | null = null;
 // The current shell window, tracked so the per-session window host (ADR-0016
 // stage 2) can push layout snapshots back to it for persistence.
 let shellWindow: BrowserWindow | null = null;
+let tray: Tray | null = null;
 
 // Set once the app is quitting; the session-window host reads it so window
 // closes during shutdown do not overwrite the persisted layout restore needs.
 let appQuitting = false;
+
+function kungfuBinPath(): string {
+  const binName = process.platform === 'win32' ? 'kungfu.exe' : 'kungfu';
+  return path.join(path.dirname(process.env.KFE_PATH || bindingPath), binName);
+}
+
+function showShellWindow() {
+  const win = shellWindow && !shellWindow.isDestroyed() ? shellWindow : null;
+  if (!win) {
+    createWindow();
+    return;
+  }
+  if (process.platform === 'darwin') void app.dock?.show();
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+  buildTrayMenu();
+}
+
+function hideShellWindow(win = shellWindow) {
+  if (!win || win.isDestroyed()) return;
+  win.hide();
+  if (process.platform === 'darwin') app.dock?.hide();
+  buildTrayMenu();
+}
+
+async function showCommandResult(
+  title: string,
+  args: string[],
+  successMessage: string,
+) {
+  try {
+    const out = execFileSync(kungfuBinPath(), args, {
+      env: process.env,
+      timeout: 10000,
+    });
+    await dialog.showMessageBox({
+      type: 'info',
+      message: successMessage,
+      detail: out.toString().trim().slice(0, 4000) || successMessage,
+    });
+  } catch (e) {
+    await dialog.showMessageBox({
+      type: 'error',
+      message: title,
+      detail: (e as Error).message,
+    });
+  }
+}
+
+function quitGui() {
+  appQuitting = true;
+  app.quit();
+}
+
+async function stopMasterAndQuit() {
+  try {
+    execFileSync(kungfuBinPath(), ['master', 'stop', '--json'], {
+      env: process.env,
+      timeout: 10000,
+    });
+    quitGui();
+  } catch (e) {
+    await dialog.showMessageBox({
+      type: 'error',
+      message: 'Could not stop Kungfu Master',
+      detail: (e as Error).message,
+    });
+  }
+}
+
+function trayIcon() {
+  const candidates = [
+    path.join(process.resourcesPath || '', 'logo', 'icon.png'),
+    path.join(__dirname, '../renderer/logo/icon.png'),
+    path.join(__dirname, '../../public/logo/icon.png'),
+    path.join(
+      process.resourcesPath || '',
+      'app',
+      'out',
+      'renderer',
+      'logo',
+      'icon.png',
+    ),
+  ];
+  const iconPath = candidates.find((candidate) => existsSync(candidate));
+  const image = iconPath
+    ? nativeImage.createFromPath(iconPath)
+    : nativeImage.createFromNamedImage('NSApplicationIcon');
+  return image.isEmpty()
+    ? nativeImage.createEmpty()
+    : image.resize({ width: 18, height: 18 });
+}
+
+function buildTrayMenu() {
+  if (!tray) return;
+  const visible =
+    shellWindow && !shellWindow.isDestroyed() ? shellWindow.isVisible() : false;
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      {
+        label: 'Show Kungfu',
+        enabled: !visible,
+        click: showShellWindow,
+      },
+      {
+        label: 'Hide Window',
+        enabled: visible,
+        click: () => hideShellWindow(),
+      },
+      { type: 'separator' },
+      {
+        label: 'Master Status',
+        click: () =>
+          void showCommandResult(
+            'Could not read Kungfu Master status',
+            ['master', 'status', '--json'],
+            'Kungfu Master Status',
+          ),
+      },
+      {
+        label: 'Start Master',
+        click: () =>
+          void showCommandResult(
+            'Could not start Kungfu Master',
+            ['master', 'start', '--json'],
+            'Kungfu Master started',
+          ),
+      },
+      {
+        label: 'Stop Master',
+        click: () =>
+          void showCommandResult(
+            'Could not stop Kungfu Master',
+            ['master', 'stop', '--json'],
+            'Kungfu Master stopped',
+          ),
+      },
+      { type: 'separator' },
+      {
+        label: 'Quit GUI',
+        click: quitGui,
+      },
+      {
+        label: 'Stop Master and Quit',
+        click: () => void stopMasterAndQuit(),
+      },
+    ]),
+  );
+}
+
+function createTray() {
+  if (tray) return;
+  tray = new Tray(trayIcon());
+  tray.setToolTip('Kungfu');
+  tray.on('click', () => {
+    const visible =
+      shellWindow && !shellWindow.isDestroyed()
+        ? shellWindow.isVisible()
+        : false;
+    if (visible) hideShellWindow();
+    else showShellWindow();
+  });
+  buildTrayMenu();
+}
 
 ipcMain.handle(ENSURE_CHANNEL, (_event, payload) => {
   const { id, bundlePath, declared } = payload as {
@@ -418,6 +586,18 @@ function createWindow() {
   win.on('unmaximize', () => publishWindowChromeState(win));
   win.on('enter-full-screen', () => publishWindowChromeState(win));
   win.on('leave-full-screen', () => publishWindowChromeState(win));
+  win.on('close', (event) => {
+    if (appQuitting) return;
+    event.preventDefault();
+    hideShellWindow(win);
+  });
+  win.on('closed', () => {
+    if (shellWindow === win) {
+      shellWindow = null;
+      manager = null;
+    }
+    buildTrayMenu();
+  });
 
   // The trusted renderer holds the real capabilities and runs the capability
   // host; this manager embeds sandboxed views and relays their invokes to it.
@@ -428,7 +608,11 @@ function createWindow() {
     harnessEntry,
   });
 
-  win.on('ready-to-show', () => win.show());
+  win.on('ready-to-show', () => {
+    win.show();
+    if (process.platform === 'darwin') void app.dock?.show();
+    buildTrayMenu();
+  });
 
   if (process.env.ELECTRON_RENDERER_URL) {
     win.loadURL(process.env.ELECTRON_RENDERER_URL);
@@ -439,6 +623,7 @@ function createWindow() {
 
 app.whenReady().then(() => {
   buildMenu();
+  createTray();
   // ADR-0016 stage 1 (flagged): run the durable session host in main so it
   // outlives windows. The ipcMain handlers are global, so bind once; events are
   // sent back to whichever renderer subscribed. Default keeps the in-renderer
@@ -469,7 +654,8 @@ app.whenReady().then(() => {
 });
 
 app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  if (shellWindow && !shellWindow.isDestroyed()) showShellWindow();
+  else createWindow();
 });
 
 app.on('before-quit', () => {
@@ -479,5 +665,6 @@ app.on('before-quit', () => {
 });
 
 app.on('window-all-closed', () => {
+  if (!appQuitting && tray) return;
   if (process.platform !== 'darwin') app.quit();
 });

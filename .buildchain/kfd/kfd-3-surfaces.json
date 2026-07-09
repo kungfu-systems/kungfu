@@ -35,6 +35,10 @@
           "role": "kungfu-master-service-supervisor-runtime"
         },
         {
+          "path": "framework/gui/src/main/index.ts",
+          "role": "kungfu-gui-master-tray-surface"
+        },
+        {
           "path": "product/scripts/product.mjs",
           "role": "kungfu-product-dev-and-build-entrypoints"
         }
@@ -502,6 +506,26 @@
         "owner": "kungfu",
         "source": "scripts/buildchain-kfd-evidence.mjs",
         "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+      }
+    },
+    {
+      "id": "kungfu.gui.master-tray",
+      "name": "Kungfu GUI menu-bar/system-tray master residency controls",
+      "kind": "gui",
+      "participantProfile": "agent-or-developer",
+      "state": "declared",
+      "availability": "shipped",
+      "visibility": "public",
+      "participantFacing": true,
+      "public": true,
+      "sourcePath": "framework/gui/src/main/index.ts",
+      "evidencePath": "docs/master-service.md",
+      "artifactPath": "docs/master-service.md",
+      "maturity": "draft",
+      "declaration": {
+        "owner": "kungfu",
+        "source": "scripts/buildchain-kfd-evidence.mjs",
+        "sourcePath": "framework/gui/src/main/index.ts"
       }
     },
     {

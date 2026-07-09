@@ -651,6 +651,14 @@ function sdkAndProductSurfaces() {
       maturity: 'draft',
     }),
     fileSurface({
+      id: 'kungfu.gui.master-tray',
+      name: 'Kungfu GUI menu-bar/system-tray master residency controls',
+      kind: 'gui',
+      sourcePath: 'framework/gui/src/main/index.ts',
+      evidencePath: 'docs/master-service.md',
+      maturity: 'draft',
+    }),
+    fileSurface({
       id: 'kungfu.product.dev-run',
       name: './kungfu-code product',
       kind: 'cli',
@@ -734,6 +742,10 @@ function buildKfd3Registry(upstreamAggregate = buildUpstreamKfdAggregate()) {
           {
             path: rel(MASTER_SERVICE_PATH),
             role: 'kungfu-master-service-supervisor-runtime',
+          },
+          {
+            path: 'framework/gui/src/main/index.ts',
+            role: 'kungfu-gui-master-tray-surface',
           },
           {
             path: 'product/scripts/product.mjs',

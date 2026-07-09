@@ -29,6 +29,9 @@ extraResources:
   # kungfu's embedded Node (libnode) via `kungfu cockpit`.
   - from: ../tui/dist
     to: tui
+  # Tray/menu-bar icon assets used by the resident GUI control surface.
+  - from: public/logo
+    to: logo
 mac:
   # dir = the pack verb's unpacked app (fast, CI-friendly); dmg + zip = the
   # dist verb's installable artifacts. Unsigned pre-release (identity: null):

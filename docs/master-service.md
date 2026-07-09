@@ -72,3 +72,19 @@ an explicit user operation after the file is installed.
 - `kungfu master stop` stops the supervisor and its child master.
 - `kungfu master service uninstall --execute` removes the user service file; it
   does not delete runtime journals or other user data.
+
+## GUI Tray / Menu-Bar Controls
+
+The reference GUI keeps a resident tray surface after the main window is closed.
+On macOS this appears in the menu bar; on Windows and Linux it appears in the
+system tray when the desktop environment supports Electron tray icons.
+
+The tray menu exposes explicit lifecycle choices:
+
+- `Show Kungfu` / `Hide Window` changes only the GUI window visibility.
+- `Master Status`, `Start Master`, and `Stop Master` call the same
+  `kungfu master ... --json` CLI surface listed above.
+- `Quit GUI` exits Electron without treating window close as intent to stop the
+  resident master.
+- `Stop Master and Quit` first runs `kungfu master stop --json`, then exits the
+  GUI if the stop succeeds.
