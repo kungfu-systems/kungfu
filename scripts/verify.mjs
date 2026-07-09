@@ -730,6 +730,7 @@ function main() {
         'agent-demo-',
         'atlas-demo-',
         'kfx-demo-',
+        'storage-demo-',
       ];
       const fixturesDir = path.join(ROOT, 'tests', 'fixtures');
       const fixtures = fs.existsSync(fixturesDir)

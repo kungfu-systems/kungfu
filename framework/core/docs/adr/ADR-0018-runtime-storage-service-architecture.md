@@ -51,6 +51,15 @@ files, SQLite projections, or other backends, but those implementations sit in
 `libkungfu` above the kernel. Python and Node expose bindings over the C++
 surface; they do not own independent storage semantics.
 
+The binding rule is executable, not just architectural: Python storage helpers
+must delegate to `pykungfu.runtime.*storage*` functions backed by
+`libkungfu::runtime::storage_service_api`, and Node storage helpers must delegate
+to `kungfu_node` functions backed by the same C++ service. Any new GUI, CLI, or
+agent-facing JavaScript surface that needs storage maintenance/status data
+should call the Node binding (or a shell command that reaches the same service),
+not reimplement manifest scanning, fsck, import/export, rebuild, GC, compact, or
+sync verification in JavaScript.
+
 The `libyijinjing` storage contract must expose the Git-like synchronization
 vocabulary as C++ data contracts, not as Python-only or JavaScript-only helper
 records: source refs, source heads, range selectors, hash inventories, channel
@@ -96,6 +105,11 @@ execution.
 - Future Python, Node, and C++ action-recording users share the same storage
   vocabulary; language bindings call the C++ contract surface instead of
   inventing independent import/export/fsck models.
+- The Node package is a first-class storage consumer: `@kungfu-tech/core`
+  exposes native binding functions for capabilities, request construction,
+  operation execution, manifest acceptance, latest-manifest loading, record
+  export, and payload writes. These functions are JSON/bytes adapters over
+  `libkungfu`, not a Node storage engine.
 - Large payloads are not stored by making journal frames arbitrarily large. The
   journal carries commitments and metadata; the payload store carries bodies.
 - SQLite is a projection facility, not the authority root. It may be rebuilt

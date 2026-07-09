@@ -46,9 +46,15 @@ handbooks** (kungfu/CLI, pypi/python, npm/node), plus a resolvable
 | --- | --- |
 | schema registry, error dictionary, conformance vectors, capabilities | `framework/core` |
 | CLI-ref handbook | `developer/toolchain` |
-| node-ref handbook | `framework/api` |
-| py-ref handbook | python binding |
+| node-ref handbook | `framework/api` + `framework/core` native Node binding |
+| py-ref handbook | python binding over `libkungfu` |
 | format spec (prose), conformance map, aggregation, manifest | `framework/spec` (this package) |
+
+Storage is one of the load-bearing examples for this ownership split:
+`libyijinjing` names the portable storage vocabulary, `libkungfu` implements
+the runtime storage service, and Python/Node expose binding shims over that C++
+service. The spec bundle should document those surfaces as bindings to the same
+runtime contract, not as independent Python or Node storage models.
 
 ## Scripts (skeleton placeholders)
 

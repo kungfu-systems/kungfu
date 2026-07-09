@@ -44,6 +44,7 @@ decltype(__pfnDliNotifyHook2) __pfnDliNotifyHook2 = load_exe_hook;
 
 #include <kungfu/common.h>
 #include <kungfu/runtime/io.h>
+#include <kungfu/runtime/storage/service.h>
 #include <kungfu/yijinjing/hash.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
 
@@ -180,6 +181,100 @@ Napi::Value FormatContentHash(const Napi::CallbackInfo &info) {
   return Napi::String::New(info.Env(), yijinjing::storage::format_content_hash(hash));
 }
 
+Napi::Value JsonToValue(Napi::Env env, const nlohmann::json &value) {
+  auto json = env.Global().Get("JSON").As<Napi::Object>();
+  auto parse = json.Get("parse").As<Napi::Function>();
+  return parse.Call(json, {Napi::String::New(env, value.dump(-1, ' ', false))});
+}
+
+nlohmann::json ValueToJson(Napi::Env env, const Napi::Value &value, const std::string &label) {
+  auto json = env.Global().Get("JSON").As<Napi::Object>();
+  auto stringify = json.Get("stringify").As<Napi::Function>();
+  auto serialized = stringify.Call(json, {value});
+  if (!serialized.IsString()) {
+    throw Napi::TypeError::New(env, label + " must be JSON-serializable");
+  }
+  return nlohmann::json::parse(serialized.As<Napi::String>().Utf8Value());
+}
+
+nlohmann::json OptionalObjectArg(const Napi::CallbackInfo &info, size_t index, const std::string &label) {
+  if (!IsValid(info, index) || info[index].IsNull()) {
+    return nlohmann::json::object();
+  }
+  auto parsed = ValueToJson(info.Env(), info[index], label);
+  if (!parsed.is_object()) {
+    throw Napi::TypeError::New(info.Env(), label + " must be an object");
+  }
+  return parsed;
+}
+
+nlohmann::json RequiredObjectArg(const Napi::CallbackInfo &info, size_t index, const std::string &label) {
+  if (!IsValid(info, index) || info[index].IsNull()) {
+    throw Napi::TypeError::New(info.Env(), label + " must be an object");
+  }
+  auto parsed = ValueToJson(info.Env(), info[index], label);
+  if (!parsed.is_object()) {
+    throw Napi::TypeError::New(info.Env(), label + " must be an object");
+  }
+  return parsed;
+}
+
+Napi::Value StorageServiceCapabilities(const Napi::CallbackInfo &info) {
+  return JsonToValue(info.Env(), runtime::storage_service_api::storage_service_capabilities());
+}
+
+Napi::Value MakeStorageServiceRequest(const Napi::CallbackInfo &info) {
+  if (!IsValid(info, 0, &Napi::Value::IsString) || !IsValid(info, 1, &Napi::Value::IsString)) {
+    throw Napi::TypeError::New(info.Env(), "makeStorageServiceRequest(operation, runtimeDir, options?)");
+  }
+  return JsonToValue(info.Env(), runtime::storage_service_api::make_storage_service_request(
+                                     info[0].As<Napi::String>().Utf8Value(), info[1].As<Napi::String>().Utf8Value(),
+                                     OptionalObjectArg(info, 2, "options")));
+}
+
+Napi::Value RunStorageServiceOperation(const Napi::CallbackInfo &info) {
+  if (!IsValid(info, 0, &Napi::Value::IsString) || !IsValid(info, 1, &Napi::Value::IsString)) {
+    throw Napi::TypeError::New(info.Env(), "runStorageServiceOperation(operation, runtimeDir, options?)");
+  }
+  return JsonToValue(info.Env(), runtime::storage_service_api::run_storage_service_operation(
+                                     info[0].As<Napi::String>().Utf8Value(), info[1].As<Napi::String>().Utf8Value(),
+                                     OptionalObjectArg(info, 2, "options")));
+}
+
+Napi::Value AcceptStorageManifest(const Napi::CallbackInfo &info) {
+  if (!IsValid(info, 0, &Napi::Value::IsString)) {
+    throw Napi::TypeError::New(info.Env(), "acceptStorageManifest(runtimeDir, manifest)");
+  }
+  return JsonToValue(info.Env(), runtime::storage_service_api::accept_storage_manifest(
+                                     info[0].As<Napi::String>().Utf8Value(), RequiredObjectArg(info, 1, "manifest")));
+}
+
+Napi::Value LoadStorageLatestManifest(const Napi::CallbackInfo &info) {
+  if (!IsValid(info, 0, &Napi::Value::IsString) || !IsValid(info, 1, &Napi::Value::IsString)) {
+    throw Napi::TypeError::New(info.Env(), "loadStorageLatestManifest(runtimeDir, sourceId)");
+  }
+  return JsonToValue(info.Env(), runtime::storage_service_api::load_storage_latest_manifest(
+                                     info[0].As<Napi::String>().Utf8Value(), info[1].As<Napi::String>().Utf8Value()));
+}
+
+Napi::Value ExportStorageRecords(const Napi::CallbackInfo &info) {
+  if (!IsValid(info, 0, &Napi::Value::IsString) || !IsValid(info, 1, &Napi::Value::IsString)) {
+    throw Napi::TypeError::New(info.Env(), "exportStorageRecords(runtimeDir, sourceId, range?)");
+  }
+  return JsonToValue(info.Env(), runtime::storage_service_api::export_storage_records(
+                                     info[0].As<Napi::String>().Utf8Value(), info[1].As<Napi::String>().Utf8Value(),
+                                     OptionalObjectArg(info, 2, "range")));
+}
+
+Napi::Value WriteStoragePayloadBytes(const Napi::CallbackInfo &info) {
+  if (!IsValid(info, 0, &Napi::Value::IsString) || !IsValid(info, 1, &Napi::Value::IsString)) {
+    throw Napi::TypeError::New(info.Env(), "writeStoragePayloadBytes(runtimeDir, digest, payload)");
+  }
+  return Napi::String::New(info.Env(), runtime::storage_service_api::write_storage_payload_bytes(
+                                           info[0].As<Napi::String>().Utf8Value(),
+                                           info[1].As<Napi::String>().Utf8Value(), ContentBytes(info, 2)));
+}
+
 Napi::Value VerifyContentHash(const Napi::CallbackInfo &info) {
   auto payload = ContentBytes(info, 0);
   if (!IsValid(info, 1, &Napi::Value::IsString)) {
@@ -265,6 +360,13 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
   exports.Set("parseContentHash", Napi::Function::New(env, ParseContentHash));
   exports.Set("formatContentHash", Napi::Function::New(env, FormatContentHash));
   exports.Set("verifyContentHash", Napi::Function::New(env, VerifyContentHash));
+  exports.Set("storageServiceCapabilities", Napi::Function::New(env, StorageServiceCapabilities));
+  exports.Set("makeStorageServiceRequest", Napi::Function::New(env, MakeStorageServiceRequest));
+  exports.Set("runStorageServiceOperation", Napi::Function::New(env, RunStorageServiceOperation));
+  exports.Set("acceptStorageManifest", Napi::Function::New(env, AcceptStorageManifest));
+  exports.Set("loadStorageLatestManifest", Napi::Function::New(env, LoadStorageLatestManifest));
+  exports.Set("exportStorageRecords", Napi::Function::New(env, ExportStorageRecords));
+  exports.Set("writeStoragePayloadBytes", Napi::Function::New(env, WriteStoragePayloadBytes));
   exports.Set("formatTime", Napi::Function::New(env, FormatTime));
   exports.Set("parseTime", Napi::Function::New(env, ParseTime));
   exports.Set("shutdown", Napi::Function::New(env, Shutdown));

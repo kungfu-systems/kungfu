@@ -404,6 +404,99 @@ function directLegacyRegistryNameHits(rel, text) {
   return hits;
 }
 
+function storageBindingOwnershipHits(rel, text) {
+  const hits = [];
+  if (rel === 'framework/core/src/python/kungfu/storage/service.py') {
+    const required = [
+      'storage_service_capabilities',
+      'make_storage_service_request',
+      'run_storage_service_operation',
+      'accept_storage_manifest',
+      'export_storage_records',
+      'write_storage_payload_bytes',
+    ];
+    for (const needle of required) {
+      if (!text.includes(`_runtime().${needle}`)) {
+        hits.push({
+          file: rel,
+          line: 1,
+          rule: 'storage binding ownership',
+          message:
+            'Python storage service must remain a thin shim over the libkungfu runtime storage service.',
+          text: needle,
+        });
+      }
+    }
+  }
+  if (rel === 'framework/core/lib/kungfu.js') {
+    const required = [
+      'binding.storageServiceCapabilities',
+      'binding.makeStorageServiceRequest',
+      'binding.runStorageServiceOperation',
+      'binding.acceptStorageManifest',
+      'binding.loadStorageLatestManifest',
+      'binding.exportStorageRecords',
+      'binding.writeStoragePayloadBytes',
+    ];
+    for (const needle of required) {
+      if (!text.includes(needle)) {
+        hits.push({
+          file: rel,
+          line: 1,
+          rule: 'storage binding ownership',
+          message:
+            'Node public storage API must forward to the native binding instead of owning storage semantics.',
+          text: needle,
+        });
+      }
+    }
+  }
+  if (rel === 'framework/core/src/bindings/node/binding/kungfu_node.cpp') {
+    const required = [
+      '#include <kungfu/runtime/storage/service.h>',
+      'storage_service_api::storage_service_capabilities',
+      'storage_service_api::make_storage_service_request',
+      'storage_service_api::run_storage_service_operation',
+      'storage_service_api::accept_storage_manifest',
+      'storage_service_api::load_storage_latest_manifest',
+      'storage_service_api::export_storage_records',
+      'storage_service_api::write_storage_payload_bytes',
+    ];
+    for (const needle of required) {
+      if (!text.includes(needle)) {
+        hits.push({
+          file: rel,
+          line: 1,
+          rule: 'storage binding ownership',
+          message:
+            'Node native storage binding must be a JSON/bytes adapter over libkungfu storage_service_api.',
+          text: needle,
+        });
+      }
+    }
+    for (const forbidden of [
+      'yijinjing/storage/generic_service.h',
+      'source_manifest_dir(',
+      'latest_manifest_path(',
+      'manifest_path(',
+      'read_json_file(',
+      'write_json_file(',
+    ]) {
+      if (text.includes(forbidden)) {
+        hits.push({
+          file: rel,
+          line: lineNumber(text, text.indexOf(forbidden)),
+          rule: 'storage binding ownership',
+          message:
+            'Node native binding must not reimplement storage provider internals; keep them in libkungfu.',
+          text: forbidden,
+        });
+      }
+    }
+  }
+  return hits;
+}
+
 function isAllowedRuleSelfReference(rel, rule) {
   if (
     rule.name === 'ambiguous fast hash api' &&
@@ -437,6 +530,7 @@ for (const rel of selectedFiles()) {
   }
   hits.push(...corePublicRegistryHits(rel, text));
   hits.push(...directLegacyRegistryNameHits(rel, text));
+  hits.push(...storageBindingOwnershipHits(rel, text));
 }
 
 if (hits.length) {
