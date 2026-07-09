@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
+import sqlite3
 from datetime import datetime, timezone
 
 import kungfu
@@ -794,7 +795,24 @@ def test_storage_maintenance_rebuild_gc_compact_and_sync_check(tmp_path):
     rebuild = storage_service.rebuild_index(runtime_dir, source_id="local-synth")
     assert rebuild["ok"]
     assert rebuild["written"]
+    sqlite_projection = next(
+        row for row in rebuild["projections"] if row["name"] == "sqlite"
+    )
+    assert sqlite_projection["written"] is True
+    assert sqlite_projection["rows"] == {"sources": 1, "manifests": 1, "entries": 1}
+    sqlite_path = runtime_dir / "storage/projections/storage.sqlite"
+    assert sqlite_path.exists()
+    with sqlite3.connect(sqlite_path) as db:
+        assert db.execute("select count(*) from storage_sources").fetchone()[0] == 1
+        assert db.execute("select count(*) from storage_manifests").fetchone()[0] == 1
+        assert db.execute("select count(*) from storage_entries").fetchone()[0] == 1
     assert storage_service.status(runtime_dir, source_id="local-synth")["ok"]
+    status = storage_service.status(runtime_dir, source_id="local-synth")
+    status_sqlite = next(
+        row for row in status["projections"] if row["name"] == "sqlite"
+    )
+    assert status_sqlite["exists"] is True
+    assert status_sqlite["counts"] == {"sources": 1, "manifests": 1, "entries": 1}
 
     orphan_raw = b'{"orphan":true}'
     orphan_hash = payloads.payload_hash(orphan_raw)
@@ -808,10 +826,14 @@ def test_storage_maintenance_rebuild_gc_compact_and_sync_check(tmp_path):
     compact = storage_service.compact_plan(runtime_dir, dry_run=True)
     assert compact["ok"]
     assert compact["gc"]["candidate_count"] == 1
+    assert compact["projection_compact"]["name"] == "sqlite"
+    assert compact["projection_compact"]["action"] == "rebuild-and-vacuum"
     assert any(row["name"] == "backend-compact" for row in compact["unsupported"])
 
     fsck = storage_service.fsck(runtime_dir)
     assert fsck["ok"]
+    assert fsck["checked"]["projection_indexes"] == 2
+    assert fsck["checked"]["sqlite_projection_rows"] == 3
     assert fsck["checked"]["orphan_payloads"] == 1
     assert any(warning["code"] == "orphan_payload" for warning in fsck["warnings"])
 

@@ -19,6 +19,7 @@
 #include <kungfu/yijinjing/storage/sync_root.h>
 #include <rocksdb/db.h>
 #include <rocksdb/iterator.h>
+#include <sqlite3.h>
 
 namespace kungfu::runtime::storage_service_api {
 
@@ -32,6 +33,7 @@ inline constexpr const char *CONTENT_TYPE_JSON = "application/json";
 inline constexpr const char *SOURCE_REGISTRY_SCHEMA = "kungfu.storage.source-registry/v1";
 inline constexpr const char *PROJECTION_SOURCE_REGISTRY = "source-registry";
 inline constexpr const char *PROJECTION_SQLITE = "sqlite";
+inline constexpr const char *SQLITE_PROJECTION_SCHEMA = "kungfu.storage.sqlite-projection/v1";
 inline constexpr const char *PROVIDER_FILE = "content-addressed-file";
 inline constexpr const char *PROVIDER_ROCKSDB = "rocksdb";
 inline constexpr const char *ENV_STORAGE_PROVIDER = "KUNGFU_STORAGE_PROVIDER";
@@ -92,6 +94,20 @@ nlohmann::json array_or_empty(const nlohmann::json &object, const std::string &f
 
 std::string canonical_json(const nlohmann::json &value) { return value.dump(-1, ' ', false); }
 
+uint64_t uint64_or(const nlohmann::json &object, const std::string &field, uint64_t fallback = 0) {
+  if (!object.is_object() || !object.contains(field)) {
+    return fallback;
+  }
+  const auto &value = object.at(field);
+  if (value.is_number_unsigned()) {
+    return value.get<uint64_t>();
+  }
+  if (value.is_number_integer()) {
+    return static_cast<uint64_t>(value.get<int64_t>());
+  }
+  return fallback;
+}
+
 fs::path root_dir(const std::string &runtime_dir) { return fs::path(runtime_dir) / "storage"; }
 
 fs::path registry_path(const std::string &runtime_dir) { return root_dir(runtime_dir) / "sources.json"; }
@@ -99,6 +115,12 @@ fs::path registry_path(const std::string &runtime_dir) { return root_dir(runtime
 fs::path payload_root(const std::string &runtime_dir) { return root_dir(runtime_dir) / "payloads"; }
 
 fs::path rocksdb_root(const std::string &runtime_dir) { return root_dir(runtime_dir) / "rocksdb"; }
+
+fs::path projection_root(const std::string &runtime_dir) { return root_dir(runtime_dir) / "projections"; }
+
+fs::path sqlite_projection_path(const std::string &runtime_dir) {
+  return projection_root(runtime_dir) / "storage.sqlite";
+}
 
 fs::path payload_path(const std::string &runtime_dir, const std::string &digest) {
   return payload_root(runtime_dir) / digest.substr(0, std::min<size_t>(2, digest.size())) / (digest + ".json");
@@ -695,6 +717,353 @@ nlohmann::json accepted_cursor(const nlohmann::json &manifest) {
   };
 }
 
+struct sqlite_projection_counts {
+  size_t sources = 0;
+  size_t manifests = 0;
+  size_t entries = 0;
+};
+
+class sqlite_projection {
+public:
+  explicit sqlite_projection(fs::path path, bool writable) : path_(std::move(path)) {
+    if (writable) {
+      fs::create_directories(path_.parent_path());
+    }
+    const auto flags = writable ? SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE : SQLITE_OPEN_READONLY;
+    sqlite3 *raw = nullptr;
+    const auto rc = sqlite3_open_v2(path_.string().c_str(), &raw, flags, nullptr);
+    db_.reset(raw);
+    if (rc != SQLITE_OK) {
+      throw std::runtime_error("sqlite_projection_open_failed: " + last_error());
+    }
+    if (writable) {
+      exec("PRAGMA journal_mode=WAL");
+      exec("PRAGMA synchronous=NORMAL");
+    }
+  }
+
+  [[nodiscard]] const fs::path &path() const { return path_; }
+
+  void create_schema() {
+    exec("CREATE TABLE IF NOT EXISTS storage_projection_meta ("
+         "key TEXT PRIMARY KEY,"
+         "value TEXT NOT NULL)");
+    exec("CREATE TABLE IF NOT EXISTS storage_sources ("
+         "source_id TEXT PRIMARY KEY,"
+         "source_type TEXT,"
+         "source_head TEXT,"
+         "manifest_id TEXT,"
+         "source_coordinate TEXT,"
+         "scope TEXT,"
+         "sync_root_json TEXT,"
+         "source_json TEXT NOT NULL)");
+    exec("CREATE TABLE IF NOT EXISTS storage_manifests ("
+         "source_id TEXT NOT NULL,"
+         "manifest_id TEXT NOT NULL,"
+         "source_head TEXT,"
+         "entry_count INTEGER NOT NULL,"
+         "sync_root_json TEXT,"
+         "manifest_json TEXT NOT NULL,"
+         "PRIMARY KEY (source_id, manifest_id))");
+    exec("CREATE TABLE IF NOT EXISTS storage_entries ("
+         "source_id TEXT NOT NULL,"
+         "manifest_id TEXT NOT NULL,"
+         "kind TEXT,"
+         "entry_source_id TEXT,"
+         "source_path TEXT,"
+         "source_time TEXT,"
+         "payload_hash TEXT,"
+         "byte_len INTEGER,"
+         "content_type TEXT,"
+         "payload_state TEXT,"
+         "entry_json TEXT NOT NULL,"
+         "PRIMARY KEY (source_id, manifest_id, kind, entry_source_id, source_path, payload_hash))");
+    exec("CREATE INDEX IF NOT EXISTS idx_storage_entries_payload_hash ON storage_entries(payload_hash)");
+    exec("CREATE INDEX IF NOT EXISTS idx_storage_entries_source_time ON storage_entries(source_time)");
+  }
+
+  void clear(const std::string &source_id) {
+    if (source_id.empty()) {
+      exec("DELETE FROM storage_entries");
+      exec("DELETE FROM storage_manifests");
+      exec("DELETE FROM storage_sources");
+      return;
+    }
+    exec_bound("DELETE FROM storage_entries WHERE source_id = ?", {source_id});
+    exec_bound("DELETE FROM storage_manifests WHERE source_id = ?", {source_id});
+    exec_bound("DELETE FROM storage_sources WHERE source_id = ?", {source_id});
+  }
+
+  void write_meta(const std::string &key, const std::string &value) {
+    exec_bound("INSERT OR REPLACE INTO storage_projection_meta(key, value) VALUES (?, ?)", {key, value});
+  }
+
+  void insert_source(const nlohmann::json &manifest, const nlohmann::json &source) {
+    exec_bound(
+        "INSERT OR REPLACE INTO storage_sources("
+        "source_id, source_type, source_head, manifest_id, source_coordinate, scope, sync_root_json, source_json) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        {
+            text_or(manifest, "source_id"),
+            text_or(manifest, "source_type"),
+            text_or(manifest, "source_head"),
+            text_or(manifest, "manifest_id"),
+            text_or(source, "coordinate"),
+            text_or(manifest, "scope"),
+            manifest.contains("sync_root") ? canonical_json(manifest.at("sync_root")) : std::string(),
+            canonical_json(source),
+        });
+  }
+
+  void insert_manifest(const nlohmann::json &manifest) {
+    exec_bound("INSERT OR REPLACE INTO storage_manifests("
+               "source_id, manifest_id, source_head, entry_count, sync_root_json, manifest_json) "
+               "VALUES (?, ?, ?, ?, ?, ?)",
+               {
+                   text_or(manifest, "source_id"),
+                   text_or(manifest, "manifest_id"),
+                   text_or(manifest, "source_head"),
+                   std::to_string(entries_for_manifest(manifest).size()),
+                   manifest.contains("sync_root") ? canonical_json(manifest.at("sync_root")) : std::string(),
+                   canonical_json(manifest),
+               });
+  }
+
+  void insert_entry(const nlohmann::json &manifest, const nlohmann::json &entry) {
+    exec_bound("INSERT OR REPLACE INTO storage_entries("
+               "source_id, manifest_id, kind, entry_source_id, source_path, source_time, payload_hash, byte_len, "
+               "content_type, payload_state, entry_json) "
+               "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+               {
+                   text_or(manifest, "source_id"),
+                   text_or(manifest, "manifest_id"),
+                   text_or(entry, "kind"),
+                   text_or(entry, "source_id"),
+                   text_or(entry, "source_path"),
+                   text_or(entry, "source_time"),
+                   text_or(entry, "payload_hash"),
+                   std::to_string(uint64_or(entry, "byte_len")),
+                   text_or(entry, "content_type"),
+                   text_or(entry, "payload_state"),
+                   canonical_json(entry),
+               });
+  }
+
+  [[nodiscard]] bool table_exists(const std::string &name) const {
+    sqlite3_stmt *raw = nullptr;
+    const auto rc = sqlite3_prepare_v2(db_.get(), "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", -1,
+                                       &raw, nullptr);
+    statement stmt(raw);
+    if (rc != SQLITE_OK) {
+      throw std::runtime_error("sqlite_projection_prepare_failed: " + last_error());
+    }
+    bind_text(stmt.get(), 1, name);
+    return sqlite3_step(stmt.get()) == SQLITE_ROW;
+  }
+
+  [[nodiscard]] size_t count_rows(const std::string &table, const std::string &source_id = {}) const {
+    if (!table_exists(table)) {
+      return 0;
+    }
+    sqlite3_stmt *raw = nullptr;
+    const auto sql =
+        source_id.empty() ? "SELECT COUNT(*) FROM " + table : "SELECT COUNT(*) FROM " + table + " WHERE source_id = ?";
+    const auto rc = sqlite3_prepare_v2(db_.get(), sql.c_str(), -1, &raw, nullptr);
+    statement stmt(raw);
+    if (rc != SQLITE_OK) {
+      throw std::runtime_error("sqlite_projection_prepare_failed: " + last_error());
+    }
+    if (!source_id.empty()) {
+      bind_text(stmt.get(), 1, source_id);
+    }
+    if (sqlite3_step(stmt.get()) != SQLITE_ROW) {
+      throw std::runtime_error("sqlite_projection_count_failed: " + table + ": " + last_error());
+    }
+    return static_cast<size_t>(sqlite3_column_int64(stmt.get(), 0));
+  }
+
+  [[nodiscard]] sqlite_projection_counts counts(const std::string &source_id = {}) const {
+    return {count_rows("storage_sources", source_id), count_rows("storage_manifests", source_id),
+            count_rows("storage_entries", source_id)};
+  }
+
+  void exec(const std::string &sql) {
+    char *error = nullptr;
+    const auto rc = sqlite3_exec(db_.get(), sql.c_str(), nullptr, nullptr, &error);
+    std::string message = error ? error : "";
+    sqlite3_free(error);
+    if (rc != SQLITE_OK) {
+      throw std::runtime_error("sqlite_projection_exec_failed: " + message);
+    }
+  }
+
+private:
+  struct sqlite3_deleter {
+    void operator()(sqlite3 *db) const {
+      if (db != nullptr) {
+        sqlite3_close(db);
+      }
+    }
+  };
+
+  struct statement_deleter {
+    void operator()(sqlite3_stmt *stmt) const {
+      if (stmt != nullptr) {
+        sqlite3_finalize(stmt);
+      }
+    }
+  };
+
+  using statement = std::unique_ptr<sqlite3_stmt, statement_deleter>;
+
+  [[nodiscard]] std::string last_error() const { return db_ ? sqlite3_errmsg(db_.get()) : "sqlite handle unavailable"; }
+
+  static void bind_text(sqlite3_stmt *stmt, int index, const std::string &value) {
+    const auto rc = sqlite3_bind_text(stmt, index, value.c_str(), -1, SQLITE_TRANSIENT);
+    if (rc != SQLITE_OK) {
+      throw std::runtime_error("sqlite_projection_bind_failed");
+    }
+  }
+
+  void exec_bound(const std::string &sql, const std::vector<std::string> &values) {
+    sqlite3_stmt *raw = nullptr;
+    const auto rc = sqlite3_prepare_v2(db_.get(), sql.c_str(), -1, &raw, nullptr);
+    statement stmt(raw);
+    if (rc != SQLITE_OK) {
+      throw std::runtime_error("sqlite_projection_prepare_failed: " + last_error());
+    }
+    for (size_t index = 0; index < values.size(); ++index) {
+      bind_text(stmt.get(), static_cast<int>(index + 1), values.at(index));
+    }
+    const auto step = sqlite3_step(stmt.get());
+    if (step != SQLITE_DONE) {
+      throw std::runtime_error("sqlite_projection_step_failed: " + last_error());
+    }
+  }
+
+  fs::path path_;
+  std::unique_ptr<sqlite3, sqlite3_deleter> db_ = {};
+};
+
+nlohmann::json sqlite_projection_json(const std::string &runtime_dir, const std::string &source_id = {}) {
+  const auto path = sqlite_projection_path(runtime_dir);
+  nlohmann::json result = {
+      {"name", PROJECTION_SQLITE}, {"schema", SQLITE_PROJECTION_SCHEMA}, {"path", path.string()}, {"rebuildable", true},
+      {"authority", "derived"},    {"exists", fs::exists(path)},
+  };
+  if (!fs::exists(path)) {
+    result["counts"] = {{"sources", 0}, {"manifests", 0}, {"entries", 0}};
+    return result;
+  }
+  try {
+    const sqlite_projection projection(path, false);
+    const auto counts = projection.counts(source_id);
+    result["ok"] = true;
+    result["counts"] = {{"sources", counts.sources}, {"manifests", counts.manifests}, {"entries", counts.entries}};
+  } catch (const std::exception &e) {
+    result["ok"] = false;
+    result["error"] = e.what();
+  }
+  return result;
+}
+
+nlohmann::json replace_string_subtree(nlohmann::json value, const std::string &needle, const std::string &replacement) {
+  if (needle.empty()) {
+    return value;
+  }
+  if (value.is_string()) {
+    auto text = value.get<std::string>();
+    size_t pos = 0;
+    while ((pos = text.find(needle, pos)) != std::string::npos) {
+      text.replace(pos, needle.size(), replacement);
+      pos += replacement.size();
+    }
+    return text;
+  }
+  if (value.is_array()) {
+    for (auto &item : value) {
+      item = replace_string_subtree(item, needle, replacement);
+    }
+    return value;
+  }
+  if (value.is_object()) {
+    for (auto &[_, item] : value.items()) {
+      item = replace_string_subtree(item, needle, replacement);
+    }
+    return value;
+  }
+  return value;
+}
+
+nlohmann::json rebuild_sqlite_projection(const storage_provider &provider, const storage_service_options &options,
+                                         bool write) {
+  size_t sources = 0;
+  size_t manifests = 0;
+  size_t entries = 0;
+  nlohmann::json errors = nlohmann::json::array();
+  nlohmann::json changes = nlohmann::json::array();
+  const auto path = sqlite_projection_path(options.runtime_dir);
+  std::unique_ptr<sqlite_projection> projection;
+  if (write) {
+    projection = std::make_unique<sqlite_projection>(path, true);
+    projection->create_schema();
+    projection->exec("BEGIN IMMEDIATE");
+    projection->clear(options.source_id);
+    projection->write_meta("schema", SQLITE_PROJECTION_SCHEMA);
+    projection->write_meta("authority", "derived");
+  }
+  try {
+    for (const auto &record : provider.latest_manifest_records(options.source_id)) {
+      if (!record.value.is_object()) {
+        errors.push_back({{"code", "manifest_invalid"}, {"path", record.uri}});
+        continue;
+      }
+      const auto current_source_id = text_or(record.value, "source_id");
+      if (current_source_id.empty()) {
+        errors.push_back({{"code", "source_id_missing"}, {"path", record.uri}});
+        continue;
+      }
+      const auto source = source_projection_from_manifest(record.value);
+      const auto source_entries = entries_for_manifest(record.value);
+      if (write) {
+        projection->insert_source(record.value, source);
+        projection->insert_manifest(record.value);
+        for (const auto &entry : source_entries) {
+          projection->insert_entry(record.value, entry);
+        }
+      }
+      changes.push_back({{"source_id", current_source_id},
+                         {"manifest_id", text_or(record.value, "manifest_id")},
+                         {"entries", source_entries.size()}});
+      ++sources;
+      ++manifests;
+      entries += source_entries.size();
+    }
+    if (write) {
+      projection->exec("COMMIT");
+    }
+  } catch (...) {
+    if (write && projection) {
+      try {
+        projection->exec("ROLLBACK");
+      } catch (const std::exception &) {
+      }
+    }
+    throw;
+  }
+  return {
+      {"name", PROJECTION_SQLITE},
+      {"schema", SQLITE_PROJECTION_SCHEMA},
+      {"path", path.string()},
+      {"rebuilt_from", "accepted latest manifests"},
+      {"dry_run", !write},
+      {"written", write},
+      {"rows", {{"sources", sources}, {"manifests", manifests}, {"entries", entries}}},
+      {"changes", changes},
+      {"errors", errors},
+  };
+}
+
 nlohmann::json load_latest_manifest_impl(const storage_provider &provider, const std::string &source_id) {
   return provider.load_latest_manifest(source_id);
 }
@@ -819,6 +1188,11 @@ nlohmann::json status_impl(const storage_service_options &options) {
            {"path", provider->registry_uri()},
            {"rebuildable", true},
        }},
+      {"projections", nlohmann::json::array({{{"name", PROJECTION_SOURCE_REGISTRY},
+                                              {"path", provider->registry_uri()},
+                                              {"rebuildable", true},
+                                              {"authority", "derived"}},
+                                             sqlite_projection_json(options.runtime_dir, options.source_id)})},
       {"source_status", source_status},
   };
 }
@@ -857,6 +1231,7 @@ nlohmann::json fsck_error_report(const storage_service_options &options, const s
            {"accepted_ranges", 0},
            {"source_records", 0},
            {"projection_indexes", 0},
+           {"sqlite_projection_rows", 0},
            {"orphan_payloads", 0},
        }},
   };
@@ -895,7 +1270,8 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
            {"schemas", 0},
            {"accepted_ranges", 0},
            {"source_records", 0},
-           {"projection_indexes", 1},
+           {"projection_indexes", fs::exists(sqlite_projection_path(options.runtime_dir)) ? 2 : 1},
+           {"sqlite_projection_rows", 0},
            {"orphan_payloads", 0},
        }},
   };
@@ -980,6 +1356,48 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
       }
     }
   }
+
+  const auto sqlite_projection_status = sqlite_projection_json(options.runtime_dir, options.source_id);
+  report["projections"] = nlohmann::json::array({{{"name", PROJECTION_SOURCE_REGISTRY},
+                                                  {"path", provider->registry_uri()},
+                                                  {"rebuildable", true},
+                                                  {"authority", "derived"}},
+                                                 sqlite_projection_status});
+  if (!sqlite_projection_status.value("exists", false)) {
+    report["warnings"].push_back({{"code", "sqlite_projection_missing"},
+                                  {"path", sqlite_projection_path(options.runtime_dir).string()},
+                                  {"reason", "projection is derived and can be rebuilt"}});
+  } else if (!sqlite_projection_status.value("ok", true)) {
+    report["ok"] = false;
+    report["errors"].push_back({{"code", "sqlite_projection_unreadable"},
+                                {"path", sqlite_projection_path(options.runtime_dir).string()},
+                                {"error", sqlite_projection_status.value("error", "")}});
+  } else {
+    const auto expected_sources = sources.size();
+    size_t expected_manifests = 0;
+    size_t expected_entries = 0;
+    for (const auto &source : sources) {
+      const auto current_source_id = text_or(source, "source_id");
+      auto manifest = load_latest_manifest_impl(*provider, current_source_id);
+      if (manifest.is_object()) {
+        ++expected_manifests;
+        expected_entries += entries_for_manifest(manifest).size();
+      }
+    }
+    const auto counts = object_or_empty(sqlite_projection_status, "counts");
+    report["checked"]["sqlite_projection_rows"] =
+        counts.value("sources", 0) + counts.value("manifests", 0) + counts.value("entries", 0);
+    if (counts.value("sources", 0) != expected_sources || counts.value("manifests", 0) != expected_manifests ||
+        counts.value("entries", 0) != expected_entries) {
+      report["ok"] = false;
+      report["errors"].push_back(
+          {{"code", "sqlite_projection_drift"},
+           {"path", sqlite_projection_path(options.runtime_dir).string()},
+           {"expected",
+            {{"sources", expected_sources}, {"manifests", expected_manifests}, {"entries", expected_entries}}},
+           {"actual", counts}});
+    }
+  }
   return report;
 }
 
@@ -1023,6 +1441,12 @@ nlohmann::json rebuild_index_impl(const storage_service_options &options) {
   }
   const nlohmann::json new_registry = {{"schema", SOURCE_REGISTRY_SCHEMA}, {"sources", new_sources}};
   const auto would_write = old_registry != new_registry;
+  const auto sqlite_projection = rebuild_sqlite_projection(*provider, options, !options.dry_run);
+  if (!sqlite_projection.value("errors", nlohmann::json::array()).empty()) {
+    for (const auto &error : sqlite_projection.at("errors")) {
+      errors.push_back(error);
+    }
+  }
   if (would_write && !options.dry_run) {
     provider->save_registry(new_registry);
   }
@@ -1036,15 +1460,18 @@ nlohmann::json rebuild_index_impl(const storage_service_options &options) {
            {"path", provider->registry_uri()},
            {"rebuilt_from", "accepted latest manifests"},
        }},
+      {"projections", nlohmann::json::array({{{"name", PROJECTION_SOURCE_REGISTRY},
+                                              {"path", provider->registry_uri()},
+                                              {"rebuilt_from", "accepted latest manifests"},
+                                              {"dry_run", options.dry_run},
+                                              {"written", would_write && !options.dry_run}},
+                                             sqlite_projection})},
       {"dry_run", options.dry_run},
       {"would_write", would_write},
       {"written", would_write && !options.dry_run},
       {"sources_rebuilt", rebuilt},
       {"changes", changes},
       {"errors", errors},
-      {"unsupported",
-       nlohmann::json::array(
-           {{{"name", PROJECTION_SQLITE}, {"reason", "no generic SQLite projection exists in this storage slice"}}})},
   };
 }
 
@@ -1116,10 +1543,17 @@ nlohmann::json compact_plan_impl(const storage_service_options &options) {
       {"retained_manifests", manifests},
       {"rebuild_index", rebuild},
       {"gc", garbage},
+      {"projection_compact",
+       {
+           {"name", PROJECTION_SQLITE},
+           {"path", sqlite_projection_path(options.runtime_dir).string()},
+           {"action", "rebuild-and-vacuum"},
+           {"dry_run", true},
+           {"rebuildable", true},
+       }},
       {"unsupported",
        nlohmann::json::array(
            {{{"name", "history-archive"}, {"reason", "archive bundles are not implemented in this slice"}},
-            {{"name", PROJECTION_SQLITE}, {"reason", "no generic SQLite projection exists in this storage slice"}},
             {{"name", "backend-compact"},
              {"reason", provider->name() == PROVIDER_ROCKSDB ? "RocksDB compaction is not destructive-history compact"
                                                              : "the file backend has no backend compaction"}}})},
@@ -1259,6 +1693,7 @@ public:
       import_options.bundle = bundle;
       import_result = import_bundle(import_options);
       imported_report = fsck_impl(import_options);
+      imported_report = replace_string_subtree(imported_report, temp_root.string(), "<sync-runtime>");
       const auto import_provider = make_provider(import_options);
       imported_manifest = load_latest_manifest_impl(*import_provider, options.source_id);
       fs::remove_all(temp_root);
@@ -1504,6 +1939,18 @@ nlohmann::json storage_service_capabilities() {
                          {"layout", rocksdb_storage_provider("").layout()},
                          {"runtime", rocksdb_storage_provider("").runtime()}},
                     })},
+      {"projections",
+       nlohmann::json::array(
+           {{{"name", PROJECTION_SOURCE_REGISTRY},
+             {"schema", SOURCE_REGISTRY_SCHEMA},
+             {"authority", "derived"},
+             {"rebuildable", true}},
+            {{"name", PROJECTION_SQLITE},
+             {"schema", SQLITE_PROJECTION_SCHEMA},
+             {"authority", "derived"},
+             {"path", "storage/projections/storage.sqlite"},
+             {"tables", nlohmann::json::array({"storage_sources", "storage_manifests", "storage_entries"})},
+             {"rebuildable", true}}})},
       {"notes",
        nlohmann::json::array({
            "The runtime storage service surface and providers are owned by libkungfu.",

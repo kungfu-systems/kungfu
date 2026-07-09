@@ -408,7 +408,17 @@ runtime/storage/sources.json
 runtime/storage/sources/<source_id>/manifests/latest.json
 runtime/storage/sources/<source_id>/manifests/<manifest_id>.json
 runtime/storage/payloads/<prefix>/<sha256>.json
+runtime/storage/projections/storage.sqlite
 ```
+
+`runtime/storage/projections/storage.sqlite` is the first generic SQLite
+projection. It is owned by the C++ storage service, rebuilt by
+`storage rebuild-index`, and contains query tables for accepted source records,
+latest manifests, and manifest entries. It is intentionally derived from the
+provider's accepted latest manifests: deleting it loses query cache only, not
+authority. `storage fsck` treats a missing projection as a warning and treats a
+present projection whose row counts no longer match latest manifests as
+projection drift.
 
 The user-facing generic commands are:
 
@@ -451,27 +461,29 @@ making storage health and sync readiness inspectable:
   cursor-like accepted head for future channel fetch.
 - `storage fsck --scope all|source` checks the generic source registry, latest
   manifests, source-record drift, accepted ranges, sync roots, payload
-  presence/hash/length, payload inventory counts, schema inventory counts, and
-  all-scope orphan payload candidates.
+  presence/hash/length, payload inventory counts, schema inventory counts,
+  SQLite projection drift, and all-scope orphan payload candidates.
 - `storage rebuild-index` rebuilds the derived
-  `runtime/storage/sources.json` source registry from accepted latest manifests.
-  This command may write only that derived registry unless `--dry-run` is used.
+  `runtime/storage/sources.json` source registry and the C++-owned SQLite
+  projection from accepted latest manifests. This command writes only derived
+  indexes unless `--dry-run` is used.
 - `storage gc --dry-run` scans payload files and reports unreachable candidates.
   All-scope candidates are unreferenced by retained storage manifests. Source
   scope is informational only because the interim payload store is shared.
 - `storage compact --dry-run` composes a reviewable plan: retained manifests,
-  rebuild-index preview, gc preview, and unsupported backend/history actions.
-  It does not archive, delete, vacuum, compact, or rewrite any facts.
+  rebuild-index preview, gc preview, SQLite rebuild/vacuum intent, and
+  unsupported backend/history actions. It does not archive, delete, vacuum,
+  compact, or rewrite any facts.
 - `storage verify-sync --source <source-id>` exports a manifest-backed bundle,
   imports it into a temporary local runtime, runs fsck there, and compares sync
   roots. This simulates the proof path future remote sync will use without a
   real remote.
 
-The current generic store still has no generic SQLite/RocksDB projection.
-Therefore `rebuild-index` explicitly reports SQLite as unsupported rather than
-pretending to rebuild a projection that does not exist. Atlas's user-facing
-cards remain a journal-folded projection; this slice does not add a standalone
-Atlas SQLite projection.
+The current generic store has a generic SQLite projection and content-addressed
+file plus RocksDB providers, but SQLite remains a rebuildable projection, not a
+provider or authority root. Atlas's user-facing cards remain a journal-folded
+projection; this slice does not add a standalone Atlas-specific SQLite
+projection.
 
 ## Safety Boundaries
 

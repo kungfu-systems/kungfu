@@ -122,6 +122,12 @@ execution.
   surface: the default content-addressed file provider and an optional RocksDB
   payload/manifest provider. Provider selection is an implementation option;
   Node and Python continue to call the same native runtime service.
+- The first generic SQLite projection is also owned by the C++ service. It lives
+  at `storage/projections/storage.sqlite`, is rebuilt from accepted latest
+  manifests by `rebuild_index`, and exposes `storage_sources`,
+  `storage_manifests`, and `storage_entries` query tables. It is derived and
+  disposable: `fsck` reports a missing projection as rebuildable cache loss and
+  reports mismatched row counts as projection drift.
 - Large payloads are not stored by making journal frames arbitrarily large. The
   journal carries commitments and metadata; the payload store carries bodies.
 - SQLite is a projection facility, not the authority root. It may be rebuilt
