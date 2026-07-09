@@ -22,6 +22,7 @@ import {
   DESTROY_CHANNEL,
   ENSURE_CHANNEL,
   HIDE_CHANNEL,
+  MASTER_STATUS_GET_CHANNEL,
   SET_BOUNDS_CHANNEL,
   SHOW_CHANNEL,
   WINDOW_CHROME_CONTROL_CHANNEL,
@@ -266,6 +267,7 @@ let manager: SandboxManager | null = null;
 // stage 2) can push layout snapshots back to it for persistence.
 let shellWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
+let lastMasterStatus: MasterStatusResult | null = null;
 
 // Set once the app is quitting; the session-window host reads it so window
 // closes during shutdown do not overwrite the persisted layout restore needs.
@@ -274,6 +276,83 @@ let appQuitting = false;
 function kungfuBinPath(): string {
   const binName = process.platform === 'win32' ? 'kungfu.exe' : 'kungfu';
   return path.join(path.dirname(process.env.KFE_PATH || bindingPath), binName);
+}
+
+type MasterStatusPayload = {
+  status?: string;
+  configHome?: string;
+  dataRoot?: string;
+  runtimeDir?: string;
+  supervisor?: { pid?: number | null; running?: boolean };
+  master?: { pid?: number | null; running?: boolean };
+  route?: { routeId?: string; registered?: boolean };
+  routes?: { count?: number };
+};
+
+type MasterStatusResult = {
+  ok: boolean;
+  payload: MasterStatusPayload | null;
+  error: string;
+  updatedAt: number;
+};
+
+function readMasterStatus(): MasterStatusResult {
+  try {
+    const out = execFileSync(kungfuBinPath(), ['master', 'status', '--json'], {
+      env: process.env,
+      timeout: 10000,
+    });
+    const payload = JSON.parse(out.toString()) as MasterStatusPayload;
+    lastMasterStatus = {
+      ok: true,
+      payload,
+      error: '',
+      updatedAt: Date.now(),
+    };
+    return lastMasterStatus;
+  } catch (e) {
+    lastMasterStatus = {
+      ok: false,
+      payload: null,
+      error: (e as Error).message,
+      updatedAt: Date.now(),
+    };
+    return lastMasterStatus;
+  }
+}
+
+function ensureMasterForGuiStartup() {
+  try {
+    const out = execFileSync(kungfuBinPath(), ['master', 'ensure', '--json'], {
+      env: process.env,
+      timeout: 15000,
+    });
+    lastMasterStatus = {
+      ok: true,
+      payload: JSON.parse(out.toString()) as MasterStatusPayload,
+      error: '',
+      updatedAt: Date.now(),
+    };
+    console.log('KF_MASTER_ENSURE_OK');
+  } catch (e) {
+    lastMasterStatus = {
+      ok: false,
+      payload: null,
+      error: (e as Error).message,
+      updatedAt: Date.now(),
+    };
+    console.log(`KF_MASTER_ENSURE_FAIL ${lastMasterStatus.error}`);
+  }
+}
+
+function masterStatusLabel(result = lastMasterStatus ?? readMasterStatus()) {
+  if (!result.ok || !result.payload) return 'Master: unavailable';
+  const supervisor = result.payload.supervisor?.running;
+  const master = result.payload.master?.running;
+  if (supervisor && master) return 'Master: running';
+  if (supervisor) return 'Master: waiting';
+  if (master) return 'Master: orphan';
+  return 'Master: stopped';
 }
 
 function showShellWindow() {
@@ -368,8 +447,23 @@ function buildTrayMenu() {
   if (!tray) return;
   const visible =
     shellWindow && !shellWindow.isDestroyed() ? shellWindow.isVisible() : false;
+  const status = readMasterStatus();
+  const payload = status.payload;
+  const statusDetail =
+    status.ok && payload
+      ? `Data root: ${payload.dataRoot || '-'}`
+      : status.error || 'Status unavailable';
   tray.setContextMenu(
     Menu.buildFromTemplate([
+      {
+        label: masterStatusLabel(status),
+        enabled: false,
+      },
+      {
+        label: statusDetail,
+        enabled: false,
+      },
+      { type: 'separator' },
       {
         label: 'Show Kungfu',
         enabled: !visible,
@@ -492,6 +586,8 @@ ipcMain.handle(WINDOW_CHROME_CONTROL_CHANNEL, (event, payload) => {
     fullscreen: win.isFullScreen(),
   };
 });
+
+ipcMain.handle(MASTER_STATUS_GET_CHANNEL, () => readMasterStatus());
 
 // Application menu with the VS Code-style "Install 'kungfu' Command in PATH"
 // action, so a real user who installed Kungfu.app can use `kungfu` in a shell.
@@ -622,6 +718,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  ensureMasterForGuiStartup();
   buildMenu();
   createTray();
   // ADR-0016 stage 1 (flagged): run the durable session host in main so it

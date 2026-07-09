@@ -29,6 +29,7 @@ import * as ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import * as jsxRuntime from 'react/jsx-runtime';
 import {
+  MASTER_STATUS_GET_CHANNEL,
   SESSION_WINDOW_OPEN_CHANNEL,
   SESSION_WINDOW_RESTORE_CHANNEL,
   SESSION_WINDOW_SNAPSHOT_CHANNEL,
@@ -201,6 +202,59 @@ function statusColor(severity: StatusBarSeverity | undefined): string {
   if (severity === 'warning') return '#dcdcaa';
   if (severity === 'error') return '#f48771';
   return '#cccccc';
+}
+
+type MasterStatusPayload = {
+  status?: string;
+  configHome?: string;
+  dataRoot?: string;
+  runtimeDir?: string;
+  supervisor?: { pid?: number | null; running?: boolean };
+  master?: { pid?: number | null; running?: boolean };
+  route?: { routeId?: string; registered?: boolean };
+  routes?: { count?: number };
+};
+
+type MasterStatusResult = {
+  ok: boolean;
+  payload: MasterStatusPayload | null;
+  error: string;
+  updatedAt: number;
+};
+
+function masterStatusText(status: MasterStatusResult | null): string {
+  if (!status) return 'master checking';
+  if (!status.ok || !status.payload) return 'master unavailable';
+  const supervisor = status.payload.supervisor?.running;
+  const master = status.payload.master?.running;
+  if (supervisor && master) return 'master live';
+  if (supervisor) return 'master starting';
+  if (master) return 'master orphan';
+  return 'master offline';
+}
+
+function supervisorStatusText(status: MasterStatusResult | null): string {
+  if (!status) return 'supervisor checking';
+  if (!status.ok || !status.payload) return 'supervisor unavailable';
+  return status.payload.supervisor?.running
+    ? 'supervisor live'
+    : 'supervisor stopped';
+}
+
+function statusTooltip(status: MasterStatusResult | null): string {
+  if (!status) return 'Supervisor/master status is being checked';
+  if (!status.ok || !status.payload)
+    return status.error || 'Status unavailable';
+  const payload = status.payload;
+  return [
+    `Status: ${payload.status || '-'}`,
+    `Config: ${payload.configHome || '-'}`,
+    `Data root: ${payload.dataRoot || '-'}`,
+    `Runtime: ${payload.runtimeDir || '-'}`,
+    `Route: ${payload.route?.routeId || '-'}${
+      payload.route?.registered ? ' registered' : ' not registered'
+    }`,
+  ].join('\n');
 }
 
 function notificationColor(level: ShellNotification['level']): string {
@@ -523,6 +577,8 @@ function App() {
   const [masterLive, setMasterLive] = React.useState(
     () => runtime.ledger?.health().live ?? false,
   );
+  const [masterStatus, setMasterStatus] =
+    React.useState<MasterStatusResult | null>(null);
   const [statusBarItems, setStatusBarItems] = React.useState<
     Record<string, StatusBarItem>
   >({});
@@ -546,6 +602,43 @@ function App() {
     const timer = setInterval(refresh, 5000);
     return () => clearInterval(timer);
   }, [runtime.ledger]);
+
+  React.useEffect(() => {
+    type MasterStatusIpc = {
+      invoke: (channel: string) => Promise<MasterStatusResult>;
+    };
+    let ipc: MasterStatusIpc | null = null;
+    try {
+      ipc = (window.require('electron') as { ipcRenderer: MasterStatusIpc })
+        .ipcRenderer;
+    } catch {
+      ipc = null;
+    }
+    if (!ipc) return;
+    let cancelled = false;
+    const refresh = () => {
+      void ipc
+        .invoke(MASTER_STATUS_GET_CHANNEL)
+        .then((next) => {
+          if (!cancelled) setMasterStatus(next);
+        })
+        .catch((e: unknown) => {
+          if (cancelled) return;
+          setMasterStatus({
+            ok: false,
+            payload: null,
+            error: e instanceof Error ? e.message : String(e),
+            updatedAt: Date.now(),
+          });
+        });
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, []);
 
   React.useEffect(
     () => () => {
@@ -812,6 +905,7 @@ function App() {
       message: runtime.message,
       runtimeDir: runtime.runtimeDir,
       kungfuVersion: runtime.kungfuVersion,
+      masterStatus,
       buildInfo: runtime.buildInfo,
       skillManager: runtime.skillManager,
       exports: runtime.exports,
@@ -896,15 +990,34 @@ function App() {
     setCommandText('');
   }, [commandText, enabled, openKfx, showNotification]);
 
+  const supervisorRunning = masterStatus?.payload?.supervisor?.running === true;
+  const masterRunning =
+    masterStatus?.payload?.master?.running === true ||
+    (!masterStatus?.ok && masterLive);
+  const masterSeverity: StatusBarSeverity = masterRunning
+    ? 'ok'
+    : supervisorRunning
+      ? 'warning'
+      : 'error';
   const systemStatusItems: StatusBarItem[] = [
     {
+      id: 'system.supervisor',
+      text: supervisorStatusText(masterStatus),
+      icon: supervisorRunning ? '●' : '○',
+      severity: supervisorRunning ? 'ok' : 'warning',
+      side: 'left',
+      priority: -110,
+      tooltip: statusTooltip(masterStatus),
+      command: { kind: 'open-kfx', kfxId: 'status' },
+    },
+    {
       id: 'system.master',
-      text: masterLive ? 'master live' : 'master offline',
-      icon: masterLive ? '●' : '○',
-      severity: masterLive ? 'ok' : 'warning',
+      text: masterStatusText(masterStatus),
+      icon: masterRunning ? '●' : '○',
+      severity: masterSeverity,
       side: 'left',
       priority: -100,
-      tooltip: 'Master connection',
+      tooltip: statusTooltip(masterStatus),
       command: { kind: 'open-kfx', kfxId: 'status' },
     },
     {

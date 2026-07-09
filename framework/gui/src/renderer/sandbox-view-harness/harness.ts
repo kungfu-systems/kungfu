@@ -80,6 +80,7 @@ const shell: Shell = {
     message: 'sandboxed',
     runtimeDir: '',
     kungfuVersion: '',
+    masterStatus: null,
     buildInfo: null,
     skillManager: null,
     exports: [],

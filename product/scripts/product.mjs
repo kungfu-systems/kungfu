@@ -89,7 +89,7 @@ function defaultInstanceRoot(env = process.env) {
   return path.resolve(
     expandHomePath(
       env.KF_AUTO_INSTANCE_ROOT ||
-        path.join(os.homedir(), '.kungfu', 'instances'),
+        path.join(os.homedir(), '.kungfu-config', 'instances'),
     ),
   );
 }

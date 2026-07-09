@@ -26,6 +26,22 @@ function SystemStatusView({
 
   const info = shell.info;
   const versions = window.process.versions;
+  const masterStatus = info.masterStatus;
+  const masterPayload = masterStatus?.payload as
+    | {
+        status?: string;
+        configHome?: string;
+        dataRoot?: string;
+        runtimeDir?: string;
+        supervisor?: { running?: boolean; pid?: number | null };
+        master?: { running?: boolean; pid?: number | null };
+        route?: { routeId?: string; registered?: boolean };
+        routes?: { count?: number };
+      }
+    | null
+    | undefined;
+  const supervisorLive = masterPayload?.supervisor?.running === true;
+  const masterLive = masterPayload?.master?.running === true || live;
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -34,19 +50,40 @@ function SystemStatusView({
         <div style={{ ...mono }}>
           <div>
             master:{' '}
-            <span style={{ color: live ? '#4ec9b0' : '#858585' }}>
-              {live ? '● live (connected)' : '○ offline (no master)'}
+            <span style={{ color: masterLive ? '#4ec9b0' : '#858585' }}>
+              {masterLive ? '● live' : '○ offline'}
             </span>
           </div>
+          <div>
+            supervisor:{' '}
+            <span style={{ color: supervisorLive ? '#4ec9b0' : '#858585' }}>
+              {supervisorLive ? '● live' : '○ stopped'}
+            </span>
+          </div>
+          <div>service status: {masterPayload?.status ?? 'unknown'}</div>
           <div>core: {String(info.buildInfo?.version ?? 'unknown')}</div>
           <div>kungfu: {info.kungfuVersion || 'unavailable'}</div>
           <div>
             electron: {versions.electron} · node: {versions.node}
           </div>
-          <div>runtime home: {info.runtimeDir}</div>
+          <div>
+            runtime home: {masterPayload?.runtimeDir ?? info.runtimeDir}
+          </div>
+          <div>data root: {masterPayload?.dataRoot ?? 'unknown'}</div>
+          <div>config home: {masterPayload?.configHome ?? 'unknown'}</div>
+          <div>
+            route: {masterPayload?.route?.routeId ?? 'unknown'} ·{' '}
+            {masterPayload?.route?.registered ? 'registered' : 'not registered'}
+          </div>
+          <div>routes: {String(masterPayload?.routes?.count ?? 'unknown')}</div>
           <div style={{ color: info.ok ? '#4ec9b0' : '#f48771' }}>
             binding: {info.message}
           </div>
+          {masterStatus && !masterStatus.ok ? (
+            <div style={{ color: '#f48771' }}>
+              master status: {masterStatus.error || 'unavailable'}
+            </div>
+          ) : null}
         </div>
         <h2 style={{ ...headingStyle, marginTop: 12 }}>
           Binding exports · {info.exports.length}

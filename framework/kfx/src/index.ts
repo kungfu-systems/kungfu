@@ -715,6 +715,12 @@ export type ShellRuntimeInfo = {
   message: string;
   runtimeDir: string;
   kungfuVersion: string;
+  masterStatus: {
+    ok: boolean;
+    payload: Record<string, unknown> | null;
+    error: string;
+    updatedAt: number;
+  } | null;
   buildInfo: Record<string, unknown> | null;
   skillManager: Record<string, unknown> | null;
   exports: string[];

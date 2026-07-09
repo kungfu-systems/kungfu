@@ -69,6 +69,17 @@ test('derives a stable auto instance root from a worktree path', () => {
   );
 });
 
+test('defaults auto instance homes under the config root', () => {
+  const root = path.join(tmpdir(), 'kungfu-feature', 'demo-worktree');
+  const home = instanceHomeForWorktree(root, {});
+  assert.match(
+    home,
+    new RegExp(
+      `${escapeRegExp(path.join(homedir(), '.kungfu-config', 'instances', 'worktrees'))}${escapeRegExp(path.sep)}demo-worktree-[0-9a-f]{10}$`,
+    ),
+  );
+});
+
 test('seeds default config into a fresh instance without overwriting it', () => {
   const parent = mkdtempSync(path.join(tmpdir(), 'kungfu-product-seed-'));
   const sourceHome = path.join(parent, 'default-config');

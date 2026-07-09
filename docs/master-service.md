@@ -140,10 +140,21 @@ system tray when the desktop environment supports Electron tray icons.
 
 The tray menu exposes explicit lifecycle choices:
 
+- GUI startup runs `kungfu master ensure --json` against the resolved
+  `KF_HOME` / `KF_RUNTIME_DIR` / `KF_CONFIG_HOME`, so product GUI sessions
+  register the current data root with the per-user supervisor automatically.
 - `Show Kungfu` / `Hide Window` changes only the GUI window visibility.
+- The tray menu includes a read-only supervisor/master summary and the current
+  data root before the lifecycle actions.
 - `Master Status`, `Start Master`, and `Stop Master` call the same
   `kungfu master ... --json` CLI surface listed above.
 - `Quit GUI` exits Electron without treating window close as intent to stop the
   resident master.
 - `Stop Master and Quit` first runs `kungfu master stop --json`, then exits the
   GUI if the stop succeeds.
+
+The shell bottom status bar and the System Status view read the same
+`kungfu master status --json` payload through the Electron main process. They
+surface supervisor liveness, workspace master liveness, config home, data root,
+runtime directory, and route registration without introducing a second process
+control path.
