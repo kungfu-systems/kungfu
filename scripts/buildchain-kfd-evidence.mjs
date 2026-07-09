@@ -104,6 +104,26 @@ const AGENT_COMMANDS_PATH = path.join(
   'commands.json',
 );
 const SDK_CLI_PATH = path.join(ROOT, 'developer', 'sdk', 'src', 'sdk.js');
+const MASTER_CLI_PATH = path.join(
+  ROOT,
+  'framework',
+  'core',
+  'src',
+  'python',
+  'kungfu',
+  'cli',
+  'commands',
+  'master.py',
+);
+const MASTER_SERVICE_PATH = path.join(
+  ROOT,
+  'framework',
+  'core',
+  'src',
+  'python',
+  'kungfu',
+  'master_service.py',
+);
 const CONTRACT_REGISTRY_PATH = path.join(
   ROOT,
   'framework',
@@ -623,6 +643,14 @@ function sdkAndProductSurfaces() {
       maturity: 'stable',
     }),
     fileSurface({
+      id: 'kungfu.master.service',
+      name: 'kungfu master status|start|stop|restart|service plan|install|uninstall|status',
+      kind: 'cli',
+      sourcePath: rel(MASTER_CLI_PATH),
+      evidencePath: rel(MASTER_SERVICE_PATH),
+      maturity: 'draft',
+    }),
+    fileSurface({
       id: 'kungfu.product.dev-run',
       name: './kungfu-code product',
       kind: 'cli',
@@ -698,6 +726,14 @@ function buildKfd3Registry(upstreamAggregate = buildUpstreamKfdAggregate()) {
           {
             path: rel(SDK_CLI_PATH),
             role: 'kungfu-sdk-product-entrypoints',
+          },
+          {
+            path: rel(MASTER_CLI_PATH),
+            role: 'kungfu-master-service-entrypoints',
+          },
+          {
+            path: rel(MASTER_SERVICE_PATH),
+            role: 'kungfu-master-service-supervisor-runtime',
           },
           {
             path: 'product/scripts/product.mjs',

@@ -27,6 +27,14 @@
           "role": "kungfu-sdk-product-entrypoints"
         },
         {
+          "path": "framework/core/src/python/kungfu/cli/commands/master.py",
+          "role": "kungfu-master-service-entrypoints"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/master_service.py",
+          "role": "kungfu-master-service-supervisor-runtime"
+        },
+        {
           "path": "product/scripts/product.mjs",
           "role": "kungfu-product-dev-and-build-entrypoints"
         }
@@ -554,6 +562,26 @@
         "owner": "kungfu",
         "source": "scripts/buildchain-kfd-evidence.mjs",
         "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+      }
+    },
+    {
+      "id": "kungfu.master.service",
+      "name": "kungfu master status|start|stop|restart|service plan|install|uninstall|status",
+      "kind": "cli",
+      "participantProfile": "agent-or-developer",
+      "state": "declared",
+      "availability": "shipped",
+      "visibility": "public",
+      "participantFacing": true,
+      "public": true,
+      "sourcePath": "framework/core/src/python/kungfu/cli/commands/master.py",
+      "evidencePath": "framework/core/src/python/kungfu/master_service.py",
+      "artifactPath": "framework/core/src/python/kungfu/master_service.py",
+      "maturity": "draft",
+      "declaration": {
+        "owner": "kungfu",
+        "source": "scripts/buildchain-kfd-evidence.mjs",
+        "sourcePath": "framework/core/src/python/kungfu/cli/commands/master.py"
       }
     },
     {

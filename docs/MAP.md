@@ -37,6 +37,7 @@ and the map routes a question to whichever doc answers it.
 | What is the event / journal / replay model? | [`event-model.md`](event-model.md) | use | stable |
 | What does Rewind replay, and what must it never silently re-execute? | [ADR-0020](../framework/core/docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md) + [`rewind.md`](rewind.md) | why, verify | stable |
 | How does Kungfu persist user facts, sync sources, and maintain storage over time? | [`runtime-storage-service.md`](runtime-storage-service.md) | use, verify | draft |
+| How can the master stay alive after the GUI closes, and how do I manage the user service? | [`master-service.md`](master-service.md) | use, verify | draft |
 | How can a multi-machine timeline stay stable without one global clock? | [ADR-0021](../framework/core/docs/adr/ADR-0021-observer-relative-timeline-projection.md) + [`event-model.md`](event-model.md) | why, verify | stable |
 | Where must action-recording semantics live across C++ / Python / Node? | [ADR-0022](../framework/core/docs/adr/ADR-0022-core-action-recording-surface.md) + [`event-model.md`](event-model.md) | why, use | stable |
 | What is a location role, and why does it not decide journal page size? | [ADR-0024](../framework/core/docs/adr/ADR-0024-location-role-and-journal-page-policy.md) + [`event-model.md`](event-model.md) | why, use | stable |
