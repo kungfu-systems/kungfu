@@ -7,6 +7,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
@@ -21,6 +22,9 @@ import {
   parseArgs,
   resolveInstanceHome,
   seedInstanceConfig,
+  shouldAutoWorkspaceHome,
+  workspaceDataHomeForCwd,
+  workspaceEnv,
 } from './product.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -54,6 +58,47 @@ test('builds a consistent Kungfu instance environment', () => {
   assert.equal(env.KF_HOME, path.join(home, 'home'));
   assert.equal(env.KF_CONFIG_HOME, path.join(home, 'config'));
   assert.equal(env.KF_RUNTIME_DIR, path.join(home, 'home', 'runtime'));
+});
+
+test('builds a workspace data environment with separate config home', () => {
+  const dataHome = path.join(tmpdir(), 'repo', '.kungfu');
+  const env = workspaceEnv(dataHome, {
+    PATH: '/bin',
+    KF_CONFIG_HOME: path.join(tmpdir(), 'kungfu-config'),
+  });
+  assert.equal(env.PATH, '/bin');
+  assert.equal(env.KF_HOME, dataHome);
+  assert.equal(env.KF_CONFIG_HOME, path.join(tmpdir(), 'kungfu-config'));
+  assert.equal(env.KF_RUNTIME_DIR, path.join(dataHome, 'runtime'));
+  assert.equal(env.KF_INSTANCE_HOME, undefined);
+});
+
+test('derives workspace data home from nearest existing .kungfu', () => {
+  const parent = mkdtempSync(path.join(tmpdir(), 'kungfu-workspace-existing-'));
+  const nested = path.join(parent, 'a', 'b');
+  const existing = path.join(parent, 'a', '.kungfu');
+  mkdirSync(nested, { recursive: true });
+  mkdirSync(existing, { recursive: true });
+  try {
+    assert.equal(workspaceDataHomeForCwd(nested), existing);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test('derives workspace data home from git root without creating it', () => {
+  const repo = mkdtempSync(path.join(tmpdir(), 'kungfu-workspace-git-'));
+  const nested = path.join(repo, 'nested');
+  mkdirSync(nested, { recursive: true });
+  try {
+    const init = spawnSync('git', ['init'], { cwd: repo, encoding: 'utf8' });
+    assert.equal(init.status, 0, init.stderr || init.stdout);
+    const workspaceHome = path.join(realpathSync(repo), '.kungfu');
+    assert.equal(workspaceDataHomeForCwd(nested), workspaceHome);
+    assert.equal(existsSync(workspaceHome), false);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
 });
 
 test('derives a stable auto instance root from a worktree path', () => {
@@ -155,6 +200,49 @@ test('dry-run shows instance env without creating the home', () => {
   } finally {
     rmSync(parent, { recursive: true, force: true });
   }
+});
+
+test('dry-run auto-selects workspace .kungfu for gui dev', () => {
+  const result = spawnSync(
+    process.execPath,
+    [__filename.replace(/\.test\.mjs$/, '.mjs'), 'gui', 'dev', '--dry-run'],
+    {
+      encoding: 'utf8',
+      env: { HOME: homedir(), PATH: process.env.PATH || '' },
+    },
+  );
+  const workspaceHome = path.join(ROOT, '.kungfu');
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.equal(
+    shouldAutoWorkspaceHome(
+      { noInstanceHome: false, instanceHome: '' },
+      'gui',
+      'dev',
+      { HOME: homedir() },
+    ),
+    true,
+  );
+  assert.match(
+    result.stdout,
+    new RegExp(`auto-workspace-home: ${escapeRegExp(workspaceHome)}`),
+  );
+  assert.match(
+    result.stdout,
+    new RegExp(`KF_HOME=${escapeRegExp(workspaceHome)}`),
+  );
+  assert.match(
+    result.stdout,
+    new RegExp(
+      `KF_CONFIG_HOME=${escapeRegExp(path.join(homedir(), '.kungfu-config'))}`,
+    ),
+  );
+  assert.match(
+    result.stdout,
+    new RegExp(
+      `KF_RUNTIME_DIR=${escapeRegExp(path.join(workspaceHome, 'runtime'))}`,
+    ),
+  );
+  assert.doesNotMatch(result.stdout, /KF_INSTANCE_HOME=/);
 });
 
 test('dev product commands expose local KFD metadata to kungfu kfd', () => {

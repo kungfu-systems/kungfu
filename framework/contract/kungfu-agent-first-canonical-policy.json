@@ -95,13 +95,13 @@
       },
       "source": {
         "path": "framework/config/kungfu-config.contract.json",
-        "sha256": "sha256:9398832cf89bc8f7f96555ac4be23a3d93bac2e5e392b9eaa3b4917a9526bbea",
-        "renderedSha256": "sha256:9398832cf89bc8f7f96555ac4be23a3d93bac2e5e392b9eaa3b4917a9526bbea",
+        "sha256": "sha256:1e51d554f79f8fc6ab2ddbe5782f44426d62f095fb724d34783b61d7045cf0a0",
+        "renderedSha256": "sha256:1e51d554f79f8fc6ab2ddbe5782f44426d62f095fb724d34783b61d7045cf0a0",
         "byteForByte": true
       },
       "artifact": {
         "path": "config/kungfu-config.contract.json",
-        "expectedSha256": "sha256:9398832cf89bc8f7f96555ac4be23a3d93bac2e5e392b9eaa3b4917a9526bbea"
+        "expectedSha256": "sha256:1e51d554f79f8fc6ab2ddbe5782f44426d62f095fb724d34783b61d7045cf0a0"
       }
     },
     {

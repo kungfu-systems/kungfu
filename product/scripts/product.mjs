@@ -44,7 +44,7 @@ function usage(code) {
       '--instance-home, --home, -H <path>',
       '  run the product against an isolated Kungfu instance root:',
       '  KF_HOME=<path>/home, KF_CONFIG_HOME=<path>/config, KF_RUNTIME_DIR=<path>/home/runtime',
-      '  dev commands auto-pick an instance root for linked git worktrees',
+      '  dev commands auto-pick a workspace data home at <workspace>/.kungfu',
       '',
     ].join('\n'),
   );
@@ -119,6 +119,27 @@ function seedInstanceConfig(instanceHome, options = {}) {
   return { seeded: true, source, target };
 }
 
+function nearestExistingWorkspaceHome(cwd) {
+  let current = path.resolve(cwd);
+  const legacyUserHome = path.join(os.homedir(), '.kungfu');
+  for (;;) {
+    const candidate = path.join(current, '.kungfu');
+    if (existsSync(candidate) && path.resolve(candidate) !== legacyUserHome) {
+      return candidate;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) return '';
+    current = parent;
+  }
+}
+
+function workspaceDataHomeForCwd(cwd = ROOT) {
+  const existing = nearestExistingWorkspaceHome(cwd);
+  if (existing) return existing;
+  const gitRoot = gitOutput(['rev-parse', '--show-toplevel'], cwd);
+  return gitRoot ? path.join(path.resolve(gitRoot), '.kungfu') : '';
+}
+
 function instanceHomeForWorktree(worktreeRoot, env = process.env) {
   const resolvedRoot = path.resolve(worktreeRoot);
   const name = sanitizeInstanceName(path.basename(resolvedRoot));
@@ -158,10 +179,21 @@ function shouldAutoInstanceHome(parsed, surface, verb, env = process.env) {
       !parsed.instanceHome &&
       !env.KF_INSTANCE_HOME &&
       !env.KF_HOME &&
-      !env.KF_CONFIG_HOME &&
       verb === 'dev' &&
       (surface === 'gui' || surface === 'tui') &&
       isLinkedGitWorktree(ROOT),
+  );
+}
+
+function shouldAutoWorkspaceHome(parsed, surface, verb, env = process.env) {
+  return Boolean(
+    !parsed.noInstanceHome &&
+      !parsed.instanceHome &&
+      !env.KF_INSTANCE_HOME &&
+      !env.KF_HOME &&
+      verb === 'dev' &&
+      (surface === 'gui' || surface === 'tui') &&
+      workspaceDataHomeForCwd(ROOT),
   );
 }
 
@@ -174,6 +206,16 @@ function instanceEnv(instanceHome, baseEnv = process.env) {
     KF_HOME: runtimeHome,
     KF_CONFIG_HOME: path.join(instanceHome, 'config'),
     KF_RUNTIME_DIR: path.join(runtimeHome, 'runtime'),
+  };
+}
+
+function workspaceEnv(workspaceHome, baseEnv = process.env) {
+  if (!workspaceHome) return { ...baseEnv };
+  return {
+    ...baseEnv,
+    KF_HOME: workspaceHome,
+    KF_CONFIG_HOME: baseEnv.KF_CONFIG_HOME || defaultConfigHome(),
+    KF_RUNTIME_DIR: path.join(workspaceHome, 'runtime'),
   };
 }
 
@@ -247,6 +289,11 @@ function run(label, cmd, args, options = {}) {
         `[dry-run] auto-instance-home: ${options.autoInstanceHome}\n`,
       );
     }
+    if (options.autoWorkspaceHome) {
+      process.stdout.write(
+        `[dry-run] auto-workspace-home: ${options.autoWorkspaceHome}\n`,
+      );
+    }
     const diff = envDiff(options.env || {});
     if (diff.length) {
       process.stdout.write(`[dry-run] env: ${diff.join(' ')}\n`);
@@ -267,6 +314,11 @@ function run(label, cmd, args, options = {}) {
       );
     }
   }
+  if (options.workspaceHome) {
+    mkdirSync(path.join(options.workspaceHome, 'runtime'), {
+      recursive: true,
+    });
+  }
   const result = spawnSync(cmd, args, {
     cwd: ROOT,
     env: options.env || process.env,
@@ -285,12 +337,14 @@ function main(argv = process.argv.slice(2)) {
   const parsed = parseArgs(argv);
   const { dryRun, positional } = parsed;
   const [surface, verb] = positional;
-  const autoInstanceHome = shouldAutoInstanceHome(parsed, surface, verb)
-    ? instanceHomeForWorktree(ROOT)
+  const autoInstanceHome = '';
+  const autoWorkspaceHome = shouldAutoWorkspaceHome(parsed, surface, verb)
+    ? workspaceDataHomeForCwd(ROOT)
     : '';
   const instanceHome =
     parsed.instanceHome || process.env.KF_INSTANCE_HOME || autoInstanceHome;
-  const baseEnv = instanceEnv(instanceHome);
+  const workspaceHome = instanceHome ? '' : autoWorkspaceHome;
+  const baseEnv = workspaceEnv(workspaceHome, instanceEnv(instanceHome));
   const env =
     verb === 'dev' && (surface === 'gui' || surface === 'tui')
       ? devKfdEnv(baseEnv)
@@ -305,6 +359,8 @@ function main(argv = process.argv.slice(2)) {
         env,
         instanceHome,
         autoInstanceHome,
+        workspaceHome,
+        autoWorkspaceHome,
       });
     } else if (verb === 'build' || verb === 'pack') {
       run(
@@ -316,6 +372,8 @@ function main(argv = process.argv.slice(2)) {
           env,
           instanceHome,
           autoInstanceHome,
+          workspaceHome,
+          autoWorkspaceHome,
         },
       );
     } else if (verb === 'dist') {
@@ -328,6 +386,8 @@ function main(argv = process.argv.slice(2)) {
           env,
           instanceHome,
           autoInstanceHome,
+          workspaceHome,
+          autoWorkspaceHome,
         },
       );
     } else {
@@ -340,6 +400,8 @@ function main(argv = process.argv.slice(2)) {
         env,
         instanceHome,
         autoInstanceHome,
+        workspaceHome,
+        autoWorkspaceHome,
       });
     } else if (verb === 'build') {
       pnpm('tui build', ['--filter', '@kungfu-tech/tui', 'run', 'build'], {
@@ -347,6 +409,8 @@ function main(argv = process.argv.slice(2)) {
         env,
         instanceHome,
         autoInstanceHome,
+        workspaceHome,
+        autoWorkspaceHome,
       });
     } else if (verb === 'bundle' || verb === 'dist') {
       pnpm('tui bundle', ['--filter', '@kungfu-tech/tui', 'run', 'bundle'], {
@@ -354,6 +418,8 @@ function main(argv = process.argv.slice(2)) {
         env,
         instanceHome,
         autoInstanceHome,
+        workspaceHome,
+        autoWorkspaceHome,
       });
     } else {
       fail('unknown tui command (supported: dev, build, bundle, dist)');
@@ -369,6 +435,8 @@ function main(argv = process.argv.slice(2)) {
           env,
           instanceHome,
           autoInstanceHome,
+          workspaceHome,
+          autoWorkspaceHome,
         },
       );
     } else {
@@ -393,4 +461,7 @@ export {
   resolveInstanceHome,
   seedInstanceConfig,
   shouldAutoInstanceHome,
+  shouldAutoWorkspaceHome,
+  workspaceDataHomeForCwd,
+  workspaceEnv,
 };

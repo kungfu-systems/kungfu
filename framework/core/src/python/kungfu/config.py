@@ -4,6 +4,7 @@ import copy
 import json
 import os
 import platform
+import subprocess
 from collections.abc import Mapping
 from typing import Any, cast
 
@@ -94,11 +95,15 @@ def default_config(
     contract = load_contract(contract_path, env=env)
     runtime_home = runtime_home or default_runtime_home(env)
     config_home = config_home or default_config_home(env)
+    workspace_home = workspace_data_home(env=env) or ""
+    machine_home = machine_runtime_home(env)
     defaults = _expand_placeholders(
         contract["defaults"],
         {
             "configHome": os.path.abspath(os.path.expanduser(config_home)),
             "runtimeHome": os.path.abspath(os.path.expanduser(runtime_home)),
+            "workspaceDataHome": workspace_home,
+            "machineDataHome": machine_home,
         },
         contract["resolution"]["placeholders"],
     )
@@ -174,11 +179,14 @@ def resolve_config(
     env = os.environ if env is None else env
     contract = load_contract(contract_path, env=env)
     resolution = contract["resolution"]
+    workspace_home = workspace_data_home(env=env)
+    machine_home = machine_runtime_home(env)
     runtime_home = os.path.abspath(
         os.path.expanduser(
             runtime_home
             or env.get(resolution["runtimeHomeEnv"])
-            or default_runtime_home(env)
+            or workspace_home
+            or machine_home
         )
     )
     config_home = (
@@ -203,6 +211,8 @@ def resolve_config(
         "configHome": config_home,
         "configPath": config_path,
         "runtimeHome": runtime_home,
+        "workspaceDataHome": workspace_home or "",
+        "machineDataHome": machine_home,
         "sources": [
             {
                 "type": "contract",
@@ -350,14 +360,10 @@ def _expand_placeholders(
     return value
 
 
-def default_runtime_home(env: Mapping[str, str] | None = None) -> str:
+def machine_runtime_home(env: Mapping[str, str] | None = None) -> str:
     env = os.environ if env is None else env
     contract = load_contract(env=env)
     resolution = contract["resolution"]
-    env_name = resolution["runtimeHomeEnv"]
-    if env.get(env_name):
-        return os.path.abspath(os.path.expanduser(env[env_name]))
-
     platform_key = {
         "Darwin": "darwin",
         "Windows": "win32",
@@ -374,6 +380,74 @@ def default_runtime_home(env: Mapping[str, str] | None = None) -> str:
             )
         )
     )
+
+
+def workspace_data_home(
+    cwd: str | None = None,
+    *,
+    env: Mapping[str, str] | None = None,
+) -> str | None:
+    env = os.environ if env is None else env
+    start = os.path.realpath(
+        os.path.abspath(os.path.expanduser(cwd or env.get("PWD") or os.getcwd()))
+    )
+    if os.path.isfile(start):
+        start = os.path.dirname(start)
+    existing = _nearest_existing_workspace_home(start)
+    if existing:
+        return existing
+    git_root = _git_worktree_root(start)
+    if git_root:
+        return os.path.join(git_root, ".kungfu")
+    return None
+
+
+def default_runtime_home(
+    env: Mapping[str, str] | None = None,
+    *,
+    cwd: str | None = None,
+) -> str:
+    env = os.environ if env is None else env
+    contract = load_contract(env=env)
+    resolution = contract["resolution"]
+    env_name = resolution["runtimeHomeEnv"]
+    if env.get(env_name):
+        return os.path.abspath(os.path.expanduser(env[env_name]))
+    workspace_home = workspace_data_home(cwd, env=env)
+    return workspace_home or machine_runtime_home(env)
+
+
+def _nearest_existing_workspace_home(start: str) -> str | None:
+    current = os.path.realpath(os.path.abspath(start))
+    legacy_user_home = os.path.realpath(
+        os.path.join(os.path.expanduser("~"), ".kungfu")
+    )
+    while True:
+        candidate = os.path.join(current, ".kungfu")
+        if os.path.isdir(candidate) and candidate != legacy_user_home:
+            return os.path.realpath(candidate)
+        parent = os.path.dirname(current)
+        if parent == current:
+            return None
+        current = parent
+
+
+def _git_worktree_root(cwd: str) -> str | None:
+    try:
+        result = subprocess.run(
+            ["git", "-C", cwd, "rev-parse", "--show-toplevel"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except (OSError, ValueError):
+        return None
+    if result.returncode != 0:
+        return None
+    root = result.stdout.strip()
+    if not root:
+        return None
+    return os.path.realpath(os.path.abspath(root))
 
 
 def _expand_environment_template(

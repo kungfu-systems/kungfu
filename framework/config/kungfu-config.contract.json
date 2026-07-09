@@ -126,6 +126,16 @@
                 "contains": {
                   "const": "runtimeHome"
                 }
+              },
+              {
+                "contains": {
+                  "const": "workspaceDataHome"
+                }
+              },
+              {
+                "contains": {
+                  "const": "machineDataHome"
+                }
               }
             ]
           },
@@ -170,7 +180,9 @@
     "merge": "deep-object-replace-array-scalar",
     "placeholders": [
       "configHome",
-      "runtimeHome"
+      "runtimeHome",
+      "workspaceDataHome",
+      "machineDataHome"
     ],
     "overrideSchema": "kungfu.config.override/v1",
     "defaultsSchema": "kungfu.config.defaults/v1",
@@ -201,6 +213,8 @@
         "required": [
           "configHome",
           "runtimeHome",
+          "workspaceDataHome",
+          "machineDataHome",
           "skills",
           "kfx"
         ],
@@ -209,6 +223,12 @@
             "type": "string"
           },
           "runtimeHome": {
+            "type": "string"
+          },
+          "workspaceDataHome": {
+            "type": "string"
+          },
+          "machineDataHome": {
             "type": "string"
           },
           "skills": {
@@ -337,6 +357,8 @@
     "paths": {
       "configHome": "${configHome}",
       "runtimeHome": "${runtimeHome}",
+      "workspaceDataHome": "${workspaceDataHome}",
+      "machineDataHome": "${machineDataHome}",
       "skills": [
         "${configHome}/skills",
         "${runtimeHome}/skills"

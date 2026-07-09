@@ -85,6 +85,8 @@ def path(ctx, as_json):
                 "configHome": data["configHome"],
                 "configPath": data["configPath"],
                 "runtimeHome": data["runtimeHome"],
+                "workspaceDataHome": data["workspaceDataHome"],
+                "machineDataHome": data["machineDataHome"],
             }
         )
         return

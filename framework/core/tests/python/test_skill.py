@@ -2,13 +2,17 @@
 
 from pathlib import Path
 import json
+import subprocess
 
 from kungfu.config import (
     contract_hash,
+    default_runtime_home,
     load_contract,
+    machine_runtime_home,
     resolve_config,
     set_user_config_value,
     unset_user_config_value,
+    workspace_data_home,
 )
 from kungfu.skill import (
     append_audit_event,
@@ -175,6 +179,62 @@ def test_resolved_config_uses_defaults_without_writing_user_file(tmp_path):
     assert config["config"]["ui"]["fontSize"] == 14
     assert config["config"]["ui"]["scale"] == 1.0
     assert config["config"]["agent"]["entrypoint"] == "kungfu agent context --json"
+
+
+def test_runtime_home_prefers_git_workspace_without_creating_it(tmp_path):
+    repo = tmp_path / "repo"
+    child = repo / "nested" / "work"
+    child.mkdir(parents=True)
+    subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+    env = {"PWD": str(child), "HOME": str(tmp_path)}
+
+    workspace_home = str(repo / ".kungfu")
+    assert workspace_data_home(env=env) == workspace_home
+    assert default_runtime_home(env=env) == workspace_home
+    assert not (repo / ".kungfu").exists()
+
+    config = resolve_config(config_home=str(tmp_path / "config"), env=env)
+    assert config["runtimeHome"] == workspace_home
+    assert config["workspaceDataHome"] == workspace_home
+    assert config["machineDataHome"] == machine_runtime_home(env)
+    assert config["config"]["paths"]["workspaceDataHome"] == workspace_home
+    assert config["config"]["paths"]["machineDataHome"] == machine_runtime_home(env)
+
+
+def test_existing_workspace_home_wins_before_git_root(tmp_path):
+    repo = tmp_path / "repo"
+    nested = repo / "a" / "b"
+    nested.mkdir(parents=True)
+    existing = repo / "a" / ".kungfu"
+    existing.mkdir()
+    subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+
+    assert workspace_data_home(str(nested), env={"HOME": str(tmp_path)}) == str(
+        existing
+    )
+
+
+def test_explicit_kf_home_wins_over_workspace_home(tmp_path):
+    repo = tmp_path / "repo"
+    child = repo / "child"
+    child.mkdir(parents=True)
+    subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+    explicit_home = tmp_path / "explicit-home"
+    env = {"PWD": str(child), "HOME": str(tmp_path), "KF_HOME": str(explicit_home)}
+
+    assert default_runtime_home(env=env) == str(explicit_home)
+    config = resolve_config(config_home=str(tmp_path / "config"), env=env)
+    assert config["runtimeHome"] == str(explicit_home)
+    assert config["workspaceDataHome"] == str(repo / ".kungfu")
+
+
+def test_runtime_home_uses_machine_fallback_without_workspace(tmp_path):
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    env = {"PWD": str(plain), "HOME": str(tmp_path)}
+
+    assert workspace_data_home(env=env) is None
+    assert default_runtime_home(env=env) == machine_runtime_home(env)
 
 
 def test_resolved_config_merges_user_override(tmp_path):

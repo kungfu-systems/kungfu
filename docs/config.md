@@ -120,8 +120,10 @@ kungfu agent verify --json
 
 `kungfu config show --json` returns `kungfu.config.resolved/v1`: built-in
 defaults, optional user overrides, contract metadata, source metadata,
-`configHome`, `configPath`, and `runtimeHome`. The `contract.hash` field makes
-the exact contract world inspectable by users, agents, and release gates.
+`configHome`, `configPath`, `runtimeHome`, `workspaceDataHome`, and
+`machineDataHome`. `kungfu config path --json` returns the same path decision in
+a compact `kungfu.config.path/v1` payload. The `contract.hash` field makes the
+exact contract world inspectable by users, agents, and release gates.
 
 ## Isolated product instances
 
