@@ -723,6 +723,13 @@ struct sqlite_projection_counts {
   size_t entries = 0;
 };
 
+std::string limit_clause(uint64_t limit) {
+  if (limit == 0) {
+    return "";
+  }
+  return " LIMIT " + std::to_string(std::min<uint64_t>(limit, 1000));
+}
+
 class sqlite_projection {
 public:
   explicit sqlite_projection(fs::path path, bool writable) : path_(std::move(path)) {
@@ -887,6 +894,83 @@ public:
             count_rows("storage_entries", source_id)};
   }
 
+  [[nodiscard]] nlohmann::json query_sources(const std::string &source_id, uint64_t limit) const {
+    std::vector<std::string> values;
+    auto sql = std::string("SELECT source_json FROM storage_sources");
+    if (!source_id.empty()) {
+      sql += " WHERE source_id = ?";
+      values.emplace_back(source_id);
+    }
+    sql += " ORDER BY source_id" + limit_clause(limit);
+    return query_json_column(sql, values, 0);
+  }
+
+  [[nodiscard]] nlohmann::json query_manifests(const std::string &source_id, uint64_t limit) const {
+    std::vector<std::string> values;
+    auto sql = std::string("SELECT manifest_json FROM storage_manifests");
+    if (!source_id.empty()) {
+      sql += " WHERE source_id = ?";
+      values.emplace_back(source_id);
+    }
+    sql += " ORDER BY source_id, manifest_id" + limit_clause(limit);
+    return query_json_column(sql, values, 0);
+  }
+
+  [[nodiscard]] nlohmann::json query_entries(const storage_service_options &options) const {
+    std::vector<std::string> values;
+    std::vector<std::string> clauses;
+    if (!options.source_id.empty()) {
+      clauses.emplace_back("source_id = ?");
+      values.emplace_back(options.source_id);
+    }
+    if (!options.kind.empty()) {
+      clauses.emplace_back("kind = ?");
+      values.emplace_back(options.kind);
+    }
+    const auto since = text_or(options.range, "since");
+    if (!since.empty()) {
+      clauses.emplace_back("source_time >= ?");
+      values.emplace_back(since);
+    }
+    const auto until = text_or(options.range, "until");
+    if (!until.empty()) {
+      clauses.emplace_back("source_time <= ?");
+      values.emplace_back(until);
+    }
+    auto sql = std::string("SELECT source_id, manifest_id, entry_json FROM storage_entries");
+    if (!clauses.empty()) {
+      sql += " WHERE ";
+      for (size_t index = 0; index < clauses.size(); ++index) {
+        if (index > 0) {
+          sql += " AND ";
+        }
+        sql += clauses.at(index);
+      }
+    }
+    sql += " ORDER BY source_time, kind, entry_source_id, source_path" + limit_clause(options.limit);
+    sqlite3_stmt *raw = nullptr;
+    const auto rc = sqlite3_prepare_v2(db_.get(), sql.c_str(), -1, &raw, nullptr);
+    statement stmt(raw);
+    if (rc != SQLITE_OK) {
+      throw std::runtime_error("sqlite_projection_prepare_failed: " + last_error());
+    }
+    bind_values(stmt.get(), values);
+    nlohmann::json rows = nlohmann::json::array();
+    int step = SQLITE_ROW;
+    while ((step = sqlite3_step(stmt.get())) == SQLITE_ROW) {
+      auto row = parse_json_column(stmt.get(), 2);
+      if (row.is_object()) {
+        row["storage_source_id"] = column_text(stmt.get(), 0);
+        row["manifest_id"] = column_text(stmt.get(), 1);
+      }
+      rows.push_back(row);
+    }
+    if (step != SQLITE_DONE) {
+      throw std::runtime_error("sqlite_projection_query_failed: " + last_error());
+    }
+    return rows;
+  }
+
   void exec(const std::string &sql) {
     char *error = nullptr;
     const auto rc = sqlite3_exec(db_.get(), sql.c_str(), nullptr, nullptr, &error);
@@ -923,6 +1007,45 @@ private:
     if (rc != SQLITE_OK) {
       throw std::runtime_error("sqlite_projection_bind_failed");
     }
+  }
+
+  static std::string column_text(sqlite3_stmt *stmt, int index) {
+    const auto raw = sqlite3_column_text(stmt, index);
+    return raw == nullptr ? std::string() : reinterpret_cast<const char *>(raw);
+  }
+
+  static nlohmann::json parse_json_column(sqlite3_stmt *stmt, int index) {
+    const auto raw = column_text(stmt, index);
+    if (raw.empty()) {
+      return nullptr;
+    }
+    return nlohmann::json::parse(raw);
+  }
+
+  static void bind_values(sqlite3_stmt *stmt, const std::vector<std::string> &values) {
+    for (size_t index = 0; index < values.size(); ++index) {
+      bind_text(stmt, static_cast<int>(index + 1), values.at(index));
+    }
+  }
+
+  [[nodiscard]] nlohmann::json query_json_column(const std::string &sql, const std::vector<std::string> &values,
+                                                 int column) const {
+    sqlite3_stmt *raw = nullptr;
+    const auto rc = sqlite3_prepare_v2(db_.get(), sql.c_str(), -1, &raw, nullptr);
+    statement stmt(raw);
+    if (rc != SQLITE_OK) {
+      throw std::runtime_error("sqlite_projection_prepare_failed: " + last_error());
+    }
+    bind_values(stmt.get(), values);
+    nlohmann::json rows = nlohmann::json::array();
+    int step = SQLITE_ROW;
+    while ((step = sqlite3_step(stmt.get())) == SQLITE_ROW) {
+      rows.push_back(parse_json_column(stmt.get(), column));
+    }
+    if (step != SQLITE_DONE) {
+      throw std::runtime_error("sqlite_projection_query_failed: " + last_error());
+    }
+    return rows;
   }
 
   void exec_bound(const std::string &sql, const std::vector<std::string> &values) {
@@ -964,6 +1087,45 @@ nlohmann::json sqlite_projection_json(const std::string &runtime_dir, const std:
     result["ok"] = false;
     result["error"] = e.what();
   }
+  return result;
+}
+
+nlohmann::json query_sqlite_projection(const storage_service_options &options) {
+  const auto query = options.query.empty() ? std::string("entries") : options.query;
+  const auto path = sqlite_projection_path(options.runtime_dir);
+  nlohmann::json result = {
+      {"ok", true},
+      {"scope", options.source_id.empty() ? "all" : "source"},
+      {"source_id", options.source_id.empty() ? nlohmann::json(nullptr) : nlohmann::json(options.source_id)},
+      {"projection",
+       {{"name", PROJECTION_SQLITE},
+        {"schema", SQLITE_PROJECTION_SCHEMA},
+        {"path", path.string()},
+        {"authority", "derived"},
+        {"rebuildable", true}}},
+      {"query", query},
+      {"kind", options.kind.empty() ? nlohmann::json(nullptr) : nlohmann::json(options.kind)},
+      {"range", options.range},
+      {"limit", options.limit},
+      {"rows", nlohmann::json::array()},
+  };
+  if (!fs::exists(path)) {
+    result["ok"] = false;
+    result["errors"] = nlohmann::json::array(
+        {{{"code", "sqlite_projection_missing"}, {"path", path.string()}, {"hint", "run storage rebuild-index"}}});
+    return result;
+  }
+  const sqlite_projection projection(path, false);
+  if (query == "sources") {
+    result["rows"] = projection.query_sources(options.source_id, options.limit);
+  } else if (query == "manifests") {
+    result["rows"] = projection.query_manifests(options.source_id, options.limit);
+  } else if (query == "entries") {
+    result["rows"] = projection.query_entries(options);
+  } else {
+    throw std::invalid_argument("unsupported storage query: " + query);
+  }
+  result["row_count"] = result.at("rows").size();
   return result;
 }
 
@@ -1721,6 +1883,10 @@ public:
             {"source_fsck", source_report},
             {"imported_fsck", imported_report}};
   }
+
+  [[nodiscard]] nlohmann::json query(const storage_service_options &options) const override {
+    return query_sqlite_projection(options);
+  }
 };
 
 const file_storage_service &storage_service_instance() {
@@ -1753,6 +1919,7 @@ std::vector<std::string> storage_operation_names() {
       storage_operation_name(storage_operation::ExportBundle), storage_operation_name(storage_operation::ImportBundle),
       storage_operation_name(storage_operation::RebuildIndex), storage_operation_name(storage_operation::GcPlan),
       storage_operation_name(storage_operation::CompactPlan),  storage_operation_name(storage_operation::VerifySync),
+      storage_operation_name(storage_operation::Query),
   };
 }
 
@@ -1774,6 +1941,8 @@ std::string storage_operation_name(storage_operation operation) {
     return "compact_plan";
   case storage_operation::VerifySync:
     return "verify_sync";
+  case storage_operation::Query:
+    return "query";
   }
   throw std::invalid_argument("unknown storage operation");
 }
@@ -1803,6 +1972,9 @@ storage_operation parse_storage_operation(const std::string &operation) {
   if (operation == "verify_sync") {
     return storage_operation::VerifySync;
   }
+  if (operation == "query") {
+    return storage_operation::Query;
+  }
   throw std::invalid_argument("unsupported storage operation: " + operation);
 }
 
@@ -1820,12 +1992,23 @@ storage_service_options parse_storage_service_options(const std::string &runtime
   parsed.artifact_uri = text_or(options, "artifact_uri");
   parsed.bundle = object_or_empty(options, "bundle");
   parsed.manifest = object_or_empty(options, "manifest");
+  parsed.query = text_or(options, "query", "entries");
+  parsed.kind = text_or(options, "kind");
+  parsed.limit = uint64_or(options, "limit", 100);
   return parsed;
 }
 
 nlohmann::json make_storage_service_request(const std::string &operation, const std::string &runtime_dir,
                                             const nlohmann::json &options) {
-  return make_request(parse_storage_operation(operation), parse_storage_service_options(runtime_dir, options));
+  const auto parsed_operation = parse_storage_operation(operation);
+  const auto parsed_options = parse_storage_service_options(runtime_dir, options);
+  auto request = make_request(parsed_operation, parsed_options);
+  if (parsed_operation == storage_operation::Query) {
+    request["query"] = parsed_options.query;
+    request["kind"] = parsed_options.kind.empty() ? nlohmann::json(nullptr) : nlohmann::json(parsed_options.kind);
+    request["limit"] = parsed_options.limit;
+  }
+  return request;
 }
 
 nlohmann::json run_storage_service_operation(const std::string &operation, const std::string &runtime_dir,
@@ -1849,6 +2032,8 @@ nlohmann::json run_storage_service_operation(const std::string &operation, const
     return storage_service_instance().compact_plan(parsed_options);
   case storage_operation::VerifySync:
     return storage_service_instance().verify_sync(parsed_options);
+  case storage_operation::Query:
+    return storage_service_instance().query(parsed_options);
   }
   throw std::invalid_argument("unknown storage operation");
 }

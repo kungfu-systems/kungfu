@@ -116,6 +116,13 @@ function selectedNodeResults(runtimeDir) {
       scope: 'source',
       source_id: 'node-synth',
     }),
+    query: kungfu.runStorageServiceOperation('query', runtimeDir, {
+      scope: 'source',
+      source_id: 'node-synth',
+      query: 'entries',
+      kind: 'note',
+      limit: 10,
+    }),
     verify: kungfu.runStorageServiceOperation('verify_sync', runtimeDir, {
       scope: 'source',
       source_id: 'node-synth',
@@ -174,6 +181,13 @@ out = {
         range_filter={"since": "2026-07-09T00:00:00Z"},
     ),
     "bundle": service.build_export_bundle(runtime_dir, source_id="node-synth"),
+    "query": service.query_projection(
+        runtime_dir,
+        query="entries",
+        source_id="node-synth",
+        kind="note",
+        limit=10,
+    ),
     "verify": service.verify_local_sync(runtime_dir, source_id="node-synth"),
 }
 print(json.dumps(out, sort_keys=True, separators=(",", ":")))
@@ -234,6 +248,12 @@ for (const providerCase of providerCases) {
           const accepted = writeNodeFixture(runtimeDir);
           assert.equal(accepted.schema, 'kungfu.storage.import-manifest/v1');
           assert.equal(accepted.source_id, 'node-synth');
+          const rebuilt = kungfu.runStorageServiceOperation(
+            'rebuild_index',
+            runtimeDir,
+            { scope: 'source', source_id: 'node-synth', dry_run: false },
+          );
+          assert.equal(rebuilt.ok, true);
 
           const nodeResults = selectedNodeResults(runtimeDir);
           const pythonResults = selectedPythonResults(runtimeDir);
@@ -259,6 +279,11 @@ for (const providerCase of providerCases) {
           assert.equal(nodeResults.fsck.ok, true);
           assert.equal(nodeResults.bundle.records.length, 2);
           assert.equal(nodeResults.exported.length, 1);
+          assert.equal(nodeResults.query.row_count, 2);
+          assert.equal(
+            nodeResults.query.rows[0].storage_source_id,
+            'node-synth',
+          );
           assert.equal(nodeResults.verify.sync_roots_match, true);
           assert.equal(
             fs.existsSync(providerCase.expectedPath(runtimeDir)),

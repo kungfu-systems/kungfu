@@ -22,6 +22,7 @@ enum class storage_operation {
   GcPlan,
   CompactPlan,
   VerifySync,
+  Query,
 };
 
 struct storage_service_options {
@@ -36,6 +37,9 @@ struct storage_service_options {
   std::string artifact_uri = {};
   nlohmann::json bundle = nlohmann::json::object();
   nlohmann::json manifest = nlohmann::json::object();
+  std::string query = {};
+  std::string kind = {};
+  uint64_t limit = 100;
 };
 
 class storage_service {
@@ -57,6 +61,8 @@ public:
   [[nodiscard]] virtual nlohmann::json compact_plan(const storage_service_options &options) const = 0;
 
   [[nodiscard]] virtual nlohmann::json verify_sync(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json query(const storage_service_options &options) const = 0;
 };
 
 [[nodiscard]] std::vector<std::string> storage_operation_names();

@@ -90,7 +90,7 @@ The first `libkungfu` provider slice exposes
 `kungfu::runtime::storage_service_api::storage_service` and the
 `kungfu.runtime.storage-service/v1` operation surface for `status`, `fsck`,
 `export_bundle`, `import_bundle`, `rebuild_index`, `gc_plan`, `compact_plan`,
-and `verify_sync`. The current default backend is a content-addressed file
+`verify_sync`, and read-only `query`. The current default backend is a content-addressed file
 provider implemented in C++ under the runtime service. A second C++ provider
 stores the same source registry, manifests, and payload bodies in RocksDB behind
 the identical service operations. Python storage commands are now compatibility
@@ -420,6 +420,14 @@ authority. `storage fsck` treats a missing projection as a warning and treats a
 present projection whose row counts no longer match latest manifests as
 projection drift.
 
+`storage query` is the first public read-only API over that projection. It still
+enters through `libkungfu` (`kungfu.runtime.storage-service/v1` operation
+`query`) instead of letting Python, Node, CLI, or GUI code read SQLite directly.
+The v1 query surface supports `sources`, `manifests`, and `entries` tables,
+source filtering, entry-kind filtering, ISO time ranges, and a bounded limit.
+It returns JSON rows decoded by the C++ service; the SQLite file remains
+rebuildable cache, not a source of authority.
+
 The user-facing generic commands are:
 
 ```sh
@@ -437,6 +445,8 @@ kungfu storage rebuild-index --scope source --source <source-id> --json
 kungfu storage gc --scope all --dry-run --json
 kungfu storage compact --scope all --dry-run --json
 kungfu storage verify-sync --source <source-id> --json
+kungfu storage query --table entries --scope source --source <source-id> \
+  --kind goal --since 20d --json
 ```
 
 `kungfu source add/list/sync/fsck` uses the same source registry path. Atlas
@@ -467,6 +477,9 @@ making storage health and sync readiness inspectable:
   `runtime/storage/sources.json` source registry and the C++-owned SQLite
   projection from accepted latest manifests. This command writes only derived
   indexes unless `--dry-run` is used.
+- `storage query --table sources|manifests|entries` reads the C++-owned SQLite
+  projection through the runtime storage service. It is read-only and fails with
+  a rebuild hint when the projection is missing.
 - `storage gc --dry-run` scans payload files and reports unreachable candidates.
   All-scope candidates are unreferenced by retained storage manifests. Source
   scope is informational only because the interim payload store is shared.

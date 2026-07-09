@@ -242,6 +242,64 @@ def rebuild_index(ctx, scope, storage_source_id, dry_run, as_json):
         sys.exit(1)
 
 
+@storage.command(help="query the rebuildable SQLite storage projection")
+@click.option(
+    "--table",
+    "query_table",
+    type=click.Choice(["sources", "manifests", "entries"]),
+    default="entries",
+    show_default=True,
+)
+@click.option("--scope", type=click.Choice(["source", "all"]), default="all")
+@click.option("--source", "storage_source_id", type=str, default=None)
+@click.option("--kind", type=str, default=None, help="filter entry rows by kind")
+@click.option("--since", type=str, default=None, help="relative window such as 3d/12h")
+@click.option(
+    "--from", "from_time", type=str, default=None, help="inclusive start time"
+)
+@click.option("--until", type=str, default=None, help="inclusive end time")
+@click.option("--limit", type=click.IntRange(min=0), default=100, show_default=True)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@storage_command_context
+def query(
+    ctx,
+    query_table,
+    scope,
+    storage_source_id,
+    kind,
+    since,
+    from_time,
+    until,
+    limit,
+    as_json,
+):
+    from kungfu.storage import service
+
+    if scope == "source":
+        _require_source(storage_source_id)
+    result = service.query_projection(
+        ctx.runtime_dir,
+        query=query_table,
+        source_id=storage_source_id if scope == "source" else None,
+        kind=kind,
+        range_filter=_range_filter(since, from_time, until),
+        limit=limit,
+    )
+    if as_json:
+        _echo_json(result)
+        return
+    if not result["ok"]:
+        for error in result.get("errors", []):
+            click.echo(f"  error: {error}", err=True)
+        sys.exit(1)
+    click.echo(
+        f"[storage] query {query_table}: {result['row_count']} rows "
+        f"from {result['projection']['path']}"
+    )
+    for row in result["rows"]:
+        click.echo(json.dumps(row, sort_keys=True))
+
+
 @storage.command(help="plan unreachable payload garbage collection")
 @click.option("--scope", type=click.Choice(["source", "all"]), required=True)
 @click.option("--source", "storage_source_id", type=str, default=None)

@@ -435,6 +435,31 @@ def verify_local_sync(
     )
 
 
+def query_projection(
+    runtime_dir: str | Path,
+    *,
+    query: str = "entries",
+    source_id: str | None = None,
+    kind: str | None = None,
+    range_filter: dict[str, Any] | None = None,
+    limit: int = 100,
+) -> dict[str, Any]:
+    return dict(
+        _runtime().run_storage_service_operation(
+            "query",
+            str(runtime_dir),
+            {
+                "scope": "source" if source_id else "all",
+                "source_id": source_id,
+                "query": query,
+                "kind": kind,
+                "range": range_filter or {},
+                "limit": limit,
+            },
+        )
+    )
+
+
 def write_jsonl(records: list[dict[str, Any]], out_path: str | Path) -> None:
     with open(out_path, "w", encoding="utf-8") as f:
         for record in records:

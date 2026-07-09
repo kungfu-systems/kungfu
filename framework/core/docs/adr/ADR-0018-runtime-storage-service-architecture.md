@@ -128,6 +128,10 @@ execution.
   `storage_manifests`, and `storage_entries` query tables. It is derived and
   disposable: `fsck` reports a missing projection as rebuildable cache loss and
   reports mismatched row counts as projection drift.
+- The read-only query surface over that projection is also a storage service
+  operation (`query`), not a Python, Node, CLI, or GUI SQLite reader. Bindings
+  pass table/filter/limit options into `libkungfu` and receive decoded JSON rows
+  from the C++ service.
 - Large payloads are not stored by making journal frames arbitrarily large. The
   journal carries commitments and metadata; the payload store carries bodies.
 - SQLite is a projection facility, not the authority root. It may be rebuilt

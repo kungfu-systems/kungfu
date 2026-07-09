@@ -327,6 +327,7 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
         "gc_plan",
         "compact_plan",
         "verify_sync",
+        "query",
     }
 
     request = runtime.make_storage_service_request(
@@ -405,6 +406,7 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
     storage_service.status(runtime_dir, source_id="local-synth")
     storage_service.fsck(runtime_dir, source_id="local-synth")
     storage_service.rebuild_index(runtime_dir, source_id="local-synth", dry_run=True)
+    storage_service.rebuild_index(runtime_dir, source_id="local-synth", dry_run=False)
     storage_service.gc_plan(runtime_dir, dry_run=True)
     storage_service.compact_plan(runtime_dir, dry_run=True)
     storage_service.build_export_bundle(runtime_dir, source_id="local-synth")
@@ -413,6 +415,17 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
         storage_service.build_export_bundle(runtime_dir, source_id="local-synth"),
     )
     storage_service.verify_local_sync(runtime_dir, source_id="local-synth")
+    query = storage_service.query_projection(
+        runtime_dir,
+        query="entries",
+        source_id="local-synth",
+        kind="note",
+        limit=10,
+    )
+    assert query["ok"]
+    assert query["row_count"] == 1
+    assert query["rows"][0]["kind"] == "note"
+    assert query["rows"][0]["storage_source_id"] == "local-synth"
 
     entered = {operation for operation, _, _ in calls}
     assert {
@@ -424,6 +437,7 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
         "export_bundle",
         "import_bundle",
         "verify_sync",
+        "query",
     } <= entered
 
 

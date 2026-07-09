@@ -344,6 +344,16 @@
       "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
     },
     {
+      "id": "kungfu.storage.query",
+      "surface": "cli",
+      "name": "kungfu storage query --table entries --scope source --source <source-id> --json",
+      "purpose": "Query C++-owned SQLite storage projection rows without reading SQLite directly from bindings.",
+      "maturity": "stable",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
       "id": "kungfu.remote.add",
       "surface": "cli",
       "name": "kungfu remote add <source-id> --host <host> --home <kf-home> --json",

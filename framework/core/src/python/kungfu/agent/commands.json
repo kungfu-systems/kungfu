@@ -194,6 +194,12 @@
       "purpose": "Simulate manifest-backed local export/import/fsck and compare sync roots."
     },
     {
+      "apiId": "kungfu.storage.query",
+      "name": "kungfu storage query --table entries --scope source --source <source-id> --json",
+      "maturity": "stable",
+      "purpose": "Query C++-owned SQLite storage projection rows without reading SQLite directly from bindings."
+    },
+    {
       "apiId": "kungfu.remote.add",
       "name": "kungfu remote add <source-id> --host <host> --home <kf-home> --json",
       "maturity": "experimental",
