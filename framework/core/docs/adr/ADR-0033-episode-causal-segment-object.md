@@ -8,7 +8,8 @@
 - Related: ADR-0018 defines the runtime storage service. ADR-0019 defines
   Git-like source sync over `location` and `channel`. ADR-0020 defines the
   action timeline and replay boundary. ADR-0021 defines observer-relative
-  timeline projection. ADR-0032 defines the generic source service v1.
+  timeline projection. ADR-0032 defines the generic source service v1. ADR-0034
+  defines the yijinjing-backed Episode manifest journal.
   [`docs/episode-object-model.md`](../../../../docs/episode-object-model.md)
   is the companion design document.
 
@@ -113,6 +114,9 @@ retention and archive policy permits."
 - Migration can start logically: manifests and indexes can identify Episodes
   before the mmap writer fully allocates page files by Episode. The target
   architecture still makes Episode the physical organization domain.
+- Manifest facts are append-only yijinjing records, not loose JSON authority.
+  JSON can be exported as a folded view, but the local manifest authority is
+  decided separately in ADR-0034.
 
 ## First delivery
 

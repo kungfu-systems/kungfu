@@ -37,7 +37,7 @@ and the map routes a question to whichever doc answers it.
 | What is the event / journal / replay model? | [`event-model.md`](event-model.md) | use | stable |
 | What does Rewind replay, and what must it never silently re-execute? | [ADR-0020](../framework/core/docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md) + [`rewind.md`](rewind.md) | why, verify | stable |
 | How does Kungfu persist user facts, sync sources, and maintain storage over time? | [`runtime-storage-service.md`](runtime-storage-service.md) | use, verify | draft |
-| What is an Episode, and why is it the unit of export/import/fsck/timeline slicing? | [`episode-object-model.md`](episode-object-model.md) + [ADR-0033](../framework/core/docs/adr/ADR-0033-episode-causal-segment-object.md) | why, use, verify | draft |
+| What is an Episode, and why is it the unit of export/import/fsck/timeline slicing? | [`episode-object-model.md`](episode-object-model.md) + [ADR-0033](../framework/core/docs/adr/ADR-0033-episode-causal-segment-object.md) + [ADR-0034](../framework/core/docs/adr/ADR-0034-yijinjing-episode-manifest-journal.md) | why, use, verify | draft |
 | How can the master stay alive after the GUI closes, and how do I manage the user service? | [`master-service.md`](master-service.md) | use, verify | draft |
 | How can a multi-machine timeline stay stable without one global clock? | [ADR-0021](../framework/core/docs/adr/ADR-0021-observer-relative-timeline-projection.md) + [`event-model.md`](event-model.md) | why, verify | stable |
 | Where must action-recording semantics live across C++ / Python / Node? | [ADR-0022](../framework/core/docs/adr/ADR-0022-core-action-recording-surface.md) + [`event-model.md`](event-model.md) | why, use | stable |
@@ -116,6 +116,10 @@ route to the row that answers them:
   export unit / import unit / tombstone / episode manifest / episode fsck** →
   *Episode object model* ([`episode-object-model.md`](episode-object-model.md))
   and [ADR-0033](../framework/core/docs/adr/ADR-0033-episode-causal-segment-object.md).
+- **episode manifest journal / manifest record / manifest delta / manifest
+  authority / yijinjing manifest / Hana manifest / JSON manifest** → *Episode
+  object model* ([`episode-object-model.md`](episode-object-model.md)) and
+  [ADR-0034](../framework/core/docs/adr/ADR-0034-yijinjing-episode-manifest-journal.md).
 - **signature / checksum / supply chain / SBOM** → *verify a release binary*
   (`provenance.md`, `blocked` — see [`known-limits.md`](known-limits.md)).
 - **KFD / SDK scaffold / release gate evidence / contract scaffold / fact

@@ -99,22 +99,27 @@ data with provenance attached.
 
 ## Physical Shape
 
-The target storage shape is Episode-aware:
+The target storage shape is Episode-aware and journal-backed:
 
 ```text
-episode/<episode_id>/
-  manifest.json
-  segments/
-    <segment_id>/
-      pages...
-  payloads -> content-addressed payload store
-  projections -> rebuildable indexes
+episode manifest journal
+  yijinjing mmap frames for Episode metadata records
+
+event journals
+  yijinjing mmap frames for runtime/action facts
+
+payload store
+  content-addressed payload bodies
+
+projections
+  rebuildable indexes and folded views
 ```
 
-This is a conceptual shape, not a required literal directory layout. Providers
-may store the same object in content-addressed files, RocksDB, or a future
-hybrid layout. The requirement is that the provider can answer Episode
-questions without scanning unrelated history as the normal path.
+The local authority for Episode manifest facts is not a loose JSON file. ADR-0034
+defines manifest records as yijinjing first-class data structures stored in a
+yijinjing-backed append-only manifest journal. Providers may maintain
+content-addressed files, RocksDB indexes, SQLite projections, or exported JSON
+views, but those are not the manifest authority.
 
 The lower journal shape should move toward:
 
@@ -134,8 +139,9 @@ proves it.
 
 ## Episode Manifest
 
-A sealed Episode manifest should carry enough data for fsck, export/import, and
-timeline projection:
+A sealed Episode manifest is the folded result of append-only manifest journal
+records. It should carry enough data for fsck, export/import, and timeline
+projection:
 
 | Field | Meaning |
 | --- | --- |
@@ -154,6 +160,24 @@ timeline projection:
 
 Open Episodes may have provisional ids. A sealed Episode should get a stable id
 derived from its manifest/root so export/import can be idempotent.
+
+The manifest journal records the history that produces this folded view:
+
+```text
+episode_open
+episode_frame_attached
+episode_input_ref_attached
+episode_payload_ref_attached
+episode_schema_ref_attached
+episode_sealed
+episode_tombstoned
+episode_repair_receipt
+episode_purge_receipt
+```
+
+JSON may be emitted as an export/debug/folded view, but Python, Node, CLI, and
+GUI code should treat the C++/yijinjing manifest journal as the local source of
+truth.
 
 ## Core Operations
 
@@ -201,17 +225,19 @@ complete:
 1. **Documentation and contracts** — accept ADR-0033, publish this design, and
    add C++ vocabulary types for Episode ids, manifests, dependencies, and fsck
    issues.
-2. **Logical Episode index** — let current storage manifests and source imports
+2. **Manifest journal records** — add yijinjing first-class Episode manifest
+   record types in C++ before adding Python/Node convenience APIs.
+3. **Logical Episode index** — let current storage manifests and source imports
    name Episodes, even if the frames still live in existing journal pages.
-3. **Episode-aware writer** — make the C++ action recorder/storage writer open,
+4. **Episode-aware writer** — make the C++ action recorder/storage writer open,
    append to, and seal Episodes; expose thin Python/Node bindings.
-4. **Episode-aware providers** — make file/RocksDB providers store and query
+5. **Episode-aware providers** — make file/RocksDB providers store and query
    Episode manifests and frame coordinates as first-class records.
-5. **Episode export/import/fsck** — support `kungfu storage export/import/fsck`
+6. **Episode export/import/fsck** — support `kungfu storage export/import/fsck`
    by Episode selectors and bundles.
-6. **GUI/Rewind** — render Episodes as the primary work slices; timeline views
+7. **GUI/Rewind** — render Episodes as the primary work slices; timeline views
    project selected Episodes rather than raw source/page streams.
-7. **Maintenance** — implement tombstone, gc, compact, archive, and restore
+8. **Maintenance** — implement tombstone, gc, compact, archive, and restore
    around retained Episode sets.
 
 During the migration, source/range/date selectors remain useful compatibility

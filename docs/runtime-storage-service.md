@@ -24,6 +24,9 @@ records the first generic source service implementation slice.
 [`ADR-0033`](../framework/core/docs/adr/ADR-0033-episode-causal-segment-object.md)
 defines Episode as the first-class causal segment object that future storage,
 sync, fsck, import/export, and timeline slicing should address directly.
+[`ADR-0034`](../framework/core/docs/adr/ADR-0034-yijinjing-episode-manifest-journal.md)
+defines Episode manifest records as yijinjing-backed append-only journal facts,
+with JSON limited to export, import interchange, diagnostics, and folded views.
 
 ## Existing Ground
 
@@ -135,7 +138,8 @@ The first C++ contract surface is intentionally header-only vocabulary under
 The next storage-contract layer should add Episode vocabulary under the same
 C++ ownership boundary. Episode is not a Python/Node convenience term: it is the
 causal segment object that providers, fsck, export/import, and timeline
-projection must agree on.
+projection must agree on. Its manifest history should be stored as yijinjing
+manifest journal records, not as loose JSON authority.
 
 ## Source, Location, And Channel
 
