@@ -232,6 +232,21 @@ episode_inspect
 missing open records, duplicate opens, duplicate closes, and malformed frame
 attachments.
 
+The same folded manifest now exposes a first causal graph projection:
+
+```text
+kungfu.episode.causal-graph/v1
+```
+
+`episode_inspect` and Episode-scoped storage export include this graph plus the
+folded `dependencies` list. V1 records internal frame trigger edges when both
+frames live in the Episode, and records declared or missing external
+dependencies for parent Episodes, referenced Episodes, trigger frames, payloads,
+and schemas. `storage fsck --scope episode` uses the graph to distinguish a
+failed Episode from a degraded Episode: failed means unreadable or structurally
+invalid manifest evidence; degraded means the Episode remains inspectable but
+some dependency, trigger frame, or payload evidence is missing.
+
 V1 deliberately does not add an Episode field to `frame_header`. New writes are
 associated with Episodes by appending `EpisodeFrameAttached` records from the
 C++ service using the action recorder's frame receipt. This keeps current mmap
@@ -283,6 +298,7 @@ Episode fsck should verify at least:
 - every `trigger_frame_uid` or equivalent frame-level causal parent resolves
   inside the Episode;
 - external dependencies are declared as Episode ids;
+- declared external trigger frames are named as compact input-frame refs;
 - payload refs exist or are explicitly marked redacted/absent/missing;
 - present payload hashes and byte lengths match the manifest;
 - required schemas resolve;
@@ -292,6 +308,13 @@ Episode fsck should verify at least:
 
 Fsck must report degraded evidence. It must not invent causality or silently
 repair a missing payload by treating it as absent.
+
+V1 degraded diagnostics are intentionally conservative. A missing parent
+Episode, missing referenced Episode, undeclared external trigger frame, missing
+root trigger frame, or missing payload ref produces a warning and a degraded
+status while keeping `ok: true` when the manifest itself is readable. This gives
+repair/sync code a precise target without making the Episode disappear from
+inspection or export.
 
 ## Migration Plan
 

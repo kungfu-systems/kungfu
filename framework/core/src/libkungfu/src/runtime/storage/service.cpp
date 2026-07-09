@@ -1422,9 +1422,10 @@ nlohmann::json episode_fsck_impl(const storage_service_options &options) {
   const auto checked = object_or_empty(episode_report, "checked");
   nlohmann::json report = {
       {"ok", episode_report.value("ok", false)},
-      {"status", episode_report.value("ok", false) ? "ok" : "failed"},
+      {"status", episode_report.value("status", episode_report.value("ok", false) ? "ok" : "failed")},
       {"scope", "episode"},
       {"episode_id", options.episode_id == 0 ? nlohmann::json(nullptr) : nlohmann::json(options.episode_id)},
+      {"degraded", episode_report.value("degraded", false)},
       {"errors", episode_report.value("errors", nlohmann::json::array())},
       {"warnings", episode_report.value("warnings", nlohmann::json::array())},
       {"checked",
@@ -1460,25 +1461,24 @@ nlohmann::json episode_export_bundle_impl(const storage_service_options &options
   const auto records = inspected.value("records", nlohmann::json::array());
   const auto frames = inspected.value("frames", nlohmann::json::array());
   const auto refs = inspected.value("refs", nlohmann::json::array());
-  nlohmann::json dependencies = nlohmann::json::array();
-  for (const auto &ref : refs) {
-    if (text_or(ref, "ref_kind") == "episode") {
-      dependencies.push_back(ref);
-    }
-  }
+  const auto dependencies = inspected.value("dependencies", nlohmann::json::array());
+  const auto causal_graph = inspected.value("causal_graph", nlohmann::json::object());
   return {{"schema", "kungfu.storage.episode-bundle/v1"},
           {"bundle_id", "episode:" + std::to_string(options.episode_id)},
           {"scope", "episode"},
           {"episode_id", options.episode_id},
           {"authority", "yijinjing-journal"},
           {"manifest", episode},
+          {"causal_graph", causal_graph},
           {"records", records},
           {"frames", frames},
           {"refs", refs},
           {"dependencies", dependencies},
+          {"degraded", causal_graph.value("degraded", false)},
           {"record_count", records.size()},
           {"frame_count", frames.size()},
-          {"ref_count", refs.size()}};
+          {"ref_count", refs.size()},
+          {"dependency_count", dependencies.size()}};
 }
 
 nlohmann::json replace_string_subtree(nlohmann::json value, const std::string &needle, const std::string &replacement) {
@@ -1898,6 +1898,7 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
   report["checked"]["episode_manifest_records"] = episode_checked.value("episode_manifest_records", 0);
   report["checked"]["episodes"] = episode_checked.value("episodes", 0);
   report["episode_manifest"] = episode_report;
+  report["degraded"] = report.value("degraded", false) || episode_report.value("degraded", false);
   for (const auto &error : array_or_empty(episode_report, "errors")) {
     auto row = error;
     row["projection"] = "episode-manifest";
@@ -1909,6 +1910,7 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
     row["projection"] = "episode-manifest";
     report["warnings"].push_back(row);
   }
+  degraded = degraded || episode_report.value("degraded", false);
 
   const auto sqlite_projection_status = sqlite_projection_json(options.runtime_dir, options.source_id);
   report["projections"] = nlohmann::json::array({{{"name", PROJECTION_SOURCE_REGISTRY},
@@ -1953,6 +1955,7 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
   }
   // Tri-state verdict over the boolean ok: failed (corruption/drift/unreadable)
   // dominates, then degraded (incomplete but not corrupt), else ok.
+  report["degraded"] = degraded;
   report["status"] = !report["ok"].get<bool>() ? "failed" : (degraded ? "degraded" : "ok");
   return report;
 }

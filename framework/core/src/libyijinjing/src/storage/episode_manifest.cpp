@@ -3,6 +3,7 @@
 #include <kungfu/yijinjing/storage/episode_manifest.h>
 
 #include <algorithm>
+#include <filesystem>
 #include <map>
 #include <memory>
 #include <stdexcept>
@@ -21,6 +22,8 @@ using namespace kungfu::yijinjing::types;
 namespace kungfu::yijinjing::storage {
 
 namespace {
+
+namespace fs = std::filesystem;
 
 constexpr uint32_t EPISODE_MANIFEST_SCHEMA_VERSION = 1;
 
@@ -248,6 +251,194 @@ std::map<uint64_t, episode_fold> fold_records(const std::vector<nlohmann::json> 
   return folded;
 }
 
+uint64_t u64_or(const nlohmann::json &object, const std::string &field, uint64_t fallback = 0) {
+  if (!object.is_object() || !object.contains(field)) {
+    return fallback;
+  }
+  const auto &value = object.at(field);
+  if (value.is_number_unsigned()) {
+    return value.get<uint64_t>();
+  }
+  if (value.is_number_integer()) {
+    const auto signed_value = value.get<int64_t>();
+    return signed_value < 0 ? fallback : static_cast<uint64_t>(signed_value);
+  }
+  return fallback;
+}
+
+std::string text_or(const nlohmann::json &object, const std::string &field, const std::string &fallback = {}) {
+  if (!object.is_object() || !object.contains(field) || !object.at(field).is_string()) {
+    return fallback;
+  }
+  return object.at(field).get<std::string>();
+}
+
+bool contains_u64(const std::vector<uint64_t> &values, uint64_t value) {
+  return std::find(values.begin(), values.end(), value) != values.end();
+}
+
+bool payload_ref_exists(const std::string &runtime_dir, const nlohmann::json &ref) {
+  const auto ref_id = text_or(ref, "ref_id");
+  if (ref_id.empty()) {
+    return false;
+  }
+  fs::path path(ref_id);
+  if (path.is_relative()) {
+    path = fs::path(runtime_dir) / path;
+  }
+  return fs::exists(path);
+}
+
+struct episode_graph {
+  nlohmann::json graph = nlohmann::json::object();
+  nlohmann::json dependencies = nlohmann::json::array();
+  nlohmann::json warnings = nlohmann::json::array();
+  bool degraded = false;
+};
+
+episode_graph build_causal_graph(const std::string &runtime_dir, uint64_t episode_id, const episode_fold &episode,
+                                 const std::map<uint64_t, episode_fold> &folded) {
+  std::vector<uint64_t> frame_uids;
+  std::vector<uint64_t> declared_input_frames;
+  nlohmann::json frame_edges = nlohmann::json::array();
+  nlohmann::json dependencies = nlohmann::json::array();
+  nlohmann::json warnings = nlohmann::json::array();
+  bool degraded = false;
+
+  for (const auto &frame : episode.frames) {
+    const auto frame_uid = u64_or(frame, "frame_uid");
+    if (frame_uid != 0) {
+      frame_uids.push_back(frame_uid);
+    }
+  }
+  for (const auto &ref : episode.refs) {
+    if (text_or(ref, "ref_kind") == "input_frame") {
+      const auto ref_uid = u64_or(ref, "ref_uid");
+      if (ref_uid != 0) {
+        declared_input_frames.push_back(ref_uid);
+      }
+    }
+  }
+
+  const auto parent_episode_id = u64_or(episode.summary, "parent_episode_id");
+  if (parent_episode_id != 0) {
+    const bool present = folded.find(parent_episode_id) != folded.end();
+    const auto status = present ? "present" : "missing";
+    dependencies.push_back(
+        {{"kind", "episode"}, {"role", "parent"}, {"episode_id", parent_episode_id}, {"status", status}});
+    if (!present) {
+      degraded = true;
+      warnings.push_back({{"code", "episode_dependency_missing"},
+                          {"episode_id", episode_id},
+                          {"dependency_episode_id", parent_episode_id},
+                          {"role", "parent"}});
+    }
+  }
+
+  const auto root_trigger_frame_uid = u64_or(episode.summary, "root_trigger_frame_uid");
+  if (root_trigger_frame_uid != 0 && !contains_u64(frame_uids, root_trigger_frame_uid)) {
+    const bool declared = contains_u64(declared_input_frames, root_trigger_frame_uid);
+    dependencies.push_back({{"kind", "frame"},
+                            {"role", "root_trigger"},
+                            {"frame_uid", root_trigger_frame_uid},
+                            {"status", declared ? "declared_external" : "missing"}});
+    if (!declared) {
+      degraded = true;
+      warnings.push_back({{"code", "episode_root_trigger_frame_missing"},
+                          {"episode_id", episode_id},
+                          {"frame_uid", root_trigger_frame_uid}});
+    }
+  }
+
+  for (const auto &frame : episode.frames) {
+    const auto frame_uid = u64_or(frame, "frame_uid");
+    const auto trigger_frame_uid = u64_or(frame, "trigger_frame_uid");
+    if (trigger_frame_uid == 0) {
+      continue;
+    }
+    if (contains_u64(frame_uids, trigger_frame_uid)) {
+      frame_edges.push_back({{"kind", "frame_trigger"},
+                             {"scope", "internal"},
+                             {"from_frame_uid", trigger_frame_uid},
+                             {"to_frame_uid", frame_uid}});
+      continue;
+    }
+    const bool declared = contains_u64(declared_input_frames, trigger_frame_uid);
+    dependencies.push_back({{"kind", "frame"},
+                            {"role", "trigger"},
+                            {"frame_uid", trigger_frame_uid},
+                            {"dependent_frame_uid", frame_uid},
+                            {"status", declared ? "declared_external" : "missing"}});
+    if (!declared) {
+      degraded = true;
+      warnings.push_back({{"code", "episode_trigger_frame_missing"},
+                          {"episode_id", episode_id},
+                          {"frame_uid", trigger_frame_uid},
+                          {"dependent_frame_uid", frame_uid}});
+    }
+  }
+
+  for (const auto &ref : episode.refs) {
+    const auto ref_kind = text_or(ref, "ref_kind");
+    if (ref_kind == "episode") {
+      const auto ref_uid = u64_or(ref, "ref_uid");
+      const bool present = ref_uid != 0 && folded.find(ref_uid) != folded.end();
+      const bool declared_external = ref_uid == 0 || !text_or(ref, "ref_id").empty();
+      const auto status = present ? "present" : (declared_external ? "declared_external" : "missing");
+      dependencies.push_back({{"kind", "episode"},
+                              {"role", "ref"},
+                              {"episode_id", ref_uid},
+                              {"ref_id", text_or(ref, "ref_id")},
+                              {"ref_hash", text_or(ref, "ref_hash")},
+                              {"status", status}});
+      if (!present && !declared_external) {
+        degraded = true;
+        warnings.push_back({{"code", "episode_dependency_missing"},
+                            {"episode_id", episode_id},
+                            {"dependency_episode_id", ref_uid},
+                            {"role", "ref"}});
+      }
+    } else if (ref_kind == "payload") {
+      const bool present = payload_ref_exists(runtime_dir, ref);
+      dependencies.push_back({{"kind", "payload"},
+                              {"role", "payload_ref"},
+                              {"ref_uid", u64_or(ref, "ref_uid")},
+                              {"ref_id", text_or(ref, "ref_id")},
+                              {"ref_hash", text_or(ref, "ref_hash")},
+                              {"status", present ? "present" : "missing"}});
+      if (!present) {
+        degraded = true;
+        warnings.push_back({{"code", "episode_payload_ref_missing"},
+                            {"episode_id", episode_id},
+                            {"ref_id", text_or(ref, "ref_id")},
+                            {"ref_hash", text_or(ref, "ref_hash")}});
+      }
+    } else if (ref_kind == "schema") {
+      dependencies.push_back({{"kind", "schema"},
+                              {"role", "schema_ref"},
+                              {"ref_uid", u64_or(ref, "ref_uid")},
+                              {"ref_id", text_or(ref, "ref_id")},
+                              {"ref_hash", text_or(ref, "ref_hash")},
+                              {"status", "declared"}});
+    }
+  }
+
+  return {{{
+               "schema",
+               "kungfu.episode.causal-graph/v1",
+           },
+           {"episode_id", episode_id},
+           {"frame_count", frame_uids.size()},
+           {"edge_count", frame_edges.size()},
+           {"dependency_count", dependencies.size()},
+           {"degraded", degraded},
+           {"edges", frame_edges},
+           {"dependencies", dependencies}},
+          dependencies,
+          warnings,
+          degraded};
+}
+
 } // namespace
 
 episode_manifest_store::episode_manifest_store(std::string runtime_dir) : runtime_dir_(std::move(runtime_dir)) {}
@@ -385,11 +576,14 @@ nlohmann::json episode_manifest_store::inspect(uint64_t episode_id) const {
             {"episode_id", episode_id},
             {"errors", nlohmann::json::array({{{"code", "episode_missing"}, {"episode_id", episode_id}}})}};
   }
+  const auto graph = build_causal_graph(runtime_dir_, episode_id, iter->second, folded);
   return {{"ok", true},
           {"schema", EPISODE_MANIFEST_SCHEMA_V1},
           {"runtime_dir", runtime_dir_},
           {"authority", "yijinjing-journal"},
           {"episode", iter->second.summary},
+          {"causal_graph", graph.graph},
+          {"dependencies", graph.dependencies},
           {"records", iter->second.records},
           {"frames", iter->second.frames},
           {"refs", iter->second.refs}};
@@ -401,6 +595,7 @@ nlohmann::json episode_manifest_store::fsck(uint64_t episode_id) const {
   nlohmann::json errors = nlohmann::json::array();
   nlohmann::json warnings = nlohmann::json::array();
   size_t checked = 0;
+  bool degraded = false;
   for (const auto &[current_episode_id, episode] : folded) {
     if (episode_id != 0 && current_episode_id != episode_id) {
       continue;
@@ -437,14 +632,21 @@ nlohmann::json episode_manifest_store::fsck(uint64_t episode_id) const {
       warnings.push_back(
           {{"code", "episode_closed_duplicate"}, {"episode_id", current_episode_id}, {"count", close_count}});
     }
+    const auto graph = build_causal_graph(runtime_dir_, current_episode_id, episode, folded);
+    degraded = degraded || graph.degraded;
+    for (const auto &warning : graph.warnings) {
+      warnings.push_back(warning);
+    }
   }
   if (episode_id != 0 && checked == 0) {
     errors.push_back({{"code", "episode_missing"}, {"episode_id", episode_id}});
   }
   return {{"ok", errors.empty()},
+          {"status", errors.empty() ? (degraded ? "degraded" : "ok") : "failed"},
           {"schema", EPISODE_MANIFEST_SCHEMA_V1},
           {"runtime_dir", runtime_dir_},
           {"authority", "yijinjing-journal"},
+          {"degraded", degraded},
           {"errors", errors},
           {"warnings", warnings},
           {"checked", {{"episode_manifest_records", records.size()}, {"episodes", checked}}}};

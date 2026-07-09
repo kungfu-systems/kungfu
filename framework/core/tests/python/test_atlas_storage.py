@@ -540,6 +540,16 @@ def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
     assert episode["record_kind"] == "episode_open"
     assert episode["episode_id"] == 42
 
+    input_ref = storage_service.episode_attach_ref(
+        runtime_dir,
+        episode_id=42,
+        ref_kind="input_frame",
+        ref_uid=99,
+        ref_id="external-frame:99",
+    )
+    assert input_ref["record_kind"] == "episode_ref_attached"
+    assert input_ref["ref_kind"] == "input_frame"
+
     attached = storage_service.episode_attach_frame(
         runtime_dir,
         episode_id=42,
@@ -577,12 +587,17 @@ def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
     inspected = storage_service.episode_inspect(runtime_dir, episode_id=42)
     assert inspected["ok"]
     assert inspected["episode"]["status"] == "ended"
-    assert len(inspected["records"]) == 3
+    assert len(inspected["records"]) == 4
     assert inspected["frames"][0]["frame_uid"] == 100
+    assert inspected["causal_graph"]["schema"] == "kungfu.episode.causal-graph/v1"
+    assert inspected["causal_graph"]["degraded"] is False
+    assert inspected["dependencies"][0]["kind"] == "frame"
+    assert inspected["dependencies"][0]["status"] == "declared_external"
 
     fsck = storage_service.fsck(runtime_dir)
     assert fsck["ok"]
-    assert fsck["checked"]["episode_manifest_records"] == 3
+    assert fsck["status"] == "ok"
+    assert fsck["checked"]["episode_manifest_records"] == 4
     assert fsck["checked"]["episodes"] == 1
     assert fsck["episode_manifest"]["authority"] == "yijinjing-journal"
 
@@ -616,8 +631,84 @@ def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
     assert bundle["scope"] == "episode"
     assert bundle["episode_id"] == 42
     assert bundle["manifest"]["episode_id"] == 42
-    assert bundle["record_count"] == 3
+    assert bundle["causal_graph"]["degraded"] is False
+    assert bundle["dependencies"][0]["status"] == "declared_external"
+    assert bundle["record_count"] == 4
     assert bundle["frame_count"] == 1
+
+
+def test_episode_fsck_reports_degraded_causal_dependencies(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    storage_service.episode_begin(
+        runtime_dir,
+        episode_id=7,
+        parent_episode_id=999,
+        root_trigger_frame_uid=77,
+        title="degraded episode",
+        actor="pytest",
+        source="unit-test",
+        begin_time=1000,
+    )
+    storage_service.episode_attach_frame(
+        runtime_dir,
+        episode_id=7,
+        frame_uid=101,
+        trigger_frame_uid=77,
+        stream_id=7,
+        gen_time=1100,
+        carrier_type=10803,
+        source=1,
+        dest=0,
+        data_length=12,
+        integrity_version=2,
+        payload_checksum=123,
+        frame_checksum=456,
+    )
+    storage_service.episode_attach_ref(
+        runtime_dir,
+        episode_id=7,
+        ref_kind="payload",
+        ref_id="missing/payload.json",
+        ref_hash="sha256:missing",
+    )
+    storage_service.episode_attach_ref(
+        runtime_dir,
+        episode_id=7,
+        ref_kind="episode",
+        ref_uid=998,
+    )
+    storage_service.episode_end(
+        runtime_dir,
+        episode_id=7,
+        end_time=1200,
+        last_frame_uid=101,
+        frame_count=1,
+        reason="done",
+    )
+
+    inspected = storage_service.episode_inspect(runtime_dir, episode_id=7)
+    assert inspected["ok"]
+    assert inspected["causal_graph"]["degraded"] is True
+    assert {dependency["kind"] for dependency in inspected["dependencies"]} >= {
+        "episode",
+        "frame",
+        "payload",
+    }
+
+    fsck = storage_service.fsck(runtime_dir, episode_id=7)
+    assert fsck["ok"]
+    assert fsck["status"] == "degraded"
+    assert fsck["degraded"] is True
+    warning_codes = {warning["code"] for warning in fsck["warnings"]}
+    assert "episode_dependency_missing" in warning_codes
+    assert "episode_root_trigger_frame_missing" in warning_codes
+    assert "episode_trigger_frame_missing" in warning_codes
+    assert "episode_payload_ref_missing" in warning_codes
+
+    bundle = storage_service.build_export_bundle(runtime_dir, episode_id=7)
+    assert bundle["degraded"] is True
+    assert bundle["causal_graph"]["degraded"] is True
+    assert bundle["dependency_count"] == len(bundle["dependencies"])
 
 
 def test_payload_fsck_verifies_versioned_frame_checksums(tmp_path):
