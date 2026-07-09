@@ -117,9 +117,13 @@ Enforcement is a mechanism, not a rule:
    symbol-level) wired into `verify.mjs`; allowlists the view module and fails
    elsewhere. `runtime/schema/schema_compiler.cpp` is temporarily allowlisted.
    A `slices/view-encapsulation` probe proves the roundtrip + boundary.
-5. **Migrate the rest** — `schema_compiler` (behind `kungfu::view::compile_schema`)
-   and the `py-runtime` consumer incrementally, then remove the schema_compiler
-   allowlist to flip the gate strict.
+5. **Migrate the rest** (done, slice 2) — `schema_compiler` now delegates the
+   `.fbs` -> `.bfbs` compile to `kungfu::view::compile_schema` (keeping only its
+   trust-tier policy), and the schema_compiler allowlist is removed so the gate
+   is **strict**: no `flatbuffers::` / `reflection::` appears anywhere outside
+   `kungfu::view`. The `py-runtime` consumer needs no change — it marshals the
+   compiled `.bfbs` bytes across the binding boundary and never holds a bare
+   reflection view.
 
 ## Explicitly out of scope
 

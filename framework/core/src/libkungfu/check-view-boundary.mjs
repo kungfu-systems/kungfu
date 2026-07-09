@@ -15,11 +15,9 @@
 // comment outside the view module should need to name `flatbuffers::` /
 // `reflection::`; reword the seam instead.
 //
-// ALLOWLIST (slice-staged):
-//   - the kungfu::view module itself (the sole FB access point);
-//   - runtime/schema/schema_compiler.cpp — the `.fbs` -> `.bfbs` compile path,
-//     migrated in a later slice. Remove this entry when it moves behind
-//     kungfu::view::compile_schema, flipping the gate fully strict.
+// ALLOWLIST: only the kungfu::view module itself (the sole FB access point).
+// The gate is strict — the `.fbs` -> `.bfbs` compile path now goes through
+// kungfu::view::compile_schema, so no other file may name FlatBuffers.
 //
 // Pure Node (no grep/bash), so the guard runs on every platform.
 //
@@ -38,10 +36,9 @@ const allowedPrefixes = [
   'libkungfu/include/kungfu/view/',
   'libkungfu/src/view/',
 ];
-const allowedFiles = [
-  // Deferred to the next migration slice; see ALLOWLIST note above.
-  'libkungfu/src/runtime/schema/schema_compiler.cpp',
-];
+// No exceptions: every `.fbs`/`.bfbs`/reflection path now goes through
+// kungfu::view (schema_compiler delegates to view::compile_schema). Strict.
+const allowedFiles = [];
 
 const cppExt = /\.(h|hh|hpp|hxx|c|cc|cpp|cxx|inl|ipp)$/;
 

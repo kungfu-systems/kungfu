@@ -66,7 +66,13 @@ static std::string make_data(const char *fbs, const char *json) {
 }
 
 int main() {
-  const std::string bfbs = make_bfbs(FBS);
+  // compile .fbs -> .bfbs through the view chokepoint (the sole FB compile entry)
+  auto compiled = view::compile_schema(FBS, /*allow_includes*/ false);
+  assert(compiled.ok && !compiled.bfbs.empty() && compiled.error.empty());
+  auto bad = view::compile_schema("table Broken { : }", false);
+  assert(!bad.ok && !bad.error.empty() && bad.bfbs.empty()); // never throws on bad input
+  const std::string bfbs = compiled.bfbs;
+
   const std::string data = make_data(FBS, JSON);
   const auto *dbuf = reinterpret_cast<const uint8_t *>(data.data());
 

@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// kungfu::view regime 2 implementation — the ONLY translation unit in kungfu
-// that names `flatbuffers::` / `reflection::` for the open-layer reflection path
-// (ADR-0039). Everything borrow-heavy about FlatBuffers lives behind this file;
+// kungfu::view implementation — the ONLY translation unit in kungfu that names
+// `flatbuffers::` / `reflection::` (ADR-0039): the open-layer reflection path
+// (regime 2) and the `.fbs` -> `.bfbs` compile entry both live behind this file;
 // the header exposes only reflection-free types.
 #include <kungfu/view/schema.h>
 
+#include <flatbuffers/idl.h> // Parser for the .fbs -> .bfbs compile entry
 #include <flatbuffers/reflection.h>
 #include <flatbuffers/util.h> // LoadFile for the .bfbs import boundary
 #include <sqlite3.h>
@@ -184,6 +185,25 @@ std::vector<std::string> alter_add_missing(sqlite3 *db, const std::vector<col_pl
     }
   }
   return added;
+}
+
+compiled_schema compile_schema(std::string_view fbs_text, bool allow_includes) {
+  compiled_schema out;
+  // In-memory compile against the already-linked FlatBuffers library. With no
+  // include directories provided, a schema that pulls in other files fails to
+  // resolve — the safe default for the in-process open-layer path.
+  flatbuffers::IDLOptions idl_opts;
+  flatbuffers::Parser parser(idl_opts);
+  const char *no_includes[] = {nullptr};
+  if (!parser.Parse(std::string(fbs_text).c_str(), allow_includes ? nullptr : no_includes)) {
+    out.error = parser.error_;
+    return out;
+  }
+  parser.Serialize(); // parsed schema -> reflection binary (.bfbs)
+  const auto *buf = reinterpret_cast<const char *>(parser.builder_.GetBufferPointer());
+  out.bfbs.assign(buf, parser.builder_.GetSize());
+  out.ok = true;
+  return out;
 }
 
 } // namespace kungfu::view

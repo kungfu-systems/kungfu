@@ -2,7 +2,7 @@
 
 #include <kungfu/runtime/schema/schema_compiler.h>
 
-#include <flatbuffers/idl.h>
+#include <kungfu/view/schema.h>
 
 namespace kungfu::runtime::schema {
 
@@ -25,24 +25,15 @@ compile_result compile_fbs(const std::string &fbs_text, const compile_options &o
     return result;
   }
 
-  // In-memory compile against the already-linked FlatBuffers library. No
-  // include directories are provided, so a schema that pulls in other files
-  // fails to resolve — acceptable for the in-process open-layer path and
-  // mandatory for the sandboxed tier.
-  flatbuffers::IDLOptions idl_opts;
-  flatbuffers::Parser parser(idl_opts);
-
-  const char *include_paths[] = {nullptr};
-  if (!parser.Parse(fbs_text.c_str(), allow_includes ? nullptr : include_paths)) {
-    result.error = parser.error_;
+  // The `.fbs` -> `.bfbs` compile itself goes through kungfu::view: FlatBuffers
+  // is reached only through that one module (ADR-0039). This layer keeps just
+  // the trust-tier policy above.
+  auto compiled = kungfu::view::compile_schema(fbs_text, allow_includes);
+  if (!compiled.ok) {
+    result.error = std::move(compiled.error);
     return result;
   }
-
-  // Serialize the parsed schema to its reflection binary (.bfbs).
-  parser.Serialize();
-  const std::uint8_t *buf = parser.builder_.GetBufferPointer();
-  const std::size_t size = parser.builder_.GetSize();
-  result.bfbs.assign(buf, buf + size);
+  result.bfbs.assign(compiled.bfbs.begin(), compiled.bfbs.end());
   result.ok = true;
   return result;
 }

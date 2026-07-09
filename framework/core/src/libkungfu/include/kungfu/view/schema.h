@@ -112,6 +112,22 @@ private:
 // not altered here.
 std::vector<std::string> alter_add_missing(sqlite3 *db, const std::vector<col_plan> &cols, std::string_view table);
 
+// Result of compiling `.fbs` schema text to a `.bfbs` reflection binary.
+struct compiled_schema {
+  bool ok = false;
+  std::string bfbs;  // reflection binary bytes on success, empty on failure
+  std::string error; // FlatBuffers parser diagnostic (file:line: message) on failure
+};
+
+// Compile `.fbs` schema text to a `.bfbs` reflection binary in-process (the
+// linked FlatBuffers parser; no flatc, no subprocess) — the sole FB compile
+// entry, so `flatbuffers::Parser` stays inside kungfu::view (ADR-0039). Never
+// throws: a parse failure returns ok=false with the parser diagnostic. This is
+// schema parsing, not code execution. `allow_includes=false` blocks cross-file
+// includes (callers force it off for untrusted input); trust-tier size bounds
+// stay with the caller, not here.
+[[nodiscard]] compiled_schema compile_schema(std::string_view fbs_text, bool allow_includes);
+
 } // namespace kungfu::view
 
 #endif // KUNGFU_VIEW_SCHEMA_H
