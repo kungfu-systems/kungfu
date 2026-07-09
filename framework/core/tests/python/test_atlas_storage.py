@@ -307,10 +307,16 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
     assert capabilities["owner"] == "libkungfu"
     assert capabilities["backend"] == "content-addressed-file"
     assert capabilities["provider"] == "content-addressed-file"
+    assert capabilities["provider_config_source"] == "default"
     assert {provider["name"] for provider in capabilities["providers"]} == {
         "content-addressed-file",
         "rocksdb",
     }
+    assert any(
+        provider["name"] == "rocksdb"
+        and provider["runtime"]["lifecycle"] == "provider-instance-owned"
+        for provider in capabilities["providers"]
+    )
     assert set(capabilities["operations"]) == {
         "status",
         "fsck",
@@ -333,6 +339,7 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
         "operation": "status",
         "runtime_dir": str(tmp_path),
         "provider": "content-addressed-file",
+        "provider_config_source": "default",
         "scope": "source",
         "source_id": "local-synth",
         "dry_run": True,
@@ -348,7 +355,17 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
     assert status["ok"]
     assert status["backend"] == "content-addressed-file"
     assert status["provider"] == "content-addressed-file"
+    assert status["provider_config_source"] == "default"
+    assert status["provider_runtime"]["lifecycle"] == "stateless-filesystem"
     assert status["sources"] == []
+
+    request = runtime.make_storage_service_request(
+        "status",
+        str(tmp_path),
+        {"provider": "rocksdb", "scope": "all"},
+    )
+    assert request["provider"] == "rocksdb"
+    assert request["provider_config_source"] == "option"
 
 
 def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monkeypatch):

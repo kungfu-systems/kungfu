@@ -93,6 +93,10 @@ function writeNodeFixture(runtimeDir) {
 function selectedNodeResults(runtimeDir) {
   return {
     capabilities: kungfu.storageServiceCapabilities(),
+    optionRequest: kungfu.makeStorageServiceRequest('status', runtimeDir, {
+      provider: 'content-addressed-file',
+      scope: 'all',
+    }),
     request: kungfu.makeStorageServiceRequest('fsck', runtimeDir, {
       scope: 'source',
       source_id: 'node-synth',
@@ -152,6 +156,11 @@ from kungfu.storage import service
 
 out = {
     "capabilities": service.service_capabilities(),
+    "optionRequest": service._runtime().make_storage_service_request(
+        "status",
+        runtime_dir,
+        {"provider": "content-addressed-file", "scope": "all"},
+    ),
     "request": service._runtime().make_storage_service_request(
         "fsck",
         runtime_dir,
@@ -232,6 +241,20 @@ for (const providerCase of providerCases) {
           assert.equal(
             nodeResults.status.provider,
             providerCase.expectedProvider,
+          );
+          assert.equal(
+            nodeResults.optionRequest.provider,
+            'content-addressed-file',
+          );
+          assert.equal(
+            nodeResults.optionRequest.provider_config_source,
+            'option',
+          );
+          assert.equal(
+            nodeResults.status.provider_runtime.lifecycle,
+            providerCase.expectedProvider === 'rocksdb'
+              ? 'provider-instance-owned'
+              : 'stateless-filesystem',
           );
           assert.equal(nodeResults.fsck.ok, true);
           assert.equal(nodeResults.bundle.records.length, 2);

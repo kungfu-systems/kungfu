@@ -98,12 +98,21 @@ shims over that service instead of a second implementation of the provider
 semantics.
 
 Provider selection is runtime configuration, not product vocabulary. The
-default provider remains `content-addressed-file`; setting
-`KUNGFU_STORAGE_PROVIDER=rocksdb` or passing the storage service option
-`{"provider":"rocksdb"}` selects the RocksDB provider for the same operations.
-The returned status/capabilities may report the selected provider for
+default provider remains `content-addressed-file`; explicit storage service
+options win over environment defaults, and `KUNGFU_STORAGE_PROVIDER=rocksdb`
+selects RocksDB only when the request does not pass `{"provider":"..."}`. The
+returned request/status/capabilities include `provider_config_source` for
 observability, but commands and SDKs should continue to model storage in terms
 of manifests, payload references, bundles, projections, and verification.
+
+Provider lifecycle is also owned by `libkungfu`, not the bindings. The
+content-addressed file provider is stateless filesystem access. The RocksDB
+provider owns a RocksDB handle for the lifetime of its C++ provider instance,
+uses read-only opens for read operations without creating a backend, upgrades to
+a writable handle when writes are required, and reports typed `rocksdb_*`
+runtime errors from the service surface. Python and Node remain thin callers of
+the same C++ service and must not manage RocksDB handles or provider-specific
+retry policy themselves.
 
 The first C++ contract surface is intentionally header-only vocabulary under
 `<kungfu/yijinjing/storage...>`:

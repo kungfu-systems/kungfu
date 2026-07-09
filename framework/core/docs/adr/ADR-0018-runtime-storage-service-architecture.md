@@ -60,6 +60,14 @@ should call the Node binding (or a shell command that reaches the same service),
 not reimplement manifest scanning, fsck, import/export, rebuild, GC, compact, or
 sync verification in JavaScript.
 
+Provider lifecycle and configuration are part of that same C++ service boundary.
+The storage service chooses a provider in this order: explicit service option,
+then `KUNGFU_STORAGE_PROVIDER`, then the default `content-addressed-file`
+provider. Capabilities/status expose the selected provider and
+`provider_config_source` only for observability. Backends such as RocksDB own
+their native handles inside the C++ provider instance; bindings do not open,
+cache, retry, or compact provider-specific handles.
+
 The `libyijinjing` storage contract must expose the Git-like synchronization
 vocabulary as C++ data contracts, not as Python-only or JavaScript-only helper
 records: source refs, source heads, range selectors, hash inventories, channel

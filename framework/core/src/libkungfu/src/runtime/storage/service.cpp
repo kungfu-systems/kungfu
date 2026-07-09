@@ -36,6 +36,11 @@ inline constexpr const char *PROVIDER_FILE = "content-addressed-file";
 inline constexpr const char *PROVIDER_ROCKSDB = "rocksdb";
 inline constexpr const char *ENV_STORAGE_PROVIDER = "KUNGFU_STORAGE_PROVIDER";
 
+struct provider_selection {
+  std::string name = {};
+  std::string source = {};
+};
+
 struct stored_payload {
   std::string digest = {};
   std::string uri = {};
@@ -157,12 +162,7 @@ void write_bytes(const fs::path &path, const std::string &raw) {
   output.write(raw.data(), static_cast<std::streamsize>(raw.size()));
 }
 
-std::string normalized_provider(std::string provider) {
-  if (provider.empty()) {
-    if (const char *env_provider = std::getenv(ENV_STORAGE_PROVIDER); env_provider != nullptr) {
-      provider = env_provider;
-    }
-  }
+std::string normalized_provider_name(const std::string &provider) {
   if (provider.empty() || provider == "file" || provider == PROVIDER_FILE) {
     return PROVIDER_FILE;
   }
@@ -170,6 +170,17 @@ std::string normalized_provider(std::string provider) {
     return PROVIDER_ROCKSDB;
   }
   throw std::invalid_argument("unsupported storage provider: " + provider);
+}
+
+provider_selection select_provider(std::string provider) {
+  if (provider.empty()) {
+    if (const char *env_provider = std::getenv(ENV_STORAGE_PROVIDER); env_provider != nullptr) {
+      provider = env_provider;
+      return {normalized_provider_name(provider), "env:" + std::string(ENV_STORAGE_PROVIDER)};
+    }
+    return {PROVIDER_FILE, "default"};
+  }
+  return {normalized_provider_name(provider), "option"};
 }
 
 std::string storage_uri(const std::string &provider, const std::string &runtime_dir, const std::string &key) {
@@ -185,6 +196,7 @@ public:
 
   [[nodiscard]] virtual std::string name() const = 0;
   [[nodiscard]] virtual nlohmann::json layout() const = 0;
+  [[nodiscard]] virtual nlohmann::json runtime() const = 0;
   [[nodiscard]] virtual std::string registry_uri() const = 0;
   [[nodiscard]] virtual nlohmann::json load_registry() const = 0;
   virtual void save_registry(const nlohmann::json &registry) const = 0;
@@ -212,6 +224,15 @@ public:
         {"source_registry", "storage/sources.json"},
         {"source_manifests", "storage/sources/<source-id>/manifests/*.json"},
         {"payloads", "storage/payloads/<hash-prefix>/<sha256>.json"},
+    };
+  }
+
+  [[nodiscard]] nlohmann::json runtime() const override {
+    return {
+        {"lifecycle", "stateless-filesystem"},
+        {"handle", "per filesystem operation"},
+        {"readonly_open_creates_backend", false},
+        {"write_open_creates_backend", true},
     };
   }
 
@@ -325,6 +346,17 @@ public:
         {"source_registry", "registry"},
         {"source_manifests", "manifest/<source-id>/<manifest-id> and manifest/<source-id>/latest"},
         {"payloads", "payload/<sha256>"},
+    };
+  }
+
+  [[nodiscard]] nlohmann::json runtime() const override {
+    return {
+        {"lifecycle", "provider-instance-owned"},
+        {"handle", db_ ? (db_writable_ ? "open-readwrite" : "open-readonly") : "closed"},
+        {"readonly_open_creates_backend", false},
+        {"write_open_creates_backend", true},
+        {"read_options", {{"fill_cache", read_options_.fill_cache}}},
+        {"write_options", {{"sync", write_options_.sync}}},
     };
   }
 
@@ -446,10 +478,18 @@ private:
   }
   [[nodiscard]] static std::string payload_key(const std::string &digest) { return "payload/" + digest; }
 
-  [[nodiscard]] std::unique_ptr<rocksdb::DB> open(bool write) const {
+  [[nodiscard]] rocksdb::DB *open(bool write) const {
+    if (db_) {
+      if (!write || db_writable_) {
+        return db_.get();
+      }
+      db_.reset();
+      db_writable_ = false;
+    }
     rocksdb::DB *raw = nullptr;
     rocksdb::Options options;
     options.create_if_missing = write;
+    options.error_if_exists = false;
     rocksdb::Status status;
     if (write) {
       fs::create_directories(rocksdb_root(runtime_dir_));
@@ -461,9 +501,11 @@ private:
       status = rocksdb::DB::OpenForReadOnly(options, rocksdb_root(runtime_dir_).string(), &raw);
     }
     if (!status.ok()) {
-      throw std::runtime_error("failed to open RocksDB storage provider: " + status.ToString());
+      throw std::runtime_error("rocksdb_open_failed: " + status.ToString());
     }
-    return std::unique_ptr<rocksdb::DB>(raw);
+    db_.reset(raw);
+    db_writable_ = write;
+    return db_.get();
   }
 
   [[nodiscard]] bool get(const std::string &key, std::string &value) const {
@@ -471,21 +513,21 @@ private:
     if (!db) {
       return false;
     }
-    const auto status = db->Get(rocksdb::ReadOptions(), key, &value);
+    const auto status = db->Get(read_options_, key, &value);
     if (status.IsNotFound()) {
       return false;
     }
     if (!status.ok()) {
-      throw std::runtime_error("failed to read RocksDB storage key " + key + ": " + status.ToString());
+      throw std::runtime_error("rocksdb_read_failed: " + key + ": " + status.ToString());
     }
     return true;
   }
 
   void put(const std::string &key, const std::string &value) const {
     auto db = open(true);
-    const auto status = db->Put(rocksdb::WriteOptions(), key, value);
+    const auto status = db->Put(write_options_, key, value);
     if (!status.ok()) {
-      throw std::runtime_error("failed to write RocksDB storage key " + key + ": " + status.ToString());
+      throw std::runtime_error("rocksdb_write_failed: " + key + ": " + status.ToString());
     }
   }
 
@@ -494,7 +536,7 @@ private:
     if (!db) {
       return;
     }
-    std::unique_ptr<rocksdb::Iterator> it(db->NewIterator(rocksdb::ReadOptions()));
+    std::unique_ptr<rocksdb::Iterator> it(db->NewIterator(read_options_));
     for (it->Seek(prefix); it->Valid(); it->Next()) {
       const auto key = it->key().ToString();
       if (!key.starts_with(prefix)) {
@@ -503,16 +545,24 @@ private:
       fn(key, it->value().ToString());
     }
     if (!it->status().ok()) {
-      throw std::runtime_error("failed to iterate RocksDB storage provider: " + it->status().ToString());
+      throw std::runtime_error("rocksdb_iterate_failed: " + it->status().ToString());
     }
   }
 
   std::string runtime_dir_;
+  mutable std::unique_ptr<rocksdb::DB> db_ = {};
+  mutable bool db_writable_ = false;
+  rocksdb::ReadOptions read_options_ = [] {
+    rocksdb::ReadOptions options;
+    options.fill_cache = false;
+    return options;
+  }();
+  rocksdb::WriteOptions write_options_ = {};
 };
 
 std::unique_ptr<storage_provider> make_provider(const storage_service_options &options) {
-  const auto provider = normalized_provider(options.provider);
-  if (provider == PROVIDER_ROCKSDB) {
+  const auto provider = select_provider(options.provider);
+  if (provider.name == PROVIDER_ROCKSDB) {
     return std::make_unique<rocksdb_storage_provider>(options.runtime_dir);
   }
   return std::make_unique<file_storage_provider>(options.runtime_dir);
@@ -757,6 +807,8 @@ nlohmann::json status_impl(const storage_service_options &options) {
       {"ok", options.source_id.empty() ? true : !sources.empty()},
       {"backend", provider->name()},
       {"provider", provider->name()},
+      {"provider_config_source", options.provider_config_source},
+      {"provider_runtime", provider->runtime()},
       {"scope", options.source_id.empty() ? "all" : "source"},
       {"source_id", options.source_id.empty() ? nlohmann::json(nullptr) : nlohmann::json(options.source_id)},
       {"sources", sources},
@@ -1247,7 +1299,8 @@ nlohmann::json make_request(storage_operation operation, const storage_service_o
       {"owner", RUNTIME_STORAGE_SERVICE_OWNER},
       {"operation", storage_operation_name(operation)},
       {"runtime_dir", options.runtime_dir},
-      {"provider", normalized_provider(options.provider)},
+      {"provider", options.provider},
+      {"provider_config_source", options.provider_config_source},
       {"scope", options.scope},
       {"source_id", options.source_id},
       {"dry_run", options.dry_run},
@@ -1321,7 +1374,9 @@ storage_operation parse_storage_operation(const std::string &operation) {
 storage_service_options parse_storage_service_options(const std::string &runtime_dir, const nlohmann::json &options) {
   storage_service_options parsed;
   parsed.runtime_dir = runtime_dir;
-  parsed.provider = normalized_provider(text_or(options, "provider"));
+  const auto selected_provider = select_provider(text_or(options, "provider"));
+  parsed.provider = selected_provider.name;
+  parsed.provider_config_source = selected_provider.source;
   parsed.scope = text_or(options, "scope", "all");
   parsed.source_id = text_or(options, "source_id");
   parsed.dry_run = bool_or(options, "dry_run", true);
@@ -1429,20 +1484,25 @@ std::string write_storage_payload_bytes(const std::string &runtime_dir, const st
 }
 
 nlohmann::json storage_service_capabilities() {
-  const auto provider = normalized_provider({});
+  const auto provider = select_provider({});
   return {
       {"schema", RUNTIME_STORAGE_SERVICE_SCHEMA_V1},
       {"owner", RUNTIME_STORAGE_SERVICE_OWNER},
       {"operations", storage_operation_names()},
-      {"backend", provider},
-      {"provider", provider},
+      {"backend", provider.name},
+      {"provider", provider.name},
+      {"provider_config_source", provider.source},
       {"providers", nlohmann::json::array({
                         {{"name", PROVIDER_FILE},
-                         {"default", provider == PROVIDER_FILE},
-                         {"layout", file_storage_provider("").layout()}},
+                         {"default", provider.name == PROVIDER_FILE},
+                         {"selected", provider.name == PROVIDER_FILE},
+                         {"layout", file_storage_provider("").layout()},
+                         {"runtime", file_storage_provider("").runtime()}},
                         {{"name", PROVIDER_ROCKSDB},
-                         {"default", provider == PROVIDER_ROCKSDB},
-                         {"layout", rocksdb_storage_provider("").layout()}},
+                         {"default", provider.name == PROVIDER_ROCKSDB},
+                         {"selected", provider.name == PROVIDER_ROCKSDB},
+                         {"layout", rocksdb_storage_provider("").layout()},
+                         {"runtime", rocksdb_storage_provider("").runtime()}},
                     })},
       {"notes",
        nlohmann::json::array({
