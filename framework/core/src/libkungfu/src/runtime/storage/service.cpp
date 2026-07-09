@@ -29,6 +29,9 @@ namespace yy_storage = kungfu::yijinjing::storage;
 namespace {
 
 inline constexpr const char *PAYLOAD_STATE_PRESENT = "present";
+inline constexpr const char *PAYLOAD_STATE_REDACTED = "redacted";
+inline constexpr const char *PAYLOAD_STATE_ABSENT = "absent";
+inline constexpr const char *PAYLOAD_STATE_MISSING = "missing";
 inline constexpr const char *CONTENT_TYPE_JSON = "application/json";
 inline constexpr const char *SOURCE_REGISTRY_SCHEMA = "kungfu.storage.source-registry/v1";
 inline constexpr const char *PROJECTION_SOURCE_REGISTRY = "source-registry";
@@ -1437,6 +1440,12 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
            {"orphan_payloads", 0},
        }},
   };
+  // Degraded means facts are incomplete but not corrupt: a payload is recorded
+  // missing (data loss), as opposed to intentionally redacted/absent. Corruption
+  // and drift set ok=false (failed); degradation keeps ok=true but is surfaced
+  // through the tri-state `status` field so a missing payload no longer hides
+  // under ok=true.
+  bool degraded = false;
   if (!options.source_id.empty() && sources.empty()) {
     report["ok"] = false;
     report["errors"].push_back({{"code", "source_missing"}, {"source_id", options.source_id}});
@@ -1489,11 +1498,20 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
     }
     for (const auto &entry : entries_for_manifest(manifest)) {
       report["checked"]["payloads"] = report["checked"]["payloads"].get<size_t>() + 1;
-      if (text_or(entry, "payload_state") != PAYLOAD_STATE_PRESENT) {
+      const auto payload_state = text_or(entry, "payload_state");
+      if (payload_state != PAYLOAD_STATE_PRESENT) {
+        // Redacted/absent are intentional (a sensitive body deliberately withheld
+        // or known not to exist) and stay ok; any other non-present state, such as
+        // a recorded-missing body, is a real gap and degrades the verdict.
+        const bool intentional = payload_state == PAYLOAD_STATE_REDACTED || payload_state == PAYLOAD_STATE_ABSENT;
+        if (!intentional) {
+          degraded = true;
+        }
         report["warnings"].push_back({{"code", "payload_not_present"},
                                       {"source_id", current_source_id},
                                       {"subject", text_or(entry, "kind") + ":" + text_or(entry, "source_id")},
-                                      {"state", text_or(entry, "payload_state")}});
+                                      {"state", payload_state},
+                                      {"intentional", intentional}});
         continue;
       }
       const auto [_, error] = load_payload_impl(*provider, entry);
@@ -1560,6 +1578,9 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
            {"actual", counts}});
     }
   }
+  // Tri-state verdict over the boolean ok: failed (corruption/drift/unreadable)
+  // dominates, then degraded (incomplete but not corrupt), else ok.
+  report["status"] = !report["ok"].get<bool>() ? "failed" : (degraded ? "degraded" : "ok");
   return report;
 }
 

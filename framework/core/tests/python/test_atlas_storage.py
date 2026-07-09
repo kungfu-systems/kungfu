@@ -881,3 +881,71 @@ def test_atlas_import_persists_generic_source_manifest(tmp_path):
     source_fsck = source_store.fsck_source(runtime_dir, "atlas-local")
     assert source_fsck["ok"]
     assert source_fsck["storage"]["ok"]
+
+
+def test_storage_fsck_reports_degraded_status_for_recorded_payload_states(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    storage_service.write_synthetic_source(
+        runtime_dir,
+        source_id="degraded-synth",
+        manifest_id="imp-degraded",
+        source_head="head-1",
+        records=[
+            {
+                "kind": "note",
+                "source_id": "note-present",
+                "source_path": "notes/p.json",
+                "source_time": "2026-07-07T00:00:00Z",
+                "payload": {"body": "present"},
+            },
+            {
+                "kind": "note",
+                "source_id": "note-missing",
+                "source_path": "notes/m.json",
+                "source_time": "2026-07-08T00:00:00Z",
+                "payload": {"body": "lost"},
+                "payload_state": "missing",
+            },
+            {
+                "kind": "note",
+                "source_id": "note-redacted",
+                "source_path": "notes/r.json",
+                "source_time": "2026-07-09T00:00:00Z",
+                "payload": {"body": "sensitive"},
+                "payload_state": "redacted",
+            },
+        ],
+    )
+
+    report = storage_service.fsck(runtime_dir, source_id="degraded-synth")
+    # A recorded-missing payload is incomplete, not corrupt: ok stays true, but the
+    # tri-state verdict degrades so the loss is not hidden under ok=true. A redacted
+    # body is an intentional withholding and does not degrade the verdict.
+    assert report["ok"]
+    assert report["status"] == "degraded"
+    withheld = {
+        warning["subject"]: (warning["state"], warning["intentional"])
+        for warning in report["warnings"]
+        if warning["code"] == "payload_not_present"
+    }
+    assert withheld["note:note-missing"] == ("missing", False)
+    assert withheld["note:note-redacted"] == ("redacted", True)
+
+    # A fully present source verifies as ok with an ok verdict.
+    healthy_dir = tmp_path / "healthy"
+    storage_service.write_synthetic_source(
+        healthy_dir,
+        source_id="healthy-synth",
+        records=[
+            {
+                "kind": "note",
+                "source_id": "note-a",
+                "source_path": "notes/a.json",
+                "source_time": "2026-07-09T00:00:00Z",
+                "payload": {"body": "a"},
+            }
+        ],
+    )
+    healthy = storage_service.fsck(healthy_dir, source_id="healthy-synth")
+    assert healthy["ok"]
+    assert healthy["status"] == "ok"

@@ -603,7 +603,9 @@ def write_synthetic_source(
                 "content_type": CONTENT_TYPE_JSON,
                 "payload_hash": digest,
                 "byte_len": len(raw),
-                "payload_state": PAYLOAD_STATE_PRESENT,
+                "payload_state": str(
+                    record.get("payload_state") or PAYLOAD_STATE_PRESENT
+                ),
             }
         )
     manifest = build_import_manifest(
