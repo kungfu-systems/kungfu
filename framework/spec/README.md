@@ -54,7 +54,9 @@ Storage is one of the load-bearing examples for this ownership split:
 `libyijinjing` names the portable storage vocabulary, `libkungfu` implements
 the runtime storage service, and Python/Node expose binding shims over that C++
 service. The spec bundle should document those surfaces as bindings to the same
-runtime contract, not as independent Python or Node storage models.
+runtime contract, not as independent Python or Node storage models. Storage
+backends such as the content-addressed file provider or RocksDB provider are
+runtime implementation choices behind that contract.
 
 ## Scripts (skeleton placeholders)
 

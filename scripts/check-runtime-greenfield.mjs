@@ -406,6 +406,26 @@ function directLegacyRegistryNameHits(rel, text) {
 
 function storageBindingOwnershipHits(rel, text) {
   const hits = [];
+  if (rel === 'framework/core/src/libkungfu/src/runtime/storage/service.cpp') {
+    const required = [
+      '#include <rocksdb/db.h>',
+      'class rocksdb_storage_provider',
+      'rocksdb::DB::Open',
+      'rocksdb::DB::OpenForReadOnly',
+    ];
+    for (const needle of required) {
+      if (!text.includes(needle)) {
+        hits.push({
+          file: rel,
+          line: 1,
+          rule: 'storage provider ownership',
+          message:
+            'RocksDB storage provider ownership must stay in the libkungfu C++ runtime storage service.',
+          text: needle,
+        });
+      }
+    }
+  }
   if (rel === 'framework/core/src/python/kungfu/storage/service.py') {
     const required = [
       'storage_service_capabilities',
@@ -424,6 +444,22 @@ function storageBindingOwnershipHits(rel, text) {
           message:
             'Python storage service must remain a thin shim over the libkungfu runtime storage service.',
           text: needle,
+        });
+      }
+    }
+    for (const forbidden of [
+      'rocksdb',
+      'storage/rocksdb',
+      'payload/<sha256>',
+    ]) {
+      if (text.includes(forbidden)) {
+        hits.push({
+          file: rel,
+          line: lineNumber(text, text.indexOf(forbidden)),
+          rule: 'storage provider ownership',
+          message:
+            'Python storage helpers must not know provider internals; route through libkungfu runtime storage service.',
+          text: forbidden,
         });
       }
     }
@@ -447,6 +483,22 @@ function storageBindingOwnershipHits(rel, text) {
           message:
             'Node public storage API must forward to the native binding instead of owning storage semantics.',
           text: needle,
+        });
+      }
+    }
+    for (const forbidden of [
+      'rocksdb',
+      'storage/rocksdb',
+      'payload/<sha256>',
+    ]) {
+      if (text.includes(forbidden)) {
+        hits.push({
+          file: rel,
+          line: lineNumber(text, text.indexOf(forbidden)),
+          rule: 'storage provider ownership',
+          message:
+            'Node public storage API must not know provider internals; route through the native binding.',
+          text: forbidden,
         });
       }
     }
@@ -481,6 +533,9 @@ function storageBindingOwnershipHits(rel, text) {
       'manifest_path(',
       'read_json_file(',
       'write_json_file(',
+      'rocksdb/',
+      'storage/rocksdb',
+      'payload/<sha256>',
     ]) {
       if (text.includes(forbidden)) {
         hits.push({

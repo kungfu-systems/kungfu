@@ -70,8 +70,8 @@ def _payload_root(runtime_dir: str | Path) -> Path:
     return root_dir(runtime_dir) / "payloads"
 
 
-def write_payload_bytes(runtime_dir: str | Path, digest: str, raw: bytes) -> Path:
-    return Path(_runtime().write_storage_payload_bytes(str(runtime_dir), digest, raw))
+def write_payload_bytes(runtime_dir: str | Path, digest: str, raw: bytes) -> str:
+    return str(_runtime().write_storage_payload_bytes(str(runtime_dir), digest, raw))
 
 
 def source_manifest_dir(runtime_dir: str | Path, source_id: str) -> Path:

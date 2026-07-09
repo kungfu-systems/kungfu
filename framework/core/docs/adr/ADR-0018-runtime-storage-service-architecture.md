@@ -110,6 +110,10 @@ execution.
   operation execution, manifest acceptance, latest-manifest loading, record
   export, and payload writes. These functions are JSON/bytes adapters over
   `libkungfu`, not a Node storage engine.
+- The first provider family has two C++ implementations behind the same service
+  surface: the default content-addressed file provider and an optional RocksDB
+  payload/manifest provider. Provider selection is an implementation option;
+  Node and Python continue to call the same native runtime service.
 - Large payloads are not stored by making journal frames arbitrarily large. The
   journal carries commitments and metadata; the payload store carries bodies.
 - SQLite is a projection facility, not the authority root. It may be rebuilt
@@ -139,7 +143,9 @@ kungfu atlas verify --repo <atlas-repo> --json
 That slice proves the direction without claiming the whole service is complete:
 
 - Atlas large JSON bodies are stored outside mmap frames as hash-addressed
-  payloads.
+  payloads. The default provider stores those payloads as content-addressed
+  files; the RocksDB provider stores the same payloads, manifests, and source
+  registry records in a C++-owned key/value backend.
 - Import writes a manifest with source head, object count, payload inventory,
   and projection watermark.
 - `fsck` detects missing payloads, hash mismatches, malformed payload JSON, and
@@ -151,7 +157,8 @@ That slice proves the direction without claiming the whole service is complete:
 ## Explicitly out of scope
 
 - Choosing RocksDB, SQLite blob tables, files, or another backend as the final
-  large-payload store.
+  large-payload store for every runtime profile. The service now has a RocksDB
+  provider slice, but the product contract remains provider-neutral.
 - Repairing arbitrary journal corruption.
 - Declaring Atlas or any imported source no longer authoritative.
 - Defining cross-machine fetch/pull semantics, channel protocol, conflict

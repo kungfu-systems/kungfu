@@ -119,6 +119,24 @@ function selectedNodeResults(runtimeDir) {
   };
 }
 
+function withStorageProvider(provider, fn) {
+  const previous = process.env.KUNGFU_STORAGE_PROVIDER;
+  if (provider) {
+    process.env.KUNGFU_STORAGE_PROVIDER = provider;
+  } else {
+    Reflect.deleteProperty(process.env, 'KUNGFU_STORAGE_PROVIDER');
+  }
+  try {
+    return fn();
+  } finally {
+    if (previous === undefined) {
+      Reflect.deleteProperty(process.env, 'KUNGFU_STORAGE_PROVIDER');
+    } else {
+      process.env.KUNGFU_STORAGE_PROVIDER = previous;
+    }
+  }
+}
+
 function selectedPythonResults(runtimeDir) {
   const script = String.raw`
 import json
@@ -169,37 +187,63 @@ print(json.dumps(out, sort_keys=True, separators=(",", ":")))
   return JSON.parse(result.stdout);
 }
 
-test(
-  'Node storage binding uses the shared C++ service and matches Python',
+const providerCases = [
   {
-    skip:
-      nativeAvailable || process.env.KUNGFU_REQUIRE_NATIVE === '1'
-        ? false
-        : 'built kungfu_node binding is unavailable',
+    name: 'content-addressed-file',
+    env: undefined,
+    expectedProvider: 'content-addressed-file',
+    expectedPath: (runtimeDir) => path.join(runtimeDir, 'storage', 'payloads'),
   },
-  () => {
-    assert.equal(
-      nativeAvailable,
-      true,
-      'built native binding must expose storage service functions',
-    );
-    const runtimeDir = fs.mkdtempSync(
-      path.join(os.tmpdir(), 'kf-node-storage-'),
-    );
-    try {
-      const accepted = writeNodeFixture(runtimeDir);
-      assert.equal(accepted.schema, 'kungfu.storage.import-manifest/v1');
-      assert.equal(accepted.source_id, 'node-synth');
+  {
+    name: 'rocksdb',
+    env: 'rocksdb',
+    expectedProvider: 'rocksdb',
+    expectedPath: (runtimeDir) => path.join(runtimeDir, 'storage', 'rocksdb'),
+  },
+];
 
-      const nodeResults = selectedNodeResults(runtimeDir);
-      const pythonResults = selectedPythonResults(runtimeDir);
-      assert.deepEqual(nodeResults, pythonResults);
-      assert.equal(nodeResults.fsck.ok, true);
-      assert.equal(nodeResults.bundle.records.length, 2);
-      assert.equal(nodeResults.exported.length, 1);
-      assert.equal(nodeResults.verify.sync_roots_match, true);
-    } finally {
-      fs.rmSync(runtimeDir, { recursive: true, force: true });
-    }
-  },
-);
+for (const providerCase of providerCases) {
+  test(
+    `Node storage binding uses the shared C++ service and matches Python (${providerCase.name})`,
+    {
+      skip:
+        nativeAvailable || process.env.KUNGFU_REQUIRE_NATIVE === '1'
+          ? false
+          : 'built kungfu_node binding is unavailable',
+    },
+    () =>
+      withStorageProvider(providerCase.env, () => {
+        assert.equal(
+          nativeAvailable,
+          true,
+          'built native binding must expose storage service functions',
+        );
+        const runtimeDir = fs.mkdtempSync(
+          path.join(os.tmpdir(), `kf-node-storage-${providerCase.name}-`),
+        );
+        try {
+          const accepted = writeNodeFixture(runtimeDir);
+          assert.equal(accepted.schema, 'kungfu.storage.import-manifest/v1');
+          assert.equal(accepted.source_id, 'node-synth');
+
+          const nodeResults = selectedNodeResults(runtimeDir);
+          const pythonResults = selectedPythonResults(runtimeDir);
+          assert.deepEqual(nodeResults, pythonResults);
+          assert.equal(
+            nodeResults.status.provider,
+            providerCase.expectedProvider,
+          );
+          assert.equal(nodeResults.fsck.ok, true);
+          assert.equal(nodeResults.bundle.records.length, 2);
+          assert.equal(nodeResults.exported.length, 1);
+          assert.equal(nodeResults.verify.sync_roots_match, true);
+          assert.equal(
+            fs.existsSync(providerCase.expectedPath(runtimeDir)),
+            true,
+          );
+        } finally {
+          fs.rmSync(runtimeDir, { recursive: true, force: true });
+        }
+      }),
+  );
+}

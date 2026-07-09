@@ -306,6 +306,11 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
     assert capabilities["schema"] == "kungfu.runtime.storage-service/v1"
     assert capabilities["owner"] == "libkungfu"
     assert capabilities["backend"] == "content-addressed-file"
+    assert capabilities["provider"] == "content-addressed-file"
+    assert {provider["name"] for provider in capabilities["providers"]} == {
+        "content-addressed-file",
+        "rocksdb",
+    }
     assert set(capabilities["operations"]) == {
         "status",
         "fsck",
@@ -327,6 +332,7 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
         "owner": "libkungfu",
         "operation": "status",
         "runtime_dir": str(tmp_path),
+        "provider": "content-addressed-file",
         "scope": "source",
         "source_id": "local-synth",
         "dry_run": True,
@@ -341,6 +347,7 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
     )
     assert status["ok"]
     assert status["backend"] == "content-addressed-file"
+    assert status["provider"] == "content-addressed-file"
     assert status["sources"] == []
 
 

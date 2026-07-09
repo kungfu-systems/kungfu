@@ -90,10 +90,20 @@ The first `libkungfu` provider slice exposes
 `kungfu::runtime::storage_service_api::storage_service` and the
 `kungfu.runtime.storage-service/v1` operation surface for `status`, `fsck`,
 `export_bundle`, `import_bundle`, `rebuild_index`, `gc_plan`, `compact_plan`,
-and `verify_sync`. The current backend is a content-addressed file provider
-implemented in C++ under the runtime service. Python storage commands are now
-compatibility shims over that service instead of a second implementation of the
-provider semantics.
+and `verify_sync`. The current default backend is a content-addressed file
+provider implemented in C++ under the runtime service. A second C++ provider
+stores the same source registry, manifests, and payload bodies in RocksDB behind
+the identical service operations. Python storage commands are now compatibility
+shims over that service instead of a second implementation of the provider
+semantics.
+
+Provider selection is runtime configuration, not product vocabulary. The
+default provider remains `content-addressed-file`; setting
+`KUNGFU_STORAGE_PROVIDER=rocksdb` or passing the storage service option
+`{"provider":"rocksdb"}` selects the RocksDB provider for the same operations.
+The returned status/capabilities may report the selected provider for
+observability, but commands and SDKs should continue to model storage in terms
+of manifests, payload references, bundles, projections, and verification.
 
 The first C++ contract surface is intentionally header-only vocabulary under
 `<kungfu/yijinjing/storage...>`:

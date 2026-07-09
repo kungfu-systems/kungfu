@@ -78,9 +78,10 @@ surface. It is not the only storage path.
 - Remote transport over `channel` is not implemented in this slice.
 - Multi-source conflict resolution is still out of scope.
 - Observer-relative timeline roots are separate from the manifest sync root.
-- The interim store uses content-addressed files. A RocksDB or SQLite-backed
-  provider can replace that implementation without changing the public source
-  contracts.
+- The default store uses content-addressed files, and the runtime storage
+  service also has a C++ RocksDB provider for the same payload, manifest, and
+  source-registry contracts. A future SQLite-backed blob provider could still be
+  added without changing the public source contracts.
 - Destructive garbage collection, compaction, repair, and projection rebuild
   remain future storage-service operations.
 
@@ -88,9 +89,10 @@ surface. It is not the only storage path.
 
 - **Keep generic source logic in Python.** Rejected. That would make Python the
   semantic owner and force Node/C++ users to reimplement source contracts.
-- **Jump directly to a RocksDB provider.** Deferred. The immediate risk is
-  semantic drift, not file-store performance. A replaceable interim provider is
-  enough to prove contracts and CLI behavior.
+- **Expose RocksDB as the generic source API.** Rejected. RocksDB is now a
+  provider behind the runtime storage service, but source consumers still use
+  source, manifest, range, bundle, and fsck vocabulary instead of backend
+  engine calls.
 - **Make Atlas the only import/export surface.** Rejected. Atlas is an adapter
   and a test corpus, not the storage architecture.
 - **Solve remote sync and conflicts now.** Deferred. The source registry,

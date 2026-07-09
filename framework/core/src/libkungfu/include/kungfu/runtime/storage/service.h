@@ -26,6 +26,7 @@ enum class storage_operation {
 
 struct storage_service_options {
   std::string runtime_dir = {};
+  std::string provider = {};
   std::string scope = {};
   std::string source_id = {};
   bool dry_run = true;

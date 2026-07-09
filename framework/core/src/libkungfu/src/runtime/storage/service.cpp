@@ -3,8 +3,10 @@
 #include <kungfu/runtime/storage/service.h>
 
 #include <algorithm>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <optional>
 #include <random>
 #include <stdexcept>
@@ -15,6 +17,8 @@
 #include <kungfu/yijinjing/storage/content_hash.h>
 #include <kungfu/yijinjing/storage/generic_service.h>
 #include <kungfu/yijinjing/storage/sync_root.h>
+#include <rocksdb/db.h>
+#include <rocksdb/iterator.h>
 
 namespace kungfu::runtime::storage_service_api {
 
@@ -28,6 +32,22 @@ inline constexpr const char *CONTENT_TYPE_JSON = "application/json";
 inline constexpr const char *SOURCE_REGISTRY_SCHEMA = "kungfu.storage.source-registry/v1";
 inline constexpr const char *PROJECTION_SOURCE_REGISTRY = "source-registry";
 inline constexpr const char *PROJECTION_SQLITE = "sqlite";
+inline constexpr const char *PROVIDER_FILE = "content-addressed-file";
+inline constexpr const char *PROVIDER_ROCKSDB = "rocksdb";
+inline constexpr const char *ENV_STORAGE_PROVIDER = "KUNGFU_STORAGE_PROVIDER";
+
+struct stored_payload {
+  std::string digest = {};
+  std::string uri = {};
+  uint64_t bytes = 0;
+};
+
+struct stored_manifest {
+  std::string source_id = {};
+  std::string manifest_id = {};
+  std::string uri = {};
+  nlohmann::json value = nlohmann::json::object();
+};
 
 std::string text_or(const nlohmann::json &object, const std::string &field, const std::string &fallback = {}) {
   if (!object.is_object() || !object.contains(field)) {
@@ -73,6 +93,8 @@ fs::path registry_path(const std::string &runtime_dir) { return root_dir(runtime
 
 fs::path payload_root(const std::string &runtime_dir) { return root_dir(runtime_dir) / "payloads"; }
 
+fs::path rocksdb_root(const std::string &runtime_dir) { return root_dir(runtime_dir) / "rocksdb"; }
+
 fs::path payload_path(const std::string &runtime_dir, const std::string &digest) {
   return payload_root(runtime_dir) / digest.substr(0, std::min<size_t>(2, digest.size())) / (digest + ".json");
 }
@@ -88,6 +110,11 @@ fs::path latest_manifest_path(const std::string &runtime_dir, const std::string 
 fs::path manifest_path(const std::string &runtime_dir, const std::string &source_id, const std::string &manifest_id) {
   return source_manifest_dir(runtime_dir, source_id) / (manifest_id + ".json");
 }
+
+std::vector<fs::path> manifest_paths(const std::string &runtime_dir, const std::string &source_id = {});
+std::vector<fs::path> latest_manifest_paths(const std::string &runtime_dir, const std::string &source_id = {});
+std::vector<fs::path> all_payload_paths(const std::string &runtime_dir);
+std::string payload_digest_from_path(const fs::path &path);
 
 std::optional<nlohmann::json> read_json_file(const fs::path &path) {
   if (!fs::exists(path)) {
@@ -130,21 +157,371 @@ void write_bytes(const fs::path &path, const std::string &raw) {
   output.write(raw.data(), static_cast<std::streamsize>(raw.size()));
 }
 
-nlohmann::json load_registry_impl(const std::string &runtime_dir) {
-  const auto path = registry_path(runtime_dir);
-  if (!fs::exists(path)) {
-    return {{"schema", SOURCE_REGISTRY_SCHEMA}, {"sources", nlohmann::json::object()}};
+std::string normalized_provider(std::string provider) {
+  if (provider.empty()) {
+    if (const char *env_provider = std::getenv(ENV_STORAGE_PROVIDER); env_provider != nullptr) {
+      provider = env_provider;
+    }
   }
-  auto data = read_json_file(path);
-  if (!data || !data->contains("sources") || !data->at("sources").is_object()) {
-    throw std::runtime_error("invalid storage source registry: " + path.string());
+  if (provider.empty() || provider == "file" || provider == PROVIDER_FILE) {
+    return PROVIDER_FILE;
   }
-  (*data)["schema"] = data->value("schema", SOURCE_REGISTRY_SCHEMA);
-  return *data;
+  if (provider == "rocks" || provider == PROVIDER_ROCKSDB) {
+    return PROVIDER_ROCKSDB;
+  }
+  throw std::invalid_argument("unsupported storage provider: " + provider);
 }
 
-void save_registry_impl(const std::string &runtime_dir, const nlohmann::json &registry) {
-  write_json_file(registry_path(runtime_dir), registry);
+std::string storage_uri(const std::string &provider, const std::string &runtime_dir, const std::string &key) {
+  if (provider == PROVIDER_ROCKSDB) {
+    return std::string("rocksdb://") + rocksdb_root(runtime_dir).string() + "#" + key;
+  }
+  return key;
+}
+
+class storage_provider {
+public:
+  virtual ~storage_provider() = default;
+
+  [[nodiscard]] virtual std::string name() const = 0;
+  [[nodiscard]] virtual nlohmann::json layout() const = 0;
+  [[nodiscard]] virtual std::string registry_uri() const = 0;
+  [[nodiscard]] virtual nlohmann::json load_registry() const = 0;
+  virtual void save_registry(const nlohmann::json &registry) const = 0;
+  [[nodiscard]] virtual nlohmann::json load_latest_manifest(const std::string &source_id) const = 0;
+  virtual void write_manifest(const std::string &source_id, const std::string &manifest_id,
+                              const nlohmann::json &manifest) const = 0;
+  virtual void write_latest_manifest(const std::string &source_id, const nlohmann::json &manifest) const = 0;
+  [[nodiscard]] virtual std::vector<stored_manifest> manifest_records(const std::string &source_id = {}) const = 0;
+  [[nodiscard]] virtual std::vector<stored_manifest>
+  latest_manifest_records(const std::string &source_id = {}) const = 0;
+  [[nodiscard]] virtual bool payload_exists(const std::string &digest) const = 0;
+  [[nodiscard]] virtual std::string read_payload(const std::string &digest) const = 0;
+  virtual void write_payload(const std::string &digest, const std::string &raw) const = 0;
+  [[nodiscard]] virtual std::vector<stored_payload> all_payloads() const = 0;
+};
+
+class file_storage_provider : public storage_provider {
+public:
+  explicit file_storage_provider(std::string runtime_dir) : runtime_dir_(std::move(runtime_dir)) {}
+
+  [[nodiscard]] std::string name() const override { return PROVIDER_FILE; }
+
+  [[nodiscard]] nlohmann::json layout() const override {
+    return {
+        {"source_registry", "storage/sources.json"},
+        {"source_manifests", "storage/sources/<source-id>/manifests/*.json"},
+        {"payloads", "storage/payloads/<hash-prefix>/<sha256>.json"},
+    };
+  }
+
+  [[nodiscard]] std::string registry_uri() const override { return registry_path(runtime_dir_).string(); }
+
+  [[nodiscard]] nlohmann::json load_registry() const override {
+    const auto path = registry_path(runtime_dir_);
+    if (!fs::exists(path)) {
+      return {{"schema", SOURCE_REGISTRY_SCHEMA}, {"sources", nlohmann::json::object()}};
+    }
+    auto data = read_json_file(path);
+    if (!data || !data->contains("sources") || !data->at("sources").is_object()) {
+      throw std::runtime_error("invalid storage source registry: " + path.string());
+    }
+    (*data)["schema"] = data->value("schema", SOURCE_REGISTRY_SCHEMA);
+    return *data;
+  }
+
+  void save_registry(const nlohmann::json &registry) const override {
+    write_json_file(registry_path(runtime_dir_), registry);
+  }
+
+  [[nodiscard]] nlohmann::json load_latest_manifest(const std::string &source_id) const override {
+    const auto path = latest_manifest_path(runtime_dir_, source_id);
+    if (!fs::exists(path)) {
+      return nullptr;
+    }
+    auto data = read_json_file(path);
+    return data ? *data : nlohmann::json(nullptr);
+  }
+
+  void write_manifest(const std::string &source_id, const std::string &manifest_id,
+                      const nlohmann::json &manifest) const override {
+    write_json_file(manifest_path(runtime_dir_, source_id, manifest_id), manifest);
+  }
+
+  void write_latest_manifest(const std::string &source_id, const nlohmann::json &manifest) const override {
+    write_json_file(latest_manifest_path(runtime_dir_, source_id), manifest);
+  }
+
+  [[nodiscard]] std::vector<stored_manifest> manifest_records(const std::string &source_id = {}) const override {
+    std::vector<stored_manifest> records;
+    for (const auto &path : manifest_paths(runtime_dir_, source_id)) {
+      std::optional<nlohmann::json> manifest;
+      try {
+        manifest = read_json_file(path);
+      } catch (const std::exception &) {
+        records.push_back({{}, path.filename().string(), path.string(), nullptr});
+        continue;
+      }
+      if (!manifest) {
+        continue;
+      }
+      records.push_back({text_or(*manifest, "source_id"), text_or(*manifest, "manifest_id", path.filename().string()),
+                         path.string(), *manifest});
+    }
+    return records;
+  }
+
+  [[nodiscard]] std::vector<stored_manifest> latest_manifest_records(const std::string &source_id = {}) const override {
+    std::vector<stored_manifest> records;
+    for (const auto &path : latest_manifest_paths(runtime_dir_, source_id)) {
+      std::optional<nlohmann::json> manifest;
+      try {
+        manifest = read_json_file(path);
+      } catch (const std::exception &) {
+        records.push_back({{}, "latest", path.string(), nullptr});
+        continue;
+      }
+      if (!manifest) {
+        continue;
+      }
+      records.push_back({text_or(*manifest, "source_id"), text_or(*manifest, "manifest_id"), path.string(), *manifest});
+    }
+    return records;
+  }
+
+  [[nodiscard]] bool payload_exists(const std::string &digest) const override {
+    return fs::exists(payload_path(runtime_dir_, digest));
+  }
+
+  [[nodiscard]] std::string read_payload(const std::string &digest) const override {
+    return read_bytes(payload_path(runtime_dir_, digest));
+  }
+
+  void write_payload(const std::string &digest, const std::string &raw) const override {
+    write_bytes(payload_path(runtime_dir_, digest), raw);
+  }
+
+  [[nodiscard]] std::vector<stored_payload> all_payloads() const override {
+    std::vector<stored_payload> result;
+    for (const auto &path : all_payload_paths(runtime_dir_)) {
+      result.push_back({payload_digest_from_path(path), path.string(), fs::file_size(path)});
+    }
+    return result;
+  }
+
+private:
+  std::string runtime_dir_;
+};
+
+class rocksdb_storage_provider : public storage_provider {
+public:
+  explicit rocksdb_storage_provider(std::string runtime_dir) : runtime_dir_(std::move(runtime_dir)) {}
+
+  [[nodiscard]] std::string name() const override { return PROVIDER_ROCKSDB; }
+
+  [[nodiscard]] nlohmann::json layout() const override {
+    return {
+        {"database", "storage/rocksdb"},
+        {"source_registry", "registry"},
+        {"source_manifests", "manifest/<source-id>/<manifest-id> and manifest/<source-id>/latest"},
+        {"payloads", "payload/<sha256>"},
+    };
+  }
+
+  [[nodiscard]] std::string registry_uri() const override { return uri_for("registry"); }
+
+  [[nodiscard]] nlohmann::json load_registry() const override {
+    std::string raw;
+    if (!get("registry", raw)) {
+      return {{"schema", SOURCE_REGISTRY_SCHEMA}, {"sources", nlohmann::json::object()}};
+    }
+    auto data = nlohmann::json::parse(raw);
+    if (!data.is_object() || !data.contains("sources") || !data.at("sources").is_object()) {
+      throw std::runtime_error("invalid storage source registry: " + registry_uri());
+    }
+    data["schema"] = data.value("schema", SOURCE_REGISTRY_SCHEMA);
+    return data;
+  }
+
+  void save_registry(const nlohmann::json &registry) const override { put("registry", canonical_json(registry)); }
+
+  [[nodiscard]] nlohmann::json load_latest_manifest(const std::string &source_id) const override {
+    std::string raw;
+    if (!get(latest_manifest_key(source_id), raw)) {
+      return nullptr;
+    }
+    auto data = nlohmann::json::parse(raw);
+    return data.is_object() ? data : nlohmann::json(nullptr);
+  }
+
+  void write_manifest(const std::string &source_id, const std::string &manifest_id,
+                      const nlohmann::json &manifest) const override {
+    put(manifest_key(source_id, manifest_id), canonical_json(manifest));
+  }
+
+  void write_latest_manifest(const std::string &source_id, const nlohmann::json &manifest) const override {
+    put(latest_manifest_key(source_id), canonical_json(manifest));
+  }
+
+  [[nodiscard]] std::vector<stored_manifest> manifest_records(const std::string &source_id = {}) const override {
+    const auto prefix = source_id.empty() ? std::string("manifest/") : "manifest/" + source_id + "/";
+    std::vector<stored_manifest> records;
+    for_each(prefix, [&](const std::string &key, const std::string &raw) {
+      if (key.ends_with("/latest")) {
+        return;
+      }
+      auto data = nlohmann::json::parse(raw);
+      if (!data.is_object()) {
+        records.push_back({{}, key.substr(key.find_last_of('/') + 1), uri_for(key), nullptr});
+        return;
+      }
+      records.push_back({text_or(data, "source_id"),
+                         text_or(data, "manifest_id", key.substr(key.find_last_of('/') + 1)), uri_for(key), data});
+    });
+    std::sort(records.begin(), records.end(),
+              [](const stored_manifest &lhs, const stored_manifest &rhs) { return lhs.uri < rhs.uri; });
+    return records;
+  }
+
+  [[nodiscard]] std::vector<stored_manifest> latest_manifest_records(const std::string &source_id = {}) const override {
+    std::vector<stored_manifest> records;
+    if (!source_id.empty()) {
+      auto manifest = load_latest_manifest(source_id);
+      if (manifest.is_object()) {
+        records.push_back({text_or(manifest, "source_id"), text_or(manifest, "manifest_id"),
+                           uri_for(latest_manifest_key(source_id)), manifest});
+      }
+      return records;
+    }
+    for_each("manifest/", [&](const std::string &key, const std::string &raw) {
+      if (!key.ends_with("/latest")) {
+        return;
+      }
+      auto data = nlohmann::json::parse(raw);
+      if (data.is_object()) {
+        records.push_back({text_or(data, "source_id"), text_or(data, "manifest_id"), uri_for(key), data});
+      }
+    });
+    std::sort(records.begin(), records.end(),
+              [](const stored_manifest &lhs, const stored_manifest &rhs) { return lhs.source_id < rhs.source_id; });
+    return records;
+  }
+
+  [[nodiscard]] bool payload_exists(const std::string &digest) const override {
+    std::string raw;
+    return get(payload_key(digest), raw);
+  }
+
+  [[nodiscard]] std::string read_payload(const std::string &digest) const override {
+    std::string raw;
+    if (!get(payload_key(digest), raw)) {
+      throw std::runtime_error("failed to read payload: " + uri_for(payload_key(digest)));
+    }
+    return raw;
+  }
+
+  void write_payload(const std::string &digest, const std::string &raw) const override {
+    put(payload_key(digest), raw);
+  }
+
+  [[nodiscard]] std::vector<stored_payload> all_payloads() const override {
+    std::vector<stored_payload> result;
+    for_each("payload/", [&](const std::string &key, const std::string &raw) {
+      result.push_back({key.substr(std::string("payload/").size()), uri_for(key), raw.size()});
+    });
+    std::sort(result.begin(), result.end(),
+              [](const stored_payload &lhs, const stored_payload &rhs) { return lhs.digest < rhs.digest; });
+    return result;
+  }
+
+private:
+  [[nodiscard]] std::string uri_for(const std::string &key) const {
+    return storage_uri(PROVIDER_ROCKSDB, runtime_dir_, key);
+  }
+  [[nodiscard]] static std::string manifest_key(const std::string &source_id, const std::string &manifest_id) {
+    return "manifest/" + source_id + "/" + manifest_id;
+  }
+  [[nodiscard]] static std::string latest_manifest_key(const std::string &source_id) {
+    return "manifest/" + source_id + "/latest";
+  }
+  [[nodiscard]] static std::string payload_key(const std::string &digest) { return "payload/" + digest; }
+
+  [[nodiscard]] std::unique_ptr<rocksdb::DB> open(bool write) const {
+    rocksdb::DB *raw = nullptr;
+    rocksdb::Options options;
+    options.create_if_missing = write;
+    rocksdb::Status status;
+    if (write) {
+      fs::create_directories(rocksdb_root(runtime_dir_));
+      status = rocksdb::DB::Open(options, rocksdb_root(runtime_dir_).string(), &raw);
+    } else {
+      if (!fs::exists(rocksdb_root(runtime_dir_))) {
+        return {};
+      }
+      status = rocksdb::DB::OpenForReadOnly(options, rocksdb_root(runtime_dir_).string(), &raw);
+    }
+    if (!status.ok()) {
+      throw std::runtime_error("failed to open RocksDB storage provider: " + status.ToString());
+    }
+    return std::unique_ptr<rocksdb::DB>(raw);
+  }
+
+  [[nodiscard]] bool get(const std::string &key, std::string &value) const {
+    auto db = open(false);
+    if (!db) {
+      return false;
+    }
+    const auto status = db->Get(rocksdb::ReadOptions(), key, &value);
+    if (status.IsNotFound()) {
+      return false;
+    }
+    if (!status.ok()) {
+      throw std::runtime_error("failed to read RocksDB storage key " + key + ": " + status.ToString());
+    }
+    return true;
+  }
+
+  void put(const std::string &key, const std::string &value) const {
+    auto db = open(true);
+    const auto status = db->Put(rocksdb::WriteOptions(), key, value);
+    if (!status.ok()) {
+      throw std::runtime_error("failed to write RocksDB storage key " + key + ": " + status.ToString());
+    }
+  }
+
+  template <typename Fn> void for_each(const std::string &prefix, Fn fn) const {
+    auto db = open(false);
+    if (!db) {
+      return;
+    }
+    std::unique_ptr<rocksdb::Iterator> it(db->NewIterator(rocksdb::ReadOptions()));
+    for (it->Seek(prefix); it->Valid(); it->Next()) {
+      const auto key = it->key().ToString();
+      if (!key.starts_with(prefix)) {
+        break;
+      }
+      fn(key, it->value().ToString());
+    }
+    if (!it->status().ok()) {
+      throw std::runtime_error("failed to iterate RocksDB storage provider: " + it->status().ToString());
+    }
+  }
+
+  std::string runtime_dir_;
+};
+
+std::unique_ptr<storage_provider> make_provider(const storage_service_options &options) {
+  const auto provider = normalized_provider(options.provider);
+  if (provider == PROVIDER_ROCKSDB) {
+    return std::make_unique<rocksdb_storage_provider>(options.runtime_dir);
+  }
+  return std::make_unique<file_storage_provider>(options.runtime_dir);
+}
+
+std::unique_ptr<storage_provider> make_provider(const std::string &runtime_dir) {
+  storage_service_options options;
+  options.runtime_dir = runtime_dir;
+  return make_provider(options);
 }
 
 nlohmann::json entries_for_manifest(const nlohmann::json &manifest, const nlohmann::json &range_filter = {}) {
@@ -161,7 +538,7 @@ nlohmann::json entries_for_manifest(const nlohmann::json &manifest, const nlohma
   return result;
 }
 
-std::vector<fs::path> manifest_paths(const std::string &runtime_dir, const std::string &source_id = {}) {
+std::vector<fs::path> manifest_paths(const std::string &runtime_dir, const std::string &source_id) {
   std::vector<fs::path> paths;
   const auto sources_root = root_dir(runtime_dir) / "sources";
   std::vector<fs::path> roots;
@@ -189,7 +566,7 @@ std::vector<fs::path> manifest_paths(const std::string &runtime_dir, const std::
   return paths;
 }
 
-std::vector<fs::path> latest_manifest_paths(const std::string &runtime_dir, const std::string &source_id = {}) {
+std::vector<fs::path> latest_manifest_paths(const std::string &runtime_dir, const std::string &source_id) {
   std::vector<fs::path> paths;
   const auto sources_root = root_dir(runtime_dir) / "sources";
   if (!source_id.empty()) {
@@ -268,18 +645,13 @@ nlohmann::json accepted_cursor(const nlohmann::json &manifest) {
   };
 }
 
-nlohmann::json load_latest_manifest_impl(const std::string &runtime_dir, const std::string &source_id) {
-  const auto path = latest_manifest_path(runtime_dir, source_id);
-  if (!fs::exists(path)) {
-    return nullptr;
-  }
-  auto data = read_json_file(path);
-  return data ? *data : nlohmann::json(nullptr);
+nlohmann::json load_latest_manifest_impl(const storage_provider &provider, const std::string &source_id) {
+  return provider.load_latest_manifest(source_id);
 }
 
-nlohmann::json source_manifest_status(const std::string &runtime_dir, const nlohmann::json &source) {
+nlohmann::json source_manifest_status(const storage_provider &provider, const nlohmann::json &source) {
   const auto source_id = text_or(source, "source_id");
-  auto manifest = load_latest_manifest_impl(runtime_dir, source_id);
+  auto manifest = load_latest_manifest_impl(provider, source_id);
   if (manifest.is_null()) {
     return {
         {"source_id", source_id},       {"ok", false},      {"projection", PROJECTION_SOURCE_REGISTRY},
@@ -306,26 +678,21 @@ nlohmann::json source_manifest_status(const std::string &runtime_dir, const nloh
   };
 }
 
-std::vector<std::string> referenced_payload_hashes(const std::string &runtime_dir, const std::string &source_id = {}) {
+std::vector<std::string> referenced_payload_hashes(const storage_provider &provider,
+                                                   const std::string &source_id = {}) {
   std::vector<std::string> hashes;
   std::vector<std::pair<std::string, std::string>> seen_manifests;
-  for (const auto &path : manifest_paths(runtime_dir, source_id)) {
-    std::optional<nlohmann::json> manifest;
-    try {
-      manifest = read_json_file(path);
-    } catch (const std::exception &) {
-      continue;
-    }
-    if (!manifest) {
+  for (const auto &record : provider.manifest_records(source_id)) {
+    if (!record.value.is_object()) {
       continue;
     }
     const auto key =
-        std::make_pair(text_or(*manifest, "source_id"), text_or(*manifest, "manifest_id", path.filename().string()));
+        std::make_pair(text_or(record.value, "source_id"), text_or(record.value, "manifest_id", record.manifest_id));
     if (std::find(seen_manifests.begin(), seen_manifests.end(), key) != seen_manifests.end()) {
       continue;
     }
     seen_manifests.emplace_back(key);
-    for (const auto &entry : entries_for_manifest(*manifest)) {
+    for (const auto &entry : entries_for_manifest(record.value)) {
       const auto digest = text_or(entry, "payload_hash");
       if (!digest.empty() && std::find(hashes.begin(), hashes.end(), digest) == hashes.end()) {
         hashes.emplace_back(digest);
@@ -335,13 +702,13 @@ std::vector<std::string> referenced_payload_hashes(const std::string &runtime_di
   return hashes;
 }
 
-std::pair<nlohmann::json, std::string> load_payload_impl(const std::string &runtime_dir, const nlohmann::json &entry) {
+std::pair<nlohmann::json, std::string> load_payload_impl(const storage_provider &provider,
+                                                         const nlohmann::json &entry) {
   const auto digest = text_or(entry, "payload_hash");
-  const auto path = payload_path(runtime_dir, digest);
-  if (!fs::exists(path)) {
+  if (!provider.payload_exists(digest)) {
     return {nullptr, "payload_missing"};
   }
-  const auto raw = read_bytes(path);
+  const auto raw = provider.read_payload(digest);
   if (!entry.contains("byte_len") ||
       !entry.at("byte_len").is_number_unsigned() && !entry.at("byte_len").is_number_integer()) {
     return {nullptr, "byte_len_mismatch"};
@@ -360,8 +727,8 @@ std::pair<nlohmann::json, std::string> load_payload_impl(const std::string &runt
   }
 }
 
-nlohmann::json list_sources_impl(const std::string &runtime_dir) {
-  auto registry = load_registry_impl(runtime_dir);
+nlohmann::json list_sources_impl(const storage_provider &provider) {
+  auto registry = provider.load_registry();
   nlohmann::json sources = nlohmann::json::array();
   for (const auto &[_, source] : registry.at("sources").items()) {
     if (source.is_object()) {
@@ -375,19 +742,21 @@ nlohmann::json list_sources_impl(const std::string &runtime_dir) {
 }
 
 nlohmann::json status_impl(const storage_service_options &options) {
+  const auto provider = make_provider(options);
   auto sources = nlohmann::json::array();
-  for (const auto &source : list_sources_impl(options.runtime_dir)) {
+  for (const auto &source : list_sources_impl(*provider)) {
     if (options.source_id.empty() || text_or(source, "source_id") == options.source_id) {
       sources.push_back(source);
     }
   }
   nlohmann::json source_status = nlohmann::json::array();
   for (const auto &source : sources) {
-    source_status.push_back(source_manifest_status(options.runtime_dir, source));
+    source_status.push_back(source_manifest_status(*provider, source));
   }
   return {
       {"ok", options.source_id.empty() ? true : !sources.empty()},
-      {"backend", "content-addressed-file"},
+      {"backend", provider->name()},
+      {"provider", provider->name()},
       {"scope", options.source_id.empty() ? "all" : "source"},
       {"source_id", options.source_id.empty() ? nlohmann::json(nullptr) : nlohmann::json(options.source_id)},
       {"sources", sources},
@@ -395,7 +764,7 @@ nlohmann::json status_impl(const storage_service_options &options) {
       {"projection",
        {
            {"name", PROJECTION_SOURCE_REGISTRY},
-           {"path", registry_path(options.runtime_dir).string()},
+           {"path", provider->registry_uri()},
            {"rebuildable", true},
        }},
       {"source_status", source_status},
@@ -442,9 +811,10 @@ nlohmann::json fsck_error_report(const storage_service_options &options, const s
 }
 
 nlohmann::json fsck_impl(const storage_service_options &options) {
+  const auto provider = make_provider(options);
   nlohmann::json registry;
   try {
-    registry = load_registry_impl(options.runtime_dir);
+    registry = provider->load_registry();
   } catch (const std::exception &e) {
     return fsck_error_report(options, "source_registry_invalid", e.what());
   }
@@ -485,7 +855,7 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
 
   for (const auto &source : sources) {
     const auto current_source_id = text_or(source, "source_id");
-    auto manifest = load_latest_manifest_impl(options.runtime_dir, current_source_id);
+    auto manifest = load_latest_manifest_impl(*provider, current_source_id);
     if (manifest.is_null()) {
       report["ok"] = false;
       report["errors"].push_back({{"code", "manifest_missing"}, {"source_id", current_source_id}});
@@ -536,7 +906,7 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
                                       {"state", text_or(entry, "payload_state")}});
         continue;
       }
-      const auto [_, error] = load_payload_impl(options.runtime_dir, entry);
+      const auto [_, error] = load_payload_impl(*provider, entry);
       if (!error.empty()) {
         report["ok"] = false;
         report["errors"].push_back({{"code", error},
@@ -549,12 +919,12 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
   }
 
   if (options.source_id.empty()) {
-    const auto referenced = referenced_payload_hashes(options.runtime_dir);
-    for (const auto &path : all_payload_paths(options.runtime_dir)) {
-      const auto digest = payload_digest_from_path(path);
+    const auto referenced = referenced_payload_hashes(*provider);
+    for (const auto &payload : provider->all_payloads()) {
+      const auto digest = payload.digest;
       if (std::find(referenced.begin(), referenced.end(), digest) == referenced.end()) {
         report["checked"]["orphan_payloads"] = report["checked"]["orphan_payloads"].get<size_t>() + 1;
-        report["warnings"].push_back({{"code", "orphan_payload"}, {"path", path.string()}, {"payload_hash", digest}});
+        report["warnings"].push_back({{"code", "orphan_payload"}, {"path", payload.uri}, {"payload_hash", digest}});
       }
     }
   }
@@ -562,9 +932,10 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
 }
 
 nlohmann::json rebuild_index_impl(const storage_service_options &options) {
+  const auto provider = make_provider(options);
   nlohmann::json old_registry;
   try {
-    old_registry = load_registry_impl(options.runtime_dir);
+    old_registry = provider->load_registry();
   } catch (const std::exception &) {
     old_registry = {{"schema", SOURCE_REGISTRY_SCHEMA}, {"sources", nlohmann::json::object()}};
   }
@@ -574,30 +945,23 @@ nlohmann::json rebuild_index_impl(const storage_service_options &options) {
   nlohmann::json errors = nlohmann::json::array();
   size_t rebuilt = 0;
 
-  for (const auto &path : latest_manifest_paths(options.runtime_dir, options.source_id)) {
-    std::optional<nlohmann::json> manifest;
-    try {
-      manifest = read_json_file(path);
-    } catch (const std::exception &e) {
-      errors.push_back({{"code", "manifest_read_error"}, {"path", path.string()}, {"error", e.what()}});
+  for (const auto &record : provider->latest_manifest_records(options.source_id)) {
+    if (!record.value.is_object()) {
+      errors.push_back({{"code", "manifest_invalid"}, {"path", record.uri}});
       continue;
     }
-    if (!manifest) {
-      errors.push_back({{"code", "manifest_invalid"}, {"path", path.string()}});
-      continue;
-    }
-    const auto current_source_id = text_or(*manifest, "source_id");
+    const auto current_source_id = text_or(record.value, "source_id");
     if (current_source_id.empty()) {
-      errors.push_back({{"code", "source_id_missing"}, {"path", path.string()}});
+      errors.push_back({{"code", "source_id_missing"}, {"path", record.uri}});
       continue;
     }
-    const auto projected = source_projection_from_manifest(*manifest);
+    const auto projected = source_projection_from_manifest(record.value);
     const auto previous =
         old_sources.contains(current_source_id) ? old_sources.at(current_source_id) : nlohmann::json(nullptr);
     if (previous != projected) {
       changes.push_back({{"source_id", current_source_id},
                          {"action", previous.is_null() ? "add" : "update"},
-                         {"manifest_id", text_or(*manifest, "manifest_id")}});
+                         {"manifest_id", text_or(record.value, "manifest_id")}});
     }
     new_sources[current_source_id] = projected;
     ++rebuilt;
@@ -608,7 +972,7 @@ nlohmann::json rebuild_index_impl(const storage_service_options &options) {
   const nlohmann::json new_registry = {{"schema", SOURCE_REGISTRY_SCHEMA}, {"sources", new_sources}};
   const auto would_write = old_registry != new_registry;
   if (would_write && !options.dry_run) {
-    save_registry_impl(options.runtime_dir, new_registry);
+    provider->save_registry(new_registry);
   }
   return {
       {"ok", errors.empty()},
@@ -617,7 +981,7 @@ nlohmann::json rebuild_index_impl(const storage_service_options &options) {
       {"projection",
        {
            {"name", PROJECTION_SOURCE_REGISTRY},
-           {"path", registry_path(options.runtime_dir).string()},
+           {"path", provider->registry_uri()},
            {"rebuilt_from", "accepted latest manifests"},
        }},
       {"dry_run", options.dry_run},
@@ -636,19 +1000,20 @@ nlohmann::json gc_plan_impl(const storage_service_options &options) {
   if (!options.dry_run) {
     throw std::invalid_argument("storage_gc_requires_dry_run");
   }
-  const auto referenced = referenced_payload_hashes(options.runtime_dir, options.source_id);
-  const auto payloads = all_payload_paths(options.runtime_dir);
+  const auto provider = make_provider(options);
+  const auto referenced = referenced_payload_hashes(*provider, options.source_id);
+  const auto payloads = provider->all_payloads();
   nlohmann::json candidates = nlohmann::json::array();
   uint64_t candidate_bytes = 0;
-  for (const auto &path : payloads) {
-    const auto digest = payload_digest_from_path(path);
+  for (const auto &payload : payloads) {
+    const auto digest = payload.digest;
     if (std::find(referenced.begin(), referenced.end(), digest) != referenced.end()) {
       continue;
     }
-    const auto bytes = fs::file_size(path);
+    const auto bytes = payload.bytes;
     candidate_bytes += bytes;
     candidates.push_back({{"payload_hash", digest},
-                          {"path", path.string()},
+                          {"path", payload.uri},
                           {"bytes", bytes},
                           {"safe_to_delete", options.source_id.empty()}});
   }
@@ -678,23 +1043,18 @@ nlohmann::json compact_plan_impl(const storage_service_options &options) {
   rebuild_options.dry_run = true;
   const auto rebuild = rebuild_index_impl(rebuild_options);
   const auto garbage = gc_plan_impl(rebuild_options);
+  const auto provider = make_provider(options);
   nlohmann::json manifests = nlohmann::json::array();
-  for (const auto &path : manifest_paths(options.runtime_dir, options.source_id)) {
-    std::optional<nlohmann::json> manifest;
-    try {
-      manifest = read_json_file(path);
-    } catch (const std::exception &) {
-      continue;
-    }
-    if (!manifest) {
+  for (const auto &record : provider->manifest_records(options.source_id)) {
+    if (!record.value.is_object()) {
       continue;
     }
     manifests.push_back(
-        {{"source_id", text_or(*manifest, "source_id")},
-         {"manifest_id", text_or(*manifest, "manifest_id")},
-         {"path", path.string()},
-         {"entries", entries_for_manifest(*manifest).size()},
-         {"sync_root", manifest->contains("sync_root") ? manifest->at("sync_root") : nlohmann::json(nullptr)}});
+        {{"source_id", text_or(record.value, "source_id")},
+         {"manifest_id", text_or(record.value, "manifest_id")},
+         {"path", record.uri},
+         {"entries", entries_for_manifest(record.value).size()},
+         {"sync_root", record.value.contains("sync_root") ? record.value.at("sync_root") : nlohmann::json(nullptr)}});
   }
   return {
       {"ok", rebuild.value("ok", false) && garbage.value("ok", false)},
@@ -708,7 +1068,9 @@ nlohmann::json compact_plan_impl(const storage_service_options &options) {
        nlohmann::json::array(
            {{{"name", "history-archive"}, {"reason", "archive bundles are not implemented in this slice"}},
             {{"name", PROJECTION_SQLITE}, {"reason", "no generic SQLite projection exists in this storage slice"}},
-            {{"name", "backend-compact"}, {"reason", "the interim backend is content-addressed files"}}})},
+            {{"name", "backend-compact"},
+             {"reason", provider->name() == PROVIDER_ROCKSDB ? "RocksDB compaction is not destructive-history compact"
+                                                             : "the file backend has no backend compaction"}}})},
       {"notes", nlohmann::json::array({"No manifests, payloads, journal frames, or projections were rewritten.",
                                        "This is a reviewable compaction plan, not destructive compaction."})},
   };
@@ -725,10 +1087,10 @@ public:
   }
 
   [[nodiscard]] nlohmann::json export_bundle(const storage_service_options &options) const override {
-    const auto manifest = load_latest_manifest_impl(options.runtime_dir, options.source_id);
+    const auto provider = make_provider(options);
+    const auto manifest = load_latest_manifest_impl(*provider, options.source_id);
     if (manifest.is_null()) {
-      throw std::runtime_error("manifest not found: " +
-                               latest_manifest_path(options.runtime_dir, options.source_id).string());
+      throw std::runtime_error("manifest not found: " + options.source_id);
     }
     auto export_manifest = manifest;
     if (!options.range.empty()) {
@@ -743,8 +1105,26 @@ public:
            {"counts", {{"records", entries_for_manifest(manifest, options.range).size()}}},
            {"entries", entries_for_manifest(manifest, options.range)}});
     }
-    return yy_storage::build_storage_export_bundle(
-        export_manifest, export_storage_records(options.runtime_dir, options.source_id, options.range));
+    nlohmann::json records = nlohmann::json::array();
+    for (const auto &entry : entries_for_manifest(manifest, options.range)) {
+      auto [payload, error] = load_payload_impl(*provider, entry);
+      if (!error.empty()) {
+        throw std::runtime_error(error + ": " + text_or(entry, "kind") + ":" + text_or(entry, "source_id"));
+      }
+      auto row = entry;
+      row["scope"] = text_or(manifest, "scope");
+      row["manifest_id"] = text_or(manifest, "manifest_id");
+      row["storage_source_id"] = options.source_id;
+      row["source_type"] = text_or(manifest, "source_type");
+      row["source_head"] = text_or(manifest, "source_head");
+      row["payload"] = payload;
+      records.push_back(row);
+    }
+    std::sort(records.begin(), records.end(), [](const nlohmann::json &lhs, const nlohmann::json &rhs) {
+      return std::make_tuple(text_or(lhs, "kind"), text_or(lhs, "source_id"), text_or(lhs, "source_path")) <
+             std::make_tuple(text_or(rhs, "kind"), text_or(rhs, "source_id"), text_or(rhs, "source_path"));
+    });
+    return yy_storage::build_storage_export_bundle(export_manifest, records);
   }
 
   [[nodiscard]] nlohmann::json import_bundle(const storage_service_options &options) const override {
@@ -763,6 +1143,7 @@ public:
         }
       }
     }
+    const auto provider = make_provider(options);
     for (const auto &record : records) {
       if (!record.is_object() || !record.contains("payload")) {
         continue;
@@ -772,9 +1153,20 @@ public:
       if (digest.empty()) {
         digest = yy_storage::compute_content_hash_value(raw, yy_storage::CONTENT_HASH_ALGORITHM_SHA256);
       }
-      write_storage_payload_bytes(options.runtime_dir, digest, raw);
+      const auto error =
+          yy_storage::verify_payload_ref(raw, digest, raw.size(), yy_storage::CONTENT_HASH_ALGORITHM_SHA256);
+      if (!error.empty()) {
+        throw std::invalid_argument("storage_payload_invalid: " + error);
+      }
+      provider->write_payload(digest, raw);
     }
-    const auto accepted = accept_storage_manifest(options.runtime_dir, manifest);
+    const auto generic = yy_storage::build_storage_import_manifest(manifest);
+    provider->write_manifest(text_or(generic, "source_id"), text_or(generic, "manifest_id"), generic);
+    provider->write_latest_manifest(text_or(generic, "source_id"), generic);
+    auto registry = provider->load_registry();
+    registry["sources"][text_or(generic, "source_id")] = generic.at("source");
+    provider->save_registry(registry);
+    const auto accepted = generic;
     return {{"ok", true},
             {"scope", "source"},
             {"source_id", text_or(accepted, "source_id")},
@@ -815,13 +1207,15 @@ public:
       import_options.bundle = bundle;
       import_result = import_bundle(import_options);
       imported_report = fsck_impl(import_options);
-      imported_manifest = load_latest_manifest_impl(import_options.runtime_dir, options.source_id);
+      const auto import_provider = make_provider(import_options);
+      imported_manifest = load_latest_manifest_impl(*import_provider, options.source_id);
       fs::remove_all(temp_root);
     } catch (...) {
       fs::remove_all(temp_root);
       throw;
     }
-    const auto local_manifest = load_latest_manifest_impl(options.runtime_dir, options.source_id);
+    const auto provider = make_provider(options);
+    const auto local_manifest = load_latest_manifest_impl(*provider, options.source_id);
     const auto local_root = local_manifest.is_object() && local_manifest.contains("sync_root")
                                 ? local_manifest.at("sync_root")
                                 : nlohmann::json(nullptr);
@@ -853,6 +1247,7 @@ nlohmann::json make_request(storage_operation operation, const storage_service_o
       {"owner", RUNTIME_STORAGE_SERVICE_OWNER},
       {"operation", storage_operation_name(operation)},
       {"runtime_dir", options.runtime_dir},
+      {"provider", normalized_provider(options.provider)},
       {"scope", options.scope},
       {"source_id", options.source_id},
       {"dry_run", options.dry_run},
@@ -926,6 +1321,7 @@ storage_operation parse_storage_operation(const std::string &operation) {
 storage_service_options parse_storage_service_options(const std::string &runtime_dir, const nlohmann::json &options) {
   storage_service_options parsed;
   parsed.runtime_dir = runtime_dir;
+  parsed.provider = normalized_provider(text_or(options, "provider"));
   parsed.scope = text_or(options, "scope", "all");
   parsed.source_id = text_or(options, "source_id");
   parsed.dry_run = bool_or(options, "dry_run", true);
@@ -968,6 +1364,7 @@ nlohmann::json run_storage_service_operation(const std::string &operation, const
 }
 
 nlohmann::json accept_storage_manifest(const std::string &runtime_dir, const nlohmann::json &manifest) {
+  const auto provider = make_provider(runtime_dir);
   const auto generic = yy_storage::build_storage_import_manifest(manifest);
   for (const auto &issue : yy_storage::verify_storage_import_manifest(generic)) {
     if (issue.severity != "warning") {
@@ -976,28 +1373,30 @@ nlohmann::json accept_storage_manifest(const std::string &runtime_dir, const nlo
   }
   const auto source_id = text_or(generic, "source_id");
   const auto manifest_id = text_or(generic, "manifest_id");
-  write_json_file(manifest_path(runtime_dir, source_id, manifest_id), generic);
-  write_json_file(latest_manifest_path(runtime_dir, source_id), generic);
+  provider->write_manifest(source_id, manifest_id, generic);
+  provider->write_latest_manifest(source_id, generic);
 
-  auto registry = load_registry_impl(runtime_dir);
+  auto registry = provider->load_registry();
   registry["sources"][source_id] = generic.at("source");
-  save_registry_impl(runtime_dir, registry);
+  provider->save_registry(registry);
   return generic;
 }
 
 nlohmann::json load_storage_latest_manifest(const std::string &runtime_dir, const std::string &source_id) {
-  return load_latest_manifest_impl(runtime_dir, source_id);
+  const auto provider = make_provider(runtime_dir);
+  return load_latest_manifest_impl(*provider, source_id);
 }
 
 nlohmann::json export_storage_records(const std::string &runtime_dir, const std::string &source_id,
                                       const nlohmann::json &range) {
-  const auto manifest = load_latest_manifest_impl(runtime_dir, source_id);
+  const auto provider = make_provider(runtime_dir);
+  const auto manifest = load_latest_manifest_impl(*provider, source_id);
   if (manifest.is_null()) {
-    throw std::runtime_error("manifest not found: " + latest_manifest_path(runtime_dir, source_id).string());
+    throw std::runtime_error("manifest not found: " + source_id);
   }
   nlohmann::json records = nlohmann::json::array();
   for (const auto &entry : entries_for_manifest(manifest, range)) {
-    auto [payload, error] = load_payload_impl(runtime_dir, entry);
+    auto [payload, error] = load_payload_impl(*provider, entry);
     if (!error.empty()) {
       throw std::runtime_error(error + ": " + text_or(entry, "kind") + ":" + text_or(entry, "source_id"));
     }
@@ -1023,27 +1422,34 @@ std::string write_storage_payload_bytes(const std::string &runtime_dir, const st
   if (!error.empty()) {
     throw std::invalid_argument("storage_payload_invalid: " + error);
   }
-  const auto path = payload_path(runtime_dir, digest);
-  write_bytes(path, raw);
-  return path.string();
+  const auto provider = make_provider(runtime_dir);
+  provider->write_payload(digest, raw);
+  return provider->name() == PROVIDER_ROCKSDB ? storage_uri(PROVIDER_ROCKSDB, runtime_dir, "payload/" + digest)
+                                              : payload_path(runtime_dir, digest).string();
 }
 
 nlohmann::json storage_service_capabilities() {
+  const auto provider = normalized_provider({});
   return {
       {"schema", RUNTIME_STORAGE_SERVICE_SCHEMA_V1},
       {"owner", RUNTIME_STORAGE_SERVICE_OWNER},
       {"operations", storage_operation_names()},
-      {"backend", "content-addressed-file"},
-      {"layout",
-       {
-           {"source_registry", "storage/sources.json"},
-           {"source_manifests", "storage/sources/<source-id>/manifests/*.json"},
-           {"payloads", "storage/payloads/<hash-prefix>/<sha256>.json"},
-       }},
-      {"notes", nlohmann::json::array({
-                    "The runtime storage service surface and current file provider are owned by libkungfu.",
-                    "Python and Node should remain binding, CLI, or UI layers over this service.",
-                })},
+      {"backend", provider},
+      {"provider", provider},
+      {"providers", nlohmann::json::array({
+                        {{"name", PROVIDER_FILE},
+                         {"default", provider == PROVIDER_FILE},
+                         {"layout", file_storage_provider("").layout()}},
+                        {{"name", PROVIDER_ROCKSDB},
+                         {"default", provider == PROVIDER_ROCKSDB},
+                         {"layout", rocksdb_storage_provider("").layout()}},
+                    })},
+      {"notes",
+       nlohmann::json::array({
+           "The runtime storage service surface and providers are owned by libkungfu.",
+           "Provider selection is an implementation option; product semantics remain storage-service operations.",
+           "Python and Node should remain binding, CLI, or UI layers over this service.",
+       })},
   };
 }
 
