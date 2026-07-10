@@ -30,11 +30,90 @@ _binding: Any = None
 _build_info: dict[str, Any] | None = None
 
 
+class WrongRuntimeError(RuntimeError):
+    """Raised when the kungfu package runs on a foreign interpreter.
+
+    Packages only resolve against kungfu's own pinned runtime (ADR-0046):
+    outside the frozen host, the blessed interpreter is the kungfu-managed
+    python-build-standalone that `kungfu env` derives environments from.
+    Running anywhere else turns into this named error instead of a mystery
+    native-import failure three layers deeper.
+    """
+
+
+def _runtime_violation(
+    python_version: str,
+    *,
+    frozen: bool,
+    base_prefix: str,
+    running_version: str,
+) -> str | None:
+    """Judge interpreter blessedness; None means blessed.
+
+    Pure so both verdicts unit-test without staging real interpreters. The
+    frozen host is blessed by construction. A satellite is blessed when its
+    feature version matches the one the binding was built for and it runs
+    from a kungfu-managed python-build-standalone install (whose prefix
+    directory is named cpython-<version>-<platform>).
+    """
+    if frozen:
+        return None
+    expected_feature = ".".join(python_version.split(".")[:2])
+    running_feature = ".".join(running_version.split(".")[:2])
+    if expected_feature and running_feature != expected_feature:
+        return (
+            f"this kungfu build speaks python {expected_feature}.x, "
+            f"but the running interpreter is {running_version}"
+        )
+    if not os.path.basename(base_prefix).startswith("cpython-"):
+        return (
+            f"the running interpreter at {base_prefix} is not the "
+            "kungfu-managed runtime"
+        )
+    return None
+
+
+def _verify_blessed_runtime(binding: Any) -> None:
+    import sys
+
+    if os.environ.get("KUNGFU_ALLOW_FOREIGN_RUNTIME"):
+        # The one named bypass (never silent): print where support ends.
+        print(
+            "kungfu: KUNGFU_ALLOW_FOREIGN_RUNTIME is set — running on an "
+            "unblessed interpreter, on your own recognizance",
+            file=sys.stderr,
+        )
+        return
+    info_path = os.path.join(os.path.dirname(binding.__file__), "kungfubuildinfo.json")
+    try:
+        with open(info_path, "r") as build_info_file:
+            python_version = json.load(build_info_file).get("pythonVersion", "")
+    except OSError:
+        return  # no buildinfo (bare dev build) — nothing to judge against
+    running = ".".join(str(v) for v in sys.version_info[:3])
+    violation = _runtime_violation(
+        python_version,
+        frozen="__compiled__" in globals() or bool(getattr(sys, "frozen", False)),
+        base_prefix=sys.base_prefix,
+        running_version=running,
+    )
+    if violation:
+        raise WrongRuntimeError(
+            f"{violation}\n"
+            f"  found:    {sys.executable}\n"
+            f"  expected: the kungfu runtime (python {python_version}, "
+            "kungfu-managed)\n"
+            "  fix:      run inside an env derived from it — "
+            "kungfu env create, then kungfu env run"
+        )
+
+
 def _load_binding() -> Any:
     global _binding
     if _binding is None:
         import pykungfu as binding
 
+        _verify_blessed_runtime(binding)
         _binding = binding
     return _binding
 
