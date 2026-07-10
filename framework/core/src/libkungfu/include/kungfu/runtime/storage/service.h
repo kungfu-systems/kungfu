@@ -220,6 +220,86 @@ struct storage_projection_status_view {
   storage_projection_verify_result verification = {};
 };
 
+using episode_frame_field_value = std::variant<int64_t, uint64_t>;
+
+struct episode_frame_field_mismatch {
+  std::string field = {};
+  episode_frame_field_value claimed = uint64_t{0};
+  episode_frame_field_value actual = uint64_t{0};
+};
+
+struct episode_frame_verification_issue {
+  std::string code = {};
+  uint64_t episode_id = 0;
+  uint64_t frame_uid = 0;
+  std::optional<uint32_t> location_uid = {};
+  std::optional<uint32_t> dest = {};
+  std::optional<uint32_t> integrity_version = {};
+  std::vector<episode_frame_field_mismatch> fields = {};
+  std::optional<uint64_t> claimed_payload_checksum = {};
+  std::optional<uint64_t> actual_payload_checksum = {};
+  std::optional<uint64_t> claimed_frame_checksum = {};
+  std::optional<uint64_t> actual_frame_checksum = {};
+};
+
+struct episode_frame_verification {
+  std::vector<episode_frame_verification_issue> errors = {};
+  std::vector<episode_frame_verification_issue> warnings = {};
+  uint64_t verified = 0;
+  bool degraded = false;
+};
+
+struct episode_qualification_evidence {
+  std::string name = {};
+  std::string state = {};
+  std::vector<std::string> issue_codes = {};
+};
+
+using episode_qualification_issue_detail =
+    std::variant<yijinjing::storage::episode_fsck_issue, episode_frame_verification_issue,
+                 storage_projection_verify_result>;
+
+struct episode_qualification_issue {
+  std::string severity = {};
+  std::string code = {};
+  std::string evidence = {};
+  episode_qualification_issue_detail detail = yijinjing::storage::episode_fsck_issue{};
+};
+
+struct episode_qualification_capability {
+  std::string name = {};
+  bool safe = false;
+  std::vector<std::string> required_evidence = {};
+  std::vector<std::string> blocked_by = {};
+};
+
+struct episode_repair_subject {
+  std::optional<uint64_t> episode_id = {};
+  std::optional<uint64_t> dependency_episode_id = {};
+  std::optional<uint64_t> frame_uid = {};
+  std::optional<uint64_t> dependent_frame_uid = {};
+  std::optional<std::string> ref_id = {};
+  std::optional<std::string> ref_hash = {};
+  std::optional<std::string> role = {};
+};
+
+struct episode_repair_prerequisite {
+  std::string issue_code = {};
+  std::string action = {};
+  std::vector<std::string> required_inputs = {};
+  episode_repair_subject subject = {};
+};
+
+struct episode_qualification_result {
+  uint64_t episode_id = 0;
+  std::string lifecycle = "missing";
+  std::string status = "failed";
+  std::vector<episode_qualification_evidence> evidence = {};
+  std::vector<episode_qualification_issue> issues = {};
+  std::vector<episode_qualification_capability> capabilities = {};
+  std::vector<episode_repair_prerequisite> repair_prerequisites = {};
+};
+
 struct storage_status_request {
   std::string runtime_dir = {};
   std::string provider = {};

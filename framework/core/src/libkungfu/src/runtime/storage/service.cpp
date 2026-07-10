@@ -1415,35 +1415,6 @@ storage_query_result query_journal_projection(const storage_query_request &reque
 // option because it reads every referenced journal. A sealed (Ended) Episode
 // with a missing or mismatched frame is failed; an open/aborted Episode is
 // degraded with the exact missing side reported.
-using episode_frame_field_value = std::variant<int64_t, uint64_t>;
-
-struct episode_frame_field_mismatch {
-  std::string field = {};
-  episode_frame_field_value claimed = uint64_t{0};
-  episode_frame_field_value actual = uint64_t{0};
-};
-
-struct episode_frame_verification_issue {
-  std::string code = {};
-  uint64_t episode_id = 0;
-  uint64_t frame_uid = 0;
-  std::optional<uint32_t> location_uid = {};
-  std::optional<uint32_t> dest = {};
-  std::optional<uint32_t> integrity_version = {};
-  std::vector<episode_frame_field_mismatch> fields = {};
-  std::optional<uint64_t> claimed_payload_checksum = {};
-  std::optional<uint64_t> actual_payload_checksum = {};
-  std::optional<uint64_t> claimed_frame_checksum = {};
-  std::optional<uint64_t> actual_frame_checksum = {};
-};
-
-struct episode_frame_verification {
-  std::vector<episode_frame_verification_issue> errors = {};
-  std::vector<episode_frame_verification_issue> warnings = {};
-  uint64_t verified = 0;
-  bool degraded = false;
-};
-
 episode_frame_verification verify_episode_frame_claims(const storage_service_options &options) {
   namespace yjj = kungfu::yijinjing;
   episode_frame_verification result;
@@ -1626,8 +1597,8 @@ struct episode_repair_descriptor {
   std::vector<std::string> required_inputs = {};
 };
 
-std::optional<episode_repair_descriptor> episode_repair_descriptor_for_issue(const nlohmann::json &issue) {
-  const auto code = text_or(issue, "code");
+std::optional<episode_repair_descriptor> episode_repair_descriptor_for_issue(const episode_qualification_issue &issue) {
+  const auto &code = issue.code;
   if (code == "episode_dependency_missing") {
     return episode_repair_descriptor{"fetch_episode", {"source_or_episode_bundle"}};
   }
@@ -1643,9 +1614,26 @@ std::optional<episode_repair_descriptor> episode_repair_descriptor_for_issue(con
   if (code == "episode_projection_absent" || code == "episode_projection_drift") {
     return episode_repair_descriptor{"rebuild_projection", {}};
   }
-  if (code == "payload_not_present" && !bool_or(issue, "intentional", true)) {
+  return std::nullopt;
+}
+
+// Repair-plan compatibility still consumes edge JSON warnings outside the
+// typed Episode qualification path. Keep that parser at the edge until the
+// repair operation family receives its own typed request/result migration.
+std::optional<episode_repair_descriptor> episode_repair_descriptor_for_issue(const nlohmann::json &issue) {
+  const auto code = text_or(issue, "code");
+  if (code == "episode_dependency_missing")
+    return episode_repair_descriptor{"fetch_episode", {"source_or_episode_bundle"}};
+  if (code == "episode_root_trigger_frame_missing" || code == "episode_trigger_frame_missing")
+    return episode_repair_descriptor{"fetch_frame_or_declare_external_input", {"source_or_episode_bundle"}};
+  if (code == "episode_payload_ref_missing" || code == "episode_payload_ref_hash_mismatch")
+    return episode_repair_descriptor{"fetch_payload_by_hash", {"payload_store_or_episode_bundle"}};
+  if (code == "episode_attached_frame_missing")
+    return episode_repair_descriptor{"fetch_frame", {"source_or_episode_bundle"}};
+  if (code == "episode_projection_absent" || code == "episode_projection_drift")
+    return episode_repair_descriptor{"rebuild_projection", {}};
+  if (code == "payload_not_present" && !bool_or(issue, "intentional", true))
     return episode_repair_descriptor{"fetch_payload_by_hash", {"source_or_bundle"}};
-  }
   return std::nullopt;
 }
 
@@ -1748,12 +1736,12 @@ episode_qualification_result make_episode_qualification(uint64_t episode_id,
       {"projection", "not_checked", {}},
   };
 
-  const auto add_issue = [&result](const nlohmann::json &detail, const std::string &severity) {
+  const auto add_issue = [&result](auto detail, const std::string &severity) {
     episode_qualification_issue issue;
     issue.severity = severity;
-    issue.code = text_or(detail, "code", "episode_issue_unknown");
+    issue.code = detail.code;
     issue.evidence = episode_issue_evidence(issue.code);
-    issue.detail = detail;
+    issue.detail = std::move(detail);
     result.issues.push_back(issue);
     if (auto *evidence = find_episode_evidence(result, issue.evidence); evidence != nullptr) {
       append_unique(evidence->issue_codes, issue.code);
@@ -1765,17 +1753,17 @@ episode_qualification_result make_episode_qualification(uint64_t episode_id,
     }
   };
   for (const auto &error : manifest_report.errors) {
-    add_issue(yy_storage::render_episode_fsck_issue(error), "error");
+    add_issue(error, "error");
   }
   for (const auto &warning : manifest_report.warnings) {
-    add_issue(yy_storage::render_episode_fsck_issue(warning), "warning");
+    add_issue(warning, "warning");
   }
   if (frame_verification != nullptr) {
     for (const auto &error : frame_verification->errors) {
-      add_issue(render_episode_frame_verification_issue(error), "error");
+      add_issue(error, "error");
     }
     for (const auto &warning : frame_verification->warnings) {
-      add_issue(render_episode_frame_verification_issue(warning), "warning");
+      add_issue(warning, "warning");
     }
   }
 
@@ -1787,20 +1775,20 @@ episode_qualification_result make_episode_qualification(uint64_t episode_id,
       evidence->state = "verified";
     } else if (projection_status == "absent") {
       evidence->state = "missing";
-      add_issue({{"code", "episode_projection_absent"}, {"status", projection_status}}, "info");
+      auto issue = projection;
+      issue.status = "absent";
+      episode_qualification_issue qualification_issue{"info", "episode_projection_absent", "projection",
+                                                      std::move(issue)};
+      result.issues.push_back(std::move(qualification_issue));
+      append_unique(evidence->issue_codes, "episode_projection_absent");
     } else if (projection_status == "degraded") {
       evidence->state = "degraded";
-      nlohmann::json drift = nlohmann::json::array();
-      for (const auto &item : projection.drift) {
-        drift.push_back({{"table", item.table},
-                         {"projection_rows", item.projection_rows},
-                         {"journal_distinct", item.journal_distinct}});
-      }
-      add_issue({{"code", "episode_projection_drift"}, {"status", projection_status}, {"drift", std::move(drift)}},
-                "warning");
+      result.issues.push_back({"warning", "episode_projection_drift", "projection", projection});
+      append_unique(evidence->issue_codes, "episode_projection_drift");
     } else {
       evidence->state = "failed";
-      add_issue({{"code", "episode_projection_unavailable"}, {"status", projection_status}}, "error");
+      result.issues.push_back({"error", "episode_projection_unavailable", "projection", projection});
+      append_unique(evidence->issue_codes, "episode_projection_unavailable");
     }
   }
 
@@ -1848,21 +1836,74 @@ episode_qualification_result make_episode_qualification(uint64_t episode_id,
   };
 
   for (const auto &issue : result.issues) {
-    const auto descriptor = episode_repair_descriptor_for_issue(issue.detail);
+    const auto descriptor = episode_repair_descriptor_for_issue(issue);
     if (!descriptor.has_value()) {
       continue;
     }
-    nlohmann::json subject = nlohmann::json::object();
-    for (const auto *field :
-         {"episode_id", "dependency_episode_id", "frame_uid", "dependent_frame_uid", "ref_id", "ref_hash", "role"}) {
-      if (issue.detail.contains(field) && !issue.detail.at(field).is_null()) {
-        subject[field] = issue.detail.at(field);
-      }
-    }
-    result.repair_prerequisites.push_back(
-        {issue.code, descriptor->action, descriptor->required_inputs, std::move(subject)});
+    episode_repair_subject subject{};
+    std::visit(
+        [&subject](const auto &detail) {
+          using detail_t = std::decay_t<decltype(detail)>;
+          if constexpr (std::is_same_v<detail_t, yy_storage::episode_fsck_issue>) {
+            subject.episode_id = detail.episode_id;
+            subject.dependency_episode_id = detail.dependency_episode_id;
+            subject.frame_uid = detail.frame_uid;
+            subject.dependent_frame_uid = detail.dependent_frame_uid;
+            subject.ref_id = detail.ref_id;
+            subject.ref_hash = detail.ref_hash;
+            subject.role = detail.role;
+          } else if constexpr (std::is_same_v<detail_t, episode_frame_verification_issue>) {
+            subject.episode_id = detail.episode_id;
+            subject.frame_uid = detail.frame_uid;
+          }
+        },
+        issue.detail);
+    result.repair_prerequisites.push_back({issue.code, descriptor->action, descriptor->required_inputs, subject});
   }
   return result;
+}
+
+nlohmann::json episode_qualification_issue_detail_json(const episode_qualification_issue &issue) {
+  return std::visit(
+      [&issue](const auto &detail) {
+        using detail_t = std::decay_t<decltype(detail)>;
+        if constexpr (std::is_same_v<detail_t, yy_storage::episode_fsck_issue>) {
+          return yy_storage::render_episode_fsck_issue(detail);
+        } else if constexpr (std::is_same_v<detail_t, episode_frame_verification_issue>) {
+          return render_episode_frame_verification_issue(detail);
+        } else {
+          nlohmann::json rendered = {{"code", issue.code}, {"status", detail.status}};
+          if (issue.code == "episode_projection_drift") {
+            rendered["drift"] = nlohmann::json::array();
+            for (const auto &item : detail.drift) {
+              rendered["drift"].push_back({{"table", item.table},
+                                           {"projection_rows", item.projection_rows},
+                                           {"journal_distinct", item.journal_distinct}});
+            }
+          }
+          return rendered;
+        }
+      },
+      issue.detail);
+}
+
+nlohmann::json episode_repair_subject_json(const episode_repair_subject &subject) {
+  nlohmann::json rendered = nlohmann::json::object();
+  if (subject.episode_id.has_value())
+    rendered["episode_id"] = *subject.episode_id;
+  if (subject.dependency_episode_id.has_value())
+    rendered["dependency_episode_id"] = *subject.dependency_episode_id;
+  if (subject.frame_uid.has_value())
+    rendered["frame_uid"] = *subject.frame_uid;
+  if (subject.dependent_frame_uid.has_value())
+    rendered["dependent_frame_uid"] = *subject.dependent_frame_uid;
+  if (subject.ref_id.has_value())
+    rendered["ref_id"] = *subject.ref_id;
+  if (subject.ref_hash.has_value())
+    rendered["ref_hash"] = *subject.ref_hash;
+  if (subject.role.has_value())
+    rendered["role"] = *subject.role;
+  return rendered;
 }
 
 nlohmann::json episode_qualification_json(const episode_qualification_result &result) {
@@ -1872,8 +1913,10 @@ nlohmann::json episode_qualification_json(const episode_qualification_result &re
   }
   nlohmann::json issues = nlohmann::json::array();
   for (const auto &issue : result.issues) {
-    issues.push_back(
-        {{"severity", issue.severity}, {"code", issue.code}, {"evidence", issue.evidence}, {"detail", issue.detail}});
+    issues.push_back({{"severity", issue.severity},
+                      {"code", issue.code},
+                      {"evidence", issue.evidence},
+                      {"detail", episode_qualification_issue_detail_json(issue)}});
   }
   nlohmann::json capabilities = nlohmann::json::array();
   nlohmann::json safe_capabilities = nlohmann::json::array();
@@ -1894,7 +1937,7 @@ nlohmann::json episode_qualification_json(const episode_qualification_result &re
     repair_prerequisites.push_back({{"issue_code", prerequisite.issue_code},
                                     {"action", prerequisite.action},
                                     {"required_inputs", prerequisite.required_inputs},
-                                    {"subject", prerequisite.subject}});
+                                    {"subject", episode_repair_subject_json(prerequisite.subject)}});
   }
   return {{"schema", EPISODE_QUALIFICATION_SCHEMA_V1},
           {"policy_source", "cpp-typed-fold-fsck"},

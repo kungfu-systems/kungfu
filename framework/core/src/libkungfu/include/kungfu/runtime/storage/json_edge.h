@@ -14,45 +14,6 @@ namespace kungfu::runtime::storage_service_api {
 
 inline constexpr const char *EPISODE_QUALIFICATION_SCHEMA_V1 = "kungfu.episode.qualification/v1";
 
-// Transitional JSON-edge structures used by qualification and compatibility
-// adapters. They must not cross into the typed storage_service interface.
-struct episode_qualification_evidence {
-  std::string name = {};
-  std::string state = {};
-  std::vector<std::string> issue_codes = {};
-};
-
-struct episode_qualification_issue {
-  std::string severity = {};
-  std::string code = {};
-  std::string evidence = {};
-  nlohmann::json detail = nlohmann::json::object();
-};
-
-struct episode_qualification_capability {
-  std::string name = {};
-  bool safe = false;
-  std::vector<std::string> required_evidence = {};
-  std::vector<std::string> blocked_by = {};
-};
-
-struct episode_repair_prerequisite {
-  std::string issue_code = {};
-  std::string action = {};
-  std::vector<std::string> required_inputs = {};
-  nlohmann::json subject = nlohmann::json::object();
-};
-
-struct episode_qualification_result {
-  uint64_t episode_id = 0;
-  std::string lifecycle = "missing";
-  std::string status = "failed";
-  std::vector<episode_qualification_evidence> evidence = {};
-  std::vector<episode_qualification_issue> issues = {};
-  std::vector<episode_qualification_capability> capabilities = {};
-  std::vector<episode_repair_prerequisite> repair_prerequisites = {};
-};
-
 enum class storage_operation {
   Status,
   Fsck,
