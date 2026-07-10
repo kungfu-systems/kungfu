@@ -127,24 +127,28 @@ jobs:
           Set-Location $env:SOURCE_ROOT
           .\shifu.cmd install --frozen-lockfile --no-optional
 
-      - name: Seed core build (POSIX)
+      - name: Generate core toolchain (POSIX)
         if: ${{ runner.os != 'Windows' }}
         shell: bash
-        run: cd "$SOURCE_ROOT" && ./shifu build:core
+        run: cd "$SOURCE_ROOT" && ./shifu --filter @kungfu-tech/core configure
 
-      - name: Seed core build (Windows)
+      - name: Generate core toolchain (Windows)
         if: ${{ runner.os == 'Windows' }}
         shell: pwsh
         run: |
           Set-Location $env:SOURCE_ROOT
-          .\shifu.cmd build:core
+          .\shifu.cmd --filter @kungfu-tech/core configure
 
       - name: Build and run shared membrane consumers
         shell: bash
         run: |
           cd "$SOURCE_ROOT"
           # shifu-entry-contract: allow the isolated spike configure is not a product-level Shifu task
-          cmake -S framework/core -B framework/core/build -DKUNGFU_WITH_SLICES=ON
+          cmake -S framework/core -B framework/core/build \
+            -DCMAKE_TOOLCHAIN_FILE="$PWD/framework/core/build/conan_toolchain.cmake" \
+            -DCMAKE_POLICY_DEFAULT_CMP0091=NEW \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DKUNGFU_WITH_SLICES=ON
           # shifu-entry-contract: allow the isolated spike targets are not product-level Shifu tasks
           cmake --build framework/core/build --target shared_embedding_host shared_embedding_native_kfx
           # shifu-entry-contract: allow the spike harness must inspect platform-specific binaries directly
