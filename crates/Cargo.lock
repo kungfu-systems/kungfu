@@ -5,3 +5,10 @@ version = 3
 [[package]]
 name = "shifu"
 version = "4.0.0-alpha.0"
+dependencies = [
+ "shifu-core",
+]
+
+[[package]]
+name = "shifu-core"
+version = "0.1.0"

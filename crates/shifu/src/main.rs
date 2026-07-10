@@ -39,9 +39,10 @@ mod doctor;
 mod envfile;
 #[cfg(windows)]
 mod msvc;
-mod style;
 mod tools;
 mod util;
+
+use shifu_core::style;
 
 /// Rich subcommands handled by the L2 node implementation (shifu.mjs),
 /// mirroring the sh / cmd entrypoints. Everything else goes to corepack pnpm.
@@ -213,7 +214,7 @@ fn version_line(root: Option<&Path>) -> String {
         if let (Ok(exe), Some(root)) = (env::current_exe(), root) {
             let exe = exe.canonicalize().unwrap_or(exe);
             let root = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
-            is_repo = exe.starts_with(&root);
+            is_repo = exe.starts_with(root);
         }
     }
     let role = if is_repo {

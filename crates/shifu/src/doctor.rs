@@ -14,7 +14,9 @@
 use std::path::Path;
 use std::process::Command;
 
-use crate::{style, tools, util};
+use shifu_core::style;
+
+use crate::{tools, util};
 
 struct Check {
     label: &'static str,
