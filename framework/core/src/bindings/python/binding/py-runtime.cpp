@@ -465,10 +465,15 @@ void bind(pybind11::module &&m) {
             storage_service_api::export_storage_records(runtime_dir, source_id, py_to_json(range_filter)));
       },
       py::arg("runtime_dir"), py::arg("source_id"), py::arg("range_filter") = py::dict());
+  // The content-store facade releases the GIL around the C++ call so Python
+  // threads genuinely share the process-cached provider (the concurrency the
+  // service-level lifecycle guarantees); conversions between Python and C++
+  // values stay under the GIL on both sides of the release window.
   m.def(
       "write_storage_payload_bytes",
       [](const std::string &runtime_dir, const std::string &digest, py::bytes payload) {
         const std::string raw = payload;
+        py::gil_scoped_release release;
         return storage_service_api::write_storage_payload_bytes(runtime_dir, digest, raw);
       },
       py::arg("runtime_dir"), py::arg("digest"), py::arg("payload"));
@@ -477,28 +482,47 @@ void bind(pybind11::module &&m) {
       [](const std::string &runtime_dir, const std::string &content_namespace, py::bytes payload,
          const std::string &expected_hash) {
         const std::string raw = payload;
-        return json_to_py(
-            storage_service_api::content_store_put_if_absent(runtime_dir, content_namespace, raw, expected_hash));
+        nlohmann::json result;
+        {
+          py::gil_scoped_release release;
+          result = storage_service_api::content_store_put_if_absent(runtime_dir, content_namespace, raw, expected_hash);
+        }
+        return json_to_py(result);
       },
       py::arg("runtime_dir"), py::arg("content_namespace"), py::arg("payload"), py::arg("expected_hash") = "");
-  m.def("content_store_has", &storage_service_api::content_store_has, py::arg("runtime_dir"),
-        py::arg("content_namespace"), py::arg("content_hash"));
+  m.def("content_store_has", &storage_service_api::content_store_has, py::call_guard<py::gil_scoped_release>(),
+        py::arg("runtime_dir"), py::arg("content_namespace"), py::arg("content_hash"));
   m.def(
       "content_store_verify",
       [](const std::string &runtime_dir, const std::string &content_namespace, const std::string &content_hash) {
-        return json_to_py(storage_service_api::content_store_verify(runtime_dir, content_namespace, content_hash));
+        nlohmann::json result;
+        {
+          py::gil_scoped_release release;
+          result = storage_service_api::content_store_verify(runtime_dir, content_namespace, content_hash);
+        }
+        return json_to_py(result);
       },
       py::arg("runtime_dir"), py::arg("content_namespace"), py::arg("content_hash"));
   m.def(
       "content_store_get",
       [](const std::string &runtime_dir, const std::string &content_namespace, const std::string &content_hash) {
-        return py::bytes(storage_service_api::content_store_get(runtime_dir, content_namespace, content_hash));
+        std::string bytes;
+        {
+          py::gil_scoped_release release;
+          bytes = storage_service_api::content_store_get(runtime_dir, content_namespace, content_hash);
+        }
+        return py::bytes(bytes);
       },
       py::arg("runtime_dir"), py::arg("content_namespace"), py::arg("content_hash"));
   m.def(
       "content_store_capabilities",
       [](const std::string &runtime_dir) {
-        return json_to_py(storage_service_api::content_store_capabilities(runtime_dir));
+        nlohmann::json result;
+        {
+          py::gil_scoped_release release;
+          result = storage_service_api::content_store_capabilities(runtime_dir);
+        }
+        return json_to_py(result);
       },
       py::arg("runtime_dir"));
 

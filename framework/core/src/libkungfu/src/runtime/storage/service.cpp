@@ -3,12 +3,14 @@
 #include <kungfu/runtime/storage/service.h>
 
 #include <algorithm>
+#include <atomic>
 #include <charconv>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <random>
 #include <stdexcept>
@@ -519,9 +521,8 @@ public:
 
   [[nodiscard]] nlohmann::json runtime() const override {
     return {
-        {"lifecycle", "stateless-filesystem"},
-        {"handle", "per filesystem operation"},
-        {"readonly_open_creates_backend", false},
+        {"lifecycle", "stateless-filesystem"},  {"instance_lifecycle", "process-cached"},
+        {"handle", "per filesystem operation"}, {"readonly_open_creates_backend", false},
         {"write_open_creates_backend", true},
     };
   }
@@ -645,7 +646,9 @@ private:
 // races on the same key are benign under content identity.
 class rocksdb_content_store : public yy_storage::content_store {
 public:
-  using engine_opener = std::function<rocksdb::DB *(bool write)>;
+  // Returns a shared handle so an in-flight operation keeps its engine alive
+  // across a concurrent readonly-to-readwrite upgrade in the provider.
+  using engine_opener = std::function<std::shared_ptr<rocksdb::DB>(bool write)>;
 
   explicit rocksdb_content_store(engine_opener open) : open_(std::move(open)) {}
 
@@ -690,8 +693,8 @@ public:
     }
     result.hash = digest;
     result.byte_length = size;
-    auto *db = open_(true);
-    if (db == nullptr) {
+    auto db = open_(true);
+    if (!db) {
       result.error = yy_storage::content_store_error::IoError;
       result.message = "cannot open storage engine for write";
       return result;
@@ -734,8 +737,8 @@ public:
         yy_storage::content_store_error::Ok) {
       return false;
     }
-    auto *db = open_(false);
-    if (db == nullptr) {
+    auto db = open_(false);
+    if (!db) {
       return false;
     }
     std::string existing;
@@ -794,8 +797,8 @@ private:
     if (digest_error != yy_storage::content_store_error::Ok) {
       return digest_error;
     }
-    auto *db = open_(false);
-    if (db == nullptr) {
+    auto db = open_(false);
+    if (!db) {
       message = "no storage engine at this runtime dir";
       return yy_storage::content_store_error::NotFound;
     }
@@ -837,8 +840,10 @@ public:
   }
 
   [[nodiscard]] nlohmann::json runtime() const override {
+    std::lock_guard<std::mutex> lock(db_mutex_);
     return {
         {"lifecycle", "provider-instance-owned"},
+        {"instance_lifecycle", "process-cached"},
         {"handle", db_ ? (db_writable_ ? "open-readwrite" : "open-readonly") : "closed"},
         {"readonly_open_creates_backend", false},
         {"write_open_creates_backend", true},
@@ -973,10 +978,16 @@ private:
     return "manifest/" + source_id + "/latest";
   }
 
-  [[nodiscard]] rocksdb::DB *open(bool write) const {
+  // Lazily opens the engine and hands back a shared handle. RocksDB is
+  // thread-safe through one handle, so concurrent operations share it; the
+  // readonly-to-readwrite upgrade swaps in a fresh handle while in-flight
+  // readers finish on the old one (a readonly open holds no engine lock).
+  // Readonly opens still never create the database; only writes do.
+  [[nodiscard]] std::shared_ptr<rocksdb::DB> open(bool write) const {
+    std::lock_guard<std::mutex> lock(db_mutex_);
     if (db_) {
       if (!write || db_writable_) {
-        return db_.get();
+        return db_;
       }
       db_.reset();
       db_writable_ = false;
@@ -998,9 +1009,9 @@ private:
     if (!status.ok()) {
       throw std::runtime_error("rocksdb_open_failed: " + status.ToString());
     }
-    db_.reset(raw);
+    db_ = std::shared_ptr<rocksdb::DB>(raw);
     db_writable_ = write;
-    return db_.get();
+    return db_;
   }
 
   [[nodiscard]] bool get(const std::string &key, std::string &value) const {
@@ -1046,7 +1057,8 @@ private:
 
   std::string runtime_dir_;
   mutable rocksdb_content_store content_store_;
-  mutable std::unique_ptr<rocksdb::DB> db_ = {};
+  mutable std::mutex db_mutex_;
+  mutable std::shared_ptr<rocksdb::DB> db_ = {};
   mutable bool db_writable_ = false;
   rocksdb::ReadOptions read_options_ = [] {
     rocksdb::ReadOptions options;
@@ -1056,30 +1068,89 @@ private:
   rocksdb::WriteOptions write_options_ = {};
 };
 
-std::unique_ptr<storage_provider> make_provider(const storage_service_options &options) {
-  const auto provider = select_provider(options.provider);
-  if (provider.name == PROVIDER_ROCKSDB) {
-    return std::make_unique<rocksdb_storage_provider>(options.runtime_dir);
+std::unique_ptr<storage_provider> make_provider(const std::string &provider_name, const std::string &runtime_dir) {
+  if (provider_name == PROVIDER_ROCKSDB) {
+    return std::make_unique<rocksdb_storage_provider>(runtime_dir);
   }
-  return std::make_unique<file_storage_provider>(options.runtime_dir);
+  return std::make_unique<file_storage_provider>(runtime_dir);
 }
 
-std::unique_ptr<storage_provider> make_provider(const std::string &runtime_dir) {
+// ADR-0040 decision 6: the per-operation provider open/close was a lifecycle
+// artifact, not an engine limit. One long-lived provider per (canonical
+// runtime dir, provider) is shared by every operation in this process, so
+// concurrent facade/service calls share one engine handle instead of racing
+// for the engine lock. Entries live until process exit: the touched
+// (runtime dir, provider) set is small, an evicted-then-reused handle would
+// reintroduce the open/close races this cache removes, and a background
+// eviction thread is out of scope by design. The engine's own lock keeps
+// rejecting a second process on the same database path — holding the write
+// handle for the process lifetime is that decision made visible, and hero's
+// location-metadata engine lives under layout::MAP, a disjoint path from
+// this provider's storage/rocksdb, so no path ever has two in-process owners.
+class provider_cache {
+public:
+  static provider_cache &instance() {
+    // Intentionally leaked: cached engine handles must not run destructors
+    // during static teardown (RocksDB aborts once its lock infrastructure is
+    // torn down first). Never closing on exit loses nothing under the
+    // declared contract — publication is WAL-ordered, so exit-without-close
+    // is exactly the crash-safety case the backend already commits to.
+    static auto *cache = new provider_cache();
+    return *cache;
+  }
+
+  [[nodiscard]] std::shared_ptr<storage_provider> acquire(const storage_service_options &options) {
+    const auto selection = select_provider(options.provider);
+    const auto runtime_dir = absolute_normalized(options.runtime_dir).string();
+    const auto key = selection.name + "|" + runtime_dir;
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (const auto it = providers_.find(key); it != providers_.end()) {
+      hits_.fetch_add(1, std::memory_order_relaxed);
+      return it->second;
+    }
+    misses_.fetch_add(1, std::memory_order_relaxed);
+    return providers_.emplace(key, make_provider(selection.name, runtime_dir)).first->second;
+  }
+
+  [[nodiscard]] nlohmann::json stats() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return {
+        {"lifecycle", "process"},
+        {"entries", providers_.size()},
+        {"hits", hits_.load(std::memory_order_relaxed)},
+        {"misses", misses_.load(std::memory_order_relaxed)},
+    };
+  }
+
+private:
+  provider_cache() = default;
+
+  mutable std::mutex mutex_;
+  std::unordered_map<std::string, std::shared_ptr<storage_provider>> providers_;
+  std::atomic<uint64_t> hits_{0};
+  std::atomic<uint64_t> misses_{0};
+};
+
+std::shared_ptr<storage_provider> shared_provider(const storage_service_options &options) {
+  return provider_cache::instance().acquire(options);
+}
+
+std::shared_ptr<storage_provider> shared_provider(const std::string &runtime_dir) {
   storage_service_options options;
   options.runtime_dir = runtime_dir;
-  return make_provider(options);
+  return shared_provider(options);
 }
 
 // Bundle a provider with an episode store wired to its content store, so
 // payload-ref resolution reads the same backend that published the bytes
 // (ADR-0040); the provider member keeps the injected store alive.
 struct episode_store_with_provider {
-  std::unique_ptr<storage_provider> provider;
+  std::shared_ptr<storage_provider> provider;
   yy_storage::episode_manifest_store store;
 };
 
 episode_store_with_provider episode_ref_store(const storage_service_options &options) {
-  auto provider = make_provider(options);
+  auto provider = shared_provider(options);
   auto store = yy_storage::episode_manifest_store(options.runtime_dir);
   store.set_content_store(&provider->content_store());
   return {std::move(provider), std::move(store)};
@@ -1107,6 +1178,8 @@ nlohmann::json workspace_episode_layout(const storage_service_options &options, 
       {"config_home", optional_absolute_path(options.operation_options, "config_home")},
       {"provider", provider.name()},
       {"provider_layout", provider.layout()},
+      {"provider_runtime", provider.runtime()},
+      {"provider_cache", provider_cache::instance().stats()},
       {"paths",
        {{"data_home", home.string()},
         {"runtime_dir", runtime.string()},
@@ -2224,7 +2297,7 @@ nlohmann::json apply_source_bundle_material(const storage_service_options &optio
   if (source_id.empty()) {
     throw std::invalid_argument("repair_apply_source_id_required");
   }
-  const auto provider = make_provider(options);
+  const auto provider = shared_provider(options);
   auto manifest = load_latest_manifest_impl(*provider, source_id);
   if (manifest.is_null()) {
     throw std::runtime_error("manifest not found: " + source_id);
@@ -2876,7 +2949,7 @@ nlohmann::json list_sources_impl(const storage_provider &provider) {
 }
 
 nlohmann::json status_impl(const storage_service_options &options) {
-  const auto provider = make_provider(options);
+  const auto provider = shared_provider(options);
   auto sources = nlohmann::json::array();
   for (const auto &source : list_sources_impl(*provider)) {
     if (options.source_id.empty() || text_or(source, "source_id") == options.source_id) {
@@ -2893,6 +2966,7 @@ nlohmann::json status_impl(const storage_service_options &options) {
       {"provider", provider->name()},
       {"provider_config_source", options.provider_config_source},
       {"provider_runtime", provider->runtime()},
+      {"provider_cache", provider_cache::instance().stats()},
       {"scope", options.source_id.empty() ? "all" : "source"},
       {"source_id", options.source_id.empty() ? nlohmann::json(nullptr) : nlohmann::json(options.source_id)},
       {"sources", sources},
@@ -2958,7 +3032,7 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
   if (options.scope == "episode") {
     return episode_fsck_impl(options);
   }
-  const auto provider = make_provider(options);
+  const auto provider = shared_provider(options);
   nlohmann::json registry;
   try {
     registry = provider->load_registry();
@@ -3164,7 +3238,7 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
 }
 
 nlohmann::json rebuild_index_impl(const storage_service_options &options) {
-  const auto provider = make_provider(options);
+  const auto provider = shared_provider(options);
   nlohmann::json old_registry;
   try {
     old_registry = provider->load_registry();
@@ -3241,7 +3315,7 @@ nlohmann::json gc_plan_impl(const storage_service_options &options) {
   if (!options.dry_run) {
     throw std::invalid_argument("storage_gc_requires_dry_run");
   }
-  const auto provider = make_provider(options);
+  const auto provider = shared_provider(options);
   const auto referenced = referenced_payload_hashes(*provider, options.source_id);
   const auto payloads = provider->all_payloads();
   nlohmann::json candidates = nlohmann::json::array();
@@ -3284,7 +3358,7 @@ nlohmann::json compact_plan_impl(const storage_service_options &options) {
   rebuild_options.dry_run = true;
   const auto rebuild = rebuild_index_impl(rebuild_options);
   const auto garbage = gc_plan_impl(rebuild_options);
-  const auto provider = make_provider(options);
+  const auto provider = shared_provider(options);
   nlohmann::json manifests = nlohmann::json::array();
   for (const auto &record : provider->manifest_records(options.source_id)) {
     if (!record.value.is_object()) {
@@ -3350,7 +3424,7 @@ public:
     if (options.scope == "episode") {
       return episode_export_bundle_impl(options);
     }
-    const auto provider = make_provider(options);
+    const auto provider = shared_provider(options);
     const auto manifest = load_latest_manifest_impl(*provider, options.source_id);
     if (manifest.is_null()) {
       throw std::runtime_error("manifest not found: " + options.source_id);
@@ -3409,7 +3483,7 @@ public:
         }
       }
     }
-    const auto provider = make_provider(options);
+    const auto provider = shared_provider(options);
     for (const auto &record : records) {
       if (!record.is_object() || !record.contains("payload")) {
         continue;
@@ -3474,14 +3548,14 @@ public:
       import_result = import_bundle(import_options);
       imported_report = fsck_impl(import_options);
       imported_report = replace_string_subtree(imported_report, temp_root.string(), "<sync-runtime>");
-      const auto import_provider = make_provider(import_options);
+      const auto import_provider = shared_provider(import_options);
       imported_manifest = load_latest_manifest_impl(*import_provider, options.source_id);
       fs::remove_all(temp_root);
     } catch (...) {
       fs::remove_all(temp_root);
       throw;
     }
-    const auto provider = make_provider(options);
+    const auto provider = shared_provider(options);
     const auto local_manifest = load_latest_manifest_impl(*provider, options.source_id);
     const auto local_root = local_manifest.is_object() && local_manifest.contains("sync_root")
                                 ? local_manifest.at("sync_root")
@@ -3507,7 +3581,7 @@ public:
   }
 
   [[nodiscard]] nlohmann::json layout(const storage_service_options &options) const override {
-    const auto provider = make_provider(options);
+    const auto provider = shared_provider(options);
     return workspace_episode_layout(options, *provider);
   }
 
@@ -3935,7 +4009,7 @@ nlohmann::json run_storage_service_operation(const std::string &operation, const
 }
 
 nlohmann::json accept_storage_manifest(const std::string &runtime_dir, const nlohmann::json &manifest) {
-  const auto provider = make_provider(runtime_dir);
+  const auto provider = shared_provider(runtime_dir);
   const auto generic = yy_storage::build_storage_import_manifest(manifest);
   for (const auto &issue : yy_storage::verify_storage_import_manifest(generic)) {
     if (issue.severity != "warning") {
@@ -3954,13 +4028,13 @@ nlohmann::json accept_storage_manifest(const std::string &runtime_dir, const nlo
 }
 
 nlohmann::json load_storage_latest_manifest(const std::string &runtime_dir, const std::string &source_id) {
-  const auto provider = make_provider(runtime_dir);
+  const auto provider = shared_provider(runtime_dir);
   return load_latest_manifest_impl(*provider, source_id);
 }
 
 nlohmann::json export_storage_records(const std::string &runtime_dir, const std::string &source_id,
                                       const nlohmann::json &range) {
-  const auto provider = make_provider(runtime_dir);
+  const auto provider = shared_provider(runtime_dir);
   const auto manifest = load_latest_manifest_impl(*provider, source_id);
   if (manifest.is_null()) {
     throw std::runtime_error("manifest not found: " + source_id);
@@ -3993,7 +4067,7 @@ std::string write_storage_payload_bytes(const std::string &runtime_dir, const st
   if (!error.empty()) {
     throw std::invalid_argument("storage_payload_invalid: " + error);
   }
-  const auto provider = make_provider(runtime_dir);
+  const auto provider = shared_provider(runtime_dir);
   provider->write_payload(digest, raw);
   return provider->name() == PROVIDER_ROCKSDB ? storage_uri(PROVIDER_ROCKSDB, runtime_dir, "payloads/" + digest)
                                               : payload_path(runtime_dir, digest).string();
@@ -4043,7 +4117,7 @@ nlohmann::json content_store_put_if_absent(const std::string &runtime_dir, const
       return invalid_content_hash_json(message);
     }
   }
-  const auto provider = make_provider(runtime_dir);
+  const auto provider = shared_provider(runtime_dir);
   return content_result_json(provider->content_store().put_if_absent(content_namespace, raw, expected));
 }
 
@@ -4054,7 +4128,7 @@ bool content_store_has(const std::string &runtime_dir, const std::string &conten
   if (!parse_content_hash_text(content_hash_text, hash, message)) {
     return false;
   }
-  const auto provider = make_provider(runtime_dir);
+  const auto provider = shared_provider(runtime_dir);
   return provider->content_store().has(content_namespace, hash);
 }
 
@@ -4065,7 +4139,7 @@ nlohmann::json content_store_verify(const std::string &runtime_dir, const std::s
   if (!parse_content_hash_text(content_hash_text, hash, message)) {
     return invalid_content_hash_json(message);
   }
-  const auto provider = make_provider(runtime_dir);
+  const auto provider = shared_provider(runtime_dir);
   return content_result_json(provider->content_store().verify(content_namespace, hash));
 }
 
@@ -4076,7 +4150,7 @@ std::string content_store_get(const std::string &runtime_dir, const std::string 
   if (!parse_content_hash_text(content_hash_text, hash, message)) {
     throw std::invalid_argument("content_store_get: " + message);
   }
-  const auto provider = make_provider(runtime_dir);
+  const auto provider = shared_provider(runtime_dir);
   auto result = provider->content_store().get(content_namespace, hash);
   if (!result.ok()) {
     throw std::runtime_error(std::string("content_store_get_failed: ") +
@@ -4087,7 +4161,7 @@ std::string content_store_get(const std::string &runtime_dir, const std::string 
 }
 
 nlohmann::json content_store_capabilities(const std::string &runtime_dir) {
-  const auto provider = make_provider(runtime_dir);
+  const auto provider = shared_provider(runtime_dir);
   const auto caps = provider->content_store().capabilities();
   return {{"provider", provider->name()},
           {"profile", caps.profile},

@@ -297,7 +297,33 @@ for (const providerCase of providerCases) {
 
           const nodeResults = selectedNodeResults(runtimeDir);
           const pythonResults = selectedPythonResults(runtimeDir);
-          assert.deepEqual(nodeResults, pythonResults);
+          // the provider cache and its live handle state are process-local
+          // observability (each runtime is its own process with its own
+          // cache), so they are asserted per-process and excluded from the
+          // cross-runtime equality contract
+          assert.equal(
+            nodeResults.status.provider_runtime.instance_lifecycle,
+            'process-cached',
+          );
+          assert.equal(nodeResults.status.provider_cache.lifecycle, 'process');
+          assert.ok(nodeResults.status.provider_cache.entries >= 1);
+          assert.ok(nodeResults.status.provider_cache.hits >= 1);
+          const stripProcessLocal = (results) => {
+            const strip = ({
+              provider_runtime: _runtime,
+              provider_cache: _cache,
+              ...rest
+            }) => rest;
+            return {
+              ...results,
+              status: strip(results.status),
+              layout: strip(results.layout),
+            };
+          };
+          assert.deepEqual(
+            stripProcessLocal(nodeResults),
+            stripProcessLocal(pythonResults),
+          );
           assert.equal(
             nodeResults.status.provider,
             providerCase.expectedProvider,

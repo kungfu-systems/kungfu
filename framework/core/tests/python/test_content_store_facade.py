@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import hashlib
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -133,6 +134,67 @@ def test_fsck_resolves_refs_through_the_selected_backend(tmp_path, provider):
         assert not object_path.exists()
     else:
         assert object_path.exists()
+
+
+def test_concurrent_put_if_absent_shares_one_provider(tmp_path, provider):
+    # ADR-0040 decision 6: facade calls share one process-cached provider per
+    # (runtime dir, provider), so N threads publishing the same bytes must all
+    # succeed with exactly one stored copy and zero engine-lock errors. Before
+    # the provider cache this deadlocked rocksdb on its own LOCK file.
+    runtime_dir = tmp_path / "runtime"
+    raw = f"concurrent dedup via {provider}".encode()
+    digest = _digest(raw)
+    threads, attempts = 8, 32
+
+    with ThreadPoolExecutor(max_workers=threads) as pool:
+        results = list(
+            pool.map(
+                lambda _: content_store.put_if_absent(runtime_dir, "payloads", raw),
+                range(attempts),
+            )
+        )
+
+    assert all(r["ok"] for r in results)
+    assert all(r["error"] == "ok" for r in results)
+    assert all(r["hash"]["value"] == digest for r in results)
+    # at least one attempt performed the initial publication; racing
+    # publishers of identical bytes are benign under content identity
+    assert any(not r["existed"] for r in results)
+
+    assert content_store.get(runtime_dir, "payloads", digest) == raw
+    assert content_store.verify(runtime_dir, "payloads", digest)["ok"]
+    if provider == "content-addressed-file":
+        object_dir = Path(runtime_dir) / "storage" / "payloads" / digest[:2]
+        assert [p.name for p in object_dir.iterdir()] == [digest]
+
+
+def test_concurrent_readers_and_writers_stay_consistent(tmp_path, provider):
+    runtime_dir = tmp_path / "runtime"
+    payloads = [f"object {i} via {provider}".encode() for i in range(16)]
+
+    def publish_and_read(raw: bytes) -> None:
+        digest = _digest(raw)
+        put = content_store.put_if_absent(runtime_dir, "payloads", raw)
+        assert put["ok"], put
+        assert content_store.has(runtime_dir, "payloads", digest)
+        assert content_store.get(runtime_dir, "payloads", digest) == raw
+        assert content_store.verify(runtime_dir, "payloads", digest)["ok"]
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        list(pool.map(publish_and_read, payloads * 4))
+
+
+def test_status_reports_the_cached_provider(tmp_path, provider):
+    runtime_dir = tmp_path / "runtime"
+    assert content_store.put_if_absent(runtime_dir, "payloads", b"observable")["ok"]
+
+    status = service.status(runtime_dir)
+    cache = status["provider_cache"]
+    assert cache["lifecycle"] == "process"
+    assert cache["entries"] >= 1
+    # the facade call above seeded the cache, so status reuses that provider
+    assert cache["hits"] >= 1
+    assert status["provider_runtime"]["instance_lifecycle"] == "process-cached"
 
 
 def test_sealed_missing_ref_fails_under_both_backends(tmp_path, provider):
