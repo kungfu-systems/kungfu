@@ -128,6 +128,13 @@ pinned toolchain on first run — nothing to preinstall beyond `curl` (plus a
 C++ toolchain and CMake for the native core; `./shifu doctor` tells you
 exactly what is missing and where to get it).
 
+> 功夫练不下去的时候，你去找的那个人就是师傅。
+> *When your kungfu fails you, the one you turn to is your shifu.*
+
+That is shifu's whole job description: it appears wherever kungfu cannot yet
+help itself — before the toolchain exists, when the environment is broken,
+when the repository itself still needs fetching.
+
 With shifu installed on your PATH (`cargo install --path crates/shifu --root
 ~/.local` from any checkout), it also works as a standalone bootstrap core:
 

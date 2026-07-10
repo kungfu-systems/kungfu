@@ -25,8 +25,14 @@ struct Check {
 
 pub fn run(root: Option<&Path>) -> ! {
     println!(
-        "\u{1f94b} {}\n",
+        "\u{1f94b} {}",
         style::bold("shifu doctor - development environment preflight")
+    );
+    println!(
+        "   {}\n",
+        style::dim(
+            "\u{201c}When your kungfu fails you, the one you turn to is your shifu.\u{201d}"
+        )
     );
 
     #[cfg_attr(not(windows), allow(unused_mut))]

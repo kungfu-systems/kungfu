@@ -52,6 +52,12 @@ fn print_usage() {
         "\u{1f94b} {}",
         style::bold("shifu - the kungfu development/build launcher (pinned-toolchain entrypoint)")
     );
+    println!(
+        "   {}",
+        style::dim(
+            "\u{201c}When your kungfu fails you, the one you turn to is your shifu.\u{201d}"
+        )
+    );
     println!();
     println!("{}", style::cyan("Usage:"));
     println!("  shifu <task> [args...]     run any pnpm task under the pinned toolchain");

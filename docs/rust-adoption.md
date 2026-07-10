@@ -127,6 +127,20 @@ this discipline exists to prevent.
 
 ## Worked example: the launcher
 
+> 功夫练不下去的时候，你去找的那个人就是师傅。
+> *When your kungfu fails you, the one you turn to is your shifu.*
+
+The name states the role: shifu appears wherever kungfu cannot help itself —
+before the toolchain exists, when the environment is broken, when the
+repository itself still needs fetching. A self-hosting system (see
+[ADR-0009](../framework/core/docs/adr/ADR-0009-load-bearing-self-bootstrap.md))
+needs exactly one such fixed point outside its own loop, and that fixed point
+must itself be beyond needing help — which is why the launcher's
+zero-dependency, std-only, weld-as-little-as-possible discipline
+([ADR-0044](../framework/core/docs/adr/ADR-0044-shifu-delegation-protocol.md))
+is constitutive, not aesthetic: the helper of last resort cannot afford to
+need one.
+
 `crates/shifu` replaces the platform-split entrypoint logic (sh + cmd +
 per-platform special-casing) with one binary that:
 
