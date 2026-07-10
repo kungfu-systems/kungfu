@@ -38,44 +38,44 @@ jobs:
       KUNGFU_BUILDCHAIN_SOURCE_BUILD: "1"
       SHIFU_NATIVE: "1"
       SHIFU_REQUIRE_MSVC: "1"
+      SOURCE_ROOT: source-${{ github.event.pull_request.head.sha }}
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
-      - name: Checkout Buildchain runtime
-        uses: actions/checkout@v7.0.0
+      - name: Setup Node.js
+        uses: actions/setup-node@v6.4.0
         with:
-          repository: kungfu-systems/buildchain
-          ref: v2
-          path: .buildchain/runtime
-          persist-credentials: false
+          node-version: "24"
 
-      # The reusable Buildchain workflow locks pull_request events to GitHub's
-      # synthetic refs/pull/*/merge ref. The LAN mirror intentionally carries
-      # branch refs, not synthetic PR refs, so lock this non-publishing spike to
-      # the immutable same-repository head SHA and its real branch ref instead.
-      - name: Checkout immutable PR head through Buildchain cache
-        # shifu-entry-contract: allow Buildchain must bootstrap before the consumer source and Shifu entrypoint exist
-        run: node .buildchain/runtime/scripts/locked-source-checkout.mjs
+      # A SHA-addressed source archive avoids the self-hosted fleet's unreliable
+      # large GitHub Git fetch path. Use a per-SHA directory so no runner cleanup
+      # or overwrite is required, while retaining an immutable source identity.
+      - name: Fetch immutable PR head snapshot
+        shell: bash
         env:
-          BUILDCHAIN_SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
-          BUILDCHAIN_SOURCE_REF: refs/heads/${{ github.event.pull_request.head.ref }}
-          BUILDCHAIN_CHECKOUT_CACHE_MODE: auto
-          BUILDCHAIN_CHECKOUT_CACHE_MIRROR_URL_TEMPLATE: ${{ vars.BUILDCHAIN_CHECKOUT_CACHE_MIRROR_URL_TEMPLATE }}
-          BUILDCHAIN_CHECKOUT_CACHE_REFERENCE_REPOSITORY_TEMPLATE: ${{ vars.BUILDCHAIN_CHECKOUT_CACHE_REFERENCE_REPOSITORY_TEMPLATE }}
-          BUILDCHAIN_CHECKOUT_CACHE_FALLBACK: github
-          BUILDCHAIN_CHECKOUT_CACHE_TIMEOUT_SECONDS: "60"
-          BUILDCHAIN_SOURCE_CHECKOUT_DIAGNOSTICS_PATH: .buildchain/diagnostics/source-checkout.json
           GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$SOURCE_ROOT"
+          curl --fail --location --retry 3 --connect-timeout 15 \
+            --header "Authorization: Bearer ${GITHUB_TOKEN}" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/tarball/${SOURCE_SHA}" \
+            --output "${RUNNER_TEMP}/kungfu-${SOURCE_SHA}.tar.gz"
+          tar -xzf "${RUNNER_TEMP}/kungfu-${SOURCE_SHA}.tar.gz" \
+            -C "$SOURCE_ROOT" --strip-components=1
+          test -f "$SOURCE_ROOT/shifu"
 
       - name: Install frozen workspace
         shell: bash
-        run: ./shifu install --frozen-lockfile --no-optional
+        run: cd "$SOURCE_ROOT" && ./shifu install --frozen-lockfile --no-optional
 
       - name: Seed core build
         shell: bash
-        run: ./shifu build:core
+        run: cd "$SOURCE_ROOT" && ./shifu build:core
 
       - name: Build and run shared membrane consumers
         shell: bash
         run: |
+          cd "$SOURCE_ROOT"
           # shifu-entry-contract: allow the isolated spike configure is not a product-level Shifu task
           cmake -S framework/core -B framework/core/build -DKUNGFU_WITH_SLICES=ON
           # shifu-entry-contract: allow the isolated spike targets are not product-level Shifu tasks
