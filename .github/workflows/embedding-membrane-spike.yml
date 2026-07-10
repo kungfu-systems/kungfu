@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Embedding membrane spike
+
+on:
+  pull_request:
+    branches:
+      - dev/v*/v*
+    paths:
+      - "framework/core/src/libkungfu/include/kungfu/embedding.h"
+      - "framework/core/src/libkungfu/include/kungfu/embedding.hpp"
+      - "framework/core/src/libkungfu/src/runtime/embedding.cpp"
+      - "framework/core/slices/shared-embedding-membrane/**"
+      - "framework/core/slices/CMakeLists.txt"
+      - ".github/workflows/embedding-membrane-spike.yml"
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: write
+  id-token: write
+
+jobs:
+  native-membrane:
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v2
+    secrets: inherit
+    with:
+      runner-preset: kungfu-v4-self-hosted
+      artifact-name: embedding-membrane-spike
+      artifact-paths: |
+        framework/core/build/Release/shared_embedding_host
+        framework/core/build/Release/shared_embedding_host.exe
+        framework/core/build/Release/shared_embedding_native_kfx.so
+        framework/core/build/Release/shared_embedding_native_kfx.dll
+      expected-artifacts-json: >-
+        {"minFiles":2,"minTotalBytes":1}
+      require-install: true
+      require-build: true
+      require-verify: true
+      verify-command: >-
+        bash -c "cmake -S framework/core -B framework/core/build -DKUNGFU_WITH_SLICES=ON &&
+        cmake --build framework/core/build --target shared_embedding_host shared_embedding_native_kfx &&
+        node framework/core/slices/shared-embedding-membrane/run.mjs framework/core/build"
+      release-candidate: false
+      artifact-transfer-mode: s3-to-github-artifacts
+      artifact-retention-days: 7
+      buildchain-contract-lock-path: .buildchain/contract-lock.json

@@ -196,6 +196,12 @@ extensions) or where measured evidence justifies a trunk-only surface. Two
 permanently parallel embedding contracts on one core is the drift this
 paragraph exists to forbid.
 
+The 2026-07-10 native membrane spike exercises that default before Stage 3:
+the existing Rust host probe now consumes the same v1 context/reader/batch
+table as the dynamically loaded native KFX probe. The result is recorded in
+[`docs/libkungfu-embedding-membrane-spike.md`](../../../../docs/libkungfu-embedding-membrane-spike.md).
+It is feasibility evidence only and does not authorize or begin Stage 3.
+
 ## Alternatives considered
 
 - **Frozen host + uv-managed satellite runtimes.** Deliver uv and a pinned

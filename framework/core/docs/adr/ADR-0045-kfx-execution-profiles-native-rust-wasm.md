@@ -221,6 +221,14 @@ throughput by more than an order of magnitude, so the spike must record engine
 configuration as evidence rather than report a single “WASM is fast” number
 ([Wasmtime issue 8034](https://github.com/bytecodealliance/wasmtime/issues/8034)).
 
+The native half now has a provisional implementation and evidence in
+[`docs/libkungfu-embedding-membrane-spike.md`](../../../../docs/libkungfu-embedding-membrane-spike.md):
+one core-owned v1 table, C++ and safe Rust wrappers, no per-frame callback,
+borrowed mmap pages with explicit batch release, and contained exceptions.
+macOS arm64 passes the native budgets; Linux x64 and Windows x64 remain pending
+the spike PR matrix. This does not start the WASM spike or change the KFX
+manifest/contract.
+
 ## Contract obligations
 
 Any future manifest schema for these profiles must make the following facts
