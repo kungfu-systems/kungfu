@@ -25,6 +25,7 @@ and the map routes a question to whichever doc answers it.
 | What is kungfu, in one idea? | [`../README.md`](../README.md) | — | stable |
 | What do the terms mean (`kungfu` / `yijinjing` / journal / schema …)? | [`concepts.md`](concepts.md) | use | stable |
 | Why is it built this way? What is load-bearing? | [`design-philosophy.md`](design-philosophy.md) | why | stable |
+| Why compare Kungfu to SQLite, Git, and a flight recorder — and why is it neither observability nor blockchain? | [`design-philosophy.md`](design-philosophy.md#the-missing-infrastructure-layer-runtime-facts) | why | stable |
 | Why does Kungfu start from accountability? | [`facts-before-trust.md`](facts-before-trust.md) | why | stable |
 | Why this versioning / release design (don't replace it naively)? | [`version-release-design.md`](version-release-design.md) | why | stable |
 | When must a change open a minor or major (and when must it not)? | [`versioning.md`](versioning.md) (rule: KFD-1, adopted by ADR-0010) | verify | stable |
@@ -89,6 +90,10 @@ route to the row that answers them:
   ([ADR-0021](../framework/core/docs/adr/ADR-0021-observer-relative-timeline-projection.md)).
 - **accountability / facts before trust / local proof before control** → *why
   does Kungfu start from accountability* ([`facts-before-trust.md`](facts-before-trust.md)).
+- **SQLite / Git for runs / flight recorder / runtime fact infrastructure /
+  observability / OpenTelemetry / blockchain / polyglot semantic core** → *why
+  Kungfu occupies a distinct runtime-fact layer*
+  ([`design-philosophy.md`](design-philosophy.md#the-missing-infrastructure-layer-runtime-facts)).
 - **latency / performance / zero-copy / serialization** → *the membrane*
   ([`architecture.md`](architecture.md)) and *the event model*
   ([`event-model.md`](event-model.md)).
