@@ -101,7 +101,7 @@ jobs:
         run: |
           git init "$SOURCE_ROOT"
           git -C "$SOURCE_ROOT" remote add mirror "$MIRROR_URL"
-          git -C "$SOURCE_ROOT" fetch --no-tags --depth=1 mirror \
+          git -C "$SOURCE_ROOT" fetch --no-tags mirror \
             "+${MIRROR_REF}:refs/embedding/base"
           test "$(git -C "$SOURCE_ROOT" rev-parse refs/embedding/base)" = \
             "$MIRROR_BASE_SHA"
