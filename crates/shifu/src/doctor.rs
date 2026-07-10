@@ -16,7 +16,7 @@
 use std::path::Path;
 
 use shifu_core::probe::{self, Probe, Status};
-use shifu_core::style;
+use shifu_core::{bootstrap, style};
 
 use crate::{tools, util};
 
@@ -70,6 +70,19 @@ pub fn run(root: Option<&Path>) -> ! {
         );
     }
 
+    println!(
+        "\n{}",
+        style::cyan("Bootstrap state (informational; never blocks):")
+    );
+    let mut bootstrap_section = vec![bootstrap::cache_probe()];
+    for tool in [&tools::FNM, &tools::UV] {
+        bootstrap_section.push(bootstrap::mirror_probe(tool));
+        bootstrap_section.push(bootstrap::pin_probe(tool, root));
+    }
+    for finding in probe::run_all(bootstrap_section) {
+        probe::print_finding(&finding);
+    }
+
     println!("\n{}", style::cyan("Optional:"));
     for finding in probe::run_all(vec![Probe::command_version(
         "rustc/cargo",
@@ -104,7 +117,7 @@ fn managed_probes(root: Option<&Path>) -> Vec<Probe> {
         .map(|tool| {
             let root_buf = root_buf.clone();
             Probe {
-                label: tool.name,
+                label: tool.name.to_string(),
                 probe: Box::new(move || {
                     let lookup_root = root_buf.clone().unwrap_or_else(|| Path::new(".").into());
                     let found = tools::find_tool(tool, &lookup_root)
@@ -130,7 +143,7 @@ fn managed_probes(root: Option<&Path>) -> Vec<Probe> {
     if let Some(root) = root {
         if let Ok(node) = std::fs::read_to_string(root.join(".node-version")) {
             probes.push(Probe {
-                label: "node",
+                label: "node".to_string(),
                 probe: Box::new(move || {
                     Status::Info(format!(
                         "pinned {} by .node-version (installed via fnm on first build)",
@@ -179,7 +192,7 @@ fn cpp_compiler_probe() -> Probe {
 
 fn cmake_probe() -> Probe {
     Probe {
-        label: "cmake",
+        label: "cmake".to_string(),
         probe: Box::new(|| {
             let Some(version_line) =
                 util::find_on_path("cmake").and_then(|_| probe::version_line("cmake"))
@@ -213,7 +226,7 @@ fn cmake_probe() -> Probe {
 #[cfg(windows)]
 fn msvc_probe() -> Probe {
     Probe {
-        label: "MSVC (cl.exe)",
+        label: "MSVC (cl.exe)".to_string(),
         probe: Box::new(|| {
             // cl on PATH or discoverable via vcvars is both fine; the launcher
             // loads vcvars itself at build time.

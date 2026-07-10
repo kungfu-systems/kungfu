@@ -28,7 +28,7 @@ pub enum Status {
 }
 
 pub struct Probe {
-    pub label: &'static str,
+    pub label: String,
     /// The check itself: pure observation, no side effects on the machine.
     pub probe: Box<dyn FnOnce() -> Status>,
     /// Required probes decide the exit code; optional ones only inform.
@@ -42,7 +42,7 @@ pub struct Probe {
 
 /// The evaluated result of one probe: everything a reporter needs.
 pub struct Finding {
-    pub label: &'static str,
+    pub label: String,
     pub status: Status,
     pub required: bool,
     pub hint: String,
@@ -63,13 +63,13 @@ impl Probe {
     /// Canned probe: the first of `candidates` resolvable on PATH answers
     /// with its `--version` line as evidence.
     pub fn command_version(
-        label: &'static str,
+        label: &str,
         candidates: &'static [&'static str],
         hint: &str,
         required: bool,
     ) -> Probe {
         Probe {
-            label,
+            label: label.to_string(),
             probe: Box::new(move || {
                 for name in candidates {
                     if host::find_on_path(name).is_some() {

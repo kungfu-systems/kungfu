@@ -47,6 +47,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::host;
+use crate::probe::{Probe, Status};
 
 /// Compiled fallback versions — used only when a tool is absent AND the repo
 /// carries no pin file. The repo pin files are the normal source of truth; an
@@ -628,6 +629,139 @@ pub fn default_fnm_dir_if_bootstrapped(fnm_path: &Path) {
         let _ = fs::create_dir_all(&dir);
         env::set_var("FNM_DIR", &dir);
     }
+}
+
+// ---------------------------------------------------------------------------
+// Seed probes — the bootstrap leg diagnosing itself through the probe
+// framework (report, never repair). Every bearer's doctor can mount these;
+// none of them is required, so they inform without changing exit semantics.
+
+/// Cache-health probe: the user-global tool cache exists (or will be created)
+/// and is writable.
+pub fn cache_probe() -> Probe {
+    let dir = host::kungfu_cache_dir().join("tools");
+    Probe {
+        label: "tool cache".to_string(),
+        required: false,
+        hint: "the user-global bootstrap cache must stay writable".to_string(),
+        repair_cmd: Some(format!("chmod -R u+rw {}", dir.display())),
+        probe: Box::new(move || {
+            if !dir.exists() {
+                return Status::Info(format!(
+                    "{} - absent; created on first bootstrap",
+                    dir.display()
+                ));
+            }
+            let readonly = fs::metadata(&dir)
+                .map(|m| m.permissions().readonly())
+                .unwrap_or(false);
+            if readonly {
+                return Status::Missing;
+            }
+            let mut tools: Vec<String> = fs::read_dir(&dir)
+                .map(|entries| {
+                    entries
+                        .flatten()
+                        .filter(|e| e.path().is_dir())
+                        .map(|e| e.file_name().to_string_lossy().to_string())
+                        .collect()
+                })
+                .unwrap_or_default();
+            tools.sort();
+            if tools.is_empty() {
+                Status::Present(format!("{} - empty", dir.display()))
+            } else {
+                Status::Present(format!("{} - caches {}", dir.display(), tools.join(", ")))
+            }
+        }),
+    }
+}
+
+/// Mirror probe: when a mirror override is configured for `tool`, check the
+/// mirror answers at all (connection-level reachability, not asset presence);
+/// otherwise report the default source and the override to set.
+pub fn mirror_probe(tool: &'static Tool) -> Probe {
+    let configured = env::var(tool.mirror_env)
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+    let label = format!("{} mirror", tool.name);
+    match configured {
+        None => Probe {
+            label,
+            required: false,
+            hint: String::new(),
+            repair_cmd: None,
+            probe: Box::new(move || {
+                Status::Info(format!(
+                    "default ({}); override: {}",
+                    tool.default_base, tool.mirror_env
+                ))
+            }),
+        },
+        Some(url) => Probe {
+            label,
+            required: false,
+            hint: format!(
+                "configured mirror does not answer - fix or unset {}",
+                tool.mirror_env
+            ),
+            repair_cmd: Some(format!("unset {}", tool.mirror_env)),
+            probe: Box::new(move || {
+                if url_answers(&url) {
+                    Status::Present(format!("{url} (reachable, via {})", tool.mirror_env))
+                } else {
+                    Status::Missing
+                }
+            }),
+        },
+    }
+}
+
+/// Pin-vs-cache probe (version bite): does the user-global cache hold exactly
+/// the version this checkout pins?
+pub fn pin_probe(tool: &'static Tool, root: Option<&Path>) -> Probe {
+    let root = root.map(Path::to_path_buf);
+    let tool_dir = host::kungfu_cache_dir().join("tools").join(tool.name);
+    Probe {
+        label: format!("{} pin", tool.name),
+        required: false,
+        hint: "cache holds other versions but not the pinned one; the pin is fetched on next use, stale versions only cost disk".to_string(),
+        repair_cmd: Some(format!("rm -rf {}", tool_dir.display())),
+        probe: Box::new(move || {
+            let lookup_root = root.clone().unwrap_or_else(|| Path::new(".").into());
+            let pin = tool.version(&lookup_root);
+            if tool.cached_binary(&lookup_root).is_file() {
+                return Status::Present(format!("cache holds pinned {pin}"));
+            }
+            let cache_populated = fs::read_dir(&tool_dir)
+                .map(|mut entries| entries.next().is_some())
+                .unwrap_or(false);
+            if cache_populated {
+                return Status::Missing;
+            }
+            if host::find_on_path(tool.name).is_some() {
+                Status::Info(format!("pinned {pin}; resolves from PATH, cache unused"))
+            } else {
+                Status::Info(format!("pinned {pin}; bootstraps on first use"))
+            }
+        }),
+    }
+}
+
+/// Connection-level reachability: does anything answer at `url`? Any HTTP
+/// response counts (a 404 on the base path still proves the mirror answers);
+/// only DNS/connect/timeout failures — or having no curl — report false.
+fn url_answers(url: &str) -> bool {
+    let Some(curl) = host::find_on_path("curl") else {
+        return false;
+    };
+    Command::new(curl)
+        .args(["-sSI", "--connect-timeout", "3", "--max-time", "6"])
+        .arg(url)
+        .output()
+        .map(|out| out.status.success())
+        .unwrap_or(false)
 }
 
 #[cfg(test)]
