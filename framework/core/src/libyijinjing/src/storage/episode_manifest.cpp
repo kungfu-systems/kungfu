@@ -4,7 +4,6 @@
 
 #include <algorithm>
 #include <filesystem>
-#include <map>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -150,135 +149,215 @@ nlohmann::json record_json(const EpisodeClosed &record) {
   return row;
 }
 
-std::vector<nlohmann::json> read_records(const std::string &runtime_dir) {
-  std::vector<nlohmann::json> records;
-  const auto location = manifest_location(runtime_dir);
-  if (location->locator->list_page_id(location, location::PUBLIC).empty()) {
-    return records;
-  }
-  auto reader = std::make_shared<kungfu::yijinjing::journal::reader>(true, false, std::make_shared<bus>(false));
-  reader->join(location, location::PUBLIC, 0);
-  while (reader->data_available()) {
-    const auto frame = reader->current_frame();
-    switch (frame->carrier_type()) {
-    case EpisodeOpen::tag:
-      records.push_back(record_json(frame->data<EpisodeOpen>()));
-      break;
-    case EpisodeHeartbeat::tag:
-      records.push_back(record_json(frame->data<EpisodeHeartbeat>()));
-      break;
-    case EpisodeFrameAttached::tag:
-      records.push_back(record_json(frame->data<EpisodeFrameAttached>()));
-      break;
-    case EpisodeRefAttached::tag:
-      records.push_back(record_json(frame->data<EpisodeRefAttached>()));
-      break;
-    case EpisodeClosed::tag:
-      records.push_back(record_json(frame->data<EpisodeClosed>()));
-      break;
-    default:
-      records.push_back({{"schema", EPISODE_MANIFEST_SCHEMA_V1},
-                         {"record_kind", "unknown"},
-                         {"carrier_type", frame->carrier_type()},
-                         {"frame_uid", frame->frame_uid()},
-                         {"gen_time", frame->gen_time()}});
-      break;
-    }
-    records.back()["manifest_frame_uid"] = frame->frame_uid();
-    records.back()["manifest_gen_time"] = frame->gen_time();
-    reader->next();
-  }
-  return records;
+// Edge projection of one typed record, including its manifest provenance.
+nlohmann::json record_row_json(const episode_manifest_record &record) {
+  auto row = std::visit(
+      [&record](const auto &body) -> nlohmann::json {
+        using body_t = std::decay_t<decltype(body)>;
+        if constexpr (std::is_same_v<body_t, episode_manifest_unknown_record>) {
+          return {{"schema", EPISODE_MANIFEST_SCHEMA_V1},
+                  {"record_kind", "unknown"},
+                  {"carrier_type", body.carrier_type},
+                  {"frame_uid", record.manifest_frame_uid},
+                  {"gen_time", record.manifest_gen_time}};
+        } else {
+          return record_json(body);
+        }
+      },
+      record.body);
+  row["manifest_frame_uid"] = record.manifest_frame_uid;
+  row["manifest_gen_time"] = record.manifest_gen_time;
+  return row;
 }
 
-struct episode_fold {
+// Decode one manifest frame into its typed v1 record. A frame with an
+// unrecognized carrier type, a schema_version newer than v1, or a payload too
+// short for its record layout stays an unknown record: preserved with
+// provenance, never folded, so a newer writer does not brick this reader.
+template <typename T> bool decode_v1_record(const frame_ptr &frame, episode_manifest_record &record) {
+  if (frame->data_length() < sizeof(T)) {
+    return false;
+  }
+  if (frame->data<T>().schema_version > EPISODE_MANIFEST_SCHEMA_VERSION) {
+    return false;
+  }
+  record.body = frame->data<T>();
+  return true;
+}
+
+episode_manifest_record decode_record(const frame_ptr &frame) {
+  episode_manifest_record record{};
+  record.manifest_frame_uid = frame->frame_uid();
+  record.manifest_gen_time = frame->gen_time();
+  bool decoded = false;
+  switch (frame->carrier_type()) {
+  case EpisodeOpen::tag:
+    decoded = decode_v1_record<EpisodeOpen>(frame, record);
+    break;
+  case EpisodeHeartbeat::tag:
+    decoded = decode_v1_record<EpisodeHeartbeat>(frame, record);
+    break;
+  case EpisodeFrameAttached::tag:
+    decoded = decode_v1_record<EpisodeFrameAttached>(frame, record);
+    break;
+  case EpisodeRefAttached::tag:
+    decoded = decode_v1_record<EpisodeRefAttached>(frame, record);
+    break;
+  case EpisodeClosed::tag:
+    decoded = decode_v1_record<EpisodeClosed>(frame, record);
+    break;
+  default:
+    break;
+  }
+  if (!decoded) {
+    episode_manifest_unknown_record unknown{};
+    unknown.carrier_type = frame->carrier_type();
+    if (frame->data_length() >= sizeof(uint32_t)) {
+      // Every v1 record starts with a uint32 schema_version; reading that
+      // prefix is safe even when the rest of the layout is unknown.
+      unknown.schema_version = *static_cast<const uint32_t *>(frame->data_address());
+      unknown.unknown_version = unknown.schema_version > EPISODE_MANIFEST_SCHEMA_VERSION;
+    }
+    record.body = unknown;
+  }
+  return record;
+}
+
+uint64_t record_episode_id(const episode_manifest_record &record) {
+  return std::visit(
+      [](const auto &body) -> uint64_t {
+        using body_t = std::decay_t<decltype(body)>;
+        if constexpr (std::is_same_v<body_t, episode_manifest_unknown_record>) {
+          return 0;
+        } else {
+          return body.episode_id;
+        }
+      },
+      record.body);
+}
+
+// The deterministic fold: records apply strictly in append order, so the
+// current view is a pure function of the journal content. Identity is
+// first-open-wins; watermarks are last-writer-wins; collections keep append
+// order including duplicates.
+void fold_into(episode_manifest_fold &fold, const episode_manifest_record &record) {
+  ++fold.total_record_count;
+  if (std::holds_alternative<episode_manifest_unknown_record>(record.body)) {
+    ++fold.unknown_record_count;
+    return;
+  }
+  const auto episode_id = record_episode_id(record);
+  if (episode_id == 0) {
+    ++fold.unfolded_record_count;
+    return;
+  }
+  auto &view = fold.episodes[episode_id];
+  view.episode_id = episode_id;
+  view.records.push_back(record);
+  const auto record_index = view.records.size() - 1;
+  std::visit(
+      [&view, &record, record_index](const auto &body) {
+        using body_t = std::decay_t<decltype(body)>;
+        if constexpr (std::is_same_v<body_t, EpisodeOpen>) {
+          ++view.open_count;
+          if (!view.opened) {
+            view.opened = true;
+            view.open = body;
+            view.open_manifest_frame_uid = record.manifest_frame_uid;
+            view.open_manifest_gen_time = record.manifest_gen_time;
+          }
+        } else if constexpr (std::is_same_v<body_t, EpisodeHeartbeat>) {
+          view.heartbeat_seen = true;
+          view.update_time = body.update_time;
+          view.claimed_frame_count = body.frame_count;
+          view.last_frame_uid_seen = true;
+          view.last_frame_uid = body.last_frame_uid;
+        } else if constexpr (std::is_same_v<body_t, EpisodeFrameAttached>) {
+          if (body.frame_uid == 0) {
+            ++view.missing_frame_uid_count;
+          } else {
+            const auto duplicate =
+                std::any_of(view.frame_indices.begin(), view.frame_indices.end(), [&view, &body](size_t index) {
+                  return std::get<EpisodeFrameAttached>(view.records[index].body).frame_uid == body.frame_uid;
+                });
+            if (duplicate) {
+              view.duplicate_frame_uids.push_back(body.frame_uid);
+            }
+          }
+          view.frame_indices.push_back(record_index);
+          view.last_frame_uid_seen = true;
+          view.last_frame_uid = body.frame_uid;
+        } else if constexpr (std::is_same_v<body_t, EpisodeRefAttached>) {
+          view.ref_indices.push_back(record_index);
+        } else if constexpr (std::is_same_v<body_t, EpisodeClosed>) {
+          ++view.close_count;
+          view.closed = true;
+          view.close = body;
+          view.claimed_frame_count = body.frame_count;
+          view.last_frame_uid_seen = true;
+          view.last_frame_uid = body.last_frame_uid;
+        }
+      },
+      record.body);
+}
+
+// Edge projection of the folded current view. Key set matches the v1 edge
+// JSON shape: identity keys appear when the Episode has an open record,
+// watermark keys when a writer produced them, and the computed counts always.
+nlohmann::json summary_json(const episode_current_view &view) {
   nlohmann::json summary = nlohmann::json::object();
-  nlohmann::json records = nlohmann::json::array();
-  nlohmann::json frames = nlohmann::json::array();
-  nlohmann::json refs = nlohmann::json::array();
-  bool opened = false;
-  bool closed = false;
-};
-
-std::map<uint64_t, episode_fold> fold_records(const std::vector<nlohmann::json> &records) {
-  std::map<uint64_t, episode_fold> folded;
-  for (const auto &record : records) {
-    const auto episode_id = record.value("episode_id", uint64_t{0});
-    if (episode_id == 0) {
-      continue;
-    }
-    auto &episode = folded[episode_id];
-    episode.records.push_back(record);
-    const auto kind = record.value("record_kind", std::string{});
-    if (kind == "episode_open") {
-      episode.opened = true;
-      episode.summary = record;
-      episode.summary["record_count"] = episode.records.size();
-      episode.summary["frame_count"] = episode.frames.size();
-      episode.summary["ref_count"] = episode.refs.size();
-    } else if (kind == "episode_heartbeat") {
-      episode.summary["last_frame_uid"] = record.value("last_frame_uid", uint64_t{0});
-      episode.summary["frame_count"] = record.value("frame_count", episode.frames.size());
-      episode.summary["update_time"] = record.value("update_time", int64_t{0});
-    } else if (kind == "episode_frame_attached") {
-      episode.frames.push_back(record);
-      episode.summary["last_frame_uid"] = record.value("frame_uid", uint64_t{0});
-      episode.summary["frame_count"] = episode.frames.size();
-    } else if (kind == "episode_ref_attached") {
-      episode.refs.push_back(record);
-      episode.summary["ref_count"] = episode.refs.size();
-    } else if (kind == "episode_closed") {
-      episode.closed = true;
-      episode.summary["status"] = record.value("status", "unknown");
-      episode.summary["end_time"] = record.value("end_time", int64_t{0});
-      episode.summary["last_frame_uid"] = record.value("last_frame_uid", uint64_t{0});
-      episode.summary["frame_count"] = record.value("frame_count", episode.frames.size());
-      episode.summary["reason"] = record.value("reason", "");
-    }
+  if (view.opened) {
+    summary = record_json(view.open);
+    summary["manifest_frame_uid"] = view.open_manifest_frame_uid;
+    summary["manifest_gen_time"] = view.open_manifest_gen_time;
   }
-  for (auto &[episode_id, episode] : folded) {
-    episode.summary["schema"] = EPISODE_MANIFEST_SCHEMA_V1;
-    episode.summary["episode_id"] = episode_id;
-    episode.summary["opened"] = episode.opened;
-    episode.summary["closed"] = episode.closed;
-    episode.summary["record_count"] = episode.records.size();
-    episode.summary["frame_count"] = episode.frames.size();
-    episode.summary["ref_count"] = episode.refs.size();
-    if (!episode.summary.contains("status")) {
-      episode.summary["status"] = episode.opened ? "open" : "dangling";
-    }
+  if (view.heartbeat_seen) {
+    summary["update_time"] = view.update_time;
   }
-  return folded;
+  if (view.last_frame_uid_seen) {
+    summary["last_frame_uid"] = view.last_frame_uid;
+  }
+  if (view.closed) {
+    summary["status"] = status_name(view.close.status);
+    summary["end_time"] = view.close.end_time;
+    summary["reason"] = fixed_string(view.close.reason);
+  }
+  summary["schema"] = EPISODE_MANIFEST_SCHEMA_V1;
+  summary["episode_id"] = view.episode_id;
+  summary["opened"] = view.opened;
+  summary["closed"] = view.closed;
+  summary["record_count"] = view.records.size();
+  summary["frame_count"] = view.frame_indices.size();
+  summary["ref_count"] = view.ref_indices.size();
+  if (!summary.contains("status")) {
+    summary["status"] = view.opened ? "open" : "dangling";
+  }
+  return summary;
 }
 
-uint64_t u64_or(const nlohmann::json &object, const std::string &field, uint64_t fallback = 0) {
-  if (!object.is_object() || !object.contains(field)) {
-    return fallback;
+nlohmann::json rows_json(const episode_current_view &view, const std::vector<size_t> &indices) {
+  nlohmann::json rows = nlohmann::json::array();
+  for (const auto index : indices) {
+    rows.push_back(record_row_json(view.records[index]));
   }
-  const auto &value = object.at(field);
-  if (value.is_number_unsigned()) {
-    return value.get<uint64_t>();
-  }
-  if (value.is_number_integer()) {
-    const auto signed_value = value.get<int64_t>();
-    return signed_value < 0 ? fallback : static_cast<uint64_t>(signed_value);
-  }
-  return fallback;
+  return rows;
 }
 
-std::string text_or(const nlohmann::json &object, const std::string &field, const std::string &fallback = {}) {
-  if (!object.is_object() || !object.contains(field) || !object.at(field).is_string()) {
-    return fallback;
+nlohmann::json records_json(const episode_current_view &view) {
+  nlohmann::json rows = nlohmann::json::array();
+  for (const auto &record : view.records) {
+    rows.push_back(record_row_json(record));
   }
-  return object.at(field).get<std::string>();
+  return rows;
 }
 
 bool contains_u64(const std::vector<uint64_t> &values, uint64_t value) {
   return std::find(values.begin(), values.end(), value) != values.end();
 }
 
-bool payload_ref_exists(const std::string &runtime_dir, const nlohmann::json &ref) {
-  const auto ref_id = text_or(ref, "ref_id");
+// Stage 4 (ADR-0041) replaces this path probe with resolution through the
+// ADR-0040 immutable content_store once that primitive lands.
+bool payload_ref_exists(const std::string &runtime_dir, const std::string &ref_id) {
   if (ref_id.empty()) {
     return false;
   }
@@ -296,8 +375,8 @@ struct episode_graph {
   bool degraded = false;
 };
 
-episode_graph build_causal_graph(const std::string &runtime_dir, uint64_t episode_id, const episode_fold &episode,
-                                 const std::map<uint64_t, episode_fold> &folded) {
+episode_graph build_causal_graph(const std::string &runtime_dir, uint64_t episode_id, const episode_current_view &view,
+                                 const std::map<uint64_t, episode_current_view> &folded) {
   std::vector<uint64_t> frame_uids;
   std::vector<uint64_t> declared_input_frames;
   nlohmann::json frame_edges = nlohmann::json::array();
@@ -305,22 +384,20 @@ episode_graph build_causal_graph(const std::string &runtime_dir, uint64_t episod
   nlohmann::json warnings = nlohmann::json::array();
   bool degraded = false;
 
-  for (const auto &frame : episode.frames) {
-    const auto frame_uid = u64_or(frame, "frame_uid");
+  for (size_t position = 0; position < view.frame_indices.size(); ++position) {
+    const auto frame_uid = view.frame_at(position).frame_uid;
     if (frame_uid != 0) {
       frame_uids.push_back(frame_uid);
     }
   }
-  for (const auto &ref : episode.refs) {
-    if (text_or(ref, "ref_kind") == "input_frame") {
-      const auto ref_uid = u64_or(ref, "ref_uid");
-      if (ref_uid != 0) {
-        declared_input_frames.push_back(ref_uid);
-      }
+  for (size_t position = 0; position < view.ref_indices.size(); ++position) {
+    const auto &ref = view.ref_at(position);
+    if (ref.ref_kind == EpisodeRefKind::InputFrame && ref.ref_uid != 0) {
+      declared_input_frames.push_back(ref.ref_uid);
     }
   }
 
-  const auto parent_episode_id = u64_or(episode.summary, "parent_episode_id");
+  const auto parent_episode_id = view.opened ? view.open.parent_episode_id : uint64_t{0};
   if (parent_episode_id != 0) {
     const bool present = folded.find(parent_episode_id) != folded.end();
     const auto status = present ? "present" : "missing";
@@ -335,7 +412,7 @@ episode_graph build_causal_graph(const std::string &runtime_dir, uint64_t episod
     }
   }
 
-  const auto root_trigger_frame_uid = u64_or(episode.summary, "root_trigger_frame_uid");
+  const auto root_trigger_frame_uid = view.opened ? view.open.root_trigger_frame_uid : uint64_t{0};
   if (root_trigger_frame_uid != 0 && !contains_u64(frame_uids, root_trigger_frame_uid)) {
     const bool declared = contains_u64(declared_input_frames, root_trigger_frame_uid);
     dependencies.push_back({{"kind", "frame"},
@@ -350,75 +427,75 @@ episode_graph build_causal_graph(const std::string &runtime_dir, uint64_t episod
     }
   }
 
-  for (const auto &frame : episode.frames) {
-    const auto frame_uid = u64_or(frame, "frame_uid");
-    const auto trigger_frame_uid = u64_or(frame, "trigger_frame_uid");
-    if (trigger_frame_uid == 0) {
+  for (size_t position = 0; position < view.frame_indices.size(); ++position) {
+    const auto &frame = view.frame_at(position);
+    if (frame.trigger_frame_uid == 0) {
       continue;
     }
-    if (contains_u64(frame_uids, trigger_frame_uid)) {
+    if (contains_u64(frame_uids, frame.trigger_frame_uid)) {
       frame_edges.push_back({{"kind", "frame_trigger"},
                              {"scope", "internal"},
-                             {"from_frame_uid", trigger_frame_uid},
-                             {"to_frame_uid", frame_uid}});
+                             {"from_frame_uid", frame.trigger_frame_uid},
+                             {"to_frame_uid", frame.frame_uid}});
       continue;
     }
-    const bool declared = contains_u64(declared_input_frames, trigger_frame_uid);
+    const bool declared = contains_u64(declared_input_frames, frame.trigger_frame_uid);
     dependencies.push_back({{"kind", "frame"},
                             {"role", "trigger"},
-                            {"frame_uid", trigger_frame_uid},
-                            {"dependent_frame_uid", frame_uid},
+                            {"frame_uid", frame.trigger_frame_uid},
+                            {"dependent_frame_uid", frame.frame_uid},
                             {"status", declared ? "declared_external" : "missing"}});
     if (!declared) {
       degraded = true;
       warnings.push_back({{"code", "episode_trigger_frame_missing"},
                           {"episode_id", episode_id},
-                          {"frame_uid", trigger_frame_uid},
-                          {"dependent_frame_uid", frame_uid}});
+                          {"frame_uid", frame.trigger_frame_uid},
+                          {"dependent_frame_uid", frame.frame_uid}});
     }
   }
 
-  for (const auto &ref : episode.refs) {
-    const auto ref_kind = text_or(ref, "ref_kind");
-    if (ref_kind == "episode") {
-      const auto ref_uid = u64_or(ref, "ref_uid");
-      const bool present = ref_uid != 0 && folded.find(ref_uid) != folded.end();
-      const bool declared_external = ref_uid == 0 || !text_or(ref, "ref_id").empty();
+  for (size_t position = 0; position < view.ref_indices.size(); ++position) {
+    const auto &ref = view.ref_at(position);
+    const auto ref_id = fixed_string(ref.ref_id);
+    const auto ref_hash = fixed_string(ref.ref_hash);
+    if (ref.ref_kind == EpisodeRefKind::Episode) {
+      const bool present = ref.ref_uid != 0 && folded.find(ref.ref_uid) != folded.end();
+      const bool declared_external = ref.ref_uid == 0 || !ref_id.empty();
       const auto status = present ? "present" : (declared_external ? "declared_external" : "missing");
       dependencies.push_back({{"kind", "episode"},
                               {"role", "ref"},
-                              {"episode_id", ref_uid},
-                              {"ref_id", text_or(ref, "ref_id")},
-                              {"ref_hash", text_or(ref, "ref_hash")},
+                              {"episode_id", ref.ref_uid},
+                              {"ref_id", ref_id},
+                              {"ref_hash", ref_hash},
                               {"status", status}});
       if (!present && !declared_external) {
         degraded = true;
         warnings.push_back({{"code", "episode_dependency_missing"},
                             {"episode_id", episode_id},
-                            {"dependency_episode_id", ref_uid},
+                            {"dependency_episode_id", ref.ref_uid},
                             {"role", "ref"}});
       }
-    } else if (ref_kind == "payload") {
-      const bool present = payload_ref_exists(runtime_dir, ref);
+    } else if (ref.ref_kind == EpisodeRefKind::Payload) {
+      const bool present = payload_ref_exists(runtime_dir, ref_id);
       dependencies.push_back({{"kind", "payload"},
                               {"role", "payload_ref"},
-                              {"ref_uid", u64_or(ref, "ref_uid")},
-                              {"ref_id", text_or(ref, "ref_id")},
-                              {"ref_hash", text_or(ref, "ref_hash")},
+                              {"ref_uid", ref.ref_uid},
+                              {"ref_id", ref_id},
+                              {"ref_hash", ref_hash},
                               {"status", present ? "present" : "missing"}});
       if (!present) {
         degraded = true;
         warnings.push_back({{"code", "episode_payload_ref_missing"},
                             {"episode_id", episode_id},
-                            {"ref_id", text_or(ref, "ref_id")},
-                            {"ref_hash", text_or(ref, "ref_hash")}});
+                            {"ref_id", ref_id},
+                            {"ref_hash", ref_hash}});
       }
-    } else if (ref_kind == "schema") {
+    } else if (ref.ref_kind == EpisodeRefKind::Schema) {
       dependencies.push_back({{"kind", "schema"},
                               {"role", "schema_ref"},
-                              {"ref_uid", u64_or(ref, "ref_uid")},
-                              {"ref_id", text_or(ref, "ref_id")},
-                              {"ref_hash", text_or(ref, "ref_hash")},
+                              {"ref_uid", ref.ref_uid},
+                              {"ref_id", ref_id},
+                              {"ref_hash", ref_hash},
                               {"status", "declared"}});
     }
   }
@@ -543,15 +620,41 @@ nlohmann::json episode_manifest_store::abort(const episode_close_options &option
   return end(abort_options);
 }
 
+void episode_manifest_store::for_each_typed_record(const episode_manifest_record_visitor &visit) const {
+  const auto location = manifest_location(runtime_dir_);
+  if (location->locator->list_page_id(location, location::PUBLIC).empty()) {
+    return;
+  }
+  auto reader = std::make_shared<kungfu::yijinjing::journal::reader>(true, false, std::make_shared<bus>(false));
+  reader->join(location, location::PUBLIC, 0);
+  while (reader->data_available()) {
+    visit(decode_record(reader->current_frame()));
+    reader->next();
+  }
+}
+
+std::vector<episode_manifest_record> episode_manifest_store::read_typed_records() const {
+  std::vector<episode_manifest_record> records;
+  for_each_typed_record([&records](const episode_manifest_record &record) { records.push_back(record); });
+  return records;
+}
+
+episode_manifest_fold episode_manifest_store::fold_typed_records() const {
+  episode_manifest_fold fold;
+  for_each_typed_record([&fold](const episode_manifest_record &record) { fold_into(fold, record); });
+  return fold;
+}
+
 nlohmann::json episode_manifest_store::list(uint64_t location_uid, uint64_t limit) const {
-  const auto folded = fold_records(read_records(runtime_dir_));
+  const auto fold = fold_typed_records();
   nlohmann::json episodes = nlohmann::json::array();
-  for (auto iter = folded.rbegin(); iter != folded.rend(); ++iter) {
-    const auto &summary = iter->second.summary;
-    if (location_uid != 0 && summary.value("location_uid", uint64_t{0}) != location_uid) {
+  for (auto iter = fold.episodes.rbegin(); iter != fold.episodes.rend(); ++iter) {
+    const auto &view = iter->second;
+    const auto view_location_uid = view.opened ? view.open.location_uid : uint32_t{0};
+    if (location_uid != 0 && view_location_uid != location_uid) {
       continue;
     }
-    episodes.push_back(summary);
+    episodes.push_back(summary_json(view));
     if (limit != 0 && episodes.size() >= limit) {
       break;
     }
@@ -568,71 +671,58 @@ nlohmann::json episode_manifest_store::inspect(uint64_t episode_id) const {
   if (episode_id == 0) {
     throw std::invalid_argument("episode_id is required");
   }
-  const auto folded = fold_records(read_records(runtime_dir_));
-  const auto iter = folded.find(episode_id);
-  if (iter == folded.end()) {
+  const auto fold = fold_typed_records();
+  const auto iter = fold.episodes.find(episode_id);
+  if (iter == fold.episodes.end()) {
     return {{"ok", false},
             {"schema", EPISODE_MANIFEST_SCHEMA_V1},
             {"episode_id", episode_id},
             {"errors", nlohmann::json::array({{{"code", "episode_missing"}, {"episode_id", episode_id}}})}};
   }
-  const auto graph = build_causal_graph(runtime_dir_, episode_id, iter->second, folded);
+  const auto &view = iter->second;
+  const auto graph = build_causal_graph(runtime_dir_, episode_id, view, fold.episodes);
   return {{"ok", true},
           {"schema", EPISODE_MANIFEST_SCHEMA_V1},
           {"runtime_dir", runtime_dir_},
           {"authority", "yijinjing-journal"},
-          {"episode", iter->second.summary},
+          {"episode", summary_json(view)},
           {"causal_graph", graph.graph},
           {"dependencies", graph.dependencies},
-          {"records", iter->second.records},
-          {"frames", iter->second.frames},
-          {"refs", iter->second.refs}};
+          {"records", records_json(view)},
+          {"frames", rows_json(view, view.frame_indices)},
+          {"refs", rows_json(view, view.ref_indices)}};
 }
 
 nlohmann::json episode_manifest_store::fsck(uint64_t episode_id) const {
-  const auto records = read_records(runtime_dir_);
-  const auto folded = fold_records(records);
+  const auto fold = fold_typed_records();
   nlohmann::json errors = nlohmann::json::array();
   nlohmann::json warnings = nlohmann::json::array();
   size_t checked = 0;
   bool degraded = false;
-  for (const auto &[current_episode_id, episode] : folded) {
+  for (const auto &[current_episode_id, view] : fold.episodes) {
     if (episode_id != 0 && current_episode_id != episode_id) {
       continue;
     }
     ++checked;
-    if (!episode.opened) {
+    if (!view.opened) {
       errors.push_back({{"code", "episode_open_missing"}, {"episode_id", current_episode_id}});
     }
-    size_t open_count = 0;
-    size_t close_count = 0;
-    std::vector<uint64_t> seen_frames;
-    for (const auto &record : episode.records) {
-      const auto kind = record.value("record_kind", std::string{});
-      if (kind == "episode_open") {
-        ++open_count;
-      } else if (kind == "episode_closed") {
-        ++close_count;
-      } else if (kind == "episode_frame_attached") {
-        const auto frame_uid = record.value("frame_uid", uint64_t{0});
-        if (frame_uid == 0) {
-          errors.push_back({{"code", "episode_frame_uid_missing"}, {"episode_id", current_episode_id}});
-        } else if (std::find(seen_frames.begin(), seen_frames.end(), frame_uid) != seen_frames.end()) {
-          warnings.push_back(
-              {{"code", "episode_frame_duplicate"}, {"episode_id", current_episode_id}, {"frame_uid", frame_uid}});
-        } else {
-          seen_frames.push_back(frame_uid);
-        }
-      }
+    for (size_t occurrence = 0; occurrence < view.missing_frame_uid_count; ++occurrence) {
+      errors.push_back({{"code", "episode_frame_uid_missing"}, {"episode_id", current_episode_id}});
     }
-    if (open_count > 1) {
-      errors.push_back({{"code", "episode_open_duplicate"}, {"episode_id", current_episode_id}, {"count", open_count}});
-    }
-    if (close_count > 1) {
+    for (const auto frame_uid : view.duplicate_frame_uids) {
       warnings.push_back(
-          {{"code", "episode_closed_duplicate"}, {"episode_id", current_episode_id}, {"count", close_count}});
+          {{"code", "episode_frame_duplicate"}, {"episode_id", current_episode_id}, {"frame_uid", frame_uid}});
     }
-    const auto graph = build_causal_graph(runtime_dir_, current_episode_id, episode, folded);
+    if (view.open_count > 1) {
+      errors.push_back(
+          {{"code", "episode_open_duplicate"}, {"episode_id", current_episode_id}, {"count", view.open_count}});
+    }
+    if (view.close_count > 1) {
+      warnings.push_back(
+          {{"code", "episode_closed_duplicate"}, {"episode_id", current_episode_id}, {"count", view.close_count}});
+    }
+    const auto graph = build_causal_graph(runtime_dir_, current_episode_id, view, fold.episodes);
     degraded = degraded || graph.degraded;
     for (const auto &warning : graph.warnings) {
       warnings.push_back(warning);
@@ -649,7 +739,7 @@ nlohmann::json episode_manifest_store::fsck(uint64_t episode_id) const {
           {"degraded", degraded},
           {"errors", errors},
           {"warnings", warnings},
-          {"checked", {{"episode_manifest_records", records.size()}, {"episodes", checked}}}};
+          {"checked", {{"episode_manifest_records", fold.total_record_count}, {"episodes", checked}}}};
 }
 
 } // namespace kungfu::yijinjing::storage
