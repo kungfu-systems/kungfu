@@ -96,9 +96,10 @@ jobs:
           name: embedding-source-delta-${{ github.event.pull_request.head.sha }}
           path: ${{ runner.temp }}/embedding-source-delta
 
-      # The LAN mirror carries the pinned dev base in its history. Its branch
-      # tip may advance after the PR event, so pin the base commit itself and
-      # compare Git tree ids before executing any source from the PR.
+      # Prefer the LAN mirror for the pinned dev base. Its branch tip may
+      # advance or briefly lag after the PR event, so fall back to fetching the
+      # immutable base SHA from GitHub and compare Git tree ids before executing
+      # any source from the PR.
       - name: Reconstruct and verify immutable PR head
         shell: bash
         run: |
@@ -106,7 +107,13 @@ jobs:
           git -C "$SOURCE_ROOT" remote add mirror "$MIRROR_URL"
           git -C "$SOURCE_ROOT" fetch --no-tags mirror \
             "+${MIRROR_REF}:refs/embedding/base"
-          git -C "$SOURCE_ROOT" cat-file -e "${MIRROR_BASE_SHA}^{commit}"
+          if ! git -C "$SOURCE_ROOT" cat-file -e \
+            "${MIRROR_BASE_SHA}^{commit}" 2>/dev/null; then
+            git -C "$SOURCE_ROOT" remote add github \
+              "https://github.com/${GITHUB_REPOSITORY}.git"
+            git -C "$SOURCE_ROOT" fetch --no-tags --depth=1 github \
+              "$MIRROR_BASE_SHA"
+          fi
           git -C "$SOURCE_ROOT" checkout --detach "$MIRROR_BASE_SHA"
           git -C "$SOURCE_ROOT" apply --index --binary \
             "${RUNNER_TEMP}/embedding-source-delta/source.patch"
