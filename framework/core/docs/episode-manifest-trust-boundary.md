@@ -38,14 +38,15 @@ Mapping each ADR-0033 trust-boundary claim onto that record set:
 | declared external input frames | `EpisodeRefAttached` with `ref_kind=InputFrame` (`ref_uid` = frame uid); `EpisodeOpen.root_trigger_frame_uid` for the opening trigger | representable |
 | causal closure (ADR-0033 core invariant) | derivable: `EpisodeFrameAttached.trigger_frame_uid` edges must resolve inside the Episode's frame set or be declared as `InputFrame` refs / Episode dependencies. Closure is a checked property of the fold, not a stored field | representable (checked, not stored) |
 | rebuildable projection / query indexes | not stored in the manifest by design — projections are derived from the journal and verified against it (ADR-0041 point 5) | n/a (satisfied structurally) |
-| hash roots / sync roots for fsck/export/import | **not representable in v1.** No record carries an Episode-level inventory hash root. v1 fsck verifies by full enumeration of claims instead of root comparison, which is sufficient for the local trust boundary. A hash-root field is deferred to the forthcoming Episode ADR plus a schema-version ADR; it must not be squeezed into `ref_hash` or `note` by overloading | deferred — explicit gap, no field overloading |
+| hash roots / sync roots for fsck/export/import | **not representable in v1.** No record carries an Episode-level inventory hash root. v1 fsck verifies by full enumeration of claims instead of root comparison, which is sufficient for the local trust boundary. A hash-root field is deferred to a later Episode identity decision plus a schema-version ADR; ADR-0042 qualifies atomic safety without selecting the root algorithm. It must not be squeezed into `ref_hash` or `note` by overloading | deferred — explicit gap, no field overloading |
 
 Conclusion required by ADR-0041: the existing record set is sufficient for
 every claim this slice needs. The single not-representable claim (Episode
 hash/sync roots) is exactly the deep-identity surface ADR-0041 already
-defers to the forthcoming Episode ADR; nothing in stages 1–3 and 5 depends
-on it. Content-ref resolution (stage 4) depends on ADR-0040's immutable
-`content_store` landing first and changes no record layout.
+defers to a later identity/schema decision; ADR-0042 does not select that root,
+and nothing in stages 1–3 and 5 depends on it. Content-ref resolution (stage 4)
+depends on ADR-0040's immutable `content_store` landing first and changes no
+record layout.
 
 ## 2. Deterministic typed fold (stage 1 semantics)
 

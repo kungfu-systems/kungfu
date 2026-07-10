@@ -29,7 +29,10 @@ ai_provenance:
   ADR-0034 makes its manifest a yijinjing journal; ADR-0041 makes the POD journal
   plus one typed fold the trust boundary; ADR-0040 defines the immutable content
   store used by Episode references; ADR-0023 and ADR-0028 define frame and hash
-  integrity boundaries. The executable qualification design lives in
+  integrity boundaries. The ADR-0041 field map and writer/crash contract are
+  recorded in
+  [`framework/core/docs/episode-manifest-trust-boundary.md`](../episode-manifest-trust-boundary.md).
+  The executable qualification design lives in
   [`docs/episode-atomicity-qualification.md`](../../../../docs/episode-atomicity-qualification.md).
 
 ## Context
