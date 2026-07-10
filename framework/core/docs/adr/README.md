@@ -60,7 +60,7 @@ A record's **Status** says where it stands:
 | [0042](ADR-0042-episode-atomic-safety-and-qualification.md) | proposed | Episode is the atomic safety and fault-containment unit, qualified by evidence under load |
 | [0043](ADR-0043-episode-identity-sealed-content-root.md) | proposed | Episode identity is two layers — a local coordinate plus a sealed content root committed in the manifest |
 | [0044](ADR-0044-shifu-delegation-protocol.md) | accepted | The shifu delegation protocol — what installed binaries bake in forever |
-| [0045](ADR-0045-kfx-execution-profiles-native-rust-wasm.md) | proposed | KFX execution profiles — Rust-primary native, WebAssembly components, managed runtimes, and subprocesses |
+| [0045](ADR-0045-kfx-execution-profiles-native-rust-wasm.md) | accepted | KFX execution profiles — Rust-primary native, WebAssembly components, managed runtimes, and subprocesses |
 | [0046](ADR-0046-rust-host-trunk-and-assembled-runtime.md) | accepted | Rust host trunk, layered CLI, and the assembled runtime distribution |
 
 ## Reading by theme
