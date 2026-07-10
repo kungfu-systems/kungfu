@@ -29,6 +29,17 @@ jobs:
       require-install: true
       require-build: true
       require-verify: true
+      # This workflow only fires on alpha/release PRs, so it is the recurring
+      # heavy gate (kungfu has no nightly). Override the default lifecycle verify
+      # (.buildchain/buildchain.toml runs quick `verify`) with the kungfu::view
+      # memory-safety long-run: `--fuzz` adds the libFuzzer stage over the three
+      # FlatBuffers access entries under ASan/UBSan (ADR-0039 residual risk); a
+      # new crash fails verify and blocks the alpha. The ASan/UBSan corpus-replay
+      # tier runs on every platform (MSVC /fsanitize=address on Windows); the
+      # libFuzzer long-run is the Linux gate and soft-skips where libFuzzer is
+      # absent. KUNGFU_FUZZ_SECONDS bounds the per-target run.
+      verify-command: >-
+        KUNGFU_FUZZ_SECONDS=90 node scripts/buildchain-run-kungfu-code.mjs verify --fuzz
       release-candidate: true
       artifact-transfer-mode: s3-to-github-artifacts
       artifact-retention-days: 14

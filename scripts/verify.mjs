@@ -11,6 +11,9 @@
 //   ./kungfu-code verify --full       full: rebuild:core + freeze first, then assert; also builds and runs the
 //                                     capability slices (framework/core/slices) + yijinjing dependency guard
 //   ./kungfu-code verify --with-app   also assert the build:app artifact (with --full it builds the app first)
+//   ./kungfu-code verify --fuzz       add the kungfu::view libFuzzer long-run (ADR-0039 memory safety); needs a
+//                                     libFuzzer-capable clang (brew LLVM on macOS, system clang on Linux). The
+//                                     alpha/release build passes this; a new crash blocks the build.
 //   ./kungfu-code verify --help
 //
 // Assertion targets (all grounded in the build scripts, not guessed):
@@ -63,6 +66,10 @@ if (args.includes('--help') || args.includes('-h')) {
 }
 const doFull = args.includes('--full');
 const withApp = args.includes('--with-app');
+// --fuzz adds the libFuzzer long-run tier (needs a libFuzzer-capable clang); the
+// alpha/release build passes it. The lightweight ASan/UBSan corpus replay runs
+// whenever the memory-safety stage runs (full or fuzz).
+const doFuzz = args.includes('--fuzz');
 
 // expected version: single source of truth is lerna.json (maintained by the release workflow)
 function expectedVersion() {
@@ -770,7 +777,235 @@ function main() {
     }
   }
 
+  // ── Stage 7: kungfu::view memory safety (ASan/UBSan + libFuzzer) ───
+  // ADR-0039 residual risk: *demonstrate* — not merely assert — that the three
+  // untrusted-input entries of the sole FlatBuffers access module never read out
+  // of bounds. Two tiers over the same fuzz entries (framework/core/fuzz):
+  //   full  → ASan+UBSan corpus replay via the libFuzzer-less standalone driver
+  //           (the build compiler; every-build lightweight tier).
+  //   fuzz  → libFuzzer long-run (needs a libFuzzer-capable clang; the
+  //           alpha/release build passes --fuzz and a new crash blocks it).
+  // Both build standalone against the conan deps that rebuild:core seeded under
+  // framework/core/build (like the slices stage, the build tree must exist).
+  if (doFull || doFuzz) {
+    console.log(
+      '\n[verify] stage 7: kungfu::view memory safety (ASan/UBSan + fuzz)',
+    );
+    const core = path.join(ROOT, 'framework', 'core');
+    const fuzzSrc = path.join(core, 'fuzz');
+    const prefix = conanPrefix(core);
+    const targets = ['compile_schema', 'from_bytes', 'bind_frame'];
+    /** @param {import('child_process').SpawnSyncReturns<string>} r */
+    const tail3 = (r) =>
+      `${r.stdout || ''}${r.stderr || ''}`
+        .trim()
+        .split('\n')
+        .slice(-3)
+        .join(' | ')
+        .slice(0, 400);
+    if (!prefix) {
+      fail(
+        'view memory-safety deps',
+        `conan CMakeDeps not found under ${path.join(core, 'build')}; rebuild:core must run first (use --full)`,
+      );
+      return summarize();
+    }
+
+    // Tier 1 — ASan/UBSan corpus replay (every build; the build compiler).
+    {
+      const buildDir = path.join(core, 'build-sanitize');
+      const cfg = spawnSync(
+        'cmake',
+        [
+          '-S',
+          fuzzSrc,
+          '-B',
+          buildDir,
+          '-DKUNGFU_WITH_SANITIZERS=ON',
+          '-DCMAKE_BUILD_TYPE=Release',
+          `-DCMAKE_PREFIX_PATH=${prefix}`,
+          `-DCMAKE_MODULE_PATH=${prefix}`,
+        ],
+        { stdio: 'inherit' },
+      );
+      if (cfg.status !== 0) {
+        fail(
+          'view ASan/UBSan configure',
+          `cmake -DKUNGFU_WITH_SANITIZERS=ON failed (exit ${cfg.status})`,
+        );
+      } else {
+        const bld = spawnSync(
+          'cmake',
+          ['--build', buildDir, '--config', 'Release'],
+          {
+            stdio: 'inherit',
+          },
+        );
+        if (bld.status !== 0)
+          fail(
+            'view ASan/UBSan build',
+            `cmake --build failed (exit ${bld.status})`,
+          );
+        else {
+          pass('view ASan/UBSan build', 'KUNGFU_WITH_SANITIZERS=ON');
+          for (const t of targets) {
+            const bin = builtBin(buildDir, `fuzz_${t}_sanitize`);
+            if (!bin) {
+              fail(
+                `view ASan replay ${t}`,
+                `binary missing under ${path.relative(ROOT, buildDir)}`,
+              );
+              continue;
+            }
+            const corpus = path.join(fuzzSrc, 'corpus', t);
+            const r = spawnSync(bin, [corpus], { encoding: 'utf8' });
+            if (r.status === 0)
+              pass(`view ASan replay ${t}`, 'corpus clean under ASan+UBSan');
+            else
+              fail(
+                `view ASan replay ${t}`,
+                `exit ${exitLabel(r.status, r.signal)}; tail: ${tail3(r)}`,
+              );
+          }
+        }
+      }
+    }
+
+    // Tier 2 — libFuzzer long-run (alpha/release gate). Needs a libFuzzer clang.
+    if (doFuzz) {
+      const clang = fuzzClang();
+      const buildDir = path.join(core, 'build-fuzz');
+      const cfgArgs = [
+        '-S',
+        fuzzSrc,
+        '-B',
+        buildDir,
+        '-DKUNGFU_WITH_FUZZ=ON',
+        '-DCMAKE_BUILD_TYPE=Release',
+        `-DCMAKE_PREFIX_PATH=${prefix}`,
+        `-DCMAKE_MODULE_PATH=${prefix}`,
+      ];
+      if (clang) cfgArgs.push(`-DCMAKE_CXX_COMPILER=${clang}`);
+      const cfg = spawnSync('cmake', cfgArgs, { stdio: 'inherit' });
+      if (cfg.status !== 0) {
+        fail(
+          'view fuzz configure',
+          `cmake -DKUNGFU_WITH_FUZZ=ON failed (exit ${cfg.status})`,
+        );
+      } else {
+        const bld = spawnSync(
+          'cmake',
+          ['--build', buildDir, '--config', 'Release'],
+          {
+            stdio: 'inherit',
+          },
+        );
+        if (bld.status !== 0) {
+          fail('view fuzz build', `cmake --build failed (exit ${bld.status})`);
+        } else {
+          const built = targets.filter((t) => builtBin(buildDir, `fuzz_${t}`));
+          if (built.length === 0) {
+            // No libFuzzer in the active clang. Linux clang ships it, so on the
+            // Linux alpha runner this is a real gate failure, not a skip. On
+            // macOS/Windows libFuzzer is not always present; the sanitizer tier
+            // above already exercised ASan/UBSan, so soft-skip the long-run there
+            // rather than break the platform's build.
+            if (process.platform === 'linux') {
+              fail(
+                'view fuzz targets',
+                `no libFuzzer targets built on Linux (clang '${clang || 'default'}' lacks -fsanitize=fuzzer); the Linux alpha gate requires libFuzzer. Set KUNGFU_FUZZ_CLANGXX to an LLVM clang.`,
+              );
+            } else {
+              console.log(
+                `  (skipped: no libFuzzer clang on ${process.platform}; ASan/UBSan tier above covered the entries. brew install llvm or set KUNGFU_FUZZ_CLANGXX to enable the long-run here.)`,
+              );
+            }
+          } else {
+            pass(
+              'view fuzz build',
+              `KUNGFU_WITH_FUZZ=ON (${built.length}/${targets.length} targets)`,
+            );
+            const secs = Number(process.env.KUNGFU_FUZZ_SECONDS || '20');
+            for (const t of built) {
+              const bin = builtBin(buildDir, `fuzz_${t}`);
+              // Fuzz in a throwaway working dir seeded from the read-only
+              // checked-in corpus, and send any crash reproducer to a scratch
+              // dir, so a CI run never mutates framework/core/fuzz/corpus (libFuzzer
+              // appends newly-found units to its first corpus arg) or drops a
+              // crash-* file into the repo. The checked-in seeds stay the single
+              // source of truth; alpha findings are added back deliberately.
+              const seeds = path.join(fuzzSrc, 'corpus', t);
+              const work = path.join(buildDir, 'work', t);
+              const artifacts = path.join(buildDir, 'artifacts', t);
+              fs.mkdirSync(work, { recursive: true });
+              fs.mkdirSync(artifacts, { recursive: true });
+              if (fs.existsSync(seeds))
+                for (const f of fs.readdirSync(seeds))
+                  fs.copyFileSync(path.join(seeds, f), path.join(work, f));
+              const r = spawnSync(
+                bin,
+                [
+                  work,
+                  `-max_total_time=${secs}`,
+                  `-artifact_prefix=${artifacts}${path.sep}`,
+                  '-print_final_stats=1',
+                ],
+                { encoding: 'utf8' },
+              );
+              if (r.status === 0) pass(`view fuzz ${t}`, `${secs}s, no crash`);
+              else
+                fail(
+                  `view fuzz ${t}`,
+                  `crash — reproducer under ${path.relative(ROOT, artifacts)}; exit ${exitLabel(r.status, r.signal)}; tail: ${tail3(r)}`,
+                );
+            }
+          }
+        }
+      }
+    }
+  }
+
   return summarize();
+}
+
+// conan CMakeDeps (flatbuffers / SQLite configs) are generated into
+// framework/core/build by build:core / rebuild:core; the standalone fuzz build
+// reuses them via CMAKE_PREFIX_PATH so it need not re-resolve conan itself.
+function conanPrefix(core) {
+  const build = path.join(core, 'build');
+  const markers = [
+    'flatbuffers-config.cmake',
+    'Findflatbuffers.cmake',
+    'FlatBuffersConfig.cmake',
+  ];
+  return markers.some((m) => fs.existsSync(path.join(build, m))) ? build : null;
+}
+
+// Locate a built executable across single-config (Ninja/Make: buildDir/<name>)
+// and multi-config (VS: buildDir/Release/<name>.exe) generator layouts.
+function builtBin(buildDir, name) {
+  const cands = [
+    path.join(buildDir, name),
+    path.join(buildDir, `${name}.exe`),
+    path.join(buildDir, 'Release', name),
+    path.join(buildDir, 'Release', `${name}.exe`),
+  ];
+  return cands.find((p) => fs.existsSync(p)) || null;
+}
+
+// libFuzzer needs an LLVM clang; Apple clang has none. Honor an explicit
+// override, else prefer Homebrew LLVM (macOS), else on Linux prefer clang++
+// (system clang ships libFuzzer) over a possibly-gcc default. Returns null to
+// mean "let CMake pick its default compiler".
+function fuzzClang() {
+  if (process.env.KUNGFU_FUZZ_CLANGXX) return process.env.KUNGFU_FUZZ_CLANGXX;
+  const cands = [
+    '/opt/homebrew/opt/llvm/bin/clang++',
+    '/usr/local/opt/llvm/bin/clang++',
+  ];
+  for (const c of cands) if (fs.existsSync(c)) return c;
+  if (process.platform === 'linux') return 'clang++';
+  return null;
 }
 
 function summarize() {

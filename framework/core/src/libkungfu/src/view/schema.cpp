@@ -59,6 +59,17 @@ schema_handle schema_handle::from_bytes(std::string bfbs) {
   flatbuffers::Verifier v(reinterpret_cast<const uint8_t *>(bfbs.data()), bfbs.size());
   if (!reflection::VerifySchemaBuffer(v))
     throw std::runtime_error("kungfu::view: malformed .bfbs reflection schema buffer");
+  // VerifySchemaBuffer still accepts a structurally-valid schema that declares no
+  // root_type (root_table() == nullptr) — reflection makes root_type optional.
+  // The whole access path (plan_columns / bind_frame / verify_table) reflects
+  // through the root table on every call, so a rootless schema would otherwise
+  // drive a null-pointer member read downstream. Reject it here at the sole load
+  // boundary so every live handle guarantees a non-null root table (ADR-0039
+  // spatial safety). Object.fields / Field.name / Field.type are `required` in
+  // reflection.fbs, so the verifier already guarantees those once the root exists.
+  const reflection::Schema *s = schema_of(bfbs);
+  if (s == nullptr || s->root_table() == nullptr)
+    throw std::runtime_error("kungfu::view: .bfbs reflection schema declares no root_type");
   schema_handle h;
   h.bfbs_ = std::make_shared<const std::string>(std::move(bfbs));
   return h;
