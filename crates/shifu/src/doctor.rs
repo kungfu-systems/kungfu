@@ -177,8 +177,8 @@ fn cpp_compiler_check() -> Check {
 
 fn cmake_check() -> Check {
     let hint = "https://cmake.org/download/ (>= 3.20 required)";
-    let Some(version_line) = util::find_on_path("cmake")
-        .and_then(|_| version_of("cmake", &["--version"]))
+    let Some(version_line) =
+        util::find_on_path("cmake").and_then(|_| version_of("cmake", &["--version"]))
     else {
         return Check {
             label: "cmake",
