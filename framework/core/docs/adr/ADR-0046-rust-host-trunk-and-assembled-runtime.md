@@ -127,13 +127,33 @@ domain.
 
 ### 4. Assembled runtime distribution — the freezer retires at end state
 
-The product ships a **complete, exact CPython** (python-build-standalone —
-the same distribution uv pins for the build — bundled at a pinned
-version+build) instead of a frozen subset, plus **uv as the bundled install
-engine**. The runtime-exclusivity contract has three mechanisms:
+The product runs on a **complete, exact CPython** (python-build-standalone —
+the same distribution uv pins for the build — at a pinned version+build)
+instead of a frozen subset, with **uv as the install engine**.
+
+**Toolchain delivery is lazy by default.** The installer stays small: neither
+uv nor the package toolchain travels inside it. The first package operation
+fetches the pinned uv (and, through uv, the pinned satellite CPython) by
+exact version + checksum into a user-level cache, mirror-overridable — the
+same bootstrap discipline the launcher already implements for the build
+toolchain ([ADR-0044](ADR-0044-shifu-delegation-protocol.md) lineage). The
+product carrier of this capability is the trunk's earliest incarnation: it
+shares the launcher's bootstrap component rather than reinventing a
+downloader, so the Rust trunk exists in the product from stage 1 (as the
+toolchain bootstrapper) and grows into decision 1's full role by stage 3.
+An offline / enterprise installer variant **pre-warms the same cache** —
+bundling is a packaging option, not a second code path. A failed fetch is a
+named, self-diagnosing error (exact URL, expected checksum, the mirror
+override to set), in the same spirit as the wrong-runtime guard. Laziness
+applies to the *package toolchain*: once stage 2 replaces the frozen binary,
+the interpreter the host itself runs on ships in the product image (it is
+the runtime), while uv stays lazy at every stage. Only the dev launcher's
+build-side legs (fnm, node toolchain bootstrap) never enter the product.
+
+The runtime-exclusivity contract has three mechanisms:
 
 - **kungfu owns the install surface**: packages are installed through kungfu
-  commands (uv underneath), and environments derive only from the bundled
+  commands (uv underneath), and environments derive only from the blessed
   interpreter — a wheel only ever resolves against the exact blessed triple.
 - **Wrong-runtime guard**: the kungfu Python package verifies at startup that
   it is running on the blessed interpreter (buildinfo / `sys.prefix` check)
@@ -166,7 +186,7 @@ when stage 3 lands, recorded against this ADR.
 
 ## Alternatives considered
 
-- **Frozen host + uv-managed satellite runtimes.** Bundle uv and a pinned
+- **Frozen host + uv-managed satellite runtimes.** Deliver uv and a pinned
   satellite CPython next to the frozen binary; heavy packages run in
   satellites over the journal. This genuinely delivers drivers 2 and 3 with
   the smallest change, and is acknowledged as a legitimate *interim* — but as
@@ -192,11 +212,13 @@ when stage 3 lands, recorded against this ADR.
 
 ## Adoption path (each stage independently shippable)
 
-1. **Stage 1 — package capability on the current form.** Bundle uv, pin the
-   satellite CPython, publish a pykungfu wheel for it, land the
-   kungfu-owned install surface and the wrong-runtime guard. The frozen host
-   is untouched; users get "pip anything into kungfu's exact runtime" via
-   satellite environments.
+1. **Stage 1 — package capability on the current form.** Land the
+   launcher-lineage bootstrap in the product (lazy pinned uv, and through it
+   the pinned satellite CPython), publish a pykungfu wheel, land the
+   kungfu-owned install surface and the wrong-runtime guard, define the
+   offline pre-warm installer variant. The frozen host is untouched; users
+   get "pip anything into kungfu's exact runtime" via satellite
+   environments, and the default installer stays small.
 2. **Stage 2 — assembly replaces freezing.** The host itself runs the
    assembled tree (stdlib pruning policy decided here, in its own record);
    freeze leaves the product path platform by platform (macOS → Linux →
@@ -225,8 +247,14 @@ re-decided rather than silently assumed.
   the freezer.
 - The trunk adds a Rust component on the product path (not just tooling) —
   release, CI, and the crates/ workspace carry it under the existing
-  discipline; dist size grows by the uv binary and the full stdlib, partially
-  offset by dropping the frozen binary.
+  discipline. The default installer stays small (the package toolchain
+  arrives lazily, cached user-globally); the offline variant grows by the
+  pre-warmed uv + CPython cache; from stage 2 the product image carries the
+  full stdlib in place of the frozen binary.
+- New-user friction concentrates where it belongs: first contact costs no
+  extra download, and the one-time toolchain fetch lands only on users
+  already deep enough to install packages — with the offline variant
+  covering environments where any download is unacceptable.
 
 ## Violation criteria
 
