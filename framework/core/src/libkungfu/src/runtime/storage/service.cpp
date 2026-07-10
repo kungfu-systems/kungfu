@@ -1144,17 +1144,13 @@ storage_projection_status_view manifest_catalog_projection_status(const std::str
   return {PROJECTION_MANIFEST_CATALOG, projection.sqlite_path(), true, projection.verify_typed()};
 }
 
-nlohmann::json projection_status_json(const storage_projection_status_view &status) {
-  const auto &report = status.verification;
+nlohmann::json projection_verification_json(const storage_projection_verify_result &report) {
   nlohmann::json rendered = {{"ok", report.ok},
                              {"status", report.status},
                              {"schema", report.schema},
                              {"runtime_dir", report.runtime_dir},
                              {"authority", report.authority},
-                             {"projection_present", report.projection_present},
-                             {"name", status.name},
-                             {"path", status.path},
-                             {"rebuildable", status.rebuildable}};
+                             {"projection_present", report.projection_present}};
   if (!report.note.empty()) {
     rendered["note"] = report.note;
   }
@@ -1175,6 +1171,14 @@ nlohmann::json projection_status_json(const storage_projection_status_view &stat
       rendered["journal_distinct"][item.table] = item.count;
     }
   }
+  return rendered;
+}
+
+nlohmann::json projection_status_json(const storage_projection_status_view &status) {
+  auto rendered = projection_verification_json(status.verification);
+  rendered["name"] = status.name;
+  rendered["path"] = status.path;
+  rendered["rebuildable"] = status.rebuildable;
   return rendered;
 }
 
@@ -1697,17 +1701,42 @@ episode_qualification_capability make_episode_capability(const std::string &name
   return capability;
 }
 
-episode_qualification_result make_episode_qualification(const nlohmann::json &report, bool frames_checked) {
+episode_qualification_result make_episode_qualification(uint64_t episode_id,
+                                                        const yy_storage::episode_fsck_result &manifest_report,
+                                                        const episode_frame_verification *frame_verification,
+                                                        const storage_projection_verify_result &projection) {
   episode_qualification_result result;
-  result.episode_id = uint64_or(report, "episode_id");
-  result.status = text_or(report, "status", "failed");
-  const auto manifest_report = object_or_empty(report, "episode_manifest");
-  const auto episode = object_or_empty(manifest_report, "episode");
-  const bool exists = !episode.empty();
-  result.lifecycle = exists ? text_or(episode, "status", "dangling") : "missing";
-  const auto frame_count = uint64_or(episode, "frame_count");
-  const auto payload_ref_count = uint64_or(episode, "payload_ref_count");
-  const auto schema_ref_count = uint64_or(episode, "schema_ref_count");
+  result.episode_id = episode_id;
+  result.status = manifest_report.status;
+  const bool exists = manifest_report.episode.has_value();
+  const auto lifecycle = [](const yy_storage::episode_current_view &episode) {
+    if (!episode.opened)
+      return std::string("dangling");
+    if (!episode.closed)
+      return std::string("open");
+    switch (episode.close.status) {
+    case yy_enums::EpisodeStatus::Ended:
+      return std::string("ended");
+    case yy_enums::EpisodeStatus::Aborted:
+      return std::string("aborted");
+    case yy_enums::EpisodeStatus::Tombstoned:
+      return std::string("tombstoned");
+    default:
+      return std::string("unknown");
+    }
+  };
+  result.lifecycle = exists ? lifecycle(*manifest_report.episode) : "missing";
+  const auto frame_count = exists ? manifest_report.episode->frame_indices.size() : size_t{0};
+  size_t payload_ref_count = 0;
+  size_t schema_ref_count = 0;
+  if (exists) {
+    for (size_t position = 0; position < manifest_report.episode->ref_indices.size(); ++position) {
+      const auto kind = manifest_report.episode->ref_at(position).ref_kind;
+      payload_ref_count += kind == yy_enums::EpisodeRefKind::Payload ? 1 : 0;
+      schema_ref_count += kind == yy_enums::EpisodeRefKind::Schema ? 1 : 0;
+    }
+  }
+  const bool frames_checked = frame_verification != nullptr;
 
   result.evidence = {
       {"manifest_records", exists ? "verified" : "failed", {}},
@@ -1735,15 +1764,22 @@ episode_qualification_result make_episode_qualification(const nlohmann::json &re
       }
     }
   };
-  for (const auto &error : array_or_empty(report, "errors")) {
-    add_issue(error, "error");
+  for (const auto &error : manifest_report.errors) {
+    add_issue(yy_storage::render_episode_fsck_issue(error), "error");
   }
-  for (const auto &warning : array_or_empty(report, "warnings")) {
-    add_issue(warning, "warning");
+  for (const auto &warning : manifest_report.warnings) {
+    add_issue(yy_storage::render_episode_fsck_issue(warning), "warning");
+  }
+  if (frame_verification != nullptr) {
+    for (const auto &error : frame_verification->errors) {
+      add_issue(render_episode_frame_verification_issue(error), "error");
+    }
+    for (const auto &warning : frame_verification->warnings) {
+      add_issue(render_episode_frame_verification_issue(warning), "warning");
+    }
   }
 
-  const auto projection = object_or_empty(report, "episode_projection");
-  const auto projection_status = text_or(projection, "status", "not_checked");
+  const auto &projection_status = projection.status;
   if (auto *evidence = find_episode_evidence(result, "projection"); evidence != nullptr) {
     if (!exists) {
       evidence->state = "not_applicable";
@@ -1754,15 +1790,24 @@ episode_qualification_result make_episode_qualification(const nlohmann::json &re
       add_issue({{"code", "episode_projection_absent"}, {"status", projection_status}}, "info");
     } else if (projection_status == "degraded") {
       evidence->state = "degraded";
-      add_issue({{"code", "episode_projection_drift"},
-                 {"status", projection_status},
-                 {"drift", projection.value("drift", nlohmann::json::array())}},
+      nlohmann::json drift = nlohmann::json::array();
+      for (const auto &item : projection.drift) {
+        drift.push_back({{"table", item.table},
+                         {"projection_rows", item.projection_rows},
+                         {"journal_distinct", item.journal_distinct}});
+      }
+      add_issue({{"code", "episode_projection_drift"}, {"status", projection_status}, {"drift", std::move(drift)}},
                 "warning");
     } else {
       evidence->state = "failed";
       add_issue({{"code", "episode_projection_unavailable"}, {"status", projection_status}}, "error");
     }
   }
+
+  const bool frame_failed = frame_verification != nullptr && !frame_verification->errors.empty();
+  const bool degraded = manifest_report.degraded || (frame_verification != nullptr && frame_verification->degraded) ||
+                        projection_status == "degraded";
+  result.status = (!manifest_report.ok || frame_failed) ? "failed" : (degraded ? "degraded" : "ok");
 
   const auto state = [&result](const std::string &name) {
     const auto *evidence = find_episode_evidence(result, name);
@@ -1866,7 +1911,8 @@ nlohmann::json episode_qualification_json(const episode_qualification_result &re
 
 nlohmann::json episode_fsck_impl(const storage_service_options &options) {
   const auto scoped = episode_ref_store(options);
-  const auto episode_report = scoped.store.fsck(options.episode_id);
+  const auto typed_episode_report = scoped.store.fsck_typed(options.episode_id);
+  const auto episode_report = yy_storage::render_episode_fsck_result(typed_episode_report);
   const auto checked = object_or_empty(episode_report, "checked");
   nlohmann::json report = {
       {"ok", episode_report.value("ok", false)},
@@ -1901,31 +1947,35 @@ nlohmann::json episode_fsck_impl(const storage_service_options &options) {
                                               {"rebuildable", true}}})}};
   // ADR-0041 point 5: the SQLite projection is a derived view verified
   // against the journal; drift degrades fsck, it never fails the journal.
-  auto projection_report = episode_manifest_projection(options.runtime_dir).verify();
+  const auto projection = episode_manifest_projection(options.runtime_dir);
+  const auto typed_projection_report = projection.verify_typed();
+  auto projection_report = projection_verification_json(typed_projection_report);
   report["episode_projection"] = projection_report;
   if (projection_report.value("status", std::string("ok")) == "degraded" &&
       report.value("status", std::string("ok")) == "ok") {
     report["status"] = "degraded";
     report["degraded"] = true;
   }
+  std::optional<episode_frame_verification> frame_verification;
   if (bool_or(options.operation_options, "verify_frames", false)) {
-    auto verification = verify_episode_frame_claims(options);
-    for (const auto &error : verification.errors) {
+    frame_verification = verify_episode_frame_claims(options);
+    for (const auto &error : frame_verification->errors) {
       report["errors"].push_back(render_episode_frame_verification_issue(error));
     }
-    for (const auto &warning : verification.warnings) {
+    for (const auto &warning : frame_verification->warnings) {
       report["warnings"].push_back(render_episode_frame_verification_issue(warning));
     }
-    report["checked"]["episode_frames_verified"] = verification.verified;
+    report["checked"]["episode_frames_verified"] = frame_verification->verified;
     const bool ok = report["errors"].empty();
-    const bool degraded = report.value("degraded", false) || verification.degraded;
+    const bool degraded = report.value("degraded", false) || frame_verification->degraded;
     report["ok"] = ok;
     report["degraded"] = degraded;
     report["status"] = ok ? (degraded ? "degraded" : "ok") : "failed";
   }
   if (options.episode_id != 0) {
-    report["qualification"] = episode_qualification_json(
-        make_episode_qualification(report, bool_or(options.operation_options, "verify_frames", false)));
+    report["qualification"] = episode_qualification_json(make_episode_qualification(
+        options.episode_id, typed_episode_report, frame_verification.has_value() ? &*frame_verification : nullptr,
+        typed_projection_report));
   }
   return report;
 }

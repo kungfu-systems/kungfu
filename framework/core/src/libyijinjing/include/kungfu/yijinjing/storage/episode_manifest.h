@@ -211,6 +211,10 @@ struct episode_fsck_result {
   std::optional<episode_current_view> episode = {};
 };
 
+[[nodiscard]] nlohmann::json render_episode_fsck_issue(const episode_fsck_issue &issue);
+
+[[nodiscard]] nlohmann::json render_episode_fsck_result(const episode_fsck_result &result);
+
 // ADR-0043: the content root of one Episode's owned claim sequence — a linear
 // hash chain over the covered records in manifest append order (the first
 // EpisodeOpen, every EpisodeFrameAttached / EpisodeRefAttached, and the first

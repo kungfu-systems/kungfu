@@ -1199,56 +1199,56 @@ episode_fsck_result episode_manifest_store::fsck_typed(uint64_t episode_id) cons
   return result;
 }
 
-nlohmann::json episode_manifest_store::fsck(uint64_t episode_id) const {
-  const auto result = fsck_typed(episode_id);
-  const auto render_issue = [](const episode_fsck_issue &issue) {
-    nlohmann::json row = {{"code", issue.code}};
-    if (issue.episode_id.has_value())
-      row["episode_id"] = *issue.episode_id;
-    if (issue.dependency_episode_id.has_value())
-      row["dependency_episode_id"] = *issue.dependency_episode_id;
-    if (issue.frame_uid.has_value())
-      row["frame_uid"] = *issue.frame_uid;
-    if (issue.dependent_frame_uid.has_value())
-      row["dependent_frame_uid"] = *issue.dependent_frame_uid;
-    if (issue.count.has_value())
-      row["count"] = *issue.count;
-    if (issue.status.has_value())
-      row["status"] = *issue.status;
-    if (issue.claimed.has_value())
-      row["claimed"] = *issue.claimed;
-    if (issue.actual.has_value())
-      row["actual"] = *issue.actual;
-    if (issue.recorded_covered_record_count.has_value()) {
-      row["recorded_covered_record_count"] = *issue.recorded_covered_record_count;
-    }
-    if (issue.computed_covered_record_count.has_value()) {
-      row["computed_covered_record_count"] = *issue.computed_covered_record_count;
-    }
-    if (issue.role.has_value())
-      row["role"] = *issue.role;
-    if (issue.ref_id.has_value())
-      row["ref_id"] = *issue.ref_id;
-    if (issue.ref_hash.has_value())
-      row["ref_hash"] = *issue.ref_hash;
-    if (issue.detail.has_value())
-      row["detail"] = *issue.detail;
-    if (issue.reason.has_value())
-      row["reason"] = *issue.reason;
-    if (issue.algorithm.has_value())
-      row["algorithm"] = *issue.algorithm;
-    if (issue.recorded.has_value())
-      row["recorded"] = *issue.recorded;
-    if (issue.computed.has_value())
-      row["computed"] = *issue.computed;
-    return row;
-  };
+nlohmann::json render_episode_fsck_issue(const episode_fsck_issue &issue) {
+  nlohmann::json row = {{"code", issue.code}};
+  if (issue.episode_id.has_value())
+    row["episode_id"] = *issue.episode_id;
+  if (issue.dependency_episode_id.has_value())
+    row["dependency_episode_id"] = *issue.dependency_episode_id;
+  if (issue.frame_uid.has_value())
+    row["frame_uid"] = *issue.frame_uid;
+  if (issue.dependent_frame_uid.has_value())
+    row["dependent_frame_uid"] = *issue.dependent_frame_uid;
+  if (issue.count.has_value())
+    row["count"] = *issue.count;
+  if (issue.status.has_value())
+    row["status"] = *issue.status;
+  if (issue.claimed.has_value())
+    row["claimed"] = *issue.claimed;
+  if (issue.actual.has_value())
+    row["actual"] = *issue.actual;
+  if (issue.recorded_covered_record_count.has_value()) {
+    row["recorded_covered_record_count"] = *issue.recorded_covered_record_count;
+  }
+  if (issue.computed_covered_record_count.has_value()) {
+    row["computed_covered_record_count"] = *issue.computed_covered_record_count;
+  }
+  if (issue.role.has_value())
+    row["role"] = *issue.role;
+  if (issue.ref_id.has_value())
+    row["ref_id"] = *issue.ref_id;
+  if (issue.ref_hash.has_value())
+    row["ref_hash"] = *issue.ref_hash;
+  if (issue.detail.has_value())
+    row["detail"] = *issue.detail;
+  if (issue.reason.has_value())
+    row["reason"] = *issue.reason;
+  if (issue.algorithm.has_value())
+    row["algorithm"] = *issue.algorithm;
+  if (issue.recorded.has_value())
+    row["recorded"] = *issue.recorded;
+  if (issue.computed.has_value())
+    row["computed"] = *issue.computed;
+  return row;
+}
+
+nlohmann::json render_episode_fsck_result(const episode_fsck_result &result) {
   nlohmann::json errors = nlohmann::json::array();
   nlohmann::json warnings = nlohmann::json::array();
   for (const auto &issue : result.errors)
-    errors.push_back(render_issue(issue));
+    errors.push_back(render_episode_fsck_issue(issue));
   for (const auto &issue : result.warnings)
-    warnings.push_back(render_issue(issue));
+    warnings.push_back(render_episode_fsck_issue(issue));
   nlohmann::json report = {{"ok", result.ok},
                            {"status", result.status},
                            {"schema", result.schema},
@@ -1266,6 +1266,10 @@ nlohmann::json episode_manifest_store::fsck(uint64_t episode_id) const {
     report["episode"] = summary_json(*result.episode);
   }
   return report;
+}
+
+nlohmann::json episode_manifest_store::fsck(uint64_t episode_id) const {
+  return render_episode_fsck_result(fsck_typed(episode_id));
 }
 
 } // namespace kungfu::yijinjing::storage
