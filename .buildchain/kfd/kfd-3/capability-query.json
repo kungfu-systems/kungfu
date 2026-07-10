@@ -441,7 +441,7 @@
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
         "sourcePath": "scripts/buildchain-kfd-evidence.mjs",
         "artifactPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "digest": "sha256:57bfe9f4bb2547614af874d973ea6ffe4cad7c672fed33463300b103d9ff4566"
+        "digest": "sha256:79bef98b357228e95b5678a2e2c71ca7342c3d287878ec4e76a3ffec15890daa"
       },
       "kfd2Trust": {
         "status": "release-passport-required",
@@ -617,7 +617,7 @@
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
         "sourcePath": "product/scripts/product.mjs",
         "artifactPath": "product/package.json",
-        "digest": "sha256:1f19ccd831d879458ef86e3c0a7df5a54ea2adce3d9c1b4d4726ace4b6617fb2"
+        "digest": "sha256:94b694f6b8e0be142f90b15aaf68ab7797b589c0ca5581a35bd9b285a4d9933b"
       },
       "kfd2Trust": {
         "status": "release-passport-required",
@@ -639,7 +639,7 @@
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
         "sourcePath": "product/scripts/product.mjs",
         "artifactPath": "product/package.json",
-        "digest": "sha256:b89cb748b4beb098a836d0dde9ded2e7846c73a1c536780c8316c1f3ab91b61c"
+        "digest": "sha256:505a06d3b3ca71e76061a7de08d5819f579960eeb7d1b4133b3b582b244e0273"
       },
       "kfd2Trust": {
         "status": "release-passport-required",
@@ -661,7 +661,7 @@
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
         "sourcePath": "product/scripts/dist.mjs",
         "artifactPath": "product/package.json",
-        "digest": "sha256:f7f8e5ab48e228b1e9849a355c50be338d11677b9858a7b2013a3cde554ec384"
+        "digest": "sha256:bd5e3d86eeeeff676c95cab599d63bb1bce980a46461010883b9fd48d6e93756"
       },
       "kfd2Trust": {
         "status": "release-passport-required",

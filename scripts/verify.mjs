@@ -333,13 +333,12 @@ function main() {
     );
 
   // ── Stage 0d: KFD-2 release claims registry ──────────────────────
-  // The release claims are product-owned facts. The verifier checks the source
-  // registry and Buildchain projection without writing generated .buildchain
-  // files.
+  // Product intent remains Kungfu-owned; Buildchain validates the canonical
+  // registry and generated release projections without writing files.
   console.log('\n[verify] stage 0d: KFD-2 release claims registry');
   const kfd2Claims = spawnSync(
-    process.execPath,
-    [path.join(__dirname, 'kfd2-release-claims.mjs'), '--check'],
+    'pnpm',
+    ['exec', 'buildchain', 'kfd', '2', 'product-claims', 'check'],
     { encoding: 'utf8' },
   );
   if (kfd2Claims.status === 0)
@@ -348,7 +347,7 @@ function main() {
     fail(
       'KFD-2 release claims registry',
       `${kfd2Claims.stdout || ''}${kfd2Claims.stderr || ''}`.trim() ||
-        `kfd2-release-claims exited ${kfd2Claims.status}`,
+        `Buildchain product-claims exited ${kfd2Claims.status}`,
     );
 
   // ── Stage 0e: Buildchain KFD release evidence ───────────────────

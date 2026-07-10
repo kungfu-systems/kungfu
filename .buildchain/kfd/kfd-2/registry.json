@@ -1,6 +1,6 @@
 {
-  "schema": "kungfu.kfd-2-release-claims.registry/v1",
-  "description": "Kungfu-owned source registry for public KFD-2 release trust claims. Generated release claim files are projections of this registry, not the source of truth.",
+  "schema": "kungfu-buildchain-kfd-2-product-claims-registry/v1",
+  "description": "Kungfu-owned source registry for public KFD-2 release trust claims, rendered and checked by Buildchain.",
   "product": {
     "name": "Kungfu Episodes",
     "repository": "kungfu-systems/kungfu",
@@ -8,7 +8,8 @@
   },
   "releaseDefaults": {
     "channel": "dev/v4/v4.0",
-    "tagPrefix": "v"
+    "tagPrefix": "v",
+    "sourceSha": "local-dev-snapshot"
   },
   "kfd": {
     "standard": "kfd-2",
@@ -17,9 +18,10 @@
     "interfaceVersion": 1
   },
   "buildchain": {
-    "minimumVersion": "2.8.0",
+    "minimumVersion": "2.11.14-alpha.0",
     "claimInput": "--kfd-2-claim-json",
-    "projection": "one raw claim object per file under .buildchain/kfd-2/claims/"
+    "projection": "one raw claim object per file under .buildchain/kfd/kfd-2/claims/",
+    "checkCommand": "node scripts/verify-agent-pack.mjs && pnpm exec buildchain kfd 2 product-claims check"
   },
   "claims": [
     {
@@ -65,7 +67,7 @@
         }
       ],
       "verification": {
-        "command": "node scripts/verify-agent-pack.mjs && node scripts/kfd2-release-claims.mjs --check",
+        "command": "node scripts/verify-agent-pack.mjs && pnpm exec buildchain kfd 2 product-claims check",
         "expectedResult": "pass"
       },
       "auditBoundary": {
@@ -134,7 +136,7 @@
         }
       ],
       "verification": {
-        "command": "node scripts/verify-agent-pack.mjs && node scripts/kfd2-release-claims.mjs --check",
+        "command": "node scripts/verify-agent-pack.mjs && pnpm exec buildchain kfd 2 product-claims check",
         "expectedResult": "pass"
       },
       "auditBoundary": {
@@ -198,7 +200,7 @@
         }
       ],
       "verification": {
-        "command": "node scripts/verify-agent-pack.mjs && node scripts/kfd2-release-claims.mjs --check",
+        "command": "node scripts/verify-agent-pack.mjs && pnpm exec buildchain kfd 2 product-claims check",
         "expectedResult": "pass"
       },
       "auditBoundary": {

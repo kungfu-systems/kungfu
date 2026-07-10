@@ -289,7 +289,7 @@ function touchesBuildchainKfdEvidence(files) {
       file === 'developer/sdk/kfd/upstream-aggregate.json' ||
       file === 'developer/sdk/src/sdk.js' ||
       file === 'scripts/buildchain-kfd-evidence.mjs' ||
-      file === 'scripts/kfd2-release-claims.mjs' ||
+      file === '.buildchain/kfd/kfd-2/registry.json' ||
       file.startsWith('framework/core/src/python/kungfu/agent/') ||
       file.startsWith('.github/workflows/') ||
       file.startsWith('docs/kfd-'),

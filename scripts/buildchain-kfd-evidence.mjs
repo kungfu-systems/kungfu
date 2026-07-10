@@ -6,7 +6,6 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -14,10 +13,11 @@ import {
   BUILDCHAIN_KFD1_RELEASE_GATE_PATH,
   BUILDCHAIN_KFD1_VERIFY_RESULT_PATH,
   BUILDCHAIN_KFD2_DIR,
+  BUILDCHAIN_KFD2_REGISTRY_PATH,
   BUILDCHAIN_KFD3_DIR,
   BUILDCHAIN_KFD3_SURFACE_REGISTRY_PATH as KFD3_DEFAULT_REGISTRY_PATH,
 } from '@kungfu-tech/buildchain/buildchain-layout';
-import { kfd1, kfd3 } from '@kungfu-tech/buildchain/kfd';
+import { kfd1, kfd2, kfd3 } from '@kungfu-tech/buildchain/kfd';
 
 const KFD3_SURFACE_REGISTRY_CONTRACT =
   'kungfu-buildchain-kfd-3-surface-registry';
@@ -135,13 +135,7 @@ const CONTRACT_REGISTRY_PATH = path.join(
   'contract',
   'kungfu-contracts.registry.json',
 );
-const KFD2_REGISTRY_PATH = path.join(
-  ROOT,
-  'framework',
-  'release',
-  'kfd-2',
-  'kungfu-release-claims.registry.json',
-);
+const KFD2_REGISTRY_PATH = path.join(ROOT, BUILDCHAIN_KFD2_REGISTRY_PATH);
 const CORE_PACKAGE_PATH = path.join(ROOT, 'framework', 'core', 'package.json');
 const ARTIFACT_VERIFY_COMMAND =
   'node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json';
@@ -1003,17 +997,6 @@ function assertCurrent(filePath, value, label) {
   }
 }
 
-function assertSameFile(expectedPath, actualPath, label) {
-  if (!fs.existsSync(actualPath)) {
-    throw new Error(`${label} is missing: ${rel(actualPath)}`);
-  }
-  const expected = fs.readFileSync(expectedPath, 'utf8');
-  const actual = fs.readFileSync(actualPath, 'utf8');
-  if (expected !== actual) {
-    throw new Error(`${label} is stale: ${rel(actualPath)}`);
-  }
-}
-
 function buildKfd1Witness() {
   return runNodeScript([
     'developer/sdk/src/sdk.js',
@@ -1046,15 +1029,39 @@ function buildKfd1VerifyResult(kfd1Gate) {
 }
 
 function buildKfd2Claims({ write, outputDir = KFD2_OUTPUT_DIR }) {
-  return runNodeScript([
-    'scripts/kfd2-release-claims.mjs',
-    write ? '--write' : '--check',
-    '--output-dir',
-    outputDir,
-    '--source-sha',
-    KFD_EVIDENCE_SOURCE_SHA,
-    '--json',
-  ]);
+  const result = write
+    ? kfd2.writeProductClaimOutputs({
+        cwd: ROOT,
+        outputDir: rel(outputDir),
+        sourceSha: KFD_EVIDENCE_SOURCE_SHA,
+      })
+    : kfd2.checkProductClaimOutputs({
+        cwd: ROOT,
+        outputDir: rel(outputDir),
+        sourceSha: KFD_EVIDENCE_SOURCE_SHA,
+      });
+  if (!result.ok) {
+    throw new Error(
+      `Buildchain KFD-2 product claims are stale:\n${(result.issues || [])
+        .map((issue) => `- ${issue.path || issue.code}: ${issue.message}`)
+        .join('\n')}`,
+    );
+  }
+  return {
+    ...result,
+    releaseClaims: {
+      ...result.releaseClaims,
+      sha256: result.summary.releaseClaimsSha256,
+      path: rel(path.join(outputDir, 'release-claims.json')),
+    },
+    buildchainProjection: {
+      claimCount: result.summary.claimCount,
+      claims: result.claims.map((claim) => ({
+        ...claim,
+        path: `${rel(outputDir)}/claims/${claim.id}.json`,
+      })),
+    },
+  };
 }
 
 function writeKfd2PackagedOutputs(outputDir) {
@@ -1062,58 +1069,12 @@ function writeKfd2PackagedOutputs(outputDir) {
 }
 
 function assertCurrentKfd2Output(outputDir, label) {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-kfd2-check-'));
   try {
-    const expected = writeKfd2PackagedOutputs(tmpDir);
-    const releaseClaimsPath = path.join(outputDir, 'release-claims.json');
-    assertSameFile(
-      path.join(tmpDir, 'release-claims.json'),
-      releaseClaimsPath,
-      `${label} release claims`,
+    return buildKfd2Claims({ write: false, outputDir });
+  } catch (error) {
+    throw new Error(
+      `${label}: ${error instanceof Error ? error.message : error}`,
     );
-    for (const claim of expected.buildchainProjection?.claims || []) {
-      const fileName = `${claim.id}.json`;
-      assertSameFile(
-        path.join(tmpDir, 'claims', fileName),
-        path.join(outputDir, 'claims', fileName),
-        `${label} claim ${claim.id}`,
-      );
-    }
-    const expectedArgs = (expected.buildchainProjection?.claims || [])
-      .map(
-        (claim) =>
-          `--kfd-2-claim-json ${rel(path.join(outputDir, 'claims', `${claim.id}.json`))}`,
-      )
-      .join('\n');
-    const actualArgsPath = path.join(outputDir, 'buildchain-claim-args.txt');
-    if (!fs.existsSync(actualArgsPath)) {
-      throw new Error(
-        `${label} Buildchain claim args is missing: ${rel(actualArgsPath)}`,
-      );
-    }
-    const actualArgs = fs.readFileSync(actualArgsPath, 'utf8').trimEnd();
-    if (actualArgs !== expectedArgs) {
-      throw new Error(
-        `${label} Buildchain claim args is stale: ${rel(actualArgsPath)}`,
-      );
-    }
-    return {
-      ...expected,
-      outputDir: rel(outputDir),
-      releaseClaims: {
-        ...expected.releaseClaims,
-        path: rel(releaseClaimsPath),
-      },
-      buildchainProjection: {
-        ...expected.buildchainProjection,
-        claims: (expected.buildchainProjection?.claims || []).map((claim) => ({
-          ...claim,
-          path: `${rel(outputDir)}/claims/${claim.id}.json`,
-        })),
-      },
-    };
-  } finally {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 }
 

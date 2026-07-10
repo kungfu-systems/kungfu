@@ -62,7 +62,7 @@
         }
       ],
       "verification": {
-        "command": "node scripts/verify-agent-pack.mjs && node scripts/kfd2-release-claims.mjs --check",
+        "command": "node scripts/verify-agent-pack.mjs && pnpm exec buildchain kfd 2 product-claims check",
         "expectedResult": "pass"
       },
       "auditBoundary": {
@@ -140,7 +140,7 @@
         }
       ],
       "verification": {
-        "command": "node scripts/verify-agent-pack.mjs && node scripts/kfd2-release-claims.mjs --check",
+        "command": "node scripts/verify-agent-pack.mjs && pnpm exec buildchain kfd 2 product-claims check",
         "expectedResult": "pass"
       },
       "auditBoundary": {
@@ -209,7 +209,7 @@
         }
       ],
       "verification": {
-        "command": "node scripts/verify-agent-pack.mjs && node scripts/kfd2-release-claims.mjs --check",
+        "command": "node scripts/verify-agent-pack.mjs && pnpm exec buildchain kfd 2 product-claims check",
         "expectedResult": "pass"
       },
       "auditBoundary": {

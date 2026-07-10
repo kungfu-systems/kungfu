@@ -58,7 +58,7 @@
     }
   ],
   "hashes": {
-    "registrySha256": "4f7065e70f97b3855083454766f54d68bbf065a8bd236caac70c9887b301b60d",
+    "registrySha256": "5e686417b7bb43116755ccf2e1ccc001ce4c1fe7706d062ebc2bdf776925b4c6",
     "sourceSha256": "54dc1ae6436427df7a15551c897c3111a88b529c610f1dd0f16673199e2dec14",
     "evidenceSha256": [
       {
@@ -109,7 +109,7 @@
   ],
   "verification": {
     "result": "passed",
-    "command": "node scripts/verify-agent-pack.mjs && node scripts/kfd2-release-claims.mjs --check",
+    "command": "node scripts/verify-agent-pack.mjs && pnpm exec buildchain kfd 2 product-claims check",
     "expectedResult": "pass"
   },
   "auditBoundary": {
