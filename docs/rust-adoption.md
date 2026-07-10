@@ -189,7 +189,12 @@ per-platform special-casing) with one binary that:
   (plus the checkout's current branch for the repo role);
 - `shifu clone [path]` fetches the repository itself and `shifu doctor`
   checks the development environment (install pointers for the heavyweight
-  prerequisites it deliberately does not manage). Together with delegation
+  prerequisites it deliberately does not manage); `shifu promote` installs
+  the freshest built dev product from the user-global build stash (successful
+  desktop builds register themselves there, so a cleaned worktree cannot
+  strand its build) and `shifu builds` lists that stash — the jurisdiction
+  siblings of clone: clone acquires the repository, promote acquires the
+  product. Together with delegation
   this makes an installed shifu a self-sufficient bootstrap core: install
   once, clone anywhere, and every capability that can evolve lives in the
   repo — the binary never needs re-installing to pick up new launcher
