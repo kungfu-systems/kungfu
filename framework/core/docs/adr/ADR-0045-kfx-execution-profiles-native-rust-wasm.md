@@ -23,7 +23,9 @@ last_reviewed: 2026-07-10
   [ADR-0013](ADR-0013-cli-runtime-extension-isolation-trusted-channel.md),
   [ADR-0014](ADR-0014-extension-execution-contract-uniform-capability-surface.md),
   [ADR-0017](ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md),
-  [ADR-0022](ADR-0022-core-action-recording-surface.md), and
+  [ADR-0022](ADR-0022-core-action-recording-surface.md),
+  [ADR-0046](ADR-0046-rust-host-trunk-and-assembled-runtime.md) (the host
+  trunk is the prospective second consumer of the one C ABI decided here), and
   [`docs/rust-adoption.md`](../../../../docs/rust-adoption.md)
 
 ## Question
@@ -150,6 +152,11 @@ WASI; it is its own pure-component form.
 1. **One C ABI is the source of truth.** The C++ core owns a versioned table of
    opaque handles, fixed-width scalar/POD types, lifecycle functions, error
    codes, and capability entrypoints. No C++ or Rust ABI crosses the boundary.
+   This ABI has a second consumer already queued: the host trunk
+   ([ADR-0046](ADR-0046-rust-host-trunk-and-assembled-runtime.md)) plans to
+   route its embedding seam through the same membrane rather than a parallel
+   exported-C++ contract — one more reason no single consumer's convenience
+   may leak language-specific types across it.
 2. **Two thin language layers wrap the same ABI.** An official `kungfu-kfx`
    crate contains the unsafe calls and exposes a safe Rust API. A C++ header
    provides RAII/convenience over the same C functions. Neither layer owns

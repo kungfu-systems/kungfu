@@ -184,6 +184,18 @@ explicit exported embedding surface (the spike found `journal::assemble`
 absent from the export set); which symbols constitute that surface is decided
 when stage 3 lands, recorded against this ADR.
 
+The membrane converges with
+[ADR-0045](ADR-0045-kfx-execution-profiles-native-rust-wasm.md): its gate 1
+gives libkungfu **one versioned C ABI** as the extension boundary, and the
+trunk is that ABI's prospective second consumer. When it lands, the trunk's
+embedding seam defaults to consuming the *same* C ABI — one membrane, two
+consumers — rather than growing a parallel exported-C++ contract; stage 3 may
+keep same-repo C++ linkage only as the interim (the trunk is versioned and
+compiled with the core, so C++ linkage is safe there in a way it never is for
+extensions) or where measured evidence justifies a trunk-only surface. Two
+permanently parallel embedding contracts on one core is the drift this
+paragraph exists to forbid.
+
 ## Alternatives considered
 
 - **Frozen host + uv-managed satellite runtimes.** Deliver uv and a pinned

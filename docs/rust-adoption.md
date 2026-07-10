@@ -69,10 +69,15 @@ the component's case for existing.
    ABI for in-process embedding. Kungfu does not maintain infrastructure for
    this mode: it reintroduces the FFI seam the boundaries above exclude. A
    component that truly needs it must argue its own case and bring its own
-   binding/build wiring in review. The first argued case on record is the
-   host trunk —
+   binding/build wiring in review. Argued cases on record: the host trunk —
    [ADR-0046](../framework/core/docs/adr/ADR-0046-rust-host-trunk-and-assembled-runtime.md)
-   (init + control plane only; hot paths still never cross the seam).
+   (accepted; init + control plane only, hot paths never cross the seam) —
+   and, proposed, the extension-side surfaces of
+   [ADR-0045](../framework/core/docs/adr/ADR-0045-kfx-execution-profiles-native-rust-wasm.md)
+   (the `kungfu-kfx` safe wrapper over the core's one versioned C ABI, and
+   the bounded `libwasm` component host). Both sides converge on the same
+   discipline: libkungfu owns one C embedding membrane and every in-process
+   consumer wraps it, rather than each consumer growing a private seam.
 3. **Artifact (natural).** Anything produced *by* a Rust tool (reports, data
    files, archives) is consumed like any other artifact; nothing Rust-specific
    applies downstream.
