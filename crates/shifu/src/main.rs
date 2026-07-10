@@ -39,6 +39,7 @@ mod doctor;
 mod envfile;
 #[cfg(windows)]
 mod msvc;
+mod style;
 mod tools;
 mod util;
 
@@ -46,25 +47,48 @@ mod util;
 /// mirroring the sh / cmd entrypoints. Everything else goes to corepack pnpm.
 const L2_SUBCOMMANDS: &[&str] = &["build", "rebuild", "proxy", "config"];
 
-const USAGE: &str = "\
-shifu - the kungfu development/build launcher (pinned-toolchain entrypoint)
-
-Usage:
-  shifu <task> [args...]     run any pnpm task under the pinned toolchain
-                             (node via fnm/.node-version, python via uv;
-                             missing prerequisites bootstrap automatically)
-  shifu build | rebuild      bootstrap build (rebuild clears generated outputs)
-  shifu proxy | config ...   manage local mirror/cache config (build-local.env)
-  shifu clone [path]         clone the kungfu repository (default: current dir;
-                             SHIFU_CLONE_URL overrides the source)
-  shifu doctor               check the development environment (install pointers
-                             for anything missing; exits 1 on missing required)
-  shifu --version | -v | -V  launcher version and build identity
-  shifu self-version         this binary's version, machine readable
-  shifu help                 pnpm's own help (tasks are pnpm scripts)
-
-Common tasks: sync, build, check, fix, verify, dist, app
-Docs: AGENTS.md (build), docs/rust-adoption.md (how this launcher works)";
+fn print_usage() {
+    println!(
+        "{} {}",
+        "\u{1f94b}",
+        style::bold("shifu - the kungfu development/build launcher (pinned-toolchain entrypoint)")
+    );
+    println!();
+    println!("{}", style::cyan("Usage:"));
+    println!("  shifu <task> [args...]     run any pnpm task under the pinned toolchain");
+    println!(
+        "                             {}",
+        style::dim("(node via fnm/.node-version, python via uv;")
+    );
+    println!(
+        "                             {}",
+        style::dim("missing prerequisites bootstrap automatically)")
+    );
+    println!("  shifu build | rebuild      bootstrap build (rebuild clears generated outputs)");
+    println!("  shifu proxy | config ...   manage local mirror/cache config (build-local.env)");
+    println!("  shifu clone [path]         clone the kungfu repository (default: current dir;");
+    println!(
+        "                             {}",
+        style::dim("SHIFU_CLONE_URL overrides the source)")
+    );
+    println!("  shifu doctor               check the development environment (install pointers");
+    println!(
+        "                             {}",
+        style::dim("for anything missing; exits 1 on missing required)")
+    );
+    println!("  shifu --version | -v | -V  launcher version and build identity");
+    println!("  shifu self-version         this binary's version, machine readable");
+    println!("  shifu help                 pnpm's own help (tasks are pnpm scripts)");
+    println!();
+    println!(
+        "{} sync, build, check, fix, verify, dist, app",
+        style::cyan("Common tasks:")
+    );
+    println!(
+        "{} AGENTS.md (build), docs/rust-adoption.md (how this launcher works)",
+        style::cyan("Docs:")
+    );
+}
 
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -80,7 +104,7 @@ fn main() {
     // Usage is static and repo-independent: answer before repo discovery so a
     // bare `shifu` outside any checkout is still helpful. Not delegated.
     if args.is_empty() || matches!(first, Some("-h") | Some("--help")) {
-        println!("{USAGE}");
+        print_usage();
         exit(if args.is_empty() { 2 } else { 0 });
     }
 
@@ -141,7 +165,10 @@ fn clone_repo(args: &[String]) -> ! {
             127,
         );
     };
-    eprintln!("shifu: cloning {url} into {dest}");
+    eprintln!(
+        "\u{1f94b} {}",
+        style::bold(&format!("cloning {url} into {dest}"))
+    );
     let status = std::process::Command::new(git)
         .arg("clone")
         .arg(&url)
@@ -154,7 +181,15 @@ fn clone_repo(args: &[String]) -> ! {
             } else {
                 format!("cd {dest} && ")
             };
-            eprintln!("shifu: done - next: {cd_hint}./shifu build   (or ./shifu doctor first)");
+            eprintln!(
+                "\u{2705} {} next: {}",
+                style::green("done -"),
+                style::bold(&format!("{cd_hint}./shifu build")),
+            );
+            eprintln!(
+                "   {}",
+                style::dim("(or ./shifu doctor first to check your environment)")
+            );
             exit(0);
         }
         Ok(s) => exit(s.code().unwrap_or(1)),

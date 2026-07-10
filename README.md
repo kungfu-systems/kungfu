@@ -119,11 +119,24 @@ conventions, and the pull request / release flow.
 ```sh
 git clone git@github.com:kungfu-systems/kungfu.git
 cd kungfu
+./shifu doctor            # check your environment (optional but recommended)
 ./shifu sync && ./shifu build
 ```
 
 `./shifu` (`shifu.cmd` on Windows) is the build opener: it bootstraps the
-pinned toolchain on first run — nothing to preinstall beyond `curl`.
+pinned toolchain on first run — nothing to preinstall beyond `curl` (plus a
+C++ toolchain and CMake for the native core; `./shifu doctor` tells you
+exactly what is missing and where to get it).
+
+With shifu installed on your PATH (`cargo install --path crates/shifu --root
+~/.local` from any checkout), it also works as a standalone bootstrap core:
+
+```sh
+shifu clone [path]        # fetch the repository (default: current directory)
+cd <path> && shifu build  # inside a checkout, shifu always delegates to the
+                          # repo's own ./shifu — install once, stay current
+                          # by pulling code, never by re-installing shifu
+```
 
 ## Documentation
 

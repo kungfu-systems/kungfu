@@ -27,6 +27,10 @@ package manager (pnpm via Corepack), and the Python environment (via
 [uv](https://docs.astral.sh/uv/)) — bootstrapped automatically on first run
 when not already installed.
 
+Run `./shifu doctor` to check your environment: it reports every required
+tool with a version line or an install pointer (and exits non-zero when a
+required tool is missing, so it can gate scripts).
+
 ## Repository layout
 
 Kungfu is a pnpm-workspaces monorepo. See [`docs/architecture.md`](docs/architecture.md)

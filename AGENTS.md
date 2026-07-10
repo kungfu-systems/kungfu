@@ -22,6 +22,7 @@ One entrypoint runs every task under the pinned toolchain. Do not invoke pnpm,
 node, conan, or cmake directly — go through it:
 
 ```sh
+./shifu doctor    # check the development environment (install pointers)
 ./shifu sync      # install JS dependencies (frozen lockfile)
 ./shifu build     # build all workspaces (C++ core + bindings + app)
 ./shifu rebuild   # clear generated build outputs, then run build

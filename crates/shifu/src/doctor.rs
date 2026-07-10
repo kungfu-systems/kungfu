@@ -14,7 +14,7 @@
 use std::path::Path;
 use std::process::Command;
 
-use crate::{tools, util};
+use crate::{style, tools, util};
 
 struct Check {
     label: &'static str,
@@ -24,7 +24,10 @@ struct Check {
 }
 
 pub fn run(root: Option<&Path>) -> ! {
-    println!("shifu doctor - development environment preflight\n");
+    println!(
+        "\u{1f94b} {}\n",
+        style::bold("shifu doctor - development environment preflight")
+    );
 
     #[cfg_attr(not(windows), allow(unused_mut))]
     let mut required = vec![
@@ -41,14 +44,20 @@ pub fn run(root: Option<&Path>) -> ! {
     #[cfg(windows)]
     required.push(msvc_check());
 
-    println!("Required (preinstall these; shifu does not manage them):");
+    println!(
+        "{}",
+        style::cyan("Required (preinstall these; shifu does not manage them):")
+    );
     let mut missing_required = false;
     for check in &required {
         missing_required |= check.required && check.found.is_none();
         print_check(check);
     }
 
-    println!("\nManaged by shifu (bootstrapped automatically when missing):");
+    println!(
+        "\n{}",
+        style::cyan("Managed by shifu (bootstrapped automatically when missing):")
+    );
     for tool in [&tools::FNM, &tools::UV] {
         let found = tools::find_tool(tool, root.unwrap_or(Path::new(".")))
             .and_then(|p| version_of(&p.to_string_lossy(), &["--version"]));
@@ -61,21 +70,24 @@ pub fn run(root: Option<&Path>) -> ! {
             (None, Some(p)) => format!("absent; will bootstrap {p} on first run"),
             (None, None) => "absent; will bootstrap the pinned version on first run".to_string(),
         };
-        println!("  ~ {:<14} {label}", tool.name);
+        println!("  \u{1f9f0} {:<14} {label}", tool.name);
     }
     if let Some(root) = root {
         if let Ok(node) = std::fs::read_to_string(root.join(".node-version")) {
             println!(
-                "  ~ {:<14} pinned {} by .node-version (installed via fnm on first build)",
+                "  \u{1f9f0} {:<14} pinned {} by .node-version (installed via fnm on first build)",
                 "node",
                 node.trim()
             );
         }
     } else {
-        println!("  (run inside a kungfu checkout to see the repo's toolchain pins)");
+        println!(
+            "  {}",
+            style::dim("(run inside a kungfu checkout to see the repo's toolchain pins)")
+        );
     }
 
-    println!("\nOptional:");
+    println!("\n{}", style::cyan("Optional:"));
     print_check(&probe(
         "rustc/cargo",
         &["cargo"],
@@ -84,21 +96,33 @@ pub fn run(root: Option<&Path>) -> ! {
     ));
 
     if missing_required {
-        println!("\nresult: missing required tools - see the install pointers above");
+        println!(
+            "\n\u{26d4} {}",
+            style::red("missing required tools - see the install pointers above")
+        );
         std::process::exit(1);
     }
-    println!("\nresult: all required tools present");
+    println!(
+        "\n\u{1f94b} {}",
+        style::green("all required tools present - ready to train")
+    );
     std::process::exit(0)
 }
 
 fn print_check(check: &Check) {
     match &check.found {
-        Some(version) => println!("  + {:<14} {version}", check.label),
-        None => println!(
-            "  {} {:<14} not found - {}",
-            if check.required { "x" } else { "-" },
+        Some(version) => println!("  \u{2705} {:<14} {}", check.label, style::dim(version)),
+        None if check.required => println!(
+            "  \u{274c} {:<14} {} - {}",
             check.label,
-            check.hint
+            style::red("not found"),
+            style::yellow(check.hint)
+        ),
+        None => println!(
+            "  \u{2796} {:<14} {} - {}",
+            check.label,
+            style::dim("not found"),
+            style::dim(check.hint)
         ),
     }
 }
