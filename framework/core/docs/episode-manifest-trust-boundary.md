@@ -65,17 +65,17 @@ an edge (CLI/binding/export) renders the view.
 - A frame with a known `carrier_type` but `schema_version` > 1 is an
   **unknown-version record**: its layout cannot be assumed, so it is treated
   like an unknown record (no field, including `episode_id`, is decoded from
-  it). Unknown/unknown-version records are counted on the typed fold; a
-  dedicated fsck diagnostic for them lands with stage 3 so the stage 1 fsck
-  output stays byte-compatible. Either way a newer writer does not brick an
-  older reader.
+  it). Unknown/unknown-version records are counted on the typed fold and
+  reported by fsck as `manifest_unknown_records` (stage 3). Either way a
+  newer writer does not brick an older reader.
 
 ### 2.2 Fold order and grouping
 
 - Records fold strictly in append order; the fold is a pure function of the
   journal content, so any two readers derive the same view.
 - Records group by `episode_id`. A record whose `episode_id` is 0 folds
-  nowhere (counted on the fold; a dedicated fsck code lands with stage 3).
+  nowhere (counted on the fold; fsck reports it as
+  `manifest_record_episode_id_missing`, stage 3).
 - Records may legitimately arrive for an `episode_id` with no `EpisodeOpen`
   (e.g. the open lives in a deleted page). The view exists with
   `opened=false` and status `dangling`; fsck reports `episode_open_missing`.
@@ -102,8 +102,9 @@ an edge (CLI/binding/export) renders the view.
   `frame_count`, `reason`). More than one close is reported
   (`episode_closed_duplicate` warning), except that a close whose status is
   `Tombstoned` following an `Ended`/`Aborted` seal is the intended
-  append-only tombstone path (ADR-0033) and is still reported as a warning in
-  v1 until tombstone semantics get their own fsck rule in stage 3.
+  append-only tombstone path (ADR-0033): fsck reports it as
+  `episode_tombstoned` (intentional) instead of `episode_closed_duplicate`
+  (stage 3).
 
 ### 2.4 Derived summary fields
 
@@ -229,8 +230,15 @@ C4. Episodes owned by other locations are reported, never mutated.
    change.
 2. **Writer/recovery** — §3 guard + fixtures; no automatic lifecycle wiring
    before green.
-3. **Structural fsck** — status/seal consistency, claimed-vs-actual counts,
-   payload-ref claims, causal closure, frame integrity over the typed fold.
+3. **Structural fsck** (delivered) — over the typed fold: seal claims verified
+   against the folded actual (`episode_seal_frame_count_mismatch`,
+   `episode_seal_last_frame_missing`), invalid close status, the intentional
+   tombstone path, and unknown/unfolded record diagnostics. Deep verification
+   (fsck `verify_frames`, episode scope, opt-in) re-opens the claimed event
+   journals and verifies each attached frame receipt — presence, header
+   fields, recomputed payload/frame checksums (ADR-0023/0028) — failing a
+   sealed Episode and degrading an open one, with the exact missing side
+   reported.
 4. **Content resolution** — blocked on ADR-0040 `content_store` (interface +
    file backend); replaces the bespoke `payload_ref_exists` path probe.
 5. **Projection/query** — rebuildable Episode SQLite projection via

@@ -12,9 +12,12 @@
 #include <random>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
+#include <kungfu/runtime/action_recorder.h>
 #include <kungfu/runtime/storage/source_registry_projection.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
 #include <kungfu/yijinjing/storage/episode_manifest.h>
@@ -1515,6 +1518,161 @@ nlohmann::json query_sqlite_projection(const storage_service_options &options) {
   return result;
 }
 
+// Stage 3 deep verification (ADR-0041 point 4, ADR-0023/0028): re-open the
+// event journals the manifest claims frames from and verify each attached
+// frame receipt against the actual frame — presence, header fields, and the
+// recomputed payload/frame checksums. Opt-in via the fsck "verify_frames"
+// option because it reads every referenced journal. A sealed (Ended) Episode
+// with a missing or mismatched frame is failed; an open/aborted Episode is
+// degraded with the exact missing side reported.
+struct episode_frame_verification {
+  nlohmann::json errors = nlohmann::json::array();
+  nlohmann::json warnings = nlohmann::json::array();
+  size_t verified = 0;
+  bool degraded = false;
+};
+
+episode_frame_verification verify_episode_frame_claims(const storage_service_options &options) {
+  namespace yjj = kungfu::yijinjing;
+  episode_frame_verification result;
+  const auto fold = episode_store(options).fold_typed_records();
+
+  auto locator = std::make_shared<yjj::data::locator>(options.runtime_dir, yy_enums::mode::LIVE);
+  std::unordered_map<uint32_t, yjj::data::location_ptr> locations_by_uid;
+  for (const auto &location : locator->list_locations("*", "*", "*", "*")) {
+    locations_by_uid.emplace(location->uid, location);
+  }
+
+  struct claim_context {
+    uint64_t episode_id = 0;
+    bool sealed = false;
+    yjj::types::EpisodeFrameAttached claim = {};
+  };
+  std::map<std::pair<uint32_t, uint32_t>, std::vector<claim_context>> journals;
+  for (const auto &[episode_id, view] : fold.episodes) {
+    if (options.episode_id != 0 && episode_id != options.episode_id) {
+      continue;
+    }
+    const bool sealed = view.closed && view.close.status == yy_enums::EpisodeStatus::Ended;
+    for (size_t position = 0; position < view.frame_indices.size(); ++position) {
+      const auto &claim = view.frame_at(position);
+      if (claim.frame_uid == 0) {
+        continue;
+      }
+      journals[{claim.source, claim.dest}].push_back({episode_id, sealed, claim});
+    }
+  }
+
+  auto report_presence_issue = [&result](bool sealed, nlohmann::json issue) {
+    if (sealed) {
+      result.errors.push_back(std::move(issue));
+    } else {
+      result.warnings.push_back(std::move(issue));
+      result.degraded = true;
+    }
+  };
+
+  for (auto &[journal_key, claims] : journals) {
+    const auto source_uid = journal_key.first;
+    const auto dest_uid = journal_key.second;
+    const auto location_iter = locations_by_uid.find(source_uid);
+    if (location_iter == locations_by_uid.end()) {
+      for (const auto &context : claims) {
+        report_presence_issue(context.sealed, {{"code", "episode_frame_location_unknown"},
+                                               {"episode_id", context.episode_id},
+                                               {"frame_uid", context.claim.frame_uid},
+                                               {"location_uid", source_uid}});
+      }
+      continue;
+    }
+    const auto &location = location_iter->second;
+
+    std::unordered_map<uint64_t, std::vector<const claim_context *>> wanted;
+    for (const auto &context : claims) {
+      wanted[context.claim.frame_uid].push_back(&context);
+    }
+
+    std::unordered_set<uint64_t> found;
+    if (!location->locator->list_page_id(location, dest_uid).empty()) {
+      auto reader = std::make_shared<yjj::journal::reader>(true, false, std::make_shared<yjj::journal::bus>(false));
+      reader->join(location, dest_uid, 0);
+      while (reader->data_available()) {
+        const auto frame = reader->current_frame();
+        const auto wanted_iter = wanted.find(frame->frame_uid());
+        if (wanted_iter != wanted.end() && found.insert(frame->frame_uid()).second) {
+          const auto &header = *reinterpret_cast<const yjj::types::frame_header *>(frame->address());
+          const auto *payload = static_cast<const uint8_t *>(frame->data_address());
+          for (const auto *context : wanted_iter->second) {
+            const auto &claim = context->claim;
+            nlohmann::json fields = nlohmann::json::array();
+            if (header.carrier_type != claim.carrier_type) {
+              fields.push_back(
+                  {{"field", "carrier_type"}, {"claimed", claim.carrier_type}, {"actual", header.carrier_type}});
+            }
+            if (header.gen_time != claim.gen_time) {
+              fields.push_back({{"field", "gen_time"}, {"claimed", claim.gen_time}, {"actual", header.gen_time}});
+            }
+            if (header.trigger_frame_uid != claim.trigger_frame_uid) {
+              fields.push_back({{"field", "trigger_frame_uid"},
+                                {"claimed", claim.trigger_frame_uid},
+                                {"actual", header.trigger_frame_uid}});
+            }
+            if (frame->data_length() < claim.data_length) {
+              fields.push_back(
+                  {{"field", "data_length"}, {"claimed", claim.data_length}, {"actual", frame->data_length()}});
+            }
+            if (!fields.empty()) {
+              result.errors.push_back({{"code", "episode_attached_frame_mismatch"},
+                                       {"episode_id", context->episode_id},
+                                       {"frame_uid", claim.frame_uid},
+                                       {"fields", fields}});
+              continue;
+            }
+            if (claim.integrity_version == 0) {
+              ++result.verified;
+              continue;
+            }
+            std::string algorithm;
+            try {
+              algorithm = action::frame_checksum_algorithm_for_integrity_version(claim.integrity_version);
+            } catch (const std::exception &) {
+              report_presence_issue(context->sealed, {{"code", "episode_frame_integrity_version_unknown"},
+                                                      {"episode_id", context->episode_id},
+                                                      {"frame_uid", claim.frame_uid},
+                                                      {"integrity_version", claim.integrity_version}});
+              continue;
+            }
+            const auto payload_checksum = action::checksum_payload(payload, claim.data_length, algorithm);
+            const auto frame_checksum = action::checksum_frame(header, payload, claim.data_length, algorithm);
+            if (payload_checksum != claim.payload_checksum || frame_checksum != claim.frame_checksum) {
+              result.errors.push_back({{"code", "episode_attached_frame_checksum_mismatch"},
+                                       {"episode_id", context->episode_id},
+                                       {"frame_uid", claim.frame_uid},
+                                       {"claimed_payload_checksum", claim.payload_checksum},
+                                       {"actual_payload_checksum", payload_checksum},
+                                       {"claimed_frame_checksum", claim.frame_checksum},
+                                       {"actual_frame_checksum", frame_checksum}});
+              continue;
+            }
+            ++result.verified;
+          }
+        }
+        reader->next();
+      }
+    }
+    for (const auto &context : claims) {
+      if (found.count(context.claim.frame_uid) == 0) {
+        report_presence_issue(context.sealed, {{"code", "episode_attached_frame_missing"},
+                                               {"episode_id", context.episode_id},
+                                               {"frame_uid", context.claim.frame_uid},
+                                               {"location_uid", context.claim.source},
+                                               {"dest", context.claim.dest}});
+      }
+    }
+  }
+  return result;
+}
+
 nlohmann::json episode_fsck_impl(const storage_service_options &options) {
   const auto episode_report = episode_store(options).fsck(options.episode_id);
   const auto checked = object_or_empty(episode_report, "checked");
@@ -1544,6 +1702,21 @@ nlohmann::json episode_fsck_impl(const storage_service_options &options) {
                                               {"authority", "yijinjing-journal"},
                                               {"path", "journal/system/storage/episode-manifest/live/*.journal"},
                                               {"rebuildable", false}}})}};
+  if (bool_or(options.operation_options, "verify_frames", false)) {
+    auto verification = verify_episode_frame_claims(options);
+    for (auto &error : verification.errors) {
+      report["errors"].push_back(std::move(error));
+    }
+    for (auto &warning : verification.warnings) {
+      report["warnings"].push_back(std::move(warning));
+    }
+    report["checked"]["episode_frames_verified"] = verification.verified;
+    const bool ok = report["errors"].empty();
+    const bool degraded = report.value("degraded", false) || verification.degraded;
+    report["ok"] = ok;
+    report["degraded"] = degraded;
+    report["status"] = ok ? (degraded ? "degraded" : "ok") : "failed";
+  }
   return report;
 }
 

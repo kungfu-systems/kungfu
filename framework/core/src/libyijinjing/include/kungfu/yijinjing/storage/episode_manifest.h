@@ -142,7 +142,9 @@ struct episode_current_view {
   uint64_t claimed_frame_count = 0;
   bool last_frame_uid_seen = false;
   uint64_t last_frame_uid = 0;
+  size_t unique_frame_count = 0;
   yijinjing::types::EpisodeClosed close = {};
+  std::vector<yijinjing::enums::EpisodeStatus> close_statuses = {};
   std::vector<episode_manifest_record> records = {};
   std::vector<size_t> frame_indices = {};
   std::vector<size_t> ref_indices = {};

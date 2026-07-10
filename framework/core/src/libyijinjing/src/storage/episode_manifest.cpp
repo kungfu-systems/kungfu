@@ -355,6 +355,8 @@ void fold_into(episode_manifest_fold &fold, const episode_manifest_record &recor
                 });
             if (duplicate) {
               view.duplicate_frame_uids.push_back(body.frame_uid);
+            } else {
+              ++view.unique_frame_count;
             }
           }
           view.frame_indices.push_back(record_index);
@@ -366,6 +368,7 @@ void fold_into(episode_manifest_fold &fold, const episode_manifest_record &recor
           ++view.close_count;
           view.closed = true;
           view.close = body;
+          view.close_statuses.push_back(body.status);
           view.claimed_frame_count = body.frame_count;
           view.last_frame_uid_seen = true;
           view.last_frame_uid = body.last_frame_uid;
@@ -850,14 +853,61 @@ nlohmann::json episode_manifest_store::fsck(uint64_t episode_id) const {
           {{"code", "episode_open_duplicate"}, {"episode_id", current_episode_id}, {"count", view.open_count}});
     }
     if (view.close_count > 1) {
-      warnings.push_back(
-          {{"code", "episode_closed_duplicate"}, {"episode_id", current_episode_id}, {"count", view.close_count}});
+      // The append-only tombstone path (a Tombstoned close after the seal) is
+      // intentional, not a duplicate-close anomaly.
+      bool extra_closes_are_tombstones = view.close.status == EpisodeStatus::Tombstoned;
+      for (size_t index = 1; extra_closes_are_tombstones && index < view.close_statuses.size(); ++index) {
+        extra_closes_are_tombstones = view.close_statuses[index] == EpisodeStatus::Tombstoned;
+      }
+      if (extra_closes_are_tombstones) {
+        warnings.push_back(
+            {{"code", "episode_tombstoned"}, {"episode_id", current_episode_id}, {"count", view.close_count}});
+      } else {
+        warnings.push_back(
+            {{"code", "episode_closed_duplicate"}, {"episode_id", current_episode_id}, {"count", view.close_count}});
+      }
+    }
+    if (view.closed) {
+      const auto close_status = view.close.status;
+      const bool status_valid = close_status == EpisodeStatus::Ended || close_status == EpisodeStatus::Aborted ||
+                                close_status == EpisodeStatus::Tombstoned;
+      if (!status_valid) {
+        errors.push_back({{"code", "episode_close_status_invalid"},
+                          {"episode_id", current_episode_id},
+                          {"status", static_cast<int32_t>(close_status)}});
+      }
+      // A seal is a claim about the Episode's content; the fold is the actual.
+      if (close_status == EpisodeStatus::Ended) {
+        if (view.close.frame_count != view.unique_frame_count) {
+          errors.push_back({{"code", "episode_seal_frame_count_mismatch"},
+                            {"episode_id", current_episode_id},
+                            {"claimed", view.close.frame_count},
+                            {"actual", view.unique_frame_count}});
+        }
+        if (view.close.last_frame_uid != 0) {
+          bool claimed_last_present = false;
+          for (size_t position = 0; !claimed_last_present && position < view.frame_indices.size(); ++position) {
+            claimed_last_present = view.frame_at(position).frame_uid == view.close.last_frame_uid;
+          }
+          if (!claimed_last_present) {
+            errors.push_back({{"code", "episode_seal_last_frame_missing"},
+                              {"episode_id", current_episode_id},
+                              {"frame_uid", view.close.last_frame_uid}});
+          }
+        }
+      }
     }
     const auto graph = build_causal_graph(runtime_dir_, current_episode_id, view, fold.episodes);
     degraded = degraded || graph.degraded;
     for (const auto &warning : graph.warnings) {
       warnings.push_back(warning);
     }
+  }
+  if (fold.unknown_record_count > 0) {
+    warnings.push_back({{"code", "manifest_unknown_records"}, {"count", fold.unknown_record_count}});
+  }
+  if (fold.unfolded_record_count > 0) {
+    warnings.push_back({{"code", "manifest_record_episode_id_missing"}, {"count", fold.unfolded_record_count}});
   }
   if (episode_id != 0 && checked == 0) {
     errors.push_back({{"code", "episode_missing"}, {"episode_id", episode_id}});
@@ -870,7 +920,11 @@ nlohmann::json episode_manifest_store::fsck(uint64_t episode_id) const {
           {"degraded", degraded},
           {"errors", errors},
           {"warnings", warnings},
-          {"checked", {{"episode_manifest_records", fold.total_record_count}, {"episodes", checked}}}};
+          {"checked",
+           {{"episode_manifest_records", fold.total_record_count},
+            {"episodes", checked},
+            {"unknown_records", fold.unknown_record_count},
+            {"unfolded_records", fold.unfolded_record_count}}}};
 }
 
 } // namespace kungfu::yijinjing::storage

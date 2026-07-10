@@ -385,8 +385,17 @@ def fsck(
     *,
     source_id: str | None = None,
     episode_id: int | None = None,
+    verify_frames: bool = False,
 ) -> dict[str, Any]:
-    scope = "episode" if episode_id else ("source" if source_id else "all")
+    # verify_frames re-opens the event journals the Episode manifest claims
+    # frames from and verifies each attached receipt (presence, header fields,
+    # recomputed checksums). Episode-scope only; it reads every referenced
+    # journal, so it stays opt-in.
+    scope = (
+        "episode"
+        if (episode_id or verify_frames)
+        else ("source" if source_id else "all")
+    )
     return dict(
         _runtime().run_storage_service_operation(
             "fsck",
@@ -395,6 +404,7 @@ def fsck(
                 "scope": scope,
                 "source_id": source_id,
                 "episode_id": _u64(episode_id),
+                "verify_frames": verify_frames,
             },
         )
     )
