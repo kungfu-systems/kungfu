@@ -7,11 +7,13 @@
 # prebuilt binary to download, and the release workflow tags releases
 # shifu-v<version> from it. Do not add a second VERSION file.
 #
-# Zero runtime dependencies on purpose: the launcher is a thin dispatcher whose
-# job is spawning other processes (fnm / uv / node / corepack pnpm), so
+# Zero external dependencies on purpose: the launcher is a thin dispatcher
+# whose job is spawning other processes (fnm / uv / node / corepack pnpm), so
 # downloads and archive extraction also shell out to platform tools
 # (curl / tar / unzip / PowerShell). This keeps the supply-chain surface empty,
 # the binary tiny, and the crate buildable on any reasonably recent rustc.
+# The only dependency is the workspace-internal std-only bootstrap crate —
+# the download/verify/cache engine shared with the product trunk.
 
 [package]
 name = "shifu"
@@ -22,3 +24,4 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+bootstrap = { path = "../bootstrap" }

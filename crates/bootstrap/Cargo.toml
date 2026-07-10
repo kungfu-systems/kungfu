@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# bootstrap — the shared pinned-toolchain bootstrap engine.
+#
+# Workspace-internal library, never published or released on its own: its
+# version rides whichever binary embeds it (shifu for the dev/build side, the
+# product trunk for the runtime side). Zero dependencies on purpose, same as
+# shifu: downloads and archive extraction shell out to platform tools so the
+# supply-chain surface stays empty.
+
+[package]
+name = "bootstrap"
+version = "0.1.0"
+description = "shared pinned-toolchain bootstrap engine (download, verify, cache) for shifu and the product trunk"
+publish = false
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]

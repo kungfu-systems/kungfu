@@ -4,12 +4,14 @@
 #
 # Every in-repo Rust component lives here as a workspace member; see
 # docs/rust-adoption.md for the adoption paradigm (source layout, consumption
-# modes, distribution, and the selective-exercise discipline). The first member
-# is shifu, the self-contained dev/build launcher.
+# modes, distribution, and the selective-exercise discipline). Members:
+# shifu, the self-contained dev/build launcher, and bootstrap, the shared
+# pinned-toolchain bootstrap engine it exposes to the product trunk
+# (ADR-0046 stage 1).
 
 [workspace]
 resolver = "2"
-members = ["shifu"]
+members = ["bootstrap", "shifu"]
 # host-spike is a throwaway feasibility probe (rust host shell → libkungfu →
 # embedded libpython/libnode). It builds against a sibling worktree's core
 # artifacts, so it must not enter the workspace CI gate or the release matrix;
