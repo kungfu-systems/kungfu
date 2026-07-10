@@ -53,7 +53,9 @@ layout, and code style.
 `check` is the source-quality gate for changed files plus shared type/tooling
 tests. `check:all` exists for whole-tree cleanup once the lint baseline is clean.
 `verify` is the runtime/product done-check: it asserts the build artifacts and
-runs a `kungfu` runtime smoke, rather than trusting a "looks built" impression.
+runs a `kungfu` runtime smoke plus the `mvp-smoke-v1` Episode qualification,
+rather than trusting a "looks built" impression. The larger Episode baseline
+remains an explicit periodic/release-readiness command.
 
 ## Proposing changes
 

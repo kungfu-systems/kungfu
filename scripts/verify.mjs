@@ -14,6 +14,9 @@
 //   ./kungfu-code verify --fuzz       add the kungfu::view libFuzzer long-run (ADR-0039 memory safety); needs a
 //                                     libFuzzer-capable clang (brew LLVM on macOS, system clang on Linux). The
 //                                     alpha/release build passes this; a new crash blocks the build.
+//   ./kungfu-code verify --skip-episode-qualification
+//                                     diagnostic-only escape hatch; the default verify path runs the
+//                                     mvp-smoke-v1 Episode qualification profile.
 //   ./kungfu-code verify --help
 //
 // Assertion targets (all grounded in the build scripts, not guessed):
@@ -32,6 +35,7 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -66,6 +70,7 @@ if (args.includes('--help') || args.includes('-h')) {
 }
 const doFull = args.includes('--full');
 const withApp = args.includes('--with-app');
+const skipEpisodeQualification = args.includes('--skip-episode-qualification');
 // --fuzz adds the libFuzzer long-run tier (needs a libFuzzer-capable clang); the
 // alpha/release build passes it. The lightweight ASan/UBSan corpus replay runs
 // whenever the memory-safety stage runs (full or fuzz).
@@ -156,13 +161,98 @@ function runPnpm(task) {
   }
 }
 
+function runEpisodeQualificationSmoke() {
+  console.log('\n[verify] stage 3b: Episode qualification (mvp-smoke-v1)');
+  if (skipEpisodeQualification) {
+    console.log(
+      '  (skipped: explicitly requested with --skip-episode-qualification; Buildchain and alpha/release do not use this bypass)',
+    );
+    return;
+  }
+
+  const harness = path.join(
+    ROOT,
+    'framework',
+    'core',
+    'tests',
+    'qualification',
+    'episode',
+    'run.mjs',
+  );
+  const runRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kf-verify-episode-'));
+  const reportPath = path.join(runRoot, 'episode-trust-report.json');
+  const smoke = spawnSync(
+    process.execPath,
+    [harness, '--profile', 'mvp-smoke-v1', '--report', reportPath],
+    {
+      cwd: ROOT,
+      encoding: 'utf8',
+      timeout: 5 * 60 * 1000,
+      maxBuffer: 10 * 1024 * 1024,
+    },
+  );
+  const tail = outputTail(smoke.stdout, smoke.stderr, 8);
+  if (smoke.error || smoke.status !== 0) {
+    const processDetail = smoke.error
+      ? `${smoke.error.code || smoke.error.message}`
+      : `exit ${exitLabel(smoke.status, smoke.signal)}`;
+    fail(
+      'Episode qualification smoke',
+      `${processDetail}; report/runtime retained under ${runRoot}${tail ? `; tail: ${tail}` : ''}`,
+    );
+    return;
+  }
+
+  try {
+    const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+    const scenarios = report?.workload?.scenarios || [];
+    const scenariosPassed = scenarios.filter((scenario) => scenario.ok).length;
+    if (
+      report?.schema !== 'kungfu.episode.trust-report/v1' ||
+      report?.profile !== 'mvp-smoke-v1' ||
+      scenarios.length === 0 ||
+      scenariosPassed !== scenarios.length
+    ) {
+      fail(
+        'Episode qualification smoke',
+        `unexpected Trust Report contract; report retained at ${reportPath}`,
+      );
+      return;
+    }
+    if (process.env.CI && report.qualified !== true) {
+      fail(
+        'Episode qualification smoke',
+        `CI requires a clean-source qualified Trust Report; report retained at ${reportPath}`,
+      );
+      return;
+    }
+    const busy = report.performance?.scenarios
+      ?.flatMap((scenario) => scenario.writers || [])
+      .reduce(
+        (total, writer) =>
+          total + (writer.operations?.manifest_writer_busy || 0),
+        0,
+      );
+    pass(
+      'Episode qualification smoke',
+      `${scenariosPassed}/${scenarios.length} scenarios; busy=${busy || 0}; qualified=${String(report.qualified)}`,
+    );
+    fs.rmSync(runRoot, { recursive: true, force: true });
+  } catch (error) {
+    fail(
+      'Episode qualification smoke',
+      `invalid or missing Trust Report at ${reportPath}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
 function main() {
   const version = expectedVersion();
   console.log(
     `[verify] kungfu build-chain verification — expected version ${version}`,
   );
   console.log(
-    `[verify] mode: ${doFull ? 'full (build first)' : 'quick (assert existing artifacts only)'}${withApp ? ' + app' : ''}`,
+    `[verify] mode: ${doFull ? 'full (build first)' : 'quick (assert existing artifacts only)'}${withApp ? ' + app' : ''}${skipEpisodeQualification ? ' - Episode qualification' : ' + Episode qualification'}`,
   );
 
   // ── Stage 0a: cross-platform script guard (read-only) ─────────────
@@ -628,6 +718,8 @@ function main() {
     fail('kungfu skill contract smoke', 'no kungfu executable, skipped');
     fail('kungfu contract registry smoke', 'no kungfu executable, skipped');
   }
+
+  runEpisodeQualificationSmoke();
 
   // ── Stage 4: (optional) app build artifact ────────────────────────
   if (withApp) {

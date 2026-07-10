@@ -79,6 +79,11 @@ cd kungfu
 `./kungfu-code <task>` runs `<task>` under the pinned Node toolchain — it is a
 thin wrapper, so any pnpm task works (`./kungfu-code build:core`, etc.).
 
+`./kungfu-code verify` includes the bounded `mvp-smoke-v1` Episode
+qualification by default. Use `./kungfu-code episode:qualify -- --profile
+mvp-baseline-v1` explicitly for the heavier periodic/release-readiness
+baseline; it is not run on every build.
+
 > Node, packages, and Electron binaries are resolved through the standard
 > `FNM_NODE_DIST_MIRROR`, `COREPACK_NPM_REGISTRY`, and `ELECTRON_MIRROR`
 > environment variables; set these to point at a specific mirror if needed.

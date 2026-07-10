@@ -34,6 +34,18 @@ The default report path is a retained temporary directory printed at the end of
 the run. Runtime homes are removed after their fresh-process probes unless
 `--keep-runtime` is supplied.
 
+## Build-chain gate
+
+`./kungfu-code verify` runs `mvp-smoke-v1` by default after checking the built
+runtime artifacts. This means both the declared Buildchain `verify` lifecycle
+and the alpha/release `verify --fuzz` workflow fail when the smoke profile
+fails. `--skip-episode-qualification` is an explicit local diagnostic escape
+hatch; the checked-in Buildchain and alpha/release commands do not use it.
+
+`mvp-baseline-v1` is intentionally not a per-build gate. Run its 100k
+accumulation and 10k contention workloads explicitly for periodic or
+release-readiness qualification.
+
 ## Result boundary
 
 The v0 profiles are metadata-only: each independent Episode contains exactly
