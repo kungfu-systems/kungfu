@@ -31,6 +31,10 @@ facts must not allocate raw `300xx` / `400xx` `carrier_type` numbers.
 [ADR-0025](../framework/core/docs/adr/ADR-0025-carrier-type-and-action-envelope-semantics.md)
 then completes that rename: `carrier_type` is transport metadata, and business
 semantics live in `kungfu.action-envelope/v1`.
+[ADR-0047](../framework/core/docs/adr/ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md)
+assigns each structured fact one schema owner: closed kernel records use Hana
+POD, while the action envelope and open/domain payloads use `.fbs`. JSON is an
+edge rendering or adapter format, not a third journal schema.
 
 Location identity uses neutral roles, not trading categories. [ADR-0024](../framework/core/docs/adr/ADR-0024-location-role-and-journal-page-policy.md)
 defines `source`, `sink`, `actor`, `system`, and `service`, and keeps journal
@@ -67,18 +71,19 @@ fields (defined in
 | `carrier_type` | `int32` | Wire-level carrier type. In v4 business facts normally use the generic action-envelope carrier and put semantics in `action_type` / `schema_ref`. |
 | `source` | `uint32` | Source of the frame. |
 | `dest` | `uint32` | Destination of the frame. |
-| `data_type` | enum | Payload encoding (raw struct vs json). |
+| `data_type` | enum | Low-level payload encoding marker. Closed records use raw POD; the current JSON value remains a transitional/edge-compatible encoding, not schema authority. |
 | `initial_source` | `uint32` | The original writer of the frame. |
 | `frame_uid` | `uint64` | Frame key. |
 | `trigger_frame_uid` | `uint64` | The reader's current frame when this frame was generated. |
 | `stream_id` | `uint64` | Stream identifier. |
 
-Closed yijinjing/runtime frames may still identify their payload layout directly
-through `carrier_type`. New v4 business facts should use the generic action
-envelope carrier: the journal header keeps `carrier_type` for filtering and fsck,
-while the payload names the domain action through `action_type` and
-`schema_ref`. The same bytes are read by C++, Python, and Node without inventing
-per-language causality logic (see [`contracts.md`](contracts.md)).
+Closed yijinjing/runtime frames identify their Hana POD layout directly through
+`carrier_type`. New v4 business facts use the generic action-envelope carrier:
+the journal header keeps `carrier_type` for filtering and fsck, while the
+FlatBuffers envelope names the domain action through `action_type` and
+`schema_ref`. The current pre-release JSON/base64 envelope is transitional and
+must migrate before the stable v4 baseline. C++, Python, and Node still share
+the C++ recording and causality semantics (see [`contracts.md`](contracts.md)).
 
 Current `frame_header` does not contain an in-frame checksum. New
 `action_recorder` receipts carry `integrity_version`, `checksum_algorithm`,

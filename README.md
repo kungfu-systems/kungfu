@@ -41,11 +41,12 @@ The commercial product surface is prepared in this repository as part of the
 same open-source monorepo. Public release artifacts use the Kungfu Episodes
 name; the underlying runtime and developer-facing surfaces remain Kungfu.
 
-At its core is a low-latency, append-only event journal with a shared,
-strongly-typed schema, exposed zero-copy to C++, Python, and Node. Kungfu
-offers these capabilities — the journal, in-process state, and deterministic
-replay — as a foundation (SDK) to build on, and ships a minimal reference
-application built on that foundation.
+At its core is a low-latency, append-only event journal with one declared schema
+authority per structured fact: fixed-layout Hana POD for the closed kernel and
+FlatBuffers for the open/domain layer. Closed journal records are exposed
+zero-copy to C++, Python, and Node. Kungfu offers these capabilities — the
+journal, in-process state, and deterministic replay — as a foundation (SDK) to
+build on, and ships a minimal reference application built on that foundation.
 
 Originally created for trading execution, the core is general: anything that
 needs to capture, share, and faithfully replay high-frequency event streams.
@@ -53,10 +54,10 @@ needs to capture, share, and faithfully replay high-frequency event streams.
 ## Core ideas
 
 - **Journal-first data plane** — one append-only event log
-  ([`yijinjing`](framework/core)) with a unified runtime schema
-  (`kungfu/yijinjing/schema`) carrying source / destination / nanosecond
-  timestamp / carrier type metadata. Every component consumes the same frames
-  rather than inventing its own format.
+  ([`yijinjing`](framework/core)) and two declared schema substrates: the
+  `kungfu/yijinjing/schema` Hana closed set for kernel facts, and `.fbs` for
+  open/domain facts. Every component consumes the same frame protocol rather
+  than inventing a language-local fact format.
 - **Zero-copy, multi-language runtime** — the same in-process journal data is
   shared across C++, Python, and Node (N-API) without serialization on the hot
   path.

@@ -5,8 +5,9 @@
 - Category: (architecture) Episode manifest storage and schema ownership
 - Subsystem: yijinjing schema, journal mmap, Episode manifests, runtime storage
   service, Python bindings, Node bindings, Rewind payloads.
-- Related: ADR-0002 defines the FlatBuffers runtime schema over the zero-copy
-  POD layout. ADR-0022 defines the C++ core as the action-recording membrane.
+- Related: ADR-0047 assigns closed kernel records to the Hana POD substrate and
+  open/domain facts to FlatBuffers. ADR-0022 defines the C++ core as the
+  action-recording membrane.
   ADR-0033 defines Episode as the first-class causal segment object.
   [`docs/episode-object-model.md`](../../../../docs/episode-object-model.md)
   describes the Episode object model.

@@ -13,6 +13,15 @@
   with the completed data-axis work in
   [ADR-0002](ADR-0002-yijinjing-schema-runtime-layout.md).
 
+## Schema premise supersession
+
+The control-axis decision in this record stands. Its description of the data
+axis as one FlatBuffers runtime schema is historical and was superseded by
+ADR-0047: the kernel remained a Hana POD closed set, while FlatBuffers owns the
+open/domain substrate. The `nng` transport migration and the value of generated
+open schemas remain valid evidence; they no longer imply FlatBuffers ownership
+of closed kernel layouts.
+
 ## Context
 
 v4's modernization so far has de-risked the **data axis**: yijinjing schema moved to a

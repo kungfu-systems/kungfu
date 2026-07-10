@@ -122,7 +122,7 @@ the same C++ service and must not manage RocksDB handles or provider-specific
 retry policy themselves.
 
 The C++ contract surface under `<kungfu/yijinjing/storage...>` is the Hana-core
-kernel record vocabulary (ADR-0037) plus the content-addressed body store:
+kernel record vocabulary (ADR-0037/0047) plus the content-addressed body store:
 
 | Header | Contract role |
 | --- | --- |
@@ -489,8 +489,9 @@ the workspace root as:
 `kungfu storage layout --json` is the v1 inspection surface for this resolved
 layout. It enters through the C++ `kungfu.runtime.storage-service/v1` operation
 `layout`, so Python, Node, CLI, and GUI code can inspect the same paths without
-redefining path rules. The returned JSON is an inspection contract, not a fact
-source: Episode authority remains the yijinjing manifest journal, source
+redefining path rules. The returned JSON is a CLI/adapter inspection projection,
+not a fact source or the semantic C++ service contract: Episode authority
+remains the yijinjing manifest journal, source
 authority remains accepted manifests plus content-addressed payloads, and
 SQLite/RocksDB remain provider/projection implementation details behind the
 storage service API.
@@ -509,9 +510,12 @@ projection drift (degraded, never failed — a rebuild restores the view).
 through `libkungfu` (`kungfu.runtime.storage-service/v1` operation `query`)
 instead of letting Python, Node, CLI, or GUI code read SQLite directly. The
 query surface supports `sources`, `manifests`, and `entries`, source filtering,
-entry-kind filtering, ISO time ranges, and a bounded limit. It returns JSON
-rows folded by the C++ service from the journals — the authority — while the
-SQLite files serve external SQL tooling.
+entry-kind filtering, ISO time ranges, and a bounded limit. The current
+pre-release service returns JSON rows folded from the authoritative journals.
+ADR-0047 requires the semantic service and Hana/`sqlite_orm` query path to
+return typed rows/views internally, with JSON produced only by the CLI/binding
+edge adapter. The SQLite files remain rebuildable projections and may serve
+external SQL tooling; they never become authority.
 
 The user-facing generic commands are:
 

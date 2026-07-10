@@ -40,8 +40,11 @@ All in-repo Rust lives in one cargo workspace:
 ```text
 crates/
   Cargo.toml          # workspace; shared release profile (size-optimized, stripped)
-  shifu/        # first member: the launcher
+  shifu/              # first member: the launcher (binary)
     Cargo.toml        # per-component version = its release pin
+    src/
+  shifu-core/         # the shifu role as a library (bootstrap + probe); unpublished
+    Cargo.toml        # own version, NOT lerna-synced — no release pin surface
     src/
 ```
 
@@ -188,3 +191,31 @@ It scores three yeses: it *is* the process boundary in front of everything
 else; it needs to exist before node/python are provisioned, which only a
 self-contained binary can do; and it is a thin dispatcher that changes rarely
 because build logic stays declarative in the repo.
+
+### The role as a library: shifu-core
+
+The launcher is only the first bearer of the shifu role — the product's Rust
+trunk is the queued second
+([ADR-0046](../framework/core/docs/adr/ADR-0046-rust-host-trunk-and-assembled-runtime.md):
+stage 1 shares the bootstrap leg for its lazy pinned-uv fetch, stage 3
+consumes the rest). So the parts of the role every bearer needs live in
+`crates/shifu-core`, an unpublished workspace library, and each new appearance
+of the role adds a probe or a tool spec instead of re-implementing downloads
+and checklists. Two legs, one discipline each:
+
+- **bootstrap** — acquire pinned tools. `FetchSpec`/`fetch` is the engine
+  (exact version + URL, optional pinned SHA-256 verified before the cache is
+  touched, user-global cache placement); `Tool` is the launcher-flavored front
+  end (repo pin files, env overrides, mirror envs, release asset naming). A
+  failed fetch is a named error carrying the exact URL, the expected checksum,
+  and the mirror override to set — self-diagnosing by construction.
+- **probe** — declarative environment checks (`label / probe / required /
+  hint / repair_cmd`), findings rendered by a shared reporter. Reports, never
+  repairs: a probe that knows the exact fix names it in `repair_cmd`, printed
+  next to the failure; executing it stays a human decision. The dev doctor is
+  the first consumer, including the seed probes with which the bootstrap leg
+  diagnoses itself (cache health, mirror reachability, pin-vs-cache bite).
+
+Distribution-wise the library is deliberately invisible: never published,
+never tagged, no shim, version not lerna-synced — the launcher's release pin
+surface stays exactly one crate wide.
