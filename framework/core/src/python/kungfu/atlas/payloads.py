@@ -18,7 +18,6 @@ from kungfu.atlas import (
     ACTION_MARKER_SNAPSHOT,
     ACTION_MISSION_SNAPSHOT,
 )
-from kungfu.storage import service as storage_service
 
 CONTENT_TYPE_JSON = "application/json"
 FRAME_INTEGRITY_VERSION_V1 = 1
@@ -388,20 +387,20 @@ def write_import_payloads(
         "entries": sorted_entries,
         "sync_root": compute_sync_root(sorted_entries),
     }
-    manifest["storage_manifest"] = storage_service.build_import_manifest(
-        {
-            "manifest_id": import_id,
-            "storage_source_id": storage_source_id,
-            "source_type": source_type,
-            "source_coordinate": repo_root,
-            "source_head": repo_head,
-            "scope": "atlas",
-            "range": manifest["range"],
-            "counts": counts,
-            "entries": sorted_entries,
-            "sync_root": manifest["sync_root"],
-        }
-    )
+    # The storage-service acceptance input (ADR-0037): an adapter-edge
+    # document. Acceptance turns it into Hana-core journal records; the
+    # adapter keeps a copy of what it submitted.
+    manifest["storage_manifest"] = {
+        "manifest_id": import_id,
+        "storage_source_id": storage_source_id,
+        "source_type": source_type,
+        "source_coordinate": repo_root,
+        "source_head": repo_head,
+        "scope": "atlas",
+        "range": manifest["range"] or {},
+        "entries": sorted_entries,
+        "sync_root": manifest["sync_root"],
+    }
 
     manifest_path = import_manifest_path(store_dir, import_id)
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -768,13 +767,22 @@ def fsck_import(
     _check_sync_root(report, manifest, manifest_entries)
     storage_manifest = manifest.get("storage_manifest")
     if isinstance(storage_manifest, dict):
+        # The storage_manifest is the acceptance input document (ADR-0037):
+        # check it structurally and against this manifest before it is (re-)
+        # submitted to the storage service.
         report["checked"]["storage_manifests"] += 1
-        for issue in storage_service.verify_import_manifest(storage_manifest):
-            if issue.get("severity") == "warning":
-                report["warnings"].append(issue)
-            else:
+        for field in ("manifest_id", "storage_source_id"):
+            if not str(storage_manifest.get(field) or ""):
                 report["ok"] = False
-                report["errors"].append(issue)
+                report["errors"].append(
+                    {"code": "missing_field", "path": f"$.storage_manifest.{field}"}
+                )
+        if storage_manifest.get("entries") != manifest.get("entries"):
+            report["ok"] = False
+            report["errors"].append({"code": "storage_manifest_entries_drift"})
+        if storage_manifest.get("sync_root") != manifest.get("sync_root"):
+            report["ok"] = False
+            report["errors"].append({"code": "storage_manifest_sync_root_drift"})
     else:
         report["ok"] = False
         report["errors"].append({"code": "storage_manifest_missing"})

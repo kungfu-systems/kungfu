@@ -449,8 +449,17 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
     assert layout["config_home"] == str(config_home)
     assert layout["paths"]["data_home"] == str(workspace_home)
     assert layout["paths"]["storage_dir"] == str(runtime_dir / "storage")
-    assert layout["paths"]["sqlite_projection"] == str(
-        runtime_dir / "storage/projections/storage.sqlite"
+    assert layout["paths"]["manifest_catalog_journal"] == str(
+        runtime_dir / "journal/system/storage/manifest-catalog/live/*.journal"
+    )
+    assert layout["paths"]["source_registry_journal"] == str(
+        runtime_dir / "journal/system/storage/source-registry/live/*.journal"
+    )
+    assert layout["paths"]["source_registry_projection"] == str(
+        runtime_dir / "storage/projections/source-registry.sqlite"
+    )
+    assert layout["paths"]["manifest_catalog_projection"] == str(
+        runtime_dir / "storage/projections/manifest-catalog.sqlite"
     )
     assert layout["paths"]["episode_manifest_journal"] == str(
         runtime_dir / "journal/system/storage/episode-manifest/live/*.journal"
@@ -1233,36 +1242,54 @@ def test_storage_maintenance_rebuild_gc_compact_and_sync_check(tmp_path):
     status = storage_service.status(runtime_dir, source_id="local-synth")
     assert status["source_status"][0]["accepted_cursor"]["source_head"] == "head-1"
     assert status["source_status"][0]["sync_root"] == accepted["sync_root"]
+    # The JSON-as-contract artifacts are retired (ADR-0037 final slice): no
+    # sources.json registry and no per-source manifest files — the journals
+    # are the authority.
+    assert not (runtime_dir / "storage" / "sources.json").exists()
+    assert not (runtime_dir / "storage" / "sources").exists()
 
-    storage_service.registry_path(runtime_dir).unlink()
     dry_rebuild = storage_service.rebuild_index(
         runtime_dir, source_id="local-synth", dry_run=True
     )
     assert dry_rebuild["ok"]
     assert dry_rebuild["would_write"]
-    assert not storage_service.registry_path(runtime_dir).exists()
+    assert not (runtime_dir / "storage/projections/manifest-catalog.sqlite").exists()
 
     rebuild = storage_service.rebuild_index(runtime_dir, source_id="local-synth")
     assert rebuild["ok"]
     assert rebuild["written"]
-    sqlite_projection = next(
-        row for row in rebuild["projections"] if row["name"] == "sqlite"
+    catalog_projection = next(
+        row
+        for row in rebuild["projections"]
+        if row["name"] == "manifest-catalog-sqlite"
     )
-    assert sqlite_projection["written"] is True
-    assert sqlite_projection["rows"] == {"sources": 1, "manifests": 1, "entries": 1}
-    sqlite_path = runtime_dir / "storage/projections/storage.sqlite"
+    assert catalog_projection["written"] is True
+    assert catalog_projection["rows"]["import_manifest_accepted"] == 1
+    assert catalog_projection["rows"]["manifest_entry_recorded"] == 1
+    assert catalog_projection["rows"]["channel_cursor_updated"] == 1
+    sqlite_path = runtime_dir / "storage/projections/manifest-catalog.sqlite"
     assert sqlite_path.exists()
     with sqlite3.connect(sqlite_path) as db:
-        assert db.execute("select count(*) from storage_sources").fetchone()[0] == 1
-        assert db.execute("select count(*) from storage_manifests").fetchone()[0] == 1
-        assert db.execute("select count(*) from storage_entries").fetchone()[0] == 1
+        tables = {
+            row[0]
+            for row in db.execute("select name from sqlite_master where type = 'table'")
+        }
+        assert {
+            "ImportManifestAccepted",
+            "ManifestEntryRecorded",
+            "ExportBundleRecorded",
+            "ChannelCursorUpdated",
+        } <= tables
+        assert (
+            db.execute("select count(*) from ImportManifestAccepted").fetchone()[0] == 1
+        )
     assert storage_service.status(runtime_dir, source_id="local-synth")["ok"]
     status = storage_service.status(runtime_dir, source_id="local-synth")
-    status_sqlite = next(
-        row for row in status["projections"] if row["name"] == "sqlite"
+    status_catalog = next(
+        row for row in status["projections"] if row["name"] == "manifest-catalog-sqlite"
     )
-    assert status_sqlite["exists"] is True
-    assert status_sqlite["counts"] == {"sources": 1, "manifests": 1, "entries": 1}
+    assert status_catalog["projection_present"] is True
+    assert status_catalog["status"] == "ok"
 
     orphan_raw = b'{"orphan":true}'
     orphan_hash = payloads.payload_hash(orphan_raw)
@@ -1276,14 +1303,15 @@ def test_storage_maintenance_rebuild_gc_compact_and_sync_check(tmp_path):
     compact = storage_service.compact_plan(runtime_dir, dry_run=True)
     assert compact["ok"]
     assert compact["gc"]["candidate_count"] == 1
-    assert compact["projection_compact"]["name"] == "sqlite"
+    assert compact["projection_compact"]["name"] == "manifest-catalog-sqlite"
     assert compact["projection_compact"]["action"] == "rebuild-and-vacuum"
     assert any(row["name"] == "backend-compact" for row in compact["unsupported"])
 
     fsck = storage_service.fsck(runtime_dir)
     assert fsck["ok"]
     assert fsck["checked"]["projection_indexes"] == 2
-    assert fsck["checked"]["sqlite_projection_rows"] == 3
+    assert fsck["checked"]["manifests"] == 1
+    assert fsck["checked"]["entries_documents"] == 1
     assert fsck["checked"]["orphan_payloads"] == 1
     assert any(warning["code"] == "orphan_payload" for warning in fsck["warnings"])
 
@@ -1304,7 +1332,11 @@ def test_atlas_import_persists_generic_source_manifest(tmp_path):
         source_type="atlas",
         repo=str(repo),
     )
-    assert result["storage_record"]["schema"] == "kungfu.storage.source-record/v1"
+    # add_source registers into the source-registry kernel journal; the
+    # storage_record is that journal's fold edge (ADR-0037).
+    assert result["storage_record"]["schema"] == "kungfu.storage.source-registry/v1"
+    assert result["storage_record"]["source_id"] == "atlas-local"
+    assert result["storage_record"]["kind"] == "adapter"
 
     sync = source_store.sync_source(runtime_dir, "atlas-local")
     assert sync["ok"]

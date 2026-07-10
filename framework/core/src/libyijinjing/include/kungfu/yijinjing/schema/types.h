@@ -83,6 +83,17 @@ KF_JSON_SERIALIZE_ENUM(SourceVerificationStatus, {
 
 inline std::ostream &operator<<(std::ostream &os, SourceVerificationStatus t) { return os << int32_t(t); }
 
+enum class PayloadState : int8_t { Present = 1, Redacted = 2, Absent = 3, Missing = 4 };
+
+KF_JSON_SERIALIZE_ENUM(PayloadState, {
+                                         {PayloadState::Present, "Present"},
+                                         {PayloadState::Redacted, "Redacted"},
+                                         {PayloadState::Absent, "Absent"},
+                                         {PayloadState::Missing, "Missing"},
+                                     })
+
+inline std::ostream &operator<<(std::ostream &os, PayloadState t) { return os << int32_t(t); }
+
 } // namespace kungfu::yijinjing::enums
 
 namespace kungfu::yijinjing::types {
@@ -378,6 +389,92 @@ KF_DEFINE_PACK_TYPE(                                                            
     (enums::SourceVerificationStatus, status),                                          //
     (array<char, 128>, source_id),                                                      //
     (array<char, 128>, manifest_id)                                                     //
+);
+
+// Storage manifest-catalog records (ADR-0037, final slice): the ADR-0018
+// import-manifest / export-bundle / channel-cursor family as Hana-core kernel
+// metadata in an append-only yijinjing journal. Variable-length manifest
+// entries grow as ManifestEntryRecorded delta records; the exact accepted
+// entries document is committed by content hash (entries_hash) into the
+// content store, so the JSON edge and the cross-store sync root stay
+// byte-reproducible. JSON is an edge projection only, never the contract.
+KF_DEFINE_PACK_TYPE(                                                         //
+    ImportManifestAccepted, 10904, PK(manifest_uid), TIMESTAMP(accept_time), //
+    (uint32_t, schema_version),                                              //
+    (uint64_t, manifest_uid),                                                //
+    (uint64_t, source_uid),                                                  //
+    (uint32_t, location_uid),                                                //
+    (int64_t, accept_time),                                                  //
+    (uint64_t, entry_count),                                                 //
+    (uint64_t, entries_byte_len),                                            //
+    (enums::SourceVerificationStatus, status),                               //
+    (array<char, 32>, scope),                                                //
+    (array<char, 32>, source_type),                                          //
+    (array<char, 128>, source_id),                                           //
+    (array<char, 128>, manifest_id),                                         //
+    (array<char, 128>, source_head),                                         //
+    (array<char, 256>, source_coordinate),                                   //
+    (array<char, 40>, range_since),                                          //
+    (array<char, 40>, range_until),                                          //
+    (array<char, 16>, sync_root_algo),                                       //
+    (array<char, 72>, sync_root_value),                                      //
+    (array<char, 72>, entries_hash)                                          //
+);
+
+KF_DEFINE_PACK_TYPE(                                                                     //
+    ManifestEntryRecorded, 10905, PK(manifest_uid, entry_index), TIMESTAMP(accept_time), //
+    (uint32_t, schema_version),                                                          //
+    (uint64_t, manifest_uid),                                                            //
+    (uint64_t, source_uid),                                                              //
+    (uint64_t, entry_index),                                                             //
+    (uint32_t, location_uid),                                                            //
+    (int64_t, accept_time),                                                              //
+    (uint32_t, entry_schema_version),                                                    //
+    (uint64_t, byte_len),                                                                //
+    (enums::PayloadState, payload_state),                                                //
+    (array<char, 64>, kind),                                                             //
+    (array<char, 128>, entry_source_id),                                                 //
+    (array<char, 256>, source_path),                                                     //
+    (array<char, 40>, source_time),                                                      //
+    (array<char, 64>, content_type),                                                     //
+    (array<char, 72>, payload_hash),                                                     //
+    (array<char, 72>, commitment_hash)                                                   //
+);
+
+KF_DEFINE_PACK_TYPE(                                                                  //
+    ExportBundleRecorded, 10906, PK(bundle_uid, export_time), TIMESTAMP(export_time), //
+    (uint32_t, schema_version),                                                       //
+    (uint64_t, bundle_uid),                                                           //
+    (uint64_t, manifest_uid),                                                         //
+    (uint64_t, source_uid),                                                           //
+    (uint32_t, location_uid),                                                         //
+    (int64_t, export_time),                                                           //
+    (uint64_t, exported_records),                                                     //
+    (uint64_t, entry_count),                                                          //
+    (array<char, 128>, source_id),                                                    //
+    (array<char, 128>, manifest_id),                                                  //
+    (array<char, 40>, range_since),                                                   //
+    (array<char, 40>, range_until),                                                   //
+    (array<char, 16>, sync_root_algo),                                                //
+    (array<char, 72>, sync_root_value)                                                //
+);
+
+KF_DEFINE_PACK_TYPE(                                                                   //
+    ChannelCursorUpdated, 10907, PK(channel_uid, update_time), TIMESTAMP(update_time), //
+    (uint32_t, schema_version),                                                        //
+    (uint64_t, channel_uid),                                                           //
+    (uint64_t, source_uid),                                                            //
+    (uint64_t, manifest_uid),                                                          //
+    (uint32_t, location_uid),                                                          //
+    (int64_t, update_time),                                                            //
+    (uint64_t, entry_count),                                                           //
+    (array<char, 128>, source_id),                                                     //
+    (array<char, 128>, manifest_id),                                                   //
+    (array<char, 128>, source_head),                                                   //
+    (array<char, 40>, range_since),                                                    //
+    (array<char, 40>, range_until),                                                    //
+    (array<char, 16>, sync_root_algo),                                                 //
+    (array<char, 72>, sync_root_value)                                                 //
 );
 
 KF_DEFINE_PACK_TYPE(                                                   //

@@ -80,19 +80,23 @@ def add_source(
         "last_source_head": previous.get("last_source_head"),
         "last_range": previous.get("last_range"),
     }
-    source["storage_record"] = storage_service.build_source_record(
-        {
-            "source_id": source_id,
-            "source_type": source_type,
-            "source_coordinate": source["repo"],
-            "updated_at": stamp,
-        }
-    )
+    # Register the source in the storage kernel's source-registry journal
+    # (ADR-0037); the edge record comes back from the journal fold, not from
+    # a JSON registry file.
+    inspected = storage_service.source_inspect(str(runtime_dir), source_id=source_id)
+    if not inspected.get("ok"):
+        storage_service.source_register(
+            str(runtime_dir),
+            source_id=source_id,
+            kind="adapter",
+            coordinate=source["repo"],
+        )
+        inspected = storage_service.source_inspect(
+            str(runtime_dir), source_id=source_id
+        )
+    source["storage_record"] = inspected.get("source")
     sources[source_id] = source
     save_registry(runtime_dir, registry)
-    generic_registry = storage_service.load_registry(Path(runtime_dir))
-    generic_registry["sources"][source_id] = source["storage_record"]
-    storage_service.save_registry(Path(runtime_dir), generic_registry)
     return source
 
 
@@ -175,8 +179,8 @@ def sync_source(
             "last_range": result.get("range"),
         }
     )
-    generic_registry = storage_service.load_registry(Path(runtime_dir))
-    source["storage_record"] = generic_registry["sources"].get(source_id)
+    inspected = storage_service.source_inspect(str(runtime_dir), source_id=source_id)
+    source["storage_record"] = inspected.get("source") if inspected.get("ok") else None
     save_registry(runtime_dir, registry)
     return {"ok": True, "source": source, "sync": result}
 

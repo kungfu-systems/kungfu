@@ -31,6 +31,16 @@ struct sync_root_issue {
 
 [[nodiscard]] nlohmann::json make_sync_root_entry_commitment(const nlohmann::json &entry);
 
+// The leaf hash of one entry commitment — the exact per-entry input of the
+// linear chain. Recorded per entry by the manifest catalog (ADR-0037) so the
+// chain is recomputable from kernel records without the entries document.
+[[nodiscard]] std::string sync_root_entry_leaf_hash(const nlohmann::json &entry);
+
+// Fold pre-computed leaf hashes into the linear-chain sync root. Identical
+// proof semantics to compute_linear_sync_root; the leaves are its per-entry
+// hashes.
+[[nodiscard]] nlohmann::json compute_linear_sync_root_from_leaves(const std::vector<std::string> &leaf_hashes);
+
 [[nodiscard]] nlohmann::json compute_linear_sync_root(const std::vector<nlohmann::json> &entries);
 
 [[nodiscard]] std::vector<sync_root_issue> verify_linear_sync_root(const nlohmann::json &actual,

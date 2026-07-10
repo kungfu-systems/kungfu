@@ -82,15 +82,14 @@ int main(int argc, char **argv) {
   } // writer closed; from here on the process only reads the format
 
   // ── read side: reconstruct the identity, reopen, assert the chain ──
-  storage::manifest_ref manifest{};
-  manifest.source.id = "embedding_slice";
-  manifest.source.kind = storage::source_kind::Local;
-  manifest.location.namespace_ = namespace_;
-  manifest.location.name = name;
-  manifest.range.first_frame_uid = written_uids.front();
-  manifest.range.last_frame_uid = written_uids.back();
-  if (!manifest.range.has_frame_bounds()) {
-    std::cerr << "FAIL: storage manifest contract did not preserve frame bounds\n";
+  // The storage kernel vocabulary for an accepted frame range is the POD
+  // closed-set record (ADR-0037), not a heap struct.
+  types::AcceptedRangeRecorded accepted{};
+  kungfu::copy_string(accepted.source_id, "embedding_slice");
+  accepted.first_frame_uid = written_uids.front();
+  accepted.last_frame_uid = written_uids.back();
+  if (accepted.first_frame_uid == 0 || accepted.last_frame_uid == 0) {
+    std::cerr << "FAIL: storage accepted-range record did not preserve frame bounds\n";
     return 1;
   }
 

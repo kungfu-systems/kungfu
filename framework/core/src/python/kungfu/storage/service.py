@@ -7,13 +7,13 @@ from typing import Any
 import kungfu
 
 from kungfu.action_envelope import canonical_json_bytes, payload_hash
-from kungfu.content_hash import CONTENT_HASH_ALGORITHM_SHA256
 
 PAYLOAD_STATE_PRESENT = "present"
 CONTENT_TYPE_JSON = "application/json"
 SOURCE_REGISTRY_SCHEMA = "kungfu.storage.source-registry/v1"
-PROJECTION_SOURCE_REGISTRY = "source-registry"
-PROJECTION_SQLITE = "sqlite"
+MANIFEST_CATALOG_SCHEMA = "kungfu.storage.manifest-catalog/v1"
+PROJECTION_SOURCE_REGISTRY = "source-registry-sqlite"
+PROJECTION_MANIFEST_CATALOG = "manifest-catalog-sqlite"
 PROJECTION_ATLAS_JOURNAL_FOLD = "atlas-journal-fold"
 RUNTIME_STORAGE_SERVICE_SCHEMA = "kungfu.runtime.storage-service/v1"
 
@@ -72,10 +72,6 @@ def root_dir(runtime_dir: str | Path) -> Path:
     return Path(runtime_dir) / "storage"
 
 
-def registry_path(runtime_dir: str | Path) -> Path:
-    return root_dir(runtime_dir) / "sources.json"
-
-
 def payload_path(runtime_dir: str | Path, digest: str) -> Path:
     # ADR-0037: payload bodies are opaque content-addressed bytes named by the
     # content hash alone (no format-implying extension). Must match the C++
@@ -83,98 +79,8 @@ def payload_path(runtime_dir: str | Path, digest: str) -> Path:
     return root_dir(runtime_dir) / "payloads" / digest[:2] / digest
 
 
-def _payload_root(runtime_dir: str | Path) -> Path:
-    return root_dir(runtime_dir) / "payloads"
-
-
 def write_payload_bytes(runtime_dir: str | Path, digest: str, raw: bytes) -> str:
     return str(_runtime().write_storage_payload_bytes(str(runtime_dir), digest, raw))
-
-
-def source_manifest_dir(runtime_dir: str | Path, source_id: str) -> Path:
-    return root_dir(runtime_dir) / "sources" / source_id / "manifests"
-
-
-def latest_manifest_path(runtime_dir: str | Path, source_id: str) -> Path:
-    return source_manifest_dir(runtime_dir, source_id) / "latest.json"
-
-
-def manifest_path(runtime_dir: str | Path, source_id: str, manifest_id: str) -> Path:
-    return source_manifest_dir(runtime_dir, source_id) / f"{manifest_id}.json"
-
-
-def _read_json(path: Path) -> dict[str, Any] | None:
-    data = json.loads(path.read_text(encoding="utf-8"))
-    return data if isinstance(data, dict) else None
-
-
-def _manifest_paths(
-    runtime_dir: str | Path, source_id: str | None = None
-) -> list[Path]:
-    base = root_dir(runtime_dir) / "sources"
-    if source_id:
-        roots = [base / source_id / "manifests"]
-    else:
-        roots = (
-            sorted(path / "manifests" for path in base.iterdir())
-            if base.exists()
-            else []
-        )
-    paths: list[Path] = []
-    for manifest_dir in roots:
-        if manifest_dir.exists():
-            paths.extend(sorted(manifest_dir.glob("*.json")))
-    return paths
-
-
-def _latest_manifest_paths(
-    runtime_dir: str | Path, source_id: str | None = None
-) -> list[Path]:
-    base = root_dir(runtime_dir) / "sources"
-    if source_id:
-        paths = [base / source_id / "manifests" / "latest.json"]
-    else:
-        paths = sorted(base.glob("*/manifests/latest.json")) if base.exists() else []
-    return [path for path in paths if path.exists()]
-
-
-def _all_payload_paths(runtime_dir: str | Path) -> list[Path]:
-    payload_root = _payload_root(runtime_dir)
-    if not payload_root.exists():
-        return []
-    return sorted(path for path in payload_root.glob("*/*.json") if path.is_file())
-
-
-def _payload_digest_from_path(path: Path) -> str:
-    return path.stem
-
-
-def load_registry(runtime_dir: str | Path) -> dict[str, Any]:
-    path = registry_path(runtime_dir)
-    if not path.exists():
-        return {"schema": SOURCE_REGISTRY_SCHEMA, "sources": {}}
-    data = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(data, dict) or not isinstance(data.get("sources"), dict):
-        raise ValueError(f"invalid storage source registry: {path}")
-    data.setdefault("schema", SOURCE_REGISTRY_SCHEMA)
-    return data
-
-
-def save_registry(runtime_dir: str | Path, registry: dict[str, Any]) -> None:
-    path = registry_path(runtime_dir)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(registry, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-
-
-def build_source_record(input_record: dict[str, Any]) -> dict[str, Any]:
-    return dict(_runtime().build_storage_source_record(input_record))
-
-
-def build_import_manifest(input_manifest: dict[str, Any]) -> dict[str, Any]:
-    return dict(_runtime().build_storage_import_manifest(input_manifest))
 
 
 def verify_import_manifest(manifest: dict[str, Any]) -> list[dict[str, Any]]:
@@ -194,6 +100,13 @@ def _write_json(path: Path, data: dict[str, Any]) -> None:
 def accept_manifest(
     runtime_dir: str | Path, manifest: dict[str, Any]
 ) -> dict[str, Any]:
+    """Accept one import manifest into the kernel journals (ADR-0037).
+
+    ``manifest`` is the adapter-edge input document; the accepted facts are
+    Hana-core journal records and the return value is their JSON edge
+    projection.
+    """
+
     return dict(_runtime().accept_storage_manifest(str(runtime_dir), manifest))
 
 
@@ -204,101 +117,6 @@ def load_latest_manifest(
     if data is None:
         return None
     return data if isinstance(data, dict) else None
-
-
-def _referenced_payload_hashes(
-    runtime_dir: str | Path, source_id: str | None = None
-) -> set[str]:
-    hashes: set[str] = set()
-    seen_manifests: set[tuple[str, str]] = set()
-    for path in _manifest_paths(runtime_dir, source_id):
-        try:
-            manifest = _read_json(path)
-        except (OSError, json.JSONDecodeError):
-            continue
-        if not manifest:
-            continue
-        key = (
-            str(manifest.get("source_id") or ""),
-            str(manifest.get("manifest_id") or path.name),
-        )
-        if key in seen_manifests:
-            continue
-        seen_manifests.add(key)
-        for entry in _entries_for_manifest(manifest):
-            digest = str(entry.get("payload_hash") or "")
-            if digest:
-                hashes.add(digest)
-    return hashes
-
-
-def _source_projection_from_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
-    source = manifest.get("source")
-    if isinstance(source, dict):
-        return source
-    return build_source_record(
-        {
-            "source_id": manifest.get("source_id"),
-            "source_type": manifest.get("source_type"),
-            "source_head": manifest.get("source_head"),
-            "range": manifest.get("range"),
-            "manifest_id": manifest.get("manifest_id"),
-            "sync_root": manifest.get("sync_root"),
-            "accepted_ranges": manifest.get("accepted_ranges", []),
-        }
-    )
-
-
-def _accepted_cursor(manifest: dict[str, Any]) -> dict[str, Any]:
-    accepted_ranges = manifest.get("accepted_ranges", [])
-    last_range = accepted_ranges[-1] if accepted_ranges else {}
-    last_range = last_range if isinstance(last_range, dict) else {}
-    return {
-        "schema": "kungfu.storage.channel-cursor/v1",
-        "source_id": manifest.get("source_id"),
-        "manifest_id": manifest.get("manifest_id"),
-        "source_head": manifest.get("source_head") or last_range.get("source_head"),
-        "range": manifest.get("range") or last_range.get("range") or {},
-        "sync_root": manifest.get("sync_root") or last_range.get("sync_root"),
-        "entry_count": len(_entries_for_manifest(manifest)),
-    }
-
-
-def _source_manifest_status(
-    runtime_dir: str | Path, source: dict[str, Any]
-) -> dict[str, Any]:
-    source_id = str(source.get("source_id") or "")
-    manifest = load_latest_manifest(runtime_dir, source_id)
-    if manifest is None:
-        return {
-            "source_id": source_id,
-            "ok": False,
-            "projection": PROJECTION_SOURCE_REGISTRY,
-            "reason": "manifest_missing",
-            "source": source,
-        }
-    entries = _entries_for_manifest(manifest)
-    payload_inventory = manifest.get("payload_inventory", {})
-    schema_inventory = manifest.get("schema_inventory", {})
-    return {
-        "source_id": source_id,
-        "ok": True,
-        "projection": PROJECTION_SOURCE_REGISTRY,
-        "manifest_id": manifest.get("manifest_id"),
-        "source_type": manifest.get("source_type"),
-        "source_head": manifest.get("source_head"),
-        "accepted_ranges": manifest.get("accepted_ranges", []),
-        "accepted_cursor": _accepted_cursor(manifest),
-        "sync_root": manifest.get("sync_root"),
-        "entries": len(entries),
-        "payload_inventory": len(payload_inventory.get("entries", []))
-        if isinstance(payload_inventory, dict)
-        else 0,
-        "schema_inventory": len(schema_inventory.get("entries", []))
-        if isinstance(schema_inventory, dict)
-        else 0,
-        "source_record": source,
-    }
 
 
 def list_sources(runtime_dir: str | Path) -> list[dict[str, Any]]:
@@ -350,34 +168,6 @@ def _entries_for_manifest(
     if range_filter:
         entries = _runtime().filter_storage_manifest_entries(entries, range_filter)
     return [dict(entry) for entry in entries if isinstance(entry, dict)]
-
-
-def _load_payload(
-    runtime_dir: str | Path, entry: dict[str, Any]
-) -> tuple[Any, str | None]:
-    digest = str(entry.get("payload_hash") or "")
-    path = payload_path(runtime_dir, digest)
-    if not path.exists():
-        return None, "payload_missing"
-    raw = path.read_bytes()
-    expected_len = entry.get("byte_len")
-    if not isinstance(expected_len, int) or expected_len < 0:
-        return None, "byte_len_mismatch"
-    try:
-        error = _runtime().verify_storage_payload(
-            raw,
-            digest,
-            expected_len,
-            CONTENT_HASH_ALGORITHM_SHA256,
-        )
-    except ValueError:
-        return None, "hash_mismatch"
-    if error:
-        return None, str(error)
-    try:
-        return json.loads(raw.decode("utf-8")), None
-    except (UnicodeDecodeError, json.JSONDecodeError):
-        return None, "payload_decode_error"
 
 
 def fsck(
@@ -476,6 +266,42 @@ def repair_apply(
                 "dry_run": dry_run,
                 "bundle": _binding_json(repair_input),
             },
+        )
+    )
+
+
+def source_register(
+    runtime_dir: str | Path,
+    *,
+    source_id: str,
+    kind: str = "local",
+    coordinate: str = "",
+    head: str = "",
+) -> dict[str, Any]:
+    """Register a source in the source-registry kernel journal (ADR-0037)."""
+
+    return dict(
+        _runtime().run_storage_service_operation(
+            "source_register",
+            str(runtime_dir),
+            {
+                "source_id": source_id,
+                "kind": kind,
+                "coordinate": coordinate,
+                "head": head,
+            },
+        )
+    )
+
+
+def source_inspect(runtime_dir: str | Path, *, source_id: str) -> dict[str, Any]:
+    """Fold the source-registry journal into one source's edge view."""
+
+    return dict(
+        _runtime().run_storage_service_operation(
+            "source_inspect",
+            str(runtime_dir),
+            {"source_id": source_id},
         )
     )
 
@@ -857,7 +683,7 @@ def export_jsonl(
 ) -> dict[str, Any]:
     manifest = load_latest_manifest(runtime_dir, source_id)
     if manifest is None:
-        raise FileNotFoundError(str(latest_manifest_path(runtime_dir, source_id)))
+        raise FileNotFoundError(f"no accepted manifest for source: {source_id}")
     records = export_records(
         runtime_dir, source_id=source_id, range_filter=range_filter
     )
@@ -984,7 +810,8 @@ def write_synthetic_source(
                 ),
             }
         )
-    manifest = build_import_manifest(
+    return accept_manifest(
+        runtime_dir,
         {
             "manifest_id": manifest_id,
             "storage_source_id": source_id,
@@ -992,9 +819,7 @@ def write_synthetic_source(
             "source_coordinate": f"synthetic:{source_id}",
             "source_head": source_head,
             "scope": "source",
-            "range": range_filter,
-            "counts": {"records": len(entries)},
+            "range": range_filter or {},
             "entries": entries,
-        }
+        },
     )
-    return accept_manifest(runtime_dir, manifest)

@@ -62,7 +62,11 @@ constexpr auto AllTypes = boost::hana::make_map( //
     TYPE_PAIR(EpisodeClosed),                    // 10805
     TYPE_PAIR(SourceRegistered),                 // 10901
     TYPE_PAIR(SourceHeadUpdated),                // 10902
-    TYPE_PAIR(AcceptedRangeRecorded)             // 10903
+    TYPE_PAIR(AcceptedRangeRecorded),            // 10903
+    TYPE_PAIR(ImportManifestAccepted),           // 10904
+    TYPE_PAIR(ManifestEntryRecorded),            // 10905
+    TYPE_PAIR(ExportBundleRecorded),             // 10906
+    TYPE_PAIR(ChannelCursorUpdated)              // 10907
 );
 
 constexpr auto AllDataTypes = boost::hana::make_map( //
@@ -98,7 +102,11 @@ constexpr auto AllDataTypes = boost::hana::make_map( //
     TYPE_PAIR(EpisodeClosed),                        // 10805
     TYPE_PAIR(SourceRegistered),                     // 10901
     TYPE_PAIR(SourceHeadUpdated),                    // 10902
-    TYPE_PAIR(AcceptedRangeRecorded)                 // 10903
+    TYPE_PAIR(AcceptedRangeRecorded),                // 10903
+    TYPE_PAIR(ImportManifestAccepted),               // 10904
+    TYPE_PAIR(ManifestEntryRecorded),                // 10905
+    TYPE_PAIR(ExportBundleRecorded),                 // 10906
+    TYPE_PAIR(ChannelCursorUpdated)                  // 10907
 );
 
 constexpr auto CorePublicDataTypes = boost::hana::make_map( //
@@ -134,7 +142,11 @@ constexpr auto CorePublicDataTypes = boost::hana::make_map( //
     TYPE_PAIR(EpisodeClosed),                               // 10805
     TYPE_PAIR(SourceRegistered),                            // 10901
     TYPE_PAIR(SourceHeadUpdated),                           // 10902
-    TYPE_PAIR(AcceptedRangeRecorded)                        // 10903
+    TYPE_PAIR(AcceptedRangeRecorded),                       // 10903
+    TYPE_PAIR(ImportManifestAccepted),                      // 10904
+    TYPE_PAIR(ManifestEntryRecorded),                       // 10905
+    TYPE_PAIR(ExportBundleRecorded),                        // 10906
+    TYPE_PAIR(ChannelCursorUpdated)                         // 10907
 );
 
 constexpr auto CorePublicProfileDataTypes = boost::hana::make_map( //
@@ -173,6 +185,18 @@ constexpr auto SourceRegistryDataTypes = boost::hana::make_map( //
     TYPE_PAIR(SourceRegistered),                                // 10901
     TYPE_PAIR(SourceHeadUpdated),                               // 10902
     TYPE_PAIR(AcceptedRangeRecorded)                            // 10903
+);
+
+// ADR-0037 (final slice): the manifest-catalog record family — import-manifest
+// acceptance, per-entry deltas, export-bundle receipts, and channel cursors —
+// as a Hana closed set for the rebuildable SQLite projection
+// (cache::make_storage_ptr), the same path the source-registry projection
+// uses. The manifest-catalog journal stays the authority.
+constexpr auto ManifestCatalogDataTypes = boost::hana::make_map( //
+    TYPE_PAIR(ImportManifestAccepted),                           // 10904
+    TYPE_PAIR(ManifestEntryRecorded),                            // 10905
+    TYPE_PAIR(ExportBundleRecorded),                             // 10906
+    TYPE_PAIR(ChannelCursorUpdated)                              // 10907
 );
 
 // ADR-0041: the Episode manifest record family as a Hana closed set for the

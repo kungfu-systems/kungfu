@@ -22,11 +22,12 @@
 
 #include <kungfu/runtime/action_recorder.h>
 #include <kungfu/runtime/storage/episode_manifest_projection.h>
+#include <kungfu/runtime/storage/manifest_catalog_projection.h>
 #include <kungfu/runtime/storage/source_registry_projection.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
 #include <kungfu/yijinjing/storage/content_store.h>
 #include <kungfu/yijinjing/storage/episode_manifest.h>
-#include <kungfu/yijinjing/storage/generic_service.h>
+#include <kungfu/yijinjing/storage/manifest_catalog.h>
 #include <kungfu/yijinjing/storage/source_registry.h>
 #include <kungfu/yijinjing/storage/sync_root.h>
 #include <rocksdb/db.h>
@@ -44,12 +45,23 @@ namespace {
 inline constexpr const char *PAYLOAD_STATE_PRESENT = "present";
 inline constexpr const char *PAYLOAD_STATE_REDACTED = "redacted";
 inline constexpr const char *PAYLOAD_STATE_ABSENT = "absent";
-inline constexpr const char *PAYLOAD_STATE_MISSING = "missing";
 inline constexpr const char *CONTENT_TYPE_JSON = "application/json";
-inline constexpr const char *SOURCE_REGISTRY_SCHEMA = "kungfu.storage.source-registry/v1";
-inline constexpr const char *PROJECTION_SOURCE_REGISTRY = "source-registry";
-inline constexpr const char *PROJECTION_SQLITE = "sqlite";
-inline constexpr const char *SQLITE_PROJECTION_SCHEMA = "kungfu.storage.sqlite-projection/v1";
+
+const char *payload_state_text(yy_enums::PayloadState state) {
+  switch (state) {
+  case yy_enums::PayloadState::Present:
+    return PAYLOAD_STATE_PRESENT;
+  case yy_enums::PayloadState::Redacted:
+    return PAYLOAD_STATE_REDACTED;
+  case yy_enums::PayloadState::Absent:
+    return PAYLOAD_STATE_ABSENT;
+  case yy_enums::PayloadState::Missing:
+    return "missing";
+  }
+  return "missing";
+}
+inline constexpr const char *PROJECTION_SOURCE_REGISTRY = "source-registry-sqlite";
+inline constexpr const char *PROJECTION_MANIFEST_CATALOG = "manifest-catalog-sqlite";
 inline constexpr const char *PROVIDER_FILE = "content-addressed-file";
 inline constexpr const char *PROVIDER_ROCKSDB = "rocksdb";
 inline constexpr const char *ENV_STORAGE_PROVIDER = "KUNGFU_STORAGE_PROVIDER";
@@ -63,13 +75,6 @@ struct stored_payload {
   std::string digest = {};
   std::string uri = {};
   uint64_t bytes = 0;
-};
-
-struct stored_manifest {
-  std::string source_id = {};
-  std::string manifest_id = {};
-  std::string uri = {};
-  nlohmann::json value = nlohmann::json::object();
 };
 
 std::string text_or(const nlohmann::json &object, const std::string &field, const std::string &fallback = {}) {
@@ -352,17 +357,11 @@ yy_storage::accepted_range_options parse_accepted_range_options(const nlohmann::
 
 fs::path root_dir(const std::string &runtime_dir) { return fs::path(runtime_dir) / "storage"; }
 
-fs::path registry_path(const std::string &runtime_dir) { return root_dir(runtime_dir) / "sources.json"; }
-
 fs::path payload_root(const std::string &runtime_dir) { return root_dir(runtime_dir) / "payloads"; }
 
 fs::path rocksdb_root(const std::string &runtime_dir) { return root_dir(runtime_dir) / "rocksdb"; }
 
 fs::path projection_root(const std::string &runtime_dir) { return root_dir(runtime_dir) / "projections"; }
-
-fs::path sqlite_projection_path(const std::string &runtime_dir) {
-  return projection_root(runtime_dir) / "storage.sqlite";
-}
 
 fs::path payload_path(const std::string &runtime_dir, const std::string &digest) {
   // ADR-0037: payload bodies are opaque content-addressed bytes. The file is
@@ -370,18 +369,6 @@ fs::path payload_path(const std::string &runtime_dir, const std::string &digest)
   // body format is orthogonal to the record schema, which commits to the body
   // by hash, length, and payload state (content_type is record metadata).
   return payload_root(runtime_dir) / digest.substr(0, std::min<size_t>(2, digest.size())) / digest;
-}
-
-fs::path source_manifest_dir(const std::string &runtime_dir, const std::string &source_id) {
-  return root_dir(runtime_dir) / "sources" / source_id / "manifests";
-}
-
-fs::path latest_manifest_path(const std::string &runtime_dir, const std::string &source_id) {
-  return source_manifest_dir(runtime_dir, source_id) / "latest.json";
-}
-
-fs::path manifest_path(const std::string &runtime_dir, const std::string &source_id, const std::string &manifest_id) {
-  return source_manifest_dir(runtime_dir, source_id) / (manifest_id + ".json");
 }
 
 fs::path absolute_normalized(fs::path path) { return fs::absolute(std::move(path)).lexically_normal(); }
@@ -404,25 +391,8 @@ std::string optional_absolute_path(const nlohmann::json &object, const std::stri
   return value.empty() ? std::string{} : absolute_normalized(value).string();
 }
 
-std::vector<fs::path> manifest_paths(const std::string &runtime_dir, const std::string &source_id = {});
-std::vector<fs::path> latest_manifest_paths(const std::string &runtime_dir, const std::string &source_id = {});
 std::vector<fs::path> all_payload_paths(const std::string &runtime_dir);
 std::string payload_digest_from_path(const fs::path &path);
-
-std::optional<nlohmann::json> read_json_file(const fs::path &path) {
-  if (!fs::exists(path)) {
-    return std::nullopt;
-  }
-  std::ifstream input(path);
-  if (!input) {
-    throw std::runtime_error("failed to read JSON file: " + path.string());
-  }
-  auto data = nlohmann::json::parse(input);
-  if (!data.is_object()) {
-    return std::nullopt;
-  }
-  return data;
-}
 
 void write_json_file(const fs::path &path, const nlohmann::json &data) {
   fs::create_directories(path.parent_path());
@@ -485,16 +455,6 @@ public:
   [[nodiscard]] virtual std::string name() const = 0;
   [[nodiscard]] virtual nlohmann::json layout() const = 0;
   [[nodiscard]] virtual nlohmann::json runtime() const = 0;
-  [[nodiscard]] virtual std::string registry_uri() const = 0;
-  [[nodiscard]] virtual nlohmann::json load_registry() const = 0;
-  virtual void save_registry(const nlohmann::json &registry) const = 0;
-  [[nodiscard]] virtual nlohmann::json load_latest_manifest(const std::string &source_id) const = 0;
-  virtual void write_manifest(const std::string &source_id, const std::string &manifest_id,
-                              const nlohmann::json &manifest) const = 0;
-  virtual void write_latest_manifest(const std::string &source_id, const nlohmann::json &manifest) const = 0;
-  [[nodiscard]] virtual std::vector<stored_manifest> manifest_records(const std::string &source_id = {}) const = 0;
-  [[nodiscard]] virtual std::vector<stored_manifest>
-  latest_manifest_records(const std::string &source_id = {}) const = 0;
   [[nodiscard]] virtual bool payload_exists(const std::string &digest) const = 0;
   [[nodiscard]] virtual std::string read_payload(const std::string &digest) const = 0;
   virtual void write_payload(const std::string &digest, const std::string &raw) const = 0;
@@ -513,8 +473,8 @@ public:
 
   [[nodiscard]] nlohmann::json layout() const override {
     return {
-        {"source_registry", "storage/sources.json"},
-        {"source_manifests", "storage/sources/<source-id>/manifests/*.json"},
+        {"manifest_catalog_journal", "journal/system/storage/manifest-catalog/live/*.journal"},
+        {"manifest_entries", "storage/manifests/<hash-prefix>/<sha256>"},
         {"payloads", "storage/payloads/<hash-prefix>/<sha256>"},
     };
   }
@@ -525,80 +485,6 @@ public:
         {"handle", "per filesystem operation"}, {"readonly_open_creates_backend", false},
         {"write_open_creates_backend", true},
     };
-  }
-
-  [[nodiscard]] std::string registry_uri() const override { return registry_path(runtime_dir_).string(); }
-
-  [[nodiscard]] nlohmann::json load_registry() const override {
-    const auto path = registry_path(runtime_dir_);
-    if (!fs::exists(path)) {
-      return {{"schema", SOURCE_REGISTRY_SCHEMA}, {"sources", nlohmann::json::object()}};
-    }
-    auto data = read_json_file(path);
-    if (!data || !data->contains("sources") || !data->at("sources").is_object()) {
-      throw std::runtime_error("invalid storage source registry: " + path.string());
-    }
-    (*data)["schema"] = data->value("schema", SOURCE_REGISTRY_SCHEMA);
-    return *data;
-  }
-
-  void save_registry(const nlohmann::json &registry) const override {
-    write_json_file(registry_path(runtime_dir_), registry);
-  }
-
-  [[nodiscard]] nlohmann::json load_latest_manifest(const std::string &source_id) const override {
-    const auto path = latest_manifest_path(runtime_dir_, source_id);
-    if (!fs::exists(path)) {
-      return nullptr;
-    }
-    auto data = read_json_file(path);
-    return data ? *data : nlohmann::json(nullptr);
-  }
-
-  void write_manifest(const std::string &source_id, const std::string &manifest_id,
-                      const nlohmann::json &manifest) const override {
-    write_json_file(manifest_path(runtime_dir_, source_id, manifest_id), manifest);
-  }
-
-  void write_latest_manifest(const std::string &source_id, const nlohmann::json &manifest) const override {
-    write_json_file(latest_manifest_path(runtime_dir_, source_id), manifest);
-  }
-
-  [[nodiscard]] std::vector<stored_manifest> manifest_records(const std::string &source_id = {}) const override {
-    std::vector<stored_manifest> records;
-    for (const auto &path : manifest_paths(runtime_dir_, source_id)) {
-      std::optional<nlohmann::json> manifest;
-      try {
-        manifest = read_json_file(path);
-      } catch (const std::exception &) {
-        records.push_back({{}, path.filename().string(), path.string(), nullptr});
-        continue;
-      }
-      if (!manifest) {
-        continue;
-      }
-      records.push_back({text_or(*manifest, "source_id"), text_or(*manifest, "manifest_id", path.filename().string()),
-                         path.string(), *manifest});
-    }
-    return records;
-  }
-
-  [[nodiscard]] std::vector<stored_manifest> latest_manifest_records(const std::string &source_id = {}) const override {
-    std::vector<stored_manifest> records;
-    for (const auto &path : latest_manifest_paths(runtime_dir_, source_id)) {
-      std::optional<nlohmann::json> manifest;
-      try {
-        manifest = read_json_file(path);
-      } catch (const std::exception &) {
-        records.push_back({{}, "latest", path.string(), nullptr});
-        continue;
-      }
-      if (!manifest) {
-        continue;
-      }
-      records.push_back({text_or(*manifest, "source_id"), text_or(*manifest, "manifest_id"), path.string(), *manifest});
-    }
-    return records;
   }
 
   [[nodiscard]] bool payload_exists(const std::string &digest) const override {
@@ -833,8 +719,8 @@ public:
   [[nodiscard]] nlohmann::json layout() const override {
     return {
         {"database", "storage/rocksdb"},
-        {"source_registry", "registry"},
-        {"source_manifests", "manifest/<source-id>/<manifest-id> and manifest/<source-id>/latest"},
+        {"manifest_catalog_journal", "journal/system/storage/manifest-catalog/live/*.journal"},
+        {"manifest_entries", "manifests/<sha256>"},
         {"payloads", "payloads/<sha256>"},
     };
   }
@@ -850,85 +736,6 @@ public:
         {"read_options", {{"fill_cache", read_options_.fill_cache}}},
         {"write_options", {{"sync", write_options_.sync}}},
     };
-  }
-
-  [[nodiscard]] std::string registry_uri() const override { return uri_for("registry"); }
-
-  [[nodiscard]] nlohmann::json load_registry() const override {
-    std::string raw;
-    if (!get("registry", raw)) {
-      return {{"schema", SOURCE_REGISTRY_SCHEMA}, {"sources", nlohmann::json::object()}};
-    }
-    auto data = nlohmann::json::parse(raw);
-    if (!data.is_object() || !data.contains("sources") || !data.at("sources").is_object()) {
-      throw std::runtime_error("invalid storage source registry: " + registry_uri());
-    }
-    data["schema"] = data.value("schema", SOURCE_REGISTRY_SCHEMA);
-    return data;
-  }
-
-  void save_registry(const nlohmann::json &registry) const override { put("registry", canonical_json(registry)); }
-
-  [[nodiscard]] nlohmann::json load_latest_manifest(const std::string &source_id) const override {
-    std::string raw;
-    if (!get(latest_manifest_key(source_id), raw)) {
-      return nullptr;
-    }
-    auto data = nlohmann::json::parse(raw);
-    return data.is_object() ? data : nlohmann::json(nullptr);
-  }
-
-  void write_manifest(const std::string &source_id, const std::string &manifest_id,
-                      const nlohmann::json &manifest) const override {
-    put(manifest_key(source_id, manifest_id), canonical_json(manifest));
-  }
-
-  void write_latest_manifest(const std::string &source_id, const nlohmann::json &manifest) const override {
-    put(latest_manifest_key(source_id), canonical_json(manifest));
-  }
-
-  [[nodiscard]] std::vector<stored_manifest> manifest_records(const std::string &source_id = {}) const override {
-    const auto prefix = source_id.empty() ? std::string("manifest/") : "manifest/" + source_id + "/";
-    std::vector<stored_manifest> records;
-    for_each(prefix, [&](const std::string &key, const std::string &raw) {
-      if (key.ends_with("/latest")) {
-        return;
-      }
-      auto data = nlohmann::json::parse(raw);
-      if (!data.is_object()) {
-        records.push_back({{}, key.substr(key.find_last_of('/') + 1), uri_for(key), nullptr});
-        return;
-      }
-      records.push_back({text_or(data, "source_id"),
-                         text_or(data, "manifest_id", key.substr(key.find_last_of('/') + 1)), uri_for(key), data});
-    });
-    std::sort(records.begin(), records.end(),
-              [](const stored_manifest &lhs, const stored_manifest &rhs) { return lhs.uri < rhs.uri; });
-    return records;
-  }
-
-  [[nodiscard]] std::vector<stored_manifest> latest_manifest_records(const std::string &source_id = {}) const override {
-    std::vector<stored_manifest> records;
-    if (!source_id.empty()) {
-      auto manifest = load_latest_manifest(source_id);
-      if (manifest.is_object()) {
-        records.push_back({text_or(manifest, "source_id"), text_or(manifest, "manifest_id"),
-                           uri_for(latest_manifest_key(source_id)), manifest});
-      }
-      return records;
-    }
-    for_each("manifest/", [&](const std::string &key, const std::string &raw) {
-      if (!key.ends_with("/latest")) {
-        return;
-      }
-      auto data = nlohmann::json::parse(raw);
-      if (data.is_object()) {
-        records.push_back({text_or(data, "source_id"), text_or(data, "manifest_id"), uri_for(key), data});
-      }
-    });
-    std::sort(records.begin(), records.end(),
-              [](const stored_manifest &lhs, const stored_manifest &rhs) { return lhs.source_id < rhs.source_id; });
-    return records;
   }
 
   [[nodiscard]] bool payload_exists(const std::string &digest) const override {
@@ -970,12 +777,6 @@ public:
 private:
   [[nodiscard]] std::string uri_for(const std::string &key) const {
     return storage_uri(PROVIDER_ROCKSDB, runtime_dir_, key);
-  }
-  [[nodiscard]] static std::string manifest_key(const std::string &source_id, const std::string &manifest_id) {
-    return "manifest/" + source_id + "/" + manifest_id;
-  }
-  [[nodiscard]] static std::string latest_manifest_key(const std::string &source_id) {
-    return "manifest/" + source_id + "/latest";
   }
 
   // Lazily opens the engine and hands back a shared handle. RocksDB is
@@ -1163,7 +964,11 @@ nlohmann::json workspace_episode_layout(const storage_service_options &options, 
   const auto storage_dir = runtime / "storage";
   const auto episode_manifest_dir =
       journal_dir / "system" / yy_storage::EPISODE_MANIFEST_NAMESPACE / yy_storage::EPISODE_MANIFEST_NAME / "live";
-  const auto source_manifest_pattern = storage_dir / "sources" / "<source-id>" / "manifests" / "*.json";
+  const auto manifest_catalog_journal_dir =
+      journal_dir / "system" / yy_storage::MANIFEST_CATALOG_NAMESPACE / yy_storage::MANIFEST_CATALOG_NAME / "live";
+  const auto source_registry_journal_dir =
+      journal_dir / "system" / yy_storage::SOURCE_REGISTRY_NAMESPACE / yy_storage::SOURCE_REGISTRY_NAME / "live";
+  const auto manifest_entries_pattern = storage_dir / "manifests" / "<hash-prefix>" / "<sha256>";
   const auto payload_pattern = storage_dir / "payloads" / "<hash-prefix>" / "<sha256>";
 
   return {
@@ -1188,11 +993,13 @@ nlohmann::json workspace_episode_layout(const storage_service_options &options, 
         {"inbox_dir", (home / "inbox").string()},
         {"journal_dir", journal_dir.string()},
         {"storage_dir", storage_dir.string()},
-        {"source_registry", registry_path(runtime.string()).string()},
-        {"source_manifests", source_manifest_pattern.string()},
+        {"source_registry_journal", (source_registry_journal_dir / "*.journal").string()},
+        {"manifest_catalog_journal", (manifest_catalog_journal_dir / "*.journal").string()},
+        {"manifest_entries", manifest_entries_pattern.string()},
         {"payloads", payload_pattern.string()},
         {"rocksdb", rocksdb_root(runtime.string()).string()},
-        {"sqlite_projection", sqlite_projection_path(runtime.string()).string()},
+        {"source_registry_projection", source_registry_projection(runtime.string()).sqlite_path()},
+        {"manifest_catalog_projection", manifest_catalog_projection(runtime.string()).sqlite_path()},
         {"episode_manifest_journal_dir", episode_manifest_dir.string()},
         {"episode_manifest_journal", (episode_manifest_dir / "*.journal").string()},
         {"master_state", (runtime / "master").string()},
@@ -1209,10 +1016,15 @@ nlohmann::json workspace_episode_layout(const storage_service_options &options, 
       {"ownership",
        {{"journal_dir", "append-only yijinjing frames owned by the resolved runtime"},
         {"episode_manifest_journal", "append-only yijinjing manifest records; not loose JSON authority"},
-        {"storage_dir", "runtime storage service area for manifests, payloads, provider databases, and projections"},
-        {"source_registry", "derived source catalog that can be rebuilt from accepted manifests"},
+        {"storage_dir", "runtime storage service area for content-addressed bodies, provider databases, and "
+                        "projections"},
+        {"source_registry_journal", "append-only yijinjing source-registry kernel records; the source catalog"},
+        {"manifest_catalog_journal",
+         "append-only yijinjing manifest-catalog kernel records; the import/export/cursor authority"},
+        {"manifest_entries", "content-addressed accepted entries documents committed by the manifest records"},
         {"payloads", "provider-owned content-addressed payload bodies"},
-        {"sqlite_projection", "derived rebuildable query projection"},
+        {"source_registry_projection", "derived rebuildable SQLite projection over the source-registry journal"},
+        {"manifest_catalog_projection", "derived rebuildable SQLite projection over the manifest-catalog journal"},
         {"rocksdb", "optional provider-owned large-payload/key-value backend"},
         {"config_home", "user config home; intentionally outside workspace data"}}},
       {"notes", nlohmann::json::array({
@@ -1236,57 +1048,6 @@ nlohmann::json entries_for_manifest(const nlohmann::json &manifest, const nlohma
     }
   }
   return result;
-}
-
-std::vector<fs::path> manifest_paths(const std::string &runtime_dir, const std::string &source_id) {
-  std::vector<fs::path> paths;
-  const auto sources_root = root_dir(runtime_dir) / "sources";
-  std::vector<fs::path> roots;
-  if (!source_id.empty()) {
-    roots.emplace_back(sources_root / source_id / "manifests");
-  } else if (fs::exists(sources_root)) {
-    for (const auto &entry : fs::directory_iterator(sources_root)) {
-      if (entry.is_directory()) {
-        roots.emplace_back(entry.path() / "manifests");
-      }
-    }
-  }
-  std::sort(roots.begin(), roots.end());
-  for (const auto &manifest_dir : roots) {
-    if (!fs::exists(manifest_dir)) {
-      continue;
-    }
-    for (const auto &entry : fs::directory_iterator(manifest_dir)) {
-      if (entry.is_regular_file() && entry.path().extension() == ".json") {
-        paths.emplace_back(entry.path());
-      }
-    }
-  }
-  std::sort(paths.begin(), paths.end());
-  return paths;
-}
-
-std::vector<fs::path> latest_manifest_paths(const std::string &runtime_dir, const std::string &source_id) {
-  std::vector<fs::path> paths;
-  const auto sources_root = root_dir(runtime_dir) / "sources";
-  if (!source_id.empty()) {
-    const auto path = sources_root / source_id / "manifests" / "latest.json";
-    if (fs::exists(path)) {
-      paths.emplace_back(path);
-    }
-    return paths;
-  }
-  if (!fs::exists(sources_root)) {
-    return paths;
-  }
-  for (const auto &entry : fs::directory_iterator(sources_root)) {
-    const auto path = entry.path() / "manifests" / "latest.json";
-    if (entry.is_directory() && fs::exists(path)) {
-      paths.emplace_back(path);
-    }
-  }
-  std::sort(paths.begin(), paths.end());
-  return paths;
 }
 
 std::vector<fs::path> all_payload_paths(const std::string &runtime_dir) {
@@ -1317,411 +1078,47 @@ std::string payload_digest_from_path(const fs::path &path) {
   return path.filename().string();
 }
 
-nlohmann::json source_projection_from_manifest(const nlohmann::json &manifest) {
-  if (manifest.contains("source") && manifest.at("source").is_object()) {
-    return manifest.at("source");
-  }
-  return yy_storage::build_storage_source_record({
-      {"source_id", text_or(manifest, "source_id")},
-      {"source_type", text_or(manifest, "source_type")},
-      {"source_head", text_or(manifest, "source_head")},
-      {"range", object_or_empty(manifest, "range")},
-      {"manifest_id", text_or(manifest, "manifest_id")},
-      {"sync_root", object_or_empty(manifest, "sync_root")},
-      {"accepted_ranges", array_or_empty(manifest, "accepted_ranges")},
-  });
+yy_storage::manifest_catalog_store catalog_store(const std::string &runtime_dir) {
+  return yy_storage::manifest_catalog_store(runtime_dir);
 }
 
-nlohmann::json accepted_cursor(const nlohmann::json &manifest) {
-  auto accepted_ranges = array_or_empty(manifest, "accepted_ranges");
-  nlohmann::json last_range = nlohmann::json::object();
-  if (!accepted_ranges.empty() && accepted_ranges.back().is_object()) {
-    last_range = accepted_ranges.back();
-  }
-  return {
-      {"schema", "kungfu.storage.channel-cursor/v1"},
-      {"source_id", text_or(manifest, "source_id")},
-      {"manifest_id", text_or(manifest, "manifest_id")},
-      {"source_head", text_or(manifest, "source_head", text_or(last_range, "source_head"))},
-      {"range", manifest.contains("range") && manifest.at("range").is_object() ? manifest.at("range")
-                                                                               : object_or_empty(last_range, "range")},
-      {"sync_root",
-       manifest.contains("sync_root") ? manifest.at("sync_root") : object_or_empty(last_range, "sync_root")},
-      {"entry_count", entries_for_manifest(manifest).size()},
-  };
+yy_storage::source_registry_store registry_store(const std::string &runtime_dir) {
+  return yy_storage::source_registry_store(runtime_dir);
 }
 
-struct sqlite_projection_counts {
-  size_t sources = 0;
-  size_t manifests = 0;
-  size_t entries = 0;
-};
-
-std::string limit_clause(uint64_t limit) {
-  if (limit == 0) {
-    return "";
-  }
-  return " LIMIT " + std::to_string(std::min<uint64_t>(limit, 1000));
+nlohmann::json load_latest_manifest_impl(const std::string &runtime_dir, const storage_provider &provider,
+                                         const std::string &source_id) {
+  return catalog_store(runtime_dir).latest_manifest(source_id, provider.content_store());
 }
 
-class sqlite_projection {
-public:
-  explicit sqlite_projection(fs::path path, bool writable) : path_(std::move(path)) {
-    if (writable) {
-      fs::create_directories(path_.parent_path());
-    }
-    const auto flags = writable ? SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE : SQLITE_OPEN_READONLY;
-    sqlite3 *raw = nullptr;
-    const auto rc = sqlite3_open_v2(path_.string().c_str(), &raw, flags, nullptr);
-    db_.reset(raw);
-    if (rc != SQLITE_OK) {
-      throw std::runtime_error("sqlite_projection_open_failed: " + last_error());
-    }
-    if (writable) {
-      exec("PRAGMA journal_mode=WAL");
-      exec("PRAGMA synchronous=NORMAL");
-    }
-  }
+// The channel cursor is a journal record written at acceptance (ADR-0037);
+// reading it back is a fold over ChannelCursorUpdated, not a derivation from
+// the manifest edge.
+nlohmann::json accepted_cursor(const std::string &runtime_dir, const std::string &source_id) {
+  return catalog_store(runtime_dir).latest_cursor(source_id);
+}
 
-  [[nodiscard]] const fs::path &path() const { return path_; }
+// The two derived, rebuildable SQLite projections over the storage kernel
+// journals, as reported by status / fsck / capabilities.
+nlohmann::json source_registry_projection_report(const std::string &runtime_dir) {
+  auto report = source_registry_projection(runtime_dir).verify();
+  report["name"] = PROJECTION_SOURCE_REGISTRY;
+  report["path"] = source_registry_projection(runtime_dir).sqlite_path();
+  report["rebuildable"] = true;
+  return report;
+}
 
-  void create_schema() {
-    exec("CREATE TABLE IF NOT EXISTS storage_projection_meta ("
-         "key TEXT PRIMARY KEY,"
-         "value TEXT NOT NULL)");
-    exec("CREATE TABLE IF NOT EXISTS storage_sources ("
-         "source_id TEXT PRIMARY KEY,"
-         "source_type TEXT,"
-         "source_head TEXT,"
-         "manifest_id TEXT,"
-         "source_coordinate TEXT,"
-         "scope TEXT,"
-         "sync_root_json TEXT,"
-         "source_json TEXT NOT NULL)");
-    exec("CREATE TABLE IF NOT EXISTS storage_manifests ("
-         "source_id TEXT NOT NULL,"
-         "manifest_id TEXT NOT NULL,"
-         "source_head TEXT,"
-         "entry_count INTEGER NOT NULL,"
-         "sync_root_json TEXT,"
-         "manifest_json TEXT NOT NULL,"
-         "PRIMARY KEY (source_id, manifest_id))");
-    exec("CREATE TABLE IF NOT EXISTS storage_entries ("
-         "source_id TEXT NOT NULL,"
-         "manifest_id TEXT NOT NULL,"
-         "kind TEXT,"
-         "entry_source_id TEXT,"
-         "source_path TEXT,"
-         "source_time TEXT,"
-         "payload_hash TEXT,"
-         "byte_len INTEGER,"
-         "content_type TEXT,"
-         "payload_state TEXT,"
-         "entry_json TEXT NOT NULL,"
-         "PRIMARY KEY (source_id, manifest_id, kind, entry_source_id, source_path, payload_hash))");
-    exec("CREATE INDEX IF NOT EXISTS idx_storage_entries_payload_hash ON storage_entries(payload_hash)");
-    exec("CREATE INDEX IF NOT EXISTS idx_storage_entries_source_time ON storage_entries(source_time)");
-  }
+nlohmann::json manifest_catalog_projection_report(const std::string &runtime_dir) {
+  auto report = manifest_catalog_projection(runtime_dir).verify();
+  report["name"] = PROJECTION_MANIFEST_CATALOG;
+  report["path"] = manifest_catalog_projection(runtime_dir).sqlite_path();
+  report["rebuildable"] = true;
+  return report;
+}
 
-  void clear(const std::string &source_id) {
-    if (source_id.empty()) {
-      exec("DELETE FROM storage_entries");
-      exec("DELETE FROM storage_manifests");
-      exec("DELETE FROM storage_sources");
-      return;
-    }
-    exec_bound("DELETE FROM storage_entries WHERE source_id = ?", {source_id});
-    exec_bound("DELETE FROM storage_manifests WHERE source_id = ?", {source_id});
-    exec_bound("DELETE FROM storage_sources WHERE source_id = ?", {source_id});
-  }
-
-  void write_meta(const std::string &key, const std::string &value) {
-    exec_bound("INSERT OR REPLACE INTO storage_projection_meta(key, value) VALUES (?, ?)", {key, value});
-  }
-
-  void insert_source(const nlohmann::json &manifest, const nlohmann::json &source) {
-    exec_bound(
-        "INSERT OR REPLACE INTO storage_sources("
-        "source_id, source_type, source_head, manifest_id, source_coordinate, scope, sync_root_json, source_json) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        {
-            text_or(manifest, "source_id"),
-            text_or(manifest, "source_type"),
-            text_or(manifest, "source_head"),
-            text_or(manifest, "manifest_id"),
-            text_or(source, "coordinate"),
-            text_or(manifest, "scope"),
-            manifest.contains("sync_root") ? canonical_json(manifest.at("sync_root")) : std::string(),
-            canonical_json(source),
-        });
-  }
-
-  void insert_manifest(const nlohmann::json &manifest) {
-    exec_bound("INSERT OR REPLACE INTO storage_manifests("
-               "source_id, manifest_id, source_head, entry_count, sync_root_json, manifest_json) "
-               "VALUES (?, ?, ?, ?, ?, ?)",
-               {
-                   text_or(manifest, "source_id"),
-                   text_or(manifest, "manifest_id"),
-                   text_or(manifest, "source_head"),
-                   std::to_string(entries_for_manifest(manifest).size()),
-                   manifest.contains("sync_root") ? canonical_json(manifest.at("sync_root")) : std::string(),
-                   canonical_json(manifest),
-               });
-  }
-
-  void insert_entry(const nlohmann::json &manifest, const nlohmann::json &entry) {
-    exec_bound("INSERT OR REPLACE INTO storage_entries("
-               "source_id, manifest_id, kind, entry_source_id, source_path, source_time, payload_hash, byte_len, "
-               "content_type, payload_state, entry_json) "
-               "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-               {
-                   text_or(manifest, "source_id"),
-                   text_or(manifest, "manifest_id"),
-                   text_or(entry, "kind"),
-                   text_or(entry, "source_id"),
-                   text_or(entry, "source_path"),
-                   text_or(entry, "source_time"),
-                   text_or(entry, "payload_hash"),
-                   std::to_string(uint64_or(entry, "byte_len")),
-                   text_or(entry, "content_type"),
-                   text_or(entry, "payload_state"),
-                   canonical_json(entry),
-               });
-  }
-
-  [[nodiscard]] bool table_exists(const std::string &name) const {
-    sqlite3_stmt *raw = nullptr;
-    const auto rc = sqlite3_prepare_v2(db_.get(), "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", -1,
-                                       &raw, nullptr);
-    statement stmt(raw);
-    if (rc != SQLITE_OK) {
-      throw std::runtime_error("sqlite_projection_prepare_failed: " + last_error());
-    }
-    bind_text(stmt.get(), 1, name);
-    return sqlite3_step(stmt.get()) == SQLITE_ROW;
-  }
-
-  [[nodiscard]] size_t count_rows(const std::string &table, const std::string &source_id = {}) const {
-    if (!table_exists(table)) {
-      return 0;
-    }
-    sqlite3_stmt *raw = nullptr;
-    const auto sql =
-        source_id.empty() ? "SELECT COUNT(*) FROM " + table : "SELECT COUNT(*) FROM " + table + " WHERE source_id = ?";
-    const auto rc = sqlite3_prepare_v2(db_.get(), sql.c_str(), -1, &raw, nullptr);
-    statement stmt(raw);
-    if (rc != SQLITE_OK) {
-      throw std::runtime_error("sqlite_projection_prepare_failed: " + last_error());
-    }
-    if (!source_id.empty()) {
-      bind_text(stmt.get(), 1, source_id);
-    }
-    if (sqlite3_step(stmt.get()) != SQLITE_ROW) {
-      throw std::runtime_error("sqlite_projection_count_failed: " + table + ": " + last_error());
-    }
-    return static_cast<size_t>(sqlite3_column_int64(stmt.get(), 0));
-  }
-
-  [[nodiscard]] sqlite_projection_counts counts(const std::string &source_id = {}) const {
-    return {count_rows("storage_sources", source_id), count_rows("storage_manifests", source_id),
-            count_rows("storage_entries", source_id)};
-  }
-
-  [[nodiscard]] nlohmann::json query_sources(const std::string &source_id, uint64_t limit) const {
-    std::vector<std::string> values;
-    auto sql = std::string("SELECT source_json FROM storage_sources");
-    if (!source_id.empty()) {
-      sql += " WHERE source_id = ?";
-      values.emplace_back(source_id);
-    }
-    sql += " ORDER BY source_id" + limit_clause(limit);
-    return query_json_column(sql, values, 0);
-  }
-
-  [[nodiscard]] nlohmann::json query_manifests(const std::string &source_id, uint64_t limit) const {
-    std::vector<std::string> values;
-    auto sql = std::string("SELECT manifest_json FROM storage_manifests");
-    if (!source_id.empty()) {
-      sql += " WHERE source_id = ?";
-      values.emplace_back(source_id);
-    }
-    sql += " ORDER BY source_id, manifest_id" + limit_clause(limit);
-    return query_json_column(sql, values, 0);
-  }
-
-  [[nodiscard]] nlohmann::json query_entries(const storage_service_options &options) const {
-    std::vector<std::string> values;
-    std::vector<std::string> clauses;
-    if (!options.source_id.empty()) {
-      clauses.emplace_back("source_id = ?");
-      values.emplace_back(options.source_id);
-    }
-    if (!options.kind.empty()) {
-      clauses.emplace_back("kind = ?");
-      values.emplace_back(options.kind);
-    }
-    const auto since = text_or(options.range, "since");
-    if (!since.empty()) {
-      clauses.emplace_back("source_time >= ?");
-      values.emplace_back(since);
-    }
-    const auto until = text_or(options.range, "until");
-    if (!until.empty()) {
-      clauses.emplace_back("source_time <= ?");
-      values.emplace_back(until);
-    }
-    auto sql = std::string("SELECT source_id, manifest_id, entry_json FROM storage_entries");
-    if (!clauses.empty()) {
-      sql += " WHERE ";
-      for (size_t index = 0; index < clauses.size(); ++index) {
-        if (index > 0) {
-          sql += " AND ";
-        }
-        sql += clauses.at(index);
-      }
-    }
-    sql += " ORDER BY source_time, kind, entry_source_id, source_path" + limit_clause(options.limit);
-    sqlite3_stmt *raw = nullptr;
-    const auto rc = sqlite3_prepare_v2(db_.get(), sql.c_str(), -1, &raw, nullptr);
-    statement stmt(raw);
-    if (rc != SQLITE_OK) {
-      throw std::runtime_error("sqlite_projection_prepare_failed: " + last_error());
-    }
-    bind_values(stmt.get(), values);
-    nlohmann::json rows = nlohmann::json::array();
-    int step = SQLITE_ROW;
-    while ((step = sqlite3_step(stmt.get())) == SQLITE_ROW) {
-      auto row = parse_json_column(stmt.get(), 2);
-      if (row.is_object()) {
-        row["storage_source_id"] = column_text(stmt.get(), 0);
-        row["manifest_id"] = column_text(stmt.get(), 1);
-      }
-      rows.push_back(row);
-    }
-    if (step != SQLITE_DONE) {
-      throw std::runtime_error("sqlite_projection_query_failed: " + last_error());
-    }
-    return rows;
-  }
-
-  void exec(const std::string &sql) {
-    char *error = nullptr;
-    const auto rc = sqlite3_exec(db_.get(), sql.c_str(), nullptr, nullptr, &error);
-    std::string message = error ? error : "";
-    sqlite3_free(error);
-    if (rc != SQLITE_OK) {
-      throw std::runtime_error("sqlite_projection_exec_failed: " + message);
-    }
-  }
-
-private:
-  struct sqlite3_deleter {
-    void operator()(sqlite3 *db) const {
-      if (db != nullptr) {
-        sqlite3_close(db);
-      }
-    }
-  };
-
-  struct statement_deleter {
-    void operator()(sqlite3_stmt *stmt) const {
-      if (stmt != nullptr) {
-        sqlite3_finalize(stmt);
-      }
-    }
-  };
-
-  using statement = std::unique_ptr<sqlite3_stmt, statement_deleter>;
-
-  [[nodiscard]] std::string last_error() const { return db_ ? sqlite3_errmsg(db_.get()) : "sqlite handle unavailable"; }
-
-  static void bind_text(sqlite3_stmt *stmt, int index, const std::string &value) {
-    const auto rc = sqlite3_bind_text(stmt, index, value.c_str(), -1, SQLITE_TRANSIENT);
-    if (rc != SQLITE_OK) {
-      throw std::runtime_error("sqlite_projection_bind_failed");
-    }
-  }
-
-  static std::string column_text(sqlite3_stmt *stmt, int index) {
-    const auto raw = sqlite3_column_text(stmt, index);
-    return raw == nullptr ? std::string() : reinterpret_cast<const char *>(raw);
-  }
-
-  static nlohmann::json parse_json_column(sqlite3_stmt *stmt, int index) {
-    const auto raw = column_text(stmt, index);
-    if (raw.empty()) {
-      return nullptr;
-    }
-    return nlohmann::json::parse(raw);
-  }
-
-  static void bind_values(sqlite3_stmt *stmt, const std::vector<std::string> &values) {
-    for (size_t index = 0; index < values.size(); ++index) {
-      bind_text(stmt, static_cast<int>(index + 1), values.at(index));
-    }
-  }
-
-  [[nodiscard]] nlohmann::json query_json_column(const std::string &sql, const std::vector<std::string> &values,
-                                                 int column) const {
-    sqlite3_stmt *raw = nullptr;
-    const auto rc = sqlite3_prepare_v2(db_.get(), sql.c_str(), -1, &raw, nullptr);
-    statement stmt(raw);
-    if (rc != SQLITE_OK) {
-      throw std::runtime_error("sqlite_projection_prepare_failed: " + last_error());
-    }
-    bind_values(stmt.get(), values);
-    nlohmann::json rows = nlohmann::json::array();
-    int step = SQLITE_ROW;
-    while ((step = sqlite3_step(stmt.get())) == SQLITE_ROW) {
-      rows.push_back(parse_json_column(stmt.get(), column));
-    }
-    if (step != SQLITE_DONE) {
-      throw std::runtime_error("sqlite_projection_query_failed: " + last_error());
-    }
-    return rows;
-  }
-
-  void exec_bound(const std::string &sql, const std::vector<std::string> &values) {
-    sqlite3_stmt *raw = nullptr;
-    const auto rc = sqlite3_prepare_v2(db_.get(), sql.c_str(), -1, &raw, nullptr);
-    statement stmt(raw);
-    if (rc != SQLITE_OK) {
-      throw std::runtime_error("sqlite_projection_prepare_failed: " + last_error());
-    }
-    for (size_t index = 0; index < values.size(); ++index) {
-      bind_text(stmt.get(), static_cast<int>(index + 1), values.at(index));
-    }
-    const auto step = sqlite3_step(stmt.get());
-    if (step != SQLITE_DONE) {
-      throw std::runtime_error("sqlite_projection_step_failed: " + last_error());
-    }
-  }
-
-  fs::path path_;
-  std::unique_ptr<sqlite3, sqlite3_deleter> db_ = {};
-};
-
-nlohmann::json sqlite_projection_json(const std::string &runtime_dir, const std::string &source_id = {}) {
-  const auto path = sqlite_projection_path(runtime_dir);
-  nlohmann::json result = {
-      {"name", PROJECTION_SQLITE}, {"schema", SQLITE_PROJECTION_SCHEMA}, {"path", path.string()}, {"rebuildable", true},
-      {"authority", "derived"},    {"exists", fs::exists(path)},
-  };
-  if (!fs::exists(path)) {
-    result["counts"] = {{"sources", 0}, {"manifests", 0}, {"entries", 0}};
-    return result;
-  }
-  try {
-    const sqlite_projection projection(path, false);
-    const auto counts = projection.counts(source_id);
-    result["ok"] = true;
-    result["counts"] = {{"sources", counts.sources}, {"manifests", counts.manifests}, {"entries", counts.entries}};
-  } catch (const std::exception &e) {
-    result["ok"] = false;
-    result["error"] = e.what();
-  }
-  return result;
+nlohmann::json storage_projection_reports(const std::string &runtime_dir) {
+  return nlohmann::json::array(
+      {source_registry_projection_report(runtime_dir), manifest_catalog_projection_report(runtime_dir)});
 }
 
 nlohmann::json query_sqlite_projection(const storage_service_options &options) {
@@ -1784,16 +1181,17 @@ nlohmann::json query_sqlite_projection(const storage_service_options &options) {
             {"rows", rows},
             {"row_count", rows.size()}};
   }
-  const auto path = sqlite_projection_path(options.runtime_dir);
+  // Generic storage queries serve straight from the kernel journals — the
+  // authority — folded and filtered in process. The SQLite projections stay
+  // available for external SQL tooling and are verified by fsck.
   nlohmann::json result = {
       {"ok", true},
       {"scope", options.source_id.empty() ? "all" : "source"},
       {"source_id", options.source_id.empty() ? nlohmann::json(nullptr) : nlohmann::json(options.source_id)},
       {"projection",
-       {{"name", PROJECTION_SQLITE},
-        {"schema", SQLITE_PROJECTION_SCHEMA},
-        {"path", path.string()},
-        {"authority", "derived"},
+       {{"name", "manifest-catalog"},
+        {"schema", yy_storage::MANIFEST_CATALOG_SCHEMA_V1},
+        {"authority", "yijinjing-journal"},
         {"rebuildable", true}}},
       {"query", query},
       {"kind", options.kind.empty() ? nlohmann::json(nullptr) : nlohmann::json(options.kind)},
@@ -1801,23 +1199,94 @@ nlohmann::json query_sqlite_projection(const storage_service_options &options) {
       {"limit", options.limit},
       {"rows", nlohmann::json::array()},
   };
-  if (!fs::exists(path)) {
-    result["ok"] = false;
-    result["errors"] = nlohmann::json::array(
-        {{{"code", "sqlite_projection_missing"}, {"path", path.string()}, {"hint", "run storage rebuild-index"}}});
-    return result;
-  }
-  const sqlite_projection projection(path, false);
+  const auto limit = options.limit == 0 ? uint64_t{1000} : std::min<uint64_t>(options.limit, 1000);
+  nlohmann::json rows = nlohmann::json::array();
   if (query == "sources") {
-    result["rows"] = projection.query_sources(options.source_id, options.limit);
+    for (const auto &source : catalog_store(options.runtime_dir).list().value("sources", nlohmann::json::array())) {
+      if (!options.source_id.empty() && text_or(source, "source_id") != options.source_id) {
+        continue;
+      }
+      rows.push_back(source);
+      if (rows.size() >= limit) {
+        break;
+      }
+    }
   } else if (query == "manifests") {
-    result["rows"] = projection.query_manifests(options.source_id, options.limit);
+    for (const auto &source : catalog_store(options.runtime_dir).list().value("sources", nlohmann::json::array())) {
+      const auto current_source_id = text_or(source, "source_id");
+      if (!options.source_id.empty() && current_source_id != options.source_id) {
+        continue;
+      }
+      const auto inspected = catalog_store(options.runtime_dir).inspect(current_source_id);
+      for (auto manifest : inspected.value("manifests", nlohmann::json::array())) {
+        manifest["source_id"] = current_source_id;
+        rows.push_back(manifest);
+        if (rows.size() >= limit) {
+          break;
+        }
+      }
+      if (rows.size() >= limit) {
+        break;
+      }
+    }
   } else if (query == "entries") {
-    result["rows"] = projection.query_entries(options);
+    const auto records = catalog_store(options.runtime_dir).read_typed_records();
+    std::unordered_map<uint64_t, size_t> latest_by_uid;
+    for (size_t index = 0; index < records.manifests.size(); ++index) {
+      latest_by_uid[records.manifests[index].manifest_uid] = index;
+    }
+    const auto since = text_or(options.range, "since");
+    const auto until = text_or(options.range, "until");
+    for (const auto &record : records.entries) {
+      const auto header_iter = latest_by_uid.find(record.manifest_uid);
+      if (header_iter == latest_by_uid.end()) {
+        continue;
+      }
+      const auto &header = records.manifests[header_iter->second];
+      if (record.accept_time != header.accept_time) {
+        continue; // superseded by a re-accept of the same manifest
+      }
+      nlohmann::json row = {
+          {"kind", std::string(record.kind.value)},
+          {"source_id", std::string(record.entry_source_id.value)},
+          {"source_path", std::string(record.source_path.value)},
+          {"source_time", std::string(record.source_time.value)},
+          {"schema_version", record.entry_schema_version},
+          {"content_type", std::string(record.content_type.value)},
+          {"payload_hash", std::string(record.payload_hash.value)},
+          {"byte_len", record.byte_len},
+          {"payload_state", payload_state_text(record.payload_state)},
+          {"entry_index", record.entry_index},
+          {"accept_time", record.accept_time},
+          {"storage_source_id", std::string(header.source_id.value)},
+          {"manifest_id", std::string(header.manifest_id.value)},
+      };
+      if (!options.source_id.empty() && row.value("storage_source_id", "") != options.source_id) {
+        continue;
+      }
+      if (!options.kind.empty() && row.value("kind", "") != options.kind) {
+        continue;
+      }
+      const auto stamp = row.value("source_time", std::string{});
+      if ((!since.empty() || !until.empty()) && stamp.empty()) {
+        continue;
+      }
+      if (!since.empty() && stamp < since) {
+        continue;
+      }
+      if (!until.empty() && stamp > until) {
+        continue;
+      }
+      rows.push_back(row);
+      if (rows.size() >= limit) {
+        break;
+      }
+    }
   } else {
     throw std::invalid_argument("unsupported storage query: " + query);
   }
-  result["row_count"] = result.at("rows").size();
+  result["rows"] = rows;
+  result["row_count"] = rows.size();
   return result;
 }
 
@@ -2324,7 +1793,8 @@ nlohmann::json episode_export_bundle_impl(const storage_service_options &options
 
 nlohmann::json fsck_impl(const storage_service_options &options);
 nlohmann::json episode_import_bundle_impl(const storage_service_options &options);
-nlohmann::json load_latest_manifest_impl(const storage_provider &provider, const std::string &source_id);
+nlohmann::json accept_storage_manifest_impl(const std::string &runtime_dir, const nlohmann::json &input);
+nlohmann::json export_bundle_generic_impl(const storage_service_options &options, bool record_receipt);
 
 nlohmann::json repair_candidate_common(const nlohmann::json &warning, const std::string &code, const std::string &kind,
                                        const std::string &role, const std::string &action,
@@ -2567,7 +2037,7 @@ nlohmann::json apply_source_bundle_material(const storage_service_options &optio
     throw std::invalid_argument("repair_apply_source_id_required");
   }
   const auto provider = shared_provider(options);
-  auto manifest = load_latest_manifest_impl(*provider, source_id);
+  auto manifest = load_latest_manifest_impl(options.runtime_dir, *provider, source_id);
   if (manifest.is_null()) {
     throw std::runtime_error("manifest not found: " + source_id);
   }
@@ -2627,18 +2097,19 @@ nlohmann::json apply_source_bundle_material(const storage_service_options &optio
   }
   nlohmann::json accepted = nullptr;
   if (write && manifest_changed) {
-    auto repaired_input = manifest;
-    repaired_input["entries"] = entries;
-    repaired_input.erase("sync_root");
-    repaired_input.erase("accepted_ranges");
-    repaired_input.erase("payload_inventory");
-    repaired_input["manifest_id"] = text_or(manifest, "manifest_id") + ".repair";
-    accepted = yy_storage::build_storage_import_manifest(repaired_input);
-    provider->write_manifest(source_id, text_or(accepted, "manifest_id"), accepted);
-    provider->write_latest_manifest(source_id, accepted);
-    auto registry = provider->load_registry();
-    registry["sources"][source_id] = accepted.at("source");
-    provider->save_registry(registry);
+    // A repair is a fresh acceptance: new manifest id, entries as repaired,
+    // sync root recomputed at acceptance. History stays append-only.
+    accepted = accept_storage_manifest_impl(
+        options.runtime_dir, {
+                                 {"manifest_id", text_or(manifest, "manifest_id") + ".repair"},
+                                 {"storage_source_id", source_id},
+                                 {"source_type", text_or(manifest, "source_type")},
+                                 {"source_coordinate", text_or(object_or_empty(manifest, "source"), "coordinate")},
+                                 {"source_head", text_or(manifest, "source_head")},
+                                 {"scope", text_or(manifest, "scope")},
+                                 {"range", object_or_empty(manifest, "range")},
+                                 {"entries", entries},
+                             });
   }
   return {{"kind", "source_bundle"},
           {"schema", text_or(bundle, "schema")},
@@ -2841,7 +2312,7 @@ void push_unique_bundle(nlohmann::json &bundles, std::vector<std::string> &seen,
   bundles.push_back(bundle);
 }
 
-nlohmann::json repair_fetch_impl(const storage_service_options &options, const storage_service &service) {
+nlohmann::json repair_fetch_impl(const storage_service_options &options) {
   if (!options.dry_run) {
     throw std::invalid_argument("storage_repair_fetch_is_read_only");
   }
@@ -2873,7 +2344,7 @@ nlohmann::json repair_fetch_impl(const storage_service_options &options, const s
           candidate_options.runtime_dir = runtime.runtime_dir.string();
           candidate_options.scope = "source";
           candidate_options.source_id = source_id;
-          const auto bundle = service.export_bundle(candidate_options);
+          const auto bundle = export_bundle_generic_impl(candidate_options, /*record_receipt=*/false);
           if (!source_bundle_has_payload(bundle, payload_hash)) {
             skipped.push_back({{"candidate", candidate},
                                {"evidence_source", runtime.source},
@@ -2914,7 +2385,7 @@ nlohmann::json repair_fetch_impl(const storage_service_options &options, const s
             candidate_options.runtime_dir = runtime.runtime_dir.string();
             candidate_options.scope = "episode";
             candidate_options.episode_id = episode_id;
-            const auto bundle = service.export_bundle(candidate_options);
+            const auto bundle = episode_export_bundle_impl(candidate_options);
             if (!episode_bundle_satisfies_candidate(candidate, bundle)) {
               skipped.push_back({{"candidate", candidate},
                                  {"evidence_source", runtime.source},
@@ -3052,85 +2523,15 @@ nlohmann::json replace_string_subtree(nlohmann::json value, const std::string &n
   return value;
 }
 
-nlohmann::json rebuild_sqlite_projection(const storage_provider &provider, const storage_service_options &options,
-                                         bool write) {
-  size_t sources = 0;
-  size_t manifests = 0;
-  size_t entries = 0;
-  nlohmann::json errors = nlohmann::json::array();
-  nlohmann::json changes = nlohmann::json::array();
-  const auto path = sqlite_projection_path(options.runtime_dir);
-  std::unique_ptr<sqlite_projection> projection;
-  if (write) {
-    projection = std::make_unique<sqlite_projection>(path, true);
-    projection->create_schema();
-    projection->exec("BEGIN IMMEDIATE");
-    projection->clear(options.source_id);
-    projection->write_meta("schema", SQLITE_PROJECTION_SCHEMA);
-    projection->write_meta("authority", "derived");
-  }
-  try {
-    for (const auto &record : provider.latest_manifest_records(options.source_id)) {
-      if (!record.value.is_object()) {
-        errors.push_back({{"code", "manifest_invalid"}, {"path", record.uri}});
-        continue;
-      }
-      const auto current_source_id = text_or(record.value, "source_id");
-      if (current_source_id.empty()) {
-        errors.push_back({{"code", "source_id_missing"}, {"path", record.uri}});
-        continue;
-      }
-      const auto source = source_projection_from_manifest(record.value);
-      const auto source_entries = entries_for_manifest(record.value);
-      if (write) {
-        projection->insert_source(record.value, source);
-        projection->insert_manifest(record.value);
-        for (const auto &entry : source_entries) {
-          projection->insert_entry(record.value, entry);
-        }
-      }
-      changes.push_back({{"source_id", current_source_id},
-                         {"manifest_id", text_or(record.value, "manifest_id")},
-                         {"entries", source_entries.size()}});
-      ++sources;
-      ++manifests;
-      entries += source_entries.size();
-    }
-    if (write) {
-      projection->exec("COMMIT");
-    }
-  } catch (...) {
-    if (write && projection) {
-      try {
-        projection->exec("ROLLBACK");
-      } catch (const std::exception &) {
-      }
-    }
-    throw;
-  }
-  return {
-      {"name", PROJECTION_SQLITE},
-      {"schema", SQLITE_PROJECTION_SCHEMA},
-      {"path", path.string()},
-      {"rebuilt_from", "accepted latest manifests"},
-      {"dry_run", !write},
-      {"written", write},
-      {"rows", {{"sources", sources}, {"manifests", manifests}, {"entries", entries}}},
-      {"changes", changes},
-      {"errors", errors},
-  };
-}
-
-nlohmann::json load_latest_manifest_impl(const storage_provider &provider, const std::string &source_id) {
-  return provider.load_latest_manifest(source_id);
-}
-
-nlohmann::json source_manifest_status(const storage_provider &provider, const nlohmann::json &source) {
+// One registered source's status row: the source-registry fold summary joined
+// with the catalog's latest accepted manifest edge and the journal cursor.
+nlohmann::json source_manifest_status(const std::string &runtime_dir, const storage_provider &provider,
+                                      const nlohmann::json &source) {
   const auto source_id = text_or(source, "source_id");
-  auto manifest = load_latest_manifest_impl(provider, source_id);
+  auto manifest = load_latest_manifest_impl(runtime_dir, provider, source_id);
   if (manifest.is_null()) {
     return {
-        {"source_id", source_id},       {"ok", false},      {"projection", PROJECTION_SOURCE_REGISTRY},
+        {"source_id", source_id},       {"ok", false},      {"authority", "yijinjing-journal"},
         {"reason", "manifest_missing"}, {"source", source},
     };
   }
@@ -3140,42 +2541,22 @@ nlohmann::json source_manifest_status(const storage_provider &provider, const nl
   return {
       {"source_id", source_id},
       {"ok", true},
-      {"projection", PROJECTION_SOURCE_REGISTRY},
+      {"authority", "yijinjing-journal"},
       {"manifest_id", text_or(manifest, "manifest_id")},
       {"source_type", text_or(manifest, "source_type")},
       {"source_head", text_or(manifest, "source_head")},
       {"accepted_ranges", array_or_empty(manifest, "accepted_ranges")},
-      {"accepted_cursor", accepted_cursor(manifest)},
+      {"accepted_cursor", accepted_cursor(runtime_dir, source_id)},
       {"sync_root", manifest.contains("sync_root") ? manifest.at("sync_root") : nlohmann::json(nullptr)},
       {"entries", entries.size()},
       {"payload_inventory", array_or_empty(payload_inventory, "entries").size()},
       {"schema_inventory", array_or_empty(schema_inventory, "entries").size()},
-      {"source_record", source},
+      {"source_record", manifest.contains("source") ? manifest.at("source") : source},
   };
 }
 
-std::vector<std::string> referenced_payload_hashes(const storage_provider &provider,
-                                                   const std::string &source_id = {}) {
-  std::vector<std::string> hashes;
-  std::vector<std::pair<std::string, std::string>> seen_manifests;
-  for (const auto &record : provider.manifest_records(source_id)) {
-    if (!record.value.is_object()) {
-      continue;
-    }
-    const auto key =
-        std::make_pair(text_or(record.value, "source_id"), text_or(record.value, "manifest_id", record.manifest_id));
-    if (std::find(seen_manifests.begin(), seen_manifests.end(), key) != seen_manifests.end()) {
-      continue;
-    }
-    seen_manifests.emplace_back(key);
-    for (const auto &entry : entries_for_manifest(record.value)) {
-      const auto digest = text_or(entry, "payload_hash");
-      if (!digest.empty() && std::find(hashes.begin(), hashes.end(), digest) == hashes.end()) {
-        hashes.emplace_back(digest);
-      }
-    }
-  }
-  return hashes;
+std::vector<std::string> referenced_payload_hashes(const std::string &runtime_dir, const std::string &source_id = {}) {
+  return catalog_store(runtime_dir).referenced_payload_hashes(source_id);
 }
 
 std::pair<nlohmann::json, std::string> load_payload_impl(const storage_provider &provider,
@@ -3203,10 +2584,11 @@ std::pair<nlohmann::json, std::string> load_payload_impl(const storage_provider 
   }
 }
 
-nlohmann::json list_sources_impl(const storage_provider &provider) {
-  auto registry = provider.load_registry();
+// Registered sources from the source-registry journal fold: the single source
+// catalog (the JSON sources.json registry is retired, ADR-0037 final slice).
+nlohmann::json list_sources_impl(const std::string &runtime_dir) {
   nlohmann::json sources = nlohmann::json::array();
-  for (const auto &[_, source] : registry.at("sources").items()) {
+  for (const auto &source : registry_store(runtime_dir).list().value("sources", nlohmann::json::array())) {
     if (source.is_object()) {
       sources.push_back(source);
     }
@@ -3220,14 +2602,14 @@ nlohmann::json list_sources_impl(const storage_provider &provider) {
 nlohmann::json status_impl(const storage_service_options &options) {
   const auto provider = shared_provider(options);
   auto sources = nlohmann::json::array();
-  for (const auto &source : list_sources_impl(*provider)) {
+  for (const auto &source : list_sources_impl(options.runtime_dir)) {
     if (options.source_id.empty() || text_or(source, "source_id") == options.source_id) {
       sources.push_back(source);
     }
   }
   nlohmann::json source_status = nlohmann::json::array();
   for (const auto &source : sources) {
-    source_status.push_back(source_manifest_status(*provider, source));
+    source_status.push_back(source_manifest_status(options.runtime_dir, *provider, source));
   }
   return {
       {"ok", options.source_id.empty() ? true : !sources.empty()},
@@ -3238,19 +2620,10 @@ nlohmann::json status_impl(const storage_service_options &options) {
       {"provider_cache", provider_cache::instance().stats()},
       {"scope", options.source_id.empty() ? "all" : "source"},
       {"source_id", options.source_id.empty() ? nlohmann::json(nullptr) : nlohmann::json(options.source_id)},
+      {"authority", "yijinjing-journal"},
       {"sources", sources},
       {"source_count", sources.size()},
-      {"projection",
-       {
-           {"name", PROJECTION_SOURCE_REGISTRY},
-           {"path", provider->registry_uri()},
-           {"rebuildable", true},
-       }},
-      {"projections", nlohmann::json::array({{{"name", PROJECTION_SOURCE_REGISTRY},
-                                              {"path", provider->registry_uri()},
-                                              {"rebuildable", true},
-                                              {"authority", "derived"}},
-                                             sqlite_projection_json(options.runtime_dir, options.source_id)})},
+      {"projections", storage_projection_reports(options.runtime_dir)},
       {"source_status", source_status},
   };
 }
@@ -3302,133 +2675,115 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
     return episode_fsck_impl(options);
   }
   const auto provider = shared_provider(options);
-  nlohmann::json registry;
-  try {
-    registry = provider->load_registry();
-  } catch (const std::exception &e) {
-    return fsck_error_report(options, "source_registry_invalid", e.what());
-  }
 
   nlohmann::json sources = nlohmann::json::array();
-  for (const auto &[_, source] : registry.at("sources").items()) {
-    if (source.is_object() && (options.source_id.empty() || text_or(source, "source_id") == options.source_id)) {
+  for (const auto &source : list_sources_impl(options.runtime_dir)) {
+    if (options.source_id.empty() || text_or(source, "source_id") == options.source_id) {
       sources.push_back(source);
     }
   }
-  std::sort(sources.begin(), sources.end(), [](const nlohmann::json &lhs, const nlohmann::json &rhs) {
-    return text_or(lhs, "source_id") < text_or(rhs, "source_id");
-  });
 
   nlohmann::json report = {
       {"ok", true},
       {"scope", options.source_id.empty() ? "all" : "source"},
       {"source_id", options.source_id.empty() ? nlohmann::json(nullptr) : nlohmann::json(options.source_id)},
+      {"authority", "yijinjing-journal"},
       {"errors", nlohmann::json::array()},
       {"warnings", nlohmann::json::array()},
       {"checked",
        {
            {"sources", sources.size()},
            {"manifests", 0},
+           {"manifest_entries", 0},
            {"payloads", 0},
-           {"schemas", 0},
+           {"entries_documents", 0},
            {"accepted_ranges", 0},
            {"source_records", 0},
-           {"projection_indexes", fs::exists(sqlite_projection_path(options.runtime_dir)) ? 2 : 1},
-           {"sqlite_projection_rows", 0},
+           {"projection_indexes", 2},
            {"orphan_payloads", 0},
            {"episode_manifest_records", 0},
            {"episodes", 0},
        }},
   };
-  // Degraded means facts are incomplete but not corrupt: a payload is recorded
-  // missing (data loss), as opposed to intentionally redacted/absent. Corruption
-  // and drift set ok=false (failed); degradation keeps ok=true but is surfaced
-  // through the tri-state `status` field so a missing payload no longer hides
-  // under ok=true.
   bool degraded = false;
   if (!options.source_id.empty() && sources.empty()) {
     report["ok"] = false;
     report["errors"].push_back({{"code", "source_missing"}, {"source_id", options.source_id}});
+    report["degraded"] = false;
+    report["status"] = "failed";
     return report;
   }
 
+  // Source-registry journal fold consistency (dangling heads, duplicate
+  // registrations) — the registry journal is a first-class fact source too.
+  const auto registry_report = registry_store(options.runtime_dir).fsck(options.source_id);
+  for (auto error : array_or_empty(registry_report, "errors")) {
+    if (text_or(error, "code") == "source_missing") {
+      continue; // covered by the registered-set check above
+    }
+    error["projection"] = "source-registry";
+    report["ok"] = false;
+    report["errors"].push_back(error);
+  }
+  for (auto warning : array_or_empty(registry_report, "warnings")) {
+    warning["projection"] = "source-registry";
+    report["warnings"].push_back(warning);
+  }
+
+  // Catalog fold, sync-root chain, committed entries documents, and payload
+  // references through the ADR-0040 content store (kernel-owned checks).
+  std::map<std::string, nlohmann::json> catalog_sources;
+  for (const auto &summary : catalog_store(options.runtime_dir).list().value("sources", nlohmann::json::array())) {
+    catalog_sources.emplace(text_or(summary, "source_id"), summary);
+  }
+  size_t sources_with_manifests = 0;
   for (const auto &source : sources) {
     const auto current_source_id = text_or(source, "source_id");
-    auto manifest = load_latest_manifest_impl(*provider, current_source_id);
-    if (manifest.is_null()) {
+    const auto iter = catalog_sources.find(current_source_id);
+    if (iter == catalog_sources.end()) {
       report["ok"] = false;
       report["errors"].push_back({{"code", "manifest_missing"}, {"source_id", current_source_id}});
       continue;
     }
-    report["checked"]["manifests"] = report["checked"]["manifests"].get<size_t>() + 1;
-    report["checked"]["source_records"] = report["checked"]["source_records"].get<size_t>() + 1;
-    const auto projected_source = source_projection_from_manifest(manifest);
-    if (projected_source != source) {
+    ++sources_with_manifests;
+    // The registry head and the catalog's latest accepted head must agree;
+    // divergence means one journal missed an acceptance.
+    const auto registry_head = text_or(source, "head");
+    const auto catalog_head = text_or(iter->second, "source_head");
+    if (!registry_head.empty() && registry_head != catalog_head) {
       report["ok"] = false;
       report["errors"].push_back({{"code", "source_registry_drift"},
                                   {"source_id", current_source_id},
-                                  {"expected", projected_source},
-                                  {"actual", source}});
-    }
-    for (const auto &issue : yy_storage::verify_storage_import_manifest(manifest)) {
-      auto row = issue_to_json(issue);
-      row["source_id"] = current_source_id;
-      if (issue.severity == "warning") {
-        report["warnings"].push_back(row);
-      } else {
-        report["ok"] = false;
-        report["errors"].push_back(row);
-      }
+                                  {"expected", catalog_head},
+                                  {"actual", registry_head}});
     }
     report["checked"]["accepted_ranges"] =
-        report["checked"]["accepted_ranges"].get<size_t>() + array_or_empty(manifest, "accepted_ranges").size();
-    report["checked"]["schemas"] = report["checked"]["schemas"].get<size_t>() +
-                                   array_or_empty(object_or_empty(manifest, "schema_inventory"), "entries").size();
-    const auto payload_inventory = object_or_empty(manifest, "payload_inventory");
-    if (!payload_inventory.empty()) {
-      const auto inventory_count = array_or_empty(payload_inventory, "entries").size();
-      const auto entry_count = entries_for_manifest(manifest).size();
-      if (inventory_count != entry_count) {
-        report["ok"] = false;
-        report["errors"].push_back({{"code", "payload_inventory_mismatch"},
-                                    {"source_id", current_source_id},
-                                    {"expected", entry_count},
-                                    {"actual", inventory_count}});
+        report["checked"]["accepted_ranges"].get<size_t>() + source.value("accepted_range_count", size_t{0});
+  }
+  report["checked"]["source_records"] = sources_with_manifests;
+
+  if (sources_with_manifests > 0 || options.source_id.empty()) {
+    const auto catalog_report = catalog_store(options.runtime_dir).fsck(options.source_id, provider->content_store());
+    for (auto error : array_or_empty(catalog_report, "errors")) {
+      if (text_or(error, "code") == "source_missing") {
+        continue; // a registered source with no manifests is already reported
       }
+      report["ok"] = false;
+      report["errors"].push_back(error);
     }
-    for (const auto &entry : entries_for_manifest(manifest)) {
-      report["checked"]["payloads"] = report["checked"]["payloads"].get<size_t>() + 1;
-      const auto payload_state = text_or(entry, "payload_state");
-      if (payload_state != PAYLOAD_STATE_PRESENT) {
-        // Redacted/absent are intentional (a sensitive body deliberately withheld
-        // or known not to exist) and stay ok; any other non-present state, such as
-        // a recorded-missing body, is a real gap and degrades the verdict.
-        const bool intentional = payload_state == PAYLOAD_STATE_REDACTED || payload_state == PAYLOAD_STATE_ABSENT;
-        if (!intentional) {
-          degraded = true;
-        }
-        report["warnings"].push_back({{"code", "payload_not_present"},
-                                      {"source_id", current_source_id},
-                                      {"subject", text_or(entry, "kind") + ":" + text_or(entry, "source_id")},
-                                      {"payload_hash", text_or(entry, "payload_hash")},
-                                      {"state", payload_state},
-                                      {"intentional", intentional}});
-        continue;
-      }
-      const auto [_, error] = load_payload_impl(*provider, entry);
-      if (!error.empty()) {
-        report["ok"] = false;
-        report["errors"].push_back({{"code", error},
-                                    {"source_id", current_source_id},
-                                    {"kind", text_or(entry, "kind")},
-                                    {"entry_source_id", text_or(entry, "source_id")},
-                                    {"payload_hash", text_or(entry, "payload_hash")}});
-      }
+    for (const auto &warning : array_or_empty(catalog_report, "warnings")) {
+      report["warnings"].push_back(warning);
     }
+    degraded = degraded || catalog_report.value("degraded", false);
+    const auto catalog_checked = object_or_empty(catalog_report, "checked");
+    report["checked"]["manifests"] = catalog_checked.value("manifests", 0);
+    report["checked"]["manifest_entries"] = catalog_checked.value("manifest_entries", 0);
+    report["checked"]["payloads"] = catalog_checked.value("payloads", 0);
+    report["checked"]["entries_documents"] = catalog_checked.value("entries_documents", 0);
   }
 
   if (options.source_id.empty()) {
-    const auto referenced = referenced_payload_hashes(*provider);
+    const auto referenced = referenced_payload_hashes(options.runtime_dir);
     for (const auto &payload : provider->all_payloads()) {
       const auto digest = payload.digest;
       if (std::find(referenced.begin(), referenced.end(), digest) == referenced.end()) {
@@ -3444,7 +2799,6 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
   report["checked"]["episode_manifest_records"] = episode_checked.value("episode_manifest_records", 0);
   report["checked"]["episodes"] = episode_checked.value("episodes", 0);
   report["episode_manifest"] = episode_report;
-  report["degraded"] = report.value("degraded", false) || episode_report.value("degraded", false);
   for (const auto &error : array_or_empty(episode_report, "errors")) {
     auto row = error;
     row["projection"] = "episode-manifest";
@@ -3458,47 +2812,27 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
   }
   degraded = degraded || episode_report.value("degraded", false);
 
-  const auto sqlite_projection_status = sqlite_projection_json(options.runtime_dir, options.source_id);
-  report["projections"] = nlohmann::json::array({{{"name", PROJECTION_SOURCE_REGISTRY},
-                                                  {"path", provider->registry_uri()},
-                                                  {"rebuildable", true},
-                                                  {"authority", "derived"}},
-                                                 sqlite_projection_status});
-  if (!sqlite_projection_status.value("exists", false)) {
-    report["warnings"].push_back({{"code", "sqlite_projection_missing"},
-                                  {"path", sqlite_projection_path(options.runtime_dir).string()},
-                                  {"reason", "projection is derived and can be rebuilt"}});
-  } else if (!sqlite_projection_status.value("ok", true)) {
-    report["ok"] = false;
-    report["errors"].push_back({{"code", "sqlite_projection_unreadable"},
-                                {"path", sqlite_projection_path(options.runtime_dir).string()},
-                                {"error", sqlite_projection_status.value("error", "")}});
-  } else {
-    const auto expected_sources = sources.size();
-    size_t expected_manifests = 0;
-    size_t expected_entries = 0;
-    for (const auto &source : sources) {
-      const auto current_source_id = text_or(source, "source_id");
-      auto manifest = load_latest_manifest_impl(*provider, current_source_id);
-      if (manifest.is_object()) {
-        ++expected_manifests;
-        expected_entries += entries_for_manifest(manifest).size();
-      }
-    }
-    const auto counts = object_or_empty(sqlite_projection_status, "counts");
-    report["checked"]["sqlite_projection_rows"] =
-        counts.value("sources", 0) + counts.value("manifests", 0) + counts.value("entries", 0);
-    if (counts.value("sources", 0) != expected_sources || counts.value("manifests", 0) != expected_manifests ||
-        counts.value("entries", 0) != expected_entries) {
-      report["ok"] = false;
-      report["errors"].push_back(
-          {{"code", "sqlite_projection_drift"},
-           {"path", sqlite_projection_path(options.runtime_dir).string()},
-           {"expected",
-            {{"sources", expected_sources}, {"manifests", expected_manifests}, {"entries", expected_entries}}},
-           {"actual", counts}});
+  // Derived SQLite projections are verified against the journal folds.
+  // Drift or absence degrades the verdict (the journal stays the authority
+  // and a rebuild restores the view); it never fails the journal itself.
+  const auto projections = storage_projection_reports(options.runtime_dir);
+  report["projections"] = projections;
+  for (const auto &projection : projections) {
+    const auto status = text_or(projection, "status", "ok");
+    if (status == "absent") {
+      report["warnings"].push_back({{"code", "projection_absent"},
+                                    {"projection", text_or(projection, "name")},
+                                    {"path", text_or(projection, "path")},
+                                    {"reason", "projection is derived and can be rebuilt"}});
+    } else if (status == "degraded") {
+      degraded = true;
+      report["warnings"].push_back({{"code", "projection_drift"},
+                                    {"projection", text_or(projection, "name")},
+                                    {"path", text_or(projection, "path")},
+                                    {"drift", projection.value("drift", nlohmann::json::array())}});
     }
   }
+
   // Tri-state verdict over the boolean ok: failed (corruption/drift/unreadable)
   // dominates, then degraded (incomplete but not corrupt), else ok.
   report["degraded"] = degraded;
@@ -3507,75 +2841,56 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
 }
 
 nlohmann::json rebuild_index_impl(const storage_service_options &options) {
-  const auto provider = shared_provider(options);
-  nlohmann::json old_registry;
-  try {
-    old_registry = provider->load_registry();
-  } catch (const std::exception &) {
-    old_registry = {{"schema", SOURCE_REGISTRY_SCHEMA}, {"sources", nlohmann::json::object()}};
-  }
-  auto old_sources = object_or_empty(old_registry, "sources");
-  auto new_sources = options.source_id.empty() ? nlohmann::json::object() : old_sources;
-  nlohmann::json changes = nlohmann::json::array();
+  // ADR-0037 (final slice): rebuild the derived SQLite projections from the
+  // kernel journals through the Hana closed-set -> SQLite path. The journals
+  // are the authority; there is no JSON registry to regenerate any more.
   nlohmann::json errors = nlohmann::json::array();
-  size_t rebuilt = 0;
-
-  for (const auto &record : provider->latest_manifest_records(options.source_id)) {
-    if (!record.value.is_object()) {
-      errors.push_back({{"code", "manifest_invalid"}, {"path", record.uri}});
-      continue;
+  nlohmann::json projections = nlohmann::json::array();
+  bool would_write = false;
+  const auto plan_one = [&](const char *name, auto &&projection) {
+    auto verify = projection.verify();
+    const auto status = verify.value("status", std::string("ok"));
+    const bool needs_write = status != "ok" || !verify.value("projection_present", false);
+    would_write = would_write || needs_write;
+    if (options.dry_run) {
+      verify["name"] = name;
+      verify["dry_run"] = true;
+      verify["written"] = false;
+      verify["would_write"] = needs_write;
+      projections.push_back(verify);
+      return;
     }
-    const auto current_source_id = text_or(record.value, "source_id");
-    if (current_source_id.empty()) {
-      errors.push_back({{"code", "source_id_missing"}, {"path", record.uri}});
-      continue;
+    auto rebuilt = projection.rebuild();
+    rebuilt["name"] = name;
+    rebuilt["dry_run"] = false;
+    rebuilt["written"] = true;
+    if (!rebuilt.value("ok", false)) {
+      errors.push_back({{"code", "projection_rebuild_failed"}, {"projection", name}});
     }
-    const auto projected = source_projection_from_manifest(record.value);
-    const auto previous =
-        old_sources.contains(current_source_id) ? old_sources.at(current_source_id) : nlohmann::json(nullptr);
-    if (previous != projected) {
-      changes.push_back({{"source_id", current_source_id},
-                         {"action", previous.is_null() ? "add" : "update"},
-                         {"manifest_id", text_or(record.value, "manifest_id")}});
+    projections.push_back(rebuilt);
+  };
+  plan_one(PROJECTION_SOURCE_REGISTRY, source_registry_projection(options.runtime_dir));
+  plan_one(PROJECTION_MANIFEST_CATALOG, manifest_catalog_projection(options.runtime_dir));
+  const auto sources = list_sources_impl(options.runtime_dir);
+  if (!options.source_id.empty()) {
+    const auto found = std::any_of(sources.begin(), sources.end(), [&](const nlohmann::json &source) {
+      return text_or(source, "source_id") == options.source_id;
+    });
+    if (!found) {
+      errors.push_back({{"code", "source_missing"}, {"source_id", options.source_id}});
     }
-    new_sources[current_source_id] = projected;
-    ++rebuilt;
-  }
-  if (!options.source_id.empty() && rebuilt == 0) {
-    errors.push_back({{"code", "source_manifest_missing"}, {"source_id", options.source_id}});
-  }
-  const nlohmann::json new_registry = {{"schema", SOURCE_REGISTRY_SCHEMA}, {"sources", new_sources}};
-  const auto would_write = old_registry != new_registry;
-  const auto sqlite_projection = rebuild_sqlite_projection(*provider, options, !options.dry_run);
-  if (!sqlite_projection.value("errors", nlohmann::json::array()).empty()) {
-    for (const auto &error : sqlite_projection.at("errors")) {
-      errors.push_back(error);
-    }
-  }
-  if (would_write && !options.dry_run) {
-    provider->save_registry(new_registry);
   }
   return {
       {"ok", errors.empty()},
       {"scope", options.source_id.empty() ? "all" : "source"},
       {"source_id", options.source_id.empty() ? nlohmann::json(nullptr) : nlohmann::json(options.source_id)},
-      {"projection",
-       {
-           {"name", PROJECTION_SOURCE_REGISTRY},
-           {"path", provider->registry_uri()},
-           {"rebuilt_from", "accepted latest manifests"},
-       }},
-      {"projections", nlohmann::json::array({{{"name", PROJECTION_SOURCE_REGISTRY},
-                                              {"path", provider->registry_uri()},
-                                              {"rebuilt_from", "accepted latest manifests"},
-                                              {"dry_run", options.dry_run},
-                                              {"written", would_write && !options.dry_run}},
-                                             sqlite_projection})},
+      {"authority", "yijinjing-journal"},
+      {"rebuilt_from", "storage kernel journals"},
+      {"projections", projections},
       {"dry_run", options.dry_run},
-      {"would_write", would_write},
-      {"written", would_write && !options.dry_run},
-      {"sources_rebuilt", rebuilt},
-      {"changes", changes},
+      {"would_write", options.dry_run ? would_write : true},
+      {"written", !options.dry_run},
+      {"sources_rebuilt", sources.size()},
       {"errors", errors},
   };
 }
@@ -3585,7 +2900,7 @@ nlohmann::json gc_plan_impl(const storage_service_options &options) {
     throw std::invalid_argument("storage_gc_requires_dry_run");
   }
   const auto provider = shared_provider(options);
-  const auto referenced = referenced_payload_hashes(*provider, options.source_id);
+  const auto referenced = referenced_payload_hashes(options.runtime_dir, options.source_id);
   const auto payloads = provider->all_payloads();
   nlohmann::json candidates = nlohmann::json::array();
   uint64_t candidate_bytes = 0;
@@ -3629,16 +2944,20 @@ nlohmann::json compact_plan_impl(const storage_service_options &options) {
   const auto garbage = gc_plan_impl(rebuild_options);
   const auto provider = shared_provider(options);
   nlohmann::json manifests = nlohmann::json::array();
-  for (const auto &record : provider->manifest_records(options.source_id)) {
-    if (!record.value.is_object()) {
+  const auto catalog = catalog_store(options.runtime_dir);
+  for (const auto &summary : catalog.list().value("sources", nlohmann::json::array())) {
+    const auto current_source_id = text_or(summary, "source_id");
+    if (!options.source_id.empty() && current_source_id != options.source_id) {
       continue;
     }
-    manifests.push_back(
-        {{"source_id", text_or(record.value, "source_id")},
-         {"manifest_id", text_or(record.value, "manifest_id")},
-         {"path", record.uri},
-         {"entries", entries_for_manifest(record.value).size()},
-         {"sync_root", record.value.contains("sync_root") ? record.value.at("sync_root") : nlohmann::json(nullptr)}});
+    const auto inspected = catalog.inspect(current_source_id);
+    for (const auto &manifest : inspected.value("manifests", nlohmann::json::array())) {
+      manifests.push_back(
+          {{"source_id", current_source_id},
+           {"manifest_id", text_or(manifest, "manifest_id")},
+           {"entries", manifest.value("entry_count", 0)},
+           {"sync_root", manifest.contains("sync_root") ? manifest.at("sync_root") : nlohmann::json(nullptr)}});
+    }
   }
   return {
       {"ok", rebuild.value("ok", false) && garbage.value("ok", false)},
@@ -3650,8 +2969,8 @@ nlohmann::json compact_plan_impl(const storage_service_options &options) {
       {"gc", garbage},
       {"projection_compact",
        {
-           {"name", PROJECTION_SQLITE},
-           {"path", sqlite_projection_path(options.runtime_dir).string()},
+           {"name", PROJECTION_MANIFEST_CATALOG},
+           {"path", manifest_catalog_projection(options.runtime_dir).sqlite_path()},
            {"action", "rebuild-and-vacuum"},
            {"dry_run", true},
            {"rebuildable", true},
@@ -3665,6 +2984,111 @@ nlohmann::json compact_plan_impl(const storage_service_options &options) {
       {"notes", nlohmann::json::array({"No manifests, payloads, journal frames, or projections were rewritten.",
                                        "This is a reviewable compaction plan, not destructive compaction."})},
   };
+}
+
+// Accept one import manifest into the kernel journals: the manifest-catalog
+// records (header + per-entry deltas + channel cursor, entries document
+// committed into the content store) plus the source-registry alignment
+// (register-once, head update, accepted range). Returns the accepted
+// manifest JSON edge.
+nlohmann::json accept_storage_manifest_impl(const std::string &runtime_dir, const nlohmann::json &input) {
+  const auto provider = shared_provider(runtime_dir);
+  const auto edge = catalog_store(runtime_dir).accept_manifest(input, provider->content_store());
+  const auto source_id = text_or(edge, "source_id");
+  const auto source = object_or_empty(edge, "source");
+  const auto sync_root = object_or_empty(edge, "sync_root");
+  const auto registry = registry_store(runtime_dir);
+  if (!registry.inspect(source_id).value("ok", false)) {
+    yy_storage::source_register_options reg{};
+    reg.source_id = source_id;
+    reg.kind = text_or(source, "kind") == "adapter" ? yy_enums::SourceKind::Adapter : yy_enums::SourceKind::Local;
+    reg.coordinate = text_or(source, "coordinate");
+    reg.head = text_or(edge, "source_head");
+    (void)registry.register_source(reg);
+  }
+  yy_storage::source_head_update_options head{};
+  head.source_id = source_id;
+  head.head = text_or(edge, "source_head");
+  head.inventory_hash_algo = text_or(sync_root, "algorithm");
+  head.inventory_hash = text_or(sync_root, "value");
+  (void)registry.update_head(head);
+  yy_storage::accepted_range_options accepted{};
+  accepted.source_id = source_id;
+  accepted.manifest_id = text_or(edge, "manifest_id");
+  (void)registry.record_accepted_range(accepted);
+  return edge;
+}
+
+// Project a range-filtered manifest edge for export: filtered entries, a
+// recomputed sync root over them, and rebuilt inventories. Same proof
+// semantics; the range view is an edge document, never a stored record.
+nlohmann::json range_filtered_manifest_edge(const nlohmann::json &manifest, const nlohmann::json &range_filter) {
+  auto edge = manifest;
+  const auto entries = entries_for_manifest(manifest, range_filter);
+  const auto sync_root = yy_storage::compute_linear_sync_root(entries.get<std::vector<nlohmann::json>>());
+  edge["entries"] = entries;
+  edge["range"] = range_filter;
+  edge["counts"] = {{"records", entries.size()}};
+  edge["sync_root"] = sync_root;
+  edge["payload_inventory"] = yy_storage::build_storage_payload_inventory(entries);
+  edge["schema_inventory"] = yy_storage::build_storage_schema_inventory(entries);
+  nlohmann::json accepted = {
+      {"schema", yy_storage::STORAGE_ACCEPTED_RANGE_SCHEMA_V1},
+      {"source_id", text_or(manifest, "source_id")},
+      {"manifest_id", text_or(manifest, "manifest_id")},
+      {"range", range_filter},
+      {"source_head", text_or(manifest, "source_head")},
+      {"sync_root", sync_root},
+      {"entry_count", entries.size()},
+      {"status", "ok"},
+  };
+  edge["accepted_ranges"] = nlohmann::json::array({accepted});
+  if (edge.contains("source") && edge.at("source").is_object()) {
+    edge["source"]["current_head"]["range"] = range_filter;
+    edge["source"]["current_head"]["inventory_hash"] = sync_root.value("value", "");
+    edge["source"]["accepted_ranges"] = nlohmann::json::array({accepted});
+  }
+  return edge;
+}
+
+nlohmann::json export_bundle_generic_impl(const storage_service_options &options, bool record_receipt) {
+  const auto provider = shared_provider(options);
+  const auto manifest = load_latest_manifest_impl(options.runtime_dir, *provider, options.source_id);
+  if (manifest.is_null()) {
+    throw std::runtime_error("manifest not found: " + options.source_id);
+  }
+  auto export_manifest = manifest;
+  if (!options.range.empty()) {
+    export_manifest = range_filtered_manifest_edge(manifest, options.range);
+  }
+  nlohmann::json records = nlohmann::json::array();
+  for (const auto &entry : entries_for_manifest(manifest, options.range)) {
+    auto [payload, error] = load_payload_impl(*provider, entry);
+    if (!error.empty()) {
+      throw std::runtime_error(error + ": " + text_or(entry, "kind") + ":" + text_or(entry, "source_id"));
+    }
+    auto row = entry;
+    row["scope"] = text_or(manifest, "scope");
+    row["manifest_id"] = text_or(manifest, "manifest_id");
+    row["storage_source_id"] = options.source_id;
+    row["source_type"] = text_or(manifest, "source_type");
+    row["source_head"] = text_or(manifest, "source_head");
+    row["payload"] = payload;
+    records.push_back(row);
+  }
+  std::sort(records.begin(), records.end(), [](const nlohmann::json &lhs, const nlohmann::json &rhs) {
+    return std::make_tuple(text_or(lhs, "kind"), text_or(lhs, "source_id"), text_or(lhs, "source_path")) <
+           std::make_tuple(text_or(rhs, "kind"), text_or(rhs, "source_id"), text_or(rhs, "source_path"));
+  });
+  auto bundle = yy_storage::build_storage_export_bundle(export_manifest, records);
+  if (record_receipt) {
+    // The export receipt is a local journal fact (ADR-0037): what left this
+    // store, when, over which range, committing to the exported sync root. It
+    // is deliberately not embedded in the bundle -- the exchange document
+    // stays deterministic for identical content.
+    (void)catalog_store(options.runtime_dir).record_export(export_manifest, records.size(), options.range);
+  }
+  return bundle;
 }
 
 class file_storage_service : public storage_service {
@@ -3682,7 +3106,7 @@ public:
   }
 
   [[nodiscard]] nlohmann::json repair_fetch(const storage_service_options &options) const override {
-    return repair_fetch_impl(options, *this);
+    return repair_fetch_impl(options);
   }
 
   [[nodiscard]] nlohmann::json repair_apply(const storage_service_options &options) const override {
@@ -3693,44 +3117,10 @@ public:
     if (options.scope == "episode") {
       return episode_export_bundle_impl(options);
     }
-    const auto provider = shared_provider(options);
-    const auto manifest = load_latest_manifest_impl(*provider, options.source_id);
-    if (manifest.is_null()) {
-      throw std::runtime_error("manifest not found: " + options.source_id);
-    }
-    auto export_manifest = manifest;
-    if (!options.range.empty()) {
-      export_manifest = yy_storage::build_storage_import_manifest(
-          {{"manifest_id", text_or(manifest, "manifest_id")},
-           {"storage_source_id", text_or(manifest, "source_id")},
-           {"source_type", text_or(manifest, "source_type")},
-           {"source_coordinate", text_or(object_or_empty(manifest, "source"), "coordinate")},
-           {"source_head", text_or(manifest, "source_head")},
-           {"scope", text_or(manifest, "scope")},
-           {"range", options.range},
-           {"counts", {{"records", entries_for_manifest(manifest, options.range).size()}}},
-           {"entries", entries_for_manifest(manifest, options.range)}});
-    }
-    nlohmann::json records = nlohmann::json::array();
-    for (const auto &entry : entries_for_manifest(manifest, options.range)) {
-      auto [payload, error] = load_payload_impl(*provider, entry);
-      if (!error.empty()) {
-        throw std::runtime_error(error + ": " + text_or(entry, "kind") + ":" + text_or(entry, "source_id"));
-      }
-      auto row = entry;
-      row["scope"] = text_or(manifest, "scope");
-      row["manifest_id"] = text_or(manifest, "manifest_id");
-      row["storage_source_id"] = options.source_id;
-      row["source_type"] = text_or(manifest, "source_type");
-      row["source_head"] = text_or(manifest, "source_head");
-      row["payload"] = payload;
-      records.push_back(row);
-    }
-    std::sort(records.begin(), records.end(), [](const nlohmann::json &lhs, const nlohmann::json &rhs) {
-      return std::make_tuple(text_or(lhs, "kind"), text_or(lhs, "source_id"), text_or(lhs, "source_path")) <
-             std::make_tuple(text_or(rhs, "kind"), text_or(rhs, "source_id"), text_or(rhs, "source_path"));
-    });
-    return yy_storage::build_storage_export_bundle(export_manifest, records);
+    // The public export operation records the export-bundle receipt; internal
+    // read-only exports (verify_sync round trips, repair-fetch evidence scans
+    // over mirror runtimes) call the impl without the receipt.
+    return export_bundle_generic_impl(options, /*record_receipt=*/true);
   }
 
   [[nodiscard]] nlohmann::json import_bundle(const storage_service_options &options) const override {
@@ -3769,13 +3159,20 @@ public:
       }
       provider->write_payload(digest, raw);
     }
-    const auto generic = yy_storage::build_storage_import_manifest(manifest);
-    provider->write_manifest(text_or(generic, "source_id"), text_or(generic, "manifest_id"), generic);
-    provider->write_latest_manifest(text_or(generic, "source_id"), generic);
-    auto registry = provider->load_registry();
-    registry["sources"][text_or(generic, "source_id")] = generic.at("source");
-    provider->save_registry(registry);
-    const auto accepted = generic;
+    // Acceptance is a journal append: the bundle manifest is the adapter-edge
+    // input, the accepted fact records are Hana-core kernel metadata.
+    const auto accepted = accept_storage_manifest_impl(
+        options.runtime_dir, {
+                                 {"manifest_id", text_or(manifest, "manifest_id")},
+                                 {"storage_source_id", text_or(manifest, "source_id")},
+                                 {"source_type", text_or(manifest, "source_type")},
+                                 {"source_coordinate", text_or(object_or_empty(manifest, "source"), "coordinate")},
+                                 {"source_head", text_or(manifest, "source_head")},
+                                 {"scope", text_or(manifest, "scope")},
+                                 {"range", object_or_empty(manifest, "range")},
+                                 {"entries", array_or_empty(manifest, "entries")},
+                                 {"sync_root", object_or_empty(manifest, "sync_root")},
+                             });
     return {{"ok", true},
             {"scope", "source"},
             {"source_id", text_or(accepted, "source_id")},
@@ -3803,7 +3200,8 @@ public:
               {"source_id", options.source_id},
               {"errors", nlohmann::json::array({{{"code", "source_fsck_failed"}, {"fsck", source_report}}})}};
     }
-    const auto bundle = export_bundle(options);
+    auto export_options = options;
+    const auto bundle = export_bundle_generic_impl(export_options, /*record_receipt=*/false);
     const auto temp_root =
         fs::temp_directory_path() / ("kungfu-storage-sync-" + std::to_string(std::random_device{}()) + "-" +
                                      std::to_string(std::random_device{}()));
@@ -3818,14 +3216,14 @@ public:
       imported_report = fsck_impl(import_options);
       imported_report = replace_string_subtree(imported_report, temp_root.string(), "<sync-runtime>");
       const auto import_provider = shared_provider(import_options);
-      imported_manifest = load_latest_manifest_impl(*import_provider, options.source_id);
+      imported_manifest = load_latest_manifest_impl(import_options.runtime_dir, *import_provider, options.source_id);
       fs::remove_all(temp_root);
     } catch (...) {
       fs::remove_all(temp_root);
       throw;
     }
     const auto provider = shared_provider(options);
-    const auto local_manifest = load_latest_manifest_impl(*provider, options.source_id);
+    const auto local_manifest = load_latest_manifest_impl(options.runtime_dir, *provider, options.source_id);
     const auto local_root = local_manifest.is_object() && local_manifest.contains("sync_root")
                                 ? local_manifest.at("sync_root")
                                 : nlohmann::json(nullptr);
@@ -4283,33 +3681,18 @@ nlohmann::json run_storage_service_operation(const std::string &operation, const
 }
 
 nlohmann::json accept_storage_manifest(const std::string &runtime_dir, const nlohmann::json &manifest) {
-  const auto provider = shared_provider(runtime_dir);
-  const auto generic = yy_storage::build_storage_import_manifest(manifest);
-  for (const auto &issue : yy_storage::verify_storage_import_manifest(generic)) {
-    if (issue.severity != "warning") {
-      throw std::invalid_argument("storage_manifest_invalid: " + issue.code);
-    }
-  }
-  const auto source_id = text_or(generic, "source_id");
-  const auto manifest_id = text_or(generic, "manifest_id");
-  provider->write_manifest(source_id, manifest_id, generic);
-  provider->write_latest_manifest(source_id, generic);
-
-  auto registry = provider->load_registry();
-  registry["sources"][source_id] = generic.at("source");
-  provider->save_registry(registry);
-  return generic;
+  return accept_storage_manifest_impl(runtime_dir, manifest);
 }
 
 nlohmann::json load_storage_latest_manifest(const std::string &runtime_dir, const std::string &source_id) {
   const auto provider = shared_provider(runtime_dir);
-  return load_latest_manifest_impl(*provider, source_id);
+  return load_latest_manifest_impl(runtime_dir, *provider, source_id);
 }
 
 nlohmann::json export_storage_records(const std::string &runtime_dir, const std::string &source_id,
                                       const nlohmann::json &range) {
   const auto provider = shared_provider(runtime_dir);
-  const auto manifest = load_latest_manifest_impl(*provider, source_id);
+  const auto manifest = load_latest_manifest_impl(runtime_dir, *provider, source_id);
   if (manifest.is_null()) {
     throw std::runtime_error("manifest not found: " + source_id);
   }
@@ -4471,15 +3854,26 @@ nlohmann::json storage_service_capabilities() {
                     })},
       {"projections",
        nlohmann::json::array(
-           {{{"name", PROJECTION_SOURCE_REGISTRY},
-             {"schema", SOURCE_REGISTRY_SCHEMA},
+           {{{"name", "source-registry"},
+             {"schema", yy_storage::SOURCE_REGISTRY_SCHEMA_V1},
+             {"authority", "yijinjing-journal"},
+             {"path", "journal/system/storage/source-registry/live/*.journal"},
+             {"rebuildable", false}},
+            {{"name", PROJECTION_SOURCE_REGISTRY},
+             {"schema", SOURCE_REGISTRY_PROJECTION_SCHEMA_V1},
              {"authority", "derived"},
+             {"path", "storage/projections/source-registry.sqlite"},
              {"rebuildable", true}},
-            {{"name", PROJECTION_SQLITE},
-             {"schema", SQLITE_PROJECTION_SCHEMA},
+            {{"name", "manifest-catalog"},
+             {"schema", yy_storage::MANIFEST_CATALOG_SCHEMA_V1},
+             {"authority", "yijinjing-journal"},
+             {"path", "journal/system/storage/manifest-catalog/live/*.journal"},
+             {"export_schema", yy_storage::STORAGE_EXPORT_BUNDLE_SCHEMA_V1},
+             {"rebuildable", false}},
+            {{"name", PROJECTION_MANIFEST_CATALOG},
+             {"schema", MANIFEST_CATALOG_PROJECTION_SCHEMA_V1},
              {"authority", "derived"},
-             {"path", "storage/projections/storage.sqlite"},
-             {"tables", nlohmann::json::array({"storage_sources", "storage_manifests", "storage_entries"})},
+             {"path", "storage/projections/manifest-catalog.sqlite"},
              {"rebuildable", true}},
             {{"name", "episode-manifest"},
              {"schema", yy_storage::EPISODE_MANIFEST_SCHEMA_V1},

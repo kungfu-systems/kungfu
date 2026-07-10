@@ -24,7 +24,7 @@
 #include <kungfu/yijinjing/log.h>
 #include <kungfu/yijinjing/schema/registry.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
-#include <kungfu/yijinjing/storage/generic_service.h>
+#include <kungfu/yijinjing/storage/manifest_catalog.h>
 #include <kungfu/yijinjing/storage/sync_root.h>
 #include <kungfu/yijinjing/time.h>
 
@@ -384,14 +384,6 @@ void bind(pybind11::module &&m) {
       },
       py::arg("payload"), py::arg("expected_hash"), py::arg("expected_byte_length"),
       py::arg("algorithm") = yijinjing::storage::CONTENT_HASH_ALGORITHM_SHA256);
-  m.def(
-      "build_storage_source_record",
-      [](py::dict input) { return json_to_py(yijinjing::storage::build_storage_source_record(py_to_json(input))); },
-      py::arg("input"));
-  m.def(
-      "build_storage_import_manifest",
-      [](py::dict input) { return json_to_py(yijinjing::storage::build_storage_import_manifest(py_to_json(input))); },
-      py::arg("input"));
   m.def(
       "filter_storage_manifest_entries",
       [](py::iterable entries, py::dict range_filter) {

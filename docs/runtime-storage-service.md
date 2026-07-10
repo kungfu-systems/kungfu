@@ -121,19 +121,22 @@ runtime errors from the service surface. Python and Node remain thin callers of
 the same C++ service and must not manage RocksDB handles or provider-specific
 retry policy themselves.
 
-The first C++ contract surface is intentionally header-only vocabulary under
-`<kungfu/yijinjing/storage...>`:
+The C++ contract surface under `<kungfu/yijinjing/storage...>` is the Hana-core
+kernel record vocabulary (ADR-0037) plus the content-addressed body store:
 
 | Header | Contract role |
 | --- | --- |
-| `common.h` | Stable primitive enums and references: payload state, verification status, content hash, location, event range. |
-| `range.h` | Range selectors and hash inventories for partial fetch/export. |
-| `source.h` | Source identity, heads, accepted ranges, and registry snapshots. |
-| `bundle.h` | Manifest, payload inventory, schema inventory, and bundle root. |
-| `channel.h` | Channel refs, cursors, and request envelopes. |
-| `acceptance.h` | Accepted segments plus import/export/sync result records. |
-| `fsck.h` | Read-only verification options, issue taxonomy, and reports. |
-| `provider.h` | Abstract service/provider interfaces implemented above the kernel. |
+| `common.h` | Content hash primitive and hash-algorithm constants. |
+| `content_hash.h` / `content_store.h` | Content-addressed hashing and the immutable write-once body store (ADR-0040). |
+| `source_registry.h` | The source-registry kernel journal: `SourceRegistered` / `SourceHeadUpdated` / `AcceptedRangeRecorded` POD records folded into the source catalog. |
+| `manifest_catalog.h` | The manifest-catalog kernel journal: `ImportManifestAccepted` / `ManifestEntryRecorded` / `ExportBundleRecorded` / `ChannelCursorUpdated` POD records, the accepted entries document committed by content hash, and the import-manifest / export-bundle JSON edge assemblers. |
+| `sync_root.h` | The linear-chain sync-root proof over manifest entry commitments. |
+| `episode_manifest.h` | The Episode manifest kernel journal (ADR-0034/0041/0043). |
+
+The interim heap structs (`bundle.h`, `channel.h`, `source.h`, `acceptance.h`,
+`fsck.h`, `range.h`) and the abstract `provider.h` interfaces were retired with
+the ADR-0037 final slice: the record contract is the closed-set POD schema plus
+the journals, never `std::string`-bearing structs and never JSON files.
 
 The next storage-contract layer should add Episode vocabulary under the same
 C++ ownership boundary. Episode is not a Python/Node convenience term: it is the
@@ -458,14 +461,16 @@ The C++ semantic surface now builds and verifies these contracts:
 - `kungfu.storage.payload-inventory/v1`;
 - `kungfu.storage.schema-inventory/v1`.
 
-The interim runtime store persists:
+The runtime store persists (ADR-0037 final slice — the journals are the
+authority; there are no JSON manifest files and no JSON source registry):
 
 ```text
-runtime/storage/sources.json
-runtime/storage/sources/<source_id>/manifests/latest.json
-runtime/storage/sources/<source_id>/manifests/<manifest_id>.json
-runtime/storage/payloads/<prefix>/<sha256>.json
-runtime/storage/projections/storage.sqlite
+runtime/journal/system/storage/source-registry/live/*.journal
+runtime/journal/system/storage/manifest-catalog/live/*.journal
+runtime/storage/manifests/<prefix>/<sha256>      # accepted entries documents
+runtime/storage/payloads/<prefix>/<sha256>       # content-addressed bodies
+runtime/storage/projections/source-registry.sqlite
+runtime/storage/projections/manifest-catalog.sqlite
 ```
 
 When the resolved data home is a workspace `.kungfu/`, those paths live under
@@ -473,11 +478,12 @@ the workspace root as:
 
 ```text
 .kungfu/runtime/journal/system/storage/episode-manifest/live/*.journal
-.kungfu/runtime/storage/sources.json
-.kungfu/runtime/storage/sources/<source_id>/manifests/*.json
-.kungfu/runtime/storage/payloads/<prefix>/<sha256>.json
+.kungfu/runtime/journal/system/storage/source-registry/live/*.journal
+.kungfu/runtime/journal/system/storage/manifest-catalog/live/*.journal
+.kungfu/runtime/storage/manifests/<prefix>/<sha256>
+.kungfu/runtime/storage/payloads/<prefix>/<sha256>
 .kungfu/runtime/storage/rocksdb/
-.kungfu/runtime/storage/projections/storage.sqlite
+.kungfu/runtime/storage/projections/*.sqlite
 ```
 
 `kungfu storage layout --json` is the v1 inspection surface for this resolved
@@ -489,22 +495,23 @@ authority remains accepted manifests plus content-addressed payloads, and
 SQLite/RocksDB remain provider/projection implementation details behind the
 storage service API.
 
-`runtime/storage/projections/storage.sqlite` is the first generic SQLite
-projection. It is owned by the C++ storage service, rebuilt by
-`storage rebuild-index`, and contains query tables for accepted source records,
-latest manifests, and manifest entries. It is intentionally derived from the
-provider's accepted latest manifests: deleting it loses query cache only, not
-authority. `storage fsck` treats a missing projection as a warning and treats a
-present projection whose row counts no longer match latest manifests as
-projection drift.
+`runtime/storage/projections/source-registry.sqlite` and
+`runtime/storage/projections/manifest-catalog.sqlite` are the generic SQLite
+projections. They are owned by the C++ storage service, rebuilt by
+`storage rebuild-index` through the compile-time Hana closed-set → SQLite
+column path (`cache::make_storage_ptr`), and are intentionally derived from the
+kernel journals: deleting them loses query cache only, not authority.
+`storage fsck` treats a missing projection as a warning and a present
+projection whose current-view row counts diverge from the journal fold as
+projection drift (degraded, never failed — a rebuild restores the view).
 
-`storage query` is the first public read-only API over that projection. It still
-enters through `libkungfu` (`kungfu.runtime.storage-service/v1` operation
-`query`) instead of letting Python, Node, CLI, or GUI code read SQLite directly.
-The v1 query surface supports `sources`, `manifests`, and `entries` tables,
-source filtering, entry-kind filtering, ISO time ranges, and a bounded limit.
-It returns JSON rows decoded by the C++ service; the SQLite file remains
-rebuildable cache, not a source of authority.
+`storage query` is the public read-only API over the journal folds. It enters
+through `libkungfu` (`kungfu.runtime.storage-service/v1` operation `query`)
+instead of letting Python, Node, CLI, or GUI code read SQLite directly. The
+query surface supports `sources`, `manifests`, and `entries`, source filtering,
+entry-kind filtering, ISO time ranges, and a bounded limit. It returns JSON
+rows folded by the C++ service from the journals — the authority — while the
+SQLite files serve external SQL tooling.
 
 The user-facing generic commands are:
 
@@ -594,17 +601,19 @@ making storage health and sync readiness inspectable:
 - `storage status --scope all|source` now reports each source's latest manifest,
   accepted ranges, manifest sync root, payload/schema inventory counts, and a
   cursor-like accepted head for future channel fetch.
-- `storage fsck --scope all|source` checks the generic source registry, latest
-  manifests, source-record drift, accepted ranges, sync roots, payload
-  presence/hash/length, payload inventory counts, schema inventory counts,
-  SQLite projection drift, and all-scope orphan payload candidates.
-- `storage rebuild-index` rebuilds the derived
-  `runtime/storage/sources.json` source registry and the C++-owned SQLite
-  projection from accepted latest manifests. This command writes only derived
-  indexes unless `--dry-run` is used.
-- `storage query --table sources|manifests|entries` reads the C++-owned SQLite
-  projection through the runtime storage service. It is read-only and fails with
-  a rebuild hint when the projection is missing.
+- `storage fsck --scope all|source` checks the source-registry journal fold,
+  each source's latest catalog manifest, registry/catalog head drift, the
+  sync-root chain recomputed from the per-entry commitment records, the
+  committed entries document (re-fetched and cross-checked field by field
+  against the delta records), payload presence/hash/length through the
+  content store, SQLite projection drift, and all-scope orphan payload
+  candidates.
+- `storage rebuild-index` rebuilds the derived SQLite projections
+  (`source-registry.sqlite`, `manifest-catalog.sqlite`) from the kernel
+  journals. This command writes only derived indexes unless `--dry-run` is
+  used.
+- `storage query --table sources|manifests|entries` folds the kernel journals
+  through the runtime storage service. It is read-only.
 - `storage gc --dry-run` scans payload files and reports unreachable candidates.
   All-scope candidates are unreferenced by retained storage manifests. Source
   scope is informational only because the interim payload store is shared.

@@ -1,7 +1,8 @@
 # ADR-0037: ADR-0018 storage-service records are Hana-core kernel metadata; JSON is an edge projection, not the contract
 
-- Status: accepted (the decision is validated by the source-registry slice; see
-  "First delivery" below for what has landed vs. what remains staged)
+- Status: accepted, delivered (the source-registry slice validated the
+  pattern; the final slice migrated import manifest / export bundle / channel
+  cursor and retired the JSON-as-contract path — see "First delivery")
 - Date: 2026-07-09
 - Category: (architecture) storage-service record representation and schema
   ownership — which substrate defines source registry, manifest, and fsck
@@ -194,9 +195,31 @@ or a sibling catalog-plane journal, not diverge into two incompatible layouts.
   payload slice.
 - Then migrate the remaining storage-service records and retire the
   JSON-as-contract path and the unconsumed heap structs / `provider.h`.
-  **(later)** — import manifest, export bundle, and channel cursor still use the
-  `generic_service` JSON path; they are migrated after the source-registry slice
-  proves the pattern.
+  **(done, final slice)** — the manifest-catalog family landed as four POD
+  records `ImportManifestAccepted` (10904), `ManifestEntryRecorded` (10905),
+  `ExportBundleRecorded` (10906), `ChannelCursorUpdated` (10907), written to an
+  append-only yijinjing SYSTEM journal (namespace `storage`, name
+  `manifest-catalog`, the source-registry journal's sibling). Variable-length
+  manifest entries grow as per-entry delta records; the exact accepted entries
+  document is committed by content hash into the content store
+  (`storage/manifests/<prefix>/<sha256>`) so the JSON edge and the cross-store
+  sync root stay byte-reproducible, and each delta record carries the entry's
+  sync-root leaf hash so the linear chain is recomputable from kernel records
+  alone (identical proof semantics). Acceptance also aligns the source-registry
+  journal (register-once, head update, accepted range), which retires the
+  parallel JSON `sources.json` registry. The `generic_service` JSON builders,
+  the per-source JSON manifest files, the hand-written raw-SQL `storage.sqlite`
+  projection, and the heap structs (`common.h` heap members, `bundle.h`,
+  `channel.h`, `source.h`, `acceptance.h`, `fsck.h`, `range.h`) plus
+  `provider.h` are retired; the typed projection (`manifest-catalog.sqlite`,
+  `cache::make_storage_ptr` over `ManifestCatalogDataTypes`) replaces them.
+  `import-manifest/v1` / `export-bundle/v1` / `channel-cursor/v1` survive as
+  JSON edge projections labelled `authority: yijinjing-journal`; export appends
+  an `ExportBundleRecorded` receipt as a local journal fact without embedding
+  it in the deterministic exchange bundle. fsck verifies journal fold
+  consistency, the recomputed sync-root chain, the committed entries document,
+  payload references through the ADR-0040 content store, and projection drift
+  (degraded, never failed).
 
 ## Explicitly out of scope
 

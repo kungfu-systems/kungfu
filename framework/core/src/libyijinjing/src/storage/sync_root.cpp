@@ -47,15 +47,18 @@ nlohmann::json make_sync_root_entry_commitment(const nlohmann::json &entry) {
   return commitment;
 }
 
-nlohmann::json compute_linear_sync_root(const std::vector<nlohmann::json> &entries) {
+std::string sync_root_entry_leaf_hash(const nlohmann::json &entry) {
+  return hash_json(make_sync_root_entry_commitment(entry));
+}
+
+nlohmann::json compute_linear_sync_root_from_leaves(const std::vector<std::string> &leaf_hashes) {
   auto previous = std::string{SYNC_ROOT_INITIAL_SHA256};
-  for (size_t index = 0; index < entries.size(); ++index) {
-    const auto entry_hash = hash_json(make_sync_root_entry_commitment(entries[index]));
+  for (size_t index = 0; index < leaf_hashes.size(); ++index) {
     previous = hash_json({
         {"schema", SYNC_ROOT_CHAIN_LINK_SCHEMA_V1},
         {"index", index},
         {"previous", previous},
-        {"entry", entry_hash},
+        {"entry", leaf_hashes[index]},
     });
   }
 
@@ -70,7 +73,7 @@ nlohmann::json compute_linear_sync_root(const std::vector<nlohmann::json> &entri
       {"proof", SYNC_ROOT_PROOF_LINEAR_CHAIN_V1},
       {"algorithm", CONTENT_HASH_ALGORITHM_SHA256},
       {"value", previous},
-      {"entry_count", entries.size()},
+      {"entry_count", leaf_hashes.size()},
       {"initial", SYNC_ROOT_INITIAL_SHA256},
       {"ordering",
        {
@@ -78,6 +81,15 @@ nlohmann::json compute_linear_sync_root(const std::vector<nlohmann::json> &entri
            {"fields", ordering_fields},
        }},
   };
+}
+
+nlohmann::json compute_linear_sync_root(const std::vector<nlohmann::json> &entries) {
+  std::vector<std::string> leaves;
+  leaves.reserve(entries.size());
+  for (const auto &entry : entries) {
+    leaves.push_back(sync_root_entry_leaf_hash(entry));
+  }
+  return compute_linear_sync_root_from_leaves(leaves);
 }
 
 std::vector<sync_root_issue> verify_linear_sync_root(const nlohmann::json &actual,
