@@ -2,6 +2,8 @@
 
 add_library(shared_embedding_native_kfx MODULE native_kfx.cpp)
 target_include_directories(shared_embedding_native_kfx PRIVATE ../../src/libkungfu/include)
+target_compile_options(shared_embedding_native_kfx PRIVATE
+  $<$<CONFIG:Release>:${COMPILER_OPTIMIZE_ON_OPTIONS}>)
 # The repository-wide link_libraries(CONAN_LIBS) predates this thin module and
 # would otherwise pull static dependency state across the plugin boundary.  The
 # native KFX consumer intentionally depends only on the versioned C table that
@@ -18,4 +20,6 @@ set_target_properties(shared_embedding_native_kfx PROPERTIES
 
 add_executable(shared_embedding_host host.cpp)
 target_include_directories(shared_embedding_host PRIVATE ../../src/libkungfu/include)
+target_compile_options(shared_embedding_host PRIVATE
+  $<$<CONFIG:Release>:${COMPILER_OPTIMIZE_ON_OPTIONS}>)
 target_link_libraries(shared_embedding_host PRIVATE ${LIBKUNGFU_NAME} ${CMAKE_DL_LIBS})
