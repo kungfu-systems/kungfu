@@ -73,8 +73,13 @@ fn pinned_fetch_roundtrip_cache_hit_and_checksum_gate() {
     };
     let cached = fetch(&spec).expect("pinned fetch round trip");
     assert_eq!(cached, spec.cached_binary());
+    let target = format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH);
     assert!(
-        cached.ends_with(Path::new("kungfu/tools/demotool/1.2.3").join(binary)),
+        cached.ends_with(
+            Path::new("kungfu/tools/demotool/1.2.3")
+                .join(&target)
+                .join(binary)
+        ),
         "cache layout: {}",
         cached.display()
     );
