@@ -645,11 +645,41 @@ Storage service operations must preserve these boundaries:
   explicit import boundary;
 - projections are disposable, payloads referenced by retained events are not.
 
+### Payload State Encoding
+
+The four-state payload encoding is decided and producer-facing (it closed the
+former open decision):
+
+- The state lives on the kernel manifest entry record
+  (`ManifestEntryRecorded.payload_state`, POD enum `PayloadState`:
+  `present=1, redacted=2, absent=3, missing=4`) and participates in the
+  sync-root entry commitment, so a state can never be rewritten without
+  changing the manifest's proof.
+- `present`: the body is stored content-addressed; `payload_hash` and
+  `byte_len` are required and verified by fsck.
+- `redacted`: a sensitive body deliberately withheld at the adapter edge
+  (ADR-0018 security boundary). The body is never serialized or stored — no
+  raw secret can reach the payload store, manifest, or journal. The entry may
+  carry the hash/length the producer computed before withholding, or leave
+  them empty. fsck reports `intentional=true` and does not degrade.
+- `absent`: the source confirmed the body does not exist. `payload_hash` is
+  empty and `byte_len` is zero. fsck reports `intentional=true` and does not
+  degrade.
+- `missing`: the body was expected but is lost. fsck degrades the verdict.
+- Export carries every entry with its recorded state. `redacted` and `absent`
+  bodies are never read; a `missing` body is attempted so a lost-and-found
+  copy becomes repair material, otherwise the honest gap is exported as a
+  body-less record. Import accepts the entries verbatim, so the states and
+  the sync root survive cross-store round trips.
+- Producers enter through `enrich_source_records` / `write_import_payloads`
+  (Python adapter edge) or the acceptance input document directly: a record
+  marked `payload_state=redacted|absent` is never serialized and never
+  written to the store.
+
 ## Open Decisions
 
 - First payload backend: RocksDB, content-addressed files, SQLite blob table, or
   a hybrid.
-- Exact encoding for present/redacted/absent/missing payload state.
 - Exact source registry schema.
 - How channel requests map to range/session/hash inventory across machines.
 - Whether `compact` ships as one command first, or later after `checkpoint`,

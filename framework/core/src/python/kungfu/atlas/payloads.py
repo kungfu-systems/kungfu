@@ -32,6 +32,13 @@ FRAME_CHECKSUM_ALGORITHMS_BY_VERSION = {
 }
 SUPPORTED_FRAME_CHECKSUM_ALGORITHMS = set(FRAME_CHECKSUM_ALGORITHMS_BY_VERSION.values())
 PAYLOAD_STATE_PRESENT = "present"
+# Producer-side honest states (ADR-0018 security boundary): a deliberately
+# withheld sensitive body is recorded as redacted, a source-confirmed
+# nonexistent body as absent. Neither ever serializes the body; missing means
+# "expected but lost" and degrades fsck.
+PAYLOAD_STATE_REDACTED = "redacted"
+PAYLOAD_STATE_ABSENT = "absent"
+PAYLOAD_STATE_MISSING = "missing"
 SYNC_ROOT_SCHEMA = "kungfu.sync-root/v1"
 SYNC_ROOT_SCOPE_ATLAS_IMPORT_MANIFEST = "atlas.import.manifest"
 SYNC_ROOT_CHAIN_LINK_SCHEMA = "kungfu.sync-chain-link/v1"
@@ -100,20 +107,43 @@ def _source_refs(record: dict[str, Any]) -> list[dict[str, str]]:
 def enrich_source_records(source_records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     enriched = []
     for record in source_records:
-        raw = canonical_json_bytes(_source_payload(record))
-        digest = payload_hash(raw)
-        row = {
-            "kind": record.get("kind"),
-            "source_id": record.get("source_id"),
-            "source_path": record.get("source_path"),
-            "source_time": record.get("source_time"),
-            "schema_version": record.get("schema_version"),
-            "content_type": CONTENT_TYPE_JSON,
-            "payload_hash": digest,
-            "byte_len": len(raw),
-            "payload_state": PAYLOAD_STATE_PRESENT,
-            "payload": _source_payload(record),
-        }
+        state = str(record.get("payload_state") or PAYLOAD_STATE_PRESENT)
+        if state != PAYLOAD_STATE_PRESENT:
+            # The body is deliberately withheld (redacted) or known not to
+            # exist (absent): nothing is serialized, so no raw content can
+            # leak into the store. A redacted entry may carry the hash/length
+            # the producer computed before withholding; an absent entry has
+            # neither.
+            row = {
+                "kind": record.get("kind"),
+                "source_id": record.get("source_id"),
+                "source_path": record.get("source_path"),
+                "source_time": record.get("source_time"),
+                "schema_version": record.get("schema_version"),
+                "content_type": CONTENT_TYPE_JSON,
+                "payload_hash": ""
+                if state == PAYLOAD_STATE_ABSENT
+                else str(record.get("payload_hash") or ""),
+                "byte_len": 0
+                if state == PAYLOAD_STATE_ABSENT
+                else int(record.get("byte_len") or 0),
+                "payload_state": state,
+            }
+        else:
+            raw = canonical_json_bytes(_source_payload(record))
+            digest = payload_hash(raw)
+            row = {
+                "kind": record.get("kind"),
+                "source_id": record.get("source_id"),
+                "source_path": record.get("source_path"),
+                "source_time": record.get("source_time"),
+                "schema_version": record.get("schema_version"),
+                "content_type": CONTENT_TYPE_JSON,
+                "payload_hash": digest,
+                "byte_len": len(raw),
+                "payload_state": PAYLOAD_STATE_PRESENT,
+                "payload": _source_payload(record),
+            }
         refs = _source_refs(record)
         if refs:
             row["source_refs"] = refs
@@ -355,11 +385,13 @@ def write_import_payloads(
         else enrich_source_records(source_records)
     )
     for record in records:
-        raw = canonical_json_bytes(record["payload"])
-        path = payload_path(store_dir, record["payload_hash"])
-        path.parent.mkdir(parents=True, exist_ok=True)
-        if not path.exists():
-            path.write_bytes(raw)
+        state = str(record.get("payload_state") or PAYLOAD_STATE_PRESENT)
+        if state == PAYLOAD_STATE_PRESENT:
+            raw = canonical_json_bytes(record["payload"])
+            path = payload_path(store_dir, record["payload_hash"])
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if not path.exists():
+                path.write_bytes(raw)
         entry = {k: v for k, v in record.items() if k != "payload"}
         receipt = (action_receipts or {}).get(_entry_key(entry))
         if receipt is not None:
@@ -921,9 +953,23 @@ def export_records(
     for entry in _entries_for_range(
         store_dir, manifest.get("entries", []), range_filter
     ):
-        payload, error = _load_payload(store_dir, entry)
-        if error:
-            raise ValueError(f"{error}: {entry.get('kind')}:{entry.get('source_id')}")
+        state = str(entry.get("payload_state") or PAYLOAD_STATE_PRESENT)
+        if state in (PAYLOAD_STATE_REDACTED, PAYLOAD_STATE_ABSENT):
+            # deliberately withheld / source-confirmed nonexistent: the entry
+            # exports with its recorded state and no body, never read
+            payload = None
+        elif state != PAYLOAD_STATE_PRESENT:
+            # recorded-missing: attempt the body so a lost-and-found copy
+            # becomes repair material, else export the honest gap
+            payload, error = _load_payload(store_dir, entry)
+            if error:
+                payload = None
+        else:
+            payload, error = _load_payload(store_dir, entry)
+            if error:
+                raise ValueError(
+                    f"{error}: {entry.get('kind')}:{entry.get('source_id')}"
+                )
         row = dict(entry)
         row["scope"] = "atlas"
         row["import_id"] = manifest.get("import_id")

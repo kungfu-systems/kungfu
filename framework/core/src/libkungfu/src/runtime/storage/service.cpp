@@ -2562,7 +2562,9 @@ std::vector<std::string> referenced_payload_hashes(const std::string &runtime_di
 std::pair<nlohmann::json, std::string> load_payload_impl(const storage_provider &provider,
                                                          const nlohmann::json &entry) {
   const auto digest = text_or(entry, "payload_hash");
-  if (!provider.payload_exists(digest)) {
+  if (digest.empty() || !provider.payload_exists(digest)) {
+    // An empty digest can never resolve to a body (and must not reach the
+    // hash primitives, which reject empty values).
     return {nullptr, "payload_missing"};
   }
   const auto raw = provider.read_payload(digest);
@@ -3063,17 +3065,31 @@ nlohmann::json export_bundle_generic_impl(const storage_service_options &options
   }
   nlohmann::json records = nlohmann::json::array();
   for (const auto &entry : entries_for_manifest(manifest, options.range)) {
-    auto [payload, error] = load_payload_impl(*provider, entry);
-    if (!error.empty()) {
-      throw std::runtime_error(error + ": " + text_or(entry, "kind") + ":" + text_or(entry, "source_id"));
-    }
     auto row = entry;
     row["scope"] = text_or(manifest, "scope");
     row["manifest_id"] = text_or(manifest, "manifest_id");
     row["storage_source_id"] = options.source_id;
     row["source_type"] = text_or(manifest, "source_type");
     row["source_head"] = text_or(manifest, "source_head");
-    row["payload"] = payload;
+    const auto state = text_or(entry, "payload_state", PAYLOAD_STATE_PRESENT);
+    if (state == PAYLOAD_STATE_REDACTED || state == PAYLOAD_STATE_ABSENT) {
+      // A deliberately withheld or source-confirmed nonexistent body is an
+      // honest state, not an export failure: the entry travels with its
+      // recorded state and no body, and the body is never read.
+      row["payload"] = nullptr;
+    } else if (state != PAYLOAD_STATE_PRESENT) {
+      // A recorded-missing body is expected to exist: attempt it, so a
+      // lost-and-found body becomes repair material; otherwise export the
+      // honest gap.
+      auto [payload, error] = load_payload_impl(*provider, entry);
+      row["payload"] = error.empty() ? payload : nlohmann::json(nullptr);
+    } else {
+      auto [payload, error] = load_payload_impl(*provider, entry);
+      if (!error.empty()) {
+        throw std::runtime_error(error + ": " + text_or(entry, "kind") + ":" + text_or(entry, "source_id"));
+      }
+      row["payload"] = payload;
+    }
     records.push_back(row);
   }
   std::sort(records.begin(), records.end(), [](const nlohmann::json &lhs, const nlohmann::json &rhs) {
@@ -3144,7 +3160,13 @@ public:
     }
     const auto provider = shared_provider(options);
     for (const auto &record : records) {
-      if (!record.is_object() || !record.contains("payload")) {
+      if (!record.is_object() || !record.contains("payload") || record.at("payload").is_null()) {
+        continue;
+      }
+      const auto record_state = text_or(record, "payload_state", PAYLOAD_STATE_PRESENT);
+      if (record_state == PAYLOAD_STATE_REDACTED || record_state == PAYLOAD_STATE_ABSENT) {
+        // A withheld or nonexistent body must never enter the store, even if
+        // a malformed bundle carries one (ADR-0018 security boundary).
         continue;
       }
       const auto raw = canonical_json(record.at("payload"));
@@ -3698,17 +3720,25 @@ nlohmann::json export_storage_records(const std::string &runtime_dir, const std:
   }
   nlohmann::json records = nlohmann::json::array();
   for (const auto &entry : entries_for_manifest(manifest, range)) {
-    auto [payload, error] = load_payload_impl(*provider, entry);
-    if (!error.empty()) {
-      throw std::runtime_error(error + ": " + text_or(entry, "kind") + ":" + text_or(entry, "source_id"));
-    }
     auto row = entry;
     row["scope"] = text_or(manifest, "scope");
     row["manifest_id"] = text_or(manifest, "manifest_id");
     row["storage_source_id"] = source_id;
     row["source_type"] = text_or(manifest, "source_type");
     row["source_head"] = text_or(manifest, "source_head");
-    row["payload"] = payload;
+    const auto state = text_or(entry, "payload_state", PAYLOAD_STATE_PRESENT);
+    if (state == PAYLOAD_STATE_REDACTED || state == PAYLOAD_STATE_ABSENT) {
+      row["payload"] = nullptr;
+    } else if (state != PAYLOAD_STATE_PRESENT) {
+      auto [payload, error] = load_payload_impl(*provider, entry);
+      row["payload"] = error.empty() ? payload : nlohmann::json(nullptr);
+    } else {
+      auto [payload, error] = load_payload_impl(*provider, entry);
+      if (!error.empty()) {
+        throw std::runtime_error(error + ": " + text_or(entry, "kind") + ":" + text_or(entry, "source_id"));
+      }
+      row["payload"] = payload;
+    }
     records.push_back(row);
   }
   std::sort(records.begin(), records.end(), [](const nlohmann::json &lhs, const nlohmann::json &rhs) {
