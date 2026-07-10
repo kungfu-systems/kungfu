@@ -33,7 +33,7 @@ into measured facts:
 | 1 | Rust ↔ shared libkungfu membrane | fixture-only C++ writer, then the versioned C ABI context/reader/batch lifecycle through a safe Rust wrapper; mmap payload, zero payload copy |
 | 2 | python-build-standalone embeds | link `libpython3.x` from the uv-managed prefix, `Py_Initialize` with `PYTHONHOME` staged |
 | 3 | the binding loads | `import pykungfu` with `PYTHONPATH` at the native dir |
-| 4 | real runtime, not compile-time | Python-level journal write→read roundtrip through `pykungfu.yijinjing` |
+| 4 | real runtime, not compile-time | Python-level journal write→read roundtrip through `pykungfu.runtime` |
 | 5 | node satellite equivalence | `pykungfu.libnode.run(... '-e' ...)` — the same `node::Start` path the product uses — answers and hands control back |
 
 Each step prints `PASS`/`FAIL` with timing; exit 0 means all five passed.
