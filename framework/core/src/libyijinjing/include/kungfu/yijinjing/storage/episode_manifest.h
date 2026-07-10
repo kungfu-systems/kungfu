@@ -167,11 +167,21 @@ struct episode_manifest_fold {
   size_t unfolded_record_count = 0;
 };
 
+class content_store;
+
 class episode_manifest_store {
 public:
   explicit episode_manifest_store(std::string runtime_dir);
 
   [[nodiscard]] std::string runtime_dir() const { return runtime_dir_; }
+
+  // ADR-0040/0041: payload refs resolve through this injected content store
+  // when set, so the runtime layer can route resolution through the same
+  // backend that published the bytes (file or engine-backed). Non-owning; the
+  // caller keeps the store alive across the operation. When unset, fsck and
+  // inspect fall back to the kernel's default file backend over
+  // <runtime_dir>/storage.
+  void set_content_store(const content_store *store) { content_store_ = store; }
 
   // Append-only writers. Each writes one POD record to the journal and
   // returns its JSON edge projection.
@@ -212,6 +222,7 @@ public:
 
 private:
   std::string runtime_dir_;
+  const content_store *content_store_ = nullptr;
 };
 
 } // namespace kungfu::yijinjing::storage

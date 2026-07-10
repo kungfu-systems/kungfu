@@ -443,7 +443,7 @@ struct payload_ref_resolution {
   std::string detail = {};
 };
 
-payload_ref_resolution resolve_payload_ref(const std::string &runtime_dir, const std::string &ref_hash) {
+payload_ref_resolution resolve_payload_ref(const content_store &store, const std::string &ref_hash) {
   content_hash hash{};
   try {
     // canonical form is "<algo>:<hex>"; bare hex from earlier producers is
@@ -452,7 +452,6 @@ payload_ref_resolution resolve_payload_ref(const std::string &runtime_dir, const
   } catch (const std::exception &e) {
     return {"unaddressable", "episode_payload_ref_hash_invalid", e.what()};
   }
-  file_content_store store((fs::path(runtime_dir) / "storage").string());
   const auto verified = store.verify("payloads", hash);
   switch (verified.error) {
   case content_store_error::Ok:
@@ -476,7 +475,7 @@ struct episode_graph {
   bool degraded = false;
 };
 
-episode_graph build_causal_graph(const std::string &runtime_dir, uint64_t episode_id, const episode_current_view &view,
+episode_graph build_causal_graph(const content_store &refs, uint64_t episode_id, const episode_current_view &view,
                                  const std::map<uint64_t, episode_current_view> &folded) {
   std::vector<uint64_t> frame_uids;
   std::vector<uint64_t> declared_input_frames;
@@ -579,7 +578,7 @@ episode_graph build_causal_graph(const std::string &runtime_dir, uint64_t episod
                             {"role", "ref"}});
       }
     } else if (ref.ref_kind == EpisodeRefKind::Payload) {
-      const auto resolved = resolve_payload_ref(runtime_dir, ref_hash);
+      const auto resolved = resolve_payload_ref(refs, ref_hash);
       dependencies.push_back({{"kind", "payload"},
                               {"role", "payload_ref"},
                               {"ref_uid", ref.ref_uid},
@@ -851,7 +850,9 @@ nlohmann::json episode_manifest_store::inspect(uint64_t episode_id) const {
             {"errors", nlohmann::json::array({{{"code", "episode_missing"}, {"episode_id", episode_id}}})}};
   }
   const auto &view = iter->second;
-  const auto graph = build_causal_graph(runtime_dir_, episode_id, view, fold.episodes);
+  const file_content_store default_content_store((fs::path(runtime_dir_) / "storage").string());
+  const content_store &refs = content_store_ != nullptr ? *content_store_ : default_content_store;
+  const auto graph = build_causal_graph(refs, episode_id, view, fold.episodes);
   return {{"ok", true},
           {"schema", EPISODE_MANIFEST_SCHEMA_V1},
           {"runtime_dir", runtime_dir_},
@@ -866,6 +867,8 @@ nlohmann::json episode_manifest_store::inspect(uint64_t episode_id) const {
 
 nlohmann::json episode_manifest_store::fsck(uint64_t episode_id) const {
   const auto fold = fold_typed_records();
+  const file_content_store default_content_store((fs::path(runtime_dir_) / "storage").string());
+  const content_store &refs = content_store_ != nullptr ? *content_store_ : default_content_store;
   nlohmann::json errors = nlohmann::json::array();
   nlohmann::json warnings = nlohmann::json::array();
   size_t checked = 0;
@@ -934,7 +937,7 @@ nlohmann::json episode_manifest_store::fsck(uint64_t episode_id) const {
         }
       }
     }
-    const auto graph = build_causal_graph(runtime_dir_, current_episode_id, view, fold.episodes);
+    const auto graph = build_causal_graph(refs, current_episode_id, view, fold.episodes);
     degraded = degraded || graph.degraded;
     for (const auto &error : graph.errors) {
       errors.push_back(error);

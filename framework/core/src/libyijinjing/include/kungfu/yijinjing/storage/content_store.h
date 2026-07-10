@@ -80,6 +80,12 @@ struct content_get_result {
 // A valid namespace is 1..64 chars of [a-z0-9_-].
 [[nodiscard]] bool is_valid_content_namespace(const std::string &content_namespace);
 
+// Validate a caller-supplied digest against a store's normalized algorithm
+// without throwing across the contract; failures land in the declared error
+// taxonomy. Shared by every backend so digest hygiene stays identical.
+[[nodiscard]] content_store_error validate_content_digest(const content_hash &hash, const std::string &store_algorithm,
+                                                          std::string &message);
+
 class content_store {
 public:
   virtual ~content_store() = default;

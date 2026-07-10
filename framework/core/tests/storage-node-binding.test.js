@@ -375,3 +375,76 @@ for (const providerCase of providerCases) {
       }),
   );
 }
+
+// ADR-0040 stage B: the content-store facade serves Node with the same
+// vocabulary as C++/Python over both provider profiles.
+for (const provider of ['content-addressed-file', 'rocksdb']) {
+  test(
+    `content store facade roundtrip (${provider})`,
+    {
+      skip:
+        nativeAvailable || process.env.KUNGFU_REQUIRE_NATIVE === '1'
+          ? false
+          : 'built kungfu_node binding is unavailable',
+    },
+    () =>
+      withStorageProvider(provider, () => {
+        const runtimeDir = fs.mkdtempSync(
+          path.join(os.tmpdir(), 'kf-content-store-'),
+        );
+        try {
+          const raw = Buffer.from(`node facade payload via ${provider}`);
+          const put = kungfu.contentStorePutIfAbsent(
+            runtimeDir,
+            'payloads',
+            raw,
+          );
+          assert.equal(put.ok, true);
+          assert.equal(put.existed, false);
+          const digest = put.hash.value;
+
+          const again = kungfu.contentStorePutIfAbsent(
+            runtimeDir,
+            'payloads',
+            raw,
+          );
+          assert.equal(again.ok, true);
+          assert.equal(again.existed, true);
+
+          assert.equal(
+            kungfu.contentStoreHas(runtimeDir, 'payloads', `sha256:${digest}`),
+            true,
+          );
+          assert.deepEqual(
+            Buffer.from(kungfu.contentStoreGet(runtimeDir, 'payloads', digest)),
+            raw,
+          );
+          const verified = kungfu.contentStoreVerify(
+            runtimeDir,
+            'payloads',
+            digest,
+          );
+          assert.equal(verified.ok, true);
+          assert.equal(verified.byte_length, raw.length);
+
+          const caps = kungfu.contentStoreCapabilities(runtimeDir);
+          assert.equal(
+            caps.profile,
+            provider === 'rocksdb' ? 'kungfu-rocksdb/v1' : 'yijinjing-file/v1',
+          );
+          assert.equal(caps.verified_reads, true);
+
+          const rejected = kungfu.contentStorePutIfAbsent(
+            runtimeDir,
+            'payloads',
+            Buffer.from('other bytes'),
+            `sha256:${'0'.repeat(64)}`,
+          );
+          assert.equal(rejected.ok, false);
+          assert.equal(rejected.error, 'hash_mismatch');
+        } finally {
+          fs.rmSync(runtimeDir, { recursive: true, force: true });
+        }
+      }),
+  );
+}

@@ -155,6 +155,28 @@ public:
 [[nodiscard]] std::string write_storage_payload_bytes(const std::string &runtime_dir, const std::string &digest,
                                                       const std::string &raw);
 
+// ADR-0040 content-store facade: the immutable content contract
+// (put-if-absent / get / has / verify, capability discovery) routed through
+// the provider selected for this runtime dir, so Python and Node speak the
+// same vocabulary as C++ over both the file and engine-backed profiles.
+// Hashes accept "<algo>:<hex>" or bare hex.
+[[nodiscard]] nlohmann::json content_store_put_if_absent(const std::string &runtime_dir,
+                                                         const std::string &content_namespace, const std::string &raw,
+                                                         const std::string &expected_hash = {});
+
+[[nodiscard]] bool content_store_has(const std::string &runtime_dir, const std::string &content_namespace,
+                                     const std::string &content_hash_text);
+
+[[nodiscard]] nlohmann::json content_store_verify(const std::string &runtime_dir, const std::string &content_namespace,
+                                                  const std::string &content_hash_text);
+
+// Verified read: throws when the object is missing, corrupt, or unaddressable,
+// so corrupt bytes never reach a caller.
+[[nodiscard]] std::string content_store_get(const std::string &runtime_dir, const std::string &content_namespace,
+                                            const std::string &content_hash_text);
+
+[[nodiscard]] nlohmann::json content_store_capabilities(const std::string &runtime_dir);
+
 [[nodiscard]] nlohmann::json storage_service_capabilities();
 
 } // namespace kungfu::runtime::storage_service_api

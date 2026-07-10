@@ -472,6 +472,35 @@ void bind(pybind11::module &&m) {
         return storage_service_api::write_storage_payload_bytes(runtime_dir, digest, raw);
       },
       py::arg("runtime_dir"), py::arg("digest"), py::arg("payload"));
+  m.def(
+      "content_store_put_if_absent",
+      [](const std::string &runtime_dir, const std::string &content_namespace, py::bytes payload,
+         const std::string &expected_hash) {
+        const std::string raw = payload;
+        return json_to_py(
+            storage_service_api::content_store_put_if_absent(runtime_dir, content_namespace, raw, expected_hash));
+      },
+      py::arg("runtime_dir"), py::arg("content_namespace"), py::arg("payload"), py::arg("expected_hash") = "");
+  m.def("content_store_has", &storage_service_api::content_store_has, py::arg("runtime_dir"),
+        py::arg("content_namespace"), py::arg("content_hash"));
+  m.def(
+      "content_store_verify",
+      [](const std::string &runtime_dir, const std::string &content_namespace, const std::string &content_hash) {
+        return json_to_py(storage_service_api::content_store_verify(runtime_dir, content_namespace, content_hash));
+      },
+      py::arg("runtime_dir"), py::arg("content_namespace"), py::arg("content_hash"));
+  m.def(
+      "content_store_get",
+      [](const std::string &runtime_dir, const std::string &content_namespace, const std::string &content_hash) {
+        return py::bytes(storage_service_api::content_store_get(runtime_dir, content_namespace, content_hash));
+      },
+      py::arg("runtime_dir"), py::arg("content_namespace"), py::arg("content_hash"));
+  m.def(
+      "content_store_capabilities",
+      [](const std::string &runtime_dir) {
+        return json_to_py(storage_service_api::content_store_capabilities(runtime_dir));
+      },
+      py::arg("runtime_dir"));
 
   m.def("setup_log", &yijinjing::log::setup_log);
   m.def("emit_log", &yijinjing::log::emit_log);

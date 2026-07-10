@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <random>
@@ -496,6 +497,10 @@ public:
   [[nodiscard]] virtual std::string read_payload(const std::string &digest) const = 0;
   virtual void write_payload(const std::string &digest, const std::string &raw) const = 0;
   [[nodiscard]] virtual std::vector<stored_payload> all_payloads() const = 0;
+  // ADR-0040: the immutable content store this provider publishes payload
+  // bytes through. Injected into kernel fsck/inspect so payload-ref
+  // resolution reads the same backend that owns the bytes.
+  [[nodiscard]] virtual yy_storage::content_store &content_store() const = 0;
 };
 
 class file_storage_provider : public storage_provider {
@@ -607,14 +612,15 @@ public:
     // ADR-0040: publish through the immutable content store (atomic
     // tmp+rename, digest checked against the bytes) instead of a bare file
     // write; the store's layout is byte-compatible with payload_path.
-    yy_storage::file_content_store store(root_dir(runtime_dir_).string());
-    const auto result = store.put_if_absent("payloads", raw, yy_storage::make_content_hash(digest));
+    const auto result = content_store_.put_if_absent("payloads", raw, yy_storage::make_content_hash(digest));
     if (!result.ok()) {
       throw std::runtime_error("failed to publish payload " + digest + ": " +
                                yy_storage::content_store_error_name(result.error) +
                                (result.message.empty() ? "" : " (" + result.message + ")"));
     }
   }
+
+  [[nodiscard]] yy_storage::content_store &content_store() const override { return content_store_; }
 
   [[nodiscard]] std::vector<stored_payload> all_payloads() const override {
     std::vector<stored_payload> result;
@@ -626,11 +632,198 @@ public:
 
 private:
   std::string runtime_dir_;
+  mutable yy_storage::file_content_store content_store_{root_dir(runtime_dir_).string()};
+};
+
+// ADR-0040: the RocksDB-backed content store lives in the runtime/provider
+// layer and implements the yijinjing contract over the provider's single
+// long-lived engine handle (decision 6). Keys are "<namespace>/<digest>",
+// bare lowercase hex. The store never owns the handle: the provider does,
+// and multi-process ownership of one database path is rejected by the
+// engine's own lock. Values are written through the WAL in one atomic key
+// write, so a torn object is never visible under a digest; identical-bytes
+// races on the same key are benign under content identity.
+class rocksdb_content_store : public yy_storage::content_store {
+public:
+  using engine_opener = std::function<rocksdb::DB *(bool write)>;
+
+  explicit rocksdb_content_store(engine_opener open) : open_(std::move(open)) {}
+
+  [[nodiscard]] yy_storage::content_store_capabilities capabilities() const override {
+    yy_storage::content_store_capabilities caps{};
+    caps.profile = "kungfu-rocksdb/v1";
+    caps.hash_algorithm = yy_storage::CONTENT_HASH_ALGORITHM_SHA256;
+    caps.max_object_size = 0;
+    caps.atomic_put_if_absent = true;
+    caps.verified_reads = true;
+    caps.durability = write_options_.sync ? "fsync-per-write" : "wal-os-buffered";
+    caps.visibility = "publish-then-visible";
+    caps.concurrency = "multi-writer-single-process";
+    return caps;
+  }
+
+  [[nodiscard]] yy_storage::content_store_result put_if_absent(const std::string &content_namespace, const void *data,
+                                                               size_t size,
+                                                               const yy_storage::content_hash &expected) override {
+    yy_storage::content_store_result result{};
+    if (!yy_storage::is_valid_content_namespace(content_namespace)) {
+      result.error = yy_storage::content_store_error::InvalidArgument;
+      result.message = "invalid content namespace: " + content_namespace;
+      return result;
+    }
+    if (size > 0 && data == nullptr) {
+      result.error = yy_storage::content_store_error::InvalidArgument;
+      result.message = "null data with non-zero size";
+      return result;
+    }
+    const auto digest = yy_storage::compute_content_hash(data, size, yy_storage::CONTENT_HASH_ALGORITHM_SHA256);
+    if (!expected.empty()) {
+      result.error = yy_storage::validate_content_digest(expected, digest.algorithm, result.message);
+      if (result.error != yy_storage::content_store_error::Ok) {
+        return result;
+      }
+      if (expected.value != digest.value) {
+        result.error = yy_storage::content_store_error::HashMismatch;
+        result.message = "bytes hash to " + digest.value + ", caller declared " + expected.value;
+        return result;
+      }
+    }
+    result.hash = digest;
+    result.byte_length = size;
+    auto *db = open_(true);
+    if (db == nullptr) {
+      result.error = yy_storage::content_store_error::IoError;
+      result.message = "cannot open storage engine for write";
+      return result;
+    }
+    const auto key = object_key(content_namespace, digest.value);
+    std::string existing;
+    auto status = db->Get(read_options_, key, &existing);
+    if (status.ok()) {
+      if (existing.size() != size) {
+        result.error = yy_storage::content_store_error::CorruptObject;
+        result.message = "existing object holds " + std::to_string(existing.size()) + " bytes, content is " +
+                         std::to_string(size) + " bytes; run verify";
+        return result;
+      }
+      result.existed = true;
+      return result;
+    }
+    if (!status.IsNotFound()) {
+      result.error = yy_storage::content_store_error::IoError;
+      result.message = "engine read failed: " + status.ToString();
+      return result;
+    }
+    status = db->Put(write_options_, key, rocksdb::Slice(static_cast<const char *>(data), size));
+    if (!status.ok()) {
+      result.error = yy_storage::content_store_error::IoError;
+      result.message = "engine write failed: " + status.ToString();
+      return result;
+    }
+    return result;
+  }
+
+  using yy_storage::content_store::put_if_absent;
+
+  [[nodiscard]] bool has(const std::string &content_namespace, const yy_storage::content_hash &hash) const override {
+    if (!yy_storage::is_valid_content_namespace(content_namespace)) {
+      return false;
+    }
+    std::string message;
+    if (yy_storage::validate_content_digest(hash, yy_storage::CONTENT_HASH_ALGORITHM_SHA256, message) !=
+        yy_storage::content_store_error::Ok) {
+      return false;
+    }
+    auto *db = open_(false);
+    if (db == nullptr) {
+      return false;
+    }
+    std::string existing;
+    return db->Get(read_options_, object_key(content_namespace, hash.value), &existing).ok();
+  }
+
+  [[nodiscard]] yy_storage::content_store_result verify(const std::string &content_namespace,
+                                                        const yy_storage::content_hash &hash) const override {
+    yy_storage::content_store_result result{};
+    std::string bytes;
+    result.error = load_object(content_namespace, hash, bytes, result.message);
+    if (result.error != yy_storage::content_store_error::Ok) {
+      return result;
+    }
+    result.hash = yy_storage::make_content_hash(hash.value, yy_storage::CONTENT_HASH_ALGORITHM_SHA256);
+    result.byte_length = bytes.size();
+    if (!yy_storage::verify_content_hash(bytes, result.hash)) {
+      result.error = yy_storage::content_store_error::CorruptObject;
+      result.message = "stored bytes do not hash to " + result.hash.value;
+    }
+    return result;
+  }
+
+  [[nodiscard]] yy_storage::content_get_result get(const std::string &content_namespace,
+                                                   const yy_storage::content_hash &hash) const override {
+    yy_storage::content_get_result result{};
+    std::string bytes;
+    result.error = load_object(content_namespace, hash, bytes, result.message);
+    if (result.error != yy_storage::content_store_error::Ok) {
+      return result;
+    }
+    result.hash = yy_storage::make_content_hash(hash.value, yy_storage::CONTENT_HASH_ALGORITHM_SHA256);
+    if (!yy_storage::verify_content_hash(bytes, result.hash)) {
+      result.error = yy_storage::content_store_error::CorruptObject;
+      result.message = "stored bytes do not hash to " + result.hash.value;
+      return result;
+    }
+    result.bytes = std::move(bytes);
+    return result;
+  }
+
+private:
+  [[nodiscard]] static std::string object_key(const std::string &content_namespace, const std::string &digest) {
+    return content_namespace + "/" + digest;
+  }
+
+  [[nodiscard]] yy_storage::content_store_error load_object(const std::string &content_namespace,
+                                                            const yy_storage::content_hash &hash, std::string &bytes,
+                                                            std::string &message) const {
+    if (!yy_storage::is_valid_content_namespace(content_namespace)) {
+      message = "invalid content namespace: " + content_namespace;
+      return yy_storage::content_store_error::InvalidArgument;
+    }
+    const auto digest_error =
+        yy_storage::validate_content_digest(hash, yy_storage::CONTENT_HASH_ALGORITHM_SHA256, message);
+    if (digest_error != yy_storage::content_store_error::Ok) {
+      return digest_error;
+    }
+    auto *db = open_(false);
+    if (db == nullptr) {
+      message = "no storage engine at this runtime dir";
+      return yy_storage::content_store_error::NotFound;
+    }
+    const auto status = db->Get(read_options_, object_key(content_namespace, hash.value), &bytes);
+    if (status.IsNotFound()) {
+      message = "no object under " + object_key(content_namespace, hash.value);
+      return yy_storage::content_store_error::NotFound;
+    }
+    if (!status.ok()) {
+      message = "engine read failed: " + status.ToString();
+      return yy_storage::content_store_error::IoError;
+    }
+    return yy_storage::content_store_error::Ok;
+  }
+
+  engine_opener open_;
+  rocksdb::ReadOptions read_options_ = [] {
+    rocksdb::ReadOptions options;
+    options.fill_cache = false;
+    return options;
+  }();
+  rocksdb::WriteOptions write_options_ = {};
 };
 
 class rocksdb_storage_provider : public storage_provider {
 public:
-  explicit rocksdb_storage_provider(std::string runtime_dir) : runtime_dir_(std::move(runtime_dir)) {}
+  explicit rocksdb_storage_provider(std::string runtime_dir)
+      : runtime_dir_(std::move(runtime_dir)), content_store_([this](bool write) { return open(write); }) {}
 
   [[nodiscard]] std::string name() const override { return PROVIDER_ROCKSDB; }
 
@@ -639,7 +832,7 @@ public:
         {"database", "storage/rocksdb"},
         {"source_registry", "registry"},
         {"source_manifests", "manifest/<source-id>/<manifest-id> and manifest/<source-id>/latest"},
-        {"payloads", "payload/<sha256>"},
+        {"payloads", "payloads/<sha256>"},
     };
   }
 
@@ -734,31 +927,40 @@ public:
   }
 
   [[nodiscard]] bool payload_exists(const std::string &digest) const override {
-    std::string raw;
-    return get(payload_key(digest), raw);
+    return content_store_.has("payloads", yy_storage::make_content_hash(digest));
   }
 
   [[nodiscard]] std::string read_payload(const std::string &digest) const override {
-    std::string raw;
-    if (!get(payload_key(digest), raw)) {
-      throw std::runtime_error("failed to read payload: " + uri_for(payload_key(digest)));
+    // verified read through the content store: corrupt bytes never come back
+    auto result = content_store_.get("payloads", yy_storage::make_content_hash(digest));
+    if (!result.ok()) {
+      throw std::runtime_error("failed to read payload " + digest + ": " +
+                               yy_storage::content_store_error_name(result.error) +
+                               (result.message.empty() ? "" : " (" + result.message + ")"));
     }
-    return raw;
+    return std::move(result.bytes);
   }
 
   void write_payload(const std::string &digest, const std::string &raw) const override {
-    put(payload_key(digest), raw);
+    const auto result = content_store_.put_if_absent("payloads", raw, yy_storage::make_content_hash(digest));
+    if (!result.ok()) {
+      throw std::runtime_error("failed to publish payload " + digest + ": " +
+                               yy_storage::content_store_error_name(result.error) +
+                               (result.message.empty() ? "" : " (" + result.message + ")"));
+    }
   }
 
   [[nodiscard]] std::vector<stored_payload> all_payloads() const override {
     std::vector<stored_payload> result;
-    for_each("payload/", [&](const std::string &key, const std::string &raw) {
-      result.push_back({key.substr(std::string("payload/").size()), uri_for(key), raw.size()});
+    for_each("payloads/", [&](const std::string &key, const std::string &raw) {
+      result.push_back({key.substr(std::string("payloads/").size()), uri_for(key), raw.size()});
     });
     std::sort(result.begin(), result.end(),
               [](const stored_payload &lhs, const stored_payload &rhs) { return lhs.digest < rhs.digest; });
     return result;
   }
+
+  [[nodiscard]] yy_storage::content_store &content_store() const override { return content_store_; }
 
 private:
   [[nodiscard]] std::string uri_for(const std::string &key) const {
@@ -770,7 +972,6 @@ private:
   [[nodiscard]] static std::string latest_manifest_key(const std::string &source_id) {
     return "manifest/" + source_id + "/latest";
   }
-  [[nodiscard]] static std::string payload_key(const std::string &digest) { return "payload/" + digest; }
 
   [[nodiscard]] rocksdb::DB *open(bool write) const {
     if (db_) {
@@ -844,6 +1045,7 @@ private:
   }
 
   std::string runtime_dir_;
+  mutable rocksdb_content_store content_store_;
   mutable std::unique_ptr<rocksdb::DB> db_ = {};
   mutable bool db_writable_ = false;
   rocksdb::ReadOptions read_options_ = [] {
@@ -866,6 +1068,21 @@ std::unique_ptr<storage_provider> make_provider(const std::string &runtime_dir) 
   storage_service_options options;
   options.runtime_dir = runtime_dir;
   return make_provider(options);
+}
+
+// Bundle a provider with an episode store wired to its content store, so
+// payload-ref resolution reads the same backend that published the bytes
+// (ADR-0040); the provider member keeps the injected store alive.
+struct episode_store_with_provider {
+  std::unique_ptr<storage_provider> provider;
+  yy_storage::episode_manifest_store store;
+};
+
+episode_store_with_provider episode_ref_store(const storage_service_options &options) {
+  auto provider = make_provider(options);
+  auto store = yy_storage::episode_manifest_store(options.runtime_dir);
+  store.set_content_store(&provider->content_store());
+  return {std::move(provider), std::move(store)};
 }
 
 nlohmann::json workspace_episode_layout(const storage_service_options &options, const storage_provider &provider) {
@@ -1442,7 +1659,8 @@ nlohmann::json query_sqlite_projection(const storage_service_options &options) {
       if (options.episode_id == 0) {
         rows = episode_store(options).list(0, options.limit).value("episodes", nlohmann::json::array());
       } else {
-        const auto inspected = episode_store(options).inspect(options.episode_id);
+        const auto scoped = episode_ref_store(options);
+        const auto inspected = scoped.store.inspect(options.episode_id);
         if (inspected.value("ok", false)) {
           rows.push_back(inspected.at("episode"));
         }
@@ -1451,7 +1669,8 @@ nlohmann::json query_sqlite_projection(const storage_service_options &options) {
       if (options.episode_id == 0) {
         throw std::invalid_argument("episode_id is required for " + query);
       }
-      const auto inspected = episode_store(options).inspect(options.episode_id);
+      const auto scoped = episode_ref_store(options);
+      const auto inspected = scoped.store.inspect(options.episode_id);
       if (!inspected.value("ok", false)) {
         return {{"ok", false},
                 {"scope", "episode"},
@@ -1685,7 +1904,8 @@ episode_frame_verification verify_episode_frame_claims(const storage_service_opt
 }
 
 nlohmann::json episode_fsck_impl(const storage_service_options &options) {
-  const auto episode_report = episode_store(options).fsck(options.episode_id);
+  const auto scoped = episode_ref_store(options);
+  const auto episode_report = scoped.store.fsck(options.episode_id);
   const auto checked = object_or_empty(episode_report, "checked");
   nlohmann::json report = {
       {"ok", episode_report.value("ok", false)},
@@ -1749,7 +1969,8 @@ nlohmann::json episode_export_bundle_impl(const storage_service_options &options
   if (options.episode_id == 0) {
     throw std::invalid_argument("episode_id is required for episode export");
   }
-  const auto inspected = episode_store(options).inspect(options.episode_id);
+  const auto scoped = episode_ref_store(options);
+  const auto inspected = scoped.store.inspect(options.episode_id);
   if (!inspected.value("ok", false)) {
     throw std::runtime_error("episode not found: " + std::to_string(options.episode_id));
   }
@@ -1927,7 +2148,8 @@ nlohmann::json apply_episode_bundle_material(const storage_service_options &opti
   nlohmann::json existing_keys = nlohmann::json::array();
   std::vector<std::string> seen;
   if (bundle_episode_id != 0) {
-    const auto inspected = episode_store(options).inspect(bundle_episode_id);
+    const auto scoped = episode_ref_store(options);
+    const auto inspected = scoped.store.inspect(bundle_episode_id);
     for (const auto &existing : array_or_empty(inspected, "records")) {
       const auto key = episode_record_identity_key(existing);
       seen.push_back(key);
@@ -2873,7 +3095,8 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
     }
   }
 
-  const auto episode_report = episode_store(options).fsck();
+  const auto scoped = episode_ref_store(options);
+  const auto episode_report = scoped.store.fsck();
   const auto episode_checked = object_or_empty(episode_report, "checked");
   report["checked"]["episode_manifest_records"] = episode_checked.value("episode_manifest_records", 0);
   report["checked"]["episodes"] = episode_checked.value("episodes", 0);
@@ -3319,7 +3542,7 @@ public:
   }
 
   [[nodiscard]] nlohmann::json episode_inspect(const storage_service_options &options) const override {
-    return episode_store(options).inspect(uint64_or(options.operation_options, "episode_id"));
+    return episode_ref_store(options).store.inspect(uint64_or(options.operation_options, "episode_id"));
   }
 
   [[nodiscard]] nlohmann::json episode_recover(const storage_service_options &options) const override {
@@ -3772,8 +3995,109 @@ std::string write_storage_payload_bytes(const std::string &runtime_dir, const st
   }
   const auto provider = make_provider(runtime_dir);
   provider->write_payload(digest, raw);
-  return provider->name() == PROVIDER_ROCKSDB ? storage_uri(PROVIDER_ROCKSDB, runtime_dir, "payload/" + digest)
+  return provider->name() == PROVIDER_ROCKSDB ? storage_uri(PROVIDER_ROCKSDB, runtime_dir, "payloads/" + digest)
                                               : payload_path(runtime_dir, digest).string();
+}
+
+namespace {
+
+nlohmann::json content_result_json(const yy_storage::content_store_result &result) {
+  return {{"ok", result.ok()},
+          {"error", yy_storage::content_store_error_name(result.error)},
+          {"hash", {{"algorithm", result.hash.algorithm}, {"value", result.hash.value}}},
+          {"byte_length", result.byte_length},
+          {"existed", result.existed},
+          {"message", result.message}};
+}
+
+// Accept "<algo>:<hex>" or bare hex, mirroring the kernel's ref resolution.
+bool parse_content_hash_text(const std::string &text, yy_storage::content_hash &hash, std::string &message) {
+  try {
+    hash = text.find(':') != std::string::npos ? yy_storage::parse_content_hash(text)
+                                               : yy_storage::make_content_hash(text);
+    return true;
+  } catch (const std::exception &e) {
+    message = e.what();
+    return false;
+  }
+}
+
+nlohmann::json invalid_content_hash_json(const std::string &message) {
+  yy_storage::content_store_result result{};
+  result.error = yy_storage::content_store_error::InvalidArgument;
+  result.message = message;
+  return content_result_json(result);
+}
+
+} // namespace
+
+// ADR-0040 content-store facade: one immutable contract routed through the
+// provider selected for this runtime dir, so file and engine-backed profiles
+// serve Python/Node through the same vocabulary as C++.
+nlohmann::json content_store_put_if_absent(const std::string &runtime_dir, const std::string &content_namespace,
+                                           const std::string &raw, const std::string &expected_hash) {
+  yy_storage::content_hash expected{};
+  if (!expected_hash.empty()) {
+    std::string message;
+    if (!parse_content_hash_text(expected_hash, expected, message)) {
+      return invalid_content_hash_json(message);
+    }
+  }
+  const auto provider = make_provider(runtime_dir);
+  return content_result_json(provider->content_store().put_if_absent(content_namespace, raw, expected));
+}
+
+bool content_store_has(const std::string &runtime_dir, const std::string &content_namespace,
+                       const std::string &content_hash_text) {
+  yy_storage::content_hash hash{};
+  std::string message;
+  if (!parse_content_hash_text(content_hash_text, hash, message)) {
+    return false;
+  }
+  const auto provider = make_provider(runtime_dir);
+  return provider->content_store().has(content_namespace, hash);
+}
+
+nlohmann::json content_store_verify(const std::string &runtime_dir, const std::string &content_namespace,
+                                    const std::string &content_hash_text) {
+  yy_storage::content_hash hash{};
+  std::string message;
+  if (!parse_content_hash_text(content_hash_text, hash, message)) {
+    return invalid_content_hash_json(message);
+  }
+  const auto provider = make_provider(runtime_dir);
+  return content_result_json(provider->content_store().verify(content_namespace, hash));
+}
+
+std::string content_store_get(const std::string &runtime_dir, const std::string &content_namespace,
+                              const std::string &content_hash_text) {
+  yy_storage::content_hash hash{};
+  std::string message;
+  if (!parse_content_hash_text(content_hash_text, hash, message)) {
+    throw std::invalid_argument("content_store_get: " + message);
+  }
+  const auto provider = make_provider(runtime_dir);
+  auto result = provider->content_store().get(content_namespace, hash);
+  if (!result.ok()) {
+    throw std::runtime_error(std::string("content_store_get_failed: ") +
+                             yy_storage::content_store_error_name(result.error) +
+                             (result.message.empty() ? "" : ": " + result.message));
+  }
+  return std::move(result.bytes);
+}
+
+nlohmann::json content_store_capabilities(const std::string &runtime_dir) {
+  const auto provider = make_provider(runtime_dir);
+  const auto caps = provider->content_store().capabilities();
+  return {{"provider", provider->name()},
+          {"profile", caps.profile},
+          {"hash_algorithm", caps.hash_algorithm},
+          {"max_object_size", caps.max_object_size},
+          {"atomic_put_if_absent", caps.atomic_put_if_absent},
+          {"verified_reads", caps.verified_reads},
+          {"durability", caps.durability},
+          {"visibility", caps.visibility},
+          {"concurrency", caps.concurrency}};
 }
 
 nlohmann::json storage_service_capabilities() {

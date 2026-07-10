@@ -80,27 +80,6 @@ void sync_directory(const fs::path &dir) {
 #endif
 }
 
-// Validate a caller-supplied digest against the store's algorithm without
-// throwing across the contract; failures land in the declared error taxonomy.
-content_store_error check_digest(const content_hash &hash, const std::string &store_algorithm, std::string &message) {
-  std::string normalized;
-  try {
-    normalized = normalize_content_hash_algorithm(hash.algorithm);
-  } catch (const std::invalid_argument &e) {
-    message = e.what();
-    return content_store_error::InvalidArgument;
-  }
-  if (normalized != store_algorithm) {
-    message = "digest algorithm " + normalized + " does not match store algorithm " + store_algorithm;
-    return content_store_error::InvalidArgument;
-  }
-  if (hash.value.size() != SHA256_HEX_LENGTH || !is_lower_hex(hash.value)) {
-    message = "digest value must be " + std::to_string(SHA256_HEX_LENGTH) + " lowercase hex chars";
-    return content_store_error::InvalidArgument;
-  }
-  return content_store_error::Ok;
-}
-
 content_store_error read_file_bytes(const fs::path &path, std::string &bytes, std::string &message) {
   std::error_code ec;
   if (!fs::exists(path, ec)) {
@@ -144,6 +123,26 @@ const char *content_store_error_name(content_store_error error) {
   return "unknown";
 }
 
+content_store_error validate_content_digest(const content_hash &hash, const std::string &store_algorithm,
+                                            std::string &message) {
+  std::string normalized;
+  try {
+    normalized = normalize_content_hash_algorithm(hash.algorithm);
+  } catch (const std::invalid_argument &e) {
+    message = e.what();
+    return content_store_error::InvalidArgument;
+  }
+  if (normalized != store_algorithm) {
+    message = "digest algorithm " + normalized + " does not match store algorithm " + store_algorithm;
+    return content_store_error::InvalidArgument;
+  }
+  if (hash.value.size() != SHA256_HEX_LENGTH || !is_lower_hex(hash.value)) {
+    message = "digest value must be " + std::to_string(SHA256_HEX_LENGTH) + " lowercase hex chars";
+    return content_store_error::InvalidArgument;
+  }
+  return content_store_error::Ok;
+}
+
 bool is_valid_content_namespace(const std::string &content_namespace) {
   if (content_namespace.empty() || content_namespace.size() > MAX_NAMESPACE_LENGTH) {
     return false;
@@ -184,7 +183,7 @@ std::string file_content_store::object_path(const std::string &content_namespace
     throw std::invalid_argument("invalid content namespace: " + content_namespace);
   }
   std::string message;
-  if (check_digest(hash, options_.hash_algorithm, message) != content_store_error::Ok) {
+  if (validate_content_digest(hash, options_.hash_algorithm, message) != content_store_error::Ok) {
     throw std::invalid_argument(message);
   }
   const auto path = fs::path(root_dir_) / content_namespace / hash.value.substr(0, DIGEST_PREFIX_LENGTH) / hash.value;
@@ -212,7 +211,7 @@ content_store_result file_content_store::put_if_absent(const std::string &conten
   }
   const auto digest = compute_content_hash(data, size, options_.hash_algorithm);
   if (!expected.empty()) {
-    result.error = check_digest(expected, options_.hash_algorithm, result.message);
+    result.error = validate_content_digest(expected, options_.hash_algorithm, result.message);
     if (result.error != content_store_error::Ok) {
       return result;
     }
@@ -320,7 +319,7 @@ bool file_content_store::has(const std::string &content_namespace, const content
     return false;
   }
   std::string message;
-  if (check_digest(hash, options_.hash_algorithm, message) != content_store_error::Ok) {
+  if (validate_content_digest(hash, options_.hash_algorithm, message) != content_store_error::Ok) {
     return false;
   }
   std::error_code ec;
@@ -334,7 +333,7 @@ content_store_result file_content_store::verify(const std::string &content_names
     result.message = "invalid content namespace: " + content_namespace;
     return result;
   }
-  result.error = check_digest(hash, options_.hash_algorithm, result.message);
+  result.error = validate_content_digest(hash, options_.hash_algorithm, result.message);
   if (result.error != content_store_error::Ok) {
     return result;
   }
@@ -360,7 +359,7 @@ content_get_result file_content_store::get(const std::string &content_namespace,
     result.message = "invalid content namespace: " + content_namespace;
     return result;
   }
-  result.error = check_digest(hash, options_.hash_algorithm, result.message);
+  result.error = validate_content_digest(hash, options_.hash_algorithm, result.message);
   if (result.error != content_store_error::Ok) {
     return result;
   }
