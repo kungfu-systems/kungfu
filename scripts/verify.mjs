@@ -721,6 +721,19 @@ function main() {
       if (guard.status === 0) pass('yijinjing dependency guard', 'check-deps');
       else fail('yijinjing dependency guard', tail3(guard));
 
+      // ADR-0040: the guard itself must demonstrably fail on a seeded
+      // engine include/symbol/link; a guard that cannot fail is not a gate.
+      const guardSelfTest = spawnSync(
+        process.execPath,
+        [guardMjs, '--self-test'],
+        {
+          encoding: 'utf8',
+        },
+      );
+      if (guardSelfTest.status === 0)
+        pass('yijinjing dependency guard self-test', 'seeded violations fail');
+      else fail('yijinjing dependency guard self-test', tail3(guardSelfTest));
+
       // ADR-0039: all FlatBuffers/reflection access is confined to kungfu::view.
       const viewGuardMjs = path.join(
         core,

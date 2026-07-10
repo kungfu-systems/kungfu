@@ -5,6 +5,7 @@
 # all; each slice is a self-contained subdirectory with its own probe
 # statement, sources and one-command run script.
 
+add_subdirectory(content-store)
 add_subdirectory(fact-ledger)
 add_subdirectory(schema-registry)
 add_subdirectory(view-encapsulation)
