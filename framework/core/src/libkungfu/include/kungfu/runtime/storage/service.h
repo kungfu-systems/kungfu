@@ -242,6 +242,32 @@ struct storage_status_result {
   std::vector<storage_source_status_view> source_status = {};
 };
 
+struct storage_gc_plan_request {
+  std::string runtime_dir = {};
+  std::string provider = {};
+  std::string source_id = {};
+  bool dry_run = true;
+};
+
+struct storage_gc_candidate_view {
+  std::string payload_hash = {};
+  std::string uri = {};
+  uint64_t bytes = 0;
+  bool safe_to_delete = false;
+};
+
+struct storage_gc_plan_result {
+  bool ok = true;
+  std::string scope = "all";
+  std::optional<std::string> source_id = {};
+  bool dry_run = true;
+  uint64_t payloads_scanned = 0;
+  uint64_t referenced_payloads = 0;
+  uint64_t candidate_bytes = 0;
+  std::vector<storage_gc_candidate_view> candidates = {};
+  std::vector<std::string> notes = {};
+};
+
 class storage_service {
 public:
   virtual ~storage_service() = default;
@@ -249,6 +275,8 @@ public:
   [[nodiscard]] virtual storage_status_result status(const storage_status_request &request) const = 0;
 
   [[nodiscard]] virtual storage_query_result query(const storage_query_request &request) const = 0;
+
+  [[nodiscard]] virtual storage_gc_plan_result gc_plan(const storage_gc_plan_request &request) const = 0;
 };
 
 [[nodiscard]] std::string storage_query_kind_name(storage_query_kind kind);

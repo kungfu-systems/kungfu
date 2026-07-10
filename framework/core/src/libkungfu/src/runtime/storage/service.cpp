@@ -3131,43 +3131,38 @@ nlohmann::json rebuild_index_impl(const storage_service_options &options) {
   };
 }
 
-nlohmann::json gc_plan_impl(const storage_service_options &options) {
-  if (!options.dry_run) {
+storage_gc_plan_result gc_plan_typed_impl(const storage_gc_plan_request &request) {
+  if (!request.dry_run) {
     throw std::invalid_argument("storage_gc_requires_dry_run");
   }
-  const auto provider = shared_provider(options);
-  const auto referenced = referenced_payload_hashes(options.runtime_dir, options.source_id);
+  const auto provider = provider_cache::instance().acquire(request.runtime_dir, request.provider);
+  const auto referenced = referenced_payload_hashes(request.runtime_dir, request.source_id);
   const auto payloads = provider->all_payloads();
-  nlohmann::json candidates = nlohmann::json::array();
-  uint64_t candidate_bytes = 0;
+  storage_gc_plan_result result{};
+  result.scope = request.source_id.empty() ? "all" : "source";
+  if (!request.source_id.empty()) {
+    result.source_id = request.source_id;
+  }
+  result.payloads_scanned = payloads.size();
+  result.referenced_payloads = referenced.size();
   for (const auto &payload : payloads) {
     const auto digest = payload.digest;
     if (std::find(referenced.begin(), referenced.end(), digest) != referenced.end()) {
       continue;
     }
-    const auto bytes = payload.bytes;
-    candidate_bytes += bytes;
-    candidates.push_back({{"payload_hash", digest},
-                          {"path", payload.uri},
-                          {"bytes", bytes},
-                          {"safe_to_delete", options.source_id.empty()}});
+    result.candidate_bytes += payload.bytes;
+    result.candidates.push_back({digest, payload.uri, payload.bytes, request.source_id.empty()});
   }
-  return {
-      {"ok", true},
-      {"scope", options.source_id.empty() ? "all" : "source"},
-      {"source_id", options.source_id.empty() ? nlohmann::json(nullptr) : nlohmann::json(options.source_id)},
-      {"dry_run", true},
-      {"payloads_scanned", payloads.size()},
-      {"referenced_payloads", referenced.size()},
-      {"candidate_count", candidates.size()},
-      {"candidate_bytes", candidate_bytes},
-      {"candidates", candidates},
-      {"notes", nlohmann::json::array({"No payloads were deleted.",
-                                       options.source_id.empty()
-                                           ? "All-scope candidates are unreferenced by retained storage manifests."
-                                           : "Source scope candidates are not globally safe to delete because the "
-                                             "interim payload store is shared."})},
-  };
+  result.notes = {"No payloads were deleted.",
+                  request.source_id.empty()
+                      ? "All-scope candidates are unreferenced by retained storage manifests."
+                      : "Source scope candidates are not globally safe to delete because the interim payload store "
+                        "is shared."};
+  return result;
+}
+
+nlohmann::json gc_plan_impl(const storage_service_options &options) {
+  return render_storage_gc_plan_result(default_storage_service().gc_plan(parse_storage_gc_plan_request(options)));
 }
 
 nlohmann::json compact_plan_impl(const storage_service_options &options) {
@@ -3603,6 +3598,10 @@ public:
   [[nodiscard]] storage_query_result query(const storage_query_request &request) const override {
     return query_journal_projection(request);
   }
+
+  [[nodiscard]] storage_gc_plan_result gc_plan(const storage_gc_plan_request &request) const override {
+    return gc_plan_typed_impl(request);
+  }
 };
 
 const file_storage_service &typed_storage_service_instance() {
@@ -3921,6 +3920,30 @@ storage_query_request parse_storage_query_request(const storage_service_options 
 
 storage_status_request parse_storage_status_request(const storage_service_options &options) {
   return {options.runtime_dir, options.provider, options.provider_config_source, options.source_id};
+}
+
+storage_gc_plan_request parse_storage_gc_plan_request(const storage_service_options &options) {
+  return {options.runtime_dir, options.provider, options.source_id, options.dry_run};
+}
+
+nlohmann::json render_storage_gc_plan_result(const storage_gc_plan_result &result) {
+  nlohmann::json candidates = nlohmann::json::array();
+  for (const auto &candidate : result.candidates) {
+    candidates.push_back({{"payload_hash", candidate.payload_hash},
+                          {"path", candidate.uri},
+                          {"bytes", candidate.bytes},
+                          {"safe_to_delete", candidate.safe_to_delete}});
+  }
+  return {{"ok", result.ok},
+          {"scope", result.scope},
+          {"source_id", result.source_id.has_value() ? nlohmann::json(*result.source_id) : nlohmann::json(nullptr)},
+          {"dry_run", result.dry_run},
+          {"payloads_scanned", result.payloads_scanned},
+          {"referenced_payloads", result.referenced_payloads},
+          {"candidate_count", result.candidates.size()},
+          {"candidate_bytes", result.candidate_bytes},
+          {"candidates", std::move(candidates)},
+          {"notes", result.notes}};
 }
 
 nlohmann::json render_storage_status_result(const storage_status_result &result) {

@@ -124,6 +124,10 @@ struct storage_service_options {
 
 [[nodiscard]] nlohmann::json render_storage_status_result(const storage_status_result &result);
 
+[[nodiscard]] storage_gc_plan_request parse_storage_gc_plan_request(const storage_service_options &options);
+
+[[nodiscard]] nlohmann::json render_storage_gc_plan_result(const storage_gc_plan_result &result);
+
 [[nodiscard]] nlohmann::json make_storage_service_request(const std::string &operation, const std::string &runtime_dir,
                                                           const nlohmann::json &options = nlohmann::json::object());
 
