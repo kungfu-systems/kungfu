@@ -69,7 +69,6 @@ jobs:
             runner: '["self-hosted","Windows","X64","kungfu-build-v4-windows-x64"]'
     runs-on: ${{ fromJSON(matrix.runner) }}
     env:
-      KUNGFU_BUILDCHAIN_NO_OPTIONAL: "1"
       KUNGFU_BUILDCHAIN_SOURCE_BUILD: "1"
       SHIFU_NATIVE: "1"
       SHIFU_REQUIRE_MSVC: "1"
@@ -113,13 +112,29 @@ jobs:
           test "$(git -C "$SOURCE_ROOT" write-tree)" = "$expected_tree"
           test -f "$SOURCE_ROOT/shifu"
 
-      - name: Install frozen workspace
+      - name: Install frozen workspace (POSIX)
+        if: ${{ runner.os != 'Windows' }}
         shell: bash
-        run: cd "$SOURCE_ROOT" && ./shifu install --frozen-lockfile --no-optional
+        run: cd "$SOURCE_ROOT" && ./shifu install --frozen-lockfile
 
-      - name: Seed core build
+      - name: Install frozen workspace (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        shell: pwsh
+        run: |
+          Set-Location $env:SOURCE_ROOT
+          .\shifu.cmd install --frozen-lockfile
+
+      - name: Seed core build (POSIX)
+        if: ${{ runner.os != 'Windows' }}
         shell: bash
         run: cd "$SOURCE_ROOT" && ./shifu build:core
+
+      - name: Seed core build (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        shell: pwsh
+        run: |
+          Set-Location $env:SOURCE_ROOT
+          .\shifu.cmd build:core
 
       - name: Build and run shared membrane consumers
         shell: bash
