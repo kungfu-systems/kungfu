@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <functional>
 #include <map>
+#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -172,6 +173,44 @@ struct episode_manifest_fold {
   size_t unfolded_record_count = 0;
 };
 
+struct episode_fsck_issue {
+  std::string code = {};
+  std::optional<uint64_t> episode_id = {};
+  std::optional<uint64_t> dependency_episode_id = {};
+  std::optional<uint64_t> frame_uid = {};
+  std::optional<uint64_t> dependent_frame_uid = {};
+  std::optional<uint64_t> count = {};
+  std::optional<int32_t> status = {};
+  std::optional<uint64_t> claimed = {};
+  std::optional<uint64_t> actual = {};
+  std::optional<uint64_t> recorded_covered_record_count = {};
+  std::optional<uint64_t> computed_covered_record_count = {};
+  std::optional<std::string> role = {};
+  std::optional<std::string> ref_id = {};
+  std::optional<std::string> ref_hash = {};
+  std::optional<std::string> detail = {};
+  std::optional<std::string> reason = {};
+  std::optional<std::string> algorithm = {};
+  std::optional<std::string> recorded = {};
+  std::optional<std::string> computed = {};
+};
+
+struct episode_fsck_result {
+  bool ok = true;
+  std::string status = "ok";
+  std::string schema = EPISODE_MANIFEST_SCHEMA_V1;
+  std::string runtime_dir = {};
+  std::string authority = "yijinjing-journal";
+  bool degraded = false;
+  std::vector<episode_fsck_issue> errors = {};
+  std::vector<episode_fsck_issue> warnings = {};
+  uint64_t episode_manifest_records = 0;
+  uint64_t episodes = 0;
+  uint64_t unknown_records = 0;
+  uint64_t unfolded_records = 0;
+  std::optional<episode_current_view> episode = {};
+};
+
 // ADR-0043: the content root of one Episode's owned claim sequence — a linear
 // hash chain over the covered records in manifest append order (the first
 // EpisodeOpen, every EpisodeFrameAttached / EpisodeRefAttached, and the first
@@ -236,6 +275,8 @@ public:
   [[nodiscard]] nlohmann::json list(uint64_t location_uid = 0, uint64_t limit = 100) const;
 
   [[nodiscard]] nlohmann::json inspect(uint64_t episode_id) const;
+
+  [[nodiscard]] episode_fsck_result fsck_typed(uint64_t episode_id = 0) const;
 
   [[nodiscard]] nlohmann::json fsck(uint64_t episode_id = 0) const;
 

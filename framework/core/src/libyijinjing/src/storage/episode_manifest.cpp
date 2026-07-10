@@ -535,8 +535,8 @@ payload_ref_resolution resolve_payload_ref(const content_store &store, const std
 struct episode_graph {
   nlohmann::json graph = nlohmann::json::object();
   nlohmann::json dependencies = nlohmann::json::array();
-  nlohmann::json errors = nlohmann::json::array();
-  nlohmann::json warnings = nlohmann::json::array();
+  std::vector<episode_fsck_issue> errors = {};
+  std::vector<episode_fsck_issue> warnings = {};
   bool degraded = false;
 };
 
@@ -546,8 +546,8 @@ episode_graph build_causal_graph(const content_store &refs, uint64_t episode_id,
   std::vector<uint64_t> declared_input_frames;
   nlohmann::json frame_edges = nlohmann::json::array();
   nlohmann::json dependencies = nlohmann::json::array();
-  nlohmann::json errors = nlohmann::json::array();
-  nlohmann::json warnings = nlohmann::json::array();
+  std::vector<episode_fsck_issue> errors;
+  std::vector<episode_fsck_issue> warnings;
   bool degraded = false;
   const bool sealed = view.closed && view.close.status == EpisodeStatus::Ended;
 
@@ -572,10 +572,12 @@ episode_graph build_causal_graph(const content_store &refs, uint64_t episode_id,
         {{"kind", "episode"}, {"role", "parent"}, {"episode_id", parent_episode_id}, {"status", status}});
     if (!present) {
       degraded = true;
-      warnings.push_back({{"code", "episode_dependency_missing"},
-                          {"episode_id", episode_id},
-                          {"dependency_episode_id", parent_episode_id},
-                          {"role", "parent"}});
+      episode_fsck_issue issue{};
+      issue.code = "episode_dependency_missing";
+      issue.episode_id = episode_id;
+      issue.dependency_episode_id = parent_episode_id;
+      issue.role = "parent";
+      warnings.push_back(std::move(issue));
     }
   }
 
@@ -588,9 +590,11 @@ episode_graph build_causal_graph(const content_store &refs, uint64_t episode_id,
                             {"status", declared ? "declared_external" : "missing"}});
     if (!declared) {
       degraded = true;
-      warnings.push_back({{"code", "episode_root_trigger_frame_missing"},
-                          {"episode_id", episode_id},
-                          {"frame_uid", root_trigger_frame_uid}});
+      episode_fsck_issue issue{};
+      issue.code = "episode_root_trigger_frame_missing";
+      issue.episode_id = episode_id;
+      issue.frame_uid = root_trigger_frame_uid;
+      warnings.push_back(std::move(issue));
     }
   }
 
@@ -614,10 +618,12 @@ episode_graph build_causal_graph(const content_store &refs, uint64_t episode_id,
                             {"status", declared ? "declared_external" : "missing"}});
     if (!declared) {
       degraded = true;
-      warnings.push_back({{"code", "episode_trigger_frame_missing"},
-                          {"episode_id", episode_id},
-                          {"frame_uid", frame.trigger_frame_uid},
-                          {"dependent_frame_uid", frame.frame_uid}});
+      episode_fsck_issue issue{};
+      issue.code = "episode_trigger_frame_missing";
+      issue.episode_id = episode_id;
+      issue.frame_uid = frame.trigger_frame_uid;
+      issue.dependent_frame_uid = frame.frame_uid;
+      warnings.push_back(std::move(issue));
     }
   }
 
@@ -637,10 +643,12 @@ episode_graph build_causal_graph(const content_store &refs, uint64_t episode_id,
                               {"status", status}});
       if (!present && !declared_external) {
         degraded = true;
-        warnings.push_back({{"code", "episode_dependency_missing"},
-                            {"episode_id", episode_id},
-                            {"dependency_episode_id", ref.ref_uid},
-                            {"role", "ref"}});
+        episode_fsck_issue issue{};
+        issue.code = "episode_dependency_missing";
+        issue.episode_id = episode_id;
+        issue.dependency_episode_id = ref.ref_uid;
+        issue.role = "ref";
+        warnings.push_back(std::move(issue));
       }
     } else if (ref.ref_kind == EpisodeRefKind::Payload) {
       const auto resolved = resolve_payload_ref(refs, ref_hash);
@@ -651,10 +659,13 @@ episode_graph build_causal_graph(const content_store &refs, uint64_t episode_id,
                               {"ref_hash", ref_hash},
                               {"status", resolved.status}});
       if (resolved.code != nullptr) {
-        nlohmann::json issue = {
-            {"code", resolved.code}, {"episode_id", episode_id}, {"ref_id", ref_id}, {"ref_hash", ref_hash}};
+        episode_fsck_issue issue{};
+        issue.code = resolved.code;
+        issue.episode_id = episode_id;
+        issue.ref_id = ref_id;
+        issue.ref_hash = ref_hash;
         if (!resolved.detail.empty()) {
-          issue["detail"] = resolved.detail;
+          issue.detail = resolved.detail;
         }
         // A seal claims the Episode's material is complete and intact; an
         // unverified payload ref falsifies a sealed Episode and only
@@ -1041,36 +1052,44 @@ nlohmann::json episode_manifest_store::inspect(uint64_t episode_id) const {
           {"refs", rows_json(view, view.ref_indices)}};
 }
 
-nlohmann::json episode_manifest_store::fsck(uint64_t episode_id) const {
+episode_fsck_result episode_manifest_store::fsck_typed(uint64_t episode_id) const {
   const auto fold = fold_typed_records();
   const file_content_store default_content_store((fs::path(runtime_dir_) / "storage").string());
   const content_store &refs = content_store_ != nullptr ? *content_store_ : default_content_store;
-  nlohmann::json errors = nlohmann::json::array();
-  nlohmann::json warnings = nlohmann::json::array();
-  size_t checked = 0;
-  bool degraded = false;
-  nlohmann::json scoped_episode = nullptr;
+  episode_fsck_result result{};
+  result.runtime_dir = runtime_dir_;
+  result.episode_manifest_records = static_cast<uint64_t>(fold.total_record_count);
+  result.unknown_records = static_cast<uint64_t>(fold.unknown_record_count);
+  result.unfolded_records = static_cast<uint64_t>(fold.unfolded_record_count);
+  const auto issue_for = [](std::string code, uint64_t current_episode_id) {
+    episode_fsck_issue issue{};
+    issue.code = std::move(code);
+    issue.episode_id = current_episode_id;
+    return issue;
+  };
   for (const auto &[current_episode_id, view] : fold.episodes) {
     if (episode_id != 0 && current_episode_id != episode_id) {
       continue;
     }
-    ++checked;
+    ++result.episodes;
     if (episode_id != 0) {
-      scoped_episode = summary_json(view);
+      result.episode = view;
     }
     if (!view.opened) {
-      errors.push_back({{"code", "episode_open_missing"}, {"episode_id", current_episode_id}});
+      result.errors.push_back(issue_for("episode_open_missing", current_episode_id));
     }
     for (size_t occurrence = 0; occurrence < view.missing_frame_uid_count; ++occurrence) {
-      errors.push_back({{"code", "episode_frame_uid_missing"}, {"episode_id", current_episode_id}});
+      result.errors.push_back(issue_for("episode_frame_uid_missing", current_episode_id));
     }
     for (const auto frame_uid : view.duplicate_frame_uids) {
-      warnings.push_back(
-          {{"code", "episode_frame_duplicate"}, {"episode_id", current_episode_id}, {"frame_uid", frame_uid}});
+      auto issue = issue_for("episode_frame_duplicate", current_episode_id);
+      issue.frame_uid = frame_uid;
+      result.warnings.push_back(std::move(issue));
     }
     if (view.open_count > 1) {
-      errors.push_back(
-          {{"code", "episode_open_duplicate"}, {"episode_id", current_episode_id}, {"count", view.open_count}});
+      auto issue = issue_for("episode_open_duplicate", current_episode_id);
+      issue.count = static_cast<uint64_t>(view.open_count);
+      result.errors.push_back(std::move(issue));
     }
     if (view.close_count > 1) {
       // The append-only tombstone path (a Tombstoned close after the seal) is
@@ -1079,30 +1098,27 @@ nlohmann::json episode_manifest_store::fsck(uint64_t episode_id) const {
       for (size_t index = 1; extra_closes_are_tombstones && index < view.close_statuses.size(); ++index) {
         extra_closes_are_tombstones = view.close_statuses[index] == EpisodeStatus::Tombstoned;
       }
-      if (extra_closes_are_tombstones) {
-        warnings.push_back(
-            {{"code", "episode_tombstoned"}, {"episode_id", current_episode_id}, {"count", view.close_count}});
-      } else {
-        warnings.push_back(
-            {{"code", "episode_closed_duplicate"}, {"episode_id", current_episode_id}, {"count", view.close_count}});
-      }
+      auto issue = issue_for(extra_closes_are_tombstones ? "episode_tombstoned" : "episode_closed_duplicate",
+                             current_episode_id);
+      issue.count = static_cast<uint64_t>(view.close_count);
+      result.warnings.push_back(std::move(issue));
     }
     if (view.closed) {
       const auto close_status = view.close.status;
       const bool status_valid = close_status == EpisodeStatus::Ended || close_status == EpisodeStatus::Aborted ||
                                 close_status == EpisodeStatus::Tombstoned;
       if (!status_valid) {
-        errors.push_back({{"code", "episode_close_status_invalid"},
-                          {"episode_id", current_episode_id},
-                          {"status", static_cast<int32_t>(close_status)}});
+        auto issue = issue_for("episode_close_status_invalid", current_episode_id);
+        issue.status = static_cast<int32_t>(close_status);
+        result.errors.push_back(std::move(issue));
       }
       // A seal is a claim about the Episode's content; the fold is the actual.
       if (close_status == EpisodeStatus::Ended) {
         if (view.close.frame_count != view.unique_frame_count) {
-          errors.push_back({{"code", "episode_seal_frame_count_mismatch"},
-                            {"episode_id", current_episode_id},
-                            {"claimed", view.close.frame_count},
-                            {"actual", view.unique_frame_count}});
+          auto issue = issue_for("episode_seal_frame_count_mismatch", current_episode_id);
+          issue.claimed = view.close.frame_count;
+          issue.actual = static_cast<uint64_t>(view.unique_frame_count);
+          result.errors.push_back(std::move(issue));
         }
         if (view.close.last_frame_uid != 0) {
           bool claimed_last_present = false;
@@ -1110,9 +1126,9 @@ nlohmann::json episode_manifest_store::fsck(uint64_t episode_id) const {
             claimed_last_present = view.frame_at(position).frame_uid == view.close.last_frame_uid;
           }
           if (!claimed_last_present) {
-            errors.push_back({{"code", "episode_seal_last_frame_missing"},
-                              {"episode_id", current_episode_id},
-                              {"frame_uid", view.close.last_frame_uid}});
+            auto issue = issue_for("episode_seal_last_frame_missing", current_episode_id);
+            issue.frame_uid = view.close.last_frame_uid;
+            result.errors.push_back(std::move(issue));
           }
         }
       }
@@ -1123,69 +1139,131 @@ nlohmann::json episode_manifest_store::fsck(uint64_t episode_id) const {
     // canonicalize records a newer writer may have covered), reported
     // honestly instead of guessed.
     if (view.root_seen && !view.closed) {
-      errors.push_back({{"code", "episode_root_without_seal"}, {"episode_id", current_episode_id}});
+      result.errors.push_back(issue_for("episode_root_without_seal", current_episode_id));
     }
     if (view.root_count > 1) {
-      warnings.push_back(
-          {{"code", "episode_root_duplicate"}, {"episode_id", current_episode_id}, {"count", view.root_count}});
+      auto issue = issue_for("episode_root_duplicate", current_episode_id);
+      issue.count = static_cast<uint64_t>(view.root_count);
+      result.warnings.push_back(std::move(issue));
     }
     if (view.root_seen && view.closed) {
       const auto recorded_algorithm = fixed_string(view.root.algorithm);
       if (fold.unknown_record_count > 0) {
-        warnings.push_back({{"code", "episode_root_unverifiable"},
-                            {"episode_id", current_episode_id},
-                            {"reason", "unknown_records_present"}});
+        auto issue = issue_for("episode_root_unverifiable", current_episode_id);
+        issue.reason = "unknown_records_present";
+        result.warnings.push_back(std::move(issue));
       } else if (recorded_algorithm != CONTENT_HASH_ALGORITHM_SHA256) {
-        warnings.push_back({{"code", "episode_root_unverifiable"},
-                            {"episode_id", current_episode_id},
-                            {"reason", "unsupported_algorithm"},
-                            {"algorithm", recorded_algorithm}});
+        auto issue = issue_for("episode_root_unverifiable", current_episode_id);
+        issue.reason = "unsupported_algorithm";
+        issue.algorithm = recorded_algorithm;
+        result.warnings.push_back(std::move(issue));
       } else {
         const auto root = compute_episode_content_root(view);
         const auto recorded_value = fixed_string(view.root.root_value);
         if (recorded_value != root.value || view.root.covered_record_count != root.covered_record_count) {
-          errors.push_back({{"code", "episode_root_mismatch"},
-                            {"episode_id", current_episode_id},
-                            {"recorded", recorded_value},
-                            {"computed", root.value},
-                            {"recorded_covered_record_count", view.root.covered_record_count},
-                            {"computed_covered_record_count", root.covered_record_count}});
+          auto issue = issue_for("episode_root_mismatch", current_episode_id);
+          issue.recorded = recorded_value;
+          issue.computed = root.value;
+          issue.recorded_covered_record_count = view.root.covered_record_count;
+          issue.computed_covered_record_count = root.covered_record_count;
+          result.errors.push_back(std::move(issue));
         }
       }
     }
     const auto graph = build_causal_graph(refs, current_episode_id, view, fold.episodes);
-    degraded = degraded || graph.degraded;
+    result.degraded = result.degraded || graph.degraded;
     for (const auto &error : graph.errors) {
-      errors.push_back(error);
+      result.errors.push_back(error);
     }
     for (const auto &warning : graph.warnings) {
-      warnings.push_back(warning);
+      result.warnings.push_back(warning);
     }
   }
   if (fold.unknown_record_count > 0) {
-    warnings.push_back({{"code", "manifest_unknown_records"}, {"count", fold.unknown_record_count}});
+    episode_fsck_issue issue{};
+    issue.code = "manifest_unknown_records";
+    issue.count = static_cast<uint64_t>(fold.unknown_record_count);
+    result.warnings.push_back(std::move(issue));
   }
   if (fold.unfolded_record_count > 0) {
-    warnings.push_back({{"code", "manifest_record_episode_id_missing"}, {"count", fold.unfolded_record_count}});
+    episode_fsck_issue issue{};
+    issue.code = "manifest_record_episode_id_missing";
+    issue.count = static_cast<uint64_t>(fold.unfolded_record_count);
+    result.warnings.push_back(std::move(issue));
   }
-  if (episode_id != 0 && checked == 0) {
-    errors.push_back({{"code", "episode_missing"}, {"episode_id", episode_id}});
+  if (episode_id != 0 && result.episodes == 0) {
+    result.errors.push_back(issue_for("episode_missing", episode_id));
   }
-  nlohmann::json report = {{"ok", errors.empty()},
-                           {"status", errors.empty() ? (degraded ? "degraded" : "ok") : "failed"},
-                           {"schema", EPISODE_MANIFEST_SCHEMA_V1},
-                           {"runtime_dir", runtime_dir_},
-                           {"authority", "yijinjing-journal"},
-                           {"degraded", degraded},
-                           {"errors", errors},
-                           {"warnings", warnings},
+  result.ok = result.errors.empty();
+  result.status = !result.ok ? "failed" : (result.degraded ? "degraded" : "ok");
+  return result;
+}
+
+nlohmann::json episode_manifest_store::fsck(uint64_t episode_id) const {
+  const auto result = fsck_typed(episode_id);
+  const auto render_issue = [](const episode_fsck_issue &issue) {
+    nlohmann::json row = {{"code", issue.code}};
+    if (issue.episode_id.has_value())
+      row["episode_id"] = *issue.episode_id;
+    if (issue.dependency_episode_id.has_value())
+      row["dependency_episode_id"] = *issue.dependency_episode_id;
+    if (issue.frame_uid.has_value())
+      row["frame_uid"] = *issue.frame_uid;
+    if (issue.dependent_frame_uid.has_value())
+      row["dependent_frame_uid"] = *issue.dependent_frame_uid;
+    if (issue.count.has_value())
+      row["count"] = *issue.count;
+    if (issue.status.has_value())
+      row["status"] = *issue.status;
+    if (issue.claimed.has_value())
+      row["claimed"] = *issue.claimed;
+    if (issue.actual.has_value())
+      row["actual"] = *issue.actual;
+    if (issue.recorded_covered_record_count.has_value()) {
+      row["recorded_covered_record_count"] = *issue.recorded_covered_record_count;
+    }
+    if (issue.computed_covered_record_count.has_value()) {
+      row["computed_covered_record_count"] = *issue.computed_covered_record_count;
+    }
+    if (issue.role.has_value())
+      row["role"] = *issue.role;
+    if (issue.ref_id.has_value())
+      row["ref_id"] = *issue.ref_id;
+    if (issue.ref_hash.has_value())
+      row["ref_hash"] = *issue.ref_hash;
+    if (issue.detail.has_value())
+      row["detail"] = *issue.detail;
+    if (issue.reason.has_value())
+      row["reason"] = *issue.reason;
+    if (issue.algorithm.has_value())
+      row["algorithm"] = *issue.algorithm;
+    if (issue.recorded.has_value())
+      row["recorded"] = *issue.recorded;
+    if (issue.computed.has_value())
+      row["computed"] = *issue.computed;
+    return row;
+  };
+  nlohmann::json errors = nlohmann::json::array();
+  nlohmann::json warnings = nlohmann::json::array();
+  for (const auto &issue : result.errors)
+    errors.push_back(render_issue(issue));
+  for (const auto &issue : result.warnings)
+    warnings.push_back(render_issue(issue));
+  nlohmann::json report = {{"ok", result.ok},
+                           {"status", result.status},
+                           {"schema", result.schema},
+                           {"runtime_dir", result.runtime_dir},
+                           {"authority", result.authority},
+                           {"degraded", result.degraded},
+                           {"errors", std::move(errors)},
+                           {"warnings", std::move(warnings)},
                            {"checked",
-                            {{"episode_manifest_records", fold.total_record_count},
-                             {"episodes", checked},
-                             {"unknown_records", fold.unknown_record_count},
-                             {"unfolded_records", fold.unfolded_record_count}}}};
-  if (episode_id != 0) {
-    report["episode"] = scoped_episode;
+                            {{"episode_manifest_records", result.episode_manifest_records},
+                             {"episodes", result.episodes},
+                             {"unknown_records", result.unknown_records},
+                             {"unfolded_records", result.unfolded_records}}}};
+  if (result.episode.has_value()) {
+    report["episode"] = summary_json(*result.episode);
   }
   return report;
 }
