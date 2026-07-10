@@ -30,7 +30,9 @@ The read capability crosses the membrane once per batch. Each returned payload
 pointer borrows an mmap page retained until explicit batch release. The report
 therefore requires `payload_bytes_copied == 0`, a non-null mapped address, 100
 4 KiB batches (16 frames per call), and a direct 1 MiB view. Exceptions are
-contained on both sides of the C boundary.
+contained on both sides of the C boundary. The report also records the exact
+extension-owned idle wrapper state (`sizeof(context) + sizeof(reader)`),
+excluding the host-owned shared core and module code.
 
 Run through the repository entrypoint:
 

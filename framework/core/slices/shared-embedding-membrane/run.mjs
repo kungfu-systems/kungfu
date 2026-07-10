@@ -38,6 +38,8 @@ process.stdout.write(result.stdout);
 const report = JSON.parse(result.stdout.trim().split('\n').at(-1));
 if (report.abi_version !== 1) fail('unexpected ABI version');
 if (report.payload_bytes_copied !== 0) fail('payload copy detected');
+if (report.extension_owned_idle_bytes <= 0)
+  fail('extension-owned idle state was not reported');
 if (report.control_p99_ns > 1000)
   fail(`control p99 ${report.control_p99_ns}ns exceeds 1us gate`);
 if (report.batch_4k_p99_ns > 5000)

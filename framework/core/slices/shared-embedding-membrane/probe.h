@@ -29,6 +29,7 @@ typedef struct kf_native_probe_report_v1 {
   uint64_t batch_4k_p50_ns;
   uint64_t batch_4k_p99_ns;
   uint64_t one_mib_payload_bytes;
+  uint64_t extension_owned_idle_bytes;
   uint64_t checksum;
 } kf_native_probe_report_v1;
 

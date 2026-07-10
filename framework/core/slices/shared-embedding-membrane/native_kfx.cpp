@@ -67,6 +67,7 @@ extern "C" KF_NATIVE_PROBE_EXPORT int32_t KF_EMBEDDING_CALL kf_native_probe_run_
     location.mode = KF_EMBEDDING_MODE_LIVE;
     location.role = KF_EMBEDDING_ROLE_SYSTEM;
     kungfu::embedding::reader reader(context, location);
+    report->extension_owned_idle_bytes = sizeof(context) + sizeof(reader);
 
     std::vector<uint64_t> batch_times;
     batch_times.reserve(100);

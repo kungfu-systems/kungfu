@@ -67,8 +67,9 @@ Current local evidence is macOS arm64, Release, 2026-07-10:
 | probe | p50 | p99 | gate | result |
 |---|---:|---:|---:|---|
 | warm capability/control call | 0 ns (clock floor) | 42 ns | p99 <= 1 us | pass |
-| 4 KiB batch, 16 frames/call | 2.542 us | 4.209 us | p99 <= 5 us | pass |
+| 4 KiB batch, 16 frames/call | 2.625 us | 4.541 us | p99 <= 5 us | pass |
 | 1 MiB payload | direct mmap view | direct mmap view | no payload copy | pass |
+| extension-owned idle wrapper state | 96 bytes | 96 bytes | report delta | pass |
 
 The Rust host-spike passes all five existing steps. Its first step now seeds a
 fixture in C++ only, then performs context/reader/batch lifecycle and payload
