@@ -8,7 +8,7 @@ confidence: high
 sensitivity: public
 evidence_grade: B
 review_state: user-reviewed
-last_reviewed: 2026-07-10
+last_reviewed: 2026-07-11
 ---
 
 # ADR-0045: KFX execution profiles — Rust-primary native, WebAssembly components, managed runtimes, and subprocesses
@@ -225,9 +225,9 @@ The native half now has a provisional implementation and evidence in
 [`docs/libkungfu-embedding-membrane-spike.md`](../../../../docs/libkungfu-embedding-membrane-spike.md):
 one core-owned v1 table, C++ and safe Rust wrappers, no per-frame callback,
 borrowed mmap pages with explicit batch release, and contained exceptions.
-macOS arm64 passes the native budgets; Linux x64 and Windows x64 remain pending
-the spike PR matrix. This does not start the WASM spike or change the KFX
-manifest/contract.
+macOS arm64, Linux x64, and Windows x64 pass the native budgets using the same
+probe schema; the dedicated PR matrix guards the platform builds and cut-proof.
+This does not start the WASM spike or change the KFX manifest/contract.
 
 ## Contract obligations
 
