@@ -392,6 +392,15 @@ The baseline may be split into separate invocations when runtime is long, but
 each report must retain the exact profile, seed, source revision, and completed
 scenario list.
 
+`scenario_timeout_seconds` is an execution watchdog that prevents an abandoned
+runner from surviving indefinitely; it is not a throughput or latency SLO. The
+baseline allows up to two hours for one process on a loaded qualification host.
+Forward progress remains a hard semantic gate independently: a worker that
+makes no successful progress for the profile's `progress_timeout_ms` fails even
+when the outer execution watchdog has not expired. When the outer watchdog does
+expire, the complete `uv`/Python process tree is terminated and the evidence is
+not qualified.
+
 As of 2026-07-10, `./shifu verify` runs `mvp-smoke-v1` by default. The
 declared Buildchain `verify` lifecycle and the alpha/release `verify --fuzz`
 workflow therefore inherit the same Episode correctness gate. The explicit
@@ -414,9 +423,11 @@ The following conditions fail the profile regardless of throughput:
 - the emitted Trust Report does not validate against its versioned schema.
 
 The first baseline records performance observations without inventing an
-absolute throughput or latency SLO. OOM, timeout, or loss of forward progress is
-an availability failure. After repeatable baselines exist, numerical SLOs may be
-added to a new profile version without changing ADR-0042.
+absolute throughput or latency SLO. OOM or loss of forward progress is an
+availability failure. Expiry of the outer execution watchdog makes a run
+inconclusive and therefore not qualified; it is not evidence that a public
+performance SLO was violated. After repeatable baselines exist, numerical SLOs
+may be added to a new profile version without changing ADR-0042.
 
 The v0 report sets the Episode query profile to
 `episode-manifest-direct`. The current Episode query path reads the manifest

@@ -244,6 +244,7 @@ function readResult(resultPath, fallback) {
 
 function runPython(args, resultPath, timeoutSeconds, scriptPath = workerPath) {
   return new Promise((resolve) => {
+    const detached = process.platform !== 'win32';
     const child = spawn(
       'uv',
       ['run', '--frozen', 'python', scriptPath, ...args],
@@ -251,6 +252,7 @@ function runPython(args, resultPath, timeoutSeconds, scriptPath = workerPath) {
         cwd: coreDir,
         env: runtimeEnv(),
         stdio: ['ignore', 'pipe', 'pipe'],
+        detached,
       },
     );
     let stdout = '';
@@ -267,7 +269,22 @@ function runPython(args, resultPath, timeoutSeconds, scriptPath = workerPath) {
     });
     const timer = setTimeout(() => {
       timedOut = true;
-      child.kill('SIGKILL');
+      if (process.platform === 'win32' && child.pid) {
+        const terminated = spawnSync(
+          'taskkill',
+          ['/pid', String(child.pid), '/t', '/f'],
+          { stdio: 'ignore' },
+        );
+        if (terminated.status !== 0) child.kill('SIGKILL');
+      } else if (child.pid) {
+        try {
+          process.kill(-child.pid, 'SIGKILL');
+        } catch {
+          child.kill('SIGKILL');
+        }
+      } else {
+        child.kill('SIGKILL');
+      }
     }, timeoutSeconds * 1000);
     child.on('close', (code, signal) => {
       clearTimeout(timer);

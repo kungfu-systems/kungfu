@@ -64,6 +64,12 @@ scenarios, correctness counters, fresh-process/fsck/recovery facts, semantic
 oracle histories, and required semantic dimensions to pass. Performance values
 remain trend evidence; v1 adopts no absolute throughput SLO.
 
+The profile's outer scenario timeout is only an execution watchdog. The
+baseline sets it to two hours per process so a loaded qualification host does
+not turn slow-but-progressing work into a one-hour performance SLO. The
+independent 60-second no-progress deadline remains a hard gate; watchdog expiry
+terminates the full `uv`/Python process tree and leaves the run unqualified.
+
 Verify a retained envelope without rerunning the workload:
 
 ```sh
