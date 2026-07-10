@@ -154,12 +154,7 @@ export function assertNoExtraDylibs(bin) {
       .split('\n')
       .map((l) => l.match(/([A-Za-z0-9_.+-]+\.dll)\s*$/i)?.[1])
       .filter(Boolean)
-      .filter(
-        (d) =>
-          !/^(?:KERNEL(?:32|BASE)|VCRUNTIME\d*(?:_\d+)?|api-ms-.*|ucrtbase|MSVCP\d*|ntdll|msvcrt)\.dll$/i.test(
-            d,
-          ),
-      )
+      .filter((d) => !isWindowsSystemDll(d))
       .join('\n');
   } else {
     console.log('  (skip: no otool/ldd/dumpbin on this platform)');
@@ -167,6 +162,22 @@ export function assertNoExtraDylibs(bin) {
   }
   if (deps) fail(`unexpected dynamic dependencies in ${bin}:\n${deps}`);
   console.log(`  ${path.basename(bin)}: system runtime only`);
+}
+
+export function isWindowsSystemDll(dependency) {
+  const name = dependency.toLowerCase();
+  return (
+    [
+      'kernel32.dll',
+      'kernelbase.dll',
+      'msvcrt.dll',
+      'ntdll.dll',
+      'ucrtbase.dll',
+    ].includes(name) ||
+    (name.startsWith('api-ms-') && name.endsWith('.dll')) ||
+    (name.startsWith('msvcp') && name.endsWith('.dll')) ||
+    (name.startsWith('vcruntime') && name.endsWith('.dll'))
+  );
 }
 
 function has(tool) {
