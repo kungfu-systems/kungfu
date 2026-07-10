@@ -179,12 +179,12 @@ The dogfood installer: it bundles the runtime, both reference UIs, the SDK and
 all first-party kfx declared by `product/package.json` into desktop and CLI
 products. Installing the desktop product yields the reference GUI and TUI, the
 `kungfu` shell, and the SDK for zero-setup extension and product development.
-`./kungfu-code dist` is the single source-to-product command; its outputs live
+`./shifu dist` is the single source-to-product command; its outputs live
 under `product/release`.
 
-### Build tooling — `kungfu-code`
+### Build tooling — `shifu`
 
-Build-time only: `./kungfu-code` is the development orchestrator that pins the
+Build-time only: `./shifu` is the development orchestrator that pins the
 toolchain (Node via fnm, Python via uv, the package manager via Corepack) so a
 fresh clone builds with one command.
 
@@ -238,7 +238,7 @@ developer/    build tooling you build WITH (invoked, a devDependency)
 extensions/   kfx plugins (reference extensions)
 examples/     samples and build-coverage probes
 product       dogfood desktop and CLI products (assemble the above)
-kungfu-code   build orchestrator (pins the toolchain)
+shifu   build orchestrator (pins the toolchain)
 ```
 
 ### Where a new package goes

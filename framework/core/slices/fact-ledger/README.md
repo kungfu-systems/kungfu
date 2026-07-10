@@ -99,7 +99,7 @@ link back correctly, so CI can gate on it.
 5. **No uid recompute** — `export.cpp` reads `frame_uid`/`trigger_frame_uid`
    straight off the header; it never calls `writer::current_frame_uid()`
    (ADR-0010 4.6).
-6. **Reproducible build+run** — the commands above, plus `run.sh`; `./kungfu-code verify --full` runs the same proof as part of the repository gate.
+6. **Reproducible build+run** — the commands above, plus `run.sh`; `./shifu verify --full` runs the same proof as part of the repository gate.
 
 ## Honest capture boundary (what this slice does NOT claim)
 

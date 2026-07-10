@@ -120,7 +120,7 @@ conventions, and the pull request / release flow.
 # install fnm and uv once, then:
 git clone git@github.com:kungfu-systems/kungfu.git
 cd kungfu
-./kungfu-code sync && ./kungfu-code build
+./shifu sync && ./shifu build
 ```
 
 ## Documentation

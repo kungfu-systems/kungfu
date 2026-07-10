@@ -1,19 +1,19 @@
 # SPDX-License-Identifier: Apache-2.0
 #
-# Release the kungfu-code launcher: build the 3-platform prebuilt binaries and
-# publish them as a GitHub release tagged kungfu-code-v<version>.
+# Release the shifu launcher: build the 3-platform prebuilt binaries and
+# publish them as a GitHub release tagged shifu-v<version>.
 #
-# The version single source of truth is crates/kungfu-code/Cargo.toml; the tag
-# must match it (verified below). The kungfu-code / kungfu-code.cmd shims and
+# The version single source of truth is crates/shifu/Cargo.toml; the tag
+# must match it (verified below). The shifu / shifu.cmd shims and
 # fresh machines download these assets, so users never need a Rust toolchain.
 # Linux builds target musl for a fully static binary that runs on any distro.
 
-name: Release kungfu-code
+name: Release shifu
 
 on:
   push:
     tags:
-      - "kungfu-code-v*"
+      - "shifu-v*"
   workflow_dispatch:
 
 permissions:
@@ -27,13 +27,13 @@ jobs:
         include:
           - os: macos-14
             target: aarch64-apple-darwin
-            asset: kungfu-code-macos-arm64
+            asset: shifu-macos-arm64
           - os: ubuntu-22.04
             target: x86_64-unknown-linux-musl
-            asset: kungfu-code-linux-x64
+            asset: shifu-linux-x64
           - os: windows-2022
             target: x86_64-pc-windows-msvc
-            asset: kungfu-code-windows-x64.exe
+            asset: shifu-windows-x64.exe
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -43,10 +43,10 @@ jobs:
       - name: Verify tag matches Cargo.toml version
         if: startsWith(github.ref, 'refs/tags/')
         run: |
-          ver="$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/kungfu-code/Cargo.toml | head -n 1)"
-          tag="${GITHUB_REF_NAME#kungfu-code-v}"
+          ver="$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/shifu/Cargo.toml | head -n 1)"
+          tag="${GITHUB_REF_NAME#shifu-v}"
           if [ "$ver" != "$tag" ]; then
-            echo "tag $GITHUB_REF_NAME does not match crates/kungfu-code/Cargo.toml version $ver" >&2
+            echo "tag $GITHUB_REF_NAME does not match crates/shifu/Cargo.toml version $ver" >&2
             exit 1
           fi
       - name: Install musl target
@@ -58,12 +58,12 @@ jobs:
         if: ${{ !contains(matrix.target, 'musl') }}
         run: rustup target add "${{ matrix.target }}"
       - name: Build
-        run: cargo build --release -p kungfu-code --target "${{ matrix.target }}"
+        run: cargo build --release -p shifu --target "${{ matrix.target }}"
         working-directory: crates
       - name: Stage asset
         run: |
           mkdir -p dist
-          src="crates/target/${{ matrix.target }}/release/kungfu-code"
+          src="crates/target/${{ matrix.target }}/release/shifu"
           if [ "${{ runner.os }}" = "Windows" ]; then src="${src}.exe"; fi
           cp "$src" "dist/${{ matrix.asset }}"
       - name: Checksum
@@ -101,4 +101,4 @@ jobs:
           gh release create "$GITHUB_REF_NAME" dist/* \
             --repo "$GITHUB_REPOSITORY" \
             --title "$GITHUB_REF_NAME" \
-            --notes "Prebuilt kungfu-code launcher binaries (macos-arm64, linux-x64 static/musl, windows-x64). Fetched automatically by the kungfu-code shims; see docs/rust-adoption.md."
+            --notes "Prebuilt shifu launcher binaries (macos-arm64, linux-x64 static/musl, windows-x64). Fetched automatically by the shifu shims; see docs/rust-adoption.md."

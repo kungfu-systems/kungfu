@@ -2,12 +2,12 @@
 // Repo-local bootstrap build for a fresh Kungfu worktree.
 //
 // Goal:
-//   ./kungfu-code build
-//   ./kungfu-code product gui dev
+//   ./shifu build
+//   ./shifu product gui dev
 //
 // `build` prepares the runtime, GUI/TUI surfaces, SDK and every first-party KFX
 // view. `rebuild` first removes generated build outputs, then runs the same
-// build. Packaging remains `./kungfu-code dist`.
+// build. Packaging remains `./shifu dist`.
 
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -221,7 +221,7 @@ function main() {
   pnpm('build GUI', ['--filter', '@kungfu-tech/gui', 'run', 'build']);
 
   log('\n[build] complete');
-  log('[build] next: ./kungfu-code product gui dev');
+  log('[build] next: ./shifu product gui dev');
 }
 
 try {

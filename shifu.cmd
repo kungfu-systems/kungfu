@@ -1,20 +1,20 @@
 @echo off
-rem kungfu-code.cmd - kungfu dev/build launcher (Windows).
+rem shifu.cmd - kungfu dev/build launcher (Windows).
 rem ASCII-only on purpose: Windows cmd parses .cmd in the OEM codepage (e.g. GBK/936),
 rem so non-ASCII bytes corrupt parsing. Keep this file ASCII; the sh version may use UTF-8.
 rem
-rem Aligns with the macOS/Linux kungfu-code (sh):
-rem   kungfu-code app | kungfu-code build:core | kungfu-code <any pnpm task>
-rem   kungfu-code proxy ... / config ...   rich subcommands -> delegated to L2 node (not pnpm)
+rem Aligns with the macOS/Linux shifu (sh):
+rem   shifu app | shifu build:core | shifu <any pnpm task>
+rem   shifu proxy ... / config ...   rich subcommands -> delegated to L2 node (not pnpm)
 rem
-rem This script is a thin shim in front of the native launcher (crates\kungfu-code,
+rem This script is a thin shim in front of the native launcher (crates\shifu,
 rem a self-contained Rust binary -- see docs/rust-adoption.md). Resolution order:
-rem   1. KUNGFU_CODE_BIN            explicit binary override
-rem   2. user-global cached binary  %USERPROFILE%\.cache\kungfu\kungfu-code\<version>\
+rem   1. SHIFU_BIN            explicit binary override
+rem   2. user-global cached binary  %USERPROFILE%\.cache\kungfu\shifu\<version>\
 rem   3. fnm + uv already installed -> proven in-script bootstrap below
-rem                                    (force native instead with KUNGFU_CODE_NATIVE=1)
+rem                                    (force native instead with SHIFU_NATIVE=1)
 rem   4. fresh machine              -> download the prebuilt binary pinned by
-rem                                    crates\kungfu-code\Cargo.toml (KUNGFU_CODE_DIST_MIRROR
+rem                                    crates\shifu\Cargo.toml (SHIFU_DIST_MIRROR
 rem                                    overrides the base URL), or cargo build from source
 rem The native launcher bootstraps fnm + uv itself when missing (prebuilt binaries),
 rem and loads the MSVC environment when cl.exe is absent. The in-script bootstrap
@@ -22,7 +22,7 @@ rem kept below still requires the two one-time prerequisites:
 rem fnm (winget install Schniz.fnm) + uv (winget install astral-sh.uv).
 rem
 rem Repo has zero LAN/mirror coupling (open-source clone uses official upstreams). For LAN cache /
-rem CN mirror, use `kungfu-code config` to derive build-local.env.example into the user-global file:
+rem CN mirror, use `shifu config` to derive build-local.env.example into the user-global file:
 rem   %USERPROFILE%\.config\kungfu\build-local.env  (sh-format, shared by main repo and all worktrees)
 rem This .cmd parses that file with pure cmd to load mirror env; optional repo .\build-local.env overrides.
 setlocal enabledelayedexpansion
@@ -35,20 +35,20 @@ call :loadenv "%_KFC_USERCFG%"
 call :loadenv ".\build-local.env"
 
 rem -- Native launcher resolution ------------------------------------------------
-if "%KUNGFU_CODE_NATIVE%"=="0" goto inscript
+if "%SHIFU_NATIVE%"=="0" goto inscript
 
-if defined KUNGFU_CODE_BIN if exist "%KUNGFU_CODE_BIN%" (
-  "%KUNGFU_CODE_BIN%" %*
+if defined SHIFU_BIN if exist "%SHIFU_BIN%" (
+  "%SHIFU_BIN%" %*
   exit /b !errorlevel!
 )
 
 set "_KFC_VER="
-for /f "usebackq tokens=2 delims== " %%v in (`findstr /b /c:"version = " crates\kungfu-code\Cargo.toml`) do (
+for /f "usebackq tokens=2 delims== " %%v in (`findstr /b /c:"version = " crates\shifu\Cargo.toml`) do (
   if not defined _KFC_VER set "_KFC_VER=%%~v"
 )
 set "_KFC_CACHE=%USERPROFILE%\.cache"
 if defined XDG_CACHE_HOME set "_KFC_CACHE=%XDG_CACHE_HOME%"
-set "_KFC_BIN=%_KFC_CACHE%\kungfu\kungfu-code\%_KFC_VER%\kungfu-code.exe"
+set "_KFC_BIN=%_KFC_CACHE%\kungfu\shifu\%_KFC_VER%\shifu.exe"
 
 if exist "%_KFC_BIN%" (
   "%_KFC_BIN%" %*
@@ -56,19 +56,19 @@ if exist "%_KFC_BIN%" (
 )
 
 rem Machines with both prerequisites keep the proven in-script path below;
-rem fresh machines (or KUNGFU_CODE_NATIVE=1) acquire the native launcher.
-if "%KUNGFU_CODE_NATIVE%"=="1" goto acquire
+rem fresh machines (or SHIFU_NATIVE=1) acquire the native launcher.
+if "%SHIFU_NATIVE%"=="1" goto acquire
 where fnm >nul 2>nul || goto acquire
 where uv >nul 2>nul || goto acquire
 goto inscript
 
 :acquire
 set "_KFC_BASE=https://github.com/kungfu-systems/kungfu/releases/download"
-if defined KUNGFU_CODE_DIST_MIRROR set "_KFC_BASE=%KUNGFU_CODE_DIST_MIRROR%"
-set "_KFC_URL=%_KFC_BASE%/kungfu-code-v%_KFC_VER%/kungfu-code-windows-x64.exe"
+if defined SHIFU_DIST_MIRROR set "_KFC_BASE=%SHIFU_DIST_MIRROR%"
+set "_KFC_URL=%_KFC_BASE%/shifu-v%_KFC_VER%/shifu-windows-x64.exe"
 where curl >nul 2>nul && (
-  echo kungfu-code: fetching prebuilt launcher %_KFC_VER% ^(windows-x64^) 1>&2
-  if not exist "%_KFC_CACHE%\kungfu\kungfu-code\%_KFC_VER%" mkdir "%_KFC_CACHE%\kungfu\kungfu-code\%_KFC_VER%" >nul 2>nul
+  echo shifu: fetching prebuilt launcher %_KFC_VER% ^(windows-x64^) 1>&2
+  if not exist "%_KFC_CACHE%\kungfu\shifu\%_KFC_VER%" mkdir "%_KFC_CACHE%\kungfu\shifu\%_KFC_VER%" >nul 2>nul
   curl -fsSL --retry 2 --connect-timeout 20 -o "%_KFC_BIN%.tmp" "%_KFC_URL%" && (
     move /y "%_KFC_BIN%.tmp" "%_KFC_BIN%" >nul
     "%_KFC_BIN%" %*
@@ -77,16 +77,16 @@ where curl >nul 2>nul && (
   del "%_KFC_BIN%.tmp" >nul 2>nul
 )
 where cargo >nul 2>nul && (
-  echo kungfu-code: building native launcher from source ^(cargo build --release^) 1>&2
-  cargo build --release --manifest-path crates\Cargo.toml -p kungfu-code 1>&2 && (
-    if not exist "%_KFC_CACHE%\kungfu\kungfu-code\%_KFC_VER%" mkdir "%_KFC_CACHE%\kungfu\kungfu-code\%_KFC_VER%" >nul 2>nul
-    copy /y crates\target\release\kungfu-code.exe "%_KFC_BIN%" >nul && (
+  echo shifu: building native launcher from source ^(cargo build --release^) 1>&2
+  cargo build --release --manifest-path crates\Cargo.toml -p shifu 1>&2 && (
+    if not exist "%_KFC_CACHE%\kungfu\shifu\%_KFC_VER%" mkdir "%_KFC_CACHE%\kungfu\shifu\%_KFC_VER%" >nul 2>nul
+    copy /y crates\target\release\shifu.exe "%_KFC_BIN%" >nul && (
       "%_KFC_BIN%" %*
       exit /b !errorlevel!
     )
   )
 )
-echo kungfu-code: native launcher unavailable; falling back to the in-script bootstrap 1>&2
+echo shifu: native launcher unavailable; falling back to the in-script bootstrap 1>&2
 
 :inscript
 rem -- Delegate rich subcommands to L2 node (no pnpm, no uv). Prefer fnm node, else system node. --
@@ -97,23 +97,23 @@ goto bootstrap
 :delegate
 where fnm >nul 2>nul && (
   fnm install >nul 2>nul
-  fnm exec --using-file -- node "%~dp0kungfu-code.mjs" %*
+  fnm exec --using-file -- node "%~dp0shifu.mjs" %*
   exit /b !errorlevel!
 )
 where node >nul 2>nul && (
-  node "%~dp0kungfu-code.mjs" %*
+  node "%~dp0shifu.mjs" %*
   exit /b !errorlevel!
 )
-echo kungfu-code: rich subcommand needs node -- install fnm ^(winget install Schniz.fnm^) or any system node 1>&2
+echo shifu: rich subcommand needs node -- install fnm ^(winget install Schniz.fnm^) or any system node 1>&2
 exit /b 127
 
 :bootstrap
 where fnm >nul 2>nul || (
-  echo kungfu-code: install fnm first ^(node-side prereq^) -- winget install Schniz.fnm ^(or https://github.com/Schniz/fnm^) 1>&2
+  echo shifu: install fnm first ^(node-side prereq^) -- winget install Schniz.fnm ^(or https://github.com/Schniz/fnm^) 1>&2
   exit /b 127
 )
 where uv >nul 2>nul || (
-  echo kungfu-code: install uv first ^(python-side prereq^) -- winget install astral-sh.uv ^(or https://docs.astral.sh/uv/^) 1>&2
+  echo shifu: install uv first ^(python-side prereq^) -- winget install astral-sh.uv ^(or https://docs.astral.sh/uv/^) 1>&2
   exit /b 127
 )
 

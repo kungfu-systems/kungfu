@@ -3,9 +3,9 @@
 //
 // Quality gate for local development and CI.
 //
-//   ./kungfu-code check          changed-scope read-only gate + shared tests
-//   ./kungfu-code check:staged   fast, read-only pre-commit gate
-//   ./kungfu-code check:all      whole-tree lint/type/test gate
+//   ./shifu check          changed-scope read-only gate + shared tests
+//   ./shifu check:staged   fast, read-only pre-commit gate
+//   ./shifu check:all      whole-tree lint/type/test gate
 //
 // Formatting fixes live in scripts/fix.mjs. This script must not rewrite source
 // files; pre-commit uses it directly, so the hook stays predictable.

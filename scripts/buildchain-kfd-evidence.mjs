@@ -674,7 +674,7 @@ function sdkAndProductSurfaces() {
     }),
     fileSurface({
       id: 'kungfu.product.dev-run',
-      name: './kungfu-code product',
+      name: './shifu product',
       kind: 'cli',
       sourcePath: 'product/scripts/product.mjs',
       evidencePath: 'product/package.json',
@@ -682,7 +682,7 @@ function sdkAndProductSurfaces() {
     }),
     fileSurface({
       id: 'kungfu.product.release-build',
-      name: './kungfu-code dist',
+      name: './shifu dist',
       kind: 'cli',
       sourcePath: 'product/scripts/dist.mjs',
       evidencePath: 'product/package.json',
@@ -690,7 +690,7 @@ function sdkAndProductSurfaces() {
     }),
     fileSurface({
       id: 'kungfu.product.cli-release-build',
-      name: './kungfu-code product cli dist',
+      name: './shifu product cli dist',
       kind: 'cli',
       sourcePath: 'product/scripts/product.mjs',
       evidencePath: 'product/package.json',
@@ -698,7 +698,7 @@ function sdkAndProductSurfaces() {
     }),
     fileSurface({
       id: 'kungfu.buildchain.kfd.evidence',
-      name: './kungfu-code kfd:buildchain',
+      name: './shifu kfd:buildchain',
       kind: 'cli',
       sourcePath: 'scripts/buildchain-kfd-evidence.mjs',
       evidencePath: KFD3_DEFAULT_REGISTRY_PATH,
@@ -770,7 +770,7 @@ function buildKfd3Registry(upstreamAggregate = buildUpstreamKfdAggregate()) {
           '.buildchain/kfd/kfd-3/collaboration-interface.artifact.json',
           '.buildchain/kfd/kfd-3/capability-query.json',
         ],
-        checkCommand: './kungfu-code kfd:buildchain:check',
+        checkCommand: './shifu kfd:buildchain:check',
       },
     },
     upstreamKfd: {

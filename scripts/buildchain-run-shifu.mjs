@@ -644,7 +644,7 @@ env.KUNGFU_BUILDCHAIN_SOURCE_BUILD = '1';
 const result =
   process.platform === 'win32'
     ? runWindowsPnpm(argv, env, pinnedWindowsNode)
-    : spawnSync(path.join(repoRoot, 'kungfu-code'), argv, {
+    : spawnSync(path.join(repoRoot, 'shifu'), argv, {
         cwd: repoRoot,
         env,
         stdio: 'inherit',
@@ -656,7 +656,7 @@ if (result.error) {
 }
 
 if (result.signal) {
-  console.error(`kungfu-code terminated by signal ${result.signal}`);
+  console.error(`shifu terminated by signal ${result.signal}`);
   process.exit(1);
 }
 

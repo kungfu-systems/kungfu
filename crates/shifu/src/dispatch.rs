@@ -5,7 +5,7 @@
 //   run_pnpm:     ensure fnm + uv, pin node (`fnm install`), then run the task
 //                 under the pinned toolchain via `fnm exec -- corepack pnpm`.
 //   delegate_l2:  rich subcommands (build/rebuild/proxy/config) go to the L2
-//                 node implementation (kungfu-code.mjs), never to pnpm.
+//                 node implementation (shifu.mjs), never to pnpm.
 //
 // A tiny `pnpm -> corepack pnpm` shim dir is prepended to PATH for the child
 // so repo scripts that spawn bare `pnpm` work without requiring the user to
@@ -40,7 +40,7 @@ pub fn run_pnpm(root: &Path, args: &[String]) -> ! {
 }
 
 pub fn delegate_l2(root: &Path, args: &[String]) -> ! {
-    let l2 = root.join("kungfu-code.mjs");
+    let l2 = root.join("shifu.mjs");
 
     // Prefer the pinned node via an fnm that is already present (PATH or
     // cache); fall back to any system node so `config` can run before the
@@ -113,7 +113,7 @@ fn prepend_child_path(cmd: &mut Command, dirs: Vec<PathBuf>) {
 }
 
 fn make_pnpm_shim_dir() -> std::io::Result<PathBuf> {
-    let dir = util::unique_temp_dir("kungfu-code-pnpm")?;
+    let dir = util::unique_temp_dir("shifu-pnpm")?;
     #[cfg(windows)]
     {
         fs::write(

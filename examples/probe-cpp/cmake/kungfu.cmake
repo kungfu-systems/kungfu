@@ -19,7 +19,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 get_filename_component(KF_CORE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../framework/core" ABSOLUTE)
 if(NOT EXISTS "${KF_CORE_DIR}/src/libkungfu/include")
-  message(FATAL_ERROR "libkungfu headers not found under ${KF_CORE_DIR}. Build the core first: ./kungfu-code rebuild:core")
+  message(FATAL_ERROR "libkungfu headers not found under ${KF_CORE_DIR}. Build the core first: ./shifu rebuild:core")
 endif()
 
 # conan-generated find_package() configs/modules live in the core build dir.
@@ -35,7 +35,7 @@ find_library(KF_LIBKUNGFU
   PATHS "${KF_CORE_DIR}/build/Release" "${KF_CORE_DIR}/dist/kfc"
   NO_DEFAULT_PATH)
 if(NOT KF_LIBKUNGFU)
-  message(FATAL_ERROR "libkungfu shared library not found under ${KF_CORE_DIR}. Build the core first: ./kungfu-code rebuild:core")
+  message(FATAL_ERROR "libkungfu shared library not found under ${KF_CORE_DIR}. Build the core first: ./shifu rebuild:core")
 endif()
 
 # Compile src/cpp/*.cpp of the current extension into a native pybind11 module

@@ -6,7 +6,7 @@
 // (dispatch_watcher_bench.js), drives typed Quote load through a registered
 // apprentice, then prints the probe reports collected on the watcher side.
 // Requires the core dev environment (built dist/kungfu) and the repo-pinned
-// node — run under ./kungfu-code or fnm so process.execPath (used to spawn the
+// node — run under ./shifu or fnm so process.execPath (used to spawn the
 // watcher) matches the ABI of the built kungfu_node.node binding.
 //
 // Usage: node tests/bench/dispatch_bench_watcher.mjs [event-count]

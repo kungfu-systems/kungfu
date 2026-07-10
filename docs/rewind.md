@@ -15,7 +15,7 @@ Release binaries are not published yet. Two paths today:
 **Desktop app (macOS arm64)** — build the installer once from a workspace:
 
 ```sh
-./kungfu-code dist
+./shifu dist
 ```
 
 This produces `product/release/desktop/Kungfu Episodes-<version>-arm64.dmg` (and a zip).
@@ -33,7 +33,7 @@ release pipeline (next gate).
 ```sh
 git clone git@github.com:kungfu-systems/kungfu.git
 cd kungfu
-./kungfu-code sync && ./kungfu-code build
+./shifu sync && ./shifu build
 ```
 
 Everything below runs from the repository root. `kungfu` is the
@@ -125,7 +125,7 @@ recorded action timeline; it does not silently repeat real-world side effects.
 ## Diagnose in the app
 
 ```sh
-KF_RUNTIME_DIR=<home-dir>/runtime ./kungfu-code app
+KF_RUNTIME_DIR=<home-dir>/runtime ./shifu app
 ```
 
 The **Rewind** tab (first in the left nav) shows three panes:
@@ -158,7 +158,7 @@ used.
 ## Demos
 
 Deterministic end-to-end demos live under `tests/fixtures/` and double as
-release gates (`./kungfu-code verify --full` runs them all):
+release gates (`./shifu verify --full` runs them all):
 
 | Demo | Shows |
 | --- | --- |

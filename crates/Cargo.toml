@@ -5,11 +5,11 @@
 # Every in-repo Rust component lives here as a workspace member; see
 # docs/rust-adoption.md for the adoption paradigm (source layout, consumption
 # modes, distribution, and the selective-exercise discipline). The first member
-# is kungfu-code, the self-contained dev/build launcher.
+# is shifu, the self-contained dev/build launcher.
 
 [workspace]
 resolver = "2"
-members = ["kungfu-code"]
+members = ["shifu"]
 
 [workspace.package]
 edition = "2021"

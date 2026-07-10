@@ -7,12 +7,12 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 pub fn die(msg: &str) -> ! {
-    eprintln!("kungfu-code: {msg}");
+    eprintln!("shifu: {msg}");
     std::process::exit(1);
 }
 
 pub fn die_code(msg: &str, code: i32) -> ! {
-    eprintln!("kungfu-code: {msg}");
+    eprintln!("shifu: {msg}");
     std::process::exit(code);
 }
 

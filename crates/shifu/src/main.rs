@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// kungfu-code — the kungfu dev/build launcher as one self-contained binary.
+// shifu — the kungfu dev/build launcher as one self-contained binary.
 //
-// It is the native successor to the L1 shell entrypoints (kungfu-code sh /
-// kungfu-code.cmd) with the same contract:
+// It is the native successor to the L1 shell entrypoints (shifu sh /
+// shifu.cmd) with the same contract:
 //
-//   kungfu-code <any pnpm task/args>    run the task under the pinned toolchain
-//   kungfu-code build | rebuild         rich subcommands -> delegated to L2 node
-//   kungfu-code proxy | config ...      (kungfu-code.mjs), not passed to pnpm
-//   kungfu-code self-version            print the launcher's own version
+//   shifu <any pnpm task/args>    run the task under the pinned toolchain
+//   shifu build | rebuild         rich subcommands -> delegated to L2 node
+//   shifu proxy | config ...      (shifu.mjs), not passed to pnpm
+//   shifu self-version            print the launcher's own version
 //
 // plus the capability the scripts could only ask the user for: when fnm / uv
 // are missing it bootstraps them from prebuilt release binaries into a
@@ -32,7 +32,7 @@ mod msvc;
 mod tools;
 mod util;
 
-/// Rich subcommands handled by the L2 node implementation (kungfu-code.mjs),
+/// Rich subcommands handled by the L2 node implementation (shifu.mjs),
 /// mirroring the sh / cmd entrypoints. Everything else goes to corepack pnpm.
 const L2_SUBCOMMANDS: &[&str] = &["build", "rebuild", "proxy", "config"];
 
@@ -64,27 +64,27 @@ fn main() {
 /// discovered rather than assumed: explicit override first, then walk up from
 /// the current directory looking for the repo's own entrypoint marker.
 fn find_repo_root() -> PathBuf {
-    if let Some(explicit) = env::var_os("KUNGFU_CODE_ROOT") {
+    if let Some(explicit) = env::var_os("SHIFU_ROOT") {
         let root = PathBuf::from(explicit);
-        if root.join("kungfu-code.mjs").is_file() {
+        if root.join("shifu.mjs").is_file() {
             return root;
         }
         util::die(&format!(
-            "KUNGFU_CODE_ROOT does not look like a kungfu repo (missing kungfu-code.mjs): {}",
+            "SHIFU_ROOT does not look like a kungfu repo (missing shifu.mjs): {}",
             root.display()
         ));
     }
     let start = env::current_dir().unwrap_or_else(|e| util::die(&format!("cannot read cwd: {e}")));
     let mut dir = start.as_path();
     loop {
-        if dir.join("kungfu-code.mjs").is_file() && dir.join(".node-version").is_file() {
+        if dir.join("shifu.mjs").is_file() && dir.join(".node-version").is_file() {
             return dir.to_path_buf();
         }
         match dir.parent() {
             Some(parent) => dir = parent,
             None => util::die(
-                "not inside a kungfu repository (no kungfu-code.mjs found walking up from the \
-                 current directory; set KUNGFU_CODE_ROOT to override)",
+                "not inside a kungfu repository (no shifu.mjs found walking up from the \
+                 current directory; set SHIFU_ROOT to override)",
             ),
         }
     }

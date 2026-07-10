@@ -3,7 +3,7 @@
 // Stage C kfc freeze 独立入口（脱 conan2；对应迁移文档 D6 + Stage C wiring）。
 //
 // 背景：conan2 移除了独立 `conan package` 本地命令，原 `freeze`→run-conan.js package
-// 只触发 `conan build`（占位，不跑 freezer）。本脚本把 freeze 做成 `./kungfu-code freeze`
+// 只触发 `conan build`（占位，不跑 freezer）。本脚本把 freeze 做成 `./shifu freeze`
 // 一步可复现，并据 `config.freezer` 选择 Nuitka（默认）或 PyInstaller（fallback）。
 //
 // 两条 freezer 路径（可人 2026-06-17 决策 Nuitka 2.x，不行回退 PyInstaller；

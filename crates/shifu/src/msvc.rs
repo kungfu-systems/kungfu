@@ -8,7 +8,7 @@
 //
 // Missing MSVC is a warning by default — most tasks (lint, tests, config) do
 // not need cl.exe and the build itself fails with a clear cause if it comes to
-// that. CI sets KUNGFU_CODE_REQUIRE_MSVC=1 to make it a hard error instead.
+// that. CI sets SHIFU_REQUIRE_MSVC=1 to make it a hard error instead.
 
 #![cfg(windows)]
 
@@ -25,17 +25,14 @@ pub fn ensure_msvc_env(root: &Path) {
     }
     let Some(vcvars) = vcvars_candidates().into_iter().next() else {
         let msg = "MSVC cl.exe not found in PATH and vcvars64.bat could not be located";
-        if env::var_os("KUNGFU_CODE_REQUIRE_MSVC").is_some_and(|v| v == "1") {
+        if env::var_os("SHIFU_REQUIRE_MSVC").is_some_and(|v| v == "1") {
             util::die(msg);
         }
-        eprintln!("kungfu-code: warning: {msg}; C++ builds will fail until Visual Studio Build Tools are installed");
+        eprintln!("shifu: warning: {msg}; C++ builds will fail until Visual Studio Build Tools are installed");
         return;
     };
 
-    eprintln!(
-        "kungfu-code: cl.exe not found; loading {}",
-        vcvars.display()
-    );
+    eprintln!("shifu: cl.exe not found; loading {}", vcvars.display());
     let mut cmd = Command::new("cmd.exe");
     {
         use std::os::windows::process::CommandExt;

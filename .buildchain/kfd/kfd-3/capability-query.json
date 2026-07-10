@@ -431,7 +431,7 @@
     {
       "id": "kungfu.buildchain.kfd.evidence",
       "kind": "cli",
-      "name": "./kungfu-code kfd:buildchain",
+      "name": "./shifu kfd:buildchain",
       "state": "declared",
       "detected": true,
       "enforced": false,
@@ -607,7 +607,7 @@
     {
       "id": "kungfu.product.cli-release-build",
       "kind": "cli",
-      "name": "./kungfu-code product cli dist",
+      "name": "./shifu product cli dist",
       "state": "declared",
       "detected": true,
       "enforced": false,
@@ -629,7 +629,7 @@
     {
       "id": "kungfu.product.dev-run",
       "kind": "cli",
-      "name": "./kungfu-code product",
+      "name": "./shifu product",
       "state": "declared",
       "detected": true,
       "enforced": false,
@@ -651,7 +651,7 @@
     {
       "id": "kungfu.product.release-build",
       "kind": "cli",
-      "name": "./kungfu-code dist",
+      "name": "./shifu dist",
       "state": "declared",
       "detected": true,
       "enforced": false,

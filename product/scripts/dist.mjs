@@ -4,7 +4,7 @@
 // product assembly -> TUI bundle -> desktop installer and/or CLI archive under
 // product/release.
 // Run through the repo entrypoint so Node is pinned:
-//   ./kungfu-code dist
+//   ./shifu dist
 
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';

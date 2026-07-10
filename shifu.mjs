@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
 //
-// kungfu-code.mjs — the "rich subset" (L2) of the kungfu-code entrypoint.
+// shifu.mjs — the "rich subset" (L2) of the shifu entrypoint.
 //
 // Three-tier subset model:
-//   L1  kungfu-code (sh)        bootstrap simple commands: load env / check fnm+uv / pin node / run pnpm,
+//   L1  shifu (sh)        bootstrap simple commands: load env / check fnm+uv / pin node / run pnpm,
 //                               and delegate rich subcommands (proxy/config…) to this file.
-//   L2  kungfu-code.mjs (node)  rich commands available once fnm is installed (node implementation, pure builtins, no deps).
+//   L2  shifu.mjs (node)  rich commands available once fnm is installed (node implementation, pure builtins, no deps).
 //                               currently: bootstrap build/rebuild and local cache/mirror proxy config management.
 //   L3  (future) TUI            reuse kungfu's own TUI infrastructure / build-artifact runtime; directly import
 //                               the readConfig/setKey config helpers below instead of reimplementing them.
@@ -30,8 +30,8 @@ const KEYS = [
   'COREPACK_NPM_REGISTRY',
   'UV_DEFAULT_INDEX',
   'UV_PYTHON_INSTALL_MIRROR',
-  // launcher distribution mirrors (native kungfu-code binary + its fnm/uv bootstrap)
-  'KUNGFU_CODE_DIST_MIRROR',
+  // launcher distribution mirrors (native shifu binary + its fnm/uv bootstrap)
+  'SHIFU_DIST_MIRROR',
   'KUNGFU_FNM_DIST_MIRROR',
   'KUNGFU_UV_DIST_MIRROR',
   // compile params (cap per machine, to avoid memory thrash on many-core machines)
@@ -121,7 +121,7 @@ export { CONFIG_FILE, KEYS, readConfig, setKey, unsetKey };
 /** @param {string} cmd */
 function help(cmd) {
   console.error(
-    `kungfu-code ${cmd} — manage local build environment config: mirrors/cache + compile params (user-global build-local.env)
+    `shifu ${cmd} — manage local build environment config: mirrors/cache + compile params (user-global build-local.env)
   ${cmd} path               print the config file path
   ${cmd} init               derive the config file from build-local.env.example (if absent)
   ${cmd} edit               open the config file with $EDITOR (create from template first if absent)
@@ -159,7 +159,7 @@ function main() {
   }
   if (cmd !== 'proxy' && cmd !== 'config') {
     console.error(
-      `kungfu-code.mjs: unknown command ${cmd || '(empty)'} (supported: build/rebuild/proxy/config)`,
+      `shifu.mjs: unknown command ${cmd || '(empty)'} (supported: build/rebuild/proxy/config)`,
     );
     process.exit(2);
   }

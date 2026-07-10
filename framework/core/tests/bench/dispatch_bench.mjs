@@ -6,7 +6,7 @@
 // with an open-layer event burst from a registered apprentice (dispatch_load.py),
 // then prints the probe reports collected on the master side. Requires the core
 // dev environment (built dist/kungfu) and the repo-pinned node (run under
-// ./kungfu-code or fnm so process.execPath matches the built binding).
+// ./shifu or fnm so process.execPath matches the built binding).
 //
 // Usage: node tests/bench/dispatch_bench.mjs [event-count] [load-type]
 //

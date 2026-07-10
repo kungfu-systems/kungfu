@@ -125,7 +125,7 @@ the ones that close the loop:
 
 - **Stage-0 bootstrap (the compiler analogy).** `kungfu` *embeds* runtimes for the
   user, but *building* `kungfu` needs a Python/Node toolchain that does not yet
-  exist inside it — supplied externally by `./kungfu-code` (Node via fnm, Python
+  exist inside it — supplied externally by `./shifu` (Node via fnm, Python
   via uv, the package manager via Corepack). There is a handoff: an external
   stage-0 toolchain produces `kungfu`, after which `kfx` development switches to
   `kungfu`'s own embedded toolchain. This is exactly a self-hosting compiler's

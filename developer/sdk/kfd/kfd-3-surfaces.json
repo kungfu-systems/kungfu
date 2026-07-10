@@ -49,7 +49,7 @@
         ".buildchain/kfd/kfd-3/collaboration-interface.artifact.json",
         ".buildchain/kfd/kfd-3/capability-query.json"
       ],
-      "checkCommand": "./kungfu-code kfd:buildchain:check"
+      "checkCommand": "./shifu kfd:buildchain:check"
     }
   },
   "upstreamKfd": {
@@ -450,7 +450,7 @@
     },
     {
       "id": "kungfu.buildchain.kfd.evidence",
-      "name": "./kungfu-code kfd:buildchain",
+      "name": "./shifu kfd:buildchain",
       "kind": "cli",
       "participantProfile": "agent-or-developer",
       "state": "declared",
@@ -610,7 +610,7 @@
     },
     {
       "id": "kungfu.product.cli-release-build",
-      "name": "./kungfu-code product cli dist",
+      "name": "./shifu product cli dist",
       "kind": "cli",
       "participantProfile": "agent-or-developer",
       "state": "declared",
@@ -630,7 +630,7 @@
     },
     {
       "id": "kungfu.product.dev-run",
-      "name": "./kungfu-code product",
+      "name": "./shifu product",
       "kind": "cli",
       "participantProfile": "agent-or-developer",
       "state": "declared",
@@ -650,7 +650,7 @@
     },
     {
       "id": "kungfu.product.release-build",
-      "name": "./kungfu-code dist",
+      "name": "./shifu dist",
       "kind": "cli",
       "participantProfile": "agent-or-developer",
       "state": "declared",

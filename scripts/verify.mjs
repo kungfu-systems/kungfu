@@ -7,17 +7,17 @@
 // artifacts" criterion, which also serves as a CI smoke baseline.
 //
 // Usage (node pinned via the entrypoint; plain `node scripts/verify.mjs` works):
-//   ./kungfu-code verify              quick: only assert "existing" artifacts (dist/kungfu exists + kungfu runs + version matches)
-//   ./kungfu-code verify --full       full: rebuild:core + freeze first, then assert; also builds and runs the
+//   ./shifu verify              quick: only assert "existing" artifacts (dist/kungfu exists + kungfu runs + version matches)
+//   ./shifu verify --full       full: rebuild:core + freeze first, then assert; also builds and runs the
 //                                     capability slices (framework/core/slices) + yijinjing dependency guard
-//   ./kungfu-code verify --with-app   also assert the build:app artifact (with --full it builds the app first)
-//   ./kungfu-code verify --fuzz       add the kungfu::view libFuzzer long-run (ADR-0039 memory safety); needs a
+//   ./shifu verify --with-app   also assert the build:app artifact (with --full it builds the app first)
+//   ./shifu verify --fuzz       add the kungfu::view libFuzzer long-run (ADR-0039 memory safety); needs a
 //                                     libFuzzer-capable clang (brew LLVM on macOS, system clang on Linux). The
 //                                     alpha/release build passes this; a new crash blocks the build.
-//   ./kungfu-code verify --skip-episode-qualification
+//   ./shifu verify --skip-episode-qualification
 //                                     diagnostic-only escape hatch; the default verify path runs the
 //                                     mvp-smoke-v1 Episode qualification profile.
-//   ./kungfu-code verify --help
+//   ./shifu verify --help
 //
 // Assertion targets (all grounded in the build scripts, not guessed):
 //   - framework/core/dist/kungfu/                     freeze artifact directory (run-freeze.js renameSync target)
@@ -391,7 +391,7 @@ function main() {
     else
       fail(
         'node version pinned',
-        `current v${got} ≠ .node-version ${want} (run via ./kungfu-code)`,
+        `current v${got} ≠ .node-version ${want} (run via ./shifu)`,
       );
   }
 

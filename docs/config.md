@@ -50,7 +50,7 @@ ships it at:
 dist/kungfu/config/kungfu-config.contract.json
 ```
 
-`kungfu-code verify` checks that the frozen artifact contract hash matches the
+`shifu verify` checks that the frozen artifact contract hash matches the
 repo contract hash, then runs the frozen `kungfu config show --json` and checks
 that the runtime-reported contract hash is the same. Defaults, resolution rules,
 and schema must not be redefined in Python, Node, GUI, or other feature
@@ -136,7 +136,7 @@ Use an instance home when you need to run a second local Kungfu app without
 sharing the default homes:
 
 ```sh
-./kungfu-code product gui dev --instance-home ~/kungfu-instances/demo
+./shifu product gui dev --instance-home ~/kungfu-instances/demo
 ```
 
 `--instance-home <path>` also accepts `--home <path>` and `-H <path>`. The

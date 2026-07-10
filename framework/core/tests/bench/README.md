@@ -23,7 +23,7 @@ pre-dispatched fast path).
 ## Runs
 
 Master form (requires built `dist/kungfu`; run under the repo-pinned node, e.g.
-via `./kungfu-code` or `fnm exec`, so the load binding ABI matches):
+via `./shifu` or `fnm exec`, so the load binding ABI matches):
 
 ```sh
 KF_BYPASS_CACHED=1 node tests/bench/dispatch_bench.mjs   # rx-isolated: no storage feed

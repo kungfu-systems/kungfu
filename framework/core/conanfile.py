@@ -368,7 +368,7 @@ class KungfuCoreConan(ConanFile):
             sys.exit(rc)
 
     def __parallel_jobs(self):
-        # 并行编译度优先取环境变量 KUNGFU_BUILD_JOBS（由 kungfu-code 的 build-local.env 在各机
+        # 并行编译度优先取环境变量 KUNGFU_BUILD_JOBS（由 shifu 的 build-local.env 在各机
         # 统一配置,仓内不硬编码);其次 conan conf tools.build:jobs;最后回退 os.cpu_count()。
         # kungfu 开 -flto + 重模板,单路峰值约 2GB,大核机（如 agent-120 32 线程）默认满并行会
         # 撑爆内存换页 thrash,故需可按机封顶。

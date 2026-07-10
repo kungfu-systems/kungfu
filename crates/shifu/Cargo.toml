@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 #
-# kungfu-code — the kungfu dev/build launcher as one self-contained binary.
+# shifu — the kungfu dev/build launcher as one self-contained binary.
 #
 # The [package] version below is the single source of truth for the launcher
-# release pin: the kungfu-code / kungfu-code.cmd shims read it to decide which
+# release pin: the shifu / shifu.cmd shims read it to decide which
 # prebuilt binary to download, and the release workflow tags releases
-# kungfu-code-v<version> from it. Do not add a second VERSION file.
+# shifu-v<version> from it. Do not add a second VERSION file.
 #
 # Zero runtime dependencies on purpose: the launcher is a thin dispatcher whose
 # job is spawning other processes (fnm / uv / node / corepack pnpm), so
@@ -14,7 +14,7 @@
 # the binary tiny, and the crate buildable on any reasonably recent rustc.
 
 [package]
-name = "kungfu-code"
+name = "shifu"
 version = "0.1.0"
 description = "kungfu development/build launcher — pinned-toolchain entrypoint as a single self-contained binary"
 edition.workspace = true

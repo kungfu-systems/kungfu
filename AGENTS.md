@@ -22,15 +22,15 @@ One entrypoint runs every task under the pinned toolchain. Do not invoke pnpm,
 node, conan, or cmake directly — go through it:
 
 ```sh
-./kungfu-code sync      # install JS dependencies (frozen lockfile)
-./kungfu-code build     # build all workspaces (C++ core + bindings + app)
-./kungfu-code rebuild   # clear generated build outputs, then run build
-./kungfu-code check     # changed-scope read-only quality gate (lint/type/tests)
-./kungfu-code fix       # explicit formatting / safe auto-fixes for changed files
-./kungfu-code product gui dev   # run the reference GUI through the product loop
-./kungfu-code product cli dist  # build the CLI product archive
-./kungfu-code dist      # build distributable products under product/release
-./kungfu-code <task>    # any pnpm task, run under the pinned node
+./shifu sync      # install JS dependencies (frozen lockfile)
+./shifu build     # build all workspaces (C++ core + bindings + app)
+./shifu rebuild   # clear generated build outputs, then run build
+./shifu check     # changed-scope read-only quality gate (lint/type/tests)
+./shifu fix       # explicit formatting / safe auto-fixes for changed files
+./shifu product gui dev   # run the reference GUI through the product loop
+./shifu product cli dist  # build the CLI product archive
+./shifu dist      # build distributable products under product/release
+./shifu <task>    # any pnpm task, run under the pinned node
 ```
 
 One-time prerequisites (install once; node, the package manager, and the Python
@@ -39,7 +39,7 @@ interpreter then resolve automatically):
 - [fnm](https://github.com/Schniz/fnm) — pins node via `.node-version`
 - [uv](https://docs.astral.sh/uv/) — manages the Python toolchain
 
-On a machine without them, `./kungfu-code` bootstraps pinned prebuilt copies
+On a machine without them, `./shifu` bootstraps pinned prebuilt copies
 automatically (nothing needed beyond `curl`); see
 [`docs/rust-adoption.md`](docs/rust-adoption.md).
 
@@ -49,9 +49,9 @@ layout, and code style.
 ## Checking your work is green
 
 ```sh
-./kungfu-code check           # changed-scope lint, typecheck and unit/tooling tests
-./kungfu-code verify          # assert existing build artifacts (quick)
-./kungfu-code verify --full   # rebuild + freeze, then assert (slow; needs the full toolchain)
+./shifu check           # changed-scope lint, typecheck and unit/tooling tests
+./shifu verify          # assert existing build artifacts (quick)
+./shifu verify --full   # rebuild + freeze, then assert (slow; needs the full toolchain)
 ```
 
 `check` is the source-quality gate for changed files plus shared type/tooling

@@ -44,7 +44,7 @@ for how the layers fit together; the main areas:
 - `product` — the dogfood product assembly bundling the runtime, reference UIs,
   SDK, first-party kfx, desktop installers, and CLI archives.
 - `crates` — the Rust workspace: self-contained native tools consumed as
-  prebuilt binaries, currently the native `kungfu-code` launcher. See
+  prebuilt binaries, currently the native `shifu` launcher. See
   [`docs/rust-adoption.md`](docs/rust-adoption.md) for when (and when not) a
   component belongs here.
 
@@ -52,7 +52,7 @@ Two command-line entry points, kept forward-compatible:
 
 - `kungfu` — the end-user CLI command (`kungfu --version`, journal subcommands,
   …). It fronts the `kungfu` runtime.
-- `./kungfu-code` — the development/build orchestrator used while working on the
+- `./shifu` — the development/build orchestrator used while working on the
   repo (see below).
 
 ## Toolchain & build
@@ -61,7 +61,7 @@ The repo pins its Node version via [`fnm`](https://github.com/Schniz/fnm) and a
 checked-in `.node-version`, and manages the Python environment with
 [`uv`](https://docs.astral.sh/uv/). You only need to install `fnm` and `uv` once;
 Node, the package manager, and the Python interpreter are then resolved automatically.
-On a machine without fnm / uv, `./kungfu-code` bootstraps pinned prebuilt copies
+On a machine without fnm / uv, `./shifu` bootstraps pinned prebuilt copies
 into `~/.cache/kungfu` via its native launcher, so even that one-time install is
 optional — nothing beyond `curl` is required.
 
@@ -71,23 +71,23 @@ optional — nothing beyond `curl` is required.
 git clone git@github.com:kungfu-systems/kungfu.git
 cd kungfu
 
-./kungfu-code sync          # install JS dependencies (frozen lockfile)
-./kungfu-code build         # build all workspaces (C++ core + bindings + app)
-./kungfu-code rebuild       # remove generated build outputs, then build
-./kungfu-code check         # changed-scope read-only quality gate
-./kungfu-code fix           # explicit formatting / safe auto-fixes for changed files
-./kungfu-code product gui dev # run the reference GUI dev loop
-./kungfu-code product tui dev # run the reference TUI dev loop
-./kungfu-code product cli dist # build the CLI product archive
-./kungfu-code dist          # rebuild core, freeze, build bundled products under product/release
-./kungfu-code app           # launch the desktop app
+./shifu sync          # install JS dependencies (frozen lockfile)
+./shifu build         # build all workspaces (C++ core + bindings + app)
+./shifu rebuild       # remove generated build outputs, then build
+./shifu check         # changed-scope read-only quality gate
+./shifu fix           # explicit formatting / safe auto-fixes for changed files
+./shifu product gui dev # run the reference GUI dev loop
+./shifu product tui dev # run the reference TUI dev loop
+./shifu product cli dist # build the CLI product archive
+./shifu dist          # rebuild core, freeze, build bundled products under product/release
+./shifu app           # launch the desktop app
 ```
 
-`./kungfu-code <task>` runs `<task>` under the pinned Node toolchain — it is a
-thin wrapper, so any pnpm task works (`./kungfu-code build:core`, etc.).
+`./shifu <task>` runs `<task>` under the pinned Node toolchain — it is a
+thin wrapper, so any pnpm task works (`./shifu build:core`, etc.).
 
-`./kungfu-code verify` includes the bounded `mvp-smoke-v1` Episode
-qualification by default. Use `./kungfu-code episode:qualify -- --profile
+`./shifu verify` includes the bounded `mvp-smoke-v1` Episode
+qualification by default. Use `./shifu episode:qualify -- --profile
 mvp-baseline-v1` explicitly for the heavier periodic/release-readiness
 baseline; it is not run on every build.
 
@@ -108,15 +108,15 @@ Formatting and linting are part of the pre-commit, ready/PR, and CI flow:
 Run formatting before committing:
 
 ```sh
-./kungfu-code format        # all languages
-./kungfu-code fix           # format + safe lint fixes for changed files
-./kungfu-code check         # read-only changed-scope lint/type/test gate
+./shifu format        # all languages
+./shifu fix           # format + safe lint fixes for changed files
+./shifu check         # read-only changed-scope lint/type/test gate
 ```
 
-The installed pre-commit hook runs `./kungfu-code check:staged` semantics via
+The installed pre-commit hook runs `./shifu check:staged` semantics via
 Node: it checks staged files without rewriting or re-staging them. If the hook
-reports formatting or fixable lint issues, run `./kungfu-code fix:staged`, review
-the diff, and commit again. CI should run `./kungfu-code check` and the relevant
+reports formatting or fixable lint issues, run `./shifu fix:staged`, review
+the diff, and commit again. CI should run `./shifu check` and the relevant
 build or verify command. `check:all` and `fix:all` are available for deliberate
 whole-tree lint-baseline cleanup.
 

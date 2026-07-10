@@ -7,8 +7,8 @@
 // everywhere, incl. Git-for-Windows bundled bash); no checks live in the shim.
 //
 // Pre-commit is intentionally read-only: it runs the fast staged gate and never
-// formats or re-stages files. Use `./kungfu-code fix:staged` or
-// `./kungfu-code fix` for explicit source rewriting.
+// formats or re-stages files. Use `./shifu fix:staged` or
+// `./shifu fix` for explicit source rewriting.
 //
 // Bypass everything with `git commit -n`.
 // @ts-check

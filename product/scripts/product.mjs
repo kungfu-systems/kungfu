@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Repo-local dogfood product entry. The SDK owns the generic external-project
 // `kungfu sdk product` verbs; this wrapper maps the same vocabulary to Kungfu's
-// product-level assembly so `./kungfu-code product gui build` does not silently
+// product-level assembly so `./shifu product gui build` does not silently
 // regress to a GUI-only build.
 
 import { spawnSync } from 'node:child_process';
@@ -31,9 +31,9 @@ const SDK_ENTRY = path.join(ROOT, 'developer', 'sdk', 'src', 'sdk.js');
 function usage(code) {
   process.stdout.write(
     [
-      'usage: ./kungfu-code product gui dev|build|pack|dist [--dry-run] [--instance-home <path>] [--no-instance-home]',
-      '       ./kungfu-code product tui dev|build|bundle|dist [--dry-run] [--instance-home <path>] [--no-instance-home]',
-      '       ./kungfu-code product cli dist [--dry-run] [--instance-home <path>] [--no-instance-home]',
+      'usage: ./shifu product gui dev|build|pack|dist [--dry-run] [--instance-home <path>] [--no-instance-home]',
+      '       ./shifu product tui dev|build|bundle|dist [--dry-run] [--instance-home <path>] [--no-instance-home]',
+      '       ./shifu product cli dist [--dry-run] [--instance-home <path>] [--no-instance-home]',
       '',
       'gui build/pack  -> desktop product unpacked app under product/dist/desktop',
       'gui dist        -> desktop product installer assets under product/release/desktop',
@@ -51,7 +51,7 @@ function usage(code) {
 }
 
 function fail(message) {
-  process.stderr.write(`kungfu-code product: ${message}\n`);
+  process.stderr.write(`shifu product: ${message}\n`);
   process.exit(1);
 }
 

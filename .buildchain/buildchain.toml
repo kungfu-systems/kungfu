@@ -18,18 +18,18 @@ type = "json"
 path = "lerna.json"
 key = "version"
 
-# Lifecycle commands run through ./kungfu-code, the pinned-toolchain entrypoint
+# Lifecycle commands run through ./shifu, the pinned-toolchain entrypoint
 # (fnm + uv). Declared here for stage 1; buildchain execution (via the reusable
 # build workflow) and the runner preset that provides the fnm/uv/conan
 # prerequisites are wired in a later stage.
 [lifecycle.install]
-command = "node scripts/buildchain-run-kungfu-code.mjs install --frozen-lockfile --no-optional"
+command = "node scripts/buildchain-run-shifu.mjs install --frozen-lockfile --no-optional"
 
 [lifecycle.build]
-command = "node scripts/buildchain-run-kungfu-code.mjs dist"
+command = "node scripts/buildchain-run-shifu.mjs dist"
 
 [lifecycle.verify]
-command = "node scripts/buildchain-run-kungfu-code.mjs verify"
+command = "node scripts/buildchain-run-shifu.mjs verify"
 
 [lifecycle.publish]
 command = "node scripts/buildchain-custom-publish-evidence.mjs"

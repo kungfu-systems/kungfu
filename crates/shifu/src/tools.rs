@@ -159,14 +159,14 @@ fn bootstrap(tool: &Tool) -> Result<PathBuf, String> {
         .map_err(|e| format!("cannot create {}: {e}", target_dir.display()))?;
 
     eprintln!(
-        "kungfu-code: {} not found; fetching prebuilt {} {} into {}",
+        "shifu: {} not found; fetching prebuilt {} {} into {}",
         tool.name,
         tool.name,
         tool.version(),
         target_dir.display()
     );
 
-    let work = util::unique_temp_dir(&format!("kungfu-code-{}", tool.name))
+    let work = util::unique_temp_dir(&format!("shifu-{}", tool.name))
         .map_err(|e| format!("cannot create temp dir: {e}"))?;
     let archive = work.join(url.rsplit('/').next().unwrap_or("archive"));
 

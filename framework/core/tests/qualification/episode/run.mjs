@@ -39,7 +39,7 @@ function usage() {
   console.log(`Episode Qualification Harness
 
 Usage:
-  ./kungfu-code episode:qualify -- [options]
+  ./shifu episode:qualify -- [options]
 
 Options:
   --profile NAME                     mvp-smoke-v1 (default) or mvp-baseline-v1
@@ -210,7 +210,7 @@ function assertNativeBinding() {
   }
   if (!entries.some((name) => /^pykungfu.*\.(so|pyd)$/.test(name))) {
     fail(
-      `native binding not found under ${dist}; run './kungfu-code build:core' first`,
+      `native binding not found under ${dist}; run './shifu build:core' first`,
     );
   }
 }

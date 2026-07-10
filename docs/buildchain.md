@@ -9,7 +9,7 @@ shaped the way it is see [`version-release-design.md`](version-release-design.md
 
 A fresh clone needs only two host tools — `fnm` and `uv` — installed once.
 Everything else is pinned and resolved automatically. The orchestrator is
-`./kungfu-code` (the development entry point; see [`concepts.md`](concepts.md)):
+`./shifu` (the development entry point; see [`concepts.md`](concepts.md)):
 
 - **Node side:** `fnm` selects the Node version pinned by `.node-version`, then
   Corepack provides the package manager (`pnpm`) at the version pinned in
@@ -18,7 +18,7 @@ Everything else is pinned and resolved automatically. The orchestrator is
   and `uv run` drives the Python build tools (Conan, Nuitka).
 
 So the toolchain is reproducible from checked-in pins, not from whatever Node or
-Python happens to be on the host. `./kungfu-code <task>` runs any `pnpm` task
+Python happens to be on the host. `./shifu <task>` runs any `pnpm` task
 under those pinned tools.
 
 ## Source → binary
@@ -28,9 +28,9 @@ under those pinned tools.
 | `libkungfu` (C++ core: yijinjing schema + journal) | `framework/core/src` | CMake + Conan 2; build orchestration in `framework/core/.gyp/` |
 | Python binding (`py_kungfu`) | `framework/core/src/bindings/python` | pybind11, built under the pinned CPython |
 | Node addon (`kungfu_node.node`) | `framework/core/src/bindings/node` | N-API via the `.gyp` build |
-| `kungfu` (the frozen runtime) | the above + embedded Python/Node runtimes | `./kungfu-code freeze` |
-| distributable products | frozen runtime + GUI/TUI/CLI + all product-declared first-party kfx | `./kungfu-code dist` |
-| product loops | SDK-distributed GUI/TUI/CLI dev/build verbs | single kfx: `kungfu sdk product gui dev`; product assembly: `kungfu sdk product gui dist`; repo dogfood via `./kungfu-code product ...` |
+| `kungfu` (the frozen runtime) | the above + embedded Python/Node runtimes | `./shifu freeze` |
+| distributable products | frozen runtime + GUI/TUI/CLI + all product-declared first-party kfx | `./shifu dist` |
+| product loops | SDK-distributed GUI/TUI/CLI dev/build verbs | single kfx: `kungfu sdk product gui dev`; product assembly: `kungfu sdk product gui dist`; repo dogfood via `./shifu product ...` |
 
 ## Where the prebuilt binaries come from
 
@@ -59,7 +59,7 @@ writes sanitized `source-checkout.json` diagnostics into the platform artifacts.
 
 ## Maturity
 
-The local build path (`./kungfu-code sync && ./kungfu-code build`) is real and is
+The local build path (`./shifu sync && ./shifu build`) is real and is
 how the repository builds itself. The **consumer-facing provenance** of a
 published binary — how you verify a download's signature and that it matches its
 tag — is tracked separately and waits on the release infrastructure being fully

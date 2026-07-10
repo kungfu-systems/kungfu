@@ -255,8 +255,8 @@ edits journal bytes directly.
 The repository command is:
 
 ```sh
-./kungfu-code episode:qualify -- --profile mvp-smoke-v1
-./kungfu-code episode:qualify -- --profile mvp-baseline-v1
+./shifu episode:qualify -- --profile mvp-smoke-v1
+./shifu episode:qualify -- --profile mvp-baseline-v1
 ```
 
 Generated runtime homes and reports default to an operating-system temporary
@@ -359,7 +359,7 @@ The baseline may be split into separate invocations when runtime is long, but
 each report must retain the exact profile, seed, source revision, and completed
 scenario list.
 
-As of 2026-07-10, `./kungfu-code verify` runs `mvp-smoke-v1` by default. The
+As of 2026-07-10, `./shifu verify` runs `mvp-smoke-v1` by default. The
 declared Buildchain `verify` lifecycle and the alpha/release `verify --fuzz`
 workflow therefore inherit the same Episode correctness gate. The explicit
 `--skip-episode-qualification` option is for local diagnosis; checked-in

@@ -3,9 +3,9 @@
 //
 // Explicit source-rewriting companion to scripts/check.mjs.
 //
-//   ./kungfu-code fix          format/fix changed source files
-//   ./kungfu-code fix:staged   format/fix only staged source files and re-stage them
-//   ./kungfu-code fix:all      format/fix the whole repo
+//   ./shifu fix          format/fix changed source files
+//   ./shifu fix:staged   format/fix only staged source files and re-stage them
+//   ./shifu fix:all      format/fix the whole repo
 // @ts-check
 
 import { spawnSync } from 'node:child_process';

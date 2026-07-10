@@ -28,7 +28,7 @@ cmake --build build
 slices/<name>/run.sh
 ```
 
-Slices are wired into the repository verification gate: `./kungfu-code verify
+Slices are wired into the repository verification gate: `./shifu verify
 --full` configures with `KUNGFU_WITH_SLICES=ON`, builds the slices, executes
 each `run.sh`, and runs the yijinjing dependency-direction guard
 (`src/libyijinjing/check-deps.sh`). The quick `verify` path does not build or

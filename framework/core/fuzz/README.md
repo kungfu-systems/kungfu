@@ -42,8 +42,8 @@ point `CMAKE_PREFIX_PATH` at the core build dir.
 (the conan tree seeded by `build:core` / `rebuild:core`, like the slices stage):
 
 ```bash
-./kungfu-code verify --full     # ASan/UBSan corpus replay (every-build tier)
-./kungfu-code verify --fuzz      # + libFuzzer long-run (needs a libFuzzer clang)
+./shifu verify --full     # ASan/UBSan corpus replay (every-build tier)
+./shifu verify --fuzz      # + libFuzzer long-run (needs a libFuzzer clang)
 ```
 
 `KUNGFU_FUZZ_SECONDS` bounds the per-target long-run (default 20s);

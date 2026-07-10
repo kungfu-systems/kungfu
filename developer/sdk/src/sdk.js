@@ -2500,7 +2500,7 @@ function cppBuild(manifest) {
   const toolchain = path.join(coreDir, 'build', 'conan_toolchain.cmake');
   if (!fs.existsSync(toolchain)) {
     fail(
-      `core not built: ${toolchain} is missing. Run \`./kungfu-code rebuild:core\` first.`,
+      `core not built: ${toolchain} is missing. Run \`./shifu rebuild:core\` first.`,
     );
   }
   const buildDir = path.resolve('build');
@@ -2552,9 +2552,7 @@ function pythonAotBuild(manifest) {
     );
   const py = path.join(coreDir, '.venv', 'bin', 'python3');
   if (!fs.existsSync(py)) {
-    fail(
-      `core Python not found: ${py}. Run \`./kungfu-code rebuild:core\` first.`,
-    );
+    fail(`core Python not found: ${py}. Run \`./shifu rebuild:core\` first.`);
   }
   const pkgRoot = path.resolve('src', 'python');
   const pkg = fs.existsSync(pkgRoot)
@@ -2751,7 +2749,7 @@ function resolveKfdUpstreamAggregate() {
     if (fs.existsSync(resolved)) return resolved;
   }
   fail(
-    'KFD upstream aggregate not found; run ./kungfu-code kfd:buildchain or install a SDK package that includes kfd/upstream-aggregate.json',
+    'KFD upstream aggregate not found; run ./shifu kfd:buildchain or install a SDK package that includes kfd/upstream-aggregate.json',
   );
 }
 
@@ -2841,7 +2839,7 @@ function kfdSchemaSummary() {
 function resolvePackagedKfd1Witness() {
   if (fs.existsSync(SDK_KFD1_WITNESS)) return SDK_KFD1_WITNESS;
   fail(
-    'SDK packaged KFD-1 witness not found; run ./kungfu-code kfd:buildchain in the Kungfu checkout before packaging',
+    'SDK packaged KFD-1 witness not found; run ./shifu kfd:buildchain in the Kungfu checkout before packaging',
   );
 }
 
@@ -2851,7 +2849,7 @@ function resolvePackagedKfd1Witness() {
 function resolvePackagedKfd1ReleaseGate() {
   if (fs.existsSync(SDK_KFD1_RELEASE_GATE)) return SDK_KFD1_RELEASE_GATE;
   fail(
-    'SDK packaged KFD-1 release gate not found; run ./kungfu-code kfd:buildchain in the Kungfu checkout before packaging',
+    'SDK packaged KFD-1 release gate not found; run ./shifu kfd:buildchain in the Kungfu checkout before packaging',
   );
 }
 
@@ -2861,7 +2859,7 @@ function resolvePackagedKfd1ReleaseGate() {
 function resolvePackagedKfd1VerifyResult() {
   if (fs.existsSync(SDK_KFD1_VERIFY_RESULT)) return SDK_KFD1_VERIFY_RESULT;
   fail(
-    'SDK packaged KFD-1 verify result not found; run ./kungfu-code kfd:buildchain in the Kungfu checkout before packaging',
+    'SDK packaged KFD-1 verify result not found; run ./shifu kfd:buildchain in the Kungfu checkout before packaging',
   );
 }
 
@@ -2930,7 +2928,7 @@ function buildKfd1VerifyResult(releaseGate) {
 function readKfd2ClaimsDocument() {
   if (!fs.existsSync(SDK_KFD2_RELEASE_CLAIMS)) {
     fail(
-      'SDK packaged KFD-2 release claims not found; run ./kungfu-code kfd:buildchain in the Kungfu checkout before packaging',
+      'SDK packaged KFD-2 release claims not found; run ./shifu kfd:buildchain in the Kungfu checkout before packaging',
     );
   }
   const releaseClaims = /** @type {Record<string, any>} */ (

@@ -9,21 +9,21 @@ Build the core first so `framework/core/dist/kungfu` contains the native binding
 then run:
 
 ```sh
-./kungfu-code episode:qualify -- --profile mvp-smoke-v1
-./kungfu-code episode:qualify -- --profile mvp-baseline-v1
-./kungfu-code episode:qualify -- --profile mvp-smoke-v1 --mode semantic
+./shifu episode:qualify -- --profile mvp-smoke-v1
+./shifu episode:qualify -- --profile mvp-baseline-v1
+./shifu episode:qualify -- --profile mvp-smoke-v1 --mode semantic
 ```
 
 Useful scoped runs:
 
 ```sh
-./kungfu-code episode:qualify -- \
+./shifu episode:qualify -- \
   --profile mvp-smoke-v1 \
   --mode accumulation \
   --accumulation-checkpoints 1000,10000 \
   --seed 42042
 
-./kungfu-code episode:qualify -- \
+./shifu episode:qualify -- \
   --profile mvp-smoke-v1 \
   --mode contention \
   --contention-episodes 2000 \
@@ -37,7 +37,7 @@ the run. Runtime homes are removed after their fresh-process probes unless
 
 ## Build-chain gate
 
-`./kungfu-code verify` runs `mvp-smoke-v1` by default after checking the built
+`./shifu verify` runs `mvp-smoke-v1` by default after checking the built
 runtime artifacts. This means both the declared Buildchain `verify` lifecycle
 and the alpha/release `verify --fuzz` workflow fail when the smoke profile
 fails. `--skip-episode-qualification` is an explicit local diagnostic escape

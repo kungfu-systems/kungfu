@@ -6,7 +6,7 @@ gate, one release pipeline) so that any future "should this piece be Rust?"
 question costs minutes to decide and about an hour to wire up — in either
 direction. The value of an option is that saying **no** stays cheap too.
 
-The first exercised case is the `kungfu-code` launcher (`crates/kungfu-code`),
+The first exercised case is the `shifu` launcher (`crates/shifu`),
 which also serves as the worked example for everything below.
 
 ## Where Rust fits — and where it does not
@@ -40,13 +40,13 @@ All in-repo Rust lives in one cargo workspace:
 ```text
 crates/
   Cargo.toml          # workspace; shared release profile (size-optimized, stripped)
-  kungfu-code/        # first member: the launcher
+  shifu/        # first member: the launcher
     Cargo.toml        # per-component version = its release pin
     src/
 ```
 
 Adding a component = adding a workspace member directory and listing it in
-`crates/Cargo.toml`. The `kungfu-code CI` workflow (fmt, clippy `-D warnings`,
+`crates/Cargo.toml`. The `shifu CI` workflow (fmt, clippy `-D warnings`,
 tests, release build on the three platforms) picks up every member
 automatically via `--workspace`.
 
@@ -80,14 +80,14 @@ The paved road for mode 1, as implemented for the launcher:
 
 - **Version pin** — the component's `Cargo.toml` `version` is the single
   source of truth. No separate VERSION files.
-- **Release** — tag `kungfu-code-v<version>` triggers
-  `.github/workflows/release-kungfu-code.yml`: a 3-platform matrix
+- **Release** — tag `shifu-v<version>` triggers
+  `.github/workflows/release-shifu.yml`: a 3-platform matrix
   (macos-arm64, linux-x64 as a fully static musl build, windows-x64) publishes
   binaries plus `SHA256SUMS` to GitHub Releases.
-- **Fetch** — thin shims (`kungfu-code`, `kungfu-code.cmd`) read the pin,
+- **Fetch** — thin shims (`shifu`, `shifu.cmd`) read the pin,
   download the matching asset, cache it, and `exec` it. Mirrors are
   configurable per environment through the user-global `build-local.env`
-  (`KUNGFU_CODE_DIST_MIRROR`, and `KUNGFU_FNM_DIST_MIRROR` /
+  (`SHIFU_DIST_MIRROR`, and `KUNGFU_FNM_DIST_MIRROR` /
   `KUNGFU_UV_DIST_MIRROR` for the launcher's own tool bootstrap).
 - **Fallback** — when no release asset is reachable, the shims build from
   source if cargo is present, then fall back to the legacy in-script path, so
@@ -120,7 +120,7 @@ this discipline exists to prevent.
 
 ## Worked example: the launcher
 
-`crates/kungfu-code` replaces the platform-split entrypoint logic (sh + cmd +
+`crates/shifu` replaces the platform-split entrypoint logic (sh + cmd +
 per-platform special-casing) with one binary that:
 
 - discovers the repo root and loads the two-layer `build-local.env`;
@@ -131,7 +131,7 @@ per-platform special-casing) with one binary that:
   corepack-pinned pnpm (with a `pnpm -> corepack pnpm` shim so repo scripts
   spawning bare `pnpm` work without `corepack enable`);
 - delegates the rich subcommands (`build` / `rebuild` / `proxy` / `config`) to
-  the node L2 implementation (`kungfu-code.mjs`), keeping config management in
+  the node L2 implementation (`shifu.mjs`), keeping config management in
   one place;
 - on Windows, loads the MSVC environment (vswhere → `vcvars64.bat`) when
   `cl.exe` is absent.

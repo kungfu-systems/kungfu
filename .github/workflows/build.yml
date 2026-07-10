@@ -39,7 +39,7 @@ jobs:
       # libFuzzer long-run is the Linux gate and soft-skips where libFuzzer is
       # absent. KUNGFU_FUZZ_SECONDS bounds the per-target run.
       verify-command: >-
-        KUNGFU_FUZZ_SECONDS=90 node scripts/buildchain-run-kungfu-code.mjs verify --fuzz
+        KUNGFU_FUZZ_SECONDS=90 node scripts/buildchain-run-shifu.mjs verify --fuzz
       release-candidate: true
       artifact-transfer-mode: s3-to-github-artifacts
       artifact-retention-days: 14

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Shared harness for the capability-slice run.mjs drivers (replacing run.sh),
-// so `./kungfu-code verify --full` runs the slice proofs on every platform pnpm
+// so `./shifu verify --full` runs the slice proofs on every platform pnpm
 // runs on — no bash. Pure Node: child_process, fs, os, crypto. The slices drive
 // native binaries built under the core build dir; this collapses binary
 // discovery, the dynamic-dependency cut-proof, and checksums into one place.

@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "kungfu-code"
+name = "shifu"
 version = "0.1.0"

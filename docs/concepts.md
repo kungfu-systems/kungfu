@@ -14,7 +14,7 @@ principles behind them see [`design-philosophy.md`](design-philosophy.md).
 | `Kungfu config` | The **agent-facing global JSON configuration** resolved from the `config-contract` defaults plus optional `~/.kungfu-config/config.json` overrides. Its schema, defaults, and resolution rules live in one KFD-1 contract file. It is separate from workspace `.kungfu/` data and the `KF_HOME` machine fallback. |
 | `kungfu sdk` | The **application/extension SDK command**: scaffolds and builds `kfx` extensions, assembles applications, and produces packaged artifacts. |
 | `kungfu` | The **kungfu runtime binary and end-user CLI command** — the canonical way to invoke kungfu from the command line. It embeds a Python and a Node runtime and exposes the journal/state APIs; it is the runtime everything else runs on. Operator-facing slices such as `kungfu cockpit`, managed runs, and skill context injection grow under this command. |
-| `./kungfu-code` | The **development/build orchestrator** used while working on the repo (pins Node, Python, and the package manager so a fresh clone builds with one command). It is build-time only, not shipped. |
+| `./shifu` | The **development/build orchestrator** used while working on the repo (pins Node, Python, and the package manager so a fresh clone builds with one command). It is build-time only, not shipped. |
 
 ## Core building blocks
 
