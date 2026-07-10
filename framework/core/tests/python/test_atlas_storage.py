@@ -557,6 +557,61 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
     } <= entered
 
 
+def test_storage_query_edge_renders_typed_source_manifest_and_entry_rows(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    storage_service.write_synthetic_source(
+        runtime_dir,
+        source_id="typed-query-source",
+        manifest_id="typed-query-manifest",
+        source_head="typed-head",
+        records=[
+            {
+                "kind": "note",
+                "source_id": "note-a",
+                "source_path": "notes/a.json",
+                "source_time": "2026-07-08T00:00:00Z",
+                "payload": {"title": "A", "body": "alpha"},
+            }
+        ],
+    )
+
+    sources = storage_service.query_projection(
+        runtime_dir,
+        query="sources",
+        source_id="typed-query-source",
+    )
+    assert sources["projection"] == {
+        "name": "manifest-catalog",
+        "schema": "kungfu.storage.manifest-catalog/v1",
+        "authority": "yijinjing-journal",
+        "rebuildable": True,
+    }
+    assert sources["row_count"] == 1
+    assert sources["rows"][0]["source_id"] == "typed-query-source"
+    assert sources["rows"][0]["manifest_id"] == "typed-query-manifest"
+
+    manifests = storage_service.query_projection(
+        runtime_dir,
+        query="manifests",
+        source_id="typed-query-source",
+    )
+    assert manifests["row_count"] == 1
+    assert manifests["rows"][0]["source_id"] == "typed-query-source"
+    assert manifests["rows"][0]["manifest_id"] == "typed-query-manifest"
+    assert manifests["rows"][0]["status"] == "ok"
+
+    entries = storage_service.query_projection(
+        runtime_dir,
+        query="entries",
+        source_id="typed-query-source",
+        kind="note",
+        limit=1,
+    )
+    assert entries["row_count"] == 1
+    assert entries["rows"][0]["source_id"] == "note-a"
+    assert entries["rows"][0]["storage_source_id"] == "typed-query-source"
+
+
 def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
     runtime_dir = tmp_path / "runtime"
     episode = storage_service.episode_begin(

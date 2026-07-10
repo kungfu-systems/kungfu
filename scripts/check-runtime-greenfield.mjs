@@ -505,7 +505,7 @@ function storageBindingOwnershipHits(rel, text) {
   }
   if (rel === 'framework/core/src/bindings/node/binding/kungfu_node.cpp') {
     const required = [
-      '#include <kungfu/runtime/storage/service.h>',
+      '#include <kungfu/runtime/storage/json_edge.h>',
       'storage_service_api::storage_service_capabilities',
       'storage_service_api::make_storage_service_request',
       'storage_service_api::run_storage_service_operation',

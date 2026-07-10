@@ -44,7 +44,7 @@ decltype(__pfnDliNotifyHook2) __pfnDliNotifyHook2 = load_exe_hook;
 
 #include <kungfu/common.h>
 #include <kungfu/runtime/io.h>
-#include <kungfu/runtime/storage/service.h>
+#include <kungfu/runtime/storage/json_edge.h>
 #include <kungfu/yijinjing/hash.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
 

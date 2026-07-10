@@ -15,7 +15,7 @@
 #include <kungfu/runtime/practice/apprentice.h>
 #include <kungfu/runtime/practice/master.h>
 #include <kungfu/runtime/schema/schema_compiler.h>
-#include <kungfu/runtime/storage/service.h>
+#include <kungfu/runtime/storage/json_edge.h>
 #include <kungfu/runtime/util/terminal.h>
 #include <kungfu/yijinjing/hash.h>
 #include <kungfu/yijinjing/journal/assemble.h>

@@ -3,222 +3,132 @@
 #ifndef KUNGFU_RUNTIME_STORAGE_SERVICE_H
 #define KUNGFU_RUNTIME_STORAGE_SERVICE_H
 
+#include <cstdint>
+#include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
-#include <nlohmann/json.hpp>
+#include <kungfu/yijinjing/storage/episode_manifest.h>
 
 namespace kungfu::runtime::storage_service_api {
 
 inline constexpr const char *RUNTIME_STORAGE_SERVICE_SCHEMA_V1 = "kungfu.runtime.storage-service/v1";
 inline constexpr const char *RUNTIME_STORAGE_SERVICE_OWNER = "libkungfu";
-inline constexpr const char *EPISODE_QUALIFICATION_SCHEMA_V1 = "kungfu.episode.qualification/v1";
 
-// ADR-0042 Capability Contract v1.  This is the C++-owned result derived from
-// the typed Episode fold plus fsck evidence.  Language bindings and CLIs only
-// serialize this result; they must not infer their own capability policy.
-struct episode_qualification_evidence {
-  std::string name = {};
-  std::string state = {};
-  std::vector<std::string> issue_codes = {};
+enum class storage_query_kind {
+  Sources,
+  Manifests,
+  Entries,
+  Episodes,
+  EpisodeRecords,
+  EpisodeFrames,
+  EpisodeRefs,
 };
 
-struct episode_qualification_issue {
-  std::string severity = {};
-  std::string code = {};
-  std::string evidence = {};
-  nlohmann::json detail = nlohmann::json::object();
+struct storage_time_range {
+  std::string since = {};
+  std::string until = {};
 };
 
-struct episode_qualification_capability {
-  std::string name = {};
-  bool safe = false;
-  std::vector<std::string> required_evidence = {};
-  std::vector<std::string> blocked_by = {};
-};
-
-struct episode_repair_prerequisite {
-  std::string issue_code = {};
-  std::string action = {};
-  std::vector<std::string> required_inputs = {};
-  nlohmann::json subject = nlohmann::json::object();
-};
-
-struct episode_qualification_result {
-  uint64_t episode_id = 0;
-  std::string lifecycle = "missing";
-  std::string status = "failed";
-  std::vector<episode_qualification_evidence> evidence = {};
-  std::vector<episode_qualification_issue> issues = {};
-  std::vector<episode_qualification_capability> capabilities = {};
-  std::vector<episode_repair_prerequisite> repair_prerequisites = {};
-};
-
-enum class storage_operation {
-  Status,
-  Fsck,
-  RepairPlan,
-  RepairFetch,
-  RepairApply,
-  ExportBundle,
-  ImportBundle,
-  RebuildIndex,
-  GcPlan,
-  CompactPlan,
-  VerifySync,
-  Query,
-  Layout,
-  EpisodeBegin,
-  EpisodeHeartbeat,
-  EpisodeEnd,
-  EpisodeAbort,
-  EpisodeAttachFrame,
-  EpisodeAttachRef,
-  EpisodeList,
-  EpisodeInspect,
-  EpisodeRecover,
-  EpisodeProjectionRebuild,
-  SourceRegister,
-  SourceUpdateHead,
-  SourceRecordAcceptedRange,
-  SourceList,
-  SourceInspect,
-  SourceRegistryFsck,
-  SourceRegistryRebuild,
-};
-
-struct storage_service_options {
+struct storage_query_request {
   std::string runtime_dir = {};
   std::string provider = {};
   std::string provider_config_source = {};
-  std::string scope = {};
   std::string source_id = {};
-  bool dry_run = true;
-  bool verify = true;
-  nlohmann::json range = nlohmann::json::object();
-  std::string artifact_uri = {};
-  nlohmann::json bundle = nlohmann::json::object();
-  nlohmann::json manifest = nlohmann::json::object();
-  nlohmann::json operation_options = nlohmann::json::object();
-  std::string query = {};
-  std::string kind = {};
+  std::string entry_kind = {};
+  storage_time_range range = {};
+  storage_query_kind query = storage_query_kind::Entries;
   uint64_t episode_id = 0;
   uint64_t limit = 100;
+};
+
+struct storage_sync_root_view {
+  std::string algorithm = {};
+  std::string value = {};
+};
+
+struct storage_source_query_row {
+  uint64_t source_uid = 0;
+  std::string source_id = {};
+  std::string source_type = {};
+  std::string coordinate = {};
+  std::string manifest_id = {};
+  std::string source_head = {};
+  int64_t accept_time = 0;
+  uint64_t entry_count = 0;
+  storage_sync_root_view sync_root = {};
+  uint64_t manifest_count = 0;
+  uint64_t export_count = 0;
+};
+
+struct storage_manifest_query_row {
+  std::string source_id = {};
+  std::string manifest_id = {};
+  int64_t accept_time = 0;
+  uint64_t entry_count = 0;
+  std::string entries_hash = {};
+  storage_sync_root_view sync_root = {};
+  std::string status = {};
+};
+
+struct storage_entry_query_row {
+  std::string kind = {};
+  std::string source_id = {};
+  std::string source_path = {};
+  std::string source_time = {};
+  uint32_t schema_version = 0;
+  std::string content_type = {};
+  std::string payload_hash = {};
+  uint64_t byte_len = 0;
+  std::string payload_state = {};
+  uint64_t entry_index = 0;
+  int64_t accept_time = 0;
+  std::string storage_source_id = {};
+  std::string manifest_id = {};
+};
+
+struct storage_query_error {
+  std::string code = {};
+  std::optional<uint64_t> episode_id = {};
+};
+
+using storage_query_rows =
+    std::variant<std::vector<storage_source_query_row>, std::vector<storage_manifest_query_row>,
+                 std::vector<storage_entry_query_row>, std::vector<yijinjing::storage::episode_current_view>,
+                 std::vector<yijinjing::storage::episode_manifest_record>>;
+
+struct storage_query_result {
+  bool ok = true;
+  std::string scope = "all";
+  std::optional<std::string> source_id = {};
+  std::optional<uint64_t> episode_id = {};
+  std::string projection_name = {};
+  std::string projection_schema = {};
+  std::string authority = "yijinjing-journal";
+  bool rebuildable = false;
+  storage_query_kind query = storage_query_kind::Entries;
+  std::optional<std::string> entry_kind = {};
+  storage_time_range range = {};
+  uint64_t limit = 100;
+  storage_query_rows rows = std::vector<storage_entry_query_row>{};
+  std::vector<storage_query_error> errors = {};
+
+  [[nodiscard]] size_t row_count() const;
 };
 
 class storage_service {
 public:
   virtual ~storage_service() = default;
 
-  [[nodiscard]] virtual nlohmann::json status(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json fsck(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json repair_plan(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json repair_fetch(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json repair_apply(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json export_bundle(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json import_bundle(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json rebuild_index(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json gc_plan(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json compact_plan(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json verify_sync(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json query(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json layout(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json episode_begin(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json episode_heartbeat(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json episode_end(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json episode_abort(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json episode_attach_frame(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json episode_attach_ref(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json episode_list(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json episode_inspect(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json episode_recover(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json episode_projection_rebuild(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json source_register(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json source_update_head(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json source_record_accepted_range(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json source_list(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json source_inspect(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json source_registry_fsck(const storage_service_options &options) const = 0;
-
-  [[nodiscard]] virtual nlohmann::json source_registry_rebuild(const storage_service_options &options) const = 0;
+  [[nodiscard]] virtual storage_query_result query(const storage_query_request &request) const = 0;
 };
 
-[[nodiscard]] std::vector<std::string> storage_operation_names();
+[[nodiscard]] std::string storage_query_kind_name(storage_query_kind kind);
 
-[[nodiscard]] std::string storage_operation_name(storage_operation operation);
+[[nodiscard]] storage_query_kind parse_storage_query_kind(const std::string &kind);
 
-[[nodiscard]] storage_operation parse_storage_operation(const std::string &operation);
-
-[[nodiscard]] storage_service_options parse_storage_service_options(const std::string &runtime_dir,
-                                                                    const nlohmann::json &options);
-
-[[nodiscard]] nlohmann::json make_storage_service_request(const std::string &operation, const std::string &runtime_dir,
-                                                          const nlohmann::json &options = nlohmann::json::object());
-
-[[nodiscard]] nlohmann::json run_storage_service_operation(const std::string &operation, const std::string &runtime_dir,
-                                                           const nlohmann::json &options = nlohmann::json::object());
-
-[[nodiscard]] nlohmann::json accept_storage_manifest(const std::string &runtime_dir, const nlohmann::json &manifest);
-
-[[nodiscard]] nlohmann::json load_storage_latest_manifest(const std::string &runtime_dir, const std::string &source_id);
-
-[[nodiscard]] nlohmann::json export_storage_records(const std::string &runtime_dir, const std::string &source_id,
-                                                    const nlohmann::json &range = nlohmann::json::object());
-
-[[nodiscard]] std::string write_storage_payload_bytes(const std::string &runtime_dir, const std::string &digest,
-                                                      const std::string &raw);
-
-// ADR-0040 content-store facade: the immutable content contract
-// (put-if-absent / get / has / verify, capability discovery) routed through
-// the provider selected for this runtime dir, so Python and Node speak the
-// same vocabulary as C++ over both the file and engine-backed profiles.
-// Hashes accept "<algo>:<hex>" or bare hex.
-[[nodiscard]] nlohmann::json content_store_put_if_absent(const std::string &runtime_dir,
-                                                         const std::string &content_namespace, const std::string &raw,
-                                                         const std::string &expected_hash = {});
-
-[[nodiscard]] bool content_store_has(const std::string &runtime_dir, const std::string &content_namespace,
-                                     const std::string &content_hash_text);
-
-[[nodiscard]] nlohmann::json content_store_verify(const std::string &runtime_dir, const std::string &content_namespace,
-                                                  const std::string &content_hash_text);
-
-// Verified read: throws when the object is missing, corrupt, or unaddressable,
-// so corrupt bytes never reach a caller.
-[[nodiscard]] std::string content_store_get(const std::string &runtime_dir, const std::string &content_namespace,
-                                            const std::string &content_hash_text);
-
-[[nodiscard]] nlohmann::json content_store_capabilities(const std::string &runtime_dir);
-
-[[nodiscard]] nlohmann::json storage_service_capabilities();
+[[nodiscard]] const storage_service &default_storage_service();
 
 } // namespace kungfu::runtime::storage_service_api
 

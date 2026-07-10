@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+#include <kungfu/runtime/storage/json_edge.h>
 #include <kungfu/runtime/storage/service.h>
 
 #include <algorithm>
@@ -9,6 +10,7 @@
 #include <filesystem>
 #include <fstream>
 #include <functional>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -1121,106 +1123,153 @@ nlohmann::json storage_projection_reports(const std::string &runtime_dir) {
       {source_registry_projection_report(runtime_dir), manifest_catalog_projection_report(runtime_dir)});
 }
 
-nlohmann::json query_sqlite_projection(const storage_service_options &options) {
-  const auto query = options.query.empty() ? std::string("entries") : options.query;
-  if (query == "episodes" || query == "episode_records" || query == "episode_frames" || query == "episode_refs") {
-    nlohmann::json rows = nlohmann::json::array();
-    if (query == "episodes") {
-      if (options.episode_id == 0) {
-        rows = episode_store(options).list(0, options.limit).value("episodes", nlohmann::json::array());
+const char *verification_status_text(yy_enums::SourceVerificationStatus status) {
+  switch (status) {
+  case yy_enums::SourceVerificationStatus::Ok:
+    return "ok";
+  case yy_enums::SourceVerificationStatus::Degraded:
+    return "degraded";
+  case yy_enums::SourceVerificationStatus::Failed:
+    return "failed";
+  }
+  return "failed";
+}
+
+storage_query_result query_journal_projection(const storage_query_request &request) {
+  storage_query_result result{};
+  result.query = request.query;
+  result.limit = request.limit;
+  result.range = request.range;
+  if (!request.entry_kind.empty()) {
+    result.entry_kind = request.entry_kind;
+  }
+
+  const bool episode_query =
+      request.query == storage_query_kind::Episodes || request.query == storage_query_kind::EpisodeRecords ||
+      request.query == storage_query_kind::EpisodeFrames || request.query == storage_query_kind::EpisodeRefs;
+  if (episode_query) {
+    result.scope = "episode";
+    if (request.episode_id != 0) {
+      result.episode_id = request.episode_id;
+    }
+    result.projection_name = "episode-manifest";
+    result.projection_schema = yy_storage::EPISODE_MANIFEST_SCHEMA_V1;
+    result.rebuildable = false;
+
+    const auto fold = yy_storage::episode_manifest_store(request.runtime_dir).fold_typed_records();
+    if (request.query == storage_query_kind::Episodes) {
+      std::vector<yy_storage::episode_current_view> rows;
+      if (request.episode_id != 0) {
+        const auto iter = fold.episodes.find(request.episode_id);
+        if (iter != fold.episodes.end()) {
+          rows.push_back(iter->second);
+        }
       } else {
-        const auto scoped = episode_ref_store(options);
-        const auto inspected = scoped.store.inspect(options.episode_id);
-        if (inspected.value("ok", false)) {
-          rows.push_back(inspected.at("episode"));
+        for (auto iter = fold.episodes.rbegin(); iter != fold.episodes.rend(); ++iter) {
+          rows.push_back(iter->second);
+          if (request.limit != 0 && rows.size() >= request.limit) {
+            break;
+          }
         }
       }
+      result.rows = std::move(rows);
+      return result;
+    }
+
+    if (request.episode_id == 0) {
+      throw std::invalid_argument("episode_id is required for " + storage_query_kind_name(request.query));
+    }
+    const auto iter = fold.episodes.find(request.episode_id);
+    if (iter == fold.episodes.end()) {
+      result.ok = false;
+      result.errors.push_back({"episode_missing", request.episode_id});
+      result.rows = std::vector<yy_storage::episode_manifest_record>{};
+      return result;
+    }
+    const auto &view = iter->second;
+    std::vector<yy_storage::episode_manifest_record> rows;
+    if (request.query == storage_query_kind::EpisodeRecords) {
+      rows = view.records;
     } else {
-      if (options.episode_id == 0) {
-        throw std::invalid_argument("episode_id is required for " + query);
-      }
-      const auto scoped = episode_ref_store(options);
-      const auto inspected = scoped.store.inspect(options.episode_id);
-      if (!inspected.value("ok", false)) {
-        return {{"ok", false},
-                {"scope", "episode"},
-                {"episode_id", options.episode_id},
-                {"projection",
-                 {{"name", "episode-manifest"},
-                  {"schema", yy_storage::EPISODE_MANIFEST_SCHEMA_V1},
-                  {"authority", "yijinjing-journal"},
-                  {"rebuildable", false}}},
-                {"query", query},
-                {"limit", options.limit},
-                {"rows", nlohmann::json::array()},
-                {"row_count", 0},
-                {"errors", inspected.value("errors", nlohmann::json::array())}};
-      }
-      const auto field = query == "episode_records"
-                             ? std::string("records")
-                             : (query == "episode_frames" ? std::string("frames") : std::string("refs"));
-      rows = inspected.value(field, nlohmann::json::array());
-      if (options.limit != 0 && rows.is_array() && rows.size() > options.limit) {
-        nlohmann::json limited = nlohmann::json::array();
-        for (size_t index = 0; index < std::min<size_t>(rows.size(), options.limit); ++index) {
-          limited.push_back(rows.at(index));
-        }
-        rows = limited;
+      const auto &indices = request.query == storage_query_kind::EpisodeFrames ? view.frame_indices : view.ref_indices;
+      rows.reserve(indices.size());
+      for (const auto index : indices) {
+        rows.push_back(view.records.at(index));
       }
     }
-    return {{"ok", true},
-            {"scope", "episode"},
-            {"episode_id", options.episode_id == 0 ? nlohmann::json(nullptr) : nlohmann::json(options.episode_id)},
-            {"projection",
-             {{"name", "episode-manifest"},
-              {"schema", yy_storage::EPISODE_MANIFEST_SCHEMA_V1},
-              {"authority", "yijinjing-journal"},
-              {"rebuildable", false}}},
-            {"query", query},
-            {"limit", options.limit},
-            {"rows", rows},
-            {"row_count", rows.size()}};
+    if (request.limit != 0 && rows.size() > request.limit) {
+      rows.resize(request.limit);
+    }
+    result.rows = std::move(rows);
+    return result;
   }
-  // Generic storage queries serve straight from the kernel journals — the
-  // authority — folded and filtered in process. The SQLite projections stay
-  // available for external SQL tooling and are verified by fsck.
-  nlohmann::json result = {
-      {"ok", true},
-      {"scope", options.source_id.empty() ? "all" : "source"},
-      {"source_id", options.source_id.empty() ? nlohmann::json(nullptr) : nlohmann::json(options.source_id)},
-      {"projection",
-       {{"name", "manifest-catalog"},
-        {"schema", yy_storage::MANIFEST_CATALOG_SCHEMA_V1},
-        {"authority", "yijinjing-journal"},
-        {"rebuildable", true}}},
-      {"query", query},
-      {"kind", options.kind.empty() ? nlohmann::json(nullptr) : nlohmann::json(options.kind)},
-      {"range", options.range},
-      {"limit", options.limit},
-      {"rows", nlohmann::json::array()},
-  };
-  const auto limit = options.limit == 0 ? uint64_t{1000} : std::min<uint64_t>(options.limit, 1000);
-  nlohmann::json rows = nlohmann::json::array();
-  if (query == "sources") {
-    for (const auto &source : catalog_store(options.runtime_dir).list().value("sources", nlohmann::json::array())) {
-      if (!options.source_id.empty() && text_or(source, "source_id") != options.source_id) {
+
+  result.scope = request.source_id.empty() ? "all" : "source";
+  if (!request.source_id.empty()) {
+    result.source_id = request.source_id;
+  }
+  result.projection_name = "manifest-catalog";
+  result.projection_schema = yy_storage::MANIFEST_CATALOG_SCHEMA_V1;
+  result.rebuildable = true;
+
+  // Generic storage queries serve straight from the typed kernel journal
+  // records. SQLite remains a derived projection used for parity/SQL access,
+  // never the authority or an intermediate JSON query substrate.
+  const auto records = catalog_store(request.runtime_dir).read_typed_records();
+  const auto limit = request.limit == 0 ? uint64_t{1000} : std::min<uint64_t>(request.limit, 1000);
+  std::map<uint64_t, std::vector<size_t>> manifests_by_source;
+  for (size_t index = 0; index < records.manifests.size(); ++index) {
+    manifests_by_source[records.manifests[index].source_uid].push_back(index);
+  }
+
+  if (request.query == storage_query_kind::Sources) {
+    std::vector<storage_source_query_row> rows;
+    for (const auto &[source_uid, indices] : manifests_by_source) {
+      const auto &latest = records.manifests.at(indices.back());
+      const auto source_id = std::string(latest.source_id.value);
+      if (!request.source_id.empty() && source_id != request.source_id) {
         continue;
       }
-      rows.push_back(source);
+      uint64_t export_count = 0;
+      for (const auto &receipt : records.exports) {
+        export_count += receipt.source_uid == source_uid ? 1 : 0;
+      }
+      rows.push_back({source_uid,
+                      source_id,
+                      std::string(latest.source_type.value),
+                      std::string(latest.source_coordinate.value),
+                      std::string(latest.manifest_id.value),
+                      std::string(latest.source_head.value),
+                      latest.accept_time,
+                      latest.entry_count,
+                      {std::string(latest.sync_root_algo.value), std::string(latest.sync_root_value.value)},
+                      indices.size(),
+                      export_count});
       if (rows.size() >= limit) {
         break;
       }
     }
-  } else if (query == "manifests") {
-    for (const auto &source : catalog_store(options.runtime_dir).list().value("sources", nlohmann::json::array())) {
-      const auto current_source_id = text_or(source, "source_id");
-      if (!options.source_id.empty() && current_source_id != options.source_id) {
+    result.rows = std::move(rows);
+    return result;
+  }
+
+  if (request.query == storage_query_kind::Manifests) {
+    std::vector<storage_manifest_query_row> rows;
+    for (const auto &[source_uid, indices] : manifests_by_source) {
+      (void)source_uid;
+      const auto source_id = std::string(records.manifests.at(indices.back()).source_id.value);
+      if (!request.source_id.empty() && source_id != request.source_id) {
         continue;
       }
-      const auto inspected = catalog_store(options.runtime_dir).inspect(current_source_id);
-      for (auto manifest : inspected.value("manifests", nlohmann::json::array())) {
-        manifest["source_id"] = current_source_id;
-        rows.push_back(manifest);
+      for (const auto index : indices) {
+        const auto &record = records.manifests.at(index);
+        rows.push_back({source_id,
+                        std::string(record.manifest_id.value),
+                        record.accept_time,
+                        record.entry_count,
+                        std::string(record.entries_hash.value),
+                        {std::string(record.sync_root_algo.value), std::string(record.sync_root_value.value)},
+                        verification_status_text(record.status)});
         if (rows.size() >= limit) {
           break;
         }
@@ -1229,64 +1278,61 @@ nlohmann::json query_sqlite_projection(const storage_service_options &options) {
         break;
       }
     }
-  } else if (query == "entries") {
-    const auto records = catalog_store(options.runtime_dir).read_typed_records();
-    std::unordered_map<uint64_t, size_t> latest_by_uid;
-    for (size_t index = 0; index < records.manifests.size(); ++index) {
-      latest_by_uid[records.manifests[index].manifest_uid] = index;
-    }
-    const auto since = text_or(options.range, "since");
-    const auto until = text_or(options.range, "until");
-    for (const auto &record : records.entries) {
-      const auto header_iter = latest_by_uid.find(record.manifest_uid);
-      if (header_iter == latest_by_uid.end()) {
-        continue;
-      }
-      const auto &header = records.manifests[header_iter->second];
-      if (record.accept_time != header.accept_time) {
-        continue; // superseded by a re-accept of the same manifest
-      }
-      nlohmann::json row = {
-          {"kind", std::string(record.kind.value)},
-          {"source_id", std::string(record.entry_source_id.value)},
-          {"source_path", std::string(record.source_path.value)},
-          {"source_time", std::string(record.source_time.value)},
-          {"schema_version", record.entry_schema_version},
-          {"content_type", std::string(record.content_type.value)},
-          {"payload_hash", std::string(record.payload_hash.value)},
-          {"byte_len", record.byte_len},
-          {"payload_state", payload_state_text(record.payload_state)},
-          {"entry_index", record.entry_index},
-          {"accept_time", record.accept_time},
-          {"storage_source_id", std::string(header.source_id.value)},
-          {"manifest_id", std::string(header.manifest_id.value)},
-      };
-      if (!options.source_id.empty() && row.value("storage_source_id", "") != options.source_id) {
-        continue;
-      }
-      if (!options.kind.empty() && row.value("kind", "") != options.kind) {
-        continue;
-      }
-      const auto stamp = row.value("source_time", std::string{});
-      if ((!since.empty() || !until.empty()) && stamp.empty()) {
-        continue;
-      }
-      if (!since.empty() && stamp < since) {
-        continue;
-      }
-      if (!until.empty() && stamp > until) {
-        continue;
-      }
-      rows.push_back(row);
-      if (rows.size() >= limit) {
-        break;
-      }
-    }
-  } else {
-    throw std::invalid_argument("unsupported storage query: " + query);
+    result.rows = std::move(rows);
+    return result;
   }
-  result["rows"] = rows;
-  result["row_count"] = rows.size();
+
+  if (request.query != storage_query_kind::Entries) {
+    throw std::invalid_argument("unsupported storage query: " + storage_query_kind_name(request.query));
+  }
+  std::unordered_map<uint64_t, size_t> latest_by_manifest_uid;
+  for (size_t index = 0; index < records.manifests.size(); ++index) {
+    latest_by_manifest_uid[records.manifests[index].manifest_uid] = index;
+  }
+  std::vector<storage_entry_query_row> rows;
+  for (const auto &record : records.entries) {
+    const auto header_iter = latest_by_manifest_uid.find(record.manifest_uid);
+    if (header_iter == latest_by_manifest_uid.end()) {
+      continue;
+    }
+    const auto &header = records.manifests.at(header_iter->second);
+    if (record.accept_time != header.accept_time) {
+      continue;
+    }
+    storage_entry_query_row row{std::string(record.kind.value),
+                                std::string(record.entry_source_id.value),
+                                std::string(record.source_path.value),
+                                std::string(record.source_time.value),
+                                record.entry_schema_version,
+                                std::string(record.content_type.value),
+                                std::string(record.payload_hash.value),
+                                record.byte_len,
+                                payload_state_text(record.payload_state),
+                                record.entry_index,
+                                record.accept_time,
+                                std::string(header.source_id.value),
+                                std::string(header.manifest_id.value)};
+    if (!request.source_id.empty() && row.storage_source_id != request.source_id) {
+      continue;
+    }
+    if (!request.entry_kind.empty() && row.kind != request.entry_kind) {
+      continue;
+    }
+    if ((!request.range.since.empty() || !request.range.until.empty()) && row.source_time.empty()) {
+      continue;
+    }
+    if (!request.range.since.empty() && row.source_time < request.range.since) {
+      continue;
+    }
+    if (!request.range.until.empty() && row.source_time > request.range.until) {
+      continue;
+    }
+    rows.push_back(std::move(row));
+    if (rows.size() >= limit) {
+      break;
+    }
+  }
+  result.rows = std::move(rows);
   return result;
 }
 
@@ -3107,29 +3153,25 @@ nlohmann::json export_bundle_generic_impl(const storage_service_options &options
   return bundle;
 }
 
-class file_storage_service : public storage_service {
+class file_storage_json_edge_service {
 public:
-  [[nodiscard]] nlohmann::json status(const storage_service_options &options) const override {
-    return status_impl(options);
-  }
+  [[nodiscard]] nlohmann::json status(const storage_service_options &options) const { return status_impl(options); }
 
-  [[nodiscard]] nlohmann::json fsck(const storage_service_options &options) const override {
-    return fsck_impl(options);
-  }
+  [[nodiscard]] nlohmann::json fsck(const storage_service_options &options) const { return fsck_impl(options); }
 
-  [[nodiscard]] nlohmann::json repair_plan(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json repair_plan(const storage_service_options &options) const {
     return repair_plan_impl(options);
   }
 
-  [[nodiscard]] nlohmann::json repair_fetch(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json repair_fetch(const storage_service_options &options) const {
     return repair_fetch_impl(options);
   }
 
-  [[nodiscard]] nlohmann::json repair_apply(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json repair_apply(const storage_service_options &options) const {
     return repair_apply_impl(options);
   }
 
-  [[nodiscard]] nlohmann::json export_bundle(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json export_bundle(const storage_service_options &options) const {
     if (options.scope == "episode") {
       return episode_export_bundle_impl(options);
     }
@@ -3139,7 +3181,7 @@ public:
     return export_bundle_generic_impl(options, /*record_receipt=*/true);
   }
 
-  [[nodiscard]] nlohmann::json import_bundle(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json import_bundle(const storage_service_options &options) const {
     if (!options.bundle.is_object()) {
       throw std::invalid_argument("bundle_manifest_missing");
     }
@@ -3202,19 +3244,17 @@ public:
             {"records", records.size()}};
   }
 
-  [[nodiscard]] nlohmann::json rebuild_index(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json rebuild_index(const storage_service_options &options) const {
     return rebuild_index_impl(options);
   }
 
-  [[nodiscard]] nlohmann::json gc_plan(const storage_service_options &options) const override {
-    return gc_plan_impl(options);
-  }
+  [[nodiscard]] nlohmann::json gc_plan(const storage_service_options &options) const { return gc_plan_impl(options); }
 
-  [[nodiscard]] nlohmann::json compact_plan(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json compact_plan(const storage_service_options &options) const {
     return compact_plan_impl(options);
   }
 
-  [[nodiscard]] nlohmann::json verify_sync(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json verify_sync(const storage_service_options &options) const {
     const auto source_report = fsck_impl(options);
     if (!source_report.value("ok", false)) {
       return {{"ok", false},
@@ -3265,46 +3305,42 @@ public:
             {"imported_fsck", imported_report}};
   }
 
-  [[nodiscard]] nlohmann::json query(const storage_service_options &options) const override {
-    return query_sqlite_projection(options);
-  }
-
-  [[nodiscard]] nlohmann::json layout(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json layout(const storage_service_options &options) const {
     const auto provider = shared_provider(options);
     return workspace_episode_layout(options, *provider);
   }
 
-  [[nodiscard]] nlohmann::json episode_begin(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json episode_begin(const storage_service_options &options) const {
     return episode_store(options).begin(parse_episode_begin_options(options.operation_options));
   }
 
-  [[nodiscard]] nlohmann::json episode_heartbeat(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json episode_heartbeat(const storage_service_options &options) const {
     return episode_store(options).heartbeat(parse_episode_heartbeat_options(options.operation_options));
   }
 
-  [[nodiscard]] nlohmann::json episode_end(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json episode_end(const storage_service_options &options) const {
     return episode_store(options).end(
         parse_episode_close_options(options.operation_options, yy_enums::EpisodeStatus::Ended));
   }
 
-  [[nodiscard]] nlohmann::json episode_abort(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json episode_abort(const storage_service_options &options) const {
     return episode_store(options).abort(
         parse_episode_close_options(options.operation_options, yy_enums::EpisodeStatus::Aborted));
   }
 
-  [[nodiscard]] nlohmann::json episode_attach_frame(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json episode_attach_frame(const storage_service_options &options) const {
     return episode_store(options).attach_frame(parse_episode_frame_attach_options(options.operation_options));
   }
 
-  [[nodiscard]] nlohmann::json episode_attach_ref(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json episode_attach_ref(const storage_service_options &options) const {
     return episode_store(options).attach_ref(parse_episode_ref_attach_options(options.operation_options));
   }
 
-  [[nodiscard]] nlohmann::json episode_list(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json episode_list(const storage_service_options &options) const {
     return episode_store(options).list(uint64_or(options.operation_options, "location_uid"), options.limit);
   }
 
-  [[nodiscard]] nlohmann::json episode_inspect(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json episode_inspect(const storage_service_options &options) const {
     auto inspected = episode_ref_store(options).store.inspect(options.episode_id);
     auto qualification_options = options;
     qualification_options.scope = "episode";
@@ -3313,36 +3349,36 @@ public:
     return inspected;
   }
 
-  [[nodiscard]] nlohmann::json episode_recover(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json episode_recover(const storage_service_options &options) const {
     return episode_store(options).recover(parse_episode_recover_options(options.operation_options));
   }
 
-  [[nodiscard]] nlohmann::json episode_projection_rebuild(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json episode_projection_rebuild(const storage_service_options &options) const {
     return episode_manifest_projection(options.runtime_dir).rebuild();
   }
 
-  [[nodiscard]] nlohmann::json source_register(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json source_register(const storage_service_options &options) const {
     return source_registry_store(options).register_source(parse_source_register_options(options.operation_options));
   }
 
-  [[nodiscard]] nlohmann::json source_update_head(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json source_update_head(const storage_service_options &options) const {
     return source_registry_store(options).update_head(parse_source_head_update_options(options.operation_options));
   }
 
-  [[nodiscard]] nlohmann::json source_record_accepted_range(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json source_record_accepted_range(const storage_service_options &options) const {
     return source_registry_store(options).record_accepted_range(
         parse_accepted_range_options(options.operation_options));
   }
 
-  [[nodiscard]] nlohmann::json source_list(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json source_list(const storage_service_options &options) const {
     return source_registry_store(options).list();
   }
 
-  [[nodiscard]] nlohmann::json source_inspect(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json source_inspect(const storage_service_options &options) const {
     return source_registry_store(options).inspect(text_or(options.operation_options, "source_id", options.source_id));
   }
 
-  [[nodiscard]] nlohmann::json source_registry_fsck(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json source_registry_fsck(const storage_service_options &options) const {
     const auto source_id = text_or(options.operation_options, "source_id", options.source_id);
     auto report = source_registry_store(options).fsck(source_id);
     // ADR-0037: fsck verifies journal + projection. The journal is the
@@ -3361,14 +3397,244 @@ public:
     return report;
   }
 
-  [[nodiscard]] nlohmann::json source_registry_rebuild(const storage_service_options &options) const override {
+  [[nodiscard]] nlohmann::json source_registry_rebuild(const storage_service_options &options) const {
     return source_registry_projection(options.runtime_dir).rebuild();
   }
 };
 
-const file_storage_service &storage_service_instance() {
+class file_storage_service : public storage_service {
+public:
+  [[nodiscard]] storage_query_result query(const storage_query_request &request) const override {
+    return query_journal_projection(request);
+  }
+};
+
+const file_storage_service &typed_storage_service_instance() {
   static const file_storage_service service;
   return service;
+}
+
+const file_storage_json_edge_service &storage_json_edge_service_instance() {
+  static const file_storage_json_edge_service service;
+  return service;
+}
+
+const char *episode_status_text(yy_enums::EpisodeStatus status) {
+  switch (status) {
+  case yy_enums::EpisodeStatus::Open:
+    return "open";
+  case yy_enums::EpisodeStatus::Ended:
+    return "ended";
+  case yy_enums::EpisodeStatus::Aborted:
+    return "aborted";
+  case yy_enums::EpisodeStatus::Tombstoned:
+    return "tombstoned";
+  }
+  return "unknown";
+}
+
+const char *episode_ref_kind_text(yy_enums::EpisodeRefKind kind) {
+  switch (kind) {
+  case yy_enums::EpisodeRefKind::InputFrame:
+    return "input_frame";
+  case yy_enums::EpisodeRefKind::Payload:
+    return "payload";
+  case yy_enums::EpisodeRefKind::Schema:
+    return "schema";
+  case yy_enums::EpisodeRefKind::Episode:
+    return "episode";
+  }
+  return "unknown";
+}
+
+template <typename T> nlohmann::json episode_base_record_json(const char *kind, const T &record) {
+  return {{"schema", yy_storage::EPISODE_MANIFEST_SCHEMA_V1},
+          {"record_kind", kind},
+          {"schema_version", record.schema_version},
+          {"episode_id", record.episode_id},
+          {"location_uid", record.location_uid}};
+}
+
+nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeOpen &record) {
+  auto row = episode_base_record_json("episode_open", record);
+  row["status"] = episode_status_text(yy_enums::EpisodeStatus::Open);
+  row["parent_episode_id"] = record.parent_episode_id;
+  row["root_trigger_frame_uid"] = record.root_trigger_frame_uid;
+  row["begin_time"] = record.begin_time;
+  row["title"] = std::string(record.title.value);
+  row["actor"] = std::string(record.actor.value);
+  row["source"] = std::string(record.source.value);
+  return row;
+}
+
+nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeHeartbeat &record) {
+  auto row = episode_base_record_json("episode_heartbeat", record);
+  row["update_time"] = record.update_time;
+  row["last_frame_uid"] = record.last_frame_uid;
+  row["frame_count"] = record.frame_count;
+  row["note"] = std::string(record.note.value);
+  return row;
+}
+
+nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeFrameAttached &record) {
+  auto row = episode_base_record_json("episode_frame_attached", record);
+  row["frame_uid"] = record.frame_uid;
+  row["trigger_frame_uid"] = record.trigger_frame_uid;
+  row["stream_id"] = record.stream_id;
+  row["gen_time"] = record.gen_time;
+  row["trigger_time"] = record.trigger_time;
+  row["carrier_type"] = record.carrier_type;
+  row["source"] = record.source;
+  row["dest"] = record.dest;
+  row["data_length"] = record.data_length;
+  row["integrity_version"] = record.integrity_version;
+  row["payload_checksum"] = record.payload_checksum;
+  row["frame_checksum"] = record.frame_checksum;
+  return row;
+}
+
+nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeRefAttached &record) {
+  auto row = episode_base_record_json("episode_ref_attached", record);
+  row["ref_kind"] = episode_ref_kind_text(record.ref_kind);
+  row["ref_uid"] = record.ref_uid;
+  row["update_time"] = record.update_time;
+  row["ref_id"] = std::string(record.ref_id.value);
+  row["ref_hash"] = std::string(record.ref_hash.value);
+  return row;
+}
+
+nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeClosed &record) {
+  auto row = episode_base_record_json("episode_closed", record);
+  row["status"] = episode_status_text(record.status);
+  row["end_time"] = record.end_time;
+  row["last_frame_uid"] = record.last_frame_uid;
+  row["frame_count"] = record.frame_count;
+  row["reason"] = std::string(record.reason.value);
+  return row;
+}
+
+nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeRootCommitted &record) {
+  auto row = episode_base_record_json("episode_root_committed", record);
+  row["commit_time"] = record.commit_time;
+  row["covered_record_count"] = record.covered_record_count;
+  row["algorithm"] = std::string(record.algorithm.value);
+  row["root_value"] = std::string(record.root_value.value);
+  return row;
+}
+
+nlohmann::json episode_record_row_json(const yy_storage::episode_manifest_record &record) {
+  auto row = std::visit(
+      [&record](const auto &body) -> nlohmann::json {
+        using body_t = std::decay_t<decltype(body)>;
+        if constexpr (std::is_same_v<body_t, yy_storage::episode_manifest_unknown_record>) {
+          return {{"schema", yy_storage::EPISODE_MANIFEST_SCHEMA_V1},
+                  {"record_kind", "unknown"},
+                  {"carrier_type", body.carrier_type},
+                  {"frame_uid", record.manifest_frame_uid},
+                  {"gen_time", record.manifest_gen_time}};
+        } else {
+          return episode_record_body_json(body);
+        }
+      },
+      record.body);
+  row["manifest_frame_uid"] = record.manifest_frame_uid;
+  row["manifest_gen_time"] = record.manifest_gen_time;
+  return row;
+}
+
+nlohmann::json episode_summary_json(const yy_storage::episode_current_view &view) {
+  nlohmann::json summary = nlohmann::json::object();
+  if (view.opened) {
+    summary = episode_record_body_json(view.open);
+    summary["manifest_frame_uid"] = view.open_manifest_frame_uid;
+    summary["manifest_gen_time"] = view.open_manifest_gen_time;
+  }
+  if (view.heartbeat_seen) {
+    summary["update_time"] = view.update_time;
+  }
+  if (view.last_frame_uid_seen) {
+    summary["last_frame_uid"] = view.last_frame_uid;
+  }
+  if (view.closed) {
+    summary["status"] = episode_status_text(view.close.status);
+    summary["end_time"] = view.close.end_time;
+    summary["reason"] = std::string(view.close.reason.value);
+  }
+  summary["schema"] = yy_storage::EPISODE_MANIFEST_SCHEMA_V1;
+  summary["episode_id"] = view.episode_id;
+  summary["opened"] = view.opened;
+  summary["closed"] = view.closed;
+  summary["record_count"] = view.records.size();
+  summary["frame_count"] = view.frame_indices.size();
+  summary["ref_count"] = view.ref_indices.size();
+  size_t payload_ref_count = 0;
+  size_t schema_ref_count = 0;
+  for (size_t position = 0; position < view.ref_indices.size(); ++position) {
+    const auto kind = view.ref_at(position).ref_kind;
+    payload_ref_count += kind == yy_enums::EpisodeRefKind::Payload ? 1 : 0;
+    schema_ref_count += kind == yy_enums::EpisodeRefKind::Schema ? 1 : 0;
+  }
+  summary["payload_ref_count"] = payload_ref_count;
+  summary["schema_ref_count"] = schema_ref_count;
+  if (view.root_seen) {
+    summary["content_root"] = std::string(view.root.root_value.value);
+    summary["content_root_algorithm"] = std::string(view.root.algorithm.value);
+  }
+  if (!summary.contains("status")) {
+    summary["status"] = view.opened ? "open" : "dangling";
+  }
+  return summary;
+}
+
+nlohmann::json storage_query_rows_json(const storage_query_rows &rows) {
+  return std::visit(
+      [](const auto &typed_rows) {
+        using rows_t = std::decay_t<decltype(typed_rows)>;
+        nlohmann::json rendered = nlohmann::json::array();
+        for (const auto &row : typed_rows) {
+          if constexpr (std::is_same_v<rows_t, std::vector<storage_source_query_row>>) {
+            rendered.push_back({{"source_uid", row.source_uid},
+                                {"source_id", row.source_id},
+                                {"source_type", row.source_type},
+                                {"coordinate", row.coordinate},
+                                {"manifest_id", row.manifest_id},
+                                {"source_head", row.source_head},
+                                {"accept_time", row.accept_time},
+                                {"entry_count", row.entry_count},
+                                {"sync_root", {{"algorithm", row.sync_root.algorithm}, {"value", row.sync_root.value}}},
+                                {"manifest_count", row.manifest_count},
+                                {"export_count", row.export_count}});
+          } else if constexpr (std::is_same_v<rows_t, std::vector<storage_manifest_query_row>>) {
+            rendered.push_back({{"manifest_id", row.manifest_id},
+                                {"accept_time", row.accept_time},
+                                {"entry_count", row.entry_count},
+                                {"entries_hash", row.entries_hash},
+                                {"sync_root", {{"algorithm", row.sync_root.algorithm}, {"value", row.sync_root.value}}},
+                                {"status", row.status},
+                                {"source_id", row.source_id}});
+          } else if constexpr (std::is_same_v<rows_t, std::vector<storage_entry_query_row>>) {
+            rendered.push_back({{"kind", row.kind},
+                                {"source_id", row.source_id},
+                                {"source_path", row.source_path},
+                                {"source_time", row.source_time},
+                                {"schema_version", row.schema_version},
+                                {"content_type", row.content_type},
+                                {"payload_hash", row.payload_hash},
+                                {"byte_len", row.byte_len},
+                                {"payload_state", row.payload_state},
+                                {"entry_index", row.entry_index},
+                                {"accept_time", row.accept_time},
+                                {"storage_source_id", row.storage_source_id},
+                                {"manifest_id", row.manifest_id}});
+          } else if constexpr (std::is_same_v<rows_t, std::vector<yy_storage::episode_current_view>>) {
+            rendered.push_back(episode_summary_json(row));
+          } else {
+            rendered.push_back(episode_record_row_json(row));
+          }
+        }
+        return rendered;
+      },
+      rows);
 }
 
 nlohmann::json make_request(storage_operation operation, const storage_service_options &options) {
@@ -3389,6 +3655,117 @@ nlohmann::json make_request(storage_operation operation, const storage_service_o
 }
 
 } // namespace
+
+size_t storage_query_result::row_count() const {
+  return std::visit([](const auto &typed_rows) { return typed_rows.size(); }, rows);
+}
+
+std::string storage_query_kind_name(storage_query_kind kind) {
+  switch (kind) {
+  case storage_query_kind::Sources:
+    return "sources";
+  case storage_query_kind::Manifests:
+    return "manifests";
+  case storage_query_kind::Entries:
+    return "entries";
+  case storage_query_kind::Episodes:
+    return "episodes";
+  case storage_query_kind::EpisodeRecords:
+    return "episode_records";
+  case storage_query_kind::EpisodeFrames:
+    return "episode_frames";
+  case storage_query_kind::EpisodeRefs:
+    return "episode_refs";
+  }
+  throw std::invalid_argument("unknown storage query kind");
+}
+
+storage_query_kind parse_storage_query_kind(const std::string &kind) {
+  const auto normalized = kind.empty() ? std::string("entries") : kind;
+  if (normalized == "sources") {
+    return storage_query_kind::Sources;
+  }
+  if (normalized == "manifests") {
+    return storage_query_kind::Manifests;
+  }
+  if (normalized == "entries") {
+    return storage_query_kind::Entries;
+  }
+  if (normalized == "episodes") {
+    return storage_query_kind::Episodes;
+  }
+  if (normalized == "episode_records") {
+    return storage_query_kind::EpisodeRecords;
+  }
+  if (normalized == "episode_frames") {
+    return storage_query_kind::EpisodeFrames;
+  }
+  if (normalized == "episode_refs") {
+    return storage_query_kind::EpisodeRefs;
+  }
+  throw std::invalid_argument("unsupported storage query: " + normalized);
+}
+
+const storage_service &default_storage_service() { return typed_storage_service_instance(); }
+
+storage_query_request parse_storage_query_request(const storage_service_options &options) {
+  storage_query_request request{};
+  request.runtime_dir = options.runtime_dir;
+  request.provider = options.provider;
+  request.provider_config_source = options.provider_config_source;
+  request.source_id = options.source_id;
+  request.entry_kind = options.kind;
+  request.range.since = text_or(options.range, "since");
+  request.range.until = text_or(options.range, "until");
+  request.query = parse_storage_query_kind(options.query);
+  request.episode_id = options.episode_id;
+  request.limit = options.limit;
+  return request;
+}
+
+nlohmann::json render_storage_query_result(const storage_query_result &result) {
+  auto rows = storage_query_rows_json(result.rows);
+  nlohmann::json rendered = {{"ok", result.ok},
+                             {"scope", result.scope},
+                             {"projection",
+                              {{"name", result.projection_name},
+                               {"schema", result.projection_schema},
+                               {"authority", result.authority},
+                               {"rebuildable", result.rebuildable}}},
+                             {"query", storage_query_kind_name(result.query)},
+                             {"limit", result.limit},
+                             {"rows", std::move(rows)},
+                             {"row_count", result.row_count()}};
+  const bool episode_query =
+      result.query == storage_query_kind::Episodes || result.query == storage_query_kind::EpisodeRecords ||
+      result.query == storage_query_kind::EpisodeFrames || result.query == storage_query_kind::EpisodeRefs;
+  if (episode_query) {
+    rendered["episode_id"] =
+        result.episode_id.has_value() ? nlohmann::json(*result.episode_id) : nlohmann::json(nullptr);
+  } else {
+    rendered["source_id"] = result.source_id.has_value() ? nlohmann::json(*result.source_id) : nlohmann::json(nullptr);
+    rendered["kind"] = result.entry_kind.has_value() ? nlohmann::json(*result.entry_kind) : nlohmann::json(nullptr);
+    nlohmann::json range = nlohmann::json::object();
+    if (!result.range.since.empty()) {
+      range["since"] = result.range.since;
+    }
+    if (!result.range.until.empty()) {
+      range["until"] = result.range.until;
+    }
+    rendered["range"] = std::move(range);
+  }
+  if (!result.errors.empty()) {
+    rendered["errors"] = nlohmann::json::array();
+    for (const auto &error : result.errors) {
+      nlohmann::json row = {{"code", error.code}};
+      if (error.episode_id.has_value()) {
+        row["episode_id"] = *error.episode_id;
+      }
+      rendered["errors"].push_back(std::move(row));
+    }
+  }
+  return rendered;
+}
 
 std::vector<std::string> storage_operation_names() {
   return {
@@ -3639,65 +4016,65 @@ nlohmann::json run_storage_service_operation(const std::string &operation, const
   const auto parsed_options = parse_storage_service_options(runtime_dir, options);
   switch (parsed_operation) {
   case storage_operation::Status:
-    return storage_service_instance().status(parsed_options);
+    return storage_json_edge_service_instance().status(parsed_options);
   case storage_operation::Fsck:
-    return storage_service_instance().fsck(parsed_options);
+    return storage_json_edge_service_instance().fsck(parsed_options);
   case storage_operation::RepairPlan:
-    return storage_service_instance().repair_plan(parsed_options);
+    return storage_json_edge_service_instance().repair_plan(parsed_options);
   case storage_operation::RepairFetch:
-    return storage_service_instance().repair_fetch(parsed_options);
+    return storage_json_edge_service_instance().repair_fetch(parsed_options);
   case storage_operation::RepairApply:
-    return storage_service_instance().repair_apply(parsed_options);
+    return storage_json_edge_service_instance().repair_apply(parsed_options);
   case storage_operation::ExportBundle:
-    return storage_service_instance().export_bundle(parsed_options);
+    return storage_json_edge_service_instance().export_bundle(parsed_options);
   case storage_operation::ImportBundle:
-    return storage_service_instance().import_bundle(parsed_options);
+    return storage_json_edge_service_instance().import_bundle(parsed_options);
   case storage_operation::RebuildIndex:
-    return storage_service_instance().rebuild_index(parsed_options);
+    return storage_json_edge_service_instance().rebuild_index(parsed_options);
   case storage_operation::GcPlan:
-    return storage_service_instance().gc_plan(parsed_options);
+    return storage_json_edge_service_instance().gc_plan(parsed_options);
   case storage_operation::CompactPlan:
-    return storage_service_instance().compact_plan(parsed_options);
+    return storage_json_edge_service_instance().compact_plan(parsed_options);
   case storage_operation::VerifySync:
-    return storage_service_instance().verify_sync(parsed_options);
+    return storage_json_edge_service_instance().verify_sync(parsed_options);
   case storage_operation::Query:
-    return storage_service_instance().query(parsed_options);
+    return render_storage_query_result(default_storage_service().query(parse_storage_query_request(parsed_options)));
   case storage_operation::Layout:
-    return storage_service_instance().layout(parsed_options);
+    return storage_json_edge_service_instance().layout(parsed_options);
   case storage_operation::EpisodeBegin:
-    return storage_service_instance().episode_begin(parsed_options);
+    return storage_json_edge_service_instance().episode_begin(parsed_options);
   case storage_operation::EpisodeHeartbeat:
-    return storage_service_instance().episode_heartbeat(parsed_options);
+    return storage_json_edge_service_instance().episode_heartbeat(parsed_options);
   case storage_operation::EpisodeEnd:
-    return storage_service_instance().episode_end(parsed_options);
+    return storage_json_edge_service_instance().episode_end(parsed_options);
   case storage_operation::EpisodeAbort:
-    return storage_service_instance().episode_abort(parsed_options);
+    return storage_json_edge_service_instance().episode_abort(parsed_options);
   case storage_operation::EpisodeAttachFrame:
-    return storage_service_instance().episode_attach_frame(parsed_options);
+    return storage_json_edge_service_instance().episode_attach_frame(parsed_options);
   case storage_operation::EpisodeAttachRef:
-    return storage_service_instance().episode_attach_ref(parsed_options);
+    return storage_json_edge_service_instance().episode_attach_ref(parsed_options);
   case storage_operation::EpisodeList:
-    return storage_service_instance().episode_list(parsed_options);
+    return storage_json_edge_service_instance().episode_list(parsed_options);
   case storage_operation::EpisodeInspect:
-    return storage_service_instance().episode_inspect(parsed_options);
+    return storage_json_edge_service_instance().episode_inspect(parsed_options);
   case storage_operation::EpisodeRecover:
-    return storage_service_instance().episode_recover(parsed_options);
+    return storage_json_edge_service_instance().episode_recover(parsed_options);
   case storage_operation::EpisodeProjectionRebuild:
-    return storage_service_instance().episode_projection_rebuild(parsed_options);
+    return storage_json_edge_service_instance().episode_projection_rebuild(parsed_options);
   case storage_operation::SourceRegister:
-    return storage_service_instance().source_register(parsed_options);
+    return storage_json_edge_service_instance().source_register(parsed_options);
   case storage_operation::SourceUpdateHead:
-    return storage_service_instance().source_update_head(parsed_options);
+    return storage_json_edge_service_instance().source_update_head(parsed_options);
   case storage_operation::SourceRecordAcceptedRange:
-    return storage_service_instance().source_record_accepted_range(parsed_options);
+    return storage_json_edge_service_instance().source_record_accepted_range(parsed_options);
   case storage_operation::SourceList:
-    return storage_service_instance().source_list(parsed_options);
+    return storage_json_edge_service_instance().source_list(parsed_options);
   case storage_operation::SourceInspect:
-    return storage_service_instance().source_inspect(parsed_options);
+    return storage_json_edge_service_instance().source_inspect(parsed_options);
   case storage_operation::SourceRegistryFsck:
-    return storage_service_instance().source_registry_fsck(parsed_options);
+    return storage_json_edge_service_instance().source_registry_fsck(parsed_options);
   case storage_operation::SourceRegistryRebuild:
-    return storage_service_instance().source_registry_rebuild(parsed_options);
+    return storage_json_edge_service_instance().source_registry_rebuild(parsed_options);
   }
   throw std::invalid_argument("unknown storage operation");
 }
