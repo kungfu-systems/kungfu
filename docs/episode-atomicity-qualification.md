@@ -14,7 +14,7 @@ ai_provenance:
   product: Codex
   generated_at: 2026-07-10
   visible_context: ADR-0042 design discussion, current Episode v1 implementation/tests, and Kungfu fuzz/verification conventions
-  invisible_context_boundary: No qualification harness or industrial-scale run exists yet; numerical envelopes are planning targets, not measured capacity
+  invisible_context_boundary: The current harness and first local single-node baselines are visible; no multi-platform CI result, fleet-scale run, payload-volume qualification, or industrial soak is available yet
 ---
 
 # Episode Atomicity Qualification
@@ -327,6 +327,13 @@ payload profile: metadata-only
 The baseline may be split into separate invocations when runtime is long, but
 each report must retain the exact profile, seed, source revision, and completed
 scenario list.
+
+As of 2026-07-10, `./kungfu-code verify` runs `mvp-smoke-v1` by default. The
+declared Buildchain `verify` lifecycle and the alpha/release `verify --fuzz`
+workflow therefore inherit the same Episode correctness gate. The explicit
+`--skip-episode-qualification` option is for local diagnosis; checked-in
+Buildchain commands do not use it. `mvp-baseline-v1` remains an explicit
+periodic or release-readiness qualification rather than a per-build workload.
 
 ### v0 correctness and progress gates
 
