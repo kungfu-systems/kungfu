@@ -157,5 +157,8 @@ jobs:
           # shifu-entry-contract: allow the isolated spike targets are not product-level Shifu tasks
           cmake --build framework/core/build --config Release --parallel 2 \
             --target shared_embedding_host shared_embedding_native_kfx
+          # Keep the latency gate separate from sustained compiler load on the
+          # self-hosted fleet.  This is one fixed settle, not a benchmark retry.
+          sleep 60
           # shifu-entry-contract: allow the spike harness must inspect platform-specific binaries directly
           node framework/core/slices/shared-embedding-membrane/run.mjs framework/core/build

@@ -58,9 +58,11 @@ Each native probe trial warms 10 batches, then reads 16,000 256-byte frames as
 1,000 calls of 16 frames (4 KiB per call), followed by one direct 1 MiB view.
 The harness runs three independent trials, keeps every raw result visible, and
 gates the median of their p99 values so one scheduler preemption is not treated
-as sustained latency. The dynamically loaded module has only system C/C++
-runtime dependencies; it has no libkungfu or C++ core dependency. The host has
-exactly one libkungfu dependency and passes the v1 table to the module.
+as sustained latency. CI applies one fixed 60-second post-build settle before
+the harness; it does not retry a failed benchmark. The dynamically loaded
+module has only system C/C++ runtime dependencies; it has no libkungfu or C++
+core dependency. The host has exactly one libkungfu dependency and passes the
+v1 table to the module.
 
 ## Measured evidence
 
