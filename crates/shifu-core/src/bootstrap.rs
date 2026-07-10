@@ -63,7 +63,7 @@ const UV_BASE: &str = "https://github.com/astral-sh/uv/releases/download";
 /// `FetchSpec::cached_binary`): binaries for different targets must never
 /// share a cache slot.
 fn cache_target() -> String {
-    format!("{}-{}", env::consts::OS, env::consts::ARCH)
+    host::os_arch()
 }
 
 /// Everything the fetch engine needs to acquire one pinned tool: an exact

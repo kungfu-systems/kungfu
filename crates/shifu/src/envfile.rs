@@ -13,12 +13,17 @@ use std::path::Path;
 
 use crate::util;
 
-pub fn load(repo_root: &Path) {
+/// Load the two-layer config: the user-global file always (rootless verbs
+/// like `promote` and `builds` read configuration too), the repo-root
+/// override only inside a checkout.
+pub fn load(repo_root: Option<&Path>) {
     let user_global = util::xdg_dir("XDG_CONFIG_HOME", ".config")
         .join("kungfu")
         .join("build-local.env");
     apply_file(&user_global);
-    apply_file(&repo_root.join("build-local.env"));
+    if let Some(root) = repo_root {
+        apply_file(&root.join("build-local.env"));
+    }
 }
 
 fn apply_file(path: &Path) {
@@ -32,7 +37,7 @@ fn apply_file(path: &Path) {
     }
 }
 
-fn parse_line(line: &str) -> Option<(&str, &str)> {
+pub(crate) fn parse_line(line: &str) -> Option<(&str, &str)> {
     let s = line.trim_start();
     if s.is_empty() || s.starts_with('#') {
         return None;
