@@ -18,10 +18,13 @@ permissions:
   contents: read
 
 jobs:
-  source-snapshot:
-    name: Prepare immutable source snapshot
+  source-delta:
+    name: Prepare immutable source delta
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
+    env:
+      MIRROR_BASE_SHA: a9eb6a1af3a4e1a49a09efb8f8312bcb522de298
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
       - name: Checkout immutable PR head
         uses: actions/checkout@v4
@@ -30,18 +33,22 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Pack source snapshot
-        env:
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+      - name: Pack tree-verified source delta
         run: |
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
-          tar --exclude=.git -czf "${RUNNER_TEMP}/kungfu-source.tar.gz" .
+          git fetch --no-tags --depth=1 origin "$MIRROR_BASE_SHA"
+          mkdir -p "${RUNNER_TEMP}/embedding-source-delta"
+          git diff --binary "$MIRROR_BASE_SHA" "$SOURCE_SHA" \
+            > "${RUNNER_TEMP}/embedding-source-delta/source.patch"
+          git rev-parse "${SOURCE_SHA}^{tree}" \
+            > "${RUNNER_TEMP}/embedding-source-delta/source-tree-sha"
+          test -s "${RUNNER_TEMP}/embedding-source-delta/source.patch"
 
-      - name: Upload source snapshot
+      - name: Upload source delta
         uses: actions/upload-artifact@v4
         with:
-          name: embedding-source-${{ github.event.pull_request.head.sha }}
-          path: ${{ runner.temp }}/kungfu-source.tar.gz
+          name: embedding-source-delta-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/embedding-source-delta
           if-no-files-found: error
           retention-days: 1
 
@@ -49,7 +56,7 @@ jobs:
     name: ${{ matrix.name }}
     # Never execute untrusted fork code on the self-hosted build fleet.
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
-    needs: source-snapshot
+    needs: source-delta
     strategy:
       fail-fast: false
       matrix:
@@ -66,7 +73,10 @@ jobs:
       KUNGFU_BUILDCHAIN_SOURCE_BUILD: "1"
       SHIFU_NATIVE: "1"
       SHIFU_REQUIRE_MSVC: "1"
-      SOURCE_ROOT: source-${{ github.event.pull_request.head.sha }}
+      MIRROR_BASE_SHA: a9eb6a1af3a4e1a49a09efb8f8312bcb522de298
+      MIRROR_REF: refs/heads/dev/v4/v4.0
+      MIRROR_URL: http://192.168.100.222:8088/git-mirrors/kungfu.git
+      SOURCE_ROOT: source-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Setup Node.js
         uses: actions/setup-node@v6.4.0
@@ -78,19 +88,29 @@ jobs:
         shell: pwsh
         run: '"C:\Program Files\Git\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append'
 
-      - name: Download immutable PR head snapshot
+      - name: Download immutable source delta
         uses: actions/download-artifact@v4
         with:
-          name: embedding-source-${{ github.event.pull_request.head.sha }}
-          path: ${{ runner.temp }}/embedding-source
+          name: embedding-source-delta-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/embedding-source-delta
 
-      # Use a per-SHA directory so no runner cleanup or overwrite is required.
-      - name: Extract immutable PR head snapshot
+      # The LAN mirror carries the exact pinned dev base. Apply the small binary
+      # delta and compare Git tree ids before executing any source from the PR.
+      - name: Reconstruct and verify immutable PR head
         shell: bash
         run: |
-          mkdir -p "$SOURCE_ROOT"
-          tar -xzf "${RUNNER_TEMP}/embedding-source/kungfu-source.tar.gz" \
-            -C "$SOURCE_ROOT"
+          git init "$SOURCE_ROOT"
+          git -C "$SOURCE_ROOT" remote add mirror "$MIRROR_URL"
+          git -C "$SOURCE_ROOT" fetch --no-tags --depth=1 mirror \
+            "+${MIRROR_REF}:refs/embedding/base"
+          test "$(git -C "$SOURCE_ROOT" rev-parse refs/embedding/base)" = \
+            "$MIRROR_BASE_SHA"
+          git -C "$SOURCE_ROOT" checkout --detach "$MIRROR_BASE_SHA"
+          git -C "$SOURCE_ROOT" apply --index --binary \
+            "${RUNNER_TEMP}/embedding-source-delta/source.patch"
+          expected_tree="$(tr -d '\r\n' \
+            < "${RUNNER_TEMP}/embedding-source-delta/source-tree-sha")"
+          test "$(git -C "$SOURCE_ROOT" write-tree)" = "$expected_tree"
           test -f "$SOURCE_ROOT/shifu"
 
       - name: Install frozen workspace
