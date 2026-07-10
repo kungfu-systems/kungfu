@@ -878,16 +878,21 @@ std::vector<std::string> manifest_catalog_store::referenced_payload_hashes(const
   return hashes;
 }
 
-nlohmann::json manifest_catalog_store::fsck(const std::string &source_id, content_store &store) const {
+manifest_catalog_fsck_result manifest_catalog_store::fsck_typed(const std::string &source_id,
+                                                                content_store &store) const {
   const auto fold = fold_catalog(read_typed_records());
   const auto filter_uid = source_id.empty() ? uint64_t{0} : uid_of(source_id);
-  nlohmann::json errors = nlohmann::json::array();
-  nlohmann::json warnings = nlohmann::json::array();
-  bool degraded = false;
-  size_t checked_manifests = 0;
-  size_t checked_entries = 0;
-  size_t checked_payloads = 0;
-  size_t checked_documents = 0;
+  manifest_catalog_fsck_result result{};
+  result.runtime_dir = runtime_dir_;
+  result.exports = static_cast<uint64_t>(fold.records.exports.size());
+  result.cursors = static_cast<uint64_t>(fold.records.cursors.size());
+  const auto issue_for = [](std::string code, const std::string &current_source_id, const std::string &manifest_id) {
+    manifest_catalog_fsck_issue issue{};
+    issue.code = std::move(code);
+    issue.source_id = current_source_id;
+    issue.manifest_id = manifest_id;
+    return issue;
+  };
 
   // The current view is each source's latest accepted manifest; superseded
   // acceptances are history and do not degrade current health.
@@ -897,19 +902,18 @@ nlohmann::json manifest_catalog_store::fsck(const std::string &source_id, conten
     }
     const auto &latest = fold.records.manifests[manifest_indices.back()];
     const auto manifest_uid = latest.manifest_uid;
-    ++checked_manifests;
+    ++result.manifests;
     const auto manifest_id = fixed_string(latest.manifest_id);
     const auto current_source_id = fixed_string(latest.source_id);
 
     // Fold consistency: one delta record per entry index of the latest accept.
     const auto entry_records = latest_entry_records(fold, manifest_uid, latest.entry_count);
-    checked_entries += entry_records.size();
+    result.manifest_entries += static_cast<uint64_t>(entry_records.size());
     if (entry_records.size() != latest.entry_count) {
-      errors.push_back({{"code", "manifest_entry_count_mismatch"},
-                        {"source_id", current_source_id},
-                        {"manifest_id", manifest_id},
-                        {"expected", latest.entry_count},
-                        {"actual", entry_records.size()}});
+      auto issue = issue_for("manifest_entry_count_mismatch", current_source_id, manifest_id);
+      issue.expected = latest.entry_count;
+      issue.actual = static_cast<uint64_t>(entry_records.size());
+      result.errors.push_back(std::move(issue));
       continue;
     }
 
@@ -921,31 +925,28 @@ nlohmann::json manifest_catalog_store::fsck(const std::string &source_id, conten
     }
     const auto recomputed = compute_linear_sync_root_from_leaves(leaves);
     if (recomputed.value("value", "") != fixed_string(latest.sync_root_value)) {
-      errors.push_back({{"code", "sync_root_mismatch"},
-                        {"source_id", current_source_id},
-                        {"manifest_id", manifest_id},
-                        {"expected", fixed_string(latest.sync_root_value)},
-                        {"actual", recomputed.value("value", "")}});
+      auto issue = issue_for("sync_root_mismatch", current_source_id, manifest_id);
+      issue.expected_text = fixed_string(latest.sync_root_value);
+      issue.actual_text = recomputed.value("value", "");
+      result.errors.push_back(std::move(issue));
     }
 
     // The committed entries document, cross-checked field by field.
-    ++checked_documents;
+    ++result.entries_documents;
     nlohmann::json entries = nullptr;
     try {
       entries = load_entries_document(latest, store);
     } catch (const std::exception &e) {
-      errors.push_back({{"code", "entries_document_unavailable"},
-                        {"source_id", current_source_id},
-                        {"manifest_id", manifest_id},
-                        {"error", e.what()}});
+      auto issue = issue_for("entries_document_unavailable", current_source_id, manifest_id);
+      issue.error = e.what();
+      result.errors.push_back(std::move(issue));
     }
     if (entries.is_array()) {
       if (entries.size() != latest.entry_count) {
-        errors.push_back({{"code", "entries_document_mismatch"},
-                          {"source_id", current_source_id},
-                          {"manifest_id", manifest_id},
-                          {"expected", latest.entry_count},
-                          {"actual", entries.size()}});
+        auto issue = issue_for("entries_document_mismatch", current_source_id, manifest_id);
+        issue.expected = latest.entry_count;
+        issue.actual = static_cast<uint64_t>(entries.size());
+        result.errors.push_back(std::move(issue));
       } else {
         for (size_t index = 0; index < entry_records.size(); ++index) {
           const auto &entry = entries.at(index);
@@ -960,16 +961,14 @@ nlohmann::json manifest_catalog_store::fsck(const std::string &source_id, conten
               entry_record->byte_len == entry.value("byte_len", uint64_t{0}) &&
               payload_state_name(entry_record->payload_state) == text_or(entry, "payload_state", "missing");
           if (!fields_match) {
-            errors.push_back({{"code", "manifest_entry_drift"},
-                              {"source_id", current_source_id},
-                              {"manifest_id", manifest_id},
-                              {"entry_index", index}});
+            auto issue = issue_for("manifest_entry_drift", current_source_id, manifest_id);
+            issue.entry_index = index;
+            result.errors.push_back(std::move(issue));
           }
           if (sync_root_entry_leaf_hash(entry) != fixed_string(entry_record->commitment_hash)) {
-            errors.push_back({{"code", "entry_commitment_mismatch"},
-                              {"source_id", current_source_id},
-                              {"manifest_id", manifest_id},
-                              {"entry_index", index}});
+            auto issue = issue_for("entry_commitment_mismatch", current_source_id, manifest_id);
+            issue.entry_index = index;
+            result.errors.push_back(std::move(issue));
           }
         }
       }
@@ -977,47 +976,50 @@ nlohmann::json manifest_catalog_store::fsck(const std::string &source_id, conten
 
     // Payload references through the ADR-0040 content store.
     for (const auto *entry_record : entry_records) {
-      ++checked_payloads;
+      ++result.payloads;
       const auto state = entry_record->payload_state;
       const auto digest = fixed_string(entry_record->payload_hash);
       if (state != PayloadState::Present) {
         const bool intentional = state == PayloadState::Redacted || state == PayloadState::Absent;
         if (!intentional) {
-          degraded = true;
+          result.degraded = true;
         }
-        warnings.push_back(
-            {{"code", "payload_not_present"},
-             {"source_id", current_source_id},
-             {"subject", fixed_string(entry_record->kind) + ":" + fixed_string(entry_record->entry_source_id)},
-             {"payload_hash", digest},
-             {"state", payload_state_name(state)},
-             {"intentional", intentional}});
+        auto issue = issue_for("payload_not_present", current_source_id, manifest_id);
+        issue.manifest_id.reset();
+        issue.subject = fixed_string(entry_record->kind) + ":" + fixed_string(entry_record->entry_source_id);
+        issue.payload_hash = digest;
+        issue.state = payload_state_name(state);
+        issue.intentional = intentional;
+        result.warnings.push_back(std::move(issue));
         continue;
       }
       if (digest.empty()) {
-        errors.push_back({{"code", "payload_missing"},
-                          {"source_id", current_source_id},
-                          {"kind", fixed_string(entry_record->kind)},
-                          {"entry_source_id", fixed_string(entry_record->entry_source_id)},
-                          {"payload_hash", digest}});
+        auto issue = issue_for("payload_missing", current_source_id, manifest_id);
+        issue.manifest_id.reset();
+        issue.kind = fixed_string(entry_record->kind);
+        issue.entry_source_id = fixed_string(entry_record->entry_source_id);
+        issue.payload_hash = digest;
+        result.errors.push_back(std::move(issue));
         continue;
       }
       const auto verified = store.verify("payloads", make_content_hash(digest));
       if (!verified.ok()) {
-        errors.push_back(
-            {{"code", verified.error == content_store_error::NotFound ? "payload_missing" : "hash_mismatch"},
-             {"source_id", current_source_id},
-             {"kind", fixed_string(entry_record->kind)},
-             {"entry_source_id", fixed_string(entry_record->entry_source_id)},
-             {"payload_hash", digest}});
+        auto issue = issue_for(verified.error == content_store_error::NotFound ? "payload_missing" : "hash_mismatch",
+                               current_source_id, manifest_id);
+        issue.manifest_id.reset();
+        issue.kind = fixed_string(entry_record->kind);
+        issue.entry_source_id = fixed_string(entry_record->entry_source_id);
+        issue.payload_hash = digest;
+        result.errors.push_back(std::move(issue));
       } else if (verified.byte_length != entry_record->byte_len) {
-        errors.push_back({{"code", "byte_len_mismatch"},
-                          {"source_id", current_source_id},
-                          {"kind", fixed_string(entry_record->kind)},
-                          {"entry_source_id", fixed_string(entry_record->entry_source_id)},
-                          {"payload_hash", digest},
-                          {"expected", entry_record->byte_len},
-                          {"actual", verified.byte_length}});
+        auto issue = issue_for("byte_len_mismatch", current_source_id, manifest_id);
+        issue.manifest_id.reset();
+        issue.kind = fixed_string(entry_record->kind);
+        issue.entry_source_id = fixed_string(entry_record->entry_source_id);
+        issue.payload_hash = digest;
+        issue.expected = entry_record->byte_len;
+        issue.actual = verified.byte_length;
+        result.errors.push_back(std::move(issue));
       }
     }
   }
@@ -1031,16 +1033,18 @@ nlohmann::json manifest_catalog_store::fsck(const std::string &source_id, conten
         fold.records.entries[by_index.begin()->second.front()].source_uid != filter_uid) {
       continue;
     }
-    errors.push_back({{"code", "manifest_header_missing"}, {"manifest_uid", manifest_uid}});
+    manifest_catalog_fsck_issue issue{};
+    issue.code = "manifest_header_missing";
+    issue.manifest_uid = manifest_uid;
+    result.errors.push_back(std::move(issue));
   }
   for (const auto &receipt : fold.records.exports) {
     if (filter_uid != 0 && receipt.source_uid != filter_uid) {
       continue;
     }
     if (!fold.manifest_accepts.contains(receipt.manifest_uid)) {
-      warnings.push_back({{"code", "export_manifest_unknown"},
-                          {"source_id", fixed_string(receipt.source_id)},
-                          {"manifest_id", fixed_string(receipt.manifest_id)}});
+      result.warnings.push_back(
+          issue_for("export_manifest_unknown", fixed_string(receipt.source_id), fixed_string(receipt.manifest_id)));
     }
   }
   for (const auto &cursor : fold.records.cursors) {
@@ -1048,31 +1052,94 @@ nlohmann::json manifest_catalog_store::fsck(const std::string &source_id, conten
       continue;
     }
     if (!fold.manifest_accepts.contains(cursor.manifest_uid)) {
-      warnings.push_back({{"code", "cursor_manifest_unknown"},
-                          {"source_id", fixed_string(cursor.source_id)},
-                          {"manifest_id", fixed_string(cursor.manifest_id)}});
+      result.warnings.push_back(
+          issue_for("cursor_manifest_unknown", fixed_string(cursor.source_id), fixed_string(cursor.manifest_id)));
     }
   }
-  if (filter_uid != 0 && checked_manifests == 0) {
-    errors.push_back({{"code", "source_missing"}, {"source_id", source_id}});
+  if (filter_uid != 0 && result.manifests == 0) {
+    manifest_catalog_fsck_issue issue{};
+    issue.code = "source_missing";
+    issue.source_id = source_id;
+    result.errors.push_back(std::move(issue));
   }
 
-  const bool failed = !errors.empty();
-  return {{"ok", !failed},
-          {"status", failed ? "failed" : (degraded ? "degraded" : "ok")},
-          {"degraded", degraded},
-          {"schema", MANIFEST_CATALOG_SCHEMA_V1},
-          {"runtime_dir", runtime_dir_},
-          {"authority", "yijinjing-journal"},
-          {"errors", errors},
-          {"warnings", warnings},
+  result.ok = result.errors.empty();
+  result.status = !result.ok ? "failed" : (result.degraded ? "degraded" : "ok");
+  return result;
+}
+
+nlohmann::json manifest_catalog_store::fsck(const std::string &source_id, content_store &store) const {
+  const auto result = fsck_typed(source_id, store);
+  const auto render_issue = [](const manifest_catalog_fsck_issue &issue) {
+    nlohmann::json row = {{"code", issue.code}};
+    if (issue.source_id.has_value()) {
+      row["source_id"] = *issue.source_id;
+    }
+    if (issue.manifest_id.has_value()) {
+      row["manifest_id"] = *issue.manifest_id;
+    }
+    if (issue.error.has_value()) {
+      row["error"] = *issue.error;
+    }
+    if (issue.subject.has_value()) {
+      row["subject"] = *issue.subject;
+    }
+    if (issue.payload_hash.has_value()) {
+      row["payload_hash"] = *issue.payload_hash;
+    }
+    if (issue.state.has_value()) {
+      row["state"] = *issue.state;
+    }
+    if (issue.kind.has_value()) {
+      row["kind"] = *issue.kind;
+    }
+    if (issue.entry_source_id.has_value()) {
+      row["entry_source_id"] = *issue.entry_source_id;
+    }
+    if (issue.manifest_uid.has_value()) {
+      row["manifest_uid"] = *issue.manifest_uid;
+    }
+    if (issue.entry_index.has_value()) {
+      row["entry_index"] = *issue.entry_index;
+    }
+    if (issue.expected.has_value()) {
+      row["expected"] = *issue.expected;
+    } else if (issue.expected_text.has_value()) {
+      row["expected"] = *issue.expected_text;
+    }
+    if (issue.actual.has_value()) {
+      row["actual"] = *issue.actual;
+    } else if (issue.actual_text.has_value()) {
+      row["actual"] = *issue.actual_text;
+    }
+    if (issue.intentional.has_value()) {
+      row["intentional"] = *issue.intentional;
+    }
+    return row;
+  };
+  nlohmann::json errors = nlohmann::json::array();
+  nlohmann::json warnings = nlohmann::json::array();
+  for (const auto &issue : result.errors) {
+    errors.push_back(render_issue(issue));
+  }
+  for (const auto &issue : result.warnings) {
+    warnings.push_back(render_issue(issue));
+  }
+  return {{"ok", result.ok},
+          {"status", result.status},
+          {"degraded", result.degraded},
+          {"schema", result.schema},
+          {"runtime_dir", result.runtime_dir},
+          {"authority", result.authority},
+          {"errors", std::move(errors)},
+          {"warnings", std::move(warnings)},
           {"checked",
-           {{"manifests", checked_manifests},
-            {"manifest_entries", checked_entries},
-            {"payloads", checked_payloads},
-            {"entries_documents", checked_documents},
-            {"exports", fold.records.exports.size()},
-            {"cursors", fold.records.cursors.size()}}}};
+           {{"manifests", result.manifests},
+            {"manifest_entries", result.manifest_entries},
+            {"payloads", result.payloads},
+            {"entries_documents", result.entries_documents},
+            {"exports", result.exports},
+            {"cursors", result.cursors}}}};
 }
 
 } // namespace kungfu::yijinjing::storage

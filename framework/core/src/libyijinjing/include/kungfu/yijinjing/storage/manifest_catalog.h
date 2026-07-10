@@ -3,6 +3,7 @@
 #ifndef KUNGFU_YIJINJING_STORAGE_MANIFEST_CATALOG_H
 #define KUNGFU_YIJINJING_STORAGE_MANIFEST_CATALOG_H
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -78,6 +79,42 @@ struct manifest_catalog_journal_records {
   std::vector<yijinjing::types::ChannelCursorUpdated> cursors = {};
 };
 
+struct manifest_catalog_fsck_issue {
+  std::string code = {};
+  std::optional<std::string> source_id = {};
+  std::optional<std::string> manifest_id = {};
+  std::optional<std::string> error = {};
+  std::optional<std::string> subject = {};
+  std::optional<std::string> payload_hash = {};
+  std::optional<std::string> state = {};
+  std::optional<std::string> kind = {};
+  std::optional<std::string> entry_source_id = {};
+  std::optional<uint64_t> manifest_uid = {};
+  std::optional<uint64_t> entry_index = {};
+  std::optional<uint64_t> expected = {};
+  std::optional<uint64_t> actual = {};
+  std::optional<std::string> expected_text = {};
+  std::optional<std::string> actual_text = {};
+  std::optional<bool> intentional = {};
+};
+
+struct manifest_catalog_fsck_result {
+  bool ok = true;
+  std::string status = "ok";
+  bool degraded = false;
+  std::string schema = MANIFEST_CATALOG_SCHEMA_V1;
+  std::string runtime_dir = {};
+  std::string authority = "yijinjing-journal";
+  std::vector<manifest_catalog_fsck_issue> errors = {};
+  std::vector<manifest_catalog_fsck_issue> warnings = {};
+  uint64_t manifests = 0;
+  uint64_t manifest_entries = 0;
+  uint64_t payloads = 0;
+  uint64_t entries_documents = 0;
+  uint64_t exports = 0;
+  uint64_t cursors = 0;
+};
+
 class manifest_catalog_store {
 public:
   explicit manifest_catalog_store(std::string runtime_dir);
@@ -125,6 +162,8 @@ public:
   // and each present payload verified through the content store. Projection
   // drift is the runtime projection's own verify; this checks the journal
   // and the content-addressed facts.
+  [[nodiscard]] manifest_catalog_fsck_result fsck_typed(const std::string &source_id, content_store &store) const;
+
   [[nodiscard]] nlohmann::json fsck(const std::string &source_id, content_store &store) const;
 
 private:
