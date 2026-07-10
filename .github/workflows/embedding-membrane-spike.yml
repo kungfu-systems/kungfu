@@ -155,6 +155,7 @@ jobs:
             -DPYTHON_EXECUTABLE="$spike_python" \
             -DKUNGFU_WITH_SLICES=ON
           # shifu-entry-contract: allow the isolated spike targets are not product-level Shifu tasks
-          cmake --build framework/core/build --target shared_embedding_host shared_embedding_native_kfx
+          cmake --build framework/core/build --config Release --parallel 2 \
+            --target shared_embedding_host shared_embedding_native_kfx
           # shifu-entry-contract: allow the spike harness must inspect platform-specific binaries directly
           node framework/core/slices/shared-embedding-membrane/run.mjs framework/core/build
