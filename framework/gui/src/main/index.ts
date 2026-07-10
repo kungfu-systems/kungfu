@@ -94,6 +94,16 @@ if (process.env.KF_INSTANCE_HOME) {
 } else if (process.env.KF_HOME && !process.env.KF_RUNTIME_DIR) {
   process.env.KF_HOME = resolveHomePath(process.env.KF_HOME);
   process.env.KF_RUNTIME_DIR = path.join(process.env.KF_HOME, 'runtime');
+} else if (
+  !app.isPackaged &&
+  process.env.KF_DEV_HOME &&
+  !process.env.KF_RUNTIME_DIR
+) {
+  // KF_DEV_HOME pins local dev runs to one workspace data home even when the
+  // GUI is launched directly (bypassing the product launcher). Packaged apps
+  // and explicit KF_INSTANCE_HOME/KF_HOME are unaffected.
+  process.env.KF_HOME = resolveHomePath(process.env.KF_DEV_HOME);
+  process.env.KF_RUNTIME_DIR = path.join(process.env.KF_HOME, 'runtime');
 }
 
 type WindowChromePlatform = 'darwin' | 'win32' | 'linux' | 'other';
