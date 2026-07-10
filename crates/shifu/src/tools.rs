@@ -72,6 +72,11 @@ pub const UV: Tool = Tool {
 };
 
 impl Tool {
+    /// Repo pin file name (e.g. ".fnm-version"), for doctor-style reporting.
+    pub fn pin_file(&self) -> &'static str {
+        self.pin_file
+    }
+
     fn version(&self, root: &Path) -> String {
         let env_val = env::var(self.version_env).ok();
         let file_text = fs::read_to_string(root.join(self.pin_file)).ok();

@@ -146,7 +146,15 @@ per-platform special-casing) with one binary that:
   --root ~/.local`), delegates to the checkout's own `./shifu` entrypoint
   whenever it runs inside one, so the repo-pinned launcher version always
   wins; `shifu --version` reports the crate version, the baked build commit,
-  and whether the answering process is the installed or the repo launcher.
+  and whether the answering process is the installed or the repo launcher
+  (plus the checkout's current branch for the repo role);
+- `shifu clone [path]` fetches the repository itself and `shifu doctor`
+  checks the development environment (install pointers for the heavyweight
+  prerequisites it deliberately does not manage). Together with delegation
+  this makes an installed shifu a self-sufficient bootstrap core: install
+  once, clone anywhere, and every capability that can evolve lives in the
+  repo — the binary never needs re-installing to pick up new launcher
+  behavior.
 
 It scores three yeses: it *is* the process boundary in front of everything
 else; it needs to exist before node/python are provisioned, which only a

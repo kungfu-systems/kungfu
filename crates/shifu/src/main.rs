@@ -35,6 +35,7 @@ use std::path::{Path, PathBuf};
 use std::process::exit;
 
 mod dispatch;
+mod doctor;
 mod envfile;
 #[cfg(windows)]
 mod msvc;
@@ -54,6 +55,10 @@ Usage:
                              missing prerequisites bootstrap automatically)
   shifu build | rebuild      bootstrap build (rebuild clears generated outputs)
   shifu proxy | config ...   manage local mirror/cache config (build-local.env)
+  shifu clone [path]         clone the kungfu repository (default: current dir;
+                             SHIFU_CLONE_URL overrides the source)
+  shifu doctor               check the development environment (install pointers
+                             for anything missing; exits 1 on missing required)
   shifu --version | -v | -V  launcher version and build identity
   shifu self-version         this binary's version, machine readable
   shifu help                 pnpm's own help (tasks are pnpm scripts)
@@ -79,18 +84,30 @@ fn main() {
         exit(if args.is_empty() { 2 } else { 0 });
     }
 
-    let is_version = matches!(first, Some("--version") | Some("-v") | Some("-V"));
-    if is_version {
-        println!("{}", version_line());
+    // Repo acquisition — the one verb that must work outside a checkout.
+    if first == Some("clone") {
+        clone_repo(&args[1..]);
     }
 
-    let root = find_repo_root(is_version);
-    envfile::load(&root);
-    maybe_delegate_to_repo_entrypoint(&root, &args);
+    let is_version = matches!(first, Some("--version") | Some("-v") | Some("-V"));
+    let is_doctor = first == Some("doctor");
 
+    let root = find_repo_root(is_version || is_doctor);
+
+    if is_version {
+        println!("{}", version_line(root.as_deref()));
+    }
+    if let Some(root) = root.as_deref() {
+        envfile::load(root);
+        maybe_delegate_to_repo_entrypoint(root, &args);
+    }
     if is_version {
         exit(0);
     }
+    if is_doctor {
+        doctor::run(root.as_deref());
+    }
+    let root = root.expect("strict repo discovery cannot return None");
 
     match first {
         Some(cmd) if L2_SUBCOMMANDS.contains(&cmd) => dispatch::delegate_l2(&root, &args),
@@ -104,20 +121,94 @@ fn main() {
     }
 }
 
+const DEFAULT_CLONE_URL: &str = "https://github.com/kungfu-systems/kungfu.git";
+
+/// `shifu clone [path]` — fetch the kungfu repository (default: into the
+/// current directory, which git requires to be empty). With this one verb an
+/// installed shifu is a self-sufficient bootstrap core: clone anywhere, and
+/// inside the checkout every later invocation delegates to the repo-pinned
+/// launcher, so new functionality always comes from the repo, never from
+/// re-installing the binary.
+fn clone_repo(args: &[String]) -> ! {
+    if args.len() > 1 {
+        util::die("usage: shifu clone [path]");
+    }
+    let dest = args.first().map(String::as_str).unwrap_or(".");
+    let url = env::var("SHIFU_CLONE_URL").unwrap_or_else(|_| DEFAULT_CLONE_URL.to_string());
+    let Some(git) = util::find_on_path("git") else {
+        util::die_code(
+            "git is required for clone — install it first (https://git-scm.com/downloads)",
+            127,
+        );
+    };
+    eprintln!("shifu: cloning {url} into {dest}");
+    let status = std::process::Command::new(git)
+        .arg("clone")
+        .arg(&url)
+        .arg(dest)
+        .status();
+    match status {
+        Ok(s) if s.success() => {
+            let cd_hint = if dest == "." {
+                String::new()
+            } else {
+                format!("cd {dest} && ")
+            };
+            eprintln!("shifu: done - next: {cd_hint}./shifu build   (or ./shifu doctor first)");
+            exit(0);
+        }
+        Ok(s) => exit(s.code().unwrap_or(1)),
+        Err(e) => util::die(&format!("failed to run git clone: {e}")),
+    }
+}
+
 /// One line of build identity: crate version (locked to the monorepo train),
 /// the commit that built this binary, and whether this process is the repo's
-/// own launcher or an externally installed one.
-fn version_line() -> String {
+/// own launcher or an externally installed one. The repo role also reports the
+/// checkout's current branch — the binary identity is baked, but the branch is
+/// live repo state.
+fn version_line(root: Option<&Path>) -> String {
+    let mut is_repo = env::var("SHIFU_FROM_SHIM").ok().as_deref() == Some("1");
+    if !is_repo {
+        if let (Ok(exe), Some(root)) = (env::current_exe(), root) {
+            let exe = exe.canonicalize().unwrap_or(exe);
+            let root = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
+            is_repo = exe.starts_with(&root);
+        }
+    }
+    let role = if is_repo {
+        match root.and_then(current_branch) {
+            Some(branch) => format!("repo @ {branch}"),
+            None => "repo".to_string(),
+        }
+    } else {
+        "installed".to_string()
+    };
     format!(
-        "shifu {} (git {}, {})",
+        "shifu {} (git {}, {role})",
         env!("CARGO_PKG_VERSION"),
         env!("SHIFU_GIT_SHA"),
-        if env::var("SHIFU_FROM_SHIM").ok().as_deref() == Some("1") {
-            "repo"
-        } else {
-            "installed"
-        }
     )
+}
+
+fn current_branch(root: &Path) -> Option<String> {
+    let out = std::process::Command::new("git")
+        .args(["rev-parse", "--abbrev-ref", "HEAD"])
+        .current_dir(root)
+        .output()
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let branch = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    if branch.is_empty() {
+        return None;
+    }
+    Some(if branch == "HEAD" {
+        "detached".to_string()
+    } else {
+        branch
+    })
 }
 
 /// An installed binary run inside a checkout hands over to that checkout's
@@ -171,14 +262,13 @@ fn maybe_delegate_to_repo_entrypoint(root: &Path, args: &[String]) {
 /// discovered rather than assumed: explicit override first, then walk up from
 /// the current directory looking for the repo's own entrypoint marker.
 ///
-/// With `lenient` (used by --version), failing to find a repo is not an
-/// error — the version line has already been printed and the process exits
-/// cleanly instead of dying outside a checkout.
-fn find_repo_root(lenient: bool) -> PathBuf {
+/// With `lenient` (used by --version and doctor), failing to find a repo
+/// returns None instead of dying — those verbs are useful outside a checkout.
+fn find_repo_root(lenient: bool) -> Option<PathBuf> {
     if let Some(explicit) = env::var_os("SHIFU_ROOT") {
         let root = PathBuf::from(explicit);
         if root.join("shifu.mjs").is_file() {
-            return root;
+            return Some(root);
         }
         util::die(&format!(
             "SHIFU_ROOT does not look like a kungfu repo (missing shifu.mjs): {}",
@@ -189,13 +279,13 @@ fn find_repo_root(lenient: bool) -> PathBuf {
     let mut dir = start.as_path();
     loop {
         if dir.join("shifu.mjs").is_file() && dir.join(".node-version").is_file() {
-            return dir.to_path_buf();
+            return Some(dir.to_path_buf());
         }
         match dir.parent() {
             Some(parent) => dir = parent,
             None => {
                 if lenient {
-                    exit(0);
+                    return None;
                 }
                 util::die(
                     "not inside a kungfu repository (no shifu.mjs found walking up from the \

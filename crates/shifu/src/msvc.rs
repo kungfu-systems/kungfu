@@ -102,6 +102,11 @@ fn program_files_roots() -> Vec<PathBuf> {
     roots
 }
 
+/// Whether an MSVC environment is discoverable at all (doctor reporting).
+pub fn vcvars_available() -> bool {
+    !vcvars_candidates().is_empty()
+}
+
 fn vcvars_candidates() -> Vec<PathBuf> {
     let mut candidates: Vec<PathBuf> = Vec::new();
     let mut add = |p: PathBuf| {
