@@ -18,7 +18,7 @@ permissions:
 jobs:
   promote:
     if: ${{ github.event.pull_request.merged == true }}
-    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v2
+    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v2-alpha
     with:
       channel: ${{ startsWith(github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}
       target-ref: ${{ github.event.pull_request.base.ref }}
