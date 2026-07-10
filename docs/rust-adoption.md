@@ -1,12 +1,12 @@
 # Rust adoption paradigm
 
 Kungfu treats Rust as a **first-class option**, not a migration target: the
-repository pays a small, fixed holding cost (a `code/` cargo workspace, one CI
+repository pays a small, fixed holding cost (a `crates/` cargo workspace, one CI
 gate, one release pipeline) so that any future "should this piece be Rust?"
 question costs minutes to decide and about an hour to wire up — in either
 direction. The value of an option is that saying **no** stays cheap too.
 
-The first exercised case is the `kungfu-code` launcher (`code/kungfu-code`),
+The first exercised case is the `kungfu-code` launcher (`crates/kungfu-code`),
 which also serves as the worked example for everything below.
 
 ## Where Rust fits — and where it does not
@@ -38,7 +38,7 @@ Hard boundaries, decided deliberately and not per-case:
 All in-repo Rust lives in one cargo workspace:
 
 ```text
-code/
+crates/
   Cargo.toml          # workspace; shared release profile (size-optimized, stripped)
   kungfu-code/        # first member: the launcher
     Cargo.toml        # per-component version = its release pin
@@ -46,7 +46,7 @@ code/
 ```
 
 Adding a component = adding a workspace member directory and listing it in
-`code/Cargo.toml`. The `kungfu-code CI` workflow (fmt, clippy `-D warnings`,
+`crates/Cargo.toml`. The `kungfu-code CI` workflow (fmt, clippy `-D warnings`,
 tests, release build on the three platforms) picks up every member
 automatically via `--workspace`.
 
@@ -120,7 +120,7 @@ this discipline exists to prevent.
 
 ## Worked example: the launcher
 
-`code/kungfu-code` replaces the platform-split entrypoint logic (sh + cmd +
+`crates/kungfu-code` replaces the platform-split entrypoint logic (sh + cmd +
 per-platform special-casing) with one binary that:
 
 - discovers the repo root and loads the two-layer `build-local.env`;

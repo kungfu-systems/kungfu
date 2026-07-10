@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 #
-# code/ — the repo's Rust workspace ("optionality" landing zone).
+# crates/ — the repo's Rust workspace ("optionality" landing zone).
 #
 # Every in-repo Rust component lives here as a workspace member; see
 # docs/rust-adoption.md for the adoption paradigm (source layout, consumption

@@ -43,7 +43,7 @@ for how the layers fit together; the main areas:
 - `extensions/*` — kfx extensions; `examples/*` — samples.
 - `product` — the dogfood product assembly bundling the runtime, reference UIs,
   SDK, first-party kfx, desktop installers, and CLI archives.
-- `code` — the Rust workspace: self-contained native tools consumed as
+- `crates` — the Rust workspace: self-contained native tools consumed as
   prebuilt binaries, currently the native `kungfu-code` launcher. See
   [`docs/rust-adoption.md`](docs/rust-adoption.md) for when (and when not) a
   component belongs here.

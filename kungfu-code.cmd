@@ -7,14 +7,14 @@ rem Aligns with the macOS/Linux kungfu-code (sh):
 rem   kungfu-code app | kungfu-code build:core | kungfu-code <any pnpm task>
 rem   kungfu-code proxy ... / config ...   rich subcommands -> delegated to L2 node (not pnpm)
 rem
-rem This script is a thin shim in front of the native launcher (code\kungfu-code,
+rem This script is a thin shim in front of the native launcher (crates\kungfu-code,
 rem a self-contained Rust binary -- see docs/rust-adoption.md). Resolution order:
 rem   1. KUNGFU_CODE_BIN            explicit binary override
 rem   2. user-global cached binary  %USERPROFILE%\.cache\kungfu\kungfu-code\<version>\
 rem   3. fnm + uv already installed -> proven in-script bootstrap below
 rem                                    (force native instead with KUNGFU_CODE_NATIVE=1)
 rem   4. fresh machine              -> download the prebuilt binary pinned by
-rem                                    code\kungfu-code\Cargo.toml (KUNGFU_CODE_DIST_MIRROR
+rem                                    crates\kungfu-code\Cargo.toml (KUNGFU_CODE_DIST_MIRROR
 rem                                    overrides the base URL), or cargo build from source
 rem The native launcher bootstraps fnm + uv itself when missing (prebuilt binaries),
 rem and loads the MSVC environment when cl.exe is absent. The in-script bootstrap
@@ -43,7 +43,7 @@ if defined KUNGFU_CODE_BIN if exist "%KUNGFU_CODE_BIN%" (
 )
 
 set "_KFC_VER="
-for /f "usebackq tokens=2 delims== " %%v in (`findstr /b /c:"version = " code\kungfu-code\Cargo.toml`) do (
+for /f "usebackq tokens=2 delims== " %%v in (`findstr /b /c:"version = " crates\kungfu-code\Cargo.toml`) do (
   if not defined _KFC_VER set "_KFC_VER=%%~v"
 )
 set "_KFC_CACHE=%USERPROFILE%\.cache"
@@ -78,9 +78,9 @@ where curl >nul 2>nul && (
 )
 where cargo >nul 2>nul && (
   echo kungfu-code: building native launcher from source ^(cargo build --release^) 1>&2
-  cargo build --release --manifest-path code\Cargo.toml -p kungfu-code 1>&2 && (
+  cargo build --release --manifest-path crates\Cargo.toml -p kungfu-code 1>&2 && (
     if not exist "%_KFC_CACHE%\kungfu\kungfu-code\%_KFC_VER%" mkdir "%_KFC_CACHE%\kungfu\kungfu-code\%_KFC_VER%" >nul 2>nul
-    copy /y code\target\release\kungfu-code.exe "%_KFC_BIN%" >nul && (
+    copy /y crates\target\release\kungfu-code.exe "%_KFC_BIN%" >nul && (
       "%_KFC_BIN%" %*
       exit /b !errorlevel!
     )

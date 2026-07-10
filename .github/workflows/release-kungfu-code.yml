@@ -3,7 +3,7 @@
 # Release the kungfu-code launcher: build the 3-platform prebuilt binaries and
 # publish them as a GitHub release tagged kungfu-code-v<version>.
 #
-# The version single source of truth is code/kungfu-code/Cargo.toml; the tag
+# The version single source of truth is crates/kungfu-code/Cargo.toml; the tag
 # must match it (verified below). The kungfu-code / kungfu-code.cmd shims and
 # fresh machines download these assets, so users never need a Rust toolchain.
 # Linux builds target musl for a fully static binary that runs on any distro.
@@ -43,10 +43,10 @@ jobs:
       - name: Verify tag matches Cargo.toml version
         if: startsWith(github.ref, 'refs/tags/')
         run: |
-          ver="$(sed -n 's/^version = "\(.*\)"$/\1/p' code/kungfu-code/Cargo.toml | head -n 1)"
+          ver="$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/kungfu-code/Cargo.toml | head -n 1)"
           tag="${GITHUB_REF_NAME#kungfu-code-v}"
           if [ "$ver" != "$tag" ]; then
-            echo "tag $GITHUB_REF_NAME does not match code/kungfu-code/Cargo.toml version $ver" >&2
+            echo "tag $GITHUB_REF_NAME does not match crates/kungfu-code/Cargo.toml version $ver" >&2
             exit 1
           fi
       - name: Install musl target
@@ -59,11 +59,11 @@ jobs:
         run: rustup target add "${{ matrix.target }}"
       - name: Build
         run: cargo build --release -p kungfu-code --target "${{ matrix.target }}"
-        working-directory: code
+        working-directory: crates
       - name: Stage asset
         run: |
           mkdir -p dist
-          src="code/target/${{ matrix.target }}/release/kungfu-code"
+          src="crates/target/${{ matrix.target }}/release/kungfu-code"
           if [ "${{ runner.os }}" = "Windows" ]; then src="${src}.exe"; fi
           cp "$src" "dist/${{ matrix.asset }}"
       - name: Checksum

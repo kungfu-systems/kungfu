@@ -8,13 +8,13 @@
 #   ./kungfu-code rebuild      # rich subcommand: clear generated outputs, then bootstrap build
 #   ./kungfu-code proxy ...    # rich subcommand: manage local cache/mirror proxy config (delegated to L2 node, not passed to pnpm)
 #
-# This script is a thin shim in front of the native launcher (code/kungfu-code, a
+# This script is a thin shim in front of the native launcher (crates/kungfu-code, a
 # self-contained Rust binary — see docs/rust-adoption.md). Resolution order:
 #   1. KUNGFU_CODE_BIN            explicit binary override
 #   2. user-global cached binary  ${XDG_CACHE_HOME:-~/.cache}/kungfu/kungfu-code/<version>/
 #   3. fnm + uv already installed -> proven in-script bootstrap below (no new network deps);
 #                                    force the native path instead with KUNGFU_CODE_NATIVE=1
-#   4. fresh machine              -> download the prebuilt binary pinned by code/kungfu-code/Cargo.toml
+#   4. fresh machine              -> download the prebuilt binary pinned by crates/kungfu-code/Cargo.toml
 #                                    (KUNGFU_CODE_DIST_MIRROR overrides the base URL), or
 #                                    `cargo build` when a Rust toolchain is present
 #
@@ -49,7 +49,7 @@ kungfu_load_proxy() {
 
 # ── Native launcher resolution ───────────────────────────────────────────────
 kungfu_native_version() {
-  sed -n 's/^version = "\(.*\)"$/\1/p' code/kungfu-code/Cargo.toml | head -n 1
+  sed -n 's/^version = "\(.*\)"$/\1/p' crates/kungfu-code/Cargo.toml | head -n 1
 }
 
 kungfu_native_platform() {
@@ -80,8 +80,8 @@ kungfu_native_acquire() {
   fi
   if command -v cargo >/dev/null 2>&1; then
     echo "kungfu-code: building native launcher from source (cargo build --release)" >&2
-    if cargo build --release --manifest-path code/Cargo.toml -p kungfu-code >&2; then
-      cp code/target/release/kungfu-code "$_dest" && chmod +x "$_dest" && return 0
+    if cargo build --release --manifest-path crates/Cargo.toml -p kungfu-code >&2; then
+      cp crates/target/release/kungfu-code "$_dest" && chmod +x "$_dest" && return 0
     fi
   fi
   return 1
