@@ -9,6 +9,7 @@
 // mirror override to set) — the wrong-runtime spirit applied to downloads.
 
 mod envs;
+mod launch;
 mod pins;
 
 use std::env;
@@ -37,6 +38,22 @@ const DEFAULT_ENV: &str = "default";
 
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
+    // Installed as `kungfu`, this binary is the assembled product's front
+    // door: the trunk keeps only the subtrees it implements (env, prewarm)
+    // and execs the assembled interpreter for everything else, verbatim —
+    // argv-transparent per the layering law (ADR-0046 stage 2).
+    if launch::invoked_as_kungfu() {
+        let result = match args.first().map(String::as_str) {
+            Some("env") => dispatch_env(&args[1..]),
+            Some("prewarm") => envs::prewarm(),
+            _ => launch::launch(&args),
+        };
+        if let Err(msg) = result {
+            eprintln!("kungfu: {msg}");
+            exit(1);
+        }
+        return;
+    }
     let result = match args.first().map(String::as_str) {
         Some("env") => dispatch_env(&args[1..]),
         Some("prewarm") => envs::prewarm(),

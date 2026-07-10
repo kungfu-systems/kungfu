@@ -1,0 +1,32 @@
+{
+  "schema": "kungfu.stdlib-prune/v1",
+  "note": "Family-level subtraction from the complete python-build-standalone prefix (ADR-0046 stage 2). Entries are prefix-relative; '*' globs cover version-suffixed names. Every entry must match the tree it prunes — a stale entry fails the assemble build instead of failing in the field. New python dependencies live in site-packages and never interact with this list.",
+  "prune": {
+    "common": [
+      "lib/python3.13/idlelib",
+      "lib/python3.13/tkinter",
+      "lib/python3.13/turtledemo",
+      "lib/python3.13/turtle.py",
+      "lib/python3.13/ensurepip",
+      "lib/python3.13/site-packages/pip",
+      "lib/python3.13/site-packages/pip-*.dist-info",
+      "lib/python3.13/lib-dynload/_tkinter*",
+      "bin/idle3*",
+      "bin/pip*",
+      "bin/pydoc3*",
+      "include"
+    ],
+    "darwin": [
+      "lib/tcl9.0",
+      "lib/tk9.0",
+      "lib/tcl9",
+      "lib/itcl4.3.5",
+      "lib/thread3.0.4",
+      "lib/libtcl9.0.dylib",
+      "lib/libtcl9tk9.0.dylib",
+      "lib/pkgconfig",
+      "bin/python3-config",
+      "bin/python3.13-config"
+    ]
+  }
+}

@@ -388,23 +388,43 @@ function applyStdlibPrune(treeRoot) {
     return;
   }
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-  const entries = Array.isArray(manifest.prune) ? manifest.prune : [];
+  const sections = manifest.prune || {};
+  const entries = [
+    ...(sections.common || []),
+    ...(sections[process.platform] || []),
+  ];
   const root = path.resolve(treeRoot);
   let n = 0;
   for (const rel of entries) {
-    const target = path.resolve(treeRoot, rel);
-    if (!target.startsWith(root + path.sep)) {
-      console.error(`[freeze] assemble: prune entry escapes the tree: ${rel}`);
+    // '*' globs cover version-suffixed names (pip-<ver>.dist-info); a literal
+    // or glob that matches nothing means the manifest no longer describes the
+    // tree it prunes, which stops the build.
+    const matches = rel.includes('*')
+      ? fs.globSync(rel, { cwd: treeRoot })
+      : [rel];
+    if (!matches.length) {
+      console.error(`[freeze] assemble: prune glob matches nothing: ${rel}`);
       process.exit(1);
     }
-    if (!existsLstat(target)) {
-      console.error(`[freeze] assemble: prune entry not in the tree: ${rel}`);
-      process.exit(1);
+    for (const m of matches) {
+      const target = path.resolve(treeRoot, m);
+      if (!target.startsWith(root + path.sep)) {
+        console.error(
+          `[freeze] assemble: prune entry escapes the tree: ${rel}`,
+        );
+        process.exit(1);
+      }
+      if (!existsLstat(target)) {
+        console.error(`[freeze] assemble: prune entry not in the tree: ${rel}`);
+        process.exit(1);
+      }
+      fs.rmSync(target, { recursive: true, force: true });
+      n++;
     }
-    fs.rmSync(target, { recursive: true, force: true });
-    n++;
   }
-  console.log(`[freeze] assemble: pruned ${n}/${entries.length} entries`);
+  console.log(
+    `[freeze] assemble: pruned ${n} paths (${entries.length} entries)`,
+  );
 }
 
 // Natives the frozen leg bundled by following imports (pykungfu and the
@@ -481,12 +501,20 @@ function assembleTree(bt) {
     { cwd: CORE },
   );
 
-  // The kungfu package ships as sources at the dist root (data files — .bfbs
-  // schemas, the agent pack — travel inside the package, where the source
-  // layout already has them). The .pth wires the dist root into the tree.
+  // The kungfu package ships as sources in the tree's site-packages — the
+  // standard home, and the dist root stays free for the product entry named
+  // `kungfu`. Data files (.bfbs schemas, the agent pack) travel inside the
+  // package, where the source layout already has them. The .pth wires the
+  // flat dist root (pykungfu + natives) into the tree.
+  const sitePackages = path.join(
+    treeDest,
+    'lib',
+    `python${feature}`,
+    'site-packages',
+  );
   fs.cpSync(
     path.join(CORE, 'src', 'python', 'kungfu'),
-    path.join(distKfc, 'kungfu'),
+    path.join(sitePackages, 'kungfu'),
     {
       recursive: true,
       filter: (src) => !src.split(path.sep).includes('__pycache__'),
@@ -494,12 +522,6 @@ function assembleTree(bt) {
   );
   fs.copyFileSync(info, path.join(distKfc, 'kungfubuildinfo.json'));
 
-  const sitePackages = path.join(
-    treeDest,
-    'lib',
-    `python${feature}`,
-    'site-packages',
-  );
   // Relative to site-packages: four levels up is the dist root.
   fs.writeFileSync(path.join(sitePackages, 'kungfu-dist.pth'), '../../../..\n');
   fs.writeFileSync(
@@ -514,10 +536,40 @@ function assembleTree(bt) {
   copyRuntimeNative(bt, distKfc);
   copyAppNative(bt);
   copyConfigContract();
+  stageEntry(distKfc);
   console.log(
-    '[freeze] ✅ dist/kungfu assembled (interpreter tree + flat natives; ' +
-      'entry binary lands with the entry-form step)',
+    '[freeze] ✅ dist/kungfu assembled (interpreter tree + flat natives + ' +
+      'trunk entry)',
   );
+}
+
+// The product entry is the trunk binary installed under the name `kungfu`:
+// invoked as `kungfu` it keeps the subtrees it implements (env, prewarm) and
+// execs the assembled interpreter on -m kungfu for everything else, verbatim
+// (crates/trunk/src/launch.rs). Staged here so a bare `pnpm run freeze`
+// yields a runnable assembled dist; dist.mjs stageTrunk later re-stages
+// kungfu-trunk and asserts pins consistency at the product stage — same
+// commit, same profile, same binary.
+/** @param {string} distKfc */
+function stageEntry(distKfc) {
+  const crates = path.join(CORE, '..', '..', 'crates');
+  shell.run('cargo', ['build', '--release', '-p', 'kungfu-trunk'], true, {
+    cwd: crates,
+  });
+  const built = path.join(
+    crates,
+    'target',
+    'release',
+    isWin ? 'kungfu-trunk.exe' : 'kungfu-trunk',
+  );
+  for (const name of ['kungfu-trunk', 'kungfu']) {
+    fs.copyFileSync(built, path.join(distKfc, isWin ? `${name}.exe` : name));
+  }
+  fs.copyFileSync(
+    path.join(CORE, '..', '..', 'product', 'runtime-pins.env'),
+    path.join(distKfc, 'runtime-pins.env'),
+  );
+  console.log('[freeze] assemble: trunk entry staged as kungfu + kungfu-trunk');
 }
 
 // ------------------------------------------------------------- pyinstaller
