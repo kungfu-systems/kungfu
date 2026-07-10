@@ -44,4 +44,9 @@ jobs:
       release-candidate: false
       artifact-transfer-mode: s3-to-github-artifacts
       artifact-retention-days: 7
+      checkout-cache-mode: auto
+      checkout-cache-mirror-url-template: ${{ vars.BUILDCHAIN_CHECKOUT_CACHE_MIRROR_URL_TEMPLATE }}
+      checkout-cache-reference-repository-template: ${{ vars.BUILDCHAIN_CHECKOUT_CACHE_REFERENCE_REPOSITORY_TEMPLATE }}
+      checkout-cache-fallback: github
+      checkout-cache-timeout-seconds: 60
       buildchain-contract-lock-path: .buildchain/contract-lock.json
