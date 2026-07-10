@@ -184,6 +184,172 @@ Episode bodies may be compact in metadata-scale runs. Separate payload-volume
 profiles must exercise realistic bytes, dedup, cold material, and I/O pressure so
 metadata throughput is not misreported as full-ledger throughput.
 
+## Executable v0 slice
+
+The first harness intentionally implements only the two independent axes needed
+to establish an MVP baseline. It does not attempt the full fault matrix or claim
+fleet-scale capacity.
+
+```text
+accumulation: one writer, increasing retained Episode population
+contention:   fixed total work, 1 / 2 / 5 / 10 physical workers
+```
+
+Keeping these axes separate makes a regression attributable. The accumulation
+run does not increase concurrency, and the contention run does not increase the
+total Episode population as worker count rises.
+
+### Repository layout and entrypoint
+
+The v0 implementation lives under the existing core test tree:
+
+```text
+framework/core/tests/qualification/episode/
+  README.md
+  run.mjs
+  episode_workload.py
+  profiles/
+    mvp-smoke-v1.json
+    mvp-baseline-v1.json
+  schemas/
+    trust-report-v1.schema.json
+```
+
+`run.mjs` is the cross-platform entrypoint and process/report coordinator.
+`episode_workload.py` drives the shipped Python facade backed by the real C++
+Episode implementation; it is not a second manifest parser or Episode engine.
+All load uses `kungfu.storage.service` operations. The harness never creates or
+edits journal bytes directly.
+
+The repository command is:
+
+```sh
+./kungfu-code episode:qualify -- --profile mvp-smoke-v1
+./kungfu-code episode:qualify -- --profile mvp-baseline-v1
+```
+
+Generated runtime homes and reports default to an operating-system temporary
+directory and are not checked in. `--report <path>` selects a Trust Report
+destination, and `--keep-runtime` retains the generated runtime home for
+diagnosis. CI may upload the report as an evidence artifact.
+
+### Deterministic metadata workload
+
+The first population profile is explicitly `metadata-only`. Every generated
+Episode is independent and terminal:
+
+```text
+EpisodeOpen -> EpisodeClosed(Ended|Aborted)
+```
+
+Episode ids and bounded title/actor/source content are derived from the profile,
+mode, seed, worker id, and sequence number. They never depend on wall-clock time.
+The expected record count and every sampled Episode are therefore reproducible.
+The initial profile attaches no event frames, payloads, schemas, or dependency
+edges; later payload/DAG profiles must not reuse its throughput as full-ledger
+evidence.
+
+The accumulation mode accepts a parameterized Episode count and records
+checkpoints. The initial checkpoints are `10^3`, `10^4`, and `10^5`; a `10^6`
+run remains a manual qualification until measured duration and memory usage make
+it suitable for a recurring gate. At each checkpoint the harness records:
+
+- open and terminal-append throughput plus p50/p95/p99 latency;
+- `episode_list(limit=100)` latency and total count;
+- inspect latency and exact readback for the first, middle, last, and
+  seed-selected Episodes;
+- Episode-scoped and full fsck latency and verdict;
+- clean recovery (`episode_recover` must recover zero Episodes after a clean
+  run);
+- a fresh-process list/inspect/fsck probe after the writer process exits;
+- runtime bytes, journal file count, RSS high-water mark, and file-descriptor
+  observations where the platform exposes them.
+
+The current implementation folds the whole manifest for list, inspect, and
+fsck. The v0 curve is expected to expose that cost. It must report the curve
+honestly rather than hiding it behind a smaller sampled data set.
+
+### Bounded writer contention
+
+The contention mode runs `1`, `2`, `5`, and `10` worker processes against one
+data root while keeping the total number of Episodes fixed. Every worker writes
+a disjoint deterministic Episode-id range through the same public Episode
+surface.
+
+The current manifest contract is acquire-or-fail. A competing operation may
+return `manifest_writer_busy`; this is an expected explicit contention result,
+not a successful append and not manifest corruption. The v0 client applies a
+bounded exponential backoff with seed-derived jitter only to that exact error.
+The profile records the initial delay, cap, retry limit, and progress deadline.
+Every other exception is immediately unexpected.
+
+The Trust Report separates at least:
+
+```text
+successful_appends
+manifest_writer_busy
+retry_count
+retry_exhausted
+unexpected_errors
+longest_no_progress_interval
+```
+
+A passing contention run requires every expected Episode to reach exactly one
+terminal state, zero exhausted retries, zero unexpected errors, no deadlock or
+progress timeout, clean full fsck, and identical fresh-process readback. The
+bounded claim is that the declared single-node profile preserved Episode
+authority under ten-worker contention and completed under the recorded retry
+policy. It is not evidence for ten thousand workers or a distributed service.
+
+### Versioned initial profiles
+
+`mvp-smoke-v1` is the Episode/manifest PR gate:
+
+```text
+seed: fixed and recorded
+accumulation: 1,000 Episodes
+contention: 1 / 2 / 5 / 10 workers, 1,000 total Episodes per run
+payload profile: metadata-only
+```
+
+`mvp-baseline-v1` is the MVP-candidate/manual baseline:
+
+```text
+seeds: at least three fixed and recorded seeds
+accumulation checkpoints: 1,000 / 10,000 / 100,000 Episodes
+contention: 1 / 2 / 5 / 10 workers, 10,000 total Episodes per run
+payload profile: metadata-only
+```
+
+The baseline may be split into separate invocations when runtime is long, but
+each report must retain the exact profile, seed, source revision, and completed
+scenario list.
+
+### v0 correctness and progress gates
+
+The following conditions fail the profile regardless of throughput:
+
+- expected, listed, folded, inspected, or fsck Episode counts disagree;
+- an Episode has a missing/duplicate open or terminal record, an unexpected
+  status, or mismatched deterministic metadata;
+- full fsck fails or emits a warning not declared by the profile;
+- recovery finds an open Episode after a clean workload;
+- fresh-process readback differs from the writer-process result;
+- a worker crashes, deadlocks, exhausts retries, exceeds the no-progress
+  deadline, or reports an exception other than the declared busy result;
+- the emitted Trust Report does not validate against its versioned schema.
+
+The first baseline records performance observations without inventing an
+absolute throughput or latency SLO. OOM, timeout, or loss of forward progress is
+an availability failure. After repeatable baselines exist, numerical SLOs may be
+added to a new profile version without changing ADR-0042.
+
+The v0 report sets the Episode query profile to
+`episode-manifest-direct`. The current Episode query path reads the manifest
+fold directly; source-registry SQLite rebuild is not an Episode projection
+rebuild and must not be reported as one. Until an Episode projection exists,
+projection-rebuild coverage remains an explicit gap.
+
 ## Metrics
 
 ### Correctness gates
