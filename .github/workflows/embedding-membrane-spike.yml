@@ -143,11 +143,16 @@ jobs:
         shell: bash
         run: |
           cd "$SOURCE_ROOT"
+          spike_python="$PWD/framework/core/.venv/bin/python3"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            spike_python="$PWD/framework/core/.venv/Scripts/python.exe"
+          fi
           # shifu-entry-contract: allow the isolated spike configure is not a product-level Shifu task
           cmake -S framework/core -B framework/core/build \
             -DCMAKE_TOOLCHAIN_FILE="$PWD/framework/core/build/conan_toolchain.cmake" \
             -DCMAKE_POLICY_DEFAULT_CMP0091=NEW \
             -DCMAKE_BUILD_TYPE=Release \
+            -DPYTHON_EXECUTABLE="$spike_python" \
             -DKUNGFU_WITH_SLICES=ON
           # shifu-entry-contract: allow the isolated spike targets are not product-level Shifu tasks
           cmake --build framework/core/build --target shared_embedding_host shared_embedding_native_kfx
