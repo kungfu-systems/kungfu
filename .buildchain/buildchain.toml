@@ -18,18 +18,31 @@ type = "json"
 path = "lerna.json"
 key = "version"
 
-# Lifecycle commands run through ./shifu, the pinned-toolchain entrypoint
-# (fnm + uv). Declared here for stage 1; buildchain execution (via the reusable
-# build workflow) and the runner preset that provides the fnm/uv/conan
-# prerequisites are wired in a later stage.
+# Lifecycle commands run through ./shifu, the pinned-toolchain entrypoint.
+# One command on every platform: stages run under bash (Git Bash on Windows
+# runners), where the shim resolves the native launcher — cached binary, then
+# prebuilt release download, then cargo, then the in-script bootstrap (the
+# runner preset's own fnm/uv) as the last fallback. The launcher bootstraps
+# missing prerequisites and loads the MSVC environment on Windows itself.
+[lifecycle.env]
+KUNGFU_BUILDCHAIN_NO_OPTIONAL = "1"
+KUNGFU_BUILDCHAIN_SOURCE_BUILD = "1"
+# Exercise the native launcher path in CI (dogfood; regressions fail here first).
+SHIFU_NATIVE = "1"
+# Fail fast on Windows when MSVC cannot be located (no-op elsewhere).
+SHIFU_REQUIRE_MSVC = "1"
+
 [lifecycle.install]
-command = "node scripts/buildchain-run-shifu.mjs install --frozen-lockfile --no-optional"
+shell = "bash"
+command = "./shifu install --frozen-lockfile --no-optional"
 
 [lifecycle.build]
-command = "node scripts/buildchain-run-shifu.mjs dist"
+shell = "bash"
+command = "./shifu dist"
 
 [lifecycle.verify]
-command = "node scripts/buildchain-run-shifu.mjs verify"
+shell = "bash"
+command = "./shifu verify"
 
 [lifecycle.publish]
 command = "node scripts/buildchain-custom-publish-evidence.mjs"

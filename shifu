@@ -53,12 +53,23 @@ kungfu_native_version() {
 }
 
 kungfu_native_platform() {
+  # Windows is reachable here too: CI lifecycle stages run this script under
+  # Git Bash (shell = "bash"), where uname reports MINGW*/MSYS*/CYGWIN*.
   case "$(uname -s)/$(uname -m)" in
     Darwin/arm64) echo "macos-arm64" ;;
     Darwin/x86_64) echo "macos-x64" ;;
     Linux/x86_64) echo "linux-x64" ;;
     Linux/aarch64 | Linux/arm64) echo "linux-arm64" ;;
+    MINGW*/x86_64 | MSYS*/x86_64 | CYGWIN*/x86_64) echo "windows-x64" ;;
     *) echo "" ;;
+  esac
+}
+
+# Binary file name for a platform: Windows assets/binaries carry .exe.
+kungfu_native_binname() {
+  case "$1" in
+    windows-*) echo "shifu.exe" ;;
+    *) echo "shifu" ;;
   esac
 }
 
@@ -71,7 +82,9 @@ kungfu_native_acquire() {
   mkdir -p "$(dirname "$_dest")"
   if [ -n "$_plat" ] && command -v curl >/dev/null 2>&1; then
     _base="${SHIFU_DIST_MIRROR:-https://github.com/kungfu-systems/kungfu/releases/download}"
-    _url="${_base%/}/shifu-v${_ver}/shifu-${_plat}"
+    _asset="shifu-${_plat}"
+    case "$_plat" in windows-*) _asset="${_asset}.exe" ;; esac
+    _url="${_base%/}/shifu-v${_ver}/${_asset}"
     echo "shifu: fetching prebuilt launcher ${_ver} (${_plat})" >&2
     if curl -fsSL --retry 2 --connect-timeout 20 -o "${_dest}.tmp" "$_url"; then
       chmod +x "${_dest}.tmp" && mv "${_dest}.tmp" "$_dest" && return 0
@@ -81,7 +94,8 @@ kungfu_native_acquire() {
   if command -v cargo >/dev/null 2>&1; then
     echo "shifu: building native launcher from source (cargo build --release)" >&2
     if cargo build --release --manifest-path crates/Cargo.toml -p shifu >&2; then
-      cp crates/target/release/shifu "$_dest" && chmod +x "$_dest" && return 0
+      _built="crates/target/release/$(kungfu_native_binname "$_plat")"
+      cp "$_built" "$_dest" && chmod +x "$_dest" && return 0
     fi
   fi
   return 1
@@ -94,7 +108,7 @@ if [ "${SHIFU_NATIVE:-}" != "0" ]; then
     exec "${SHIFU_BIN}" "$@"
   fi
   kungfu_ver="$(kungfu_native_version)"
-  kungfu_bin="${XDG_CACHE_HOME:-$HOME/.cache}/kungfu/shifu/${kungfu_ver}/shifu"
+  kungfu_bin="${XDG_CACHE_HOME:-$HOME/.cache}/kungfu/shifu/${kungfu_ver}/$(kungfu_native_binname "$(kungfu_native_platform)")"
   if [ -x "$kungfu_bin" ]; then
     exec "$kungfu_bin" "$@"
   fi

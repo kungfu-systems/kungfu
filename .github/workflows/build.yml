@@ -8,6 +8,9 @@ on:
     branches:
       - alpha/v*/v*
       - release/v*/v*
+  # Manual runs validate lifecycle changes (e.g. the ./shifu entrypoint
+  # switch) on the full platform matrix without waiting for an alpha PR.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -38,8 +41,15 @@ jobs:
       # tier runs on every platform (MSVC /fsanitize=address on Windows); the
       # libFuzzer long-run is the Linux gate and soft-skips where libFuzzer is
       # absent. KUNGFU_FUZZ_SECONDS bounds the per-target run.
+      #
+      # Wrapped in `bash -c`: an explicit verify-command runs under the
+      # platform default shell (cmd.exe on Windows) and does not inherit the
+      # lifecycle stage's shell or [lifecycle.env], so the shell and the env
+      # are inlined here to match the .buildchain/buildchain.toml stages.
       verify-command: >-
-        KUNGFU_FUZZ_SECONDS=90 node scripts/buildchain-run-shifu.mjs verify --fuzz
+        bash -c "KUNGFU_BUILDCHAIN_NO_OPTIONAL=1 KUNGFU_BUILDCHAIN_SOURCE_BUILD=1
+        SHIFU_NATIVE=1 SHIFU_REQUIRE_MSVC=1 KUNGFU_FUZZ_SECONDS=90
+        ./shifu verify --fuzz"
       release-candidate: true
       artifact-transfer-mode: s3-to-github-artifacts
       artifact-retention-days: 14

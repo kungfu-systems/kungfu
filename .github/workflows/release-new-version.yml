@@ -57,3 +57,33 @@ jobs:
       BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
       BUILDCHAIN_ISSUE_APP_ID: ${{ secrets.BUILDCHAIN_ISSUE_APP_ID }}
       BUILDCHAIN_ISSUE_APP_PRIVATE_KEY: ${{ secrets.BUILDCHAIN_ISSUE_APP_PRIVATE_KEY }}
+
+  # The shifu launcher version is locked to lerna.json (scripts/
+  # sync-shifu-version.mjs), so every promoted version also ships launcher
+  # binaries: tag shifu-v<version> here, which triggers the "Release shifu"
+  # workflow. Pushed with the promotion PAT — a GITHUB_TOKEN-pushed tag would
+  # not trigger downstream workflows.
+  shifu-launcher-tag:
+    needs: promote
+    if: ${{ github.event.pull_request.merged == true }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+          token: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
+      - name: Tag the launcher release for the promoted version
+        run: |
+          ver="$(node -p "require('./lerna.json').version")"
+          pin="$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/shifu/Cargo.toml | head -n 1)"
+          if [ "$ver" != "$pin" ]; then
+            echo "lerna.json ($ver) and crates/shifu/Cargo.toml ($pin) disagree; run scripts/sync-shifu-version.mjs" >&2
+            exit 1
+          fi
+          tag="shifu-v${ver}"
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "$tag already exists; skipping"
+            exit 0
+          fi
+          git tag "$tag"
+          git push origin "$tag"
