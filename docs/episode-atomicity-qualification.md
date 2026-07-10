@@ -481,6 +481,56 @@ best throughput number.
 6. Emit Trust Report v1 and run the first single-node baseline without treating
    its numbers as a support promise.
 
+## First development baseline (2026-07-10)
+
+The first v0 run exercised source revision
+`b6961891731bf55da589fae9377b5af6039b3232` on `darwin/arm64`, Node
+`v22.22.3`, 20 logical CPUs, and 128 GiB RAM. All three reports validated as
+`kungfu.episode.trust-report/v1` and were generated from a clean source tree.
+This is development evidence, not an adopted SLO or supported-capacity promise.
+
+The complete `mvp-smoke-v1` run passed all five scenarios in 8.4 seconds:
+1,000-Episode accumulation plus 1/2/5/10-worker contention at 1,000 Episodes
+per worker-count scenario. The ten-worker scenario observed 1,013 explicit
+`manifest_writer_busy` results, exhausted none, and finished with zero count,
+readback, fsck, recovery, unexpected-error, or progress-timeout violations.
+
+One seed (`42042`) then exercised the accumulation envelope:
+
+| Retained Episodes | Added-batch ingest | Full list | Full fsck | Inspect p95 | Probe RSS |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 1,000 | 1,670 Episodes/s | 40 ms | 9 ms | 1.1 ms | 54 MB |
+| 10,000 | 937 Episodes/s | 444 ms | 82 ms | 11.0 ms | 115 MB |
+| 100,000 | 316 Episodes/s | 4.20 s | 804 ms | 87.5 ms | 698 MB |
+
+At 100,000 Episodes, all 100,000 objects and 200,000 semantic Episode records
+matched exactly after fresh-process readback. The physical manifest contained
+200,002 frames across three journal pages; the additional two frames were page
+control records and are reported separately rather than misclassified as
+Episode corruption. Clean recovery found zero interrupted Episodes.
+
+The profile also ran 10,000 Episodes at each declared worker count:
+
+| Workers | Aggregate ingest | Busy/retry results | Exhausted | Correctness violations |
+| ---: | ---: | ---: | ---: | ---: |
+| 1 | 1,230 Episodes/s | 0 | 0 | 0 |
+| 2 | 1,205 Episodes/s | 1,091 | 0 | 0 |
+| 5 | 1,143 Episodes/s | 4,343 | 0 | 0 |
+| 10 | 1,169 Episodes/s | 8,252 | 0 | 0 |
+
+The bounded conclusion is two-sided:
+
+- the current single-node manifest path preserved Episode authority and made
+  forward progress under ten physical writers with the declared retry policy;
+- writer throughput did not scale with worker count, and retained-population
+  cost is visible in both append and whole-manifest read paths. A long-lived
+  writer/request queue plus bounded/indexed Episode reads are implementation
+  priorities before adopting a materially larger support envelope.
+
+Only one of the baseline profile's three declared seeds was run for the 100k and
+10k-contention tables. Repeating all seeds, payload-volume profiles, dependency
+DAGs, faults, and soak remains required before a broader qualification claim.
+
 ## Open questions
 
 - What is the smallest stable capability vocabulary for v1?
