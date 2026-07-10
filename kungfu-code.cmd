@@ -1,5 +1,5 @@
 @echo off
-rem kungfu-code.cmd - kungfu dev/build launcher (Windows), L1 of the 3-layer subset.
+rem kungfu-code.cmd - kungfu dev/build launcher (Windows).
 rem ASCII-only on purpose: Windows cmd parses .cmd in the OEM codepage (e.g. GBK/936),
 rem so non-ASCII bytes corrupt parsing. Keep this file ASCII; the sh version may use UTF-8.
 rem
@@ -7,8 +7,20 @@ rem Aligns with the macOS/Linux kungfu-code (sh):
 rem   kungfu-code app | kungfu-code build:core | kungfu-code <any pnpm task>
 rem   kungfu-code proxy ... / config ...   rich subcommands -> delegated to L2 node (not pnpm)
 rem
-rem 3-layer subset: L1 this .cmd (bootstrap + delegate); L2 kungfu-code.mjs (node rich cmds); L3 (future) TUI.
-rem Two one-time prerequisites: fnm (winget install Schniz.fnm) + uv (winget install astral-sh.uv).
+rem This script is a thin shim in front of the native launcher (code\kungfu-code,
+rem a self-contained Rust binary -- see docs/rust-adoption.md). Resolution order:
+rem   1. KUNGFU_CODE_BIN            explicit binary override
+rem   2. user-global cached binary  %USERPROFILE%\.cache\kungfu\kungfu-code\<version>\
+rem   3. fnm + uv already installed -> proven in-script bootstrap below
+rem                                    (force native instead with KUNGFU_CODE_NATIVE=1)
+rem   4. fresh machine              -> download the prebuilt binary pinned by
+rem                                    code\kungfu-code\Cargo.toml (KUNGFU_CODE_DIST_MIRROR
+rem                                    overrides the base URL), or cargo build from source
+rem The native launcher bootstraps fnm + uv itself when missing (prebuilt binaries),
+rem and loads the MSVC environment when cl.exe is absent. The in-script bootstrap
+rem kept below still requires the two one-time prerequisites:
+rem fnm (winget install Schniz.fnm) + uv (winget install astral-sh.uv).
+rem
 rem Repo has zero LAN/mirror coupling (open-source clone uses official upstreams). For LAN cache /
 rem CN mirror, use `kungfu-code config` to derive build-local.env.example into the user-global file:
 rem   %USERPROFILE%\.config\kungfu\build-local.env  (sh-format, shared by main repo and all worktrees)
@@ -16,6 +28,67 @@ rem This .cmd parses that file with pure cmd to load mirror env; optional repo .
 setlocal enabledelayedexpansion
 cd /d "%~dp0"
 
+rem Load local cache proxy config: user-global first, then optional in-repo override (set propagates to children).
+set "_KFC_USERCFG=%USERPROFILE%\.config\kungfu\build-local.env"
+if defined XDG_CONFIG_HOME set "_KFC_USERCFG=%XDG_CONFIG_HOME%\kungfu\build-local.env"
+call :loadenv "%_KFC_USERCFG%"
+call :loadenv ".\build-local.env"
+
+rem -- Native launcher resolution ------------------------------------------------
+if "%KUNGFU_CODE_NATIVE%"=="0" goto inscript
+
+if defined KUNGFU_CODE_BIN if exist "%KUNGFU_CODE_BIN%" (
+  "%KUNGFU_CODE_BIN%" %*
+  exit /b !errorlevel!
+)
+
+set "_KFC_VER="
+for /f "usebackq tokens=2 delims== " %%v in (`findstr /b /c:"version = " code\kungfu-code\Cargo.toml`) do (
+  if not defined _KFC_VER set "_KFC_VER=%%~v"
+)
+set "_KFC_CACHE=%USERPROFILE%\.cache"
+if defined XDG_CACHE_HOME set "_KFC_CACHE=%XDG_CACHE_HOME%"
+set "_KFC_BIN=%_KFC_CACHE%\kungfu\kungfu-code\%_KFC_VER%\kungfu-code.exe"
+
+if exist "%_KFC_BIN%" (
+  "%_KFC_BIN%" %*
+  exit /b !errorlevel!
+)
+
+rem Machines with both prerequisites keep the proven in-script path below;
+rem fresh machines (or KUNGFU_CODE_NATIVE=1) acquire the native launcher.
+if "%KUNGFU_CODE_NATIVE%"=="1" goto acquire
+where fnm >nul 2>nul || goto acquire
+where uv >nul 2>nul || goto acquire
+goto inscript
+
+:acquire
+set "_KFC_BASE=https://github.com/kungfu-systems/kungfu/releases/download"
+if defined KUNGFU_CODE_DIST_MIRROR set "_KFC_BASE=%KUNGFU_CODE_DIST_MIRROR%"
+set "_KFC_URL=%_KFC_BASE%/kungfu-code-v%_KFC_VER%/kungfu-code-windows-x64.exe"
+where curl >nul 2>nul && (
+  echo kungfu-code: fetching prebuilt launcher %_KFC_VER% ^(windows-x64^) 1>&2
+  if not exist "%_KFC_CACHE%\kungfu\kungfu-code\%_KFC_VER%" mkdir "%_KFC_CACHE%\kungfu\kungfu-code\%_KFC_VER%" >nul 2>nul
+  curl -fsSL --retry 2 --connect-timeout 20 -o "%_KFC_BIN%.tmp" "%_KFC_URL%" && (
+    move /y "%_KFC_BIN%.tmp" "%_KFC_BIN%" >nul
+    "%_KFC_BIN%" %*
+    exit /b !errorlevel!
+  )
+  del "%_KFC_BIN%.tmp" >nul 2>nul
+)
+where cargo >nul 2>nul && (
+  echo kungfu-code: building native launcher from source ^(cargo build --release^) 1>&2
+  cargo build --release --manifest-path code\Cargo.toml -p kungfu-code 1>&2 && (
+    if not exist "%_KFC_CACHE%\kungfu\kungfu-code\%_KFC_VER%" mkdir "%_KFC_CACHE%\kungfu\kungfu-code\%_KFC_VER%" >nul 2>nul
+    copy /y code\target\release\kungfu-code.exe "%_KFC_BIN%" >nul && (
+      "%_KFC_BIN%" %*
+      exit /b !errorlevel!
+    )
+  )
+)
+echo kungfu-code: native launcher unavailable; falling back to the in-script bootstrap 1>&2
+
+:inscript
 rem -- Delegate rich subcommands to L2 node (no pnpm, no uv). Prefer fnm node, else system node. --
 if /i "%~1"=="proxy"  goto delegate
 if /i "%~1"=="config" goto delegate
@@ -35,12 +108,6 @@ echo kungfu-code: rich subcommand needs node -- install fnm ^(winget install Sch
 exit /b 127
 
 :bootstrap
-rem Load local cache proxy config: user-global first, then optional in-repo override (set propagates to children).
-set "_KFC_USERCFG=%USERPROFILE%\.config\kungfu\build-local.env"
-if defined XDG_CONFIG_HOME set "_KFC_USERCFG=%XDG_CONFIG_HOME%\kungfu\build-local.env"
-call :loadenv "%_KFC_USERCFG%"
-call :loadenv ".\build-local.env"
-
 where fnm >nul 2>nul || (
   echo kungfu-code: install fnm first ^(node-side prereq^) -- winget install Schniz.fnm ^(or https://github.com/Schniz/fnm^) 1>&2
   exit /b 127

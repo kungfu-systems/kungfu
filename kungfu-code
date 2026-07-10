@@ -1,5 +1,5 @@
 #!/bin/sh
-# kungfu-code — the kungfu development/build orchestration "entrypoint" (macOS / Linux), L1 of a three-tier subset.
+# kungfu-code — the kungfu development/build orchestration "entrypoint" (macOS / Linux).
 #
 # One command that runs any build/dev task under the node pinned by the repo (.node-version):
 #   ./kungfu-code app          # = pnpm app (launch the Electron build of kungfu)
@@ -8,15 +8,22 @@
 #   ./kungfu-code rebuild      # rich subcommand: clear generated outputs, then bootstrap build
 #   ./kungfu-code proxy ...    # rich subcommand: manage local cache/mirror proxy config (delegated to L2 node, not passed to pnpm)
 #
-# Three-tier subset model:
-#   L1 this file (sh)         bootstrap: load proxy env / check fnm+uv / pin node / run pnpm; rich subcommands delegate to L2.
-#   L2 kungfu-code.mjs (node)  rich commands available once fnm is installed (cache config proxy, etc.), pure node builtins.
-#   L3 (future) TUI           reuse kungfu's own TUI infrastructure / build artifacts; reuse L2's config read/write.
+# This script is a thin shim in front of the native launcher (code/kungfu-code, a
+# self-contained Rust binary — see docs/rust-adoption.md). Resolution order:
+#   1. KUNGFU_CODE_BIN            explicit binary override
+#   2. user-global cached binary  ${XDG_CACHE_HOME:-~/.cache}/kungfu/kungfu-code/<version>/
+#   3. fnm + uv already installed -> proven in-script bootstrap below (no new network deps);
+#                                    force the native path instead with KUNGFU_CODE_NATIVE=1
+#   4. fresh machine              -> download the prebuilt binary pinned by code/kungfu-code/Cargo.toml
+#                                    (KUNGFU_CODE_DIST_MIRROR overrides the base URL), or
+#                                    `cargo build` when a Rust toolchain is present
 #
-# Mechanism (dual-driver entrypoint, symmetric node side + python side):
+# The native launcher bootstraps the two toolchain prerequisites itself when they
+# are missing (prebuilt fnm for node, prebuilt uv for python), so a fresh clone
+# needs nothing preinstalled beyond curl. The in-script bootstrap kept below for
+# already-provisioned machines still requires installing fnm + uv once:
 #   node side:   fnm selects node (.node-version) → corepack dispatches pnpm (version pinned by package.json packageManager).
 #   python side: uv manages standalone CPython + uv.lock + `uv run` for conan/nuitka (uv is to python as fnm is to node).
-# Install the two prerequisites once: fnm + uv; no dependence on system node/python versions, and no --ignore-engines.
 #
 # This repo has zero LAN/mirror coupling (an open-source cloner uses the official upstreams out of the box). To
 # accelerate through a LAN cache / CN mirror, use `./kungfu-code proxy` to derive the template build-local.env.example
@@ -40,10 +47,73 @@ kungfu_load_proxy() {
   return 0
 }
 
+# ── Native launcher resolution ───────────────────────────────────────────────
+kungfu_native_version() {
+  sed -n 's/^version = "\(.*\)"$/\1/p' code/kungfu-code/Cargo.toml | head -n 1
+}
+
+kungfu_native_platform() {
+  case "$(uname -s)/$(uname -m)" in
+    Darwin/arm64) echo "macos-arm64" ;;
+    Darwin/x86_64) echo "macos-x64" ;;
+    Linux/x86_64) echo "linux-x64" ;;
+    Linux/aarch64 | Linux/arm64) echo "linux-arm64" ;;
+    *) echo "" ;;
+  esac
+}
+
+# Try to place the native launcher at $1 (version $2). Best-effort: returns
+# non-zero on failure so the caller can fall back to the in-script bootstrap.
+kungfu_native_acquire() {
+  _dest="$1"
+  _ver="$2"
+  _plat="$(kungfu_native_platform)"
+  mkdir -p "$(dirname "$_dest")"
+  if [ -n "$_plat" ] && command -v curl >/dev/null 2>&1; then
+    _base="${KUNGFU_CODE_DIST_MIRROR:-https://github.com/kungfu-systems/kungfu/releases/download}"
+    _url="${_base%/}/kungfu-code-v${_ver}/kungfu-code-${_plat}"
+    echo "kungfu-code: fetching prebuilt launcher ${_ver} (${_plat})" >&2
+    if curl -fsSL --retry 2 --connect-timeout 20 -o "${_dest}.tmp" "$_url"; then
+      chmod +x "${_dest}.tmp" && mv "${_dest}.tmp" "$_dest" && return 0
+    fi
+    rm -f "${_dest}.tmp"
+  fi
+  if command -v cargo >/dev/null 2>&1; then
+    echo "kungfu-code: building native launcher from source (cargo build --release)" >&2
+    if cargo build --release --manifest-path code/Cargo.toml -p kungfu-code >&2; then
+      cp code/target/release/kungfu-code "$_dest" && chmod +x "$_dest" && return 0
+    fi
+  fi
+  return 1
+}
+
+kungfu_load_proxy
+
+if [ "${KUNGFU_CODE_NATIVE:-}" != "0" ]; then
+  if [ -n "${KUNGFU_CODE_BIN:-}" ] && [ -x "${KUNGFU_CODE_BIN}" ]; then
+    exec "${KUNGFU_CODE_BIN}" "$@"
+  fi
+  kungfu_ver="$(kungfu_native_version)"
+  kungfu_bin="${XDG_CACHE_HOME:-$HOME/.cache}/kungfu/kungfu-code/${kungfu_ver}/kungfu-code"
+  if [ -x "$kungfu_bin" ]; then
+    exec "$kungfu_bin" "$@"
+  fi
+  # Machines that already have both prerequisites keep the proven in-script
+  # path below; fresh machines (or KUNGFU_CODE_NATIVE=1) go native.
+  if [ "${KUNGFU_CODE_NATIVE:-}" = "1" ] \
+    || ! command -v fnm >/dev/null 2>&1 \
+    || ! command -v uv >/dev/null 2>&1; then
+    if kungfu_native_acquire "$kungfu_bin" "$kungfu_ver"; then
+      exec "$kungfu_bin" "$@"
+    fi
+    echo "kungfu-code: native launcher unavailable; falling back to the in-script bootstrap" >&2
+  fi
+fi
+
+# ── In-script bootstrap (requires fnm + uv installed once) ───────────────────
 # Rich subcommands delegate to L2 node (not passed to pnpm). L2 is pure node builtins and version-agnostic:
 # prefer fnm-managed node when available (the normal path once bootstrap is ready); fall back to system node when fnm is
 # not ready, so a developer can still use L2 config first (e.g. set a mirror to in turn help fnm); error only if neither exists.
-kungfu_load_proxy
 case "${1:-}" in
   build | rebuild | proxy | config)
     if command -v fnm >/dev/null 2>&1; then
@@ -58,7 +128,7 @@ case "${1:-}" in
     ;;
 esac
 
-# Normal build/dev task: load proxy config → check the two prerequisites → pin node → corepack pnpm
+# Normal build/dev task: check the two prerequisites → pin node → corepack pnpm
 if ! command -v fnm >/dev/null 2>&1; then
   echo "kungfu-code: install fnm once first (node-side prerequisite) — 'arch -arm64 brew install fnm' (or see https://github.com/Schniz/fnm)" >&2
   exit 127

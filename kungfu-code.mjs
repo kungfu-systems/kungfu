@@ -30,6 +30,10 @@ const KEYS = [
   'COREPACK_NPM_REGISTRY',
   'UV_DEFAULT_INDEX',
   'UV_PYTHON_INSTALL_MIRROR',
+  // launcher distribution mirrors (native kungfu-code binary + its fnm/uv bootstrap)
+  'KUNGFU_CODE_DIST_MIRROR',
+  'KUNGFU_FNM_DIST_MIRROR',
+  'KUNGFU_UV_DIST_MIRROR',
   // compile params (cap per machine, to avoid memory thrash on many-core machines)
   'KUNGFU_BUILD_JOBS',
 ];
