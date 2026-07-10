@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Cross-platform coordinator for the Episode Qualification Harness v0.
+// Cross-platform coordinator for the Episode Qualification Harness.
 // Profiles, process isolation, timeouts, aggregation, and the Trust Report live
 // here. Python workers call the real C++-backed Episode surface and write one
 // private result file each; workers never contend on the report itself.
@@ -17,21 +17,33 @@ const harnessDir = path.dirname(__filename);
 const coreDir = path.resolve(harnessDir, '..', '..', '..');
 const rootDir = path.resolve(coreDir, '..', '..');
 const workerPath = path.join(harnessDir, 'episode_workload.py');
+const semanticWorkerPath = path.join(harnessDir, 'semantic_workload.py');
 const schemaPath = path.join(
   harnessDir,
   'schemas',
-  'trust-report-v1.schema.json',
+  'trust-report-v2.schema.json',
 );
+const semanticDimensionNames = [
+  'lifecycle_safety',
+  'capability_soundness',
+  'useful_degradation',
+  'repair_monotonicity',
+  'dependency_containment',
+  'projection_derivation',
+  'publication_recovery',
+  'content_integrity',
+  'portable_identity',
+];
 
 function usage() {
-  console.log(`Episode Qualification Harness v0
+  console.log(`Episode Qualification Harness
 
 Usage:
   ./kungfu-code episode:qualify -- [options]
 
 Options:
   --profile NAME                     mvp-smoke-v1 (default) or mvp-baseline-v1
-  --mode all|accumulation|contention selected scenario family (default: all)
+  --mode all|accumulation|contention|semantic selected scenario family (default: all)
   --seed N                           override profile seeds with one seed
   --accumulation-checkpoints A,B     override accumulation checkpoints
   --contention-episodes N            override fixed contention Episode count
@@ -113,9 +125,11 @@ function parseArgs(argv) {
       process.exit(0);
     } else fail(`unknown argument '${arg}'`);
   }
-  if (!['all', 'accumulation', 'contention'].includes(options.mode)) {
+  if (
+    !['all', 'accumulation', 'contention', 'semantic'].includes(options.mode)
+  ) {
     fail(
-      `--mode must be all, accumulation, or contention, got '${options.mode}'`,
+      `--mode must be all, accumulation, contention, or semantic, got '${options.mode}'`,
     );
   }
   if (!/^[a-z0-9][a-z0-9-]*$/.test(options.profile)) {
@@ -150,6 +164,25 @@ function loadProfile(options) {
     if (!Array.isArray(profile[key]) || profile[key].length === 0) {
       fail(`profile ${key} must be a non-empty array`);
     }
+  }
+  if (
+    !profile.semantic ||
+    !Array.isArray(profile.semantic.required_dimensions) ||
+    profile.semantic.required_dimensions.length === 0 ||
+    !Number.isSafeInteger(profile.semantic.timeout_seconds) ||
+    profile.semantic.timeout_seconds <= 0
+  ) {
+    fail(
+      'profile semantic policy must declare required_dimensions and timeout_seconds',
+    );
+  }
+  const unknownDimensions = profile.semantic.required_dimensions.filter(
+    (dimension) => !semanticDimensionNames.includes(dimension),
+  );
+  if (unknownDimensions.length > 0) {
+    fail(
+      `profile has unknown semantic dimensions: ${unknownDimensions.join(',')}`,
+    );
   }
   return profile;
 }
@@ -209,11 +242,11 @@ function readResult(resultPath, fallback) {
   }
 }
 
-function runPython(args, resultPath, timeoutSeconds) {
+function runPython(args, resultPath, timeoutSeconds, scriptPath = workerPath) {
   return new Promise((resolve) => {
     const child = spawn(
       'uv',
-      ['run', '--frozen', 'python', workerPath, ...args],
+      ['run', '--frozen', 'python', scriptPath, ...args],
       {
         cwd: coreDir,
         env: runtimeEnv(),
@@ -462,6 +495,20 @@ async function runContention(profile, seed, workerCount, runRoot, keepRuntime) {
   return scenario;
 }
 
+async function runSemantic(profile, runRoot, keepRuntime) {
+  const runtimeRoot = path.join(runRoot, 'runtime', 'semantic-v1');
+  const resultPath = path.join(runRoot, 'results', 'semantic-v1.json');
+  fs.mkdirSync(runtimeRoot, { recursive: true });
+  const result = await runPython(
+    ['--result', resultPath, '--runtime-root', runtimeRoot],
+    resultPath,
+    profile.semantic.timeout_seconds,
+    semanticWorkerPath,
+  );
+  removeRuntime(runtimeRoot, keepRuntime);
+  return result;
+}
+
 function sumWorkerOperation(scenarios, field) {
   let total = 0;
   for (const scenario of scenarios) {
@@ -626,6 +673,7 @@ async function main() {
   const sourceDirty = gitText(['status', '--porcelain']).length > 0;
   const started = Date.now();
   const scenarios = [];
+  let semantic = null;
 
   console.log(
     `[episode-qualify] profile=${profile.name} mode=${options.mode} seeds=${profile.seeds.join(',')}`,
@@ -656,6 +704,10 @@ async function main() {
       }
     }
   }
+  if (options.mode === 'all' || options.mode === 'semantic') {
+    console.log('[episode-qualify] semantic oracle and production comparisons');
+    semantic = await runSemantic(profile, runRoot, options.keepRuntime);
+  }
 
   const errors = probeErrors(scenarios);
   const retryExhausted = sumWorkerOperation(scenarios, 'retry_exhausted');
@@ -674,10 +726,6 @@ async function main() {
     sumWorkerOperation(scenarios, 'progress_timeouts') +
     countCodes(errors, (code) => code === 'scenario_timeout');
   const correctness = {
-    silent_invalid: 0,
-    capability_violations: 0,
-    containment_violations: 0,
-    repair_monotonicity_violations: 0,
     count_mismatches: countCodes(errors, (code) =>
       code.includes('count_mismatch'),
     ),
@@ -692,8 +740,34 @@ async function main() {
     unexpected_errors: unexpectedErrors,
     progress_timeouts: progressTimeouts,
   };
-  const allScenariosOk =
-    scenarios.length > 0 && scenarios.every((scenario) => scenario.ok);
+  const metadataSelected = ['all', 'accumulation', 'contention'].includes(
+    options.mode,
+  );
+  const metadataScenariosOk =
+    !metadataSelected ||
+    (scenarios.length > 0 && scenarios.every((scenario) => scenario.ok));
+  const semanticSelected = ['all', 'semantic'].includes(options.mode);
+  const requiredSemanticDimensions = profile.semantic.required_dimensions;
+  const semanticDimensions =
+    semantic?.dimensions ||
+    Object.fromEntries(
+      semanticDimensionNames.map((dimension) => [
+        dimension,
+        {
+          status: 'not_exercised',
+          cases_executed: 0,
+          violations: [],
+          evidence: [],
+          reason: `invocation selected only the ${options.mode} scenario family`,
+        },
+      ]),
+    );
+  const requiredSemanticPassed = requiredSemanticDimensions.every(
+    (dimension) => semanticDimensions[dimension]?.status === 'passed',
+  );
+  const selectedExecutionOk =
+    metadataScenariosOk &&
+    (!semanticSelected || (Boolean(semantic?.ok) && requiredSemanticPassed));
   const contentionScenarios = scenarios.filter(
     (scenario) => scenario.kind === 'contention' && scenario.workers > 1,
   );
@@ -702,10 +776,11 @@ async function main() {
   const durationSeconds = (Date.now() - started) / 1000;
   const gaps = [
     'metadata-only profile; realistic payload bytes and dedup are not exercised',
-    'independent Episodes only; dependency DAG depth and fan-out are not exercised',
-    'Episode query is manifest-direct; Episode projection rebuild is not implemented',
+    'semantic dependency coverage is bounded to direct dependencies; generated DAG depth and fan-out are not exercised',
+    'Episode projection derivation is exercised, but large projection rebuild cost is not measured',
     'single-node local filesystem only; no service-backed or distributed qualification',
-    'deterministic publication crash and corruption coverage remains in separate fixtures',
+    'publication coverage exercises an interrupted open Episode; torn journal/page crash points remain in deterministic fixtures',
+    'production Episode safe-capability reporting is not implemented, so capability_soundness is not_exercised',
     'no absolute performance SLO is adopted by the v0 profile',
   ];
   if (options.mode !== 'all') {
@@ -718,7 +793,7 @@ async function main() {
   }
 
   const report = {
-    schema: 'kungfu.episode.trust-report/v1',
+    schema: 'kungfu.episode.trust-report/v2',
     source_revision: sourceRevision,
     source_dirty: sourceDirty,
     episode_contract: 'kungfu.episode.manifest/v1',
@@ -748,19 +823,46 @@ async function main() {
     fault_coverage: {
       writer_contention_exercised: contentionScenarios.length > 0,
       writer_contention_observed: busyObserved,
-      fresh_process_readback: scenarios.every((scenario) =>
-        Boolean(scenario.probe?.ok),
-      ),
-      clean_recovery: scenarios.every(
-        (scenario) => scenario.probe?.recovery?.recovered_count === 0,
-      ),
+      fresh_process_readback:
+        scenarios.length > 0 &&
+        scenarios.every((scenario) => Boolean(scenario.probe?.ok)),
+      clean_recovery:
+        scenarios.length > 0 &&
+        scenarios.every(
+          (scenario) => scenario.probe?.recovery?.recovered_count === 0,
+        ),
+      interrupted_open_recovery:
+        semanticDimensions.publication_recovery?.status === 'passed',
+      missing_content_and_hash_rejection:
+        semanticDimensions.content_integrity?.status === 'passed',
+      dependency_failure_containment:
+        semanticDimensions.dependency_containment?.status === 'passed',
+      projection_drift_and_rebuild:
+        semanticDimensions.projection_derivation?.status === 'passed',
     },
     correctness,
+    semantic_evidence: {
+      oracle: semantic?.oracle || 'kungfu.episode.semantic-oracle/v1',
+      oracle_check: semantic?.oracle_check || {
+        status: 'not_exercised',
+        histories_checked: 0,
+        violation: `invocation selected only the ${options.mode} scenario family`,
+      },
+      required_dimensions: requiredSemanticDimensions,
+      dimensions: semanticDimensions,
+      cases: semantic?.cases || [],
+      process: semantic?.process || null,
+    },
     performance: {
       scenarios: scenarios.map(performanceScenario),
     },
     gaps,
-    qualified: allScenariosOk && !sourceDirty,
+    qualified:
+      options.mode === 'all' &&
+      metadataScenariosOk &&
+      Boolean(semantic?.ok) &&
+      requiredSemanticPassed &&
+      !sourceDirty,
   };
   fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`);
   const schemaValidation = await validateReport(reportPath);
@@ -774,12 +876,12 @@ async function main() {
   console.log(
     `[episode-qualify] scenarios=${scenarios.length} passed=${scenarios.filter((scenario) => scenario.ok).length} busy=${sumWorkerOperation(scenarios, 'manifest_writer_busy')} qualified=${report.qualified}`,
   );
-  if (sourceDirty && allScenariosOk) {
+  if (sourceDirty && selectedExecutionOk) {
     console.log(
       '[episode-qualify] scenario gates passed, but release qualification remains false for a dirty source tree',
     );
   }
-  process.exitCode = allScenariosOk && schemaValidation.ok ? 0 : 1;
+  process.exitCode = selectedExecutionOk && schemaValidation.ok ? 0 : 1;
 }
 
 await main();

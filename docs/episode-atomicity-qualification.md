@@ -102,6 +102,37 @@ Small-state exhaustive enumeration should cover short histories before random
 generation scales them. Every discovered counterexample becomes a minimized,
 checked-in regression fixture.
 
+### Semantic v1 executable slice
+
+The first executable slice lives under
+`framework/core/tests/qualification/episode/`. Its oracle has no Kungfu import
+and consumes only abstract lifecycle and evidence transitions. The production
+worker separately drives the public Python storage service, then compares
+observable lifecycle, fsck status, issue class, record stability, recovery,
+projection, and portable identity against the oracle.
+
+Each recurring semantic run first exhausts the 48-state Semantic v1 cross-
+product of payload evidence, direct dependency presence, terminal state, and
+repair choice. A model-invariant failure blocks qualification before production
+comparisons can support a claim.
+
+The recurring `mvp-smoke-v1` gate requires these dimensions to pass:
+
+- lifecycle safety;
+- useful degradation;
+- repair monotonicity;
+- direct dependency failure containment;
+- projection derivation and rebuild convergence;
+- interrupted-open publication recovery;
+- content integrity and immutable put-if-absent behavior;
+- export/import preservation of Episode identity and causal counts.
+
+`capability_soundness` is explicitly `not_exercised`: the content-store backend
+declares storage capabilities, but the production Episode fold does not yet emit
+the safe-operation capability report required by ADR-0042. Semantic v1 does not
+invent an edge-layer substitute or count an unexecuted check as zero violations.
+This is a visible remaining implementation stage, not a silent pass.
+
 ## Fault matrix
 
 The harness injects one fault and selected combinations at declared durability
@@ -445,7 +476,7 @@ Each run records at least:
 
 ```json
 {
-  "schema": "kungfu.episode.trust-report/v1",
+  "schema": "kungfu.episode.trust-report/v2",
   "source_revision": "<git sha>",
   "episode_contract": "<version>",
   "profile": "single-node-qualification/v1",
@@ -461,10 +492,28 @@ Each run records at least:
   },
   "fault_coverage": {},
   "correctness": {
-    "silent_invalid": 0,
-    "capability_violations": 0,
-    "containment_violations": 0,
-    "repair_monotonicity_violations": 0
+    "count_mismatches": 0,
+    "readback_mismatches": 0
+  },
+  "semantic_evidence": {
+    "oracle": "kungfu.episode.semantic-oracle/v1",
+    "required_dimensions": [],
+    "dimensions": {
+      "lifecycle_safety": {
+        "status": "passed",
+        "cases_executed": 1,
+        "violations": [],
+        "evidence": ["open-publication-recovery"],
+        "reason": null
+      },
+      "capability_soundness": {
+        "status": "not_exercised",
+        "cases_executed": 0,
+        "violations": [],
+        "evidence": [],
+        "reason": "production Episode safe-capability report is not implemented"
+      }
+    }
   },
   "performance": {},
   "gaps": [],
@@ -477,6 +526,12 @@ descriptions. Reports are evidence artifacts, not authority facts inside an
 Episode. A human summary must link the exact report rather than restate only the
 best throughput number.
 
+Trust Report v2 replaces v1's ambiguous semantic zero counters with evidence
+dimensions. Every dimension is `passed`, `failed`, or `not_exercised`; only
+profile-required `passed` dimensions contribute to `qualified=true`. The v1
+schema remains available for historical baseline reports and is not
+reinterpreted as Semantic v1 evidence.
+
 ## First implementation slices
 
 1. Encode the abstract state/capability oracle and exhaust short histories.
@@ -485,8 +540,8 @@ best throughput number.
    corpus.
 4. Add generated DAG and recovery properties with reproducible seeds.
 5. Add a metadata-scale driver, then realistic payload and multi-process modes.
-6. Emit Trust Report v1 and run the first single-node baseline without treating
-   its numbers as a support promise.
+6. Emit the versioned Trust Report and run the first single-node baseline
+   without treating its numbers as a support promise.
 
 ## First development baseline (2026-07-10)
 

@@ -207,11 +207,19 @@ function runEpisodeQualificationSmoke() {
     const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
     const scenarios = report?.workload?.scenarios || [];
     const scenariosPassed = scenarios.filter((scenario) => scenario.ok).length;
+    const requiredSemanticDimensions =
+      report?.semantic_evidence?.required_dimensions || [];
+    const semanticDimensions = report?.semantic_evidence?.dimensions || {};
+    const semanticPassed = requiredSemanticDimensions.filter(
+      (dimension) => semanticDimensions[dimension]?.status === 'passed',
+    ).length;
     if (
-      report?.schema !== 'kungfu.episode.trust-report/v1' ||
+      report?.schema !== 'kungfu.episode.trust-report/v2' ||
       report?.profile !== 'mvp-smoke-v1' ||
       scenarios.length === 0 ||
-      scenariosPassed !== scenarios.length
+      scenariosPassed !== scenarios.length ||
+      requiredSemanticDimensions.length === 0 ||
+      semanticPassed !== requiredSemanticDimensions.length
     ) {
       fail(
         'Episode qualification smoke',
@@ -235,7 +243,7 @@ function runEpisodeQualificationSmoke() {
       );
     pass(
       'Episode qualification smoke',
-      `${scenariosPassed}/${scenarios.length} scenarios; busy=${busy || 0}; qualified=${String(report.qualified)}`,
+      `${scenariosPassed}/${scenarios.length} scale scenarios; ${semanticPassed}/${requiredSemanticDimensions.length} required semantic dimensions; busy=${busy || 0}; qualified=${String(report.qualified)}`,
     );
     fs.rmSync(runRoot, { recursive: true, force: true });
   } catch (error) {

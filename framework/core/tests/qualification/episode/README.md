@@ -1,6 +1,6 @@
 # Episode Qualification Harness
 
-This directory implements the executable v0 slice of
+This directory implements the executable scale v0 and Semantic v1 slices of
 [`docs/episode-atomicity-qualification.md`](../../../../../docs/episode-atomicity-qualification.md).
 It exercises the shipped Python facade backed by the C++ Episode manifest
 implementation; it does not parse or mutate journal bytes itself.
@@ -11,6 +11,7 @@ then run:
 ```sh
 ./kungfu-code episode:qualify -- --profile mvp-smoke-v1
 ./kungfu-code episode:qualify -- --profile mvp-baseline-v1
+./kungfu-code episode:qualify -- --profile mvp-smoke-v1 --mode semantic
 ```
 
 Useful scoped runs:
@@ -46,13 +47,35 @@ hatch; the checked-in Buildchain and alpha/release commands do not use it.
 accumulation and 10k contention workloads explicitly for periodic or
 release-readiness qualification.
 
+## Semantic evidence
+
+The independent `semantic_oracle.py` models externally observable lifecycle,
+evidence, dependency, repair, and projection states without importing Kungfu or
+reading journal bytes. `semantic_workload.py` compares that model with the real
+storage service for:
+
+- interrupted-open recovery and recovery idempotence;
+- useful degradation for missing content and monotonic restoration;
+- content hash rejection and put-if-absent idempotence;
+- direct dependency failure containment;
+- projection absence, drift, and rebuild convergence;
+- export/import preservation of Episode identity and causal counts.
+
+Trust Report v2 records every semantic dimension as `passed`, `failed`, or
+`not_exercised`. A dimension can pass only when a production comparison ran.
+`capability_soundness` remains `not_exercised` until the production Episode
+safe-capability report exists; it is therefore not part of the current MVP
+required-dimension set.
+
 ## Result boundary
 
-The v0 profiles are metadata-only: each independent Episode contains exactly
-one open and one terminal record. They qualify manifest population, fold/fsck
-readback, writer contention, retry progress, and cold-process stability. They
-do not qualify realistic payload bytes, dependency DAGs, projection rebuild,
-distributed writers, or fleet-scale capacity. Those gaps remain explicit in
+The scale v0 profiles are metadata-only: each independent Episode contains
+exactly one open and one terminal record. They qualify manifest population,
+fold/fsck readback, writer contention, retry progress, and cold-process
+stability. They do not qualify realistic payload distributions, deep or wide dependency DAGs,
+distributed writers, or fleet-scale capacity. Semantic v1 adds small
+deterministic payload, direct-dependency, and projection cases; it does not turn
+those bounded cases into a scale or soak claim. Those gaps remain explicit in
 every Trust Report.
 
 `manifest_writer_busy` is the only retryable error. The worker records every
@@ -65,5 +88,8 @@ open Episode, or fresh-process mismatch fails the scenario.
 - `run.mjs` owns profiles, worker processes, timeouts, aggregation, and reports.
 - `episode_workload.py` performs writes and readback through
   `kungfu.storage.service`.
+- `semantic_oracle.py` is the dependency-free abstract model.
+- `semantic_workload.py` performs bounded model-versus-production comparisons.
 - `profiles/*.json` are versioned workload and progress policies.
-- `schemas/trust-report-v1.schema.json` validates every emitted report.
+- `schemas/trust-report-v2.schema.json` validates current reports; v1 remains
+  checked in so historical evidence stays readable.

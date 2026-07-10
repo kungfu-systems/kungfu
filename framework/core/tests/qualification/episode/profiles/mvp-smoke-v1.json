@@ -25,5 +25,18 @@
     "list_limit": 100,
     "allowed_full_fsck_warnings": ["sqlite_projection_missing"]
   },
+  "semantic": {
+    "required_dimensions": [
+      "lifecycle_safety",
+      "useful_degradation",
+      "repair_monotonicity",
+      "dependency_containment",
+      "projection_derivation",
+      "publication_recovery",
+      "content_integrity",
+      "portable_identity"
+    ],
+    "timeout_seconds": 120
+  },
   "scenario_timeout_seconds": 180
 }
