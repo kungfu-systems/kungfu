@@ -56,6 +56,7 @@ A record's **Status** says where it stands:
 | [0038](ADR-0038-location-namespace-terminology.md) | accepted | Location middle identity segment is namespace |
 | [0039](ADR-0039-unified-view-interface-encapsulates-flatbuffers.md) | proposed | a single kungfu view interface is the sole FlatBuffers access point; raw FB is not called elsewhere |
 | [0040](ADR-0040-runtime-fact-ledger-content-addressed-kv.md) | proposed | a first-class content-addressed KV is a runtime fact-ledger primitive, backend-neutral from an embedded single agent to a fleet-scale sharded/tiered store |
+| [0041](ADR-0041-episode-manifest-first-class-journal-structure.md) | proposed | the Episode manifest is the object's trust boundary — a POD-native yijinjing journal structure with writer/runtime/fsck/query tightened around it, JSON edge-only |
 
 ## Reading by theme
 
