@@ -26,4 +26,5 @@
 
 pub mod bootstrap;
 pub mod host;
+pub mod probe;
 pub mod style;
