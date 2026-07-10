@@ -46,6 +46,11 @@ jobs:
         with:
           node-version: "24"
 
+      - name: Expose Git Bash on Windows
+        if: ${{ runner.os == 'Windows' }}
+        shell: pwsh
+        run: '"C:\Program Files\Git\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append'
+
       # A SHA-addressed source archive avoids the self-hosted fleet's unreliable
       # large GitHub Git fetch path. Use a per-SHA directory so no runner cleanup
       # or overwrite is required, while retaining an immutable source identity.
