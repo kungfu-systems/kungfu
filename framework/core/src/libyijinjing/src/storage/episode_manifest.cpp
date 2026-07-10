@@ -224,6 +224,15 @@ nlohmann::json record_json(const EpisodeClosed &record) {
   return row;
 }
 
+nlohmann::json record_json(const EpisodeRootCommitted &record) {
+  auto row = base_record_json("episode_root_committed", record);
+  row["commit_time"] = record.commit_time;
+  row["covered_record_count"] = record.covered_record_count;
+  row["algorithm"] = fixed_string(record.algorithm);
+  row["root_value"] = fixed_string(record.root_value);
+  return row;
+}
+
 // Edge projection of one typed record, including its manifest provenance.
 nlohmann::json record_row_json(const episode_manifest_record &record) {
   auto row = std::visit(
@@ -280,6 +289,9 @@ episode_manifest_record decode_record(const frame_ptr &frame) {
     break;
   case EpisodeClosed::tag:
     decoded = decode_v1_record<EpisodeClosed>(frame, record);
+    break;
+  case EpisodeRootCommitted::tag:
+    decoded = decode_v1_record<EpisodeRootCommitted>(frame, record);
     break;
   default:
     break;
@@ -374,6 +386,12 @@ void fold_into(episode_manifest_fold &fold, const episode_manifest_record &recor
           view.claimed_frame_count = body.frame_count;
           view.last_frame_uid_seen = true;
           view.last_frame_uid = body.last_frame_uid;
+        } else if constexpr (std::is_same_v<body_t, EpisodeRootCommitted>) {
+          ++view.root_count;
+          if (!view.root_seen) {
+            view.root_seen = true;
+            view.root = body;
+          }
         }
       },
       record.body);
@@ -416,10 +434,48 @@ nlohmann::json summary_json(const episode_current_view &view) {
   }
   summary["payload_ref_count"] = payload_ref_count;
   summary["schema_ref_count"] = schema_ref_count;
+  if (view.root_seen) {
+    summary["content_root"] = fixed_string(view.root.root_value);
+    summary["content_root_algorithm"] = fixed_string(view.root.algorithm);
+  }
   if (!summary.contains("status")) {
     summary["status"] = view.opened ? "open" : "dangling";
   }
   return summary;
+}
+
+// ADR-0043 edge projection of Episode identity: the recorded root claim, the
+// recomputed root when this reader can derive one, and the verdict. Status
+// vocabulary: undefined (open), absent (sealed, no root), verified, mismatch,
+// unverifiable (unknown records present or unsupported algorithm),
+// root_without_seal (a root claims identity of an unsealed Episode).
+nlohmann::json content_root_json(const episode_current_view &view, size_t unknown_record_count) {
+  nlohmann::json recorded = view.root_seen ? record_json(view.root) : nlohmann::json(nullptr);
+  nlohmann::json computed = nullptr;
+  nlohmann::json match = nullptr;
+  const char *status = "undefined";
+  if (!view.closed) {
+    if (view.root_seen) {
+      status = "root_without_seal";
+    }
+  } else if (unknown_record_count > 0) {
+    status = view.root_seen ? "unverifiable" : "absent";
+  } else {
+    const auto root = compute_episode_content_root(view);
+    computed = {
+        {"algorithm", root.algorithm}, {"value", root.value}, {"covered_record_count", root.covered_record_count}};
+    if (!view.root_seen) {
+      status = "absent";
+    } else if (fixed_string(view.root.algorithm) != root.algorithm) {
+      status = "unverifiable";
+    } else {
+      const bool verified = fixed_string(view.root.root_value) == root.value &&
+                            view.root.covered_record_count == root.covered_record_count;
+      match = verified;
+      status = verified ? "verified" : "mismatch";
+    }
+  }
+  return {{"recorded", recorded}, {"computed", computed}, {"match", match}, {"status", status}};
 }
 
 nlohmann::json rows_json(const episode_current_view &view, const std::vector<size_t> &indices) {
@@ -637,7 +693,76 @@ episode_graph build_causal_graph(const content_store &refs, uint64_t episode_id,
           degraded};
 }
 
+// ADR-0043: per-record commitment for the content root. Each covered record
+// contributes its hana field bytes in declaration order — scalar and enum
+// fields as their in-memory little-endian bytes, fixed char arrays as their
+// full zero-filled extent. Struct padding never enters the hash, so the
+// commitment is deterministic across compilers and write paths.
+template <typename T> std::string episode_record_commitment(const T &record) {
+  std::string bytes;
+  boost::hana::for_each(boost::hana::accessors<T>(), [&bytes, &record](auto accessor) {
+    const auto &member = boost::hana::second(accessor)(record);
+    bytes.append(reinterpret_cast<const char *>(&member), sizeof(member));
+  });
+  return compute_content_hash_value(bytes);
+}
+
+// ADR-0043 v1 chain link preimage, pinned by fixtures: ASCII domain tag,
+// decimal covered-record index, previous link hex, record commitment hex,
+// joined by '|'. The initial link is 64 zero hex digits.
+constexpr const char *EPISODE_ROOT_LINK_DOMAIN = "kungfu.episode-root-link/v1";
+constexpr const char *EPISODE_ROOT_INITIAL_LINK = "0000000000000000000000000000000000000000000000000000000000000000";
+
+std::string episode_root_chain_link(size_t index, const std::string &previous, const std::string &record_commitment) {
+  return compute_content_hash_value(std::string(EPISODE_ROOT_LINK_DOMAIN) + "|" + std::to_string(index) + "|" +
+                                    previous + "|" + record_commitment);
+}
+
 } // namespace
+
+episode_content_root compute_episode_content_root(const episode_current_view &view) {
+  episode_content_root root{};
+  root.algorithm = CONTENT_HASH_ALGORITHM_SHA256;
+  root.value = EPISODE_ROOT_INITIAL_LINK;
+  bool open_covered = false;
+  bool close_covered = false;
+  for (const auto &record : view.records) {
+    const auto commitment = std::visit(
+        [&open_covered, &close_covered](const auto &body) -> std::string {
+          using body_t = std::decay_t<decltype(body)>;
+          if constexpr (std::is_same_v<body_t, EpisodeOpen>) {
+            if (open_covered) {
+              return {};
+            }
+            open_covered = true;
+            return episode_record_commitment(body);
+          } else if constexpr (std::is_same_v<body_t, EpisodeFrameAttached> ||
+                               std::is_same_v<body_t, EpisodeRefAttached>) {
+            return episode_record_commitment(body);
+          } else if constexpr (std::is_same_v<body_t, EpisodeClosed>) {
+            // the first terminal close is the seal and part of identity;
+            // later closes (tombstone path, anomalous duplicates) are
+            // lifecycle facts outside it
+            if (close_covered) {
+              return {};
+            }
+            close_covered = true;
+            return episode_record_commitment(body);
+          } else {
+            // heartbeats, unknown records, and the root record itself stay
+            // outside identity
+            return {};
+          }
+        },
+        record.body);
+    if (commitment.empty()) {
+      continue;
+    }
+    root.value = episode_root_chain_link(root.covered_record_count, root.value, commitment);
+    ++root.covered_record_count;
+  }
+  return root;
+}
 
 std::string episode_manifest_writer_lock_path(const std::string &runtime_dir) {
   const auto location = manifest_location(runtime_dir);
@@ -740,9 +865,33 @@ nlohmann::json episode_manifest_store::end(const episode_close_options &options)
   record.frame_count = options.frame_count;
   set_fixed_string(record.reason, options.reason);
   const auto guard = acquire_writer_guard(runtime_dir_);
+  auto fold = fold_typed_records();
+  const auto folded = fold.episodes.find(record.episode_id);
+  const bool first_close = folded == fold.episodes.end() || !folded->second.closed;
   auto writer = make_writer(runtime_dir_);
   writer.write_at(record.end_time, 0, record);
-  return record_json(record);
+  auto response = record_json(record);
+  // ADR-0043: the first terminal close is the seal — commit the Episode's
+  // content identity as the final claim, under the same writer guard so no
+  // record can interleave between the seal and its root. Later closes
+  // (tombstone path) are lifecycle facts outside identity and get no root.
+  if (first_close) {
+    episode_manifest_record appended{};
+    appended.body = record;
+    fold_into(fold, appended);
+    const auto root = compute_episode_content_root(fold.episodes.at(record.episode_id));
+    EpisodeRootCommitted root_record{};
+    root_record.schema_version = EPISODE_MANIFEST_SCHEMA_VERSION;
+    root_record.episode_id = record.episode_id;
+    root_record.location_uid = record.location_uid;
+    root_record.commit_time = record.end_time;
+    root_record.covered_record_count = root.covered_record_count;
+    set_fixed_string(root_record.algorithm, root.algorithm);
+    set_fixed_string(root_record.root_value, root.value);
+    writer.write_at(root_record.commit_time, 0, root_record);
+    response["content_root"] = record_json(root_record);
+  }
+  return response;
 }
 
 nlohmann::json episode_manifest_store::abort(const episode_close_options &options) const {
@@ -753,7 +902,7 @@ nlohmann::json episode_manifest_store::abort(const episode_close_options &option
 
 nlohmann::json episode_manifest_store::recover(const episode_recover_options &options) const {
   const auto guard = acquire_writer_guard(runtime_dir_);
-  const auto fold = fold_typed_records();
+  auto fold = fold_typed_records();
   const auto end_time = options.end_time == 0 ? time::now_in_nano() : options.end_time;
   const auto reason = options.reason.empty() ? std::string("recovered") : options.reason;
   std::vector<EpisodeClosed> closes;
@@ -786,7 +935,24 @@ nlohmann::json episode_manifest_store::recover(const episode_recover_options &op
     auto writer = make_writer(runtime_dir_);
     for (const auto &record : closes) {
       writer.write_at(record.end_time, 0, record);
-      recovered.push_back(record_json(record));
+      auto row = record_json(record);
+      // ADR-0043: recovery seals were open Episodes, so each close here is
+      // the first close — commit each Episode's content root after its seal.
+      episode_manifest_record appended{};
+      appended.body = record;
+      fold_into(fold, appended);
+      const auto root = compute_episode_content_root(fold.episodes.at(record.episode_id));
+      EpisodeRootCommitted root_record{};
+      root_record.schema_version = EPISODE_MANIFEST_SCHEMA_VERSION;
+      root_record.episode_id = record.episode_id;
+      root_record.location_uid = record.location_uid;
+      root_record.commit_time = record.end_time;
+      root_record.covered_record_count = root.covered_record_count;
+      set_fixed_string(root_record.algorithm, root.algorithm);
+      set_fixed_string(root_record.root_value, root.value);
+      writer.write_at(root_record.commit_time, 0, root_record);
+      row["content_root"] = record_json(root_record);
+      recovered.push_back(row);
     }
   }
   return {{"ok", true},
@@ -867,6 +1033,7 @@ nlohmann::json episode_manifest_store::inspect(uint64_t episode_id) const {
           {"runtime_dir", runtime_dir_},
           {"authority", "yijinjing-journal"},
           {"episode", summary_json(view)},
+          {"content_root", content_root_json(view, fold.unknown_record_count)},
           {"causal_graph", graph.graph},
           {"dependencies", graph.dependencies},
           {"records", records_json(view)},
@@ -947,6 +1114,42 @@ nlohmann::json episode_manifest_store::fsck(uint64_t episode_id) const {
                               {"episode_id", current_episode_id},
                               {"frame_uid", view.close.last_frame_uid}});
           }
+        }
+      }
+    }
+    // ADR-0043: the recorded content root is a claim about the whole covered
+    // sequence; fsck recomputes it from the fold and verifies. Unknown
+    // records make the recomputation unverifiable (this reader cannot
+    // canonicalize records a newer writer may have covered), reported
+    // honestly instead of guessed.
+    if (view.root_seen && !view.closed) {
+      errors.push_back({{"code", "episode_root_without_seal"}, {"episode_id", current_episode_id}});
+    }
+    if (view.root_count > 1) {
+      warnings.push_back(
+          {{"code", "episode_root_duplicate"}, {"episode_id", current_episode_id}, {"count", view.root_count}});
+    }
+    if (view.root_seen && view.closed) {
+      const auto recorded_algorithm = fixed_string(view.root.algorithm);
+      if (fold.unknown_record_count > 0) {
+        warnings.push_back({{"code", "episode_root_unverifiable"},
+                            {"episode_id", current_episode_id},
+                            {"reason", "unknown_records_present"}});
+      } else if (recorded_algorithm != CONTENT_HASH_ALGORITHM_SHA256) {
+        warnings.push_back({{"code", "episode_root_unverifiable"},
+                            {"episode_id", current_episode_id},
+                            {"reason", "unsupported_algorithm"},
+                            {"algorithm", recorded_algorithm}});
+      } else {
+        const auto root = compute_episode_content_root(view);
+        const auto recorded_value = fixed_string(view.root.root_value);
+        if (recorded_value != root.value || view.root.covered_record_count != root.covered_record_count) {
+          errors.push_back({{"code", "episode_root_mismatch"},
+                            {"episode_id", current_episode_id},
+                            {"recorded", recorded_value},
+                            {"computed", root.value},
+                            {"recorded_covered_record_count", view.root.covered_record_count},
+                            {"computed_covered_record_count", root.covered_record_count}});
         }
       }
     }

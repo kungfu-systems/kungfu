@@ -2428,13 +2428,13 @@ nlohmann::json repair_plan_impl(const storage_service_options &options) {
 
 bool episode_record_kind_supported(const std::string &kind) {
   return kind == "episode_open" || kind == "episode_heartbeat" || kind == "episode_frame_attached" ||
-         kind == "episode_ref_attached" || kind == "episode_closed";
+         kind == "episode_ref_attached" || kind == "episode_closed" || kind == "episode_root_committed";
 }
 
 std::string episode_record_identity_key(const nlohmann::json &record) {
   const auto kind = text_or(record, "record_kind");
   const auto episode_id = std::to_string(uint64_or(record, "episode_id"));
-  if (kind == "episode_open" || kind == "episode_closed") {
+  if (kind == "episode_open" || kind == "episode_closed" || kind == "episode_root_committed") {
     return kind + ":" + episode_id;
   }
   if (kind == "episode_frame_attached") {
@@ -2464,6 +2464,16 @@ nlohmann::json episode_apply_record(const storage_service_options &options, cons
   }
   if (kind == "episode_closed") {
     return episode_store(options).end(parse_episode_close_options(record, yy_enums::EpisodeStatus::Ended));
+  }
+  if (kind == "episode_root_committed") {
+    // ADR-0043: the destination's root is committed by its own seal path (the
+    // episode_closed apply above); the bundle's root record is carried through
+    // as the source's identity claim for comparison, never re-appended — a
+    // root must commit to the sequence its own store recorded, and a second
+    // root record would only be a duplicate-root diagnostic.
+    auto row = record;
+    row["applied"] = "source_identity_claim";
+    return row;
   }
   return nullptr;
 }

@@ -389,7 +389,9 @@ def run_probe(args: argparse.Namespace) -> dict[str, Any]:
     semantic_record_count = sum(
         int(row.get("record_count", 0)) for row in all_episodes.get("episodes", [])
     )
-    expected_records = args.expected_count * 2
+    # ADR-0043: every sealed Episode carries open + close + the root
+    # committed at seal
+    expected_records = args.expected_count * 3
     if semantic_record_count != expected_records:
         errors.append(
             _issue(
@@ -426,7 +428,7 @@ def run_probe(args: argparse.Namespace) -> dict[str, Any]:
             "status": expected["status"],
             "opened": True,
             "closed": True,
-            "record_count": 2,
+            "record_count": 3,
             "frame_count": 0,
             "ref_count": 0,
         }
@@ -436,9 +438,10 @@ def run_probe(args: argparse.Namespace) -> dict[str, Any]:
             if episode.get(key) != value
         }
         record_kinds = [row.get("record_kind") for row in inspected.get("records", [])]
-        if record_kinds != ["episode_open", "episode_closed"]:
+        expected_kinds = ["episode_open", "episode_closed", "episode_root_committed"]
+        if record_kinds != expected_kinds:
             mismatched["record_kinds"] = {
-                "expected": ["episode_open", "episode_closed"],
+                "expected": expected_kinds,
                 "actual": record_kinds,
             }
         if mismatched:

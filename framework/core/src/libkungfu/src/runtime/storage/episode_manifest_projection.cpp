@@ -26,14 +26,16 @@ fs::path projection_path(const std::string &runtime_dir) {
 // Distinct-primary-key journal counts. The SQLite tables upsert by primary
 // key (EpisodeOpen by episode_id; EpisodeHeartbeat by episode_id+update_time;
 // EpisodeFrameAttached by episode_id+frame_uid; EpisodeRefAttached by
-// episode_id+ref_kind+ref_uid; EpisodeClosed by episode_id), so the honest
-// expected row count is the distinct-PK count, not the raw append count.
+// episode_id+ref_kind+ref_uid; EpisodeClosed and EpisodeRootCommitted by
+// episode_id), so the honest expected row count is the distinct-PK count,
+// not the raw append count.
 struct distinct_counts {
   size_t opens = 0;
   size_t heartbeats = 0;
   size_t frames = 0;
   size_t refs = 0;
   size_t closes = 0;
+  size_t roots = 0;
 };
 
 distinct_counts distinct_pk_counts(const std::vector<yijinjing::storage::episode_manifest_record> &records) {
@@ -42,6 +44,7 @@ distinct_counts distinct_pk_counts(const std::vector<yijinjing::storage::episode
   std::set<std::pair<uint64_t, uint64_t>> frame_keys;
   std::set<std::tuple<uint64_t, int8_t, uint64_t>> ref_keys;
   std::set<uint64_t> close_keys;
+  std::set<uint64_t> root_keys;
   for (const auto &record : records) {
     std::visit(
         [&](const auto &body) {
@@ -56,11 +59,14 @@ distinct_counts distinct_pk_counts(const std::vector<yijinjing::storage::episode
             ref_keys.emplace(body.episode_id, static_cast<int8_t>(body.ref_kind), body.ref_uid);
           } else if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeClosed>) {
             close_keys.insert(body.episode_id);
+          } else if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeRootCommitted>) {
+            root_keys.insert(body.episode_id);
           }
         },
         record.body);
   }
-  return {open_keys.size(), heartbeat_keys.size(), frame_keys.size(), ref_keys.size(), close_keys.size()};
+  return {open_keys.size(), heartbeat_keys.size(), frame_keys.size(),
+          ref_keys.size(),  close_keys.size(),     root_keys.size()};
 }
 
 } // namespace
@@ -87,6 +93,7 @@ nlohmann::json episode_manifest_projection::rebuild() const {
   storage->remove_all<yijinjing::types::EpisodeFrameAttached>();
   storage->remove_all<yijinjing::types::EpisodeRefAttached>();
   storage->remove_all<yijinjing::types::EpisodeClosed>();
+  storage->remove_all<yijinjing::types::EpisodeRootCommitted>();
 
   const auto records = yijinjing::storage::episode_manifest_store(runtime_dir_).read_typed_records();
   std::unordered_set<uint64_t> opened;
@@ -122,7 +129,8 @@ nlohmann::json episode_manifest_projection::rebuild() const {
         {"episode_heartbeat", storage->count<yijinjing::types::EpisodeHeartbeat>()},
         {"episode_frame_attached", storage->count<yijinjing::types::EpisodeFrameAttached>()},
         {"episode_ref_attached", storage->count<yijinjing::types::EpisodeRefAttached>()},
-        {"episode_closed", storage->count<yijinjing::types::EpisodeClosed>()}}},
+        {"episode_closed", storage->count<yijinjing::types::EpisodeClosed>()},
+        {"episode_root_committed", storage->count<yijinjing::types::EpisodeRootCommitted>()}}},
       {"journal_records", records.size()},
   };
 }
@@ -157,6 +165,7 @@ nlohmann::json episode_manifest_projection::verify() const {
   const size_t projected_frames = storage->count<yijinjing::types::EpisodeFrameAttached>();
   const size_t projected_refs = storage->count<yijinjing::types::EpisodeRefAttached>();
   const size_t projected_closes = storage->count<yijinjing::types::EpisodeClosed>();
+  const size_t projected_roots = storage->count<yijinjing::types::EpisodeRootCommitted>();
 
   nlohmann::json drift = nlohmann::json::array();
   const auto check = [&](const char *table, size_t projected, size_t journal_expected) {
@@ -169,6 +178,7 @@ nlohmann::json episode_manifest_projection::verify() const {
   check("episode_frame_attached", projected_frames, expected.frames);
   check("episode_ref_attached", projected_refs, expected.refs);
   check("episode_closed", projected_closes, expected.closes);
+  check("episode_root_committed", projected_roots, expected.roots);
 
   const bool degraded = !drift.empty();
   return {
@@ -185,13 +195,15 @@ nlohmann::json episode_manifest_projection::verify() const {
         {"episode_heartbeat", projected_heartbeats},
         {"episode_frame_attached", projected_frames},
         {"episode_ref_attached", projected_refs},
-        {"episode_closed", projected_closes}}},
+        {"episode_closed", projected_closes},
+        {"episode_root_committed", projected_roots}}},
       {"journal_distinct",
        {{"episode_open", expected.opens},
         {"episode_heartbeat", expected.heartbeats},
         {"episode_frame_attached", expected.frames},
         {"episode_ref_attached", expected.refs},
-        {"episode_closed", expected.closes}}},
+        {"episode_closed", expected.closes},
+        {"episode_root_committed", expected.roots}}},
   };
 }
 

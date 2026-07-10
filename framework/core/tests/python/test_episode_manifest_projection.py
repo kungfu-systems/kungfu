@@ -75,6 +75,7 @@ def test_rebuild_builds_sqlite_at_declared_path(tmp_path):
         "episode_frame_attached": 2,
         "episode_ref_attached": 2,
         "episode_closed": 2,
+        "episode_root_committed": 2,
     }
     assert (runtime_dir / PROJECTION_SUBPATH).exists()
 

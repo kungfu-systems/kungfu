@@ -118,7 +118,7 @@ struct episode_manifest_record {
   int64_t manifest_gen_time = 0;
   std::variant<episode_manifest_unknown_record, yijinjing::types::EpisodeOpen, yijinjing::types::EpisodeHeartbeat,
                yijinjing::types::EpisodeFrameAttached, yijinjing::types::EpisodeRefAttached,
-               yijinjing::types::EpisodeClosed>
+               yijinjing::types::EpisodeClosed, yijinjing::types::EpisodeRootCommitted>
       body = episode_manifest_unknown_record{};
 };
 
@@ -145,6 +145,11 @@ struct episode_current_view {
   size_t unique_frame_count = 0;
   yijinjing::types::EpisodeClosed close = {};
   std::vector<yijinjing::enums::EpisodeStatus> close_statuses = {};
+  // ADR-0043: the recorded content-root claim. First-committed-wins (a root
+  // names a sealed identity once); later duplicates are fsck diagnostics.
+  bool root_seen = false;
+  size_t root_count = 0;
+  yijinjing::types::EpisodeRootCommitted root = {};
   std::vector<episode_manifest_record> records = {};
   std::vector<size_t> frame_indices = {};
   std::vector<size_t> ref_indices = {};
@@ -166,6 +171,20 @@ struct episode_manifest_fold {
   size_t unknown_record_count = 0;
   size_t unfolded_record_count = 0;
 };
+
+// ADR-0043: the content root of one Episode's owned claim sequence — a linear
+// hash chain over the covered records in manifest append order (the first
+// EpisodeOpen, every EpisodeFrameAttached / EpisodeRefAttached, and the first
+// terminal EpisodeClosed). Heartbeats, manifest provenance, unknown records,
+// and the root record itself stay outside identity. Each record contributes
+// its hana field bytes in declaration order (padding never enters the hash).
+struct episode_content_root {
+  uint32_t covered_record_count = 0;
+  std::string algorithm = {};
+  std::string value = {};
+};
+
+[[nodiscard]] episode_content_root compute_episode_content_root(const episode_current_view &view);
 
 class content_store;
 

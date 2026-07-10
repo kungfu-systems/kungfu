@@ -184,7 +184,8 @@ constexpr auto EpisodeManifestDataTypes = boost::hana::make_map( //
     TYPE_PAIR(EpisodeHeartbeat),                                 // 10802
     TYPE_PAIR(EpisodeFrameAttached),                             // 10803
     TYPE_PAIR(EpisodeRefAttached),                               // 10804
-    TYPE_PAIR(EpisodeClosed)                                     // 10805
+    TYPE_PAIR(EpisodeClosed),                                    // 10805
+    TYPE_PAIR(EpisodeRootCommitted)                              // 10806 (ADR-0043)
 );
 
 constexpr auto StaticDataTypes = boost::hana::make_map();

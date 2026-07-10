@@ -320,6 +320,20 @@ KF_DEFINE_PACK_TYPE(                                           //
     (array<char, 64>, reason)                                  //
 );
 
+// ADR-0043: the sealed Episode's content identity — a hash root chained over
+// the Episode's owned claim sequence, appended as the final claim after the
+// seal. schema_version pins both the record layout and the root composition.
+KF_DEFINE_PACK_TYPE(                                                     //
+    EpisodeRootCommitted, 10806, PK(episode_id), TIMESTAMP(commit_time), //
+    (uint32_t, schema_version),                                          //
+    (uint64_t, episode_id),                                              //
+    (uint32_t, location_uid),                                            //
+    (int64_t, commit_time),                                              //
+    (uint32_t, covered_record_count),                                    //
+    (array<char, 16>, algorithm),                                        //
+    (array<char, 72>, root_value)                                        //
+);
+
 // Storage source-registry records (ADR-0037): Hana-core kernel metadata for the
 // ADR-0018 storage-service source family, written to an append-only yijinjing
 // journal and folded into a current view. JSON is an edge projection only.

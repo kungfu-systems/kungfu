@@ -609,7 +609,10 @@ def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
     inspected = storage_service.episode_inspect(runtime_dir, episode_id=42)
     assert inspected["ok"]
     assert inspected["episode"]["status"] == "ended"
-    assert len(inspected["records"]) == 4
+    # open + frame + ref + close, plus the ADR-0043 root committed at seal
+    assert len(inspected["records"]) == 5
+    assert inspected["records"][-1]["record_kind"] == "episode_root_committed"
+    assert inspected["content_root"]["status"] == "verified"
     assert inspected["frames"][0]["frame_uid"] == 100
     assert inspected["causal_graph"]["schema"] == "kungfu.episode.causal-graph/v1"
     assert inspected["causal_graph"]["degraded"] is False
@@ -619,7 +622,7 @@ def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
     fsck = storage_service.fsck(runtime_dir)
     assert fsck["ok"]
     assert fsck["status"] == "ok"
-    assert fsck["checked"]["episode_manifest_records"] == 4
+    assert fsck["checked"]["episode_manifest_records"] == 5
     assert fsck["checked"]["episodes"] == 1
     assert fsck["episode_manifest"]["authority"] == "yijinjing-journal"
 
@@ -655,7 +658,7 @@ def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
     assert bundle["manifest"]["episode_id"] == 42
     assert bundle["causal_graph"]["degraded"] is False
     assert bundle["dependencies"][0]["status"] == "declared_external"
-    assert bundle["record_count"] == 4
+    assert bundle["record_count"] == 5
     assert bundle["frame_count"] == 1
 
 

@@ -204,10 +204,20 @@ def test_c5_torn_manifest_tail_never_presents_a_partial_seal(tmp_path):
 
     journal_files = _journal_files(runtime_dir)
     assert len(journal_files) == 1
-    _zero_last_frame_length(journal_files[0])
 
-    # The torn seal is invisible; the Episode regresses to open instead of
-    # surfacing as a sealed-but-unverified object, and nothing crashes.
+    # ADR-0043 publication order: the seal appends EpisodeClosed, then the
+    # content root. Crash point A — the root append is lost: the Episode
+    # stays honestly sealed with its identity reported absent, never failed.
+    _zero_last_frame_length(journal_files[0])
+    inspected = service.episode_inspect(runtime_dir, episode_id=6)
+    assert inspected["episode"]["status"] == "ended"
+    assert inspected["content_root"]["status"] == "absent"
+    fsck = service.fsck(runtime_dir, episode_id=6)
+    assert fsck["ok"]
+
+    # Crash point B — the seal itself is torn: the Episode regresses to open
+    # instead of surfacing as a sealed-but-unverified object, nothing crashes.
+    _zero_last_frame_length(journal_files[0])
     inspected = service.episode_inspect(runtime_dir, episode_id=6)["episode"]
     assert inspected["status"] == "open"
     assert inspected["closed"] is False
