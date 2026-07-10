@@ -34,6 +34,9 @@ if defined XDG_CONFIG_HOME set "_KFC_USERCFG=%XDG_CONFIG_HOME%\kungfu\build-loca
 call :loadenv "%_KFC_USERCFG%"
 call :loadenv ".\build-local.env"
 
+rem Mark native dispatches so an installed binary never re-delegates back here.
+set "SHIFU_FROM_SHIM=1"
+
 rem -- Native launcher resolution ------------------------------------------------
 if "%SHIFU_NATIVE%"=="0" goto inscript
 
@@ -89,6 +92,29 @@ where cargo >nul 2>nul && (
 echo shifu: native launcher unavailable; falling back to the in-script bootstrap 1>&2
 
 :inscript
+rem In-script fallback versions of the launcher-owned flags (the native
+rem launcher normally answers these before we get here).
+if "%~1"=="" (
+  echo shifu - the kungfu development/build launcher ^(pinned-toolchain entrypoint^)
+  echo.
+  echo   shifu ^<task^> [args...]     run any pnpm task under the pinned toolchain
+  echo   shifu build ^| rebuild      bootstrap build ^(rebuild clears generated outputs^)
+  echo   shifu proxy ^| config ...   manage local mirror/cache config
+  echo   shifu --version            launcher version; shifu help for pnpm's own help
+  echo.
+  echo Common tasks: sync, build, check, fix, verify, dist, app  ^(docs: AGENTS.md^)
+  exit /b 2
+)
+if "%~1"=="--version" goto scriptversion
+if "%~1"=="-v" goto scriptversion
+if "%~1"=="-V" goto scriptversion
+goto richcheck
+
+:scriptversion
+echo shifu %_KFC_VER% ^(script^)
+exit /b 0
+
+:richcheck
 rem -- Delegate rich subcommands to L2 node (no pnpm, no uv). Prefer fnm node, else system node. --
 if /i "%~1"=="proxy"  goto delegate
 if /i "%~1"=="config" goto delegate

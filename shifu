@@ -103,6 +103,10 @@ kungfu_native_acquire() {
 
 kungfu_load_proxy
 
+# Mark native dispatches so an installed binary never re-delegates back to this
+# script (see the launcher's installed-binary delegation).
+export SHIFU_FROM_SHIM=1
+
 if [ "${SHIFU_NATIVE:-}" != "0" ]; then
   if [ -n "${SHIFU_BIN:-}" ] && [ -x "${SHIFU_BIN}" ]; then
     exec "${SHIFU_BIN}" "$@"
@@ -123,6 +127,26 @@ if [ "${SHIFU_NATIVE:-}" != "0" ]; then
     echo "shifu: native launcher unavailable; falling back to the in-script bootstrap" >&2
   fi
 fi
+
+# In-script fallback versions of the launcher-owned flags (the native launcher
+# normally answers these before we get here).
+case "${1:-}" in
+  "")
+    echo "shifu - the kungfu development/build launcher (pinned-toolchain entrypoint)"
+    echo ""
+    echo "  ./shifu <task> [args...]     run any pnpm task under the pinned toolchain"
+    echo "  ./shifu build | rebuild      bootstrap build (rebuild clears generated outputs)"
+    echo "  ./shifu proxy | config ...   manage local mirror/cache config"
+    echo "  ./shifu --version            launcher version; ./shifu help for pnpm's own help"
+    echo ""
+    echo "Common tasks: sync, build, check, fix, verify, dist, app  (docs: AGENTS.md)"
+    exit 2
+    ;;
+  -v | -V | --version)
+    echo "shifu $(kungfu_native_version) (script)"
+    exit 0
+    ;;
+esac
 
 # ── In-script bootstrap (requires fnm + uv installed once) ───────────────────
 # Rich subcommands delegate to L2 node (not passed to pnpm). L2 is pure node builtins and version-agnostic:

@@ -141,7 +141,12 @@ per-platform special-casing) with one binary that:
   the node L2 implementation (`shifu.mjs`), keeping config management in
   one place;
 - on Windows, loads the MSVC environment (vswhere → `vcvars64.bat`) when
-  `cl.exe` is absent.
+  `cl.exe` is absent;
+- when installed outside the repo (e.g. `cargo install --path crates/shifu
+  --root ~/.local`), delegates to the checkout's own `./shifu` entrypoint
+  whenever it runs inside one, so the repo-pinned launcher version always
+  wins; `shifu --version` reports the crate version, the baked build commit,
+  and whether the answering process is the installed or the repo launcher.
 
 It scores three yeses: it *is* the process boundary in front of everything
 else; it needs to exist before node/python are provisioned, which only a
