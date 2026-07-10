@@ -27,6 +27,7 @@ export function locate(importMetaUrl) {
 export function findBin(buildDir, name, subdir) {
   const bases = [
     path.join(buildDir, 'Release', name),
+    subdir ? path.join(buildDir, subdir, 'Release', name) : null,
     subdir ? path.join(buildDir, subdir, name) : null,
     path.join(buildDir, name),
   ].filter(Boolean);

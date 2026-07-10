@@ -27,6 +27,7 @@ const moduleNames =
       : ['shared_embedding_native_kfx.so'];
 const bases = [
   path.join(buildDir, 'Release'),
+  path.join(buildDir, 'slices', 'shared-embedding-membrane', 'Release'),
   path.join(buildDir, 'slices', 'shared-embedding-membrane'),
   buildDir,
 ];
