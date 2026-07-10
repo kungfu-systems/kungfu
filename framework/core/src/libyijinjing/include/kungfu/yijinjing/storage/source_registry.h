@@ -124,13 +124,14 @@ public:
 
   [[nodiscard]] source_registry_fold fold_typed_records() const;
 
-  // Append-only writers. Each writes one POD record to the journal and returns
-  // its JSON edge projection.
-  [[nodiscard]] nlohmann::json register_source(const source_register_options &options) const;
+  // Append-only writers. Each writes and returns the authoritative POD record;
+  // compatibility JSON is rendered by the caller's edge adapter.
+  [[nodiscard]] yijinjing::types::SourceRegistered register_source(const source_register_options &options) const;
 
-  [[nodiscard]] nlohmann::json update_head(const source_head_update_options &options) const;
+  [[nodiscard]] yijinjing::types::SourceHeadUpdated update_head(const source_head_update_options &options) const;
 
-  [[nodiscard]] nlohmann::json record_accepted_range(const accepted_range_options &options) const;
+  [[nodiscard]] yijinjing::types::AcceptedRangeRecorded
+  record_accepted_range(const accepted_range_options &options) const;
 
   // Fold the journal into the current source-registry view (JSON edge).
   [[nodiscard]] nlohmann::json list() const;

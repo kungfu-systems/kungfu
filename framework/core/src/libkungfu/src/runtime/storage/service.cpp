@@ -2676,6 +2676,54 @@ storage_cursor_view cursor_status_view(const yijinjing::types::ChannelCursorUpda
           cursor.entry_count};
 }
 
+nlohmann::json source_registry_record_json(const yijinjing::types::SourceRegistered &record) {
+  return {{"schema", yy_storage::SOURCE_REGISTRY_SCHEMA_V1},
+          {"record_kind", "source_registered"},
+          {"schema_version", record.schema_version},
+          {"source_uid", record.source_uid},
+          {"source_id", fixed_string(record.source_id)},
+          {"kind", source_kind_text(record.kind)},
+          {"coordinate", fixed_string(record.coordinate)},
+          {"head", fixed_string(record.head)},
+          {"location_uid", record.location_uid},
+          {"register_time", record.register_time}};
+}
+
+nlohmann::json source_registry_record_json(const yijinjing::types::SourceHeadUpdated &record) {
+  return {{"schema", yy_storage::SOURCE_REGISTRY_SCHEMA_V1},
+          {"record_kind", "source_head_updated"},
+          {"schema_version", record.schema_version},
+          {"source_uid", record.source_uid},
+          {"location_uid", record.location_uid},
+          {"update_time", record.update_time},
+          {"head", fixed_string(record.head)},
+          {"range",
+           {{"first_frame_uid", record.first_frame_uid},
+            {"last_frame_uid", record.last_frame_uid},
+            {"since", record.since},
+            {"until", record.until}}},
+          {"inventory_hash",
+           {{"algorithm", fixed_string(record.inventory_hash_algo)}, {"value", fixed_string(record.inventory_hash)}}}};
+}
+
+nlohmann::json source_registry_record_json(const yijinjing::types::AcceptedRangeRecorded &record) {
+  return {{"schema", yy_storage::SOURCE_REGISTRY_SCHEMA_V1},
+          {"record_kind", "accepted_range_recorded"},
+          {"schema_version", record.schema_version},
+          {"source_uid", record.source_uid},
+          {"manifest_uid", record.manifest_uid},
+          {"source_id", fixed_string(record.source_id)},
+          {"manifest_id", fixed_string(record.manifest_id)},
+          {"location_uid", record.location_uid},
+          {"accept_time", record.accept_time},
+          {"range",
+           {{"first_frame_uid", record.first_frame_uid},
+            {"last_frame_uid", record.last_frame_uid},
+            {"since", record.since},
+            {"until", record.until}}},
+          {"status", verification_status_text(record.status)}};
+}
+
 storage_status_result status_typed_impl(const storage_status_request &request) {
   const auto selection = select_provider(request.provider);
   const auto provider = provider_cache::instance().acquire(request.runtime_dir, selection.name);
@@ -3495,16 +3543,18 @@ public:
   }
 
   [[nodiscard]] nlohmann::json source_register(const storage_service_options &options) const {
-    return source_registry_store(options).register_source(parse_source_register_options(options.operation_options));
+    return source_registry_record_json(
+        source_registry_store(options).register_source(parse_source_register_options(options.operation_options)));
   }
 
   [[nodiscard]] nlohmann::json source_update_head(const storage_service_options &options) const {
-    return source_registry_store(options).update_head(parse_source_head_update_options(options.operation_options));
+    return source_registry_record_json(
+        source_registry_store(options).update_head(parse_source_head_update_options(options.operation_options)));
   }
 
   [[nodiscard]] nlohmann::json source_record_accepted_range(const storage_service_options &options) const {
-    return source_registry_store(options).record_accepted_range(
-        parse_accepted_range_options(options.operation_options));
+    return source_registry_record_json(
+        source_registry_store(options).record_accepted_range(parse_accepted_range_options(options.operation_options)));
   }
 
   [[nodiscard]] nlohmann::json source_list(const storage_service_options &options) const {

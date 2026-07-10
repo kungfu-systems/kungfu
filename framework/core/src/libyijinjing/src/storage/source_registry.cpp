@@ -296,7 +296,7 @@ source_registry_fold source_registry_store::fold_typed_records() const {
   return fold;
 }
 
-nlohmann::json source_registry_store::register_source(const source_register_options &options) const {
+SourceRegistered source_registry_store::register_source(const source_register_options &options) const {
   if (options.source_id.empty()) {
     throw std::invalid_argument("source_id is required");
   }
@@ -311,10 +311,10 @@ nlohmann::json source_registry_store::register_source(const source_register_opti
   set_fixed_string(record.head, options.head);
   auto writer = make_writer(runtime_dir_);
   writer.write_at(record.register_time, 0, record);
-  return record_json(record);
+  return record;
 }
 
-nlohmann::json source_registry_store::update_head(const source_head_update_options &options) const {
+SourceHeadUpdated source_registry_store::update_head(const source_head_update_options &options) const {
   if (options.source_id.empty()) {
     throw std::invalid_argument("source_id is required");
   }
@@ -332,10 +332,10 @@ nlohmann::json source_registry_store::update_head(const source_head_update_optio
   set_fixed_string(record.inventory_hash, options.inventory_hash);
   auto writer = make_writer(runtime_dir_);
   writer.write_at(record.update_time, 0, record);
-  return record_json(record);
+  return record;
 }
 
-nlohmann::json source_registry_store::record_accepted_range(const accepted_range_options &options) const {
+AcceptedRangeRecorded source_registry_store::record_accepted_range(const accepted_range_options &options) const {
   if (options.source_id.empty()) {
     throw std::invalid_argument("source_id is required");
   }
@@ -354,7 +354,7 @@ nlohmann::json source_registry_store::record_accepted_range(const accepted_range
   set_fixed_string(record.manifest_id, options.manifest_id);
   auto writer = make_writer(runtime_dir_);
   writer.write_at(record.accept_time, 0, record);
-  return record_json(record);
+  return record;
 }
 
 nlohmann::json source_registry_store::list() const {
