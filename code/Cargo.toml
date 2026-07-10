@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# code/ — the repo's Rust workspace ("optionality" landing zone).
+#
+# Every in-repo Rust component lives here as a workspace member; see
+# docs/rust-adoption.md for the adoption paradigm (source layout, consumption
+# modes, distribution, and the selective-exercise discipline). The first member
+# is kungfu-code, the self-contained dev/build launcher.
+
+[workspace]
+resolver = "2"
+members = ["kungfu-code"]
+
+[workspace.package]
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/kungfu-systems/kungfu"
+
+# Release binaries are small, fully static dispatchers: optimize for size and
+# strip symbols; the launcher's hot path is process orchestration, not compute.
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
