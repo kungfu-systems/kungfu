@@ -23,6 +23,10 @@ namespace {
 
 constexpr int32_t MSG_BATCH = 21001;
 constexpr int32_t MSG_ONE_MIB = 21002;
+constexpr uint32_t BATCH_FIXTURE_FRAMES =
+    KF_NATIVE_PROBE_BATCH_FRAMES * (KF_NATIVE_PROBE_WARMUP_BATCHES + KF_NATIVE_PROBE_MEASURED_BATCHES);
+constexpr uint64_t MEASURED_PAYLOAD_BYTES =
+    static_cast<uint64_t>(KF_NATIVE_PROBE_BATCH_FRAMES) * KF_NATIVE_PROBE_MEASURED_BATCHES * 256U;
 
 bool check_error_paths(const kf_embedding_api_v1 &api, const char *root) {
   if (api.context_capabilities(nullptr, nullptr) != KF_EMBEDDING_INVALID_ARGUMENT ||
@@ -82,7 +86,7 @@ bool seed(const std::string &root) {
                                                   std::make_shared<journal::noop_publisher>(), false,
                                                   std::make_shared<journal::bus>(false));
   std::vector<uint8_t> payload(256);
-  for (uint32_t index = 0; index < 1600; ++index) {
+  for (uint32_t index = 0; index < BATCH_FIXTURE_FRAMES; ++index) {
     std::fill(payload.begin(), payload.end(), static_cast<uint8_t>(index & 0xffU));
     writer->write_bytes(time::now_in_nano(), MSG_BATCH, payload, static_cast<uint32_t>(payload.size()));
   }
@@ -167,7 +171,8 @@ int main(int argc, char **argv) {
     std::fprintf(stderr, "native KFX probe failed: %d\n", status);
     return 8;
   }
-  if (report.frame_count != 1600 || report.payload_bytes != 409600 || report.payload_bytes_copied != 0 ||
+  if (report.frame_count != KF_NATIVE_PROBE_BATCH_FRAMES * KF_NATIVE_PROBE_MEASURED_BATCHES ||
+      report.payload_bytes != MEASURED_PAYLOAD_BYTES || report.payload_bytes_copied != 0 ||
       report.one_mib_payload_bytes != 1024U * 1024U || report.first_payload_address == 0 ||
       report.extension_owned_idle_bytes == 0) {
     std::fprintf(stderr, "native KFX report invariant failed\n");

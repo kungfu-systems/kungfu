@@ -7,6 +7,10 @@
 
 #include <stdint.h>
 
+#define KF_NATIVE_PROBE_BATCH_FRAMES UINT32_C(16)
+#define KF_NATIVE_PROBE_WARMUP_BATCHES UINT32_C(10)
+#define KF_NATIVE_PROBE_MEASURED_BATCHES UINT32_C(1000)
+
 #if defined(_WIN32)
 #define KF_NATIVE_PROBE_EXPORT __declspec(dllexport)
 #else

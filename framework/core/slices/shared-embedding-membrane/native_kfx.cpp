@@ -69,14 +69,26 @@ extern "C" KF_NATIVE_PROBE_EXPORT int32_t KF_EMBEDDING_CALL kf_native_probe_run_
     kungfu::embedding::reader reader(context, location);
     report->extension_owned_idle_bytes = sizeof(context) + sizeof(reader);
 
-    std::vector<uint64_t> batch_times;
-    batch_times.reserve(100);
     uint64_t checksum = 0;
-    for (int i = 0; i < 100; ++i) {
+    for (uint32_t i = 0; i < KF_NATIVE_PROBE_WARMUP_BATCHES; ++i) {
+      auto batch = reader.read_batch(KF_NATIVE_PROBE_BATCH_FRAMES);
+      if (batch.size() != KF_NATIVE_PROBE_BATCH_FRAMES || batch.payload_bytes() != 4096 ||
+          batch.payload_bytes_copied() != 0) {
+        return 12;
+      }
+      for (const auto &frame : batch) {
+        checksum ^= consume(frame);
+      }
+    }
+
+    std::vector<uint64_t> batch_times;
+    batch_times.reserve(KF_NATIVE_PROBE_MEASURED_BATCHES);
+    for (uint32_t i = 0; i < KF_NATIVE_PROBE_MEASURED_BATCHES; ++i) {
       const auto start = clock_type::now();
-      auto batch = reader.read_batch(16);
+      auto batch = reader.read_batch(KF_NATIVE_PROBE_BATCH_FRAMES);
       const auto end = clock_type::now();
-      if (batch.size() != 16 || batch.payload_bytes() != 4096 || batch.payload_bytes_copied() != 0) {
+      if (batch.size() != KF_NATIVE_PROBE_BATCH_FRAMES || batch.payload_bytes() != 4096 ||
+          batch.payload_bytes_copied() != 0) {
         return 12;
       }
       if (report->first_payload_address == 0) {

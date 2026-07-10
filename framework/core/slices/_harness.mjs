@@ -166,7 +166,22 @@ export function assertNoExtraDylibs(bin) {
 }
 
 function has(tool) {
-  const probe = isWin ? 'where' : 'command';
-  const args = isWin ? [tool] : ['-v', tool];
-  return spawnSync(probe, args, { stdio: 'ignore' }).status === 0;
+  const extensions = isWin
+    ? ['', ...(process.env.PATHEXT || '.COM;.EXE;.BAT;.CMD').split(';')]
+    : [''];
+  for (const directory of (process.env.PATH || '').split(path.delimiter)) {
+    const base = directory.replace(/^"|"$/g, '');
+    for (const extension of extensions) {
+      try {
+        fs.accessSync(
+          path.join(base, `${tool}${extension}`),
+          fs.constants.X_OK,
+        );
+        return true;
+      } catch {
+        /* next candidate */
+      }
+    }
+  }
+  return false;
 }
