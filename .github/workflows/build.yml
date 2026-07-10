@@ -49,7 +49,9 @@ jobs:
       verify-command: >-
         bash -c "KUNGFU_BUILDCHAIN_NO_OPTIONAL=1 KUNGFU_BUILDCHAIN_SOURCE_BUILD=1
         SHIFU_NATIVE=1 SHIFU_REQUIRE_MSVC=1 KUNGFU_FUZZ_SECONDS=90
-        ./shifu verify --fuzz"
+        ./shifu verify --fuzz &&
+        ./shifu episode:qualify:release -- --output
+        product/release/qualification/episode-release-evidence.json"
       release-candidate: true
       artifact-transfer-mode: s3-to-github-artifacts
       artifact-retention-days: 14

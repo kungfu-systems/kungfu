@@ -47,6 +47,37 @@ hatch; the checked-in Buildchain and alpha/release commands do not use it.
 accumulation and 10k contention workloads explicitly for periodic or
 release-readiness qualification.
 
+## Release evidence
+
+Run the complete release profile and emit one retained evidence envelope with:
+
+```sh
+./shifu episode:qualify:release -- --output \
+  product/release/qualification/episode-release-evidence.json
+```
+
+The `kungfu.episode.release-evidence/v1` envelope embeds Trust Report v2 and
+binds it to the exact Git commit/tree, clean-source state, canonical profile
+digest, platform/hardware facts, pinned Shifu/toolchain facts, and hashes of the
+native runtime artifacts actually exercised. Its hard gates require all scale
+scenarios, correctness counters, fresh-process/fsck/recovery facts, semantic
+oracle histories, and required semantic dimensions to pass. Performance values
+remain trend evidence; v1 adopts no absolute throughput SLO.
+
+Verify a retained envelope without rerunning the workload:
+
+```sh
+./shifu episode:qualify:release -- verify \
+  --evidence product/release/qualification/episode-release-evidence.json
+```
+
+Add `--check-runtime` only when the exact built runtime is still present and
+should be compared byte-for-byte with the recorded artifact manifest. The
+alpha/release Build workflow and manual workflow dispatch run the release path
+on the existing Buildchain platform matrix and retain the evidence beside the
+product artifacts. Development PRs continue to run only the bounded source and
+smoke gates.
+
 ## Semantic evidence
 
 The independent `semantic_oracle.py` models externally observable lifecycle,
@@ -96,3 +127,6 @@ open Episode, or fresh-process mismatch fails the scenario.
   capability contract.
 - `schemas/trust-report-v2.schema.json` validates current reports; v1 remains
   checked in so historical evidence stays readable.
+- `schemas/release-evidence-v1.schema.json` validates the retained release
+  envelope; `release_evidence.mjs` additionally verifies all embedded digests
+  and hard-gate consistency.
