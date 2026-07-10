@@ -43,12 +43,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(flatbuffers REQUIRED)
 find_package(SQLite3 REQUIRED)
 
-set(_view_dir ${CMAKE_CURRENT_SOURCE_DIR}/../src/libkungfu)
-set(_view_src ${_view_dir}/src/view/schema.cpp)
-set(_view_inc ${_view_dir}/include)
-
-# entry basename -> fuzz_<name>.cpp; kept in lockstep with the checked-in targets
-set(_targets compile_schema from_bytes bind_frame)
+# Whole libkungfu public include — covers kungfu::view today and any other core
+# module a future fuzz target drives (e.g. a storage/episode import surface).
+set(_lk_dir ${CMAKE_CURRENT_SOURCE_DIR}/../src/libkungfu)
+set(_lk_inc ${_lk_dir}/include)
+set(_view_src ${_lk_dir}/src/view/schema.cpp)
 
 # The libFuzzer tier only materializes when the active compiler actually ships
 # libFuzzer; otherwise skip with a message (Apple clang has none).
@@ -84,24 +83,42 @@ else()
 endif()
 set(_fuzz_flags -fsanitize=fuzzer,address,undefined -fno-omit-frame-pointer)
 
-foreach(t ${_targets})
-  set(_entry ${CMAKE_CURRENT_SOURCE_DIR}/fuzz_${t}.cpp)
+# kungfu_add_fuzz(<name> <module .cpp under test> [more .cpp ...])
+#   Builds fuzz/fuzz_<name>.cpp + the module source(s) two ways:
+#     KUNGFU_WITH_SANITIZERS -> fuzz_<name>_sanitize  (StandaloneFuzzMain corpus
+#                                                      replay under ASan/UBSan, any compiler)
+#     KUNGFU_WITH_FUZZ       -> fuzz_<name>           (libFuzzer, when available)
+#   Adding a new untrusted-input surface is one row here + a fuzz_<name>.cpp entry +
+#   a corpus/<name>/ seed dir; scripts/verify.mjs discovers targets from fuzz_*.cpp,
+#   so no wiring change is needed beyond this file.
+function(kungfu_add_fuzz _name)
+  set(_entry ${CMAKE_CURRENT_SOURCE_DIR}/fuzz_${_name}.cpp)
+  set(_mod_srcs ${ARGN})
 
   if (KUNGFU_WITH_SANITIZERS)
-    add_executable(fuzz_${t}_sanitize ${_entry} ${CMAKE_CURRENT_SOURCE_DIR}/StandaloneFuzzMain.cpp ${_view_src})
-    target_include_directories(fuzz_${t}_sanitize PRIVATE ${_view_inc})
-    target_link_libraries(fuzz_${t}_sanitize PRIVATE flatbuffers::flatbuffers SQLite::SQLite3)
-    target_compile_options(fuzz_${t}_sanitize PRIVATE ${_san_compile})
+    add_executable(fuzz_${_name}_sanitize ${_entry} ${CMAKE_CURRENT_SOURCE_DIR}/StandaloneFuzzMain.cpp ${_mod_srcs})
+    target_include_directories(fuzz_${_name}_sanitize PRIVATE ${_lk_inc})
+    target_link_libraries(fuzz_${_name}_sanitize PRIVATE flatbuffers::flatbuffers SQLite::SQLite3)
+    target_compile_options(fuzz_${_name}_sanitize PRIVATE ${_san_compile})
     if (_san_link)
-      target_link_options(fuzz_${t}_sanitize PRIVATE ${_san_link})
+      target_link_options(fuzz_${_name}_sanitize PRIVATE ${_san_link})
     endif()
   endif()
 
   if (_have_libfuzzer)
-    add_executable(fuzz_${t} ${_entry} ${_view_src})
-    target_include_directories(fuzz_${t} PRIVATE ${_view_inc})
-    target_link_libraries(fuzz_${t} PRIVATE flatbuffers::flatbuffers SQLite::SQLite3)
-    target_compile_options(fuzz_${t} PRIVATE ${_fuzz_flags})
-    target_link_options(fuzz_${t} PRIVATE ${_fuzz_flags})
+    add_executable(fuzz_${_name} ${_entry} ${_mod_srcs})
+    target_include_directories(fuzz_${_name} PRIVATE ${_lk_inc})
+    target_link_libraries(fuzz_${_name} PRIVATE flatbuffers::flatbuffers SQLite::SQLite3)
+    target_compile_options(fuzz_${_name} PRIVATE ${_fuzz_flags})
+    target_link_options(fuzz_${_name} PRIVATE ${_fuzz_flags})
   endif()
-endforeach()
+endfunction()
+
+# ── Registered fuzz targets ─────────────────────────────────────────
+# kungfu::view — the sole FlatBuffers access module (ADR-0039): the three
+# untrusted-input entries each compile the view TU directly (no runtime).
+kungfu_add_fuzz(compile_schema ${_view_src})
+kungfu_add_fuzz(from_bytes     ${_view_src})
+kungfu_add_fuzz(bind_frame     ${_view_src})
+# Future untrusted-input surfaces plug in with one row, e.g.:
+#   kungfu_add_fuzz(episode_import ${_lk_dir}/src/storage/episode/import.cpp)

@@ -794,7 +794,17 @@ function main() {
     const core = path.join(ROOT, 'framework', 'core');
     const fuzzSrc = path.join(core, 'fuzz');
     const prefix = conanPrefix(core);
-    const targets = ['compile_schema', 'from_bytes', 'bind_frame'];
+    // Discover fuzz targets from fuzz_<name>.cpp so a new untrusted-input surface
+    // (registered via kungfu_add_fuzz in fuzz/CMakeLists.txt + a corpus/<name>/)
+    // is picked up here with no edit. StandaloneFuzzMain.cpp is not a fuzz_*.cpp.
+    const targets = fs.existsSync(fuzzSrc)
+      ? fs
+          .readdirSync(fuzzSrc)
+          .map((f) => /^fuzz_(.+)\.cpp$/.exec(f))
+          .filter((m) => m)
+          .map((m) => m[1])
+          .sort()
+      : [];
     /** @param {import('child_process').SpawnSyncReturns<string>} r */
     const tail3 = (r) =>
       `${r.stdout || ''}${r.stderr || ''}`

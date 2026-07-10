@@ -117,6 +117,14 @@ std::optional<int> schema_handle::bind_frame(sqlite3_stmt *st, const std::vector
   const flatbuffers::Table *root = flatbuffers::GetAnyRoot(buf);
   int idx = 1;
   for (const auto &c : cols) {
+    // Spatial safety: a col_plan cached against a larger/older schema (e.g. one
+    // planned before an evolve() shrank the field set) can carry a field_index
+    // past the current schema's fields. Bounds-check before fields->Get so the
+    // sole FB access path never issues an unchecked out-of-range reflection read
+    // (ADR-0039). A stale plan can't bind this frame correctly, so skip it whole,
+    // like a failed verify.
+    if (c.field_index >= fields->size())
+      return std::nullopt;
     const reflection::Field *f = fields->Get(c.field_index);
     switch (c.kind) {
     case bind_kind::as_text: {
@@ -140,7 +148,8 @@ bool schema_handle::verify_table(const uint8_t *buf, size_t len) const {
   if (!bfbs_ || buf == nullptr)
     return false;
   const reflection::Schema *s = schema_of(*bfbs_);
-  flatbuffers::Verifier v(buf, len);
+  // reflection Verify constructs its own Verifier over (buf, len); no separate
+  // flatbuffers::Verifier needed here.
   return flatbuffers::Verify(*s, *s->root_table(), buf, len);
 }
 
@@ -185,8 +194,13 @@ std::vector<std::string> alter_add_missing(sqlite3 *db, const std::vector<col_pl
   std::vector<std::string> existing;
   sqlite3_stmt *st = nullptr;
   sqlite3_prepare_v2(db, ("PRAGMA table_info(" + tbl + ")").c_str(), -1, &st, nullptr);
-  while (sqlite3_step(st) == SQLITE_ROW)
-    existing.push_back(reinterpret_cast<const char *>(sqlite3_column_text(st, 1)));
+  while (sqlite3_step(st) == SQLITE_ROW) {
+    // PRAGMA table_info.name is never NULL in practice, but guard the cast so a
+    // NULL text column can never construct std::string(nullptr) (UB).
+    const auto *name = sqlite3_column_text(st, 1);
+    if (name != nullptr)
+      existing.push_back(reinterpret_cast<const char *>(name));
+  }
   sqlite3_finalize(st);
   std::vector<std::string> added;
   for (const auto &c : cols) {

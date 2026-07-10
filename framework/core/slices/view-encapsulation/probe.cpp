@@ -151,6 +151,21 @@ int main() {
   auto added = view::alter_add_missing(db, full2, "quote_full");
   assert(added.size() == 1 && added[0] == "volume");
 
+  // spatial safety (stale plan): a col_plan referencing a field beyond the schema
+  // it is bound against — e.g. a 6-field plan applied to a 5-field schema — must
+  // bounds-check field_index, never issue an out-of-range fields->Get. bind_frame
+  // skips such a frame (nullopt) instead of an OOB reflection read.
+  {
+    auto big6 = view::schema_handle::from_bytes(make_bfbs(FBS2)).plan_columns(false);
+    assert(big6.size() == 6);                                      // field indices 0..5
+    auto small5 = view::schema_handle::from_bytes(make_bfbs(FBS)); // 5 fields, indices 0..4
+    const std::string sd = make_data(FBS, JSON);
+    sqlite3_stmt *stf = nullptr;
+    assert(sqlite3_prepare_v2(db, "SELECT ?,?,?,?,?,?", -1, &stf, nullptr) == SQLITE_OK);
+    assert(!small5.bind_frame(stf, big6, reinterpret_cast<const uint8_t *>(sd.data()), sd.size()).has_value());
+    sqlite3_finalize(stf);
+  }
+
   sqlite3_close(db);
   std::printf("OK: kungfu::view projection roundtrip (thin+full+evolve+verify) holds; no runtime linked\n");
   return 0;
