@@ -5,8 +5,8 @@
   "witnessKind": "prebuild",
   "supportLevel": "release",
   "source": {
-    "cwd": "/Users/dkr/Worktrees/kungfu/feature/kfd2-product-claims-migration",
-    "sourceSha": "1946346530db0053af8a28e6612e5d108af44969",
+    "cwd": "/Users/dkr/Worktrees/kungfu/fix/buildchain-train-validation",
+    "sourceSha": "155c1c726a688a5dccae517d44adbe993247fafd",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
     "registryDigest": "sha256:75b842671319953a3dd7543cc21afd2c46a494bc0a09897981b1e5bf76a4e017"
   },
