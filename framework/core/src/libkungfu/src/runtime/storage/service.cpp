@@ -993,6 +993,13 @@ episode_store_with_provider episode_ref_store(const storage_service_options &opt
   return {std::move(provider), std::move(store)};
 }
 
+episode_store_with_provider episode_ref_store(const storage_fsck_request &request) {
+  auto provider = provider_cache::instance().acquire(request.runtime_dir, request.provider);
+  auto store = yy_storage::episode_manifest_store(request.runtime_dir);
+  store.set_content_store(&provider->content_store());
+  return {std::move(provider), std::move(store)};
+}
+
 nlohmann::json workspace_episode_layout(const storage_service_options &options, const storage_provider &provider) {
   const auto runtime = absolute_normalized(options.runtime_dir);
   const auto home = runtime_home_path(options);
@@ -1415,12 +1422,12 @@ storage_query_result query_journal_projection(const storage_query_request &reque
 // option because it reads every referenced journal. A sealed (Ended) Episode
 // with a missing or mismatched frame is failed; an open/aborted Episode is
 // degraded with the exact missing side reported.
-episode_frame_verification verify_episode_frame_claims(const storage_service_options &options) {
+episode_frame_verification verify_episode_frame_claims(const storage_fsck_request &request) {
   namespace yjj = kungfu::yijinjing;
   episode_frame_verification result;
-  const auto fold = episode_store(options).fold_typed_records();
+  const auto fold = yy_storage::episode_manifest_store(request.runtime_dir).fold_typed_records();
 
-  auto locator = std::make_shared<yjj::data::locator>(options.runtime_dir, yy_enums::mode::LIVE);
+  auto locator = std::make_shared<yjj::data::locator>(request.runtime_dir, yy_enums::mode::LIVE);
   std::unordered_map<uint32_t, yjj::data::location_ptr> locations_by_uid;
   for (const auto &location : locator->list_locations("*", "*", "*", "*")) {
     locations_by_uid.emplace(location->uid, location);
@@ -1433,7 +1440,7 @@ episode_frame_verification verify_episode_frame_claims(const storage_service_opt
   };
   std::map<std::pair<uint32_t, uint32_t>, std::vector<claim_context>> journals;
   for (const auto &[episode_id, view] : fold.episodes) {
-    if (options.episode_id != 0 && episode_id != options.episode_id) {
+    if (request.episode_id != 0 && episode_id != request.episode_id) {
       continue;
     }
     const bool sealed = view.closed && view.close.status == yy_enums::EpisodeStatus::Ended;
@@ -1952,75 +1959,57 @@ nlohmann::json episode_qualification_json(const episode_qualification_result &re
           {"repair_prerequisites", repair_prerequisites}};
 }
 
+storage_fsck_result episode_fsck_typed_impl(const storage_fsck_request &request) {
+  storage_fsck_result result{};
+  result.scope = storage_fsck_scope::Episode;
+  if (request.episode_id != 0)
+    result.episode_id = request.episode_id;
+
+  const auto scoped = episode_ref_store(request);
+  result.episode_manifest = scoped.store.fsck_typed(request.episode_id);
+  result.checked.episode_manifest_records = result.episode_manifest.episode_manifest_records;
+  result.checked.episodes = result.episode_manifest.episodes;
+  result.checked.projection_indexes = 1;
+  for (const auto &error : result.episode_manifest.errors)
+    result.issues.push_back({"error", error.code, "episode-manifest", error});
+  for (const auto &warning : result.episode_manifest.warnings)
+    result.issues.push_back({"warning", warning.code, "episode-manifest", warning});
+
+  const auto projection = episode_manifest_projection(request.runtime_dir);
+  storage_projection_status_view projection_status{"episode-manifest-sqlite", projection.sqlite_path(), true,
+                                                   projection.verify_typed()};
+  if (projection_status.verification.status == "degraded") {
+    result.degraded = true;
+    result.issues.push_back({"warning", "projection_drift", projection_status.name, projection_status});
+  } else if (projection_status.verification.status == "absent") {
+    result.issues.push_back({"warning", "projection_absent", projection_status.name, projection_status});
+  }
+  result.projections.push_back(projection_status);
+
+  if (request.verify_frames) {
+    result.frame_verification = verify_episode_frame_claims(request);
+    result.checked.episode_frames_verified = result.frame_verification->verified;
+    result.degraded = result.degraded || result.frame_verification->degraded;
+    for (const auto &error : result.frame_verification->errors)
+      result.issues.push_back({"error", error.code, "episode-frames", error});
+    for (const auto &warning : result.frame_verification->warnings)
+      result.issues.push_back({"warning", warning.code, "episode-frames", warning});
+  }
+  result.degraded = result.degraded || result.episode_manifest.degraded;
+  result.ok = std::none_of(result.issues.begin(), result.issues.end(),
+                           [](const auto &issue) { return issue.severity == "error"; });
+  result.status = !result.ok ? "failed" : (result.degraded ? "degraded" : "ok");
+  if (request.episode_id != 0) {
+    result.qualification =
+        make_episode_qualification(request.episode_id, result.episode_manifest,
+                                   result.frame_verification.has_value() ? &*result.frame_verification : nullptr,
+                                   result.projections.front().verification);
+  }
+  return result;
+}
+
 nlohmann::json episode_fsck_impl(const storage_service_options &options) {
-  const auto scoped = episode_ref_store(options);
-  const auto typed_episode_report = scoped.store.fsck_typed(options.episode_id);
-  const auto episode_report = yy_storage::render_episode_fsck_result(typed_episode_report);
-  const auto checked = object_or_empty(episode_report, "checked");
-  nlohmann::json report = {
-      {"ok", episode_report.value("ok", false)},
-      {"status", episode_report.value("status", episode_report.value("ok", false) ? "ok" : "failed")},
-      {"scope", "episode"},
-      {"episode_id", options.episode_id == 0 ? nlohmann::json(nullptr) : nlohmann::json(options.episode_id)},
-      {"degraded", episode_report.value("degraded", false)},
-      {"errors", episode_report.value("errors", nlohmann::json::array())},
-      {"warnings", episode_report.value("warnings", nlohmann::json::array())},
-      {"checked",
-       {{"sources", 0},
-        {"manifests", 0},
-        {"payloads", 0},
-        {"schemas", 0},
-        {"accepted_ranges", 0},
-        {"source_records", 0},
-        {"projection_indexes", 1},
-        {"sqlite_projection_rows", 0},
-        {"orphan_payloads", 0},
-        {"episode_manifest_records", checked.value("episode_manifest_records", 0)},
-        {"episodes", checked.value("episodes", 0)}}},
-      {"episode_manifest", episode_report},
-      {"projections", nlohmann::json::array({{{"name", "episode-manifest"},
-                                              {"schema", yy_storage::EPISODE_MANIFEST_SCHEMA_V1},
-                                              {"authority", "yijinjing-journal"},
-                                              {"path", "journal/system/storage/episode-manifest/live/*.journal"},
-                                              {"rebuildable", false}},
-                                             {{"name", "episode-manifest-sqlite"},
-                                              {"schema", EPISODE_MANIFEST_PROJECTION_SCHEMA_V1},
-                                              {"authority", "yijinjing-journal"},
-                                              {"path", "storage/projections/episode-manifest.sqlite"},
-                                              {"rebuildable", true}}})}};
-  // ADR-0041 point 5: the SQLite projection is a derived view verified
-  // against the journal; drift degrades fsck, it never fails the journal.
-  const auto projection = episode_manifest_projection(options.runtime_dir);
-  const auto typed_projection_report = projection.verify_typed();
-  auto projection_report = projection_verification_json(typed_projection_report);
-  report["episode_projection"] = projection_report;
-  if (projection_report.value("status", std::string("ok")) == "degraded" &&
-      report.value("status", std::string("ok")) == "ok") {
-    report["status"] = "degraded";
-    report["degraded"] = true;
-  }
-  std::optional<episode_frame_verification> frame_verification;
-  if (bool_or(options.operation_options, "verify_frames", false)) {
-    frame_verification = verify_episode_frame_claims(options);
-    for (const auto &error : frame_verification->errors) {
-      report["errors"].push_back(render_episode_frame_verification_issue(error));
-    }
-    for (const auto &warning : frame_verification->warnings) {
-      report["warnings"].push_back(render_episode_frame_verification_issue(warning));
-    }
-    report["checked"]["episode_frames_verified"] = frame_verification->verified;
-    const bool ok = report["errors"].empty();
-    const bool degraded = report.value("degraded", false) || frame_verification->degraded;
-    report["ok"] = ok;
-    report["degraded"] = degraded;
-    report["status"] = ok ? (degraded ? "degraded" : "ok") : "failed";
-  }
-  if (options.episode_id != 0) {
-    report["qualification"] = episode_qualification_json(make_episode_qualification(
-        options.episode_id, typed_episode_report, frame_verification.has_value() ? &*frame_verification : nullptr,
-        typed_projection_report));
-  }
-  return report;
+  return render_storage_fsck_result(default_storage_service().fsck(parse_storage_fsck_request(options)));
 }
 
 nlohmann::json episode_export_bundle_impl(const storage_service_options &options) {
@@ -3057,7 +3046,124 @@ nlohmann::json fsck_error_report(const storage_service_options &options, const s
   };
 }
 
-nlohmann::json fsck_impl(const storage_service_options &options) {
+storage_fsck_result fsck_typed_impl(const storage_fsck_request &request) {
+  if (request.scope == storage_fsck_scope::Episode)
+    return episode_fsck_typed_impl(request);
+
+  storage_fsck_result result{};
+  result.scope = request.source_id.empty() ? storage_fsck_scope::All : storage_fsck_scope::Source;
+  if (!request.source_id.empty())
+    result.source_id = request.source_id;
+  result.checked.projection_indexes = 2;
+
+  const auto status =
+      status_typed_impl({request.runtime_dir, request.provider, request.provider_config_source, request.source_id});
+  std::vector<storage_source_registry_view> sources;
+  for (const auto &source : status.sources) {
+    if (source.registered)
+      sources.push_back(source);
+  }
+  result.checked.sources = sources.size();
+  if (!request.source_id.empty() && sources.empty()) {
+    storage_fsck_cross_issue detail{};
+    detail.source_id = request.source_id;
+    result.issues.push_back({"error", "source_missing", "source-registry", detail});
+    result.ok = false;
+    result.status = "failed";
+    return result;
+  }
+
+  result.source_registry = registry_store(request.runtime_dir).fsck_typed(request.source_id);
+  for (const auto &error : result.source_registry.errors) {
+    if (error.code != "source_missing")
+      result.issues.push_back({"error", error.code, "source-registry", error});
+  }
+  for (const auto &warning : result.source_registry.warnings)
+    result.issues.push_back({"warning", warning.code, "source-registry", warning});
+
+  const auto catalog_records = catalog_store(request.runtime_dir).read_typed_records();
+  std::unordered_map<uint64_t, const yijinjing::types::ImportManifestAccepted *> latest_manifests;
+  for (const auto &manifest : catalog_records.manifests)
+    latest_manifests[manifest.source_uid] = &manifest;
+  uint64_t sources_with_manifests = 0;
+  for (const auto &source : sources) {
+    const auto iter = latest_manifests.find(source.source_uid);
+    if (iter == latest_manifests.end()) {
+      storage_fsck_cross_issue detail{};
+      detail.source_id = source.source_id;
+      result.issues.push_back({"error", "manifest_missing", "manifest-catalog", detail});
+      continue;
+    }
+    ++sources_with_manifests;
+    const auto catalog_head = fixed_string(iter->second->source_head);
+    if (source.head.has_value() && !source.head->empty() && *source.head != catalog_head) {
+      storage_fsck_cross_issue detail{};
+      detail.source_id = source.source_id;
+      detail.expected = catalog_head;
+      detail.actual = *source.head;
+      result.issues.push_back({"error", "source_registry_drift", "source-registry", detail});
+    }
+    result.checked.accepted_ranges += source.accepted_range_count;
+  }
+  result.checked.source_records = sources_with_manifests;
+
+  auto provider = provider_cache::instance().acquire(request.runtime_dir, request.provider);
+  if (sources_with_manifests > 0 || request.source_id.empty()) {
+    result.manifest_catalog =
+        catalog_store(request.runtime_dir).fsck_typed(request.source_id, provider->content_store());
+    for (const auto &error : result.manifest_catalog->errors) {
+      if (error.code != "source_missing")
+        result.issues.push_back({"error", error.code, "manifest-catalog", error});
+    }
+    for (const auto &warning : result.manifest_catalog->warnings)
+      result.issues.push_back({"warning", warning.code, "manifest-catalog", warning});
+    result.degraded = result.degraded || result.manifest_catalog->degraded;
+    result.checked.manifests = result.manifest_catalog->manifests;
+    result.checked.manifest_entries = result.manifest_catalog->manifest_entries;
+    result.checked.payloads = result.manifest_catalog->payloads;
+    result.checked.entries_documents = result.manifest_catalog->entries_documents;
+  }
+
+  if (request.source_id.empty()) {
+    const auto referenced = referenced_payload_hashes(request.runtime_dir);
+    for (const auto &payload : provider->all_payloads()) {
+      if (std::find(referenced.begin(), referenced.end(), payload.digest) == referenced.end()) {
+        ++result.checked.orphan_payloads;
+        storage_fsck_cross_issue detail{};
+        detail.path = payload.uri;
+        detail.payload_hash = payload.digest;
+        result.issues.push_back({"warning", "orphan_payload", "content-store", detail});
+      }
+    }
+  }
+
+  const auto scoped = episode_ref_store(request);
+  result.episode_manifest = scoped.store.fsck_typed();
+  result.checked.episode_manifest_records = result.episode_manifest.episode_manifest_records;
+  result.checked.episodes = result.episode_manifest.episodes;
+  for (const auto &error : result.episode_manifest.errors)
+    result.issues.push_back({"error", error.code, "episode-manifest", error});
+  for (const auto &warning : result.episode_manifest.warnings)
+    result.issues.push_back({"warning", warning.code, "episode-manifest", warning});
+  result.degraded = result.degraded || result.episode_manifest.degraded;
+
+  result.projections = {source_registry_projection_status(request.runtime_dir),
+                        manifest_catalog_projection_status(request.runtime_dir)};
+  for (const auto &projection : result.projections) {
+    if (projection.verification.status == "absent") {
+      result.issues.push_back({"warning", "projection_absent", projection.name, projection});
+    } else if (projection.verification.status == "degraded") {
+      result.degraded = true;
+      result.issues.push_back({"warning", "projection_drift", projection.name, projection});
+    }
+  }
+  result.ok = std::none_of(result.issues.begin(), result.issues.end(),
+                           [](const auto &issue) { return issue.severity == "error"; });
+  result.status = !result.ok ? "failed" : (result.degraded ? "degraded" : "ok");
+  return result;
+}
+
+nlohmann::json fsck_legacy_impl(const storage_service_options &options) {
   if (options.scope == "episode") {
     return episode_fsck_impl(options);
   }
@@ -3236,6 +3342,10 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
   report["degraded"] = degraded;
   report["status"] = !report["ok"].get<bool>() ? "failed" : (degraded ? "degraded" : "ok");
   return report;
+}
+
+nlohmann::json fsck_impl(const storage_service_options &options) {
+  return render_storage_fsck_result(default_storage_service().fsck(parse_storage_fsck_request(options)));
 }
 
 storage_rebuild_index_result rebuild_index_typed_impl(const storage_rebuild_index_request &request) {
@@ -3749,6 +3859,10 @@ public:
     return status_typed_impl(request);
   }
 
+  [[nodiscard]] storage_fsck_result fsck(const storage_fsck_request &request) const override {
+    return fsck_typed_impl(request);
+  }
+
   [[nodiscard]] storage_query_result query(const storage_query_request &request) const override {
     return query_journal_projection(request);
   }
@@ -4065,6 +4179,188 @@ storage_query_kind parse_storage_query_kind(const std::string &kind) {
 }
 
 const storage_service &default_storage_service() { return typed_storage_service_instance(); }
+
+std::string storage_fsck_scope_name(storage_fsck_scope scope) {
+  switch (scope) {
+  case storage_fsck_scope::All:
+    return "all";
+  case storage_fsck_scope::Source:
+    return "source";
+  case storage_fsck_scope::Episode:
+    return "episode";
+  }
+  return "all";
+}
+
+storage_fsck_request parse_storage_fsck_request(const storage_service_options &options) {
+  storage_fsck_request request{};
+  request.runtime_dir = options.runtime_dir;
+  request.provider = options.provider;
+  request.provider_config_source = options.provider_config_source;
+  request.source_id = options.source_id;
+  request.episode_id = options.episode_id;
+  request.verify_frames = bool_or(options.operation_options, "verify_frames", false);
+  request.scope = options.scope == "episode"
+                      ? storage_fsck_scope::Episode
+                      : (options.source_id.empty() ? storage_fsck_scope::All : storage_fsck_scope::Source);
+  return request;
+}
+
+nlohmann::json render_storage_fsck_issue(const storage_fsck_issue &issue, storage_fsck_scope scope) {
+  auto rendered = std::visit(
+      [&issue, scope](const auto &detail) {
+        using detail_t = std::decay_t<decltype(detail)>;
+        if constexpr (std::is_same_v<detail_t, storage_fsck_cross_issue>) {
+          nlohmann::json row = {{"code", issue.code}};
+          if (detail.source_id.has_value())
+            row["source_id"] = *detail.source_id;
+          if (detail.path.has_value())
+            row["path"] = *detail.path;
+          if (detail.payload_hash.has_value())
+            row["payload_hash"] = *detail.payload_hash;
+          if (detail.expected.has_value())
+            row["expected"] = *detail.expected;
+          if (detail.actual.has_value())
+            row["actual"] = *detail.actual;
+          if (detail.reason.has_value())
+            row["reason"] = *detail.reason;
+          return row;
+        } else if constexpr (std::is_same_v<detail_t, yy_storage::source_registry_fsck_issue>) {
+          nlohmann::json row = {{"code", detail.code}, {"projection", "source-registry"}};
+          if (detail.source_uid.has_value())
+            row["source_uid"] = *detail.source_uid;
+          if (detail.source_id.has_value())
+            row["source_id"] = *detail.source_id;
+          if (detail.count.has_value())
+            row["count"] = *detail.count;
+          return row;
+        } else if constexpr (std::is_same_v<detail_t, yy_storage::manifest_catalog_fsck_issue>) {
+          nlohmann::json row = {{"code", detail.code}};
+          if (detail.source_id.has_value())
+            row["source_id"] = *detail.source_id;
+          if (detail.manifest_id.has_value())
+            row["manifest_id"] = *detail.manifest_id;
+          if (detail.error.has_value())
+            row["error"] = *detail.error;
+          if (detail.subject.has_value())
+            row["subject"] = *detail.subject;
+          if (detail.payload_hash.has_value())
+            row["payload_hash"] = *detail.payload_hash;
+          if (detail.state.has_value())
+            row["state"] = *detail.state;
+          if (detail.kind.has_value())
+            row["kind"] = *detail.kind;
+          if (detail.entry_source_id.has_value())
+            row["entry_source_id"] = *detail.entry_source_id;
+          if (detail.manifest_uid.has_value())
+            row["manifest_uid"] = *detail.manifest_uid;
+          if (detail.entry_index.has_value())
+            row["entry_index"] = *detail.entry_index;
+          if (detail.expected.has_value())
+            row["expected"] = *detail.expected;
+          if (detail.actual.has_value())
+            row["actual"] = *detail.actual;
+          if (detail.expected_text.has_value())
+            row["expected"] = *detail.expected_text;
+          if (detail.actual_text.has_value())
+            row["actual"] = *detail.actual_text;
+          if (detail.intentional.has_value())
+            row["intentional"] = *detail.intentional;
+          return row;
+        } else if constexpr (std::is_same_v<detail_t, yy_storage::episode_fsck_issue>) {
+          auto row = yy_storage::render_episode_fsck_issue(detail);
+          if (scope != storage_fsck_scope::Episode)
+            row["projection"] = "episode-manifest";
+          return row;
+        } else if constexpr (std::is_same_v<detail_t, episode_frame_verification_issue>) {
+          return render_episode_frame_verification_issue(detail);
+        } else {
+          nlohmann::json row = {{"code", issue.code}, {"projection", detail.name}, {"path", detail.path}};
+          if (issue.code == "projection_absent") {
+            row["reason"] = "projection is derived and can be rebuilt";
+          } else {
+            row["drift"] = nlohmann::json::array();
+            for (const auto &drift : detail.verification.drift) {
+              row["drift"].push_back({{"table", drift.table},
+                                      {"projection_rows", drift.projection_rows},
+                                      {"journal_distinct", drift.journal_distinct}});
+            }
+          }
+          return row;
+        }
+      },
+      issue.detail);
+  return rendered;
+}
+
+nlohmann::json render_storage_fsck_result(const storage_fsck_result &result) {
+  nlohmann::json errors = nlohmann::json::array();
+  nlohmann::json warnings = nlohmann::json::array();
+  for (const auto &issue : result.issues) {
+    auto rendered = render_storage_fsck_issue(issue, result.scope);
+    (issue.severity == "error" ? errors : warnings).push_back(std::move(rendered));
+  }
+  nlohmann::json checked = {{"sources", result.checked.sources},
+                            {"manifests", result.checked.manifests},
+                            {"accepted_ranges", result.checked.accepted_ranges},
+                            {"source_records", result.checked.source_records},
+                            {"projection_indexes", result.checked.projection_indexes},
+                            {"orphan_payloads", result.checked.orphan_payloads},
+                            {"episode_manifest_records", result.checked.episode_manifest_records},
+                            {"episodes", result.checked.episodes}};
+  if (result.scope == storage_fsck_scope::Episode) {
+    checked["payloads"] = 0;
+    checked["schemas"] = 0;
+    checked["sqlite_projection_rows"] = 0;
+  } else {
+    checked["manifest_entries"] = result.checked.manifest_entries;
+    checked["payloads"] = result.checked.payloads;
+    checked["entries_documents"] = result.checked.entries_documents;
+  }
+  if (result.frame_verification.has_value())
+    checked["episode_frames_verified"] = result.checked.episode_frames_verified;
+
+  nlohmann::json report = {{"ok", result.ok},
+                           {"status", result.status},
+                           {"scope", storage_fsck_scope_name(result.scope)},
+                           {"degraded", result.degraded},
+                           {"errors", std::move(errors)},
+                           {"warnings", std::move(warnings)},
+                           {"checked", std::move(checked)},
+                           {"episode_manifest", yy_storage::render_episode_fsck_result(result.episode_manifest)}};
+  if (result.scope == storage_fsck_scope::Episode) {
+    report["episode_id"] = result.episode_id.has_value() ? nlohmann::json(*result.episode_id) : nlohmann::json(nullptr);
+    const auto &projection = result.projections.front();
+    report["episode_projection"] = projection_verification_json(projection.verification);
+    report["projections"] = nlohmann::json::array({{{"name", "episode-manifest"},
+                                                    {"schema", yy_storage::EPISODE_MANIFEST_SCHEMA_V1},
+                                                    {"authority", "yijinjing-journal"},
+                                                    {"path", "journal/system/storage/episode-manifest/live/*.journal"},
+                                                    {"rebuildable", false}},
+                                                   {{"name", "episode-manifest-sqlite"},
+                                                    {"schema", EPISODE_MANIFEST_PROJECTION_SCHEMA_V1},
+                                                    {"authority", "yijinjing-journal"},
+                                                    {"path", "storage/projections/episode-manifest.sqlite"},
+                                                    {"rebuildable", true}}});
+    report["repair_policy"] = {{"mode", "plan-fetch-apply"},
+                               {"auto_repair", false},
+                               {"destructive", false},
+                               {"projection_rebuild",
+                                {{"authority", "yijinjing-journal"},
+                                 {"projection", "sqlite"},
+                                 {"operation", "episode_projection_rebuild"},
+                                 {"rebuildable", true}}}};
+    if (result.qualification.has_value())
+      report["qualification"] = episode_qualification_json(*result.qualification);
+  } else {
+    report["source_id"] = result.source_id.has_value() ? nlohmann::json(*result.source_id) : nlohmann::json(nullptr);
+    report["authority"] = result.authority;
+    report["projections"] = nlohmann::json::array();
+    for (const auto &projection : result.projections)
+      report["projections"].push_back(projection_status_json(projection));
+  }
+  return report;
+}
 
 storage_query_request parse_storage_query_request(const storage_service_options &options) {
   storage_query_request request{};

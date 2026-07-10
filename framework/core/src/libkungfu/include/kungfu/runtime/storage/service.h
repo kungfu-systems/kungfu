@@ -11,6 +11,8 @@
 
 #include <kungfu/runtime/storage/projection_types.h>
 #include <kungfu/yijinjing/storage/episode_manifest.h>
+#include <kungfu/yijinjing/storage/manifest_catalog.h>
+#include <kungfu/yijinjing/storage/source_registry.h>
 
 namespace kungfu::runtime::storage_service_api {
 
@@ -300,6 +302,72 @@ struct episode_qualification_result {
   std::vector<episode_repair_prerequisite> repair_prerequisites = {};
 };
 
+enum class storage_fsck_scope { All, Source, Episode };
+
+struct storage_fsck_request {
+  std::string runtime_dir = {};
+  std::string provider = {};
+  std::string provider_config_source = {};
+  storage_fsck_scope scope = storage_fsck_scope::All;
+  std::string source_id = {};
+  uint64_t episode_id = 0;
+  bool verify_frames = false;
+};
+
+struct storage_fsck_cross_issue {
+  std::optional<std::string> source_id = {};
+  std::optional<std::string> path = {};
+  std::optional<std::string> payload_hash = {};
+  std::optional<std::string> expected = {};
+  std::optional<std::string> actual = {};
+  std::optional<std::string> reason = {};
+};
+
+using storage_fsck_issue_detail =
+    std::variant<storage_fsck_cross_issue, yijinjing::storage::source_registry_fsck_issue,
+                 yijinjing::storage::manifest_catalog_fsck_issue, yijinjing::storage::episode_fsck_issue,
+                 episode_frame_verification_issue, storage_projection_status_view>;
+
+struct storage_fsck_issue {
+  std::string severity = "error";
+  std::string code = {};
+  std::string projection = {};
+  storage_fsck_issue_detail detail = storage_fsck_cross_issue{};
+};
+
+struct storage_fsck_counts {
+  uint64_t sources = 0;
+  uint64_t manifests = 0;
+  uint64_t manifest_entries = 0;
+  uint64_t payloads = 0;
+  uint64_t entries_documents = 0;
+  uint64_t accepted_ranges = 0;
+  uint64_t source_records = 0;
+  uint64_t projection_indexes = 0;
+  uint64_t orphan_payloads = 0;
+  uint64_t episode_manifest_records = 0;
+  uint64_t episodes = 0;
+  uint64_t episode_frames_verified = 0;
+};
+
+struct storage_fsck_result {
+  bool ok = true;
+  bool degraded = false;
+  std::string status = "ok";
+  storage_fsck_scope scope = storage_fsck_scope::All;
+  std::optional<std::string> source_id = {};
+  std::optional<uint64_t> episode_id = {};
+  std::string authority = "yijinjing-journal";
+  storage_fsck_counts checked = {};
+  yijinjing::storage::source_registry_fsck_result source_registry = {};
+  std::optional<yijinjing::storage::manifest_catalog_fsck_result> manifest_catalog = {};
+  yijinjing::storage::episode_fsck_result episode_manifest = {};
+  std::vector<storage_projection_status_view> projections = {};
+  std::optional<episode_frame_verification> frame_verification = {};
+  std::optional<episode_qualification_result> qualification = {};
+  std::vector<storage_fsck_issue> issues = {};
+};
+
 struct storage_status_request {
   std::string runtime_dir = {};
   std::string provider = {};
@@ -431,6 +499,8 @@ public:
 
   [[nodiscard]] virtual storage_status_result status(const storage_status_request &request) const = 0;
 
+  [[nodiscard]] virtual storage_fsck_result fsck(const storage_fsck_request &request) const = 0;
+
   [[nodiscard]] virtual storage_query_result query(const storage_query_request &request) const = 0;
 
   [[nodiscard]] virtual storage_gc_plan_result gc_plan(const storage_gc_plan_request &request) const = 0;
@@ -442,6 +512,8 @@ public:
 };
 
 [[nodiscard]] std::string storage_query_kind_name(storage_query_kind kind);
+
+[[nodiscard]] std::string storage_fsck_scope_name(storage_fsck_scope scope);
 
 [[nodiscard]] storage_query_kind parse_storage_query_kind(const std::string &kind);
 
