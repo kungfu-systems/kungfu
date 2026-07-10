@@ -34,6 +34,17 @@ struct storage_projection_verify_result {
   std::vector<storage_projection_count> journal_distinct = {};
 };
 
+struct storage_projection_rebuild_result {
+  bool ok = true;
+  std::string schema = {};
+  std::string runtime_dir = {};
+  std::string authority = "yijinjing-journal";
+  std::string projection = "sqlite";
+  std::string sqlite_path = {};
+  std::vector<storage_projection_count> rows = {};
+  std::vector<storage_projection_count> journal_records = {};
+};
+
 } // namespace kungfu::runtime::storage_service_api
 
 #endif // KUNGFU_RUNTIME_STORAGE_PROJECTION_TYPES_H

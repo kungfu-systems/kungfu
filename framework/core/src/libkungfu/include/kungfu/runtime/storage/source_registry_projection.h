@@ -32,6 +32,8 @@ public:
   // replace every journal record. Returns per-table row counts.
   [[nodiscard]] nlohmann::json rebuild() const;
 
+  [[nodiscard]] storage_projection_rebuild_result rebuild_typed() const;
+
   // Verify the projection against the journal fold. Reports drift (projection
   // row counts diverging from journal record counts) as degraded, missing
   // projection as a distinct honest state, not silently ok.

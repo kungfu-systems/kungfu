@@ -3076,59 +3076,53 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
   return report;
 }
 
-nlohmann::json rebuild_index_impl(const storage_service_options &options) {
+storage_rebuild_index_result rebuild_index_typed_impl(const storage_rebuild_index_request &request) {
   // ADR-0037 (final slice): rebuild the derived SQLite projections from the
   // kernel journals through the Hana closed-set -> SQLite path. The journals
   // are the authority; there is no JSON registry to regenerate any more.
-  nlohmann::json errors = nlohmann::json::array();
-  nlohmann::json projections = nlohmann::json::array();
-  bool would_write = false;
+  storage_rebuild_index_result result{};
+  result.scope = request.source_id.empty() ? "all" : "source";
+  if (!request.source_id.empty()) {
+    result.source_id = request.source_id;
+  }
+  result.dry_run = request.dry_run;
+  result.written = !request.dry_run;
   const auto plan_one = [&](const char *name, auto &&projection) {
-    auto verify = projection.verify();
-    const auto status = verify.value("status", std::string("ok"));
-    const bool needs_write = status != "ok" || !verify.value("projection_present", false);
-    would_write = would_write || needs_write;
-    if (options.dry_run) {
-      verify["name"] = name;
-      verify["dry_run"] = true;
-      verify["written"] = false;
-      verify["would_write"] = needs_write;
-      projections.push_back(verify);
+    auto verify = projection.verify_typed();
+    const bool needs_write = verify.status != "ok" || !verify.projection_present;
+    result.would_write = result.would_write || needs_write;
+    if (request.dry_run) {
+      result.projections.push_back({name, true, false, needs_write, std::move(verify)});
       return;
     }
-    auto rebuilt = projection.rebuild();
-    rebuilt["name"] = name;
-    rebuilt["dry_run"] = false;
-    rebuilt["written"] = true;
-    if (!rebuilt.value("ok", false)) {
-      errors.push_back({{"code", "projection_rebuild_failed"}, {"projection", name}});
+    auto rebuilt = projection.rebuild_typed();
+    if (!rebuilt.ok) {
+      result.errors.push_back({"projection_rebuild_failed", std::string(name), {}});
     }
-    projections.push_back(rebuilt);
+    result.projections.push_back({name, false, true, true, std::move(rebuilt)});
   };
-  plan_one(PROJECTION_SOURCE_REGISTRY, source_registry_projection(options.runtime_dir));
-  plan_one(PROJECTION_MANIFEST_CATALOG, manifest_catalog_projection(options.runtime_dir));
-  const auto sources = list_sources_impl(options.runtime_dir);
-  if (!options.source_id.empty()) {
-    const auto found = std::any_of(sources.begin(), sources.end(), [&](const nlohmann::json &source) {
-      return text_or(source, "source_id") == options.source_id;
+  plan_one(PROJECTION_SOURCE_REGISTRY, source_registry_projection(request.runtime_dir));
+  plan_one(PROJECTION_MANIFEST_CATALOG, manifest_catalog_projection(request.runtime_dir));
+  const auto sources = registry_store(request.runtime_dir).fold_typed_records();
+  result.sources_rebuilt = sources.sources.size();
+  if (!request.source_id.empty()) {
+    const auto found = std::any_of(sources.sources.begin(), sources.sources.end(), [&](const auto &item) {
+      return item.second.registered && fixed_string(item.second.registration.source_id) == request.source_id;
     });
     if (!found) {
-      errors.push_back({{"code", "source_missing"}, {"source_id", options.source_id}});
+      result.errors.push_back({"source_missing", {}, request.source_id});
     }
   }
-  return {
-      {"ok", errors.empty()},
-      {"scope", options.source_id.empty() ? "all" : "source"},
-      {"source_id", options.source_id.empty() ? nlohmann::json(nullptr) : nlohmann::json(options.source_id)},
-      {"authority", "yijinjing-journal"},
-      {"rebuilt_from", "storage kernel journals"},
-      {"projections", projections},
-      {"dry_run", options.dry_run},
-      {"would_write", options.dry_run ? would_write : true},
-      {"written", !options.dry_run},
-      {"sources_rebuilt", sources.size()},
-      {"errors", errors},
-  };
+  result.ok = result.errors.empty();
+  if (!request.dry_run) {
+    result.would_write = true;
+  }
+  return result;
+}
+
+nlohmann::json rebuild_index_impl(const storage_service_options &options) {
+  return render_storage_rebuild_index_result(
+      default_storage_service().rebuild_index(parse_storage_rebuild_index_request(options)));
 }
 
 storage_gc_plan_result gc_plan_typed_impl(const storage_gc_plan_request &request) {
@@ -3602,6 +3596,11 @@ public:
   [[nodiscard]] storage_gc_plan_result gc_plan(const storage_gc_plan_request &request) const override {
     return gc_plan_typed_impl(request);
   }
+
+  [[nodiscard]] storage_rebuild_index_result
+  rebuild_index(const storage_rebuild_index_request &request) const override {
+    return rebuild_index_typed_impl(request);
+  }
 };
 
 const file_storage_service &typed_storage_service_instance() {
@@ -3944,6 +3943,90 @@ nlohmann::json render_storage_gc_plan_result(const storage_gc_plan_result &resul
           {"candidate_bytes", result.candidate_bytes},
           {"candidates", std::move(candidates)},
           {"notes", result.notes}};
+}
+
+storage_rebuild_index_request parse_storage_rebuild_index_request(const storage_service_options &options) {
+  return {options.runtime_dir, options.source_id, options.dry_run};
+}
+
+nlohmann::json render_storage_rebuild_index_result(const storage_rebuild_index_result &result) {
+  nlohmann::json projections = nlohmann::json::array();
+  for (const auto &action : result.projections) {
+    auto rendered = std::visit(
+        [](const auto &detail) {
+          using detail_t = std::decay_t<decltype(detail)>;
+          nlohmann::json row = {{"ok", detail.ok},
+                                {"schema", detail.schema},
+                                {"runtime_dir", detail.runtime_dir},
+                                {"authority", detail.authority}};
+          if constexpr (std::is_same_v<detail_t, storage_projection_verify_result>) {
+            row["status"] = detail.status;
+            row["projection_present"] = detail.projection_present;
+            if (!detail.note.empty()) {
+              row["note"] = detail.note;
+            }
+            if (detail.projection_present) {
+              row["degraded"] = detail.degraded;
+              row["drift"] = nlohmann::json::array();
+              for (const auto &drift : detail.drift) {
+                row["drift"].push_back({{"table", drift.table},
+                                        {"projection_rows", drift.projection_rows},
+                                        {"journal_distinct", drift.journal_distinct}});
+              }
+              row["rows"] = nlohmann::json::object();
+              for (const auto &count : detail.rows) {
+                row["rows"][count.table] = count.count;
+              }
+              row["journal_distinct"] = nlohmann::json::object();
+              for (const auto &count : detail.journal_distinct) {
+                row["journal_distinct"][count.table] = count.count;
+              }
+            }
+          } else {
+            row["projection"] = detail.projection;
+            row["sqlite_path"] = detail.sqlite_path;
+            row["rows"] = nlohmann::json::object();
+            for (const auto &count : detail.rows) {
+              row["rows"][count.table] = count.count;
+            }
+            row["journal_records"] = nlohmann::json::object();
+            for (const auto &count : detail.journal_records) {
+              row["journal_records"][count.table] = count.count;
+            }
+          }
+          return row;
+        },
+        action.detail);
+    rendered["name"] = action.name;
+    rendered["dry_run"] = action.dry_run;
+    rendered["written"] = action.written;
+    if (action.dry_run) {
+      rendered["would_write"] = action.would_write;
+    }
+    projections.push_back(std::move(rendered));
+  }
+  nlohmann::json errors = nlohmann::json::array();
+  for (const auto &error : result.errors) {
+    nlohmann::json row = {{"code", error.code}};
+    if (error.projection.has_value()) {
+      row["projection"] = *error.projection;
+    }
+    if (error.source_id.has_value()) {
+      row["source_id"] = *error.source_id;
+    }
+    errors.push_back(std::move(row));
+  }
+  return {{"ok", result.ok},
+          {"scope", result.scope},
+          {"source_id", result.source_id.has_value() ? nlohmann::json(*result.source_id) : nlohmann::json(nullptr)},
+          {"authority", result.authority},
+          {"rebuilt_from", result.rebuilt_from},
+          {"projections", std::move(projections)},
+          {"dry_run", result.dry_run},
+          {"would_write", result.would_write},
+          {"written", result.written},
+          {"sources_rebuilt", result.sources_rebuilt},
+          {"errors", std::move(errors)}};
 }
 
 nlohmann::json render_storage_status_result(const storage_status_result &result) {

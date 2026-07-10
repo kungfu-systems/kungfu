@@ -61,7 +61,7 @@ std::string manifest_catalog_projection::sqlite_path() const { return projection
 
 bool manifest_catalog_projection::exists() const { return fs::exists(projection_path(runtime_dir_)); }
 
-nlohmann::json manifest_catalog_projection::rebuild() const {
+storage_projection_rebuild_result manifest_catalog_projection::rebuild_typed() const {
   const auto path = projection_path(runtime_dir_);
   fs::create_directories(path.parent_path());
 
@@ -91,23 +91,40 @@ nlohmann::json manifest_catalog_projection::rebuild() const {
   }
 
   return {
-      {"ok", true},
-      {"schema", MANIFEST_CATALOG_PROJECTION_SCHEMA_V1},
-      {"runtime_dir", runtime_dir_},
-      {"authority", "yijinjing-journal"},
-      {"projection", "sqlite"},
-      {"sqlite_path", path.string()},
-      {"rows",
-       {{"import_manifest_accepted", storage->count<yijinjing::types::ImportManifestAccepted>()},
-        {"manifest_entry_recorded", storage->count<yijinjing::types::ManifestEntryRecorded>()},
-        {"export_bundle_recorded", storage->count<yijinjing::types::ExportBundleRecorded>()},
-        {"channel_cursor_updated", storage->count<yijinjing::types::ChannelCursorUpdated>()}}},
-      {"journal_records",
-       {{"import_manifest_accepted", records.manifests.size()},
-        {"manifest_entry_recorded", records.entries.size()},
-        {"export_bundle_recorded", records.exports.size()},
-        {"channel_cursor_updated", records.cursors.size()}}},
-  };
+      true,
+      MANIFEST_CATALOG_PROJECTION_SCHEMA_V1,
+      runtime_dir_,
+      "yijinjing-journal",
+      "sqlite",
+      path.string(),
+      {{"import_manifest_accepted", static_cast<uint64_t>(storage->count<yijinjing::types::ImportManifestAccepted>())},
+       {"manifest_entry_recorded", static_cast<uint64_t>(storage->count<yijinjing::types::ManifestEntryRecorded>())},
+       {"export_bundle_recorded", static_cast<uint64_t>(storage->count<yijinjing::types::ExportBundleRecorded>())},
+       {"channel_cursor_updated", static_cast<uint64_t>(storage->count<yijinjing::types::ChannelCursorUpdated>())}},
+      {{"import_manifest_accepted", records.manifests.size()},
+       {"manifest_entry_recorded", records.entries.size()},
+       {"export_bundle_recorded", records.exports.size()},
+       {"channel_cursor_updated", records.cursors.size()}}};
+}
+
+nlohmann::json manifest_catalog_projection::rebuild() const {
+  const auto result = rebuild_typed();
+  nlohmann::json rows = nlohmann::json::object();
+  nlohmann::json journal_records = nlohmann::json::object();
+  for (const auto &item : result.rows) {
+    rows[item.table] = item.count;
+  }
+  for (const auto &item : result.journal_records) {
+    journal_records[item.table] = item.count;
+  }
+  return {{"ok", result.ok},
+          {"schema", result.schema},
+          {"runtime_dir", result.runtime_dir},
+          {"authority", result.authority},
+          {"projection", result.projection},
+          {"sqlite_path", result.sqlite_path},
+          {"rows", std::move(rows)},
+          {"journal_records", std::move(journal_records)}};
 }
 
 storage_projection_verify_result manifest_catalog_projection::verify_typed() const {

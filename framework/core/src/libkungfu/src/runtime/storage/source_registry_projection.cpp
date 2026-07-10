@@ -55,7 +55,7 @@ std::string source_registry_projection::sqlite_path() const { return projection_
 
 bool source_registry_projection::exists() const { return fs::exists(projection_path(runtime_dir_)); }
 
-nlohmann::json source_registry_projection::rebuild() const {
+storage_projection_rebuild_result source_registry_projection::rebuild_typed() const {
   const auto path = projection_path(runtime_dir_);
   fs::create_directories(path.parent_path());
 
@@ -81,21 +81,38 @@ nlohmann::json source_registry_projection::rebuild() const {
   }
 
   return {
-      {"ok", true},
-      {"schema", SOURCE_REGISTRY_PROJECTION_SCHEMA_V1},
-      {"runtime_dir", runtime_dir_},
-      {"authority", "yijinjing-journal"},
-      {"projection", "sqlite"},
-      {"sqlite_path", path.string()},
-      {"rows",
-       {{"source_registered", storage->count<yijinjing::types::SourceRegistered>()},
-        {"source_head_updated", storage->count<yijinjing::types::SourceHeadUpdated>()},
-        {"accepted_range_recorded", storage->count<yijinjing::types::AcceptedRangeRecorded>()}}},
-      {"journal_records",
-       {{"source_registered", records.registered.size()},
-        {"source_head_updated", records.head_updates.size()},
-        {"accepted_range_recorded", records.accepted_ranges.size()}}},
-  };
+      true,
+      SOURCE_REGISTRY_PROJECTION_SCHEMA_V1,
+      runtime_dir_,
+      "yijinjing-journal",
+      "sqlite",
+      path.string(),
+      {{"source_registered", static_cast<uint64_t>(storage->count<yijinjing::types::SourceRegistered>())},
+       {"source_head_updated", static_cast<uint64_t>(storage->count<yijinjing::types::SourceHeadUpdated>())},
+       {"accepted_range_recorded", static_cast<uint64_t>(storage->count<yijinjing::types::AcceptedRangeRecorded>())}},
+      {{"source_registered", records.registered.size()},
+       {"source_head_updated", records.head_updates.size()},
+       {"accepted_range_recorded", records.accepted_ranges.size()}}};
+}
+
+nlohmann::json source_registry_projection::rebuild() const {
+  const auto result = rebuild_typed();
+  nlohmann::json rows = nlohmann::json::object();
+  nlohmann::json journal_records = nlohmann::json::object();
+  for (const auto &item : result.rows) {
+    rows[item.table] = item.count;
+  }
+  for (const auto &item : result.journal_records) {
+    journal_records[item.table] = item.count;
+  }
+  return {{"ok", result.ok},
+          {"schema", result.schema},
+          {"runtime_dir", result.runtime_dir},
+          {"authority", result.authority},
+          {"projection", result.projection},
+          {"sqlite_path", result.sqlite_path},
+          {"rows", std::move(rows)},
+          {"journal_records", std::move(journal_records)}};
 }
 
 storage_projection_verify_result source_registry_projection::verify_typed() const {

@@ -268,6 +268,43 @@ struct storage_gc_plan_result {
   std::vector<std::string> notes = {};
 };
 
+using storage_projection_action_detail =
+    std::variant<storage_projection_verify_result, storage_projection_rebuild_result>;
+
+struct storage_projection_action_view {
+  std::string name = {};
+  bool dry_run = true;
+  bool written = false;
+  bool would_write = false;
+  storage_projection_action_detail detail = storage_projection_verify_result{};
+};
+
+struct storage_rebuild_index_request {
+  std::string runtime_dir = {};
+  std::string source_id = {};
+  bool dry_run = true;
+};
+
+struct storage_projection_error {
+  std::string code = {};
+  std::optional<std::string> projection = {};
+  std::optional<std::string> source_id = {};
+};
+
+struct storage_rebuild_index_result {
+  bool ok = true;
+  std::string scope = "all";
+  std::optional<std::string> source_id = {};
+  std::string authority = "yijinjing-journal";
+  std::string rebuilt_from = "storage kernel journals";
+  std::vector<storage_projection_action_view> projections = {};
+  bool dry_run = true;
+  bool would_write = false;
+  bool written = false;
+  uint64_t sources_rebuilt = 0;
+  std::vector<storage_projection_error> errors = {};
+};
+
 class storage_service {
 public:
   virtual ~storage_service() = default;
@@ -277,6 +314,9 @@ public:
   [[nodiscard]] virtual storage_query_result query(const storage_query_request &request) const = 0;
 
   [[nodiscard]] virtual storage_gc_plan_result gc_plan(const storage_gc_plan_request &request) const = 0;
+
+  [[nodiscard]] virtual storage_rebuild_index_result
+  rebuild_index(const storage_rebuild_index_request &request) const = 0;
 };
 
 [[nodiscard]] std::string storage_query_kind_name(storage_query_kind kind);
