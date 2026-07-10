@@ -44,8 +44,9 @@ if defined XDG_CONFIG_HOME set "_KFC_USERCFG=%XDG_CONFIG_HOME%\kungfu\build-loca
 call :loadenv "%_KFC_USERCFG%"
 call :loadenv ".\build-local.env"
 
-rem Mark native dispatches so an installed binary never re-delegates back here.
+rem Mark the canonical entrypoint and keep native dispatches from re-delegating here.
 set "SHIFU_FROM_SHIM=1"
+set "SHIFU_ENTRYPOINT=1"
 
 rem -- Native launcher resolution ------------------------------------------------
 if "%SHIFU_NATIVE%"=="0" goto inscript

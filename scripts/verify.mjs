@@ -263,6 +263,25 @@ function main() {
     `[verify] mode: ${doFull ? 'full (build first)' : 'quick (assert existing artifacts only)'}${withApp ? ' + app' : ''}${skipEpisodeQualification ? ' - Episode qualification' : ' + Episode qualification'}`,
   );
 
+  // ── Stage 0: development/build entrypoint contract (read-only) ───
+  // Buildchain lifecycle verification enters here through ./shifu verify, so
+  // this keeps CI command surfaces and agent guidance from silently regressing
+  // to direct package-manager/toolchain invocation.
+  console.log('\n[verify] stage 0: Shifu entry contract');
+  const shifuEntry = spawnSync(
+    process.execPath,
+    [path.join(__dirname, 'check-shifu-entry-contract.mjs')],
+    { encoding: 'utf8' },
+  );
+  if (shifuEntry.status === 0)
+    pass('Shifu entry contract', 'participant commands enter through Shifu');
+  else
+    fail(
+      'Shifu entry contract',
+      outputTail(shifuEntry.stdout, shifuEntry.stderr, 8) ||
+        `exit ${exitLabel(shifuEntry.status, shifuEntry.signal)}`,
+    );
+
   // ── Stage 0a: cross-platform script guard (read-only) ─────────────
   // Tooling drives its fixtures/slices/guards/benches through Node so it runs on
   // every platform pnpm runs on (Windows included). A bash `.sh` anywhere in the

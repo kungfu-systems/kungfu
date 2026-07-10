@@ -88,6 +88,15 @@ cd kungfu
 `./shifu <task>` runs `<task>` under the pinned Node toolchain — it is a
 thin wrapper, so any pnpm task works (`./shifu build:core`, etc.).
 
+Shifu also marks child tasks with `SHIFU_ENTRYPOINT=1`. Participant-facing root
+tasks reject accidental direct package-manager invocation and print the
+equivalent `./shifu <task>` command. This marker is provenance, not a security
+boundary; do not set it by hand to bypass the launcher. The repository check
+also rejects direct `pnpm`, Node, Conan, or CMake commands in agent guidance,
+contributor docs, Buildchain lifecycle configuration, and ordinary workflows.
+Launcher implementation/bootstrap exceptions must be narrow and carry a
+preceding `shifu-entry-contract: allow <reason>` comment.
+
 `./shifu verify` includes the bounded `mvp-smoke-v1` Episode
 qualification by default. Use `./shifu episode:qualify -- --profile
 mvp-baseline-v1` explicitly for the heavier periodic/release-readiness

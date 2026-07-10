@@ -260,6 +260,19 @@ function checkShifuVersionSync() {
   ]);
 }
 
+function checkShifuEntryContract() {
+  run('Shifu entry contract gate', 'node', [
+    path.join('scripts', 'check-shifu-entry-contract.mjs'),
+  ]);
+}
+
+function testShifuEntryContract() {
+  run('Shifu entry contract tests', 'node', [
+    '--test',
+    path.join('scripts', 'check-shifu-entry-contract.test.mjs'),
+  ]);
+}
+
 function checkCarrierActionEnvelope(scopeArgs = []) {
   run('carrier/action-envelope gate', 'node', [
     path.join('scripts', 'check-carrier-action-envelope.mjs'),
@@ -301,12 +314,16 @@ function checkBuildchainKfdEvidence(files = [], { force = false } = {}) {
     log('[check] no Buildchain KFD evidence inputs changed');
     return;
   }
-  run('Buildchain KFD evidence check', 'pnpm', ['run', 'kfd:buildchain:check']);
+  run('Buildchain KFD evidence check', 'node', [
+    path.join('scripts', 'buildchain-kfd-evidence.mjs'),
+    '--check',
+  ]);
 }
 
 function checkStaged() {
   checkNoBashStaged();
   checkShifuVersionSync();
+  checkShifuEntryContract();
   checkCarrierActionEnvelope(['--staged']);
   checkRuntimeGreenfield(['--staged']);
   const files = stagedFiles();
@@ -350,6 +367,7 @@ function checkStaged() {
 }
 
 function checkShared() {
+  testShifuEntryContract();
   run('tooling type check', 'pnpm', ['run', 'check:types']);
   run('SDK unit tests', 'pnpm', [
     '--filter',
@@ -368,6 +386,7 @@ function checkShared() {
 function checkChanged() {
   checkNoBashTree();
   checkShifuVersionSync();
+  checkShifuEntryContract();
   checkCarrierActionEnvelope();
   checkRuntimeGreenfield();
   const files = changedFiles();
@@ -381,6 +400,7 @@ function checkChanged() {
 function checkAll() {
   checkNoBashTree();
   checkShifuVersionSync();
+  checkShifuEntryContract();
   checkCarrierActionEnvelope(['--all']);
   checkRuntimeGreenfield(['--all']);
   run('repo lint + format check', 'pnpm', ['run', 'lint']);

@@ -113,9 +113,10 @@ kungfu_native_acquire() {
 
 kungfu_load_proxy
 
-# Mark native dispatches so an installed binary never re-delegates back to this
-# script (see the launcher's installed-binary delegation).
+# Mark the canonical entrypoint and keep native dispatches from re-delegating
+# back to this script (see the launcher's installed-binary delegation).
 export SHIFU_FROM_SHIM=1
+export SHIFU_ENTRYPOINT=1
 
 if [ "${SHIFU_NATIVE:-}" != "0" ]; then
   if [ -n "${SHIFU_BIN:-}" ] && [ -x "${SHIFU_BIN}" ]; then

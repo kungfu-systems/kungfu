@@ -74,6 +74,7 @@ jobs:
           token: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
       - name: Tag the launcher release for the promoted version
         run: |
+          # shifu-entry-contract: allow release control-plane metadata lookup before launcher dispatch
           ver="$(node -p "require('./lerna.json').version")"
           pin="$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/shifu/Cargo.toml | head -n 1)"
           if [ "$ver" != "$pin" ]; then

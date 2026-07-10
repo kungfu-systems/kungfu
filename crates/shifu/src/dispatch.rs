@@ -34,7 +34,10 @@ pub fn run_pnpm(root: &Path, args: &[String]) -> ! {
     } else {
         cmd.arg("corepack");
     }
-    cmd.arg("pnpm").args(args).current_dir(root);
+    cmd.arg("pnpm")
+        .args(args)
+        .env("SHIFU_ENTRYPOINT", "1")
+        .current_dir(root);
     prepend_child_path(&mut cmd, tool_dirs_for_child(&fnm, &uv));
     util::exec_or_exit(cmd)
 }
@@ -55,13 +58,17 @@ pub fn delegate_l2(root: &Path, args: &[String]) -> ! {
             .arg("node")
             .arg(&l2)
             .args(args)
+            .env("SHIFU_ENTRYPOINT", "1")
             .current_dir(root);
         prepend_child_path(&mut cmd, tool_dirs_for_child(&fnm, Path::new("")));
         util::exec_or_exit(cmd)
     }
     if let Some(node) = util::find_on_path("node") {
         let mut cmd = Command::new(node);
-        cmd.arg(&l2).args(args).current_dir(root);
+        cmd.arg(&l2)
+            .args(args)
+            .env("SHIFU_ENTRYPOINT", "1")
+            .current_dir(root);
         util::exec_or_exit(cmd)
     }
     let fnm = tools::ensure_tool(&tools::FNM, root);
@@ -74,6 +81,7 @@ pub fn delegate_l2(root: &Path, args: &[String]) -> ! {
         .arg("node")
         .arg(&l2)
         .args(args)
+        .env("SHIFU_ENTRYPOINT", "1")
         .current_dir(root);
     prepend_child_path(&mut cmd, tool_dirs_for_child(&fnm, Path::new("")));
     util::exec_or_exit(cmd)

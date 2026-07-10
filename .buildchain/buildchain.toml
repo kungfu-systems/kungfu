@@ -45,6 +45,7 @@ shell = "bash"
 command = "./shifu verify"
 
 [lifecycle.publish]
+# shifu-entry-contract: allow Buildchain publish adapter bootstraps before repository lifecycle dispatch
 command = "node scripts/buildchain-custom-publish-evidence.mjs"
 
 [badges]
