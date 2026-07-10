@@ -58,6 +58,9 @@ A record's **Status** says where it stands:
 | [0040](ADR-0040-runtime-fact-ledger-content-addressed-kv.md) | proposed | a first-class content-addressed store is a runtime fact-ledger primitive, with mutable KV and fleet topology kept as separate capabilities |
 | [0041](ADR-0041-episode-manifest-first-class-journal-structure.md) | proposed | the Episode manifest is the object's trust boundary — POD journal records, one typed fold, and JSON at the edge |
 | [0042](ADR-0042-episode-atomic-safety-and-qualification.md) | proposed | Episode is the atomic safety and fault-containment unit, qualified by evidence under load |
+| [0043](ADR-0043-episode-identity-sealed-content-root.md) | proposed | Episode identity is two layers — a local coordinate plus a sealed content root committed in the manifest |
+| [0044](ADR-0044-shifu-delegation-protocol.md) | accepted | The shifu delegation protocol — what installed binaries bake in forever |
+| [0045](ADR-0045-kfx-execution-profiles-native-rust-wasm.md) | proposed | KFX execution profiles — Rust-primary native, WebAssembly components, managed runtimes, and subprocesses |
 
 ## Reading by theme
 
@@ -85,6 +88,9 @@ A record's **Status** says where it stands:
   [0017](ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md)
   (who assembles it: one host-agnostic load plan shared by the GUI and CLI, and
   a background `service` facet as the first production caller of the OS sandbox).
+  [0045](ADR-0045-kfx-execution-profiles-native-rust-wasm.md) proposes the
+  orthogonal execution-profile axis: Rust-primary native, WASM components,
+  managed runtimes, and subprocesses, without weakening the trust decision.
 - **Agent capability layer** — [0015](ADR-0015-kungfu-skill-agent-context-layer.md)
   (Kungfu Skill as the agent-facing layer above kfx: `SKILL.md` as the minimum
   valid source, compact catalog injection, Node/Python manage modes, and kfx
