@@ -55,6 +55,7 @@
     "dist:dir": "pnpm --filter @kungfu-tech/product-kungfu run package",
     "package:app": "pnpm --filter @kungfu-tech/product-kungfu run package",
     "verify": "node scripts/verify.mjs",
+    "episode:qualify": "node framework/core/tests/qualification/episode/run.mjs",
     "kfd:buildchain": "node scripts/buildchain-kfd-evidence.mjs --write",
     "kfd:buildchain:check": "node scripts/buildchain-kfd-evidence.mjs --check",
     "kfd:query": "node scripts/buildchain-kfd-evidence.mjs --query",

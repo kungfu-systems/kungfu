@@ -255,7 +255,10 @@ run remains a manual qualification until measured duration and memory usage make
 it suitable for a recurring gate. At each checkpoint the harness records:
 
 - open and terminal-append throughput plus p50/p95/p99 latency;
-- `episode_list(limit=100)` latency and total count;
+- `episode_list(limit=100)` latency, plus an explicit unbounded-list count for
+  the current v1 API whose bounded result does not carry a separate total;
+- semantic Episode record totals derived from the listed per-Episode views,
+  while journal page/control frames remain a separate physical observation;
 - inspect latency and exact readback for the first, middle, last, and
   seed-selected Episodes;
 - Episode-scoped and full fsck latency and verdict;
