@@ -615,13 +615,13 @@ def run_supervisor(
                         child.terminate()
                     children.pop(route_id_, None)
             for route_id_, route in desired_routes.items():
-                child = children.get(route_id_)
-                if child and child.poll() is None:
+                running_child = children.get(route_id_)
+                if running_child and running_child.poll() is None:
                     touch_route_heartbeat(
                         config_home,
                         route_id_,
                         supervisor_pid=os.getpid(),
-                        master_pid=child.pid,
+                        master_pid=running_child.pid,
                     )
                     continue
                 route_home = str(route["home"])
