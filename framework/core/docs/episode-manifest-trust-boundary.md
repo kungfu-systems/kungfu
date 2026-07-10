@@ -241,5 +241,13 @@ C4. Episodes owned by other locations are reported, never mutated.
    reported.
 4. **Content resolution** — blocked on ADR-0040 `content_store` (interface +
    file backend); replaces the bespoke `payload_ref_exists` path probe.
-5. **Projection/query** — rebuildable Episode SQLite projection via
-   `cache::make_storage_ptr`, verified against the journal fold.
+5. **Projection/query** (delivered) — rebuildable Episode SQLite projection
+   (`storage/projections/episode-manifest.sqlite`) over the typed record
+   stream via `cache::make_storage_ptr` on `EpisodeManifestDataTypes`, the
+   same Hana closed-set → SQLite path as the source-registry projection.
+   `episode_projection_rebuild` rebuilds it (EpisodeOpen replays first-wins to
+   match the fold's immutable-identity rule); episode-scope fsck verifies it
+   against distinct-primary-key journal counts — drift degrades, an absent
+   projection is an honest distinct state, and the journal remains the only
+   authority. The fold stays the fresh read path; the projection serves
+   indexed / SQL access.

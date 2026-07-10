@@ -809,6 +809,18 @@ def episode_recover(
     )
 
 
+def episode_projection_rebuild(runtime_dir: str | Path) -> dict[str, Any]:
+    """Rebuild the Episode manifest SQLite projection from the journal."""
+
+    return dict(
+        _runtime().run_storage_service_operation(
+            "episode_projection_rebuild",
+            str(runtime_dir),
+            {},
+        )
+    )
+
+
 def write_jsonl(records: list[dict[str, Any]], out_path: str | Path) -> None:
     with open(out_path, "w", encoding="utf-8") as f:
         for record in records:

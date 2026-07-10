@@ -18,6 +18,7 @@
 #include <vector>
 
 #include <kungfu/runtime/action_recorder.h>
+#include <kungfu/runtime/storage/episode_manifest_projection.h>
 #include <kungfu/runtime/storage/source_registry_projection.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
 #include <kungfu/yijinjing/storage/episode_manifest.h>
@@ -1701,7 +1702,21 @@ nlohmann::json episode_fsck_impl(const storage_service_options &options) {
                                               {"schema", yy_storage::EPISODE_MANIFEST_SCHEMA_V1},
                                               {"authority", "yijinjing-journal"},
                                               {"path", "journal/system/storage/episode-manifest/live/*.journal"},
-                                              {"rebuildable", false}}})}};
+                                              {"rebuildable", false}},
+                                             {{"name", "episode-manifest-sqlite"},
+                                              {"schema", EPISODE_MANIFEST_PROJECTION_SCHEMA_V1},
+                                              {"authority", "yijinjing-journal"},
+                                              {"path", "storage/projections/episode-manifest.sqlite"},
+                                              {"rebuildable", true}}})}};
+  // ADR-0041 point 5: the SQLite projection is a derived view verified
+  // against the journal; drift degrades fsck, it never fails the journal.
+  auto projection_report = episode_manifest_projection(options.runtime_dir).verify();
+  report["episode_projection"] = projection_report;
+  if (projection_report.value("status", std::string("ok")) == "degraded" &&
+      report.value("status", std::string("ok")) == "ok") {
+    report["status"] = "degraded";
+    report["degraded"] = true;
+  }
   if (bool_or(options.operation_options, "verify_frames", false)) {
     auto verification = verify_episode_frame_claims(options);
     for (auto &error : verification.errors) {
@@ -3292,6 +3307,10 @@ public:
     return episode_store(options).recover(parse_episode_recover_options(options.operation_options));
   }
 
+  [[nodiscard]] nlohmann::json episode_projection_rebuild(const storage_service_options &options) const override {
+    return episode_manifest_projection(options.runtime_dir).rebuild();
+  }
+
   [[nodiscard]] nlohmann::json source_register(const storage_service_options &options) const override {
     return source_registry_store(options).register_source(parse_source_register_options(options.operation_options));
   }
@@ -3440,6 +3459,8 @@ std::string storage_operation_name(storage_operation operation) {
     return "episode_inspect";
   case storage_operation::EpisodeRecover:
     return "episode_recover";
+  case storage_operation::EpisodeProjectionRebuild:
+    return "episode_projection_rebuild";
   case storage_operation::SourceRegister:
     return "source_register";
   case storage_operation::SourceUpdateHead:
@@ -3524,6 +3545,9 @@ storage_operation parse_storage_operation(const std::string &operation) {
   }
   if (operation == "episode_recover") {
     return storage_operation::EpisodeRecover;
+  }
+  if (operation == "episode_projection_rebuild") {
+    return storage_operation::EpisodeProjectionRebuild;
   }
   if (operation == "source_register") {
     return storage_operation::SourceRegister;
@@ -3648,6 +3672,8 @@ nlohmann::json run_storage_service_operation(const std::string &operation, const
     return storage_service_instance().episode_inspect(parsed_options);
   case storage_operation::EpisodeRecover:
     return storage_service_instance().episode_recover(parsed_options);
+  case storage_operation::EpisodeProjectionRebuild:
+    return storage_service_instance().episode_projection_rebuild(parsed_options);
   case storage_operation::SourceRegister:
     return storage_service_instance().source_register(parsed_options);
   case storage_operation::SourceUpdateHead:

@@ -175,6 +175,18 @@ constexpr auto SourceRegistryDataTypes = boost::hana::make_map( //
     TYPE_PAIR(AcceptedRangeRecorded)                            // 10903
 );
 
+// ADR-0041: the Episode manifest record family as a Hana closed set for the
+// rebuildable SQLite projection (cache::make_storage_ptr), the same path the
+// source-registry projection uses. The manifest journal stays the authority;
+// this set only feeds derived, rebuildable views.
+constexpr auto EpisodeManifestDataTypes = boost::hana::make_map( //
+    TYPE_PAIR(EpisodeOpen),                                      // 10801
+    TYPE_PAIR(EpisodeHeartbeat),                                 // 10802
+    TYPE_PAIR(EpisodeFrameAttached),                             // 10803
+    TYPE_PAIR(EpisodeRefAttached),                               // 10804
+    TYPE_PAIR(EpisodeClosed)                                     // 10805
+);
+
 constexpr auto StaticDataTypes = boost::hana::make_map();
 constexpr auto StatisticDataTypes = boost::hana::make_map();
 
