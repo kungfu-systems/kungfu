@@ -23,7 +23,7 @@ jobs:
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     env:
-      MIRROR_BASE_SHA: a9eb6a1af3a4e1a49a09efb8f8312bcb522de298
+      MIRROR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
       SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
       - name: Checkout immutable PR head
@@ -75,7 +75,7 @@ jobs:
       KUNGFU_BUILD_SKIP_PYKUNGFU: "1"
       SHIFU_NATIVE: "1"
       SHIFU_REQUIRE_MSVC: "1"
-      MIRROR_BASE_SHA: a9eb6a1af3a4e1a49a09efb8f8312bcb522de298
+      MIRROR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
       MIRROR_REF: refs/heads/dev/v4/v4.0
       MIRROR_URL: http://192.168.100.222:8088/git-mirrors/kungfu.git
       SOURCE_ROOT: source-${{ github.run_id }}-${{ github.run_attempt }}
