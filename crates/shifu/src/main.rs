@@ -49,8 +49,7 @@ const L2_SUBCOMMANDS: &[&str] = &["build", "rebuild", "proxy", "config"];
 
 fn print_usage() {
     println!(
-        "{} {}",
-        "\u{1f94b}",
+        "\u{1f94b} {}",
         style::bold("shifu - the kungfu development/build launcher (pinned-toolchain entrypoint)")
     );
     println!();

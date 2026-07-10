@@ -142,12 +142,10 @@ impl Tool {
 /// Values are trimmed and a leading `v` is tolerated (tags are normalized
 /// per-tool at URL construction).
 fn resolve_version(env_val: Option<&str>, file_text: Option<&str>, fallback: &str) -> String {
-    for candidate in [env_val, file_text] {
-        if let Some(raw) = candidate {
-            let v = raw.trim().trim_start_matches('v');
-            if !v.is_empty() {
-                return v.to_string();
-            }
+    for raw in [env_val, file_text].into_iter().flatten() {
+        let v = raw.trim().trim_start_matches('v');
+        if !v.is_empty() {
+            return v.to_string();
         }
     }
     fallback.to_string()
