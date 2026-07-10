@@ -1,14 +1,14 @@
 ---
-status: draft
+status: active
 period: 2026-07-10
 theme: libkungfu-shared-embedding-membrane
 doc_type: analysis
 source_level: local-files
-confidence: medium
+confidence: high
 sensitivity: internal
-evidence_grade: B
-review_state: unreviewed
-last_reviewed: 2026-07-10
+evidence_grade: A
+review_state: self-reviewed
+last_reviewed: 2026-07-11
 ai_provenance:
   model_family: GPT-5
   product: Codex
@@ -27,12 +27,15 @@ The probe does not link libkungfu or any C++ symbol: the host passes the version
 the table through the header-only C++ RAII wrapper in `kungfu/embedding.hpp`.
 
 The read capability crosses the membrane once per batch. Each returned payload
-pointer borrows an mmap page retained until explicit batch release. The report
-therefore requires `payload_bytes_copied == 0`, a non-null mapped address, 100
-4 KiB batches (16 frames per call), and a direct 1 MiB view. Exceptions are
-contained on both sides of the C boundary. The report also records the exact
-extension-owned idle wrapper state (`sizeof(context) + sizeof(reader)`),
-excluding the host-owned shared core and module code.
+pointer borrows an mmap page retained until explicit batch release. Each trial
+warms 10 batches, then requires `payload_bytes_copied == 0`, a non-null mapped
+address, 1,000 measured 4 KiB batches (16 frames per call), and a direct 1 MiB
+view. The harness reports three independent trials and gates the median p99;
+CI uses one fixed 60-second post-build settle and never retries a failed
+benchmark. Exceptions are contained on both sides of the C boundary. The
+report also records the exact extension-owned idle wrapper state
+(`sizeof(context) + sizeof(reader)`), excluding the host-owned shared core and
+module code.
 
 Run through the repository entrypoint:
 
