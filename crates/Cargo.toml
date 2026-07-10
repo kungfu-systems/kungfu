@@ -7,11 +7,13 @@
 # modes, distribution, and the selective-exercise discipline). The first member
 # is shifu, the self-contained dev/build launcher; shifu-core is the
 # unpublished library behind it (the shifu role framework — bootstrap + probe —
-# shared with the product trunk per ADR-0046).
+# shared with the product trunk per ADR-0046); trunk is that product trunk at
+# stage-1 size (kungfu-trunk: pinned-toolchain bootstrap + the kungfu-owned
+# env/package surface), shipped inside dist/kungfu rather than released alone.
 
 [workspace]
 resolver = "2"
-members = ["shifu", "shifu-core"]
+members = ["shifu", "shifu-core", "trunk"]
 # host-spike is a throwaway feasibility probe (rust host shell → libkungfu →
 # embedded libpython/libnode). It builds against a sibling worktree's core
 # artifacts, so it must not enter the workspace CI gate or the release matrix;

@@ -44,6 +44,7 @@ and the map routes a question to whichever doc answers it.
 | Where must action-recording semantics live across C++ / Python / Node? | [ADR-0022](../framework/core/docs/adr/ADR-0022-core-action-recording-surface.md) + [`event-model.md`](event-model.md) | why, use | stable |
 | What is a location role, and why does it not decide journal page size? | [ADR-0024](../framework/core/docs/adr/ADR-0024-location-role-and-journal-page-policy.md) + [`event-model.md`](event-model.md) | why, use | stable |
 | Where are the Python / Node / framework adapter boundaries? | [`adapters.md`](adapters.md) | use | stable |
+| How do I install Python packages (pandas/torch-class) into Kungfu's runtime? | [`python-environments.md`](python-environments.md) + [ADR-0046](../framework/core/docs/adr/ADR-0046-rust-host-trunk-and-assembled-runtime.md) | use | stable |
 | How do I go from source to a binary? | [`buildchain.md`](buildchain.md) (+ [`../CONTRIBUTING.md`](../CONTRIBUTING.md)) | use | stable |
 | When (and when not) does a component get written in Rust, and how is one added? | [`rust-adoption.md`](rust-adoption.md) | why, use | stable |
 | What must never change about the `shifu` entrypoints (and why)? | [ADR-0044](../framework/core/docs/adr/ADR-0044-shifu-delegation-protocol.md) | why, verify | stable |
