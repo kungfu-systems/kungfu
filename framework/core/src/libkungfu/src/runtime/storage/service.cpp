@@ -1411,10 +1411,32 @@ storage_query_result query_journal_projection(const storage_query_request &reque
 // option because it reads every referenced journal. A sealed (Ended) Episode
 // with a missing or mismatched frame is failed; an open/aborted Episode is
 // degraded with the exact missing side reported.
+using episode_frame_field_value = std::variant<int64_t, uint64_t>;
+
+struct episode_frame_field_mismatch {
+  std::string field = {};
+  episode_frame_field_value claimed = uint64_t{0};
+  episode_frame_field_value actual = uint64_t{0};
+};
+
+struct episode_frame_verification_issue {
+  std::string code = {};
+  uint64_t episode_id = 0;
+  uint64_t frame_uid = 0;
+  std::optional<uint32_t> location_uid = {};
+  std::optional<uint32_t> dest = {};
+  std::optional<uint32_t> integrity_version = {};
+  std::vector<episode_frame_field_mismatch> fields = {};
+  std::optional<uint64_t> claimed_payload_checksum = {};
+  std::optional<uint64_t> actual_payload_checksum = {};
+  std::optional<uint64_t> claimed_frame_checksum = {};
+  std::optional<uint64_t> actual_frame_checksum = {};
+};
+
 struct episode_frame_verification {
-  nlohmann::json errors = nlohmann::json::array();
-  nlohmann::json warnings = nlohmann::json::array();
-  size_t verified = 0;
+  std::vector<episode_frame_verification_issue> errors = {};
+  std::vector<episode_frame_verification_issue> warnings = {};
+  uint64_t verified = 0;
   bool degraded = false;
 };
 
@@ -1449,7 +1471,7 @@ episode_frame_verification verify_episode_frame_claims(const storage_service_opt
     }
   }
 
-  auto report_presence_issue = [&result](bool sealed, nlohmann::json issue) {
+  auto report_presence_issue = [&result](bool sealed, episode_frame_verification_issue issue) {
     if (sealed) {
       result.errors.push_back(std::move(issue));
     } else {
@@ -1464,10 +1486,12 @@ episode_frame_verification verify_episode_frame_claims(const storage_service_opt
     const auto location_iter = locations_by_uid.find(source_uid);
     if (location_iter == locations_by_uid.end()) {
       for (const auto &context : claims) {
-        report_presence_issue(context.sealed, {{"code", "episode_frame_location_unknown"},
-                                               {"episode_id", context.episode_id},
-                                               {"frame_uid", context.claim.frame_uid},
-                                               {"location_uid", source_uid}});
+        episode_frame_verification_issue issue{};
+        issue.code = "episode_frame_location_unknown";
+        issue.episode_id = context.episode_id;
+        issue.frame_uid = context.claim.frame_uid;
+        issue.location_uid = source_uid;
+        report_presence_issue(context.sealed, std::move(issue));
       }
       continue;
     }
@@ -1490,28 +1514,26 @@ episode_frame_verification verify_episode_frame_claims(const storage_service_opt
           const auto *payload = static_cast<const uint8_t *>(frame->data_address());
           for (const auto *context : wanted_iter->second) {
             const auto &claim = context->claim;
-            nlohmann::json fields = nlohmann::json::array();
+            std::vector<episode_frame_field_mismatch> fields;
             if (header.carrier_type != claim.carrier_type) {
-              fields.push_back(
-                  {{"field", "carrier_type"}, {"claimed", claim.carrier_type}, {"actual", header.carrier_type}});
+              fields.push_back({"carrier_type", int64_t{claim.carrier_type}, int64_t{header.carrier_type}});
             }
             if (header.gen_time != claim.gen_time) {
-              fields.push_back({{"field", "gen_time"}, {"claimed", claim.gen_time}, {"actual", header.gen_time}});
+              fields.push_back({"gen_time", claim.gen_time, header.gen_time});
             }
             if (header.trigger_frame_uid != claim.trigger_frame_uid) {
-              fields.push_back({{"field", "trigger_frame_uid"},
-                                {"claimed", claim.trigger_frame_uid},
-                                {"actual", header.trigger_frame_uid}});
+              fields.push_back({"trigger_frame_uid", claim.trigger_frame_uid, header.trigger_frame_uid});
             }
             if (frame->data_length() < claim.data_length) {
-              fields.push_back(
-                  {{"field", "data_length"}, {"claimed", claim.data_length}, {"actual", frame->data_length()}});
+              fields.push_back({"data_length", uint64_t{claim.data_length}, uint64_t{frame->data_length()}});
             }
             if (!fields.empty()) {
-              result.errors.push_back({{"code", "episode_attached_frame_mismatch"},
-                                       {"episode_id", context->episode_id},
-                                       {"frame_uid", claim.frame_uid},
-                                       {"fields", fields}});
+              episode_frame_verification_issue issue{};
+              issue.code = "episode_attached_frame_mismatch";
+              issue.episode_id = context->episode_id;
+              issue.frame_uid = claim.frame_uid;
+              issue.fields = std::move(fields);
+              result.errors.push_back(std::move(issue));
               continue;
             }
             if (claim.integrity_version == 0) {
@@ -1522,22 +1544,26 @@ episode_frame_verification verify_episode_frame_claims(const storage_service_opt
             try {
               algorithm = action::frame_checksum_algorithm_for_integrity_version(claim.integrity_version);
             } catch (const std::exception &) {
-              report_presence_issue(context->sealed, {{"code", "episode_frame_integrity_version_unknown"},
-                                                      {"episode_id", context->episode_id},
-                                                      {"frame_uid", claim.frame_uid},
-                                                      {"integrity_version", claim.integrity_version}});
+              episode_frame_verification_issue issue{};
+              issue.code = "episode_frame_integrity_version_unknown";
+              issue.episode_id = context->episode_id;
+              issue.frame_uid = claim.frame_uid;
+              issue.integrity_version = claim.integrity_version;
+              report_presence_issue(context->sealed, std::move(issue));
               continue;
             }
             const auto payload_checksum = action::checksum_payload(payload, claim.data_length, algorithm);
             const auto frame_checksum = action::checksum_frame(header, payload, claim.data_length, algorithm);
             if (payload_checksum != claim.payload_checksum || frame_checksum != claim.frame_checksum) {
-              result.errors.push_back({{"code", "episode_attached_frame_checksum_mismatch"},
-                                       {"episode_id", context->episode_id},
-                                       {"frame_uid", claim.frame_uid},
-                                       {"claimed_payload_checksum", claim.payload_checksum},
-                                       {"actual_payload_checksum", payload_checksum},
-                                       {"claimed_frame_checksum", claim.frame_checksum},
-                                       {"actual_frame_checksum", frame_checksum}});
+              episode_frame_verification_issue issue{};
+              issue.code = "episode_attached_frame_checksum_mismatch";
+              issue.episode_id = context->episode_id;
+              issue.frame_uid = claim.frame_uid;
+              issue.claimed_payload_checksum = claim.payload_checksum;
+              issue.actual_payload_checksum = payload_checksum;
+              issue.claimed_frame_checksum = claim.frame_checksum;
+              issue.actual_frame_checksum = frame_checksum;
+              result.errors.push_back(std::move(issue));
               continue;
             }
             ++result.verified;
@@ -1548,15 +1574,47 @@ episode_frame_verification verify_episode_frame_claims(const storage_service_opt
     }
     for (const auto &context : claims) {
       if (found.count(context.claim.frame_uid) == 0) {
-        report_presence_issue(context.sealed, {{"code", "episode_attached_frame_missing"},
-                                               {"episode_id", context.episode_id},
-                                               {"frame_uid", context.claim.frame_uid},
-                                               {"location_uid", context.claim.source},
-                                               {"dest", context.claim.dest}});
+        episode_frame_verification_issue issue{};
+        issue.code = "episode_attached_frame_missing";
+        issue.episode_id = context.episode_id;
+        issue.frame_uid = context.claim.frame_uid;
+        issue.location_uid = context.claim.source;
+        issue.dest = context.claim.dest;
+        report_presence_issue(context.sealed, std::move(issue));
       }
     }
   }
   return result;
+}
+
+nlohmann::json render_episode_frame_verification_issue(const episode_frame_verification_issue &issue) {
+  nlohmann::json row = {{"code", issue.code}, {"episode_id", issue.episode_id}, {"frame_uid", issue.frame_uid}};
+  if (issue.location_uid.has_value())
+    row["location_uid"] = *issue.location_uid;
+  if (issue.dest.has_value())
+    row["dest"] = *issue.dest;
+  if (issue.integrity_version.has_value())
+    row["integrity_version"] = *issue.integrity_version;
+  if (!issue.fields.empty()) {
+    row["fields"] = nlohmann::json::array();
+    for (const auto &field : issue.fields) {
+      const auto render_value = [](const episode_frame_field_value &value) {
+        return std::visit([](const auto item) { return nlohmann::json(item); }, value);
+      };
+      row["fields"].push_back(
+          {{"field", field.field}, {"claimed", render_value(field.claimed)}, {"actual", render_value(field.actual)}});
+    }
+  }
+  if (issue.claimed_payload_checksum.has_value()) {
+    row["claimed_payload_checksum"] = *issue.claimed_payload_checksum;
+  }
+  if (issue.actual_payload_checksum.has_value())
+    row["actual_payload_checksum"] = *issue.actual_payload_checksum;
+  if (issue.claimed_frame_checksum.has_value())
+    row["claimed_frame_checksum"] = *issue.claimed_frame_checksum;
+  if (issue.actual_frame_checksum.has_value())
+    row["actual_frame_checksum"] = *issue.actual_frame_checksum;
+  return row;
 }
 
 struct episode_repair_descriptor {
@@ -1852,11 +1910,11 @@ nlohmann::json episode_fsck_impl(const storage_service_options &options) {
   }
   if (bool_or(options.operation_options, "verify_frames", false)) {
     auto verification = verify_episode_frame_claims(options);
-    for (auto &error : verification.errors) {
-      report["errors"].push_back(std::move(error));
+    for (const auto &error : verification.errors) {
+      report["errors"].push_back(render_episode_frame_verification_issue(error));
     }
-    for (auto &warning : verification.warnings) {
-      report["warnings"].push_back(std::move(warning));
+    for (const auto &warning : verification.warnings) {
+      report["warnings"].push_back(render_episode_frame_verification_issue(warning));
     }
     report["checked"]["episode_frames_verified"] = verification.verified;
     const bool ok = report["errors"].empty();
