@@ -152,10 +152,13 @@ export function assertNoExtraDylibs(bin) {
     }).stdout;
     deps = out
       .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => /\.dll$/i.test(l))
+      .map((l) => l.match(/([A-Za-z0-9_.+-]+\.dll)\s*$/i)?.[1])
+      .filter(Boolean)
       .filter(
-        (d) => !/^(KERNEL32|VCRUNTIME|api-ms-|ucrtbase|MSVCP|ntdll)/i.test(d),
+        (d) =>
+          !/^(?:KERNEL(?:32|BASE)|VCRUNTIME\d*(?:_\d+)?|api-ms-.*|ucrtbase|MSVCP\d*|ntdll|msvcrt)\.dll$/i.test(
+            d,
+          ),
       )
       .join('\n');
   } else {
