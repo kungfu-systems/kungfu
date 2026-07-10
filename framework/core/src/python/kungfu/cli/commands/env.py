@@ -7,6 +7,7 @@ from pathlib import Path
 
 import click
 
+from kungfu import host
 from kungfu.cli.commands import kfc
 
 
@@ -14,7 +15,7 @@ def _resolve_trunk() -> str | None:
     """Locate the kungfu-trunk binary that owns the env semantics.
 
     Resolution order: explicit override, then the product layout (trunk ships
-    next to the frozen binary in dist/kungfu), then the dev build under
+    at the dist root, next to the product entry), then the dev build under
     crates/target. Deliberately no PATH probing — the env surface must be the
     product's own trunk, not a foreign binary that happens to share the name.
     """
@@ -22,9 +23,11 @@ def _resolve_trunk() -> str | None:
     override = os.environ.get("KUNGFU_TRUNK_BIN")
     if override:
         return override if Path(override).is_file() else None
-    product = Path(sys.executable).parent / exe
-    if product.is_file():
-        return str(product)
+    root = host.product_root()
+    if root is not None:
+        product = root / exe
+        if product.is_file():
+            return str(product)
     for parent in Path(__file__).resolve().parents:
         if (parent / "crates").is_dir():
             for profile in ("release", "debug"):

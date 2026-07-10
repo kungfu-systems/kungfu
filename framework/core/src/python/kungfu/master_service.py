@@ -7,7 +7,6 @@ import os
 import platform
 import signal
 import subprocess
-import sys
 import time
 from dataclasses import dataclass
 from hashlib import sha256
@@ -16,6 +15,7 @@ from typing import Any
 from xml.sax.saxutils import escape as xml_escape
 
 import kungfu
+from kungfu import host
 
 lf = kungfu.__binding__.yijinjing
 yjj = kungfu.__binding__.runtime
@@ -202,10 +202,7 @@ def unlink_if_exists(path: Path) -> None:
 
 
 def entry_command() -> list[str]:
-    argv0 = Path(sys.argv[0])
-    if argv0.exists() and argv0.name not in {"python", "python3"}:
-        return [str(argv0.resolve())]
-    return [sys.executable, "-m", "kungfu"]
+    return host.entry_command()
 
 
 def command_env(
