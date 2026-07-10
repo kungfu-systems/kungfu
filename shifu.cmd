@@ -3,6 +3,16 @@ rem shifu.cmd - kungfu dev/build launcher (Windows).
 rem ASCII-only on purpose: Windows cmd parses .cmd in the OEM codepage (e.g. GBK/936),
 rem so non-ASCII bytes corrupt parsing. Keep this file ASCII; the sh version may use UTF-8.
 rem
+rem == PROTOCOL WARNING (ADR-0044) ==============================================
+rem This file's NAME and LOCATION (repo root) are a welded surface baked into
+rem every installed shifu binary in the wild: together with ./shifu it is how
+rem they recognize a checkout and what they spawn (via cmd.exe) when
+rem delegating. Never rename, move, or remove it. Its implementation may
+rem change freely, but any dispatch of a resolved native binary must keep
+rem setting SHIFU_FROM_SHIM=1.
+rem See framework/core/docs/adr/ADR-0044-shifu-delegation-protocol.md
+rem =============================================================================
+rem
 rem Aligns with the macOS/Linux shifu (sh):
 rem   shifu app | shifu build:core | shifu <any pnpm task>
 rem   shifu proxy ... / config ...   rich subcommands -> delegated to L2 node (not pnpm)

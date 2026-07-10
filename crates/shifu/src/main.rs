@@ -311,7 +311,7 @@ fn maybe_delegate_to_repo_entrypoint(root: &Path, args: &[String]) {
 /// the current directory looking for the repo's own entrypoint marker.
 ///
 /// A directory is a kungfu repo root when both welded entrypoint files are
-/// present. This recognition protocol is deliberately anchored on nothing but
+/// present. Protocol authority: ADR-0044 (shifu delegation protocol). This recognition protocol is deliberately anchored on nothing but
 /// the entrypoints themselves (a KFD-1 welded surface, so it survives any
 /// toolchain evolution — even a future without node), and on both of them as a
 /// pair so a stray file named `shifu` in some unrelated directory cannot be

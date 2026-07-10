@@ -159,7 +159,8 @@ per-platform special-casing) with one binary that:
   `shifu.cmd` (both welded surfaces), spawn the entrypoint directly without
   assuming what it is implemented in, and carry a two-fuse anti-loop guard
   (`SHIFU_FROM_SHIM` / `SHIFU_DELEGATED`) — so the handover survives any
-  toolchain evolution, including one that retires node.
+  toolchain evolution, including one that retires node. Protocol authority:
+  [ADR-0044](../framework/core/docs/adr/ADR-0044-shifu-delegation-protocol.md).
 
 It scores three yeses: it *is* the process boundary in front of everything
 else; it needs to exist before node/python are provisioned, which only a
