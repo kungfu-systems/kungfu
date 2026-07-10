@@ -577,6 +577,15 @@ name = "kungfu"
 version = "0.0.0"
 source = { editable = "." }
 dependencies = [
+    { name = "click" },
+    { name = "flatbuffers" },
+    { name = "jsonschema" },
+    { name = "psutil" },
+    { name = "tabulate" },
+]
+
+[package.dev-dependencies]
+dev = [
     { name = "authing" },
     { name = "boto3" },
     { name = "certifi" },
@@ -584,15 +593,12 @@ dependencies = [
     { name = "chardet" },
     { name = "charset-normalizer" },
     { name = "clang-format" },
-    { name = "click" },
     { name = "colorama", marker = "os_name == 'nt'" },
     { name = "conan" },
     { name = "cryptography", marker = "sys_platform == 'linux'" },
     { name = "filelock" },
-    { name = "flatbuffers" },
     { name = "importlib-metadata" },
     { name = "jeepney", marker = "sys_platform == 'linux'" },
-    { name = "jsonschema" },
     { name = "keyring" },
     { name = "msgpack" },
     { name = "mypy" },
@@ -609,9 +615,9 @@ dependencies = [
     { name = "platformdirs" },
     { name = "plotly" },
     { name = "pluggy" },
-    { name = "psutil" },
     { name = "pybind11-stubgen" },
     { name = "pycparser", marker = "sys_platform != 'win32'" },
+    { name = "pyinstaller" },
     { name = "pytest" },
     { name = "pywin32-ctypes", marker = "sys_platform == 'win32'" },
     { name = "railroad-diagrams" },
@@ -622,7 +628,6 @@ dependencies = [
     { name = "setuptools" },
     { name = "shellingham" },
     { name = "statsmodels" },
-    { name = "tabulate" },
     { name = "tomli-w" },
     { name = "tomlkit" },
     { name = "urllib3" },
@@ -635,13 +640,17 @@ dependencies = [
     { name = "zstandard" },
 ]
 
-[package.dev-dependencies]
-dev = [
-    { name = "pyinstaller" },
-]
-
 [package.metadata]
 requires-dist = [
+    { name = "click", specifier = "~=8.1.7" },
+    { name = "flatbuffers", specifier = ">=25.2,<26" },
+    { name = "jsonschema", specifier = "~=4.25.0" },
+    { name = "psutil", specifier = "~=6.1.0" },
+    { name = "tabulate", specifier = "~=0.9.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [
     { name = "authing", specifier = "~=5.1.0" },
     { name = "boto3", specifier = "~=1.35.0" },
     { name = "certifi" },
@@ -649,15 +658,12 @@ requires-dist = [
     { name = "chardet" },
     { name = "charset-normalizer" },
     { name = "clang-format", specifier = "==20.1.8" },
-    { name = "click", specifier = "~=8.1.7" },
     { name = "colorama", marker = "os_name == 'nt'", specifier = "==0.4.6" },
     { name = "conan", specifier = ">=2.22,<3.0.0" },
     { name = "cryptography", marker = "sys_platform == 'linux'", specifier = ">=48.0.1,<49.0.0" },
     { name = "filelock" },
-    { name = "flatbuffers", specifier = ">=25.2,<26" },
     { name = "importlib-metadata" },
     { name = "jeepney", marker = "sys_platform == 'linux'", specifier = "==0.8.0" },
-    { name = "jsonschema", specifier = "~=4.25.0" },
     { name = "keyring", specifier = "~=25.5.0" },
     { name = "msgpack" },
     { name = "mypy", specifier = "~=1.13" },
@@ -674,9 +680,9 @@ requires-dist = [
     { name = "platformdirs" },
     { name = "plotly", specifier = ">=6.8.0,<7.0.0" },
     { name = "pluggy" },
-    { name = "psutil", specifier = "~=6.1.0" },
     { name = "pybind11-stubgen", specifier = "~=2.5" },
     { name = "pycparser", marker = "sys_platform != 'win32'", specifier = "==2.22" },
+    { name = "pyinstaller", specifier = "~=6.11.0" },
     { name = "pytest", specifier = ">=9.0.3,<10.0.0" },
     { name = "pywin32-ctypes", marker = "sys_platform == 'win32'", specifier = "==0.2.3" },
     { name = "railroad-diagrams" },
@@ -687,7 +693,6 @@ requires-dist = [
     { name = "setuptools", specifier = ">=78.1.1,<81.0.0" },
     { name = "shellingham" },
     { name = "statsmodels", specifier = "~=0.14.4" },
-    { name = "tabulate", specifier = "~=0.9.0" },
     { name = "tomli-w", specifier = "~=1.0.0" },
     { name = "tomlkit", specifier = "~=0.13.0" },
     { name = "urllib3", specifier = ">=2.7.0,<3.0.0" },
@@ -699,9 +704,6 @@ requires-dist = [
     { name = "zipp" },
     { name = "zstandard", specifier = "~=0.23.0" },
 ]
-
-[package.metadata.requires-dev]
-dev = [{ name = "pyinstaller", specifier = "~=6.11.0" }]
 
 [[package]]
 name = "librt"

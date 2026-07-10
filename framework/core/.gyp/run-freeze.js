@@ -372,6 +372,30 @@ function existsLstat(p) {
   }
 }
 
+// pykungfu wheel 随 dist 发布：wheel 由 gyp 链的 wheel 目标先行构建
+// (build/python/dist/*.whl)，freeze 后拷进 dist/kungfu/wheels/，产品装包面
+// (kungfu env) 从产品目录内解析 wheel 装进卫星 env。直跑 `pnpm run freeze`
+// （跳过 wheel 目标的 dev 捷径）时告警不失败；完整 gyp/dist 链恒先建 wheel。
+function copyWheel() {
+  const wheelSrc = path.join(CORE, 'build', 'python', 'dist');
+  const wheelDest = path.join(CORE, 'dist', 'kungfu', 'wheels');
+  const wheels = fs.existsSync(wheelSrc)
+    ? fs.readdirSync(wheelSrc).filter((f) => f.endsWith('.whl'))
+    : [];
+  if (!wheels.length) {
+    console.warn(
+      '[freeze] ⚠️ build/python/dist 无 wheel（dev 捷径？完整链请经 gyp wheel 目标）；' +
+        'dist/kungfu/wheels 缺失将使产品装包面不可用',
+    );
+    return;
+  }
+  fs.mkdirSync(wheelDest, { recursive: true });
+  for (const f of wheels) {
+    fs.copyFileSync(path.join(wheelSrc, f), path.join(wheelDest, f));
+  }
+  console.log(`[freeze] wheel 进 dist：${wheels.join(', ')}`);
+}
+
 function main() {
   const bt = buildType();
   const fz = freezer();
@@ -384,6 +408,7 @@ function main() {
     console.error(`[freeze] 未知 freezer: ${fz}（应为 nuitka 或 pyinstaller）`);
     process.exit(1);
   }
+  copyWheel();
 }
 
 main();
