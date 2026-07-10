@@ -12,5 +12,15 @@ pub use shifu_core::bootstrap::{default_fnm_dir_if_bootstrapped, find_tool, Tool
 use crate::util;
 
 pub fn ensure_tool(tool: &Tool, root: &Path) -> PathBuf {
-    shifu_core::bootstrap::ensure_tool(tool, root).unwrap_or_else(|msg| util::die_code(&msg, 127))
+    shifu_core::bootstrap::ensure_tool(tool, root).unwrap_or_else(|err| {
+        util::die_code(
+            &format!(
+                "{} is required but was not found on PATH, and bootstrapping the prebuilt binary \
+                 failed: {err}\n  install it manually ({}) or fix the failure above and re-run",
+                tool.name,
+                tool.install_hint()
+            ),
+            127,
+        )
+    })
 }

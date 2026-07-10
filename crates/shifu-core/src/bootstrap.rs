@@ -5,6 +5,16 @@
 // python side); the same discipline the product trunk reuses for its lazy
 // pinned-uv fetch (ADR-0046 stage 1).
 //
+// Two layers:
+//
+//   FetchSpec / fetch  the engine — given an exact tool/version/URL (and
+//                      optionally a pinned SHA-256), place the binary in the
+//                      user-global cache and return its path. Any consumer
+//                      with its own pin source drives this directly.
+//   Tool               the launcher-flavored spec on top: repo pin files,
+//                      env version overrides, per-tool mirror env, release
+//                      asset naming — resolving into a FetchSpec.
+//
 // Resolution order per tool:
 //   1. already on PATH             -> use it (respect the user's environment)
 //   2. user-global cache           -> ${XDG_CACHE_HOME:-~/.cache}/kungfu/tools/<tool>/<version>/
@@ -15,10 +25,14 @@
 // discipline the repo already applies to node (fnm) and CPython (uv).
 //
 // Downloads shell out to platform tools (curl + tar/unzip on Unix,
-// curl.exe/PowerShell + tar.exe on Windows 10+) so the launcher itself stays
-// dependency-free. Mirrors are configurable through build-local.env
+// curl.exe/PowerShell + tar.exe on Windows 10+) so the shifu role itself
+// stays dependency-free. Mirrors are configurable through build-local.env
 // (KUNGFU_FNM_DIST_MIRROR / KUNGFU_UV_DIST_MIRROR), and checksums can be
 // pinned per environment (KUNGFU_FNM_SHA256 / KUNGFU_UV_SHA256).
+//
+// A failed fetch is a named error (BootstrapError) carrying the exact URL,
+// the expected checksum, and the mirror override to set — self-diagnosing by
+// construction, so a consumer's failure report needs no archaeology.
 //
 // Bootstrap versions resolve like node's: the repo pins them in data files
 // (.fnm-version / .uv-version, same shape as .node-version). Precedence:
@@ -27,6 +41,7 @@
 // a checkout predates the pin files).
 
 use std::env;
+use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -42,6 +57,174 @@ const UV_FALLBACK_VERSION: &str = "0.11.23";
 const FNM_BASE: &str = "https://github.com/Schniz/fnm/releases/download";
 const UV_BASE: &str = "https://github.com/astral-sh/uv/releases/download";
 
+/// Everything the fetch engine needs to acquire one pinned tool: an exact
+/// version, an exact URL, and optionally the expected archive SHA-256. The
+/// caller owns pin resolution; the engine owns download / verify / cache.
+pub struct FetchSpec {
+    /// Cache key and default binary stem ("uv").
+    pub tool: String,
+    /// Exact pinned version — becomes the cache subdirectory.
+    pub version: String,
+    /// Exact download URL, mirror override already applied.
+    pub url: String,
+    /// Expected SHA-256 of the downloaded archive; verified when set.
+    pub sha256: Option<String>,
+    /// Name of the mirror-override env var, quoted in failure diagnostics.
+    pub mirror_env: Option<String>,
+    /// Binary file name inside the archive; defaults to `tool` (plus `.exe`
+    /// on Windows).
+    pub binary: Option<String>,
+}
+
+impl FetchSpec {
+    fn binary_name(&self) -> String {
+        match &self.binary {
+            Some(name) => name.clone(),
+            None if cfg!(windows) => format!("{}.exe", self.tool),
+            None => self.tool.clone(),
+        }
+    }
+
+    /// Where the engine caches this tool+version:
+    /// `${XDG_CACHE_HOME:-~/.cache}/kungfu/tools/<tool>/<version>/<binary>`.
+    pub fn cached_binary(&self) -> PathBuf {
+        host::kungfu_cache_dir()
+            .join("tools")
+            .join(&self.tool)
+            .join(&self.version)
+            .join(self.binary_name())
+    }
+
+    fn error(&self, kind: BootstrapErrorKind) -> BootstrapError {
+        BootstrapError::new(
+            self.tool.clone(),
+            Some(self.url.clone()),
+            self.mirror_env.clone(),
+            kind,
+        )
+    }
+}
+
+/// A named, self-diagnosing bootstrap failure: what tool, which exact URL,
+/// which mirror override to set — everything a failure report needs. Boxed
+/// internally so the error path stays cheap to return.
+#[derive(Debug)]
+pub struct BootstrapError(Box<BootstrapErrorInner>);
+
+#[derive(Debug)]
+struct BootstrapErrorInner {
+    tool: String,
+    url: Option<String>,
+    mirror_env: Option<String>,
+    kind: BootstrapErrorKind,
+}
+
+impl BootstrapError {
+    fn new(
+        tool: String,
+        url: Option<String>,
+        mirror_env: Option<String>,
+        kind: BootstrapErrorKind,
+    ) -> Self {
+        BootstrapError(Box::new(BootstrapErrorInner {
+            tool,
+            url,
+            mirror_env,
+            kind,
+        }))
+    }
+
+    pub fn tool(&self) -> &str {
+        &self.0.tool
+    }
+
+    /// Exact URL involved, when the failure has one.
+    pub fn url(&self) -> Option<&str> {
+        self.0.url.as_deref()
+    }
+
+    /// The mirror-override env var a consumer can set to route around it.
+    pub fn mirror_env(&self) -> Option<&str> {
+        self.0.mirror_env.as_deref()
+    }
+
+    pub fn kind(&self) -> &BootstrapErrorKind {
+        &self.0.kind
+    }
+}
+
+#[derive(Debug)]
+pub enum BootstrapErrorKind {
+    /// No prebuilt asset exists for this OS/arch.
+    NoPrebuilt {
+        os: &'static str,
+        arch: &'static str,
+    },
+    /// The download step failed (no downloader, network error, 404, ...).
+    Download { detail: String },
+    /// The downloaded archive did not match the pinned SHA-256.
+    ChecksumMismatch { expected: String, actual: String },
+    /// A pinned checksum was requested but could not be verified on this host.
+    ChecksumUnverifiable { detail: String },
+    /// Extraction or placement failed after a successful download.
+    Io { detail: String },
+}
+
+impl fmt::Display for BootstrapError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let inner = &self.0;
+        match &inner.kind {
+            BootstrapErrorKind::NoPrebuilt { os, arch } => {
+                write!(f, "no prebuilt {} for {os}/{arch}", inner.tool)?;
+            }
+            BootstrapErrorKind::Download { detail } => {
+                write!(f, "downloading {} failed: {detail}", inner.tool)?;
+                if let Some(url) = &inner.url {
+                    write!(f, "\n  url: {url}")?;
+                }
+                if let Some(mirror) = &inner.mirror_env {
+                    write!(
+                        f,
+                        "\n  set {mirror} to a reachable mirror to route around it"
+                    )?;
+                }
+            }
+            BootstrapErrorKind::ChecksumMismatch { expected, actual } => {
+                write!(f, "checksum mismatch for {}", inner.tool)?;
+                if let Some(url) = &inner.url {
+                    write!(f, "\n  url: {url}")?;
+                }
+                write!(
+                    f,
+                    "\n  expected sha256: {expected}\n  actual sha256:   {actual}"
+                )?;
+                if let Some(mirror) = &inner.mirror_env {
+                    write!(
+                        f,
+                        "\n  (stale or tampered mirror? point {mirror} elsewhere, or update the pinned checksum)"
+                    )?;
+                }
+            }
+            BootstrapErrorKind::ChecksumUnverifiable { detail } => {
+                write!(
+                    f,
+                    "cannot verify the pinned sha256 for {}: {detail}",
+                    inner.tool
+                )?;
+            }
+            BootstrapErrorKind::Io { detail } => {
+                write!(f, "bootstrapping {} failed: {detail}", inner.tool)?;
+                if let Some(url) = &inner.url {
+                    write!(f, "\n  url: {url}")?;
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+impl std::error::Error for BootstrapError {}
+
 pub struct Tool {
     /// Command name and cached-binary file stem ("fnm" / "uv").
     pub name: &'static str,
@@ -50,6 +233,7 @@ pub struct Tool {
     pin_file: &'static str,
     default_version: &'static str,
     mirror_env: &'static str,
+    checksum_env: &'static str,
     default_base: &'static str,
     install_hint: &'static str,
 }
@@ -60,6 +244,7 @@ pub const FNM: Tool = Tool {
     pin_file: ".fnm-version",
     default_version: FNM_FALLBACK_VERSION,
     mirror_env: "KUNGFU_FNM_DIST_MIRROR",
+    checksum_env: "KUNGFU_FNM_SHA256",
     default_base: FNM_BASE,
     install_hint: "https://github.com/Schniz/fnm",
 };
@@ -70,6 +255,7 @@ pub const UV: Tool = Tool {
     pin_file: ".uv-version",
     default_version: UV_FALLBACK_VERSION,
     mirror_env: "KUNGFU_UV_DIST_MIRROR",
+    checksum_env: "KUNGFU_UV_SHA256",
     default_base: UV_BASE,
     install_hint: "https://docs.astral.sh/uv/",
 };
@@ -80,7 +266,14 @@ impl Tool {
         self.pin_file
     }
 
-    fn version(&self, root: &Path) -> String {
+    /// Manual install pointer, for failure messages.
+    pub fn install_hint(&self) -> &'static str {
+        self.install_hint
+    }
+
+    /// Pinned version for a checkout: env override > repo pin file >
+    /// compiled fallback.
+    pub fn version(&self, root: &Path) -> String {
         let env_val = env::var(self.version_env).ok();
         let file_text = fs::read_to_string(root.join(self.pin_file)).ok();
         resolve_version(
@@ -130,14 +323,40 @@ impl Tool {
         Some(name)
     }
 
-    fn download_url(&self, root: &Path) -> Option<String> {
-        let asset = self.asset()?;
+    /// Resolve this tool at an exact version into an engine spec: release
+    /// asset for the current platform, mirror override applied, checksum pin
+    /// taken from the environment. This is the launcher-flavored front end of
+    /// `fetch`; a consumer with its own pin source builds a FetchSpec
+    /// directly instead.
+    pub fn fetch_spec(&self, version: &str) -> Result<FetchSpec, BootstrapError> {
+        let Some(asset) = self.asset() else {
+            return Err(BootstrapError::new(
+                self.name.to_string(),
+                None,
+                Some(self.mirror_env.to_string()),
+                BootstrapErrorKind::NoPrebuilt {
+                    os: env::consts::OS,
+                    arch: env::consts::ARCH,
+                },
+            ));
+        };
         let tag = match self.name {
             // fnm tags are v-prefixed; uv tags are bare versions.
-            "fnm" => format!("v{}", self.version(root)),
-            _ => self.version(root),
+            "fnm" => format!("v{version}"),
+            _ => version.to_string(),
         };
-        Some(format!("{}/{}/{}", self.base_url(), tag, asset))
+        let sha256 = env::var(self.checksum_env)
+            .ok()
+            .map(|s| s.trim().to_lowercase())
+            .filter(|s| !s.is_empty());
+        Ok(FetchSpec {
+            tool: self.name.to_string(),
+            version: version.to_string(),
+            url: format!("{}/{}/{}", self.base_url(), tag, asset),
+            sha256,
+            mirror_env: Some(self.mirror_env.to_string()),
+            binary: None,
+        })
     }
 }
 
@@ -165,58 +384,61 @@ pub fn find_tool(tool: &Tool, root: &Path) -> Option<PathBuf> {
 }
 
 /// Resolve a tool, bootstrapping the pinned prebuilt release when absent.
-/// The error is a complete, self-diagnosing message; how to exit on it is the
-/// binary's decision (the launcher dies with code 127).
-pub fn ensure_tool(tool: &Tool, root: &Path) -> Result<PathBuf, String> {
+/// The error names everything (URL, checksum, mirror override); how to exit
+/// on it is the binary's decision (the launcher dies with code 127).
+pub fn ensure_tool(tool: &Tool, root: &Path) -> Result<PathBuf, BootstrapError> {
     if let Some(found) = find_tool(tool, root) {
         return Ok(found);
     }
-    bootstrap(tool, root).map_err(|err| {
-        format!(
-            "{} is required but was not found on PATH, and bootstrapping the prebuilt binary \
-             failed: {err}\n  install it manually ({}) or fix the failure above and re-run",
-            tool.name, tool.install_hint
-        )
-    })
-}
-
-fn bootstrap(tool: &Tool, root: &Path) -> Result<PathBuf, String> {
-    let url = tool.download_url(root).ok_or_else(|| {
-        format!(
-            "no prebuilt {} for {}/{}",
-            tool.name,
-            env::consts::OS,
-            env::consts::ARCH
-        )
-    })?;
-    let target = tool.cached_binary(root);
-    let target_dir = target.parent().expect("cached binary has a parent dir");
-    fs::create_dir_all(target_dir)
-        .map_err(|e| format!("cannot create {}: {e}", target_dir.display()))?;
-
+    let spec = tool.fetch_spec(&tool.version(root))?;
     eprintln!(
         "shifu: {} not found; fetching prebuilt {} {} into {}",
         tool.name,
         tool.name,
-        tool.version(root),
-        target_dir.display()
+        spec.version,
+        spec.cached_binary()
+            .parent()
+            .expect("cached binary has a parent dir")
+            .display()
     );
+    fetch(&spec)
+}
 
-    let work = host::unique_temp_dir(&format!("shifu-{}", tool.name))
-        .map_err(|e| format!("cannot create temp dir: {e}"))?;
-    let archive = work.join(url.rsplit('/').next().unwrap_or("archive"));
+/// The fetch engine: return the cached binary for `spec`, downloading,
+/// verifying (when a checksum is pinned), extracting, and caching it first
+/// when absent. Pure acquisition — no PATH probing, no process exits.
+pub fn fetch(spec: &FetchSpec) -> Result<PathBuf, BootstrapError> {
+    let target = spec.cached_binary();
+    if target.is_file() {
+        return Ok(target);
+    }
+    let target_dir = target.parent().expect("cached binary has a parent dir");
+    fs::create_dir_all(target_dir).map_err(|e| {
+        spec.error(BootstrapErrorKind::Io {
+            detail: format!("cannot create {}: {e}", target_dir.display()),
+        })
+    })?;
 
-    download(&url, &archive)?;
-    verify_checksum(tool, &archive)?;
-    extract(&archive, &work)?;
+    let work = host::unique_temp_dir(&format!("shifu-{}", spec.tool)).map_err(|e| {
+        spec.error(BootstrapErrorKind::Io {
+            detail: format!("cannot create temp dir: {e}"),
+        })
+    })?;
+    let archive = work.join(spec.url.rsplit('/').next().unwrap_or("archive"));
 
-    let binary_name = if cfg!(windows) {
-        format!("{}.exe", tool.name)
-    } else {
-        tool.name.to_string()
-    };
-    let extracted = find_file(&work, &binary_name, 3)
-        .ok_or_else(|| format!("{binary_name} not found inside {}", archive.display()))?;
+    download(&spec.url, &archive)
+        .map_err(|detail| spec.error(BootstrapErrorKind::Download { detail }))?;
+    if let Some(expected) = &spec.sha256 {
+        verify_checksum(spec, expected, &archive)?;
+    }
+    extract(&archive, &work).map_err(|detail| spec.error(BootstrapErrorKind::Io { detail }))?;
+
+    let binary_name = spec.binary_name();
+    let extracted = find_file(&work, &binary_name, 3).ok_or_else(|| {
+        spec.error(BootstrapErrorKind::Io {
+            detail: format!("{binary_name} not found inside {}", archive.display()),
+        })
+    })?;
 
     #[cfg(unix)]
     {
@@ -226,8 +448,11 @@ fn bootstrap(tool: &Tool, root: &Path) -> Result<PathBuf, String> {
 
     // rename() fails across filesystems (temp dir vs cache); fall back to copy.
     if fs::rename(&extracted, &target).is_err() {
-        fs::copy(&extracted, &target)
-            .map_err(|e| format!("cannot place {}: {e}", target.display()))?;
+        fs::copy(&extracted, &target).map_err(|e| {
+            spec.error(BootstrapErrorKind::Io {
+                detail: format!("cannot place {}: {e}", target.display()),
+            })
+        })?;
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
@@ -249,7 +474,7 @@ fn download(url: &str, dest: &Path) -> Result<(), String> {
         if status.success() {
             return Ok(());
         }
-        return Err(format!("curl failed downloading {url}"));
+        return Err("curl failed".to_string());
     }
     #[cfg(windows)]
     {
@@ -271,38 +496,29 @@ fn download(url: &str, dest: &Path) -> Result<(), String> {
             if status.success() {
                 return Ok(());
             }
-            return Err(format!("{ps} failed downloading {url}"));
+            return Err(format!("{ps} failed"));
         }
     }
     Err("no downloader available (curl not on PATH)".to_string())
 }
 
-/// Optional integrity pin: when KUNGFU_<TOOL>_SHA256 is set (e.g. by CI or a
-/// mirror-using environment), the downloaded archive must match it.
-fn verify_checksum(tool: &Tool, archive: &Path) -> Result<(), String> {
-    let env_key = match tool.name {
-        "fnm" => "KUNGFU_FNM_SHA256",
-        "uv" => "KUNGFU_UV_SHA256",
-        _ => return Ok(()),
-    };
-    let Ok(expected) = env::var(env_key) else {
-        return Ok(());
-    };
+/// Verify the downloaded archive against the pinned checksum.
+fn verify_checksum(spec: &FetchSpec, expected: &str, archive: &Path) -> Result<(), BootstrapError> {
     let expected = expected.trim().to_lowercase();
     if expected.is_empty() {
         return Ok(());
     }
-    let actual = sha256_file(archive)?;
+    let actual = sha256_file(archive)
+        .map_err(|detail| spec.error(BootstrapErrorKind::ChecksumUnverifiable { detail }))?;
     if actual != expected {
-        return Err(format!(
-            "checksum mismatch for {} (expected {expected}, got {actual})",
-            archive.display()
-        ));
+        return Err(spec.error(BootstrapErrorKind::ChecksumMismatch { expected, actual }));
     }
     Ok(())
 }
 
-fn sha256_file(path: &Path) -> Result<String, String> {
+/// SHA-256 of a file via the host's own tools (sha256sum / shasum on Unix,
+/// certutil on Windows) — the same zero-dependency discipline as downloads.
+pub fn sha256_file(path: &Path) -> Result<String, String> {
     let attempts: &[(&str, &[&str])] = if cfg!(windows) {
         &[("certutil", &["-hashfile"])]
     } else {
