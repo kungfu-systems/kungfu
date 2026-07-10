@@ -18,6 +18,7 @@
 // @ts-check
 
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const { shell } = require('../lib');
 const { verifyWindowsSymbols } = require('./verify-windows-symbols');
@@ -297,6 +298,228 @@ function freezeNuitka(bt) {
   console.log('[freeze] ✅ dist/kungfu 就绪（nuitka 扁平产物 + app native）');
 }
 
+// --------------------------------------------------------------- assemble
+//
+// ADR-0046 stage 2: the host runs a complete, exact CPython tree instead of a
+// frozen subset. The assembled dist keeps the flat dist/kungfu root (natives,
+// contract, wheels — identical to the frozen layout) and adds the interpreter
+// tree under dist/kungfu/python. The kungfu package ships as sources at the
+// dist root, wired into the tree through a site-packages .pth (never through
+// PYTHON* environment variables, which would leak into satellite envs). The
+// tree carries a kungfu-host.json marker so kungfu.host detects the assembled
+// form; the product entry binary is wired by the entry-form step.
+
+// uv names python-build-standalone keys with its own os/arch vocabulary; keep
+// the mapping identical to kungfu-trunk's python_request (crates/trunk).
+/** @param {string} pin */
+function pbsKey(pin) {
+  const osName = { darwin: 'macos', win32: 'windows', linux: 'linux' }[
+    process.platform
+  ];
+  const arch = { arm64: 'aarch64', x64: 'x86_64' }[process.arch];
+  if (!osName || !arch) {
+    console.error(
+      `[freeze] assemble: unsupported platform ${process.platform}/${process.arch}`,
+    );
+    process.exit(1);
+  }
+  return `cpython-${pin}-${osName}-${arch}-none`;
+}
+
+// PYTHON_PIN comes from the product pins manifest — the same single source the
+// trunk reads at runtime, so the assembled tree and satellite envs can never
+// drift apart. dist.mjs already asserts the manifest against .uv-version.
+function readRuntimePins() {
+  const pinsPath = path.join(CORE, '..', '..', 'product', 'runtime-pins.env');
+  /** @type {Record<string, string>} */
+  const pins = {};
+  for (const line of fs.readFileSync(pinsPath, 'utf-8').split('\n')) {
+    const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
+    if (m) pins[m[1]] = m[2];
+  }
+  if (!pins.PYTHON_PIN) {
+    console.error(`[freeze] assemble: PYTHON_PIN missing in ${pinsPath}`);
+    process.exit(1);
+  }
+  return pins;
+}
+
+// Materialize the pinned python-build-standalone prefix in the kungfu cache
+// (same layout the trunk uses: UV_PYTHON_INSTALL_DIR under ~/.cache/kungfu),
+// arch-qualified so a foreign-arch install can never satisfy the request.
+/** @param {string} pin */
+function ensureRuntimeTree(pin) {
+  const cache = process.env.XDG_CACHE_HOME || path.join(os.homedir(), '.cache');
+  const installDir = path.join(cache, 'kungfu', 'python');
+  const key = pbsKey(pin);
+  shell.run('uv', ['python', 'install', key], true, {
+    cwd: CORE,
+    env: {
+      ...process.env,
+      UV_PYTHON_INSTALL_DIR: installDir,
+      UV_PYTHON_PREFERENCE: 'only-managed',
+    },
+  });
+  const prefix = path.join(installDir, key);
+  if (!fs.existsSync(prefix)) {
+    console.error(`[freeze] assemble: expected runtime tree at ${prefix}`);
+    process.exit(1);
+  }
+  return prefix;
+}
+
+// The stdlib prune policy is a declarative manifest, not code: a fixed list of
+// prefix-relative paths subtracted from a complete stdlib. New dependencies
+// live in site-packages and never interact with this list, and a stale entry
+// fails safe (ships a few extra MB) — deliberately unlike the nofollow-import
+// surface this stage retires. A pruned entry that is unexpectedly absent stops
+// the build: the manifest must describe the tree it prunes.
+/** @param {string} treeRoot */
+function applyStdlibPrune(treeRoot) {
+  const manifestPath = path.join(
+    CORE,
+    '..',
+    '..',
+    'product',
+    'stdlib-prune.json',
+  );
+  if (!fs.existsSync(manifestPath)) {
+    console.log('[freeze] assemble: no stdlib-prune manifest, full tree ships');
+    return;
+  }
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+  const entries = Array.isArray(manifest.prune) ? manifest.prune : [];
+  const root = path.resolve(treeRoot);
+  let n = 0;
+  for (const rel of entries) {
+    const target = path.resolve(treeRoot, rel);
+    if (!target.startsWith(root + path.sep)) {
+      console.error(`[freeze] assemble: prune entry escapes the tree: ${rel}`);
+      process.exit(1);
+    }
+    if (!existsLstat(target)) {
+      console.error(`[freeze] assemble: prune entry not in the tree: ${rel}`);
+      process.exit(1);
+    }
+    fs.rmSync(target, { recursive: true, force: true });
+    n++;
+  }
+  console.log(`[freeze] assemble: pruned ${n}/${entries.length} entries`);
+}
+
+// Natives the frozen leg bundled by following imports (pykungfu and the
+// libraries its rpath colocation expects) must be staged explicitly here;
+// the four app-side .node files keep going through copyAppNative.
+/** @param {string} bt @param {string} distKfc */
+function copyRuntimeNative(bt, distKfc) {
+  const rel = path.join(CORE, 'build', bt);
+  const wanted =
+    /^(pykungfu.*\.(so|pyd)|libkungfu.*|libnode.*|libnodebuildinfo\.json)$/i;
+  let n = 0;
+  for (const f of fs.readdirSync(rel)) {
+    if (!wanted.test(f)) continue;
+    fs.copyFileSync(path.join(rel, f), path.join(distKfc, f));
+    n++;
+  }
+  if (!n) {
+    console.error(`[freeze] assemble: no runtime natives under build/${bt}`);
+    process.exit(1);
+  }
+  console.log(`[freeze] assemble: staged ${n} runtime natives`);
+}
+
+/** @param {string} bt */
+function assembleTree(bt) {
+  if (isWin) {
+    console.error(
+      '[freeze] assemble: windows keeps the frozen path until its layout ' +
+        'lands (ADR-0046 stage 2 goes platform by platform)',
+    );
+    process.exit(1);
+  }
+  const pins = readRuntimePins();
+  const pin = pins.PYTHON_PIN;
+  const feature = pin.split('.').slice(0, 2).join('.');
+  const distKfc = path.join(CORE, 'dist', 'kungfu');
+  const info = ensureBuildInfo(bt);
+  const prefix = ensureRuntimeTree(pin);
+
+  console.log(`[freeze] assemble: ${pbsKey(pin)} → dist/kungfu/python`);
+  fs.rmSync(distKfc, { recursive: true, force: true });
+  fs.mkdirSync(distKfc, { recursive: true });
+
+  const treeDest = path.join(distKfc, 'python');
+  fs.cpSync(prefix, treeDest, { recursive: true, verbatimSymlinks: true });
+  applyStdlibPrune(treeDest);
+
+  // Runtime dependencies resolve from the committed lock into the tree's own
+  // site-packages — the host tree is the blessed interpreter, so its deps are
+  // part of the product image, not a satellite env concern.
+  const req = path.join(CORE, 'build', 'assemble-requirements.txt');
+  shell.run(
+    'uv',
+    ['export', '--frozen', '--no-dev', '--no-emit-project', '-o', req],
+    true,
+    { cwd: CORE },
+  );
+  // The tree keeps python-build-standalone's EXTERNALLY-MANAGED marker: in the
+  // product it guards the kungfu-owned install surface (a stray pip into the
+  // host tree gets refused, ADR-0046 violation 5). The build stages the deps
+  // through the one explicit bypass.
+  shell.run(
+    'uv',
+    [
+      'pip',
+      'install',
+      '--python',
+      path.join(treeDest, 'bin', 'python3'),
+      '--break-system-packages',
+      '-r',
+      req,
+    ],
+    true,
+    { cwd: CORE },
+  );
+
+  // The kungfu package ships as sources at the dist root (data files — .bfbs
+  // schemas, the agent pack — travel inside the package, where the source
+  // layout already has them). The .pth wires the dist root into the tree.
+  fs.cpSync(
+    path.join(CORE, 'src', 'python', 'kungfu'),
+    path.join(distKfc, 'kungfu'),
+    {
+      recursive: true,
+      filter: (src) => !src.split(path.sep).includes('__pycache__'),
+    },
+  );
+  fs.copyFileSync(info, path.join(distKfc, 'kungfubuildinfo.json'));
+
+  const sitePackages = path.join(
+    treeDest,
+    'lib',
+    `python${feature}`,
+    'site-packages',
+  );
+  // Relative to site-packages: four levels up is the dist root.
+  fs.writeFileSync(path.join(sitePackages, 'kungfu-dist.pth'), '../../../..\n');
+  fs.writeFileSync(
+    path.join(treeDest, 'kungfu-host.json'),
+    `${JSON.stringify(
+      { schema: 'kungfu.host/v1', form: 'assembled', product_root: '..' },
+      null,
+      2,
+    )}\n`,
+  );
+
+  copyRuntimeNative(bt, distKfc);
+  copyAppNative(bt);
+  copyConfigContract();
+  console.log(
+    '[freeze] ✅ dist/kungfu assembled (interpreter tree + flat natives; ' +
+      'entry binary lands with the entry-form step)',
+  );
+}
+
 // ------------------------------------------------------------- pyinstaller
 
 /** @param {string} bt */
@@ -404,8 +627,12 @@ function main() {
     freezeNuitka(bt);
   } else if (fz === 'pyinstaller') {
     freezePyinstaller(bt);
+  } else if (fz === 'assemble') {
+    assembleTree(bt);
   } else {
-    console.error(`[freeze] 未知 freezer: ${fz}（应为 nuitka 或 pyinstaller）`);
+    console.error(
+      `[freeze] 未知 freezer: ${fz}（应为 nuitka、pyinstaller 或 assemble）`,
+    );
     process.exit(1);
   }
   copyWheel();
