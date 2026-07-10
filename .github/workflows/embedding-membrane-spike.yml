@@ -16,37 +16,69 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
-  issues: write
-  id-token: write
 
 jobs:
   native-membrane:
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v2
-    secrets: inherit
-    with:
-      runner-preset: kungfu-v4-self-hosted
-      artifact-name: embedding-membrane-spike
-      artifact-paths: |
-        framework/core/build/Release/shared_embedding_host
-        framework/core/build/Release/shared_embedding_host.exe
-        framework/core/build/Release/shared_embedding_native_kfx.so
-        framework/core/build/Release/shared_embedding_native_kfx.dll
-      expected-artifacts-json: >-
-        {"minFiles":2,"minTotalBytes":1}
-      require-install: true
-      require-build: true
-      require-verify: true
-      verify-command: >-
-        bash -c "cmake -S framework/core -B framework/core/build -DKUNGFU_WITH_SLICES=ON &&
-        cmake --build framework/core/build --target shared_embedding_host shared_embedding_native_kfx &&
-        node framework/core/slices/shared-embedding-membrane/run.mjs framework/core/build"
-      release-candidate: false
-      artifact-transfer-mode: s3-to-github-artifacts
-      artifact-retention-days: 7
-      checkout-cache-mode: auto
-      checkout-cache-mirror-url-template: ${{ vars.BUILDCHAIN_CHECKOUT_CACHE_MIRROR_URL_TEMPLATE }}
-      checkout-cache-reference-repository-template: ${{ vars.BUILDCHAIN_CHECKOUT_CACHE_REFERENCE_REPOSITORY_TEMPLATE }}
-      checkout-cache-fallback: github
-      checkout-cache-timeout-seconds: 60
-      buildchain-contract-lock-path: .buildchain/contract-lock.json
+    name: ${{ matrix.name }}
+    # Never execute untrusted fork code on the self-hosted build fleet.
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x64
+            runner: '["self-hosted","Linux","X64","kungfu-build-v4-linux-x64"]'
+          - name: macOS ARM64
+            runner: '["self-hosted","macOS","ARM64","kungfu-build-v4-macos-arm64"]'
+          - name: Windows x64
+            runner: '["self-hosted","Windows","X64","kungfu-build-v4-windows-x64"]'
+    runs-on: ${{ fromJSON(matrix.runner) }}
+    env:
+      KUNGFU_BUILDCHAIN_NO_OPTIONAL: "1"
+      KUNGFU_BUILDCHAIN_SOURCE_BUILD: "1"
+      SHIFU_NATIVE: "1"
+      SHIFU_REQUIRE_MSVC: "1"
+    steps:
+      - name: Checkout Buildchain runtime
+        uses: actions/checkout@v7.0.0
+        with:
+          repository: kungfu-systems/buildchain
+          ref: v2
+          path: .buildchain/runtime
+          persist-credentials: false
+
+      # The reusable Buildchain workflow locks pull_request events to GitHub's
+      # synthetic refs/pull/*/merge ref. The LAN mirror intentionally carries
+      # branch refs, not synthetic PR refs, so lock this non-publishing spike to
+      # the immutable same-repository head SHA and its real branch ref instead.
+      - name: Checkout immutable PR head through Buildchain cache
+        # shifu-entry-contract: allow Buildchain must bootstrap before the consumer source and Shifu entrypoint exist
+        run: node .buildchain/runtime/scripts/locked-source-checkout.mjs
+        env:
+          BUILDCHAIN_SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+          BUILDCHAIN_SOURCE_REF: refs/heads/${{ github.event.pull_request.head.ref }}
+          BUILDCHAIN_CHECKOUT_CACHE_MODE: auto
+          BUILDCHAIN_CHECKOUT_CACHE_MIRROR_URL_TEMPLATE: ${{ vars.BUILDCHAIN_CHECKOUT_CACHE_MIRROR_URL_TEMPLATE }}
+          BUILDCHAIN_CHECKOUT_CACHE_REFERENCE_REPOSITORY_TEMPLATE: ${{ vars.BUILDCHAIN_CHECKOUT_CACHE_REFERENCE_REPOSITORY_TEMPLATE }}
+          BUILDCHAIN_CHECKOUT_CACHE_FALLBACK: github
+          BUILDCHAIN_CHECKOUT_CACHE_TIMEOUT_SECONDS: "60"
+          BUILDCHAIN_SOURCE_CHECKOUT_DIAGNOSTICS_PATH: .buildchain/diagnostics/source-checkout.json
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Install frozen workspace
+        shell: bash
+        run: ./shifu install --frozen-lockfile --no-optional
+
+      - name: Seed core build
+        shell: bash
+        run: ./shifu build:core
+
+      - name: Build and run shared membrane consumers
+        shell: bash
+        run: |
+          # shifu-entry-contract: allow the isolated spike configure is not a product-level Shifu task
+          cmake -S framework/core -B framework/core/build -DKUNGFU_WITH_SLICES=ON
+          # shifu-entry-contract: allow the isolated spike targets are not product-level Shifu tasks
+          cmake --build framework/core/build --target shared_embedding_host shared_embedding_native_kfx
+          # shifu-entry-contract: allow the spike harness must inspect platform-specific binaries directly
+          node framework/core/slices/shared-embedding-membrane/run.mjs framework/core/build
