@@ -20,11 +20,12 @@ sensitive material in issues or pull requests.
 
 - A C++23 toolchain and [CMake](https://cmake.org/) (>= 3.20)
 - [Conan 2](https://conan.io/) for C++ dependencies
-- [fnm](https://github.com/Schniz/fnm) (Node is pinned via `.node-version`)
-- [uv](https://docs.astral.sh/uv/) for the Python environment
 
-Node, the package manager (pnpm via Corepack), and the Python interpreter are
-resolved automatically once `fnm` and `uv` are installed.
+Everything else is resolved by the `./shifu` entrypoint: node (via
+[fnm](https://github.com/Schniz/fnm) and the checked-in `.node-version`), the
+package manager (pnpm via Corepack), and the Python environment (via
+[uv](https://docs.astral.sh/uv/)) — bootstrapped automatically on first run
+when not already installed.
 
 ## Repository layout
 
@@ -57,17 +58,14 @@ Two command-line entry points, kept forward-compatible:
 
 ## Toolchain & build
 
-The repo pins its Node version via [`fnm`](https://github.com/Schniz/fnm) and a
-checked-in `.node-version`, and manages the Python environment with
-[`uv`](https://docs.astral.sh/uv/). You only need to install `fnm` and `uv` once;
-Node, the package manager, and the Python interpreter are then resolved automatically.
-On a machine without fnm / uv, `./shifu` bootstraps pinned prebuilt copies
-into `~/.cache/kungfu` via its native launcher, so even that one-time install is
-optional — nothing beyond `curl` is required.
+`./shifu` (`shifu.cmd` on Windows) is the build opener: every task runs
+under the toolchain the repo pins — node via [`fnm`](https://github.com/Schniz/fnm)
+and the checked-in `.node-version`, python via [`uv`](https://docs.astral.sh/uv/).
+There is nothing to preinstall beyond `curl`: on first run the launcher
+bootstraps pinned prebuilt fnm / uv into `~/.cache/kungfu` when they are not
+already on PATH (your own installs are used as-is).
 
 ```sh
-# one-time: install fnm and uv (e.g. `brew install fnm uv`)
-
 git clone git@github.com:kungfu-systems/kungfu.git
 cd kungfu
 

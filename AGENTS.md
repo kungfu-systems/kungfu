@@ -33,15 +33,12 @@ node, conan, or cmake directly — go through it:
 ./shifu <task>    # any pnpm task, run under the pinned node
 ```
 
-One-time prerequisites (install once; node, the package manager, and the Python
-interpreter then resolve automatically):
-
-- [fnm](https://github.com/Schniz/fnm) — pins node via `.node-version`
-- [uv](https://docs.astral.sh/uv/) — manages the Python toolchain
-
-On a machine without them, `./shifu` bootstraps pinned prebuilt copies
-automatically (nothing needed beyond `curl`); see
-[`docs/rust-adoption.md`](docs/rust-adoption.md).
+There is nothing to preinstall beyond `curl`: on first run `./shifu`
+bootstraps the pinned toolchain automatically (node via
+[fnm](https://github.com/Schniz/fnm) and `.node-version`, python via
+[uv](https://docs.astral.sh/uv/)) into `~/.cache/kungfu`. An fnm / uv you
+already have on PATH is used as-is. See
+[`docs/rust-adoption.md`](docs/rust-adoption.md) for how the launcher works.
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full toolchain, repository
 layout, and code style.

@@ -62,6 +62,7 @@
     "kfd2:claims": "node scripts/kfd2-release-claims.mjs --write",
     "kfd2:claims:check": "node scripts/kfd2-release-claims.mjs --check",
     "check:types": "tsc -p tsconfig.tools.json",
+    "version": "node scripts/sync-shifu-version.mjs && git add crates/shifu/Cargo.toml crates/Cargo.lock",
     "prepare": "node scripts/install-hooks.mjs",
     "hooks:install": "node scripts/install-hooks.mjs --force"
   },

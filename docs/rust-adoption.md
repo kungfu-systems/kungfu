@@ -78,8 +78,12 @@ the component's case for existing.
 
 The paved road for mode 1, as implemented for the launcher:
 
-- **Version pin** — the component's `Cargo.toml` `version` is the single
-  source of truth. No separate VERSION files.
+- **Version pin** — the component's `Cargo.toml` `version` is what the shims
+  and the release workflow bind to. For the launcher it is kept in lockstep
+  with the monorepo version (`lerna.json`) by
+  `scripts/sync-shifu-version.mjs`: the root `version` lifecycle rewrites it
+  during `lerna version`, and `./shifu check` gates against drift. No separate
+  VERSION files.
 - **Release** — tag `shifu-v<version>` triggers
   `.github/workflows/release-shifu.yml`: a 3-platform matrix
   (macos-arm64, linux-x64 as a fully static musl build, windows-x64) publishes

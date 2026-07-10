@@ -253,6 +253,13 @@ function checkNoBashTree() {
   );
 }
 
+function checkShifuVersionSync() {
+  run('shifu version sync gate', 'node', [
+    path.join('scripts', 'sync-shifu-version.mjs'),
+    '--check',
+  ]);
+}
+
 function checkCarrierActionEnvelope(scopeArgs = []) {
   run('carrier/action-envelope gate', 'node', [
     path.join('scripts', 'check-carrier-action-envelope.mjs'),
@@ -299,6 +306,7 @@ function checkBuildchainKfdEvidence(files = [], { force = false } = {}) {
 
 function checkStaged() {
   checkNoBashStaged();
+  checkShifuVersionSync();
   checkCarrierActionEnvelope(['--staged']);
   checkRuntimeGreenfield(['--staged']);
   const files = stagedFiles();
@@ -359,6 +367,7 @@ function checkShared() {
 
 function checkChanged() {
   checkNoBashTree();
+  checkShifuVersionSync();
   checkCarrierActionEnvelope();
   checkRuntimeGreenfield();
   const files = changedFiles();
@@ -371,6 +380,7 @@ function checkChanged() {
 
 function checkAll() {
   checkNoBashTree();
+  checkShifuVersionSync();
   checkCarrierActionEnvelope(['--all']);
   checkRuntimeGreenfield(['--all']);
   run('repo lint + format check', 'pnpm', ['run', 'lint']);
