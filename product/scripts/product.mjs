@@ -44,6 +44,8 @@ function usage(code) {
       '  run the product against an isolated Kungfu instance root:',
       '  KF_HOME=<path>/home, KF_CONFIG_HOME=<path>/config, KF_RUNTIME_DIR=<path>/home/runtime',
       '  dev commands auto-pick a workspace data home at <workspace>/.kungfu',
+      '  KF_DEV_HOME=<path> pins the dev workspace data home for local dev runs',
+      '  (dev only; explicit flags and KF_INSTANCE_HOME/KF_HOME take precedence)',
       '',
     ].join('\n'),
   );
@@ -196,6 +198,23 @@ function shouldAutoWorkspaceHome(parsed, surface, verb, env = process.env) {
   );
 }
 
+// KF_DEV_HOME pins every local dev run on this machine to one workspace data
+// home, so a daily-driver dev instance keeps its state across worktrees. It
+// only applies to dev verbs and loses to explicit flags and
+// KF_INSTANCE_HOME/KF_HOME, so tests and packaged runs stay unaffected.
+function devWorkspaceHomeOverride(parsed, surface, verb, env = process.env) {
+  const raw = (env.KF_DEV_HOME || '').trim();
+  return raw &&
+    !parsed.noInstanceHome &&
+    !parsed.instanceHome &&
+    !env.KF_INSTANCE_HOME &&
+    !env.KF_HOME &&
+    verb === 'dev' &&
+    (surface === 'gui' || surface === 'tui')
+    ? path.resolve(expandHomePath(raw))
+    : '';
+}
+
 function instanceEnv(instanceHome, baseEnv = process.env) {
   if (!instanceHome) return { ...baseEnv };
   const runtimeHome = path.join(instanceHome, 'home');
@@ -337,9 +356,11 @@ function main(argv = process.argv.slice(2)) {
   const { dryRun, positional } = parsed;
   const [surface, verb] = positional;
   const autoInstanceHome = '';
-  const autoWorkspaceHome = shouldAutoWorkspaceHome(parsed, surface, verb)
-    ? workspaceDataHomeForCwd(ROOT)
-    : '';
+  const autoWorkspaceHome =
+    devWorkspaceHomeOverride(parsed, surface, verb) ||
+    (shouldAutoWorkspaceHome(parsed, surface, verb)
+      ? workspaceDataHomeForCwd(ROOT)
+      : '');
   const instanceHome =
     parsed.instanceHome || process.env.KF_INSTANCE_HOME || autoInstanceHome;
   const workspaceHome = instanceHome ? '' : autoWorkspaceHome;
@@ -452,6 +473,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
 
 export {
   devKfdEnv,
+  devWorkspaceHomeOverride,
   instanceEnv,
   instanceHomeForWorktree,
   isLinkedGitWorktree,

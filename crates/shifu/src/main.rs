@@ -39,6 +39,7 @@ mod doctor;
 mod envfile;
 #[cfg(windows)]
 mod msvc;
+mod self_update;
 mod tools;
 mod util;
 
@@ -84,6 +85,11 @@ fn print_usage() {
     );
     println!("  shifu --version | -v | -V  launcher version and build identity");
     println!("  shifu self-version         this binary's version, machine readable");
+    println!("  shifu self-update          refresh this installed binary in place");
+    println!(
+        "                             {}",
+        style::dim("(from checkout source, or --version <v> for a release)")
+    );
     println!("  shifu help                 pnpm's own help (tasks are pnpm scripts)");
     println!();
     println!(
@@ -121,18 +127,28 @@ fn main() {
 
     let is_version = matches!(first, Some("--version") | Some("-v") | Some("-V"));
     let is_doctor = first == Some("doctor");
+    let is_self_update = first == Some("self-update");
 
-    let root = find_repo_root(is_version || is_doctor);
+    let root = find_repo_root(is_version || is_doctor || is_self_update);
 
     if is_version {
         println!("{}", version_line(root.as_deref()));
     }
     if let Some(root) = root.as_deref() {
         envfile::load(root);
+        // self-update answers for THIS binary (never delegated): delegation
+        // would replace the process with the checkout's launcher, while the
+        // update must act on the binary the user invoked.
+        if is_self_update {
+            self_update::run(Some(root), &args[1..]);
+        }
         maybe_delegate_to_repo_entrypoint(root, &args);
     }
     if is_version {
         exit(0);
+    }
+    if is_self_update {
+        self_update::run(None, &args[1..]);
     }
     if is_doctor {
         doctor::run(root.as_deref());

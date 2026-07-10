@@ -448,14 +448,20 @@ pub fn fetch(spec: &FetchSpec) -> Result<PathBuf, BootstrapError> {
     if let Some(expected) = &spec.sha256 {
         verify_checksum(spec, expected, &archive)?;
     }
-    extract(&archive, &work).map_err(|detail| spec.error(BootstrapErrorKind::Io { detail }))?;
 
+    // Archives are unpacked and searched for the binary; a raw asset (no
+    // archive suffix — release binaries like shifu's ship raw) IS the binary.
     let binary_name = spec.binary_name();
-    let extracted = find_file(&work, &binary_name, 3).ok_or_else(|| {
-        spec.error(BootstrapErrorKind::Io {
-            detail: format!("{binary_name} not found inside {}", archive.display()),
-        })
-    })?;
+    let extracted = if is_archive_name(&archive) {
+        extract(&archive, &work).map_err(|detail| spec.error(BootstrapErrorKind::Io { detail }))?;
+        find_file(&work, &binary_name, 3).ok_or_else(|| {
+            spec.error(BootstrapErrorKind::Io {
+                detail: format!("{binary_name} not found inside {}", archive.display()),
+            })
+        })?
+    } else {
+        archive.clone()
+    };
 
     #[cfg(unix)]
     {
@@ -478,6 +484,19 @@ pub fn fetch(spec: &FetchSpec) -> Result<PathBuf, BootstrapError> {
     }
     let _ = fs::remove_dir_all(&work);
     Ok(target)
+}
+
+fn is_archive_name(path: &Path) -> bool {
+    let name = path.to_string_lossy().to_lowercase();
+    name.ends_with(".tar.gz") || name.ends_with(".tgz") || name.ends_with(".zip")
+}
+
+/// Download one file with the host's own tools (curl, PowerShell fallback on
+/// Windows) — the same zero-dependency engine `fetch` uses, exposed for
+/// consumers that need a sidecar file (e.g. a release's SHA256SUMS) rather
+/// than a cached tool.
+pub fn download_file(url: &str, dest: &Path) -> Result<(), String> {
+    download(url, dest)
 }
 
 fn download(url: &str, dest: &Path) -> Result<(), String> {

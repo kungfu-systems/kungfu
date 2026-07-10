@@ -233,6 +233,39 @@ function checkPythonFiles(label, files) {
   }
 }
 
+// Rust format + lint check, workspace-scoped whenever any crates/ file is in
+// the given list: the workspace is a few small crates, cargo fmt reads the
+// edition from Cargo.toml, and clippy compiles whole targets by nature — so
+// per-file scoping buys nothing, and running the exact two commands shifu CI
+// runs (fmt --all --check, clippy -D warnings) means the local gate cannot
+// drift from CI. Read-only: fixes live in fix.mjs. A missing cargo warns and
+// skips — rustc is deliberately outside shifu's bootstrap scope (doctor
+// reports it as optional), and CI backstops crates/ edits made without a
+// local Rust toolchain.
+function checkRustFiles(label, files, { force = false } = {}) {
+  const rust = files.filter((file) => file.startsWith('crates/'));
+  if (!force && !rust.length) {
+    log(`[check] no ${label} crates/ files`);
+    return;
+  }
+  if (!has('cargo')) {
+    warn(
+      `cargo not found; skipped Rust check${rust.length ? `: ${rust.join(' ')}` : ''}`,
+    );
+    return;
+  }
+  const crates = path.join(ROOT, 'crates');
+  run(`${label} Rust format check`, 'cargo', ['fmt', '--all', '--check'], {
+    cwd: crates,
+  });
+  run(
+    `${label} Rust lint check`,
+    'cargo',
+    ['clippy', '--workspace', '--all-targets', '--', '-D', 'warnings'],
+    { cwd: crates },
+  );
+}
+
 function checkNoBashStaged() {
   const hits = scanStaged(ROOT);
   if (!hits.length) return;
@@ -361,6 +394,7 @@ function checkStaged() {
   checkPythonFiles('staged', files);
 
   checkBiomeFiles('staged', files);
+  checkRustFiles('staged', files);
   checkBuildchainKfdEvidence(files);
 
   log('\n[check] staged gate passed');
@@ -392,6 +426,7 @@ function checkChanged() {
   const files = changedFiles();
   checkPythonFiles('changed', files);
   checkBiomeFiles('changed', files);
+  checkRustFiles('changed', files);
   checkBuildchainKfdEvidence(files);
   checkShared();
   log('\n[check] changed-scope gate passed');
@@ -404,6 +439,7 @@ function checkAll() {
   checkCarrierActionEnvelope(['--all']);
   checkRuntimeGreenfield(['--all']);
   run('repo lint + format check', 'pnpm', ['run', 'lint']);
+  checkRustFiles('all', [], { force: true });
   checkBuildchainKfdEvidence([], { force: true });
   checkShared();
   log('\n[check] whole-tree gate passed');
