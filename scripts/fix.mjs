@@ -246,6 +246,23 @@ function fixFiles(scope, files, restageAfterFix) {
     changed.push(...web);
   }
 
+  const rust = files.filter((file) => file.startsWith('crates/'));
+  if (rust.length) {
+    if (has('cargo')) {
+      // Workspace scope on purpose: cargo fmt reads the edition from
+      // Cargo.toml (no flags to drift), and CI keeps the tree fmt-clean, so
+      // --all only ever rewrites the files you touched. Only the files from
+      // the given scope are re-staged; collateral rewrites stay unstaged for
+      // review.
+      run('Rust format', 'cargo', ['fmt', '--all'], {
+        cwd: path.join(ROOT, 'crates'),
+      });
+      changed.push(...rust.filter((file) => file.endsWith('.rs')));
+    } else {
+      warn(`cargo not found; skipped Rust format: ${rust.join(' ')}`);
+    }
+  }
+
   if (restageAfterFix) {
     const restage = [...new Set(changed)].filter(isFile);
     if (restage.length) {

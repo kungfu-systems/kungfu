@@ -25,6 +25,8 @@ const ROOT = path.resolve(PRODUCT_DIR, '..');
 const GUI_DIR = path.join(ROOT, 'framework', 'gui');
 const TUI_DIR = path.join(ROOT, 'framework', 'tui');
 const CORE_DIST = path.join(ROOT, 'framework', 'core', 'dist', 'kungfu');
+const CRATES_DIR = path.join(ROOT, 'crates');
+const RUNTIME_PINS = path.join(PRODUCT_DIR, 'runtime-pins.env');
 const SDK_DIR = path.join(ROOT, 'developer', 'sdk');
 const EXTENSIONS_ROOT = path.join(ROOT, 'extensions');
 const ASSEMBLED_EXTENSIONS = path.join(PRODUCT_DIR, 'extensions');
@@ -590,6 +592,48 @@ function assertCoreFrozen() {
   }
 }
 
+// ADR-0046 stage 1: kungfu-trunk (the product trunk carrying the kungfu-owned
+// env/package surface) ships next to the frozen binary, together with its
+// runtime-pins manifest. UV_VERSION in the manifest must equal the repo's
+// .uv-version so the product and the dev launcher pull the same pinned uv.
+function stageTrunk() {
+  run(
+    'build kungfu-trunk',
+    'cargo',
+    ['build', '--release', '-p', 'kungfu-trunk'],
+    {
+      cwd: CRATES_DIR,
+      phase: 'core',
+      event: 'product.core.trunk',
+    },
+  );
+  const trunkBin = path.join(
+    CRATES_DIR,
+    'target',
+    'release',
+    isWin ? 'kungfu-trunk.exe' : 'kungfu-trunk',
+  );
+  if (!fs.existsSync(trunkBin)) {
+    throw new Error(`cargo did not produce ${rel(trunkBin)}`);
+  }
+  const uvPin = (fs
+    .readFileSync(RUNTIME_PINS, 'utf8')
+    .match(/^UV_VERSION=(.+)$/m) || [])[1]?.trim();
+  const repoPin = fs
+    .readFileSync(path.join(ROOT, '.uv-version'), 'utf8')
+    .trim();
+  if (uvPin !== repoPin) {
+    throw new Error(
+      `runtime-pins.env pins uv ${uvPin} but .uv-version pins ${repoPin}; update product/runtime-pins.env (version and checksums) alongside .uv-version`,
+    );
+  }
+  fs.copyFileSync(trunkBin, path.join(CORE_DIST, path.basename(trunkBin)));
+  fs.copyFileSync(RUNTIME_PINS, path.join(CORE_DIST, 'runtime-pins.env'));
+  console.log(
+    '[product] kungfu-trunk + runtime-pins.env staged into core dist',
+  );
+}
+
 function platformId() {
   const platform =
     {
@@ -979,6 +1023,7 @@ function main() {
         },
       );
       assertCoreFrozen();
+      stageTrunk();
 
       buildKfx(kfxPackages, buildEnv);
       assembleKfx(kfxPackages);

@@ -17,7 +17,7 @@
 //
 // Resolution order per tool:
 //   1. already on PATH             -> use it (respect the user's environment)
-//   2. user-global cache           -> ${XDG_CACHE_HOME:-~/.cache}/kungfu/tools/<tool>/<version>/
+//   2. user-global cache           -> ${XDG_CACHE_HOME:-~/.cache}/kungfu/tools/<tool>/<version>/<os>-<arch>/
 //   3. bootstrap: download the pinned prebuilt release binary into the cache
 //
 // Step 3 is what makes a fresh machine turnkey: no compiler, no package
@@ -58,6 +58,14 @@ const UV_FALLBACK_VERSION: &str = "0.11.23";
 const FNM_BASE: &str = "https://github.com/Schniz/fnm/releases/download";
 const UV_BASE: &str = "https://github.com/astral-sh/uv/releases/download";
 
+/// Cache path segment naming the platform triple this process would fetch
+/// for, e.g. `macos-aarch64`. Part of the cache contract (see
+/// `FetchSpec::cached_binary`): binaries for different targets must never
+/// share a cache slot.
+fn cache_target() -> String {
+    format!("{}-{}", env::consts::OS, env::consts::ARCH)
+}
+
 /// Everything the fetch engine needs to acquire one pinned tool: an exact
 /// version, an exact URL, and optionally the expected archive SHA-256. The
 /// caller owns pin resolution; the engine owns download / verify / cache.
@@ -87,12 +95,19 @@ impl FetchSpec {
     }
 
     /// Where the engine caches this tool+version:
-    /// `${XDG_CACHE_HOME:-~/.cache}/kungfu/tools/<tool>/<version>/<binary>`.
+    /// `${XDG_CACHE_HOME:-~/.cache}/kungfu/tools/<tool>/<version>/<os>-<arch>/<binary>`.
+    ///
+    /// The target segment is load-bearing: on macOS a Rosetta-context consumer
+    /// can populate an arch-blind path with an x86_64 binary that a native
+    /// arm64 consumer would then silently run (and it would install x86_64
+    /// satellites in turn). One cache key per platform triple keeps every
+    /// consumer's toolchain matching its own architecture.
     pub fn cached_binary(&self) -> PathBuf {
         host::kungfu_cache_dir()
             .join("tools")
             .join(&self.tool)
             .join(&self.version)
+            .join(cache_target())
             .join(self.binary_name())
     }
 
@@ -301,6 +316,7 @@ impl Tool {
             .join("tools")
             .join(self.name)
             .join(self.version(root))
+            .join(cache_target())
             .join(file)
     }
 
