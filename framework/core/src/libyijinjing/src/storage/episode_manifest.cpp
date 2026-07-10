@@ -973,7 +973,13 @@ void episode_manifest_store::for_each_typed_record(const episode_manifest_record
   auto reader = std::make_shared<kungfu::yijinjing::journal::reader>(true, false, std::make_shared<bus>(false));
   reader->join(location, location::PUBLIC, 0);
   while (reader->data_available()) {
-    visit(decode_record(reader->current_frame()));
+    const auto frame = reader->current_frame();
+    // PageEnd is journal infrastructure: the reader consumes it to roll over
+    // to the next page, but it is not an Episode manifest record and must not
+    // make every cross-page content root unverifiable.
+    if (frame->carrier_type() != PageEnd::tag) {
+      visit(decode_record(frame));
+    }
     reader->next();
   }
 }

@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
+#include <algorithm>
+
 #include <kungfu/common.h>
 #include <kungfu/yijinjing/journal/journal.h>
 #include <kungfu/yijinjing/schema/core.h>
@@ -168,15 +170,20 @@ void journal::close_page(int64_t trigger_time, int64_t last_gen_time) {
 
   frame last_page_frame;
   last_page_frame.set_address(last_page->last_frame_address());
+  // A writer may be reopened for each logical append. If that fresh writer is
+  // the one that rolls a full page, its in-memory last_gen_time is still zero.
+  // The page itself is authoritative: preserve the final published frame's
+  // time so a cold reader seeking from time zero does not skip the page.
+  const auto persisted_last_gen_time = last_page_frame.gen_time();
   last_page_frame.move_to_next();
   last_page_frame.set_header_length();
   last_page_frame.set_trigger_time(trigger_time);
   last_page_frame.set_carrier_type(yijinjing::types::PageEnd::tag);
   last_page_frame.set_source(location_->uid);
   last_page_frame.set_dest(dest_id_);
-  last_page_frame.set_gen_time(last_gen_time);
-  last_page_frame.set_data_length(0);
+  last_page_frame.set_gen_time(std::max(last_gen_time, persisted_last_gen_time));
   last_page->set_last_frame_position(last_page_frame.address() - last_page->address());
+  last_page_frame.publish_data_length(0);
 }
 
 } // namespace kungfu::yijinjing::journal
