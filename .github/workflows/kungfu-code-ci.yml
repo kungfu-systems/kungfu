@@ -1,0 +1,54 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# CI for the Rust workspace under code/ (currently the kungfu-code launcher).
+# Deliberately independent of the buildchain lifecycle: code/ sits in front of
+# the toolchain the buildchain lifecycle provisions, so it gets a small,
+# fast, GitHub-hosted gate of its own.
+
+name: kungfu-code CI
+
+on:
+  pull_request:
+    branches:
+      - dev/v*/v*
+      - alpha/v*/v*
+      - release/v*/v*
+    paths:
+      - "code/**"
+      - ".github/workflows/kungfu-code-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+          - os: ubuntu-22.04
+          - os: windows-2022
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain versions
+        run: rustc --version && cargo --version
+      - name: Format
+        run: cargo fmt --all --check
+        working-directory: code
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+        working-directory: code
+      - name: Test
+        run: cargo test --workspace
+        working-directory: code
+      - name: Build (release)
+        run: cargo build --workspace --release
+        working-directory: code
+      - name: Launcher smoke (self-version)
+        if: runner.os != 'Windows'
+        run: ./code/target/release/kungfu-code self-version
+      - name: Launcher smoke (self-version, Windows)
+        if: runner.os == 'Windows'
+        run: .\code\target\release\kungfu-code.exe self-version
