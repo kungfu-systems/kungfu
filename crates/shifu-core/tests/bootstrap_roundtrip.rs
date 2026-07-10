@@ -118,5 +118,23 @@ fn pinned_fetch_roundtrip_cache_hit_and_checksum_gate() {
         "a failed verification must not populate the cache"
     );
 
+    // Raw (non-archive) asset: release binaries like shifu's own ship as
+    // bare files — the verified download IS the binary.
+    let payload: &[u8] = b"raw-binary-bytes";
+    let raw = scratch.join("rawtool-macos-arm64");
+    fs::write(&raw, payload).expect("write raw fixture");
+    let digest = sha256_file(&raw).expect("digest raw fixture");
+    let raw_spec = FetchSpec {
+        tool: "rawtool".to_string(),
+        version: "2.0.0".to_string(),
+        url: file_url(&raw),
+        sha256: Some(digest),
+        mirror_env: None,
+        binary: None,
+    };
+    let cached = fetch(&raw_spec).expect("raw asset fetch");
+    assert_eq!(cached, raw_spec.cached_binary());
+    assert_eq!(fs::read(&cached).expect("read cached raw"), payload);
+
     let _ = fs::remove_dir_all(&scratch);
 }
