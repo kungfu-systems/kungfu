@@ -130,7 +130,10 @@ per-platform special-casing) with one binary that:
 - discovers the repo root and loads the two-layer `build-local.env`;
 - ensures fnm (node side) and uv (python side), **bootstrapping pinned
   prebuilt binaries** into the user-global cache when absent — a fresh clone
-  needs nothing preinstalled beyond curl;
+  needs nothing preinstalled beyond curl; the bootstrap versions are pinned by
+  the repo data files `.fnm-version` / `.uv-version` (same shape as
+  `.node-version`; env override wins, a compiled fallback covers checkouts
+  without the pin files);
 - pins node via `.node-version` and dispatches every task to the
   corepack-pinned pnpm (with a `pnpm -> corepack pnpm` shim so repo scripts
   spawning bare `pnpm` work without `corepack enable`);

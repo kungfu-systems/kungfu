@@ -18,8 +18,8 @@ use std::process::Command;
 use crate::{tools, util};
 
 pub fn run_pnpm(root: &Path, args: &[String]) -> ! {
-    let fnm = tools::ensure_tool(&tools::FNM);
-    let uv = tools::ensure_tool(&tools::UV);
+    let fnm = tools::ensure_tool(&tools::FNM, root);
+    let uv = tools::ensure_tool(&tools::UV, root);
     tools::default_fnm_dir_if_bootstrapped(&fnm);
 
     // Idempotent: make sure the node pinned by .node-version is installed.
@@ -45,7 +45,7 @@ pub fn delegate_l2(root: &Path, args: &[String]) -> ! {
     // Prefer the pinned node via an fnm that is already present (PATH or
     // cache); fall back to any system node so `config` can run before the
     // toolchain is ready; bootstrap fnm only as the last resort.
-    if let Some(fnm) = tools::find_tool(&tools::FNM) {
+    if let Some(fnm) = tools::find_tool(&tools::FNM, root) {
         tools::default_fnm_dir_if_bootstrapped(&fnm);
         util::run_quiet(&fnm, &["install"], root);
         let mut cmd = Command::new(&fnm);
@@ -64,7 +64,7 @@ pub fn delegate_l2(root: &Path, args: &[String]) -> ! {
         cmd.arg(&l2).args(args).current_dir(root);
         util::exec_or_exit(cmd)
     }
-    let fnm = tools::ensure_tool(&tools::FNM);
+    let fnm = tools::ensure_tool(&tools::FNM, root);
     tools::default_fnm_dir_if_bootstrapped(&fnm);
     util::run_quiet(&fnm, &["install"], root);
     let mut cmd = Command::new(&fnm);
