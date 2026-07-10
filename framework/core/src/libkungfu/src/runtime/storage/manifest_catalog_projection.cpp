@@ -110,7 +110,7 @@ nlohmann::json manifest_catalog_projection::rebuild() const {
   };
 }
 
-nlohmann::json manifest_catalog_projection::verify() const {
+storage_projection_verify_result manifest_catalog_projection::verify_typed() const {
   const auto path = projection_path(runtime_dir_);
   const auto records = yijinjing::storage::manifest_catalog_store(runtime_dir_).read_typed_records();
   const auto expected = distinct_pk_counts(records);
@@ -120,16 +120,15 @@ nlohmann::json manifest_catalog_projection::verify() const {
   if (!fs::exists(path)) {
     // Missing projection is a distinct honest state, not a silent ok: if the
     // journal has records, the projection needs a rebuild before SQL queries.
-    return {
-        {"ok", true},
-        {"status", has_records ? "absent" : "ok"},
-        {"schema", MANIFEST_CATALOG_PROJECTION_SCHEMA_V1},
-        {"runtime_dir", runtime_dir_},
-        {"authority", "yijinjing-journal"},
-        {"projection_present", false},
-        {"note", has_records ? "projection not built; run rebuild_index to enable SQL queries"
-                             : "no manifest-catalog records; projection not needed"},
-    };
+    return {true,
+            has_records ? "absent" : "ok",
+            MANIFEST_CATALOG_PROJECTION_SCHEMA_V1,
+            runtime_dir_,
+            "yijinjing-journal",
+            false,
+            false,
+            has_records ? "projection not built; run rebuild_index to enable SQL queries"
+                        : "no manifest-catalog records; projection not needed"};
   }
 
   auto storage = cache::make_storage_ptr(path.string(), yijinjing::ManifestCatalogDataTypes);
@@ -145,10 +144,10 @@ nlohmann::json manifest_catalog_projection::verify() const {
   // cache there means queries answer from old facts. Export receipts are an
   // append-only audit stream on the read path — every export appends one —
   // so receipt lag between rebuilds is expected and is not drift.
-  nlohmann::json drift = nlohmann::json::array();
+  std::vector<storage_projection_drift> drift;
   const auto check = [&](const char *table, size_t projected, size_t journal_expected) {
     if (projected != journal_expected) {
-      drift.push_back({{"table", table}, {"projection_rows", projected}, {"journal_distinct", journal_expected}});
+      drift.push_back({table, projected, journal_expected});
     }
   };
   check("import_manifest_accepted", projected_manifests, expected.manifests);
@@ -156,24 +155,52 @@ nlohmann::json manifest_catalog_projection::verify() const {
   check("channel_cursor_updated", projected_cursors, expected.cursors);
 
   const bool degraded = !drift.empty();
-  return {
-      {"ok", !degraded},
-      {"status", degraded ? "degraded" : "ok"},
-      {"schema", MANIFEST_CATALOG_PROJECTION_SCHEMA_V1},
-      {"runtime_dir", runtime_dir_},
-      {"authority", "yijinjing-journal"},
-      {"projection_present", true},
-      {"degraded", degraded},
-      {"drift", drift},
-      {"rows",
-       {{"import_manifest_accepted", projected_manifests},
-        {"manifest_entry_recorded", projected_entries},
-        {"channel_cursor_updated", projected_cursors}}},
-      {"journal_distinct",
-       {{"import_manifest_accepted", expected.manifests},
-        {"manifest_entry_recorded", expected.entries},
-        {"channel_cursor_updated", expected.cursors}}},
-  };
+  return {!degraded,
+          degraded ? "degraded" : "ok",
+          MANIFEST_CATALOG_PROJECTION_SCHEMA_V1,
+          runtime_dir_,
+          "yijinjing-journal",
+          true,
+          degraded,
+          {},
+          std::move(drift),
+          {{"import_manifest_accepted", projected_manifests},
+           {"manifest_entry_recorded", projected_entries},
+           {"channel_cursor_updated", projected_cursors}},
+          {{"import_manifest_accepted", expected.manifests},
+           {"manifest_entry_recorded", expected.entries},
+           {"channel_cursor_updated", expected.cursors}}};
+}
+
+nlohmann::json manifest_catalog_projection::verify() const {
+  const auto report = verify_typed();
+  nlohmann::json rendered = {{"ok", report.ok},
+                             {"status", report.status},
+                             {"schema", report.schema},
+                             {"runtime_dir", report.runtime_dir},
+                             {"authority", report.authority},
+                             {"projection_present", report.projection_present}};
+  if (!report.note.empty()) {
+    rendered["note"] = report.note;
+  }
+  if (report.projection_present) {
+    rendered["degraded"] = report.degraded;
+    rendered["drift"] = nlohmann::json::array();
+    for (const auto &item : report.drift) {
+      rendered["drift"].push_back({{"table", item.table},
+                                   {"projection_rows", item.projection_rows},
+                                   {"journal_distinct", item.journal_distinct}});
+    }
+    rendered["rows"] = nlohmann::json::object();
+    for (const auto &item : report.rows) {
+      rendered["rows"][item.table] = item.count;
+    }
+    rendered["journal_distinct"] = nlohmann::json::object();
+    for (const auto &item : report.journal_distinct) {
+      rendered["journal_distinct"][item.table] = item.count;
+    }
+  }
+  return rendered;
 }
 
 } // namespace kungfu::runtime::storage_service_api

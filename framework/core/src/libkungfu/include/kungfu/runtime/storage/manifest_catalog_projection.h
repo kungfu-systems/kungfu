@@ -7,6 +7,8 @@
 
 #include <nlohmann/json.hpp>
 
+#include <kungfu/runtime/storage/projection_types.h>
+
 namespace kungfu::runtime::storage_service_api {
 
 inline constexpr const char *MANIFEST_CATALOG_PROJECTION_SCHEMA_V1 = "kungfu.storage.manifest-catalog-projection/v1";
@@ -34,6 +36,8 @@ public:
   // row counts diverging from journal distinct-PK counts) as degraded, missing
   // projection as a distinct honest state, not silently ok.
   [[nodiscard]] nlohmann::json verify() const;
+
+  [[nodiscard]] storage_projection_verify_result verify_typed() const;
 
 private:
   std::string runtime_dir_;
