@@ -124,7 +124,7 @@ export function assertNotContains(text, pattern, label) {
  */
 export function assertNoExtraDylibs(bin) {
   let deps = '';
-  if (has('otool')) {
+  if (process.platform === 'darwin' && has('otool')) {
     const out = run('otool', ['-L', bin]).stdout;
     deps = out
       .split('\n')
@@ -133,7 +133,7 @@ export function assertNoExtraDylibs(bin) {
       .filter(Boolean)
       .filter((d) => !/^\/usr\/lib\/(libc\+\+|libSystem|libobjc)/.test(d))
       .join('\n');
-  } else if (has('ldd')) {
+  } else if (process.platform === 'linux' && has('ldd')) {
     const out = run('ldd', [bin], { allowFail: true }).stdout;
     deps = out
       .split('\n')
@@ -146,7 +146,7 @@ export function assertNoExtraDylibs(bin) {
           ),
       )
       .join('\n');
-  } else if (has('dumpbin')) {
+  } else if (isWin && has('dumpbin')) {
     const out = run('dumpbin', ['/DEPENDENTS', bin], {
       allowFail: true,
     }).stdout;
