@@ -17,6 +17,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
   devKfdEnv,
+  devWorkspaceHomeOverride,
   instanceEnv,
   instanceHomeForWorktree,
   parseArgs,
@@ -58,6 +59,60 @@ test('builds a consistent Kungfu instance environment', () => {
   assert.equal(env.KF_HOME, path.join(home, 'home'));
   assert.equal(env.KF_CONFIG_HOME, path.join(home, 'config'));
   assert.equal(env.KF_RUNTIME_DIR, path.join(home, 'home', 'runtime'));
+});
+
+test('KF_DEV_HOME pins the dev workspace data home', () => {
+  const parsed = { noInstanceHome: false, instanceHome: '' };
+  const devHome = path.join(tmpdir(), 'atlas', '.kungfu');
+  assert.equal(
+    devWorkspaceHomeOverride(parsed, 'gui', 'dev', { KF_DEV_HOME: devHome }),
+    devHome,
+  );
+  assert.equal(
+    devWorkspaceHomeOverride(parsed, 'tui', 'dev', { KF_DEV_HOME: '~/wsp' }),
+    path.join(homedir(), 'wsp'),
+  );
+});
+
+test('KF_DEV_HOME loses to explicit homes and non-dev verbs', () => {
+  const parsed = { noInstanceHome: false, instanceHome: '' };
+  const devHome = path.join(tmpdir(), 'atlas', '.kungfu');
+  assert.equal(
+    devWorkspaceHomeOverride(parsed, 'gui', 'dev', {
+      KF_DEV_HOME: devHome,
+      KF_HOME: path.join(tmpdir(), 'explicit'),
+    }),
+    '',
+  );
+  assert.equal(
+    devWorkspaceHomeOverride(parsed, 'gui', 'dev', {
+      KF_DEV_HOME: devHome,
+      KF_INSTANCE_HOME: path.join(tmpdir(), 'instance'),
+    }),
+    '',
+  );
+  assert.equal(
+    devWorkspaceHomeOverride(parsed, 'gui', 'build', { KF_DEV_HOME: devHome }),
+    '',
+  );
+  assert.equal(
+    devWorkspaceHomeOverride(
+      { noInstanceHome: true, instanceHome: '' },
+      'gui',
+      'dev',
+      { KF_DEV_HOME: devHome },
+    ),
+    '',
+  );
+  assert.equal(
+    devWorkspaceHomeOverride(
+      { noInstanceHome: false, instanceHome: path.join(tmpdir(), 'flag') },
+      'gui',
+      'dev',
+      { KF_DEV_HOME: devHome },
+    ),
+    '',
+  );
 });
 
 test('builds a workspace data environment with separate config home', () => {
@@ -243,6 +298,43 @@ test('dry-run auto-selects workspace .kungfu for gui dev', () => {
     ),
   );
   assert.doesNotMatch(result.stdout, /KF_INSTANCE_HOME=/);
+});
+
+test('dry-run honors KF_DEV_HOME as the dev workspace data home', () => {
+  const devHome = mkdtempSync(path.join(tmpdir(), 'kungfu-dev-home-'));
+  try {
+    const result = spawnSync(
+      process.execPath,
+      [__filename.replace(/\.test\.mjs$/, '.mjs'), 'gui', 'dev', '--dry-run'],
+      {
+        encoding: 'utf8',
+        env: {
+          HOME: homedir(),
+          PATH: process.env.PATH || '',
+          KF_DEV_HOME: devHome,
+        },
+      },
+    );
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    const resolvedDevHome = path.resolve(devHome);
+    assert.match(
+      result.stdout,
+      new RegExp(`auto-workspace-home: ${escapeRegExp(resolvedDevHome)}`),
+    );
+    assert.match(
+      result.stdout,
+      new RegExp(`KF_HOME=${escapeRegExp(resolvedDevHome)}`),
+    );
+    assert.match(
+      result.stdout,
+      new RegExp(
+        `KF_RUNTIME_DIR=${escapeRegExp(path.join(resolvedDevHome, 'runtime'))}`,
+      ),
+    );
+    assert.doesNotMatch(result.stdout, /KF_INSTANCE_HOME=/);
+  } finally {
+    rmSync(devHome, { recursive: true, force: true });
+  }
 });
 
 test('dev product commands expose local KFD metadata to kungfu kfd', () => {
