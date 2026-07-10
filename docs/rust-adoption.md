@@ -69,7 +69,10 @@ the component's case for existing.
    ABI for in-process embedding. Kungfu does not maintain infrastructure for
    this mode: it reintroduces the FFI seam the boundaries above exclude. A
    component that truly needs it must argue its own case and bring its own
-   binding/build wiring in review.
+   binding/build wiring in review. The first argued case on record is the
+   host trunk —
+   [ADR-0046](../framework/core/docs/adr/ADR-0046-rust-host-trunk-and-assembled-runtime.md)
+   (init + control plane only; hot paths still never cross the seam).
 3. **Artifact (natural).** Anything produced *by* a Rust tool (reports, data
    files, archives) is consumed like any other artifact; nothing Rust-specific
    applies downstream.

@@ -61,6 +61,7 @@ A record's **Status** says where it stands:
 | [0043](ADR-0043-episode-identity-sealed-content-root.md) | proposed | Episode identity is two layers — a local coordinate plus a sealed content root committed in the manifest |
 | [0044](ADR-0044-shifu-delegation-protocol.md) | accepted | The shifu delegation protocol — what installed binaries bake in forever |
 | [0045](ADR-0045-kfx-execution-profiles-native-rust-wasm.md) | proposed | KFX execution profiles — Rust-primary native, WebAssembly components, managed runtimes, and subprocesses |
+| [0046](ADR-0046-rust-host-trunk-and-assembled-runtime.md) | accepted | Rust host trunk, layered CLI, and the assembled runtime distribution |
 
 ## Reading by theme
 
@@ -154,6 +155,11 @@ A record's **Status** says where it stands:
   [0042](ADR-0042-episode-atomic-safety-and-qualification.md) (Episode atomic
   safety as evidence-bounded capability, graceful degradation, monotonic repair,
   fault containment, and qualification under scale).
+- **Host & distribution** — [0044](ADR-0044-shifu-delegation-protocol.md)
+  (what installed launcher binaries bake in forever) and
+  [0046](ADR-0046-rust-host-trunk-and-assembled-runtime.md) (the target host
+  topology: Rust trunk over satellite runtimes, the CLI layering law, and the
+  assembled exact-runtime distribution contract that retires the freezer).
 - **Cross-cutting principle** — [0009](ADR-0009-load-bearing-self-bootstrap.md)
   (load-bearing self-bootstrap), which also names the general law that
   [`docs/architecture.md` § The build dogfoods the SDK](../../../../docs/architecture.md)
