@@ -21,6 +21,7 @@
 #include <kungfu/runtime/storage/episode_manifest_projection.h>
 #include <kungfu/runtime/storage/source_registry_projection.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
+#include <kungfu/yijinjing/storage/content_store.h>
 #include <kungfu/yijinjing/storage/episode_manifest.h>
 #include <kungfu/yijinjing/storage/generic_service.h>
 #include <kungfu/yijinjing/storage/source_registry.h>
@@ -603,7 +604,16 @@ public:
   }
 
   void write_payload(const std::string &digest, const std::string &raw) const override {
-    write_bytes(payload_path(runtime_dir_, digest), raw);
+    // ADR-0040: publish through the immutable content store (atomic
+    // tmp+rename, digest checked against the bytes) instead of a bare file
+    // write; the store's layout is byte-compatible with payload_path.
+    yy_storage::file_content_store store(root_dir(runtime_dir_).string());
+    const auto result = store.put_if_absent("payloads", raw, yy_storage::make_content_hash(digest));
+    if (!result.ok()) {
+      throw std::runtime_error("failed to publish payload " + digest + ": " +
+                               yy_storage::content_store_error_name(result.error) +
+                               (result.message.empty() ? "" : " (" + result.message + ")"));
+    }
   }
 
   [[nodiscard]] std::vector<stored_payload> all_payloads() const override {
@@ -1806,7 +1816,7 @@ nlohmann::json repair_candidate_from_warning(const nlohmann::json &warning) {
                                    "fetch_frame_or_declare_external_input",
                                    nlohmann::json::array({"source_or_episode_bundle"}));
   }
-  if (code == "episode_payload_ref_missing") {
+  if (code == "episode_payload_ref_missing" || code == "episode_payload_ref_hash_mismatch") {
     return repair_candidate_common(warning, "repair_episode_payload_ref", "payload", "payload_ref",
                                    "fetch_payload_by_hash", nlohmann::json::array({"payload_store_or_episode_bundle"}));
   }
@@ -1832,6 +1842,15 @@ nlohmann::json repair_plan_impl(const storage_service_options &options) {
     if (candidate.is_null()) {
       unsupported.push_back(warning);
     } else {
+      candidates.push_back(candidate);
+    }
+  }
+  // Sealed-Episode payload-ref issues are errors (the seal is falsified), and
+  // they are exactly the issues repair material can satisfy; other error
+  // codes are structural manifest defects, not fetchable facts.
+  for (const auto &error : array_or_empty(report, "errors")) {
+    const auto candidate = repair_candidate_from_warning(error);
+    if (!candidate.is_null()) {
       candidates.push_back(candidate);
     }
   }

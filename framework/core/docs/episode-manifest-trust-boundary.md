@@ -31,7 +31,7 @@ Mapping each ADR-0033 trust-boundary claim onto that record set:
 | Manifest version | `schema_version` (u32) present on every record; store-level constant `kungfu.episode.manifest/v1` | representable |
 | open / sealed / tombstoned status | presence of `EpisodeOpen` = open; `EpisodeClosed.status` ∈ {Ended, Aborted, Tombstoned}. Tombstone is a later `EpisodeClosed` append with `status=Tombstoned`, never an in-place edit | representable (fold rule §2.3) |
 | frame membership | one `EpisodeFrameAttached` per frame, id-level (`frame_uid`), carrying the frame receipt (checksums, integrity version, stream, times). Range-compressed membership is a future optimization, not required for the claim | representable |
-| payload inventory + content hashes | `EpisodeRefAttached` with `ref_kind=Payload`; `ref_id` is the payload address (today a runtime-dir-relative path, later a content-store key), `ref_hash` the content hash. Convention: `ref_hash` is `<algo>:<hex>` (e.g. `sha256:...`), consistent with current producers (`episode_lifecycle.attach_payload_ref`). Per-frame payload checksums additionally live on `EpisodeFrameAttached.payload_checksum` | representable; hash-algo prefix is a producer convention, not a schema change |
+| payload inventory + content hashes | `EpisodeRefAttached` with `ref_kind=Payload`; `ref_hash` is the content identity and the resolution key: fsck resolves the ref through the ADR-0040 immutable `content_store` (namespace `payloads`) by this hash; `ref_id` is an edge label recording the bytes' runtime-relative origin, with no resolution role. Canonical `ref_hash` form is `<algo>:<hex>` (e.g. `sha256:...`, written by `episode_lifecycle.attach_payload_ref`); bare hex from earlier producers is accepted as the store's default algorithm. Per-frame payload checksums additionally live on `EpisodeFrameAttached.payload_checksum` | representable; hash-algo prefix is a producer convention, not a schema change |
 | schema inventory | `EpisodeRefAttached` with `ref_kind=Schema` (`ref_id` = schema id, `ref_hash` = `.bfbs` content hash) | representable |
 | source and location provenance | `EpisodeOpen.source` / `actor` / `title`; `location_uid` on every record | representable |
 | declared dependency Episode ids | `EpisodeOpen.parent_episode_id` plus `EpisodeRefAttached` with `ref_kind=Episode` (`ref_uid` = episode id, optional `ref_id`/`ref_hash` for externally-held Episodes) | representable |
@@ -44,9 +44,9 @@ Conclusion required by ADR-0041: the existing record set is sufficient for
 every claim this slice needs. The single not-representable claim (Episode
 hash/sync roots) is exactly the deep-identity surface ADR-0041 already
 defers to a later identity/schema decision; ADR-0042 does not select that root,
-and nothing in stages 1–3 and 5 depends on it. Content-ref resolution (stage 4)
-depends on ADR-0040's immutable `content_store` landing first and changes no
-record layout.
+and nothing in stages 1–3 and 5 depends on it. Content-ref resolution (stage 4,
+delivered) resolves through ADR-0040's immutable `content_store` and changed
+no record layout.
 
 ## 2. Deterministic typed fold (stage 1 semantics)
 
@@ -169,8 +169,9 @@ one atomic write. The contract orders them so a crash can only ever leave a
 record event      1) append event frame (event journal, durable receipt)
                   2) append EpisodeFrameAttached (manifest journal)
 
-attach payload    1) publish payload bytes (stage 4: content_store
-                     put-if-absent; today: provider payload write)
+attach payload    1) publish payload bytes through the content store
+                     (put-if-absent; the file provider's payload write is
+                     this publish)
                   2) append EpisodeRefAttached claiming id + hash
 
 seal              1) verify every claim this writer made is durable
@@ -239,8 +240,14 @@ C4. Episodes owned by other locations are reported, never mutated.
    fields, recomputed payload/frame checksums (ADR-0023/0028) — failing a
    sealed Episode and degrading an open one, with the exact missing side
    reported.
-4. **Content resolution** — blocked on ADR-0040 `content_store` (interface +
-   file backend); replaces the bespoke `payload_ref_exists` path probe.
+4. **Content resolution** (delivered) — payload refs resolve through the
+   ADR-0040 immutable `content_store` by `ref_hash` (verified read, full
+   error taxonomy: missing / hash-mismatch / unaddressable / io), replacing
+   the bespoke `payload_ref_exists` path probe. An unverified payload ref
+   fails a sealed Episode and degrades an open one, mirroring the frame
+   verification severity; producers publish bytes via content-store
+   put-if-absent before appending the ref. Schema refs stay declared-only
+   until schemas live in the store.
 5. **Projection/query** (delivered) — rebuildable Episode SQLite projection
    (`storage/projections/episode-manifest.sqlite`) over the typed record
    stream via `cache::make_storage_ptr` on `EpisodeManifestDataTypes`, the

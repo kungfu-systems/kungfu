@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import struct
 from pathlib import Path
 
@@ -21,7 +22,6 @@ import kungfu
 
 from kungfu.storage import service
 from kungfu.storage.episode_lifecycle import RuntimeEpisodeLifecycle
-
 
 MANIFEST_SUBDIR = Path("journal/system/storage/episode-manifest/live")
 
@@ -285,3 +285,141 @@ def test_verify_frames_detects_tampered_payload(tmp_path):
     assert fsck["status"] == "failed"
     codes = [e["code"] for e in fsck["errors"]]
     assert "episode_attached_frame_checksum_mismatch" in codes
+
+
+# ---- stage 4: payload refs resolve through the ADR-0040 content store ----
+#
+# ref_hash is the resolution key (verified read through the immutable
+# content store, namespace "payloads"); ref_id is an edge label. A sealed
+# Episode with a missing / mismatched / unaddressable payload ref fails;
+# an open Episode is degraded.
+
+
+def _publish_payload(runtime_dir: Path, raw: bytes) -> str:
+    digest = hashlib.sha256(raw).hexdigest()
+    service.write_payload_bytes(runtime_dir, digest, raw)
+    return digest
+
+
+def _attach_payload_ref(runtime_dir: Path, episode_id: int, ref_hash: str) -> None:
+    service.episode_attach_ref(
+        runtime_dir,
+        episode_id=episode_id,
+        ref_kind="payload",
+        ref_id="fixtures/payload.bin",
+        ref_hash=ref_hash,
+    )
+
+
+def _seal(runtime_dir: Path, episode_id: int) -> None:
+    service.episode_end(
+        runtime_dir,
+        episode_id=episode_id,
+        end_time=2000,
+        frame_count=0,
+        reason="done",
+    )
+
+
+def _payload_object(runtime_dir: Path, digest: str) -> Path:
+    return Path(runtime_dir) / "storage" / "payloads" / digest[:2] / digest
+
+
+def test_published_payload_ref_verifies_through_content_store(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    _begin(runtime_dir, 41)
+    digest = _publish_payload(runtime_dir, b"stage-4 payload body")
+    _attach_payload_ref(runtime_dir, 41, f"sha256:{digest}")
+    _seal(runtime_dir, 41)
+
+    fsck = service.fsck(runtime_dir, episode_id=41)
+    assert fsck["ok"]
+    assert fsck["status"] == "ok"
+
+    inspected = service.episode_inspect(runtime_dir, episode_id=41)
+    payload_deps = [
+        dep for dep in inspected["dependencies"] if dep["kind"] == "payload"
+    ]
+    assert payload_deps and payload_deps[0]["status"] == "present"
+
+
+def test_bare_hex_ref_hash_is_accepted(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    _begin(runtime_dir, 42)
+    digest = _publish_payload(runtime_dir, b"bare hex producer compat")
+    _attach_payload_ref(runtime_dir, 42, digest)
+    _seal(runtime_dir, 42)
+
+    fsck = service.fsck(runtime_dir, episode_id=42)
+    assert fsck["ok"]
+    assert fsck["status"] == "ok"
+
+
+def test_sealed_missing_payload_ref_fails_fsck(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    _begin(runtime_dir, 43)
+    absent = hashlib.sha256(b"never published").hexdigest()
+    _attach_payload_ref(runtime_dir, 43, f"sha256:{absent}")
+    _seal(runtime_dir, 43)
+
+    fsck = service.fsck(runtime_dir, episode_id=43)
+    assert not fsck["ok"]
+    assert fsck["status"] == "failed"
+    assert "episode_payload_ref_missing" in [e["code"] for e in fsck["errors"]]
+
+
+def test_open_missing_payload_ref_degrades_fsck(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    _begin(runtime_dir, 44)
+    absent = hashlib.sha256(b"never published either").hexdigest()
+    _attach_payload_ref(runtime_dir, 44, f"sha256:{absent}")
+
+    fsck = service.fsck(runtime_dir, episode_id=44)
+    assert fsck["ok"]
+    assert fsck["status"] == "degraded"
+    assert "episode_payload_ref_missing" in [w["code"] for w in fsck["warnings"]]
+
+
+def test_sealed_tampered_payload_fails_fsck(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    _begin(runtime_dir, 45)
+    raw = b"authentic payload bytes"
+    digest = _publish_payload(runtime_dir, raw)
+    _attach_payload_ref(runtime_dir, 45, f"sha256:{digest}")
+    _seal(runtime_dir, 45)
+
+    # same-length corruption: presence and length survive, content does not
+    tampered = b"Xuthentic payload bytes"
+    _payload_object(runtime_dir, digest).write_bytes(tampered)
+
+    fsck = service.fsck(runtime_dir, episode_id=45)
+    assert not fsck["ok"]
+    assert fsck["status"] == "failed"
+    assert "episode_payload_ref_hash_mismatch" in [e["code"] for e in fsck["errors"]]
+
+
+def test_unaddressable_ref_hash_is_reported(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    _begin(runtime_dir, 46)
+    _attach_payload_ref(runtime_dir, 46, "sha256:not-a-digest")
+
+    fsck = service.fsck(runtime_dir, episode_id=46)
+    assert fsck["ok"]
+    assert fsck["status"] == "degraded"
+    assert "episode_payload_ref_hash_invalid" in [w["code"] for w in fsck["warnings"]]
+
+
+def test_lifecycle_attach_publishes_into_content_store(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    lifecycle = _lifecycle(runtime_dir, "worker-payload")
+    payload_file = tmp_path / "artifact.json"
+    payload_file.write_text('{"result": "ok"}', encoding="utf-8")
+    lifecycle.attach_payload_ref(str(payload_file))
+    lifecycle.close(ok=True)
+
+    digest = hashlib.sha256(payload_file.read_bytes()).hexdigest()
+    assert _payload_object(runtime_dir, digest).exists()
+
+    fsck = service.fsck(runtime_dir, episode_id=lifecycle.episode_id)
+    assert fsck["ok"]
+    assert fsck["status"] == "ok"

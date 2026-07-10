@@ -130,13 +130,30 @@ class RuntimeEpisodeLifecycle:
     def attach_payload_ref(
         self, path: str, *, content_hash: str = "", ref_id: str | None = None
     ) -> None:
+        # ADR-0041 stage 4: publish the payload bytes into the content store
+        # first, then append the ref claiming their identity; fsck resolves
+        # the ref through the store by ref_hash, not by path. ref_id stays an
+        # edge label (the runtime-relative origin of the bytes).
+        from kungfu.content_hash import compute_content_hash_value
+
+        with open(path, "rb") as payload_file:
+            raw = payload_file.read()
+        digest = compute_content_hash_value(raw)
+        if content_hash:
+            declared = content_hash.split(":", 1)[-1]
+            if declared != digest:
+                raise ValueError(
+                    f"attach_payload_ref: declared hash {content_hash} does not "
+                    f"match the bytes at {path} (sha256:{digest})"
+                )
+        service.write_payload_bytes(self.runtime_dir, digest, raw)
         service.episode_attach_ref(
             self.runtime_dir,
             episode_id=self.episode_id,
             location_uid=self.location_uid,
             ref_kind="payload",
             ref_id=ref_id or _relative_ref(self.runtime_dir, path),
-            ref_hash=content_hash,
+            ref_hash=f"sha256:{digest}",
         )
 
     def close(self, *, ok: bool, reason: str = "") -> None:

@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import sqlite3
 from pathlib import Path
 
@@ -41,15 +42,15 @@ def _seed_episode(runtime_dir: Path, episode_id: int) -> None:
         payload_checksum=0,
         frame_checksum=0,
     )
-    payload = Path(runtime_dir) / "payloads" / f"{episode_id}.bin"
-    payload.parent.mkdir(parents=True, exist_ok=True)
-    payload.write_bytes(b"payload")
+    # stage 4: payload bytes live in the content store, addressed by ref_hash
+    payload_digest = hashlib.sha256(b"payload").hexdigest()
+    service.write_payload_bytes(runtime_dir, payload_digest, b"payload")
     service.episode_attach_ref(
         runtime_dir,
         episode_id=episode_id,
         ref_kind="payload",
         ref_id=f"payloads/{episode_id}.bin",
-        ref_hash="sha256:test",
+        ref_hash=f"sha256:{payload_digest}",
     )
     service.episode_end(
         runtime_dir,

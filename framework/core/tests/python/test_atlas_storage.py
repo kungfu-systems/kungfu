@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
+import hashlib
 import json
 import sqlite3
 from datetime import datetime, timezone
@@ -658,6 +659,12 @@ def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
     assert bundle["frame_count"] == 1
 
 
+# A well-formed digest whose bytes were never published: stage 4 resolves
+# payload refs through the content store by hash, so "absent" must still be
+# addressable to count as missing (a malformed hash is unaddressable instead).
+_ABSENT_PAYLOAD_HASH = "sha256:" + hashlib.sha256(b"absent-payload").hexdigest()
+
+
 def test_episode_fsck_reports_degraded_causal_dependencies(tmp_path):
     runtime_dir = tmp_path / "runtime"
     storage_service.episode_begin(
@@ -690,7 +697,7 @@ def test_episode_fsck_reports_degraded_causal_dependencies(tmp_path):
         episode_id=7,
         ref_kind="payload",
         ref_id="missing/payload.json",
-        ref_hash="sha256:missing",
+        ref_hash=_ABSENT_PAYLOAD_HASH,
     )
     storage_service.episode_attach_ref(
         runtime_dir,
@@ -717,14 +724,17 @@ def test_episode_fsck_reports_degraded_causal_dependencies(tmp_path):
     }
 
     fsck = storage_service.fsck(runtime_dir, episode_id=7)
-    assert fsck["ok"]
-    assert fsck["status"] == "degraded"
+    # stage 4: the episode is sealed, so an unresolved payload ref falsifies
+    # the seal (error/failed) instead of merely degrading it
+    assert not fsck["ok"]
+    assert fsck["status"] == "failed"
     assert fsck["degraded"] is True
     warning_codes = {warning["code"] for warning in fsck["warnings"]}
     assert "episode_dependency_missing" in warning_codes
     assert "episode_root_trigger_frame_missing" in warning_codes
     assert "episode_trigger_frame_missing" in warning_codes
-    assert "episode_payload_ref_missing" in warning_codes
+    error_codes = {error["code"] for error in fsck["errors"]}
+    assert "episode_payload_ref_missing" in error_codes
 
     bundle = storage_service.build_export_bundle(runtime_dir, episode_id=7)
     assert bundle["degraded"] is True
@@ -745,7 +755,7 @@ def test_episode_fsck_reports_degraded_causal_dependencies(tmp_path):
     assert repair["episode_id"] == 7
     assert repair["dry_run"] is True
     assert repair["plan_only"] is True
-    assert repair["status"] == "degraded"
+    assert repair["status"] == "failed"
     assert repair["degraded"] is True
     assert repair["candidate_count"] >= 4
     candidate_codes = {candidate["code"] for candidate in repair["candidates"]}
@@ -807,7 +817,7 @@ def test_episode_fsck_reports_degraded_causal_dependencies(tmp_path):
         episode_id=7,
         ref_kind="payload",
         ref_id="missing/payload.json",
-        ref_hash="sha256:missing",
+        ref_hash=_ABSENT_PAYLOAD_HASH,
     )
     storage_service.episode_attach_ref(
         donor_dir,
@@ -846,7 +856,9 @@ def test_episode_fsck_reports_degraded_causal_dependencies(tmp_path):
     assert dry_apply["dry_run"] is True
     assert dry_apply["applied"] is False
     assert dry_apply["applied_count"] >= 1
-    assert storage_service.fsck(runtime_dir, episode_id=7)["status"] == "degraded"
+    # still failed: the sealed episode's payload bytes are not in the store
+    # (bundles carry manifest records, not payload bodies)
+    assert storage_service.fsck(runtime_dir, episode_id=7)["status"] == "failed"
 
     applied = storage_service.repair_apply(
         runtime_dir, fetched["material"], episode_id=7, dry_run=False

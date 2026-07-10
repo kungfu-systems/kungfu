@@ -11,6 +11,8 @@
 #include <kungfu/yijinjing/common.h>
 #include <kungfu/yijinjing/hash.h>
 #include <kungfu/yijinjing/journal/journal.h>
+#include <kungfu/yijinjing/storage/content_hash.h>
+#include <kungfu/yijinjing/storage/content_store.h>
 #include <kungfu/yijinjing/time.h>
 
 #ifdef _WINDOWS
@@ -431,22 +433,45 @@ bool contains_u64(const std::vector<uint64_t> &values, uint64_t value) {
   return std::find(values.begin(), values.end(), value) != values.end();
 }
 
-// Stage 4 (ADR-0041) replaces this path probe with resolution through the
-// ADR-0040 immutable content_store once that primitive lands.
-bool payload_ref_exists(const std::string &runtime_dir, const std::string &ref_id) {
-  if (ref_id.empty()) {
-    return false;
+// ADR-0041 stage 4: a payload ref resolves through the ADR-0040 immutable
+// content_store by its content identity (ref_hash); ref_id is an edge label
+// with no resolution role. The verified read maps the store's declared error
+// taxonomy onto manifest diagnostics -- there is no path fallback.
+struct payload_ref_resolution {
+  const char *status = "missing"; // dependency status for the causal graph
+  const char *code = nullptr;     // issue code when the ref is not verified
+  std::string detail = {};
+};
+
+payload_ref_resolution resolve_payload_ref(const std::string &runtime_dir, const std::string &ref_hash) {
+  content_hash hash{};
+  try {
+    // canonical form is "<algo>:<hex>"; bare hex from earlier producers is
+    // accepted as the store's default algorithm
+    hash = ref_hash.find(':') != std::string::npos ? parse_content_hash(ref_hash) : make_content_hash(ref_hash);
+  } catch (const std::exception &e) {
+    return {"unaddressable", "episode_payload_ref_hash_invalid", e.what()};
   }
-  fs::path path(ref_id);
-  if (path.is_relative()) {
-    path = fs::path(runtime_dir) / path;
+  file_content_store store((fs::path(runtime_dir) / "storage").string());
+  const auto verified = store.verify("payloads", hash);
+  switch (verified.error) {
+  case content_store_error::Ok:
+    return {"present", nullptr, {}};
+  case content_store_error::NotFound:
+    return {"missing", "episode_payload_ref_missing", verified.message};
+  case content_store_error::CorruptObject:
+    return {"hash_mismatch", "episode_payload_ref_hash_mismatch", verified.message};
+  case content_store_error::InvalidArgument:
+    return {"unaddressable", "episode_payload_ref_hash_invalid", verified.message};
+  default:
+    return {"unreadable", "episode_payload_ref_io_error", verified.message};
   }
-  return fs::exists(path);
 }
 
 struct episode_graph {
   nlohmann::json graph = nlohmann::json::object();
   nlohmann::json dependencies = nlohmann::json::array();
+  nlohmann::json errors = nlohmann::json::array();
   nlohmann::json warnings = nlohmann::json::array();
   bool degraded = false;
 };
@@ -457,8 +482,10 @@ episode_graph build_causal_graph(const std::string &runtime_dir, uint64_t episod
   std::vector<uint64_t> declared_input_frames;
   nlohmann::json frame_edges = nlohmann::json::array();
   nlohmann::json dependencies = nlohmann::json::array();
+  nlohmann::json errors = nlohmann::json::array();
   nlohmann::json warnings = nlohmann::json::array();
   bool degraded = false;
+  const bool sealed = view.closed && view.close.status == EpisodeStatus::Ended;
 
   for (size_t position = 0; position < view.frame_indices.size(); ++position) {
     const auto frame_uid = view.frame_at(position).frame_uid;
@@ -552,19 +579,28 @@ episode_graph build_causal_graph(const std::string &runtime_dir, uint64_t episod
                             {"role", "ref"}});
       }
     } else if (ref.ref_kind == EpisodeRefKind::Payload) {
-      const bool present = payload_ref_exists(runtime_dir, ref_id);
+      const auto resolved = resolve_payload_ref(runtime_dir, ref_hash);
       dependencies.push_back({{"kind", "payload"},
                               {"role", "payload_ref"},
                               {"ref_uid", ref.ref_uid},
                               {"ref_id", ref_id},
                               {"ref_hash", ref_hash},
-                              {"status", present ? "present" : "missing"}});
-      if (!present) {
-        degraded = true;
-        warnings.push_back({{"code", "episode_payload_ref_missing"},
-                            {"episode_id", episode_id},
-                            {"ref_id", ref_id},
-                            {"ref_hash", ref_hash}});
+                              {"status", resolved.status}});
+      if (resolved.code != nullptr) {
+        nlohmann::json issue = {
+            {"code", resolved.code}, {"episode_id", episode_id}, {"ref_id", ref_id}, {"ref_hash", ref_hash}};
+        if (!resolved.detail.empty()) {
+          issue["detail"] = resolved.detail;
+        }
+        // A seal claims the Episode's material is complete and intact; an
+        // unverified payload ref falsifies a sealed Episode and only
+        // degrades an open one (trust-boundary contract §3.2).
+        if (sealed) {
+          errors.push_back(std::move(issue));
+        } else {
+          degraded = true;
+          warnings.push_back(std::move(issue));
+        }
       }
     } else if (ref.ref_kind == EpisodeRefKind::Schema) {
       dependencies.push_back({{"kind", "schema"},
@@ -588,6 +624,7 @@ episode_graph build_causal_graph(const std::string &runtime_dir, uint64_t episod
            {"edges", frame_edges},
            {"dependencies", dependencies}},
           dependencies,
+          errors,
           warnings,
           degraded};
 }
@@ -899,6 +936,9 @@ nlohmann::json episode_manifest_store::fsck(uint64_t episode_id) const {
     }
     const auto graph = build_causal_graph(runtime_dir_, current_episode_id, view, fold.episodes);
     degraded = degraded || graph.degraded;
+    for (const auto &error : graph.errors) {
+      errors.push_back(error);
+    }
     for (const auto &warning : graph.warnings) {
       warnings.push_back(warning);
     }
