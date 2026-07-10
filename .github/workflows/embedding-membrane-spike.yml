@@ -18,10 +18,38 @@ permissions:
   contents: read
 
 jobs:
+  source-snapshot:
+    name: Prepare immutable source snapshot
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout immutable PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Pack source snapshot
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          tar --exclude=.git -czf "${RUNNER_TEMP}/kungfu-source.tar.gz" .
+
+      - name: Upload source snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: embedding-source-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/kungfu-source.tar.gz
+          if-no-files-found: error
+          retention-days: 1
+
   native-membrane:
     name: ${{ matrix.name }}
     # Never execute untrusted fork code on the self-hosted build fleet.
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    needs: source-snapshot
     strategy:
       fail-fast: false
       matrix:
@@ -39,7 +67,6 @@ jobs:
       SHIFU_NATIVE: "1"
       SHIFU_REQUIRE_MSVC: "1"
       SOURCE_ROOT: source-${{ github.event.pull_request.head.sha }}
-      SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
       - name: Setup Node.js
         uses: actions/setup-node@v6.4.0
@@ -51,22 +78,19 @@ jobs:
         shell: pwsh
         run: '"C:\Program Files\Git\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append'
 
-      # A SHA-addressed source archive avoids the self-hosted fleet's unreliable
-      # large GitHub Git fetch path. Use a per-SHA directory so no runner cleanup
-      # or overwrite is required, while retaining an immutable source identity.
-      - name: Fetch immutable PR head snapshot
+      - name: Download immutable PR head snapshot
+        uses: actions/download-artifact@v4
+        with:
+          name: embedding-source-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/embedding-source
+
+      # Use a per-SHA directory so no runner cleanup or overwrite is required.
+      - name: Extract immutable PR head snapshot
         shell: bash
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
         run: |
           mkdir -p "$SOURCE_ROOT"
-          curl --fail --location --retry 3 --connect-timeout 15 \
-            --header "Authorization: Bearer ${GITHUB_TOKEN}" \
-            --header "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/tarball/${SOURCE_SHA}" \
-            --output "${RUNNER_TEMP}/kungfu-${SOURCE_SHA}.tar.gz"
-          tar -xzf "${RUNNER_TEMP}/kungfu-${SOURCE_SHA}.tar.gz" \
-            -C "$SOURCE_ROOT" --strip-components=1
+          tar -xzf "${RUNNER_TEMP}/embedding-source/kungfu-source.tar.gz" \
+            -C "$SOURCE_ROOT"
           test -f "$SOURCE_ROOT/shifu"
 
       - name: Install frozen workspace
