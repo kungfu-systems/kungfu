@@ -43,6 +43,10 @@ for how the layers fit together; the main areas:
 - `extensions/*` — kfx extensions; `examples/*` — samples.
 - `product` — the dogfood product assembly bundling the runtime, reference UIs,
   SDK, first-party kfx, desktop installers, and CLI archives.
+- `code` — the Rust workspace: self-contained native tools consumed as
+  prebuilt binaries, currently the native `kungfu-code` launcher. See
+  [`docs/rust-adoption.md`](docs/rust-adoption.md) for when (and when not) a
+  component belongs here.
 
 Two command-line entry points, kept forward-compatible:
 
@@ -57,6 +61,9 @@ The repo pins its Node version via [`fnm`](https://github.com/Schniz/fnm) and a
 checked-in `.node-version`, and manages the Python environment with
 [`uv`](https://docs.astral.sh/uv/). You only need to install `fnm` and `uv` once;
 Node, the package manager, and the Python interpreter are then resolved automatically.
+On a machine without fnm / uv, `./kungfu-code` bootstraps pinned prebuilt copies
+into `~/.cache/kungfu` via its native launcher, so even that one-time install is
+optional — nothing beyond `curl` is required.
 
 ```sh
 # one-time: install fnm and uv (e.g. `brew install fnm uv`)

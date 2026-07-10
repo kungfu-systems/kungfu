@@ -39,6 +39,10 @@ interpreter then resolve automatically):
 - [fnm](https://github.com/Schniz/fnm) — pins node via `.node-version`
 - [uv](https://docs.astral.sh/uv/) — manages the Python toolchain
 
+On a machine without them, `./kungfu-code` bootstraps pinned prebuilt copies
+automatically (nothing needed beyond `curl`); see
+[`docs/rust-adoption.md`](docs/rust-adoption.md).
+
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full toolchain, repository
 layout, and code style.
 
