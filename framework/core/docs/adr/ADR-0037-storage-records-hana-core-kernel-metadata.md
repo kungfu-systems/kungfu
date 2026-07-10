@@ -1,8 +1,7 @@
 # ADR-0037: ADR-0018 storage-service records are Hana-core kernel metadata; JSON is an edge projection, not the contract
 
-- Status: accepted, delivered (the source-registry slice validated the
-  pattern; the final slice migrated import manifest / export bundle / channel
-  cursor and retired the JSON-as-contract path — see "First delivery")
+- Status: accepted; record/journal/projection migration delivered, typed service
+  interface still staged (see "First delivery")
 - Date: 2026-07-09
 - Category: (architecture) storage-service record representation and schema
   ownership — which substrate defines source registry, manifest, and fsck
@@ -10,8 +9,9 @@
 - Subsystem: `libyijinjing` storage semantic contract, `libkungfu` runtime
   storage service and providers, the yijinjing closed-set schema registry,
   Python/Node storage bindings, and SQLite/RocksDB projections.
-- Related: ADR-0002 makes FlatBuffers the wire/journal runtime schema over POD;
-  ADR-0018 established the runtime storage service; ADR-0019 builds Git-like
+- Related: ADR-0047 generalizes this storage-specific split into the system-wide
+  single-schema-owner rule; ADR-0018 established the runtime storage service;
+  ADR-0019 builds Git-like
   source sync on the native location/channel types; ADR-0027 limits the Python
   yijinjing surface to core public runtime types; ADR-0033/0034 make Episode and
   the Episode manifest journal yijinjing-native kernel facts; ADR-0035 fixes the
@@ -136,6 +136,13 @@ storage-service record family, which ADR-0034 did not explicitly cover. The two
 manifest families share substrate and should share the manifest journal format
 or a sibling catalog-plane journal, not diverge into two incompatible layouts.
 
+## Relation to ADR-0047
+
+ADR-0047 generalizes the two-substrate observation in this ADR. This record
+continues to own the classification of storage-service records as Hana kernel
+metadata, while ADR-0047 owns the system-wide single-schema-owner rule, typed
+view boundary, JSON edge rule, and exclusive SQLite projection routing.
+
 ## Consequences
 
 - **The storage kernel is FlatBuffers-independent.** Core data can be defined,
@@ -151,7 +158,7 @@ or a sibling catalog-plane journal, not diverge into two incompatible layouts.
   (C++-owned bindings exposing core public runtime types, ADR-0027), not
   per-type JSON conversion.
 
-## First delivery (staged)
+## First delivery (record slices delivered; typed service pending)
 
 - Pick one storage-service record — the source record or the import manifest —
   define it as a POD Hana-core type with a kernel `carrier_type` id (a core type
@@ -194,8 +201,9 @@ or a sibling catalog-plane journal, not diverge into two incompatible layouts.
   projection as a distinct honest state. Payload verification arrives with the
   payload slice.
 - Then migrate the remaining storage-service records and retire the
-  JSON-as-contract path and the unconsumed heap structs / `provider.h`.
-  **(done, final slice)** — the manifest-catalog family landed as four POD
+  JSON file authorities, unconsumed heap structs, and eventually the JSON
+  semantic service interface. **(record migration done; typed service pending)**
+  — the manifest-catalog family landed as four POD
   records `ImportManifestAccepted` (10904), `ManifestEntryRecorded` (10905),
   `ExportBundleRecorded` (10906), `ChannelCursorUpdated` (10907), written to an
   append-only yijinjing SYSTEM journal (namespace `storage`, name
@@ -219,15 +227,20 @@ or a sibling catalog-plane journal, not diverge into two incompatible layouts.
   it in the deterministic exchange bundle. fsck verifies journal fold
   consistency, the recomputed sync-root chain, the committed entries document,
   payload references through the ADR-0040 content store, and projection drift
-  (degraded, never failed).
+  (degraded, never failed). The current `storage_service` virtual methods and
+  options still carry `nlohmann::json`; those signatures are a transitional
+  edge-shaped semantic interface, not completion of this ADR. ADR-0047 requires
+  typed request/result/view and query-row APIs with JSON moved to a named edge
+  adapter.
 
 ## Explicitly out of scope
 
 - The Episode manifest record family (ADR-0034); this ADR is the ADR-0018
   generic storage-service family. They align but are recorded separately.
 - The journal home / location (ADR-0035).
-- Making any domain or business payload a Hana core type — those stay
-  FlatBuffers behind action envelopes (ADR-0025/0034). The Hana core stays
+- Making open/KFX domain payloads Hana core types by default — those stay
+  FlatBuffers behind action envelopes (ADR-0025/0047). A domain fact can enter
+  Hana only through an explicit kernel admission decision. The Hana core stays
   limited to kernel facts, storage metadata, receipts, and compact references.
 - Destructive `gc` / `compact` execution (ADR-0018).
 

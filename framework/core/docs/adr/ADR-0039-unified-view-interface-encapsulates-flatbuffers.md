@@ -9,9 +9,9 @@
   schema registry), `libkungfu/runtime/schema` (schema compiler), the Python/Node
   bindings that consume them, and — for the zero-cost regime only — the
   `libyijinjing` journal POD read path.
-- Related: ADR-0002 makes FlatBuffers the runtime schema over the POD layout;
-  ADR-0037 keeps kernel records as Hana POD (FB-independent) and FB for the open
-  layer; ADR-0023/0025 gate carrier types. This ADR is orthogonal to the
+- Related: ADR-0047 assigns authoritative facts to either Hana POD or the
+  FlatBuffers open layer; ADR-0037 applies that split to storage records;
+  ADR-0023/0025 gate carrier types. This ADR is orthogonal to the
   Hana-vs-FB substrate split: it governs *how FB is accessed*, not *what uses FB*.
 
 ## Context

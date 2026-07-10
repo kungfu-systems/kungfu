@@ -229,12 +229,14 @@ for a production incident that a convenient platform would never trigger.
 
 ### A declared, published contract
 
-`yijinjing` carries a declared runtime schema exposed to C++, Python, and Node,
-not a C++ internal secret. Because the contract is published and the maker's own
-build consumes it, contract failures surface at the SDK boundary the maker
-themselves uses — not when an external consumer cannot read the data. Historical
-ADR-0002 and ADR-0008 describe the earlier `yijinjing schema` package name and the
-schema-layout invariant it now contributes to `yijinjing`.
+Kungfu's data plane carries declared schema authority exposed to C++, Python,
+and Node, not a language-local secret. Closed `yijinjing` kernel facts are Hana-described POD; open
+and domain facts are `.fbs`-owned, and each structured fact has exactly one
+owner. Because those contracts are published and the maker's own build consumes
+them, contract failures surface at the SDK boundary the maker themselves uses —
+not when an external consumer cannot read the data. ADR-0047 defines the current
+split; ADR-0008 defines the closed layout invariant, while superseded ADR-0002
+preserves the earlier migration history.
 
 ## The two principles are one stance
 
@@ -276,8 +278,9 @@ no way to fake it:
   ([ADR-0008](../framework/core/docs/adr/ADR-0008-yijinjing-schema-layout-baseline.md)).
 - *"This release is good"* → an un-cheatable pipeline decides, not any one person,
   not even the maintainers ([version & release design](version-release-design.md)).
-- *"The contract holds"* → it is a declared schema that the maker's own build
-  consumes ([ADR-0002](../framework/core/docs/adr/ADR-0002-yijinjing-schema-runtime-layout.md)).
+- *"The contract holds"* → every structured fact has one declared schema owner
+  that the maker's own build consumes
+  ([ADR-0047](../framework/core/docs/adr/ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md)).
 - *"It's easy to set up"* → the runtime physically absorbs the toolchain, so
   zero-setup is true rather than promised (Principle 1).
 
