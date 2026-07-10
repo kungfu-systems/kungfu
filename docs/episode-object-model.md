@@ -323,10 +323,10 @@ inspection or export.
 
 ADR-0042 tightens the intended interpretation without turning degradation into
 a deletion policy: lifecycle, health, and safe capabilities are separate
-dimensions. A future structured qualification result should state which
-operations remain safe and why; the current `ok` field must be read in its
-documented scope rather than as a claim that every Episode capability is fully
-available.
+dimensions. `kungfu.episode.qualification/v1` now states which operations remain
+safe, their evidence requirements, their blockers, and repair prerequisites.
+The compatibility `ok` field must still be read in its documented fsck scope;
+it is not a substitute for the capability contract.
 
 `kungfu.storage.repair-plan/v1` is the first repair-facing projection over that
 diagnostic set. It maps the Episode warnings to read-only candidates such as

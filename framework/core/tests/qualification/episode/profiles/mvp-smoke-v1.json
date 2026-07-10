@@ -28,6 +28,7 @@
   "semantic": {
     "required_dimensions": [
       "lifecycle_safety",
+      "capability_soundness",
       "useful_degradation",
       "repair_monotonicity",
       "dependency_containment",

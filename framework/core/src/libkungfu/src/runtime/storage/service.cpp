@@ -1903,6 +1903,253 @@ episode_frame_verification verify_episode_frame_claims(const storage_service_opt
   return result;
 }
 
+struct episode_repair_descriptor {
+  std::string action = {};
+  std::vector<std::string> required_inputs = {};
+};
+
+std::optional<episode_repair_descriptor> episode_repair_descriptor_for_issue(const nlohmann::json &issue) {
+  const auto code = text_or(issue, "code");
+  if (code == "episode_dependency_missing") {
+    return episode_repair_descriptor{"fetch_episode", {"source_or_episode_bundle"}};
+  }
+  if (code == "episode_root_trigger_frame_missing" || code == "episode_trigger_frame_missing") {
+    return episode_repair_descriptor{"fetch_frame_or_declare_external_input", {"source_or_episode_bundle"}};
+  }
+  if (code == "episode_payload_ref_missing" || code == "episode_payload_ref_hash_mismatch") {
+    return episode_repair_descriptor{"fetch_payload_by_hash", {"payload_store_or_episode_bundle"}};
+  }
+  if (code == "episode_attached_frame_missing") {
+    return episode_repair_descriptor{"fetch_frame", {"source_or_episode_bundle"}};
+  }
+  if (code == "episode_projection_absent" || code == "episode_projection_drift") {
+    return episode_repair_descriptor{"rebuild_projection", {}};
+  }
+  if (code == "payload_not_present" && !bool_or(issue, "intentional", true)) {
+    return episode_repair_descriptor{"fetch_payload_by_hash", {"source_or_bundle"}};
+  }
+  return std::nullopt;
+}
+
+std::string episode_issue_evidence(const std::string &code) {
+  if (code.rfind("episode_payload_ref_", 0) == 0) {
+    return "content";
+  }
+  if (code.rfind("episode_attached_frame_", 0) == 0 || code == "episode_frame_location_unknown" ||
+      code == "episode_frame_integrity_version_unknown") {
+    return "frames";
+  }
+  if (code == "episode_dependency_missing" || code == "episode_root_trigger_frame_missing" ||
+      code == "episode_trigger_frame_missing") {
+    return "causal_closure";
+  }
+  if (code.rfind("episode_projection_", 0) == 0) {
+    return "projection";
+  }
+  return "manifest_integrity";
+}
+
+void append_unique(std::vector<std::string> &values, const std::string &value) {
+  if (std::find(values.begin(), values.end(), value) == values.end()) {
+    values.push_back(value);
+  }
+}
+
+episode_qualification_evidence *find_episode_evidence(episode_qualification_result &result, const std::string &name) {
+  const auto iter = std::find_if(result.evidence.begin(), result.evidence.end(),
+                                 [&name](const auto &entry) { return entry.name == name; });
+  return iter == result.evidence.end() ? nullptr : &*iter;
+}
+
+const episode_qualification_evidence *find_episode_evidence(const episode_qualification_result &result,
+                                                            const std::string &name) {
+  const auto iter = std::find_if(result.evidence.begin(), result.evidence.end(),
+                                 [&name](const auto &entry) { return entry.name == name; });
+  return iter == result.evidence.end() ? nullptr : &*iter;
+}
+
+episode_qualification_capability make_episode_capability(const std::string &name,
+                                                         std::vector<std::pair<std::string, bool>> requirements) {
+  episode_qualification_capability capability;
+  capability.name = name;
+  capability.safe = true;
+  for (const auto &[requirement, satisfied] : requirements) {
+    capability.required_evidence.push_back(requirement);
+    if (!satisfied) {
+      capability.safe = false;
+      capability.blocked_by.push_back(requirement);
+    }
+  }
+  return capability;
+}
+
+episode_qualification_result make_episode_qualification(const nlohmann::json &report, bool frames_checked) {
+  episode_qualification_result result;
+  result.episode_id = uint64_or(report, "episode_id");
+  result.status = text_or(report, "status", "failed");
+  const auto manifest_report = object_or_empty(report, "episode_manifest");
+  const auto episode = object_or_empty(manifest_report, "episode");
+  const bool exists = !episode.empty();
+  result.lifecycle = exists ? text_or(episode, "status", "dangling") : "missing";
+  const auto frame_count = uint64_or(episode, "frame_count");
+  const auto payload_ref_count = uint64_or(episode, "payload_ref_count");
+  const auto schema_ref_count = uint64_or(episode, "schema_ref_count");
+
+  result.evidence = {
+      {"manifest_records", exists ? "verified" : "failed", {}},
+      {"manifest_integrity", exists ? "verified" : "failed", {}},
+      {"causal_closure", exists ? "verified" : "failed", {}},
+      {"content", payload_ref_count == 0 ? "not_applicable" : "verified", {}},
+      {"frames", frame_count == 0 ? "not_applicable" : (frames_checked ? "verified" : "not_checked"), {}},
+      {"schemas", schema_ref_count == 0 ? "not_applicable" : "not_checked", {}},
+      {"projection", "not_checked", {}},
+  };
+
+  const auto add_issue = [&result](const nlohmann::json &detail, const std::string &severity) {
+    episode_qualification_issue issue;
+    issue.severity = severity;
+    issue.code = text_or(detail, "code", "episode_issue_unknown");
+    issue.evidence = episode_issue_evidence(issue.code);
+    issue.detail = detail;
+    result.issues.push_back(issue);
+    if (auto *evidence = find_episode_evidence(result, issue.evidence); evidence != nullptr) {
+      append_unique(evidence->issue_codes, issue.code);
+      if (severity == "error") {
+        evidence->state = "failed";
+      } else if (severity == "warning" && evidence->state != "failed") {
+        evidence->state = "degraded";
+      }
+    }
+  };
+  for (const auto &error : array_or_empty(report, "errors")) {
+    add_issue(error, "error");
+  }
+  for (const auto &warning : array_or_empty(report, "warnings")) {
+    add_issue(warning, "warning");
+  }
+
+  const auto projection = object_or_empty(report, "episode_projection");
+  const auto projection_status = text_or(projection, "status", "not_checked");
+  if (auto *evidence = find_episode_evidence(result, "projection"); evidence != nullptr) {
+    if (!exists) {
+      evidence->state = "not_applicable";
+    } else if (projection_status == "ok") {
+      evidence->state = "verified";
+    } else if (projection_status == "absent") {
+      evidence->state = "missing";
+      add_issue({{"code", "episode_projection_absent"}, {"status", projection_status}}, "info");
+    } else if (projection_status == "degraded") {
+      evidence->state = "degraded";
+      add_issue({{"code", "episode_projection_drift"},
+                 {"status", projection_status},
+                 {"drift", projection.value("drift", nlohmann::json::array())}},
+                "warning");
+    } else {
+      evidence->state = "failed";
+      add_issue({{"code", "episode_projection_unavailable"}, {"status", projection_status}}, "error");
+    }
+  }
+
+  const auto state = [&result](const std::string &name) {
+    const auto *evidence = find_episode_evidence(result, name);
+    return evidence == nullptr ? std::string("missing") : evidence->state;
+  };
+  const auto verified = [&state](const std::string &name) { return state(name) == "verified"; };
+  const auto verified_or_not_applicable = [&state](const std::string &name) {
+    const auto value = state(name);
+    return value == "verified" || value == "not_applicable";
+  };
+  const bool records_readable = verified("manifest_records");
+  const bool manifest_valid = verified("manifest_integrity");
+  result.capabilities = {
+      make_episode_capability("inspect", {{"manifest_records=verified", records_readable}}),
+      make_episode_capability("fsck", {{"manifest_records=verified", records_readable}}),
+      make_episode_capability("export_evidence", {{"manifest_records=verified", records_readable}}),
+      make_episode_capability("plan_repair", {{"manifest_records=verified", records_readable}}),
+      make_episode_capability("rebuild_projection", {{"manifest_records=verified", records_readable},
+                                                     {"manifest_integrity=verified", manifest_valid}}),
+      make_episode_capability("append", {{"lifecycle=open", result.lifecycle == "open"},
+                                         {"manifest_records=verified", records_readable},
+                                         {"manifest_integrity=verified", manifest_valid}}),
+      make_episode_capability("replay", {{"lifecycle=ended", result.lifecycle == "ended"},
+                                         {"manifest_records=verified", records_readable},
+                                         {"manifest_integrity=verified", manifest_valid},
+                                         {"causal_closure=verified", verified("causal_closure")},
+                                         {"content=verified|not_applicable", verified_or_not_applicable("content")},
+                                         {"frames=verified|not_applicable", verified_or_not_applicable("frames")},
+                                         {"schemas=verified|not_applicable", verified_or_not_applicable("schemas")}}),
+      make_episode_capability("depend_on",
+                              {{"lifecycle=ended", result.lifecycle == "ended"},
+                               {"manifest_records=verified", records_readable},
+                               {"manifest_integrity=verified", manifest_valid},
+                               {"causal_closure=verified", verified("causal_closure")},
+                               {"content=verified|not_applicable", verified_or_not_applicable("content")},
+                               {"frames=verified|not_applicable", verified_or_not_applicable("frames")},
+                               {"schemas=verified|not_applicable", verified_or_not_applicable("schemas")}}),
+  };
+
+  for (const auto &issue : result.issues) {
+    const auto descriptor = episode_repair_descriptor_for_issue(issue.detail);
+    if (!descriptor.has_value()) {
+      continue;
+    }
+    nlohmann::json subject = nlohmann::json::object();
+    for (const auto *field :
+         {"episode_id", "dependency_episode_id", "frame_uid", "dependent_frame_uid", "ref_id", "ref_hash", "role"}) {
+      if (issue.detail.contains(field) && !issue.detail.at(field).is_null()) {
+        subject[field] = issue.detail.at(field);
+      }
+    }
+    result.repair_prerequisites.push_back(
+        {issue.code, descriptor->action, descriptor->required_inputs, std::move(subject)});
+  }
+  return result;
+}
+
+nlohmann::json episode_qualification_json(const episode_qualification_result &result) {
+  nlohmann::json evidence = nlohmann::json::object();
+  for (const auto &entry : result.evidence) {
+    evidence[entry.name] = {{"state", entry.state}, {"issue_codes", entry.issue_codes}};
+  }
+  nlohmann::json issues = nlohmann::json::array();
+  for (const auto &issue : result.issues) {
+    issues.push_back(
+        {{"severity", issue.severity}, {"code", issue.code}, {"evidence", issue.evidence}, {"detail", issue.detail}});
+  }
+  nlohmann::json capabilities = nlohmann::json::array();
+  nlohmann::json safe_capabilities = nlohmann::json::array();
+  nlohmann::json contractions = nlohmann::json::array();
+  for (const auto &capability : result.capabilities) {
+    capabilities.push_back({{"name", capability.name},
+                            {"safe", capability.safe},
+                            {"requires", capability.required_evidence},
+                            {"blocked_by", capability.blocked_by}});
+    if (capability.safe) {
+      safe_capabilities.push_back(capability.name);
+    } else {
+      contractions.push_back({{"capability", capability.name}, {"blocked_by", capability.blocked_by}});
+    }
+  }
+  nlohmann::json repair_prerequisites = nlohmann::json::array();
+  for (const auto &prerequisite : result.repair_prerequisites) {
+    repair_prerequisites.push_back({{"issue_code", prerequisite.issue_code},
+                                    {"action", prerequisite.action},
+                                    {"required_inputs", prerequisite.required_inputs},
+                                    {"subject", prerequisite.subject}});
+  }
+  return {{"schema", EPISODE_QUALIFICATION_SCHEMA_V1},
+          {"policy_source", "cpp-typed-fold-fsck"},
+          {"episode_id", result.episode_id},
+          {"lifecycle", result.lifecycle},
+          {"status", result.status},
+          {"evidence", evidence},
+          {"issues", issues},
+          {"capabilities", capabilities},
+          {"safe_capabilities", safe_capabilities},
+          {"contractions", contractions},
+          {"repair_prerequisites", repair_prerequisites}};
+}
+
 nlohmann::json episode_fsck_impl(const storage_service_options &options) {
   const auto scoped = episode_ref_store(options);
   const auto episode_report = scoped.store.fsck(options.episode_id);
@@ -1961,6 +2208,10 @@ nlohmann::json episode_fsck_impl(const storage_service_options &options) {
     report["ok"] = ok;
     report["degraded"] = degraded;
     report["status"] = ok ? (degraded ? "degraded" : "ok") : "failed";
+  }
+  if (options.episode_id != 0) {
+    report["qualification"] = episode_qualification_json(
+        make_episode_qualification(report, bool_or(options.operation_options, "verify_frames", false)));
   }
   return report;
 }
@@ -2023,32 +2274,40 @@ nlohmann::json repair_candidate_common(const nlohmann::json &warning, const std:
 
 nlohmann::json repair_candidate_from_warning(const nlohmann::json &warning) {
   const auto code = text_or(warning, "code");
+  const auto descriptor = episode_repair_descriptor_for_issue(warning);
+  if (!descriptor.has_value()) {
+    return nullptr;
+  }
+  std::string candidate_code;
+  std::string kind;
+  std::string role;
   if (code == "episode_dependency_missing") {
-    return repair_candidate_common(warning, "repair_episode_dependency", "episode", text_or(warning, "role", "ref"),
-                                   "fetch_episode", nlohmann::json::array({"source_or_episode_bundle"}));
+    candidate_code = "repair_episode_dependency";
+    kind = "episode";
+    role = text_or(warning, "role", "ref");
+  } else if (code == "episode_root_trigger_frame_missing") {
+    candidate_code = "repair_episode_root_trigger_frame";
+    kind = "frame";
+    role = "root_trigger";
+  } else if (code == "episode_trigger_frame_missing") {
+    candidate_code = "repair_episode_trigger_frame";
+    kind = "frame";
+    role = "trigger";
+  } else if (code == "episode_payload_ref_missing" || code == "episode_payload_ref_hash_mismatch") {
+    candidate_code = "repair_episode_payload_ref";
+    kind = "payload";
+    role = "payload_ref";
+  } else if (code == "payload_not_present") {
+    candidate_code = "repair_source_payload";
+    kind = "payload";
+    role = "source_record";
+  } else {
+    // Projection repair is exposed by the qualification contract through the
+    // dedicated rebuild operation, not as a storage repair-plan bundle row.
+    return nullptr;
   }
-  if (code == "episode_root_trigger_frame_missing") {
-    return repair_candidate_common(warning, "repair_episode_root_trigger_frame", "frame", "root_trigger",
-                                   "fetch_frame_or_declare_external_input",
-                                   nlohmann::json::array({"source_or_episode_bundle"}));
-  }
-  if (code == "episode_trigger_frame_missing") {
-    return repair_candidate_common(warning, "repair_episode_trigger_frame", "frame", "trigger",
-                                   "fetch_frame_or_declare_external_input",
-                                   nlohmann::json::array({"source_or_episode_bundle"}));
-  }
-  if (code == "episode_payload_ref_missing" || code == "episode_payload_ref_hash_mismatch") {
-    return repair_candidate_common(warning, "repair_episode_payload_ref", "payload", "payload_ref",
-                                   "fetch_payload_by_hash", nlohmann::json::array({"payload_store_or_episode_bundle"}));
-  }
-  if (code == "payload_not_present") {
-    if (bool_or(warning, "intentional", true)) {
-      return nullptr;
-    }
-    return repair_candidate_common(warning, "repair_source_payload", "payload", "source_record",
-                                   "fetch_payload_by_hash", nlohmann::json::array({"source_or_bundle"}));
-  }
-  return nullptr;
+  return repair_candidate_common(warning, candidate_code, kind, role, descriptor->action,
+                                 nlohmann::json(descriptor->required_inputs));
 }
 
 nlohmann::json repair_plan_impl(const storage_service_options &options) {
@@ -3542,7 +3801,12 @@ public:
   }
 
   [[nodiscard]] nlohmann::json episode_inspect(const storage_service_options &options) const override {
-    return episode_ref_store(options).store.inspect(uint64_or(options.operation_options, "episode_id"));
+    auto inspected = episode_ref_store(options).store.inspect(options.episode_id);
+    auto qualification_options = options;
+    qualification_options.scope = "episode";
+    const auto qualification_report = episode_fsck_impl(qualification_options);
+    inspected["qualification"] = qualification_report.at("qualification");
+    return inspected;
   }
 
   [[nodiscard]] nlohmann::json episode_recover(const storage_service_options &options) const override {

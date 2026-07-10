@@ -14,7 +14,7 @@ from itertools import product
 
 
 class Lifecycle(str, Enum):
-    ABSENT = "absent"
+    ABSENT = "missing"
     OPEN = "open"
     ENDED = "ended"
     ABORTED = "aborted"
@@ -93,6 +93,15 @@ class EpisodeOracle:
             self.projection = "stale"
 
     def observe(self) -> Observation:
+        if self.lifecycle is Lifecycle.ABSENT:
+            return Observation(
+                lifecycle=self.lifecycle.value,
+                status="failed",
+                issue_classes=("episode_missing",),
+                safe_capabilities=(),
+                projection=self.projection,
+            )
+
         issue_classes: list[str] = []
         payload_issues = {
             evidence
@@ -108,7 +117,7 @@ class EpisodeOracle:
         if self.projection == "stale":
             issue_classes.append("projection_stale")
 
-        sealed = self.lifecycle in (Lifecycle.ENDED, Lifecycle.ABORTED)
+        sealed = self.lifecycle is Lifecycle.ENDED
         if sealed and payload_issues:
             status = "failed"
         elif issue_classes:
@@ -116,13 +125,18 @@ class EpisodeOracle:
         else:
             status = "ok"
 
-        capabilities = ["inspect", "export_evidence"]
-        if status != "failed":
-            capabilities.append("continue_independent_work")
-        if issue_classes:
-            capabilities.append("plan_repair")
-        if self.lifecycle is Lifecycle.OPEN and status != "failed":
+        capabilities = [
+            "inspect",
+            "fsck",
+            "export_evidence",
+            "plan_repair",
+            "rebuild_projection",
+        ]
+        if self.lifecycle is Lifecycle.OPEN:
             capabilities.append("append")
+        consuming_issues = payload_issues or self.missing_dependencies
+        if self.lifecycle is Lifecycle.ENDED and not consuming_issues:
+            capabilities.extend(("replay", "depend_on"))
 
         return Observation(
             lifecycle=self.lifecycle.value,
@@ -182,7 +196,7 @@ def exhaust_bounded_histories() -> int:
         observed = oracle.observe()
         if observed.lifecycle != terminal:
             raise AssertionError("bounded-history lifecycle mismatch")
-        if terminal != "open" and evidence is not Evidence.PRESENT and not repair:
+        if terminal == "ended" and evidence is not Evidence.PRESENT and not repair:
             if observed.status != "failed":
                 raise AssertionError("sealed missing evidence was not failed")
         checked += 1

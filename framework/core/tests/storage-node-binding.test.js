@@ -376,6 +376,61 @@ for (const providerCase of providerCases) {
   );
 }
 
+test(
+  'Node projects the C++ Episode qualification contract without re-derivation',
+  {
+    skip:
+      nativeAvailable || process.env.KUNGFU_REQUIRE_NATIVE === '1'
+        ? false
+        : 'built kungfu_node binding is unavailable',
+  },
+  () => {
+    const runtimeDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'kf-episode-qualification-node-'),
+    );
+    try {
+      kungfu.runStorageServiceOperation('episode_begin', runtimeDir, {
+        episode_id: 901,
+        title: 'node qualification projection',
+        actor: 'node-test',
+        source: 'storage-node-binding',
+        begin_time: 1000,
+      });
+      kungfu.runStorageServiceOperation('episode_end', runtimeDir, {
+        episode_id: 901,
+        end_time: 2000,
+        frame_count: 0,
+        reason: 'done',
+      });
+      const fsck = kungfu.runStorageServiceOperation('fsck', runtimeDir, {
+        scope: 'episode',
+        episode_id: 901,
+      });
+      const inspected = kungfu.runStorageServiceOperation(
+        'episode_inspect',
+        runtimeDir,
+        { episode_id: 901 },
+      );
+      assert.equal(
+        fsck.qualification.schema,
+        'kungfu.episode.qualification/v1',
+      );
+      assert.equal(fsck.qualification.policy_source, 'cpp-typed-fold-fsck');
+      assert.deepEqual(inspected.qualification, fsck.qualification);
+      assert.equal(
+        fsck.qualification.safe_capabilities.includes('replay'),
+        true,
+      );
+      assert.equal(
+        fsck.qualification.safe_capabilities.includes('append'),
+        false,
+      );
+    } finally {
+      fs.rmSync(runtimeDir, { recursive: true, force: true });
+    }
+  },
+);
+
 // ADR-0040 stage B: the content-store facade serves Node with the same
 // vocabulary as C++/Python over both provider profiles.
 for (const provider of ['content-addressed-file', 'rocksdb']) {

@@ -407,6 +407,15 @@ nlohmann::json summary_json(const episode_current_view &view) {
   summary["record_count"] = view.records.size();
   summary["frame_count"] = view.frame_indices.size();
   summary["ref_count"] = view.ref_indices.size();
+  size_t payload_ref_count = 0;
+  size_t schema_ref_count = 0;
+  for (size_t position = 0; position < view.ref_indices.size(); ++position) {
+    const auto kind = view.ref_at(position).ref_kind;
+    payload_ref_count += kind == EpisodeRefKind::Payload ? 1 : 0;
+    schema_ref_count += kind == EpisodeRefKind::Schema ? 1 : 0;
+  }
+  summary["payload_ref_count"] = payload_ref_count;
+  summary["schema_ref_count"] = schema_ref_count;
   if (!summary.contains("status")) {
     summary["status"] = view.opened ? "open" : "dangling";
   }
@@ -873,11 +882,15 @@ nlohmann::json episode_manifest_store::fsck(uint64_t episode_id) const {
   nlohmann::json warnings = nlohmann::json::array();
   size_t checked = 0;
   bool degraded = false;
+  nlohmann::json scoped_episode = nullptr;
   for (const auto &[current_episode_id, view] : fold.episodes) {
     if (episode_id != 0 && current_episode_id != episode_id) {
       continue;
     }
     ++checked;
+    if (episode_id != 0) {
+      scoped_episode = summary_json(view);
+    }
     if (!view.opened) {
       errors.push_back({{"code", "episode_open_missing"}, {"episode_id", current_episode_id}});
     }
@@ -955,19 +968,23 @@ nlohmann::json episode_manifest_store::fsck(uint64_t episode_id) const {
   if (episode_id != 0 && checked == 0) {
     errors.push_back({{"code", "episode_missing"}, {"episode_id", episode_id}});
   }
-  return {{"ok", errors.empty()},
-          {"status", errors.empty() ? (degraded ? "degraded" : "ok") : "failed"},
-          {"schema", EPISODE_MANIFEST_SCHEMA_V1},
-          {"runtime_dir", runtime_dir_},
-          {"authority", "yijinjing-journal"},
-          {"degraded", degraded},
-          {"errors", errors},
-          {"warnings", warnings},
-          {"checked",
-           {{"episode_manifest_records", fold.total_record_count},
-            {"episodes", checked},
-            {"unknown_records", fold.unknown_record_count},
-            {"unfolded_records", fold.unfolded_record_count}}}};
+  nlohmann::json report = {{"ok", errors.empty()},
+                           {"status", errors.empty() ? (degraded ? "degraded" : "ok") : "failed"},
+                           {"schema", EPISODE_MANIFEST_SCHEMA_V1},
+                           {"runtime_dir", runtime_dir_},
+                           {"authority", "yijinjing-journal"},
+                           {"degraded", degraded},
+                           {"errors", errors},
+                           {"warnings", warnings},
+                           {"checked",
+                            {{"episode_manifest_records", fold.total_record_count},
+                             {"episodes", checked},
+                             {"unknown_records", fold.unknown_record_count},
+                             {"unfolded_records", fold.unfolded_record_count}}}};
+  if (episode_id != 0) {
+    report["episode"] = scoped_episode;
+  }
+  return report;
 }
 
 } // namespace kungfu::yijinjing::storage

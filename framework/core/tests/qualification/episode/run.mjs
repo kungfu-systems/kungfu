@@ -780,7 +780,6 @@ async function main() {
     'Episode projection derivation is exercised, but large projection rebuild cost is not measured',
     'single-node local filesystem only; no service-backed or distributed qualification',
     'publication coverage exercises an interrupted open Episode; torn journal/page crash points remain in deterministic fixtures',
-    'production Episode safe-capability reporting is not implemented, so capability_soundness is not_exercised',
     'no absolute performance SLO is adopted by the v0 profile',
   ];
   if (options.mode !== 'all') {

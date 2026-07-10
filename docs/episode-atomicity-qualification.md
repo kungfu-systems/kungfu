@@ -119,6 +119,7 @@ comparisons can support a claim.
 The recurring `mvp-smoke-v1` gate requires these dimensions to pass:
 
 - lifecycle safety;
+- capability soundness;
 - useful degradation;
 - repair monotonicity;
 - direct dependency failure containment;
@@ -127,11 +128,43 @@ The recurring `mvp-smoke-v1` gate requires these dimensions to pass:
 - content integrity and immutable put-if-absent behavior;
 - export/import preservation of Episode identity and causal counts.
 
-`capability_soundness` is explicitly `not_exercised`: the content-store backend
-declares storage capabilities, but the production Episode fold does not yet emit
-the safe-operation capability report required by ADR-0042. Semantic v1 does not
-invent an edge-layer substitute or count an unexecuted check as zero violations.
-This is a visible remaining implementation stage, not a silent pass.
+### Capability Contract v1
+
+The production C++ fsck path now emits
+`kungfu.episode.qualification/v1`. The result is derived from the typed Episode
+fold and the current fsck evidence; Python, Node and CLI surfaces return the
+same JSON projection without reconstructing policy. The contract contains:
+
+- lifecycle and overall qualification status;
+- named evidence dimensions with explicit `verified`, `not_applicable`,
+  `not_checked`, `missing`, `degraded`, or `failed` state;
+- structured issues linked back to their evidence dimension;
+- every v1 capability with its evidence requirements and concrete blockers;
+- the exact `safe_capabilities` projection and explicit contractions;
+- repair prerequisites derived from the same issue vocabulary used by the
+  storage repair plan, including dedicated projection-rebuild prerequisites.
+
+The deliberately small v1 vocabulary is `inspect`, `fsck`, `export_evidence`,
+`plan_repair`, `rebuild_projection`, `append`, `replay`, and `depend_on`.
+Forensic and evidence-preserving operations remain safe when an Episode's
+content or causal closure is degraded. `append` additionally requires an open
+lifecycle and valid manifest structure. `replay` and `depend_on` require an
+ended Episode plus verified manifest integrity and causal closure, with content,
+frames, and schemas either verified or not applicable. A present but unchecked
+frame/schema claim therefore contracts consuming capabilities rather than being
+silently treated as verified.
+
+This result is a qualification decision, not proof that every future execution
+endpoint already enforces it. Callers adding a replay, query, import-accept, or
+other consuming endpoint must gate that endpoint on the C++ result rather than
+copy its predicates. Adding a capability or changing a precondition requires a
+new contract version plus oracle/profile compatibility qualification.
+
+Semantic v1 now compares the oracle's exact safe-capability set with production
+across missing, healthy-open, degraded-open, healthy-ended, failed-ended, and
+degraded-aborted states. It also checks that the per-capability rows,
+`safe_capabilities`, and contraction projection agree. Both over-advertising and
+unnecessary contraction fail the required `capability_soundness` dimension.
 
 ## Fault matrix
 
@@ -507,11 +540,11 @@ Each run records at least:
         "reason": null
       },
       "capability_soundness": {
-        "status": "not_exercised",
-        "cases_executed": 0,
+        "status": "passed",
+        "cases_executed": 1,
         "violations": [],
-        "evidence": [],
-        "reason": "production Episode safe-capability report is not implemented"
+        "evidence": ["capability-contract"],
+        "reason": null
       }
     }
   },
@@ -595,7 +628,6 @@ DAGs, faults, and soak remains required before a broader qualification claim.
 
 ## Open questions
 
-- What is the smallest stable capability vocabulary for v1?
 - Which capability decisions require fresh full fsck, cached verification, or
   verification-on-use?
 - Which missing evidence is optional, intentionally absent, recoverable, or

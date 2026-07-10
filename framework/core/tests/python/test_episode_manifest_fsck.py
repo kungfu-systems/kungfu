@@ -15,10 +15,12 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import struct
 from pathlib import Path
 
 import kungfu
+import jsonschema
 
 from kungfu.storage import service
 from kungfu.storage.episode_lifecycle import RuntimeEpisodeLifecycle
@@ -221,12 +223,18 @@ def test_verify_frames_confirms_real_recorded_frames(tmp_path):
     lifecycle.record_event("test.step", b'{"step":2}', run_id="r1")
     lifecycle.close(ok=True)
 
+    unchecked = service.fsck(runtime_dir, episode_id=lifecycle.episode_id)
+    assert unchecked["qualification"]["evidence"]["frames"]["state"] == "not_checked"
+    assert _capability(unchecked["qualification"], "replay")["safe"] is False
+
     fsck = service.fsck(
         runtime_dir, episode_id=lifecycle.episode_id, verify_frames=True
     )
     assert fsck["ok"]
     assert fsck["status"] == "ok"
     assert fsck["checked"]["episode_frames_verified"] == 2
+    assert fsck["qualification"]["evidence"]["frames"]["state"] == "verified"
+    assert _capability(fsck["qualification"], "replay")["safe"] is True
 
 
 def test_verify_frames_fails_sealed_episode_with_missing_journal(tmp_path):
@@ -247,6 +255,14 @@ def test_verify_frames_fails_sealed_episode_with_missing_journal(tmp_path):
     assert fsck["status"] == "failed"
     codes = [e["code"] for e in fsck["errors"]]
     assert "episode_attached_frame_missing" in codes
+    qualification = fsck["qualification"]
+    assert qualification["evidence"]["frames"]["state"] == "failed"
+    assert "inspect" in qualification["safe_capabilities"]
+    assert _capability(qualification, "replay")["safe"] is False
+    assert {
+        (row["issue_code"], row["action"])
+        for row in qualification["repair_prerequisites"]
+    } >= {("episode_attached_frame_missing", "fetch_frame")}
 
 
 def test_verify_frames_degrades_open_episode_with_missing_journal(tmp_path):
@@ -266,6 +282,8 @@ def test_verify_frames_degrades_open_episode_with_missing_journal(tmp_path):
     assert fsck["degraded"] is True
     codes = [w["code"] for w in fsck["warnings"]]
     assert "episode_attached_frame_missing" in codes
+    assert fsck["qualification"]["evidence"]["frames"]["state"] == "degraded"
+    assert "append" in fsck["qualification"]["safe_capabilities"]
 
 
 def test_verify_frames_detects_tampered_payload(tmp_path):
@@ -423,3 +441,121 @@ def test_lifecycle_attach_publishes_into_content_store(tmp_path):
     fsck = service.fsck(runtime_dir, episode_id=lifecycle.episode_id)
     assert fsck["ok"]
     assert fsck["status"] == "ok"
+
+
+# ---- ADR-0042 Capability Contract v1 ----
+
+
+def _capability(qualification: dict, name: str) -> dict:
+    return next(row for row in qualification["capabilities"] if row["name"] == name)
+
+
+def test_healthy_sealed_episode_emits_versioned_safe_capabilities(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    _begin(runtime_dir, 51)
+    _seal(runtime_dir, 51)
+
+    fsck = service.fsck(runtime_dir, episode_id=51)
+    qualification = fsck["qualification"]
+    assert qualification["schema"] == "kungfu.episode.qualification/v1"
+    assert qualification["policy_source"] == "cpp-typed-fold-fsck"
+    assert qualification["lifecycle"] == "ended"
+    assert qualification["status"] == "ok"
+    assert qualification["evidence"]["manifest_records"]["state"] == "verified"
+    assert qualification["evidence"]["frames"]["state"] == "not_applicable"
+    assert qualification["evidence"]["content"]["state"] == "not_applicable"
+    assert {"inspect", "fsck", "export_evidence", "replay", "depend_on"} <= set(
+        qualification["safe_capabilities"]
+    )
+    assert _capability(qualification, "append")["safe"] is False
+    assert _capability(qualification, "append")["blocked_by"] == ["lifecycle=open"]
+
+    inspected = service.episode_inspect(runtime_dir, episode_id=51)
+    assert inspected["qualification"] == qualification
+
+
+def test_open_degradation_preserves_append_and_evidence_export(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    _begin(runtime_dir, 52)
+    absent = hashlib.sha256(b"capability missing payload").hexdigest()
+    _attach_payload_ref(runtime_dir, 52, f"sha256:{absent}")
+
+    qualification = service.fsck(runtime_dir, episode_id=52)["qualification"]
+    assert qualification["status"] == "degraded"
+    assert qualification["evidence"]["content"]["state"] == "degraded"
+    assert {"inspect", "export_evidence", "append", "plan_repair"} <= set(
+        qualification["safe_capabilities"]
+    )
+    assert _capability(qualification, "replay")["safe"] is False
+    assert "lifecycle=ended" in _capability(qualification, "replay")["blocked_by"]
+    assert (
+        "content=verified|not_applicable"
+        in _capability(qualification, "replay")["blocked_by"]
+    )
+    assert {
+        (row["issue_code"], row["action"])
+        for row in qualification["repair_prerequisites"]
+    } >= {("episode_payload_ref_missing", "fetch_payload_by_hash")}
+
+
+def test_failed_episode_contracts_consuming_capabilities_not_forensics(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    _begin(runtime_dir, 53)
+    absent = hashlib.sha256(b"sealed capability missing payload").hexdigest()
+    _attach_payload_ref(runtime_dir, 53, f"sha256:{absent}")
+    _seal(runtime_dir, 53)
+
+    qualification = service.fsck(runtime_dir, episode_id=53)["qualification"]
+    assert qualification["status"] == "failed"
+    assert qualification["evidence"]["content"]["state"] == "failed"
+    assert {"inspect", "fsck", "export_evidence", "plan_repair"} <= set(
+        qualification["safe_capabilities"]
+    )
+    assert _capability(qualification, "replay")["safe"] is False
+    assert _capability(qualification, "depend_on")["safe"] is False
+
+
+def test_unverified_schema_claim_contracts_decode_consumers(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    _begin(runtime_dir, 55)
+    service.episode_attach_ref(
+        runtime_dir,
+        episode_id=55,
+        ref_kind="schema",
+        ref_id="qualification/schema-v1",
+        ref_hash="sha256:" + "1" * 64,
+    )
+    _seal(runtime_dir, 55)
+
+    qualification = service.fsck(runtime_dir, episode_id=55)["qualification"]
+    assert qualification["status"] == "ok"
+    assert qualification["evidence"]["schemas"]["state"] == "not_checked"
+    assert "export_evidence" in qualification["safe_capabilities"]
+    assert _capability(qualification, "replay")["safe"] is False
+    assert (
+        "schemas=verified|not_applicable"
+        in _capability(qualification, "replay")["blocked_by"]
+    )
+
+
+def test_missing_episode_advertises_no_episode_capability(tmp_path):
+    qualification = service.fsck(tmp_path / "runtime", episode_id=999)["qualification"]
+    assert qualification["lifecycle"] == "missing"
+    assert qualification["status"] == "failed"
+    assert qualification["safe_capabilities"] == []
+
+
+def test_episode_qualification_v1_schema_accepts_production_result(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    _begin(runtime_dir, 54)
+    _seal(runtime_dir, 54)
+    qualification = service.fsck(runtime_dir, episode_id=54)["qualification"]
+    schema_path = (
+        Path(__file__).resolve().parents[1]
+        / "qualification"
+        / "episode"
+        / "schemas"
+        / "episode-qualification-v1.schema.json"
+    )
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    jsonschema.validate(qualification, schema)

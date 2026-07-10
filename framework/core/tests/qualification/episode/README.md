@@ -60,12 +60,13 @@ storage service for:
 - direct dependency failure containment;
 - projection absence, drift, and rebuild convergence;
 - export/import preservation of Episode identity and causal counts.
+- exact safe-capability agreement for missing, open, ended, aborted, degraded,
+  failed, repaired, and projection-derived states.
 
 Trust Report v2 records every semantic dimension as `passed`, `failed`, or
 `not_exercised`. A dimension can pass only when a production comparison ran.
-`capability_soundness` remains `not_exercised` until the production Episode
-safe-capability report exists; it is therefore not part of the current MVP
-required-dimension set.
+`capability_soundness` compares the independent oracle with the C++-owned
+`kungfu.episode.qualification/v1` result and is required by both MVP profiles.
 
 ## Result boundary
 
@@ -91,5 +92,7 @@ open Episode, or fresh-process mismatch fails the scenario.
 - `semantic_oracle.py` is the dependency-free abstract model.
 - `semantic_workload.py` performs bounded model-versus-production comparisons.
 - `profiles/*.json` are versioned workload and progress policies.
+- `schemas/episode-qualification-v1.schema.json` validates the production
+  capability contract.
 - `schemas/trust-report-v2.schema.json` validates current reports; v1 remains
   checked in so historical evidence stays readable.

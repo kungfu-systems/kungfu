@@ -256,7 +256,10 @@ fault matrices, commands, SLOs, and report schema evolve in
 
 1. Define a versioned internal Episode qualification result containing evidence
    dimensions, issues, and safe capabilities; project it through the existing
-   edge JSON without breaking v1 consumers.
+   edge JSON without breaking v1 consumers. Delivered as
+   `kungfu.episode.qualification/v1`: one C++-owned typed result projected by
+   scoped fsck and inspect, with capability requirements, contractions and
+   repair prerequisites.
 2. Build an independent, executable reference model for lifecycle, dependency,
    capability, repair, and interruption states; compare the C++ typed fold/fsck
    result against it with generated histories.

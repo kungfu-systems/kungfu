@@ -79,6 +79,33 @@ def _end(service: Any, runtime_dir: Path, episode_id: int) -> None:
     )
 
 
+def _expect_capability_contract(
+    oracle: EpisodeOracle, report: dict[str, Any], label: str
+) -> dict[str, Any]:
+    qualification = report["qualification"]
+    expected = oracle.observe()
+    actual_safe = tuple(sorted(qualification["safe_capabilities"]))
+    _expect(qualification["lifecycle"], expected.lifecycle, f"{label} lifecycle")
+    _expect(qualification["status"], expected.status, f"{label} status")
+    _expect(actual_safe, expected.safe_capabilities, f"{label} safe capabilities")
+    rows = {row["name"]: row for row in qualification["capabilities"]}
+    _expect(
+        tuple(sorted(name for name, row in rows.items() if row["safe"])),
+        actual_safe,
+        f"{label} safe row projection",
+    )
+    _expect(
+        tuple(sorted(row["capability"] for row in qualification["contractions"])),
+        tuple(sorted(name for name, row in rows.items() if not row["safe"])),
+        f"{label} contraction projection",
+    )
+    return {
+        "lifecycle": qualification["lifecycle"],
+        "status": qualification["status"],
+        "safe_capabilities": list(actual_safe),
+    }
+
+
 def _case_lifecycle_recovery(service: Any, _: Any, root: Path) -> dict[str, Any]:
     runtime_dir = root / "lifecycle-recovery"
     oracle = EpisodeOracle()
@@ -306,6 +333,98 @@ def _case_portable_identity(service: Any, _: Any, root: Path) -> dict[str, Any]:
     }
 
 
+def _case_capability_contract(
+    service: Any, content_store: Any, root: Path
+) -> dict[str, Any]:
+    runtime_dir = root / "capability-contract"
+    snapshots: dict[str, Any] = {}
+
+    missing = EpisodeOracle()
+    snapshots["missing"] = _expect_capability_contract(
+        missing,
+        service.fsck(runtime_dir, episode_id=699),
+        "missing Episode",
+    )
+
+    raw = b"capability qualification payload"
+    ref_hash = f"sha256:{hashlib.sha256(raw).hexdigest()}"
+    oracle = EpisodeOracle()
+    oracle.begin()
+    _begin(service, runtime_dir, 601)
+    snapshots["open"] = _expect_capability_contract(
+        oracle,
+        service.episode_inspect(runtime_dir, episode_id=601),
+        "healthy open Episode",
+    )
+
+    oracle.attach_payload("payload", Evidence.MISSING)
+    service.episode_attach_ref(
+        runtime_dir,
+        episode_id=601,
+        ref_kind="payload",
+        ref_id="qualification/capability.bin",
+        ref_hash=ref_hash,
+    )
+    degraded = service.fsck(runtime_dir, episode_id=601)
+    snapshots["degraded_open"] = _expect_capability_contract(
+        oracle, degraded, "degraded open Episode"
+    )
+    _expect(
+        "append" in degraded["qualification"]["safe_capabilities"],
+        True,
+        "degradation must preserve append",
+    )
+
+    content_store.put_if_absent(runtime_dir, "payloads", raw, expected_hash=ref_hash)
+    oracle.restore_payload("payload")
+    oracle.end()
+    _end(service, runtime_dir, 601)
+    snapshots["healthy_ended"] = _expect_capability_contract(
+        oracle,
+        service.fsck(runtime_dir, episode_id=601),
+        "healthy ended Episode",
+    )
+
+    failed = EpisodeOracle()
+    failed.begin()
+    failed.attach_payload("payload", Evidence.MISSING)
+    failed.end()
+    _begin(service, runtime_dir, 602)
+    service.episode_attach_ref(
+        runtime_dir,
+        episode_id=602,
+        ref_kind="payload",
+        ref_id="qualification/missing.bin",
+        ref_hash=f"sha256:{hashlib.sha256(b'missing capability payload').hexdigest()}",
+    )
+    _end(service, runtime_dir, 602)
+    snapshots["failed_ended"] = _expect_capability_contract(
+        failed,
+        service.fsck(runtime_dir, episode_id=602),
+        "failed ended Episode",
+    )
+
+    aborted = EpisodeOracle()
+    aborted.begin()
+    aborted.attach_payload("payload", Evidence.MISSING)
+    aborted.abort()
+    _begin(service, runtime_dir, 603)
+    service.episode_attach_ref(
+        runtime_dir,
+        episode_id=603,
+        ref_kind="payload",
+        ref_id="qualification/aborted.bin",
+        ref_hash=f"sha256:{hashlib.sha256(b'aborted missing payload').hexdigest()}",
+    )
+    service.episode_abort(runtime_dir, episode_id=603, reason="qualification")
+    snapshots["degraded_aborted"] = _expect_capability_contract(
+        aborted,
+        service.fsck(runtime_dir, episode_id=603),
+        "degraded aborted Episode",
+    )
+    return {"contract": "kungfu.episode.qualification/v1", "snapshots": snapshots}
+
+
 CASES: tuple[
     tuple[str, tuple[str, ...], Callable[[Any, Any, Path], dict[str, Any]]], ...
 ] = (
@@ -326,6 +445,11 @@ CASES: tuple[
     ),
     ("projection-derivation", ("projection_derivation",), _case_projection),
     ("portable-identity", ("portable_identity",), _case_portable_identity),
+    (
+        "capability-contract",
+        ("capability_soundness",),
+        _case_capability_contract,
+    ),
 )
 
 
@@ -376,15 +500,7 @@ def run_semantic(runtime_root: Path) -> dict[str, Any]:
             for case in covered
             for message in case["violations"]
         ]
-        if dimension == "capability_soundness":
-            dimensions[dimension] = {
-                "status": "not_exercised",
-                "cases_executed": 0,
-                "violations": [],
-                "evidence": [],
-                "reason": "production Episode safe-capability report is not implemented",
-            }
-        elif not covered:
+        if not covered:
             dimensions[dimension] = {
                 "status": "not_exercised",
                 "cases_executed": 0,

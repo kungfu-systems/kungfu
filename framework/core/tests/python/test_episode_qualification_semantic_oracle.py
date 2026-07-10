@@ -64,6 +64,32 @@ def test_projection_is_derived_and_journal_change_marks_it_stale():
     assert oracle.observe().status == "ok"
 
 
+def test_capability_contract_preserves_forensics_and_contracts_consumers():
+    oracle = EpisodeOracle()
+    assert oracle.observe().safe_capabilities == ()
+    oracle.begin()
+    assert "append" in oracle.observe().safe_capabilities
+    assert "replay" not in oracle.observe().safe_capabilities
+    oracle.attach_payload("artifact", Evidence.MISSING)
+    assert {"inspect", "export_evidence", "plan_repair"} <= set(
+        oracle.observe().safe_capabilities
+    )
+    oracle.end()
+    assert oracle.observe().status == "failed"
+    assert "replay" not in oracle.observe().safe_capabilities
+    assert "depend_on" not in oracle.observe().safe_capabilities
+
+
+def test_aborted_episode_does_not_claim_a_content_seal():
+    oracle = EpisodeOracle()
+    oracle.begin()
+    oracle.attach_payload("artifact", Evidence.MISSING)
+    oracle.abort()
+    assert oracle.observe().status == "degraded"
+    assert "append" not in oracle.observe().safe_capabilities
+    assert "replay" not in oracle.observe().safe_capabilities
+
+
 def test_bounded_payload_dependency_histories_preserve_core_invariants():
     assert exhaust_bounded_histories() == 48
 
