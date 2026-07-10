@@ -678,9 +678,21 @@ former open decision):
 
 ## Open Decisions
 
-- First payload backend: RocksDB, content-addressed files, SQLite blob table, or
-  a hybrid.
-- Exact source registry schema.
+Decided since this list was first drafted (kept here so the history of the
+question is visible):
+
+- ~~First payload backend~~ — decided: the content-addressed file store is the
+  default provider and RocksDB is the optional engine-backed provider, both
+  behind the same immutable content-store contract (ADR-0040).
+- ~~Exact source registry schema~~ — decided: the source registry is the
+  Hana-core kernel journal family `SourceRegistered` / `SourceHeadUpdated` /
+  `AcceptedRangeRecorded` (ADR-0037), folded into the current view with a
+  rebuildable SQLite projection.
+- ~~Exact payload state encoding~~ — decided: see "Payload State Encoding"
+  above.
+
+Still open:
+
 - How channel requests map to range/session/hash inventory across machines.
 - Whether `compact` ships as one command first, or later after `checkpoint`,
   `gc`, and `rebuild-index` are boring.
