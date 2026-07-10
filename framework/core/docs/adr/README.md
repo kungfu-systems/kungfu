@@ -57,6 +57,7 @@ A record's **Status** says where it stands:
 | [0039](ADR-0039-unified-view-interface-encapsulates-flatbuffers.md) | proposed | a single kungfu view interface is the sole FlatBuffers access point; raw FB is not called elsewhere |
 | [0040](ADR-0040-runtime-fact-ledger-content-addressed-kv.md) | proposed | a first-class content-addressed store is a runtime fact-ledger primitive, with mutable KV and fleet topology kept as separate capabilities |
 | [0041](ADR-0041-episode-manifest-first-class-journal-structure.md) | proposed | the Episode manifest is the object's trust boundary — POD journal records, one typed fold, and JSON at the edge |
+| [0042](ADR-0042-episode-atomic-safety-and-qualification.md) | proposed | Episode is the atomic safety and fault-containment unit, qualified by evidence under load |
 
 ## Reading by theme
 
@@ -143,7 +144,10 @@ A record's **Status** says where it stands:
   fsck report, accepted range — are Hana-core kernel metadata like the Episode
   manifest of ADR-0034, journal-backed and delta-append; the current JSON
   service surface and unconsumed heap structs are retired to an edge projection,
-  and payload bodies are opaque content-addressed bytes, not `.json` text).
+  and payload bodies are opaque content-addressed bytes, not `.json` text), and
+  [0042](ADR-0042-episode-atomic-safety-and-qualification.md) (Episode atomic
+  safety as evidence-bounded capability, graceful degradation, monotonic repair,
+  fault containment, and qualification under scale).
 - **Cross-cutting principle** — [0009](ADR-0009-load-bearing-self-bootstrap.md)
   (load-bearing self-bootstrap), which also names the general law that
   [`docs/architecture.md` § The build dogfoods the SDK](../../../../docs/architecture.md)
@@ -164,3 +168,6 @@ A record's **Status** says where it stands:
 - [`docs/episode-object-model.md`](../../../../docs/episode-object-model.md) —
   the Episode object model, causal closure invariant, and storage migration
   direction.
+- [`docs/episode-atomicity-qualification.md`](../../../../docs/episode-atomicity-qualification.md) —
+  the evolving semantic oracle, fault matrix, scale tiers, metrics, and Episode
+  Trust Report design required by ADR-0042.

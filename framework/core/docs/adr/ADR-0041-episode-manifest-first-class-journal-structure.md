@@ -14,8 +14,10 @@
   Episode manifest records in the yijinjing journal format; ADR-0037 makes the
   storage record family Hana-core kernel metadata with JSON as an edge
   projection; ADR-0040 makes the runtime fact ledger's content-addressed store a
-  first-class primitive; ADR-0023 starts frame integrity at the C++ recorder;
-  ADR-0028 separates content hashes from frame checksums.
+  first-class primitive; ADR-0042 defines Episode atomic safety, graceful
+  degradation, fault containment, and qualification under load; ADR-0023 starts
+  frame integrity at the C++ recorder; ADR-0028 separates content hashes from
+  frame checksums.
 
 ## Scope
 
@@ -27,13 +29,13 @@ This ADR is about eliminating the remaining JSON-early implementation, deriving
 one typed current view from those records, and tightening the operations that
 touch it.
 
-It is deliberately narrow. The **complete Episode concept** — the Episode
-identity model and its atomic / independent / operable / pressure-resistant
-guarantees, Episode-aware physical page allocation, and the dependency /
-projection / observer policy — is a **forthcoming Episode ADR**, consistent with
-ADR-0033 deferring physical layout. This ADR only makes the manifest (the trust
-boundary) clear and tight; it does not decide the deep Episode identity or
-composition semantics.
+It is deliberately narrow. ADR-0042 takes the next semantic slice — atomic
+safety, graceful degradation, fault containment, recovery, and qualification
+under pressure. The deep Episode identity and hash-root composition model,
+Episode-aware physical page allocation, and the dependency / projection /
+observer policy remain later decisions, consistent with ADR-0033 deferring
+physical layout. This ADR only makes the manifest (the trust boundary) clear and
+tight; it does not decide those deeper semantics.
 
 ## Context
 
@@ -160,9 +162,9 @@ operations tighten around that separation:
   the source-registry projection pattern while keeping the journal as authority.
 - Causal closure, the ADR-0033 core invariant, becomes a checked property of the
   manifest rather than an assumption.
-- The manifest is ready to serve the forthcoming complete Episode ADR: the deep
-  identity / atomicity / independence / composition model can be defined on top
-  of a manifest that is already POD-native and structurally verified.
+- The manifest is ready to serve ADR-0042's atomic-safety qualification and later
+  identity / composition work: those guarantees can be defined on top of a
+  manifest that is already POD-native and structurally verified.
 
 ## Relation to ADR-0033 / ADR-0034
 
@@ -171,8 +173,9 @@ decides the manifest records live in the yijinjing journal format. Both stand.
 This ADR refines them: the journal is the authority, the typed fold is the one
 canonical in-memory derivation, and fold / fsck / query stop collapsing to JSON early. It does
 not touch the Episode concept, identity model, physical layout, or
-dependency/projection policy — those remain with ADR-0033 and the forthcoming
-Episode ADR.
+dependency/projection policy. ADR-0042 defines the atomic-safety and
+qualification contract; deep identity, layout, and projection policy remain
+later decisions.
 
 ## First delivery (staged)
 
@@ -200,10 +203,10 @@ schema-version ADR rather than silently changing the record set.
 
 ## Explicitly out of scope
 
-- The complete Episode concept ADR: the Episode identity model and its atomic /
-  independent / operable / pressure-resistant guarantees, Episode-aware physical
-  page allocation, and dependency / projection / observer policy. This ADR is the
-  manifest, not the full object model.
+- Episode atomic safety, graceful degradation, fault containment, and
+  pressure-qualification semantics (ADR-0042); this ADR is the manifest, not the
+  full object model. Deep identity, Episode-aware physical page allocation, and
+  dependency / projection / observer policy also remain outside this ADR.
 - Any change to the ADR-0034 Episode record set, Episode carrier_type allocation,
   or the edge JSON shape; this ADR tightens structure and operations, not the
   schema.
@@ -225,7 +228,9 @@ schema-version ADR rather than silently changing the record set.
 - **Expand this ADR to the full Episode object model (identity, atomicity,
   composition).** Rejected for now. The manifest is the core of the Episode and
   can be made first-class on its own; the deep object model is a distinct decision
-  best made on top of a clean manifest, in the forthcoming Episode ADR.
+  best made on top of a clean manifest. ADR-0042 takes the atomic-safety and
+  qualification slice; deeper identity, layout, and composition decisions remain
+  separate.
 
 ## Residual risk
 

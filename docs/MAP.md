@@ -37,7 +37,7 @@ and the map routes a question to whichever doc answers it.
 | What is the event / journal / replay model? | [`event-model.md`](event-model.md) | use | stable |
 | What does Rewind replay, and what must it never silently re-execute? | [ADR-0020](../framework/core/docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md) + [`rewind.md`](rewind.md) | why, verify | stable |
 | How does Kungfu persist user facts, sync sources, and maintain storage over time? | [`runtime-storage-service.md`](runtime-storage-service.md) | use, verify | draft |
-| What is an Episode, and why is it the unit of export/import/fsck/timeline slicing? | [`episode-object-model.md`](episode-object-model.md) + [ADR-0033](../framework/core/docs/adr/ADR-0033-episode-causal-segment-object.md) + [ADR-0034](../framework/core/docs/adr/ADR-0034-yijinjing-episode-manifest-journal.md) | why, use, verify | draft |
+| What is an Episode, why is it the atomic trust boundary, and how is that claim qualified under faults and load? | [`episode-object-model.md`](episode-object-model.md) + [`episode-atomicity-qualification.md`](episode-atomicity-qualification.md) + [ADR-0033](../framework/core/docs/adr/ADR-0033-episode-causal-segment-object.md) + [ADR-0034](../framework/core/docs/adr/ADR-0034-yijinjing-episode-manifest-journal.md) + [ADR-0042](../framework/core/docs/adr/ADR-0042-episode-atomic-safety-and-qualification.md) | why, use, verify | draft |
 | What is the supervisor/master topology, and how can the master stay alive after the GUI closes? | [`master-service.md`](master-service.md) + [ADR-0036](../framework/core/docs/adr/ADR-0036-supervisor-and-workspace-master-topology.md) | use, verify | draft |
 | How can a multi-machine timeline stay stable without one global clock? | [ADR-0021](../framework/core/docs/adr/ADR-0021-observer-relative-timeline-projection.md) + [`event-model.md`](event-model.md) | why, verify | stable |
 | Where must action-recording semantics live across C++ / Python / Node? | [ADR-0022](../framework/core/docs/adr/ADR-0022-core-action-recording-surface.md) + [`event-model.md`](event-model.md) | why, use | stable |
@@ -120,10 +120,14 @@ route to the row that answers them:
   store / fsck / compact / garbage collection / range export / projection
   rebuild** → *runtime storage service*
   ([`runtime-storage-service.md`](runtime-storage-service.md)).
-- **episode / causal segment / causal closure / lifecycle unit / run slice /
-  export unit / import unit / tombstone / episode manifest / episode fsck** →
+- **episode / causal segment / causal closure / atomic safety / graceful
+  degradation / capability contraction / qualification / Trust Report /
+  lifecycle unit / run slice / export unit / import unit / tombstone / episode
+  manifest / episode fsck** →
   *Episode object model* ([`episode-object-model.md`](episode-object-model.md))
-  and [ADR-0033](../framework/core/docs/adr/ADR-0033-episode-causal-segment-object.md).
+  plus [`episode-atomicity-qualification.md`](episode-atomicity-qualification.md),
+  [ADR-0033](../framework/core/docs/adr/ADR-0033-episode-causal-segment-object.md),
+  and [ADR-0042](../framework/core/docs/adr/ADR-0042-episode-atomic-safety-and-qualification.md).
 - **episode manifest journal / manifest record / manifest delta / manifest
   authority / yijinjing manifest / Hana manifest / JSON manifest** → *Episode
   object model* ([`episode-object-model.md`](episode-object-model.md)) and

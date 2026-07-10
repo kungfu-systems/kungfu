@@ -6,6 +6,11 @@ invariants are accepted by
 [ADR-0034](../framework/core/docs/adr/ADR-0034-yijinjing-episode-manifest-journal.md)
 defines the append-only yijinjing manifest journal. The full Episode-aware
 physical journal layout is still future work.
+[ADR-0042](../framework/core/docs/adr/ADR-0042-episode-atomic-safety-and-qualification.md)
+proposes Episode as the atomic safety and fault-containment unit: degradation
+preserves verified work and contracts only the capabilities that missing or
+unverifiable evidence cannot safely support. Its executable verification design
+lives in [Episode Atomicity Qualification](episode-atomicity-qualification.md).
 
 Kungfu needs a storage object that matches the way users and agents reason about
 work. Raw mmap pages are append blocks. A source is a provenance and sync
@@ -315,6 +320,13 @@ root trigger frame, or missing payload ref produces a warning and a degraded
 status while keeping `ok: true` when the manifest itself is readable. This gives
 repair/sync code a precise target without making the Episode disappear from
 inspection or export.
+
+ADR-0042 tightens the intended interpretation without turning degradation into
+a deletion policy: lifecycle, health, and safe capabilities are separate
+dimensions. A future structured qualification result should state which
+operations remain safe and why; the current `ok` field must be read in its
+documented scope rather than as a claim that every Episode capability is fully
+available.
 
 `kungfu.storage.repair-plan/v1` is the first repair-facing projection over that
 diagnostic set. It maps the Episode warnings to read-only candidates such as
