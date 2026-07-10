@@ -95,16 +95,16 @@ bool seed(const std::string &root) {
   return true;
 }
 
-class module {
+class dynamic_module {
 public:
-  explicit module(const char *path) {
+  explicit dynamic_module(const char *path) {
 #if defined(_WIN32)
     handle_ = LoadLibraryA(path);
 #else
     handle_ = dlopen(path, RTLD_NOW | RTLD_LOCAL);
 #endif
   }
-  ~module() {
+  ~dynamic_module() {
     if (handle_ != nullptr) {
 #if defined(_WIN32)
       FreeLibrary(static_cast<HMODULE>(handle_));
@@ -158,7 +158,7 @@ int main(int argc, char **argv) {
     return 6;
   }
 
-  module native_kfx(argv[2]);
+  dynamic_module native_kfx(argv[2]);
   if (!native_kfx.loaded() || native_kfx.entry() == nullptr) {
     std::fprintf(stderr, "native KFX module load failed: %s\n", argv[2]);
     return 7;
