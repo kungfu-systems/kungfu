@@ -305,6 +305,46 @@ struct storage_rebuild_index_result {
   std::vector<storage_projection_error> errors = {};
 };
 
+struct storage_compact_plan_request {
+  std::string runtime_dir = {};
+  std::string provider = {};
+  std::string source_id = {};
+  bool dry_run = true;
+};
+
+struct storage_retained_manifest_view {
+  std::string source_id = {};
+  std::string manifest_id = {};
+  uint64_t entries = 0;
+  storage_sync_root_view sync_root = {};
+};
+
+struct storage_projection_compact_view {
+  std::string name = {};
+  std::string path = {};
+  std::string action = "rebuild-and-vacuum";
+  bool dry_run = true;
+  bool rebuildable = true;
+};
+
+struct storage_unsupported_action_view {
+  std::string name = {};
+  std::string reason = {};
+};
+
+struct storage_compact_plan_result {
+  bool ok = true;
+  std::string scope = "all";
+  std::optional<std::string> source_id = {};
+  bool dry_run = true;
+  std::vector<storage_retained_manifest_view> retained_manifests = {};
+  storage_rebuild_index_result rebuild_index = {};
+  storage_gc_plan_result gc = {};
+  storage_projection_compact_view projection_compact = {};
+  std::vector<storage_unsupported_action_view> unsupported = {};
+  std::vector<std::string> notes = {};
+};
+
 class storage_service {
 public:
   virtual ~storage_service() = default;
@@ -317,6 +357,8 @@ public:
 
   [[nodiscard]] virtual storage_rebuild_index_result
   rebuild_index(const storage_rebuild_index_request &request) const = 0;
+
+  [[nodiscard]] virtual storage_compact_plan_result compact_plan(const storage_compact_plan_request &request) const = 0;
 };
 
 [[nodiscard]] std::string storage_query_kind_name(storage_query_kind kind);

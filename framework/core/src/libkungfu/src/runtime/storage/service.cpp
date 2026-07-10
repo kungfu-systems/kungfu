@@ -3159,56 +3159,54 @@ nlohmann::json gc_plan_impl(const storage_service_options &options) {
   return render_storage_gc_plan_result(default_storage_service().gc_plan(parse_storage_gc_plan_request(options)));
 }
 
-nlohmann::json compact_plan_impl(const storage_service_options &options) {
-  if (!options.dry_run) {
+storage_compact_plan_result compact_plan_typed_impl(const storage_compact_plan_request &request) {
+  if (!request.dry_run) {
     throw std::invalid_argument("storage_compact_requires_dry_run");
   }
-  auto rebuild_options = options;
-  rebuild_options.dry_run = true;
-  const auto rebuild = rebuild_index_impl(rebuild_options);
-  const auto garbage = gc_plan_impl(rebuild_options);
-  const auto provider = shared_provider(options);
-  nlohmann::json manifests = nlohmann::json::array();
-  const auto catalog = catalog_store(options.runtime_dir);
-  for (const auto &summary : catalog.list().value("sources", nlohmann::json::array())) {
-    const auto current_source_id = text_or(summary, "source_id");
-    if (!options.source_id.empty() && current_source_id != options.source_id) {
+  storage_compact_plan_result result{};
+  result.scope = request.source_id.empty() ? "all" : "source";
+  if (!request.source_id.empty()) {
+    result.source_id = request.source_id;
+  }
+  result.rebuild_index = rebuild_index_typed_impl({request.runtime_dir, request.source_id, true});
+  result.gc = gc_plan_typed_impl({request.runtime_dir, request.provider, request.source_id, true});
+
+  const auto catalog = catalog_store(request.runtime_dir).read_typed_records();
+  std::map<uint64_t, std::vector<const yijinjing::types::ImportManifestAccepted *>> manifests_by_source;
+  for (const auto &manifest : catalog.manifests) {
+    manifests_by_source[manifest.source_uid].push_back(&manifest);
+  }
+  for (const auto &[source_uid, manifests] : manifests_by_source) {
+    (void)source_uid;
+    const auto current_source_id = fixed_string(manifests.back()->source_id);
+    if (!request.source_id.empty() && current_source_id != request.source_id) {
       continue;
     }
-    const auto inspected = catalog.inspect(current_source_id);
-    for (const auto &manifest : inspected.value("manifests", nlohmann::json::array())) {
-      manifests.push_back(
-          {{"source_id", current_source_id},
-           {"manifest_id", text_or(manifest, "manifest_id")},
-           {"entries", manifest.value("entry_count", 0)},
-           {"sync_root", manifest.contains("sync_root") ? manifest.at("sync_root") : nlohmann::json(nullptr)}});
+    for (const auto *manifest : manifests) {
+      result.retained_manifests.push_back(
+          {current_source_id,
+           fixed_string(manifest->manifest_id),
+           manifest->entry_count,
+           {fixed_string(manifest->sync_root_algo), fixed_string(manifest->sync_root_value)}});
     }
   }
-  return {
-      {"ok", rebuild.value("ok", false) && garbage.value("ok", false)},
-      {"scope", options.source_id.empty() ? "all" : "source"},
-      {"source_id", options.source_id.empty() ? nlohmann::json(nullptr) : nlohmann::json(options.source_id)},
-      {"dry_run", true},
-      {"retained_manifests", manifests},
-      {"rebuild_index", rebuild},
-      {"gc", garbage},
-      {"projection_compact",
-       {
-           {"name", PROJECTION_MANIFEST_CATALOG},
-           {"path", manifest_catalog_projection(options.runtime_dir).sqlite_path()},
-           {"action", "rebuild-and-vacuum"},
-           {"dry_run", true},
-           {"rebuildable", true},
-       }},
-      {"unsupported",
-       nlohmann::json::array(
-           {{{"name", "history-archive"}, {"reason", "archive bundles are not implemented in this slice"}},
-            {{"name", "backend-compact"},
-             {"reason", provider->name() == PROVIDER_ROCKSDB ? "RocksDB compaction is not destructive-history compact"
-                                                             : "the file backend has no backend compaction"}}})},
-      {"notes", nlohmann::json::array({"No manifests, payloads, journal frames, or projections were rewritten.",
-                                       "This is a reviewable compaction plan, not destructive compaction."})},
-  };
+  result.projection_compact = {PROJECTION_MANIFEST_CATALOG,
+                               manifest_catalog_projection(request.runtime_dir).sqlite_path(), "rebuild-and-vacuum",
+                               true, true};
+  const auto provider = provider_cache::instance().acquire(request.runtime_dir, request.provider);
+  result.unsupported = {{"history-archive", "archive bundles are not implemented in this slice"},
+                        {"backend-compact", provider->name() == PROVIDER_ROCKSDB
+                                                ? "RocksDB compaction is not destructive-history compact"
+                                                : "the file backend has no backend compaction"}};
+  result.notes = {"No manifests, payloads, journal frames, or projections were rewritten.",
+                  "This is a reviewable compaction plan, not destructive compaction."};
+  result.ok = result.rebuild_index.ok && result.gc.ok;
+  return result;
+}
+
+nlohmann::json compact_plan_impl(const storage_service_options &options) {
+  return render_storage_compact_plan_result(
+      default_storage_service().compact_plan(parse_storage_compact_plan_request(options)));
 }
 
 // Accept one import manifest into the kernel journals: the manifest-catalog
@@ -3600,6 +3598,10 @@ public:
   [[nodiscard]] storage_rebuild_index_result
   rebuild_index(const storage_rebuild_index_request &request) const override {
     return rebuild_index_typed_impl(request);
+  }
+
+  [[nodiscard]] storage_compact_plan_result compact_plan(const storage_compact_plan_request &request) const override {
+    return compact_plan_typed_impl(request);
   }
 };
 
@@ -4027,6 +4029,51 @@ nlohmann::json render_storage_rebuild_index_result(const storage_rebuild_index_r
           {"written", result.written},
           {"sources_rebuilt", result.sources_rebuilt},
           {"errors", std::move(errors)}};
+}
+
+storage_compact_plan_request parse_storage_compact_plan_request(const storage_service_options &options) {
+  return {options.runtime_dir, options.provider, options.source_id, options.dry_run};
+}
+
+nlohmann::json render_storage_compact_plan_result(const storage_compact_plan_result &result) {
+  nlohmann::json retained_manifests = nlohmann::json::array();
+  for (const auto &manifest : result.retained_manifests) {
+    retained_manifests.push_back({{"source_id", manifest.source_id},
+                                  {"manifest_id", manifest.manifest_id},
+                                  {"entries", manifest.entries},
+                                  {"sync_root",
+                                   {{"schema", yy_storage::SYNC_ROOT_SCHEMA_V1},
+                                    {"scope", yy_storage::SYNC_ROOT_SCOPE_ATLAS_IMPORT_MANIFEST},
+                                    {"proof", yy_storage::SYNC_ROOT_PROOF_LINEAR_CHAIN_V1},
+                                    {"algorithm", manifest.sync_root.algorithm},
+                                    {"value", manifest.sync_root.value},
+                                    {"entry_count", manifest.entries},
+                                    {"initial", yy_storage::SYNC_ROOT_INITIAL_SHA256},
+                                    {"ordering",
+                                     {{"policy", yy_storage::SYNC_ROOT_ORDERING_POLICY_MANIFEST_ENTRY_SORT_V1},
+                                      {"fields", nlohmann::json::array({"kind", "source_id", "source_path"})}}}}}});
+  }
+  nlohmann::json unsupported = nlohmann::json::array();
+  for (const auto &action : result.unsupported) {
+    unsupported.push_back({{"name", action.name}, {"reason", action.reason}});
+  }
+  return {
+      {"ok", result.ok},
+      {"scope", result.scope},
+      {"source_id", result.source_id.has_value() ? nlohmann::json(*result.source_id) : nlohmann::json(nullptr)},
+      {"dry_run", result.dry_run},
+      {"retained_manifests", std::move(retained_manifests)},
+      {"rebuild_index", render_storage_rebuild_index_result(result.rebuild_index)},
+      {"gc", render_storage_gc_plan_result(result.gc)},
+      {"projection_compact",
+       {{"name", result.projection_compact.name},
+        {"path", result.projection_compact.path},
+        {"action", result.projection_compact.action},
+        {"dry_run", result.projection_compact.dry_run},
+        {"rebuildable", result.projection_compact.rebuildable}}},
+      {"unsupported", std::move(unsupported)},
+      {"notes", result.notes},
+  };
 }
 
 nlohmann::json render_storage_status_result(const storage_status_result &result) {
