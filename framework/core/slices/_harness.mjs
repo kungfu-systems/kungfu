@@ -146,13 +146,13 @@ export function assertNoExtraDylibs(bin) {
           ),
       )
       .join('\n');
-  } else if (isWin && has('dumpbin')) {
-    const out = run('dumpbin', ['/DEPENDENTS', bin], {
-      allowFail: true,
-    }).stdout;
+  } else if (isWin && (has('dumpbin') || has('ldd'))) {
+    const tool = has('dumpbin') ? 'dumpbin' : 'ldd';
+    const args = tool === 'dumpbin' ? ['/DEPENDENTS', bin] : [bin];
+    const out = run(tool, args, { allowFail: true }).stdout;
     deps = out
       .split('\n')
-      .map((l) => l.match(/([A-Za-z0-9_.+-]+\.dll)\s*$/i)?.[1])
+      .map(windowsDllName)
       .filter(Boolean)
       .filter((d) => !isWindowsSystemDll(d))
       .join('\n');
@@ -162,6 +162,13 @@ export function assertNoExtraDylibs(bin) {
   }
   if (deps) fail(`unexpected dynamic dependencies in ${bin}:\n${deps}`);
   console.log(`  ${path.basename(bin)}: system runtime only`);
+}
+
+export function windowsDllName(line) {
+  return line
+    .trim()
+    .split(/\s+/)[0]
+    .match(/([A-Za-z0-9_.+-]+\.dll)$/i)?.[1];
 }
 
 export function isWindowsSystemDll(dependency) {
