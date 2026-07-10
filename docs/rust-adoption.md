@@ -154,7 +154,12 @@ per-platform special-casing) with one binary that:
   this makes an installed shifu a self-sufficient bootstrap core: install
   once, clone anywhere, and every capability that can evolve lives in the
   repo — the binary never needs re-installing to pick up new launcher
-  behavior.
+  behavior. The loop is welded to nothing but the entrypoints themselves:
+  installed binaries recognize a repo root by the presence of `shifu` and
+  `shifu.cmd` (both welded surfaces), spawn the entrypoint directly without
+  assuming what it is implemented in, and carry a two-fuse anti-loop guard
+  (`SHIFU_FROM_SHIM` / `SHIFU_DELEGATED`) — so the handover survives any
+  toolchain evolution, including one that retires node.
 
 It scores three yeses: it *is* the process boundary in front of everything
 else; it needs to exist before node/python are provisioned, which only a

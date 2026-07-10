@@ -250,8 +250,17 @@ fn current_branch(root: &Path) -> Option<String> {
 /// ./shifu entrypoint, so the repo-pinned launcher version always wins. Skipped
 /// when the shim dispatched us (SHIFU_FROM_SHIM=1) or when this binary already
 /// lives inside the repo (a local cargo build).
+///
+/// Two protocol properties keep the handover future-proof and loop-free:
+/// the entrypoint is spawned directly (executable bit + shebang, or cmd.exe
+/// for the .cmd), so nothing about its implementation form is baked into old
+/// binaries; and the spawn carries SHIFU_DELEGATED=1 as a second fuse — a
+/// binary that sees it never delegates again, so even a future shim that
+/// forgets SHIFU_FROM_SHIM cannot produce an infinite delegation loop.
 fn maybe_delegate_to_repo_entrypoint(root: &Path, args: &[String]) {
-    if env::var("SHIFU_FROM_SHIM").ok().as_deref() == Some("1") {
+    if env::var("SHIFU_FROM_SHIM").ok().as_deref() == Some("1")
+        || env::var("SHIFU_DELEGATED").ok().as_deref() == Some("1")
+    {
         return;
     }
     let root = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
@@ -270,8 +279,12 @@ fn maybe_delegate_to_repo_entrypoint(root: &Path, args: &[String]) {
     }
     #[cfg(unix)]
     {
-        let mut cmd = std::process::Command::new("/bin/sh");
-        cmd.arg(&script).args(args).current_dir(&root);
+        // Spawn the entrypoint directly: the kernel resolves shebang vs native
+        // executable, so its implementation form is not baked in here.
+        let mut cmd = std::process::Command::new(&script);
+        cmd.args(args)
+            .env("SHIFU_DELEGATED", "1")
+            .current_dir(&root);
         util::exec_or_exit(cmd);
     }
     #[cfg(windows)]
@@ -287,7 +300,7 @@ fn maybe_delegate_to_repo_entrypoint(root: &Path, args: &[String]) {
             line.push('"');
             cmd.raw_arg(line);
         }
-        cmd.current_dir(&root);
+        cmd.env("SHIFU_DELEGATED", "1").current_dir(&root);
         util::exec_or_exit(cmd);
     }
 }
@@ -297,23 +310,33 @@ fn maybe_delegate_to_repo_entrypoint(root: &Path, args: &[String]) {
 /// discovered rather than assumed: explicit override first, then walk up from
 /// the current directory looking for the repo's own entrypoint marker.
 ///
+/// A directory is a kungfu repo root when both welded entrypoint files are
+/// present. This recognition protocol is deliberately anchored on nothing but
+/// the entrypoints themselves (a KFD-1 welded surface, so it survives any
+/// toolchain evolution — even a future without node), and on both of them as a
+/// pair so a stray file named `shifu` in some unrelated directory cannot be
+/// mistaken for a repo — the delegation path executes what it finds.
+fn is_repo_root(dir: &Path) -> bool {
+    dir.join("shifu").is_file() && dir.join("shifu.cmd").is_file()
+}
+
 /// With `lenient` (used by --version and doctor), failing to find a repo
 /// returns None instead of dying — those verbs are useful outside a checkout.
 fn find_repo_root(lenient: bool) -> Option<PathBuf> {
     if let Some(explicit) = env::var_os("SHIFU_ROOT") {
         let root = PathBuf::from(explicit);
-        if root.join("shifu.mjs").is_file() {
+        if is_repo_root(&root) {
             return Some(root);
         }
         util::die(&format!(
-            "SHIFU_ROOT does not look like a kungfu repo (missing shifu.mjs): {}",
+            "SHIFU_ROOT does not look like a kungfu repo (missing shifu / shifu.cmd entrypoints): {}",
             root.display()
         ));
     }
     let start = env::current_dir().unwrap_or_else(|e| util::die(&format!("cannot read cwd: {e}")));
     let mut dir = start.as_path();
     loop {
-        if dir.join("shifu.mjs").is_file() && dir.join(".node-version").is_file() {
+        if is_repo_root(dir) {
             return Some(dir.to_path_buf());
         }
         match dir.parent() {
