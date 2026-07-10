@@ -2952,18 +2952,29 @@ nlohmann::json fsck_impl(const storage_service_options &options) {
 
   // Source-registry journal fold consistency (dangling heads, duplicate
   // registrations) — the registry journal is a first-class fact source too.
-  const auto registry_report = registry_store(options.runtime_dir).fsck(options.source_id);
-  for (auto error : array_or_empty(registry_report, "errors")) {
-    if (text_or(error, "code") == "source_missing") {
+  const auto registry_report = registry_store(options.runtime_dir).fsck_typed(options.source_id);
+  const auto render_registry_issue = [](const yy_storage::source_registry_fsck_issue &issue) {
+    nlohmann::json row = {{"code", issue.code}, {"projection", "source-registry"}};
+    if (issue.source_uid.has_value()) {
+      row["source_uid"] = *issue.source_uid;
+    }
+    if (issue.source_id.has_value()) {
+      row["source_id"] = *issue.source_id;
+    }
+    if (issue.count.has_value()) {
+      row["count"] = *issue.count;
+    }
+    return row;
+  };
+  for (const auto &error : registry_report.errors) {
+    if (error.code == "source_missing") {
       continue; // covered by the registered-set check above
     }
-    error["projection"] = "source-registry";
     report["ok"] = false;
-    report["errors"].push_back(error);
+    report["errors"].push_back(render_registry_issue(error));
   }
-  for (auto warning : array_or_empty(registry_report, "warnings")) {
-    warning["projection"] = "source-registry";
-    report["warnings"].push_back(warning);
+  for (const auto &warning : registry_report.warnings) {
+    report["warnings"].push_back(render_registry_issue(warning));
   }
 
   // Catalog fold, sync-root chain, committed entries documents, and payload

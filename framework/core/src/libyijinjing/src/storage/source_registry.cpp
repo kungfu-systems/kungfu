@@ -394,39 +394,66 @@ nlohmann::json source_registry_store::inspect(const std::string &source_id) cons
           {"records", records_json(iter->second)}};
 }
 
-nlohmann::json source_registry_store::fsck(const std::string &source_id) const {
+source_registry_fsck_result source_registry_store::fsck_typed(const std::string &source_id) const {
   const auto folded = fold_typed_records();
   const auto filter_uid = source_id.empty() ? uint64_t{0} : source_uid_of(source_id);
-  nlohmann::json errors = nlohmann::json::array();
-  nlohmann::json warnings = nlohmann::json::array();
-  size_t checked = 0;
+  source_registry_fsck_result result{};
+  result.runtime_dir = runtime_dir_;
+  result.source_registry_records = static_cast<uint64_t>(folded.total_record_count);
   for (const auto &[current_source_uid, source] : folded.sources) {
     if (filter_uid != 0 && current_source_uid != filter_uid) {
       continue;
     }
-    ++checked;
+    ++result.sources;
     if (!source.registered) {
       // Head updates or accepted ranges without a registration are dangling
       // producer output: honest degradation, recorded, not silently dropped.
-      errors.push_back({{"code", "source_registration_missing"}, {"source_uid", current_source_uid}});
+      result.errors.push_back({"source_registration_missing", current_source_uid, {}, {}});
     }
     if (source.register_count > 1) {
-      warnings.push_back({{"code", "source_registered_duplicate"},
-                          {"source_uid", current_source_uid},
-                          {"count", source.register_count}});
+      result.warnings.push_back(
+          {"source_registered_duplicate", current_source_uid, {}, static_cast<uint64_t>(source.register_count)});
     }
   }
-  if (filter_uid != 0 && checked == 0) {
-    errors.push_back({{"code", "source_missing"}, {"source_id", source_id}});
+  if (filter_uid != 0 && result.sources == 0) {
+    result.errors.push_back({"source_missing", {}, source_id, {}});
   }
-  return {{"ok", errors.empty()},
-          {"status", errors.empty() ? "ok" : "failed"},
-          {"schema", SOURCE_REGISTRY_SCHEMA_V1},
-          {"runtime_dir", runtime_dir_},
-          {"authority", "yijinjing-journal"},
-          {"errors", errors},
-          {"warnings", warnings},
-          {"checked", {{"source_registry_records", folded.total_record_count}, {"sources", checked}}}};
+  result.ok = result.errors.empty();
+  result.status = result.ok ? "ok" : "failed";
+  return result;
+}
+
+nlohmann::json source_registry_store::fsck(const std::string &source_id) const {
+  const auto result = fsck_typed(source_id);
+  const auto render_issue = [](const source_registry_fsck_issue &issue) {
+    nlohmann::json row = {{"code", issue.code}};
+    if (issue.source_uid.has_value()) {
+      row["source_uid"] = *issue.source_uid;
+    }
+    if (issue.source_id.has_value()) {
+      row["source_id"] = *issue.source_id;
+    }
+    if (issue.count.has_value()) {
+      row["count"] = *issue.count;
+    }
+    return row;
+  };
+  nlohmann::json errors = nlohmann::json::array();
+  nlohmann::json warnings = nlohmann::json::array();
+  for (const auto &issue : result.errors) {
+    errors.push_back(render_issue(issue));
+  }
+  for (const auto &issue : result.warnings) {
+    warnings.push_back(render_issue(issue));
+  }
+  return {{"ok", result.ok},
+          {"status", result.status},
+          {"schema", result.schema},
+          {"runtime_dir", result.runtime_dir},
+          {"authority", result.authority},
+          {"errors", std::move(errors)},
+          {"warnings", std::move(warnings)},
+          {"checked", {{"source_registry_records", result.source_registry_records}, {"sources", result.sources}}}};
 }
 
 } // namespace kungfu::yijinjing::storage

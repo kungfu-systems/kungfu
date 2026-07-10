@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <functional>
 #include <map>
+#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -108,6 +109,25 @@ struct source_registry_fold {
   size_t unfolded_record_count = 0;
 };
 
+struct source_registry_fsck_issue {
+  std::string code = {};
+  std::optional<uint64_t> source_uid = {};
+  std::optional<std::string> source_id = {};
+  std::optional<uint64_t> count = {};
+};
+
+struct source_registry_fsck_result {
+  bool ok = true;
+  std::string status = "ok";
+  std::string schema = SOURCE_REGISTRY_SCHEMA_V1;
+  std::string runtime_dir = {};
+  std::string authority = "yijinjing-journal";
+  std::vector<source_registry_fsck_issue> errors = {};
+  std::vector<source_registry_fsck_issue> warnings = {};
+  uint64_t source_registry_records = 0;
+  uint64_t sources = 0;
+};
+
 class source_registry_store {
 public:
   explicit source_registry_store(std::string runtime_dir);
@@ -139,6 +159,8 @@ public:
   [[nodiscard]] nlohmann::json inspect(const std::string &source_id) const;
 
   // Verify the journal by reopening frames and checking fold consistency.
+  [[nodiscard]] source_registry_fsck_result fsck_typed(const std::string &source_id = {}) const;
+
   [[nodiscard]] nlohmann::json fsck(const std::string &source_id = {}) const;
 
 private:
