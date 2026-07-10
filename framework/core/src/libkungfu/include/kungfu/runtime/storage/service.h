@@ -128,6 +128,13 @@ struct storage_provider_runtime_view {
   std::optional<bool> write_sync = {};
 };
 
+struct storage_provider_layout_view {
+  std::optional<std::string> database = {};
+  std::string manifest_catalog_journal = {};
+  std::string manifest_entries = {};
+  std::string payloads = {};
+};
+
 struct storage_provider_cache_view {
   std::string lifecycle = "process";
   uint64_t entries = 0;

@@ -477,7 +477,7 @@ public:
   virtual ~storage_provider() = default;
 
   [[nodiscard]] virtual std::string name() const = 0;
-  [[nodiscard]] virtual nlohmann::json layout() const = 0;
+  [[nodiscard]] virtual storage_provider_layout_view layout() const = 0;
   [[nodiscard]] virtual storage_provider_runtime_view runtime() const = 0;
   [[nodiscard]] virtual bool payload_exists(const std::string &digest) const = 0;
   [[nodiscard]] virtual std::string read_payload(const std::string &digest) const = 0;
@@ -495,12 +495,11 @@ public:
 
   [[nodiscard]] std::string name() const override { return PROVIDER_FILE; }
 
-  [[nodiscard]] nlohmann::json layout() const override {
-    return {
-        {"manifest_catalog_journal", "journal/system/storage/manifest-catalog/live/*.journal"},
-        {"manifest_entries", "storage/manifests/<hash-prefix>/<sha256>"},
-        {"payloads", "storage/payloads/<hash-prefix>/<sha256>"},
-    };
+  [[nodiscard]] storage_provider_layout_view layout() const override {
+    return {{},
+            "journal/system/storage/manifest-catalog/live/*.journal",
+            "storage/manifests/<hash-prefix>/<sha256>",
+            "storage/payloads/<hash-prefix>/<sha256>"};
   }
 
   [[nodiscard]] storage_provider_runtime_view runtime() const override {
@@ -736,13 +735,9 @@ public:
 
   [[nodiscard]] std::string name() const override { return PROVIDER_ROCKSDB; }
 
-  [[nodiscard]] nlohmann::json layout() const override {
-    return {
-        {"database", "storage/rocksdb"},
-        {"manifest_catalog_journal", "journal/system/storage/manifest-catalog/live/*.journal"},
-        {"manifest_entries", "manifests/<sha256>"},
-        {"payloads", "payloads/<sha256>"},
-    };
+  [[nodiscard]] storage_provider_layout_view layout() const override {
+    return {"storage/rocksdb", "journal/system/storage/manifest-catalog/live/*.journal", "manifests/<sha256>",
+            "payloads/<sha256>"};
   }
 
   [[nodiscard]] storage_provider_runtime_view runtime() const override {
@@ -961,6 +956,16 @@ nlohmann::json provider_runtime_json(const storage_provider_runtime_view &runtim
   return rendered;
 }
 
+nlohmann::json provider_layout_json(const storage_provider_layout_view &layout) {
+  nlohmann::json rendered = {{"manifest_catalog_journal", layout.manifest_catalog_journal},
+                             {"manifest_entries", layout.manifest_entries},
+                             {"payloads", layout.payloads}};
+  if (layout.database.has_value()) {
+    rendered["database"] = *layout.database;
+  }
+  return rendered;
+}
+
 nlohmann::json provider_cache_json(const storage_provider_cache_view &cache) {
   return {{"lifecycle", cache.lifecycle}, {"entries", cache.entries}, {"hits", cache.hits}, {"misses", cache.misses}};
 }
@@ -1013,7 +1018,7 @@ nlohmann::json workspace_episode_layout(const storage_service_options &options, 
       {"runtime_dir_is_standard_child", runtime.filename() == "runtime"},
       {"config_home", optional_absolute_path(options.operation_options, "config_home")},
       {"provider", provider.name()},
-      {"provider_layout", provider.layout()},
+      {"provider_layout", provider_layout_json(provider.layout())},
       {"provider_runtime", provider_runtime_json(provider.runtime())},
       {"provider_cache", provider_cache_json(provider_cache::instance().stats())},
       {"paths",
@@ -4576,12 +4581,12 @@ nlohmann::json storage_service_capabilities() {
                         {{"name", PROVIDER_FILE},
                          {"default", provider.name == PROVIDER_FILE},
                          {"selected", provider.name == PROVIDER_FILE},
-                         {"layout", file_storage_provider("").layout()},
+                         {"layout", provider_layout_json(file_storage_provider("").layout())},
                          {"runtime", provider_runtime_json(file_storage_provider("").runtime())}},
                         {{"name", PROVIDER_ROCKSDB},
                          {"default", provider.name == PROVIDER_ROCKSDB},
                          {"selected", provider.name == PROVIDER_ROCKSDB},
-                         {"layout", rocksdb_storage_provider("").layout()},
+                         {"layout", provider_layout_json(rocksdb_storage_provider("").layout())},
                          {"runtime", provider_runtime_json(rocksdb_storage_provider("").runtime())}},
                     })},
       {"projections",
