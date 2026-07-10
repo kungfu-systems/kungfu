@@ -35,6 +35,7 @@ enum class storage_operation {
   EpisodeAttachRef,
   EpisodeList,
   EpisodeInspect,
+  EpisodeRecover,
   SourceRegister,
   SourceUpdateHead,
   SourceRecordAcceptedRange,
@@ -108,6 +109,8 @@ public:
   [[nodiscard]] virtual nlohmann::json episode_list(const storage_service_options &options) const = 0;
 
   [[nodiscard]] virtual nlohmann::json episode_inspect(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json episode_recover(const storage_service_options &options) const = 0;
 
   [[nodiscard]] virtual nlohmann::json source_register(const storage_service_options &options) const = 0;
 

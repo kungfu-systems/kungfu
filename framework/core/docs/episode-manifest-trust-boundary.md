@@ -152,10 +152,11 @@ belongs to the storage/catalog plane of one data root. Its writer owner is
   an explicit `manifest_writer_busy` error instead of appending concurrently.
   This satisfies the yijinjing single-writer-per-location rule by mechanism
   rather than convention.
-- Current state (pre-stage-2): each operation constructs a transient
-  journal writer with no guard. That is the gap this contract closes; the
-  typed fold (stage 1) may land before it, automatic lifecycle wiring may
-  not.
+- Delivered (stage 2): every mutating store operation acquires the guard —
+  an exclusive advisory lock (`flock` / `LockFileEx`) on `writer.lock` in the
+  manifest journal directory (see `episode_manifest_writer_lock_path`) — and
+  the loser fails with `manifest_writer_busy`. Reads never take the guard.
+  Automatic lifecycle wiring stays out of scope; a later card decides it.
 
 ### 3.2 Publication order: fact before claim
 
@@ -206,17 +207,21 @@ log); there is no side state file. On writer start with the guard held:
 fold → enumerate this location's `open` Episodes → resume or abort each per
 C4. Episodes owned by other locations are reported, never mutated.
 
-### 3.4 What stage 2 delivers
+### 3.4 What stage 2 delivers (delivered)
 
 - The data-root-scoped writer guard (acquire-or-fail) wired into the store's
-  write contract, with a contention test (two writers, one loser, no
-  interleaved append).
+  write contract, with a contention fixture: a held guard makes a concurrent
+  writer fail with `manifest_writer_busy`, so appends never interleave.
 - Crash fixtures C1–C6 as journal-state constructions (fixtures write the
-  exact pre-crash record sequences; no process-killing theatrics needed) with
-  fsck/recovery assertions.
-- The recovery pass (`resume-or-abort` for owned open Episodes) as an explicit
-  maintenance operation. Automatic lifecycle wiring (runtime auto-append on
-  every event) stays out until these fixtures are green.
+  exact pre-crash record sequences; C5 strips the ADR-0001 publication token
+  of the last frame) with fsck/recovery assertions, in
+  `tests/python/test_episode_manifest_recovery.py`.
+- The recovery pass as the explicit `episode_recover` maintenance operation
+  (store `recover()`, storage-service `episode_recover`, Python
+  `service.episode_recover`): closes in-scope interrupted open Episodes as
+  `aborted` with a declared reason; open Episodes owned by other locations
+  are reported in `skipped_open`, never mutated. Automatic lifecycle wiring
+  (runtime auto-append on every event) stays out; a later card decides it.
 
 ## 4. Stage gates recap (ADR-0041 first delivery)
 

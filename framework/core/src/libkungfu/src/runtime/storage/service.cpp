@@ -256,6 +256,15 @@ yy_storage::episode_ref_attach_options parse_episode_ref_attach_options(const nl
   return parsed;
 }
 
+yy_storage::episode_recover_options parse_episode_recover_options(const nlohmann::json &value) {
+  yy_storage::episode_recover_options parsed{};
+  parsed.episode_id = uint64_or(value, "episode_id");
+  parsed.location_uid = uint32_or(value, "location_uid");
+  parsed.end_time = int64_or(value, "end_time");
+  parsed.reason = text_or(value, "reason");
+  return parsed;
+}
+
 yy_enums::SourceKind source_kind_or(const nlohmann::json &object, const std::string &field,
                                     yy_enums::SourceKind fallback) {
   const auto value = text_or(object, field);
@@ -3106,6 +3115,10 @@ public:
     return episode_store(options).inspect(uint64_or(options.operation_options, "episode_id"));
   }
 
+  [[nodiscard]] nlohmann::json episode_recover(const storage_service_options &options) const override {
+    return episode_store(options).recover(parse_episode_recover_options(options.operation_options));
+  }
+
   [[nodiscard]] nlohmann::json source_register(const storage_service_options &options) const override {
     return source_registry_store(options).register_source(parse_source_register_options(options.operation_options));
   }
@@ -3252,6 +3265,8 @@ std::string storage_operation_name(storage_operation operation) {
     return "episode_list";
   case storage_operation::EpisodeInspect:
     return "episode_inspect";
+  case storage_operation::EpisodeRecover:
+    return "episode_recover";
   case storage_operation::SourceRegister:
     return "source_register";
   case storage_operation::SourceUpdateHead:
@@ -3333,6 +3348,9 @@ storage_operation parse_storage_operation(const std::string &operation) {
   }
   if (operation == "episode_inspect") {
     return storage_operation::EpisodeInspect;
+  }
+  if (operation == "episode_recover") {
+    return storage_operation::EpisodeRecover;
   }
   if (operation == "source_register") {
     return storage_operation::SourceRegister;
@@ -3455,6 +3473,8 @@ nlohmann::json run_storage_service_operation(const std::string &operation, const
     return storage_service_instance().episode_list(parsed_options);
   case storage_operation::EpisodeInspect:
     return storage_service_instance().episode_inspect(parsed_options);
+  case storage_operation::EpisodeRecover:
+    return storage_service_instance().episode_recover(parsed_options);
   case storage_operation::SourceRegister:
     return storage_service_instance().source_register(parsed_options);
   case storage_operation::SourceUpdateHead:

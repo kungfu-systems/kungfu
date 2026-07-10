@@ -13,6 +13,14 @@
 #include <kungfu/yijinjing/journal/journal.h>
 #include <kungfu/yijinjing/time.h>
 
+#ifdef _WINDOWS
+#include <windows.h>
+#else
+#include <fcntl.h>
+#include <sys/file.h>
+#include <unistd.h>
+#endif
+
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::yijinjing::enums;
 using namespace kungfu::yijinjing::journal;
@@ -75,6 +83,71 @@ location_ptr manifest_location(const std::string &runtime_dir) {
 writer make_writer(const std::string &runtime_dir) {
   return writer(manifest_location(runtime_dir), location::PUBLIC, true, std::make_shared<noop_publisher>(), false,
                 std::make_shared<bus>(false));
+}
+
+// Data-root-scoped manifest writer guard (trust-boundary contract §3.1): an
+// exclusive advisory lock on the lock file next to the manifest journal,
+// acquired before every manifest append and released when the operation ends.
+// Acquire-or-fail: a concurrent writer gets manifest_writer_busy instead of
+// appending alongside the active one. This enforces the yijinjing
+// single-writer-per-location rule by mechanism rather than convention.
+class manifest_writer_guard {
+public:
+  explicit manifest_writer_guard(const std::string &lock_path) : lock_path_(lock_path) {
+#ifdef _WINDOWS
+    handle_ = CreateFileA(lock_path.c_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
+                          OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (handle_ == INVALID_HANDLE_VALUE) {
+      throw std::runtime_error("manifest_writer_guard: cannot open lock file " + lock_path);
+    }
+    OVERLAPPED overlapped{};
+    if (LockFileEx(handle_, LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY, 0, 1, 0, &overlapped) == 0) {
+      CloseHandle(handle_);
+      handle_ = INVALID_HANDLE_VALUE;
+      throw std::runtime_error("manifest_writer_busy: another writer holds " + lock_path);
+    }
+#else
+    fd_ = ::open(lock_path.c_str(), O_CREAT | O_RDWR | O_CLOEXEC, 0644);
+    if (fd_ < 0) {
+      throw std::runtime_error("manifest_writer_guard: cannot open lock file " + lock_path);
+    }
+    if (::flock(fd_, LOCK_EX | LOCK_NB) != 0) {
+      ::close(fd_);
+      fd_ = -1;
+      throw std::runtime_error("manifest_writer_busy: another writer holds " + lock_path);
+    }
+#endif
+  }
+
+  manifest_writer_guard(const manifest_writer_guard &) = delete;
+  manifest_writer_guard &operator=(const manifest_writer_guard &) = delete;
+
+  ~manifest_writer_guard() {
+#ifdef _WINDOWS
+    if (handle_ != INVALID_HANDLE_VALUE) {
+      OVERLAPPED overlapped{};
+      UnlockFileEx(handle_, 0, 1, 0, &overlapped);
+      CloseHandle(handle_);
+    }
+#else
+    if (fd_ >= 0) {
+      ::flock(fd_, LOCK_UN);
+      ::close(fd_);
+    }
+#endif
+  }
+
+private:
+  std::string lock_path_;
+#ifdef _WINDOWS
+  HANDLE handle_ = INVALID_HANDLE_VALUE;
+#else
+  int fd_ = -1;
+#endif
+};
+
+manifest_writer_guard acquire_writer_guard(const std::string &runtime_dir) {
+  return manifest_writer_guard(episode_manifest_writer_lock_path(runtime_dir));
 }
 
 uint64_t generated_episode_id(const episode_begin_options &options) {
@@ -518,6 +591,11 @@ episode_graph build_causal_graph(const std::string &runtime_dir, uint64_t episod
 
 } // namespace
 
+std::string episode_manifest_writer_lock_path(const std::string &runtime_dir) {
+  const auto location = manifest_location(runtime_dir);
+  return (fs::path(location->locator->layout_dir(location, enums::layout::JOURNAL, true)) / "writer.lock").string();
+}
+
 episode_manifest_store::episode_manifest_store(std::string runtime_dir) : runtime_dir_(std::move(runtime_dir)) {}
 
 nlohmann::json episode_manifest_store::begin(const episode_begin_options &options) const {
@@ -531,6 +609,7 @@ nlohmann::json episode_manifest_store::begin(const episode_begin_options &option
   set_fixed_string(record.title, options.title);
   set_fixed_string(record.actor, options.actor);
   set_fixed_string(record.source, options.source);
+  const auto guard = acquire_writer_guard(runtime_dir_);
   auto writer = make_writer(runtime_dir_);
   writer.write_at(record.begin_time, 0, record);
   return record_json(record);
@@ -548,6 +627,7 @@ nlohmann::json episode_manifest_store::heartbeat(const episode_heartbeat_options
   record.last_frame_uid = options.last_frame_uid;
   record.frame_count = options.frame_count;
   set_fixed_string(record.note, options.note);
+  const auto guard = acquire_writer_guard(runtime_dir_);
   auto writer = make_writer(runtime_dir_);
   writer.write_at(record.update_time, 0, record);
   return record_json(record);
@@ -573,6 +653,7 @@ nlohmann::json episode_manifest_store::attach_frame(const episode_frame_attach_o
   record.integrity_version = options.integrity_version;
   record.payload_checksum = options.payload_checksum;
   record.frame_checksum = options.frame_checksum;
+  const auto guard = acquire_writer_guard(runtime_dir_);
   auto writer = make_writer(runtime_dir_);
   writer.write_at(record.gen_time, 0, record);
   return record_json(record);
@@ -591,6 +672,7 @@ nlohmann::json episode_manifest_store::attach_ref(const episode_ref_attach_optio
   record.update_time = options.update_time == 0 ? time::now_in_nano() : options.update_time;
   set_fixed_string(record.ref_id, options.ref_id);
   set_fixed_string(record.ref_hash, options.ref_hash);
+  const auto guard = acquire_writer_guard(runtime_dir_);
   auto writer = make_writer(runtime_dir_);
   writer.write_at(record.update_time, 0, record);
   return record_json(record);
@@ -609,6 +691,7 @@ nlohmann::json episode_manifest_store::end(const episode_close_options &options)
   record.last_frame_uid = options.last_frame_uid;
   record.frame_count = options.frame_count;
   set_fixed_string(record.reason, options.reason);
+  const auto guard = acquire_writer_guard(runtime_dir_);
   auto writer = make_writer(runtime_dir_);
   writer.write_at(record.end_time, 0, record);
   return record_json(record);
@@ -618,6 +701,54 @@ nlohmann::json episode_manifest_store::abort(const episode_close_options &option
   auto abort_options = options;
   abort_options.status = EpisodeStatus::Aborted;
   return end(abort_options);
+}
+
+nlohmann::json episode_manifest_store::recover(const episode_recover_options &options) const {
+  const auto guard = acquire_writer_guard(runtime_dir_);
+  const auto fold = fold_typed_records();
+  const auto end_time = options.end_time == 0 ? time::now_in_nano() : options.end_time;
+  const auto reason = options.reason.empty() ? std::string("recovered") : options.reason;
+  std::vector<EpisodeClosed> closes;
+  nlohmann::json skipped = nlohmann::json::array();
+  for (const auto &[episode_id, view] : fold.episodes) {
+    if (!view.opened || view.closed) {
+      continue;
+    }
+    if (options.episode_id != 0 && episode_id != options.episode_id) {
+      continue;
+    }
+    if (options.location_uid != 0 && view.open.location_uid != options.location_uid) {
+      // Open Episodes owned by another location are reported, never mutated.
+      skipped.push_back({{"episode_id", episode_id}, {"location_uid", view.open.location_uid}});
+      continue;
+    }
+    EpisodeClosed record{};
+    record.schema_version = EPISODE_MANIFEST_SCHEMA_VERSION;
+    record.episode_id = episode_id;
+    record.location_uid = view.open.location_uid;
+    record.status = EpisodeStatus::Aborted;
+    record.end_time = end_time;
+    record.last_frame_uid = view.last_frame_uid;
+    record.frame_count = view.frame_indices.size();
+    set_fixed_string(record.reason, reason);
+    closes.push_back(record);
+  }
+  nlohmann::json recovered = nlohmann::json::array();
+  if (!closes.empty()) {
+    auto writer = make_writer(runtime_dir_);
+    for (const auto &record : closes) {
+      writer.write_at(record.end_time, 0, record);
+      recovered.push_back(record_json(record));
+    }
+  }
+  return {{"ok", true},
+          {"schema", EPISODE_MANIFEST_SCHEMA_V1},
+          {"runtime_dir", runtime_dir_},
+          {"authority", "yijinjing-journal"},
+          {"recovered", recovered},
+          {"recovered_count", recovered.size()},
+          {"skipped_open", skipped},
+          {"skipped_count", skipped.size()}};
 }
 
 void episode_manifest_store::for_each_typed_record(const episode_manifest_record_visitor &visit) const {

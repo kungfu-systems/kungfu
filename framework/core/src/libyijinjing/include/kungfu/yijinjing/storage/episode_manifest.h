@@ -85,6 +85,22 @@ struct episode_ref_attach_options {
   std::string ref_hash = {};
 };
 
+// Explicit crash-recovery maintenance operation: close interrupted open
+// Episodes as aborted. Never automatic; the caller declares its scope with
+// episode_id (one Episode) and/or location_uid (only Episodes opened by that
+// owner location). Open Episodes outside the scope are reported, not mutated.
+struct episode_recover_options {
+  uint64_t episode_id = 0;   // 0 = every open Episode in scope
+  uint32_t location_uid = 0; // 0 = any owner location
+  int64_t end_time = 0;
+  std::string reason = {}; // defaults to "recovered"
+};
+
+// The manifest writer guard lock file, next to the manifest journal pages.
+// Every manifest write acquires an exclusive advisory lock on it or fails
+// with manifest_writer_busy; see docs/episode-manifest-trust-boundary.md §3.
+[[nodiscard]] std::string episode_manifest_writer_lock_path(const std::string &runtime_dir);
+
 // A manifest frame whose carrier type is not a v1 record, or whose
 // schema_version is newer than this reader understands. It is preserved in
 // the typed stream with provenance but never folded into an Episode view, so
@@ -168,6 +184,11 @@ public:
   [[nodiscard]] nlohmann::json end(const episode_close_options &options) const;
 
   [[nodiscard]] nlohmann::json abort(const episode_close_options &options) const;
+
+  // Resume-or-abort recovery for interrupted open Episodes, as an explicit
+  // maintenance step under the writer guard. Appends EpisodeClosed(Aborted)
+  // for in-scope open Episodes; never runs automatically.
+  [[nodiscard]] nlohmann::json recover(const episode_recover_options &options) const;
 
   // Stream the manifest journal back as typed records in append order. The
   // streaming visitor is the primitive; memory stays bounded by what the

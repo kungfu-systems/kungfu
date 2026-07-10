@@ -777,6 +777,28 @@ def episode_inspect(runtime_dir: str | Path, *, episode_id: int) -> dict[str, An
     )
 
 
+def episode_recover(
+    runtime_dir: str | Path,
+    *,
+    episode_id: int = 0,
+    location_uid: int = 0,
+    end_time: int = 0,
+    reason: str = "",
+) -> dict[str, Any]:
+    return dict(
+        _runtime().run_storage_service_operation(
+            "episode_recover",
+            str(runtime_dir),
+            {
+                "episode_id": _u64(episode_id),
+                "location_uid": location_uid,
+                "end_time": end_time,
+                "reason": reason,
+            },
+        )
+    )
+
+
 def write_jsonl(records: list[dict[str, Any]], out_path: str | Path) -> None:
     with open(out_path, "w", encoding="utf-8") as f:
         for record in records:
