@@ -214,3 +214,86 @@ def test_denied_authorization_cannot_execute(tmp_path):
         )
 
     assert caught.value.diagnosis["code"] == "authorization-denied"
+
+
+def test_repeated_loose_source_captures_create_project_gravity(tmp_path):
+    source = tmp_path / "loose-project"
+    source.mkdir()
+    identity = _home(tmp_path)
+    receipts = tmp_path / ".kungfu" / "inbox" / "receipts"
+    receipts.mkdir(parents=True)
+    for index in range(3):
+        (receipts / f"capture-{index}.json").write_text(
+            json.dumps(
+                {
+                    "schema": "kungfu.workspace.target-receipt/v1",
+                    "receipt_id": f"workspace-target:capture-{index}",
+                    "association": "unassigned",
+                    "source_working_directory": str(source),
+                    "resulting_identities": [{"kind": "episode", "id": index}],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+    advice = advise_workspace(inspect_guidance(identity, source_path=str(source)))
+    assert advice["state"] == "recommended"
+    assert advice["reason_codes"] == ["repeated-unassigned-captures"]
+
+
+def test_keep_home_records_decision_without_creating_project_workspace(tmp_path):
+    source = tmp_path / "loose-work"
+    source.mkdir()
+    identity = _home(tmp_path)
+    _, _, preview = _preview(identity, source, "keep-home")
+    authorization = authorize_workspace_action(
+        identity,
+        preview,
+        expected_preview_id=preview["preview_id"],
+        decision="approve",
+        authorized_by="test-user",
+    )
+
+    receipt = execute_workspace_action(
+        identity,
+        source_path=str(source),
+        authorization_id=authorization["authorization_id"],
+    )
+    assert receipt["intent"] == "keep-home"
+    assert receipt["applied_effects"] == [
+        {"effect": "guidance-decision-recorded", "decision": "keep-home"}
+    ]
+    assert not (source / ".kungfu").exists()
+
+
+def test_portable_contract_is_separate_and_never_mutates_git(tmp_path):
+    repo, nested = _git_repo(tmp_path)
+    identity = _home(tmp_path)
+    git_config = (repo / ".git" / "config").read_bytes()
+    _, advice, preview = _preview(identity, nested, "prepare-portable-contract")
+
+    assert "prepare-portable-contract" in advice["options"]
+    assert preview["authorization_class"] == "portable-contract-write"
+    authorization = authorize_workspace_action(
+        identity,
+        preview,
+        expected_preview_id=preview["preview_id"],
+        decision="approve",
+        authorized_by="test-user",
+    )
+    receipt = execute_workspace_action(
+        identity,
+        source_path=str(nested),
+        authorization_id=authorization["authorization_id"],
+    )
+
+    manifest_path = repo / ".kungfu" / "contract" / "workspace.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["tracked_inputs"] == ["contract/workspace.json"]
+    assert "runtime/**" in manifest["excluded_paths"]
+    assert "journal/**" in manifest["excluded_paths"]
+    assert manifest["git_effects_authorized"] is False
+    assert (repo / ".git" / "config").read_bytes() == git_config
+    assert "git-stage" in receipt["skipped_effects"]
+    assert "git-commit" in receipt["skipped_effects"]
+    assert verify_workspace_action(identity, receipt["receipt_id"])["ok"] is True

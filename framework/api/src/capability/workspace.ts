@@ -4,6 +4,7 @@
 
 export type WorkspaceGuidanceIntent =
   | 'create-project-workspace'
+  | 'prepare-portable-contract'
   | 'keep-home'
   | 'suppress-source';
 

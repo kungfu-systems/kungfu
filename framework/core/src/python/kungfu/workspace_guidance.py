@@ -28,6 +28,7 @@ POLICY_VERSION = "workspace-project-gravity/v1"
 
 GuidanceIntent = Literal[
     "create-project-workspace",
+    "prepare-portable-contract",
     "keep-home",
     "suppress-source",
 ]
@@ -146,6 +147,11 @@ def advise_workspace(inspection: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_intent": recommended_intent,
         "options": [
             "create-project-workspace",
+            *(
+                ["prepare-portable-contract"]
+                if inspection["git_repository"]["present"]
+                else []
+            ),
             "keep-home",
             "suppress-source",
         ],
@@ -172,7 +178,7 @@ def preview_workspace_action(
         )
     effects: list[dict[str, Any]] = []
     authorization_class = "guidance-decision"
-    if intent == "create-project-workspace":
+    if intent in {"create-project-workspace", "prepare-portable-contract"}:
         effects = [
             {
                 "effect": "create-project-data-home",
@@ -186,6 +192,29 @@ def preview_workspace_action(
             },
         ]
         authorization_class = "workspace-create"
+        if intent == "prepare-portable-contract":
+            effects.extend(
+                [
+                    {
+                        "effect": "create-portable-contract-directory",
+                        "path": os.path.join(
+                            advice["project_candidate_root"],
+                            ".kungfu",
+                            "contract",
+                        ),
+                    },
+                    {
+                        "effect": "write-portable-contract-manifest",
+                        "path": os.path.join(
+                            advice["project_candidate_root"],
+                            ".kungfu",
+                            "contract",
+                            "workspace.json",
+                        ),
+                    },
+                ]
+            )
+            authorization_class = "portable-contract-write"
     elif intent == "keep-home":
         effects = [{"effect": "record-guidance-decision", "decision": intent}]
     else:
@@ -314,7 +343,10 @@ def execute_workspace_action(
 
     applied_effects: list[dict[str, Any]] = []
     resulting_identities: list[dict[str, Any]] = []
-    if preview["intent"] == "create-project-workspace":
+    if preview["intent"] in {
+        "create-project-workspace",
+        "prepare-portable-contract",
+    }:
         project = inspect_workspace(preview["project_candidate_root"])
         assert project is not None
         ensure_receipt = ensure_workspace_data_home(project, "create-project-workspace")
@@ -323,6 +355,40 @@ def execute_workspace_action(
             for path in ensure_receipt["created_paths"]
         )
         resulting_identities.append(project.as_dict())
+        if preview["intent"] == "prepare-portable-contract":
+            contract_path = os.path.join(
+                project.data_home, "contract", "workspace.json"
+            )
+            contract = {
+                "schema": "kungfu.workspace.portable-contract/v1",
+                "workspace_id": project.workspace_id,
+                "workspace_root": project.workspace_root,
+                "policy_version": POLICY_VERSION,
+                "tracked_inputs": ["contract/workspace.json"],
+                "eligible_classes": [
+                    "policy",
+                    "schema",
+                    "kfx-pin",
+                    "portable-query-definition",
+                ],
+                "excluded_paths": [
+                    "runtime/**",
+                    "journal/**",
+                    "storage/**",
+                    "inbox/**",
+                    "projections/**",
+                    "payloads/**",
+                ],
+                "git_effects_authorized": False,
+            }
+            _write_json_atomic(contract_path, contract)
+            applied_effects.append(
+                {
+                    "effect": "portable-contract-manifest-written",
+                    "path": contract_path,
+                    "content_hash": _stable_id("portable-contract", contract),
+                }
+            )
     elif preview["intent"] == "keep-home":
         applied_effects.append(
             {"effect": "guidance-decision-recorded", "decision": "keep-home"}
@@ -391,6 +457,13 @@ def verify_workspace_action(
                 errors.append("project-data-home-missing")
             if not os.path.isdir(str(resulting.get("runtime_dir") or "")):
                 errors.append("project-runtime-directory-missing")
+    for effect in receipt.get("applied_effects", []):
+        if effect.get("effect") == "portable-contract-manifest-written":
+            manifest = _read_json_if_present(str(effect.get("path") or ""))
+            if not manifest:
+                errors.append("portable-contract-manifest-missing")
+            elif manifest.get("git_effects_authorized") is not False:
+                errors.append("portable-contract-git-boundary-mismatch")
     return {
         "schema": VERIFY_SCHEMA,
         "ok": not errors,

@@ -70,6 +70,10 @@ kungfu workspace verify --home --receipt-id <id> --json
 
 If relevant capture facts change after authorization, `apply` rejects the
 stale preview. Recompute advice and preview instead of widening the old grant.
+In an existing Git repository, `prepare-portable-contract` may create only the
+low-frequency `.kungfu/contract/workspace.json` input. It still does not grant
+Git init, ignore edits, stage, commit, push, remote creation, or publication;
+high-frequency runtime, journal, storage, inbox, and payload paths stay excluded.
 
 When the user asks to sync an Atlas-style control-plane repo into Kungfu,
 snapshot it and verify the projection with:

@@ -174,7 +174,14 @@ def advise(path, home, source, as_json):
 @click.option(
     "--intent",
     required=True,
-    type=click.Choice(["create-project-workspace", "keep-home", "suppress-source"]),
+    type=click.Choice(
+        [
+            "create-project-workspace",
+            "prepare-portable-contract",
+            "keep-home",
+            "suppress-source",
+        ]
+    ),
 )
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 def preview(path, home, source, intent, as_json):
@@ -200,7 +207,14 @@ def preview(path, home, source, intent, as_json):
 @click.option(
     "--intent",
     required=True,
-    type=click.Choice(["create-project-workspace", "keep-home", "suppress-source"]),
+    type=click.Choice(
+        [
+            "create-project-workspace",
+            "prepare-portable-contract",
+            "keep-home",
+            "suppress-source",
+        ]
+    ),
 )
 @click.option("--preview-id", required=True)
 @click.option("--decision", required=True, type=click.Choice(["approve", "deny"]))

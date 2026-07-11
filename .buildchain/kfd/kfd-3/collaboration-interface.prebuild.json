@@ -6,7 +6,7 @@
   "supportLevel": "release",
   "source": {
     "cwd": "/Users/dkr/Worktrees/kungfu/feature/home-workspace-agent-guidance",
-    "sourceSha": "c7e594d13134460a9475c96e90ba71a2ece2a2f5",
+    "sourceSha": "caa70020c244e327fa9ce61b5f892d41429d5f15",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
     "registryDigest": "sha256:710a7f091e6f42a2059d2b617a417650fc7894e6ba80e3c456530460b755fd02"
   },
