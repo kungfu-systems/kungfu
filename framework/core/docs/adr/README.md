@@ -75,6 +75,7 @@ A record's **Status** says where it stands:
 | [0055](ADR-0055-retire-journal-session-and-separate-runtime-state-from-projection.md) | accepted | retire journal Session; separate live state from schema projections |
 | [0056](ADR-0056-retire-legacy-journal-cli-lifecycle-tools.md) | accepted | journal lifecycle management belongs to Storage and Episode boundaries |
 | [0057](ADR-0057-domain-neutral-live-runtime-terminology.md) | accepted | live runtime internals use reactor, peer, and coordinator; the public command is `kungfu runtime` |
+| [0058](ADR-0058-yijinjing-explicit-mapping-policies.md) | accepted | yijinjing mmap behavior uses explicit access, creation, residency, and durability policies |
 
 ## Reading by theme
 
@@ -83,6 +84,9 @@ A record's **Status** says where it stands:
   (the closed POD layout as a compatibility invariant), and
   [0047](ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md) (one schema
   owner per structured fact: Hana POD closed set or FlatBuffers open layer).
+  [0058](ADR-0058-yijinjing-explicit-mapping-policies.md) separates mmap
+  authority from residency and durability requests without changing the wire
+  or POD layouts.
   [0002](ADR-0002-yijinjing-schema-runtime-layout.md) is retained as the
   superseded historical decision that preceded this split.
 - **Control / event axis** — [0003](ADR-0003-control-axis-python-coroutine-integration.md)
@@ -184,7 +188,9 @@ A record's **Status** says where it stands:
   (Episode replaces the retired Session replay anchor), and
   [0056](ADR-0056-retire-legacy-journal-cli-lifecycle-tools.md) (journal
   lifecycle management belongs to Storage/Episode rather than loose-file CLI
-  archive and clean commands), and
+  archive and clean commands),
+  [0058](ADR-0058-yijinjing-explicit-mapping-policies.md) (explicit mapping and
+  page-open policies, with coordinator-only pre-creation), and
   [0042](ADR-0042-episode-atomic-safety-and-qualification.md) (Episode atomic
   safety as evidence-bounded capability, graceful degradation, monotonic repair,
   fault containment, and qualification under scale).

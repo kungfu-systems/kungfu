@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <kungfu/yijinjing/common.h>
+#include <kungfu/yijinjing/journal/journal.h>
 #include <kungfu/yijinjing/journal/page.h>
 #include <kungfu/yijinjing/platform/mmap.h>
 #include <kungfu/yijinjing/schema/core.h>
@@ -34,7 +35,15 @@ using kungfu::yijinjing::data::locator;
 using kungfu::yijinjing::enums::location_role;
 using kungfu::yijinjing::enums::mode;
 using kungfu::yijinjing::journal::page;
+using kungfu::yijinjing::journal::page_open_policy;
+using kungfu::yijinjing::journal::page_precreation;
+using kungfu::yijinjing::journal::reader_policy;
 using kungfu::yijinjing::platform::mapped_region;
+using kungfu::yijinjing::platform::mapping_access;
+using kungfu::yijinjing::platform::mapping_creation;
+using kungfu::yijinjing::platform::mapping_durability;
+using kungfu::yijinjing::platform::mapping_policy;
+using kungfu::yijinjing::platform::mapping_residency;
 using kungfu::yijinjing::types::frame_header;
 using kungfu::yijinjing::types::page_header;
 
@@ -104,10 +113,74 @@ void test_wire_layout_invariants() {
   static_assert(!std::is_copy_constructible_v<mapped_region>);
 }
 
+void test_mapping_policy_truth_table() {
+  static_assert(mapping_policy::read_existing().qualified());
+  static_assert(mapping_policy::write_existing().qualified());
+  static_assert(mapping_policy::write_create_or_grow().qualified());
+
+  constexpr mapping_policy read_create{mapping_access::read_only, mapping_creation::create_or_grow,
+                                       mapping_residency::demand, mapping_durability::visibility};
+  constexpr mapping_policy prefault{mapping_access::read_only, mapping_creation::existing_only,
+                                    mapping_residency::prefault, mapping_durability::visibility};
+  constexpr mapping_policy pinned{mapping_access::read_write, mapping_creation::existing_only,
+                                  mapping_residency::pinned, mapping_durability::visibility};
+  constexpr mapping_policy asynchronous{mapping_access::read_write, mapping_creation::existing_only,
+                                        mapping_residency::demand, mapping_durability::asynchronous};
+  constexpr mapping_policy durable{mapping_access::read_write, mapping_creation::existing_only,
+                                   mapping_residency::demand, mapping_durability::durable};
+  static_assert(!read_create.structurally_valid());
+  static_assert(!read_create.qualified());
+  static_assert(!prefault.qualified());
+  static_assert(!pinned.qualified());
+  static_assert(!asynchronous.qualified());
+  static_assert(!durable.qualified());
+
+  temp_tree tree;
+  const auto path = tree.root() / "invalid-policy.journal";
+  for (const auto policy : {read_create, prefault, pinned, asynchronous, durable}) {
+    require_throws([&] { (void)mapped_region::map(path.string(), 4096, policy); },
+                   "unqualified mapping policy was accepted");
+  }
+  require(!fs::exists(path), "invalid policy mutated the filesystem before rejection");
+}
+
+void test_page_open_intent_truth_table() {
+  const auto reader = page_open_policy::reader();
+  require(!reader.may_initialize() && !reader.may_publish_normal() && !reader.mapping().writable() &&
+              !reader.mapping().creates_or_grows(),
+          "reader intent gained mutation authority");
+
+  const auto writer = page_open_policy::writer();
+  require(writer.may_initialize() && writer.may_publish_normal() && writer.mapping().writable() &&
+              writer.mapping().creates_or_grows() && !writer.opens_preopen(),
+          "writer intent lost active-page authority");
+
+  const auto reader_preload = page_open_policy::reader_preload();
+  require(reader_preload.opens_preopen() && !reader_preload.may_initialize() && !reader_preload.mapping().writable(),
+          "reader preloader gained mutation authority");
+
+  const auto writer_preload = page_open_policy::writer_preload();
+  require(writer_preload.opens_preopen() && writer_preload.may_initialize() && writer_preload.may_publish_normal(),
+          "writer preloader cannot activate its page");
+
+  const auto precreator = page_open_policy::coordinator_precreate();
+  require(precreator.opens_preopen() && precreator.may_initialize() && !precreator.may_publish_normal() &&
+              precreator.mapping().writable() && precreator.mapping().creates_or_grows(),
+          "coordinator precreator authority is not isolated");
+
+  const auto peer_reader = reader_policy::peer();
+  require(peer_reader.discover_page_size && peer_reader.journal.precreation == page_precreation::disabled,
+          "peer reader unexpectedly owns precreation");
+  const auto coordinator_reader = reader_policy::coordinator();
+  require(!coordinator_reader.discover_page_size &&
+              coordinator_reader.journal.precreation == page_precreation::coordinator,
+          "coordinator reader did not receive explicit precreation authority");
+}
+
 void test_existing_mapping_never_creates_or_grows() {
   temp_tree tree;
   const auto missing = tree.root() / "missing.journal";
-  require_throws([&] { (void)mapped_region::map_existing(missing.string(), 4096); },
+  require_throws([&] { (void)mapped_region::map(missing.string(), 4096, mapping_policy::read_existing()); },
                  "existing-only mapping accepted a missing file");
   require(!fs::exists(missing), "existing-only mapping created a missing file");
 
@@ -117,16 +190,17 @@ void test_existing_mapping_never_creates_or_grows() {
     stream << "short";
   }
   const auto before = fs::file_size(truncated);
-  require_throws([&] { (void)mapped_region::map_existing(truncated.string(), 4096); },
+  require_throws([&] { (void)mapped_region::map(truncated.string(), 4096, mapping_policy::read_existing()); },
                  "existing-only mapping accepted a truncated file");
   require(fs::file_size(truncated) == before, "existing-only mapping changed a truncated file size");
-  require_throws([&] { (void)mapped_region::map_existing(truncated.string(), 0); }, "zero-length mapping was accepted");
+  require_throws([&] { (void)mapped_region::map(truncated.string(), 0, mapping_policy::read_existing()); },
+                 "zero-length mapping was accepted");
 }
 
 void test_mapped_region_move_ownership() {
   temp_tree tree;
   const auto path = tree.root() / "owned.journal";
-  auto first = mapped_region::map_writable(path.string(), 4096);
+  auto first = mapped_region::map(path.string(), 4096, mapping_policy::write_create_or_grow());
   require(first && first.writable() && first.size() == 4096, "writable mapping facts are incorrect");
   *reinterpret_cast<uint64_t *>(first.address()) = UINT64_C(0x1020304050607080);
 
@@ -137,7 +211,7 @@ void test_mapped_region_move_ownership() {
   require(!second, "released mapping retained an address");
   require(fs::file_size(path) == 4096, "writable mapping did not size the file exactly once");
 
-  auto reader = mapped_region::map_existing(path.string(), 4096);
+  auto reader = mapped_region::map(path.string(), 4096, mapping_policy::read_existing());
   require(!reader.writable(), "read mapping unexpectedly has write access");
   require(*reinterpret_cast<const uint64_t *>(reader.address()) == UINT64_C(0x1020304050607080),
           "mapped payload changed across release/reopen");
@@ -151,18 +225,18 @@ void test_mapping_error_paths_release_resources() {
     stream << "short";
   }
 
-  require_throws([&] { (void)mapped_region::map_existing(truncated.string(), 4096); },
+  require_throws([&] { (void)mapped_region::map(truncated.string(), 4096, mapping_policy::read_existing()); },
                  "resource-count warmup unexpectedly mapped a truncated file");
   const auto before = process_resource_count();
   for (int i = 0; i < 8; ++i) {
-    require_throws([&] { (void)mapped_region::map_existing(truncated.string(), 4096); },
+    require_throws([&] { (void)mapped_region::map(truncated.string(), 4096, mapping_policy::read_existing()); },
                    "repeated truncated mapping unexpectedly succeeded");
   }
   const auto after = process_resource_count();
   require(after <= before + 1, "failing mappings leaked file descriptors or handles");
 
   const auto stale_path = tree.root() / "stale.journal";
-  auto stale = mapped_region::map_writable(stale_path.string(), 4096);
+  auto stale = mapped_region::map(stale_path.string(), 4096, mapping_policy::write_create_or_grow());
 #ifdef _WINDOWS
   require(UnmapViewOfFile(reinterpret_cast<void *>(stale.address())) != 0,
           "failed to inject an already-unmapped Windows view");
@@ -190,7 +264,7 @@ void test_resize_budget_failure_releases_file() {
       _exit(2);
     }
     try {
-      (void)mapped_region::map_writable(path.string(), 4096);
+      (void)mapped_region::map(path.string(), 4096, mapping_policy::write_create_or_grow());
       _exit(3);
     } catch (...) {
       std::error_code error;
@@ -210,7 +284,7 @@ void test_page_reader_does_not_create_layout() {
   auto loc = make_location(tree.root());
   const auto journal_dir = loc->locator->layout_dir(loc, kungfu::yijinjing::enums::layout::JOURNAL, false);
   require(!fs::exists(journal_dir), "test journal directory unexpectedly exists");
-  require_throws([&] { (void)page::load(loc, location::PUBLIC, TEST_PAGE_SIZE, 1, false, true); },
+  require_throws([&] { (void)page::load(loc, location::PUBLIC, TEST_PAGE_SIZE, 1, page_open_policy::reader()); },
                  "reader opened a missing journal page");
   require(!fs::exists(journal_dir), "reader created the journal directory for a missing page");
 }
@@ -219,7 +293,7 @@ void test_corrupt_page_offsets_fail_before_payload_access() {
   temp_tree tree;
   auto loc = make_location(tree.root());
   const auto path = create_page_path(loc);
-  auto region = mapped_region::map_writable(path, TEST_PAGE_SIZE);
+  auto region = mapped_region::map(path, TEST_PAGE_SIZE, mapping_policy::write_create_or_grow());
   auto *header = reinterpret_cast<page_header *>(region.address());
   header->version = __JOURNAL_VERSION__;
   header->page_header_length = sizeof(page_header);
@@ -229,7 +303,7 @@ void test_corrupt_page_offsets_fail_before_payload_access() {
   header->last_frame_position = TEST_PAGE_SIZE;
   require(region.reset(), "failed to release corrupt-page fixture mapping");
 
-  require_throws([&] { (void)page::load(loc, location::PUBLIC, TEST_PAGE_SIZE, 1, false, true); },
+  require_throws([&] { (void)page::load(loc, location::PUBLIC, TEST_PAGE_SIZE, 1, page_open_policy::reader()); },
                  "page accepted a last-frame offset outside the mapped payload");
 }
 
@@ -248,7 +322,7 @@ void test_corrupt_page_header_facts_are_rejected() {
     temp_tree tree;
     auto loc = make_location(tree.root());
     const auto path = create_page_path(loc);
-    auto region = mapped_region::map_writable(path, TEST_PAGE_SIZE);
+    auto region = mapped_region::map(path, TEST_PAGE_SIZE, mapping_policy::write_create_or_grow());
     auto *header = reinterpret_cast<page_header *>(region.address());
     header->version = __JOURNAL_VERSION__;
     header->page_header_length = sizeof(page_header);
@@ -259,7 +333,7 @@ void test_corrupt_page_header_facts_are_rejected() {
     test_case.corrupt(*header);
     require(region.reset(), std::string("failed to release ") + test_case.name + " fixture");
 
-    require_throws([&] { (void)page::load(loc, location::PUBLIC, TEST_PAGE_SIZE, 1, false, true); },
+    require_throws([&] { (void)page::load(loc, location::PUBLIC, TEST_PAGE_SIZE, 1, page_open_policy::reader()); },
                    std::string("page accepted corrupt ") + test_case.name);
   }
 }
@@ -268,15 +342,15 @@ void test_page_header_publication() {
   temp_tree tree;
   auto loc = make_location(tree.root());
   const auto path = create_page_path(loc);
-  auto empty = mapped_region::map_writable(path, TEST_PAGE_SIZE);
+  auto empty = mapped_region::map(path, TEST_PAGE_SIZE, mapping_policy::write_create_or_grow());
   require(empty.reset(), "failed to release empty page fixture mapping");
 
 #ifdef _WINDOWS
   std::thread initializer([loc] {
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
-    (void)page::load(loc, location::PUBLIC, TEST_PAGE_SIZE, 1, true, true);
+    (void)page::load(loc, location::PUBLIC, TEST_PAGE_SIZE, 1, page_open_policy::writer());
   });
-  auto reader = page::load(loc, location::PUBLIC, TEST_PAGE_SIZE, 1, false, true);
+  auto reader = page::load(loc, location::PUBLIC, TEST_PAGE_SIZE, 1, page_open_policy::reader());
   initializer.join();
 #else
   const pid_t child = fork();
@@ -284,13 +358,13 @@ void test_page_header_publication() {
   if (child == 0) {
     try {
       std::this_thread::sleep_for(std::chrono::milliseconds(20));
-      (void)page::load(loc, location::PUBLIC, TEST_PAGE_SIZE, 1, true, true);
+      (void)page::load(loc, location::PUBLIC, TEST_PAGE_SIZE, 1, page_open_policy::writer());
       _exit(0);
     } catch (...) {
       _exit(2);
     }
   }
-  auto reader = page::load(loc, location::PUBLIC, TEST_PAGE_SIZE, 1, false, true);
+  auto reader = page::load(loc, location::PUBLIC, TEST_PAGE_SIZE, 1, page_open_policy::reader());
   int status = 0;
   require(waitpid(child, &status, 0) == child && WIFEXITED(status) && WEXITSTATUS(status) == 0,
           "initializer process failed");
@@ -306,6 +380,8 @@ void test_page_header_publication() {
 int main() {
   const std::pair<const char *, void (*)()> tests[] = {
       {"wire layout invariants", test_wire_layout_invariants},
+      {"mapping policy truth table", test_mapping_policy_truth_table},
+      {"page open intent truth table", test_page_open_intent_truth_table},
       {"existing mapping never creates or grows", test_existing_mapping_never_creates_or_grows},
       {"mapped region move ownership", test_mapped_region_move_ownership},
       {"mapping error paths release resources", test_mapping_error_paths_release_resources},

@@ -45,11 +45,44 @@ struct journal_key {
 };
 
 typedef std::map<journal_key, journal_ptr> JournalMap;
+
+enum class page_precreation : uint8_t { disabled, coordinator };
+
+struct journal_open_policy {
+  page_open_policy current_page;
+  page_open_policy preload_page;
+  page_precreation precreation;
+
+  [[nodiscard]] static constexpr journal_open_policy reader() noexcept {
+    return {page_open_policy::reader(), page_open_policy::reader_preload(), page_precreation::disabled};
+  }
+  [[nodiscard]] static constexpr journal_open_policy coordinator_reader() noexcept {
+    return {page_open_policy::reader(), page_open_policy::reader_preload(), page_precreation::coordinator};
+  }
+  [[nodiscard]] static constexpr journal_open_policy writer() noexcept {
+    return {page_open_policy::writer(), page_open_policy::writer_preload(), page_precreation::disabled};
+  }
+};
+
+struct reader_policy {
+  journal_open_policy journal;
+  bool discover_page_size;
+
+  [[nodiscard]] static constexpr reader_policy peer() noexcept { return {journal_open_policy::reader(), true}; }
+  [[nodiscard]] static constexpr reader_policy coordinator() noexcept {
+    return {journal_open_policy::coordinator_reader(), false};
+  }
+};
+
 class journal {
 public:
-  explicit journal(data::location_ptr location, uint32_t dest_id, bool is_writing, bool lazy, bool low_latency,
+  explicit journal(data::location_ptr location, uint32_t dest_id, journal_open_policy policy, bool low_latency,
                    bus_ptr bus, uint64_t page_size,
                    yijinjing::enums::Priority priority = yijinjing::enums::Priority::Medium);
+
+  [[deprecated("use journal_open_policy")]] explicit journal(
+      data::location_ptr location, uint32_t dest_id, bool is_writing, bool lazy, bool low_latency, bus_ptr bus,
+      uint64_t page_size, yijinjing::enums::Priority priority = yijinjing::enums::Priority::Medium);
 
   journal(const journal &other);
 
@@ -91,8 +124,7 @@ protected:
   const data::location_ptr location_;
   const uint64_t page_size_;
   const uint32_t dest_id_;
-  const bool is_writing_;
-  const bool lazy_;
+  const journal_open_policy policy_;
   const bool low_latency_;
   const yijinjing::enums::Priority priority_;
   bus_ptr bus_ = {};
@@ -128,8 +160,11 @@ protected:
 
 class reader {
 public:
-  explicit reader(bool lazy, bool low_latency, bus_ptr bus)
-      : lazy_(lazy), low_latency_(low_latency), bus_(std::move(bus)), current_(nullptr) {}
+  explicit reader(reader_policy policy, bool low_latency, bus_ptr bus)
+      : policy_(policy), low_latency_(low_latency), bus_(std::move(bus)), current_(nullptr) {}
+
+  [[deprecated("use reader_policy")]] explicit reader(bool lazy, bool low_latency, bus_ptr bus)
+      : reader(lazy ? reader_policy::peer() : reader_policy::coordinator(), low_latency, std::move(bus)) {}
 
   reader(const reader &other);
 
@@ -189,7 +224,7 @@ protected:
     bool operator()(const journal_ptr &lhs, const journal_ptr &rhs) const;
   };
 
-  const bool lazy_;
+  const reader_policy policy_;
   const bool low_latency_;
   bus_ptr bus_;
   journal_ptr current_;
@@ -202,15 +237,31 @@ protected:
 
 class writer {
 public:
+  explicit writer(const data::location_ptr &location, uint32_t dest_id, publisher_ptr publisher, bool low_latency,
+                  const bus_ptr &bus);
+
+  explicit writer(const data::location_ptr &location, uint32_t dest_id, publisher_ptr publisher, bool low_latency,
+                  const bus_ptr &bus, uint64_t page_size);
+
+  explicit writer(const data::location_ptr &location, uint32_t dest_id, publisher_ptr publisher, bool low_latency,
+                  const bus_ptr &bus, uint64_t page_size, int64_t begin_time);
+
+  explicit writer(const data::location_ptr &location, uint32_t dest_id, publisher_ptr publisher, bool low_latency,
+                  const bus_ptr &bus, const journal_ptr &journal, int64_t begin_time);
+
+  [[deprecated("writer mapping policy is explicit")]]
   explicit writer(const data::location_ptr &location, uint32_t dest_id, bool lazy, publisher_ptr publisher,
                   bool low_latency, const bus_ptr &bus);
 
+  [[deprecated("writer mapping policy is explicit")]]
   explicit writer(const data::location_ptr &location, uint32_t dest_id, bool lazy, publisher_ptr publisher,
                   bool low_latency, const bus_ptr &bus, uint64_t page_size);
 
+  [[deprecated("writer mapping policy is explicit")]]
   explicit writer(const data::location_ptr &location, uint32_t dest_id, bool lazy, publisher_ptr publisher,
                   bool low_latency, const bus_ptr &bus, uint64_t page_size, int64_t begin_time);
 
+  [[deprecated("writer mapping policy is explicit")]]
   explicit writer(const data::location_ptr &location, uint32_t dest_id, bool lazy, publisher_ptr publisher,
                   bool low_latency, const bus_ptr &bus, const journal_ptr &journal, int64_t begin_time);
 
@@ -350,6 +401,11 @@ public:
 
 class hookable_writer : public writer {
 public:
+  explicit hookable_writer(const data::location_ptr &location, uint32_t dest_id, publisher_ptr publisher,
+                           bool low_latency, const bus_ptr &bus, uint64_t page_size, writer_hook_ptr hook)
+      : writer(location, dest_id, std::move(publisher), low_latency, bus, page_size), hook_(std::move(hook)) {}
+
+  [[deprecated("writer mapping policy is explicit")]]
   explicit hookable_writer(const data::location_ptr &location, uint32_t dest_id, bool lazy, publisher_ptr publisher,
                            bool low_latency, const bus_ptr &bus, uint64_t page_size, writer_hook_ptr hook)
       : writer(location, dest_id, lazy, std::move(publisher), low_latency, bus, page_size), hook_(std::move(hook)) {}

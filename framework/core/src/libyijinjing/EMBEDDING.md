@@ -51,7 +51,12 @@ as-is and performs no `find_package` of its own.
   reference consumers;
 - the core primitives required by that surface: deterministic hash helpers
   (`<kungfu/yijinjing/hash.h>`) and page mmap helpers
-  (`<kungfu/yijinjing/platform/mmap.h>`);
+  (`<kungfu/yijinjing/platform/mmap.h>`). New mmap callers construct an
+  explicit `mapping_policy` from access, creation, residency, and durability
+  intent; the currently qualified factories are `read_existing()`,
+  `write_existing()`, and `write_create_or_grow()`. Unsupported prefault,
+  pinned, asynchronous-writeback, and durable-writeback requests fail before
+  filesystem mutation rather than degrading silently;
 - the storage semantic contracts under `<kungfu/yijinjing/storage...>`:
   payload references, range selectors, source heads, channel requests/cursors,
   manifests, hash/schema inventories, accepted segments, fsck reports, and
@@ -92,3 +97,13 @@ actually true, not before:
 Until then, the static core stays the single supported form, and
 `libkungfu.so/.dylib/.dll` remains the runtime entry point for everything
 user-facing.
+
+## mmap source compatibility
+
+The typed `mapped_region::map(path, size, policy)` API is canonical. Deprecated
+`map_existing`, `map_writable`, and raw-address boolean overloads remain only as
+temporary source adapters for existing embedders; they translate directly to a
+typed policy and do not preserve the former best-effort locking interpretation
+of `lazy`. New integrations must not use those adapters. See
+[ADR-0058](../../docs/adr/ADR-0058-yijinjing-explicit-mapping-policies.md) for
+the qualification table and removal conditions.

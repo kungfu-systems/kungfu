@@ -30,16 +30,16 @@ static_assert(std::atomic_ref<yijinjing::enums::PageStatus>::is_always_lock_free
 } // namespace
 using namespace yijinjing::types;
 
-page::page(data::location_ptr location, uint32_t dest_id, uint32_t page_id, size_t size, bool lazy, bool is_writing,
+page::page(data::location_ptr location, uint32_t dest_id, uint32_t page_id, size_t size, page_open_policy policy,
            platform::mapped_region region)
-    : region_(std::move(region)), location_(std::move(location)), dest_id_(dest_id), page_id_(page_id),
-      is_writing_(is_writing), size_(size), header_(reinterpret_cast<page_header *>(region_.address())) {
-  (void)lazy;
+    : region_(std::move(region)), location_(std::move(location)), dest_id_(dest_id), page_id_(page_id), policy_(policy),
+      size_(size), header_(reinterpret_cast<page_header *>(region_.address())) {
   assert(region_);
 }
 
 page::~page() {
-  SPDLOG_TRACE("release page {}/{:08x}.{}.journal, is_writing_ {}", location_->uname, dest_id_, page_id_, is_writing_);
+  SPDLOG_TRACE("release page {}/{:08x}.{}.journal, intent {}", location_->uname, dest_id_, page_id_,
+               static_cast<int>(policy_.intent()));
   if (not region_.reset()) {
     SPDLOG_ERROR("can not release page {}/{:08x}.{}.journal", location_->uname, dest_id_, page_id_);
   }
@@ -58,7 +58,7 @@ void page::set_last_frame_position(uint64_t position) {
 }
 
 void page::enable_page() {
-  if (is_writing_) {
+  if (policy_.may_publish_normal()) {
     publish_status(yijinjing::enums::PageStatus::Normal);
   }
 }
@@ -116,21 +116,19 @@ int64_t page::end_time() const {
 }
 
 page_ptr page::load(const data::location_ptr &location, uint32_t dest_id, uint64_t page_size, uint32_t page_id,
-                    bool is_writing, bool lazy, bool pre_open, bool allow_create) {
+                    page_open_policy policy) {
   if (page_size < sizeof(page_header) + 2 * sizeof(frame_header)) {
     throw journal_error("page size is too small for page and frame publication headers");
   }
-  const bool may_initialize = is_writing || allow_create;
-  std::string path = resolve_page_path(location, dest_id, page_id, may_initialize);
-  auto region = may_initialize ? platform::mapped_region::map_writable(path, page_size, lazy)
-                               : platform::mapped_region::map_existing(path, page_size, false, lazy);
+  const bool may_initialize = policy.may_initialize();
+  std::string path = resolve_page_path(location, dest_id, page_id, policy.mapping().creates_or_grows());
+  auto region = platform::mapped_region::map(path, page_size, policy.mapping());
 
   auto header = reinterpret_cast<page_header *>(region.address());
-  auto loaded_page =
-      std::shared_ptr<page>(new page(location, dest_id, page_id, page_size, lazy, is_writing, std::move(region)));
-  bool is_virgin_page = loaded_page->acquire_last_frame_position() == 0;
-  SPDLOG_TRACE("load page {}/{:08x}.{}.journal lazy {} size {} is_writing {} is_virgin_page {}", location->uname,
-               dest_id, page_id, lazy, page_size, is_writing, is_virgin_page);
+  auto loaded_page = std::shared_ptr<page>(new page(location, dest_id, page_id, page_size, policy, std::move(region)));
+  const bool is_virgin_page = loaded_page->acquire_last_frame_position() == 0;
+  SPDLOG_TRACE("load page {}/{:08x}.{}.journal intent {} size {} is_virgin_page {}", location->uname, dest_id, page_id,
+               static_cast<int>(policy.intent()), page_size, is_virgin_page);
 
   if (may_initialize) {
     if (is_virgin_page) {
@@ -138,10 +136,10 @@ page_ptr page::load(const data::location_ptr &location, uint32_t dest_id, uint64
       header->page_header_length = sizeof(page_header);
       header->page_size = page_size;
       header->frame_header_length = sizeof(frame_header);
-      loaded_page->publish_status(pre_open ? yijinjing::enums::PageStatus::PreOpen
-                                           : yijinjing::enums::PageStatus::Normal);
+      loaded_page->publish_status(policy.opens_preopen() ? yijinjing::enums::PageStatus::PreOpen
+                                                         : yijinjing::enums::PageStatus::Normal);
       loaded_page->set_last_frame_position(header->page_header_length);
-    } else if (not pre_open) {
+    } else if (!policy.opens_preopen()) {
       loaded_page->publish_status(yijinjing::enums::PageStatus::Normal);
     }
   }
@@ -169,9 +167,9 @@ page_ptr page::load(const data::location_ptr &location, uint32_t dest_id, uint64
   }
   if (header->page_size != page_size) {
     uint64_t s = header->page_size;
-    throw journal_error(fmt::format(
-        "page size mismatch, required {}, found {}, location {}, path {}, dest_id {}, page_id {} is_writing {}",
-        page_size, s, location->uname, path, dest_id, page_id, is_writing));
+    throw journal_error(
+        fmt::format("page size mismatch, required {}, found {}, location {}, path {}, dest_id {}, page_id {} intent {}",
+                    page_size, s, location->uname, path, dest_id, page_id, static_cast<int>(policy.intent())));
   }
 
   const auto last_frame_position = loaded_page->acquire_last_frame_position();
@@ -180,25 +178,33 @@ page_ptr page::load(const data::location_ptr &location, uint32_t dest_id, uint64
                                     last_frame_position, header->page_header_length, page_size));
   }
 
-  if (loaded_page->acquire_status() != yijinjing::enums::PageStatus::Normal && !pre_open) {
+  if (loaded_page->acquire_status() != yijinjing::enums::PageStatus::Normal && !policy.opens_preopen()) {
     SPDLOG_WARN("page is still preopen status");
   }
 
   return loaded_page;
 }
 
+page_ptr page::load(const data::location_ptr &location, uint32_t dest_id, uint64_t page_size, uint32_t page_id,
+                    bool is_writing, bool lazy, bool pre_open, bool allow_create) {
+  (void)lazy;
+  const auto policy = allow_create && !is_writing ? page_open_policy::coordinator_precreate()
+                      : is_writing ? (pre_open ? page_open_policy::writer_preload() : page_open_policy::writer())
+                                   : (pre_open ? page_open_policy::reader_preload() : page_open_policy::reader());
+  return load(location, dest_id, page_size, page_id, policy);
+}
+
 page_ptr page::load_header_and_1st_frame_header(const data::location_ptr &location, uint32_t dest_id, uint32_t page_id,
-                                                bool is_writing, bool lazy) {
+                                                page_open_policy policy) {
   uint32_t page_header_size = sizeof(page_header);
   uint32_t frame_header_size = sizeof(frame_header);
   uint32_t sliced_page_size = page_header_size + frame_header_size;
-  std::string path = resolve_page_path(location, dest_id, page_id, is_writing);
-  auto region = is_writing ? platform::mapped_region::map_writable(path, sliced_page_size, lazy)
-                           : platform::mapped_region::map_existing(path, sliced_page_size, false, lazy);
+  std::string path = resolve_page_path(location, dest_id, page_id, policy.mapping().creates_or_grows());
+  auto region = platform::mapped_region::map(path, sliced_page_size, policy.mapping());
 
   auto header = reinterpret_cast<page_header *>(region.address());
-  auto loaded_page = std::shared_ptr<page>(
-      new page(location, dest_id, page_id, sliced_page_size, lazy, is_writing, std::move(region)));
+  auto loaded_page =
+      std::shared_ptr<page>(new page(location, dest_id, page_id, sliced_page_size, policy, std::move(region)));
   if (loaded_page->acquire_last_frame_position() == 0) {
     SPDLOG_WARN("open a page never loaded : {}", path);
   }
@@ -209,6 +215,13 @@ page_ptr page::load_header_and_1st_frame_header(const data::location_ptr &locati
   }
 
   return loaded_page;
+}
+
+page_ptr page::load_header_and_1st_frame_header(const data::location_ptr &location, uint32_t dest_id, uint32_t page_id,
+                                                bool is_writing, bool lazy) {
+  (void)lazy;
+  return load_header_and_1st_frame_header(location, dest_id, page_id,
+                                          is_writing ? page_open_policy::writer() : page_open_policy::header_probe());
 }
 
 std::string page::get_page_path(const data::location_ptr &location, uint32_t dest_id, uint32_t page_id) {
@@ -233,7 +246,8 @@ uint32_t page::find_page_id(const data::location_ptr &location, uint32_t dest_id
     return page_ids.front();
   }
   for (int i = static_cast<int>(page_ids.size()) - 1; i >= 0; i--) {
-    auto loaded_page = page::load_header_and_1st_frame_header(location, dest_id, page_ids[i], false, true);
+    auto loaded_page =
+        page::load_header_and_1st_frame_header(location, dest_id, page_ids[i], page_open_policy::header_probe());
     const auto *loaded_page_header = loaded_page->header_;
     if (loaded_page->acquire_last_frame_position() != 0 &&
         loaded_page->acquire_status() != yijinjing::enums::PageStatus::PreOpen &&

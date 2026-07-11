@@ -12,6 +12,58 @@
 
 namespace kungfu::yijinjing::journal {
 
+enum class page_open_intent : uint8_t {
+  reader,
+  writer,
+  reader_preload,
+  writer_preload,
+  coordinator_precreate,
+  header_probe
+};
+
+class page_open_policy {
+public:
+  [[nodiscard]] static constexpr page_open_policy reader() noexcept {
+    return page_open_policy(page_open_intent::reader);
+  }
+  [[nodiscard]] static constexpr page_open_policy writer() noexcept {
+    return page_open_policy(page_open_intent::writer);
+  }
+  [[nodiscard]] static constexpr page_open_policy reader_preload() noexcept {
+    return page_open_policy(page_open_intent::reader_preload);
+  }
+  [[nodiscard]] static constexpr page_open_policy writer_preload() noexcept {
+    return page_open_policy(page_open_intent::writer_preload);
+  }
+  [[nodiscard]] static constexpr page_open_policy coordinator_precreate() noexcept {
+    return page_open_policy(page_open_intent::coordinator_precreate);
+  }
+  [[nodiscard]] static constexpr page_open_policy header_probe() noexcept {
+    return page_open_policy(page_open_intent::header_probe);
+  }
+
+  [[nodiscard]] constexpr page_open_intent intent() const noexcept { return intent_; }
+  [[nodiscard]] constexpr bool may_initialize() const noexcept {
+    return intent_ == page_open_intent::writer || intent_ == page_open_intent::writer_preload ||
+           intent_ == page_open_intent::coordinator_precreate;
+  }
+  [[nodiscard]] constexpr bool may_publish_normal() const noexcept {
+    return intent_ == page_open_intent::writer || intent_ == page_open_intent::writer_preload;
+  }
+  [[nodiscard]] constexpr bool opens_preopen() const noexcept {
+    return intent_ == page_open_intent::reader_preload || intent_ == page_open_intent::writer_preload ||
+           intent_ == page_open_intent::coordinator_precreate;
+  }
+  [[nodiscard]] constexpr platform::mapping_policy mapping() const noexcept {
+    return may_initialize() ? platform::mapping_policy::write_create_or_grow()
+                            : platform::mapping_policy::read_existing();
+  }
+
+private:
+  explicit constexpr page_open_policy(page_open_intent intent) noexcept : intent_(intent) {}
+  page_open_intent intent_;
+};
+
 class page {
 
 public:
@@ -60,10 +112,18 @@ public:
   void enable_page();
 
   static page_ptr load(const data::location_ptr &location, uint32_t dest_id, uint64_t page_size, uint32_t page_id,
-                       bool is_writing, bool lazy, bool pre_open = false, bool allow_create = false);
+                       page_open_policy policy);
+
+  [[deprecated("use page::load with an explicit page_open_policy")]] static page_ptr
+  load(const data::location_ptr &location, uint32_t dest_id, uint64_t page_size, uint32_t page_id, bool is_writing,
+       bool lazy, bool pre_open = false, bool allow_create = false);
 
   static page_ptr load_header_and_1st_frame_header(const data::location_ptr &location, uint32_t dest_id,
-                                                   uint32_t page_id, bool is_writing, bool lazy);
+                                                   uint32_t page_id, page_open_policy policy);
+
+  [[deprecated("use an explicit header-probe page_open_policy")]] static page_ptr
+  load_header_and_1st_frame_header(const data::location_ptr &location, uint32_t dest_id, uint32_t page_id,
+                                   bool is_writing, bool lazy);
 
   static std::string get_page_path(const data::location_ptr &location, uint32_t dest_id, uint32_t page_id);
 
@@ -80,11 +140,11 @@ protected:
   const data::location_ptr location_;
   const uint32_t dest_id_;
   const uint32_t page_id_;
-  const bool is_writing_;
+  const page_open_policy policy_;
   const size_t size_;
   const yijinjing::types::page_header *header_;
 
-  page(data::location_ptr location, uint32_t dest_id, uint32_t page_id, size_t size, bool lazy, bool is_writing,
+  page(data::location_ptr location, uint32_t dest_id, uint32_t page_id, size_t size, page_open_policy policy,
        platform::mapped_region region);
 
   [[nodiscard]] uint64_t acquire_last_frame_position() const;

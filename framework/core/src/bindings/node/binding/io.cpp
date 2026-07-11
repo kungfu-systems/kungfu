@@ -17,8 +17,8 @@ namespace kungfu::node {
 Napi::FunctionReference IODevice::constructor = {};
 
 IODevice::IODevice(const Napi::CallbackInfo &info)
-    : ObjectWrap(info),
-      io_device(ExtractLocation(info, 0, IODevice::ExtractRuntimeLocatorByIndex(info, 1)), false, true) {
+    : ObjectWrap(info), io_device(ExtractLocation(info, 0, IODevice::ExtractRuntimeLocatorByIndex(info, 1)), false,
+                                  io_mapping_policy::peer()) {
   Napi::Env env = info.Env();
   Napi::HandleScope scope(env);
 }

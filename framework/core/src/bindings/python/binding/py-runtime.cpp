@@ -1222,8 +1222,11 @@ void bind(pybind11::module &&m) {
       .def("__rshift__", &assemble::operator>>);
 
   py::class_<io_device, kungfu::runtime::io_device_ptr>(m, "io_device")
-      .def(py::init<location_ptr, bool, bool>(), py::arg("home"), py::arg("low_latency") = false,
-           py::arg("lazy") = true)
+      .def(py::init([](location_ptr home, bool low_latency, bool lazy) {
+             return std::make_shared<io_device>(std::move(home), low_latency,
+                                                kungfu::runtime::io_mapping_policy::from_legacy_lazy(lazy));
+           }),
+           py::arg("home"), py::arg("low_latency") = false, py::arg("lazy") = true)
       .def_property_readonly("publisher", &io_device::get_publisher)
       .def_property_readonly("bus", &io_device::get_bus)
       .def_property_readonly("observer", &io_device::get_observer)

@@ -60,7 +60,8 @@ int32_t KF_EMBEDDING_CALL context_open(const kf_embedding_context_config_v1 *con
     result->home = data::location::make_shared(static_cast<enums::mode>(config->mode), enums::location_role::SYSTEM,
                                                config->host_namespace, config->host_name, result->locator);
     const bool low_latency = (config->flags & KF_EMBEDDING_CONTEXT_LOW_LATENCY) != 0;
-    result->io = std::make_shared<kungfu::runtime::io_device>(result->home, low_latency, /*lazy=*/true);
+    result->io = std::make_shared<kungfu::runtime::io_device>(result->home, low_latency,
+                                                              kungfu::runtime::io_mapping_policy::peer());
     *out_context = result.release();
     return KF_EMBEDDING_OK;
   });

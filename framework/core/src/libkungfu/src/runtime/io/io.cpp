@@ -150,10 +150,10 @@ public:
   bool is_usable() override { return socket_.recv(NNG_FLAG_ALLOC) == 0; }
 };
 
-io_device::io_device(data::location_ptr home, const bool low_latency, const bool lazy)
+io_device::io_device(data::location_ptr home, const bool low_latency, io_mapping_policy policy)
     : home_(std::move(home)),
       live_home_(location::make_shared(mode::LIVE, home_->role, home_->namespace_, home_->name, home_->locator)),
-      low_latency_(low_latency), lazy_(lazy), begin_time_(time::now_in_nano()),
+      low_latency_(low_latency), mapping_policy_(policy), begin_time_(time::now_in_nano()),
       bus_(std::make_shared<bus>(is_resource_manager_required())) {
   // keep the guarantees deterministic even when static-library linking drops
   // the seam installers' load-time static initializers
@@ -166,17 +166,22 @@ io_device::io_device(data::location_ptr home, const bool low_latency, const bool
   url_factory_ = std::make_shared<ipc_url_factory>();
 }
 
-reader_ptr io_device::open_reader_to_subscribe() { return std::make_shared<reader>(lazy_, low_latency_, bus_); }
+io_device::io_device(data::location_ptr home, const bool low_latency, const bool lazy)
+    : io_device(std::move(home), low_latency, io_mapping_policy::from_legacy_lazy(lazy)) {}
+
+reader_ptr io_device::open_reader_to_subscribe() {
+  return std::make_shared<reader>(mapping_policy_.reader, low_latency_, bus_);
+}
 
 reader_ptr io_device::open_reader(const data::location_ptr &location, uint32_t dest_id) {
-  auto r = std::make_shared<reader>(lazy_, low_latency_, bus_);
+  auto r = std::make_shared<reader>(mapping_policy_.reader, low_latency_, bus_);
   r->join(location, dest_id, 0);
   return r;
 }
 
 writer_ptr io_device::open_writer(uint32_t dest_id, uint64_t page_size) {
   if (home_->mode != mode::REPLAY) {
-    return std::make_shared<writer>(home_, dest_id, lazy_, publisher_, low_latency_, bus_, page_size);
+    return std::make_shared<writer>(home_, dest_id, publisher_, low_latency_, bus_, page_size);
   } else {
     return std::make_shared<replay_writer>(live_home_, dest_id, std::make_shared<noop_publisher>(),
                                            std::make_shared<bus>(false), page_size, begin_time_);
@@ -185,7 +190,7 @@ writer_ptr io_device::open_writer(uint32_t dest_id, uint64_t page_size) {
 
 writer_ptr io_device::open_writer_at(const data::location_ptr &location, uint32_t dest_id, uint64_t page_size) {
   if (home_->mode != mode::REPLAY) {
-    return std::make_shared<writer>(location, dest_id, lazy_, publisher_, low_latency_, bus_, page_size);
+    return std::make_shared<writer>(location, dest_id, publisher_, low_latency_, bus_, page_size);
   } else {
     return std::make_shared<replay_writer>(location, dest_id, std::make_shared<noop_publisher>(),
                                            std::make_shared<bus>(false), page_size, begin_time_);
@@ -194,7 +199,7 @@ writer_ptr io_device::open_writer_at(const data::location_ptr &location, uint32_
 
 writer_ptr io_device::open_hookable_writer(uint32_t dest_id, const writer_hook_ptr &hook, uint64_t page_size) {
   if (home_->mode != mode::REPLAY) {
-    return std::make_shared<hookable_writer>(home_, dest_id, lazy_, publisher_, low_latency_, bus_, page_size, hook);
+    return std::make_shared<hookable_writer>(home_, dest_id, publisher_, low_latency_, bus_, page_size, hook);
   } else {
     return std::make_shared<replay_writer>(live_home_, dest_id, std::make_shared<noop_publisher>(),
                                            std::make_shared<bus>(false), page_size, begin_time_);
@@ -204,7 +209,7 @@ writer_ptr io_device::open_hookable_writer(uint32_t dest_id, const writer_hook_p
 writer_ptr io_device::open_hookable_writer_at(const data::location_ptr &location, uint32_t dest_id,
                                               const writer_hook_ptr &hook, uint64_t page_size) {
   if (home_->mode != mode::REPLAY) {
-    return std::make_shared<hookable_writer>(location, dest_id, lazy_, publisher_, low_latency_, bus_, page_size, hook);
+    return std::make_shared<hookable_writer>(location, dest_id, publisher_, low_latency_, bus_, page_size, hook);
   } else {
     return std::make_shared<replay_writer>(live_home_, dest_id, std::make_shared<noop_publisher>(),
                                            std::make_shared<bus>(false), page_size, begin_time_);
@@ -212,13 +217,13 @@ writer_ptr io_device::open_hookable_writer_at(const data::location_ptr &location
 }
 
 io_device_coordinator::io_device_coordinator(data::location_ptr home, bool low_latency)
-    : io_device(std::move(home), low_latency, false) {
+    : io_device(std::move(home), low_latency, io_mapping_policy::coordinator()) {
   publisher_ = std::make_shared<nanomsg_publisher_coordinator>(*this, is_low_latency());
   observer_ = std::make_shared<nanomsg_observer_coordinator>(*this, is_low_latency());
 }
 
 io_device_peer::io_device_peer(data::location_ptr home, bool low_latency)
-    : io_device(std::move(home), low_latency, true) {}
+    : io_device(std::move(home), low_latency, io_mapping_policy::peer()) {}
 
 bool io_device_peer::is_usable() {
   nanomsg_publisher_peer publisher(*this, false);

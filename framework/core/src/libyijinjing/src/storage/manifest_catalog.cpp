@@ -182,7 +182,7 @@ location_ptr catalog_location(const std::string &runtime_dir) {
 }
 
 writer make_writer(const std::string &runtime_dir) {
-  return writer(catalog_location(runtime_dir), location::PUBLIC, true, std::make_shared<noop_publisher>(), false,
+  return writer(catalog_location(runtime_dir), location::PUBLIC, std::make_shared<noop_publisher>(), false,
                 std::make_shared<bus>(false));
 }
 
