@@ -734,10 +734,7 @@ pub unsafe extern "C" fn kf_libwasm_run_v1(
 
 #[no_mangle]
 pub extern "C" fn kf_libwasm_panic_probe_v1() -> i32 {
-    let previous_hook = std::panic::take_hook();
-    std::panic::set_hook(Box::new(|_| {}));
     let result = catch_unwind(|| panic!("libwasm spike panic containment probe"));
-    std::panic::set_hook(previous_hook);
     match result {
         Ok(_) => INVARIANT_ERROR,
         Err(_) => PANIC_CONTAINED,
