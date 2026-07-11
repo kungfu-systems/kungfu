@@ -17,7 +17,9 @@
   delegation; the trunk is its runtime sibling);
   [ADR-0045](ADR-0045-kfx-execution-profiles-native-rust-wasm.md) (extension
   execution profiles; both ADRs draw on the same Rust line, at different
-  layers: 0045 places extensions, this ADR places the host).
+  layers: 0045 places extensions, this ADR places the host);
+  [ADR-0050](ADR-0050-assembled-runtime-stdlib-pruning-policy.md) (the
+  stage-2 stdlib pruning policy, the own record stage 2 calls for).
 
 ## Question
 

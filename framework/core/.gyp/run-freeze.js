@@ -4,10 +4,12 @@
 //
 // 背景：conan2 移除了独立 `conan package` 本地命令，原 `freeze`→run-conan.js package
 // 只触发 `conan build`（占位，不跑 freezer）。本脚本把 freeze 做成 `./shifu freeze`
-// 一步可复现，并据 `config.freezer` 选择 Nuitka（默认）或 PyInstaller（fallback）。
+// 一步可复现，并据 `config.freezer` 选择产物腿；缺省按平台：macOS=assemble
+// （ADR-0046 stage 2，组装完整 CPython 树），Linux/Windows=nuitka（各自平台腿
+// 落地前维持冻结）。
 //
-// 两条 freezer 路径（可人 2026-06-17 决策 Nuitka 2.x，不行回退 PyInstaller；
-// .v4 线 Nuitka 三平台已跑通，见 docs/conan2-migration.md §4c）：
+// 三条产物腿（assemble 见 ADR-0046 与本文件 assemble 段注释；冻结腿去留记账见
+// docs/buildchain.md「Freeze retirement ledger」）：
 //
 // - nuitka（默认）：编译成 C，产物 kungfu_cli.dist 本就扁平（无 _internal），移到 dist/kungfu 即可，
 //   不需要 promote。kungfu_cli.py 内嵌 nuitka-project 选项（--standalone 等）。Nuitka 只跟随
@@ -38,7 +40,12 @@ function buildType() {
 }
 
 function freezer() {
-  return shell.getConfigValue('freezer') || 'nuitka';
+  // ADR-0046 stage 2 rolls out platform by platform: macOS ships the
+  // assembled runtime; Linux/Windows keep nuitka until their legs land.
+  // An explicit config value still selects any leg on any platform.
+  const explicit = shell.getConfigValue('freezer');
+  if (explicit) return explicit;
+  return process.platform === 'darwin' ? 'assemble' : 'nuitka';
 }
 
 // kungfu.spec datas 引用 build/include 与 build/libs（仅 pyinstaller 路径需要）。

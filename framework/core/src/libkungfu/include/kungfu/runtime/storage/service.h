@@ -8,6 +8,8 @@
 
 #include <nlohmann/json.hpp>
 
+#include <kungfu/runtime/query/fact_query.h>
+
 namespace kungfu::runtime::storage_service_api {
 
 inline constexpr const char *RUNTIME_STORAGE_SERVICE_SCHEMA_V1 = "kungfu.runtime.storage-service/v1";
@@ -67,6 +69,7 @@ enum class storage_operation {
   CompactPlan,
   VerifySync,
   Query,
+  FactQuery,
   Layout,
   EpisodeBegin,
   EpisodeHeartbeat,
@@ -100,6 +103,7 @@ struct storage_service_options {
   nlohmann::json bundle = nlohmann::json::object();
   nlohmann::json manifest = nlohmann::json::object();
   nlohmann::json operation_options = nlohmann::json::object();
+  nlohmann::json query_definition = nlohmann::json::object();
   std::string query = {};
   std::string kind = {};
   uint64_t episode_id = 0;
@@ -133,6 +137,8 @@ public:
   [[nodiscard]] virtual nlohmann::json verify_sync(const storage_service_options &options) const = 0;
 
   [[nodiscard]] virtual nlohmann::json query(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json fact_query(const storage_service_options &options) const = 0;
 
   [[nodiscard]] virtual nlohmann::json layout(const storage_service_options &options) const = 0;
 

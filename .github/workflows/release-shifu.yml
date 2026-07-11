@@ -60,6 +60,10 @@ jobs:
       - name: Build
         run: cargo build --release -p shifu --target "${{ matrix.target }}"
         working-directory: crates
+        env:
+          # Bake the "release" build channel so `shifu --version` can tell a
+          # release asset from a local source build.
+          SHIFU_RELEASE_BUILD: "1"
       - name: Stage asset
         run: |
           mkdir -p dist

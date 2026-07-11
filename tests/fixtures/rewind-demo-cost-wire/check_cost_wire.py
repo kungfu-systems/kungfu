@@ -42,11 +42,25 @@ sys.path.insert(0, core_src)
 # kungfu.rewind.cost.* and kungfu.rewind.cost_wire still import from disk (none
 # of them touch the native binding). bundle.py calls kungfu.schema_data_path at
 # import time, so the stub provides the source-layout resolver.
+
+
+def _stub_sha256_value(payload, algorithm="sha256"):
+    # bundle.emit hashes the schema blob through kungfu.content_hash, which
+    # dispatches to the native binding. This wire test runs without pykungfu,
+    # so the stub answers only the sha256 default the binding would compute.
+    if algorithm != "sha256":
+        raise ValueError(f"stub binding only hashes sha256, got {algorithm}")
+    return hashlib.sha256(bytes(payload)).hexdigest()
+
+
 if "kungfu" not in sys.modules:
     _m = types.ModuleType("kungfu")
     _m.__path__ = [os.path.join(core_src, "kungfu")]
     _m.schema_data_path = lambda module_file, name: os.path.join(
         os.path.dirname(module_file), name
+    )
+    _m.__binding__ = types.SimpleNamespace(
+        runtime=types.SimpleNamespace(compute_content_hash_value=_stub_sha256_value)
     )
     sys.modules["kungfu"] = _m
 

@@ -23,6 +23,7 @@ and the map routes a question to whichever doc answers it.
 | Your question | Document | Plane | Status |
 |---|---|---|---|
 | What is kungfu, in one idea? | [`../README.md`](../README.md) | — | stable |
+| Do I need the whole Kungfu App, or which smaller product should I start with? | [`choose-your-kungfu.md`](choose-your-kungfu.md) | use | draft · adoption contract accepted; artifacts qualify independently in stages |
 | What do the terms mean (`kungfu` / `yijinjing` / journal / schema …)? | [`concepts.md`](concepts.md) | use | stable |
 | Why is it built this way? What is load-bearing? | [`design-philosophy.md`](design-philosophy.md) | why | stable |
 | Why compare Kungfu to SQLite, Git, and a flight recorder — and why is it neither observability nor blockchain? | [`design-philosophy.md`](design-philosophy.md#the-missing-infrastructure-layer-runtime-facts) | why | stable |
@@ -40,6 +41,7 @@ and the map routes a question to whichever doc answers it.
 | What is the event / journal / replay model? | [`event-model.md`](event-model.md) | use | stable |
 | What does Rewind replay, and what must it never silently re-execute? | [ADR-0020](../framework/core/docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md) + [`rewind.md`](rewind.md) | why, verify | stable |
 | How does Kungfu persist user facts, sync sources, and maintain storage over time? | [`runtime-storage-service.md`](runtime-storage-service.md) | use, verify | draft |
+| How do my domain facts enter Kungfu's declared fact world, remain replayable, and become eligible for trust assessment? | [`fact-surface-admission.md`](fact-surface-admission.md) + [ADR-0051](../framework/core/docs/adr/ADR-0051-kfd-contract-world-fact-admission-and-trust.md) | why, use, verify | draft · semantics accepted; implementation staged |
 | How do I query current or historical runtime facts, and what proves the answer? | [`querying-runtime-facts.md`](querying-runtime-facts.md) + [ADR-0048](../framework/core/docs/adr/ADR-0048-runtime-fact-query-semantics-and-changelog.md) | use, verify | draft · semantics accepted; implementation staged |
 | What is an Episode, why is it the atomic trust boundary, and how is that claim qualified under faults and load? | [`episode-object-model.md`](episode-object-model.md) + [`episode-atomicity-qualification.md`](episode-atomicity-qualification.md) + [ADR-0033](../framework/core/docs/adr/ADR-0033-episode-causal-segment-object.md) + [ADR-0034](../framework/core/docs/adr/ADR-0034-yijinjing-episode-manifest-journal.md) + [ADR-0042](../framework/core/docs/adr/ADR-0042-episode-atomic-safety-and-qualification.md) | why, use, verify | draft |
 | What is the supervisor/master topology, and how can the master stay alive after the GUI closes? | [`master-service.md`](master-service.md) + [ADR-0036](../framework/core/docs/adr/ADR-0036-supervisor-and-workspace-master-topology.md) | use, verify | draft |
@@ -49,6 +51,7 @@ and the map routes a question to whichever doc answers it.
 | Where are the Python / Node / framework adapter boundaries? | [`adapters.md`](adapters.md) | use | stable |
 | How do I install Python packages (pandas/torch-class) into Kungfu's runtime? | [`python-environments.md`](python-environments.md) + [ADR-0046](../framework/core/docs/adr/ADR-0046-rust-host-trunk-and-assembled-runtime.md) | use | stable |
 | How do I go from source to a binary? | [`buildchain.md`](buildchain.md) (+ [`../CONTRIBUTING.md`](../CONTRIBUTING.md)) | use | stable |
+| What Python runtime ships inside the product, and what was pruned from it? | [ADR-0050](../framework/core/docs/adr/ADR-0050-assembled-runtime-stdlib-pruning-policy.md) + [`buildchain.md`](buildchain.md) | why, verify | stable |
 | When (and when not) does a component get written in Rust, and how is one added? | [`rust-adoption.md`](rust-adoption.md) | why, use | stable |
 | What must never change about the `shifu` entrypoints (and why)? | [ADR-0044](../framework/core/docs/adr/ADR-0044-shifu-delegation-protocol.md) | why, verify | stable |
 | Where does a release binary come from, and how do I verify it? | `provenance.md` | verify | blocked · needs release infra |
@@ -102,12 +105,17 @@ route to the row that answers them:
   changelog / proof / lineage / QueryDefinition** → *how do I query current or
   historical runtime facts* ([`querying-runtime-facts.md`](querying-runtime-facts.md))
   and [ADR-0048](../framework/core/docs/adr/ADR-0048-runtime-fact-query-semantics-and-changelog.md).
+- **contract world / fact surface / fact admission / user facts / domain facts /
+  KFD-1 facts / KFD-2 trust report** -> *how domain facts enter Kungfu and become
+  eligible for trust assessment* ([`fact-surface-admission.md`](fact-surface-admission.md))
+  and [ADR-0051](../framework/core/docs/adr/ADR-0051-kfd-contract-world-fact-admission-and-trust.md).
 - **latency / performance / zero-copy / serialization** → *the membrane*
   ([`architecture.md`](architecture.md)) and *the event model*
   ([`event-model.md`](event-model.md)).
 - **lightweight / too heavy / minimal install / independent package / libkungfu
   only / CLI without GUI / layer deletion / assembled runtime** → *which
-  Kungfu layer can I adopt independently* ([`product-layers.md`](product-layers.md))
+  Kungfu should I start with* ([`choose-your-kungfu.md`](choose-your-kungfu.md)),
+  then *what does each layer guarantee* ([`product-layers.md`](product-layers.md))
   and [ADR-0049](../framework/core/docs/adr/ADR-0049-layer-complete-products-and-domain-neutral-core.md).
 - **quant trading / agent runtime / games / virtual reality / virtual worlds /
   domain-neutral core / future application horizon** →

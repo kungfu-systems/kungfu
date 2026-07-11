@@ -67,6 +67,8 @@ A record's **Status** says where it stands:
 | [0047](ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md) | accepted; staged | authoritative structured facts have one schema owner — Hana POD or FlatBuffers |
 | [0048](ADR-0048-runtime-fact-query-semantics-and-changelog.md) | accepted; staged | runtime fact queries use explicit bases, one logical plan, and a proof-carrying changelog |
 | [0049](ADR-0049-layer-complete-products-and-domain-neutral-core.md) | accepted; staged | every product layer is independently complete and the core remains domain-neutral |
+| [0050](ADR-0050-assembled-runtime-stdlib-pruning-policy.md) | accepted | stdlib pruning policy for the assembled runtime — family-level subtraction, declarative fail-closed manifest |
+| [0051](ADR-0051-kfd-contract-world-fact-admission-and-trust.md) | accepted; staged | KFD contract worlds govern fact admission, historical interpretation, and trust assessment |
 
 ## Reading by theme
 
@@ -165,7 +167,10 @@ A record's **Status** says where it stands:
   edge-only policy, and exclusive Hana/FlatBuffers SQLite projection paths),
   [0048](ADR-0048-runtime-fact-query-semantics-and-changelog.md) (the explicit
   current/historical query basis, shared logical plan, proof envelope, and
-  resumable changelog contract), and
+  resumable changelog contract),
+  [0051](ADR-0051-kfd-contract-world-fact-admission-and-trust.md) (the KFD-1
+  declaration, replayable fact-admission, historical interpretation, and KFD-2
+  trust-assessment path), and
   [0042](ADR-0042-episode-atomic-safety-and-qualification.md) (Episode atomic
   safety as evidence-bounded capability, graceful degradation, monotonic repair,
   fault containment, and qualification under scale).
@@ -202,6 +207,9 @@ A record's **Status** says where it stands:
   Trust Report design required by ADR-0042.
 - [`docs/querying-runtime-facts.md`](../../../../docs/querying-runtime-facts.md) —
   the staged human and agent service surface defined by ADR-0048.
+- [`docs/fact-surface-admission.md`](../../../../docs/fact-surface-admission.md) —
+  how product and user facts enter a KFD-declared contract world and become
+  eligible for historical query and trust assessment.
 - [`docs/product-layers.md`](../../../../docs/product-layers.md) — independent
   adoption products and their qualification boundaries.
 - [`docs/domain-horizons.md`](../../../../docs/domain-horizons.md) — the

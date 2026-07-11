@@ -89,7 +89,11 @@ fn print_usage() {
     println!("  shifu self-update          refresh this installed binary in place");
     println!(
         "                             {}",
-        style::dim("(from checkout source, or --version <v> for a release)")
+        style::dim("(checkout source > local build slot; --version <v> for a")
+    );
+    println!(
+        "                             {}",
+        style::dim("release; --list generations; --rollback one step back)")
     );
     println!("  shifu promote [--launch]   install the freshest built dev kungfu");
     println!("  shifu builds               list registered dev builds");
@@ -258,9 +262,10 @@ fn version_line(root: Option<&Path>) -> String {
         "installed".to_string()
     };
     format!(
-        "shifu {} (git {}, {role})",
+        "shifu {} (git {}, {}, {role})",
         env!("CARGO_PKG_VERSION"),
         env!("SHIFU_GIT_SHA"),
+        env!("SHIFU_BUILD_CHANNEL"),
     )
 }
 

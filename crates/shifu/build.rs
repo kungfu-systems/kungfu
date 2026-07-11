@@ -26,5 +26,16 @@ fn main() {
         "cargo:rustc-env=SHIFU_GIT_SHA={sha}{}",
         if dirty { "-dirty" } else { "" }
     );
+    // Build channel: release binaries (built by release-shifu.yml with
+    // SHIFU_RELEASE_BUILD=1) identify as "release"; every local build — cargo
+    // install, the shim's source-fresh slots, self-update — is "source", so
+    // `shifu --version` always tells which supply chain the binary came from.
+    let channel = if std::env::var_os("SHIFU_RELEASE_BUILD").is_some_and(|v| v == "1") {
+        "release"
+    } else {
+        "source"
+    };
+    println!("cargo:rustc-env=SHIFU_BUILD_CHANNEL={channel}");
+    println!("cargo:rerun-if-env-changed=SHIFU_RELEASE_BUILD");
     println!("cargo:rerun-if-changed=../../.git/HEAD");
 }

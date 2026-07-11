@@ -21,6 +21,7 @@
 #include <vector>
 
 #include <kungfu/runtime/action_recorder.h>
+#include <kungfu/runtime/query/fact_query.h>
 #include <kungfu/runtime/storage/episode_manifest_projection.h>
 #include <kungfu/runtime/storage/manifest_catalog_projection.h>
 #include <kungfu/runtime/storage/source_registry_projection.h>
@@ -3269,6 +3270,11 @@ public:
     return query_sqlite_projection(options);
   }
 
+  [[nodiscard]] nlohmann::json fact_query(const storage_service_options &options) const override {
+    const auto definition = query::parse_query_definition(options.query_definition);
+    return query::query_result_json(query::run_episode_authority_scan(options.runtime_dir, definition));
+  }
+
   [[nodiscard]] nlohmann::json layout(const storage_service_options &options) const override {
     const auto provider = shared_provider(options);
     return workspace_episode_layout(options, *provider);
@@ -3404,6 +3410,7 @@ std::vector<std::string> storage_operation_names() {
       storage_operation_name(storage_operation::CompactPlan),
       storage_operation_name(storage_operation::VerifySync),
       storage_operation_name(storage_operation::Query),
+      storage_operation_name(storage_operation::FactQuery),
       storage_operation_name(storage_operation::Layout),
       storage_operation_name(storage_operation::EpisodeBegin),
       storage_operation_name(storage_operation::EpisodeHeartbeat),
@@ -3449,6 +3456,8 @@ std::string storage_operation_name(storage_operation operation) {
     return "verify_sync";
   case storage_operation::Query:
     return "query";
+  case storage_operation::FactQuery:
+    return "fact_query";
   case storage_operation::Layout:
     return "layout";
   case storage_operation::EpisodeBegin:
@@ -3526,6 +3535,9 @@ storage_operation parse_storage_operation(const std::string &operation) {
   if (operation == "query") {
     return storage_operation::Query;
   }
+  if (operation == "fact_query") {
+    return storage_operation::FactQuery;
+  }
   if (operation == "layout") {
     return storage_operation::Layout;
   }
@@ -3598,6 +3610,7 @@ storage_service_options parse_storage_service_options(const std::string &runtime
   parsed.bundle = object_or_empty(options, "bundle");
   parsed.manifest = object_or_empty(options, "manifest");
   parsed.operation_options = options;
+  parsed.query_definition = object_or_empty(options, "definition");
   parsed.query = text_or(options, "query", "entries");
   parsed.kind = text_or(options, "kind");
   parsed.episode_id = uint64_or(options, "episode_id");
@@ -3614,6 +3627,8 @@ nlohmann::json make_storage_service_request(const std::string &operation, const 
     request["query"] = parsed_options.query;
     request["kind"] = parsed_options.kind.empty() ? nlohmann::json(nullptr) : nlohmann::json(parsed_options.kind);
     request["limit"] = parsed_options.limit;
+  } else if (parsed_operation == storage_operation::FactQuery) {
+    request["definition"] = parsed_options.query_definition;
   } else if (parsed_operation == storage_operation::Layout) {
     request["runtime_home"] = runtime_home_path(parsed_options).string();
     request["runtime_home_source"] = runtime_home_source(parsed_options);
@@ -3662,6 +3677,8 @@ nlohmann::json run_storage_service_operation(const std::string &operation, const
     return storage_service_instance().verify_sync(parsed_options);
   case storage_operation::Query:
     return storage_service_instance().query(parsed_options);
+  case storage_operation::FactQuery:
+    return storage_service_instance().fact_query(parsed_options);
   case storage_operation::Layout:
     return storage_service_instance().layout(parsed_options);
   case storage_operation::EpisodeBegin:
