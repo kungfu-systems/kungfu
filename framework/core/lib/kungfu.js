@@ -110,6 +110,7 @@ module.exports = () => {
     storageSourceRegistryFsckTyped: binding.storageSourceRegistryFsckTyped,
     storageSourceRegistryRebuildTyped:
       binding.storageSourceRegistryRebuildTyped,
+    storageLayoutTyped: binding.storageLayoutTyped,
     makeStorageServiceRequest: binding.makeStorageServiceRequest,
     runStorageServiceOperation: binding.runStorageServiceOperation,
     acceptStorageManifest: binding.acceptStorageManifest,

@@ -609,6 +609,20 @@ Napi::Value StorageSourceRegistryRebuildTyped(const Napi::CallbackInfo &info) {
                                          {info[0].As<Napi::String>().Utf8Value()}));
 }
 
+Napi::Value StorageLayoutTyped(const Napi::CallbackInfo &info) {
+  if (!IsValid(info, 0, &Napi::Value::IsString))
+    throw Napi::TypeError::New(info.Env(), "storageLayoutTyped(runtimeDir, options?)");
+  runtime::storage_service_api::storage_layout_request request{};
+  request.runtime_dir = info[0].As<Napi::String>().Utf8Value();
+  if (IsValid(info, 1, &Napi::Value::IsObject)) {
+    const auto options = info[1].As<Napi::Object>();
+    request.runtime_home = StringOption(options, "runtime_home");
+    request.config_home = StringOption(options, "config_home");
+    request.provider = StringOption(options, "provider");
+  }
+  return HanaViewToValue(info.Env(), runtime::storage_service_api::default_storage_service().layout(request));
+}
+
 Napi::Value StorageFsckTyped(const Napi::CallbackInfo &info) {
   if (!IsValid(info, 0, &Napi::Value::IsString))
     throw Napi::TypeError::New(info.Env(), "storageFsckTyped(runtimeDir, options?)");
@@ -867,6 +881,7 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
   exports.Set("storageSourceInspectTyped", Napi::Function::New(env, StorageSourceInspectTyped));
   exports.Set("storageSourceRegistryFsckTyped", Napi::Function::New(env, StorageSourceRegistryFsckTyped));
   exports.Set("storageSourceRegistryRebuildTyped", Napi::Function::New(env, StorageSourceRegistryRebuildTyped));
+  exports.Set("storageLayoutTyped", Napi::Function::New(env, StorageLayoutTyped));
   exports.Set("makeStorageServiceRequest", Napi::Function::New(env, MakeStorageServiceRequest));
   exports.Set("runStorageServiceOperation", Napi::Function::New(env, RunStorageServiceOperation));
   exports.Set("acceptStorageManifest", Napi::Function::New(env, AcceptStorageManifest));

@@ -739,6 +739,14 @@ void bind(pybind11::module &&m) {
       },
       py::arg("runtime_dir"));
   m.def(
+      "storage_layout_typed",
+      [](const std::string &runtime_dir, const std::string &runtime_home, const std::string &config_home,
+         const std::string &provider) {
+        return hana_view_to_py(
+            storage_service_api::default_storage_service().layout({runtime_dir, runtime_home, config_home, provider}));
+      },
+      py::arg("runtime_dir"), py::arg("runtime_home") = "", py::arg("config_home") = "", py::arg("provider") = "");
+  m.def(
       "make_storage_service_request",
       [](const std::string &operation, const std::string &runtime_dir, py::dict options) {
         return json_to_py(

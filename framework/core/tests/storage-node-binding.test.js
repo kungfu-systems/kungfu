@@ -132,8 +132,7 @@ function selectedNodeResults(runtimeDir) {
       source_id: 'node-synth',
     }),
     status: kungfu.storageStatusTyped(runtimeDir, 'node-synth'),
-    layout: kungfu.runStorageServiceOperation('layout', runtimeDir, {
-      scope: 'all',
+    layout: kungfu.storageLayoutTyped(runtimeDir, {
       runtime_home: path.dirname(runtimeDir),
       config_home: path.join(path.dirname(runtimeDir), 'config'),
     }),
@@ -305,6 +304,9 @@ test(
       });
       const sourceRebuild =
         kungfu.storageSourceRegistryRebuildTyped(runtimeDir);
+      const layout = kungfu.storageLayoutTyped(runtimeDir, {
+        runtime_home: path.dirname(runtimeDir),
+      });
       assert.equal(query.query, 4);
       assert.equal(query.rows[0].body.title, 'typed-query');
       assert.equal(query.rows[0].body.location_uid, 17);
@@ -335,6 +337,8 @@ test(
       assert.equal(sourceInspect.source.current_head, 'head-1');
       assert.equal(sourceFsck.journal.ok, true);
       assert.equal(sourceRebuild.authority, 'yijinjing-journal');
+      assert.equal(layout.owner, 'libkungfu');
+      assert.equal(layout.runtime_home, path.dirname(runtimeDir));
     } finally {
       JSON.parse = originalParse;
       JSON.stringify = originalStringify;

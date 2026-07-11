@@ -52,6 +52,13 @@ interface StorageProviderCache {
   misses: bigint;
 }
 
+interface StorageProviderLayout {
+  database: string | null;
+  manifest_catalog_journal: string;
+  manifest_entries: string;
+  payloads: string;
+}
+
 interface StorageStatusResult {
   ok: boolean;
   backend: string;
@@ -65,6 +72,66 @@ interface StorageStatusResult {
   sources: Array<Record<string, unknown>>;
   projections: StorageProjectionStatus[];
   source_status: Array<Record<string, unknown>>;
+}
+
+interface StorageLayoutResult {
+  schema: string;
+  owner: string;
+  layout_version: number;
+  runtime_home: string;
+  workspace_data_home: string;
+  runtime_home_source: string;
+  runtime_dir: string;
+  runtime_dir_is_standard_child: boolean;
+  config_home: string;
+  provider: string;
+  provider_layout: StorageProviderLayout;
+  provider_runtime: StorageProviderRuntime;
+  provider_cache: StorageProviderCache;
+  paths: {
+    data_home: string;
+    runtime_dir: string;
+    archive_dir: string;
+    dataset_dir: string;
+    inbox_dir: string;
+    journal_dir: string;
+    storage_dir: string;
+    source_registry_journal: string;
+    manifest_catalog_journal: string;
+    manifest_entries: string;
+    payloads: string;
+    rocksdb: string;
+    source_registry_projection: string;
+    manifest_catalog_projection: string;
+    episode_manifest_journal_dir: string;
+    episode_manifest_journal: string;
+    master_state: string;
+    remote_mirrors: string;
+    atlas_store: string;
+  };
+  episodes: {
+    authority: string;
+    schema: string;
+    manifest_namespace: string;
+    manifest_name: string;
+    manifest_journal: string;
+    query_tables: string[];
+    export_schema: string;
+  };
+  ownership: {
+    journal_dir: string;
+    episode_manifest_journal: string;
+    storage_dir: string;
+    source_registry_journal: string;
+    manifest_catalog_journal: string;
+    manifest_entries: string;
+    payloads: string;
+    source_registry_projection: string;
+    manifest_catalog_projection: string;
+    rocksdb: string;
+    config_home: string;
+  };
+  notes: string[];
 }
 
 type StorageQueryName =
@@ -569,6 +636,14 @@ interface KungfuRuntime {
     runtimeDir: string,
     sourceId?: string,
   ): StorageStatusResult;
+  storageLayoutTyped(
+    runtimeDir: string,
+    options?: {
+      runtime_home?: string;
+      config_home?: string;
+      provider?: 'content-addressed-file' | 'rocksdb';
+    },
+  ): StorageLayoutResult;
   storageQueryTyped(
     runtimeDir: string,
     query: StorageQueryName,

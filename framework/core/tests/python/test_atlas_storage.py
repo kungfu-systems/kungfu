@@ -363,6 +363,7 @@ def test_typed_storage_status_binding_bypasses_json_transport(tmp_path):
     try:
         status = runtime.storage_status_typed(str(runtime_dir))
         status_high_level = storage_service.status(runtime_dir)
+        layout = storage_service.layout(runtime_dir)
         query = runtime.storage_query_typed(
             str(runtime_dir), "episode_records", episode_id=701
         )
@@ -434,6 +435,8 @@ def test_typed_storage_status_binding_bypasses_json_transport(tmp_path):
     assert status["projections"][0]["verification"]["authority"] == "yijinjing-journal"
     assert status_high_level["authority"] == status["authority"]
     assert status_high_level["projections"] == status["projections"]
+    assert layout["owner"] == "libkungfu"
+    assert layout["runtime_dir"] == str(runtime_dir.resolve())
     assert (
         status_high_level["provider_cache"]["hits"] >= status["provider_cache"]["hits"]
     )
@@ -564,6 +567,14 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
         runtime_home=workspace_home,
         config_home=config_home,
     )
+    layout_edge = runtime.run_storage_service_operation(
+        "layout",
+        str(runtime_dir),
+        {
+            "runtime_home": str(workspace_home),
+            "config_home": str(config_home),
+        },
+    )
     assert layout["schema"] == "kungfu.workspace.episode-layout/v1"
     assert layout["owner"] == "libkungfu"
     assert layout["workspace_data_home"] == str(workspace_home)
@@ -595,6 +606,13 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
         "episode_frames",
         "episode_refs",
     ]
+    assert layout_edge["paths"] == layout["paths"]
+    assert layout_edge["episodes"] == layout["episodes"]
+    assert layout_edge["provider_layout"] == {
+        key: value
+        for key, value in layout["provider_layout"].items()
+        if value is not None
+    }
 
 
 def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monkeypatch):
@@ -619,6 +637,7 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
     runtime = kungfu.__binding__.runtime
     original_operation = runtime.run_storage_service_operation
     original_typed_status = runtime.storage_status_typed
+    original_typed_layout = runtime.storage_layout_typed
     original_typed_query = runtime.storage_query_typed
     original_typed_gc = runtime.storage_gc_plan_typed
     original_typed_rebuild = runtime.storage_rebuild_index_typed
@@ -627,6 +646,7 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
     original_typed_repair = runtime.storage_repair_plan_typed
     calls = []
     typed_statuses = []
+    typed_layouts = []
     typed_queries = []
     typed_maintenance = []
 
@@ -641,6 +661,10 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
     def spy_typed_status(runtime_dir_arg, source_id=None):
         typed_statuses.append((runtime_dir_arg, source_id))
         return original_typed_status(runtime_dir_arg, source_id)
+
+    def spy_typed_layout(runtime_dir_arg, **options):
+        typed_layouts.append((runtime_dir_arg, dict(options)))
+        return original_typed_layout(runtime_dir_arg, **options)
 
     def spy_typed_gc(runtime_dir_arg, **options):
         typed_maintenance.append(("gc_plan", runtime_dir_arg, dict(options)))
@@ -668,6 +692,7 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
         spy_operation,
     )
     monkeypatch.setattr(runtime, "storage_status_typed", spy_typed_status)
+    monkeypatch.setattr(runtime, "storage_layout_typed", spy_typed_layout)
     monkeypatch.setattr(runtime, "storage_query_typed", spy_typed_query)
     monkeypatch.setattr(runtime, "storage_gc_plan_typed", spy_typed_gc)
     monkeypatch.setattr(runtime, "storage_rebuild_index_typed", spy_typed_rebuild)
@@ -710,7 +735,6 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
 
     entered = {operation for operation, _, _ in calls}
     assert {
-        "layout",
         "repair_fetch",
         "repair_apply",
         "export_bundle",
@@ -718,6 +742,12 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
         "verify_sync",
     } <= entered
     assert typed_statuses == [(str(runtime_dir), "local-synth")]
+    assert typed_layouts == [
+        (
+            str(runtime_dir),
+            {"runtime_home": "", "config_home": "", "provider": ""},
+        )
+    ]
     assert typed_queries == [
         (
             str(runtime_dir),

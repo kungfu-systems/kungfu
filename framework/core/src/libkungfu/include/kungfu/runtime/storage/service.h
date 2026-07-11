@@ -144,6 +144,79 @@ struct storage_provider_cache_view {
   uint64_t misses = 0;
 };
 
+struct storage_layout_request {
+  std::string runtime_dir = {};
+  std::string runtime_home = {};
+  std::string config_home = {};
+  std::string provider = {};
+};
+
+struct storage_layout_paths_view {
+  std::string data_home = {};
+  std::string runtime_dir = {};
+  std::string archive_dir = {};
+  std::string dataset_dir = {};
+  std::string inbox_dir = {};
+  std::string journal_dir = {};
+  std::string storage_dir = {};
+  std::string source_registry_journal = {};
+  std::string manifest_catalog_journal = {};
+  std::string manifest_entries = {};
+  std::string payloads = {};
+  std::string rocksdb = {};
+  std::string source_registry_projection = {};
+  std::string manifest_catalog_projection = {};
+  std::string episode_manifest_journal_dir = {};
+  std::string episode_manifest_journal = {};
+  std::string master_state = {};
+  std::string remote_mirrors = {};
+  std::string atlas_store = {};
+};
+
+struct storage_layout_episode_view {
+  std::string authority = "yijinjing-journal";
+  std::string schema = {};
+  std::string manifest_namespace = {};
+  std::string manifest_name = {};
+  std::string manifest_journal = {};
+  std::vector<std::string> query_tables = {};
+  std::string export_schema = {};
+};
+
+struct storage_layout_ownership_view {
+  std::string journal_dir = {};
+  std::string episode_manifest_journal = {};
+  std::string storage_dir = {};
+  std::string source_registry_journal = {};
+  std::string manifest_catalog_journal = {};
+  std::string manifest_entries = {};
+  std::string payloads = {};
+  std::string source_registry_projection = {};
+  std::string manifest_catalog_projection = {};
+  std::string rocksdb = {};
+  std::string config_home = {};
+};
+
+struct storage_layout_result {
+  std::string schema = "kungfu.workspace.episode-layout/v1";
+  std::string owner = RUNTIME_STORAGE_SERVICE_OWNER;
+  uint32_t layout_version = 1;
+  std::string runtime_home = {};
+  std::string workspace_data_home = {};
+  std::string runtime_home_source = {};
+  std::string runtime_dir = {};
+  bool runtime_dir_is_standard_child = false;
+  std::string config_home = {};
+  std::string provider = {};
+  storage_provider_layout_view provider_layout = {};
+  storage_provider_runtime_view provider_runtime = {};
+  storage_provider_cache_view provider_cache = {};
+  storage_layout_paths_view paths = {};
+  storage_layout_episode_view episodes = {};
+  storage_layout_ownership_view ownership = {};
+  std::vector<std::string> notes = {};
+};
+
 struct storage_frame_range_view {
   uint64_t first_frame_uid = 0;
   uint64_t last_frame_uid = 0;
@@ -733,6 +806,8 @@ public:
   virtual ~storage_service() = default;
 
   [[nodiscard]] virtual storage_status_result status(const storage_status_request &request) const = 0;
+
+  [[nodiscard]] virtual storage_layout_result layout(const storage_layout_request &request) const = 0;
 
   [[nodiscard]] virtual storage_fsck_result fsck(const storage_fsck_request &request) const = 0;
 

@@ -139,15 +139,11 @@ def layout(
     provider: str | None = None,
 ) -> dict[str, Any]:
     return dict(
-        _runtime().run_storage_service_operation(
-            "layout",
+        _runtime().storage_layout_typed(
             str(runtime_dir),
-            {
-                "scope": "all",
-                "runtime_home": str(runtime_home) if runtime_home is not None else None,
-                "config_home": str(config_home) if config_home is not None else None,
-                "provider": provider,
-            },
+            runtime_home=str(runtime_home) if runtime_home is not None else "",
+            config_home=str(config_home) if config_home is not None else "",
+            provider=provider or "",
         )
     )
 
