@@ -10,6 +10,7 @@
 
 mod doctor;
 mod envs;
+mod help;
 mod launch;
 mod pins;
 mod variant;
@@ -56,10 +57,23 @@ fn main() {
     // and execs the assembled interpreter for everything else, verbatim —
     // argv-transparent per the layering law (ADR-0046 stage 2).
     if launch::invoked_as_kungfu() {
+        // Root help renders the unified command surface from the shipped manifest
+        // without waking a satellite (ADR-0046 stage 4). Only the root form is
+        // intercepted — `kungfu <command> --help` stays the command's own help,
+        // routed to the satellite. If the manifest is absent (a dev build), fall
+        // through to the launch path, where the Python CLI prints its own help.
+        let first = args.first().map(String::as_str);
+        if matches!(first, None | Some("--help" | "-h" | "help")) {
+            if let Some(text) = help::render() {
+                print!("{text}");
+                return;
+            }
+        }
+
         // doctor is owned by the trunk at the front door on purpose: it is the
         // diagnostic that must run even when the domain runtime is broken, so it
         // never forwards to the assembled interpreter (ADR-0046 driver 1).
-        let result = match args.first().map(String::as_str) {
+        let result = match first {
             Some("env") => dispatch_env(&args[1..]),
             Some("prewarm") => envs::prewarm(),
             Some("doctor") => doctor::run(&args[1..]),

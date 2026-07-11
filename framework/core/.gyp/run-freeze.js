@@ -15,6 +15,7 @@
 //   下加解释器树；kungfu 包以源码随树发布，经 site-packages 的 .pth 接回扁平根。
 // @ts-check
 
+const cp = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -541,10 +542,35 @@ function assembleTree(bt) {
   copyLibwasmRuntime();
   copyConfigContract();
   stageEntry(distKfc);
+  generateHelpManifest(layout.python, distKfc);
   console.log(
     '[freeze] ✅ dist/kungfu assembled (interpreter tree + flat natives + ' +
       'trunk entry)',
   );
+}
+
+// Introspect the assembled click tree into the declarative help manifest the
+// trunk renders for `kungfu --help` without booting Python (ADR-0046 stage 4).
+// The manifest is generated from the live CLI (kungfu.cli.help_manifest), so it
+// is the single source of truth and cannot drift. Non-fatal: the trunk falls
+// back to the Python CLI help when the manifest is absent, so a generation
+// failure must not break the assemble.
+/** @param {string} pythonExe @param {string} distKfc */
+function generateHelpManifest(pythonExe, distKfc) {
+  const out = path.join(distKfc, 'help-manifest.txt');
+  try {
+    const text = cp.execFileSync(
+      pythonExe,
+      ['-m', 'kungfu.cli.help_manifest'],
+      { cwd: distKfc, encoding: 'utf8' },
+    );
+    fs.writeFileSync(out, text);
+    console.log('[freeze] assemble: staged help-manifest.txt');
+  } catch (e) {
+    console.error(
+      `[freeze] assemble: help manifest generation failed; the trunk will fall back to python --help: ${e.message}`,
+    );
+  }
 }
 
 // The product entry is the trunk binary installed under the name `kungfu`:
