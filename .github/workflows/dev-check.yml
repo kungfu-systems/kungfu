@@ -1,0 +1,68 @@
+# SPDX-License-Identifier: Apache-2.0
+
+# Dev Check
+#
+# A fast, build-free gate on development-mainline PRs. The heavy build+verify
+# only runs at alpha promotion, and the Dev Verify Patrol runs the full verify
+# once a day; this fills the gap in between for the cheapest regression class —
+# Python type and format errors — which need no native build to catch and so
+# can fail a PR in seconds instead of surfacing a day later on the patrol.
+#
+# Scope is deliberately narrow: mypy (the package is meant to stay error-clean;
+# see framework/core/pyproject.toml [tool.mypy]) and ruff format. Whole-tree
+# ruff lint (check:all) stays out until its baseline is clean, as the project
+# already documents. Slice, fixture, and qualification regressions need a build
+# and remain the patrol's job.
+
+name: Dev Check
+
+on:
+  pull_request:
+    branches:
+      - dev/v*/v*
+    paths:
+      - "framework/core/src/python/**"
+      - "framework/core/tests/python/**"
+      - "framework/core/pyproject.toml"
+      - "framework/core/uv.lock"
+      - ".uv-version"
+      - ".github/workflows/dev-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  python-check:
+    name: Python type + format
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: framework/core
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Read pinned uv version
+        id: uv
+        shell: bash
+        working-directory: .
+        run: echo "version=$(tr -d '\r\n' < .uv-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v8.3.2
+        with:
+          version: ${{ steps.uv.outputs.version }}
+
+      - name: Sync Python environment (frozen)
+        shell: bash
+        run: uv sync --frozen
+
+      - name: mypy (type baseline)
+        shell: bash
+        run: uv run --frozen mypy src/python/kungfu
+
+      - name: ruff format (check only)
+        shell: bash
+        run: uv run --frozen ruff format --check src/python tests/python
