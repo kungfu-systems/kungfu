@@ -67,14 +67,14 @@ jobs:
       matrix:
         include:
           - name: Linux x64
-            runner: '["self-hosted","Linux","X64","kungfu-build-v4-linux-x64"]'
-            source_mode: mirror
+            runner: '"ubuntu-22.04"'
+            source_mode: github
           - name: macOS ARM64
             runner: '"macos-15"'
             source_mode: github
           - name: Windows x64
-            runner: '["self-hosted","Windows","X64","kungfu-build-v4-windows-x64"]'
-            source_mode: mirror
+            runner: '"windows-2022"'
+            source_mode: github
     runs-on: ${{ fromJSON(matrix.runner) }}
     env:
       KUNGFU_BUILDCHAIN_NO_OPTIONAL: "1"
