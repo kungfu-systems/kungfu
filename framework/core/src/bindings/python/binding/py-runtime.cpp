@@ -103,6 +103,13 @@ template <typename T> py::object hana_view_to_py(const T &value) {
     return py::int_(static_cast<std::underlying_type_t<value_t>>(value));
   } else if constexpr (std::is_same_v<value_t, std::string>) {
     return py::str(value);
+  } else if constexpr (kungfu::is_array_of_v<value_t, char>) {
+    return py::str(value.value);
+  } else if constexpr (kungfu::is_array_of_others_v<value_t, char>) {
+    py::list result;
+    for (size_t index = 0; index < value_t::length; ++index)
+      result.append(hana_view_to_py(value[index]));
+    return result;
   } else if constexpr (kungfu::runtime::storage_binding::is_optional_v<value_t>) {
     return value.has_value() ? hana_view_to_py(*value) : py::none();
   } else if constexpr (kungfu::runtime::storage_binding::is_vector_v<value_t>) {
@@ -469,6 +476,23 @@ void bind(pybind11::module &&m) {
         return hana_view_to_py(storage_service_api::default_storage_service().status(request));
       },
       py::arg("runtime_dir"), py::arg("source_id") = py::none());
+  m.def(
+      "storage_query_typed",
+      [](const std::string &runtime_dir, const std::string &query, const std::optional<std::string> &source_id,
+         const std::optional<std::string> &entry_kind, uint64_t episode_id, uint64_t limit, const std::string &since,
+         const std::string &until) {
+        storage_service_api::storage_query_request request{};
+        request.runtime_dir = runtime_dir;
+        request.query = storage_service_api::parse_storage_query_kind(query);
+        request.source_id = source_id.value_or("");
+        request.entry_kind = entry_kind.value_or("");
+        request.episode_id = episode_id;
+        request.limit = limit;
+        request.range = {since, until};
+        return hana_view_to_py(storage_service_api::default_storage_service().query(request));
+      },
+      py::arg("runtime_dir"), py::arg("query"), py::arg("source_id") = py::none(), py::arg("entry_kind") = py::none(),
+      py::arg("episode_id") = 0, py::arg("limit") = 100, py::arg("since") = "", py::arg("until") = "");
   m.def(
       "make_storage_service_request",
       [](const std::string &operation, const std::string &runtime_dir, py::dict options) {

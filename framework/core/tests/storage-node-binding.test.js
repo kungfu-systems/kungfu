@@ -187,6 +187,12 @@ test(
     const runtimeDir = fs.mkdtempSync(
       path.join(os.tmpdir(), 'kf-typed-status-'),
     );
+    kungfu.runStorageServiceOperation('episode_begin', runtimeDir, {
+      episode_id: '701',
+      location_uid: 17,
+      title: 'typed-query',
+      actor: 'binding-test',
+    });
     const originalParse = JSON.parse;
     const originalStringify = JSON.stringify;
     try {
@@ -207,6 +213,12 @@ test(
         status.projections[0].verification.authority,
         'yijinjing-journal',
       );
+      const query = kungfu.storageQueryTyped(runtimeDir, 'episode_records', {
+        episode_id: 701n,
+      });
+      assert.equal(query.query, 4);
+      assert.equal(query.rows[0].body.title, 'typed-query');
+      assert.equal(query.rows[0].body.location_uid, 17);
     } finally {
       JSON.parse = originalParse;
       JSON.stringify = originalStringify;

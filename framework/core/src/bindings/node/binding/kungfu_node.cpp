@@ -239,6 +239,13 @@ template <typename T> Napi::Value HanaViewToValue(Napi::Env env, const T &value)
     return Napi::Number::New(env, static_cast<double>(static_cast<std::underlying_type_t<value_t>>(value)));
   } else if constexpr (std::is_same_v<value_t, std::string>) {
     return Napi::String::New(env, value);
+  } else if constexpr (kungfu::is_array_of_v<value_t, char>) {
+    return Napi::String::New(env, value.value);
+  } else if constexpr (kungfu::is_array_of_others_v<value_t, char>) {
+    auto result = Napi::Array::New(env, value_t::length);
+    for (size_t index = 0; index < value_t::length; ++index)
+      result.Set(index, HanaViewToValue(env, value[index]));
+    return result;
   } else if constexpr (runtime::storage_binding::is_optional_v<value_t>) {
     return value.has_value() ? HanaViewToValue(env, *value) : env.Null();
   } else if constexpr (runtime::storage_binding::is_vector_v<value_t>) {
@@ -267,6 +274,40 @@ Napi::Value StorageStatusTyped(const Napi::CallbackInfo &info) {
   if (IsValid(info, 1, &Napi::Value::IsString))
     request.source_id = info[1].As<Napi::String>().Utf8Value();
   return HanaViewToValue(info.Env(), runtime::storage_service_api::default_storage_service().status(request));
+}
+
+Napi::Value StorageQueryTyped(const Napi::CallbackInfo &info) {
+  if (!IsValid(info, 0, &Napi::Value::IsString) || !IsValid(info, 1, &Napi::Value::IsString)) {
+    throw Napi::TypeError::New(info.Env(), "storageQueryTyped(runtimeDir, query, options?)");
+  }
+  runtime::storage_service_api::storage_query_request request{};
+  request.runtime_dir = info[0].As<Napi::String>().Utf8Value();
+  request.query = runtime::storage_service_api::parse_storage_query_kind(info[1].As<Napi::String>().Utf8Value());
+  if (IsValid(info, 2, &Napi::Value::IsObject)) {
+    const auto options = info[2].As<Napi::Object>();
+    if (options.Has("source_id") && options.Get("source_id").IsString())
+      request.source_id = options.Get("source_id").As<Napi::String>().Utf8Value();
+    if (options.Has("entry_kind") && options.Get("entry_kind").IsString())
+      request.entry_kind = options.Get("entry_kind").As<Napi::String>().Utf8Value();
+    if (options.Has("episode_id")) {
+      const auto episode_id = options.Get("episode_id");
+      if (episode_id.IsBigInt()) {
+        bool lossless = false;
+        request.episode_id = episode_id.As<Napi::BigInt>().Uint64Value(&lossless);
+        if (!lossless)
+          throw Napi::RangeError::New(info.Env(), "episode_id must fit in an unsigned 64-bit integer");
+      } else {
+        request.episode_id = episode_id.ToNumber().Int64Value();
+      }
+    }
+    if (options.Has("limit"))
+      request.limit = options.Get("limit").ToNumber().Int64Value();
+    if (options.Has("since") && options.Get("since").IsString())
+      request.range.since = options.Get("since").As<Napi::String>().Utf8Value();
+    if (options.Has("until") && options.Get("until").IsString())
+      request.range.until = options.Get("until").As<Napi::String>().Utf8Value();
+  }
+  return HanaViewToValue(info.Env(), runtime::storage_service_api::default_storage_service().query(request));
 }
 
 Napi::Value StorageServiceCapabilities(const Napi::CallbackInfo &info) {
@@ -463,6 +504,7 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
   exports.Set("verifyContentHash", Napi::Function::New(env, VerifyContentHash));
   exports.Set("storageServiceCapabilities", Napi::Function::New(env, StorageServiceCapabilities));
   exports.Set("storageStatusTyped", Napi::Function::New(env, StorageStatusTyped));
+  exports.Set("storageQueryTyped", Napi::Function::New(env, StorageQueryTyped));
   exports.Set("makeStorageServiceRequest", Napi::Function::New(env, MakeStorageServiceRequest));
   exports.Set("runStorageServiceOperation", Napi::Function::New(env, RunStorageServiceOperation));
   exports.Set("acceptStorageManifest", Napi::Function::New(env, AcceptStorageManifest));

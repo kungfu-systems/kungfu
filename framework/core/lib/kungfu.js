@@ -85,6 +85,7 @@ module.exports = () => {
     parseTime: binding.parseTime,
     storageServiceCapabilities: binding.storageServiceCapabilities,
     storageStatusTyped: binding.storageStatusTyped,
+    storageQueryTyped: binding.storageQueryTyped,
     makeStorageServiceRequest: binding.makeStorageServiceRequest,
     runStorageServiceOperation: binding.runStorageServiceOperation,
     acceptStorageManifest: binding.acceptStorageManifest,

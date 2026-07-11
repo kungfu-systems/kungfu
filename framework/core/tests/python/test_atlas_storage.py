@@ -346,6 +346,14 @@ def test_storage_core_binding_owns_sync_root_and_payload_checks(tmp_path):
 
 def test_typed_storage_status_binding_bypasses_json_transport(tmp_path):
     runtime = kungfu.__binding__.runtime
+    runtime_dir = tmp_path / "runtime"
+    storage_service.episode_begin(
+        runtime_dir,
+        episode_id=701,
+        location_uid=17,
+        title="typed-query",
+        actor="binding-test",
+    )
     original_loads = json.loads
 
     def reject_json_transport(*_args, **_kwargs):
@@ -353,7 +361,10 @@ def test_typed_storage_status_binding_bypasses_json_transport(tmp_path):
 
     json.loads = reject_json_transport
     try:
-        status = runtime.storage_status_typed(str(tmp_path / "runtime"))
+        status = runtime.storage_status_typed(str(runtime_dir))
+        query = runtime.storage_query_typed(
+            str(runtime_dir), "episode_records", episode_id=701
+        )
     finally:
         json.loads = original_loads
 
@@ -363,6 +374,9 @@ def test_typed_storage_status_binding_bypasses_json_transport(tmp_path):
     assert status["provider_runtime"]["read_fill_cache"] is None
     assert isinstance(status["projections"], list)
     assert status["projections"][0]["verification"]["authority"] == "yijinjing-journal"
+    assert query["query"] == 4
+    assert query["rows"][0]["body"]["title"] == "typed-query"
+    assert query["rows"][0]["body"]["location_uid"] == 17
 
 
 def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
