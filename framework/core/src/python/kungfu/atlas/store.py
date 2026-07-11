@@ -286,7 +286,7 @@ class ImportStore:
                 self.runtime_dir, manifest["storage_manifest"]
             )
             self.emit_manifest()
-            storage_service.episode_end(
+            closed = storage_service.episode_end(
                 self.runtime_dir,
                 episode_id=episode_id,
                 location_uid=location_uid,
@@ -303,6 +303,36 @@ class ImportStore:
                 reason=f"{type(error).__name__}: {error}"[:256],
             )
             raise
+        content_root = closed.get("content_root", {})
+        import_episode_root = str(content_root.get("root_value") or "")
+        if import_episode_root and not import_episode_root.startswith("sha256:"):
+            import_episode_root = "sha256:" + import_episode_root
+        try:
+            from kungfu.atlas import mission_control
+
+            mission_control_receipt = mission_control.admit_import(
+                self.runtime_dir,
+                import_id=import_id,
+                import_episode_id=episode_id,
+                import_episode_root=import_episode_root,
+                repo_head=repo_head,
+                storage_source_id=storage_source_id,
+                entries=enriched_records,
+            )
+        except Exception as error:  # sealed import remains durable and inspectable
+            mission_control_receipt = {
+                "schema": "kungfu.mission-control.atlas-admission/v1",
+                "status": "failed",
+                "authority_mode": "atlas-bridge",
+                "import_id": import_id,
+                "import_episode_id": episode_id,
+                "import_episode_root": import_episode_root,
+                "error": f"{type(error).__name__}: {error}"[:512],
+            }
+            warnings.append(
+                "mission-control admission failed after sealed Atlas import: "
+                + mission_control_receipt["error"]
+            )
         return {
             "import_id": import_id,
             "episode_id": episode_id,
@@ -317,6 +347,7 @@ class ImportStore:
             "goals": len(goals),
             "markers": len(markers),
             "payloads": len(source_records),
+            "mission_control": mission_control_receipt,
             "warnings": warnings,
         }
 

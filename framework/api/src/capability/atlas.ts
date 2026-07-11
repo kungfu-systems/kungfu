@@ -51,6 +51,14 @@ export type AtlasImportResult = {
   missions: number;
   goals: number;
   markers: number;
+  mission_control?: {
+    status: string;
+    authority_mode: string;
+    admitted?: number;
+    already_present?: number;
+    import_episode_id?: number;
+    import_episode_root?: string;
+  };
   warnings: string[];
 };
 

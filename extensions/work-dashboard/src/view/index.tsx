@@ -198,8 +198,13 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
     }
     try {
       const result = atlas.importRepo(repoRoot);
+      const missionControl = result.mission_control;
       setMessage(
-        `imported ${result.missions} missions / ${result.goals} goals / ${result.markers} markers (${result.warnings.length} warning)`,
+        `imported ${result.missions} missions / ${result.goals} goals / ${result.markers} markers (${result.warnings.length} warning)${
+          missionControl
+            ? ` · Mission Control ${missionControl.status}: ${missionControl.admitted ?? 0} admitted / ${missionControl.already_present ?? 0} already present`
+            : ''
+        }`,
       );
       reload();
     } catch (e) {

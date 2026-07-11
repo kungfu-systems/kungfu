@@ -11,7 +11,8 @@ import kungfu
 import pytest
 
 from kungfu import runtime_service
-from kungfu.atlas import importer, payloads
+from kungfu.atlas import importer, mission_control, payloads
+from kungfu.atlas import store as atlas_store
 from kungfu.atlas import CARRIER_ATLAS_ACTION
 from kungfu.sources import store as source_store
 from kungfu.storage import service as storage_service
@@ -260,6 +261,67 @@ def test_atlas_source_records_filter_by_window(tmp_path):
     assert ("mission", "mission-b") in {
         (record["kind"], record["source_id"]) for record in source_records
     }
+
+
+def test_atlas_import_admits_mission_and_go_into_shared_fact_state(tmp_path):
+    repo = tmp_path / "atlas"
+    runtime_dir = tmp_path / "runtime"
+    _atlas_fixture(repo)
+
+    first = atlas_store.ImportStore(runtime_dir).run_import(str(repo))
+    admitted = first["mission_control"]
+    assert admitted["status"] == "admitted", admitted.get("error", admitted)
+    assert admitted["authority_mode"] == "atlas-bridge"
+    assert admitted["contract_world"] == {
+        "id": mission_control.CONTRACT_WORLD_ID,
+        "version": mission_control.CONTRACT_VERSION,
+    }
+    assert admitted["admitted"] == 2
+    assert admitted["already_present"] == 0
+    assert admitted["outcomes"] == {"admitted": 2}
+    assert admitted["import_episode_id"] == first["episode_id"]
+    assert admitted["import_episode_root"].startswith("sha256:")
+
+    state = storage_service.fact_state(runtime_dir)
+    assert len(state["canonical_facts"]) == 2
+    assert {row["fact_surface_id"] for row in state["canonical_facts"]} == {
+        mission_control.MISSION_SURFACE_ID,
+        mission_control.GO_SURFACE_ID,
+    }
+    material = storage_service.fact_material_list(runtime_dir)
+    bodies = list(material["payloads"].values())
+    assert {body["source"]["authority_mode"] for body in bodies} == {"atlas-bridge"}
+    assert {body["source"]["import_episode_root"] for body in bodies} == {
+        admitted["import_episode_root"]
+    }
+    goal_body = next(body for body in bodies if body["source"]["kind"] == "goal")
+    assert goal_body["links"] == {"mission_id": "atlas:mission-a"}
+    assert goal_body["record"]["goal_id"] == "goal-a"
+
+    second = atlas_store.ImportStore(runtime_dir).run_import(str(repo))
+    assert second["mission_control"]["status"] == "admitted"
+    assert second["mission_control"]["admitted"] == 0
+    assert second["mission_control"]["already_present"] == 2
+    assert len(storage_service.fact_state(runtime_dir)["canonical_facts"]) == 2
+
+    goal_path = repo / "agent-journal/goals/registry/active/goal-a.json"
+    changed = json.loads(goal_path.read_text(encoding="utf-8"))
+    changed["status"] = "ready"
+    changed["updated_at"] = "2026-07-09T00:00:00Z"
+    _write_json(goal_path, changed)
+    third = atlas_store.ImportStore(runtime_dir).run_import(str(repo))
+    assert third["mission_control"]["status"] == "admitted", third["mission_control"]
+    assert third["mission_control"]["admitted"] == 1
+    assert third["mission_control"]["already_present"] == 1
+    goal_material = storage_service.fact_material_list(
+        runtime_dir,
+        type_id=mission_control.GO_SURFACE_ID,
+        subject_key="atlas:goal-a",
+    )
+    latest = goal_material["state"]["canonical_facts"]
+    assert len(latest) == 1
+    latest_body = goal_material["payloads"][latest[0]["payload_hash"]]
+    assert latest_body["record"]["status"] == "ready"
 
 
 def test_atlas_range_export_preserves_context_closure(tmp_path):
