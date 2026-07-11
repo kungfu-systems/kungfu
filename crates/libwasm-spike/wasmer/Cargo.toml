@@ -23,6 +23,9 @@ wasmer-engine = []
 wasmer = { version = "=7.2.0", default-features = false, features = ["sys", "cranelift"] }
 wat = "1"
 
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "=0.61.2", features = ["Win32_System_ProcessStatus", "Win32_System_Threading"] }
+
 [profile.release]
 opt-level = 3
 lto = "thin"

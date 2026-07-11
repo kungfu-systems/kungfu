@@ -59,7 +59,7 @@ jobs:
 
   native-membrane:
     name: ${{ matrix.name }}
-    # Never execute untrusted fork code on the self-hosted build fleet.
+    # Keep executable source-delta handling restricted to same-repo PRs.
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     needs: source-delta
     strategy:
@@ -194,7 +194,7 @@ jobs:
           Set-Location $env:SOURCE_ROOT
           .\shifu.cmd --filter @kungfu-tech/core configure
 
-      - name: Build and run native membrane consumers
+      - name: Build and run membrane consumers
         shell: bash
         run: |
           cd "$SOURCE_ROOT"
@@ -221,8 +221,9 @@ jobs:
           # build runner.  This is one fixed settle, not a benchmark retry.
           sleep 60
           # shifu-entry-contract: allow the spike harness must inspect platform-specific binaries directly
-          node framework/core/slices/shared-embedding-membrane/run.mjs framework/core/build
           # shifu-entry-contract: allow the libwasm spike harness must inspect engine cdylibs directly
           node framework/core/slices/libwasm-shared-membrane/run.mjs framework/core/build
+          # shifu-entry-contract: allow the spike harness must inspect platform-specific binaries directly
+          node framework/core/slices/shared-embedding-membrane/run.mjs framework/core/build
           # shifu-entry-contract: allow the native closure harness must inspect platform-specific binaries directly
           node framework/core/slices/native-storage-closure/run.mjs framework/core/build
