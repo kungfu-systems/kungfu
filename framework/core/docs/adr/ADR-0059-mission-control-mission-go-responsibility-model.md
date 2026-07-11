@@ -162,8 +162,15 @@ private authority.
 3. Map the existing Atlas import envelopes into the declared fact world while
    preserving Atlas bridge authority and diagnostic raw observations.
 4. Add one proof-carrying Mission/Go state query at head and one exact cut.
+   **Implemented:** ADR-0048 now accepts the domain-neutral `fact-state` object,
+   bounded `subject_keys`, and exact `system_time` cuts over the admission
+   journal.
 5. Add one deterministic completion or reasonable-progress assessor and expose
    its TrustReport through CLI and Work Dashboard progressive disclosure.
+   **Implemented for reasonable progress:** the saved Mission Control profile
+   persists an ADR-0052 assessment and maps its state to an explicit
+   purpose-bound fitness view without treating Atlas self-report as universal
+   truth.
 6. Qualify the full path in a temporary data root, then expand GUI authoring and
    portable Mission bundles only from observed dogfood needs.
 
@@ -173,7 +180,9 @@ Go cards into the shared Fact Library under the `kungfu.mission-control` world.
 The admitted payload binds the Atlas source id/path/time, repository head,
 content hash, import id, and sealed Episode root. Admission failure cannot
 rewrite or abort the already sealed import and is returned as an explicit
-degraded receipt. Steps 4 and 5 remain the next product gate.
+degraded receipt. Steps 4 and 5 now form the first executable trust slice;
+completion and handoff policies remain later profiles requiring stronger
+independent evidence.
 
 ## Acceptance gates
 

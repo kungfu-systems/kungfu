@@ -20,7 +20,8 @@ export type QueryTemporalPattern = {
 export type QueryDefinition = {
   schema: 'kungfu.query.definition/v1';
   basis: Record<string, unknown>;
-  object: string;
+  object: 'episodes' | 'fact-state';
+  subject_keys?: string[];
   limit: number;
   evidence: string;
   temporal_pattern?: QueryTemporalPattern;

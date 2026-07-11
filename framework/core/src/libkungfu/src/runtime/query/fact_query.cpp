@@ -10,9 +10,11 @@
 #include <limits>
 #include <map>
 #include <regex>
+#include <set>
 #include <stdexcept>
 #include <string>
 
+#include <kungfu/runtime/facts/fact_admission.h>
 #include <kungfu/runtime/storage/episode_manifest_projection.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
 #include <kungfu/yijinjing/storage/episode_manifest.h>
@@ -145,6 +147,9 @@ nlohmann::json temporal_pattern_json(const temporal_pattern &pattern) {
 nlohmann::json cut_json(const cut &value) {
   if (value.kind == cut_kind::Head) {
     return {{"kind", "head"}};
+  }
+  if (value.kind == cut_kind::SystemTime) {
+    return {{"kind", "system_time"}, {"system_time", std::to_string(value.system_time)}};
   }
   return {{"kind", "manifest_frame_uid"}, {"manifest_frame_uid", std::to_string(value.manifest_frame_uid)}};
 }
@@ -342,6 +347,21 @@ result_schema temporal_match_result_schema() {
            {"evidence_refs", "array<object>", false}}};
 }
 
+result_schema fact_state_result_schema() {
+  return {QUERY_FACT_STATE_ROW_SCHEMA_V1,
+          {{"observation_id", "string", false},
+           {"contract_world_id", "string", false},
+           {"fact_surface_id", "string", false},
+           {"subject_key", "string", false},
+           {"source_id", "string", false},
+           {"payload_hash", "string", false},
+           {"payload_ref", "string", false},
+           {"valid_time", "object", false},
+           {"system_time", "int64", false},
+           {"episode_id", "uint64", false},
+           {"causal_parent_event_id", "string", true}}};
+}
+
 nlohmann::json resolved_cut_json(const yy_storage::episode_manifest_fold &fold) {
   if (fold.total_record_count == 0) {
     return {{"kind", "empty"}};
@@ -355,15 +375,33 @@ query_definition parse_query_definition(const nlohmann::json &value) {
   if (!value.is_object()) {
     throw std::invalid_argument("query definition must be an object");
   }
-  reject_unknown_fields(value, {"schema", "basis", "object", "limit", "evidence", "temporal_pattern"}, "definition");
+  reject_unknown_fields(value, {"schema", "basis", "object", "subject_keys", "limit", "evidence", "temporal_pattern"},
+                        "definition");
   query_definition definition;
   definition.schema = optional_text(value, "schema", QUERY_DEFINITION_SCHEMA_V1);
   if (definition.schema != QUERY_DEFINITION_SCHEMA_V1) {
     throw std::invalid_argument("unsupported query definition schema: " + definition.schema);
   }
   definition.object = optional_text(value, "object", "episodes");
-  if (definition.object != "episodes") {
-    throw std::invalid_argument("ADR-0048 Q0 supports only object=episodes");
+  if (definition.object != "episodes" && definition.object != "fact-state") {
+    throw std::invalid_argument("ADR-0048 supports only object=episodes or object=fact-state");
+  }
+  if (value.contains("subject_keys")) {
+    if (!value.at("subject_keys").is_array() || value.at("subject_keys").size() > 256) {
+      throw std::invalid_argument("definition.subject_keys must be an array with at most 256 entries");
+    }
+    for (const auto &item : value.at("subject_keys")) {
+      if (!item.is_string() || item.get<std::string>().empty() || item.get<std::string>().size() > 512) {
+        throw std::invalid_argument("definition.subject_keys entries must contain 1..512 bytes");
+      }
+      definition.subject_keys.push_back(item.get<std::string>());
+    }
+    std::sort(definition.subject_keys.begin(), definition.subject_keys.end());
+    definition.subject_keys.erase(std::unique(definition.subject_keys.begin(), definition.subject_keys.end()),
+                                  definition.subject_keys.end());
+  }
+  if (definition.object == "episodes" && !definition.subject_keys.empty()) {
+    throw std::invalid_argument("definition.subject_keys is supported only for object=fact-state");
   }
   definition.limit = optional_uint64(value, "limit", 100);
   if (definition.limit == 0 || definition.limit > 1000) {
@@ -455,29 +493,53 @@ query_definition parse_query_definition(const nlohmann::json &value) {
     const auto path = std::string("definition.basis.fact_surfaces[") + std::to_string(index) + "]";
     definition.basis.fact_surfaces.push_back(parse_declaration_reference(fact_surfaces.at(index), path.c_str()));
   }
-  definition.basis.scope = optional_text(basis, "scope", "episode-manifest");
-  if (definition.basis.scope != "episode-manifest") {
-    throw std::invalid_argument("ADR-0048 Q0 supports only scope=episode-manifest");
+  const auto expected_scope = definition.object == "episodes" ? "episode-manifest" : "domain-fact-ledger";
+  definition.basis.scope = optional_text(basis, "scope", expected_scope);
+  if (definition.basis.scope != expected_scope) {
+    throw std::invalid_argument("query basis scope does not match the selected object");
   }
   definition.basis.episode_id = optional_uint64(basis, "episode_id");
-  definition.basis.perspective = optional_text(basis, "perspective", "manifest-append-order");
-  if (definition.basis.perspective != "manifest-append-order") {
-    throw std::invalid_argument("ADR-0048 Q0 supports only perspective=manifest-append-order");
+  if (definition.object == "fact-state" && definition.basis.episode_id != 0) {
+    throw std::invalid_argument("object=fact-state does not accept basis.episode_id");
+  }
+  const auto expected_perspective =
+      definition.object == "episodes" ? "manifest-append-order" : "system-time-then-observation-id";
+  definition.basis.perspective = optional_text(basis, "perspective", expected_perspective);
+  if (definition.basis.perspective != expected_perspective) {
+    throw std::invalid_argument("query basis perspective does not match the selected object");
   }
 
   const auto selected_cut = basis.value("cut", nlohmann::json{{"kind", "head"}});
-  reject_unknown_fields(selected_cut, {"kind", "manifest_frame_uid"}, "definition.basis.cut");
+  reject_unknown_fields(selected_cut, {"kind", "manifest_frame_uid", "system_time"}, "definition.basis.cut");
   const auto cut_name = optional_text(selected_cut, "kind", "head");
   if (cut_name == "head") {
-    if (selected_cut.contains("manifest_frame_uid")) {
-      throw std::invalid_argument("head cut must not include manifest_frame_uid");
+    if (selected_cut.contains("manifest_frame_uid") || selected_cut.contains("system_time")) {
+      throw std::invalid_argument("head cut must not include a cut token");
     }
     definition.basis.selected_cut.kind = cut_kind::Head;
   } else if (cut_name == "manifest_frame_uid") {
+    if (definition.object != "episodes") {
+      throw std::invalid_argument("manifest_frame_uid cuts are supported only for object=episodes");
+    }
     definition.basis.selected_cut.kind = cut_kind::ManifestFrameUid;
     definition.basis.selected_cut.manifest_frame_uid = optional_uint64(selected_cut, "manifest_frame_uid");
     if (definition.basis.selected_cut.manifest_frame_uid == 0) {
       throw std::invalid_argument("manifest_frame_uid cut requires a non-zero token");
+    }
+    if (selected_cut.contains("system_time")) {
+      throw std::invalid_argument("manifest_frame_uid cut must not include system_time");
+    }
+  } else if (cut_name == "system_time") {
+    if (definition.object != "fact-state" || !selected_cut.contains("system_time")) {
+      throw std::invalid_argument("system_time cuts require object=fact-state and a system_time token");
+    }
+    definition.basis.selected_cut.kind = cut_kind::SystemTime;
+    definition.basis.selected_cut.system_time = int64_value(selected_cut.at("system_time"), "cut.system_time");
+    if (definition.basis.selected_cut.system_time <= 0) {
+      throw std::invalid_argument("system_time cut requires a positive token");
+    }
+    if (selected_cut.contains("manifest_frame_uid")) {
+      throw std::invalid_argument("system_time cut must not include manifest_frame_uid");
     }
   } else {
     throw std::invalid_argument("unsupported query cut: " + cut_name);
@@ -495,7 +557,11 @@ query_definition parse_query_definition(const nlohmann::json &value) {
   definition.basis.valid_time = optional_text(time_basis, "valid_time", definition.basis.valid_time);
   definition.basis.system_time = optional_text(time_basis, "system_time", definition.basis.system_time);
   definition.basis.causal_time = optional_text(time_basis, "causal_time", definition.basis.causal_time);
-  const query_policy supported_policy{};
+  const query_policy supported_policy =
+      definition.object == "episodes"
+          ? query_policy{}
+          : query_policy{"latest-admitted-per-source/v1", "kungfu.facts.domain-fact-event/v1", "fact-authority-scan/v1",
+                         "preserve-source-claims/v1", "hash-and-ref/v1"};
   if (definition.basis.policy.fold != supported_policy.fold ||
       definition.basis.policy.schema != supported_policy.schema ||
       definition.basis.policy.engine != supported_policy.engine ||
@@ -503,11 +569,19 @@ query_definition parse_query_definition(const nlohmann::json &value) {
       definition.basis.policy.redaction != supported_policy.redaction) {
     throw std::invalid_argument("unsupported ADR-0048 Q0 policy version");
   }
-  const query_basis supported_basis{};
+  const query_basis supported_basis =
+      definition.object == "episodes"
+          ? query_basis{}
+          : query_basis{
+                {},         {},      "domain-fact-ledger", 0, "system-time-then-observation-id", {}, supported_policy,
+                "explicit", "event", "event-parent"};
   if (definition.basis.valid_time != supported_basis.valid_time ||
       definition.basis.system_time != supported_basis.system_time ||
       definition.basis.causal_time != supported_basis.causal_time) {
     throw std::invalid_argument("unsupported ADR-0048 Q0 time basis");
+  }
+  if (definition.has_temporal_pattern && definition.object != "episodes") {
+    throw std::invalid_argument("temporal pattern requires object=episodes");
   }
   if (definition.has_temporal_pattern && definition.basis.episode_id != 0) {
     throw std::invalid_argument("temporal pattern requires basis.episode_id=0 so the partition can span Episodes");
@@ -538,6 +612,9 @@ nlohmann::json query_definition_json(const query_definition &definition) {
                           {"object", normalized.object},
                           {"limit", normalized.limit},
                           {"evidence", normalized.evidence}};
+  if (!normalized.subject_keys.empty()) {
+    value["subject_keys"] = normalized.subject_keys;
+  }
   if (normalized.has_temporal_pattern) {
     value["temporal_pattern"] = temporal_pattern_json(normalized.pattern);
   }
@@ -549,7 +626,9 @@ logical_plan plan_query(const query_definition &definition) {
   plan.definition = definition;
   normalize_declaration_basis(plan.definition.basis);
   const auto &normalized = plan.definition;
-  plan.row_schema = normalized.has_temporal_pattern ? temporal_match_result_schema() : episode_result_schema();
+  plan.row_schema = normalized.object == "fact-state"
+                        ? fact_state_result_schema()
+                        : (normalized.has_temporal_pattern ? temporal_match_result_schema() : episode_result_schema());
   plan.query_definition_hash = json_hash(query_definition_json(normalized));
   auto fact_surfaces = nlohmann::json::array();
   for (const auto &surface : normalized.basis.fact_surfaces) {
@@ -572,10 +651,16 @@ logical_plan plan_query(const query_definition &definition) {
         {"filter",
          {{"field", "episode_id"}, {"operator", "eq"}, {"value", std::to_string(normalized.basis.episode_id)}}});
   }
+  if (!normalized.subject_keys.empty()) {
+    plan.operators.push_back(
+        {"filter", {{"field", "subject_key"}, {"operator", "in"}, {"values", normalized.subject_keys}}});
+  }
   if (normalized.has_temporal_pattern) {
     plan.operators.push_back({"temporal_match", temporal_pattern_json(normalized.pattern)});
-  } else {
+  } else if (normalized.object == "episodes") {
     plan.operators.push_back({"order", {{"field", "episode_id"}, {"direction", "asc"}}});
+  } else {
+    plan.operators.push_back({"order", {{"field", "observation_id"}, {"direction", "asc"}}});
   }
   plan.operators.push_back({"limit", {{"count", normalized.limit}}});
   auto projected_fields = nlohmann::json::array();
@@ -660,63 +745,65 @@ nlohmann::json logical_plan_json(const logical_plan &plan) {
 nlohmann::json query_capabilities_json() {
   const auto contract_world = episode_contract_world_reference();
   const auto fact_surface = episode_fact_surface_reference();
-  return {{"schema", QUERY_CAPABILITIES_SCHEMA_V1},
-          {"query_definition_schema", QUERY_DEFINITION_SCHEMA_V1},
-          {"logical_plan_schema", LOGICAL_PLAN_SCHEMA_V1},
-          {"objects", nlohmann::json::array({"episodes"})},
-          {"operators", nlohmann::json::array(
-                            {"authority_scan", "filter", "order", "temporal_match", "limit", "project", "evidence"})},
-          {"cuts", nlohmann::json::array({"head", "manifest_frame_uid"})},
-          {"admission_outcomes", nlohmann::json::array({"admitted", "unregistered-surface", "incompatible-schema",
-                                                        "ambiguous-authority", "unverifiable"})},
-          {"builtin_declarations",
-           {{"contract_world",
-             {{"reference", declaration_reference_json(contract_world)},
-              {"declaration", episode_contract_world_declaration_payload()}}},
-            {"fact_surfaces", nlohmann::json::array({{{"reference", declaration_reference_json(fact_surface)},
-                                                      {"declaration", episode_fact_surface_declaration_payload()}}})}}},
-          {"formats", nlohmann::json::array({"json", "ndjson", "tsv"})},
-          {"frontends", nlohmann::json::array({"query-definition", "bounded-sql"})},
-          {"continuous",
-           {{"schema", QUERY_CHANGELOG_SCHEMA_V1},
-            {"resume_token_schema", QUERY_RESUME_TOKEN_SCHEMA_V1},
-            {"messages", nlohmann::json::array({"SnapshotBegin", "RowUpsert", "RowRetract", "Progress", "SchemaChange",
-                                                "SnapshotEnd", "Gap"})},
-            {"ordering", "batch-index"},
-            {"replay", "message-idempotent"},
-            {"backpressure", "bounded-pages"}}},
-          {"saved_view_schema", QUERY_VIEW_SCHEMA_V1},
-          {"temporal_patterns",
-           {{"schema", QUERY_TEMPORAL_PATTERN_SCHEMA_V1},
-            {"partition", "one field"},
-            {"order", "one explicit time field"},
-            {"sequence_steps", 2},
-            {"sequence_semantics", "ordered-subsequence"},
-            {"repeat", "1..16"},
-            {"within", "1ns..30d"},
-            {"absence", "optional, closed by explicit as_of_time"},
-            {"unsupported",
-             nlohmann::json::array({"alternation", "nested patterns", "unbounded waits", "inferred causality"})}}},
-          {"sql",
-           {{"object", "episodes"},
-            {"accepted", nlohmann::json::array(
-                             {"SELECT * FROM episodes",
-                              "SELECT * FROM episodes WHERE episode_id = <u64> ORDER BY episode_id ASC LIMIT <1..1000>",
-                              "SELECT * FROM episodes MATCH_RECOGNIZE (PARTITION BY <field> ORDER BY <field> ASC "
-                              "PATTERN ((A B){<1..16>,<1..16>}) DEFINE A AS <field> = '<value>', B AS <field> = "
-                              "'<value>' WITHIN <ns> AS OF <ns> [ABSENT <field> = '<value>']) [LIMIT <1..1000>]"})},
-            {"rejected",
-             nlohmann::json::array({"column projections", "joins", "subqueries", "OR", "non-equality predicates",
-                                    "descending order", "pattern alternation", "nested or unbounded patterns"})},
-            {"basis_owner", "QueryDefinition"}}},
-          {"execution_engines", nlohmann::json::array({"episode-authority-scan/v1", "episode-sqlite-projection/v1"})},
-          {"commands", nlohmann::json::array({"capabilities", "schema", "describe", "examples", "compile-sql",
-                                              "validate", "explain", "prove", "changelog", "saved-view", "saved"})},
-          {"limits", {{"minimum", 1}, {"maximum", 1000}}},
-          {"error_codes",
-           nlohmann::json::array({"KF_QUERY_INPUT", "KF_QUERY_VALIDATION", "KF_QUERY_EXECUTION", "KF_QUERY_OUTPUT",
-                                  "KF_QUERY_CHANGELOG", "KF_QUERY_VIEW", "KF_SAVED_QUERY", "KF_SAVED_QUERY_RUN"})},
-          {"physical_plan", {{"public", false}, {"reason", "engine-private-and-replaceable"}}}};
+  return {
+      {"schema", QUERY_CAPABILITIES_SCHEMA_V1},
+      {"query_definition_schema", QUERY_DEFINITION_SCHEMA_V1},
+      {"logical_plan_schema", LOGICAL_PLAN_SCHEMA_V1},
+      {"objects", nlohmann::json::array({"episodes", "fact-state"})},
+      {"operators",
+       nlohmann::json::array({"authority_scan", "filter", "order", "temporal_match", "limit", "project", "evidence"})},
+      {"cuts", nlohmann::json::array({"head", "manifest_frame_uid", "system_time"})},
+      {"admission_outcomes", nlohmann::json::array({"admitted", "unregistered-surface", "incompatible-schema",
+                                                    "ambiguous-authority", "unverifiable"})},
+      {"builtin_declarations",
+       {{"contract_world",
+         {{"reference", declaration_reference_json(contract_world)},
+          {"declaration", episode_contract_world_declaration_payload()}}},
+        {"fact_surfaces", nlohmann::json::array({{{"reference", declaration_reference_json(fact_surface)},
+                                                  {"declaration", episode_fact_surface_declaration_payload()}}})}}},
+      {"formats", nlohmann::json::array({"json", "ndjson", "tsv"})},
+      {"frontends", nlohmann::json::array({"query-definition", "bounded-sql"})},
+      {"continuous",
+       {{"schema", QUERY_CHANGELOG_SCHEMA_V1},
+        {"resume_token_schema", QUERY_RESUME_TOKEN_SCHEMA_V1},
+        {"messages", nlohmann::json::array({"SnapshotBegin", "RowUpsert", "RowRetract", "Progress", "SchemaChange",
+                                            "SnapshotEnd", "Gap"})},
+        {"ordering", "batch-index"},
+        {"replay", "message-idempotent"},
+        {"backpressure", "bounded-pages"}}},
+      {"saved_view_schema", QUERY_VIEW_SCHEMA_V1},
+      {"temporal_patterns",
+       {{"schema", QUERY_TEMPORAL_PATTERN_SCHEMA_V1},
+        {"partition", "one field"},
+        {"order", "one explicit time field"},
+        {"sequence_steps", 2},
+        {"sequence_semantics", "ordered-subsequence"},
+        {"repeat", "1..16"},
+        {"within", "1ns..30d"},
+        {"absence", "optional, closed by explicit as_of_time"},
+        {"unsupported",
+         nlohmann::json::array({"alternation", "nested patterns", "unbounded waits", "inferred causality"})}}},
+      {"sql",
+       {{"object", "episodes"},
+        {"accepted", nlohmann::json::array(
+                         {"SELECT * FROM episodes",
+                          "SELECT * FROM episodes WHERE episode_id = <u64> ORDER BY episode_id ASC LIMIT <1..1000>",
+                          "SELECT * FROM episodes MATCH_RECOGNIZE (PARTITION BY <field> ORDER BY <field> ASC "
+                          "PATTERN ((A B){<1..16>,<1..16>}) DEFINE A AS <field> = '<value>', B AS <field> = "
+                          "'<value>' WITHIN <ns> AS OF <ns> [ABSENT <field> = '<value>']) [LIMIT <1..1000>]"})},
+        {"rejected",
+         nlohmann::json::array({"column projections", "joins", "subqueries", "OR", "non-equality predicates",
+                                "descending order", "pattern alternation", "nested or unbounded patterns"})},
+        {"basis_owner", "QueryDefinition"}}},
+      {"execution_engines",
+       nlohmann::json::array({"episode-authority-scan/v1", "episode-sqlite-projection/v1", "fact-authority-scan/v1"})},
+      {"commands", nlohmann::json::array({"capabilities", "schema", "describe", "examples", "compile-sql", "validate",
+                                          "explain", "prove", "changelog", "saved-view", "saved"})},
+      {"limits", {{"minimum", 1}, {"maximum", 1000}}},
+      {"error_codes",
+       nlohmann::json::array({"KF_QUERY_INPUT", "KF_QUERY_VALIDATION", "KF_QUERY_EXECUTION", "KF_QUERY_OUTPUT",
+                              "KF_QUERY_CHANGELOG", "KF_QUERY_VIEW", "KF_SAVED_QUERY", "KF_SAVED_QUERY_RUN"})},
+      {"physical_plan", {{"public", false}, {"reason", "engine-private-and-replaceable"}}}};
 }
 
 nlohmann::json query_definition_schema_json() {
@@ -741,21 +828,32 @@ nlohmann::json query_definition_schema_json() {
                         {"manifest_frame_uid",
                          {{"oneOf", nlohmann::json::array({{{"type", "integer"}, {"minimum", 1}},
                                                            {{"type", "string"}, {"pattern", "^[1-9][0-9]*$"}}})}}}}},
+                      {"additionalProperties", false}},
+                     {{"type", "object"},
+                      {"required", nlohmann::json::array({"kind", "system_time"})},
+                      {"properties",
+                       {{"kind", {{"const", "system_time"}}},
+                        {"system_time",
+                         {{"oneOf", nlohmann::json::array({{{"type", "integer"}, {"minimum", 1}},
+                                                           {{"type", "string"}, {"pattern", "^[1-9][0-9]*$"}}})}}}}},
                       {"additionalProperties", false}}})}};
-  const auto policy_schema = nlohmann::json{{"type", "object"},
-                                            {"properties",
-                                             {{"fold", {{"const", "episode-manifest-fold/v1"}}},
-                                              {"schema", {{"const", "kungfu.episode.manifest/v1"}}},
-                                              {"engine", {{"const", "episode-authority-scan/v1"}}},
-                                              {"conflict", {{"const", "preserve-source-claims/v1"}}},
-                                              {"redaction", {{"const", "report-missing-evidence/v1"}}}}},
-                                            {"additionalProperties", false}};
-  const auto time_basis_schema = nlohmann::json{{"type", "object"},
-                                                {"properties",
-                                                 {{"valid_time", {{"const", "not-projected"}}},
-                                                  {"system_time", {{"const", "manifest-gen-time"}}},
-                                                  {"causal_time", {{"const", "manifest-order-and-episode-refs"}}}}},
-                                                {"additionalProperties", false}};
+  const auto policy_schema = nlohmann::json{
+      {"type", "object"},
+      {"properties",
+       {{"fold", {{"enum", nlohmann::json::array({"episode-manifest-fold/v1", "latest-admitted-per-source/v1"})}}},
+        {"schema",
+         {{"enum", nlohmann::json::array({"kungfu.episode.manifest/v1", "kungfu.facts.domain-fact-event/v1"})}}},
+        {"engine", {{"enum", nlohmann::json::array({"episode-authority-scan/v1", "fact-authority-scan/v1"})}}},
+        {"conflict", {{"const", "preserve-source-claims/v1"}}},
+        {"redaction", {{"enum", nlohmann::json::array({"report-missing-evidence/v1", "hash-and-ref/v1"})}}}}},
+      {"additionalProperties", false}};
+  const auto time_basis_schema = nlohmann::json{
+      {"type", "object"},
+      {"properties",
+       {{"valid_time", {{"enum", nlohmann::json::array({"not-projected", "explicit"})}}},
+        {"system_time", {{"enum", nlohmann::json::array({"manifest-gen-time", "event"})}}},
+        {"causal_time", {{"enum", nlohmann::json::array({"manifest-order-and-episode-refs", "event-parent"})}}}}},
+      {"additionalProperties", false}};
   const auto event_predicate_schema = nlohmann::json{
       {"type", "object"},
       {"required", nlohmann::json::array({"field", "equals"})},
@@ -792,37 +890,50 @@ nlohmann::json query_definition_schema_json() {
                         {{{"type", "integer"}, {"minimum", 1}}, {{"type", "string"}, {"pattern", "^[1-9][0-9]*$"}}})}}},
         {"absence", event_predicate_schema}}},
       {"additionalProperties", false}};
-  return {{"$schema", "https://json-schema.org/draft/2020-12/schema"},
-          {"$id", QUERY_DEFINITION_SCHEMA_V1},
-          {"title", "Kungfu QueryDefinition"},
-          {"type", "object"},
-          {"required", nlohmann::json::array({"schema", "basis", "object"})},
+  return {
+      {"$schema", "https://json-schema.org/draft/2020-12/schema"},
+      {"$id", QUERY_DEFINITION_SCHEMA_V1},
+      {"title", "Kungfu QueryDefinition"},
+      {"type", "object"},
+      {"required", nlohmann::json::array({"schema", "basis", "object"})},
+      {"properties",
+       {{"schema", {{"const", QUERY_DEFINITION_SCHEMA_V1}}},
+        {"basis",
+         {{"type", "object"},
+          {"required", nlohmann::json::array({"contract_world", "fact_surfaces", "scope", "perspective", "cut"})},
           {"properties",
-           {{"schema", {{"const", QUERY_DEFINITION_SCHEMA_V1}}},
-            {"basis",
-             {{"type", "object"},
-              {"required", nlohmann::json::array({"contract_world", "fact_surfaces", "scope", "perspective", "cut"})},
-              {"properties",
-               {{"contract_world", declaration_reference_schema},
-                {"fact_surfaces",
-                 {{"type", "array"}, {"minItems", 1}, {"maxItems", 16}, {"items", declaration_reference_schema}}},
-                {"scope", {{"const", "episode-manifest"}}},
-                {"episode_id",
-                 {{"oneOf", nlohmann::json::array({{{"type", "integer"}, {"minimum", 0}},
-                                                   {{"type", "string"}, {"pattern", "^[0-9]+$"}}})}}},
-                {"perspective", {{"const", "manifest-append-order"}}},
-                {"cut", cut_schema},
-                {"policy", policy_schema},
-                {"time_basis", time_basis_schema}}},
-              {"additionalProperties", false}}},
-            {"object", {{"const", "episodes"}}},
-            {"limit", {{"type", "integer"}, {"minimum", 1}, {"maximum", 1000}}},
-            {"evidence", {{"const", "proof"}}},
-            {"temporal_pattern", temporal_pattern_schema}}},
-          {"additionalProperties", false}};
+           {{"contract_world", declaration_reference_schema},
+            {"fact_surfaces",
+             {{"type", "array"}, {"minItems", 1}, {"maxItems", 16}, {"items", declaration_reference_schema}}},
+            {"scope", {{"enum", nlohmann::json::array({"episode-manifest", "domain-fact-ledger"})}}},
+            {"episode_id",
+             {{"oneOf", nlohmann::json::array(
+                            {{{"type", "integer"}, {"minimum", 0}}, {{"type", "string"}, {"pattern", "^[0-9]+$"}}})}}},
+            {"perspective",
+             {{"enum", nlohmann::json::array({"manifest-append-order", "system-time-then-observation-id"})}}},
+            {"cut", cut_schema},
+            {"policy", policy_schema},
+            {"time_basis", time_basis_schema}}},
+          {"additionalProperties", false}}},
+        {"object", {{"enum", nlohmann::json::array({"episodes", "fact-state"})}}},
+        {"subject_keys",
+         {{"type", "array"}, {"maxItems", 256}, {"items", {{"type", "string"}, {"minLength", 1}, {"maxLength", 512}}}}},
+        {"limit", {{"type", "integer"}, {"minimum", 1}, {"maximum", 1000}}},
+        {"evidence", {{"const", "proof"}}},
+        {"temporal_pattern", temporal_pattern_schema}}},
+      {"additionalProperties", false}};
 }
 
 nlohmann::json query_object_description_json(const std::string &object) {
+  if (object == "fact-state") {
+    return {{"schema", "kungfu.query.object-description/v1"},
+            {"object", "fact-state"},
+            {"authority", "yijinjing domain fact admission journal"},
+            {"result_schema", result_schema_json(fact_state_result_schema())},
+            {"basis_filter", "subject_keys"},
+            {"canonical_order", nlohmann::json{{"field", "observation_id"}, {"direction", "asc"}}},
+            {"supported_cuts", nlohmann::json::array({"head", "system_time"})}};
+  }
   if (object != "episodes") {
     throw std::invalid_argument("unsupported query object: " + object);
   }
@@ -853,6 +964,20 @@ nlohmann::json query_examples_json() {
   attention_definition.pattern.as_of_time = 7200000000000LL;
   attention_definition.pattern.has_absence = true;
   attention_definition.pattern.absence = {"title", "stable_published"};
+  auto fact_state_definition = head_definition;
+  fact_state_definition.object = "fact-state";
+  fact_state_definition.subject_keys = {"atlas:mission-example", "atlas:goal-example"};
+  fact_state_definition.basis.contract_world = {"example.world", "1", json_hash({{"id", "example.world"}})};
+  fact_state_definition.basis.fact_surfaces = {
+      {"example.world.mission", "1", json_hash({{"id", "example.world.mission"}})},
+      {"example.world.go", "1", json_hash({{"id", "example.world.go"}})}};
+  fact_state_definition.basis.scope = "domain-fact-ledger";
+  fact_state_definition.basis.perspective = "system-time-then-observation-id";
+  fact_state_definition.basis.policy = {"latest-admitted-per-source/v1", "kungfu.facts.domain-fact-event/v1",
+                                        "fact-authority-scan/v1", "preserve-source-claims/v1", "hash-and-ref/v1"};
+  fact_state_definition.basis.valid_time = "explicit";
+  fact_state_definition.basis.system_time = "event";
+  fact_state_definition.basis.causal_time = "event-parent";
   return {{"schema", "kungfu.query.examples/v1"},
           {"examples",
            nlohmann::json::array(
@@ -860,7 +985,10 @@ nlohmann::json query_examples_json() {
                 {{"name", "episode-historical-cut"}, {"definition", query_definition_json(historical_definition)}},
                 {{"name", "buildchain-release-attention"},
                  {"definition", query_definition_json(attention_definition)},
-                 {"interpretation", "recorded temporal qualification, not inferred causality"}}})}};
+                 {"interpretation", "recorded temporal qualification, not inferred causality"}},
+                {{"name", "declared-fact-state"},
+                 {"definition", query_definition_json(fact_state_definition)},
+                 {"interpretation", "canonical admitted fact state for a bounded subject set"}}})}};
 }
 
 nlohmann::json query_result_json(const query_result &result) {
@@ -880,6 +1008,10 @@ nlohmann::json query_result_json(const query_result &result) {
   for (const auto &item : result.proof.unverifiable_inputs) {
     unverifiable.push_back(item);
   }
+  auto conflicts = nlohmann::json::array();
+  for (const auto &item : result.proof.conflicts) {
+    conflicts.push_back(item);
+  }
   auto fact_surfaces = nlohmann::json::array();
   for (const auto &surface : result.proof.fact_surface_declarations) {
     fact_surfaces.push_back(declaration_reference_json(surface));
@@ -888,6 +1020,24 @@ nlohmann::json query_result_json(const query_result &result) {
   for (const auto &outcome : result.proof.admission_outcomes) {
     admission_outcomes.push_back(admission_evidence_json(outcome));
   }
+  const auto lineage = nlohmann::json{
+      {"schema", result.proof.schema},
+      {"query_definition_hash", result.proof.query_definition_hash},
+      {"logical_plan_hash", result.proof.logical_plan_hash},
+      {"authority", result.proof.authority},
+      {"cut", result.proof.cut},
+      {"policy_versions", result.proof.policy_versions},
+      {"time_basis", result.proof.time_basis},
+      {"execution", result.proof.execution},
+      {"determinism", result.proof.determinism},
+      {"canonical_state", result.proof.canonical_state},
+      {"contract_world_declaration", declaration_reference_json(result.proof.contract_world_declaration)},
+      {"fact_surface_declarations", fact_surfaces},
+      {"admission_outcomes", admission_outcomes},
+      {"episode_content_roots", roots},
+      {"missing_inputs", missing},
+      {"unverifiable_inputs", unverifiable},
+      {"conflicts", conflicts}};
   return {{"schema", result.schema},
           {"definition", query_definition_json(result.definition)},
           {"logical_plan", logical_plan_json(result.plan)},
@@ -895,23 +1045,9 @@ nlohmann::json query_result_json(const query_result &result) {
           {"rows", rows},
           {"row_count", rows.size()},
           {"result_hash", result.result_hash},
-          {"lineage",
-           {{"schema", result.proof.schema},
-            {"query_definition_hash", result.proof.query_definition_hash},
-            {"logical_plan_hash", result.proof.logical_plan_hash},
-            {"authority", result.proof.authority},
-            {"cut", result.proof.cut},
-            {"policy_versions", result.proof.policy_versions},
-            {"time_basis", result.proof.time_basis},
-            {"execution", result.proof.execution},
-            {"determinism", result.proof.determinism},
-            {"canonical_state", result.proof.canonical_state},
-            {"contract_world_declaration", declaration_reference_json(result.proof.contract_world_declaration)},
-            {"fact_surface_declarations", fact_surfaces},
-            {"admission_outcomes", admission_outcomes},
-            {"episode_content_roots", roots},
-            {"missing_inputs", missing},
-            {"unverifiable_inputs", unverifiable}}}};
+          {"query_definition_root", result.proof.query_definition_hash},
+          {"query_proof_root", json_hash(lineage)},
+          {"lineage", lineage}};
 }
 
 namespace {
@@ -1591,6 +1727,165 @@ query_result run_episode_authority_scan(const std::string &runtime_dir, const lo
                         ? store.fold_typed_records()
                         : store.fold_typed_records_until(definition.basis.selected_cut.manifest_frame_uid);
   return run_episode_fold(plan, fold, {{"engine", "episode-authority-scan/v1"}, {"source", "journal"}});
+}
+
+query_result run_fact_state_authority_scan(const std::string &runtime_dir, const logical_plan &plan) {
+  const auto &definition = plan.definition;
+  if (definition.object != "fact-state") {
+    throw std::invalid_argument("fact-state authority scan requires object=fact-state");
+  }
+  const auto cut_system_time =
+      definition.basis.selected_cut.kind == cut_kind::SystemTime ? definition.basis.selected_cut.system_time : 0;
+  const auto state = facts::query_fact_state(runtime_dir, cut_system_time);
+  const auto resolved_cut = int64_value(state.at("cut").at("system_time"), "state.cut.system_time");
+  const std::set<std::string> selected_subjects(definition.subject_keys.begin(), definition.subject_keys.end());
+  std::set<std::string> selected_surfaces;
+  for (const auto &surface : definition.basis.fact_surfaces) {
+    selected_surfaces.insert(surface.id);
+  }
+  const auto selected = [&](const nlohmann::json &row) {
+    return optional_text(row, "contract_world_id") == definition.basis.contract_world.id &&
+           selected_surfaces.contains(optional_text(row, "fact_surface_id")) &&
+           (selected_subjects.empty() || selected_subjects.contains(optional_text(row, "subject_key")));
+  };
+
+  query_result result;
+  result.definition = definition;
+  result.plan = plan;
+  result.row_schema = plan.row_schema;
+  result.proof.query_definition_hash = plan.query_definition_hash;
+  result.proof.logical_plan_hash = plan.logical_plan_hash;
+  result.proof.contract_world_declaration = definition.basis.contract_world;
+  result.proof.fact_surface_declarations = definition.basis.fact_surfaces;
+  result.proof.cut = {
+      {"declared", cut_json(definition.basis.selected_cut)}, {"resolved", state.at("cut")}, {"inclusive", true}};
+  result.proof.policy_versions = policy_json(definition.basis.policy);
+  result.proof.time_basis = {{"valid_time", definition.basis.valid_time},
+                             {"system_time", definition.basis.system_time},
+                             {"causal_time", definition.basis.causal_time}};
+  result.proof.execution = {{"engine", "fact-authority-scan/v1"}, {"source", "journal"}};
+
+  uint64_t selected_history_count = 0;
+  std::map<std::string, uint64_t> outcome_counts;
+  for (const auto &row : state.at("observation_history")) {
+    if (!selected(row)) {
+      continue;
+    }
+    ++selected_history_count;
+    ++outcome_counts[optional_text(row, "outcome", "unverifiable")];
+  }
+  result.proof.authority = {{"kind", "yijinjing-journal"},
+                            {"schema", facts::DOMAIN_FACT_EVENT_SCHEMA_V1},
+                            {"record_count", state.at("proof").at("record_count")},
+                            {"selected_observation_count", selected_history_count}};
+
+  const auto declaration_effective = [resolved_cut](const nlohmann::json &declaration) {
+    const auto from = int64_value(declaration.at("effective_from"), "declaration.effective_from");
+    const auto until = int64_value(declaration.at("effective_until"), "declaration.effective_until");
+    return resolved_cut >= from && (until == 0 || resolved_cut < until);
+  };
+  const auto reference_matches = [&](const declaration_reference &reference, const nlohmann::json &catalog) {
+    uint64_t exact = 0;
+    uint64_t identity = 0;
+    for (const auto &entry : catalog) {
+      if (optional_text(entry, "id") != reference.id || optional_text(entry, "version") != reference.version ||
+          !declaration_effective(entry)) {
+        continue;
+      }
+      ++identity;
+      if (optional_text(entry, "root") == reference.root) {
+        ++exact;
+      }
+    }
+    return std::pair{exact, identity};
+  };
+  bool declarations_admitted = true;
+  const auto &catalog = state.at("catalog");
+  const auto [world_exact, world_identity] =
+      reference_matches(definition.basis.contract_world, catalog.at("contract_worlds"));
+  if (world_exact != 1) {
+    declarations_admitted = false;
+    result.proof.unverifiable_inputs.push_back(
+        {{"kind", "contract-world-declaration"},
+         {"id", definition.basis.contract_world.id},
+         {"reason", world_identity == 0 ? "unregistered-or-ineffective" : "root-mismatch-or-ambiguous"}});
+  }
+  for (const auto &surface : definition.basis.fact_surfaces) {
+    const auto [exact, identity] = reference_matches(surface, catalog.at("fact_surfaces"));
+    const auto row_count = static_cast<uint64_t>(
+        std::count_if(state.at("canonical_facts").begin(), state.at("canonical_facts").end(), [&](const auto &row) {
+          return selected(row) && optional_text(row, "fact_surface_id") == surface.id;
+        }));
+    if (exact == 1 && world_exact == 1) {
+      result.proof.admission_outcomes.push_back(
+          {admission_outcome::Admitted, surface.id, row_count, "facts satisfy the pinned effective declaration"});
+    } else {
+      declarations_admitted = false;
+      result.proof.admission_outcomes.push_back(
+          {identity == 0 ? admission_outcome::UnregisteredSurface : admission_outcome::Unverifiable, surface.id,
+           row_count,
+           identity == 0 ? "fact surface is unregistered or ineffective"
+                         : "fact surface declaration root is mismatched or ambiguous"});
+    }
+  }
+  const auto append_outcome = [&](const char *name, admission_outcome outcome) {
+    if (outcome_counts[name] != 0) {
+      result.proof.admission_outcomes.push_back(
+          {outcome, "", outcome_counts[name], "selected observation admission outcome"});
+    }
+  };
+  append_outcome("unregistered-surface", admission_outcome::UnregisteredSurface);
+  append_outcome("incompatible-schema", admission_outcome::IncompatibleSchema);
+  append_outcome("ambiguous-authority", admission_outcome::AmbiguousAuthority);
+  append_outcome("unverifiable", admission_outcome::Unverifiable);
+
+  for (const auto &conflict : state.at("conflicts")) {
+    if (selected_subjects.empty() || selected_subjects.contains(optional_text(conflict, "subject_key"))) {
+      result.proof.conflicts.push_back(conflict);
+    }
+  }
+
+  yy_storage::episode_manifest_store episodes(runtime_dir);
+  std::set<uint64_t> rooted_episodes;
+  uint64_t matching_rows = 0;
+  for (auto row : state.at("canonical_facts")) {
+    if (!selected(row)) {
+      continue;
+    }
+    ++matching_rows;
+    if (result.rows.size() >= definition.limit) {
+      continue;
+    }
+    const auto episode_id = uint64_value(row.at("episode_id"), "fact-state.episode_id");
+    row["episode_id"] = std::to_string(episode_id);
+    row["system_time"] = std::to_string(int64_value(row.at("system_time"), "fact-state.system_time"));
+    result.rows.push_back(std::move(row));
+    if (!rooted_episodes.insert(episode_id).second) {
+      continue;
+    }
+    const auto inspected = episodes.inspect_typed(episode_id);
+    if (inspected.content_root.status == yy_storage::episode_content_root_status::Verified &&
+        inspected.content_root.computed.has_value()) {
+      const auto &root = *inspected.content_root.computed;
+      result.proof.episode_content_roots.push_back({{"episode_id", std::to_string(episode_id)},
+                                                    {"status", "verified"},
+                                                    {"computed", root.algorithm + ":" + root.value}});
+    } else {
+      result.proof.unverifiable_inputs.push_back(
+          {{"kind", "fact-episode-content-root"}, {"episode_id", std::to_string(episode_id)}});
+    }
+  }
+  if (matching_rows > result.rows.size()) {
+    result.proof.missing_inputs.push_back(
+        {{"kind", "fact-state-result-limit"}, {"available", matching_rows}, {"limit", definition.limit}});
+  }
+  const auto bad_outcomes = outcome_counts["unregistered-surface"] + outcome_counts["incompatible-schema"] +
+                            outcome_counts["ambiguous-authority"] + outcome_counts["unverifiable"];
+  result.proof.canonical_state = declarations_admitted && bad_outcomes == 0 &&
+                                 result.proof.unverifiable_inputs.empty() && result.proof.missing_inputs.empty();
+  result.proof.determinism = result.proof.canonical_state ? "deterministic" : "unverifiable";
+  result.result_hash = json_hash({{"result_schema", result_schema_json(result.row_schema)}, {"rows", result.rows}});
+  return result;
 }
 
 query_result run_episode_sqlite_projection(const std::string &runtime_dir, const logical_plan &plan) {

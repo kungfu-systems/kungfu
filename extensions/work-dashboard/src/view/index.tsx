@@ -9,6 +9,7 @@ import type {
   AtlasGoal,
   AtlasImportInfo,
   AtlasMission,
+  AtlasMissionControlReport,
   WorkItem,
 } from '@kungfu-tech/api/capability';
 import { WORK_STATUS_NAMES } from '@kungfu-tech/api/capability';
@@ -157,6 +158,75 @@ function AtlasGoalDetail({ goal }: { goal: AtlasGoal | null }) {
   );
 }
 
+function MissionTrustPanel({
+  report,
+  error,
+}: {
+  report: AtlasMissionControlReport | null;
+  error: string;
+}) {
+  if (error) {
+    return (
+      <section style={{ ...panelStyle }}>
+        <h2 style={headingStyle}>Mission TrustReport</h2>
+        <div style={{ ...mono, color: '#f48771' }}>{error}</div>
+      </section>
+    );
+  }
+  if (!report) {
+    return (
+      <section style={{ ...panelStyle }}>
+        <h2 style={headingStyle}>Mission TrustReport</h2>
+        <div style={{ ...mono, color: '#6a6a6a' }}>
+          select a Mission to run its purpose-bound progress assessment
+        </div>
+      </section>
+    );
+  }
+  const fitnessColor =
+    report.fitness === 'fit'
+      ? '#4ec9b0'
+      : report.fitness === 'warning'
+        ? '#dcdcaa'
+        : '#f48771';
+  return (
+    <section style={{ ...panelStyle }}>
+      <h2 style={headingStyle}>Mission TrustReport</h2>
+      <div style={{ ...mono, color: fitnessColor, marginBottom: 6 }}>
+        {report.fitness} · {report.assessment.state} ·{' '}
+        {report.state.canonical_state ? 'canonical cut' : 'degraded cut'}
+      </div>
+      {report.findings.map((finding) => (
+        <div key={finding} style={{ ...mono, color: '#cccccc' }}>
+          finding: {finding}
+        </div>
+      ))}
+      <details style={{ marginTop: 8 }}>
+        <summary style={{ ...mono, color: '#9cdcfe', cursor: 'pointer' }}>
+          proof and residual risk
+        </summary>
+        <div style={{ ...mono, color: '#858585', overflowWrap: 'anywhere' }}>
+          assessment: {report.assessment_key}
+        </div>
+        <div style={{ ...mono, color: '#858585', overflowWrap: 'anywhere' }}>
+          report: {report.report_hash ?? '-'}
+        </div>
+        <div style={{ ...mono, color: '#858585', overflowWrap: 'anywhere' }}>
+          definition: {report.query_definition_root}
+        </div>
+        <div style={{ ...mono, color: '#858585', overflowWrap: 'anywhere' }}>
+          proof: {report.query_proof_root}
+        </div>
+        {report.known_limits.map((risk) => (
+          <div key={risk} style={{ ...mono, color: '#dcdcaa' }}>
+            residual risk: {risk}
+          </div>
+        ))}
+      </details>
+    </section>
+  );
+}
+
 function AtlasUnavailableView() {
   return (
     <section style={{ ...panelStyle, height: '100%' }}>
@@ -180,6 +250,9 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
   const [statusFilter, setStatusFilter] = React.useState<string>('all');
   const [selectedGoal, setSelectedGoal] = React.useState<string | null>(null);
   const [message, setMessage] = React.useState<string>('');
+  const [trustReport, setTrustReport] =
+    React.useState<AtlasMissionControlReport | null>(null);
+  const [trustError, setTrustError] = React.useState<string>('');
 
   const reload = React.useCallback(() => {
     setInfo(atlas.importInfo());
@@ -190,6 +263,21 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
   React.useEffect(() => {
     reload();
   }, [reload]);
+
+  React.useEffect(() => {
+    if (selectedMission === 'all') {
+      setTrustReport(null);
+      setTrustError('');
+      return;
+    }
+    try {
+      setTrustReport(atlas.assessMission(selectedMission));
+      setTrustError('');
+    } catch (error) {
+      setTrustReport(null);
+      setTrustError((error as Error).message);
+    }
+  }, [atlas, selectedMission]);
 
   const importNow = () => {
     if (!repoRoot.trim()) {
@@ -368,7 +456,19 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
           </div>
         )}
       </section>
-      <AtlasGoalDetail goal={currentGoal} />
+      <div
+        style={{
+          display: 'flex',
+          flex: 1,
+          minWidth: 0,
+          minHeight: 0,
+          flexDirection: 'column',
+          gap: 12,
+        }}
+      >
+        <MissionTrustPanel report={trustReport} error={trustError} />
+        <AtlasGoalDetail goal={currentGoal} />
+      </div>
     </div>
   );
 }

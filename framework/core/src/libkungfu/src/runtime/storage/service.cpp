@@ -4707,11 +4707,16 @@ public:
       if (engine != "authority" && engine != "sqlite") {
         throw std::invalid_argument("query engine must be authority or sqlite");
       }
+      const auto authority_engine =
+          definition.object == "fact-state" ? "fact-authority-scan/v1" : "episode-authority-scan/v1";
+      if (definition.object == "fact-state" && engine == "sqlite") {
+        throw std::invalid_argument("object=fact-state currently supports only the authority engine");
+      }
       return {{"schema", query::QUERY_EXPLAIN_SCHEMA_V1},
               {"definition", query::query_definition_json(definition)},
               {"logical_plan", query::logical_plan_json(plan)},
               {"physical",
-               {{"engine", engine == "authority" ? "episode-authority-scan/v1" : "episode-sqlite-projection/v1"},
+               {{"engine", engine == "authority" ? authority_engine : "episode-sqlite-projection/v1"},
                 {"bounded", true},
                 {"limit", definition.limit},
                 {"cost",
@@ -4727,9 +4732,15 @@ public:
     const auto plan = query::plan_query(definition);
     const auto engine = text_or(options.operation_options, "engine", "authority");
     if (engine == "authority") {
+      if (definition.object == "fact-state") {
+        return query::query_result_json(query::run_fact_state_authority_scan(options.runtime_dir, plan));
+      }
       return query::query_result_json(query::run_episode_authority_scan(options.runtime_dir, plan));
     }
     if (engine == "sqlite") {
+      if (definition.object != "episodes") {
+        throw std::invalid_argument("object=fact-state currently supports only the authority engine");
+      }
       return query::query_result_json(query::run_episode_sqlite_projection(options.runtime_dir, plan));
     }
     throw std::invalid_argument("query engine must be authority or sqlite");
@@ -4737,6 +4748,9 @@ public:
 
   [[nodiscard]] nlohmann::json fact_changelog(const storage_service_options &options) const {
     const auto definition = query::parse_query_definition(options.query_definition);
+    if (definition.object != "episodes") {
+      throw std::invalid_argument("fact-state changelog is not implemented; request a proof snapshot");
+    }
     const auto plan = query::plan_query(definition);
     const auto resume_token = object_or_empty(options.operation_options, "resume_token");
     const auto max_messages = uint64_or(options.operation_options, "max_messages", 100);

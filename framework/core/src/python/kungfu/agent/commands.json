@@ -134,6 +134,12 @@
       "purpose": "Snapshot an Atlas-style control-plane repo into Kungfu's local read-only projection."
     },
     {
+      "apiId": "kungfu.atlas.assess-mission",
+      "name": "kungfu atlas assess-mission <mission-id> --json",
+      "maturity": "experimental",
+      "purpose": "Query admitted Mission/Go facts and persist a purpose-bound progress TrustReport."
+    },
+    {
       "apiId": "kungfu.atlas.show.import",
       "name": "kungfu atlas show import --json",
       "maturity": "stable",
@@ -447,7 +453,7 @@
     },
     "atlas-projection": {
       "maturity": "stable",
-      "next": "kungfu atlas import --repo <atlas-repo> --json; kungfu storage fsck --scope all --json; kungfu storage verify-sync --source <source-id> --json; kungfu atlas show missions --json; kungfu atlas show goals --json",
+      "next": "kungfu atlas import --repo <atlas-repo> --json; kungfu storage fsck --scope all --json; kungfu storage verify-sync --source <source-id> --json; kungfu atlas show missions --json; kungfu atlas assess-mission <mission-id> --json",
       "when": "The user asks to sync, import, inspect, or visualize an Atlas-style mission/goal/worktree control-plane repo inside Kungfu."
     },
     "trace": {

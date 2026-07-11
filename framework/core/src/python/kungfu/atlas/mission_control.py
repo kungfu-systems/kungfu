@@ -24,6 +24,26 @@ GO_SURFACE_ID = "kungfu.mission-control.go"
 ATLAS_FACT_SOURCE_ID = "atlas-adapter"
 
 FACT_SURFACES = (MISSION_SURFACE_ID, GO_SURFACE_ID)
+PROGRESS_CLAIM = "mission-progress-is-reasonable"
+PROGRESS_PURPOSE = "operator-review"
+PROGRESS_POLICY = {
+    "id": "kungfu.mission-control.reasonable-progress",
+    "version": "1",
+    "rules": {
+        "requires_mission": True,
+        "requires_linked_go": True,
+        "progress_statuses": [
+            "active",
+            "reviewing",
+            "stage-ready",
+            "ready",
+            "completed",
+            "merged",
+        ],
+        "warning_statuses": ["blocked", "paused", "waiting"],
+        "completion_self_report_is_authority": False,
+    },
+}
 SURFACE_BY_KIND = {
     "mission": MISSION_SURFACE_ID,
     "goal": GO_SURFACE_ID,
@@ -79,6 +99,11 @@ def _record_schema(kind: str) -> dict[str, Any]:
 
 def _canonical_json(value: Any) -> str:
     return json.dumps(value, separators=(",", ":"), sort_keys=True)
+
+
+def _sha256_root(value: Any) -> str:
+    raw = value if isinstance(value, str) else _canonical_json(value)
+    return "sha256:" + hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
 def _observation_id(entry: dict[str, Any], storage_source_id: str) -> str:
@@ -270,4 +295,331 @@ def admit_import(
         "outcomes": outcomes,
         "skipped": skipped,
         "receipts": receipts,
+    }
+
+
+def _declaration_refs(runtime_dir: str, cut_system_time: int) -> tuple[dict, list]:
+    catalog = storage_service.fact_type_list(
+        runtime_dir, cut_system_time=cut_system_time
+    )
+    worlds = [
+        row
+        for row in catalog.get("contract_worlds", [])
+        if row.get("id") == CONTRACT_WORLD_ID and row.get("version") == CONTRACT_VERSION
+    ]
+    if len(worlds) != 1:
+        raise RuntimeError("mission-control contract world is missing or ambiguous")
+    surfaces = []
+    for surface_id in FACT_SURFACES:
+        matches = [
+            row
+            for row in catalog.get("fact_types", [])
+            if row.get("id") == surface_id and row.get("version") == CONTRACT_VERSION
+        ]
+        if len(matches) != 1:
+            raise RuntimeError(
+                f"mission-control fact surface is missing or ambiguous: {surface_id}"
+            )
+        surfaces.append(
+            {
+                "id": matches[0]["id"],
+                "version": matches[0]["version"],
+                "root": matches[0]["root"],
+            }
+        )
+    world = {
+        "id": worlds[0]["id"],
+        "version": worlds[0]["version"],
+        "root": worlds[0]["root"],
+    }
+    return world, surfaces
+
+
+def _selected_subjects(
+    runtime_dir: str,
+    *,
+    mission_id: str,
+    storage_source_id: str,
+    cut_system_time: int,
+) -> tuple[str, list[str], dict[str, Any]]:
+    mission_subject = (
+        mission_id
+        if mission_id.startswith(f"{storage_source_id}:")
+        else f"{storage_source_id}:{mission_id}"
+    )
+    materials = storage_service.fact_material_list(
+        runtime_dir, cut_system_time=cut_system_time
+    )
+    payloads = materials.get("payloads", {})
+    selected = {mission_subject}
+    mission_present = False
+    for row in materials.get("state", {}).get("canonical_facts", []):
+        payload = payloads.get(str(row.get("payload_hash") or ""), {})
+        if row.get("fact_surface_id") == MISSION_SURFACE_ID:
+            mission_present = (
+                mission_present or row.get("subject_key") == mission_subject
+            )
+            continue
+        if (
+            row.get("fact_surface_id") == GO_SURFACE_ID
+            and payload.get("links", {}).get("mission_id") == mission_subject
+        ):
+            selected.add(str(row["subject_key"]))
+    if not mission_present:
+        raise ValueError(f"admitted Mission fact not found: {mission_subject}")
+    return mission_subject, sorted(selected), materials
+
+
+def build_state_query(
+    runtime_dir: str,
+    *,
+    mission_id: str,
+    storage_source_id: str = "atlas",
+    cut_system_time: int = 0,
+    limit: int = 256,
+) -> dict[str, Any]:
+    """Build the ADR-0048 query shared by CLI, API, and GUI."""
+
+    mission_subject, subjects, _ = _selected_subjects(
+        runtime_dir,
+        mission_id=mission_id,
+        storage_source_id=storage_source_id,
+        cut_system_time=cut_system_time,
+    )
+    world, surfaces = _declaration_refs(runtime_dir, cut_system_time)
+    cut = (
+        {"kind": "system_time", "system_time": str(cut_system_time)}
+        if cut_system_time
+        else {"kind": "head"}
+    )
+    return {
+        "schema": "kungfu.query.definition/v1",
+        "basis": {
+            "contract_world": world,
+            "fact_surfaces": surfaces,
+            "scope": "domain-fact-ledger",
+            "perspective": "system-time-then-observation-id",
+            "cut": cut,
+            "policy": {
+                "fold": "latest-admitted-per-source/v1",
+                "schema": "kungfu.facts.domain-fact-event/v1",
+                "engine": "fact-authority-scan/v1",
+                "conflict": "preserve-source-claims/v1",
+                "redaction": "hash-and-ref/v1",
+            },
+            "time_basis": {
+                "valid_time": "explicit",
+                "system_time": "event",
+                "causal_time": "event-parent",
+            },
+        },
+        "object": "fact-state",
+        "subject_keys": subjects,
+        "limit": max(limit, len(subjects)),
+        "evidence": "proof",
+        "mission_control": {
+            "mission_subject": mission_subject,
+            "selection": "admitted-payload-links/v1",
+        },
+    }
+
+
+def _runtime_query_definition(definition: dict[str, Any]) -> dict[str, Any]:
+    query = dict(definition)
+    query.pop("mission_control", None)
+    return query
+
+
+def query_state(
+    runtime_dir: str,
+    *,
+    mission_id: str,
+    storage_source_id: str = "atlas",
+    cut_system_time: int = 0,
+) -> dict[str, Any]:
+    """Return one proof-bearing Mission/Go state from admitted facts."""
+
+    definition = build_state_query(
+        runtime_dir,
+        mission_id=mission_id,
+        storage_source_id=storage_source_id,
+        cut_system_time=cut_system_time,
+    )
+    result = storage_service.fact_query_definition(
+        runtime_dir, _runtime_query_definition(definition)
+    )
+    materials = storage_service.fact_material_list(
+        runtime_dir, cut_system_time=cut_system_time
+    )
+    payloads = materials.get("payloads", {})
+    rows = []
+    mission = None
+    goals = []
+    for row in result.get("rows", []):
+        body = payloads.get(str(row.get("payload_hash") or ""))
+        resolved = {**row, "payload": body}
+        rows.append(resolved)
+        if row.get("fact_surface_id") == MISSION_SURFACE_ID:
+            mission = resolved
+        elif row.get("fact_surface_id") == GO_SURFACE_ID:
+            goals.append(resolved)
+    goals.sort(key=lambda row: str(row.get("subject_key") or ""))
+    return {
+        "schema": "kungfu.mission-control.state/v1",
+        "authority_mode": "atlas-bridge",
+        "mission_subject": definition["mission_control"]["mission_subject"],
+        "definition": result["definition"],
+        "logical_plan": result["logical_plan"],
+        "query_definition_root": result["query_definition_root"],
+        "query_proof_root": result["query_proof_root"],
+        "result_hash": result["result_hash"],
+        "cut": result["lineage"]["cut"],
+        "canonical_state": result["lineage"]["canonical_state"],
+        "lineage": result["lineage"],
+        "mission": mission,
+        "goals": goals,
+        "rows": rows,
+    }
+
+
+def _assessment_evidence(state: dict[str, Any]) -> dict[str, int]:
+    lineage = state["lineage"]
+    counts = {
+        "admitted": 0,
+        "unregistered-surface": 0,
+        "incompatible-schema": 0,
+        "ambiguous-authority": 0,
+        "unverifiable": 0,
+    }
+    for row in lineage.get("admission_outcomes", []):
+        outcome = str(row.get("outcome") or "unverifiable")
+        if outcome in counts:
+            counts[outcome] += int(row.get("record_count") or 0)
+    return {
+        "canonical_fact_count": len(state["rows"]),
+        "conflict_count": len(lineage.get("conflicts", [])),
+        "admitted_count": counts["admitted"],
+        "unregistered_surface_count": counts["unregistered-surface"],
+        "incompatible_schema_count": counts["incompatible-schema"],
+        "ambiguous_authority_count": counts["ambiguous-authority"],
+        "unverifiable_count": counts["unverifiable"]
+        + len(lineage.get("unverifiable_inputs", [])),
+    }
+
+
+def _progress_fitness(
+    state: dict[str, Any], assessment_state: str
+) -> tuple[str, list[str]]:
+    if assessment_state != "fresh":
+        mapped = {
+            "insufficient-evidence": "insufficient",
+            "conflicted": "conflicted",
+            "stale": "stale",
+            "unverifiable": "unverifiable",
+        }
+        return mapped.get(assessment_state, "warning"), [
+            f"assessment state is {assessment_state}"
+        ]
+    if not state.get("canonical_state"):
+        return "unverifiable", ["query lineage is not canonical"]
+    if state.get("mission") is None:
+        return "insufficient", ["Mission fact is missing"]
+    goals = state.get("goals", [])
+    if not goals:
+        return "insufficient", ["no linked Go facts are admitted"]
+    statuses = [
+        str(row.get("payload", {}).get("record", {}).get("status") or "unknown")
+        for row in goals
+    ]
+    warning_statuses = set(PROGRESS_POLICY["rules"]["warning_statuses"])
+    progress_statuses = set(PROGRESS_POLICY["rules"]["progress_statuses"])
+    findings = [f"linked Go statuses: {', '.join(statuses)}"]
+    if any(status in warning_statuses for status in statuses):
+        return "warning", findings
+    if any(status in progress_statuses for status in statuses):
+        return "fit", findings
+    return "warning", findings + ["no Go carries a recognized progress state"]
+
+
+def assess_progress(
+    runtime_dir: str,
+    *,
+    mission_id: str,
+    storage_source_id: str = "atlas",
+    purpose: str = PROGRESS_PURPOSE,
+    cut_system_time: int = 0,
+    executor_profile: str = "thread",
+) -> dict[str, Any]:
+    """Persist and expose the first purpose-bound Mission progress report."""
+
+    state = query_state(
+        runtime_dir,
+        mission_id=mission_id,
+        storage_source_id=storage_source_id,
+        cut_system_time=cut_system_time,
+    )
+    if not state["rows"]:
+        raise ValueError("Mission progress assessment requires admitted facts")
+    work_row = max(state["rows"], key=lambda row: int(row["system_time"]))
+    work_episode_id = str(work_row["episode_id"])
+    root_rows = {
+        str(row.get("episode_id")): str(row.get("computed") or "")
+        for row in state["lineage"].get("episode_content_roots", [])
+    }
+    work_episode_root = root_rows.get(work_episode_id, "")
+    if not work_episode_root:
+        raise RuntimeError("selected Mission/Go fact Episode has no verified root")
+    claim_basis = {
+        "claim_type": PROGRESS_CLAIM,
+        "mission_subject": state["mission_subject"],
+        "purpose": purpose,
+        "query_result_hash": state["result_hash"],
+    }
+    policy_ref = {
+        "id": PROGRESS_POLICY["id"],
+        "version": PROGRESS_POLICY["version"],
+        "root": _sha256_root(PROGRESS_POLICY),
+    }
+    request = {
+        "claim_id": f"mission-progress-{_sha256_root(claim_basis)[7:31]}",
+        "claim_type": PROGRESS_CLAIM,
+        "purpose": purpose,
+        "work_episode_id": work_episode_id,
+        "work_episode_root": work_episode_root,
+        "query_definition_root": state["query_definition_root"],
+        "query_proof_root": state["query_proof_root"],
+        "contract_world": state["definition"]["basis"]["contract_world"],
+        "fact_surfaces": state["definition"]["basis"]["fact_surfaces"],
+        "policy": policy_ref,
+        "evidence": _assessment_evidence(state),
+        "deadline": 0,
+        "responsibility": "Atlas source authority; libkungfu proof and assessment",
+        "residual_risks": [
+            "Atlas remains authoritative in bridge mode",
+            "source status is evidence, not universal external truth",
+        ],
+    }
+    requested = storage_service.assessment_request(runtime_dir, request)
+    assessed = storage_service.assessment_execute(
+        runtime_dir,
+        requested["assessment_key"],
+        executor_profile=executor_profile,
+    )
+    fitness, findings = _progress_fitness(state, assessed["state"])
+    return {
+        "schema": "kungfu.mission-control.trust-report/v1",
+        "claim": {
+            "id": request["claim_id"],
+            "type": PROGRESS_CLAIM,
+            "purpose": purpose,
+        },
+        "fitness": fitness,
+        "findings": findings,
+        "known_limits": request["residual_risks"],
+        "state": state,
+        "assessment": assessed,
+        "assessment_key": assessed["assessment_key"],
+        "report_hash": assessed.get("report", {}).get("report_hash"),
+        "query_definition_root": state["query_definition_root"],
+        "query_proof_root": state["query_proof_root"],
     }

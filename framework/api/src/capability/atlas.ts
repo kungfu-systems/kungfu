@@ -76,6 +76,29 @@ export type AtlasMissionDetail = {
   goals: AtlasGoal[];
 };
 
+export type AtlasMissionControlReport = {
+  schema: 'kungfu.mission-control.trust-report/v1';
+  fitness: string;
+  findings: string[];
+  known_limits: string[];
+  assessment_key: string;
+  report_hash?: string;
+  query_definition_root: string;
+  query_proof_root: string;
+  assessment: {
+    state: string;
+    reused?: boolean;
+    report?: { purpose?: string; residual_risks?: string[] };
+  };
+  state: {
+    mission_subject: string;
+    canonical_state: boolean;
+    cut: { declared?: unknown; resolved?: unknown };
+    mission?: { payload?: { record?: AtlasMission } } | null;
+    goals: Array<{ payload?: { record?: AtlasGoal } }>;
+  };
+};
+
 export type AtlasGoalFilter = {
   status?: string;
   missionId?: string;
@@ -88,6 +111,10 @@ export type Atlas = {
   importInfo: () => AtlasImportInfo | null;
   missions: () => AtlasMission[];
   mission: (missionId: string) => AtlasMissionDetail | null;
+  assessMission: (
+    missionId: string,
+    options?: { source?: string; purpose?: string },
+  ) => AtlasMissionControlReport;
   goals: (filter?: AtlasGoalFilter) => AtlasGoal[];
   goal: (goalId: string) => AtlasGoal | null;
   markers: () => AtlasMarker[];
@@ -182,6 +209,12 @@ export function openAtlas(options: OpenAtlasOptions): Atlas {
       } catch {
         return null;
       }
+    },
+    assessMission: (missionId, assessment = {}) => {
+      const args = ['atlas', 'assess-mission', missionId, '--json'];
+      if (assessment.source) args.push('--source', assessment.source);
+      if (assessment.purpose) args.push('--purpose', assessment.purpose);
+      return runJson<AtlasMissionControlReport>(args);
     },
     goals: (filter = {}) => {
       const args = ['atlas', 'show', 'goals', '--json'];

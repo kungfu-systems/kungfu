@@ -152,10 +152,12 @@ worktree records. Kungfu records observations with source coordinates, hashes,
 capture boundaries, and import Episodes. It may query and assess those facts,
 but it does not silently write them back to Atlas.
 
-The initial bridge now connects each explicit import to declared Mission/Go
-fact admission after the source snapshot Episode is sealed. The next vertical
-slice adds an ADR-0048 proof-carrying Mission state query and one KFD-2
-completion or progress assessment.
+The initial bridge connects each explicit import to declared Mission/Go fact
+admission after the source snapshot Episode is sealed. The first trust slice
+now runs the same ADR-0048 `fact-state` QueryDefinition at head or an exact
+system-time cut, then persists an ADR-0052 `mission-progress-is-reasonable`
+assessment. `kungfu atlas assess-mission` and the Work Dashboard consume the
+same report identity and proof root.
 
 ### Native mode
 
@@ -189,9 +191,12 @@ The first implementation target is intentionally narrow:
 1. import one real Atlas Mission and at least one linked Go;
 2. admit the pinned Mission/Go facts without changing Atlas authority
    (**implemented**);
-3. query current state with observer, cut, declaration roots, and proof;
-4. assess one completion or reasonable-progress claim for a declared purpose;
-5. show the result through the existing Work Dashboard/Trust progression;
+3. query current state with observer, cut, declaration roots, and proof
+   (**implemented for bounded Mission/Go subject sets**);
+4. assess one reasonable-progress claim for a declared purpose
+   (**implemented**);
+5. show the result through the existing Work Dashboard/Trust progression
+   (**implemented**);
 6. run entirely in an isolated temporary data root.
 
 This slice does not require a general ontology, unrestricted rule engine,

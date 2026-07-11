@@ -324,6 +324,83 @@ def test_atlas_import_admits_mission_and_go_into_shared_fact_state(tmp_path):
     assert latest_body["record"]["status"] == "ready"
 
 
+def test_mission_control_queries_and_assesses_progress_at_pinned_cuts(tmp_path):
+    repo = tmp_path / "atlas"
+    runtime_dir = tmp_path / "runtime"
+    _atlas_fixture(repo)
+    atlas_store.ImportStore(runtime_dir).run_import(str(repo))
+
+    definition = mission_control.build_state_query(
+        str(runtime_dir), mission_id="mission-a"
+    )
+    assert definition["object"] == "fact-state"
+    assert definition["subject_keys"] == ["atlas:goal-a", "atlas:mission-a"]
+    assert definition["basis"]["scope"] == "domain-fact-ledger"
+
+    first_state = mission_control.query_state(str(runtime_dir), mission_id="mission-a")
+    assert first_state["canonical_state"] is True
+    assert first_state["query_definition_root"].startswith("sha256:")
+    assert first_state["query_proof_root"].startswith("sha256:")
+    assert first_state["mission"]["payload"]["record"]["mission_id"] == "mission-a"
+    assert [row["payload"]["record"]["goal_id"] for row in first_state["goals"]] == [
+        "goal-a"
+    ]
+    assert first_state["lineage"]["conflicts"] == []
+    assert len(first_state["lineage"]["episode_content_roots"]) == 2
+
+    first_report = mission_control.assess_progress(
+        str(runtime_dir), mission_id="mission-a"
+    )
+    assert first_report["fitness"] == "fit"
+    assert first_report["assessment"]["state"] == "fresh"
+    assert first_report["assessment"]["report"]["purpose"] == "operator-review"
+    assert (
+        first_report["assessment"]["report"]["query_proof_root"]
+        == first_state["query_proof_root"]
+    )
+    repeated = mission_control.assess_progress(str(runtime_dir), mission_id="mission-a")
+    assert repeated["assessment_key"] == first_report["assessment_key"]
+    assert repeated["assessment"]["reused"] is True
+
+    from click.testing import CliRunner
+    from kungfu.cli.commands import __registry__  # noqa: F401
+    from kungfu.cli.commands import kfc
+
+    cli = CliRunner().invoke(
+        kfc,
+        ["atlas", "assess-mission", "mission-a", "--json"],
+        env={"KF_RUNTIME_DIR": str(runtime_dir)},
+    )
+    assert cli.exit_code == 0, cli.output
+    cli_report = json.loads(cli.output)
+    assert cli_report["fitness"] == "fit"
+    assert cli_report["assessment_key"] == first_report["assessment_key"]
+
+    historical_cut = int(first_state["cut"]["resolved"]["system_time"])
+    goal_path = repo / "agent-journal/goals/registry/active/goal-a.json"
+    changed = json.loads(goal_path.read_text(encoding="utf-8"))
+    changed["status"] = "blocked"
+    changed["updated_at"] = "2026-07-09T00:00:00Z"
+    _write_json(goal_path, changed)
+    atlas_store.ImportStore(runtime_dir).run_import(str(repo))
+
+    current_report = mission_control.assess_progress(
+        str(runtime_dir), mission_id="mission-a"
+    )
+    assert current_report["fitness"] == "warning"
+    assert current_report["assessment_key"] != first_report["assessment_key"]
+    historical_report = mission_control.assess_progress(
+        str(runtime_dir),
+        mission_id="mission-a",
+        cut_system_time=historical_cut,
+    )
+    assert historical_report["fitness"] == "fit"
+    assert (
+        historical_report["state"]["goals"][0]["payload"]["record"]["status"]
+        == "active"
+    )
+
+
 def test_atlas_range_export_preserves_context_closure(tmp_path):
     repo = tmp_path / "atlas"
     store = tmp_path / "store"

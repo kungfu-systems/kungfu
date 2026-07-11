@@ -241,3 +241,55 @@ def import_info(ctx, as_json):
         return
     for key, value in meta.items():
         click.echo(f"  {key}: {value}")
+
+
+@atlas.command(
+    name="assess-mission",
+    help="query admitted Mission/Go facts and persist a purpose-bound TrustReport",
+)
+@click.argument("mission_id", type=str)
+@click.option("--source", "storage_source_id", type=str, default="atlas")
+@click.option("--purpose", type=str, default="operator-review")
+@click.option("--cut-system-time", type=int, default=0)
+@click.option(
+    "--executor",
+    "executor_profile",
+    type=click.Choice(["inline", "thread", "process"]),
+    default="thread",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@atlas_command_context
+def assess_mission(
+    ctx,
+    mission_id,
+    storage_source_id,
+    purpose,
+    cut_system_time,
+    executor_profile,
+    as_json,
+):
+    from kungfu.atlas import mission_control
+
+    try:
+        report = mission_control.assess_progress(
+            ctx.runtime_dir,
+            mission_id=mission_id,
+            storage_source_id=storage_source_id,
+            purpose=purpose,
+            cut_system_time=cut_system_time,
+            executor_profile=executor_profile,
+        )
+    except (RuntimeError, ValueError) as error:
+        click.echo(f"[atlas] Mission assessment failed: {error}", err=True)
+        sys.exit(1)
+    if as_json:
+        _echo_json(report)
+        return
+    click.echo(
+        f"[atlas] {mission_id}: {report['fitness']} for {purpose} "
+        f"({report['assessment']['state']})"
+    )
+    click.echo(f"  assessment: {report['assessment_key']}")
+    click.echo(f"  proof: {report['query_proof_root']}")
+    for finding in report["findings"]:
+        click.echo(f"  finding: {finding}")

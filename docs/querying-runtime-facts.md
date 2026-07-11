@@ -58,6 +58,29 @@ query(definition, cut=episode-root:...)
 diff(definition, from=cut-a, to=cut-b)
 ```
 
+The bounded `fact-state` object applies the same contract to admitted domain
+facts. It selects a finite set of stable subject keys and supports `head` or an
+exact system-time cut. The basis excerpt below omits the required declaration,
+policy, and time-axis fields for readability:
+
+```json
+{
+  "schema": "kungfu.query.definition/v1",
+  "object": "fact-state",
+  "subject_keys": ["atlas:mission-a", "atlas:goal-a"],
+  "basis": {
+    "scope": "domain-fact-ledger",
+    "perspective": "system-time-then-observation-id",
+    "cut": { "kind": "head" }
+  }
+}
+```
+
+The complete definition also pins contract-world and fact-surface roots,
+policy versions, and all three time axes. The result returns payload hashes and
+refs, verified fact Episode roots, a definition root, and a proof root. Payload
+resolution stays content-addressed and cannot change the query basis.
+
 Checkpoints and SQLite projections may make these operations fast. They are
 rebuildable accelerators; the authoritative records and fold semantics still
 determine the result.
@@ -251,8 +274,10 @@ column, or layout cannot silently change the query basis.
 ADR-0048 accepts the target semantics and staged sequence. It does not claim a
 complete SQL dialect, general CEP engine, or full visual query builder.
 
-The current implementation proves bounded Episode/fact and temporal-attention
-queries at `head` and exact historical manifest-frame cuts, including
+The current implementation proves bounded Episode, admitted `fact-state`, and
+temporal-attention queries. Episode queries support `head` and exact historical
+manifest-frame cuts; fact-state queries support `head` and exact system-time
+cuts. Both include
 declaration coordinates, typed admission outcomes, proof lineage, one
 normalized LogicalPlan, authority/SQLite conformance, changelog retractions,
 and thin GUI presentation. The admitted temporal algebra stays intentionally

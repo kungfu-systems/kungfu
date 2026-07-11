@@ -16,7 +16,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/commands.json",
-        "sha256": "a4f6747ff33c98f1d7096bdd2fd4cc700e018a115e91dd3f3ea65f7de49b0b95"
+        "sha256": "e6fdd795001014ac840235dca97928d78ca762c4aec87350855312d20759419f"
       },
       "description": "Machine-readable command catalog and mode maturity metadata."
     },
@@ -54,7 +54,7 @@
     "evidenceSha256": [
       {
         "path": "framework/core/src/python/kungfu/agent/commands.json",
-        "sha256": "a4f6747ff33c98f1d7096bdd2fd4cc700e018a115e91dd3f3ea65f7de49b0b95"
+        "sha256": "e6fdd795001014ac840235dca97928d78ca762c4aec87350855312d20759419f"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
@@ -76,7 +76,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/commands.json",
-        "sha256": "a4f6747ff33c98f1d7096bdd2fd4cc700e018a115e91dd3f3ea65f7de49b0b95"
+        "sha256": "e6fdd795001014ac840235dca97928d78ca762c4aec87350855312d20759419f"
       }
     ]
   },
@@ -90,7 +90,7 @@
     {
       "name": "agent-command-catalog",
       "path": "framework/core/src/python/kungfu/agent/commands.json",
-      "sha256": "a4f6747ff33c98f1d7096bdd2fd4cc700e018a115e91dd3f3ea65f7de49b0b95",
+      "sha256": "e6fdd795001014ac840235dca97928d78ca762c4aec87350855312d20759419f",
       "expectedPackagePath": "kungfu/agent/commands.json"
     }
   ],

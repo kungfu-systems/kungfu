@@ -876,6 +876,7 @@ nlohmann::json query_fact_state(const std::string &runtime_dir, int64_t cut_syst
          {"valid_time",
           {{"from", integer_value(observation, "valid_from")}, {"until", integer_value(observation, "valid_until")}}},
          {"system_time", observation_times.at(id)},
+         {"episode_id", observation_episode_ids.at(id)},
          {"causal_parent_event_id", observation_causal_parent_ids.at(id)}});
     active_by_subject[text_or(observation, "contract_world_id") + "\n" + text_or(observation, "fact_surface_id") +
                       "\n" + text_or(observation, "subject_key")]

@@ -244,6 +244,16 @@
       "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
     },
     {
+      "id": "kungfu.atlas.assess-mission",
+      "surface": "cli",
+      "name": "kungfu atlas assess-mission <mission-id> --json",
+      "purpose": "Query admitted Mission/Go facts and persist a purpose-bound progress TrustReport.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
       "id": "kungfu.atlas.show.import",
       "surface": "cli",
       "name": "kungfu atlas show import --json",

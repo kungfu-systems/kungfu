@@ -319,6 +319,28 @@
       "residualRisk": []
     },
     {
+      "id": "kungfu.atlas.assess-mission",
+      "kind": "cli",
+      "name": "kungfu atlas assess-mission <mission-id> --json",
+      "state": "declared",
+      "detected": true,
+      "enforced": false,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "kfd1Basis": {
+        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+        "digest": "sha256:18732621727384f63583180de30ad73e6b01b284c3142b64550bb671cddda8a0"
+      },
+      "kfd2Trust": {
+        "status": "release-passport-required",
+        "trustImpact": "query-release-passport-for-final-trust",
+        "residualRisk": []
+      },
+      "residualRisk": []
+    },
+    {
       "id": "kungfu.atlas.import",
       "kind": "cli",
       "name": "kungfu atlas import --repo <atlas-repo> --json",

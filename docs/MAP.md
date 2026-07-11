@@ -28,7 +28,7 @@ and the map routes a question to whichever doc answers it.
 | Why is it built this way? What is load-bearing? | [`design-philosophy.md`](design-philosophy.md) | why | stable |
 | Why compare Kungfu to SQLite, Git, and a flight recorder — and why is it neither observability nor blockchain? | [`design-philosophy.md`](design-philosophy.md#the-missing-infrastructure-layer-runtime-facts) | why | stable |
 | Why does Kungfu start from accountability? | [`facts-before-trust.md`](facts-before-trust.md) | why | stable |
-| How do Missions, delegated Go work, runtime facts, proof, and decisions become one product? | [`mission-control.md`](mission-control.md) + [ADR-0059](../framework/core/docs/adr/ADR-0059-mission-control-mission-go-responsibility-model.md) | why, use, verify | draft · product contract accepted; Atlas admission implemented; query/assessment staged |
+| How do Missions, delegated Go work, runtime facts, proof, and decisions become one product? | [`mission-control.md`](mission-control.md) + [ADR-0059](../framework/core/docs/adr/ADR-0059-mission-control-mission-go-responsibility-model.md) | why, use, verify | draft · Atlas admission plus first proof/assessment/dashboard slice implemented |
 | Why does the commercial product lead with Cost/State/Proof, and what does that profile guarantee? | [`cost-state-proof-profile.md`](cost-state-proof-profile.md) | why, use, verify | draft · profile contract accepted; qualification staged |
 | Why this versioning / release design (don't replace it naively)? | [`version-release-design.md`](version-release-design.md) | why | stable |
 | When must a change open a minor or major (and when must it not)? | [`versioning.md`](versioning.md) (rule: KFD-1, adopted by ADR-0010) | verify | stable |
