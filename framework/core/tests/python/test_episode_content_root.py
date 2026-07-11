@@ -263,4 +263,5 @@ def test_projection_carries_the_root_record(tmp_path):
     _build_episode(runtime_dir)
     rebuilt = service.episode_projection_rebuild(runtime_dir)
     assert rebuilt["ok"]
-    assert rebuilt["rows"]["episode_root_committed"] == 1
+    rows = {row["table"]: row["count"] for row in rebuilt["rows"]}
+    assert rows["episode_root_committed"] == 1

@@ -34,6 +34,8 @@ public:
   // upsert by their declared primary keys. Returns per-table row counts.
   [[nodiscard]] nlohmann::json rebuild() const;
 
+  [[nodiscard]] storage_projection_rebuild_result rebuild_typed() const;
+
   // Verify the projection against the journal's typed record stream. Reports
   // drift (projection row counts diverging from distinct-primary-key journal
   // counts) as degraded, missing projection as a distinct honest state.

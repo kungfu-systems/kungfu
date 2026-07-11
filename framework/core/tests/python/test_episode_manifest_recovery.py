@@ -88,7 +88,8 @@ def test_writer_guard_blocks_concurrent_writer(tmp_path):
         fcntl.flock(holder.fileno(), fcntl.LOCK_UN)
 
     heartbeat = service.episode_heartbeat(runtime_dir, episode_id=1, update_time=1200)
-    assert heartbeat["record_kind"] == "episode_heartbeat"
+    assert heartbeat["episode_id"] == 1
+    assert heartbeat["update_time"] == 1200
     # Reads never take the guard.
     assert service.episode_list(runtime_dir)["episode_count"] == 1
 
@@ -96,9 +97,9 @@ def test_writer_guard_blocks_concurrent_writer(tmp_path):
 def test_c1_recover_on_empty_manifest_is_a_no_op(tmp_path):
     runtime_dir = tmp_path / "runtime"
     report = service.episode_recover(runtime_dir)
-    assert report["ok"]
-    assert report["recovered_count"] == 0
-    assert report["skipped_count"] == 0
+    assert report["runtime_dir"] == str(runtime_dir)
+    assert report["recovered"] == []
+    assert report["skipped_open"] == []
     assert service.fsck(runtime_dir)["ok"]
 
 
@@ -112,18 +113,19 @@ def test_c2_interrupted_open_episode_recovers_as_aborted(tmp_path):
     assert service.fsck(runtime_dir)["ok"]
 
     report = service.episode_recover(runtime_dir, reason="crash recovery")
-    assert report["recovered_count"] == 1
+    assert len(report["recovered"]) == 1
     recovered = report["recovered"][0]
-    assert recovered["episode_id"] == 2
-    assert recovered["status"] == "aborted"
-    assert recovered["reason"] == "crash recovery"
+    assert recovered["close"]["episode_id"] == 2
+    assert recovered["close"]["status"] == 3
+    assert recovered["close"]["reason"] == "crash recovery"
+    assert recovered["content_root"]["episode_id"] == 2
 
     inspected = service.episode_inspect(runtime_dir, episode_id=2)["episode"]
     assert inspected["status"] == "aborted"
     assert inspected["closed"] is True
 
     # Recovery is idempotent: nothing left open.
-    assert service.episode_recover(runtime_dir)["recovered_count"] == 0
+    assert service.episode_recover(runtime_dir)["recovered"] == []
 
 
 def test_c3_resume_reattach_is_a_detectable_duplicate(tmp_path):
@@ -166,10 +168,10 @@ def test_c4_recover_scopes_to_the_declared_owner_location(tmp_path):
     _begin(runtime_dir, 5, location_uid=222)
 
     report = service.episode_recover(runtime_dir, location_uid=111)
-    assert report["recovered_count"] == 1
-    assert report["recovered"][0]["episode_id"] == 4
+    assert len(report["recovered"]) == 1
+    assert report["recovered"][0]["close"]["episode_id"] == 4
     # The other location's open Episode is reported, never mutated.
-    assert report["skipped_count"] == 1
+    assert len(report["skipped_open"]) == 1
     assert report["skipped_open"][0] == {"episode_id": 5, "location_uid": 222}
     assert (
         service.episode_inspect(runtime_dir, episode_id=5)["episode"]["status"]
@@ -177,8 +179,8 @@ def test_c4_recover_scopes_to_the_declared_owner_location(tmp_path):
     )
 
     report = service.episode_recover(runtime_dir)
-    assert report["recovered_count"] == 1
-    assert report["recovered"][0]["episode_id"] == 5
+    assert len(report["recovered"]) == 1
+    assert report["recovered"][0]["close"]["episode_id"] == 5
 
 
 def test_c5_torn_manifest_tail_never_presents_a_partial_seal(tmp_path):
@@ -231,7 +233,7 @@ def test_c5_torn_manifest_tail_never_presents_a_partial_seal(tmp_path):
 
     # The recovery pass turns the interrupted Episode into an honest abort.
     report = service.episode_recover(runtime_dir, reason="torn seal recovered")
-    assert report["recovered_count"] == 1
+    assert len(report["recovered"]) == 1
     assert (
         service.episode_inspect(runtime_dir, episode_id=6)["episode"]["status"]
         == "aborted"
@@ -245,7 +247,7 @@ def test_c6_sealed_episode_is_stable_and_recover_leaves_it_alone(tmp_path):
         runtime_dir, episode_id=7, end_time=1600, last_frame_uid=0, frame_count=0
     )
 
-    assert service.episode_recover(runtime_dir)["recovered_count"] == 0
+    assert service.episode_recover(runtime_dir)["recovered"] == []
 
     # Append-only duplicate close stays visible as a warning; the last close
     # wins the folded status.

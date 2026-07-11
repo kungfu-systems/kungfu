@@ -372,6 +372,29 @@ def test_typed_storage_status_binding_bypasses_json_transport(tmp_path):
         compact = storage_service.compact_plan(runtime_dir)
         fsck = storage_service.fsck(runtime_dir, episode_id=701)
         repair = storage_service.repair_plan(runtime_dir, episode_id=701)
+        episode = storage_service.episode_begin(
+            runtime_dir,
+            episode_id=702,
+            begin_time=1000,
+            title="typed-writer",
+        )
+        heartbeat = storage_service.episode_heartbeat(
+            runtime_dir, episode_id=702, update_time=1100
+        )
+        attached_ref = storage_service.episode_attach_ref(
+            runtime_dir, episode_id=702, ref_kind="input_frame", ref_uid=9
+        )
+        attached_frame = storage_service.episode_attach_frame(
+            runtime_dir, episode_id=702, frame_uid=10, gen_time=1200
+        )
+        closed = storage_service.episode_end(
+            runtime_dir, episode_id=702, end_time=1300, frame_count=1
+        )
+        storage_service.episode_begin(runtime_dir, episode_id=703, begin_time=1400)
+        recovered = storage_service.episode_recover(
+            runtime_dir, episode_id=703, end_time=1500
+        )
+        projection = storage_service.episode_projection_rebuild(runtime_dir)
     finally:
         json.loads = original_loads
 
@@ -399,6 +422,13 @@ def test_typed_storage_status_binding_bypasses_json_transport(tmp_path):
     assert repair["scope"] == 2
     assert repair["episode_id"] == 701
     assert repair["dry_run"] is True
+    assert episode["episode_id"] == 702
+    assert heartbeat["update_time"] == 1100
+    assert attached_ref["ref_kind"] == 1
+    assert attached_frame["frame_uid"] == 10
+    assert closed["close"]["status"] == 2
+    assert recovered["recovered"][0]["close"]["status"] == 3
+    assert projection["authority"] == "yijinjing-journal"
 
 
 def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
@@ -694,6 +724,45 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
     ]
 
 
+def test_python_episode_writer_and_recovery_use_typed_bindings(tmp_path, monkeypatch):
+    runtime = kungfu.__binding__.runtime
+    runtime_dir = tmp_path / "runtime"
+    typed_names = [
+        "storage_episode_begin_typed",
+        "storage_episode_heartbeat_typed",
+        "storage_episode_attach_frame_typed",
+        "storage_episode_attach_ref_typed",
+        "storage_episode_close_typed",
+        "storage_episode_recover_typed",
+        "storage_episode_projection_rebuild_typed",
+    ]
+    originals = {name: getattr(runtime, name) for name in typed_names}
+    calls = []
+
+    for name, original in originals.items():
+
+        def spy(*args, _name=name, _original=original, **kwargs):
+            calls.append((_name, args, kwargs))
+            return _original(*args, **kwargs)
+
+        monkeypatch.setattr(runtime, name, spy)
+
+    storage_service.episode_begin(runtime_dir, episode_id=801, begin_time=1000)
+    storage_service.episode_heartbeat(runtime_dir, episode_id=801, update_time=1100)
+    storage_service.episode_attach_frame(
+        runtime_dir, episode_id=801, frame_uid=1, gen_time=1200
+    )
+    storage_service.episode_attach_ref(
+        runtime_dir, episode_id=801, ref_kind="input_frame", ref_uid=2
+    )
+    storage_service.episode_end(runtime_dir, episode_id=801, end_time=1300)
+    storage_service.episode_begin(runtime_dir, episode_id=802, begin_time=1400)
+    storage_service.episode_recover(runtime_dir, episode_id=802, end_time=1500)
+    storage_service.episode_projection_rebuild(runtime_dir)
+
+    assert {name for name, _, _ in calls} == set(typed_names)
+
+
 def test_storage_query_edge_renders_typed_source_manifest_and_entry_rows(tmp_path):
     runtime_dir = tmp_path / "runtime"
     storage_service.write_synthetic_source(
@@ -759,8 +828,7 @@ def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
         source="unit-test",
         begin_time=1000,
     )
-    assert episode["schema"] == "kungfu.episode.manifest/v1"
-    assert episode["record_kind"] == "episode_open"
+    assert episode["schema_version"] == 1
     assert episode["episode_id"] == 42
 
     input_ref = storage_service.episode_attach_ref(
@@ -770,8 +838,7 @@ def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
         ref_uid=99,
         ref_id="external-frame:99",
     )
-    assert input_ref["record_kind"] == "episode_ref_attached"
-    assert input_ref["ref_kind"] == "input_frame"
+    assert input_ref["ref_kind"] == 1
 
     attached = storage_service.episode_attach_frame(
         runtime_dir,
@@ -788,7 +855,7 @@ def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
         payload_checksum=123,
         frame_checksum=456,
     )
-    assert attached["record_kind"] == "episode_frame_attached"
+    assert attached["schema_version"] == 1
     assert attached["frame_uid"] == 100
 
     ended = storage_service.episode_end(
@@ -799,7 +866,8 @@ def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
         frame_count=1,
         reason="done",
     )
-    assert ended["status"] == "ended"
+    assert ended["close"]["status"] == 2
+    assert ended["content_root"]["episode_id"] == 42
 
     listed = storage_service.episode_list(runtime_dir)
     assert listed["authority"] == "yijinjing-journal"

@@ -78,7 +78,7 @@ std::string episode_manifest_projection::sqlite_path() const { return projection
 
 bool episode_manifest_projection::exists() const { return fs::exists(projection_path(runtime_dir_)); }
 
-nlohmann::json episode_manifest_projection::rebuild() const {
+storage_projection_rebuild_result episode_manifest_projection::rebuild_typed() const {
   const auto path = projection_path(runtime_dir_);
   fs::create_directories(path.parent_path());
 
@@ -116,23 +116,44 @@ nlohmann::json episode_manifest_projection::rebuild() const {
         record.body);
   }
 
-  return {
-      {"ok", true},
-      {"schema", EPISODE_MANIFEST_PROJECTION_SCHEMA_V1},
-      {"runtime_dir", runtime_dir_},
-      {"authority", "yijinjing-journal"},
-      {"projection", "sqlite"},
-      {"sqlite_path", path.string()},
-      {"unknown_records_skipped", unknown_skipped},
-      {"rows",
-       {{"episode_open", storage->count<yijinjing::types::EpisodeOpen>()},
-        {"episode_heartbeat", storage->count<yijinjing::types::EpisodeHeartbeat>()},
-        {"episode_frame_attached", storage->count<yijinjing::types::EpisodeFrameAttached>()},
-        {"episode_ref_attached", storage->count<yijinjing::types::EpisodeRefAttached>()},
-        {"episode_closed", storage->count<yijinjing::types::EpisodeClosed>()},
-        {"episode_root_committed", storage->count<yijinjing::types::EpisodeRootCommitted>()}}},
-      {"journal_records", records.size()},
-  };
+  return {true,
+          EPISODE_MANIFEST_PROJECTION_SCHEMA_V1,
+          runtime_dir_,
+          "yijinjing-journal",
+          "sqlite",
+          path.string(),
+          {{"episode_open", static_cast<uint64_t>(storage->count<yijinjing::types::EpisodeOpen>())},
+           {"episode_heartbeat", static_cast<uint64_t>(storage->count<yijinjing::types::EpisodeHeartbeat>())},
+           {"episode_frame_attached", static_cast<uint64_t>(storage->count<yijinjing::types::EpisodeFrameAttached>())},
+           {"episode_ref_attached", static_cast<uint64_t>(storage->count<yijinjing::types::EpisodeRefAttached>())},
+           {"episode_closed", static_cast<uint64_t>(storage->count<yijinjing::types::EpisodeClosed>())},
+           {"episode_root_committed", static_cast<uint64_t>(storage->count<yijinjing::types::EpisodeRootCommitted>())}},
+          {{"episode_manifest_records", static_cast<uint64_t>(records.size())},
+           {"unknown_records_skipped", static_cast<uint64_t>(unknown_skipped)}}};
+}
+
+nlohmann::json episode_manifest_projection::rebuild() const {
+  const auto result = rebuild_typed();
+  nlohmann::json rows = nlohmann::json::object();
+  for (const auto &item : result.rows)
+    rows[item.table] = item.count;
+  uint64_t journal_records = 0;
+  uint64_t unknown_records_skipped = 0;
+  for (const auto &item : result.journal_records) {
+    if (item.table == "episode_manifest_records")
+      journal_records = item.count;
+    if (item.table == "unknown_records_skipped")
+      unknown_records_skipped = item.count;
+  }
+  return {{"ok", result.ok},
+          {"schema", result.schema},
+          {"runtime_dir", result.runtime_dir},
+          {"authority", result.authority},
+          {"projection", result.projection},
+          {"sqlite_path", result.sqlite_path},
+          {"unknown_records_skipped", unknown_records_skipped},
+          {"rows", std::move(rows)},
+          {"journal_records", journal_records}};
 }
 
 storage_projection_verify_result episode_manifest_projection::verify_typed() const {

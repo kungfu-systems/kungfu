@@ -21,6 +21,72 @@ inline constexpr const char *EPISODE_MANIFEST_SCHEMA_V1 = "kungfu.episode.manife
 inline constexpr const char *EPISODE_MANIFEST_NAMESPACE = "storage";
 inline constexpr const char *EPISODE_MANIFEST_NAME = "episode-manifest";
 
+// Owned semantic inputs shared by the journal store and the runtime storage
+// service. They are not persisted records and carry no carrier/layout promise.
+struct episode_begin_options {
+  uint64_t episode_id = 0;
+  uint64_t parent_episode_id = 0;
+  uint64_t root_trigger_frame_uid = 0;
+  uint32_t location_uid = 0;
+  int64_t begin_time = 0;
+  std::string title = {};
+  std::string actor = {};
+  std::string source = {};
+};
+
+struct episode_heartbeat_options {
+  uint64_t episode_id = 0;
+  uint32_t location_uid = 0;
+  int64_t update_time = 0;
+  uint64_t last_frame_uid = 0;
+  uint64_t frame_count = 0;
+  std::string note = {};
+};
+
+struct episode_close_options {
+  uint64_t episode_id = 0;
+  uint32_t location_uid = 0;
+  yijinjing::enums::EpisodeStatus status = yijinjing::enums::EpisodeStatus::Ended;
+  int64_t end_time = 0;
+  uint64_t last_frame_uid = 0;
+  uint64_t frame_count = 0;
+  std::string reason = {};
+};
+
+struct episode_frame_attach_options {
+  uint64_t episode_id = 0;
+  uint32_t location_uid = 0;
+  uint64_t frame_uid = 0;
+  uint64_t trigger_frame_uid = 0;
+  uint64_t stream_id = 0;
+  int64_t gen_time = 0;
+  int64_t trigger_time = 0;
+  int32_t carrier_type = 0;
+  uint32_t source = 0;
+  uint32_t dest = 0;
+  uint32_t data_length = 0;
+  uint32_t integrity_version = 0;
+  uint64_t payload_checksum = 0;
+  uint64_t frame_checksum = 0;
+};
+
+struct episode_ref_attach_options {
+  uint64_t episode_id = 0;
+  uint32_t location_uid = 0;
+  yijinjing::enums::EpisodeRefKind ref_kind = yijinjing::enums::EpisodeRefKind::InputFrame;
+  uint64_t ref_uid = 0;
+  int64_t update_time = 0;
+  std::string ref_id = {};
+  std::string ref_hash = {};
+};
+
+struct episode_recover_options {
+  uint64_t episode_id = 0;
+  uint32_t location_uid = 0;
+  int64_t end_time = 0;
+  std::string reason = {};
+};
+
 struct episode_manifest_unknown_record {
   int32_t carrier_type = 0;
   uint32_t schema_version = 0;

@@ -203,6 +203,167 @@ interface StorageRepairPlanResult {
   notes: string[];
 }
 
+type EpisodeStatus = 1 | 2 | 3 | 4;
+type EpisodeRefKind = 1 | 2 | 3 | 4;
+
+interface EpisodeBeginOptions {
+  episode_id?: bigint | number;
+  parent_episode_id?: bigint | number;
+  root_trigger_frame_uid?: bigint | number;
+  location_uid?: number;
+  begin_time?: number;
+  title?: string;
+  actor?: string;
+  source?: string;
+}
+
+interface EpisodeHeartbeatOptions {
+  episode_id: bigint | number;
+  location_uid?: number;
+  update_time?: number;
+  last_frame_uid?: bigint | number;
+  frame_count?: bigint | number;
+  note?: string;
+}
+
+interface EpisodeFrameAttachOptions {
+  episode_id: bigint | number;
+  frame_uid: bigint | number;
+  location_uid?: number;
+  trigger_frame_uid?: bigint | number;
+  stream_id?: bigint | number;
+  gen_time?: number;
+  trigger_time?: number;
+  carrier_type?: number;
+  source?: number;
+  dest?: number;
+  data_length?: number;
+  integrity_version?: number;
+  payload_checksum?: bigint | number;
+  frame_checksum?: bigint | number;
+}
+
+interface EpisodeRefAttachOptions {
+  episode_id: bigint | number;
+  ref_kind?: 'input_frame' | 'payload' | 'schema' | 'episode';
+  ref_uid?: bigint | number;
+  ref_id?: string;
+  ref_hash?: string;
+  location_uid?: number;
+  update_time?: number;
+}
+
+interface EpisodeCloseOptions {
+  episode_id: bigint | number;
+  aborted?: boolean;
+  location_uid?: number;
+  end_time?: number;
+  last_frame_uid?: bigint | number;
+  frame_count?: bigint | number;
+  reason?: string;
+}
+
+interface EpisodeRecoverOptions {
+  episode_id?: bigint | number;
+  location_uid?: number;
+  end_time?: number;
+  reason?: string;
+}
+
+interface EpisodeOpenRecord {
+  schema_version: number;
+  episode_id: bigint;
+  parent_episode_id: bigint;
+  root_trigger_frame_uid: bigint;
+  location_uid: number;
+  begin_time: bigint;
+  title: string;
+  actor: string;
+  source: string;
+}
+
+interface EpisodeHeartbeatRecord {
+  schema_version: number;
+  episode_id: bigint;
+  location_uid: number;
+  update_time: bigint;
+  last_frame_uid: bigint;
+  frame_count: bigint;
+  note: string;
+}
+
+interface EpisodeFrameAttachedRecord {
+  schema_version: number;
+  episode_id: bigint;
+  location_uid: number;
+  frame_uid: bigint;
+  trigger_frame_uid: bigint;
+  stream_id: bigint;
+  gen_time: bigint;
+  trigger_time: bigint;
+  carrier_type: number;
+  source: number;
+  dest: number;
+  data_length: number;
+  integrity_version: number;
+  payload_checksum: bigint;
+  frame_checksum: bigint;
+}
+
+interface EpisodeRefAttachedRecord {
+  schema_version: number;
+  episode_id: bigint;
+  location_uid: number;
+  ref_kind: EpisodeRefKind;
+  ref_uid: bigint;
+  update_time: bigint;
+  ref_id: string;
+  ref_hash: string;
+}
+
+interface EpisodeClosedRecord {
+  schema_version: number;
+  episode_id: bigint;
+  location_uid: number;
+  status: EpisodeStatus;
+  end_time: bigint;
+  last_frame_uid: bigint;
+  frame_count: bigint;
+  reason: string;
+}
+
+interface EpisodeRootCommittedRecord {
+  schema_version: number;
+  episode_id: bigint;
+  location_uid: number;
+  commit_time: bigint;
+  covered_record_count: number;
+  algorithm: string;
+  root_value: string;
+}
+
+interface EpisodeCloseResult {
+  close: EpisodeClosedRecord;
+  content_root: EpisodeRootCommittedRecord | null;
+}
+
+interface EpisodeRecoverResult {
+  runtime_dir: string;
+  recovered: EpisodeCloseResult[];
+  skipped_open: Array<{ episode_id: bigint; location_uid: number }>;
+}
+
+interface StorageProjectionRebuildResult {
+  ok: boolean;
+  schema: string;
+  runtime_dir: string;
+  authority: string;
+  projection: string;
+  sqlite_path: string;
+  rows: Array<{ table: string; count: bigint }>;
+  journal_records: Array<{ table: string; count: bigint }>;
+}
+
 interface KungfuRuntime {
   storageStatusTyped(
     runtimeDir: string,
@@ -233,6 +394,33 @@ interface KungfuRuntime {
     runtimeDir: string,
     options?: StorageRepairPlanOptions,
   ): StorageRepairPlanResult;
+  storageEpisodeBeginTyped(
+    runtimeDir: string,
+    options: EpisodeBeginOptions,
+  ): EpisodeOpenRecord;
+  storageEpisodeHeartbeatTyped(
+    runtimeDir: string,
+    options: EpisodeHeartbeatOptions,
+  ): EpisodeHeartbeatRecord;
+  storageEpisodeAttachFrameTyped(
+    runtimeDir: string,
+    options: EpisodeFrameAttachOptions,
+  ): EpisodeFrameAttachedRecord;
+  storageEpisodeAttachRefTyped(
+    runtimeDir: string,
+    options: EpisodeRefAttachOptions,
+  ): EpisodeRefAttachedRecord;
+  storageEpisodeCloseTyped(
+    runtimeDir: string,
+    options: EpisodeCloseOptions,
+  ): EpisodeCloseResult;
+  storageEpisodeRecoverTyped(
+    runtimeDir: string,
+    options: EpisodeRecoverOptions,
+  ): EpisodeRecoverResult;
+  storageEpisodeProjectionRebuildTyped(
+    runtimeDir: string,
+  ): StorageProjectionRebuildResult;
   [name: string]: unknown;
 }
 

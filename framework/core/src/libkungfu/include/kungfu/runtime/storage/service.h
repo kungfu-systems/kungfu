@@ -608,6 +608,40 @@ struct storage_verify_sync_result {
   std::string imported_runtime_dir = {};
 };
 
+struct storage_episode_begin_request {
+  std::string runtime_dir = {};
+  yijinjing::storage::episode_begin_options options = {};
+};
+
+struct storage_episode_heartbeat_request {
+  std::string runtime_dir = {};
+  yijinjing::storage::episode_heartbeat_options options = {};
+};
+
+struct storage_episode_frame_attach_request {
+  std::string runtime_dir = {};
+  yijinjing::storage::episode_frame_attach_options options = {};
+};
+
+struct storage_episode_ref_attach_request {
+  std::string runtime_dir = {};
+  yijinjing::storage::episode_ref_attach_options options = {};
+};
+
+struct storage_episode_close_request {
+  std::string runtime_dir = {};
+  yijinjing::storage::episode_close_options options = {};
+};
+
+struct storage_episode_recover_request {
+  std::string runtime_dir = {};
+  yijinjing::storage::episode_recover_options options = {};
+};
+
+struct storage_episode_projection_rebuild_request {
+  std::string runtime_dir = {};
+};
+
 class storage_service {
 public:
   virtual ~storage_service() = default;
@@ -634,6 +668,30 @@ public:
   import_bundle(const storage_import_bundle_request &request) const = 0;
 
   [[nodiscard]] virtual storage_verify_sync_result verify_sync(const storage_verify_sync_request &request) const = 0;
+
+  [[nodiscard]] virtual yijinjing::types::EpisodeOpen
+  episode_begin(const storage_episode_begin_request &request) const = 0;
+
+  [[nodiscard]] virtual yijinjing::types::EpisodeHeartbeat
+  episode_heartbeat(const storage_episode_heartbeat_request &request) const = 0;
+
+  [[nodiscard]] virtual yijinjing::types::EpisodeFrameAttached
+  episode_attach_frame(const storage_episode_frame_attach_request &request) const = 0;
+
+  [[nodiscard]] virtual yijinjing::types::EpisodeRefAttached
+  episode_attach_ref(const storage_episode_ref_attach_request &request) const = 0;
+
+  [[nodiscard]] virtual yijinjing::storage::episode_close_write_result
+  episode_end(const storage_episode_close_request &request) const = 0;
+
+  [[nodiscard]] virtual yijinjing::storage::episode_close_write_result
+  episode_abort(const storage_episode_close_request &request) const = 0;
+
+  [[nodiscard]] virtual yijinjing::storage::episode_recover_result
+  episode_recover(const storage_episode_recover_request &request) const = 0;
+
+  [[nodiscard]] virtual storage_projection_rebuild_result
+  episode_projection_rebuild(const storage_episode_projection_rebuild_request &request) const = 0;
 };
 
 [[nodiscard]] std::string storage_query_kind_name(storage_query_kind kind);

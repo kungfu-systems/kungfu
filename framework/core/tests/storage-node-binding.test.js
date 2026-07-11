@@ -240,6 +240,40 @@ test(
         episode_id: 701n,
         dry_run: true,
       });
+      const episode = kungfu.storageEpisodeBeginTyped(runtimeDir, {
+        episode_id: 702n,
+        begin_time: 1000,
+        title: 'typed-writer',
+      });
+      const heartbeat = kungfu.storageEpisodeHeartbeatTyped(runtimeDir, {
+        episode_id: 702n,
+        update_time: 1100,
+      });
+      const attachedRef = kungfu.storageEpisodeAttachRefTyped(runtimeDir, {
+        episode_id: 702n,
+        ref_kind: 'input_frame',
+        ref_uid: 9n,
+      });
+      const attachedFrame = kungfu.storageEpisodeAttachFrameTyped(runtimeDir, {
+        episode_id: 702n,
+        frame_uid: 10n,
+        gen_time: 1200,
+      });
+      const closed = kungfu.storageEpisodeCloseTyped(runtimeDir, {
+        episode_id: 702n,
+        end_time: 1300,
+        frame_count: 1n,
+      });
+      kungfu.storageEpisodeBeginTyped(runtimeDir, {
+        episode_id: 703n,
+        begin_time: 1400,
+      });
+      const recovered = kungfu.storageEpisodeRecoverTyped(runtimeDir, {
+        episode_id: 703n,
+        end_time: 1500,
+      });
+      const projection =
+        kungfu.storageEpisodeProjectionRebuildTyped(runtimeDir);
       assert.equal(query.query, 4);
       assert.equal(query.rows[0].body.title, 'typed-query');
       assert.equal(query.rows[0].body.location_uid, 17);
@@ -251,6 +285,13 @@ test(
       assert.equal(repair.scope, 2);
       assert.equal(repair.episode_id, 701n);
       assert.equal(repair.dry_run, true);
+      assert.equal(episode.episode_id, 702n);
+      assert.equal(heartbeat.update_time, 1100n);
+      assert.equal(attachedRef.ref_kind, 1);
+      assert.equal(attachedFrame.frame_uid, 10n);
+      assert.equal(closed.close.status, 2);
+      assert.equal(recovered.recovered[0].close.status, 3);
+      assert.equal(projection.authority, 'yijinjing-journal');
     } finally {
       JSON.parse = originalParse;
       JSON.stringify = originalStringify;

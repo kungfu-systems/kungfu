@@ -559,6 +559,101 @@ void bind(pybind11::module &&m) {
       py::arg("runtime_dir"), py::arg("source_id") = py::none(), py::arg("episode_id") = 0,
       py::arg("verify_frames") = false, py::arg("dry_run") = true);
   m.def(
+      "storage_episode_begin_typed",
+      [](const std::string &runtime_dir, uint64_t episode_id, uint64_t parent_episode_id,
+         uint64_t root_trigger_frame_uid, uint32_t location_uid, int64_t begin_time, const std::string &title,
+         const std::string &actor, const std::string &source) {
+        storage_service_api::storage_episode_begin_request request{};
+        request.runtime_dir = runtime_dir;
+        request.options = {
+            episode_id, parent_episode_id, root_trigger_frame_uid, location_uid, begin_time, title, actor, source};
+        return hana_view_to_py(storage_service_api::default_storage_service().episode_begin(request));
+      },
+      py::arg("runtime_dir"), py::arg("episode_id") = 0, py::arg("parent_episode_id") = 0,
+      py::arg("root_trigger_frame_uid") = 0, py::arg("location_uid") = 0, py::arg("begin_time") = 0,
+      py::arg("title") = "", py::arg("actor") = "", py::arg("source") = "");
+  m.def(
+      "storage_episode_heartbeat_typed",
+      [](const std::string &runtime_dir, uint64_t episode_id, uint32_t location_uid, int64_t update_time,
+         uint64_t last_frame_uid, uint64_t frame_count, const std::string &note) {
+        storage_service_api::storage_episode_heartbeat_request request{};
+        request.runtime_dir = runtime_dir;
+        request.options = {episode_id, location_uid, update_time, last_frame_uid, frame_count, note};
+        return hana_view_to_py(storage_service_api::default_storage_service().episode_heartbeat(request));
+      },
+      py::arg("runtime_dir"), py::arg("episode_id"), py::arg("location_uid") = 0, py::arg("update_time") = 0,
+      py::arg("last_frame_uid") = 0, py::arg("frame_count") = 0, py::arg("note") = "");
+  m.def(
+      "storage_episode_attach_frame_typed",
+      [](const std::string &runtime_dir, uint64_t episode_id, uint64_t frame_uid, uint32_t location_uid,
+         uint64_t trigger_frame_uid, uint64_t stream_id, int64_t gen_time, int64_t trigger_time, int32_t carrier_type,
+         uint32_t source, uint32_t dest, uint32_t data_length, uint32_t integrity_version, uint64_t payload_checksum,
+         uint64_t frame_checksum) {
+        storage_service_api::storage_episode_frame_attach_request request{};
+        request.runtime_dir = runtime_dir;
+        request.options = {episode_id,       location_uid,  frame_uid,    trigger_frame_uid,
+                           stream_id,        gen_time,      trigger_time, carrier_type,
+                           source,           dest,          data_length,  integrity_version,
+                           payload_checksum, frame_checksum};
+        return hana_view_to_py(storage_service_api::default_storage_service().episode_attach_frame(request));
+      },
+      py::arg("runtime_dir"), py::arg("episode_id"), py::arg("frame_uid"), py::arg("location_uid") = 0,
+      py::arg("trigger_frame_uid") = 0, py::arg("stream_id") = 0, py::arg("gen_time") = 0, py::arg("trigger_time") = 0,
+      py::arg("carrier_type") = 0, py::arg("source") = 0, py::arg("dest") = 0, py::arg("data_length") = 0,
+      py::arg("integrity_version") = 0, py::arg("payload_checksum") = 0, py::arg("frame_checksum") = 0);
+  m.def(
+      "storage_episode_attach_ref_typed",
+      [](const std::string &runtime_dir, uint64_t episode_id, const std::string &ref_kind, uint64_t ref_uid,
+         const std::string &ref_id, const std::string &ref_hash, uint32_t location_uid, int64_t update_time) {
+        storage_service_api::storage_episode_ref_attach_request request{};
+        request.runtime_dir = runtime_dir;
+        request.options = {episode_id,
+                           location_uid,
+                           ref_kind == "payload"   ? EpisodeRefKind::Payload
+                           : ref_kind == "schema"  ? EpisodeRefKind::Schema
+                           : ref_kind == "episode" ? EpisodeRefKind::Episode
+                                                   : EpisodeRefKind::InputFrame,
+                           ref_uid,
+                           update_time,
+                           ref_id,
+                           ref_hash};
+        return hana_view_to_py(storage_service_api::default_storage_service().episode_attach_ref(request));
+      },
+      py::arg("runtime_dir"), py::arg("episode_id"), py::arg("ref_kind") = "input_frame", py::arg("ref_uid") = 0,
+      py::arg("ref_id") = "", py::arg("ref_hash") = "", py::arg("location_uid") = 0, py::arg("update_time") = 0);
+  m.def(
+      "storage_episode_close_typed",
+      [](const std::string &runtime_dir, uint64_t episode_id, bool aborted, uint32_t location_uid, int64_t end_time,
+         uint64_t last_frame_uid, uint64_t frame_count, const std::string &reason) {
+        storage_service_api::storage_episode_close_request request{};
+        request.runtime_dir = runtime_dir;
+        request.options = {episode_id, location_uid,   aborted ? EpisodeStatus::Aborted : EpisodeStatus::Ended,
+                           end_time,   last_frame_uid, frame_count,
+                           reason};
+        const auto &service = storage_service_api::default_storage_service();
+        return hana_view_to_py(aborted ? service.episode_abort(request) : service.episode_end(request));
+      },
+      py::arg("runtime_dir"), py::arg("episode_id"), py::arg("aborted") = false, py::arg("location_uid") = 0,
+      py::arg("end_time") = 0, py::arg("last_frame_uid") = 0, py::arg("frame_count") = 0, py::arg("reason") = "");
+  m.def(
+      "storage_episode_recover_typed",
+      [](const std::string &runtime_dir, uint64_t episode_id, uint32_t location_uid, int64_t end_time,
+         const std::string &reason) {
+        storage_service_api::storage_episode_recover_request request{};
+        request.runtime_dir = runtime_dir;
+        request.options = {episode_id, location_uid, end_time, reason};
+        return hana_view_to_py(storage_service_api::default_storage_service().episode_recover(request));
+      },
+      py::arg("runtime_dir"), py::arg("episode_id") = 0, py::arg("location_uid") = 0, py::arg("end_time") = 0,
+      py::arg("reason") = "");
+  m.def(
+      "storage_episode_projection_rebuild_typed",
+      [](const std::string &runtime_dir) {
+        return hana_view_to_py(storage_service_api::default_storage_service().episode_projection_rebuild(
+            storage_service_api::storage_episode_projection_rebuild_request{runtime_dir}));
+      },
+      py::arg("runtime_dir"));
+  m.def(
       "make_storage_service_request",
       [](const std::string &operation, const std::string &runtime_dir, py::dict options) {
         return json_to_py(

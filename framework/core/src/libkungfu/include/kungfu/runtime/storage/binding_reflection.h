@@ -129,5 +129,8 @@ BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_repair_can
                         role, action, safe_to_apply, required_inputs, subject, issue);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_repair_plan_result, ok, scope, source_id,
                         episode_id, dry_run, plan_only, status, degraded, candidates, unsupported, fsck, notes);
+BOOST_HANA_ADAPT_STRUCT(kungfu::yijinjing::storage::episode_close_write_result, close, content_root);
+BOOST_HANA_ADAPT_STRUCT(kungfu::yijinjing::storage::episode_recover_skipped_open, episode_id, location_uid);
+BOOST_HANA_ADAPT_STRUCT(kungfu::yijinjing::storage::episode_recover_result, runtime_dir, recovered, skipped_open);
 
 #endif // KUNGFU_RUNTIME_STORAGE_BINDING_REFLECTION_H

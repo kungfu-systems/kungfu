@@ -4018,6 +4018,46 @@ public:
   [[nodiscard]] storage_verify_sync_result verify_sync(const storage_verify_sync_request &request) const override {
     return verify_sync_typed_impl(request);
   }
+
+  [[nodiscard]] yijinjing::types::EpisodeOpen
+  episode_begin(const storage_episode_begin_request &request) const override {
+    return yy_storage::episode_manifest_store(request.runtime_dir).begin(request.options);
+  }
+
+  [[nodiscard]] yijinjing::types::EpisodeHeartbeat
+  episode_heartbeat(const storage_episode_heartbeat_request &request) const override {
+    return yy_storage::episode_manifest_store(request.runtime_dir).heartbeat(request.options);
+  }
+
+  [[nodiscard]] yijinjing::types::EpisodeFrameAttached
+  episode_attach_frame(const storage_episode_frame_attach_request &request) const override {
+    return yy_storage::episode_manifest_store(request.runtime_dir).attach_frame(request.options);
+  }
+
+  [[nodiscard]] yijinjing::types::EpisodeRefAttached
+  episode_attach_ref(const storage_episode_ref_attach_request &request) const override {
+    return yy_storage::episode_manifest_store(request.runtime_dir).attach_ref(request.options);
+  }
+
+  [[nodiscard]] yy_storage::episode_close_write_result
+  episode_end(const storage_episode_close_request &request) const override {
+    return yy_storage::episode_manifest_store(request.runtime_dir).end(request.options);
+  }
+
+  [[nodiscard]] yy_storage::episode_close_write_result
+  episode_abort(const storage_episode_close_request &request) const override {
+    return yy_storage::episode_manifest_store(request.runtime_dir).abort(request.options);
+  }
+
+  [[nodiscard]] yy_storage::episode_recover_result
+  episode_recover(const storage_episode_recover_request &request) const override {
+    return yy_storage::episode_manifest_store(request.runtime_dir).recover(request.options);
+  }
+
+  [[nodiscard]] storage_projection_rebuild_result
+  episode_projection_rebuild(const storage_episode_projection_rebuild_request &request) const override {
+    return episode_manifest_projection(request.runtime_dir).rebuild_typed();
+  }
 };
 
 const file_storage_service &typed_storage_service_instance() {

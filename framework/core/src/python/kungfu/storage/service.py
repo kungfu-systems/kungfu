@@ -439,19 +439,16 @@ def episode_begin(
     begin_time: int = 0,
 ) -> dict[str, Any]:
     return dict(
-        _runtime().run_storage_service_operation(
-            "episode_begin",
+        _runtime().storage_episode_begin_typed(
             str(runtime_dir),
-            {
-                "episode_id": _u64(episode_id),
-                "parent_episode_id": _u64(parent_episode_id),
-                "root_trigger_frame_uid": _u64(root_trigger_frame_uid),
-                "location_uid": location_uid,
-                "begin_time": begin_time,
-                "title": title,
-                "actor": actor,
-                "source": source,
-            },
+            episode_id=episode_id,
+            parent_episode_id=parent_episode_id,
+            root_trigger_frame_uid=root_trigger_frame_uid,
+            location_uid=location_uid,
+            begin_time=begin_time,
+            title=title,
+            actor=actor,
+            source=source,
         )
     )
 
@@ -467,17 +464,14 @@ def episode_heartbeat(
     note: str = "",
 ) -> dict[str, Any]:
     return dict(
-        _runtime().run_storage_service_operation(
-            "episode_heartbeat",
+        _runtime().storage_episode_heartbeat_typed(
             str(runtime_dir),
-            {
-                "episode_id": _u64(episode_id),
-                "location_uid": location_uid,
-                "update_time": update_time,
-                "last_frame_uid": _u64(last_frame_uid),
-                "frame_count": _u64(frame_count),
-                "note": note,
-            },
+            episode_id=episode_id,
+            location_uid=location_uid,
+            update_time=update_time,
+            last_frame_uid=last_frame_uid,
+            frame_count=frame_count,
+            note=note,
         )
     )
 
@@ -501,25 +495,22 @@ def episode_attach_frame(
     frame_checksum: int = 0,
 ) -> dict[str, Any]:
     return dict(
-        _runtime().run_storage_service_operation(
-            "episode_attach_frame",
+        _runtime().storage_episode_attach_frame_typed(
             str(runtime_dir),
-            {
-                "episode_id": _u64(episode_id),
-                "location_uid": location_uid,
-                "frame_uid": _u64(frame_uid),
-                "trigger_frame_uid": _u64(trigger_frame_uid),
-                "stream_id": _u64(stream_id),
-                "gen_time": gen_time,
-                "trigger_time": trigger_time,
-                "carrier_type": carrier_type,
-                "source": source,
-                "dest": dest,
-                "data_length": data_length,
-                "integrity_version": integrity_version,
-                "payload_checksum": _u64(payload_checksum),
-                "frame_checksum": _u64(frame_checksum),
-            },
+            episode_id=episode_id,
+            frame_uid=frame_uid,
+            location_uid=location_uid,
+            trigger_frame_uid=trigger_frame_uid,
+            stream_id=stream_id,
+            gen_time=gen_time,
+            trigger_time=trigger_time,
+            carrier_type=carrier_type,
+            source=source,
+            dest=dest,
+            data_length=data_length,
+            integrity_version=integrity_version,
+            payload_checksum=payload_checksum,
+            frame_checksum=frame_checksum,
         )
     )
 
@@ -536,18 +527,15 @@ def episode_attach_ref(
     update_time: int = 0,
 ) -> dict[str, Any]:
     return dict(
-        _runtime().run_storage_service_operation(
-            "episode_attach_ref",
+        _runtime().storage_episode_attach_ref_typed(
             str(runtime_dir),
-            {
-                "episode_id": _u64(episode_id),
-                "location_uid": location_uid,
-                "ref_kind": ref_kind,
-                "ref_uid": _u64(ref_uid),
-                "ref_id": ref_id,
-                "ref_hash": ref_hash,
-                "update_time": update_time,
-            },
+            episode_id=episode_id,
+            ref_kind=ref_kind,
+            ref_uid=ref_uid,
+            ref_id=ref_id,
+            ref_hash=ref_hash,
+            location_uid=location_uid,
+            update_time=update_time,
         )
     )
 
@@ -563,17 +551,15 @@ def episode_end(
     reason: str = "",
 ) -> dict[str, Any]:
     return dict(
-        _runtime().run_storage_service_operation(
-            "episode_end",
+        _runtime().storage_episode_close_typed(
             str(runtime_dir),
-            {
-                "episode_id": _u64(episode_id),
-                "location_uid": location_uid,
-                "end_time": end_time,
-                "last_frame_uid": _u64(last_frame_uid),
-                "frame_count": _u64(frame_count),
-                "reason": reason,
-            },
+            episode_id=episode_id,
+            aborted=False,
+            location_uid=location_uid,
+            end_time=end_time,
+            last_frame_uid=last_frame_uid,
+            frame_count=frame_count,
+            reason=reason,
         )
     )
 
@@ -589,17 +575,15 @@ def episode_abort(
     reason: str = "",
 ) -> dict[str, Any]:
     return dict(
-        _runtime().run_storage_service_operation(
-            "episode_abort",
+        _runtime().storage_episode_close_typed(
             str(runtime_dir),
-            {
-                "episode_id": _u64(episode_id),
-                "location_uid": location_uid,
-                "end_time": end_time,
-                "last_frame_uid": _u64(last_frame_uid),
-                "frame_count": _u64(frame_count),
-                "reason": reason,
-            },
+            episode_id=episode_id,
+            aborted=True,
+            location_uid=location_uid,
+            end_time=end_time,
+            last_frame_uid=last_frame_uid,
+            frame_count=frame_count,
+            reason=reason,
         )
     )
 
@@ -638,15 +622,12 @@ def episode_recover(
     reason: str = "",
 ) -> dict[str, Any]:
     return dict(
-        _runtime().run_storage_service_operation(
-            "episode_recover",
+        _runtime().storage_episode_recover_typed(
             str(runtime_dir),
-            {
-                "episode_id": _u64(episode_id),
-                "location_uid": location_uid,
-                "end_time": end_time,
-                "reason": reason,
-            },
+            episode_id=episode_id,
+            location_uid=location_uid,
+            end_time=end_time,
+            reason=reason,
         )
     )
 
@@ -654,13 +635,7 @@ def episode_recover(
 def episode_projection_rebuild(runtime_dir: str | Path) -> dict[str, Any]:
     """Rebuild the Episode manifest SQLite projection from the journal."""
 
-    return dict(
-        _runtime().run_storage_service_operation(
-            "episode_projection_rebuild",
-            str(runtime_dir),
-            {},
-        )
-    )
+    return dict(_runtime().storage_episode_projection_rebuild_typed(str(runtime_dir)))
 
 
 def write_jsonl(records: list[dict[str, Any]], out_path: str | Path) -> None:

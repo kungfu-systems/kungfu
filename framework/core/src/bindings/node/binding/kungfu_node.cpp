@@ -369,6 +369,132 @@ uint64_t Uint64Option(Napi::Env env, const Napi::Object &options, const char *na
   return static_cast<uint64_t>(value.ToNumber().Int64Value());
 }
 
+uint32_t Uint32Option(const Napi::Object &options, const char *name) {
+  return options.Has(name) ? options.Get(name).ToNumber().Uint32Value() : 0;
+}
+
+int64_t Int64Option(const Napi::Object &options, const char *name) {
+  return options.Has(name) ? options.Get(name).ToNumber().Int64Value() : 0;
+}
+
+std::string StringOption(const Napi::Object &options, const char *name) {
+  return options.Has(name) && options.Get(name).IsString() ? options.Get(name).As<Napi::String>().Utf8Value() : "";
+}
+
+Napi::Value StorageEpisodeBeginTyped(const Napi::CallbackInfo &info) {
+  if (!IsValid(info, 0, &Napi::Value::IsString) || !IsValid(info, 1, &Napi::Value::IsObject))
+    throw Napi::TypeError::New(info.Env(), "storageEpisodeBeginTyped(runtimeDir, options)");
+  const auto options = info[1].As<Napi::Object>();
+  runtime::storage_service_api::storage_episode_begin_request request{};
+  request.runtime_dir = info[0].As<Napi::String>().Utf8Value();
+  request.options = {Uint64Option(info.Env(), options, "episode_id"),
+                     Uint64Option(info.Env(), options, "parent_episode_id"),
+                     Uint64Option(info.Env(), options, "root_trigger_frame_uid"),
+                     Uint32Option(options, "location_uid"),
+                     Int64Option(options, "begin_time"),
+                     StringOption(options, "title"),
+                     StringOption(options, "actor"),
+                     StringOption(options, "source")};
+  return HanaViewToValue(info.Env(), runtime::storage_service_api::default_storage_service().episode_begin(request));
+}
+
+Napi::Value StorageEpisodeHeartbeatTyped(const Napi::CallbackInfo &info) {
+  if (!IsValid(info, 0, &Napi::Value::IsString) || !IsValid(info, 1, &Napi::Value::IsObject))
+    throw Napi::TypeError::New(info.Env(), "storageEpisodeHeartbeatTyped(runtimeDir, options)");
+  const auto options = info[1].As<Napi::Object>();
+  runtime::storage_service_api::storage_episode_heartbeat_request request{};
+  request.runtime_dir = info[0].As<Napi::String>().Utf8Value();
+  request.options = {Uint64Option(info.Env(), options, "episode_id"),
+                     Uint32Option(options, "location_uid"),
+                     Int64Option(options, "update_time"),
+                     Uint64Option(info.Env(), options, "last_frame_uid"),
+                     Uint64Option(info.Env(), options, "frame_count"),
+                     StringOption(options, "note")};
+  return HanaViewToValue(info.Env(),
+                         runtime::storage_service_api::default_storage_service().episode_heartbeat(request));
+}
+
+Napi::Value StorageEpisodeAttachFrameTyped(const Napi::CallbackInfo &info) {
+  if (!IsValid(info, 0, &Napi::Value::IsString) || !IsValid(info, 1, &Napi::Value::IsObject))
+    throw Napi::TypeError::New(info.Env(), "storageEpisodeAttachFrameTyped(runtimeDir, options)");
+  const auto options = info[1].As<Napi::Object>();
+  runtime::storage_service_api::storage_episode_frame_attach_request request{};
+  request.runtime_dir = info[0].As<Napi::String>().Utf8Value();
+  request.options = {Uint64Option(info.Env(), options, "episode_id"),
+                     Uint32Option(options, "location_uid"),
+                     Uint64Option(info.Env(), options, "frame_uid"),
+                     Uint64Option(info.Env(), options, "trigger_frame_uid"),
+                     Uint64Option(info.Env(), options, "stream_id"),
+                     Int64Option(options, "gen_time"),
+                     Int64Option(options, "trigger_time"),
+                     static_cast<int32_t>(Int64Option(options, "carrier_type")),
+                     Uint32Option(options, "source"),
+                     Uint32Option(options, "dest"),
+                     Uint32Option(options, "data_length"),
+                     Uint32Option(options, "integrity_version"),
+                     Uint64Option(info.Env(), options, "payload_checksum"),
+                     Uint64Option(info.Env(), options, "frame_checksum")};
+  return HanaViewToValue(info.Env(),
+                         runtime::storage_service_api::default_storage_service().episode_attach_frame(request));
+}
+
+Napi::Value StorageEpisodeAttachRefTyped(const Napi::CallbackInfo &info) {
+  if (!IsValid(info, 0, &Napi::Value::IsString) || !IsValid(info, 1, &Napi::Value::IsObject))
+    throw Napi::TypeError::New(info.Env(), "storageEpisodeAttachRefTyped(runtimeDir, options)");
+  const auto options = info[1].As<Napi::Object>();
+  const auto ref_kind = StringOption(options, "ref_kind");
+  runtime::storage_service_api::storage_episode_ref_attach_request request{};
+  request.runtime_dir = info[0].As<Napi::String>().Utf8Value();
+  request.options = {Uint64Option(info.Env(), options, "episode_id"),
+                     Uint32Option(options, "location_uid"),
+                     ref_kind == "payload"   ? EpisodeRefKind::Payload
+                     : ref_kind == "schema"  ? EpisodeRefKind::Schema
+                     : ref_kind == "episode" ? EpisodeRefKind::Episode
+                                             : EpisodeRefKind::InputFrame,
+                     Uint64Option(info.Env(), options, "ref_uid"),
+                     Int64Option(options, "update_time"),
+                     StringOption(options, "ref_id"),
+                     StringOption(options, "ref_hash")};
+  return HanaViewToValue(info.Env(),
+                         runtime::storage_service_api::default_storage_service().episode_attach_ref(request));
+}
+
+Napi::Value StorageEpisodeCloseTyped(const Napi::CallbackInfo &info) {
+  if (!IsValid(info, 0, &Napi::Value::IsString) || !IsValid(info, 1, &Napi::Value::IsObject))
+    throw Napi::TypeError::New(info.Env(), "storageEpisodeCloseTyped(runtimeDir, options)");
+  const auto options = info[1].As<Napi::Object>();
+  const auto aborted = options.Has("aborted") && options.Get("aborted").ToBoolean().Value();
+  runtime::storage_service_api::storage_episode_close_request request{};
+  request.runtime_dir = info[0].As<Napi::String>().Utf8Value();
+  request.options = {Uint64Option(info.Env(), options, "episode_id"),
+                     Uint32Option(options, "location_uid"),
+                     aborted ? EpisodeStatus::Aborted : EpisodeStatus::Ended,
+                     Int64Option(options, "end_time"),
+                     Uint64Option(info.Env(), options, "last_frame_uid"),
+                     Uint64Option(info.Env(), options, "frame_count"),
+                     StringOption(options, "reason")};
+  const auto &service = runtime::storage_service_api::default_storage_service();
+  return HanaViewToValue(info.Env(), aborted ? service.episode_abort(request) : service.episode_end(request));
+}
+
+Napi::Value StorageEpisodeRecoverTyped(const Napi::CallbackInfo &info) {
+  if (!IsValid(info, 0, &Napi::Value::IsString) || !IsValid(info, 1, &Napi::Value::IsObject))
+    throw Napi::TypeError::New(info.Env(), "storageEpisodeRecoverTyped(runtimeDir, options)");
+  const auto options = info[1].As<Napi::Object>();
+  runtime::storage_service_api::storage_episode_recover_request request{};
+  request.runtime_dir = info[0].As<Napi::String>().Utf8Value();
+  request.options = {Uint64Option(info.Env(), options, "episode_id"), Uint32Option(options, "location_uid"),
+                     Int64Option(options, "end_time"), StringOption(options, "reason")};
+  return HanaViewToValue(info.Env(), runtime::storage_service_api::default_storage_service().episode_recover(request));
+}
+
+Napi::Value StorageEpisodeProjectionRebuildTyped(const Napi::CallbackInfo &info) {
+  if (!IsValid(info, 0, &Napi::Value::IsString))
+    throw Napi::TypeError::New(info.Env(), "storageEpisodeProjectionRebuildTyped(runtimeDir)");
+  return HanaViewToValue(info.Env(), runtime::storage_service_api::default_storage_service().episode_projection_rebuild(
+                                         {info[0].As<Napi::String>().Utf8Value()}));
+}
+
 Napi::Value StorageFsckTyped(const Napi::CallbackInfo &info) {
   if (!IsValid(info, 0, &Napi::Value::IsString))
     throw Napi::TypeError::New(info.Env(), "storageFsckTyped(runtimeDir, options?)");
@@ -611,6 +737,13 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
   exports.Set("storageCompactPlanTyped", Napi::Function::New(env, StorageCompactPlanTyped));
   exports.Set("storageFsckTyped", Napi::Function::New(env, StorageFsckTyped));
   exports.Set("storageRepairPlanTyped", Napi::Function::New(env, StorageRepairPlanTyped));
+  exports.Set("storageEpisodeBeginTyped", Napi::Function::New(env, StorageEpisodeBeginTyped));
+  exports.Set("storageEpisodeHeartbeatTyped", Napi::Function::New(env, StorageEpisodeHeartbeatTyped));
+  exports.Set("storageEpisodeAttachFrameTyped", Napi::Function::New(env, StorageEpisodeAttachFrameTyped));
+  exports.Set("storageEpisodeAttachRefTyped", Napi::Function::New(env, StorageEpisodeAttachRefTyped));
+  exports.Set("storageEpisodeCloseTyped", Napi::Function::New(env, StorageEpisodeCloseTyped));
+  exports.Set("storageEpisodeRecoverTyped", Napi::Function::New(env, StorageEpisodeRecoverTyped));
+  exports.Set("storageEpisodeProjectionRebuildTyped", Napi::Function::New(env, StorageEpisodeProjectionRebuildTyped));
   exports.Set("makeStorageServiceRequest", Napi::Function::New(env, MakeStorageServiceRequest));
   exports.Set("runStorageServiceOperation", Napi::Function::New(env, RunStorageServiceOperation));
   exports.Set("acceptStorageManifest", Napi::Function::New(env, AcceptStorageManifest));

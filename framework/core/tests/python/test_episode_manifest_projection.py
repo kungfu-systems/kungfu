@@ -75,7 +75,7 @@ def test_rebuild_builds_sqlite_at_declared_path(tmp_path):
     report = service.episode_projection_rebuild(runtime_dir)
     assert report["ok"]
     assert report["authority"] == "yijinjing-journal"
-    assert report["rows"] == {
+    assert {row["table"]: row["count"] for row in report["rows"]} == {
         "episode_open": 2,
         "episode_heartbeat": 0,
         "episode_frame_attached": 2,
@@ -164,7 +164,10 @@ def test_rebuild_on_empty_manifest_is_ok(tmp_path):
     runtime_dir = tmp_path / "runtime"
     report = service.episode_projection_rebuild(runtime_dir)
     assert report["ok"]
-    assert report["journal_records"] == 0
+    assert {row["table"]: row["count"] for row in report["journal_records"]} == {
+        "episode_manifest_records": 0,
+        "unknown_records_skipped": 0,
+    }
     fsck = service.fsck(runtime_dir, episode_id=0)
     # episode_id=0 keeps the all-scope; the projection state for an empty
     # manifest verifies clean either way.
