@@ -169,7 +169,15 @@ jobs:
             uv_bin="$HOME/.cache/kungfu/tools/uv/$uv_version/$uv_target/$uv_name"
           fi
           test -x "$uv_bin"
-          python_bin="$(command -v python3 || command -v python)"
+          python_bin=""
+          for candidate in python3.13 python3.12 python3.11 python3 python; do
+            if command -v "$candidate" >/dev/null 2>&1 && \
+              "$candidate" -c 'import tomllib' >/dev/null 2>&1; then
+              python_bin="$(command -v "$candidate")"
+              break
+            fi
+          done
+          test -n "$python_bin"
           fingerprint() {
             "$python_bin" -c 'import hashlib,json,sys,tomllib; d=tomllib.load(open(sys.argv[1],"rb")); rows=[]; [(rows.append((p.get("name"),p.get("version"),("registry" if "registry" in p.get("source",{}) else json.dumps(p.get("source",{}),sort_keys=True)),sorted([x.get("hash","") for x in ([p.get("sdist",{})] if p.get("sdist") else [])+p.get("wheels",[])])))) for p in d.get("package",[])]; print(hashlib.sha256(json.dumps(sorted(rows),separators=(",",":")).encode()).hexdigest())' "$1"
           }
