@@ -17,11 +17,10 @@
 //
 // Exit code 0 = all five steps PASS.
 
+use kungfu_embedding::{Context, ContextConfig, EmbeddingError, Location};
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int};
 use std::time::Instant;
-
-mod embedding;
 
 extern "C" {
     fn kf_shim_seed_fixture(root: *const c_char) -> c_int;
@@ -96,9 +95,9 @@ fn main() {
         if unsafe { kf_shim_seed_fixture(root_c.as_ptr()) } != 0 {
             return false;
         }
-        let result = (|| -> Result<bool, String> {
-            let context = embedding::Context::open(&root_str)?;
-            let mut reader = context.open_reader("host_spike", "cpp")?;
+        let result = (|| -> Result<bool, EmbeddingError> {
+            let context = Context::open(&ContextConfig::new(&root_str, "host_spike", "rust"))?;
+            let mut reader = context.open_reader(&Location::new("host_spike", "cpp"))?;
             let matched = {
                 let batch = reader.read_batch(32)?;
                 batch.payload_bytes_copied() == 0

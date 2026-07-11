@@ -21,7 +21,6 @@ use std::process::Command;
 
 fn main() {
     println!("cargo:rerun-if-changed=shim/host_shim.cpp");
-    println!("cargo:rerun-if-changed=src/embedding.rs");
     println!("cargo:rerun-if-env-changed=KF_SPIKE_SIBLING_CORE");
     println!("cargo:rerun-if-env-changed=KF_SPIKE_NATIVE_DIR");
     println!("cargo:rerun-if-env-changed=KF_SPIKE_PYTHON_HOME");
