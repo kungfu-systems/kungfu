@@ -782,7 +782,7 @@ std::string episode_manifest_writer_lock_path(const std::string &runtime_dir) {
 
 episode_manifest_store::episode_manifest_store(std::string runtime_dir) : runtime_dir_(std::move(runtime_dir)) {}
 
-nlohmann::json episode_manifest_store::begin(const episode_begin_options &options) const {
+EpisodeOpen episode_manifest_store::begin(const episode_begin_options &options) const {
   EpisodeOpen record{};
   record.schema_version = EPISODE_MANIFEST_SCHEMA_VERSION;
   record.episode_id = options.episode_id == 0 ? generated_episode_id(options) : options.episode_id;
@@ -796,10 +796,10 @@ nlohmann::json episode_manifest_store::begin(const episode_begin_options &option
   const auto guard = acquire_writer_guard(runtime_dir_);
   auto writer = make_writer(runtime_dir_);
   writer.write_at(record.begin_time, 0, record);
-  return record_json(record);
+  return record;
 }
 
-nlohmann::json episode_manifest_store::heartbeat(const episode_heartbeat_options &options) const {
+EpisodeHeartbeat episode_manifest_store::heartbeat(const episode_heartbeat_options &options) const {
   if (options.episode_id == 0) {
     throw std::invalid_argument("episode_id is required");
   }
@@ -814,10 +814,10 @@ nlohmann::json episode_manifest_store::heartbeat(const episode_heartbeat_options
   const auto guard = acquire_writer_guard(runtime_dir_);
   auto writer = make_writer(runtime_dir_);
   writer.write_at(record.update_time, 0, record);
-  return record_json(record);
+  return record;
 }
 
-nlohmann::json episode_manifest_store::attach_frame(const episode_frame_attach_options &options) const {
+EpisodeFrameAttached episode_manifest_store::attach_frame(const episode_frame_attach_options &options) const {
   if (options.episode_id == 0 || options.frame_uid == 0) {
     throw std::invalid_argument("episode_id and frame_uid are required");
   }
@@ -840,10 +840,10 @@ nlohmann::json episode_manifest_store::attach_frame(const episode_frame_attach_o
   const auto guard = acquire_writer_guard(runtime_dir_);
   auto writer = make_writer(runtime_dir_);
   writer.write_at(record.gen_time, 0, record);
-  return record_json(record);
+  return record;
 }
 
-nlohmann::json episode_manifest_store::attach_ref(const episode_ref_attach_options &options) const {
+EpisodeRefAttached episode_manifest_store::attach_ref(const episode_ref_attach_options &options) const {
   if (options.episode_id == 0) {
     throw std::invalid_argument("episode_id is required");
   }
@@ -859,10 +859,10 @@ nlohmann::json episode_manifest_store::attach_ref(const episode_ref_attach_optio
   const auto guard = acquire_writer_guard(runtime_dir_);
   auto writer = make_writer(runtime_dir_);
   writer.write_at(record.update_time, 0, record);
-  return record_json(record);
+  return record;
 }
 
-nlohmann::json episode_manifest_store::end(const episode_close_options &options) const {
+episode_close_write_result episode_manifest_store::end(const episode_close_options &options) const {
   if (options.episode_id == 0) {
     throw std::invalid_argument("episode_id is required");
   }
@@ -881,7 +881,8 @@ nlohmann::json episode_manifest_store::end(const episode_close_options &options)
   const bool first_close = folded == fold.episodes.end() || !folded->second.closed;
   auto writer = make_writer(runtime_dir_);
   writer.write_at(record.end_time, 0, record);
-  auto response = record_json(record);
+  episode_close_write_result result{};
+  result.close = record;
   // ADR-0043: the first terminal close is the seal — commit the Episode's
   // content identity as the final claim, under the same writer guard so no
   // record can interleave between the seal and its root. Later closes
@@ -900,12 +901,12 @@ nlohmann::json episode_manifest_store::end(const episode_close_options &options)
     set_fixed_string(root_record.algorithm, root.algorithm);
     set_fixed_string(root_record.root_value, root.value);
     writer.write_at(root_record.commit_time, 0, root_record);
-    response["content_root"] = record_json(root_record);
+    result.content_root = root_record;
   }
-  return response;
+  return result;
 }
 
-nlohmann::json episode_manifest_store::abort(const episode_close_options &options) const {
+episode_close_write_result episode_manifest_store::abort(const episode_close_options &options) const {
   auto abort_options = options;
   abort_options.status = EpisodeStatus::Aborted;
   return end(abort_options);

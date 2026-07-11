@@ -2033,6 +2033,13 @@ nlohmann::json render_manifest_entry_view(const yy_storage::manifest_entry_view 
 nlohmann::json render_manifest_document(const yy_storage::manifest_document_view &manifest);
 nlohmann::json render_storage_export_bundle_result(const storage_export_bundle_result &result);
 storage_export_bundle_result parse_storage_export_bundle(const nlohmann::json &bundle);
+nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeOpen &record);
+nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeHeartbeat &record);
+nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeFrameAttached &record);
+nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeRefAttached &record);
+nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeClosed &record);
+nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeRootCommitted &record);
+nlohmann::json render_episode_close_write_result(const yy_storage::episode_close_write_result &result);
 
 storage_repair_subject repair_subject(const storage_fsck_issue &issue) {
   return std::visit(
@@ -2190,19 +2197,20 @@ std::string episode_record_identity_key(const nlohmann::json &record) {
 nlohmann::json episode_apply_record(const storage_service_options &options, const nlohmann::json &record) {
   const auto kind = text_or(record, "record_kind");
   if (kind == "episode_open") {
-    return episode_store(options).begin(parse_episode_begin_options(record));
+    return episode_record_body_json(episode_store(options).begin(parse_episode_begin_options(record)));
   }
   if (kind == "episode_heartbeat") {
-    return episode_store(options).heartbeat(parse_episode_heartbeat_options(record));
+    return episode_record_body_json(episode_store(options).heartbeat(parse_episode_heartbeat_options(record)));
   }
   if (kind == "episode_frame_attached") {
-    return episode_store(options).attach_frame(parse_episode_frame_attach_options(record));
+    return episode_record_body_json(episode_store(options).attach_frame(parse_episode_frame_attach_options(record)));
   }
   if (kind == "episode_ref_attached") {
-    return episode_store(options).attach_ref(parse_episode_ref_attach_options(record));
+    return episode_record_body_json(episode_store(options).attach_ref(parse_episode_ref_attach_options(record)));
   }
   if (kind == "episode_closed") {
-    return episode_store(options).end(parse_episode_close_options(record, yy_enums::EpisodeStatus::Ended));
+    return render_episode_close_write_result(
+        episode_store(options).end(parse_episode_close_options(record, yy_enums::EpisodeStatus::Ended)));
   }
   if (kind == "episode_root_committed") {
     // ADR-0043: the destination's root is committed by its own seal path (the
@@ -3793,29 +3801,33 @@ public:
   }
 
   [[nodiscard]] nlohmann::json episode_begin(const storage_service_options &options) const {
-    return episode_store(options).begin(parse_episode_begin_options(options.operation_options));
+    return episode_record_body_json(
+        episode_store(options).begin(parse_episode_begin_options(options.operation_options)));
   }
 
   [[nodiscard]] nlohmann::json episode_heartbeat(const storage_service_options &options) const {
-    return episode_store(options).heartbeat(parse_episode_heartbeat_options(options.operation_options));
+    return episode_record_body_json(
+        episode_store(options).heartbeat(parse_episode_heartbeat_options(options.operation_options)));
   }
 
   [[nodiscard]] nlohmann::json episode_end(const storage_service_options &options) const {
-    return episode_store(options).end(
-        parse_episode_close_options(options.operation_options, yy_enums::EpisodeStatus::Ended));
+    return render_episode_close_write_result(episode_store(options).end(
+        parse_episode_close_options(options.operation_options, yy_enums::EpisodeStatus::Ended)));
   }
 
   [[nodiscard]] nlohmann::json episode_abort(const storage_service_options &options) const {
-    return episode_store(options).abort(
-        parse_episode_close_options(options.operation_options, yy_enums::EpisodeStatus::Aborted));
+    return render_episode_close_write_result(episode_store(options).abort(
+        parse_episode_close_options(options.operation_options, yy_enums::EpisodeStatus::Aborted)));
   }
 
   [[nodiscard]] nlohmann::json episode_attach_frame(const storage_service_options &options) const {
-    return episode_store(options).attach_frame(parse_episode_frame_attach_options(options.operation_options));
+    return episode_record_body_json(
+        episode_store(options).attach_frame(parse_episode_frame_attach_options(options.operation_options)));
   }
 
   [[nodiscard]] nlohmann::json episode_attach_ref(const storage_service_options &options) const {
-    return episode_store(options).attach_ref(parse_episode_ref_attach_options(options.operation_options));
+    return episode_record_body_json(
+        episode_store(options).attach_ref(parse_episode_ref_attach_options(options.operation_options)));
   }
 
   [[nodiscard]] nlohmann::json episode_list(const storage_service_options &options) const {
@@ -4043,6 +4055,14 @@ nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeRootCommi
   row["algorithm"] = std::string(record.algorithm.value);
   row["root_value"] = std::string(record.root_value.value);
   return row;
+}
+
+nlohmann::json render_episode_close_write_result(const yy_storage::episode_close_write_result &result) {
+  auto rendered = episode_record_body_json(result.close);
+  if (result.content_root.has_value()) {
+    rendered["content_root"] = episode_record_body_json(*result.content_root);
+  }
+  return rendered;
 }
 
 nlohmann::json episode_record_row_json(const yy_storage::episode_manifest_record &record) {

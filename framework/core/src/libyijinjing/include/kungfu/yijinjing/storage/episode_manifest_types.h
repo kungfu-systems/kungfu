@@ -124,6 +124,11 @@ struct episode_content_root {
   std::string value = {};
 };
 
+struct episode_close_write_result {
+  yijinjing::types::EpisodeClosed close = {};
+  std::optional<yijinjing::types::EpisodeRootCommitted> content_root = {};
+};
+
 // The root covers the Episode-owned claim sequence in manifest append order;
 // transport provenance, heartbeats, unknown records, and the root record do
 // not participate in identity.

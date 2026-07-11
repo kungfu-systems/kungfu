@@ -113,19 +113,19 @@ public:
   // <runtime_dir>/storage.
   void set_content_store(const content_store *store) { content_store_ = store; }
 
-  // Append-only writers. Each writes one POD record to the journal and
-  // returns its JSON edge projection.
-  [[nodiscard]] nlohmann::json begin(const episode_begin_options &options) const;
+  // Append-only writers return the authoritative Hana POD record directly;
+  // JSON compatibility is rendered by the libkungfu edge adapter.
+  [[nodiscard]] yijinjing::types::EpisodeOpen begin(const episode_begin_options &options) const;
 
-  [[nodiscard]] nlohmann::json heartbeat(const episode_heartbeat_options &options) const;
+  [[nodiscard]] yijinjing::types::EpisodeHeartbeat heartbeat(const episode_heartbeat_options &options) const;
 
-  [[nodiscard]] nlohmann::json attach_frame(const episode_frame_attach_options &options) const;
+  [[nodiscard]] yijinjing::types::EpisodeFrameAttached attach_frame(const episode_frame_attach_options &options) const;
 
-  [[nodiscard]] nlohmann::json attach_ref(const episode_ref_attach_options &options) const;
+  [[nodiscard]] yijinjing::types::EpisodeRefAttached attach_ref(const episode_ref_attach_options &options) const;
 
-  [[nodiscard]] nlohmann::json end(const episode_close_options &options) const;
+  [[nodiscard]] episode_close_write_result end(const episode_close_options &options) const;
 
-  [[nodiscard]] nlohmann::json abort(const episode_close_options &options) const;
+  [[nodiscard]] episode_close_write_result abort(const episode_close_options &options) const;
 
   // Resume-or-abort recovery for interrupted open Episodes, as an explicit
   // maintenance step under the writer guard. Appends EpisodeClosed(Aborted)
