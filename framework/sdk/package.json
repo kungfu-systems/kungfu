@@ -1,0 +1,23 @@
+{
+  "name": "@kungfu-tech/storage",
+  "version": "4.0.0-alpha.0",
+  "description": "Kungfu Node storage SDK over the versioned libkungfu contract",
+  "license": "Apache-2.0",
+  "author": {
+    "name": "Kungfu",
+    "email": "info@kungfu.link"
+  },
+  "repository": {
+    "url": "https://github.com/kungfu-systems/kungfu.git"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "main": "index.js",
+  "files": ["index.js", "README.md", "LICENSE", "kungfu-storage.contract.json"],
+  "scripts": {
+    "build": "node package-artifacts.mjs --validate",
+    "pack": "node package-artifacts.mjs"
+  }
+}

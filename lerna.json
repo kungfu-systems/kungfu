@@ -5,7 +5,7 @@
     "developer/*",
     "extensions/*",
     "examples/*",
-    "artifact"
+    "product"
   ],
   "command": {
     "version": {

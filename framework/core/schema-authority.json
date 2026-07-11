@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "authorities": [
+    {
+      "identity": "kungfu.kernel.profile",
+      "owner": "hana",
+      "symbol": "ProfileDataTypes",
+      "declaration": "framework/core/src/libyijinjing/include/kungfu/yijinjing/schema/registry.h",
+      "projection_route": "hana-sqlite-orm"
+    },
+    {
+      "identity": "kungfu.kernel.state",
+      "owner": "hana",
+      "symbol": "StateDataTypes",
+      "declaration": "framework/core/src/libyijinjing/include/kungfu/yijinjing/schema/registry.h",
+      "projection_route": "hana-sqlite-orm"
+    },
+    {
+      "identity": "kungfu.storage.source-registry",
+      "owner": "hana",
+      "symbol": "SourceRegistryDataTypes",
+      "declaration": "framework/core/src/libyijinjing/include/kungfu/yijinjing/schema/registry.h",
+      "projection_route": "hana-sqlite-orm"
+    },
+    {
+      "identity": "kungfu.storage.manifest-catalog",
+      "owner": "hana",
+      "symbol": "ManifestCatalogDataTypes",
+      "declaration": "framework/core/src/libyijinjing/include/kungfu/yijinjing/schema/registry.h",
+      "projection_route": "hana-sqlite-orm"
+    },
+    {
+      "identity": "kungfu.storage.episode-manifest",
+      "owner": "hana",
+      "symbol": "EpisodeManifestDataTypes",
+      "declaration": "framework/core/src/libyijinjing/include/kungfu/yijinjing/schema/registry.h",
+      "projection_route": "hana-sqlite-orm"
+    },
+    {
+      "identity": "kungfu.action.envelope",
+      "owner": "flatbuffers",
+      "declaration": "framework/core/src/libkungfu/schema/ActionEnvelope.fbs",
+      "derived_schema": "framework/core/src/libkungfu/schema/ActionEnvelope.bfbs",
+      "projection_route": "flatbuffers-bfbs"
+    },
+    {
+      "identity": "kungfu.domain.fact-events",
+      "owner": "flatbuffers",
+      "declaration": "framework/core/src/libkungfu/schemas/domain_fact_event.fbs",
+      "derived_schema": "framework/core/src/libkungfu/schemas/domain_fact_event.bfbs",
+      "projection_route": "flatbuffers-bfbs"
+    },
+    {
+      "identity": "kungfu.trust.assessment-events",
+      "owner": "flatbuffers",
+      "declaration": "framework/core/src/libkungfu/schemas/assessment_event.fbs",
+      "derived_schema": "framework/core/src/libkungfu/schemas/assessment_event.bfbs",
+      "projection_route": "flatbuffers-bfbs"
+    },
+    {
+      "identity": "kungfu.query.saved-query-events",
+      "owner": "flatbuffers",
+      "declaration": "framework/core/src/libkungfu/schemas/saved_query_catalog_event.fbs",
+      "derived_schema": "framework/core/src/libkungfu/schemas/saved_query_catalog_event.bfbs",
+      "projection_route": "flatbuffers-bfbs"
+    },
+    {
+      "identity": "kungfu.atlas.events",
+      "owner": "flatbuffers",
+      "declaration": "framework/core/src/python/kungfu/atlas/atlas_events.fbs",
+      "derived_schema": "framework/core/src/python/kungfu/atlas/atlas_events.bfbs",
+      "projection_route": "flatbuffers-bfbs"
+    },
+    {
+      "identity": "kungfu.rewind.events",
+      "owner": "flatbuffers",
+      "declaration": "framework/core/src/python/kungfu/rewind/rewind_events.fbs",
+      "derived_schema": "framework/core/src/python/kungfu/rewind/rewind_events.bfbs",
+      "projection_route": "flatbuffers-bfbs"
+    },
+    {
+      "identity": "kungfu.work.events",
+      "owner": "flatbuffers",
+      "declaration": "framework/core/src/python/kungfu/work/work_events.fbs",
+      "derived_schema": "framework/core/src/python/kungfu/work/work_events.bfbs",
+      "projection_route": "flatbuffers-bfbs"
+    }
+  ],
+  "non_authorities": [
+    {
+      "identity": "kungfu.storage.typed-service-view",
+      "kind": "typed-view",
+      "derives_from": "kungfu.storage.source-registry",
+      "reason": "C++/Python/Node typed results are projections of Hana-owned records."
+    },
+    {
+      "identity": "kungfu.storage.opaque-content-body",
+      "kind": "opaque-body",
+      "reason": "Content-addressed bytes have integrity metadata but no structural schema owner."
+    }
+  ],
+  "json_edges": [
+    {
+      "path": "framework/core/src/libkungfu/include/kungfu/runtime/storage/json_edge.h",
+      "surface": "public-edge",
+      "direction": "foreign-ingress-and-rendered-egress",
+      "reason": "Compatibility import/export and explicit JSON rendering only; typed service.h remains authoritative.",
+      "remove_when": "All external storage clients consume typed bindings or a separately versioned interchange protocol."
+    },
+    {
+      "path": "framework/core/src/libkungfu/src/runtime/storage/service.cpp",
+      "surface": "implementation-edge",
+      "direction": "foreign-ingress-and-rendered-egress",
+      "reason": "Implements json_edge.h adapters around the typed storage service; it is not a public semantic header.",
+      "remove_when": "The json_edge.h compatibility surface is retired."
+    }
+  ],
+  "flatbuffers_projection_boundary": "framework/core/src/libkungfu/include/kungfu/runtime/projection/flatbuffer_schema_registry.h"
+}

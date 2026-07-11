@@ -28,27 +28,28 @@ re-running that specific proof from the repo alone is not currently possible.
 **Maturity.** `stable` — implemented, and stress-validated on both architectures
 per the results reported in ADR-0001.
 
-## The longfist binary layout is the cross-language / on-disk contract
+## The yijinjing schema layout is the cross-language / on-disk contract
 
 **Guarantee.** The same in-memory bytes are read by C++, Python, and Node without
 parsing, and the same bytes are what is persisted to the journal. The layout
-*is* the ABI: a consumer speaks a layout, it does not negotiate one. The schema
-is a declared FlatBuffers definition
-([`*.fbs`](../framework/core/src/libkungfu/include/kungfu/longfist/fb)) generated for all
-three languages, not a C++-internal secret.
+*is* the ABI: a consumer speaks a layout, it does not negotiate one. The closed
+runtime schema is declared in
+[`kungfu/yijinjing/schema`](../framework/core/src/libyijinjing/include/kungfu/yijinjing/schema)
+and exposed through generated C++/Python/Node bindings, not a C++-internal
+secret.
 
-**Verify.** [ADR-0008](../framework/core/docs/adr/ADR-0008-longfist-schema-evolution-and-minor-maintenance.md)
-(the layout as the true invariant) and
-[ADR-0002](../framework/core/docs/adr/ADR-0002-longfist-flatbuffers-runtime-schema.md)
-(the FlatBuffers migration); the schema files under
-[`longfist/fb/`](../framework/core/src/libkungfu/include/kungfu/longfist/fb).
+**Verify.** The schema headers under
+[`kungfu/yijinjing/schema`](../framework/core/src/libyijinjing/include/kungfu/yijinjing/schema),
+the Python binding under `pykungfu.yijinjing`, the Node binding exposed as
+`binding.Schema`, and [ADR-0008](../framework/core/docs/adr/ADR-0008-yijinjing-schema-layout-baseline.md).
 
-**Maturity.** The layout-as-contract is `stable`. The **enforcement** that lets
-an external consumer rely on a stated compatibility *window* (CI checks against
-breaking changes, a runtime ≥ schema load gate, cross-version replay tests) is
-**not yet built** — see [`known-limits.md`](known-limits.md#compatibility-governance-is-designed-not-yet-enforced).
-Until then: treat compatibility as per-minor, and verify against the layout, not
-a version number.
+**Maturity.** The v4 greenfield baseline is `stable` as the current contract
+root. Pre-v4 layouts are not compatibility targets. The **enforcement** that
+will let external consumers rely on a stated v4+ compatibility window (schema
+change gates, runtime/schema load checks, cross-version replay/import tests) is
+**not yet built** — see [`known-limits.md`](known-limits.md#v4-schema-compatibility-enforcement-is-designed-not-yet-complete).
+Until then: verify against the current v4 layout and treat breaking pre-release
+schema cleanup as allowed only before the first stable v4 release.
 
 ## Replay runs on the same runtime as live
 
@@ -58,9 +59,9 @@ nanosecond `gen_time` and the `trigger_frame_uid` causal links in each frame
 (see [`event-model.md`](event-model.md)), a recorded stream reproduces with high
 precision.
 
-**Verify.** [`replay_writer.cpp`](../framework/core/src/libkungfu/src/yijinjing/journal/replay_writer.cpp)
+**Verify.** [`replay_writer.cpp`](../framework/core/src/libkungfu/src/runtime/journal/replay_writer.cpp)
 and the shared journal runtime under
-[`yijinjing/`](../framework/core/src/libkungfu/src/yijinjing).
+[`runtime/`](../framework/core/src/libkungfu/src/runtime).
 
 **Maturity.** `stable` for the mechanism (same-runtime replay). The precise
 determinism boundary — what is and is not reproducible across machines and
@@ -86,7 +87,7 @@ kungfu config contract --json
 kungfu config schema --json
 kungfu config defaults --json
 kungfu config show --json
-./kungfu-code verify
+./shifu verify
 ```
 
 `verify` checks that the frozen artifact copy under
@@ -122,7 +123,7 @@ contract, not by ad hoc consumers.
 kungfu kfx contract --json
 kungfu kfx schema --json
 kungfu kfx inspect <package-dir-or-tgz> --json
-./kungfu-code verify
+./shifu verify
 ```
 
 `verify` checks that the frozen artifact copy under
@@ -167,7 +168,7 @@ kungfu contract verify --json
 kungfu sdk contract policy --check --json
 kungfu sdk contract witness --json
 kungfu sdk contract audit --json
-./kungfu-code verify
+./shifu verify
 ```
 
 `verify` walks the same registry and compares every shipped contract artifact
@@ -177,9 +178,9 @@ the SDK witness to Buildchain as declarative input, for example:
 
 ```sh
 mkdir -p .buildchain/kfd-1
-kungfu sdk contract witness --json > .buildchain/kfd-1/contract-world.witness.json
+kungfu sdk contract witness --json > .buildchain/kfd/kfd-1/contract-world.witness.json
 buildchain collect github-release \
-  --kfd-1-witness-json .buildchain/kfd-1/contract-world.witness.json
+  --kfd-1-witness-json .buildchain/kfd/kfd-1/contract-world.witness.json
 ```
 
 Buildchain then freezes the pre-build witness and independently checks the
@@ -189,6 +190,169 @@ currently named `kfd-1`.
 **Maturity.** `draft` while more welded surfaces move onto machine-readable
 contracts. The registry/tooling path is intended to be the stable KFD-1
 infrastructure before third-party contract surfaces are published.
+
+## KFD-2 release claims use the Buildchain product registry contract
+
+**Guarantee.** Public KFD-2 release trust claims are declared in one tracked
+registry:
+[`registry.json`](../.buildchain/kfd/kfd-2/registry.json).
+The registry binds each claim to source files, machine-readable evidence,
+artifact coordinates, a local verification command, audit boundary,
+responsibility state, and residual risk. Kungfu owns those product facts;
+Buildchain owns the generic registry validation and deterministic projection
+mechanism. The other files under `.buildchain/kfd/kfd-2/` are generated release
+inputs, not a second source of truth.
+
+**Verify.** Run:
+
+```sh
+pnpm run kfd2:claims:check
+pnpm run kfd2:claims
+```
+
+`product-claims check` validates the registry and fails on missing, stale, or
+unexpected generated claim files without writing. `product-claims write` emits
+the KFD canonical wrapper at `.buildchain/kfd/kfd-2/release-claims.json`, raw
+claim files under `.buildchain/kfd/kfd-2/claims/`, and the release-passport
+argument list. Release collection continues to pass the raw files through
+Buildchain's compatible `--kfd-2-claim-json` input.
+
+**Maturity.** `draft`. The first claim set covers the agent onboarding pack,
+Codex report receipts, and the remote fact boundary. The release workflow now
+generates these files through Buildchain before release-passport collection and
+passes the raw claim inputs to the release gate.
+
+## Buildchain KFD release evidence is generated from Kungfu facts
+
+**Guarantee.** Kungfu exposes one root command set for Buildchain KFD release
+passport inputs:
+
+```sh
+kungfu kfd query --json
+kungfu kfd upstream --json
+kungfu kfd aggregate --json
+kungfu sdk kfd query --json
+kungfu sdk kfd upstream --json
+kungfu sdk kfd aggregate --json
+./shifu kfd:buildchain
+./shifu kfd:buildchain:check
+./shifu kfd:query
+node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json
+```
+
+`kungfu kfd ...` is the installed-runtime bridge for users and agents;
+`kungfu sdk kfd ...` exposes the same SDK-distributed Buildchain bridge directly.
+The `./shifu kfd:*` commands are the repository development and release
+evidence generators. `query` reports Kungfu's own declared surfaces, while
+`upstream` and `aggregate` expose the packaged KFD/libnode/Buildchain upstream
+KFD aggregate.
+
+During `./shifu product gui dev` and `./shifu product tui dev`, the
+product wrapper exports `KUNGFU_SDK_ENTRY`, `KUNGFU_KFD3_REGISTRY`, and
+`KUNGFU_KFD_UPSTREAM_AGGREGATE` for the launched dev process. This lets a local
+dev run query the working tree's KFD facts through the normal `kungfu kfd`
+bridge instead of waiting for a packaged release artifact.
+
+The root [`.buildchain/kfd/kfd-3/surfaces.json`](../.buildchain/kfd/kfd-3/surfaces.json) file is the product's
+Buildchain-managed KFD-3 registry and is the Buildchain-facing source of truth
+for participant-facing surfaces. Kungfu-specific subregistries and entrypoint
+lists, such as the installed agent registry, are inputs that must project into
+that root registry through `./shifu kfd:buildchain:check`.
+
+The generator keeps the root registry current, writes a packaged SDK copy at
+`developer/sdk/kfd/kfd-3-surfaces.json`, writes the SDK-packaged upstream
+aggregate at `developer/sdk/kfd/upstream-aggregate.json`, then writes ignored
+release evidence under `.buildchain/`:
+
+```text
+.buildchain/kfd/kfd-1/contract-world.witness.json
+.buildchain/kfd/kfd-2/claims/*.json
+.buildchain/kfd/kfd-3/collaboration-interface.prebuild.json
+.buildchain/kfd/kfd-3/collaboration-interface.artifact.json
+.buildchain/kfd/kfd-3/capability-query.json
+```
+
+The `.buildchain/` files are generated release evidence, not a second source of
+truth. The strict registry audit verifies that the root registry uses
+Buildchain's managed path and contract, declares `.buildchain/kfd/kfd-3/surfaces.json` as its
+source of truth, carries per-surface declaration metadata, and includes every
+agent registry plus SDK/product surface generated by Kungfu.
+
+**Verify.** Run:
+
+```sh
+./shifu kfd:buildchain:check
+./shifu verify
+```
+
+The release workflow runs `node scripts/buildchain-custom-publish-evidence.mjs`;
+that script generates KFD evidence before writing custom publish evidence.
+Buildchain 2.10 then collects:
+
+- KFD-1 witness `.buildchain/kfd/kfd-1/contract-world.witness.json`;
+- KFD-2 raw claims under `.buildchain/kfd/kfd-2/claims/`;
+- KFD-3 prebuild witness `.buildchain/kfd/kfd-3/collaboration-interface.prebuild.json`;
+- KFD-3 artifact witness from
+  `node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json`.
+
+**Maturity.** `draft` for the breadth of the declared interface, because the
+current surface set is agent/SDK/product focused. The Buildchain release
+passport wiring is active and is now part of `./shifu verify`.
+
+## The agent-first bridge is Kungfu's current KFD-3 profile
+
+**Guarantee.** The installed runtime carries a local Agent Onboarding Pack and
+machine-readable commands that let an agent start from a minimal artifact-local
+entrypoint instead of guessing from external notes:
+
+```sh
+kungfu agent brief
+kungfu agent capabilities --json
+kungfu agent choose-mode --json
+```
+
+This is Kungfu's current concrete profile of KFD-3: cooperation starts from
+transparent value and constraints. KFD-3 itself is not agent-only; the general
+participant-facing schema belongs in the KFD repository as a collaboration
+interface. Kungfu's first profile is agent-first because agents are the current
+non-human collaborators that need local discovery, mode choice, safety
+boundaries, and receipt/closeout instructions.
+
+The target implementation is a closed participant-facing API surface:
+
+- one Kungfu-owned registry declares public-agent, public-human, experimental,
+  deprecated, internal, and unsupported entrypoints;
+- CLI/help/docs/skills/JSON command catalogs are generated from that registry
+  or explicitly anchored to it in implementation code;
+- Markdown operation manuals are generated or linted against the same registry;
+- reverse audit enumerates the shipped command tree and fails if a reachable
+  entrypoint is not classified;
+- `kungfu agent verify --json` proves the installed artifact can expose the
+  same first-party facts it asks agents to use.
+
+In other words, KFD-3 is not satisfied by "there is documentation." It requires
+proof that the artifact's participant-facing API is discoverable, constraint
+transparent, and closed against hidden usable APIs.
+
+**Verify today.** Run:
+
+```sh
+kungfu agent brief
+kungfu agent capabilities --json
+kungfu agent choose-mode --json
+node scripts/verify-agent-pack.mjs
+```
+
+`verify-agent-pack` is the current packaging gate: it checks the installed pack
+files, command catalog, provider skills, package data, and GUI/TUI pointers.
+The planned KFD-3 closure gate should extend this into registry/code-anchor
+verification, Markdown reference linting, and Buildchain witness generation.
+
+**Maturity.** `draft`. The installed pack and packaging check exist. The
+single-source registry, CLI anchors, reverse command-tree audit,
+`kungfu agent verify --json`, docs projection checks, and Buildchain KFD-3
+witness remain future implementation work. See
+[`kfd-native-sdk-release-gates.md`](kfd-native-sdk-release-gates.md).
 
 ## The Skill contract is a single source of truth
 
@@ -206,7 +370,7 @@ kungfu skill contract --json
 kungfu skill schema --json
 kungfu skill validate <skill-dir> --json
 kungfu skill context --path <skill-root> --json
-./kungfu-code verify
+./shifu verify
 ```
 
 `verify` checks the frozen Skill contract artifact and smoke-tests that the

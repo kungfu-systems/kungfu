@@ -30,7 +30,7 @@ const require = createRequire(
 );
 
 if (!fs.existsSync(bin)) {
-  fail('kungfu CLI is not frozen (run ./kungfu-code freeze first)');
+  fail('kungfu CLI is not frozen (run ./shifu freeze first)');
 }
 if (!fs.existsSync(bundlePath)) {
   fail('work-dashboard is not built (run kungfu sdk kfx build first)');

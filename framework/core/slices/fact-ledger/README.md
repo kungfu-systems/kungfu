@@ -8,7 +8,7 @@ runtime coupling creeping back into the core (the zero-extra-dylib assertion
 in `run.sh` is the canary).
 
 A minimal, verifiable slice that embeds the yijinjing journal spine in a plain
-process **without starting the trading runtime** (no master, no bus drain loop,
+process **without starting the trading runtime** (no coordinator, no bus drain loop,
 no nng sockets), records a causal chain inside the spine, and then proves it can
 be reopened and exported by a fully independent tool.
 
@@ -99,7 +99,7 @@ link back correctly, so CI can gate on it.
 5. **No uid recompute** — `export.cpp` reads `frame_uid`/`trigger_frame_uid`
    straight off the header; it never calls `writer::current_frame_uid()`
    (ADR-0010 4.6).
-6. **Reproducible build+run** — the commands above, plus `run.sh`; `./kungfu-code verify --full` runs the same proof as part of the repository gate.
+6. **Reproducible build+run** — the commands above, plus `run.sh`; `./shifu verify --full` runs the same proof as part of the repository gate.
 
 ## Honest capture boundary (what this slice does NOT claim)
 
@@ -109,11 +109,14 @@ link back correctly, so CI can gate on it.
   `src/libyijinjing/check-deps.sh` guards the dependency direction (no
   practice/wingchun/nng/rxcpp/sqlite/rocksdb, no trading types, no full type
   registry).
-- **No in-frame content hash yet.** Content commitment lives at the manifest
-  layer (checksums over exported payloads), not as a per-frame `payload_hash` in
-  the spine (the external hash-blob store of the full design is future work).
-- **`msg_type` is an opaque int.** No self-describing schema registry is bundled;
-  decoding still assumes the reader knows the meaning of a type.
+- **Frame integrity is receipt-scoped in this slice.** The action-recorder smoke
+  verifies the C++ receipt's `payload_checksum` and `frame_checksum`, including
+  a payload-mutation negative check. Full journal-native trailer / hash-chain
+  integrity is still future work.
+- **`msg_type` is a carrier int.** The v4 action-recorder smoke uses the generic
+  action-envelope carrier (`1000`); domain semantics are carried by the JSON
+  payload's `action_type` / schema fields. No full self-describing schema
+  registry is bundled in this slice yet.
 - **`frame_uid` is stable within a bundle and across re-reads, but not
   reproducible across separate write runs** (per-writer nano-hash low bits;
   ADR-0010 8.2.3 determinism not adopted).

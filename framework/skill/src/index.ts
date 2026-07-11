@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
   existsSync,
@@ -90,6 +91,8 @@ export interface KungfuResolvedConfig {
   configHome: string;
   configPath: string;
   runtimeHome: string;
+  workspaceDataHome: string;
+  machineDataHome: string;
   sources: Array<Record<string, unknown>>;
   config: Record<string, unknown>;
 }
@@ -689,16 +692,11 @@ export function defaultKungfuConfigHome(
   );
 }
 
-export function defaultKungfuRuntimeHome(
+export function machineKungfuRuntimeHome(
   env: Record<string, string | undefined> = process.env,
 ): string {
   const contract = loadKungfuConfigContract({ env });
   const resolution = objectValue(contract.resolution);
-  const runtimeHomeEnv = requiredString(
-    resolution?.runtimeHomeEnv,
-    'resolution.runtimeHomeEnv',
-  );
-  if (env[runtimeHomeEnv]) return resolve(expandUserPath(env[runtimeHomeEnv]));
   const templates = objectValue(resolution?.defaultRuntimeHome);
   const template = requiredString(
     templates?.[platform()] ?? templates?.default,
@@ -718,12 +716,41 @@ export function defaultKungfuRuntimeHome(
   );
 }
 
+export function workspaceKungfuDataHome(
+  cwd = '',
+  env: Record<string, string | undefined> = process.env,
+): string {
+  const start = resolve(expandUserPath(cwd || env.PWD || process.cwd()));
+  const existing = nearestExistingWorkspaceHome(start);
+  if (existing) return existing;
+  const gitRoot = gitWorktreeRoot(start);
+  return gitRoot ? join(gitRoot, '.kungfu') : '';
+}
+
+export function defaultKungfuRuntimeHome(
+  env: Record<string, string | undefined> = process.env,
+  options: { cwd?: string } = {},
+): string {
+  const contract = loadKungfuConfigContract({ env });
+  const resolution = objectValue(contract.resolution);
+  const runtimeHomeEnv = requiredString(
+    resolution?.runtimeHomeEnv,
+    'resolution.runtimeHomeEnv',
+  );
+  if (env[runtimeHomeEnv]) return resolve(expandUserPath(env[runtimeHomeEnv]));
+  return (
+    workspaceKungfuDataHome(options.cwd ?? env.PWD ?? process.cwd(), env) ||
+    machineKungfuRuntimeHome(env)
+  );
+}
+
 export function defaultKungfuConfig(
   runtimeHome = defaultKungfuRuntimeHome(),
   options: {
     configHome?: string;
     env?: Record<string, string | undefined>;
     contractPath?: string;
+    cwd?: string;
   } = {},
 ): Record<string, unknown> {
   const env = options.env ?? process.env;
@@ -740,6 +767,11 @@ export function defaultKungfuConfig(
     {
       configHome,
       runtimeHome: resolve(expandUserPath(runtimeHome)),
+      workspaceDataHome: workspaceKungfuDataHome(
+        options.cwd ?? env.PWD ?? process.cwd(),
+        env,
+      ),
+      machineDataHome: machineKungfuRuntimeHome(env),
     },
     requiredStringArray(resolution?.placeholders, 'resolution.placeholders'),
   ) as Record<string, unknown>;
@@ -765,11 +797,17 @@ export function resolveKungfuConfig(
     resolution?.userOverrideFile,
     'resolution.userOverrideFile',
   );
+  const workspaceDataHome = workspaceKungfuDataHome(
+    env.PWD ?? process.cwd(),
+    env,
+  );
+  const machineDataHome = machineKungfuRuntimeHome(env);
   const runtimeHome = resolve(
     expandUserPath(
       options.runtimeHome ||
         env[runtimeHomeEnv] ||
-        defaultKungfuRuntimeHome(env),
+        workspaceDataHome ||
+        machineDataHome,
     ),
   );
   const configHome = resolve(
@@ -779,7 +817,7 @@ export function resolveKungfuConfig(
   const override = readKungfuUserConfig(configPath, contract);
   const config = expandConfigPlaceholders(
     deepMerge(defaultKungfuConfig(runtimeHome, { configHome, env }), override),
-    { configHome, runtimeHome },
+    { configHome, runtimeHome, workspaceDataHome, machineDataHome },
     requiredStringArray(resolution?.placeholders, 'resolution.placeholders'),
   ) as Record<string, unknown>;
   validateKungfuConfig(config, contract);
@@ -793,6 +831,8 @@ export function resolveKungfuConfig(
     configHome,
     configPath,
     runtimeHome,
+    workspaceDataHome,
+    machineDataHome,
     sources: [
       {
         type: 'contract',
@@ -815,6 +855,29 @@ export function resolveKungfuConfig(
     ],
     config,
   };
+}
+
+function nearestExistingWorkspaceHome(cwd: string): string {
+  let current = resolve(cwd);
+  const legacyUserHome = join(homedir(), '.kungfu');
+  for (;;) {
+    const candidate = join(current, '.kungfu');
+    if (existsSync(candidate) && resolve(candidate) !== legacyUserHome) {
+      return candidate;
+    }
+    const parent = dirname(current);
+    if (parent === current) return '';
+    current = parent;
+  }
+}
+
+function gitWorktreeRoot(cwd: string): string {
+  const result = spawnSync('git', ['-C', cwd, 'rev-parse', '--show-toplevel'], {
+    encoding: 'utf8',
+  });
+  if (result.status !== 0) return '';
+  const root = result.stdout.trim();
+  return root ? resolve(root) : '';
 }
 
 const CONFIG_CONTRACT_FILE = 'kungfu-config.contract.json';
@@ -1476,17 +1539,17 @@ function parseSimpleYaml(src: string): Frontmatter {
       const value = listMatch[1];
       const kv = value.match(/^([A-Za-z0-9_.-]+):\s*(.*)$/);
       if (kv) {
-        currentObject = { [kv[1]]: stripQuotes(kv[2]) };
+        currentObject = { [kv[1]]: parseScalar(kv[2]) };
         currentArray.push(currentObject);
       } else {
         currentObject = undefined;
-        currentArray.push(stripQuotes(value));
+        currentArray.push(parseScalar(value));
       }
       continue;
     }
     const nestedMatch = raw.match(/^ {4}([A-Za-z0-9_.-]+):\s*(.*)$/);
     if (nestedMatch && currentObject) {
-      currentObject[nestedMatch[1]] = stripQuotes(nestedMatch[2]);
+      currentObject[nestedMatch[1]] = parseScalar(nestedMatch[2]);
       continue;
     }
     const scalarMatch = raw.match(/^([A-Za-z0-9_.-]+):\s*(.*)$/);
@@ -1498,7 +1561,7 @@ function parseSimpleYaml(src: string): Frontmatter {
       root[currentKey] = currentArray;
     } else {
       currentArray = undefined;
-      root[currentKey] = stripQuotes(scalarMatch[2]);
+      root[currentKey] = parseScalar(scalarMatch[2]);
     }
   }
   return root;
@@ -1537,6 +1600,25 @@ function stripQuotes(value: string): string {
     (trimmed.startsWith("'") && trimmed.endsWith("'"))
   ) {
     return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
+function parseScalar(value: string): unknown {
+  const valueTrimmed = value.trim();
+  if (
+    (valueTrimmed.startsWith('"') && valueTrimmed.endsWith('"')) ||
+    (valueTrimmed.startsWith("'") && valueTrimmed.endsWith("'"))
+  ) {
+    return valueTrimmed.slice(1, -1);
+  }
+  const trimmed = valueTrimmed;
+  if (trimmed === 'true') return true;
+  if (trimmed === 'false') return false;
+  if (trimmed === 'null' || trimmed === '~') return null;
+  if (/^-?(0|[1-9][0-9]*)$/.test(trimmed)) return Number.parseInt(trimmed, 10);
+  if (/^-?(0|[1-9][0-9]*)\.[0-9]+$/.test(trimmed)) {
+    return Number.parseFloat(trimmed);
   }
   return trimmed;
 }

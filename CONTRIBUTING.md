@@ -20,20 +20,27 @@ sensitive material in issues or pull requests.
 
 - A C++23 toolchain and [CMake](https://cmake.org/) (>= 3.20)
 - [Conan 2](https://conan.io/) for C++ dependencies
-- [fnm](https://github.com/Schniz/fnm) (Node is pinned via `.node-version`)
-- [uv](https://docs.astral.sh/uv/) for the Python environment
 
-Node, the package manager (pnpm via Corepack), and the Python interpreter are
-resolved automatically once `fnm` and `uv` are installed.
+Everything else is resolved by the `./shifu` entrypoint: node (via
+[fnm](https://github.com/Schniz/fnm) and the checked-in `.node-version`), the
+package manager (pnpm via Corepack), and the Python environment (via
+[uv](https://docs.astral.sh/uv/)), plus the Buildchain binary pinned by
+`.buildchain-version`. They are bootstrapped automatically when needed. User
+fnm / uv installations remain eligible; Buildchain is pin-first so a global
+version cannot silently replace the repository's reproducible build input.
+
+Run `./shifu doctor` to check your environment: it reports every required
+tool with a version line or an install pointer (and exits non-zero when a
+required tool is missing, so it can gate scripts).
 
 ## Repository layout
 
 Kungfu is a pnpm-workspaces monorepo. See [`docs/architecture.md`](docs/architecture.md)
 for how the layers fit together; the main areas:
 
-- `framework/core` — the C++ core (`longfist` type system, `yijinjing` journal
-  runtime) plus its Python and Node (N-API) bindings and the `kungfu` runtime,
-  packaged as `@kungfu-tech/core`. Build orchestration lives in
+- `framework/core` — the C++ core (`yijinjing` journal, storage semantics, and
+  runtime schema) plus its Python and Node (N-API) bindings and the `kungfu`
+  runtime, packaged as `@kungfu-tech/core`. Build orchestration lives in
   `framework/core/.gyp/`.
 - `framework/api` — the capability SDK (typed access to journal / state / replay).
 - `framework/gui`, `framework/tui` — the two reference UIs: a desktop GUI
@@ -41,38 +48,64 @@ for how the layers fit together; the main areas:
 - `developer/sdk` — the application / extension SDK (`kungfu sdk`); `developer/toolchain`
   — shared build dependencies.
 - `extensions/*` — kfx extensions; `examples/*` — samples.
-- `artifact` — the dogfood installer bundling the runtime, reference UIs and SDK.
+- `product` — the dogfood product assembly bundling the runtime, reference UIs,
+  SDK, first-party kfx, desktop installers, and CLI archives.
+- `crates` — the Rust workspace: self-contained native tools consumed as
+  prebuilt binaries, currently the native `shifu` launcher. See
+  [`docs/rust-adoption.md`](docs/rust-adoption.md) for when (and when not) a
+  component belongs here.
 
 Two command-line entry points, kept forward-compatible:
 
-- `kungfu` — the end-user CLI command (`kungfu --version`, journal subcommands,
+- `kungfu` — the end-user CLI command (`kungfu --version`, `query`, `storage`,
   …). It fronts the `kungfu` runtime.
-- `./kungfu-code` — the development/build orchestrator used while working on the
+- `./shifu` — the development/build orchestrator used while working on the
   repo (see below).
 
 ## Toolchain & build
 
-The repo pins its Node version via [`fnm`](https://github.com/Schniz/fnm) and a
-checked-in `.node-version`, and manages the Python environment with
-[`uv`](https://docs.astral.sh/uv/). You only need to install `fnm` and `uv` once;
-Node, the package manager, and the Python interpreter are then resolved automatically.
+`./shifu` (`shifu.cmd` on Windows) is the build opener: every task runs
+under the toolchain the repo pins — node via [`fnm`](https://github.com/Schniz/fnm)
+and the checked-in `.node-version`, python via [`uv`](https://docs.astral.sh/uv/).
+There is nothing to preinstall beyond `curl`: on first run the launcher
+bootstraps pinned prebuilt fnm / uv into `~/.cache/kungfu` when they are not
+already on PATH (your own installs are used as-is).
 
 ```sh
-# one-time: install fnm and uv (e.g. `brew install fnm uv`)
-
 git clone git@github.com:kungfu-systems/kungfu.git
 cd kungfu
 
-./kungfu-code sync          # install JS dependencies (frozen lockfile)
-./kungfu-code build         # build all workspaces (C++ core + bindings + app)
-./kungfu-code product gui dev # run the reference GUI dev loop
-./kungfu-code product tui dev # run the reference TUI dev loop
-./kungfu-code dist          # rebuild core, freeze, build all bundled kfx, package artifact/dist
-./kungfu-code app           # launch the desktop app
+./shifu sync          # install JS dependencies (frozen lockfile)
+./shifu build         # build all workspaces (C++ core + bindings + app)
+./shifu rebuild       # remove generated build outputs, then build
+./shifu check         # changed-scope read-only quality gate
+./shifu fix           # explicit formatting / safe auto-fixes for changed files
+./shifu product gui dev # run the reference GUI dev loop
+./shifu product tui dev # run the reference TUI dev loop
+./shifu product cli dist # build the CLI product archive
+./shifu dist          # rebuild core, freeze, build bundled products under product/release
+./shifu app           # launch the desktop app
 ```
 
-`./kungfu-code <task>` runs `<task>` under the pinned Node toolchain — it is a
-thin wrapper, so any pnpm task works (`./kungfu-code build:core`, etc.).
+`./shifu <task>` runs `<task>` under the pinned Node toolchain — it is a
+thin wrapper, so any pnpm task works (`./shifu build:core`, etc.).
+
+Shifu also marks child tasks with `SHIFU_ENTRYPOINT=1`. Participant-facing root
+tasks reject accidental direct package-manager invocation and print the
+equivalent `./shifu <task>` command. This marker is provenance, not a security
+boundary; do not set it by hand to bypass the launcher. The repository check
+also rejects direct `pnpm`, Node, Conan, or CMake commands in agent guidance,
+contributor docs, Buildchain lifecycle configuration, and ordinary workflows.
+Launcher implementation/bootstrap exceptions must be narrow and carry a
+preceding `shifu-entry-contract: allow <reason>` comment.
+
+`./shifu verify` includes the bounded `mvp-smoke-v1` Episode
+qualification by default. Use `./shifu episode:qualify -- --profile
+mvp-baseline-v1` explicitly for the heavier periodic/release-readiness
+baseline. `./shifu episode:qualify:release` runs that complete baseline and
+seals its Trust Report into retained release evidence. The release-evidence
+path runs on alpha/release candidates and manual Build workflow dispatches, not
+on every development pull request.
 
 > Node, packages, and Electron binaries are resolved through the standard
 > `FNM_NODE_DIST_MIRROR`, `COREPACK_NPM_REGISTRY`, and `ELECTRON_MIRROR`
@@ -80,7 +113,7 @@ thin wrapper, so any pnpm task works (`./kungfu-code build:core`, etc.).
 
 ## Code style
 
-Formatting and linting are part of the pre-build flow and CI:
+Formatting and linting are part of the pre-commit, ready/PR, and CI flow:
 
 - **C++** — `clang-format` (config in `.clang-format`).
 - **Python** — [`ruff`](https://docs.astral.sh/ruff/) for both formatting
@@ -91,8 +124,17 @@ Formatting and linting are part of the pre-build flow and CI:
 Run formatting before committing:
 
 ```sh
-./kungfu-code format        # all languages
+./shifu format        # all languages
+./shifu fix           # format + safe lint fixes for changed files
+./shifu check         # read-only changed-scope lint/type/test gate
 ```
+
+The installed pre-commit hook runs `./shifu check:staged` semantics via
+Node: it checks staged files without rewriting or re-staging them. If the hook
+reports formatting or fixable lint issues, run `./shifu fix:staged`, review
+the diff, and commit again. CI should run `./shifu check` and the relevant
+build or verify command. `check:all` and `fix:all` are available for deliberate
+whole-tree lint-baseline cleanup.
 
 ### Scripts are JavaScript
 

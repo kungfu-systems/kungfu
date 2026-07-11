@@ -13,12 +13,13 @@ reader::~reader() {
 }
 
 void reader::join(const data::location_ptr &location, uint32_t dest_id, const int64_t from_time, uint64_t page_size,
-                  longfist::enums::Priority priority) {
+                  yijinjing::enums::Priority priority) {
   SPDLOG_TRACE("join location: {}, dest_id: {}, page_size: {} ", location->to_string(), dest_id, page_size);
   auto key = journal_key(location, dest_id);
-  auto size = lazy_ ? find_page_size(location, dest_id) : page::find_page_size(location, dest_id, page_size);
+  auto size = policy_.discover_page_size ? find_page_size(location, dest_id)
+                                         : page::find_page_size(location, dest_id, page_size);
   auto result = journals_.try_emplace(
-      key, std::make_shared<journal>(location, dest_id, false, lazy_, low_latency_, bus_, size, priority));
+      key, std::make_shared<journal>(location, dest_id, policy_.journal, low_latency_, bus_, size, priority));
   if (result.second) {
     journals_.at(key)->seek_to_time(from_time);
   }
@@ -127,7 +128,7 @@ void reader::preload_next_page() {
   }
 }
 
-reader::reader(const reader &other) : lazy_(other.lazy_), low_latency_(other.low_latency_), bus_(other.bus_) {
+reader::reader(const reader &other) : policy_(other.policy_), low_latency_(other.low_latency_), bus_(other.bus_) {
   for (auto &j : other.journals_) {
     journals_.emplace(j.first, j.second);
     if (other.current_->get_source() == j.second->get_source() and other.current_->get_dest() == j.second->get_dest()) {
@@ -155,11 +156,11 @@ uint64_t reader::find_page_size(const data::location_ptr &location, uint32_t des
   }
 
   auto page_id = page_ids.front();
-  auto page = page::load_header_and_1st_frame_header(location, dest_id, page_id, false, true);
+  auto page = page::load_header_and_1st_frame_header(location, dest_id, page_id, page_open_policy::header_probe());
   auto page_size = page->get_page_size();
   if (page_size == 0) {
     const std::string msg = fmt::format("open a page never init page_header for {}", location->uname,
-                                        page::get_page_path(location, dest_id, page_id));
+                                        page::resolve_page_path(location, dest_id, page_id, false));
     SPDLOG_ERROR(msg);
     throw journal_error(msg);
   }

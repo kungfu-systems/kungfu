@@ -4,10 +4,13 @@ packages:
   - "extensions/*"
   - "extensions/*/*"
   - "examples/*"
-  - "artifact"
+  - "product"
 allowBuilds:
   '@biomejs/biome': true
   '@kungfu-tech/libnode': true
+  '@kungfu-tech/libnode-darwin-arm64': true
+  '@kungfu-tech/libnode-linux-x64': true
+  '@kungfu-tech/libnode-win32-x64': true
   core-js: true
   electron: true
   electron-winstaller: true
@@ -21,6 +24,9 @@ allowBuilds:
 # it ages past the cutoff, forcing a per-version allow-list. 0 = no minimum age.
 minimumReleaseAge: 0
 overrides:
+  # Keep Buildchain's KFD gate metadata aligned with the SDK-distributed KFD
+  # package so KFD-4 schema metadata is available to downstream Kungfu CLI users.
+  '@kungfu-tech/buildchain>@kungfu-tech/kfd': 1.0.0-alpha.21
   # node-gyp 9.x cannot detect Visual Studio 2026; 13.x adds VS2026 support, which
   # the Windows build needs to match the prebuilt (MSVC 19.5) conan dependencies.
   node-gyp: ^13.0.0

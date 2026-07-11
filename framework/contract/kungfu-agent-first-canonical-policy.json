@@ -6,14 +6,14 @@
     "kfd": {
       "package": {
         "name": "@kungfu-tech/kfd",
-        "version": "1.0.0-alpha.2",
+        "version": "1.0.0-alpha.21",
         "repository": "git+https://github.com/kungfu-systems/kfd.git"
       },
       "standard": {
         "key": "kfd-1",
         "id": "KFD-1",
         "label": "KFD-1",
-        "title": "Contracts must not drift: contract worlds need one fact source",
+        "title": "Facts must not drift: contract worlds need one fact source",
         "revision": 1,
         "status": "active"
       },
@@ -31,7 +31,7 @@
     "buildchain": {
       "package": {
         "name": "@kungfu-tech/buildchain",
-        "version": "2.8.0"
+        "version": "2.11.14-alpha.0"
       },
       "formatting": {
         "name": "buildchain-release-evidence-json-v1",
@@ -95,13 +95,13 @@
       },
       "source": {
         "path": "framework/config/kungfu-config.contract.json",
-        "sha256": "sha256:ad21f1f270f47436d7131f2c26524eb882dd67d2c92197aec4c839a7bdac6ecb",
-        "renderedSha256": "sha256:ad21f1f270f47436d7131f2c26524eb882dd67d2c92197aec4c839a7bdac6ecb",
+        "sha256": "sha256:1e51d554f79f8fc6ab2ddbe5782f44426d62f095fb724d34783b61d7045cf0a0",
+        "renderedSha256": "sha256:1e51d554f79f8fc6ab2ddbe5782f44426d62f095fb724d34783b61d7045cf0a0",
         "byteForByte": true
       },
       "artifact": {
         "path": "config/kungfu-config.contract.json",
-        "expectedSha256": "sha256:ad21f1f270f47436d7131f2c26524eb882dd67d2c92197aec4c839a7bdac6ecb"
+        "expectedSha256": "sha256:1e51d554f79f8fc6ab2ddbe5782f44426d62f095fb724d34783b61d7045cf0a0"
       }
     },
     {
@@ -114,13 +114,13 @@
       },
       "source": {
         "path": "framework/kfx/kungfu-kfx.contract.json",
-        "sha256": "sha256:0a585a0557c37a962a58f5ab5bcf8bd97dde8ca531701179cc7433a4a5df8c98",
-        "renderedSha256": "sha256:0a585a0557c37a962a58f5ab5bcf8bd97dde8ca531701179cc7433a4a5df8c98",
+        "sha256": "sha256:ad1a493d02e732283ea94958deac2c998ccf0bfb32251815a462188bd15dbb7c",
+        "renderedSha256": "sha256:ad1a493d02e732283ea94958deac2c998ccf0bfb32251815a462188bd15dbb7c",
         "byteForByte": true
       },
       "artifact": {
         "path": "config/kungfu-kfx.contract.json",
-        "expectedSha256": "sha256:0a585a0557c37a962a58f5ab5bcf8bd97dde8ca531701179cc7433a4a5df8c98"
+        "expectedSha256": "sha256:ad1a493d02e732283ea94958deac2c998ccf0bfb32251815a462188bd15dbb7c"
       }
     },
     {
