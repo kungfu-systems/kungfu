@@ -112,12 +112,21 @@ The paved road for mode 1, as implemented for the launcher:
   checkout therefore always runs its own launcher code, never the last
   release. Machines without cargo keep the release-pinned path untouched.
 - **Self-update** — `shifu self-update` refreshes an installed binary in
-  place (answered before delegation, so it acts on the copy you invoked):
-  inside a checkout it rebuilds from source (or fetches the pinned release
-  when cargo is absent), outside one it requires an explicit
-  `--version <v>`; release downloads are verified against the release's
-  `SHA256SUMS` and the swap is a rename dance that restores the old binary
-  on failure. Shim-cache slots refuse it — the shim owns their lifecycle.
+  place (answered before delegation, so it acts on the copy you invoked).
+  Sources, in order: an explicit `--version <v>` fetches that release asset
+  (verified against the release's `SHA256SUMS`) — also the road back to the
+  official build; inside a checkout it rebuilds from the checkout's current
+  source; outside one it takes the newest local build slot the shim produced
+  (the binary that drove the last build, surviving its worktree), printing
+  that binary's full identity line before the swap. Every replacement first
+  archives the outgoing binary under a generations ledger
+  (`KUNGFU_SHIFU_GENERATIONS_KEEP`, default 3): `--list` shows it,
+  `--rollback` restores the previous generation — reversibly, since the
+  current binary is archived in turn. `shifu --version` names each binary's
+  build channel (`release` = CI release asset, `source` = any local build),
+  so which supply chain you are running is never a guess. The swap is a
+  rename dance that restores the old binary on failure; shim-cache slots
+  refuse the verb — the shim owns their lifecycle.
 - **Fallback** — when no release asset is reachable, the shims build from
   source if cargo is present, then fall back to the legacy in-script path, so
   no machine class is stranded.
