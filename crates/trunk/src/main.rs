@@ -8,6 +8,7 @@
 // Failures are named and self-diagnosing (exact URL, expected checksum, the
 // mirror override to set) — the wrong-runtime spirit applied to downloads.
 
+mod doctor;
 mod envs;
 mod launch;
 mod pins;
@@ -29,6 +30,8 @@ usage:
   kungfu-trunk env run [--env <name>] [-- <cmd>...]
                                                run a command inside an env (default: python)
   kungfu-trunk prewarm                         pre-fetch the pinned uv + satellite CPython
+  kungfu-trunk doctor [--read <ns> <name>]     read-only runtime inspection via the
+                                               embedding membrane (product build)
   kungfu-trunk --version | --help
 
 envs live under <KF_HOME>/envs; the default env is named 'default'.
@@ -43,9 +46,13 @@ fn main() {
     // and execs the assembled interpreter for everything else, verbatim —
     // argv-transparent per the layering law (ADR-0046 stage 2).
     if launch::invoked_as_kungfu() {
+        // doctor is owned by the trunk at the front door on purpose: it is the
+        // diagnostic that must run even when the domain runtime is broken, so it
+        // never forwards to the assembled interpreter (ADR-0046 driver 1).
         let result = match args.first().map(String::as_str) {
             Some("env") => dispatch_env(&args[1..]),
             Some("prewarm") => envs::prewarm(),
+            Some("doctor") => doctor::run(&args[1..]),
             _ => launch::launch(&args),
         };
         if let Err(msg) = result {
@@ -57,6 +64,7 @@ fn main() {
     let result = match args.first().map(String::as_str) {
         Some("env") => dispatch_env(&args[1..]),
         Some("prewarm") => envs::prewarm(),
+        Some("doctor") => doctor::run(&args[1..]),
         Some("--version" | "-V" | "version") => {
             println!("kungfu-trunk {}", env!("CARGO_PKG_VERSION"));
             Ok(())
