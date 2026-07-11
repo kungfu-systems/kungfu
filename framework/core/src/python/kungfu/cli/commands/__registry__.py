@@ -17,6 +17,7 @@ from . import work
 from . import atlas
 from . import storage
 from . import query
+from . import facts
 from . import source
 from . import kfx
 from . import skill
@@ -43,6 +44,7 @@ __all__ = [
     "atlas",
     "storage",
     "query",
+    "facts",
     "source",
     "kfx",
     "skill",
