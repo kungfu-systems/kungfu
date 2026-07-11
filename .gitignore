@@ -30,6 +30,7 @@ __kungfulibs__/
 # Build related
 build/
 build-*/
+target/
 cmake-build-debug/
 dist/
 .buildchain/*

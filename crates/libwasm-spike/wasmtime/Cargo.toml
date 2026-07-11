@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: Apache-2.0
+
+[package]
+name = "kungfu-libwasm-wasmtime-spike"
+version = "0.0.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+name = "kf_libwasm_wasmtime_spike"
+path = "../src/lib.rs"
+crate-type = ["cdylib"]
+
+[workspace]
+
+[features]
+default = ["wasmtime-engine"]
+wasmtime-engine = []
+wasmer-engine = []
+
+[dependencies]
+wasmtime = { version = "=46.0.1", default-features = false, features = ["cranelift", "runtime", "std"] }
+wat = "1"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "unwind"
