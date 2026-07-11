@@ -30,7 +30,8 @@ and the map routes a question to whichever doc answers it.
 | Why does Kungfu start from accountability? | [`facts-before-trust.md`](facts-before-trust.md) | why | stable |
 | How do Missions, delegated Go work, runtime facts, proof, and decisions become one product? | [`mission-control.md`](mission-control.md) + [`mission-control-workspaces.md`](mission-control-workspaces.md) + [ADR-0059](../framework/core/docs/adr/ADR-0059-mission-control-mission-go-responsibility-model.md) | why, use, verify | draft · mechanisms implemented; workspace product composition and five-question Mission Home designed |
 | How does Desktop open and remember a workspace without creating `.kungfu` on read? | [`mission-control-workspaces.md`](mission-control-workspaces.md) + [ADR-0060](../framework/core/docs/adr/ADR-0060-desktop-workspace-selection-and-lazy-data-home.md) | why, use, verify | proposed · product design complete; implementation sliced |
-| How can a first-time user manage agent work without a repository or predeclared Mission? | [`mission-control-workspaces.md`](mission-control-workspaces.md) + [ADR-0060](../framework/core/docs/adr/ADR-0060-desktop-workspace-selection-and-lazy-data-home.md) | why, use, verify | proposed · Personal Agent Workspace and unassigned inbox designed |
+| How can a first-time user manage agent work without a repository or predeclared Mission? | [`mission-control-workspaces.md`](mission-control-workspaces.md) + [ADR-0060](../framework/core/docs/adr/ADR-0060-desktop-workspace-selection-and-lazy-data-home.md) | why, use, verify | proposed · Home Workspace and unassigned inbox designed |
+| Why is agent-mediated guidance a first-class product interface rather than a later CLI integration? | [ADR-0061](../framework/core/docs/adr/ADR-0061-agent-mediated-guidance-is-a-first-class-product-interface.md) + [`mission-control-workspaces.md`](mission-control-workspaces.md) | why, use, verify | proposed · dual-first advice/action/receipt contract designed |
 | Why does the commercial product lead with Cost/State/Proof, and what does that profile guarantee? | [`cost-state-proof-profile.md`](cost-state-proof-profile.md) | why, use, verify | draft · first progress and completion qualification implemented |
 | Why this versioning / release design (don't replace it naively)? | [`version-release-design.md`](version-release-design.md) | why | stable |
 | When must a change open a minor or major (and when must it not)? | [`versioning.md`](versioning.md) (rule: KFD-1, adopted by ADR-0010) | verify | stable |
@@ -150,13 +151,17 @@ route to the row that answers them:
 - **config / `.kungfu` / `~/.kungfu-config` / `KF_CONFIG_HOME` / `KF_HOME` / UI font / UI scale /
   shortcuts / agent entrypoint** → *Kungfu config* ([`config.md`](config.md)).
 - **workspace data home / `.kungfu/` / data root / Git worktree data /
-  machine fallback / Personal Agent Workspace / Agent Work Inbox / config home
+  machine fallback / Home Workspace / Agent Work Inbox / config home
   rename / Open Workspace / recent workspace / lazy initialization** → *Kungfu
   config and Desktop workspace product*
   ([`config.md`](config.md)) and
   [`mission-control-workspaces.md`](mission-control-workspaces.md),
   [ADR-0035](../framework/core/docs/adr/ADR-0035-workspace-local-kungfu-data-home.md),
   and [ADR-0060](../framework/core/docs/adr/ADR-0060-desktop-workspace-selection-and-lazy-data-home.md).
+- **agent-mediated guidance / dual-first UX / advice / impact preview /
+  authorization / execution receipt / stale advice / agent-operable product** →
+  *Mission Control workspace product* ([`mission-control-workspaces.md`](mission-control-workspaces.md))
+  and [ADR-0061](../framework/core/docs/adr/ADR-0061-agent-mediated-guidance-is-a-first-class-product-interface.md).
 - **supervisor / per-user supervisor / workspace coordinator / data-root coordinator /
   coordinator singleton / live registry / idle shutdown / daemonless storage** →
   *Kungfu supervisor and coordinator service* ([`runtime-service.md`](runtime-service.md))

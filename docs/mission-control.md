@@ -142,9 +142,17 @@ assessment, or close work without hand-authoring low-level declarations. GUI
 and agent surfaces consume the same domain objects, QueryDefinitions, and
 assessment contracts; no GUI-private database owns Mission state.
 
+Agent-mediated use is a first-class product path, not an integration added
+after GUI design. Kungfu owns typed inspection, evidence-backed advice, impact
+preview, authorization, execution, receipt, and verification semantics. The
+agent explains the options and may execute an authorized intent; its prose
+cannot create facts or expand authority. A minimal direct GUI remains available
+for the same decisions and recovery path. This product principle is fixed by
+[ADR-0061](../framework/core/docs/adr/ADR-0061-agent-mediated-guidance-is-a-first-class-product-interface.md).
+
 A first-time user does not need an Atlas-style Markdown repository or a fully
-formed Mission. **Start managing agent work** explicitly selects a Personal
-Agent Workspace at `~/.kungfu`; its first managed run lazily initializes the
+formed Mission. **Start managing agent work** selects the logical Home Workspace
+at `~/.kungfu`; its first managed run lazily initializes the
 fact world and appears in an unassigned Agent Work Inbox. Kungfu can establish
 exact attribution only for managed or explicitly integrated runs. Imported
 external traces remain observed or ambiguous, and purpose-bound fitness stays
@@ -216,7 +224,7 @@ export consumer. Long-lived dual writes with two authorities are forbidden.
 ## Storage and portability
 
 Project workspace state lives under its resolved `<project>/.kungfu/`; the
-explicit Personal Agent Workspace lives at `~/.kungfu`. Machine fallback and
+Home Workspace lives at `~/.kungfu`. Machine fallback and
 `~/.kungfu-config` remain separate service/config homes. Journal records,
 Episodes, schemas, payloads, saved queries, assessment Episodes, TrustReports,
 and observer metadata belong to the selected fact-world authority.
