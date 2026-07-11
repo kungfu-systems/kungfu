@@ -8,8 +8,8 @@
 // （ADR-0046 stage 2，组装完整 CPython 树），Linux/Windows=nuitka（各自平台腿
 // 落地前维持冻结）。
 //
-// 三条产物腿（nuitka/pyinstaller 见 docs/conan2-migration.md §4c；assemble 见
-// ADR-0046 与本文件 assemble 段注释）：
+// 三条产物腿（assemble 见 ADR-0046 与本文件 assemble 段注释；冻结腿去留记账见
+// docs/buildchain.md「Freeze retirement ledger」）：
 //
 // - nuitka（默认）：编译成 C，产物 kungfu_cli.dist 本就扁平（无 _internal），移到 dist/kungfu 即可，
 //   不需要 promote。kungfu_cli.py 内嵌 nuitka-project 选项（--standalone 等）。Nuitka 只跟随
