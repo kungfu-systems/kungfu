@@ -613,16 +613,12 @@ def episode_inspect(runtime_dir: str | Path, *, episode_id: int) -> dict[str, An
     )
 
 
-def fact_query(
-    runtime_dir: str | Path,
-    *,
-    episode_id: int = 0,
-    cut: dict[str, Any] | None = None,
-    limit: int = 100,
+def build_fact_query_definition(
+    *, episode_id: int = 0, cut: dict[str, Any] | None = None, limit: int = 100
 ) -> dict[str, Any]:
-    """Run the ADR-0048 Q0 Episode authority-scan reference query."""
+    """Build the canonical edge form consumed by the C++ query planner."""
 
-    definition = {
+    return {
         "schema": "kungfu.query.definition/v1",
         "basis": {
             "scope": "episode-manifest",
@@ -646,10 +642,51 @@ def fact_query(
         "limit": limit,
         "evidence": "proof",
     }
+
+
+def query_plan(
+    runtime_dir: str | Path,
+    *,
+    action: str,
+    definition: dict[str, Any] | None = None,
+    object_name: str = "episodes",
+) -> dict[str, Any]:
+    """Use the C++-owned ADR-0048 planner and discovery contract."""
+
+    options: dict[str, Any] = {"action": action, "object": object_name}
+    if definition is not None:
+        options["definition"] = definition
+    return dict(
+        _runtime().run_storage_service_operation(
+            "query_plan", str(runtime_dir), options
+        )
+    )
+
+
+def fact_query_definition(
+    runtime_dir: str | Path, definition: dict[str, Any]
+) -> dict[str, Any]:
+    """Plan and execute a QueryDefinition through the authority-scan oracle."""
+
     return dict(
         _runtime().run_storage_service_operation(
             "fact_query", str(runtime_dir), {"definition": definition}
         )
+    )
+
+
+def fact_query(
+    runtime_dir: str | Path,
+    *,
+    episode_id: int = 0,
+    cut: dict[str, Any] | None = None,
+    limit: int = 100,
+) -> dict[str, Any]:
+    """Run the ADR-0048 Episode authority-scan reference query."""
+
+    return fact_query_definition(
+        runtime_dir,
+        build_fact_query_definition(episode_id=episode_id, cut=cut, limit=limit),
     )
 
 

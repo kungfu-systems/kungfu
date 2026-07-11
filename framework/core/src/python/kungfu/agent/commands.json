@@ -218,6 +218,54 @@
       "purpose": "Query C++-owned SQLite storage projection rows without reading SQLite directly from bindings."
     },
     {
+      "apiId": "kungfu.query.capabilities",
+      "name": "kungfu query capabilities --json",
+      "maturity": "experimental",
+      "purpose": "Discover the versioned fact-query contract, logical operators, formats, limits, and stable error codes."
+    },
+    {
+      "apiId": "kungfu.query.schema",
+      "name": "kungfu query schema --json",
+      "maturity": "experimental",
+      "purpose": "Print the supported versioned QueryDefinition JSON schema."
+    },
+    {
+      "apiId": "kungfu.query.describe",
+      "name": "kungfu query describe episodes --json",
+      "maturity": "experimental",
+      "purpose": "Describe the Episode authority source, canonical order, cuts, and result fields."
+    },
+    {
+      "apiId": "kungfu.query.examples",
+      "name": "kungfu query examples --json",
+      "maturity": "experimental",
+      "purpose": "Print runnable head and exact historical-cut QueryDefinition examples."
+    },
+    {
+      "apiId": "kungfu.query.validate",
+      "name": "kungfu query validate --file query.json --json",
+      "maturity": "experimental",
+      "purpose": "Validate and canonically hash a QueryDefinition without executing it."
+    },
+    {
+      "apiId": "kungfu.query.explain",
+      "name": "kungfu query explain --file query.json --json",
+      "maturity": "experimental",
+      "purpose": "Show the normalized LogicalPlan and bounded authority-scan cost shape without claiming proof."
+    },
+    {
+      "apiId": "kungfu.query.prove",
+      "name": "kungfu query prove --file query.json --json",
+      "maturity": "experimental",
+      "purpose": "Execute the shared LogicalPlan through the authority-scan oracle and return rows with proof lineage."
+    },
+    {
+      "apiId": "kungfu.query.prove",
+      "name": "kungfu query prove --episode-id <id> --json",
+      "maturity": "experimental",
+      "purpose": "Execute the same planner through the semantic Episode shortcut."
+    },
+    {
       "apiId": "kungfu.remote.add",
       "name": "kungfu remote add <source-id> --host <host> --home <kf-home> --json",
       "maturity": "experimental",

@@ -3270,9 +3270,50 @@ public:
     return query_sqlite_projection(options);
   }
 
+  [[nodiscard]] nlohmann::json query_plan(const storage_service_options &options) const override {
+    const auto action = text_or(options.operation_options, "action", "validate");
+    if (action == "capabilities") {
+      return query::query_capabilities_json();
+    }
+    if (action == "schema") {
+      return query::query_definition_schema_json();
+    }
+    if (action == "describe") {
+      return query::query_object_description_json(text_or(options.operation_options, "object", "episodes"));
+    }
+    if (action == "examples") {
+      return query::query_examples_json();
+    }
+
+    const auto definition = query::parse_query_definition(options.query_definition);
+    const auto plan = query::plan_query(definition);
+    if (action == "validate") {
+      return {{"schema", query::QUERY_VALIDATION_SCHEMA_V1},
+              {"ok", true},
+              {"definition", query::query_definition_json(definition)},
+              {"query_definition_hash", plan.query_definition_hash},
+              {"logical_plan_hash", plan.logical_plan_hash}};
+    }
+    if (action == "explain") {
+      return {{"schema", query::QUERY_EXPLAIN_SCHEMA_V1},
+              {"definition", query::query_definition_json(definition)},
+              {"logical_plan", query::logical_plan_json(plan)},
+              {"physical",
+               {{"engine", "episode-authority-scan/v1"},
+                {"bounded", true},
+                {"limit", definition.limit},
+                {"cost",
+                 {{"class", "bounded-authority-scan"},
+                  {"upper_bound_rows", definition.limit},
+                  {"authority_records", "runtime-dependent"}}}}}};
+    }
+    throw std::invalid_argument("unsupported query planner action: " + action);
+  }
+
   [[nodiscard]] nlohmann::json fact_query(const storage_service_options &options) const override {
     const auto definition = query::parse_query_definition(options.query_definition);
-    return query::query_result_json(query::run_episode_authority_scan(options.runtime_dir, definition));
+    const auto plan = query::plan_query(definition);
+    return query::query_result_json(query::run_episode_authority_scan(options.runtime_dir, plan));
   }
 
   [[nodiscard]] nlohmann::json layout(const storage_service_options &options) const override {
@@ -3410,6 +3451,7 @@ std::vector<std::string> storage_operation_names() {
       storage_operation_name(storage_operation::CompactPlan),
       storage_operation_name(storage_operation::VerifySync),
       storage_operation_name(storage_operation::Query),
+      storage_operation_name(storage_operation::QueryPlan),
       storage_operation_name(storage_operation::FactQuery),
       storage_operation_name(storage_operation::Layout),
       storage_operation_name(storage_operation::EpisodeBegin),
@@ -3456,6 +3498,8 @@ std::string storage_operation_name(storage_operation operation) {
     return "verify_sync";
   case storage_operation::Query:
     return "query";
+  case storage_operation::QueryPlan:
+    return "query_plan";
   case storage_operation::FactQuery:
     return "fact_query";
   case storage_operation::Layout:
@@ -3534,6 +3578,9 @@ storage_operation parse_storage_operation(const std::string &operation) {
   }
   if (operation == "query") {
     return storage_operation::Query;
+  }
+  if (operation == "query_plan") {
+    return storage_operation::QueryPlan;
   }
   if (operation == "fact_query") {
     return storage_operation::FactQuery;
@@ -3627,8 +3674,9 @@ nlohmann::json make_storage_service_request(const std::string &operation, const 
     request["query"] = parsed_options.query;
     request["kind"] = parsed_options.kind.empty() ? nlohmann::json(nullptr) : nlohmann::json(parsed_options.kind);
     request["limit"] = parsed_options.limit;
-  } else if (parsed_operation == storage_operation::FactQuery) {
+  } else if (parsed_operation == storage_operation::QueryPlan || parsed_operation == storage_operation::FactQuery) {
     request["definition"] = parsed_options.query_definition;
+    request["action"] = text_or(parsed_options.operation_options, "action");
   } else if (parsed_operation == storage_operation::Layout) {
     request["runtime_home"] = runtime_home_path(parsed_options).string();
     request["runtime_home_source"] = runtime_home_source(parsed_options);
@@ -3677,6 +3725,8 @@ nlohmann::json run_storage_service_operation(const std::string &operation, const
     return storage_service_instance().verify_sync(parsed_options);
   case storage_operation::Query:
     return storage_service_instance().query(parsed_options);
+  case storage_operation::QueryPlan:
+    return storage_service_instance().query_plan(parsed_options);
   case storage_operation::FactQuery:
     return storage_service_instance().fact_query(parsed_options);
   case storage_operation::Layout:

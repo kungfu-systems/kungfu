@@ -384,6 +384,77 @@
       "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
     },
     {
+      "id": "kungfu.query.capabilities",
+      "surface": "cli",
+      "name": "kungfu query capabilities --json",
+      "purpose": "Discover the versioned fact-query contract, logical operators, formats, limits, and stable error codes.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.query.schema",
+      "surface": "cli",
+      "name": "kungfu query schema --json",
+      "purpose": "Print the supported versioned QueryDefinition JSON schema.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.query.describe",
+      "surface": "cli",
+      "name": "kungfu query describe episodes --json",
+      "purpose": "Describe the Episode authority source, canonical order, cuts, and result fields.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.query.examples",
+      "surface": "cli",
+      "name": "kungfu query examples --json",
+      "purpose": "Print runnable head and exact historical-cut QueryDefinition examples.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.query.validate",
+      "surface": "cli",
+      "name": "kungfu query validate --file query.json --json",
+      "purpose": "Validate and canonically hash a QueryDefinition without executing it.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.query.explain",
+      "surface": "cli",
+      "name": "kungfu query explain --file query.json --json",
+      "purpose": "Show the normalized LogicalPlan and bounded authority-scan cost shape without claiming proof.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.query.prove",
+      "surface": "cli",
+      "name": "kungfu query prove --file query.json --json",
+      "aliases": ["kungfu query prove --episode-id <id> --json"],
+      "purpose": "Execute the shared LogicalPlan through the authority-scan oracle and return rows with proof lineage.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
       "id": "kungfu.remote.add",
       "surface": "cli",
       "name": "kungfu remote add <source-id> --host <host> --home <kf-home> --json",

@@ -6,6 +6,7 @@ import sqlite3
 from datetime import datetime, timezone
 
 import kungfu
+import pytest
 
 from kungfu.atlas import importer, payloads
 from kungfu.atlas import CARRIER_ATLAS_ACTION
@@ -375,6 +376,7 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
         "compact_plan",
         "verify_sync",
         "query",
+        "query_plan",
         "fact_query",
         "layout",
         "episode_begin",
@@ -736,6 +738,11 @@ def test_fact_query_reproduces_head_and_historical_episode_cuts(tmp_path):
     assert historical["lineage"]["cut"]["resolved"] == historical_cut
     assert historical["lineage"]["determinism"] == "deterministic"
     assert historical["lineage"]["missing_inputs"] == []
+    assert historical["logical_plan"]["schema"] == "kungfu.query.logical-plan/v1"
+    assert (
+        historical["lineage"]["logical_plan_hash"]
+        == historical["logical_plan"]["logical_plan_hash"]
+    )
     assert set(historical["lineage"]["time_basis"]) == {
         "valid_time",
         "system_time",
@@ -771,6 +778,67 @@ def test_fact_query_reproduces_head_and_historical_episode_cuts(tmp_path):
             "manifest_frame_uid": "18446744073709551615",
         }
     ]
+
+
+def test_query_planner_normalizes_defaults_and_exposes_one_semantic_root(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    explicit = storage_service.build_fact_query_definition(episode_id=48, limit=10)
+    sparse = {
+        "schema": "kungfu.query.definition/v1",
+        "basis": {
+            "scope": "episode-manifest",
+            "episode_id": "48",
+            "perspective": "manifest-append-order",
+            "cut": {"kind": "head"},
+        },
+        "object": "episodes",
+        "limit": 10,
+    }
+
+    explicit_validation = storage_service.query_plan(
+        runtime_dir, action="validate", definition=explicit
+    )
+    sparse_validation = storage_service.query_plan(
+        runtime_dir, action="validate", definition=sparse
+    )
+    explanation = storage_service.query_plan(
+        runtime_dir, action="explain", definition=sparse
+    )
+    capabilities = storage_service.query_plan(runtime_dir, action="capabilities")
+    definition_schema = storage_service.query_plan(runtime_dir, action="schema")
+
+    assert explicit_validation == sparse_validation
+    assert explicit_validation["schema"] == "kungfu.query.validation/v1"
+    assert explicit_validation["ok"] is True
+    assert (
+        explanation["logical_plan"]["logical_plan_hash"]
+        == explicit_validation["logical_plan_hash"]
+    )
+    assert [
+        operator["kind"] for operator in explanation["logical_plan"]["operators"]
+    ] == [
+        "authority_scan",
+        "filter",
+        "order",
+        "limit",
+        "project",
+        "evidence",
+    ]
+    assert explanation["physical"]["engine"] == "episode-authority-scan/v1"
+    assert capabilities["physical_plan"]["public"] is False
+    assert capabilities["formats"] == ["json", "ndjson", "tsv"]
+    assert definition_schema["$schema"].endswith("/draft/2020-12/schema")
+    assert definition_schema["additionalProperties"] is False
+    assert definition_schema["properties"]["basis"]["additionalProperties"] is False
+
+    unsupported = dict(sparse)
+    unsupported["where"] = {"field": "status", "operator": "eq", "value": "ended"}
+    with pytest.raises(
+        (RuntimeError, ValueError), match="unsupported query field: definition.where"
+    ):
+        storage_service.query_plan(
+            runtime_dir, action="validate", definition=unsupported
+        )
 
 
 # A well-formed digest whose bytes were never published: stage 4 resolves

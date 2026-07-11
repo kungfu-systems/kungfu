@@ -29,7 +29,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/commands.json",
-            "sha256": "55efae97c6dfe6d5640ff8fb569dcb20f758a70d6cf50b3f1da5613e510dc6f9"
+            "sha256": "4ab5d51cc5c5c15326813058c60f0c674594c537c861df3e55e6e0d1d3ab5042"
           },
           "description": "Machine-readable command catalog and mode maturity metadata."
         },
@@ -194,7 +194,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/commands.json",
-            "sha256": "55efae97c6dfe6d5640ff8fb569dcb20f758a70d6cf50b3f1da5613e510dc6f9"
+            "sha256": "4ab5d51cc5c5c15326813058c60f0c674594c537c861df3e55e6e0d1d3ab5042"
           },
           "description": "Remote add/sync command declarations and mode metadata."
         },

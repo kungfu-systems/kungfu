@@ -454,9 +454,21 @@ test(
           },
         },
       );
+      const queryPlan = kungfu.runStorageServiceOperation(
+        'query_plan',
+        runtimeDir,
+        {
+          action: 'explain',
+          definition: factQuery.definition,
+        },
+      );
       assert.equal(
         fsck.qualification.schema,
         'kungfu.episode.qualification/v1',
+      );
+      assert.equal(
+        queryPlan.logical_plan.logical_plan_hash,
+        factQuery.lineage.logical_plan_hash,
       );
       assert.equal(fsck.qualification.policy_source, 'cpp-typed-fold-fsck');
       assert.deepEqual(inspected.qualification, fsck.qualification);
