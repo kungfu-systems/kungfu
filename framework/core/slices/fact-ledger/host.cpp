@@ -3,7 +3,7 @@
 // Minimal fact-ledger host (write path).
 //
 // Proves that the journal spine can be embedded in a plain process that starts
-// no master, no bus drain loop and no network sockets: it opens a journal
+// no coordinator, no bus drain loop and no network sockets: it opens a journal
 // location with a noop bus + noop publisher, appends N (>= 3) Json events, and
 // records a causal chain inside the spine -- event k's trigger_frame_uid points
 // at event k-1's frame_uid. The process then exits; an independent tool reopens
@@ -13,7 +13,7 @@
 //
 // The causal parent is fed explicitly through bus::set_trigger_frame_uid before
 // each frame is closed. In the live trading runtime this value is set by the
-// hero drain loop; here we set it by hand, which is exactly the point of the
+// reactor drain loop; here we set it by hand, which is exactly the point of the
 // "cut the core out of the runtime" test.
 
 #include <kungfu/yijinjing/common.h>
@@ -89,7 +89,7 @@ int main(int argc, char **argv) {
   auto location = data::location::make_shared(schema::enums::mode::LIVE, schema::enums::location_role::SYSTEM,
                                               namespace_, name, locator);
 
-  // The whole point: a noop bus (no hero/drain loop) and a noop publisher (no
+  // The whole point: a noop bus (no reactor/drain loop) and a noop publisher (no
   // nng socket). Nothing here starts the trading runtime.
   auto bus = std::make_shared<journal::bus>(false);
   auto publisher = std::make_shared<journal::noop_publisher>();

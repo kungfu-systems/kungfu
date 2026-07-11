@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 import kungfu
 import pytest
 
-from kungfu import master_service
+from kungfu import runtime_service
 from kungfu.atlas import importer, payloads
 from kungfu.atlas import CARRIER_ATLAS_ACTION
 from kungfu.sources import store as source_store
@@ -81,7 +81,7 @@ def _assessment_request(work_episode_root, *, episode_id=5200, evidence=None):
             "unverifiable_count": 0,
         },
         "deadline": 0,
-        "responsibility": "workspace-master",
+        "responsibility": "workspace-coordinator",
         "residual_risks": ["first built-in assessor only"],
     }
 
@@ -2771,7 +2771,9 @@ def test_storage_maintenance_rebuild_gc_compact_and_sync_check(tmp_path):
     with sqlite3.connect(sqlite_path) as db:
         tables = {
             row[0]
-            for row in db.execute("select name from sqlite_master where type = 'table'")
+            for row in db.execute(
+                "select name from sqlite_coordinator where type = 'table'"
+            )
         }
         assert {
             "ImportManifestAccepted",
@@ -3474,7 +3476,7 @@ def test_source_registry_projection_fsck_does_not_create_missing_schema(tmp_path
     with sqlite3.connect(projection_db) as conn:
         assert (
             conn.execute(
-                "SELECT name FROM sqlite_master WHERE type = 'table'"
+                "SELECT name FROM sqlite_coordinator WHERE type = 'table'"
             ).fetchall()
             == []
         )
@@ -3685,7 +3687,7 @@ def test_assessment_process_and_thread_executors_have_identical_report_hashes(
         )
         if executor_profile == "process":
             child = subprocess.run(
-                master_service.assessment_worker_command(
+                runtime_service.assessment_worker_command(
                     str(runtime_dir), requested["assessment_key"]
                 ),
                 check=False,

@@ -2,8 +2,8 @@
 //
 // Event-dispatch latency baseline, node watcher form (ADR-0005 evidence).
 //
-// Constructs the real node Watcher against a running master's KF_HOME and
-// starts its uv pump (hero::step through hero::drain), so the
+// Constructs the real node Watcher against a running coordinator's KF_HOME and
+// starts its uv pump (reactor::step through reactor::drain), so the
 // KF_DISPATCH_PROBE instrument reports the watcher-side per-frame rx
 // traversal cost into the watcher's log. Run under plain node from
 // framework/core; the load is driven separately by dispatch_load.py

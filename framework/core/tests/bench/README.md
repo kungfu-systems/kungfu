@@ -7,22 +7,22 @@ the evidence feed for
 
 ## What is measured
 
-`hero::drain` pushes every reactable journal frame through `sb.on_next`,
+`reactor::drain` pushes every reactable journal frame through `sb.on_next`,
 which fans it synchronously through **all** rx filter chains subscribed on
-`events_`. The `KF_DISPATCH_PROBE=1` instrument in `hero.cpp` times exactly
+`events_`. The `KF_DISPATCH_PROBE=1` instrument in `reactor.cpp` times exactly
 that call per frame and aggregates count / mean / max per `carrier_type`,
 reporting through the process log every 5 seconds and at journal end. The
 probe is opt-in; when the env var is unset the per-frame cost is a single
 predictable branch.
 
-Both runtime forms pump through the same site: master and apprentice via
-`hero::run`, the node watcher via `hero::step` (its trading-data side reader
+Both runtime forms pump through the same site: coordinator and peer via
+`reactor::run`, the node watcher via `reactor::step` (its trading-data side reader
 deliberately bypasses rx and is out of scope here — it is already the
 pre-dispatched fast path).
 
 ## Runs
 
-Master form (requires built `dist/kungfu`; run under the repo-pinned node, e.g.
+Coordinator form (requires built `dist/kungfu`; run under the repo-pinned node, e.g.
 via `./shifu` or `fnm exec`, so the load binding ABI matches):
 
 ```sh
@@ -33,12 +33,12 @@ node tests/bench/dispatch_bench.mjs                      # storage-on: deploymen
 The node watcher form is `node tests/bench/dispatch_bench_watcher.mjs`.
 
 The two runs bracket the rx layer's share: the rx-isolated run is chain scan
-+ `instanceof` (one `dynamic_cast` per frame, master only) + feed guards;
++ `instanceof` (one `dynamic_cast` per frame, coordinator only) + feed guards;
 the storage-on delta is cached/sqlite work that no rx change can recover.
 
-Load shape: `dispatch_load.py` registers a real apprentice and writes typed
+Load shape: `dispatch_load.py` registers a real peer and writes typed
 schema `Quote`-style frames. Typed frames are the right load because **both**
-runtime forms already pre-filter open-layer events before rx: master's
+runtime forms already pre-filter open-layer events before rx: coordinator's
 `is_reactable` is `not is_custom_event` and the watcher's rejects custom
 events too. Open-layer traffic therefore never touches the filter chains —
 an existing cheap pre-dispatch worth noting as ADR-0005 evidence in its own

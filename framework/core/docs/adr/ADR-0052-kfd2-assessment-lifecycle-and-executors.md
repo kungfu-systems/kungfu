@@ -1,12 +1,12 @@
-# ADR-0052: KFD-2 assessments are claim-triggered jobs coordinated by the workspace master
+# ADR-0052: KFD-2 assessments are claim-triggered jobs coordinated by the workspace coordinator
 
 - Status: accepted; initial runtime implemented
 - Date: 2026-07-11
 - Category: architecture — trust-assessment lifecycle and execution topology
-- Subsystem: workspace master, KFD-2, Episode, query service, yijinjing
+- Subsystem: workspace coordinator, KFD-2, Episode, query service, yijinjing
   locations/channels, embedded libkungfu, GUI/TUI, and KFX assessors
 - Related: ADR-0033 defines Episode; ADR-0036 defines the per-data-root
-  workspace master; ADR-0043 defines sealed Episode roots; ADR-0048 defines
+  workspace coordinator; ADR-0043 defines sealed Episode roots; ADR-0048 defines
   proof-carrying queries; ADR-0051 binds KFD contract worlds to fact admission
   and trust assessment.
 
@@ -23,10 +23,10 @@ domain logic. Letting each agent or GUI produce its own report would instead
 create competing trust states that disappear with the process that computed
 them.
 
-Kungfu already has the required substrate: per-data-root workspace masters,
+Kungfu already has the required substrate: per-data-root workspace coordinators,
 locations and channels, single-writer mmap journals, sealed Episodes, explicit
 query cuts, and supervised multi-process execution. The assessment design
-should use those primitives without making the master or libkungfu a monolith.
+should use those primitives without making the coordinator or libkungfu a monolith.
 
 ## Decision
 
@@ -101,9 +101,9 @@ High-risk decisions may explicitly await or require a report. A timeout means
 the Episode remains sealed while the guarded action fails closed because trust
 is pending or insufficient.
 
-### 4. Desktop workspace master coordinates assessment jobs
+### 4. Desktop workspace coordinator coordinates assessment jobs
 
-For a live Desktop data root, the workspace master owns:
+For a live Desktop data root, the workspace coordinator owns:
 
 - trigger discovery and durable job scheduling;
 - assessment-key deduplication;
@@ -112,12 +112,12 @@ For a live Desktop data root, the workspace master owns:
 - acceptance and publication of assessment results;
 - subscription updates consumed by GUI, CLI, TUI, and agents.
 
-The master remains a coordinator, not fact authority and not the universal
+The coordinator remains a coordinator, not fact authority and not the universal
 implementation of every assessor. Durable requests, reports, Episodes, and
 proof remain in the data-root ledger. The per-user supervisor only starts and
-routes to the correct workspace master; it does not assess workspace claims.
+routes to the correct workspace coordinator; it does not assess workspace claims.
 
-If no live master exists, a masterless or embedded host may schedule assessment
+If no live coordinator exists, a daemonless or embedded host may schedule assessment
 against closed data through the same contracts.
 
 ### 5. Process assessors use locations, channels, and single-writer journals
@@ -137,11 +137,11 @@ must not concurrently write the same mmap journal file.
 
 The assessor does not append to the already sealed work Episode. It produces a
 separate Assessment Episode that causally depends on the assessed Episode,
-declarations, and query proof. The workspace master validates and admits that
+declarations, and query proof. The workspace coordinator validates and admits that
 result into the workspace fold.
 
 Durable request plus idempotent assessment key makes crash recovery at-least
-once but logically single-result: the master can retry an interrupted worker
+once but logically single-result: the coordinator can retry an interrupted worker
 without inventing a second assessment identity.
 
 ### 6. Embedded products use the same contract with thread execution
@@ -193,7 +193,7 @@ dashboard tax. GUI state does not own assessment meaning.
    seal persist or deterministically expose assessment intent without waiting.
 2. Add one built-in deterministic assessor over a sealed Episode and
    proof-carrying query; store its result as a dependent Assessment Episode.
-3. Add workspace-master scheduling, deduplication, retry, precise invalidation,
+3. Add workspace-coordinator scheduling, deduplication, retry, precise invalidation,
    and subscription updates with one process executor.
 4. Add the equivalent libkungfu thread executor and conformance fixtures
    comparing report hashes across process and thread execution.
@@ -201,12 +201,12 @@ dashboard tax. GUI state does not own assessment meaning.
    from summary to report, proof, and replay.
 
 The initial vertical slice is implemented in `libkungfu` and the workspace
-master. `assessment_event.fbs` owns request, execution, result, invalidation,
+coordinator. `assessment_event.fbs` owns request, execution, result, invalidation,
 and report persistence. The request coordinator journal is separate from the
 per-key/per-executor assessor journals, so managed process and embedded thread
 executors retain distinct locations and single-writer result paths. The Python
-workspace master schedules one pending process worker at a time and publishes a
-subscription fold to `master/assessments.json`; CLI and GUI surfaces show
+workspace coordinator schedules one pending process worker at a time and publishes a
+subscription fold to `coordinator/assessments.json`; CLI and GUI surfaces show
 freshness and fitness before proof/replay details. Native C ABI, Node, Python,
 process, and thread fixtures cover the shared contract. The embedded `thread`
 profile dispatches the C++ assessment body through a dedicated joined thread;
@@ -217,7 +217,7 @@ identity remains derived only from pinned semantic inputs.
 
 - Append throughput and Episode seal do not depend on completing an unbounded
   KFD-2 assessment.
-- A sealed Episode plus durable request survives recorder/master/worker restart
+- A sealed Episode plus durable request survives recorder/coordinator/worker restart
   and eventually produces one logical report or an explicit terminal state.
 - Reports bind claim, purpose, pinned cut, declarations, evidence, policy, and
   residual risk; no moving-head evaluation is described as reproducible.
@@ -241,7 +241,7 @@ identity remains derived only from pinned semantic inputs.
 - Desktop keeps durable assessment work alive after an agent or GUI exits.
 - Embedded consumers retain full local trust capability without requiring the
   Desktop process topology or managed-language runtimes.
-- The master gains scheduler responsibilities but not domain-specific assessor
+- The coordinator gains scheduler responsibilities but not domain-specific assessor
   logic or fact authority.
 - Assessment reports become replayable, queryable facts with explicit
   freshness instead of ephemeral dashboard judgments.
@@ -254,7 +254,7 @@ identity remains derived only from pinned semantic inputs.
   or failed assessor must not prevent durable Episode closure.
 - **Let each agent or GUI assess independently.** Rejected because trust state
   would fork and disappear with process lifecycle.
-- **Let workers write the master's journal directly.** Rejected because it
+- **Let workers write the coordinator's journal directly.** Rejected because it
   violates single-writer journal semantics.
 - **Append the report to the sealed work Episode.** Rejected because sealing is
   immutable; assessment is a dependent causal object.

@@ -1,15 +1,15 @@
-"""KungfuEventLoop(coloop.py) 协程调度的可证伪测试 — 阶段0 测试网。
+"""LiveEventLoop(event_loop.py) 协程调度的可证伪测试 — 阶段0 测试网。
 
-只测纯 Python 事件循环逻辑：按文件路径载入 coloop.py，绕开 kungfu/__init__.py 的
-`import pykungfu`(C++ 扩展)，用 FakeHero 替身驱动事件循环，不依赖真实行情/网关/下单。
+只测纯 Python 事件循环逻辑：按文件路径载入 event_loop.py，绕开 kungfu/__init__.py 的
+`import pykungfu`(C++ 扩展)，用 FakeReactor 替身驱动事件循环，不依赖真实行情/网关/下单。
 
 坐实 principal-engineer 评审发现的缺陷：
 
-- P0  KungfuEventLoop.post_step 用单槽 self._current + 无条件重新入队作为"协程是否结束"
-      的标志位(coloop.py:64-69)，配合 strategy.py __call_proxy 的 `await func; loop._current=None`
+- P0  LiveEventLoop.post_step 用单槽 self._current + 无条件重新入队作为"协程是否结束"
+      的标志位(event_loop.py:64-69)，配合 strategy.py __call_proxy 的 `await func; loop._current=None`
       (strategy.py:129-133)。多个并发 async 回调同时在飞时，单槽会被互相覆盖，导致部分协程
       丢失或被重复驱动。
-- P2  定时器到期判断用严格小于 `handle._when < now()`(coloop.py:57)：精确等于到期时间的
+- P2  定时器到期判断用严格小于 `handle._when < now()`(event_loop.py:57)：精确等于到期时间的
       定时器当轮不触发，回测离散时间下会延迟一个事件。
 """
 
@@ -17,21 +17,23 @@ import asyncio
 import importlib.util
 import pathlib
 
-_COLOOP = (
+_EVENT_LOOP = (
     pathlib.Path(__file__).resolve().parents[2]
-    / "src/python/kungfu/runtime/practice/coloop.py"
+    / "src/python/kungfu/runtime/live/event_loop.py"
 )
 
 
 def _load():
-    spec = importlib.util.spec_from_file_location("kungfu_coloop_under_test", _COLOOP)
+    spec = importlib.util.spec_from_file_location(
+        "kungfu_event_loop_under_test", _EVENT_LOOP
+    )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
 
 
-coloop = _load()
-KungfuEventLoop = coloop.KungfuEventLoop
+event_loop = _load()
+LiveEventLoop = event_loop.LiveEventLoop
 
 
 class _NullLogger:
@@ -44,8 +46,8 @@ class FakeHome:
     uname = "test.strategy"
 
 
-class FakeHero:
-    """KungfuEventLoop 需要的最小 C++ hero/apprentice 接口替身。"""
+class FakeReactor:
+    """LiveEventLoop 需要的最小 C++ reactor/peer 接口替身。"""
 
     def __init__(self):
         self._now = 0
@@ -59,7 +61,7 @@ class FakeHero:
         self._now += int(ns)
 
     def step(self, num=0):
-        # 真实 hero.step 会拉一轮 C++ 事件;测试里事件由 call_proxy 直接投递,这里留空。
+        # 真实 reactor.step 会拉一轮 C++ 事件;测试里事件由 call_proxy 直接投递,这里留空。
         pass
 
     def pre_setup(self):
@@ -91,17 +93,17 @@ class FakeCtx:
 
 
 def make_loop():
-    hero = FakeHero()
+    reactor = FakeReactor()
     ctx = FakeCtx()
-    loop = KungfuEventLoop(ctx, hero)
+    loop = LiveEventLoop(ctx, reactor)
     ctx.loop = loop
-    return loop, hero, ctx
+    return loop, reactor, ctx
 
 
 def call_proxy(loop, coro_func, *args):
     """复现 strategy.py __call_proxy 的协程回调投递路径:
         async wrap(): await func(...); loop._current = None  + asyncio.ensure_future
-    这是 async 策略回调进入 KungfuEventLoop 的真实路径。
+    这是 async 策略回调进入 LiveEventLoop 的真实路径。
     """
 
     async def wrap():
@@ -139,7 +141,7 @@ class WaitRounds:
 
 def test_single_async_callback_completes():
     """smoke:单个 async 回调应被驱动到完成恰好一次。"""
-    loop, hero, ctx = make_loop()
+    loop, reactor, ctx = make_loop()
     done = []
 
     async def cb():
@@ -156,7 +158,7 @@ def test_two_concurrent_async_callbacks_both_complete():
 
     单槽 _current + 无条件重新入队若有缺陷,会丢失或重复驱动其中一个。
     """
-    loop, hero, ctx = make_loop()
+    loop, reactor, ctx = make_loop()
     done = []
 
     async def cb(tag):
@@ -172,29 +174,29 @@ def test_two_concurrent_async_callbacks_both_complete():
 
 
 def test_timer_fires_at_exact_due_time():
-    """P2 复现:call_at(when) 在 hero.now()==when 那一刻应触发。
+    """P2 复现:call_at(when) 在 reactor.now()==when 那一刻应触发。
 
-    coloop.py:57 用 `handle._when < now()`(严格小于),到期时刻当轮不触发。
+    event_loop.py:57 用 `handle._when < now()`(严格小于),到期时刻当轮不触发。
     """
-    loop, hero, ctx = make_loop()
+    loop, reactor, ctx = make_loop()
     fired = []
     when = 1000
-    loop.call_at(when, lambda: fired.append(hero.now()))
-    hero._now = when  # 引擎时间恰好推进到到期时刻
+    loop.call_at(when, lambda: fired.append(reactor.now()))
+    reactor._now = when  # 引擎时间恰好推进到到期时刻
     loop.post_step()
     assert fired == [when], (
-        f"到期时刻定时器未触发(now={hero.now()}, when={when}): {fired}"
+        f"到期时刻定时器未触发(now={reactor.now()}, when={when}): {fired}"
     )
 
 
 def test_pending_future_does_not_self_resolve():
-    """P1 连带:新 coloop 下 await 一个永不 set_result 的 future 会正确挂起,不靠忙轮询自动跑完。
+    """P1 连带:新 event_loop 下 await 一个永不 set_result 的 future 会正确挂起,不靠忙轮询自动跑完。
 
     旧 post_step 靠'无条件重新入队'重复驱动协程,使 AsyncOrderAction 那种'永不完成 future +
     每轮重新轮询订单状态'的忙轮询得以推进。移除重排后该假设不再成立 => 依赖它的
     AsyncOrderAction 必须改成事件驱动 set_result(否则 await ctx.buy() 死锁)。
     """
-    loop, hero, ctx = make_loop()
+    loop, reactor, ctx = make_loop()
     done = []
 
     async def cb():
@@ -215,9 +217,9 @@ def test_future_resolves_when_set_result():
     """P1 修复方向:future.set_result 后 await 它的协程应被唤醒续跑。
 
     这是 AsyncOrderAction 应改成的事件驱动模式(在 on_order/on_trade 回调里对订单终态 set_result),
-    替代'永不完成 future + 外部重轮询'。本测试证明新 coloop 支持该标准模式。
+    替代'永不完成 future + 外部重轮询'。本测试证明新 event_loop 支持该标准模式。
     """
-    loop, hero, ctx = make_loop()
+    loop, reactor, ctx = make_loop()
     done = []
     holder = {}
 
@@ -271,12 +273,12 @@ class _ReplicaOrderAction:
 
 
 def test_legacy_order_action_deadlocks_on_new_loop():
-    """P1 坐实:旧 AsyncOrderAction(永不完成 future + 重轮询)在新 coloop 下,即使订单成交也死锁。
+    """P1 坐实:旧 AsyncOrderAction(永不完成 future + 重轮询)在新 event_loop 下,即使订单成交也死锁。
 
     旧 post_step 的'无条件重新入队'被移除后,没有谁重新驱动协程去重轮询订单状态;而 future
     永不 set_result,Task 永久挂起。这证明 P0 修复必须配套把下单 await 改成事件驱动 set_result。
     """
-    loop, hero, ctx = make_loop()
+    loop, reactor, ctx = make_loop()
     book = {}  # order_id -> status
     done = []
 
@@ -291,5 +293,5 @@ def test_legacy_order_action_deadlocks_on_new_loop():
     book[1] = "Filled"  # 订单成交,但旧逻辑无事件回调去 set_result
     drive(loop, max_rounds=10)
     assert done == [], (
-        f"旧 AsyncOrderAction 在新 coloop 下:订单成交后 await 仍死锁(必须改 set_result): {done}"
+        f"旧 AsyncOrderAction 在新 event_loop 下:订单成交后 await 仍死锁(必须改 set_result): {done}"
     )

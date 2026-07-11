@@ -7,26 +7,26 @@
 #include <csignal>
 #include <cstdio>
 #include <kungfu/common.h>
+#include <kungfu/runtime/live/reactor.h>
 #include <kungfu/runtime/os.h>
-#include <kungfu/runtime/practice/hero.h>
 #include <kungfu/runtime/util/stacktrace.h>
 
 using namespace kungfu::runtime::util;
 
 namespace kungfu::runtime::os {
-static kungfu::runtime::practice::hero *hero_instance = {};
+static kungfu::runtime::live::reactor *reactor_instance = {};
 static bool signals_handler_enabled = true;
 
-void stop_hero() {
-  if (hero_instance != nullptr && hero_instance->is_live()) {
-    hero_instance->signal_stop();
+void stop_reactor() {
+  if (reactor_instance != nullptr && reactor_instance->is_live()) {
+    reactor_instance->signal_stop();
   }
 }
 
-void exit_hero(int signum) {
-  if (hero_instance != nullptr && hero_instance->is_live()) {
-    hero_instance->signal_stop();
-    hero_instance->on_exit();
+void exit_reactor(int signum) {
+  if (reactor_instance != nullptr && reactor_instance->is_live()) {
+    reactor_instance->signal_stop();
+    reactor_instance->on_exit();
   }
   exit(signum);
 }
@@ -37,11 +37,11 @@ void kf_os_signal_handler(int signum) {
   case SIGINT:   // interrupt
   case SIGBREAK: // Ctrl-Break sequence
     KF_LOG_INFO("kungfu app interrupted");
-    stop_hero();
+    stop_reactor();
     break;
   case SIGTERM: // Software termination signal from kill
     KF_LOG_INFO("kungfu app terminated");
-    stop_hero();
+    stop_reactor();
     break;
   case SIGILL:         // illegal instruction - invalid function image
   case SIGFPE:         // floating point exception
@@ -50,11 +50,11 @@ void kf_os_signal_handler(int signum) {
   case SIGABRT_COMPAT: // SIGABRT compatible with other platforms, same as SIGABRT
     // Fatal crash path: do NOT call KF_LOG_* (spdlog) here -- it allocates and
     // locks and can deadlock or double-fault before we reach the dumper. The
-    // real symbolized dump comes from the SEH __except (hero.cpp) and the
+    // real symbolized dump comes from the SEH __except (reactor.cpp) and the
     // top-level filter installed in handle_os_signals(); this contextless
     // CRT-signal path is only a last resort.
     print_stack_trace(nullptr);
-    exit_hero(signum);
+    exit_reactor(signum);
     break;
 #else
   case SIGURG:   // discard signal       urgent condition present on socket
@@ -69,19 +69,19 @@ void kf_os_signal_handler(int signum) {
   case SIGTTIN: // stop process         background read attempted from control terminal
   case SIGTTOU: // stop process         background write attempted to control terminal
     KF_LOG_CRITICAL("kungfu app stopped by signal {}", signum);
-    exit_hero(signum);
+    exit_reactor(signum);
     break;
   case SIGINT: // terminate process    interrupt program
     KF_LOG_INFO("kungfu app interrupted");
-    exit_hero(signum);
+    exit_reactor(signum);
     break;
   case SIGTERM: // terminate process    software termination signal
     KF_LOG_INFO("kungfu app terminated");
-    stop_hero();
+    stop_reactor();
     break;
   case SIGKILL: // terminate process    kill program
     KF_LOG_INFO("kungfu app killed");
-    exit_hero(signum);
+    exit_reactor(signum);
   case SIGHUP:    // terminate process    terminal line hangup
   case SIGPIPE:   // terminate process    write on a pipe with no reader
   case SIGALRM:   // terminate process    real-time timer expired
@@ -94,11 +94,11 @@ void kf_os_signal_handler(int signum) {
     // especially after heap corruption. print_stack_trace() is async-signal-safe
     // and emits the signal number itself.
     print_stack_trace(stderr, signum);
-    exit_hero(signum);
+    exit_reactor(signum);
   case SIGUSR1: // terminate process    User defined signal 1
   case SIGUSR2: // terminate process    User defined signal 2
     print_stack_trace(stderr, signum);
-    exit_hero(signum);
+    exit_reactor(signum);
   case SIGQUIT: // create core image    quit program
   case SIGILL:  // create core image    illegal instruction
   case SIGTRAP: // create core image    trace trap
@@ -106,13 +106,13 @@ void kf_os_signal_handler(int signum) {
   case SIGFPE:  // create core image    floating-point exception
   case SIGBUS:  // create core image    bus error
     print_stack_trace(stderr, signum);
-    exit_hero(signum);
+    exit_reactor(signum);
   case SIGSEGV: // create core image    segmentation violation
     print_stack_trace(stderr, signum);
-    exit_hero(signum);
+    exit_reactor(signum);
   case SIGSYS: // create core image    non-existent system call invoked
     print_stack_trace(stderr, signum);
-    exit_hero(signum);
+    exit_reactor(signum);
 #endif // _WINDOWS
 #ifdef __APPLE__
   case SIGINFO: // discard signal       status request from keyboard
@@ -120,7 +120,7 @@ void kf_os_signal_handler(int signum) {
     break;
   case SIGEMT: // create core image    emulate instruction executed
     print_stack_trace(stderr, signum);
-    exit_hero(signum);
+    exit_reactor(signum);
 #endif // __APPLE__
   default:
     KF_LOG_INFO("kungfu app caught unknown signal {}, signal ignored", signum);
@@ -130,7 +130,7 @@ void kf_os_signal_handler(int signum) {
 void disable_os_signals_handler() { signals_handler_enabled = false; }
 
 #ifdef _WINDOWS
-// Process-wide backstop for exceptions raised outside hero::produce's SEH frame
+// Process-wide backstop for exceptions raised outside reactor::produce's SEH frame
 // (other threads, or before / after the produce loop). It hands the dumper real
 // EXCEPTION_POINTERS, unlike the contextless CRT signal(SIGSEGV) path.
 static LONG WINAPI kf_top_level_filter(EXCEPTION_POINTERS *ep) {
@@ -139,12 +139,12 @@ static LONG WINAPI kf_top_level_filter(EXCEPTION_POINTERS *ep) {
 }
 #endif // _WINDOWS
 
-void handle_os_signals(void *hero) {
-  if (hero_instance != nullptr) {
-    throw yijinjing_error("kungfu can only have one hero instance per process");
+void handle_os_signals(void *reactor) {
+  if (reactor_instance != nullptr) {
+    throw yijinjing_error("kungfu can only have one reactor instance per process");
   }
 
-  hero_instance = static_cast<kungfu::runtime::practice::hero *>(hero);
+  reactor_instance = static_cast<kungfu::runtime::live::reactor *>(reactor);
 
   if (not signals_handler_enabled) {
     KF_LOG_WARN("OS signals hander disabled");
@@ -166,6 +166,6 @@ void handle_os_signals(void *hero) {
   }
 }
 
-void reset_hero_instance() { hero_instance = nullptr; }
+void reset_reactor_instance() { reactor_instance = nullptr; }
 
 } // namespace kungfu::runtime::os

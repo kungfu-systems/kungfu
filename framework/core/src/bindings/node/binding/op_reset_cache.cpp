@@ -12,10 +12,10 @@ using namespace kungfu::yijinjing::enums;
 using namespace kungfu::yijinjing::types;
 using namespace kungfu::runtime;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::runtime::practice;
+using namespace kungfu::runtime::live;
 
 namespace kungfu::node::serialize {
-JsResetCache::JsResetCache(apprentice &app, Napi::ObjectReference &state) : app_(app), state_(state) {}
+JsResetCache::JsResetCache(peer &app, Napi::ObjectReference &state) : app_(app), state_(state) {}
 
 void JsResetCache::operator()(const state<CacheReset> &state) {
   auto source = state.source;

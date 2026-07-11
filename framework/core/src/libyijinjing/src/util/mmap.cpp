@@ -26,10 +26,11 @@ namespace kungfu::yijinjing::platform {
 
 uintptr_t load_mmap_buffer(const std::string &path, size_t size, bool is_writing, bool lazy) {
 #ifdef _WINDOWS
-  bool is_master = is_writing || !lazy;
-  HANDLE dumpFileDescriptor = CreateFileA(path.c_str(), (is_master) ? (GENERIC_READ | GENERIC_WRITE) : GENERIC_READ,
-                                          FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-                                          (is_master) ? OPEN_ALWAYS : OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+  bool has_write_access = is_writing || !lazy;
+  HANDLE dumpFileDescriptor =
+      CreateFileA(path.c_str(), (has_write_access) ? (GENERIC_READ | GENERIC_WRITE) : GENERIC_READ,
+                  FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, (has_write_access) ? OPEN_ALWAYS : OPEN_EXISTING,
+                  FILE_ATTRIBUTE_NORMAL, NULL);
   if (dumpFileDescriptor == INVALID_HANDLE_VALUE) {
     throw journal_error("unable to mmap for page " + path);
   }
@@ -37,15 +38,15 @@ uintptr_t load_mmap_buffer(const std::string &path, size_t size, bool is_writing
   // https://learn.microsoft.com/zh-cn/windows/win32/memory/creating-a-file-mapping-object?redirectedfrom=MSDN
   // max journal size is 2GB in Windows
   HANDLE fileMappingObject =
-      CreateFileMapping(dumpFileDescriptor, NULL, (is_master) ? PAGE_READWRITE : PAGE_READONLY, 0, size, NULL);
+      CreateFileMapping(dumpFileDescriptor, NULL, (has_write_access) ? PAGE_READWRITE : PAGE_READONLY, 0, size, NULL);
 
   if (fileMappingObject == NULL) {
     int nRet = GetLastError();
-    SPDLOG_ERROR("{} CreateFileMapping Error = {}, {}\n", is_master ? "writer" : "reader", nRet, path);
+    SPDLOG_ERROR("{} CreateFileMapping Error = {}, {}\n", has_write_access ? "writer" : "reader", nRet, path);
     throw journal_error("unable to mmap for page " + path);
   }
 
-  void *buffer = MapViewOfFile(fileMappingObject, (is_master) ? FILE_MAP_ALL_ACCESS : FILE_MAP_READ, 0, 0, size);
+  void *buffer = MapViewOfFile(fileMappingObject, (has_write_access) ? FILE_MAP_ALL_ACCESS : FILE_MAP_READ, 0, 0, size);
 
   if (buffer == nullptr) {
     int nRet = GetLastError();
@@ -54,13 +55,13 @@ uintptr_t load_mmap_buffer(const std::string &path, size_t size, bool is_writing
   CloseHandle(fileMappingObject);
   CloseHandle(dumpFileDescriptor);
 #else
-  bool is_master = is_writing || !lazy;
-  int fd = open(path.c_str(), (is_master ? O_RDWR : O_RDONLY) | O_CREAT, (mode_t)0600);
+  bool has_write_access = is_writing || !lazy;
+  int fd = open(path.c_str(), (has_write_access ? O_RDWR : O_RDONLY) | O_CREAT, (mode_t)0600);
   if (fd < 0) {
     throw journal_error("failed to open file for page " + path + ", errno: " + strerror(errno));
   }
 
-  if (is_master) {
+  if (has_write_access) {
     if (lseek(fd, size - 1, SEEK_SET) == -1) {
       close(fd);
       throw journal_error("failed to stretch for page " + path + ", errno: " + strerror(errno));
@@ -78,7 +79,7 @@ uintptr_t load_mmap_buffer(const std::string &path, size_t size, bool is_writing
    * races where it might get reassigned to something else if you first released the old resource then attempted to
    * regain it for the new resource.
    */
-  void *buffer = mmap(0, size, is_master ? (PROT_READ | PROT_WRITE) : PROT_READ, MAP_SHARED, fd, 0);
+  void *buffer = mmap(0, size, has_write_access ? (PROT_READ | PROT_WRITE) : PROT_READ, MAP_SHARED, fd, 0);
 
   if (buffer == MAP_FAILED) {
     close(fd);

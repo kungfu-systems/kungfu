@@ -61,30 +61,30 @@ The full assessment runs beside the recording path. Failure or timeout does not
 undo the sealed Episode. A high-risk action may explicitly wait for a fresh
 report and fail closed if the report remains pending or insufficient.
 
-## Desktop: the workspace master coordinates
+## Desktop: the workspace coordinator coordinates
 
-For each live `.kungfu` data root, the workspace master observes relevant
+For each live `.kungfu` data root, the workspace coordinator observes relevant
 claims, schedules assessment jobs, deduplicates requests, tracks dependencies,
 invalidates stale reports, retries workers, and publishes status updates.
 
-The per-user supervisor only starts and routes workspace masters. The master is
+The per-user supervisor only starts and routes workspace coordinators. The coordinator is
 not the fact authority and does not contain every domain assessor. Requests,
 reports, Episodes, and proof remain durable in the workspace ledger.
 
 A typical process assessment is:
 
 ```text
-workspace master sees a claim
+workspace coordinator sees a claim
   -> records AssessmentRequested
   -> starts or assigns an assessor worker
   -> worker reads pinned sealed journals through mmap
   -> worker writes through its own assessor journal
-  -> master admits the result
+  -> coordinator admits the result
   -> GUI receives the TrustReport update
 ```
 
 The worker has its own Kungfu location and single-writer journal. It never
-concurrently writes the master's mmap journal. Because the work Episode is
+concurrently writes the coordinator's mmap journal. Because the work Episode is
 already sealed, the report is stored in a separate Assessment Episode that
 depends on the work Episode, declarations, and query proof.
 

@@ -1,6 +1,6 @@
 # ADR-0036: Per-user supervisor manages per-data-root masters
 
-- Status: accepted
+- Status: superseded by [ADR-0057](ADR-0057-domain-neutral-live-runtime-terminology.md)
 - Date: 2026-07-09
 - Category: (architecture) live runtime coordination, process topology, and
   workspace master lifecycle
@@ -10,8 +10,13 @@
   source sync over location and channel. ADR-0033 defines Episode as the
   first-class causal segment object. ADR-0034 defines the yijinjing-backed
   Episode manifest journal. ADR-0035 defines workspace-local `.kungfu/` as the
-  default fact-ledger home. [`docs/master-service.md`](../../../../docs/master-service.md)
+  default fact-ledger home. [`docs/runtime-service.md`](../../../../docs/runtime-service.md)
   documents the operator-facing service surface.
+
+> Historical note: this decision established the two-level process topology.
+> ADR-0057 retains that topology but replaces its stylized runtime vocabulary.
+> The terms below are preserved to make the original decision auditable; they
+> are not the canonical names for new code or operator surfaces.
 
 ## Context
 

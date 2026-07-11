@@ -57,14 +57,14 @@ inline int GetMillisecondsSleepAfterStep(const Napi::CallbackInfo &info) {
   return info[3].As<Napi::Number>().Int32Value();
 }
 
-// The function-try-block is deliberate: base-class construction (apprentice
+// The function-try-block is deliberate: base-class construction (peer
 // opens the io device and session index storage) can throw under
 // cross-process contention, and a body-level try cannot catch member
 // initializer exceptions. A plain std::exception escaping this napi callback
 // terminates the whole process; convert to a JS-catchable error instead.
 Watcher::Watcher(const Napi::CallbackInfo &info) try
     : ObjectWrap(info),                                                                           //
-      apprentice(GetWatcherLocation(info), true),                                                 //
+      peer(GetWatcherLocation(info), true),                                                       //
       milliseconds_sleep_after_step_(GetNumber(info, 3)),                                         //
       ledger_ref_(Napi::ObjectReference::New(Napi::Object::New(info.Env()), 1)),                  //
       app_states_ref_(Napi::ObjectReference::New(Napi::Object::New(info.Env()), 1)),              //
@@ -166,12 +166,13 @@ Napi::Value Watcher::IsStarted(const Napi::CallbackInfo &info) { return Napi::Bo
 Napi::Value Watcher::RequestStop(const Napi::CallbackInfo &info) {
   auto app_location = IODevice::ExtractLocation(info, 0, get_locator());
 
-  // stop master
-  if (app_location->role == location_role::SYSTEM && app_location->namespace_ == "master") {
-    if (not has_writer(get_master_command_uid())) {
+  // Stop the coordinator through its per-peer command channel.
+  if (app_location->role == location_role::SYSTEM &&
+      runtime::live::is_coordinator_wire_namespace(app_location->namespace_)) {
+    if (not has_writer(get_coordinator_command_uid())) {
       return Napi::Boolean::New(info.Env(), false);
     }
-    get_writer(get_master_command_uid())->mark(now(), RequestStop::tag);
+    get_writer(get_coordinator_command_uid())->mark(now(), RequestStop::tag);
     return Napi::Boolean::New(info.Env(), true);
   }
 
@@ -358,8 +359,9 @@ void Watcher::OnRegister(int64_t trigger_time, const Register &register_data) {
 
 void Watcher::OnDeregister(int64_t trigger_time, const Deregister &deregister_data) {
   auto app_location = location::make_shared(deregister_data, get_locator());
-  if (app_location->role == location_role::SYSTEM and app_location->namespace_ == "master" and
-      app_location->name == "master") {
+  if (app_location->role == location_role::SYSTEM and
+      runtime::live::is_coordinator_wire_namespace(app_location->namespace_) and
+      app_location->name == runtime::live::COORDINATOR_WIRE_NAME) {
     CancelWorker();
   }
 }
@@ -408,15 +410,15 @@ void Watcher::StartWorker() {
       SPDLOG_INFO("watcher quit");
       return;
     } else {
-      // have to wait for master down totally
+      // Wait until the coordinator is fully down before reconnecting.
       std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 
-    watcher->AfterMasterDown(info);
+    watcher->AfterCoordinatorDown(info);
     watcher->set_begin_time(yijinjing::time::now_in_nano());
     SPDLOG_INFO("Restart watcher uv loop");
-    // master may quit within watcher running time,
-    // so, once master deregistered, the uv logic in watcher need to be restarte.
+    // The coordinator may quit while the watcher is running; restart the UV
+    // loop after its deregistration has been observed.
     watcher->StartWorker();
   };
 
@@ -432,20 +434,20 @@ void Watcher::Quit(const Napi::CallbackInfo &info) {
 }
 
 void Watcher::RequestDeregister() {
-  if (not has_writer(get_master_command_uid())) {
-    SPDLOG_WARN("no master cmd writer");
+  if (not has_writer(get_coordinator_command_uid())) {
+    SPDLOG_WARN("no coordinator command writer");
     return;
   }
 
-  auto writer = get_writer(get_master_command_uid());
+  auto writer = get_writer(get_coordinator_command_uid());
   writer->mark(now(), RequestDeregister::tag);
   SPDLOG_INFO("RequestDeregister");
 }
 
-void Watcher::AfterMasterDown(const Napi::CallbackInfo &info) {
-  SPDLOG_INFO("after master down");
+void Watcher::AfterCoordinatorDown(const Napi::CallbackInfo &info) {
+  SPDLOG_INFO("after coordinator down");
   Napi::HandleScope scope(info.Env());
-  //  disjoin(get_master_command_uid());
+  // disjoin(get_coordinator_command_uid());
   reader_->clear();
   writers_.clear();
   band_writers_.clear();

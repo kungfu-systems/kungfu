@@ -243,7 +243,7 @@ void location::verify_location_uid() {
   if (not is_verify_location()) {
     return;
   }
-  const std::string rocksdb_seed = get_master_kv(uname);
+  const std::string rocksdb_seed = get_coordinator_kv(uname);
   SPDLOG_TRACE("rocksdb_seed: {}", rocksdb_seed);
   if (not rocksdb_seed.empty()) {
     update_seed(std::stoul(rocksdb_seed));
@@ -256,7 +256,7 @@ void location::verify_location_uid() {
 
 bool location::is_uid_clash() {
   std::string str_location_uid64;
-  const std::string clash_uname = get_master_kv(std::to_string(uid));
+  const std::string clash_uname = get_coordinator_kv(std::to_string(uid));
   if (clash_uname.empty() or clash_uname == uname) {
     return false;
   } else {
@@ -266,8 +266,8 @@ bool location::is_uid_clash() {
   }
 }
 
-std::string location::get_master_kv(const std::string &key) {
-  auto provider = master_kv();
+std::string location::get_coordinator_kv(const std::string &key) {
+  auto provider = coordinator_kv();
   return provider ? provider(*this, key) : std::string{};
 }
 

@@ -4,12 +4,13 @@
 // Created by Keren Dong on 2019-06-15.
 //
 
-#ifndef KUNGFU_HERO_H
-#define KUNGFU_HERO_H
+#ifndef KUNGFU_RUNTIME_LIVE_REACTOR_H
+#define KUNGFU_RUNTIME_LIVE_REACTOR_H
 
 #include <kungfu/runtime/common.h>
 
 #include <kungfu/runtime/io.h>
+#include <kungfu/runtime/live/identity.h>
 #include <kungfu/runtime/rx.h>
 #include <kungfu/runtime/util/rocks.h>
 #include <kungfu/yijinjing/journal/journal.h>
@@ -21,7 +22,7 @@
 #define KUNGFU_SETUP_LOG() kungfu::yijinjing::log::copy_log_settings(get_home(), get_home()->name)
 #endif // KUNGFU_SETUP_LOG
 
-namespace kungfu::runtime::practice {
+namespace kungfu::runtime::live {
 
 inline yijinjing::data::location_ptr make_system_location(const std::string &namespace_, const std::string &name,
                                                           const yijinjing::data::locator_ptr &locator,
@@ -32,11 +33,11 @@ inline yijinjing::data::location_ptr make_system_location(const std::string &nam
 
 typedef std::unordered_map<uint32_t, yijinjing::journal::writer_ptr> WriterMap;
 
-class hero : public yijinjing::resource {
+class reactor : public yijinjing::resource {
 public:
-  explicit hero(kungfu::runtime::io_device_ptr io_device);
+  explicit reactor(kungfu::runtime::io_device_ptr io_device);
 
-  ~hero() override;
+  ~reactor() override;
 
   [[nodiscard]] bool is_usable() override;
 
@@ -132,29 +133,29 @@ public:
 
   [[nodiscard]] virtual bool is_reactable(const event_ptr &event);
 
-  [[nodiscard]] virtual rocksdb::DB *get_master_rocksdb() const;
+  [[nodiscard]] virtual rocksdb::DB *get_coordinator_rocksdb() const;
 
-  [[nodiscard]] virtual rocksdb::DB *get_app_rocksdb() const;
+  [[nodiscard]] virtual rocksdb::DB *get_peer_rocksdb() const;
 
-  [[nodiscard]] virtual std::string get_master_kv(const std::string &key) const;
+  [[nodiscard]] virtual std::string get_coordinator_kv(const std::string &key) const;
 
-  [[nodiscard]] virtual std::map<std::string, std::string> get_master_kvs(const std::set<std::string> &keys) const;
+  [[nodiscard]] virtual std::map<std::string, std::string> get_coordinator_kvs(const std::set<std::string> &keys) const;
 
-  virtual void put_master_kv(const std::string &key, const std::string &value) const;
+  virtual void put_coordinator_kv(const std::string &key, const std::string &value) const;
 
-  virtual void put_master_kvs(const std::map<std::string, std::string> &kvs) const;
+  virtual void put_coordinator_kvs(const std::map<std::string, std::string> &kvs) const;
 
-  [[nodiscard]] virtual std::string get_app_kv(const std::string &key) const;
+  [[nodiscard]] virtual std::string get_peer_kv(const std::string &key) const;
 
-  [[nodiscard]] virtual std::map<std::string, std::string> get_app_kvs(const std::set<std::string> &keys) const;
+  [[nodiscard]] virtual std::map<std::string, std::string> get_peer_kvs(const std::set<std::string> &keys) const;
 
-  virtual void put_app_kv(const std::string &key, const std::string &value) const;
+  virtual void put_peer_kv(const std::string &key, const std::string &value) const;
 
-  virtual void put_app_kvs(const std::map<std::string, std::string> &kvs) const;
+  virtual void put_peer_kvs(const std::map<std::string, std::string> &kvs) const;
 
   virtual void read_location_from_rocksdb();
 
-  virtual void ensure_master_rocksdb();
+  virtual void ensure_coordinator_rocksdb();
 
   void write_location_to_rocksdb(const yijinjing::data::location_ptr &location);
 
@@ -165,9 +166,9 @@ public:
 
   [[nodiscard]] yijinjing::data::location_ptr get_ledger_home_location() const;
 
-  [[nodiscard]] yijinjing::data::location_ptr get_master_home_location() const;
+  [[nodiscard]] yijinjing::data::location_ptr get_coordinator_home_location() const;
 
-  [[nodiscard]] yijinjing::data::location_ptr get_master_cmd_location() const;
+  [[nodiscard]] yijinjing::data::location_ptr get_coordinator_cmd_location() const;
 
   [[nodiscard]] const rx::connectable_observable<event_ptr> &get_events() const;
 
@@ -187,8 +188,8 @@ protected:
 
   rx::connectable_observable<event_ptr> events_ = {};
 
-  const yijinjing::data::location_ptr master_home_location_;
-  const yijinjing::data::location_ptr master_cmd_location_;
+  const yijinjing::data::location_ptr coordinator_home_location_;
+  const yijinjing::data::location_ptr coordinator_cmd_location_;
   const yijinjing::data::location_ptr ledger_home_location_;
 
   static uint64_t make_source_dest_hash(uint32_t source_id, uint32_t dest_id);
@@ -241,10 +242,10 @@ protected:
   kungfu::runtime::io_device_ptr io_device_;
   rx::composite_subscription cs_;
   int64_t now_;
-  mutable rocksdb::DB *master_db_ = {};
-  mutable rocksdb::DB *app_db_ = {};
-  mutable std::mutex master_db_mtx_ = {};
-  mutable std::mutex app_db_mtx_ = {};
+  mutable rocksdb::DB *coordinator_db_ = {};
+  mutable rocksdb::DB *peer_db_ = {};
+  mutable std::mutex coordinator_db_mtx_ = {};
+  mutable std::mutex peer_db_mtx_ = {};
   inline static const std::string LOCATION_KEYS = "location_uid64";
 
   std::unordered_map<uint64_t, yijinjing::types::Band> bands_ = {};
@@ -278,7 +279,7 @@ protected:
     }
   }
 
-  static void delegate_produce(hero *instance, const rx::subscriber<event_ptr> &subscriber);
+  static void delegate_produce(reactor *instance, const rx::subscriber<event_ptr> &subscriber);
 };
-} // namespace kungfu::runtime::practice
-#endif // KUNGFU_HERO_H
+} // namespace kungfu::runtime::live
+#endif // KUNGFU_RUNTIME_LIVE_REACTOR_H

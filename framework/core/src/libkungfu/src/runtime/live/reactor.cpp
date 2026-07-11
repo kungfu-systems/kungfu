@@ -10,9 +10,9 @@
 #include <vector>
 
 #include <kungfu/common.h>
+#include <kungfu/runtime/live/reactor.h>
 #include <kungfu/runtime/nanomsg/socket.h>
 #include <kungfu/runtime/os.h>
-#include <kungfu/runtime/practice/hero.h>
 #include <kungfu/runtime/util/rocks.h>
 #include <kungfu/runtime/util/stacktrace.h>
 #include <kungfu/runtime/util/terminal.h>
@@ -28,17 +28,17 @@ using namespace kungfu::yijinjing::data;
 using namespace kungfu::runtime::journal;
 using namespace kungfu::runtime::nanomsg;
 
-namespace kungfu::runtime::practice {
+namespace kungfu::runtime::live {
 
 namespace {
 // Dispatch-latency probe for the reactive event layer (evidence for
-// ADR-0005). Each sb.on_next in hero::drain fans a frame synchronously
+// ADR-0005). Each sb.on_next in reactor::drain fans a frame synchronously
 // through every rx filter chain subscribed on events_, so timing that call
 // measures the full per-frame chain traversal for whichever form is
-// pumping — master and apprentice via run(), the node watcher via step().
+// pumping — coordinator and peer via run(), the node watcher via step().
 // Opt-in via KF_DISPATCH_PROBE=1; when disabled the per-frame cost is one
 // predictable branch. thread_local isolates samples per pump thread, which
-// is per hero instance.
+// is per reactor instance.
 struct dispatch_probe {
   struct stat {
     uint64_t count = 0;
@@ -96,11 +96,12 @@ inline std::string encode(const kungfu::runtime::io_device_ptr &io_device) {
   return fmt::format("{:08x}", home_uid);
 }
 
-hero::hero(kungfu::runtime::io_device_ptr io_device)
+reactor::reactor(kungfu::runtime::io_device_ptr io_device)
     : begin_time_(yijinjing::time::now_in_nano()), end_time_(INT64_MAX),
-      master_home_location_(make_system_location("master", "master", io_device->get_locator())),
-      master_cmd_location_(
-          make_system_location("master", encode(io_device), io_device->get_locator(), io_device->get_home()->seed)),
+      coordinator_home_location_(
+          make_system_location(COORDINATOR_WIRE_NAMESPACE, COORDINATOR_WIRE_NAME, io_device->get_locator())),
+      coordinator_cmd_location_(make_system_location(COORDINATOR_WIRE_NAMESPACE, encode(io_device),
+                                                     io_device->get_locator(), io_device->get_home()->seed)),
       ledger_home_location_(make_system_location("service", "ledger", io_device->get_locator())),
       io_device_(std::move(io_device)), now_(0), main_thread_id_(util::get_thread_id()) {
 
@@ -109,19 +110,19 @@ hero::hero(kungfu::runtime::io_device_ptr io_device)
   reader_ = io_device_->open_reader_to_subscribe();
 }
 
-hero::~hero() {
+reactor::~reactor() {
   writers_.clear();
   reader_.reset();
   io_device_.reset();
   ensure_sqlite_shutdown();
-  os::reset_hero_instance();
-  rocks::clear_rocksdb(&master_db_);
-  rocks::clear_rocksdb(&app_db_);
+  os::reset_reactor_instance();
+  rocks::clear_rocksdb(&coordinator_db_);
+  rocks::clear_rocksdb(&peer_db_);
 }
 
-bool hero::is_usable() { return io_device_->is_usable(); }
+bool reactor::is_usable() { return io_device_->is_usable(); }
 
-bool hero::setup() {
+bool reactor::setup() {
   io_device_->setup();
   SPDLOG_DEBUG("io setup done");
   // A subscriber error must stop this loop, not SIGINT the whole process
@@ -137,12 +138,12 @@ bool hero::setup() {
   return true;
 }
 
-void hero::pre_setup() {
-  ensure_master_rocksdb();
+void reactor::pre_setup() {
+  ensure_coordinator_rocksdb();
   read_location_from_rocksdb();
   add_location(0, get_io_device()->get_live_home());
-  add_location(0, master_home_location_);
-  add_location(0, master_cmd_location_);
+  add_location(0, coordinator_home_location_);
+  add_location(0, coordinator_cmd_location_);
   add_location(0, ledger_home_location_);
   // could get in rocksdb in live
   if (get_home()->mode != mode::LIVE) {
@@ -152,72 +153,72 @@ void hero::pre_setup() {
   }
 }
 
-void hero::step(uint32_t step_limit) {
+void reactor::step(uint32_t step_limit) {
   continual_ = false;
   step_limit_ = step_limit;
   events_.connect(cs_);
 }
 
-void hero::run(uint32_t step_limit) {
+void reactor::run(uint32_t step_limit) {
   SPDLOG_INFO("[{:08x}] {} running", get_home_uid(), get_home_uname());
   SPDLOG_DEBUG("from {} until {}", yijinjing::time::strftime(begin_time_), yijinjing::time::strftime(end_time_));
   step_limit_ = step_limit;
   pre_setup();
   setup();
-  SPDLOG_DEBUG("app setup done");
+  SPDLOG_DEBUG("live runtime setup done");
   continual_ = true;
   events_.connect(cs_);
   on_exit();
   SPDLOG_INFO("[{:08x}] {} done", get_home_uid(), get_home_uname());
 }
 
-bool hero::is_live() const { return live_; }
+bool reactor::is_live() const { return live_; }
 
-bool hero::is_low_latency() const { return io_device_->is_low_latency(); }
+bool reactor::is_low_latency() const { return io_device_->is_low_latency(); }
 
-const bus_ptr &hero::get_bus() const { return io_device_->get_bus(); }
+const bus_ptr &reactor::get_bus() const { return io_device_->get_bus(); }
 
-void hero::signal_stop() { live_ = false; }
+void reactor::signal_stop() { live_ = false; }
 
-int64_t hero::now() const { return now_; }
+int64_t reactor::now() const { return now_; }
 
-void hero::set_now(int64_t now) { now_ = now; }
+void reactor::set_now(int64_t now) { now_ = now; }
 
-void hero::set_begin_time(int64_t begin_time) {
+void reactor::set_begin_time(int64_t begin_time) {
   begin_time_ = begin_time;
   io_device_->set_begin_time(begin_time);
 }
 
-int64_t hero::get_begin_time() const { return begin_time_; }
+int64_t reactor::get_begin_time() const { return begin_time_; }
 
-void hero::set_end_time(int64_t end_time) { end_time_ = end_time; }
+void reactor::set_end_time(int64_t end_time) { end_time_ = end_time; }
 
-int64_t hero::get_end_time() const { return end_time_; }
+int64_t reactor::get_end_time() const { return end_time_; }
 
-const locator_ptr &hero::get_locator() const { return io_device_->get_locator(); }
+const locator_ptr &reactor::get_locator() const { return io_device_->get_locator(); }
 
-kungfu::runtime::io_device_ptr hero::get_io_device() const { return io_device_; }
+kungfu::runtime::io_device_ptr reactor::get_io_device() const { return io_device_; }
 
-const location_ptr &hero::get_home() const { return get_io_device()->get_home(); }
+const location_ptr &reactor::get_home() const { return get_io_device()->get_home(); }
 
-uint32_t hero::get_home_uid() const { return get_io_device()->get_home()->uid; }
+uint32_t reactor::get_home_uid() const { return get_io_device()->get_home()->uid; }
 
-const std::string &hero::get_home_uname() const { return get_io_device()->get_home()->uname; }
+const std::string &reactor::get_home_uname() const { return get_io_device()->get_home()->uname; }
 
-const location_ptr &hero::get_live_home() const { return get_io_device()->get_live_home(); }
+const location_ptr &reactor::get_live_home() const { return get_io_device()->get_live_home(); }
 
-uint32_t hero::get_live_home_uid() const { return get_io_device()->get_live_home()->uid; }
+uint32_t reactor::get_live_home_uid() const { return get_io_device()->get_live_home()->uid; }
 
-reader_ptr hero::get_reader() const { return reader_; }
+reader_ptr reactor::get_reader() const { return reader_; }
 
-bool hero::has_writer(uint32_t dest_id) const {
+bool reactor::has_writer(uint32_t dest_id) const {
   if (util::get_thread_id() != main_thread_id_) {
     return has_band_writer(dest_id) or writers_.find(dest_id) != writers_.end();
   }
   return writers_.find(dest_id) != writers_.end();
 }
 
-writer_ptr hero::get_writer(uint32_t dest_id) const {
+writer_ptr reactor::get_writer(uint32_t dest_id) const {
   if (util::get_thread_id() != main_thread_id_) {
     try {
       return get_band_writer(dest_id);
@@ -235,12 +236,12 @@ writer_ptr hero::get_writer(uint32_t dest_id) const {
   return writers_.at(dest_id);
 }
 
-bool hero::has_band_writer(uint32_t dest_id) const {
+bool reactor::has_band_writer(uint32_t dest_id) const {
   std::lock_guard<std::mutex> lk(band_mtx_);
   return band_writers_.find(dest_id) != band_writers_.end();
 }
 
-writer_ptr hero::get_band_writer(uint32_t dest_id) const {
+writer_ptr reactor::get_band_writer(uint32_t dest_id) const {
   std::lock_guard<std::mutex> lk(band_mtx_);
   if (band_writers_.find(dest_id) == band_writers_.end()) {
     SPDLOG_ERROR("no band writer for {}", get_location_uname(dest_id));
@@ -248,11 +249,11 @@ writer_ptr hero::get_band_writer(uint32_t dest_id) const {
   return band_writers_.at(dest_id);
 }
 
-const WriterMap &hero::get_writers() const { return writers_; }
+const WriterMap &reactor::get_writers() const { return writers_; }
 
-bool hero::has_location(uint32_t uid) const { return locations_.find(uid) != locations_.end(); }
+bool reactor::has_location(uint32_t uid) const { return locations_.find(uid) != locations_.end(); }
 
-location_ptr hero::get_location(uint32_t uid) const {
+location_ptr reactor::get_location(uint32_t uid) const {
   if (not has_location(uid)) {
     SPDLOG_ERROR("no location {} in locations_", uid);
   }
@@ -265,7 +266,7 @@ location_ptr hero::get_location(uint32_t uid) const {
   return locations_.at(uid);
 }
 
-std::string hero::get_location_uname(uint32_t uid) const {
+std::string reactor::get_location_uname(uint32_t uid) const {
   if (uid == location::PUBLIC) {
     return "public";
   }
@@ -278,61 +279,61 @@ std::string hero::get_location_uname(uint32_t uid) const {
   return get_location(uid)->uname;
 }
 
-bool hero::is_location_live(uint32_t uid) const { return registry_.find(uid) != registry_.end(); }
+bool reactor::is_location_live(uint32_t uid) const { return registry_.find(uid) != registry_.end(); }
 
-bool hero::has_channel(uint32_t source, uint32_t dest) const {
+bool reactor::has_channel(uint32_t source, uint32_t dest) const {
   return has_channel(make_source_dest_hash(source, dest));
 }
 
-bool hero::has_channel(uint64_t hash) const { return channels_.find(hash) != channels_.end(); }
+bool reactor::has_channel(uint64_t hash) const { return channels_.find(hash) != channels_.end(); }
 
-const yijinjing::types::Channel &hero::get_channel(uint32_t source, uint32_t dest) const {
+const yijinjing::types::Channel &reactor::get_channel(uint32_t source, uint32_t dest) const {
   return get_channel(make_source_dest_hash(source, dest));
 }
 
-const Channel &hero::get_channel(uint64_t hash) const {
+const Channel &reactor::get_channel(uint64_t hash) const {
   assert(has_channel(hash));
   return channels_.at(hash);
 }
 
-const std::unordered_map<uint64_t, yijinjing::types::Channel> &hero::get_channels() const { return channels_; }
+const std::unordered_map<uint64_t, yijinjing::types::Channel> &reactor::get_channels() const { return channels_; }
 
-const std::unordered_map<uint32_t, yijinjing::types::Register> &hero::get_registry() const { return registry_; }
+const std::unordered_map<uint32_t, yijinjing::types::Register> &reactor::get_registry() const { return registry_; }
 
-const std::unordered_map<uint32_t, yijinjing::data::location_ptr> &hero::get_locations() const { return locations_; }
+const std::unordered_map<uint32_t, yijinjing::data::location_ptr> &reactor::get_locations() const { return locations_; }
 
-bool hero::has_band(uint32_t source, uint32_t dest) const { return has_band(make_source_dest_hash(source, dest)); }
+bool reactor::has_band(uint32_t source, uint32_t dest) const { return has_band(make_source_dest_hash(source, dest)); }
 
-bool hero::has_band(uint64_t hash) const { return bands_.find(hash) != bands_.end(); }
+bool reactor::has_band(uint64_t hash) const { return bands_.find(hash) != bands_.end(); }
 
-const yijinjing::types::Band &hero::get_band(uint32_t source, uint32_t dest) const {
+const yijinjing::types::Band &reactor::get_band(uint32_t source, uint32_t dest) const {
   return get_band(make_source_dest_hash(source, dest));
 }
 
-const yijinjing::types::Band &hero::get_band(uint64_t hash) const {
+const yijinjing::types::Band &reactor::get_band(uint64_t hash) const {
   assert(has_band(hash));
   return bands_.at(hash);
 }
 
-const std::unordered_map<uint64_t, yijinjing::types::Band> &hero::get_bands() const { return bands_; }
+const std::unordered_map<uint64_t, yijinjing::types::Band> &reactor::get_bands() const { return bands_; }
 
-void hero::on_notify() {}
+void reactor::on_notify() {}
 
-void hero::on_exit() { SPDLOG_INFO("default on_exit"); }
+void reactor::on_exit() { SPDLOG_INFO("default on_exit"); }
 
-location_ptr hero::get_ledger_home_location() const { return ledger_home_location_; }
+location_ptr reactor::get_ledger_home_location() const { return ledger_home_location_; }
 
-location_ptr hero::get_master_home_location() const { return master_home_location_; }
+location_ptr reactor::get_coordinator_home_location() const { return coordinator_home_location_; }
 
-location_ptr hero::get_master_cmd_location() const { return master_cmd_location_; }
+location_ptr reactor::get_coordinator_cmd_location() const { return coordinator_cmd_location_; }
 
-const rx::connectable_observable<event_ptr> &hero::get_events() const { return events_; }
+const rx::connectable_observable<event_ptr> &reactor::get_events() const { return events_; }
 
-uint64_t hero::make_source_dest_hash(uint32_t source_id, uint32_t dest_id) {
+uint64_t reactor::make_source_dest_hash(uint32_t source_id, uint32_t dest_id) {
   return uint64_t(source_id) << 32u | uint64_t(dest_id);
 }
 
-bool hero::check_location_exists(uint32_t source_id, uint32_t dest_id) const {
+bool reactor::check_location_exists(uint32_t source_id, uint32_t dest_id) const {
   if (not has_location(source_id)) {
     SPDLOG_ERROR("source_id {}, {} does not exist", source_id, get_location_uname(source_id));
     return false;
@@ -344,7 +345,7 @@ bool hero::check_location_exists(uint32_t source_id, uint32_t dest_id) const {
   return true;
 }
 
-bool hero::check_location_live(uint32_t source_id, uint32_t dest_id) const {
+bool reactor::check_location_live(uint32_t source_id, uint32_t dest_id) const {
   if (not check_location_exists(source_id, dest_id)) {
     return false;
   }
@@ -359,7 +360,7 @@ bool hero::check_location_live(uint32_t source_id, uint32_t dest_id) const {
   return true;
 }
 
-void hero::add_location(int64_t, const location_ptr &location) {
+void reactor::add_location(int64_t, const location_ptr &location) {
   location_uid64s_.insert(std::to_string(location->uid64));
   bool write_rocks = locations_.try_emplace(location->uid, location).second |
                      location64s_.try_emplace(location->uid64, location).second;
@@ -368,25 +369,25 @@ void hero::add_location(int64_t, const location_ptr &location) {
   }
 }
 
-void hero::add_location(int64_t trigger_time, const Location &location) {
+void reactor::add_location(int64_t trigger_time, const Location &location) {
   add_location(trigger_time, yijinjing::data::location::make_shared(location, get_locator()));
 }
 
-void hero::remove_location(int64_t trigger_time, uint32_t location_uid) { locations_.erase(location_uid); }
+void reactor::remove_location(int64_t trigger_time, uint32_t location_uid) { locations_.erase(location_uid); }
 
-void hero::register_location(int64_t, const Register &register_data) {
+void reactor::register_location(int64_t, const Register &register_data) {
   uint32_t location_uid = register_data.location_uid;
   registry_.insert_or_assign(location_uid, register_data);
 }
 
-void hero::deregister_location(int64_t, const uint32_t location_uid) {
+void reactor::deregister_location(int64_t, const uint32_t location_uid) {
   auto result = registry_.erase(location_uid);
   if (result) {
     SPDLOG_TRACE("location [{:08x}] {} down", location_uid, get_location_uname(location_uid));
   }
 }
 
-void hero::register_channel(int64_t, const Channel &channel) {
+void reactor::register_channel(int64_t, const Channel &channel) {
   uint64_t channel_uid = make_source_dest_hash(channel.source_id, channel.dest_id);
   auto result = channels_.try_emplace(channel_uid, channel);
   if (result.second) {
@@ -396,7 +397,7 @@ void hero::register_channel(int64_t, const Channel &channel) {
   }
 }
 
-void hero::deregister_channel(uint32_t source_id) {
+void reactor::deregister_channel(uint32_t source_id) {
   auto channel_it = channels_.begin();
   while (channel_it != channels_.end()) {
     if (channel_it->second.source_id == source_id) {
@@ -412,7 +413,7 @@ void hero::deregister_channel(uint32_t source_id) {
   }
 }
 
-void hero::register_band(int64_t, const Band &band) {
+void reactor::register_band(int64_t, const Band &band) {
   uint64_t band_uid = make_source_dest_hash(band.source_id, band.dest_id);
   auto result = bands_.try_emplace(band_uid, band);
   if (result.second) {
@@ -422,7 +423,7 @@ void hero::register_band(int64_t, const Band &band) {
   }
 }
 
-void hero::deregister_band(uint32_t source_id) {
+void reactor::deregister_band(uint32_t source_id) {
   auto band_it = bands_.begin();
   while (band_it != bands_.end()) {
     if (band_it->second.source_id == source_id) {
@@ -438,24 +439,24 @@ void hero::deregister_band(uint32_t source_id) {
   }
 }
 
-void hero::require_read_from(int64_t trigger_time, uint32_t dest_id, uint32_t source_id, int64_t from_time,
-                             uint64_t page_size) {
+void reactor::require_read_from(int64_t trigger_time, uint32_t dest_id, uint32_t source_id, int64_t from_time,
+                                uint64_t page_size) {
   do_require_read_from<RequestReadFrom>(get_writer(dest_id), trigger_time, dest_id, source_id, from_time, page_size);
 }
 
-void hero::require_read_from_public(int64_t trigger_time, uint32_t dest_id, uint32_t source_id, int64_t from_time,
-                                    uint64_t page_size) {
+void reactor::require_read_from_public(int64_t trigger_time, uint32_t dest_id, uint32_t source_id, int64_t from_time,
+                                       uint64_t page_size) {
   do_require_read_from<RequestReadFromPublic>(get_writer(dest_id), trigger_time, dest_id, source_id, from_time,
                                               page_size);
 }
 
-void hero::require_read_from_sync(int64_t trigger_time, uint32_t dest_id, uint32_t source_id, int64_t from_time,
-                                  uint64_t page_size) {
+void reactor::require_read_from_sync(int64_t trigger_time, uint32_t dest_id, uint32_t source_id, int64_t from_time,
+                                     uint64_t page_size) {
   do_require_read_from<RequestReadFromSync>(get_writer(dest_id), trigger_time, dest_id, source_id, from_time,
                                             page_size);
 }
 
-void hero::require_write_to(int64_t trigger_time, uint32_t source_id, uint32_t dest_id, uint64_t page_size) {
+void reactor::require_write_to(int64_t trigger_time, uint32_t source_id, uint32_t dest_id, uint64_t page_size) {
   if (not check_location_exists(source_id, dest_id)) {
     return;
   }
@@ -466,8 +467,8 @@ void hero::require_write_to(int64_t trigger_time, uint32_t source_id, uint32_t d
   writer->close_data();
 }
 
-void hero::require_write_to_band(int64_t trigger_time, uint32_t source_id,
-                                 const yijinjing::data::location_ptr &location, uint64_t page_size) const {
+void reactor::require_write_to_band(int64_t trigger_time, uint32_t source_id,
+                                    const yijinjing::data::location_ptr &location, uint64_t page_size) const {
   auto writer = get_writer(source_id);
   RequestWriteToBand msg = {};
   location->to<RequestWriteToBand>(msg);
@@ -475,7 +476,7 @@ void hero::require_write_to_band(int64_t trigger_time, uint32_t source_id,
   writer->write(trigger_time, msg);
 }
 
-void hero::produce(const rx::subscriber<event_ptr> &sb) {
+void reactor::produce(const rx::subscriber<event_ptr> &sb) {
   try {
     do {
       live_ = drain(sb) && live_;
@@ -491,7 +492,7 @@ void hero::produce(const rx::subscriber<event_ptr> &sb) {
   }
 }
 
-void hero::deal_notice(bool bypass, bool notify, const rx::subscriber<event_ptr> &sb) {
+void reactor::deal_notice(bool bypass, bool notify, const rx::subscriber<event_ptr> &sb) {
   if (bypass or io_device_->get_home()->mode != mode::LIVE) {
     return;
   }
@@ -512,7 +513,7 @@ void hero::deal_notice(bool bypass, bool notify, const rx::subscriber<event_ptr>
   }
 }
 
-bool hero::drain(const rx::subscriber<event_ptr> &sb) {
+bool reactor::drain(const rx::subscriber<event_ptr> &sb) {
   bool bypass = io_device_->is_lazy() and is_low_latency();
   deal_notice(bypass, true, sb);
   for (std::size_t step_count = 0;                                                             //
@@ -562,7 +563,7 @@ bool hero::drain(const rx::subscriber<event_ptr> &sb) {
   return true;
 }
 
-void hero::delegate_produce(hero *instance, const rx::subscriber<event_ptr> &subscriber) {
+void reactor::delegate_produce(reactor *instance, const rx::subscriber<event_ptr> &subscriber) {
 #ifdef _WINDOWS
   __try {
     instance->produce(subscriber);
@@ -573,15 +574,15 @@ void hero::delegate_produce(hero *instance, const rx::subscriber<event_ptr> &sub
 #endif
 }
 
-bool hero::is_reactable(const event_ptr &event) { return true; }
+bool reactor::is_reactable(const event_ptr &event) { return true; }
 
-void hero::disjoin(const location_ptr &location) { disjoin_locations_.insert(location); }
+void reactor::disjoin(const location_ptr &location) { disjoin_locations_.insert(location); }
 
-void hero::disjoin_channel(const location_ptr &location, uint32_t dest_id) {
+void reactor::disjoin_channel(const location_ptr &location, uint32_t dest_id) {
   disjoin_channels_.insert({location, dest_id});
 }
 
-void hero::cleanup_reader_disjoin() {
+void reactor::cleanup_reader_disjoin() {
   /**
    * Invoking reader_->disjoin within the events_ stream is forbidden due to several critical reasons:
    * 1. It may release current reading journal, causing segmentation violation or memory crash,
@@ -601,45 +602,45 @@ void hero::cleanup_reader_disjoin() {
   disjoin_channels_.clear();
 }
 
-rocksdb::DB *hero::get_master_rocksdb() const {
-  static const std::string master_db_dir = get_locator()->layout_dir(get_master_home_location(), layout::MAP);
-  SPDLOG_DEBUG("get_master_rocksdb from dir: {}", master_db_dir);
+rocksdb::DB *reactor::get_coordinator_rocksdb() const {
+  static const std::string coordinator_db_dir = get_locator()->layout_dir(get_coordinator_home_location(), layout::MAP);
+  SPDLOG_DEBUG("get_coordinator_rocksdb from dir: {}", coordinator_db_dir);
   if (io_device_->is_lazy()) {
-    std::lock_guard<std::mutex> lk(master_db_mtx_);
-    rocks::clear_rocksdb(&master_db_);
-    rocksdb::Status status = rocks::open_db(master_db_dir, &master_db_, false);
+    std::lock_guard<std::mutex> lk(coordinator_db_mtx_);
+    rocks::clear_rocksdb(&coordinator_db_);
+    rocksdb::Status status = rocks::open_db(coordinator_db_dir, &coordinator_db_, false);
     if (not status.ok()) {
-      const std::string msg = fmt::format("OpenForReadOnly for {} failed, {}", master_db_dir, status.ToString());
+      const std::string msg = fmt::format("OpenForReadOnly for {} failed, {}", coordinator_db_dir, status.ToString());
       SPDLOG_INFO(msg);
       throw yijinjing_error(msg);
     }
   } else {
-    if (nullptr == master_db_) {
-      std::lock_guard<std::mutex> lk(master_db_mtx_);
-      if (nullptr != master_db_) {
-        return master_db_;
+    if (nullptr == coordinator_db_) {
+      std::lock_guard<std::mutex> lk(coordinator_db_mtx_);
+      if (nullptr != coordinator_db_) {
+        return coordinator_db_;
       }
-      rocksdb::Status status = rocks::open_db(master_db_dir, &master_db_, true);
+      rocksdb::Status status = rocks::open_db(coordinator_db_dir, &coordinator_db_, true);
       if (not status.ok()) {
-        const std::string msg = fmt::format("Open for {} failed, {}", master_db_dir, status.ToString());
+        const std::string msg = fmt::format("Open for {} failed, {}", coordinator_db_dir, status.ToString());
         SPDLOG_ERROR(msg);
         throw yijinjing_error(msg);
       }
     }
   }
-  return master_db_;
+  return coordinator_db_;
 }
 
-rocksdb::DB *hero::get_app_rocksdb() const {
+rocksdb::DB *reactor::get_peer_rocksdb() const {
   if (not io_device_->is_lazy()) {
-    return get_master_rocksdb();
+    return get_coordinator_rocksdb();
   }
-  if (nullptr == app_db_) {
-    std::lock_guard<std::mutex> lk(app_db_mtx_);
-    if (nullptr != app_db_) {
-      return app_db_;
+  if (nullptr == peer_db_) {
+    std::lock_guard<std::mutex> lk(peer_db_mtx_);
+    if (nullptr != peer_db_) {
+      return peer_db_;
     }
-    rocksdb::Status status = rocks::open_db(get_locator()->layout_dir(get_home(), layout::MAP), &app_db_, true);
+    rocksdb::Status status = rocks::open_db(get_locator()->layout_dir(get_home(), layout::MAP), &peer_db_, true);
     if (not status.ok()) {
       const std::string msg =
           fmt::format("Open for {} failed, {}", get_locator()->layout_dir(get_home(), layout::MAP), status.ToString());
@@ -647,83 +648,83 @@ rocksdb::DB *hero::get_app_rocksdb() const {
       throw yijinjing_error(msg);
     }
   }
-  return app_db_;
+  return peer_db_;
 }
 
-std::string hero::get_master_kv(const std::string &key) const {
+std::string reactor::get_coordinator_kv(const std::string &key) const {
   std::string value{};
-  rocksdb::Status status = rocks::get_kv(key, value, get_master_rocksdb());
+  rocksdb::Status status = rocks::get_kv(key, value, get_coordinator_rocksdb());
   if (not status.ok()) {
     SPDLOG_DEBUG("get key:{} failed, {}", key, status.ToString());
   }
   return value;
 }
 
-void hero::put_master_kv(const std::string &key, const std::string &value) const {
+void reactor::put_coordinator_kv(const std::string &key, const std::string &value) const {
   if (io_device_->is_lazy()) {
     return;
   }
-  rocksdb::Status status = rocks::put_kv(key, value, get_master_rocksdb());
+  rocksdb::Status status = rocks::put_kv(key, value, get_coordinator_rocksdb());
   if (not status.ok()) {
     SPDLOG_ERROR("put key:{} value: {}, failed, {}", key, value, status.ToString());
   }
 }
 
-std::string hero::get_app_kv(const std::string &key) const {
+std::string reactor::get_peer_kv(const std::string &key) const {
   std::string value{};
-  rocksdb::Status status = rocks::get_kv(key, value, get_app_rocksdb());
+  rocksdb::Status status = rocks::get_kv(key, value, get_peer_rocksdb());
   if (not status.ok()) {
     SPDLOG_ERROR("get key:{} failed, {}", key, status.ToString());
   }
   return value;
 }
 
-void hero::put_app_kv(const std::string &key, const std::string &value) const {
-  rocksdb::Status status = rocks::put_kv(key, value, get_app_rocksdb());
+void reactor::put_peer_kv(const std::string &key, const std::string &value) const {
+  rocksdb::Status status = rocks::put_kv(key, value, get_peer_rocksdb());
   if (not status.ok()) {
     SPDLOG_ERROR("put key:{} value: {}, failed, {}", key, value, status.ToString());
   }
 }
 
-void hero::ensure_master_rocksdb() {
-  static const std::string master_db_dir = get_locator()->layout_dir(get_master_home_location(), layout::MAP);
+void reactor::ensure_coordinator_rocksdb() {
+  static const std::string coordinator_db_dir = get_locator()->layout_dir(get_coordinator_home_location(), layout::MAP);
   try {
-    get_master_rocksdb();
+    get_coordinator_rocksdb();
   } catch (const std::exception &e) {
     SPDLOG_DEBUG("catch exception: {}", e.what());
-    std::lock_guard<std::mutex> lk(master_db_mtx_);
-    rocks::open_db(get_locator()->layout_dir(get_master_home_location(), layout::MAP), &master_db_, true);
-    rocks::clear_rocksdb(&master_db_);
+    std::lock_guard<std::mutex> lk(coordinator_db_mtx_);
+    rocks::open_db(get_locator()->layout_dir(get_coordinator_home_location(), layout::MAP), &coordinator_db_, true);
+    rocks::clear_rocksdb(&coordinator_db_);
   }
 }
 
-std::map<std::string, std::string> hero::get_master_kvs(const std::set<std::string> &keys) const {
-  return rocks::get_kvs(keys, get_master_rocksdb());
+std::map<std::string, std::string> reactor::get_coordinator_kvs(const std::set<std::string> &keys) const {
+  return rocks::get_kvs(keys, get_coordinator_rocksdb());
 }
 
-std::map<std::string, std::string> hero::get_app_kvs(const std::set<std::string> &keys) const {
-  return rocks::get_kvs(keys, get_app_rocksdb());
+std::map<std::string, std::string> reactor::get_peer_kvs(const std::set<std::string> &keys) const {
+  return rocks::get_kvs(keys, get_peer_rocksdb());
 }
 
-void hero::put_master_kvs(const std::map<std::string, std::string> &kvs) const {
+void reactor::put_coordinator_kvs(const std::map<std::string, std::string> &kvs) const {
   if (io_device_->is_lazy()) {
     return;
   }
 
-  rocksdb::Status status = rocks::put_kvs(kvs, get_master_rocksdb());
+  rocksdb::Status status = rocks::put_kvs(kvs, get_coordinator_rocksdb());
   if (not status.ok()) {
     SPDLOG_ERROR("Write failed, {}", status.ToString());
   }
 }
 
-void hero::put_app_kvs(const std::map<std::string, std::string> &kvs) const {
-  rocksdb::Status status = rocks::put_kvs(kvs, get_app_rocksdb());
+void reactor::put_peer_kvs(const std::map<std::string, std::string> &kvs) const {
+  rocksdb::Status status = rocks::put_kvs(kvs, get_peer_rocksdb());
   if (not status.ok()) {
     SPDLOG_ERROR("Write failed, {}", status.ToString());
   }
 }
 
-void hero::write_location_to_rocksdb(const location_ptr &location) {
+void reactor::write_location_to_rocksdb(const location_ptr &location) {
   if (io_device_->is_lazy()) {
     return;
   }
@@ -744,11 +745,11 @@ void hero::write_location_to_rocksdb(const location_ptr &location) {
   batch.Put(location->uname, std::to_string(location->seed));
   batch.Put(str_uid64, location->to_string());
   batch.Put(LOCATION_KEYS, json_obj.dump());
-  rocks::put_kvs(batch, get_master_rocksdb());
+  rocks::put_kvs(batch, get_coordinator_rocksdb());
 }
 
-void hero::read_location_from_rocksdb() {
-  std::string str_location_uid64s_json = get_master_kv(LOCATION_KEYS);
+void reactor::read_location_from_rocksdb() {
+  std::string str_location_uid64s_json = get_coordinator_kv(LOCATION_KEYS);
   SPDLOG_DEBUG("str_location_uid64s_json: {}", str_location_uid64s_json);
   if (str_location_uid64s_json.empty()) {
     return;
@@ -758,7 +759,7 @@ void hero::read_location_from_rocksdb() {
     for (const std::string uid64 : location_uid64s_json[LOCATION_KEYS]) {
       location_uid64s_.insert(uid64);
     }
-    std::map<std::string, std::string> map_str_location64s_ = get_master_kvs(location_uid64s_);
+    std::map<std::string, std::string> map_str_location64s_ = get_coordinator_kvs(location_uid64s_);
     for (const auto &pair : map_str_location64s_) {
       SPDLOG_DEBUG("uid64: {}, location_json: {}", pair.first, pair.second);
       const location_ptr location = location::make_shared(Location{pair.second}, get_locator());
@@ -768,4 +769,4 @@ void hero::read_location_from_rocksdb() {
     }
   }
 }
-} // namespace kungfu::runtime::practice
+} // namespace kungfu::runtime::live

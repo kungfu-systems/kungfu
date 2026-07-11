@@ -3,7 +3,7 @@ import { headingStyle, mono, panelStyle } from '@kungfu-tech/kfx';
 import React from 'react';
 import { QueryReferencePanel } from './query-reference';
 
-// System kfx: system status. Runtime facts (master liveness, versions,
+// System kfx: system status. Runtime facts (coordinator liveness, versions,
 // binding exports, runtime home) plus the core schema type registry — the
 // diagnostics face of the shell. The future storage health story
 // (fsck/export overview) mounts here.
@@ -41,8 +41,8 @@ function SystemStatusView({
 
   const info = shell.info;
   const versions = window.process.versions;
-  const masterStatus = info.masterStatus;
-  const masterPayload = masterStatus?.payload as
+  const runtimeStatus = info.runtimeStatus;
+  const runtimePayload = runtimeStatus?.payload as
     | {
         status?: string;
         configHome?: string;
@@ -54,7 +54,7 @@ function SystemStatusView({
           warnings?: string[];
         };
         supervisor?: { running?: boolean; pid?: number | null };
-        master?: { running?: boolean; pid?: number | null };
+        coordinator?: { running?: boolean; pid?: number | null };
         route?: {
           routeId?: string;
           registered?: boolean;
@@ -65,8 +65,8 @@ function SystemStatusView({
       }
     | null
     | undefined;
-  const supervisorLive = masterPayload?.supervisor?.running === true;
-  const masterLive = masterPayload?.master?.running === true || live;
+  const supervisorLive = runtimePayload?.supervisor?.running === true;
+  const coordinatorLive = runtimePayload?.coordinator?.running === true || live;
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -74,9 +74,9 @@ function SystemStatusView({
         <h2 style={headingStyle}>Runtime</h2>
         <div style={{ ...mono }}>
           <div>
-            master:{' '}
-            <span style={{ color: masterLive ? '#4ec9b0' : '#858585' }}>
-              {masterLive ? '● live' : '○ offline'}
+            coordinator:{' '}
+            <span style={{ color: coordinatorLive ? '#4ec9b0' : '#858585' }}>
+              {coordinatorLive ? '● live' : '○ offline'}
             </span>
           </div>
           <div>
@@ -85,22 +85,22 @@ function SystemStatusView({
               {supervisorLive ? '● live' : '○ stopped'}
             </span>
           </div>
-          <div>service status: {masterPayload?.status ?? 'unknown'}</div>
+          <div>service status: {runtimePayload?.status ?? 'unknown'}</div>
           <div>
             lifecycle:{' '}
             <span
               style={{
-                color: masterPayload?.lifecycle?.healthy
+                color: runtimePayload?.lifecycle?.healthy
                   ? '#4ec9b0'
                   : '#dcdcaa',
               }}
             >
-              {masterPayload?.lifecycle?.state ?? 'unknown'}
+              {runtimePayload?.lifecycle?.state ?? 'unknown'}
             </span>
           </div>
           <div>
             lifecycle warnings:{' '}
-            {masterPayload?.lifecycle?.warnings?.join(', ') || '-'}
+            {runtimePayload?.lifecycle?.warnings?.join(', ') || '-'}
           </div>
           <div>core: {String(info.buildInfo?.version ?? 'unknown')}</div>
           <div>kungfu: {info.kungfuVersion || 'unavailable'}</div>
@@ -108,31 +108,33 @@ function SystemStatusView({
             electron: {versions.electron} · node: {versions.node}
           </div>
           <div>
-            runtime home: {masterPayload?.runtimeDir ?? info.runtimeDir}
+            runtime home: {runtimePayload?.runtimeDir ?? info.runtimeDir}
           </div>
-          <div>data root: {masterPayload?.dataRoot ?? 'unknown'}</div>
-          <div>config home: {masterPayload?.configHome ?? 'unknown'}</div>
+          <div>data root: {runtimePayload?.dataRoot ?? 'unknown'}</div>
+          <div>config home: {runtimePayload?.configHome ?? 'unknown'}</div>
           <div>
-            route: {masterPayload?.route?.routeId ?? 'unknown'} ·{' '}
-            {masterPayload?.route?.registered ? 'registered' : 'not registered'}
-            {masterPayload?.route?.stale ? ' · stale' : ''}
+            route: {runtimePayload?.route?.routeId ?? 'unknown'} ·{' '}
+            {runtimePayload?.route?.registered
+              ? 'registered'
+              : 'not registered'}
+            {runtimePayload?.route?.stale ? ' · stale' : ''}
           </div>
           <div>
             route lease age:{' '}
-            {masterPayload?.route?.freshness?.ageSeconds == null
+            {runtimePayload?.route?.freshness?.ageSeconds == null
               ? 'unknown'
-              : `${masterPayload.route.freshness.ageSeconds.toFixed(1)}s`}
+              : `${runtimePayload.route.freshness.ageSeconds.toFixed(1)}s`}
           </div>
           <div>
-            routes: {String(masterPayload?.routes?.count ?? 'unknown')} · stale:{' '}
-            {String(masterPayload?.routes?.staleCount ?? 0)}
+            routes: {String(runtimePayload?.routes?.count ?? 'unknown')} ·
+            stale: {String(runtimePayload?.routes?.staleCount ?? 0)}
           </div>
           <div style={{ color: info.ok ? '#4ec9b0' : '#f48771' }}>
             binding: {info.message}
           </div>
-          {masterStatus && !masterStatus.ok ? (
+          {runtimeStatus && !runtimeStatus.ok ? (
             <div style={{ color: '#f48771' }}>
-              master status: {masterStatus.error || 'unavailable'}
+              coordinator status: {runtimeStatus.error || 'unavailable'}
             </div>
           ) : null}
         </div>

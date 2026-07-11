@@ -2,12 +2,12 @@
 #
 # Load generator for the event-dispatch latency baseline (ADR-0005 evidence).
 #
-# Registers a plain apprentice against a running master in the same KF_HOME,
+# Registers a plain peer against a running coordinator in the same KF_HOME,
 # waits for the register handshake to grant the PUBLIC writer, then writes a
-# burst of open-layer events into its own journal. The master joins this
-# journal on register, so every frame written here traverses the master's
-# full rx filter-chain set; the KF_DISPATCH_PROBE instrument in hero::drain
-# reports the per-frame traversal cost on the master side.
+# burst of open-layer events into its own journal. The coordinator joins this
+# journal on register, so every frame written here traverses the coordinator's
+# full rx filter-chain set; the KF_DISPATCH_PROBE instrument in reactor::drain
+# reports the per-frame traversal cost on the coordinator side.
 #
 # Usage: dispatch_load.py <kf-home> <event-count> [payload-bytes] [carrier-type]
 #
@@ -32,14 +32,14 @@ lf = kungfu.__binding__.yijinjing
 yjj = kungfu.__binding__.runtime
 
 PUBLIC_DEST = 0
-# Generic action envelope carrier; no closed-schema tag, so on the master side every
+# Generic action envelope carrier; no closed-schema tag, so on the coordinator side every
 # is(tag) chain rejects it and the cost measured is the pure chain scan plus the
 # instanceof feed chain.
 DEFAULT_CARRIER_TYPE = 1000
 STEP_TIMEOUT_SECONDS = 30
 
 
-class LoadApp(yjj.apprentice):
+class LoadApp(yjj.peer):
     def on_exit(self):
         pass
 
@@ -70,7 +70,7 @@ def main():
     while not (app.is_started() and app.has_writer(PUBLIC_DEST)):
         app.step(1000)
         if time.time() > deadline:
-            sys.exit("register handshake timed out; is master running?")
+            sys.exit("register handshake timed out; is coordinator running?")
 
     writer = app.get_writer(PUBLIC_DEST)
     payload = [0] * payload_bytes  # binding takes list[int] (vector<uint8_t>)
@@ -78,7 +78,7 @@ def main():
     for i in range(count):
         writer.write_bytes(yjj.now_in_nano(), carrier_type, payload, payload_bytes)
         if i % 10000 == 0:
-            app.step(100)  # keep consuming master feedback while loading
+            app.step(100)  # keep consuming coordinator feedback while loading
     elapsed = time.time() - started_at
 
     # Let the reader side finish draining, then send a small tail burst: the

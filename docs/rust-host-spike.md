@@ -128,7 +128,7 @@ Notable friction found while wiring the probe, all resolved in-probe:
    host main thread, same as today's frozen entrypoint.
 3. **"I am the host" assumptions in the Python tree** — inventoried: 17
    `sys.executable` / `sys.argv[0]` sites (entry-command fallback in
-   master_service spawning children as `[sys.executable, "-m", "kungfu"]`,
+   runtime_service spawning children as `[sys.executable, "-m", "kungfu"]`,
    config/artifact discovery relative to the executable, argv rewriting in
    site/variants), SIGTERM/SIGINT handlers installed on the assumption of
    owning the main thread, one atexit hook (REPL history). Notably there is

@@ -2,6 +2,7 @@
 
 #include <kungfu/common.h>
 #include <kungfu/runtime/io.h>
+#include <kungfu/runtime/live/identity.h>
 #include <kungfu/runtime/util/rocks.h>
 #include <kungfu/yijinjing/journal/bus.h>
 #include <kungfu/yijinjing/log.h>
@@ -33,8 +34,9 @@ class nanomsg_resource : public resource {
 protected:
   nanomsg_resource(const io_device &io_device, bool low_latency, protocol p)
       : io_device_(io_device), low_latency_(low_latency),
-        location_(std::make_shared<data::location>(mode::LIVE, yijinjing::enums::location_role::SYSTEM, "master",
-                                                   "master", io_device_.get_live_home()->locator)),
+        location_(std::make_shared<data::location>(mode::LIVE, yijinjing::enums::location_role::SYSTEM,
+                                                   live::COORDINATOR_WIRE_NAMESPACE, live::COORDINATOR_WIRE_NAME,
+                                                   io_device_.get_live_home()->locator)),
         listen_path_(io_device_.get_url_factory()->make_path_listen(location_, p)),
         dial_path_(io_device_.get_url_factory()->make_path_dial(location_, p)), socket_(p) {}
 
@@ -60,9 +62,9 @@ public:
   }
 };
 
-class nanomsg_publisher_master : public nanomsg_publisher {
+class nanomsg_publisher_coordinator : public nanomsg_publisher {
 public:
-  nanomsg_publisher_master(const io_device &io_device, bool low_latency)
+  nanomsg_publisher_coordinator(const io_device &io_device, bool low_latency)
       : nanomsg_publisher(io_device, low_latency, protocol::PUBLISH) {}
 
   bool setup() override {
@@ -73,9 +75,9 @@ public:
   bool is_usable() override { return true; }
 };
 
-class nanomsg_publisher_client : public nanomsg_publisher {
+class nanomsg_publisher_peer : public nanomsg_publisher {
 public:
-  nanomsg_publisher_client(const io_device &io_device, bool low_latency)
+  nanomsg_publisher_peer(const io_device &io_device, bool low_latency)
       : nanomsg_publisher(io_device, low_latency, protocol::PUSH) {}
 
   bool setup() override {
@@ -121,9 +123,9 @@ private:
   int recv_flags_;
 };
 
-class nanomsg_observer_master : public nanomsg_observer {
+class nanomsg_observer_coordinator : public nanomsg_observer {
 public:
-  nanomsg_observer_master(const io_device &io_device, bool low_latency)
+  nanomsg_observer_coordinator(const io_device &io_device, bool low_latency)
       : nanomsg_observer(io_device, low_latency, protocol::PULL) {}
 
   bool setup() override {
@@ -134,9 +136,9 @@ public:
   bool is_usable() override { return true; }
 };
 
-class nanomsg_observer_client : public nanomsg_observer {
+class nanomsg_observer_peer : public nanomsg_observer {
 public:
-  nanomsg_observer_client(const io_device &io_device, bool low_latency)
+  nanomsg_observer_peer(const io_device &io_device, bool low_latency)
       : nanomsg_observer(io_device, low_latency, protocol::SUBSCRIBE) {}
 
   bool setup() override {
@@ -156,7 +158,7 @@ io_device::io_device(data::location_ptr home, const bool low_latency, const bool
   // keep the guarantees deterministic even when static-library linking drops
   // the seam installers' load-time static initializers
   journal::install_typed_frame_dumper();
-  util::install_master_kv_provider();
+  util::install_coordinator_kv_provider();
   if (spdlog::default_logger()->name().empty()) {
     yijinjing::log::setup_log(home_, home_->name);
   }
@@ -209,27 +211,27 @@ writer_ptr io_device::open_hookable_writer_at(const data::location_ptr &location
   }
 }
 
-io_device_master::io_device_master(data::location_ptr home, bool low_latency)
+io_device_coordinator::io_device_coordinator(data::location_ptr home, bool low_latency)
     : io_device(std::move(home), low_latency, false) {
-  publisher_ = std::make_shared<nanomsg_publisher_master>(*this, is_low_latency());
-  observer_ = std::make_shared<nanomsg_observer_master>(*this, is_low_latency());
+  publisher_ = std::make_shared<nanomsg_publisher_coordinator>(*this, is_low_latency());
+  observer_ = std::make_shared<nanomsg_observer_coordinator>(*this, is_low_latency());
 }
 
-io_device_client::io_device_client(data::location_ptr home, bool low_latency)
+io_device_peer::io_device_peer(data::location_ptr home, bool low_latency)
     : io_device(std::move(home), low_latency, true) {}
 
-bool io_device_client::is_usable() {
-  nanomsg_publisher_client publisher(*this, false);
-  nanomsg_observer_client observer(*this, false);
+bool io_device_peer::is_usable() {
+  nanomsg_publisher_peer publisher(*this, false);
+  nanomsg_observer_peer observer(*this, false);
   publisher.setup();
   observer.setup();
   std::this_thread::sleep_for(std::chrono::milliseconds(TEST_USABLE_TIMEOUT));
   return publisher.is_usable() and observer.is_usable();
 }
 
-bool io_device_client::setup() {
-  publisher_ = std::make_shared<nanomsg_publisher_client>(*this, is_low_latency());
-  observer_ = std::make_shared<nanomsg_observer_client>(*this, is_low_latency());
+bool io_device_peer::setup() {
+  publisher_ = std::make_shared<nanomsg_publisher_peer>(*this, is_low_latency());
+  observer_ = std::make_shared<nanomsg_observer_peer>(*this, is_low_latency());
   auto is_live_mode = get_home()->mode == mode::LIVE;
   if (not is_live_mode) {
     return true;

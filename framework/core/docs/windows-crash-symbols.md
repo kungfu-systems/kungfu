@@ -18,7 +18,7 @@ ship without PDBs of ours.
 ## Why
 
 When a native crash reaches the runtime stackwalker (an access violation in the
-`hero::produce` event loop, or a C++ exception escaping into `std::terminate` in
+`reactor::produce` event loop, or a C++ exception escaping into `std::terminate` in
 the node binding), the walker resolves each frame through DbgHelp. On Windows,
 unlike Linux/macOS, the binary carries **no** symbol table — the function names
 and source lines live only in the PDB.
@@ -62,7 +62,7 @@ keep PDBs archived per release so past crash reports stay decodable.
 
 ## Minidump companion (`.dmp`)
 
-On a real fault (the SEH `__except` in `hero::produce` and the
+On a real fault (the SEH `__except` in `reactor::produce` and the
 `SetUnhandledExceptionFilter` backstop, both of which carry an exception
 context), the crash handler writes a **minidump** alongside the text report, in
 the same directory (`$KF_HOME/logview`), with the same `<pid>_<ts>` stem. The

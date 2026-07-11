@@ -23,7 +23,7 @@ from . import skill
 from . import codex
 from . import sdk
 from . import kfd
-from . import master
+from . import runtime
 
 __all__ = [
     "engage",
@@ -49,5 +49,5 @@ __all__ = [
     "codex",
     "sdk",
     "kfd",
-    "master",
+    "runtime",
 ]

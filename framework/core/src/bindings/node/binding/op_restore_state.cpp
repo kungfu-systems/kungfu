@@ -12,7 +12,7 @@ using namespace kungfu::yijinjing::enums;
 using namespace kungfu::yijinjing::types;
 using namespace kungfu::runtime;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::runtime::practice;
+using namespace kungfu::runtime::live;
 
 namespace kungfu::node::serialize {
 JsRestoreState::JsRestoreState(Napi::ObjectReference &state, location_ptr location)

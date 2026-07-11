@@ -43,7 +43,7 @@ export function openLedger(options: OpenLedgerOptions): Ledger {
   let joined = false;
   if (options.join) {
     // Constructing a watcher initializes the runtime home layout; starting
-    // it makes it join a live master when one is running.
+    // it makes it join a live coordinator when one is running.
     watcher = new binding.Watcher(runtimeDir, options.join.name, true, 50);
     if (!watcher.isStarted()) watcher.start();
     joined = true;

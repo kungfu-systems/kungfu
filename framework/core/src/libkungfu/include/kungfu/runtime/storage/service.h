@@ -167,7 +167,7 @@ struct storage_layout_paths_view {
   std::string manifest_catalog_projection = {};
   std::string episode_manifest_journal_dir = {};
   std::string episode_manifest_journal = {};
-  std::string master_state = {};
+  std::string coordinator_state = {};
   std::string remote_mirrors = {};
   std::string atlas_store = {};
 };

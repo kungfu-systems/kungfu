@@ -1049,7 +1049,7 @@ std::unique_ptr<storage_provider> make_provider(const std::string &provider_name
 // reintroduce the open/close races this cache removes, and a background
 // eviction thread is out of scope by design. The engine's own lock keeps
 // rejecting a second process on the same database path — holding the write
-// handle for the process lifetime is that decision made visible, and hero's
+// handle for the process lifetime is that decision made visible, and reactor's
 // location-metadata engine lives under layout::MAP, a disjoint path from
 // this provider's storage/rocksdb, so no path ever has two in-process owners.
 class provider_cache {
@@ -1193,7 +1193,7 @@ storage_layout_result workspace_episode_layout_typed(const storage_layout_reques
                   manifest_catalog_projection(runtime.string()).sqlite_path(),
                   episode_manifest_dir.string(),
                   (episode_manifest_dir / "*.journal").string(),
-                  (runtime / "master").string(),
+                  (runtime / "coordinator").string(),
                   (runtime / "remotes" / "<source-id>" / "runtime").string(),
                   (runtime / "atlas" / "store").string()};
   result.episodes = {"yijinjing-journal",
@@ -1251,7 +1251,7 @@ nlohmann::json workspace_episode_layout_json(const storage_layout_result &result
             {"manifest_catalog_projection", result.paths.manifest_catalog_projection},
             {"episode_manifest_journal_dir", result.paths.episode_manifest_journal_dir},
             {"episode_manifest_journal", result.paths.episode_manifest_journal},
-            {"master_state", result.paths.master_state},
+            {"coordinator_state", result.paths.coordinator_state},
             {"remote_mirrors", result.paths.remote_mirrors},
             {"atlas_store", result.paths.atlas_store}}},
           {"episodes",

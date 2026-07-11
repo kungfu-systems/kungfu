@@ -22,7 +22,7 @@ import {
   DESTROY_CHANNEL,
   ENSURE_CHANNEL,
   HIDE_CHANNEL,
-  MASTER_STATUS_GET_CHANNEL,
+  RUNTIME_STATUS_GET_CHANNEL,
   SET_BOUNDS_CHANNEL,
   SHOW_CHANNEL,
   WINDOW_CHROME_CONTROL_CHANNEL,
@@ -279,7 +279,7 @@ let manager: SandboxManager | null = null;
 // stage 2) can push layout snapshots back to it for persistence.
 let shellWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
-let lastMasterStatus: MasterStatusResult | null = null;
+let lastRuntimeStatus: RuntimeStatusResult | null = null;
 
 // Set once the app is quitting; the session-window host reads it so window
 // closes during shutdown do not overwrite the persisted layout restore needs.
@@ -290,7 +290,7 @@ function kungfuBinPath(): string {
   return path.join(path.dirname(process.env.KFE_PATH || bindingPath), binName);
 }
 
-type MasterStatusPayload = {
+type RuntimeStatusPayload = {
   status?: string;
   configHome?: string;
   dataRoot?: string;
@@ -301,7 +301,7 @@ type MasterStatusPayload = {
     warnings?: string[];
   };
   supervisor?: { pid?: number | null; running?: boolean };
-  master?: { pid?: number | null; running?: boolean };
+  coordinator?: { pid?: number | null; running?: boolean };
   route?: { routeId?: string; registered?: boolean; stale?: boolean };
   routes?: { count?: number; staleCount?: number };
   assessments?: {
@@ -316,86 +316,86 @@ type MasterStatusPayload = {
   };
 };
 
-type MasterStatusResult = {
+type RuntimeStatusResult = {
   ok: boolean;
-  payload: MasterStatusPayload | null;
+  payload: RuntimeStatusPayload | null;
   error: string;
   updatedAt: number;
 };
 
-function readMasterStatus(): MasterStatusResult {
+function readRuntimeStatus(): RuntimeStatusResult {
   try {
-    const out = execFileSync(kungfuBinPath(), ['master', 'status', '--json'], {
+    const out = execFileSync(kungfuBinPath(), ['runtime', 'status', '--json'], {
       env: process.env,
       timeout: 10000,
     });
-    const payload = JSON.parse(out.toString()) as MasterStatusPayload;
+    const payload = JSON.parse(out.toString()) as RuntimeStatusPayload;
     try {
       const assessmentOut = execFileSync(
         kungfuBinPath(),
-        ['master', 'assessments', '--json'],
+        ['runtime', 'assessments', '--json'],
         { env: process.env, timeout: 10000 },
       );
       payload.assessments = JSON.parse(assessmentOut.toString());
     } catch {
-      // Assessment visibility degrades independently; master health still
+      // Assessment visibility degrades independently; runtime health still
       // renders and the next status poll retries the progressive trust view.
     }
-    lastMasterStatus = {
+    lastRuntimeStatus = {
       ok: true,
       payload,
       error: '',
       updatedAt: Date.now(),
     };
-    return lastMasterStatus;
+    return lastRuntimeStatus;
   } catch (e) {
-    lastMasterStatus = {
+    lastRuntimeStatus = {
       ok: false,
       payload: null,
       error: (e as Error).message,
       updatedAt: Date.now(),
     };
-    return lastMasterStatus;
+    return lastRuntimeStatus;
   }
 }
 
-function ensureMasterForGuiStartup() {
+function ensureRuntimeForGuiStartup() {
   try {
-    const out = execFileSync(kungfuBinPath(), ['master', 'ensure', '--json'], {
+    const out = execFileSync(kungfuBinPath(), ['runtime', 'ensure', '--json'], {
       env: process.env,
       timeout: 15000,
     });
-    lastMasterStatus = {
+    lastRuntimeStatus = {
       ok: true,
-      payload: JSON.parse(out.toString()) as MasterStatusPayload,
+      payload: JSON.parse(out.toString()) as RuntimeStatusPayload,
       error: '',
       updatedAt: Date.now(),
     };
-    console.log('KF_MASTER_ENSURE_OK');
+    console.log('KF_RUNTIME_ENSURE_OK');
   } catch (e) {
-    lastMasterStatus = {
+    lastRuntimeStatus = {
       ok: false,
       payload: null,
       error: (e as Error).message,
       updatedAt: Date.now(),
     };
-    console.log(`KF_MASTER_ENSURE_FAIL ${lastMasterStatus.error}`);
+    console.log(`KF_RUNTIME_ENSURE_FAIL ${lastRuntimeStatus.error}`);
   }
 }
 
-function masterStatusLabel(result = lastMasterStatus ?? readMasterStatus()) {
-  if (!result.ok || !result.payload) return 'Master: unavailable';
+function runtimeStatusLabel(result = lastRuntimeStatus ?? readRuntimeStatus()) {
+  if (!result.ok || !result.payload) return 'Runtime: unavailable';
   const lifecycle = result.payload.lifecycle?.state || result.payload.status;
-  if (lifecycle === 'stale-route') return 'Master: stale route';
-  if (lifecycle === 'degraded') return 'Master: degraded';
-  if (lifecycle === 'dead') return 'Master: dead pid';
-  if (lifecycle === 'orphan-master') return 'Master: orphan';
+  if (lifecycle === 'stale-route') return 'Runtime: stale route';
+  if (lifecycle === 'degraded') return 'Runtime: degraded';
+  if (lifecycle === 'dead') return 'Runtime: dead pid';
+  if (lifecycle === 'orphan-coordinator') return 'Runtime: orphan';
   const supervisor = result.payload.supervisor?.running;
-  const master = result.payload.master?.running;
-  if (supervisor && master) return 'Master: running';
-  if (supervisor) return 'Master: waiting';
-  if (master) return 'Master: orphan';
-  return 'Master: stopped';
+  const runtime = result.payload.coordinator?.running;
+  if (supervisor && runtime) return 'Runtime: running';
+  if (supervisor) return 'Runtime: waiting';
+  if (runtime) return 'Runtime: orphan';
+  return 'Runtime: stopped';
 }
 
 function showShellWindow() {
@@ -447,9 +447,9 @@ function quitGui() {
   app.quit();
 }
 
-async function stopMasterAndQuit() {
+async function stopRuntimeAndQuit() {
   try {
-    execFileSync(kungfuBinPath(), ['master', 'stop', '--json'], {
+    execFileSync(kungfuBinPath(), ['runtime', 'stop', '--json'], {
       env: process.env,
       timeout: 10000,
     });
@@ -457,7 +457,7 @@ async function stopMasterAndQuit() {
   } catch (e) {
     await dialog.showMessageBox({
       type: 'error',
-      message: 'Could not stop Kungfu Master',
+      message: 'Could not stop Kungfu Runtime',
       detail: (e as Error).message,
     });
   }
@@ -490,7 +490,7 @@ function buildTrayMenu() {
   if (!tray) return;
   const visible =
     shellWindow && !shellWindow.isDestroyed() ? shellWindow.isVisible() : false;
-  const status = readMasterStatus();
+  const status = readRuntimeStatus();
   const payload = status.payload;
   const statusDetail =
     status.ok && payload
@@ -501,7 +501,7 @@ function buildTrayMenu() {
   tray.setContextMenu(
     Menu.buildFromTemplate([
       {
-        label: masterStatusLabel(status),
+        label: runtimeStatusLabel(status),
         enabled: false,
       },
       {
@@ -521,30 +521,30 @@ function buildTrayMenu() {
       },
       { type: 'separator' },
       {
-        label: 'Master Status',
+        label: 'Runtime Status',
         click: () =>
           void showCommandResult(
-            'Could not read Kungfu Master status',
-            ['master', 'status', '--json'],
-            'Kungfu Master Status',
+            'Could not read Kungfu Runtime status',
+            ['runtime', 'status', '--json'],
+            'Kungfu Runtime Status',
           ),
       },
       {
-        label: 'Start Master',
+        label: 'Start Runtime',
         click: () =>
           void showCommandResult(
-            'Could not start Kungfu Master',
-            ['master', 'start', '--json'],
-            'Kungfu Master started',
+            'Could not start Kungfu Runtime',
+            ['runtime', 'start', '--json'],
+            'Kungfu Runtime started',
           ),
       },
       {
-        label: 'Stop Master',
+        label: 'Stop Runtime',
         click: () =>
           void showCommandResult(
-            'Could not stop Kungfu Master',
-            ['master', 'stop', '--json'],
-            'Kungfu Master stopped',
+            'Could not stop Kungfu Runtime',
+            ['runtime', 'stop', '--json'],
+            'Kungfu Runtime stopped',
           ),
       },
       { type: 'separator' },
@@ -553,8 +553,8 @@ function buildTrayMenu() {
         click: quitGui,
       },
       {
-        label: 'Stop Master and Quit',
-        click: () => void stopMasterAndQuit(),
+        label: 'Stop Runtime and Quit',
+        click: () => void stopRuntimeAndQuit(),
       },
     ]),
   );
@@ -632,7 +632,7 @@ ipcMain.handle(WINDOW_CHROME_CONTROL_CHANNEL, (event, payload) => {
   };
 });
 
-ipcMain.handle(MASTER_STATUS_GET_CHANNEL, () => readMasterStatus());
+ipcMain.handle(RUNTIME_STATUS_GET_CHANNEL, () => readRuntimeStatus());
 
 // Application menu with the VS Code-style "Install 'kungfu' Command in PATH"
 // action, so a real user who installed Kungfu Episodes.app can use `kungfu` in a shell.
@@ -764,7 +764,7 @@ function createWindow() {
 
 app.whenReady().then(() => {
   app.setName(PRODUCT_NAME);
-  ensureMasterForGuiStartup();
+  ensureRuntimeForGuiStartup();
   buildMenu();
   createTray();
   // ADR-0016 stage 1 (flagged): run the durable session host in main so it

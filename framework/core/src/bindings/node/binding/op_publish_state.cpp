@@ -12,10 +12,10 @@ using namespace kungfu::yijinjing::enums;
 using namespace kungfu::yijinjing::types;
 using namespace kungfu::runtime;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::runtime::practice;
+using namespace kungfu::runtime::live;
 
 namespace kungfu::node::serialize {
-JsPublishState::JsPublishState(apprentice &app, Napi::ObjectReference &state) : app_(app), state_(state) {}
+JsPublishState::JsPublishState(peer &app, Napi::ObjectReference &state) : app_(app), state_(state) {}
 
 void JsPublishState::operator()(Napi::Object object) {
   auto now = yijinjing::time::now_in_nano();

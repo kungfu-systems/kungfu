@@ -121,14 +121,14 @@ struct location : public std::enable_shared_from_this<location>, public yijinjin
   static constexpr uint32_t PUBLIC = 0;
   static constexpr uint32_t SYNC = 1;
 
-  // uid-seed verification reads the master's kv map, whose storage backend
+  // uid-seed verification reads the coordinator's kv map, whose storage backend
   // belongs to the runtime. The runtime installs a provider here (see
-  // install_master_kv_provider in util/rocks.h); without one, get_master_kv
+  // install_coordinator_kv_provider in util/rocks.h); without one, get_coordinator_kv
   // returns empty and verification degrades to the pure hash path.
-  using master_kv_provider = std::string (*)(const location &self, const std::string &key);
+  using coordinator_kv_provider = std::string (*)(const location &self, const std::string &key);
 
-  static master_kv_provider &master_kv() {
-    static master_kv_provider provider = nullptr;
+  static coordinator_kv_provider &coordinator_kv() {
+    static coordinator_kv_provider provider = nullptr;
     return provider;
   }
 
@@ -145,7 +145,7 @@ struct location : public std::enable_shared_from_this<location>, public yijinjin
 
   void verify_location_uid();
 
-  std::string get_master_kv(const std::string &key);
+  std::string get_coordinator_kv(const std::string &key);
 
   void update_seed(uint32_t s);
 

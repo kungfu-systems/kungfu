@@ -5,7 +5,7 @@
 # stream into current items.
 #
 # Journal shape: standalone single-writer, same construction as the Rewind
-# supervisor and the C++ slices — no master, no-op publisher, private bus.
+# supervisor and the C++ slices — no coordinator, no-op publisher, private bus.
 # Every `kungfu work` mutation opens the writer, appends, and exits; the
 # journal remains the fact source and current state is always a fold.
 #

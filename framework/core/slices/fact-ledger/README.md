@@ -8,7 +8,7 @@ runtime coupling creeping back into the core (the zero-extra-dylib assertion
 in `run.sh` is the canary).
 
 A minimal, verifiable slice that embeds the yijinjing journal spine in a plain
-process **without starting the trading runtime** (no master, no bus drain loop,
+process **without starting the trading runtime** (no coordinator, no bus drain loop,
 no nng sockets), records a causal chain inside the spine, and then proves it can
 be reopened and exported by a fully independent tool.
 

@@ -938,7 +938,7 @@ test(
                 unverifiable_count: 0,
               },
               deadline: 0,
-              responsibility: 'workspace-master',
+              responsibility: 'workspace-coordinator',
               residual_risks: ['first built-in assessor only'],
             },
           },

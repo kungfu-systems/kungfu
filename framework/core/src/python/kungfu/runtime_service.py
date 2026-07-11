@@ -22,11 +22,17 @@ lf = kungfu.__binding__.yijinjing
 yjj = kungfu.__binding__.runtime
 
 
-SCHEMA_STATUS = "kungfu.master-service.status/v1"
-SCHEMA_PLAN = "kungfu.master-service.plan/v1"
-SCHEMA_RESULT = "kungfu.master-service.result/v1"
-SCHEMA_ROUTES = "kungfu.master-service.routes/v1"
-SCHEMA_ASSESSMENT_SUBSCRIPTION = "kungfu.master.assessment-subscription/v1"
+SCHEMA_STATUS = "kungfu.runtime.status/v2"
+SCHEMA_PLAN = "kungfu.runtime.service-plan/v2"
+SCHEMA_RESULT = "kungfu.runtime.service-result/v2"
+SCHEMA_ROUTES = "kungfu.runtime.routes/v2"
+SCHEMA_ASSESSMENT_SUBSCRIPTION = "kungfu.runtime.assessment-subscription/v2"
+LEGACY_SCHEMA_ROUTES = "kungfu.master-service.routes/v1"
+# Stable wire-v1 identity. New code calls this process the coordinator, while
+# existing journals and RocksDB records continue to resolve the historic UID.
+COORDINATOR_WIRE_NAMESPACE = "master"
+COORDINATOR_WIRE_NAME = "master"
+LEGACY_STATE_DIR_NAME = "master"
 SERVICE_ID = "tech.kungfu.supervisor"
 SERVICE_NAME = "Kungfu Supervisor"
 ROUTE_LEASE_TTL_SECONDS = 30.0
@@ -142,7 +148,7 @@ def route_record(home: str, runtime_dir: str) -> dict[str, Any]:
         "leaseUpdatedAt": now,
         "heartbeatAt": None,
         "supervisorPid": None,
-        "masterPid": None,
+        "coordinatorPid": None,
         "createdAt": now,
         "updatedAt": now,
     }
@@ -153,19 +159,31 @@ def supervisor_state_dir(config_home: str | None = None) -> Path:
 
 
 def state_dir(runtime_dir: str) -> Path:
-    return Path(runtime_dir).expanduser().resolve() / "master"
+    return Path(runtime_dir).expanduser().resolve() / "coordinator"
+
+
+def legacy_state_dir(runtime_dir: str) -> Path:
+    return Path(runtime_dir).expanduser().resolve() / LEGACY_STATE_DIR_NAME
 
 
 def supervisor_pid_path(config_home: str | None = None) -> Path:
     return supervisor_state_dir(config_home) / "supervisor.pid"
 
 
-def master_pid_path(runtime_dir: str) -> Path:
-    return state_dir(runtime_dir) / "master.pid"
+def coordinator_pid_path(runtime_dir: str) -> Path:
+    return state_dir(runtime_dir) / "coordinator.pid"
+
+
+def legacy_coordinator_pid_path(runtime_dir: str) -> Path:
+    return legacy_state_dir(runtime_dir) / "master.pid"
 
 
 def state_path(runtime_dir: str) -> Path:
     return state_dir(runtime_dir) / "state.json"
+
+
+def legacy_state_path(runtime_dir: str) -> Path:
+    return legacy_state_dir(runtime_dir) / "state.json"
 
 
 def supervisor_state_path(config_home: str | None = None) -> Path:
@@ -180,8 +198,8 @@ def supervisor_log_path(config_home: str | None = None) -> Path:
     return supervisor_state_dir(config_home) / "supervisor.log"
 
 
-def master_log_path(runtime_dir: str) -> Path:
-    return state_dir(runtime_dir) / "master.log"
+def coordinator_log_path(runtime_dir: str) -> Path:
+    return state_dir(runtime_dir) / "coordinator.log"
 
 
 def assessment_subscription_path(runtime_dir: str) -> Path:
@@ -193,6 +211,17 @@ def read_pid(path: Path) -> int | None:
         return int(path.read_text("utf-8").strip())
     except (OSError, ValueError):
         return None
+
+
+def read_coordinator_pid(runtime_dir: str) -> int | None:
+    return read_pid(coordinator_pid_path(runtime_dir)) or read_pid(
+        legacy_coordinator_pid_path(runtime_dir)
+    )
+
+
+def unlink_coordinator_pid_files(runtime_dir: str) -> None:
+    unlink_if_exists(coordinator_pid_path(runtime_dir))
+    unlink_if_exists(legacy_coordinator_pid_path(runtime_dir))
 
 
 def write_pid(path: Path, pid: int) -> None:
@@ -225,12 +254,12 @@ def command_env(
     return env
 
 
-def master_run_command(home: str, runtime_dir: str, log_level: str) -> list[str]:
+def coordinator_run_command(home: str, runtime_dir: str, log_level: str) -> list[str]:
     return [
         *entry_command(),
         "--log_level",
         log_level,
-        "master",
+        "runtime",
         "run",
         "--runtime-dir",
         runtime_dir,
@@ -242,7 +271,7 @@ def master_run_command(home: str, runtime_dir: str, log_level: str) -> list[str]
 def assessment_worker_command(runtime_dir: str, assessment_key: str) -> list[str]:
     return [
         *entry_command(),
-        "master",
+        "runtime",
         "assess-worker",
         "--runtime-dir",
         resolve_runtime_dir("", runtime_dir),
@@ -292,7 +321,7 @@ def supervisor_command(
         *entry_command(),
         "--log_level",
         log_level,
-        "master",
+        "runtime",
         "supervise",
         "--config-home",
         resolve_config_home(config_home),
@@ -312,9 +341,14 @@ def _empty_routes() -> dict[str, Any]:
 
 def read_routes(config_home: str | None = None) -> dict[str, Any]:
     payload = _json_read(routes_path(config_home))
-    if payload.get("schema") != SCHEMA_ROUTES or not isinstance(
-        payload.get("routes"), dict
-    ):
+    if not isinstance(payload.get("routes"), dict):
+        return _empty_routes()
+    if payload.get("schema") == LEGACY_SCHEMA_ROUTES:
+        for route in payload["routes"].values():
+            if isinstance(route, dict) and "coordinatorPid" not in route:
+                route["coordinatorPid"] = route.pop("masterPid", None)
+        payload["schema"] = SCHEMA_ROUTES
+    elif payload.get("schema") != SCHEMA_ROUTES:
         return _empty_routes()
     return payload
 
@@ -344,7 +378,7 @@ def touch_route_heartbeat(
     route_id_: str,
     *,
     supervisor_pid: int | None,
-    master_pid: int | None,
+    coordinator_pid: int | None,
 ) -> dict[str, Any] | None:
     payload = read_routes(config_home)
     route = payload["routes"].get(route_id_)
@@ -354,7 +388,7 @@ def touch_route_heartbeat(
     route["heartbeatAt"] = now
     route["leaseTtlSeconds"] = route.get("leaseTtlSeconds", ROUTE_LEASE_TTL_SECONDS)
     route["supervisorPid"] = supervisor_pid
-    route["masterPid"] = master_pid
+    route["coordinatorPid"] = coordinator_pid
     route["updatedAt"] = now
     payload["routes"][route_id_] = route
     write_routes(config_home, payload)
@@ -404,32 +438,32 @@ def _lifecycle_status(
     route_freshness: dict[str, Any],
     supervisor_pid: int | None,
     supervisor_running: bool,
-    master_pid: int | None,
-    master_running: bool,
+    coordinator_pid: int | None,
+    coordinator_running: bool,
 ) -> dict[str, Any]:
     warnings: list[str] = []
     supervisor_state = _pid_state(supervisor_pid)
-    master_state = _pid_state(master_pid)
+    coordinator_state = _pid_state(coordinator_pid)
     route_stale = bool(route_freshness.get("stale"))
     if route_stale:
         warnings.append("route-stale")
     if supervisor_state == "dead":
         warnings.append("supervisor-dead-pid")
-    if master_state == "dead":
-        warnings.append("master-dead-pid")
+    if coordinator_state == "dead":
+        warnings.append("coordinator-dead-pid")
 
     state = "stopped"
     if route_stale:
         state = "stale-route"
-    elif master_running and not supervisor_running:
-        state = "orphan-master"
-        warnings.append("orphan-master")
-    elif supervisor_running and master_running:
+    elif coordinator_running and not supervisor_running:
+        state = "orphan-coordinator"
+        warnings.append("orphan-coordinator")
+    elif supervisor_running and coordinator_running:
         state = "running"
-    elif supervisor_running and not master_running:
+    elif supervisor_running and not coordinator_running:
         state = "degraded"
-        warnings.append("master-not-running")
-    elif supervisor_state == "dead" or master_state == "dead":
+        warnings.append("coordinator-not-running")
+    elif supervisor_state == "dead" or coordinator_state == "dead":
         state = "dead"
     elif registered:
         state = "registered"
@@ -440,7 +474,7 @@ def _lifecycle_status(
         "healthy": healthy,
         "warnings": warnings,
         "supervisorProcess": supervisor_state,
-        "masterProcess": master_state,
+        "coordinatorProcess": coordinator_state,
         "routeFreshness": route_freshness,
     }
 
@@ -462,32 +496,32 @@ def repair_route_state(
 ) -> list[str]:
     current = route_status(home, runtime_dir, config_home)
     repairs: list[str] = []
-    master_pid = current["master"]["pid"]
+    coordinator_pid = current["coordinator"]["pid"]
     if current["lifecycle"]["supervisorProcess"] == "dead":
         unlink_if_exists(supervisor_pid_path(config_home))
         repairs.append("removed-dead-supervisor-pid")
-    if current["lifecycle"]["masterProcess"] == "dead":
-        unlink_if_exists(master_pid_path(runtime_dir))
-        repairs.append("removed-dead-master-pid")
-    if current["lifecycle"]["state"] == "orphan-master" and master_pid:
-        if _terminate_and_wait(master_pid):
-            unlink_if_exists(master_pid_path(runtime_dir))
-            repairs.append("terminated-orphan-master")
+    if current["lifecycle"]["coordinatorProcess"] == "dead":
+        unlink_coordinator_pid_files(runtime_dir)
+        repairs.append("removed-dead-coordinator-pid")
+    if current["lifecycle"]["state"] == "orphan-coordinator" and coordinator_pid:
+        if _terminate_and_wait(coordinator_pid):
+            unlink_coordinator_pid_files(runtime_dir)
+            repairs.append("terminated-orphan-coordinator")
         else:
-            repairs.append("orphan-master-still-running")
+            repairs.append("orphan-coordinator-still-running")
     if current["route"].get("freshness", {}).get("stale"):
         repairs.append("refreshed-stale-route")
     return repairs
 
 
-class Master(yjj.master):
+class Coordinator(yjj.coordinator):
     def __init__(self, home: str, runtime_dir: str, low_latency: bool = False) -> None:
         locator = yjj.locator(runtime_dir)
         location = yjj.location(
             lf.enums.mode.LIVE,
             lf.enums.location_role.SYSTEM,
-            "master",
-            "master",
+            COORDINATOR_WIRE_NAMESPACE,
+            COORDINATOR_WIRE_NAME,
             locator,
         )
         super().__init__(location, low_latency)
@@ -538,8 +572,8 @@ class Master(yjj.master):
             return
         assessment_key = str(pending[0]["assessment_key"])
         command = assessment_worker_command(self.runtime_dir, assessment_key)
-        master_log_path(self.runtime_dir).parent.mkdir(parents=True, exist_ok=True)
-        with master_log_path(self.runtime_dir).open("ab") as log:
+        coordinator_log_path(self.runtime_dir).parent.mkdir(parents=True, exist_ok=True)
+        with coordinator_log_path(self.runtime_dir).open("ab") as log:
             child = subprocess.Popen(
                 command,
                 stdin=subprocess.DEVNULL,
@@ -554,29 +588,29 @@ class Master(yjj.master):
         self._assessment_worker = (assessment_key, child, nanotime)
 
 
-def run_master(home: str, runtime_dir: str, low_latency: bool = False) -> int:
+def run_coordinator(home: str, runtime_dir: str, low_latency: bool = False) -> int:
     home = resolve_runtime_home(home)
     runtime_dir = resolve_runtime_dir(home, runtime_dir)
     service_state_dir = state_dir(runtime_dir)
     service_state_dir.mkdir(parents=True, exist_ok=True)
-    write_pid(master_pid_path(runtime_dir), os.getpid())
+    write_pid(coordinator_pid_path(runtime_dir), os.getpid())
     _json_write(
         state_path(runtime_dir),
         {
             "schema": SCHEMA_STATUS,
-            "status": "master-running",
+            "status": "coordinator-running",
             "home": home,
             "runtimeDir": runtime_dir,
-            "masterPid": os.getpid(),
+            "coordinatorPid": os.getpid(),
             "updatedAt": _now(),
         },
     )
     try:
-        master = Master(home, runtime_dir, low_latency=low_latency)
-        master.run()
+        coordinator = Coordinator(home, runtime_dir, low_latency=low_latency)
+        coordinator.run()
         return 0
     finally:
-        unlink_if_exists(master_pid_path(runtime_dir))
+        unlink_coordinator_pid_files(runtime_dir)
 
 
 def status(home: str, runtime_dir: str) -> dict[str, Any]:
@@ -593,14 +627,16 @@ def route_status(
     runtime_dir = resolve_runtime_dir(home, runtime_dir)
     route = route_record(home, runtime_dir)
     supervisor_pid = read_pid(supervisor_pid_path(config_home))
-    master_pid = read_pid(master_pid_path(runtime_dir))
-    state = _json_read(state_path(runtime_dir))
+    coordinator_pid = read_coordinator_pid(runtime_dir)
+    state = _json_read(state_path(runtime_dir)) or _json_read(
+        legacy_state_path(runtime_dir)
+    )
     supervisor_state = _json_read(supervisor_state_path(config_home))
     routes = read_routes(config_home)
     registered_route = routes["routes"].get(route["routeId"])
     registered = isinstance(registered_route, dict)
     supervisor_running = _is_pid_running(supervisor_pid)
-    master_running = _is_pid_running(master_pid)
+    coordinator_running = _is_pid_running(coordinator_pid)
     now = _now()
     route_freshness = _route_freshness(
         registered_route if registered else None,
@@ -612,8 +648,8 @@ def route_status(
         route_freshness=route_freshness,
         supervisor_pid=supervisor_pid,
         supervisor_running=supervisor_running,
-        master_pid=master_pid,
-        master_running=master_running,
+        coordinator_pid=coordinator_pid,
+        coordinator_running=coordinator_running,
     )
     route_payload = registered_route if registered else route
     return {
@@ -639,12 +675,12 @@ def route_status(
             "pidFile": str(supervisor_pid_path(config_home)),
             "log": str(supervisor_log_path(config_home)),
         },
-        "master": {
-            "pid": master_pid,
-            "running": master_running,
-            "processState": lifecycle["masterProcess"],
-            "pidFile": str(master_pid_path(runtime_dir)),
-            "log": str(master_log_path(runtime_dir)),
+        "coordinator": {
+            "pid": coordinator_pid,
+            "running": coordinator_running,
+            "processState": lifecycle["coordinatorProcess"],
+            "pidFile": str(coordinator_pid_path(runtime_dir)),
+            "log": str(coordinator_log_path(runtime_dir)),
         },
         "routes": {
             "path": str(routes_path(config_home)),
@@ -704,7 +740,7 @@ def run_supervisor(
                 if child.poll() is not None or route_id_ not in desired_routes:
                     route = desired_routes.get(route_id_)
                     if route:
-                        unlink_if_exists(master_pid_path(str(route["runtimeDir"])))
+                        unlink_coordinator_pid_files(str(route["runtimeDir"]))
                     if route_id_ not in desired_routes and child.poll() is None:
                         child.terminate()
                     children.pop(route_id_, None)
@@ -715,16 +751,18 @@ def run_supervisor(
                         config_home,
                         route_id_,
                         supervisor_pid=os.getpid(),
-                        master_pid=running_child.pid,
+                        coordinator_pid=running_child.pid,
                     )
                     continue
                 route_home = str(route["home"])
                 route_runtime_dir = str(route["runtimeDir"])
-                command = master_run_command(route_home, route_runtime_dir, log_level)
-                master_log_path(route_runtime_dir).parent.mkdir(
+                command = coordinator_run_command(
+                    route_home, route_runtime_dir, log_level
+                )
+                coordinator_log_path(route_runtime_dir).parent.mkdir(
                     parents=True, exist_ok=True
                 )
-                with master_log_path(route_runtime_dir).open("ab") as log:
+                with coordinator_log_path(route_runtime_dir).open("ab") as log:
                     child = subprocess.Popen(
                         command,
                         env=command_env(
@@ -737,12 +775,12 @@ def run_supervisor(
                         stderr=log,
                     )
                 children[route_id_] = child
-                write_pid(master_pid_path(route_runtime_dir), child.pid)
+                write_pid(coordinator_pid_path(route_runtime_dir), child.pid)
                 touch_route_heartbeat(
                     config_home,
                     route_id_,
                     supervisor_pid=os.getpid(),
-                    master_pid=child.pid,
+                    coordinator_pid=child.pid,
                 )
             _json_write(
                 supervisor_state_path(config_home),
@@ -755,7 +793,7 @@ def run_supervisor(
                         route_id_: {
                             "home": route["home"],
                             "runtimeDir": route["runtimeDir"],
-                            "masterPid": children[route_id_].pid
+                            "coordinatorPid": children[route_id_].pid
                             if route_id_ in children
                             else None,
                         }
@@ -778,7 +816,7 @@ def run_supervisor(
                 child.kill()
         for route in read_routes(config_home)["routes"].values():
             if isinstance(route, dict) and route.get("runtimeDir"):
-                unlink_if_exists(master_pid_path(str(route["runtimeDir"])))
+                unlink_coordinator_pid_files(str(route["runtimeDir"]))
         unlink_if_exists(supervisor_pid_path(config_home))
         _json_write(
             supervisor_state_path(config_home),
@@ -791,7 +829,7 @@ def run_supervisor(
         )
 
 
-def ensure_master(
+def ensure_coordinator(
     home: str,
     runtime_dir: str,
     log_level: str,
@@ -804,7 +842,7 @@ def ensure_master(
     route = upsert_route(config_home, home, runtime_dir)
     current = route_status(home, runtime_dir, config_home)
     if current["supervisor"]["running"]:
-        return _wait_for_master(
+        return _wait_for_coordinator(
             home, runtime_dir, config_home, changed=False, route=route, repairs=repairs
         )
     supervisor_state_dir(config_home).mkdir(parents=True, exist_ok=True)
@@ -830,7 +868,7 @@ def ensure_master(
         else:
             kwargs["start_new_session"] = True
         subprocess.Popen(command, **kwargs)
-    return _wait_for_master(
+    return _wait_for_coordinator(
         home,
         runtime_dir,
         config_home,
@@ -841,7 +879,7 @@ def ensure_master(
     )
 
 
-def _wait_for_master(
+def _wait_for_coordinator(
     home: str,
     runtime_dir: str,
     config_home: str,
@@ -854,7 +892,7 @@ def _wait_for_master(
     deadline = time.time() + 5
     while time.time() < deadline:
         current = route_status(home, runtime_dir, config_home)
-        if current["supervisor"]["running"] and current["master"]["running"]:
+        if current["supervisor"]["running"] and current["coordinator"]["running"]:
             payload = {
                 **current,
                 "changed": changed,

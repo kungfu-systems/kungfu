@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <kungfu/runtime/journal/tracer.h>
+#include <kungfu/runtime/live/identity.h>
 #include <kungfu/yijinjing/journal/page.h>
 #include <kungfu/yijinjing/schema/registry.h>
 
@@ -16,31 +17,32 @@ tracer::tracer(const location_ptr location, bool in, bool out, int64_t begin, in
     : home_(location), reader_(std::make_shared<reader>(true, false, std::make_shared<bus>(false))),
       reader_for_in_(std::make_shared<reader>(true, false, std::make_shared<bus>(false))), in_(in), out_(out),
       begin_time_(begin), end_time_(end == 0 ? INT64_MAX : end) {
-  auto master_home_location =
-      location::make_shared(mode::LIVE, location_role::SYSTEM, "master", "master", get_locator());
-  auto is_master = master_home_location->uid == home_->uid;
+  auto coordinator_home_location = location::make_shared(
+      mode::LIVE, location_role::SYSTEM, live::COORDINATOR_WIRE_NAMESPACE, live::COORDINATOR_WIRE_NAME, get_locator());
+  auto is_coordinator = coordinator_home_location->uid == home_->uid;
   if (in) {
-    if (not is_master) {
+    if (not is_coordinator) {
       auto uid_str = fmt::format("{:08x}", home_->uid);
-      auto master_cmd_location =
-          location::make_shared(mode::LIVE, location_role::SYSTEM, "master", uid_str, get_locator());
-      if (page::check_page_existed(master_cmd_location, home_->uid)) {
-        reader_->join(master_cmd_location, home_->uid, begin_time_);
-        reader_for_in_->join(master_cmd_location, home_->uid, begin_time_);
+      auto coordinator_cmd_location = location::make_shared(mode::LIVE, location_role::SYSTEM,
+                                                            live::COORDINATOR_WIRE_NAMESPACE, uid_str, get_locator());
+      if (page::check_page_existed(coordinator_cmd_location, home_->uid)) {
+        reader_->join(coordinator_cmd_location, home_->uid, begin_time_);
+        reader_for_in_->join(coordinator_cmd_location, home_->uid, begin_time_);
       } else {
         SPDLOG_WARN("page not existed, home_ {}, source_location: {}, dest: {}", home_->uname,
-                    master_cmd_location->uname, (uint32_t)home_->uid);
+                    coordinator_cmd_location->uname, (uint32_t)home_->uid);
       }
     } else {
       for (auto target_location : get_locator()->list_locations("*", "*", "*", "*")) {
-        if (target_location->role == location_role::SYSTEM and target_location->namespace_ == "master") {
+        if (target_location->role == location_role::SYSTEM and
+            live::is_coordinator_wire_namespace(target_location->namespace_)) {
           continue;
         }
         for (auto dest_id : get_locator()->list_location_dest(target_location)) {
           auto uid_str = fmt::format("{:08x}", target_location->uid);
-          auto master_cmd_location =
-              location::make_shared(mode::LIVE, location_role::SYSTEM, "master", uid_str, get_locator());
-          if (dest_id == master_cmd_location->uid) {
+          auto coordinator_cmd_location = location::make_shared(
+              mode::LIVE, location_role::SYSTEM, live::COORDINATOR_WIRE_NAMESPACE, uid_str, get_locator());
+          if (dest_id == coordinator_cmd_location->uid) {
             if (page::check_page_existed(target_location, dest_id)) {
               reader_->join(target_location, dest_id, begin_time_);
               reader_for_in_->join(target_location, dest_id, begin_time_);
@@ -52,11 +54,12 @@ tracer::tracer(const location_ptr location, bool in, bool out, int64_t begin, in
       }
     }
 
-    if (page::check_page_existed(master_home_location, location::PUBLIC)) {
-      reader_->join(master_home_location, location::PUBLIC, begin_time_);
-      reader_for_in_->join(master_home_location, location::PUBLIC, begin_time_);
+    if (page::check_page_existed(coordinator_home_location, location::PUBLIC)) {
+      reader_->join(coordinator_home_location, location::PUBLIC, begin_time_);
+      reader_for_in_->join(coordinator_home_location, location::PUBLIC, begin_time_);
     } else {
-      SPDLOG_WARN("page not existed, source_location: {}, dest: {}", master_home_location->uname, location::PUBLIC);
+      SPDLOG_WARN("page not existed, source_location: {}, dest: {}", coordinator_home_location->uname,
+                  location::PUBLIC);
     }
   }
 
@@ -69,14 +72,15 @@ tracer::tracer(const location_ptr location, bool in, bool out, int64_t begin, in
       }
     }
 
-    if (is_master) {
-      for (auto master_cmd_location : get_locator()->list_locations("system", "master", "*", "*")) {
-        SPDLOG_INFO("master_cmd_location: {}", master_cmd_location->uname);
-        for (auto dest_id : get_locator()->list_location_dest(master_cmd_location)) {
-          if (page::check_page_existed(master_cmd_location, dest_id)) {
-            reader_->join(master_cmd_location, dest_id, begin_time_);
+    if (is_coordinator) {
+      for (auto coordinator_cmd_location :
+           get_locator()->list_locations("system", live::COORDINATOR_WIRE_NAMESPACE, "*", "*")) {
+        SPDLOG_INFO("coordinator_cmd_location: {}", coordinator_cmd_location->uname);
+        for (auto dest_id : get_locator()->list_location_dest(coordinator_cmd_location)) {
+          if (page::check_page_existed(coordinator_cmd_location, dest_id)) {
+            reader_->join(coordinator_cmd_location, dest_id, begin_time_);
           } else {
-            SPDLOG_WARN("page not existed, source_location: {}, dest: {}", master_cmd_location->uname,
+            SPDLOG_WARN("page not existed, source_location: {}, dest: {}", coordinator_cmd_location->uname,
                         (uint32_t)dest_id);
           }
         }
@@ -153,7 +157,7 @@ void tracer::join_for_in(const yijinjing::journal::frame_ptr &frame) const {
   }
 
   // This step is quite special because "RequestReadFromOthers" is sent after joining the journal. To leave a trace, it
-  // should be processed at the time of sending, not waiting for the master to return.
+  // should be processed at send time, not while waiting for the coordinator.
   if ((frame->dest() == home_->uid or frame->source() == home_->uid) and
       frame->carrier_type() == RequestReadFromOthers::tag) {
     auto request = frame->data<RequestReadFromOthers>();

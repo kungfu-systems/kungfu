@@ -30,7 +30,7 @@ BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_layout_pat
                         dataset_dir, inbox_dir, journal_dir, storage_dir, source_registry_journal,
                         manifest_catalog_journal, manifest_entries, payloads, rocksdb, source_registry_projection,
                         manifest_catalog_projection, episode_manifest_journal_dir, episode_manifest_journal,
-                        master_state, remote_mirrors, atlas_store);
+                        coordinator_state, remote_mirrors, atlas_store);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_layout_episode_view, authority, schema,
                         manifest_namespace, manifest_name, manifest_journal, query_tables, export_schema);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_layout_ownership_view, journal_dir,

@@ -11,7 +11,7 @@
 #include "data_table.h"
 
 #include <kungfu/common.h>
-#include <kungfu/runtime/practice/apprentice.h>
+#include <kungfu/runtime/live/peer.h>
 #include <kungfu/runtime/projection/hana_sqlite.h>
 #include <kungfu/runtime/state_cache/store.h>
 #include <kungfu/yijinjing/schema/registry.h>
@@ -364,24 +364,24 @@ private:
 
 class JsPublishState {
 public:
-  JsPublishState(runtime::practice::apprentice &app, Napi::ObjectReference &state);
+  JsPublishState(runtime::live::peer &app, Napi::ObjectReference &state);
 
   void operator()(Napi::Object object);
 
 private:
-  runtime::practice::apprentice &app_;
+  runtime::live::peer &app_;
   Napi::ObjectReference &state_;
   JsGet get = {};
 };
 
 class JsResetCache {
 public:
-  JsResetCache(runtime::practice::apprentice &app, Napi::ObjectReference &state);
+  JsResetCache(runtime::live::peer &app, Napi::ObjectReference &state);
 
   void operator()(const state<yijinjing::types::CacheReset> &state);
 
 private:
-  runtime::practice::apprentice &app_;
+  runtime::live::peer &app_;
   Napi::ObjectReference &state_;
 };
 

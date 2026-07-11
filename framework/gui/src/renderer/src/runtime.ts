@@ -204,7 +204,7 @@ export function bootRuntime(): Runtime {
       skillManager = null;
     }
     // Joining initializes a fresh runtime home's layout and connects to a
-    // live master when one is running; the domain handle needs the layout.
+    // live coordinator when one is running; the domain handle needs the layout.
     const ledger = openLedger({
       binding,
       locator: { runtimeDir },

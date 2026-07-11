@@ -33,7 +33,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 const forbiddenIncludes =
-  /^\s*#\s*include\s*[<"](nng\/|rxcpp\/|sqlite|rocksdb\/|leveldb\/|lmdb|duckdb|kungfu\/runtime\/|kungfu\/longfist\/|kungfu\/yijinjing\/schema\/registry\.h|kungfu\/yijinjing\/practice\/|kungfu\/yijinjing\/cache\/|kungfu\/yijinjing\/index\/|kungfu\/yijinjing\/nanomsg\/|kungfu\/yijinjing\/socket\/|kungfu\/yijinjing\/io\.h|kungfu\/yijinjing\/rx\.h|kungfu\/yijinjing\/util\/|kungfu\/wingchun\/)/;
+  /^\s*#\s*include\s*[<"](nng\/|rxcpp\/|sqlite|rocksdb\/|leveldb\/|lmdb|duckdb|kungfu\/runtime\/|kungfu\/longfist\/|kungfu\/yijinjing\/schema\/registry\.h|kungfu\/yijinjing\/live\/|kungfu\/yijinjing\/cache\/|kungfu\/yijinjing\/index\/|kungfu\/yijinjing\/nanomsg\/|kungfu\/yijinjing\/socket\/|kungfu\/yijinjing\/io\.h|kungfu\/yijinjing\/rx\.h|kungfu\/yijinjing\/util\/|kungfu\/wingchun\/)/;
 
 const forbiddenSymbols =
   /yijinjing::types::(Order|Trade|Position)|types::(Order|Trade|Position)[A-Za-z]*\b|LegacyCompiledTypes\b|LegacyCompiledDataTypes\b|LegacyCompiledTypeTags\b|wingchun/;

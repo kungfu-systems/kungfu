@@ -62,7 +62,7 @@ caller may rely on. The implementation lives in
 
 ## Not the same database as the location metadata engine
 
-`hero`'s master/app RocksDB (location metadata) lives under the locator's
+`reactor`'s coordinator/app RocksDB (location metadata) lives under the locator's
 `layout::MAP` directory (`<root>/map/<role>/<namespace>/<name>/<mode>`); the
 storage provider's engine lives under `<runtime_dir>/storage/rocksdb`. The
 paths are disjoint by construction, so no database path ever has two in-process

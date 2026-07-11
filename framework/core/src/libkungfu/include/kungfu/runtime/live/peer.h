@@ -4,22 +4,22 @@
 // Created by Keren Dong on 2019-06-01.
 //
 
-#ifndef KUNGFU_APPRENTICE_H
-#define KUNGFU_APPRENTICE_H
+#ifndef KUNGFU_RUNTIME_LIVE_PEER_H
+#define KUNGFU_RUNTIME_LIVE_PEER_H
 
 #include <kungfu/runtime/common.h>
 
 #include <kungfu/runtime/io.h>
-#include <kungfu/runtime/practice/hero.h>
+#include <kungfu/runtime/live/reactor.h>
 #include <kungfu/runtime/state_cache/model.h>
 #include <kungfu/yijinjing/time.h>
 
-namespace kungfu::runtime::practice {
-class apprentice;
+namespace kungfu::runtime::live {
+class peer;
 
 class resource_manager {
 public:
-  explicit resource_manager(apprentice &app);
+  explicit resource_manager(peer &runtime_peer);
 
   virtual ~resource_manager();
 
@@ -28,7 +28,7 @@ public:
   std::thread &get_resource_management_worker();
 
 private:
-  practice::apprentice &app_;
+  peer &peer_;
   std::thread resource_management_worker;
   std::atomic<bool> m_quit_ = false;
 
@@ -37,18 +37,17 @@ private:
   [[nodiscard]] bool is_resource_management_worker_required() const;
 };
 
-class apprentice : public hero {
+class peer : public reactor {
 public:
-  explicit apprentice(const yijinjing::data::location_ptr &home, bool low_latency = false,
-                      std::string arguments = "{}");
+  explicit peer(const yijinjing::data::location_ptr &home, bool low_latency = false, std::string arguments = "{}");
 
-  explicit apprentice(const kungfu::runtime::io_device_ptr &io_device, std::string arguments = "{}");
+  explicit peer(const kungfu::runtime::io_device_ptr &io_device, std::string arguments = "{}");
 
   bool is_started() const;
 
   void pause();
 
-  uint32_t get_master_command_uid() const;
+  uint32_t get_coordinator_command_uid() const;
 
   int64_t get_checkin_time() const;
 
@@ -178,12 +177,12 @@ public:
 
 protected:
   state_cache::bank state_bank_;
-  yijinjing::journal::writer_ptr master_cmd_writer_for_thread_ = nullptr;
+  yijinjing::journal::writer_ptr coordinator_cmd_writer_for_thread_ = nullptr;
   yijinjing::journal::writer_ptr public_writer_ = nullptr;
   inline static thread_local yijinjing::journal::writer_ptr thread_writer_ = nullptr;
 
-  friend void add_location(practice::apprentice &app, const yijinjing::data::location_ptr &location) {
-    app.add_location(app.now(), location);
+  friend void add_location(peer &runtime_peer, const yijinjing::data::location_ptr &location) {
+    runtime_peer.add_location(runtime_peer.now(), location);
   }
 
   void react() override;
@@ -220,7 +219,7 @@ protected:
 
   std::function<rx::observable<event_ptr>(rx::observable<event_ptr>)> timer(int64_t nanotime, int32_t timer_id) {
     enable_timer(timer_id);
-    auto writer = get_writer(get_master_command_uid());
+    auto writer = get_writer(get_coordinator_command_uid());
     int64_t duration_ns = nanotime - now();
     yijinjing::types::TimeRequest &r = writer->open_data<yijinjing::types::TimeRequest>(now());
     r.id = timer_id;
@@ -251,7 +250,7 @@ protected:
   std::function<rx::observable<event_ptr>(rx::observable<event_ptr>)> time_interval(Duration &&d, int32_t timer_id) {
     enable_timer(timer_id);
     auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(d).count();
-    auto writer = get_writer(get_master_command_uid());
+    auto writer = get_writer(get_coordinator_command_uid());
     yijinjing::types::TimeRequest &r = writer->open_data<yijinjing::types::TimeRequest>(now());
     r.id = timer_id;
     r.base_time = now();
@@ -273,7 +272,7 @@ protected:
              rx::filter([&, duration_ns, timer_id](const event_ptr &event) {
                if (event->carrier_type() == yijinjing::types::Time::tag &&
                    event->gen_time() >= timer_checkpoints_[timer_id] + duration_ns) {
-                 auto writer = get_writer(get_master_command_uid());
+                 auto writer = get_writer(get_coordinator_command_uid());
                  yijinjing::types::TimeRequest &r = writer->open_data<yijinjing::types::TimeRequest>(now());
                  r.id = timer_id;
                  r.base_time = timer_checkpoints_[timer_id] + duration_ns;
@@ -294,7 +293,7 @@ protected:
   std::function<rx::observable<event_ptr>(rx::observable<event_ptr>)> timeout(Duration &&d, int32_t timer_id) {
     enable_timer(timer_id);
     auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(d).count();
-    auto writer = get_writer(get_master_command_uid());
+    auto writer = get_writer(get_coordinator_command_uid());
     yijinjing::types::TimeRequest &r = writer->open_data<yijinjing::types::TimeRequest>(now());
     r.id = timer_id;
     r.base_time = now();
@@ -309,7 +308,7 @@ protected:
                                    })) |
               rx::filter([&, duration_ns, timer_id](const event_ptr &event) {
                 if (event->carrier_type() != yijinjing::types::Time::tag) {
-                  auto writer = get_writer(get_master_command_uid());
+                  auto writer = get_writer(get_coordinator_command_uid());
                   yijinjing::types::TimeRequest &r = writer->open_data<yijinjing::types::TimeRequest>(now());
                   r.id = timer_id;
                   r.base_time = now();
@@ -358,7 +357,7 @@ private:
   void enable_timer(int32_t timer_id);
 };
 
-DECLARE_PTR(apprentice)
-} // namespace kungfu::runtime::practice
+DECLARE_PTR(peer)
+} // namespace kungfu::runtime::live
 
-#endif // KUNGFU_APPRENTICE_H
+#endif // KUNGFU_RUNTIME_LIVE_PEER_H

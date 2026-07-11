@@ -44,7 +44,7 @@ The Node surface is an N-API addon (`kungfu_node.node`) — entry point
 `kungfu_node.cpp` — exposing the journal, IO, history, schema registry, and the in-memory
 state stores. The `watcher` (`watcher.cpp`) is the component that consumes the
 journal and presents state to JavaScript for the reference UIs; it is an
-`apprentice` (see [`concepts.md`](concepts.md)). N-API is used as the stability
+`peer` (see [`concepts.md`](concepts.md)). N-API is used as the stability
 layer so the addon is decoupled from V8 ABI churn.
 
 Source: [`framework/core/src/bindings/node/binding/`](../framework/core/src/bindings/node/binding)

@@ -98,11 +98,11 @@ template <typename... Ts> constexpr decltype(auto) while_to(Ts... arg) {
   return lambda_filter_any<Ts...>(&event::dest)(arg...);
 }
 
-// How a subscriber error takes the event loop down. The loop owner (hero)
+// How a subscriber error takes the event loop down. The loop owner (reactor)
 // installs a structured stop at setup, so an error ends the pump cleanly —
 // produce() completes, hosts unwind, destructors run — instead of raising a
 // process-wide SIGINT from the middle of a dispatch. The SIGINT default only
-// covers rx usage outside a hero-owned loop. Failing loud stays: routing
+// covers rx usage outside a reactor-owned loop. Failing loud stays: routing
 // chains are load-bearing, and a silently dead chain is worse than a dead
 // loop.
 inline std::function<void()> &loop_interrupter() {
@@ -133,7 +133,7 @@ static constexpr auto $(ArgN &&...an) -> decltype(subscribe<event_ptr>(std::forw
 }
 
 // steppable/holdon exist to support step mode and are NOT replaceable by
-// rxcpp's publish(). hero::step() drives the event loop by calling
+// rxcpp's publish(). reactor::step() drives the event loop by calling
 // events_.connect(cs_) once per tick; upstream multicast wraps its entire
 // on_connect body — including source.subscribe — in an
 // `if (connection.empty())` guard, so with publish() every connect after the
@@ -141,7 +141,7 @@ static constexpr auto $(ArgN &&...an) -> decltype(subscribe<event_ptr>(std::forw
 // only the subject linkage inside that guard (attach subscribers once) and
 // re-subscribes the source on EVERY connect (drive one more produce pass).
 // That one-brace difference is the step primitive both hosts rely on: the
-// node watcher's uv loop and the python coroutine loop each pump the hero
+// node watcher's uv loop and the python coroutine loop each pump the reactor
 // through repeated step() calls.
 template <class T, class Observable, class Subject> struct steppable : public operator_base<T> {
   typedef decay_t<Observable> source_type;

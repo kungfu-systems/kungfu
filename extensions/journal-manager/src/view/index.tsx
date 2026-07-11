@@ -124,8 +124,8 @@ function JournalManagerView({ caps }: { caps: KfxCapabilities; shell: Shell }) {
         {error && <div style={{ ...mono, color: '#f48771' }}>{error}</div>}
         {events.length === 0 && !error && (
           <div style={{ ...mono, color: '#6a6a6a' }}>
-            no journal frames match — start a master against this runtime home
-            and rescan
+            no journal frames match — start the runtime coordinator against this
+            runtime home and rescan
           </div>
         )}
         <table style={{ ...mono, borderCollapse: 'collapse', width: '100%' }}>

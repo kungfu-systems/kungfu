@@ -3,7 +3,7 @@
 // Independent fact-ledger export tool (read path).
 //
 // Reopens a journal directory that some other process wrote and then exited,
-// WITHOUT starting the trading runtime (no master, no bus drain loop, no nng).
+// WITHOUT starting the trading runtime (no coordinator, no bus drain loop, no nng).
 // It iterates the frames in written order and produces two portable artifacts:
 //
 //   <out>.jsonl          one line per event, stable field set, payload verbatim
@@ -209,7 +209,7 @@ int main(int argc, char **argv) {
         "wall_clock_to_external_trusted_time_source", "system_calls / memory / external_io"}},
       {"known_limitations",
        {"Build-time link still depends on the monolithic libkungfu; only the RUNTIME is decoupled "
-        "(no master, no bus drain loop, no nng sockets). Pure journal-core extraction is future work.",
+        "(no coordinator, no bus drain loop, no nng sockets). Pure journal-core extraction is future work.",
         "frame_uid low bits are derived from a per-writer-run nano hash, so uids are stable within a "
         "bundle and across re-reads, but not reproducible across separate write runs (ADR-0010 8.2.3 not adopted)."}},
   };

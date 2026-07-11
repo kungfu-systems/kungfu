@@ -120,8 +120,8 @@ void journal::preload_next_page() {
   SPDLOG_TRACE("journal: {} ", page::get_page_path(location_, dest_id_, preload_page_->get_page_id()));
 }
 
-// saving time for other process switch page, except the master
-// only for master reading, and low_latency mode
+// Save page-switch time for other processes. This path is only used by the
+// coordinator reader in low-latency mode.
 void journal::try_load_next_extra_page() {
   if (lazy_ || is_writing_ || !low_latency_ ||                                        //
       page_->is_pre_open() ||                                                         //

@@ -46,7 +46,7 @@ as-is and performs no `find_package` of its own.
   `<kungfu/common.h>`, `<kungfu/yijinjing/schema/core.h>` and
   `<kungfu/yijinjing/...>`;
 - the full journal write/read surface with a noop bus and noop publisher --
-  no master, no event loop, no sockets, no databases. The
+  no coordinator, no event loop, no sockets, no databases. The
   `slices/fact-ledger/` tools under `framework/core/slices/` are the
   reference consumers;
 - the core primitives required by that surface: deterministic hash helpers

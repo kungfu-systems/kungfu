@@ -759,19 +759,19 @@
       "residualRisk": []
     },
     {
-      "id": "kungfu.gui.master-tray",
+      "id": "kungfu.gui.runtime-tray",
       "kind": "gui",
-      "name": "Kungfu GUI menu-bar/system-tray master residency controls",
+      "name": "Kungfu GUI menu-bar/system-tray runtime residency controls",
       "state": "declared",
       "detected": true,
       "enforced": false,
       "sourcePath": "framework/gui/src/main/index.ts",
-      "artifactPath": "docs/master-service.md",
+      "artifactPath": "docs/runtime-service.md",
       "kfd1Basis": {
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
         "sourcePath": "framework/gui/src/main/index.ts",
-        "artifactPath": "docs/master-service.md",
-        "digest": "sha256:20ee3323d8476707524926c4a54d79deaf8e24915d2127a33134518ce63dc425"
+        "artifactPath": "docs/runtime-service.md",
+        "digest": "sha256:cdfc149ff0ae8a385d311acbe190017a109b51faa66f3eeced24ba05f7413844"
       },
       "kfd2Trust": {
         "status": "release-passport-required",
@@ -838,28 +838,6 @@
         "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
         "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
         "digest": "sha256:5a8fd448eaeb1347451767a580ebc552ffdd9c46b420e240c3fa808573d5ecf6"
-      },
-      "kfd2Trust": {
-        "status": "release-passport-required",
-        "trustImpact": "query-release-passport-for-final-trust",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.master.service",
-      "kind": "cli",
-      "name": "kungfu master status|start|stop|restart|service plan|install|uninstall|status",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/cli/commands/master.py",
-      "artifactPath": "framework/core/src/python/kungfu/master_service.py",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/cli/commands/master.py",
-        "artifactPath": "framework/core/src/python/kungfu/master_service.py",
-        "digest": "sha256:b34389ad885143ab225bd93def0efa0276928f143514110482455a0fafc42a08"
       },
       "kfd2Trust": {
         "status": "release-passport-required",
@@ -1256,6 +1234,28 @@
         "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
         "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
         "digest": "sha256:57a8892448a0fd5fb921b6e5f4324085c61f5aff8e2f3054093d2c20e51b9426"
+      },
+      "kfd2Trust": {
+        "status": "release-passport-required",
+        "trustImpact": "query-release-passport-for-final-trust",
+        "residualRisk": []
+      },
+      "residualRisk": []
+    },
+    {
+      "id": "kungfu.runtime.service",
+      "kind": "cli",
+      "name": "kungfu runtime status|start|stop|restart|service plan|install|uninstall|status",
+      "state": "declared",
+      "detected": true,
+      "enforced": false,
+      "sourcePath": "framework/core/src/python/kungfu/cli/commands/runtime.py",
+      "artifactPath": "framework/core/src/python/kungfu/runtime_service.py",
+      "kfd1Basis": {
+        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
+        "sourcePath": "framework/core/src/python/kungfu/cli/commands/runtime.py",
+        "artifactPath": "framework/core/src/python/kungfu/runtime_service.py",
+        "digest": "sha256:8c6639ca65a13fb11287e4a1b478da5e641a733f38f178f6a24fb4ba1016f890"
       },
       "kfd2Trust": {
         "status": "release-passport-required",

@@ -3,9 +3,9 @@
 // Shared harness for the dispatch-latency bench drivers (dispatch_bench.mjs and
 // dispatch_bench_watcher.mjs, replacing the two run.sh forms), so the ADR-0005
 // evidence harness runs under plain node on every platform pnpm runs on — no
-// bash. Pure Node: child_process, fs, os. Both drivers start a master with the
+// bash. Pure Node: child_process, fs, os. Both drivers start a coordinator with the
 // KF_DISPATCH_PROBE instrument enabled, drive a typed-frame load through a
-// registered apprentice, then print the probe reports collected from the logs.
+// registered peer, then print the probe reports collected from the logs.
 
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -25,7 +25,7 @@ export function benchHome() {
 
 // dev-python import of pykungfu / dev-node load of the binding: give the
 // dynamic loader the built dist/kungfu as a fallback search dir (same as the
-// capture fixtures). Also stamps KF_DISPATCH_PROBE=1 so hero.cpp emits the
+// capture fixtures). Also stamps KF_DISPATCH_PROBE=1 so reactor.cpp emits the
 // per-frame report.
 export function probeEnv(coreDir, extra = {}) {
   const dist = path.join(coreDir, 'dist', 'kungfu');
@@ -51,10 +51,10 @@ export function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Start the master. Same invocation shape the app supervisor uses (processUtils
-// buildKungfuArgs); stdout+stderr land in <home>/master.out.
-export function startMaster(coreDir, home, env) {
-  const out = fs.openSync(path.join(home, 'master.out'), 'w');
+// Start the coordinator. Same invocation shape the app supervisor uses (processUtils
+// buildKungfuArgs); stdout+stderr land in <home>/coordinator.out.
+export function startCoordinator(coreDir, home, env) {
+  const out = fs.openSync(path.join(home, 'coordinator.out'), 'w');
   return track(
     spawn(
       'uv',
@@ -65,15 +65,13 @@ export function startMaster(coreDir, home, env) {
         '.devtools/kungfu_cli.py',
         '-H',
         home,
+        'runtime',
         'run',
-        '-c',
-        'system',
-        '-g',
-        'master',
-        '-n',
-        'master',
-        '-m',
-        'live',
+        '--home',
+        home,
+        '--runtime-dir',
+        path.join(home, 'runtime'),
+        '--low-latency',
       ],
       { cwd: coreDir, env, stdio: ['ignore', out, out] },
     ),
@@ -81,7 +79,7 @@ export function startMaster(coreDir, home, env) {
 }
 
 // Drive the load synchronously (mirrors the blocking foreground call in run.sh):
-// register a real apprentice and write `count` typed schema frames in batches
+// register a real peer and write `count` typed schema frames in batches
 // of 64. loadType selects the frame kind ("quote" typed frames by default).
 export function runLoad(benchDir, home, count, loadType, env) {
   return spawnSync(

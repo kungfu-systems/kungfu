@@ -104,7 +104,7 @@ interface StorageLayoutResult {
     manifest_catalog_projection: string;
     episode_manifest_journal_dir: string;
     episode_manifest_journal: string;
-    master_state: string;
+    coordinator_state: string;
     remote_mirrors: string;
     atlas_store: string;
   };

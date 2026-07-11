@@ -17,8 +17,8 @@ fallback. The architecture decision is
 The matching live process topology is
 [ADR-0036](../framework/core/docs/adr/ADR-0036-supervisor-and-workspace-master-topology.md):
 a per-user `supervisor` is a router/process manager, while each resolved
-workspace or fallback data root can have its own `master`. The supervisor may
-keep small routing/runtime state under the user config area; workspace master
+workspace or fallback data root can have its own `coordinator`. The supervisor may
+keep small routing/runtime state under the user config area; workspace coordinator
 process-control state belongs under the resolved data root.
 
 The split is intentional. Runtime data can be large and stateful; workspace

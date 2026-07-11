@@ -7,10 +7,10 @@ import sys
 
 import click
 
-from kungfu import master_service
+from kungfu import runtime_service
 from kungfu.cli.commands import PrioritizedCommandGroup, kfc
 
-master_command_context = kfc.pass_context()
+runtime_command_context = kfc.pass_context()
 
 
 def _json(payload):
@@ -28,11 +28,11 @@ def _plain_status(payload):
         f"{payload['supervisor']['pid'] or '-'} "
         f"({'running' if payload['supervisor']['running'] else 'stopped'})"
     )
-    if "master" in payload:
+    if "coordinator" in payload:
         click.echo(
-            "master: "
-            f"{payload['master']['pid'] or '-'} "
-            f"({'running' if payload['master']['running'] else 'stopped'})"
+            "coordinator: "
+            f"{payload['coordinator']['pid'] or '-'} "
+            f"({'running' if payload['coordinator']['running'] else 'stopped'})"
         )
     warnings = payload.get("lifecycle", {}).get("warnings") or []
     if warnings:
@@ -42,30 +42,32 @@ def _plain_status(payload):
 @kfc.group(
     cls=PrioritizedCommandGroup,
     help_priority=2,
-    help="manage the resident Kungfu master supervisor",
+    help="manage the resident Kungfu runtime",
 )
 @click.help_option("-h", "--help")
 @kfc.pass_context()
-def master(ctx):
+def runtime(ctx):
     pass
 
 
-@master.command(name="status", help="print resident master supervisor status")
+@runtime.command(name="status", help="print resident coordinator supervisor status")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@master_command_context
-def master_status(ctx, as_json):
-    payload = master_service.route_status(ctx.home, ctx.runtime_dir, ctx.config_home)
+@runtime_command_context
+def runtime_status(ctx, as_json):
+    payload = runtime_service.route_status(ctx.home, ctx.runtime_dir, ctx.config_home)
     if as_json:
         _json(payload)
         return
     _plain_status(payload)
 
 
-@master.command(help="ensure the current data-root master via the user supervisor")
+@runtime.command(
+    help="ensure the current data-root coordinator via the user supervisor"
+)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@master_command_context
+@runtime_command_context
 def ensure(ctx, as_json):
-    payload = master_service.ensure_master(
+    payload = runtime_service.ensure_coordinator(
         ctx.home,
         ctx.runtime_dir,
         ctx.log_level,
@@ -77,11 +79,11 @@ def ensure(ctx, as_json):
     click.echo("started" if payload.get("changed") else "already running")
 
 
-@master.command(help="start the resident master supervisor")
+@runtime.command(help="start the resident coordinator supervisor")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@master_command_context
+@runtime_command_context
 def start(ctx, as_json):
-    payload = master_service.ensure_master(
+    payload = runtime_service.ensure_coordinator(
         ctx.home,
         ctx.runtime_dir,
         ctx.log_level,
@@ -93,11 +95,11 @@ def start(ctx, as_json):
     click.echo("started" if payload.get("changed") else "already running")
 
 
-@master.command(help="stop the resident master supervisor")
+@runtime.command(help="stop the resident coordinator supervisor")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@master_command_context
+@runtime_command_context
 def stop(ctx, as_json):
-    payload = master_service.stop_supervisor(ctx.config_home)
+    payload = runtime_service.stop_supervisor(ctx.config_home)
     if as_json:
         _json(payload)
         return
@@ -106,21 +108,21 @@ def stop(ctx, as_json):
     click.echo("stopped" if payload.get("changed") else "already stopped")
 
 
-@master.command(help="restart the resident master supervisor")
+@runtime.command(help="restart the resident coordinator supervisor")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@master_command_context
+@runtime_command_context
 def restart(ctx, as_json):
-    stopped = master_service.stop_supervisor(ctx.config_home)
+    stopped = runtime_service.stop_supervisor(ctx.config_home)
     if stopped.get("error"):
         raise click.ClickException(str(stopped["error"]))
-    started = master_service.ensure_master(
+    started = runtime_service.ensure_coordinator(
         ctx.home,
         ctx.runtime_dir,
         ctx.log_level,
         ctx.config_home,
     )
     payload = {
-        "schema": "kungfu.master-service.restart/v1",
+        "schema": runtime_service.SCHEMA_RESULT,
         "stop": stopped,
         "start": started,
     }
@@ -130,7 +132,7 @@ def restart(ctx, as_json):
     click.echo("restarted")
 
 
-@master.command(help="run one foreground master process")
+@runtime.command(help="run one foreground coordinator process")
 @click.option(
     "--home",
     "runtime_home",
@@ -146,24 +148,24 @@ def restart(ctx, as_json):
 )
 @click.option("--low-latency", is_flag=True, hidden=True)
 def run(runtime_home, runtime_dir, low_latency):
-    sys.exit(master_service.run_master(runtime_home, runtime_dir, low_latency))
+    sys.exit(runtime_service.run_coordinator(runtime_home, runtime_dir, low_latency))
 
 
-@master.command(name="assess-worker", hidden=True)
+@runtime.command(name="assess-worker", hidden=True)
 @click.option("--runtime-dir", required=True)
 @click.option("--assessment-key", required=True)
 def assess_worker(runtime_dir, assessment_key):
-    _json(master_service.run_assessment_worker(runtime_dir, assessment_key))
+    _json(runtime_service.run_assessment_worker(runtime_dir, assessment_key))
 
 
-@master.command(
+@runtime.command(
     name="assessments",
     help="show claim assessment freshness and fitness before proof/replay drill-down",
 )
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@master_command_context
+@runtime_command_context
 def assessments(ctx, as_json):
-    payload = master_service.publish_assessment_snapshot(ctx.runtime_dir)
+    payload = runtime_service.publish_assessment_snapshot(ctx.runtime_dir)
     if as_json:
         _json(payload)
         return
@@ -184,22 +186,22 @@ def assessments(ctx, as_json):
                 click.echo(f"  residual-risk={'; '.join(risks)}")
 
 
-@master.command(name="trust", help="require a fresh assessment for a purpose")
+@runtime.command(name="trust", help="require a fresh assessment for a purpose")
 @click.option("--assessment-key", required=True)
 @click.option("--purpose", required=True)
 @click.option("--await-seconds", type=float, default=0.0, show_default=True)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@master_command_context
+@runtime_command_context
 def trust(ctx, assessment_key, purpose, await_seconds, as_json):
     if await_seconds > 0:
-        payload = master_service.storage_service.trust_await(
+        payload = runtime_service.storage_service.trust_await(
             ctx.runtime_dir,
             assessment_key,
             purpose=purpose,
             timeout_seconds=await_seconds,
         )
     else:
-        payload = master_service.storage_service.trust_require(
+        payload = runtime_service.storage_service.trust_require(
             ctx.runtime_dir, assessment_key, purpose=purpose
         )
     if as_json:
@@ -210,7 +212,7 @@ def trust(ctx, assessment_key, purpose, await_seconds, as_json):
         raise click.exceptions.Exit(2)
 
 
-@master.command(help="run the foreground master supervisor service loop")
+@runtime.command(help="run the foreground coordinator supervisor service loop")
 @click.option(
     "--home",
     "runtime_home",
@@ -235,7 +237,7 @@ def supervise(runtime_home, runtime_dir, config_home, foreground):
     callable(foreground)
     root = click.get_current_context().parent.parent
     sys.exit(
-        master_service.run_supervisor(
+        runtime_service.run_supervisor(
             getattr(root, "log_level", "warning"),
             config_home=config_home,
             home=runtime_home,
@@ -244,21 +246,21 @@ def supervise(runtime_home, runtime_dir, config_home, foreground):
     )
 
 
-@master.group(
+@runtime.group(
     cls=PrioritizedCommandGroup,
-    help="install, remove, and inspect the user-level master service plan",
+    help="install, remove, and inspect the user-level coordinator service plan",
 )
 @click.help_option("-h", "--help")
-@master_command_context
+@runtime_command_context
 def service(ctx):
     pass
 
 
 @service.command(help="print the platform service plan without writing files")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@master_command_context
+@runtime_command_context
 def plan(ctx, as_json):
-    payload = master_service.service_plan(
+    payload = runtime_service.service_plan(
         ctx.home, ctx.runtime_dir, ctx.log_level, ctx.config_home
     ).as_dict()
     if as_json:
@@ -270,9 +272,9 @@ def plan(ctx, as_json):
 
 @service.command(name="status", help="print user-level service installation status")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@master_command_context
+@runtime_command_context
 def service_status(ctx, as_json):
-    payload = master_service.service_status(
+    payload = runtime_service.service_status(
         ctx.home,
         ctx.runtime_dir,
         ctx.log_level,
@@ -295,10 +297,10 @@ def service_status(ctx, as_json):
     help="write the service file; default is a dry-run preview",
 )
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@master_command_context
+@runtime_command_context
 def install(ctx, execute, as_json):
     if execute:
-        payload = master_service.install_service(
+        payload = runtime_service.install_service(
             ctx.home,
             ctx.runtime_dir,
             ctx.log_level,
@@ -306,11 +308,11 @@ def install(ctx, execute, as_json):
         )
     else:
         payload = {
-            "schema": "kungfu.master-service.result/v1",
+            "schema": runtime_service.SCHEMA_RESULT,
             "action": "install",
             "changed": False,
             "dryRun": True,
-            "plan": master_service.service_plan(
+            "plan": runtime_service.service_plan(
                 ctx.home,
                 ctx.runtime_dir,
                 ctx.log_level,
@@ -331,10 +333,10 @@ def install(ctx, execute, as_json):
     help="remove the service file; default is a dry-run preview",
 )
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@master_command_context
+@runtime_command_context
 def uninstall(ctx, execute, as_json):
     if execute:
-        payload = master_service.uninstall_service(
+        payload = runtime_service.uninstall_service(
             ctx.home,
             ctx.runtime_dir,
             ctx.log_level,
@@ -342,11 +344,11 @@ def uninstall(ctx, execute, as_json):
         )
     else:
         payload = {
-            "schema": "kungfu.master-service.result/v1",
+            "schema": runtime_service.SCHEMA_RESULT,
             "action": "uninstall",
             "changed": False,
             "dryRun": True,
-            "plan": master_service.service_plan(
+            "plan": runtime_service.service_plan(
                 ctx.home,
                 ctx.runtime_dir,
                 ctx.log_level,

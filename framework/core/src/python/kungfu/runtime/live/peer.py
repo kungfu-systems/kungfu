@@ -9,13 +9,13 @@ from typing import Any
 
 from . import os_signal  # type: ignore[attr-defined]  # native submodule
 
-# native pybind11 binding (no stubs); Any so `yjj.apprentice` is a usable base
+# native pybind11 binding (no stubs); Any so `yjj.peer` is a usable base
 yjj: Any = kungfu.__binding__.runtime
 
 
-class Apprentice(yjj.apprentice):
+class Peer(yjj.peer):
     def __init__(self, ctx):
-        yjj.apprentice.__init__(
+        yjj.peer.__init__(
             self,
             yjj.location(
                 kfr.MODES[ctx.mode],
@@ -33,7 +33,7 @@ class Apprentice(yjj.apprentice):
 
     def go(self):
         kfio.checkin(self.ctx, self.io_device)
-        yjj.apprentice.go(self)
+        yjj.peer.go(self)
 
     def exit_gracefully(self, signum, frame):
         self.stop()

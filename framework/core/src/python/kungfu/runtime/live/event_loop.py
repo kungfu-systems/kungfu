@@ -8,8 +8,8 @@ import subprocess
 from collections import deque
 
 
-class KungfuEventLoop(asyncio.AbstractEventLoop):
-    def __init__(self, ctx, hero):
+class LiveEventLoop(asyncio.AbstractEventLoop):
+    def __init__(self, ctx, reactor):
         self._time = 0
         self._running = False
         self._immediate = deque()
@@ -17,33 +17,33 @@ class KungfuEventLoop(asyncio.AbstractEventLoop):
         self._exception = None
         self._current = None
         self._ctx = ctx
-        self._hero = hero
-        self.home = self._hero.home
+        self._reactor = reactor
+        self.home = self._reactor.home
         asyncio.set_event_loop(self)
 
     def get_debug(self):
         return False
 
     def time(self):
-        return self._hero.now()
+        return self._reactor.now()
 
     def get_home_uid(self):
-        return self._hero.get_home_uid()
+        return self._reactor.get_home_uid()
 
     def get_home_uname(self):
-        return self._hero.get_home_uname()
+        return self._reactor.get_home_uname()
 
     def get_begin_time(self):
-        return self._hero.get_begin_time()
+        return self._reactor.get_begin_time()
 
     def get_end_time(self):
-        return self._hero.get_end_time()
+        return self._reactor.get_end_time()
 
     def pre_setup(self):
-        self._hero.pre_setup()
+        self._reactor.pre_setup()
 
     def setup(self):
-        self._hero.setup()
+        self._reactor.setup()
 
     def post_step(self):
         ready = deque()
@@ -54,7 +54,7 @@ class KungfuEventLoop(asyncio.AbstractEventLoop):
             scheduled = []
             while self._scheduled:
                 handle = heapq.heappop(self._scheduled)
-                if handle._when <= self._hero.now():
+                if handle._when <= self._reactor.now():
                     handle._scheduled = False
                     ready.append(handle)
                 else:
@@ -64,7 +64,7 @@ class KungfuEventLoop(asyncio.AbstractEventLoop):
         # 一次性执行本轮就绪 handle。不再用单槽 self._current + 无条件重新入队:
         # asyncio Task/Future 自身通过 call_soon(-> self._immediate) 与 future done-callback
         # 安排续跑;事件循环重复入队已跑过的 handle 会与该自调度冲突,对已完成 Task 重复
-        # __step 触发 InvalidStateError(见 tests/python/test_coloop_concurrency.py)。
+        # __step 触发 InvalidStateError(见 tests/python/test_event_loop_concurrency.py)。
         while ready:
             handle = ready.popleft()
             if not handle._cancelled:
@@ -76,7 +76,9 @@ class KungfuEventLoop(asyncio.AbstractEventLoop):
     def run(self, step_limit=0):
         self._running = True
         self._ctx.logger.info(
-            "[{:08x}] {} running".format(self._hero.home.uid, self._hero.home.uname)
+            "[{:08x}] {} running".format(
+                self._reactor.home.uid, self._reactor.home.uname
+            )
         )
         self.setup()
         while self.is_live():
@@ -85,27 +87,27 @@ class KungfuEventLoop(asyncio.AbstractEventLoop):
 
         self.on_exit()
         self._ctx.logger.info(
-            "[{:08x}] {} done".format(self._hero.home.uid, self._hero.home.uname)
+            "[{:08x}] {} done".format(self._reactor.home.uid, self._reactor.home.uname)
         )
 
     def step(self, num=0):
-        self._hero.step(num)
+        self._reactor.step(num)
         self.post_step()
 
     def on_exit(self):
-        self._hero.on_exit()
+        self._reactor.on_exit()
 
     def _timer_handle_cancelled(self, handle):
         pass
 
     def is_live(self):
-        return self._hero.live
+        return self._reactor.live
 
     def is_running(self):
-        return self._hero.live
+        return self._reactor.live
 
     def is_closed(self):
-        return not self._hero.live
+        return not self._reactor.live
 
     def stop(self):
         self._running = False
@@ -128,11 +130,11 @@ class KungfuEventLoop(asyncio.AbstractEventLoop):
         if delay < 0:
             raise Exception("Can't schedule in the past")
         return self.call_at(
-            self._hero.now() + delay * int(1e9), callback, *args, context=context
+            self._reactor.now() + delay * int(1e9), callback, *args, context=context
         )
 
     def call_at(self, when, callback, *args, context=None):
-        if when < self._hero.now():
+        if when < self._reactor.now():
             raise Exception("Can't schedule in the past")
         handle = asyncio.TimerHandle(when, callback, args, self, context)
         heapq.heappush(self._scheduled, handle)

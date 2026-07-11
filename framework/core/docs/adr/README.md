@@ -53,7 +53,7 @@ A record's **Status** says where it stands:
 | [0033](ADR-0033-episode-causal-segment-object.md) | accepted | Episode is the first-class causal segment object |
 | [0034](ADR-0034-yijinjing-episode-manifest-journal.md) | accepted | Episode manifest records live in the yijinjing journal format |
 | [0035](ADR-0035-workspace-local-kungfu-data-home.md) | accepted | Workspace-local `.kungfu` is the default fact ledger home |
-| [0036](ADR-0036-supervisor-and-workspace-master-topology.md) | accepted | Per-user supervisor manages per-data-root masters |
+| [0036](ADR-0036-supervisor-and-workspace-coordinator-topology.md) | superseded by 0057 | Established the per-user supervisor and per-data-root coordinator topology |
 | [0037](ADR-0037-storage-records-hana-core-kernel-metadata.md) | accepted | ADR-0018 storage-service records are Hana-core kernel metadata; JSON is an edge projection, not the contract |
 | [0038](ADR-0038-location-namespace-terminology.md) | accepted | Location middle identity segment is namespace |
 | [0039](ADR-0039-unified-view-interface-encapsulates-flatbuffers.md) | proposed | a single kungfu view interface is the sole FlatBuffers access point; raw FB is not called elsewhere |
@@ -69,11 +69,12 @@ A record's **Status** says where it stands:
 | [0049](ADR-0049-layer-complete-products-and-domain-neutral-core.md) | accepted; staged | every product layer is independently complete and the core remains domain-neutral |
 | [0050](ADR-0050-assembled-runtime-stdlib-pruning-policy.md) | accepted | stdlib pruning policy for the assembled runtime — family-level subtraction, declarative fail-closed manifest |
 | [0051](ADR-0051-kfd-contract-world-fact-admission-and-trust.md) | accepted; staged | KFD contract worlds govern fact admission, historical interpretation, and trust assessment |
-| [0052](ADR-0052-kfd2-assessment-lifecycle-and-executors.md) | accepted; staged | KFD-2 assessments are claim-triggered jobs coordinated by the workspace master |
+| [0052](ADR-0052-kfd2-assessment-lifecycle-and-executors.md) | accepted; staged | KFD-2 assessments are claim-triggered jobs coordinated by the workspace coordinator |
 | [0053](ADR-0053-self-contained-episode-bundles.md) | proposed | Episode bundles carry their owned bytes, and import materializes them |
 | [0054](ADR-0054-libwasm-production-runtime-and-release.md) | accepted | libwasm is a governed product runtime, not a copied spike library |
 | [0055](ADR-0055-retire-journal-session-and-separate-runtime-state-from-projection.md) | accepted | retire journal Session; separate live state from schema projections |
 | [0056](ADR-0056-retire-legacy-journal-cli-lifecycle-tools.md) | accepted | journal lifecycle management belongs to Storage and Episode boundaries |
+| [0057](ADR-0057-domain-neutral-live-runtime-terminology.md) | accepted | live runtime internals use reactor, peer, and coordinator; the public command is `kungfu runtime` |
 
 ## Reading by theme
 
@@ -157,7 +158,7 @@ A record's **Status** says where it stands:
   [0035](ADR-0035-workspace-local-kungfu-data-home.md) (workspace-local
   `.kungfu/` as the default Episode/fact ledger home, with `~/.kungfu-config`
   as the user config home and `KF_HOME` retained as machine fallback), and
-  [0036](ADR-0036-supervisor-and-workspace-master-topology.md) (a per-user
+  [0036](ADR-0036-supervisor-and-workspace-coordinator-topology.md) (a per-user
   supervisor routes CLI/GUI/TUI entrypoints to per-data-root masters while
   storage remains daemonless), and
   [0037](ADR-0037-storage-records-hana-core-kernel-metadata.md) (the ADR-0018
@@ -177,7 +178,7 @@ A record's **Status** says where it stands:
   declaration, replayable fact-admission, historical interpretation, and KFD-2
   trust-assessment path),
   [0052](ADR-0052-kfd2-assessment-lifecycle-and-executors.md) (claim-triggered
-  assessment jobs, workspace-master coordination, Assessment Episodes, and
+  assessment jobs, workspace-coordinator coordination, Assessment Episodes, and
   equivalent process/thread executors), and
   [0055](ADR-0055-retire-journal-session-and-separate-runtime-state-from-projection.md)
   (Episode replaces the retired Session replay anchor), and
@@ -227,7 +228,7 @@ A record's **Status** says where it stands:
   how product and user facts enter a KFD-declared contract world and become
   eligible for historical query and trust assessment.
 - [`docs/kfd2-trust-assessment.md`](../../../../docs/kfd2-trust-assessment.md) —
-  when KFD-2 runs, how the workspace master coordinates it, and how Desktop and
+  when KFD-2 runs, how the workspace coordinator coordinates it, and how Desktop and
   embedded executors share one contract.
 - [`docs/product-layers.md`](../../../../docs/product-layers.md) — independent
   adoption products and their qualification boundaries.

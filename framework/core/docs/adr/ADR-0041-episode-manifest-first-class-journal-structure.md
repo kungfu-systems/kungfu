@@ -108,7 +108,7 @@ operations tighten around that separation:
    states, so a partial Episode is never presented as complete.
 
    The implementation must name one logical writer owner for the manifest
-   location. Masterless operation does not waive ownership: a process must acquire
+   location. Daemonless operation does not waive ownership: a process must acquire
    the same data-root-scoped writer guard or fail rather than append concurrently
    to an active catalog writer.
 
@@ -251,5 +251,5 @@ schema-version ADR rather than silently changing the record set.
   deferred to the Episode ADR; the field layout chosen here must not foreclose a
   content-addressed identity / hash-root model later.
 - A prose-only writer ownership rule is insufficient. The implementation needs a
-  data-root-scoped guard and crash fixtures before a master and masterless process
+  data-root-scoped guard and crash fixtures before a coordinator and daemonless process
   can safely target the same manifest location.

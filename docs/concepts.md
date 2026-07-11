@@ -28,7 +28,7 @@ principles behind them see [`design-philosophy.md`](design-philosophy.md).
 | **fact surface** | A declared family of domain facts inside a contract world. It has one schema owner plus explicit source, identity, time, correction, conflict, redaction, and known-limit semantics. See [ADR-0051](../framework/core/docs/adr/ADR-0051-kfd-contract-world-fact-admission-and-trust.md). |
 | **fact admission** | The replayable decision that an observation satisfies a pinned fact-surface declaration. Recorded observations may instead remain unregistered, incompatible, authority-ambiguous, or unverifiable; only admitted facts enter that contract world's canonical fold. |
 | **trust report** | A KFD-2 assessment of a concrete claim for an intended purpose, bound to declaration roots, Episode/query proof, responsibility, validation, evidence gaps, and residual risk. It is not a universal boolean attached to a fact. |
-| **assessment job** | A durable KFD-2 evaluation identified by claim, purpose, pinned cut, declaration roots, and policy version. The workspace master coordinates it in Desktop; embedded hosts may use the same contract with a thread executor. |
+| **assessment job** | A durable KFD-2 evaluation identified by claim, purpose, pinned cut, declaration roots, and policy version. The workspace coordinator coordinates it in Desktop; embedded hosts may use the same contract with a thread executor. |
 | **Assessment Episode** | A causal Episode containing assessment lifecycle and TrustReport output. It depends on the sealed work Episode and proof it assesses; it never mutates that sealed Episode. |
 | **assessor executor** | Replaceable placement for one assessment contract: inline, thread, process, or sandbox. Placement may change, but pinned inputs, location identity, single-writer result commit, and report semantics do not. |
 | **yijinjing** | The append-only **journal and storage-semantic kernel** — frame/page mmap, reader/writer, locator/location, causal event ranges, payload references, manifests, source records, fsck reports, provider contracts, and the closed runtime fact schema. Runtime backends and the FlatBuffers open layer live above it in `libkungfu`. |
@@ -63,10 +63,10 @@ These appear in the control-axis ADRs (0003–0005) and in the code.
 
 | Term | What it is |
 |---|---|
-| **hero** | The reactive **engine core** (`runtime::practice::hero`): a participant on the journal bus that drives a single-threaded event loop and exposes journal events as an RxCpp observable stream. It is the base of the practice layer. |
-| **apprentice** | A `hero` specialized as a **client/peer** (`apprentice : public hero`): the typical participant that attaches to the bus to consume and produce events. |
-| **watcher** | The **Node (N-API) binding** (`Watcher : public apprentice`): it consumes the journal/state and exposes it to JavaScript for the reference UIs. |
-| **coloop** | The **Python event-loop integration** (`KungfuEventLoop`): fuses the engine loop with Python `asyncio` on a single thread — see [ADR-0003](../framework/core/docs/adr/ADR-0003-control-axis-python-coroutine-integration.md). |
+| **reactor** | The reactive **engine core** (`runtime::live::reactor`): a participant on the journal bus that drives a single-threaded event loop and exposes journal events as an RxCpp observable stream. It is the base of the live runtime layer. |
+| **peer** | A `reactor` specialized as a **client/peer** (`peer : public reactor`): the typical participant that attaches to the bus to consume and produce events. |
+| **watcher** | The **Node (N-API) binding** (`Watcher : public peer`): it consumes the journal/state and exposes it to JavaScript for the reference UIs. |
+| **event loop** | The **Python event-loop integration** (`LiveEventLoop`): fuses the engine loop with Python `asyncio` on a single thread — see [ADR-0003](../framework/core/docs/adr/ADR-0003-control-axis-python-coroutine-integration.md). |
 
 ## Layers (in brief)
 

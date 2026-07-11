@@ -1,3 +1,4 @@
+#include <kungfu/runtime/live/identity.h>
 #include <kungfu/runtime/util/rocks.h>
 #include <kungfu/yijinjing/common.h>
 namespace kungfu::runtime::util {
@@ -139,16 +140,17 @@ void rocks::clear_rocksdb(rocksdb::DB **db) {
   *db = nullptr;
 }
 
-// Runtime side of the location master-kv seam: the core's uid-seed
-// verification asks the master's kv map through location::master_kv(); this
+// Runtime side of the location coordinator-kv seam: the core's uid-seed
+// verification asks the coordinator's kv map through location::coordinator_kv(); this
 // backs it with the rocksdb MAP layout. Installed on load (static init) and
 // again explicitly from the io_device constructor, so static-library builds
 // that drop unreferenced objects still get it before any runtime lookup.
-void install_master_kv_provider() {
-  data::location::master_kv() = [](const data::location &self, const std::string &key) {
+void install_coordinator_kv_provider() {
+  data::location::coordinator_kv() = [](const data::location &self, const std::string &key) {
     namespace es = yijinjing::enums;
-    const std::string rocksdb_dir = self.locator->layout_directory(es::layout::MAP, es::location_role::SYSTEM, "master",
-                                                                   "master", self.mode, false);
+    const std::string rocksdb_dir =
+        self.locator->layout_directory(es::layout::MAP, es::location_role::SYSTEM, live::COORDINATOR_WIRE_NAMESPACE,
+                                       live::COORDINATOR_WIRE_NAME, self.mode, false);
     SPDLOG_TRACE("rocksdb_dir: {}", rocksdb_dir);
     std::string value{};
     rocks::get_kv(key, value, rocksdb_dir);
@@ -156,8 +158,8 @@ void install_master_kv_provider() {
   };
 }
 
-static const bool master_kv_provider_installed = [] {
-  install_master_kv_provider();
+static const bool coordinator_kv_provider_installed = [] {
+  install_coordinator_kv_provider();
   return true;
 }();
 

@@ -4,17 +4,17 @@
 // Created by Keren Dong on 2019-06-15.
 //
 
-#ifndef KUNGFU_MASTER_H
-#define KUNGFU_MASTER_H
+#ifndef KUNGFU_RUNTIME_LIVE_COORDINATOR_H
+#define KUNGFU_RUNTIME_LIVE_COORDINATOR_H
 
 #include <kungfu/runtime/common.h>
 
 #include <kungfu/runtime/io.h>
-#include <kungfu/runtime/practice/hero.h>
+#include <kungfu/runtime/live/reactor.h>
 #include <kungfu/runtime/state_cache/manager.h>
 #include <kungfu/yijinjing/journal/common.h>
 
-namespace kungfu::runtime::practice {
+namespace kungfu::runtime::live {
 
 struct timer_task {
   int64_t checkpoint;
@@ -23,17 +23,17 @@ struct timer_task {
   int64_t repeat_count;
 };
 
-class master : public hero {
+class coordinator : public reactor {
 public:
-  explicit master(const yijinjing::data::location_ptr &home, bool low_latency = false);
+  explicit coordinator(const yijinjing::data::location_ptr &home, bool low_latency = false);
 
-  explicit master(const kungfu::runtime::io_device_ptr &io_device);
+  explicit coordinator(const kungfu::runtime::io_device_ptr &io_device);
 
   void on_exit() override;
 
   void notify_deregister_on_exit();
 
-  void notify_master_deregister_on_exit();
+  void notify_coordinator_deregister_on_exit();
 
   void on_notify() override;
 
@@ -43,9 +43,9 @@ public:
 
   virtual void on_interval_check(int64_t nanotime) = 0;
 
-  void register_app(const event_ptr &event);
+  void register_peer(const event_ptr &event);
 
-  void deregister_app(int64_t trigger_time, uint32_t app_location_uid);
+  void deregister_peer(int64_t trigger_time, uint32_t peer_location_uid);
 
   void on_request_deregister(const event_ptr &event);
 
@@ -57,7 +57,7 @@ protected:
   int64_t last_check_;
   state_cache::manager state_cache_;
 
-  std::unordered_map<uint32_t, uint32_t> app_cmd_locations_ = {};
+  std::unordered_map<uint32_t, uint32_t> peer_cmd_locations_ = {};
   std::unordered_map<uint32_t, std::unordered_map<int32_t, timer_task>> timer_tasks_ = {};
 
   void react() override;
@@ -66,7 +66,7 @@ protected:
 
   void on_frame() final;
 
-  void try_add_location(int64_t trigger_time, const yijinjing::data::location_ptr &app_location);
+  void try_add_location(int64_t trigger_time, const yijinjing::data::location_ptr &peer_location);
 
 private:
   void handle_timer_tasks();
@@ -103,5 +103,5 @@ private:
 
   void write_bands(int64_t trigger_time, const yijinjing::journal::writer_ptr &writer);
 };
-} // namespace kungfu::runtime::practice
-#endif // KUNGFU_MASTER_H
+} // namespace kungfu::runtime::live
+#endif // KUNGFU_RUNTIME_LIVE_COORDINATOR_H

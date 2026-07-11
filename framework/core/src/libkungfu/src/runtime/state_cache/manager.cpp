@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <kungfu/common.h>
-#include <kungfu/runtime/practice/hero.h>
+#include <kungfu/runtime/live/reactor.h>
 #include <kungfu/runtime/projection/flatbuffer.h>
 #include <kungfu/runtime/state_cache/manager.h>
 #include <kungfu/yijinjing/schema/registry.h>
@@ -12,7 +12,7 @@ using namespace kungfu::yijinjing;
 using namespace kungfu::yijinjing::enums;
 using namespace kungfu::yijinjing::types;
 using namespace kungfu::runtime;
-using namespace kungfu::runtime::practice;
+using namespace kungfu::runtime::live;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::runtime::state_cache;
 
@@ -27,7 +27,7 @@ namespace kungfu::runtime::state_cache {
 
 manager::manager(const kungfu::runtime::io_device_ptr &io_device)
     : profile_(io_device->get_locator()),
-      ledger_home_location_(practice::make_system_location("service", "ledger", io_device->get_locator())) {
+      ledger_home_location_(live::make_system_location("service", "ledger", io_device->get_locator())) {
   bypass_cached_ = std::getenv("KF_BYPASS_CACHED") != nullptr;
   profile_.setup();
   profile_get_all(profile_, profile_restore_bank_);

@@ -48,7 +48,7 @@ void set_error_log_dir(const std::string &path) { error_log_dir = path; }
 
 namespace {
 // Crash-path helpers. On Windows the crash arrives via an SEH __except filter
-// (hero.cpp) or the top-level unhandled-exception filter (signal.cpp), not POSIX
+// (reactor.cpp) or the top-level unhandled-exception filter (signal.cpp), not POSIX
 // signals, but the same hazard applies: the faulting thread may already hold the
 // spdlog, CRT stdio, or C locale lock. So the crash path must avoid KF_LOG_*
 // (spdlog), std::ofstream / stdio, std::localtime and heap-heavy std::string
@@ -280,7 +280,7 @@ void write_crash_minidump(EXCEPTION_POINTERS *ep, const SYSTEMTIME &st) {
 
 // Crash dump for the Windows SEH / unhandled-exception path. Keeps returning
 // EXCEPTION_EXECUTE_HANDLER so it can be used directly as an SEH __except filter
-// expression (hero.cpp) and wrapped for SetUnhandledExceptionFilter (signal.cpp).
+// expression (reactor.cpp) and wrapped for SetUnhandledExceptionFilter (signal.cpp).
 //
 // Note: a stack-overflow exception can corrupt the SEH frame chain and defeat
 // this path; that limitation is documented (W-A accepted, see header).

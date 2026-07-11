@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Event-dispatch latency baseline, master form (ADR-0005 evidence).
+// Event-dispatch latency baseline, coordinator form (ADR-0005 evidence).
 //
-// Starts a master with the KF_DISPATCH_PROBE instrument enabled, drives it
-// with an open-layer event burst from a registered apprentice (dispatch_load.py),
-// then prints the probe reports collected on the master side. Requires the core
+// Starts a coordinator with the KF_DISPATCH_PROBE instrument enabled, drives it
+// with an open-layer event burst from a registered peer (dispatch_load.py),
+// then prints the probe reports collected on the coordinator side. Requires the core
 // dev environment (built dist/kungfu) and the repo-pinned node (run under
 // ./shifu or fnm so process.execPath matches the built binding).
 //
@@ -25,7 +25,7 @@ import {
   probeEnv,
   runLoad,
   sleep,
-  startMaster,
+  startCoordinator,
   waitExit,
 } from './_bench.mjs';
 
@@ -33,7 +33,7 @@ const benchDir = path.dirname(fileURLToPath(import.meta.url));
 const coreDir = path.resolve(benchDir, '..', '..'); // framework/core
 
 const count = Number.parseInt(process.argv[2] || '200000', 10);
-// "quote" (typed schema frames) by default: both master and the node watcher
+// "quote" (typed schema frames) by default: both coordinator and the node watcher
 // pre-filter open-layer events in is_reactable before rx, so only typed frames
 // actually traverse the filter chains being measured
 const loadType = process.argv[3] || 'quote';
@@ -44,13 +44,15 @@ console.log(
 );
 
 const env = probeEnv(coreDir);
-const master = startMaster(coreDir, home, env);
+const coordinator = startCoordinator(coreDir, home, env);
 
-// let master bind sockets and settle
+// let coordinator bind sockets and settle
 await sleep(3000);
-if (!alive(master)) {
-  console.error('master failed to start:');
-  process.stderr.write(fs.readFileSync(path.join(home, 'master.out'), 'utf8'));
+if (!alive(coordinator)) {
+  console.error('coordinator failed to start:');
+  process.stderr.write(
+    fs.readFileSync(path.join(home, 'coordinator.out'), 'utf8'),
+  );
   process.exit(1);
 }
 
@@ -58,17 +60,17 @@ runLoad(benchDir, home, count, loadType, env);
 
 // let at least one 5s probe report tick fire after the burst settles
 await sleep(6000);
-master.kill();
-await waitExit(master, 5000);
+coordinator.kill();
+await waitExit(coordinator, 5000);
 
-console.log('--- dispatch probe reports (master) ---');
+console.log('--- dispatch probe reports (coordinator) ---');
 const reports = collectProbeReports([
-  path.join(home, 'master.out'),
+  path.join(home, 'coordinator.out'),
   ...findLogs(path.join(home, 'runtime')),
 ]);
 if (reports.length === 0) {
   console.error(
-    `no probe output found — check ${path.join(home, 'master.out')}`,
+    `no probe output found — check ${path.join(home, 'coordinator.out')}`,
   );
   process.exit(1);
 }

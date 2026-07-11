@@ -29,7 +29,7 @@ import * as ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import * as jsxRuntime from 'react/jsx-runtime';
 import {
-  MASTER_STATUS_GET_CHANNEL,
+  RUNTIME_STATUS_GET_CHANNEL,
   SESSION_WINDOW_OPEN_CHANNEL,
   SESSION_WINDOW_RESTORE_CHANNEL,
   SESSION_WINDOW_SNAPSHOT_CHANNEL,
@@ -206,7 +206,7 @@ function statusColor(severity: StatusBarSeverity | undefined): string {
   return '#cccccc';
 }
 
-type MasterStatusPayload = {
+type RuntimeStatusPayload = {
   status?: string;
   configHome?: string;
   dataRoot?: string;
@@ -217,7 +217,7 @@ type MasterStatusPayload = {
     warnings?: string[];
   };
   supervisor?: { pid?: number | null; running?: boolean };
-  master?: { pid?: number | null; running?: boolean };
+  coordinator?: { pid?: number | null; running?: boolean };
   route?: { routeId?: string; registered?: boolean; stale?: boolean };
   routes?: { count?: number; staleCount?: number };
   assessments?: {
@@ -232,30 +232,30 @@ type MasterStatusPayload = {
   };
 };
 
-type MasterStatusResult = {
+type RuntimeStatusResult = {
   ok: boolean;
-  payload: MasterStatusPayload | null;
+  payload: RuntimeStatusPayload | null;
   error: string;
   updatedAt: number;
 };
 
-function masterStatusText(status: MasterStatusResult | null): string {
-  if (!status) return 'master checking';
-  if (!status.ok || !status.payload) return 'master unavailable';
+function runtimeStatusText(status: RuntimeStatusResult | null): string {
+  if (!status) return 'runtime checking';
+  if (!status.ok || !status.payload) return 'runtime unavailable';
   const lifecycle = status.payload.lifecycle?.state || status.payload.status;
-  if (lifecycle === 'stale-route') return 'master stale route';
-  if (lifecycle === 'degraded') return 'master degraded';
-  if (lifecycle === 'dead') return 'master dead pid';
-  if (lifecycle === 'orphan-master') return 'master orphan';
+  if (lifecycle === 'stale-route') return 'runtime stale route';
+  if (lifecycle === 'degraded') return 'runtime degraded';
+  if (lifecycle === 'dead') return 'runtime dead pid';
+  if (lifecycle === 'orphan-coordinator') return 'runtime orphan';
   const supervisor = status.payload.supervisor?.running;
-  const master = status.payload.master?.running;
-  if (supervisor && master) return 'master live';
-  if (supervisor) return 'master starting';
-  if (master) return 'master orphan';
-  return 'master offline';
+  const runtime = status.payload.coordinator?.running;
+  if (supervisor && runtime) return 'runtime live';
+  if (supervisor) return 'runtime starting';
+  if (runtime) return 'runtime orphan';
+  return 'runtime offline';
 }
 
-function supervisorStatusText(status: MasterStatusResult | null): string {
+function supervisorStatusText(status: RuntimeStatusResult | null): string {
   if (!status) return 'supervisor checking';
   if (!status.ok || !status.payload) return 'supervisor unavailable';
   const lifecycle = status.payload.lifecycle?.state || status.payload.status;
@@ -266,8 +266,8 @@ function supervisorStatusText(status: MasterStatusResult | null): string {
     : 'supervisor stopped';
 }
 
-function statusTooltip(status: MasterStatusResult | null): string {
-  if (!status) return 'Supervisor/master status is being checked';
+function statusTooltip(status: RuntimeStatusResult | null): string {
+  if (!status) return 'Supervisor/runtime status is being checked';
   if (!status.ok || !status.payload)
     return status.error || 'Status unavailable';
   const payload = status.payload;
@@ -285,7 +285,7 @@ function statusTooltip(status: MasterStatusResult | null): string {
   ].join('\n');
 }
 
-function trustStatusText(status: MasterStatusResult | null): string {
+function trustStatusText(status: RuntimeStatusResult | null): string {
   const assessments = status?.payload?.assessments;
   if (!assessments) return 'trust unavailable';
   const counts = assessments.counts ?? {};
@@ -301,7 +301,7 @@ function trustStatusText(status: MasterStatusResult | null): string {
   return `trust fresh ${String(counts.fresh ?? 0)}`;
 }
 
-function trustTooltip(status: MasterStatusResult | null): string {
+function trustTooltip(status: RuntimeStatusResult | null): string {
   const assessments = status?.payload?.assessments?.assessments;
   if (!assessments) return 'Assessment subscription is unavailable';
   if (assessments.length === 0) return 'No load-bearing claims assessed';
@@ -635,11 +635,11 @@ function App() {
   const [windowChrome, controlWindow] = useWindowChrome();
   const [config, setConfig] = React.useState<KungfuResolvedConfig | null>(null);
   const [configError, setConfigError] = React.useState('');
-  const [masterLive, setMasterLive] = React.useState(
+  const [runtimeLive, setRuntimeLive] = React.useState(
     () => runtime.ledger?.health().live ?? false,
   );
-  const [masterStatus, setMasterStatus] =
-    React.useState<MasterStatusResult | null>(null);
+  const [runtimeStatus, setRuntimeStatus] =
+    React.useState<RuntimeStatusResult | null>(null);
   const [statusBarItems, setStatusBarItems] = React.useState<
     Record<string, StatusBarItem>
   >({});
@@ -658,19 +658,20 @@ function App() {
   }, []);
 
   React.useEffect(() => {
-    const refresh = () => setMasterLive(runtime.ledger?.health().live ?? false);
+    const refresh = () =>
+      setRuntimeLive(runtime.ledger?.health().live ?? false);
     refresh();
     const timer = setInterval(refresh, 5000);
     return () => clearInterval(timer);
   }, [runtime.ledger]);
 
   React.useEffect(() => {
-    type MasterStatusIpc = {
-      invoke: (channel: string) => Promise<MasterStatusResult>;
+    type RuntimeStatusIpc = {
+      invoke: (channel: string) => Promise<RuntimeStatusResult>;
     };
-    let ipc: MasterStatusIpc | null = null;
+    let ipc: RuntimeStatusIpc | null = null;
     try {
-      ipc = (window.require('electron') as { ipcRenderer: MasterStatusIpc })
+      ipc = (window.require('electron') as { ipcRenderer: RuntimeStatusIpc })
         .ipcRenderer;
     } catch {
       ipc = null;
@@ -679,13 +680,13 @@ function App() {
     let cancelled = false;
     const refresh = () => {
       void ipc
-        .invoke(MASTER_STATUS_GET_CHANNEL)
+        .invoke(RUNTIME_STATUS_GET_CHANNEL)
         .then((next) => {
-          if (!cancelled) setMasterStatus(next);
+          if (!cancelled) setRuntimeStatus(next);
         })
         .catch((e: unknown) => {
           if (cancelled) return;
-          setMasterStatus({
+          setRuntimeStatus({
             ok: false,
             payload: null,
             error: e instanceof Error ? e.message : String(e),
@@ -966,7 +967,7 @@ function App() {
       message: runtime.message,
       runtimeDir: runtime.runtimeDir,
       kungfuVersion: runtime.kungfuVersion,
-      masterStatus,
+      runtimeStatus,
       buildInfo: runtime.buildInfo,
       skillManager: runtime.skillManager,
       exports: runtime.exports,
@@ -1051,24 +1052,25 @@ function App() {
     setCommandText('');
   }, [commandText, enabled, openKfx, showNotification]);
 
-  const supervisorRunning = masterStatus?.payload?.supervisor?.running === true;
-  const masterRunning =
-    masterStatus?.payload?.master?.running === true ||
-    (!masterStatus?.ok && masterLive);
+  const supervisorRunning =
+    runtimeStatus?.payload?.supervisor?.running === true;
+  const coordinatorRunning =
+    runtimeStatus?.payload?.coordinator?.running === true ||
+    (!runtimeStatus?.ok && runtimeLive);
   const lifecycleState =
-    masterStatus?.payload?.lifecycle?.state || masterStatus?.payload?.status;
-  const lifecycleHealthy = masterStatus?.payload?.lifecycle?.healthy === true;
+    runtimeStatus?.payload?.lifecycle?.state || runtimeStatus?.payload?.status;
+  const lifecycleHealthy = runtimeStatus?.payload?.lifecycle?.healthy === true;
   const lifecycleDegraded =
     lifecycleState === 'stale-route' ||
     lifecycleState === 'degraded' ||
     lifecycleState === 'dead' ||
-    lifecycleState === 'orphan-master';
-  const masterSeverity: StatusBarSeverity = lifecycleHealthy
+    lifecycleState === 'orphan-coordinator';
+  const runtimeSeverity: StatusBarSeverity = lifecycleHealthy
     ? 'ok'
     : lifecycleDegraded || supervisorRunning
       ? 'warning'
       : 'error';
-  const trustCounts = masterStatus?.payload?.assessments?.counts ?? {};
+  const trustCounts = runtimeStatus?.payload?.assessments?.counts ?? {};
   const trustBlocked =
     (trustCounts.stale ?? 0) +
     (trustCounts['insufficient-evidence'] ?? 0) +
@@ -1079,7 +1081,7 @@ function App() {
   const systemStatusItems: StatusBarItem[] = [
     {
       id: 'system.supervisor',
-      text: supervisorStatusText(masterStatus),
+      text: supervisorStatusText(runtimeStatus),
       icon: supervisorRunning ? '●' : '○',
       severity:
         lifecycleState === 'dead'
@@ -1089,17 +1091,17 @@ function App() {
             : 'warning',
       side: 'left',
       priority: -110,
-      tooltip: statusTooltip(masterStatus),
+      tooltip: statusTooltip(runtimeStatus),
       command: { kind: 'open-kfx', kfxId: 'status' },
     },
     {
-      id: 'system.master',
-      text: masterStatusText(masterStatus),
-      icon: masterRunning ? '●' : '○',
-      severity: masterSeverity,
+      id: 'system.coordinator',
+      text: runtimeStatusText(runtimeStatus),
+      icon: coordinatorRunning ? '●' : '○',
+      severity: runtimeSeverity,
       side: 'left',
       priority: -100,
-      tooltip: statusTooltip(masterStatus),
+      tooltip: statusTooltip(runtimeStatus),
       command: { kind: 'open-kfx', kfxId: 'status' },
     },
     {
@@ -1114,13 +1116,13 @@ function App() {
     },
     {
       id: 'system.trust',
-      text: trustStatusText(masterStatus),
+      text: trustStatusText(runtimeStatus),
       icon: trustBlocked > 0 ? '!' : trustPending > 0 ? '◐' : '✓',
       severity:
         trustBlocked > 0 ? 'error' : trustPending > 0 ? 'warning' : 'ok',
       side: 'left',
       priority: -85,
-      tooltip: trustTooltip(masterStatus),
+      tooltip: trustTooltip(runtimeStatus),
       command: { kind: 'open-kfx', kfxId: 'status' },
     },
     {

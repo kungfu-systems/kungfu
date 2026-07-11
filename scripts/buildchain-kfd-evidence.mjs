@@ -109,7 +109,7 @@ const AGENT_COMMANDS_PATH = path.join(
 );
 const SDK_CLI_PATH = path.join(ROOT, 'developer', 'sdk', 'src', 'sdk.js');
 const PRODUCT_PACKAGE_PATH = path.join(ROOT, 'product', 'package.json');
-const MASTER_CLI_PATH = path.join(
+const RUNTIME_CLI_PATH = path.join(
   ROOT,
   'framework',
   'core',
@@ -118,16 +118,16 @@ const MASTER_CLI_PATH = path.join(
   'kungfu',
   'cli',
   'commands',
-  'master.py',
+  'runtime.py',
 );
-const MASTER_SERVICE_PATH = path.join(
+const RUNTIME_SERVICE_PATH = path.join(
   ROOT,
   'framework',
   'core',
   'src',
   'python',
   'kungfu',
-  'master_service.py',
+  'runtime_service.py',
 );
 const CONTRACT_REGISTRY_PATH = path.join(
   ROOT,
@@ -660,19 +660,19 @@ function sdkAndProductSurfaces() {
       maturity: 'stable',
     }),
     fileSurface({
-      id: 'kungfu.master.service',
-      name: 'kungfu master status|start|stop|restart|service plan|install|uninstall|status',
+      id: 'kungfu.runtime.service',
+      name: 'kungfu runtime status|start|stop|restart|service plan|install|uninstall|status',
       kind: 'cli',
-      sourcePath: rel(MASTER_CLI_PATH),
-      evidencePath: rel(MASTER_SERVICE_PATH),
+      sourcePath: rel(RUNTIME_CLI_PATH),
+      evidencePath: rel(RUNTIME_SERVICE_PATH),
       maturity: 'draft',
     }),
     fileSurface({
-      id: 'kungfu.gui.master-tray',
-      name: 'Kungfu GUI menu-bar/system-tray master residency controls',
+      id: 'kungfu.gui.runtime-tray',
+      name: 'Kungfu GUI menu-bar/system-tray runtime residency controls',
       kind: 'gui',
       sourcePath: 'framework/gui/src/main/index.ts',
-      evidencePath: 'docs/master-service.md',
+      evidencePath: 'docs/runtime-service.md',
       maturity: 'draft',
     }),
     fileSurface({
@@ -777,16 +777,16 @@ function buildKfd3Registry(upstreamAggregate = buildUpstreamKfdAggregate()) {
             role: 'kungfu-sdk-product-entrypoints',
           },
           {
-            path: rel(MASTER_CLI_PATH),
-            role: 'kungfu-master-service-entrypoints',
+            path: rel(RUNTIME_CLI_PATH),
+            role: 'kungfu-runtime-service-entrypoints',
           },
           {
-            path: rel(MASTER_SERVICE_PATH),
-            role: 'kungfu-master-service-supervisor-runtime',
+            path: rel(RUNTIME_SERVICE_PATH),
+            role: 'kungfu-runtime-service-supervisor-runtime',
           },
           {
             path: 'framework/gui/src/main/index.ts',
-            role: 'kungfu-gui-master-tray-surface',
+            role: 'kungfu-gui-runtime-tray-surface',
           },
           {
             path: 'product/scripts/product.mjs',

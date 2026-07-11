@@ -96,23 +96,23 @@ protected:
 
 DECLARE_PTR(io_device)
 
-class io_device_master : public io_device {
+class io_device_coordinator : public io_device {
 public:
-  io_device_master(data::location_ptr home, bool low_latency);
+  io_device_coordinator(data::location_ptr home, bool low_latency);
 };
 
-DECLARE_PTR(io_device_master)
+DECLARE_PTR(io_device_coordinator)
 
-class io_device_client : public io_device {
+class io_device_peer : public io_device {
 public:
-  io_device_client(data::location_ptr home, bool low_latency);
+  io_device_peer(data::location_ptr home, bool low_latency);
 
   bool is_usable() override;
 
   bool setup() override;
 };
 
-DECLARE_PTR(io_device_client)
+DECLARE_PTR(io_device_peer)
 
 void handle_sql_error(int rc, const std::string &error_tip);
 void ensure_sqlite_initilize();

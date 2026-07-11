@@ -356,6 +356,12 @@ function checkJournalAuthorityBoundary() {
   ]);
 }
 
+function checkLiveRuntimeTerminology() {
+  run('live runtime terminology gate', 'node', [
+    path.join('scripts', 'check-live-runtime-terminology.mjs'),
+  ]);
+}
+
 function checkAdrIdentities() {
   const adrDir = path.join(ROOT, 'framework', 'core', 'docs', 'adr');
   const files = fs
@@ -428,6 +434,7 @@ function checkStaged() {
   checkRuntimeGreenfield(['--staged']);
   checkSchemaAuthority();
   checkJournalAuthorityBoundary();
+  checkLiveRuntimeTerminology();
   checkAdrIdentities();
   const files = stagedFiles();
   if (!files.length) {
@@ -474,6 +481,7 @@ function checkShared() {
   testShifuEntryContract();
   testSchemaAuthority();
   checkJournalAuthorityBoundary();
+  checkLiveRuntimeTerminology();
   checkAdrIdentities();
   run('journal manager type check', 'pnpm', [
     '--filter',
@@ -505,6 +513,7 @@ function checkChanged() {
   checkRuntimeGreenfield();
   checkSchemaAuthority();
   checkJournalAuthorityBoundary();
+  checkLiveRuntimeTerminology();
   const files = changedFiles();
   checkPythonFiles('changed', files);
   checkBiomeFiles('changed', files);
@@ -522,6 +531,7 @@ function checkAll() {
   checkRuntimeGreenfield(['--all']);
   checkSchemaAuthority();
   checkJournalAuthorityBoundary();
+  checkLiveRuntimeTerminology();
   run('repo lint + format check', 'pnpm', ['run', 'lint']);
   checkRustFiles('all', [], { force: true });
   checkBuildchainKfdEvidence([], { force: true });

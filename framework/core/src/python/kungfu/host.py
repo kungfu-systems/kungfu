@@ -20,7 +20,7 @@ tree prefix (next to python-build-standalone's own BUILD file):
     {"schema": "kungfu.host/v1", "form": "assembled", "product_root": ".."}
 
 Inventory of host assumptions this seam collects (spike report Part 3.3):
-the self-re-entry family (master_service.entry_command, the nuitka/pdm
+the self-re-entry family (runtime_service.entry_command, the nuitka/pdm
 bridges' [sys.executable, -m, kungfu] calls) is correct by construction
 wherever sys.executable is a real interpreter and re-routes through
 entry_command() where it is not; the product-root family (contract
@@ -28,7 +28,7 @@ registry/artifact discovery, the baked first-party manifest, the trunk
 binary next to the entry, variants dist-module detection) resolves through
 product_root(); the argv0 family that only names a process for libnode
 (cockpit/sdk/kfd) keeps argv0 semantics untouched. Signal handlers
-(master_service SIGTERM/SIGINT, apprentice os_signal) and the vendored
+(runtime_service SIGTERM/SIGINT, peer os_signal) and the vendored
 site.py atexit hook stay as they are: in stage 2 CPython still owns the
 process main thread; the forwarding seam is stage 3 work.
 """

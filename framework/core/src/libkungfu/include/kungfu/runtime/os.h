@@ -14,9 +14,9 @@
 namespace kungfu::runtime::os {
 void disable_os_signals_handler();
 
-void handle_os_signals(void *hero);
+void handle_os_signals(void *reactor);
 
-void reset_hero_instance();
+void reset_reactor_instance();
 } // namespace kungfu::runtime::os
 
 #endif // KUNGFU_RUNTIME_OS_H

@@ -69,7 +69,7 @@ target_compile_options(${LIBKUNGFU_NAME} PRIVATE "$<$<CONFIG:Release>:${COMPILER
 # src/libyijinjing, its sources are no longer under this directory's GLOB);
 # PUBLIC so bindings linking libkungfu inherit the core usage requirements.
 # The runtime headers and sqlite_orm are PUBLIC for the same reason: binding
-# sources include the state-cache/practice headers directly.
+# sources include the state-cache/live headers directly.
 target_include_directories(${LIBKUNGFU_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include ${KUNGFU_GENERATED_INCLUDE_DIR} ${LIBKUNGFU_SQLITE_ORM_INCLUDE})
 target_link_libraries(${LIBKUNGFU_NAME} PUBLIC yijinjing ${CONAN_LIBS})
 

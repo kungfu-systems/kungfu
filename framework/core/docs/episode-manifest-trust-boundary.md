@@ -147,8 +147,8 @@ belongs to the storage/catalog plane of one data root. Its writer owner is
   alternate assembly path.
 - The store must hold a **data-root-scoped writer guard** while appending: an
   advisory exclusive lock on a lock file next to the manifest location
-  (acquire-or-fail, never blocking-wait-forever). A master process and a
-  masterless CLI invocation contend on the same guard; the loser fails with
+  (acquire-or-fail, never blocking-wait-forever). A coordinator process and a
+  daemonless CLI invocation contend on the same guard; the loser fails with
   an explicit `manifest_writer_busy` error instead of appending concurrently.
   This satisfies the yijinjing single-writer-per-location rule by mechanism
   rather than convention.

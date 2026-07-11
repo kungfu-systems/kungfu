@@ -39,4 +39,4 @@ export const WINDOW_CHROME_GET_CHANNEL = 'kf-window-chrome:get';
 export const WINDOW_CHROME_CONTROL_CHANNEL = 'kf-window-chrome:control';
 export const WINDOW_CHROME_STATE_CHANNEL = 'kf-window-chrome:state';
 
-export const MASTER_STATUS_GET_CHANNEL = 'kf-master-status:get';
+export const RUNTIME_STATUS_GET_CHANNEL = 'kf-runtime-status:get';

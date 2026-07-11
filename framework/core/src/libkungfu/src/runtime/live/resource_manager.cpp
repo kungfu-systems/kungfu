@@ -1,12 +1,12 @@
 
-#include <kungfu/runtime/practice/apprentice.h>
+#include <kungfu/runtime/live/peer.h>
 
-using namespace kungfu::runtime::practice;
+using namespace kungfu::runtime::live;
 using namespace kungfu::yijinjing::enums;
 
-namespace kungfu::runtime::practice {
+namespace kungfu::runtime::live {
 
-resource_manager::resource_manager(apprentice &app) : app_(app) {}
+resource_manager::resource_manager(peer &runtime_peer) : peer_(runtime_peer) {}
 
 std::thread &resource_manager::get_resource_management_worker() { return resource_management_worker; }
 
@@ -23,9 +23,9 @@ void resource_manager::on_react() {
 
 void resource_manager::do_management() {
   while (true) {
-    app_.get_bus()->wait();
-    app_.preload_next_page();
-    app_.release_page();
+    peer_.get_bus()->wait();
+    peer_.preload_next_page();
+    peer_.release_page();
     if (m_quit_) {
       break;
     }
@@ -33,12 +33,12 @@ void resource_manager::do_management() {
 }
 
 bool resource_manager::is_resource_management_worker_required() const {
-  return app_.get_bus()->is_on_load_page_required();
+  return peer_.get_bus()->is_on_load_page_required();
 }
 
 resource_manager::~resource_manager() {
   m_quit_ = true;
-  app_.get_bus()->notify_all();
+  peer_.get_bus()->notify_all();
 
   if (resource_management_worker.joinable()) {
     resource_management_worker.join();
@@ -46,4 +46,4 @@ resource_manager::~resource_manager() {
   }
 }
 
-} // namespace kungfu::runtime::practice
+} // namespace kungfu::runtime::live
