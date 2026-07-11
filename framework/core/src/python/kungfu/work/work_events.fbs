@@ -97,3 +97,8 @@ table RunLinked {
   work_id:string;
   run_id:string;
 }
+
+// Reflection schemas need a declared root so the shared schema_handle can
+// validate the schema itself. Per-action verification still selects the table
+// bound by action_type from manifest.json.
+root_type WorkItemCreated;

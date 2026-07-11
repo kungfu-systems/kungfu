@@ -32,6 +32,7 @@ import flatbuffers.number_types as N
 import kungfu
 
 from kungfu.action_envelope import CARRIER_ACTION_ENVELOPE
+from kungfu.action_envelope import verify_flatbuffer_payload
 from kungfu.content_hash import verify_content_hash_value
 from kungfu.rewind import ACTION_TYPE_NAMES
 from kungfu.rewind import reflection_fb
@@ -113,6 +114,7 @@ class BundleDecoder:
             self.manifest = json.load(f)
         self.bindings = self.manifest["schema_bindings"]
         self._schemas: dict[str, Any] = {}
+        self._schema_bytes: dict[str, bytes] = {}
         self._objects: dict[str, str] = {}
         for action_type, binding in self.bindings.items():
             blob_path = os.path.join(
@@ -125,6 +127,7 @@ class BundleDecoder:
                     f"schema blob hash mismatch for action_type {action_type}"
                 )
             self._schemas[action_type] = reflection_fb.Schema.GetRootAs(blob, 0)
+            self._schema_bytes[action_type] = blob
             self._objects[action_type] = binding["name"]
 
     def _find_object(self, schema: Any, name: str) -> Any:
@@ -136,6 +139,10 @@ class BundleDecoder:
         raise KeyError(f"object {name} not in schema")
 
     def decode(self, action_type: str, payload: bytes) -> dict[str, Any]:
+        if not verify_flatbuffer_payload(
+            self._schema_bytes[action_type], payload, self._objects[action_type]
+        ):
+            raise ValueError(f"invalid FlatBuffers payload for {action_type}")
         schema = self._schemas[action_type]
         obj = self._find_object(schema, self._objects[action_type])
         n = flatbuffers.encode.Get(flatbuffers.packer.uoffset, payload, 0)
@@ -202,8 +209,8 @@ def verify(runtime_dir: str, run_id: str, bundle_dir: str) -> tuple[int, list[st
     frames = read_frames(runtime_dir, run_id)
     differences: list[str] = []
     for index, (action_type, header, payload) in enumerate(frames):
-        native = decode_native(action_type, payload)
         bundled = decoder.decode(action_type, payload)
+        native = decode_native(action_type, payload)
         if native != bundled:
             keys = sorted(set(native) | set(bundled))
             for key in keys:
@@ -220,12 +227,14 @@ def causal_tree(
 ) -> tuple[dict[str, Any], dict[Any, dict[str, Any]], list[Any]]:
     """Reconstruct the run's causal tree from the journal (native path)."""
     frames = read_frames(runtime_dir, run_id)
+    decoder = BundleDecoder(os.path.join(runtime_dir, "rewind", run_id, "bundle"))
     spans: dict[Any, dict[str, Any]] = {}
     order: list[Any] = []
     run_facts: dict[str, Any] = {}
     pending_retry: dict[Any, Any] = {}
     for action_type, header, payload in frames:
         name = ACTION_TYPE_NAMES[action_type]
+        decoder.decode(action_type, payload)
         facts = decode_native(action_type, payload)
         facts["_gen_time"] = header.gen_time
         if name in ("RunBegin", "RunEnd"):

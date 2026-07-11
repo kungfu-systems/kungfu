@@ -11,11 +11,11 @@ The generic carrier and semantic vocabulary in this ADR stand. The JSON object
 shown below is now the **edge JSON rendering** of the logical envelope, not its
 authoritative on-journal schema.
 
-ADR-0047 assigns the action envelope to the FlatBuffers open layer. Before the
-stable v4 baseline, the current JSON/base64 implementation must migrate to a
-declared `ActionEnvelope.fbs`; the nested payload is carried as bytes with an
-encoding and schema reference, without base64 on the binary journal path.
-Current pre-release JSON-envelope journals remain non-compatibility targets.
+ADR-0047 assigns the action envelope to the FlatBuffers open layer. The
+pre-stable migration is implemented by `ActionEnvelope.fbs`: the nested payload
+is carried as bytes with an encoding and schema reference, without base64 on
+the binary journal path. Pre-migration JSON-envelope journals remain
+non-compatibility targets.
 
 ## Context
 

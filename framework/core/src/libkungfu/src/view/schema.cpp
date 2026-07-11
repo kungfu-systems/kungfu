@@ -53,6 +53,25 @@ bool has_attr(const reflection::Field *f, const char *k) {
 // this file.
 const reflection::Schema *schema_of(const std::string &bytes) { return reflection::GetSchema(bytes.c_str()); }
 
+const reflection::Object *object_of(const reflection::Schema *schema, std::string_view name) {
+  if (name.empty())
+    return schema->root_table();
+  const auto *objects = schema->objects();
+  const reflection::Object *suffix_match = nullptr;
+  for (const auto *object : *objects) {
+    const auto qualified = object->name()->str();
+    if (qualified == name)
+      return object;
+    if (qualified.size() > name.size() && qualified[qualified.size() - name.size() - 1] == '.' &&
+        qualified.substr(qualified.size() - name.size()) == name) {
+      if (suffix_match != nullptr)
+        return nullptr;
+      suffix_match = object;
+    }
+  }
+  return suffix_match;
+}
+
 } // namespace
 
 schema_handle schema_handle::from_bytes(std::string bfbs) {
@@ -144,13 +163,16 @@ std::optional<int> schema_handle::bind_frame(sqlite3_stmt *st, const std::vector
   return idx;
 }
 
-bool schema_handle::verify_table(const uint8_t *buf, size_t len) const {
+bool schema_handle::verify_table(const uint8_t *buf, size_t len, std::string_view object_name) const {
   if (!bfbs_ || buf == nullptr)
     return false;
   const reflection::Schema *s = schema_of(*bfbs_);
+  const reflection::Object *object = object_of(s, object_name);
+  if (object == nullptr)
+    return false;
   // reflection Verify constructs its own Verifier over (buf, len); no separate
   // flatbuffers::Verifier needed here.
-  return flatbuffers::Verify(*s, *s->root_table(), buf, len);
+  return flatbuffers::Verify(*s, *object, buf, len);
 }
 
 std::string create_ddl(const std::vector<col_plan> &cols, std::string_view table, bool thin) {

@@ -71,6 +71,13 @@ to its declaration roots, Episode/query proof, responsibility, validation,
 known gaps, and residual risk. Trust is therefore inspectable and purpose-bound,
 not a boolean copied onto every row.
 
+Assessment is claim-triggered rather than run after every recorded event. In a
+Desktop workspace, the workspace master coordinates durable assessment jobs
+and supervised workers. Embedded libkungfu consumers may execute the same job
+contract in controlled threads. Both produce a separate Assessment Episode and
+the same TrustReport semantics. See
+[KFD-2 trust assessment in a live workspace](kfd2-trust-assessment.md).
+
 ## Intended developer path
 
 The SDK target is one shared declaration consumed by local runtime checks,
@@ -85,3 +92,19 @@ kungfu sdk add fact-surface <name>
 
 The CLI, SDKs, GUI/TUI, and Buildchain must inspect the same semantic object.
 No GUI database or generated release file becomes a second fact authority.
+
+## Current executable slice
+
+The first executable declaration is the built-in
+`kungfu.runtime.episode-manifest` fact surface inside the `kungfu.runtime`
+contract world. Query normalization binds both content roots into the
+QueryDefinition, LogicalPlan, and proof lineage. The authority scan returns
+canonical rows only when those exact registered roots match; an unknown id,
+incompatible version, ambiguous surface set, or changed root returns no
+canonical rows and reports a typed admission outcome instead of consulting a
+newer declaration implicitly.
+
+This slice establishes the declaration and diagnostic contract for the Episode
+authority oracle. General user/domain declaration registration and journaled
+per-observation admission remain staged work; the current runtime does not
+claim that arbitrary recorded observations are admitted facts.

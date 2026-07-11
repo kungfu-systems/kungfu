@@ -214,7 +214,7 @@ function validateMatrix(matrix) {
   }
 }
 
-function walkPackageJson(dir, result) {
+function walkPackageJson(dir, result, sourceRoot) {
   if (!fs.existsSync(dir)) return;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     if (
@@ -230,7 +230,11 @@ function walkPackageJson(dir, result) {
     )
       continue;
     const target = path.join(dir, entry.name);
-    if (entry.isDirectory()) walkPackageJson(target, result);
+    if (
+      path.resolve(target) === path.resolve(sourceRoot, 'product', 'extensions')
+    )
+      continue;
+    if (entry.isDirectory()) walkPackageJson(target, result, sourceRoot);
     else if (entry.isFile() && entry.name === 'package.json')
       result.push(target);
   }
@@ -239,7 +243,7 @@ function walkPackageJson(dir, result) {
 function loadWorkspaceGraph(root = ROOT) {
   const files = [];
   for (const rel of WORKSPACE_ROOTS)
-    walkPackageJson(path.join(root, rel), files);
+    walkPackageJson(path.join(root, rel), files, root);
   const packages = new Map();
   for (const file of files) {
     const manifest = readJson(file);

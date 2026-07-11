@@ -26,5 +26,6 @@
 
 pub mod bootstrap;
 pub mod host;
+pub mod json;
 pub mod probe;
 pub mod style;

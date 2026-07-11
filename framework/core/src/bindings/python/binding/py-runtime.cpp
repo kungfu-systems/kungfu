@@ -15,8 +15,11 @@
 #include <kungfu/runtime/practice/apprentice.h>
 #include <kungfu/runtime/practice/master.h>
 #include <kungfu/runtime/schema/schema_compiler.h>
-#include <kungfu/runtime/storage/service.h>
+#include <kungfu/runtime/storage/binding_reflection.h>
+#include <kungfu/runtime/storage/hana_view.h>
+#include <kungfu/runtime/storage/json_edge.h>
 #include <kungfu/runtime/util/terminal.h>
+#include <kungfu/view/schema.h>
 #include <kungfu/yijinjing/hash.h>
 #include <kungfu/yijinjing/journal/assemble.h>
 #include <kungfu/yijinjing/journal/frame.h>
@@ -39,6 +42,7 @@ using namespace kungfu::runtime::nanomsg;
 using namespace kungfu::runtime::practice;
 
 namespace py = pybind11;
+using namespace pybind11::literals;
 
 namespace {
 
@@ -85,6 +89,194 @@ std::vector<nlohmann::json> py_entries_to_json(py::iterable entries) {
 
 py::object json_to_py(const nlohmann::json &value) {
   return py::module_::import("json").attr("loads")(value.dump(-1, ' ', false));
+}
+
+template <typename> inline constexpr bool dependent_false_v = false;
+
+template <typename T> py::object hana_view_to_py(const T &value) {
+  using value_t = std::decay_t<T>;
+  if constexpr (std::is_same_v<value_t, bool>) {
+    return py::bool_(value);
+  } else if constexpr (std::is_integral_v<value_t>) {
+    return py::int_(value);
+  } else if constexpr (std::is_floating_point_v<value_t>) {
+    return py::float_(value);
+  } else if constexpr (std::is_enum_v<value_t>) {
+    return py::int_(static_cast<std::underlying_type_t<value_t>>(value));
+  } else if constexpr (std::is_same_v<value_t, std::string>) {
+    return py::str(value);
+  } else if constexpr (kungfu::is_array_of_v<value_t, char>) {
+    return py::str(value.value);
+  } else if constexpr (kungfu::is_array_of_others_v<value_t, char>) {
+    py::list result;
+    for (size_t index = 0; index < value_t::length; ++index)
+      result.append(hana_view_to_py(value[index]));
+    return result;
+  } else if constexpr (kungfu::runtime::storage_binding::is_optional_v<value_t>) {
+    return value.has_value() ? hana_view_to_py(*value) : py::none();
+  } else if constexpr (kungfu::runtime::storage_binding::is_vector_v<value_t>) {
+    py::list result;
+    for (const auto &item : value)
+      result.append(hana_view_to_py(item));
+    return result;
+  } else if constexpr (kungfu::runtime::storage_binding::is_variant_v<value_t>) {
+    return std::visit([](const auto &item) { return hana_view_to_py(item); }, value);
+  } else if constexpr (kungfu::runtime::storage_binding::is_hana_view_v<value_t>) {
+    py::dict result;
+    kungfu::runtime::storage_binding::for_each_field(
+        value, [&](const auto &name, const auto &field) { result[py::str(name)] = hana_view_to_py(field); });
+    return result;
+  } else {
+    static_assert(dependent_false_v<value_t>, "unsupported Hana binding value");
+  }
+}
+
+std::string dict_string(const py::dict &object, const char *key) {
+  return object.contains(key) && !object[key].is_none() ? object[key].cast<std::string>() : std::string{};
+}
+
+template <typename T> T dict_number(const py::dict &object, const char *key, T fallback = {}) {
+  return object.contains(key) && !object[key].is_none() ? object[key].cast<T>() : fallback;
+}
+
+kungfu::view::action::payload_encoding payload_encoding_from_py(const py::handle &value) {
+  using encoding = kungfu::view::action::payload_encoding;
+  if (py::isinstance<py::int_>(value))
+    return static_cast<encoding>(value.cast<uint8_t>());
+  const auto name = value.is_none() ? std::string{} : value.cast<std::string>();
+  if (name == "flatbuffers")
+    return encoding::FlatBuffers;
+  if (name == "json")
+    return encoding::Json;
+  if (name == "content-reference")
+    return encoding::ContentReference;
+  if (name == "opaque")
+    return encoding::Opaque;
+  return encoding::None;
+}
+
+kungfu::view::action::envelope action_envelope_from_py(const py::dict &object) {
+  using namespace kungfu::view::action;
+  envelope result{};
+  result.version = dict_number<uint16_t>(object, "version", ACTION_ENVELOPE_VERSION);
+  result.action_type = dict_string(object, "action_type");
+  if (!object.contains("schema_ref") || !py::isinstance<py::dict>(object["schema_ref"]))
+    throw std::invalid_argument("action envelope requires schema_ref");
+  const auto schema = object["schema_ref"].cast<py::dict>();
+  result.schema_ref = {dict_string(schema, "id"), dict_number<uint32_t>(schema, "version", 1)};
+  if (object.contains("actor") && py::isinstance<py::dict>(object["actor"])) {
+    const auto value = object["actor"].cast<py::dict>();
+    result.actor = actor_metadata{dict_string(value, "id"), dict_string(value, "kind"),
+                                  dict_string(value, "storage_source_id"), dict_string(value, "source_type")};
+  }
+  if (object.contains("session") && py::isinstance<py::dict>(object["session"])) {
+    const auto value = object["session"].cast<py::dict>();
+    result.session = session_metadata{dict_string(value, "run_id"), dict_string(value, "import_id")};
+  }
+  if (object.contains("source") && py::isinstance<py::dict>(object["source"])) {
+    const auto value = object["source"].cast<py::dict>();
+    result.source =
+        source_metadata{dict_string(value, "kind"), dict_string(value, "source_id"), dict_string(value, "source_path"),
+                        dict_string(value, "source_time"), dict_number<uint32_t>(value, "schema_version")};
+  }
+  if (object.contains("batch") && py::isinstance<py::dict>(object["batch"])) {
+    const auto value = object["batch"].cast<py::dict>();
+    result.batch = batch_metadata{dict_string(value, "repo_root"),
+                                  dict_string(value, "repo_head"),
+                                  dict_number<uint32_t>(value, "schema_version"),
+                                  dict_number<uint64_t>(value, "missions"),
+                                  dict_number<uint64_t>(value, "goals"),
+                                  dict_number<uint64_t>(value, "markers"),
+                                  dict_number<uint64_t>(value, "warnings")};
+  }
+  if (object.contains("journal") && py::isinstance<py::dict>(object["journal"])) {
+    const auto value = object["journal"].cast<py::dict>();
+    result.journal = journal_metadata{dict_number<uint64_t>(value, "frame_uid"),
+                                      dict_number<uint64_t>(value, "trigger_frame_uid"),
+                                      dict_number<uint64_t>(value, "stream_id"),
+                                      dict_number<int64_t>(value, "gen_time"),
+                                      dict_number<int64_t>(value, "trigger_time"),
+                                      dict_number<int32_t>(value, "carrier_type", ACTION_ENVELOPE_CARRIER_TYPE),
+                                      dict_number<uint32_t>(value, "source"),
+                                      dict_number<uint32_t>(value, "initial_source"),
+                                      dict_number<uint32_t>(value, "dest"),
+                                      dict_number<uint32_t>(value, "data_length"),
+                                      dict_number<int8_t>(value, "data_type"),
+                                      dict_number<uint32_t>(value, "integrity_version"),
+                                      dict_string(value, "checksum_algorithm"),
+                                      dict_number<uint64_t>(value, "payload_checksum"),
+                                      dict_number<uint64_t>(value, "frame_checksum")};
+  }
+  if (object.contains("payload") && py::isinstance<py::dict>(object["payload"])) {
+    const auto value = object["payload"].cast<py::dict>();
+    std::vector<uint8_t> data;
+    py::object encoding_value = py::none();
+    if (value.contains("encoding"))
+      encoding_value = py::reinterpret_borrow<py::object>(value["encoding"]);
+    if (value.contains("data") && !value["data"].is_none()) {
+      if (py::isinstance<py::bytes>(value["data"])) {
+        const auto bytes = value["data"].cast<std::string>();
+        data.assign(bytes.begin(), bytes.end());
+      } else {
+        data = value["data"].cast<std::vector<uint8_t>>();
+      }
+    }
+    result.payload = payload_view{payload_encoding_from_py(encoding_value),
+                                  std::move(data),
+                                  dict_string(value, "hash_algorithm"),
+                                  dict_string(value, "hash"),
+                                  dict_number<uint64_t>(value, "byte_len"),
+                                  dict_string(value, "content_type"),
+                                  dict_string(value, "state")};
+  }
+  return result;
+}
+
+py::dict action_envelope_to_py(const kungfu::view::action::envelope &value) {
+  py::dict result;
+  result["version"] = value.version;
+  result["action_type"] = value.action_type;
+  result["schema_ref"] = py::dict("id"_a = value.schema_ref.id, "version"_a = value.schema_ref.version);
+  if (value.actor.has_value()) {
+    result["actor"] =
+        py::dict("id"_a = value.actor->id, "kind"_a = value.actor->kind,
+                 "storage_source_id"_a = value.actor->storage_source_id, "source_type"_a = value.actor->source_type);
+  }
+  if (value.session.has_value()) {
+    result["session"] = py::dict("run_id"_a = value.session->run_id, "import_id"_a = value.session->import_id);
+  }
+  if (value.source.has_value()) {
+    result["source"] =
+        py::dict("kind"_a = value.source->kind, "source_id"_a = value.source->source_id,
+                 "source_path"_a = value.source->source_path, "source_time"_a = value.source->source_time,
+                 "schema_version"_a = value.source->schema_version);
+  }
+  if (value.batch.has_value()) {
+    result["batch"] = py::dict("repo_root"_a = value.batch->repo_root, "repo_head"_a = value.batch->repo_head,
+                               "schema_version"_a = value.batch->schema_version, "missions"_a = value.batch->missions,
+                               "goals"_a = value.batch->goals, "markers"_a = value.batch->markers,
+                               "warnings"_a = value.batch->warnings);
+  }
+  if (value.journal.has_value()) {
+    result["journal"] = py::dict(
+        "frame_uid"_a = value.journal->frame_uid, "trigger_frame_uid"_a = value.journal->trigger_frame_uid,
+        "stream_id"_a = value.journal->stream_id, "gen_time"_a = value.journal->gen_time,
+        "trigger_time"_a = value.journal->trigger_time, "carrier_type"_a = value.journal->carrier_type,
+        "source"_a = value.journal->source, "initial_source"_a = value.journal->initial_source,
+        "dest"_a = value.journal->dest, "data_length"_a = value.journal->data_length,
+        "data_type"_a = value.journal->data_type, "integrity_version"_a = value.journal->integrity_version,
+        "checksum_algorithm"_a = value.journal->checksum_algorithm,
+        "payload_checksum"_a = value.journal->payload_checksum, "frame_checksum"_a = value.journal->frame_checksum);
+  }
+  if (value.payload.has_value()) {
+    result["payload"] = py::dict(
+        "encoding"_a = static_cast<uint8_t>(value.payload->encoding),
+        "data"_a = py::bytes(reinterpret_cast<const char *>(value.payload->data.data()), value.payload->data.size()),
+        "hash_algorithm"_a = value.payload->hash_algorithm, "hash"_a = value.payload->hash,
+        "byte_len"_a = value.payload->byte_len, "content_type"_a = value.payload->content_type,
+        "state"_a = value.payload->state);
+  }
+  return result;
 }
 
 } // namespace
@@ -425,6 +617,286 @@ void bind(pybind11::module &&m) {
   m.def("storage_service_capabilities",
         []() { return json_to_py(storage_service_api::storage_service_capabilities()); });
   m.def(
+      "storage_status_typed",
+      [](const std::string &runtime_dir, const std::optional<std::string> &source_id) {
+        storage_service_api::storage_status_request request{};
+        request.runtime_dir = runtime_dir;
+        if (source_id.has_value())
+          request.source_id = *source_id;
+        return hana_view_to_py(storage_service_api::default_storage_service().status(request));
+      },
+      py::arg("runtime_dir"), py::arg("source_id") = py::none());
+  m.def(
+      "storage_query_typed",
+      [](const std::string &runtime_dir, const std::string &query, const std::optional<std::string> &source_id,
+         const std::optional<std::string> &entry_kind, uint64_t episode_id, uint64_t limit, const std::string &since,
+         const std::string &until) {
+        storage_service_api::storage_query_request request{};
+        request.runtime_dir = runtime_dir;
+        request.query = storage_service_api::parse_storage_query_kind(query);
+        request.source_id = source_id.value_or("");
+        request.entry_kind = entry_kind.value_or("");
+        request.episode_id = episode_id;
+        request.limit = limit;
+        request.range = {since, until};
+        return hana_view_to_py(storage_service_api::default_storage_service().query(request));
+      },
+      py::arg("runtime_dir"), py::arg("query"), py::arg("source_id") = py::none(), py::arg("entry_kind") = py::none(),
+      py::arg("episode_id") = 0, py::arg("limit") = 100, py::arg("since") = "", py::arg("until") = "");
+  m.def(
+      "storage_gc_plan_typed",
+      [](const std::string &runtime_dir, const std::optional<std::string> &source_id, bool dry_run) {
+        storage_service_api::storage_gc_plan_request request{};
+        request.runtime_dir = runtime_dir;
+        request.source_id = source_id.value_or("");
+        request.dry_run = dry_run;
+        return hana_view_to_py(storage_service_api::default_storage_service().gc_plan(request));
+      },
+      py::arg("runtime_dir"), py::arg("source_id") = py::none(), py::arg("dry_run") = true);
+  m.def(
+      "storage_rebuild_index_typed",
+      [](const std::string &runtime_dir, const std::optional<std::string> &source_id, bool dry_run) {
+        storage_service_api::storage_rebuild_index_request request{};
+        request.runtime_dir = runtime_dir;
+        request.source_id = source_id.value_or("");
+        request.dry_run = dry_run;
+        return hana_view_to_py(storage_service_api::default_storage_service().rebuild_index(request));
+      },
+      py::arg("runtime_dir"), py::arg("source_id") = py::none(), py::arg("dry_run") = true);
+  m.def(
+      "storage_compact_plan_typed",
+      [](const std::string &runtime_dir, const std::optional<std::string> &source_id, bool dry_run) {
+        storage_service_api::storage_compact_plan_request request{};
+        request.runtime_dir = runtime_dir;
+        request.source_id = source_id.value_or("");
+        request.dry_run = dry_run;
+        return hana_view_to_py(storage_service_api::default_storage_service().compact_plan(request));
+      },
+      py::arg("runtime_dir"), py::arg("source_id") = py::none(), py::arg("dry_run") = true);
+  m.def(
+      "storage_fsck_typed",
+      [](const std::string &runtime_dir, const std::optional<std::string> &source_id, uint64_t episode_id,
+         bool verify_frames) {
+        storage_service_api::storage_fsck_request request{};
+        request.runtime_dir = runtime_dir;
+        request.source_id = source_id.value_or("");
+        request.episode_id = episode_id;
+        request.verify_frames = verify_frames;
+        request.scope = episode_id != 0 || verify_frames
+                            ? storage_service_api::storage_fsck_scope::Episode
+                            : (request.source_id.empty() ? storage_service_api::storage_fsck_scope::All
+                                                         : storage_service_api::storage_fsck_scope::Source);
+        return hana_view_to_py(storage_service_api::default_storage_service().fsck(request));
+      },
+      py::arg("runtime_dir"), py::arg("source_id") = py::none(), py::arg("episode_id") = 0,
+      py::arg("verify_frames") = false);
+  m.def(
+      "storage_repair_plan_typed",
+      [](const std::string &runtime_dir, const std::optional<std::string> &source_id, uint64_t episode_id,
+         bool verify_frames, bool dry_run) {
+        storage_service_api::storage_repair_plan_request request{};
+        request.runtime_dir = runtime_dir;
+        request.source_id = source_id.value_or("");
+        request.episode_id = episode_id;
+        request.verify_frames = verify_frames;
+        request.dry_run = dry_run;
+        request.scope = episode_id != 0 || verify_frames
+                            ? storage_service_api::storage_fsck_scope::Episode
+                            : (request.source_id.empty() ? storage_service_api::storage_fsck_scope::All
+                                                         : storage_service_api::storage_fsck_scope::Source);
+        return hana_view_to_py(storage_service_api::default_storage_service().repair_plan(request));
+      },
+      py::arg("runtime_dir"), py::arg("source_id") = py::none(), py::arg("episode_id") = 0,
+      py::arg("verify_frames") = false, py::arg("dry_run") = true);
+  m.def(
+      "storage_episode_begin_typed",
+      [](const std::string &runtime_dir, uint64_t episode_id, uint64_t parent_episode_id,
+         uint64_t root_trigger_frame_uid, uint32_t location_uid, int64_t begin_time, const std::string &title,
+         const std::string &actor, const std::string &source) {
+        storage_service_api::storage_episode_begin_request request{};
+        request.runtime_dir = runtime_dir;
+        request.options = {
+            episode_id, parent_episode_id, root_trigger_frame_uid, location_uid, begin_time, title, actor, source};
+        return hana_view_to_py(storage_service_api::default_storage_service().episode_begin(request));
+      },
+      py::arg("runtime_dir"), py::arg("episode_id") = 0, py::arg("parent_episode_id") = 0,
+      py::arg("root_trigger_frame_uid") = 0, py::arg("location_uid") = 0, py::arg("begin_time") = 0,
+      py::arg("title") = "", py::arg("actor") = "", py::arg("source") = "");
+  m.def(
+      "storage_episode_heartbeat_typed",
+      [](const std::string &runtime_dir, uint64_t episode_id, uint32_t location_uid, int64_t update_time,
+         uint64_t last_frame_uid, uint64_t frame_count, const std::string &note) {
+        storage_service_api::storage_episode_heartbeat_request request{};
+        request.runtime_dir = runtime_dir;
+        request.options = {episode_id, location_uid, update_time, last_frame_uid, frame_count, note};
+        return hana_view_to_py(storage_service_api::default_storage_service().episode_heartbeat(request));
+      },
+      py::arg("runtime_dir"), py::arg("episode_id"), py::arg("location_uid") = 0, py::arg("update_time") = 0,
+      py::arg("last_frame_uid") = 0, py::arg("frame_count") = 0, py::arg("note") = "");
+  m.def(
+      "storage_episode_attach_frame_typed",
+      [](const std::string &runtime_dir, uint64_t episode_id, uint64_t frame_uid, uint32_t location_uid,
+         uint64_t trigger_frame_uid, uint64_t stream_id, int64_t gen_time, int64_t trigger_time, int32_t carrier_type,
+         uint32_t source, uint32_t dest, uint32_t data_length, uint32_t integrity_version, uint64_t payload_checksum,
+         uint64_t frame_checksum) {
+        storage_service_api::storage_episode_frame_attach_request request{};
+        request.runtime_dir = runtime_dir;
+        request.options = {episode_id,       location_uid,  frame_uid,    trigger_frame_uid,
+                           stream_id,        gen_time,      trigger_time, carrier_type,
+                           source,           dest,          data_length,  integrity_version,
+                           payload_checksum, frame_checksum};
+        return hana_view_to_py(storage_service_api::default_storage_service().episode_attach_frame(request));
+      },
+      py::arg("runtime_dir"), py::arg("episode_id"), py::arg("frame_uid"), py::arg("location_uid") = 0,
+      py::arg("trigger_frame_uid") = 0, py::arg("stream_id") = 0, py::arg("gen_time") = 0, py::arg("trigger_time") = 0,
+      py::arg("carrier_type") = 0, py::arg("source") = 0, py::arg("dest") = 0, py::arg("data_length") = 0,
+      py::arg("integrity_version") = 0, py::arg("payload_checksum") = 0, py::arg("frame_checksum") = 0);
+  m.def(
+      "storage_episode_attach_ref_typed",
+      [](const std::string &runtime_dir, uint64_t episode_id, const std::string &ref_kind, uint64_t ref_uid,
+         const std::string &ref_id, const std::string &ref_hash, uint32_t location_uid, int64_t update_time) {
+        storage_service_api::storage_episode_ref_attach_request request{};
+        request.runtime_dir = runtime_dir;
+        request.options = {episode_id,
+                           location_uid,
+                           ref_kind == "payload"   ? EpisodeRefKind::Payload
+                           : ref_kind == "schema"  ? EpisodeRefKind::Schema
+                           : ref_kind == "episode" ? EpisodeRefKind::Episode
+                                                   : EpisodeRefKind::InputFrame,
+                           ref_uid,
+                           update_time,
+                           ref_id,
+                           ref_hash};
+        return hana_view_to_py(storage_service_api::default_storage_service().episode_attach_ref(request));
+      },
+      py::arg("runtime_dir"), py::arg("episode_id"), py::arg("ref_kind") = "input_frame", py::arg("ref_uid") = 0,
+      py::arg("ref_id") = "", py::arg("ref_hash") = "", py::arg("location_uid") = 0, py::arg("update_time") = 0);
+  m.def(
+      "storage_episode_close_typed",
+      [](const std::string &runtime_dir, uint64_t episode_id, bool aborted, uint32_t location_uid, int64_t end_time,
+         uint64_t last_frame_uid, uint64_t frame_count, const std::string &reason) {
+        storage_service_api::storage_episode_close_request request{};
+        request.runtime_dir = runtime_dir;
+        request.options = {episode_id, location_uid,   aborted ? EpisodeStatus::Aborted : EpisodeStatus::Ended,
+                           end_time,   last_frame_uid, frame_count,
+                           reason};
+        const auto &service = storage_service_api::default_storage_service();
+        return hana_view_to_py(aborted ? service.episode_abort(request) : service.episode_end(request));
+      },
+      py::arg("runtime_dir"), py::arg("episode_id"), py::arg("aborted") = false, py::arg("location_uid") = 0,
+      py::arg("end_time") = 0, py::arg("last_frame_uid") = 0, py::arg("frame_count") = 0, py::arg("reason") = "");
+  m.def(
+      "storage_episode_recover_typed",
+      [](const std::string &runtime_dir, uint64_t episode_id, uint32_t location_uid, int64_t end_time,
+         const std::string &reason) {
+        storage_service_api::storage_episode_recover_request request{};
+        request.runtime_dir = runtime_dir;
+        request.options = {episode_id, location_uid, end_time, reason};
+        return hana_view_to_py(storage_service_api::default_storage_service().episode_recover(request));
+      },
+      py::arg("runtime_dir"), py::arg("episode_id") = 0, py::arg("location_uid") = 0, py::arg("end_time") = 0,
+      py::arg("reason") = "");
+  m.def(
+      "storage_episode_list_typed",
+      [](const std::string &runtime_dir, uint32_t location_uid, uint64_t limit) {
+        return hana_view_to_py(storage_service_api::default_storage_service().episode_list(
+            storage_service_api::storage_episode_list_request{runtime_dir, location_uid, limit}));
+      },
+      py::arg("runtime_dir"), py::arg("location_uid") = 0, py::arg("limit") = 100);
+  m.def(
+      "storage_episode_inspect_typed",
+      [](const std::string &runtime_dir, uint64_t episode_id) {
+        return hana_view_to_py(storage_service_api::default_storage_service().episode_inspect(
+            storage_service_api::storage_episode_inspect_request{runtime_dir, episode_id}));
+      },
+      py::arg("runtime_dir"), py::arg("episode_id"));
+  m.def(
+      "storage_episode_projection_rebuild_typed",
+      [](const std::string &runtime_dir) {
+        return hana_view_to_py(storage_service_api::default_storage_service().episode_projection_rebuild(
+            storage_service_api::storage_episode_projection_rebuild_request{runtime_dir}));
+      },
+      py::arg("runtime_dir"));
+  m.def(
+      "storage_source_register_typed",
+      [](const std::string &runtime_dir, const std::string &source_id, const std::string &kind,
+         const std::string &coordinate, const std::string &head, uint32_t location_uid, int64_t register_time) {
+        storage_service_api::storage_source_register_request request{};
+        request.runtime_dir = runtime_dir;
+        const auto source_kind = kind == "imported_bundle"  ? SourceKind::ImportedBundle
+                                 : kind == "kungfu_runtime" ? SourceKind::KungfuRuntime
+                                 : kind == "adapter"        ? SourceKind::Adapter
+                                                            : SourceKind::Local;
+        request.options = {source_id, source_kind, coordinate, head, location_uid, register_time};
+        return hana_view_to_py(storage_service_api::default_storage_service().source_register(request));
+      },
+      py::arg("runtime_dir"), py::arg("source_id"), py::arg("kind") = "local", py::arg("coordinate") = "",
+      py::arg("head") = "", py::arg("location_uid") = 0, py::arg("register_time") = 0);
+  m.def(
+      "storage_source_update_head_typed",
+      [](const std::string &runtime_dir, const std::string &source_id, uint32_t location_uid, int64_t update_time,
+         uint64_t first_frame_uid, uint64_t last_frame_uid, int64_t since, int64_t until, const std::string &head,
+         const std::string &inventory_hash_algo, const std::string &inventory_hash) {
+        storage_service_api::storage_source_head_update_request request{};
+        request.runtime_dir = runtime_dir;
+        request.options = {source_id, location_uid, update_time, first_frame_uid,     last_frame_uid,
+                           since,     until,        head,        inventory_hash_algo, inventory_hash};
+        return hana_view_to_py(storage_service_api::default_storage_service().source_update_head(request));
+      },
+      py::arg("runtime_dir"), py::arg("source_id"), py::arg("location_uid") = 0, py::arg("update_time") = 0,
+      py::arg("first_frame_uid") = 0, py::arg("last_frame_uid") = 0, py::arg("since") = 0, py::arg("until") = 0,
+      py::arg("head") = "", py::arg("inventory_hash_algo") = "", py::arg("inventory_hash") = "");
+  m.def(
+      "storage_source_record_accepted_range_typed",
+      [](const std::string &runtime_dir, const std::string &source_id, const std::string &manifest_id,
+         uint32_t location_uid, int64_t accept_time, uint64_t first_frame_uid, uint64_t last_frame_uid, int64_t since,
+         int64_t until, const std::string &status) {
+        storage_service_api::storage_source_accepted_range_request request{};
+        request.runtime_dir = runtime_dir;
+        const auto verification = status == "degraded" ? SourceVerificationStatus::Degraded
+                                  : status == "failed" ? SourceVerificationStatus::Failed
+                                                       : SourceVerificationStatus::Ok;
+        request.options = {source_id,      manifest_id, location_uid, accept_time, first_frame_uid,
+                           last_frame_uid, since,       until,        verification};
+        return hana_view_to_py(storage_service_api::default_storage_service().source_record_accepted_range(request));
+      },
+      py::arg("runtime_dir"), py::arg("source_id"), py::arg("manifest_id"), py::arg("location_uid") = 0,
+      py::arg("accept_time") = 0, py::arg("first_frame_uid") = 0, py::arg("last_frame_uid") = 0, py::arg("since") = 0,
+      py::arg("until") = 0, py::arg("status") = "ok");
+  m.def(
+      "storage_source_list_typed",
+      [](const std::string &runtime_dir) {
+        return hana_view_to_py(storage_service_api::default_storage_service().source_list({runtime_dir}));
+      },
+      py::arg("runtime_dir"));
+  m.def(
+      "storage_source_inspect_typed",
+      [](const std::string &runtime_dir, const std::string &source_id) {
+        return hana_view_to_py(storage_service_api::default_storage_service().source_inspect({runtime_dir, source_id}));
+      },
+      py::arg("runtime_dir"), py::arg("source_id"));
+  m.def(
+      "storage_source_registry_fsck_typed",
+      [](const std::string &runtime_dir, const std::string &source_id) {
+        return hana_view_to_py(
+            storage_service_api::default_storage_service().source_registry_fsck({runtime_dir, source_id}));
+      },
+      py::arg("runtime_dir"), py::arg("source_id") = "");
+  m.def(
+      "storage_source_registry_rebuild_typed",
+      [](const std::string &runtime_dir) {
+        return hana_view_to_py(storage_service_api::default_storage_service().source_registry_rebuild({runtime_dir}));
+      },
+      py::arg("runtime_dir"));
+  m.def(
+      "storage_layout_typed",
+      [](const std::string &runtime_dir, const std::string &runtime_home, const std::string &config_home,
+         const std::string &provider) {
+        return hana_view_to_py(
+            storage_service_api::default_storage_service().layout({runtime_dir, runtime_home, config_home, provider}));
+      },
+      py::arg("runtime_dir"), py::arg("runtime_home") = "", py::arg("config_home") = "", py::arg("provider") = "");
+  m.def(
       "make_storage_service_request",
       [](const std::string &operation, const std::string &runtime_dir, py::dict options) {
         return json_to_py(
@@ -578,6 +1050,34 @@ void bind(pybind11::module &&m) {
       .def_readonly("payload_checksum", &action::record_receipt::payload_checksum)
       .def_readonly("frame_checksum", &action::record_receipt::frame_checksum);
 
+  m.def(
+      "encode_action_envelope",
+      [](const py::dict &value) {
+        const auto encoded = view::action::encode(action_envelope_from_py(value));
+        return py::bytes(reinterpret_cast<const char *>(encoded.data()), encoded.size());
+      },
+      py::arg("value"));
+  m.def(
+      "decode_action_envelope",
+      [](py::bytes value) -> py::object {
+        const auto bytes = value.cast<std::string>();
+        const auto decoded = view::action::decode(reinterpret_cast<const uint8_t *>(bytes.data()), bytes.size());
+        if (!decoded.has_value())
+          return py::none();
+        return action_envelope_to_py(*decoded);
+      },
+      py::arg("value"));
+  m.def(
+      "verify_flatbuffer_payload",
+      [](py::bytes schema_bfbs, py::bytes payload, const std::string &object_name) {
+        const auto schema_bytes = schema_bfbs.cast<std::string>();
+        const auto payload_bytes = payload.cast<std::string>();
+        const auto schema = view::schema_handle::from_bytes(schema_bytes);
+        return schema.verify_table(reinterpret_cast<const uint8_t *>(payload_bytes.data()), payload_bytes.size(),
+                                   object_name);
+      },
+      py::arg("schema_bfbs"), py::arg("payload"), py::arg("object_name") = "");
+
   py::class_<action::action_recorder, action::action_recorder_ptr>(m, "action_recorder")
       .def(py::init<const std::string &, const std::string &, const std::string &, uint32_t, uint64_t>(),
            py::arg("runtime_dir"), py::arg("namespace"), py::arg("name"),
@@ -593,6 +1093,12 @@ void bind(pybind11::module &&m) {
           py::arg_v("options", action::record_options{}, "action_record_options()"))
       .def("record_json", &action::action_recorder::record_json, py::arg("carrier_type"), py::arg("json_payload"),
            py::arg_v("options", action::record_options{}, "action_record_options()"))
+      .def(
+          "record_action",
+          [](action::action_recorder &recorder, const py::dict &value, action::record_options options) {
+            return recorder.record_action(action_envelope_from_py(value), options);
+          },
+          py::arg("value"), py::arg_v("options", action::record_options{}, "action_record_options()"))
       .def("mark", &action::action_recorder::mark, py::arg("carrier_type"),
            py::arg_v("options", action::record_options{}, "action_record_options()"))
       .def_property_readonly("last_frame_uid", &action::action_recorder::last_frame_uid);

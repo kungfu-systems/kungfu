@@ -21,6 +21,20 @@ function SystemStatusView({
   );
 
   const [selected, setSelected] = React.useState<string | null>(null);
+  const [episodeId, setEpisodeId] = React.useState('');
+  const [sourceId, setSourceId] = React.useState('');
+  const [storageResult, setStorageResult] = React.useState(
+    'Choose an operation. Every action below calls the public storage capability.',
+  );
+  const runStorage = (label: string, operation: () => unknown) => {
+    try {
+      setStorageResult(`${label}\n${JSON.stringify(operation(), null, 2)}`);
+    } catch (error) {
+      setStorageResult(
+        `${label} failed\n${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  };
   const registry = shell.info.schemaTypes;
   const current = registry.find((t) => t.name === selected);
 
@@ -184,6 +198,91 @@ function SystemStatusView({
             )}
           </div>
         </div>
+      </section>
+      <section style={{ ...panelStyle, gridColumn: '1 / -1' }}>
+        <h2 style={headingStyle}>Storage operations · public capability</h2>
+        <div
+          style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}
+        >
+          <button
+            type="button"
+            onClick={() => runStorage('layout', caps.storage.layout)}
+          >
+            Layout / init
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              runStorage('timeline', () => caps.storage.episodes())
+            }
+          >
+            Episode timeline
+          </button>
+          <input
+            aria-label="Episode id"
+            placeholder="episode id"
+            value={episodeId}
+            onChange={(event) => setEpisodeId(event.target.value)}
+          />
+          <button
+            type="button"
+            onClick={() =>
+              runStorage('inspect', () =>
+                caps.storage.inspectEpisode(Number.parseInt(episodeId, 10)),
+              )
+            }
+          >
+            Inspect
+          </button>
+          <input
+            aria-label="Source id"
+            placeholder="source id (optional)"
+            value={sourceId}
+            onChange={(event) => setSourceId(event.target.value)}
+          />
+          <button
+            type="button"
+            onClick={() =>
+              runStorage('query', () => caps.storage.query(sourceId))
+            }
+          >
+            Query
+          </button>
+          <button
+            type="button"
+            onClick={() => runStorage('fsck', caps.storage.fsck)}
+          >
+            Verify / fsck
+          </button>
+          <button
+            type="button"
+            onClick={() => runStorage('repair plan', caps.storage.repairPlan)}
+          >
+            Repair plan
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              runStorage('portable export', () =>
+                caps.storage.exportBundle(sourceId),
+              )
+            }
+          >
+            Export bundle
+          </button>
+        </div>
+        <pre
+          style={{
+            ...mono,
+            margin: 0,
+            maxHeight: 260,
+            overflow: 'auto',
+            whiteSpace: 'pre-wrap',
+            color: '#9cdcfe',
+          }}
+        >
+          {storageResult}
+        </pre>
       </section>
     </div>
   );

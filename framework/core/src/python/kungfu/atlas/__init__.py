@@ -13,8 +13,8 @@
 # display and query them; it never writes back to the source repository.
 
 # v4 carrier allocation: the journal header keeps one generic carrier and
-# Atlas business semantics live in the JSON action envelope's action_type/schema
-# metadata. Do not allocate one carrier per Atlas business event.
+# Atlas business semantics live in the FlatBuffers action envelope's
+# action_type/schema metadata. Do not allocate one carrier per business event.
 from kungfu.action_envelope import CARRIER_ACTION_ENVELOPE
 
 CARRIER_ATLAS_ACTION = CARRIER_ACTION_ENVELOPE

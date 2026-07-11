@@ -115,10 +115,12 @@ qualification is staged. This page describes the adoption contract the project
 is implementing; it does not claim that every package is already published or
 that every row has passed its final release gate.
 
-In particular, native historical-query closure, the Cargo SDK, a stable
-cross-toolchain C ABI, and the complete per-artifact size/startup matrix remain
-staged work. Check [known limits](known-limits.md) and the relevant release
-artifact before choosing a production path.
+The native historical-query closure and versioned C ABI now have executable
+qualification. Thin Python, Node, and Rust storage SDK sources share that
+contract and pass an exact-artifact Darwin ARM64 gate, but they are not yet a
+published cross-platform release claim. The complete resident-memory and
+release-channel matrix also remains staged. Check [known limits](known-limits.md)
+and the relevant release artifact before choosing a production path.
 
 The project treats that honesty as part of the product: an absent or staged
 layer should be named as such rather than hidden behind the full App.

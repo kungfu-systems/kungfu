@@ -83,7 +83,48 @@ module.exports = () => {
     formatTime: binding.formatTime,
     formatStringToHashHex: binding.formatStringToHashHex,
     parseTime: binding.parseTime,
+    encodeActionEnvelope: binding.encodeActionEnvelope,
+    decodeActionEnvelope: binding.decodeActionEnvelope,
+    verifyFlatbufferPayload: binding.verifyFlatbufferPayload,
+    ACTION_ENVELOPE_CARRIER_TYPE: binding.ACTION_ENVELOPE_CARRIER_TYPE,
+    /**
+     * @param {string} runtimeDir
+     * @param {string} namespace
+     * @param {string} name
+     * @param {number} [destId]
+     * @param {number|bigint} [streamId]
+     * @returns {any}
+     */
+    ActionRecorder: (runtimeDir, namespace, name, destId, streamId) =>
+      new binding.ActionRecorder(runtimeDir, namespace, name, destId, streamId),
     storageServiceCapabilities: binding.storageServiceCapabilities,
+    storageStatusTyped: binding.storageStatusTyped,
+    storageQueryTyped: binding.storageQueryTyped,
+    storageGcPlanTyped: binding.storageGcPlanTyped,
+    storageRebuildIndexTyped: binding.storageRebuildIndexTyped,
+    storageCompactPlanTyped: binding.storageCompactPlanTyped,
+    storageFsckTyped: binding.storageFsckTyped,
+    storageRepairPlanTyped: binding.storageRepairPlanTyped,
+    storageEpisodeBeginTyped: binding.storageEpisodeBeginTyped,
+    storageEpisodeHeartbeatTyped: binding.storageEpisodeHeartbeatTyped,
+    storageEpisodeAttachFrameTyped: binding.storageEpisodeAttachFrameTyped,
+    storageEpisodeAttachRefTyped: binding.storageEpisodeAttachRefTyped,
+    storageEpisodeCloseTyped: binding.storageEpisodeCloseTyped,
+    storageEpisodeRecoverTyped: binding.storageEpisodeRecoverTyped,
+    storageEpisodeProjectionRebuildTyped:
+      binding.storageEpisodeProjectionRebuildTyped,
+    storageEpisodeListTyped: binding.storageEpisodeListTyped,
+    storageEpisodeInspectTyped: binding.storageEpisodeInspectTyped,
+    storageSourceRegisterTyped: binding.storageSourceRegisterTyped,
+    storageSourceUpdateHeadTyped: binding.storageSourceUpdateHeadTyped,
+    storageSourceRecordAcceptedRangeTyped:
+      binding.storageSourceRecordAcceptedRangeTyped,
+    storageSourceListTyped: binding.storageSourceListTyped,
+    storageSourceInspectTyped: binding.storageSourceInspectTyped,
+    storageSourceRegistryFsckTyped: binding.storageSourceRegistryFsckTyped,
+    storageSourceRegistryRebuildTyped:
+      binding.storageSourceRegistryRebuildTyped,
+    storageLayoutTyped: binding.storageLayoutTyped,
     makeStorageServiceRequest: binding.makeStorageServiceRequest,
     runStorageServiceOperation: binding.runStorageServiceOperation,
     acceptStorageManifest: binding.acceptStorageManifest,

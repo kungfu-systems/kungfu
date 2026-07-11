@@ -98,9 +98,11 @@ public:
                                               size_t len) const;
 
   // Verify a data FlatBuffers table buffer against this schema (bounds-check the
-  // whole table graph). bind_frame runs this internally; exposed for callers
-  // that want to validate a buffer without binding.
-  [[nodiscard]] bool verify_table(const uint8_t *buf, size_t len) const;
+  // whole table graph). With an empty object_name the declared root_type is
+  // used; otherwise the named table (qualified or unique suffix) is selected,
+  // which is required for action manifests that bind several tables from one
+  // `.bfbs`. bind_frame runs the root-table form internally.
+  [[nodiscard]] bool verify_table(const uint8_t *buf, size_t len, std::string_view object_name = {}) const;
 
 private:
   // Co-owned `.bfbs` bytes. shared_ptr<const> so copies share one immutable

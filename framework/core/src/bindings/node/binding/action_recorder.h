@@ -19,6 +19,8 @@ public:
 
   Napi::Value RecordJson(const Napi::CallbackInfo &info);
 
+  Napi::Value RecordAction(const Napi::CallbackInfo &info);
+
   Napi::Value Mark(const Napi::CallbackInfo &info);
 
   Napi::Value LastFrameUid(const Napi::CallbackInfo &info);

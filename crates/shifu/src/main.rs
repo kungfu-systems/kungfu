@@ -40,6 +40,7 @@ mod envfile;
 #[cfg(windows)]
 mod msvc;
 mod promote;
+mod registrar;
 mod self_update;
 mod tools;
 mod util;

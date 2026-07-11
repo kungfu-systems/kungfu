@@ -1,0 +1,65 @@
+{
+  "schema": "kungfu.layer-qualification.sdk-semantic-fixture/v1",
+  "contract": "kungfu.runtime.storage-service/v1",
+  "native_abi": "kungfu/native_storage.h@1",
+  "episode_id": 42490049,
+  "steps": [
+    {
+      "id": "episode-begin",
+      "operation": "episode_begin",
+      "request": { "episode_id": 42490049, "begin_time": 100, "title": "SDK closure", "actor": "ecosystem SDK", "source": "adr-0049" },
+      "assert": [{ "path": ["episode_id"], "equals": 42490049 }]
+    },
+    {
+      "id": "query-open-head",
+      "operation": "fact_query",
+      "request": { "definition": { "basis": { "episode_id": 42490049, "cut": { "kind": "head" } } } },
+      "capture": {
+        "open_cut": ["lineage", "cut", "resolved", "manifest_frame_uid"]
+      },
+      "assert": [{ "path": ["rows", 0, "closed"], "equals": false }]
+    },
+    {
+      "id": "episode-end",
+      "operation": "episode_end",
+      "request": { "episode_id": 42490049, "end_time": 200, "frame_count": 0, "reason": "SDK closure complete" },
+      "assert": [{ "path": ["content_root"], "exists": true }]
+    },
+    {
+      "id": "query-closed-head",
+      "operation": "fact_query",
+      "request": { "definition": { "basis": { "episode_id": 42490049, "cut": { "kind": "head" } } } },
+      "assert": [
+        { "path": ["rows", 0, "closed"], "equals": true },
+        {
+          "path": ["rows", 0, "content_root_status"],
+          "equals": "verified"
+        }
+      ]
+    },
+    {
+      "id": "query-historical-cut",
+      "operation": "fact_query",
+      "request": { "definition": { "basis": { "episode_id": 42490049, "cut": { "kind": "manifest_frame_uid", "manifest_frame_uid": "${open_cut}" } } } },
+      "assert": [
+        { "path": ["rows", 0, "closed"], "equals": false },
+        { "path": ["lineage", "cut", "inclusive"], "equals": true }
+      ]
+    },
+    {
+      "id": "fsck",
+      "operation": "fsck",
+      "request": { "scope": "episode", "episode_id": 42490049 },
+      "assert": [{ "path": ["ok"], "equals": true }]
+    },
+    {
+      "id": "export-bundle",
+      "operation": "export_bundle",
+      "request": { "scope": "episode", "episode_id": 42490049 },
+      "assert": [
+        { "path": ["schema"], "equals": "kungfu.storage.episode-bundle/v1" },
+        { "path": ["record_count"], "equals": 3 }
+      ]
+    }
+  ]
+}
