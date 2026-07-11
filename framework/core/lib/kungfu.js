@@ -83,6 +83,19 @@ module.exports = () => {
     formatTime: binding.formatTime,
     formatStringToHashHex: binding.formatStringToHashHex,
     parseTime: binding.parseTime,
+    encodeActionEnvelope: binding.encodeActionEnvelope,
+    decodeActionEnvelope: binding.decodeActionEnvelope,
+    ACTION_ENVELOPE_CARRIER_TYPE: binding.ACTION_ENVELOPE_CARRIER_TYPE,
+    /**
+     * @param {string} runtimeDir
+     * @param {string} namespace
+     * @param {string} name
+     * @param {number} [destId]
+     * @param {number|bigint} [streamId]
+     * @returns {any}
+     */
+    ActionRecorder: (runtimeDir, namespace, name, destId, streamId) =>
+      new binding.ActionRecorder(runtimeDir, namespace, name, destId, streamId),
     storageServiceCapabilities: binding.storageServiceCapabilities,
     storageStatusTyped: binding.storageStatusTyped,
     storageQueryTyped: binding.storageQueryTyped,

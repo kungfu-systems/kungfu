@@ -631,7 +631,132 @@ interface StorageProjectionRebuildResult {
   journal_records: Array<{ table: string; count: bigint }>;
 }
 
+type ActionPayloadEncoding =
+  | 0
+  | 1
+  | 2
+  | 3
+  | 4
+  | 'none'
+  | 'flatbuffers'
+  | 'json'
+  | 'content-reference'
+  | 'opaque';
+
+interface ActionEnvelope {
+  version?: number;
+  action_type: string;
+  schema_ref: { id: string; version?: number };
+  actor?: {
+    id?: string;
+    kind?: string;
+    storage_source_id?: string;
+    source_type?: string;
+  };
+  session?: { run_id?: string; import_id?: string };
+  source?: {
+    kind?: string;
+    source_id?: string;
+    source_path?: string;
+    source_time?: string;
+    schema_version?: number;
+  };
+  batch?: {
+    repo_root?: string;
+    repo_head?: string;
+    schema_version?: number;
+    missions?: bigint | number;
+    goals?: bigint | number;
+    markers?: bigint | number;
+    warnings?: bigint | number;
+  };
+  journal?: {
+    frame_uid?: bigint | number;
+    trigger_frame_uid?: bigint | number;
+    stream_id?: bigint | number;
+    gen_time?: bigint | number;
+    trigger_time?: bigint | number;
+    carrier_type?: number;
+    source?: number;
+    initial_source?: number;
+    dest?: number;
+    data_length?: number;
+    data_type?: number;
+    integrity_version?: number;
+    checksum_algorithm?: string;
+    payload_checksum?: bigint | number;
+    frame_checksum?: bigint | number;
+  };
+  payload?: {
+    encoding?: ActionPayloadEncoding;
+    data?: Uint8Array;
+    hash_algorithm?: string;
+    hash?: string;
+    byte_len?: bigint | number;
+    content_type?: string;
+    state?: string;
+  };
+}
+
+interface DecodedActionEnvelope extends ActionEnvelope {
+  version: number;
+  schema_ref: { id: string; version: number };
+  payload?: {
+    encoding: 0 | 1 | 2 | 3 | 4;
+    data: Uint8Array;
+    hash_algorithm: string;
+    hash: string;
+    byte_len: bigint;
+    content_type: string;
+    state: string;
+  };
+}
+
+interface ActionRecordOptions {
+  genTime?: bigint | number;
+  triggerTime?: bigint | number;
+  parentFrameUid?: bigint | number;
+  streamId?: bigint | number;
+  chainToLast?: boolean;
+}
+
+interface ActionRecordReceipt {
+  frameUid: bigint;
+  triggerFrameUid: bigint;
+  streamId: bigint;
+  genTime: bigint;
+  triggerTime: bigint;
+  carrierType: number;
+  source: number;
+  initialSource: number;
+  dest: number;
+  dataLength: number;
+  dataType: number;
+  integrityVersion: number;
+  checksumAlgorithm: string;
+  payloadChecksum: bigint;
+  frameChecksum: bigint;
+}
+
+interface ActionRecorder {
+  recordAction(
+    value: ActionEnvelope,
+    options?: ActionRecordOptions,
+  ): ActionRecordReceipt;
+  lastFrameUid(): bigint;
+}
+
 interface KungfuRuntime {
+  readonly ACTION_ENVELOPE_CARRIER_TYPE: number;
+  encodeActionEnvelope(value: ActionEnvelope): Uint8Array;
+  decodeActionEnvelope(value: Uint8Array): DecodedActionEnvelope | null;
+  ActionRecorder(
+    runtimeDir: string,
+    namespace: string,
+    name: string,
+    destId?: number,
+    streamId?: bigint | number,
+  ): ActionRecorder;
   storageStatusTyped(
     runtimeDir: string,
     sourceId?: string,

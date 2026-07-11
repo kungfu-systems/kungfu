@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import base64
 import json
 from typing import Any
 
@@ -15,7 +14,6 @@ CARRIER_ACTION_ENVELOPE = 1000
 ACTION_ENVELOPE_SCHEMA = "kungfu.action-envelope/v1"
 PAYLOAD_ENCODING_FLATBUFFERS = "flatbuffers"
 PAYLOAD_ENCODING_JSON = "json"
-CONTENT_TRANSFER_BASE64 = "base64"
 
 
 def canonical_json_bytes(value: Any) -> bytes:
@@ -34,10 +32,10 @@ def payload_hash(payload: bytes) -> str:
 def flatbuffer_payload(payload: bytes) -> dict[str, Any]:
     return {
         "encoding": PAYLOAD_ENCODING_FLATBUFFERS,
-        "content_transfer_encoding": CONTENT_TRANSFER_BASE64,
-        "data": base64.b64encode(payload).decode("ascii"),
+        "data": bytes(payload),
         "byte_len": len(payload),
-        "sha256": payload_hash(payload),
+        "hash_algorithm": "sha256",
+        "hash": payload_hash(payload),
     }
 
 
@@ -46,13 +44,8 @@ def decode_flatbuffer_payload(payload: dict[str, Any]) -> bytes:
         raise ValueError(
             f"expected flatbuffers payload, got {payload.get('encoding')!r}"
         )
-    if payload.get("content_transfer_encoding") != CONTENT_TRANSFER_BASE64:
-        raise ValueError(
-            "expected base64 transfer encoding, got "
-            f"{payload.get('content_transfer_encoding')!r}"
-        )
-    data = base64.b64decode(str(payload.get("data") or ""), validate=True)
-    expected = payload.get("sha256")
+    data = bytes(payload.get("data") or b"")
+    expected = payload.get("hash")
     if expected and not verify_content_hash_value(data, str(expected)):
         raise ValueError("action envelope payload hash mismatch")
     return data
@@ -83,7 +76,11 @@ def build_action_envelope(
     if batch is not None:
         envelope["batch"] = batch
     if payload is not None:
-        envelope["payload"] = payload
+        envelope["payload"] = dict(payload)
+        if "encoding" not in envelope["payload"]:
+            envelope["payload"]["encoding"] = (
+                "content-reference" if envelope["payload"].get("hash") else "opaque"
+            )
     if journal is not None:
         envelope["journal"] = dict(journal)
     return envelope
@@ -94,21 +91,35 @@ def encode_action_envelope(envelope: dict[str, Any]) -> bytes:
         raise ValueError("not a Kungfu action envelope")
     if not envelope.get("action_type"):
         raise ValueError("action envelope requires action_type")
-    return canonical_json_bytes(envelope)
+    import kungfu
+
+    return bytes(kungfu.__binding__.runtime.encode_action_envelope(envelope))
 
 
 def decode_action_envelope(
     data: bytes | bytearray | memoryview | list[int],
 ) -> dict[str, Any] | None:
-    raw = bytes(data).rstrip(b"\0")
+    raw = bytes(data)
     if not raw:
         return None
-    try:
-        envelope = json.loads(raw.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError):
-        return None
+    import kungfu
+
+    envelope = kungfu.__binding__.runtime.decode_action_envelope(raw)
     if not isinstance(envelope, dict):
         return None
-    if envelope.get("schema") != ACTION_ENVELOPE_SCHEMA:
-        return None
+    envelope["schema"] = ACTION_ENVELOPE_SCHEMA
+    for key in ("actor", "session", "source", "batch", "journal", "payload"):
+        if envelope.get(key) is None:
+            envelope.pop(key, None)
+    payload = envelope.get("payload")
+    if isinstance(payload, dict):
+        names = {
+            0: "none",
+            1: PAYLOAD_ENCODING_FLATBUFFERS,
+            2: PAYLOAD_ENCODING_JSON,
+            3: "content-reference",
+            4: "opaque",
+        }
+        payload["encoding"] = names.get(payload.get("encoding"), "none")
+        payload["data"] = bytes(payload.get("data") or b"")
     return envelope

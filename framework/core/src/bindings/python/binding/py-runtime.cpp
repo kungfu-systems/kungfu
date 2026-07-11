@@ -7,6 +7,7 @@
 #include <nlohmann/json.hpp>
 #include <pybind11/stl.h>
 
+#include <kungfu/runtime/action_envelope_reflection.h>
 #include <kungfu/runtime/action_recorder.h>
 #include <kungfu/runtime/cache/profile.h>
 #include <kungfu/runtime/index/session.h>
@@ -127,6 +128,107 @@ template <typename T> py::object hana_view_to_py(const T &value) {
   } else {
     static_assert(dependent_false_v<value_t>, "unsupported Hana binding value");
   }
+}
+
+std::string dict_string(const py::dict &object, const char *key) {
+  return object.contains(key) && !object[key].is_none() ? object[key].cast<std::string>() : std::string{};
+}
+
+template <typename T> T dict_number(const py::dict &object, const char *key, T fallback = {}) {
+  return object.contains(key) && !object[key].is_none() ? object[key].cast<T>() : fallback;
+}
+
+kungfu::view::action::payload_encoding payload_encoding_from_py(const py::handle &value) {
+  using encoding = kungfu::view::action::payload_encoding;
+  if (py::isinstance<py::int_>(value))
+    return static_cast<encoding>(value.cast<uint8_t>());
+  const auto name = value.is_none() ? std::string{} : value.cast<std::string>();
+  if (name == "flatbuffers")
+    return encoding::FlatBuffers;
+  if (name == "json")
+    return encoding::Json;
+  if (name == "content-reference")
+    return encoding::ContentReference;
+  if (name == "opaque")
+    return encoding::Opaque;
+  return encoding::None;
+}
+
+kungfu::view::action::envelope action_envelope_from_py(const py::dict &object) {
+  using namespace kungfu::view::action;
+  envelope result{};
+  result.version = dict_number<uint16_t>(object, "version", ACTION_ENVELOPE_VERSION);
+  result.action_type = dict_string(object, "action_type");
+  if (!object.contains("schema_ref") || !py::isinstance<py::dict>(object["schema_ref"]))
+    throw std::invalid_argument("action envelope requires schema_ref");
+  const auto schema = object["schema_ref"].cast<py::dict>();
+  result.schema_ref = {dict_string(schema, "id"), dict_number<uint32_t>(schema, "version", 1)};
+  if (object.contains("actor") && py::isinstance<py::dict>(object["actor"])) {
+    const auto value = object["actor"].cast<py::dict>();
+    result.actor = actor_metadata{dict_string(value, "id"), dict_string(value, "kind"),
+                                  dict_string(value, "storage_source_id"), dict_string(value, "source_type")};
+  }
+  if (object.contains("session") && py::isinstance<py::dict>(object["session"])) {
+    const auto value = object["session"].cast<py::dict>();
+    result.session = session_metadata{dict_string(value, "run_id"), dict_string(value, "import_id")};
+  }
+  if (object.contains("source") && py::isinstance<py::dict>(object["source"])) {
+    const auto value = object["source"].cast<py::dict>();
+    result.source =
+        source_metadata{dict_string(value, "kind"), dict_string(value, "source_id"), dict_string(value, "source_path"),
+                        dict_string(value, "source_time"), dict_number<uint32_t>(value, "schema_version")};
+  }
+  if (object.contains("batch") && py::isinstance<py::dict>(object["batch"])) {
+    const auto value = object["batch"].cast<py::dict>();
+    result.batch = batch_metadata{dict_string(value, "repo_root"),
+                                  dict_string(value, "repo_head"),
+                                  dict_number<uint32_t>(value, "schema_version"),
+                                  dict_number<uint64_t>(value, "missions"),
+                                  dict_number<uint64_t>(value, "goals"),
+                                  dict_number<uint64_t>(value, "markers"),
+                                  dict_number<uint64_t>(value, "warnings")};
+  }
+  if (object.contains("journal") && py::isinstance<py::dict>(object["journal"])) {
+    const auto value = object["journal"].cast<py::dict>();
+    result.journal = journal_metadata{dict_number<uint64_t>(value, "frame_uid"),
+                                      dict_number<uint64_t>(value, "trigger_frame_uid"),
+                                      dict_number<uint64_t>(value, "stream_id"),
+                                      dict_number<int64_t>(value, "gen_time"),
+                                      dict_number<int64_t>(value, "trigger_time"),
+                                      dict_number<int32_t>(value, "carrier_type", ACTION_ENVELOPE_CARRIER_TYPE),
+                                      dict_number<uint32_t>(value, "source"),
+                                      dict_number<uint32_t>(value, "initial_source"),
+                                      dict_number<uint32_t>(value, "dest"),
+                                      dict_number<uint32_t>(value, "data_length"),
+                                      dict_number<int8_t>(value, "data_type"),
+                                      dict_number<uint32_t>(value, "integrity_version"),
+                                      dict_string(value, "checksum_algorithm"),
+                                      dict_number<uint64_t>(value, "payload_checksum"),
+                                      dict_number<uint64_t>(value, "frame_checksum")};
+  }
+  if (object.contains("payload") && py::isinstance<py::dict>(object["payload"])) {
+    const auto value = object["payload"].cast<py::dict>();
+    std::vector<uint8_t> data;
+    py::object encoding_value = py::none();
+    if (value.contains("encoding"))
+      encoding_value = py::reinterpret_borrow<py::object>(value["encoding"]);
+    if (value.contains("data") && !value["data"].is_none()) {
+      if (py::isinstance<py::bytes>(value["data"])) {
+        const auto bytes = value["data"].cast<std::string>();
+        data.assign(bytes.begin(), bytes.end());
+      } else {
+        data = value["data"].cast<std::vector<uint8_t>>();
+      }
+    }
+    result.payload = payload_view{payload_encoding_from_py(encoding_value),
+                                  std::move(data),
+                                  dict_string(value, "hash_algorithm"),
+                                  dict_string(value, "hash"),
+                                  dict_number<uint64_t>(value, "byte_len"),
+                                  dict_string(value, "content_type"),
+                                  dict_string(value, "state")};
+  }
+  return result;
 }
 
 } // namespace
@@ -900,6 +1002,22 @@ void bind(pybind11::module &&m) {
       .def_readonly("payload_checksum", &action::record_receipt::payload_checksum)
       .def_readonly("frame_checksum", &action::record_receipt::frame_checksum);
 
+  m.def(
+      "encode_action_envelope",
+      [](const py::dict &value) {
+        const auto encoded = view::action::encode(action_envelope_from_py(value));
+        return py::bytes(reinterpret_cast<const char *>(encoded.data()), encoded.size());
+      },
+      py::arg("value"));
+  m.def(
+      "decode_action_envelope",
+      [](py::bytes value) -> py::object {
+        const auto bytes = value.cast<std::string>();
+        const auto decoded = view::action::decode(reinterpret_cast<const uint8_t *>(bytes.data()), bytes.size());
+        return decoded.has_value() ? hana_view_to_py(*decoded) : py::none();
+      },
+      py::arg("value"));
+
   py::class_<action::action_recorder, action::action_recorder_ptr>(m, "action_recorder")
       .def(py::init<const std::string &, const std::string &, const std::string &, uint32_t, uint64_t>(),
            py::arg("runtime_dir"), py::arg("namespace"), py::arg("name"),
@@ -915,6 +1033,12 @@ void bind(pybind11::module &&m) {
           py::arg_v("options", action::record_options{}, "action_record_options()"))
       .def("record_json", &action::action_recorder::record_json, py::arg("carrier_type"), py::arg("json_payload"),
            py::arg_v("options", action::record_options{}, "action_record_options()"))
+      .def(
+          "record_action",
+          [](action::action_recorder &recorder, const py::dict &value, action::record_options options) {
+            return recorder.record_action(action_envelope_from_py(value), options);
+          },
+          py::arg("value"), py::arg_v("options", action::record_options{}, "action_record_options()"))
       .def("mark", &action::action_recorder::mark, py::arg("carrier_type"),
            py::arg_v("options", action::record_options{}, "action_record_options()"))
       .def_property_readonly("last_frame_uid", &action::action_recorder::last_frame_uid);

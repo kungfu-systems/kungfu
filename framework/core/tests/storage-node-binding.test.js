@@ -14,6 +14,9 @@ const nativeAvailable =
   typeof kungfu.runStorageServiceOperation === 'function' &&
   typeof kungfu.acceptStorageManifest === 'function';
 const typedStatusAvailable = typeof kungfu.storageStatusTyped === 'function';
+const actionEnvelopeAvailable =
+  typeof kungfu.encodeActionEnvelope === 'function' &&
+  typeof kungfu.decodeActionEnvelope === 'function';
 
 function runtimeEnv() {
   const key =
@@ -187,6 +190,53 @@ function withStorageProvider(provider, fn) {
     }
   }
 }
+
+test(
+  'Node action envelope uses verified FlatBuffers bytes and a Raw carrier',
+  {
+    skip:
+      actionEnvelopeAvailable || process.env.KUNGFU_REQUIRE_NATIVE === '1'
+        ? false
+        : 'built action envelope binding is unavailable',
+  },
+  () => {
+    const value = {
+      version: 1,
+      action_type: 'rewind.model.response',
+      schema_ref: { id: 'kungfu.rewind.ModelResponse', version: 3 },
+      actor: { id: 'agent-1', kind: 'agent' },
+      session: { run_id: 'run-1' },
+      payload: {
+        encoding: 'flatbuffers',
+        data: Buffer.from('payload'),
+      },
+    };
+    const encoded = Buffer.from(kungfu.encodeActionEnvelope(value));
+    assert.notEqual(encoded[0], '{'.charCodeAt(0));
+    assert.equal(encoded.subarray(4, 8).toString('ascii'), 'KFAE');
+
+    const decoded = kungfu.decodeActionEnvelope(encoded);
+    assert.equal(decoded.action_type, value.action_type);
+    assert.deepEqual(decoded.schema_ref, value.schema_ref);
+    assert.equal(decoded.payload.encoding, 1);
+    assert.deepEqual(Buffer.from(decoded.payload.data), Buffer.from('payload'));
+    assert.equal(decoded.payload.hash_algorithm, 'sha256');
+    assert.match(decoded.payload.hash, /^[0-9a-f]{64}$/);
+    assert.equal(decoded.payload.byte_len, 7n);
+
+    const corrupted = Buffer.from(encoded);
+    corrupted[corrupted.indexOf(Buffer.from('payload'))] ^= 0xff;
+    assert.equal(kungfu.decodeActionEnvelope(corrupted), null);
+
+    const runtimeDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'kf-action-envelope-node-'),
+    );
+    const recorder = kungfu.ActionRecorder(runtimeDir, 'action', 'binary');
+    const receipt = recorder.recordAction(value);
+    assert.equal(receipt.carrierType, kungfu.ACTION_ENVELOPE_CARRIER_TYPE);
+    assert.equal(receipt.dataType, 0);
+  },
+);
 
 test(
   'Hana typed storage status bypasses JSON stringify/parse transport',
