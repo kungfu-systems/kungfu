@@ -126,6 +126,10 @@ The slice supports an optional `KF_LIBWASM_CARGO_REGISTRY` CMake cache value
 for a sparse mirror. An empty value uses the official Cargo source; mirror and
 official downloads are both checked against the adapter lockfiles.
 
+The standalone spike directory pins Rust 1.95.0 with the minimal profile.
+This satisfies the engines' declared Rust 1.94 (Wasmtime) and Rust 1.93
+(Wasmer) minima without changing the root workspace toolchain policy.
+
 ## Remaining gates
 
 1. Pass the immutable-source Linux x64 and Windows x64 workflow rows with the
