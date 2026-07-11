@@ -318,11 +318,16 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
   const [completionReport, setCompletionReport] =
     React.useState<AtlasMissionControlReport | null>(null);
   const [completionError, setCompletionError] = React.useState<string>('');
+  const [newMissionId, setNewMissionId] = React.useState('');
+  const [newMissionTitle, setNewMissionTitle] = React.useState('');
+  const [newMissionIntent, setNewMissionIntent] = React.useState('');
   const [newGoalId, setNewGoalId] = React.useState('');
   const [newGoalTitle, setNewGoalTitle] = React.useState('');
   const [newGoalObjective, setNewGoalObjective] = React.useState('');
   const [claimStatement, setClaimStatement] = React.useState('');
   const [evidenceEpisodes, setEvidenceEpisodes] = React.useState('');
+  const [bundlePath, setBundlePath] = React.useState('');
+  const [importBundlePath, setImportBundlePath] = React.useState('');
   const actor = 'work-dashboard';
 
   const reload = React.useCallback(() => {
@@ -370,6 +375,62 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
       reload();
     } catch (e) {
       setMessage((e as Error).message);
+    }
+  };
+
+  const createMissionNow = () => {
+    try {
+      const result = atlas.createMission(newMissionId, {
+        title: newMissionTitle,
+        intent: newMissionIntent,
+        actor,
+        actorType: 'user',
+      });
+      setMessage(
+        `created ${result.mission_subject}: ${result.receipt.status}${
+          result.receipt.reused ? ' (reused)' : ''
+        }`,
+      );
+      reload();
+      setSelectedMission(newMissionId);
+      setNewMissionId('');
+      setNewMissionTitle('');
+      setNewMissionIntent('');
+    } catch (error) {
+      setMessage((error as Error).message);
+    }
+  };
+
+  const exportMissionNow = (mode: 'full' | 'thin') => {
+    if (selectedMission === 'all' || !bundlePath.trim()) {
+      setMessage('select a Mission and enter an export path');
+      return;
+    }
+    try {
+      const result = atlas.exportMission(selectedMission, bundlePath, { mode });
+      setMessage(
+        `exported ${result.mode} bundle: ${result.status} · ${result.episode_count} Episodes · ${result.out}`,
+      );
+    } catch (error) {
+      setMessage((error as Error).message);
+    }
+  };
+
+  const importMissionNow = (execute: boolean) => {
+    if (!importBundlePath.trim()) {
+      setMessage('enter a Mission bundle path');
+      return;
+    }
+    try {
+      const result = atlas.importMission(importBundlePath, { execute });
+      setMessage(
+        `${result.mode} bundle ${result.status} · accepted=${result.accepted} · missing=${result.missing_material_count}${
+          result.diagnosis ? ` · ${result.diagnosis}` : ''
+        }`,
+      );
+      reload();
+    } catch (error) {
+      setMessage((error as Error).message);
     }
   };
 
@@ -451,9 +512,9 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
   return (
     <div style={{ display: 'flex', gap: 12, height: '100%', minHeight: 0 }}>
       <section style={{ ...panelStyle, width: 440, flexShrink: 0 }}>
-        <h2 style={headingStyle}>Atlas projection</h2>
+        <h2 style={headingStyle}>Mission Control</h2>
         <div style={{ ...mono, color: '#858585', marginBottom: 8 }}>
-          source: Atlas files · authority stays in Atlas
+          Atlas bridge + Kungfu-native facts · authority remains explicit
         </div>
         <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
           <input
@@ -485,6 +546,72 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
             {message}
           </div>
         )}
+        <div
+          style={{
+            display: 'grid',
+            gap: 5,
+            marginBottom: 10,
+            padding: 8,
+            border: '1px solid #3c3c3c',
+            borderRadius: 4,
+          }}
+        >
+          <h2 style={headingStyle}>Create native Mission</h2>
+          <TextInput
+            value={newMissionId}
+            placeholder="stable Mission id"
+            onChange={setNewMissionId}
+          />
+          <TextInput
+            value={newMissionTitle}
+            placeholder="title"
+            onChange={setNewMissionTitle}
+          />
+          <TextInput
+            value={newMissionIntent}
+            placeholder="long-running intent"
+            onChange={setNewMissionIntent}
+          />
+          <SmallButton onClick={createMissionNow}>create Mission</SmallButton>
+        </div>
+        <div
+          style={{
+            display: 'grid',
+            gap: 5,
+            marginBottom: 10,
+            padding: 8,
+            border: '1px solid #3c3c3c',
+            borderRadius: 4,
+          }}
+        >
+          <h2 style={headingStyle}>Portable Mission bundle</h2>
+          <TextInput
+            value={bundlePath}
+            placeholder="export path (.json)"
+            onChange={setBundlePath}
+          />
+          <div style={{ display: 'flex', gap: 5 }}>
+            <SmallButton onClick={() => exportMissionNow('full')}>
+              export full
+            </SmallButton>
+            <SmallButton onClick={() => exportMissionNow('thin')}>
+              export thin
+            </SmallButton>
+          </div>
+          <TextInput
+            value={importBundlePath}
+            placeholder="import bundle path"
+            onChange={setImportBundlePath}
+          />
+          <div style={{ display: 'flex', gap: 5 }}>
+            <SmallButton onClick={() => importMissionNow(false)}>
+              validate
+            </SmallButton>
+            <SmallButton onClick={() => importMissionNow(true)}>
+              materialize
+            </SmallButton>
+          </div>
+        </div>
         {selectedMission !== 'all' && (
           <div
             style={{

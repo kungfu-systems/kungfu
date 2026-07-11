@@ -168,12 +168,14 @@ Mission scopes larger than the ADR-0048 256-subject bound are evaluated as a
 deterministic set of bounded subqueries and expose a composite definition and
 proof root; the runtime does not silently truncate the Mission.
 
-The pre-release Mission Control contract is now v2. It keeps Atlas-imported
-Mission/Go facts and adds two native surfaces under the same declared world:
-Kungfu-native Go facts and explicit completion claims. A user can create a Go
-in the Work Dashboard, while an agent can call the same operations:
+The pre-release Mission Control contract is now v3. It keeps Atlas-imported
+Mission/Go facts and admits explicitly sourced Kungfu-native Mission and Go
+facts plus completion claims under the same declared world. A user can author
+them in the Work Dashboard, while an agent can call the same operations:
 
 ```sh
+kungfu atlas create-mission <mission-id> \
+  --title <title> --intent <intent> --actor <actor> --json
 kungfu atlas create-go <mission-id> <goal-id> \
   --title <title> --objective <objective> --actor <actor> --json
 kungfu atlas claim-completion <mission-id> <goal-id> \
@@ -188,11 +190,10 @@ frame-verified, sealed work Episode remains visible but fails closed as
 insufficient. The GUI and CLI return the same assessment key and composite
 proof root.
 
-The earlier pre-release v1 Mission Control declaration cannot be silently mixed
-with v2 because its open-ended declarations did not include native sources or
-the completion-claim surface. A v1 data root therefore reports an explicit
-migration/re-import requirement. No released format is affected; a durable
-migration tool is required before this contract leaves pre-release status.
+The earlier pre-release v1/v2 Mission Control declarations cannot be silently
+mixed with v3 because their authority sets differ. Those data roots therefore
+report an explicit migration/re-import requirement. No released format is
+affected; this boundary must become a durable migration before stable release.
 
 ### Native mode
 
@@ -210,6 +211,27 @@ observer metadata share that authority.
 A full bundle carries the bounded content closure needed for offline replay and
 proof. A thin bundle carries declared roots and references and reports missing
 material honestly. Copying a GUI cache is never a portability mechanism.
+
+The first portable contract is `kungfu.mission-control.bundle/v1`. It composes
+the existing self-contained Episode bundles for declarations, Mission/Go/claim
+facts, linked cost/work evidence, and assessment, then pins the expected Mission
+query definition, proof, result, and Cost/State/Proof profile identities:
+
+```sh
+kungfu atlas export-mission <mission-id> \
+  --out <mission.kfmission.json> --mode full --json
+kungfu atlas export-mission <mission-id> \
+  --out <mission.thin.kfmission.json> --mode thin --json
+kungfu atlas import-mission --from <mission.kfmission.json> --json
+kungfu atlas import-mission --from <mission.kfmission.json> --execute --json
+```
+
+Validation is the default. `--execute` materializes only a full closure, in
+journal-time order, and accepts it only if the fresh data root reproduces all
+three Mission state roots. A thin bundle always remains a degraded reference
+with a diagnosis that a full bundle is required. Rewind run discovery uses the
+restored Episode source, so cost facts survive transfer without copying the
+old runtime directory or GUI projection.
 
 ## Current maturity
 
@@ -233,6 +255,8 @@ The first implementation target is intentionally narrow:
 5. show the result through the existing Work Dashboard/Trust progression
    (**implemented**);
 6. run entirely in an isolated temporary data root (**implemented**).
+7. create a native Mission and move its Mission/Go/cost/claim/proof closure to
+   a fresh data root (**implemented for full and thin local bundles**).
 
 This slice does not require a general ontology, unrestricted rule engine,
 cloud-only control plane, or full visual query builder.

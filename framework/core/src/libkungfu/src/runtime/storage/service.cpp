@@ -66,9 +66,7 @@ template <size_t N> std::string fixed_string(const kungfu::array<char, N> &value
 }
 
 template <size_t N> void assign_fixed(kungfu::array<char, N> &target, const std::string &value) {
-  std::fill(std::begin(target.value), std::end(target.value), '\0');
-  const auto length = std::min(value.size(), N - 1);
-  std::copy_n(value.data(), length, target.value);
+  kungfu::copy_string(target, value.c_str());
 }
 
 // ADR-0053: frame bytes cross the JSON edge as base64. The codec lives here

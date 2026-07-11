@@ -146,12 +146,12 @@ The profile may start from a run before the user declares a Mission. Attaching
 that run to a later Go reuses its identity and evidence; it does not migrate to
 a different data model.
 
-### 8. Native Go and completion claims are explicitly sourced
+### 8. Native Mission, Go, and completion claims are explicitly sourced
 
-The first pre-release native contract is version 2. It admits Atlas Mission/Go
-observations alongside explicitly sourced `kungfu-user` and `kungfu-agent`
-Go facts, plus a completion-claim surface. Native Go creation does not mutate
-the imported Atlas Mission or impersonate the Atlas adapter.
+The native-authority pre-release contract is version 3. It admits Atlas
+Mission/Go observations alongside explicitly sourced `kungfu-user` and
+`kungfu-agent` Mission and Go facts, plus a completion-claim surface. Native
+creation does not mutate an imported Atlas Mission or impersonate the adapter.
 
 Completion remains two-step: a participant records `task-completed`, then
 KFD-2 evaluates it for a declared purpose. The built-in policy requires a
@@ -160,12 +160,27 @@ independent work evidence. Cost continues to come from Rewind CostSnapshot
 events and is joined by stable Go/work identity rather than copied into the
 Mission fact world.
 
-Version 1 used open-ended declarations that cannot be safely amended in place.
-If a selected pre-release data root already contains v1, the runtime fails with
-an explicit migration/re-import requirement instead of creating overlapping
-declarations or silently changing authority.
+Versions 1 and 2 used authority declarations that cannot be safely amended in
+place. If a selected pre-release data root already contains either version, the
+runtime fails with an explicit migration/re-import requirement instead of
+creating overlapping declarations or silently changing authority.
 
-### 9. Human and agent surfaces are peers
+### 9. Mission portability composes Episode identities
+
+`kungfu.mission-control.bundle/v1` is a bounded closure, not another journal.
+It inventories the contract declarations, Mission/Go/claim fact Episodes,
+linked CostSnapshot and claim-evidence Episodes, assessment Episode, expected
+query roots, and Cost/State/Proof profile identity. Each inventory entry embeds
+the existing ADR-0053 Episode bundle.
+
+A full Mission bundle materializes those Episodes in journal-time order and
+must reproduce the same Mission query definition, proof, and result roots in a
+fresh data root. A thin bundle preserves roots and references, validates, and
+remains explicitly degraded; it cannot materialize Mission state. Atlas bridge
+exports may include a shared source-import Episode and disclose that broader
+provenance scope. GUI caches and projection rows are never portability input.
+
+### 10. Human and agent surfaces are peers
 
 The GUI and installed CLI/API operate the same Mission/Go commands,
 QueryDefinitions, and assessment requests. The GUI uses progressive disclosure
@@ -191,6 +206,9 @@ private authority.
    Completion fails closed without an independent frame-verified Episode.
 6. Qualify the full path in a temporary data root, then expand GUI authoring and
    portable Mission bundles only from observed dogfood needs.
+   **Implemented:** a native Mission with Go, CostSnapshot, completion claim,
+   assessment, and proof exports as a full closure, imports into a fresh root,
+   and reproduces state and Cost/State/Proof. Thin import remains degraded.
 
 Step 3's initial slice is implemented: every explicit Atlas import still seals
 its source snapshot Episode first, then idempotently admits present Mission and
@@ -201,6 +219,8 @@ rewrite or abort the already sealed import and is returned as an explicit
 degraded receipt. Steps 4 and 5 now form the first executable trust slice for
 progress and completion. Native Go creation and completion claims use the same
 Fact Library, query, assessment, CLI/API, and Work Dashboard paths.
+Native Mission creation and full/thin bundle management now use those same
+surfaces; no projection or GUI cache is added to the authority path.
 
 ## Acceptance gates
 
@@ -217,6 +237,8 @@ Fact Library, query, assessment, CLI/API, and Work Dashboard paths.
   identities.
 - Missing, conflicting, stale, redacted, or unverifiable evidence cannot render
   an unqualified successful state.
+- Full Mission import reproduces the pinned query/proof/result roots and linked
+  cost facts; thin import cannot claim materialized or accepted state.
 - All initial dogfood writes use isolated temporary data roots and do not modify
   a user's existing `.kungfu` or runtime home.
 

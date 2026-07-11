@@ -1,9 +1,8 @@
 #  SPDX-License-Identifier: Apache-2.0
 #
-# `kungfu atlas` — the Atlas control-plane import profile (read-only slice).
-# `import` snapshots an Atlas-style repository's mission/goal/worktree-marker
-# state into the local journal; `show` renders the latest completed batch.
-# The source repository remains the authority; nothing is written back.
+# `kungfu atlas` — the Atlas bridge and Mission Control pre-release namespace.
+# Imported Atlas records keep Atlas authority; Kungfu-native Mission/Go facts
+# and portable Mission bundles share the same Fact Library and proof path.
 
 import click
 import json
@@ -17,7 +16,7 @@ atlas_command_context = kfc.pass_context()
 @kfc.group(
     cls=PrioritizedCommandGroup,
     help_priority=2,
-    help="import and inspect an Atlas-style control plane (read-only)",
+    help="bridge Atlas facts and operate proof-backed Mission Control",
 )
 @click.help_option("-h", "--help")
 @kfc.pass_context()
@@ -39,6 +38,12 @@ def _load(ctx):
         )
         sys.exit(1)
     return projection
+
+
+def _load_optional(ctx):
+    from kungfu.atlas import store
+
+    return store.load(ctx.runtime_dir)
 
 
 def _range_filter(since, from_time, until):
@@ -124,23 +129,29 @@ def show(ctx):
     pass
 
 
-@show.command(help="list imported missions")
+@show.command(help="list admitted Atlas and Kungfu-native Missions")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @atlas_command_context
 def missions(ctx, as_json):
-    projection = _load(ctx)
-    cards = sorted(projection["missions"].values(), key=lambda c: c["mission_id"])
+    from kungfu.atlas import mission_control
+
+    projection = _load_optional(ctx)
+    cards_by_id = dict((projection or {}).get("missions", {}))
+    for record in mission_control.list_missions(ctx.runtime_dir):
+        mission_id = str(record["mission_id"])
+        cards_by_id[mission_id] = {**record, **cards_by_id.get(mission_id, {})}
+    cards = sorted(cards_by_id.values(), key=lambda c: c["mission_id"])
     if as_json:
         _echo_json(cards)
         return
     for card in cards:
         click.echo(
             f"{card['mission_id']}  [{card['status']}]  {card['title']}"
-            f"{'  stage: ' + card['stage_name'] if card['stage_name'] else ''}"
+            f"{'  stage: ' + card.get('stage_name', '') if card.get('stage_name') else ''}"
         )
 
 
-@show.command(help="list imported goals")
+@show.command(help="list admitted Atlas and Kungfu-native Go facts")
 @click.option("--status", type=str, default=None, help="filter by goal status")
 @click.option(
     "--mission", "mission_id", type=str, default=None, help="filter by mission"
@@ -148,12 +159,22 @@ def missions(ctx, as_json):
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @atlas_command_context
 def goals(ctx, status, mission_id, as_json):
-    projection = _load(ctx)
+    from kungfu.atlas import mission_control
+
+    projection = _load_optional(ctx)
+    cards_by_id = dict((projection or {}).get("goals", {}))
+    for record in mission_control.list_goals(ctx.runtime_dir):
+        goal_id = str(record["goal_id"])
+        cards_by_id[goal_id] = {**record, **cards_by_id.get(goal_id, {})}
     cards = [
         card
-        for card in sorted(projection["goals"].values(), key=lambda c: c["goal_id"])
+        for card in sorted(cards_by_id.values(), key=lambda c: c["goal_id"])
         if (status is None or card["status"] == status)
-        and (mission_id is None or card["mission_id"] == mission_id)
+        and (
+            mission_id is None
+            or card.get("mission_id") == mission_id
+            or card.get("mission_subject") == mission_id
+        )
     ]
     if as_json:
         _echo_json(cards)
@@ -161,7 +182,7 @@ def goals(ctx, status, mission_id, as_json):
     for card in cards:
         click.echo(
             f"{card['goal_id']}  [{card['status']}]"
-            f"{'  (archived)' if card['archived'] else ''}  {card['title']}"
+            f"{'  (archived)' if card.get('archived') else ''}  {card['title']}"
         )
 
 
@@ -183,8 +204,19 @@ def markers(ctx, as_json):
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @atlas_command_context
 def goal(ctx, goal_id, as_json):
-    projection = _load(ctx)
-    card = projection["goals"].get(goal_id)
+    projection = _load_optional(ctx)
+    card = (projection or {}).get("goals", {}).get(goal_id)
+    if card is None:
+        from kungfu.atlas import mission_control
+
+        card = next(
+            (
+                row
+                for row in mission_control.list_goals(ctx.runtime_dir)
+                if row.get("goal_id") == goal_id
+            ),
+            None,
+        )
     if card is None:
         click.echo(f"[atlas] unknown goal: {goal_id}", err=True)
         sys.exit(1)
@@ -196,23 +228,20 @@ def goal(ctx, goal_id, as_json):
             click.echo(f"  {key}: {value}")
 
 
-@show.command(help="show one mission and its imported goals")
+@show.command(help="show one admitted Mission and its Go facts")
 @click.argument("mission_id", type=str)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @atlas_command_context
 def mission(ctx, mission_id, as_json):
-    projection = _load(ctx)
-    card = projection["missions"].get(mission_id)
-    if card is None:
+    from kungfu.atlas import mission_control
+
+    try:
+        state = mission_control.query_state(ctx.runtime_dir, mission_id=mission_id)
+    except ValueError:
         click.echo(f"[atlas] unknown mission: {mission_id}", err=True)
         sys.exit(1)
-    linked = [
-        goal_card
-        for goal_card in sorted(
-            projection["goals"].values(), key=lambda c: c["goal_id"]
-        )
-        if goal_card["mission_id"] == mission_id
-    ]
+    card = state["mission"]["payload"]["record"]
+    linked = [row["payload"]["record"] for row in state["goals"]]
     if as_json:
         _echo_json({"mission": card, "goals": linked})
         return
@@ -306,6 +335,120 @@ def assess_mission(
     click.echo(f"  proof: {report['query_proof_root']}")
     for finding in report["findings"]:
         click.echo(f"  finding: {finding}")
+
+
+@atlas.command(
+    name="create-mission",
+    help="create a Kungfu-native Mission in the shared Fact Library",
+)
+@click.argument("mission_id", type=str)
+@click.option("--title", type=str, required=True)
+@click.option("--intent", type=str, required=True)
+@click.option("--actor", type=str, required=True)
+@click.option(
+    "--actor-type",
+    type=click.Choice(["user", "agent"]),
+    default="agent",
+)
+@click.option(
+    "--status", type=click.Choice(["proposed", "active", "paused"]), default="active"
+)
+@click.option("--horizon", type=str, default="long-term")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@atlas_command_context
+def create_mission_cmd(
+    ctx, mission_id, title, intent, actor, actor_type, status, horizon, as_json
+):
+    from kungfu.atlas import mission_control
+
+    try:
+        result = mission_control.create_mission(
+            ctx.runtime_dir,
+            mission_id=mission_id,
+            title=title,
+            intent=intent,
+            actor=actor,
+            actor_type=actor_type,
+            status=status,
+            horizon=horizon,
+        )
+    except (RuntimeError, ValueError) as error:
+        click.echo(f"[atlas] create Mission failed: {error}", err=True)
+        sys.exit(1)
+    if as_json:
+        _echo_json(result)
+        return
+    click.echo(f"[atlas] {result['mission_subject']}: {result['receipt']['status']}")
+
+
+@atlas.command(
+    name="export-mission",
+    help="export a full or thin portable Mission bundle",
+)
+@click.argument("mission_id", type=str)
+@click.option("--out", "out_path", type=str, required=True)
+@click.option("--mode", type=click.Choice(["full", "thin"]), default="full")
+@click.option("--source", "storage_source_id", type=str, default="atlas")
+@click.option("--purpose", type=str, default="operator-review")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@atlas_command_context
+def export_mission_cmd(
+    ctx, mission_id, out_path, mode, storage_source_id, purpose, as_json
+):
+    from kungfu.atlas import mission_bundle
+
+    try:
+        result = mission_bundle.write_mission_bundle(
+            ctx.runtime_dir,
+            out_path,
+            mission_id=mission_id,
+            mode=mode,
+            storage_source_id=storage_source_id,
+            purpose=purpose,
+        )
+    except (OSError, RuntimeError, ValueError) as error:
+        click.echo(f"[atlas] export Mission failed: {error}", err=True)
+        sys.exit(1)
+    if as_json:
+        _echo_json(result)
+        return
+    click.echo(
+        f"[atlas] exported {result['mode']} {result['mission_subject']} "
+        f"to {result['out']}: {result['status']}"
+    )
+
+
+@atlas.command(
+    name="import-mission",
+    help="verify or materialize a portable Mission bundle",
+)
+@click.option("--from", "from_path", type=str, required=True)
+@click.option(
+    "--execute",
+    is_flag=True,
+    help="materialize a full bundle; thin bundles remain degraded references",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@atlas_command_context
+def import_mission_cmd(ctx, from_path, execute, as_json):
+    from kungfu.atlas import mission_bundle
+
+    try:
+        result = mission_bundle.import_mission_bundle_file(
+            ctx.runtime_dir, from_path, execute=execute
+        )
+    except (OSError, RuntimeError, ValueError) as error:
+        click.echo(f"[atlas] import Mission failed: {error}", err=True)
+        sys.exit(1)
+    if as_json:
+        _echo_json(result)
+        return
+    click.echo(
+        f"[atlas] {result['mission_subject']} bundle {result['status']}; "
+        f"accepted={result['accepted']} missing={result['missing_material_count']}"
+    )
+    if result["diagnosis"]:
+        click.echo(f"  diagnosis: {result['diagnosis']}")
 
 
 @atlas.command(

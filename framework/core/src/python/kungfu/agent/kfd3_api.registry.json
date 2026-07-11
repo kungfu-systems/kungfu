@@ -244,6 +244,36 @@
       "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
     },
     {
+      "id": "kungfu.atlas.create-mission",
+      "surface": "cli",
+      "name": "kungfu atlas create-mission <mission-id> --title <title> --intent <intent> --actor <actor> --json",
+      "purpose": "Create a Kungfu-native long-running Mission in the shared Fact Library.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.atlas.export-mission",
+      "surface": "cli",
+      "name": "kungfu atlas export-mission <mission-id> --out <bundle.json> --mode <full|thin> --json",
+      "purpose": "Export a bounded Mission closure with proof coordinates and full or thin Episode material.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.atlas.import-mission",
+      "surface": "cli",
+      "name": "kungfu atlas import-mission --from <bundle.json> [--execute] --json",
+      "purpose": "Verify a portable Mission bundle and explicitly materialize full closures while thin bundles remain degraded references.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
       "id": "kungfu.atlas.assess-mission",
       "surface": "cli",
       "name": "kungfu atlas assess-mission <mission-id> --json",
@@ -297,7 +327,7 @@
       "id": "kungfu.atlas.show.missions",
       "surface": "cli",
       "name": "kungfu atlas show missions --json",
-      "purpose": "List imported Atlas mission cards from the latest projection.",
+      "purpose": "List admitted Atlas and Kungfu-native Mission facts from the selected data root.",
       "maturity": "stable",
       "visibility": "adjacent-agent",
       "anchor": { "kind": "catalog" },

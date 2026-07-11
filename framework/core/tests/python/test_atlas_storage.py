@@ -11,7 +11,7 @@ import kungfu
 import pytest
 
 from kungfu import runtime_service
-from kungfu.atlas import importer, mission_control, payloads
+from kungfu.atlas import importer, mission_bundle, mission_control, payloads
 from kungfu.atlas import store as atlas_store
 from kungfu.atlas import CARRIER_ATLAS_ACTION
 from kungfu.rewind import reporting as rewind_reporting
@@ -629,6 +629,167 @@ def test_mission_control_native_go_completion_claim_fails_closed_then_passes(
     assert cli_report["assessment_key"] == completed["assessment_key"]
 
 
+def test_native_mission_full_bundle_roundtrip_and_thin_degraded_import(tmp_path):
+    source = tmp_path / "source-runtime"
+    destination = tmp_path / "destination-runtime"
+    thin_destination = tmp_path / "thin-destination-runtime"
+
+    created = mission_control.create_mission(
+        str(source),
+        mission_id="native-mission",
+        title="Native Mission",
+        intent="Preserve a long-running purpose with proof",
+        actor="test-user",
+        actor_type="user",
+    )
+    assert created["mission_subject"] == "kungfu:native-mission"
+    assert mission_control.list_missions(str(source))[0]["authority_mode"] == (
+        "kungfu-native"
+    )
+    mission_control.create_go(
+        str(source),
+        mission_id="native-mission",
+        goal_id="portable-go",
+        title="Portable Go",
+        objective="Prove full and thin Mission transfer",
+        actor="test-agent",
+        actor_type="agent",
+    )
+    rewind_reporting.begin_run(
+        str(source),
+        run_id="portable-go-run",
+        provider="codex",
+        cwd=None,
+        work_id="portable-go",
+    )
+    rewind_reporting.report_cost(
+        str(source),
+        run_id="portable-go-run",
+        provider="codex",
+        surface="exec-json",
+        source="test",
+        attribution="exact_run",
+        work_id="portable-go",
+        input_tokens=40,
+        output_tokens=10,
+        cost_usd=0.1,
+    )
+    rewind_reporting.end_run(
+        str(source), run_id="portable-go-run", status="succeeded", exit_code=0
+    )
+    evidence = next(
+        row
+        for row in storage_service.episode_list(source, limit=0)["episodes"]
+        if row["open"]["source"] == "rewind:portable-go-run"
+    )
+    mission_control.claim_completion(
+        str(source),
+        mission_id="native-mission",
+        goal_id="portable-go",
+        statement="The portable Mission loop is complete",
+        actor="test-agent",
+        actor_type="agent",
+        evidence_episode_ids=[int(evidence["episode_id"])],
+    )
+    source_report = mission_control.assess_completion(
+        str(source), mission_id="native-mission", goal_id="portable-go"
+    )
+    assert source_report["fitness"] == "fit"
+
+    full = mission_bundle.build_mission_bundle(
+        str(source), mission_id="native-mission", mode="full"
+    )
+    thin = mission_bundle.build_mission_bundle(
+        str(source), mission_id="native-mission", mode="thin"
+    )
+    assert full["status"] == "portable", full["closure"]
+    assert full["closure"]["full_closure"] is True
+    assert full["closure"]["source_provenance_included"] is False
+    assert thin["status"] == "degraded"
+    assert thin["closure"]["full_closure"] is False
+    assert all(not row["self_contained"] for row in thin["episodes"])
+
+    imported = mission_bundle.import_mission_bundle(
+        str(destination), full, execute=True
+    )
+    assert imported["status"] == "imported", imported
+    assert imported["accepted"] is True
+    assert imported["state_verification"]["ok"] is True
+    assert mission_control.list_missions(str(destination))[0]["mission_id"] == (
+        "native-mission"
+    )
+    destination_report = mission_control.assess_completion(
+        str(destination), mission_id="native-mission", goal_id="portable-go"
+    )
+    assert destination_report["fitness"] == "fit"
+    assert destination_report["profile"]["cost"]["cost_usd"] == 0.1
+    assert destination_report["profile"]["cost"]["tokens"]["input_tokens"] == 40
+
+    degraded = mission_bundle.import_mission_bundle(
+        str(thin_destination), thin, execute=True
+    )
+    assert degraded["status"] == "degraded"
+    assert degraded["accepted"] is False
+    assert degraded["materialized"] is False
+    assert "require a full bundle" in degraded["diagnosis"]
+    assert mission_control.list_missions(str(thin_destination)) == []
+
+    tampered = json.loads(json.dumps(full))
+    tampered["mission_id"] = "tampered"
+    with pytest.raises(ValueError, match="bundle root mismatch"):
+        mission_bundle.import_mission_bundle(str(tmp_path / "tampered"), tampered)
+
+    from click.testing import CliRunner
+    from kungfu.cli.commands import __registry__  # noqa: F401
+    from kungfu.cli.commands import kfc
+
+    bundle_path = tmp_path / "native-mission.kfmission.json"
+    runner = CliRunner()
+    create_cli = runner.invoke(
+        kfc,
+        [
+            "atlas",
+            "create-mission",
+            "native-mission",
+            "--title",
+            "Native Mission",
+            "--intent",
+            "Preserve a long-running purpose with proof",
+            "--actor",
+            "test-user",
+            "--actor-type",
+            "user",
+            "--json",
+        ],
+        env={"KF_RUNTIME_DIR": str(source)},
+    )
+    assert create_cli.exit_code == 0, create_cli.output
+    assert json.loads(create_cli.output)["receipt"]["reused"] is True
+    exported = runner.invoke(
+        kfc,
+        [
+            "atlas",
+            "export-mission",
+            "native-mission",
+            "--out",
+            str(bundle_path),
+            "--mode",
+            "full",
+            "--json",
+        ],
+        env={"KF_RUNTIME_DIR": str(source)},
+    )
+    assert exported.exit_code == 0, exported.output
+    assert json.loads(exported.output)["status"] == "portable"
+    listed = runner.invoke(
+        kfc,
+        ["atlas", "show", "missions", "--json"],
+        env={"KF_RUNTIME_DIR": str(source)},
+    )
+    assert listed.exit_code == 0, listed.output
+    assert json.loads(listed.output)[0]["mission_id"] == "native-mission"
+
+
 def test_mission_control_batches_large_mission_state_queries(tmp_path):
     repo = tmp_path / "atlas"
     runtime_dir = tmp_path / "runtime"
@@ -663,13 +824,16 @@ def test_mission_control_batches_large_mission_state_queries(tmp_path):
     assert state["query_proof_root"].startswith("sha256:")
 
 
-def test_mission_control_v1_data_root_requires_explicit_migration(tmp_path):
+@pytest.mark.parametrize("legacy_version", mission_control.LEGACY_CONTRACT_VERSIONS)
+def test_mission_control_legacy_data_root_requires_explicit_migration(
+    tmp_path, legacy_version
+):
     runtime_dir = tmp_path / "runtime"
     storage_service.fact_declare_contract_world(
         runtime_dir,
         {
             "id": mission_control.CONTRACT_WORLD_ID,
-            "version": mission_control.LEGACY_CONTRACT_VERSION,
+            "version": legacy_version,
             "effective_from": 100,
             "effective_until": 0,
             "fact_surface_ids": [
@@ -695,7 +859,7 @@ def test_mission_control_v1_data_root_requires_explicit_migration(tmp_path):
     assert {(row["id"], row["version"]) for row in catalog["contract_worlds"]} == {
         (
             mission_control.CONTRACT_WORLD_ID,
-            mission_control.LEGACY_CONTRACT_VERSION,
+            legacy_version,
         )
     }
 

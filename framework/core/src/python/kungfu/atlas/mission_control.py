@@ -1,12 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
-"""Mission/Go admission for the read-only Atlas bridge.
+"""Mission Control facts for the Atlas bridge and Kungfu-native authority.
 
-Atlas remains authoritative. This module turns already captured Atlas Mission
-and goal snapshots into the shared ADR-0051 Fact Library path so Mission
-Control can query and assess them without treating the adapter projection as
-truth. The original source coordinates and sealed import Episode remain bound
-into every admitted payload.
+Atlas remains authoritative for imported observations. Native user and agent
+Mission/Go/claim facts enter the same ADR-0051 Fact Library with explicit source
+authority, so query, assessment, GUI, CLI, and portable bundles share one truth
+path. Imported payloads retain their source coordinates and sealed Episode.
 """
 
 import hashlib
@@ -22,8 +21,9 @@ from kungfu.rewind import replay as rewind_replay
 from kungfu.storage import service as storage_service
 
 CONTRACT_WORLD_ID = "kungfu.mission-control"
-CONTRACT_VERSION = "2"
-LEGACY_CONTRACT_VERSION = "1"
+CONTRACT_VERSION = "3"
+LEGACY_CONTRACT_VERSION = "2"
+LEGACY_CONTRACT_VERSIONS = ("1", "2")
 MISSION_SURFACE_ID = "kungfu.mission-control.mission"
 GO_SURFACE_ID = "kungfu.mission-control.go"
 CLAIM_SURFACE_ID = "kungfu.mission-control.completion-claim"
@@ -78,7 +78,11 @@ SURFACE_BY_KIND = {
     "goal": GO_SURFACE_ID,
 }
 SURFACE_AUTHORITIES = {
-    MISSION_SURFACE_ID: [ATLAS_FACT_SOURCE_ID],
+    MISSION_SURFACE_ID: [
+        ATLAS_FACT_SOURCE_ID,
+        USER_FACT_SOURCE_ID,
+        AGENT_FACT_SOURCE_ID,
+    ],
     GO_SURFACE_ID: [
         ATLAS_FACT_SOURCE_ID,
         USER_FACT_SOURCE_ID,
@@ -172,7 +176,7 @@ def _ensure_contract(runtime_dir: str, system_time: int) -> dict[str, Any]:
         world
         for world in catalog.get("contract_worlds", [])
         if world.get("id") == CONTRACT_WORLD_ID
-        and world.get("version") == LEGACY_CONTRACT_VERSION
+        and world.get("version") in LEGACY_CONTRACT_VERSIONS
     ]
     worlds = [
         world
@@ -184,8 +188,8 @@ def _ensure_contract(runtime_dir: str, system_time: int) -> dict[str, Any]:
         raise RuntimeError("mission-control contract world is ambiguous")
     if not worlds and legacy_worlds:
         raise RuntimeError(
-            "mission-control v1 data requires explicit migration or re-import "
-            "into a clean pre-release data root before v2 native Go operations"
+            "mission-control v1/v2 data requires explicit migration or re-import "
+            "into a clean pre-release data root before v3 native Mission operations"
         )
     if worlds:
         declared = set(worlds[0].get("fact_surface_ids") or [])
@@ -395,23 +399,32 @@ def _selected_subjects(
     storage_source_id: str,
     cut_system_time: int,
 ) -> tuple[str, list[str], dict[str, Any]]:
-    mission_subject = (
-        mission_id
-        if mission_id.startswith(f"{storage_source_id}:")
-        else f"{storage_source_id}:{mission_id}"
-    )
     materials = storage_service.fact_material_list(
         runtime_dir, cut_system_time=cut_system_time
     )
     payloads = materials.get("payloads", {})
+    requested_subjects = (
+        {mission_id}
+        if ":" in mission_id
+        else {f"{storage_source_id}:{mission_id}", f"kungfu:{mission_id}"}
+    )
+    admitted_subjects = {
+        str(row.get("subject_key") or "")
+        for row in materials.get("state", {}).get("canonical_facts", [])
+        if row.get("fact_surface_id") == MISSION_SURFACE_ID
+        and row.get("subject_key") in requested_subjects
+    }
+    if not admitted_subjects:
+        raise ValueError(f"admitted Mission fact not found: {mission_id}")
+    if len(admitted_subjects) > 1:
+        raise ValueError(
+            f"Mission id is ambiguous across source authorities: {mission_id}"
+        )
+    mission_subject = next(iter(admitted_subjects))
     selected = {mission_subject}
-    mission_present = False
     for row in materials.get("state", {}).get("canonical_facts", []):
         payload = payloads.get(str(row.get("payload_hash") or ""), {})
         if row.get("fact_surface_id") == MISSION_SURFACE_ID:
-            mission_present = (
-                mission_present or row.get("subject_key") == mission_subject
-            )
             continue
         if (
             row.get("fact_surface_id") == GO_SURFACE_ID
@@ -423,8 +436,6 @@ def _selected_subjects(
             and payload.get("links", {}).get("mission_id") == mission_subject
         ):
             selected.add(str(row["subject_key"]))
-    if not mission_present:
-        raise ValueError(f"admitted Mission fact not found: {mission_subject}")
     return mission_subject, sorted(selected), materials
 
 
@@ -720,6 +731,123 @@ def _put_native_fact(
     }
 
 
+def list_domain_records(
+    runtime_dir: str,
+    *,
+    surface_id: str,
+    cut_system_time: int = 0,
+) -> list[dict[str, Any]]:
+    """List current admitted records without depending on an Atlas projection."""
+
+    materials = storage_service.fact_material_list(
+        runtime_dir, cut_system_time=cut_system_time
+    )
+    payloads = materials.get("payloads", {})
+    records = []
+    for row in materials.get("state", {}).get("canonical_facts", []):
+        if row.get("fact_surface_id") != surface_id:
+            continue
+        payload = payloads.get(str(row.get("payload_hash") or ""), {})
+        record = dict(payload.get("record") or {})
+        if not record:
+            continue
+        record["subject_key"] = str(row.get("subject_key") or "")
+        record["source_authority"] = str(row.get("source_id") or "")
+        record["authority_mode"] = str(
+            payload.get("source", {}).get("authority_mode") or "unknown"
+        )
+        records.append(record)
+    identity_key = "mission_id" if surface_id == MISSION_SURFACE_ID else "goal_id"
+    records.sort(key=lambda record: str(record.get(identity_key) or ""))
+    return records
+
+
+def list_missions(
+    runtime_dir: str, *, cut_system_time: int = 0
+) -> list[dict[str, Any]]:
+    return list_domain_records(
+        runtime_dir,
+        surface_id=MISSION_SURFACE_ID,
+        cut_system_time=cut_system_time,
+    )
+
+
+def list_goals(runtime_dir: str, *, cut_system_time: int = 0) -> list[dict[str, Any]]:
+    return list_domain_records(
+        runtime_dir,
+        surface_id=GO_SURFACE_ID,
+        cut_system_time=cut_system_time,
+    )
+
+
+def create_mission(
+    runtime_dir: str,
+    *,
+    mission_id: str,
+    title: str,
+    intent: str,
+    actor: str,
+    actor_type: str = "agent",
+    status: str = "active",
+    horizon: str = "long-term",
+    system_time: int = 0,
+) -> dict[str, Any]:
+    """Create one Kungfu-native Mission in the shared Fact Library."""
+
+    system_time = system_time or time.time_ns()
+    _ensure_contract(runtime_dir, system_time)
+    system_time += len(FACT_SURFACES) + 1
+    mission_id = _stable_id(mission_id, "mission_id")
+    existing = [
+        row for row in list_missions(runtime_dir) if row.get("mission_id") == mission_id
+    ]
+    if any(row.get("subject_key") != f"kungfu:{mission_id}" for row in existing):
+        raise ValueError(
+            f"mission_id already belongs to another source authority: {mission_id}"
+        )
+    if status not in {"proposed", "active", "paused"}:
+        raise ValueError("native Mission status must be proposed, active, or paused")
+    source_id = _native_source(actor_type)
+    record = {
+        "mission_id": mission_id,
+        "title": title.strip(),
+        "intent": intent.strip(),
+        "status": status,
+        "horizon": horizon.strip() or "long-term",
+        "owner": actor.strip(),
+        "actor_type": actor_type,
+    }
+    if not record["title"] or not record["intent"] or not record["owner"]:
+        raise ValueError("title, intent, and actor are required")
+    subject_key = f"kungfu:{mission_id}"
+    payload = {
+        "record": record,
+        "source": {
+            "authority_mode": "kungfu-native",
+            "source_id": source_id,
+            "source_time": "journal-system-time",
+            "payload_hash": _sha256_root(record),
+            "actor": record["owner"],
+        },
+        "links": {"mission_id": subject_key},
+    }
+    receipt = _put_native_fact(
+        runtime_dir,
+        kind="mission",
+        surface_id=MISSION_SURFACE_ID,
+        subject_key=subject_key,
+        source_id=source_id,
+        payload=payload,
+        system_time=system_time,
+    )
+    return {
+        "schema": "kungfu.mission-control.mission-write/v1",
+        "authority_mode": "kungfu-native",
+        "mission_subject": subject_key,
+        "receipt": receipt,
+    }
+
+
 def create_go(
     runtime_dir: str,
     *,
@@ -768,7 +896,8 @@ def create_go(
         "title": title.strip(),
         "objective": objective.strip(),
         "status": status,
-        "mission_id": mission_subject,
+        "mission_id": mission_subject.split(":", 1)[-1],
+        "mission_subject": mission_subject,
         "actor": actor.strip(),
         "actor_type": actor_type,
     }
@@ -1024,68 +1153,67 @@ def _cost_profile(runtime_dir: str, state: dict[str, Any]) -> dict[str, Any]:
     observations = []
     unreadable_runs = []
     episode_id_by_run = {}
+    episode_by_run = {}
+    for episode in episode_rows:
+        source = str(episode.get("open", {}).get("source") or "")
+        if source.startswith("rewind:"):
+            episode_by_run[source.removeprefix("rewind:")] = episode
+    run_ids = set(episode_by_run)
     if rewind_root.is_dir():
-        for run_dir in sorted(path for path in rewind_root.iterdir() if path.is_dir()):
+        run_ids.update(path.name for path in rewind_root.iterdir() if path.is_dir())
+    for run_id in sorted(run_ids):
+        run_dir = rewind_root / run_id
+        if run_dir.is_dir():
             manifest_path = run_dir / "bundle" / "manifest.json"
             if manifest_path.is_file():
                 try:
                     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
                     episode_id = manifest.get("fact_bridge", {}).get("episode_id") or ""
                     if str(episode_id).isdigit():
-                        episode_id_by_run[run_dir.name] = str(episode_id)
+                        episode_id_by_run[run_id] = str(episode_id)
                 except (OSError, ValueError, TypeError):
                     pass
-            try:
-                frames = rewind_replay.read_frames(runtime_dir, run_dir.name)
-            except (FileNotFoundError, RuntimeError, ValueError) as error:
-                unreadable_runs.append(
-                    {"run_id": run_dir.name, "error": type(error).__name__}
-                )
+        try:
+            frames = rewind_replay.read_frames(runtime_dir, run_id)
+        except (FileNotFoundError, RuntimeError, ValueError) as error:
+            unreadable_runs.append({"run_id": run_id, "error": type(error).__name__})
+            continue
+        for action_type, header, payload in frames:
+            if action_type != ACTION_COST_SNAPSHOT:
                 continue
-            for action_type, header, payload in frames:
-                if action_type != ACTION_COST_SNAPSHOT:
-                    continue
-                if cost_cut and int(header.gen_time) > cost_cut:
-                    continue
-                fact = rewind_replay.decode_native(action_type, payload)
-                if str(fact.get("work_id") or "") not in work_ids:
-                    continue
-                observations.append(
-                    {
-                        "run_id": str(fact.get("run_id") or run_dir.name),
-                        "work_id": str(fact.get("work_id") or ""),
-                        "system_time": str(header.gen_time),
-                        "provider": str(fact.get("provider") or ""),
-                        "surface": str(fact.get("surface") or ""),
-                        "model": str(fact.get("model") or ""),
-                        "source": str(fact.get("source") or ""),
-                        "attribution": ATTRIBUTION_NAMES.get(
-                            int(fact.get("attribution") or 0), "unknown"
-                        ),
-                        "attribution_rank": int(fact.get("attribution") or 0),
-                        "ambiguous": bool(fact.get("ambiguous_attribution")),
-                        "input_tokens": int(fact.get("input_tokens") or 0),
-                        "output_tokens": int(fact.get("output_tokens") or 0),
-                        "cached_input_tokens": int(
-                            fact.get("cached_input_tokens") or 0
-                        ),
-                        "cache_creation_input_tokens": int(
-                            fact.get("cache_creation_input_tokens") or 0
-                        ),
-                        "reasoning_tokens": int(fact.get("reasoning_tokens") or 0),
-                        "cost_usd": (
-                            float(fact.get("cost_usd") or 0.0)
-                            if fact.get("cost_usd_known")
-                            else None
-                        ),
-                    }
-                )
-
-    episode_by_run = {}
-    for episode in episode_rows:
-        source = str(episode.get("open", {}).get("source") or "")
-        if source.startswith("rewind:"):
-            episode_by_run[source.removeprefix("rewind:")] = episode
+            if cost_cut and int(header.gen_time) > cost_cut:
+                continue
+            fact = rewind_replay.decode_native(action_type, payload)
+            if str(fact.get("work_id") or "") not in work_ids:
+                continue
+            observations.append(
+                {
+                    "run_id": str(fact.get("run_id") or run_id),
+                    "work_id": str(fact.get("work_id") or ""),
+                    "system_time": str(header.gen_time),
+                    "provider": str(fact.get("provider") or ""),
+                    "surface": str(fact.get("surface") or ""),
+                    "model": str(fact.get("model") or ""),
+                    "source": str(fact.get("source") or ""),
+                    "attribution": ATTRIBUTION_NAMES.get(
+                        int(fact.get("attribution") or 0), "unknown"
+                    ),
+                    "attribution_rank": int(fact.get("attribution") or 0),
+                    "ambiguous": bool(fact.get("ambiguous_attribution")),
+                    "input_tokens": int(fact.get("input_tokens") or 0),
+                    "output_tokens": int(fact.get("output_tokens") or 0),
+                    "cached_input_tokens": int(fact.get("cached_input_tokens") or 0),
+                    "cache_creation_input_tokens": int(
+                        fact.get("cache_creation_input_tokens") or 0
+                    ),
+                    "reasoning_tokens": int(fact.get("reasoning_tokens") or 0),
+                    "cost_usd": (
+                        float(fact.get("cost_usd") or 0.0)
+                        if fact.get("cost_usd_known")
+                        else None
+                    ),
+                }
+            )
     proof_episodes = []
     unsealed_runs = []
     for run_id in sorted({row["run_id"] for row in observations}):

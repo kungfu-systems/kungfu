@@ -134,6 +134,24 @@
       "purpose": "Snapshot an Atlas-style control-plane repo into Kungfu's local read-only projection."
     },
     {
+      "apiId": "kungfu.atlas.create-mission",
+      "name": "kungfu atlas create-mission <mission-id> --title <title> --intent <intent> --actor <actor> --json",
+      "maturity": "experimental",
+      "purpose": "Create a Kungfu-native long-running Mission in the shared Fact Library."
+    },
+    {
+      "apiId": "kungfu.atlas.export-mission",
+      "name": "kungfu atlas export-mission <mission-id> --out <bundle.json> --mode <full|thin> --json",
+      "maturity": "experimental",
+      "purpose": "Export a bounded Mission closure with proof coordinates and full or thin Episode material."
+    },
+    {
+      "apiId": "kungfu.atlas.import-mission",
+      "name": "kungfu atlas import-mission --from <bundle.json> [--execute] --json",
+      "maturity": "experimental",
+      "purpose": "Verify a portable Mission bundle and explicitly materialize full closures while thin bundles remain degraded references."
+    },
+    {
       "apiId": "kungfu.atlas.assess-mission",
       "name": "kungfu atlas assess-mission <mission-id> --json",
       "maturity": "experimental",
@@ -167,7 +185,7 @@
       "apiId": "kungfu.atlas.show.missions",
       "name": "kungfu atlas show missions --json",
       "maturity": "stable",
-      "purpose": "List imported Atlas mission cards from the latest projection."
+      "purpose": "List admitted Atlas and Kungfu-native Mission facts from the selected data root."
     },
     {
       "apiId": "kungfu.atlas.show.goals",
@@ -471,8 +489,8 @@
     },
     "atlas-projection": {
       "maturity": "stable",
-      "next": "kungfu atlas import --repo <atlas-repo> --json; kungfu storage fsck --scope all --json; kungfu storage verify-sync --source <source-id> --json; kungfu atlas show missions --json; kungfu atlas assess-mission <mission-id> --json",
-      "when": "The user asks to sync, import, inspect, or visualize an Atlas-style mission/goal/worktree control-plane repo inside Kungfu."
+      "next": "kungfu atlas show missions --json; create or import a Mission when needed; use kungfu atlas export-mission <mission-id> --out <bundle.json> --mode full --json for transfer",
+      "when": "The user asks to create, import, inspect, assess, visualize, preserve, or transfer Mission/Go facts inside Kungfu."
     },
     "trace": {
       "maturity": "stable",

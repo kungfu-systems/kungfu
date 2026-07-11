@@ -1,12 +1,17 @@
-// Atlas-domain capability handle: call the existing read-only
-// `kungfu atlas` CLI surface and expose its JSON projection to GUI/kfx views.
-// Atlas remains the authority; this handle only imports and reads Kungfu's
-// local projection.
+// Mission Control capability handle over the `kungfu atlas` pre-release CLI.
+// Atlas remains authority for imported facts; native Mission/Go/claim writes
+// and portable bundle operations enter the same local Fact Library.
 
 export type AtlasMission = {
   mission_id: string;
   title?: string;
+  intent?: string;
   status?: string;
+  horizon?: string;
+  owner?: string;
+  subject_key?: string;
+  source_authority?: string;
+  authority_mode?: string;
   active_lens?: string;
   stage_name?: string;
   next_review?: string;
@@ -182,6 +187,50 @@ export type AtlasGoWrite = {
   };
 };
 
+export type AtlasMissionWrite = {
+  schema: 'kungfu.mission-control.mission-write/v1';
+  authority_mode: 'kungfu-native';
+  mission_subject: string;
+  receipt: {
+    status: string;
+    reused: boolean;
+    observation_id: string;
+    episode_id?: string;
+  };
+};
+
+export type AtlasMissionBundleExport = {
+  schema: 'kungfu.mission-control.bundle-export/v1';
+  status: 'portable' | 'degraded';
+  mode: 'full' | 'thin';
+  mission_subject: string;
+  bundle_id: string;
+  bundle_root: string;
+  episode_count: number;
+  out: string;
+};
+
+export type AtlasMissionBundleImport = {
+  schema: 'kungfu.mission-control.bundle-import/v1';
+  status: 'validated' | 'imported' | 'degraded';
+  accepted: boolean;
+  materialized: boolean;
+  mode: 'full' | 'thin';
+  mission_subject: string;
+  bundle_id: string;
+  bundle_root: string;
+  episode_count: number;
+  missing_material_count: number;
+  diagnosis: string;
+  state_verification?: {
+    ok: boolean;
+    query_definition_root_match: boolean;
+    query_proof_root_match: boolean;
+    result_hash_match: boolean;
+    canonical_state: boolean;
+  } | null;
+};
+
 export type AtlasCompletionClaimWrite = {
   schema: 'kungfu.mission-control.completion-claim-write/v1';
   authority_mode: 'kungfu-native';
@@ -217,6 +266,26 @@ export type Atlas = {
     missionId: string,
     options?: { source?: string; purpose?: string },
   ) => AtlasMissionControlReport;
+  createMission: (
+    missionId: string,
+    input: {
+      title: string;
+      intent: string;
+      actor: string;
+      actorType?: 'user' | 'agent';
+      status?: 'proposed' | 'active' | 'paused';
+      horizon?: string;
+    },
+  ) => AtlasMissionWrite;
+  exportMission: (
+    missionId: string,
+    outPath: string,
+    options?: { mode?: 'full' | 'thin'; source?: string; purpose?: string },
+  ) => AtlasMissionBundleExport;
+  importMission: (
+    fromPath: string,
+    options?: { execute?: boolean },
+  ) => AtlasMissionBundleImport;
   createGo: (
     missionId: string,
     input: {
@@ -343,6 +412,48 @@ export function openAtlas(options: OpenAtlasOptions): Atlas {
       if (assessment.source) args.push('--source', assessment.source);
       if (assessment.purpose) args.push('--purpose', assessment.purpose);
       return runJson<AtlasMissionControlReport>(args);
+    },
+    createMission: (missionId, input) => {
+      const args = [
+        'atlas',
+        'create-mission',
+        missionId,
+        '--title',
+        input.title,
+        '--intent',
+        input.intent,
+        '--actor',
+        input.actor,
+        '--actor-type',
+        input.actorType ?? 'agent',
+        '--status',
+        input.status ?? 'active',
+        '--horizon',
+        input.horizon ?? 'long-term',
+        '--json',
+      ];
+      return runJson<AtlasMissionWrite>(args);
+    },
+    exportMission: (missionId, outPath, transfer = {}) => {
+      const args = [
+        'atlas',
+        'export-mission',
+        missionId,
+        '--out',
+        outPath,
+        '--mode',
+        transfer.mode ?? 'full',
+        '--json',
+      ];
+      if (transfer.source) args.push('--source', transfer.source);
+      if (transfer.purpose) args.push('--purpose', transfer.purpose);
+      return runJson<AtlasMissionBundleExport>(args);
+    },
+    importMission: (fromPath, transfer = {}) => {
+      const args = ['atlas', 'import-mission', '--from', fromPath];
+      if (transfer.execute) args.push('--execute');
+      args.push('--json');
+      return runJson<AtlasMissionBundleImport>(args);
     },
     createGo: (missionId, input) => {
       const args = [
