@@ -19,6 +19,7 @@ last_reviewed: 2026-07-11
 - Related: [ADR-0001](ADR-0001-yijinjing-publish-barrier.md),
   [ADR-0024](ADR-0024-location-role-and-journal-page-policy.md), and
   [ADR-0057](ADR-0057-domain-neutral-live-runtime-terminology.md)
+- Qualification: [mmap performance](../qualification/mmap-performance.md)
 
 ## Context
 
@@ -107,6 +108,8 @@ semantics during that period.
   latency side effect.
 - Demand paging remains the only qualified residency policy; the historical
   best-effort `mlock` path is retired.
+- The qualification harness measures the existing demand/visibility baseline
+  without granting unqualified policy requests or changing production defaults.
 - This is an internal contract refactor with compatibility adapters and has
   patch-level version impact. Qualifying residency or durability modes later
   requires new evidence and may have independent version impact.

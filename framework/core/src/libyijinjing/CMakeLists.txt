@@ -66,6 +66,12 @@ if(YIJINJING_BUILD_TESTS)
   target_link_libraries(yijinjing_mmap_tests PRIVATE yijinjing)
   target_compile_features(yijinjing_mmap_tests PRIVATE cxx_std_23)
   add_test(NAME yijinjing_mmap_tests COMMAND yijinjing_mmap_tests)
+
+  # Evidence tool only: this executable exercises the qualified production
+  # surface but is not linked into or shipped with the runtime.
+  add_executable(yijinjing_mmap_qualification tests/mmap_qualification.cpp)
+  target_link_libraries(yijinjing_mmap_qualification PRIVATE yijinjing)
+  target_compile_features(yijinjing_mmap_qualification PRIVATE cxx_std_23)
 endif()
 
 if(DEFINED COMPILER_OPTIMIZE_ON_OPTIONS AND NOT "${COMPILER_OPTIMIZE_ON_OPTIONS}" STREQUAL "")
