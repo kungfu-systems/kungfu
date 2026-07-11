@@ -803,6 +803,102 @@ test(
   },
 );
 
+test(
+  'embedded assessment dispatch uses a real C++ thread without changing report identity',
+  {
+    skip:
+      nativeAvailable || process.env.KUNGFU_REQUIRE_NATIVE === '1'
+        ? false
+        : 'built kungfu_node binding is unavailable',
+  },
+  () => {
+    const execute = (executorProfile) => {
+      const runtimeDir = fs.mkdtempSync(
+        path.join(os.tmpdir(), `kf-assessment-${executorProfile}-`),
+      );
+      try {
+        kungfu.runStorageServiceOperation('episode_begin', runtimeDir, {
+          episode_id: 920,
+          title: 'assessment thread dispatch',
+          actor: 'node-test',
+          source: 'storage-node-binding',
+          begin_time: 1000,
+        });
+        const closed = kungfu.runStorageServiceOperation(
+          'episode_end',
+          runtimeDir,
+          {
+            episode_id: 920,
+            end_time: 1100,
+            frame_count: 0,
+            reason: 'sealed before assessment',
+          },
+        );
+        const root = (char) => `sha256:${char.repeat(64)}`;
+        const requested = kungfu.runStorageServiceOperation(
+          'assessment_request',
+          runtimeDir,
+          {
+            system_time: 1200,
+            request: {
+              claim_id: 'claim-release-ready',
+              claim_type: 'release-readiness',
+              purpose: 'release-gate',
+              work_episode_id: 920,
+              work_episode_root: `sha256:${closed.content_root.root_value}`,
+              query_definition_root: root('1'),
+              query_proof_root: root('2'),
+              contract_world: {
+                id: 'kungfu-runtime',
+                version: 'v1',
+                root: root('3'),
+              },
+              fact_surfaces: [
+                { id: 'release-facts', version: 'v1', root: root('4') },
+              ],
+              policy: {
+                id: 'deterministic-assessor',
+                version: 'v1',
+                root: root('5'),
+              },
+              evidence: {
+                canonical_fact_count: 3,
+                conflict_count: 0,
+                admitted_count: 3,
+                unregistered_surface_count: 0,
+                incompatible_schema_count: 0,
+                ambiguous_authority_count: 0,
+                unverifiable_count: 0,
+              },
+              deadline: 0,
+              responsibility: 'workspace-master',
+              residual_risks: ['first built-in assessor only'],
+            },
+          },
+        );
+        return kungfu.runStorageServiceOperation(
+          'assessment_execute',
+          runtimeDir,
+          {
+            assessment_key: requested.assessment_key,
+            executor_profile: executorProfile,
+            system_time: 1300,
+          },
+        );
+      } finally {
+        fs.rmSync(runtimeDir, { recursive: true, force: true });
+      }
+    };
+
+    const inline = execute('inline');
+    const threaded = execute('thread');
+    assert.equal(inline.execution.separate_thread_dispatch, false);
+    assert.equal(threaded.execution.separate_thread_dispatch, true);
+    assert.deepEqual(threaded.report, inline.report);
+    assert.equal(threaded.report.report_hash, inline.report.report_hash);
+  },
+);
+
 // ADR-0040 stage B: the content-store facade serves Node with the same
 // vocabulary as C++/Python over both provider profiles.
 for (const provider of ['content-addressed-file', 'rocksdb']) {

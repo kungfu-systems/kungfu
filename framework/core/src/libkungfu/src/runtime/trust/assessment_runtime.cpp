@@ -14,10 +14,12 @@
 #include <algorithm>
 #include <charconv>
 #include <filesystem>
+#include <future>
 #include <iterator>
 #include <limits>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -625,79 +627,87 @@ nlohmann::json execute_assessment(const std::string &runtime_dir, const std::str
   if (executor_profile != "inline" && executor_profile != "thread" && executor_profile != "process") {
     throw std::invalid_argument("executor_profile must be inline, thread, or process");
   }
-  nlohmann::json request;
-  nlohmann::json prior_execution;
-  nlohmann::json prior_report;
-  uint64_t prior_episode_id = 0;
-  uint64_t prior_parent_id = 0;
-  bool invalidated = false;
-  uint32_t prior_attempts = 0;
-  for (const auto &record : read_events(runtime_dir, assessment_key)) {
-    if (request_key(record.event) != assessment_key) {
-      continue;
+  const auto caller_thread = std::this_thread::get_id();
+  const auto execute_once = [&]() -> nlohmann::json {
+    nlohmann::json request;
+    nlohmann::json prior_execution;
+    nlohmann::json prior_report;
+    uint64_t prior_episode_id = 0;
+    uint64_t prior_parent_id = 0;
+    bool invalidated = false;
+    uint32_t prior_attempts = 0;
+    for (const auto &record : read_events(runtime_dir, assessment_key)) {
+      if (request_key(record.event) != assessment_key) {
+        continue;
+      }
+      if (record.event.contains("request") && record.event.at("request").is_object()) {
+        request = record.event.at("request");
+      }
+      if (record.event.contains("execution") && record.event.at("execution").is_object()) {
+        prior_execution = record.event.at("execution");
+        prior_attempts =
+            std::max(prior_attempts, static_cast<uint32_t>(unsigned_value(record.event.at("execution"), "attempt")));
+      }
+      if (record.event.contains("report") && record.event.at("report").is_object()) {
+        prior_report = record.event.at("report");
+        prior_episode_id = unsigned_value(record.event, "assessment_episode_id");
+        prior_parent_id = unsigned_value(record.event, "parent_episode_id");
+        invalidated = false;
+      }
+      if (text_or(record.event, "kind") == "AssessmentInvalidated") {
+        invalidated = true;
+      }
     }
-    if (record.event.contains("request") && record.event.at("request").is_object()) {
-      request = record.event.at("request");
+    if (!request.is_object()) {
+      throw std::invalid_argument("assessment request not found");
     }
-    if (record.event.contains("execution") && record.event.at("execution").is_object()) {
-      prior_execution = record.event.at("execution");
-      prior_attempts =
-          std::max(prior_attempts, static_cast<uint32_t>(unsigned_value(record.event.at("execution"), "attempt")));
+    require_sealed_work_episode(runtime_dir, request);
+    if (prior_report.is_object()) {
+      return {{"schema", ASSESSMENT_CONTRACT_V1},
+              {"assessment_key", assessment_key},
+              {"state", invalidated ? "stale" : state_edge_name(text_or(prior_report, "state"))},
+              {"report", edge_report(prior_report)},
+              {"execution", prior_execution},
+              {"assessment_episode_id", prior_episode_id},
+              {"parent_episode_id", prior_parent_id},
+              {"reused", true}};
     }
-    if (record.event.contains("report") && record.event.at("report").is_object()) {
-      prior_report = record.event.at("report");
-      prior_episode_id = unsigned_value(record.event, "assessment_episode_id");
-      prior_parent_id = unsigned_value(record.event, "parent_episode_id");
-      invalidated = false;
-    }
-    if (text_or(record.event, "kind") == "AssessmentInvalidated") {
-      invalidated = true;
-    }
-  }
-  if (!request.is_object()) {
-    throw std::invalid_argument("assessment request not found");
-  }
-  require_sealed_work_episode(runtime_dir, request);
-  if (prior_report.is_object()) {
+    const auto event_time = system_time == 0 ? yy::time::now_in_nano() : system_time;
+    const auto attempt = prior_attempts + 1;
+    const auto report = build_report(request);
+    nlohmann::json started = {{"assessment_key", assessment_key},
+                              {"executor_profile", executor_profile},
+                              {"separate_thread_dispatch", std::this_thread::get_id() != caller_thread},
+                              {"state", "Running"},
+                              {"attempt", attempt},
+                              {"started_at", event_time},
+                              {"finished_at", 0},
+                              {"failure_reason", ""},
+                              {"work_episode_id", request.at("work_episode_id")}};
+    nlohmann::json completed = started;
+    completed["state"] = report.at("state");
+    completed["finished_at"] = event_time;
+    nlohmann::json completed_body = {
+        {"execution", completed}, {"report", report}, {"work_episode_id", request.at("work_episode_id")}};
+    const auto recorded =
+        append_episode(runtime_dir,
+                       {event_shell("AssessmentStarted", event_time, started),
+                        event_shell("AssessmentCompleted", event_time, completed_body)},
+                       event_time, unsigned_value(request, "work_episode_id"), "assessment result " + assessment_key,
+                       assessor_journal_name(assessment_key, executor_profile));
     return {{"schema", ASSESSMENT_CONTRACT_V1},
             {"assessment_key", assessment_key},
-            {"state", invalidated ? "stale" : state_edge_name(text_or(prior_report, "state"))},
-            {"report", edge_report(prior_report)},
-            {"execution", prior_execution},
-            {"assessment_episode_id", prior_episode_id},
-            {"parent_episode_id", prior_parent_id},
-            {"reused", true}};
+            {"state", state_edge_name(text_or(report, "state"))},
+            {"report", edge_report(report)},
+            {"execution", completed},
+            {"assessment_episode_id", recorded.episode_id},
+            {"parent_episode_id", unsigned_value(request, "work_episode_id")},
+            {"reused", false}};
+  };
+  if (executor_profile == "thread") {
+    return std::async(std::launch::async, execute_once).get();
   }
-  const auto event_time = system_time == 0 ? yy::time::now_in_nano() : system_time;
-  const auto attempt = prior_attempts + 1;
-  const auto report = build_report(request);
-  nlohmann::json started = {{"assessment_key", assessment_key},
-                            {"executor_profile", executor_profile},
-                            {"state", "Running"},
-                            {"attempt", attempt},
-                            {"started_at", event_time},
-                            {"finished_at", 0},
-                            {"failure_reason", ""},
-                            {"work_episode_id", request.at("work_episode_id")}};
-  nlohmann::json completed = started;
-  completed["state"] = report.at("state");
-  completed["finished_at"] = event_time;
-  nlohmann::json completed_body = {
-      {"execution", completed}, {"report", report}, {"work_episode_id", request.at("work_episode_id")}};
-  const auto recorded =
-      append_episode(runtime_dir,
-                     {event_shell("AssessmentStarted", event_time, started),
-                      event_shell("AssessmentCompleted", event_time, completed_body)},
-                     event_time, unsigned_value(request, "work_episode_id"), "assessment result " + assessment_key,
-                     assessor_journal_name(assessment_key, executor_profile));
-  return {{"schema", ASSESSMENT_CONTRACT_V1},
-          {"assessment_key", assessment_key},
-          {"state", state_edge_name(text_or(report, "state"))},
-          {"report", edge_report(report)},
-          {"execution", completed},
-          {"assessment_episode_id", recorded.episode_id},
-          {"parent_episode_id", unsigned_value(request, "work_episode_id")},
-          {"reused", false}};
+  return execute_once();
 }
 
 nlohmann::json query_assessment(const std::string &runtime_dir, const std::string &assessment_key) {

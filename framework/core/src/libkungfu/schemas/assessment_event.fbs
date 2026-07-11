@@ -66,6 +66,7 @@ table AssessmentRequest {
 table AssessmentExecution {
   assessment_key:string;
   executor_profile:string;
+  separate_thread_dispatch:bool;
   state:AssessmentState;
   attempt:uint;
   started_at:long;

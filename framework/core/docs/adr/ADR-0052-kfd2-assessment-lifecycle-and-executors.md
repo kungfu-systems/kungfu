@@ -208,7 +208,10 @@ executors retain distinct locations and single-writer result paths. The Python
 workspace master schedules one pending process worker at a time and publishes a
 subscription fold to `master/assessments.json`; CLI and GUI surfaces show
 freshness and fitness before proof/replay details. Native C ABI, Node, Python,
-process, and thread fixtures cover the shared contract.
+process, and thread fixtures cover the shared contract. The embedded `thread`
+profile dispatches the C++ assessment body through a dedicated joined thread;
+its persisted execution record proves separate-thread placement while report
+identity remains derived only from pinned semantic inputs.
 
 ## Acceptance gates
 

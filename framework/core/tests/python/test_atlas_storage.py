@@ -3382,6 +3382,8 @@ def test_assessment_process_and_thread_executors_have_identical_report_hashes(
     )
     assert results["process"]["execution"]["executor_profile"] == "process"
     assert results["thread"]["execution"]["executor_profile"] == "thread"
+    assert results["process"]["execution"]["separate_thread_dispatch"] is False
+    assert results["thread"]["execution"]["separate_thread_dispatch"] is True
 
 
 def test_assessment_invalidation_is_precise_and_subscription_list_is_folded(
