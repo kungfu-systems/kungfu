@@ -93,7 +93,8 @@ def entry_command() -> list[str]:
     """
     argv0 = Path(sys.argv[0]) if sys.argv and sys.argv[0] else None
     if (
-        argv0 is not None
+        host_form() != FORM_SOURCE
+        and argv0 is not None
         and argv0.is_file()
         and os.access(argv0, os.X_OK)
         and argv0.suffix != ".py"

@@ -14,6 +14,16 @@ configure_file(
   @ONLY
 )
 
+# ADR-0052 assessment jobs use an independent FlatBuffers authority while
+# sharing the ActionEnvelope and Episode substrates with ADR-0051.
+file(READ "${PROJECT_SOURCE_DIR}/schemas/assessment_event.fbs" ASSESSMENT_EVENT_FBS)
+file(MAKE_DIRECTORY "${KUNGFU_GENERATED_INCLUDE_DIR}/kungfu/runtime/trust")
+configure_file(
+  "${PROJECT_SOURCE_DIR}/schemas/assessment_schema.h.in"
+  "${KUNGFU_GENERATED_INCLUDE_DIR}/kungfu/runtime/trust/assessment_schema.h"
+  @ONLY
+)
+
 # this directory holds the libkungfu runtime layer above the standalone
 # yijinjing journal core, so the source GLOB needs no exclusion list beyond the
 # cache/optim split

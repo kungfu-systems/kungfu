@@ -15,10 +15,14 @@ namespace {
 
 constexpr uint64_t CAPABILITIES = KF_NATIVE_STORAGE_CAP_EPISODE_LIFECYCLE |
                                   KF_NATIVE_STORAGE_CAP_HEAD_AND_HISTORICAL_QUERY | KF_NATIVE_STORAGE_CAP_FSCK |
-                                  KF_NATIVE_STORAGE_CAP_EXPORT | KF_NATIVE_STORAGE_CAP_DOMAIN_FACT_ADMISSION;
-constexpr std::array<std::string_view, 10> SUPPORTED_OPERATIONS = {
-    "episode_begin", "episode_end",        "fact_query",           "fsck",         "export_bundle",
-    "fact_contract", "fact_declare_world", "fact_declare_surface", "fact_observe", "fact_state",
+                                  KF_NATIVE_STORAGE_CAP_EXPORT | KF_NATIVE_STORAGE_CAP_DOMAIN_FACT_ADMISSION |
+                                  KF_NATIVE_STORAGE_CAP_TRUST_ASSESSMENT;
+constexpr std::array<std::string_view, 17> SUPPORTED_OPERATIONS = {
+    "episode_begin",         "episode_end",       "fact_query",          "fsck",
+    "export_bundle",         "fact_contract",     "fact_declare_world",  "fact_declare_surface",
+    "fact_observe",          "fact_state",        "assessment_contract", "assessment_request",
+    "assessment_execute",    "assessment_status", "trust_require",       "assessment_list",
+    "assessment_invalidate",
 };
 
 bool supported_operation(const char *operation) {

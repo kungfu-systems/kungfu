@@ -304,6 +304,16 @@ type MasterStatusPayload = {
   master?: { pid?: number | null; running?: boolean };
   route?: { routeId?: string; registered?: boolean; stale?: boolean };
   routes?: { count?: number; staleCount?: number };
+  assessments?: {
+    assessment_count?: number;
+    counts?: Record<string, number>;
+    assessments?: Array<{
+      state?: string;
+      assessment_key?: string;
+      request?: { claim_id?: string; purpose?: string };
+      report?: { residual_risks?: string[]; query_proof_root?: string };
+    }>;
+  };
 };
 
 type MasterStatusResult = {
@@ -320,6 +330,17 @@ function readMasterStatus(): MasterStatusResult {
       timeout: 10000,
     });
     const payload = JSON.parse(out.toString()) as MasterStatusPayload;
+    try {
+      const assessmentOut = execFileSync(
+        kungfuBinPath(),
+        ['master', 'assessments', '--json'],
+        { env: process.env, timeout: 10000 },
+      );
+      payload.assessments = JSON.parse(assessmentOut.toString());
+    } catch {
+      // Assessment visibility degrades independently; master health still
+      // renders and the next status poll retries the progressive trust view.
+    }
     lastMasterStatus = {
       ok: true,
       payload,

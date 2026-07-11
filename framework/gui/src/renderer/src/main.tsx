@@ -220,6 +220,16 @@ type MasterStatusPayload = {
   master?: { pid?: number | null; running?: boolean };
   route?: { routeId?: string; registered?: boolean; stale?: boolean };
   routes?: { count?: number; staleCount?: number };
+  assessments?: {
+    assessment_count?: number;
+    counts?: Record<string, number>;
+    assessments?: Array<{
+      state?: string;
+      assessment_key?: string;
+      request?: { claim_id?: string; purpose?: string };
+      report?: { residual_risks?: string[]; query_proof_root?: string };
+    }>;
+  };
 };
 
 type MasterStatusResult = {
@@ -273,6 +283,39 @@ function statusTooltip(status: MasterStatusResult | null): string {
     }${payload.route?.stale ? ' stale' : ''}`,
     `Stale routes: ${String(payload.routes?.staleCount ?? 0)}`,
   ].join('\n');
+}
+
+function trustStatusText(status: MasterStatusResult | null): string {
+  const assessments = status?.payload?.assessments;
+  if (!assessments) return 'trust unavailable';
+  const counts = assessments.counts ?? {};
+  const blocked =
+    (counts.stale ?? 0) +
+    (counts['insufficient-evidence'] ?? 0) +
+    (counts.conflicted ?? 0) +
+    (counts.unverifiable ?? 0) +
+    (counts['failed-retryable'] ?? 0);
+  if (blocked > 0) return `trust blocked ${String(blocked)}`;
+  if ((counts.pending ?? 0) + (counts.running ?? 0) > 0)
+    return `trust pending ${String((counts.pending ?? 0) + (counts.running ?? 0))}`;
+  return `trust fresh ${String(counts.fresh ?? 0)}`;
+}
+
+function trustTooltip(status: MasterStatusResult | null): string {
+  const assessments = status?.payload?.assessments?.assessments;
+  if (!assessments) return 'Assessment subscription is unavailable';
+  if (assessments.length === 0) return 'No load-bearing claims assessed';
+  return assessments
+    .map((assessment) => {
+      const request = assessment.request ?? {};
+      const risks = assessment.report?.residual_risks?.join('; ') || '-';
+      return `${assessment.state || '-'}: ${request.claim_id || '-'} for ${
+        request.purpose || '-'
+      }\nresidual risk: ${risks}\nproof: ${
+        assessment.report?.query_proof_root || '-'
+      }`;
+    })
+    .join('\n\n');
 }
 
 function notificationColor(level: ShellNotification['level']): string {
@@ -1025,6 +1068,14 @@ function App() {
     : lifecycleDegraded || supervisorRunning
       ? 'warning'
       : 'error';
+  const trustCounts = masterStatus?.payload?.assessments?.counts ?? {};
+  const trustBlocked =
+    (trustCounts.stale ?? 0) +
+    (trustCounts['insufficient-evidence'] ?? 0) +
+    (trustCounts.conflicted ?? 0) +
+    (trustCounts.unverifiable ?? 0) +
+    (trustCounts['failed-retryable'] ?? 0);
+  const trustPending = (trustCounts.pending ?? 0) + (trustCounts.running ?? 0);
   const systemStatusItems: StatusBarItem[] = [
     {
       id: 'system.supervisor',
@@ -1059,6 +1110,17 @@ function App() {
       side: 'left',
       priority: -90,
       tooltip: 'Runtime binding status',
+      command: { kind: 'open-kfx', kfxId: 'status' },
+    },
+    {
+      id: 'system.trust',
+      text: trustStatusText(masterStatus),
+      icon: trustBlocked > 0 ? '!' : trustPending > 0 ? '◐' : '✓',
+      severity:
+        trustBlocked > 0 ? 'error' : trustPending > 0 ? 'warning' : 'ok',
+      side: 'left',
+      priority: -85,
+      tooltip: trustTooltip(masterStatus),
       command: { kind: 'open-kfx', kfxId: 'status' },
     },
     {

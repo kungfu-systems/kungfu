@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
+import time
 from pathlib import Path
 from typing import Any
 
@@ -808,6 +809,148 @@ def fact_state(
             {"cut_system_time": cut_system_time, "subject_key": subject_key},
         )
     )
+
+
+def assessment_contract(runtime_dir: str | Path = "") -> dict[str, Any]:
+    """Return the C++-owned ADR-0052 assessment contract."""
+
+    return dict(
+        _runtime().run_storage_service_operation(
+            "assessment_contract", str(runtime_dir), {}
+        )
+    )
+
+
+def assessment_request(
+    runtime_dir: str | Path,
+    request: dict[str, Any],
+    *,
+    system_time: int = 0,
+) -> dict[str, Any]:
+    """Persist an assessment intent without blocking the work Episode seal."""
+
+    return dict(
+        _runtime().run_storage_service_operation(
+            "assessment_request",
+            str(runtime_dir),
+            {"request": request, "system_time": system_time},
+        )
+    )
+
+
+def assessment_execute(
+    runtime_dir: str | Path,
+    assessment_key: str,
+    *,
+    executor_profile: str = "process",
+    system_time: int = 0,
+) -> dict[str, Any]:
+    """Execute or deduplicate a durable assessment job."""
+
+    return dict(
+        _runtime().run_storage_service_operation(
+            "assessment_execute",
+            str(runtime_dir),
+            {
+                "assessment_key": assessment_key,
+                "executor_profile": executor_profile,
+                "system_time": system_time,
+            },
+        )
+    )
+
+
+def assessment_status(runtime_dir: str | Path, assessment_key: str) -> dict[str, Any]:
+    """Fold the durable lifecycle of one assessment key."""
+
+    return dict(
+        _runtime().run_storage_service_operation(
+            "assessment_status",
+            str(runtime_dir),
+            {"assessment_key": assessment_key},
+        )
+    )
+
+
+def assessment_list(runtime_dir: str | Path) -> dict[str, Any]:
+    """List durable assessment lifecycle folds for workspace scheduling."""
+
+    return dict(
+        _runtime().run_storage_service_operation(
+            "assessment_list", str(runtime_dir), {}
+        )
+    )
+
+
+def assessment_invalidate(
+    runtime_dir: str | Path,
+    assessment_key: str,
+    *,
+    changed_root: str,
+    reason: str = "",
+    system_time: int = 0,
+) -> dict[str, Any]:
+    """Mark a report stale only when the changed root is one of its inputs."""
+
+    return dict(
+        _runtime().run_storage_service_operation(
+            "assessment_invalidate",
+            str(runtime_dir),
+            {
+                "assessment_key": assessment_key,
+                "changed_root": changed_root,
+                "reason": reason,
+                "system_time": system_time,
+            },
+        )
+    )
+
+
+def trust_require(
+    runtime_dir: str | Path, assessment_key: str, *, purpose: str
+) -> dict[str, Any]:
+    """Fail closed unless a fresh report is bound to the requested purpose."""
+
+    return dict(
+        _runtime().run_storage_service_operation(
+            "trust_require",
+            str(runtime_dir),
+            {"assessment_key": assessment_key, "purpose": purpose},
+        )
+    )
+
+
+def trust_await(
+    runtime_dir: str | Path,
+    assessment_key: str,
+    *,
+    purpose: str,
+    timeout_seconds: float,
+    poll_interval_seconds: float = 0.05,
+) -> dict[str, Any]:
+    """Wait a bounded time, then fail closed without changing Episode seal state."""
+
+    deadline = time.monotonic() + max(timeout_seconds, 0.0)
+    while True:
+        result = trust_require(runtime_dir, assessment_key, purpose=purpose)
+        if result["allowed"] or result["reason"] not in {
+            "assessment-not-found",
+            "assessment-not-fresh",
+        }:
+            return result
+        status = assessment_status(runtime_dir, assessment_key)
+        if status.get("state") not in {None, "pending", "running"}:
+            return result
+        if time.monotonic() >= deadline:
+            return {
+                "schema": "kungfu.trust.assessment/v1",
+                "allowed": False,
+                "reason": "trust-timeout",
+                "assessment_key": assessment_key,
+                "purpose": purpose,
+                "state": status.get("state", "missing"),
+            }
+        time.sleep(max(poll_interval_seconds, 0.001))
 
 
 def compile_fact_query_sql(

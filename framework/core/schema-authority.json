@@ -58,6 +58,13 @@
       "projection_route": "flatbuffers-bfbs"
     },
     {
+      "identity": "kungfu.trust.assessment-events",
+      "owner": "flatbuffers",
+      "declaration": "framework/core/src/libkungfu/schemas/assessment_event.fbs",
+      "derived_schema": "framework/core/src/libkungfu/schemas/assessment_event.bfbs",
+      "projection_route": "flatbuffers-bfbs"
+    },
+    {
       "identity": "kungfu.atlas.events",
       "owner": "flatbuffers",
       "declaration": "framework/core/src/python/kungfu/atlas/atlas_events.fbs",

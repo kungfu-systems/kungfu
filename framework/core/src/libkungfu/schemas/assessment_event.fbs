@@ -1,0 +1,112 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Durable KFD-2 assessment requests and results for ADR-0052.
+// This is the single persisted schema owner. JSON is an edge projection only.
+
+namespace kungfu.trust.fb;
+
+enum EventKind : byte {
+  AssessmentRequested = 0,
+  AssessmentStarted = 1,
+  AssessmentCompleted = 2,
+  AssessmentInvalidated = 3
+}
+
+enum AssessmentState : byte {
+  Pending = 0,
+  Running = 1,
+  Fresh = 2,
+  Stale = 3,
+  InsufficientEvidence = 4,
+  Conflicted = 5,
+  Unverifiable = 6,
+  FailedRetryable = 7
+}
+
+table DeclarationRef {
+  id:string;
+  version:string;
+  root:string;
+}
+
+table PolicyRef {
+  id:string;
+  version:string;
+  root:string;
+}
+
+table EvidenceSummary {
+  canonical_fact_count:ulong;
+  conflict_count:ulong;
+  admitted_count:ulong;
+  unregistered_surface_count:ulong;
+  incompatible_schema_count:ulong;
+  ambiguous_authority_count:ulong;
+  unverifiable_count:ulong;
+}
+
+table AssessmentRequest {
+  assessment_key:string;
+  claim_id:string;
+  claim_type:string;
+  purpose:string;
+  work_episode_id:ulong;
+  work_episode_root:string;
+  query_definition_root:string;
+  query_proof_root:string;
+  contract_world:DeclarationRef;
+  fact_surfaces:[DeclarationRef];
+  policy:PolicyRef;
+  evidence:EvidenceSummary;
+  deadline:long;
+  responsibility:string;
+  residual_risks:[string];
+}
+
+table AssessmentExecution {
+  assessment_key:string;
+  executor_profile:string;
+  state:AssessmentState;
+  attempt:uint;
+  started_at:long;
+  finished_at:long;
+  failure_reason:string;
+}
+
+table TrustReport {
+  assessment_key:string;
+  claim_id:string;
+  claim_type:string;
+  purpose:string;
+  state:AssessmentState;
+  work_episode_id:ulong;
+  work_episode_root:string;
+  query_definition_root:string;
+  query_proof_root:string;
+  contract_world:DeclarationRef;
+  fact_surfaces:[DeclarationRef];
+  policy:PolicyRef;
+  evidence:EvidenceSummary;
+  responsibility:string;
+  residual_risks:[string];
+  deterministic:bool;
+  report_hash:string;
+}
+
+table AssessmentEvent {
+  schema_version:uint;
+  event_id:string;
+  assessment_key:string;
+  kind:EventKind;
+  system_time:long;
+  assessment_episode_id:ulong;
+  parent_episode_id:ulong;
+  request:AssessmentRequest;
+  execution:AssessmentExecution;
+  report:TrustReport;
+  reason:string;
+  changed_root:string;
+  relevant:bool;
+}
+
+root_type AssessmentEvent;

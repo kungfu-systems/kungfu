@@ -16,6 +16,7 @@ from xml.sax.saxutils import escape as xml_escape
 
 import kungfu
 from kungfu import host
+from kungfu.storage import service as storage_service
 
 lf = kungfu.__binding__.yijinjing
 yjj = kungfu.__binding__.runtime
@@ -25,6 +26,7 @@ SCHEMA_STATUS = "kungfu.master-service.status/v1"
 SCHEMA_PLAN = "kungfu.master-service.plan/v1"
 SCHEMA_RESULT = "kungfu.master-service.result/v1"
 SCHEMA_ROUTES = "kungfu.master-service.routes/v1"
+SCHEMA_ASSESSMENT_SUBSCRIPTION = "kungfu.master.assessment-subscription/v1"
 SERVICE_ID = "tech.kungfu.supervisor"
 SERVICE_NAME = "Kungfu Supervisor"
 ROUTE_LEASE_TTL_SECONDS = 30.0
@@ -182,6 +184,10 @@ def master_log_path(runtime_dir: str) -> Path:
     return state_dir(runtime_dir) / "master.log"
 
 
+def assessment_subscription_path(runtime_dir: str) -> Path:
+    return state_dir(runtime_dir) / "assessments.json"
+
+
 def read_pid(path: Path) -> int | None:
     try:
         return int(path.read_text("utf-8").strip())
@@ -231,6 +237,47 @@ def master_run_command(home: str, runtime_dir: str, log_level: str) -> list[str]
         "--home",
         home,
     ]
+
+
+def assessment_worker_command(runtime_dir: str, assessment_key: str) -> list[str]:
+    return [
+        *entry_command(),
+        "master",
+        "assess-worker",
+        "--runtime-dir",
+        resolve_runtime_dir("", runtime_dir),
+        "--assessment-key",
+        assessment_key,
+    ]
+
+
+def assessment_snapshot(runtime_dir: str) -> dict[str, Any]:
+    lifecycle = storage_service.assessment_list(runtime_dir)
+    counts: dict[str, int] = {}
+    for assessment in lifecycle["assessments"]:
+        state = str(assessment["state"])
+        counts[state] = counts.get(state, 0) + 1
+    return {
+        **lifecycle,
+        "schema": SCHEMA_ASSESSMENT_SUBSCRIPTION,
+        "runtimeDir": resolve_runtime_dir("", runtime_dir),
+        "updatedAt": _now(),
+        "counts": counts,
+    }
+
+
+def publish_assessment_snapshot(runtime_dir: str) -> dict[str, Any]:
+    snapshot = assessment_snapshot(runtime_dir)
+    _json_write(assessment_subscription_path(runtime_dir), snapshot)
+    return snapshot
+
+
+def run_assessment_worker(runtime_dir: str, assessment_key: str) -> dict[str, Any]:
+    return storage_service.assessment_execute(
+        runtime_dir,
+        assessment_key,
+        executor_profile="process",
+    )
 
 
 def supervisor_command(
@@ -446,6 +493,17 @@ class Master(yjj.master):
         super().__init__(location, low_latency)
         self.home_dir = home
         self.runtime_dir = runtime_dir
+        self._assessment_worker: tuple[str, subprocess.Popen[Any], int] | None = None
+        self._assessment_last_check = 0
+
+    @staticmethod
+    def _assessment_worker_timeout_ns() -> int:
+        raw = os.environ.get("KF_ASSESSMENT_WORKER_TIMEOUT_SECONDS", "30")
+        try:
+            seconds = max(float(raw), 0.1)
+        except ValueError:
+            seconds = 30.0
+        return int(seconds * 1_000_000_000)
 
     def on_register(self, gen_time: int, register_data: Any) -> None:
         return None
@@ -454,7 +512,46 @@ class Master(yjj.master):
         return True
 
     def on_interval_check(self, nanotime: int) -> None:
-        return None
+        if nanotime - self._assessment_last_check < 500_000_000:
+            return
+        self._assessment_last_check = nanotime
+        if self._assessment_worker is not None:
+            _, child, started_at = self._assessment_worker
+            if child.poll() is None:
+                if nanotime - started_at < self._assessment_worker_timeout_ns():
+                    return
+                child.terminate()
+                try:
+                    child.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    child.kill()
+                    child.wait()
+            self._assessment_worker = None
+
+        snapshot = publish_assessment_snapshot(self.runtime_dir)
+        pending = [
+            assessment
+            for assessment in snapshot["assessments"]
+            if assessment["state"] == "pending"
+        ]
+        if not pending:
+            return
+        assessment_key = str(pending[0]["assessment_key"])
+        command = assessment_worker_command(self.runtime_dir, assessment_key)
+        master_log_path(self.runtime_dir).parent.mkdir(parents=True, exist_ok=True)
+        with master_log_path(self.runtime_dir).open("ab") as log:
+            child = subprocess.Popen(
+                command,
+                stdin=subprocess.DEVNULL,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                env=command_env(
+                    self.home_dir,
+                    self.runtime_dir,
+                    os.environ.get("KF_LOG_LEVEL", "warning"),
+                ),
+            )
+        self._assessment_worker = (assessment_key, child, nanotime)
 
 
 def run_master(home: str, runtime_dir: str, low_latency: bool = False) -> int:

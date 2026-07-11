@@ -149,6 +149,67 @@ def run(runtime_home, runtime_dir, low_latency):
     sys.exit(master_service.run_master(runtime_home, runtime_dir, low_latency))
 
 
+@master.command(name="assess-worker", hidden=True)
+@click.option("--runtime-dir", required=True)
+@click.option("--assessment-key", required=True)
+def assess_worker(runtime_dir, assessment_key):
+    _json(master_service.run_assessment_worker(runtime_dir, assessment_key))
+
+
+@master.command(
+    name="assessments",
+    help="show claim assessment freshness and fitness before proof/replay drill-down",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@master_command_context
+def assessments(ctx, as_json):
+    payload = master_service.publish_assessment_snapshot(ctx.runtime_dir)
+    if as_json:
+        _json(payload)
+        return
+    click.echo(f"assessments: {payload['assessment_count']}")
+    for assessment in payload["assessments"]:
+        request = assessment["request"]
+        click.echo(
+            f"{assessment['state']}: {request['claim_id']} "
+            f"for {request['purpose']} ({assessment['assessment_key']})"
+        )
+        if "report" in assessment:
+            report = assessment["report"]
+            click.echo(
+                f"  fitness={report['state']} proof={report['query_proof_root']}"
+            )
+            risks = report.get("residual_risks") or []
+            if risks:
+                click.echo(f"  residual-risk={'; '.join(risks)}")
+
+
+@master.command(name="trust", help="require a fresh assessment for a purpose")
+@click.option("--assessment-key", required=True)
+@click.option("--purpose", required=True)
+@click.option("--await-seconds", type=float, default=0.0, show_default=True)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@master_command_context
+def trust(ctx, assessment_key, purpose, await_seconds, as_json):
+    if await_seconds > 0:
+        payload = master_service.storage_service.trust_await(
+            ctx.runtime_dir,
+            assessment_key,
+            purpose=purpose,
+            timeout_seconds=await_seconds,
+        )
+    else:
+        payload = master_service.storage_service.trust_require(
+            ctx.runtime_dir, assessment_key, purpose=purpose
+        )
+    if as_json:
+        _json(payload)
+    else:
+        click.echo("allowed" if payload["allowed"] else f"blocked: {payload['reason']}")
+    if not payload["allowed"]:
+        raise click.exceptions.Exit(2)
+
+
 @master.command(help="run the foreground master supervisor service loop")
 @click.option(
     "--home",

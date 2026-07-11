@@ -2,12 +2,15 @@
 
 import hashlib
 import json
+import os
 import sqlite3
+import subprocess
 from datetime import datetime, timezone
 
 import kungfu
 import pytest
 
+from kungfu import master_service
 from kungfu.atlas import importer, payloads
 from kungfu.atlas import CARRIER_ATLAS_ACTION
 from kungfu.sources import store as source_store
@@ -17,6 +20,70 @@ from kungfu.storage import service as storage_service
 def _write_json(path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
+
+
+def _sha256_root(value: str) -> str:
+    return "sha256:" + hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _sealed_work_episode(runtime_dir, *, episode_id=5200):
+    storage_service.episode_begin(
+        runtime_dir,
+        episode_id=episode_id,
+        begin_time=1000,
+        title="assessment work",
+        actor="pytest",
+        source="adr-0052-test",
+    )
+    closed = storage_service.episode_end(
+        runtime_dir,
+        episode_id=episode_id,
+        end_time=1100,
+        reason="work sealed before assessment",
+    )
+    return "sha256:" + closed["content_root"]["root_value"]
+
+
+def _assessment_request(work_episode_root, *, episode_id=5200, evidence=None):
+    return {
+        "claim_id": "claim-release-ready",
+        "claim_type": "release-readiness",
+        "purpose": "release-gate",
+        "work_episode_id": episode_id,
+        "work_episode_root": work_episode_root,
+        "query_definition_root": _sha256_root("query-definition"),
+        "query_proof_root": _sha256_root("query-proof"),
+        "contract_world": {
+            "id": "kungfu-runtime",
+            "version": "v1",
+            "root": _sha256_root("contract-world"),
+        },
+        "fact_surfaces": [
+            {
+                "id": "release-facts",
+                "version": "v1",
+                "root": _sha256_root("release-facts"),
+            }
+        ],
+        "policy": {
+            "id": "deterministic-assessor",
+            "version": "v1",
+            "root": _sha256_root("deterministic-assessor"),
+        },
+        "evidence": evidence
+        or {
+            "canonical_fact_count": 3,
+            "conflict_count": 0,
+            "admitted_count": 3,
+            "unregistered_surface_count": 0,
+            "incompatible_schema_count": 0,
+            "ambiguous_authority_count": 0,
+            "unverifiable_count": 0,
+        },
+        "deadline": 0,
+        "responsibility": "workspace-master",
+        "residual_risks": ["first built-in assessor only"],
+    }
 
 
 def _atlas_fixture(root):
@@ -527,6 +594,13 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
         "fact_declare_surface",
         "fact_observe",
         "fact_state",
+        "assessment_contract",
+        "assessment_request",
+        "assessment_execute",
+        "assessment_status",
+        "assessment_list",
+        "assessment_invalidate",
+        "trust_require",
         "layout",
         "episode_begin",
         "episode_heartbeat",
@@ -1813,6 +1887,7 @@ def test_episode_fsck_reports_degraded_causal_dependencies(tmp_path):
     assert "episode_dependency_missing" in warning_codes
     assert "episode_root_trigger_frame_missing" in warning_codes
     assert "episode_trigger_frame_missing" in warning_codes
+
     error_codes = {
         issue["code"] for issue in fsck["issues"] if issue["severity"] == "error"
     }
@@ -3144,3 +3219,236 @@ def test_payload_bodies_are_opaque_content_addressed_bytes(tmp_path):
     # The runtime still verifies the body by hash + length regardless of naming.
     runtime = kungfu.__binding__.runtime
     assert runtime.verify_storage_payload(raw, digest, entry["byte_len"]) == ""
+
+
+def test_assessment_job_is_durable_idempotent_and_does_not_mutate_work_episode(
+    tmp_path,
+):
+    runtime_dir = tmp_path / "runtime"
+    work_root = _sealed_work_episode(runtime_dir)
+    work_before = storage_service.episode_inspect(runtime_dir, episode_id=5200)[
+        "content_root"
+    ]
+
+    requested = storage_service.assessment_request(
+        runtime_dir,
+        _assessment_request(work_root),
+        system_time=1200,
+    )
+    assert requested["state"] == "pending"
+    assert requested["parent_episode_id"] == 5200
+    assert requested["reused"] is False
+
+    # A fresh edge call folds the journaled request, proving this is not an
+    # in-memory callback or append-hot-path assessment.
+    pending = storage_service.assessment_status(
+        runtime_dir, requested["assessment_key"]
+    )
+    assert pending["found"] is True
+    assert pending["state"] == "pending"
+    timed_out = storage_service.trust_await(
+        runtime_dir,
+        requested["assessment_key"],
+        purpose="release-gate",
+        timeout_seconds=0,
+    )
+    assert timed_out["allowed"] is False
+    assert timed_out["reason"] == "trust-timeout"
+    assert (
+        storage_service.episode_inspect(runtime_dir, episode_id=5200)["content_root"]
+        == work_before
+    )
+
+    completed = storage_service.assessment_execute(
+        runtime_dir,
+        requested["assessment_key"],
+        executor_profile="process",
+        system_time=1300,
+    )
+    assert completed["state"] == "fresh"
+    assert completed["execution"]["executor_profile"] == "process"
+    assert completed["report"]["deterministic"] is True
+    assert completed["report"]["report_hash"].startswith("sha256:")
+    assert completed["parent_episode_id"] == 5200
+
+    result_episode = storage_service.episode_inspect(
+        runtime_dir, episode_id=completed["assessment_episode_id"]
+    )
+    request_episode = storage_service.episode_inspect(
+        runtime_dir, episode_id=requested["assessment_episode_id"]
+    )
+    assert result_episode["episode"]["open"]["parent_episode_id"] == 5200
+    assert result_episode["episode"]["open"]["source"] == (
+        "adr-0052-assessment-runtime"
+    )
+    assert (
+        result_episode["episode"]["open"]["location_uid"]
+        != (request_episode["episode"]["open"]["location_uid"])
+    )
+
+    repeated = storage_service.assessment_execute(
+        runtime_dir,
+        requested["assessment_key"],
+        executor_profile="thread",
+        system_time=1400,
+    )
+    assert repeated["reused"] is True
+    assert repeated["report"]["report_hash"] == completed["report"]["report_hash"]
+    assert repeated["assessment_episode_id"] == completed["assessment_episode_id"]
+
+    assert (
+        storage_service.trust_require(
+            runtime_dir, requested["assessment_key"], purpose="release-gate"
+        )["allowed"]
+        is True
+    )
+    assert storage_service.trust_require(
+        runtime_dir, requested["assessment_key"], purpose="different-purpose"
+    ) == {
+        "schema": "kungfu.trust.assessment/v1",
+        "allowed": False,
+        "reason": "purpose-mismatch",
+    }
+    assert (
+        storage_service.trust_require(
+            runtime_dir, _sha256_root("missing-assessment"), purpose="release-gate"
+        )["reason"]
+        == "assessment-not-found"
+    )
+
+
+def test_assessment_request_rejects_a_claim_about_the_wrong_episode_root(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    work_root = _sealed_work_episode(runtime_dir)
+    request = _assessment_request(work_root)
+    request["work_episode_root"] = _sha256_root("not-the-sealed-episode")
+
+    with pytest.raises(
+        (RuntimeError, ValueError), match="does not match the sealed Episode"
+    ):
+        storage_service.assessment_request(runtime_dir, request, system_time=1200)
+
+
+def test_assessment_process_and_thread_executors_have_identical_report_hashes(
+    tmp_path,
+):
+    results = {}
+    for executor_profile in ("process", "thread"):
+        runtime_dir = tmp_path / executor_profile
+        work_root = _sealed_work_episode(runtime_dir)
+        requested = storage_service.assessment_request(
+            runtime_dir,
+            _assessment_request(work_root),
+            system_time=1200,
+        )
+        if executor_profile == "process":
+            child = subprocess.run(
+                master_service.assessment_worker_command(
+                    str(runtime_dir), requested["assessment_key"]
+                ),
+                check=False,
+                capture_output=True,
+                text=True,
+                env=dict(os.environ),
+            )
+            assert child.returncode == 0, child.stderr
+            results[executor_profile] = storage_service.assessment_status(
+                runtime_dir, requested["assessment_key"]
+            )
+        else:
+            results[executor_profile] = storage_service.assessment_execute(
+                runtime_dir,
+                requested["assessment_key"],
+                executor_profile=executor_profile,
+                system_time=1300,
+            )
+
+    assert results["process"]["assessment_key"] == results["thread"]["assessment_key"]
+    assert results["process"]["report"] == results["thread"]["report"]
+    assert (
+        results["process"]["report"]["report_hash"]
+        == results["thread"]["report"]["report_hash"]
+    )
+    assert results["process"]["execution"]["executor_profile"] == "process"
+    assert results["thread"]["execution"]["executor_profile"] == "thread"
+
+
+def test_assessment_invalidation_is_precise_and_subscription_list_is_folded(
+    tmp_path,
+):
+    runtime_dir = tmp_path / "runtime"
+    work_root = _sealed_work_episode(runtime_dir)
+    requested = storage_service.assessment_request(
+        runtime_dir, _assessment_request(work_root), system_time=1200
+    )
+    storage_service.assessment_execute(
+        runtime_dir, requested["assessment_key"], system_time=1300
+    )
+
+    irrelevant = storage_service.assessment_invalidate(
+        runtime_dir,
+        requested["assessment_key"],
+        changed_root=_sha256_root("unrelated-fact-surface"),
+        reason="unrelated evidence changed",
+        system_time=1400,
+    )
+    assert irrelevant["invalidated"] is False
+    assert irrelevant["relevant"] is False
+    assert (
+        storage_service.assessment_status(runtime_dir, requested["assessment_key"])[
+            "state"
+        ]
+        == "fresh"
+    )
+
+    relevant = storage_service.assessment_invalidate(
+        runtime_dir,
+        requested["assessment_key"],
+        changed_root=_sha256_root("release-facts"),
+        reason="bound fact surface changed",
+        system_time=1500,
+    )
+    assert relevant["invalidated"] is True
+    assert relevant["relevant"] is True
+    assert (
+        storage_service.assessment_status(runtime_dir, requested["assessment_key"])[
+            "state"
+        ]
+        == "stale"
+    )
+
+    listed = storage_service.assessment_list(runtime_dir)
+    assert listed["assessment_count"] == 1
+    assert listed["assessments"][0]["state"] == "stale"
+
+
+@pytest.mark.parametrize(
+    ("evidence", "expected_state"),
+    [
+        ({"canonical_fact_count": 0}, "insufficient-evidence"),
+        ({"canonical_fact_count": 2, "conflict_count": 1}, "conflicted"),
+        ({"canonical_fact_count": 2, "unverifiable_count": 1}, "unverifiable"),
+    ],
+)
+def test_assessment_fails_closed_for_nonfresh_evidence(
+    tmp_path, evidence, expected_state
+):
+    runtime_dir = tmp_path / expected_state
+    work_root = _sealed_work_episode(runtime_dir)
+    requested = storage_service.assessment_request(
+        runtime_dir,
+        _assessment_request(work_root, evidence=evidence),
+        system_time=1200,
+    )
+    completed = storage_service.assessment_execute(
+        runtime_dir,
+        requested["assessment_key"],
+        executor_profile="process",
+        system_time=1300,
+    )
+    assert completed["state"] == expected_state
+    gate = storage_service.trust_require(
+        runtime_dir, requested["assessment_key"], purpose="release-gate"
+    )
+    assert gate["allowed"] is False
+    assert gate["reason"] == "assessment-not-fresh"

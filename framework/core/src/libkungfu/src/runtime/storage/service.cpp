@@ -29,6 +29,7 @@
 #include <kungfu/runtime/storage/episode_manifest_projection.h>
 #include <kungfu/runtime/storage/manifest_catalog_projection.h>
 #include <kungfu/runtime/storage/source_registry_projection.h>
+#include <kungfu/runtime/trust/assessment_runtime.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
 #include <kungfu/yijinjing/storage/content_store.h>
 #include <kungfu/yijinjing/storage/episode_manifest.h>
@@ -4658,6 +4659,42 @@ public:
                                    text_or(options.operation_options, "subject_key"));
   }
 
+  [[nodiscard]] nlohmann::json assessment_contract(const storage_service_options &options) const {
+    (void)options;
+    return trust::assessment_contract_json();
+  }
+
+  [[nodiscard]] nlohmann::json assessment_request(const storage_service_options &options) const {
+    return trust::request_assessment(options.runtime_dir, object_or_empty(options.operation_options, "request"),
+                                     int64_or(options.operation_options, "system_time"));
+  }
+
+  [[nodiscard]] nlohmann::json assessment_execute(const storage_service_options &options) const {
+    return trust::execute_assessment(options.runtime_dir, text_or(options.operation_options, "assessment_key"),
+                                     text_or(options.operation_options, "executor_profile", "process"),
+                                     int64_or(options.operation_options, "system_time"));
+  }
+
+  [[nodiscard]] nlohmann::json assessment_status(const storage_service_options &options) const {
+    return trust::query_assessment(options.runtime_dir, text_or(options.operation_options, "assessment_key"));
+  }
+
+  [[nodiscard]] nlohmann::json assessment_list(const storage_service_options &options) const {
+    return trust::list_assessments(options.runtime_dir);
+  }
+
+  [[nodiscard]] nlohmann::json assessment_invalidate(const storage_service_options &options) const {
+    return trust::invalidate_assessment(options.runtime_dir, text_or(options.operation_options, "assessment_key"),
+                                        text_or(options.operation_options, "changed_root"),
+                                        text_or(options.operation_options, "reason"),
+                                        int64_or(options.operation_options, "system_time"));
+  }
+
+  [[nodiscard]] nlohmann::json trust_require(const storage_service_options &options) const {
+    return trust::require_trust(options.runtime_dir, text_or(options.operation_options, "assessment_key"),
+                                text_or(options.operation_options, "purpose"));
+  }
+
   [[nodiscard]] nlohmann::json episode_begin(const storage_service_options &options) const {
     return episode_record_body_json(
         episode_store(options).begin(parse_episode_begin_options(options.operation_options)));
@@ -5960,6 +5997,13 @@ std::vector<std::string> storage_operation_names() {
       storage_operation_name(storage_operation::FactDeclareSurface),
       storage_operation_name(storage_operation::FactObserve),
       storage_operation_name(storage_operation::FactState),
+      storage_operation_name(storage_operation::AssessmentContract),
+      storage_operation_name(storage_operation::AssessmentRequest),
+      storage_operation_name(storage_operation::AssessmentExecute),
+      storage_operation_name(storage_operation::AssessmentStatus),
+      storage_operation_name(storage_operation::AssessmentList),
+      storage_operation_name(storage_operation::AssessmentInvalidate),
+      storage_operation_name(storage_operation::TrustRequire),
       storage_operation_name(storage_operation::Layout),
       storage_operation_name(storage_operation::EpisodeBegin),
       storage_operation_name(storage_operation::EpisodeHeartbeat),
@@ -6023,6 +6067,20 @@ std::string storage_operation_name(storage_operation operation) {
     return "fact_observe";
   case storage_operation::FactState:
     return "fact_state";
+  case storage_operation::AssessmentContract:
+    return "assessment_contract";
+  case storage_operation::AssessmentRequest:
+    return "assessment_request";
+  case storage_operation::AssessmentExecute:
+    return "assessment_execute";
+  case storage_operation::AssessmentStatus:
+    return "assessment_status";
+  case storage_operation::AssessmentList:
+    return "assessment_list";
+  case storage_operation::AssessmentInvalidate:
+    return "assessment_invalidate";
+  case storage_operation::TrustRequire:
+    return "trust_require";
   case storage_operation::Layout:
     return "layout";
   case storage_operation::EpisodeBegin:
@@ -6123,6 +6181,27 @@ storage_operation parse_storage_operation(const std::string &operation) {
   }
   if (operation == "fact_state") {
     return storage_operation::FactState;
+  }
+  if (operation == "assessment_contract") {
+    return storage_operation::AssessmentContract;
+  }
+  if (operation == "assessment_request") {
+    return storage_operation::AssessmentRequest;
+  }
+  if (operation == "assessment_execute") {
+    return storage_operation::AssessmentExecute;
+  }
+  if (operation == "assessment_status") {
+    return storage_operation::AssessmentStatus;
+  }
+  if (operation == "assessment_list") {
+    return storage_operation::AssessmentList;
+  }
+  if (operation == "assessment_invalidate") {
+    return storage_operation::AssessmentInvalidate;
+  }
+  if (operation == "trust_require") {
+    return storage_operation::TrustRequire;
   }
   if (operation == "layout") {
     return storage_operation::Layout;
@@ -6281,6 +6360,20 @@ nlohmann::json run_storage_service_operation(const std::string &operation, const
     return storage_json_edge_service_instance().fact_observe(parsed_options);
   case storage_operation::FactState:
     return storage_json_edge_service_instance().fact_state(parsed_options);
+  case storage_operation::AssessmentContract:
+    return storage_json_edge_service_instance().assessment_contract(parsed_options);
+  case storage_operation::AssessmentRequest:
+    return storage_json_edge_service_instance().assessment_request(parsed_options);
+  case storage_operation::AssessmentExecute:
+    return storage_json_edge_service_instance().assessment_execute(parsed_options);
+  case storage_operation::AssessmentStatus:
+    return storage_json_edge_service_instance().assessment_status(parsed_options);
+  case storage_operation::AssessmentList:
+    return storage_json_edge_service_instance().assessment_list(parsed_options);
+  case storage_operation::AssessmentInvalidate:
+    return storage_json_edge_service_instance().assessment_invalidate(parsed_options);
+  case storage_operation::TrustRequire:
+    return storage_json_edge_service_instance().trust_require(parsed_options);
   case storage_operation::Layout:
     return storage_json_edge_service_instance().layout(parsed_options);
   case storage_operation::EpisodeBegin:

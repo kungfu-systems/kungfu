@@ -57,12 +57,23 @@ def test_marker_with_wrong_schema_is_not_assembled(monkeypatch, tmp_path):
     assert host.product_root() is None
 
 
-def test_entry_command_prefers_a_real_executable_argv0(monkeypatch, tmp_path):
+def test_entry_command_prefers_a_real_product_executable_argv0(monkeypatch, tmp_path):
+    prefix = tmp_path / "dist" / "kungfu" / "python"
+    _write_marker(prefix)
+    monkeypatch.setattr(sys, "base_prefix", str(prefix))
     entry = tmp_path / "kungfu"
     entry.write_text("#!/bin/sh\n", encoding="utf-8")
     entry.chmod(entry.stat().st_mode | stat.S_IXUSR)
     monkeypatch.setattr(sys, "argv", [str(entry)])
     assert host.entry_command() == [str(entry.resolve())]
+
+
+def test_source_entry_command_does_not_treat_pytest_as_kungfu(monkeypatch, tmp_path):
+    entry = tmp_path / "pytest"
+    entry.write_text("#!/bin/sh\n", encoding="utf-8")
+    entry.chmod(entry.stat().st_mode | stat.S_IXUSR)
+    monkeypatch.setattr(sys, "argv", [str(entry)])
+    assert host.entry_command() == [sys.executable, "-m", "kungfu"]
 
 
 def test_entry_command_reenters_the_interpreter_for_module_runs(monkeypatch):

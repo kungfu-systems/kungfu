@@ -9,9 +9,10 @@
 namespace {
 
 constexpr uint64_t EPISODE_ID = UINT64_C(42490049);
-constexpr uint64_t EXPECTED_CAPABILITIES = KF_NATIVE_STORAGE_CAP_EPISODE_LIFECYCLE |
-                                           KF_NATIVE_STORAGE_CAP_HEAD_AND_HISTORICAL_QUERY |
-                                           KF_NATIVE_STORAGE_CAP_FSCK | KF_NATIVE_STORAGE_CAP_EXPORT;
+constexpr uint64_t EXPECTED_CAPABILITIES =
+    KF_NATIVE_STORAGE_CAP_EPISODE_LIFECYCLE | KF_NATIVE_STORAGE_CAP_HEAD_AND_HISTORICAL_QUERY |
+    KF_NATIVE_STORAGE_CAP_FSCK | KF_NATIVE_STORAGE_CAP_EXPORT | KF_NATIVE_STORAGE_CAP_DOMAIN_FACT_ADMISSION |
+    KF_NATIVE_STORAGE_CAP_TRUST_ASSESSMENT;
 // This external-style C consumer intentionally pins the built-in declaration
 // roots. Contract-world drift must fail closed until the consumer updates.
 constexpr const char *CONTRACT_WORLD_ROOT = "sha256:99e55c748b2e2b12c994b5e691f6781e66f9d460402e4e6871a48d3628314e9e";
@@ -146,8 +147,12 @@ int main(int argc, char **argv) {
   if (!call(api, context, "episode_end", end_request, response) || !contains(response, "\"content_root\":")) {
     return 10;
   }
-  if (api.context_close(context) != KF_NATIVE_STORAGE_OK) {
+  if (!call(api, context, "assessment_contract", "{}", response) || !contains(response, "kungfu.trust.assessment/v1") ||
+      !contains(response, "flatbuffers")) {
     return 11;
+  }
+  if (api.context_close(context) != KF_NATIVE_STORAGE_OK) {
+    return 12;
   }
 
   // Reopen the same .kungfu workspace to prove the lifecycle is not process-

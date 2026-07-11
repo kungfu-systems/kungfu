@@ -46,6 +46,7 @@ typedef enum kf_native_storage_status {
 #define KF_NATIVE_STORAGE_CAP_FSCK (UINT64_C(1) << 2)
 #define KF_NATIVE_STORAGE_CAP_EXPORT (UINT64_C(1) << 3)
 #define KF_NATIVE_STORAGE_CAP_DOMAIN_FACT_ADMISSION (UINT64_C(1) << 4)
+#define KF_NATIVE_STORAGE_CAP_TRUST_ASSESSMENT (UINT64_C(1) << 5)
 
 typedef struct kf_native_storage_context_config_v1 {
   uint32_t struct_size;

@@ -1,6 +1,6 @@
 # ADR-0052: KFD-2 assessments are claim-triggered jobs coordinated by the workspace master
 
-- Status: accepted; implementation staged
+- Status: accepted; initial runtime implemented
 - Date: 2026-07-11
 - Category: architecture — trust-assessment lifecycle and execution topology
 - Subsystem: workspace master, KFD-2, Episode, query service, yijinjing
@@ -199,6 +199,16 @@ dashboard tax. GUI state does not own assessment meaning.
    comparing report hashes across process and thread execution.
 5. Add explicit `await`/`require trust` decision gates and a GUI progression
    from summary to report, proof, and replay.
+
+The initial vertical slice is implemented in `libkungfu` and the workspace
+master. `assessment_event.fbs` owns request, execution, result, invalidation,
+and report persistence. The request coordinator journal is separate from the
+per-key/per-executor assessor journals, so managed process and embedded thread
+executors retain distinct locations and single-writer result paths. The Python
+workspace master schedules one pending process worker at a time and publishes a
+subscription fold to `master/assessments.json`; CLI and GUI surfaces show
+freshness and fitness before proof/replay details. Native C ABI, Node, Python,
+process, and thread fixtures cover the shared contract.
 
 ## Acceptance gates
 

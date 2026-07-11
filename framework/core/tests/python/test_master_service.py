@@ -258,3 +258,117 @@ def test_service_plan_is_dry_run_material(tmp_path):
     assert plan["path"]
     assert plan["installNote"]
     assert plan["uninstallNote"]
+
+
+def test_workspace_master_schedules_one_pending_assessment_process(
+    tmp_path, monkeypatch
+):
+    runtime_dir = tmp_path / "runtime"
+    pending_key = "sha256:" + "1" * 64
+    monkeypatch.setattr(
+        master_service,
+        "publish_assessment_snapshot",
+        lambda runtime_dir: {
+            "assessments": [{"assessment_key": pending_key, "state": "pending"}]
+        },
+    )
+    monkeypatch.setattr(
+        master_service,
+        "assessment_worker_command",
+        lambda runtime_dir, key: ["worker", runtime_dir, key],
+    )
+
+    spawned = []
+
+    class _FakeWorker:
+        def poll(self):
+            return None
+
+    def _spawn(command, **kwargs):
+        spawned.append((command, kwargs))
+        return _FakeWorker()
+
+    monkeypatch.setattr(master_service.subprocess, "Popen", _spawn)
+    master = master_service.Master(str(tmp_path / "home"), str(runtime_dir))
+    master.on_interval_check(1_000_000_000)
+    master.on_interval_check(2_000_000_000)
+
+    assert len(spawned) == 1
+    assert spawned[0][0] == ["worker", str(runtime_dir), pending_key]
+    assert master._assessment_worker[0] == pending_key
+
+
+def test_workspace_master_cancels_timed_out_assessor_and_retries_pending_request(
+    tmp_path, monkeypatch
+):
+    runtime_dir = tmp_path / "runtime"
+    pending_key = "sha256:" + "2" * 64
+    monkeypatch.setenv("KF_ASSESSMENT_WORKER_TIMEOUT_SECONDS", "1")
+    monkeypatch.setattr(
+        master_service,
+        "publish_assessment_snapshot",
+        lambda runtime_dir: {
+            "assessments": [{"assessment_key": pending_key, "state": "pending"}]
+        },
+    )
+    monkeypatch.setattr(
+        master_service,
+        "assessment_worker_command",
+        lambda runtime_dir, key: ["worker", runtime_dir, key],
+    )
+
+    spawned = []
+
+    class _FakeWorker:
+        def __init__(self):
+            self.terminated = False
+
+        def poll(self):
+            return None
+
+        def terminate(self):
+            self.terminated = True
+
+        def wait(self, timeout=None):
+            return 0
+
+    def _spawn(command, **kwargs):
+        worker = _FakeWorker()
+        spawned.append(worker)
+        return worker
+
+    monkeypatch.setattr(master_service.subprocess, "Popen", _spawn)
+    master = master_service.Master(str(tmp_path / "home"), str(runtime_dir))
+    master.on_interval_check(1_000_000_000)
+    master.on_interval_check(2_500_000_000)
+
+    assert len(spawned) == 2
+    assert spawned[0].terminated is True
+    assert master._assessment_worker[1] is spawned[1]
+
+
+def test_assessment_subscription_snapshot_exposes_summary_before_proof(
+    tmp_path, monkeypatch
+):
+    runtime_dir = tmp_path / "runtime"
+    monkeypatch.setattr(
+        master_service.storage_service,
+        "assessment_list",
+        lambda runtime_dir: {
+            "schema": "kungfu.trust.assessment/v1",
+            "assessment_count": 2,
+            "assessments": [
+                {"assessment_key": "fresh", "state": "fresh"},
+                {"assessment_key": "pending", "state": "pending"},
+            ],
+        },
+    )
+
+    snapshot = master_service.publish_assessment_snapshot(str(runtime_dir))
+
+    assert snapshot["schema"] == "kungfu.master.assessment-subscription/v1"
+    assert snapshot["counts"] == {"fresh": 1, "pending": 1}
+    persisted = master_service._json_read(
+        master_service.assessment_subscription_path(str(runtime_dir))
+    )
+    assert persisted["counts"] == snapshot["counts"]

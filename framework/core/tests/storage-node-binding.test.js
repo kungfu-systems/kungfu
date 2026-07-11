@@ -772,6 +772,37 @@ test(
   },
 );
 
+test(
+  'assessment contract and lifecycle operations are owned by libkungfu across the Node edge',
+  {
+    skip:
+      nativeAvailable || process.env.KUNGFU_REQUIRE_NATIVE === '1'
+        ? false
+        : 'built kungfu_node binding is unavailable',
+  },
+  () => {
+    const contract = kungfu.runStorageServiceOperation(
+      'assessment_contract',
+      '',
+      {},
+    );
+    assert.equal(contract.schema, 'kungfu.trust.assessment/v1');
+    assert.equal(contract.schema_owner, 'flatbuffers');
+    assert.deepEqual(contract.executor_profiles, [
+      'inline',
+      'thread',
+      'process',
+    ]);
+    assert.equal(contract.schema_root.startsWith('sha256:'), true);
+    assert.equal(
+      kungfu
+        .storageServiceCapabilities()
+        .operations.includes('assessment_execute'),
+      true,
+    );
+  },
+);
+
 // ADR-0040 stage B: the content-store facade serves Node with the same
 // vocabulary as C++/Python over both provider profiles.
 for (const provider of ['content-addressed-file', 'rocksdb']) {
