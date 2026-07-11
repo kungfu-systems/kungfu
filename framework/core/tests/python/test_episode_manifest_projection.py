@@ -19,6 +19,12 @@ from kungfu.storage import service
 PROJECTION_SUBPATH = Path("storage/projections/episode-manifest.sqlite")
 
 
+def _episode_projection(fsck: dict) -> dict:
+    return next(
+        row for row in fsck["projections"] if row["name"] == "episode-manifest-sqlite"
+    )["verification"]
+
+
 def _seed_episode(runtime_dir: Path, episode_id: int) -> None:
     service.episode_begin(
         runtime_dir,
@@ -99,15 +105,15 @@ def test_fsck_reports_absent_then_ok_then_drift(tmp_path):
     fsck = service.fsck(runtime_dir, episode_id=3)
     assert fsck["ok"]
     assert fsck["status"] == "ok"
-    assert fsck["episode_projection"]["status"] == "absent"
-    assert fsck["episode_projection"]["projection_present"] is False
+    assert _episode_projection(fsck)["status"] == "absent"
+    assert _episode_projection(fsck)["projection_present"] is False
 
     # Rebuilt projection verifies clean.
     service.episode_projection_rebuild(runtime_dir)
     fsck = service.fsck(runtime_dir, episode_id=3)
     assert fsck["ok"]
     assert fsck["status"] == "ok"
-    assert fsck["episode_projection"]["status"] == "ok"
+    assert _episode_projection(fsck)["status"] == "ok"
 
     # New journal records after the rebuild: the projection has drifted; fsck
     # degrades but does not fail the journal, and a rebuild converges.
@@ -115,8 +121,8 @@ def test_fsck_reports_absent_then_ok_then_drift(tmp_path):
     fsck = service.fsck(runtime_dir, episode_id=4)
     assert fsck["status"] == "degraded"
     assert fsck["degraded"] is True
-    assert fsck["episode_projection"]["status"] == "degraded"
-    drift_tables = {d["table"] for d in fsck["episode_projection"]["drift"]}
+    assert _episode_projection(fsck)["status"] == "degraded"
+    drift_tables = {d["table"] for d in _episode_projection(fsck)["drift"]}
     assert "episode_open" in drift_tables
 
     service.episode_projection_rebuild(runtime_dir)

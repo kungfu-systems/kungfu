@@ -172,21 +172,12 @@ def fsck(
     # frames from and verifies each attached receipt (presence, header fields,
     # recomputed checksums). Episode-scope only; it reads every referenced
     # journal, so it stays opt-in.
-    scope = (
-        "episode"
-        if (episode_id or verify_frames)
-        else ("source" if source_id else "all")
-    )
     return dict(
-        _runtime().run_storage_service_operation(
-            "fsck",
+        _runtime().storage_fsck_typed(
             str(runtime_dir),
-            {
-                "scope": scope,
-                "source_id": source_id,
-                "episode_id": _u64(episode_id),
-                "verify_frames": verify_frames,
-            },
+            source_id=source_id,
+            episode_id=episode_id or 0,
+            verify_frames=verify_frames,
         )
     )
 
@@ -198,17 +189,12 @@ def repair_plan(
     episode_id: int | None = None,
     dry_run: bool = True,
 ) -> dict[str, Any]:
-    scope = "episode" if episode_id else ("source" if source_id else "all")
     return dict(
-        _runtime().run_storage_service_operation(
-            "repair_plan",
+        _runtime().storage_repair_plan_typed(
             str(runtime_dir),
-            {
-                "scope": scope,
-                "source_id": source_id,
-                "episode_id": _u64(episode_id),
-                "dry_run": dry_run,
-            },
+            source_id=source_id,
+            episode_id=episode_id or 0,
+            dry_run=dry_run,
         )
     )
 

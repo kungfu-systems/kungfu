@@ -151,9 +151,13 @@ def test_c3_resume_reattach_is_a_detectable_duplicate(tmp_path):
 
     fsck = service.fsck(runtime_dir, episode_id=3)
     assert fsck["ok"]
-    warnings = [w for w in fsck["warnings"] if w["code"] == "episode_frame_duplicate"]
+    warnings = [
+        issue
+        for issue in fsck["issues"]
+        if issue["severity"] == "warning" and issue["code"] == "episode_frame_duplicate"
+    ]
     assert len(warnings) == 1
-    assert warnings[0]["frame_uid"] == 77
+    assert warnings[0]["detail"]["frame_uid"] == 77
 
 
 def test_c4_recover_scopes_to_the_declared_owner_location(tmp_path):
@@ -247,7 +251,9 @@ def test_c6_sealed_episode_is_stable_and_recover_leaves_it_alone(tmp_path):
     # wins the folded status.
     service.episode_abort(runtime_dir, episode_id=7, end_time=1700, reason="late")
     fsck = service.fsck(runtime_dir, episode_id=7)
-    codes = [w["code"] for w in fsck["warnings"]]
+    codes = [
+        issue["code"] for issue in fsck["issues"] if issue["severity"] == "warning"
+    ]
     assert "episode_closed_duplicate" in codes
     assert (
         service.episode_inspect(runtime_dir, episode_id=7)["episode"]["status"]

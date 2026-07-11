@@ -153,6 +153,56 @@ interface StorageCompactPlanResult {
   notes: string[];
 }
 
+interface StorageFsckOptions {
+  source_id?: string;
+  episode_id?: bigint | number;
+  verify_frames?: boolean;
+}
+
+interface StorageFsckIssue {
+  severity: string;
+  code: string;
+  projection: string;
+  detail: Record<string, unknown>;
+}
+
+interface StorageFsckResult {
+  ok: boolean;
+  degraded: boolean;
+  status: string;
+  scope: 0 | 1 | 2;
+  source_id: string | null;
+  episode_id: bigint | null;
+  authority: string;
+  checked: Record<string, bigint>;
+  source_registry: Record<string, unknown>;
+  manifest_catalog: Record<string, unknown> | null;
+  episode_manifest: Record<string, unknown>;
+  projections: StorageProjectionStatus[];
+  frame_verification: Record<string, unknown> | null;
+  qualification: Record<string, unknown> | null;
+  issues: StorageFsckIssue[];
+}
+
+interface StorageRepairPlanOptions extends StorageFsckOptions {
+  dry_run?: boolean;
+}
+
+interface StorageRepairPlanResult {
+  ok: boolean;
+  scope: 0 | 1 | 2;
+  source_id: string | null;
+  episode_id: bigint | null;
+  dry_run: boolean;
+  plan_only: boolean;
+  status: string;
+  degraded: boolean;
+  candidates: Array<Record<string, unknown>>;
+  unsupported: StorageFsckIssue[];
+  fsck: StorageFsckResult;
+  notes: string[];
+}
+
 interface KungfuRuntime {
   storageStatusTyped(
     runtimeDir: string,
@@ -175,6 +225,14 @@ interface KungfuRuntime {
     runtimeDir: string,
     options?: StorageMaintenanceOptions,
   ): StorageCompactPlanResult;
+  storageFsckTyped(
+    runtimeDir: string,
+    options?: StorageFsckOptions,
+  ): StorageFsckResult;
+  storageRepairPlanTyped(
+    runtimeDir: string,
+    options?: StorageRepairPlanOptions,
+  ): StorageRepairPlanResult;
   [name: string]: unknown;
 }
 

@@ -89,6 +89,8 @@ module.exports = () => {
     storageGcPlanTyped: binding.storageGcPlanTyped,
     storageRebuildIndexTyped: binding.storageRebuildIndexTyped,
     storageCompactPlanTyped: binding.storageCompactPlanTyped,
+    storageFsckTyped: binding.storageFsckTyped,
+    storageRepairPlanTyped: binding.storageRepairPlanTyped,
     makeStorageServiceRequest: binding.makeStorageServiceRequest,
     runStorageServiceOperation: binding.runStorageServiceOperation,
     acceptStorageManifest: binding.acceptStorageManifest,

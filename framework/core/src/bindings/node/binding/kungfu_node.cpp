@@ -355,6 +355,62 @@ Napi::Value StorageCompactPlanTyped(const Napi::CallbackInfo &info) {
   return HanaViewToValue(info.Env(), runtime::storage_service_api::default_storage_service().compact_plan(request));
 }
 
+uint64_t Uint64Option(Napi::Env env, const Napi::Object &options, const char *name) {
+  if (!options.Has(name))
+    return 0;
+  const auto value = options.Get(name);
+  if (value.IsBigInt()) {
+    bool lossless = false;
+    const auto result = value.As<Napi::BigInt>().Uint64Value(&lossless);
+    if (!lossless)
+      throw Napi::RangeError::New(env, std::string(name) + " must fit in an unsigned 64-bit integer");
+    return result;
+  }
+  return static_cast<uint64_t>(value.ToNumber().Int64Value());
+}
+
+Napi::Value StorageFsckTyped(const Napi::CallbackInfo &info) {
+  if (!IsValid(info, 0, &Napi::Value::IsString))
+    throw Napi::TypeError::New(info.Env(), "storageFsckTyped(runtimeDir, options?)");
+  runtime::storage_service_api::storage_fsck_request request{};
+  request.runtime_dir = info[0].As<Napi::String>().Utf8Value();
+  if (IsValid(info, 1, &Napi::Value::IsObject)) {
+    const auto options = info[1].As<Napi::Object>();
+    if (options.Has("source_id") && options.Get("source_id").IsString())
+      request.source_id = options.Get("source_id").As<Napi::String>().Utf8Value();
+    request.episode_id = Uint64Option(info.Env(), options, "episode_id");
+    if (options.Has("verify_frames") && options.Get("verify_frames").IsBoolean())
+      request.verify_frames = options.Get("verify_frames").As<Napi::Boolean>().Value();
+  }
+  request.scope = request.episode_id != 0 || request.verify_frames
+                      ? runtime::storage_service_api::storage_fsck_scope::Episode
+                      : (request.source_id.empty() ? runtime::storage_service_api::storage_fsck_scope::All
+                                                   : runtime::storage_service_api::storage_fsck_scope::Source);
+  return HanaViewToValue(info.Env(), runtime::storage_service_api::default_storage_service().fsck(request));
+}
+
+Napi::Value StorageRepairPlanTyped(const Napi::CallbackInfo &info) {
+  if (!IsValid(info, 0, &Napi::Value::IsString))
+    throw Napi::TypeError::New(info.Env(), "storageRepairPlanTyped(runtimeDir, options?)");
+  runtime::storage_service_api::storage_repair_plan_request request{};
+  request.runtime_dir = info[0].As<Napi::String>().Utf8Value();
+  if (IsValid(info, 1, &Napi::Value::IsObject)) {
+    const auto options = info[1].As<Napi::Object>();
+    if (options.Has("source_id") && options.Get("source_id").IsString())
+      request.source_id = options.Get("source_id").As<Napi::String>().Utf8Value();
+    request.episode_id = Uint64Option(info.Env(), options, "episode_id");
+    if (options.Has("verify_frames") && options.Get("verify_frames").IsBoolean())
+      request.verify_frames = options.Get("verify_frames").As<Napi::Boolean>().Value();
+    if (options.Has("dry_run") && options.Get("dry_run").IsBoolean())
+      request.dry_run = options.Get("dry_run").As<Napi::Boolean>().Value();
+  }
+  request.scope = request.episode_id != 0 || request.verify_frames
+                      ? runtime::storage_service_api::storage_fsck_scope::Episode
+                      : (request.source_id.empty() ? runtime::storage_service_api::storage_fsck_scope::All
+                                                   : runtime::storage_service_api::storage_fsck_scope::Source);
+  return HanaViewToValue(info.Env(), runtime::storage_service_api::default_storage_service().repair_plan(request));
+}
+
 Napi::Value StorageServiceCapabilities(const Napi::CallbackInfo &info) {
   return JsonToValue(info.Env(), runtime::storage_service_api::storage_service_capabilities());
 }
@@ -553,6 +609,8 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
   exports.Set("storageGcPlanTyped", Napi::Function::New(env, StorageGcPlanTyped));
   exports.Set("storageRebuildIndexTyped", Napi::Function::New(env, StorageRebuildIndexTyped));
   exports.Set("storageCompactPlanTyped", Napi::Function::New(env, StorageCompactPlanTyped));
+  exports.Set("storageFsckTyped", Napi::Function::New(env, StorageFsckTyped));
+  exports.Set("storageRepairPlanTyped", Napi::Function::New(env, StorageRepairPlanTyped));
   exports.Set("makeStorageServiceRequest", Napi::Function::New(env, MakeStorageServiceRequest));
   exports.Set("runStorageServiceOperation", Napi::Function::New(env, RunStorageServiceOperation));
   exports.Set("acceptStorageManifest", Napi::Function::New(env, AcceptStorageManifest));

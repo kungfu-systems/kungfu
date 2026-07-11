@@ -370,6 +370,8 @@ def test_typed_storage_status_binding_bypasses_json_transport(tmp_path):
         gc = storage_service.gc_plan(runtime_dir)
         rebuild = storage_service.rebuild_index(runtime_dir, dry_run=True)
         compact = storage_service.compact_plan(runtime_dir)
+        fsck = storage_service.fsck(runtime_dir, episode_id=701)
+        repair = storage_service.repair_plan(runtime_dir, episode_id=701)
     finally:
         json.loads = original_loads
 
@@ -392,6 +394,11 @@ def test_typed_storage_status_binding_bypasses_json_transport(tmp_path):
     assert gc["dry_run"] is True
     assert rebuild["would_write"] is True
     assert compact["dry_run"] is True
+    assert fsck["scope"] == 2
+    assert fsck["episode_id"] == 701
+    assert repair["scope"] == 2
+    assert repair["episode_id"] == 701
+    assert repair["dry_run"] is True
 
 
 def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
@@ -549,6 +556,8 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
     original_typed_gc = runtime.storage_gc_plan_typed
     original_typed_rebuild = runtime.storage_rebuild_index_typed
     original_typed_compact = runtime.storage_compact_plan_typed
+    original_typed_fsck = runtime.storage_fsck_typed
+    original_typed_repair = runtime.storage_repair_plan_typed
     calls = []
     typed_statuses = []
     typed_queries = []
@@ -578,6 +587,14 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
         typed_maintenance.append(("compact_plan", runtime_dir_arg, dict(options)))
         return original_typed_compact(runtime_dir_arg, **options)
 
+    def spy_typed_fsck(runtime_dir_arg, **options):
+        typed_maintenance.append(("fsck", runtime_dir_arg, dict(options)))
+        return original_typed_fsck(runtime_dir_arg, **options)
+
+    def spy_typed_repair(runtime_dir_arg, **options):
+        typed_maintenance.append(("repair_plan", runtime_dir_arg, dict(options)))
+        return original_typed_repair(runtime_dir_arg, **options)
+
     monkeypatch.setattr(
         runtime,
         "run_storage_service_operation",
@@ -588,6 +605,8 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
     monkeypatch.setattr(runtime, "storage_gc_plan_typed", spy_typed_gc)
     monkeypatch.setattr(runtime, "storage_rebuild_index_typed", spy_typed_rebuild)
     monkeypatch.setattr(runtime, "storage_compact_plan_typed", spy_typed_compact)
+    monkeypatch.setattr(runtime, "storage_fsck_typed", spy_typed_fsck)
+    monkeypatch.setattr(runtime, "storage_repair_plan_typed", spy_typed_repair)
 
     storage_service.status(runtime_dir, source_id="local-synth")
     storage_service.layout(runtime_dir)
@@ -625,8 +644,6 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
     entered = {operation for operation, _, _ in calls}
     assert {
         "layout",
-        "fsck",
-        "repair_plan",
         "repair_fetch",
         "repair_apply",
         "export_bundle",
@@ -648,6 +665,20 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
         )
     ]
     assert typed_maintenance == [
+        (
+            "fsck",
+            str(runtime_dir),
+            {"source_id": "local-synth", "episode_id": 0, "verify_frames": False},
+        ),
+        (
+            "repair_plan",
+            str(runtime_dir),
+            {
+                "source_id": "local-synth",
+                "episode_id": 0,
+                "dry_run": True,
+            },
+        ),
         (
             "rebuild_index",
             str(runtime_dir),
@@ -798,7 +829,7 @@ def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
 
     episode_fsck = storage_service.fsck(runtime_dir, episode_id=42)
     assert episode_fsck["ok"]
-    assert episode_fsck["scope"] == "episode"
+    assert episode_fsck["scope"] == 2
     assert episode_fsck["episode_id"] == 42
     assert episode_fsck["checked"]["episodes"] == 1
 
@@ -902,11 +933,15 @@ def test_episode_fsck_reports_degraded_causal_dependencies(tmp_path):
     assert not fsck["ok"]
     assert fsck["status"] == "failed"
     assert fsck["degraded"] is True
-    warning_codes = {warning["code"] for warning in fsck["warnings"]}
+    warning_codes = {
+        issue["code"] for issue in fsck["issues"] if issue["severity"] == "warning"
+    }
     assert "episode_dependency_missing" in warning_codes
     assert "episode_root_trigger_frame_missing" in warning_codes
     assert "episode_trigger_frame_missing" in warning_codes
-    error_codes = {error["code"] for error in fsck["errors"]}
+    error_codes = {
+        issue["code"] for issue in fsck["issues"] if issue["severity"] == "error"
+    }
     assert "episode_payload_ref_missing" in error_codes
 
     bundle = storage_service.build_export_bundle(runtime_dir, episode_id=7)
@@ -923,14 +958,13 @@ def test_episode_fsck_reports_degraded_causal_dependencies(tmp_path):
     assert imported["dependency_count"] == len(bundle["dependencies"])
 
     repair = storage_service.repair_plan(runtime_dir, episode_id=7, dry_run=True)
-    assert repair["schema"] == "kungfu.storage.repair-plan/v1"
-    assert repair["scope"] == "episode"
+    assert repair["scope"] == 2
     assert repair["episode_id"] == 7
     assert repair["dry_run"] is True
     assert repair["plan_only"] is True
     assert repair["status"] == "failed"
     assert repair["degraded"] is True
-    assert repair["candidate_count"] >= 4
+    assert len(repair["candidates"]) >= 4
     candidate_codes = {candidate["code"] for candidate in repair["candidates"]}
     assert "repair_episode_dependency" in candidate_codes
     assert "repair_episode_root_trigger_frame" in candidate_codes
@@ -1040,8 +1074,9 @@ def test_episode_fsck_reports_degraded_causal_dependencies(tmp_path):
     assert applied["applied"] is True
     assert applied["applied_count"] >= 1
     repaired_warning_codes = {
-        warning["code"]
-        for warning in storage_service.fsck(runtime_dir, episode_id=7)["warnings"]
+        issue["code"]
+        for issue in storage_service.fsck(runtime_dir, episode_id=7)["issues"]
+        if issue["severity"] == "warning"
     }
     assert "episode_root_trigger_frame_missing" not in repaired_warning_codes
     assert "episode_trigger_frame_missing" not in repaired_warning_codes
@@ -1482,7 +1517,7 @@ def test_storage_maintenance_rebuild_gc_compact_and_sync_check(tmp_path):
     assert fsck["checked"]["manifests"] == 1
     assert fsck["checked"]["entries_documents"] == 1
     assert fsck["checked"]["orphan_payloads"] == 1
-    assert any(warning["code"] == "orphan_payload" for warning in fsck["warnings"])
+    assert any(issue["code"] == "orphan_payload" for issue in fsck["issues"])
 
     sync_check = storage_service.verify_local_sync(runtime_dir, source_id="local-synth")
     assert sync_check["ok"]
@@ -1569,9 +1604,12 @@ def test_storage_fsck_reports_degraded_status_for_recorded_payload_states(tmp_pa
     assert report["ok"]
     assert report["status"] == "degraded"
     withheld = {
-        warning["subject"]: (warning["state"], warning["intentional"])
-        for warning in report["warnings"]
-        if warning["code"] == "payload_not_present"
+        issue["detail"]["subject"]: (
+            issue["detail"]["state"],
+            issue["detail"]["intentional"],
+        )
+        for issue in report["issues"]
+        if issue["code"] == "payload_not_present"
     }
     assert withheld["note:note-missing"] == ("missing", False)
     assert withheld["note:note-redacted"] == ("redacted", True)
@@ -1579,12 +1617,11 @@ def test_storage_fsck_reports_degraded_status_for_recorded_payload_states(tmp_pa
     repair = storage_service.repair_plan(
         runtime_dir, source_id="degraded-synth", dry_run=True
     )
-    assert repair["schema"] == "kungfu.storage.repair-plan/v1"
     assert repair["status"] == "degraded"
-    assert repair["candidate_count"] == 1
+    assert len(repair["candidates"]) == 1
     assert repair["candidates"][0]["code"] == "repair_source_payload"
-    assert repair["candidates"][0]["subject"] == "note:note-missing"
-    assert repair["candidates"][0]["payload_hash"]
+    assert repair["candidates"][0]["subject"]["subject"] == "note:note-missing"
+    assert repair["candidates"][0]["subject"]["payload_hash"]
 
     fetch_out = tmp_path / "source-repair-material.json"
     fetched = storage_service.repair_fetch(
@@ -1618,9 +1655,9 @@ def test_storage_fsck_reports_degraded_status_for_recorded_payload_states(tmp_pa
     assert repaired["ok"]
     assert repaired["status"] == "ok"
     warning_subjects = {
-        warning["subject"]
-        for warning in repaired["warnings"]
-        if warning["code"] == "payload_not_present"
+        issue["detail"]["subject"]
+        for issue in repaired["issues"]
+        if issue["code"] == "payload_not_present"
     }
     assert "note:note-missing" not in warning_subjects
 
@@ -1709,9 +1746,9 @@ def test_payload_state_producer_export_import_round_trip(tmp_path):
     assert report["ok"]
     assert report["status"] == "degraded"  # only the missing body degrades
     withheld = {
-        warning["subject"]: warning["intentional"]
-        for warning in report["warnings"]
-        if warning["code"] == "payload_not_present"
+        issue["detail"]["subject"]: issue["detail"]["intentional"]
+        for issue in report["issues"]
+        if issue["code"] == "payload_not_present"
     }
     assert withheld == {
         "note:note-redacted": True,

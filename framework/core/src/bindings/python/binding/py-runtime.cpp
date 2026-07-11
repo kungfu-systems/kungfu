@@ -524,6 +524,41 @@ void bind(pybind11::module &&m) {
       },
       py::arg("runtime_dir"), py::arg("source_id") = py::none(), py::arg("dry_run") = true);
   m.def(
+      "storage_fsck_typed",
+      [](const std::string &runtime_dir, const std::optional<std::string> &source_id, uint64_t episode_id,
+         bool verify_frames) {
+        storage_service_api::storage_fsck_request request{};
+        request.runtime_dir = runtime_dir;
+        request.source_id = source_id.value_or("");
+        request.episode_id = episode_id;
+        request.verify_frames = verify_frames;
+        request.scope = episode_id != 0 || verify_frames
+                            ? storage_service_api::storage_fsck_scope::Episode
+                            : (request.source_id.empty() ? storage_service_api::storage_fsck_scope::All
+                                                         : storage_service_api::storage_fsck_scope::Source);
+        return hana_view_to_py(storage_service_api::default_storage_service().fsck(request));
+      },
+      py::arg("runtime_dir"), py::arg("source_id") = py::none(), py::arg("episode_id") = 0,
+      py::arg("verify_frames") = false);
+  m.def(
+      "storage_repair_plan_typed",
+      [](const std::string &runtime_dir, const std::optional<std::string> &source_id, uint64_t episode_id,
+         bool verify_frames, bool dry_run) {
+        storage_service_api::storage_repair_plan_request request{};
+        request.runtime_dir = runtime_dir;
+        request.source_id = source_id.value_or("");
+        request.episode_id = episode_id;
+        request.verify_frames = verify_frames;
+        request.dry_run = dry_run;
+        request.scope = episode_id != 0 || verify_frames
+                            ? storage_service_api::storage_fsck_scope::Episode
+                            : (request.source_id.empty() ? storage_service_api::storage_fsck_scope::All
+                                                         : storage_service_api::storage_fsck_scope::Source);
+        return hana_view_to_py(storage_service_api::default_storage_service().repair_plan(request));
+      },
+      py::arg("runtime_dir"), py::arg("source_id") = py::none(), py::arg("episode_id") = 0,
+      py::arg("verify_frames") = false, py::arg("dry_run") = true);
+  m.def(
       "make_storage_service_request",
       [](const std::string &operation, const std::string &runtime_dir, py::dict options) {
         return json_to_py(

@@ -230,7 +230,7 @@ def test_tampered_root_fails_fsck(tmp_path):
     fsck = service.fsck(runtime_dir, episode_id=7)
     assert not fsck["ok"]
     assert fsck["status"] == "failed"
-    codes = [e["code"] for e in fsck["errors"]]
+    codes = [issue["code"] for issue in fsck["issues"] if issue["severity"] == "error"]
     assert "episode_root_mismatch" in codes
 
 

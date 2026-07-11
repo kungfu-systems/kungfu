@@ -80,5 +80,54 @@ BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_projection
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_unsupported_action_view, name, reason);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_compact_plan_result, ok, scope, source_id,
                         dry_run, retained_manifests, rebuild_index, gc, projection_compact, unsupported, notes);
+BOOST_HANA_ADAPT_STRUCT(kungfu::yijinjing::storage::source_registry_fsck_issue, code, source_uid, source_id, count);
+BOOST_HANA_ADAPT_STRUCT(kungfu::yijinjing::storage::source_registry_fsck_result, ok, status, schema, runtime_dir,
+                        authority, errors, warnings, source_registry_records, sources);
+BOOST_HANA_ADAPT_STRUCT(kungfu::yijinjing::storage::manifest_catalog_fsck_issue, code, source_id, manifest_id, error,
+                        subject, payload_hash, state, kind, entry_source_id, manifest_uid, entry_index, expected,
+                        actual, expected_text, actual_text, intentional);
+BOOST_HANA_ADAPT_STRUCT(kungfu::yijinjing::storage::manifest_catalog_fsck_result, ok, status, degraded, schema,
+                        runtime_dir, authority, errors, warnings, manifests, manifest_entries, payloads,
+                        entries_documents, exports, cursors);
+BOOST_HANA_ADAPT_STRUCT(kungfu::yijinjing::storage::episode_fsck_issue, code, episode_id, dependency_episode_id,
+                        frame_uid, dependent_frame_uid, count, status, claimed, actual, recorded_covered_record_count,
+                        computed_covered_record_count, role, ref_id, ref_hash, detail, reason, algorithm, recorded,
+                        computed);
+BOOST_HANA_ADAPT_STRUCT(kungfu::yijinjing::storage::episode_fsck_result, ok, status, schema, runtime_dir, authority,
+                        degraded, errors, warnings, episode_manifest_records, episodes, unknown_records,
+                        unfolded_records, episode);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::episode_frame_field_mismatch, field, claimed, actual);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::episode_frame_verification_issue, code, episode_id,
+                        frame_uid, location_uid, dest, integrity_version, fields, claimed_payload_checksum,
+                        actual_payload_checksum, claimed_frame_checksum, actual_frame_checksum);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::episode_frame_verification, errors, warnings, verified,
+                        degraded);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::episode_qualification_evidence, name, state, issue_codes);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::episode_qualification_issue, severity, code, evidence,
+                        detail);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::episode_qualification_capability, name, safe,
+                        required_evidence, blocked_by);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::episode_repair_subject, episode_id, dependency_episode_id,
+                        frame_uid, dependent_frame_uid, ref_id, ref_hash, role);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::episode_repair_prerequisite, issue_code, action,
+                        required_inputs, subject);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::episode_qualification_result, episode_id, lifecycle,
+                        status, evidence, issues, capabilities, repair_prerequisites);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_fsck_cross_issue, source_id, path, payload_hash,
+                        expected, actual, reason);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_fsck_issue, severity, code, projection, detail);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_fsck_counts, sources, manifests, manifest_entries,
+                        payloads, entries_documents, accepted_ranges, source_records, projection_indexes,
+                        orphan_payloads, episode_manifest_records, episodes, episode_frames_verified);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_fsck_result, ok, degraded, status, scope,
+                        source_id, episode_id, authority, checked, source_registry, manifest_catalog, episode_manifest,
+                        projections, frame_verification, qualification, issues);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_repair_subject, episode_id, dependency_episode_id,
+                        frame_uid, dependent_frame_uid, ref_id, ref_hash, source_id, subject, state, path,
+                        payload_hash);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_repair_candidate_view, code, issue_code, kind,
+                        role, action, safe_to_apply, required_inputs, subject, issue);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_repair_plan_result, ok, scope, source_id,
+                        episode_id, dry_run, plan_only, status, degraded, candidates, unsupported, fsck, notes);
 
 #endif // KUNGFU_RUNTIME_STORAGE_BINDING_REFLECTION_H

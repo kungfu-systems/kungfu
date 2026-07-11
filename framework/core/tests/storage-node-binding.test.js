@@ -137,12 +137,10 @@ function selectedNodeResults(runtimeDir) {
       runtime_home: path.dirname(runtimeDir),
       config_home: path.join(path.dirname(runtimeDir), 'config'),
     }),
-    fsck: kungfu.runStorageServiceOperation('fsck', runtimeDir, {
-      scope: 'source',
+    fsck: kungfu.storageFsckTyped(runtimeDir, {
       source_id: 'node-synth',
     }),
-    repair: kungfu.runStorageServiceOperation('repair_plan', runtimeDir, {
-      scope: 'source',
+    repair: kungfu.storageRepairPlanTyped(runtimeDir, {
       source_id: 'node-synth',
       dry_run: true,
     }),
@@ -237,12 +235,22 @@ test(
         dry_run: true,
       });
       const compact = kungfu.storageCompactPlanTyped(runtimeDir);
+      const fsck = kungfu.storageFsckTyped(runtimeDir, { episode_id: 701n });
+      const repair = kungfu.storageRepairPlanTyped(runtimeDir, {
+        episode_id: 701n,
+        dry_run: true,
+      });
       assert.equal(query.query, 4);
       assert.equal(query.rows[0].body.title, 'typed-query');
       assert.equal(query.rows[0].body.location_uid, 17);
       assert.equal(gc.dry_run, true);
       assert.equal(rebuild.would_write, true);
       assert.equal(compact.dry_run, true);
+      assert.equal(fsck.scope, 2);
+      assert.equal(fsck.episode_id, 701n);
+      assert.equal(repair.scope, 2);
+      assert.equal(repair.episode_id, 701n);
+      assert.equal(repair.dry_run, true);
     } finally {
       JSON.parse = originalParse;
       JSON.stringify = originalStringify;
@@ -402,10 +410,21 @@ for (const providerCase of providerCases) {
               provider_cache: _cache,
               ...rest
             }) => rest;
+            const stripExportCount = (fsck) => ({
+              ...fsck,
+              manifest_catalog: fsck.manifest_catalog
+                ? { ...fsck.manifest_catalog, exports: 0 }
+                : null,
+            });
             return {
               ...results,
               status: strip(results.status),
               layout: strip(results.layout),
+              fsck: stripExportCount(results.fsck),
+              repair: {
+                ...results.repair,
+                fsck: stripExportCount(results.repair.fsck),
+              },
             };
           };
           assert.deepEqual(
@@ -455,11 +474,7 @@ for (const providerCase of providerCases) {
               : 'stateless-filesystem',
           );
           assert.equal(nodeResults.fsck.ok, true);
-          assert.equal(
-            nodeResults.repair.schema,
-            'kungfu.storage.repair-plan/v1',
-          );
-          assert.equal(nodeResults.repair.candidate_count, 0);
+          assert.equal(nodeResults.repair.candidates.length, 0);
           assert.equal(
             nodeResults.repairFetch.schema,
             'kungfu.storage.repair-fetch/v1',
