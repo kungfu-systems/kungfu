@@ -4,9 +4,9 @@
 //
 // 背景：conan2 移除了独立 `conan package` 本地命令，原 `freeze`→run-conan.js package
 // 只触发 `conan build`（占位，不跑 freezer）。本脚本把 freeze 做成 `./shifu freeze`
-// 一步可复现，并据 `config.freezer` 选择产物腿；缺省按平台：macOS=assemble
-// （ADR-0046 stage 2，组装完整 CPython 树），Linux/Windows=nuitka（各自平台腿
-// 落地前维持冻结）。
+// 一步可复现，并据 `config.freezer` 选择产物腿；缺省全平台 assemble（ADR-0046
+// stage 2 已逐平台收口：macOS→Linux→Windows 全部组装完整 CPython 树）。冻结腿
+// （nuitka/pyinstaller）随最后平台退役，去留记账见 docs/buildchain.md。
 //
 // 三条产物腿（assemble 见 ADR-0046 与本文件 assemble 段注释；冻结腿去留记账见
 // docs/buildchain.md「Freeze retirement ledger」）：
@@ -40,12 +40,13 @@ function buildType() {
 }
 
 function freezer() {
-  // ADR-0046 stage 2 rolls out platform by platform: macOS and Linux ship
-  // the assembled runtime; Windows keeps nuitka until its leg lands.
-  // An explicit config value still selects any leg on any platform.
+  // ADR-0046 stage 2 rolled out platform by platform and is now complete:
+  // macOS, Linux, and Windows all ship the assembled runtime. The frozen legs
+  // retire with this last platform (docs/buildchain.md「Freeze retirement
+  // ledger」). An explicit config value can still select any surviving leg.
   const explicit = shell.getConfigValue('freezer');
   if (explicit) return explicit;
-  return process.platform === 'win32' ? 'nuitka' : 'assemble';
+  return 'assemble';
 }
 
 // kungfu.spec datas 引用 build/include 与 build/libs（仅 pyinstaller 路径需要）。
@@ -513,15 +514,36 @@ function copyRuntimeNative(bt, distKfc) {
   console.log(`[freeze] assemble: staged ${n} runtime natives`);
 }
 
+// python-build-standalone lays the prefix out differently by OS, so the seams
+// that touch the interpreter (the install-target python, the site-packages
+// home, the .pth climb back to the flat dist root) fork here. POSIX keeps
+// bin/python3 + lib/pythonX.Y/site-packages; Windows keeps python.exe at the
+// prefix root + Lib/site-packages (capital L, no version subdir). The .pth
+// counts directories from site-packages up to dist/kungfu: four on POSIX
+// (site-packages → pythonX.Y → lib → python → kungfu), three on Windows
+// (site-packages → Lib → python → kungfu).
+/** @param {string} treeDest @param {string} feature */
+function assembleLayout(treeDest, feature) {
+  return isWin
+    ? {
+        python: path.join(treeDest, 'python.exe'),
+        sitePackages: path.join(treeDest, 'Lib', 'site-packages'),
+        pthToRoot: '../../..',
+      }
+    : {
+        python: path.join(treeDest, 'bin', 'python3'),
+        sitePackages: path.join(
+          treeDest,
+          'lib',
+          `python${feature}`,
+          'site-packages',
+        ),
+        pthToRoot: '../../../..',
+      };
+}
+
 /** @param {string} bt */
 function assembleTree(bt) {
-  if (isWin) {
-    console.error(
-      '[freeze] assemble: windows keeps the frozen path until its layout ' +
-        'lands (ADR-0046 stage 2 goes platform by platform)',
-    );
-    process.exit(1);
-  }
   const pins = readRuntimePins();
   const pin = pins.PYTHON_PIN;
   const feature = pin.split('.').slice(0, 2).join('.');
@@ -536,6 +558,7 @@ function assembleTree(bt) {
   const treeDest = path.join(distKfc, 'python');
   fs.cpSync(prefix, treeDest, { recursive: true, verbatimSymlinks: true });
   applyStdlibPrune(treeDest);
+  const layout = assembleLayout(treeDest, feature);
 
   // Runtime dependencies resolve from the committed lock into the tree's own
   // site-packages — the host tree is the blessed interpreter, so its deps are
@@ -557,7 +580,7 @@ function assembleTree(bt) {
       'pip',
       'install',
       '--python',
-      path.join(treeDest, 'bin', 'python3'),
+      layout.python,
       '--break-system-packages',
       '-r',
       req,
@@ -571,15 +594,9 @@ function assembleTree(bt) {
   // `kungfu`. Data files (.bfbs schemas, the agent pack) travel inside the
   // package, where the source layout already has them. The .pth wires the
   // flat dist root (pykungfu + natives) into the tree.
-  const sitePackages = path.join(
-    treeDest,
-    'lib',
-    `python${feature}`,
-    'site-packages',
-  );
   fs.cpSync(
     path.join(CORE, 'src', 'python', 'kungfu'),
-    path.join(sitePackages, 'kungfu'),
+    path.join(layout.sitePackages, 'kungfu'),
     {
       recursive: true,
       filter: (src) => !src.split(path.sep).includes('__pycache__'),
@@ -587,8 +604,10 @@ function assembleTree(bt) {
   );
   fs.copyFileSync(info, path.join(distKfc, 'kungfubuildinfo.json'));
 
-  // Relative to site-packages: four levels up is the dist root.
-  fs.writeFileSync(path.join(sitePackages, 'kungfu-dist.pth'), '../../../..\n');
+  fs.writeFileSync(
+    path.join(layout.sitePackages, 'kungfu-dist.pth'),
+    `${layout.pthToRoot}\n`,
+  );
   fs.writeFileSync(
     path.join(treeDest, 'kungfu-host.json'),
     `${JSON.stringify(
@@ -598,7 +617,13 @@ function assembleTree(bt) {
     )}\n`,
   );
 
-  copyRuntimeNative(bt, distKfc);
+  // Native staging follows the MSVC-vs-single-config split: on Windows the
+  // python binding (pykungfu.pyd, core statically linked) sits at build/ root
+  // and libnode.dll at build/<bt>, so the Windows-aware helper (also its PDB)
+  // stages them; POSIX natives colocate under build/<bt> with rpath, so the
+  // flat copy suffices.
+  if (isWin) copyPyBindingWin(bt);
+  else copyRuntimeNative(bt, distKfc);
   copyAppNative(bt);
   copyLibwasmRuntime();
   copyConfigContract();
