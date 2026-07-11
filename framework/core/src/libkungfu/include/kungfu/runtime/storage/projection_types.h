@@ -43,6 +43,7 @@ struct storage_projection_rebuild_result {
   std::string sqlite_path = {};
   std::vector<storage_projection_count> rows = {};
   std::vector<storage_projection_count> journal_records = {};
+  uint64_t query_records = 0;
 };
 
 } // namespace kungfu::runtime::storage_service_api

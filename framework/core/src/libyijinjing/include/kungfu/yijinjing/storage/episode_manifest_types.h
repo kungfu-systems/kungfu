@@ -96,6 +96,10 @@ struct episode_manifest_unknown_record {
 struct episode_manifest_record {
   uint64_t manifest_frame_uid = 0;
   int64_t manifest_gen_time = 0;
+  // Exact packed journal body. Derived projections retain these bytes so they
+  // can replay the canonical decoder instead of inventing a second semantic
+  // representation. Unknown/newer records remain round-trippable too.
+  std::vector<uint8_t> payload = {};
   std::variant<episode_manifest_unknown_record, yijinjing::types::EpisodeOpen, yijinjing::types::EpisodeHeartbeat,
                yijinjing::types::EpisodeFrameAttached, yijinjing::types::EpisodeRefAttached,
                yijinjing::types::EpisodeClosed, yijinjing::types::EpisodeRootCommitted>

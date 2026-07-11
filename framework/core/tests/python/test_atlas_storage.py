@@ -143,9 +143,13 @@ def test_atlas_source_records_keep_full_payloads(tmp_path):
     repo = tmp_path / "atlas"
     _atlas_fixture(repo)
 
-    missions, goals, markers, source_records, warnings = (
-        importer.read_control_plane_with_sources(str(repo))
-    )
+    (
+        missions,
+        goals,
+        markers,
+        source_records,
+        warnings,
+    ) = importer.read_control_plane_with_sources(str(repo))
 
     assert warnings == []
     assert [card["mission_id"] for card in missions] == ["mission-a"]
@@ -169,11 +173,15 @@ def test_atlas_source_records_filter_by_window(tmp_path):
     _atlas_fixture(repo)
     _atlas_window_context_fixture(repo)
 
-    missions, goals, _, source_records, warnings = (
-        importer.read_control_plane_with_sources(
-            str(repo),
-            window={"since": "2026-07-01T00:00:00Z"},
-        )
+    (
+        missions,
+        goals,
+        _,
+        source_records,
+        warnings,
+    ) = importer.read_control_plane_with_sources(
+        str(repo),
+        window={"since": "2026-07-01T00:00:00Z"},
     )
 
     assert warnings == []
@@ -194,9 +202,13 @@ def test_atlas_range_export_preserves_context_closure(tmp_path):
     _atlas_fixture(repo)
     _atlas_window_context_fixture(repo)
 
-    missions, goals, markers, source_records, warnings = (
-        importer.read_control_plane_with_sources(str(repo), window=window)
-    )
+    (
+        missions,
+        goals,
+        markers,
+        source_records,
+        warnings,
+    ) = importer.read_control_plane_with_sources(str(repo), window=window)
     assert warnings == []
 
     manifest = payloads.write_import_payloads(
@@ -230,9 +242,13 @@ def test_payload_manifest_fsck_export_and_verify(tmp_path):
     repo = tmp_path / "atlas"
     store = tmp_path / "store"
     _atlas_fixture(repo)
-    missions, goals, markers, source_records, _ = (
-        importer.read_control_plane_with_sources(str(repo))
-    )
+    (
+        missions,
+        goals,
+        markers,
+        source_records,
+        _,
+    ) = importer.read_control_plane_with_sources(str(repo))
 
     manifest = payloads.write_import_payloads(
         store,
@@ -1281,6 +1297,139 @@ def test_query_planner_normalizes_defaults_and_exposes_one_semantic_root(tmp_pat
         )
 
 
+def test_sql_frontend_and_sqlite_projection_conform_at_head_and_exact_cut(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    storage_service.episode_begin(
+        runtime_dir, episode_id=48, title="q2", begin_time=1000
+    )
+    storage_service.episode_attach_frame(
+        runtime_dir,
+        episode_id=48,
+        frame_uid=4801,
+        stream_id=48,
+        gen_time=1100,
+        carrier_type=10803,
+        source=1,
+        data_length=8,
+        integrity_version=2,
+        payload_checksum=11,
+        frame_checksum=22,
+    )
+    records = storage_service.episode_inspect(runtime_dir, episode_id=48)["records"]
+    exact_cut = {
+        "kind": "manifest_frame_uid",
+        "manifest_frame_uid": str(records[-1]["manifest_frame_uid"]),
+    }
+    storage_service.episode_end(
+        runtime_dir, episode_id=48, end_time=1200, frame_count=1, reason="done"
+    )
+    rebuilt = storage_service.episode_projection_rebuild(runtime_dir)
+    journal_records = {
+        item["table"]: item["count"] for item in rebuilt["journal_records"]
+    }
+    assert rebuilt["query_records"] == journal_records["episode_manifest_records"]
+
+    head_definition = storage_service.build_fact_query_definition(
+        episode_id=48, limit=10
+    )
+    sql = (
+        "SELECT * FROM episodes WHERE episode_id = 48 ORDER BY episode_id ASC LIMIT 10"
+    )
+    compilation = storage_service.compile_fact_query_sql(
+        runtime_dir, sql=sql, definition=storage_service.build_fact_query_definition()
+    )
+    direct_plan = storage_service.query_plan(
+        runtime_dir, action="validate", definition=head_definition
+    )
+    assert compilation["logical_plan_hash"] == direct_plan["logical_plan_hash"]
+    assert compilation["definition"] == direct_plan["definition"]
+
+    head = storage_service.fact_query_conformance(runtime_dir, head_definition)
+    historical = storage_service.fact_query_conformance(
+        runtime_dir,
+        storage_service.build_fact_query_definition(
+            episode_id=48, cut=exact_cut, limit=10
+        ),
+    )
+    missing_cut = storage_service.fact_query_conformance(
+        runtime_dir,
+        storage_service.build_fact_query_definition(
+            episode_id=48,
+            cut={
+                "kind": "manifest_frame_uid",
+                "manifest_frame_uid": "18446744073709551615",
+            },
+            limit=10,
+        ),
+    )
+    changed_declaration = json.loads(json.dumps(head_definition))
+    changed_declaration["basis"]["fact_surfaces"][0]["root"] = "sha256:" + "0" * 64
+    rejected_basis = storage_service.fact_query_conformance(
+        runtime_dir, changed_declaration
+    )
+    assert head["ok"] is True
+    assert historical["ok"] is True
+    assert missing_cut["ok"] is True
+    assert rejected_basis["ok"] is True
+    assert head["authority"]["lineage"]["execution"]["engine"] == (
+        "episode-authority-scan/v1"
+    )
+    assert head["sqlite"]["lineage"]["execution"]["engine"] == (
+        "episode-sqlite-projection/v1"
+    )
+    assert head["sqlite"]["lineage"]["execution"]["projection_verified"] is True
+    assert head["checks"]["lineage_semantics"] is True
+    assert historical["sqlite"]["rows"][0]["status"] == "open"
+    assert head["sqlite"]["rows"][0]["status"] == "ended"
+    assert missing_cut["sqlite"]["lineage"]["canonical_state"] is False
+    assert (
+        rejected_basis["sqlite"]["lineage"]["admission_outcomes"][0]["outcome"]
+        == "unverifiable"
+    )
+
+    capabilities = storage_service.query_plan(runtime_dir, action="capabilities")
+    assert capabilities["frontends"] == ["query-definition", "bounded-sql"]
+    assert capabilities["sql"]["basis_owner"] == "QueryDefinition"
+    assert capabilities["execution_engines"] == [
+        "episode-authority-scan/v1",
+        "episode-sqlite-projection/v1",
+    ]
+
+
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "SELECT episode_id FROM episodes",
+        "SELECT * FROM episodes ORDER BY episode_id DESC",
+        "SELECT * FROM episodes WHERE status = 'ended'",
+        "SELECT * FROM episodes LIMIT 0",
+        "SELECT * FROM episodes LIMIT 1001",
+        "SELECT * FROM episodes; DROP TABLE episodes",
+    ],
+)
+def test_sql_frontend_rejects_everything_outside_the_declared_subset(tmp_path, sql):
+    with pytest.raises(
+        (RuntimeError, ValueError), match="unsupported SQL|LIMIT must be between"
+    ):
+        storage_service.compile_fact_query_sql(
+            tmp_path,
+            sql=sql,
+            definition=storage_service.build_fact_query_definition(),
+        )
+
+
+def test_sqlite_query_engine_fails_closed_when_projection_is_stale(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    storage_service.episode_begin(runtime_dir, episode_id=1, begin_time=1000)
+    storage_service.episode_projection_rebuild(runtime_dir)
+    storage_service.episode_begin(runtime_dir, episode_id=2, begin_time=1100)
+
+    with pytest.raises(
+        (RuntimeError, ValueError), match="projection is absent or stale"
+    ):
+        storage_service.fact_query(runtime_dir, engine="sqlite")
+
+
 # A well-formed digest whose bytes were never published: stage 4 resolves
 # payload refs through the content store by hash, so "absent" must still be
 # addressable to count as missing (a malformed hash is unaddressable instead).
@@ -1620,9 +1769,13 @@ def test_payload_fsck_reports_missing_payload(tmp_path):
     repo = tmp_path / "atlas"
     store = tmp_path / "store"
     _atlas_fixture(repo)
-    missions, goals, markers, source_records, _ = (
-        importer.read_control_plane_with_sources(str(repo))
-    )
+    (
+        missions,
+        goals,
+        markers,
+        source_records,
+        _,
+    ) = importer.read_control_plane_with_sources(str(repo))
     manifest = payloads.write_import_payloads(
         store,
         import_id="imp-test",

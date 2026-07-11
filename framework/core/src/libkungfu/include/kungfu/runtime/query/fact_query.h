@@ -114,6 +114,7 @@ struct lineage {
   nlohmann::json cut = nlohmann::json::object();
   nlohmann::json policy_versions = nlohmann::json::object();
   nlohmann::json time_basis = nlohmann::json::object();
+  nlohmann::json execution = nlohmann::json::object();
   std::string determinism = "deterministic";
   bool canonical_state = false;
   declaration_reference contract_world_declaration = {};
@@ -142,6 +143,10 @@ struct query_result {
 
 [[nodiscard]] logical_plan plan_query(const query_definition &definition);
 
+// Deliberately bounded SQL frontend. SQL selects rows only; the supplied base
+// definition remains the owner of declarations, cut, time basis, and policy.
+[[nodiscard]] query_definition compile_episode_sql(const std::string &sql, const query_definition &base_definition);
+
 [[nodiscard]] nlohmann::json logical_plan_json(const logical_plan &plan);
 
 [[nodiscard]] nlohmann::json query_capabilities_json();
@@ -155,6 +160,8 @@ struct query_result {
 [[nodiscard]] nlohmann::json query_result_json(const query_result &result);
 
 [[nodiscard]] query_result run_episode_authority_scan(const std::string &runtime_dir, const logical_plan &plan);
+
+[[nodiscard]] query_result run_episode_sqlite_projection(const std::string &runtime_dir, const logical_plan &plan);
 
 } // namespace kungfu::runtime::query
 
