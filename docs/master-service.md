@@ -22,6 +22,13 @@ storage: yijinjing journals, Episode manifest journal, payload store, and
 rebuildable projections. Local append/seal/fsck/export operations may run
 without a live master when they do not need live discovery or routing.
 
+The target workspace master also coordinates KFD-2 assessment jobs for its data
+root. It discovers load-bearing claims, deduplicates and invalidates assessment
+requests, supervises assessor executors, and publishes TrustReport lifecycle
+updates. It does not become fact authority or embed every domain assessor. See
+[KFD-2 trust assessment in a live workspace](kfd2-trust-assessment.md) and
+[ADR-0052](../framework/core/docs/adr/ADR-0052-kfd2-assessment-lifecycle-and-executors.md).
+
 ## Current CLI Surface
 
 The current implementation slice exposes the process manager through
@@ -158,6 +165,11 @@ intentionally left as an explicit user operation after the file is installed.
 - A graceful shutdown should flush live projections, seal or record the master
   lifecycle Episode where applicable, close sockets, release locks, and leave
   journals, manifests, payloads, and projections intact.
+- Pending assessment requests are durable ledger work, not master-memory-only
+  tasks. A restarted master can rediscover and retry them by assessment key.
+- Closing an Episode does not wait for an unbounded KFD-2 evaluation by
+  default. Explicit high-risk gates may wait for a fresh report while leaving
+  the sealed Episode intact on timeout or insufficient trust.
 
 ## GUI Tray / Menu-Bar Controls
 

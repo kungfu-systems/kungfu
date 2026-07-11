@@ -69,6 +69,7 @@ A record's **Status** says where it stands:
 | [0049](ADR-0049-layer-complete-products-and-domain-neutral-core.md) | accepted; staged | every product layer is independently complete and the core remains domain-neutral |
 | [0050](ADR-0050-assembled-runtime-stdlib-pruning-policy.md) | accepted | stdlib pruning policy for the assembled runtime — family-level subtraction, declarative fail-closed manifest |
 | [0051](ADR-0051-kfd-contract-world-fact-admission-and-trust.md) | accepted; staged | KFD contract worlds govern fact admission, historical interpretation, and trust assessment |
+| [0052](ADR-0052-kfd2-assessment-lifecycle-and-executors.md) | accepted; staged | KFD-2 assessments are claim-triggered jobs coordinated by the workspace master |
 
 ## Reading by theme
 
@@ -170,7 +171,10 @@ A record's **Status** says where it stands:
   resumable changelog contract),
   [0051](ADR-0051-kfd-contract-world-fact-admission-and-trust.md) (the KFD-1
   declaration, replayable fact-admission, historical interpretation, and KFD-2
-  trust-assessment path), and
+  trust-assessment path),
+  [0052](ADR-0052-kfd2-assessment-lifecycle-and-executors.md) (claim-triggered
+  assessment jobs, workspace-master coordination, Assessment Episodes, and
+  equivalent process/thread executors), and
   [0042](ADR-0042-episode-atomic-safety-and-qualification.md) (Episode atomic
   safety as evidence-bounded capability, graceful degradation, monotonic repair,
   fault containment, and qualification under scale).
@@ -210,6 +214,9 @@ A record's **Status** says where it stands:
 - [`docs/fact-surface-admission.md`](../../../../docs/fact-surface-admission.md) —
   how product and user facts enter a KFD-declared contract world and become
   eligible for historical query and trust assessment.
+- [`docs/kfd2-trust-assessment.md`](../../../../docs/kfd2-trust-assessment.md) —
+  when KFD-2 runs, how the workspace master coordinates it, and how Desktop and
+  embedded executors share one contract.
 - [`docs/product-layers.md`](../../../../docs/product-layers.md) — independent
   adoption products and their qualification boundaries.
 - [`docs/domain-horizons.md`](../../../../docs/domain-horizons.md) — the

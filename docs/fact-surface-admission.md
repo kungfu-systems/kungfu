@@ -71,6 +71,13 @@ to its declaration roots, Episode/query proof, responsibility, validation,
 known gaps, and residual risk. Trust is therefore inspectable and purpose-bound,
 not a boolean copied onto every row.
 
+Assessment is claim-triggered rather than run after every recorded event. In a
+Desktop workspace, the workspace master coordinates durable assessment jobs
+and supervised workers. Embedded libkungfu consumers may execute the same job
+contract in controlled threads. Both produce a separate Assessment Episode and
+the same TrustReport semantics. See
+[KFD-2 trust assessment in a live workspace](kfd2-trust-assessment.md).
+
 ## Intended developer path
 
 The SDK target is one shared declaration consumed by local runtime checks,

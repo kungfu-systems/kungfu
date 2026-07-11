@@ -42,6 +42,7 @@ and the map routes a question to whichever doc answers it.
 | What does Rewind replay, and what must it never silently re-execute? | [ADR-0020](../framework/core/docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md) + [`rewind.md`](rewind.md) | why, verify | stable |
 | How does Kungfu persist user facts, sync sources, and maintain storage over time? | [`runtime-storage-service.md`](runtime-storage-service.md) | use, verify | draft |
 | How do my domain facts enter Kungfu's declared fact world, remain replayable, and become eligible for trust assessment? | [`fact-surface-admission.md`](fact-surface-admission.md) + [ADR-0051](../framework/core/docs/adr/ADR-0051-kfd-contract-world-fact-admission-and-trust.md) | why, use, verify | draft · semantics accepted; implementation staged |
+| When does KFD-2 assess a claim, what does the workspace master do, and how do Desktop processes and embedded threads share the model? | [`kfd2-trust-assessment.md`](kfd2-trust-assessment.md) + [ADR-0052](../framework/core/docs/adr/ADR-0052-kfd2-assessment-lifecycle-and-executors.md) | why, use, verify | draft · semantics accepted; implementation staged |
 | How do I query current or historical runtime facts, and what proves the answer? | [`querying-runtime-facts.md`](querying-runtime-facts.md) + [ADR-0048](../framework/core/docs/adr/ADR-0048-runtime-fact-query-semantics-and-changelog.md) | use, verify | draft · semantics accepted; implementation staged |
 | What is an Episode, why is it the atomic trust boundary, and how is that claim qualified under faults and load? | [`episode-object-model.md`](episode-object-model.md) + [`episode-atomicity-qualification.md`](episode-atomicity-qualification.md) + [ADR-0033](../framework/core/docs/adr/ADR-0033-episode-causal-segment-object.md) + [ADR-0034](../framework/core/docs/adr/ADR-0034-yijinjing-episode-manifest-journal.md) + [ADR-0042](../framework/core/docs/adr/ADR-0042-episode-atomic-safety-and-qualification.md) | why, use, verify | draft |
 | What is the supervisor/master topology, and how can the master stay alive after the GUI closes? | [`master-service.md`](master-service.md) + [ADR-0036](../framework/core/docs/adr/ADR-0036-supervisor-and-workspace-master-topology.md) | use, verify | draft |
@@ -109,6 +110,10 @@ route to the row that answers them:
   KFD-1 facts / KFD-2 trust report** -> *how domain facts enter Kungfu and become
   eligible for trust assessment* ([`fact-surface-admission.md`](fact-surface-admission.md))
   and [ADR-0051](../framework/core/docs/adr/ADR-0051-kfd-contract-world-fact-admission-and-trust.md).
+- **KFD-2 assessment / TrustReport refresh / claim trigger / assessment worker /
+  Assessment Episode / process assessor / thread assessor** -> *when and where
+  trust is assessed* ([`kfd2-trust-assessment.md`](kfd2-trust-assessment.md))
+  and [ADR-0052](../framework/core/docs/adr/ADR-0052-kfd2-assessment-lifecycle-and-executors.md).
 - **latency / performance / zero-copy / serialization** → *the membrane*
   ([`architecture.md`](architecture.md)) and *the event model*
   ([`event-model.md`](event-model.md)).
