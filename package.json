@@ -59,6 +59,7 @@
     "verify": "node scripts/require-shifu.mjs verify && node scripts/verify.mjs",
     "episode:qualify": "node scripts/require-shifu.mjs episode:qualify && node framework/core/tests/qualification/episode/run.mjs",
     "episode:qualify:release": "node scripts/require-shifu.mjs episode:qualify:release && node framework/core/tests/qualification/episode/release_evidence.mjs",
+    "layers:qualify": "node scripts/require-shifu.mjs layers:qualify && node tests/qualification/layers/run.mjs",
     "kfd:buildchain": "node scripts/require-shifu.mjs kfd:buildchain && node scripts/buildchain-kfd-evidence.mjs --write",
     "kfd:buildchain:check": "node scripts/require-shifu.mjs kfd:buildchain:check && node scripts/buildchain-kfd-evidence.mjs --check",
     "kfd:query": "node scripts/require-shifu.mjs kfd:query && node scripts/buildchain-kfd-evidence.mjs --query",
