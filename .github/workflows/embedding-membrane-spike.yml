@@ -63,10 +63,13 @@ jobs:
         include:
           - name: Linux x64
             runner: '["self-hosted","Linux","X64","kungfu-build-v4-linux-x64"]'
+            source_mode: mirror
           - name: macOS ARM64
-            runner: '["self-hosted","macOS","ARM64","kungfu-build-v4-macos-arm64"]'
+            runner: '"macos-15"'
+            source_mode: github
           - name: Windows x64
             runner: '["self-hosted","Windows","X64","kungfu-build-v4-windows-x64"]'
+            source_mode: mirror
     runs-on: ${{ fromJSON(matrix.runner) }}
     env:
       KUNGFU_BUILDCHAIN_NO_OPTIONAL: "1"
@@ -78,6 +81,7 @@ jobs:
       MIRROR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
       MIRROR_REF: refs/heads/dev/v4/v4.0
       MIRROR_URL: http://192.168.100.222:8088/git-mirrors/kungfu.git
+      SOURCE_MODE: ${{ matrix.source_mode }}
       SOURCE_ROOT: source-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Setup Node.js
@@ -104,11 +108,14 @@ jobs:
         shell: bash
         run: |
           git init "$SOURCE_ROOT"
-          git -C "$SOURCE_ROOT" remote add mirror "$MIRROR_URL"
-          git -C "$SOURCE_ROOT" fetch --no-tags mirror \
-            "+${MIRROR_REF}:refs/embedding/base"
-          if ! git -C "$SOURCE_ROOT" cat-file -e \
-            "${MIRROR_BASE_SHA}^{commit}" 2>/dev/null; then
+          if [ "$SOURCE_MODE" = "mirror" ]; then
+            git -C "$SOURCE_ROOT" remote add mirror "$MIRROR_URL"
+            git -C "$SOURCE_ROOT" fetch --no-tags mirror \
+              "+${MIRROR_REF}:refs/embedding/base"
+          fi
+          if [ "$SOURCE_MODE" = "github" ] || \
+            ! git -C "$SOURCE_ROOT" cat-file -e \
+              "${MIRROR_BASE_SHA}^{commit}" 2>/dev/null; then
             git -C "$SOURCE_ROOT" remote add github \
               "https://github.com/${GITHUB_REPOSITORY}.git"
             git -C "$SOURCE_ROOT" fetch --no-tags --depth=1 github \
@@ -164,8 +171,11 @@ jobs:
           # shifu-entry-contract: allow the isolated spike targets are not product-level Shifu tasks
           cmake --build framework/core/build --config Release --parallel 2 \
             --target shared_embedding_host shared_embedding_native_kfx
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            test "$(uname -m)" = "arm64"
+          fi
           # Keep the latency gate separate from sustained compiler load on the
-          # self-hosted fleet.  This is one fixed settle, not a benchmark retry.
+          # build runner.  This is one fixed settle, not a benchmark retry.
           sleep 60
           # shifu-entry-contract: allow the spike harness must inspect platform-specific binaries directly
           node framework/core/slices/shared-embedding-membrane/run.mjs framework/core/build
