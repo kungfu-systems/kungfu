@@ -399,7 +399,9 @@ function readRuntimePins() {
   const pinsPath = path.join(CORE, '..', '..', 'product', 'runtime-pins.env');
   /** @type {Record<string, string>} */
   const pins = {};
-  for (const line of fs.readFileSync(pinsPath, 'utf-8').split('\n')) {
+  // Split on CRLF or LF: a Windows checkout with core.autocrlf=true renders the
+  // committed LF file as CRLF, and a trailing \r would defeat the value match.
+  for (const line of fs.readFileSync(pinsPath, 'utf-8').split(/\r?\n/)) {
     const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
     if (m) pins[m[1]] = m[2];
   }
