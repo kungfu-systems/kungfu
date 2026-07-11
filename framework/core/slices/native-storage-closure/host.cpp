@@ -9,6 +9,10 @@
 namespace {
 
 constexpr uint64_t EPISODE_ID = UINT64_C(42490049);
+constexpr const char *EPISODE_CONTRACT_WORLD_ROOT =
+    "sha256:99e55c748b2e2b12c994b5e691f6781e66f9d460402e4e6871a48d3628314e9e";
+constexpr const char *EPISODE_FACT_SURFACE_ROOT =
+    "sha256:bfdb3eb73ba4ab88e5da42d3eec7a964260ba8da4a0151213a7ed121252ddc85";
 constexpr uint64_t EXPECTED_CAPABILITIES = KF_NATIVE_STORAGE_CAP_EPISODE_LIFECYCLE |
                                            KF_NATIVE_STORAGE_CAP_HEAD_AND_HISTORICAL_QUERY |
                                            KF_NATIVE_STORAGE_CAP_FSCK | KF_NATIVE_STORAGE_CAP_EXPORT;
@@ -61,7 +65,11 @@ std::string resolved_cut(const std::string &head) {
 std::string fact_query_request(const std::string &cut) {
   const auto selected_cut = cut.empty() ? std::string{"{\"kind\":\"head\"}"}
                                         : "{\"kind\":\"manifest_frame_uid\",\"manifest_frame_uid\":\"" + cut + "\"}";
-  return "{\"definition\":{\"basis\":{\"episode_id\":" + std::to_string(EPISODE_ID) + ",\"cut\":" + selected_cut +
+  return std::string{"{\"definition\":{\"basis\":{\"contract_world\":{\"id\":\"kungfu.runtime\",\"version\":\"1\","
+                     "\"root\":\""} +
+         EPISODE_CONTRACT_WORLD_ROOT +
+         "\"},\"fact_surfaces\":[{\"id\":\"kungfu.runtime.episode-manifest\",\"version\":\"1\",\"root\":\"" +
+         EPISODE_FACT_SURFACE_ROOT + "\"}],\"episode_id\":" + std::to_string(EPISODE_ID) + ",\"cut\":" + selected_cut +
          "}}}";
 }
 
