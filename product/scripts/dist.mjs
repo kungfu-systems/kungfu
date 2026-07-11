@@ -17,6 +17,7 @@ import {
   verifyBuildchainLogEvents,
 } from '@kungfu-tech/buildchain/logging';
 import { extractTarGz, extractZip, writeTarGz, writeZip } from './archive.mjs';
+import { writeCompatibilityManifest } from './compatibility.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -37,6 +38,10 @@ const RELEASE_DIR = path.join(PRODUCT_DIR, 'release');
 const DESKTOP_RELEASE_DIR = path.join(RELEASE_DIR, 'desktop');
 const CLI_RELEASE_DIR = path.join(RELEASE_DIR, 'cli');
 const CLI_ARCHIVE_PREFIX = 'kungfu-episodes-cli';
+const COMPATIBILITY_MANIFEST = path.join(
+  CORE_DIST,
+  'product-compatibility.json',
+);
 const isWin = process.platform === 'win32';
 const require = createRequire(import.meta.url);
 const buildchainLogger = createBuildchainLogger({
@@ -748,6 +753,7 @@ function writeCliManifest(stageRoot, archiveName) {
         archive: archiveName,
         entries: {
           kungfu: isWin ? 'kungfu/kungfu.exe' : 'kungfu/kungfu',
+          compatibility: 'kungfu/product-compatibility.json',
           sdk: 'sdk/sdk.js',
           sdkPackage: 'sdk/package.json',
           kfd3Registry: 'kfd/kfd-3-surfaces.json',
@@ -822,6 +828,189 @@ function assertSameSet(label, expected, actual) {
   }
 }
 
+function listRelativeFiles(root) {
+  const files = [];
+  const visit = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) visit(full);
+      else if (entry.isFile())
+        files.push(path.relative(root, full).split(path.sep).join('/'));
+    }
+  };
+  visit(root);
+  return files.sort();
+}
+
+export function runInstalledKungfu({
+  kungfuBin,
+  installRoot,
+  home,
+  args,
+  env,
+}) {
+  const result = spawnSync(kungfuBin, ['-H', home, ...args], {
+    cwd: installRoot,
+    env,
+    encoding: 'utf8',
+    shell: isWin,
+  });
+  if (result.status !== 0) {
+    throw new Error(
+      [
+        `installed kungfu ${args.join(' ')} failed (exit ${exitLabel(result.status, result.signal)})`,
+        result.stdout?.trim() ? `stdout:\n${result.stdout.trim()}` : '',
+        result.stderr?.trim() ? `stderr:\n${result.stderr.trim()}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    );
+  }
+  return result.stdout || '';
+}
+
+export function runInstalledCliSemanticSmoke({ installRoot, kungfuBin, env }) {
+  const home = path.join(installRoot, '.qualification-home');
+  const episodeId = 49003;
+  const exportPath = path.join(installRoot, 'episode-export.json');
+  runInstalledKungfu({
+    kungfuBin,
+    installRoot,
+    home,
+    args: ['storage', 'layout', '--json'],
+    env,
+  });
+  runInstalledKungfu({
+    kungfuBin,
+    installRoot,
+    home,
+    args: [
+      'storage',
+      'episode',
+      'begin',
+      '--episode-id',
+      String(episodeId),
+      '--source',
+      'adr0049-cli',
+      '--json',
+    ],
+    env,
+  });
+  runInstalledKungfu({
+    kungfuBin,
+    installRoot,
+    home,
+    args: [
+      'storage',
+      'episode',
+      'heartbeat',
+      '--episode-id',
+      String(episodeId),
+      '--note',
+      'qualification',
+      '--json',
+    ],
+    env,
+  });
+  runInstalledKungfu({
+    kungfuBin,
+    installRoot,
+    home,
+    args: [
+      'storage',
+      'episode',
+      'end',
+      '--episode-id',
+      String(episodeId),
+      '--reason',
+      'qualified',
+      '--json',
+    ],
+    env,
+  });
+  const query = parseJsonOutput(
+    runInstalledKungfu({
+      kungfuBin,
+      installRoot,
+      home,
+      args: [
+        'storage',
+        'query',
+        '--table',
+        'episodes',
+        '--scope',
+        'all',
+        '--json',
+      ],
+      env,
+    }),
+    'storage query',
+  );
+  if (!query.ok || query.row_count < 1)
+    throw new Error('installed CLI query did not return the recorded Episode');
+  const fsck = parseJsonOutput(
+    runInstalledKungfu({
+      kungfuBin,
+      installRoot,
+      home,
+      args: [
+        'storage',
+        'fsck',
+        '--scope',
+        'episode',
+        '--episode-id',
+        String(episodeId),
+        '--json',
+      ],
+      env,
+    }),
+    'storage fsck',
+  );
+  if (!fsck.ok)
+    throw new Error('installed CLI fsck rejected the recorded Episode');
+  runInstalledKungfu({
+    kungfuBin,
+    installRoot,
+    home,
+    args: [
+      'storage',
+      'export',
+      '--scope',
+      'episode',
+      '--episode-id',
+      String(episodeId),
+      '--format',
+      'bundle-json',
+      '--out',
+      exportPath,
+      '--json',
+    ],
+    env,
+  });
+  assertFile(exportPath, 'installed CLI Episode export');
+  const brief = runInstalledKungfu({
+    kungfuBin,
+    installRoot,
+    home,
+    args: ['agent', 'brief'],
+    env,
+  });
+  if (!brief.trim()) throw new Error('installed CLI agent brief was empty');
+  const mode = parseJsonOutput(
+    runInstalledKungfu({
+      kungfuBin,
+      installRoot,
+      home,
+      args: ['agent', 'choose-mode', '--json'],
+      env,
+    }),
+    'agent choose-mode',
+  );
+  if (!mode.mode)
+    throw new Error('installed CLI agent discovery did not choose a mode');
+  return { home, exportPath, episodeId };
+}
+
 function runInstalledKungfuKfdSmoke({
   installRoot,
   kungfuBin,
@@ -862,7 +1051,7 @@ function runInstalledKungfuKfdSmoke({
   }
 }
 
-function smokeCliProductArchive({ archivePath, archiveBase }) {
+export function smokeCliProductArchive({ archivePath, archiveBase }) {
   buildchainLogger.spanSync(
     'product.cli.smoke',
     {
@@ -894,6 +1083,11 @@ function smokeCliProductArchive({ archivePath, archiveBase }) {
         }
 
         const kungfuBin = entryPath(installRoot, manifest.entries, 'kungfu');
+        const compatibility = entryPath(
+          installRoot,
+          manifest.entries,
+          'compatibility',
+        );
         const sdkEntry = entryPath(installRoot, manifest.entries, 'sdk');
         const sdkPackage = entryPath(
           installRoot,
@@ -927,6 +1121,7 @@ function smokeCliProductArchive({ archivePath, archiveBase }) {
           'templates',
         );
         assertFile(kungfuBin, 'installed kungfu runtime');
+        assertFile(compatibility, 'installed compatibility manifest');
         assertFile(sdkEntry, 'installed Kungfu SDK entry');
         assertFile(sdkPackage, 'installed Kungfu SDK package metadata');
         assertFile(kfd3Registry, 'installed KFD-3 registry');
@@ -942,6 +1137,22 @@ function smokeCliProductArchive({ archivePath, archiveBase }) {
           listInstalledKfxPackages(extensionsRoot),
         );
 
+        const forbidden = listRelativeFiles(installRoot).filter((file) =>
+          /(^|\/)(electron|@kungfu-tech\/gui)(\/|$)/i.test(file),
+        );
+        if (forbidden.length) {
+          throw new Error(
+            `CLI archive contains GUI/Electron entries: ${forbidden.join(', ')}`,
+          );
+        }
+
+        const smokeEnv = {
+          ...process.env,
+          KUNGFU_SDK_ENTRY: sdkEntry,
+          KUNGFU_KFD3_REGISTRY: kfd3Registry,
+          KUNGFU_KFD_UPSTREAM_AGGREGATE: kfdUpstreamAggregate,
+          KF_FIRST_PARTY_SOURCE_ROOT: extensionsRoot,
+        };
         runInstalledKungfuKfdSmoke({
           installRoot,
           kungfuBin,
@@ -949,6 +1160,11 @@ function smokeCliProductArchive({ archivePath, archiveBase }) {
           kfd3Registry,
           kfdUpstreamAggregate,
           extensionsRoot,
+        });
+        runInstalledCliSemanticSmoke({
+          installRoot,
+          kungfuBin,
+          env: smokeEnv,
         });
         console.log('[product] CLI installed-layout smoke passed');
       } finally {
@@ -1074,6 +1290,11 @@ function main() {
           phase: 'ui',
           event: 'product.gui.build',
         });
+        writeCompatibilityManifest({
+          root: ROOT,
+          output: COMPATIBILITY_MANIFEST,
+          includeGui: true,
+        });
         run(
           'electron-builder desktop product',
           process.execPath,
@@ -1098,6 +1319,13 @@ function main() {
         // and stashes the artifact after this task exits successfully.
       }
       if (wantsCli()) {
+        if (!wantsDesktop()) {
+          writeCompatibilityManifest({
+            root: ROOT,
+            output: COMPATIBILITY_MANIFEST,
+            includeGui: false,
+          });
+        }
         buildCliProduct();
       }
 

@@ -310,9 +310,16 @@ function checkLayerQualification() {
   run('ADR-0049 layer qualification harness tests', 'node', [
     '--test',
     path.join('tests', 'qualification', 'layers', 'run.test.mjs'),
+    path.join('tests', 'qualification', 'layers', 'surfaces', 'run.test.mjs'),
+    path.join('product', 'scripts', 'compatibility.test.mjs'),
+    path.join('product', 'scripts', 'dist.test.mjs'),
   ]);
   run('ADR-0049 layer qualification harness', 'node', [
     path.join('tests', 'qualification', 'layers', 'run.mjs'),
+  ]);
+  run('ADR-0049 surface source contract', 'node', [
+    path.join('tests', 'qualification', 'layers', 'surfaces', 'run.mjs'),
+    '--validate-only',
   ]);
 }
 

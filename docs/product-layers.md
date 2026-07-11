@@ -38,7 +38,12 @@ closure and its versioned C ABI now pass their dedicated gate. Thin Python,
 Node, and Rust storage SDK sources plus a shared semantic fixture are staged;
 exact source-built artifacts have Darwin ARM64 evidence, while publication,
 other platforms, resident-memory sampling, and the full release matrix remain
-separate release claims.
+separate release claims. The headless and human surfaces now share a public
+storage capability: the GUI Storage panel expresses inspect, timeline, query,
+repair-plan, and export operations through the same native service used by the
+CLI. Product builds also emit one source-bound compatibility manifest for the
+CLI and desktop forms. Exact directory-form surface evidence remains distinct
+from publication and installer-uninstall claims.
 
 ## The rule behind the choices
 
@@ -69,6 +74,12 @@ automation, and operators. It must not require Electron for semantic
 operations.
 
 Pixel composition is legitimately GUI-specific. Fact meaning is not.
+
+The reference GUI's Storage panel is the executable mapping: every semantic
+button names a public `storage.*` capability method, while the surface fixture
+pins its equivalent `kungfu storage ...` expression. Adding a new GUI-only
+migration, repair, verification, or export semantic fails that contract until a
+lower expression exists.
 
 ## What ecosystem packages must mean
 

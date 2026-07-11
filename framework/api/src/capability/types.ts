@@ -129,6 +129,11 @@ export type KfNativeFrame = {
 };
 
 export type KfNativeBinding = {
+  runStorageServiceOperation?: (
+    operation: string,
+    runtimeDir: string,
+    options?: Record<string, unknown>,
+  ) => Record<string, unknown>;
   Schema?: new () => {
     types: Record<string, () => Record<string, unknown>>;
   };
