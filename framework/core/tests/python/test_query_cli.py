@@ -278,3 +278,93 @@ def test_query_cli_compiles_bounded_sql_and_runs_sqlite_engine(tmp_path):
     assert proof_value["lineage"]["execution"]["engine"] == (
         "episode-sqlite-projection/v1"
     )
+
+
+def test_query_cli_compiles_and_proves_temporal_attention_pattern(tmp_path):
+    home = tmp_path / "home"
+    runtime_dir = home / "runtime"
+    for episode_id, title, actor, begin_time in [
+        (1, "alpha_published", "feature-agent", 1000),
+        (2, "gate_failed", "release-infra", 1100),
+        (3, "alpha_published", "feature-agent", 1200),
+        (4, "gate_failed", "release-infra", 1300),
+    ]:
+        storage_service.episode_begin(
+            runtime_dir,
+            episode_id=episode_id,
+            title=title,
+            actor=actor,
+            source="buildchain-cli-fixture",
+            begin_time=begin_time,
+        )
+    base = storage_service.build_fact_query_definition(limit=10)
+    definition = json.loads(json.dumps(base))
+    definition["temporal_pattern"] = {
+        "schema": "kungfu.query.temporal-pattern/v1",
+        "partition_by": "source",
+        "order_by": "begin_time",
+        "sequence": [
+            {"field": "title", "equals": "alpha_published"},
+            {"field": "title", "equals": "gate_failed"},
+        ],
+        "repeat": {"min": 2, "max": 8},
+        "within_ns": "1000",
+        "as_of_time": "2000",
+        "absence": {"field": "title", "equals": "stable_published"},
+    }
+    base_path = tmp_path / "base.json"
+    base_path.write_text(json.dumps(base), encoding="utf-8")
+    definition_path = tmp_path / "attention.json"
+    definition_path.write_text(json.dumps(definition), encoding="utf-8")
+    saved_path = tmp_path / "attention-view.json"
+    saved_path.write_text(
+        json.dumps(
+            {
+                "schema": "kungfu.query.saved-view/v1",
+                "name": "release-attention",
+                "definition": definition,
+                "view": {
+                    "kind": "attention",
+                    "partitionField": "partition_key",
+                    "repeatField": "repeat_count",
+                    "elapsedField": "elapsed_ns",
+                    "attributionField": "attribution_counts",
+                    "evidenceField": "matched_episode_ids",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    sql = """SELECT * FROM episodes MATCH_RECOGNIZE (
+      PARTITION BY source ORDER BY begin_time ASC PATTERN ((A B){2,8})
+      DEFINE A AS title = 'alpha_published', B AS title = 'gate_failed'
+      WITHIN 1000 AS OF 2000 ABSENT title = 'stable_published'
+    ) LIMIT 10"""
+    runner = CliRunner()
+
+    compiled = _invoke(
+        runner,
+        home,
+        "compile-sql",
+        "--file",
+        str(base_path),
+        "--sql",
+        sql,
+        "--json",
+    )
+    proof = _invoke(runner, home, "prove", "--file", str(definition_path), "--json")
+    inspected = _invoke(runner, home, "saved-view", "--file", str(saved_path), "--json")
+
+    assert compiled.exit_code == 0, compiled.output
+    assert proof.exit_code == 0, proof.output
+    assert inspected.exit_code == 0, inspected.output
+    compiled_value = json.loads(compiled.output)
+    proof_value = json.loads(proof.output)
+    assert compiled_value["definition"] == proof_value["definition"]
+    assert (
+        compiled_value["logical_plan_hash"]
+        == (proof_value["logical_plan"]["logical_plan_hash"])
+    )
+    assert proof_value["rows"][0]["partition_key"] == "buildchain-cli-fixture"
+    assert proof_value["rows"][0]["attention_required"] is True
+    assert json.loads(inspected.output)["view"]["kind"] == "attention"

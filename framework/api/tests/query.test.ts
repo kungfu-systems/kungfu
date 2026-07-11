@@ -5,6 +5,7 @@ import {
   type QueryChangelogPage,
   applyQueryChangelogPage,
   emptyQueryChangelogState,
+  parseSavedQueryView,
 } from '../src/capability/query.ts';
 
 const token = {
@@ -133,5 +134,43 @@ test('gap halts mutation and frontier regression fails closed', () => {
         ]),
       ),
     /frontier regressed/,
+  );
+});
+
+test('attention saved view remains presentation-only', () => {
+  const definition = {
+    ...token.definition,
+    temporal_pattern: {
+      schema: 'kungfu.query.temporal-pattern/v1' as const,
+      partition_by: 'source',
+      order_by: 'begin_time',
+      sequence: [
+        { field: 'title', equals: 'alpha_published' },
+        { field: 'title', equals: 'gate_failed' },
+      ] as const,
+      repeat: { min: 2, max: 8 },
+      within_ns: '3600000000000',
+      as_of_time: '7200000000000',
+      absence: { field: 'title', equals: 'stable_published' },
+    },
+  };
+  const saved = parseSavedQueryView({
+    schema: 'kungfu.query.saved-view/v1',
+    name: 'release attention',
+    definition,
+    view: {
+      kind: 'attention',
+      partitionField: 'partition_key',
+      repeatField: 'repeat_count',
+      elapsedField: 'elapsed_ns',
+      attributionField: 'attribution_counts',
+      evidenceField: 'matched_episode_ids',
+    },
+  });
+
+  assert.equal(saved.view.kind, 'attention');
+  assert.deepEqual(
+    saved.definition.temporal_pattern,
+    definition.temporal_pattern,
   );
 });

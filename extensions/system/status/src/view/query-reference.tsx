@@ -29,6 +29,10 @@ function evidenceLabel(state: QueryChangelogState, key: string): string {
   return `${status} · ${determinism}`;
 }
 
+function rowKey(row: Record<string, unknown>): string {
+  return String(row.match_id ?? row.episode_id ?? 'unknown');
+}
+
 export function QueryTableReference({
   state,
   spec,
@@ -51,7 +55,7 @@ export function QueryTableReference({
       </thead>
       <tbody>
         {rows.map((row) => {
-          const key = String(row.episode_id ?? 'unknown');
+          const key = rowKey(row);
           return (
             <tr key={key}>
               {spec.columns.map((column) => (
@@ -98,7 +102,7 @@ export function QueryTimelineReference({
   return (
     <ol style={{ ...mono, margin: 0, paddingLeft: 24 }}>
       {rows.map((row) => {
-        const key = String(row.episode_id ?? 'unknown');
+        const key = rowKey(row);
         return (
           <li key={key} style={{ padding: '4px 0' }}>
             <span style={{ color: '#9cdcfe' }}>
@@ -176,6 +180,43 @@ export function QueryCausalGraphReference({
   );
 }
 
+export function QueryAttentionReference({
+  state,
+  spec,
+}: {
+  state: QueryChangelogState;
+  spec: Extract<QueryViewSpec, { kind: 'attention' }>;
+}) {
+  return (
+    <div style={mono}>
+      {queryRows(state).map((row) => {
+        const key = rowKey(row);
+        return (
+          <article
+            key={key}
+            style={{ padding: 8, borderLeft: '3px solid #dcdcaa', margin: 6 }}
+          >
+            <strong style={{ color: '#dcdcaa' }}>attention required</strong>{' '}
+            <span style={{ color: '#9cdcfe' }}>
+              {cell(row[spec.partitionField])}
+            </span>
+            <div>
+              {cell(row[spec.repeatField])} repeats · elapsed{' '}
+              {cell(row[spec.elapsedField])} ns
+            </div>
+            <div>recorded attribution: {cell(row[spec.attributionField])}</div>
+            <div>matched evidence: {cell(row[spec.evidenceField])}</div>
+            <div style={{ color: '#858585' }}>
+              Temporal qualification only; no causal claim is inferred.
+            </div>
+            <div style={{ color: '#dcdcaa' }}>{evidenceLabel(state, key)}</div>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
 function referenceView(state: QueryChangelogState, spec: QueryViewSpec) {
   switch (spec.kind) {
     case 'table':
@@ -186,6 +227,8 @@ function referenceView(state: QueryChangelogState, spec: QueryViewSpec) {
       return <QueryDiffReference state={state} spec={spec} />;
     case 'causal-graph':
       return <QueryCausalGraphReference state={state} spec={spec} />;
+    case 'attention':
+      return <QueryAttentionReference state={state} spec={spec} />;
   }
 }
 
@@ -217,6 +260,14 @@ const specs: Record<QueryViewSpec['kind'], QueryViewSpec> = {
     parentField: 'parent_episode_id',
     labelField: 'status',
   },
+  attention: {
+    kind: 'attention',
+    partitionField: 'partition_key',
+    repeatField: 'repeat_count',
+    elapsedField: 'elapsed_ns',
+    attributionField: 'attribution_counts',
+    evidenceField: 'matched_episode_ids',
+  },
 };
 
 export function QueryReferencePanel({ caps }: { caps: KfxCapabilities }) {
@@ -227,18 +278,26 @@ export function QueryReferencePanel({ caps }: { caps: KfxCapabilities }) {
   const [state, setState] = React.useState(emptyQueryChangelogState);
   const [error, setError] = React.useState('');
 
-  const loadExample = () => {
+  const loadExample = (
+    name = 'episode-head',
+    view: QueryViewSpec = specs.table,
+  ) => {
     try {
       const examples = caps.storage.queryExamples() as {
-        examples?: { definition?: SavedQueryView['definition'] }[];
+        examples?: {
+          name?: string;
+          definition?: SavedQueryView['definition'];
+        }[];
       };
-      const definition = examples.examples?.[0]?.definition;
+      const definition = examples.examples?.find(
+        (example) => example.name === name,
+      )?.definition;
       if (!definition) throw new Error('query example unavailable');
       const value: SavedQueryView = {
         schema: 'kungfu.query.saved-view/v1',
-        name: 'episode-head',
+        name,
         definition,
-        view: specs.table,
+        view,
       };
       const text = JSON.stringify(value, null, 2);
       window.localStorage.setItem(SAVED_QUERY_KEY, text);
@@ -321,8 +380,16 @@ export function QueryReferencePanel({ caps }: { caps: KfxCapabilities }) {
           <div
             style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}
           >
-            <button type="button" onClick={loadExample}>
-              Load example
+            <button type="button" onClick={() => loadExample()}>
+              Load Episode example
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                loadExample('buildchain-release-attention', specs.attention)
+              }
+            >
+              Load attention example
             </button>
             <label style={{ ...mono, display: 'inline-block' }}>
               Import JSON{' '}

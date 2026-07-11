@@ -6,6 +6,8 @@
 #include <cctype>
 #include <charconv>
 #include <initializer_list>
+#include <iterator>
+#include <limits>
 #include <map>
 #include <regex>
 #include <stdexcept>
@@ -64,6 +66,27 @@ uint64_t optional_uint64(const nlohmann::json &object, const char *field, uint64
   return uint64_value(object.at(field), field);
 }
 
+int64_t int64_value(const nlohmann::json &value, const char *field) {
+  if (value.is_number_integer()) {
+    return value.get<int64_t>();
+  }
+  if (value.is_number_unsigned()) {
+    const auto parsed = value.get<uint64_t>();
+    if (parsed <= static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
+      return static_cast<int64_t>(parsed);
+    }
+  }
+  if (value.is_string()) {
+    const auto text = value.get<std::string>();
+    int64_t parsed = 0;
+    const auto [end, error] = std::from_chars(text.data(), text.data() + text.size(), parsed);
+    if (error == std::errc{} && end == text.data() + text.size()) {
+      return parsed;
+    }
+  }
+  throw std::invalid_argument(std::string("invalid signed query field: ") + field);
+}
+
 std::string optional_text(const nlohmann::json &object, const char *field, const std::string &fallback = {}) {
   if (!object.is_object() || !object.contains(field) || object.at(field).is_null()) {
     return fallback;
@@ -72,6 +95,51 @@ std::string optional_text(const nlohmann::json &object, const char *field, const
     throw std::invalid_argument(std::string("invalid text query field: ") + field);
   }
   return object.at(field).get<std::string>();
+}
+
+std::string ascii_lower(std::string value) {
+  std::transform(value.begin(), value.end(), value.begin(),
+                 [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+  return value;
+}
+
+event_predicate parse_event_predicate(const nlohmann::json &value, const char *path) {
+  reject_unknown_fields(value, {"field", "equals"}, path);
+  event_predicate predicate{optional_text(value, "field"), optional_text(value, "equals")};
+  static const std::regex field_name("^[a-z][a-z0-9_]{0,63}$");
+  if (!std::regex_match(predicate.field, field_name) || predicate.equals.empty() || predicate.equals.size() > 256) {
+    throw std::invalid_argument(std::string(path) + " requires a safe field and 1..256 byte equals value");
+  }
+  static constexpr const char *SUPPORTED_FIELDS[] = {
+      "episode_id", "title",        "actor",       "source",    "status",         "begin_time",         "end_time",
+      "reason",     "record_count", "frame_count", "ref_count", "last_frame_uid", "content_root_status"};
+  if (std::find(std::begin(SUPPORTED_FIELDS), std::end(SUPPORTED_FIELDS), predicate.field) ==
+      std::end(SUPPORTED_FIELDS)) {
+    throw std::invalid_argument(std::string(path) + " uses unsupported Episode field: " + predicate.field);
+  }
+  return predicate;
+}
+
+nlohmann::json event_predicate_json(const event_predicate &predicate) {
+  return {{"field", predicate.field}, {"equals", predicate.equals}};
+}
+
+nlohmann::json temporal_pattern_json(const temporal_pattern &pattern) {
+  auto sequence = nlohmann::json::array();
+  for (const auto &step : pattern.sequence) {
+    sequence.push_back(event_predicate_json(step));
+  }
+  nlohmann::json value = {{"schema", pattern.schema},
+                          {"partition_by", pattern.partition_by},
+                          {"order_by", pattern.order_by},
+                          {"sequence", sequence},
+                          {"repeat", {{"min", pattern.repeat_min}, {"max", pattern.repeat_max}}},
+                          {"within_ns", std::to_string(pattern.within_ns)},
+                          {"as_of_time", std::to_string(pattern.as_of_time)}};
+  if (pattern.has_absence) {
+    value["absence"] = event_predicate_json(pattern.absence);
+  }
+  return value;
 }
 
 nlohmann::json cut_json(const cut &value) {
@@ -250,7 +318,28 @@ result_schema episode_result_schema() {
            {"frame_count", "uint64", false},
            {"ref_count", "uint64", false},
            {"content_root", "string", true},
-           {"content_root_status", "string", false}}};
+           {"content_root_status", "string", false},
+           {"title", "string", true},
+           {"actor", "string", true},
+           {"source", "string", true},
+           {"reason", "string", true}}};
+}
+
+result_schema temporal_match_result_schema() {
+  return {QUERY_TEMPORAL_MATCH_ROW_SCHEMA_V1,
+          {{"match_id", "string", false},
+           {"partition_key", "string", false},
+           {"repeat_count", "uint64", false},
+           {"start_time", "int64", false},
+           {"end_time", "int64", false},
+           {"as_of_time", "int64", false},
+           {"elapsed_ns", "int64", false},
+           {"matched_episode_ids", "array<uint64>", false},
+           {"matched_events", "array<object>", false},
+           {"attribution_counts", "object", false},
+           {"absence", "object", true},
+           {"attention_required", "boolean", false},
+           {"evidence_refs", "array<object>", false}}};
 }
 
 nlohmann::json resolved_cut_json(const yy_storage::episode_manifest_fold &fold) {
@@ -266,7 +355,7 @@ query_definition parse_query_definition(const nlohmann::json &value) {
   if (!value.is_object()) {
     throw std::invalid_argument("query definition must be an object");
   }
-  reject_unknown_fields(value, {"schema", "basis", "object", "limit", "evidence"}, "definition");
+  reject_unknown_fields(value, {"schema", "basis", "object", "limit", "evidence", "temporal_pattern"}, "definition");
   query_definition definition;
   definition.schema = optional_text(value, "schema", QUERY_DEFINITION_SCHEMA_V1);
   if (definition.schema != QUERY_DEFINITION_SCHEMA_V1) {
@@ -283,6 +372,70 @@ query_definition parse_query_definition(const nlohmann::json &value) {
   definition.evidence = optional_text(value, "evidence", "proof");
   if (definition.evidence != "proof") {
     throw std::invalid_argument("ADR-0048 Q1 supports only evidence=proof");
+  }
+  if (value.contains("temporal_pattern")) {
+    const auto &pattern = value.at("temporal_pattern");
+    reject_unknown_fields(
+        pattern, {"schema", "partition_by", "order_by", "sequence", "repeat", "within_ns", "as_of_time", "absence"},
+        "definition.temporal_pattern");
+    for (const auto *required :
+         {"schema", "partition_by", "order_by", "sequence", "repeat", "within_ns", "as_of_time"}) {
+      if (!pattern.contains(required)) {
+        throw std::invalid_argument(std::string("definition.temporal_pattern requires field: ") + required);
+      }
+    }
+    definition.has_temporal_pattern = true;
+    definition.pattern.schema = optional_text(pattern, "schema", QUERY_TEMPORAL_PATTERN_SCHEMA_V1);
+    if (definition.pattern.schema != QUERY_TEMPORAL_PATTERN_SCHEMA_V1) {
+      throw std::invalid_argument("unsupported temporal pattern schema: " + definition.pattern.schema);
+    }
+    definition.pattern.partition_by = optional_text(pattern, "partition_by", "source");
+    definition.pattern.order_by = optional_text(pattern, "order_by", "begin_time");
+    static const std::regex field_name("^[a-z][a-z0-9_]{0,63}$");
+    if (!std::regex_match(definition.pattern.partition_by, field_name) ||
+        !std::regex_match(definition.pattern.order_by, field_name)) {
+      throw std::invalid_argument("temporal pattern partition_by/order_by must be safe field names");
+    }
+    static constexpr const char *PARTITION_FIELDS[] = {
+        "episode_id", "title", "actor", "source", "status", "reason", "content_root_status"};
+    if (std::find(std::begin(PARTITION_FIELDS), std::end(PARTITION_FIELDS), definition.pattern.partition_by) ==
+        std::end(PARTITION_FIELDS)) {
+      throw std::invalid_argument("temporal pattern partition_by uses unsupported Episode field");
+    }
+    if (definition.pattern.order_by != "begin_time" && definition.pattern.order_by != "end_time") {
+      throw std::invalid_argument("temporal pattern order_by must be begin_time or end_time");
+    }
+    if (!pattern.contains("sequence") || !pattern.at("sequence").is_array() || pattern.at("sequence").size() != 2) {
+      throw std::invalid_argument("temporal pattern sequence requires exactly two predicates");
+    }
+    definition.pattern.sequence.push_back(
+        parse_event_predicate(pattern.at("sequence").at(0), "definition.temporal_pattern.sequence[0]"));
+    definition.pattern.sequence.push_back(
+        parse_event_predicate(pattern.at("sequence").at(1), "definition.temporal_pattern.sequence[1]"));
+    const auto repeat = pattern.value("repeat", nlohmann::json::object());
+    reject_unknown_fields(repeat, {"min", "max"}, "definition.temporal_pattern.repeat");
+    definition.pattern.repeat_min = optional_uint64(repeat, "min", 1);
+    definition.pattern.repeat_max = optional_uint64(repeat, "max", definition.pattern.repeat_min);
+    if (definition.pattern.repeat_min == 0 || definition.pattern.repeat_max < definition.pattern.repeat_min ||
+        definition.pattern.repeat_max > 16) {
+      throw std::invalid_argument("temporal pattern repeat requires 1 <= min <= max <= 16");
+    }
+    definition.pattern.within_ns = optional_uint64(pattern, "within_ns");
+    constexpr uint64_t MAX_PATTERN_WINDOW_NS = 30ULL * 24ULL * 60ULL * 60ULL * 1000000000ULL;
+    if (definition.pattern.within_ns == 0 || definition.pattern.within_ns > MAX_PATTERN_WINDOW_NS) {
+      throw std::invalid_argument("temporal pattern within_ns must be between 1ns and 30 days");
+    }
+    if (!pattern.contains("as_of_time")) {
+      throw std::invalid_argument("temporal pattern requires explicit as_of_time");
+    }
+    definition.pattern.as_of_time = int64_value(pattern.at("as_of_time"), "temporal_pattern.as_of_time");
+    if (definition.pattern.as_of_time <= 0) {
+      throw std::invalid_argument("temporal pattern as_of_time must be positive");
+    }
+    if (pattern.contains("absence")) {
+      definition.pattern.has_absence = true;
+      definition.pattern.absence = parse_event_predicate(pattern.at("absence"), "definition.temporal_pattern.absence");
+    }
   }
 
   const auto basis = value.value("basis", nlohmann::json::object());
@@ -356,6 +509,9 @@ query_definition parse_query_definition(const nlohmann::json &value) {
       definition.basis.causal_time != supported_basis.causal_time) {
     throw std::invalid_argument("unsupported ADR-0048 Q0 time basis");
   }
+  if (definition.has_temporal_pattern && definition.basis.episode_id != 0) {
+    throw std::invalid_argument("temporal pattern requires basis.episode_id=0 so the partition can span Episodes");
+  }
   return definition;
 }
 
@@ -366,22 +522,26 @@ nlohmann::json query_definition_json(const query_definition &definition) {
   for (const auto &surface : normalized.basis.fact_surfaces) {
     fact_surfaces.push_back(declaration_reference_json(surface));
   }
-  return {{"schema", normalized.schema},
-          {"basis",
-           {{"contract_world", declaration_reference_json(normalized.basis.contract_world)},
-            {"fact_surfaces", fact_surfaces},
-            {"scope", normalized.basis.scope},
-            {"episode_id", std::to_string(normalized.basis.episode_id)},
-            {"perspective", normalized.basis.perspective},
-            {"cut", cut_json(normalized.basis.selected_cut)},
-            {"policy", policy_json(normalized.basis.policy)},
-            {"time_basis",
-             {{"valid_time", normalized.basis.valid_time},
-              {"system_time", normalized.basis.system_time},
-              {"causal_time", normalized.basis.causal_time}}}}},
-          {"object", normalized.object},
-          {"limit", normalized.limit},
-          {"evidence", normalized.evidence}};
+  nlohmann::json value = {{"schema", normalized.schema},
+                          {"basis",
+                           {{"contract_world", declaration_reference_json(normalized.basis.contract_world)},
+                            {"fact_surfaces", fact_surfaces},
+                            {"scope", normalized.basis.scope},
+                            {"episode_id", std::to_string(normalized.basis.episode_id)},
+                            {"perspective", normalized.basis.perspective},
+                            {"cut", cut_json(normalized.basis.selected_cut)},
+                            {"policy", policy_json(normalized.basis.policy)},
+                            {"time_basis",
+                             {{"valid_time", normalized.basis.valid_time},
+                              {"system_time", normalized.basis.system_time},
+                              {"causal_time", normalized.basis.causal_time}}}}},
+                          {"object", normalized.object},
+                          {"limit", normalized.limit},
+                          {"evidence", normalized.evidence}};
+  if (normalized.has_temporal_pattern) {
+    value["temporal_pattern"] = temporal_pattern_json(normalized.pattern);
+  }
+  return value;
 }
 
 logical_plan plan_query(const query_definition &definition) {
@@ -389,7 +549,7 @@ logical_plan plan_query(const query_definition &definition) {
   plan.definition = definition;
   normalize_declaration_basis(plan.definition.basis);
   const auto &normalized = plan.definition;
-  plan.row_schema = episode_result_schema();
+  plan.row_schema = normalized.has_temporal_pattern ? temporal_match_result_schema() : episode_result_schema();
   plan.query_definition_hash = json_hash(query_definition_json(normalized));
   auto fact_surfaces = nlohmann::json::array();
   for (const auto &surface : normalized.basis.fact_surfaces) {
@@ -412,7 +572,11 @@ logical_plan plan_query(const query_definition &definition) {
         {"filter",
          {{"field", "episode_id"}, {"operator", "eq"}, {"value", std::to_string(normalized.basis.episode_id)}}});
   }
-  plan.operators.push_back({"order", {{"field", "episode_id"}, {"direction", "asc"}}});
+  if (normalized.has_temporal_pattern) {
+    plan.operators.push_back({"temporal_match", temporal_pattern_json(normalized.pattern)});
+  } else {
+    plan.operators.push_back({"order", {{"field", "episode_id"}, {"direction", "asc"}}});
+  }
   plan.operators.push_back({"limit", {{"count", normalized.limit}}});
   auto projected_fields = nlohmann::json::array();
   for (const auto &field : plan.row_schema.fields) {
@@ -435,17 +599,43 @@ query_definition compile_episode_sql(const std::string &sql, const query_definit
   if (sql.empty() || sql.size() > 4096) {
     throw std::invalid_argument("bounded SQL must contain 1..4096 bytes");
   }
+  static const std::regex temporal_grammar(
+      R"(^\s*SELECT\s+\*\s+FROM\s+episodes\s+MATCH_RECOGNIZE\s*\(\s*PARTITION\s+BY\s+([a-z][a-z0-9_]{0,63})\s+ORDER\s+BY\s+([a-z][a-z0-9_]{0,63})\s+ASC\s+PATTERN\s*\(\s*\(\s*A\s+B\s*\)\s*\{\s*([0-9]+)\s*,\s*([0-9]+)\s*\}\s*\)\s+DEFINE\s+A\s+AS\s+([a-z][a-z0-9_]{0,63})\s*=\s*'([A-Za-z0-9_.:@/+-]{1,256})'\s*,\s*B\s+AS\s+([a-z][a-z0-9_]{0,63})\s*=\s*'([A-Za-z0-9_.:@/+-]{1,256})'\s+WITHIN\s+([0-9]+)\s+AS\s+OF\s+([0-9]+)(?:\s+ABSENT\s+([a-z][a-z0-9_]{0,63})\s*=\s*'([A-Za-z0-9_.:@/+-]{1,256})')?\s*\)(?:\s+LIMIT\s+([0-9]+))?\s*;?\s*$)",
+      std::regex::ECMAScript | std::regex::icase);
   static const std::regex grammar(
       R"(^\s*SELECT\s+\*\s+FROM\s+episodes(?:\s+WHERE\s+episode_id\s*=\s*([0-9]+))?(?:\s+ORDER\s+BY\s+episode_id\s+ASC)?(?:\s+LIMIT\s+([0-9]+))?\s*;?\s*$)",
       std::regex::ECMAScript | std::regex::icase);
   std::smatch match;
+  if (std::regex_match(sql, match, temporal_grammar)) {
+    auto compiled = base_definition;
+    compiled.basis.episode_id = 0;
+    compiled.has_temporal_pattern = true;
+    compiled.pattern = {};
+    compiled.pattern.partition_by = ascii_lower(match[1].str());
+    compiled.pattern.order_by = ascii_lower(match[2].str());
+    compiled.pattern.repeat_min = uint64_value(match[3].str(), "sql.pattern.repeat_min");
+    compiled.pattern.repeat_max = uint64_value(match[4].str(), "sql.pattern.repeat_max");
+    compiled.pattern.sequence = {{ascii_lower(match[5].str()), match[6].str()},
+                                 {ascii_lower(match[7].str()), match[8].str()}};
+    compiled.pattern.within_ns = uint64_value(match[9].str(), "sql.pattern.within_ns");
+    compiled.pattern.as_of_time = int64_value(match[10].str(), "sql.pattern.as_of_time");
+    if (match[11].matched) {
+      compiled.pattern.has_absence = true;
+      compiled.pattern.absence = {ascii_lower(match[11].str()), match[12].str()};
+    }
+    if (match[13].matched) {
+      compiled.limit = uint64_value(match[13].str(), "sql.limit");
+    }
+    return parse_query_definition(query_definition_json(compiled));
+  }
   if (!std::regex_match(sql, match, grammar)) {
     throw std::invalid_argument("unsupported SQL; expected SELECT * FROM episodes [WHERE episode_id = N] "
-                                "[ORDER BY episode_id ASC] [LIMIT N]");
+                                "[ORDER BY episode_id ASC] [LIMIT N], or the bounded MATCH_RECOGNIZE form");
   }
 
   auto compiled = base_definition;
   compiled.basis.episode_id = 0;
+  compiled.has_temporal_pattern = false;
   if (match[1].matched) {
     compiled.basis.episode_id = uint64_value(match[1].str(), "sql.episode_id");
   }
@@ -470,47 +660,62 @@ nlohmann::json logical_plan_json(const logical_plan &plan) {
 nlohmann::json query_capabilities_json() {
   const auto contract_world = episode_contract_world_reference();
   const auto fact_surface = episode_fact_surface_reference();
-  return {
-      {"schema", QUERY_CAPABILITIES_SCHEMA_V1},
-      {"query_definition_schema", QUERY_DEFINITION_SCHEMA_V1},
-      {"logical_plan_schema", LOGICAL_PLAN_SCHEMA_V1},
-      {"objects", nlohmann::json::array({"episodes"})},
-      {"operators", nlohmann::json::array({"authority_scan", "filter", "order", "limit", "project", "evidence"})},
-      {"cuts", nlohmann::json::array({"head", "manifest_frame_uid"})},
-      {"admission_outcomes", nlohmann::json::array({"admitted", "unregistered-surface", "incompatible-schema",
-                                                    "ambiguous-authority", "unverifiable"})},
-      {"builtin_declarations",
-       {{"contract_world",
-         {{"reference", declaration_reference_json(contract_world)},
-          {"declaration", episode_contract_world_declaration_payload()}}},
-        {"fact_surfaces", nlohmann::json::array({{{"reference", declaration_reference_json(fact_surface)},
-                                                  {"declaration", episode_fact_surface_declaration_payload()}}})}}},
-      {"formats", nlohmann::json::array({"json", "ndjson", "tsv"})},
-      {"frontends", nlohmann::json::array({"query-definition", "bounded-sql"})},
-      {"continuous",
-       {{"schema", QUERY_CHANGELOG_SCHEMA_V1},
-        {"resume_token_schema", QUERY_RESUME_TOKEN_SCHEMA_V1},
-        {"messages", nlohmann::json::array({"SnapshotBegin", "RowUpsert", "RowRetract", "Progress", "SchemaChange",
-                                            "SnapshotEnd", "Gap"})},
-        {"ordering", "batch-index"},
-        {"replay", "message-idempotent"},
-        {"backpressure", "bounded-pages"}}},
-      {"saved_view_schema", QUERY_VIEW_SCHEMA_V1},
-      {"sql",
-       {{"object", "episodes"},
-        {"accepted", nlohmann::json::array(
-                         {"SELECT * FROM episodes",
-                          "SELECT * FROM episodes WHERE episode_id = <u64> ORDER BY episode_id ASC LIMIT <1..1000>"})},
-        {"rejected", nlohmann::json::array({"column projections", "joins", "subqueries", "OR",
-                                            "non-equality predicates", "descending order"})},
-        {"basis_owner", "QueryDefinition"}}},
-      {"execution_engines", nlohmann::json::array({"episode-authority-scan/v1", "episode-sqlite-projection/v1"})},
-      {"commands", nlohmann::json::array({"capabilities", "schema", "describe", "examples", "compile-sql", "validate",
-                                          "explain", "prove", "changelog", "saved-view"})},
-      {"limits", {{"minimum", 1}, {"maximum", 1000}}},
-      {"error_codes", nlohmann::json::array({"KF_QUERY_INPUT", "KF_QUERY_VALIDATION", "KF_QUERY_EXECUTION",
-                                             "KF_QUERY_OUTPUT", "KF_QUERY_CHANGELOG", "KF_QUERY_VIEW"})},
-      {"physical_plan", {{"public", false}, {"reason", "engine-private-and-replaceable"}}}};
+  return {{"schema", QUERY_CAPABILITIES_SCHEMA_V1},
+          {"query_definition_schema", QUERY_DEFINITION_SCHEMA_V1},
+          {"logical_plan_schema", LOGICAL_PLAN_SCHEMA_V1},
+          {"objects", nlohmann::json::array({"episodes"})},
+          {"operators", nlohmann::json::array(
+                            {"authority_scan", "filter", "order", "temporal_match", "limit", "project", "evidence"})},
+          {"cuts", nlohmann::json::array({"head", "manifest_frame_uid"})},
+          {"admission_outcomes", nlohmann::json::array({"admitted", "unregistered-surface", "incompatible-schema",
+                                                        "ambiguous-authority", "unverifiable"})},
+          {"builtin_declarations",
+           {{"contract_world",
+             {{"reference", declaration_reference_json(contract_world)},
+              {"declaration", episode_contract_world_declaration_payload()}}},
+            {"fact_surfaces", nlohmann::json::array({{{"reference", declaration_reference_json(fact_surface)},
+                                                      {"declaration", episode_fact_surface_declaration_payload()}}})}}},
+          {"formats", nlohmann::json::array({"json", "ndjson", "tsv"})},
+          {"frontends", nlohmann::json::array({"query-definition", "bounded-sql"})},
+          {"continuous",
+           {{"schema", QUERY_CHANGELOG_SCHEMA_V1},
+            {"resume_token_schema", QUERY_RESUME_TOKEN_SCHEMA_V1},
+            {"messages", nlohmann::json::array({"SnapshotBegin", "RowUpsert", "RowRetract", "Progress", "SchemaChange",
+                                                "SnapshotEnd", "Gap"})},
+            {"ordering", "batch-index"},
+            {"replay", "message-idempotent"},
+            {"backpressure", "bounded-pages"}}},
+          {"saved_view_schema", QUERY_VIEW_SCHEMA_V1},
+          {"temporal_patterns",
+           {{"schema", QUERY_TEMPORAL_PATTERN_SCHEMA_V1},
+            {"partition", "one field"},
+            {"order", "one explicit time field"},
+            {"sequence_steps", 2},
+            {"sequence_semantics", "ordered-subsequence"},
+            {"repeat", "1..16"},
+            {"within", "1ns..30d"},
+            {"absence", "optional, closed by explicit as_of_time"},
+            {"unsupported",
+             nlohmann::json::array({"alternation", "nested patterns", "unbounded waits", "inferred causality"})}}},
+          {"sql",
+           {{"object", "episodes"},
+            {"accepted", nlohmann::json::array(
+                             {"SELECT * FROM episodes",
+                              "SELECT * FROM episodes WHERE episode_id = <u64> ORDER BY episode_id ASC LIMIT <1..1000>",
+                              "SELECT * FROM episodes MATCH_RECOGNIZE (PARTITION BY <field> ORDER BY <field> ASC "
+                              "PATTERN ((A B){<1..16>,<1..16>}) DEFINE A AS <field> = '<value>', B AS <field> = "
+                              "'<value>' WITHIN <ns> AS OF <ns> [ABSENT <field> = '<value>']) [LIMIT <1..1000>]"})},
+            {"rejected",
+             nlohmann::json::array({"column projections", "joins", "subqueries", "OR", "non-equality predicates",
+                                    "descending order", "pattern alternation", "nested or unbounded patterns"})},
+            {"basis_owner", "QueryDefinition"}}},
+          {"execution_engines", nlohmann::json::array({"episode-authority-scan/v1", "episode-sqlite-projection/v1"})},
+          {"commands", nlohmann::json::array({"capabilities", "schema", "describe", "examples", "compile-sql",
+                                              "validate", "explain", "prove", "changelog", "saved-view"})},
+          {"limits", {{"minimum", 1}, {"maximum", 1000}}},
+          {"error_codes", nlohmann::json::array({"KF_QUERY_INPUT", "KF_QUERY_VALIDATION", "KF_QUERY_EXECUTION",
+                                                 "KF_QUERY_OUTPUT", "KF_QUERY_CHANGELOG", "KF_QUERY_VIEW"})},
+          {"physical_plan", {{"public", false}, {"reason", "engine-private-and-replaceable"}}}};
 }
 
 nlohmann::json query_definition_schema_json() {
@@ -550,6 +755,42 @@ nlohmann::json query_definition_schema_json() {
                                                   {"system_time", {{"const", "manifest-gen-time"}}},
                                                   {"causal_time", {{"const", "manifest-order-and-episode-refs"}}}}},
                                                 {"additionalProperties", false}};
+  const auto event_predicate_schema = nlohmann::json{
+      {"type", "object"},
+      {"required", nlohmann::json::array({"field", "equals"})},
+      {"properties",
+       {{"field",
+         {{"enum", nlohmann::json::array({"episode_id", "title", "actor", "source", "status", "begin_time", "end_time",
+                                          "reason", "record_count", "frame_count", "ref_count", "last_frame_uid",
+                                          "content_root_status"})}}},
+        {"equals", {{"type", "string"}, {"minLength", 1}, {"maxLength", 256}}}}},
+      {"additionalProperties", false}};
+  const auto temporal_pattern_schema = nlohmann::json{
+      {"type", "object"},
+      {"required",
+       nlohmann::json::array({"schema", "partition_by", "order_by", "sequence", "repeat", "within_ns", "as_of_time"})},
+      {"properties",
+       {{"schema", {{"const", QUERY_TEMPORAL_PATTERN_SCHEMA_V1}}},
+        {"partition_by",
+         {{"enum", nlohmann::json::array(
+                       {"episode_id", "title", "actor", "source", "status", "reason", "content_root_status"})}}},
+        {"order_by", {{"enum", nlohmann::json::array({"begin_time", "end_time"})}}},
+        {"sequence", {{"type", "array"}, {"minItems", 2}, {"maxItems", 2}, {"items", event_predicate_schema}}},
+        {"repeat",
+         {{"type", "object"},
+          {"required", nlohmann::json::array({"min", "max"})},
+          {"properties",
+           {{"min", {{"type", "integer"}, {"minimum", 1}, {"maximum", 16}}},
+            {"max", {{"type", "integer"}, {"minimum", 1}, {"maximum", 16}}}}},
+          {"additionalProperties", false}}},
+        {"within_ns",
+         {{"oneOf", nlohmann::json::array(
+                        {{{"type", "integer"}, {"minimum", 1}}, {{"type", "string"}, {"pattern", "^[1-9][0-9]*$"}}})}}},
+        {"as_of_time",
+         {{"oneOf", nlohmann::json::array(
+                        {{{"type", "integer"}, {"minimum", 1}}, {{"type", "string"}, {"pattern", "^[1-9][0-9]*$"}}})}}},
+        {"absence", event_predicate_schema}}},
+      {"additionalProperties", false}};
   return {{"$schema", "https://json-schema.org/draft/2020-12/schema"},
           {"$id", QUERY_DEFINITION_SCHEMA_V1},
           {"title", "Kungfu QueryDefinition"},
@@ -575,7 +816,8 @@ nlohmann::json query_definition_schema_json() {
               {"additionalProperties", false}}},
             {"object", {{"const", "episodes"}}},
             {"limit", {{"type", "integer"}, {"minimum", 1}, {"maximum", 1000}}},
-            {"evidence", {{"const", "proof"}}}}},
+            {"evidence", {{"const", "proof"}}},
+            {"temporal_pattern", temporal_pattern_schema}}},
           {"additionalProperties", false}};
 }
 
@@ -598,11 +840,26 @@ nlohmann::json query_examples_json() {
   historical_definition.basis.episode_id = 1048;
   historical_definition.basis.selected_cut.kind = cut_kind::ManifestFrameUid;
   historical_definition.basis.selected_cut.manifest_frame_uid = 123456789;
+  auto attention_definition = head_definition;
+  attention_definition.limit = 10;
+  attention_definition.has_temporal_pattern = true;
+  attention_definition.pattern.partition_by = "source";
+  attention_definition.pattern.order_by = "begin_time";
+  attention_definition.pattern.sequence = {{"title", "alpha_published"}, {"title", "gate_failed"}};
+  attention_definition.pattern.repeat_min = 2;
+  attention_definition.pattern.repeat_max = 8;
+  attention_definition.pattern.within_ns = 3600000000000ULL;
+  attention_definition.pattern.as_of_time = 7200000000000LL;
+  attention_definition.pattern.has_absence = true;
+  attention_definition.pattern.absence = {"title", "stable_published"};
   return {{"schema", "kungfu.query.examples/v1"},
           {"examples",
            nlohmann::json::array(
                {{{"name", "episode-head"}, {"definition", query_definition_json(head_definition)}},
-                {{"name", "episode-historical-cut"}, {"definition", query_definition_json(historical_definition)}}})}};
+                {{"name", "episode-historical-cut"}, {"definition", query_definition_json(historical_definition)}},
+                {{"name", "buildchain-release-attention"},
+                 {"definition", query_definition_json(attention_definition)},
+                 {"interpretation", "recorded temporal qualification, not inferred causality"}}})}};
 }
 
 nlohmann::json query_result_json(const query_result &result) {
@@ -748,8 +1005,14 @@ query_result run_at_frontier(const std::string &runtime_dir, const query_definit
 }
 
 std::string row_key(const nlohmann::json &row) {
-  if (!row.is_object() || !row.contains("episode_id")) {
-    throw std::runtime_error("episode changelog row has no episode_id key");
+  if (!row.is_object()) {
+    throw std::runtime_error("query changelog row must be an object");
+  }
+  if (row.contains("match_id") && row.at("match_id").is_string()) {
+    return row.at("match_id").get<std::string>();
+  }
+  if (!row.contains("episode_id")) {
+    throw std::runtime_error("query changelog row has neither match_id nor episode_id key");
   }
   const auto &value = row.at("episode_id");
   if (value.is_string()) {
@@ -776,13 +1039,22 @@ std::map<std::string, nlohmann::json> rows_by_key(const query_result &result) {
 }
 
 nlohmann::json evidence_reference(const query_result &result, const nlohmann::json &row) {
-  return {{"episode_id", row_key(row)},
-          {"content_root", row.value("content_root", nlohmann::json(nullptr))},
-          {"content_root_status", row.value("content_root_status", "unverifiable")},
-          {"canonical_state", result.proof.canonical_state},
-          {"determinism", result.proof.determinism},
-          {"missing_inputs", result.proof.missing_inputs},
-          {"unverifiable_inputs", result.proof.unverifiable_inputs}};
+  nlohmann::json reference = {{"content_root", row.value("content_root", nlohmann::json(nullptr))},
+                              {"content_root_status", row.value("content_root_status", "unverifiable")},
+                              {"canonical_state", result.proof.canonical_state},
+                              {"determinism", result.proof.determinism},
+                              {"missing_inputs", result.proof.missing_inputs},
+                              {"unverifiable_inputs", result.proof.unverifiable_inputs}};
+  if (row.contains("episode_id")) {
+    // Preserve the Q3 evidence edge: uint64 identities are rendered as text.
+    reference["episode_id"] = row_key(row);
+  }
+  if (row.contains("match_id")) {
+    reference["row_key"] = row_key(row);
+    reference["match_id"] = row.at("match_id");
+    reference["evidence_refs"] = row.value("evidence_refs", nlohmann::json::array());
+  }
+  return reference;
 }
 
 nlohmann::json changelog_payload_json(const changelog_payload &payload) {
@@ -1003,6 +1275,189 @@ changelog_page run_episode_changelog(const std::string &runtime_dir, const logic
   return page;
 }
 
+namespace {
+
+std::string event_text(const nlohmann::json &row, const std::string &field) {
+  if (!row.contains(field) || row.at(field).is_null()) {
+    return {};
+  }
+  if (row.at(field).is_string()) {
+    return row.at(field).get<std::string>();
+  }
+  if (row.at(field).is_number_integer()) {
+    return std::to_string(row.at(field).get<int64_t>());
+  }
+  if (row.at(field).is_number_unsigned()) {
+    return std::to_string(row.at(field).get<uint64_t>());
+  }
+  if (row.at(field).is_boolean()) {
+    return row.at(field).get<bool>() ? "true" : "false";
+  }
+  return {};
+}
+
+bool event_matches(const nlohmann::json &row, const event_predicate &predicate) {
+  return event_text(row, predicate.field) == predicate.equals;
+}
+
+bool event_time(const nlohmann::json &row, const std::string &field, int64_t &value) {
+  if (!row.contains(field) || row.at(field).is_null()) {
+    return false;
+  }
+  try {
+    value = int64_value(row.at(field), field.c_str());
+    return true;
+  } catch (const std::invalid_argument &) {
+    return false;
+  }
+}
+
+nlohmann::json pattern_event_json(const nlohmann::json &row) {
+  nlohmann::json event = nlohmann::json::object();
+  for (const auto *field : {"episode_id", "title", "actor", "source", "status", "begin_time", "end_time", "reason",
+                            "content_root", "content_root_status"}) {
+    if (row.contains(field)) {
+      event[field] = row.at(field);
+    }
+  }
+  return event;
+}
+
+std::vector<nlohmann::json> evaluate_temporal_pattern(const logical_plan &plan,
+                                                      const std::vector<nlohmann::json> &input_rows, lineage &proof) {
+  const auto &pattern = plan.definition.pattern;
+  struct ordered_event {
+    int64_t time = 0;
+    uint64_t episode_id = 0;
+    const nlohmann::json *row = nullptr;
+  };
+  std::map<std::string, std::vector<ordered_event>> partitions;
+  for (const auto &row : input_rows) {
+    const auto partition = event_text(row, pattern.partition_by);
+    int64_t time = 0;
+    if (partition.empty() || !event_time(row, pattern.order_by, time) || time <= 0) {
+      proof.unverifiable_inputs.push_back({{"kind", "temporal-pattern-input"},
+                                           {"episode_id", event_text(row, "episode_id")},
+                                           {"reason", "missing partition/order field"}});
+      continue;
+    }
+    if (time > pattern.as_of_time) {
+      continue;
+    }
+    partitions[partition].push_back({time, optional_uint64(row, "episode_id"), &row});
+  }
+
+  std::vector<nlohmann::json> matches;
+  for (auto &[partition, events] : partitions) {
+    std::sort(events.begin(), events.end(), [](const ordered_event &left, const ordered_event &right) {
+      return left.time < right.time || (left.time == right.time && left.episode_id < right.episode_id);
+    });
+    size_t cursor = 0;
+    std::vector<const ordered_event *> matched;
+    int64_t start_time = 0;
+    int64_t end_time = 0;
+    uint64_t repeat_count = 0;
+    while (cursor < events.size() && repeat_count < pattern.repeat_max) {
+      size_t first = cursor;
+      while (first < events.size() && !event_matches(*events[first].row, pattern.sequence[0])) {
+        ++first;
+      }
+      if (first == events.size()) {
+        break;
+      }
+      if (matched.empty()) {
+        start_time = events[first].time;
+      }
+      const auto max_time = pattern.within_ns > static_cast<uint64_t>(std::numeric_limits<int64_t>::max() - start_time)
+                                ? std::numeric_limits<int64_t>::max()
+                                : start_time + static_cast<int64_t>(pattern.within_ns);
+      if (events[first].time > max_time) {
+        break;
+      }
+      size_t second = first + 1;
+      while (second < events.size() && events[second].time <= max_time &&
+             !event_matches(*events[second].row, pattern.sequence[1])) {
+        ++second;
+      }
+      if (second == events.size() || events[second].time > max_time) {
+        break;
+      }
+      matched.push_back(&events[first]);
+      matched.push_back(&events[second]);
+      end_time = events[second].time;
+      ++repeat_count;
+      cursor = second + 1;
+    }
+    if (repeat_count < pattern.repeat_min) {
+      continue;
+    }
+    const auto window_end = pattern.within_ns > static_cast<uint64_t>(std::numeric_limits<int64_t>::max() - start_time)
+                                ? std::numeric_limits<int64_t>::max()
+                                : start_time + static_cast<int64_t>(pattern.within_ns);
+    if (pattern.as_of_time < window_end) {
+      proof.missing_inputs.push_back({{"kind", "temporal-pattern-window"},
+                                      {"partition_key", partition},
+                                      {"required_through", std::to_string(window_end)},
+                                      {"observed_through", std::to_string(pattern.as_of_time)}});
+      continue;
+    }
+    bool terminal_present = false;
+    if (pattern.has_absence) {
+      terminal_present = std::any_of(events.begin(), events.end(), [&](const ordered_event &event) {
+        return event.time >= start_time && event.time <= window_end && event_matches(*event.row, pattern.absence);
+      });
+    }
+    if (terminal_present) {
+      continue;
+    }
+
+    auto episode_ids = nlohmann::json::array();
+    auto matched_events = nlohmann::json::array();
+    auto evidence_refs = nlohmann::json::array();
+    nlohmann::json attribution_counts = nlohmann::json::object();
+    for (const auto *event : matched) {
+      episode_ids.push_back(event->episode_id);
+      matched_events.push_back(pattern_event_json(*event->row));
+      evidence_refs.push_back({{"episode_id", std::to_string(event->episode_id)},
+                               {"content_root", event->row->value("content_root", nlohmann::json(nullptr))},
+                               {"content_root_status", event->row->value("content_root_status", "unverifiable")}});
+      const auto attribution = event_text(*event->row, "actor");
+      if (!attribution.empty()) {
+        attribution_counts[attribution] = attribution_counts.value(attribution, 0) + 1;
+      }
+    }
+    nlohmann::json absence = nullptr;
+    if (pattern.has_absence) {
+      absence = event_predicate_json(pattern.absence);
+    }
+    // A match key must survive head advancement. The full QueryDefinition hash
+    // includes the resolved historical cut during changelog reconstruction, so
+    // deriving the key from it would turn a valid correction into a false Gap.
+    const auto match_id = json_hash({{"temporal_pattern", temporal_pattern_json(pattern)},
+                                     {"partition_key", partition},
+                                     {"matched_episode_ids", episode_ids}});
+    matches.push_back({{"match_id", match_id},
+                       {"partition_key", partition},
+                       {"repeat_count", repeat_count},
+                       {"start_time", start_time},
+                       {"end_time", end_time},
+                       {"as_of_time", pattern.as_of_time},
+                       {"elapsed_ns", pattern.as_of_time - start_time},
+                       {"matched_episode_ids", episode_ids},
+                       {"matched_events", matched_events},
+                       {"attribution_counts", attribution_counts},
+                       {"absence", absence},
+                       {"attention_required", true},
+                       {"evidence_refs", evidence_refs}});
+    if (matches.size() >= plan.definition.limit) {
+      break;
+    }
+  }
+  return matches;
+}
+
+} // namespace
+
 static query_result run_episode_fold(const logical_plan &plan, const yy_storage::episode_manifest_fold &fold,
                                      nlohmann::json execution) {
   const auto &definition = plan.definition;
@@ -1075,10 +1530,16 @@ static query_result run_episode_fold(const logical_plan &plan, const yy_storage:
   result.proof.canonical_state =
       declarations_admitted && fold.cut_found && fold.unknown_record_count == 0 && fold.unfolded_record_count == 0;
 
+  std::vector<nlohmann::json> pattern_input_rows;
+  bool pattern_input_truncated = false;
   if (fold.cut_found && declarations_admitted) {
     for (const auto &[episode_id, view] : fold.episodes) {
       if (definition.basis.episode_id != 0 && episode_id != definition.basis.episode_id) {
         continue;
+      }
+      if (definition.has_temporal_pattern && pattern_input_rows.size() >= 1000) {
+        pattern_input_truncated = true;
+        break;
       }
       auto row = yy_storage::episode_summary_json(view);
       const auto content_root = yy_storage::episode_content_root_json(view, fold.unknown_record_count);
@@ -1086,14 +1547,31 @@ static query_result run_episode_fold(const logical_plan &plan, const yy_storage:
       if (!row.contains("content_root")) {
         row["content_root"] = nullptr;
       }
-      result.rows.push_back(row);
+      if (definition.has_temporal_pattern) {
+        pattern_input_rows.push_back(row);
+      } else {
+        result.rows.push_back(row);
+      }
       result.proof.episode_content_roots.push_back({{"episode_id", std::to_string(episode_id)},
                                                     {"status", content_root.at("status")},
                                                     {"recorded", content_root.at("recorded")},
                                                     {"computed", content_root.at("computed")}});
-      if (definition.limit != 0 && result.rows.size() >= definition.limit) {
+      if (!definition.has_temporal_pattern && definition.limit != 0 && result.rows.size() >= definition.limit) {
         break;
       }
+    }
+  }
+  if (definition.has_temporal_pattern) {
+    if (pattern_input_truncated) {
+      result.proof.missing_inputs.push_back(
+          {{"kind", "temporal-pattern-input-limit"}, {"limit", 1000}, {"available", fold.episodes.size()}});
+    }
+    result.rows = evaluate_temporal_pattern(plan, pattern_input_rows, result.proof);
+    result.proof.execution["temporal_pattern"] = temporal_pattern_json(definition.pattern);
+    result.proof.execution["pattern_input_rows"] = pattern_input_rows.size();
+    if (!result.proof.missing_inputs.empty() || !result.proof.unverifiable_inputs.empty()) {
+      result.proof.determinism = "unverifiable";
+      result.proof.canonical_state = false;
     }
   }
   if (definition.basis.episode_id != 0 && result.rows.empty() && fold.cut_found) {

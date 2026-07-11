@@ -1,5 +1,21 @@
-// ADR-0048 Q3 public query/changelog/view contracts. QueryDefinition remains
+// ADR-0048 public query/changelog/view contracts. QueryDefinition remains
 // the semantic owner; ViewSpec only selects a presentation of returned rows.
+
+export type QueryEventPredicate = {
+  field: string;
+  equals: string;
+};
+
+export type QueryTemporalPattern = {
+  schema: 'kungfu.query.temporal-pattern/v1';
+  partition_by: string;
+  order_by: string;
+  sequence: [QueryEventPredicate, QueryEventPredicate];
+  repeat: { min: number; max: number };
+  within_ns: string;
+  as_of_time: string;
+  absence?: QueryEventPredicate;
+};
 
 export type QueryDefinition = {
   schema: 'kungfu.query.definition/v1';
@@ -7,6 +23,7 @@ export type QueryDefinition = {
   object: string;
   limit: number;
   evidence: string;
+  temporal_pattern?: QueryTemporalPattern;
 };
 
 export type QueryFrontier =
@@ -110,11 +127,20 @@ export type CausalGraphViewSpec = {
   parentField: string;
   labelField: string;
 };
+export type AttentionViewSpec = {
+  kind: 'attention';
+  partitionField: string;
+  repeatField: string;
+  elapsedField: string;
+  attributionField: string;
+  evidenceField: string;
+};
 export type QueryViewSpec =
   | TableViewSpec
   | TimelineViewSpec
   | DiffViewSpec
-  | CausalGraphViewSpec;
+  | CausalGraphViewSpec
+  | AttentionViewSpec;
 
 export type SavedQueryView = {
   schema: 'kungfu.query.saved-view/v1';
@@ -238,7 +264,9 @@ export function parseSavedQueryView(value: unknown): SavedQueryView {
   }
   if (
     !saved.view ||
-    !['table', 'timeline', 'diff', 'causal-graph'].includes(saved.view.kind)
+    !['table', 'timeline', 'diff', 'causal-graph', 'attention'].includes(
+      saved.view.kind,
+    )
   ) {
     throw new Error('saved query view requires a supported ViewSpec');
   }

@@ -78,6 +78,7 @@ def _load_saved_view(file_path: str) -> dict[str, Any]:
         "timeline",
         "diff",
         "causal-graph",
+        "attention",
     }:
         _fail("KF_QUERY_VIEW", "saved query view requires a supported ViewSpec")
     return value

@@ -8,8 +8,9 @@ This document describes the target service contract accepted by
 [ADR-0048](../framework/core/docs/adr/ADR-0048-runtime-fact-query-semantics-and-changelog.md).
 The implementation is staged. QueryDefinition planning, proof-bearing Episode
 queries, the agent CLI, a bounded SQL compiler, journal/SQLite conformance, a
-resumable changelog, and table/timeline/diff/causal-graph reference views ship
-today. Broad SQL and temporal patterns remain later slices.
+resumable changelog, a bounded temporal-pattern operator, and
+table/timeline/diff/causal-graph/attention reference views ship today. Broad
+SQL and general complex-event processing remain outside the current surface.
 
 ## The query basis
 
@@ -89,14 +90,51 @@ SELECT * FROM episodes
   [LIMIT <1..1000>]
 ```
 
+It also accepts one bounded pattern form:
+
+```sql
+SELECT * FROM episodes MATCH_RECOGNIZE (
+  PARTITION BY source ORDER BY begin_time ASC
+  PATTERN ((A B){2,8})
+  DEFINE A AS title = 'alpha_published',
+         B AS title = 'gate_failed'
+  WITHIN 3600000000000 AS OF 7200000000000
+  ABSENT title = 'stable_published'
+) LIMIT 10
+```
+
+The equivalent `kungfu.query.temporal-pattern/v1` in QueryDefinition admits
+exactly one partition field, one explicit order field, a two-predicate ordered
+subsequence repeated 1–16 times, a 1 ns–30 day window, an explicit `as_of_time`,
+and one optional absence predicate. Alternation, nesting, unbounded waits, and
+inferred causality fail closed. The explicit as-of time makes absence
+reproducible rather than a guess about whether enough time has passed.
+
 Column projections, joins, subqueries, `OR`, non-equality predicates, and
 descending order are rejected. SQL owns only row selection. A base
 QueryDefinition still owns the declaration roots, scope, cut, policy, and time
 basis. Both authoring forms must produce the same LogicalPlan hash.
 
-Temporal pattern matching is part of the shared plan. The target is to expose
-it through SQL, typed builders, saved templates, and visual builders rather
-than require a separate EPL-like language.
+Temporal pattern matching is part of the shared plan and is exposed through
+QueryDefinition, bounded SQL, typed TypeScript contracts, saved views, and the
+System Status attention reference. It does not require a separate EPL-like
+language.
+
+### Attention qualification dogfood
+
+The first fixture encodes the observed Buildchain question as ordinary Episode
+manifest rows: `title` is the recorded event type, `source` is the release or
+feature correlation key, `actor` is the recorded attribution class, and
+`begin_time` is the declared event time. Repeated
+`alpha_published -> gate_failed` pairs within a closed window, with no
+`stable_published`, yield one proof-bearing attention row. A later stable event
+inside that valid-time window retracts the row through the existing changelog.
+
+The same operator is exercised by an unrelated corpus-import fixture using
+`stage_started -> validation_failed` and the absence of
+`human_decision_required`. This guards against embedding Buildchain-specific
+logic in the query engine. Attribution counts report recorded actors; temporal
+proximity alone never becomes a causal claim.
 
 ## Query results include proof
 
@@ -190,8 +228,8 @@ Humans can build and save queries through reference components:
 - causal graphs and evidence drill-down;
 - temporal pattern builders;
 
-The System Status KFX contains the initial table, timeline, diff, and causal
-graph references. It imports the same `kungfu.query.saved-view/v1` JSON that
+The System Status KFX contains table, timeline, diff, causal-graph, and
+attention references. It imports the same `kungfu.query.saved-view/v1` JSON that
 the CLI inspects. Only the QueryDefinition and thin ViewSpec are persisted in
 the browser; result rows and proof are rebuilt from the native query
 capability, and missing or unverifiable evidence remains visible in every
@@ -204,11 +242,11 @@ column, or layout cannot silently change the query basis.
 ## Current maturity
 
 ADR-0048 accepts the target semantics and staged sequence. It does not claim a
-complete SQL dialect, CEP engine, changelog implementation, or GUI builder is
-already present.
+complete SQL dialect, general CEP engine, or full visual query builder.
 
-The current implementation proves one bounded Episode/fact query at `head` and
-at an exact historical manifest-frame cut, including declaration coordinates,
-typed admission outcomes, proof lineage, one normalized LogicalPlan, and
-authority/SQLite conformance. Later slices add changelog/GUI components and the
-smallest temporal-pattern set justified by dogfood.
+The current implementation proves bounded Episode/fact and temporal-attention
+queries at `head` and exact historical manifest-frame cuts, including
+declaration coordinates, typed admission outcomes, proof lineage, one
+normalized LogicalPlan, authority/SQLite conformance, changelog retractions,
+and thin GUI presentation. The admitted temporal algebra stays intentionally
+small until more dogfood questions justify expanding it.

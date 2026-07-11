@@ -1495,6 +1495,197 @@ def test_fact_changelog_resumes_pages_without_loss_or_duplication(tmp_path):
     assert finished["messages"][0]["frontier"]["kind"] == "manifest_frame_uid"
 
 
+def test_temporal_attention_pattern_is_reproducible_and_retracts_on_late_terminal(
+    tmp_path,
+):
+    runtime_dir = tmp_path / "runtime"
+    buildchain_events = [
+        (1, "alpha_published", "feature-agent", 1000),
+        (2, "gate_failed", "release-infra", 1100),
+        (3, "alpha_published", "feature-agent", 1200),
+        (4, "gate_failed", "release-infra", 1300),
+        # This event is beyond the declared as_of cut and must not contaminate it.
+        (5, "alpha_published", "future-agent", 3000),
+    ]
+    for episode_id, title, actor, begin_time in buildchain_events:
+        storage_service.episode_begin(
+            runtime_dir,
+            episode_id=episode_id,
+            title=title,
+            actor=actor,
+            source="buildchain-feature-42",
+            begin_time=begin_time,
+        )
+
+    definition = storage_service.build_fact_query_definition(limit=10)
+    definition["temporal_pattern"] = {
+        "schema": "kungfu.query.temporal-pattern/v1",
+        "partition_by": "source",
+        "order_by": "begin_time",
+        "sequence": [
+            {"field": "title", "equals": "alpha_published"},
+            {"field": "title", "equals": "gate_failed"},
+        ],
+        "repeat": {"min": 2, "max": 8},
+        "within_ns": "1000",
+        "as_of_time": "2000",
+        "absence": {"field": "title", "equals": "stable_published"},
+    }
+
+    plan = storage_service.query_plan(
+        runtime_dir, action="validate", definition=definition
+    )
+    explanation = storage_service.query_plan(
+        runtime_dir, action="explain", definition=definition
+    )
+    assert [
+        operator["kind"] for operator in explanation["logical_plan"]["operators"]
+    ] == [
+        "authority_scan",
+        "temporal_match",
+        "limit",
+        "project",
+        "evidence",
+    ]
+    result = storage_service.fact_query_definition(runtime_dir, definition)
+    assert result["result_schema"]["schema"] == ("kungfu.query.temporal-match-row/v1")
+    assert len(result["rows"]) == 1
+    match = result["rows"][0]
+    assert match["partition_key"] == "buildchain-feature-42"
+    assert match["repeat_count"] == 2
+    assert match["matched_episode_ids"] == [1, 2, 3, 4]
+    assert match["attribution_counts"] == {
+        "feature-agent": 2,
+        "release-infra": 2,
+    }
+    assert match["attention_required"] is True
+    assert result["lineage"]["canonical_state"] is True
+
+    sql = """SELECT * FROM episodes MATCH_RECOGNIZE (
+      PARTITION BY source ORDER BY begin_time ASC
+      PATTERN ((A B){2,8})
+      DEFINE A AS title = 'alpha_published', B AS title = 'gate_failed'
+      WITHIN 1000 AS OF 2000 ABSENT title = 'stable_published'
+    ) LIMIT 10"""
+    compilation = storage_service.compile_fact_query_sql(
+        runtime_dir,
+        sql=sql,
+        definition=storage_service.build_fact_query_definition(limit=10),
+    )
+    assert compilation["definition"] == plan["definition"]
+    assert compilation["logical_plan_hash"] == plan["logical_plan_hash"]
+
+    storage_service.episode_projection_rebuild(runtime_dir)
+    conformance = storage_service.fact_query_conformance(runtime_dir, definition)
+    assert conformance["ok"] is True
+
+    snapshot = storage_service.fact_changelog(runtime_dir, definition)
+    assert [message["type"] for message in snapshot["messages"]] == [
+        "SnapshotBegin",
+        "RowUpsert",
+        "SnapshotEnd",
+    ]
+    steady = snapshot["resume_token"]
+    storage_service.episode_begin(
+        runtime_dir,
+        episode_id=6,
+        title="stable_published",
+        actor="release-infra",
+        source="buildchain-feature-42",
+        begin_time=1500,
+    )
+    correction = storage_service.fact_changelog(
+        runtime_dir, definition, resume_token=steady
+    )
+    assert [message["type"] for message in correction["messages"]] == [
+        "RowRetract",
+        "Progress",
+    ]
+    assert correction["messages"][0]["key"] == match["match_id"]
+    assert correction["messages"][0]["evidence_ref"]["evidence_refs"]
+
+
+def test_temporal_pattern_reuses_the_same_algebra_for_non_buildchain_work(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    for episode_id, title, actor, begin_time in [
+        (10, "stage_started", "ingest-agent", 1000),
+        (11, "validation_failed", "source-data", 1100),
+        (12, "stage_started", "ingest-agent", 1200),
+        (13, "validation_failed", "schema-drift", 1300),
+    ]:
+        storage_service.episode_begin(
+            runtime_dir,
+            episode_id=episode_id,
+            title=title,
+            actor=actor,
+            source="corpus-import-7",
+            begin_time=begin_time,
+        )
+    definition = storage_service.build_fact_query_definition(limit=10)
+    definition["temporal_pattern"] = {
+        "schema": "kungfu.query.temporal-pattern/v1",
+        "partition_by": "source",
+        "order_by": "begin_time",
+        "sequence": [
+            {"field": "title", "equals": "stage_started"},
+            {"field": "title", "equals": "validation_failed"},
+        ],
+        "repeat": {"min": 2, "max": 4},
+        "within_ns": "1000",
+        "as_of_time": "2000",
+        "absence": {"field": "title", "equals": "human_decision_required"},
+    }
+
+    result = storage_service.fact_query_definition(runtime_dir, definition)
+    assert len(result["rows"]) == 1
+    assert result["rows"][0]["partition_key"] == "corpus-import-7"
+    assert result["rows"][0]["attribution_counts"] == {
+        "ingest-agent": 2,
+        "schema-drift": 1,
+        "source-data": 1,
+    }
+
+
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    [
+        (lambda pattern: pattern.pop("as_of_time"), "requires field: as_of_time"),
+        (
+            lambda pattern: pattern.update(repeat={"min": 0, "max": 2}),
+            "1 <= min <= max <= 16",
+        ),
+        (
+            lambda pattern: pattern.update(order_by="record_count"),
+            "order_by must be begin_time or end_time",
+        ),
+        (
+            lambda pattern: pattern["sequence"][0].update(field="private_field"),
+            "unsupported Episode field",
+        ),
+    ],
+)
+def test_temporal_pattern_fails_closed_outside_bounded_algebra(
+    tmp_path, mutation, message
+):
+    definition = storage_service.build_fact_query_definition()
+    pattern = {
+        "schema": "kungfu.query.temporal-pattern/v1",
+        "partition_by": "source",
+        "order_by": "begin_time",
+        "sequence": [
+            {"field": "title", "equals": "stage_started"},
+            {"field": "title", "equals": "validation_failed"},
+        ],
+        "repeat": {"min": 2, "max": 4},
+        "within_ns": "1000",
+        "as_of_time": "2000",
+    }
+    mutation(pattern)
+    definition["temporal_pattern"] = pattern
+    with pytest.raises((RuntimeError, ValueError), match=message):
+        storage_service.query_plan(tmp_path, action="validate", definition=definition)
+
+
 def test_query_planner_normalizes_defaults_and_exposes_one_semantic_root(tmp_path):
     runtime_dir = tmp_path / "runtime"
     explicit = storage_service.build_fact_query_definition(episode_id=48, limit=10)
@@ -1554,8 +1745,11 @@ def test_query_planner_normalizes_defaults_and_exposes_one_semantic_root(tmp_pat
         "root"
     ].startswith("sha256:")
     assert capabilities["formats"] == ["json", "ndjson", "tsv"]
+    assert capabilities["temporal_patterns"]["sequence_steps"] == 2
+    assert capabilities["temporal_patterns"]["repeat"] == "1..16"
     assert definition_schema["$schema"].endswith("/draft/2020-12/schema")
     assert definition_schema["additionalProperties"] is False
+    assert "temporal_pattern" in definition_schema["properties"]
     assert definition_schema["properties"]["basis"]["additionalProperties"] is False
     assert "contract_world" in definition_schema["properties"]["basis"]["required"]
     assert "fact_surfaces" in definition_schema["properties"]["basis"]["required"]
