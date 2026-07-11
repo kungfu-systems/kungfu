@@ -43,6 +43,27 @@ function stableStringify(value) {
   return JSON.stringify(value);
 }
 
+function normalizeTypedIntegers(value) {
+  if (typeof value === 'bigint') {
+    return value <= BigInt(Number.MAX_SAFE_INTEGER) &&
+      value >= BigInt(Number.MIN_SAFE_INTEGER)
+      ? Number(value)
+      : `i64:${value}`;
+  }
+  if (Array.isArray(value)) {
+    return value.map(normalizeTypedIntegers);
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        key,
+        normalizeTypedIntegers(item),
+      ]),
+    );
+  }
+  return value;
+}
+
 function writeRecord(runtimeDir, record) {
   const payload = record.payload ?? record;
   const raw = Buffer.from(stableStringify(payload), 'utf8');
@@ -110,10 +131,7 @@ function selectedNodeResults(runtimeDir) {
       scope: 'source',
       source_id: 'node-synth',
     }),
-    status: kungfu.runStorageServiceOperation('status', runtimeDir, {
-      scope: 'source',
-      source_id: 'node-synth',
-    }),
+    status: kungfu.storageStatusTyped(runtimeDir, 'node-synth'),
     layout: kungfu.runStorageServiceOperation('layout', runtimeDir, {
       scope: 'all',
       runtime_home: path.dirname(runtimeDir),
@@ -143,11 +161,9 @@ function selectedNodeResults(runtimeDir) {
       since: '2026-07-09T00:00:00Z',
     }),
     bundle,
-    query: kungfu.runStorageServiceOperation('query', runtimeDir, {
-      scope: 'source',
+    query: kungfu.storageQueryTyped(runtimeDir, 'entries', {
       source_id: 'node-synth',
-      query: 'entries',
-      kind: 'note',
+      entry_kind: 'note',
       limit: 10,
     }),
     verify: kungfu.runStorageServiceOperation('verify_sync', runtimeDir, {
@@ -274,16 +290,25 @@ out = {
         range_filter={"since": "2026-07-09T00:00:00Z"},
     ),
     "bundle": bundle,
-    "query": service.query_projection(
+    "query": service._runtime().storage_query_typed(
         runtime_dir,
-        query="entries",
+        "entries",
         source_id="node-synth",
-        kind="note",
+        entry_kind="note",
         limit=10,
     ),
     "verify": service.verify_local_sync(runtime_dir, source_id="node-synth"),
 }
-print(json.dumps(out, sort_keys=True, separators=(",", ":")))
+def node_safe(value):
+    if isinstance(value, dict):
+        return {key: node_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [node_safe(item) for item in value]
+    if isinstance(value, int) and not isinstance(value, bool) and abs(value) > 2**53 - 1:
+        return f"i64:{value}"
+    return value
+
+print(json.dumps(node_safe(out), sort_keys=True, separators=(",", ":")))
 `;
   const result = spawnSync(
     'uv',
@@ -348,7 +373,9 @@ for (const providerCase of providerCases) {
           );
           assert.equal(rebuilt.ok, true);
 
-          const nodeResults = selectedNodeResults(runtimeDir);
+          const nodeResults = normalizeTypedIntegers(
+            selectedNodeResults(runtimeDir),
+          );
           const pythonResults = selectedPythonResults(runtimeDir);
           // the provider cache and its live handle state are process-local
           // observability (each runtime is its own process with its own
@@ -438,7 +465,7 @@ for (const providerCase of providerCases) {
           assert.equal(nodeResults.repairApply.dry_run, true);
           assert.equal(nodeResults.bundle.records.length, 2);
           assert.equal(nodeResults.exported.length, 1);
-          assert.equal(nodeResults.query.row_count, 2);
+          assert.equal(nodeResults.query.rows.length, 2);
           assert.equal(
             nodeResults.query.rows[0].storage_source_id,
             'node-synth',

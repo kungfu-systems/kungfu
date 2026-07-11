@@ -8,6 +8,7 @@
   "description": "Kungfu Core Library",
   "license": "Apache-2.0",
   "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "repository": {
     "url": "https://github.com/kungfu-systems/kungfu.git"
   },
