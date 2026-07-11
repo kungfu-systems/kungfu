@@ -4,6 +4,7 @@
 #define KUNGFU_YIJINJING_ACTION_RECORDER_H
 
 #include <kungfu/runtime/common.h>
+#include <kungfu/view/action_envelope.h>
 #include <kungfu/yijinjing/journal/journal.h>
 #include <kungfu/yijinjing/schema/core.h>
 
@@ -68,6 +69,8 @@ public:
   record_receipt record_bytes(int32_t carrier_type, const std::vector<uint8_t> &payload, record_options options = {});
 
   record_receipt record_json(int32_t carrier_type, const std::string &json_payload, record_options options = {});
+
+  record_receipt record_action(const view::action::envelope &envelope, record_options options = {});
 
   record_receipt mark(int32_t carrier_type, record_options options = {});
 

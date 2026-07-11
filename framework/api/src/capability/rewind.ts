@@ -146,40 +146,24 @@ export type OpenRewindOptions = {
 const decoder = new TextDecoder();
 const ACTION_ENVELOPE_CARRIER = 1000;
 
-type ActionEnvelope = {
-  schema?: string;
-  action_type?: string;
-  payload?: {
-    encoding?: string;
-    content_transfer_encoding?: string;
-    data?: string;
-  };
-};
-
-function decodeEnvelope(bytes: Uint8Array): {
+function decodeEnvelope(
+  binding: KfNativeBinding,
+  bytes: Uint8Array,
+): {
   actionType: string;
   payload: Uint8Array;
 } | null {
-  const jsonText = Buffer.from(bytes).toString('utf8').replace(/\0+$/u, '');
-  if (!jsonText) return null;
-  let envelope: ActionEnvelope;
-  try {
-    envelope = JSON.parse(jsonText) as ActionEnvelope;
-  } catch {
-    return null;
-  }
+  const envelope = binding.decodeActionEnvelope(bytes);
   if (
-    envelope.schema !== 'kungfu.action-envelope/v1' ||
-    typeof envelope.action_type !== 'string' ||
-    envelope.payload?.encoding !== 'flatbuffers' ||
-    envelope.payload.content_transfer_encoding !== 'base64' ||
-    typeof envelope.payload.data !== 'string'
+    envelope === null ||
+    envelope.payload?.encoding !== 1 ||
+    !(envelope.payload.data instanceof Uint8Array)
   ) {
     return null;
   }
   return {
     actionType: envelope.action_type,
-    payload: new Uint8Array(Buffer.from(envelope.payload.data, 'base64')),
+    payload: envelope.payload.data,
   };
 }
 
@@ -336,13 +320,16 @@ export function openRewind(options: OpenRewindOptions): Rewind {
   // `.bfbs`; decoders are deduped by schema hash.
   const loadBinders = (): Map<
     string,
-    { kind: string; decoder: ReflectionDecoder }
+    { kind: string; decoder: ReflectionDecoder; schemaBfbs: Uint8Array }
   > => {
     const binders = new Map<
       string,
-      { kind: string; decoder: ReflectionDecoder }
+      { kind: string; decoder: ReflectionDecoder; schemaBfbs: Uint8Array }
     >();
-    const byHash = new Map<string, ReflectionDecoder>();
+    const byHash = new Map<
+      string,
+      { decoder: ReflectionDecoder; schemaBfbs: Uint8Array }
+    >();
     let runIds: string[];
     try {
       runIds = readDir(`${runtimeDir}/rewind`);
@@ -365,18 +352,22 @@ export function openRewind(options: OpenRewindOptions): Rewind {
         manifest.schema_bindings ?? {},
       )) {
         if (binders.has(actionType)) continue;
-        let dec = byHash.get(binding_.schema_hash);
-        if (!dec) {
+        let schema = byHash.get(binding_.schema_hash);
+        if (!schema) {
           try {
-            dec = new ReflectionDecoder(
-              readFile(`${bundle}/schemas/${binding_.schema_hash}.bfbs`),
+            const schemaBfbs = readFile(
+              `${bundle}/schemas/${binding_.schema_hash}.bfbs`,
             );
+            schema = {
+              decoder: new ReflectionDecoder(schemaBfbs),
+              schemaBfbs,
+            };
           } catch {
             continue; // schema blob missing/unreadable, skip this binding
           }
-          byHash.set(binding_.schema_hash, dec);
+          byHash.set(binding_.schema_hash, schema);
         }
-        binders.set(actionType, { kind: binding_.name, decoder: dec });
+        binders.set(actionType, { kind: binding_.name, ...schema });
       }
     }
     return binders;
@@ -389,13 +380,23 @@ export function openRewind(options: OpenRewindOptions): Rewind {
     while (assemble.dataAvailable()) {
       const frame = assemble.currentFrame();
       if (frame.carrierType() === ACTION_ENVELOPE_CARRIER) {
-        const envelope = decodeEnvelope(frame.dataBytes());
+        const envelope = decodeEnvelope(binding, frame.dataBytes());
         if (!envelope) {
           assemble.next();
           continue;
         }
         const bound = binders.get(envelope.actionType);
         if (!bound) {
+          assemble.next();
+          continue;
+        }
+        if (
+          !binding.verifyFlatbufferPayload(
+            bound.schemaBfbs,
+            envelope.payload,
+            bound.kind,
+          )
+        ) {
           assemble.next();
           continue;
         }

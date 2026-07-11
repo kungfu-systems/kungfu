@@ -24,7 +24,7 @@ from kungfu.atlas import (
     importer,
     payloads,
 )
-from kungfu.action_envelope import decode_action_envelope
+from kungfu.action_envelope import decode_action_envelope, encode_action_envelope
 from kungfu.storage import service as storage_service
 
 lf = kungfu.__binding__.yijinjing
@@ -58,10 +58,6 @@ def _text(value):
     return text or None
 
 
-def _journal_payload(envelope):
-    return payloads.canonical_json_bytes(envelope)
-
-
 def _receipt_value(receipt, name, default=None):
     return getattr(receipt, name, default)
 
@@ -90,8 +86,8 @@ class ImportStore:
         )
 
     def _append_envelope(self, envelope):
-        data = _journal_payload(envelope)
-        receipt = self.recorder.record_json(CARRIER_ATLAS_ACTION, data.decode("utf-8"))
+        data = encode_action_envelope(envelope)
+        receipt = self.recorder.record_action(envelope)
         return {
             "frame_uid": receipt.frame_uid,
             "trigger_frame_uid": receipt.trigger_frame_uid,
@@ -343,10 +339,11 @@ class ImportStore:
             "hash_algorithm": payloads.CONTENT_HASH_ALGORITHM_SHA256,
             "schema_bindings": {
                 str(carrier_type): {
-                    "schema_kind": "json",
+                    "schema_kind": "flatbuffers",
                     "name": name,
                     "schema": payloads.ACTION_ENVELOPE_SCHEMA,
                     "schema_version": 1,
+                    "file_identifier": "KFAE",
                 }
                 for carrier_type, name in CARRIER_TYPE_NAMES.items()
             },

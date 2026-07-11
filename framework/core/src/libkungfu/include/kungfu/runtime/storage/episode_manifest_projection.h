@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include <nlohmann/json.hpp>
+#include <kungfu/runtime/storage/projection_types.h>
 
 #include <kungfu/yijinjing/storage/episode_manifest.h>
 
@@ -33,12 +33,12 @@ public:
   // clear tables, replay every typed record. EpisodeOpen replays first-wins
   // to match the fold's immutable-identity rule; the other record families
   // upsert by their declared primary keys. Returns per-table row counts.
-  [[nodiscard]] nlohmann::json rebuild() const;
+  [[nodiscard]] storage_projection_rebuild_result rebuild_typed() const;
 
   // Verify the projection against the journal's typed record stream. Reports
   // drift (projection row counts diverging from distinct-primary-key journal
   // counts) as degraded, missing projection as a distinct honest state.
-  [[nodiscard]] nlohmann::json verify() const;
+  [[nodiscard]] storage_projection_verify_result verify_typed() const;
 
   // Read the append-preserving query projection. The caller must verify the
   // projection first; this method never falls back to the authority journal.

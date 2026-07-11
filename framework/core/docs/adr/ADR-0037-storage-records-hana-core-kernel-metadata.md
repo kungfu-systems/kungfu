@@ -1,7 +1,6 @@
 # ADR-0037: ADR-0018 storage-service records are Hana-core kernel metadata; JSON is an edge projection, not the contract
 
-- Status: accepted; record/journal/projection migration delivered, typed service
-  interface still staged (see "First delivery")
+- Status: accepted; record/journal/projection and typed service migration delivered
 - Date: 2026-07-09
 - Category: (architecture) storage-service record representation and schema
   ownership — which substrate defines source registry, manifest, and fsck
@@ -227,11 +226,10 @@ view boundary, JSON edge rule, and exclusive SQLite projection routing.
   it in the deterministic exchange bundle. fsck verifies journal fold
   consistency, the recomputed sync-root chain, the committed entries document,
   payload references through the ADR-0040 content store, and projection drift
-  (degraded, never failed). The current `storage_service` virtual methods and
-  options still carry `nlohmann::json`; those signatures are a transitional
-  edge-shaped semantic interface, not completion of this ADR. ADR-0047 requires
-  typed request/result/view and query-row APIs with JSON moved to a named edge
-  adapter.
+  (degraded, never failed). The authoritative `storage_service` virtual methods
+  now use typed request/result/view and query-row APIs. JSON compatibility lives
+  behind the named `json_edge.h` adapter, and the schema-authority gate prevents
+  it from re-entering public storage semantic headers.
 
 ## Explicitly out of scope
 

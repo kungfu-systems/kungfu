@@ -197,6 +197,13 @@ record_receipt action_recorder::record_json(int32_t carrier_type, const std::str
                         static_cast<uint32_t>(json_payload.size()), options);
 }
 
+record_receipt action_recorder::record_action(const view::action::envelope &envelope, record_options options) {
+  const auto payload = view::action::encode(envelope);
+  options.data_type = FrameDataType::Raw;
+  return record_payload(view::action::ACTION_ENVELOPE_CARRIER_TYPE, payload.data(),
+                        static_cast<uint32_t>(payload.size()), options);
+}
+
 record_receipt action_recorder::mark(int32_t carrier_type, record_options options) {
   options.data_type = FrameDataType::Raw;
   return record_payload(carrier_type, nullptr, 0, options);

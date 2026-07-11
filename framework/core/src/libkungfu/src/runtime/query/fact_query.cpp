@@ -760,8 +760,8 @@ query_result run_episode_authority_scan(const std::string &runtime_dir, const lo
 query_result run_episode_sqlite_projection(const std::string &runtime_dir, const logical_plan &plan) {
   const auto &definition = plan.definition;
   storage_service_api::episode_manifest_projection projection(runtime_dir);
-  const auto verification = projection.verify();
-  if (!verification.value("projection_present", false) || !verification.value("ok", false)) {
+  const auto verification = projection.verify_typed();
+  if (!verification.projection_present || !verification.ok) {
     throw std::runtime_error("Episode SQLite query projection is absent or stale; rebuild it before execution");
   }
   const auto fold = definition.basis.selected_cut.kind == cut_kind::Head
@@ -771,7 +771,7 @@ query_result run_episode_sqlite_projection(const std::string &runtime_dir, const
                           {{"engine", "episode-sqlite-projection/v1"},
                            {"source", "sqlite-projection"},
                            {"projection_verified", true},
-                           {"projection_status", verification.value("status", "unknown")},
+                           {"projection_status", verification.status},
                            {"projection_schema", storage_service_api::EPISODE_MANIFEST_PROJECTION_SCHEMA_V1}});
 }
 

@@ -221,4 +221,6 @@ def test_sealed_missing_ref_fails_under_both_backends(tmp_path, provider):
     fsck = service.fsck(runtime_dir, episode_id=9)
     assert not fsck["ok"]
     assert fsck["status"] == "failed"
-    assert "episode_payload_ref_missing" in [e["code"] for e in fsck["errors"]]
+    assert "episode_payload_ref_missing" in [
+        issue["code"] for issue in fsck["issues"] if issue["severity"] == "error"
+    ]

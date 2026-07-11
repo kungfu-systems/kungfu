@@ -320,10 +320,12 @@ function freezeNuitka(bt) {
 // the mapping identical to kungfu-trunk's python_request (crates/trunk).
 /** @param {string} pin */
 function pbsKey(pin) {
-  const osName = { darwin: 'macos', win32: 'windows', linux: 'linux' }[
-    process.platform
-  ];
-  const arch = { arm64: 'aarch64', x64: 'x86_64' }[process.arch];
+  /** @type {Record<string, string>} */
+  const osNames = { darwin: 'macos', win32: 'windows', linux: 'linux' };
+  /** @type {Record<string, string>} */
+  const architectures = { arm64: 'aarch64', x64: 'x86_64' };
+  const osName = osNames[process.platform];
+  const arch = architectures[process.arch];
   if (!osName || !arch) {
     console.error(
       `[freeze] assemble: unsupported platform ${process.platform}/${process.arch}`,

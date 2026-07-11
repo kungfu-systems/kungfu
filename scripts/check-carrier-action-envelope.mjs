@@ -37,6 +37,24 @@ const ALLOCATION_PATTERNS = [
   },
 ];
 
+const LEGACY_ENVELOPE_PATTERNS = [
+  {
+    name: 'UTF-8 JSON envelope decode',
+    re: /Buffer\.from\s*\(\s*bytes\s*\)[^\n]*toString\s*\(\s*['"]utf8['"]\s*\)/g,
+  },
+  {
+    name: 'base64 envelope transfer',
+    re: /content_transfer_encoding|Buffer\.from\s*\([^\n]*['"]base64['"]\s*\)/gi,
+  },
+];
+
+const NATIVE_ENVELOPE_CONSUMERS = new Set([
+  'framework/api/src/capability/rewind.ts',
+  'framework/api/src/capability/work.ts',
+  'framework/core/src/python/kungfu/rewind/wire.py',
+  'framework/core/src/python/kungfu/work/wire.py',
+]);
+
 function git(gitArgs) {
   const result = spawnSync('git', gitArgs, {
     cwd: ROOT,
@@ -183,11 +201,24 @@ for (const rel of selectedFiles()) {
       });
     }
   }
+  if (NATIVE_ENVELOPE_CONSUMERS.has(rel)) {
+    for (const pattern of LEGACY_ENVELOPE_PATTERNS) {
+      pattern.re.lastIndex = 0;
+      for (const match of text.matchAll(pattern.re)) {
+        hits.push({
+          file: rel,
+          line: lineNumber(text, match.index || 0),
+          pattern: pattern.name,
+          text: match[0].trim(),
+        });
+      }
+    }
+  }
 }
 
 if (hits.length) {
   console.error(
-    '[carrier-action] raw open-layer business allocation is blocked.',
+    '[carrier-action] raw allocation or legacy JSON/base64 envelope transport is blocked.',
   );
   console.error(
     '[carrier-action] New v4 facts must use carrier_type=1000 with action_type/schema_ref.',

@@ -8,8 +8,8 @@
 
 #include <nlohmann/json.hpp>
 
-#include <kungfu/yijinjing/schema/types.h>
 #include <kungfu/yijinjing/storage/content_store.h>
+#include <kungfu/yijinjing/storage/manifest_catalog_types.h>
 
 namespace kungfu::yijinjing::storage {
 
@@ -23,12 +23,6 @@ namespace kungfu::yijinjing::storage {
 // committed by content hash into the content store so the JSON edge and the
 // cross-store sync root stay byte-reproducible. JSON is an edge projection
 // only, never the contract.
-inline constexpr const char *MANIFEST_CATALOG_SCHEMA_V1 = "kungfu.storage.manifest-catalog/v1";
-inline constexpr const char *MANIFEST_CATALOG_NAMESPACE = "storage";
-inline constexpr const char *MANIFEST_CATALOG_NAME = "manifest-catalog";
-// Content-store namespace holding the canonical accepted entries documents.
-inline constexpr const char *MANIFEST_ENTRIES_CONTENT_NAMESPACE = "manifests";
-
 // JSON edge schemas. These name edge projections and exchange documents over
 // the journal records, not stored contracts.
 inline constexpr const char *STORAGE_SOURCE_RECORD_SCHEMA_V1 = "kungfu.storage.source-record/v1";
@@ -70,14 +64,6 @@ struct storage_issue {
 
 [[nodiscard]] nlohmann::json build_storage_schema_inventory(const nlohmann::json &entries);
 
-// Typed POD records folded off the manifest-catalog journal, in append order.
-struct manifest_catalog_journal_records {
-  std::vector<yijinjing::types::ImportManifestAccepted> manifests = {};
-  std::vector<yijinjing::types::ManifestEntryRecorded> entries = {};
-  std::vector<yijinjing::types::ExportBundleRecorded> exports = {};
-  std::vector<yijinjing::types::ChannelCursorUpdated> cursors = {};
-};
-
 class manifest_catalog_store {
 public:
   explicit manifest_catalog_store(std::string runtime_dir);
@@ -87,6 +73,17 @@ public:
   // Read the journal back as typed POD records (append order). Authority for
   // rebuildable projections such as the SQLite cache.
   [[nodiscard]] manifest_catalog_journal_records read_typed_records() const;
+
+  // Typed semantic entrypoints. JSON methods below are compatibility edge
+  // adapters over these owned views.
+  [[nodiscard]] manifest_document_view accept_manifest_typed(const manifest_document_view &input,
+                                                             content_store &store) const;
+
+  [[nodiscard]] std::optional<manifest_document_view> latest_manifest_typed(const std::string &source_id,
+                                                                            content_store &store) const;
+
+  void record_export_typed(const manifest_document_view &manifest, uint64_t exported_records,
+                           const std::string &range_since = {}, const std::string &range_until = {}) const;
 
   // Accept one import manifest. `input` is the adapter-edge document (the
   // same vocabulary the retired JSON builder took: manifest_id, source ids,
@@ -125,6 +122,8 @@ public:
   // and each present payload verified through the content store. Projection
   // drift is the runtime projection's own verify; this checks the journal
   // and the content-addressed facts.
+  [[nodiscard]] manifest_catalog_fsck_result fsck_typed(const std::string &source_id, content_store &store) const;
+
   [[nodiscard]] nlohmann::json fsck(const std::string &source_id, content_store &store) const;
 
 private:

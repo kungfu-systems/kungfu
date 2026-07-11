@@ -83,8 +83,11 @@ def add_source(
     # Register the source in the storage kernel's source-registry journal
     # (ADR-0037); the edge record comes back from the journal fold, not from
     # a JSON registry file.
-    inspected = storage_service.source_inspect(str(runtime_dir), source_id=source_id)
-    if not inspected.get("ok"):
+    try:
+        inspected = storage_service.source_inspect(
+            str(runtime_dir), source_id=source_id
+        )
+    except ValueError:
         storage_service.source_register(
             str(runtime_dir),
             source_id=source_id,

@@ -13,6 +13,10 @@ const kungfu = kungfuFactory();
 const nativeAvailable =
   typeof kungfu.runStorageServiceOperation === 'function' &&
   typeof kungfu.acceptStorageManifest === 'function';
+const typedStatusAvailable = typeof kungfu.storageStatusTyped === 'function';
+const actionEnvelopeAvailable =
+  typeof kungfu.encodeActionEnvelope === 'function' &&
+  typeof kungfu.decodeActionEnvelope === 'function';
 
 function runtimeEnv() {
   const key =
@@ -40,6 +44,27 @@ function stableStringify(value) {
       .join(',')}}`;
   }
   return JSON.stringify(value);
+}
+
+function normalizeTypedIntegers(value) {
+  if (typeof value === 'bigint') {
+    return value <= BigInt(Number.MAX_SAFE_INTEGER) &&
+      value >= BigInt(Number.MIN_SAFE_INTEGER)
+      ? Number(value)
+      : `i64:${value}`;
+  }
+  if (Array.isArray(value)) {
+    return value.map(normalizeTypedIntegers);
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        key,
+        normalizeTypedIntegers(item),
+      ]),
+    );
+  }
+  return value;
 }
 
 function writeRecord(runtimeDir, record) {
@@ -109,21 +134,15 @@ function selectedNodeResults(runtimeDir) {
       scope: 'source',
       source_id: 'node-synth',
     }),
-    status: kungfu.runStorageServiceOperation('status', runtimeDir, {
-      scope: 'source',
-      source_id: 'node-synth',
-    }),
-    layout: kungfu.runStorageServiceOperation('layout', runtimeDir, {
-      scope: 'all',
+    status: kungfu.storageStatusTyped(runtimeDir, 'node-synth'),
+    layout: kungfu.storageLayoutTyped(runtimeDir, {
       runtime_home: path.dirname(runtimeDir),
       config_home: path.join(path.dirname(runtimeDir), 'config'),
     }),
-    fsck: kungfu.runStorageServiceOperation('fsck', runtimeDir, {
-      scope: 'source',
+    fsck: kungfu.storageFsckTyped(runtimeDir, {
       source_id: 'node-synth',
     }),
-    repair: kungfu.runStorageServiceOperation('repair_plan', runtimeDir, {
-      scope: 'source',
+    repair: kungfu.storageRepairPlanTyped(runtimeDir, {
       source_id: 'node-synth',
       dry_run: true,
     }),
@@ -142,11 +161,9 @@ function selectedNodeResults(runtimeDir) {
       since: '2026-07-09T00:00:00Z',
     }),
     bundle,
-    query: kungfu.runStorageServiceOperation('query', runtimeDir, {
-      scope: 'source',
+    query: kungfu.storageQueryTyped(runtimeDir, 'entries', {
       source_id: 'node-synth',
-      query: 'entries',
-      kind: 'note',
+      entry_kind: 'note',
       limit: 10,
     }),
     verify: kungfu.runStorageServiceOperation('verify_sync', runtimeDir, {
@@ -173,6 +190,220 @@ function withStorageProvider(provider, fn) {
     }
   }
 }
+
+test(
+  'Node action envelope uses verified FlatBuffers bytes and a Raw carrier',
+  {
+    skip:
+      actionEnvelopeAvailable || process.env.KUNGFU_REQUIRE_NATIVE === '1'
+        ? false
+        : 'built action envelope binding is unavailable',
+  },
+  () => {
+    const value = {
+      version: 1,
+      action_type: 'rewind.model.response',
+      schema_ref: { id: 'kungfu.rewind.ModelResponse', version: 3 },
+      actor: { id: 'agent-1', kind: 'agent' },
+      session: { run_id: 'run-1' },
+      payload: {
+        encoding: 'flatbuffers',
+        data: Buffer.from('payload'),
+      },
+    };
+    const encoded = Buffer.from(kungfu.encodeActionEnvelope(value));
+    assert.notEqual(encoded[0], '{'.charCodeAt(0));
+    assert.equal(encoded.subarray(4, 8).toString('ascii'), 'KFAE');
+
+    const decoded = kungfu.decodeActionEnvelope(encoded);
+    assert.equal(decoded.action_type, value.action_type);
+    assert.deepEqual(decoded.schema_ref, value.schema_ref);
+    assert.equal(decoded.payload.encoding, 1);
+    assert.deepEqual(Buffer.from(decoded.payload.data), Buffer.from('payload'));
+    assert.equal(decoded.payload.hash_algorithm, 'sha256');
+    assert.match(decoded.payload.hash, /^[0-9a-f]{64}$/);
+    assert.equal(decoded.payload.byte_len, 7n);
+    const envelopeSchema = fs.readFileSync(
+      path.join(coreDir, 'src', 'libkungfu', 'schema', 'ActionEnvelope.bfbs'),
+    );
+    assert.equal(kungfu.verifyFlatbufferPayload(envelopeSchema, encoded), true);
+    assert.equal(
+      kungfu.verifyFlatbufferPayload(envelopeSchema, encoded.subarray(0, 16)),
+      false,
+    );
+
+    const corrupted = Buffer.from(encoded);
+    corrupted[corrupted.indexOf(Buffer.from('payload'))] ^= 0xff;
+    assert.equal(kungfu.decodeActionEnvelope(corrupted), null);
+
+    const runtimeDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'kf-action-envelope-node-'),
+    );
+    const recorder = kungfu.ActionRecorder(runtimeDir, 'action', 'binary');
+    const receipt = recorder.recordAction(value);
+    assert.equal(receipt.carrierType, kungfu.ACTION_ENVELOPE_CARRIER_TYPE);
+    assert.equal(receipt.dataType, 0);
+  },
+);
+
+test(
+  'Hana typed storage status bypasses JSON stringify/parse transport',
+  {
+    skip:
+      typedStatusAvailable || process.env.KUNGFU_REQUIRE_NATIVE === '1'
+        ? false
+        : 'typed storage status binding is unavailable',
+  },
+  () => {
+    const runtimeDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'kf-typed-status-'),
+    );
+    kungfu.runStorageServiceOperation('episode_begin', runtimeDir, {
+      episode_id: '701',
+      location_uid: 17,
+      title: 'typed-query',
+      actor: 'binding-test',
+    });
+    const originalParse = JSON.parse;
+    const originalStringify = JSON.stringify;
+    try {
+      JSON.parse = () => {
+        throw new Error('typed status binding must not call JSON.parse');
+      };
+      JSON.stringify = () => {
+        throw new Error('typed status binding must not call JSON.stringify');
+      };
+      const status = kungfu.storageStatusTyped(runtimeDir);
+      assert.equal(status.ok, true);
+      assert.equal(status.source_id, null);
+      assert.equal(typeof status.provider_runtime, 'object');
+      assert.equal(status.provider_runtime.read_fill_cache, null);
+      assert.equal(typeof status.provider_cache.entries, 'bigint');
+      assert.equal(Array.isArray(status.projections), true);
+      assert.equal(
+        status.projections[0].verification.authority,
+        'yijinjing-journal',
+      );
+      const query = kungfu.storageQueryTyped(runtimeDir, 'episode_records', {
+        episode_id: 701n,
+      });
+      const gc = kungfu.storageGcPlanTyped(runtimeDir);
+      const rebuild = kungfu.storageRebuildIndexTyped(runtimeDir, {
+        dry_run: true,
+      });
+      const compact = kungfu.storageCompactPlanTyped(runtimeDir);
+      const fsck = kungfu.storageFsckTyped(runtimeDir, { episode_id: 701n });
+      const repair = kungfu.storageRepairPlanTyped(runtimeDir, {
+        episode_id: 701n,
+        dry_run: true,
+      });
+      const episode = kungfu.storageEpisodeBeginTyped(runtimeDir, {
+        episode_id: 702n,
+        begin_time: 1000,
+        title: 'typed-writer',
+      });
+      const heartbeat = kungfu.storageEpisodeHeartbeatTyped(runtimeDir, {
+        episode_id: 702n,
+        update_time: 1100,
+      });
+      const attachedRef = kungfu.storageEpisodeAttachRefTyped(runtimeDir, {
+        episode_id: 702n,
+        ref_kind: 'input_frame',
+        ref_uid: 9n,
+      });
+      const attachedFrame = kungfu.storageEpisodeAttachFrameTyped(runtimeDir, {
+        episode_id: 702n,
+        frame_uid: 10n,
+        gen_time: 1200,
+      });
+      const closed = kungfu.storageEpisodeCloseTyped(runtimeDir, {
+        episode_id: 702n,
+        end_time: 1300,
+        frame_count: 1n,
+      });
+      const listed = kungfu.storageEpisodeListTyped(runtimeDir);
+      const inspected = kungfu.storageEpisodeInspectTyped(runtimeDir, {
+        episode_id: 702n,
+      });
+      kungfu.storageEpisodeBeginTyped(runtimeDir, {
+        episode_id: 703n,
+        begin_time: 1400,
+      });
+      const recovered = kungfu.storageEpisodeRecoverTyped(runtimeDir, {
+        episode_id: 703n,
+        end_time: 1500,
+      });
+      const projection =
+        kungfu.storageEpisodeProjectionRebuildTyped(runtimeDir);
+      const registeredSource = kungfu.storageSourceRegisterTyped(runtimeDir, {
+        source_id: 'typed-source',
+        kind: 'adapter',
+        coordinate: 'adapter://typed',
+      });
+      const updatedSource = kungfu.storageSourceUpdateHeadTyped(runtimeDir, {
+        source_id: 'typed-source',
+        update_time: 1600,
+        head: 'head-1',
+      });
+      const acceptedRange = kungfu.storageSourceRecordAcceptedRangeTyped(
+        runtimeDir,
+        {
+          source_id: 'typed-source',
+          manifest_id: 'manifest-1',
+          accept_time: 1700,
+        },
+      );
+      const sourceList = kungfu.storageSourceListTyped(runtimeDir);
+      const sourceInspect = kungfu.storageSourceInspectTyped(runtimeDir, {
+        source_id: 'typed-source',
+      });
+      const sourceFsck = kungfu.storageSourceRegistryFsckTyped(runtimeDir, {
+        source_id: 'typed-source',
+      });
+      const sourceRebuild =
+        kungfu.storageSourceRegistryRebuildTyped(runtimeDir);
+      const layout = kungfu.storageLayoutTyped(runtimeDir, {
+        runtime_home: path.dirname(runtimeDir),
+      });
+      assert.equal(query.query, 4);
+      assert.equal(query.rows[0].body.title, 'typed-query');
+      assert.equal(query.rows[0].body.location_uid, 17);
+      assert.equal(gc.dry_run, true);
+      assert.equal(rebuild.would_write, true);
+      assert.equal(compact.dry_run, true);
+      assert.equal(fsck.scope, 2);
+      assert.equal(fsck.episode_id, 701n);
+      assert.equal(repair.scope, 2);
+      assert.equal(repair.episode_id, 701n);
+      assert.equal(repair.dry_run, true);
+      assert.equal(episode.episode_id, 702n);
+      assert.equal(heartbeat.update_time, 1100n);
+      assert.equal(attachedRef.ref_kind, 1);
+      assert.equal(attachedFrame.frame_uid, 10n);
+      assert.equal(closed.close.status, 2);
+      assert.equal(listed.episodes[0].episode_id, 702n);
+      assert.equal(inspected.content_root.status, 4);
+      assert.equal(recovered.recovered[0].close.status, 3);
+      assert.equal(projection.authority, 'yijinjing-journal');
+      assert.equal(registeredSource.kind, 4);
+      assert.equal(updatedSource.head, 'head-1');
+      assert.equal(acceptedRange.status, 1);
+      assert.equal(
+        sourceList.sources[0].source_uid,
+        registeredSource.source_uid,
+      );
+      assert.equal(sourceInspect.source.current_head, 'head-1');
+      assert.equal(sourceFsck.journal.ok, true);
+      assert.equal(sourceRebuild.authority, 'yijinjing-journal');
+      assert.equal(layout.owner, 'libkungfu');
+      assert.equal(layout.runtime_home, path.dirname(runtimeDir));
+    } finally {
+      JSON.parse = originalParse;
+      JSON.stringify = originalStringify;
+      fs.rmSync(runtimeDir, { recursive: true, force: true });
+    }
+  },
+);
 
 function selectedPythonResults(runtimeDir) {
   const script = String.raw`
@@ -221,16 +452,25 @@ out = {
         range_filter={"since": "2026-07-09T00:00:00Z"},
     ),
     "bundle": bundle,
-    "query": service.query_projection(
+    "query": service._runtime().storage_query_typed(
         runtime_dir,
-        query="entries",
+        "entries",
         source_id="node-synth",
-        kind="note",
+        entry_kind="note",
         limit=10,
     ),
     "verify": service.verify_local_sync(runtime_dir, source_id="node-synth"),
 }
-print(json.dumps(out, sort_keys=True, separators=(",", ":")))
+def node_safe(value):
+    if isinstance(value, dict):
+        return {key: node_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [node_safe(item) for item in value]
+    if isinstance(value, int) and not isinstance(value, bool) and abs(value) > 2**53 - 1:
+        return f"i64:{value}"
+    return value
+
+print(json.dumps(node_safe(out), sort_keys=True, separators=(",", ":")))
 `;
   const result = spawnSync(
     'uv',
@@ -295,7 +535,9 @@ for (const providerCase of providerCases) {
           );
           assert.equal(rebuilt.ok, true);
 
-          const nodeResults = selectedNodeResults(runtimeDir);
+          const nodeResults = normalizeTypedIntegers(
+            selectedNodeResults(runtimeDir),
+          );
           const pythonResults = selectedPythonResults(runtimeDir);
           // the provider cache and its live handle state are process-local
           // observability (each runtime is its own process with its own
@@ -314,10 +556,21 @@ for (const providerCase of providerCases) {
               provider_cache: _cache,
               ...rest
             }) => rest;
+            const stripExportCount = (fsck) => ({
+              ...fsck,
+              manifest_catalog: fsck.manifest_catalog
+                ? { ...fsck.manifest_catalog, exports: 0 }
+                : null,
+            });
             return {
               ...results,
               status: strip(results.status),
               layout: strip(results.layout),
+              fsck: stripExportCount(results.fsck),
+              repair: {
+                ...results.repair,
+                fsck: stripExportCount(results.repair.fsck),
+              },
             };
           };
           assert.deepEqual(
@@ -367,11 +620,7 @@ for (const providerCase of providerCases) {
               : 'stateless-filesystem',
           );
           assert.equal(nodeResults.fsck.ok, true);
-          assert.equal(
-            nodeResults.repair.schema,
-            'kungfu.storage.repair-plan/v1',
-          );
-          assert.equal(nodeResults.repair.candidate_count, 0);
+          assert.equal(nodeResults.repair.candidates.length, 0);
           assert.equal(
             nodeResults.repairFetch.schema,
             'kungfu.storage.repair-fetch/v1',
@@ -385,7 +634,7 @@ for (const providerCase of providerCases) {
           assert.equal(nodeResults.repairApply.dry_run, true);
           assert.equal(nodeResults.bundle.records.length, 2);
           assert.equal(nodeResults.exported.length, 1);
-          assert.equal(nodeResults.query.row_count, 2);
+          assert.equal(nodeResults.query.rows.length, 2);
           assert.equal(
             nodeResults.query.rows[0].storage_source_id,
             'node-synth',

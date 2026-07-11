@@ -219,7 +219,11 @@ export function bootRuntime(): Runtime {
       readDir: (d: string) => rewindFs.readdirSync(d),
     });
     const storage = openStorage({ binding, locator: { runtimeDir } });
-    const work = openWork({ binding, locator: { runtimeDir } });
+    const work = openWork({
+      binding,
+      locator: { runtimeDir },
+      readFile: (p: string) => rewindFs.readFileSync(p),
+    });
     const childProcess = window.require('node:child_process') as {
       execFileSync: (
         file: string,
