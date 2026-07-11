@@ -1140,13 +1140,6 @@ nlohmann::json load_latest_manifest_impl(const std::string &runtime_dir, const s
   return catalog_store(runtime_dir).latest_manifest(source_id, provider.content_store());
 }
 
-// The channel cursor is a journal record written at acceptance (ADR-0037);
-// reading it back is a fold over ChannelCursorUpdated, not a derivation from
-// the manifest edge.
-nlohmann::json accepted_cursor(const std::string &runtime_dir, const std::string &source_id) {
-  return catalog_store(runtime_dir).latest_cursor(source_id);
-}
-
 storage_projection_status_view source_registry_projection_status(const std::string &runtime_dir) {
   const auto projection = source_registry_projection(runtime_dir);
   return {PROJECTION_SOURCE_REGISTRY, projection.sqlite_path(), true, projection.verify_typed()};
@@ -1193,19 +1186,6 @@ nlohmann::json projection_status_json(const storage_projection_status_view &stat
   rendered["path"] = status.path;
   rendered["rebuildable"] = status.rebuildable;
   return rendered;
-}
-
-nlohmann::json source_registry_projection_report(const std::string &runtime_dir) {
-  return projection_status_json(source_registry_projection_status(runtime_dir));
-}
-
-nlohmann::json manifest_catalog_projection_report(const std::string &runtime_dir) {
-  return projection_status_json(manifest_catalog_projection_status(runtime_dir));
-}
-
-nlohmann::json storage_projection_reports(const std::string &runtime_dir) {
-  return nlohmann::json::array(
-      {source_registry_projection_report(runtime_dir), manifest_catalog_projection_report(runtime_dir)});
 }
 
 const char *verification_status_text(yy_enums::SourceVerificationStatus status) {
@@ -2023,6 +2003,7 @@ nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeRefAttach
 nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeClosed &record);
 nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeRootCommitted &record);
 nlohmann::json render_episode_close_write_result(const yy_storage::episode_close_write_result &result);
+nlohmann::json render_episode_recover_result(const yy_storage::episode_recover_result &result);
 nlohmann::json episode_record_row_json(const yy_storage::episode_manifest_record &record);
 nlohmann::json render_storage_episode_bundle_result(const storage_episode_bundle_result &result);
 
@@ -3160,63 +3141,6 @@ std::pair<nlohmann::json, std::string> load_payload_impl(const storage_provider 
   }
 }
 
-// Registered sources from the source-registry journal fold: the single source
-// catalog (the JSON sources.json registry is retired, ADR-0037 final slice).
-nlohmann::json list_sources_impl(const std::string &runtime_dir) {
-  nlohmann::json sources = nlohmann::json::array();
-  for (const auto &source : registry_store(runtime_dir).list().value("sources", nlohmann::json::array())) {
-    if (source.is_object()) {
-      sources.push_back(source);
-    }
-  }
-  std::sort(sources.begin(), sources.end(), [](const nlohmann::json &lhs, const nlohmann::json &rhs) {
-    return text_or(lhs, "source_id") < text_or(rhs, "source_id");
-  });
-  return sources;
-}
-
-nlohmann::json issue_to_json(const yy_storage::storage_issue &issue) {
-  nlohmann::json row = {{"severity", issue.severity}, {"code", issue.code}};
-  if (!issue.path.empty()) {
-    row["path"] = issue.path;
-  }
-  if (!issue.message.empty()) {
-    row["message"] = issue.message;
-  }
-  if (!issue.expected.is_null()) {
-    row["expected"] = issue.expected;
-  }
-  if (!issue.actual.is_null()) {
-    row["actual"] = issue.actual;
-  }
-  return row;
-}
-
-nlohmann::json fsck_error_report(const storage_service_options &options, const std::string &code,
-                                 const std::string &error) {
-  return {
-      {"ok", false},
-      {"scope", options.source_id.empty() ? "all" : "source"},
-      {"source_id", options.source_id.empty() ? nlohmann::json(nullptr) : nlohmann::json(options.source_id)},
-      {"errors", nlohmann::json::array({{{"code", code}, {"error", error}}})},
-      {"warnings", nlohmann::json::array()},
-      {"checked",
-       {
-           {"sources", 0},
-           {"manifests", 0},
-           {"payloads", 0},
-           {"schemas", 0},
-           {"accepted_ranges", 0},
-           {"source_records", 0},
-           {"projection_indexes", 0},
-           {"sqlite_projection_rows", 0},
-           {"orphan_payloads", 0},
-           {"episode_manifest_records", 0},
-           {"episodes", 0},
-       }},
-  };
-}
-
 storage_fsck_result fsck_typed_impl(const storage_fsck_request &request) {
   if (request.scope == storage_fsck_scope::Episode)
     return episode_fsck_typed_impl(request);
@@ -3477,31 +3401,15 @@ nlohmann::json compact_plan_impl(const storage_service_options &options) {
 // (register-once, head update, accepted range). Returns the accepted
 // manifest JSON edge.
 nlohmann::json accept_storage_manifest_impl(const std::string &runtime_dir, const nlohmann::json &input) {
-  const auto provider = shared_provider(runtime_dir);
-  const auto edge = catalog_store(runtime_dir).accept_manifest(input, provider->content_store());
-  const auto source_id = text_or(edge, "source_id");
-  const auto source = object_or_empty(edge, "source");
-  const auto sync_root = object_or_empty(edge, "sync_root");
-  const auto registry = registry_store(runtime_dir);
-  if (!registry.inspect(source_id).value("ok", false)) {
-    yy_storage::source_register_options reg{};
-    reg.source_id = source_id;
-    reg.kind = text_or(source, "kind") == "adapter" ? yy_enums::SourceKind::Adapter : yy_enums::SourceKind::Local;
-    reg.coordinate = text_or(source, "coordinate");
-    reg.head = text_or(edge, "source_head");
-    (void)registry.register_source(reg);
+  auto parsed = parse_storage_export_bundle({{"manifest", input}});
+  (void)default_storage_service().import_bundle({runtime_dir, {}, std::move(parsed), false});
+  const auto provider = provider_cache::instance().acquire(runtime_dir, {});
+  const auto accepted =
+      catalog_store(runtime_dir).latest_manifest_typed(text_or(input, "source_id", "local"), provider->content_store());
+  if (!accepted.has_value()) {
+    throw std::runtime_error("accepted manifest not found");
   }
-  yy_storage::source_head_update_options head{};
-  head.source_id = source_id;
-  head.head = text_or(edge, "source_head");
-  head.inventory_hash_algo = text_or(sync_root, "algorithm");
-  head.inventory_hash = text_or(sync_root, "value");
-  (void)registry.update_head(head);
-  yy_storage::accepted_range_options accepted{};
-  accepted.source_id = source_id;
-  accepted.manifest_id = text_or(edge, "manifest_id");
-  (void)registry.record_accepted_range(accepted);
-  return edge;
+  return render_manifest_document(*accepted);
 }
 
 nlohmann::json render_manifest_entry_view(const yy_storage::manifest_entry_view &entry) {
@@ -3986,13 +3894,15 @@ public:
     auto inspected = episode_ref_store(options).store.inspect(options.episode_id);
     auto qualification_options = options;
     qualification_options.scope = "episode";
-    const auto qualification_report = episode_fsck_impl(qualification_options);
-    inspected["qualification"] = qualification_report.at("qualification");
+    const auto fsck = default_storage_service().fsck(parse_storage_fsck_request(qualification_options));
+    if (fsck.qualification.has_value())
+      inspected["qualification"] = episode_qualification_json(*fsck.qualification);
     return inspected;
   }
 
   [[nodiscard]] nlohmann::json episode_recover(const storage_service_options &options) const {
-    return episode_store(options).recover(parse_episode_recover_options(options.operation_options));
+    return render_episode_recover_result(
+        episode_store(options).recover(parse_episode_recover_options(options.operation_options)));
   }
 
   [[nodiscard]] nlohmann::json episode_projection_rebuild(const storage_service_options &options) const {
@@ -4024,21 +3934,37 @@ public:
 
   [[nodiscard]] nlohmann::json source_registry_fsck(const storage_service_options &options) const {
     const auto source_id = text_or(options.operation_options, "source_id", options.source_id);
-    auto report = source_registry_store(options).fsck(source_id);
+    const auto journal = source_registry_store(options).fsck_typed(source_id);
+    const auto render_issue = [](const yy_storage::source_registry_fsck_issue &issue) {
+      nlohmann::json row = {{"code", issue.code}};
+      if (issue.source_uid.has_value())
+        row["source_uid"] = *issue.source_uid;
+      if (issue.source_id.has_value())
+        row["source_id"] = *issue.source_id;
+      if (issue.count.has_value())
+        row["count"] = *issue.count;
+      return row;
+    };
+    nlohmann::json errors = nlohmann::json::array();
+    for (const auto &issue : journal.errors)
+      errors.push_back(render_issue(issue));
+    nlohmann::json warnings = nlohmann::json::array();
+    for (const auto &issue : journal.warnings)
+      warnings.push_back(render_issue(issue));
+    const auto projection = source_registry_projection(options.runtime_dir).verify_typed();
     // ADR-0037: fsck verifies journal + projection. The journal is the
     // authority; a rebuildable projection that has drifted from it is degraded,
     // not failed.
-    auto projection = source_registry_projection(options.runtime_dir).verify();
-    report["projection"] = projection;
-    const bool journal_ok = report.value("ok", false);
-    const bool projection_degraded = projection.value("status", std::string("ok")) == "degraded";
-    report["ok"] = journal_ok && !projection_degraded;
-    if (!journal_ok) {
-      report["status"] = "failed";
-    } else if (projection_degraded) {
-      report["status"] = "degraded";
-    }
-    return report;
+    const bool projection_degraded = projection.status == "degraded";
+    return {{"ok", journal.ok && !projection_degraded},
+            {"status", !journal.ok ? "failed" : (projection_degraded ? "degraded" : "ok")},
+            {"schema", journal.schema},
+            {"runtime_dir", journal.runtime_dir},
+            {"authority", journal.authority},
+            {"errors", std::move(errors)},
+            {"warnings", std::move(warnings)},
+            {"checked", {{"source_registry_records", journal.source_registry_records}, {"sources", journal.sources}}},
+            {"projection", projection_verification_json(projection)}};
   }
 
   [[nodiscard]] nlohmann::json source_registry_rebuild(const storage_service_options &options) const {
@@ -4211,6 +4137,23 @@ nlohmann::json render_episode_close_write_result(const yy_storage::episode_close
     rendered["content_root"] = episode_record_body_json(*result.content_root);
   }
   return rendered;
+}
+
+nlohmann::json render_episode_recover_result(const yy_storage::episode_recover_result &result) {
+  nlohmann::json recovered = nlohmann::json::array();
+  for (const auto &item : result.recovered)
+    recovered.push_back(render_episode_close_write_result(item));
+  nlohmann::json skipped = nlohmann::json::array();
+  for (const auto &item : result.skipped_open)
+    skipped.push_back({{"episode_id", item.episode_id}, {"location_uid", item.location_uid}});
+  return {{"ok", true},
+          {"schema", yy_storage::EPISODE_MANIFEST_SCHEMA_V1},
+          {"runtime_dir", result.runtime_dir},
+          {"authority", "yijinjing-journal"},
+          {"recovered", std::move(recovered)},
+          {"recovered_count", result.recovered.size()},
+          {"skipped_open", std::move(skipped)},
+          {"skipped_count", result.skipped_open.size()}};
 }
 
 nlohmann::json episode_record_row_json(const yy_storage::episode_manifest_record &record) {

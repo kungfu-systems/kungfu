@@ -960,13 +960,13 @@ episode_close_write_result episode_manifest_store::abort(const episode_close_opt
   return end(abort_options);
 }
 
-nlohmann::json episode_manifest_store::recover(const episode_recover_options &options) const {
+episode_recover_result episode_manifest_store::recover(const episode_recover_options &options) const {
   const auto guard = acquire_writer_guard(runtime_dir_);
   auto fold = fold_typed_records();
   const auto end_time = options.end_time == 0 ? time::now_in_nano() : options.end_time;
   const auto reason = options.reason.empty() ? std::string("recovered") : options.reason;
   std::vector<EpisodeClosed> closes;
-  nlohmann::json skipped = nlohmann::json::array();
+  std::vector<episode_recover_skipped_open> skipped;
   for (const auto &[episode_id, view] : fold.episodes) {
     if (!view.opened || view.closed) {
       continue;
@@ -976,7 +976,7 @@ nlohmann::json episode_manifest_store::recover(const episode_recover_options &op
     }
     if (options.location_uid != 0 && view.open.location_uid != options.location_uid) {
       // Open Episodes owned by another location are reported, never mutated.
-      skipped.push_back({{"episode_id", episode_id}, {"location_uid", view.open.location_uid}});
+      skipped.push_back({episode_id, view.open.location_uid});
       continue;
     }
     EpisodeClosed record{};
@@ -990,12 +990,13 @@ nlohmann::json episode_manifest_store::recover(const episode_recover_options &op
     set_fixed_string(record.reason, reason);
     closes.push_back(record);
   }
-  nlohmann::json recovered = nlohmann::json::array();
+  std::vector<episode_close_write_result> recovered;
   if (!closes.empty()) {
     auto writer = make_writer(runtime_dir_);
     for (const auto &record : closes) {
       writer.write_at(record.end_time, 0, record);
-      auto row = record_json(record);
+      episode_close_write_result written{};
+      written.close = record;
       // ADR-0043: recovery seals were open Episodes, so each close here is
       // the first close — commit each Episode's content root after its seal.
       episode_manifest_record appended{};
@@ -1011,18 +1012,11 @@ nlohmann::json episode_manifest_store::recover(const episode_recover_options &op
       set_fixed_string(root_record.algorithm, root.algorithm);
       set_fixed_string(root_record.root_value, root.value);
       writer.write_at(root_record.commit_time, 0, root_record);
-      row["content_root"] = record_json(root_record);
-      recovered.push_back(row);
+      written.content_root = root_record;
+      recovered.push_back(std::move(written));
     }
   }
-  return {{"ok", true},
-          {"schema", EPISODE_MANIFEST_SCHEMA_V1},
-          {"runtime_dir", runtime_dir_},
-          {"authority", "yijinjing-journal"},
-          {"recovered", recovered},
-          {"recovered_count", recovered.size()},
-          {"skipped_open", skipped},
-          {"skipped_count", skipped.size()}};
+  return {runtime_dir_, std::move(recovered), std::move(skipped)};
 }
 
 void episode_manifest_store::for_each_typed_record(const episode_manifest_record_visitor &visit) const {

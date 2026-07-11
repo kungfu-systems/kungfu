@@ -130,7 +130,7 @@ public:
   // Resume-or-abort recovery for interrupted open Episodes, as an explicit
   // maintenance step under the writer guard. Appends EpisodeClosed(Aborted)
   // for in-scope open Episodes; never runs automatically.
-  [[nodiscard]] nlohmann::json recover(const episode_recover_options &options) const;
+  [[nodiscard]] episode_recover_result recover(const episode_recover_options &options) const;
 
   // Stream the manifest journal back as typed records in append order. The
   // streaming visitor is the primitive; memory stays bounded by what the

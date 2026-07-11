@@ -163,6 +163,17 @@ struct episode_close_write_result {
   std::optional<yijinjing::types::EpisodeRootCommitted> content_root = {};
 };
 
+struct episode_recover_skipped_open {
+  uint64_t episode_id = 0;
+  uint32_t location_uid = 0;
+};
+
+struct episode_recover_result {
+  std::string runtime_dir = {};
+  std::vector<episode_close_write_result> recovered = {};
+  std::vector<episode_recover_skipped_open> skipped_open = {};
+};
+
 // The root covers the Episode-owned claim sequence in manifest append order;
 // transport provenance, heartbeats, unknown records, and the root record do
 // not participate in identity.
