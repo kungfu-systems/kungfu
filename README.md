@@ -32,15 +32,46 @@ Public entrypoints:
 - Developer and agent map: <https://libkungfu.dev>
 - Source and open monorepo: this repository
 
+## Getting started
+
+Kungfu is currently **Coming soon**. Start by choosing the experience that
+matches your job:
+
+1. Read [**Choose Your Kungfu**](docs/choose-your-kungfu.md) to decide between
+   the assembled App, GUI, CLI/TUI, one language SDK, `libkungfu`, or the
+   portable format.
+2. Check [known limits](docs/known-limits.md) before treating a staged artifact
+   as a production guarantee.
+3. If Kungfu is already installed, an agent can discover the local product
+   without web documentation:
+
+   ```sh
+   kungfu agent brief
+   kungfu agent capabilities --json
+   kungfu agent choose-mode --json
+   ```
+
+To evaluate the current source tree before public artifacts are available:
+
+```sh
+git clone https://github.com/kungfu-systems/kungfu.git
+cd kungfu
+./shifu doctor
+./shifu sync && ./shifu build
+```
+
+Contributors should continue with [`CONTRIBUTING.md`](CONTRIBUTING.md) for
+toolchain requirements, development commands, and the pull request flow.
+
 ## Use only what you need
 
 You do **not** have to adopt the whole Kungfu App. Start with the smallest
-product that closes your job: the `.kungfu` format, `libkungfu`, one language
-SDK, the standalone CLI/TUI, the GUI, or the assembled App. Higher layers add
-convenience; they do not become the exclusive authority over your facts.
+product that closes your job: the assembled App, the GUI, the standalone
+CLI/TUI, one language SDK, `libkungfu`, or the `.kungfu` format. Higher layers
+add convenience; they do not become the exclusive authority over your facts.
 
-See [**Choose your Kungfu**](docs/choose-your-kungfu.md) for the user-facing
-decision guide and [`docs/product-layers.md`](docs/product-layers.md) for the
+See [**Choose Your Kungfu**](docs/choose-your-kungfu.md) for the user-facing
+decision guide and [**Product Layers**](docs/product-layers.md) for the
 qualification contract behind it. Kungfu is currently **Coming soon**, so the
 guide names staged artifacts explicitly rather than implying every package is
 already released.
@@ -105,6 +136,27 @@ The runtime deliberately absorbs this complexity so its users do not have to. To
 keep that convenience sustainable rather than bespoke, the absorbed tooling is
 built on mainstream, well-maintained foundations.
 
+For source development, `./shifu` (`shifu.cmd` on Windows) is the build opener.
+It bootstraps the pinned toolchain on first run—nothing to preinstall beyond
+`curl`, plus a C++ toolchain and CMake for the native core. `./shifu doctor`
+reports exactly what is missing and where to get it.
+
+> 功夫练不下去的时候，你去找的那个人就是师傅。
+> *When your kungfu fails you, the one you turn to is your shifu.*
+
+That is shifu's whole job description: it appears wherever kungfu cannot yet
+help itself — before the toolchain exists, when the environment is broken, or
+when the repository itself still needs fetching.
+
+With shifu installed on your PATH (`cargo install --path crates/shifu --root
+~/.local` from any checkout), it also works as a standalone bootstrap core:
+
+```sh
+shifu clone [path]        # fetch the repository (default: current directory)
+cd <path> && shifu build  # inside a checkout, shifu delegates to the repo's
+                          # own ./shifu; update by pulling, not reinstalling
+```
+
 ## Components
 
 - **Core & runtime** — `yijinjing` (journal, storage semantics, and runtime
@@ -125,40 +177,6 @@ built on mainstream, well-maintained foundations.
 Runs on Windows, macOS, and Linux (including arm64). See
 [`docs/architecture.md`](docs/architecture.md) for how these pieces are layered.
 
-## Getting started
-
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the toolchain, build steps, coding
-conventions, and the pull request / release flow.
-
-```sh
-git clone git@github.com:kungfu-systems/kungfu.git
-cd kungfu
-./shifu doctor            # check your environment (optional but recommended)
-./shifu sync && ./shifu build
-```
-
-`./shifu` (`shifu.cmd` on Windows) is the build opener: it bootstraps the
-pinned toolchain on first run — nothing to preinstall beyond `curl` (plus a
-C++ toolchain and CMake for the native core; `./shifu doctor` tells you
-exactly what is missing and where to get it).
-
-> 功夫练不下去的时候，你去找的那个人就是师傅。
-> *When your kungfu fails you, the one you turn to is your shifu.*
-
-That is shifu's whole job description: it appears wherever kungfu cannot yet
-help itself — before the toolchain exists, when the environment is broken,
-when the repository itself still needs fetching.
-
-With shifu installed on your PATH (`cargo install --path crates/shifu --root
-~/.local` from any checkout), it also works as a standalone bootstrap core:
-
-```sh
-shifu clone [path]        # fetch the repository (default: current directory)
-cd <path> && shifu build  # inside a checkout, shifu always delegates to the
-                          # repo's own ./shifu — install once, stay current
-                          # by pulling code, never by re-installing shifu
-```
-
 ## Documentation
 
 Start at the [**documentation map**](docs/MAP.md) — it routes your question
@@ -167,8 +185,10 @@ right document, and is readable by both people and agents.
 
 - Installed agent entrypoint: `kungfu agent brief`,
   `kungfu agent capabilities --json`, and `kungfu agent choose-mode --json`.
-- [`docs/choose-your-kungfu.md`](docs/choose-your-kungfu.md) — choose the
+- [**Choose Your Kungfu**](docs/choose-your-kungfu.md) — choose the
   smallest Kungfu product that closes your job; the full App is optional.
+- [**Product Layers**](docs/product-layers.md) — inspect the independent
+  product contracts and qualification boundaries behind that choice.
 - [`docs/MAP.md`](docs/MAP.md) — the question-indexed map of all documentation.
 - [`docs/concepts.md`](docs/concepts.md) — the vocabulary in one place
   (`kungfu`/`kfx`/`sdk`, `libkungfu`, `yijinjing`, journal, schema, …).
