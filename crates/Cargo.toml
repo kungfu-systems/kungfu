@@ -13,7 +13,7 @@
 
 [workspace]
 resolver = "2"
-members = ["shifu", "shifu-core", "trunk"]
+members = ["shifu", "shifu-core", "trunk", "kungfu-sdk"]
 # host-spike is a throwaway feasibility probe (rust host shell → libkungfu →
 # embedded libpython/libnode). It builds against a sibling worktree's core
 # artifacts, so it must not enter the workspace CI gate or the release matrix;

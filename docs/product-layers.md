@@ -33,10 +33,12 @@ The architecture already has the main separation mechanisms: a C++ core over
 yijinjing, thin Python/Node bindings, delayed satellite runtimes, headless and
 GUI surfaces, workspace-local `.kungfu`, and an assembled distribution.
 
-ADR-0049 makes independent qualification the release obligation. Native
-historical query closure, the Cargo SDK, stable cross-toolchain C ABI, and the
-full per-artifact size/startup matrix remain staged work rather than current
-release claims.
+ADR-0049 makes independent qualification the release obligation. The native
+closure and its versioned C ABI now pass their dedicated gate. Thin Python,
+Node, and Rust storage SDK sources plus a shared semantic fixture are staged;
+exact source-built artifacts have Darwin ARM64 evidence, while publication,
+other platforms, resident-memory sampling, and the full release matrix remain
+separate release claims.
 
 ## The rule behind the choices
 

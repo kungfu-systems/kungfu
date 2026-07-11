@@ -77,6 +77,24 @@ What is **not yet guaranteed**:
 
 Treat these as usable pre-release slices, not a finished shell promise.
 
+## Ecosystem SDK qualification is source-complete on one platform, not released
+
+Python `kungfu-storage`, Node `@kungfu-tech/storage`, and the Rust
+`kungfu-sdk` crate are thin adapters over the same versioned libkungfu storage
+contract. Their shared clean-environment fixture has exact-artifact Darwin ARM64
+evidence for Episode lifecycle, head/historical query, fsck, and export without
+sibling SDKs or the GUI.
+
+What is **not yet guaranteed**:
+
+- publication of those package names to PyPI, npm, or crates.io;
+- equivalent exact-artifact reports for Linux x64 and Windows x64;
+- a cross-platform peak-resident-memory measurement in the one-shot SDK gate;
+- a stable compatibility promise before the v4 release channel promotes them.
+
+The artifact matrix therefore keeps all three ecosystem SDK rows `staged` even
+when a source-built qualification report passes on a named platform.
+
 ## Runtime storage service is designed, not complete
 
 Kungfu has the grounded pieces for a local runtime fact ledger: append-only

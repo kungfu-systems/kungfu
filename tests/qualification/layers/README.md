@@ -38,3 +38,25 @@ database dependencies in the consumer binary.
 `./shifu check` runs this harness as a lightweight source gate. Later artifact
 goals can add installed-artifact probes and release evidence without turning
 this directory into another release orchestrator.
+
+## Ecosystem SDK qualification
+
+The SDK gate uses one declarative semantic fixture and three deliberately thin
+adapters. Python calls the storage service exposed by the wheel's native
+binding, Node calls the same service through the packaged
+`@kungfu-tech/storage` addon, and Rust owns the versioned C table through the
+`kungfu-sdk` crate. The runner—not the adapters—owns the Episode/query/fsck/
+export scenario, so a language package cannot quietly redefine semantics.
+
+After building the exact wheel, npm main/platform archives, and staged native
+directory, run:
+
+```sh
+./shifu layers:qualify:sdk -- --report /tmp/kungfu-sdk-qualification.json
+```
+
+Each package is installed into a separate clean ecosystem root. The report
+binds artifact hashes, installed size, dependency count, first-call latency,
+and sibling-runtime deletion proofs. A source-built passing report does not
+claim that the artifact is published or qualified on unnamed platforms; those
+remain release-channel evidence.

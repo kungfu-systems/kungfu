@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(DIR, '..', '..', '..');
 const RUNNER = path.join(DIR, 'run.mjs');
+const SDK_RUNNER = path.join(DIR, 'sdk', 'run.mjs');
 const MATRIX = path.join(DIR, 'artifact-matrix.json');
 
 function run(args) {
@@ -56,4 +57,13 @@ test('rejects a matrix that drops an official artifact', () => {
   } finally {
     fs.rmSync(temp, { recursive: true, force: true });
   }
+});
+
+test('validates the shared SDK semantic fixture without installed artifacts', () => {
+  const result = spawnSync(process.execPath, [SDK_RUNNER, '--validate-only'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /fixture valid; steps=7; sha256=[a-f0-9]{64}/);
 });

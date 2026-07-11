@@ -52,7 +52,7 @@
       "required_capabilities": ["discover", "record", "query", "verify", "export"],
       "forbidden_dependencies": ["@kungfu-tech/gui", "@kungfu-tech/tui", "npm-sdk", "cargo-sdk"],
       "onboarding": {
-        "commands": ["pip install kungfu"],
+        "commands": ["pip install kungfu-storage"],
         "concepts": ["workspace", "episode", "capability", "verification"]
       }
     },
@@ -60,25 +60,25 @@
       "id": "npm-sdk",
       "layer": "npm SDK",
       "artifact_status": "staged",
-      "workspace_package": "@kungfu-tech/api",
+      "workspace_package": "@kungfu-tech/storage",
       "declared_closure": "Install in a clean Node environment and run the shared semantic fixture without sibling SDKs.",
       "required_capabilities": ["discover", "record", "query", "verify", "export"],
       "forbidden_dependencies": ["@kungfu-tech/gui", "@kungfu-tech/tui", "pypi-sdk", "cargo-sdk"],
       "onboarding": {
-        "commands": ["npm install @kungfu-tech/api"],
+        "commands": ["npm install @kungfu-tech/storage"],
         "concepts": ["workspace", "episode", "capability", "verification"]
       }
     },
     {
       "id": "cargo-sdk",
       "layer": "Cargo SDK",
-      "artifact_status": "absent",
+      "artifact_status": "staged",
       "workspace_package": null,
       "declared_closure": "Install in a clean Rust environment and run the shared semantic fixture without sibling SDKs.",
       "required_capabilities": ["discover", "record", "query", "verify", "export"],
       "forbidden_dependencies": ["@kungfu-tech/gui", "@kungfu-tech/tui", "pypi-sdk", "npm-sdk"],
       "onboarding": {
-        "commands": [],
+        "commands": ["cargo add kungfu-sdk"],
         "concepts": ["workspace", "episode", "capability", "verification"]
       }
     },
