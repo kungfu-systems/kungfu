@@ -4,26 +4,21 @@
 //
 // 背景：conan2 移除了独立 `conan package` 本地命令，原 `freeze`→run-conan.js package
 // 只触发 `conan build`（占位，不跑 freezer）。本脚本把 freeze 做成 `./shifu freeze`
-// 一步可复现，并据 `config.freezer` 选择产物腿；缺省全平台 assemble（ADR-0046
-// stage 2 已逐平台收口：macOS→Linux→Windows 全部组装完整 CPython 树）。冻结腿
-// （nuitka/pyinstaller）随最后平台退役，去留记账见 docs/buildchain.md。
+// 一步可复现；产物腿现只剩 assemble。
 //
-// 三条产物腿（assemble 见 ADR-0046 与本文件 assemble 段注释；冻结腿去留记账见
-// docs/buildchain.md「Freeze retirement ledger」）：
+// 冻结腿（nuitka/pyinstaller）已于 2026-07-11 退役（ADR-0046 stage 2 收口：
+// macOS→Linux→Windows 全部组装完整 CPython 树，Windows 为最后一块平台）；去留记账
+// 见 docs/buildchain.md「Freeze retirement ledger」。
 //
-// - nuitka（默认）：编译成 C，产物 kungfu_cli.dist 本就扁平（无 _internal），移到 dist/kungfu 即可，
-//   不需要 promote。kungfu_cli.py 内嵌 nuitka-project 选项（--standalone 等）。Nuitka 只跟随
-//   kungfu_cli.py 的 import，故 app/electron 侧 node native（drone.node / kungfu_node.node /
-//   kungfu_electron.node）需 freeze 后从 build/<type> 补拷（kfc python 进程不 import 它们）。
-// - pyinstaller（fallback）：onedir 把数据/库放进 _internal/，而 app 栈假设 dist/kungfu 扁平，
-//   故 freeze 后 promote（_internal/*→顶层，Unix 符号链/Win 拷贝）。
+// - assemble（唯一产物腿，见 ADR-0046 与本文件 assemble 段注释）：宿主运行一棵完整精确的
+//   CPython 树。dist/kungfu 保持扁平根（natives/contract/wheels），并在 dist/kungfu/python
+//   下加解释器树；kungfu 包以源码随树发布，经 site-packages 的 .pth 接回扁平根。
 // @ts-check
 
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { shell } = require('../lib');
-const { verifyWindowsSymbols } = require('./verify-windows-symbols');
 
 const CORE = path.resolve(__dirname, '..'); // framework/core
 const isWin = process.platform === 'win32';
@@ -47,21 +42,6 @@ function freezer() {
   const explicit = shell.getConfigValue('freezer');
   if (explicit) return explicit;
   return 'assemble';
-}
-
-// kungfu.spec datas 引用 build/include 与 build/libs（仅 pyinstaller 路径需要）。
-// 头文件按 target 归属分布在各库目录下，staging 时合并成单一 include 树。
-function stage() {
-  const includeRoots = ['libyijinjing', 'libkungfu'].map((lib) =>
-    path.join(CORE, 'src', lib, 'include'),
-  );
-  const buildInc = path.join(CORE, 'build', 'include');
-  console.log('[freeze] staging: src/lib*/include → build/include');
-  fs.rmSync(buildInc, { recursive: true, force: true });
-  for (const inc of includeRoots) {
-    fs.cpSync(inc, buildInc, { recursive: true });
-  }
-  fs.mkdirSync(path.join(CORE, 'build', 'libs'), { recursive: true });
 }
 
 // kungfu/__init__ 读 pykungfu 同目录的 kungfubuildinfo.json 取 version；缺则生成。
@@ -277,85 +257,6 @@ function copyPyBindingWin(bt) {
   if (!pyd) console.error('[freeze] Win 警告：build 树未找到 pykungfu*.pyd');
   if (!dll) console.error('[freeze] Win 警告：build 树未找到 libnode.dll');
   console.log(`[freeze] Win：补拷 python binding → dist/kungfu：${n} 项`);
-}
-
-// ----------------------------------------------------------------- nuitka
-
-/** @param {string} bt */
-function freezeNuitka(bt) {
-  const rel = path.join(CORE, 'build', bt); // 三 native（pykungfu/libkungfu/libnode）同目录
-  const out = path.join(CORE, 'build', 'kungfu-nuitka');
-  const distKfc = path.join(CORE, 'dist', 'kungfu');
-  const info = ensureBuildInfo(bt);
-
-  console.log(
-    `[freeze] nuitka kungfu_cli.py（PYTHONPATH=${path.relative(CORE, rel)}）`,
-  );
-  fs.rmSync(out, { recursive: true, force: true });
-  // Linux 强制 clang 后端：gcc 13 编译 nuitka 生成的 scipy 巨型 C 文件会触发 internal
-  // compiler error(cfgcleanup.cc try_forward_edges ICE)。Mac 本就默认 clang、不撞，故仅
-  // Linux 切 clang，顺带让两平台 freeze 用同一 C 编译器、跨机更一致。需机器装 clang。
-  const clangOpt = process.platform === 'linux' ? ['--clang'] : [];
-  shell.run(
-    'uv',
-    [
-      'run',
-      '--frozen',
-      'python',
-      '-m',
-      'nuitka',
-      ...clangOpt,
-      '--output-dir=build/kungfu-nuitka',
-      // `kungfu trace -- <cmd>` spawns arbitrary child commands; some (e.g.
-      // `sh -c ...`) carry a `-c` argument that Nuitka's deployment mode
-      // mistakes for the frozen binary being asked to self-execute. The runtime
-      // never re-executes itself, so disabling this guard is safe.
-      '--no-deployment-flag=self-execution',
-      `--include-data-files=${info}=kungfubuildinfo.json`,
-      // Fact-ledger schema blobs: the kungfu package's *_events.bfbs are read at
-      // runtime (rewind/atlas/work) but Nuitka does not follow non-.py package
-      // data, so ship them flat next to the binding where schema_data_path falls
-      // back to when the compiled module dir is not a real directory.
-      ...['rewind', 'atlas', 'work'].map(
-        (m) =>
-          `--include-data-files=${path.join(CORE, 'src', 'python', 'kungfu', m, `${m}_events.bfbs`)}=${m}_events.bfbs`,
-      ),
-      ...agentPackDataArgs(),
-      path.join('src', 'python', 'kungfu_cli.py'),
-    ],
-    true,
-    { cwd: CORE, env: { ...process.env, PYTHONPATH: rel } },
-  );
-
-  // Nuitka standalone 产物 kungfu_cli.dist 本就扁平 → 直接移到 dist/kungfu（无 _internal、无 promote）。
-  const kfcDist = path.join(out, 'kungfu_cli.dist');
-  if (!fs.existsSync(kfcDist)) {
-    console.error(`[freeze] 错误：未找到 ${kfcDist}（nuitka 产物布局变化？）`);
-    process.exit(1);
-  }
-  fs.rmSync(distKfc, { recursive: true, force: true });
-  fs.mkdirSync(path.dirname(distKfc), { recursive: true });
-  fs.renameSync(kfcDist, distKfc);
-
-  // nuitka standalone 入口名为 kungfu_cli.bin(Unix)/kungfu.exe(Win)；app 栈按 'kungfu'(Unix)/'kungfu.exe'(Win)
-  // 定位可执行（framework/api pathConfig/processUtils 的 kungfuName）。把 nuitka 入口重命名为
-  // kungfu（用 rename 不用符号链，保持 nuitka 产物无符号链、electron-builder 打包干净）。
-  if (!isWin) {
-    const binPath = path.join(distKfc, 'kungfu_cli.bin');
-    const kungfuPath = path.join(distKfc, 'kungfu');
-    if (fs.existsSync(binPath)) fs.renameSync(binPath, kungfuPath);
-  } else {
-    const exePath = path.join(distKfc, 'kungfu_cli.exe');
-    const kungfuExe = path.join(distKfc, 'kungfu.exe');
-    if (fs.existsSync(exePath)) fs.renameSync(exePath, kungfuExe);
-  }
-
-  copyAppNative(bt);
-  copyPyBindingWin(bt);
-  copyLibwasmRuntime();
-  copyConfigContract();
-  if (isWin) verifyWindowsSymbols(path.join(CORE, 'dist', 'kungfu'));
-  console.log('[freeze] ✅ dist/kungfu 就绪（nuitka 扁平产物 + app native）');
 }
 
 // --------------------------------------------------------------- assemble
@@ -665,72 +566,6 @@ function stageEntry(distKfc) {
   console.log('[freeze] assemble: trunk entry staged as kungfu + kungfu-trunk');
 }
 
-// ------------------------------------------------------------- pyinstaller
-
-/** @param {string} bt */
-function freezePyinstaller(bt) {
-  stage();
-  ensureBuildInfo(bt);
-  console.log(`[freeze] pyinstaller kungfu.spec (CMAKE_BUILD_TYPE=${bt})`);
-  fs.rmSync(path.join(CORE, 'dist'), { recursive: true, force: true });
-  shell.run(
-    'uv',
-    [
-      'run',
-      '--frozen',
-      'pyinstaller',
-      '--workpath=build',
-      '--distpath=dist',
-      '--clean',
-      '--noconfirm',
-      path.join('src', 'python', 'kungfu.spec'),
-    ],
-    true,
-    {
-      cwd: CORE,
-      env: {
-        ...process.env,
-        CMAKE_BUILD_TYPE: bt,
-        KUNGFU_PYI_HOOKS_PATH: path.join(CORE, 'src', 'python', 'pyi-hooks'),
-      },
-    },
-  );
-  promote();
-  copyLibwasmRuntime();
-  copyConfigContract();
-  if (isWin) verifyWindowsSymbols(path.join(CORE, 'dist', 'kungfu'));
-  console.log(
-    '[freeze] ✅ dist/kungfu 就绪（pyinstaller 扁平视图 + _internal 真身）',
-  );
-}
-
-// _internal/* 在 dist/kungfu 顶层补一层视图，满足 app 栈的扁平布局假设（仅 pyinstaller 路径）。
-function promote() {
-  const distKfc = path.join(CORE, 'dist', 'kungfu');
-  const internal = path.join(distKfc, '_internal');
-  if (!fs.existsSync(internal)) {
-    console.error(
-      `[freeze] 错误：未找到 ${internal}（PyInstaller onedir 布局变化？）`,
-    );
-    process.exit(1);
-  }
-  console.log(
-    `[freeze] promote _internal/* → 顶层（${isWin ? '拷贝' : '符号链'}）`,
-  );
-  let n = 0;
-  for (const entry of fs.readdirSync(internal)) {
-    const top = path.join(distKfc, entry);
-    if (existsLstat(top)) continue; // 跳过 pyinstaller 已放在顶层的项（kfc exe 等）
-    if (isWin) {
-      fs.cpSync(path.join(internal, entry), top, { recursive: true });
-    } else {
-      fs.symlinkSync(path.join('_internal', entry), top);
-    }
-    n++;
-  }
-  console.log(`[freeze] promote 完成：${n} 项`);
-}
-
 /** @param {string} p */
 function existsLstat(p) {
   try {
@@ -769,18 +604,13 @@ function main() {
   const bt = buildType();
   const fz = freezer();
   console.log(`[freeze] freezer=${fz} build_type=${bt}`);
-  if (fz === 'nuitka') {
-    freezeNuitka(bt);
-  } else if (fz === 'pyinstaller') {
-    freezePyinstaller(bt);
-  } else if (fz === 'assemble') {
-    assembleTree(bt);
-  } else {
+  if (fz !== 'assemble') {
     console.error(
-      `[freeze] 未知 freezer: ${fz}（应为 nuitka、pyinstaller 或 assemble）`,
+      `[freeze] 冻结腿（nuitka/pyinstaller）已于 2026-07-11 退役（ADR-0046 stage 2 收口）；现只剩 assemble，收到 freezer=${fz}`,
     );
     process.exit(1);
   }
+  assembleTree(bt);
   copyWheel();
 }
 

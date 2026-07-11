@@ -3,15 +3,6 @@ revision = 3
 requires-python = "==3.13.*"
 
 [[package]]
-name = "altgraph"
-version = "0.17.5"
-source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
-sdist = { url = "http://192.168.100.222:3141/root/pypi/+f/c87/b395dd12fabde/altgraph-0.17.5.tar.gz", hash = "sha256:c87b395dd12fabde9c99573a9749d67da8d29ef9de0125c7f536699b4a9bc9e7" }
-wheels = [
-    { url = "http://192.168.100.222:3141/root/pypi/+f/f3a/22400bce1b0c7/altgraph-0.17.5-py2.py3-none-any.whl", hash = "sha256:f3a22400bce1b0c701683820ac4f3b159cd301acab067c51c653e06961600597" },
-]
-
-[[package]]
 name = "anyio"
 version = "4.14.1"
 source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
@@ -617,7 +608,6 @@ dev = [
     { name = "pluggy" },
     { name = "pybind11-stubgen" },
     { name = "pycparser", marker = "sys_platform != 'win32'" },
-    { name = "pyinstaller" },
     { name = "pytest" },
     { name = "pywin32-ctypes", marker = "sys_platform == 'win32'" },
     { name = "railroad-diagrams" },
@@ -682,7 +672,6 @@ dev = [
     { name = "pluggy" },
     { name = "pybind11-stubgen", specifier = "~=2.5" },
     { name = "pycparser", marker = "sys_platform != 'win32'", specifier = "==2.22" },
-    { name = "pyinstaller", specifier = "~=6.11.0" },
     { name = "pytest", specifier = ">=9.0.3,<10.0.0" },
     { name = "pywin32-ctypes", marker = "sys_platform == 'win32'", specifier = "==0.2.3" },
     { name = "railroad-diagrams" },
@@ -725,18 +714,6 @@ wheels = [
     { url = "http://192.168.100.222:3141/root/pypi/+f/da5/8944be8270f2b/librt-0.12.0-cp313-cp313-win32.whl", hash = "sha256:da58944be8270f2bfee628a9a2a60c1cf6a12c8bea8e2c9b6edf3e5414ca7793" },
     { url = "http://192.168.100.222:3141/root/pypi/+f/1db/4be3037e4ce06/librt-0.12.0-cp313-cp313-win_amd64.whl", hash = "sha256:1db4be3037e4ce065a071fa7deee93e78ebc25f448340a02a6c1c0b82c37e383" },
     { url = "http://192.168.100.222:3141/root/pypi/+f/05f/d2542892ad770/librt-0.12.0-cp313-cp313-win_arm64.whl", hash = "sha256:05fd2542892ad770b5dd45003fd080477cf220b611d3ee59b0792097eb0873a9" },
-]
-
-[[package]]
-name = "macholib"
-version = "1.16.4"
-source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
-dependencies = [
-    { name = "altgraph" },
-]
-sdist = { url = "http://192.168.100.222:3141/root/pypi/+f/f40/8c93ab2e995cd/macholib-1.16.4.tar.gz", hash = "sha256:f408c93ab2e995cd2c46e34fe328b130404be143469e41bc366c807448979362" }
-wheels = [
-    { url = "http://192.168.100.222:3141/root/pypi/+f/da1/a3fa8266e30f0/macholib-1.16.4-py2.py3-none-any.whl", hash = "sha256:da1a3fa8266e30f0ce7e97c6a54eefaae8edd1e5f86f3eb8b95457cae90265ea" },
 ]
 
 [[package]]
@@ -1057,15 +1034,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pefile"
-version = "2023.2.7"
-source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
-sdist = { url = "http://192.168.100.222:3141/root/pypi/+f/82e/6114004b3d691/pefile-2023.2.7.tar.gz", hash = "sha256:82e6114004b3d6911c77c3953e3838654b04511b8b66e8583db70c65998017dc" }
-wheels = [
-    { url = "http://192.168.100.222:3141/root/pypi/+f/da1/85cd2af68c08a/pefile-2023.2.7-py3-none-any.whl", hash = "sha256:da185cd2af68c08a6cd4481f7325ed600a88f6a813bad9dea07ab3ef73d8d8d6" },
-]
-
-[[package]]
 name = "pip"
 version = "26.1.2"
 source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
@@ -1145,46 +1113,6 @@ source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
 sdist = { url = "http://192.168.100.222:3141/root/pypi/+f/675/7cd03768053ff/pygments-2.20.0.tar.gz", hash = "sha256:6757cd03768053ff99f3039c1a36d6c0aa0b263438fcab17520b30a303a82b5f" }
 wheels = [
     { url = "http://192.168.100.222:3141/root/pypi/+f/81a/9e26dd42fd28a/pygments-2.20.0-py3-none-any.whl", hash = "sha256:81a9e26dd42fd28a23a2d169d86d7ac03b46e2f8b59ed4698fb4785f946d0176" },
-]
-
-[[package]]
-name = "pyinstaller"
-version = "6.11.1"
-source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
-dependencies = [
-    { name = "altgraph" },
-    { name = "macholib", marker = "sys_platform == 'darwin'" },
-    { name = "packaging" },
-    { name = "pefile", marker = "sys_platform == 'win32'" },
-    { name = "pyinstaller-hooks-contrib" },
-    { name = "pywin32-ctypes", marker = "sys_platform == 'win32'" },
-    { name = "setuptools" },
-]
-sdist = { url = "http://192.168.100.222:3141/root/pypi/+f/491/dfb4d9d5d1d96/pyinstaller-6.11.1.tar.gz", hash = "sha256:491dfb4d9d5d1d9650d9507daec1ff6829527a254d8e396badd60a0affcb72ef" }
-wheels = [
-    { url = "http://192.168.100.222:3141/root/pypi/+f/44e/36172de326af6/pyinstaller-6.11.1-py3-none-macosx_10_13_universal2.whl", hash = "sha256:44e36172de326af6d4e7663b12f71dbd34e2e3e02233e181e457394423daaf03" },
-    { url = "http://192.168.100.222:3141/root/pypi/+f/6d1/2c45a29add780/pyinstaller-6.11.1-py3-none-manylinux2014_aarch64.whl", hash = "sha256:6d12c45a29add78039066a53fb05967afaa09a672426072b13816fe7676abfc4" },
-    { url = "http://192.168.100.222:3141/root/pypi/+f/ddc/0fddd75f07f7e/pyinstaller-6.11.1-py3-none-manylinux2014_i686.whl", hash = "sha256:ddc0fddd75f07f7e423da1f0822e389a42af011f9589e0269b87e0d89aa48c1f" },
-    { url = "http://192.168.100.222:3141/root/pypi/+f/0d6/475559c4939f0/pyinstaller-6.11.1-py3-none-manylinux2014_ppc64le.whl", hash = "sha256:0d6475559c4939f0735122989611d7f739ed3bf02f666ce31022928f7a7e4fda" },
-    { url = "http://192.168.100.222:3141/root/pypi/+f/e21/c7806e34f4018/pyinstaller-6.11.1-py3-none-manylinux2014_s390x.whl", hash = "sha256:e21c7806e34f40181e7606926a14579f848bfb1dc52cbca7eea66eccccbfe977" },
-    { url = "http://192.168.100.222:3141/root/pypi/+f/32c/742a24fe65d07/pyinstaller-6.11.1-py3-none-manylinux2014_x86_64.whl", hash = "sha256:32c742a24fe65d0702958fadf4040f76de85859c26bec0008766e5dbabc5b68f" },
-    { url = "http://192.168.100.222:3141/root/pypi/+f/208/c0ef6dab0837a/pyinstaller-6.11.1-py3-none-musllinux_1_1_aarch64.whl", hash = "sha256:208c0ef6dab0837a0a273ea32d1a3619a208e3d1fe3fec3785eea71a77fd00ce" },
-    { url = "http://192.168.100.222:3141/root/pypi/+f/ad8/4abf465bcda36/pyinstaller-6.11.1-py3-none-musllinux_1_1_x86_64.whl", hash = "sha256:ad84abf465bcda363c1d54eafa76745d77b6a8a713778348377dc98d12a452f7" },
-    { url = "http://192.168.100.222:3141/root/pypi/+f/2e8/365276c5131c9/pyinstaller-6.11.1-py3-none-win32.whl", hash = "sha256:2e8365276c5131c9bef98e358fbc305e4022db8bedc9df479629d6414021956a" },
-    { url = "http://192.168.100.222:3141/root/pypi/+f/7ac/83c0dc0e04357/pyinstaller-6.11.1-py3-none-win_amd64.whl", hash = "sha256:7ac83c0dc0e04357dab98c487e74ad2adb30e7eb186b58157a8faf46f1fa796f" },
-    { url = "http://192.168.100.222:3141/root/pypi/+f/35e/6b8077d240600/pyinstaller-6.11.1-py3-none-win_arm64.whl", hash = "sha256:35e6b8077d240600bb309ed68bb0b1453fd2b7ab740b66d000db7abae6244423" },
-]
-
-[[package]]
-name = "pyinstaller-hooks-contrib"
-version = "2026.6"
-source = { registry = "http://192.168.100.222:3141/root/pypi/+simple/" }
-dependencies = [
-    { name = "packaging" },
-]
-sdist = { url = "http://192.168.100.222:3141/root/pypi/+f/bef/5002c32f4f50b/pyinstaller_hooks_contrib-2026.6.tar.gz", hash = "sha256:bef5002c32f4f50bd55b005da12cff64eca8783e7eaf86a06a62410164bab725" }
-wheels = [
-    { url = "http://192.168.100.222:3141/root/pypi/+f/fd1/3b8ac126b3536/pyinstaller_hooks_contrib-2026.6-py3-none-any.whl", hash = "sha256:fd13b8ac126b35361175edacd41a0d97080b75dd5f4b594ecefefff969509dd3" },
 ]
 
 [[package]]

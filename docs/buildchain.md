@@ -28,22 +28,23 @@ under those pinned tools.
 | `libkungfu` (C++ core: yijinjing schema + journal) | `framework/core/src` | CMake + Conan 2; build orchestration in `framework/core/.gyp/` |
 | Python binding (`py_kungfu`) | `framework/core/src/bindings/python` | pybind11, built under the pinned CPython |
 | Node addon (`kungfu_node.node`) | `framework/core/src/bindings/node` | N-API via the `.gyp` build |
-| `kungfu` (the product runtime) | the above + the Python/Node runtimes | `./shifu freeze` — on macOS this assembles the complete pinned CPython tree next to the entry (ADR-0046 stage 2); on Linux/Windows it still Nuitka-freezes until those platform legs land |
+| `kungfu` (the product runtime) | the above + the Python/Node runtimes | `./shifu freeze` — assembles the complete pinned CPython tree next to the entry on every platform (ADR-0046 stage 2; the Nuitka/PyInstaller freeze legs were retired 2026-07-11) |
 | distributable products | product runtime + GUI/TUI/CLI + all product-declared first-party kfx | `./shifu dist` |
 | product loops | SDK-distributed GUI/TUI/CLI dev/build verbs | single kfx: `kungfu sdk product gui dev`; product assembly: `kungfu sdk product gui dist`; repo dogfood via `./shifu product ...` |
 
-## Freeze retirement ledger (macOS exited 2026-07-11)
+## Freeze retirement ledger (fully retired 2026-07-11)
 
-ADR-0046 stage 2 retires freezing platform by platform. What remains of the
-freeze machinery, and why, while the window is open:
+ADR-0046 stage 2 retired freezing platform by platform, and Windows — the last
+frozen platform — exited on 2026-07-11. The freeze **distribution** chain is now
+gone; only the `assemble` leg ships. What was removed, and what stays and why:
 
-| Leg | Status | Retires when |
+| Leg | Status | Note |
 |---|---|---|
-| `run-freeze.js` nuitka leg + the `nuitka-project` header in `kungfu_cli.py` (the `nofollow-import` list) | **kept** — Linux/Windows still freeze | the last frozen platform exits |
-| `run-freeze.js` pyinstaller fallback leg | **kept but off every default**; no platform selects it | with the nuitka leg — retire both together |
-| `conanfile.py` legacy freeze path (its `freezer` option + PyInstaller import) | **dead code** — freeze left conan in the conan2 migration; the option is no longer passed by the build chain | first conanfile cleanup touching that section |
+| `run-freeze.js` nuitka leg + the `nuitka-project` header shim `src/python/kungfu_cli.py` (the `nofollow-import` list) | **retired 2026-07-11** — leg and shim deleted | Windows was the last frozen platform; `assemble` is the sole leg |
+| `run-freeze.js` pyinstaller fallback leg + `src/python/kungfu.spec` + `src/python/pyi-hooks/` | **retired 2026-07-11** — leg, spec, and hooks deleted | retired together with the nuitka leg |
+| `conanfile.py` legacy freeze path (its `freezer` option + `__run_freeze`/`__run_nuitka`/`__run_pyinstaller` + PyInstaller import) | **retired 2026-07-11** — dead code removed | freeze had left conan in the conan2 migration; the option was no longer passed by the build chain |
 | `engage nuitka` / `engage pdm` bridges | **kept, deliberately** — their consumer is the Python-AOT kfx build contract (`kungfu sdk kfx build` for py extensions), not the freeze chain; retirement follows the ADR-0045 execution-profile line, not this ledger |
-| Nuitka / PyInstaller pins in `uv.lock` dev deps | **kept** — the frozen platforms and the engage bridge still resolve them | with their last consumer above |
+| Nuitka / PyInstaller pins in dev deps | **pyinstaller pin retired 2026-07-11**; **nuitka pin kept** — now resolved only by the `engage nuitka` bridge (ADR-0045), no longer by any freeze leg |
 
 The assembled form's own policy record is
 [ADR-0050](../framework/core/docs/adr/ADR-0050-assembled-runtime-stdlib-pruning-policy.md)
@@ -56,7 +57,8 @@ kungfu distributes prebuilt cross-platform binaries rather than expecting users 
 compile (see [`version-release-design.md`](version-release-design.md)): the native
 artifacts are published via node-pre-gyp (configuration in
 [`framework/core/package.json`](../framework/core/package.json)), and the `kungfu` runtime is
-shipped frozen. A tag is bound to its binaries atomically — *tag exists ⇒ the
+shipped as an assembled complete CPython tree (ADR-0046 stage 2). A tag is bound
+to its binaries atomically — *tag exists ⇒ the
 matching binaries exist* — which is the trust property the release mechanism
 exists to hold.
 

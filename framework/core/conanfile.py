@@ -55,7 +55,6 @@ class KungfuCoreConan(ConanFile):
     ]
     options = {
         "log_level": ["trace", "debug", "info", "warning", "error", "critical"],
-        "freezer": ["nuitka", "pyinstaller"],
         "node_version": ["ANY"],
         "electron_version": ["ANY"],
         "vs_toolset": ["auto", "ClangCL"],
@@ -88,7 +87,6 @@ class KungfuCoreConan(ConanFile):
         "gtest/*:disable_pthreads": False,
         # 自身 options
         "log_level": "info",
-        "freezer": "pyinstaller",
         "node_version": "ANY",
         "electron_version": "ANY",
         # clang 已知问题:
@@ -110,7 +108,6 @@ class KungfuCoreConan(ConanFile):
         "dist/*",
     )
     conanfile_dir = path.dirname(path.realpath(__file__))
-    pyi_hooks_dir = path.join(conanfile_dir, "src", "python", "pyi-hooks")
     build_info_file = "kungfubuildinfo.json"
     build_dir = path.join(conanfile_dir, "build")
     dist_dir = path.join(conanfile_dir, "dist")
@@ -148,7 +145,6 @@ class KungfuCoreConan(ConanFile):
         build_type = self.__get_build_type()
         if self.gyp_call:
             self.__clean_dist_dir()
-            self.__run_freeze(build_type)
             self.__show_build_info(build_type)
         else:
             src = self.conanfile_dir
@@ -360,13 +356,6 @@ class KungfuCoreConan(ConanFile):
             self.output.error(f"pnpm exec {args} failed with return code {rc}")
             sys.exit(rc)
 
-    def __run_pnpm_script(self, *args):
-        pnpm = "pnpm" if _detected_os() != "Windows" else "pnpm.cmd"
-        rc = subprocess.Popen([shutil.which(pnpm), "run", *args]).wait()
-        if rc != 0:
-            self.output.error(f"pnpm run {args} failed with return code {rc}")
-            sys.exit(rc)
-
     def __parallel_jobs(self):
         # 并行编译度优先取环境变量 KUNGFU_BUILD_JOBS（由 shifu 的 build-local.env 在各机
         # 统一配置,仓内不硬编码);其次 conan conf tools.build:jobs;最后回退 os.cpu_count()。
@@ -456,47 +445,3 @@ class KungfuCoreConan(ConanFile):
         if machine in ("arm64", "aarch64", "armv8"):
             return "arm64"
         return "x64"
-
-    def __run_pyinstaller(self, build_type):
-        pathlib.Path(self.__get_build_info_path(build_type)).touch()
-        cwd = os.getcwd()
-        try:
-            os.chdir(path.pardir)
-            from PyInstaller import __main__ as freezer
-
-            freezer.run(
-                [
-                    f"--workpath={path.join('.', 'build')}",
-                    f"--distpath={path.join('.', 'dist')}",
-                    "--clean",
-                    "--noconfirm",
-                    path.join(".", "src", "python", "kungfu.spec"),
-                ]
-            )
-        finally:
-            os.chdir(cwd)
-
-        self.output.success("PyInstaller done")
-
-    def __run_nuitka(self, build_type):
-        cwd = os.getcwd()
-        try:
-            os.chdir(path.pardir)
-            self.__run_pnpm_script(
-                "nuitka",
-                "--output-dir=build",
-                path.join("src", "python", "kungfu_cli.py"),
-            )
-        finally:
-            os.chdir(cwd)
-
-        kungfu_dist_dir = path.join(self.build_dir, "kungfu_cli.dist")
-        shutil.copytree(build_type, kungfu_dist_dir)
-        shutil.rmtree(self.kungfu_dir, ignore_errors=True)
-        shutil.move(kungfu_dist_dir, self.kungfu_dir)
-        self.output.success("Nuitka done")
-
-    def __run_freeze(self, build_type):
-        os.environ["KUNGFU_PYI_HOOKS_PATH"] = self.pyi_hooks_dir
-        freeze = {"pyinstaller": self.__run_pyinstaller, "nuitka": self.__run_nuitka}
-        freeze[str(self.options.freezer)](build_type)
