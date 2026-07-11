@@ -5,7 +5,26 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { sha256Tree } from './compatibility.mjs';
+
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+);
+
+test('compatibility native contract input exists', () => {
+  assert.equal(
+    fs.existsSync(
+      path.join(
+        repoRoot,
+        'framework/core/src/libkungfu/include/kungfu/native_storage.h',
+      ),
+    ),
+    true,
+  );
+});
 
 test('compatibility tree hash is path-stable and content-sensitive', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-compatibility-'));
