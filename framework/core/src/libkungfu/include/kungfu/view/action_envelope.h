@@ -83,7 +83,7 @@ struct payload_view {
 struct envelope {
   uint16_t version = ACTION_ENVELOPE_VERSION;
   std::string action_type = {};
-  schema_ref schema_ref = {};
+  ::kungfu::view::action::schema_ref schema_ref = {};
   std::optional<actor_metadata> actor = {};
   std::optional<session_metadata> session = {};
   std::optional<source_metadata> source = {};
