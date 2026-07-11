@@ -26,6 +26,44 @@ struct manifest_catalog_journal_records {
   std::vector<yijinjing::types::ChannelCursorUpdated> cursors = {};
 };
 
+// Owned typed projection of an accepted manifest entry. action_json contains
+// canonical JSON only for the legacy Action Envelope compatibility field; it
+// is opaque to the storage kernel and disappears when that envelope moves to
+// FlatBuffers.
+struct manifest_entry_view {
+  std::string kind = {};
+  std::string source_id = {};
+  std::string source_path = {};
+  std::string source_time = {};
+  uint32_t schema_version = 0;
+  std::string content_type = {};
+  std::string payload_hash = {};
+  uint64_t byte_len = 0;
+  yijinjing::enums::PayloadState payload_state = yijinjing::enums::PayloadState::Missing;
+  std::optional<std::string> action_json = {};
+};
+
+struct manifest_sync_root_view {
+  std::string algorithm = {};
+  std::string value = {};
+  uint64_t entry_count = 0;
+};
+
+struct manifest_document_view {
+  std::string manifest_id = {};
+  std::string scope = {};
+  std::string source_id = {};
+  std::string source_type = {};
+  std::string source_coordinate = {};
+  std::string source_head = {};
+  std::string range_since = {};
+  std::string range_until = {};
+  std::vector<manifest_entry_view> entries = {};
+  manifest_sync_root_view sync_root = {};
+};
+
+[[nodiscard]] manifest_sync_root_view compute_manifest_sync_root(const std::vector<manifest_entry_view> &entries);
+
 struct manifest_catalog_fsck_issue {
   std::string code = {};
   std::optional<std::string> source_id = {};

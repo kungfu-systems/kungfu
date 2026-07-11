@@ -545,6 +545,41 @@ struct storage_compact_plan_result {
   std::vector<std::string> notes = {};
 };
 
+struct storage_export_bundle_request {
+  std::string runtime_dir = {};
+  std::string provider = {};
+  std::string source_id = {};
+  storage_time_range range = {};
+  bool record_receipt = true;
+};
+
+struct storage_export_record_view {
+  yijinjing::storage::manifest_entry_view entry = {};
+  std::optional<std::string> payload_json = {};
+};
+
+struct storage_export_bundle_result {
+  std::string bundle_id = {};
+  std::string source_id = {};
+  yijinjing::storage::manifest_document_view manifest = {};
+  std::vector<storage_export_record_view> records = {};
+};
+
+struct storage_import_bundle_request {
+  std::string runtime_dir = {};
+  std::string provider = {};
+  storage_export_bundle_result bundle = {};
+  bool verify = true;
+};
+
+struct storage_import_bundle_result {
+  bool ok = true;
+  std::string scope = "source";
+  std::string source_id = {};
+  std::string manifest_id = {};
+  uint64_t records = 0;
+};
+
 class storage_service {
 public:
   virtual ~storage_service() = default;
@@ -563,6 +598,12 @@ public:
   rebuild_index(const storage_rebuild_index_request &request) const = 0;
 
   [[nodiscard]] virtual storage_compact_plan_result compact_plan(const storage_compact_plan_request &request) const = 0;
+
+  [[nodiscard]] virtual storage_export_bundle_result
+  export_bundle(const storage_export_bundle_request &request) const = 0;
+
+  [[nodiscard]] virtual storage_import_bundle_result
+  import_bundle(const storage_import_bundle_request &request) const = 0;
 };
 
 [[nodiscard]] std::string storage_query_kind_name(storage_query_kind kind);

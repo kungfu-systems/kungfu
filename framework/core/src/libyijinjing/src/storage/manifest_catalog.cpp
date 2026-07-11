@@ -572,6 +572,99 @@ nlohmann::json build_storage_export_bundle(const nlohmann::json &manifest, const
   };
 }
 
+namespace {
+
+nlohmann::json manifest_entry_edge(const manifest_entry_view &entry) {
+  nlohmann::json edge = {
+      {"kind", entry.kind},
+      {"source_id", entry.source_id},
+      {"source_path", entry.source_path},
+      {"source_time", entry.source_time},
+      {"schema_version", entry.schema_version},
+      {"content_type", entry.content_type},
+      {"payload_hash", entry.payload_hash},
+      {"byte_len", entry.byte_len},
+      {"payload_state", payload_state_name(entry.payload_state)},
+  };
+  if (entry.action_json.has_value()) {
+    edge["action"] = nlohmann::json::parse(*entry.action_json);
+  }
+  return edge;
+}
+
+manifest_entry_view manifest_entry_from_edge(const nlohmann::json &entry) {
+  manifest_entry_view view{};
+  view.kind = text_or(entry, "kind");
+  view.source_id = text_or(entry, "source_id");
+  view.source_path = text_or(entry, "source_path");
+  view.source_time = text_or(entry, "source_time");
+  view.schema_version = entry.value("schema_version", uint32_t{0});
+  view.content_type = text_or(entry, "content_type");
+  view.payload_hash = text_or(entry, "payload_hash");
+  view.byte_len = entry.value("byte_len", uint64_t{0});
+  view.payload_state = payload_state_from_text(text_or(entry, "payload_state", "missing"));
+  if (entry.contains("action") && entry.at("action").is_object()) {
+    view.action_json = canonical_json(entry.at("action"));
+  }
+  return view;
+}
+
+nlohmann::json manifest_document_input_edge(const manifest_document_view &view) {
+  nlohmann::json entries = nlohmann::json::array();
+  for (const auto &entry : view.entries) {
+    entries.push_back(manifest_entry_edge(entry));
+  }
+  nlohmann::json input = {
+      {"manifest_id", view.manifest_id},
+      {"storage_source_id", view.source_id},
+      {"source_id", view.source_id},
+      {"source_type", view.source_type},
+      {"source_coordinate", view.source_coordinate},
+      {"source_head", view.source_head},
+      {"scope", view.scope},
+      {"range", range_edge(view.range_since, view.range_until)},
+      {"entries", std::move(entries)},
+  };
+  if (!view.sync_root.value.empty()) {
+    input["sync_root"] = compute_linear_sync_root(input.at("entries").get<std::vector<nlohmann::json>>());
+    input["sync_root"]["algorithm"] = view.sync_root.algorithm;
+    input["sync_root"]["value"] = view.sync_root.value;
+    input["sync_root"]["entry_count"] = view.sync_root.entry_count;
+  }
+  return input;
+}
+
+manifest_document_view manifest_document_from_edge(const nlohmann::json &edge) {
+  manifest_document_view view{};
+  view.manifest_id = text_or(edge, "manifest_id");
+  view.scope = text_or(edge, "scope");
+  view.source_id = text_or(edge, "source_id");
+  view.source_type = text_or(edge, "source_type");
+  view.source_head = text_or(edge, "source_head");
+  view.source_coordinate = text_or(object_or_empty(edge, "source"), "coordinate");
+  const auto range = object_or_empty(edge, "range");
+  view.range_since = text_or(range, "since");
+  view.range_until = text_or(range, "until");
+  for (const auto &entry : array_or_empty(edge, "entries")) {
+    view.entries.push_back(manifest_entry_from_edge(entry));
+  }
+  const auto root = object_or_empty(edge, "sync_root");
+  view.sync_root = {text_or(root, "algorithm"), text_or(root, "value"), root.value("entry_count", uint64_t{0})};
+  return view;
+}
+
+} // namespace
+
+manifest_sync_root_view compute_manifest_sync_root(const std::vector<manifest_entry_view> &entries) {
+  std::vector<nlohmann::json> edges;
+  edges.reserve(entries.size());
+  for (const auto &entry : entries) {
+    edges.push_back(manifest_entry_edge(entry));
+  }
+  const auto root = compute_linear_sync_root(edges);
+  return {text_or(root, "algorithm"), text_or(root, "value"), root.value("entry_count", uint64_t{0})};
+}
+
 manifest_catalog_store::manifest_catalog_store(std::string runtime_dir) : runtime_dir_(std::move(runtime_dir)) {}
 
 manifest_catalog_journal_records manifest_catalog_store::read_typed_records() const {
@@ -603,6 +696,25 @@ manifest_catalog_journal_records manifest_catalog_store::read_typed_records() co
     reader->next();
   }
   return records;
+}
+
+manifest_document_view manifest_catalog_store::accept_manifest_typed(const manifest_document_view &input,
+                                                                     content_store &store) const {
+  return manifest_document_from_edge(accept_manifest(manifest_document_input_edge(input), store));
+}
+
+std::optional<manifest_document_view> manifest_catalog_store::latest_manifest_typed(const std::string &source_id,
+                                                                                    content_store &store) const {
+  const auto edge = latest_manifest(source_id, store);
+  if (edge.is_null()) {
+    return std::nullopt;
+  }
+  return manifest_document_from_edge(edge);
+}
+
+void manifest_catalog_store::record_export_typed(const manifest_document_view &manifest, uint64_t exported_records,
+                                                 const std::string &range_since, const std::string &range_until) const {
+  (void)record_export(manifest_document_input_edge(manifest), exported_records, range_edge(range_since, range_until));
 }
 
 nlohmann::json manifest_catalog_store::accept_manifest(const nlohmann::json &input, content_store &store) const {

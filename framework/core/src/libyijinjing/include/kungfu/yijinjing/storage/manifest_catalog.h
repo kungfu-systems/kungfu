@@ -74,6 +74,17 @@ public:
   // rebuildable projections such as the SQLite cache.
   [[nodiscard]] manifest_catalog_journal_records read_typed_records() const;
 
+  // Typed semantic entrypoints. JSON methods below are compatibility edge
+  // adapters over these owned views.
+  [[nodiscard]] manifest_document_view accept_manifest_typed(const manifest_document_view &input,
+                                                             content_store &store) const;
+
+  [[nodiscard]] std::optional<manifest_document_view> latest_manifest_typed(const std::string &source_id,
+                                                                            content_store &store) const;
+
+  void record_export_typed(const manifest_document_view &manifest, uint64_t exported_records,
+                           const std::string &range_since = {}, const std::string &range_until = {}) const;
+
   // Accept one import manifest. `input` is the adapter-edge document (the
   // same vocabulary the retired JSON builder took: manifest_id, source ids,
   // type, coordinate, head, scope, range, entries, optional sync_root).
