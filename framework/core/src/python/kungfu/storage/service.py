@@ -306,14 +306,10 @@ def rebuild_index(
     """Rebuild the source registry projection from accepted manifests."""
 
     return dict(
-        _runtime().run_storage_service_operation(
-            "rebuild_index",
+        _runtime().storage_rebuild_index_typed(
             str(runtime_dir),
-            {
-                "scope": "source" if source_id else "all",
-                "source_id": source_id,
-                "dry_run": dry_run,
-            },
+            source_id=source_id,
+            dry_run=dry_run,
         )
     )
 
@@ -325,14 +321,10 @@ def gc_plan(
     dry_run: bool = True,
 ) -> dict[str, Any]:
     return dict(
-        _runtime().run_storage_service_operation(
-            "gc_plan",
+        _runtime().storage_gc_plan_typed(
             str(runtime_dir),
-            {
-                "scope": "source" if source_id else "all",
-                "source_id": source_id,
-                "dry_run": dry_run,
-            },
+            source_id=source_id,
+            dry_run=dry_run,
         )
     )
 
@@ -344,14 +336,10 @@ def compact_plan(
     dry_run: bool = True,
 ) -> dict[str, Any]:
     return dict(
-        _runtime().run_storage_service_operation(
-            "compact_plan",
+        _runtime().storage_compact_plan_typed(
             str(runtime_dir),
-            {
-                "scope": "source" if source_id else "all",
-                "source_id": source_id,
-                "dry_run": dry_run,
-            },
+            source_id=source_id,
+            dry_run=dry_run,
         )
     )
 

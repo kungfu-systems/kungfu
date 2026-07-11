@@ -104,6 +104,55 @@ interface StorageQueryResult {
   errors: Array<{ code: string; episode_id: bigint | null }>;
 }
 
+interface StorageMaintenanceOptions {
+  source_id?: string;
+  dry_run?: boolean;
+}
+
+interface StorageGcPlanResult {
+  ok: boolean;
+  scope: string;
+  source_id: string | null;
+  dry_run: boolean;
+  payloads_scanned: bigint;
+  referenced_payloads: bigint;
+  candidate_bytes: bigint;
+  candidates: Array<{
+    payload_hash: string;
+    uri: string;
+    bytes: bigint;
+    safe_to_delete: boolean;
+  }>;
+  notes: string[];
+}
+
+interface StorageRebuildIndexResult {
+  ok: boolean;
+  scope: string;
+  source_id: string | null;
+  authority: string;
+  rebuilt_from: string;
+  projections: Array<Record<string, unknown>>;
+  dry_run: boolean;
+  would_write: boolean;
+  written: boolean;
+  sources_rebuilt: bigint;
+  errors: Array<Record<string, unknown>>;
+}
+
+interface StorageCompactPlanResult {
+  ok: boolean;
+  scope: string;
+  source_id: string | null;
+  dry_run: boolean;
+  retained_manifests: Array<Record<string, unknown>>;
+  rebuild_index: StorageRebuildIndexResult;
+  gc: StorageGcPlanResult;
+  projection_compact: Record<string, unknown>;
+  unsupported: Array<Record<string, unknown>>;
+  notes: string[];
+}
+
 interface KungfuRuntime {
   storageStatusTyped(
     runtimeDir: string,
@@ -114,6 +163,18 @@ interface KungfuRuntime {
     query: StorageQueryName,
     options?: StorageQueryOptions,
   ): StorageQueryResult;
+  storageGcPlanTyped(
+    runtimeDir: string,
+    options?: StorageMaintenanceOptions,
+  ): StorageGcPlanResult;
+  storageRebuildIndexTyped(
+    runtimeDir: string,
+    options?: StorageMaintenanceOptions,
+  ): StorageRebuildIndexResult;
+  storageCompactPlanTyped(
+    runtimeDir: string,
+    options?: StorageMaintenanceOptions,
+  ): StorageCompactPlanResult;
   [name: string]: unknown;
 }
 

@@ -232,9 +232,17 @@ test(
       const query = kungfu.storageQueryTyped(runtimeDir, 'episode_records', {
         episode_id: 701n,
       });
+      const gc = kungfu.storageGcPlanTyped(runtimeDir);
+      const rebuild = kungfu.storageRebuildIndexTyped(runtimeDir, {
+        dry_run: true,
+      });
+      const compact = kungfu.storageCompactPlanTyped(runtimeDir);
       assert.equal(query.query, 4);
       assert.equal(query.rows[0].body.title, 'typed-query');
       assert.equal(query.rows[0].body.location_uid, 17);
+      assert.equal(gc.dry_run, true);
+      assert.equal(rebuild.would_write, true);
+      assert.equal(compact.dry_run, true);
     } finally {
       JSON.parse = originalParse;
       JSON.stringify = originalStringify;

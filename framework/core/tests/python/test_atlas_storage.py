@@ -367,6 +367,9 @@ def test_typed_storage_status_binding_bypasses_json_transport(tmp_path):
             str(runtime_dir), "episode_records", episode_id=701
         )
         query_edge = storage_service.query_projection(runtime_dir, query="entries")
+        gc = storage_service.gc_plan(runtime_dir)
+        rebuild = storage_service.rebuild_index(runtime_dir, dry_run=True)
+        compact = storage_service.compact_plan(runtime_dir)
     finally:
         json.loads = original_loads
 
@@ -386,6 +389,9 @@ def test_typed_storage_status_binding_bypasses_json_transport(tmp_path):
     assert query["rows"][0]["body"]["location_uid"] == 17
     assert query_edge["query"] == "entries"
     assert query_edge["row_count"] == 0
+    assert gc["dry_run"] is True
+    assert rebuild["would_write"] is True
+    assert compact["dry_run"] is True
 
 
 def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
@@ -540,9 +546,13 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
     original_operation = runtime.run_storage_service_operation
     original_typed_status = runtime.storage_status_typed
     original_typed_query = runtime.storage_query_typed
+    original_typed_gc = runtime.storage_gc_plan_typed
+    original_typed_rebuild = runtime.storage_rebuild_index_typed
+    original_typed_compact = runtime.storage_compact_plan_typed
     calls = []
     typed_statuses = []
     typed_queries = []
+    typed_maintenance = []
 
     def spy_operation(operation, runtime_dir_arg, options):
         calls.append((operation, runtime_dir_arg, dict(options)))
@@ -556,6 +566,18 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
         typed_statuses.append((runtime_dir_arg, source_id))
         return original_typed_status(runtime_dir_arg, source_id)
 
+    def spy_typed_gc(runtime_dir_arg, **options):
+        typed_maintenance.append(("gc_plan", runtime_dir_arg, dict(options)))
+        return original_typed_gc(runtime_dir_arg, **options)
+
+    def spy_typed_rebuild(runtime_dir_arg, **options):
+        typed_maintenance.append(("rebuild_index", runtime_dir_arg, dict(options)))
+        return original_typed_rebuild(runtime_dir_arg, **options)
+
+    def spy_typed_compact(runtime_dir_arg, **options):
+        typed_maintenance.append(("compact_plan", runtime_dir_arg, dict(options)))
+        return original_typed_compact(runtime_dir_arg, **options)
+
     monkeypatch.setattr(
         runtime,
         "run_storage_service_operation",
@@ -563,6 +585,9 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
     )
     monkeypatch.setattr(runtime, "storage_status_typed", spy_typed_status)
     monkeypatch.setattr(runtime, "storage_query_typed", spy_typed_query)
+    monkeypatch.setattr(runtime, "storage_gc_plan_typed", spy_typed_gc)
+    monkeypatch.setattr(runtime, "storage_rebuild_index_typed", spy_typed_rebuild)
+    monkeypatch.setattr(runtime, "storage_compact_plan_typed", spy_typed_compact)
 
     storage_service.status(runtime_dir, source_id="local-synth")
     storage_service.layout(runtime_dir)
@@ -604,9 +629,6 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
         "repair_plan",
         "repair_fetch",
         "repair_apply",
-        "rebuild_index",
-        "gc_plan",
-        "compact_plan",
         "export_bundle",
         "import_bundle",
         "verify_sync",
@@ -624,6 +646,20 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
                 "until": "",
             },
         )
+    ]
+    assert typed_maintenance == [
+        (
+            "rebuild_index",
+            str(runtime_dir),
+            {"source_id": "local-synth", "dry_run": True},
+        ),
+        (
+            "rebuild_index",
+            str(runtime_dir),
+            {"source_id": "local-synth", "dry_run": False},
+        ),
+        ("gc_plan", str(runtime_dir), {"source_id": None, "dry_run": True}),
+        ("compact_plan", str(runtime_dir), {"source_id": None, "dry_run": True}),
     ]
 
 
@@ -1394,9 +1430,12 @@ def test_storage_maintenance_rebuild_gc_compact_and_sync_check(tmp_path):
         if row["name"] == "manifest-catalog-sqlite"
     )
     assert catalog_projection["written"] is True
-    assert catalog_projection["rows"]["import_manifest_accepted"] == 1
-    assert catalog_projection["rows"]["manifest_entry_recorded"] == 1
-    assert catalog_projection["rows"]["channel_cursor_updated"] == 1
+    catalog_rows = {
+        row["table"]: row["count"] for row in catalog_projection["detail"]["rows"]
+    }
+    assert catalog_rows["import_manifest_accepted"] == 1
+    assert catalog_rows["manifest_entry_recorded"] == 1
+    assert catalog_rows["channel_cursor_updated"] == 1
     sqlite_path = runtime_dir / "storage/projections/manifest-catalog.sqlite"
     assert sqlite_path.exists()
     with sqlite3.connect(sqlite_path) as db:
@@ -1425,14 +1464,14 @@ def test_storage_maintenance_rebuild_gc_compact_and_sync_check(tmp_path):
     orphan_hash = payloads.payload_hash(orphan_raw)
     storage_service.write_payload_bytes(runtime_dir, orphan_hash, orphan_raw)
     gc = storage_service.gc_plan(runtime_dir, dry_run=True)
-    assert gc["candidate_count"] == 1
+    assert len(gc["candidates"]) == 1
     assert gc["candidates"][0]["payload_hash"] == orphan_hash
     assert gc["candidates"][0]["safe_to_delete"] is True
     assert storage_service.payload_path(runtime_dir, orphan_hash).exists()
 
     compact = storage_service.compact_plan(runtime_dir, dry_run=True)
     assert compact["ok"]
-    assert compact["gc"]["candidate_count"] == 1
+    assert len(compact["gc"]["candidates"]) == 1
     assert compact["projection_compact"]["name"] == "manifest-catalog-sqlite"
     assert compact["projection_compact"]["action"] == "rebuild-and-vacuum"
     assert any(row["name"] == "backend-compact" for row in compact["unsupported"])

@@ -15,6 +15,8 @@ BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_projection
                         journal_distinct);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_projection_verify_result, ok, status, schema,
                         runtime_dir, authority, projection_present, degraded, note, drift, rows, journal_distinct);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_projection_rebuild_result, ok, schema,
+                        runtime_dir, authority, projection, sqlite_path, rows, journal_records);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_time_range, since, until);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_sync_root_view, algorithm, value);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_provider_runtime_view, lifecycle,
@@ -62,5 +64,21 @@ BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_query_erro
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_query_result, ok, scope, source_id, episode_id,
                         projection_name, projection_schema, authority, rebuildable, query, entry_kind, range, limit,
                         rows, errors);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_gc_candidate_view, payload_hash, uri, bytes,
+                        safe_to_delete);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_gc_plan_result, ok, scope, source_id, dry_run,
+                        payloads_scanned, referenced_payloads, candidate_bytes, candidates, notes);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_projection_action_view, name, dry_run, written,
+                        would_write, detail);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_projection_error, code, projection, source_id);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_rebuild_index_result, ok, scope, source_id,
+                        authority, rebuilt_from, projections, dry_run, would_write, written, sources_rebuilt, errors);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_retained_manifest_view, source_id, manifest_id,
+                        entries, sync_root);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_projection_compact_view, name, path, action,
+                        dry_run, rebuildable);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_unsupported_action_view, name, reason);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_compact_plan_result, ok, scope, source_id,
+                        dry_run, retained_manifests, rebuild_index, gc, projection_compact, unsupported, notes);
 
 #endif // KUNGFU_RUNTIME_STORAGE_BINDING_REFLECTION_H

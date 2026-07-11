@@ -494,6 +494,36 @@ void bind(pybind11::module &&m) {
       py::arg("runtime_dir"), py::arg("query"), py::arg("source_id") = py::none(), py::arg("entry_kind") = py::none(),
       py::arg("episode_id") = 0, py::arg("limit") = 100, py::arg("since") = "", py::arg("until") = "");
   m.def(
+      "storage_gc_plan_typed",
+      [](const std::string &runtime_dir, const std::optional<std::string> &source_id, bool dry_run) {
+        storage_service_api::storage_gc_plan_request request{};
+        request.runtime_dir = runtime_dir;
+        request.source_id = source_id.value_or("");
+        request.dry_run = dry_run;
+        return hana_view_to_py(storage_service_api::default_storage_service().gc_plan(request));
+      },
+      py::arg("runtime_dir"), py::arg("source_id") = py::none(), py::arg("dry_run") = true);
+  m.def(
+      "storage_rebuild_index_typed",
+      [](const std::string &runtime_dir, const std::optional<std::string> &source_id, bool dry_run) {
+        storage_service_api::storage_rebuild_index_request request{};
+        request.runtime_dir = runtime_dir;
+        request.source_id = source_id.value_or("");
+        request.dry_run = dry_run;
+        return hana_view_to_py(storage_service_api::default_storage_service().rebuild_index(request));
+      },
+      py::arg("runtime_dir"), py::arg("source_id") = py::none(), py::arg("dry_run") = true);
+  m.def(
+      "storage_compact_plan_typed",
+      [](const std::string &runtime_dir, const std::optional<std::string> &source_id, bool dry_run) {
+        storage_service_api::storage_compact_plan_request request{};
+        request.runtime_dir = runtime_dir;
+        request.source_id = source_id.value_or("");
+        request.dry_run = dry_run;
+        return hana_view_to_py(storage_service_api::default_storage_service().compact_plan(request));
+      },
+      py::arg("runtime_dir"), py::arg("source_id") = py::none(), py::arg("dry_run") = true);
+  m.def(
       "make_storage_service_request",
       [](const std::string &operation, const std::string &runtime_dir, py::dict options) {
         return json_to_py(
