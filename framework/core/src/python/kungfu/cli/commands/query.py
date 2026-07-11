@@ -3,7 +3,7 @@
 import json
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 import click
 
@@ -18,7 +18,7 @@ def _echo_json(payload: Any, *, err: bool = False) -> None:
     click.echo(json.dumps(payload, indent=2, sort_keys=True), err=err)
 
 
-def _fail(code: str, message: str, *, exit_code: int = 2) -> None:
+def _fail(code: str, message: str, *, exit_code: int = 2) -> NoReturn:
     _echo_json(
         {
             "schema": ERROR_SCHEMA,
@@ -45,11 +45,18 @@ def _load_definition(file_path: str) -> dict[str, Any]:
     return value
 
 
+def _runtime_dir(ctx: click.Context) -> str:
+    # runtime_dir is copied onto the click context dynamically by
+    # pass_ctx_from_parent (commands/__init__), so typed access goes through
+    # the context dict instead of a (nonexistent) declared attribute.
+    return str(ctx.__dict__["runtime_dir"])
+
+
 def _planner_call(ctx: click.Context, action: str, **kwargs: Any) -> dict[str, Any]:
     from kungfu.storage import service
 
     try:
-        return service.query_plan(ctx.runtime_dir, action=action, **kwargs)
+        return service.query_plan(_runtime_dir(ctx), action=action, **kwargs)
     except (RuntimeError, TypeError, ValueError) as error:
         _fail("KF_QUERY_VALIDATION", str(error))
 
@@ -281,7 +288,7 @@ def prove(
         )
     try:
         result = service.fact_query_definition(
-            ctx.runtime_dir, definition, engine=engine
+            _runtime_dir(ctx), definition, engine=engine
         )
     except (RuntimeError, TypeError, ValueError) as error:
         _fail("KF_QUERY_EXECUTION", str(error), exit_code=1)
