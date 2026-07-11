@@ -320,7 +320,11 @@ export type Atlas = {
 export type AtlasExecFileSync = (
   file: string,
   args: string[],
-  options: { encoding: 'utf8'; env: Record<string, string | undefined> },
+  options: {
+    encoding: 'utf8';
+    env: Record<string, string | undefined>;
+    maxBuffer?: number;
+  },
 ) => string;
 
 export type OpenAtlasOptions = {
@@ -363,6 +367,9 @@ export function openAtlas(options: OpenAtlasOptions): Atlas {
     const out = options.execFileSync(bin, args, {
       encoding: 'utf8',
       env: cliEnv(env, runtimeDir),
+      // A real Atlas workspace can contain hundreds of goals and markers;
+      // Node's 1 MiB default truncates valid machine-readable projections.
+      maxBuffer: 64 * 1024 * 1024,
     });
     return parseJson<T>(out);
   };

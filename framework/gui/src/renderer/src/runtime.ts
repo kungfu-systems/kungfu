@@ -146,7 +146,15 @@ function readSchemaTypes(
   });
 }
 
+let bootedRuntime: Runtime | null = null;
+
 export function bootRuntime(): Runtime {
+  if (bootedRuntime) return bootedRuntime;
+  bootedRuntime = createRuntime();
+  return bootedRuntime;
+}
+
+function createRuntime(): Runtime {
   const env = window.process.env;
   const runtimeDir = env.KF_RUNTIME_DIR || '';
   const base: Omit<Runtime, 'ok' | 'message'> = {
@@ -239,7 +247,11 @@ export function bootRuntime(): Runtime {
       execFileSync: (
         file: string,
         args: string[],
-        options: { encoding: 'utf8'; env: Record<string, string | undefined> },
+        options: {
+          encoding: 'utf8';
+          env: Record<string, string | undefined>;
+          maxBuffer?: number;
+        },
       ) => string;
     };
     const cliOptions = {

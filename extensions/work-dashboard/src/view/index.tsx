@@ -342,6 +342,16 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
     'mission' | 'go' | 'import' | 'bundle' | 'claim' | null
   >(null);
   const actor = 'work-dashboard';
+  const selectedMissionSource = React.useMemo(() => {
+    if (selectedMission === 'all') return undefined;
+    const subjectKey = missions.find(
+      (mission) => mission.mission_id === selectedMission,
+    )?.subject_key;
+    const suffix = `:${selectedMission}`;
+    return subjectKey?.endsWith(suffix)
+      ? subjectKey.slice(0, -suffix.length)
+      : undefined;
+  }, [missions, selectedMission]);
 
   const reload = React.useCallback(() => {
     setInfo(atlas.importInfo());
@@ -362,13 +372,17 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
       return;
     }
     try {
-      setTrustReport(atlas.assessMission(selectedMission));
+      setTrustReport(
+        atlas.assessMission(selectedMission, {
+          source: selectedMissionSource,
+        }),
+      );
       setTrustError('');
     } catch (error) {
       setTrustReport(null);
       setTrustError((error as Error).message);
     }
-  }, [atlas, selectedMission]);
+  }, [atlas, selectedMission, selectedMissionSource]);
 
   const importNow = () => {
     if (!repoRoot.trim()) {
@@ -466,7 +480,11 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
           result.receipt.reused ? ' (reused)' : ''
         }`,
       );
-      setTrustReport(atlas.assessMission(selectedMission));
+      setTrustReport(
+        atlas.assessMission(selectedMission, {
+          source: selectedMissionSource,
+        }),
+      );
       setNewGoalId('');
       setNewGoalTitle('');
       setNewGoalObjective('');
@@ -496,7 +514,11 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
         atlas.assessCompletion(selectedMission, selectedGoal),
       );
       setCompletionError('');
-      setTrustReport(atlas.assessMission(selectedMission));
+      setTrustReport(
+        atlas.assessMission(selectedMission, {
+          source: selectedMissionSource,
+        }),
+      );
     } catch (error) {
       setCompletionReport(null);
       setCompletionError((error as Error).message);
