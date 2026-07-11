@@ -13,6 +13,7 @@ const kungfu = kungfuFactory();
 const nativeAvailable =
   typeof kungfu.runStorageServiceOperation === 'function' &&
   typeof kungfu.acceptStorageManifest === 'function';
+const typedStatusAvailable = typeof kungfu.storageStatusTyped === 'function';
 
 function runtimeEnv() {
   const key =
@@ -173,6 +174,46 @@ function withStorageProvider(provider, fn) {
     }
   }
 }
+
+test(
+  'Hana typed storage status bypasses JSON stringify/parse transport',
+  {
+    skip:
+      typedStatusAvailable || process.env.KUNGFU_REQUIRE_NATIVE === '1'
+        ? false
+        : 'typed storage status binding is unavailable',
+  },
+  () => {
+    const runtimeDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'kf-typed-status-'),
+    );
+    const originalParse = JSON.parse;
+    const originalStringify = JSON.stringify;
+    try {
+      JSON.parse = () => {
+        throw new Error('typed status binding must not call JSON.parse');
+      };
+      JSON.stringify = () => {
+        throw new Error('typed status binding must not call JSON.stringify');
+      };
+      const status = kungfu.storageStatusTyped(runtimeDir);
+      assert.equal(status.ok, true);
+      assert.equal(status.source_id, null);
+      assert.equal(typeof status.provider_runtime, 'object');
+      assert.equal(status.provider_runtime.read_fill_cache, null);
+      assert.equal(typeof status.provider_cache.entries, 'bigint');
+      assert.equal(Array.isArray(status.projections), true);
+      assert.equal(
+        status.projections[0].verification.authority,
+        'yijinjing-journal',
+      );
+    } finally {
+      JSON.parse = originalParse;
+      JSON.stringify = originalStringify;
+      fs.rmSync(runtimeDir, { recursive: true, force: true });
+    }
+  },
+);
 
 function selectedPythonResults(runtimeDir) {
   const script = String.raw`

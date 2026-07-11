@@ -344,6 +344,27 @@ def test_storage_core_binding_owns_sync_root_and_payload_checks(tmp_path):
     )
 
 
+def test_typed_storage_status_binding_bypasses_json_transport(tmp_path):
+    runtime = kungfu.__binding__.runtime
+    original_loads = json.loads
+
+    def reject_json_transport(*_args, **_kwargs):
+        raise AssertionError("typed status binding must not call json.loads")
+
+    json.loads = reject_json_transport
+    try:
+        status = runtime.storage_status_typed(str(tmp_path / "runtime"))
+    finally:
+        json.loads = original_loads
+
+    assert status["ok"] is True
+    assert status["source_id"] is None
+    assert isinstance(status["provider_runtime"], dict)
+    assert status["provider_runtime"]["read_fill_cache"] is None
+    assert isinstance(status["projections"], list)
+    assert status["projections"][0]["verification"]["authority"] == "yijinjing-journal"
+
+
 def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
     runtime = kungfu.__binding__.runtime
     capabilities = storage_service.service_capabilities()

@@ -3404,8 +3404,8 @@ nlohmann::json accept_storage_manifest_impl(const std::string &runtime_dir, cons
   auto parsed = parse_storage_export_bundle({{"manifest", input}});
   (void)default_storage_service().import_bundle({runtime_dir, {}, std::move(parsed), false});
   const auto provider = provider_cache::instance().acquire(runtime_dir, {});
-  const auto accepted =
-      catalog_store(runtime_dir).latest_manifest_typed(text_or(input, "source_id", "local"), provider->content_store());
+  const auto source_id = text_or(input, "source_id", text_or(input, "storage_source_id", "local"));
+  const auto accepted = catalog_store(runtime_dir).latest_manifest_typed(source_id, provider->content_store());
   if (!accepted.has_value()) {
     throw std::runtime_error("accepted manifest not found");
   }
@@ -3631,10 +3631,11 @@ storage_export_bundle_result parse_storage_export_bundle(const nlohmann::json &b
   auto &manifest = parsed.manifest;
   manifest.manifest_id = text_or(manifest_edge, "manifest_id");
   manifest.scope = text_or(manifest_edge, "scope");
-  manifest.source_id = text_or(manifest_edge, "source_id");
+  manifest.source_id = text_or(manifest_edge, "source_id", text_or(manifest_edge, "storage_source_id", "local"));
   manifest.source_type = text_or(manifest_edge, "source_type");
   manifest.source_head = text_or(manifest_edge, "source_head");
-  manifest.source_coordinate = text_or(object_or_empty(manifest_edge, "source"), "coordinate");
+  manifest.source_coordinate =
+      text_or(object_or_empty(manifest_edge, "source"), "coordinate", text_or(manifest_edge, "source_coordinate"));
   const auto range = object_or_empty(manifest_edge, "range");
   manifest.range_since = text_or(range, "since");
   manifest.range_until = text_or(range, "until");
@@ -3662,9 +3663,10 @@ storage_export_bundle_result parse_storage_export_bundle(const nlohmann::json &b
 
 storage_import_bundle_result import_bundle_typed_impl(const storage_import_bundle_request &request) {
   const auto &manifest = request.bundle.manifest;
-  if (manifest.manifest_id.empty() || manifest.source_id.empty()) {
-    throw std::invalid_argument("bundle_manifest_invalid: missing_field");
-  }
+  if (manifest.manifest_id.empty())
+    throw std::invalid_argument("bundle_manifest_invalid: missing_field: manifest_id");
+  if (manifest.source_id.empty())
+    throw std::invalid_argument("bundle_manifest_invalid: missing_field: source_id");
   if (request.verify) {
     const auto expected = yy_storage::compute_manifest_sync_root(manifest.entries);
     if (expected.algorithm != manifest.sync_root.algorithm || expected.value != manifest.sync_root.value ||

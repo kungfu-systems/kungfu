@@ -84,6 +84,7 @@ module.exports = () => {
     formatStringToHashHex: binding.formatStringToHashHex,
     parseTime: binding.parseTime,
     storageServiceCapabilities: binding.storageServiceCapabilities,
+    storageStatusTyped: binding.storageStatusTyped,
     makeStorageServiceRequest: binding.makeStorageServiceRequest,
     runStorageServiceOperation: binding.runStorageServiceOperation,
     acceptStorageManifest: binding.acceptStorageManifest,

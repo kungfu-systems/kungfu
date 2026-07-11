@@ -15,6 +15,8 @@
 #include <kungfu/runtime/practice/apprentice.h>
 #include <kungfu/runtime/practice/master.h>
 #include <kungfu/runtime/schema/schema_compiler.h>
+#include <kungfu/runtime/storage/binding_reflection.h>
+#include <kungfu/runtime/storage/hana_view.h>
 #include <kungfu/runtime/storage/json_edge.h>
 #include <kungfu/runtime/util/terminal.h>
 #include <kungfu/yijinjing/hash.h>
@@ -85,6 +87,39 @@ std::vector<nlohmann::json> py_entries_to_json(py::iterable entries) {
 
 py::object json_to_py(const nlohmann::json &value) {
   return py::module_::import("json").attr("loads")(value.dump(-1, ' ', false));
+}
+
+template <typename> inline constexpr bool dependent_false_v = false;
+
+template <typename T> py::object hana_view_to_py(const T &value) {
+  using value_t = std::decay_t<T>;
+  if constexpr (std::is_same_v<value_t, bool>) {
+    return py::bool_(value);
+  } else if constexpr (std::is_integral_v<value_t>) {
+    return py::int_(value);
+  } else if constexpr (std::is_floating_point_v<value_t>) {
+    return py::float_(value);
+  } else if constexpr (std::is_enum_v<value_t>) {
+    return py::int_(static_cast<std::underlying_type_t<value_t>>(value));
+  } else if constexpr (std::is_same_v<value_t, std::string>) {
+    return py::str(value);
+  } else if constexpr (kungfu::runtime::storage_binding::is_optional_v<value_t>) {
+    return value.has_value() ? hana_view_to_py(*value) : py::none();
+  } else if constexpr (kungfu::runtime::storage_binding::is_vector_v<value_t>) {
+    py::list result;
+    for (const auto &item : value)
+      result.append(hana_view_to_py(item));
+    return result;
+  } else if constexpr (kungfu::runtime::storage_binding::is_variant_v<value_t>) {
+    return std::visit([](const auto &item) { return hana_view_to_py(item); }, value);
+  } else if constexpr (kungfu::runtime::storage_binding::is_hana_view_v<value_t>) {
+    py::dict result;
+    kungfu::runtime::storage_binding::for_each_field(
+        value, [&](const auto &name, const auto &field) { result[py::str(name)] = hana_view_to_py(field); });
+    return result;
+  } else {
+    static_assert(dependent_false_v<value_t>, "unsupported Hana binding value");
+  }
 }
 
 } // namespace
@@ -424,6 +459,16 @@ void bind(pybind11::module &&m) {
       py::arg("manifest"), py::arg("records"));
   m.def("storage_service_capabilities",
         []() { return json_to_py(storage_service_api::storage_service_capabilities()); });
+  m.def(
+      "storage_status_typed",
+      [](const std::string &runtime_dir, const std::optional<std::string> &source_id) {
+        storage_service_api::storage_status_request request{};
+        request.runtime_dir = runtime_dir;
+        if (source_id.has_value())
+          request.source_id = *source_id;
+        return hana_view_to_py(storage_service_api::default_storage_service().status(request));
+      },
+      py::arg("runtime_dir"), py::arg("source_id") = py::none());
   m.def(
       "make_storage_service_request",
       [](const std::string &operation, const std::string &runtime_dir, py::dict options) {
