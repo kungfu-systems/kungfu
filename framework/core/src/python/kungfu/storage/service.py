@@ -382,6 +382,42 @@ def verify_local_sync(
     )
 
 
+def _typed_query_edge_projection(result: dict[str, Any]) -> dict[str, Any]:
+    query_names = {
+        0: "sources",
+        1: "manifests",
+        2: "entries",
+    }
+    query = query_names[int(result["query"])]
+    rows = list(result.get("rows", []))
+    rendered = {
+        "ok": bool(result["ok"]),
+        "scope": result["scope"],
+        "projection": {
+            "name": result["projection_name"],
+            "schema": result["projection_schema"],
+            "authority": result["authority"],
+            "rebuildable": bool(result["rebuildable"]),
+        },
+        "query": query,
+        "limit": int(result["limit"]),
+        "rows": rows,
+        "row_count": len(rows),
+        "source_id": result.get("source_id"),
+        "kind": result.get("entry_kind"),
+        "range": {
+            key: value for key, value in dict(result.get("range", {})).items() if value
+        },
+    }
+    errors = [
+        {key: value for key, value in dict(error).items() if value is not None}
+        for error in result.get("errors", [])
+    ]
+    if errors:
+        rendered["errors"] = errors
+    return rendered
+
+
 def query_projection(
     runtime_dir: str | Path,
     *,
@@ -393,6 +429,21 @@ def query_projection(
     limit: int = 100,
 ) -> dict[str, Any]:
     scope = "episode" if episode_id else ("source" if source_id else "all")
+    if query in {"sources", "manifests", "entries"}:
+        range_filter = range_filter or {}
+        return _typed_query_edge_projection(
+            dict(
+                _runtime().storage_query_typed(
+                    str(runtime_dir),
+                    query,
+                    source_id=source_id,
+                    entry_kind=kind,
+                    limit=limit,
+                    since=str(range_filter.get("since") or ""),
+                    until=str(range_filter.get("until") or ""),
+                )
+            )
+        )
     return dict(
         _runtime().run_storage_service_operation(
             "query",

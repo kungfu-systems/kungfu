@@ -365,6 +365,7 @@ def test_typed_storage_status_binding_bypasses_json_transport(tmp_path):
         query = runtime.storage_query_typed(
             str(runtime_dir), "episode_records", episode_id=701
         )
+        query_edge = storage_service.query_projection(runtime_dir, query="entries")
     finally:
         json.loads = original_loads
 
@@ -377,6 +378,8 @@ def test_typed_storage_status_binding_bypasses_json_transport(tmp_path):
     assert query["query"] == 4
     assert query["rows"][0]["body"]["title"] == "typed-query"
     assert query["rows"][0]["body"]["location_uid"] == 17
+    assert query_edge["query"] == "entries"
+    assert query_edge["row_count"] == 0
 
 
 def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
@@ -529,17 +532,24 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
 
     runtime = kungfu.__binding__.runtime
     original_operation = runtime.run_storage_service_operation
+    original_typed_query = runtime.storage_query_typed
     calls = []
+    typed_queries = []
 
     def spy_operation(operation, runtime_dir_arg, options):
         calls.append((operation, runtime_dir_arg, dict(options)))
         return original_operation(operation, runtime_dir_arg, options)
+
+    def spy_typed_query(runtime_dir_arg, query, **options):
+        typed_queries.append((runtime_dir_arg, query, dict(options)))
+        return original_typed_query(runtime_dir_arg, query, **options)
 
     monkeypatch.setattr(
         runtime,
         "run_storage_service_operation",
         spy_operation,
     )
+    monkeypatch.setattr(runtime, "storage_query_typed", spy_typed_query)
 
     storage_service.status(runtime_dir, source_id="local-synth")
     storage_service.layout(runtime_dir)
@@ -588,8 +598,20 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
         "export_bundle",
         "import_bundle",
         "verify_sync",
-        "query",
     } <= entered
+    assert typed_queries == [
+        (
+            str(runtime_dir),
+            "entries",
+            {
+                "source_id": "local-synth",
+                "entry_kind": "note",
+                "limit": 10,
+                "since": "",
+                "until": "",
+            },
+        )
+    ]
 
 
 def test_storage_query_edge_renders_typed_source_manifest_and_entry_rows(tmp_path):
