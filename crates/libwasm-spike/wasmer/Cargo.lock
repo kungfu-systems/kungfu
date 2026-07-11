@@ -780,6 +780,7 @@ version = "0.0.0"
 dependencies = [
  "wasmer",
  "wat",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

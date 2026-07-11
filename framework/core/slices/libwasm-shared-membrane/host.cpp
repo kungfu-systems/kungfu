@@ -84,12 +84,14 @@ bool run_engine(const char *library_path, const kf_embedding_api_v1 &api, const 
     std::fprintf(stderr, "%s libwasm module load failed: %s\n", engine_name(engine), library_path);
     return false;
   }
+  std::fprintf(stderr, "%s phase: module-loaded\n", engine_name(engine));
   const auto run = libwasm.symbol<kf_libwasm_run_v1_fn>("kf_libwasm_run_v1");
   const auto panic_probe = libwasm.symbol<kf_libwasm_panic_probe_v1_fn>("kf_libwasm_panic_probe_v1");
   if (run == nullptr || panic_probe == nullptr || panic_probe() != KF_LIBWASM_PANIC_CONTAINED) {
     std::fprintf(stderr, "%s C ABI or panic containment probe failed\n", engine_name(engine));
     return false;
   }
+  std::fprintf(stderr, "%s phase: panic-contained\n", engine_name(engine));
   kf_libwasm_config_v1 size_config{};
   size_config.struct_size = sizeof(size_config);
   size_config.engine = engine;
@@ -104,6 +106,7 @@ bool run_engine(const char *library_path, const kf_embedding_api_v1 &api, const 
     std::fprintf(stderr, "%s C ABI size/null negotiation failed\n", engine_name(engine));
     return false;
   }
+  std::fprintf(stderr, "%s phase: abi-negotiated\n", engine_name(engine));
   kf_libwasm_config_v1 config{};
   config.struct_size = sizeof(config);
   config.engine = engine;
@@ -116,6 +119,7 @@ bool run_engine(const char *library_path, const kf_embedding_api_v1 &api, const 
 
   kf_libwasm_report_v1 report{};
   report.struct_size = sizeof(report);
+  std::fprintf(stderr, "%s phase: engine-run\n", engine_name(engine));
   const auto status = run(&api, &config, &report);
   const uint64_t expected_frames = static_cast<uint64_t>(BATCH_FRAMES) * MEASURED_BATCHES;
   const uint64_t expected_payload = expected_frames * 256U;
