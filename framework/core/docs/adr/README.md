@@ -65,6 +65,7 @@ A record's **Status** says where it stands:
 | [0045](ADR-0045-kfx-execution-profiles-native-rust-wasm.md) | accepted | KFX execution profiles — Rust-primary native, WebAssembly components, managed runtimes, and subprocesses |
 | [0046](ADR-0046-rust-host-trunk-and-assembled-runtime.md) | accepted | Rust host trunk, layered CLI, and the assembled runtime distribution |
 | [0047](ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md) | accepted; staged | authoritative structured facts have one schema owner — Hana POD or FlatBuffers |
+| [0048](ADR-0048-runtime-fact-query-semantics-and-changelog.md) | accepted; staged | runtime fact queries use explicit bases, one logical plan, and a proof-carrying changelog |
 
 ## Reading by theme
 
@@ -160,7 +161,10 @@ A record's **Status** says where it stands:
   opaque content-addressed bytes, not `.json` text), and
   [0047](ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md) (the
   system-wide schema authority rule, typed-view/opaque-body boundaries, JSON
-  edge-only policy, and exclusive Hana/FlatBuffers SQLite projection paths), and
+  edge-only policy, and exclusive Hana/FlatBuffers SQLite projection paths),
+  [0048](ADR-0048-runtime-fact-query-semantics-and-changelog.md) (the explicit
+  current/historical query basis, shared logical plan, proof envelope, and
+  resumable changelog contract), and
   [0042](ADR-0042-episode-atomic-safety-and-qualification.md) (Episode atomic
   safety as evidence-bounded capability, graceful degradation, monotonic repair,
   fault containment, and qualification under scale).
@@ -192,3 +196,5 @@ A record's **Status** says where it stands:
 - [`docs/episode-atomicity-qualification.md`](../../../../docs/episode-atomicity-qualification.md) —
   the evolving semantic oracle, fault matrix, scale tiers, metrics, and Episode
   Trust Report design required by ADR-0042.
+- [`docs/querying-runtime-facts.md`](../../../../docs/querying-runtime-facts.md) —
+  the staged human and agent service surface defined by ADR-0048.

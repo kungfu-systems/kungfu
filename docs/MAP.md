@@ -38,6 +38,7 @@ and the map routes a question to whichever doc answers it.
 | What is the event / journal / replay model? | [`event-model.md`](event-model.md) | use | stable |
 | What does Rewind replay, and what must it never silently re-execute? | [ADR-0020](../framework/core/docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md) + [`rewind.md`](rewind.md) | why, verify | stable |
 | How does Kungfu persist user facts, sync sources, and maintain storage over time? | [`runtime-storage-service.md`](runtime-storage-service.md) | use, verify | draft |
+| How do I query current or historical runtime facts, and what proves the answer? | [`querying-runtime-facts.md`](querying-runtime-facts.md) + [ADR-0048](../framework/core/docs/adr/ADR-0048-runtime-fact-query-semantics-and-changelog.md) | use, verify | draft · semantics accepted; implementation staged |
 | What is an Episode, why is it the atomic trust boundary, and how is that claim qualified under faults and load? | [`episode-object-model.md`](episode-object-model.md) + [`episode-atomicity-qualification.md`](episode-atomicity-qualification.md) + [ADR-0033](../framework/core/docs/adr/ADR-0033-episode-causal-segment-object.md) + [ADR-0034](../framework/core/docs/adr/ADR-0034-yijinjing-episode-manifest-journal.md) + [ADR-0042](../framework/core/docs/adr/ADR-0042-episode-atomic-safety-and-qualification.md) | why, use, verify | draft |
 | What is the supervisor/master topology, and how can the master stay alive after the GUI closes? | [`master-service.md`](master-service.md) + [ADR-0036](../framework/core/docs/adr/ADR-0036-supervisor-and-workspace-master-topology.md) | use, verify | draft |
 | How can a multi-machine timeline stay stable without one global clock? | [ADR-0021](../framework/core/docs/adr/ADR-0021-observer-relative-timeline-projection.md) + [`event-model.md`](event-model.md) | why, verify | stable |
@@ -95,6 +96,10 @@ route to the row that answers them:
   observability / OpenTelemetry / blockchain / polyglot semantic core** → *why
   Kungfu occupies a distinct runtime-fact layer*
   ([`design-philosophy.md`](design-philosophy.md#the-missing-infrastructure-layer-runtime-facts)).
+- **query / SQL / historical state / time travel / temporal pattern / CEP /
+  changelog / proof / lineage / QueryDefinition** → *how do I query current or
+  historical runtime facts* ([`querying-runtime-facts.md`](querying-runtime-facts.md))
+  and [ADR-0048](../framework/core/docs/adr/ADR-0048-runtime-fact-query-semantics-and-changelog.md).
 - **latency / performance / zero-copy / serialization** → *the membrane*
   ([`architecture.md`](architecture.md)) and *the event model*
   ([`event-model.md`](event-model.md)).
