@@ -647,6 +647,20 @@ void bind(pybind11::module &&m) {
       py::arg("runtime_dir"), py::arg("episode_id") = 0, py::arg("location_uid") = 0, py::arg("end_time") = 0,
       py::arg("reason") = "");
   m.def(
+      "storage_episode_list_typed",
+      [](const std::string &runtime_dir, uint32_t location_uid, uint64_t limit) {
+        return hana_view_to_py(storage_service_api::default_storage_service().episode_list(
+            storage_service_api::storage_episode_list_request{runtime_dir, location_uid, limit}));
+      },
+      py::arg("runtime_dir"), py::arg("location_uid") = 0, py::arg("limit") = 100);
+  m.def(
+      "storage_episode_inspect_typed",
+      [](const std::string &runtime_dir, uint64_t episode_id) {
+        return hana_view_to_py(storage_service_api::default_storage_service().episode_inspect(
+            storage_service_api::storage_episode_inspect_request{runtime_dir, episode_id}));
+      },
+      py::arg("runtime_dir"), py::arg("episode_id"));
+  m.def(
       "storage_episode_projection_rebuild_typed",
       [](const std::string &runtime_dir) {
         return hana_view_to_py(storage_service_api::default_storage_service().episode_projection_rebuild(

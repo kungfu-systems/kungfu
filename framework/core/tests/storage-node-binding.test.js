@@ -264,6 +264,10 @@ test(
         end_time: 1300,
         frame_count: 1n,
       });
+      const listed = kungfu.storageEpisodeListTyped(runtimeDir);
+      const inspected = kungfu.storageEpisodeInspectTyped(runtimeDir, {
+        episode_id: 702n,
+      });
       kungfu.storageEpisodeBeginTyped(runtimeDir, {
         episode_id: 703n,
         begin_time: 1400,
@@ -290,6 +294,8 @@ test(
       assert.equal(attachedRef.ref_kind, 1);
       assert.equal(attachedFrame.frame_uid, 10n);
       assert.equal(closed.close.status, 2);
+      assert.equal(listed.episodes[0].episode_id, 702n);
+      assert.equal(inspected.content_root.status, 4);
       assert.equal(recovered.recovered[0].close.status, 3);
       assert.equal(projection.authority, 'yijinjing-journal');
     } finally {

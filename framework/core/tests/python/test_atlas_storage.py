@@ -390,6 +390,8 @@ def test_typed_storage_status_binding_bypasses_json_transport(tmp_path):
         closed = storage_service.episode_end(
             runtime_dir, episode_id=702, end_time=1300, frame_count=1
         )
+        listed = storage_service.episode_list(runtime_dir)
+        inspected = storage_service.episode_inspect(runtime_dir, episode_id=702)
         storage_service.episode_begin(runtime_dir, episode_id=703, begin_time=1400)
         recovered = storage_service.episode_recover(
             runtime_dir, episode_id=703, end_time=1500
@@ -427,6 +429,8 @@ def test_typed_storage_status_binding_bypasses_json_transport(tmp_path):
     assert attached_ref["ref_kind"] == 1
     assert attached_frame["frame_uid"] == 10
     assert closed["close"]["status"] == 2
+    assert listed["episodes"][0]["episode_id"] == 702
+    assert inspected["content_root"]["status"] == 4
     assert recovered["recovered"][0]["close"]["status"] == 3
     assert projection["authority"] == "yijinjing-journal"
 
@@ -733,6 +737,8 @@ def test_python_episode_writer_and_recovery_use_typed_bindings(tmp_path, monkeyp
         "storage_episode_attach_frame_typed",
         "storage_episode_attach_ref_typed",
         "storage_episode_close_typed",
+        "storage_episode_list_typed",
+        "storage_episode_inspect_typed",
         "storage_episode_recover_typed",
         "storage_episode_projection_rebuild_typed",
     ]
@@ -756,6 +762,8 @@ def test_python_episode_writer_and_recovery_use_typed_bindings(tmp_path, monkeyp
         runtime_dir, episode_id=801, ref_kind="input_frame", ref_uid=2
     )
     storage_service.episode_end(runtime_dir, episode_id=801, end_time=1300)
+    storage_service.episode_list(runtime_dir)
+    storage_service.episode_inspect(runtime_dir, episode_id=801)
     storage_service.episode_begin(runtime_dir, episode_id=802, begin_time=1400)
     storage_service.episode_recover(runtime_dir, episode_id=802, end_time=1500)
     storage_service.episode_projection_rebuild(runtime_dir)
@@ -871,22 +879,23 @@ def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
 
     listed = storage_service.episode_list(runtime_dir)
     assert listed["authority"] == "yijinjing-journal"
-    assert listed["episode_count"] == 1
+    assert len(listed["episodes"]) == 1
     assert listed["episodes"][0]["episode_id"] == 42
-    assert listed["episodes"][0]["frame_count"] == 1
+    assert listed["episodes"][0]["unique_frame_count"] == 1
 
     inspected = storage_service.episode_inspect(runtime_dir, episode_id=42)
     assert inspected["ok"]
-    assert inspected["episode"]["status"] == "ended"
+    assert inspected["episode"]["close"]["status"] == 2
     # open + frame + ref + close, plus the ADR-0043 root committed at seal
-    assert len(inspected["records"]) == 5
-    assert inspected["records"][-1]["record_kind"] == "episode_root_committed"
-    assert inspected["content_root"]["status"] == "verified"
-    assert inspected["frames"][0]["frame_uid"] == 100
+    assert len(inspected["episode"]["records"]) == 5
+    assert inspected["episode"]["records"][-1]["body"]["root_value"]
+    frame_index = inspected["episode"]["frame_indices"][0]
+    assert inspected["content_root"]["status"] == 4
+    assert inspected["episode"]["records"][frame_index]["body"]["frame_uid"] == 100
     assert inspected["causal_graph"]["schema"] == "kungfu.episode.causal-graph/v1"
     assert inspected["causal_graph"]["degraded"] is False
-    assert inspected["dependencies"][0]["kind"] == "frame"
-    assert inspected["dependencies"][0]["status"] == "declared_external"
+    assert inspected["causal_graph"]["dependencies"][0]["kind"] == "frame"
+    assert inspected["causal_graph"]["dependencies"][0]["status"] == "declared_external"
 
     fsck = storage_service.fsck(runtime_dir)
     assert fsck["ok"]
@@ -989,7 +998,9 @@ def test_episode_fsck_reports_degraded_causal_dependencies(tmp_path):
     inspected = storage_service.episode_inspect(runtime_dir, episode_id=7)
     assert inspected["ok"]
     assert inspected["causal_graph"]["degraded"] is True
-    assert {dependency["kind"] for dependency in inspected["dependencies"]} >= {
+    assert {
+        dependency["kind"] for dependency in inspected["causal_graph"]["dependencies"]
+    } >= {
         "episode",
         "frame",
         "payload",

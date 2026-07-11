@@ -151,9 +151,8 @@ def test_seal_commits_a_verified_deterministic_root(tmp_path):
     _build_episode(runtime_dir)
 
     root = _root_of(runtime_dir)
-    assert root["status"] == "verified"
+    assert root["status"] == 4
     assert root["match"] is True
-    assert root["recorded"]["record_kind"] == "episode_root_committed"
     assert root["recorded"]["algorithm"] == "sha256"
     assert root["recorded"]["root_value"] == root["computed"]["value"]
     # open + frame + ref + close are covered; heartbeats are not claims
@@ -165,7 +164,7 @@ def test_seal_commits_a_verified_deterministic_root(tmp_path):
 
     # identity surfaces on the summary for list/inspect/fsck consumers
     episode = service.episode_inspect(runtime_dir, episode_id=7)["episode"]
-    assert episode["content_root"] == root["recorded"]["root_value"]
+    assert episode["root"]["root_value"] == root["recorded"]["root_value"]
 
     fsck = service.fsck(runtime_dir, episode_id=7)
     assert fsck["ok"]
@@ -207,7 +206,7 @@ def test_sealed_episode_with_lost_root_reports_absent(tmp_path):
     _drop_last_frame(_manifest_journal(runtime_dir))
 
     root = _root_of(runtime_dir)
-    assert root["status"] == "absent"
+    assert root["status"] == 2
     assert root["recorded"] is None
     # the fold can still derive the identity for inspection or later backfill
     assert root["computed"]["value"]
@@ -224,7 +223,7 @@ def test_tampered_root_fails_fsck(tmp_path):
     _tamper_recorded_root(_manifest_journal(runtime_dir), recorded)
 
     root = _root_of(runtime_dir)
-    assert root["status"] == "mismatch"
+    assert root["status"] == 5
     assert root["match"] is False
 
     fsck = service.fsck(runtime_dir, episode_id=7)
@@ -239,7 +238,7 @@ def test_open_episode_has_no_identity_yet(tmp_path):
     _build_episode(runtime_dir, seal=False)
 
     root = _root_of(runtime_dir)
-    assert root["status"] == "undefined"
+    assert root["status"] == 0
     assert root["recorded"] is None
     assert root["computed"] is None
 
@@ -255,7 +254,7 @@ def test_abort_seals_identity_too(tmp_path):
         reason="interrupted",
     )
     root = _root_of(runtime_dir)
-    assert root["status"] == "verified"
+    assert root["status"] == 4
 
 
 def test_projection_carries_the_root_record(tmp_path):

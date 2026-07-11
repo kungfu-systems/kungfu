@@ -91,7 +91,7 @@ def test_writer_guard_blocks_concurrent_writer(tmp_path):
     assert heartbeat["episode_id"] == 1
     assert heartbeat["update_time"] == 1200
     # Reads never take the guard.
-    assert service.episode_list(runtime_dir)["episode_count"] == 1
+    assert len(service.episode_list(runtime_dir)["episodes"]) == 1
 
 
 def test_c1_recover_on_empty_manifest_is_a_no_op(tmp_path):
@@ -109,7 +109,8 @@ def test_c2_interrupted_open_episode_recovers_as_aborted(tmp_path):
 
     # The interrupted Episode stays open; it is never presented as complete.
     listed = service.episode_list(runtime_dir)["episodes"][0]
-    assert listed["status"] == "open"
+    assert listed["opened"] is True
+    assert listed["closed"] is False
     assert service.fsck(runtime_dir)["ok"]
 
     report = service.episode_recover(runtime_dir, reason="crash recovery")
@@ -121,7 +122,7 @@ def test_c2_interrupted_open_episode_recovers_as_aborted(tmp_path):
     assert recovered["content_root"]["episode_id"] == 2
 
     inspected = service.episode_inspect(runtime_dir, episode_id=2)["episode"]
-    assert inspected["status"] == "aborted"
+    assert inspected["close"]["status"] == 3
     assert inspected["closed"] is True
 
     # Recovery is idempotent: nothing left open.
@@ -174,8 +175,7 @@ def test_c4_recover_scopes_to_the_declared_owner_location(tmp_path):
     assert len(report["skipped_open"]) == 1
     assert report["skipped_open"][0] == {"episode_id": 5, "location_uid": 222}
     assert (
-        service.episode_inspect(runtime_dir, episode_id=5)["episode"]["status"]
-        == "open"
+        service.episode_inspect(runtime_dir, episode_id=5)["episode"]["closed"] is False
     )
 
     report = service.episode_recover(runtime_dir)
@@ -204,8 +204,8 @@ def test_c5_torn_manifest_tail_never_presents_a_partial_seal(tmp_path):
         runtime_dir, episode_id=6, end_time=1500, last_frame_uid=88, frame_count=1
     )
     assert (
-        service.episode_inspect(runtime_dir, episode_id=6)["episode"]["status"]
-        == "ended"
+        service.episode_inspect(runtime_dir, episode_id=6)["episode"]["close"]["status"]
+        == 2
     )
 
     journal_files = _journal_files(runtime_dir)
@@ -216,8 +216,8 @@ def test_c5_torn_manifest_tail_never_presents_a_partial_seal(tmp_path):
     # stays honestly sealed with its identity reported absent, never failed.
     _zero_last_frame_length(journal_files[0])
     inspected = service.episode_inspect(runtime_dir, episode_id=6)
-    assert inspected["episode"]["status"] == "ended"
-    assert inspected["content_root"]["status"] == "absent"
+    assert inspected["episode"]["close"]["status"] == 2
+    assert inspected["content_root"]["status"] == 2
     fsck = service.fsck(runtime_dir, episode_id=6)
     assert fsck["ok"]
 
@@ -225,9 +225,9 @@ def test_c5_torn_manifest_tail_never_presents_a_partial_seal(tmp_path):
     # instead of surfacing as a sealed-but-unverified object, nothing crashes.
     _zero_last_frame_length(journal_files[0])
     inspected = service.episode_inspect(runtime_dir, episode_id=6)["episode"]
-    assert inspected["status"] == "open"
+    assert inspected["opened"] is True
     assert inspected["closed"] is False
-    assert inspected["record_count"] == 2
+    assert len(inspected["records"]) == 2
     fsck = service.fsck(runtime_dir, episode_id=6)
     assert fsck["ok"]
 
@@ -235,8 +235,8 @@ def test_c5_torn_manifest_tail_never_presents_a_partial_seal(tmp_path):
     report = service.episode_recover(runtime_dir, reason="torn seal recovered")
     assert len(report["recovered"]) == 1
     assert (
-        service.episode_inspect(runtime_dir, episode_id=6)["episode"]["status"]
-        == "aborted"
+        service.episode_inspect(runtime_dir, episode_id=6)["episode"]["close"]["status"]
+        == 3
     )
 
 
@@ -258,6 +258,6 @@ def test_c6_sealed_episode_is_stable_and_recover_leaves_it_alone(tmp_path):
     ]
     assert "episode_closed_duplicate" in codes
     assert (
-        service.episode_inspect(runtime_dir, episode_id=7)["episode"]["status"]
-        == "aborted"
+        service.episode_inspect(runtime_dir, episode_id=7)["episode"]["close"]["status"]
+        == 3
     )

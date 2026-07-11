@@ -212,16 +212,33 @@ struct episode_causal_graph {
   bool degraded = false;
 };
 
-struct episode_inspect_result {
-  episode_current_view episode = {};
-  episode_causal_graph causal_graph = {};
-  uint64_t unknown_record_count = 0;
-};
-
 struct episode_content_root {
   uint32_t covered_record_count = 0;
   std::string algorithm = {};
   std::string value = {};
+};
+
+enum class episode_content_root_status : uint8_t {
+  Undefined = 0,
+  RootWithoutSeal = 1,
+  Absent = 2,
+  Unverifiable = 3,
+  Verified = 4,
+  Mismatch = 5,
+};
+
+struct episode_content_root_verification {
+  std::optional<yijinjing::types::EpisodeRootCommitted> recorded = {};
+  std::optional<episode_content_root> computed = {};
+  std::optional<bool> match = {};
+  episode_content_root_status status = episode_content_root_status::Undefined;
+};
+
+struct episode_inspect_result {
+  episode_current_view episode = {};
+  episode_content_root_verification content_root = {};
+  episode_causal_graph causal_graph = {};
+  uint64_t unknown_record_count = 0;
 };
 
 struct episode_close_write_result {
@@ -244,6 +261,9 @@ struct episode_recover_result {
 // transport provenance, heartbeats, unknown records, and the root record do
 // not participate in identity.
 [[nodiscard]] episode_content_root compute_episode_content_root(const episode_current_view &view);
+
+[[nodiscard]] episode_content_root_verification verify_episode_content_root(const episode_current_view &view,
+                                                                            size_t unknown_record_count);
 
 } // namespace kungfu::yijinjing::storage
 

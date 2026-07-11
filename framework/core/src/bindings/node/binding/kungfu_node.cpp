@@ -495,6 +495,28 @@ Napi::Value StorageEpisodeProjectionRebuildTyped(const Napi::CallbackInfo &info)
                                          {info[0].As<Napi::String>().Utf8Value()}));
 }
 
+Napi::Value StorageEpisodeListTyped(const Napi::CallbackInfo &info) {
+  if (!IsValid(info, 0, &Napi::Value::IsString))
+    throw Napi::TypeError::New(info.Env(), "storageEpisodeListTyped(runtimeDir, options?)");
+  runtime::storage_service_api::storage_episode_list_request request{};
+  request.runtime_dir = info[0].As<Napi::String>().Utf8Value();
+  if (IsValid(info, 1, &Napi::Value::IsObject)) {
+    const auto options = info[1].As<Napi::Object>();
+    request.location_uid = Uint32Option(options, "location_uid");
+    request.limit = options.Has("limit") ? Uint64Option(info.Env(), options, "limit") : uint64_t{100};
+  }
+  return HanaViewToValue(info.Env(), runtime::storage_service_api::default_storage_service().episode_list(request));
+}
+
+Napi::Value StorageEpisodeInspectTyped(const Napi::CallbackInfo &info) {
+  if (!IsValid(info, 0, &Napi::Value::IsString) || !IsValid(info, 1, &Napi::Value::IsObject))
+    throw Napi::TypeError::New(info.Env(), "storageEpisodeInspectTyped(runtimeDir, options)");
+  runtime::storage_service_api::storage_episode_inspect_request request{};
+  request.runtime_dir = info[0].As<Napi::String>().Utf8Value();
+  request.episode_id = Uint64Option(info.Env(), info[1].As<Napi::Object>(), "episode_id");
+  return HanaViewToValue(info.Env(), runtime::storage_service_api::default_storage_service().episode_inspect(request));
+}
+
 Napi::Value StorageFsckTyped(const Napi::CallbackInfo &info) {
   if (!IsValid(info, 0, &Napi::Value::IsString))
     throw Napi::TypeError::New(info.Env(), "storageFsckTyped(runtimeDir, options?)");
@@ -744,6 +766,8 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
   exports.Set("storageEpisodeCloseTyped", Napi::Function::New(env, StorageEpisodeCloseTyped));
   exports.Set("storageEpisodeRecoverTyped", Napi::Function::New(env, StorageEpisodeRecoverTyped));
   exports.Set("storageEpisodeProjectionRebuildTyped", Napi::Function::New(env, StorageEpisodeProjectionRebuildTyped));
+  exports.Set("storageEpisodeListTyped", Napi::Function::New(env, StorageEpisodeListTyped));
+  exports.Set("storageEpisodeInspectTyped", Napi::Function::New(env, StorageEpisodeInspectTyped));
   exports.Set("makeStorageServiceRequest", Napi::Function::New(env, MakeStorageServiceRequest));
   exports.Set("runStorageServiceOperation", Napi::Function::New(env, RunStorageServiceOperation));
   exports.Set("acceptStorageManifest", Napi::Function::New(env, AcceptStorageManifest));

@@ -342,6 +342,103 @@ interface EpisodeRootCommittedRecord {
   root_value: string;
 }
 
+interface EpisodeManifestRecord {
+  manifest_frame_uid: bigint;
+  manifest_gen_time: bigint;
+  body:
+    | EpisodeOpenRecord
+    | EpisodeHeartbeatRecord
+    | EpisodeFrameAttachedRecord
+    | EpisodeRefAttachedRecord
+    | EpisodeClosedRecord
+    | EpisodeRootCommittedRecord
+    | {
+        carrier_type: number;
+        schema_version: number;
+        unknown_version: boolean;
+      };
+}
+
+interface EpisodeCurrentView {
+  episode_id: bigint;
+  opened: boolean;
+  closed: boolean;
+  open_count: bigint;
+  close_count: bigint;
+  open: EpisodeOpenRecord;
+  open_manifest_frame_uid: bigint;
+  open_manifest_gen_time: bigint;
+  heartbeat_seen: boolean;
+  update_time: bigint;
+  claimed_frame_count: bigint;
+  last_frame_uid_seen: boolean;
+  last_frame_uid: bigint;
+  unique_frame_count: bigint;
+  close: EpisodeClosedRecord;
+  close_statuses: EpisodeStatus[];
+  root_seen: boolean;
+  root_count: bigint;
+  root: EpisodeRootCommittedRecord;
+  records: EpisodeManifestRecord[];
+  frame_indices: bigint[];
+  ref_indices: bigint[];
+  duplicate_frame_uids: bigint[];
+  missing_frame_uid_count: bigint;
+}
+
+interface EpisodeContentRootVerification {
+  recorded: EpisodeRootCommittedRecord | null;
+  computed: {
+    covered_record_count: number;
+    algorithm: string;
+    value: string;
+  } | null;
+  match: boolean | null;
+  status: 0 | 1 | 2 | 3 | 4 | 5;
+}
+
+interface EpisodeDependency {
+  kind: string;
+  role: string;
+  status: string;
+  episode_id: bigint | null;
+  frame_uid: bigint | null;
+  dependent_frame_uid: bigint | null;
+  ref_uid: bigint | null;
+  ref_id: string | null;
+  ref_hash: string | null;
+}
+
+interface EpisodeCausalGraph {
+  schema: string;
+  episode_id: bigint;
+  frame_count: bigint;
+  edges: Array<{ from_frame_uid: bigint; to_frame_uid: bigint }>;
+  dependencies: EpisodeDependency[];
+  errors: Array<Record<string, unknown>>;
+  warnings: Array<Record<string, unknown>>;
+  degraded: boolean;
+}
+
+interface EpisodeListResult {
+  ok: boolean;
+  runtime_dir: string;
+  authority: string;
+  episodes: EpisodeCurrentView[];
+  unknown_record_count: bigint;
+}
+
+interface EpisodeInspectResult {
+  ok: boolean;
+  runtime_dir: string;
+  authority: string;
+  episode: EpisodeCurrentView;
+  content_root: EpisodeContentRootVerification;
+  causal_graph: EpisodeCausalGraph;
+  unknown_record_count: bigint;
+  qualification: Record<string, unknown> | null;
+}
+
 interface EpisodeCloseResult {
   close: EpisodeClosedRecord;
   content_root: EpisodeRootCommittedRecord | null;
@@ -421,6 +518,14 @@ interface KungfuRuntime {
   storageEpisodeProjectionRebuildTyped(
     runtimeDir: string,
   ): StorageProjectionRebuildResult;
+  storageEpisodeListTyped(
+    runtimeDir: string,
+    options?: { location_uid?: number; limit?: bigint | number },
+  ): EpisodeListResult;
+  storageEpisodeInspectTyped(
+    runtimeDir: string,
+    options: { episode_id: bigint | number },
+  ): EpisodeInspectResult;
   [name: string]: unknown;
 }
 

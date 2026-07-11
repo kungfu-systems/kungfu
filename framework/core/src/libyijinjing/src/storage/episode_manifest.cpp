@@ -450,32 +450,34 @@ nlohmann::json summary_json(const episode_current_view &view) {
 // unverifiable (unknown records present or unsupported algorithm),
 // root_without_seal (a root claims identity of an unsealed Episode).
 nlohmann::json content_root_json(const episode_current_view &view, size_t unknown_record_count) {
-  nlohmann::json recorded = view.root_seen ? record_json(view.root) : nlohmann::json(nullptr);
-  nlohmann::json computed = nullptr;
-  nlohmann::json match = nullptr;
-  const char *status = "undefined";
-  if (!view.closed) {
-    if (view.root_seen) {
-      status = "root_without_seal";
+  const auto verification = verify_episode_content_root(view, unknown_record_count);
+  const auto status_name = [](episode_content_root_status status) {
+    switch (status) {
+    case episode_content_root_status::Undefined:
+      return "undefined";
+    case episode_content_root_status::RootWithoutSeal:
+      return "root_without_seal";
+    case episode_content_root_status::Absent:
+      return "absent";
+    case episode_content_root_status::Unverifiable:
+      return "unverifiable";
+    case episode_content_root_status::Verified:
+      return "verified";
+    case episode_content_root_status::Mismatch:
+      return "mismatch";
     }
-  } else if (unknown_record_count > 0) {
-    status = view.root_seen ? "unverifiable" : "absent";
-  } else {
-    const auto root = compute_episode_content_root(view);
-    computed = {
-        {"algorithm", root.algorithm}, {"value", root.value}, {"covered_record_count", root.covered_record_count}};
-    if (!view.root_seen) {
-      status = "absent";
-    } else if (fixed_string(view.root.algorithm) != root.algorithm) {
-      status = "unverifiable";
-    } else {
-      const bool verified = fixed_string(view.root.root_value) == root.value &&
-                            view.root.covered_record_count == root.covered_record_count;
-      match = verified;
-      status = verified ? "verified" : "mismatch";
-    }
-  }
-  return {{"recorded", recorded}, {"computed", computed}, {"match", match}, {"status", status}};
+    return "undefined";
+  };
+  const auto recorded =
+      verification.recorded.has_value() ? record_json(*verification.recorded) : nlohmann::json(nullptr);
+  const auto computed = verification.computed.has_value()
+                            ? nlohmann::json{{"algorithm", verification.computed->algorithm},
+                                             {"value", verification.computed->value},
+                                             {"covered_record_count", verification.computed->covered_record_count}}
+                            : nlohmann::json(nullptr);
+  const auto match = verification.match.has_value() ? nlohmann::json(*verification.match) : nlohmann::json(nullptr);
+  return {
+      {"recorded", recorded}, {"computed", computed}, {"match", match}, {"status", status_name(verification.status)}};
 }
 
 nlohmann::json rows_json(const episode_current_view &view, const std::vector<size_t> &indices) {
@@ -823,6 +825,36 @@ episode_content_root compute_episode_content_root(const episode_current_view &vi
   return root;
 }
 
+episode_content_root_verification verify_episode_content_root(const episode_current_view &view,
+                                                              size_t unknown_record_count) {
+  episode_content_root_verification result{};
+  if (view.root_seen) {
+    result.recorded = view.root;
+  }
+  if (!view.closed) {
+    result.status =
+        view.root_seen ? episode_content_root_status::RootWithoutSeal : episode_content_root_status::Undefined;
+    return result;
+  }
+  if (unknown_record_count > 0) {
+    result.status = view.root_seen ? episode_content_root_status::Unverifiable : episode_content_root_status::Absent;
+    return result;
+  }
+  result.computed = compute_episode_content_root(view);
+  if (!view.root_seen) {
+    result.status = episode_content_root_status::Absent;
+    return result;
+  }
+  if (fixed_string(view.root.algorithm) != result.computed->algorithm) {
+    result.status = episode_content_root_status::Unverifiable;
+    return result;
+  }
+  result.match = fixed_string(view.root.root_value) == result.computed->value &&
+                 view.root.covered_record_count == result.computed->covered_record_count;
+  result.status = *result.match ? episode_content_root_status::Verified : episode_content_root_status::Mismatch;
+  return result;
+}
+
 std::string episode_manifest_writer_lock_path(const std::string &runtime_dir) {
   const auto location = manifest_location(runtime_dir);
   return (fs::path(location->locator->layout_dir(location, enums::layout::JOURNAL, true)) / "writer.lock").string();
@@ -1110,7 +1142,8 @@ episode_inspect_result episode_manifest_store::inspect_typed(uint64_t episode_id
   }
   const file_content_store default_content_store((fs::path(runtime_dir_) / "storage").string());
   const content_store &refs = content_store_ != nullptr ? *content_store_ : default_content_store;
-  return {iter->second, build_causal_graph(refs, episode_id, iter->second, fold.episodes),
+  return {iter->second, verify_episode_content_root(iter->second, fold.unknown_record_count),
+          build_causal_graph(refs, episode_id, iter->second, fold.episodes),
           static_cast<uint64_t>(fold.unknown_record_count)};
 }
 

@@ -182,7 +182,7 @@ def test_tombstone_after_seal_is_intentional_not_duplicate(tmp_path):
     )
 
     inspected = service.episode_inspect(runtime_dir, episode_id=3)["episode"]
-    assert inspected["status"] == "tombstoned"
+    assert inspected["close"]["status"] == 4
 
     fsck = service.fsck(runtime_dir, episode_id=3)
     assert fsck["ok"]
@@ -223,8 +223,8 @@ def test_unknown_version_record_is_reported_not_folded(tmp_path):
     # The newer-version heartbeat stays out of the fold instead of being
     # reinterpreted with the v1 layout.
     inspected = service.episode_inspect(runtime_dir, episode_id=5)["episode"]
-    assert inspected["record_count"] == 1
-    assert "update_time" not in inspected
+    assert len(inspected["records"]) == 1
+    assert inspected["heartbeat_seen"] is False
 
 
 def test_verify_frames_confirms_real_recorded_frames(tmp_path):
@@ -367,7 +367,9 @@ def test_published_payload_ref_verifies_through_content_store(tmp_path):
 
     inspected = service.episode_inspect(runtime_dir, episode_id=41)
     payload_deps = [
-        dep for dep in inspected["dependencies"] if dep["kind"] == "payload"
+        dep
+        for dep in inspected["causal_graph"]["dependencies"]
+        if dep["kind"] == "payload"
     ]
     assert payload_deps and payload_deps[0]["status"] == "present"
 
@@ -487,7 +489,7 @@ def test_healthy_sealed_episode_emits_versioned_safe_capabilities(tmp_path):
 
     inspected = service.episode_inspect(runtime_dir, episode_id=51)
     assert inspected["qualification"]["status"] == qualification["status"]
-    assert set(inspected["qualification"]["safe_capabilities"]) == _safe_capabilities(
+    assert _safe_capabilities(inspected["qualification"]) == _safe_capabilities(
         qualification
     )
 

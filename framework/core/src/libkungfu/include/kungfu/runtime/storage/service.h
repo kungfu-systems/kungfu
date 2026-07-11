@@ -642,6 +642,36 @@ struct storage_episode_projection_rebuild_request {
   std::string runtime_dir = {};
 };
 
+struct storage_episode_list_request {
+  std::string runtime_dir = {};
+  uint32_t location_uid = 0;
+  uint64_t limit = 100;
+};
+
+struct storage_episode_list_result {
+  bool ok = true;
+  std::string runtime_dir = {};
+  std::string authority = "yijinjing-journal";
+  std::vector<yijinjing::storage::episode_current_view> episodes = {};
+  uint64_t unknown_record_count = 0;
+};
+
+struct storage_episode_inspect_request {
+  std::string runtime_dir = {};
+  uint64_t episode_id = 0;
+};
+
+struct storage_episode_inspect_result {
+  bool ok = true;
+  std::string runtime_dir = {};
+  std::string authority = "yijinjing-journal";
+  yijinjing::storage::episode_current_view episode = {};
+  yijinjing::storage::episode_content_root_verification content_root = {};
+  yijinjing::storage::episode_causal_graph causal_graph = {};
+  uint64_t unknown_record_count = 0;
+  std::optional<episode_qualification_result> qualification = {};
+};
+
 class storage_service {
 public:
   virtual ~storage_service() = default;
@@ -692,6 +722,11 @@ public:
 
   [[nodiscard]] virtual storage_projection_rebuild_result
   episode_projection_rebuild(const storage_episode_projection_rebuild_request &request) const = 0;
+
+  [[nodiscard]] virtual storage_episode_list_result episode_list(const storage_episode_list_request &request) const = 0;
+
+  [[nodiscard]] virtual storage_episode_inspect_result
+  episode_inspect(const storage_episode_inspect_request &request) const = 0;
 };
 
 [[nodiscard]] std::string storage_query_kind_name(storage_query_kind kind);

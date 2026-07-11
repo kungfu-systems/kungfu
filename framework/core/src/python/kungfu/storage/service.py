@@ -595,20 +595,16 @@ def episode_list(
     limit: int = 100,
 ) -> dict[str, Any]:
     return dict(
-        _runtime().run_storage_service_operation(
-            "episode_list",
-            str(runtime_dir),
-            {"location_uid": location_uid, "limit": limit},
+        _runtime().storage_episode_list_typed(
+            str(runtime_dir), location_uid=location_uid, limit=limit
         )
     )
 
 
 def episode_inspect(runtime_dir: str | Path, *, episode_id: int) -> dict[str, Any]:
     return dict(
-        _runtime().run_storage_service_operation(
-            "episode_inspect",
-            str(runtime_dir),
-            {"episode_id": _u64(episode_id)},
+        _runtime().storage_episode_inspect_typed(
+            str(runtime_dir), episode_id=episode_id
         )
     )
 

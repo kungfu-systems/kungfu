@@ -99,6 +99,8 @@ module.exports = () => {
     storageEpisodeRecoverTyped: binding.storageEpisodeRecoverTyped,
     storageEpisodeProjectionRebuildTyped:
       binding.storageEpisodeProjectionRebuildTyped,
+    storageEpisodeListTyped: binding.storageEpisodeListTyped,
+    storageEpisodeInspectTyped: binding.storageEpisodeInspectTyped,
     makeStorageServiceRequest: binding.makeStorageServiceRequest,
     runStorageServiceOperation: binding.runStorageServiceOperation,
     acceptStorageManifest: binding.acceptStorageManifest,

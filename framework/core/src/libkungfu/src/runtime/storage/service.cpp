@@ -4058,6 +4058,41 @@ public:
   episode_projection_rebuild(const storage_episode_projection_rebuild_request &request) const override {
     return episode_manifest_projection(request.runtime_dir).rebuild_typed();
   }
+
+  [[nodiscard]] storage_episode_list_result episode_list(const storage_episode_list_request &request) const override {
+    const auto fold = yy_storage::episode_manifest_store(request.runtime_dir).fold_typed_records();
+    storage_episode_list_result result{};
+    result.runtime_dir = request.runtime_dir;
+    result.unknown_record_count = static_cast<uint64_t>(fold.unknown_record_count);
+    for (auto iter = fold.episodes.rbegin(); iter != fold.episodes.rend(); ++iter) {
+      const auto &view = iter->second;
+      const auto location_uid = view.opened ? view.open.location_uid : uint32_t{0};
+      if (request.location_uid != 0 && request.location_uid != location_uid)
+        continue;
+      result.episodes.push_back(view);
+      if (request.limit != 0 && result.episodes.size() >= request.limit)
+        break;
+    }
+    return result;
+  }
+
+  [[nodiscard]] storage_episode_inspect_result
+  episode_inspect(const storage_episode_inspect_request &request) const override {
+    const auto inspected = yy_storage::episode_manifest_store(request.runtime_dir).inspect_typed(request.episode_id);
+    storage_fsck_request fsck_request{};
+    fsck_request.runtime_dir = request.runtime_dir;
+    fsck_request.scope = storage_fsck_scope::Episode;
+    fsck_request.episode_id = request.episode_id;
+    const auto fsck_result = fsck(fsck_request);
+    return {true,
+            request.runtime_dir,
+            "yijinjing-journal",
+            inspected.episode,
+            inspected.content_root,
+            inspected.causal_graph,
+            inspected.unknown_record_count,
+            fsck_result.qualification};
+  }
 };
 
 const file_storage_service &typed_storage_service_instance() {

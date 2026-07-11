@@ -52,6 +52,14 @@ BOOST_HANA_ADAPT_STRUCT(kungfu::yijinjing::storage::episode_current_view, episod
                         claimed_frame_count, last_frame_uid_seen, last_frame_uid, unique_frame_count, close,
                         close_statuses, root_seen, root_count, root, records, frame_indices, ref_indices,
                         duplicate_frame_uids, missing_frame_uid_count);
+BOOST_HANA_ADAPT_STRUCT(kungfu::yijinjing::storage::episode_causal_edge, from_frame_uid, to_frame_uid);
+BOOST_HANA_ADAPT_STRUCT(kungfu::yijinjing::storage::episode_dependency, kind, role, status, episode_id, frame_uid,
+                        dependent_frame_uid, ref_uid, ref_id, ref_hash);
+BOOST_HANA_ADAPT_STRUCT(kungfu::yijinjing::storage::episode_causal_graph, schema, episode_id, frame_count, edges,
+                        dependencies, errors, warnings, degraded);
+BOOST_HANA_ADAPT_STRUCT(kungfu::yijinjing::storage::episode_content_root, covered_record_count, algorithm, value);
+BOOST_HANA_ADAPT_STRUCT(kungfu::yijinjing::storage::episode_content_root_verification, recorded, computed, match,
+                        status);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_source_query_row, source_uid, source_id,
                         source_type, coordinate, manifest_id, source_head, accept_time, entry_count, sync_root,
                         manifest_count, export_count);
@@ -132,5 +140,9 @@ BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_repair_pla
 BOOST_HANA_ADAPT_STRUCT(kungfu::yijinjing::storage::episode_close_write_result, close, content_root);
 BOOST_HANA_ADAPT_STRUCT(kungfu::yijinjing::storage::episode_recover_skipped_open, episode_id, location_uid);
 BOOST_HANA_ADAPT_STRUCT(kungfu::yijinjing::storage::episode_recover_result, runtime_dir, recovered, skipped_open);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_episode_list_result, ok, runtime_dir, authority,
+                        episodes, unknown_record_count);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_episode_inspect_result, ok, runtime_dir,
+                        authority, episode, content_root, causal_graph, unknown_record_count, qualification);
 
 #endif // KUNGFU_RUNTIME_STORAGE_BINDING_REFLECTION_H
