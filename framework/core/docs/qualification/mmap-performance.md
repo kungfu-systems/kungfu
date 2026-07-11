@@ -178,14 +178,27 @@ seek ranges (minimum to maximum p50 across the three runs):
 The candidate reduces early-seek minor faults by an order of magnitude because
 it maps a bounded number of sliced headers. Write and sequential-read code is
 unchanged; their noisy p99 samples are retained as opposite-path evidence and
-are not claimed as candidate improvements. Final acceptance still requires the
-same direction on Linux.
+are not claimed as candidate improvements.
+
+Linux reproduced the result in three baseline/candidate alternations at 128
+pages:
+
+| Position | Linear baseline p50 | Ordered candidate p50 | Decision signal |
+|---|---:|---:|---|
+| early | 0.750-0.782 ms | 0.153-0.155 ms | 4.8-5.1x faster |
+| middle | 0.431-0.454 ms | 0.152-0.154 ms | 2.8-3.0x faster |
+| late | 0.120-0.127 ms | 0.117-0.119 ms | no regression |
+
+Retained Linux candidate evidence:
+[`mmap-linux-x86_64-285158703-candidate-01.json`](mmap-linux-x86_64-285158703-candidate-01.json).
+The full agent-120 product rebuild also completed with both production libwasm
+engines using the repository-pinned rustup 1.95.0 toolchain.
 
 ### Independent policy decisions
 
 | Candidate | Classification | Evidence and boundary |
 |---|---|---|
-| ordered page lookup | pending Linux reproduction | Cross-platform baselines identify the same linear shape; Mac alternations clear the performance and rollback gates. |
+| ordered page lookup | accept | Mac and Linux three-round alternations improve old-history seek, preserve the tail fast path, and leave wire/API/durability semantics unchanged. |
 | exact file sizing | keep current | Writer creation grows each page once to its declared fixed size; no redundant resize was found. |
 | extra preallocation | defer | The harness does not isolate allocation guarantees from page-cache and filesystem effects; no default changes. |
 | `MADV_RANDOM` | reject as default | Journal traffic mixes sequential traversal with sparse header probes, so global random advice contradicts the representative sequential path. |
