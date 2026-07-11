@@ -8,11 +8,10 @@ const path = require('node:path');
 
 exports.default = async function beforePack() {
   const gen = path.join(__dirname, 'gen-first-party-manifest.mjs');
-  const result = spawnSync(
-    process.execPath,
-    ['--experimental-transform-types', gen],
-    { stdio: 'inherit' },
-  );
+  const tsxLoader = require.resolve('tsx/esm');
+  const result = spawnSync(process.execPath, ['--import', tsxLoader, gen], {
+    stdio: 'inherit',
+  });
   if (result.status !== 0) {
     throw new Error('failed to bake the first-party manifest before pack');
   }
