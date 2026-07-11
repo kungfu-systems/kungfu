@@ -25,7 +25,7 @@ permissions:
 
 jobs:
   build:
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v2-alpha
+    uses: kungfu-systems/buildchain/.github/workflows/build.yml@v2
     secrets: inherit
     with:
       buildchain-ref: ${{ inputs.buildchain-ref || '' }}
@@ -59,6 +59,7 @@ jobs:
         ./shifu episode:qualify:release -- --output
         product/release/qualification/episode-release-evidence.json"
       release-candidate: true
+      publish-channel: ${{ startsWith(github.base_ref, 'release/') && 'release' || 'alpha' }}
       artifact-transfer-mode: s3-to-github-artifacts
       artifact-retention-days: 14
       checkout-cache-mode: auto
@@ -66,6 +67,7 @@ jobs:
       checkout-cache-reference-repository-template: ${{ vars.BUILDCHAIN_CHECKOUT_CACHE_REFERENCE_REPOSITORY_TEMPLATE }}
       checkout-cache-fallback: github
       checkout-cache-timeout-seconds: 60
-      buildchain-contract-lock-path: .buildchain/contract-lock.json
+      buildchain-alpha-contract-lock-path: .buildchain/alpha-contract-lock.json
+      buildchain-stable-contract-lock-path: .buildchain/contract-lock.json
       buildchain-contract-compatibility-policy: major-compatible
       buildchain-contract-drift-issue-mode: compatible-and-breaking

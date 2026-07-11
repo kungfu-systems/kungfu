@@ -35,6 +35,7 @@ cmake-build-debug/
 dist/
 .buildchain/*
 !.buildchain/buildchain.toml
+!.buildchain/alpha-contract-lock.json
 !.buildchain/contract-lock.json
 !.buildchain/kfd/
 .buildchain/kfd/*

@@ -18,12 +18,13 @@ permissions:
 jobs:
   promote:
     if: ${{ github.event.pull_request.merged == true }}
-    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v2-alpha
+    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v2
     with:
       channel: ${{ startsWith(github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}
+      buildchain-ref: ${{ startsWith(github.event.pull_request.base.ref, 'alpha/') && 'v2-alpha' || 'v2' }}
       target-ref: ${{ github.event.pull_request.base.ref }}
       target-sha: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
-      buildchain-contract-lock-path: .buildchain/contract-lock.json
+      buildchain-contract-lock-path: ${{ startsWith(github.event.pull_request.base.ref, 'alpha/') && '.buildchain/alpha-contract-lock.json' || '.buildchain/contract-lock.json' }}
       buildchain-contract-compatibility-policy: major-compatible
       buildchain-contract-drift-issue-mode: compatible-and-breaking
       package-manager: custom
