@@ -78,7 +78,10 @@ where cargo >nul 2>nul || goto pinslot
 where git >nul 2>nul || goto pinslot
 if not defined _KFC_VER goto pinslot
 set "_KFC_SRC="
-for /f "usebackq" %%s in (`git log -1 --format=%%h -- crates/shifu crates/shifu-core crates/Cargo.toml crates/Cargo.lock 2^>nul`) do set "_KFC_SRC=%%s"
+rem rev-list instead of log --format: a percent format inside a for /f
+rem backquote command gets percent-processed again by the child cmd, so git
+rem receives a literal %h and fails; rev-list needs no format at all.
+for /f "usebackq" %%s in (`git rev-list -1 --abbrev-commit HEAD -- crates/shifu crates/shifu-core crates/Cargo.toml crates/Cargo.lock 2^>nul`) do set "_KFC_SRC=%%s"
 if not defined _KFC_SRC goto pinslot
 set "_KFC_DIRTY="
 for /f "usebackq delims=" %%s in (`git status --porcelain -- crates/shifu crates/shifu-core crates/Cargo.toml crates/Cargo.lock 2^>nul`) do set "_KFC_DIRTY=1"
