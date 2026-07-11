@@ -11,7 +11,9 @@
   timeline projection. ADR-0032 defines the generic source service v1. ADR-0034
   defines the yijinjing-backed Episode manifest journal.
   [`docs/episode-object-model.md`](../../../../docs/episode-object-model.md)
-  is the companion design document.
+  is the companion design document, and
+  [`docs/journal-page-sizing-and-episode-reclamation.md`](../../../../docs/journal-page-sizing-and-episode-reclamation.md)
+  is the design note constraining page sizing and Episode-aware reclamation.
 
 ## Context
 

@@ -145,6 +145,12 @@ proofs remain unambiguous. The important rule is that every frame can be mapped
 to Episode coordinates and every Episode can name the physical evidence that
 proves it.
 
+[`journal-page-sizing-and-episode-reclamation.md`](journal-page-sizing-and-episode-reclamation.md)
+records the design judgment that constrains this future work: page-size variation
+serves only the max-frame bound at page creation, space efficiency comes from
+segment packing rather than per-Episode variable-length pages, and reclamation is
+tombstone-then-cold-path GC rather than shrinking live pages.
+
 ## Episode Manifest
 
 A sealed Episode manifest is the folded result of append-only manifest journal

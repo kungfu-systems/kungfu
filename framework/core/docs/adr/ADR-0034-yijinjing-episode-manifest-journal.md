@@ -8,9 +8,12 @@
 - Related: ADR-0047 assigns closed kernel records to the Hana POD substrate and
   open/domain facts to FlatBuffers. ADR-0022 defines the C++ core as the
   action-recording membrane.
-  ADR-0033 defines Episode as the first-class causal segment object.
+  ADR-0033 defines Episode as the first-class causal segment object. ADR-0062
+  governs the journal container format epoch, which is separate from page sizing.
   [`docs/episode-object-model.md`](../../../../docs/episode-object-model.md)
-  describes the Episode object model.
+  describes the Episode object model, and
+  [`docs/journal-page-sizing-and-episode-reclamation.md`](../../../../docs/journal-page-sizing-and-episode-reclamation.md)
+  is the design note constraining page sizing and Episode-aware reclamation.
 
 ## Context
 
