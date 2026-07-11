@@ -40,7 +40,7 @@ def find_open_episode_id(runtime_dir: str, *, source: str) -> int | None:
     matches = [
         int(row["episode_id"])
         for row in listed.get("episodes", [])
-        if row.get("source") == source and row.get("status") == "open"
+        if row.get("open", {}).get("source") == source and not bool(row.get("closed"))
     ]
     return matches[-1] if matches else None
 
@@ -79,7 +79,10 @@ class RuntimeEpisodeLifecycle:
             inspected = service.episode_inspect(
                 self.runtime_dir, episode_id=self.episode_id
             )
-            self.frame_count = len(inspected.get("frames", []))
+            episode = inspected.get("episode", {})
+            self.frame_count = int(
+                episode.get("unique_frame_count") or len(inspected.get("frames", []))
+            )
 
     @classmethod
     def resume_or_begin(

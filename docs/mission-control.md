@@ -159,6 +159,41 @@ system-time cut, then persists an ADR-0052 `mission-progress-is-reasonable`
 assessment. `kungfu atlas assess-mission` and the Work Dashboard consume the
 same report identity and proof root.
 
+That report now embeds the first `Cost/State/Proof` profile projection. Cost
+comes from linked Rewind `CostSnapshot` journal facts, responsibility state is
+a conservative mapping of admitted Go source states, and proof carries both the
+ADR-0048 roots and verified Rewind Episode roots. Missing or ambiguous cost
+attribution remains visible; the profile does not create another spend ledger.
+Mission scopes larger than the ADR-0048 256-subject bound are evaluated as a
+deterministic set of bounded subqueries and expose a composite definition and
+proof root; the runtime does not silently truncate the Mission.
+
+The pre-release Mission Control contract is now v2. It keeps Atlas-imported
+Mission/Go facts and adds two native surfaces under the same declared world:
+Kungfu-native Go facts and explicit completion claims. A user can create a Go
+in the Work Dashboard, while an agent can call the same operations:
+
+```sh
+kungfu atlas create-go <mission-id> <goal-id> \
+  --title <title> --objective <objective> --actor <actor> --json
+kungfu atlas claim-completion <mission-id> <goal-id> \
+  --statement <claim> --actor <actor> --evidence-episode <id> --json
+kungfu atlas assess-completion <mission-id> <goal-id> --json
+```
+
+These operations do not write back to Atlas. The imported Mission remains an
+Atlas-authority fact; the new Go and claim identify `kungfu-user` or
+`kungfu-agent` as their source authority. A completion claim without a
+frame-verified, sealed work Episode remains visible but fails closed as
+insufficient. The GUI and CLI return the same assessment key and composite
+proof root.
+
+The earlier pre-release v1 Mission Control declaration cannot be silently mixed
+with v2 because its open-ended declarations did not include native sources or
+the completion-claim surface. A v1 data root therefore reports an explicit
+migration/re-import requirement. No released format is affected; a durable
+migration tool is required before this contract leaves pre-release status.
+
 ### Native mode
 
 If Kungfu later becomes authoritative for Mission/Go state, the cutover is an
@@ -197,7 +232,7 @@ The first implementation target is intentionally narrow:
    (**implemented**);
 5. show the result through the existing Work Dashboard/Trust progression
    (**implemented**);
-6. run entirely in an isolated temporary data root.
+6. run entirely in an isolated temporary data root (**implemented**).
 
 This slice does not require a general ontology, unrestricted rule engine,
 cloud-only control plane, or full visual query builder.

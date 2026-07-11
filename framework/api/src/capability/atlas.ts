@@ -90,12 +90,114 @@ export type AtlasMissionControlReport = {
     reused?: boolean;
     report?: { purpose?: string; residual_risks?: string[] };
   };
+  profile: {
+    schema: 'kungfu.profile.delegated-work-cost-state-proof/v1';
+    profile_hash: string;
+    profile: { id: string; version: string };
+    mission_subject: string;
+    go_subject?: string | null;
+    cost: {
+      status: 'missing' | 'ambiguous' | 'partial' | 'attributed';
+      observation_count: number;
+      linked_run_count: number;
+      tokens: {
+        input_tokens: number;
+        output_tokens: number;
+        cached_input_tokens: number;
+        cache_creation_input_tokens: number;
+        reasoning_tokens: number;
+      };
+      cost_usd?: number | null;
+      cost_usd_known: boolean;
+      attribution: {
+        best: string;
+        worst: string;
+        ambiguous: boolean;
+      };
+      proof_episodes: Array<{
+        run_id: string;
+        episode_id: string;
+        episode_root: string;
+      }>;
+      missing: {
+        unsealed_runs: string[];
+        unreadable_runs: Array<{ run_id: string; error: string }>;
+        no_linked_cost_fact: boolean;
+      };
+    };
+    state: {
+      value: string;
+      source_statuses: string[];
+      mapping_policy: string;
+      go_subjects: string[];
+    };
+    proof: {
+      canonical_state: boolean;
+      query_definition_root: string;
+      query_proof_root: string;
+      query_result_hash: string;
+      cost_episode_roots: Array<{
+        run_id: string;
+        episode_id: string;
+        episode_root: string;
+      }>;
+      assessment_state: string;
+      assessment_report_hash?: string | null;
+      conflicts: unknown[];
+      unverifiable_inputs: unknown[];
+    };
+  };
   state: {
     mission_subject: string;
     canonical_state: boolean;
     cut: { declared?: unknown; resolved?: unknown };
     mission?: { payload?: { record?: AtlasMission } } | null;
     goals: Array<{ payload?: { record?: AtlasGoal } }>;
+    claims?: Array<{
+      payload?: {
+        record?: {
+          claim_id?: string;
+          claim_type?: string;
+          statement?: string;
+          evidence_episodes?: Array<{
+            episode_id: string;
+            episode_root: string;
+          }>;
+        };
+      };
+    }>;
+  };
+};
+
+export type AtlasGoWrite = {
+  schema: 'kungfu.mission-control.go-write/v1';
+  authority_mode: 'kungfu-native';
+  mission_subject: string;
+  go_subject: string;
+  receipt: {
+    status: string;
+    reused: boolean;
+    observation_id: string;
+    episode_id?: string;
+  };
+};
+
+export type AtlasCompletionClaimWrite = {
+  schema: 'kungfu.mission-control.completion-claim-write/v1';
+  authority_mode: 'kungfu-native';
+  mission_subject: string;
+  go_subject: string;
+  claim: {
+    claim_id: string;
+    claim_type: 'task-completed';
+    statement: string;
+    evidence_episodes: Array<{ episode_id: string; episode_root: string }>;
+  };
+  receipt: {
+    status: string;
+    reused: boolean;
+    observation_id: string;
+    episode_id?: string;
   };
 };
 
@@ -113,6 +215,32 @@ export type Atlas = {
   mission: (missionId: string) => AtlasMissionDetail | null;
   assessMission: (
     missionId: string,
+    options?: { source?: string; purpose?: string },
+  ) => AtlasMissionControlReport;
+  createGo: (
+    missionId: string,
+    input: {
+      goalId: string;
+      title: string;
+      objective: string;
+      actor: string;
+      actorType?: 'user' | 'agent';
+      status?: 'proposed' | 'active' | 'blocked' | 'waiting-for-decision';
+    },
+  ) => AtlasGoWrite;
+  claimCompletion: (
+    missionId: string,
+    goalId: string,
+    input: {
+      statement: string;
+      actor: string;
+      actorType?: 'user' | 'agent';
+      evidenceEpisodeIds?: string[];
+    },
+  ) => AtlasCompletionClaimWrite;
+  assessCompletion: (
+    missionId: string,
+    goalId: string,
     options?: { source?: string; purpose?: string },
   ) => AtlasMissionControlReport;
   goals: (filter?: AtlasGoalFilter) => AtlasGoal[];
@@ -212,6 +340,51 @@ export function openAtlas(options: OpenAtlasOptions): Atlas {
     },
     assessMission: (missionId, assessment = {}) => {
       const args = ['atlas', 'assess-mission', missionId, '--json'];
+      if (assessment.source) args.push('--source', assessment.source);
+      if (assessment.purpose) args.push('--purpose', assessment.purpose);
+      return runJson<AtlasMissionControlReport>(args);
+    },
+    createGo: (missionId, input) => {
+      const args = [
+        'atlas',
+        'create-go',
+        missionId,
+        input.goalId,
+        '--title',
+        input.title,
+        '--objective',
+        input.objective,
+        '--actor',
+        input.actor,
+        '--actor-type',
+        input.actorType ?? 'agent',
+        '--status',
+        input.status ?? 'active',
+        '--json',
+      ];
+      return runJson<AtlasGoWrite>(args);
+    },
+    claimCompletion: (missionId, goalId, input) => {
+      const args = [
+        'atlas',
+        'claim-completion',
+        missionId,
+        goalId,
+        '--statement',
+        input.statement,
+        '--actor',
+        input.actor,
+        '--actor-type',
+        input.actorType ?? 'agent',
+      ];
+      for (const episodeId of input.evidenceEpisodeIds ?? []) {
+        args.push('--evidence-episode', episodeId);
+      }
+      args.push('--json');
+      return runJson<AtlasCompletionClaimWrite>(args);
+    },
+    assessCompletion: (missionId, goalId, assessment = {}) => {
+      const args = ['atlas', 'assess-completion', missionId, goalId, '--json'];
       if (assessment.source) args.push('--source', assessment.source);
       if (assessment.purpose) args.push('--purpose', assessment.purpose);
       return runJson<AtlasMissionControlReport>(args);

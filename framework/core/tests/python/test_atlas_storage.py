@@ -14,6 +14,7 @@ from kungfu import runtime_service
 from kungfu.atlas import importer, mission_control, payloads
 from kungfu.atlas import store as atlas_store
 from kungfu.atlas import CARRIER_ATLAS_ACTION
+from kungfu.rewind import reporting as rewind_reporting
 from kungfu.sources import store as source_store
 from kungfu.storage import service as storage_service
 
@@ -348,6 +349,39 @@ def test_mission_control_queries_and_assesses_progress_at_pinned_cuts(tmp_path):
     assert first_state["lineage"]["conflicts"] == []
     assert len(first_state["lineage"]["episode_content_roots"]) == 2
 
+    rewind_reporting.begin_run(
+        str(runtime_dir),
+        run_id="goal-a-run",
+        provider="codex",
+        cwd=None,
+        work_id="goal-a",
+    )
+    rewind_reporting.report_cost(
+        str(runtime_dir),
+        run_id="goal-a-run",
+        provider="codex",
+        surface="exec-json",
+        source="codex-exec-json",
+        attribution="exact_run",
+        work_id="goal-a",
+        model="test-model",
+        input_tokens=120,
+        output_tokens=30,
+    )
+    rewind_reporting.end_run(
+        str(runtime_dir),
+        run_id="goal-a-run",
+        status="succeeded",
+        exit_code=0,
+    )
+    rewind_episodes = [
+        row
+        for row in storage_service.episode_list(runtime_dir)["episodes"]
+        if row["open"]["source"] == "rewind:goal-a-run"
+    ]
+    assert len(rewind_episodes) == 1
+    assert rewind_episodes[0]["unique_frame_count"] == 3
+    assert rewind_episodes[0]["root"]["root_value"]
     first_report = mission_control.assess_progress(
         str(runtime_dir), mission_id="mission-a"
     )
@@ -358,6 +392,26 @@ def test_mission_control_queries_and_assesses_progress_at_pinned_cuts(tmp_path):
         first_report["assessment"]["report"]["query_proof_root"]
         == first_state["query_proof_root"]
     )
+    profile = first_report["profile"]
+    assert profile["schema"] == ("kungfu.profile.delegated-work-cost-state-proof/v1")
+    assert profile["profile_hash"].startswith("sha256:")
+    assert profile["state"]["value"] == "active"
+    assert profile["cost"]["status"] == "partial"
+    assert profile["cost"]["observation_count"] == 1
+    assert profile["cost"]["tokens"]["input_tokens"] == 120
+    assert profile["cost"]["tokens"]["output_tokens"] == 30
+    assert profile["cost"]["cost_usd"] is None
+    assert profile["cost"]["cost_usd_known"] is False
+    assert profile["cost"]["attribution"] == {
+        "best": "exact-run",
+        "worst": "exact-run",
+        "ambiguous": False,
+    }
+    assert profile["cost"]["proof_episodes"], profile["cost"]
+    assert profile["cost"]["proof_episodes"][0]["run_id"] == "goal-a-run"
+    assert profile["cost"]["proof_episodes"][0]["episode_root"].startswith("sha256:")
+    assert profile["proof"]["query_proof_root"] == first_state["query_proof_root"]
+    assert profile["proof"]["assessment_report_hash"] == first_report["report_hash"]
     repeated = mission_control.assess_progress(str(runtime_dir), mission_id="mission-a")
     assert repeated["assessment_key"] == first_report["assessment_key"]
     assert repeated["assessment"]["reused"] is True
@@ -366,7 +420,8 @@ def test_mission_control_queries_and_assesses_progress_at_pinned_cuts(tmp_path):
     from kungfu.cli.commands import __registry__  # noqa: F401
     from kungfu.cli.commands import kfc
 
-    cli = CliRunner().invoke(
+    runner = CliRunner()
+    cli = runner.invoke(
         kfc,
         ["atlas", "assess-mission", "mission-a", "--json"],
         env={"KF_RUNTIME_DIR": str(runtime_dir)},
@@ -399,6 +454,250 @@ def test_mission_control_queries_and_assesses_progress_at_pinned_cuts(tmp_path):
         historical_report["state"]["goals"][0]["payload"]["record"]["status"]
         == "active"
     )
+    assert historical_report["profile"]["cost"]["status"] == "missing"
+    assert historical_report["profile"]["cost"]["observation_count"] == 0
+
+
+def test_mission_control_native_go_completion_claim_fails_closed_then_passes(
+    tmp_path,
+):
+    repo = tmp_path / "atlas"
+    runtime_dir = tmp_path / "runtime"
+    _atlas_fixture(repo)
+    atlas_store.ImportStore(runtime_dir).run_import(str(repo))
+
+    created = mission_control.create_go(
+        str(runtime_dir),
+        mission_id="mission-a",
+        goal_id="native-go",
+        title="Native Go",
+        objective="Prove the Mission Control completion loop",
+        actor="test-agent",
+        actor_type="agent",
+    )
+    assert created["authority_mode"] == "kungfu-native"
+    assert created["mission_subject"] == "atlas:mission-a"
+    assert created["go_subject"] == "kungfu:native-go"
+    assert created["receipt"]["status"] == "admitted"
+
+    state = mission_control.query_state(str(runtime_dir), mission_id="mission-a")
+    assert [row["payload"]["record"]["goal_id"] for row in state["goals"]] == [
+        "goal-a",
+        "native-go",
+    ]
+
+    no_evidence = mission_control.claim_completion(
+        str(runtime_dir),
+        mission_id="mission-a",
+        goal_id="native-go",
+        statement="The loop is implemented",
+        actor="test-agent",
+        actor_type="agent",
+    )
+    assert no_evidence["claim"]["evidence_episodes"] == []
+    insufficient = mission_control.assess_completion(
+        str(runtime_dir), mission_id="mission-a", goal_id="native-go"
+    )
+    assert insufficient["fitness"] == "insufficient"
+    assert insufficient["assessment"]["state"] in {
+        "insufficient-evidence",
+        "unverifiable",
+    }
+    assert insufficient["profile"]["state"]["value"] == "claimed-complete"
+
+    rewind_reporting.begin_run(
+        str(runtime_dir),
+        run_id="native-go-run",
+        provider="codex",
+        cwd=None,
+        work_id="native-go",
+    )
+    rewind_reporting.report_cost(
+        str(runtime_dir),
+        run_id="native-go-run",
+        provider="codex",
+        surface="exec-json",
+        source="codex-exec-json",
+        attribution="exact_run",
+        work_id="native-go",
+        input_tokens=80,
+        output_tokens=20,
+        cost_usd=0.25,
+    )
+    rewind_reporting.end_run(
+        str(runtime_dir),
+        run_id="native-go-run",
+        status="succeeded",
+        exit_code=0,
+    )
+    work_episode = next(
+        row
+        for row in storage_service.episode_list(runtime_dir)["episodes"]
+        if row["open"]["source"] == "rewind:native-go-run"
+    )
+    claimed = mission_control.claim_completion(
+        str(runtime_dir),
+        mission_id="mission-a",
+        goal_id="native-go",
+        statement="The loop is implemented with sealed work evidence",
+        actor="test-agent",
+        actor_type="agent",
+        evidence_episode_ids=[int(work_episode["episode_id"])],
+    )
+    assert len(claimed["claim"]["evidence_episodes"]) == 1
+    assert claimed["claim"]["evidence_episodes"][0]["episode_root"].startswith(
+        "sha256:"
+    )
+
+    completed = mission_control.assess_completion(
+        str(runtime_dir), mission_id="mission-a", goal_id="native-go"
+    )
+    assert completed["fitness"] == "fit"
+    assert completed["assessment"]["state"] == "fresh"
+    assert completed["claim"]["type"] == "task-completed"
+    assert len(completed["composite_proof"]["verified_evidence"]) == 1
+    assert completed["profile"]["cost"]["status"] == "attributed", completed["profile"][
+        "cost"
+    ]
+    assert completed["profile"]["cost"]["cost_usd"] == 0.25
+    assert completed["profile"]["cost"]["tokens"]["input_tokens"] == 80
+    assert completed["query_proof_root"].startswith("sha256:")
+    assert (
+        completed["assessment"]["report"]["query_proof_root"]
+        == completed["query_proof_root"]
+    )
+
+    from click.testing import CliRunner
+    from kungfu.cli.commands import __registry__  # noqa: F401
+    from kungfu.cli.commands import kfc
+
+    runner = CliRunner()
+    create_cli = runner.invoke(
+        kfc,
+        [
+            "atlas",
+            "create-go",
+            "mission-a",
+            "native-go",
+            "--title",
+            "Native Go",
+            "--objective",
+            "Prove the Mission Control completion loop",
+            "--actor",
+            "test-agent",
+            "--json",
+        ],
+        env={"KF_RUNTIME_DIR": str(runtime_dir)},
+    )
+    assert create_cli.exit_code == 0, create_cli.output
+    assert json.loads(create_cli.output)["receipt"]["reused"] is True
+
+    claim_cli = runner.invoke(
+        kfc,
+        [
+            "atlas",
+            "claim-completion",
+            "mission-a",
+            "native-go",
+            "--statement",
+            "The loop is implemented with sealed work evidence",
+            "--actor",
+            "test-agent",
+            "--evidence-episode",
+            str(work_episode["episode_id"]),
+            "--json",
+        ],
+        env={"KF_RUNTIME_DIR": str(runtime_dir)},
+    )
+    assert claim_cli.exit_code == 0, claim_cli.output
+    assert json.loads(claim_cli.output)["receipt"]["reused"] is True
+
+    cli = runner.invoke(
+        kfc,
+        [
+            "atlas",
+            "assess-completion",
+            "mission-a",
+            "native-go",
+            "--json",
+        ],
+        env={"KF_RUNTIME_DIR": str(runtime_dir)},
+    )
+    assert cli.exit_code == 0, cli.output
+    cli_report = json.loads(cli.output)
+    assert cli_report["fitness"] == "fit"
+    assert cli_report["assessment_key"] == completed["assessment_key"]
+
+
+def test_mission_control_batches_large_mission_state_queries(tmp_path):
+    repo = tmp_path / "atlas"
+    runtime_dir = tmp_path / "runtime"
+    _atlas_fixture(repo)
+    for index in range(260):
+        _write_json(
+            repo / f"agent-journal/goals/registry/active/large-go-{index:03d}.json",
+            {
+                "goal_id": f"large-go-{index:03d}",
+                "status": "active",
+                "updated_at": "2026-07-08T01:00:00Z",
+                "title": f"Large Go {index:03d}",
+                "mission_id": "mission-a",
+                "next_action": "keep the query bounded",
+            },
+        )
+    atlas_store.ImportStore(runtime_dir).run_import(str(repo))
+
+    state = mission_control.query_state(str(runtime_dir), mission_id="mission-a")
+
+    assert len(state["goals"]) == 261
+    assert state["canonical_state"] is True
+    assert state["definition"]["schema"] == (
+        "kungfu.mission-control.batched-state-query/v1"
+    )
+    assert state["logical_plan"] == {
+        "engine": "mission-control-batched-fact-state/v1",
+        "batch_size": 256,
+        "subquery_count": 2,
+    }
+    assert len(state["lineage"]["subqueries"]) == 2
+    assert state["query_proof_root"].startswith("sha256:")
+
+
+def test_mission_control_v1_data_root_requires_explicit_migration(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    storage_service.fact_declare_contract_world(
+        runtime_dir,
+        {
+            "id": mission_control.CONTRACT_WORLD_ID,
+            "version": mission_control.LEGACY_CONTRACT_VERSION,
+            "effective_from": 100,
+            "effective_until": 0,
+            "fact_surface_ids": [
+                mission_control.MISSION_SURFACE_ID,
+                mission_control.GO_SURFACE_ID,
+            ],
+        },
+        system_time=100,
+    )
+
+    with pytest.raises(RuntimeError, match="explicit migration or re-import"):
+        mission_control.create_go(
+            str(runtime_dir),
+            mission_id="mission-a",
+            goal_id="native-go",
+            title="Native Go",
+            objective="Must not overlap v1 declarations",
+            actor="test-agent",
+            actor_type="agent",
+        )
+
+    catalog = storage_service.fact_type_list(runtime_dir)
+    assert {(row["id"], row["version"]) for row in catalog["contract_worlds"]} == {
+        (
+            mission_control.CONTRACT_WORLD_ID,
+            mission_control.LEGACY_CONTRACT_VERSION,
+        )
+    }
 
 
 def test_atlas_range_export_preserves_context_closure(tmp_path):

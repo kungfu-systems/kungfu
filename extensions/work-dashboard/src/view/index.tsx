@@ -76,6 +76,33 @@ function SmallButton({
   );
 }
 
+function TextInput({
+  value,
+  placeholder,
+  onChange,
+}: {
+  value: string;
+  placeholder: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <input
+      value={value}
+      placeholder={placeholder}
+      onChange={(event) => onChange(event.target.value)}
+      style={{
+        ...mono,
+        minWidth: 0,
+        border: '1px solid #3c3c3c',
+        borderRadius: 4,
+        background: '#1e1e1e',
+        color: '#cccccc',
+        padding: '4px 6px',
+      }}
+    />
+  );
+}
+
 type FactRow = { key: string; fields: Record<string, string | undefined> };
 
 function FactRows({ label, rows }: { label: string; rows: FactRow[] }) {
@@ -161,14 +188,16 @@ function AtlasGoalDetail({ goal }: { goal: AtlasGoal | null }) {
 function MissionTrustPanel({
   report,
   error,
+  title = 'Mission TrustReport',
 }: {
   report: AtlasMissionControlReport | null;
   error: string;
+  title?: string;
 }) {
   if (error) {
     return (
       <section style={{ ...panelStyle }}>
-        <h2 style={headingStyle}>Mission TrustReport</h2>
+        <h2 style={headingStyle}>{title}</h2>
         <div style={{ ...mono, color: '#f48771' }}>{error}</div>
       </section>
     );
@@ -176,7 +205,7 @@ function MissionTrustPanel({
   if (!report) {
     return (
       <section style={{ ...panelStyle }}>
-        <h2 style={headingStyle}>Mission TrustReport</h2>
+        <h2 style={headingStyle}>{title}</h2>
         <div style={{ ...mono, color: '#6a6a6a' }}>
           select a Mission to run its purpose-bound progress assessment
         </div>
@@ -189,9 +218,24 @@ function MissionTrustPanel({
       : report.fitness === 'warning'
         ? '#dcdcaa'
         : '#f48771';
+  const profile = report.profile;
+  const cost = profile.cost;
   return (
     <section style={{ ...panelStyle }}>
-      <h2 style={headingStyle}>Mission TrustReport</h2>
+      <h2 style={headingStyle}>Cost / State / Proof</h2>
+      <div style={{ ...mono, color: '#9cdcfe', marginBottom: 4 }}>
+        cost: {cost.status} · state: {profile.state.value} · proof:{' '}
+        {profile.proof.canonical_state ? 'canonical' : 'degraded'}
+      </div>
+      <div style={{ ...mono, color: '#cccccc', marginBottom: 6 }}>
+        tokens: {cost.tokens.input_tokens} in / {cost.tokens.output_tokens} out
+        {' · '}
+        usd: {cost.cost_usd_known ? cost.cost_usd : 'unknown'}
+        {' · '}
+        attribution: {cost.attribution.worst}
+        {cost.attribution.ambiguous ? ' (ambiguous)' : ''}
+      </div>
+      <h2 style={headingStyle}>{title}</h2>
       <div style={{ ...mono, color: fitnessColor, marginBottom: 6 }}>
         {report.fitness} · {report.assessment.state} ·{' '}
         {report.state.canonical_state ? 'canonical cut' : 'degraded cut'}
@@ -217,6 +261,24 @@ function MissionTrustPanel({
         <div style={{ ...mono, color: '#858585', overflowWrap: 'anywhere' }}>
           proof: {report.query_proof_root}
         </div>
+        {cost.proof_episodes.map((episode) => (
+          <div
+            key={episode.run_id}
+            style={{ ...mono, color: '#858585', overflowWrap: 'anywhere' }}
+          >
+            cost episode: {episode.run_id} · {episode.episode_root}
+          </div>
+        ))}
+        {cost.missing.no_linked_cost_fact && (
+          <div style={{ ...mono, color: '#dcdcaa' }}>
+            missing: no CostSnapshot is linked to an admitted Go
+          </div>
+        )}
+        {cost.missing.unsealed_runs.map((runId) => (
+          <div key={runId} style={{ ...mono, color: '#dcdcaa' }}>
+            missing: unsealed cost run {runId}
+          </div>
+        ))}
         {report.known_limits.map((risk) => (
           <div key={risk} style={{ ...mono, color: '#dcdcaa' }}>
             residual risk: {risk}
@@ -253,6 +315,15 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
   const [trustReport, setTrustReport] =
     React.useState<AtlasMissionControlReport | null>(null);
   const [trustError, setTrustError] = React.useState<string>('');
+  const [completionReport, setCompletionReport] =
+    React.useState<AtlasMissionControlReport | null>(null);
+  const [completionError, setCompletionError] = React.useState<string>('');
+  const [newGoalId, setNewGoalId] = React.useState('');
+  const [newGoalTitle, setNewGoalTitle] = React.useState('');
+  const [newGoalObjective, setNewGoalObjective] = React.useState('');
+  const [claimStatement, setClaimStatement] = React.useState('');
+  const [evidenceEpisodes, setEvidenceEpisodes] = React.useState('');
+  const actor = 'work-dashboard';
 
   const reload = React.useCallback(() => {
     setInfo(atlas.importInfo());
@@ -268,6 +339,8 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
     if (selectedMission === 'all') {
       setTrustReport(null);
       setTrustError('');
+      setCompletionReport(null);
+      setCompletionError('');
       return;
     }
     try {
@@ -300,17 +373,77 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
     }
   };
 
-  const visibleGoals = goals.filter(
+  const createGoNow = () => {
+    if (selectedMission === 'all') {
+      setMessage('select a Mission before creating a Go');
+      return;
+    }
+    try {
+      const result = atlas.createGo(selectedMission, {
+        goalId: newGoalId,
+        title: newGoalTitle,
+        objective: newGoalObjective,
+        actor,
+        actorType: 'user',
+      });
+      setMessage(
+        `created ${result.go_subject}: ${result.receipt.status}${
+          result.receipt.reused ? ' (reused)' : ''
+        }`,
+      );
+      setTrustReport(atlas.assessMission(selectedMission));
+      setNewGoalId('');
+      setNewGoalTitle('');
+      setNewGoalObjective('');
+    } catch (error) {
+      setMessage((error as Error).message);
+    }
+  };
+
+  const claimAndAssessNow = () => {
+    if (selectedMission === 'all' || !selectedGoal) {
+      setCompletionError('select a Mission and Go before claiming completion');
+      return;
+    }
+    try {
+      const evidenceEpisodeIds = evidenceEpisodes
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean);
+      atlas.claimCompletion(selectedMission, selectedGoal, {
+        statement: claimStatement,
+        actor,
+        actorType: 'user',
+        evidenceEpisodeIds,
+      });
+      setCompletionReport(
+        atlas.assessCompletion(selectedMission, selectedGoal),
+      );
+      setCompletionError('');
+      setTrustReport(atlas.assessMission(selectedMission));
+    } catch (error) {
+      setCompletionReport(null);
+      setCompletionError((error as Error).message);
+    }
+  };
+
+  const effectiveGoals = new Map(goals.map((goal) => [goal.goal_id, goal]));
+  for (const row of trustReport?.state.goals ?? []) {
+    const goal = row.payload?.record;
+    if (goal?.goal_id) effectiveGoals.set(goal.goal_id, goal);
+  }
+  const allGoals = [...effectiveGoals.values()];
+  const visibleGoals = allGoals.filter(
     (goal) =>
       (selectedMission === 'all' || goal.mission_id === selectedMission) &&
       (statusFilter === 'all' || goal.status === statusFilter),
   );
   const currentGoal =
     visibleGoals.find((goal) => goal.goal_id === selectedGoal) ??
-    goals.find((goal) => goal.goal_id === selectedGoal) ??
+    allGoals.find((goal) => goal.goal_id === selectedGoal) ??
     null;
   const goalCounts = new Map<string, number>();
-  for (const goal of goals) {
+  for (const goal of allGoals) {
     const status = goal.status ?? 'unknown';
     goalCounts.set(status, (goalCounts.get(status) ?? 0) + 1);
   }
@@ -350,6 +483,36 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
         {message && (
           <div style={{ ...mono, color: '#dcdcaa', marginBottom: 8 }}>
             {message}
+          </div>
+        )}
+        {selectedMission !== 'all' && (
+          <div
+            style={{
+              display: 'grid',
+              gap: 5,
+              marginBottom: 10,
+              padding: 8,
+              border: '1px solid #3c3c3c',
+              borderRadius: 4,
+            }}
+          >
+            <h2 style={headingStyle}>Create native Go</h2>
+            <TextInput
+              value={newGoalId}
+              placeholder="stable Go id"
+              onChange={setNewGoalId}
+            />
+            <TextInput
+              value={newGoalTitle}
+              placeholder="title"
+              onChange={setNewGoalTitle}
+            />
+            <TextInput
+              value={newGoalObjective}
+              placeholder="bounded objective"
+              onChange={setNewGoalObjective}
+            />
+            <SmallButton onClick={createGoNow}>create Go</SmallButton>
           </div>
         )}
         <h2 style={headingStyle}>Missions · {missions.length}</h2>
@@ -406,7 +569,7 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
             active={statusFilter === 'all'}
             onClick={() => setStatusFilter('all')}
           >
-            all {goals.length}
+            all {allGoals.length}
           </SmallButton>
           {ATLAS_GOAL_STATUSES.map((status) => (
             <SmallButton
@@ -455,6 +618,33 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
             no imported goals match this filter
           </div>
         )}
+        {selectedGoal && selectedMission !== 'all' && (
+          <div
+            style={{
+              display: 'grid',
+              gap: 5,
+              marginTop: 10,
+              padding: 8,
+              border: '1px solid #3c3c3c',
+              borderRadius: 4,
+            }}
+          >
+            <h2 style={headingStyle}>Claim completion</h2>
+            <TextInput
+              value={claimStatement}
+              placeholder="what this Go establishes"
+              onChange={setClaimStatement}
+            />
+            <TextInput
+              value={evidenceEpisodes}
+              placeholder="evidence Episode ids, comma-separated"
+              onChange={setEvidenceEpisodes}
+            />
+            <SmallButton onClick={claimAndAssessNow}>
+              claim and assess
+            </SmallButton>
+          </div>
+        )}
       </section>
       <div
         style={{
@@ -467,6 +657,13 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
         }}
       >
         <MissionTrustPanel report={trustReport} error={trustError} />
+        {(completionReport || completionError) && (
+          <MissionTrustPanel
+            title="Completion TrustReport"
+            report={completionReport}
+            error={completionError}
+          />
+        )}
         <AtlasGoalDetail goal={currentGoal} />
       </div>
     </div>

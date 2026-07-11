@@ -29,6 +29,12 @@ Its release artifact should eventually declare:
 - the KFX selection and first-screen workflow;
 - compatibility, known limits, and qualification evidence.
 
+The first runtime projection is now exposed inside
+`kungfu.mission-control.trust-report/v1` as
+`kungfu.profile.delegated-work-cost-state-proof/v1`. It composes the admitted
+Mission/Go state, linked Rewind `CostSnapshot` facts, verified Episode roots,
+and the purpose-bound assessment. It does not copy cost into a second ledger.
+
 ## Cost
 
 Cost includes only declared, attributable observations such as tokens, money,
@@ -38,6 +44,12 @@ confidence, source, capture boundary, and missing/ambiguous state.
 Cost alone is a bill. The profile always binds cost to a stable run, Go, or
 Episode coordinate and exposes whether the work is advancing, blocked, stale,
 waiting, or unsupported by evidence.
+
+For the first Atlas bridge, a Rewind `CostSnapshot.work_id` matches either the
+stable imported Go id or its namespaced subject key. Tokens remain visible when
+the provider does not report money; unknown USD is rendered as unknown rather
+than zero. Unsealed runs, unreadable runs, weak attribution, and ambiguous
+windows degrade the cost status instead of disappearing.
 
 ## State
 
@@ -114,3 +126,11 @@ The first profile qualification should prove, in an isolated data root, that:
 - the GUI summary and agent CLI return equivalent state and proof coordinates;
 - adding a Mission/Go link does not copy or reinterpret the underlying run;
 - missing evidence cannot render a trusted completion state.
+
+The first implemented qualification now proves both progress and completion
+paths. An exact-run CostSnapshot is joined to an admitted or native Go; the same
+reported run uses one Episode for RunBegin, CostSnapshot, and RunEnd; its
+frame-verified root is carried in profile proof; and unknown USD remains
+explicit. A completion claim with no independent Episode remains insufficient,
+while the same claim with a verified work Episode produces a purpose-bound
+fresh report. GUI and CLI consume the same profile and assessment identities.

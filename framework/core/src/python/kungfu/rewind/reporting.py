@@ -72,11 +72,13 @@ def emit_manifest(
 ) -> str:
     target = bundle_dir(runtime_dir, run_id)
     os.makedirs(target, exist_ok=True)
+    episode_id = _episode(runtime_dir, run_id).episode_id
     manifest_extra = {
         "fact_bridge": {
             "schema": "kungfu.fact-bridge/v1",
             "capture_mode": capture_mode,
             "source": "reported",
+            "episode_id": str(episode_id),
         }
     }
     if extra:

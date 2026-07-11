@@ -254,6 +254,36 @@
       "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
     },
     {
+      "id": "kungfu.atlas.create-go",
+      "surface": "cli",
+      "name": "kungfu atlas create-go <mission-id> <goal-id> --title <title> --objective <objective> --actor <actor> --json",
+      "purpose": "Create a Kungfu-native Go linked to an admitted Mission without writing back to the bridged source.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.atlas.claim-completion",
+      "surface": "cli",
+      "name": "kungfu atlas claim-completion <mission-id> <goal-id> --statement <statement> --actor <actor> --evidence-episode <id> --json",
+      "purpose": "Record an explicit completion claim with independently verifiable Episode evidence.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.atlas.assess-completion",
+      "surface": "cli",
+      "name": "kungfu atlas assess-completion <mission-id> <goal-id> --json",
+      "purpose": "Assess a Go completion claim for a declared purpose and fail closed on missing evidence.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
       "id": "kungfu.atlas.show.import",
       "surface": "cli",
       "name": "kungfu atlas show import --json",

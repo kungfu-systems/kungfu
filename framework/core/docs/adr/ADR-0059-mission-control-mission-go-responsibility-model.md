@@ -123,9 +123,9 @@ hashes, capture ranges, observer metadata, and sealed import Episodes. It may
 admit, query, and assess the imported claims, but it must not silently write
 back or describe the adapter projection as native Mission authority.
 
-The existing Atlas importer and Work Dashboard are reused. The next slice adds
-declared Mission/Go fact admission, an ADR-0048 query, and an ADR-0052 assessment
-over the imported evidence rather than creating a second adapter.
+The existing Atlas importer and Work Dashboard are reused. Mission/Go fact
+admission, an ADR-0048 query, and ADR-0052 assessments operate over the imported
+evidence rather than creating a second adapter.
 
 If authority later moves to Kungfu, the transition is an explicit KFD-1
 migration/cutover event. Atlas then becomes a projection or export consumer.
@@ -146,7 +146,26 @@ The profile may start from a run before the user declares a Mission. Attaching
 that run to a later Go reuses its identity and evidence; it does not migrate to
 a different data model.
 
-### 8. Human and agent surfaces are peers
+### 8. Native Go and completion claims are explicitly sourced
+
+The first pre-release native contract is version 2. It admits Atlas Mission/Go
+observations alongside explicitly sourced `kungfu-user` and `kungfu-agent`
+Go facts, plus a completion-claim surface. Native Go creation does not mutate
+the imported Atlas Mission or impersonate the Atlas adapter.
+
+Completion remains two-step: a participant records `task-completed`, then
+KFD-2 evaluates it for a declared purpose. The built-in policy requires a
+sealed, frame-verified work Episode; the claim's own Fact Episode is not
+independent work evidence. Cost continues to come from Rewind CostSnapshot
+events and is joined by stable Go/work identity rather than copied into the
+Mission fact world.
+
+Version 1 used open-ended declarations that cannot be safely amended in place.
+If a selected pre-release data root already contains v1, the runtime fails with
+an explicit migration/re-import requirement instead of creating overlapping
+declarations or silently changing authority.
+
+### 9. Human and agent surfaces are peers
 
 The GUI and installed CLI/API operate the same Mission/Go commands,
 QueryDefinitions, and assessment requests. The GUI uses progressive disclosure
@@ -165,12 +184,11 @@ private authority.
    **Implemented:** ADR-0048 now accepts the domain-neutral `fact-state` object,
    bounded `subject_keys`, and exact `system_time` cuts over the admission
    journal.
-5. Add one deterministic completion or reasonable-progress assessor and expose
+5. Add deterministic completion and reasonable-progress assessors and expose
    its TrustReport through CLI and Work Dashboard progressive disclosure.
-   **Implemented for reasonable progress:** the saved Mission Control profile
-   persists an ADR-0052 assessment and maps its state to an explicit
-   purpose-bound fitness view without treating Atlas self-report as universal
-   truth.
+   **Implemented:** the saved Mission Control profile persists ADR-0052
+   assessments and maps their state to explicit purpose-bound fitness views.
+   Completion fails closed without an independent frame-verified Episode.
 6. Qualify the full path in a temporary data root, then expand GUI authoring and
    portable Mission bundles only from observed dogfood needs.
 
@@ -180,9 +198,9 @@ Go cards into the shared Fact Library under the `kungfu.mission-control` world.
 The admitted payload binds the Atlas source id/path/time, repository head,
 content hash, import id, and sealed Episode root. Admission failure cannot
 rewrite or abort the already sealed import and is returned as an explicit
-degraded receipt. Steps 4 and 5 now form the first executable trust slice;
-completion and handoff policies remain later profiles requiring stronger
-independent evidence.
+degraded receipt. Steps 4 and 5 now form the first executable trust slice for
+progress and completion. Native Go creation and completion claims use the same
+Fact Library, query, assessment, CLI/API, and Work Dashboard paths.
 
 ## Acceptance gates
 
