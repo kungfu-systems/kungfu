@@ -18,6 +18,9 @@ struct storage_projection_drift {
   std::string table = {};
   uint64_t projection_rows = 0;
   uint64_t journal_distinct = 0;
+  std::string reason = {};
+  std::string projection_digest = {};
+  std::string journal_digest = {};
 };
 
 struct storage_projection_verify_result {

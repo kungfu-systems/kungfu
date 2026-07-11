@@ -3,10 +3,11 @@
 #include <kungfu/runtime/storage/source_registry_projection.h>
 
 #include <filesystem>
-#include <set>
 #include <utility>
 
 #include <kungfu/runtime/cache/backend.h>
+#include <kungfu/runtime/storage/projection_content.h>
+#include <kungfu/runtime/storage/projection_transaction.h>
 #include <kungfu/yijinjing/schema/registry.h>
 #include <kungfu/yijinjing/storage/source_registry.h>
 
@@ -18,32 +19,6 @@ namespace {
 
 fs::path projection_path(const std::string &runtime_dir) {
   return fs::path(runtime_dir) / "storage" / "projections" / "source-registry.sqlite";
-}
-
-// Distinct-primary-key journal counts. The SQLite tables upsert by primary key
-// (SourceRegistered by source_uid; SourceHeadUpdated by source_uid+update_time;
-// AcceptedRangeRecorded by source_uid+manifest_uid), so the honest expected row
-// count is the distinct-PK count, not the raw append count.
-struct distinct_counts {
-  size_t registered = 0;
-  size_t head_updates = 0;
-  size_t accepted_ranges = 0;
-};
-
-distinct_counts distinct_pk_counts(const yijinjing::storage::source_registry_journal_records &records) {
-  std::set<uint64_t> registered_uids;
-  for (const auto &record : records.registered) {
-    registered_uids.insert(record.source_uid);
-  }
-  std::set<std::pair<uint64_t, int64_t>> head_keys;
-  for (const auto &record : records.head_updates) {
-    head_keys.emplace(record.source_uid, record.update_time);
-  }
-  std::set<std::pair<uint64_t, uint64_t>> accepted_keys;
-  for (const auto &record : records.accepted_ranges) {
-    accepted_keys.emplace(record.source_uid, record.manifest_uid);
-  }
-  return {registered_uids.size(), head_keys.size(), accepted_keys.size()};
 }
 
 } // namespace
@@ -62,23 +37,25 @@ storage_projection_rebuild_result source_registry_projection::rebuild_typed() co
   auto storage = cache::make_storage_ptr(path.string(), yijinjing::SourceRegistryDataTypes);
   storage->pragma.journal_mode(sqlite_orm::journal_mode::WAL);
   storage->pragma.synchronous(0);
-  storage->sync_schema();
-
-  // The journal is the authority; the projection is a full rebuild over it.
-  storage->remove_all<yijinjing::types::SourceRegistered>();
-  storage->remove_all<yijinjing::types::SourceHeadUpdated>();
-  storage->remove_all<yijinjing::types::AcceptedRangeRecorded>();
 
   const auto records = yijinjing::storage::source_registry_store(runtime_dir_).read_typed_records();
-  for (const auto &record : records.registered) {
-    storage->replace(record);
-  }
-  for (const auto &record : records.head_updates) {
-    storage->replace(record);
-  }
-  for (const auto &record : records.accepted_ranges) {
-    storage->replace(record);
-  }
+  rebuild_projection_transaction(storage, [&](sqlite3 *) {
+    storage->sync_schema();
+    // Schema sync, clear, and replay share one connection and transaction. A
+    // failed replay therefore leaves the previous readable projection intact.
+    storage->remove_all<yijinjing::types::SourceRegistered>();
+    storage->remove_all<yijinjing::types::SourceHeadUpdated>();
+    storage->remove_all<yijinjing::types::AcceptedRangeRecorded>();
+    if (!records.registered.empty()) {
+      storage->replace_range(records.registered.begin(), records.registered.end());
+    }
+    if (!records.head_updates.empty()) {
+      storage->replace_range(records.head_updates.begin(), records.head_updates.end());
+    }
+    if (!records.accepted_ranges.empty()) {
+      storage->replace_range(records.accepted_ranges.begin(), records.accepted_ranges.end());
+    }
+  });
 
   return {
       true,
@@ -98,7 +75,9 @@ storage_projection_rebuild_result source_registry_projection::rebuild_typed() co
 storage_projection_verify_result source_registry_projection::verify_typed() const {
   const auto path = projection_path(runtime_dir_);
   const auto records = yijinjing::storage::source_registry_store(runtime_dir_).read_typed_records();
-  const auto expected = distinct_pk_counts(records);
+  const auto expected_registered = snapshot_projection_content(records.registered);
+  const auto expected_head = snapshot_projection_content(records.head_updates);
+  const auto expected_accepted = snapshot_projection_content(records.accepted_ranges);
   const bool has_records =
       !records.registered.empty() || !records.head_updates.empty() || !records.accepted_ranges.empty();
 
@@ -118,21 +97,47 @@ storage_projection_verify_result source_registry_projection::verify_typed() cons
 
   auto storage = cache::make_storage_ptr(path.string(), yijinjing::SourceRegistryDataTypes);
   storage->on_open = [](sqlite3 *db) { sqlite3_busy_timeout(db, 5000); };
-  storage->sync_schema();
-
-  const size_t projected_registered = storage->count<yijinjing::types::SourceRegistered>();
-  const size_t projected_head = storage->count<yijinjing::types::SourceHeadUpdated>();
-  const size_t projected_accepted = storage->count<yijinjing::types::AcceptedRangeRecorded>();
+  projection_content_snapshot projected_registered;
+  projection_content_snapshot projected_head;
+  projection_content_snapshot projected_accepted;
+  try {
+    projected_registered = snapshot_projection_content(storage->get_all<yijinjing::types::SourceRegistered>());
+    projected_head = snapshot_projection_content(storage->get_all<yijinjing::types::SourceHeadUpdated>());
+    projected_accepted = snapshot_projection_content(storage->get_all<yijinjing::types::AcceptedRangeRecorded>());
+  } catch (const std::exception &error) {
+    return {false,
+            "degraded",
+            SOURCE_REGISTRY_PROJECTION_SCHEMA_V1,
+            runtime_dir_,
+            "yijinjing-journal",
+            true,
+            true,
+            "projection schema unreadable; rebuild required: " + std::string(error.what()),
+            {{"__schema__", 0, 0, "schema_unreadable"}}};
+  } catch (...) {
+    return {false,
+            "degraded",
+            SOURCE_REGISTRY_PROJECTION_SCHEMA_V1,
+            runtime_dir_,
+            "yijinjing-journal",
+            true,
+            true,
+            "projection schema unreadable; rebuild required",
+            {{"__schema__", 0, 0, "schema_unreadable"}}};
+  }
 
   std::vector<storage_projection_drift> drift;
-  const auto check = [&](const char *table, size_t projected, size_t journal_expected) {
-    if (projected != journal_expected) {
-      drift.push_back({table, projected, journal_expected});
+  const auto check = [&](const char *table, const projection_content_snapshot &projected,
+                         const projection_content_snapshot &journal) {
+    if (projected.digest != journal.digest) {
+      drift.push_back({table, projected.rows, journal.rows,
+                       projected.rows == journal.rows ? "content_mismatch" : "row_count_mismatch", projected.digest,
+                       journal.digest});
     }
   };
-  check("source_registered", projected_registered, expected.registered);
-  check("source_head_updated", projected_head, expected.head_updates);
-  check("accepted_range_recorded", projected_accepted, expected.accepted_ranges);
+  check("source_registered", projected_registered, expected_registered);
+  check("source_head_updated", projected_head, expected_head);
+  check("accepted_range_recorded", projected_accepted, expected_accepted);
 
   const bool degraded = !drift.empty();
   return {!degraded,
@@ -144,12 +149,12 @@ storage_projection_verify_result source_registry_projection::verify_typed() cons
           degraded,
           {},
           std::move(drift),
-          {{"source_registered", projected_registered},
-           {"source_head_updated", projected_head},
-           {"accepted_range_recorded", projected_accepted}},
-          {{"source_registered", expected.registered},
-           {"source_head_updated", expected.head_updates},
-           {"accepted_range_recorded", expected.accepted_ranges}}};
+          {{"source_registered", projected_registered.rows},
+           {"source_head_updated", projected_head.rows},
+           {"accepted_range_recorded", projected_accepted.rows}},
+          {{"source_registered", expected_registered.rows},
+           {"source_head_updated", expected_head.rows},
+           {"accepted_range_recorded", expected_accepted.rows}}};
 }
 
 } // namespace kungfu::runtime::storage_service_api

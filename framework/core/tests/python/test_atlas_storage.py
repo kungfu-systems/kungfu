@@ -2662,6 +2662,140 @@ def test_source_registry_projection_fsck_detects_drift(tmp_path):
     assert healed["projection"]["status"] == "ok"
 
 
+def test_source_registry_projection_rebuild_rolls_back_as_one_transaction(tmp_path):
+    runtime = kungfu.__binding__.runtime
+    runtime_dir = str(tmp_path)
+    projection_db = tmp_path / "storage" / "projections" / "source-registry.sqlite"
+
+    runtime.run_storage_service_operation(
+        "source_register", runtime_dir, {"source_id": "s1", "register_time": 1000}
+    )
+    runtime.run_storage_service_operation("source_registry_rebuild", runtime_dir, {})
+    with sqlite3.connect(projection_db) as conn:
+        conn.execute(
+            "CREATE TRIGGER reject_projection_replay "
+            "BEFORE INSERT ON SourceRegistered "
+            "BEGIN SELECT RAISE(ABORT, 'injected projection replay failure'); END"
+        )
+        assert conn.execute("SELECT source_id FROM SourceRegistered").fetchall() == [
+            ("s1",)
+        ]
+
+    runtime.run_storage_service_operation(
+        "source_register", runtime_dir, {"source_id": "s2", "register_time": 1001}
+    )
+    with pytest.raises(RuntimeError):
+        runtime.run_storage_service_operation(
+            "source_registry_rebuild", runtime_dir, {}
+        )
+
+    # DELETE and replay are in one transaction: the injected insert failure
+    # cannot expose an empty or half-rebuilt projection to readers.
+    with sqlite3.connect(projection_db) as conn:
+        assert conn.execute("SELECT source_id FROM SourceRegistered").fetchall() == [
+            ("s1",)
+        ]
+        conn.execute("DROP TRIGGER reject_projection_replay")
+
+    runtime.run_storage_service_operation("source_registry_rebuild", runtime_dir, {})
+    healed = runtime.run_storage_service_operation(
+        "source_registry_fsck", runtime_dir, {}
+    )
+    assert healed["projection"]["status"] == "ok"
+    assert healed["projection"]["rows"]["source_registered"] == 2
+
+
+def test_source_registry_projection_fsck_detects_same_count_content_drift(tmp_path):
+    runtime = kungfu.__binding__.runtime
+    runtime_dir = str(tmp_path)
+    projection_db = tmp_path / "storage" / "projections" / "source-registry.sqlite"
+
+    runtime.run_storage_service_operation(
+        "source_register", runtime_dir, {"source_id": "s1", "register_time": 1000}
+    )
+    runtime.run_storage_service_operation("source_registry_rebuild", runtime_dir, {})
+    with sqlite3.connect(projection_db) as conn:
+        conn.execute("UPDATE SourceRegistered SET location_uid = location_uid + 1")
+
+    fsck = runtime.run_storage_service_operation(
+        "source_registry_fsck", runtime_dir, {}
+    )
+    drift = {row["table"]: row for row in fsck["projection"]["drift"]}
+    assert drift["source_registered"]["projection_rows"] == 1
+    assert drift["source_registered"]["journal_distinct"] == 1
+    assert drift["source_registered"]["reason"] == "content_mismatch"
+    assert drift["source_registered"]["projection_digest"]
+    assert drift["source_registered"]["journal_digest"]
+    assert (
+        drift["source_registered"]["projection_digest"]
+        != drift["source_registered"]["journal_digest"]
+    )
+
+
+def test_source_registry_projection_fsck_does_not_create_missing_schema(tmp_path):
+    runtime = kungfu.__binding__.runtime
+    runtime_dir = str(tmp_path)
+    projection_db = tmp_path / "storage" / "projections" / "source-registry.sqlite"
+
+    runtime.run_storage_service_operation(
+        "source_register", runtime_dir, {"source_id": "s1", "register_time": 1000}
+    )
+    projection_db.parent.mkdir(parents=True)
+    with sqlite3.connect(projection_db):
+        pass
+
+    fsck = runtime.run_storage_service_operation(
+        "source_registry_fsck", runtime_dir, {}
+    )
+    assert fsck["projection"]["status"] == "degraded"
+    assert fsck["projection"]["drift"][0]["reason"] == "schema_unreadable"
+    with sqlite3.connect(projection_db) as conn:
+        assert (
+            conn.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            ).fetchall()
+            == []
+        )
+
+
+def test_manifest_projection_allows_export_lag_but_detects_export_corruption(tmp_path):
+    runtime = kungfu.__binding__.runtime
+    runtime_dir = tmp_path / "runtime"
+    storage_service.write_synthetic_source(
+        runtime_dir,
+        source_id="local-synth",
+        manifest_id="imp-synth",
+        source_head="head-1",
+        records=[],
+    )
+    storage_service.rebuild_index(runtime_dir, source_id="local-synth")
+
+    # Export receipts are append-only read-path audit records, so a projection
+    # captured before a later export remains a valid (stale) subset.
+    runtime.run_storage_service_operation(
+        "export_bundle",
+        str(runtime_dir),
+        {"scope": "source", "source_id": "local-synth"},
+    )
+    status = storage_service.status(runtime_dir, source_id="local-synth")
+    manifest_projection = next(
+        row for row in status["projections"] if row["name"] == "manifest-catalog-sqlite"
+    )
+    assert manifest_projection["verification"]["status"] == "ok"
+
+    storage_service.rebuild_index(runtime_dir, source_id="local-synth")
+    projection_db = runtime_dir / "storage/projections/manifest-catalog.sqlite"
+    with sqlite3.connect(projection_db) as conn:
+        conn.execute("UPDATE ExportBundleRecorded SET location_uid = location_uid + 1")
+
+    status = storage_service.status(runtime_dir, source_id="local-synth")
+    manifest_projection = next(
+        row for row in status["projections"] if row["name"] == "manifest-catalog-sqlite"
+    )
+    drift = {row["table"]: row for row in manifest_projection["verification"]["drift"]}
+    assert drift["export_bundle_recorded"]["reason"] == "content_mismatch"
+
+
 def test_payload_bodies_are_opaque_content_addressed_bytes(tmp_path):
     # ADR-0037 point 6: payload bodies are opaque content-addressed bytes with no
     # format-implying extension. The body format is orthogonal to the record

@@ -3,8 +3,8 @@
 # Episode manifest SQLite projection fixtures (ADR-0041 stage 5).
 #
 # The manifest journal is the authority; the projection is a rebuildable
-# derived view for indexed / SQL access. Fsck verifies the projection against
-# the journal's distinct-primary-key counts: drift degrades, an absent
+# derived view for indexed / SQL access. Fsck verifies normalized Hana content
+# against one journal snapshot: drift degrades, an absent
 # projection is an honest distinct state, and a rebuild converges back to ok.
 
 from __future__ import annotations
@@ -12,6 +12,8 @@ from __future__ import annotations
 import hashlib
 import sqlite3
 from pathlib import Path
+
+import pytest
 
 from kungfu.storage import service
 
@@ -158,6 +160,57 @@ def test_rebuild_keeps_first_open_identity(tmp_path):
             "SELECT title, begin_time FROM EpisodeOpen WHERE episode_id = 5"
         ).fetchall()
     assert rows == [("first identity", 1000)]
+
+
+def test_rebuild_rolls_back_typed_and_query_tables_together(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    projection_db = runtime_dir / PROJECTION_SUBPATH
+    _seed_episode(runtime_dir, 6)
+    service.episode_projection_rebuild(runtime_dir)
+
+    with sqlite3.connect(projection_db) as db:
+        baseline_opens = db.execute("SELECT COUNT(*) FROM EpisodeOpen").fetchone()[0]
+        baseline_query = db.execute(
+            "SELECT COUNT(*) FROM kf_episode_query_records_v1"
+        ).fetchone()[0]
+        db.execute(
+            "CREATE TRIGGER reject_query_replay "
+            "BEFORE INSERT ON kf_episode_query_records_v1 "
+            "BEGIN SELECT RAISE(ABORT, 'injected query replay failure'); END"
+        )
+
+    _seed_episode(runtime_dir, 7)
+    with pytest.raises(RuntimeError):
+        service.episode_projection_rebuild(runtime_dir)
+
+    # The raw query table fails after the Hana tables were replayed. Both sets
+    # still roll back to the previous readable projection on the same handle.
+    with sqlite3.connect(projection_db) as db:
+        assert (
+            db.execute("SELECT COUNT(*) FROM EpisodeOpen").fetchone()[0]
+            == baseline_opens
+        )
+        assert (
+            db.execute("SELECT COUNT(*) FROM kf_episode_query_records_v1").fetchone()[0]
+            == baseline_query
+        )
+        db.execute("DROP TRIGGER reject_query_replay")
+
+
+def test_fsck_detects_same_count_hana_content_drift(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    projection_db = runtime_dir / PROJECTION_SUBPATH
+    _seed_episode(runtime_dir, 8)
+    service.episode_projection_rebuild(runtime_dir)
+
+    with sqlite3.connect(projection_db) as db:
+        db.execute("UPDATE EpisodeOpen SET location_uid = location_uid + 1")
+
+    fsck = service.fsck(runtime_dir, episode_id=8)
+    drift = {row["table"]: row for row in _episode_projection(fsck)["drift"]}
+    assert drift["episode_open"]["projection_rows"] == 1
+    assert drift["episode_open"]["journal_distinct"] == 1
+    assert drift["episode_open"]["reason"] == "content_mismatch"
 
 
 def test_rebuild_on_empty_manifest_is_ok(tmp_path):

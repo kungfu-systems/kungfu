@@ -26,13 +26,13 @@ public:
 
   [[nodiscard]] bool exists() const;
 
-  // Rebuild the SQLite projection from the journal: sync schema, clear tables,
-  // replace every journal record. Returns per-table row counts.
+  // Rebuild schema, clear, and replay in one transaction over one captured
+  // journal snapshot. Returns per-table row counts.
   [[nodiscard]] storage_projection_rebuild_result rebuild_typed() const;
 
-  // Verify the projection against the journal fold. Reports drift (projection
-  // row counts diverging from journal distinct-PK counts) as degraded, missing
-  // projection as a distinct honest state, not silently ok.
+  // Verify normalized Hana field content against one captured journal
+  // snapshot. Primary keys come from DataType::primary_keys; verification is
+  // read-only and reports missing/unreadable projections honestly.
   [[nodiscard]] storage_projection_verify_result verify_typed() const;
 
 private:

@@ -3,10 +3,11 @@
 #include <kungfu/runtime/storage/manifest_catalog_projection.h>
 
 #include <filesystem>
-#include <set>
 #include <utility>
 
 #include <kungfu/runtime/cache/backend.h>
+#include <kungfu/runtime/storage/projection_content.h>
+#include <kungfu/runtime/storage/projection_transaction.h>
 #include <kungfu/yijinjing/schema/registry.h>
 #include <kungfu/yijinjing/storage/manifest_catalog.h>
 
@@ -18,38 +19,6 @@ namespace {
 
 fs::path projection_path(const std::string &runtime_dir) {
   return fs::path(runtime_dir) / "storage" / "projections" / "manifest-catalog.sqlite";
-}
-
-// Distinct-primary-key journal counts. The SQLite tables upsert by primary key
-// (ImportManifestAccepted by manifest_uid; ManifestEntryRecorded by
-// manifest_uid+entry_index; ExportBundleRecorded by bundle_uid+export_time;
-// ChannelCursorUpdated by channel_uid+update_time), so the honest expected row
-// count is the distinct-PK count, not the raw append count.
-struct distinct_counts {
-  size_t manifests = 0;
-  size_t entries = 0;
-  size_t exports = 0;
-  size_t cursors = 0;
-};
-
-distinct_counts distinct_pk_counts(const yijinjing::storage::manifest_catalog_journal_records &records) {
-  std::set<uint64_t> manifest_uids;
-  for (const auto &record : records.manifests) {
-    manifest_uids.insert(record.manifest_uid);
-  }
-  std::set<std::pair<uint64_t, uint64_t>> entry_keys;
-  for (const auto &record : records.entries) {
-    entry_keys.emplace(record.manifest_uid, record.entry_index);
-  }
-  std::set<std::pair<uint64_t, int64_t>> export_keys;
-  for (const auto &record : records.exports) {
-    export_keys.emplace(record.bundle_uid, record.export_time);
-  }
-  std::set<std::pair<uint64_t, int64_t>> cursor_keys;
-  for (const auto &record : records.cursors) {
-    cursor_keys.emplace(record.channel_uid, record.update_time);
-  }
-  return {manifest_uids.size(), entry_keys.size(), export_keys.size(), cursor_keys.size()};
 }
 
 } // namespace
@@ -68,27 +37,27 @@ storage_projection_rebuild_result manifest_catalog_projection::rebuild_typed() c
   auto storage = cache::make_storage_ptr(path.string(), yijinjing::ManifestCatalogDataTypes);
   storage->pragma.journal_mode(sqlite_orm::journal_mode::WAL);
   storage->pragma.synchronous(0);
-  storage->sync_schema();
-
-  // The journal is the authority; the projection is a full rebuild over it.
-  storage->remove_all<yijinjing::types::ImportManifestAccepted>();
-  storage->remove_all<yijinjing::types::ManifestEntryRecorded>();
-  storage->remove_all<yijinjing::types::ExportBundleRecorded>();
-  storage->remove_all<yijinjing::types::ChannelCursorUpdated>();
 
   const auto records = yijinjing::storage::manifest_catalog_store(runtime_dir_).read_typed_records();
-  for (const auto &record : records.manifests) {
-    storage->replace(record);
-  }
-  for (const auto &record : records.entries) {
-    storage->replace(record);
-  }
-  for (const auto &record : records.exports) {
-    storage->replace(record);
-  }
-  for (const auto &record : records.cursors) {
-    storage->replace(record);
-  }
+  rebuild_projection_transaction(storage, [&](sqlite3 *) {
+    storage->sync_schema();
+    storage->remove_all<yijinjing::types::ImportManifestAccepted>();
+    storage->remove_all<yijinjing::types::ManifestEntryRecorded>();
+    storage->remove_all<yijinjing::types::ExportBundleRecorded>();
+    storage->remove_all<yijinjing::types::ChannelCursorUpdated>();
+    if (!records.manifests.empty()) {
+      storage->replace_range(records.manifests.begin(), records.manifests.end());
+    }
+    if (!records.entries.empty()) {
+      storage->replace_range(records.entries.begin(), records.entries.end());
+    }
+    if (!records.exports.empty()) {
+      storage->replace_range(records.exports.begin(), records.exports.end());
+    }
+    if (!records.cursors.empty()) {
+      storage->replace_range(records.cursors.begin(), records.cursors.end());
+    }
+  });
 
   return {
       true,
@@ -110,7 +79,10 @@ storage_projection_rebuild_result manifest_catalog_projection::rebuild_typed() c
 storage_projection_verify_result manifest_catalog_projection::verify_typed() const {
   const auto path = projection_path(runtime_dir_);
   const auto records = yijinjing::storage::manifest_catalog_store(runtime_dir_).read_typed_records();
-  const auto expected = distinct_pk_counts(records);
+  const auto expected_manifests = snapshot_projection_content(records.manifests);
+  const auto expected_entries = snapshot_projection_content(records.entries);
+  const auto expected_exports = snapshot_projection_content(records.exports);
+  const auto expected_cursors = snapshot_projection_content(records.cursors);
   const bool has_records =
       !records.manifests.empty() || !records.entries.empty() || !records.exports.empty() || !records.cursors.empty();
 
@@ -130,11 +102,38 @@ storage_projection_verify_result manifest_catalog_projection::verify_typed() con
 
   auto storage = cache::make_storage_ptr(path.string(), yijinjing::ManifestCatalogDataTypes);
   storage->on_open = [](sqlite3 *db) { sqlite3_busy_timeout(db, 5000); };
-  storage->sync_schema();
-
-  const size_t projected_manifests = storage->count<yijinjing::types::ImportManifestAccepted>();
-  const size_t projected_entries = storage->count<yijinjing::types::ManifestEntryRecorded>();
-  const size_t projected_cursors = storage->count<yijinjing::types::ChannelCursorUpdated>();
+  projection_content_snapshot projected_manifests;
+  projection_content_snapshot projected_entries;
+  projection_content_snapshot projected_exports;
+  projection_content_snapshot projected_cursors;
+  std::vector<yijinjing::types::ExportBundleRecorded> projected_export_records;
+  try {
+    projected_manifests = snapshot_projection_content(storage->get_all<yijinjing::types::ImportManifestAccepted>());
+    projected_entries = snapshot_projection_content(storage->get_all<yijinjing::types::ManifestEntryRecorded>());
+    projected_export_records = storage->get_all<yijinjing::types::ExportBundleRecorded>();
+    projected_exports = snapshot_projection_content(projected_export_records);
+    projected_cursors = snapshot_projection_content(storage->get_all<yijinjing::types::ChannelCursorUpdated>());
+  } catch (const std::exception &error) {
+    return {false,
+            "degraded",
+            MANIFEST_CATALOG_PROJECTION_SCHEMA_V1,
+            runtime_dir_,
+            "yijinjing-journal",
+            true,
+            true,
+            "projection schema unreadable; rebuild required: " + std::string(error.what()),
+            {{"__schema__", 0, 0, "schema_unreadable"}}};
+  } catch (...) {
+    return {false,
+            "degraded",
+            MANIFEST_CATALOG_PROJECTION_SCHEMA_V1,
+            runtime_dir_,
+            "yijinjing-journal",
+            true,
+            true,
+            "projection schema unreadable; rebuild required",
+            {{"__schema__", 0, 0, "schema_unreadable"}}};
+  }
 
   // Freshness is judged on the current-view families (manifests, entries,
   // cursors): those change only when new content is accepted, and a stale
@@ -142,14 +141,21 @@ storage_projection_verify_result manifest_catalog_projection::verify_typed() con
   // append-only audit stream on the read path — every export appends one —
   // so receipt lag between rebuilds is expected and is not drift.
   std::vector<storage_projection_drift> drift;
-  const auto check = [&](const char *table, size_t projected, size_t journal_expected) {
-    if (projected != journal_expected) {
-      drift.push_back({table, projected, journal_expected});
+  const auto check = [&](const char *table, const projection_content_snapshot &projected,
+                         const projection_content_snapshot &journal) {
+    if (projected.digest != journal.digest) {
+      drift.push_back({table, projected.rows, journal.rows,
+                       projected.rows == journal.rows ? "content_mismatch" : "row_count_mismatch", projected.digest,
+                       journal.digest});
     }
   };
-  check("import_manifest_accepted", projected_manifests, expected.manifests);
-  check("manifest_entry_recorded", projected_entries, expected.entries);
-  check("channel_cursor_updated", projected_cursors, expected.cursors);
+  check("import_manifest_accepted", projected_manifests, expected_manifests);
+  check("manifest_entry_recorded", projected_entries, expected_entries);
+  if (!projection_content_is_subset(projected_export_records, records.exports)) {
+    drift.push_back({"export_bundle_recorded", projected_exports.rows, expected_exports.rows, "content_mismatch",
+                     projected_exports.digest, expected_exports.digest});
+  }
+  check("channel_cursor_updated", projected_cursors, expected_cursors);
 
   const bool degraded = !drift.empty();
   return {!degraded,
@@ -161,12 +167,12 @@ storage_projection_verify_result manifest_catalog_projection::verify_typed() con
           degraded,
           {},
           std::move(drift),
-          {{"import_manifest_accepted", projected_manifests},
-           {"manifest_entry_recorded", projected_entries},
-           {"channel_cursor_updated", projected_cursors}},
-          {{"import_manifest_accepted", expected.manifests},
-           {"manifest_entry_recorded", expected.entries},
-           {"channel_cursor_updated", expected.cursors}}};
+          {{"import_manifest_accepted", projected_manifests.rows},
+           {"manifest_entry_recorded", projected_entries.rows},
+           {"channel_cursor_updated", projected_cursors.rows}},
+          {{"import_manifest_accepted", expected_manifests.rows},
+           {"manifest_entry_recorded", expected_entries.rows},
+           {"channel_cursor_updated", expected_cursors.rows}}};
 }
 
 } // namespace kungfu::runtime::storage_service_api

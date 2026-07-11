@@ -29,15 +29,14 @@ public:
 
   [[nodiscard]] bool exists() const;
 
-  // Rebuild the SQLite projection from the manifest journal: sync schema,
-  // clear tables, replay every typed record. EpisodeOpen replays first-wins
-  // to match the fold's immutable-identity rule; the other record families
-  // upsert by their declared primary keys. Returns per-table row counts.
+  // Rebuild schema, typed tables, and the append-preserving query table in one
+  // transaction over one captured journal snapshot. EpisodeOpen replays
+  // first-wins to match the fold's immutable-identity rule.
   [[nodiscard]] storage_projection_rebuild_result rebuild_typed() const;
 
-  // Verify the projection against the journal's typed record stream. Reports
-  // drift (projection row counts diverging from distinct-primary-key journal
-  // counts) as degraded, missing projection as a distinct honest state.
+  // Verify normalized Hana field content and query-record content against one
+  // captured journal snapshot. Verification is read-only; missing or
+  // unreadable projection schema is an honest degraded state.
   [[nodiscard]] storage_projection_verify_result verify_typed() const;
 
   // Read the append-preserving query projection. The caller must verify the

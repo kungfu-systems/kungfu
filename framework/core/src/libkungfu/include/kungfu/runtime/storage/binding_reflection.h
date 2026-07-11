@@ -12,7 +12,7 @@
 // polyglot membrane; KF_DEFINE_* remains the closed-set POD admission path.
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_projection_count, table, count);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_projection_drift, table, projection_rows,
-                        journal_distinct);
+                        journal_distinct, reason, projection_digest, journal_digest);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_projection_verify_result, ok, status, schema,
                         runtime_dir, authority, projection_present, degraded, note, drift, rows, journal_distinct);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_projection_rebuild_result, ok, schema,

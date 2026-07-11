@@ -1294,7 +1294,10 @@ nlohmann::json projection_verification_json(const storage_projection_verify_resu
     for (const auto &item : report.drift) {
       rendered["drift"].push_back({{"table", item.table},
                                    {"projection_rows", item.projection_rows},
-                                   {"journal_distinct", item.journal_distinct}});
+                                   {"journal_distinct", item.journal_distinct},
+                                   {"reason", item.reason},
+                                   {"projection_digest", item.projection_digest},
+                                   {"journal_digest", item.journal_digest}});
     }
     rendered["rows"] = nlohmann::json::object();
     for (const auto &item : report.rows) {
@@ -2012,7 +2015,10 @@ nlohmann::json episode_qualification_issue_detail_json(const episode_qualificati
             for (const auto &item : detail.drift) {
               rendered["drift"].push_back({{"table", item.table},
                                            {"projection_rows", item.projection_rows},
-                                           {"journal_distinct", item.journal_distinct}});
+                                           {"journal_distinct", item.journal_distinct},
+                                           {"reason", item.reason},
+                                           {"projection_digest", item.projection_digest},
+                                           {"journal_digest", item.journal_digest}});
             }
           }
           return rendered;
@@ -5408,7 +5414,10 @@ nlohmann::json render_storage_fsck_issue(const storage_fsck_issue &issue, storag
             for (const auto &drift : detail.verification.drift) {
               row["drift"].push_back({{"table", drift.table},
                                       {"projection_rows", drift.projection_rows},
-                                      {"journal_distinct", drift.journal_distinct}});
+                                      {"journal_distinct", drift.journal_distinct},
+                                      {"reason", drift.reason},
+                                      {"projection_digest", drift.projection_digest},
+                                      {"journal_digest", drift.journal_digest}});
             }
           }
           return row;
@@ -5614,7 +5623,10 @@ nlohmann::json render_storage_rebuild_index_result(const storage_rebuild_index_r
               for (const auto &drift : detail.drift) {
                 row["drift"].push_back({{"table", drift.table},
                                         {"projection_rows", drift.projection_rows},
-                                        {"journal_distinct", drift.journal_distinct}});
+                                        {"journal_distinct", drift.journal_distinct},
+                                        {"reason", drift.reason},
+                                        {"projection_digest", drift.projection_digest},
+                                        {"journal_digest", drift.journal_digest}});
               }
               row["rows"] = nlohmann::json::object();
               for (const auto &count : detail.rows) {
