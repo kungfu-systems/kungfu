@@ -13,6 +13,24 @@ def _invoke(runner, home, *args):
     return runner.invoke(kfc, ["--home", str(home), "query", *args])
 
 
+def test_facts_cli_exposes_the_libkungfu_owned_contract(tmp_path):
+    result = CliRunner().invoke(
+        kfc, ["--home", str(tmp_path / "home"), "facts", "capabilities"]
+    )
+
+    assert result.exit_code == 0, result.output
+    contract = json.loads(result.output)
+    assert contract["schema"] == "kungfu.facts.domain-admission/v1"
+    assert contract["schema_owner"] == "flatbuffers"
+    assert contract["admission_outcomes"] == [
+        "admitted",
+        "unregistered-surface",
+        "incompatible-schema",
+        "ambiguous-authority",
+        "unverifiable",
+    ]
+
+
 def test_offline_agent_discovers_and_proves_query_in_three_commands(tmp_path):
     home = tmp_path / "home"
     runtime_dir = home / "runtime"

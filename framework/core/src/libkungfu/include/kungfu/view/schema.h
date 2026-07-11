@@ -57,6 +57,13 @@ struct col_plan {
   bind_kind kind = bind_kind::as_int;
 };
 
+struct table_codec_result {
+  bool ok = false;
+  std::string bytes;
+  std::string json;
+  std::string error;
+};
+
 // Owning handle over a `.bfbs` reflection schema: the only way to reach
 // FlatBuffers reflection in kungfu C++. Copyable and movable — copies share the
 // co-owned bytes, so a handle can outlive the caller (e.g. crossing the binding
@@ -103,6 +110,14 @@ public:
   // which is required for action manifests that bind several tables from one
   // `.bfbs`. bind_frame runs the root-table form internally.
   [[nodiscard]] bool verify_table(const uint8_t *buf, size_t len, std::string_view object_name = {}) const;
+
+  // Encode/decode one root table through this co-owned reflection schema.
+  // This keeps generic FlatBuffers JSON translation behind the same ADR-0039
+  // chokepoint as compile/verify/reflection. JSON is an edge form only; the
+  // returned bytes remain the persisted schema-owned payload.
+  [[nodiscard]] table_codec_result encode_json(std::string_view json) const;
+
+  [[nodiscard]] table_codec_result decode_json(const uint8_t *buf, size_t len) const;
 
 private:
   // Co-owned `.bfbs` bytes. shared_ptr<const> so copies share one immutable

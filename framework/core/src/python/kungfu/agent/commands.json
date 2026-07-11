@@ -266,6 +266,36 @@
       "purpose": "Execute the same planner through the semantic Episode shortcut."
     },
     {
+      "apiId": "kungfu.facts.capabilities",
+      "name": "kungfu facts capabilities",
+      "maturity": "experimental",
+      "purpose": "Discover the libkungfu-owned declaration, admission, time, and journal contract for user or domain facts."
+    },
+    {
+      "apiId": "kungfu.facts.declare-world",
+      "name": "kungfu facts declare-world --file world.json --system-time <ns>",
+      "maturity": "experimental",
+      "purpose": "Journal an effective-time contract-world declaration and bind it to a sealed Episode."
+    },
+    {
+      "apiId": "kungfu.facts.declare-surface",
+      "name": "kungfu facts declare-surface --file surface.json --system-time <ns>",
+      "maturity": "experimental",
+      "purpose": "Journal one FlatBuffers-owned fact-surface declaration under an exact contract-world root."
+    },
+    {
+      "apiId": "kungfu.facts.observe",
+      "name": "kungfu facts observe --file observation.json --system-time <ns>",
+      "maturity": "experimental",
+      "purpose": "Record an observation plus its replayable admitted, rejected, ambiguous, or unverifiable outcome."
+    },
+    {
+      "apiId": "kungfu.facts.state",
+      "name": "kungfu facts state --cut-system-time <ns> --subject-key <key>",
+      "maturity": "experimental",
+      "purpose": "Fold admitted facts at head or a historical declaration cut while preserving correction, retraction, and source conflict history."
+    },
+    {
       "apiId": "kungfu.remote.add",
       "name": "kungfu remote add <source-id> --host <host> --home <kf-home> --json",
       "maturity": "experimental",

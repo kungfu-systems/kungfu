@@ -26,10 +26,13 @@ function runtimeEnv() {
         ? 'PATH'
         : 'LD_LIBRARY_PATH';
   const current = process.env[key];
+  const runtimeBindingDir = process.env.KUNGFU_DIR || bindingDir;
   return {
     ...process.env,
-    KUNGFU_DIR: bindingDir,
-    [key]: current ? `${bindingDir}${path.delimiter}${current}` : bindingDir,
+    KUNGFU_DIR: runtimeBindingDir,
+    [key]: current
+      ? `${runtimeBindingDir}${path.delimiter}${current}`
+      : runtimeBindingDir,
   };
 }
 
@@ -408,13 +411,14 @@ test(
 function selectedPythonResults(runtimeDir) {
   const script = String.raw`
 import json
+import os
 import sys
 from pathlib import Path
 
 core_dir = Path(sys.argv[1])
 runtime_dir = sys.argv[2]
 sys.path.insert(0, str(core_dir / "src" / "python"))
-sys.path.insert(0, str(core_dir / "dist" / "kungfu"))
+sys.path.insert(0, os.environ["KUNGFU_DIR"])
 
 from kungfu.storage import service
 
@@ -737,6 +741,34 @@ test(
     } finally {
       fs.rmSync(runtimeDir, { recursive: true, force: true });
     }
+  },
+);
+
+test(
+  'domain fact contract is owned by libkungfu across the Node edge',
+  {
+    skip:
+      nativeAvailable || process.env.KUNGFU_REQUIRE_NATIVE === '1'
+        ? false
+        : 'built kungfu_node binding is unavailable',
+  },
+  () => {
+    const contract = kungfu.runStorageServiceOperation('fact_contract', '', {});
+    assert.equal(contract.schema, 'kungfu.facts.domain-admission/v1');
+    assert.equal(contract.schema_owner, 'flatbuffers');
+    assert.deepEqual(contract.observation_actions, [
+      'assert',
+      'correct',
+      'retract',
+    ]);
+    assert.deepEqual(contract.admission_outcomes, [
+      'admitted',
+      'unregistered-surface',
+      'incompatible-schema',
+      'ambiguous-authority',
+      'unverifiable',
+    ]);
+    assert.equal(contract.schema_root.startsWith('sha256:'), true);
   },
 );
 
