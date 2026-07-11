@@ -17,6 +17,12 @@ contract, fact surface, or agent interface should start from the same declared
 evidence that local verification, packaged artifacts, and Buildchain release
 gates inspect.
 
+ADR-0051 closes the runtime gap between these commitments: KFD-1 declares the
+contract world and fact surface, Episode records replayable admission history,
+ADR-0048 queries pin the effective declaration, and KFD-2 assesses a concrete
+claim over that proof. A release registry is evidence for this chain; it is not
+a parallel runtime ontology.
+
 ## Existing Substrate
 
 The implementation builds on surfaces that already exist:
@@ -65,7 +71,7 @@ evidence and are ignored by Git.
 | KFD | SDK entrypoint | Generated files and contracts | Runtime/API proof | Buildchain/release evidence | Maturity downgrade |
 |---|---|---|---|---|---|
 | KFD-1: contracts must not drift | `kungfu sdk add contract <surface>` | Contract source, schema/version metadata, registry entry, versioning/register prompt, drift fixture, known-limits stub | `kungfu contract verify --json`; `kungfu contract show <surface> --json`; packaged contract hash list | `scripts/buildchain-kfd-evidence.mjs` emits `.buildchain/kfd/kfd-1/contract-world.witness.json`, and the release workflow passes it to Buildchain 2.10 | Downgrade if the surface is not registered, dev/runtime/frozen artifacts disagree, or known limits are missing |
-| KFD-2: trust starts from facts | `kungfu sdk add fact-surface <name>` | Event schema or `.fbs`, msg type allocation, append helper, projection/store stub, `show/list --json` API, append-fold-readback fixture | Local append -> fold -> readback probe; manifest with schema hash and responsibility fields such as status, next action, decision, validation, artifact, and linked run | Buildchain validates `.buildchain/kfd/kfd-2/registry.json` and emits raw claim files under `.buildchain/kfd/kfd-2/claims/`; the release workflow passes those files to the release passport gate | Downgrade if the claim is only prose, no local readback exists, responsibility fields are absent, or cost/attribution certainty is ambiguous |
+| KFD-2: trust starts from facts | `kungfu sdk add fact-surface <name>` | KFD-1 fact-surface declaration, one schema owner, append/admission helper, projection/store stub, `show/list --json` API, and append-admit-fold-readback fixture | Local observation -> admission outcome -> Episode fold -> historical query proof; trust report binds claim, declaration roots, evidence, responsibility, and residual risk | Buildchain validates `.buildchain/kfd/kfd-2/registry.json` and emits raw claim files under `.buildchain/kfd/kfd-2/claims/`; the release workflow passes those files to the release passport gate | Downgrade if the claim is only prose, bypasses declaration/admission, lacks local readback or proof, omits responsibility/residual risk, or leaves cost/attribution certainty ambiguous |
 | KFD-3: cooperation starts from transparent value | Strict Buildchain mode: `.buildchain/kfd/kfd-3/surfaces.json` is the root Buildchain-managed registry; `kfd3_api.registry.json` + `@kfd3_api("<api-id>")` and SDK/product entrypoints are checked inputs that must project into it | Agent docs entry, capabilities/commands metadata, mode-selection or onboarding hook, constraint declaration, CLI/API examples, known-limits stub, local registry/schema, per-surface declaration metadata, and upstream KFD aggregate | `kungfu agent capabilities --json`; `kungfu agent choose-mode --json`; `kungfu agent verify --json`; `kungfu kfd query --json`; `kungfu kfd check --json`; `kungfu kfd upstream --json`; `kungfu kfd aggregate --json`; `kungfu sdk kfd query --json`; `./shifu kfd:query`; probe that an agent can discover value, boundary, next action, known limits, upstream KFD facts, and the declared control surface | `scripts/buildchain-kfd-evidence.mjs` emits KFD-3 prebuild and artifact witnesses and fails if the root registry drifts from Buildchain-managed strict mode; the release workflow passes the prebuild witness and artifact verify command to Buildchain 2.10 | Downgrade if the surface is GUI-only, prose-only, stale, hides constraints, has no machine-readable entrypoint, lacks registry declaration metadata, or exposes runtime commands not declared in the registry |
 
 ## First Implementation Decision
@@ -209,6 +215,11 @@ buildchain collect github-release \
 Release workflow wiring is now enabled through
 `.github/workflows/release-new-version.yml`; `publish-command` generates the
 files before Buildchain collects the release passport.
+
+This release-claim slice must remain explicitly narrower than ADR-0051 runtime
+fact admission. A registry claim is not automatically an admitted runtime fact,
+and a successful release gate is not a KFD-2 trust report over an Episode/query
+proof.
 
 After this, add `kungfu sdk add fact-surface <name>` once the scaffold
 vocabulary is settled. The scaffold should produce an append-first event

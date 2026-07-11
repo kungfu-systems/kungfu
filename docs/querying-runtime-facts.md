@@ -14,10 +14,12 @@ surface and must not be read as a claim that every command already ships.
 A result is meaningful only with its basis:
 
 ```text
-FactState(scope, perspective, cut, policy)
-  = fold(authoritative records admitted by that basis)
+FactState(contract_world, scope, perspective, cut, policy)
+  = fold(records admitted under the pinned declarations)
 ```
 
+- **contract_world** pins the KFD-1 contract-world and fact-surface
+  declarations that decide which observations may enter the fold;
 - **scope** chooses the data root, sources, Episodes, or other authority set;
 - **perspective** chooses the observer and ordering policy for concurrent facts;
 - **cut** chooses `head` or a reproducible historical frontier;
@@ -27,6 +29,12 @@ Kungfu does not claim one universal wall-clock truth. It provides a canonical,
 reproducible answer under a declared basis. If two authoritative sources
 disagree, the answer can preserve that disagreement instead of silently
 selecting one claim.
+
+Recording is not automatic admission. Unregistered, schema-incompatible,
+authority-ambiguous, or unverifiable observations remain inspectable for
+diagnosis, but they do not enter canonical fact state. See
+[Bringing domain facts into Kungfu](fact-surface-admission.md) and
+[ADR-0051](../framework/core/docs/adr/ADR-0051-kfd-contract-world-fact-admission-and-trust.md).
 
 Queries also distinguish:
 
@@ -80,6 +88,7 @@ A result may include rows, but it also carries the evidence needed to interpret
 them:
 
 - authority roots, source ids, accepted ranges, cut, and frontier;
+- contract-world and fact-surface declaration ids, versions, and roots;
 - Episode ids and sealed content roots;
 - query-definition and logical-plan hashes;
 - schema, reducer, fold-policy, and engine versions;
@@ -152,7 +161,9 @@ ADR-0048 accepts the target semantics and staged sequence. It does not claim a
 complete SQL dialect, CEP engine, changelog implementation, or GUI builder is
 already present.
 
-The first implementation slice must prove one bounded Episode/fact query at
-`head` and at a historical cut, including its lineage. Later slices add the
-planner and CLI, projection/SQL conformance, changelog/GUI components, and the
-smallest temporal-pattern set justified by dogfood.
+The first implementation slice already proves one bounded Episode/fact query at
+`head` and at a historical cut, including its lineage. Before planner and SQL
+surfaces broaden, the basis/proof contract must add the declaration coordinate
+and preserve Q0 exact-cut behavior. Later slices add the planner and CLI,
+projection/SQL conformance, changelog/GUI components, and the smallest
+temporal-pattern set justified by dogfood.
