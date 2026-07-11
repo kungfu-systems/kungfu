@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
 
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -59,6 +60,12 @@ function parseArgs(argv) {
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
+}
+
+function git(args) {
+  const result = spawnSync('git', args, { cwd: ROOT, encoding: 'utf8' });
+  if (result.status !== 0) fail(`git ${args.join(' ')} failed`);
+  return result.stdout.trim();
 }
 
 function sourceValidation() {
@@ -169,6 +176,13 @@ function exactQualification(options, fixture) {
       'product-compatibility.json',
     );
     const compatibility = readJson(compatibilityPath);
+    const sourceHead = git(['rev-parse', 'HEAD']);
+    if (git(['status', '--porcelain']))
+      fail('exact qualification requires a clean source tree');
+    if (compatibility.source_commit !== sourceHead)
+      fail(
+        `artifact source ${compatibility.source_commit} does not match HEAD ${sourceHead}`,
+      );
     if (compatibility.schema !== fixture.assembled.compatibility_schema)
       fail('CLI compatibility schema mismatch');
     if (sha256File(compatibilityPath) !== sha256File(desktopCompatibilityPath))
