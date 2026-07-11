@@ -609,50 +609,6 @@ manifest_entry_view manifest_entry_from_edge(const nlohmann::json &entry) {
   return view;
 }
 
-nlohmann::json manifest_document_input_edge(const manifest_document_view &view) {
-  nlohmann::json entries = nlohmann::json::array();
-  for (const auto &entry : view.entries) {
-    entries.push_back(manifest_entry_edge(entry));
-  }
-  nlohmann::json input = {
-      {"manifest_id", view.manifest_id},
-      {"storage_source_id", view.source_id},
-      {"source_id", view.source_id},
-      {"source_type", view.source_type},
-      {"source_coordinate", view.source_coordinate},
-      {"source_head", view.source_head},
-      {"scope", view.scope},
-      {"range", range_edge(view.range_since, view.range_until)},
-      {"entries", std::move(entries)},
-  };
-  if (!view.sync_root.value.empty()) {
-    input["sync_root"] = compute_linear_sync_root(input.at("entries").get<std::vector<nlohmann::json>>());
-    input["sync_root"]["algorithm"] = view.sync_root.algorithm;
-    input["sync_root"]["value"] = view.sync_root.value;
-    input["sync_root"]["entry_count"] = view.sync_root.entry_count;
-  }
-  return input;
-}
-
-manifest_document_view manifest_document_from_edge(const nlohmann::json &edge) {
-  manifest_document_view view{};
-  view.manifest_id = text_or(edge, "manifest_id");
-  view.scope = text_or(edge, "scope");
-  view.source_id = text_or(edge, "source_id");
-  view.source_type = text_or(edge, "source_type");
-  view.source_head = text_or(edge, "source_head");
-  view.source_coordinate = text_or(object_or_empty(edge, "source"), "coordinate");
-  const auto range = object_or_empty(edge, "range");
-  view.range_since = text_or(range, "since");
-  view.range_until = text_or(range, "until");
-  for (const auto &entry : array_or_empty(edge, "entries")) {
-    view.entries.push_back(manifest_entry_from_edge(entry));
-  }
-  const auto root = object_or_empty(edge, "sync_root");
-  view.sync_root = {text_or(root, "algorithm"), text_or(root, "value"), root.value("entry_count", uint64_t{0})};
-  return view;
-}
-
 } // namespace
 
 manifest_sync_root_view compute_manifest_sync_root(const std::vector<manifest_entry_view> &entries) {
@@ -700,21 +656,158 @@ manifest_catalog_journal_records manifest_catalog_store::read_typed_records() co
 
 manifest_document_view manifest_catalog_store::accept_manifest_typed(const manifest_document_view &input,
                                                                      content_store &store) const {
-  return manifest_document_from_edge(accept_manifest(manifest_document_input_edge(input), store));
+  if (input.manifest_id.empty()) {
+    throw std::invalid_argument("storage_manifest_invalid: missing_field: manifest_id");
+  }
+  const auto source_id = input.source_id.empty() ? std::string("local") : input.source_id;
+  const auto source_type = input.source_type.empty() ? std::string("local") : input.source_type;
+  const auto scope = input.scope.empty() ? source_type : input.scope;
+  const auto sync_root = compute_manifest_sync_root(input.entries);
+  if (!input.sync_root.value.empty() &&
+      (input.sync_root.algorithm != sync_root.algorithm || input.sync_root.value != sync_root.value ||
+       input.sync_root.entry_count != sync_root.entry_count)) {
+    throw std::invalid_argument("storage_manifest_invalid: sync_root_mismatch: value");
+  }
+
+  nlohmann::json entries = nlohmann::json::array();
+  for (const auto &entry : input.entries) {
+    entries.push_back(manifest_entry_edge(entry));
+  }
+  const auto entries_document = canonical_json(entries);
+  const auto put = store.put_if_absent(MANIFEST_ENTRIES_CONTENT_NAMESPACE, entries_document);
+  if (!put.ok()) {
+    throw std::runtime_error("manifest_entries_document_rejected: " + std::string(content_store_error_name(put.error)) +
+                             (put.message.empty() ? "" : " (" + put.message + ")"));
+  }
+
+  const auto location_uid = catalog_location(runtime_dir_)->uid;
+  const auto accept_time = time::now_in_nano();
+  ImportManifestAccepted record{};
+  record.schema_version = MANIFEST_CATALOG_SCHEMA_VERSION;
+  record.manifest_uid = manifest_uid_of(source_id, input.manifest_id);
+  record.source_uid = uid_of(source_id);
+  record.location_uid = location_uid;
+  record.accept_time = accept_time;
+  record.entry_count = input.entries.size();
+  record.entries_byte_len = entries_document.size();
+  record.status = SourceVerificationStatus::Ok;
+  set_checked_string(record.scope, scope, "scope");
+  set_checked_string(record.source_type, source_type, "source_type");
+  set_checked_string(record.source_id, source_id, "source_id");
+  set_checked_string(record.manifest_id, input.manifest_id, "manifest_id");
+  set_checked_string(record.source_head, input.source_head, "source_head");
+  set_checked_string(record.source_coordinate, input.source_coordinate, "source_coordinate");
+  set_checked_string(record.range_since, input.range_since, "range.since");
+  set_checked_string(record.range_until, input.range_until, "range.until");
+  set_checked_string(record.sync_root_algo, sync_root.algorithm, "sync_root.algorithm");
+  set_checked_string(record.sync_root_value, sync_root.value, "sync_root.value");
+  set_checked_string(record.entries_hash, format_content_hash(put.hash), "entries_hash");
+
+  std::vector<ManifestEntryRecorded> entry_records;
+  entry_records.reserve(input.entries.size());
+  for (size_t index = 0; index < input.entries.size(); ++index) {
+    const auto &entry = input.entries[index];
+    ManifestEntryRecorded entry_record{};
+    entry_record.schema_version = MANIFEST_CATALOG_SCHEMA_VERSION;
+    entry_record.manifest_uid = record.manifest_uid;
+    entry_record.source_uid = record.source_uid;
+    entry_record.entry_index = index;
+    entry_record.location_uid = location_uid;
+    entry_record.accept_time = accept_time;
+    entry_record.entry_schema_version = entry.schema_version;
+    entry_record.byte_len = entry.byte_len;
+    entry_record.payload_state = entry.payload_state;
+    set_checked_string(entry_record.kind, entry.kind, "entry.kind");
+    set_checked_string(entry_record.entry_source_id, entry.source_id, "entry.source_id");
+    set_checked_string(entry_record.source_path, entry.source_path, "entry.source_path");
+    set_checked_string(entry_record.source_time, entry.source_time, "entry.source_time");
+    set_checked_string(entry_record.content_type, entry.content_type, "entry.content_type");
+    set_checked_string(entry_record.payload_hash, entry.payload_hash, "entry.payload_hash");
+    set_checked_string(entry_record.commitment_hash, sync_root_entry_leaf_hash(manifest_entry_edge(entry)),
+                       "entry.commitment_hash");
+    entry_records.push_back(entry_record);
+  }
+
+  ChannelCursorUpdated cursor{};
+  cursor.schema_version = MANIFEST_CATALOG_SCHEMA_VERSION;
+  cursor.channel_uid = channel_uid_of(source_id);
+  cursor.source_uid = record.source_uid;
+  cursor.manifest_uid = record.manifest_uid;
+  cursor.location_uid = location_uid;
+  cursor.update_time = accept_time;
+  cursor.entry_count = record.entry_count;
+  set_fixed_string(cursor.source_id, source_id);
+  set_fixed_string(cursor.manifest_id, input.manifest_id);
+  cursor.source_head = record.source_head;
+  cursor.range_since = record.range_since;
+  cursor.range_until = record.range_until;
+  cursor.sync_root_algo = record.sync_root_algo;
+  cursor.sync_root_value = record.sync_root_value;
+
+  auto writer = make_writer(runtime_dir_);
+  writer.write_at(accept_time, 0, record);
+  for (const auto &entry_record : entry_records) {
+    writer.write_at(accept_time, 0, entry_record);
+  }
+  writer.write_at(accept_time, 0, cursor);
+
+  auto accepted = input;
+  accepted.source_id = source_id;
+  accepted.source_type = source_type;
+  accepted.scope = scope;
+  accepted.sync_root = sync_root;
+  return accepted;
 }
 
 std::optional<manifest_document_view> manifest_catalog_store::latest_manifest_typed(const std::string &source_id,
                                                                                     content_store &store) const {
-  const auto edge = latest_manifest(source_id, store);
-  if (edge.is_null()) {
+  if (source_id.empty()) {
+    throw std::invalid_argument("source_id is required");
+  }
+  const auto fold = fold_catalog(read_typed_records());
+  const auto *record = latest_manifest_record(fold, uid_of(source_id));
+  if (record == nullptr) {
     return std::nullopt;
   }
-  return manifest_document_from_edge(edge);
+  manifest_document_view view{};
+  view.manifest_id = fixed_string(record->manifest_id);
+  view.scope = fixed_string(record->scope);
+  view.source_id = fixed_string(record->source_id);
+  view.source_type = fixed_string(record->source_type);
+  view.source_coordinate = fixed_string(record->source_coordinate);
+  view.source_head = fixed_string(record->source_head);
+  view.range_since = fixed_string(record->range_since);
+  view.range_until = fixed_string(record->range_until);
+  for (const auto &entry : load_entries_document(*record, store)) {
+    view.entries.push_back(manifest_entry_from_edge(entry));
+  }
+  view.sync_root = {fixed_string(record->sync_root_algo), fixed_string(record->sync_root_value), record->entry_count};
+  return view;
 }
 
 void manifest_catalog_store::record_export_typed(const manifest_document_view &manifest, uint64_t exported_records,
                                                  const std::string &range_since, const std::string &range_until) const {
-  (void)record_export(manifest_document_input_edge(manifest), exported_records, range_edge(range_since, range_until));
+  if (manifest.source_id.empty() || manifest.manifest_id.empty()) {
+    throw std::invalid_argument("storage_export_invalid: manifest identity is required");
+  }
+  const auto export_time = time::now_in_nano();
+  ExportBundleRecorded record{};
+  record.schema_version = MANIFEST_CATALOG_SCHEMA_VERSION;
+  record.bundle_uid = uid_of(manifest.source_id + ":" + manifest.manifest_id);
+  record.manifest_uid = manifest_uid_of(manifest.source_id, manifest.manifest_id);
+  record.source_uid = uid_of(manifest.source_id);
+  record.location_uid = catalog_location(runtime_dir_)->uid;
+  record.export_time = export_time;
+  record.exported_records = exported_records;
+  record.entry_count = manifest.entries.size();
+  set_checked_string(record.source_id, manifest.source_id, "source_id");
+  set_checked_string(record.manifest_id, manifest.manifest_id, "manifest_id");
+  set_checked_string(record.range_since, range_since, "range.since");
+  set_checked_string(record.range_until, range_until, "range.until");
+  set_checked_string(record.sync_root_algo, manifest.sync_root.algorithm, "sync_root.algorithm");
+  set_checked_string(record.sync_root_value, manifest.sync_root.value, "sync_root.value");
+  auto writer = make_writer(runtime_dir_);
+  writer.write_at(export_time, 0, record);
 }
 
 nlohmann::json manifest_catalog_store::accept_manifest(const nlohmann::json &input, content_store &store) const {
