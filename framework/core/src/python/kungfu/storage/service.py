@@ -128,16 +128,7 @@ def status(
     *,
     source_id: str | None = None,
 ) -> dict[str, Any]:
-    return dict(
-        _runtime().run_storage_service_operation(
-            "status",
-            str(runtime_dir),
-            {
-                "scope": "source" if source_id else "all",
-                "source_id": source_id,
-            },
-        )
-    )
+    return dict(_runtime().storage_status_typed(str(runtime_dir), source_id))
 
 
 def layout(

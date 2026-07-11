@@ -362,6 +362,7 @@ def test_typed_storage_status_binding_bypasses_json_transport(tmp_path):
     json.loads = reject_json_transport
     try:
         status = runtime.storage_status_typed(str(runtime_dir))
+        status_high_level = storage_service.status(runtime_dir)
         query = runtime.storage_query_typed(
             str(runtime_dir), "episode_records", episode_id=701
         )
@@ -375,6 +376,11 @@ def test_typed_storage_status_binding_bypasses_json_transport(tmp_path):
     assert status["provider_runtime"]["read_fill_cache"] is None
     assert isinstance(status["projections"], list)
     assert status["projections"][0]["verification"]["authority"] == "yijinjing-journal"
+    assert status_high_level["authority"] == status["authority"]
+    assert status_high_level["projections"] == status["projections"]
+    assert (
+        status_high_level["provider_cache"]["hits"] >= status["provider_cache"]["hits"]
+    )
     assert query["query"] == 4
     assert query["rows"][0]["body"]["title"] == "typed-query"
     assert query["rows"][0]["body"]["location_uid"] == 17
@@ -532,8 +538,10 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
 
     runtime = kungfu.__binding__.runtime
     original_operation = runtime.run_storage_service_operation
+    original_typed_status = runtime.storage_status_typed
     original_typed_query = runtime.storage_query_typed
     calls = []
+    typed_statuses = []
     typed_queries = []
 
     def spy_operation(operation, runtime_dir_arg, options):
@@ -544,11 +552,16 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
         typed_queries.append((runtime_dir_arg, query, dict(options)))
         return original_typed_query(runtime_dir_arg, query, **options)
 
+    def spy_typed_status(runtime_dir_arg, source_id=None):
+        typed_statuses.append((runtime_dir_arg, source_id))
+        return original_typed_status(runtime_dir_arg, source_id)
+
     monkeypatch.setattr(
         runtime,
         "run_storage_service_operation",
         spy_operation,
     )
+    monkeypatch.setattr(runtime, "storage_status_typed", spy_typed_status)
     monkeypatch.setattr(runtime, "storage_query_typed", spy_typed_query)
 
     storage_service.status(runtime_dir, source_id="local-synth")
@@ -586,7 +599,6 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
 
     entered = {operation for operation, _, _ in calls}
     assert {
-        "status",
         "layout",
         "fsck",
         "repair_plan",
@@ -599,6 +611,7 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
         "import_bundle",
         "verify_sync",
     } <= entered
+    assert typed_statuses == [(str(runtime_dir), "local-synth")]
     assert typed_queries == [
         (
             str(runtime_dir),
@@ -1355,7 +1368,10 @@ def test_storage_maintenance_rebuild_gc_compact_and_sync_check(tmp_path):
     )
     status = storage_service.status(runtime_dir, source_id="local-synth")
     assert status["source_status"][0]["accepted_cursor"]["source_head"] == "head-1"
-    assert status["source_status"][0]["sync_root"] == accepted["sync_root"]
+    assert status["source_status"][0]["sync_root"] == {
+        "algorithm": accepted["sync_root"]["algorithm"],
+        "value": accepted["sync_root"]["value"],
+    }
     # The JSON-as-contract artifacts are retired (ADR-0037 final slice): no
     # sources.json registry and no per-source manifest files — the journals
     # are the authority.
@@ -1402,8 +1418,8 @@ def test_storage_maintenance_rebuild_gc_compact_and_sync_check(tmp_path):
     status_catalog = next(
         row for row in status["projections"] if row["name"] == "manifest-catalog-sqlite"
     )
-    assert status_catalog["projection_present"] is True
-    assert status_catalog["status"] == "ok"
+    assert status_catalog["verification"]["projection_present"] is True
+    assert status_catalog["verification"]["status"] == "ok"
 
     orphan_raw = b'{"orphan":true}'
     orphan_hash = payloads.payload_hash(orphan_raw)
