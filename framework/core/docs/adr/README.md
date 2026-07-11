@@ -67,6 +67,7 @@ A record's **Status** says where it stands:
 | [0047](ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md) | accepted; staged | authoritative structured facts have one schema owner — Hana POD or FlatBuffers |
 | [0048](ADR-0048-runtime-fact-query-semantics-and-changelog.md) | accepted; staged | runtime fact queries use explicit bases, one logical plan, and a proof-carrying changelog |
 | [0049](ADR-0049-layer-complete-products-and-domain-neutral-core.md) | accepted; staged | every product layer is independently complete and the core remains domain-neutral |
+| [0050](ADR-0050-assembled-runtime-stdlib-pruning-policy.md) | accepted | stdlib pruning policy for the assembled runtime — family-level subtraction, declarative fail-closed manifest |
 
 ## Reading by theme
 
