@@ -4093,6 +4093,58 @@ public:
             inspected.unknown_record_count,
             fsck_result.qualification};
   }
+
+  [[nodiscard]] yijinjing::types::SourceRegistered
+  source_register(const storage_source_register_request &request) const override {
+    return yy_storage::source_registry_store(request.runtime_dir).register_source(request.options);
+  }
+
+  [[nodiscard]] yijinjing::types::SourceHeadUpdated
+  source_update_head(const storage_source_head_update_request &request) const override {
+    return yy_storage::source_registry_store(request.runtime_dir).update_head(request.options);
+  }
+
+  [[nodiscard]] yijinjing::types::AcceptedRangeRecorded
+  source_record_accepted_range(const storage_source_accepted_range_request &request) const override {
+    return yy_storage::source_registry_store(request.runtime_dir).record_accepted_range(request.options);
+  }
+
+  [[nodiscard]] storage_source_list_result source_list(const storage_source_list_request &request) const override {
+    const auto fold = yy_storage::source_registry_store(request.runtime_dir).fold_typed_records();
+    storage_source_list_result result{};
+    result.runtime_dir = request.runtime_dir;
+    result.unknown_record_count = static_cast<uint64_t>(fold.unknown_record_count);
+    result.sources.reserve(fold.sources.size());
+    for (const auto &[source_uid, source] : fold.sources) {
+      (void)source_uid;
+      result.sources.push_back(source);
+    }
+    return result;
+  }
+
+  [[nodiscard]] storage_source_inspect_result
+  source_inspect(const storage_source_inspect_request &request) const override {
+    const auto store = yy_storage::source_registry_store(request.runtime_dir);
+    const auto source = store.inspect_typed(request.source_id);
+    if (!source.has_value())
+      throw std::invalid_argument("source not found: " + request.source_id);
+    const auto fold = store.fold_typed_records();
+    return {true, request.runtime_dir, "yijinjing-journal", *source, static_cast<uint64_t>(fold.unknown_record_count)};
+  }
+
+  [[nodiscard]] storage_source_registry_fsck_result
+  source_registry_fsck(const storage_source_registry_fsck_request &request) const override {
+    const auto journal = yy_storage::source_registry_store(request.runtime_dir).fsck_typed(request.source_id);
+    const auto projection = source_registry_projection(request.runtime_dir).verify_typed();
+    const bool projection_degraded = projection.status == "degraded";
+    return {journal.ok && !projection_degraded, !journal.ok ? "failed" : (projection_degraded ? "degraded" : "ok"),
+            journal, projection};
+  }
+
+  [[nodiscard]] storage_projection_rebuild_result
+  source_registry_rebuild(const storage_source_registry_rebuild_request &request) const override {
+    return source_registry_projection(request.runtime_dir).rebuild_typed();
+  }
 };
 
 const file_storage_service &typed_storage_service_instance() {

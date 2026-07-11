@@ -278,6 +278,33 @@ test(
       });
       const projection =
         kungfu.storageEpisodeProjectionRebuildTyped(runtimeDir);
+      const registeredSource = kungfu.storageSourceRegisterTyped(runtimeDir, {
+        source_id: 'typed-source',
+        kind: 'adapter',
+        coordinate: 'adapter://typed',
+      });
+      const updatedSource = kungfu.storageSourceUpdateHeadTyped(runtimeDir, {
+        source_id: 'typed-source',
+        update_time: 1600,
+        head: 'head-1',
+      });
+      const acceptedRange = kungfu.storageSourceRecordAcceptedRangeTyped(
+        runtimeDir,
+        {
+          source_id: 'typed-source',
+          manifest_id: 'manifest-1',
+          accept_time: 1700,
+        },
+      );
+      const sourceList = kungfu.storageSourceListTyped(runtimeDir);
+      const sourceInspect = kungfu.storageSourceInspectTyped(runtimeDir, {
+        source_id: 'typed-source',
+      });
+      const sourceFsck = kungfu.storageSourceRegistryFsckTyped(runtimeDir, {
+        source_id: 'typed-source',
+      });
+      const sourceRebuild =
+        kungfu.storageSourceRegistryRebuildTyped(runtimeDir);
       assert.equal(query.query, 4);
       assert.equal(query.rows[0].body.title, 'typed-query');
       assert.equal(query.rows[0].body.location_uid, 17);
@@ -298,6 +325,16 @@ test(
       assert.equal(inspected.content_root.status, 4);
       assert.equal(recovered.recovered[0].close.status, 3);
       assert.equal(projection.authority, 'yijinjing-journal');
+      assert.equal(registeredSource.kind, 4);
+      assert.equal(updatedSource.head, 'head-1');
+      assert.equal(acceptedRange.status, 1);
+      assert.equal(
+        sourceList.sources[0].source_uid,
+        registeredSource.source_uid,
+      );
+      assert.equal(sourceInspect.source.current_head, 'head-1');
+      assert.equal(sourceFsck.journal.ok, true);
+      assert.equal(sourceRebuild.authority, 'yijinjing-journal');
     } finally {
       JSON.parse = originalParse;
       JSON.stringify = originalStringify;

@@ -668,6 +668,77 @@ void bind(pybind11::module &&m) {
       },
       py::arg("runtime_dir"));
   m.def(
+      "storage_source_register_typed",
+      [](const std::string &runtime_dir, const std::string &source_id, const std::string &kind,
+         const std::string &coordinate, const std::string &head, uint32_t location_uid, int64_t register_time) {
+        storage_service_api::storage_source_register_request request{};
+        request.runtime_dir = runtime_dir;
+        const auto source_kind = kind == "imported_bundle"  ? SourceKind::ImportedBundle
+                                 : kind == "kungfu_runtime" ? SourceKind::KungfuRuntime
+                                 : kind == "adapter"        ? SourceKind::Adapter
+                                                            : SourceKind::Local;
+        request.options = {source_id, source_kind, coordinate, head, location_uid, register_time};
+        return hana_view_to_py(storage_service_api::default_storage_service().source_register(request));
+      },
+      py::arg("runtime_dir"), py::arg("source_id"), py::arg("kind") = "local", py::arg("coordinate") = "",
+      py::arg("head") = "", py::arg("location_uid") = 0, py::arg("register_time") = 0);
+  m.def(
+      "storage_source_update_head_typed",
+      [](const std::string &runtime_dir, const std::string &source_id, uint32_t location_uid, int64_t update_time,
+         uint64_t first_frame_uid, uint64_t last_frame_uid, int64_t since, int64_t until, const std::string &head,
+         const std::string &inventory_hash_algo, const std::string &inventory_hash) {
+        storage_service_api::storage_source_head_update_request request{};
+        request.runtime_dir = runtime_dir;
+        request.options = {source_id, location_uid, update_time, first_frame_uid,     last_frame_uid,
+                           since,     until,        head,        inventory_hash_algo, inventory_hash};
+        return hana_view_to_py(storage_service_api::default_storage_service().source_update_head(request));
+      },
+      py::arg("runtime_dir"), py::arg("source_id"), py::arg("location_uid") = 0, py::arg("update_time") = 0,
+      py::arg("first_frame_uid") = 0, py::arg("last_frame_uid") = 0, py::arg("since") = 0, py::arg("until") = 0,
+      py::arg("head") = "", py::arg("inventory_hash_algo") = "", py::arg("inventory_hash") = "");
+  m.def(
+      "storage_source_record_accepted_range_typed",
+      [](const std::string &runtime_dir, const std::string &source_id, const std::string &manifest_id,
+         uint32_t location_uid, int64_t accept_time, uint64_t first_frame_uid, uint64_t last_frame_uid, int64_t since,
+         int64_t until, const std::string &status) {
+        storage_service_api::storage_source_accepted_range_request request{};
+        request.runtime_dir = runtime_dir;
+        const auto verification = status == "degraded" ? SourceVerificationStatus::Degraded
+                                  : status == "failed" ? SourceVerificationStatus::Failed
+                                                       : SourceVerificationStatus::Ok;
+        request.options = {source_id,      manifest_id, location_uid, accept_time, first_frame_uid,
+                           last_frame_uid, since,       until,        verification};
+        return hana_view_to_py(storage_service_api::default_storage_service().source_record_accepted_range(request));
+      },
+      py::arg("runtime_dir"), py::arg("source_id"), py::arg("manifest_id"), py::arg("location_uid") = 0,
+      py::arg("accept_time") = 0, py::arg("first_frame_uid") = 0, py::arg("last_frame_uid") = 0, py::arg("since") = 0,
+      py::arg("until") = 0, py::arg("status") = "ok");
+  m.def(
+      "storage_source_list_typed",
+      [](const std::string &runtime_dir) {
+        return hana_view_to_py(storage_service_api::default_storage_service().source_list({runtime_dir}));
+      },
+      py::arg("runtime_dir"));
+  m.def(
+      "storage_source_inspect_typed",
+      [](const std::string &runtime_dir, const std::string &source_id) {
+        return hana_view_to_py(storage_service_api::default_storage_service().source_inspect({runtime_dir, source_id}));
+      },
+      py::arg("runtime_dir"), py::arg("source_id"));
+  m.def(
+      "storage_source_registry_fsck_typed",
+      [](const std::string &runtime_dir, const std::string &source_id) {
+        return hana_view_to_py(
+            storage_service_api::default_storage_service().source_registry_fsck({runtime_dir, source_id}));
+      },
+      py::arg("runtime_dir"), py::arg("source_id") = "");
+  m.def(
+      "storage_source_registry_rebuild_typed",
+      [](const std::string &runtime_dir) {
+        return hana_view_to_py(storage_service_api::default_storage_service().source_registry_rebuild({runtime_dir}));
+      },
+      py::arg("runtime_dir"));
+  m.def(
       "make_storage_service_request",
       [](const std::string &operation, const std::string &runtime_dir, py::dict options) {
         return json_to_py(

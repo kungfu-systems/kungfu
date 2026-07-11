@@ -258,15 +258,12 @@ def source_register(
     """Register a source in the source-registry kernel journal (ADR-0037)."""
 
     return dict(
-        _runtime().run_storage_service_operation(
-            "source_register",
+        _runtime().storage_source_register_typed(
             str(runtime_dir),
-            {
-                "source_id": source_id,
-                "kind": kind,
-                "coordinate": coordinate,
-                "head": head,
-            },
+            source_id=source_id,
+            kind=kind,
+            coordinate=coordinate,
+            head=head,
         )
     )
 
@@ -275,11 +272,7 @@ def source_inspect(runtime_dir: str | Path, *, source_id: str) -> dict[str, Any]
     """Fold the source-registry journal into one source's edge view."""
 
     return dict(
-        _runtime().run_storage_service_operation(
-            "source_inspect",
-            str(runtime_dir),
-            {"source_id": source_id},
-        )
+        _runtime().storage_source_inspect_typed(str(runtime_dir), source_id=source_id)
     )
 
 

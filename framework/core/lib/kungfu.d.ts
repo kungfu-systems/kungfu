@@ -439,6 +439,109 @@ interface EpisodeInspectResult {
   qualification: Record<string, unknown> | null;
 }
 
+interface SourceRegisteredRecord {
+  schema_version: number;
+  source_uid: bigint;
+  kind: 1 | 2 | 3 | 4;
+  location_uid: number;
+  register_time: bigint;
+  source_id: string;
+  coordinate: string;
+  head: string;
+}
+
+interface SourceHeadUpdatedRecord {
+  schema_version: number;
+  source_uid: bigint;
+  location_uid: number;
+  update_time: bigint;
+  first_frame_uid: bigint;
+  last_frame_uid: bigint;
+  since: bigint;
+  until: bigint;
+  head: string;
+  inventory_hash_algo: string;
+  inventory_hash: string;
+}
+
+interface AcceptedRangeRecordedRecord {
+  schema_version: number;
+  source_uid: bigint;
+  manifest_uid: bigint;
+  location_uid: number;
+  accept_time: bigint;
+  first_frame_uid: bigint;
+  last_frame_uid: bigint;
+  since: bigint;
+  until: bigint;
+  status: 1 | 2 | 3;
+  source_id: string;
+  manifest_id: string;
+}
+
+interface SourceRegistryRecord {
+  registry_frame_uid: bigint;
+  registry_gen_time: bigint;
+  body:
+    | SourceRegisteredRecord
+    | SourceHeadUpdatedRecord
+    | AcceptedRangeRecordedRecord
+    | { carrier_type: number };
+}
+
+interface SourceRegistryCurrentView {
+  source_uid: bigint;
+  registered: boolean;
+  register_count: bigint;
+  registration: SourceRegisteredRecord;
+  head_update_seen: boolean;
+  head_update: SourceHeadUpdatedRecord;
+  current_head: string;
+  records: SourceRegistryRecord[];
+  accepted_range_indices: bigint[];
+}
+
+interface SourceListResult {
+  ok: boolean;
+  runtime_dir: string;
+  authority: string;
+  sources: SourceRegistryCurrentView[];
+  unknown_record_count: bigint;
+}
+
+interface SourceInspectResult {
+  ok: boolean;
+  runtime_dir: string;
+  authority: string;
+  source: SourceRegistryCurrentView;
+  unknown_record_count: bigint;
+}
+
+interface SourceHeadUpdateOptions {
+  source_id: string;
+  location_uid?: number;
+  update_time?: bigint | number;
+  first_frame_uid?: bigint | number;
+  last_frame_uid?: bigint | number;
+  since?: bigint | number;
+  until?: bigint | number;
+  head?: string;
+  inventory_hash_algo?: string;
+  inventory_hash?: string;
+}
+
+interface AcceptedRangeRecordOptions {
+  source_id: string;
+  manifest_id: string;
+  location_uid?: number;
+  accept_time?: bigint | number;
+  first_frame_uid?: bigint | number;
+  last_frame_uid?: bigint | number;
+  since?: bigint | number;
+  until?: bigint | number;
+  status?: 'ok' | 'degraded' | 'failed';
+}
+
 interface EpisodeCloseResult {
   close: EpisodeClosedRecord;
   content_root: EpisodeRootCommittedRecord | null;
@@ -526,6 +629,42 @@ interface KungfuRuntime {
     runtimeDir: string,
     options: { episode_id: bigint | number },
   ): EpisodeInspectResult;
+  storageSourceRegisterTyped(
+    runtimeDir: string,
+    options: {
+      source_id: string;
+      kind?: 'local' | 'imported_bundle' | 'kungfu_runtime' | 'adapter';
+      coordinate?: string;
+      head?: string;
+      location_uid?: number;
+      register_time?: number;
+    },
+  ): SourceRegisteredRecord;
+  storageSourceUpdateHeadTyped(
+    runtimeDir: string,
+    options: SourceHeadUpdateOptions,
+  ): SourceHeadUpdatedRecord;
+  storageSourceRecordAcceptedRangeTyped(
+    runtimeDir: string,
+    options: AcceptedRangeRecordOptions,
+  ): AcceptedRangeRecordedRecord;
+  storageSourceListTyped(runtimeDir: string): SourceListResult;
+  storageSourceInspectTyped(
+    runtimeDir: string,
+    options: { source_id: string },
+  ): SourceInspectResult;
+  storageSourceRegistryFsckTyped(
+    runtimeDir: string,
+    options?: { source_id?: string },
+  ): {
+    ok: boolean;
+    status: string;
+    journal: Record<string, unknown>;
+    projection: StorageProjectionVerification;
+  };
+  storageSourceRegistryRebuildTyped(
+    runtimeDir: string,
+  ): StorageProjectionRebuildResult;
   [name: string]: unknown;
 }
 

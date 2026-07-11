@@ -397,6 +397,32 @@ def test_typed_storage_status_binding_bypasses_json_transport(tmp_path):
             runtime_dir, episode_id=703, end_time=1500
         )
         projection = storage_service.episode_projection_rebuild(runtime_dir)
+        registered_source = storage_service.source_register(
+            runtime_dir,
+            source_id="typed-source",
+            kind="adapter",
+            coordinate="adapter://typed",
+        )
+        updated_source = runtime.storage_source_update_head_typed(
+            str(runtime_dir),
+            "typed-source",
+            update_time=1600,
+            head="head-1",
+        )
+        accepted_range = runtime.storage_source_record_accepted_range_typed(
+            str(runtime_dir),
+            "typed-source",
+            "manifest-1",
+            accept_time=1700,
+        )
+        source_list = runtime.storage_source_list_typed(str(runtime_dir))
+        source_inspect = storage_service.source_inspect(
+            runtime_dir, source_id="typed-source"
+        )
+        source_fsck = runtime.storage_source_registry_fsck_typed(
+            str(runtime_dir), "typed-source"
+        )
+        source_rebuild = runtime.storage_source_registry_rebuild_typed(str(runtime_dir))
     finally:
         json.loads = original_loads
 
@@ -433,6 +459,13 @@ def test_typed_storage_status_binding_bypasses_json_transport(tmp_path):
     assert inspected["content_root"]["status"] == 4
     assert recovered["recovered"][0]["close"]["status"] == 3
     assert projection["authority"] == "yijinjing-journal"
+    assert registered_source["kind"] == 4
+    assert updated_source["head"] == "head-1"
+    assert accepted_range["status"] == 1
+    assert source_list["sources"][0]["source_uid"] == registered_source["source_uid"]
+    assert source_inspect["source"]["current_head"] == "head-1"
+    assert source_fsck["journal"]["ok"] is True
+    assert source_rebuild["authority"] == "yijinjing-journal"
 
 
 def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
@@ -1619,9 +1652,9 @@ def test_atlas_import_persists_generic_source_manifest(tmp_path):
     )
     # add_source registers into the source-registry kernel journal; the
     # storage_record is that journal's fold edge (ADR-0037).
-    assert result["storage_record"]["schema"] == "kungfu.storage.source-registry/v1"
-    assert result["storage_record"]["source_id"] == "atlas-local"
-    assert result["storage_record"]["kind"] == "adapter"
+    assert result["storage_record"]["registered"] is True
+    assert result["storage_record"]["registration"]["source_id"] == "atlas-local"
+    assert result["storage_record"]["registration"]["kind"] == 4
 
     sync = source_store.sync_source(runtime_dir, "atlas-local")
     assert sync["ok"]
@@ -2033,17 +2066,22 @@ def test_source_registry_fsck_flags_dangling_head_without_registration(tmp_path)
     runtime = kungfu.__binding__.runtime
     runtime_dir = str(tmp_path)
 
-    runtime.run_storage_service_operation(
-        "source_update_head",
+    runtime.storage_source_update_head_typed(
         runtime_dir,
-        {"source_id": "ghost", "head": "h", "update_time": 5000},
+        "ghost",
+        head="h",
+        update_time=5000,
     )
-    fsck = runtime.run_storage_service_operation(
-        "source_registry_fsck", runtime_dir, {}
-    )
+    inspected = runtime.storage_source_inspect_typed(runtime_dir, "ghost")
+    fsck = runtime.storage_source_registry_fsck_typed(runtime_dir)
+    assert inspected["source"]["registered"] is False
+    assert inspected["source"]["current_head"] == "h"
     assert fsck["ok"] is False
     assert fsck["status"] == "failed"
-    assert any(err["code"] == "source_registration_missing" for err in fsck["errors"])
+    assert any(
+        err["code"] == "source_registration_missing"
+        for err in fsck["journal"]["errors"]
+    )
 
 
 def test_source_registry_sqlite_projection_rebuilds_from_journal(tmp_path):

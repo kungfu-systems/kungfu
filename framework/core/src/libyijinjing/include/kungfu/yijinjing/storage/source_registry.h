@@ -3,6 +3,7 @@
 #ifndef KUNGFU_YIJINJING_STORAGE_SOURCE_REGISTRY_H
 #define KUNGFU_YIJINJING_STORAGE_SOURCE_REGISTRY_H
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -32,6 +33,10 @@ public:
   [[nodiscard]] std::vector<source_registry_record> read_typed_stream() const;
 
   [[nodiscard]] source_registry_fold fold_typed_records() const;
+
+  // Inspect by the registry's stable source identity, including a dangling
+  // source that has head/range records but no SourceRegistered record.
+  [[nodiscard]] std::optional<source_registry_current_view> inspect_typed(const std::string &source_id) const;
 
   // Append-only writers. Each writes and returns the authoritative POD record;
   // compatibility JSON is rendered by the caller's edge adapter.

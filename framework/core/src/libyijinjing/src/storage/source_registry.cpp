@@ -372,14 +372,21 @@ nlohmann::json source_registry_store::list() const {
           {"source_count", sources.size()}};
 }
 
-nlohmann::json source_registry_store::inspect(const std::string &source_id) const {
+std::optional<source_registry_current_view> source_registry_store::inspect_typed(const std::string &source_id) const {
   if (source_id.empty()) {
     throw std::invalid_argument("source_id is required");
   }
-  const auto source_uid = source_uid_of(source_id);
   const auto folded = fold_typed_records();
-  const auto iter = folded.sources.find(source_uid);
+  const auto iter = folded.sources.find(source_uid_of(source_id));
   if (iter == folded.sources.end()) {
+    return std::nullopt;
+  }
+  return iter->second;
+}
+
+nlohmann::json source_registry_store::inspect(const std::string &source_id) const {
+  const auto inspected = inspect_typed(source_id);
+  if (!inspected.has_value()) {
     return {{"ok", false},
             {"schema", SOURCE_REGISTRY_SCHEMA_V1},
             {"source_id", source_id},
@@ -389,9 +396,9 @@ nlohmann::json source_registry_store::inspect(const std::string &source_id) cons
           {"schema", SOURCE_REGISTRY_SCHEMA_V1},
           {"runtime_dir", runtime_dir_},
           {"authority", "yijinjing-journal"},
-          {"source", summary_json(iter->second)},
-          {"accepted_ranges", accepted_ranges_json(iter->second)},
-          {"records", records_json(iter->second)}};
+          {"source", summary_json(*inspected)},
+          {"accepted_ranges", accepted_ranges_json(*inspected)},
+          {"records", records_json(*inspected)}};
 }
 
 source_registry_fsck_result source_registry_store::fsck_typed(const std::string &source_id) const {

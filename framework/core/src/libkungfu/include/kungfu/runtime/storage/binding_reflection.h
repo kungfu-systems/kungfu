@@ -91,6 +91,12 @@ BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_compact_pl
 BOOST_HANA_ADAPT_STRUCT(kungfu::yijinjing::storage::source_registry_fsck_issue, code, source_uid, source_id, count);
 BOOST_HANA_ADAPT_STRUCT(kungfu::yijinjing::storage::source_registry_fsck_result, ok, status, schema, runtime_dir,
                         authority, errors, warnings, source_registry_records, sources);
+BOOST_HANA_ADAPT_STRUCT(kungfu::yijinjing::storage::source_registry_unknown_record, carrier_type);
+BOOST_HANA_ADAPT_STRUCT(kungfu::yijinjing::storage::source_registry_record, registry_frame_uid, registry_gen_time,
+                        body);
+BOOST_HANA_ADAPT_STRUCT(kungfu::yijinjing::storage::source_registry_current_view, source_uid, registered,
+                        register_count, registration, head_update_seen, head_update, current_head, records,
+                        accepted_range_indices);
 BOOST_HANA_ADAPT_STRUCT(kungfu::yijinjing::storage::manifest_catalog_fsck_issue, code, source_id, manifest_id, error,
                         subject, payload_hash, state, kind, entry_source_id, manifest_uid, entry_index, expected,
                         actual, expected_text, actual_text, intentional);
@@ -144,5 +150,11 @@ BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_episode_li
                         episodes, unknown_record_count);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_episode_inspect_result, ok, runtime_dir,
                         authority, episode, content_root, causal_graph, unknown_record_count, qualification);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_source_list_result, ok, runtime_dir, authority,
+                        sources, unknown_record_count);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_source_inspect_result, ok, runtime_dir, authority,
+                        source, unknown_record_count);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_source_registry_fsck_result, ok, status, journal,
+                        projection);
 
 #endif // KUNGFU_RUNTIME_STORAGE_BINDING_REFLECTION_H

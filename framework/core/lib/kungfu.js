@@ -101,6 +101,15 @@ module.exports = () => {
       binding.storageEpisodeProjectionRebuildTyped,
     storageEpisodeListTyped: binding.storageEpisodeListTyped,
     storageEpisodeInspectTyped: binding.storageEpisodeInspectTyped,
+    storageSourceRegisterTyped: binding.storageSourceRegisterTyped,
+    storageSourceUpdateHeadTyped: binding.storageSourceUpdateHeadTyped,
+    storageSourceRecordAcceptedRangeTyped:
+      binding.storageSourceRecordAcceptedRangeTyped,
+    storageSourceListTyped: binding.storageSourceListTyped,
+    storageSourceInspectTyped: binding.storageSourceInspectTyped,
+    storageSourceRegistryFsckTyped: binding.storageSourceRegistryFsckTyped,
+    storageSourceRegistryRebuildTyped:
+      binding.storageSourceRegistryRebuildTyped,
     makeStorageServiceRequest: binding.makeStorageServiceRequest,
     runStorageServiceOperation: binding.runStorageServiceOperation,
     acceptStorageManifest: binding.acceptStorageManifest,

@@ -672,6 +672,62 @@ struct storage_episode_inspect_result {
   std::optional<episode_qualification_result> qualification = {};
 };
 
+struct storage_source_register_request {
+  std::string runtime_dir = {};
+  yijinjing::storage::source_register_options options = {};
+};
+
+struct storage_source_head_update_request {
+  std::string runtime_dir = {};
+  yijinjing::storage::source_head_update_options options = {};
+};
+
+struct storage_source_accepted_range_request {
+  std::string runtime_dir = {};
+  yijinjing::storage::accepted_range_options options = {};
+};
+
+struct storage_source_list_request {
+  std::string runtime_dir = {};
+};
+
+struct storage_source_list_result {
+  bool ok = true;
+  std::string runtime_dir = {};
+  std::string authority = "yijinjing-journal";
+  std::vector<yijinjing::storage::source_registry_current_view> sources = {};
+  uint64_t unknown_record_count = 0;
+};
+
+struct storage_source_inspect_request {
+  std::string runtime_dir = {};
+  std::string source_id = {};
+};
+
+struct storage_source_inspect_result {
+  bool ok = true;
+  std::string runtime_dir = {};
+  std::string authority = "yijinjing-journal";
+  yijinjing::storage::source_registry_current_view source = {};
+  uint64_t unknown_record_count = 0;
+};
+
+struct storage_source_registry_fsck_request {
+  std::string runtime_dir = {};
+  std::string source_id = {};
+};
+
+struct storage_source_registry_fsck_result {
+  bool ok = true;
+  std::string status = "ok";
+  yijinjing::storage::source_registry_fsck_result journal = {};
+  storage_projection_verify_result projection = {};
+};
+
+struct storage_source_registry_rebuild_request {
+  std::string runtime_dir = {};
+};
+
 class storage_service {
 public:
   virtual ~storage_service() = default;
@@ -727,6 +783,26 @@ public:
 
   [[nodiscard]] virtual storage_episode_inspect_result
   episode_inspect(const storage_episode_inspect_request &request) const = 0;
+
+  [[nodiscard]] virtual yijinjing::types::SourceRegistered
+  source_register(const storage_source_register_request &request) const = 0;
+
+  [[nodiscard]] virtual yijinjing::types::SourceHeadUpdated
+  source_update_head(const storage_source_head_update_request &request) const = 0;
+
+  [[nodiscard]] virtual yijinjing::types::AcceptedRangeRecorded
+  source_record_accepted_range(const storage_source_accepted_range_request &request) const = 0;
+
+  [[nodiscard]] virtual storage_source_list_result source_list(const storage_source_list_request &request) const = 0;
+
+  [[nodiscard]] virtual storage_source_inspect_result
+  source_inspect(const storage_source_inspect_request &request) const = 0;
+
+  [[nodiscard]] virtual storage_source_registry_fsck_result
+  source_registry_fsck(const storage_source_registry_fsck_request &request) const = 0;
+
+  [[nodiscard]] virtual storage_projection_rebuild_result
+  source_registry_rebuild(const storage_source_registry_rebuild_request &request) const = 0;
 };
 
 [[nodiscard]] std::string storage_query_kind_name(storage_query_kind kind);
