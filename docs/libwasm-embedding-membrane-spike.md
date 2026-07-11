@@ -85,6 +85,9 @@ also contain the guest trap and deliberate Rust panic.
 These numbers are implementation evidence, not a support SLO. The dedicated
 embedding workflow will run the same source, fixture, report schema, and gates
 on macOS ARM64, Linux x64, and Windows x64 before the spike can close.
+Those rows use GitHub-hosted runners so the pinned Rust/compiler graph remains
+job-local and does not mutate or consume toolchain bandwidth on the trusted
+self-hosted build fleet.
 
 ## Resource boundary
 
