@@ -4,3 +4,4 @@ framework/config/*.contract.json text eol=lf
 framework/kfx/*.contract.json text eol=lf
 framework/skill/*.contract.json text eol=lf
 framework/contract/*.json text eol=lf
+framework/core/stubs/**/*.pyi text eol=lf
