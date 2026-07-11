@@ -69,7 +69,10 @@ function main() {
   for (const rel of glob.sync('**/*.pyi', { cwd: 'stubs/pykungfu' })) {
     const file = path.join('stubs', 'pykungfu', rel);
     const before = fs.readFileSync(file, 'utf8');
-    const after = before.replace(/\r\n?/g, '\n').replace(/\bfrom:/g, 'from_:');
+    const after = before
+      .replace(/\r\n?/g, '\n')
+      .replace(/[ \t]+$/gm, '')
+      .replace(/\bfrom:/g, 'from_:');
     if (after !== before) fs.writeFileSync(file, after);
   }
 }
