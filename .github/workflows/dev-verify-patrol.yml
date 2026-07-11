@@ -110,6 +110,15 @@ jobs:
             exit 0
           fi
 
+          # Only a real verify failure is a dev-health signal. A cancelled or
+          # skipped run (e.g. the single self-hosted runner was pre-empted by a
+          # release build) says nothing about dev, so leave the tracking issue
+          # untouched rather than raising a false red.
+          if [ "${RESULT}" != "failure" ]; then
+            echo "verify result '${RESULT}' is not a dev-health signal; leaving tracking issue unchanged"
+            exit 0
+          fi
+
           body="$(cat <<EOF
           The daily dev verify patrol found \`dev/v4/v4.0\` failing.
 
