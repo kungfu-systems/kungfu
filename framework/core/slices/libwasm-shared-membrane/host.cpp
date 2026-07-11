@@ -78,8 +78,8 @@ private:
 
 const char *engine_name(uint32_t engine) { return engine == KF_LIBWASM_ENGINE_WASMTIME ? "wasmtime" : "wasmer"; }
 
-bool run_engine(const char *library_path, const kf_embedding_api_v1 &api, const char *root, uint32_t engine) {
-  dynamic_library libwasm(library_path);
+bool run_engine(const dynamic_library &libwasm, const char *library_path, const kf_embedding_api_v1 &api,
+                const char *root, uint32_t engine) {
   if (!libwasm.loaded()) {
     std::fprintf(stderr, "%s libwasm module load failed: %s\n", engine_name(engine), library_path);
     return false;
@@ -170,8 +170,12 @@ int main(int argc, char **argv) {
   if (kungfu_embedding_get_api(KF_EMBEDDING_ABI_V1, sizeof(api), &api) != KF_EMBEDDING_OK) {
     return 4;
   }
-  if (!run_engine(argv[2], api, argv[1], KF_LIBWASM_ENGINE_WASMTIME) ||
-      !run_engine(argv[3], api, argv[1], KF_LIBWASM_ENGINE_WASMER)) {
+  // Engine adapters are process-resident. In particular, do not unload one
+  // Rust runtime before exercising another runtime's panic/unwind boundary.
+  const dynamic_library wasmtime(argv[2]);
+  const dynamic_library wasmer(argv[3]);
+  if (!run_engine(wasmtime, argv[2], api, argv[1], KF_LIBWASM_ENGINE_WASMTIME) ||
+      !run_engine(wasmer, argv[3], api, argv[1], KF_LIBWASM_ENGINE_WASMER)) {
     return 8;
   }
   return 0;
