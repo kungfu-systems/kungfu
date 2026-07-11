@@ -164,7 +164,7 @@ function App({
         <Text bold>Kungfu v4 reference TUI</Text>
         <Text color="green">● in-process binding · {exportCount} exports</Text>
         <Text color={live ? 'green' : 'gray'}>
-          {live ? '● live (master connected)' : '○ offline'}
+          {live ? '● live (coordinator connected)' : '○ offline'}
         </Text>
       </Box>
       <Text dimColor>
@@ -182,14 +182,17 @@ function App({
         </Text>
         {tail.length === 0 ? (
           <Text dimColor>
-            no journal frames yet — start a master against this runtime home
+            no journal frames yet — start the runtime coordinator against this
+            runtime home
           </Text>
         ) : null}
         {tail.map((record, index) => (
           <Text key={`${record.genTime}-${index}`}>
             <Text dimColor>{ledger.formatNanos(record.genTime)}</Text>
             {'  '}
-            <Text color="cyan">msg {String(record.msgType).padStart(5)}</Text>
+            <Text color="cyan">
+              carrier {String(record.carrierType).padStart(5)}
+            </Text>
             {'  '}
             <Text color="yellow">
               {record.source.toString(16).padStart(8, '0')} →{' '}

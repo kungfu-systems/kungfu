@@ -15,14 +15,14 @@ Release binaries are not published yet. Two paths today:
 **Desktop app (macOS arm64)** — build the installer once from a workspace:
 
 ```sh
-./kungfu-code dist
+./shifu dist
 ```
 
-This produces `artifact/dist/Kungfu-<version>-arm64.dmg` (and a zip).
-Mount, drag `Kungfu.app` to Applications, launch. The app is self-contained:
+This produces `product/release/desktop/Kungfu Episodes-<version>-arm64.dmg` (and a zip).
+Mount, drag `Kungfu Episodes.app` to Applications, launch. The app is self-contained:
 the kungfu runtime and first-party kfx ship inside it. Pre-release builds are
 unsigned: on first launch use right-click → Open, or `xattr -d com.apple.quarantine
-/Applications/Kungfu.app`. Point it at a home with
+/Applications/Kungfu\ Episodes.app`. Point it at a home with
 `KF_RUNTIME_DIR=<home-dir>/runtime`. Linux (AppImage/deb) and Windows (nsis)
 use the same electron-builder config and get wired up with signing in the
 release pipeline (next gate).
@@ -33,7 +33,7 @@ release pipeline (next gate).
 ```sh
 git clone git@github.com:kungfu-systems/kungfu.git
 cd kungfu
-./kungfu-code sync && ./kungfu-code build
+./shifu sync && ./shifu build
 ```
 
 Everything below runs from the repository root. `kungfu` is the
@@ -117,10 +117,15 @@ uv run --frozen python .devtools/kfc.py -H <anything> rewind open <file.rewind.z
 `open` refuses quietly wrong data: the archive's record must pass the same
 two-path verification as a local run before anything is shown.
 
+The replay boundary is architectural, not just a CLI behavior:
+[ADR-0020](../framework/core/docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md)
+defines Rewind's default mode as forensic replay. It reopens and verifies the
+recorded action timeline; it does not silently repeat real-world side effects.
+
 ## Diagnose in the app
 
 ```sh
-KF_RUNTIME_DIR=<home-dir>/runtime ./kungfu-code app
+KF_RUNTIME_DIR=<home-dir>/runtime ./shifu app
 ```
 
 The **Rewind** tab (first in the left nav) shows three panes:
@@ -153,7 +158,7 @@ used.
 ## Demos
 
 Deterministic end-to-end demos live under `tests/fixtures/` and double as
-release gates (`./kungfu-code verify --full` runs them all):
+release gates (`./shifu verify --full` runs them all):
 
 | Demo | Shows |
 | --- | --- |
@@ -182,7 +187,8 @@ Each runs standalone: `tests/fixtures/<name>/run.sh`.
 - Streaming (SSE) model responses are captured verbatim, not parsed into
   token/usage facts.
 - Replay is forensic (re-open, walk, verify); deterministic re-execution is a
-  later differentiator gate.
+  later differentiator gate. Any mode that can repeat external side effects
+  must be explicit and confirmed.
 - Framework auto-instrumentation ships with a real LangChain adapter (and the
   demo toolkit for the seam shape); further frameworks grow in the same adapter
   table. The LangChain adapter wraps the synchronous `BaseTool.run` funnel,

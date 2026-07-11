@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# crates/ — the repo's Rust workspace ("optionality" landing zone).
+#
+# Every in-repo Rust component lives here as a workspace member; see
+# docs/rust-adoption.md for the adoption paradigm (source layout, consumption
+# modes, distribution, and the selective-exercise discipline). The first member
+# is shifu, the self-contained dev/build launcher; shifu-core is the
+# unpublished library behind it (the shifu role framework — bootstrap + probe —
+# shared with the product trunk per ADR-0046); trunk is that product trunk at
+# stage-1 size (kungfu-trunk: pinned-toolchain bootstrap + the kungfu-owned
+# env/package surface), shipped inside dist/kungfu rather than released alone.
+
+[workspace]
+resolver = "2"
+members = ["shifu", "shifu-core", "trunk", "kungfu-sdk"]
+# host-spike is a throwaway feasibility probe (rust host shell → libkungfu →
+# embedded libpython/libnode). It builds against a sibling worktree's core
+# artifacts, so it must not enter the workspace CI gate or the release matrix;
+# it opts out with its own [workspace] table and is excluded here explicitly.
+exclude = ["host-spike"]
+
+[workspace.package]
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/kungfu-systems/kungfu"
+
+# Release binaries are small, fully static dispatchers: optimize for size and
+# strip symbols; the launcher's hot path is process orchestration, not compute.
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"

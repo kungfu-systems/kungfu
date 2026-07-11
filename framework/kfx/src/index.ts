@@ -14,6 +14,7 @@ import type {
   DomainState,
   Ledger,
   Rewind,
+  Storage,
   Terminal,
   Work,
 } from '@kungfu-tech/api/capability';
@@ -36,6 +37,23 @@ export type {
   TerminalSession,
   TerminalSpawnOptions,
   TerminalStatus,
+  QueryChangelogMessage,
+  QueryChangelogPage,
+  QueryChangelogState,
+  QueryDefinition,
+  QueryFrontier,
+  QueryResumeToken,
+  QueryResultSchema,
+  QueryViewSpec,
+  SavedQueryCatalog,
+  SavedQueryEntry,
+  SavedQueryView,
+} from '@kungfu-tech/api/capability';
+export {
+  applyQueryChangelogPage,
+  emptyQueryChangelogState,
+  parseSavedQueryView,
+  queryRows,
 } from '@kungfu-tech/api/capability';
 
 // ── capability surface ────────────────────────────────────────────────────
@@ -44,6 +62,7 @@ export type KfxCapabilities = {
   ledger: Ledger;
   domain: DomainState;
   rewind: Rewind;
+  storage: Storage;
   terminal: Terminal;
   work: Work;
   atlas?: Atlas;
@@ -706,6 +725,7 @@ export type ShellState = {
   profileId: string;
   disabledKfx: string[];
   disabledSuites: string[];
+  sidebarCollapsed: boolean;
   settings: Record<string, string>;
 };
 
@@ -714,11 +734,96 @@ export type ShellRuntimeInfo = {
   message: string;
   runtimeDir: string;
   kungfuVersion: string;
+  masterStatus: {
+    ok: boolean;
+    payload: Record<string, unknown> | null;
+    error: string;
+    updatedAt: number;
+  } | null;
   buildInfo: Record<string, unknown> | null;
   skillManager: Record<string, unknown> | null;
   exports: string[];
-  longfistTypes: { name: string; fields: string[] }[];
+  schemaTypes: { name: string; fields: string[] }[];
 };
+
+export type KungfuUiConfig = {
+  fontFamily: string;
+  fontSize: number;
+  scale: number;
+};
+
+export type KungfuResolvedConfig = {
+  schema: 'kungfu.config.resolved/v1';
+  configHome: string;
+  configPath: string;
+  runtimeHome: string;
+  config: {
+    ui: KungfuUiConfig;
+    [key: string]: unknown;
+  };
+  sources: {
+    type: string;
+    path?: string;
+    exists?: boolean;
+    [key: string]: unknown;
+  }[];
+  contract: Record<string, unknown>;
+};
+
+export type ShellCommand =
+  | { kind: 'open-kfx'; kfxId: string; params?: Record<string, string> }
+  | { kind: 'open-settings' }
+  | { kind: 'dismiss-notification'; notificationId: string };
+
+export type StatusBarSeverity = 'info' | 'ok' | 'warning' | 'error';
+export type StatusBarSide = 'left' | 'right';
+
+export type StatusBarItem = {
+  id: string;
+  text: string;
+  owner?: string;
+  side?: StatusBarSide;
+  priority?: number;
+  icon?: string;
+  severity?: StatusBarSeverity;
+  tooltip?: string;
+  command?: ShellCommand;
+};
+
+export type ShellStatusBarApi = {
+  set: (item: StatusBarItem) => void;
+  clear: (id: string) => void;
+};
+
+export type ShellNotificationLevel = 'info' | 'success' | 'warning' | 'error';
+
+export type ShellNotificationAction = {
+  id: string;
+  label: string;
+  command?: ShellCommand;
+};
+
+export type ShellNotificationInput = {
+  level?: ShellNotificationLevel;
+  title: string;
+  message?: string;
+  timeoutMs?: number;
+  actions?: ShellNotificationAction[];
+};
+
+export type ShellNotification = ShellNotificationInput & {
+  id: string;
+  level: ShellNotificationLevel;
+  createdAt: number;
+};
+
+export type KungfuConfigValue =
+  | string
+  | number
+  | boolean
+  | null
+  | Record<string, unknown>
+  | unknown[];
 
 // One loaded view as the GUI shell sees it: a load-plan entry (manifest data +
 // the trust/tier decision) with this renderer's landing added — the mounted
@@ -758,6 +863,16 @@ export type Shell = {
   // persist shell state changes; the shell owns the ConfigStore write
   updateState: (patch: Partial<ShellState>) => void;
   state: ShellState;
+  // shell-owned system chrome: persistent status items and transient toasts
+  statusBar: ShellStatusBarApi;
+  notify: (notification: ShellNotificationInput) => string;
+  dismissNotification: (id: string) => void;
+  // global Kungfu config, read/written through `kungfu config`
+  config: KungfuResolvedConfig | null;
+  configError?: string;
+  reloadConfig: () => void;
+  setConfigValue: (key: string, value: KungfuConfigValue) => void;
+  unsetConfigValue: (key: string) => void;
   // runtime facts for system views
   info: ShellRuntimeInfo;
   // every loaded kfx (for the manager and settings views)
@@ -809,7 +924,7 @@ export const panelStyle: React.CSSProperties = {
 };
 
 export const headingStyle: React.CSSProperties = {
-  fontSize: 11,
+  fontSize: 'calc(var(--kf-font-size, 14px) - 3px)',
   fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: 1,
@@ -818,8 +933,8 @@ export const headingStyle: React.CSSProperties = {
 };
 
 export const mono: React.CSSProperties = {
-  fontFamily: 'SF Mono, Menlo, monospace',
-  fontSize: 12,
+  fontFamily: 'var(--kf-mono-font-family, SF Mono, Menlo, monospace)',
+  fontSize: 'calc(var(--kf-font-size, 14px) - 2px)',
 };
 
 export const inputStyle: React.CSSProperties = {

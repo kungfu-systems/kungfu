@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "authorities": [
+    {"identity":"kernel.fact","owner":"hana","symbol":"FactDataTypes","declaration":"fact.h","projection_route":"flatbuffers-bfbs"},
+    {"identity":"open.fact","owner":"flatbuffers","declaration":"fact.fbs","derived_schema":"fact.bfbs","projection_route":"hana-sqlite-orm"}
+  ],
+  "non_authorities": [],
+  "json_edges": []
+}

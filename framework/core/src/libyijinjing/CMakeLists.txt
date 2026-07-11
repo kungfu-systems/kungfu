@@ -3,11 +3,11 @@
 # yijinjing journal core as a standalone static library (libyijinjing.a).
 #
 # The core is the journal spine: frame/page mmap machinery, reader/writer,
-# assemble, locator/location, and the base utilities they stand on. It sees
-# only the longfist schema leaf (kungfu/longfist/core.h) -- never the trading
-# type registry, nng, rxcpp, sqlite or rocksdb. libkungfu links this target
-# and must not recompile these sources; minimal tools (fact-ledger slice)
-# link only this target.
+# assemble, locator/location, storage semantic contracts, and the base
+# utilities they stand on. It sees only the yijinjing schema leaf
+# (kungfu/yijinjing/schema/core.h) -- never the trading type registry, nng, rxcpp,
+# sqlite or rocksdb. libkungfu links this target and must not recompile these
+# sources; minimal tools (fact-ledger slice) link only this target.
 #
 # This file is self-sufficient on purpose: inside the kungfu build the parent
 # provides toolchain, dependency targets and output conventions, and every
@@ -29,6 +29,9 @@ endif()
 if(NOT TARGET nlohmann_json::nlohmann_json)
   find_package(nlohmann_json REQUIRED)
 endif()
+if(NOT TARGET xxHash::xxhash)
+  find_package(xxHash REQUIRED)
+endif()
 
 file(GLOB_RECURSE YIJINJING_SOURCE_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 
@@ -46,7 +49,7 @@ target_include_directories(yijinjing PUBLIC ${PROJECT_SOURCE_DIR}/include)
 # boost::hana is header-only; inside the kungfu build and standalone alike,
 # use the vendored copy next to this tree unless the embedder has provided
 # <boost/hana.hpp> some other way. PUBLIC so every consumer of the core's
-# longfist schema leaf inherits it.
+# yijinjing schema leaf inherits it.
 if(EXISTS ${PROJECT_SOURCE_DIR}/../../.deps/hana-1.80.0/include)
   target_include_directories(yijinjing PUBLIC ${PROJECT_SOURCE_DIR}/../../.deps/hana-1.80.0/include)
 endif()
@@ -54,23 +57,21 @@ endif()
 target_link_libraries(yijinjing PUBLIC
   $<IF:$<TARGET_EXISTS:fmt::fmt-header-only>,fmt::fmt-header-only,fmt::fmt>
   $<IF:$<TARGET_EXISTS:spdlog::spdlog_header_only>,spdlog::spdlog_header_only,spdlog::spdlog>
-  nlohmann_json::nlohmann_json)
+  nlohmann_json::nlohmann_json
+  xxHash::xxhash)
 
-# Windows AppContainer guest launcher (ADR-0014): CreateAppContainerProfile /
-# DeriveAppContainerSidFromAppContainerName live in userenv. The loopback
-# exemption (FirewallAPI, NetworkIsolationSetAppContainerConfig) is added here
-# once wired; it is deferred in app_container.cpp for now.
-if(WIN32)
-  # userenv: CreateAppContainerProfile / DeriveAppContainerSidFromAppContainerName
-  # + GetAppContainerFolderPath (TEMP redirect to the container's writable folder).
-  # advapi32: FreeSid, SetEntriesInAcl, GetNamedSecurityInfo/SetNamedSecurityInfo
-  # (read/write-path ACLs — the container SID governs AppContainer file access),
-  # and ConvertSidToStringSid. ole32: CoTaskMemFree (frees GetAppContainerFolderPath's
-  # path). user32: window-station/desktop ACLs so a USER32-linked guest (node) can
-  # initialize under the AppContainer.
-  # DeriveCapabilitySidsFromName is resolved dynamically from KernelBase.dll in
-  # app_container.cpp (its import library varies across SDKs).
-  target_link_libraries(yijinjing PUBLIC userenv advapi32 user32 ole32)
+option(YIJINJING_BUILD_TESTS "build yijinjing native correctness tests" OFF)
+if(YIJINJING_BUILD_TESTS)
+  add_executable(yijinjing_mmap_tests tests/mmap_tests.cpp)
+  target_link_libraries(yijinjing_mmap_tests PRIVATE yijinjing)
+  target_compile_features(yijinjing_mmap_tests PRIVATE cxx_std_23)
+  add_test(NAME yijinjing_mmap_tests COMMAND yijinjing_mmap_tests)
+
+  # Evidence tool only: this executable exercises the qualified production
+  # surface but is not linked into or shipped with the runtime.
+  add_executable(yijinjing_mmap_qualification tests/mmap_qualification.cpp)
+  target_link_libraries(yijinjing_mmap_qualification PRIVATE yijinjing)
+  target_compile_features(yijinjing_mmap_qualification PRIVATE cxx_std_23)
 endif()
 
 if(DEFINED COMPILER_OPTIMIZE_ON_OPTIONS AND NOT "${COMPILER_OPTIMIZE_ON_OPTIONS}" STREQUAL "")

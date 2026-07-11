@@ -1,0 +1,121 @@
+{
+  "id": "remote-fact-boundary",
+  "public": true,
+  "claim": "Kungfu distinguishes local observed facts from reported, imported, and remote facts in the agent pack and remote-sync command surface instead of silently promoting remote evidence into local truth.",
+  "sourceBindings": [
+    {
+      "role": "claim-source",
+      "kind": "file",
+      "path": "framework/core/src/python/kungfu/agent/safety.md",
+      "sha256": "7d79f580d229ff16821568b5200746cc17abd68fa7ec533ca8ff2c49b7e7e8c7"
+    }
+  ],
+  "machineEvidence": [
+    {
+      "type": "file",
+      "pointer": {
+        "kind": "file",
+        "path": "framework/core/src/python/kungfu/agent/safety.md",
+        "sha256": "7d79f580d229ff16821568b5200746cc17abd68fa7ec533ca8ff2c49b7e7e8c7"
+      },
+      "description": "Fact labels for observed, reported, imported, and remote evidence."
+    },
+    {
+      "type": "file",
+      "pointer": {
+        "kind": "file",
+        "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
+        "sha256": "51f32b7c4b5e1eb49cf05a4386b1134c8f019aca984c6a7842b8bec5f972bee2"
+      },
+      "description": "Remote-sync mode rule requiring source-scoped import."
+    },
+    {
+      "type": "file",
+      "pointer": {
+        "kind": "file",
+        "path": "framework/core/src/python/kungfu/agent/commands.json",
+        "sha256": "cef0c5084edbf365561e6a403b102c79abe04e7daac494a9574f3f2ad9d48c85"
+      },
+      "description": "Remote add/sync command declarations and mode metadata."
+    },
+    {
+      "type": "file",
+      "pointer": {
+        "kind": "file",
+        "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
+        "sha256": "d8c195502f678bc34be690769f29c1c8b223fe5ae65ad142fa656e9b3c849b16"
+      },
+      "description": "Agent command surface including mode selection and bootstrap status."
+    }
+  ],
+  "hashes": {
+    "registrySha256": "5e686417b7bb43116755ccf2e1ccc001ce4c1fe7706d062ebc2bdf776925b4c6",
+    "sourceSha256": "7d79f580d229ff16821568b5200746cc17abd68fa7ec533ca8ff2c49b7e7e8c7",
+    "evidenceSha256": [
+      {
+        "path": "framework/core/src/python/kungfu/agent/safety.md",
+        "sha256": "7d79f580d229ff16821568b5200746cc17abd68fa7ec533ca8ff2c49b7e7e8c7"
+      },
+      {
+        "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
+        "sha256": "51f32b7c4b5e1eb49cf05a4386b1134c8f019aca984c6a7842b8bec5f972bee2"
+      },
+      {
+        "path": "framework/core/src/python/kungfu/agent/commands.json",
+        "sha256": "cef0c5084edbf365561e6a403b102c79abe04e7daac494a9574f3f2ad9d48c85"
+      },
+      {
+        "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
+        "sha256": "d8c195502f678bc34be690769f29c1c8b223fe5ae65ad142fa656e9b3c849b16"
+      }
+    ],
+    "artifactSha256": [
+      {
+        "path": "framework/core/src/python/kungfu/agent/safety.md",
+        "sha256": "7d79f580d229ff16821568b5200746cc17abd68fa7ec533ca8ff2c49b7e7e8c7"
+      },
+      {
+        "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
+        "sha256": "51f32b7c4b5e1eb49cf05a4386b1134c8f019aca984c6a7842b8bec5f972bee2"
+      }
+    ]
+  },
+  "artifacts": [
+    {
+      "name": "agent-safety-doc",
+      "path": "framework/core/src/python/kungfu/agent/safety.md",
+      "sha256": "7d79f580d229ff16821568b5200746cc17abd68fa7ec533ca8ff2c49b7e7e8c7",
+      "expectedPackagePath": "kungfu/agent/safety.md"
+    },
+    {
+      "name": "agent-mode-selection-doc",
+      "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
+      "sha256": "51f32b7c4b5e1eb49cf05a4386b1134c8f019aca984c6a7842b8bec5f972bee2",
+      "expectedPackagePath": "kungfu/agent/mode-selection.md"
+    }
+  ],
+  "verification": {
+    "result": "passed-with-residual-risk",
+    "command": "node scripts/verify-agent-pack.mjs && pnpm exec buildchain kfd 2 product-claims check",
+    "expectedResult": "pass"
+  },
+  "auditBoundary": {
+    "scope": "The committed agent safety and mode-selection documents, machine-readable commands catalog, and agent CLI command implementation listed in this claim.",
+    "enumerability": "declared-open",
+    "exclusions": [
+      "Actual network transport availability",
+      "Remote host identity outside locally recorded source metadata",
+      "User decisions to manually promote imported evidence"
+    ]
+  },
+  "responsibility": {
+    "sourceOwner": "kungfu",
+    "verificationOwner": "kungfu verify",
+    "releaseDecisionOwner": "kungfu release maintainer",
+    "escalation": "Keep this claim downgraded or human-reviewed while remote-sync remains an experimental surface."
+  },
+  "residualRisk": [
+    "Remote evidence freshness and identity depend on the configured source runtime and must remain source-scoped until a later command explicitly promotes it."
+  ],
+  "canonicalStatus": "audited"
+}

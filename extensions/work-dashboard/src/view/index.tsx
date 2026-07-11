@@ -9,6 +9,7 @@ import type {
   AtlasGoal,
   AtlasImportInfo,
   AtlasMission,
+  AtlasMissionControlReport,
   WorkItem,
 } from '@kungfu-tech/api/capability';
 import { WORK_STATUS_NAMES } from '@kungfu-tech/api/capability';
@@ -72,6 +73,33 @@ function SmallButton({
     >
       {children}
     </button>
+  );
+}
+
+function TextInput({
+  value,
+  placeholder,
+  onChange,
+}: {
+  value: string;
+  placeholder: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <input
+      value={value}
+      placeholder={placeholder}
+      onChange={(event) => onChange(event.target.value)}
+      style={{
+        ...mono,
+        minWidth: 0,
+        border: '1px solid #3c3c3c',
+        borderRadius: 4,
+        background: '#1e1e1e',
+        color: '#cccccc',
+        padding: '4px 6px',
+      }}
+    />
   );
 }
 
@@ -157,6 +185,110 @@ function AtlasGoalDetail({ goal }: { goal: AtlasGoal | null }) {
   );
 }
 
+function MissionTrustPanel({
+  report,
+  error,
+  title = 'Mission TrustReport',
+}: {
+  report: AtlasMissionControlReport | null;
+  error: string;
+  title?: string;
+}) {
+  if (error) {
+    return (
+      <section style={{ ...panelStyle }}>
+        <h2 style={headingStyle}>{title}</h2>
+        <div style={{ ...mono, color: '#f48771' }}>{error}</div>
+      </section>
+    );
+  }
+  if (!report) {
+    return (
+      <section style={{ ...panelStyle }}>
+        <h2 style={headingStyle}>{title}</h2>
+        <div style={{ ...mono, color: '#6a6a6a' }}>
+          select a Mission to run its purpose-bound progress assessment
+        </div>
+      </section>
+    );
+  }
+  const fitnessColor =
+    report.fitness === 'fit'
+      ? '#4ec9b0'
+      : report.fitness === 'warning'
+        ? '#dcdcaa'
+        : '#f48771';
+  const profile = report.profile;
+  const cost = profile.cost;
+  return (
+    <section style={{ ...panelStyle }}>
+      <h2 style={headingStyle}>Cost / State / Proof</h2>
+      <div style={{ ...mono, color: '#9cdcfe', marginBottom: 4 }}>
+        cost: {cost.status} · state: {profile.state.value} · proof:{' '}
+        {profile.proof.canonical_state ? 'canonical' : 'degraded'}
+      </div>
+      <div style={{ ...mono, color: '#cccccc', marginBottom: 6 }}>
+        tokens: {cost.tokens.input_tokens} in / {cost.tokens.output_tokens} out
+        {' · '}
+        usd: {cost.cost_usd_known ? cost.cost_usd : 'unknown'}
+        {' · '}
+        attribution: {cost.attribution.worst}
+        {cost.attribution.ambiguous ? ' (ambiguous)' : ''}
+      </div>
+      <h2 style={headingStyle}>{title}</h2>
+      <div style={{ ...mono, color: fitnessColor, marginBottom: 6 }}>
+        {report.fitness} · {report.assessment.state} ·{' '}
+        {report.state.canonical_state ? 'canonical cut' : 'degraded cut'}
+      </div>
+      {report.findings.map((finding) => (
+        <div key={finding} style={{ ...mono, color: '#cccccc' }}>
+          finding: {finding}
+        </div>
+      ))}
+      <details style={{ marginTop: 8 }}>
+        <summary style={{ ...mono, color: '#9cdcfe', cursor: 'pointer' }}>
+          proof and residual risk
+        </summary>
+        <div style={{ ...mono, color: '#858585', overflowWrap: 'anywhere' }}>
+          assessment: {report.assessment_key}
+        </div>
+        <div style={{ ...mono, color: '#858585', overflowWrap: 'anywhere' }}>
+          report: {report.report_hash ?? '-'}
+        </div>
+        <div style={{ ...mono, color: '#858585', overflowWrap: 'anywhere' }}>
+          definition: {report.query_definition_root}
+        </div>
+        <div style={{ ...mono, color: '#858585', overflowWrap: 'anywhere' }}>
+          proof: {report.query_proof_root}
+        </div>
+        {cost.proof_episodes.map((episode) => (
+          <div
+            key={episode.run_id}
+            style={{ ...mono, color: '#858585', overflowWrap: 'anywhere' }}
+          >
+            cost episode: {episode.run_id} · {episode.episode_root}
+          </div>
+        ))}
+        {cost.missing.no_linked_cost_fact && (
+          <div style={{ ...mono, color: '#dcdcaa' }}>
+            missing: no CostSnapshot is linked to an admitted Go
+          </div>
+        )}
+        {cost.missing.unsealed_runs.map((runId) => (
+          <div key={runId} style={{ ...mono, color: '#dcdcaa' }}>
+            missing: unsealed cost run {runId}
+          </div>
+        ))}
+        {report.known_limits.map((risk) => (
+          <div key={risk} style={{ ...mono, color: '#dcdcaa' }}>
+            residual risk: {risk}
+          </div>
+        ))}
+      </details>
+    </section>
+  );
+}
+
 function AtlasUnavailableView() {
   return (
     <section style={{ ...panelStyle, height: '100%' }}>
@@ -180,6 +312,23 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
   const [statusFilter, setStatusFilter] = React.useState<string>('all');
   const [selectedGoal, setSelectedGoal] = React.useState<string | null>(null);
   const [message, setMessage] = React.useState<string>('');
+  const [trustReport, setTrustReport] =
+    React.useState<AtlasMissionControlReport | null>(null);
+  const [trustError, setTrustError] = React.useState<string>('');
+  const [completionReport, setCompletionReport] =
+    React.useState<AtlasMissionControlReport | null>(null);
+  const [completionError, setCompletionError] = React.useState<string>('');
+  const [newMissionId, setNewMissionId] = React.useState('');
+  const [newMissionTitle, setNewMissionTitle] = React.useState('');
+  const [newMissionIntent, setNewMissionIntent] = React.useState('');
+  const [newGoalId, setNewGoalId] = React.useState('');
+  const [newGoalTitle, setNewGoalTitle] = React.useState('');
+  const [newGoalObjective, setNewGoalObjective] = React.useState('');
+  const [claimStatement, setClaimStatement] = React.useState('');
+  const [evidenceEpisodes, setEvidenceEpisodes] = React.useState('');
+  const [bundlePath, setBundlePath] = React.useState('');
+  const [importBundlePath, setImportBundlePath] = React.useState('');
+  const actor = 'work-dashboard';
 
   const reload = React.useCallback(() => {
     setInfo(atlas.importInfo());
@@ -191,6 +340,23 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
     reload();
   }, [reload]);
 
+  React.useEffect(() => {
+    if (selectedMission === 'all') {
+      setTrustReport(null);
+      setTrustError('');
+      setCompletionReport(null);
+      setCompletionError('');
+      return;
+    }
+    try {
+      setTrustReport(atlas.assessMission(selectedMission));
+      setTrustError('');
+    } catch (error) {
+      setTrustReport(null);
+      setTrustError((error as Error).message);
+    }
+  }, [atlas, selectedMission]);
+
   const importNow = () => {
     if (!repoRoot.trim()) {
       setMessage('enter an Atlas repo path before importing');
@@ -198,8 +364,13 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
     }
     try {
       const result = atlas.importRepo(repoRoot);
+      const missionControl = result.mission_control;
       setMessage(
-        `imported ${result.missions} missions / ${result.goals} goals / ${result.markers} markers (${result.warnings.length} warning)`,
+        `imported ${result.missions} missions / ${result.goals} goals / ${result.markers} markers (${result.warnings.length} warning)${
+          missionControl
+            ? ` · Mission Control ${missionControl.status}: ${missionControl.admitted ?? 0} admitted / ${missionControl.already_present ?? 0} already present`
+            : ''
+        }`,
       );
       reload();
     } catch (e) {
@@ -207,17 +378,133 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
     }
   };
 
-  const visibleGoals = goals.filter(
+  const createMissionNow = () => {
+    try {
+      const result = atlas.createMission(newMissionId, {
+        title: newMissionTitle,
+        intent: newMissionIntent,
+        actor,
+        actorType: 'user',
+      });
+      setMessage(
+        `created ${result.mission_subject}: ${result.receipt.status}${
+          result.receipt.reused ? ' (reused)' : ''
+        }`,
+      );
+      reload();
+      setSelectedMission(newMissionId);
+      setNewMissionId('');
+      setNewMissionTitle('');
+      setNewMissionIntent('');
+    } catch (error) {
+      setMessage((error as Error).message);
+    }
+  };
+
+  const exportMissionNow = (mode: 'full' | 'thin') => {
+    if (selectedMission === 'all' || !bundlePath.trim()) {
+      setMessage('select a Mission and enter an export path');
+      return;
+    }
+    try {
+      const result = atlas.exportMission(selectedMission, bundlePath, { mode });
+      setMessage(
+        `exported ${result.mode} bundle: ${result.status} · ${result.episode_count} Episodes · ${result.out}`,
+      );
+    } catch (error) {
+      setMessage((error as Error).message);
+    }
+  };
+
+  const importMissionNow = (execute: boolean) => {
+    if (!importBundlePath.trim()) {
+      setMessage('enter a Mission bundle path');
+      return;
+    }
+    try {
+      const result = atlas.importMission(importBundlePath, { execute });
+      setMessage(
+        `${result.mode} bundle ${result.status} · accepted=${result.accepted} · missing=${result.missing_material_count}${
+          result.diagnosis ? ` · ${result.diagnosis}` : ''
+        }`,
+      );
+      reload();
+    } catch (error) {
+      setMessage((error as Error).message);
+    }
+  };
+
+  const createGoNow = () => {
+    if (selectedMission === 'all') {
+      setMessage('select a Mission before creating a Go');
+      return;
+    }
+    try {
+      const result = atlas.createGo(selectedMission, {
+        goalId: newGoalId,
+        title: newGoalTitle,
+        objective: newGoalObjective,
+        actor,
+        actorType: 'user',
+      });
+      setMessage(
+        `created ${result.go_subject}: ${result.receipt.status}${
+          result.receipt.reused ? ' (reused)' : ''
+        }`,
+      );
+      setTrustReport(atlas.assessMission(selectedMission));
+      setNewGoalId('');
+      setNewGoalTitle('');
+      setNewGoalObjective('');
+    } catch (error) {
+      setMessage((error as Error).message);
+    }
+  };
+
+  const claimAndAssessNow = () => {
+    if (selectedMission === 'all' || !selectedGoal) {
+      setCompletionError('select a Mission and Go before claiming completion');
+      return;
+    }
+    try {
+      const evidenceEpisodeIds = evidenceEpisodes
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean);
+      atlas.claimCompletion(selectedMission, selectedGoal, {
+        statement: claimStatement,
+        actor,
+        actorType: 'user',
+        evidenceEpisodeIds,
+      });
+      setCompletionReport(
+        atlas.assessCompletion(selectedMission, selectedGoal),
+      );
+      setCompletionError('');
+      setTrustReport(atlas.assessMission(selectedMission));
+    } catch (error) {
+      setCompletionReport(null);
+      setCompletionError((error as Error).message);
+    }
+  };
+
+  const effectiveGoals = new Map(goals.map((goal) => [goal.goal_id, goal]));
+  for (const row of trustReport?.state.goals ?? []) {
+    const goal = row.payload?.record;
+    if (goal?.goal_id) effectiveGoals.set(goal.goal_id, goal);
+  }
+  const allGoals = [...effectiveGoals.values()];
+  const visibleGoals = allGoals.filter(
     (goal) =>
       (selectedMission === 'all' || goal.mission_id === selectedMission) &&
       (statusFilter === 'all' || goal.status === statusFilter),
   );
   const currentGoal =
     visibleGoals.find((goal) => goal.goal_id === selectedGoal) ??
-    goals.find((goal) => goal.goal_id === selectedGoal) ??
+    allGoals.find((goal) => goal.goal_id === selectedGoal) ??
     null;
   const goalCounts = new Map<string, number>();
-  for (const goal of goals) {
+  for (const goal of allGoals) {
     const status = goal.status ?? 'unknown';
     goalCounts.set(status, (goalCounts.get(status) ?? 0) + 1);
   }
@@ -225,9 +512,9 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
   return (
     <div style={{ display: 'flex', gap: 12, height: '100%', minHeight: 0 }}>
       <section style={{ ...panelStyle, width: 440, flexShrink: 0 }}>
-        <h2 style={headingStyle}>Atlas projection</h2>
+        <h2 style={headingStyle}>Mission Control</h2>
         <div style={{ ...mono, color: '#858585', marginBottom: 8 }}>
-          source: Atlas files · authority stays in Atlas
+          Atlas bridge + Kungfu-native facts · authority remains explicit
         </div>
         <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
           <input
@@ -257,6 +544,102 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
         {message && (
           <div style={{ ...mono, color: '#dcdcaa', marginBottom: 8 }}>
             {message}
+          </div>
+        )}
+        <div
+          style={{
+            display: 'grid',
+            gap: 5,
+            marginBottom: 10,
+            padding: 8,
+            border: '1px solid #3c3c3c',
+            borderRadius: 4,
+          }}
+        >
+          <h2 style={headingStyle}>Create native Mission</h2>
+          <TextInput
+            value={newMissionId}
+            placeholder="stable Mission id"
+            onChange={setNewMissionId}
+          />
+          <TextInput
+            value={newMissionTitle}
+            placeholder="title"
+            onChange={setNewMissionTitle}
+          />
+          <TextInput
+            value={newMissionIntent}
+            placeholder="long-running intent"
+            onChange={setNewMissionIntent}
+          />
+          <SmallButton onClick={createMissionNow}>create Mission</SmallButton>
+        </div>
+        <div
+          style={{
+            display: 'grid',
+            gap: 5,
+            marginBottom: 10,
+            padding: 8,
+            border: '1px solid #3c3c3c',
+            borderRadius: 4,
+          }}
+        >
+          <h2 style={headingStyle}>Portable Mission bundle</h2>
+          <TextInput
+            value={bundlePath}
+            placeholder="export path (.json)"
+            onChange={setBundlePath}
+          />
+          <div style={{ display: 'flex', gap: 5 }}>
+            <SmallButton onClick={() => exportMissionNow('full')}>
+              export full
+            </SmallButton>
+            <SmallButton onClick={() => exportMissionNow('thin')}>
+              export thin
+            </SmallButton>
+          </div>
+          <TextInput
+            value={importBundlePath}
+            placeholder="import bundle path"
+            onChange={setImportBundlePath}
+          />
+          <div style={{ display: 'flex', gap: 5 }}>
+            <SmallButton onClick={() => importMissionNow(false)}>
+              validate
+            </SmallButton>
+            <SmallButton onClick={() => importMissionNow(true)}>
+              materialize
+            </SmallButton>
+          </div>
+        </div>
+        {selectedMission !== 'all' && (
+          <div
+            style={{
+              display: 'grid',
+              gap: 5,
+              marginBottom: 10,
+              padding: 8,
+              border: '1px solid #3c3c3c',
+              borderRadius: 4,
+            }}
+          >
+            <h2 style={headingStyle}>Create native Go</h2>
+            <TextInput
+              value={newGoalId}
+              placeholder="stable Go id"
+              onChange={setNewGoalId}
+            />
+            <TextInput
+              value={newGoalTitle}
+              placeholder="title"
+              onChange={setNewGoalTitle}
+            />
+            <TextInput
+              value={newGoalObjective}
+              placeholder="bounded objective"
+              onChange={setNewGoalObjective}
+            />
+            <SmallButton onClick={createGoNow}>create Go</SmallButton>
           </div>
         )}
         <h2 style={headingStyle}>Missions · {missions.length}</h2>
@@ -313,7 +696,7 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
             active={statusFilter === 'all'}
             onClick={() => setStatusFilter('all')}
           >
-            all {goals.length}
+            all {allGoals.length}
           </SmallButton>
           {ATLAS_GOAL_STATUSES.map((status) => (
             <SmallButton
@@ -362,8 +745,54 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
             no imported goals match this filter
           </div>
         )}
+        {selectedGoal && selectedMission !== 'all' && (
+          <div
+            style={{
+              display: 'grid',
+              gap: 5,
+              marginTop: 10,
+              padding: 8,
+              border: '1px solid #3c3c3c',
+              borderRadius: 4,
+            }}
+          >
+            <h2 style={headingStyle}>Claim completion</h2>
+            <TextInput
+              value={claimStatement}
+              placeholder="what this Go establishes"
+              onChange={setClaimStatement}
+            />
+            <TextInput
+              value={evidenceEpisodes}
+              placeholder="evidence Episode ids, comma-separated"
+              onChange={setEvidenceEpisodes}
+            />
+            <SmallButton onClick={claimAndAssessNow}>
+              claim and assess
+            </SmallButton>
+          </div>
+        )}
       </section>
-      <AtlasGoalDetail goal={currentGoal} />
+      <div
+        style={{
+          display: 'flex',
+          flex: 1,
+          minWidth: 0,
+          minHeight: 0,
+          flexDirection: 'column',
+          gap: 12,
+        }}
+      >
+        <MissionTrustPanel report={trustReport} error={trustError} />
+        {(completionReport || completionError) && (
+          <MissionTrustPanel
+            title="Completion TrustReport"
+            report={completionReport}
+            error={completionError}
+          />
+        )}
+        <AtlasGoalDetail goal={currentGoal} />
+      </div>
     </div>
   );
 }

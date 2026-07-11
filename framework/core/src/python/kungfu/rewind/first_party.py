@@ -17,9 +17,8 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 
-from kungfu import kfx_contract
+from kungfu import host, kfx_contract
 
 ENV_FIRST_PARTY_MANIFEST = "KF_FIRST_PARTY_MANIFEST"
 BAKED_MANIFEST_NAME = "first-party.json"
@@ -39,13 +38,12 @@ def _read_keys(path: str | None) -> set[str] | None:
     return set(keys) if isinstance(keys, dict) else None
 
 
-def _baked_manifest_path() -> str:
-    # A frozen build ships the manifest next to the executable (in dist/kungfu,
-    # which the app also ships to Resources/kungfu); a source interpreter has no
-    # such neighbour, so this is None-ish there and the source scan takes over.
-    return os.path.join(
-        os.path.dirname(os.path.abspath(sys.executable)), BAKED_MANIFEST_NAME
-    )
+def _baked_manifest_path() -> str | None:
+    # A product build ships the manifest at the dist root (which the app also
+    # ships to Resources/kungfu); a source interpreter has no product root, so
+    # this is None there and the source scan takes over.
+    root = host.product_root()
+    return None if root is None else str(root / BAKED_MANIFEST_NAME)
 
 
 def _source_extensions_root() -> str | None:

@@ -12,8 +12,8 @@
 #include <unordered_set>
 
 namespace kungfu::yijinjing::journal {
-using namespace longfist::enums;
-using namespace longfist::types;
+using namespace yijinjing::enums;
+using namespace yijinjing::types;
 
 sink::sink() : publisher_(std::make_shared<noop_publisher>()), bus_(std::make_shared<bus>(false)) {}
 
@@ -39,13 +39,13 @@ void copy_sink::put(const data::location_ptr &location, uint32_t dest_id, const 
   writers.at(dest_id)->copy_frame(frame);
 }
 
-assemble::assemble(const data::locator_ptr &locator, const std::string &mode, const std::string &category,
-                   const std::string &group, const std::string &name)
-    : mode_(mode), category_(category), group_(group), name_(name), publisher_(std::make_shared<noop_publisher>()) {
+assemble::assemble(const data::locator_ptr &locator, const std::string &mode, const std::string &role,
+                   const std::string &namespace_, const std::string &name)
+    : mode_(mode), role_(role), namespace_(namespace_), name_(name), publisher_(std::make_shared<noop_publisher>()) {
   locators_.push_back(locator);
   readers_.push_back(std::make_shared<reader>(true, false, std::make_shared<bus>(false)));
   auto reader = readers_.back();
-  for (auto &location : locator->list_locations(category, group, name, mode)) {
+  for (auto &location : locator->list_locations(role, namespace_, name, mode)) {
     for (auto dest_id : locator->list_location_dest(location)) {
       reader->join(location, dest_id, 0);
     }
@@ -53,14 +53,14 @@ assemble::assemble(const data::locator_ptr &locator, const std::string &mode, co
   sort();
 }
 
-assemble::assemble(const std::vector<data::locator_ptr> &locators, const std::string &mode, const std::string &category,
-                   const std::string &group, const std::string &name)
-    : mode_(mode), category_(category), group_(group), name_(name), publisher_(std::make_shared<noop_publisher>()) {
+assemble::assemble(const std::vector<data::locator_ptr> &locators, const std::string &mode, const std::string &role,
+                   const std::string &namespace_, const std::string &name)
+    : mode_(mode), role_(role), namespace_(namespace_), name_(name), publisher_(std::make_shared<noop_publisher>()) {
   for (auto &locator : locators) {
     locators_.push_back(locator);
     readers_.push_back(std::make_shared<reader>(true, false, std::make_shared<bus>(false)));
     auto reader = readers_.back();
-    for (auto &location : locator->list_locations(category, group, name, mode)) {
+    for (auto &location : locator->list_locations(role, namespace_, name, mode)) {
       for (auto dest_id : locator->list_location_dest(location)) {
         reader->join(location, dest_id, 0);
       }
@@ -71,7 +71,7 @@ assemble::assemble(const std::vector<data::locator_ptr> &locators, const std::st
 
 assemble::assemble(const data::location_ptr &source_location, uint32_t dest_id, uint32_t assemble_mode,
                    int64_t from_time)
-    : mode_("*"), category_("*"), group_("*"), name_("*"), publisher_(std::make_shared<noop_publisher>()) {
+    : mode_("*"), role_("*"), namespace_("*"), name_("*"), publisher_(std::make_shared<noop_publisher>()) {
   from_time_ = from_time;
   locators_.clear();
   readers_.clear();
@@ -116,15 +116,15 @@ assemble::assemble(const data::location_ptr &source_location, uint32_t dest_id, 
 }
 
 assemble assemble::operator+(assemble &other) {
-  if (mode_ != other.mode_ or category_ != other.category_ or group_ != other.group_ or name_ != other.name_) {
-    auto msg = fmt::format("assemble incompatible: {}/{}/{}/{}, {}/{}/{}/{}", category_, group_, name_, mode_,
-                           other.category_, other.group_, other.name_, other.mode_);
+  if (mode_ != other.mode_ or role_ != other.role_ or namespace_ != other.namespace_ or name_ != other.name_) {
+    auto msg = fmt::format("assemble incompatible: {}/{}/{}/{}, {}/{}/{}/{}", role_, namespace_, name_, mode_,
+                           other.role_, other.namespace_, other.name_, other.mode_);
     throw assemble_exception(msg);
   }
   std::vector<data::locator_ptr> merged_locators = {};
   merged_locators.insert(merged_locators.end(), locators_.begin(), locators_.end());
   merged_locators.insert(merged_locators.end(), other.locators_.begin(), other.locators_.end());
-  return assemble(merged_locators, mode_, category_, group_, name_);
+  return assemble(merged_locators, mode_, role_, namespace_, name_);
 }
 
 assemble &assemble::operator+=(const assemble &other) {
@@ -226,10 +226,10 @@ void assemble::seek_to_time(int64_t nano_time) {
   sort();
 }
 
-std::vector<frame_header> assemble::read_headers(int32_t msg_type, int64_t end_time) {
+std::vector<frame_header> assemble::read_headers(int32_t carrier_type, int64_t end_time) {
   std::vector<frame_header> v{};
   while (data_available() and current_frame()->gen_time() < end_time) {
-    if (msg_type == 0 or current_frame()->msg_type() == msg_type) {
+    if (carrier_type == 0 or current_frame()->carrier_type() == carrier_type) {
       v.push_back(*reinterpret_cast<frame_header *>(current_frame()->address()));
     }
     next();
@@ -237,12 +237,12 @@ std::vector<frame_header> assemble::read_headers(int32_t msg_type, int64_t end_t
   return v;
 }
 
-std::vector<std::pair<longfist::types::frame_header, std::vector<uint8_t>>> assemble::read_bytes(int32_t msg_type,
-                                                                                                 int64_t end_time) {
-  std::vector<std::pair<longfist::types::frame_header, std::vector<uint8_t>>> v{};
+std::vector<std::pair<yijinjing::types::frame_header, std::vector<uint8_t>>> assemble::read_bytes(int32_t carrier_type,
+                                                                                                  int64_t end_time) {
+  std::vector<std::pair<yijinjing::types::frame_header, std::vector<uint8_t>>> v{};
   while (data_available() and current_frame()->gen_time() < end_time) {
-    if (msg_type == 0 or
-        current_frame()->msg_type() == msg_type && current_page()->get_version() == __JOURNAL_VERSION__) {
+    if (carrier_type == 0 or
+        current_frame()->carrier_type() == carrier_type && current_page()->get_version() == __JOURNAL_VERSION__) {
       const frame_header &head = *reinterpret_cast<frame_header *>(current_frame()->address());
       std::vector<uint8_t> bytes{current_frame()->data_as_bytes(),
                                  current_frame()->data_as_bytes() + current_frame()->data_length()};

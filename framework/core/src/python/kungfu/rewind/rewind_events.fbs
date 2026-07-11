@@ -2,12 +2,12 @@
 //
 // Kungfu Rewind capture events — the open-layer event schema for `kungfu trace`.
 //
-// Layering: these are application types (msg_type 30001-30099, see
-// docs/msg-type-ranges.md), NOT longfist kernel types. They ride the journal as
-// self-describing open-layer events: the capture supervisor binds each msg_type
-// to this schema's .bfbs in the run manifest (content-addressed, per-run), so a
-// trace bundle decodes through FlatBuffers reflection without the runtime that
-// wrote it — the same mechanism slices/schema-registry pins.
+// Layering: these are application payload tables, NOT yijinjing kernel types.
+// They ride the journal inside kungfu.action-envelope/v1 frames: the frame
+// header carries the generic action carrier, and the envelope's action_type
+// binds to this schema's .bfbs in the run manifest (content-addressed,
+// per-run), so a trace bundle decodes through FlatBuffers reflection without
+// the runtime that wrote it — the same mechanism slices/schema-registry pins.
 //
 // Fact model: the frame header already carries the capture skeleton — gen_time
 // (nanosecond event time) and trigger_frame_uid (frame-level causality). These
@@ -17,7 +17,7 @@
 // in the fields schema checks assert on, and redaction happens at export time,
 // never at capture time.
 //
-// Evolution rules (same discipline as longfist fb schemas): append new fields
+// Evolution rules (same discipline as yijinjing schema): append new fields
 // at the tail only; never reorder, delete, or reuse field ids; no `required`
 // fields. Schema evolution happens between runs — two runs binding different
 // versions of this schema coexist and both decode.
@@ -73,7 +73,7 @@ enum Decision : byte {
   Resume = 3
 }
 
-// msg_type 30001. Opens a traced run; run_id is supervisor-assigned and shared
+// action_type rewind.run.begin. Opens a traced run; run_id is supervisor-assigned and shared
 // by every runtime and capture layer in the run — the single-journal anchor.
 table RunBegin {
   run_id:string;
@@ -83,14 +83,14 @@ table RunBegin {
   schema_version:uint;
 }
 
-// msg_type 30002. Closes a traced run.
+// action_type rewind.run.end. Closes a traced run.
 table RunEnd {
   run_id:string;
   status:RunStatus;
   exit_code:int;
 }
 
-// msg_type 30003. A model invocation as sent (wire request or hook call).
+// action_type rewind.model.request. A model invocation as sent (wire request or hook call).
 table ModelRequest {
   run_id:string;
   span_id:string;
@@ -102,7 +102,7 @@ table ModelRequest {
   attempt:uint;
 }
 
-// msg_type 30004. The model's answer; span_id matches its ModelRequest.
+// action_type rewind.model.response. The model's answer; span_id matches its ModelRequest.
 table ModelResponse {
   run_id:string;
   span_id:string;
@@ -116,7 +116,7 @@ table ModelResponse {
   latency_ns:long;
 }
 
-// msg_type 30005. A tool invocation observed in the run.
+// action_type rewind.tool.call. A tool invocation observed in the run.
 table ToolCall {
   run_id:string;
   span_id:string;
@@ -126,7 +126,7 @@ table ToolCall {
   input:string;
 }
 
-// msg_type 30006. The tool's outcome; error facts live here (status + error),
+// action_type rewind.tool.result. The tool's outcome; error facts live here (status + error),
 // span_id matches its ToolCall.
 table ToolResult {
   run_id:string;
@@ -138,7 +138,7 @@ table ToolResult {
   latency_ns:long;
 }
 
-// msg_type 30007. Marks a retry edge: attempt N of span retry_of_span_id.
+// action_type rewind.retry.marker. Marks a retry edge: attempt N of span retry_of_span_id.
 table RetryMarker {
   run_id:string;
   span_id:string;
@@ -147,7 +147,7 @@ table RetryMarker {
   reason:string;
 }
 
-// msg_type 30008. One normalized cost/usage fact tied to a unit of work — the
+// action_type rewind.cost.snapshot. One normalized cost/usage fact tied to a unit of work — the
 // journal form of cost/model.py CostSnapshot. Token counts ride inline; the
 // attribution label travels with the number so a reader never sees a cost
 // without knowing how it was joined. cost_usd is only meaningful when
@@ -177,7 +177,7 @@ table CostSnapshot {
   raw_ref:string;
 }
 
-// msg_type 30009. A human control decision recorded during a managed run. It
+// action_type rewind.approval.decision. A human control decision recorded during a managed run. It
 // binds to run_id, and to request_id when the provider surfaced a specific
 // request to approve; the frame header's gen_time is the decision time. detail
 // carries what was being decided (a command, a tool call), reason the optional

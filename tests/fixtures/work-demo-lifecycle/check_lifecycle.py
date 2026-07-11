@@ -20,14 +20,15 @@ sys.path.insert(0, os.path.join(_core, "src", "python"))
 sys.path.insert(0, os.path.join(_core, "dist", "kungfu"))
 
 from kungfu.work import (  # noqa: E402
-    MSG_ARTIFACT_RECORDED,
-    MSG_CHECKPOINT_RECORDED,
-    MSG_DECISION_RECORDED,
-    MSG_NEXT_ACTION_SET,
-    MSG_RUN_LINKED,
-    MSG_VALIDATION_RECORDED,
-    MSG_WORK_ITEM_CREATED,
-    MSG_WORK_STATUS_CHANGED,
+    ACTION_ARTIFACT_RECORDED,
+    ACTION_CHECKPOINT_RECORDED,
+    ACTION_DECISION_RECORDED,
+    ACTION_NEXT_ACTION_SET,
+    ACTION_RUN_LINKED,
+    ACTION_TYPE_NAMES,
+    ACTION_VALIDATION_RECORDED,
+    ACTION_WORK_ITEM_CREATED,
+    ACTION_WORK_STATUS_CHANGED,
 )
 from kungfu.work import store  # noqa: E402
 
@@ -44,24 +45,24 @@ def check(name, ok, detail=""):
 # ── journal: every event family present with the expected count ──────────
 frames = store.read_frames(runtime_dir)
 counts = {}
-for _gen_time, msg_type, _payload in frames:
-    counts[msg_type] = counts.get(msg_type, 0) + 1
+for _gen_time, action_type, _payload in frames:
+    counts[action_type] = counts.get(action_type, 0) + 1
 
 expected_counts = {
-    MSG_WORK_ITEM_CREATED: 1,
-    MSG_WORK_STATUS_CHANGED: 7,  # start/pause/resume/block/resume/ready/done
-    MSG_NEXT_ACTION_SET: 1,
-    MSG_CHECKPOINT_RECORDED: 1,
-    MSG_DECISION_RECORDED: 1,
-    MSG_VALIDATION_RECORDED: 1,
-    MSG_ARTIFACT_RECORDED: 1,
-    MSG_RUN_LINKED: 1,
+    ACTION_WORK_ITEM_CREATED: 1,
+    ACTION_WORK_STATUS_CHANGED: 7,  # start/pause/resume/block/resume/ready/done
+    ACTION_NEXT_ACTION_SET: 1,
+    ACTION_CHECKPOINT_RECORDED: 1,
+    ACTION_DECISION_RECORDED: 1,
+    ACTION_VALIDATION_RECORDED: 1,
+    ACTION_ARTIFACT_RECORDED: 1,
+    ACTION_RUN_LINKED: 1,
 }
-for msg_type, expected in expected_counts.items():
+for action_type, expected in expected_counts.items():
     check(
-        f"{store.MSG_TYPE_NAMES[msg_type]} x{expected}",
-        counts.get(msg_type, 0) == expected,
-        f"got {counts.get(msg_type, 0)}",
+        f"{ACTION_TYPE_NAMES[action_type]} x{expected}",
+        counts.get(action_type, 0) == expected,
+        f"got {counts.get(action_type, 0)}",
     )
 
 # frames arrive in event-time order

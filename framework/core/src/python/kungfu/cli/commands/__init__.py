@@ -7,7 +7,7 @@ import os
 import typing
 from click.globals import get_current_context
 from functools import update_wrapper
-from kungfu.config import default_runtime_home
+from kungfu.config import default_config_home, default_runtime_home
 
 # click 8.1.7+ 移除了私有 TypeVar F；CLI 仅用于装饰器类型标注，改本地定义不依赖 click 内部符号。
 CLI = typing.TypeVar("CLI", bound=typing.Callable[..., typing.Any])
@@ -91,11 +91,11 @@ class PrioritizedCommandGroup(click.Group):
 
                 for key in [
                     "name",
+                    "config_home",
                     "home",
                     "extension_path",
                     "log_level",
                     "runtime_dir",
-                    "archive_dir",
                     "dataset_dir",
                     "inbox_dir",
                     "runtime_locator",
@@ -155,8 +155,10 @@ def kfc(ctx, home, extension_path, log_level, name, stage, env_verify_location):
 
     runtime_dir_override = os.environ.get("KF_RUNTIME_DIR") if not home else None
     home = default_runtime_home() if not home else home
+    config_home = default_config_home()
     ctx.extension_path = extension_path
 
+    os.environ["KF_CONFIG_HOME"] = ctx.config_home = config_home
     os.environ["KF_HOME"] = ctx.home = home
     os.environ["KF_LOG_LEVEL"] = ctx.log_level = log_level
 
@@ -173,13 +175,12 @@ def kfc(ctx, home, extension_path, log_level, name, stage, env_verify_location):
     else:
         ctx.runtime_dir = ensure_dir(ctx, "runtime")
     os.environ["KF_RUNTIME_DIR"] = ctx.runtime_dir
-    ctx.archive_dir = ensure_dir(ctx, "archive")
     ctx.dataset_dir = ensure_dir(ctx, "dataset")
     ctx.backtest_dir = ensure_dir(ctx, "backtest")
     ctx.inbox_dir = ensure_dir(ctx, "inbox")
 
-    lf = kungfu.__binding__.longfist
-    yjj = kungfu.__binding__.yijinjing
+    lf = kungfu.__binding__.yijinjing
+    yjj = kungfu.__binding__.runtime
 
     # have to keep locator alive from python side
     # https://github.com/pybind/pybind11/issues/1546
@@ -187,21 +188,21 @@ def kfc(ctx, home, extension_path, log_level, name, stage, env_verify_location):
     ctx.backtest_locator = yjj.locator(lf.enums.mode.BACKTEST)
     ctx.config_location = yjj.location(
         lf.enums.mode.LIVE,
-        lf.enums.category.SYSTEM,
+        lf.enums.location_role.SYSTEM,
         "etc",
         "kungfu",
         ctx.runtime_locator,
     )
     ctx.console_location = yjj.location(
         lf.enums.mode.LIVE,
-        lf.enums.category.SYSTEM,
+        lf.enums.location_role.SYSTEM,
         "service",
         "console",
         ctx.runtime_locator,
     )
     ctx.index_location = yjj.location(
         lf.enums.mode.LIVE,
-        lf.enums.category.SYSTEM,
+        lf.enums.location_role.SYSTEM,
         "journal",
         "index",
         ctx.runtime_locator,
