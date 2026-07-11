@@ -246,10 +246,10 @@ test('product gui dist dry-run supports a product assembly directory', () => {
     join(repoRoot, 'product'),
     '--dry-run',
   ]);
-  assert.match(output, /system\/status/);
+  assert.match(output, /system[\\/]status/);
   assert.match(output, /assemble kfx ->/);
-  assert.match(output, /framework\/tui/);
-  assert.match(output, /framework\/gui/);
+  assert.match(output, /framework[\\/]tui/);
+  assert.match(output, /framework[\\/]gui/);
   assert.match(output, /run-electron-builder\.mjs/);
   assert.match(output, /electron-builder\.yml/);
 });
