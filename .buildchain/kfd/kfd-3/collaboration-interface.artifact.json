@@ -10,8 +10,8 @@
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "94f70fdeccf6751e0c3ef4247320e17b6edf4b4bc650e09d39f7a8762eeea389",
-    "digest": "sha256:d1751b4ff3e01f2539a626680a8c41014061e51d780eb3e71c9ca205d781f804"
+    "sha256": "4ad826ed07f44d56dbd2c4563bec335f5efc80efa72877f0349927ff5b8461f5",
+    "digest": "sha256:6d5f91fecb3acc9d9aae58d8a7b4284fe4f9f36e049c472a4554f4922fe9a113"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -28,7 +28,7 @@
     },
     "digest": "sha256:a86ddd8755809f5337e11023a8218d513c87d58077265007f1d207ef957f4761"
   },
-  "collaborationInterfaceDigest": "sha256:ef61ba1a9b5c6cefe637c41b11a44c8aed390546acc0ac18828dee9ea77b751b",
+  "collaborationInterfaceDigest": "sha256:bf126033ca00e382430adedc50b3daaf4653d366e262527d1a7046031262572e",
   "exposedSurfaces": [
     {
       "id": "kungfu.agent",
@@ -628,6 +628,30 @@
         "owner": "kungfu",
         "source": "scripts/buildchain-kfd-evidence.mjs",
         "sourcePath": "product/scripts/dist.mjs"
+      },
+      "distribution": {
+        "registrar": "shifu",
+        "tasks": [
+          "dist",
+          "package"
+        ],
+        "artifacts": [
+          {
+            "kind": "app",
+            "platform": "macos",
+            "pathGlob": "product/dist/desktop/mac*/*.app"
+          },
+          {
+            "kind": "installer",
+            "platform": "windows",
+            "pathGlob": "product/dist/desktop/*.exe"
+          },
+          {
+            "kind": "appimage",
+            "platform": "linux",
+            "pathGlob": "product/dist/desktop/*.AppImage"
+          }
+        ]
       }
     },
     {

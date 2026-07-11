@@ -3,10 +3,10 @@
 // `shifu promote` / `shifu builds` — use the freshest built dev kungfu from
 // any terminal.
 //
-// Builds happen in worktrees, and worktrees are temporary: the product
-// pipeline therefore stashes each successful desktop build user-globally
-// (product/scripts/register-build.mjs), and these verbs consume that stash —
-// the directory IS the registry:
+// Builds happen in worktrees, and worktrees are temporary: the launcher
+// therefore stashes each successful build user-globally as declared by the
+// repo's KFD-3 registry (crates/shifu/src/registrar.rs), and these verbs
+// consume that stash — the directory IS the registry:
 //
 //   ${XDG_CACHE_HOME:-~/.cache}/kungfu/product/<os>-<arch>/<utc-ts>-<sha>/
 //     meta.env      KEY='VALUE' lines (build-local.env shape)

@@ -585,23 +585,6 @@ function stageDesktopRelease() {
   });
 }
 
-// Post-success bookkeeping: stash the unpacked desktop artifact user-globally
-// so `shifu promote` can install the freshest dev build from any terminal,
-// surviving worktree cleanup. Advisory by design — a registration failure
-// must not fail a build that already succeeded.
-function registerDevBuild() {
-  const result = spawnSync(
-    process.execPath,
-    [path.join(PRODUCT_DIR, 'scripts', 'register-build.mjs')],
-    { stdio: 'inherit' },
-  );
-  if (result.status !== 0) {
-    console.warn(
-      '[product] warning: dev build registration failed; shifu promote will not see this build',
-    );
-  }
-}
-
 function assertCoreFrozen() {
   const kungfuBin = path.join(CORE_DIST, isWin ? 'kungfu.exe' : 'kungfu');
   if (!fs.existsSync(kungfuBin)) {
@@ -1110,7 +1093,9 @@ function main() {
           },
         );
         stageDesktopRelease();
-        registerDevBuild();
+        // Build registration (for `shifu builds` / `shifu promote`) is not a
+        // build step: the launcher reads the KFD-3 distribution declaration
+        // and stashes the artifact after this task exits successfully.
       }
       if (wantsCli()) {
         buildCliProduct();

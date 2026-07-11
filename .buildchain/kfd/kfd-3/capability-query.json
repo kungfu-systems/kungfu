@@ -661,7 +661,7 @@
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
         "sourcePath": "product/scripts/dist.mjs",
         "artifactPath": "product/package.json",
-        "digest": "sha256:bd5e3d86eeeeff676c95cab599d63bb1bce980a46461010883b9fd48d6e93756"
+        "digest": "sha256:d8d7ee2a25e7490a2e5c5201fa31573fc88652d2b4557bf1ac7bbb6cbc48f32e"
       },
       "kfd2Trust": {
         "status": "release-passport-required",

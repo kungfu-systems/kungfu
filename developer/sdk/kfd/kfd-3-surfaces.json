@@ -666,6 +666,30 @@
         "owner": "kungfu",
         "source": "scripts/buildchain-kfd-evidence.mjs",
         "sourcePath": "product/scripts/dist.mjs"
+      },
+      "distribution": {
+        "registrar": "shifu",
+        "tasks": [
+          "dist",
+          "package"
+        ],
+        "artifacts": [
+          {
+            "kind": "app",
+            "platform": "macos",
+            "pathGlob": "product/dist/desktop/mac*/*.app"
+          },
+          {
+            "kind": "installer",
+            "platform": "windows",
+            "pathGlob": "product/dist/desktop/*.exe"
+          },
+          {
+            "kind": "appimage",
+            "platform": "linux",
+            "pathGlob": "product/dist/desktop/*.AppImage"
+          }
+        ]
       }
     },
     {

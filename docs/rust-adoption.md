@@ -247,3 +247,41 @@ and checklists. Two legs, one discipline each:
 Distribution-wise the library is deliberately invisible: never published,
 never tagged, no shim, version not lerna-synced — the launcher's release pin
 surface stays exactly one crate wide.
+
+### KFD-declared build registration
+
+`shifu builds` / `shifu promote` consume a user-global build stash, and the
+stash is fed by declaration, not by script. A repo that wants its builds
+registered states the facts in its Buildchain-managed KFD-3 surface registry
+(`.buildchain/kfd/kfd-3/surfaces.json`), on the surface that produces the
+artifact:
+
+```json
+"distribution": {
+  "registrar": "shifu",
+  "tasks": ["dist", "package"],
+  "artifacts": [
+    { "kind": "app", "platform": "macos", "pathGlob": "product/dist/desktop/mac*/*.app" },
+    { "kind": "installer", "platform": "windows", "pathGlob": "product/dist/desktop/*.exe" },
+    { "kind": "appimage", "platform": "linux", "pathGlob": "product/dist/desktop/*.AppImage" }
+  ]
+}
+```
+
+When a task named in a declaration succeeds under the launcher, shifu reads
+the declaration back (`crates/shifu/src/registrar.rs`), resolves the host
+platform's artifact, verifies it (a pinned `sha256` must match; for dev
+builds, whose content is only known after the build, the computed hash of a
+file artifact is recorded for provenance), and stashes it in the registry
+that `builds` / `promote` already read. Registration is advisory: a build
+that succeeded is never failed by its own bookkeeping — every problem is a
+named warning and the task's exit code passes through.
+
+The division of labor is deliberate. Build logic stays declarative in the
+repo; what the launcher carries is the one thing repo scripts cannot do for
+themselves: outlive the build. Worktrees are temporary, so the stash is
+user-global and the registrar runs in the process that survives the task —
+which is also why onboarding a new repo costs zero scripts: declare the
+artifacts in the KFD registry and the installed launcher does the rest. The
+KFD registry was already the repo's fact ledger; letting the recorded facts
+drive distribution is the same load-bearing member carrying one more load.

@@ -545,7 +545,15 @@ function runNodeScript(args, { expectJson = true } = {}) {
   return expectJson ? JSON.parse(result.stdout) : result.stdout;
 }
 
-function fileSurface({ id, name, kind, sourcePath, evidencePath, maturity }) {
+function fileSurface({
+  id,
+  name,
+  kind,
+  sourcePath,
+  evidencePath,
+  maturity,
+  distribution,
+}) {
   return {
     id,
     name,
@@ -565,6 +573,7 @@ function fileSurface({ id, name, kind, sourcePath, evidencePath, maturity }) {
       source: 'scripts/buildchain-kfd-evidence.mjs',
       sourcePath,
     },
+    ...(distribution ? { distribution } : {}),
   };
 }
 
@@ -681,6 +690,32 @@ function sdkAndProductSurfaces() {
       sourcePath: 'product/scripts/dist.mjs',
       evidencePath: 'product/package.json',
       maturity: 'stable',
+      // Build-output facts for the shifu registrar: when one of these tasks
+      // succeeds under shifu, the launcher stashes the host platform's
+      // artifact user-globally for `shifu builds` / `shifu promote`
+      // (crates/shifu/src/registrar.rs). Declaration, not script — a repo
+      // onboards its artifacts by stating them here.
+      distribution: {
+        registrar: 'shifu',
+        tasks: ['dist', 'package'],
+        artifacts: [
+          {
+            kind: 'app',
+            platform: 'macos',
+            pathGlob: 'product/dist/desktop/mac*/*.app',
+          },
+          {
+            kind: 'installer',
+            platform: 'windows',
+            pathGlob: 'product/dist/desktop/*.exe',
+          },
+          {
+            kind: 'appimage',
+            platform: 'linux',
+            pathGlob: 'product/dist/desktop/*.AppImage',
+          },
+        ],
+      },
     }),
     fileSurface({
       id: 'kungfu.product.cli-release-build',
