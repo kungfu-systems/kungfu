@@ -14,7 +14,9 @@
 #     -DCMAKE_TOOLCHAIN_FILE=<repo>/framework/core/build/conan_toolchain.cmake
 #   cmake --build build
 
-set(CMAKE_CXX_STANDARD 17)
+# Match the core build (gnu++23): the public yijinjing schema headers use
+# C++20+ features, so extensions cannot compile against them with C++17.
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 get_filename_component(KF_CORE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../framework/core" ABSOLUTE)
@@ -28,6 +30,12 @@ list(PREPEND CMAKE_MODULE_PATH "${KF_CORE_DIR}/build")
 
 find_package(pybind11 REQUIRED)
 find_package(flatbuffers REQUIRED)
+# kungfu/common.h pulls fmt, nlohmann/json, spdlog, and boost::hana into the
+# public header surface, so every consumer of the libkungfu/libyijinjing
+# headers needs the same dependency set the yijinjing target exports.
+find_package(fmt REQUIRED)
+find_package(nlohmann_json REQUIRED)
+find_package(spdlog REQUIRED)
 
 # The built libkungfu shared library.
 find_library(KF_LIBKUNGFU
@@ -46,5 +54,13 @@ macro(kungfu_cpp_extension _target)
   target_include_directories(${_target} PRIVATE
     "${KF_CORE_DIR}/src/libkungfu/include"
     "${KF_CORE_DIR}/src/libyijinjing/include")
-  target_link_libraries(${_target} PRIVATE ${KF_LIBKUNGFU} flatbuffers::flatbuffers)
+  # boost::hana is header-only and vendored next to the core tree (the same
+  # copy the yijinjing target exports PUBLIC).
+  if(EXISTS "${KF_CORE_DIR}/.deps/hana-1.80.0/include")
+    target_include_directories(${_target} PRIVATE "${KF_CORE_DIR}/.deps/hana-1.80.0/include")
+  endif()
+  target_link_libraries(${_target} PRIVATE ${KF_LIBKUNGFU} flatbuffers::flatbuffers
+    $<IF:$<TARGET_EXISTS:fmt::fmt-header-only>,fmt::fmt-header-only,fmt::fmt>
+    $<IF:$<TARGET_EXISTS:spdlog::spdlog_header_only>,spdlog::spdlog_header_only,spdlog::spdlog>
+    nlohmann_json::nlohmann_json)
 endmacro()
