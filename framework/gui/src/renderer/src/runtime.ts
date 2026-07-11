@@ -10,6 +10,7 @@ import {
   type PtyModule,
   type RemoteWork,
   type Rewind,
+  type Storage,
   type Terminal,
   type TmuxBinding,
   type Work,
@@ -19,6 +20,7 @@ import {
   openLedger,
   openRemoteWork,
   openRewind,
+  openStorage,
   openTerminal,
   openWork,
 } from '@kungfu-tech/api/capability';
@@ -118,6 +120,7 @@ export type Runtime = {
   ledger: Ledger | null;
   domain: DomainState | null;
   rewind: Rewind | null;
+  storage: Storage | null;
   remoteWork: RemoteWork | null;
   terminal: Terminal | null;
   work: Work | null;
@@ -154,6 +157,7 @@ export function bootRuntime(): Runtime {
     ledger: null,
     domain: null,
     rewind: null,
+    storage: null,
     remoteWork: null,
     terminal: null,
     work: null,
@@ -214,6 +218,7 @@ export function bootRuntime(): Runtime {
       readFile: (p: string) => rewindFs.readFileSync(p),
       readDir: (d: string) => rewindFs.readdirSync(d),
     });
+    const storage = openStorage({ binding, locator: { runtimeDir } });
     const work = openWork({
       binding,
       locator: { runtimeDir },
@@ -283,6 +288,7 @@ export function bootRuntime(): Runtime {
       ledger,
       domain,
       rewind,
+      storage,
       remoteWork,
       terminal,
       work,
