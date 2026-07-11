@@ -16,8 +16,12 @@ pub const CAP_EPISODE_LIFECYCLE: u64 = 1 << 0;
 pub const CAP_HEAD_AND_HISTORICAL_QUERY: u64 = 1 << 1;
 pub const CAP_FSCK: u64 = 1 << 2;
 pub const CAP_EXPORT: u64 = 1 << 3;
-pub const REQUIRED_CAPABILITIES: u64 =
-    CAP_EPISODE_LIFECYCLE | CAP_HEAD_AND_HISTORICAL_QUERY | CAP_FSCK | CAP_EXPORT;
+pub const CAP_DOMAIN_FACT_ADMISSION: u64 = 1 << 4;
+pub const REQUIRED_CAPABILITIES: u64 = CAP_EPISODE_LIFECYCLE
+    | CAP_HEAD_AND_HISTORICAL_QUERY
+    | CAP_FSCK
+    | CAP_EXPORT
+    | CAP_DOMAIN_FACT_ADMISSION;
 
 const STATUS_OK: i32 = 0;
 
@@ -239,7 +243,20 @@ mod tests {
 
     #[test]
     fn public_capability_mask_matches_native_v1() {
-        assert_eq!(REQUIRED_CAPABILITIES, 0b1111);
+        assert_eq!(REQUIRED_CAPABILITIES, 0b1_1111);
+    }
+
+    #[cfg(feature = "link-native")]
+    #[test]
+    fn domain_fact_contract_is_forwarded_without_rust_semantic_duplication() {
+        let runtime_dir = std::env::temp_dir().join("kungfu-sdk-domain-fact-contract");
+        let mut storage = NativeStorage::open(&runtime_dir).expect("open native storage");
+        let contract = storage
+            .execute_json("fact_contract", "{}")
+            .expect("read the libkungfu-owned contract");
+        assert!(contract.contains("kungfu.facts.domain-admission/v1"));
+        assert!(contract.contains("unregistered-surface"));
+        assert!(contract.contains("ambiguous-authority"));
     }
 
     #[test]

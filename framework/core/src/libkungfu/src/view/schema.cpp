@@ -153,6 +153,54 @@ bool schema_handle::verify_table(const uint8_t *buf, size_t len) const {
   return flatbuffers::Verify(*s, *s->root_table(), buf, len);
 }
 
+table_codec_result schema_handle::encode_json(std::string_view json) const {
+  table_codec_result result;
+  if (!bfbs_) {
+    result.error = "kungfu::view: cannot encode without a schema";
+    return result;
+  }
+  flatbuffers::IDLOptions options;
+  options.strict_json = true;
+  options.output_default_scalars_in_json = true;
+  flatbuffers::Parser parser(options);
+  if (!parser.Deserialize(schema_of(*bfbs_))) {
+    result.error = "kungfu::view: cannot deserialize reflection schema";
+    return result;
+  }
+  const auto source = std::string(json);
+  if (!parser.ParseJson(source.c_str())) {
+    result.error = parser.error_;
+    return result;
+  }
+  const auto *buffer = reinterpret_cast<const char *>(parser.builder_.GetBufferPointer());
+  result.bytes.assign(buffer, parser.builder_.GetSize());
+  result.ok = true;
+  return result;
+}
+
+table_codec_result schema_handle::decode_json(const uint8_t *buf, size_t len) const {
+  table_codec_result result;
+  if (!verify_table(buf, len)) {
+    result.error = "kungfu::view: FlatBuffers table failed schema verification";
+    return result;
+  }
+  flatbuffers::IDLOptions options;
+  options.strict_json = true;
+  options.output_default_scalars_in_json = true;
+  flatbuffers::Parser parser(options);
+  if (!parser.Deserialize(schema_of(*bfbs_))) {
+    result.error = "kungfu::view: cannot deserialize reflection schema";
+    return result;
+  }
+  if (const auto *error = flatbuffers::GenerateText(parser, buf, &result.json); error != nullptr) {
+    result.error = error;
+    result.json.clear();
+    return result;
+  }
+  result.ok = true;
+  return result;
+}
+
 std::string create_ddl(const std::vector<col_plan> &cols, std::string_view table, bool thin) {
   std::string ddl = "CREATE TABLE IF NOT EXISTS " + std::string(table) + " (";
   std::vector<std::string> pk;

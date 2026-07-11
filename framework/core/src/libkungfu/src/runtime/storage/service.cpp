@@ -21,6 +21,7 @@
 #include <vector>
 
 #include <kungfu/runtime/action_recorder.h>
+#include <kungfu/runtime/facts/fact_admission.h>
 #include <kungfu/runtime/query/fact_query.h>
 #include <kungfu/runtime/storage/episode_manifest_projection.h>
 #include <kungfu/runtime/storage/manifest_catalog_projection.h>
@@ -969,6 +970,7 @@ nlohmann::json workspace_episode_layout(const storage_service_options &options, 
       journal_dir / "system" / yy_storage::MANIFEST_CATALOG_NAMESPACE / yy_storage::MANIFEST_CATALOG_NAME / "live";
   const auto source_registry_journal_dir =
       journal_dir / "system" / yy_storage::SOURCE_REGISTRY_NAMESPACE / yy_storage::SOURCE_REGISTRY_NAME / "live";
+  const auto domain_fact_journal_dir = journal_dir / "system" / "facts" / "admission" / "live";
   const auto manifest_entries_pattern = storage_dir / "manifests" / "<hash-prefix>" / "<sha256>";
   const auto payload_pattern = storage_dir / "payloads" / "<hash-prefix>" / "<sha256>";
 
@@ -1003,6 +1005,7 @@ nlohmann::json workspace_episode_layout(const storage_service_options &options, 
         {"manifest_catalog_projection", manifest_catalog_projection(runtime.string()).sqlite_path()},
         {"episode_manifest_journal_dir", episode_manifest_dir.string()},
         {"episode_manifest_journal", (episode_manifest_dir / "*.journal").string()},
+        {"domain_fact_journal", (domain_fact_journal_dir / "*.journal").string()},
         {"master_state", (runtime / "master").string()},
         {"remote_mirrors", (runtime / "remotes" / "<source-id>" / "runtime").string()},
         {"atlas_store", (runtime / "atlas" / "store").string()}}},
@@ -1014,9 +1017,16 @@ nlohmann::json workspace_episode_layout(const storage_service_options &options, 
         {"manifest_journal", (episode_manifest_dir / "*.journal").string()},
         {"query_tables", nlohmann::json::array({"episodes", "episode_records", "episode_frames", "episode_refs"})},
         {"export_schema", "kungfu.storage.episode-bundle/v1"}}},
+      {"domain_facts",
+       {{"authority", "yijinjing-journal"},
+        {"event_schema", facts::DOMAIN_FACT_EVENT_SCHEMA_V1},
+        {"journal", (domain_fact_journal_dir / "*.journal").string()},
+        {"contract", facts::fact_contract_json()}}},
       {"ownership",
        {{"journal_dir", "append-only yijinjing frames owned by the resolved runtime"},
         {"episode_manifest_journal", "append-only yijinjing manifest records; not loose JSON authority"},
+        {"domain_fact_journal",
+         "action-envelope frames with FlatBuffers-owned declarations, observations, and admission decisions"},
         {"storage_dir", "runtime storage service area for content-addressed bodies, provider databases, and "
                         "projections"},
         {"source_registry_journal", "append-only yijinjing source-registry kernel records; the source catalog"},
@@ -3316,6 +3326,31 @@ public:
     return query::query_result_json(query::run_episode_authority_scan(options.runtime_dir, plan));
   }
 
+  [[nodiscard]] nlohmann::json fact_contract(const storage_service_options &options) const override {
+    (void)options;
+    return facts::fact_contract_json();
+  }
+
+  [[nodiscard]] nlohmann::json fact_declare_world(const storage_service_options &options) const override {
+    return facts::declare_contract_world(options.runtime_dir, object_or_empty(options.operation_options, "declaration"),
+                                         int64_or(options.operation_options, "system_time"));
+  }
+
+  [[nodiscard]] nlohmann::json fact_declare_surface(const storage_service_options &options) const override {
+    return facts::declare_fact_surface(options.runtime_dir, object_or_empty(options.operation_options, "declaration"),
+                                       int64_or(options.operation_options, "system_time"));
+  }
+
+  [[nodiscard]] nlohmann::json fact_observe(const storage_service_options &options) const override {
+    return facts::record_observation(options.runtime_dir, object_or_empty(options.operation_options, "observation"),
+                                     int64_or(options.operation_options, "system_time"));
+  }
+
+  [[nodiscard]] nlohmann::json fact_state(const storage_service_options &options) const override {
+    return facts::query_fact_state(options.runtime_dir, int64_or(options.operation_options, "cut_system_time"),
+                                   text_or(options.operation_options, "subject_key"));
+  }
+
   [[nodiscard]] nlohmann::json layout(const storage_service_options &options) const override {
     const auto provider = shared_provider(options);
     return workspace_episode_layout(options, *provider);
@@ -3453,6 +3488,11 @@ std::vector<std::string> storage_operation_names() {
       storage_operation_name(storage_operation::Query),
       storage_operation_name(storage_operation::QueryPlan),
       storage_operation_name(storage_operation::FactQuery),
+      storage_operation_name(storage_operation::FactContract),
+      storage_operation_name(storage_operation::FactDeclareWorld),
+      storage_operation_name(storage_operation::FactDeclareSurface),
+      storage_operation_name(storage_operation::FactObserve),
+      storage_operation_name(storage_operation::FactState),
       storage_operation_name(storage_operation::Layout),
       storage_operation_name(storage_operation::EpisodeBegin),
       storage_operation_name(storage_operation::EpisodeHeartbeat),
@@ -3502,6 +3542,16 @@ std::string storage_operation_name(storage_operation operation) {
     return "query_plan";
   case storage_operation::FactQuery:
     return "fact_query";
+  case storage_operation::FactContract:
+    return "fact_contract";
+  case storage_operation::FactDeclareWorld:
+    return "fact_declare_world";
+  case storage_operation::FactDeclareSurface:
+    return "fact_declare_surface";
+  case storage_operation::FactObserve:
+    return "fact_observe";
+  case storage_operation::FactState:
+    return "fact_state";
   case storage_operation::Layout:
     return "layout";
   case storage_operation::EpisodeBegin:
@@ -3584,6 +3634,21 @@ storage_operation parse_storage_operation(const std::string &operation) {
   }
   if (operation == "fact_query") {
     return storage_operation::FactQuery;
+  }
+  if (operation == "fact_contract") {
+    return storage_operation::FactContract;
+  }
+  if (operation == "fact_declare_world") {
+    return storage_operation::FactDeclareWorld;
+  }
+  if (operation == "fact_declare_surface") {
+    return storage_operation::FactDeclareSurface;
+  }
+  if (operation == "fact_observe") {
+    return storage_operation::FactObserve;
+  }
+  if (operation == "fact_state") {
+    return storage_operation::FactState;
   }
   if (operation == "layout") {
     return storage_operation::Layout;
@@ -3729,6 +3794,16 @@ nlohmann::json run_storage_service_operation(const std::string &operation, const
     return storage_service_instance().query_plan(parsed_options);
   case storage_operation::FactQuery:
     return storage_service_instance().fact_query(parsed_options);
+  case storage_operation::FactContract:
+    return storage_service_instance().fact_contract(parsed_options);
+  case storage_operation::FactDeclareWorld:
+    return storage_service_instance().fact_declare_world(parsed_options);
+  case storage_operation::FactDeclareSurface:
+    return storage_service_instance().fact_declare_surface(parsed_options);
+  case storage_operation::FactObserve:
+    return storage_service_instance().fact_observe(parsed_options);
+  case storage_operation::FactState:
+    return storage_service_instance().fact_state(parsed_options);
   case storage_operation::Layout:
     return storage_service_instance().layout(parsed_options);
   case storage_operation::EpisodeBegin:
@@ -3978,6 +4053,12 @@ nlohmann::json storage_service_capabilities() {
              {"path", "journal/system/storage/episode-manifest/live/*.journal"},
              {"query_tables", nlohmann::json::array({"episodes", "episode_records", "episode_frames", "episode_refs"})},
              {"export_schema", "kungfu.storage.episode-bundle/v1"},
+             {"rebuildable", false}},
+            {{"name", "domain-fact-admission"},
+             {"schema", facts::DOMAIN_FACT_EVENT_SCHEMA_V1},
+             {"authority", "yijinjing-journal"},
+             {"path", "journal/system/facts/admission/live/*.journal"},
+             {"contract", facts::fact_contract_json()},
              {"rebuildable", false}}})},
       {"notes",
        nlohmann::json::array({

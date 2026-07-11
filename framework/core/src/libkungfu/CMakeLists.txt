@@ -2,6 +2,18 @@ project(${LIBKUNGFU_NAME})
 
 enable_windows_export_all_symbols()
 
+# ADR-0051 domain-fact events keep the checked-in .fbs as the single schema
+# owner. The generated header only embeds that source text so libkungfu can
+# compile/verify it through kungfu::view without shipping a duplicate schema.
+file(READ "${PROJECT_SOURCE_DIR}/schemas/domain_fact_event.fbs" DOMAIN_FACT_EVENT_FBS)
+set(KUNGFU_GENERATED_INCLUDE_DIR "${KUNGFU_BUILD_DIR}/generated/include")
+file(MAKE_DIRECTORY "${KUNGFU_GENERATED_INCLUDE_DIR}/kungfu/runtime/facts")
+configure_file(
+  "${PROJECT_SOURCE_DIR}/schemas/domain_fact_schema.h.in"
+  "${KUNGFU_GENERATED_INCLUDE_DIR}/kungfu/runtime/facts/domain_fact_schema.h"
+  @ONLY
+)
+
 # this directory holds the libkungfu runtime layer above the standalone
 # yijinjing journal core, so the source GLOB needs no exclusion list beyond the
 # cache/optim split
@@ -17,7 +29,7 @@ add_library_object(kungfu_optim "${KUNGFU_OPTIM_SOURCE_FILES}" "${COMPILER_OPTIM
 # usage requirements (headers, hana, cxx_std_23) at their own scope
 set(LIBKUNGFU_SQLITE_ORM_INCLUDE ${PROJECT_SOURCE_DIR}/../../.deps/sqlite_orm-1.7.1/include)
 foreach(_kf_obj kungfu_cache kungfu_optim)
-  target_include_directories(${_kf_obj} PRIVATE ${PROJECT_SOURCE_DIR}/include ${LIBKUNGFU_SQLITE_ORM_INCLUDE})
+  target_include_directories(${_kf_obj} PRIVATE ${PROJECT_SOURCE_DIR}/include ${KUNGFU_GENERATED_INCLUDE_DIR} ${LIBKUNGFU_SQLITE_ORM_INCLUDE})
   target_link_libraries(${_kf_obj} PRIVATE yijinjing)
 endforeach()
 
@@ -38,7 +50,7 @@ target_compile_options(${LIBKUNGFU_NAME} PRIVATE "$<$<CONFIG:Release>:${COMPILER
 # PUBLIC so bindings linking libkungfu inherit the core usage requirements.
 # The runtime headers and sqlite_orm are PUBLIC for the same reason: binding
 # sources include the cache/practice headers directly.
-target_include_directories(${LIBKUNGFU_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include ${LIBKUNGFU_SQLITE_ORM_INCLUDE})
+target_include_directories(${LIBKUNGFU_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include ${KUNGFU_GENERATED_INCLUDE_DIR} ${LIBKUNGFU_SQLITE_ORM_INCLUDE})
 target_link_libraries(${LIBKUNGFU_NAME} PUBLIC yijinjing ${CONAN_LIBS})
 
 # Windows AppContainer guest launcher (ADR-0014) lives in the runtime sandbox

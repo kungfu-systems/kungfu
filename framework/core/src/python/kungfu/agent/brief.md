@@ -31,6 +31,10 @@ Use the modes this way:
 - **report**: create or inspect structured work facts with `kungfu work`, and
   append external run facts with `kungfu report`. Native Codex goals should use
   `kungfu codex report-goal` and verify the receipt before closeout.
+- **domain-facts**: when a user has explicitly declared a contract world and
+  schema-owned fact surface, use the experimental `kungfu facts` commands to
+  record observations, inspect admission outcomes, and replay a historical
+  system-time cut. Recording is not admission or external truth.
 - **atlas-projection**: snapshot an Atlas-style control-plane repo with
   `kungfu atlas import` when the user asks to sync, inspect, or visualize
   missions, goals, and worktree markers in Kungfu.

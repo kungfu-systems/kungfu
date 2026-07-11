@@ -1,6 +1,9 @@
 # ADR-0051: KFD contract worlds govern fact admission, historical interpretation, and trust assessment
 
 - Status: accepted; implementation staged
+- Implemented slice: FlatBuffers-owned user/domain declarations, journaled
+  per-observation admission, effective-time replay, correction, retraction, and
+  source-conflict fold; KFD-2 TrustReport and SDK scaffolding remain staged.
 - Date: 2026-07-11
 - Category: architecture — fact ontology and trust semantics
 - Subsystem: KFD declarations, runtime fact ledger, Episode fold, query basis,

@@ -455,6 +455,56 @@
       "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
     },
     {
+      "id": "kungfu.facts.capabilities",
+      "surface": "cli",
+      "name": "kungfu facts capabilities",
+      "purpose": "Discover the libkungfu-owned declaration, admission, time, and journal contract for user or domain facts.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.facts.declare-world",
+      "surface": "cli",
+      "name": "kungfu facts declare-world --file world.json --system-time <ns>",
+      "purpose": "Journal an effective-time contract-world declaration and bind it to a sealed Episode.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.facts.declare-surface",
+      "surface": "cli",
+      "name": "kungfu facts declare-surface --file surface.json --system-time <ns>",
+      "purpose": "Journal one FlatBuffers-owned fact-surface declaration under an exact contract-world root.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.facts.observe",
+      "surface": "cli",
+      "name": "kungfu facts observe --file observation.json --system-time <ns>",
+      "purpose": "Record an observation plus its replayable admitted, rejected, ambiguous, or unverifiable outcome.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.facts.state",
+      "surface": "cli",
+      "name": "kungfu facts state --cut-system-time <ns> --subject-key <key>",
+      "purpose": "Fold admitted facts at head or a historical declaration cut while preserving correction, retraction, and source conflict history.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
       "id": "kungfu.remote.add",
       "surface": "cli",
       "name": "kungfu remote add <source-id> --host <host> --home <kf-home> --json",

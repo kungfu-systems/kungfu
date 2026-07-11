@@ -71,6 +71,11 @@ enum class storage_operation {
   Query,
   QueryPlan,
   FactQuery,
+  FactContract,
+  FactDeclareWorld,
+  FactDeclareSurface,
+  FactObserve,
+  FactState,
   Layout,
   EpisodeBegin,
   EpisodeHeartbeat,
@@ -142,6 +147,16 @@ public:
   [[nodiscard]] virtual nlohmann::json query_plan(const storage_service_options &options) const = 0;
 
   [[nodiscard]] virtual nlohmann::json fact_query(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json fact_contract(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json fact_declare_world(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json fact_declare_surface(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json fact_observe(const storage_service_options &options) const = 0;
+
+  [[nodiscard]] virtual nlohmann::json fact_state(const storage_service_options &options) const = 0;
 
   [[nodiscard]] virtual nlohmann::json layout(const storage_service_options &options) const = 0;
 
