@@ -2029,6 +2029,10 @@ nlohmann::json fsck_impl(const storage_service_options &options);
 nlohmann::json episode_import_bundle_impl(const storage_service_options &options);
 nlohmann::json accept_storage_manifest_impl(const std::string &runtime_dir, const nlohmann::json &input);
 nlohmann::json export_bundle_generic_impl(const storage_service_options &options, bool record_receipt);
+nlohmann::json render_manifest_entry_view(const yy_storage::manifest_entry_view &entry);
+nlohmann::json render_manifest_document(const yy_storage::manifest_document_view &manifest);
+nlohmann::json render_storage_export_bundle_result(const storage_export_bundle_result &result);
+storage_export_bundle_result parse_storage_export_bundle(const nlohmann::json &bundle);
 
 storage_repair_subject repair_subject(const storage_fsck_issue &issue) {
   return std::visit(
@@ -2292,32 +2296,30 @@ nlohmann::json apply_episode_bundle_material(const storage_service_options &opti
           {"rejected", rejected}};
 }
 
-nlohmann::json apply_source_bundle_material(const storage_service_options &options, const nlohmann::json &bundle,
-                                            bool write) {
-  auto source_id = options.source_id.empty() ? text_or(bundle, "source_id") : options.source_id;
-  if (source_id.empty()) {
-    source_id = text_or(object_or_empty(bundle, "manifest"), "source_id");
-  }
+nlohmann::json apply_source_bundle_material(const storage_service_options &options,
+                                            const storage_export_bundle_result &bundle, bool write) {
+  const auto source_id = options.source_id.empty() ? bundle.source_id : options.source_id;
   if (source_id.empty()) {
     throw std::invalid_argument("repair_apply_source_id_required");
   }
-  const auto provider = shared_provider(options);
-  auto manifest = load_latest_manifest_impl(options.runtime_dir, *provider, source_id);
-  if (manifest.is_null()) {
+  const auto provider = provider_cache::instance().acquire(options.runtime_dir, options.provider);
+  auto manifest = catalog_store(options.runtime_dir).latest_manifest_typed(source_id, provider->content_store());
+  if (!manifest.has_value()) {
     throw std::runtime_error("manifest not found: " + source_id);
   }
-  auto entries = entries_for_manifest(manifest);
   nlohmann::json applied = nlohmann::json::array();
   nlohmann::json skipped = nlohmann::json::array();
   nlohmann::json rejected = nlohmann::json::array();
   bool manifest_changed = false;
-  for (const auto &record : array_or_empty(bundle, "records")) {
-    if (!record.is_object() || !record.contains("payload")) {
-      skipped.push_back({{"kind", "payload"}, {"reason", "payload_missing_in_material"}, {"record", record}});
+  for (const auto &record : bundle.records) {
+    if (!record.payload_json.has_value()) {
+      skipped.push_back({{"kind", "payload"},
+                         {"reason", "payload_missing_in_material"},
+                         {"record", render_manifest_entry_view(record.entry)}});
       continue;
     }
-    const auto raw = canonical_json(record.at("payload"));
-    auto digest = text_or(record, "payload_hash");
+    const auto &raw = *record.payload_json;
+    auto digest = record.entry.payload_hash;
     if (digest.empty()) {
       digest = yy_storage::compute_content_hash_value(raw, yy_storage::CONTENT_HASH_ALGORITHM_SHA256);
     }
@@ -2328,32 +2330,32 @@ nlohmann::json apply_source_bundle_material(const storage_service_options &optio
       continue;
     }
     bool matched = false;
-    for (auto &entry : entries) {
-      if (!entry.is_object() || text_or(entry, "payload_hash") != digest) {
+    for (auto &entry : manifest->entries) {
+      if (entry.payload_hash != digest) {
         continue;
       }
       matched = true;
-      if (text_or(entry, "payload_state") == PAYLOAD_STATE_PRESENT && provider->payload_exists(digest)) {
+      if (entry.payload_state == yy_enums::PayloadState::Present && provider->payload_exists(digest)) {
         skipped.push_back({{"kind", "payload"}, {"reason", "already_present"}, {"payload_hash", digest}});
         continue;
       }
-      if (text_or(entry, "payload_state") == PAYLOAD_STATE_REDACTED ||
-          text_or(entry, "payload_state") == PAYLOAD_STATE_ABSENT) {
+      if (entry.payload_state == yy_enums::PayloadState::Redacted ||
+          entry.payload_state == yy_enums::PayloadState::Absent) {
         skipped.push_back({{"kind", "payload"}, {"reason", "intentional_non_present_state"}, {"payload_hash", digest}});
         continue;
       }
       if (write) {
         provider->write_payload(digest, raw);
       }
-      entry["payload_state"] = PAYLOAD_STATE_PRESENT;
-      entry["byte_len"] = raw.size();
-      if (text_or(entry, "content_type").empty()) {
-        entry["content_type"] = CONTENT_TYPE_JSON;
+      entry.payload_state = yy_enums::PayloadState::Present;
+      entry.byte_len = raw.size();
+      if (entry.content_type.empty()) {
+        entry.content_type = CONTENT_TYPE_JSON;
       }
       manifest_changed = true;
       applied.push_back({{"kind", "payload"},
                          {"payload_hash", digest},
-                         {"subject", text_or(entry, "kind") + ":" + text_or(entry, "source_id")},
+                         {"subject", entry.kind + ":" + entry.source_id},
                          {"dry_run", !write}});
     }
     if (!matched) {
@@ -2362,22 +2364,25 @@ nlohmann::json apply_source_bundle_material(const storage_service_options &optio
   }
   nlohmann::json accepted = nullptr;
   if (write && manifest_changed) {
-    // A repair is a fresh acceptance: new manifest id, entries as repaired,
-    // sync root recomputed at acceptance. History stays append-only.
-    accepted = accept_storage_manifest_impl(
-        options.runtime_dir, {
-                                 {"manifest_id", text_or(manifest, "manifest_id") + ".repair"},
-                                 {"storage_source_id", source_id},
-                                 {"source_type", text_or(manifest, "source_type")},
-                                 {"source_coordinate", text_or(object_or_empty(manifest, "source"), "coordinate")},
-                                 {"source_head", text_or(manifest, "source_head")},
-                                 {"scope", text_or(manifest, "scope")},
-                                 {"range", object_or_empty(manifest, "range")},
-                                 {"entries", entries},
-                             });
+    manifest->manifest_id += ".repair";
+    manifest->sync_root = {};
+    const auto accepted_view =
+        catalog_store(options.runtime_dir).accept_manifest_typed(*manifest, provider->content_store());
+    accepted = render_manifest_document(accepted_view);
+    const auto registry = registry_store(options.runtime_dir);
+    yy_storage::source_head_update_options head{};
+    head.source_id = accepted_view.source_id;
+    head.head = accepted_view.source_head;
+    head.inventory_hash_algo = accepted_view.sync_root.algorithm;
+    head.inventory_hash = accepted_view.sync_root.value;
+    (void)registry.update_head(head);
+    yy_storage::accepted_range_options range{};
+    range.source_id = accepted_view.source_id;
+    range.manifest_id = accepted_view.manifest_id;
+    (void)registry.record_accepted_range(range);
   }
   return {{"kind", "source_bundle"},
-          {"schema", text_or(bundle, "schema")},
+          {"schema", yy_storage::STORAGE_EXPORT_BUNDLE_SCHEMA_V1},
           {"source_id", source_id},
           {"manifest_changed", manifest_changed},
           {"accepted_manifest", accepted},
@@ -2408,7 +2413,7 @@ nlohmann::json repair_apply_impl(const storage_service_options &options) {
       return apply_episode_bundle_material(options, item, write);
     }
     if (schema == yy_storage::STORAGE_EXPORT_BUNDLE_SCHEMA_V1) {
-      return apply_source_bundle_material(options, item, write);
+      return apply_source_bundle_material(options, parse_storage_export_bundle(item), write);
     }
     return nlohmann::json{{"kind", "unknown"},
                           {"schema", schema},
@@ -2506,16 +2511,13 @@ std::vector<repair_evidence_runtime> repair_evidence_runtimes(const storage_serv
   return runtimes;
 }
 
-bool source_bundle_has_payload(const nlohmann::json &bundle, const std::string &payload_hash) {
+bool source_bundle_has_payload(const storage_export_bundle_result &bundle, const std::string &payload_hash) {
   if (payload_hash.empty()) {
-    return !array_or_empty(bundle, "records").empty();
+    return !bundle.records.empty();
   }
-  for (const auto &record : array_or_empty(bundle, "records")) {
-    if (text_or(record, "payload_hash") == payload_hash && record.contains("payload")) {
-      return true;
-    }
-  }
-  return false;
+  return std::any_of(bundle.records.begin(), bundle.records.end(), [&payload_hash](const auto &record) {
+    return record.entry.payload_hash == payload_hash && record.payload_json.has_value();
+  });
 }
 
 bool episode_bundle_has_frame(const nlohmann::json &bundle, uint64_t frame_uid) {
@@ -2609,7 +2611,8 @@ nlohmann::json repair_fetch_impl(const storage_service_options &options) {
           candidate_options.runtime_dir = runtime.runtime_dir.string();
           candidate_options.scope = "source";
           candidate_options.source_id = source_id;
-          const auto bundle = export_bundle_generic_impl(candidate_options, /*record_receipt=*/false);
+          const auto bundle = default_storage_service().export_bundle(
+              {candidate_options.runtime_dir, candidate_options.provider, candidate_options.source_id, {}, false});
           if (!source_bundle_has_payload(bundle, payload_hash)) {
             skipped.push_back({{"candidate", candidate},
                                {"evidence_source", runtime.source},
@@ -2617,7 +2620,8 @@ nlohmann::json repair_fetch_impl(const storage_service_options &options) {
                                {"reason", "payload_not_in_bundle"}});
             continue;
           }
-          push_unique_bundle(material["source_bundles"], seen_source_bundles, bundle);
+          push_unique_bundle(material["source_bundles"], seen_source_bundles,
+                             render_storage_export_bundle_result(bundle));
           matched.push_back({{"candidate", candidate},
                              {"evidence_source", runtime.source},
                              {"runtime_dir", runtime.runtime_dir.string()},
