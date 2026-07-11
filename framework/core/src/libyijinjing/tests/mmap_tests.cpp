@@ -104,6 +104,22 @@ std::string create_page_path(const kungfu::yijinjing::data::location_ptr &loc) {
   return page::get_page_path(loc, location::PUBLIC, 1);
 }
 
+void create_seek_page(const kungfu::yijinjing::data::location_ptr &loc, uint32_t page_id, int64_t begin_time,
+                      kungfu::yijinjing::enums::PageStatus status = kungfu::yijinjing::enums::PageStatus::Normal) {
+  const auto path = page::get_page_path(loc, location::PUBLIC, page_id);
+  auto region = mapped_region::map(path, TEST_PAGE_SIZE, mapping_policy::write_create_or_grow());
+  auto *header = reinterpret_cast<page_header *>(region.address());
+  header->version = __JOURNAL_VERSION__;
+  header->page_header_length = sizeof(page_header);
+  header->page_size = TEST_PAGE_SIZE;
+  header->frame_header_length = sizeof(frame_header);
+  header->status = status;
+  header->last_frame_position = sizeof(page_header);
+  auto *first_frame = reinterpret_cast<frame_header *>(region.address() + sizeof(page_header));
+  first_frame->gen_time = begin_time;
+  require(region.reset(), "failed to release seek-page fixture mapping");
+}
+
 void test_wire_layout_invariants() {
   static_assert(sizeof(page_header) == 32, "wire-v1 page_header size changed");
   static_assert(sizeof(frame_header) == 72, "wire-v1 frame_header size changed");
@@ -375,6 +391,21 @@ void test_page_header_publication() {
   require(reader->first_frame_address() > reader->address(), "reader observed an invalid first-frame address");
 }
 
+void test_page_lookup_uses_ordered_begin_times() {
+  temp_tree tree;
+  auto loc = make_location(tree.root());
+  for (uint32_t page_id = 1; page_id <= 4; ++page_id) {
+    create_seek_page(loc, page_id, static_cast<int64_t>(page_id) * 100);
+  }
+  create_seek_page(loc, 5, 500, kungfu::yijinjing::enums::PageStatus::PreOpen);
+
+  require(page::find_page_id(loc, location::PUBLIC, 0) == 1, "zero-time lookup did not select the first page");
+  require(page::find_page_id(loc, location::PUBLIC, 100) == 1,
+          "lookup at the first begin time did not preserve first-page fallback");
+  require(page::find_page_id(loc, location::PUBLIC, 201) == 2, "lookup did not select the latest earlier page");
+  require(page::find_page_id(loc, location::PUBLIC, 1'000) == 4, "lookup selected a pre-open tail page");
+}
+
 } // namespace
 
 int main() {
@@ -392,6 +423,7 @@ int main() {
       {"corrupt page offsets fail before payload access", test_corrupt_page_offsets_fail_before_payload_access},
       {"corrupt page header facts are rejected", test_corrupt_page_header_facts_are_rejected},
       {"page header publication", test_page_header_publication},
+      {"page lookup uses ordered begin times", test_page_lookup_uses_ordered_begin_times},
   };
 
   int failed = 0;

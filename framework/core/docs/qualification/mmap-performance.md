@@ -98,10 +98,9 @@ only controlled baseline/candidate runs on the same host support a decision.
 
 ## Initial evidence status
 
-The first run records the untouched `demand + visibility` implementation from
-ADR-0058. Candidate decisions remain `defer` until both macOS and Linux
-baselines are retained. Windows is a recorded coverage gap unless a suitable
-runner is available.
+The first runs record the untouched `demand + visibility` implementation from
+ADR-0058. macOS and Linux baselines are retained below. Windows remains a
+recorded coverage gap unless a suitable runner is available.
 
 ### macOS baseline 01
 
@@ -134,3 +133,26 @@ Current classification:
 - file sizing/preallocation, advice, prefault/pinning, committed-range flush,
   and release queue: `defer`, insufficient isolated evidence;
 - production policy/default changes: none.
+
+### Linux baseline 01
+
+- Evidence: [`mmap-linux-x86_64-bc3dcb7d2-baseline-01.json`](mmap-linux-x86_64-bc3dcb7d2-baseline-01.json)
+- Git head: `bc3dcb7d2976dadb9651b9e4ad115257720d9d75`
+- Command: `./shifu qualify:mmap -- --profile baseline --output
+  /tmp/mmap-linux-x86_64-bc3dcb7d2-baseline-01.json`
+- Host: Linux 6.8.0-134-generic, x86_64 `agent-120`, 32 hardware threads,
+  4 KiB OS pages, GCC 13.3, C++23.
+- Integrity: all written data frames were read back at 8, 32, and 128 journal
+  pages. Read/seek observed no major faults; journal creation observed one
+  major fault per page on this run.
+
+| Pages | Write switch p50 / p99 | Read switch p50 / p99 | Seek early p50 / p99 | Seek middle p50 | Seek late p50 |
+|---:|---:|---:|---:|---:|---:|
+| 8 | 0.068 / 0.074 ms | 0.026 / 0.030 ms | 0.061 / 0.070 ms | 0.045 ms | 0.024 ms |
+| 32 | 0.066 / 0.155 ms | 0.026 / 0.028 ms | 0.206 / 0.471 ms | 0.128 ms | 0.045 ms |
+| 128 | 0.066 / 0.120 ms | 0.026 / 0.028 ms | 0.788 / 1.004 ms | 0.460 ms | 0.127 ms |
+
+Linux reproduces the same direction as macOS: seeking old history grows with
+page count and is much slower than seeking near the tail. Absolute timings are
+not compared across hosts. The cross-platform shape raises page lookup from a
+single-host suspicion to the first controlled production candidate.

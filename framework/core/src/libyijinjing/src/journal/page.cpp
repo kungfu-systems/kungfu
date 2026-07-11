@@ -245,17 +245,29 @@ uint32_t page::find_page_id(const data::location_ptr &location, uint32_t dest_id
   if (time == 0) {
     return page_ids.front();
   }
-  for (int i = static_cast<int>(page_ids.size()) - 1; i >= 0; i--) {
+
+  // Page begin times are append-only and therefore ordered with page ids.
+  // Probe the upper bound instead of mapping every newer page header. Pre-open
+  // pages form an ineligible suffix and naturally move the bound left.
+  size_t lower = 0;
+  size_t upper = page_ids.size();
+  uint32_t candidate = page_ids.front();
+  while (lower < upper) {
+    const size_t middle = lower + (upper - lower) / 2;
     auto loaded_page =
-        page::load_header_and_1st_frame_header(location, dest_id, page_ids[i], page_open_policy::header_probe());
+        page::load_header_and_1st_frame_header(location, dest_id, page_ids[middle], page_open_policy::header_probe());
     const auto *loaded_page_header = loaded_page->header_;
-    if (loaded_page->acquire_last_frame_position() != 0 &&
-        loaded_page->acquire_status() != yijinjing::enums::PageStatus::PreOpen &&
-        loaded_page_header->version == __JOURNAL_VERSION__ && loaded_page->begin_time() < time) {
-      return page_ids[i];
+    const bool eligible = loaded_page->acquire_last_frame_position() != 0 &&
+                          loaded_page->acquire_status() != yijinjing::enums::PageStatus::PreOpen &&
+                          loaded_page_header->version == __JOURNAL_VERSION__ && loaded_page->begin_time() < time;
+    if (eligible) {
+      candidate = page_ids[middle];
+      lower = middle + 1;
+    } else {
+      upper = middle;
     }
   }
-  return page_ids.front();
+  return candidate;
 }
 
 uint64_t page::find_page_size(const data::location_ptr &location, uint32_t dest_id, uint64_t page_size) {
