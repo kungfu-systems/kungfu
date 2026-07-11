@@ -47,6 +47,7 @@ import {
   bindElectronTerminalHost,
   createMainTerminalHost,
 } from './terminal-host';
+import { resolveLastDesktopWorkspace } from './workspace-selection';
 
 const PRODUCT_NAME = 'Kungfu Episodes';
 
@@ -78,6 +79,13 @@ function resolveHomePath(value: string): string {
   return path.resolve(expandHomePath(value));
 }
 
+function defaultConfigHome(): string {
+  return resolveHomePath(
+    process.env.KF_CONFIG_HOME ||
+      path.join(app.getPath('home'), '.kungfu-config'),
+  );
+}
+
 // A product launcher may set KF_INSTANCE_HOME to make a second Kungfu process
 // independent from the default user-global homes. Keep the same mental model as
 // the default install: config and runtime home are separate directories.
@@ -105,6 +113,38 @@ if (process.env.KF_INSTANCE_HOME) {
   process.env.KF_HOME = resolveHomePath(process.env.KF_DEV_HOME);
   process.env.KF_RUNTIME_DIR = path.join(process.env.KF_HOME, 'runtime');
 }
+
+if (
+  !process.env.KF_INSTANCE_HOME &&
+  !process.env.KF_HOME &&
+  !process.env.KF_RUNTIME_DIR
+) {
+  const selected = resolveLastDesktopWorkspace(defaultConfigHome());
+  if (selected) {
+    process.env.KF_WORKSPACE_ID = selected.workspaceId;
+    process.env.KF_WORKSPACE_KIND = selected.workspaceKind;
+    process.env.KF_WORKSPACE_ROOT = selected.workspaceRoot || '';
+    process.env.KF_WORKSPACE_DISPLAY_PATH = selected.displayPath;
+    process.env.KF_WORKSPACE_RESOLUTION_REASON = selected.resolutionReason;
+    process.env.KF_WORKSPACE_STATE = selected.state;
+    process.env.KF_HOME = selected.dataHome;
+    process.env.KF_RUNTIME_DIR = selected.runtimeDir;
+  }
+}
+
+if (
+  process.env.KF_HOME &&
+  !process.env.KF_WORKSPACE_STATE &&
+  (process.env.KF_WORKSPACE_ROOT ||
+    path.basename(process.env.KF_HOME) === '.kungfu')
+) {
+  process.env.KF_WORKSPACE_STATE = existsSync(process.env.KF_HOME)
+    ? 'ready'
+    : 'selected-uninitialized';
+}
+
+const workspaceRuntimeReady =
+  process.env.KF_WORKSPACE_STATE !== 'selected-uninitialized';
 
 type WindowChromePlatform = 'darwin' | 'win32' | 'linux' | 'other';
 type WindowChromeMode = 'native' | 'integrated' | 'custom';
@@ -198,7 +238,7 @@ process.env.KF_EXTENSION_PATH =
 //        trusted (safe by default). The pinned resource is baked at build time
 //        by scripts/gen-first-party-manifest.mjs into dist/kungfu, which ships to
 //        Resources/kungfu alongside the runtime.
-if (!process.env.KF_FIRST_PARTY_MANIFEST) {
+if (!process.env.KF_FIRST_PARTY_MANIFEST && workspaceRuntimeReady) {
   if (app.isPackaged) {
     process.env.KF_FIRST_PARTY_MANIFEST = path.join(
       process.resourcesPath,
@@ -216,7 +256,11 @@ if (!process.env.KF_FIRST_PARTY_MANIFEST) {
   }
 }
 
-if (!process.env.KF_SKILL_CONTEXT_FILE && process.env.KF_RUNTIME_DIR) {
+if (
+  !process.env.KF_SKILL_CONTEXT_FILE &&
+  process.env.KF_RUNTIME_DIR &&
+  workspaceRuntimeReady
+) {
   try {
     process.env.KF_SKILL_CONTEXT_FILE = writeGuiSkillContextFile({
       home: process.env.KF_RUNTIME_DIR,
@@ -229,7 +273,11 @@ if (!process.env.KF_SKILL_CONTEXT_FILE && process.env.KF_RUNTIME_DIR) {
   }
 }
 
-if (!process.env.KF_SKILL_MANAGER_FILE && process.env.KF_RUNTIME_DIR) {
+if (
+  !process.env.KF_SKILL_MANAGER_FILE &&
+  process.env.KF_RUNTIME_DIR &&
+  workspaceRuntimeReady
+) {
   try {
     process.env.KF_SKILL_MANAGER_FILE = writeGuiSkillManagerViewFile({
       home: process.env.KF_RUNTIME_DIR,
@@ -324,6 +372,14 @@ type RuntimeStatusResult = {
 };
 
 function readRuntimeStatus(): RuntimeStatusResult {
+  if (!workspaceRuntimeReady) {
+    return {
+      ok: false,
+      payload: null,
+      error: 'Workspace selected but not initialized',
+      updatedAt: Date.now(),
+    };
+  }
   try {
     const out = execFileSync(kungfuBinPath(), ['runtime', 'status', '--json'], {
       env: process.env,
@@ -360,6 +416,10 @@ function readRuntimeStatus(): RuntimeStatusResult {
 }
 
 function ensureRuntimeForGuiStartup() {
+  if (!workspaceRuntimeReady) {
+    console.log('KF_RUNTIME_ENSURE_DEFERRED workspace selected-uninitialized');
+    return;
+  }
   try {
     const out = execFileSync(kungfuBinPath(), ['runtime', 'ensure', '--json'], {
       env: process.env,

@@ -229,11 +229,20 @@ function instanceEnv(instanceHome, baseEnv = process.env) {
 
 function workspaceEnv(workspaceHome, baseEnv = process.env) {
   if (!workspaceHome) return { ...baseEnv };
+  const workspaceRoot =
+    path.basename(workspaceHome) === '.kungfu'
+      ? path.dirname(workspaceHome)
+      : '';
   return {
     ...baseEnv,
     KF_HOME: workspaceHome,
     KF_CONFIG_HOME: baseEnv.KF_CONFIG_HOME || defaultConfigHome(),
     KF_RUNTIME_DIR: path.join(workspaceHome, 'runtime'),
+    ...(workspaceRoot ? { KF_WORKSPACE_ROOT: workspaceRoot } : {}),
+    KF_WORKSPACE_KIND: 'project',
+    KF_WORKSPACE_STATE: existsSync(workspaceHome)
+      ? 'ready'
+      : 'selected-uninitialized',
   };
 }
 
@@ -332,11 +341,9 @@ function run(label, cmd, args, options = {}) {
       );
     }
   }
-  if (options.workspaceHome) {
-    mkdirSync(path.join(options.workspaceHome, 'runtime'), {
-      recursive: true,
-    });
-  }
+  // Selecting a workspace is read-only. Desktop owns the write-intent-bound
+  // ensure gate; the launcher must not initialize <workspace>/.kungfu merely
+  // because a user opened or developed the product against that workspace.
   const result = spawnSync(cmd, args, {
     cwd: ROOT,
     env: options.env || process.env,

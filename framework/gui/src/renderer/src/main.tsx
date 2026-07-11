@@ -1619,7 +1619,9 @@ function App() {
           </div>
         ) : (
           <p style={{ ...mono, color: '#f48771' }}>
-            binding unavailable — set KFE_PATH to a built kungfu_electron.node
+            {window.process.env.KF_WORKSPACE_STATE === 'selected-uninitialized'
+              ? 'Workspace selected but not initialized — the first fact-bearing action will create its .kungfu data home.'
+              : 'binding unavailable — set KFE_PATH to a built kungfu_electron.node'}
           </p>
         )}
       </div>

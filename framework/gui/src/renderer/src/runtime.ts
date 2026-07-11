@@ -163,6 +163,13 @@ export function bootRuntime(): Runtime {
     work: null,
     atlas: null,
   };
+  if (env.KF_WORKSPACE_STATE === 'selected-uninitialized') {
+    return {
+      ...base,
+      ok: false,
+      message: 'workspace selected but not initialized',
+    };
+  }
   try {
     const bindingPath = env.KFE_PATH;
     if (!bindingPath) {

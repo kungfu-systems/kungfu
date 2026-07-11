@@ -125,6 +125,9 @@ test('builds a workspace data environment with separate config home', () => {
   assert.equal(env.KF_HOME, dataHome);
   assert.equal(env.KF_CONFIG_HOME, path.join(tmpdir(), 'kungfu-config'));
   assert.equal(env.KF_RUNTIME_DIR, path.join(dataHome, 'runtime'));
+  assert.equal(env.KF_WORKSPACE_ROOT, path.dirname(dataHome));
+  assert.equal(env.KF_WORKSPACE_KIND, 'project');
+  assert.equal(env.KF_WORKSPACE_STATE, 'selected-uninitialized');
   assert.equal(env.KF_INSTANCE_HOME, undefined);
 });
 

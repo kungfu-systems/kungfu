@@ -24,6 +24,7 @@ from . import codex
 from . import sdk
 from . import kfd
 from . import runtime
+from . import workspace
 
 __all__ = [
     "engage",
@@ -50,4 +51,5 @@ __all__ = [
     "sdk",
     "kfd",
     "runtime",
+    "workspace",
 ]

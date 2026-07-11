@@ -158,6 +158,25 @@ def kfc(ctx, home, extension_path, log_level, name, stage, env_verify_location):
     config_home = default_config_home()
     ctx.extension_path = extension_path
 
+    # Workspace discovery and selection are control-plane operations. They must
+    # be able to inspect an uninitialized candidate without the root callback
+    # creating directories or rewriting the caller's resolution evidence first.
+    if ctx.invoked_subcommand == "workspace":
+        ctx.config_home = config_home
+        ctx.home = home
+        ctx.log_level = log_level
+        ctx.runtime_dir = os.path.abspath(
+            os.path.expanduser(
+                runtime_dir_override or os.path.join(ctx.home, "runtime")
+            )
+        )
+        ctx.dataset_dir = os.path.join(ctx.home, "dataset")
+        ctx.backtest_dir = os.path.join(ctx.home, "backtest")
+        ctx.inbox_dir = os.path.join(ctx.home, "inbox")
+        ctx.name = name or ctx.invoked_subcommand
+        ctx.stage = stage or "prod"
+        return
+
     os.environ["KF_CONFIG_HOME"] = ctx.config_home = config_home
     os.environ["KF_HOME"] = ctx.home = home
     os.environ["KF_LOG_LEVEL"] = ctx.log_level = log_level
