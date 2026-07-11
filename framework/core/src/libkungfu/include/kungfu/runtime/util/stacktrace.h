@@ -5,11 +5,11 @@
 
 #include <kungfu/common.h>
 
-#ifdef _WINDOWS
+#ifdef _WIN32
 #include <Psapi.h>
 #include <Windows.h>
 #include <cstdio>
-#endif // _WINDOWS
+#endif // _WIN32
 
 namespace kungfu::runtime::util {
 void set_error_log_dir(const std::string &path);
@@ -18,7 +18,7 @@ void set_error_log_dir(const std::string &path);
 // signal / SEH handlers are installed, never from inside a handler.
 void prepare_stack_trace();
 
-#ifdef _WINDOWS
+#ifdef _WIN32
 
 DWORD print_stack_trace(EXCEPTION_POINTERS *ep = nullptr);
 
@@ -26,7 +26,7 @@ DWORD print_stack_trace(EXCEPTION_POINTERS *ep = nullptr);
 
 void print_stack_trace(FILE *out = stderr, int signum = 0);
 
-#endif // _WINDOWS
+#endif // _WIN32
 } // namespace kungfu::runtime::util
 
 #endif // KUNGFU_RUNTIME_UTIL_STACKTRACE_H

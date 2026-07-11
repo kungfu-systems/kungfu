@@ -23,7 +23,7 @@
 
 //------------------------------------------------------------------------
 // workaround for using c++20 with hana-1.7.0@conan-center
-#if defined(_WINDOWS) && (_MSVC_LANG > 201704L)
+#if defined(_WIN32) && (_MSVC_LANG > 201704L)
 namespace std {
 template <typename T> struct is_literal_type {};
 } // namespace std
@@ -45,7 +45,7 @@ using namespace boost::hana::literals;
 
 //------------------------------------------------------------------------
 // pack struct for fixing data length in journal
-#ifdef _WINDOWS
+#ifdef _WIN32
 #define KF_PACK_TYPE_BEGIN __pragma(pack(push, 8))
 #define KF_PACK_TYPE_END                                                                                               \
   ;                                                                                                                    \
@@ -137,7 +137,7 @@ template <typename V, size_t N> struct array_to_string<V, N, std::enable_if_t<no
   };
 };
 
-// 安全定长字符串拷贝（跨平台）。替代此前 _WINDOWS 下全局 `#define strcpy/strncpy → _s 安全版`：
+// 安全定长字符串拷贝（跨平台）。替代此前 Windows 下全局 `#define strcpy/strncpy → _s 安全版`：
 // 旧宏会污染随后 include 的系统/三方头里的 strcpy/strncpy（如 <tchar.h> 内联 _strncpy_l），
 // 且对裸指针目标用 sizeof(指针) 取容量会误判。此函数显式传 size，限定在 dest[0,size) 内：
 // 从 src 复制至多 min(count,size) 个非 NUL 字节，余下补 '\0'（与定长字段语义一致，不依赖 NUL 结尾）。

@@ -236,12 +236,11 @@ function checkPythonFiles(label, files) {
 // Rust format + lint check, workspace-scoped whenever any crates/ file is in
 // the given list: the workspace is a few small crates, cargo fmt reads the
 // edition from Cargo.toml, and clippy compiles whole targets by nature — so
-// per-file scoping buys nothing, and running the exact two commands shifu CI
-// runs (fmt --all --check, clippy -D warnings) means the local gate cannot
-// drift from CI. Read-only: fixes live in fix.mjs. A missing cargo warns and
-// skips — rustc is deliberately outside shifu's bootstrap scope (doctor
-// reports it as optional), and CI backstops crates/ edits made without a
-// local Rust toolchain.
+// per-file scoping buys nothing. Formatting, clippy, and workspace unit tests
+// keep source shape, lint, and launcher dispatch behavior in one gate.
+// Read-only: fixes live in fix.mjs. A missing cargo warns and skips — rustc is
+// deliberately outside shifu's bootstrap scope (doctor reports it as
+// optional), and CI backstops crates/ edits made without a local toolchain.
 function checkRustFiles(label, files, { force = false } = {}) {
   const rust = files.filter((file) => file.startsWith('crates/'));
   if (!force && !rust.length) {
@@ -264,6 +263,9 @@ function checkRustFiles(label, files, { force = false } = {}) {
     ['clippy', '--workspace', '--all-targets', '--', '-D', 'warnings'],
     { cwd: crates },
   );
+  run(`${label} Rust unit tests`, 'cargo', ['test', '--workspace'], {
+    cwd: crates,
+  });
 }
 
 function checkNoBashStaged() {
@@ -284,6 +286,29 @@ function checkNoBashTree() {
       .map((hit) => `  ${hit}`)
       .join('\n')}`,
   );
+}
+
+function checkPlatformMacros() {
+  const files = splitLines(git(['ls-files', 'framework/core'])).filter((file) =>
+    /\.(?:c|cc|cpp|cxx|h|hh|hpp|hxx)$/.test(file),
+  );
+  const findings = [];
+  for (const file of files) {
+    const lines = fs.readFileSync(path.join(ROOT, file), 'utf8').split(/\r?\n/);
+    for (let index = 0; index < lines.length; index += 1) {
+      if (/\b_WINDOWS\b/.test(lines[index])) {
+        findings.push(
+          `${file}:${index + 1}: use the compiler-standard _WIN32 macro`,
+        );
+      }
+    }
+  }
+  if (findings.length) {
+    throw new Error(
+      `non-standard Windows platform macros:\n${findings.join('\n')}`,
+    );
+  }
+  log('[check] Windows platform macros use _WIN32');
 }
 
 function checkShifuVersionSync() {
@@ -428,6 +453,7 @@ function checkBuildchainKfdEvidence(files = [], { force = false } = {}) {
 
 function checkStaged() {
   checkNoBashStaged();
+  checkPlatformMacros();
   checkShifuVersionSync();
   checkShifuEntryContract();
   checkCarrierActionEnvelope(['--staged']);
@@ -507,6 +533,7 @@ function checkShared() {
 
 function checkChanged() {
   checkNoBashTree();
+  checkPlatformMacros();
   checkShifuVersionSync();
   checkShifuEntryContract();
   checkCarrierActionEnvelope();
@@ -525,6 +552,7 @@ function checkChanged() {
 
 function checkAll() {
   checkNoBashTree();
+  checkPlatformMacros();
   checkShifuVersionSync();
   checkShifuEntryContract();
   checkCarrierActionEnvelope(['--all']);

@@ -26,7 +26,7 @@
 #include <sys/sysctl.h>
 #endif
 
-#ifdef _WINDOWS
+#ifdef _WIN32
 #include <windows.h>
 #else
 #include <sys/resource.h>
@@ -110,7 +110,7 @@ size_t mapped_region_count() {
   // vmmap would perturb the process being measured. Leave this fact explicit
   // rather than substituting a different metric under the same name.
   return 0;
-#elif defined(_WINDOWS)
+#elif defined(_WIN32)
   size_t count = 0;
   MEMORY_BASIC_INFORMATION info{};
   auto *address = static_cast<unsigned char *>(nullptr);
@@ -130,7 +130,7 @@ size_t mapped_region_count() {
 
 resource_sample resources() {
   resource_sample result;
-#ifdef _WINDOWS
+#ifdef _WIN32
   result.mapped_regions = mapped_region_count();
 #else
   rusage usage{};
@@ -192,7 +192,7 @@ json host_facts() {
   json facts = {{"hardware_threads", std::thread::hardware_concurrency()},
                 {"cpp_standard", __cplusplus},
                 {"pointer_bits", sizeof(void *) * 8}};
-#ifdef _WINDOWS
+#ifdef _WIN32
   SYSTEM_INFO info{};
   GetSystemInfo(&info);
   facts["os"] = "windows";

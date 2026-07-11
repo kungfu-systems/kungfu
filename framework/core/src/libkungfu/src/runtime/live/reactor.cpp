@@ -564,7 +564,7 @@ bool reactor::drain(const rx::subscriber<event_ptr> &sb) {
 }
 
 void reactor::delegate_produce(reactor *instance, const rx::subscriber<event_ptr> &subscriber) {
-#ifdef _WINDOWS
+#ifdef _WIN32
   __try {
     instance->produce(subscriber);
   } __except (util::print_stack_trace(GetExceptionInformation())) {

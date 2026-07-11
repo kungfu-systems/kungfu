@@ -109,7 +109,7 @@ inline size_t _thread_id() noexcept {
 // borrowed from <spdlog/details/os-inl.h> end
 
 // borrowed from <spdlog/sinks/wincolor_sink-inl.h> begin
-#ifdef _WINDOWS
+#ifdef _WIN32
 #include <wincon.h>
 
 class WinColor {

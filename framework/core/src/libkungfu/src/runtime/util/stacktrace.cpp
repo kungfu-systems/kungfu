@@ -7,7 +7,7 @@
 #include <kungfu/common.h>
 #include <time.h>
 
-#ifdef _WINDOWS
+#ifdef _WIN32
 
 #include <kungfu/runtime/util/stacktrace.h>
 
@@ -28,7 +28,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#endif // _WINDOWS
+#endif // _WIN32
 
 namespace kungfu::runtime::util {
 
@@ -44,7 +44,7 @@ static std::string error_log_dir = get_default_error_log_dir();
 
 void set_error_log_dir(const std::string &path) { error_log_dir = path; }
 
-#ifdef _WINDOWS
+#ifdef _WIN32
 
 namespace {
 // Crash-path helpers. On Windows the crash arrives via an SEH __except filter
@@ -476,5 +476,5 @@ void prepare_stack_trace() {
     close(devnull);
   }
 }
-#endif // _WINDOWS
+#endif // _WIN32
 } // namespace kungfu::runtime::util

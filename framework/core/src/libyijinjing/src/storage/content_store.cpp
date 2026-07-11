@@ -13,7 +13,7 @@
 
 #include <kungfu/yijinjing/storage/content_hash.h>
 
-#ifdef _WINDOWS
+#ifdef _WIN32
 #include <io.h>
 #include <process.h>
 #else
@@ -43,7 +43,7 @@ bool is_lower_hex(const std::string &value) {
 }
 
 int current_pid() {
-#ifdef _WINDOWS
+#ifdef _WIN32
   return _getpid();
 #else
   return static_cast<int>(::getpid());
@@ -59,7 +59,7 @@ bool flush_to_disk(std::FILE *file) {
   if (std::fflush(file) != 0) {
     return false;
   }
-#ifdef _WINDOWS
+#ifdef _WIN32
   return _commit(_fileno(file)) == 0;
 #else
   return ::fsync(fileno(file)) == 0;
@@ -69,7 +69,7 @@ bool flush_to_disk(std::FILE *file) {
 // Publication is only durable once the directory entry is too; best-effort on
 // platforms without directory fsync.
 void sync_directory(const fs::path &dir) {
-#ifndef _WINDOWS
+#ifndef _WIN32
   const int fd = ::open(dir.c_str(), O_RDONLY);
   if (fd >= 0) {
     ::fsync(fd);

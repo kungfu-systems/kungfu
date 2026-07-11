@@ -4,7 +4,7 @@
 // Created by Keren Dong on 2019-06-10.
 //
 
-#ifdef _WINDOWS
+#ifdef _WIN32
 #include <fcntl.h>
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -18,7 +18,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#endif // _WINDOWS
+#endif // _WIN32
 
 #include <kungfu/common.h>
 #include <kungfu/yijinjing/journal/common.h>
@@ -49,7 +49,7 @@ void validate_policy(const mapping_policy policy, const std::string &path) {
   }
 }
 
-#ifdef _WINDOWS
+#ifdef _WIN32
 [[noreturn]] void throw_mapping_error(const std::string &operation, const std::string &path, int code) {
   throw journal_error(operation + " for page " + path + ", error: " + std::to_string(code));
 }
@@ -237,7 +237,7 @@ bool mapped_region::flush() const noexcept {
     return true;
   }
   void *buffer = reinterpret_cast<void *>(address_);
-#ifdef _WINDOWS
+#ifdef _WIN32
   return FlushViewOfFile(buffer, size_) != 0;
 #else
   return msync(buffer, size_, MS_SYNC) == 0;
@@ -250,7 +250,7 @@ bool mapped_region::reset() noexcept {
   }
   void *buffer = reinterpret_cast<void *>(address_);
   bool ok = true;
-#ifdef _WINDOWS
+#ifdef _WIN32
   if (writable_ && FlushViewOfFile(buffer, size_) == 0) {
     ok = false;
   }
@@ -293,7 +293,7 @@ bool flush_mmap_buffer(uintptr_t address, size_t size, mapping_durability durabi
     return false;
   }
   void *buffer = reinterpret_cast<void *>(address);
-#ifdef _WINDOWS
+#ifdef _WIN32
   if (FlushViewOfFile(buffer, size) == 0) {
     return false;
   }
@@ -307,13 +307,13 @@ bool flush_mmap_buffer(uintptr_t address, size_t size, mapping_durability durabi
 
 bool release_mmap_buffer(uintptr_t address, size_t size) {
   void *buffer = reinterpret_cast<void *>(address);
-#ifdef _WINDOWS
+#ifdef _WIN32
   const bool flushed = FlushViewOfFile(buffer, size) != 0;
   const bool unmapped = UnmapViewOfFile(buffer) != 0;
   return flushed && unmapped;
 #else
   return munmap(buffer, size) == 0;
-#endif // _WINDOWS
+#endif // _WIN32
 }
 
 uintptr_t load_mmap_buffer(const std::string &path, size_t size, bool is_writing, bool lazy) {

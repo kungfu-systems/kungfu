@@ -301,9 +301,17 @@ fn warn(msg: &str) {
 }
 
 fn git(root: &Path, args: &[&str]) -> String {
+    // Bind provenance to the declared product root. Hooks and nested Git
+    // callers may export repository-local variables that otherwise override
+    // current_dir/-C and silently fingerprint the caller's repository.
     Command::new("git")
+        .arg("-C")
+        .arg(root)
         .args(args)
-        .current_dir(root)
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_COMMON_DIR")
+        .env_remove("GIT_INDEX_FILE")
         .output()
         .ok()
         .filter(|out| out.status.success())

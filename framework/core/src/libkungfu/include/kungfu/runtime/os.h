@@ -3,7 +3,7 @@
 #ifndef KUNGFU_RUNTIME_OS_H
 #define KUNGFU_RUNTIME_OS_H
 
-#ifdef _WINDOWS
+#ifdef _WIN32
 #include <process.h>
 #define GETPID _getpid
 #else

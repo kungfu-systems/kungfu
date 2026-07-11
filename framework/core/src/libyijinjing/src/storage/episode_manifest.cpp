@@ -16,7 +16,7 @@
 #include <kungfu/yijinjing/storage/content_store.h>
 #include <kungfu/yijinjing/time.h>
 
-#ifdef _WINDOWS
+#ifdef _WIN32
 #include <windows.h>
 #else
 #include <fcntl.h>
@@ -97,7 +97,7 @@ writer make_writer(const std::string &runtime_dir) {
 class manifest_writer_guard {
 public:
   explicit manifest_writer_guard(const std::string &lock_path) : lock_path_(lock_path) {
-#ifdef _WINDOWS
+#ifdef _WIN32
     handle_ = CreateFileA(lock_path.c_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
                           OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (handle_ == INVALID_HANDLE_VALUE) {
@@ -126,7 +126,7 @@ public:
   manifest_writer_guard &operator=(const manifest_writer_guard &) = delete;
 
   ~manifest_writer_guard() {
-#ifdef _WINDOWS
+#ifdef _WIN32
     if (handle_ != INVALID_HANDLE_VALUE) {
       OVERLAPPED overlapped{};
       UnlockFileEx(handle_, 0, 1, 0, &overlapped);
@@ -142,7 +142,7 @@ public:
 
 private:
   std::string lock_path_;
-#ifdef _WINDOWS
+#ifdef _WIN32
   HANDLE handle_ = INVALID_HANDLE_VALUE;
 #else
   int fd_ = -1;

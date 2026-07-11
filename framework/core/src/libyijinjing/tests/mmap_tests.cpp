@@ -19,7 +19,7 @@
 #include <thread>
 #include <type_traits>
 
-#ifdef _WINDOWS
+#ifdef _WIN32
 #include <windows.h>
 #else
 #include <csignal>
@@ -84,7 +84,7 @@ void require_throws(const std::function<void()> &fn, const std::string &message)
 }
 
 size_t process_resource_count() {
-#ifdef _WINDOWS
+#ifdef _WIN32
   DWORD count = 0;
   require(GetProcessHandleCount(GetCurrentProcess(), &count) != 0, "failed to count process handles");
   return count;
@@ -249,11 +249,12 @@ void test_mapping_error_paths_release_resources() {
                    "repeated truncated mapping unexpectedly succeeded");
   }
   const auto after = process_resource_count();
-  require(after <= before + 1, "failing mappings leaked file descriptors or handles");
+  require(after <= before + 1, "failing mappings leaked file descriptors or handles: before=" + std::to_string(before) +
+                                   ", after=" + std::to_string(after) + ", delta=" + std::to_string(after - before));
 
   const auto stale_path = tree.root() / "stale.journal";
   auto stale = mapped_region::map(stale_path.string(), 4096, mapping_policy::write_create_or_grow());
-#ifdef _WINDOWS
+#ifdef _WIN32
   require(UnmapViewOfFile(reinterpret_cast<void *>(stale.address())) != 0,
           "failed to inject an already-unmapped Windows view");
 #else
@@ -265,7 +266,7 @@ void test_mapping_error_paths_release_resources() {
   require(!stale, "failed cleanup retained stale mapping ownership");
 }
 
-#ifndef _WINDOWS
+#ifndef _WIN32
 void test_resize_budget_failure_releases_file() {
   temp_tree tree;
   const auto path = tree.root() / "limited.journal";
@@ -361,7 +362,7 @@ void test_page_header_publication() {
   auto empty = mapped_region::map(path, TEST_PAGE_SIZE, mapping_policy::write_create_or_grow());
   require(empty.reset(), "failed to release empty page fixture mapping");
 
-#ifdef _WINDOWS
+#ifdef _WIN32
   std::thread initializer([loc] {
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
     (void)page::load(loc, location::PUBLIC, TEST_PAGE_SIZE, 1, page_open_policy::writer());
@@ -416,7 +417,7 @@ int main() {
       {"existing mapping never creates or grows", test_existing_mapping_never_creates_or_grows},
       {"mapped region move ownership", test_mapped_region_move_ownership},
       {"mapping error paths release resources", test_mapping_error_paths_release_resources},
-#ifndef _WINDOWS
+#ifndef _WIN32
       {"resize budget failure releases file", test_resize_budget_failure_releases_file},
 #endif
       {"page reader does not create layout", test_page_reader_does_not_create_layout},

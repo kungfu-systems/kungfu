@@ -33,7 +33,7 @@ void exit_reactor(int signum) {
 
 void kf_os_signal_handler(int signum) {
   switch (signum) {
-#ifdef _WINDOWS
+#ifdef _WIN32
   case SIGINT:   // interrupt
   case SIGBREAK: // Ctrl-Break sequence
     KF_LOG_INFO("kungfu app interrupted");
@@ -113,7 +113,7 @@ void kf_os_signal_handler(int signum) {
   case SIGSYS: // create core image    non-existent system call invoked
     print_stack_trace(stderr, signum);
     exit_reactor(signum);
-#endif // _WINDOWS
+#endif // _WIN32
 #ifdef __APPLE__
   case SIGINFO: // discard signal       status request from keyboard
     KF_LOG_INFO("kungfu app discard signal {}", signum);
@@ -129,7 +129,7 @@ void kf_os_signal_handler(int signum) {
 
 void disable_os_signals_handler() { signals_handler_enabled = false; }
 
-#ifdef _WINDOWS
+#ifdef _WIN32
 // Process-wide backstop for exceptions raised outside reactor::produce's SEH frame
 // (other threads, or before / after the produce loop). It hands the dumper real
 // EXCEPTION_POINTERS, unlike the contextless CRT signal(SIGSEGV) path.
@@ -137,7 +137,7 @@ static LONG WINAPI kf_top_level_filter(EXCEPTION_POINTERS *ep) {
   print_stack_trace(ep);
   return EXCEPTION_EXECUTE_HANDLER;
 }
-#endif // _WINDOWS
+#endif // _WIN32
 
 void handle_os_signals(void *reactor) {
   if (reactor_instance != nullptr) {
@@ -155,11 +155,11 @@ void handle_os_signals(void *reactor) {
   // path never triggers lazy dynamic-linker / dbghelp initialization.
   prepare_stack_trace();
 
-#ifdef _WINDOWS
+#ifdef _WIN32
   // Install the process-wide backstop after warm-up so the filter path only does
   // symbol lookups, never first-time DbgHelp initialization.
   SetUnhandledExceptionFilter(kf_top_level_filter);
-#endif // _WINDOWS
+#endif // _WIN32
 
   for (int s = 1; s < NSIG; s++) {
     signal(s, kf_os_signal_handler);

@@ -51,6 +51,11 @@ use shifu_core::style;
 /// mirroring the sh / cmd entrypoints. Everything else goes to corepack pnpm.
 const L2_SUBCOMMANDS: &[&str] = &["build", "rebuild", "proxy", "config"];
 
+#[cfg(any(windows, test))]
+fn command_requires_msvc(command: Option<&str>) -> bool {
+    !matches!(command, Some("proxy" | "config"))
+}
+
 fn print_usage() {
     println!(
         "\u{1f94b} {}",
@@ -176,15 +181,17 @@ fn main() {
     }
     let root = root.expect("strict repo discovery cannot return None");
 
+    // L2 build/rebuild dispatches inherit this process environment, so load
+    // MSVC before selecting the Node path. Proxy/config are intentionally
+    // compiler-free; ordinary pnpm tasks keep the historical MSVC bootstrap.
+    #[cfg(windows)]
+    if command_requires_msvc(first) {
+        msvc::ensure_msvc_env(&root);
+    }
+
     match first {
         Some(cmd) if L2_SUBCOMMANDS.contains(&cmd) => dispatch::delegate_l2(&root, &args),
-        _ => {
-            // Build tasks on Windows need the MSVC environment (cl.exe) for the
-            // C++ core; load vcvars when it is not already present.
-            #[cfg(windows)]
-            msvc::ensure_msvc_env(&root);
-            dispatch::run_pnpm(&root, &args)
-        }
+        _ => dispatch::run_pnpm(&root, &args),
     }
 }
 
@@ -395,5 +402,20 @@ fn find_repo_root(lenient: bool) -> Option<PathBuf> {
                 )
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::command_requires_msvc;
+
+    #[test]
+    fn compiler_environment_precedes_every_build_capable_dispatch() {
+        assert!(command_requires_msvc(Some("build")));
+        assert!(command_requires_msvc(Some("rebuild")));
+        assert!(command_requires_msvc(Some("build:core")));
+        assert!(command_requires_msvc(Some("qualify:mmap")));
+        assert!(!command_requires_msvc(Some("proxy")));
+        assert!(!command_requires_msvc(Some("config")));
     }
 }

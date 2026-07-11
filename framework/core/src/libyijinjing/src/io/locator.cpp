@@ -21,7 +21,7 @@ fs::path get_default_root() {
   if (kf_home != nullptr) {
     return fs::path{kf_home};
   }
-#ifdef _WINDOWS
+#ifdef _WIN32
   auto appdata = std::getenv("APPDATA");
   auto root = fs::path(appdata);
 #elif __APPLE__
@@ -30,7 +30,7 @@ fs::path get_default_root() {
 #elif __linux__
   auto user_home = std::getenv("HOME");
   auto root = fs::path(user_home) / ".config";
-#endif // _WINDOWS
+#endif // _WIN32
   return root / "kungfu" / "home";
 }
 
