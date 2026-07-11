@@ -3663,6 +3663,70 @@ nlohmann::json render_storage_import_bundle_result(const storage_import_bundle_r
           {"records", result.records}};
 }
 
+storage_verify_sync_result verify_sync_typed_impl(const storage_verify_sync_request &request) {
+  storage_verify_sync_result result{};
+  result.source_id = request.source_id;
+  result.source_fsck =
+      default_storage_service().fsck({request.runtime_dir, request.provider, request.provider_config_source,
+                                      storage_fsck_scope::Source, request.source_id, 0, false});
+  if (!result.source_fsck.ok) {
+    result.ok = false;
+    return result;
+  }
+
+  const auto bundle =
+      default_storage_service().export_bundle({request.runtime_dir, request.provider, request.source_id, {}, false});
+  result.exported_records = bundle.records.size();
+  result.local_sync_root = {bundle.manifest.sync_root.algorithm, bundle.manifest.sync_root.value};
+  const auto temp_root = fs::temp_directory_path() / ("kungfu-storage-sync-" + std::to_string(std::random_device{}()) +
+                                                      "-" + std::to_string(std::random_device{}()));
+  result.imported_runtime_dir = temp_root.string();
+  try {
+    result.import = default_storage_service().import_bundle({temp_root.string(), request.provider, bundle, true});
+    result.imported_fsck =
+        default_storage_service().fsck({temp_root.string(), request.provider, request.provider_config_source,
+                                        storage_fsck_scope::Source, request.source_id, 0, false});
+    const auto imported_provider = provider_cache::instance().acquire(temp_root.string(), request.provider);
+    const auto imported =
+        catalog_store(temp_root.string()).latest_manifest_typed(request.source_id, imported_provider->content_store());
+    if (imported.has_value()) {
+      result.imported_sync_root = {imported->sync_root.algorithm, imported->sync_root.value};
+    }
+    fs::remove_all(temp_root);
+  } catch (...) {
+    fs::remove_all(temp_root);
+    throw;
+  }
+  result.sync_roots_match = result.local_sync_root.algorithm == result.imported_sync_root.algorithm &&
+                            result.local_sync_root.value == result.imported_sync_root.value;
+  result.ok = result.imported_fsck.ok && result.sync_roots_match;
+  return result;
+}
+
+nlohmann::json render_storage_verify_sync_result(const storage_verify_sync_result &result) {
+  if (!result.source_fsck.ok) {
+    return {{"ok", false},
+            {"scope", "source"},
+            {"source_id", result.source_id},
+            {"errors", nlohmann::json::array({{{"code", "source_fsck_failed"},
+                                               {"fsck", render_storage_fsck_result(result.source_fsck)}}})}};
+  }
+  auto imported_fsck = render_storage_fsck_result(result.imported_fsck);
+  imported_fsck = replace_string_subtree(imported_fsck, result.imported_runtime_dir, "<sync-runtime>");
+  return {{"ok", result.ok},
+          {"scope", result.scope},
+          {"source_id", result.source_id},
+          {"exported_records", result.exported_records},
+          {"import", render_storage_import_bundle_result(result.import)},
+          {"local_sync_root",
+           render_sync_root({result.local_sync_root.algorithm, result.local_sync_root.value, result.exported_records})},
+          {"imported_sync_root", render_sync_root({result.imported_sync_root.algorithm, result.imported_sync_root.value,
+                                                   result.exported_records})},
+          {"sync_roots_match", result.sync_roots_match},
+          {"source_fsck", render_storage_fsck_result(result.source_fsck)},
+          {"imported_fsck", imported_fsck}};
+}
+
 class file_storage_json_edge_service {
 public:
   [[nodiscard]] nlohmann::json status(const storage_service_options &options) const {
@@ -3715,54 +3779,8 @@ public:
   }
 
   [[nodiscard]] nlohmann::json verify_sync(const storage_service_options &options) const {
-    const auto source_report = fsck_impl(options);
-    if (!source_report.value("ok", false)) {
-      return {{"ok", false},
-              {"scope", "source"},
-              {"source_id", options.source_id},
-              {"errors", nlohmann::json::array({{{"code", "source_fsck_failed"}, {"fsck", source_report}}})}};
-    }
-    auto export_options = options;
-    const auto bundle = export_bundle_generic_impl(export_options, /*record_receipt=*/false);
-    const auto temp_root =
-        fs::temp_directory_path() / ("kungfu-storage-sync-" + std::to_string(std::random_device{}()) + "-" +
-                                     std::to_string(std::random_device{}()));
-    nlohmann::json import_result;
-    nlohmann::json imported_report;
-    nlohmann::json imported_manifest;
-    try {
-      auto import_options = options;
-      import_options.runtime_dir = temp_root.string();
-      import_options.bundle = bundle;
-      import_result = import_bundle(import_options);
-      imported_report = fsck_impl(import_options);
-      imported_report = replace_string_subtree(imported_report, temp_root.string(), "<sync-runtime>");
-      const auto import_provider = shared_provider(import_options);
-      imported_manifest = load_latest_manifest_impl(import_options.runtime_dir, *import_provider, options.source_id);
-      fs::remove_all(temp_root);
-    } catch (...) {
-      fs::remove_all(temp_root);
-      throw;
-    }
-    const auto provider = shared_provider(options);
-    const auto local_manifest = load_latest_manifest_impl(options.runtime_dir, *provider, options.source_id);
-    const auto local_root = local_manifest.is_object() && local_manifest.contains("sync_root")
-                                ? local_manifest.at("sync_root")
-                                : nlohmann::json(nullptr);
-    const auto imported_root = imported_manifest.is_object() && imported_manifest.contains("sync_root")
-                                   ? imported_manifest.at("sync_root")
-                                   : nlohmann::json(nullptr);
-    const auto roots_match = local_root == imported_root;
-    return {{"ok", imported_report.value("ok", false) && roots_match},
-            {"scope", "source"},
-            {"source_id", options.source_id},
-            {"exported_records", bundle.value("records", nlohmann::json::array()).size()},
-            {"import", import_result},
-            {"local_sync_root", local_root},
-            {"imported_sync_root", imported_root},
-            {"sync_roots_match", roots_match},
-            {"source_fsck", source_report},
-            {"imported_fsck", imported_report}};
+    return render_storage_verify_sync_result(default_storage_service().verify_sync(
+        {options.runtime_dir, options.provider, options.provider_config_source, options.source_id}));
   }
 
   [[nodiscard]] nlohmann::json layout(const storage_service_options &options) const {
@@ -3903,6 +3921,10 @@ public:
   [[nodiscard]] storage_import_bundle_result
   import_bundle(const storage_import_bundle_request &request) const override {
     return import_bundle_typed_impl(request);
+  }
+
+  [[nodiscard]] storage_verify_sync_result verify_sync(const storage_verify_sync_request &request) const override {
+    return verify_sync_typed_impl(request);
   }
 };
 

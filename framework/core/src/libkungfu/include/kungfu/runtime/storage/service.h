@@ -580,6 +580,27 @@ struct storage_import_bundle_result {
   uint64_t records = 0;
 };
 
+struct storage_verify_sync_request {
+  std::string runtime_dir = {};
+  std::string provider = {};
+  std::string provider_config_source = {};
+  std::string source_id = {};
+};
+
+struct storage_verify_sync_result {
+  bool ok = true;
+  std::string scope = "source";
+  std::string source_id = {};
+  uint64_t exported_records = 0;
+  storage_import_bundle_result import = {};
+  storage_sync_root_view local_sync_root = {};
+  storage_sync_root_view imported_sync_root = {};
+  bool sync_roots_match = false;
+  storage_fsck_result source_fsck = {};
+  storage_fsck_result imported_fsck = {};
+  std::string imported_runtime_dir = {};
+};
+
 class storage_service {
 public:
   virtual ~storage_service() = default;
@@ -604,6 +625,8 @@ public:
 
   [[nodiscard]] virtual storage_import_bundle_result
   import_bundle(const storage_import_bundle_request &request) const = 0;
+
+  [[nodiscard]] virtual storage_verify_sync_result verify_sync(const storage_verify_sync_request &request) const = 0;
 };
 
 [[nodiscard]] std::string storage_query_kind_name(storage_query_kind kind);

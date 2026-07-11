@@ -1275,6 +1275,8 @@ def test_runtime_storage_service_operations_own_file_provider(tmp_path):
     )
     assert verify["ok"]
     assert verify["sync_roots_match"]
+    assert verify["local_sync_root"] == bundle["sync_root"]
+    assert verify["imported_sync_root"] == bundle["sync_root"]
 
 
 def test_storage_maintenance_rebuild_gc_compact_and_sync_check(tmp_path):
@@ -1374,6 +1376,8 @@ def test_storage_maintenance_rebuild_gc_compact_and_sync_check(tmp_path):
     assert sync_check["ok"]
     assert sync_check["sync_roots_match"]
     assert sync_check["exported_records"] == 1
+    assert sync_check["local_sync_root"] == accepted["sync_root"]
+    assert sync_check["imported_sync_root"] == accepted["sync_root"]
 
 
 def test_atlas_import_persists_generic_source_manifest(tmp_path):
