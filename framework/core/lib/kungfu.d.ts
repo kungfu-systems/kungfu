@@ -750,6 +750,11 @@ interface KungfuRuntime {
   readonly ACTION_ENVELOPE_CARRIER_TYPE: number;
   encodeActionEnvelope(value: ActionEnvelope): Uint8Array;
   decodeActionEnvelope(value: Uint8Array): DecodedActionEnvelope | null;
+  verifyFlatbufferPayload(
+    schemaBfbs: Uint8Array,
+    payload: Uint8Array,
+    objectName?: string,
+  ): boolean;
   ActionRecorder(
     runtimeDir: string,
     namespace: string,

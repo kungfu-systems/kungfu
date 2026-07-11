@@ -320,13 +320,16 @@ export function openRewind(options: OpenRewindOptions): Rewind {
   // `.bfbs`; decoders are deduped by schema hash.
   const loadBinders = (): Map<
     string,
-    { kind: string; decoder: ReflectionDecoder }
+    { kind: string; decoder: ReflectionDecoder; schemaBfbs: Uint8Array }
   > => {
     const binders = new Map<
       string,
-      { kind: string; decoder: ReflectionDecoder }
+      { kind: string; decoder: ReflectionDecoder; schemaBfbs: Uint8Array }
     >();
-    const byHash = new Map<string, ReflectionDecoder>();
+    const byHash = new Map<
+      string,
+      { decoder: ReflectionDecoder; schemaBfbs: Uint8Array }
+    >();
     let runIds: string[];
     try {
       runIds = readDir(`${runtimeDir}/rewind`);
@@ -349,18 +352,22 @@ export function openRewind(options: OpenRewindOptions): Rewind {
         manifest.schema_bindings ?? {},
       )) {
         if (binders.has(actionType)) continue;
-        let dec = byHash.get(binding_.schema_hash);
-        if (!dec) {
+        let schema = byHash.get(binding_.schema_hash);
+        if (!schema) {
           try {
-            dec = new ReflectionDecoder(
-              readFile(`${bundle}/schemas/${binding_.schema_hash}.bfbs`),
+            const schemaBfbs = readFile(
+              `${bundle}/schemas/${binding_.schema_hash}.bfbs`,
             );
+            schema = {
+              decoder: new ReflectionDecoder(schemaBfbs),
+              schemaBfbs,
+            };
           } catch {
             continue; // schema blob missing/unreadable, skip this binding
           }
-          byHash.set(binding_.schema_hash, dec);
+          byHash.set(binding_.schema_hash, schema);
         }
-        binders.set(actionType, { kind: binding_.name, decoder: dec });
+        binders.set(actionType, { kind: binding_.name, ...schema });
       }
     }
     return binders;
@@ -380,6 +387,16 @@ export function openRewind(options: OpenRewindOptions): Rewind {
         }
         const bound = binders.get(envelope.actionType);
         if (!bound) {
+          assemble.next();
+          continue;
+        }
+        if (
+          !binding.verifyFlatbufferPayload(
+            bound.schemaBfbs,
+            envelope.payload,
+            bound.kind,
+          )
+        ) {
           assemble.next();
           continue;
         }

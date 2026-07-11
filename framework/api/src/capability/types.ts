@@ -206,6 +206,11 @@ export type KfNativeBinding = {
     lastFrameUid: () => bigint;
   };
   decodeActionEnvelope: (value: Uint8Array) => KfActionEnvelope | null;
+  verifyFlatbufferPayload: (
+    schemaBfbs: Uint8Array,
+    payload: Uint8Array,
+    objectName?: string,
+  ) => boolean;
   SessionStore: new (
     location: Record<string, string>,
     runtimeDir: string,

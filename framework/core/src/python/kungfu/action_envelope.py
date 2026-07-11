@@ -176,3 +176,17 @@ def parse_action_envelope_edge_json(value: str | bytes) -> bytes:
             payload["data"] = b""
         edge["payload"] = payload
     return encode_action_envelope(edge)
+
+
+def verify_flatbuffer_payload(
+    schema_bfbs: bytes, payload: bytes, object_name: str = ""
+) -> bool:
+    """Verify nested domain bytes through the same C++ reflection boundary."""
+
+    import kungfu
+
+    return bool(
+        kungfu.__binding__.runtime.verify_flatbuffer_payload(
+            bytes(schema_bfbs), bytes(payload), object_name
+        )
+    )

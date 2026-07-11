@@ -87,6 +87,7 @@ export type Work = {
 export type OpenWorkOptions = {
   binding: KfNativeBinding;
   locator: KfLocator;
+  readFile: (path: string) => Uint8Array;
 };
 
 const str = (value: string | null | undefined) => value ?? undefined;
@@ -113,10 +114,46 @@ function decodeEnvelope(
 }
 
 export function openWork(options: OpenWorkOptions): Work {
-  const { binding } = options;
+  const { binding, readFile } = options;
   const runtimeDir = resolveRuntimeDir(options.locator);
 
   let cache: Map<string, WorkItem> | null = null;
+
+  const loadSchemas = (): Map<
+    string,
+    { schemaBfbs: Uint8Array; table: string }
+  > => {
+    const result = new Map<string, { schemaBfbs: Uint8Array; table: string }>();
+    try {
+      const manifest = JSON.parse(
+        Buffer.from(
+          readFile(`${runtimeDir}/work/store/manifest.json`),
+        ).toString('utf8'),
+      ) as {
+        schema_bindings?: Record<
+          string,
+          { name?: string; schema_hash?: string }
+        >;
+      };
+      const schemas = new Map<string, Uint8Array>();
+      for (const [actionType, binding_] of Object.entries(
+        manifest.schema_bindings ?? {},
+      )) {
+        if (!binding_.name || !binding_.schema_hash) continue;
+        let schemaBfbs = schemas.get(binding_.schema_hash);
+        if (!schemaBfbs) {
+          schemaBfbs = readFile(
+            `${runtimeDir}/work/store/schemas/${binding_.schema_hash}.bfbs`,
+          );
+          schemas.set(binding_.schema_hash, schemaBfbs);
+        }
+        result.set(actionType, { schemaBfbs, table: binding_.name });
+      }
+    } catch {
+      return result;
+    }
+    return result;
+  };
 
   const shell = (workId: string, time: bigint): WorkItem => ({
     workId,
@@ -132,6 +169,7 @@ export function openWork(options: OpenWorkOptions): Work {
   // Fold the event stream into current items — the same projection the
   // python store computes; state never lives anywhere but the fold.
   const scan = (): Map<string, WorkItem> => {
+    const schemas = loadSchemas();
     const frames: { genTime: bigint; actionType: string; bytes: Uint8Array }[] =
       [];
     const assemble = new binding.Assemble([runtimeDir]);
@@ -139,7 +177,16 @@ export function openWork(options: OpenWorkOptions): Work {
       const frame = assemble.currentFrame();
       if (frame.carrierType() === ACTION_ENVELOPE_CARRIER) {
         const event = decodeEnvelope(binding, frame.dataBytes());
-        if (event?.actionType.startsWith('work.')) {
+        const schema = event ? schemas.get(event.actionType) : undefined;
+        if (
+          event?.actionType.startsWith('work.') &&
+          schema !== undefined &&
+          binding.verifyFlatbufferPayload(
+            schema.schemaBfbs,
+            event.payload,
+            schema.table,
+          )
+        ) {
           frames.push({
             genTime: frame.genTime(),
             actionType: event.actionType,

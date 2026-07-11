@@ -11,8 +11,9 @@ from kungfu.action_envelope import (
     decode_flatbuffer_payload,
     encode_action_envelope,
     flatbuffer_payload,
+    verify_flatbuffer_payload,
 )
-from kungfu.work import ACTION_SCHEMA_REFS
+from kungfu.work import ACTION_SCHEMA_REFS, ACTION_TYPE_NAMES
 
 
 def build_event_envelope(action_type: str, payload: bytes) -> dict[str, Any]:
@@ -32,6 +33,8 @@ def wrap_event(action_type: str, payload: bytes) -> tuple[int, bytes]:
 
 def unwrap_event(
     data: bytes | bytearray | memoryview | list[int],
+    *,
+    schema_bfbs: bytes | None = None,
 ) -> tuple[str, bytes] | None:
     envelope = decode_action_envelope(data)
     if envelope is None:
@@ -40,4 +43,9 @@ def unwrap_event(
     payload = envelope.get("payload")
     if not isinstance(action_type, str) or not isinstance(payload, dict):
         return None
-    return action_type, decode_flatbuffer_payload(payload)
+    domain_payload = decode_flatbuffer_payload(payload)
+    if schema_bfbs is not None and not verify_flatbuffer_payload(
+        schema_bfbs, domain_payload, ACTION_TYPE_NAMES.get(action_type, "")
+    ):
+        return None
+    return action_type, domain_payload

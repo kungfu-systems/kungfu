@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -58,6 +59,11 @@ def test_binary_action_envelope_roundtrip_uses_declared_identifier():
     assert decoded["source"]["schema_version"] == 2
     assert decoded["batch"]["goals"] == 2
     assert decode_flatbuffer_payload(decoded["payload"]) == b"payload"
+    schema_path = Path(__file__).parents[2] / "src/libkungfu/schema/ActionEnvelope.bfbs"
+    schema_bfbs = schema_path.read_bytes()
+    runtime = kungfu.__binding__.runtime
+    assert runtime.verify_flatbuffer_payload(schema_bfbs, encoded)
+    assert not runtime.verify_flatbuffer_payload(schema_bfbs, encoded[:16])
 
 
 def test_binary_action_envelope_rejects_corruption_and_hash_mismatch():

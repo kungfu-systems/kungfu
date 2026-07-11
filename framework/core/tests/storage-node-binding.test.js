@@ -223,6 +223,14 @@ test(
     assert.equal(decoded.payload.hash_algorithm, 'sha256');
     assert.match(decoded.payload.hash, /^[0-9a-f]{64}$/);
     assert.equal(decoded.payload.byte_len, 7n);
+    const envelopeSchema = fs.readFileSync(
+      path.join(coreDir, 'src', 'libkungfu', 'schema', 'ActionEnvelope.bfbs'),
+    );
+    assert.equal(kungfu.verifyFlatbufferPayload(envelopeSchema, encoded), true);
+    assert.equal(
+      kungfu.verifyFlatbufferPayload(envelopeSchema, encoded.subarray(0, 16)),
+      false,
+    );
 
     const corrupted = Buffer.from(encoded);
     corrupted[corrupted.indexOf(Buffer.from('payload'))] ^= 0xff;

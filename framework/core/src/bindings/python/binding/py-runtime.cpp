@@ -19,6 +19,7 @@
 #include <kungfu/runtime/storage/hana_view.h>
 #include <kungfu/runtime/storage/json_edge.h>
 #include <kungfu/runtime/util/terminal.h>
+#include <kungfu/view/schema.h>
 #include <kungfu/yijinjing/hash.h>
 #include <kungfu/yijinjing/journal/assemble.h>
 #include <kungfu/yijinjing/journal/frame.h>
@@ -1066,6 +1067,16 @@ void bind(pybind11::module &&m) {
         return action_envelope_to_py(*decoded);
       },
       py::arg("value"));
+  m.def(
+      "verify_flatbuffer_payload",
+      [](py::bytes schema_bfbs, py::bytes payload, const std::string &object_name) {
+        const auto schema_bytes = schema_bfbs.cast<std::string>();
+        const auto payload_bytes = payload.cast<std::string>();
+        const auto schema = view::schema_handle::from_bytes(schema_bytes);
+        return schema.verify_table(reinterpret_cast<const uint8_t *>(payload_bytes.data()), payload_bytes.size(),
+                                   object_name);
+      },
+      py::arg("schema_bfbs"), py::arg("payload"), py::arg("object_name") = "");
 
   py::class_<action::action_recorder, action::action_recorder_ptr>(m, "action_recorder")
       .def(py::init<const std::string &, const std::string &, const std::string &, uint32_t, uint64_t>(),

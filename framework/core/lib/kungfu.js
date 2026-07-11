@@ -85,6 +85,7 @@ module.exports = () => {
     parseTime: binding.parseTime,
     encodeActionEnvelope: binding.encodeActionEnvelope,
     decodeActionEnvelope: binding.decodeActionEnvelope,
+    verifyFlatbufferPayload: binding.verifyFlatbufferPayload,
     ACTION_ENVELOPE_CARRIER_TYPE: binding.ACTION_ENVELOPE_CARRIER_TYPE,
     /**
      * @param {string} runtimeDir

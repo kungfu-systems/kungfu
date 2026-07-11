@@ -214,7 +214,11 @@ export function bootRuntime(): Runtime {
       readFile: (p: string) => rewindFs.readFileSync(p),
       readDir: (d: string) => rewindFs.readdirSync(d),
     });
-    const work = openWork({ binding, locator: { runtimeDir } });
+    const work = openWork({
+      binding,
+      locator: { runtimeDir },
+      readFile: (p: string) => rewindFs.readFileSync(p),
+    });
     const childProcess = window.require('node:child_process') as {
       execFileSync: (
         file: string,

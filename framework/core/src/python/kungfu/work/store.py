@@ -202,11 +202,13 @@ def read_frames(runtime_dir):
     """All work frames in gen_time order: (gen_time, action_type, bytes)."""
     location = _location(runtime_dir)
     frames = []
+    with open(_BFBS_FILE, "rb") as schema_file:
+        schema_bfbs = schema_file.read()
     try:
         for header, payload in yjj.assemble(location, 0).read_bytes(
             CARRIER_WORK_ACTION
         ):
-            event = unwrap_event(payload)
+            event = unwrap_event(payload, schema_bfbs=schema_bfbs)
             if event is None:
                 continue
             action_type, event_payload = event

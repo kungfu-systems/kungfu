@@ -2,6 +2,10 @@
 
 #include "action_recorder.h"
 
+#include <kungfu/view/schema.h>
+
+#include <exception>
+#include <string>
 #include <vector>
 
 using kungfu::runtime::action::record_options;
@@ -287,6 +291,24 @@ Napi::Value DecodeActionEnvelope(const Napi::CallbackInfo &info) {
   return decoded.has_value() ? action_envelope_to_object(info.Env(), *decoded) : info.Env().Null();
 }
 
+Napi::Value VerifyFlatbufferPayload(const Napi::CallbackInfo &info) {
+  if (!IsValid(info, 0) || !IsValid(info, 1))
+    throw Napi::TypeError::New(info.Env(), "verifyFlatbufferPayload(schemaBfbs, payload)");
+  const auto bfbs = read_bytes_value(info[0]);
+  const auto payload = read_bytes_value(info[1]);
+  const auto object_name =
+      IsValid(info, 2, &Napi::Value::IsString) ? info[2].As<Napi::String>().Utf8Value() : std::string{};
+  if (bfbs.empty())
+    throw Napi::TypeError::New(info.Env(), "schemaBfbs must be a non-empty Buffer or Uint8Array");
+  try {
+    const auto schema =
+        view::schema_handle::from_bytes(std::string(reinterpret_cast<const char *>(bfbs.data()), bfbs.size()));
+    return Napi::Boolean::New(info.Env(), schema.verify_table(payload.data(), payload.size(), object_name));
+  } catch (const std::exception &error) {
+    throw Napi::Error::New(info.Env(), error.what());
+  }
+}
+
 Napi::Object to_receipt_object(Napi::Env env, const record_receipt &receipt) {
   auto object = Napi::Object::New(env);
   object.Set("frameUid", Napi::BigInt::New(env, receipt.frame_uid));
@@ -382,6 +404,7 @@ void ActionRecorder::Init(Napi::Env env, Napi::Object exports) {
   exports.Set("ActionRecorder", func);
   exports.Set("encodeActionEnvelope", Napi::Function::New(env, EncodeActionEnvelope));
   exports.Set("decodeActionEnvelope", Napi::Function::New(env, DecodeActionEnvelope));
+  exports.Set("verifyFlatbufferPayload", Napi::Function::New(env, VerifyFlatbufferPayload));
   exports.Set("ACTION_ENVELOPE_CARRIER_TYPE", Napi::Number::New(env, view::action::ACTION_ENVELOPE_CARRIER_TYPE));
   exports.Set("FRAME_INTEGRITY_VERSION_V1", Napi::Number::New(env, runtime::action::FRAME_INTEGRITY_VERSION_V1));
   exports.Set("FRAME_INTEGRITY_VERSION_V2", Napi::Number::New(env, runtime::action::FRAME_INTEGRITY_VERSION_V2));
