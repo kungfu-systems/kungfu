@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "contract": "kungfu-buildchain-kfd-1-witness-set",
+  "id": "kungfu-contracts",
+  "standard": "kfd-1",
+  "standardLabel": "KFD-1",
+  "source": {
+    "repo": "kungfu-systems/kungfu",
+    "registry": "framework/contract/kungfu-contracts.registry.json",
+    "policy": "framework/contract/kungfu-agent-first-canonical-policy.json"
+  },
+  "contractWorld": {
+    "schemaId": "https://kfd.libkungfu.dev/schemas/kfd-1/contract-world.schema.json",
+    "digest": "sha256:3aa7446953e91f366d250331e4feb7d6a3608f56e8c5bc12fa01b2fd597ea05d"
+  },
+  "standardContract": {
+    "id": "",
+    "schemaId": "https://kfd.libkungfu.dev/schemas/kfd-1/contract-world.schema.json",
+    "path": "",
+    "sha256": "",
+    "digest": "sha256:3aa7446953e91f366d250331e4feb7d6a3608f56e8c5bc12fa01b2fd597ea05d"
+  },
+  "selfHostingBoundary": {
+    "mode": "external-contract-world",
+    "sourceScope": "KFD source standard metadata, schemas, package exports, and site-consumption entrypoints",
+    "artifactScope": "packaged public artifact surfaces",
+    "boundary": "source-to-artifact byte equality for declared standard-contract surfaces",
+    "residualRisk": []
+  },
+  "responsibility": {
+    "sourceContractOwner": "product",
+    "artifactVerificationOwner": "buildchain-release-passport",
+    "releasePassportProofOwner": "buildchain"
+  },
+  "sourceVerificationRequired": false,
+  "canonicalPolicy": {
+    "path": "framework/contract/kungfu-agent-first-canonical-policy.json",
+    "sha256": "4f7ba18746ef3e54627c1edaf39cbd74312b2ad2cb97e31240b1c58bb053a782"
+  },
+  "registry": {
+    "path": "framework/contract/kungfu-contracts.registry.json",
+    "sha256": "19c8d64633b14b805bebb7f7028ddfb69062564b939dd97cd22fe86b5e93422d"
+  },
+  "surfaces": [
+    {
+      "name": "kungfu-config",
+      "sourcePath": "framework/config/kungfu-config.contract.json",
+      "sourceSha256": "1e51d554f79f8fc6ab2ddbe5782f44426d62f095fb724d34783b61d7045cf0a0",
+      "artifactPath": "config/kungfu-config.contract.json",
+      "expectedSha256": "1e51d554f79f8fc6ab2ddbe5782f44426d62f095fb724d34783b61d7045cf0a0",
+      "byteForByte": true
+    },
+    {
+      "name": "kungfu-kfx",
+      "sourcePath": "framework/kfx/kungfu-kfx.contract.json",
+      "sourceSha256": "ad1a493d02e732283ea94958deac2c998ccf0bfb32251815a462188bd15dbb7c",
+      "artifactPath": "config/kungfu-kfx.contract.json",
+      "expectedSha256": "ad1a493d02e732283ea94958deac2c998ccf0bfb32251815a462188bd15dbb7c",
+      "byteForByte": true
+    },
+    {
+      "name": "kungfu-skill",
+      "sourcePath": "framework/skill/kungfu-skill.contract.json",
+      "sourceSha256": "fb6fbc59557ac8448226f5ed8b97fd71fcf202742e896bb06e2831abeedc2a52",
+      "artifactPath": "config/kungfu-skill.contract.json",
+      "expectedSha256": "fb6fbc59557ac8448226f5ed8b97fd71fcf202742e896bb06e2831abeedc2a52",
+      "byteForByte": true
+    }
+  ],
+  "metadata": {
+    "kfdPackage": {
+      "name": "@kungfu-tech/kfd",
+      "version": "1.0.0-alpha.21",
+      "repository": "git+https://github.com/kungfu-systems/kfd.git"
+    },
+    "schemaIds": {
+      "metadata": "https://kfd.libkungfu.dev/schemas/kfd-standards.schema.json",
+      "contractWorld": "https://kfd.libkungfu.dev/schemas/kfd-1/contract-world.schema.json",
+      "witness": "https://kfd.libkungfu.dev/schemas/kfd-1/witness.schema.json"
+    },
+    "schemaPaths": {
+      "metadata": "schemas/kfd-standards.schema.json",
+      "contractWorld": "schemas/kfd-1/contract-world.schema.json",
+      "witness": "schemas/kfd-1/witness.schema.json"
+    }
+  }
+}

@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: Apache-2.0
+
+[package]
+name = "kungfu-libwasm-wasmtime"
+version = "4.0.0-alpha.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+name = "kungfu_libwasm_wasmtime"
+path = "../src/lib.rs"
+crate-type = ["cdylib"]
+
+[workspace]
+
+[features]
+default = ["production", "wasmtime-engine"]
+production = []
+wasmtime-engine = []
+wasmer-engine = []
+
+[dependencies]
+sha2 = "=0.10.9"
+wasmparser = "=0.240.0"
+wasmtime = { version = "=46.0.1", default-features = false, features = ["cranelift", "runtime", "std"] }
+wat = "1"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "=0.61.2", features = ["Win32_System_ProcessStatus", "Win32_System_Threading"] }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "unwind"

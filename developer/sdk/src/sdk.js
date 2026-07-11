@@ -14,6 +14,15 @@ import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { BUILDCHAIN_KFD3_SURFACE_REGISTRY_PATH } from '@kungfu-tech/buildchain/buildchain-layout';
+import {
+  collectKfdStatus,
+  kfd1,
+  kfd2,
+  kfd3,
+  kfd4,
+  schemas as kfdSchemas,
+} from '@kungfu-tech/buildchain/kfd';
 import {
   BUILDCHAIN_JSON_FORMATTING_POLICY,
   createKfd1ReleaseGateEvidence,
@@ -37,7 +46,50 @@ const CONTRACT_FIXTURE_SCHEMA = 'kungfu.sdk.contract-drift-fixture/v1';
 const CANONICAL_POLICY_SCHEMA = 'kungfu.agent-first-canonical-policy/v1';
 const CANONICAL_POLICY_FILE = 'kungfu-agent-first-canonical-policy.json';
 const require = createRequire(import.meta.url);
+const { queryCapabilities: queryKfd3Capabilities } = kfd3;
 const SDK_CLI = fileURLToPath(import.meta.url);
+const SDK_ROOT = path.resolve(path.dirname(SDK_CLI), '..');
+const SDK_KFD3_CANONICAL_REGISTRY = path.join(
+  SDK_ROOT,
+  'kfd',
+  'kfd-3-surfaces.json',
+);
+const SDK_KFD_UPSTREAM_AGGREGATE = path.join(
+  SDK_ROOT,
+  'kfd',
+  'upstream-aggregate.json',
+);
+const SDK_KFD1_WITNESS = path.join(
+  SDK_ROOT,
+  'kfd',
+  'kfd-1',
+  'contract-world.witness.json',
+);
+const SDK_KFD1_RELEASE_GATE = path.join(
+  SDK_ROOT,
+  'kfd',
+  'kfd-1',
+  'release-gate.json',
+);
+const SDK_KFD1_VERIFY_RESULT = path.join(
+  SDK_ROOT,
+  'kfd',
+  'kfd-1',
+  'verify-result.json',
+);
+const SDK_KFD2_RELEASE_CLAIMS = path.join(
+  SDK_ROOT,
+  'kfd',
+  'kfd-2',
+  'release-claims.json',
+);
+const SDK_KFD2_CLAIMS_DIR = path.join(SDK_ROOT, 'kfd', 'kfd-2', 'claims');
+const SDK_KFD2_CLAIM_ARGS = path.join(
+  SDK_ROOT,
+  'kfd',
+  'kfd-2',
+  'buildchain-claim-args.txt',
+);
 const isWin = process.platform === 'win32';
 
 /**
@@ -58,9 +110,16 @@ function usage(code) {
       '       kungfu sdk contract witness [--json]',
       '       kungfu sdk contract audit [--json]',
       '       kungfu sdk contract add <surface> [--source <path>] [--json]',
+      '       kungfu sdk kfd status [--json]',
+      '       kungfu sdk kfd schema <kfd-1|kfd-2|kfd-3|kfd-4> [--schema <name>] [--json]',
+      '       kungfu sdk kfd 1 status|schema|witness|gate|verify [--json]',
+      '       kungfu sdk kfd 2 status|schema|claims|trust-claims|trust-assessment [--json]',
+      '       kungfu sdk kfd 4 status|schema [--json]',
+      '       kungfu sdk kfd query|check|witness|upstream|aggregate [--json]',
       '       kungfu sdk kfx build | clean',
       '       kungfu sdk product gui dev|build|pack|dist [--dir <app-dir>] [--dry-run]',
       '       kungfu sdk product tui dev|build|bundle|dist [--dir <tui-dir>] [--dry-run]',
+      '       kungfu sdk product cli dist [--dir <product-dir>] [--dry-run]',
       '',
       'create options:',
       '  --name <name>   product/view name (defaults to the directory basename)',
@@ -100,6 +159,13 @@ function usage(code) {
       'one local contract-world witness for config/kfx/skill without duplicating',
       'standard keys or JSON formatting rules.',
       '',
+      'kfd status/schema and kfd 1/2/4 expose Kungfu KFD-1 contract-world,',
+      'KFD-2 release-claim, KFD-3 capability, and KFD-4 schema-only facts.',
+      'query/check/witness keep the existing KFD-3 capability query behavior;',
+      'upstream and aggregate expose the SDK-packaged KFD view of Kungfu plus',
+      'upstream KFD/libnode/Buildchain package facts, without a separate',
+      'buildchain executable installation.',
+      '',
     ].join('\n'),
   );
   process.exit(code);
@@ -125,7 +191,7 @@ function errorMessage(error) {
 
 /**
  * Parsed CLI options shared by SDK verbs.
- * @typedef {{ workspace: boolean, name: string, source: string, dir: string, check: boolean, write: boolean, json: boolean, dryRun: boolean }} CliOptions
+ * @typedef {{ workspace: boolean, name: string, source: string, dir: string, schema: string, check: boolean, write: boolean, json: boolean, dryRun: boolean }} CliOptions
  */
 
 /**
@@ -140,6 +206,7 @@ function parseArgs(argv) {
     name: '',
     source: '',
     dir: '',
+    schema: '',
     check: false,
     write: false,
     json: false,
@@ -157,6 +224,9 @@ function parseArgs(argv) {
     } else if (arg === '--dir') {
       i += 1;
       options.dir = argv[i] || '';
+    } else if (arg === '--schema') {
+      i += 1;
+      options.schema = argv[i] || '';
     } else if (arg === '--check') {
       options.check = true;
     } else if (arg === '--write') {
@@ -374,7 +444,7 @@ function isKfxManifest(pkg) {
  * @param {Record<string, unknown>} pkg
  * @returns {boolean}
  */
-function isProductArtifactManifest(pkg) {
+function isProductAssemblyManifest(pkg) {
   if (isObject(pkg.kungfuProduct)) return true;
   const deps = dependencyMap(pkg);
   return (
@@ -539,6 +609,31 @@ function runSdkCommand(cwd, args, options, runOptions = {}) {
   if (result.status !== 0) {
     fail(
       `kungfu sdk ${args.join(' ')} failed (exit ${result.status ?? `signal ${result.signal}`})`,
+    );
+  }
+}
+
+/**
+ * @param {string} cwd
+ * @param {string} file
+ * @param {string[]} args
+ * @param {CliOptions} options
+ * @returns {void}
+ */
+function runNodeFile(cwd, file, args, options) {
+  if (options.dryRun) {
+    process.stdout.write(
+      `[dry-run] cd ${cwd}\n[dry-run] ${shellLine([process.execPath, file, ...args])}\n`,
+    );
+    return;
+  }
+  const result = spawnSync(process.execPath, [file, ...args], {
+    cwd,
+    stdio: 'inherit',
+  });
+  if (result.status !== 0) {
+    fail(
+      `${path.relative(cwd, file)} failed (exit ${result.status ?? `signal ${result.signal}`})`,
     );
   }
 }
@@ -757,6 +852,7 @@ function kfxProductEnv(cwd) {
           name: '',
           source: '',
           dir: '',
+          schema: '',
           check: false,
           write: false,
           json: false,
@@ -787,7 +883,7 @@ function productKfxGui(cwd, verb, options) {
   }
   if (verb !== 'dev') {
     fail(
-      'kfx product gui supports dev and build; use an artifact product for pack/dist',
+      'kfx product gui supports dev and build; use a product assembly for pack/dist',
     );
   }
   runSdkCommand(cwd, ['kfx', 'build'], options);
@@ -812,7 +908,7 @@ function productKfxGui(cwd, verb, options) {
  * @param {CliOptions} options
  * @returns {void}
  */
-function productArtifactGui(cwd, verb, options) {
+function productAssemblyGui(cwd, verb, options) {
   const kfxPackages = declaredKfxDependencies(cwd);
   for (const name of kfxPackages) {
     const packageDir = resolvePackageDir(cwd, name);
@@ -859,7 +955,7 @@ function productArtifactGui(cwd, verb, options) {
 
   const config = path.join(cwd, 'electron-builder.yml');
   if (!fs.existsSync(config)) {
-    fail(`artifact product config not found: ${config}`);
+    fail(`product config not found: ${config}`);
   }
   const builderScript = path.join(
     guiDir,
@@ -895,9 +991,9 @@ function productArtifactGui(cwd, verb, options) {
  * @param {CliOptions} options
  * @returns {Promise<void>}
  */
-async function productArtifactTui(cwd, verb, options) {
+async function productAssemblyTui(cwd, verb, options) {
   const tuiDir = resolvePackageDir(cwd, '@kungfu-tech/tui');
-  if (!tuiDir) fail('artifact product does not declare @kungfu-tech/tui');
+  if (!tuiDir) fail('product assembly does not declare @kungfu-tech/tui');
   if (verb === 'dev') {
     runPackageScript(tuiDir, 'dev', options);
     return;
@@ -914,6 +1010,34 @@ async function productArtifactTui(cwd, verb, options) {
 }
 
 /**
+ * @param {string} cwd
+ * @param {string} verb
+ * @param {CliOptions} options
+ * @returns {void}
+ */
+function productAssemblyCli(cwd, verb, options) {
+  if (verb !== 'dist') {
+    fail('unknown product cli command (supported: dist)');
+  }
+  const pkg = readPackageJson(cwd);
+  const scripts = scriptsOf(pkg);
+  if (scripts['dist:cli']) {
+    runPackageScript(cwd, 'dist:cli', options);
+    return;
+  }
+  if (scripts['cli:dist']) {
+    runPackageScript(cwd, 'cli:dist', options);
+    return;
+  }
+  const distScript = path.join(cwd, 'scripts', 'dist.mjs');
+  if (fs.existsSync(distScript)) {
+    runNodeFile(cwd, distScript, ['--product', 'cli'], options);
+    return;
+  }
+  fail('product assembly has no dist:cli script or scripts/dist.mjs');
+}
+
+/**
  * @param {string} verb
  * @param {CliOptions} options
  * @returns {void}
@@ -925,8 +1049,8 @@ function productGui(verb, options) {
     productKfxGui(cwd, verb, options);
     return;
   }
-  if (isProductArtifactManifest(pkg)) {
-    productArtifactGui(cwd, verb, options);
+  if (isProductAssemblyManifest(pkg)) {
+    productAssemblyGui(cwd, verb, options);
     return;
   }
   if (verb === 'dev') {
@@ -1007,8 +1131,8 @@ async function productTuiBundle(options) {
 async function productTui(verb, options) {
   const cwd = productCwd(options.dir);
   const pkg = readPackageJson(cwd);
-  if (isProductArtifactManifest(pkg)) {
-    await productArtifactTui(cwd, verb, options);
+  if (isProductAssemblyManifest(pkg)) {
+    await productAssemblyTui(cwd, verb, options);
     return;
   }
   if (verb === 'dev') {
@@ -1027,6 +1151,21 @@ async function productTui(verb, options) {
 }
 
 /**
+ * @param {string} verb
+ * @param {CliOptions} options
+ * @returns {void}
+ */
+function productCli(verb, options) {
+  const cwd = productCwd(options.dir);
+  const pkg = readPackageJson(cwd);
+  if (isProductAssemblyManifest(pkg)) {
+    productAssemblyCli(cwd, verb, options);
+    return;
+  }
+  fail('product cli requires a product assembly package');
+}
+
+/**
  * @param {string | undefined} surface
  * @param {string | undefined} verb
  * @param {CliOptions} options
@@ -1042,7 +1181,11 @@ async function product(surface, verb, options) {
     await productTui(verb, options);
     return;
   }
-  fail('unknown product target (supported: gui, tui)');
+  if (surface === 'cli') {
+    productCli(verb, options);
+    return;
+  }
+  fail('unknown product target (supported: gui, tui, cli)');
 }
 
 // ── KFD-1 contract prototype ───────────────────────────────────────────────
@@ -1682,6 +1825,7 @@ function contractPolicySurface(entry) {
     name: '',
     source: '',
     dir: '',
+    schema: '',
     check: false,
     write: false,
     json: true,
@@ -2356,7 +2500,7 @@ function cppBuild(manifest) {
   const toolchain = path.join(coreDir, 'build', 'conan_toolchain.cmake');
   if (!fs.existsSync(toolchain)) {
     fail(
-      `core not built: ${toolchain} is missing. Run \`./kungfu-code rebuild:core\` first.`,
+      `core not built: ${toolchain} is missing. Run \`./shifu rebuild:core\` first.`,
     );
   }
   const buildDir = path.resolve('build');
@@ -2408,9 +2552,7 @@ function pythonAotBuild(manifest) {
     );
   const py = path.join(coreDir, '.venv', 'bin', 'python3');
   if (!fs.existsSync(py)) {
-    fail(
-      `core Python not found: ${py}. Run \`./kungfu-code rebuild:core\` first.`,
-    );
+    fail(`core Python not found: ${py}. Run \`./shifu rebuild:core\` first.`);
   }
   const pkgRoot = path.resolve('src', 'python');
   const pkg = fs.existsSync(pkgRoot)
@@ -2524,8 +2666,823 @@ function kfxClean() {
   process.stdout.write('cleaned dist\n');
 }
 
+/**
+ * @param {string} start
+ * @param {string} relativePath
+ * @returns {string}
+ */
+function findUp(start, relativePath) {
+  let directory = path.resolve(start);
+  if (fs.existsSync(directory) && !fs.statSync(directory).isDirectory()) {
+    directory = path.dirname(directory);
+  }
+  while (true) {
+    const candidate = path.join(directory, relativePath);
+    if (fs.existsSync(candidate)) return candidate;
+    const parent = path.dirname(directory);
+    if (parent === directory) return '';
+    directory = parent;
+  }
+}
+
+/**
+ * @returns {string}
+ */
+function resolveKfd3Registry() {
+  const override = process.env.KUNGFU_KFD3_REGISTRY || '';
+  const candidates = [
+    override,
+    path.join(process.cwd(), BUILDCHAIN_KFD3_SURFACE_REGISTRY_PATH),
+    findUp(process.cwd(), BUILDCHAIN_KFD3_SURFACE_REGISTRY_PATH),
+    findUp(SDK_CLI, BUILDCHAIN_KFD3_SURFACE_REGISTRY_PATH),
+    SDK_KFD3_CANONICAL_REGISTRY,
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    const resolved = path.resolve(candidate);
+    if (fs.existsSync(resolved)) return resolved;
+  }
+  fail(
+    'KFD-3 registry not found; run inside a Kungfu checkout or install a SDK package that includes kfd/kfd-3-surfaces.json',
+  );
+}
+
+/**
+ * @param {string} registryPath
+ * @returns {{cwd: string, registryPath: string}}
+ */
+function kfd3RegistryQueryContext(registryPath) {
+  const canonicalSuffix = `${path.sep}${BUILDCHAIN_KFD3_SURFACE_REGISTRY_PATH.replace(/\//g, path.sep)}`;
+  if (registryPath.endsWith(canonicalSuffix)) {
+    return {
+      cwd: registryPath.slice(0, -canonicalSuffix.length),
+      registryPath: BUILDCHAIN_KFD3_SURFACE_REGISTRY_PATH,
+    };
+  }
+  return {
+    cwd: path.dirname(registryPath),
+    registryPath: path.basename(registryPath),
+  };
+}
+
+/**
+ * @returns {string}
+ */
+function resolveKfdUpstreamAggregate() {
+  const override = process.env.KUNGFU_KFD_UPSTREAM_AGGREGATE || '';
+  const candidates = [
+    override,
+    path.join(
+      process.cwd(),
+      'developer',
+      'sdk',
+      'kfd',
+      'upstream-aggregate.json',
+    ),
+    findUp(
+      process.cwd(),
+      path.join('developer', 'sdk', 'kfd', 'upstream-aggregate.json'),
+    ),
+    SDK_KFD_UPSTREAM_AGGREGATE,
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    const resolved = path.resolve(candidate);
+    if (fs.existsSync(resolved)) return resolved;
+  }
+  fail(
+    'KFD upstream aggregate not found; run ./shifu kfd:buildchain or install a SDK package that includes kfd/upstream-aggregate.json',
+  );
+}
+
+/**
+ * @returns {{ path: string, registry: Record<string, any> }}
+ */
+function readKfd3Registry() {
+  const registryPath = resolveKfd3Registry();
+  return {
+    path: registryPath,
+    registry: JSON.parse(fs.readFileSync(registryPath, 'utf8')),
+  };
+}
+
+/**
+ * @returns {{ path: string, aggregate: Record<string, any> }}
+ */
+function readKfdUpstreamAggregate() {
+  const aggregatePath = resolveKfdUpstreamAggregate();
+  return {
+    path: aggregatePath,
+    aggregate: JSON.parse(fs.readFileSync(aggregatePath, 'utf8')),
+  };
+}
+
+/**
+ * @param {string} packageName
+ * @returns {string}
+ */
+function packageVersion(packageName) {
+  try {
+    return String(require(`${packageName}/package.json`).version || '');
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * @param {string} value
+ * @returns {string}
+ */
+function normalizeKfdStandard(value) {
+  const raw = String(value || '')
+    .trim()
+    .toLowerCase();
+  const match = raw.match(/^(?:kfd[-\s]?)?([1-9][0-9]*)$/);
+  if (!match) fail(`unsupported KFD standard: ${value || '<empty>'}`);
+  return `kfd-${match[1]}`;
+}
+
+/**
+ * @param {string} standard
+ * @param {string} [schemaName]
+ * @returns {Record<string, any>}
+ */
+function readKfdSchemaDocument(standard, schemaName = '') {
+  return kfdSchemas.read({
+    standard: normalizeKfdStandard(standard),
+    schema: schemaName,
+  });
+}
+
+/**
+ * @returns {Record<string, any>}
+ */
+function kfdSchemaSummary() {
+  const schemaList = kfdSchemas.list();
+  /** @type {Record<string, Array<{ name: string, schemaId: string, schemaPath: string }>>} */
+  const byStandard = {};
+  for (const entry of schemaList.schemas || []) {
+    byStandard[entry.standard] ||= [];
+    byStandard[entry.standard].push({
+      name: entry.name,
+      schemaId: entry.schemaId,
+      schemaPath: entry.schemaPath,
+    });
+  }
+  return {
+    package: schemaList.package,
+    standards: byStandard,
+  };
+}
+
+/**
+ * @returns {string}
+ */
+function resolvePackagedKfd1Witness() {
+  if (fs.existsSync(SDK_KFD1_WITNESS)) return SDK_KFD1_WITNESS;
+  fail(
+    'SDK packaged KFD-1 witness not found; run ./shifu kfd:buildchain in the Kungfu checkout before packaging',
+  );
+}
+
+/**
+ * @returns {string}
+ */
+function resolvePackagedKfd1ReleaseGate() {
+  if (fs.existsSync(SDK_KFD1_RELEASE_GATE)) return SDK_KFD1_RELEASE_GATE;
+  fail(
+    'SDK packaged KFD-1 release gate not found; run ./shifu kfd:buildchain in the Kungfu checkout before packaging',
+  );
+}
+
+/**
+ * @returns {string}
+ */
+function resolvePackagedKfd1VerifyResult() {
+  if (fs.existsSync(SDK_KFD1_VERIFY_RESULT)) return SDK_KFD1_VERIFY_RESULT;
+  fail(
+    'SDK packaged KFD-1 verify result not found; run ./shifu kfd:buildchain in the Kungfu checkout before packaging',
+  );
+}
+
+/**
+ * @returns {Record<string, any>}
+ */
+function readKfd1Witness() {
+  try {
+    return buildContractWorldWitness(locateRepoRoot(process.cwd()));
+  } catch {
+    return /** @type {Record<string, any>} */ (
+      readJson(resolvePackagedKfd1Witness())
+    );
+  }
+}
+
+/**
+ * @param {Record<string, any>} witness
+ * @returns {Record<string, any>}
+ */
+function buildKfd1ReleaseGate(witness) {
+  const repoRoot = (() => {
+    try {
+      return locateRepoRoot(process.cwd());
+    } catch {
+      return '';
+    }
+  })();
+  if (!repoRoot) {
+    return /** @type {Record<string, any>} */ (
+      readJson(resolvePackagedKfd1ReleaseGate())
+    );
+  }
+  const gate = createKfd1ReleaseGateEvidence({
+    cwd: repoRoot,
+    artifacts: Array.isArray(witness.surfaces)
+      ? witness.surfaces.map((surface) => ({
+          name: surface.artifactPath,
+          sourcePath: path.resolve(repoRoot, surface.sourcePath),
+        }))
+      : [],
+    witnesses: [witness],
+    verifiedAt: '1970-01-01T00:00:00.000Z',
+  })?.passportSection;
+  if (!gate) fail('KFD-1 release gate could not be created from the witness');
+  return gate;
+}
+
+/**
+ * @param {Record<string, any>} releaseGate
+ * @returns {Record<string, any>}
+ */
+function buildKfd1VerifyResult(releaseGate) {
+  const issues = validateKfd1ReleaseGateEvidence(releaseGate);
+  return {
+    schemaVersion: 1,
+    contract: 'kungfu-buildchain-kfd-1-verify-result',
+    ok: issues.length === 0,
+    issues,
+  };
+}
+
+/**
+ * @returns {Record<string, any>}
+ */
+function readKfd2ClaimsDocument() {
+  if (!fs.existsSync(SDK_KFD2_RELEASE_CLAIMS)) {
+    fail(
+      'SDK packaged KFD-2 release claims not found; run ./shifu kfd:buildchain in the Kungfu checkout before packaging',
+    );
+  }
+  const releaseClaims = /** @type {Record<string, any>} */ (
+    readJson(SDK_KFD2_RELEASE_CLAIMS)
+  );
+  const claims = fs.existsSync(SDK_KFD2_CLAIMS_DIR)
+    ? fs
+        .readdirSync(SDK_KFD2_CLAIMS_DIR)
+        .filter((name) => name.endsWith('.json'))
+        .sort()
+        .map((name) => {
+          const file = path.join(SDK_KFD2_CLAIMS_DIR, name);
+          return {
+            path: path.relative(process.cwd(), file) || '.',
+            sha256: sha256File(file),
+            document: readJson(file),
+          };
+        })
+    : [];
+  return {
+    schemaVersion: 1,
+    contract: 'kungfu-sdk-kfd-2-release-claims',
+    standard: 'kfd-2',
+    metadata: kfd2.resolveMetadata(),
+    source: {
+      releaseClaims: {
+        path: path.relative(process.cwd(), SDK_KFD2_RELEASE_CLAIMS) || '.',
+        sha256: sha256File(SDK_KFD2_RELEASE_CLAIMS),
+      },
+      buildchainClaimArgs: fs.existsSync(SDK_KFD2_CLAIM_ARGS)
+        ? {
+            path: path.relative(process.cwd(), SDK_KFD2_CLAIM_ARGS) || '.',
+            sha256: sha256File(SDK_KFD2_CLAIM_ARGS),
+          }
+        : null,
+    },
+    releaseClaims,
+    buildchainProjection: {
+      claimInput: '--kfd-2-claim-json',
+      claimCount: claims.length,
+      claims,
+    },
+    releaseGate: {
+      passportInput: '--kfd-2-claim-json',
+      finalTrust: 'query-buildchain-release-passport',
+    },
+  };
+}
+
+/**
+ * @param {Record<string, any>} registry
+ * @param {string} registryPath
+ * @param {Record<string, any>} aggregate
+ * @returns {Record<string, any>}
+ */
+function buildKfdStandardsStatus(registry, registryPath, aggregate) {
+  const ownKfd = aggregate.ownKfd || {};
+  const schemas = kfdSchemaSummary();
+  return {
+    schemaVersion: 1,
+    contract: 'kungfu-sdk-kfd-standards-status',
+    product: registry.product || { id: 'kungfu', name: 'Kungfu' },
+    packages: {
+      kfd: packageVersion('@kungfu-tech/kfd'),
+      buildchain: packageVersion('@kungfu-tech/buildchain'),
+    },
+    source: {
+      registry: {
+        path: path.relative(process.cwd(), registryPath) || '.',
+        sha256: sha256File(registryPath),
+      },
+      upstreamAggregate: {
+        path:
+          path.relative(process.cwd(), resolveKfdUpstreamAggregate()) || '.',
+        sha256: sha256File(resolveKfdUpstreamAggregate()),
+      },
+    },
+    standards: {
+      'kfd-1': {
+        status: 'supported',
+        mode: 'contract-world',
+        commands: [
+          'kungfu sdk contract witness --json',
+          'kungfu sdk contract audit --json',
+          'kungfu sdk kfd 1 witness --json',
+          'kungfu sdk kfd 1 gate --json',
+          'kungfu sdk kfd 1 verify --json',
+        ],
+        schemaCount: schemas.standards['kfd-1']?.length || 0,
+        source: ownKfd.kfd1 || {
+          note: 'KFD-1 facts are provided by the SDK contract registry and packaged KFD-3 surface registry.',
+        },
+      },
+      'kfd-2': {
+        status: 'supported',
+        mode: 'release-claims',
+        commands: [
+          'kungfu sdk kfd 2 claims --json',
+          'kungfu sdk kfd 2 trust-claims --json',
+          'kungfu sdk kfd 2 trust-assessment --json',
+        ],
+        schemaCount: schemas.standards['kfd-2']?.length || 0,
+        source: ownKfd.kfd2 || {
+          note: 'KFD-2 release trust is finalized by the Buildchain release passport.',
+        },
+      },
+      'kfd-3': {
+        status: 'supported',
+        mode: registry.buildchain?.kfd3?.mode || 'declared-registry',
+        commands: [
+          'kungfu sdk kfd query --json',
+          'kungfu sdk kfd check --json',
+          'kungfu sdk kfd witness --json',
+        ],
+        schemaCount: schemas.standards['kfd-3']?.length || 0,
+        surfaceCount: Array.isArray(registry.surfaces)
+          ? registry.surfaces.length
+          : 0,
+        source: {
+          registryPath:
+            registry.registryPath || BUILDCHAIN_KFD3_SURFACE_REGISTRY_PATH,
+          sourceOfTruth: registry.policy?.sourceOfTruth || '',
+        },
+      },
+      'kfd-4': {
+        status: kfd4.status || 'schema-only',
+        mode: 'schema-only',
+        commands: [
+          'kungfu sdk kfd 4 schema --json',
+          'kungfu sdk kfd schema kfd-4 --json',
+        ],
+        schemaCount: schemas.standards['kfd-4']?.length || 0,
+        source: ownKfd.kfd4 || {
+          note: 'Buildchain 2.10.8 exposes KFD-4 as schema-only; Kungfu declares schema visibility, not a verification pass.',
+        },
+      },
+    },
+    support: {
+      'kfd-1': ['status', 'schema', 'witness', 'gate', 'verify'],
+      'kfd-2': [
+        'status',
+        'schema',
+        'claims',
+        'trust-claims',
+        'trust-assessment',
+      ],
+      'kfd-3': ['query', 'check', 'witness', 'aggregate'],
+      'kfd-4': ['status', 'schema'],
+    },
+    buildchainStatus: collectKfdStatus({ cwd: process.cwd() }),
+  };
+}
+
+/**
+ * @param {Record<string, any>} document
+ * @param {string} source
+ * @returns {Record<string, any>}
+ */
+function kfd2ValidationDocument(document, source) {
+  const validation =
+    document?.contract === 'kfd-2-trust-claims'
+      ? kfd2.validateTrustClaims(document)
+      : kfd2.validateTrustAssessment(document);
+  return {
+    schemaVersion: 1,
+    contract:
+      document?.contract === 'kfd-2-trust-claims'
+        ? 'kungfu-sdk-kfd-2-trust-claims'
+        : 'kungfu-sdk-kfd-2-trust-assessment',
+    source,
+    document,
+    validation,
+  };
+}
+
+/**
+ * @param {Record<string, any>} registry
+ * @param {string} registryPath
+ * @param {string} [warning]
+ * @returns {Record<string, any>}
+ */
+function registryCapabilityQuery(registry, registryPath, warning = '') {
+  return {
+    schemaVersion: 1,
+    contract: 'kungfu-buildchain-kfd-3-capability-query',
+    product: registry.product?.name || 'Kungfu',
+    source: {
+      type: 'kungfu-sdk-kfd3-registry',
+      path: path.relative(process.cwd(), registryPath) || '.',
+      note: 'Kungfu SDK projects product KFD-3 surfaces into Buildchain-compatible capability facts.',
+    },
+    status: 'declared',
+    warning,
+    capabilities: (registry.surfaces || []).map(
+      (/** @type {Record<string, any>} */ surface) => ({
+        id: surface.id,
+        kind: surface.kind,
+        name: surface.name,
+        state: surface.state || surface.availability || 'declared',
+        detected: true,
+        enforced:
+          surface.state === 'enforced' || surface.enforcement === 'enforced',
+        sourcePath: surface.sourcePath,
+        artifactPath: surface.artifactPath || surface.evidencePath,
+        kfd1Basis: {
+          registryPath: path.relative(process.cwd(), registryPath) || '.',
+          sourcePath: surface.sourcePath,
+          artifactPath: surface.artifactPath || surface.evidencePath,
+          digest: `sha256:${sha256KfdJson(surface)}`,
+        },
+        kfd2Trust: {
+          status: 'release-passport-required',
+          trustImpact: 'query-release-passport-for-final-trust',
+          residualRisk: [],
+        },
+        residualRisk: [],
+      }),
+    ),
+    kfd: {
+      kfd1: 'registry-facts',
+      kfd2: 'release-passport-required',
+      kfd3: 'declared',
+      kfd4: 'schema-only',
+    },
+  };
+}
+
+/**
+ * @param {CliOptions} options
+ * @returns {Promise<Record<string, any>>}
+ */
+async function kfdQuery(options) {
+  const { path: registryPath, registry } = readKfd3Registry();
+  try {
+    const queryContext = kfd3RegistryQueryContext(registryPath);
+    const query = await queryKfd3Capabilities({
+      cwd: queryContext.cwd,
+      product: registry.product?.id || 'kungfu',
+      registryPath: queryContext.registryPath,
+    });
+    if (query.status !== 'failed' && query.kfd?.kfd3 !== 'failed') {
+      return query;
+    }
+    return registryCapabilityQuery(
+      registry,
+      registryPath,
+      'Buildchain standard detector could not cover Kungfu custom declared surfaces; using Kungfu SDK registry projection.',
+    );
+  } catch (error) {
+    return registryCapabilityQuery(registry, registryPath, errorMessage(error));
+  }
+}
+
+/**
+ * @param {CliOptions} options
+ * @returns {Promise<Record<string, any>>}
+ */
+async function kfdAggregate(options) {
+  const { path: registryPath, registry } = readKfd3Registry();
+  const { path: aggregatePath, aggregate } = readKfdUpstreamAggregate();
+  const query = await kfdQuery(options);
+  return {
+    schemaVersion: 1,
+    contract: 'kungfu-sdk-kfd-aggregate',
+    product: registry.product || { id: 'kungfu', name: 'Kungfu' },
+    source: {
+      registry: {
+        path: path.relative(process.cwd(), registryPath) || '.',
+        sha256: sha256File(registryPath),
+      },
+      upstreamAggregate: {
+        path: path.relative(process.cwd(), aggregatePath) || '.',
+        sha256: sha256File(aggregatePath),
+      },
+    },
+    own: {
+      query,
+      surfaceCount: Array.isArray(registry.surfaces)
+        ? registry.surfaces.length
+        : 0,
+    },
+    upstream: aggregate,
+    kfd: {
+      kfd1: 'registry-and-upstream-facts',
+      kfd2: 'release-passport-required',
+      kfd3: 'declared-and-aggregated',
+      kfd4: 'schema-only',
+    },
+  };
+}
+
+/**
+ * @param {string | undefined} command
+ * @param {string[]} args
+ * @param {CliOptions} options
+ * @returns {Promise<void>}
+ */
+async function kfd(command, args, options) {
+  const { path: registryPath, registry } = readKfd3Registry();
+  if (command === 'status') {
+    const { aggregate } = readKfdUpstreamAggregate();
+    const status = buildKfdStandardsStatus(registry, registryPath, aggregate);
+    if (options.json)
+      process.stdout.write(`${JSON.stringify(status, null, 2)}\n`);
+    else
+      process.stdout.write(
+        `Kungfu KFD: kfd-1=${status.standards['kfd-1'].status}, kfd-2=${status.standards['kfd-2'].status}, kfd-3=${status.standards['kfd-3'].status}, kfd-4=${status.standards['kfd-4'].status}\n`,
+      );
+    return;
+  }
+  if (command === 'schema') {
+    const standard = args[0] || '';
+    if (!standard) fail('kfd schema requires <kfd-1|kfd-2|kfd-3|kfd-4>');
+    const schema = readKfdSchemaDocument(standard, options.schema || args[1]);
+    if (options.json)
+      process.stdout.write(`${JSON.stringify(schema, null, 2)}\n`);
+    else process.stdout.write(`${JSON.stringify(schema.schema, null, 2)}\n`);
+    return;
+  }
+  if (['1', 'kfd-1'].includes(String(command || '').toLowerCase())) {
+    const action = args[0] || 'status';
+    if (action === 'status') {
+      const { aggregate } = readKfdUpstreamAggregate();
+      const status = buildKfdStandardsStatus(registry, registryPath, aggregate)
+        .standards['kfd-1'];
+      if (options.json)
+        process.stdout.write(`${JSON.stringify(status, null, 2)}\n`);
+      else process.stdout.write(`Kungfu KFD-1: ${status.status}\n`);
+      return;
+    }
+    if (action === 'schema') {
+      const schema = readKfdSchemaDocument('kfd-1', options.schema || args[1]);
+      if (options.json)
+        process.stdout.write(`${JSON.stringify(schema, null, 2)}\n`);
+      else process.stdout.write(`${JSON.stringify(schema.schema, null, 2)}\n`);
+      return;
+    }
+    if (action === 'witness') {
+      const witness = readKfd1Witness();
+      if (options.json)
+        process.stdout.write(`${JSON.stringify(witness, null, 2)}\n`);
+      else
+        process.stdout.write(
+          `Kungfu KFD-1 witness: ${witness.surfaces?.length || 0} surface(s)\n`,
+        );
+      return;
+    }
+    if (action === 'gate') {
+      const gate = buildKfd1ReleaseGate(readKfd1Witness());
+      if (options.json)
+        process.stdout.write(`${JSON.stringify(gate, null, 2)}\n`);
+      else process.stdout.write(`Kungfu KFD-1 gate: ${gate.status}\n`);
+      return;
+    }
+    if (action === 'verify') {
+      const result = buildKfd1VerifyResult(
+        buildKfd1ReleaseGate(readKfd1Witness()),
+      );
+      if (options.json)
+        process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      else
+        process.stdout.write(
+          `Kungfu KFD-1 verify: ${result.ok ? 'ok' : 'failed'}\n`,
+        );
+      if (!result.ok) process.exitCode = 1;
+      return;
+    }
+    fail(
+      'unknown kfd 1 command (supported: status, schema, witness, gate, verify)',
+    );
+  }
+  if (['2', 'kfd-2'].includes(String(command || '').toLowerCase())) {
+    const action = args[0] || 'status';
+    if (action === 'status') {
+      const { aggregate } = readKfdUpstreamAggregate();
+      const status = buildKfdStandardsStatus(registry, registryPath, aggregate)
+        .standards['kfd-2'];
+      if (options.json)
+        process.stdout.write(`${JSON.stringify(status, null, 2)}\n`);
+      else process.stdout.write(`Kungfu KFD-2: ${status.status}\n`);
+      return;
+    }
+    if (action === 'schema') {
+      const schema = readKfdSchemaDocument('kfd-2', options.schema || args[1]);
+      if (options.json)
+        process.stdout.write(`${JSON.stringify(schema, null, 2)}\n`);
+      else process.stdout.write(`${JSON.stringify(schema.schema, null, 2)}\n`);
+      return;
+    }
+    if (action === 'claims') {
+      const claims = readKfd2ClaimsDocument();
+      if (options.json)
+        process.stdout.write(`${JSON.stringify(claims, null, 2)}\n`);
+      else
+        process.stdout.write(
+          `Kungfu KFD-2 claims: ${claims.buildchainProjection.claimCount} packaged claim(s)\n`,
+        );
+      return;
+    }
+    if (action === 'trust-claims') {
+      const result = kfd2ValidationDocument(
+        kfd2.readFoundationTrustClaims(),
+        '@kungfu-tech/kfd foundation trust claims',
+      );
+      if (options.json)
+        process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      else
+        process.stdout.write(
+          `Kungfu KFD-2 trust-claims: ${result.validation.ok ? 'ok' : 'failed'}\n`,
+        );
+      if (!result.validation.ok) process.exitCode = 1;
+      return;
+    }
+    if (action === 'trust-assessment') {
+      const result = kfd2ValidationDocument(
+        kfd2.readFoundationTrustAssessment(),
+        '@kungfu-tech/kfd foundation trust assessment',
+      );
+      if (options.json)
+        process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      else
+        process.stdout.write(
+          `Kungfu KFD-2 trust-assessment: ${result.validation.ok ? 'ok' : 'failed'}\n`,
+        );
+      if (!result.validation.ok) process.exitCode = 1;
+      return;
+    }
+    fail(
+      'unknown kfd 2 command (supported: status, schema, claims, trust-claims, trust-assessment)',
+    );
+  }
+  if (['4', 'kfd-4'].includes(String(command || '').toLowerCase())) {
+    const action = args[0] || 'status';
+    if (action === 'status') {
+      const { aggregate } = readKfdUpstreamAggregate();
+      const status = buildKfdStandardsStatus(registry, registryPath, aggregate)
+        .standards['kfd-4'];
+      if (options.json)
+        process.stdout.write(`${JSON.stringify(status, null, 2)}\n`);
+      else process.stdout.write(`Kungfu KFD-4: ${status.status}\n`);
+      return;
+    }
+    if (action === 'schema') {
+      const schema = readKfdSchemaDocument('kfd-4', options.schema || args[1]);
+      if (options.json)
+        process.stdout.write(`${JSON.stringify(schema, null, 2)}\n`);
+      else process.stdout.write(`${JSON.stringify(schema.schema, null, 2)}\n`);
+      return;
+    }
+    fail('unknown kfd 4 command (supported: status, schema)');
+  }
+  if (command === 'query') {
+    const query = await kfdQuery(options);
+    if (options.json)
+      process.stdout.write(`${JSON.stringify(query, null, 2)}\n`);
+    else
+      process.stdout.write(
+        `Kungfu KFD-3 capabilities: ${query.capabilities?.length || 0} (${query.status || 'unknown'})\n`,
+      );
+    return;
+  }
+  if (command === 'check') {
+    const query = await kfdQuery(options);
+    const { path: aggregatePath, aggregate } = readKfdUpstreamAggregate();
+    const output = {
+      schema: 'kungfu.sdk.kfd-check/v1',
+      ok: true,
+      registry: {
+        path: path.relative(process.cwd(), registryPath) || '.',
+        sha256: sha256File(registryPath),
+        surfaceCount: Array.isArray(registry.surfaces)
+          ? registry.surfaces.length
+          : 0,
+        strict: {
+          mode: registry.buildchain?.kfd3?.mode || '',
+          sourceOfTruth: registry.policy?.sourceOfTruth || '',
+          registryPath: registry.registryPath || '',
+          contract: registry.contract || '',
+        },
+      },
+      upstreamAggregate: {
+        path: path.relative(process.cwd(), aggregatePath) || '.',
+        sha256: sha256File(aggregatePath),
+        upstreamCount: aggregate.summary?.upstreamCount || 0,
+      },
+      query: {
+        status: query.status || 'unknown',
+        capabilityCount: query.capabilities?.length || 0,
+        kfd: query.kfd || {},
+        warning: query.warning || '',
+      },
+      standards: buildKfdStandardsStatus(registry, registryPath, aggregate)
+        .standards,
+    };
+    if (options.json)
+      process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+    else
+      process.stdout.write(
+        `Kungfu KFD-3 check: ok, capabilities=${output.query.capabilityCount}\n`,
+      );
+    return;
+  }
+  if (command === 'upstream') {
+    const { aggregate } = readKfdUpstreamAggregate();
+    if (options.json)
+      process.stdout.write(`${JSON.stringify(aggregate, null, 2)}\n`);
+    else
+      process.stdout.write(
+        `Kungfu upstream KFD aggregate: ${aggregate.summary?.upstreamCount || 0} upstream(s)\n`,
+      );
+    return;
+  }
+  if (command === 'aggregate') {
+    const aggregate = await kfdAggregate(options);
+    if (options.json)
+      process.stdout.write(`${JSON.stringify(aggregate, null, 2)}\n`);
+    else
+      process.stdout.write(
+        `Kungfu KFD aggregate: own=${aggregate.own.surfaceCount}, upstream=${aggregate.upstream.summary?.upstreamCount || 0}\n`,
+      );
+    return;
+  }
+  if (command === 'witness') {
+    const witness = {
+      schemaVersion: 1,
+      id: 'kungfu-sdk-kfd3-capability-witness',
+      standard: 'kfd-3',
+      witnessKind: 'installed-sdk-query',
+      product: registry.product || { id: 'kungfu', name: 'Kungfu' },
+      sourceRegistry: {
+        path: path.relative(process.cwd(), registryPath) || '.',
+        sha256: sha256File(registryPath),
+      },
+      exposedSurfaces: registry.surfaces || [],
+      residualRisk: [
+        'Installed CLI witnesses declare local capability facts; final release trust is determined by the Buildchain release passport KFD-2 context.',
+      ],
+    };
+    if (options.json)
+      process.stdout.write(`${JSON.stringify(witness, null, 2)}\n`);
+    else
+      process.stdout.write(
+        `Kungfu KFD-3 witness: ${witness.exposedSurfaces.length} declared surface(s)\n`,
+      );
+    return;
+  }
+  fail(
+    'unknown kfd command (supported: status, schema, 1, 2, 4, query, check, witness, upstream, aggregate)',
+  );
+}
+
 const { positional, options } = parseArgs(process.argv.slice(2));
-const [command, kind, directory] = positional;
+const [command, kind, ...rest] = positional;
+const directory = rest[0];
 
 if (!command) usage(1);
 if (command === 'create') {
@@ -2539,6 +3496,8 @@ if (command === 'create') {
   else fail(`unknown kfx command: ${kind} (supported: build, clean)`);
 } else if (command === 'product') {
   await product(kind, directory, options);
+} else if (command === 'kfd') {
+  await kfd(kind, rest, options);
 } else if (command === 'contract') {
   if (kind === 'adopt') contractAdopt(directory, options);
   else if (kind === 'render') contractRender(directory, options);

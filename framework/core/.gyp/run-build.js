@@ -15,6 +15,18 @@ function copyConfigContract() {
   copyContractArtifacts(path.join(CORE, 'dist', 'kungfu'));
 }
 
+/**
+ * @param {string} sourceDir
+ * @param {string} targetDir
+ * @param {Set<string>} staged
+ */
+function copyBuildInfo(sourceDir, targetDir, staged) {
+  const source = path.join(sourceDir, 'kungfubuildinfo.json');
+  if (!fs.existsSync(source) || staged.has('kungfubuildinfo.json')) return;
+  staged.add('kungfubuildinfo.json');
+  fs.copyFileSync(source, path.join(targetDir, 'kungfubuildinfo.json'));
+}
+
 function cpVsDependencies() {
   const isWin = process.platform === 'win32';
   if (!isWin) return;
@@ -53,6 +65,7 @@ function stage() {
   if (process.platform === 'win32') buildDirs.push('build');
   const staged = new Set();
   for (const buildDir of buildDirs) {
+    copyBuildInfo(buildDir, distKungfu, staged);
     for (const pattern of [
       '*.node',
       '*.pyd',
@@ -91,6 +104,13 @@ function build() {
   // With libnode colocated above, pykungfu imports — regenerate its .pyi stubs
   // from the fresh binding so committed stubs/ track the C++ (see gen-stubs.js).
   require('./gen-stubs').main();
+  // The pykungfu wheel ships in dist/kungfu/wheels — the product install
+  // surface (`kungfu env`) resolves it from there. Build it with the binding
+  // so every build/rebuild leaves a wheel matching the fresh natives; before
+  // this only the gyp kfc chain built it, and the product dist chain shipped
+  // without wheels (run-freeze copyWheel warned but could not fail).
+  // run-wheel.js ends with process.exit, so spawn it instead of requiring.
+  shell.run(process.execPath, [path.join(__dirname, 'run-wheel.js')], true);
   stage();
   cpVsDependencies();
 }

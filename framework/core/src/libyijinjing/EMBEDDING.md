@@ -1,10 +1,10 @@
 # Embedding the yijinjing journal core
 
-`yijinjing` is the journal spine of kungfu -- frame/page mmap machinery,
-reader/writer, assemble, locator/location and the base utilities they stand
-on -- built as a standalone static library (`libyijinjing.a`). This document
-is the embedding contract: what you get, what you must provide, and what is
-deliberately not offered.
+`yijinjing` is the journal and storage-semantic spine of kungfu -- frame/page
+mmap machinery, reader/writer, assemble, locator/location, the storage service
+contracts, and the base utilities they stand on -- built as a standalone static
+library (`libyijinjing.a`). This document is the embedding contract: what you
+get, what you must provide, and what is deliberately not offered.
 
 ## Distribution form
 
@@ -43,15 +43,29 @@ as-is and performs no `find_package` of its own.
 ## What you get
 
 - target `yijinjing` (STATIC, position-independent), include roots for
-  `<kungfu/common.h>`, `<kungfu/longfist/core.h>` and
+  `<kungfu/common.h>`, `<kungfu/yijinjing/schema/core.h>` and
   `<kungfu/yijinjing/...>`;
 - the full journal write/read surface with a noop bus and noop publisher --
-  no master, no event loop, no sockets, no databases. The
+  no coordinator, no event loop, no sockets, no databases. The
   `slices/fact-ledger/` tools under `framework/core/slices/` are the
   reference consumers;
+- the core primitives required by that surface: deterministic hash helpers
+  (`<kungfu/yijinjing/hash.h>`) and page mmap helpers
+  (`<kungfu/yijinjing/platform/mmap.h>`). New mmap callers construct an
+  explicit `mapping_policy` from access, creation, residency, and durability
+  intent; the currently qualified factories are `read_existing()`,
+  `write_existing()`, and `write_create_or_grow()`. Unsupported prefault,
+  pinned, asynchronous-writeback, and durable-writeback requests fail before
+  filesystem mutation rather than degrading silently;
+- the storage semantic contracts under `<kungfu/yijinjing/storage...>`:
+  payload references, range selectors, source heads, channel requests/cursors,
+  manifests, hash/schema inventories, accepted segments, fsck reports, and
+  provider interfaces. These are contracts only; no RocksDB, SQLite, transport,
+  or runtime process implementation is included;
 - a dependency-direction guarantee, enforced by `check-deps.sh`: the core
-  never includes runtime, transport or storage headers, the trading type
-  registry, or any trading type.
+  never includes runtime, transport or storage-engine headers, the legacy
+  `kungfu/yijinjing/util/...` surface, the trading type registry, or any
+  trading type.
 
 ## Deliberately not offered
 
@@ -62,6 +76,10 @@ as-is and performs no `find_package` of its own.
 - **Package-manager artifacts** (conan/vcpkg/npm/homebrew packages of the
   core alone). Publishing infrastructure before there is an external
   consumer inverts the demand direction.
+- **Runtime process utilities.** Stack traces, OS signal handling, terminal
+  presentation, thread IDs exposed to language bindings, and Windows
+  AppContainer launch are libkungfu runtime concerns. They are intentionally
+  absent from the embeddable core.
 
 Escalation criteria -- revisit the distribution form when any of these is
 actually true, not before:
@@ -79,3 +97,13 @@ actually true, not before:
 Until then, the static core stays the single supported form, and
 `libkungfu.so/.dylib/.dll` remains the runtime entry point for everything
 user-facing.
+
+## mmap source compatibility
+
+The typed `mapped_region::map(path, size, policy)` API is canonical. Deprecated
+`map_existing`, `map_writable`, and raw-address boolean overloads remain only as
+temporary source adapters for existing embedders; they translate directly to a
+typed policy and do not preserve the former best-effort locking interpretation
+of `lazy`. New integrations must not use those adapters. See
+[ADR-0058](../../docs/adr/ADR-0058-yijinjing-explicit-mapping-policies.md) for
+the qualification table and removal conditions.

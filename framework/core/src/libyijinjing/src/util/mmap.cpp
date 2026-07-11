@@ -6,6 +6,9 @@
 
 #ifdef _WINDOWS
 #include <fcntl.h>
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 #else
 
@@ -13,93 +16,287 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 #endif // _WINDOWS
 
 #include <kungfu/common.h>
 #include <kungfu/yijinjing/journal/common.h>
-#include <kungfu/yijinjing/util/os.h>
+#include <kungfu/yijinjing/platform/mmap.h>
+
+#include <limits>
 
 using namespace kungfu::yijinjing::journal;
 
-namespace kungfu::yijinjing::os {
+namespace kungfu::yijinjing::platform {
 
-uintptr_t load_mmap_buffer(const std::string &path, size_t size, bool is_writing, bool lazy) {
+namespace {
+
+struct native_mapping {
+  uintptr_t address;
+  bool locked;
+};
+
+void validate_policy(const mapping_policy policy, const std::string &path) {
+  if (!policy.structurally_valid()) {
+    throw journal_error("read-only mapping cannot create or grow page " + path);
+  }
+  if (policy.residency != mapping_residency::demand) {
+    throw journal_error("mapping residency request is not qualified for page " + path);
+  }
+  if (policy.durability != mapping_durability::visibility) {
+    throw journal_error("mapping durability request is not qualified for page " + path);
+  }
+}
+
 #ifdef _WINDOWS
-  bool is_master = is_writing || !lazy;
-  HANDLE dumpFileDescriptor = CreateFileA(path.c_str(), (is_master) ? (GENERIC_READ | GENERIC_WRITE) : GENERIC_READ,
-                                          FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-                                          (is_master) ? OPEN_ALWAYS : OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-  if (dumpFileDescriptor == INVALID_HANDLE_VALUE) {
-    throw journal_error("unable to mmap for page " + path);
+[[noreturn]] void throw_mapping_error(const std::string &operation, const std::string &path, int code) {
+  throw journal_error(operation + " for page " + path + ", error: " + std::to_string(code));
+}
+
+class unique_handle {
+public:
+  explicit unique_handle(HANDLE value = INVALID_HANDLE_VALUE) noexcept : value_(value) {}
+  ~unique_handle() noexcept { reset(); }
+  unique_handle(const unique_handle &) = delete;
+  unique_handle &operator=(const unique_handle &) = delete;
+  unique_handle(unique_handle &&other) noexcept : value_(other.release()) {}
+  unique_handle &operator=(unique_handle &&other) noexcept {
+    if (this != &other) {
+      reset();
+      value_ = other.release();
+    }
+    return *this;
+  }
+  [[nodiscard]] HANDLE get() const noexcept { return value_; }
+  [[nodiscard]] explicit operator bool() const noexcept { return value_ != nullptr && value_ != INVALID_HANDLE_VALUE; }
+  [[nodiscard]] HANDLE release() noexcept {
+    HANDLE value = value_;
+    value_ = INVALID_HANDLE_VALUE;
+    return value;
+  }
+  void reset() noexcept {
+    if (*this) {
+      CloseHandle(value_);
+    }
+    value_ = INVALID_HANDLE_VALUE;
   }
 
-  // https://learn.microsoft.com/zh-cn/windows/win32/memory/creating-a-file-mapping-object?redirectedfrom=MSDN
-  // max journal size is 2GB in Windows
-  HANDLE fileMappingObject =
-      CreateFileMapping(dumpFileDescriptor, NULL, (is_master) ? PAGE_READWRITE : PAGE_READONLY, 0, size, NULL);
+private:
+  HANDLE value_;
+};
 
-  if (fileMappingObject == NULL) {
-    int nRet = GetLastError();
-    SPDLOG_ERROR("{} CreateFileMapping Error = {}, {}\n", is_master ? "writer" : "reader", nRet, path);
-    throw journal_error("unable to mmap for page " + path);
+native_mapping map_file(const std::string &path, size_t size, mapping_policy policy) {
+  validate_policy(policy, path);
+  if (size == 0) {
+    throw journal_error("refusing to mmap zero bytes for page " + path);
+  }
+  if (size > static_cast<uint64_t>(std::numeric_limits<LONGLONG>::max())) {
+    throw journal_error("requested mapping is too large for page " + path);
   }
 
-  void *buffer = MapViewOfFile(fileMappingObject, (is_master) ? FILE_MAP_ALL_ACCESS : FILE_MAP_READ, 0, 0, size);
+  unique_handle file(CreateFileA(path.c_str(), policy.writable() ? (GENERIC_READ | GENERIC_WRITE) : GENERIC_READ,
+                                 FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
+                                 policy.creates_or_grows() ? OPEN_ALWAYS : OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
+                                 nullptr));
+  if (!file) {
+    throw_mapping_error("failed to open file", path, static_cast<int>(GetLastError()));
+  }
 
+  LARGE_INTEGER file_size{};
+  if (!GetFileSizeEx(file.get(), &file_size)) {
+    throw_mapping_error("failed to inspect file size", path, static_cast<int>(GetLastError()));
+  }
+  if (file_size.QuadPart < 0 || static_cast<uint64_t>(file_size.QuadPart) < size) {
+    if (!policy.creates_or_grows()) {
+      throw journal_error("page file is smaller than requested mapping: " + path + ", required " +
+                          std::to_string(size) + ", found " + std::to_string(file_size.QuadPart));
+    }
+    LARGE_INTEGER target{};
+    target.QuadPart = static_cast<LONGLONG>(size);
+    if (!SetFilePointerEx(file.get(), target, nullptr, FILE_BEGIN) || !SetEndOfFile(file.get())) {
+      throw_mapping_error("failed to stretch file", path, static_cast<int>(GetLastError()));
+    }
+  }
+
+  const auto size64 = static_cast<uint64_t>(size);
+  unique_handle mapping(CreateFileMappingA(file.get(), nullptr, policy.writable() ? PAGE_READWRITE : PAGE_READONLY,
+                                           static_cast<DWORD>(size64 >> 32u), static_cast<DWORD>(size64), nullptr));
+  if (!mapping) {
+    throw_mapping_error("failed to create file mapping", path, static_cast<int>(GetLastError()));
+  }
+
+  void *buffer = MapViewOfFile(mapping.get(), policy.writable() ? FILE_MAP_ALL_ACCESS : FILE_MAP_READ, 0, 0, size);
   if (buffer == nullptr) {
-    int nRet = GetLastError();
-    throw journal_error("failed to load page " + path + ", MapViewOfFile Error " + std::to_string(nRet));
+    throw_mapping_error("failed to map view", path, static_cast<int>(GetLastError()));
   }
-  CloseHandle(fileMappingObject);
-  CloseHandle(dumpFileDescriptor);
+  return {reinterpret_cast<uintptr_t>(buffer), false};
+}
+
 #else
-  bool is_master = is_writing || !lazy;
-  int fd = open(path.c_str(), (is_master ? O_RDWR : O_RDONLY) | O_CREAT, (mode_t)0600);
+
+native_mapping map_file(const std::string &path, size_t size, mapping_policy policy) {
+  validate_policy(policy, path);
+  if (size == 0) {
+    throw journal_error("refusing to mmap zero bytes for page " + path);
+  }
+  if (size > static_cast<uint64_t>(std::numeric_limits<off_t>::max())) {
+    throw journal_error("requested mapping is too large for page " + path);
+  }
+
+  int flags = policy.writable() ? O_RDWR : O_RDONLY;
+  if (policy.creates_or_grows()) {
+    flags |= O_CREAT;
+  }
+  int fd = open(path.c_str(), flags, static_cast<mode_t>(0600));
   if (fd < 0) {
     throw journal_error("failed to open file for page " + path + ", errno: " + strerror(errno));
   }
 
-  if (is_master) {
-    if (lseek(fd, size - 1, SEEK_SET) == -1) {
+  struct stat file_stat{};
+  if (fstat(fd, &file_stat) != 0) {
+    const int code = errno;
+    close(fd);
+    throw journal_error("failed to inspect file size for page " + path + ", errno: " + strerror(code));
+  }
+  if (file_stat.st_size < 0 || static_cast<uint64_t>(file_stat.st_size) < size) {
+    if (!policy.creates_or_grows()) {
+      const auto found = file_stat.st_size;
       close(fd);
-      throw journal_error("failed to stretch for page " + path + ", errno: " + strerror(errno));
+      throw journal_error("page file is smaller than requested mapping: " + path + ", required " +
+                          std::to_string(size) + ", found " + std::to_string(found));
     }
-    if (write(fd, "", 1) == -1) {
+    if (ftruncate(fd, static_cast<off_t>(size)) != 0) {
+      const int code = errno;
       close(fd);
-      throw journal_error("unable to write for page " + path + ", errno: " + strerror(errno));
+      throw journal_error("failed to stretch file for page " + path + ", errno: " + strerror(code));
     }
   }
 
-  /**
-   * MAP_FIXED is dup2 for memory mappings, and it's useful in exactly the same situations where dup2 is useful for file
-   * descriptors: when you want to perform a replace operation that atomically reassigns a resource identifier (memory
-   * range in the case of MAP_FIXED, or fd in the case of dup2) to refer to a new resource without the possibility of
-   * races where it might get reassigned to something else if you first released the old resource then attempted to
-   * regain it for the new resource.
-   */
-  void *buffer = mmap(0, size, is_master ? (PROT_READ | PROT_WRITE) : PROT_READ, MAP_SHARED, fd, 0);
-
+  void *buffer = mmap(nullptr, size, policy.writable() ? (PROT_READ | PROT_WRITE) : PROT_READ, MAP_SHARED, fd, 0);
   if (buffer == MAP_FAILED) {
+    const int code = errno;
     close(fd);
-    throw journal_error("Error mapping file to buffer: " + path);
-  }
-
-  if (!lazy && madvise(buffer, size, MADV_RANDOM) != 0 && mlock(buffer, size) != 0) {
-    munmap(buffer, size);
-    close(fd);
-    throw journal_error("failed to lock memory for page " + path);
+    throw journal_error("failed to map file for page " + path + ", errno: " + strerror(code));
   }
 
   close(fd);
-#endif // _WINDOWS
-  return reinterpret_cast<uintptr_t>(buffer);
+  return {reinterpret_cast<uintptr_t>(buffer), false};
 }
 
-bool flush_mmap_buffer(uintptr_t address, size_t size, bool lazy) {
+#endif
+
+} // namespace
+
+mapped_region::~mapped_region() noexcept { (void)reset(); }
+
+mapped_region::mapped_region(mapped_region &&other) noexcept
+    : address_(other.address_), size_(other.size_), writable_(other.writable_), locked_(other.locked_),
+      policy_(other.policy_) {
+  other.address_ = 0;
+  other.size_ = 0;
+  other.writable_ = false;
+  other.locked_ = false;
+  other.policy_ = mapping_policy::read_existing();
+}
+
+mapped_region &mapped_region::operator=(mapped_region &&other) noexcept {
+  if (this != &other) {
+    (void)reset();
+    address_ = other.address_;
+    size_ = other.size_;
+    writable_ = other.writable_;
+    locked_ = other.locked_;
+    policy_ = other.policy_;
+    other.address_ = 0;
+    other.size_ = 0;
+    other.writable_ = false;
+    other.locked_ = false;
+    other.policy_ = mapping_policy::read_existing();
+  }
+  return *this;
+}
+
+mapped_region mapped_region::map(const std::string &path, size_t size, mapping_policy policy) {
+  const auto native = map_file(path, size, policy);
+  return mapped_region(native.address, size, policy, native.locked);
+}
+
+mapped_region mapped_region::map_existing(const std::string &path, size_t size, bool writable, bool lazy) {
+  (void)lazy;
+  return map(path, size, writable ? mapping_policy::write_existing() : mapping_policy::read_existing());
+}
+
+mapped_region mapped_region::map_writable(const std::string &path, size_t size, bool lazy) {
+  (void)lazy;
+  return map(path, size, mapping_policy::write_create_or_grow());
+}
+
+bool mapped_region::flush() const noexcept {
+  if (address_ == 0 || !writable_) {
+    return true;
+  }
+  void *buffer = reinterpret_cast<void *>(address_);
+#ifdef _WINDOWS
+  return FlushViewOfFile(buffer, size_) != 0;
+#else
+  return msync(buffer, size_, MS_SYNC) == 0;
+#endif
+}
+
+bool mapped_region::reset() noexcept {
+  if (address_ == 0) {
+    return true;
+  }
+  void *buffer = reinterpret_cast<void *>(address_);
+  bool ok = true;
+#ifdef _WINDOWS
+  if (writable_ && FlushViewOfFile(buffer, size_) == 0) {
+    ok = false;
+  }
+  if (UnmapViewOfFile(buffer) == 0) {
+    ok = false;
+  }
+#else
+  if (locked_ && munlock(buffer, size_) != 0) {
+    ok = false;
+  }
+  if (munmap(buffer, size_) != 0) {
+    ok = false;
+  }
+#endif
+  address_ = 0;
+  size_ = 0;
+  writable_ = false;
+  locked_ = false;
+  policy_ = mapping_policy::read_existing();
+  return ok;
+}
+
+uintptr_t mapped_region::release() noexcept {
+  const uintptr_t address = address_;
+  address_ = 0;
+  size_ = 0;
+  writable_ = false;
+  locked_ = false;
+  policy_ = mapping_policy::read_existing();
+  return address;
+}
+
+uintptr_t load_mmap_buffer(const std::string &path, size_t size, mapping_policy policy) {
+  auto region = mapped_region::map(path, size, policy);
+  return region.release();
+}
+
+bool flush_mmap_buffer(uintptr_t address, size_t size, mapping_durability durability) {
+  if (durability != mapping_durability::visibility) {
+    return false;
+  }
   void *buffer = reinterpret_cast<void *>(address);
 #ifdef _WINDOWS
-  FlushViewOfFile(buffer, 0);
+  if (FlushViewOfFile(buffer, size) == 0) {
+    return false;
+  }
 #else
   if (msync(buffer, size, MS_SYNC) != 0) {
     return false;
@@ -108,22 +305,31 @@ bool flush_mmap_buffer(uintptr_t address, size_t size, bool lazy) {
   return true;
 }
 
-bool release_mmap_buffer(uintptr_t address, size_t size, bool lazy) {
+bool release_mmap_buffer(uintptr_t address, size_t size) {
   void *buffer = reinterpret_cast<void *>(address);
 #ifdef _WINDOWS
-  FlushViewOfFile(buffer, 0);
-  UnmapViewOfFile(buffer);
+  const bool flushed = FlushViewOfFile(buffer, size) != 0;
+  const bool unmapped = UnmapViewOfFile(buffer) != 0;
+  return flushed && unmapped;
 #else
-  // unlock and unmap
-  if (!lazy && munlock(buffer, size) != 0) {
-    return false;
-  }
-
-  if (munmap(buffer, size) != 0) {
-    return false;
-  }
+  return munmap(buffer, size) == 0;
 #endif // _WINDOWS
-  return true;
 }
 
-} // namespace kungfu::yijinjing::os
+uintptr_t load_mmap_buffer(const std::string &path, size_t size, bool is_writing, bool lazy) {
+  (void)lazy;
+  return load_mmap_buffer(path, size,
+                          is_writing ? mapping_policy::write_create_or_grow() : mapping_policy::read_existing());
+}
+
+bool flush_mmap_buffer(uintptr_t address, size_t size, bool lazy) {
+  (void)lazy;
+  return flush_mmap_buffer(address, size, mapping_durability::visibility);
+}
+
+bool release_mmap_buffer(uintptr_t address, size_t size, bool lazy) {
+  (void)lazy;
+  return release_mmap_buffer(address, size);
+}
+
+} // namespace kungfu::yijinjing::platform

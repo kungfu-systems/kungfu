@@ -23,6 +23,8 @@ const REQUIRED = [
   'brief.md',
   'mode-selection.md',
   'commands.json',
+  'kfd3_api.registry.json',
+  'kfd3_api.schema.json',
   'safety.md',
   'examples/report-mode.md',
   'examples/trace-mode.md',
@@ -57,6 +59,8 @@ for (const rel of REQUIRED) {
 
 let index = null;
 let commands = null;
+let apiRegistry = null;
+let apiSchema = null;
 try {
   index = readJson('index.json');
 } catch (e) {
@@ -66,6 +70,20 @@ try {
   commands = readJson('commands.json');
 } catch (e) {
   fail(`commands.json is invalid JSON: ${e instanceof Error ? e.message : e}`);
+}
+try {
+  apiRegistry = readJson('kfd3_api.registry.json');
+} catch (e) {
+  fail(
+    `kfd3_api.registry.json is invalid JSON: ${e instanceof Error ? e.message : e}`,
+  );
+}
+try {
+  apiSchema = readJson('kfd3_api.schema.json');
+} catch (e) {
+  fail(
+    `kfd3_api.schema.json is invalid JSON: ${e instanceof Error ? e.message : e}`,
+  );
 }
 
 if (index) {
@@ -94,38 +112,62 @@ if (index) {
   }
 }
 
-if (commands) {
+if (apiRegistry && apiSchema) {
+  for (const field of apiSchema.requiredTopLevel || []) {
+    if (!(field in apiRegistry))
+      fail(`kfd3_api.registry.json missing top-level field ${field}`);
+  }
+  const ids = new Set();
+  for (const [index, row] of (apiRegistry.apis || []).entries()) {
+    const id = row.id || `<index:${index}>`;
+    if (ids.has(id)) fail(`kfd3_api.registry.json duplicate api id ${id}`);
+    ids.add(id);
+    for (const field of apiSchema.apiRequiredFields || []) {
+      if (!(field in row))
+        fail(`kfd3_api.registry.json api ${id} missing field ${field}`);
+    }
+    if (!(apiSchema.visibility || []).includes(row.visibility))
+      fail(
+        `kfd3_api.registry.json api ${id} invalid visibility ${row.visibility}`,
+      );
+    const anchorKind = row.anchor?.kind;
+    if (!(apiSchema.anchorKinds || []).includes(anchorKind))
+      fail(
+        `kfd3_api.registry.json api ${id} invalid anchor kind ${anchorKind}`,
+      );
+  }
+}
+
+if (commands && apiRegistry) {
+  if (commands.apiRegistry?.source !== 'kfd3_api.registry.json')
+    fail('commands.json does not declare kfd3_api.registry.json as source');
+  if (commands.apiRegistry?.registryId !== apiRegistry.registryId)
+    fail('commands.json apiRegistry.registryId does not match registry');
+  const registryIds = new Set((apiRegistry.apis || []).map((row) => row.id));
+  for (const row of commands.commands || []) {
+    if (!row.apiId) fail(`commands.json command ${row.name} missing apiId`);
+    if (row.apiId && !registryIds.has(row.apiId))
+      fail(`commands.json command ${row.name} has unknown apiId ${row.apiId}`);
+  }
   const names = new Set((commands.commands || []).map((row) => row.name));
-  for (const name of [
-    'kungfu agent brief',
-    'kungfu agent docs',
-    'kungfu agent capabilities --json',
-    'kungfu agent choose-mode --json',
-    'kungfu agent status --target codex --json',
-    'kungfu agent bootstrap --target codex --mode report',
-    'kungfu agent mode set --target codex --mode managed-run',
-    'kungfu agent unbootstrap --target codex',
-    'kungfu agent uninstall --target codex',
-    'kungfu agent install-skill --target codex',
-    'kungfu agent install-skill --target claude',
-    'kungfu trace -- <command>',
-    'kungfu managed-run --provider <provider> --prompt <task>',
-    'kungfu work create <title> --json',
-    'kungfu report run begin --work <work-id> --provider <provider> --json',
-    'kungfu report cost --run <run-id> --provider <provider> --json',
-    'kungfu report run end --run <run-id> --status <status> --json',
-    'kungfu codex report-goal --goal-id <goal-id> --status <status> --json',
-    'kungfu codex verify-goal-report --receipt <path> --json',
-    'kungfu remote add <source-id> --host <host> --home <kf-home> --json',
-    'kungfu remote sync <source-id> --json',
-    'kungfu skill catalog --json',
-    'kungfu kfx install <source>',
-  ]) {
-    if (!names.has(name)) fail(`commands.json missing command ${name}`);
+  const registryCommandNames = new Set();
+  for (const row of apiRegistry.apis || []) {
+    if (!(row.projections || []).includes('commands.json')) continue;
+    registryCommandNames.add(row.name);
+    for (const alias of row.aliases || []) registryCommandNames.add(alias);
+  }
+  for (const name of registryCommandNames) {
+    if (!names.has(name))
+      fail(`commands.json missing registry-projected command ${name}`);
+  }
+  for (const name of names) {
+    if (!registryCommandNames.has(name))
+      fail(`commands.json has undeclared command ${name}`);
   }
   for (const mode of [
     'brief',
     'report',
+    'atlas-projection',
     'trace',
     'managed-run',
     'remote-sync',
@@ -133,6 +175,48 @@ if (commands) {
     if (!commands.modes?.[mode]) fail(`commands.json missing mode ${mode}`);
     if (!commands.modes?.[mode]?.maturity)
       fail(`commands.json mode ${mode} missing maturity`);
+  }
+}
+
+if (apiRegistry) {
+  const agentCli = fs.readFileSync(
+    path.join(
+      ROOT,
+      'framework',
+      'core',
+      'src',
+      'python',
+      'kungfu',
+      'cli',
+      'commands',
+      'agent.py',
+    ),
+    'utf8',
+  );
+  const expectedRuntimeIds = new Set(
+    (apiRegistry.apis || [])
+      .filter((row) => row.anchor?.kind === 'runtime-click')
+      .map((row) => row.id),
+  );
+  const observedAnchors = new Set(
+    [...agentCli.matchAll(/@kfd3_api\("([^"]+)"\)/g)].map((match) => match[1]),
+  );
+  for (const apiId of expectedRuntimeIds) {
+    if (!observedAnchors.has(apiId))
+      fail(`agent.py missing @kfd3_api("${apiId}")`);
+  }
+  for (const apiId of observedAnchors) {
+    if (!expectedRuntimeIds.has(apiId))
+      fail(`agent.py has stale @kfd3_api("${apiId}")`);
+  }
+  const commandBlocks = [
+    ...agentCli.matchAll(
+      /@(?:kfc|agent|mode)\.(?:group|command)[\s\S]*?\ndef\s+([a-zA-Z0-9_]+)\(/g,
+    ),
+  ];
+  for (const block of commandBlocks) {
+    if (!block[0].includes('@kfd3_api('))
+      fail(`agent.py Click command ${block[1]} has no @kfd3_api anchor`);
   }
 }
 
@@ -166,6 +250,8 @@ for (const rel of REQUIRED.filter((p) => p.endsWith('.md'))) {
       bare.startsWith('kungfu report') ||
       bare.startsWith('kungfu codex') ||
       bare.startsWith('kungfu remote') ||
+      bare.startsWith('kungfu skill') ||
+      bare.startsWith('kungfu kfx') ||
       bare.startsWith('kungfu rewind')
     ) {
       const known =
@@ -200,7 +286,12 @@ const setup = fs.readFileSync(
   path.join(ROOT, 'framework', 'core', 'src', 'python', 'setup.py'),
   'utf8',
 );
-for (const pattern of ['*.md', 'examples/*.md', 'skills/*/SKILL.md']) {
+for (const pattern of [
+  '*.json',
+  '*.md',
+  'examples/*.md',
+  'skills/*/SKILL.md',
+]) {
   if (!setup.includes(pattern))
     fail(`setup.py package_data missing ${pattern}`);
 }

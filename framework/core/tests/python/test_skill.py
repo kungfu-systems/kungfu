@@ -2,8 +2,18 @@
 
 from pathlib import Path
 import json
+import subprocess
 
-from kungfu.config import contract_hash, load_contract, resolve_config
+from kungfu.config import (
+    contract_hash,
+    default_runtime_home,
+    load_contract,
+    machine_runtime_home,
+    resolve_config,
+    set_user_config_value,
+    unset_user_config_value,
+    workspace_data_home,
+)
 from kungfu.skill import (
     append_audit_event,
     build_skill_dependency_binding,
@@ -171,6 +181,62 @@ def test_resolved_config_uses_defaults_without_writing_user_file(tmp_path):
     assert config["config"]["agent"]["entrypoint"] == "kungfu agent context --json"
 
 
+def test_runtime_home_prefers_git_workspace_without_creating_it(tmp_path):
+    repo = tmp_path / "repo"
+    child = repo / "nested" / "work"
+    child.mkdir(parents=True)
+    subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+    env = {"PWD": str(child), "HOME": str(tmp_path)}
+
+    workspace_home = str(repo / ".kungfu")
+    assert workspace_data_home(env=env) == workspace_home
+    assert default_runtime_home(env=env) == workspace_home
+    assert not (repo / ".kungfu").exists()
+
+    config = resolve_config(config_home=str(tmp_path / "config"), env=env)
+    assert config["runtimeHome"] == workspace_home
+    assert config["workspaceDataHome"] == workspace_home
+    assert config["machineDataHome"] == machine_runtime_home(env)
+    assert config["config"]["paths"]["workspaceDataHome"] == workspace_home
+    assert config["config"]["paths"]["machineDataHome"] == machine_runtime_home(env)
+
+
+def test_existing_workspace_home_wins_before_git_root(tmp_path):
+    repo = tmp_path / "repo"
+    nested = repo / "a" / "b"
+    nested.mkdir(parents=True)
+    existing = repo / "a" / ".kungfu"
+    existing.mkdir()
+    subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+
+    assert workspace_data_home(str(nested), env={"HOME": str(tmp_path)}) == str(
+        existing
+    )
+
+
+def test_explicit_kf_home_wins_over_workspace_home(tmp_path):
+    repo = tmp_path / "repo"
+    child = repo / "child"
+    child.mkdir(parents=True)
+    subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+    explicit_home = tmp_path / "explicit-home"
+    env = {"PWD": str(child), "HOME": str(tmp_path), "KF_HOME": str(explicit_home)}
+
+    assert default_runtime_home(env=env) == str(explicit_home)
+    config = resolve_config(config_home=str(tmp_path / "config"), env=env)
+    assert config["runtimeHome"] == str(explicit_home)
+    assert config["workspaceDataHome"] == str(repo / ".kungfu")
+
+
+def test_runtime_home_uses_machine_fallback_without_workspace(tmp_path):
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    env = {"PWD": str(plain), "HOME": str(tmp_path)}
+
+    assert workspace_data_home(env=env) is None
+    assert default_runtime_home(env=env) == machine_runtime_home(env)
+
+
 def test_resolved_config_merges_user_override(tmp_path):
     runtime_home = tmp_path / "runtime-home"
     config_home = tmp_path / "config-home"
@@ -198,6 +264,57 @@ def test_resolved_config_merges_user_override(tmp_path):
     assert config["config"]["ui"]["fontFamily"] == "system"
     assert config["config"]["shortcuts"]["commandPalette"] == "Ctrl+K"
     assert config["config"]["shortcuts"]["quickOpen"] == "Mod+P"
+
+
+def test_user_config_set_and_unset_dotted_values(tmp_path):
+    runtime_home = tmp_path / "runtime-home"
+    config_home = tmp_path / "config-home"
+
+    set_result = set_user_config_value(
+        "ui.fontSize",
+        18,
+        runtime_home=str(runtime_home),
+        config_home=str(config_home),
+    )
+    set_user_config_value(
+        "ui.scale",
+        1.25,
+        runtime_home=str(runtime_home),
+        config_home=str(config_home),
+    )
+
+    config_path = config_home / "config.json"
+    saved = json.loads(config_path.read_text(encoding="utf-8"))
+    assert saved["schema"] == "kungfu.config.override/v1"
+    assert saved["ui"]["fontSize"] == 18
+    assert saved["ui"]["scale"] == 1.25
+    assert set_result["config"]["ui"]["fontSize"] == 18
+
+    unset_result = unset_user_config_value(
+        "ui.fontSize",
+        runtime_home=str(runtime_home),
+        config_home=str(config_home),
+    )
+
+    saved = json.loads(config_path.read_text(encoding="utf-8"))
+    assert "fontSize" not in saved["ui"]
+    assert saved["ui"]["scale"] == 1.25
+    assert unset_result["config"]["ui"]["fontSize"] == 14
+    assert unset_result["config"]["ui"]["scale"] == 1.25
+
+
+def test_user_config_set_rejects_invalid_contract_value(tmp_path):
+    try:
+        set_user_config_value(
+            "ui.scale",
+            9,
+            runtime_home=str(tmp_path / "runtime-home"),
+            config_home=str(tmp_path / "config-home"),
+        )
+    except ValueError as e:
+        assert "greater than the maximum" in str(e)
+    else:
+        raise AssertionError("expected invalid ui.scale to fail")
 
 
 def test_resolved_config_rejects_unknown_override_keys(tmp_path):

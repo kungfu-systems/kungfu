@@ -16,6 +16,7 @@
 #include <kungfu/yijinjing/common.h>
 #include <kungfu/yijinjing/journal/assemble.h>
 #include <kungfu/yijinjing/journal/journal.h>
+#include <kungfu/yijinjing/storage.h>
 #include <kungfu/yijinjing/time.h>
 
 #include <nlohmann/json.hpp>
@@ -27,8 +28,8 @@
 #include <vector>
 
 using namespace kungfu::yijinjing;
-namespace longfist = kungfu::longfist;
-using longfist::enums::FrameDataType;
+namespace schema = kungfu::yijinjing;
+using schema::enums::FrameDataType;
 
 namespace {
 constexpr int32_t MSG_SMOKE = 20001;
@@ -49,15 +50,15 @@ int main(int argc, char **argv) {
     return 2;
   }
   const std::string root = argv[1];
-  const std::string group = "embedding_slice";
+  const std::string namespace_ = "embedding_slice";
   const std::string name = "smoke";
 
   // ── write side ────────────────────────────────────────────────────
   std::vector<uint64_t> written_uids;
   {
     auto locator = std::make_shared<data::locator>(root);
-    auto location = data::location::make_shared(longfist::enums::mode::LIVE, longfist::enums::category::SYSTEM, group,
-                                                name, locator);
+    auto location = data::location::make_shared(schema::enums::mode::LIVE, schema::enums::location_role::SYSTEM,
+                                                namespace_, name, locator);
     auto bus = std::make_shared<journal::bus>(false);
     auto publisher = std::make_shared<journal::noop_publisher>();
     auto writer = std::make_shared<journal::writer>(location, data::location::PUBLIC, /*lazy=*/true, publisher,
@@ -81,10 +82,21 @@ int main(int argc, char **argv) {
   } // writer closed; from here on the process only reads the format
 
   // ── read side: reconstruct the identity, reopen, assert the chain ──
+  // The storage kernel vocabulary for an accepted frame range is the POD
+  // closed-set record (ADR-0037), not a heap struct.
+  types::AcceptedRangeRecorded accepted{};
+  kungfu::copy_string(accepted.source_id, "embedding_slice");
+  accepted.first_frame_uid = written_uids.front();
+  accepted.last_frame_uid = written_uids.back();
+  if (accepted.first_frame_uid == 0 || accepted.last_frame_uid == 0) {
+    std::cerr << "FAIL: storage accepted-range record did not preserve frame bounds\n";
+    return 1;
+  }
+
   auto locator = std::make_shared<data::locator>(root);
-  auto location =
-      data::location::make_shared(longfist::enums::mode::LIVE, longfist::enums::category::SYSTEM, group, name, locator);
-  journal::assemble reader(location, data::location::PUBLIC, longfist::enums::AssembleMode::Channel, 0);
+  auto location = data::location::make_shared(schema::enums::mode::LIVE, schema::enums::location_role::SYSTEM,
+                                              namespace_, name, locator);
+  journal::assemble reader(location, data::location::PUBLIC, schema::enums::AssembleMode::Channel, 0);
 
   std::size_t count = 0;
   uint64_t last_uid = 0;

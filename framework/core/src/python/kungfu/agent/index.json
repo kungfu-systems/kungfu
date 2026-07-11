@@ -9,6 +9,8 @@
     { "path": "brief.md", "purpose": "first-read overview", "maturity": "stable" },
     { "path": "mode-selection.md", "purpose": "choose the right operating mode", "maturity": "stable" },
     { "path": "commands.json", "purpose": "machine-readable command and mode catalog", "maturity": "stable" },
+    { "path": "kfd3_api.registry.json", "purpose": "single KFD-3 collaboration-interface registry", "maturity": "stable" },
+    { "path": "kfd3_api.schema.json", "purpose": "local KFD-3 registry shape contract", "maturity": "stable" },
     { "path": "safety.md", "purpose": "fact boundaries and non-goals", "maturity": "stable" },
     { "path": "examples/report-mode.md", "purpose": "structured work facts without process capture", "maturity": "stable" },
     { "path": "examples/trace-mode.md", "purpose": "capture an existing command", "maturity": "stable" },
@@ -32,6 +34,7 @@
   "entrypoints": {
     "human": "kungfu agent brief",
     "machine": "kungfu agent capabilities --json",
-    "modeChoice": "kungfu agent choose-mode --json"
+    "modeChoice": "kungfu agent choose-mode --json",
+    "verify": "kungfu agent verify --json"
   }
 }

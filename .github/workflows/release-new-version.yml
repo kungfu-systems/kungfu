@@ -9,42 +9,83 @@ on:
       - alpha/v*/v*
       - release/v*/v*
 
+permissions:
+  contents: write
+  actions: read
+  issues: write
+  id-token: write
+
 jobs:
-  release:
-    uses: kungfu-trader/workflows/.github/workflows/.release-new-version.yml@v1
+  promote:
+    if: ${{ github.event.pull_request.merged == true }}
+    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v2
     with:
-      protect-dev-branches: true
-      need-qa-automated: true
-      max-preview-links: 64
+      channel: ${{ startsWith(github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}
+      buildchain-ref: ${{ startsWith(github.event.pull_request.base.ref, 'alpha/') && 'v2-alpha' || 'v2' }}
+      target-ref: ${{ github.event.pull_request.base.ref }}
+      target-sha: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+      buildchain-contract-lock-path: ${{ startsWith(github.event.pull_request.base.ref, 'alpha/') && '.buildchain/alpha-contract-lock.json' || '.buildchain/contract-lock.json' }}
+      buildchain-contract-compatibility-policy: major-compatible
+      buildchain-contract-drift-issue-mode: compatible-and-breaking
+      package-manager: custom
+      artifact-name: kungfu
+      release-candidate-workflow-file: build.yml
+      release-candidate-workflow-name: Build
+      artifact-patterns: |
+        kungfu-*
+      required-status-check: build
+      publish-target: custom
+      publish-artifact-kind: kungfu-product
+      publish-command: node scripts/buildchain-custom-publish-evidence.mjs
+      publish-mode: publish-final-version
+      publish-dist-tag: ${{ startsWith(github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'latest' }}
+      publish-package-set-order: as-provided
+      trusted-publishing: false
+      runner-preset: kungfu-v4-self-hosted
+      required-artifact-count: 3
+      release-passport: true
+      release-passport-product-name: Kungfu Episodes
+      release-passport-kfd-1-witness-jsons: |
+        .buildchain/kfd/kfd-1/contract-world.witness.json
+      release-passport-kfd-2-claim-jsons: |
+        .buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json
+        .buildchain/kfd/kfd-2/claims/codex-report-receipts.json
+        .buildchain/kfd/kfd-2/claims/remote-fact-boundary.json
+      release-passport-kfd-3-prebuild-witness-jsons: |
+        .buildchain/kfd/kfd-3/collaboration-interface.prebuild.json
+      release-passport-kfd-3-artifact-verify-command: node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json
     secrets:
-      GITHUB_PUSH_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
-      AWS_CI_ACCESS_KEY_ID: ${{ secrets.AWS_CI_ACCESS_KEY_ID }}
-      AWS_CI_SECRET_ACCESS_KEY: ${{ secrets.AWS_CI_SECRET_ACCESS_KEY }}
-      AWS_USER_ACCESS_KEY_ID: ${{ secrets.AWS_USER_ACCESS_KEY_ID }}
-      AWS_USER_SECRET_ACCESS_KEY: ${{ secrets.AWS_USER_SECRET_ACCESS_KEY }}
-      MONDAY_API_KEY: ${{ secrets.MONDAY_API_KEY }}
-      AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
+      BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
+      BUILDCHAIN_ISSUE_APP_ID: ${{ secrets.BUILDCHAIN_ISSUE_APP_ID }}
+      BUILDCHAIN_ISSUE_APP_PRIVATE_KEY: ${{ secrets.BUILDCHAIN_ISSUE_APP_PRIVATE_KEY }}
 
-  trigger-batch-pr:
-      needs: [release]
-      uses: kungfu-trader/workflows/.github/workflows/.batch-pull-request.yml@dev/v1/v1.2
-      with:
-        repo: group
-        pull-request-title: ${{ github.event.pull_request.title }}
-      secrets:
-        GITHUB_PUSH_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
-
-  sync-release-page:
-    needs: [release]
-    uses: kungfu-trader/workflows/.github/workflows/.sync-release-page.yml@dev/v1/v1.2
-    with:
-      product: artifact-kungfu
-      cloudfront-id: E1FE73MM9VXU2T
-      release-url: https://releases.libkungfu.cc
-      repo: kungfu
-      release-path: artifact-kungfu
-      product-name: kungfu
-      lower-edge: 2.0.0
-    secrets:
-      GITHUB_PUSH_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
-      AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
+  # The shifu launcher version is locked to lerna.json (scripts/
+  # sync-shifu-version.mjs), so every promoted version also ships launcher
+  # binaries: tag shifu-v<version> here, which triggers the "Release shifu"
+  # workflow. Pushed with the promotion PAT — a GITHUB_TOKEN-pushed tag would
+  # not trigger downstream workflows.
+  shifu-launcher-tag:
+    needs: promote
+    if: ${{ github.event.pull_request.merged == true }}
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+          token: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
+      - name: Tag the launcher release for the promoted version
+        run: |
+          # shifu-entry-contract: allow release control-plane metadata lookup before launcher dispatch
+          ver="$(node -p "require('./lerna.json').version")"
+          pin="$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/shifu/Cargo.toml | head -n 1)"
+          if [ "$ver" != "$pin" ]; then
+            echo "lerna.json ($ver) and crates/shifu/Cargo.toml ($pin) disagree; run scripts/sync-shifu-version.mjs" >&2
+            exit 1
+          fi
+          tag="shifu-v${ver}"
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "$tag already exists; skipping"
+            exit 0
+          fi
+          git tag "$tag"
+          git push origin "$tag"
