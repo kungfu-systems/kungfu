@@ -132,30 +132,6 @@ storage_projection_rebuild_result episode_manifest_projection::rebuild_typed() c
            {"unknown_records_skipped", static_cast<uint64_t>(unknown_skipped)}}};
 }
 
-nlohmann::json episode_manifest_projection::rebuild() const {
-  const auto result = rebuild_typed();
-  nlohmann::json rows = nlohmann::json::object();
-  for (const auto &item : result.rows)
-    rows[item.table] = item.count;
-  uint64_t journal_records = 0;
-  uint64_t unknown_records_skipped = 0;
-  for (const auto &item : result.journal_records) {
-    if (item.table == "episode_manifest_records")
-      journal_records = item.count;
-    if (item.table == "unknown_records_skipped")
-      unknown_records_skipped = item.count;
-  }
-  return {{"ok", result.ok},
-          {"schema", result.schema},
-          {"runtime_dir", result.runtime_dir},
-          {"authority", result.authority},
-          {"projection", result.projection},
-          {"sqlite_path", result.sqlite_path},
-          {"unknown_records_skipped", unknown_records_skipped},
-          {"rows", std::move(rows)},
-          {"journal_records", journal_records}};
-}
-
 storage_projection_verify_result episode_manifest_projection::verify_typed() const {
   const auto path = projection_path(runtime_dir_);
   const auto records = yijinjing::storage::episode_manifest_store(runtime_dir_).read_typed_records();
@@ -221,37 +197,6 @@ storage_projection_verify_result episode_manifest_projection::verify_typed() con
            {"episode_ref_attached", expected.refs},
            {"episode_closed", expected.closes},
            {"episode_root_committed", expected.roots}}};
-}
-
-nlohmann::json episode_manifest_projection::verify() const {
-  const auto result = verify_typed();
-  nlohmann::json drift = nlohmann::json::array();
-  nlohmann::json rows = nlohmann::json::object();
-  nlohmann::json journal_distinct = nlohmann::json::object();
-  for (const auto &item : result.drift) {
-    drift.push_back({{"table", item.table},
-                     {"projection_rows", item.projection_rows},
-                     {"journal_distinct", item.journal_distinct}});
-  }
-  for (const auto &item : result.rows)
-    rows[item.table] = item.count;
-  for (const auto &item : result.journal_distinct)
-    journal_distinct[item.table] = item.count;
-  nlohmann::json rendered = {{"ok", result.ok},
-                             {"status", result.status},
-                             {"schema", result.schema},
-                             {"runtime_dir", result.runtime_dir},
-                             {"authority", result.authority},
-                             {"projection_present", result.projection_present}};
-  if (!result.note.empty())
-    rendered["note"] = result.note;
-  if (result.projection_present) {
-    rendered["degraded"] = result.degraded;
-    rendered["drift"] = std::move(drift);
-    rendered["rows"] = std::move(rows);
-    rendered["journal_distinct"] = std::move(journal_distinct);
-  }
-  return rendered;
 }
 
 } // namespace kungfu::runtime::storage_service_api

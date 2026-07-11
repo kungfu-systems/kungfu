@@ -320,6 +320,19 @@ function checkRuntimeGreenfield(scopeArgs = []) {
   ]);
 }
 
+function checkSchemaAuthority() {
+  run('schema authority gate', 'node', [
+    path.join('scripts', 'check-schema-authority.mjs'),
+  ]);
+}
+
+function testSchemaAuthority() {
+  run('schema authority negative fixtures', 'node', [
+    '--test',
+    path.join('scripts', 'check-schema-authority.test.mjs'),
+  ]);
+}
+
 function touchesBuildchainKfdEvidence(files) {
   return files.some(
     (file) =>
@@ -359,6 +372,7 @@ function checkStaged() {
   checkShifuEntryContract();
   checkCarrierActionEnvelope(['--staged']);
   checkRuntimeGreenfield(['--staged']);
+  checkSchemaAuthority();
   const files = stagedFiles();
   if (!files.length) {
     log('[check] no staged source files');
@@ -402,6 +416,7 @@ function checkStaged() {
 
 function checkShared() {
   testShifuEntryContract();
+  testSchemaAuthority();
   run('tooling type check', 'pnpm', ['run', 'check:types']);
   run('SDK unit tests', 'pnpm', [
     '--filter',
@@ -423,6 +438,7 @@ function checkChanged() {
   checkShifuEntryContract();
   checkCarrierActionEnvelope();
   checkRuntimeGreenfield();
+  checkSchemaAuthority();
   const files = changedFiles();
   checkPythonFiles('changed', files);
   checkBiomeFiles('changed', files);
@@ -438,6 +454,7 @@ function checkAll() {
   checkShifuEntryContract();
   checkCarrierActionEnvelope(['--all']);
   checkRuntimeGreenfield(['--all']);
+  checkSchemaAuthority();
   run('repo lint + format check', 'pnpm', ['run', 'lint']);
   checkRustFiles('all', [], { force: true });
   checkBuildchainKfdEvidence([], { force: true });

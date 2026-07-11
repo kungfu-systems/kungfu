@@ -66,6 +66,22 @@ def test_binary_action_envelope_roundtrip_uses_declared_identifier():
     assert not runtime.verify_flatbuffer_payload(schema_bfbs, encoded[:16])
 
 
+def test_action_envelope_schema_artifact_and_additive_evolution():
+    schema_dir = Path(__file__).parents[2] / "src/libkungfu/schema"
+    fbs_text = (schema_dir / "ActionEnvelope.fbs").read_text()
+    compiled, error = kungfu.__binding__.runtime.compile_schema(fbs_text, False)
+    assert error == ""
+    assert bytes(compiled) == (schema_dir / "ActionEnvelope.bfbs").read_bytes()
+
+    encoded = encode_action_envelope(_fixture())
+    evolved_text = fbs_text.replace(
+        "  payload:Payload;\n}", "  payload:Payload;\n  extension:string;\n}"
+    )
+    evolved, error = kungfu.__binding__.runtime.compile_schema(evolved_text, False)
+    assert error == ""
+    assert kungfu.__binding__.runtime.verify_flatbuffer_payload(evolved, encoded)
+
+
 def test_binary_action_envelope_rejects_corruption_and_hash_mismatch():
     encoded = bytearray(encode_action_envelope(_fixture()))
     encoded[encoded.index(b"payload")] ^= 0xFF

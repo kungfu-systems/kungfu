@@ -107,26 +107,6 @@ storage_projection_rebuild_result manifest_catalog_projection::rebuild_typed() c
        {"channel_cursor_updated", records.cursors.size()}}};
 }
 
-nlohmann::json manifest_catalog_projection::rebuild() const {
-  const auto result = rebuild_typed();
-  nlohmann::json rows = nlohmann::json::object();
-  nlohmann::json journal_records = nlohmann::json::object();
-  for (const auto &item : result.rows) {
-    rows[item.table] = item.count;
-  }
-  for (const auto &item : result.journal_records) {
-    journal_records[item.table] = item.count;
-  }
-  return {{"ok", result.ok},
-          {"schema", result.schema},
-          {"runtime_dir", result.runtime_dir},
-          {"authority", result.authority},
-          {"projection", result.projection},
-          {"sqlite_path", result.sqlite_path},
-          {"rows", std::move(rows)},
-          {"journal_records", std::move(journal_records)}};
-}
-
 storage_projection_verify_result manifest_catalog_projection::verify_typed() const {
   const auto path = projection_path(runtime_dir_);
   const auto records = yijinjing::storage::manifest_catalog_store(runtime_dir_).read_typed_records();
@@ -187,37 +167,6 @@ storage_projection_verify_result manifest_catalog_projection::verify_typed() con
           {{"import_manifest_accepted", expected.manifests},
            {"manifest_entry_recorded", expected.entries},
            {"channel_cursor_updated", expected.cursors}}};
-}
-
-nlohmann::json manifest_catalog_projection::verify() const {
-  const auto report = verify_typed();
-  nlohmann::json rendered = {{"ok", report.ok},
-                             {"status", report.status},
-                             {"schema", report.schema},
-                             {"runtime_dir", report.runtime_dir},
-                             {"authority", report.authority},
-                             {"projection_present", report.projection_present}};
-  if (!report.note.empty()) {
-    rendered["note"] = report.note;
-  }
-  if (report.projection_present) {
-    rendered["degraded"] = report.degraded;
-    rendered["drift"] = nlohmann::json::array();
-    for (const auto &item : report.drift) {
-      rendered["drift"].push_back({{"table", item.table},
-                                   {"projection_rows", item.projection_rows},
-                                   {"journal_distinct", item.journal_distinct}});
-    }
-    rendered["rows"] = nlohmann::json::object();
-    for (const auto &item : report.rows) {
-      rendered["rows"][item.table] = item.count;
-    }
-    rendered["journal_distinct"] = nlohmann::json::object();
-    for (const auto &item : report.journal_distinct) {
-      rendered["journal_distinct"][item.table] = item.count;
-    }
-  }
-  return rendered;
 }
 
 } // namespace kungfu::runtime::storage_service_api

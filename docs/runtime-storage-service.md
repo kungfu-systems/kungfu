@@ -510,12 +510,12 @@ projection drift (degraded, never failed — a rebuild restores the view).
 through `libkungfu` (`kungfu.runtime.storage-service/v1` operation `query`)
 instead of letting Python, Node, CLI, or GUI code read SQLite directly. The
 query surface supports `sources`, `manifests`, and `entries`, source filtering,
-entry-kind filtering, ISO time ranges, and a bounded limit. The current
-pre-release service returns JSON rows folded from the authoritative journals.
-ADR-0047 requires the semantic service and Hana/`sqlite_orm` query path to
-return typed rows/views internally, with JSON produced only by the CLI/binding
-edge adapter. The SQLite files remain rebuildable projections and may serve
-external SQL tooling; they never become authority.
+entry-kind filtering, ISO time ranges, and a bounded limit. The semantic
+service and Hana/`sqlite_orm` query path return typed rows/views internally;
+JSON is produced only by the named CLI/binding edge adapter. The SQLite files
+remain rebuildable projections and may serve external SQL tooling; they never
+become authority. `framework/core/schema-authority.json` plus the blocking
+schema-authority gate enforce this owner-to-projection route.
 
 The user-facing generic commands are:
 

@@ -1,6 +1,6 @@
 # ADR-0047: authoritative structured facts have one schema owner — Hana POD or FlatBuffers
 
-- Status: accepted; implementation staged
+- Status: accepted; implemented and enforced
 - Date: 2026-07-10
 - Category: architecture — schema authority and representation boundaries
 - Subsystem: `libyijinjing`, `libkungfu`, action envelopes, storage service,
@@ -161,21 +161,25 @@ outside the compatibility target, consistent with ADR-0025.
 - **ADR-0039 stands unchanged in purpose.** It governs safe FlatBuffers access,
   while this ADR governs which facts FlatBuffers owns.
 
-## Implementation sequence
+## Implementation evidence
 
-1. Introduce typed storage service request/result/view and POD query-row types,
-   reuse the Hana/`sqlite_orm` query path, and move JSON to a named edge adapter.
-2. Complete recursive Hana-to-Python and Hana-to-Node conversion for POD and
-   typed views; remove JSON stringify/parse binding transport.
-3. Define and adopt `ActionEnvelope.fbs`, retaining JSON only as an edge
-   renderer/import adapter.
-4. Route all SQLite projections exclusively by schema owner and retire any
-   remaining handwritten JSON schema path.
-5. Add source gates that enforce single ownership and prevent JSON semantic
-   interfaces from re-entering the core.
-
-These are staged implementation tasks. This ADR records the target boundary; it
-does not claim those migrations are already complete.
+1. `storage/service.h` owns typed request/result/view contracts; Python and Node
+   recursively project Hana-described records and typed views without JSON
+   stringify/parse transport. `json_edge.h` is the named compatibility edge.
+2. Source-registry, manifest-catalog, and Episode SQLite projections expose
+   typed results and use `make_storage_ptr` over their Hana registries. Their
+   former JSON-returning projection methods have been removed.
+3. `ActionEnvelope.fbs` owns the `KFAE` carrier body. Rewind, Work, Atlas and
+   KFX first-party paths use the C++ recorder/decoder; outer and manifest-bound
+   nested buffers are verified before access. JSON/base64 remains an explicit
+   render/import edge.
+4. `framework/core/schema-authority.json` inventories every production `.fbs`
+   family and every Hana registry that reaches `make_storage_ptr`, while
+   explicitly classifying typed views and opaque bodies as non-authorities.
+5. `scripts/check-schema-authority.mjs` is blocking in staged, changed and
+   whole-tree `shifu check` modes. Its fixtures prove rejection of dual owners,
+   JSON core interfaces and crossed projection routes. The existing
+   `check-view-boundary` and carrier/action gates remain independently strict.
 
 ## Consequences
 
@@ -203,11 +207,11 @@ does not claim those migrations are already complete.
 
 ## Residual risk
 
-- The boundary will remain aspirational until service signatures, bindings,
-  the action envelope, and CI gates migrate.
-- A typed view macro must not accidentally register variable-length service
-  objects as journal POD.
-- Kernel admission pressure can grow the closed set without discipline; each
-  new Hana fact must justify its ABI and carrier budget.
-- Nested FlatBuffers payloads require a clear verifier and lifetime chain at
-  both the outer envelope and referenced payload layers.
+- The gate proves declared ownership and route structure; it cannot decide
+  whether a new semantic fact deserves costly kernel admission. That remains
+  an ADR/review decision.
+- The JSON implementation edge remains sizeable while compatibility import and
+  rendering exist. Its exact public header is allowlisted with a removal
+  condition; typed service headers cannot acquire JSON currency.
+- Stable-v4 compatibility still requires the normal KFD-1 release discipline;
+  current action-envelope replacement is explicitly breaking-pre-release.

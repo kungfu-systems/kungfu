@@ -1229,6 +1229,38 @@ nlohmann::json projection_verification_json(const storage_projection_verify_resu
   return rendered;
 }
 
+nlohmann::json projection_rebuild_json(const storage_projection_rebuild_result &result) {
+  nlohmann::json rows = nlohmann::json::object();
+  nlohmann::json journal_records = nlohmann::json::object();
+  for (const auto &item : result.rows)
+    rows[item.table] = item.count;
+  for (const auto &item : result.journal_records)
+    journal_records[item.table] = item.count;
+  return {{"ok", result.ok},
+          {"schema", result.schema},
+          {"runtime_dir", result.runtime_dir},
+          {"authority", result.authority},
+          {"projection", result.projection},
+          {"sqlite_path", result.sqlite_path},
+          {"rows", std::move(rows)},
+          {"journal_records", std::move(journal_records)}};
+}
+
+nlohmann::json episode_projection_rebuild_json(const storage_projection_rebuild_result &result) {
+  auto rendered = projection_rebuild_json(result);
+  uint64_t journal_records = 0;
+  uint64_t unknown_records_skipped = 0;
+  for (const auto &item : result.journal_records) {
+    if (item.table == "episode_manifest_records")
+      journal_records = item.count;
+    if (item.table == "unknown_records_skipped")
+      unknown_records_skipped = item.count;
+  }
+  rendered["journal_records"] = journal_records;
+  rendered["unknown_records_skipped"] = unknown_records_skipped;
+  return rendered;
+}
+
 nlohmann::json projection_status_json(const storage_projection_status_view &status) {
   auto rendered = projection_verification_json(status.verification);
   rendered["name"] = status.name;
@@ -3961,7 +3993,7 @@ public:
   }
 
   [[nodiscard]] nlohmann::json episode_projection_rebuild(const storage_service_options &options) const {
-    return episode_manifest_projection(options.runtime_dir).rebuild();
+    return episode_projection_rebuild_json(episode_manifest_projection(options.runtime_dir).rebuild_typed());
   }
 
   [[nodiscard]] nlohmann::json source_register(const storage_service_options &options) const {
@@ -4023,7 +4055,7 @@ public:
   }
 
   [[nodiscard]] nlohmann::json source_registry_rebuild(const storage_service_options &options) const {
-    return source_registry_projection(options.runtime_dir).rebuild();
+    return projection_rebuild_json(source_registry_projection(options.runtime_dir).rebuild_typed());
   }
 };
 

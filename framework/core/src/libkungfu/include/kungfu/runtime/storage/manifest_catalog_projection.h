@@ -5,8 +5,6 @@
 
 #include <string>
 
-#include <nlohmann/json.hpp>
-
 #include <kungfu/runtime/storage/projection_types.h>
 
 namespace kungfu::runtime::storage_service_api {
@@ -30,15 +28,11 @@ public:
 
   // Rebuild the SQLite projection from the journal: sync schema, clear tables,
   // replace every journal record. Returns per-table row counts.
-  [[nodiscard]] nlohmann::json rebuild() const;
-
   [[nodiscard]] storage_projection_rebuild_result rebuild_typed() const;
 
   // Verify the projection against the journal fold. Reports drift (projection
   // row counts diverging from journal distinct-PK counts) as degraded, missing
   // projection as a distinct honest state, not silently ok.
-  [[nodiscard]] nlohmann::json verify() const;
-
   [[nodiscard]] storage_projection_verify_result verify_typed() const;
 
 private:
