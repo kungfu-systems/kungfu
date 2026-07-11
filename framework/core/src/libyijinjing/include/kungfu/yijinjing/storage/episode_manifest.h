@@ -148,6 +148,10 @@ public:
 
   [[nodiscard]] nlohmann::json inspect(uint64_t episode_id) const;
 
+  [[nodiscard]] episode_inspect_result inspect_typed(uint64_t episode_id) const;
+
+  [[nodiscard]] episode_causal_graph causal_graph_typed(uint64_t episode_id) const;
+
   [[nodiscard]] episode_fsck_result fsck_typed(uint64_t episode_id = 0) const;
 
   [[nodiscard]] nlohmann::json fsck(uint64_t episode_id = 0) const;

@@ -565,6 +565,13 @@ struct storage_export_bundle_result {
   std::vector<storage_export_record_view> records = {};
 };
 
+struct storage_episode_bundle_result {
+  std::string bundle_id = {};
+  uint64_t episode_id = 0;
+  yijinjing::storage::episode_current_view manifest = {};
+  yijinjing::storage::episode_causal_graph causal_graph = {};
+};
+
 struct storage_import_bundle_request {
   std::string runtime_dir = {};
   std::string provider = {};

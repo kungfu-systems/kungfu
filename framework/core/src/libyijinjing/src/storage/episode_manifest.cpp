@@ -532,20 +532,13 @@ payload_ref_resolution resolve_payload_ref(const content_store &store, const std
   }
 }
 
-struct episode_graph {
-  nlohmann::json graph = nlohmann::json::object();
-  nlohmann::json dependencies = nlohmann::json::array();
-  std::vector<episode_fsck_issue> errors = {};
-  std::vector<episode_fsck_issue> warnings = {};
-  bool degraded = false;
-};
-
-episode_graph build_causal_graph(const content_store &refs, uint64_t episode_id, const episode_current_view &view,
-                                 const std::map<uint64_t, episode_current_view> &folded) {
+episode_causal_graph build_causal_graph(const content_store &refs, uint64_t episode_id,
+                                        const episode_current_view &view,
+                                        const std::map<uint64_t, episode_current_view> &folded) {
   std::vector<uint64_t> frame_uids;
   std::vector<uint64_t> declared_input_frames;
-  nlohmann::json frame_edges = nlohmann::json::array();
-  nlohmann::json dependencies = nlohmann::json::array();
+  std::vector<episode_causal_edge> frame_edges;
+  std::vector<episode_dependency> dependencies;
   std::vector<episode_fsck_issue> errors;
   std::vector<episode_fsck_issue> warnings;
   bool degraded = false;
@@ -568,8 +561,12 @@ episode_graph build_causal_graph(const content_store &refs, uint64_t episode_id,
   if (parent_episode_id != 0) {
     const bool present = folded.find(parent_episode_id) != folded.end();
     const auto status = present ? "present" : "missing";
-    dependencies.push_back(
-        {{"kind", "episode"}, {"role", "parent"}, {"episode_id", parent_episode_id}, {"status", status}});
+    episode_dependency dependency{};
+    dependency.kind = "episode";
+    dependency.role = "parent";
+    dependency.status = status;
+    dependency.episode_id = parent_episode_id;
+    dependencies.push_back(std::move(dependency));
     if (!present) {
       degraded = true;
       episode_fsck_issue issue{};
@@ -584,10 +581,12 @@ episode_graph build_causal_graph(const content_store &refs, uint64_t episode_id,
   const auto root_trigger_frame_uid = view.opened ? view.open.root_trigger_frame_uid : uint64_t{0};
   if (root_trigger_frame_uid != 0 && !contains_u64(frame_uids, root_trigger_frame_uid)) {
     const bool declared = contains_u64(declared_input_frames, root_trigger_frame_uid);
-    dependencies.push_back({{"kind", "frame"},
-                            {"role", "root_trigger"},
-                            {"frame_uid", root_trigger_frame_uid},
-                            {"status", declared ? "declared_external" : "missing"}});
+    episode_dependency dependency{};
+    dependency.kind = "frame";
+    dependency.role = "root_trigger";
+    dependency.status = declared ? "declared_external" : "missing";
+    dependency.frame_uid = root_trigger_frame_uid;
+    dependencies.push_back(std::move(dependency));
     if (!declared) {
       degraded = true;
       episode_fsck_issue issue{};
@@ -604,18 +603,17 @@ episode_graph build_causal_graph(const content_store &refs, uint64_t episode_id,
       continue;
     }
     if (contains_u64(frame_uids, frame.trigger_frame_uid)) {
-      frame_edges.push_back({{"kind", "frame_trigger"},
-                             {"scope", "internal"},
-                             {"from_frame_uid", frame.trigger_frame_uid},
-                             {"to_frame_uid", frame.frame_uid}});
+      frame_edges.push_back({frame.trigger_frame_uid, frame.frame_uid});
       continue;
     }
     const bool declared = contains_u64(declared_input_frames, frame.trigger_frame_uid);
-    dependencies.push_back({{"kind", "frame"},
-                            {"role", "trigger"},
-                            {"frame_uid", frame.trigger_frame_uid},
-                            {"dependent_frame_uid", frame.frame_uid},
-                            {"status", declared ? "declared_external" : "missing"}});
+    episode_dependency dependency{};
+    dependency.kind = "frame";
+    dependency.role = "trigger";
+    dependency.status = declared ? "declared_external" : "missing";
+    dependency.frame_uid = frame.trigger_frame_uid;
+    dependency.dependent_frame_uid = frame.frame_uid;
+    dependencies.push_back(std::move(dependency));
     if (!declared) {
       degraded = true;
       episode_fsck_issue issue{};
@@ -635,12 +633,14 @@ episode_graph build_causal_graph(const content_store &refs, uint64_t episode_id,
       const bool present = ref.ref_uid != 0 && folded.find(ref.ref_uid) != folded.end();
       const bool declared_external = ref.ref_uid == 0 || !ref_id.empty();
       const auto status = present ? "present" : (declared_external ? "declared_external" : "missing");
-      dependencies.push_back({{"kind", "episode"},
-                              {"role", "ref"},
-                              {"episode_id", ref.ref_uid},
-                              {"ref_id", ref_id},
-                              {"ref_hash", ref_hash},
-                              {"status", status}});
+      episode_dependency dependency{};
+      dependency.kind = "episode";
+      dependency.role = "ref";
+      dependency.status = status;
+      dependency.episode_id = ref.ref_uid;
+      dependency.ref_id = ref_id;
+      dependency.ref_hash = ref_hash;
+      dependencies.push_back(std::move(dependency));
       if (!present && !declared_external) {
         degraded = true;
         episode_fsck_issue issue{};
@@ -652,12 +652,14 @@ episode_graph build_causal_graph(const content_store &refs, uint64_t episode_id,
       }
     } else if (ref.ref_kind == EpisodeRefKind::Payload) {
       const auto resolved = resolve_payload_ref(refs, ref_hash);
-      dependencies.push_back({{"kind", "payload"},
-                              {"role", "payload_ref"},
-                              {"ref_uid", ref.ref_uid},
-                              {"ref_id", ref_id},
-                              {"ref_hash", ref_hash},
-                              {"status", resolved.status}});
+      episode_dependency dependency{};
+      dependency.kind = "payload";
+      dependency.role = "payload_ref";
+      dependency.status = resolved.status;
+      dependency.ref_uid = ref.ref_uid;
+      dependency.ref_id = ref_id;
+      dependency.ref_hash = ref_hash;
+      dependencies.push_back(std::move(dependency));
       if (resolved.code != nullptr) {
         episode_fsck_issue issue{};
         issue.code = resolved.code;
@@ -678,30 +680,76 @@ episode_graph build_causal_graph(const content_store &refs, uint64_t episode_id,
         }
       }
     } else if (ref.ref_kind == EpisodeRefKind::Schema) {
-      dependencies.push_back({{"kind", "schema"},
-                              {"role", "schema_ref"},
-                              {"ref_uid", ref.ref_uid},
-                              {"ref_id", ref_id},
-                              {"ref_hash", ref_hash},
-                              {"status", "declared"}});
+      episode_dependency dependency{};
+      dependency.kind = "schema";
+      dependency.role = "schema_ref";
+      dependency.status = "declared";
+      dependency.ref_uid = ref.ref_uid;
+      dependency.ref_id = ref_id;
+      dependency.ref_hash = ref_hash;
+      dependencies.push_back(std::move(dependency));
     }
   }
 
-  return {{{
-               "schema",
-               "kungfu.episode.causal-graph/v1",
-           },
-           {"episode_id", episode_id},
-           {"frame_count", frame_uids.size()},
-           {"edge_count", frame_edges.size()},
-           {"dependency_count", dependencies.size()},
-           {"degraded", degraded},
-           {"edges", frame_edges},
-           {"dependencies", dependencies}},
-          dependencies,
-          errors,
-          warnings,
-          degraded};
+  episode_causal_graph graph{};
+  graph.episode_id = episode_id;
+  graph.frame_count = static_cast<uint64_t>(frame_uids.size());
+  graph.edges = std::move(frame_edges);
+  graph.dependencies = std::move(dependencies);
+  graph.errors = std::move(errors);
+  graph.warnings = std::move(warnings);
+  graph.degraded = degraded;
+  return graph;
+}
+
+nlohmann::json dependency_json(const episode_dependency &dependency) {
+  nlohmann::json value = {{"kind", dependency.kind}, {"role", dependency.role}, {"status", dependency.status}};
+  if (dependency.episode_id.has_value()) {
+    value["episode_id"] = *dependency.episode_id;
+  }
+  if (dependency.frame_uid.has_value()) {
+    value["frame_uid"] = *dependency.frame_uid;
+  }
+  if (dependency.dependent_frame_uid.has_value()) {
+    value["dependent_frame_uid"] = *dependency.dependent_frame_uid;
+  }
+  if (dependency.ref_uid.has_value()) {
+    value["ref_uid"] = *dependency.ref_uid;
+  }
+  if (dependency.ref_id.has_value()) {
+    value["ref_id"] = *dependency.ref_id;
+  }
+  if (dependency.ref_hash.has_value()) {
+    value["ref_hash"] = *dependency.ref_hash;
+  }
+  return value;
+}
+
+nlohmann::json dependencies_json(const episode_causal_graph &graph) {
+  nlohmann::json values = nlohmann::json::array();
+  for (const auto &dependency : graph.dependencies) {
+    values.push_back(dependency_json(dependency));
+  }
+  return values;
+}
+
+nlohmann::json causal_graph_json(const episode_causal_graph &graph) {
+  nlohmann::json edges = nlohmann::json::array();
+  for (const auto &edge : graph.edges) {
+    edges.push_back({{"kind", "frame_trigger"},
+                     {"scope", "internal"},
+                     {"from_frame_uid", edge.from_frame_uid},
+                     {"to_frame_uid", edge.to_frame_uid}});
+  }
+  const auto dependencies = dependencies_json(graph);
+  return {{"schema", graph.schema},
+          {"episode_id", graph.episode_id},
+          {"frame_count", graph.frame_count},
+          {"edge_count", graph.edges.size()},
+          {"dependency_count", graph.dependencies.size()},
+          {"degraded", graph.degraded},
+          {"edges", std::move(edges)},
+          {"dependencies", dependencies}};
 }
 
 // ADR-0043: per-record commitment for the content root. Each covered record
@@ -1046,11 +1094,30 @@ nlohmann::json episode_manifest_store::inspect(uint64_t episode_id) const {
           {"authority", "yijinjing-journal"},
           {"episode", summary_json(view)},
           {"content_root", content_root_json(view, fold.unknown_record_count)},
-          {"causal_graph", graph.graph},
-          {"dependencies", graph.dependencies},
+          {"causal_graph", causal_graph_json(graph)},
+          {"dependencies", dependencies_json(graph)},
           {"records", records_json(view)},
           {"frames", rows_json(view, view.frame_indices)},
           {"refs", rows_json(view, view.ref_indices)}};
+}
+
+episode_causal_graph episode_manifest_store::causal_graph_typed(uint64_t episode_id) const {
+  return inspect_typed(episode_id).causal_graph;
+}
+
+episode_inspect_result episode_manifest_store::inspect_typed(uint64_t episode_id) const {
+  if (episode_id == 0) {
+    throw std::invalid_argument("episode_id is required");
+  }
+  const auto fold = fold_typed_records();
+  const auto iter = fold.episodes.find(episode_id);
+  if (iter == fold.episodes.end()) {
+    throw std::invalid_argument("episode not found: " + std::to_string(episode_id));
+  }
+  const file_content_store default_content_store((fs::path(runtime_dir_) / "storage").string());
+  const content_store &refs = content_store_ != nullptr ? *content_store_ : default_content_store;
+  return {iter->second, build_causal_graph(refs, episode_id, iter->second, fold.episodes),
+          static_cast<uint64_t>(fold.unknown_record_count)};
 }
 
 episode_fsck_result episode_manifest_store::fsck_typed(uint64_t episode_id) const {

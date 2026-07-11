@@ -118,6 +118,40 @@ struct episode_fsck_result {
   std::optional<episode_current_view> episode = {};
 };
 
+struct episode_causal_edge {
+  uint64_t from_frame_uid = 0;
+  uint64_t to_frame_uid = 0;
+};
+
+struct episode_dependency {
+  std::string kind = {};
+  std::string role = {};
+  std::string status = {};
+  std::optional<uint64_t> episode_id = {};
+  std::optional<uint64_t> frame_uid = {};
+  std::optional<uint64_t> dependent_frame_uid = {};
+  std::optional<uint64_t> ref_uid = {};
+  std::optional<std::string> ref_id = {};
+  std::optional<std::string> ref_hash = {};
+};
+
+struct episode_causal_graph {
+  std::string schema = "kungfu.episode.causal-graph/v1";
+  uint64_t episode_id = 0;
+  uint64_t frame_count = 0;
+  std::vector<episode_causal_edge> edges = {};
+  std::vector<episode_dependency> dependencies = {};
+  std::vector<episode_fsck_issue> errors = {};
+  std::vector<episode_fsck_issue> warnings = {};
+  bool degraded = false;
+};
+
+struct episode_inspect_result {
+  episode_current_view episode = {};
+  episode_causal_graph causal_graph = {};
+  uint64_t unknown_record_count = 0;
+};
+
 struct episode_content_root {
   uint32_t covered_record_count = 0;
   std::string algorithm = {};

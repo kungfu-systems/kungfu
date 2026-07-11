@@ -57,6 +57,12 @@ template <size_t N> std::string fixed_string(const kungfu::array<char, N> &value
   return std::string(value.value, length);
 }
 
+template <size_t N> void assign_fixed(kungfu::array<char, N> &target, const std::string &value) {
+  std::fill(std::begin(target.value), std::end(target.value), '\0');
+  const auto length = std::min(value.size(), N - 1);
+  std::copy_n(value.data(), length, target.value);
+}
+
 const char *source_kind_text(yy_enums::SourceKind kind) {
   switch (kind) {
   case yy_enums::SourceKind::Local:
@@ -1992,37 +1998,14 @@ nlohmann::json episode_fsck_impl(const storage_service_options &options) {
   return render_storage_fsck_result(default_storage_service().fsck(parse_storage_fsck_request(options)));
 }
 
-nlohmann::json episode_export_bundle_impl(const storage_service_options &options) {
+storage_episode_bundle_result episode_export_bundle_typed_impl(const storage_service_options &options) {
   if (options.episode_id == 0) {
     throw std::invalid_argument("episode_id is required for episode export");
   }
   const auto scoped = episode_ref_store(options);
-  const auto inspected = scoped.store.inspect(options.episode_id);
-  if (!inspected.value("ok", false)) {
-    throw std::runtime_error("episode not found: " + std::to_string(options.episode_id));
-  }
-  const auto episode = object_or_empty(inspected, "episode");
-  const auto records = inspected.value("records", nlohmann::json::array());
-  const auto frames = inspected.value("frames", nlohmann::json::array());
-  const auto refs = inspected.value("refs", nlohmann::json::array());
-  const auto dependencies = inspected.value("dependencies", nlohmann::json::array());
-  const auto causal_graph = inspected.value("causal_graph", nlohmann::json::object());
-  return {{"schema", "kungfu.storage.episode-bundle/v1"},
-          {"bundle_id", "episode:" + std::to_string(options.episode_id)},
-          {"scope", "episode"},
-          {"episode_id", options.episode_id},
-          {"authority", "yijinjing-journal"},
-          {"manifest", episode},
-          {"causal_graph", causal_graph},
-          {"records", records},
-          {"frames", frames},
-          {"refs", refs},
-          {"dependencies", dependencies},
-          {"degraded", causal_graph.value("degraded", false)},
-          {"record_count", records.size()},
-          {"frame_count", frames.size()},
-          {"ref_count", refs.size()},
-          {"dependency_count", dependencies.size()}};
+  const auto inspected = scoped.store.inspect_typed(options.episode_id);
+  return {"episode:" + std::to_string(options.episode_id), options.episode_id, inspected.episode,
+          inspected.causal_graph};
 }
 
 nlohmann::json fsck_impl(const storage_service_options &options);
@@ -2040,6 +2023,12 @@ nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeRefAttach
 nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeClosed &record);
 nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeRootCommitted &record);
 nlohmann::json render_episode_close_write_result(const yy_storage::episode_close_write_result &result);
+nlohmann::json episode_record_row_json(const yy_storage::episode_manifest_record &record);
+nlohmann::json render_storage_episode_bundle_result(const storage_episode_bundle_result &result);
+
+nlohmann::json episode_export_bundle_impl(const storage_service_options &options) {
+  return render_storage_episode_bundle_result(episode_export_bundle_typed_impl(options));
+}
 
 storage_repair_subject repair_subject(const storage_fsck_issue &issue) {
   return std::visit(
@@ -2172,57 +2161,227 @@ nlohmann::json repair_plan_impl(const storage_service_options &options) {
       default_storage_service().repair_plan(parse_storage_repair_plan_request(options)));
 }
 
+yy_storage::episode_manifest_record parse_episode_bundle_record(const nlohmann::json &value) {
+  yy_storage::episode_manifest_record parsed{};
+  parsed.manifest_frame_uid = uint64_or(value, "manifest_frame_uid");
+  parsed.manifest_gen_time = int64_or(value, "manifest_gen_time");
+  const auto kind = text_or(value, "record_kind");
+  const auto schema_version = uint32_or(value, "schema_version", 1);
+  if (kind == "episode_open") {
+    const auto options = parse_episode_begin_options(value);
+    yijinjing::types::EpisodeOpen record{};
+    record.schema_version = schema_version;
+    record.episode_id = options.episode_id;
+    record.parent_episode_id = options.parent_episode_id;
+    record.root_trigger_frame_uid = options.root_trigger_frame_uid;
+    record.location_uid = options.location_uid;
+    record.begin_time = options.begin_time;
+    assign_fixed(record.title, options.title);
+    assign_fixed(record.actor, options.actor);
+    assign_fixed(record.source, options.source);
+    parsed.body = record;
+  } else if (kind == "episode_heartbeat") {
+    const auto options = parse_episode_heartbeat_options(value);
+    yijinjing::types::EpisodeHeartbeat record{};
+    record.schema_version = schema_version;
+    record.episode_id = options.episode_id;
+    record.location_uid = options.location_uid;
+    record.update_time = options.update_time;
+    record.last_frame_uid = options.last_frame_uid;
+    record.frame_count = options.frame_count;
+    assign_fixed(record.note, options.note);
+    parsed.body = record;
+  } else if (kind == "episode_frame_attached") {
+    const auto options = parse_episode_frame_attach_options(value);
+    yijinjing::types::EpisodeFrameAttached record{};
+    record.schema_version = schema_version;
+    record.episode_id = options.episode_id;
+    record.location_uid = options.location_uid;
+    record.frame_uid = options.frame_uid;
+    record.trigger_frame_uid = options.trigger_frame_uid;
+    record.stream_id = options.stream_id;
+    record.gen_time = options.gen_time;
+    record.trigger_time = options.trigger_time;
+    record.carrier_type = options.carrier_type;
+    record.source = options.source;
+    record.dest = options.dest;
+    record.data_length = options.data_length;
+    record.integrity_version = options.integrity_version;
+    record.payload_checksum = options.payload_checksum;
+    record.frame_checksum = options.frame_checksum;
+    parsed.body = record;
+  } else if (kind == "episode_ref_attached") {
+    const auto options = parse_episode_ref_attach_options(value);
+    yijinjing::types::EpisodeRefAttached record{};
+    record.schema_version = schema_version;
+    record.episode_id = options.episode_id;
+    record.location_uid = options.location_uid;
+    record.ref_kind = options.ref_kind;
+    record.ref_uid = options.ref_uid;
+    record.update_time = options.update_time;
+    assign_fixed(record.ref_id, options.ref_id);
+    assign_fixed(record.ref_hash, options.ref_hash);
+    parsed.body = record;
+  } else if (kind == "episode_closed") {
+    const auto options = parse_episode_close_options(value, yy_enums::EpisodeStatus::Ended);
+    yijinjing::types::EpisodeClosed record{};
+    record.schema_version = schema_version;
+    record.episode_id = options.episode_id;
+    record.location_uid = options.location_uid;
+    record.status = options.status;
+    record.end_time = options.end_time;
+    record.last_frame_uid = options.last_frame_uid;
+    record.frame_count = options.frame_count;
+    assign_fixed(record.reason, options.reason);
+    parsed.body = record;
+  } else if (kind == "episode_root_committed") {
+    yijinjing::types::EpisodeRootCommitted record{};
+    record.schema_version = schema_version;
+    record.episode_id = uint64_or(value, "episode_id");
+    record.location_uid = uint32_or(value, "location_uid");
+    record.commit_time = int64_or(value, "commit_time");
+    record.covered_record_count = uint32_or(value, "covered_record_count");
+    assign_fixed(record.algorithm, text_or(value, "algorithm"));
+    assign_fixed(record.root_value, text_or(value, "root_value"));
+    parsed.body = record;
+  } else {
+    throw std::invalid_argument("unsupported episode record kind: " + kind);
+  }
+  return parsed;
+}
+
+storage_episode_bundle_result parse_storage_episode_bundle(const nlohmann::json &bundle) {
+  storage_episode_bundle_result parsed{};
+  parsed.bundle_id = text_or(bundle, "bundle_id");
+  parsed.episode_id = uint64_or(bundle, "episode_id", uint64_or(object_or_empty(bundle, "manifest"), "episode_id"));
+  parsed.manifest.episode_id = parsed.episode_id;
+  for (const auto &value : array_or_empty(bundle, "records")) {
+    auto record = parse_episode_bundle_record(value);
+    const auto index = parsed.manifest.records.size();
+    if (std::holds_alternative<yijinjing::types::EpisodeFrameAttached>(record.body))
+      parsed.manifest.frame_indices.push_back(index);
+    if (std::holds_alternative<yijinjing::types::EpisodeRefAttached>(record.body))
+      parsed.manifest.ref_indices.push_back(index);
+    parsed.manifest.records.push_back(std::move(record));
+  }
+  const auto graph = object_or_empty(bundle, "causal_graph");
+  parsed.causal_graph.schema = text_or(graph, "schema", "kungfu.episode.causal-graph/v1");
+  parsed.causal_graph.episode_id = uint64_or(graph, "episode_id", parsed.episode_id);
+  parsed.causal_graph.frame_count = uint64_or(graph, "frame_count", parsed.manifest.frame_indices.size());
+  parsed.causal_graph.degraded = bool_or(graph, "degraded", bool_or(bundle, "degraded", false));
+  for (const auto &edge : array_or_empty(graph, "edges")) {
+    parsed.causal_graph.edges.push_back({uint64_or(edge, "from_frame_uid"), uint64_or(edge, "to_frame_uid")});
+  }
+  for (const auto &value : array_or_empty(bundle, "dependencies")) {
+    yy_storage::episode_dependency dependency{};
+    dependency.kind = text_or(value, "kind");
+    dependency.role = text_or(value, "role");
+    dependency.status = text_or(value, "status");
+    if (value.contains("episode_id"))
+      dependency.episode_id = uint64_or(value, "episode_id");
+    if (value.contains("frame_uid"))
+      dependency.frame_uid = uint64_or(value, "frame_uid");
+    if (value.contains("dependent_frame_uid"))
+      dependency.dependent_frame_uid = uint64_or(value, "dependent_frame_uid");
+    if (value.contains("ref_uid"))
+      dependency.ref_uid = uint64_or(value, "ref_uid");
+    if (value.contains("ref_id"))
+      dependency.ref_id = text_or(value, "ref_id");
+    if (value.contains("ref_hash"))
+      dependency.ref_hash = text_or(value, "ref_hash");
+    parsed.causal_graph.dependencies.push_back(std::move(dependency));
+  }
+  return parsed;
+}
+
 bool episode_record_kind_supported(const std::string &kind) {
   return kind == "episode_open" || kind == "episode_heartbeat" || kind == "episode_frame_attached" ||
          kind == "episode_ref_attached" || kind == "episode_closed" || kind == "episode_root_committed";
 }
 
-std::string episode_record_identity_key(const nlohmann::json &record) {
-  const auto kind = text_or(record, "record_kind");
-  const auto episode_id = std::to_string(uint64_or(record, "episode_id"));
-  if (kind == "episode_open" || kind == "episode_closed" || kind == "episode_root_committed") {
-    return kind + ":" + episode_id;
-  }
-  if (kind == "episode_frame_attached") {
-    return kind + ":" + episode_id + ":" + std::to_string(uint64_or(record, "frame_uid"));
-  }
-  if (kind == "episode_ref_attached") {
-    return kind + ":" + episode_id + ":" + text_or(record, "ref_kind") + ":" +
-           std::to_string(uint64_or(record, "ref_uid")) + ":" + text_or(record, "ref_id") + ":" +
-           text_or(record, "ref_hash");
-  }
-  return canonical_json(record);
+std::string episode_record_kind(const yy_storage::episode_manifest_record &record) {
+  return std::visit(
+      [](const auto &body) -> std::string {
+        using body_t = std::decay_t<decltype(body)>;
+        if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeOpen>)
+          return "episode_open";
+        if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeHeartbeat>)
+          return "episode_heartbeat";
+        if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeFrameAttached>)
+          return "episode_frame_attached";
+        if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeRefAttached>)
+          return "episode_ref_attached";
+        if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeClosed>)
+          return "episode_closed";
+        if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeRootCommitted>)
+          return "episode_root_committed";
+        return "unknown";
+      },
+      record.body);
 }
 
-nlohmann::json episode_apply_record(const storage_service_options &options, const nlohmann::json &record) {
-  const auto kind = text_or(record, "record_kind");
-  if (kind == "episode_open") {
-    return episode_record_body_json(episode_store(options).begin(parse_episode_begin_options(record)));
-  }
-  if (kind == "episode_heartbeat") {
-    return episode_record_body_json(episode_store(options).heartbeat(parse_episode_heartbeat_options(record)));
-  }
-  if (kind == "episode_frame_attached") {
-    return episode_record_body_json(episode_store(options).attach_frame(parse_episode_frame_attach_options(record)));
-  }
-  if (kind == "episode_ref_attached") {
-    return episode_record_body_json(episode_store(options).attach_ref(parse_episode_ref_attach_options(record)));
-  }
-  if (kind == "episode_closed") {
-    return render_episode_close_write_result(
-        episode_store(options).end(parse_episode_close_options(record, yy_enums::EpisodeStatus::Ended)));
-  }
-  if (kind == "episode_root_committed") {
-    // ADR-0043: the destination's root is committed by its own seal path (the
-    // episode_closed apply above); the bundle's root record is carried through
-    // as the source's identity claim for comparison, never re-appended — a
-    // root must commit to the sequence its own store recorded, and a second
-    // root record would only be a duplicate-root diagnostic.
-    auto row = record;
-    row["applied"] = "source_identity_claim";
-    return row;
-  }
-  return nullptr;
+std::string episode_record_identity_key(const yy_storage::episode_manifest_record &record) {
+  return std::visit(
+      [](const auto &body) -> std::string {
+        using body_t = std::decay_t<decltype(body)>;
+        if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeOpen>) {
+          return "episode_open:" + std::to_string(body.episode_id);
+        } else if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeHeartbeat>) {
+          return "episode_heartbeat:" + std::to_string(body.episode_id) + ":" + std::to_string(body.update_time);
+        } else if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeFrameAttached>) {
+          return "episode_frame_attached:" + std::to_string(body.episode_id) + ":" + std::to_string(body.frame_uid);
+        } else if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeRefAttached>) {
+          return "episode_ref_attached:" + std::to_string(body.episode_id) + ":" +
+                 std::to_string(static_cast<int32_t>(body.ref_kind)) + ":" + std::to_string(body.ref_uid) + ":" +
+                 fixed_string(body.ref_id) + ":" + fixed_string(body.ref_hash);
+        } else if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeClosed>) {
+          return "episode_closed:" + std::to_string(body.episode_id);
+        } else if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeRootCommitted>) {
+          return "episode_root_committed:" + std::to_string(body.episode_id);
+        } else {
+          return "unknown:" + std::to_string(body.carrier_type) + ":" + std::to_string(body.schema_version);
+        }
+      },
+      record.body);
+}
+
+nlohmann::json episode_apply_record(const storage_service_options &options,
+                                    const yy_storage::episode_manifest_record &record) {
+  return std::visit(
+      [&options](const auto &body) -> nlohmann::json {
+        using body_t = std::decay_t<decltype(body)>;
+        const auto store = episode_store(options);
+        if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeOpen>) {
+          return episode_record_body_json(store.begin(
+              {body.episode_id, body.parent_episode_id, body.root_trigger_frame_uid, body.location_uid, body.begin_time,
+               fixed_string(body.title), fixed_string(body.actor), fixed_string(body.source)}));
+        } else if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeHeartbeat>) {
+          return episode_record_body_json(
+              store.heartbeat({body.episode_id, body.location_uid, body.update_time, body.last_frame_uid,
+                               body.frame_count, fixed_string(body.note)}));
+        } else if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeFrameAttached>) {
+          return episode_record_body_json(store.attach_frame(
+              {body.episode_id, body.location_uid, body.frame_uid, body.trigger_frame_uid, body.stream_id,
+               body.gen_time, body.trigger_time, body.carrier_type, body.source, body.dest, body.data_length,
+               body.integrity_version, body.payload_checksum, body.frame_checksum}));
+        } else if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeRefAttached>) {
+          return episode_record_body_json(
+              store.attach_ref({body.episode_id, body.location_uid, body.ref_kind, body.ref_uid, body.update_time,
+                                fixed_string(body.ref_id), fixed_string(body.ref_hash)}));
+        } else if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeClosed>) {
+          const yy_storage::episode_close_options close{
+              body.episode_id,  body.location_uid,        body.status, body.end_time, body.last_frame_uid,
+              body.frame_count, fixed_string(body.reason)};
+          return render_episode_close_write_result(body.status == yy_enums::EpisodeStatus::Aborted ? store.abort(close)
+                                                                                                   : store.end(close));
+        } else if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeRootCommitted>) {
+          auto row = episode_record_body_json(body);
+          row["applied"] = "source_identity_claim";
+          return row;
+        }
+        return nullptr;
+      },
+      record.body);
 }
 
 nlohmann::json apply_episode_bundle_material(const storage_service_options &options, const nlohmann::json &bundle,
@@ -2238,47 +2397,46 @@ nlohmann::json apply_episode_bundle_material(const storage_service_options &opti
   std::vector<std::string> seen;
   if (bundle_episode_id != 0) {
     const auto scoped = episode_ref_store(options);
-    const auto inspected = scoped.store.inspect(bundle_episode_id);
-    for (const auto &existing : array_or_empty(inspected, "records")) {
-      const auto key = episode_record_identity_key(existing);
-      seen.push_back(key);
-      existing_keys.push_back(key);
+    const auto fold = scoped.store.fold_typed_records();
+    const auto iter = fold.episodes.find(bundle_episode_id);
+    if (iter != fold.episodes.end()) {
+      for (const auto &existing : iter->second.records) {
+        const auto key = episode_record_identity_key(existing);
+        seen.push_back(key);
+        existing_keys.push_back(key);
+      }
     }
   }
   nlohmann::json applied = nlohmann::json::array();
   nlohmann::json skipped = nlohmann::json::array();
   nlohmann::json rejected = nlohmann::json::array();
-  if (write) {
-    for (const auto &record : array_or_empty(bundle, "records")) {
-      const auto kind = text_or(record, "record_kind");
-      if (kind.empty()) {
-        rejected.push_back({{"kind", "episode_record"}, {"reason", "record_kind_missing"}, {"record", record}});
-      } else if (!episode_record_kind_supported(kind)) {
-        rejected.push_back({{"kind", "episode_record"}, {"reason", "unsupported_record_kind"}, {"record_kind", kind}});
-      }
-    }
-    if (!rejected.empty()) {
-      return {{"kind", "episode_bundle"},
-              {"schema", text_or(bundle, "schema")},
-              {"episode_id", bundle_episode_id == 0 ? nlohmann::json(nullptr) : nlohmann::json(bundle_episode_id)},
-              {"validated", validated},
-              {"existing_record_keys", existing_keys},
-              {"applied", applied},
-              {"skipped", skipped},
-              {"rejected", rejected}};
-    }
-  }
   for (const auto &record : array_or_empty(bundle, "records")) {
-    const auto key = episode_record_identity_key(record);
-    if (std::find(seen.begin(), seen.end(), key) != seen.end()) {
-      skipped.push_back({{"kind", "episode_record"}, {"reason", "already_present"}, {"record", record}});
-      continue;
-    }
     const auto kind = text_or(record, "record_kind");
     if (kind.empty()) {
       rejected.push_back({{"kind", "episode_record"}, {"reason", "record_kind_missing"}, {"record", record}});
+    } else if (!episode_record_kind_supported(kind)) {
+      rejected.push_back({{"kind", "episode_record"}, {"reason", "unsupported_record_kind"}, {"record_kind", kind}});
+    }
+  }
+  if (!rejected.empty()) {
+    return {{"kind", "episode_bundle"},
+            {"schema", text_or(bundle, "schema")},
+            {"episode_id", bundle_episode_id == 0 ? nlohmann::json(nullptr) : nlohmann::json(bundle_episode_id)},
+            {"validated", validated},
+            {"existing_record_keys", existing_keys},
+            {"applied", applied},
+            {"skipped", skipped},
+            {"rejected", rejected}};
+  }
+  const auto typed_bundle = parse_storage_episode_bundle(bundle);
+  for (const auto &record : typed_bundle.manifest.records) {
+    const auto key = episode_record_identity_key(record);
+    const auto rendered_record = episode_record_row_json(record);
+    if (std::find(seen.begin(), seen.end(), key) != seen.end()) {
+      skipped.push_back({{"kind", "episode_record"}, {"reason", "already_present"}, {"record", rendered_record}});
       continue;
     }
+    const auto kind = episode_record_kind(record);
     if (write) {
       const auto written = episode_apply_record(options, record);
       if (written.is_null()) {
@@ -2287,11 +2445,8 @@ nlohmann::json apply_episode_bundle_material(const storage_service_options &opti
       }
       applied.push_back({{"kind", "episode_record"}, {"record_kind", kind}, {"record", written}});
     } else {
-      if (!episode_record_kind_supported(kind)) {
-        rejected.push_back({{"kind", "episode_record"}, {"reason", "unsupported_record_kind"}, {"record_kind", kind}});
-        continue;
-      }
-      applied.push_back({{"kind", "episode_record"}, {"record_kind", kind}, {"record", record}, {"dry_run", true}});
+      applied.push_back(
+          {{"kind", "episode_record"}, {"record_kind", kind}, {"record", rendered_record}, {"dry_run", true}});
     }
   }
   return {{"kind", "episode_bundle"},
@@ -2528,52 +2683,41 @@ bool source_bundle_has_payload(const storage_export_bundle_result &bundle, const
   });
 }
 
-bool episode_bundle_has_frame(const nlohmann::json &bundle, uint64_t frame_uid) {
+bool episode_bundle_has_frame(const storage_episode_bundle_result &bundle, uint64_t frame_uid) {
   if (frame_uid == 0) {
-    return !array_or_empty(bundle, "records").empty();
+    return !bundle.manifest.records.empty();
   }
-  for (const auto &frame : array_or_empty(bundle, "frames")) {
-    if (uint64_or(frame, "frame_uid") == frame_uid) {
-      return true;
-    }
-  }
-  for (const auto &record : array_or_empty(bundle, "records")) {
-    if (text_or(record, "record_kind") == "episode_frame_attached" && uint64_or(record, "frame_uid") == frame_uid) {
+  for (size_t position = 0; position < bundle.manifest.frame_indices.size(); ++position) {
+    if (bundle.manifest.frame_at(position).frame_uid == frame_uid) {
       return true;
     }
   }
   return false;
 }
 
-bool episode_bundle_has_ref_hash(const nlohmann::json &bundle, const std::string &ref_hash) {
+bool episode_bundle_has_ref_hash(const storage_episode_bundle_result &bundle, const std::string &ref_hash) {
   if (ref_hash.empty()) {
-    return !array_or_empty(bundle, "records").empty();
+    return !bundle.manifest.records.empty();
   }
-  for (const auto &ref : array_or_empty(bundle, "refs")) {
-    if (text_or(ref, "ref_hash") == ref_hash) {
-      return true;
-    }
-  }
-  for (const auto &record : array_or_empty(bundle, "records")) {
-    if (text_or(record, "record_kind") == "episode_ref_attached" && text_or(record, "ref_hash") == ref_hash) {
+  for (size_t position = 0; position < bundle.manifest.ref_indices.size(); ++position) {
+    if (fixed_string(bundle.manifest.ref_at(position).ref_hash) == ref_hash) {
       return true;
     }
   }
   return false;
 }
 
-bool episode_bundle_satisfies_candidate(const nlohmann::json &candidate, const nlohmann::json &bundle) {
-  const auto code = text_or(candidate, "code");
-  if (code == "repair_episode_root_trigger_frame" || code == "repair_episode_trigger_frame") {
-    return episode_bundle_has_frame(bundle, uint64_or(candidate, "frame_uid"));
+bool episode_bundle_satisfies_candidate(const storage_repair_candidate_view &candidate,
+                                        const storage_episode_bundle_result &bundle) {
+  if (candidate.code == "repair_episode_root_trigger_frame" || candidate.code == "repair_episode_trigger_frame") {
+    return episode_bundle_has_frame(bundle, candidate.subject.frame_uid.value_or(0));
   }
-  if (code == "repair_episode_payload_ref") {
-    return episode_bundle_has_ref_hash(bundle, text_or(candidate, "ref_hash"));
+  if (candidate.code == "repair_episode_payload_ref") {
+    return episode_bundle_has_ref_hash(bundle, candidate.subject.ref_hash.value_or(""));
   }
-  if (code == "repair_episode_dependency") {
-    const auto dependency_episode_id = uint64_or(candidate, "dependency_episode_id");
-    return dependency_episode_id == 0 || uint64_or(bundle, "episode_id") == dependency_episode_id ||
-           uint64_or(object_or_empty(bundle, "manifest"), "episode_id") == dependency_episode_id;
+  if (candidate.code == "repair_episode_dependency") {
+    const auto dependency_episode_id = candidate.subject.dependency_episode_id.value_or(0);
+    return dependency_episode_id == 0 || bundle.episode_id == dependency_episode_id;
   }
   return false;
 }
@@ -2593,7 +2737,8 @@ nlohmann::json repair_fetch_impl(const storage_service_options &options) {
   }
   auto plan_options = options;
   plan_options.dry_run = true;
-  const auto plan = repair_plan_impl(plan_options);
+  const auto typed_plan = repair_plan_typed_impl(parse_storage_repair_plan_request(plan_options));
+  const auto plan = render_storage_repair_plan_result(typed_plan);
   const auto runtimes = repair_evidence_runtimes(options);
   nlohmann::json material = {
       {"schema", "kungfu.storage.repair-material/v1"},
@@ -2607,12 +2752,14 @@ nlohmann::json repair_fetch_impl(const storage_service_options &options) {
   nlohmann::json skipped = nlohmann::json::array();
   nlohmann::json missing = nlohmann::json::array();
 
-  for (const auto &candidate : array_or_empty(plan, "candidates")) {
-    const auto code = text_or(candidate, "code");
+  const auto rendered_candidates = array_or_empty(plan, "candidates");
+  for (size_t candidate_index = 0; candidate_index < typed_plan.candidates.size(); ++candidate_index) {
+    const auto &candidate = typed_plan.candidates[candidate_index];
+    const auto &rendered_candidate = rendered_candidates.at(candidate_index);
     bool found = false;
-    if (code == "repair_source_payload") {
-      const auto source_id = text_or(candidate, "source_id", options.source_id);
-      const auto payload_hash = text_or(candidate, "payload_hash");
+    if (candidate.code == "repair_source_payload") {
+      const auto source_id = candidate.subject.source_id.value_or(options.source_id);
+      const auto payload_hash = candidate.subject.payload_hash.value_or("");
       for (const auto &runtime : runtimes) {
         try {
           auto candidate_options = options;
@@ -2622,7 +2769,7 @@ nlohmann::json repair_fetch_impl(const storage_service_options &options) {
           const auto bundle = default_storage_service().export_bundle(
               {candidate_options.runtime_dir, candidate_options.provider, candidate_options.source_id, {}, false});
           if (!source_bundle_has_payload(bundle, payload_hash)) {
-            skipped.push_back({{"candidate", candidate},
+            skipped.push_back({{"candidate", rendered_candidate},
                                {"evidence_source", runtime.source},
                                {"runtime_dir", runtime.runtime_dir.string()},
                                {"reason", "payload_not_in_bundle"}});
@@ -2630,27 +2777,27 @@ nlohmann::json repair_fetch_impl(const storage_service_options &options) {
           }
           push_unique_bundle(material["source_bundles"], seen_source_bundles,
                              render_storage_export_bundle_result(bundle));
-          matched.push_back({{"candidate", candidate},
+          matched.push_back({{"candidate", rendered_candidate},
                              {"evidence_source", runtime.source},
                              {"runtime_dir", runtime.runtime_dir.string()},
                              {"material", "source_bundle"}});
           found = true;
           break;
         } catch (const std::exception &e) {
-          skipped.push_back({{"candidate", candidate},
+          skipped.push_back({{"candidate", rendered_candidate},
                              {"evidence_source", runtime.source},
                              {"runtime_dir", runtime.runtime_dir.string()},
                              {"reason", e.what()}});
         }
       }
-    } else if (text_or(candidate, "kind") == "episode" || text_or(candidate, "kind") == "frame" ||
-               code == "repair_episode_payload_ref") {
+    } else if (candidate.kind == "episode" || candidate.kind == "frame" ||
+               candidate.code == "repair_episode_payload_ref") {
       std::vector<uint64_t> episode_ids;
-      const auto requested_episode_id = uint64_or(candidate, "episode_id", options.episode_id);
+      const auto requested_episode_id = candidate.subject.episode_id.value_or(options.episode_id);
       if (requested_episode_id != 0) {
         episode_ids.push_back(requested_episode_id);
       }
-      const auto dependency_episode_id = uint64_or(candidate, "dependency_episode_id");
+      const auto dependency_episode_id = candidate.subject.dependency_episode_id.value_or(0);
       if (dependency_episode_id != 0 &&
           std::find(episode_ids.begin(), episode_ids.end(), dependency_episode_id) == episode_ids.end()) {
         episode_ids.push_back(dependency_episode_id);
@@ -2662,17 +2809,18 @@ nlohmann::json repair_fetch_impl(const storage_service_options &options) {
             candidate_options.runtime_dir = runtime.runtime_dir.string();
             candidate_options.scope = "episode";
             candidate_options.episode_id = episode_id;
-            const auto bundle = episode_export_bundle_impl(candidate_options);
+            const auto bundle = episode_export_bundle_typed_impl(candidate_options);
             if (!episode_bundle_satisfies_candidate(candidate, bundle)) {
-              skipped.push_back({{"candidate", candidate},
+              skipped.push_back({{"candidate", rendered_candidate},
                                  {"evidence_source", runtime.source},
                                  {"runtime_dir", runtime.runtime_dir.string()},
                                  {"episode_id", episode_id},
                                  {"reason", "episode_evidence_not_in_bundle"}});
               continue;
             }
-            push_unique_bundle(material["episode_bundles"], seen_episode_bundles, bundle);
-            matched.push_back({{"candidate", candidate},
+            push_unique_bundle(material["episode_bundles"], seen_episode_bundles,
+                               render_storage_episode_bundle_result(bundle));
+            matched.push_back({{"candidate", rendered_candidate},
                                {"evidence_source", runtime.source},
                                {"runtime_dir", runtime.runtime_dir.string()},
                                {"episode_id", episode_id},
@@ -2680,7 +2828,7 @@ nlohmann::json repair_fetch_impl(const storage_service_options &options) {
             found = true;
             break;
           } catch (const std::exception &e) {
-            skipped.push_back({{"candidate", candidate},
+            skipped.push_back({{"candidate", rendered_candidate},
                                {"evidence_source", runtime.source},
                                {"runtime_dir", runtime.runtime_dir.string()},
                                {"episode_id", episode_id},
@@ -2693,7 +2841,7 @@ nlohmann::json repair_fetch_impl(const storage_service_options &options) {
       }
     }
     if (!found) {
-      missing.push_back(candidate);
+      missing.push_back(rendered_candidate);
     }
   }
 
@@ -4127,6 +4275,77 @@ nlohmann::json episode_summary_json(const yy_storage::episode_current_view &view
     summary["status"] = view.opened ? "open" : "dangling";
   }
   return summary;
+}
+
+nlohmann::json episode_dependency_json(const yy_storage::episode_dependency &dependency) {
+  nlohmann::json rendered = {{"kind", dependency.kind}, {"role", dependency.role}, {"status", dependency.status}};
+  if (dependency.episode_id.has_value())
+    rendered["episode_id"] = *dependency.episode_id;
+  if (dependency.frame_uid.has_value())
+    rendered["frame_uid"] = *dependency.frame_uid;
+  if (dependency.dependent_frame_uid.has_value())
+    rendered["dependent_frame_uid"] = *dependency.dependent_frame_uid;
+  if (dependency.ref_uid.has_value())
+    rendered["ref_uid"] = *dependency.ref_uid;
+  if (dependency.ref_id.has_value())
+    rendered["ref_id"] = *dependency.ref_id;
+  if (dependency.ref_hash.has_value())
+    rendered["ref_hash"] = *dependency.ref_hash;
+  return rendered;
+}
+
+nlohmann::json episode_dependencies_json(const yy_storage::episode_causal_graph &graph) {
+  nlohmann::json rendered = nlohmann::json::array();
+  for (const auto &dependency : graph.dependencies)
+    rendered.push_back(episode_dependency_json(dependency));
+  return rendered;
+}
+
+nlohmann::json episode_causal_graph_json(const yy_storage::episode_causal_graph &graph) {
+  nlohmann::json edges = nlohmann::json::array();
+  for (const auto &edge : graph.edges) {
+    edges.push_back({{"kind", "frame_trigger"},
+                     {"scope", "internal"},
+                     {"from_frame_uid", edge.from_frame_uid},
+                     {"to_frame_uid", edge.to_frame_uid}});
+  }
+  return {{"schema", graph.schema},
+          {"episode_id", graph.episode_id},
+          {"frame_count", graph.frame_count},
+          {"edge_count", graph.edges.size()},
+          {"dependency_count", graph.dependencies.size()},
+          {"degraded", graph.degraded},
+          {"edges", std::move(edges)},
+          {"dependencies", episode_dependencies_json(graph)}};
+}
+
+nlohmann::json render_storage_episode_bundle_result(const storage_episode_bundle_result &result) {
+  nlohmann::json records = nlohmann::json::array();
+  for (const auto &record : result.manifest.records)
+    records.push_back(episode_record_row_json(record));
+  nlohmann::json frames = nlohmann::json::array();
+  for (const auto index : result.manifest.frame_indices)
+    frames.push_back(episode_record_row_json(result.manifest.records.at(index)));
+  nlohmann::json refs = nlohmann::json::array();
+  for (const auto index : result.manifest.ref_indices)
+    refs.push_back(episode_record_row_json(result.manifest.records.at(index)));
+  const auto dependencies = episode_dependencies_json(result.causal_graph);
+  return {{"schema", "kungfu.storage.episode-bundle/v1"},
+          {"bundle_id", result.bundle_id},
+          {"scope", "episode"},
+          {"episode_id", result.episode_id},
+          {"authority", "yijinjing-journal"},
+          {"manifest", episode_summary_json(result.manifest)},
+          {"causal_graph", episode_causal_graph_json(result.causal_graph)},
+          {"records", std::move(records)},
+          {"frames", std::move(frames)},
+          {"refs", std::move(refs)},
+          {"dependencies", dependencies},
+          {"degraded", result.causal_graph.degraded},
+          {"record_count", result.manifest.records.size()},
+          {"frame_count", result.manifest.frame_indices.size()},
+          {"ref_count", result.manifest.ref_indices.size()},
+          {"dependency_count", result.causal_graph.dependencies.size()}};
 }
 
 nlohmann::json storage_query_rows_json(const storage_query_rows &rows) {
