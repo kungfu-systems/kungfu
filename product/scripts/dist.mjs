@@ -607,6 +607,20 @@ function assertCoreFrozen() {
   if (!fs.existsSync(kungfuBin)) {
     throw new Error(`freeze did not produce ${rel(kungfuBin)}`);
   }
+  // Assembled form (ADR-0046 stage 2): when the dist carries the interpreter
+  // tree, it must be well-formed — the host marker declares the form and the
+  // tree's python3 is the real sys.executable the entry execs.
+  const tree = path.join(CORE_DIST, 'python');
+  if (fs.existsSync(tree)) {
+    for (const required of [
+      path.join(tree, 'kungfu-host.json'),
+      path.join(tree, 'bin', 'python3'),
+    ]) {
+      if (!fs.existsSync(required)) {
+        throw new Error(`assembled runtime tree incomplete: ${rel(required)}`);
+      }
+    }
+  }
 }
 
 // ADR-0046 stage 1: kungfu-trunk (the product trunk carrying the kungfu-owned

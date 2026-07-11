@@ -27,8 +27,7 @@
     "build_type": "Release",
     "log_level": "trace",
     "python_version": "3.13",
-    "node_version": "22.22.3",
-    "freezer": "nuitka"
+    "node_version": "22.22.3"
   },
   "binary": {
     "module_name": "kungfu_node",

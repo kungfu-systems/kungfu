@@ -88,13 +88,16 @@ function makeConanOptions(names) {
 }
 
 // conan2：-if/-bf → --output-folder；arch 是 setting 由 profile 自测，不再作 -o 选项。
+// freezer 不再透传给 conan：freeze 已迁出 conan（Stage C → run-freeze.js），
+// conanfile 的 freezer option 只喂 conan2 下不可达的遗留 package() 路径；产品
+// 形态选择（含 macOS 平台默认 assemble）完全由 run-freeze.js 决定。
 function conanInstall() {
   ensureBuildchainConanProfile();
   const settings = [
     ...makeConanSettings(['build_type']),
     ...platformConanSettings(),
   ];
-  const options = makeConanOptions(['log_level', 'freezer']);
+  const options = makeConanOptions(['log_level']);
   conan([
     'install',
     '.',
@@ -111,7 +114,7 @@ function conanBuild() {
     ...makeConanSettings(['build_type']),
     ...platformConanSettings(),
   ];
-  const options = makeConanOptions(['log_level', 'freezer']);
+  const options = makeConanOptions(['log_level']);
   conan(['build', '.', '--output-folder', 'build', ...settings, ...options]);
 }
 
@@ -124,7 +127,7 @@ function conanPackage() {
     ...makeConanSettings(['build_type']),
     ...platformConanSettings(),
   ];
-  const options = makeConanOptions(['log_level', 'freezer']);
+  const options = makeConanOptions(['log_level']);
   conan(['build', '.', '--output-folder', 'build', ...settings, ...options]);
 }
 
