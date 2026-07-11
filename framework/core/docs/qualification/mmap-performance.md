@@ -156,3 +156,45 @@ Linux reproduces the same direction as macOS: seeking old history grows with
 page count and is much slower than seeking near the tail. Absolute timings are
 not compared across hosts. The cross-platform shape raises page lookup from a
 single-host suspicion to the first controlled production candidate.
+
+### Ordered page lookup candidate
+
+- Candidate: tail fast path plus binary upper-bound probes over append-ordered
+  page begin times.
+- Candidate head: `4a36ae5ea4662ed78be500530e2335e35d8644e0`.
+- Retained evidence: [`mmap-macos-arm64-4a36ae5ea-candidate-01.json`](mmap-macos-arm64-4a36ae5ea-candidate-01.json).
+- Rollback: revert `4a36ae5ea` and `60a3d5cf2`; no journal bytes, page names,
+  persisted metadata, or public API changed.
+
+Three baseline/candidate alternations on the same Mac produced these 128-page
+seek ranges (minimum to maximum p50 across the three runs):
+
+| Position | Linear baseline p50 | Ordered candidate p50 | Decision signal |
+|---|---:|---:|---|
+| early | 3.131-3.505 ms | 0.298-0.517 ms | 6.1-11.8x faster |
+| middle | 1.825-1.953 ms | 0.293-0.454 ms | 4.0-6.7x faster |
+| late | 0.186-0.234 ms | 0.162-0.221 ms | tail fast path removes the first candidate's regression |
+
+The candidate reduces early-seek minor faults by an order of magnitude because
+it maps a bounded number of sliced headers. Write and sequential-read code is
+unchanged; their noisy p99 samples are retained as opposite-path evidence and
+are not claimed as candidate improvements. Final acceptance still requires the
+same direction on Linux.
+
+### Independent policy decisions
+
+| Candidate | Classification | Evidence and boundary |
+|---|---|---|
+| ordered page lookup | pending Linux reproduction | Cross-platform baselines identify the same linear shape; Mac alternations clear the performance and rollback gates. |
+| exact file sizing | keep current | Writer creation grows each page once to its declared fixed size; no redundant resize was found. |
+| extra preallocation | defer | The harness does not isolate allocation guarantees from page-cache and filesystem effects; no default changes. |
+| `MADV_RANDOM` | reject as default | Journal traffic mixes sequential traversal with sparse header probes, so global random advice contradicts the representative sequential path. |
+| sequential / will-need advice | defer | Page-cache-cold behavior is intentionally not measured, so the present evidence cannot support an OS advice default. |
+| prefault | reject as default | It only displaces first-touch faults into startup without evidence of better journal page-switch tails; the mapping policy remains unqualified. |
+| bounded pinning | reject as default | It consumes process and system lock budgets and has no representative end-to-end win; unlimited pinning remains out of scope. |
+| committed-range flush | defer | Current visibility flush is whole-range and the mapping layer has no independently qualified committed-range authority; narrowing it could silently omit published bytes. |
+| release queue polling | defer | No representative cross-thread shared-page ownership workload exists yet; replacing the bounded one-microsecond wait would be speculative. |
+
+These are separate verdicts. Deferrals do not authorize hidden experimental
+branches or weaken the policy truth table: `prefault`, `pinned`, asynchronous,
+and durable mappings remain rejected by production mapping policy.
