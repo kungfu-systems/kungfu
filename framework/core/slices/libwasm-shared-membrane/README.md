@@ -43,8 +43,11 @@ The same three-trial schema gates both engines against ADR-0045's provisional
 budgets: control p99 at most 10 microseconds, 4 KiB batch p99 at most 50
 microseconds, 1 MiB effective copy throughput at least 1 GiB/s, and idle
 instance resident delta at most 16 MiB excluding the already-loaded engine
-code. Guest traps and a deliberate Rust panic must return as contained status,
-never unwind across C.
+code. Each trial averages eight consecutive 1 MiB guest copies before the
+outer three-trial median, so a single runner scheduling interruption cannot
+decide the throughput verdict; all eight copies remain visible in the byte
+accounting. Guest traps and a deliberate Rust panic must return as contained
+status, never unwind across C.
 
 Run through the repository entrypoint:
 

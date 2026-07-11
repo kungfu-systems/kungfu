@@ -26,6 +26,7 @@ constexpr int32_t MSG_ONE_MIB = 21102;
 constexpr uint32_t BATCH_FRAMES = 16;
 constexpr uint32_t WARMUP_BATCHES = 10;
 constexpr uint32_t MEASURED_BATCHES = 1000;
+constexpr uint64_t COPY_BENCH_REPEATS = 8;
 constexpr uint32_t FIXTURE_FRAMES = BATCH_FRAMES * (WARMUP_BATCHES + MEASURED_BATCHES);
 
 bool seed(const std::string &root) {
@@ -123,7 +124,7 @@ bool run_engine(const dynamic_library &libwasm, const char *library_path, const 
   const auto status = run(&api, &config, &report);
   const uint64_t expected_frames = static_cast<uint64_t>(BATCH_FRAMES) * MEASURED_BATCHES;
   const uint64_t expected_payload = expected_frames * 256U;
-  const uint64_t expected_copied = expected_payload + 1024U * 1024U;
+  const uint64_t expected_copied = expected_payload + 1024U * 1024U * COPY_BENCH_REPEATS;
   if (status != 0 || report.abi_version != KF_LIBWASM_ABI_V1 || report.engine != engine || report.trap_contained != 1 ||
       report.batch_calls != MEASURED_BATCHES || report.frame_count != expected_frames ||
       report.payload_bytes != expected_payload || report.host_to_guest_bytes_copied != expected_copied ||

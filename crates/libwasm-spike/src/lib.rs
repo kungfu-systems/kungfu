@@ -23,6 +23,7 @@ const CAP_READ_JOURNAL_BATCH: u64 = 1 << 0;
 const MAX_BATCH_FRAMES: u32 = 4096;
 
 const LIBWASM_ABI_V1: u32 = 1;
+const COPY_BENCH_REPEATS: u64 = 8;
 const ENGINE_WASMTIME: u32 = 1;
 #[cfg(feature = "wasmer-engine")]
 const ENGINE_WASMER: u32 = 2;
@@ -676,12 +677,22 @@ unsafe fn run(
         return Err(INVARIANT_ERROR);
     }
     let payloads = one_mib.payloads()?;
-    let (value, copy_ns) = timed(|| guest.consume(&payloads))?;
-    if value != ((0x5a_u64 << 32) | 0x5a) || copy_ns == 0 {
+    let ((), copy_total_ns) = timed(|| {
+        for _ in 0..COPY_BENCH_REPEATS {
+            if guest.consume(&payloads)? != ((0x5a_u64 << 32) | 0x5a) {
+                return Err(INVARIANT_ERROR);
+            }
+        }
+        Ok(())
+    })?;
+    if copy_total_ns == 0 {
         return Err(INVARIANT_ERROR);
     }
     let one_mib_bytes = one_mib.raw.payload_bytes;
-    let throughput = ((one_mib_bytes as u128) * 1_000_000_000_u128 / copy_ns as u128) as u64;
+    let measured_copy_bytes = one_mib_bytes * COPY_BENCH_REPEATS;
+    let copy_ns = copy_total_ns / COPY_BENCH_REPEATS;
+    let throughput =
+        ((measured_copy_bytes as u128) * 1_000_000_000_u128 / copy_total_ns as u128) as u64;
     drop(one_mib);
 
     let trap_contained = guest.trap_is_contained();
@@ -698,7 +709,7 @@ unsafe fn run(
     report.batch_calls = config.measured_batches as u64;
     report.frame_count = frame_count;
     report.payload_bytes = payload_bytes;
-    report.host_to_guest_bytes_copied = copied_bytes + one_mib_bytes;
+    report.host_to_guest_bytes_copied = copied_bytes + measured_copy_bytes;
     report.guest_to_host_bytes_copied = 0;
     report.control_p50_ns = percentile(&mut controls.clone(), 50);
     report.control_p99_ns = percentile(&mut controls, 99);
