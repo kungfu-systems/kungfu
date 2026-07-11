@@ -545,6 +545,76 @@
       "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
     },
     {
+      "id": "kungfu.facts.library",
+      "surface": "cli",
+      "name": "kungfu facts library",
+      "purpose": "Discover the supported managed Fact Library profile, content stores, portability modes, and known limits.",
+      "maturity": "stable",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc"]
+    },
+    {
+      "id": "kungfu.facts.type-create",
+      "surface": "cli",
+      "name": "kungfu facts type create --id <id> --version <version> --source <source> --schema-file <schema.json>",
+      "purpose": "Create or idempotently recover an exact versioned fact type with an owned content-addressed JSON schema.",
+      "maturity": "stable",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc"]
+    },
+    {
+      "id": "kungfu.facts.type-list",
+      "surface": "cli",
+      "name": "kungfu facts type list",
+      "purpose": "List reusable fact types and their exact declaration, schema, authority, Episode, and proof coordinates in the selected data root.",
+      "maturity": "stable",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc"]
+    },
+    {
+      "id": "kungfu.facts.material-put",
+      "surface": "cli",
+      "name": "kungfu facts material put --type <id> --type-version <version> --source <source> --subject <key> --payload-file <payload.json>",
+      "purpose": "Store JSON material and append its admitted observation through one intent-level operation.",
+      "maturity": "stable",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc"]
+    },
+    {
+      "id": "kungfu.facts.material-list",
+      "surface": "cli",
+      "name": "kungfu facts material list --type <id> --subject <key>",
+      "purpose": "Read current and historical fact material with hydrated content-addressed payloads.",
+      "maturity": "stable",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc"]
+    },
+    {
+      "id": "kungfu.facts.export",
+      "surface": "cli",
+      "name": "kungfu facts export --out <bundle.json> [--thin]",
+      "purpose": "Export the selected Fact Library as a full self-contained or explicitly thin Episode bundle.",
+      "maturity": "stable",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc"]
+    },
+    {
+      "id": "kungfu.facts.import",
+      "surface": "cli",
+      "name": "kungfu facts import --file <bundle.json> [--execute]",
+      "purpose": "Verify a Fact Library bundle by default and append it only with explicit execute intent.",
+      "maturity": "stable",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc"]
+    },
+    {
       "id": "kungfu.remote.add",
       "surface": "cli",
       "name": "kungfu remote add <source-id> --host <host> --home <kf-home> --json",

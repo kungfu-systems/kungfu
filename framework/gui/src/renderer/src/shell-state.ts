@@ -27,6 +27,7 @@ export const PROFILES: ProfileManifest[] = [
       'terminal',
       'journal-manager',
       'config-manager',
+      'fact-manager',
     ],
     defaultView: 'work-dashboard',
   },

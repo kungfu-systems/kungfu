@@ -109,6 +109,25 @@ importers:
         specifier: ^18.3.3
         version: 18.3.31
 
+  extensions/fact-manager:
+    dependencies:
+      '@kungfu-tech/api':
+        specifier: workspace:*
+        version: link:../../framework/api
+      '@kungfu-tech/kfx':
+        specifier: workspace:*
+        version: link:../../framework/kfx
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+    devDependencies:
+      '@kungfu-tech/sdk':
+        specifier: workspace:*
+        version: link:../../developer/sdk
+      '@types/react':
+        specifier: ^18.3.3
+        version: 18.3.31
+
   extensions/journal-manager:
     dependencies:
       '@kungfu-tech/api':
@@ -391,8 +410,6 @@ importers:
         specifier: ^8.0.0
         version: 8.9.0
 
-  framework/sdk: {}
-
   framework/gui:
     dependencies:
       '@kungfu-tech/api':
@@ -463,6 +480,8 @@ importers:
       typescript:
         specifier: ^5.5.4
         version: 5.9.3
+
+  framework/sdk: {}
 
   framework/skill:
     dependencies:
@@ -537,6 +556,9 @@ importers:
       '@kungfu-tech/kfx-view-config-manager':
         specifier: workspace:*
         version: link:../extensions/config-manager
+      '@kungfu-tech/kfx-view-fact-manager':
+        specifier: workspace:*
+        version: link:../extensions/fact-manager
       '@kungfu-tech/kfx-view-journal-manager':
         specifier: workspace:*
         version: link:../extensions/journal-manager

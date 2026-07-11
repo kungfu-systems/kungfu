@@ -126,7 +126,43 @@ Corrections and retractions name an admitted target observation. Concurrent
 admitted source claims remain visible and produce a conflict instead of being
 silently resolved.
 
-The current payload boundary is deliberately narrow: an observation carries a
-domain schema-owner root plus an opaque content hash/reference. The slice does
-not define a universal ontology, fetch payload bodies, decide external truth,
-run KFD-2 assessments, or implement `kungfu sdk add fact-surface` yet.
+## Managed Fact Library
+
+Built Kungfu Episodes exposes the same authority through an end-user Fact
+Library. `Fact Manager` is a first-party GUI view; the installed CLI is the
+agent-facing intent surface:
+
+```text
+kungfu facts library
+kungfu facts type create --id goal-status --version 1 \
+  --source agent --source human --schema-file goal-status.schema.json
+kungfu facts type list
+kungfu facts material put --type goal-status --type-version 1 \
+  --source agent --subject current-goal --payload-file status.json
+kungfu facts material list --type goal-status --subject current-goal
+kungfu facts export --out fact-library.full.json
+kungfu facts export --out fact-library.thin.json --thin
+kungfu facts import --file fact-library.full.json
+kungfu facts import --file fact-library.full.json --execute
+```
+
+The selected Kungfu data root remains the authority. A workspace uses its
+resolved `.kungfu/`; a personal/machine library uses the resolved `KF_HOME`.
+The GUI shows that root and never keeps a private fact database. Type versions
+are immutable and exact: a workspace adopts or imports a concrete version, not
+a mutable global "latest" pointer.
+
+Managed JSON schemas and JSON payloads are immutable content-addressed objects
+under the existing `schemas` and `payloads` namespaces. Their declaration and
+observation Episodes own corresponding refs. A full Fact Library bundle carries
+the journal frames plus schema and payload bytes; a thin bundle carries the
+declared refs and fails honestly if material is unavailable. Import validates
+by default and writes only with explicit `--execute`; replay is append-only,
+idempotent for the same Episode root, and refuses identity conflicts.
+
+The first product slice intentionally exposes only `declared-facts-v1`: the
+runtime's implemented subject-key identity, explicit valid time, journal system
+time, event-parent causality, latest-admitted-per-source fold, explicit-target
+correction/retraction, preserved source conflicts, hash/ref redaction, and
+exact-schema compatibility. It does not pretend arbitrary policy strings are a
+general rule engine, define a universal ontology, or decide external truth.

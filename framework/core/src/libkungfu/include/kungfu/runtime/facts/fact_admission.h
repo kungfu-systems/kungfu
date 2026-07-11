@@ -19,10 +19,10 @@ inline constexpr const char *DOMAIN_FACT_EVENT_SCHEMA_V1 = "kungfu.facts.domain-
                                                     int64_t system_time = 0);
 
 [[nodiscard]] nlohmann::json declare_fact_surface(const std::string &runtime_dir, const nlohmann::json &declaration,
-                                                  int64_t system_time = 0);
+                                                  int64_t system_time = 0, const std::string &owned_schema_hash = {});
 
 [[nodiscard]] nlohmann::json record_observation(const std::string &runtime_dir, const nlohmann::json &observation,
-                                                int64_t system_time = 0);
+                                                int64_t system_time = 0, const std::string &owned_payload_hash = {});
 
 [[nodiscard]] nlohmann::json query_fact_state(const std::string &runtime_dir, int64_t cut_system_time = 0,
                                               const std::string &subject_key = {});

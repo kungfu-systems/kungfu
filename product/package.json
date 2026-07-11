@@ -37,6 +37,7 @@
     "@kungfu-tech/kfx-adapter-langchain": "workspace:*",
     "@kungfu-tech/kfx-suite-system": "workspace:*",
     "@kungfu-tech/kfx-view-config-manager": "workspace:*",
+    "@kungfu-tech/kfx-view-fact-manager": "workspace:*",
     "@kungfu-tech/kfx-view-journal-manager": "workspace:*",
     "@kungfu-tech/kfx-view-kfx-manager": "workspace:*",
     "@kungfu-tech/kfx-view-rewind-inspector": "workspace:*",

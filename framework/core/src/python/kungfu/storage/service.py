@@ -822,6 +822,112 @@ def fact_state(
     )
 
 
+def fact_library_contract(runtime_dir: str | Path = "") -> dict[str, Any]:
+    """Return the supported end-user Fact Library contract."""
+
+    return dict(
+        _runtime().run_storage_service_operation(
+            "fact_library_contract", str(runtime_dir), {}
+        )
+    )
+
+
+def fact_type_create(
+    runtime_dir: str | Path,
+    definition: dict[str, Any],
+    *,
+    system_time: int = 0,
+) -> dict[str, Any]:
+    """Create or idempotently recover one versioned managed fact type."""
+
+    return dict(
+        _runtime().run_storage_service_operation(
+            "fact_type_create",
+            str(runtime_dir),
+            {"definition": definition, "system_time": system_time},
+        )
+    )
+
+
+def fact_type_list(
+    runtime_dir: str | Path,
+    *,
+    cut_system_time: int = 0,
+    scope: str = "selected-data-root",
+) -> dict[str, Any]:
+    return dict(
+        _runtime().run_storage_service_operation(
+            "fact_type_list",
+            str(runtime_dir),
+            {"cut_system_time": cut_system_time, "scope": scope},
+        )
+    )
+
+
+def fact_material_put(
+    runtime_dir: str | Path,
+    material: dict[str, Any],
+    *,
+    system_time: int = 0,
+) -> dict[str, Any]:
+    """Store JSON material and record its admitted observation in one intent."""
+
+    return dict(
+        _runtime().run_storage_service_operation(
+            "fact_material_put",
+            str(runtime_dir),
+            {"material": material, "system_time": system_time},
+        )
+    )
+
+
+def fact_material_list(
+    runtime_dir: str | Path,
+    *,
+    type_id: str = "",
+    subject_key: str = "",
+    cut_system_time: int = 0,
+) -> dict[str, Any]:
+    return dict(
+        _runtime().run_storage_service_operation(
+            "fact_material_list",
+            str(runtime_dir),
+            {
+                "type_id": type_id,
+                "subject_key": subject_key,
+                "cut_system_time": cut_system_time,
+            },
+        )
+    )
+
+
+def fact_library_export(
+    runtime_dir: str | Path,
+    *,
+    thin: bool = False,
+) -> dict[str, Any]:
+    return dict(
+        _runtime().run_storage_service_operation(
+            "fact_library_export", str(runtime_dir), {"thin": thin}
+        )
+    )
+
+
+def fact_library_import(
+    runtime_dir: str | Path,
+    library_bundle: dict[str, Any],
+    *,
+    dry_run: bool = True,
+) -> dict[str, Any]:
+    return dict(
+        _runtime().run_storage_service_operation(
+            "fact_library_import",
+            str(runtime_dir),
+            {"library_bundle": _binding_json(library_bundle), "dry_run": dry_run},
+        )
+    )
+
+
 def assessment_contract(runtime_dir: str | Path = "") -> dict[str, Any]:
     """Return the C++-owned ADR-0052 assessment contract."""
 

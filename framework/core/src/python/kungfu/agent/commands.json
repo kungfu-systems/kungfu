@@ -362,6 +362,48 @@
       "purpose": "Fold admitted facts at head or a historical declaration cut while preserving correction, retraction, and source conflict history."
     },
     {
+      "apiId": "kungfu.facts.library",
+      "name": "kungfu facts library",
+      "maturity": "stable",
+      "purpose": "Discover the supported managed Fact Library profile, content stores, portability modes, and known limits."
+    },
+    {
+      "apiId": "kungfu.facts.type-create",
+      "name": "kungfu facts type create --id <id> --version <version> --source <source> --schema-file <schema.json>",
+      "maturity": "stable",
+      "purpose": "Create or idempotently recover an exact versioned fact type with an owned content-addressed JSON schema."
+    },
+    {
+      "apiId": "kungfu.facts.type-list",
+      "name": "kungfu facts type list",
+      "maturity": "stable",
+      "purpose": "List reusable fact types and their exact declaration, schema, authority, Episode, and proof coordinates in the selected data root."
+    },
+    {
+      "apiId": "kungfu.facts.material-put",
+      "name": "kungfu facts material put --type <id> --type-version <version> --source <source> --subject <key> --payload-file <payload.json>",
+      "maturity": "stable",
+      "purpose": "Store JSON material and append its admitted observation through one intent-level operation."
+    },
+    {
+      "apiId": "kungfu.facts.material-list",
+      "name": "kungfu facts material list --type <id> --subject <key>",
+      "maturity": "stable",
+      "purpose": "Read current and historical fact material with hydrated content-addressed payloads."
+    },
+    {
+      "apiId": "kungfu.facts.export",
+      "name": "kungfu facts export --out <bundle.json> [--thin]",
+      "maturity": "stable",
+      "purpose": "Export the selected Fact Library as a full self-contained or explicitly thin Episode bundle."
+    },
+    {
+      "apiId": "kungfu.facts.import",
+      "name": "kungfu facts import --file <bundle.json> [--execute]",
+      "maturity": "stable",
+      "purpose": "Verify a Fact Library bundle by default and append it only with explicit execute intent."
+    },
+    {
       "apiId": "kungfu.remote.add",
       "name": "kungfu remote add <source-id> --host <host> --home <kf-home> --json",
       "maturity": "experimental",

@@ -589,11 +589,19 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
         "query_plan",
         "fact_query",
         "fact_changelog",
+        "saved_query_catalog",
         "fact_contract",
         "fact_declare_world",
         "fact_declare_surface",
         "fact_observe",
         "fact_state",
+        "fact_library_contract",
+        "fact_type_create",
+        "fact_type_list",
+        "fact_material_put",
+        "fact_material_list",
+        "fact_library_export",
+        "fact_library_import",
         "assessment_contract",
         "assessment_request",
         "assessment_execute",
@@ -1500,6 +1508,135 @@ def test_domain_fact_admission_replays_declaration_history_and_observation_lifec
     assert all(event["episode_id"] for event in head["observation_history"])
     assert head["proof"]["schema_owner"] == "flatbuffers"
     assert head["proof"]["schema_root"].startswith("sha256:")
+
+
+def test_managed_fact_library_roundtrips_types_material_and_owned_content(tmp_path):
+    runtime_dir = tmp_path / "source" / "runtime"
+    definition = {
+        "id": "goal-status",
+        "version": "1",
+        "source_authorities": ["agent", "human"],
+        "schema": {
+            "type": "object",
+            "properties": {
+                "status": {"type": "string"},
+                "ready_for_handoff": {"type": "boolean"},
+            },
+            "required": ["status", "ready_for_handoff"],
+            "additionalProperties": False,
+        },
+    }
+
+    created = storage_service.fact_type_create(runtime_dir, definition, system_time=100)
+    recovered = storage_service.fact_type_create(
+        runtime_dir, definition, system_time=101
+    )
+    assert created["status"] == "created"
+    assert recovered["status"] == "already_present"
+    assert created["schema_hash"].startswith("sha256:")
+    with pytest.raises(
+        (RuntimeError, ValueError), match="different immutable definition"
+    ):
+        storage_service.fact_type_create(
+            runtime_dir,
+            {**definition, "source_authorities": ["agent"]},
+            system_time=102,
+        )
+
+    catalog = storage_service.fact_type_list(runtime_dir)
+    assert [row["id"] for row in catalog["fact_types"]] == ["goal-status"]
+    assert catalog["fact_types"][0]["episode_id"]
+
+    with pytest.raises(
+        (RuntimeError, ValueError), match="missing required ready_for_handoff"
+    ):
+        storage_service.fact_material_put(
+            runtime_dir,
+            {
+                "type_id": "goal-status",
+                "type_version": "1",
+                "source_id": "agent",
+                "subject_key": "invalid-goal",
+                "payload": {"status": "ready"},
+            },
+            system_time=150,
+        )
+
+    written = storage_service.fact_material_put(
+        runtime_dir,
+        {
+            "type_id": "goal-status",
+            "type_version": "1",
+            "source_id": "agent",
+            "subject_key": "fact-library-goal",
+            "payload": {
+                "status": "ready",
+                "ready_for_handoff": True,
+            },
+        },
+        system_time=200,
+    )
+    assert written["ok"] is True
+    assert written["receipt"]["admission"]["outcome"] == "admitted"
+
+    material = storage_service.fact_material_list(
+        runtime_dir, type_id="goal-status", subject_key="fact-library-goal"
+    )
+    history = material["state"]["observation_history"]
+    assert len(history) == 1
+    assert material["payloads"][history[0]["payload_hash"]] == {
+        "ready_for_handoff": True,
+        "status": "ready",
+    }
+
+    full = storage_service.fact_library_export(runtime_dir)
+    thin = storage_service.fact_library_export(runtime_dir, thin=True)
+    assert full["schema"] == "kungfu.facts.library-bundle/v1"
+    assert full["mode"] == "full"
+    assert full["self_contained"] is True
+    assert full["material"]["missing_frame_count"] == 0
+    assert full["episode_count"] == 3
+    namespaces = {
+        row["content_namespace"]
+        for episode in full["episodes"]
+        for row in episode.get("ref_payloads", [])
+    }
+    assert namespaces == {"payloads", "schemas"}
+    assert thin["mode"] == "thin"
+    assert all("self_contained" not in episode for episode in thin["episodes"])
+
+    imported_runtime = tmp_path / "imported" / "runtime"
+    preview = storage_service.fact_library_import(imported_runtime, full)
+    applied = storage_service.fact_library_import(imported_runtime, full, dry_run=False)
+    repeated = storage_service.fact_library_import(
+        imported_runtime, full, dry_run=False
+    )
+    assert preview["ok"] is True and preview["dry_run"] is True
+    assert applied["ok"] is True and applied["receipt_count"] == 3
+    assert len(applied["preflight_receipts"]) == 3
+    assert repeated["ok"] is True
+    assert {receipt["status"] for receipt in repeated["receipts"]} == {
+        "already_present"
+    }
+    imported = storage_service.fact_material_list(
+        imported_runtime, type_id="goal-status"
+    )
+    assert len(imported["state"]["canonical_facts"]) == 1
+    imported_hash = imported["state"]["canonical_facts"][0]["payload_hash"]
+    assert imported["payloads"][imported_hash]["ready_for_handoff"] is True
+
+    tampered = json.loads(json.dumps(full))
+    schema_payload = next(
+        row
+        for episode in tampered["episodes"]
+        for row in episode.get("ref_payloads", [])
+        if row["content_namespace"] == "schemas"
+    )
+    schema_payload["content_namespace"] = "payloads"
+    with pytest.raises(
+        (RuntimeError, ValueError), match="ref_payload_namespace_mismatch"
+    ):
+        storage_service.fact_library_import(tmp_path / "tampered" / "runtime", tampered)
 
 
 def test_fact_changelog_resumes_pages_without_loss_or_duplication(tmp_path):

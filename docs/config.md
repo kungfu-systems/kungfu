@@ -130,6 +130,14 @@ but "where do workspace Episode journals, payloads, provider state, and
 projections live under the resolved data home". That layout is reported by the
 C++ storage service and keeps `KF_CONFIG_HOME` separate from workspace data.
 
+`Fact Manager` and `kungfu facts type|material|export|import` use this same
+resolved data root. Personal and workspace libraries therefore have identical
+on-disk semantics: the difference is only which root was selected. Workspaces
+pin exact fact-type versions into their own `.kungfu/`; they never follow a
+mutable type from another root implicitly. Full bundles are the transfer path
+when schema/payload closure must travel; thin bundles are explicit references,
+not backups.
+
 ## Isolated product instances
 
 Use an instance home when you need to run a second local Kungfu app without

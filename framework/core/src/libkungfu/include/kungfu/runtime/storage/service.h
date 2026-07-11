@@ -662,6 +662,7 @@ struct episode_journal_material {
 };
 
 struct episode_ref_payload_material {
+  std::string content_namespace = "payloads";
   std::string ref_hash = {};
   uint64_t byte_len = 0;
   std::string bytes = {};
