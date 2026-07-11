@@ -79,6 +79,7 @@ A record's **Status** says where it stands:
 | [0059](ADR-0059-mission-control-mission-go-responsibility-model.md) | accepted | Mission Control composes Mission and Go responsibility over runtime facts; Atlas starts as a bridged authority |
 | [0060](ADR-0060-desktop-workspace-selection-and-lazy-data-home.md) | proposed | Desktop and CLI select Home or a project workspace and create its data home only on qualified write intent |
 | [0061](ADR-0061-agent-mediated-guidance-is-a-first-class-product-interface.md) | proposed | Agent-mediated guidance is a first-class interface over shared advice, preview, authorization, action, and receipt contracts |
+| [0062](ADR-0062-journal-container-epoch-and-offline-conversion.md) | accepted; not yet implemented | the journal container epoch is derived from its layout; cross-epoch replay is deferred offline conversion, not an online adapter |
 
 ## Reading by theme
 
@@ -90,6 +91,10 @@ A record's **Status** says where it stands:
   [0058](ADR-0058-yijinjing-explicit-mapping-policies.md) separates mmap
   authority from residency and durability requests without changing the wire
   or POD layouts.
+  [0062](ADR-0062-journal-container-epoch-and-offline-conversion.md) derives the
+  journal container epoch from the page/frame header layout itself, so an
+  unversioned layout change cannot ship, and keeps cross-epoch replay off the hot
+  path as deferred offline conversion.
   [0002](ADR-0002-yijinjing-schema-runtime-layout.md) is retained as the
   superseded historical decision that preceded this split.
 - **Control / event axis** — [0003](ADR-0003-control-axis-python-coroutine-integration.md)
@@ -236,6 +241,10 @@ A record's **Status** says where it stands:
 - [`docs/episode-object-model.md`](../../../../docs/episode-object-model.md) —
   the Episode object model, causal closure invariant, and storage migration
   direction.
+- [`docs/journal-page-sizing-and-episode-reclamation.md`](../../../../docs/journal-page-sizing-and-episode-reclamation.md) —
+  the design judgment constraining the future Episode-aware physical layout:
+  page-size variation only for max-frame, packing over per-Episode pages, and
+  tombstone-then-cold-path GC (ADR-0033/0034, ADR-0055/0056).
 - [`docs/episode-atomicity-qualification.md`](../../../../docs/episode-atomicity-qualification.md) —
   the evolving semantic oracle, fault matrix, scale tiers, metrics, and Episode
   Trust Report design required by ADR-0042.
