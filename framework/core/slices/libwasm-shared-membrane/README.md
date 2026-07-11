@@ -4,7 +4,7 @@ period: 2026-07-11
 theme: libwasm-shared-embedding-membrane
 doc_type: analysis
 source_level: local-files + executable-probe
-confidence: medium
+confidence: high
 sensitivity: public
 evidence_grade: B
 review_state: unreviewed
@@ -13,8 +13,8 @@ ai_provenance:
   model_family: GPT-5
   product: Codex
   generated_at: 2026-07-11
-  visible_context: ADR-0045, merged libkungfu embedding ABI, Wasmtime and Wasmer public Rust embedding APIs
-  invisible_context_boundary: Exact hidden model build and unobserved cross-platform runtime state are unknown
+  visible_context: ADR-0045, merged libkungfu embedding ABI, Wasmtime and Wasmer public Rust embedding APIs, and run 29138796710 on macOS ARM64, Linux x64, and Windows x64
+  invisible_context_boundary: Exact hidden model build and unimplemented production admission, receipt, WIT, and Wasmer CPU-metering behavior are unknown
 ---
 
 # libwasm shared embedding membrane spike
@@ -26,9 +26,12 @@ production compatibility promise.
 The C++ host owns the only libkungfu image and passes its versioned
 `kf_embedding_api_v1` table to a dynamically loaded Rust cdylib. The Rust
 adapters expose the same two C entries and keep all Wasmtime/Wasmer types, raw
-handles, and panic containment behind that boundary. Both engines execute the same
-core-Wasm bytes: a fixed 2 MiB linear memory with `control`, `consume`, and
-`trap` exports and no WASI, filesystem, network, environment, or clock imports.
+handles, and panic containment behind that boundary. Both engines execute the
+same core-Wasm bytes: a fixed 2 MiB linear memory with `control`, `consume`,
+and `trap` exports and no WASI, filesystem, network, environment, or clock
+imports.
+Both adapters stay loaded for the host process lifetime, and the panic probe
+does not replace the process-global panic hook.
 
 The host capability crosses libkungfu once per batch. Rust copies the borrowed
 mmap payload exactly once into guest linear memory, calls the guest once, then
