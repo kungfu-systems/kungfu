@@ -13,7 +13,7 @@ inline constexpr const char *SOURCE_REGISTRY_PROJECTION_SCHEMA_V1 = "kungfu.stor
 
 // ADR-0037: rebuildable SQLite projection of the source-registry kernel journal.
 // It reuses the compile-time Hana closed-set -> SQLite column path
-// (cache::make_storage_ptr over SourceRegistryDataTypes), the same path the
+// (projection::make_storage_ptr over SourceRegistryDataTypes), the same path the
 // profile / session / state caches use, not the hand-written raw-SQL projection
 // that serves the JSON manifest layer, and not the .bfbs reflection projector
 // (which serves the FlatBuffers open layer). The journal remains the authority;

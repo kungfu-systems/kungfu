@@ -9,7 +9,7 @@
 
 #include "common.h"
 
-#include <kungfu/runtime/cache/profile.h>
+#include <kungfu/runtime/state_cache/profile.h>
 #include <kungfu/yijinjing/common.h>
 
 namespace kungfu::node {
@@ -29,7 +29,7 @@ private:
   yijinjing::data::locator_ptr locator_;
   yijinjing::data::location_ptr ledger_location_;
   yijinjing::data::location_ptr renderer_location_;
-  runtime::cache::profile profile_;
+  runtime::state_cache::profile profile_;
   static Napi::FunctionReference constructor;
   static void cleanup() {
     SPDLOG_INFO("History reset");

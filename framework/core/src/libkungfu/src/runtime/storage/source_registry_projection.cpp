@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <utility>
 
-#include <kungfu/runtime/cache/backend.h>
+#include <kungfu/runtime/projection/hana_sqlite.h>
 #include <kungfu/runtime/storage/projection_content.h>
 #include <kungfu/runtime/storage/projection_transaction.h>
 #include <kungfu/yijinjing/schema/registry.h>
@@ -34,7 +34,7 @@ storage_projection_rebuild_result source_registry_projection::rebuild_typed() co
   const auto path = projection_path(runtime_dir_);
   fs::create_directories(path.parent_path());
 
-  auto storage = cache::make_storage_ptr(path.string(), yijinjing::SourceRegistryDataTypes);
+  auto storage = projection::make_storage_ptr(path.string(), yijinjing::SourceRegistryDataTypes);
   storage->pragma.journal_mode(sqlite_orm::journal_mode::WAL);
   storage->pragma.synchronous(0);
 
@@ -95,7 +95,7 @@ storage_projection_verify_result source_registry_projection::verify_typed() cons
                         : "no source-registry records; projection not needed"};
   }
 
-  auto storage = cache::make_storage_ptr(path.string(), yijinjing::SourceRegistryDataTypes);
+  auto storage = projection::make_storage_ptr(path.string(), yijinjing::SourceRegistryDataTypes);
   storage->on_open = [](sqlite3 *db) { sqlite3_busy_timeout(db, 5000); };
   projection_content_snapshot projected_registered;
   projection_content_snapshot projected_head;

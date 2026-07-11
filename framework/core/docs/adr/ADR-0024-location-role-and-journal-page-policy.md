@@ -54,7 +54,7 @@ The existing path shape remains stable as:
 <layout>/<role>/<namespace>/<name>/<mode>
 ```
 
-The field name in `Location`, `Register`, `Session`, `Config`,
+The field name in `Location`, `Register`, `Config`,
 `RequestWriteToBand`, capability SDK location objects, Python bindings, and Node
 bindings uses `role` for the first semantic segment and `namespace` for the
 middle identity segment.

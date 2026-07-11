@@ -4,9 +4,9 @@
 // Created by Keren Dong on 2020/3/27.
 //
 
-#include <kungfu/runtime/cache/backend.h>
+#include <kungfu/runtime/state_cache/store.h>
 
-namespace kungfu::runtime::cache {
+namespace kungfu::runtime::state_cache {
 
 namespace fs = std::filesystem;
 
@@ -20,7 +20,7 @@ void shift::ensure_storage(uint32_t dest) {
   }
   auto locator = location_->locator;
   auto db_file = locator->layout_file(location_, yijinjing::enums::layout::SQLITE, fmt::format("{:08x}", dest));
-  auto storage = make_storage_ptr(db_file, yijinjing::StateDataTypes);
+  auto storage = projection::make_storage_ptr(db_file, yijinjing::StateDataTypes);
   storage->pragma.journal_mode(sqlite_orm::journal_mode::WAL);
   storage->pragma.synchronous(0);
   storage->sync_schema();
@@ -33,4 +33,4 @@ bool shift::check_storage_exists(uint32_t dest) {
   return fs::exists(db_file);
 }
 
-} // namespace kungfu::runtime::cache
+} // namespace kungfu::runtime::state_cache

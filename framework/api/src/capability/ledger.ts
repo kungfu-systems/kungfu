@@ -9,9 +9,7 @@ import {
   type RecordFilter,
   type ReplayAnchor,
   type Subscription,
-  modeName,
   resolveRuntimeDir,
-  roleName,
 } from './types.js';
 
 export type OpenLedgerOptions = {
@@ -103,25 +101,25 @@ export function openLedger(options: OpenLedgerOptions): Ledger {
   };
 
   const replayAnchors = (): ReplayAnchor[] => {
-    const store = new binding.SessionStore(
-      { role: 'system', namespace: 'capability', name: 'ledger', mode: 'live' },
-      runtimeDir,
-    );
-    const all = store.getAllSessions();
-    const rows = Array.isArray(all) ? all : Object.values(all ?? {});
+    const rows = binding.storageEpisodeListTyped(runtimeDir, {
+      limit: SCAN_HARD_LIMIT,
+    }).episodes;
     return rows.map((row) => {
       const record = row as Record<string, unknown>;
+      const open = record.open as Record<string, unknown>;
+      const close = record.close as Record<string, unknown>;
+      const closed = Boolean(record.closed);
       return {
-        location: {
-          role: roleName(record.role as number),
-          namespace: String(record.namespace ?? record.group),
-          name: String(record.name),
-          mode: modeName(record.mode as number),
-        },
-        beginTime: BigInt((record.begin_time as bigint | string) ?? 0),
-        endTime: BigInt((record.end_time as bigint | string) ?? 0),
-        frameCount: BigInt((record.frame_count as bigint | string) ?? 0),
-        dataSize: BigInt((record.data_size as bigint | string) ?? 0),
+        episodeId: BigInt((record.episode_id as bigint | string) ?? 0),
+        locationUid: Number(open.location_uid ?? 0),
+        beginTime: BigInt((open.begin_time as bigint | string) ?? 0),
+        endTime: BigInt(
+          ((closed ? close.end_time : record.update_time) as bigint | string) ??
+            0,
+        ),
+        frameCount: BigInt((record.unique_frame_count as bigint | string) ?? 0),
+        lastFrameUid: BigInt((record.last_frame_uid as bigint | string) ?? 0),
+        closed,
       };
     });
   };

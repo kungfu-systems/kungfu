@@ -16,7 +16,7 @@ using namespace kungfu::rx;
 using namespace kungfu::yijinjing;
 using namespace kungfu::yijinjing::enums;
 using namespace kungfu::yijinjing::types;
-using namespace kungfu::runtime::cache;
+using namespace kungfu::runtime::state_cache;
 using namespace kungfu::runtime;
 using namespace kungfu::yijinjing::data;
 

@@ -4,15 +4,15 @@
 // Created by Keren Dong on 2020/3/27.
 //
 
-#ifndef KUNGFU_CACHE_RUNTIME_H
-#define KUNGFU_CACHE_RUNTIME_H
+#ifndef KUNGFU_RUNTIME_STATE_CACHE_MODEL_H
+#define KUNGFU_RUNTIME_STATE_CACHE_MODEL_H
 
 #include <kungfu/runtime/common.h>
 
 #include <kungfu/yijinjing/journal/journal.h>
 #include <kungfu/yijinjing/schema/registry.h>
 
-namespace kungfu::runtime::cache {
+namespace kungfu::runtime::state_cache {
 class bank {
 public:
   template <typename DataType> void operator<<(const state<DataType> &state) {
@@ -46,7 +46,7 @@ public:
     });
   }
 
-  void operator>>(cache::bank &bank) {
+  void operator>>(bank &bank) {
     boost::hana::for_each(yijinjing::StateDataTypes, [&](auto it) {
       auto type = boost::hana::second(it);
       for (const auto &element : state_map_[type]) {
@@ -112,7 +112,7 @@ public:
     });
   }
 
-  void operator>>(cache::deque_bank &bank) {
+  void operator>>(deque_bank &bank) {
     boost::hana::for_each(yijinjing::StateDataTypes, [&](auto it) {
       auto type = boost::hana::second(it);
       for (const auto &element : state_map_[type]) {
@@ -197,7 +197,7 @@ public:
     });
   }
 
-  void operator>>(cache::bank &bank) {
+  void operator>>(bank &bank) {
     boost::hana::for_each(types_, [&](auto it) {
       auto type = boost::hana::second(it);
       for (const auto &element : state_map_[type]) {
@@ -223,6 +223,6 @@ private:
   DataTypesMap state_map_;
 };
 
-} // namespace kungfu::runtime::cache
+} // namespace kungfu::runtime::state_cache
 
-#endif // KUNGFU_CACHE_RUNTIME_H
+#endif // KUNGFU_RUNTIME_STATE_CACHE_MODEL_H

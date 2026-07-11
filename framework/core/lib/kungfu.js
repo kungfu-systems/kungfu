@@ -161,8 +161,6 @@ module.exports = () => {
     /** @param {any} home @returns {any} */
     ConfigStore: (home) => new binding.ConfigStore(home),
     /** @param {any} location @param {any} home @returns {any} */
-    SessionStore: (location, home) => new binding.SessionStore(location, home),
-    /** @param {any} location @param {any} home @returns {any} */
     IODevice: (location, home) => new binding.IODevice(location, home),
     /**
      * @param {any} location

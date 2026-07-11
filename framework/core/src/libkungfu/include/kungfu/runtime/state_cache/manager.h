@@ -1,32 +1,34 @@
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef KUNGFU_CACHED_H
-#define KUNGFU_CACHED_H
+#ifndef KUNGFU_RUNTIME_STATE_CACHE_MANAGER_H
+#define KUNGFU_RUNTIME_STATE_CACHE_MANAGER_H
 
 #include <kungfu/runtime/common.h>
 
-#include <kungfu/runtime/cache/profile.h>
-#include <kungfu/runtime/cache/runtime.h>
-#include <kungfu/runtime/index/session.h>
 #include <kungfu/runtime/io.h>
+#include <kungfu/runtime/state_cache/model.h>
+#include <kungfu/runtime/state_cache/profile.h>
+#include <kungfu/runtime/state_cache/store.h>
 #include <kungfu/yijinjing/log.h>
 
 #include <memory>
 
-namespace kungfu::runtime::cache {
-
-// 开放层运行时投影器（与 hana 闭集并存，默认 OFF）；完整定义见 open_layer_projector.h，仅在 cached.cpp include。
+namespace kungfu::runtime::projection {
 class open_layer_projector;
+}
 
+namespace kungfu::runtime::state_cache {
+
+// FlatBuffers 投影器与 Hana 闭集并存且默认关闭；完整定义只在 manager.cpp 引入。
 using ProfileDataTypesType = decltype(yijinjing::ProfileDataTypes);
 using ProfileStateMapType = decltype(yijinjing::build_state_map(yijinjing::ProfileDataTypes));
-typedef cache::typed_bank<ProfileDataTypesType, ProfileStateMapType> ProfileStateBank;
+using ProfileStateBank = typed_bank<ProfileDataTypesType, ProfileStateMapType>;
 
-class cached {
+class manager {
 public:
-  explicit cached(const kungfu::runtime::io_device_ptr &io_device);
+  explicit manager(const kungfu::runtime::io_device_ptr &io_device);
 
-  ~cached();
+  ~manager();
 
   template <typename DataType> std::vector<DataType> get_all(const DataType &) { return profile_.get_all(DataType{}); }
 
@@ -67,18 +69,6 @@ public:
 
   void store_profile_feeds();
 
-  void open_session(const yijinjing::data::location_ptr &location, int64_t open_time);
-
-  void close_session(const yijinjing::data::location_ptr &location, int64_t close_time);
-
-  void close_all_sessions(int64_t close_time);
-
-  int64_t find_last_active_time(const yijinjing::data::location_ptr &source_location);
-
-  void update_session(const yijinjing::journal::frame_ptr &frame);
-
-  index::SessionMap &get_all_sessions();
-
   void switch_feed_storage(bool pause_storage);
 
   static constexpr auto feed_profile_data = [](const event_ptr &event, auto &receiver) {
@@ -100,13 +90,12 @@ public:
   };
 
 private:
-  index::session_builder session_builder_;
   std::unordered_map<uint32_t, yijinjing::data::location_ptr> locations_ = {};
-  cache::profile profile_;
+  profile profile_;
   ProfileStateBank profile_feed_bank_ = ProfileStateBank(yijinjing::ProfileDataTypes);
   ProfileStateBank profile_restore_bank_ = ProfileStateBank(yijinjing::ProfileDataTypes);
-  std::unordered_map<uint32_t, cache::shift> app_states_shift_ = {};
-  cache::bank states_feed_bank_;
+  std::unordered_map<uint32_t, shift> app_states_shift_ = {};
+  bank states_feed_bank_;
   bool bypass_cached_;
   std::thread store_states_worker_;
   std::thread store_profile_worker_;
@@ -119,7 +108,7 @@ private:
   yijinjing::data::location_ptr ledger_home_location_;
 
   // 开放层 FB 投影器：仅当环境变量 KF_OPEN_LAYER_SCHEMAS 设定时由 ctor 启用；为空表示未启用，feed() 不投影。
-  std::unique_ptr<open_layer_projector> open_layer_;
+  std::unique_ptr<projection::open_layer_projector> open_layer_;
 
   static constexpr auto profile_get_all = [](auto &profile, auto &receiver) {
     boost::hana::for_each(yijinjing::ProfileDataTypes, [&](auto it) {
@@ -168,6 +157,6 @@ private:
       };
 };
 
-} // namespace kungfu::runtime::cache
+} // namespace kungfu::runtime::state_cache
 
-#endif // KUNGFU_CACHED_H
+#endif // KUNGFU_RUNTIME_STATE_CACHE_MANAGER_H

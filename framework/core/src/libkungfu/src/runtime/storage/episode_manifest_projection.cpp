@@ -12,7 +12,7 @@
 
 #include <sqlite3.h>
 
-#include <kungfu/runtime/cache/backend.h>
+#include <kungfu/runtime/projection/hana_sqlite.h>
 #include <kungfu/runtime/storage/projection_content.h>
 #include <kungfu/runtime/storage/projection_transaction.h>
 #include <kungfu/yijinjing/schema/registry.h>
@@ -163,7 +163,7 @@ storage_projection_rebuild_result episode_manifest_projection::rebuild_typed() c
   const auto path = projection_path(runtime_dir_);
   fs::create_directories(path.parent_path());
 
-  auto storage = cache::make_storage_ptr(path.string(), yijinjing::EpisodeManifestDataTypes);
+  auto storage = projection::make_storage_ptr(path.string(), yijinjing::EpisodeManifestDataTypes);
   storage->pragma.journal_mode(sqlite_orm::journal_mode::WAL);
   storage->pragma.synchronous(0);
 
@@ -254,7 +254,7 @@ storage_projection_verify_result episode_manifest_projection::verify_typed() con
     return result;
   }
 
-  auto storage = cache::make_storage_ptr(path.string(), yijinjing::EpisodeManifestDataTypes);
+  auto storage = projection::make_storage_ptr(path.string(), yijinjing::EpisodeManifestDataTypes);
   storage->on_open = [](sqlite3 *db) { sqlite3_busy_timeout(db, 5000); };
   projection_content_snapshot projected_opens;
   projection_content_snapshot projected_heartbeats;

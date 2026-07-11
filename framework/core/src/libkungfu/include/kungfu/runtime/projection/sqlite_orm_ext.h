@@ -4,8 +4,8 @@
 // Created by Keren Dong on 2020/3/27.
 //
 
-#ifndef KUNGFU_SQLITE_ORM_EXT_H
-#define KUNGFU_SQLITE_ORM_EXT_H
+#ifndef KUNGFU_RUNTIME_PROJECTION_SQLITE_ORM_EXT_H
+#define KUNGFU_RUNTIME_PROJECTION_SQLITE_ORM_EXT_H
 
 #include <cstring>
 #include <stdexcept>
@@ -124,4 +124,4 @@ protected:
 };
 } // namespace sqlite_orm
 
-#endif // KUNGFU_SQLITE_ORM_EXT_H
+#endif // KUNGFU_RUNTIME_PROJECTION_SQLITE_ORM_EXT_H

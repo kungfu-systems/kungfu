@@ -5,9 +5,9 @@
 //
 
 #include <kungfu/common.h>
-#include <kungfu/runtime/cache/cached.h>
 #include <kungfu/runtime/os.h>
 #include <kungfu/runtime/practice/apprentice.h>
+#include <kungfu/runtime/state_cache/manager.h>
 #include <kungfu/runtime/util/terminal.h>
 #include <utility>
 
@@ -17,7 +17,7 @@ using namespace kungfu::yijinjing::types;
 using namespace kungfu::yijinjing::enums;
 using namespace kungfu::runtime;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::runtime::cache;
+using namespace kungfu::runtime::state_cache;
 using namespace std::chrono;
 namespace fs = std::filesystem;
 
@@ -37,9 +37,7 @@ uint32_t apprentice::get_master_command_uid() const { return master_cmd_location
 
 int64_t apprentice::get_checkin_time() const { return checkin_time_; }
 
-int64_t apprentice::get_last_active_time() const { return last_active_time_; }
-
-const cache::bank &apprentice::get_state_bank() const { return state_bank_; }
+const state_cache::bank &apprentice::get_state_bank() const { return state_bank_; }
 
 void apprentice::request_read_from(int64_t trigger_time, uint32_t source_id, int64_t from_time, uint64_t page_size) {
   require_read_from(trigger_time, get_master_command_uid(), source_id, from_time, page_size);
@@ -121,7 +119,7 @@ void apprentice::react() {
     events_ | is(Channel::tag) | $$(register_channel(event->gen_time(), event->data<Channel>()));
     events_ | is(Band::tag) | $$(register_band(event->gen_time(), event->data<Band>()));
     events_ | is(RequestStop::tag) | to(get_live_home_uid()) | $$(signal_stop());
-    events_ | take_until(events_ | is(RequestStart::tag)) | $$(cached::feed_state_data(event, state_bank_));
+    events_ | take_until(events_ | is(RequestStart::tag)) | $$(manager::feed_state_data(event, state_bank_));
     events_ | is(Deregister::tag) | $$(on_deregister(event));
     events_ | is(TimeReset::tag) | first() | $$(reset_time(event->data<TimeReset>()));
   }
@@ -149,7 +147,6 @@ void apprentice::react() {
 
     self_register_event | $([&](const event_ptr &event) {
       auto data = event->data<Register>();
-      last_active_time_ = data.last_active_time;
       checkin_time_ = data.checkin_time;
       // in case operation-system time change, begin_time_ mismatch clock of master, keep using event->gen_time()
       reader_->join(master_cmd_location_, get_live_home_uid(), event->gen_time());
@@ -298,8 +295,6 @@ void apprentice::checkin() {
   register_data.uid64 = home->uid64;
   register_data.pid = GETPID();
   register_data.checkin_time = now;
-  register_data.last_active_time = now;
-
   SPDLOG_INFO("app checkin Register: {}", register_data.to_string());
 
   auto try_register = [&]() {

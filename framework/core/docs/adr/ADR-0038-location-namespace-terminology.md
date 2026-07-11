@@ -60,7 +60,7 @@ and manifests must not introduce new `group` fields for location identity.
 
 ## Consequences
 
-- `Location`, `Register`, `Deregister`, `Session`, `Config`, `OutputKey`, and
+- `Location`, `Register`, `Deregister`, `Config`, `OutputKey`, and
   `RequestWriteToBand` share the same `namespace` public field.
 - Journal CLI filters use `--namespace`; `-g` may remain as a short alias and
   `--group` may remain hidden only as a temporary input compatibility shim.

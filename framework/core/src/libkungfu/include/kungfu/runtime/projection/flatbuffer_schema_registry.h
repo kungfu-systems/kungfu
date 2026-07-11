@@ -12,8 +12,8 @@
 //
 // 与 hana×sqlite_orm 闭集**并存**：只服务 open-layer 运行时类型，绝不进 schema 闭集/热路径。
 // 本头不含任何 flatbuffers/reflection 符号——全部收进 kungfu::view（ADR-0039 门禁）。
-#ifndef KUNGFU_YIJINJING_CACHE_FB_SCHEMA_REGISTRY_H
-#define KUNGFU_YIJINJING_CACHE_FB_SCHEMA_REGISTRY_H
+#ifndef KUNGFU_RUNTIME_PROJECTION_FLATBUFFER_SCHEMA_REGISTRY_H
+#define KUNGFU_RUNTIME_PROJECTION_FLATBUFFER_SCHEMA_REGISTRY_H
 
 #include <kungfu/runtime/common.h>
 
@@ -27,7 +27,7 @@
 #include <string>
 #include <vector>
 
-namespace kungfu::runtime::cache::projector {
+namespace kungfu::runtime::projection::flatbuffer {
 
 class SchemaRegistry {
 public:
@@ -123,6 +123,6 @@ private:
   return true;
 }
 
-} // namespace kungfu::runtime::cache::projector
+} // namespace kungfu::runtime::projection::flatbuffer
 
-#endif // KUNGFU_YIJINJING_CACHE_FB_SCHEMA_REGISTRY_H
+#endif // KUNGFU_RUNTIME_PROJECTION_FLATBUFFER_SCHEMA_REGISTRY_H

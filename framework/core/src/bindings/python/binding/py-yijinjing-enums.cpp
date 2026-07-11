@@ -77,14 +77,6 @@ void bind_enums(py::module &m) {
       .export_values()
       .def("__eq__", [](const FrameDataType &a, int b) { return static_cast<int>(a) == b; });
 
-  py::enum_<ResumePolicy>(m_enums, "ResumePolicy", py::arithmetic())
-      .value("Now", ResumePolicy::Now)
-      .value("Intraday", ResumePolicy::Intraday)
-      .value("Stateless", ResumePolicy::Stateless)
-      .value("Continuous", ResumePolicy::Continuous)
-      .export_values()
-      .def("__eq__", [](const ResumePolicy &a, int b) { return static_cast<int>(a) == b; });
-
   py::enum_<EpisodeStatus>(m_enums, "EpisodeStatus", py::arithmetic())
       .value("Open", EpisodeStatus::Open)
       .value("Ended", EpisodeStatus::Ended)

@@ -1,7 +1,39 @@
 from __future__ import annotations
 import pykungfu.yijinjing.enums
 import typing
-__all__: list[str] = ['Band', 'CacheReset', 'Channel', 'ChannelRequest', 'Config', 'Deregister', 'EpisodeClosed', 'EpisodeFrameAttached', 'EpisodeHeartbeat', 'EpisodeOpen', 'EpisodeRefAttached', 'Location', 'OperatorStateUpdate', 'OutputKey', 'Register', 'RequestCachedDone', 'RequestReadFrom', 'RequestReadFromOthers', 'RequestReadFromPublic', 'RequestReadFromSync', 'RequestWriteTo', 'RequestWriteToBand', 'Session', 'SyntheticData', 'TimeKeyValue', 'TimeRequest', 'TimeReset', 'TimeValue', 'frame_header', 'page_header']
+__all__: list[str] = ['AcceptedRangeRecorded', 'Band', 'CacheReset', 'Channel', 'ChannelCursorUpdated', 'ChannelRequest', 'Config', 'Deregister', 'EpisodeClosed', 'EpisodeFrameAttached', 'EpisodeHeartbeat', 'EpisodeOpen', 'EpisodeRefAttached', 'ExportBundleRecorded', 'ImportManifestAccepted', 'Location', 'ManifestEntryRecorded', 'OperatorStateUpdate', 'OutputKey', 'Register', 'RequestCachedDone', 'RequestReadFrom', 'RequestReadFromOthers', 'RequestReadFromPublic', 'RequestReadFromSync', 'RequestWriteTo', 'RequestWriteToBand', 'SourceHeadUpdated', 'SourceRegistered', 'SyntheticData', 'TimeKeyValue', 'TimeRequest', 'TimeReset', 'TimeValue', 'frame_header', 'page_header']
+class AcceptedRangeRecorded:
+    __has_data__: typing.ClassVar[bool] = True
+    __tag__: typing.ClassVar[int] = 10903
+    accept_time: int
+    first_frame_uid: int
+    last_frame_uid: int
+    location_uid: int
+    manifest_id: String[str[128]]
+    manifest_uid: int
+    schema_version: int
+    since: int
+    source_id: String[str[128]]
+    source_uid: int
+    status: ...
+    until: int
+    def __eq__(self, arg0: AcceptedRangeRecorded) -> bool:
+        ...
+    def __hash__(self) -> int:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: str) -> None:
+        ...
+    def __parse__(self, arg0: str) -> None:
+        ...
+    def __repr__(self) -> str:
+        ...
+    @property
+    def __uid__(self) -> int:
+        ...
 class Band:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 10308
@@ -51,6 +83,40 @@ class Channel:
     dest_id: int
     source_id: int
     def __eq__(self, arg0: Channel) -> bool:
+        ...
+    def __hash__(self) -> int:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: str) -> None:
+        ...
+    def __parse__(self, arg0: str) -> None:
+        ...
+    def __repr__(self) -> str:
+        ...
+    @property
+    def __uid__(self) -> int:
+        ...
+class ChannelCursorUpdated:
+    __has_data__: typing.ClassVar[bool] = True
+    __tag__: typing.ClassVar[int] = 10907
+    channel_uid: int
+    entry_count: int
+    location_uid: int
+    manifest_id: String[str[128]]
+    manifest_uid: int
+    range_since: String[str[40]]
+    range_until: String[str[40]]
+    schema_version: int
+    source_head: String[str[128]]
+    source_id: String[str[128]]
+    source_uid: int
+    sync_root_algo: String[str[16]]
+    sync_root_value: String[str[72]]
+    update_time: int
+    def __eq__(self, arg0: ChannelCursorUpdated) -> bool:
         ...
     def __hash__(self) -> int:
         ...
@@ -291,6 +357,79 @@ class EpisodeRefAttached:
     @property
     def __uid__(self) -> int:
         ...
+class ExportBundleRecorded:
+    __has_data__: typing.ClassVar[bool] = True
+    __tag__: typing.ClassVar[int] = 10906
+    bundle_uid: int
+    entry_count: int
+    export_time: int
+    exported_records: int
+    location_uid: int
+    manifest_id: String[str[128]]
+    manifest_uid: int
+    range_since: String[str[40]]
+    range_until: String[str[40]]
+    schema_version: int
+    source_id: String[str[128]]
+    source_uid: int
+    sync_root_algo: String[str[16]]
+    sync_root_value: String[str[72]]
+    def __eq__(self, arg0: ExportBundleRecorded) -> bool:
+        ...
+    def __hash__(self) -> int:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: str) -> None:
+        ...
+    def __parse__(self, arg0: str) -> None:
+        ...
+    def __repr__(self) -> str:
+        ...
+    @property
+    def __uid__(self) -> int:
+        ...
+class ImportManifestAccepted:
+    __has_data__: typing.ClassVar[bool] = True
+    __tag__: typing.ClassVar[int] = 10904
+    accept_time: int
+    entries_byte_len: int
+    entries_hash: String[str[72]]
+    entry_count: int
+    location_uid: int
+    manifest_id: String[str[128]]
+    manifest_uid: int
+    range_since: String[str[40]]
+    range_until: String[str[40]]
+    schema_version: int
+    scope: String[str[32]]
+    source_coordinate: String[str[256]]
+    source_head: String[str[128]]
+    source_id: String[str[128]]
+    source_type: String[str[32]]
+    source_uid: int
+    status: ...
+    sync_root_algo: String[str[16]]
+    sync_root_value: String[str[72]]
+    def __eq__(self, arg0: ImportManifestAccepted) -> bool:
+        ...
+    def __hash__(self) -> int:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: str) -> None:
+        ...
+    def __parse__(self, arg0: str) -> None:
+        ...
+    def __repr__(self) -> str:
+        ...
+    @property
+    def __uid__(self) -> int:
+        ...
 class Location:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 10205
@@ -302,6 +441,42 @@ class Location:
     seed: int
     uid64: int
     def __eq__(self, arg0: Location) -> bool:
+        ...
+    def __hash__(self) -> int:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: str) -> None:
+        ...
+    def __parse__(self, arg0: str) -> None:
+        ...
+    def __repr__(self) -> str:
+        ...
+    @property
+    def __uid__(self) -> int:
+        ...
+class ManifestEntryRecorded:
+    __has_data__: typing.ClassVar[bool] = True
+    __tag__: typing.ClassVar[int] = 10905
+    accept_time: int
+    byte_len: int
+    commitment_hash: String[str[72]]
+    content_type: String[str[64]]
+    entry_index: int
+    entry_schema_version: int
+    entry_source_id: String[str[128]]
+    kind: String[str[64]]
+    location_uid: int
+    manifest_uid: int
+    payload_hash: String[str[72]]
+    payload_state: ...
+    schema_version: int
+    source_path: String[str[256]]
+    source_time: String[str[40]]
+    source_uid: int
+    def __eq__(self, arg0: ManifestEntryRecorded) -> bool:
         ...
     def __hash__(self) -> int:
         ...
@@ -375,7 +550,6 @@ class Register:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 10101
     checkin_time: int
-    last_active_time: int
     location_uid: int
     mode: pykungfu.yijinjing.enums.mode
     name: str
@@ -565,22 +739,49 @@ class RequestWriteToBand:
     @property
     def __uid__(self) -> int:
         ...
-class Session:
+class SourceHeadUpdated:
     __has_data__: typing.ClassVar[bool] = True
-    __tag__: typing.ClassVar[int] = 10103
-    begin_time: int
-    data_size: int
-    end_time: int
-    frame_count: int
+    __tag__: typing.ClassVar[int] = 10902
+    first_frame_uid: int
+    head: String[str[128]]
+    inventory_hash: String[str[128]]
+    inventory_hash_algo: String[str[16]]
+    last_frame_uid: int
     location_uid: int
-    mode: pykungfu.yijinjing.enums.mode
-    name: str
-    namespace: str
-    role: pykungfu.yijinjing.enums.location_role
-    seed: int
-    uid64: int
+    schema_version: int
+    since: int
+    source_uid: int
+    until: int
     update_time: int
-    def __eq__(self, arg0: Session) -> bool:
+    def __eq__(self, arg0: SourceHeadUpdated) -> bool:
+        ...
+    def __hash__(self) -> int:
+        ...
+    @typing.overload
+    def __init__(self) -> None:
+        ...
+    @typing.overload
+    def __init__(self, arg0: str) -> None:
+        ...
+    def __parse__(self, arg0: str) -> None:
+        ...
+    def __repr__(self) -> str:
+        ...
+    @property
+    def __uid__(self) -> int:
+        ...
+class SourceRegistered:
+    __has_data__: typing.ClassVar[bool] = True
+    __tag__: typing.ClassVar[int] = 10901
+    coordinate: String[str[256]]
+    head: String[str[128]]
+    kind: ...
+    location_uid: int
+    register_time: int
+    schema_version: int
+    source_id: String[str[128]]
+    source_uid: int
+    def __eq__(self, arg0: SourceRegistered) -> bool:
         ...
     def __hash__(self) -> int:
         ...

@@ -8,13 +8,12 @@
 #include <pybind11/stl.h>
 
 #include <kungfu/runtime/action_recorder.h>
-#include <kungfu/runtime/cache/profile.h>
-#include <kungfu/runtime/index/session.h>
 #include <kungfu/runtime/io.h>
 #include <kungfu/runtime/nanomsg/socket.h>
 #include <kungfu/runtime/practice/apprentice.h>
 #include <kungfu/runtime/practice/master.h>
 #include <kungfu/runtime/schema/schema_compiler.h>
+#include <kungfu/runtime/state_cache/profile.h>
 #include <kungfu/runtime/storage/binding_reflection.h>
 #include <kungfu/runtime/storage/hana_view.h>
 #include <kungfu/runtime/storage/json_edge.h>
@@ -34,9 +33,8 @@
 using namespace kungfu::yijinjing;
 using namespace kungfu::yijinjing::types;
 using namespace kungfu::yijinjing::enums;
-using namespace kungfu::runtime::cache;
+using namespace kungfu::runtime::state_cache;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::runtime::index;
 using namespace kungfu::runtime::journal;
 using namespace kungfu::runtime::nanomsg;
 using namespace kungfu::runtime::practice;
@@ -1242,23 +1240,6 @@ void bind(pybind11::module &&m) {
 
   py::class_<kungfu::runtime::io_device_client, io_device, io_device_client_ptr>(m, "kungfu::runtime::io_device_client")
       .def(py::init<location_ptr, bool>(), py::arg("home"), py::arg("low_latency"));
-
-  py::class_<kungfu::runtime::io_device_console, io_device, io_device_console_ptr>(m,
-                                                                                   "kungfu::runtime::io_device_console")
-      .def(py::init<location_ptr, uint32_t, uint32_t>(), py::arg("home"), py::arg("width"), py::arg("height"))
-      .def("trace", &kungfu::runtime::io_device_console::trace)
-      .def("show", &kungfu::runtime::io_device_console::show);
-
-  py::class_<session_finder, std::shared_ptr<session_finder>>(m, "session_finder")
-      .def(py::init<kungfu::runtime::io_device_ptr>())
-      .def("find_sessions", &session_finder::find_sessions, py::arg("from") = 0, py::arg("to") = INT64_MAX)
-      .def("find_sessions_for", &session_finder::find_sessions_for, py::arg("source"), py::arg("from") = 0,
-           py::arg("to") = INT64_MAX);
-
-  py::class_<session_builder, session_finder, std::shared_ptr<session_builder>>(m, "session_builder")
-      .def(py::init<kungfu::runtime::io_device_ptr>())
-      .def("rebuild_index_db", &session_builder::rebuild_index_db)
-      .def("update_index_db", &session_builder::update_index_db);
 
   auto profile_class = py::class_<profile, std::shared_ptr<profile>>(m, "profile");
   profile_class.def(py::init<const locator_ptr &>());

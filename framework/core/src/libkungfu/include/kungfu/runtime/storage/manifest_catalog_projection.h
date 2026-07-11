@@ -13,7 +13,7 @@ inline constexpr const char *MANIFEST_CATALOG_PROJECTION_SCHEMA_V1 = "kungfu.sto
 
 // ADR-0037 (final slice): rebuildable SQLite projection of the manifest-catalog
 // kernel journal. It reuses the compile-time Hana closed-set -> SQLite column
-// path (cache::make_storage_ptr over ManifestCatalogDataTypes), the same path
+// path (projection::make_storage_ptr over ManifestCatalogDataTypes), the same path
 // the source-registry projection uses — not the retired hand-written raw-SQL
 // projection that served the JSON manifest layer, and not the .bfbs reflection
 // projector (which serves the FlatBuffers open layer). The journal remains the

@@ -25,10 +25,7 @@ constexpr auto AllTypes = boost::hana::make_map( //
     TYPE_PAIR(Pong),                             // 10054
     TYPE_PAIR(Register),                         // 10101
     TYPE_PAIR(Deregister),                       // 10102
-    TYPE_PAIR(Session),                          // 10103
     TYPE_PAIR(OperatorStateUpdate),              // 10105
-    TYPE_PAIR(SessionStart),                     // 10151
-    TYPE_PAIR(SessionEnd),                       // 10152
     TYPE_PAIR(RequestStart),                     // 10153
     TYPE_PAIR(RequestStop),                      // 10154
     TYPE_PAIR(RequestDeregister),                // 10155
@@ -76,7 +73,6 @@ constexpr auto AllDataTypes = boost::hana::make_map( //
     TYPE_PAIR(OutputKey),                            // 701
     TYPE_PAIR(Register),                             // 10101
     TYPE_PAIR(Deregister),                           // 10102
-    TYPE_PAIR(Session),                              // 10103
     TYPE_PAIR(OperatorStateUpdate),                  // 10105
     TYPE_PAIR(Config),                               // 10201
     TYPE_PAIR(Location),                             // 10205
@@ -116,7 +112,6 @@ constexpr auto CorePublicDataTypes = boost::hana::make_map( //
     TYPE_PAIR(OutputKey),                                   // 701
     TYPE_PAIR(Register),                                    // 10101
     TYPE_PAIR(Deregister),                                  // 10102
-    TYPE_PAIR(Session),                                     // 10103
     TYPE_PAIR(OperatorStateUpdate),                         // 10105
     TYPE_PAIR(Config),                                      // 10201
     TYPE_PAIR(Location),                                    // 10205
@@ -166,10 +161,6 @@ constexpr auto ProfileDataTypes = boost::hana::make_map( //
     TYPE_PAIR(Location)                                  // 10205
 );
 
-constexpr auto SessionDataTypes = boost::hana::make_map( //
-    TYPE_PAIR(Session)                                   // 10103
-);
-
 constexpr auto StateDataTypes = boost::hana::make_map( //
     TYPE_PAIR(OperatorStateUpdate),                    // 10105
     TYPE_PAIR(Config),                                 // 10201
@@ -178,8 +169,8 @@ constexpr auto StateDataTypes = boost::hana::make_map( //
 );
 
 // ADR-0037: the source-registry kernel records project to SQLite through the
-// same compile-time Hana closed-set -> SQLite column path (make_storage_ptr)
-// used by the profile / session / state caches, not the hand-written raw-SQL
+// same compile-time Hana closed-set -> SQLite column path (projection::make_storage_ptr)
+// used by the profile/state caches, not a hand-written raw-SQL
 // projection that serves the JSON manifest layer.
 constexpr auto SourceRegistryDataTypes = boost::hana::make_map( //
     TYPE_PAIR(SourceRegistered),                                // 10901
@@ -190,7 +181,7 @@ constexpr auto SourceRegistryDataTypes = boost::hana::make_map( //
 // ADR-0037 (final slice): the manifest-catalog record family — import-manifest
 // acceptance, per-entry deltas, export-bundle receipts, and channel cursors —
 // as a Hana closed set for the rebuildable SQLite projection
-// (cache::make_storage_ptr), the same path the source-registry projection
+// (projection::make_storage_ptr), the same path the source-registry projection
 // uses. The manifest-catalog journal stays the authority.
 constexpr auto ManifestCatalogDataTypes = boost::hana::make_map( //
     TYPE_PAIR(ImportManifestAccepted),                           // 10904
@@ -200,7 +191,7 @@ constexpr auto ManifestCatalogDataTypes = boost::hana::make_map( //
 );
 
 // ADR-0041: the Episode manifest record family as a Hana closed set for the
-// rebuildable SQLite projection (cache::make_storage_ptr), the same path the
+// rebuildable SQLite projection (projection::make_storage_ptr), the same path the
 // source-registry projection uses. The manifest journal stays the authority;
 // this set only feeds derived, rebuildable views.
 constexpr auto EpisodeManifestDataTypes = boost::hana::make_map( //

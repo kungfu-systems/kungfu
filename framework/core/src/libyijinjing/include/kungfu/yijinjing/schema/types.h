@@ -29,17 +29,6 @@ KF_JSON_SERIALIZE_ENUM(HistoryDataType, {
 
 inline std::ostream &operator<<(std::ostream &os, HistoryDataType t) { return os << int32_t(t); }
 
-enum class ResumePolicy : int8_t { Now, Intraday, Stateless, Continuous };
-
-KF_JSON_SERIALIZE_ENUM(ResumePolicy, {
-                                         {ResumePolicy::Now, "Now"},
-                                         {ResumePolicy::Intraday, "Intraday"},
-                                         {ResumePolicy::Stateless, "Stateless"},
-                                         {ResumePolicy::Continuous, "Continuous"},
-                                     })
-
-inline std::ostream &operator<<(std::ostream &os, ResumePolicy t) { return os << int8_t(t); }
-
 enum class EpisodeStatus : int8_t { Open = 1, Ended = 2, Aborted = 3, Tombstoned = 4 };
 
 KF_JSON_SERIALIZE_ENUM(EpisodeStatus, {
@@ -101,8 +90,6 @@ namespace kungfu::yijinjing::types {
 KF_DEFINE_MARK_TYPE(Time, 10052);
 KF_DEFINE_MARK_TYPE(Ping, 10053);
 KF_DEFINE_MARK_TYPE(Pong, 10054);
-KF_DEFINE_MARK_TYPE(SessionStart, 10151);
-KF_DEFINE_MARK_TYPE(SessionEnd, 10152);
 KF_DEFINE_MARK_TYPE(RequestStart, 10153);
 KF_DEFINE_MARK_TYPE(RequestStop, 10154);
 KF_DEFINE_MARK_TYPE(RequestDeregister, 10155);
@@ -144,7 +131,6 @@ KF_DEFINE_DATA_TYPE(                                //
     (std::string, name),                            //
     (uint32_t, seed),                               //
     (int32_t, pid),                                 //
-    (int64_t, last_active_time),                    //
     (int64_t, checkin_time)                         //
 );
 
@@ -157,22 +143,6 @@ KF_DEFINE_DATA_TYPE(                                  //
     (std::string, namespace_),                        //
     (std::string, name),                              //
     (uint32_t, seed)                                  //
-);
-
-KF_DEFINE_DATA_TYPE(                                                     //
-    Session, 10103, PK(location_uid, begin_time), TIMESTAMP(begin_time), //
-    (uint64_t, uid64),                                                   //
-    (uint32_t, location_uid),                                            //
-    (enums::location_role, role),                                        //
-    (enums::mode, mode),                                                 //
-    (std::string, namespace_),                                           //
-    (std::string, name),                                                 //
-    (uint32_t, seed),                                                    //
-    (int64_t, begin_time),                                               //
-    (int64_t, update_time),                                              //
-    (int64_t, end_time),                                                 //
-    (uint32_t, frame_count),                                             //
-    (uint64_t, data_size)                                                //
 );
 
 KF_DEFINE_DATA_TYPE(                                                     //

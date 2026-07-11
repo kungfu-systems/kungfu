@@ -4,13 +4,13 @@
 // Created by Keren Dong on 2020/2/25.
 //
 
-#include <kungfu/runtime/cache/profile.h>
+#include <kungfu/runtime/state_cache/profile.h>
 
 using namespace kungfu::yijinjing;
 using namespace kungfu::yijinjing::enums;
 using namespace kungfu::yijinjing::data;
 
-namespace kungfu::runtime::cache {
+namespace kungfu::runtime::state_cache {
 
 std::string default_db_file(const locator_ptr &locator) {
   auto config_location = std::make_shared<location>(mode::LIVE, location_role::SYSTEM, "etc", "kungfu", locator);
@@ -28,8 +28,8 @@ void profile::setup() {
   storage->sync_schema();
 }
 
-cache::ProfileStoragePtr &profile::get_storage() {
-  static auto storage = cache::make_storage_ptr(profile_db_file_, ProfileDataTypes);
+projection::ProfileStoragePtr &profile::get_storage() {
+  static auto storage = projection::make_storage_ptr(profile_db_file_, ProfileDataTypes);
   return storage;
 }
-} // namespace kungfu::runtime::cache
+} // namespace kungfu::runtime::state_cache

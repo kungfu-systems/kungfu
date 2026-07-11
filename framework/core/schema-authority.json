@@ -9,13 +9,6 @@
       "projection_route": "hana-sqlite-orm"
     },
     {
-      "identity": "kungfu.kernel.session",
-      "owner": "hana",
-      "symbol": "SessionDataTypes",
-      "declaration": "framework/core/src/libyijinjing/include/kungfu/yijinjing/schema/registry.h",
-      "projection_route": "hana-sqlite-orm"
-    },
-    {
       "identity": "kungfu.kernel.state",
       "owner": "hana",
       "symbol": "StateDataTypes",
@@ -108,5 +101,5 @@
       "remove_when": "The json_edge.h compatibility surface is retired."
     }
   ],
-  "flatbuffers_projection_boundary": "framework/core/src/libkungfu/include/kungfu/runtime/cache/fb_schema_registry.h"
+  "flatbuffers_projection_boundary": "framework/core/src/libkungfu/include/kungfu/runtime/projection/flatbuffer_schema_registry.h"
 }

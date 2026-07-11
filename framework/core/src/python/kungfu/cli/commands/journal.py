@@ -4,30 +4,20 @@ import click
 import functools
 import glob
 import kungfu
-import platform
 import os
 import shutil
 import zipfile
 
 from collections import deque
-from datetime import datetime, timedelta
-from tabulate import tabulate  # type: ignore[import-untyped]  # no stubs
 
 from kungfu.cli.commands import kfc, PrioritizedCommandGroup
 from kungfu.runtime import LOG_PATTERN, ARCHIVE_PREFIX
-from kungfu.runtime import journal as kfj
+import kungfu.runtime as kfr
 from kungfu.runtime import time as kft
 from kungfu.runtime.log import create_logger
 from kungfu.runtime.sinks.archive import ArchiveSink
 from kungfu.runtime.utils import prune_layout_files, prue_layout_dirs_before_timestamp
 
-
-SESSION_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-FRAME_TIME_FORMAT = "%H:%M:%S.%N"
-DURATION_FORMAT = "%H:%M:%S.%N"
-DURATION_TZ_ADJUST = int(
-    timedelta(hours=datetime.fromtimestamp(0).hour).total_seconds() * 1e9
-)
 
 lf = kungfu.__binding__.yijinjing
 yjj = kungfu.__binding__.runtime
@@ -38,13 +28,13 @@ journal_command_context = kfc.pass_context(
 
 @kfc.group(cls=PrioritizedCommandGroup, help_priority=2)
 @click.option(
-    "-m", "--mode", default="*", type=click.Choice(list(kfj.MODES)), help="mode"
+    "-m", "--mode", default="*", type=click.Choice(list(kfr.MODES)), help="mode"
 )
 @click.option(
     "-c",
     "--role",
     default="*",
-    type=click.Choice(list(kfj.ROLES)),
+    type=click.Choice(list(kfr.ROLES)),
     help="role",
 )
 @click.option("-g", "--namespace", "namespace", type=str, default="*", help="namespace")
@@ -61,119 +51,12 @@ def journal(ctx, mode, role, namespace, legacy_group, name):
     ctx.namespace = namespace
     ctx.name = name
     ctx.location = yjj.location(
-        kfj.MODES[mode], kfj.ROLES[role], namespace, name, ctx.runtime_locator
+        kfr.MODES[mode], kfr.ROLES[role], namespace, name, ctx.runtime_locator
     )
     ctx.logger = create_logger("journal", ctx.log_level, ctx.console_location)
 
     (ctx.console_width, ctx.console_height) = shutil.get_terminal_size((0, 0))
     yjj.setup_log(ctx.console_location, "journal")
-
-
-@journal.command()
-@click.option(
-    "-s",
-    "--sortby",
-    default="begin_time",
-    type=click.Choice(
-        ["begin_time", "end_time", "duration", "mode", "role", "namespace", "name"]
-    ),
-    help="sorting method",
-)
-@click.option("-a", "--ascending", is_flag=True, help="sorted as ascending")
-@click.option(
-    "-f",
-    "--tablefmt",
-    default="simple",
-    type=click.Choice(
-        ["plain", "simple", "orgtbl", "grid", "fancy_grid", "rst", "textile"]
-    ),
-    help="output format",
-)
-@journal_command_context
-def sessions(ctx, sortby, ascending, tablefmt):
-    all_sessions = sorted(
-        kfj.find_sessions(ctx),
-        key=lambda session: session[sortby],
-        reverse=not ascending,
-    )
-    for session in all_sessions:
-        session["begin_time"] = kft.strftime(
-            session["begin_time"], kft.SESSION_DATETIME_FORMAT
-        )
-        session["update_time"] = kft.strftime(
-            abs(session["update_time"]), kft.SESSION_DATETIME_FORMAT
-        )
-        session["end_time"] = kft.strftime(
-            abs(session["end_time"]), kft.SESSION_DATETIME_FORMAT
-        )
-        session["duration"] = kft.strftime(
-            session["duration"] - kft.DURATION_TZ_ADJUST, kft.DURATION_FORMAT
-        )
-
-    table = tabulate(
-        [
-            [session[column] for column in kfj.SESSION_COLUMNS]
-            for session in all_sessions
-        ],
-        headers=kfj.SESSION_COLUMNS,
-        tablefmt=tablefmt,
-    )
-
-    (term_width, term_height) = shutil.get_terminal_size()
-    if term_height < len(all_sessions) + 2 and platform.system() != "Windows":
-        click.echo_via_pager(table)
-    else:
-        click.echo(table)
-
-
-@journal.command()
-@journal_command_context
-def rebuild_index(ctx):
-    io_device = yjj.io_device(ctx.console_location)
-    session_builder = yjj.session_builder(io_device)
-    click.echo("rebuild sqlite db")
-    session_builder.rebuild_index_db()
-    click.echo("done")
-
-
-@journal.command()
-@journal_command_context
-def update_index(ctx):
-    io_device = yjj.io_device(ctx.console_location)
-    session_builder = yjj.session_builder(io_device)
-    click.echo("update sqlite db")
-    session_builder.update_index_db()
-    click.echo("done")
-
-
-@journal.command()
-@click.option("-i", "--session_id", type=int, required=True, help="session id")
-@click.option(
-    "-t",
-    "--io_type",
-    type=click.Choice(["all", "in", "out"]),
-    default="all",
-    help="input or output during this session",
-)
-@click.option("-o", "--csv", type=str, default="", help="csv file")
-@journal_command_context
-def show(ctx, session_id, io_type, csv):
-    kfj.show_journal(ctx, session_id, io_type, csv)
-
-
-@journal.command()
-@click.option("-i", "--session_id", type=int, required=True, help="session id")
-@click.option(
-    "-t",
-    "--io-type",
-    type=click.Choice(["all", "in", "out"]),
-    default="all",
-    help="input or output during this session",
-)
-@click.option("-o", "--csv", type=str, default="", help="csv file")
-@journal_command_context
-def trace(ctx, session_id, io_type, csv):
-    kfj.trace_journal(ctx, session_id, io_type, csv)
 
 
 @journal.command()
@@ -224,11 +107,6 @@ def archive(ctx, format, mode):
     os.chdir(ctx.archive_dir)
     today_date = yjj.strftime(yjj.now_in_nano(), "%Y-%m-%d")
     tomorrow_date = yjj.strftime(yjj.now_in_nano() + 24 * 60 * 60 * 10**9, "%Y-%m-%d")
-    reindex_start = yjj.now_in_nano()
-    update_index_db(ctx)
-    reindex_end = yjj.now_in_nano()
-    ctx.logger.info(f"reindex takes {reindex_end - reindex_start} ns")
-
     if mode == "delete":
         today_start = yjj.strptime(today_date, "%Y-%m-%d")
         today_start_timestamp = today_start / 10**9
@@ -330,19 +208,6 @@ def make_archive(ctx, archive_format, archive_date):
     shutil.make_archive(archive_name, archive_format, archive_date)
     shutil.rmtree(archive_date)
     ctx.logger.info(f"compressed archive for {archive_date}")
-
-
-def update_index_db(ctx):
-    index_location = yjj.location(
-        lf.enums.mode.LIVE,
-        lf.enums.location_role.SYSTEM,
-        "journal",
-        "index",
-        ctx.runtime_locator,
-    )
-    io_device = yjj.io_device(index_location, True, True)
-    session_builder = yjj.session_builder(io_device)
-    session_builder.update_index_db()
 
 
 def print_archive(archive_file):

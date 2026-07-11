@@ -4,14 +4,15 @@
 // Created by Keren Dong on 2020/2/25.
 //
 
-#ifndef KUNGFU_CONFIG_STORE_H
-#define KUNGFU_CONFIG_STORE_H
+#ifndef KUNGFU_RUNTIME_STATE_CACHE_PROFILE_H
+#define KUNGFU_RUNTIME_STATE_CACHE_PROFILE_H
 
-#include "backend.h"
 #include "kungfu/yijinjing/schema/registry.h"
 #include <kungfu/runtime/common.h>
+#include <kungfu/runtime/projection/hana_sqlite.h>
+#include <kungfu/runtime/state_cache/model.h>
 
-namespace kungfu::runtime::cache {
+namespace kungfu::runtime::state_cache {
 class profile {
 public:
   explicit profile(const yijinjing::data::locator_ptr &locator);
@@ -65,10 +66,10 @@ public:
 private:
   const std::string profile_db_file_;
 
-  cache::ProfileStoragePtr &get_storage();
+  projection::ProfileStoragePtr &get_storage();
 
   explicit profile(std::string profile_db_file);
 };
-} // namespace kungfu::runtime::cache
+} // namespace kungfu::runtime::state_cache
 
-#endif // KUNGFU_CONFIG_STORE_H
+#endif // KUNGFU_RUNTIME_STATE_CACHE_PROFILE_H

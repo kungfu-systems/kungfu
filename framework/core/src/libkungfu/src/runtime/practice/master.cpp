@@ -15,7 +15,7 @@ using namespace kungfu::rx;
 using namespace kungfu::yijinjing;
 using namespace kungfu::yijinjing::types;
 using namespace kungfu::yijinjing::enums;
-using namespace kungfu::runtime::cache;
+using namespace kungfu::runtime::state_cache;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::runtime::journal;
 
@@ -24,70 +24,49 @@ namespace kungfu::runtime::practice {
 master::master(const location_ptr &home, bool low_latency)
     : master(std::make_shared<kungfu::runtime::io_device_master>(home, low_latency)) {}
 
-master::master(const kungfu::runtime::io_device_ptr &io_device) : hero(io_device), last_check_(0), cached_(io_device) {}
+master::master(const kungfu::runtime::io_device_ptr &io_device)
+    : hero(io_device), last_check_(0), state_cache_(io_device) {}
 
 void master::pre_setup() {
   hero::pre_setup();
-  for (const auto &app_location : cached_.get_all(Location{})) {
+  for (const auto &app_location : state_cache_.get_all(Location{})) {
     add_location(begin_time_, location::make_shared(app_location, get_locator()));
   }
-  for (const auto &config : cached_.get_all(Config{})) {
+  for (const auto &config : state_cache_.get_all(Config{})) {
     try_add_location(begin_time_, location::make_shared(config, get_locator()));
   }
 
-  cached_.open_session(master_home_location_, begin_time_);
   writers_.insert_or_assign(location::PUBLIC, get_io_device()->open_writer(location::PUBLIC));
-  cached_.run_store_workers();
-  get_writer(location::PUBLIC)->mark(begin_time_, SessionStart::tag);
+  state_cache_.run_store_workers();
 }
 
 void master::on_exit() {
   notify_deregister_on_exit();
   notify_master_deregister_on_exit();
-  mark_session_end_on_exit();
 }
 
 void master::notify_deregister_on_exit() {
-  auto &live_sessions = cached_.get_all_sessions();
-  for (auto &iter : live_sessions) {
-    auto &session = iter.second;
-    auto location_from_session = location::make_shared(session, get_locator());
-    if (session.location_uid != master_home_location_->uid) {
-      get_writer(location::PUBLIC)->write(yijinjing::time::now_in_nano(), location_from_session->to<Deregister>());
+  for (const auto &[location_uid, registration] : get_registry()) {
+    if (location_uid != master_home_location_->uid) {
+      const auto live_location = location::make_shared(registration, get_locator());
+      get_writer(location::PUBLIC)->write(yijinjing::time::now_in_nano(), live_location->to<Deregister>());
     }
   }
 }
 
 // after finished sending deregisters of other processes, then tell everyone master down
 void master::notify_master_deregister_on_exit() {
-  auto &live_sessions = cached_.get_all_sessions();
-  for (auto &iter : live_sessions) {
-    auto &session = iter.second;
-
-    if (has_writer(session.location_uid)) {
-      auto writer = get_writer(session.location_uid);
+  for (const auto &[location_uid, registration] : get_registry()) {
+    if (location_uid == master_home_location_->uid) {
+      continue;
+    }
+    if (has_writer(location_uid)) {
+      auto writer = get_writer(location_uid);
       writer->write(yijinjing::time::now_in_nano(), master_home_location_->to<Deregister>());
     } else {
-      SPDLOG_WARN("no writer {} {}", session.location_uid, get_location_uname(session.location_uid));
+      SPDLOG_WARN("no writer {} {}", location_uid, get_location_uname(location_uid));
     }
   }
-}
-
-void master::mark_session_end_on_exit() {
-  get_writer(location::PUBLIC)->mark(yijinjing::time::now_in_nano(), SessionEnd::tag);
-  auto &live_sessions = cached_.get_all_sessions();
-  for (auto &iter : live_sessions) {
-    auto &session = iter.second;
-    if (has_writer(session.location_uid)) {
-      auto writer = get_writer(session.location_uid);
-      writer->mark(yijinjing::time::now_in_nano(), SessionEnd::tag);
-    } else {
-      SPDLOG_WARN("no writer {} {}", session.location_uid, get_location_uname(session.location_uid));
-    }
-  }
-
-  // have to use new now, ensuring later than all messages
-  cached_.close_all_sessions(yijinjing::time::now_in_nano());
 }
 
 void master::on_notify() { get_io_device()->get_publisher()->notify(); }
@@ -106,7 +85,6 @@ void master::register_app(const event_ptr &event) {
     SPDLOG_ERROR("location {} has already been registered live", app_location->uname);
     return;
   }
-  register_data.last_active_time = cached_.find_last_active_time(app_location);
   register_location(event->gen_time(), register_data);
   try_add_location(event->gen_time(), app_location);
 
@@ -134,14 +112,11 @@ void master::register_app(const event_ptr &event) {
   require_write_to(event->gen_time(), app_location->uid, location::SYNC);
   require_write_to(event->gen_time(), app_location->uid, master_cmd_location->uid);
 
-  // after register sent, then open session
-  cached_.open_session(app_location, event->gen_time());
-  cached_.reset_cache_shift(app_location);
-  cached_.try_ensure_cached_storage(app_location, location::PUBLIC);
-  cached_.restore(app_location, app_cmd_writer);
+  state_cache_.reset_cache_shift(app_location);
+  state_cache_.try_ensure_cached_storage(app_location, location::PUBLIC);
+  state_cache_.restore(app_location, app_cmd_writer);
 
   write_time_reset(event->gen_time(), app_cmd_writer);
-  app_cmd_writer->mark(event->gen_time(), SessionStart::tag);
   app_cmd_writer->mark(yijinjing::time::now_in_nano(), RequestStart::tag);
 
   // have to be at this position, for triggering strategy(other) prepare
@@ -162,9 +137,6 @@ void master::deregister_app(int64_t trigger_time, uint32_t app_location_uid) {
   auto location = get_location(app_location_uid);
   SPDLOG_DEBUG("location: {}", location->to_string());
   SPDLOG_INFO("app {} gone", location->uname);
-  if (has_writer(app_location_uid)) {
-    get_writer(app_location_uid)->mark(trigger_time, SessionEnd::tag);
-  }
   deregister_channel(app_location_uid);
   deregister_band(app_location_uid);
   deregister_location(trigger_time, app_location_uid);
@@ -174,7 +146,6 @@ void master::deregister_app(int64_t trigger_time, uint32_t app_location_uid) {
   const Deregister deregister = location->to<Deregister>();
   SPDLOG_DEBUG("Deregister: {}", deregister.to_string());
   get_writer(location::PUBLIC)->write(trigger_time, deregister);
-  cached_.close_session(location, yijinjing::time::now_in_nano());
 }
 
 void master::on_request_deregister(const event_ptr &event) {
@@ -207,9 +178,9 @@ void master::react() {
   events_ | is(Location::tag) | $$(on_new_location(event));
   events_ | is(Register::tag) | $$(register_app(event));
   events_ | is(Ping::tag) | $$(pong(event));
-  events_ | is(CacheReset::tag) | $([&](const event_ptr &event) { cached_.cache_reset(event); });
-  events_ | is(CachedPause::tag) | $$(cached_.switch_feed_storage(true));
-  events_ | is(CachedResume::tag) | $$(cached_.switch_feed_storage(false));
+  events_ | is(CacheReset::tag) | $([&](const event_ptr &event) { state_cache_.cache_reset(event); });
+  events_ | is(CachedPause::tag) | $$(state_cache_.switch_feed_storage(true));
+  events_ | is(CachedResume::tag) | $$(state_cache_.switch_feed_storage(false));
   events_ | instanceof<yijinjing::journal::frame>() | $$(feed(event));
 
   // have to be at bottom of react, for avoid event still required after reader disjoin
@@ -251,7 +222,7 @@ void master::handle_timer_tasks() {
 void master::try_add_location(int64_t trigger_time, const location_ptr &app_location) {
   if (not has_location(app_location->uid)) {
     add_location(trigger_time, app_location);
-    cached_.feed_profile(dynamic_cast<Location &>(*app_location));
+    state_cache_.feed_profile(dynamic_cast<Location &>(*app_location));
   }
 }
 
@@ -261,8 +232,6 @@ void master::feed(const event_ptr &event) {
   if (!is_location_live(event->source())) {
     return;
   }
-
-  cached_.update_session(std::dynamic_pointer_cast<yijinjing::journal::frame>(event));
 
   if (event->dest() == location::SYNC) {
     return;
@@ -276,7 +245,7 @@ void master::feed(const event_ptr &event) {
     return;
   }
 
-  cached_.feed(event);
+  state_cache_.feed(event);
 }
 
 void master::pong(const event_ptr &) { get_io_device()->get_publisher()->publish("{}"); }
@@ -303,9 +272,9 @@ void master::on_request_write_to_band(const event_ptr &event) {
     return;
   }
 
-  // cached_.try_ensure_cached_storage have to be in this position, for case it taking too long to send channel/band
+  // State storage must be ready before the channel/band request is published.
   // slowly
-  cached_.try_ensure_cached_storage(get_location(app_uid), request.location_uid);
+  state_cache_.try_ensure_cached_storage(get_location(app_uid), request.location_uid);
   reader_->join(get_location(app_uid), request.location_uid, trigger_time, page_size);
   require_write_to_band(trigger_time, app_uid, target_location, page_size);
   Band band = {};
@@ -324,9 +293,9 @@ void master::on_request_write_to(const event_ptr &event) {
     return;
   }
 
-  // cached_.try_ensure_cached_storage have to be in this position, for case it taking too long to send channel/band
+  // State storage must be ready before the channel/band request is published.
   // slowly
-  cached_.try_ensure_cached_storage(get_location(app_uid), request.dest_id);
+  state_cache_.try_ensure_cached_storage(get_location(app_uid), request.dest_id);
   reader_->join(get_location(app_uid), request.dest_id, trigger_time, request.page_size);
   require_write_to(trigger_time, app_uid, request.dest_id, request.page_size);
 
@@ -349,9 +318,9 @@ void master::on_request_read_from(const event_ptr &event) {
     return;
   }
 
-  // cached_.try_ensure_cached_storage have to be in this position, for case it taking too long to send channel/band
+  // State storage must be ready before the channel/band request is published.
   // slowly
-  cached_.try_ensure_cached_storage(get_location(request.source_id), app_uid);
+  state_cache_.try_ensure_cached_storage(get_location(request.source_id), app_uid);
   reader_->join(get_location(request.source_id), app_uid, trigger_time, request.page_size);
   require_write_to(trigger_time, request.source_id, app_uid, request.page_size);
   require_read_from(trigger_time, app_uid, request.source_id, request.from_time, request.page_size);
@@ -385,7 +354,7 @@ void master::on_channel_request(const event_ptr &event) {
   const Channel &channel = event->data<Channel>();
   auto trigger_time = event->gen_time();
   if (is_location_live(channel.source_id) and not has_channel(channel.source_id, channel.dest_id)) {
-    cached_.try_ensure_cached_storage(get_location(channel.source_id), channel.dest_id);
+    state_cache_.try_ensure_cached_storage(get_location(channel.source_id), channel.dest_id);
     reader_->join(get_location(channel.source_id), channel.dest_id, trigger_time);
     require_write_to(trigger_time, channel.source_id, channel.dest_id);
     register_channel(trigger_time, channel);

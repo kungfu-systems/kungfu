@@ -9,9 +9,9 @@
 
 #include <kungfu/runtime/common.h>
 
-#include <kungfu/runtime/cache/runtime.h>
 #include <kungfu/runtime/io.h>
 #include <kungfu/runtime/practice/hero.h>
+#include <kungfu/runtime/state_cache/model.h>
 #include <kungfu/yijinjing/time.h>
 
 namespace kungfu::runtime::practice {
@@ -50,11 +50,9 @@ public:
 
   uint32_t get_master_command_uid() const;
 
-  int64_t get_last_active_time() const;
-
   int64_t get_checkin_time() const;
 
-  const cache::bank &get_state_bank() const;
+  const state_cache::bank &get_state_bank() const;
 
   void request_read_from(int64_t trigger_time, uint32_t source_id, int64_t from_time, uint64_t page_size = 0);
 
@@ -179,7 +177,7 @@ public:
   yijinjing::journal::writer_ptr &get_public_writer();
 
 protected:
-  cache::bank state_bank_;
+  state_cache::bank state_bank_;
   yijinjing::journal::writer_ptr master_cmd_writer_for_thread_ = nullptr;
   yijinjing::journal::writer_ptr public_writer_ = nullptr;
   inline static thread_local yijinjing::journal::writer_ptr thread_writer_ = nullptr;
@@ -337,7 +335,6 @@ protected:
 private:
   resource_manager manager_;
   bool started_ = false;
-  int64_t last_active_time_ = INT64_MIN;
   int64_t checkin_time_ = INT64_MIN;
   int32_t timer_usage_count_{0};
   const std::string arguments_ = {};

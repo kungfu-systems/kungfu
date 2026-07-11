@@ -9,7 +9,6 @@
 
 #include <kungfu/runtime/common.h>
 
-#include <kungfu/runtime/index/session.h>
 #include <kungfu/runtime/io.h>
 #include <kungfu/runtime/rx.h>
 #include <kungfu/runtime/util/rocks.h>

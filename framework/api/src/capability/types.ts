@@ -86,11 +86,13 @@ export type RecordFilter = {
 };
 
 export type ReplayAnchor = {
-  location: KfLocation;
+  episodeId: bigint;
+  locationUid: number;
   beginTime: bigint;
   endTime: bigint;
   frameCount: bigint;
-  dataSize: bigint;
+  lastFrameUid: bigint;
+  closed: boolean;
 };
 
 // Live-bus health is a first-class queryable signal (ADR-0011 §4), not a
@@ -216,10 +218,10 @@ export type KfNativeBinding = {
     payload: Uint8Array,
     objectName?: string,
   ) => boolean;
-  SessionStore: new (
-    location: Record<string, string>,
+  storageEpisodeListTyped: (
     runtimeDir: string,
-  ) => { getAllSessions: () => unknown };
+    options?: { location_uid?: number; limit?: bigint | number },
+  ) => { episodes: unknown[] };
   ConfigStore: new (
     runtimeDir: string,
   ) => {

@@ -350,6 +350,12 @@ function testSchemaAuthority() {
   ]);
 }
 
+function checkLegacyJournalSession() {
+  run('legacy journal Session retirement gate', 'node', [
+    path.join('scripts', 'check-legacy-journal-session.mjs'),
+  ]);
+}
+
 function touchesBuildchainKfdEvidence(files) {
   return files.some(
     (file) =>
@@ -390,6 +396,7 @@ function checkStaged() {
   checkCarrierActionEnvelope(['--staged']);
   checkRuntimeGreenfield(['--staged']);
   checkSchemaAuthority();
+  checkLegacyJournalSession();
   const files = stagedFiles();
   if (!files.length) {
     log('[check] no staged source files');
@@ -434,6 +441,7 @@ function checkStaged() {
 function checkShared() {
   testShifuEntryContract();
   testSchemaAuthority();
+  checkLegacyJournalSession();
   checkLayerQualification();
   run('tooling type check', 'pnpm', ['run', 'check:types']);
   run('SDK unit tests', 'pnpm', [
@@ -457,6 +465,7 @@ function checkChanged() {
   checkCarrierActionEnvelope();
   checkRuntimeGreenfield();
   checkSchemaAuthority();
+  checkLegacyJournalSession();
   const files = changedFiles();
   checkPythonFiles('changed', files);
   checkBiomeFiles('changed', files);
@@ -473,6 +482,7 @@ function checkAll() {
   checkCarrierActionEnvelope(['--all']);
   checkRuntimeGreenfield(['--all']);
   checkSchemaAuthority();
+  checkLegacyJournalSession();
   run('repo lint + format check', 'pnpm', ['run', 'lint']);
   checkRustFiles('all', [], { force: true });
   checkBuildchainKfdEvidence([], { force: true });

@@ -4,7 +4,7 @@ import kungfu
 import psutil
 import signal
 import kungfu.runtime.io as kfio
-import kungfu.runtime.journal as kfj
+import kungfu.runtime as kfr
 from typing import Any
 
 from . import os_signal  # type: ignore[attr-defined]  # native submodule
@@ -18,8 +18,8 @@ class Apprentice(yjj.apprentice):
         yjj.apprentice.__init__(
             self,
             yjj.location(
-                kfj.MODES[ctx.mode],
-                kfj.ROLES[ctx.role],
+                kfr.MODES[ctx.mode],
+                kfr.ROLES[ctx.role],
                 ctx.namespace,
                 ctx.name,
                 ctx.runtime_locator,

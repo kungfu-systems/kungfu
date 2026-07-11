@@ -114,21 +114,6 @@ public:
 
 DECLARE_PTR(io_device_client)
 
-class io_device_console : public io_device {
-public:
-  io_device_console(data::location_ptr home, int32_t console_width, int32_t console_height);
-
-  void trace(int64_t begin_time, int64_t end_time, bool in, bool out, std::string csv);
-
-  void show(int64_t begin_time, int64_t end_time, bool in, bool out, std::string csv);
-
-private:
-  int32_t console_width_;
-  int32_t console_height_;
-};
-
-DECLARE_PTR(io_device_console)
-
 void handle_sql_error(int rc, const std::string &error_tip);
 void ensure_sqlite_initilize();
 void ensure_sqlite_shutdown();

@@ -1,23 +1,24 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // 开放层运行时投影器（生产 reader seam）：把 open-layer FB 帧（carrier_type 不在 schema 闭集）
-// 按 .bfbs 运行时反射投影到独立 sqlite db。挂在 `cached::feed()` 上，与 hana×sqlite_orm 闭集**并存**：
+// 按 .bfbs 运行时反射投影到独立 sqlite db。调用方从 reader seam 喂入，与
+// Hana/sqlite_orm 闭集投影**并存**：
 //   - feed(event) 只处理已注册的 open-layer carrier_type，其余帧一律 no-op（交给 hana 路径），互不干扰；
-//   - 默认 OFF：cached 仅在环境变量 KF_OPEN_LAYER_SCHEMAS 指向 schemas 目录时才启用本投影器。
+//   - 默认 OFF：仅在环境变量 KF_OPEN_LAYER_SCHEMAS 指向 schemas 目录时启用。
 // schemas 来源（本切片口径）：KF_OPEN_LAYER_SCHEMAS 目录下 `manifest.txt`，每行 `carrier_type table bfbs_file`
 //   （`#` 开头为注释），逐行 own .bfbs 字节注册进 SchemaRegistry。真正配置格式待后续定。
 //
-// **批量/异步（镜像 cached 后台 worker 模式）**：feed() 不在 reader 热路径上同步写 sqlite——只把帧字节
+// **批量/异步**：feed() 不在 reader 热路径上同步写 sqlite——只把帧字节
 // **拷贝**进内存缓冲（journal mmap page 会被回收，故必须拷出，不能存 mmap 指针）；后台 worker 线程定时
 // 把缓冲在**一个事务**里批量投影。flush()/pending_count() 显式暴露供确定性测试与收尾；dtor 收尾 flush。
 // 生命周期：own SchemaRegistry(own .bfbs 字节) + own sqlite3 db + own worker 线程。
-#ifndef KUNGFU_YIJINJING_CACHE_OPEN_LAYER_PROJECTOR_H
-#define KUNGFU_YIJINJING_CACHE_OPEN_LAYER_PROJECTOR_H
+#ifndef KUNGFU_RUNTIME_PROJECTION_FLATBUFFER_H
+#define KUNGFU_RUNTIME_PROJECTION_FLATBUFFER_H
 
 #include <kungfu/runtime/common.h>
 
 #include <kungfu/common.h>
-#include <kungfu/runtime/cache/fb_schema_registry.h>
+#include <kungfu/runtime/projection/flatbuffer_schema_registry.h>
 
 #include <atomic>
 #include <chrono>
@@ -31,7 +32,7 @@
 #include <thread>
 #include <vector>
 
-namespace kungfu::runtime::cache {
+namespace kungfu::runtime::projection {
 
 class open_layer_projector {
 public:
@@ -116,8 +117,8 @@ public:
       // malformed/truncated frame is skipped (not inserted) rather than driving
       // an out-of-bounds reflection read. Count + warn so a bad producer is
       // observable without aborting the whole batch.
-      const bool ok = projector::project_frame(db_, *entry, reinterpret_cast<const uint8_t *>(p.payload.data()),
-                                               p.payload.size(), p.gen_time, p.frame_uid, p.stream_id);
+      const bool ok = flatbuffer::project_frame(db_, *entry, reinterpret_cast<const uint8_t *>(p.payload.data()),
+                                                p.payload.size(), p.gen_time, p.frame_uid, p.stream_id);
       if (!ok) {
         ++skipped_frames_;
         SPDLOG_WARN("open-layer projector: skipped malformed frame (carrier_type={}, gen_time={}, {} bytes)",
@@ -161,7 +162,7 @@ public:
     return buffer_.size();
   }
 
-  [[nodiscard]] const projector::SchemaRegistry &registry() const { return registry_; }
+  [[nodiscard]] const flatbuffer::SchemaRegistry &registry() const { return registry_; }
   [[nodiscard]] sqlite3 *db() const { return db_; }
 
 private:
@@ -174,7 +175,7 @@ private:
     std::string payload;
   };
 
-  projector::SchemaRegistry registry_;
+  flatbuffer::SchemaRegistry registry_;
   sqlite3 *db_ = nullptr;
   std::vector<pending> buffer_;
   std::mutex buf_mtx_;   // 保护 buffer_（feed push / flush swap）
@@ -186,6 +187,6 @@ private:
 };
 
 DECLARE_PTR(open_layer_projector)
-} // namespace kungfu::runtime::cache
+} // namespace kungfu::runtime::projection
 
-#endif // KUNGFU_YIJINJING_CACHE_OPEN_LAYER_PROJECTOR_H
+#endif // KUNGFU_RUNTIME_PROJECTION_FLATBUFFER_H

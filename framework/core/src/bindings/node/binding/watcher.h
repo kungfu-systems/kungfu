@@ -14,8 +14,8 @@
 #include "io.h"
 #include "journal.h"
 #include "operators.h"
-#include <kungfu/runtime/cache/runtime.h>
 #include <kungfu/runtime/practice/apprentice.h>
+#include <kungfu/runtime/state_cache/model.h>
 
 namespace kungfu::node {
 constexpr uint64_t ID_TRANC = 0x00000000FFFFFFFF;
@@ -102,7 +102,7 @@ private:
   Napi::ObjectReference config_ref_;
   serialize::JsUpdateState update_ledger;
   serialize::JsResetCache reset_cache;
-  runtime::cache::bank data_bank_;
+  runtime::state_cache::bank data_bank_;
   std::vector<kungfu::state<yijinjing::types::CacheReset>> reset_cache_states_;
 
   typedef yijinjing::enums::mode mode;

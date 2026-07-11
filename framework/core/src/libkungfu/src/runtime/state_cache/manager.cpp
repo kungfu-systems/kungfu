@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <kungfu/common.h>
-#include <kungfu/runtime/cache/cached.h>
-#include <kungfu/runtime/cache/open_layer_projector.h>
 #include <kungfu/runtime/practice/hero.h>
+#include <kungfu/runtime/projection/flatbuffer.h>
+#include <kungfu/runtime/state_cache/manager.h>
 #include <kungfu/yijinjing/schema/registry.h>
 #include <kungfu/yijinjing/time.h>
 
@@ -14,7 +14,7 @@ using namespace kungfu::yijinjing::types;
 using namespace kungfu::runtime;
 using namespace kungfu::runtime::practice;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::runtime::cache;
+using namespace kungfu::runtime::state_cache;
 
 // https://sqlite.org/limits.html
 // The maximum number of bytes in the text of an SQL statement is limited to SQLITE_MAX_SQL_LENGTH which defaults to
@@ -23,10 +23,10 @@ using namespace kungfu::runtime::cache;
 #define STORE_INTERVAL 100
 #define RESTORE_LIMIT 5000
 
-namespace kungfu::runtime::cache {
+namespace kungfu::runtime::state_cache {
 
-cached::cached(const kungfu::runtime::io_device_ptr &io_device)
-    : session_builder_(io_device), profile_(io_device->get_locator()),
+manager::manager(const kungfu::runtime::io_device_ptr &io_device)
+    : profile_(io_device->get_locator()),
       ledger_home_location_(practice::make_system_location("service", "ledger", io_device->get_locator())) {
   bypass_cached_ = std::getenv("KF_BYPASS_CACHED") != nullptr;
   profile_.setup();
@@ -35,7 +35,7 @@ cached::cached(const kungfu::runtime::io_device_ptr &io_device)
   // 开放层 FB 投影器（默认 OFF，与 hana 闭集并存）：仅当 KF_OPEN_LAYER_SCHEMAS 指向 schemas 目录时启用。
   if (const char *schemas_dir = std::getenv("KF_OPEN_LAYER_SCHEMAS"); schemas_dir != nullptr) {
     try {
-      open_layer_ = std::make_unique<open_layer_projector>();
+      open_layer_ = std::make_unique<projection::open_layer_projector>();
       auto n = open_layer_->setup(schemas_dir, std::string(schemas_dir) + "/open_layer.db");
       open_layer_->start_worker(); // 后台异步批量 flush，feed() 不在 reader 热路径同步写 sqlite
       SPDLOG_INFO("open-layer projector enabled: {} type(s) from {}", n, schemas_dir);
@@ -46,7 +46,7 @@ cached::cached(const kungfu::runtime::io_device_ptr &io_device)
   }
 }
 
-cached::~cached() {
+manager::~manager() {
 
   m_quit_ = true;
 
@@ -59,8 +59,8 @@ cached::~cached() {
   }
 }
 
-void cached::restore_profile(const yijinjing::data::location_ptr &location,
-                             const yijinjing::journal::writer_ptr &writer) {
+void manager::restore_profile(const yijinjing::data::location_ptr &location,
+                              const yijinjing::journal::writer_ptr &writer) {
   profile_store_mutex_.lock();
   try {
     // for config, basket, instruemnts .etc. from user interface
@@ -76,8 +76,8 @@ void cached::restore_profile(const yijinjing::data::location_ptr &location,
   feed_mutex_.unlock();
 }
 
-void cached::restore_states(const yijinjing::data::location_ptr &location,
-                            const yijinjing::journal::writer_ptr &writer) {
+void manager::restore_states(const yijinjing::data::location_ptr &location,
+                             const yijinjing::journal::writer_ptr &writer) {
   if (bypass_cached_) {
     return;
   }
@@ -172,12 +172,12 @@ void cached::restore_states(const yijinjing::data::location_ptr &location,
   }
 }
 
-void cached::restore(const location_ptr &location, const yijinjing::journal::writer_ptr &writer) {
+void manager::restore(const location_ptr &location, const yijinjing::journal::writer_ptr &writer) {
   restore_profile(location, writer);
   restore_states(location, writer);
 }
 
-void cached::reset_cache_shift(const location_ptr &location) {
+void manager::reset_cache_shift(const location_ptr &location) {
   if (bypass_cached_) {
     return;
   }
@@ -192,7 +192,7 @@ void cached::reset_cache_shift(const location_ptr &location) {
   app_states_shift_.erase(location_uid);
 }
 
-void cached::make_cache_shift(const location_ptr &location) {
+void manager::make_cache_shift(const location_ptr &location) {
   if (bypass_cached_) {
     return;
   }
@@ -201,7 +201,7 @@ void cached::make_cache_shift(const location_ptr &location) {
   app_states_shift_.emplace(location->uid, location);
 }
 
-void cached::try_ensure_cached_storage(const location_ptr &location, uint32_t dest) {
+void manager::try_ensure_cached_storage(const location_ptr &location, uint32_t dest) {
   if (bypass_cached_) {
     return;
   }
@@ -210,12 +210,12 @@ void cached::try_ensure_cached_storage(const location_ptr &location, uint32_t de
   ensure_cached_storage(location, dest);
 }
 
-void cached::ensure_cached_storage(const location_ptr &location, uint32_t dest) {
+void manager::ensure_cached_storage(const location_ptr &location, uint32_t dest) {
   make_cache_shift(location);
   app_states_shift_.at(location->uid).ensure_storage(dest);
 }
 
-bool cached::check_cached_storage_exists(const location_ptr &location, uint32_t dest) {
+bool manager::check_cached_storage_exists(const location_ptr &location, uint32_t dest) {
   if (app_states_shift_.find(location->uid) == app_states_shift_.end()) {
     return false;
   }
@@ -223,7 +223,7 @@ bool cached::check_cached_storage_exists(const location_ptr &location, uint32_t 
   return app_states_shift_.at(location->uid).check_storage_exists(dest);
 }
 
-void cached::cache_reset(const event_ptr &event) {
+void manager::cache_reset(const event_ptr &event) {
   if (bypass_cached_) {
     return;
   }
@@ -244,7 +244,7 @@ void cached::cache_reset(const event_ptr &event) {
   });
 }
 
-void cached::feed(const event_ptr &event) {
+void manager::feed(const event_ptr &event) {
   std::lock_guard<std::mutex> lock(feed_mutex_);
   feed_profile_data(event, profile_feed_bank_);
 
@@ -258,15 +258,15 @@ void cached::feed(const event_ptr &event) {
   }
 }
 
-void cached::run_store_workers() {
-  store_profile_worker_ = std::thread(&cached::do_store_profile_feeds, this);
+void manager::run_store_workers() {
+  store_profile_worker_ = std::thread(&manager::do_store_profile_feeds, this);
 
   if (not bypass_cached_) {
-    store_states_worker_ = std::thread(&cached::do_store_states_feeds, this);
+    store_states_worker_ = std::thread(&manager::do_store_states_feeds, this);
   }
 }
 
-void cached::do_store_states_feeds() {
+void manager::do_store_states_feeds() {
   while (!m_quit_) {
     std::this_thread::sleep_for(std::chrono::milliseconds(STORE_INTERVAL));
     if (storage_pause_) {
@@ -278,7 +278,7 @@ void cached::do_store_states_feeds() {
   SPDLOG_DEBUG("store state feed end");
 }
 
-void cached::do_store_profile_feeds() {
+void manager::do_store_profile_feeds() {
   while (!m_quit_) {
     std::this_thread::sleep_for(std::chrono::milliseconds(STORE_INTERVAL));
     if (storage_pause_) {
@@ -290,8 +290,8 @@ void cached::do_store_profile_feeds() {
   SPDLOG_DEBUG("store profile feed end");
 }
 
-void cached::store_states_feeds() {
-  cache::location_bank tmp_location_bank = {};
+void manager::store_states_feeds() {
+  location_bank tmp_location_bank = {};
   auto store_state_data_start_time = yijinjing::time::now_in_nano();
 
   feed_mutex_.lock();
@@ -341,7 +341,7 @@ void cached::store_states_feeds() {
   }
 }
 
-void cached::store_profile_feeds() {
+void manager::store_profile_feeds() {
   ProfileStateBank tmp_profile_bank = ProfileStateBank(ProfileDataTypes);
   auto store_profile_data_start_time = yijinjing::time::now_in_nano();
 
@@ -381,33 +381,6 @@ void cached::store_profile_feeds() {
   }
 }
 
-void cached::open_session(const location_ptr &location, int64_t open_time) {
-  session_builder_.open_session(location, open_time);
-}
+void manager::switch_feed_storage(bool pause_storage) { storage_pause_ = pause_storage; }
 
-void cached::close_session(const location_ptr &location, int64_t close_time) {
-  session_builder_.close_session(location, close_time);
-}
-
-void cached::close_all_sessions(int64_t close_time) { return session_builder_.close_all_sessions(close_time); }
-
-index::SessionMap &cached::get_all_sessions() { return session_builder_.get_all_sessions(); }
-
-int64_t cached::find_last_active_time(const location_ptr &location) {
-  if (bypass_cached_) {
-    return yijinjing::time::now_in_nano();
-  }
-
-  return session_builder_.find_last_active_time(location);
-}
-
-void cached::update_session(const yijinjing::journal::frame_ptr &frame) {
-  if (bypass_cached_ or storage_pause_) {
-    return;
-  }
-  session_builder_.update_session(frame);
-}
-
-void cached::switch_feed_storage(bool pause_storage) { storage_pause_ = pause_storage; }
-
-} // namespace kungfu::runtime::cache
+} // namespace kungfu::runtime::state_cache

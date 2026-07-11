@@ -24,7 +24,6 @@ using namespace kungfu::yijinjing::enums;
 using namespace kungfu::yijinjing::types;
 using namespace kungfu::runtime;
 using namespace kungfu::runtime::util;
-using namespace kungfu::runtime::cache;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::runtime::journal;
 using namespace kungfu::runtime::nanomsg;

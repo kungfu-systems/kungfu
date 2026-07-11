@@ -26,7 +26,7 @@ That public shape conflicts with the v4 direction:
 
 Add `yijinjing::CorePublicDataTypes` as the C++ registry for Python public
 `pykungfu.yijinjing.types` bindings. It contains only neutral runtime/core data
-structures such as frame/page headers, location/session/register data,
+structures such as frame/page headers and location/register data,
 channel/read/write requests, cache coordination, state updates, and time values.
 
 Add matching Python-public subsets for state and profile bindings:

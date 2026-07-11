@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-#include <kungfu/runtime/cache/sqlite_orm_ext.h>
+#include <kungfu/runtime/projection/sqlite_orm_ext.h>
 
 #include <array>
 #include <cstdint>

@@ -43,8 +43,8 @@ Payload bodies compound the drift: they are stored as `.json` text
 Meanwhile v4 has settled a **two-substrate schema architecture**:
 
 - **Hana closed-set core** (`schema/registry.h` `AllTypes` / `AllDataTypes`):
-  compile-time POD kernel types — `frame_header`, `page_header`, `Session`,
-  `Channel`, `ChannelRequest`, and the rest — registered with stable `carrier_type`
+  compile-time POD kernel types — `frame_header`, `page_header`, `Channel`,
+  `ChannelRequest`, and the rest — registered with stable `carrier_type`
   ids. This is the kernel's own fact substrate. It does **not** depend on
   FlatBuffers; the core is defined, built, read, written, and debugged without
   the FlatBuffers toolchain.
@@ -69,7 +69,7 @@ inventory, bundle root, channel request/cursor, and fsck issue/report — are
 **Hana-core kernel metadata**, not JSON and not FlatBuffers.
 
 1. **Kernel metadata, Hana core.** These records join the yijinjing closed-set
-   core schema (`schema/registry.h`) alongside `frame_header` / `Session` /
+   core schema (`schema/registry.h`) alongside `frame_header` /
    `Channel`. They are compile-time POD types with stable `carrier_type` ids. The
    storage kernel does not depend on the FlatBuffers toolchain to define, read,
    write, or debug them. FlatBuffers stays confined to the open/domain-payload
@@ -94,8 +94,9 @@ inventory, bundle root, channel request/cursor, and fsck issue/report — are
    reflection.** SQLite and RocksDB remain rebuildable projections over the
    journal. The SQLite projection for these core records reuses the existing
    compile-time Hana closed-set → SQLite column path already used by the runtime
-   cache
-   (`libkungfu/runtime/cache/backend.h` `make_storage_ptr` over `sqlite_orm`),
+   state cache
+   (`libkungfu/runtime/projection/hana_sqlite.h` `make_storage_ptr` over
+   `sqlite_orm`),
    **not** the `.bfbs` runtime reflection projector, which serves the FlatBuffers
    open layer. RocksDB stores the POD record bytes.
 
@@ -177,7 +178,7 @@ view boundary, JSON edge rule, and exclusive SQLite projection routing.
   content-addressed bytes. **(SQLite projection done, slice 2)** — the
   source-registry records project to a rebuildable SQLite cache through
   `cache::make_storage_ptr` over `SourceRegistryDataTypes` (the same compile-time
-  Hana closed-set → SQLite column path the profile / session / state caches use,
+  Hana closed-set → SQLite column path the profile / state caches use,
   not the hand-written raw-SQL projection that serves the JSON manifest layer and
   not the `.bfbs` reflection projector). `source_registry_rebuild` replays the
   journal into the typed tables; the journal stays the authority and the

@@ -58,7 +58,6 @@ decltype(__pfnDliNotifyHook2) __pfnDliNotifyHook2 = load_exe_hook;
 #include "io.h"
 #include "journal.h"
 #include "schema.h"
-#include "session_store.h"
 #include "watcher.h"
 
 #include <kungfu/runtime/util/stacktrace.h>
@@ -832,7 +831,6 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
   Schema::Init(env, exports);
   History::Init(env, exports);
   ConfigStore::Init(env, exports);
-  SessionStore::Init(env, exports);
   Frame::Init(env, exports);
   Reader::Init(env, exports);
   Assemble::Init(env, exports);

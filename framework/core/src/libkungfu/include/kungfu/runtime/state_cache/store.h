@@ -4,83 +4,20 @@
 // Created by Keren Dong on 2020/3/27.
 //
 
-#ifndef KUNGFU_CACHE_BACKEND_H
-#define KUNGFU_CACHE_BACKEND_H
+#ifndef KUNGFU_RUNTIME_STATE_CACHE_STORE_H
+#define KUNGFU_RUNTIME_STATE_CACHE_STORE_H
 
 #include <kungfu/runtime/common.h>
 
-#include <kungfu/runtime/cache/runtime.h>
-#include <kungfu/runtime/cache/sqlite_orm_ext.h>
+#include <kungfu/runtime/projection/hana_sqlite.h>
+#include <kungfu/runtime/state_cache/model.h>
 #include <kungfu/yijinjing/journal/journal.h>
 #include <kungfu/yijinjing/schema/registry.h>
 #include <kungfu/yijinjing/time.h>
 
-namespace kungfu::runtime::cache {
-template <typename ValueType> std::enable_if_t<std::is_arithmetic_v<ValueType>, ValueType> make_default() { return 0; }
+namespace kungfu::runtime::state_cache {
 
-template <typename ValueType> std::enable_if_t<std::is_enum_v<ValueType>, int> make_default() { return 0; }
-
-template <typename ValueType> std::enable_if_t<is_array_v<ValueType>, std::string> make_default() {
-  return std::string();
-}
-
-template <typename ValueType>
-std::enable_if_t<not is_numeric_v<ValueType> and not is_array_v<ValueType>, ValueType> make_default() {
-  return ValueType();
-}
-
-constexpr auto make_storage_ptr = [](const std::string &db_file, const auto &types) {
-  constexpr auto make_tables = [](const auto &types) {
-    return [&](auto key) {
-      using DataType = typename decltype(+types[key])::type;
-      auto data_accessors = boost::hana::accessors<DataType>();
-      auto columns = boost::hana::transform(data_accessors, [&](auto it) {
-        auto name = boost::hana::first(it);
-        auto accessor = boost::hana::second(it);
-        auto member_pointer = member_pointer_trait<decltype(accessor)>().pointer();
-        using MemberType = std::decay_t<decltype(accessor(DataType{}))>;
-        return sqlite_orm::make_column(name.c_str(), member_pointer,
-                                       sqlite_orm::default_value(make_default<MemberType>()));
-      });
-      auto pk_members = boost::hana::transform(DataType::primary_keys, [&](auto pk) {
-        auto pk_member =
-            boost::hana::find_if(data_accessors, hana::on(boost::hana::equal_t::to(pk), boost::hana::first));
-        auto accessor = boost::hana::second(*pk_member);
-        return member_pointer_trait<decltype(accessor)>().pointer();
-      });
-      auto make_primary_keys = [](auto... keys) { return sqlite_orm::primary_key(keys...); };
-      auto primary_keys = boost::hana::unpack(pk_members, make_primary_keys);
-      constexpr auto table_maker = [](const std::string &table_name, const auto &primary_keys) {
-        return [&](auto... columns) { return sqlite_orm::make_table(table_name, columns..., primary_keys); };
-      };
-      return boost::hana::unpack(columns, table_maker(key.c_str(), primary_keys));
-    };
-  };
-  constexpr auto storage_ptr_maker = [](const std::string &db_file) {
-    return [&](auto... tables) {
-      using storage_type = decltype(sqlite_orm::make_storage(db_file, tables...));
-      auto storage_ptr = std::make_shared<storage_type>(sqlite_orm::make_storage(db_file, tables...));
-      // storage->busy_timeout() only arms the connection alive at call time,
-      // and sqlite_orm reopens connections per operation — so later
-      // operations ran with no timeout at all and any cross-process
-      // contention surfaced as an SQLITE_BUSY throw (observed escaping
-      // thread/napi boundaries and killing whole processes). Arm every fresh
-      // connection through the on_open hook instead, which our vendored
-      // sqlite_orm invokes before pragma replay.
-      storage_ptr->on_open = [](sqlite3 *db) {
-        sqlite3_busy_timeout(db, 5 * yijinjing::time_unit::MILLISECONDS_PER_SECOND);
-      };
-      return storage_ptr;
-    };
-  };
-  auto tables = boost::hana::transform(boost::hana::keys(types), make_tables(types));
-  return boost::hana::unpack(tables, storage_ptr_maker(db_file));
-};
-
-using ProfileStoragePtr = decltype(make_storage_ptr(std::string(), yijinjing::ProfileDataTypes));
-using SessionStoragePtr = decltype(make_storage_ptr(std::string(), yijinjing::SessionDataTypes));
-using StateStoragePtr = decltype(make_storage_ptr(std::string(), yijinjing::StateDataTypes));
-using SourceRegistryStoragePtr = decltype(make_storage_ptr(std::string(), yijinjing::SourceRegistryDataTypes));
+using StateStoragePtr = projection::StateStoragePtr;
 
 template <typename, typename = void, bool = true> struct time_spec;
 
@@ -229,14 +166,14 @@ private:
     }
   }
 
-  template <typename DataType> void restore(cache::bank &bank, uint32_t dest, StateStoragePtr &storage) {
+  template <typename DataType> void restore(bank &bank, uint32_t dest, StateStoragePtr &storage) {
     auto from = yijinjing::time::history_window_start();
     for (auto &data : time_spec<DataType>::get_all(storage, from, INT64_MAX)) {
       bank << state(location_->uid, dest, from, data);
     }
   }
 
-  template <typename DataType> void restore(cache::bank &bank, uint32_t dest, StateStoragePtr &storage, int limit) {
+  template <typename DataType> void restore(bank &bank, uint32_t dest, StateStoragePtr &storage, int limit) {
     auto from = yijinjing::time::history_window_start();
     for (auto &data : time_spec<DataType>::get_all(storage, from, INT64_MAX, limit)) {
       bank << state(location_->uid, dest, from, data);
@@ -245,6 +182,6 @@ private:
 };
 
 DECLARE_PTR(shift)
-} // namespace kungfu::runtime::cache
+} // namespace kungfu::runtime::state_cache
 
-#endif // KUNGFU_CACHE_BACKEND_H
+#endif // KUNGFU_RUNTIME_STATE_CACHE_STORE_H

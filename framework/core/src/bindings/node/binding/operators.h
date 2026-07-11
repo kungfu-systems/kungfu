@@ -11,8 +11,9 @@
 #include "data_table.h"
 
 #include <kungfu/common.h>
-#include <kungfu/runtime/cache/backend.h>
 #include <kungfu/runtime/practice/apprentice.h>
+#include <kungfu/runtime/projection/hana_sqlite.h>
+#include <kungfu/runtime/state_cache/store.h>
 #include <kungfu/yijinjing/schema/registry.h>
 #include <kungfu/yijinjing/time.h>
 
@@ -314,7 +315,7 @@ public:
 
     for (auto dest : locator->list_location_dest_by_db(location_)) {
       auto db_file = locator->layout_file(location_, yijinjing::enums::layout::SQLITE, fmt::format("{:08x}", dest));
-      auto storage = runtime::cache::make_storage_ptr(db_file, yijinjing::StateDataTypes);
+      auto storage = runtime::projection::make_storage_ptr(db_file, yijinjing::StateDataTypes);
       if (sync_schema) {
         storage->sync_schema();
       }
@@ -325,7 +326,7 @@ public:
           return;
         }
 
-        for (const auto &data : runtime::cache::time_spec<DataType>::get_all(storage, from, to)) {
+        for (const auto &data : runtime::state_cache::time_spec<DataType>::get_all(storage, from, to)) {
           try {
             set(data, state_, source, dest, now);
           } catch (const std::exception &e) {

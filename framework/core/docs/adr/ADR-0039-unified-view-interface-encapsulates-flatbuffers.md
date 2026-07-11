@@ -5,7 +5,7 @@
 - Category: (architecture) memory-safety mechanism — how zero-copy views over
   FlatBuffers buffers are made temporally safe by construction instead of by
   discipline.
-- Subsystem: `libkungfu/runtime/cache` (the `.bfbs` reflection projector and
+- Subsystem: `libkungfu/runtime/projection` (the `.bfbs` reflection projector and
   schema registry), `libkungfu/runtime/schema` (schema compiler), the Python/Node
   bindings that consume them, and — for the zero-cost regime only — the
   `libyijinjing` journal POD read path.
@@ -34,9 +34,9 @@ not sprawling:
   journal mmap is temporally safe by construction and language-independent; it is
   not a hazard.
 - The entire C++ raw-FB / reflection surface is **~4 files, ~25 call sites**, all
-  in `libkungfu/runtime/cache` (`fb_projector.h`, `fb_schema_registry.h`,
-  `open_layer_projector.h`) and `libkungfu/runtime/schema` (`schema_compiler.cpp`).
-  `fb_projector.h` (the `.bfbs` reflection → SQLite projector) holds most of it and
+  in `libkungfu/runtime/projection` (`flatbuffer.h`,
+  `flatbuffer_schema_registry.h`) and `libkungfu/runtime/schema`
+  (`schema_compiler.cpp`). The projector holds most of it and
   is exactly where the dangling-view bug lived.
 - The downstream C++ consumer is essentially `bindings/python/binding/py-runtime.cpp`.
 
@@ -101,7 +101,7 @@ Enforcement is a mechanism, not a rule:
 ## First delivery (staged)
 
 1. **Map** the current raw-FB files and call sites (done: 4 files, 25 sites in
-   `runtime/cache` + `runtime/schema`; kernel is FB-free). Confirmed against live
+   `runtime/projection` + `runtime/schema`; kernel is FB-free). Confirmed against live
    `dev/v4/v4.0`.
 2. **Define `kungfu::view`** (done, slice 1) — `pod.h` zero-cost POD accessor
    (wraps `frame->data<T>()`; proven to compile to the identical

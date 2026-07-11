@@ -9,9 +9,9 @@
 
 #include <kungfu/runtime/common.h>
 
-#include <kungfu/runtime/cache/cached.h>
 #include <kungfu/runtime/io.h>
 #include <kungfu/runtime/practice/hero.h>
+#include <kungfu/runtime/state_cache/manager.h>
 #include <kungfu/yijinjing/journal/common.h>
 
 namespace kungfu::runtime::practice {
@@ -35,8 +35,6 @@ public:
 
   void notify_master_deregister_on_exit();
 
-  void mark_session_end_on_exit();
-
   void on_notify() override;
 
   virtual void on_register(int64_t gen_time, const yijinjing::types::Register &register_data) = 0;
@@ -57,7 +55,7 @@ public:
 
 protected:
   int64_t last_check_;
-  cache::cached cached_;
+  state_cache::manager state_cache_;
 
   std::unordered_map<uint32_t, uint32_t> app_cmd_locations_ = {};
   std::unordered_map<uint32_t, std::unordered_map<int32_t, timer_task>> timer_tasks_ = {};

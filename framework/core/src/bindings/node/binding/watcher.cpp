@@ -7,7 +7,7 @@
 #include "watcher.h"
 #include "config_store.h"
 #include "history.h"
-#include <kungfu/runtime/cache/cached.h>
+#include <kungfu/runtime/state_cache/manager.h>
 #include <sstream>
 
 using namespace kungfu::rx;
@@ -15,7 +15,7 @@ using namespace kungfu::yijinjing;
 using namespace kungfu::yijinjing::enums;
 using namespace kungfu::yijinjing::types;
 using namespace kungfu::runtime;
-using namespace kungfu::runtime::cache;
+using namespace kungfu::runtime::state_cache;
 using namespace kungfu::yijinjing::data;
 
 namespace kungfu::node {
@@ -248,7 +248,7 @@ void Watcher::on_react() {
   events_ | is(Register::tag) | $$(OnRegister(event->gen_time(), event->data<Register>()));
   events_ | is(Deregister::tag) | $$(OnDeregister(event->gen_time(), event->data<Deregister>()));
   auto before_start_events = events_ | take_until(events_ | is(RequestStart::tag));
-  before_start_events | $$(cached::feed_state_data(event, data_bank_));
+  before_start_events | $$(manager::feed_state_data(event, data_bank_));
 }
 
 bool Watcher::has_writer(uint32_t dest_id) const { return writers_.find(dest_id) != writers_.end(); }
@@ -261,7 +261,7 @@ yijinjing::journal::writer_ptr Watcher::get_writer(uint32_t dest_id) const {
 }
 
 void Watcher::on_start() {
-  events_ | $$(cached::feed_state_data(event, data_bank_));
+  events_ | $$(manager::feed_state_data(event, data_bank_));
 
   events_ | is(Channel::tag) | $$(InspectChannel(event->gen_time(), event->data<Channel>()));
   events_ | is(CacheReset::tag) | $$(UpdateEventCache(event));
