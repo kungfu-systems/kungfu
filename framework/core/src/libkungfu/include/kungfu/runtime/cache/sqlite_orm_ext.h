@@ -7,6 +7,9 @@
 #ifndef KUNGFU_SQLITE_ORM_EXT_H
 #define KUNGFU_SQLITE_ORM_EXT_H
 
+#include <cstring>
+#include <stdexcept>
+
 #include <kungfu/runtime/common.h>
 
 #include <sqlite_orm/sqlite_orm.h>
@@ -37,18 +40,16 @@ template <size_t N> struct statement_binder<kungfu::array<char, N>> {
 
 template <typename V, size_t N> struct statement_binder<kungfu::array<V, N>> {
   int bind(sqlite3_stmt *stmt, int index, const kungfu::array<V, N> &value) {
-    return sqlite3_bind_blob(stmt, index, value, sizeof(value.value), SQLITE_TRANSIENT);
+    static_assert(std::is_trivially_copyable_v<V>, "SQLite BLOB arrays require trivially copyable elements");
+    return sqlite3_bind_blob64(stmt, index, value.value, sizeof(value.value), SQLITE_TRANSIENT);
   }
 };
 
 template <typename V> struct statement_binder<std::vector<V>, std::enable_if_t<not std::is_same_v<V, char>>> {
   int bind(sqlite3_stmt *stmt, int index, const std::vector<V> &value) {
-    if (value.size()) {
-      int size = value.size() * sizeof(V);
-      return sqlite3_bind_blob(stmt, index, (const void *)&value.front(), size, SQLITE_TRANSIENT);
-    } else {
-      return sqlite3_bind_blob(stmt, index, "", 0, SQLITE_TRANSIENT);
-    }
+    static_assert(std::is_trivially_copyable_v<V>, "SQLite BLOB vectors require trivially copyable elements");
+    const void *data = value.empty() ? static_cast<const void *>("") : static_cast<const void *>(value.data());
+    return sqlite3_bind_blob64(stmt, index, data, value.size() * sizeof(V), SQLITE_TRANSIENT);
   }
 };
 } // namespace sqlite_orm
@@ -76,7 +77,16 @@ template <typename V, size_t N> struct row_extractor<kungfu::array<V, N>> {
   kungfu::array<V, N> extract(const char *row_value) { return kungfu::array<V, N>{row_value}; }
 
   kungfu::array<V, N> extract(sqlite3_stmt *stmt, int columnIndex) {
-    return kungfu::array<V, N>{sqlite3_column_text(stmt, columnIndex)};
+    static_assert(std::is_trivially_copyable_v<V>, "SQLite BLOB arrays require trivially copyable elements");
+    const auto bytes = sqlite3_column_bytes(stmt, columnIndex);
+    if (bytes != static_cast<int>(sizeof(V) * N)) {
+      throw std::runtime_error("SQLite BLOB array has an invalid byte length");
+    }
+    const auto *blob = static_cast<const unsigned char *>(sqlite3_column_blob(stmt, columnIndex));
+    if (blob == nullptr && bytes != 0) {
+      throw std::runtime_error("SQLite BLOB array is null");
+    }
+    return kungfu::array<V, N>{blob};
   }
 };
 
@@ -97,13 +107,19 @@ template <typename V> struct row_extractor<std::vector<V>> {
 
 protected:
   std::vector<V> go(const char *bytes, size_t len) {
-    if (len) {
-      std::vector<V> res;
-      res.reserve(len / sizeof(V));
-      std::copy(bytes, bytes + len, std::back_inserter(res));
-      return res;
+    static_assert(std::is_trivially_copyable_v<V>, "SQLite BLOB vectors require trivially copyable elements");
+    if (len % sizeof(V) != 0) {
+      throw std::runtime_error("SQLite BLOB vector has an invalid byte length");
     }
-    return {};
+    if (len == 0) {
+      return {};
+    }
+    if (bytes == nullptr) {
+      throw std::runtime_error("SQLite BLOB vector is null");
+    }
+    std::vector<V> result(len / sizeof(V));
+    std::memcpy(result.data(), bytes, len);
+    return result;
   }
 };
 } // namespace sqlite_orm
