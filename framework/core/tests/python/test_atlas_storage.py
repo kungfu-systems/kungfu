@@ -375,6 +375,7 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
         "compact_plan",
         "verify_sync",
         "query",
+        "fact_query",
         "layout",
         "episode_begin",
         "episode_heartbeat",
@@ -669,6 +670,107 @@ def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
     assert bundle["dependencies"][0]["status"] == "declared_external"
     assert bundle["record_count"] == 5
     assert bundle["frame_count"] == 1
+
+
+def test_fact_query_reproduces_head_and_historical_episode_cuts(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    opened = storage_service.episode_begin(
+        runtime_dir,
+        episode_id=1048,
+        title="query basis proof",
+        actor="pytest",
+        source="adr-0048-q0",
+        begin_time=1000,
+    )
+    attached = storage_service.episode_attach_frame(
+        runtime_dir,
+        episode_id=1048,
+        frame_uid=2001,
+        trigger_frame_uid=0,
+        stream_id=48,
+        gen_time=1100,
+        carrier_type=10803,
+        source=1,
+        dest=0,
+        data_length=12,
+        integrity_version=2,
+        payload_checksum=123,
+        frame_checksum=456,
+    )
+    storage_service.episode_end(
+        runtime_dir,
+        episode_id=1048,
+        end_time=1200,
+        last_frame_uid=2001,
+        frame_count=1,
+        reason="done",
+    )
+
+    records = storage_service.episode_inspect(runtime_dir, episode_id=1048)["records"]
+    attached_record = next(
+        record
+        for record in records
+        if record["record_kind"] == "episode_frame_attached"
+    )
+    historical_cut = {
+        "kind": "manifest_frame_uid",
+        "manifest_frame_uid": str(attached_record["manifest_frame_uid"]),
+    }
+    historical = storage_service.fact_query(
+        runtime_dir, episode_id=1048, cut=historical_cut
+    )
+    repeated = storage_service.fact_query(
+        runtime_dir, episode_id=1048, cut=historical_cut
+    )
+    head = storage_service.fact_query(runtime_dir, episode_id=1048)
+
+    assert opened["episode_id"] == attached["episode_id"]
+    assert historical == repeated
+    assert historical["schema"] == "kungfu.query.result/v1"
+    assert historical["definition"]["schema"] == "kungfu.query.definition/v1"
+    assert historical["definition"]["basis"]["cut"] == historical_cut
+    assert historical["rows"][0]["status"] == "open"
+    assert historical["rows"][0]["content_root_status"] == "undefined"
+    assert historical["lineage"]["authority"]["kind"] == "yijinjing-journal"
+    assert historical["lineage"]["authority"]["record_count"] == 2
+    assert historical["lineage"]["cut"]["resolved"] == historical_cut
+    assert historical["lineage"]["determinism"] == "deterministic"
+    assert historical["lineage"]["missing_inputs"] == []
+    assert set(historical["lineage"]["time_basis"]) == {
+        "valid_time",
+        "system_time",
+        "causal_time",
+    }
+    assert historical["lineage"]["time_basis"]["valid_time"] == "not-projected"
+    assert (
+        historical["lineage"]["policy_versions"]["engine"]
+        == "episode-authority-scan/v1"
+    )
+
+    assert head["definition"]["basis"]["cut"] == {"kind": "head"}
+    assert head["rows"][0]["status"] == "ended"
+    assert head["rows"][0]["content_root_status"] == "verified"
+    assert head["result_hash"] != historical["result_hash"]
+    assert head["lineage"]["cut"]["resolved"]["kind"] == "manifest_frame_uid"
+    assert head["lineage"]["episode_content_roots"][0]["status"] == "verified"
+
+    missing = storage_service.fact_query(
+        runtime_dir,
+        episode_id=1048,
+        cut={
+            "kind": "manifest_frame_uid",
+            "manifest_frame_uid": "18446744073709551615",
+        },
+    )
+    assert missing["rows"] == []
+    assert missing["lineage"]["determinism"] == "unverifiable"
+    assert missing["lineage"]["cut"]["resolved"] == {"kind": "unresolved"}
+    assert missing["lineage"]["missing_inputs"] == [
+        {
+            "kind": "manifest_cut",
+            "manifest_frame_uid": "18446744073709551615",
+        }
+    ]
 
 
 # A well-formed digest whose bytes were never published: stage 4 resolves

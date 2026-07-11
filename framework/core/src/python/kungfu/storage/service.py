@@ -613,6 +613,46 @@ def episode_inspect(runtime_dir: str | Path, *, episode_id: int) -> dict[str, An
     )
 
 
+def fact_query(
+    runtime_dir: str | Path,
+    *,
+    episode_id: int = 0,
+    cut: dict[str, Any] | None = None,
+    limit: int = 100,
+) -> dict[str, Any]:
+    """Run the ADR-0048 Q0 Episode authority-scan reference query."""
+
+    definition = {
+        "schema": "kungfu.query.definition/v1",
+        "basis": {
+            "scope": "episode-manifest",
+            "episode_id": _u64(episode_id),
+            "perspective": "manifest-append-order",
+            "cut": cut or {"kind": "head"},
+            "policy": {
+                "fold": "episode-manifest-fold/v1",
+                "schema": "kungfu.episode.manifest/v1",
+                "engine": "episode-authority-scan/v1",
+                "conflict": "preserve-source-claims/v1",
+                "redaction": "report-missing-evidence/v1",
+            },
+            "time_basis": {
+                "valid_time": "not-projected",
+                "system_time": "manifest-gen-time",
+                "causal_time": "manifest-order-and-episode-refs",
+            },
+        },
+        "object": "episodes",
+        "limit": limit,
+        "evidence": "proof",
+    }
+    return dict(
+        _runtime().run_storage_service_operation(
+            "fact_query", str(runtime_dir), {"definition": definition}
+        )
+    )
+
+
 def episode_recover(
     runtime_dir: str | Path,
     *,

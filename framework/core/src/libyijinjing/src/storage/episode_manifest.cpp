@@ -328,6 +328,11 @@ uint64_t record_episode_id(const episode_manifest_record &record) {
 // first-open-wins; watermarks are last-writer-wins; collections keep append
 // order including duplicates.
 void fold_into(episode_manifest_fold &fold, const episode_manifest_record &record) {
+  if (fold.total_record_count == 0) {
+    fold.first_manifest_frame_uid = record.manifest_frame_uid;
+  }
+  fold.last_manifest_frame_uid = record.manifest_frame_uid;
+  fold.last_manifest_gen_time = record.manifest_gen_time;
   ++fold.total_record_count;
   if (std::holds_alternative<episode_manifest_unknown_record>(record.body)) {
     ++fold.unknown_record_count;
@@ -720,6 +725,12 @@ std::string episode_root_chain_link(size_t index, const std::string &previous, c
 
 } // namespace
 
+nlohmann::json episode_summary_json(const episode_current_view &view) { return summary_json(view); }
+
+nlohmann::json episode_content_root_json(const episode_current_view &view, size_t unknown_record_count) {
+  return content_root_json(view, unknown_record_count);
+}
+
 episode_content_root compute_episode_content_root(const episode_current_view &view) {
   episode_content_root root{};
   root.algorithm = CONTENT_HASH_ALGORITHM_SHA256;
@@ -993,6 +1004,23 @@ std::vector<episode_manifest_record> episode_manifest_store::read_typed_records(
 episode_manifest_fold episode_manifest_store::fold_typed_records() const {
   episode_manifest_fold fold;
   for_each_typed_record([&fold](const episode_manifest_record &record) { fold_into(fold, record); });
+  return fold;
+}
+
+episode_manifest_fold episode_manifest_store::fold_typed_records_until(uint64_t manifest_frame_uid) const {
+  episode_manifest_fold fold;
+  fold.cut_found = false;
+  bool complete = false;
+  for_each_typed_record([&](const episode_manifest_record &record) {
+    if (complete) {
+      return;
+    }
+    fold_into(fold, record);
+    if (record.manifest_frame_uid == manifest_frame_uid) {
+      fold.cut_found = true;
+      complete = true;
+    }
+  });
   return fold;
 }
 

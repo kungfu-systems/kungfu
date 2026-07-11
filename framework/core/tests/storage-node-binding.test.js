@@ -437,6 +437,23 @@ test(
         runtimeDir,
         { episode_id: 901 },
       );
+      const factQuery = kungfu.runStorageServiceOperation(
+        'fact_query',
+        runtimeDir,
+        {
+          definition: {
+            schema: 'kungfu.query.definition/v1',
+            basis: {
+              scope: 'episode-manifest',
+              episode_id: '901',
+              perspective: 'manifest-append-order',
+              cut: { kind: 'head' },
+            },
+            object: 'episodes',
+            evidence: 'proof',
+          },
+        },
+      );
       assert.equal(
         fsck.qualification.schema,
         'kungfu.episode.qualification/v1',
@@ -451,6 +468,10 @@ test(
         fsck.qualification.safe_capabilities.includes('append'),
         false,
       );
+      assert.equal(factQuery.schema, 'kungfu.query.result/v1');
+      assert.equal(factQuery.rows[0].status, 'ended');
+      assert.equal(factQuery.lineage.authority.kind, 'yijinjing-journal');
+      assert.equal(factQuery.lineage.determinism, 'deterministic');
     } finally {
       fs.rmSync(runtimeDir, { recursive: true, force: true });
     }

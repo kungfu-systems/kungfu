@@ -170,7 +170,18 @@ struct episode_manifest_fold {
   size_t total_record_count = 0;
   size_t unknown_record_count = 0;
   size_t unfolded_record_count = 0;
+  uint64_t first_manifest_frame_uid = 0;
+  uint64_t last_manifest_frame_uid = 0;
+  int64_t last_manifest_gen_time = 0;
+  bool cut_found = true;
 };
+
+// Stable edge projections of one typed folded view. Query/reference paths use
+// these helpers so list/inspect and authority-scan cannot silently derive
+// different Episode row or content-root semantics.
+[[nodiscard]] nlohmann::json episode_summary_json(const episode_current_view &view);
+
+[[nodiscard]] nlohmann::json episode_content_root_json(const episode_current_view &view, size_t unknown_record_count);
 
 // ADR-0043: the content root of one Episode's owned claim sequence — a linear
 // hash chain over the covered records in manifest append order (the first
@@ -231,6 +242,11 @@ public:
   // Fold the journal into the typed current views (the canonical in-memory
   // derivation shared by list/inspect/fsck and future projection/query).
   [[nodiscard]] episode_manifest_fold fold_typed_records() const;
+
+  // Historical reference fold: admit records in manifest append order through
+  // the exact frame uid (inclusive). The uid is a stable token, not a sortable
+  // time value. cut_found is false when the requested token is absent.
+  [[nodiscard]] episode_manifest_fold fold_typed_records_until(uint64_t manifest_frame_uid) const;
 
   // Edge projections over the typed fold. JSON is produced here and only here.
   [[nodiscard]] nlohmann::json list(uint64_t location_uid = 0, uint64_t limit = 100) const;
