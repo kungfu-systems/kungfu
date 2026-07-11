@@ -1,0 +1,110 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Domain-neutral declaration and admission facts for ADR-0051.
+//
+// This is the single persisted schema owner. JSON accepted by the public
+// storage-service edge is normalized by libkungfu, encoded through this
+// schema, and written as the FlatBuffers payload of the v4 action envelope.
+// JSON returned by CLI, Python, Node, or Rust is a projection of these records.
+//
+// Evolution: append fields at the tail only; never reorder, delete, or reuse
+// field ids; no required fields.
+
+namespace kungfu.facts.fb;
+
+enum EventKind : byte {
+  ContractWorldDeclared = 0,
+  FactSurfaceDeclared = 1,
+  ObservationRecorded = 2,
+  AdmissionDecided = 3
+}
+
+enum ObservationAction : byte {
+  Assert = 0,
+  Correct = 1,
+  Retract = 2
+}
+
+enum AdmissionOutcome : byte {
+  Admitted = 0,
+  UnregisteredSurface = 1,
+  IncompatibleSchema = 2,
+  AmbiguousAuthority = 3,
+  Unverifiable = 4
+}
+
+table DeclarationRef {
+  id:string;
+  version:string;
+  root:string;
+}
+
+table ContractWorldDeclaration {
+  id:string;
+  version:string;
+  root:string;
+  effective_from:long;
+  effective_until:long;
+  fact_surface_ids:[string];
+}
+
+table FactSurfaceDeclaration {
+  id:string;
+  version:string;
+  root:string;
+  contract_world:DeclarationRef;
+  effective_from:long;
+  effective_until:long;
+  schema_owner_root:string;
+  source_authorities:[string];
+  identity_policy:string;
+  valid_time_policy:string;
+  system_time_policy:string;
+  causal_time_policy:string;
+  reducer_policy:string;
+  correction_policy:string;
+  retraction_policy:string;
+  conflict_policy:string;
+  redaction_policy:string;
+  compatibility_policy:string;
+  known_limits:[string];
+}
+
+table Observation {
+  observation_id:string;
+  contract_world_id:string;
+  fact_surface_id:string;
+  schema_owner_root:string;
+  source_id:string;
+  subject_key:string;
+  valid_from:long;
+  valid_until:long;
+  payload_hash:string;
+  payload_ref:string;
+  action:ObservationAction;
+  target_observation_id:string;
+}
+
+table AdmissionDecision {
+  observation_id:string;
+  outcome:AdmissionOutcome;
+  contract_world:DeclarationRef;
+  fact_surface:DeclarationRef;
+  reason:string;
+  proof_hash:string;
+}
+
+table FactEvent {
+  schema_version:uint;
+  event_id:string;
+  kind:EventKind;
+  system_time:long;
+  causal_parent_event_id:string;
+  episode_id:ulong;
+  contract_world_declaration:ContractWorldDeclaration;
+  fact_surface_declaration:FactSurfaceDeclaration;
+  observation:Observation;
+  admission:AdmissionDecision;
+}
+
+root_type FactEvent;

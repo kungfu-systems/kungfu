@@ -3,7 +3,7 @@
   "native_abi": {
     "id": "kungfu/native_storage.h",
     "version": 1,
-    "sha256": "802a2aca9872c6386fb9c45534a215d75b317380b8ae29f11d75f378b4885943"
+    "sha256": "91dfd4f14ef9a423ffb08a76bb4a73d171b3767256d851b1d37d7c36300f5d0d"
   },
   "semantic_fixture": {
     "id": "kungfu.layer-qualification.sdk-semantic-fixture/v1",
@@ -14,6 +14,11 @@
     "episode_end",
     "fact_query",
     "fsck",
-    "export_bundle"
+    "export_bundle",
+    "fact_contract",
+    "fact_declare_world",
+    "fact_declare_surface",
+    "fact_observe",
+    "fact_state"
   ]
 }

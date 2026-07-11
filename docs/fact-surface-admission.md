@@ -12,8 +12,9 @@ declare the fact world -> record and admit observations -> preserve Episodes
 
 This is the user-facing design accepted by
 [ADR-0051](../framework/core/docs/adr/ADR-0051-kfd-contract-world-fact-admission-and-trust.md).
-The implementation is staged; names and examples below describe the intended
-contract, not a claim that every command already ships.
+The declaration/admission slice is executable; KFD-2 assessment and SDK
+scaffolding remain staged. The boundary is listed below so an intended command
+is not mistaken for a shipped guarantee.
 
 ## Declare what can count as a fact
 
@@ -104,7 +105,28 @@ incompatible version, ambiguous surface set, or changed root returns no
 canonical rows and reports a typed admission outcome instead of consulting a
 newer declaration implicitly.
 
-This slice establishes the declaration and diagnostic contract for the Episode
-authority oracle. General user/domain declaration registration and journaled
-per-observation admission remain staged work; the current runtime does not
-claim that arbitrary recorded observations are admitted facts.
+The general user/domain slice adds one FlatBuffers-owned event contract in
+libkungfu. Contract-world declarations, fact-surface declarations,
+observations, and admission decisions are journaled and attached to sealed
+Episodes. The C++ fold selects the declaration effective at each observation's
+system time and exposes the same thin edge through Python, Node, the native
+Rust ABI, and the CLI:
+
+```text
+kungfu facts capabilities
+kungfu facts declare-world --file world.json --system-time 100
+kungfu facts declare-surface --file surface.json --system-time 101
+kungfu facts observe --file observation.json --system-time 110
+kungfu facts state --cut-system-time 150 --subject-key sku-42
+```
+
+`facts state` keeps valid, system, and causal time separate; rejected
+observations stay in `observation_history` but never enter `canonical_facts`.
+Corrections and retractions name an admitted target observation. Concurrent
+admitted source claims remain visible and produce a conflict instead of being
+silently resolved.
+
+The current payload boundary is deliberately narrow: an observation carries a
+domain schema-owner root plus an opaque content hash/reference. The slice does
+not define a universal ontology, fetch payload bodies, decide external truth,
+run KFD-2 assessments, or implement `kungfu sdk add fact-surface` yet.

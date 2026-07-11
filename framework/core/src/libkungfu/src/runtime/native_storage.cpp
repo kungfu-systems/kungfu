@@ -15,9 +15,11 @@ namespace {
 
 constexpr uint64_t CAPABILITIES = KF_NATIVE_STORAGE_CAP_EPISODE_LIFECYCLE |
                                   KF_NATIVE_STORAGE_CAP_HEAD_AND_HISTORICAL_QUERY | KF_NATIVE_STORAGE_CAP_FSCK |
-                                  KF_NATIVE_STORAGE_CAP_EXPORT;
-constexpr std::array<std::string_view, 5> SUPPORTED_OPERATIONS = {"episode_begin", "episode_end", "fact_query", "fsck",
-                                                                  "export_bundle"};
+                                  KF_NATIVE_STORAGE_CAP_EXPORT | KF_NATIVE_STORAGE_CAP_DOMAIN_FACT_ADMISSION;
+constexpr std::array<std::string_view, 10> SUPPORTED_OPERATIONS = {
+    "episode_begin", "episode_end",        "fact_query",           "fsck",         "export_bundle",
+    "fact_contract", "fact_declare_world", "fact_declare_surface", "fact_observe", "fact_state",
+};
 
 bool supported_operation(const char *operation) {
   for (const auto candidate : SUPPORTED_OPERATIONS) {

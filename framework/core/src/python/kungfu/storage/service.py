@@ -720,6 +720,74 @@ def fact_query(
     )
 
 
+def fact_contract(runtime_dir: str | Path = "") -> dict[str, Any]:
+    """Return the C++-owned ADR-0051 declaration/admission contract."""
+
+    return dict(
+        _runtime().run_storage_service_operation("fact_contract", str(runtime_dir), {})
+    )
+
+
+def fact_declare_contract_world(
+    runtime_dir: str | Path,
+    declaration: dict[str, Any],
+    *,
+    system_time: int = 0,
+) -> dict[str, Any]:
+    return dict(
+        _runtime().run_storage_service_operation(
+            "fact_declare_world",
+            str(runtime_dir),
+            {"declaration": declaration, "system_time": system_time},
+        )
+    )
+
+
+def fact_declare_surface(
+    runtime_dir: str | Path,
+    declaration: dict[str, Any],
+    *,
+    system_time: int = 0,
+) -> dict[str, Any]:
+    return dict(
+        _runtime().run_storage_service_operation(
+            "fact_declare_surface",
+            str(runtime_dir),
+            {"declaration": declaration, "system_time": system_time},
+        )
+    )
+
+
+def fact_observe(
+    runtime_dir: str | Path,
+    observation: dict[str, Any],
+    *,
+    system_time: int = 0,
+) -> dict[str, Any]:
+    return dict(
+        _runtime().run_storage_service_operation(
+            "fact_observe",
+            str(runtime_dir),
+            {"observation": observation, "system_time": system_time},
+        )
+    )
+
+
+def fact_state(
+    runtime_dir: str | Path,
+    *,
+    cut_system_time: int = 0,
+    subject_key: str = "",
+) -> dict[str, Any]:
+    return dict(
+        _runtime().run_storage_service_operation(
+            "fact_state",
+            str(runtime_dir),
+            {"cut_system_time": cut_system_time, "subject_key": subject_key},
+        )
+    )
+
+
 def compile_fact_query_sql(
     runtime_dir: str | Path, *, sql: str, definition: dict[str, Any]
 ) -> dict[str, Any]:
