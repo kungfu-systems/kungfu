@@ -6,8 +6,10 @@ of truth.
 
 This document describes the target service contract accepted by
 [ADR-0048](../framework/core/docs/adr/ADR-0048-runtime-fact-query-semantics-and-changelog.md).
-The implementation is staged; command examples below describe the intended
-surface and must not be read as a claim that every command already ships.
+The implementation is staged. QueryDefinition planning, proof-bearing Episode
+queries, the agent CLI, a bounded SQL compiler, and journal/SQLite conformance
+ship today. Changelogs, broad SQL, temporal patterns, and visual builders
+remain later slices.
 
 ## The query basis
 
@@ -69,7 +71,7 @@ Humans and agents do not need to use the same syntax. They do share the same
 durable query object.
 
 - common CLI verbs cover Episode lists, state, diffs, and evidence;
-- SQL covers general relational queries;
+- bounded SQL covers the current Episode row selection subset;
 - typed SDK builders support C++, Python, Node/TypeScript, and KFX;
 - GUI/TUI builders cover filters, tables, timelines, causal traversal, and
   temporal patterns.
@@ -77,6 +79,20 @@ durable query object.
 All of these compile to one normalized logical plan. SQL is supported, but it
 does not define the truth model. A GUI-saved query is not private GUI state; an
 agent can inspect and modify the same QueryDefinition.
+
+The current fail-closed SQL grammar is deliberately small:
+
+```sql
+SELECT * FROM episodes
+  [WHERE episode_id = <unsigned integer>]
+  [ORDER BY episode_id ASC]
+  [LIMIT <1..1000>]
+```
+
+Column projections, joins, subqueries, `OR`, non-equality predicates, and
+descending order are rejected. SQL owns only row selection. A base
+QueryDefinition still owns the declaration roots, scope, cut, policy, and time
+basis. Both authoring forms must produce the same LogicalPlan hash.
 
 Temporal pattern matching is part of the shared plan. The target is to expose
 it through SQL, typed builders, saved templates, and visual builders rather
@@ -128,10 +144,22 @@ The target discovery and diagnostic surface is:
 kungfu query capabilities --json
 kungfu query schema --json
 kungfu query examples --json
+kungfu query compile-sql --file basis.json \
+  --sql 'SELECT * FROM episodes WHERE episode_id = 1048 LIMIT 10' --json
 kungfu query validate --file query.json --json
 kungfu query explain --file query.json --json
 kungfu query prove --file query.json --json
+kungfu storage episode rebuild-projection --json
+kungfu query prove --file query.json --engine sqlite --json
 ```
+
+The SQLite engine requires an explicit Episode projection rebuild and fails
+closed when the projection is absent or stale. Its append-preserving record
+table retains journal order, exact frame-uid cuts, duplicates, unknown records,
+and packed record bodies. The journal remains the authority. Conformance checks
+compare normalized definitions/plans, result schema, rows, result hash,
+authority/cut lineage, admission outcomes, and canonical state; physical engine
+identity is reported separately as execution evidence.
 
 Stable JSON carries proof envelopes, NDJSON carries changelogs, and TSV exists
 for shell and `awk` composition. Data is written to stdout and diagnostics to
@@ -161,9 +189,8 @@ ADR-0048 accepts the target semantics and staged sequence. It does not claim a
 complete SQL dialect, CEP engine, changelog implementation, or GUI builder is
 already present.
 
-The first implementation slice already proves one bounded Episode/fact query at
-`head` and at a historical cut, including its lineage. Before planner and SQL
-surfaces broaden, the basis/proof contract must add the declaration coordinate
-and preserve Q0 exact-cut behavior. Later slices add the planner and CLI,
-projection/SQL conformance, changelog/GUI components, and the smallest
-temporal-pattern set justified by dogfood.
+The current implementation proves one bounded Episode/fact query at `head` and
+at an exact historical manifest-frame cut, including declaration coordinates,
+typed admission outcomes, proof lineage, one normalized LogicalPlan, and
+authority/SQLite conformance. Later slices add changelog/GUI components and the
+smallest temporal-pattern set justified by dogfood.

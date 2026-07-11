@@ -136,3 +136,64 @@ def test_query_cli_returns_stable_validation_error_code(tmp_path):
     error = json.loads(result.output)
     assert error["schema"] == "kungfu.query.error/v1"
     assert error["error"]["code"] == "KF_QUERY_VALIDATION"
+
+
+def test_query_cli_compiles_bounded_sql_and_runs_sqlite_engine(tmp_path):
+    home = tmp_path / "home"
+    runtime_dir = home / "runtime"
+    storage_service.episode_begin(runtime_dir, episode_id=48, begin_time=1000)
+    definition_path = tmp_path / "base-query.json"
+    definition_path.write_text(
+        json.dumps(storage_service.build_fact_query_definition()), encoding="utf-8"
+    )
+    runner = CliRunner()
+
+    rebuilt = runner.invoke(
+        kfc,
+        [
+            "--home",
+            str(home),
+            "storage",
+            "episode",
+            "rebuild-projection",
+            "--json",
+        ],
+    )
+
+    compiled = _invoke(
+        runner,
+        home,
+        "compile-sql",
+        "--file",
+        str(definition_path),
+        "--sql",
+        "SELECT * FROM episodes WHERE episode_id = 48 LIMIT 5",
+        "--json",
+    )
+    proof = _invoke(
+        runner,
+        home,
+        "prove",
+        "--episode-id",
+        "48",
+        "--limit",
+        "5",
+        "--engine",
+        "sqlite",
+        "--json",
+    )
+
+    assert rebuilt.exit_code == 0, rebuilt.output
+    assert json.loads(rebuilt.output)["query_records"] == 1
+    assert compiled.exit_code == 0, compiled.output
+    assert proof.exit_code == 0, proof.output
+    compiled_value = json.loads(compiled.output)
+    proof_value = json.loads(proof.output)
+    assert compiled_value["schema"] == "kungfu.query.sql-compilation/v1"
+    assert (
+        compiled_value["logical_plan_hash"]
+        == proof_value["logical_plan"]["logical_plan_hash"]
+    )
+    assert proof_value["lineage"]["execution"]["engine"] == (
+        "episode-sqlite-projection/v1"
+    )

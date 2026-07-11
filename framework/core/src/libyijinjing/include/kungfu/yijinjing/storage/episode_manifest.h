@@ -116,6 +116,10 @@ struct episode_manifest_unknown_record {
 struct episode_manifest_record {
   uint64_t manifest_frame_uid = 0;
   int64_t manifest_gen_time = 0;
+  // Exact packed journal body. Derived projections retain these bytes so they
+  // can replay the canonical decoder instead of inventing a second semantic
+  // representation. Unknown/newer records remain round-trippable too.
+  std::vector<uint8_t> payload = {};
   std::variant<episode_manifest_unknown_record, yijinjing::types::EpisodeOpen, yijinjing::types::EpisodeHeartbeat,
                yijinjing::types::EpisodeFrameAttached, yijinjing::types::EpisodeRefAttached,
                yijinjing::types::EpisodeClosed, yijinjing::types::EpisodeRootCommitted>
@@ -123,6 +127,13 @@ struct episode_manifest_record {
 };
 
 using episode_manifest_record_visitor = std::function<void(const episode_manifest_record &)>;
+
+// Decode the same packed body used by the journal reader. This is the only
+// decoder rebuildable projections may call; a malformed/newer body is
+// preserved as an unknown record and therefore fails canonical admission.
+[[nodiscard]] episode_manifest_record decode_episode_manifest_record(int32_t carrier_type, uint64_t manifest_frame_uid,
+                                                                     int64_t manifest_gen_time, const void *payload,
+                                                                     size_t payload_size);
 
 // The typed current view of one Episode, derived by the deterministic fold.
 // Identity fields come from the first EpisodeOpen; watermark fields are
@@ -175,6 +186,14 @@ struct episode_manifest_fold {
   int64_t last_manifest_gen_time = 0;
   bool cut_found = true;
 };
+
+// Fold already-decoded records with the same append-order semantics as the
+// journal store. Projection/query engines use these helpers to avoid a second
+// implementation of Episode identity, conflict, and cut policy.
+[[nodiscard]] episode_manifest_fold fold_episode_manifest_records(const std::vector<episode_manifest_record> &records);
+
+[[nodiscard]] episode_manifest_fold
+fold_episode_manifest_records_until(const std::vector<episode_manifest_record> &records, uint64_t manifest_frame_uid);
 
 // Stable edge projections of one typed folded view. Query/reference paths use
 // these helpers so list/inspect and authority-scan cannot silently derive

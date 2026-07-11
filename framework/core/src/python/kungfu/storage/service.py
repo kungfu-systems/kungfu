@@ -635,12 +635,20 @@ def query_plan(
     action: str,
     definition: dict[str, Any] | None = None,
     object_name: str = "episodes",
+    sql: str | None = None,
+    engine: str = "authority",
 ) -> dict[str, Any]:
     """Use the C++-owned ADR-0048 planner and discovery contract."""
 
-    options: dict[str, Any] = {"action": action, "object": object_name}
+    options: dict[str, Any] = {
+        "action": action,
+        "object": object_name,
+        "engine": engine,
+    }
     if definition is not None:
         options["definition"] = definition
+    if sql is not None:
+        options["query"] = sql
     return dict(
         _runtime().run_storage_service_operation(
             "query_plan", str(runtime_dir), options
@@ -649,13 +657,18 @@ def query_plan(
 
 
 def fact_query_definition(
-    runtime_dir: str | Path, definition: dict[str, Any]
+    runtime_dir: str | Path,
+    definition: dict[str, Any],
+    *,
+    engine: str = "authority",
 ) -> dict[str, Any]:
-    """Plan and execute a QueryDefinition through the authority-scan oracle."""
+    """Plan once and execute through the selected physical engine."""
 
     return dict(
         _runtime().run_storage_service_operation(
-            "fact_query", str(runtime_dir), {"definition": definition}
+            "fact_query",
+            str(runtime_dir),
+            {"definition": definition, "engine": engine},
         )
     )
 
@@ -666,13 +679,68 @@ def fact_query(
     episode_id: int = 0,
     cut: dict[str, Any] | None = None,
     limit: int = 100,
+    engine: str = "authority",
 ) -> dict[str, Any]:
-    """Run the ADR-0048 Episode authority-scan reference query."""
+    """Run the ADR-0048 Episode query through one declared engine."""
 
     return fact_query_definition(
         runtime_dir,
         build_fact_query_definition(episode_id=episode_id, cut=cut, limit=limit),
+        engine=engine,
     )
+
+
+def compile_fact_query_sql(
+    runtime_dir: str | Path, *, sql: str, definition: dict[str, Any]
+) -> dict[str, Any]:
+    """Compile the bounded SQL subset into the canonical LogicalPlan."""
+
+    return query_plan(
+        runtime_dir,
+        action="compile-sql",
+        definition=definition,
+        sql=sql,
+    )
+
+
+def fact_query_conformance(
+    runtime_dir: str | Path, definition: dict[str, Any]
+) -> dict[str, Any]:
+    """Compare authority and SQLite execution at the public semantic seam."""
+
+    authority = fact_query_definition(runtime_dir, definition, engine="authority")
+    sqlite = fact_query_definition(runtime_dir, definition, engine="sqlite")
+    authority_lineage = dict(authority["lineage"])
+    sqlite_lineage = dict(sqlite["lineage"])
+    authority_lineage.pop("execution", None)
+    sqlite_lineage.pop("execution", None)
+    checks = {
+        "definition": authority["definition"] == sqlite["definition"],
+        "logical_plan": authority["logical_plan"] == sqlite["logical_plan"],
+        "result_schema": authority["result_schema"] == sqlite["result_schema"],
+        "rows": authority["rows"] == sqlite["rows"],
+        "result_hash": authority["result_hash"] == sqlite["result_hash"],
+        "lineage_semantics": authority_lineage == sqlite_lineage,
+        "lineage_authority": (
+            authority["lineage"]["authority"] == sqlite["lineage"]["authority"]
+        ),
+        "lineage_cut": authority["lineage"]["cut"] == sqlite["lineage"]["cut"],
+        "lineage_admission": (
+            authority["lineage"]["admission_outcomes"]
+            == sqlite["lineage"]["admission_outcomes"]
+        ),
+        "canonical_state": (
+            authority["lineage"]["canonical_state"]
+            == sqlite["lineage"]["canonical_state"]
+        ),
+    }
+    return {
+        "schema": "kungfu.query.conformance/v1",
+        "ok": all(checks.values()),
+        "checks": checks,
+        "authority": authority,
+        "sqlite": sqlite,
+    }
 
 
 def episode_recover(

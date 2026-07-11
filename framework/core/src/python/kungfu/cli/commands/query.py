@@ -176,13 +176,49 @@ def validate(ctx: click.Context, file_path: str, as_json: bool) -> None:
 @click.option(
     "--json", "as_json", is_flag=True, help="machine-readable output (default)"
 )
+@click.option(
+    "--engine",
+    type=click.Choice(["authority", "sqlite"]),
+    default="authority",
+    show_default=True,
+)
 @query_command_context
-def explain(ctx: click.Context, file_path: str, as_json: bool) -> None:
+def explain(ctx: click.Context, file_path: str, as_json: bool, engine: str) -> None:
     del as_json
-    _echo_json(_planner_call(ctx, "explain", definition=_load_definition(file_path)))
+    _echo_json(
+        _planner_call(
+            ctx, "explain", definition=_load_definition(file_path), engine=engine
+        )
+    )
 
 
-@query.command(help="execute the authority-scan plan and emit rows with proof lineage")
+@query.command(
+    name="compile-sql", help="compile bounded SQL into the canonical LogicalPlan"
+)
+@click.option("--sql", required=True, help="bounded SELECT over episodes")
+@click.option(
+    "--file",
+    "file_path",
+    required=True,
+    help="base QueryDefinition JSON path or - for stdin; owns basis and cut",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, help="machine-readable output (default)"
+)
+@query_command_context
+def compile_sql(ctx: click.Context, sql: str, file_path: str, as_json: bool) -> None:
+    del as_json
+    _echo_json(
+        _planner_call(
+            ctx,
+            "compile-sql",
+            definition=_load_definition(file_path),
+            sql=sql,
+        )
+    )
+
+
+@query.command(help="execute one declared engine and emit rows with proof lineage")
 @click.option(
     "--file", "file_path", default=None, help="QueryDefinition JSON path or - for stdin"
 )
@@ -199,6 +235,12 @@ def explain(ctx: click.Context, file_path: str, as_json: bool) -> None:
     "--limit", type=click.IntRange(min=1, max=1000), default=100, show_default=True
 )
 @click.option(
+    "--engine",
+    type=click.Choice(["authority", "sqlite"]),
+    default="authority",
+    show_default=True,
+)
+@click.option(
     "--json", "as_json", is_flag=True, help="emit the full proof envelope (default)"
 )
 @click.option(
@@ -212,6 +254,7 @@ def prove(
     episode_id: int,
     cut_token: str | None,
     limit: int,
+    engine: str,
     as_json: bool,
     as_ndjson: bool,
     as_tsv: bool,
@@ -237,7 +280,9 @@ def prove(
             episode_id=episode_id, cut=cut, limit=limit
         )
     try:
-        result = service.fact_query_definition(ctx.runtime_dir, definition)
+        result = service.fact_query_definition(
+            ctx.runtime_dir, definition, engine=engine
+        )
     except (RuntimeError, TypeError, ValueError) as error:
         _fail("KF_QUERY_EXECUTION", str(error), exit_code=1)
     if as_ndjson:

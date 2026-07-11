@@ -3285,8 +3285,22 @@ public:
       return query::query_examples_json();
     }
 
-    const auto definition = query::parse_query_definition(options.query_definition);
+    auto definition = query::parse_query_definition(options.query_definition);
+    if (action == "compile-sql") {
+      if (options.query.empty()) {
+        throw std::invalid_argument("compile-sql requires a non-empty SQL query");
+      }
+      definition = query::compile_episode_sql(options.query, definition);
+    }
     const auto plan = query::plan_query(definition);
+    if (action == "compile-sql") {
+      return {{"schema", "kungfu.query.sql-compilation/v1"},
+              {"sql", options.query},
+              {"definition", query::query_definition_json(definition)},
+              {"logical_plan", query::logical_plan_json(plan)},
+              {"query_definition_hash", plan.query_definition_hash},
+              {"logical_plan_hash", plan.logical_plan_hash}};
+    }
     if (action == "validate") {
       return {{"schema", query::QUERY_VALIDATION_SCHEMA_V1},
               {"ok", true},
@@ -3295,15 +3309,19 @@ public:
               {"logical_plan_hash", plan.logical_plan_hash}};
     }
     if (action == "explain") {
+      const auto engine = text_or(options.operation_options, "engine", "authority");
+      if (engine != "authority" && engine != "sqlite") {
+        throw std::invalid_argument("query engine must be authority or sqlite");
+      }
       return {{"schema", query::QUERY_EXPLAIN_SCHEMA_V1},
               {"definition", query::query_definition_json(definition)},
               {"logical_plan", query::logical_plan_json(plan)},
               {"physical",
-               {{"engine", "episode-authority-scan/v1"},
+               {{"engine", engine == "authority" ? "episode-authority-scan/v1" : "episode-sqlite-projection/v1"},
                 {"bounded", true},
                 {"limit", definition.limit},
                 {"cost",
-                 {{"class", "bounded-authority-scan"},
+                 {{"class", engine == "authority" ? "bounded-authority-scan" : "bounded-sqlite-projection"},
                   {"upper_bound_rows", definition.limit},
                   {"authority_records", "runtime-dependent"}}}}}};
     }
@@ -3313,7 +3331,14 @@ public:
   [[nodiscard]] nlohmann::json fact_query(const storage_service_options &options) const override {
     const auto definition = query::parse_query_definition(options.query_definition);
     const auto plan = query::plan_query(definition);
-    return query::query_result_json(query::run_episode_authority_scan(options.runtime_dir, plan));
+    const auto engine = text_or(options.operation_options, "engine", "authority");
+    if (engine == "authority") {
+      return query::query_result_json(query::run_episode_authority_scan(options.runtime_dir, plan));
+    }
+    if (engine == "sqlite") {
+      return query::query_result_json(query::run_episode_sqlite_projection(options.runtime_dir, plan));
+    }
+    throw std::invalid_argument("query engine must be authority or sqlite");
   }
 
   [[nodiscard]] nlohmann::json layout(const storage_service_options &options) const override {

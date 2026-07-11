@@ -4,8 +4,11 @@
 #define KUNGFU_RUNTIME_STORAGE_EPISODE_MANIFEST_PROJECTION_H
 
 #include <string>
+#include <vector>
 
 #include <nlohmann/json.hpp>
+
+#include <kungfu/yijinjing/storage/episode_manifest.h>
 
 namespace kungfu::runtime::storage_service_api {
 
@@ -36,6 +39,14 @@ public:
   // drift (projection row counts diverging from distinct-primary-key journal
   // counts) as degraded, missing projection as a distinct honest state.
   [[nodiscard]] nlohmann::json verify() const;
+
+  // Read the append-preserving query projection. The caller must verify the
+  // projection first; this method never falls back to the authority journal.
+  [[nodiscard]] std::vector<yijinjing::storage::episode_manifest_record> read_typed_records() const;
+
+  [[nodiscard]] yijinjing::storage::episode_manifest_fold fold_typed_records() const;
+
+  [[nodiscard]] yijinjing::storage::episode_manifest_fold fold_typed_records_until(uint64_t manifest_frame_uid) const;
 
 private:
   std::string runtime_dir_;
