@@ -15,6 +15,24 @@ from kungfu.action_envelope import (
 from kungfu.rewind import ACTION_SCHEMA_REFS
 
 
+def build_event_envelope(
+    action_type: str,
+    payload: bytes,
+    *,
+    run_id: str | None = None,
+    actor: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    schema_ref = ACTION_SCHEMA_REFS.get(action_type, {"id": action_type, "version": 1})
+    session = {"run_id": run_id} if run_id else None
+    return build_action_envelope(
+        action_type=action_type,
+        schema_ref=schema_ref,
+        session=session,
+        actor=actor,
+        payload=flatbuffer_payload(payload),
+    )
+
+
 def wrap_event(
     action_type: str,
     payload: bytes,
@@ -22,15 +40,7 @@ def wrap_event(
     run_id: str | None = None,
     actor: dict[str, Any] | None = None,
 ) -> tuple[int, bytes]:
-    schema_ref = ACTION_SCHEMA_REFS.get(action_type, {"id": action_type, "version": 1})
-    session = {"run_id": run_id} if run_id else None
-    envelope = build_action_envelope(
-        action_type=action_type,
-        schema_ref=schema_ref,
-        session=session,
-        actor=actor,
-        payload=flatbuffer_payload(payload),
-    )
+    envelope = build_event_envelope(action_type, payload, run_id=run_id, actor=actor)
     return CARRIER_ACTION_ENVELOPE, encode_action_envelope(envelope)
 
 

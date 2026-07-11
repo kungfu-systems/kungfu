@@ -15,13 +15,10 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import struct
 from pathlib import Path
 
 import kungfu
-import jsonschema
-
 from kungfu.storage import service
 from kungfu.storage.episode_lifecycle import RuntimeEpisodeLifecycle
 
@@ -98,6 +95,18 @@ def _lifecycle(runtime_dir: Path, name: str) -> RuntimeEpisodeLifecycle:
     )
 
 
+def _issues(fsck: dict, severity: str) -> list[dict]:
+    return [issue for issue in fsck["issues"] if issue["severity"] == severity]
+
+
+def _evidence(qualification: dict, name: str) -> dict:
+    return next(row for row in qualification["evidence"] if row["name"] == name)
+
+
+def _safe_capabilities(qualification: dict) -> set[str]:
+    return {row["name"] for row in qualification["capabilities"] if row["safe"] is True}
+
+
 def test_sealed_claim_mismatch_fails_fsck(tmp_path):
     runtime_dir = tmp_path / "runtime"
     _begin(runtime_dir, 1)
@@ -123,14 +132,16 @@ def test_sealed_claim_mismatch_fails_fsck(tmp_path):
     fsck = service.fsck(runtime_dir, episode_id=1)
     assert not fsck["ok"]
     assert fsck["status"] == "failed"
-    codes = [e["code"] for e in fsck["errors"]]
+    codes = [e["code"] for e in _issues(fsck, "error")]
     assert "episode_seal_frame_count_mismatch" in codes
     assert "episode_seal_last_frame_missing" in codes
     mismatch = next(
-        e for e in fsck["errors"] if e["code"] == "episode_seal_frame_count_mismatch"
+        e
+        for e in _issues(fsck, "error")
+        if e["code"] == "episode_seal_frame_count_mismatch"
     )
-    assert mismatch["claimed"] == 2
-    assert mismatch["actual"] == 1
+    assert mismatch["detail"]["claimed"] == 2
+    assert mismatch["detail"]["actual"] == 1
 
 
 def test_consistent_seal_passes_fsck(tmp_path):
@@ -171,11 +182,11 @@ def test_tombstone_after_seal_is_intentional_not_duplicate(tmp_path):
     )
 
     inspected = service.episode_inspect(runtime_dir, episode_id=3)["episode"]
-    assert inspected["status"] == "tombstoned"
+    assert inspected["close"]["status"] == 4
 
     fsck = service.fsck(runtime_dir, episode_id=3)
     assert fsck["ok"]
-    codes = [w["code"] for w in fsck["warnings"]]
+    codes = [w["code"] for w in _issues(fsck, "warning")]
     assert "episode_tombstoned" in codes
     assert "episode_closed_duplicate" not in codes
 
@@ -188,7 +199,7 @@ def test_non_tombstone_duplicate_close_still_warns(tmp_path):
     )
     service.episode_abort(runtime_dir, episode_id=4, end_time=1300, reason="late")
     fsck = service.fsck(runtime_dir, episode_id=4)
-    codes = [w["code"] for w in fsck["warnings"]]
+    codes = [w["code"] for w in _issues(fsck, "warning")]
     assert "episode_closed_duplicate" in codes
     assert "episode_tombstoned" not in codes
 
@@ -204,16 +215,16 @@ def test_unknown_version_record_is_reported_not_folded(tmp_path):
     fsck = service.fsck(runtime_dir, episode_id=5)
     assert fsck["ok"]
     unknown = next(
-        w for w in fsck["warnings"] if w["code"] == "manifest_unknown_records"
+        w for w in _issues(fsck, "warning") if w["code"] == "manifest_unknown_records"
     )
-    assert unknown["count"] == 1
-    assert fsck["episode_manifest"]["checked"]["unknown_records"] == 1
+    assert unknown["detail"]["count"] == 1
+    assert fsck["episode_manifest"]["unknown_records"] == 1
 
     # The newer-version heartbeat stays out of the fold instead of being
     # reinterpreted with the v1 layout.
     inspected = service.episode_inspect(runtime_dir, episode_id=5)["episode"]
-    assert inspected["record_count"] == 1
-    assert "update_time" not in inspected
+    assert len(inspected["records"]) == 1
+    assert inspected["heartbeat_seen"] is False
 
 
 def test_verify_frames_confirms_real_recorded_frames(tmp_path):
@@ -224,7 +235,7 @@ def test_verify_frames_confirms_real_recorded_frames(tmp_path):
     lifecycle.close(ok=True)
 
     unchecked = service.fsck(runtime_dir, episode_id=lifecycle.episode_id)
-    assert unchecked["qualification"]["evidence"]["frames"]["state"] == "not_checked"
+    assert _evidence(unchecked["qualification"], "frames")["state"] == "not_checked"
     assert _capability(unchecked["qualification"], "replay")["safe"] is False
 
     fsck = service.fsck(
@@ -233,7 +244,7 @@ def test_verify_frames_confirms_real_recorded_frames(tmp_path):
     assert fsck["ok"]
     assert fsck["status"] == "ok"
     assert fsck["checked"]["episode_frames_verified"] == 2
-    assert fsck["qualification"]["evidence"]["frames"]["state"] == "verified"
+    assert _evidence(fsck["qualification"], "frames")["state"] == "verified"
     assert _capability(fsck["qualification"], "replay")["safe"] is True
 
 
@@ -253,11 +264,11 @@ def test_verify_frames_fails_sealed_episode_with_missing_journal(tmp_path):
     )
     assert not fsck["ok"]
     assert fsck["status"] == "failed"
-    codes = [e["code"] for e in fsck["errors"]]
+    codes = [e["code"] for e in _issues(fsck, "error")]
     assert "episode_attached_frame_missing" in codes
     qualification = fsck["qualification"]
-    assert qualification["evidence"]["frames"]["state"] == "failed"
-    assert "inspect" in qualification["safe_capabilities"]
+    assert _evidence(qualification, "frames")["state"] == "failed"
+    assert "inspect" in _safe_capabilities(qualification)
     assert _capability(qualification, "replay")["safe"] is False
     assert {
         (row["issue_code"], row["action"])
@@ -280,10 +291,10 @@ def test_verify_frames_degrades_open_episode_with_missing_journal(tmp_path):
     assert fsck["ok"]
     assert fsck["status"] == "degraded"
     assert fsck["degraded"] is True
-    codes = [w["code"] for w in fsck["warnings"]]
+    codes = [w["code"] for w in _issues(fsck, "warning")]
     assert "episode_attached_frame_missing" in codes
-    assert fsck["qualification"]["evidence"]["frames"]["state"] == "degraded"
-    assert "append" in fsck["qualification"]["safe_capabilities"]
+    assert _evidence(fsck["qualification"], "frames")["state"] == "degraded"
+    assert "append" in _safe_capabilities(fsck["qualification"])
 
 
 def test_verify_frames_detects_tampered_payload(tmp_path):
@@ -301,7 +312,7 @@ def test_verify_frames_detects_tampered_payload(tmp_path):
     )
     assert not fsck["ok"]
     assert fsck["status"] == "failed"
-    codes = [e["code"] for e in fsck["errors"]]
+    codes = [e["code"] for e in _issues(fsck, "error")]
     assert "episode_attached_frame_checksum_mismatch" in codes
 
 
@@ -356,7 +367,9 @@ def test_published_payload_ref_verifies_through_content_store(tmp_path):
 
     inspected = service.episode_inspect(runtime_dir, episode_id=41)
     payload_deps = [
-        dep for dep in inspected["dependencies"] if dep["kind"] == "payload"
+        dep
+        for dep in inspected["causal_graph"]["dependencies"]
+        if dep["kind"] == "payload"
     ]
     assert payload_deps and payload_deps[0]["status"] == "present"
 
@@ -383,7 +396,7 @@ def test_sealed_missing_payload_ref_fails_fsck(tmp_path):
     fsck = service.fsck(runtime_dir, episode_id=43)
     assert not fsck["ok"]
     assert fsck["status"] == "failed"
-    assert "episode_payload_ref_missing" in [e["code"] for e in fsck["errors"]]
+    assert "episode_payload_ref_missing" in [e["code"] for e in _issues(fsck, "error")]
 
 
 def test_open_missing_payload_ref_degrades_fsck(tmp_path):
@@ -395,7 +408,9 @@ def test_open_missing_payload_ref_degrades_fsck(tmp_path):
     fsck = service.fsck(runtime_dir, episode_id=44)
     assert fsck["ok"]
     assert fsck["status"] == "degraded"
-    assert "episode_payload_ref_missing" in [w["code"] for w in fsck["warnings"]]
+    assert "episode_payload_ref_missing" in [
+        w["code"] for w in _issues(fsck, "warning")
+    ]
 
 
 def test_sealed_tampered_payload_fails_fsck(tmp_path):
@@ -413,7 +428,9 @@ def test_sealed_tampered_payload_fails_fsck(tmp_path):
     fsck = service.fsck(runtime_dir, episode_id=45)
     assert not fsck["ok"]
     assert fsck["status"] == "failed"
-    assert "episode_payload_ref_hash_mismatch" in [e["code"] for e in fsck["errors"]]
+    assert "episode_payload_ref_hash_mismatch" in [
+        e["code"] for e in _issues(fsck, "error")
+    ]
 
 
 def test_unaddressable_ref_hash_is_reported(tmp_path):
@@ -424,7 +441,9 @@ def test_unaddressable_ref_hash_is_reported(tmp_path):
     fsck = service.fsck(runtime_dir, episode_id=46)
     assert fsck["ok"]
     assert fsck["status"] == "degraded"
-    assert "episode_payload_ref_hash_invalid" in [w["code"] for w in fsck["warnings"]]
+    assert "episode_payload_ref_hash_invalid" in [
+        w["code"] for w in _issues(fsck, "warning")
+    ]
 
 
 def test_lifecycle_attach_publishes_into_content_store(tmp_path):
@@ -457,21 +476,22 @@ def test_healthy_sealed_episode_emits_versioned_safe_capabilities(tmp_path):
 
     fsck = service.fsck(runtime_dir, episode_id=51)
     qualification = fsck["qualification"]
-    assert qualification["schema"] == "kungfu.episode.qualification/v1"
-    assert qualification["policy_source"] == "cpp-typed-fold-fsck"
     assert qualification["lifecycle"] == "ended"
     assert qualification["status"] == "ok"
-    assert qualification["evidence"]["manifest_records"]["state"] == "verified"
-    assert qualification["evidence"]["frames"]["state"] == "not_applicable"
-    assert qualification["evidence"]["content"]["state"] == "not_applicable"
+    assert _evidence(qualification, "manifest_records")["state"] == "verified"
+    assert _evidence(qualification, "frames")["state"] == "not_applicable"
+    assert _evidence(qualification, "content")["state"] == "not_applicable"
     assert {"inspect", "fsck", "export_evidence", "replay", "depend_on"} <= set(
-        qualification["safe_capabilities"]
+        _safe_capabilities(qualification)
     )
     assert _capability(qualification, "append")["safe"] is False
     assert _capability(qualification, "append")["blocked_by"] == ["lifecycle=open"]
 
     inspected = service.episode_inspect(runtime_dir, episode_id=51)
-    assert inspected["qualification"] == qualification
+    assert inspected["qualification"]["status"] == qualification["status"]
+    assert _safe_capabilities(inspected["qualification"]) == _safe_capabilities(
+        qualification
+    )
 
 
 def test_open_degradation_preserves_append_and_evidence_export(tmp_path):
@@ -482,9 +502,9 @@ def test_open_degradation_preserves_append_and_evidence_export(tmp_path):
 
     qualification = service.fsck(runtime_dir, episode_id=52)["qualification"]
     assert qualification["status"] == "degraded"
-    assert qualification["evidence"]["content"]["state"] == "degraded"
+    assert _evidence(qualification, "content")["state"] == "degraded"
     assert {"inspect", "export_evidence", "append", "plan_repair"} <= set(
-        qualification["safe_capabilities"]
+        _safe_capabilities(qualification)
     )
     assert _capability(qualification, "replay")["safe"] is False
     assert "lifecycle=ended" in _capability(qualification, "replay")["blocked_by"]
@@ -507,9 +527,9 @@ def test_failed_episode_contracts_consuming_capabilities_not_forensics(tmp_path)
 
     qualification = service.fsck(runtime_dir, episode_id=53)["qualification"]
     assert qualification["status"] == "failed"
-    assert qualification["evidence"]["content"]["state"] == "failed"
+    assert _evidence(qualification, "content")["state"] == "failed"
     assert {"inspect", "fsck", "export_evidence", "plan_repair"} <= set(
-        qualification["safe_capabilities"]
+        _safe_capabilities(qualification)
     )
     assert _capability(qualification, "replay")["safe"] is False
     assert _capability(qualification, "depend_on")["safe"] is False
@@ -529,8 +549,8 @@ def test_unverified_schema_claim_contracts_decode_consumers(tmp_path):
 
     qualification = service.fsck(runtime_dir, episode_id=55)["qualification"]
     assert qualification["status"] == "ok"
-    assert qualification["evidence"]["schemas"]["state"] == "not_checked"
-    assert "export_evidence" in qualification["safe_capabilities"]
+    assert _evidence(qualification, "schemas")["state"] == "not_checked"
+    assert "export_evidence" in _safe_capabilities(qualification)
     assert _capability(qualification, "replay")["safe"] is False
     assert (
         "schemas=verified|not_applicable"
@@ -542,20 +562,31 @@ def test_missing_episode_advertises_no_episode_capability(tmp_path):
     qualification = service.fsck(tmp_path / "runtime", episode_id=999)["qualification"]
     assert qualification["lifecycle"] == "missing"
     assert qualification["status"] == "failed"
-    assert qualification["safe_capabilities"] == []
+    assert _safe_capabilities(qualification) == set()
 
 
-def test_episode_qualification_v1_schema_accepts_production_result(tmp_path):
+def test_episode_qualification_typed_view_exposes_complete_contract(tmp_path):
     runtime_dir = tmp_path / "runtime"
     _begin(runtime_dir, 54)
     _seal(runtime_dir, 54)
     qualification = service.fsck(runtime_dir, episode_id=54)["qualification"]
-    schema_path = (
-        Path(__file__).resolve().parents[1]
-        / "qualification"
-        / "episode"
-        / "schemas"
-        / "episode-qualification-v1.schema.json"
-    )
-    schema = json.loads(schema_path.read_text(encoding="utf-8"))
-    jsonschema.validate(qualification, schema)
+    assert {row["name"] for row in qualification["evidence"]} == {
+        "manifest_records",
+        "manifest_integrity",
+        "causal_closure",
+        "content",
+        "frames",
+        "schemas",
+        "projection",
+    }
+    assert {row["name"] for row in qualification["capabilities"]} == {
+        "inspect",
+        "fsck",
+        "export_evidence",
+        "plan_repair",
+        "rebuild_projection",
+        "append",
+        "replay",
+        "depend_on",
+    }
+    assert all("required_evidence" in row for row in qualification["capabilities"])

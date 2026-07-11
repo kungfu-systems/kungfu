@@ -78,7 +78,7 @@ std::string episode_manifest_projection::sqlite_path() const { return projection
 
 bool episode_manifest_projection::exists() const { return fs::exists(projection_path(runtime_dir_)); }
 
-nlohmann::json episode_manifest_projection::rebuild() const {
+storage_projection_rebuild_result episode_manifest_projection::rebuild_typed() const {
   const auto path = projection_path(runtime_dir_);
   fs::create_directories(path.parent_path());
 
@@ -116,26 +116,23 @@ nlohmann::json episode_manifest_projection::rebuild() const {
         record.body);
   }
 
-  return {
-      {"ok", true},
-      {"schema", EPISODE_MANIFEST_PROJECTION_SCHEMA_V1},
-      {"runtime_dir", runtime_dir_},
-      {"authority", "yijinjing-journal"},
-      {"projection", "sqlite"},
-      {"sqlite_path", path.string()},
-      {"unknown_records_skipped", unknown_skipped},
-      {"rows",
-       {{"episode_open", storage->count<yijinjing::types::EpisodeOpen>()},
-        {"episode_heartbeat", storage->count<yijinjing::types::EpisodeHeartbeat>()},
-        {"episode_frame_attached", storage->count<yijinjing::types::EpisodeFrameAttached>()},
-        {"episode_ref_attached", storage->count<yijinjing::types::EpisodeRefAttached>()},
-        {"episode_closed", storage->count<yijinjing::types::EpisodeClosed>()},
-        {"episode_root_committed", storage->count<yijinjing::types::EpisodeRootCommitted>()}}},
-      {"journal_records", records.size()},
-  };
+  return {true,
+          EPISODE_MANIFEST_PROJECTION_SCHEMA_V1,
+          runtime_dir_,
+          "yijinjing-journal",
+          "sqlite",
+          path.string(),
+          {{"episode_open", static_cast<uint64_t>(storage->count<yijinjing::types::EpisodeOpen>())},
+           {"episode_heartbeat", static_cast<uint64_t>(storage->count<yijinjing::types::EpisodeHeartbeat>())},
+           {"episode_frame_attached", static_cast<uint64_t>(storage->count<yijinjing::types::EpisodeFrameAttached>())},
+           {"episode_ref_attached", static_cast<uint64_t>(storage->count<yijinjing::types::EpisodeRefAttached>())},
+           {"episode_closed", static_cast<uint64_t>(storage->count<yijinjing::types::EpisodeClosed>())},
+           {"episode_root_committed", static_cast<uint64_t>(storage->count<yijinjing::types::EpisodeRootCommitted>())}},
+          {{"episode_manifest_records", static_cast<uint64_t>(records.size())},
+           {"unknown_records_skipped", static_cast<uint64_t>(unknown_skipped)}}};
 }
 
-nlohmann::json episode_manifest_projection::verify() const {
+storage_projection_verify_result episode_manifest_projection::verify_typed() const {
   const auto path = projection_path(runtime_dir_);
   const auto records = yijinjing::storage::episode_manifest_store(runtime_dir_).read_typed_records();
   const auto expected = distinct_pk_counts(records);
@@ -144,16 +141,14 @@ nlohmann::json episode_manifest_projection::verify() const {
   if (!fs::exists(path)) {
     // Missing projection is a distinct honest state, not a silent ok: if the
     // journal has records, the projection needs a rebuild before SQL queries.
-    return {
-        {"ok", true},
-        {"status", has_records ? "absent" : "ok"},
-        {"schema", EPISODE_MANIFEST_PROJECTION_SCHEMA_V1},
-        {"runtime_dir", runtime_dir_},
-        {"authority", "yijinjing-journal"},
-        {"projection_present", false},
-        {"note", has_records ? "projection not built; run episode_projection_rebuild to enable SQL queries"
-                             : "no episode manifest records; projection not needed"},
-    };
+    storage_projection_verify_result result{};
+    result.status = has_records ? "absent" : "ok";
+    result.schema = EPISODE_MANIFEST_PROJECTION_SCHEMA_V1;
+    result.runtime_dir = runtime_dir_;
+    result.projection_present = false;
+    result.note = has_records ? "projection not built; run episode_projection_rebuild to enable SQL queries"
+                              : "no episode manifest records; projection not needed";
+    return result;
   }
 
   auto storage = cache::make_storage_ptr(path.string(), yijinjing::EpisodeManifestDataTypes);
@@ -167,10 +162,10 @@ nlohmann::json episode_manifest_projection::verify() const {
   const size_t projected_closes = storage->count<yijinjing::types::EpisodeClosed>();
   const size_t projected_roots = storage->count<yijinjing::types::EpisodeRootCommitted>();
 
-  nlohmann::json drift = nlohmann::json::array();
+  std::vector<storage_projection_drift> drift;
   const auto check = [&](const char *table, size_t projected, size_t journal_expected) {
     if (projected != journal_expected) {
-      drift.push_back({{"table", table}, {"projection_rows", projected}, {"journal_distinct", journal_expected}});
+      drift.push_back({table, static_cast<uint64_t>(projected), static_cast<uint64_t>(journal_expected)});
     }
   };
   check("episode_open", projected_opens, expected.opens);
@@ -181,30 +176,27 @@ nlohmann::json episode_manifest_projection::verify() const {
   check("episode_root_committed", projected_roots, expected.roots);
 
   const bool degraded = !drift.empty();
-  return {
-      {"ok", !degraded},
-      {"status", degraded ? "degraded" : "ok"},
-      {"schema", EPISODE_MANIFEST_PROJECTION_SCHEMA_V1},
-      {"runtime_dir", runtime_dir_},
-      {"authority", "yijinjing-journal"},
-      {"projection_present", true},
-      {"degraded", degraded},
-      {"drift", drift},
-      {"rows",
-       {{"episode_open", projected_opens},
-        {"episode_heartbeat", projected_heartbeats},
-        {"episode_frame_attached", projected_frames},
-        {"episode_ref_attached", projected_refs},
-        {"episode_closed", projected_closes},
-        {"episode_root_committed", projected_roots}}},
-      {"journal_distinct",
-       {{"episode_open", expected.opens},
-        {"episode_heartbeat", expected.heartbeats},
-        {"episode_frame_attached", expected.frames},
-        {"episode_ref_attached", expected.refs},
-        {"episode_closed", expected.closes},
-        {"episode_root_committed", expected.roots}}},
-  };
+  return {!degraded,
+          degraded ? "degraded" : "ok",
+          EPISODE_MANIFEST_PROJECTION_SCHEMA_V1,
+          runtime_dir_,
+          "yijinjing-journal",
+          true,
+          degraded,
+          {},
+          std::move(drift),
+          {{"episode_open", projected_opens},
+           {"episode_heartbeat", projected_heartbeats},
+           {"episode_frame_attached", projected_frames},
+           {"episode_ref_attached", projected_refs},
+           {"episode_closed", projected_closes},
+           {"episode_root_committed", projected_roots}},
+          {{"episode_open", expected.opens},
+           {"episode_heartbeat", expected.heartbeats},
+           {"episode_frame_attached", expected.frames},
+           {"episode_ref_attached", expected.refs},
+           {"episode_closed", expected.closes},
+           {"episode_root_committed", expected.roots}}};
 }
 
 } // namespace kungfu::runtime::storage_service_api

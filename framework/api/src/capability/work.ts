@@ -87,52 +87,73 @@ export type Work = {
 export type OpenWorkOptions = {
   binding: KfNativeBinding;
   locator: KfLocator;
+  readFile: (path: string) => Uint8Array;
 };
 
 const str = (value: string | null | undefined) => value ?? undefined;
 
-type ActionEnvelope = {
-  schema?: string;
-  action_type?: string;
-  payload?: {
-    encoding?: string;
-    content_transfer_encoding?: string;
-    data?: string;
-  };
-};
-
-function decodeEnvelope(bytes: Uint8Array): {
+function decodeEnvelope(
+  binding: KfNativeBinding,
+  bytes: Uint8Array,
+): {
   actionType: string;
   payload: Uint8Array;
 } | null {
-  const jsonText = Buffer.from(bytes).toString('utf8').replace(/\0+$/u, '');
-  if (!jsonText) return null;
-  let envelope: ActionEnvelope;
-  try {
-    envelope = JSON.parse(jsonText) as ActionEnvelope;
-  } catch {
-    return null;
-  }
+  const envelope = binding.decodeActionEnvelope(bytes);
   if (
-    envelope.schema !== 'kungfu.action-envelope/v1' ||
-    typeof envelope.action_type !== 'string' ||
-    envelope.payload?.encoding !== 'flatbuffers' ||
-    envelope.payload.content_transfer_encoding !== 'base64' ||
-    typeof envelope.payload.data !== 'string'
+    envelope === null ||
+    envelope.payload?.encoding !== 1 ||
+    !(envelope.payload.data instanceof Uint8Array)
   ) {
     return null;
   }
   return {
     actionType: envelope.action_type,
-    payload: new Uint8Array(Buffer.from(envelope.payload.data, 'base64')),
+    payload: envelope.payload.data,
   };
 }
 
 export function openWork(options: OpenWorkOptions): Work {
-  const { binding } = options;
+  const { binding, readFile } = options;
   const runtimeDir = resolveRuntimeDir(options.locator);
 
   let cache: Map<string, WorkItem> | null = null;
+
+  const loadSchemas = (): Map<
+    string,
+    { schemaBfbs: Uint8Array; table: string }
+  > => {
+    const result = new Map<string, { schemaBfbs: Uint8Array; table: string }>();
+    try {
+      const manifest = JSON.parse(
+        Buffer.from(
+          readFile(`${runtimeDir}/work/store/manifest.json`),
+        ).toString('utf8'),
+      ) as {
+        schema_bindings?: Record<
+          string,
+          { name?: string; schema_hash?: string }
+        >;
+      };
+      const schemas = new Map<string, Uint8Array>();
+      for (const [actionType, binding_] of Object.entries(
+        manifest.schema_bindings ?? {},
+      )) {
+        if (!binding_.name || !binding_.schema_hash) continue;
+        let schemaBfbs = schemas.get(binding_.schema_hash);
+        if (!schemaBfbs) {
+          schemaBfbs = readFile(
+            `${runtimeDir}/work/store/schemas/${binding_.schema_hash}.bfbs`,
+          );
+          schemas.set(binding_.schema_hash, schemaBfbs);
+        }
+        result.set(actionType, { schemaBfbs, table: binding_.name });
+      }
+    } catch {
+      return result;
+    }
+    return result;
+  };
 
   const shell = (workId: string, time: bigint): WorkItem => ({
     workId,
@@ -148,14 +169,24 @@ export function openWork(options: OpenWorkOptions): Work {
   // Fold the event stream into current items — the same projection the
   // python store computes; state never lives anywhere but the fold.
   const scan = (): Map<string, WorkItem> => {
+    const schemas = loadSchemas();
     const frames: { genTime: bigint; actionType: string; bytes: Uint8Array }[] =
       [];
     const assemble = new binding.Assemble([runtimeDir]);
     while (assemble.dataAvailable()) {
       const frame = assemble.currentFrame();
       if (frame.carrierType() === ACTION_ENVELOPE_CARRIER) {
-        const event = decodeEnvelope(frame.dataBytes());
-        if (event?.actionType.startsWith('work.')) {
+        const event = decodeEnvelope(binding, frame.dataBytes());
+        const schema = event ? schemas.get(event.actionType) : undefined;
+        if (
+          event?.actionType.startsWith('work.') &&
+          schema !== undefined &&
+          binding.verifyFlatbufferPayload(
+            schema.schemaBfbs,
+            event.payload,
+            schema.table,
+          )
+        ) {
           frames.push({
             genTime: frame.genTime(),
             actionType: event.actionType,

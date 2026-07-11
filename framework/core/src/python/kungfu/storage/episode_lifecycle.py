@@ -7,7 +7,7 @@ import os
 from typing import Any
 
 import kungfu
-from kungfu.rewind.wire import wrap_event
+from kungfu.rewind.wire import build_event_envelope
 from kungfu.storage import service
 
 lf = kungfu.__binding__.yijinjing
@@ -105,8 +105,8 @@ class RuntimeEpisodeLifecycle:
         )
 
     def record_event(self, action_type: str, payload: bytes, *, run_id: str) -> Any:
-        carrier_type, envelope = wrap_event(action_type, payload, run_id=run_id)
-        receipt = self.recorder.record_bytes(carrier_type, bytes(envelope))
+        envelope = build_event_envelope(action_type, payload, run_id=run_id)
+        receipt = self.recorder.record_action(envelope)
         self.frame_count += 1
         service.episode_attach_frame(
             self.runtime_dir,

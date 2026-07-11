@@ -345,6 +345,133 @@ def test_storage_core_binding_owns_sync_root_and_payload_checks(tmp_path):
     )
 
 
+def test_typed_storage_status_binding_bypasses_json_transport(tmp_path):
+    runtime = kungfu.__binding__.runtime
+    runtime_dir = tmp_path / "runtime"
+    storage_service.episode_begin(
+        runtime_dir,
+        episode_id=701,
+        location_uid=17,
+        title="typed-query",
+        actor="binding-test",
+    )
+    original_loads = json.loads
+
+    def reject_json_transport(*_args, **_kwargs):
+        raise AssertionError("typed status binding must not call json.loads")
+
+    json.loads = reject_json_transport
+    try:
+        status = runtime.storage_status_typed(str(runtime_dir))
+        status_high_level = storage_service.status(runtime_dir)
+        layout = storage_service.layout(runtime_dir)
+        query = runtime.storage_query_typed(
+            str(runtime_dir), "episode_records", episode_id=701
+        )
+        query_edge = storage_service.query_projection(runtime_dir, query="entries")
+        gc = storage_service.gc_plan(runtime_dir)
+        rebuild = storage_service.rebuild_index(runtime_dir, dry_run=True)
+        compact = storage_service.compact_plan(runtime_dir)
+        fsck = storage_service.fsck(runtime_dir, episode_id=701)
+        repair = storage_service.repair_plan(runtime_dir, episode_id=701)
+        episode = storage_service.episode_begin(
+            runtime_dir,
+            episode_id=702,
+            begin_time=1000,
+            title="typed-writer",
+        )
+        heartbeat = storage_service.episode_heartbeat(
+            runtime_dir, episode_id=702, update_time=1100
+        )
+        attached_ref = storage_service.episode_attach_ref(
+            runtime_dir, episode_id=702, ref_kind="input_frame", ref_uid=9
+        )
+        attached_frame = storage_service.episode_attach_frame(
+            runtime_dir, episode_id=702, frame_uid=10, gen_time=1200
+        )
+        closed = storage_service.episode_end(
+            runtime_dir, episode_id=702, end_time=1300, frame_count=1
+        )
+        listed = storage_service.episode_list(runtime_dir)
+        inspected = storage_service.episode_inspect(runtime_dir, episode_id=702)
+        storage_service.episode_begin(runtime_dir, episode_id=703, begin_time=1400)
+        recovered = storage_service.episode_recover(
+            runtime_dir, episode_id=703, end_time=1500
+        )
+        projection = storage_service.episode_projection_rebuild(runtime_dir)
+        registered_source = storage_service.source_register(
+            runtime_dir,
+            source_id="typed-source",
+            kind="adapter",
+            coordinate="adapter://typed",
+        )
+        updated_source = runtime.storage_source_update_head_typed(
+            str(runtime_dir),
+            "typed-source",
+            update_time=1600,
+            head="head-1",
+        )
+        accepted_range = runtime.storage_source_record_accepted_range_typed(
+            str(runtime_dir),
+            "typed-source",
+            "manifest-1",
+            accept_time=1700,
+        )
+        source_list = runtime.storage_source_list_typed(str(runtime_dir))
+        source_inspect = storage_service.source_inspect(
+            runtime_dir, source_id="typed-source"
+        )
+        source_fsck = runtime.storage_source_registry_fsck_typed(
+            str(runtime_dir), "typed-source"
+        )
+        source_rebuild = runtime.storage_source_registry_rebuild_typed(str(runtime_dir))
+    finally:
+        json.loads = original_loads
+
+    assert status["ok"] is True
+    assert status["source_id"] is None
+    assert isinstance(status["provider_runtime"], dict)
+    assert status["provider_runtime"]["read_fill_cache"] is None
+    assert isinstance(status["projections"], list)
+    assert status["projections"][0]["verification"]["authority"] == "yijinjing-journal"
+    assert status_high_level["authority"] == status["authority"]
+    assert status_high_level["projections"] == status["projections"]
+    assert layout["owner"] == "libkungfu"
+    assert layout["runtime_dir"] == str(runtime_dir.resolve())
+    assert (
+        status_high_level["provider_cache"]["hits"] >= status["provider_cache"]["hits"]
+    )
+    assert query["query"] == 4
+    assert query["rows"][0]["body"]["title"] == "typed-query"
+    assert query["rows"][0]["body"]["location_uid"] == 17
+    assert query_edge["query"] == "entries"
+    assert query_edge["row_count"] == 0
+    assert gc["dry_run"] is True
+    assert rebuild["would_write"] is True
+    assert compact["dry_run"] is True
+    assert fsck["scope"] == 2
+    assert fsck["episode_id"] == 701
+    assert repair["scope"] == 2
+    assert repair["episode_id"] == 701
+    assert repair["dry_run"] is True
+    assert episode["episode_id"] == 702
+    assert heartbeat["update_time"] == 1100
+    assert attached_ref["ref_kind"] == 1
+    assert attached_frame["frame_uid"] == 10
+    assert closed["close"]["status"] == 2
+    assert listed["episodes"][0]["episode_id"] == 702
+    assert inspected["content_root"]["status"] == 4
+    assert recovered["recovered"][0]["close"]["status"] == 3
+    assert projection["authority"] == "yijinjing-journal"
+    assert registered_source["kind"] == 4
+    assert updated_source["head"] == "head-1"
+    assert accepted_range["status"] == 1
+    assert source_list["sources"][0]["source_uid"] == registered_source["source_uid"]
+    assert source_inspect["source"]["current_head"] == "head-1"
+    assert source_fsck["journal"]["ok"] is True
+    assert source_rebuild["authority"] == "yijinjing-journal"
+
+
 def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
     runtime = kungfu.__binding__.runtime
     capabilities = storage_service.service_capabilities()
@@ -390,8 +517,10 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
         "episode_abort",
         "episode_attach_frame",
         "episode_attach_ref",
+        "episode_recover",
         "episode_list",
         "episode_inspect",
+        "episode_projection_rebuild",
         "source_register",
         "source_update_head",
         "source_record_accepted_range",
@@ -448,6 +577,14 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
         runtime_home=workspace_home,
         config_home=config_home,
     )
+    layout_edge = runtime.run_storage_service_operation(
+        "layout",
+        str(runtime_dir),
+        {
+            "runtime_home": str(workspace_home),
+            "config_home": str(config_home),
+        },
+    )
     assert layout["schema"] == "kungfu.workspace.episode-layout/v1"
     assert layout["owner"] == "libkungfu"
     assert layout["workspace_data_home"] == str(workspace_home)
@@ -479,6 +616,13 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
         "episode_frames",
         "episode_refs",
     ]
+    assert layout_edge["paths"] == layout["paths"]
+    assert layout_edge["episodes"] == layout["episodes"]
+    assert layout_edge["provider_layout"] == {
+        key: value
+        for key, value in layout["provider_layout"].items()
+        if value is not None
+    }
 
 
 def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monkeypatch):
@@ -502,17 +646,69 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
 
     runtime = kungfu.__binding__.runtime
     original_operation = runtime.run_storage_service_operation
+    original_typed_status = runtime.storage_status_typed
+    original_typed_layout = runtime.storage_layout_typed
+    original_typed_query = runtime.storage_query_typed
+    original_typed_gc = runtime.storage_gc_plan_typed
+    original_typed_rebuild = runtime.storage_rebuild_index_typed
+    original_typed_compact = runtime.storage_compact_plan_typed
+    original_typed_fsck = runtime.storage_fsck_typed
+    original_typed_repair = runtime.storage_repair_plan_typed
     calls = []
+    typed_statuses = []
+    typed_layouts = []
+    typed_queries = []
+    typed_maintenance = []
 
     def spy_operation(operation, runtime_dir_arg, options):
         calls.append((operation, runtime_dir_arg, dict(options)))
         return original_operation(operation, runtime_dir_arg, options)
+
+    def spy_typed_query(runtime_dir_arg, query, **options):
+        typed_queries.append((runtime_dir_arg, query, dict(options)))
+        return original_typed_query(runtime_dir_arg, query, **options)
+
+    def spy_typed_status(runtime_dir_arg, source_id=None):
+        typed_statuses.append((runtime_dir_arg, source_id))
+        return original_typed_status(runtime_dir_arg, source_id)
+
+    def spy_typed_layout(runtime_dir_arg, **options):
+        typed_layouts.append((runtime_dir_arg, dict(options)))
+        return original_typed_layout(runtime_dir_arg, **options)
+
+    def spy_typed_gc(runtime_dir_arg, **options):
+        typed_maintenance.append(("gc_plan", runtime_dir_arg, dict(options)))
+        return original_typed_gc(runtime_dir_arg, **options)
+
+    def spy_typed_rebuild(runtime_dir_arg, **options):
+        typed_maintenance.append(("rebuild_index", runtime_dir_arg, dict(options)))
+        return original_typed_rebuild(runtime_dir_arg, **options)
+
+    def spy_typed_compact(runtime_dir_arg, **options):
+        typed_maintenance.append(("compact_plan", runtime_dir_arg, dict(options)))
+        return original_typed_compact(runtime_dir_arg, **options)
+
+    def spy_typed_fsck(runtime_dir_arg, **options):
+        typed_maintenance.append(("fsck", runtime_dir_arg, dict(options)))
+        return original_typed_fsck(runtime_dir_arg, **options)
+
+    def spy_typed_repair(runtime_dir_arg, **options):
+        typed_maintenance.append(("repair_plan", runtime_dir_arg, dict(options)))
+        return original_typed_repair(runtime_dir_arg, **options)
 
     monkeypatch.setattr(
         runtime,
         "run_storage_service_operation",
         spy_operation,
     )
+    monkeypatch.setattr(runtime, "storage_status_typed", spy_typed_status)
+    monkeypatch.setattr(runtime, "storage_layout_typed", spy_typed_layout)
+    monkeypatch.setattr(runtime, "storage_query_typed", spy_typed_query)
+    monkeypatch.setattr(runtime, "storage_gc_plan_typed", spy_typed_gc)
+    monkeypatch.setattr(runtime, "storage_rebuild_index_typed", spy_typed_rebuild)
+    monkeypatch.setattr(runtime, "storage_compact_plan_typed", spy_typed_compact)
+    monkeypatch.setattr(runtime, "storage_fsck_typed", spy_typed_fsck)
+    monkeypatch.setattr(runtime, "storage_repair_plan_typed", spy_typed_repair)
 
     storage_service.status(runtime_dir, source_id="local-synth")
     storage_service.layout(runtime_dir)
@@ -549,20 +745,158 @@ def test_python_storage_operations_enter_runtime_service_surface(tmp_path, monke
 
     entered = {operation for operation, _, _ in calls}
     assert {
-        "status",
-        "layout",
-        "fsck",
-        "repair_plan",
         "repair_fetch",
         "repair_apply",
-        "rebuild_index",
-        "gc_plan",
-        "compact_plan",
         "export_bundle",
         "import_bundle",
         "verify_sync",
-        "query",
     } <= entered
+    assert typed_statuses == [(str(runtime_dir), "local-synth")]
+    assert typed_layouts == [
+        (
+            str(runtime_dir),
+            {"runtime_home": "", "config_home": "", "provider": ""},
+        )
+    ]
+    assert typed_queries == [
+        (
+            str(runtime_dir),
+            "entries",
+            {
+                "source_id": "local-synth",
+                "entry_kind": "note",
+                "limit": 10,
+                "since": "",
+                "until": "",
+            },
+        )
+    ]
+    assert typed_maintenance == [
+        (
+            "fsck",
+            str(runtime_dir),
+            {"source_id": "local-synth", "episode_id": 0, "verify_frames": False},
+        ),
+        (
+            "repair_plan",
+            str(runtime_dir),
+            {
+                "source_id": "local-synth",
+                "episode_id": 0,
+                "dry_run": True,
+            },
+        ),
+        (
+            "rebuild_index",
+            str(runtime_dir),
+            {"source_id": "local-synth", "dry_run": True},
+        ),
+        (
+            "rebuild_index",
+            str(runtime_dir),
+            {"source_id": "local-synth", "dry_run": False},
+        ),
+        ("gc_plan", str(runtime_dir), {"source_id": None, "dry_run": True}),
+        ("compact_plan", str(runtime_dir), {"source_id": None, "dry_run": True}),
+    ]
+
+
+def test_python_episode_writer_and_recovery_use_typed_bindings(tmp_path, monkeypatch):
+    runtime = kungfu.__binding__.runtime
+    runtime_dir = tmp_path / "runtime"
+    typed_names = [
+        "storage_episode_begin_typed",
+        "storage_episode_heartbeat_typed",
+        "storage_episode_attach_frame_typed",
+        "storage_episode_attach_ref_typed",
+        "storage_episode_close_typed",
+        "storage_episode_list_typed",
+        "storage_episode_inspect_typed",
+        "storage_episode_recover_typed",
+        "storage_episode_projection_rebuild_typed",
+    ]
+    originals = {name: getattr(runtime, name) for name in typed_names}
+    calls = []
+
+    for name, original in originals.items():
+
+        def spy(*args, _name=name, _original=original, **kwargs):
+            calls.append((_name, args, kwargs))
+            return _original(*args, **kwargs)
+
+        monkeypatch.setattr(runtime, name, spy)
+
+    storage_service.episode_begin(runtime_dir, episode_id=801, begin_time=1000)
+    storage_service.episode_heartbeat(runtime_dir, episode_id=801, update_time=1100)
+    storage_service.episode_attach_frame(
+        runtime_dir, episode_id=801, frame_uid=1, gen_time=1200
+    )
+    storage_service.episode_attach_ref(
+        runtime_dir, episode_id=801, ref_kind="input_frame", ref_uid=2
+    )
+    storage_service.episode_end(runtime_dir, episode_id=801, end_time=1300)
+    storage_service.episode_list(runtime_dir)
+    storage_service.episode_inspect(runtime_dir, episode_id=801)
+    storage_service.episode_begin(runtime_dir, episode_id=802, begin_time=1400)
+    storage_service.episode_recover(runtime_dir, episode_id=802, end_time=1500)
+    storage_service.episode_projection_rebuild(runtime_dir)
+
+    assert {name for name, _, _ in calls} == set(typed_names)
+
+
+def test_storage_query_edge_renders_typed_source_manifest_and_entry_rows(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    storage_service.write_synthetic_source(
+        runtime_dir,
+        source_id="typed-query-source",
+        manifest_id="typed-query-manifest",
+        source_head="typed-head",
+        records=[
+            {
+                "kind": "note",
+                "source_id": "note-a",
+                "source_path": "notes/a.json",
+                "source_time": "2026-07-08T00:00:00Z",
+                "payload": {"title": "A", "body": "alpha"},
+            }
+        ],
+    )
+
+    sources = storage_service.query_projection(
+        runtime_dir,
+        query="sources",
+        source_id="typed-query-source",
+    )
+    assert sources["projection"] == {
+        "name": "manifest-catalog",
+        "schema": "kungfu.storage.manifest-catalog/v1",
+        "authority": "yijinjing-journal",
+        "rebuildable": True,
+    }
+    assert sources["row_count"] == 1
+    assert sources["rows"][0]["source_id"] == "typed-query-source"
+    assert sources["rows"][0]["manifest_id"] == "typed-query-manifest"
+
+    manifests = storage_service.query_projection(
+        runtime_dir,
+        query="manifests",
+        source_id="typed-query-source",
+    )
+    assert manifests["row_count"] == 1
+    assert manifests["rows"][0]["source_id"] == "typed-query-source"
+    assert manifests["rows"][0]["manifest_id"] == "typed-query-manifest"
+    assert manifests["rows"][0]["status"] == "ok"
+
+    entries = storage_service.query_projection(
+        runtime_dir,
+        query="entries",
+        source_id="typed-query-source",
+        kind="note",
+        limit=1,
+    )
+    assert entries["row_count"] == 1
+    assert entries["rows"][0]["source_id"] == "note-a"
+    assert entries["rows"][0]["storage_source_id"] == "typed-query-source"
 
 
 def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
@@ -575,8 +909,7 @@ def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
         source="unit-test",
         begin_time=1000,
     )
-    assert episode["schema"] == "kungfu.episode.manifest/v1"
-    assert episode["record_kind"] == "episode_open"
+    assert episode["schema_version"] == 1
     assert episode["episode_id"] == 42
 
     input_ref = storage_service.episode_attach_ref(
@@ -586,8 +919,7 @@ def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
         ref_uid=99,
         ref_id="external-frame:99",
     )
-    assert input_ref["record_kind"] == "episode_ref_attached"
-    assert input_ref["ref_kind"] == "input_frame"
+    assert input_ref["ref_kind"] == 1
 
     attached = storage_service.episode_attach_frame(
         runtime_dir,
@@ -604,7 +936,7 @@ def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
         payload_checksum=123,
         frame_checksum=456,
     )
-    assert attached["record_kind"] == "episode_frame_attached"
+    assert attached["schema_version"] == 1
     assert attached["frame_uid"] == 100
 
     ended = storage_service.episode_end(
@@ -615,26 +947,28 @@ def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
         frame_count=1,
         reason="done",
     )
-    assert ended["status"] == "ended"
+    assert ended["close"]["status"] == 2
+    assert ended["content_root"]["episode_id"] == 42
 
     listed = storage_service.episode_list(runtime_dir)
     assert listed["authority"] == "yijinjing-journal"
-    assert listed["episode_count"] == 1
+    assert len(listed["episodes"]) == 1
     assert listed["episodes"][0]["episode_id"] == 42
-    assert listed["episodes"][0]["frame_count"] == 1
+    assert listed["episodes"][0]["unique_frame_count"] == 1
 
     inspected = storage_service.episode_inspect(runtime_dir, episode_id=42)
     assert inspected["ok"]
-    assert inspected["episode"]["status"] == "ended"
+    assert inspected["episode"]["close"]["status"] == 2
     # open + frame + ref + close, plus the ADR-0043 root committed at seal
-    assert len(inspected["records"]) == 5
-    assert inspected["records"][-1]["record_kind"] == "episode_root_committed"
-    assert inspected["content_root"]["status"] == "verified"
-    assert inspected["frames"][0]["frame_uid"] == 100
+    assert len(inspected["episode"]["records"]) == 5
+    assert inspected["episode"]["records"][-1]["body"]["root_value"]
+    frame_index = inspected["episode"]["frame_indices"][0]
+    assert inspected["content_root"]["status"] == 4
+    assert inspected["episode"]["records"][frame_index]["body"]["frame_uid"] == 100
     assert inspected["causal_graph"]["schema"] == "kungfu.episode.causal-graph/v1"
     assert inspected["causal_graph"]["degraded"] is False
-    assert inspected["dependencies"][0]["kind"] == "frame"
-    assert inspected["dependencies"][0]["status"] == "declared_external"
+    assert inspected["causal_graph"]["dependencies"][0]["kind"] == "frame"
+    assert inspected["causal_graph"]["dependencies"][0]["status"] == "declared_external"
 
     fsck = storage_service.fsck(runtime_dir)
     assert fsck["ok"]
@@ -645,7 +979,7 @@ def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
 
     episode_fsck = storage_service.fsck(runtime_dir, episode_id=42)
     assert episode_fsck["ok"]
-    assert episode_fsck["scope"] == "episode"
+    assert episode_fsck["scope"] == 2
     assert episode_fsck["episode_id"] == 42
     assert episode_fsck["checked"]["episodes"] == 1
 
@@ -1231,7 +1565,9 @@ def test_episode_fsck_reports_degraded_causal_dependencies(tmp_path):
     inspected = storage_service.episode_inspect(runtime_dir, episode_id=7)
     assert inspected["ok"]
     assert inspected["causal_graph"]["degraded"] is True
-    assert {dependency["kind"] for dependency in inspected["dependencies"]} >= {
+    assert {
+        dependency["kind"] for dependency in inspected["causal_graph"]["dependencies"]
+    } >= {
         "episode",
         "frame",
         "payload",
@@ -1243,11 +1579,15 @@ def test_episode_fsck_reports_degraded_causal_dependencies(tmp_path):
     assert not fsck["ok"]
     assert fsck["status"] == "failed"
     assert fsck["degraded"] is True
-    warning_codes = {warning["code"] for warning in fsck["warnings"]}
+    warning_codes = {
+        issue["code"] for issue in fsck["issues"] if issue["severity"] == "warning"
+    }
     assert "episode_dependency_missing" in warning_codes
     assert "episode_root_trigger_frame_missing" in warning_codes
     assert "episode_trigger_frame_missing" in warning_codes
-    error_codes = {error["code"] for error in fsck["errors"]}
+    error_codes = {
+        issue["code"] for issue in fsck["issues"] if issue["severity"] == "error"
+    }
     assert "episode_payload_ref_missing" in error_codes
 
     bundle = storage_service.build_export_bundle(runtime_dir, episode_id=7)
@@ -1264,14 +1604,13 @@ def test_episode_fsck_reports_degraded_causal_dependencies(tmp_path):
     assert imported["dependency_count"] == len(bundle["dependencies"])
 
     repair = storage_service.repair_plan(runtime_dir, episode_id=7, dry_run=True)
-    assert repair["schema"] == "kungfu.storage.repair-plan/v1"
-    assert repair["scope"] == "episode"
+    assert repair["scope"] == 2
     assert repair["episode_id"] == 7
     assert repair["dry_run"] is True
     assert repair["plan_only"] is True
     assert repair["status"] == "failed"
     assert repair["degraded"] is True
-    assert repair["candidate_count"] >= 4
+    assert len(repair["candidates"]) >= 4
     candidate_codes = {candidate["code"] for candidate in repair["candidates"]}
     assert "repair_episode_dependency" in candidate_codes
     assert "repair_episode_root_trigger_frame" in candidate_codes
@@ -1381,8 +1720,9 @@ def test_episode_fsck_reports_degraded_causal_dependencies(tmp_path):
     assert applied["applied"] is True
     assert applied["applied_count"] >= 1
     repaired_warning_codes = {
-        warning["code"]
-        for warning in storage_service.fsck(runtime_dir, episode_id=7)["warnings"]
+        issue["code"]
+        for issue in storage_service.fsck(runtime_dir, episode_id=7)["issues"]
+        if issue["severity"] == "warning"
     }
     assert "episode_root_trigger_frame_missing" not in repaired_warning_codes
     assert "episode_trigger_frame_missing" not in repaired_warning_codes
@@ -1722,6 +2062,8 @@ def test_runtime_storage_service_operations_own_file_provider(tmp_path):
     )
     assert verify["ok"]
     assert verify["sync_roots_match"]
+    assert verify["local_sync_root"] == bundle["sync_root"]
+    assert verify["imported_sync_root"] == bundle["sync_root"]
 
 
 def test_storage_maintenance_rebuild_gc_compact_and_sync_check(tmp_path):
@@ -1743,7 +2085,10 @@ def test_storage_maintenance_rebuild_gc_compact_and_sync_check(tmp_path):
     )
     status = storage_service.status(runtime_dir, source_id="local-synth")
     assert status["source_status"][0]["accepted_cursor"]["source_head"] == "head-1"
-    assert status["source_status"][0]["sync_root"] == accepted["sync_root"]
+    assert status["source_status"][0]["sync_root"] == {
+        "algorithm": accepted["sync_root"]["algorithm"],
+        "value": accepted["sync_root"]["value"],
+    }
     # The JSON-as-contract artifacts are retired (ADR-0037 final slice): no
     # sources.json registry and no per-source manifest files — the journals
     # are the authority.
@@ -1766,9 +2111,12 @@ def test_storage_maintenance_rebuild_gc_compact_and_sync_check(tmp_path):
         if row["name"] == "manifest-catalog-sqlite"
     )
     assert catalog_projection["written"] is True
-    assert catalog_projection["rows"]["import_manifest_accepted"] == 1
-    assert catalog_projection["rows"]["manifest_entry_recorded"] == 1
-    assert catalog_projection["rows"]["channel_cursor_updated"] == 1
+    catalog_rows = {
+        row["table"]: row["count"] for row in catalog_projection["detail"]["rows"]
+    }
+    assert catalog_rows["import_manifest_accepted"] == 1
+    assert catalog_rows["manifest_entry_recorded"] == 1
+    assert catalog_rows["channel_cursor_updated"] == 1
     sqlite_path = runtime_dir / "storage/projections/manifest-catalog.sqlite"
     assert sqlite_path.exists()
     with sqlite3.connect(sqlite_path) as db:
@@ -1790,21 +2138,21 @@ def test_storage_maintenance_rebuild_gc_compact_and_sync_check(tmp_path):
     status_catalog = next(
         row for row in status["projections"] if row["name"] == "manifest-catalog-sqlite"
     )
-    assert status_catalog["projection_present"] is True
-    assert status_catalog["status"] == "ok"
+    assert status_catalog["verification"]["projection_present"] is True
+    assert status_catalog["verification"]["status"] == "ok"
 
     orphan_raw = b'{"orphan":true}'
     orphan_hash = payloads.payload_hash(orphan_raw)
     storage_service.write_payload_bytes(runtime_dir, orphan_hash, orphan_raw)
     gc = storage_service.gc_plan(runtime_dir, dry_run=True)
-    assert gc["candidate_count"] == 1
+    assert len(gc["candidates"]) == 1
     assert gc["candidates"][0]["payload_hash"] == orphan_hash
     assert gc["candidates"][0]["safe_to_delete"] is True
     assert storage_service.payload_path(runtime_dir, orphan_hash).exists()
 
     compact = storage_service.compact_plan(runtime_dir, dry_run=True)
     assert compact["ok"]
-    assert compact["gc"]["candidate_count"] == 1
+    assert len(compact["gc"]["candidates"]) == 1
     assert compact["projection_compact"]["name"] == "manifest-catalog-sqlite"
     assert compact["projection_compact"]["action"] == "rebuild-and-vacuum"
     assert any(row["name"] == "backend-compact" for row in compact["unsupported"])
@@ -1815,12 +2163,14 @@ def test_storage_maintenance_rebuild_gc_compact_and_sync_check(tmp_path):
     assert fsck["checked"]["manifests"] == 1
     assert fsck["checked"]["entries_documents"] == 1
     assert fsck["checked"]["orphan_payloads"] == 1
-    assert any(warning["code"] == "orphan_payload" for warning in fsck["warnings"])
+    assert any(issue["code"] == "orphan_payload" for issue in fsck["issues"])
 
     sync_check = storage_service.verify_local_sync(runtime_dir, source_id="local-synth")
     assert sync_check["ok"]
     assert sync_check["sync_roots_match"]
     assert sync_check["exported_records"] == 1
+    assert sync_check["local_sync_root"] == accepted["sync_root"]
+    assert sync_check["imported_sync_root"] == accepted["sync_root"]
 
 
 def test_atlas_import_persists_generic_source_manifest(tmp_path):
@@ -1836,9 +2186,9 @@ def test_atlas_import_persists_generic_source_manifest(tmp_path):
     )
     # add_source registers into the source-registry kernel journal; the
     # storage_record is that journal's fold edge (ADR-0037).
-    assert result["storage_record"]["schema"] == "kungfu.storage.source-registry/v1"
-    assert result["storage_record"]["source_id"] == "atlas-local"
-    assert result["storage_record"]["kind"] == "adapter"
+    assert result["storage_record"]["registered"] is True
+    assert result["storage_record"]["registration"]["source_id"] == "atlas-local"
+    assert result["storage_record"]["registration"]["kind"] == 4
 
     sync = source_store.sync_source(runtime_dir, "atlas-local")
     assert sync["ok"]
@@ -1900,9 +2250,12 @@ def test_storage_fsck_reports_degraded_status_for_recorded_payload_states(tmp_pa
     assert report["ok"]
     assert report["status"] == "degraded"
     withheld = {
-        warning["subject"]: (warning["state"], warning["intentional"])
-        for warning in report["warnings"]
-        if warning["code"] == "payload_not_present"
+        issue["detail"]["subject"]: (
+            issue["detail"]["state"],
+            issue["detail"]["intentional"],
+        )
+        for issue in report["issues"]
+        if issue["code"] == "payload_not_present"
     }
     assert withheld["note:note-missing"] == ("missing", False)
     assert withheld["note:note-redacted"] == ("redacted", True)
@@ -1910,12 +2263,11 @@ def test_storage_fsck_reports_degraded_status_for_recorded_payload_states(tmp_pa
     repair = storage_service.repair_plan(
         runtime_dir, source_id="degraded-synth", dry_run=True
     )
-    assert repair["schema"] == "kungfu.storage.repair-plan/v1"
     assert repair["status"] == "degraded"
-    assert repair["candidate_count"] == 1
+    assert len(repair["candidates"]) == 1
     assert repair["candidates"][0]["code"] == "repair_source_payload"
-    assert repair["candidates"][0]["subject"] == "note:note-missing"
-    assert repair["candidates"][0]["payload_hash"]
+    assert repair["candidates"][0]["subject"]["subject"] == "note:note-missing"
+    assert repair["candidates"][0]["subject"]["payload_hash"]
 
     fetch_out = tmp_path / "source-repair-material.json"
     fetched = storage_service.repair_fetch(
@@ -1949,9 +2301,9 @@ def test_storage_fsck_reports_degraded_status_for_recorded_payload_states(tmp_pa
     assert repaired["ok"]
     assert repaired["status"] == "ok"
     warning_subjects = {
-        warning["subject"]
-        for warning in repaired["warnings"]
-        if warning["code"] == "payload_not_present"
+        issue["detail"]["subject"]
+        for issue in repaired["issues"]
+        if issue["code"] == "payload_not_present"
     }
     assert "note:note-missing" not in warning_subjects
 
@@ -2040,9 +2392,9 @@ def test_payload_state_producer_export_import_round_trip(tmp_path):
     assert report["ok"]
     assert report["status"] == "degraded"  # only the missing body degrades
     withheld = {
-        warning["subject"]: warning["intentional"]
-        for warning in report["warnings"]
-        if warning["code"] == "payload_not_present"
+        issue["detail"]["subject"]: issue["detail"]["intentional"]
+        for issue in report["issues"]
+        if issue["code"] == "payload_not_present"
     }
     assert withheld == {
         "note:note-redacted": True,
@@ -2248,17 +2600,22 @@ def test_source_registry_fsck_flags_dangling_head_without_registration(tmp_path)
     runtime = kungfu.__binding__.runtime
     runtime_dir = str(tmp_path)
 
-    runtime.run_storage_service_operation(
-        "source_update_head",
+    runtime.storage_source_update_head_typed(
         runtime_dir,
-        {"source_id": "ghost", "head": "h", "update_time": 5000},
+        "ghost",
+        head="h",
+        update_time=5000,
     )
-    fsck = runtime.run_storage_service_operation(
-        "source_registry_fsck", runtime_dir, {}
-    )
+    inspected = runtime.storage_source_inspect_typed(runtime_dir, "ghost")
+    fsck = runtime.storage_source_registry_fsck_typed(runtime_dir)
+    assert inspected["source"]["registered"] is False
+    assert inspected["source"]["current_head"] == "h"
     assert fsck["ok"] is False
     assert fsck["status"] == "failed"
-    assert any(err["code"] == "source_registration_missing" for err in fsck["errors"])
+    assert any(
+        err["code"] == "source_registration_missing"
+        for err in fsck["journal"]["errors"]
+    )
 
 
 def test_source_registry_sqlite_projection_rebuilds_from_journal(tmp_path):

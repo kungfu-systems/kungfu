@@ -8,7 +8,7 @@ confidence: high
 sensitivity: internal
 evidence_grade: B
 review_state: active
-last_reviewed: 2026-07-08
+last_reviewed: 2026-07-11
 ai_provenance:
   generated_by: Codex
   product: Codex CLI
@@ -34,9 +34,10 @@ the `.fbs`-owned action envelope. Its edge JSON rendering is:
 }
 ```
 
-The JSON object is not the on-journal schema. ADR-0047 requires the current
-pre-release JSON/base64 implementation to migrate to `ActionEnvelope.fbs`
-before the stable v4 baseline.
+The JSON object is not the on-journal schema. The pre-release migration required
+by ADR-0047 is implemented in PR #522: `ActionEnvelope.fbs` owns the body, the binary
+journal carries `KFAE` bytes, and JSON/base64 exists only in explicitly named
+edge render/import helpers.
 
 ## v4 Allocations
 

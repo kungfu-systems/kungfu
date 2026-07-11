@@ -6,7 +6,7 @@
   "supportLevel": "release",
   "source": {
     "cwd": "/Users/dkr/Worktrees/kungfu/feature/adr0051-fact-admission",
-    "sourceSha": "70a1883a5f7897bea09fea405d3fc6c70108c7d1",
+    "sourceSha": "cd2e3d95094e3e9a726453aa5a948334d90f4291",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
     "registryDigest": "sha256:6a8c59dbfec53dd48fa14a95e09dea9d1e27ffc62c9fc536ff6ec43c8a3309d4"
   },

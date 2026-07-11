@@ -14,6 +14,7 @@ import type {
   DomainState,
   Ledger,
   Rewind,
+  Storage,
   Terminal,
   Work,
 } from '@kungfu-tech/api/capability';
@@ -44,6 +45,7 @@ export type KfxCapabilities = {
   ledger: Ledger;
   domain: DomainState;
   rewind: Rewind;
+  storage: Storage;
   terminal: Terminal;
   work: Work;
   atlas?: Atlas;

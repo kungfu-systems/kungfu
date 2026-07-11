@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <kungfu/native_storage.h>
-#include <kungfu/runtime/storage/service.h>
+#include <kungfu/runtime/storage/json_edge.h>
 
 #include <array>
 #include <cstring>

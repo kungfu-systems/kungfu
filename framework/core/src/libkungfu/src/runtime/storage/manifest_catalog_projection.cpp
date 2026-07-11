@@ -61,7 +61,7 @@ std::string manifest_catalog_projection::sqlite_path() const { return projection
 
 bool manifest_catalog_projection::exists() const { return fs::exists(projection_path(runtime_dir_)); }
 
-nlohmann::json manifest_catalog_projection::rebuild() const {
+storage_projection_rebuild_result manifest_catalog_projection::rebuild_typed() const {
   const auto path = projection_path(runtime_dir_);
   fs::create_directories(path.parent_path());
 
@@ -91,26 +91,23 @@ nlohmann::json manifest_catalog_projection::rebuild() const {
   }
 
   return {
-      {"ok", true},
-      {"schema", MANIFEST_CATALOG_PROJECTION_SCHEMA_V1},
-      {"runtime_dir", runtime_dir_},
-      {"authority", "yijinjing-journal"},
-      {"projection", "sqlite"},
-      {"sqlite_path", path.string()},
-      {"rows",
-       {{"import_manifest_accepted", storage->count<yijinjing::types::ImportManifestAccepted>()},
-        {"manifest_entry_recorded", storage->count<yijinjing::types::ManifestEntryRecorded>()},
-        {"export_bundle_recorded", storage->count<yijinjing::types::ExportBundleRecorded>()},
-        {"channel_cursor_updated", storage->count<yijinjing::types::ChannelCursorUpdated>()}}},
-      {"journal_records",
-       {{"import_manifest_accepted", records.manifests.size()},
-        {"manifest_entry_recorded", records.entries.size()},
-        {"export_bundle_recorded", records.exports.size()},
-        {"channel_cursor_updated", records.cursors.size()}}},
-  };
+      true,
+      MANIFEST_CATALOG_PROJECTION_SCHEMA_V1,
+      runtime_dir_,
+      "yijinjing-journal",
+      "sqlite",
+      path.string(),
+      {{"import_manifest_accepted", static_cast<uint64_t>(storage->count<yijinjing::types::ImportManifestAccepted>())},
+       {"manifest_entry_recorded", static_cast<uint64_t>(storage->count<yijinjing::types::ManifestEntryRecorded>())},
+       {"export_bundle_recorded", static_cast<uint64_t>(storage->count<yijinjing::types::ExportBundleRecorded>())},
+       {"channel_cursor_updated", static_cast<uint64_t>(storage->count<yijinjing::types::ChannelCursorUpdated>())}},
+      {{"import_manifest_accepted", records.manifests.size()},
+       {"manifest_entry_recorded", records.entries.size()},
+       {"export_bundle_recorded", records.exports.size()},
+       {"channel_cursor_updated", records.cursors.size()}}};
 }
 
-nlohmann::json manifest_catalog_projection::verify() const {
+storage_projection_verify_result manifest_catalog_projection::verify_typed() const {
   const auto path = projection_path(runtime_dir_);
   const auto records = yijinjing::storage::manifest_catalog_store(runtime_dir_).read_typed_records();
   const auto expected = distinct_pk_counts(records);
@@ -120,16 +117,15 @@ nlohmann::json manifest_catalog_projection::verify() const {
   if (!fs::exists(path)) {
     // Missing projection is a distinct honest state, not a silent ok: if the
     // journal has records, the projection needs a rebuild before SQL queries.
-    return {
-        {"ok", true},
-        {"status", has_records ? "absent" : "ok"},
-        {"schema", MANIFEST_CATALOG_PROJECTION_SCHEMA_V1},
-        {"runtime_dir", runtime_dir_},
-        {"authority", "yijinjing-journal"},
-        {"projection_present", false},
-        {"note", has_records ? "projection not built; run rebuild_index to enable SQL queries"
-                             : "no manifest-catalog records; projection not needed"},
-    };
+    return {true,
+            has_records ? "absent" : "ok",
+            MANIFEST_CATALOG_PROJECTION_SCHEMA_V1,
+            runtime_dir_,
+            "yijinjing-journal",
+            false,
+            false,
+            has_records ? "projection not built; run rebuild_index to enable SQL queries"
+                        : "no manifest-catalog records; projection not needed"};
   }
 
   auto storage = cache::make_storage_ptr(path.string(), yijinjing::ManifestCatalogDataTypes);
@@ -145,10 +141,10 @@ nlohmann::json manifest_catalog_projection::verify() const {
   // cache there means queries answer from old facts. Export receipts are an
   // append-only audit stream on the read path — every export appends one —
   // so receipt lag between rebuilds is expected and is not drift.
-  nlohmann::json drift = nlohmann::json::array();
+  std::vector<storage_projection_drift> drift;
   const auto check = [&](const char *table, size_t projected, size_t journal_expected) {
     if (projected != journal_expected) {
-      drift.push_back({{"table", table}, {"projection_rows", projected}, {"journal_distinct", journal_expected}});
+      drift.push_back({table, projected, journal_expected});
     }
   };
   check("import_manifest_accepted", projected_manifests, expected.manifests);
@@ -156,24 +152,21 @@ nlohmann::json manifest_catalog_projection::verify() const {
   check("channel_cursor_updated", projected_cursors, expected.cursors);
 
   const bool degraded = !drift.empty();
-  return {
-      {"ok", !degraded},
-      {"status", degraded ? "degraded" : "ok"},
-      {"schema", MANIFEST_CATALOG_PROJECTION_SCHEMA_V1},
-      {"runtime_dir", runtime_dir_},
-      {"authority", "yijinjing-journal"},
-      {"projection_present", true},
-      {"degraded", degraded},
-      {"drift", drift},
-      {"rows",
-       {{"import_manifest_accepted", projected_manifests},
-        {"manifest_entry_recorded", projected_entries},
-        {"channel_cursor_updated", projected_cursors}}},
-      {"journal_distinct",
-       {{"import_manifest_accepted", expected.manifests},
-        {"manifest_entry_recorded", expected.entries},
-        {"channel_cursor_updated", expected.cursors}}},
-  };
+  return {!degraded,
+          degraded ? "degraded" : "ok",
+          MANIFEST_CATALOG_PROJECTION_SCHEMA_V1,
+          runtime_dir_,
+          "yijinjing-journal",
+          true,
+          degraded,
+          {},
+          std::move(drift),
+          {{"import_manifest_accepted", projected_manifests},
+           {"manifest_entry_recorded", projected_entries},
+           {"channel_cursor_updated", projected_cursors}},
+          {{"import_manifest_accepted", expected.manifests},
+           {"manifest_entry_recorded", expected.entries},
+           {"channel_cursor_updated", expected.cursors}}};
 }
 
 } // namespace kungfu::runtime::storage_service_api

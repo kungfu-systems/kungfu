@@ -81,9 +81,10 @@ Closed yijinjing/runtime frames identify their Hana POD layout directly through
 `carrier_type`. New v4 business facts use the generic action-envelope carrier:
 the journal header keeps `carrier_type` for filtering and fsck, while the
 FlatBuffers envelope names the domain action through `action_type` and
-`schema_ref`. The current pre-release JSON/base64 envelope is transitional and
-must migrate before the stable v4 baseline. C++, Python, and Node still share
-the C++ recording and causality semantics (see [`contracts.md`](contracts.md)).
+`schema_ref`. Its journal body is the verified `ActionEnvelope.fbs` `KFAE`
+buffer; JSON/base64 is emitted or accepted only by named edge adapters. C++,
+Python, and Node share the C++ recording and causality semantics (see
+[`contracts.md`](contracts.md)).
 
 Current `frame_header` does not contain an in-frame checksum. New
 `action_recorder` receipts carry `integrity_version`, `checksum_algorithm`,

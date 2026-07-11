@@ -4,6 +4,7 @@
 
 #include <kungfu/runtime/action_recorder.h>
 #include <kungfu/runtime/facts/domain_fact_schema.h>
+#include <kungfu/view/action_envelope.h>
 #include <kungfu/view/schema.h>
 #include <kungfu/yijinjing/journal/assemble.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
@@ -11,7 +12,6 @@
 #include <kungfu/yijinjing/time.h>
 
 #include <algorithm>
-#include <array>
 #include <charconv>
 #include <limits>
 #include <map>
@@ -29,10 +29,8 @@ namespace yy_storage = kungfu::yijinjing::storage;
 namespace {
 
 constexpr uint32_t FACT_EVENT_SCHEMA_VERSION = 1;
-constexpr int32_t FACT_EVENT_CARRIER = 1000;
 constexpr const char *FACT_NAMESPACE = "facts";
 constexpr const char *FACT_NAME = "admission";
-constexpr const char *ACTION_ENVELOPE_SCHEMA = "kungfu.action-envelope/v1";
 
 struct schema_contract {
   view::schema_handle handle;
@@ -53,67 +51,6 @@ struct recorded_episode {
 
 std::string content_root(const std::string &value) {
   return yy_storage::format_content_hash(yy_storage::compute_content_hash(value));
-}
-
-std::string base64_encode(const std::vector<uint8_t> &value) {
-  static constexpr char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  std::string result;
-  result.reserve(((value.size() + 2) / 3) * 4);
-  for (size_t offset = 0; offset < value.size(); offset += 3) {
-    const auto remaining = value.size() - offset;
-    const uint32_t block = static_cast<uint32_t>(value[offset]) << 16u |
-                           (remaining > 1 ? static_cast<uint32_t>(value[offset + 1]) << 8u : 0u) |
-                           (remaining > 2 ? static_cast<uint32_t>(value[offset + 2]) : 0u);
-    result.push_back(alphabet[(block >> 18u) & 0x3fu]);
-    result.push_back(alphabet[(block >> 12u) & 0x3fu]);
-    result.push_back(remaining > 1 ? alphabet[(block >> 6u) & 0x3fu] : '=');
-    result.push_back(remaining > 2 ? alphabet[block & 0x3fu] : '=');
-  }
-  return result;
-}
-
-std::vector<uint8_t> base64_decode(const std::string &value) {
-  static const auto decode = [] {
-    std::array<int16_t, 256> table{};
-    table.fill(-1);
-    const std::string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    for (size_t index = 0; index < alphabet.size(); ++index) {
-      table[static_cast<unsigned char>(alphabet[index])] = static_cast<int16_t>(index);
-    }
-    return table;
-  }();
-  if (value.size() % 4 != 0) {
-    throw std::invalid_argument("fact action envelope contains invalid base64 length");
-  }
-  std::vector<uint8_t> result;
-  result.reserve((value.size() / 4) * 3);
-  for (size_t offset = 0; offset < value.size(); offset += 4) {
-    uint32_t block = 0;
-    size_t padding = 0;
-    for (size_t index = 0; index < 4; ++index) {
-      const auto ch = static_cast<unsigned char>(value[offset + index]);
-      if (ch == '=') {
-        ++padding;
-        block <<= 6u;
-      } else {
-        if (padding != 0 || decode[ch] < 0) {
-          throw std::invalid_argument("fact action envelope contains invalid base64 data");
-        }
-        block = (block << 6u) | static_cast<uint32_t>(decode[ch]);
-      }
-    }
-    if (padding > 2 || (padding != 0 && offset + 4 != value.size())) {
-      throw std::invalid_argument("fact action envelope contains invalid base64 padding");
-    }
-    result.push_back(static_cast<uint8_t>((block >> 16u) & 0xffu));
-    if (padding < 2) {
-      result.push_back(static_cast<uint8_t>((block >> 8u) & 0xffu));
-    }
-    if (padding == 0) {
-      result.push_back(static_cast<uint8_t>(block & 0xffu));
-    }
-  }
-  return result;
 }
 
 const schema_contract &domain_schema() {
@@ -289,44 +226,19 @@ std::string action_type_for_kind(const std::string &kind) {
   throw std::invalid_argument("unsupported domain fact event kind: " + kind);
 }
 
-std::string wrap_event(const nlohmann::json &event, const std::vector<uint8_t> &payload) {
-  const auto raw = std::string(payload.begin(), payload.end());
-  return nlohmann::json{
-      {"schema", ACTION_ENVELOPE_SCHEMA},
-      {"action_type", action_type_for_kind(text_or(event, "kind"))},
-      {"schema_ref",
-       {{"id", DOMAIN_FACT_EVENT_SCHEMA_V1}, {"version", FACT_EVENT_SCHEMA_VERSION}, {"root", domain_schema().root}}},
-      {"payload",
-       {{"encoding", "flatbuffers"},
-        {"content_transfer_encoding", "base64"},
-        {"data", base64_encode(payload)},
-        {"byte_len", payload.size()},
-        {"sha256", content_root(raw)}}}}
-      .dump(-1, ' ', false);
+view::action::envelope wrap_event(const nlohmann::json &event, std::vector<uint8_t> payload) {
+  view::action::envelope envelope{};
+  envelope.action_type = action_type_for_kind(text_or(event, "kind"));
+  envelope.schema_ref = {DOMAIN_FACT_EVENT_SCHEMA_V1, FACT_EVENT_SCHEMA_VERSION};
+  envelope.payload = view::action::payload_view{view::action::payload_encoding::FlatBuffers,
+                                                std::move(payload),
+                                                {},
+                                                {},
+                                                0,
+                                                "application/vnd.kungfu.domain-fact-event+flatbuffers",
+                                                "present"};
+  return envelope;
 }
-
-std::vector<uint8_t> unwrap_event(const std::string &raw) {
-  const auto envelope = nlohmann::json::parse(raw);
-  if (!envelope.is_object() || text_or(envelope, "schema") != ACTION_ENVELOPE_SCHEMA) {
-    throw std::invalid_argument("fact journal frame is not a Kungfu action envelope");
-  }
-  const auto schema_ref = envelope.value("schema_ref", nlohmann::json::object());
-  if (text_or(schema_ref, "id") != DOMAIN_FACT_EVENT_SCHEMA_V1 || text_or(schema_ref, "root") != domain_schema().root) {
-    throw std::invalid_argument("fact action envelope does not bind the registered event schema root");
-  }
-  const auto payload = envelope.value("payload", nlohmann::json::object());
-  if (text_or(payload, "encoding") != "flatbuffers" || text_or(payload, "content_transfer_encoding") != "base64") {
-    throw std::invalid_argument("fact action envelope requires a FlatBuffers/base64 payload");
-  }
-  const auto decoded = base64_decode(required_text(payload, "data"));
-  if (unsigned_value(payload, "byte_len") != decoded.size() ||
-      text_or(payload, "sha256") != content_root(std::string(decoded.begin(), decoded.end()))) {
-    throw std::invalid_argument("fact action envelope payload evidence does not match its bytes");
-  }
-  return decoded;
-}
-
-uint64_t json_episode_id(const nlohmann::json &value) { return unsigned_value(value, "episode_id"); }
 
 recorded_episode append_episode(const std::string &runtime_dir, std::vector<nlohmann::json> events, int64_t system_time,
                                 const std::string &title) {
@@ -339,7 +251,7 @@ recorded_episode append_episode(const std::string &runtime_dir, std::vector<nloh
   begin_options.actor = "libkungfu";
   begin_options.source = "adr-0051-fact-admission";
   const auto opened = episodes.begin(begin_options);
-  const auto episode_id = json_episode_id(opened);
+  const auto episode_id = opened.episode_id;
 
   recorded_episode result;
   result.episode_id = episode_id;
@@ -349,7 +261,7 @@ recorded_episode append_episode(const std::string &runtime_dir, std::vector<nloh
     const auto envelope = wrap_event(event, binary);
     action::record_options options{};
     options.gen_time = integer_value(event, "system_time", system_time);
-    const auto receipt = recorder.record_json(FACT_EVENT_CARRIER, envelope, options);
+    const auto receipt = recorder.record_action(envelope, options);
     yy_storage::episode_frame_attach_options attached{};
     attached.episode_id = episode_id;
     attached.location_uid = receipt.source;
@@ -400,13 +312,21 @@ std::vector<fact_record> read_events(const std::string &runtime_dir, int64_t cut
     yy::journal::assemble reader(location, yy::data::location::PUBLIC, yy::enums::AssembleMode::Channel, 0);
     while (reader.data_available()) {
       const auto frame = reader.current_frame();
-      if (frame->carrier_type() == FACT_EVENT_CARRIER &&
+      if (frame->carrier_type() == view::action::ACTION_ENVELOPE_CARRIER_TYPE &&
           (cut_system_time == 0 || frame->gen_time() <= cut_system_time)) {
-        auto envelope = frame->data_as_string();
-        while (!envelope.empty() && envelope.back() == '\0') {
-          envelope.pop_back();
+        std::string error;
+        const auto envelope = view::action::decode(reinterpret_cast<const uint8_t *>(frame->data_as_bytes()),
+                                                   frame->data_length(), &error);
+        if (!envelope.has_value()) {
+          throw std::runtime_error("cannot decode fact action envelope: " + error);
         }
-        const auto payload = unwrap_event(envelope);
+        if (envelope->schema_ref.id != DOMAIN_FACT_EVENT_SCHEMA_V1 ||
+            envelope->schema_ref.version != FACT_EVENT_SCHEMA_VERSION || !envelope->payload.has_value() ||
+            envelope->payload->encoding != view::action::payload_encoding::FlatBuffers) {
+          reader.next();
+          continue;
+        }
+        const auto &payload = envelope->payload->data;
         const auto decoded = domain_schema().handle.decode_json(payload.data(), payload.size());
         if (!decoded.ok) {
           throw std::runtime_error("cannot decode domain fact event: " + decoded.error);
@@ -701,7 +621,10 @@ nlohmann::json fact_contract_json() {
           {"schema_owner", "flatbuffers"},
           {"event_schema", DOMAIN_FACT_EVENT_SCHEMA_V1},
           {"schema_root", domain_schema().root},
-          {"journal", {{"namespace", FACT_NAMESPACE}, {"name", FACT_NAME}, {"carrier_type", FACT_EVENT_CARRIER}}},
+          {"journal",
+           {{"namespace", FACT_NAMESPACE},
+            {"name", FACT_NAME},
+            {"carrier_type", view::action::ACTION_ENVELOPE_CARRIER_TYPE}}},
           {"event_kinds", nlohmann::json::array({"contract-world-declared", "fact-surface-declared",
                                                  "observation-recorded", "admission-decided"})},
           {"observation_actions", nlohmann::json::array({"assert", "correct", "retract"})},

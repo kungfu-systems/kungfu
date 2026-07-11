@@ -123,94 +123,111 @@ nlohmann::json record_json(const AcceptedRangeRecorded &record) {
   };
 }
 
-std::vector<nlohmann::json> read_records(const std::string &runtime_dir) {
-  std::vector<nlohmann::json> records;
-  const auto location = registry_location(runtime_dir);
-  if (location->locator->list_page_id(location, location::PUBLIC).empty()) {
-    return records;
-  }
-  auto reader = std::make_shared<kungfu::yijinjing::journal::reader>(true, false, std::make_shared<bus>(false));
-  reader->join(location, location::PUBLIC, 0);
-  while (reader->data_available()) {
-    const auto frame = reader->current_frame();
-    switch (frame->carrier_type()) {
-    case SourceRegistered::tag:
-      records.push_back(record_json(frame->data<SourceRegistered>()));
-      break;
-    case SourceHeadUpdated::tag:
-      records.push_back(record_json(frame->data<SourceHeadUpdated>()));
-      break;
-    case AcceptedRangeRecorded::tag:
-      records.push_back(record_json(frame->data<AcceptedRangeRecorded>()));
-      break;
-    default:
-      records.push_back({{"schema", SOURCE_REGISTRY_SCHEMA_V1},
-                         {"record_kind", "unknown"},
-                         {"carrier_type", frame->carrier_type()},
-                         {"frame_uid", frame->frame_uid()},
-                         {"gen_time", frame->gen_time()}});
-      break;
-    }
-    records.back()["registry_frame_uid"] = frame->frame_uid();
-    records.back()["registry_gen_time"] = frame->gen_time();
-    reader->next();
-  }
-  return records;
+nlohmann::json record_row_json(const source_registry_record &record) {
+  auto row = std::visit(
+      [&record](const auto &body) -> nlohmann::json {
+        using body_t = std::decay_t<decltype(body)>;
+        if constexpr (std::is_same_v<body_t, source_registry_unknown_record>) {
+          return {{"schema", SOURCE_REGISTRY_SCHEMA_V1},
+                  {"record_kind", "unknown"},
+                  {"carrier_type", body.carrier_type},
+                  {"frame_uid", record.registry_frame_uid},
+                  {"gen_time", record.registry_gen_time}};
+        } else {
+          return record_json(body);
+        }
+      },
+      record.body);
+  row["registry_frame_uid"] = record.registry_frame_uid;
+  row["registry_gen_time"] = record.registry_gen_time;
+  return row;
 }
 
-struct source_fold {
-  nlohmann::json summary = nlohmann::json::object();
-  nlohmann::json records = nlohmann::json::array();
-  nlohmann::json accepted_ranges = nlohmann::json::array();
-  bool registered = false;
-};
+uint64_t record_source_uid(const source_registry_record &record) {
+  return std::visit(
+      [](const auto &body) -> uint64_t {
+        using body_t = std::decay_t<decltype(body)>;
+        if constexpr (std::is_same_v<body_t, source_registry_unknown_record>) {
+          return 0;
+        } else {
+          return body.source_uid;
+        }
+      },
+      record.body);
+}
 
-std::map<uint64_t, source_fold> fold_records(const std::vector<nlohmann::json> &records) {
-  std::map<uint64_t, source_fold> folded;
-  for (const auto &record : records) {
-    const auto source_uid = record.value("source_uid", uint64_t{0});
-    if (source_uid == 0) {
-      continue;
-    }
-    auto &source = folded[source_uid];
-    source.records.push_back(record);
-    const auto kind = record.value("record_kind", std::string{});
-    if (kind == "source_registered") {
-      source.registered = true;
-      source.summary["source_uid"] = source_uid;
-      source.summary["source_id"] = record.value("source_id", "");
-      source.summary["kind"] = record.value("kind", "unknown");
-      source.summary["coordinate"] = record.value("coordinate", "");
-      source.summary["head"] = record.value("head", "");
-      source.summary["location_uid"] = record.value("location_uid", uint64_t{0});
-      source.summary["register_time"] = record.value("register_time", int64_t{0});
-    } else if (kind == "source_head_updated") {
-      // Later head updates fold over earlier ones: current view = latest head.
-      if (record.contains("head")) {
-        source.summary["head"] = record.value("head", "");
-      }
-      if (record.contains("range")) {
-        source.summary["current_range"] = record.at("range");
-      }
-      if (record.contains("inventory_hash")) {
-        source.summary["inventory_hash"] = record.at("inventory_hash");
-      }
-      source.summary["update_time"] = record.value("update_time", int64_t{0});
-    } else if (kind == "accepted_range_recorded") {
-      source.accepted_ranges.push_back(record);
-    }
+void fold_into(source_registry_fold &fold, const source_registry_record &record) {
+  ++fold.total_record_count;
+  if (std::holds_alternative<source_registry_unknown_record>(record.body)) {
+    ++fold.unknown_record_count;
+    return;
   }
-  for (auto &[source_uid, source] : folded) {
-    source.summary["schema"] = SOURCE_REGISTRY_SCHEMA_V1;
-    source.summary["source_uid"] = source_uid;
-    source.summary["registered"] = source.registered;
-    source.summary["record_count"] = source.records.size();
-    source.summary["accepted_range_count"] = source.accepted_ranges.size();
-    if (!source.summary.contains("source_id")) {
-      source.summary["source_id"] = "";
-    }
+  const auto source_uid = record_source_uid(record);
+  if (source_uid == 0) {
+    ++fold.unfolded_record_count;
+    return;
   }
-  return folded;
+  auto &source = fold.sources[source_uid];
+  source.source_uid = source_uid;
+  source.records.push_back(record);
+  const auto record_index = source.records.size() - 1;
+  std::visit(
+      [&source, record_index](const auto &body) {
+        using body_t = std::decay_t<decltype(body)>;
+        if constexpr (std::is_same_v<body_t, SourceRegistered>) {
+          source.registered = true;
+          ++source.register_count;
+          source.registration = body;
+          source.current_head = fixed_string(body.head);
+        } else if constexpr (std::is_same_v<body_t, SourceHeadUpdated>) {
+          source.head_update_seen = true;
+          source.head_update = body;
+          source.current_head = fixed_string(body.head);
+        } else if constexpr (std::is_same_v<body_t, AcceptedRangeRecorded>) {
+          source.accepted_range_indices.push_back(record_index);
+        }
+      },
+      record.body);
+}
+
+nlohmann::json summary_json(const source_registry_current_view &source) {
+  nlohmann::json summary = {{"schema", SOURCE_REGISTRY_SCHEMA_V1},
+                            {"source_uid", source.source_uid},
+                            {"source_id", source.registered ? fixed_string(source.registration.source_id) : ""},
+                            {"registered", source.registered},
+                            {"record_count", source.records.size()},
+                            {"accepted_range_count", source.accepted_range_indices.size()}};
+  if (source.registered) {
+    summary["kind"] = source_kind_name(source.registration.kind);
+    summary["coordinate"] = fixed_string(source.registration.coordinate);
+    summary["head"] = source.current_head;
+    summary["location_uid"] = source.registration.location_uid;
+    summary["register_time"] = source.registration.register_time;
+  }
+  if (source.head_update_seen) {
+    summary["current_range"] = range_json(source.head_update.first_frame_uid, source.head_update.last_frame_uid,
+                                          source.head_update.since, source.head_update.until);
+    summary["inventory_hash"] = {{"algorithm", fixed_string(source.head_update.inventory_hash_algo)},
+                                 {"value", fixed_string(source.head_update.inventory_hash)}};
+    summary["update_time"] = source.head_update.update_time;
+  }
+  return summary;
+}
+
+nlohmann::json records_json(const source_registry_current_view &source) {
+  nlohmann::json rows = nlohmann::json::array();
+  for (const auto &record : source.records) {
+    rows.push_back(record_row_json(record));
+  }
+  return rows;
+}
+
+nlohmann::json accepted_ranges_json(const source_registry_current_view &source) {
+  nlohmann::json rows = nlohmann::json::array();
+  for (const auto index : source.accepted_range_indices) {
+    rows.push_back(record_row_json(source.records.at(index)));
+  }
+  return rows;
 }
 
 } // namespace
@@ -219,33 +236,67 @@ source_registry_store::source_registry_store(std::string runtime_dir) : runtime_
 
 source_registry_journal_records source_registry_store::read_typed_records() const {
   source_registry_journal_records records;
+  for_each_typed_record([&records](const source_registry_record &record) {
+    std::visit(
+        [&records](const auto &body) {
+          using body_t = std::decay_t<decltype(body)>;
+          if constexpr (std::is_same_v<body_t, SourceRegistered>) {
+            records.registered.push_back(body);
+          } else if constexpr (std::is_same_v<body_t, SourceHeadUpdated>) {
+            records.head_updates.push_back(body);
+          } else if constexpr (std::is_same_v<body_t, AcceptedRangeRecorded>) {
+            records.accepted_ranges.push_back(body);
+          }
+        },
+        record.body);
+  });
+  return records;
+}
+
+void source_registry_store::for_each_typed_record(const source_registry_record_visitor &visit) const {
   const auto location = registry_location(runtime_dir_);
   if (location->locator->list_page_id(location, location::PUBLIC).empty()) {
-    return records;
+    return;
   }
   auto reader = std::make_shared<kungfu::yijinjing::journal::reader>(true, false, std::make_shared<bus>(false));
   reader->join(location, location::PUBLIC, 0);
   while (reader->data_available()) {
     const auto frame = reader->current_frame();
+    source_registry_record record{};
+    record.registry_frame_uid = frame->frame_uid();
+    record.registry_gen_time = frame->gen_time();
     switch (frame->carrier_type()) {
     case SourceRegistered::tag:
-      records.registered.push_back(frame->data<SourceRegistered>());
+      record.body = frame->data<SourceRegistered>();
       break;
     case SourceHeadUpdated::tag:
-      records.head_updates.push_back(frame->data<SourceHeadUpdated>());
+      record.body = frame->data<SourceHeadUpdated>();
       break;
     case AcceptedRangeRecorded::tag:
-      records.accepted_ranges.push_back(frame->data<AcceptedRangeRecorded>());
+      record.body = frame->data<AcceptedRangeRecorded>();
       break;
     default:
+      record.body = source_registry_unknown_record{frame->carrier_type()};
       break;
     }
+    visit(record);
     reader->next();
   }
+}
+
+std::vector<source_registry_record> source_registry_store::read_typed_stream() const {
+  std::vector<source_registry_record> records;
+  for_each_typed_record([&records](const source_registry_record &record) { records.push_back(record); });
   return records;
 }
 
-nlohmann::json source_registry_store::register_source(const source_register_options &options) const {
+source_registry_fold source_registry_store::fold_typed_records() const {
+  source_registry_fold fold;
+  for_each_typed_record([&fold](const source_registry_record &record) { fold_into(fold, record); });
+  return fold;
+}
+
+SourceRegistered source_registry_store::register_source(const source_register_options &options) const {
   if (options.source_id.empty()) {
     throw std::invalid_argument("source_id is required");
   }
@@ -260,10 +311,10 @@ nlohmann::json source_registry_store::register_source(const source_register_opti
   set_fixed_string(record.head, options.head);
   auto writer = make_writer(runtime_dir_);
   writer.write_at(record.register_time, 0, record);
-  return record_json(record);
+  return record;
 }
 
-nlohmann::json source_registry_store::update_head(const source_head_update_options &options) const {
+SourceHeadUpdated source_registry_store::update_head(const source_head_update_options &options) const {
   if (options.source_id.empty()) {
     throw std::invalid_argument("source_id is required");
   }
@@ -281,10 +332,10 @@ nlohmann::json source_registry_store::update_head(const source_head_update_optio
   set_fixed_string(record.inventory_hash, options.inventory_hash);
   auto writer = make_writer(runtime_dir_);
   writer.write_at(record.update_time, 0, record);
-  return record_json(record);
+  return record;
 }
 
-nlohmann::json source_registry_store::record_accepted_range(const accepted_range_options &options) const {
+AcceptedRangeRecorded source_registry_store::record_accepted_range(const accepted_range_options &options) const {
   if (options.source_id.empty()) {
     throw std::invalid_argument("source_id is required");
   }
@@ -303,14 +354,15 @@ nlohmann::json source_registry_store::record_accepted_range(const accepted_range
   set_fixed_string(record.manifest_id, options.manifest_id);
   auto writer = make_writer(runtime_dir_);
   writer.write_at(record.accept_time, 0, record);
-  return record_json(record);
+  return record;
 }
 
 nlohmann::json source_registry_store::list() const {
-  const auto folded = fold_records(read_records(runtime_dir_));
+  const auto folded = fold_typed_records();
   nlohmann::json sources = nlohmann::json::array();
-  for (const auto &[source_uid, source] : folded) {
-    sources.push_back(source.summary);
+  for (const auto &[source_uid, source] : folded.sources) {
+    (void)source_uid;
+    sources.push_back(summary_json(source));
   }
   return {{"ok", true},
           {"schema", SOURCE_REGISTRY_SCHEMA_V1},
@@ -320,14 +372,21 @@ nlohmann::json source_registry_store::list() const {
           {"source_count", sources.size()}};
 }
 
-nlohmann::json source_registry_store::inspect(const std::string &source_id) const {
+std::optional<source_registry_current_view> source_registry_store::inspect_typed(const std::string &source_id) const {
   if (source_id.empty()) {
     throw std::invalid_argument("source_id is required");
   }
-  const auto source_uid = source_uid_of(source_id);
-  const auto folded = fold_records(read_records(runtime_dir_));
-  const auto iter = folded.find(source_uid);
-  if (iter == folded.end()) {
+  const auto folded = fold_typed_records();
+  const auto iter = folded.sources.find(source_uid_of(source_id));
+  if (iter == folded.sources.end()) {
+    return std::nullopt;
+  }
+  return iter->second;
+}
+
+nlohmann::json source_registry_store::inspect(const std::string &source_id) const {
+  const auto inspected = inspect_typed(source_id);
+  if (!inspected.has_value()) {
     return {{"ok", false},
             {"schema", SOURCE_REGISTRY_SCHEMA_V1},
             {"source_id", source_id},
@@ -337,50 +396,71 @@ nlohmann::json source_registry_store::inspect(const std::string &source_id) cons
           {"schema", SOURCE_REGISTRY_SCHEMA_V1},
           {"runtime_dir", runtime_dir_},
           {"authority", "yijinjing-journal"},
-          {"source", iter->second.summary},
-          {"accepted_ranges", iter->second.accepted_ranges},
-          {"records", iter->second.records}};
+          {"source", summary_json(*inspected)},
+          {"accepted_ranges", accepted_ranges_json(*inspected)},
+          {"records", records_json(*inspected)}};
 }
 
-nlohmann::json source_registry_store::fsck(const std::string &source_id) const {
-  const auto records = read_records(runtime_dir_);
-  const auto folded = fold_records(records);
+source_registry_fsck_result source_registry_store::fsck_typed(const std::string &source_id) const {
+  const auto folded = fold_typed_records();
   const auto filter_uid = source_id.empty() ? uint64_t{0} : source_uid_of(source_id);
-  nlohmann::json errors = nlohmann::json::array();
-  nlohmann::json warnings = nlohmann::json::array();
-  size_t checked = 0;
-  for (const auto &[current_source_uid, source] : folded) {
+  source_registry_fsck_result result{};
+  result.runtime_dir = runtime_dir_;
+  result.source_registry_records = static_cast<uint64_t>(folded.total_record_count);
+  for (const auto &[current_source_uid, source] : folded.sources) {
     if (filter_uid != 0 && current_source_uid != filter_uid) {
       continue;
     }
-    ++checked;
+    ++result.sources;
     if (!source.registered) {
       // Head updates or accepted ranges without a registration are dangling
       // producer output: honest degradation, recorded, not silently dropped.
-      errors.push_back({{"code", "source_registration_missing"}, {"source_uid", current_source_uid}});
+      result.errors.push_back({"source_registration_missing", current_source_uid, {}, {}});
     }
-    size_t register_count = 0;
-    for (const auto &record : source.records) {
-      if (record.value("record_kind", std::string{}) == "source_registered") {
-        ++register_count;
-      }
-    }
-    if (register_count > 1) {
-      warnings.push_back(
-          {{"code", "source_registered_duplicate"}, {"source_uid", current_source_uid}, {"count", register_count}});
+    if (source.register_count > 1) {
+      result.warnings.push_back(
+          {"source_registered_duplicate", current_source_uid, {}, static_cast<uint64_t>(source.register_count)});
     }
   }
-  if (filter_uid != 0 && checked == 0) {
-    errors.push_back({{"code", "source_missing"}, {"source_id", source_id}});
+  if (filter_uid != 0 && result.sources == 0) {
+    result.errors.push_back({"source_missing", {}, source_id, {}});
   }
-  return {{"ok", errors.empty()},
-          {"status", errors.empty() ? "ok" : "failed"},
-          {"schema", SOURCE_REGISTRY_SCHEMA_V1},
-          {"runtime_dir", runtime_dir_},
-          {"authority", "yijinjing-journal"},
-          {"errors", errors},
-          {"warnings", warnings},
-          {"checked", {{"source_registry_records", records.size()}, {"sources", checked}}}};
+  result.ok = result.errors.empty();
+  result.status = result.ok ? "ok" : "failed";
+  return result;
+}
+
+nlohmann::json source_registry_store::fsck(const std::string &source_id) const {
+  const auto result = fsck_typed(source_id);
+  const auto render_issue = [](const source_registry_fsck_issue &issue) {
+    nlohmann::json row = {{"code", issue.code}};
+    if (issue.source_uid.has_value()) {
+      row["source_uid"] = *issue.source_uid;
+    }
+    if (issue.source_id.has_value()) {
+      row["source_id"] = *issue.source_id;
+    }
+    if (issue.count.has_value()) {
+      row["count"] = *issue.count;
+    }
+    return row;
+  };
+  nlohmann::json errors = nlohmann::json::array();
+  nlohmann::json warnings = nlohmann::json::array();
+  for (const auto &issue : result.errors) {
+    errors.push_back(render_issue(issue));
+  }
+  for (const auto &issue : result.warnings) {
+    warnings.push_back(render_issue(issue));
+  }
+  return {{"ok", result.ok},
+          {"status", result.status},
+          {"schema", result.schema},
+          {"runtime_dir", result.runtime_dir},
+          {"authority", result.authority},
+          {"errors", std::move(errors)},
+          {"warnings", std::move(warnings)},
+          {"checked", {{"source_registry_records", result.source_registry_records}, {"sources", result.sources}}}};
 }
 
 } // namespace kungfu::yijinjing::storage
