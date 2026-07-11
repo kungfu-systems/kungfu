@@ -55,7 +55,7 @@ for how the layers fit together; the main areas:
 
 Two command-line entry points, kept forward-compatible:
 
-- `kungfu` — the end-user CLI command (`kungfu --version`, journal subcommands,
+- `kungfu` — the end-user CLI command (`kungfu --version`, `query`, `storage`,
   …). It fronts the `kungfu` runtime.
 - `./shifu` — the development/build orchestrator used while working on the
   repo (see below).

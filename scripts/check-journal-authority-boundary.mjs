@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
-// ADR-0054 executable boundary: the retired journal Session model and the
-// mixed-responsibility runtime/cache directory must not return.
+// ADR-0055/0056 executable boundary: retired journal Session and legacy CLI
+// lifecycle surfaces must not return or bypass Storage/Episode authority.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -13,6 +13,7 @@ const SOURCE_ROOTS = [
   'framework/core/stubs',
   'framework/core/lib',
   'framework/api/src',
+  'extensions/journal-manager/src',
 ];
 const FORBIDDEN_PATHS = [
   'framework/core/src/libkungfu/include/kungfu/runtime/cache',
@@ -22,6 +23,9 @@ const FORBIDDEN_PATHS = [
   'framework/core/src/bindings/node/binding/session_store.h',
   'framework/core/src/bindings/node/binding/session_store.cpp',
   'framework/core/src/python/kungfu/runtime/journal.py',
+  'framework/core/src/python/kungfu/cli/commands/journal.py',
+  'framework/core/src/python/kungfu/runtime/sinks/archive.py',
+  'framework/core/src/python/kungfu/runtime/utils.py',
 ];
 const FORBIDDEN_TEXT = [
   /\bSessionStart\b/,
@@ -32,6 +36,17 @@ const FORBIDDEN_TEXT = [
   /\bsession_builder\b/,
   /runtime\/index\/session/,
   /runtime\/cache/,
+  /\bArchiveSink\b/,
+  /\bARCHIVE_PREFIX\b/,
+  /\bprune_layout_files\b/,
+  /\bprue_layout_dirs_before_timestamp\b/,
+  /runtime\/sinks\/archive/,
+  /commands\/journal/,
+  /\barchive_dir\b/,
+  /\bLAYOUT_LOCATION_(?:REGEX|PATTERN)\b/,
+  /\bJOURNAL_LOCATION_(?:REGEX|PATTERN)\b/,
+  /\bJOURNAL_PAGE_(?:REGEX|PATTERN)\b/,
+  /\bLOCATION_(?:UNAME_REGEX|PATTERN)\b/,
 ];
 
 function walk(directory) {
@@ -65,6 +80,26 @@ for (const sourceRoot of SOURCE_ROOTS) {
   }
 }
 
+const cliCommandsRoot = path.join(
+  ROOT,
+  'framework/core/src/python/kungfu/cli/commands',
+);
+for (const file of walk(cliCommandsRoot)) {
+  if (!file.endsWith('.py')) continue;
+  const text = fs.readFileSync(file, 'utf8');
+  const deletesPath =
+    /(?:os\.(?:remove|unlink)|Path\([^)]*\)\.unlink|shutil\.rmtree)\s*\(/.test(
+      text,
+    );
+  const namesJournalAuthority =
+    /(?:\.journal|["']journal["']|journal_dir)/.test(text);
+  if (deletesPath && namesJournalAuthority) {
+    errors.push(
+      `${path.relative(ROOT, file)} deletes journal paths outside the Storage/Episode service`,
+    );
+  }
+}
+
 const yijinjingSchema = fs.readFileSync(
   path.join(
     ROOT,
@@ -89,10 +124,10 @@ for (const relative of [
 }
 
 if (errors.length) {
-  console.error('[legacy-journal-session] ADR-0054 boundary violations:');
+  console.error('[journal-authority] ADR-0055/0056 boundary violations:');
   for (const error of errors) console.error(`  - ${error}`);
   process.exit(1);
 }
 console.log(
-  '[legacy-journal-session] Session surfaces retired; state/projection boundary clean',
+  '[journal-authority] Session/legacy CLI retired; Storage/Episode authority boundary clean',
 );

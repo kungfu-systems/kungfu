@@ -96,7 +96,6 @@ class PrioritizedCommandGroup(click.Group):
                     "extension_path",
                     "log_level",
                     "runtime_dir",
-                    "archive_dir",
                     "dataset_dir",
                     "inbox_dir",
                     "runtime_locator",
@@ -176,7 +175,6 @@ def kfc(ctx, home, extension_path, log_level, name, stage, env_verify_location):
     else:
         ctx.runtime_dir = ensure_dir(ctx, "runtime")
     os.environ["KF_RUNTIME_DIR"] = ctx.runtime_dir
-    ctx.archive_dir = ensure_dir(ctx, "archive")
     ctx.dataset_dir = ensure_dir(ctx, "dataset")
     ctx.backtest_dir = ensure_dir(ctx, "backtest")
     ctx.inbox_dir = ensure_dir(ctx, "inbox")

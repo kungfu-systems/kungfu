@@ -2,7 +2,6 @@
 
 from . import engage
 from . import env
-from . import journal
 from . import cockpit
 from . import trace
 from . import managed_run
@@ -29,7 +28,6 @@ from . import master
 __all__ = [
     "engage",
     "env",
-    "journal",
     "cockpit",
     "trace",
     "managed_run",

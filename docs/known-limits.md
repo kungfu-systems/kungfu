@@ -117,9 +117,11 @@ What is **not yet guaranteed**:
 - an authority migration path where an imported source becomes the single source
   of truth.
 
-Treat current journal archive/clean/rebuild primitives, Atlas storage commands,
-and source import/export slices as proof surfaces for the storage contract, not
-as a completed distributed storage protocol.
+Treat current Storage/Episode query, export, fsck, repair, GC-plan, compaction-
+plan, Atlas storage, and source import/export slices as proof surfaces for the
+storage contract, not as a completed distributed storage protocol. Legacy
+loose-file journal archive/clean commands are retired; this release deliberately
+has no destructive retention command.
 
 ## KFX runtime confinement is staged
 

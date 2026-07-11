@@ -1,4 +1,4 @@
-# ADR-0054: retire journal Session and separate live state from schema projections
+# ADR-0055: retire journal Session and separate live state from schema projections
 
 - Status: accepted; implemented
 - Date: 2026-07-11
@@ -7,7 +7,8 @@
   capability SDK
 - Related: ADR-0033 makes Episode the causal storage object; ADR-0037 and
   ADR-0047 define schema/projection ownership; ADR-0039 confines FlatBuffers
-  reflection to `kungfu::view`.
+  reflection to `kungfu::view`; ADR-0056 retires the remaining loose-file
+  journal lifecycle CLI.
 
 ## Context
 
@@ -42,7 +43,7 @@ state, Hana-to-SQLite compilation, and FlatBuffers reflection projection.
 
 ## Enforcement
 
-`scripts/check-legacy-journal-session.mjs` blocks reintroduction of the retired
+`scripts/check-journal-authority-boundary.mjs` blocks reintroduction of the retired
 symbols, files, CLI verbs, and `runtime/cache` path while explicitly ignoring
 unrelated terminal/network/action contexts. The gate runs in staged, changed,
 and whole-tree checks.

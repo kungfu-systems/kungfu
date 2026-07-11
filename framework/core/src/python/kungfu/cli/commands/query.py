@@ -30,10 +30,6 @@ def _fail(code: str, message: str, *, exit_code: int = 2) -> NoReturn:
     raise click.exceptions.Exit(exit_code)
 
 
-def _runtime_dir(ctx: click.Context) -> str:
-    return str(getattr(ctx, "runtime_dir"))
-
-
 def _load_definition(file_path: str) -> dict[str, Any]:
     try:
         text = (

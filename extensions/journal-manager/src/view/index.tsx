@@ -1,5 +1,5 @@
-// Default kfx: journal management. Browse the runtime home's fact ledger
-// through the capability SDK — recorded runs (replay anchors), registered
+// Default kfx: journal inspection. Browse the runtime home's fact ledger
+// through the capability SDK — Episodes (replay anchors), registered
 // locations, and the merged event stream, read in-process through the same
 // zero-copy frames the runtime itself uses.
 import type { LedgerRecord, ReplayAnchor } from '@kungfu-tech/api/capability';
@@ -67,26 +67,27 @@ function JournalManagerView({ caps }: { caps: KfxCapabilities; shell: Shell }) {
         }}
       >
         <section style={{ ...panelStyle, flex: 1 }}>
-          <h2 style={headingStyle}>Runs · {anchors.length}</h2>
+          <h2 style={headingStyle}>Episodes · {anchors.length}</h2>
           {anchors.length === 0 && (
             <div style={{ ...mono, color: '#6a6a6a' }}>
-              no recorded runs yet
+              no recorded Episodes yet
             </div>
           )}
           {anchors.map((anchor) => {
-            const key = `${anchor.location.namespace}/${anchor.location.name}/${anchor.beginTime}`;
+            const key = anchor.episodeId.toString();
             return (
               <div key={key} style={{ ...mono, marginBottom: 6 }}>
                 <div style={{ color: '#9cdcfe' }}>
-                  {anchor.location.role}/{anchor.location.namespace}/
-                  {anchor.location.name}/{anchor.location.mode}
+                  Episode {anchor.episodeId.toString()} · location{' '}
+                  {anchor.locationUid.toString(16).padStart(8, '0')}
                 </div>
                 <div style={{ color: '#858585' }}>
                   {ledger.formatNanos(anchor.beginTime, '%m/%d %H:%M:%S')} →{' '}
-                  {anchor.endTime > 0n
+                  {anchor.closed && anchor.endTime > 0n
                     ? ledger.formatNanos(anchor.endTime, '%H:%M:%S')
                     : 'open'}{' '}
-                  · {String(anchor.frameCount)} frames
+                  · {anchor.frameCount.toString()} frames · last{' '}
+                  {anchor.lastFrameUid.toString()}
                 </div>
               </div>
             );

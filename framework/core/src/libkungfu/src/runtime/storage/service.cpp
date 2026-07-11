@@ -1116,7 +1116,6 @@ storage_layout_result workspace_episode_layout_typed(const storage_layout_reques
   result.provider_cache = provider_cache::instance().stats();
   result.paths = {home.string(),
                   runtime.string(),
-                  (home / "archive").string(),
                   (home / "dataset").string(),
                   (home / "inbox").string(),
                   journal_dir.string(),
@@ -1175,7 +1174,6 @@ nlohmann::json workspace_episode_layout_json(const storage_layout_result &result
           {"paths",
            {{"data_home", result.paths.data_home},
             {"runtime_dir", result.paths.runtime_dir},
-            {"archive_dir", result.paths.archive_dir},
             {"dataset_dir", result.paths.dataset_dir},
             {"inbox_dir", result.paths.inbox_dir},
             {"journal_dir", result.paths.journal_dir},

@@ -350,10 +350,41 @@ function testSchemaAuthority() {
   ]);
 }
 
-function checkLegacyJournalSession() {
-  run('legacy journal Session retirement gate', 'node', [
-    path.join('scripts', 'check-legacy-journal-session.mjs'),
+function checkJournalAuthorityBoundary() {
+  run('journal authority boundary gate', 'node', [
+    path.join('scripts', 'check-journal-authority-boundary.mjs'),
   ]);
+}
+
+function checkAdrIdentities() {
+  const adrDir = path.join(ROOT, 'framework', 'core', 'docs', 'adr');
+  const files = fs
+    .readdirSync(adrDir)
+    .filter((file) => /^ADR-\d{4}-.+\.md$/.test(file))
+    .sort();
+  /** @type {Map<string, string[]>} */
+  const byId = new Map();
+  /** @type {string[]} */
+  const errors = [];
+  for (const file of files) {
+    const id = file.slice(4, 8);
+    const siblings = byId.get(id) || [];
+    siblings.push(file);
+    byId.set(id, siblings);
+    const text = fs.readFileSync(path.join(adrDir, file), 'utf8');
+    if (!text.includes(`# ADR-${id}:`)) {
+      errors.push(`${file} heading does not match ADR-${id}`);
+    }
+  }
+  for (const [id, siblings] of byId) {
+    if (siblings.length > 1) {
+      errors.push(`ADR-${id} is duplicated: ${siblings.join(', ')}`);
+    }
+  }
+  if (errors.length) {
+    throw new Error(`ADR identity violations:\n${errors.join('\n')}`);
+  }
+  log('[check] ADR identities unique and filename/heading pairs match');
 }
 
 function touchesBuildchainKfdEvidence(files) {
@@ -396,7 +427,8 @@ function checkStaged() {
   checkCarrierActionEnvelope(['--staged']);
   checkRuntimeGreenfield(['--staged']);
   checkSchemaAuthority();
-  checkLegacyJournalSession();
+  checkJournalAuthorityBoundary();
+  checkAdrIdentities();
   const files = stagedFiles();
   if (!files.length) {
     log('[check] no staged source files');
@@ -441,7 +473,14 @@ function checkStaged() {
 function checkShared() {
   testShifuEntryContract();
   testSchemaAuthority();
-  checkLegacyJournalSession();
+  checkJournalAuthorityBoundary();
+  checkAdrIdentities();
+  run('journal manager type check', 'pnpm', [
+    '--filter',
+    '@kungfu-tech/kfx-view-journal-manager',
+    'run',
+    'check',
+  ]);
   checkLayerQualification();
   run('tooling type check', 'pnpm', ['run', 'check:types']);
   run('SDK unit tests', 'pnpm', [
@@ -465,7 +504,7 @@ function checkChanged() {
   checkCarrierActionEnvelope();
   checkRuntimeGreenfield();
   checkSchemaAuthority();
-  checkLegacyJournalSession();
+  checkJournalAuthorityBoundary();
   const files = changedFiles();
   checkPythonFiles('changed', files);
   checkBiomeFiles('changed', files);
@@ -482,7 +521,7 @@ function checkAll() {
   checkCarrierActionEnvelope(['--all']);
   checkRuntimeGreenfield(['--all']);
   checkSchemaAuthority();
-  checkLegacyJournalSession();
+  checkJournalAuthorityBoundary();
   run('repo lint + format check', 'pnpm', ['run', 'lint']);
   checkRustFiles('all', [], { force: true });
   checkBuildchainKfdEvidence([], { force: true });

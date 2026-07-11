@@ -71,7 +71,9 @@ A record's **Status** says where it stands:
 | [0051](ADR-0051-kfd-contract-world-fact-admission-and-trust.md) | accepted; staged | KFD contract worlds govern fact admission, historical interpretation, and trust assessment |
 | [0052](ADR-0052-kfd2-assessment-lifecycle-and-executors.md) | accepted; staged | KFD-2 assessments are claim-triggered jobs coordinated by the workspace master |
 | [0053](ADR-0053-self-contained-episode-bundles.md) | proposed | Episode bundles carry their owned bytes, and import materializes them |
-| [0054](ADR-0054-retire-journal-session-and-separate-runtime-state-from-projection.md) | accepted | retire journal Session; separate live state from schema projections |
+| [0054](ADR-0054-libwasm-production-runtime-and-release.md) | accepted | libwasm is a governed product runtime, not a copied spike library |
+| [0055](ADR-0055-retire-journal-session-and-separate-runtime-state-from-projection.md) | accepted | retire journal Session; separate live state from schema projections |
+| [0056](ADR-0056-retire-legacy-journal-cli-lifecycle-tools.md) | accepted | journal lifecycle management belongs to Storage and Episode boundaries |
 
 ## Reading by theme
 
@@ -177,6 +179,11 @@ A record's **Status** says where it stands:
   [0052](ADR-0052-kfd2-assessment-lifecycle-and-executors.md) (claim-triggered
   assessment jobs, workspace-master coordination, Assessment Episodes, and
   equivalent process/thread executors), and
+  [0055](ADR-0055-retire-journal-session-and-separate-runtime-state-from-projection.md)
+  (Episode replaces the retired Session replay anchor), and
+  [0056](ADR-0056-retire-legacy-journal-cli-lifecycle-tools.md) (journal
+  lifecycle management belongs to Storage/Episode rather than loose-file CLI
+  archive and clean commands), and
   [0042](ADR-0042-episode-atomic-safety-and-qualification.md) (Episode atomic
   safety as evidence-bounded capability, graceful degradation, monotonic repair,
   fault containment, and qualification under scale).

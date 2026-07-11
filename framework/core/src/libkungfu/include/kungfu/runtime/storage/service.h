@@ -154,7 +154,6 @@ struct storage_layout_request {
 struct storage_layout_paths_view {
   std::string data_home = {};
   std::string runtime_dir = {};
-  std::string archive_dir = {};
   std::string dataset_dir = {};
   std::string inbox_dir = {};
   std::string journal_dir = {};
