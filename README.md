@@ -32,6 +32,19 @@ Public entrypoints:
 - Developer and agent map: <https://libkungfu.dev>
 - Source and open monorepo: this repository
 
+## Use only what you need
+
+You do **not** have to adopt the whole Kungfu App. Start with the smallest
+product that closes your job: the `.kungfu` format, `libkungfu`, one language
+SDK, the standalone CLI/TUI, the GUI, or the assembled App. Higher layers add
+convenience; they do not become the exclusive authority over your facts.
+
+See [**Choose your Kungfu**](docs/choose-your-kungfu.md) for the user-facing
+decision guide and [`docs/product-layers.md`](docs/product-layers.md) for the
+qualification contract behind it. Kungfu is currently **Coming soon**, so the
+guide names staged artifacts explicitly rather than implying every package is
+already released.
+
 The product goal is to make fact-first responsibility the path of least
 resistance: once a user starts relying on Kungfu, the natural way to use it
 should be to inspect facts, understand responsibility, and make control
@@ -154,6 +167,8 @@ right document, and is readable by both people and agents.
 
 - Installed agent entrypoint: `kungfu agent brief`,
   `kungfu agent capabilities --json`, and `kungfu agent choose-mode --json`.
+- [`docs/choose-your-kungfu.md`](docs/choose-your-kungfu.md) — choose the
+  smallest Kungfu product that closes your job; the full App is optional.
 - [`docs/MAP.md`](docs/MAP.md) — the question-indexed map of all documentation.
 - [`docs/concepts.md`](docs/concepts.md) — the vocabulary in one place
   (`kungfu`/`kfx`/`sdk`, `libkungfu`, `yijinjing`, journal, schema, …).

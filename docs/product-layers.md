@@ -3,6 +3,10 @@
 Kungfu is developed in one authoritative monorepo, but it is not one mandatory
 installation. Each official layer closes a specific user job independently.
 
+If you are deciding what to install or embed, start with the user-facing
+[**Choose your Kungfu**](choose-your-kungfu.md) guide. This page defines the
+technical product and qualification boundaries behind that choice.
+
 [ADR-0049](../framework/core/docs/adr/ADR-0049-layer-complete-products-and-domain-neutral-core.md)
 defines the architecture constraint. This page is the practical product map.
 

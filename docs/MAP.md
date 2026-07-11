@@ -23,6 +23,7 @@ and the map routes a question to whichever doc answers it.
 | Your question | Document | Plane | Status |
 |---|---|---|---|
 | What is kungfu, in one idea? | [`../README.md`](../README.md) | — | stable |
+| Do I need the whole Kungfu App, or which smaller product should I start with? | [`choose-your-kungfu.md`](choose-your-kungfu.md) | use | draft · adoption contract accepted; artifacts qualify independently in stages |
 | What do the terms mean (`kungfu` / `yijinjing` / journal / schema …)? | [`concepts.md`](concepts.md) | use | stable |
 | Why is it built this way? What is load-bearing? | [`design-philosophy.md`](design-philosophy.md) | why | stable |
 | Why compare Kungfu to SQLite, Git, and a flight recorder — and why is it neither observability nor blockchain? | [`design-philosophy.md`](design-philosophy.md#the-missing-infrastructure-layer-runtime-facts) | why | stable |
@@ -107,7 +108,8 @@ route to the row that answers them:
   ([`event-model.md`](event-model.md)).
 - **lightweight / too heavy / minimal install / independent package / libkungfu
   only / CLI without GUI / layer deletion / assembled runtime** → *which
-  Kungfu layer can I adopt independently* ([`product-layers.md`](product-layers.md))
+  Kungfu should I start with* ([`choose-your-kungfu.md`](choose-your-kungfu.md)),
+  then *what does each layer guarantee* ([`product-layers.md`](product-layers.md))
   and [ADR-0049](../framework/core/docs/adr/ADR-0049-layer-complete-products-and-domain-neutral-core.md).
 - **quant trading / agent runtime / games / virtual reality / virtual worlds /
   domain-neutral core / future application horizon** →
