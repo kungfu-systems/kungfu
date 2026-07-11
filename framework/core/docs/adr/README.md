@@ -66,6 +66,7 @@ A record's **Status** says where it stands:
 | [0046](ADR-0046-rust-host-trunk-and-assembled-runtime.md) | accepted | Rust host trunk, layered CLI, and the assembled runtime distribution |
 | [0047](ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md) | accepted; staged | authoritative structured facts have one schema owner — Hana POD or FlatBuffers |
 | [0048](ADR-0048-runtime-fact-query-semantics-and-changelog.md) | accepted; staged | runtime fact queries use explicit bases, one logical plan, and a proof-carrying changelog |
+| [0049](ADR-0049-layer-complete-products-and-domain-neutral-core.md) | accepted; staged | every product layer is independently complete and the core remains domain-neutral |
 
 ## Reading by theme
 
@@ -176,7 +177,10 @@ A record's **Status** says where it stands:
 - **Cross-cutting principle** — [0009](ADR-0009-load-bearing-self-bootstrap.md)
   (load-bearing self-bootstrap), which also names the general law that
   [`docs/architecture.md` § The build dogfoods the SDK](../../../../docs/architecture.md)
-  is one instance of.
+  is one instance of, and
+  [0049](ADR-0049-layer-complete-products-and-domain-neutral-core.md) (the
+  independent adoption closure, downward dependency, layer-deletion, and
+  domain-neutral kernel constraints).
 
 ## Related design documents
 
@@ -198,3 +202,8 @@ A record's **Status** says where it stands:
   Trust Report design required by ADR-0042.
 - [`docs/querying-runtime-facts.md`](../../../../docs/querying-runtime-facts.md) —
   the staged human and agent service surface defined by ADR-0048.
+- [`docs/product-layers.md`](../../../../docs/product-layers.md) — independent
+  adoption products and their qualification boundaries.
+- [`docs/domain-horizons.md`](../../../../docs/domain-horizons.md) — the
+  quantitative-trading, agent-runtime, and games/virtual-world architecture
+  horizons.
