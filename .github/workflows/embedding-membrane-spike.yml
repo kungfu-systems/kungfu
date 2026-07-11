@@ -134,6 +134,22 @@ jobs:
         shell: bash
         run: cd "$SOURCE_ROOT" && ./shifu install --frozen-lockfile --no-optional
 
+      - name: Rebind frozen Python registry metadata
+        if: ${{ matrix.source_mode == 'github' }}
+        shell: bash
+        run: |
+          cd "$SOURCE_ROOT/framework/core"
+          uv_version="$(tr -d '\r\n' < ../../.uv-version)"
+          uv_bin="$HOME/.cache/kungfu/tools/uv/$uv_version/macos-aarch64/uv"
+          test -x "$uv_bin"
+          fingerprint() {
+            python3 -c 'import hashlib,json,sys,tomllib; d=tomllib.load(open(sys.argv[1],"rb")); rows=[]; [(rows.append((p.get("name"),p.get("version"),("registry" if "registry" in p.get("source",{}) else json.dumps(p.get("source",{}),sort_keys=True)),sorted([x.get("hash","") for x in ([p.get("sdist",{})] if p.get("sdist") else [])+p.get("wheels",[])])))) for p in d.get("package",[])]; print(hashlib.sha256(json.dumps(sorted(rows),separators=(",",":")).encode()).hexdigest())' "$1"
+          }
+          before="$(fingerprint uv.lock)"
+          "$uv_bin" lock --refresh --default-index https://pypi.org/simple
+          after="$(fingerprint uv.lock)"
+          test "$before" = "$after"
+
       - name: Install frozen workspace (Windows)
         if: ${{ runner.os == 'Windows' }}
         shell: pwsh
