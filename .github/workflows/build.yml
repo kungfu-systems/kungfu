@@ -31,7 +31,7 @@ jobs:
       buildchain-ref: ${{ inputs.buildchain-ref || '' }}
       runner-preset: kungfu-v4-self-hosted
       setup-rust: true
-      rust-toolchain: "1.96.0"
+      rust-toolchain: "1.95.0"
       rustup-dist-server: https://rsproxy.cn
       rustup-update-root: https://rsproxy.cn/rustup
       cargo-registry-index: ${{ vars.BUILDCHAIN_CARGO_REGISTRY_INDEX }}
