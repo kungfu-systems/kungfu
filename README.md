@@ -23,8 +23,8 @@ libkungfu, and kfx names.
 
 Facts before trust. In KFD terms, a load-bearing claim should never stand
 alone: bind it to a verifiable source, artifact, manifest, or runtime receipt.
-([KFD](https://kfd.libkungfu.dev/); [design philosophy](docs/design-philosophy.md);
-[facts before trust](docs/facts-before-trust.md).)
+([KFD](https://kfd.libkungfu.dev/); [Design Philosophy](docs/design-philosophy.md);
+[Facts Before Trust](docs/facts-before-trust.md).)
 
 Public entrypoints:
 
@@ -37,10 +37,10 @@ Public entrypoints:
 Kungfu is currently **Coming soon**. Start by choosing the experience that
 matches your job:
 
-1. Read [**Choose Your Kungfu**](docs/choose-your-kungfu.md) to decide between
+1. Read [Choose Your Kungfu](docs/choose-your-kungfu.md) to decide between
    the assembled App, GUI, CLI/TUI, one language SDK, `libkungfu`, or the
    portable format.
-2. Check [known limits](docs/known-limits.md) before treating a staged artifact
+2. Check [Known Limits](docs/known-limits.md) before treating a staged artifact
    as a production guarantee.
 3. If Kungfu is already installed, an agent can discover the local product
    without web documentation:
@@ -60,7 +60,7 @@ cd kungfu
 ./shifu sync && ./shifu build
 ```
 
-Contributors should continue with [`CONTRIBUTING.md`](CONTRIBUTING.md) for
+Contributors should continue with [Contributing to Kungfu](CONTRIBUTING.md) for
 toolchain requirements, development commands, and the pull request flow.
 
 ## Use only what you need
@@ -70,8 +70,8 @@ product that closes your job: the assembled App, the GUI, the standalone
 CLI/TUI, one language SDK, `libkungfu`, or the `.kungfu` format. Higher layers
 add convenience; they do not become the exclusive authority over your facts.
 
-See [**Choose Your Kungfu**](docs/choose-your-kungfu.md) for the user-facing
-decision guide and [**Product Layers**](docs/product-layers.md) for the
+See [Choose Your Kungfu](docs/choose-your-kungfu.md) for the user-facing
+decision guide and [Product Layers](docs/product-layers.md) for the
 qualification contract behind it. Kungfu is currently **Coming soon**, so the
 guide names staged artifacts explicitly rather than implying every package is
 already released.
@@ -175,47 +175,47 @@ cd <path> && shifu build  # inside a checkout, shifu delegates to the repo's
   both reference UIs, the SDK and first-party kfx (`product`).
 
 Runs on Windows, macOS, and Linux (including arm64). See
-[`docs/architecture.md`](docs/architecture.md) for how these pieces are layered.
+[Architecture](docs/architecture.md) for how these pieces are layered.
 
 ## Documentation
 
-Start at the [**documentation map**](docs/MAP.md) — it routes your question
+Start at the [Documentation Map](docs/MAP.md) — it routes your question
 (why it's built this way / how to trust the artifact / how to use it) to the
 right document, and is readable by both people and agents.
 
 - Installed agent entrypoint: `kungfu agent brief`,
   `kungfu agent capabilities --json`, and `kungfu agent choose-mode --json`.
-- [**Choose Your Kungfu**](docs/choose-your-kungfu.md) — choose the
+- [Choose Your Kungfu](docs/choose-your-kungfu.md) — choose the
   smallest Kungfu product that closes your job; the full App is optional.
-- [**Product Layers**](docs/product-layers.md) — inspect the independent
+- [Product Layers](docs/product-layers.md) — inspect the independent
   product contracts and qualification boundaries behind that choice.
-- [`docs/MAP.md`](docs/MAP.md) — the question-indexed map of all documentation.
-- [`docs/concepts.md`](docs/concepts.md) — the vocabulary in one place
+- [Documentation Map](docs/MAP.md) — the question-indexed map of all documentation.
+- [Concepts](docs/concepts.md) — the vocabulary in one place
   (`kungfu`/`kfx`/`sdk`, `libkungfu`, `yijinjing`, journal, schema, …).
-- [`docs/design-philosophy.md`](docs/design-philosophy.md) — the two first
+- [Design Philosophy](docs/design-philosophy.md) — the two first
   principles the whole design follows from, and how the architecture falls out
   of them.
-- [`docs/facts-before-trust.md`](docs/facts-before-trust.md) — why Kungfu starts
+- [Facts Before Trust](docs/facts-before-trust.md) — why Kungfu starts
   from accountability: facts before trust, local proof before control.
-- [`docs/architecture.md`](docs/architecture.md) — how the repository is layered
+- [Architecture](docs/architecture.md) — how the repository is layered
   (runtime, capability SDK, application SDK, reference surfaces) and why.
-- [`docs/skills.md`](docs/skills.md) — design target for Kungfu Skills:
+- [Kungfu Skills](docs/skills.md) — design target for Kungfu Skills:
   `SKILL.md` as the minimal source, compact agent catalog injection,
   Node/Python manage modes, and kfx dependency composition.
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) — toolchain, build, conventions, releases.
-- [`LICENSE-POLICY.md`](LICENSE-POLICY.md) — project licensing, DCO-based
+- [Contributing to Kungfu](CONTRIBUTING.md) — toolchain, build, conventions, releases.
+- [License Policy](LICENSE-POLICY.md) — project licensing, DCO-based
   contributions, third-party notice policy, and commercial boundary.
-- [`TRADEMARK.md`](TRADEMARK.md) — official project mark and fork identity
+- [Trademark Policy](TRADEMARK.md) — official project mark and fork identity
   boundary.
-- [`ACCEPTABLE_USE.md`](ACCEPTABLE_USE.md) — acceptable use of official hosted,
+- [Acceptable Use Policy](ACCEPTABLE_USE.md) — acceptable use of official hosted,
   managed, and maintainer-operated services.
-- [`PROVIDER_COMPLIANCE.md`](PROVIDER_COMPLIANCE.md) — official posture for
+- [Provider Compliance Policy](PROVIDER_COMPLIANCE.md) — official posture for
   provider APIs, CLIs, credentials, usage attribution, and anti-bypass
   boundaries.
-- [`SECURITY.md`](SECURITY.md) — how to report vulnerabilities privately.
-- [`docs/version-release-design.md`](docs/version-release-design.md) — versioning
+- [Security Policy](SECURITY.md) — how to report vulnerabilities privately.
+- [Version & Release Mechanism — Design Rationale](docs/version-release-design.md) — versioning
   and release mechanism rationale.
-- [`framework/core/docs/adr/`](framework/core/docs/adr) — architecture decision
+- [Architecture Decision Records](framework/core/docs/adr) — architecture decision
   records.
 
 ## Feedback & support
@@ -224,8 +224,8 @@ Project contact happens through GitHub — there is no email support channel.
 
 - Bugs, feature requests, questions, and documentation issues:
   [open an issue](https://github.com/kungfu-systems/kungfu/issues/new/choose).
-- Changes: open a pull request (see [`CONTRIBUTING.md`](CONTRIBUTING.md)).
-- Security vulnerabilities: report them privately — see [`SECURITY.md`](SECURITY.md).
+- Changes: open a pull request (see [Contributing to Kungfu](CONTRIBUTING.md)).
+- Security vulnerabilities: report them privately — see [Security Policy](SECURITY.md).
 
 ## License
 
