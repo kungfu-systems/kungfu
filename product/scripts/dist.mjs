@@ -605,10 +605,14 @@ function assertCoreFrozen() {
   // tree's python3 is the real sys.executable the entry execs.
   const tree = path.join(CORE_DIST, 'python');
   if (fs.existsSync(tree)) {
-    for (const required of [
-      path.join(tree, 'kungfu-host.json'),
-      path.join(tree, 'bin', 'python3'),
-    ]) {
+    // The interpreter is python.exe at the tree root on Windows, bin/python3 on
+    // POSIX (same fork as run-freeze.js assembleLayout and the trunk's
+    // tree_python) — the real sys.executable the entry execs.
+    const treePython =
+      process.platform === 'win32'
+        ? path.join(tree, 'python.exe')
+        : path.join(tree, 'bin', 'python3');
+    for (const required of [path.join(tree, 'kungfu-host.json'), treePython]) {
       if (!fs.existsSync(required)) {
         throw new Error(`assembled runtime tree incomplete: ${rel(required)}`);
       }
