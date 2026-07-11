@@ -9,7 +9,7 @@ import tempfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal, Mapping
+from typing import Any, Callable, Literal, Mapping
 from uuid import uuid4
 
 from kungfu.config import default_config_home, machine_runtime_home, workspace_data_home
@@ -18,8 +18,18 @@ from kungfu.config import default_config_home, machine_runtime_home, workspace_d
 WORKSPACE_SCHEMA = "kungfu.workspace.identity/v1"
 REGISTRY_SCHEMA = "kungfu.workspace.registry/v1"
 ENSURE_RECEIPT_SCHEMA = "kungfu.workspace.ensure-receipt/v1"
+TARGET_RECEIPT_SCHEMA = "kungfu.workspace.target-receipt/v1"
 
 WorkspaceKind = Literal["home", "project", "machine"]
+OperationClass = Literal[
+    "read-only",
+    "capture-only",
+    "semantic-write",
+    "assessment",
+    "repair",
+    "migration",
+    "destructive",
+]
 
 
 @dataclass(frozen=True)
@@ -45,6 +55,41 @@ class WorkspaceIdentity:
             "state": "ready" if self.initialized else "selected-uninitialized",
             "resolution_reason": self.resolution_reason,
         }
+
+
+@dataclass(frozen=True)
+class WorkspaceTarget:
+    identity: WorkspaceIdentity
+    operation_class: OperationClass
+    source_working_directory: str
+    association: Literal["unassigned", "workspace"]
+
+    @property
+    def runtime_dir(self) -> str:
+        return os.path.join(self.identity.data_home, "runtime")
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            **self.identity.as_dict(),
+            "operation_class": self.operation_class,
+            "source_working_directory": self.source_working_directory,
+            "association": self.association,
+        }
+
+
+class WorkspaceTargetRequired(ValueError):
+    def __init__(self, operation_class: OperationClass, cwd: str):
+        self.diagnosis = {
+            "schema": "kungfu.workspace.target-diagnosis/v1",
+            "ok": False,
+            "operation_class": operation_class,
+            "resolution_reason": "no-project-workspace",
+            "source_working_directory": cwd,
+            "required_action": "pass --workspace or explicitly select Home",
+        }
+        super().__init__(
+            f"{operation_class} requires an explicit or discovered workspace target"
+        )
 
 
 def home_data_home(env: Mapping[str, str] | None = None) -> str:
@@ -116,6 +161,144 @@ def current_workspace(
         "machine_data_home": machine_runtime_home(env),
         "home_data_home": home_data_home(env),
     }
+
+
+def resolve_workspace_target(
+    operation_class: OperationClass,
+    workspace_root: str | None = None,
+    *,
+    home: bool = False,
+    cwd: str | None = None,
+    env: Mapping[str, str] | None = None,
+) -> WorkspaceTarget:
+    """Resolve one operation target without creating any workspace state.
+
+    Only the declared ``capture-only`` class may use Home when no project
+    workspace is explicit or discoverable. Every other write class fails
+    closed instead of turning Home into a silent global fallback.
+    """
+    if workspace_root and home:
+        raise ValueError("pass either workspace_root or home, not both")
+    env = os.environ if env is None else env
+    source_cwd = _canonical_path(cwd or env.get("PWD") or os.getcwd())
+    identity = inspect_workspace(
+        workspace_root,
+        home=home,
+        cwd=source_cwd,
+        env=env,
+    )
+    if identity is None:
+        if operation_class != "capture-only":
+            raise WorkspaceTargetRequired(operation_class, source_cwd)
+        identity = _home_identity(env, "no-project-workspace")
+
+    association: Literal["unassigned", "workspace"] = "workspace"
+    if (
+        operation_class == "capture-only"
+        and identity.workspace_kind == "home"
+        and identity.resolution_reason == "no-project-workspace"
+    ):
+        association = "unassigned"
+    return WorkspaceTarget(
+        identity=identity,
+        operation_class=operation_class,
+        source_working_directory=source_cwd,
+        association=association,
+    )
+
+
+def prepare_workspace_write(
+    target: WorkspaceTarget,
+    reason: str,
+) -> dict[str, Any]:
+    """Initialize a resolved write target and return the shared target receipt."""
+    if target.operation_class == "read-only":
+        raise ValueError("read-only operations cannot prepare a workspace write")
+    ensure_receipt = ensure_workspace_data_home(target.identity, reason)
+    return {
+        "schema": TARGET_RECEIPT_SCHEMA,
+        "receipt_id": f"workspace-target:{uuid4()}",
+        "recorded_at": _now(),
+        "operation_class": target.operation_class,
+        "workspace_id": target.identity.workspace_id,
+        "workspace_kind": target.identity.workspace_kind,
+        "workspace_root": target.identity.workspace_root,
+        "data_home": target.identity.data_home,
+        "runtime_dir": target.runtime_dir,
+        "resolution_reason": target.identity.resolution_reason,
+        "association": target.association,
+        "source_working_directory": target.source_working_directory,
+        "initialized": ensure_receipt["initialized"],
+        "created_paths": ensure_receipt["created_paths"],
+        "workspace_ensure_receipt_id": ensure_receipt["receipt_id"],
+        "git_effects": ensure_receipt["git_effects"],
+        "coordinator_action": ensure_receipt["coordinator_action"],
+    }
+
+
+def record_workspace_capture(
+    target: WorkspaceTarget,
+    receipt: Mapping[str, Any],
+    resulting_identities: list[dict[str, str]],
+    *,
+    work_store_factory: Callable[[str], Any] | None = None,
+) -> dict[str, Any]:
+    """Persist a capture receipt and create a durable Home Inbox work item."""
+    if target.operation_class != "capture-only":
+        raise ValueError("workspace capture records require capture-only resolution")
+    recorded = dict(receipt)
+    recorded["resulting_identities"] = resulting_identities
+    recorded["effects"] = ["capture-receipt-recorded"]
+    recorded["skipped_effects"] = [
+        "mission-association",
+        "git-init",
+        "gitignore-edit",
+        "git-stage",
+        "git-commit",
+        "git-push",
+    ]
+    if target.association == "unassigned":
+        recorded["skipped_effects"].insert(1, "project-association")
+
+    if target.association == "unassigned":
+        if work_store_factory is None:
+            from kungfu.work.store import WorkStore
+
+            work_store_factory = WorkStore
+        store = work_store_factory(target.runtime_dir)
+        identity_label = ", ".join(
+            f"{item['kind']}:{item['id']}" for item in resulting_identities
+        )
+        work_id = store.create(
+            title=f"Unassigned agent work {identity_label}",
+            kind="agent-work-inbox",
+            summary=(
+                "Captured without a project or declared Mission purpose from "
+                f"{target.source_working_directory}"
+            ),
+        )
+        store.set_next_action(
+            work_id,
+            "Attach this captured work to a Mission/Go or declare its purpose.",
+        )
+        for item in resulting_identities:
+            if item["kind"] == "run":
+                store.link_run(work_id, item["id"])
+        recorded["inbox_work_id"] = work_id
+        recorded["effects"].append("home-agent-work-inbox-item-created")
+
+    receipt_name = recorded["receipt_id"].replace(":", "-") + ".json"
+    receipt_path = os.path.join(
+        target.identity.data_home,
+        "inbox",
+        "receipts",
+        receipt_name,
+    )
+    recorded["receipt_path"] = receipt_path
+    _write_json_atomic(receipt_path, recorded)
+    if target.association == "unassigned":
+        store.artifact(recorded["inbox_work_id"], receipt_path, "workspace-capture")
+    return recorded
 
 
 def load_workspace_registry(

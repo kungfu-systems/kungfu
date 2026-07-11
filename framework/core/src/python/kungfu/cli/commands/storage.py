@@ -2,10 +2,17 @@
 
 import json
 import sys
+import tempfile
 
 import click
 
-from kungfu.cli.commands import PrioritizedCommandGroup, kfc
+from kungfu.cli.commands import PrioritizedCommandGroup, initialize_runtime_context, kfc
+from kungfu.workspace import (
+    WorkspaceTargetRequired,
+    prepare_workspace_write,
+    record_workspace_capture,
+    resolve_workspace_target,
+)
 
 storage_command_context = kfc.pass_context()
 
@@ -45,7 +52,8 @@ def _source_for_scope(scope, storage_source_id):
 @click.help_option("-h", "--help")
 @kfc.pass_context()
 def storage(ctx):
-    pass
+    if ctx.invoked_subcommand != "import":
+        initialize_runtime_context(ctx)
 
 
 @storage.command(help="show the resolved workspace Episode storage layout")
@@ -406,9 +414,29 @@ def export(
     help="episode bundles only: materialize owned frames and payloads, then "
     "replay manifest records; default validates without writing",
 )
+@click.option(
+    "--workspace",
+    "workspace_root",
+    type=click.Path(file_okay=False),
+    default=None,
+    help="explicit project workspace root for an executed Episode import",
+)
+@click.option(
+    "--home-workspace",
+    is_flag=True,
+    help="explicitly execute the Episode import in the Home Workspace",
+)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @storage_command_context
-def import_cmd(ctx, from_path, no_verify, execute, as_json):
+def import_cmd(
+    ctx,
+    from_path,
+    no_verify,
+    execute,
+    workspace_root,
+    home_workspace,
+    as_json,
+):
     from kungfu.storage import service
 
     try:
@@ -418,9 +446,57 @@ def import_cmd(ctx, from_path, no_verify, execute, as_json):
         if execute and not episode_bundle:
             click.echo("[storage] --execute applies to episode bundles only", err=True)
             sys.exit(1)
-        result = service.import_bundle(
-            ctx.runtime_dir, bundle, verify=not no_verify, execute=execute
-        )
+        workspace_receipt = None
+        if execute:
+            with tempfile.TemporaryDirectory(prefix="kungfu-episode-validate-") as root:
+                validation = service.import_bundle(
+                    root,
+                    bundle,
+                    verify=not no_verify,
+                    execute=False,
+                )
+            if not validation.get("ok"):
+                result = validation
+                if as_json:
+                    _echo_json(result)
+                    return
+                click.echo(
+                    f"[storage] episode {result.get('episode_id')} import failed: "
+                    f"{result.get('status', 'invalid')}"
+                )
+                sys.exit(1)
+            target = resolve_workspace_target(
+                "capture-only",
+                workspace_root,
+                home=home_workspace,
+            )
+            workspace_receipt = prepare_workspace_write(target, "episode-import")
+            result = service.import_bundle(
+                target.runtime_dir,
+                bundle,
+                verify=not no_verify,
+                execute=True,
+            )
+            workspace_receipt = record_workspace_capture(
+                target,
+                workspace_receipt,
+                [{"kind": "episode", "id": str(result.get("episode_id"))}],
+            )
+            result["workspace"] = workspace_receipt
+        else:
+            with tempfile.TemporaryDirectory(prefix="kungfu-episode-validate-") as root:
+                result = service.import_bundle(
+                    root,
+                    bundle,
+                    verify=not no_verify,
+                    execute=False,
+                )
+    except WorkspaceTargetRequired as e:
+        if as_json:
+            _echo_json(e.diagnosis)
+            raise click.exceptions.Exit(2) from e
+        click.echo(f"[storage] {e}", err=True)
+        sys.exit(2)
     except (OSError, ValueError) as e:
         click.echo(f"[storage] {e}", err=True)
         sys.exit(1)

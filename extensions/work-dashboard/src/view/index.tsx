@@ -907,6 +907,38 @@ function DetailView({
   );
 }
 
+function AgentWorkInboxSummary({ items }: { items: WorkItem[] }) {
+  if (!items.length) return null;
+  const evidenceCount = items.reduce(
+    (count, item) => count + item.runs.length + item.artifacts.length,
+    0,
+  );
+  const answers = [
+    ['What are we trying to achieve?', 'Not yet declared.'],
+    ['What actually happened?', `${items.length} unassigned capture(s).`],
+    [
+      'What does the evidence establish?',
+      `${evidenceCount} linked run / receipt reference(s).`,
+    ],
+    ['Is it fit for purpose?', 'insufficient — no purpose is attached.'],
+    [
+      'Who should act next?',
+      'User or agent: attach a Mission/Go or declare purpose.',
+    ],
+  ];
+  return (
+    <section style={{ ...panelStyle, marginBottom: 8 }}>
+      <h2 style={headingStyle}>Agent Work Inbox · {items.length}</h2>
+      {answers.map(([question, answer]) => (
+        <div key={question} style={{ ...mono, marginBottom: 3 }}>
+          <span style={{ color: '#9cdcfe' }}>{question}</span>{' '}
+          <span style={{ color: '#cccccc' }}>{answer}</span>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 function WorkDashboardView({
   caps,
   shell,
@@ -919,7 +951,10 @@ function WorkDashboardView({
   );
   const [items, setItems] = React.useState<WorkItem[]>(() => caps.work.items());
   const [filter, setFilter] = React.useState<string>('all');
-  const [selected, setSelected] = React.useState<string | null>(null);
+  const [selected, setSelected] = React.useState<string | null>(
+    () =>
+      items.find((item) => item.kind === 'agent-work-inbox')?.workId ?? null,
+  );
 
   const reload = React.useCallback(() => {
     caps.work.refresh();
@@ -939,6 +974,7 @@ function WorkDashboardView({
       ? items
       : items.filter((item) => statusName(item) === filter);
   const current = items.find((item) => item.workId === selected) ?? null;
+  const inboxItems = items.filter((item) => item.kind === 'agent-work-inbox');
 
   const filterButton = (name: string, count?: number) => (
     <button
@@ -987,16 +1023,23 @@ function WorkDashboardView({
         </SmallButton>
         <SmallButton onClick={() => setView('atlas')}>atlas</SmallButton>
       </div>
+      <AgentWorkInboxSummary items={inboxItems} />
       <div
         style={{
           display: 'flex',
           gap: 12,
-          height: 'calc(100% - 32px)',
+          height: inboxItems.length
+            ? 'calc(100% - 190px)'
+            : 'calc(100% - 32px)',
           minHeight: 0,
         }}
       >
         <section style={{ ...panelStyle, width: 380, flexShrink: 0 }}>
-          <h2 style={headingStyle}>Work · {items.length}</h2>
+          <h2 style={headingStyle}>
+            {inboxItems.length
+              ? `Agent Work Inbox ${inboxItems.length} · All Work ${items.length}`
+              : `Work · ${items.length}`}
+          </h2>
           <div
             style={{
               display: 'flex',
