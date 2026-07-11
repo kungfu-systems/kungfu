@@ -16,7 +16,7 @@ BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_projection
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_projection_verify_result, ok, status, schema,
                         runtime_dir, authority, projection_present, degraded, note, drift, rows, journal_distinct);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_projection_rebuild_result, ok, schema,
-                        runtime_dir, authority, projection, sqlite_path, rows, journal_records);
+                        runtime_dir, authority, projection, sqlite_path, rows, journal_records, query_records);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_time_range, since, until);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_sync_root_view, algorithm, value);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_provider_runtime_view, lifecycle,

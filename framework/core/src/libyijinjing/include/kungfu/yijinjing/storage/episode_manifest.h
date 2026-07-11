@@ -24,6 +24,21 @@ namespace kungfu::yijinjing::storage {
 
 [[nodiscard]] nlohmann::json render_episode_fsck_issue(const episode_fsck_issue &issue);
 
+// Decode the same packed body used by the journal reader. This is the only
+// decoder rebuildable projections may call; a malformed/newer body is
+// preserved as an unknown record and therefore fails canonical admission.
+[[nodiscard]] episode_manifest_record decode_episode_manifest_record(int32_t carrier_type, uint64_t manifest_frame_uid,
+                                                                     int64_t manifest_gen_time, const void *payload,
+                                                                     size_t payload_size);
+
+// Fold already-decoded records with the same append-order semantics as the
+// journal store. Projection/query engines use these helpers to avoid a second
+// implementation of Episode identity, conflict, and cut policy.
+[[nodiscard]] episode_manifest_fold fold_episode_manifest_records(const std::vector<episode_manifest_record> &records);
+
+[[nodiscard]] episode_manifest_fold
+fold_episode_manifest_records_until(const std::vector<episode_manifest_record> &records, uint64_t manifest_frame_uid);
+
 [[nodiscard]] nlohmann::json render_episode_fsck_result(const episode_fsck_result &result);
 
 // Stable edge projections shared by storage list/inspect and the fact-query

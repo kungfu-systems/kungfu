@@ -776,6 +776,25 @@ def episode_inspect(ctx, episode_id, as_json):
     click.echo(json.dumps(result["episode"], sort_keys=True))
 
 
+@episode.command(
+    name="rebuild-projection",
+    help="rebuild the derived Episode SQLite query projection",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@storage_command_context
+def episode_rebuild_projection(ctx, as_json):
+    from kungfu.storage import service
+
+    result = service.episode_projection_rebuild(ctx.runtime_dir)
+    if as_json:
+        _echo_json(result)
+        return
+    click.echo(
+        "[storage] Episode query projection rebuilt: "
+        f"{result['query_records']} append records"
+    )
+
+
 @storage.command(help="plan unreachable payload garbage collection")
 @click.option("--scope", type=click.Choice(["source", "all"]), required=True)
 @click.option("--source", "storage_source_id", type=str, default=None)

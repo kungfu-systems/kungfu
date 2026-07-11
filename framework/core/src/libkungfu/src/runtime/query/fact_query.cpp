@@ -6,9 +6,11 @@
 #include <cctype>
 #include <charconv>
 #include <initializer_list>
+#include <regex>
 #include <stdexcept>
 #include <string>
 
+#include <kungfu/runtime/storage/episode_manifest_projection.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
 #include <kungfu/yijinjing/storage/episode_manifest.h>
 
@@ -421,6 +423,42 @@ logical_plan plan_query(const query_definition &definition) {
   return plan;
 }
 
+query_definition compile_episode_sql(const std::string &sql, const query_definition &base_definition) {
+  // Accepted grammar (case-insensitive):
+  // SELECT * FROM episodes
+  //   [WHERE episode_id = <u64>]
+  //   [ORDER BY episode_id ASC]
+  //   [LIMIT <1..1000>]
+  // A single optional trailing semicolon is accepted. Everything else fails
+  // closed rather than being delegated to SQLite.
+  if (sql.empty() || sql.size() > 4096) {
+    throw std::invalid_argument("bounded SQL must contain 1..4096 bytes");
+  }
+  static const std::regex grammar(
+      R"(^\s*SELECT\s+\*\s+FROM\s+episodes(?:\s+WHERE\s+episode_id\s*=\s*([0-9]+))?(?:\s+ORDER\s+BY\s+episode_id\s+ASC)?(?:\s+LIMIT\s+([0-9]+))?\s*;?\s*$)",
+      std::regex::ECMAScript | std::regex::icase);
+  std::smatch match;
+  if (!std::regex_match(sql, match, grammar)) {
+    throw std::invalid_argument("unsupported SQL; expected SELECT * FROM episodes [WHERE episode_id = N] "
+                                "[ORDER BY episode_id ASC] [LIMIT N]");
+  }
+
+  auto compiled = base_definition;
+  compiled.basis.episode_id = 0;
+  if (match[1].matched) {
+    compiled.basis.episode_id = uint64_value(match[1].str(), "sql.episode_id");
+  }
+  if (match[2].matched) {
+    compiled.limit = uint64_value(match[2].str(), "sql.limit");
+    if (compiled.limit == 0 || compiled.limit > 1000) {
+      throw std::invalid_argument("sql LIMIT must be between 1 and 1000");
+    }
+  }
+  // Round-trip through the strict parser so a caller cannot use SQL as a way
+  // around QueryDefinition validation.
+  return parse_query_definition(query_definition_json(compiled));
+}
+
 nlohmann::json logical_plan_json(const logical_plan &plan) {
   auto value = logical_plan_payload_json(plan);
   value["definition"] = query_definition_json(plan.definition);
@@ -431,27 +469,38 @@ nlohmann::json logical_plan_json(const logical_plan &plan) {
 nlohmann::json query_capabilities_json() {
   const auto contract_world = episode_contract_world_reference();
   const auto fact_surface = episode_fact_surface_reference();
-  return {{"schema", QUERY_CAPABILITIES_SCHEMA_V1},
-          {"query_definition_schema", QUERY_DEFINITION_SCHEMA_V1},
-          {"logical_plan_schema", LOGICAL_PLAN_SCHEMA_V1},
-          {"objects", nlohmann::json::array({"episodes"})},
-          {"operators", nlohmann::json::array({"authority_scan", "filter", "order", "limit", "project", "evidence"})},
-          {"cuts", nlohmann::json::array({"head", "manifest_frame_uid"})},
-          {"admission_outcomes", nlohmann::json::array({"admitted", "unregistered-surface", "incompatible-schema",
-                                                        "ambiguous-authority", "unverifiable"})},
-          {"builtin_declarations",
-           {{"contract_world",
-             {{"reference", declaration_reference_json(contract_world)},
-              {"declaration", episode_contract_world_declaration_payload()}}},
-            {"fact_surfaces", nlohmann::json::array({{{"reference", declaration_reference_json(fact_surface)},
-                                                      {"declaration", episode_fact_surface_declaration_payload()}}})}}},
-          {"formats", nlohmann::json::array({"json", "ndjson", "tsv"})},
-          {"commands",
-           nlohmann::json::array({"capabilities", "schema", "describe", "examples", "validate", "explain", "prove"})},
-          {"limits", {{"minimum", 1}, {"maximum", 1000}}},
-          {"error_codes",
-           nlohmann::json::array({"KF_QUERY_INPUT", "KF_QUERY_VALIDATION", "KF_QUERY_EXECUTION", "KF_QUERY_OUTPUT"})},
-          {"physical_plan", {{"public", false}, {"reason", "engine-private-and-replaceable"}}}};
+  return {
+      {"schema", QUERY_CAPABILITIES_SCHEMA_V1},
+      {"query_definition_schema", QUERY_DEFINITION_SCHEMA_V1},
+      {"logical_plan_schema", LOGICAL_PLAN_SCHEMA_V1},
+      {"objects", nlohmann::json::array({"episodes"})},
+      {"operators", nlohmann::json::array({"authority_scan", "filter", "order", "limit", "project", "evidence"})},
+      {"cuts", nlohmann::json::array({"head", "manifest_frame_uid"})},
+      {"admission_outcomes", nlohmann::json::array({"admitted", "unregistered-surface", "incompatible-schema",
+                                                    "ambiguous-authority", "unverifiable"})},
+      {"builtin_declarations",
+       {{"contract_world",
+         {{"reference", declaration_reference_json(contract_world)},
+          {"declaration", episode_contract_world_declaration_payload()}}},
+        {"fact_surfaces", nlohmann::json::array({{{"reference", declaration_reference_json(fact_surface)},
+                                                  {"declaration", episode_fact_surface_declaration_payload()}}})}}},
+      {"formats", nlohmann::json::array({"json", "ndjson", "tsv"})},
+      {"frontends", nlohmann::json::array({"query-definition", "bounded-sql"})},
+      {"sql",
+       {{"object", "episodes"},
+        {"accepted", nlohmann::json::array(
+                         {"SELECT * FROM episodes",
+                          "SELECT * FROM episodes WHERE episode_id = <u64> ORDER BY episode_id ASC LIMIT <1..1000>"})},
+        {"rejected", nlohmann::json::array({"column projections", "joins", "subqueries", "OR",
+                                            "non-equality predicates", "descending order"})},
+        {"basis_owner", "QueryDefinition"}}},
+      {"execution_engines", nlohmann::json::array({"episode-authority-scan/v1", "episode-sqlite-projection/v1"})},
+      {"commands", nlohmann::json::array({"capabilities", "schema", "describe", "examples", "compile-sql", "validate",
+                                          "explain", "prove"})},
+      {"limits", {{"minimum", 1}, {"maximum", 1000}}},
+      {"error_codes",
+       nlohmann::json::array({"KF_QUERY_INPUT", "KF_QUERY_VALIDATION", "KF_QUERY_EXECUTION", "KF_QUERY_OUTPUT"})},
+      {"physical_plan", {{"public", false}, {"reason", "engine-private-and-replaceable"}}}};
 }
 
 nlohmann::json query_definition_schema_json() {
@@ -586,6 +635,7 @@ nlohmann::json query_result_json(const query_result &result) {
             {"cut", result.proof.cut},
             {"policy_versions", result.proof.policy_versions},
             {"time_basis", result.proof.time_basis},
+            {"execution", result.proof.execution},
             {"determinism", result.proof.determinism},
             {"canonical_state", result.proof.canonical_state},
             {"contract_world_declaration", declaration_reference_json(result.proof.contract_world_declaration)},
@@ -596,12 +646,9 @@ nlohmann::json query_result_json(const query_result &result) {
             {"unverifiable_inputs", unverifiable}}}};
 }
 
-query_result run_episode_authority_scan(const std::string &runtime_dir, const logical_plan &plan) {
+static query_result run_episode_fold(const logical_plan &plan, const yy_storage::episode_manifest_fold &fold,
+                                     nlohmann::json execution) {
   const auto &definition = plan.definition;
-  yy_storage::episode_manifest_store store(runtime_dir);
-  const auto fold = definition.basis.selected_cut.kind == cut_kind::Head
-                        ? store.fold_typed_records()
-                        : store.fold_typed_records_until(definition.basis.selected_cut.manifest_frame_uid);
 
   query_result result;
   result.definition = definition;
@@ -625,6 +672,7 @@ query_result run_episode_authority_scan(const std::string &runtime_dir, const lo
   result.proof.time_basis = {{"valid_time", definition.basis.valid_time},
                              {"system_time", definition.basis.system_time},
                              {"causal_time", definition.basis.causal_time}};
+  result.proof.execution = std::move(execution);
 
   auto known_record_count = static_cast<uint64_t>(fold.total_record_count);
   const auto unknown_record_count = std::min(known_record_count, static_cast<uint64_t>(fold.unknown_record_count));
@@ -698,6 +746,33 @@ query_result run_episode_authority_scan(const std::string &runtime_dir, const lo
 
   result.result_hash = json_hash({{"result_schema", result_schema_json(result.row_schema)}, {"rows", result.rows}});
   return result;
+}
+
+query_result run_episode_authority_scan(const std::string &runtime_dir, const logical_plan &plan) {
+  const auto &definition = plan.definition;
+  yy_storage::episode_manifest_store store(runtime_dir);
+  const auto fold = definition.basis.selected_cut.kind == cut_kind::Head
+                        ? store.fold_typed_records()
+                        : store.fold_typed_records_until(definition.basis.selected_cut.manifest_frame_uid);
+  return run_episode_fold(plan, fold, {{"engine", "episode-authority-scan/v1"}, {"source", "journal"}});
+}
+
+query_result run_episode_sqlite_projection(const std::string &runtime_dir, const logical_plan &plan) {
+  const auto &definition = plan.definition;
+  storage_service_api::episode_manifest_projection projection(runtime_dir);
+  const auto verification = projection.verify_typed();
+  if (!verification.projection_present || !verification.ok) {
+    throw std::runtime_error("Episode SQLite query projection is absent or stale; rebuild it before execution");
+  }
+  const auto fold = definition.basis.selected_cut.kind == cut_kind::Head
+                        ? projection.fold_typed_records()
+                        : projection.fold_typed_records_until(definition.basis.selected_cut.manifest_frame_uid);
+  return run_episode_fold(plan, fold,
+                          {{"engine", "episode-sqlite-projection/v1"},
+                           {"source", "sqlite-projection"},
+                           {"projection_verified", true},
+                           {"projection_status", verification.status},
+                           {"projection_schema", storage_service_api::EPISODE_MANIFEST_PROJECTION_SCHEMA_V1}});
 }
 
 } // namespace kungfu::runtime::query

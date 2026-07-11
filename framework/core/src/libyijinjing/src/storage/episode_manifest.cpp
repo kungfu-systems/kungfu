@@ -3,6 +3,7 @@
 #include <kungfu/yijinjing/storage/episode_manifest.h>
 
 #include <algorithm>
+#include <cstring>
 #include <filesystem>
 #include <memory>
 #include <stdexcept>
@@ -258,56 +259,71 @@ nlohmann::json record_row_json(const episode_manifest_record &record) {
 // unrecognized carrier type, a schema_version newer than v1, or a payload too
 // short for its record layout stays an unknown record: preserved with
 // provenance, never folded, so a newer writer does not brick this reader.
-template <typename T> bool decode_v1_record(const frame_ptr &frame, episode_manifest_record &record) {
-  if (frame->data_length() < sizeof(T)) {
+template <typename T> bool decode_v1_record(const void *payload, size_t payload_size, episode_manifest_record &record) {
+  if (payload_size < sizeof(T)) {
     return false;
   }
-  if (frame->data<T>().schema_version > EPISODE_MANIFEST_SCHEMA_VERSION) {
+  T body{};
+  std::memcpy(static_cast<void *>(&body), payload, sizeof(T));
+  if (body.schema_version > EPISODE_MANIFEST_SCHEMA_VERSION) {
     return false;
   }
-  record.body = frame->data<T>();
+  record.body = body;
   return true;
 }
 
-episode_manifest_record decode_record(const frame_ptr &frame) {
+episode_manifest_record decode_record_body(int32_t carrier_type, uint64_t manifest_frame_uid, int64_t manifest_gen_time,
+                                           const void *payload, size_t payload_size) {
   episode_manifest_record record{};
-  record.manifest_frame_uid = frame->frame_uid();
-  record.manifest_gen_time = frame->gen_time();
+  record.manifest_frame_uid = manifest_frame_uid;
+  record.manifest_gen_time = manifest_gen_time;
+  if (payload_size != 0) {
+    if (payload == nullptr) {
+      throw std::invalid_argument("episode manifest payload pointer is null");
+    }
+    const auto *begin = static_cast<const uint8_t *>(payload);
+    record.payload.assign(begin, begin + payload_size);
+  }
   bool decoded = false;
-  switch (frame->carrier_type()) {
+  switch (carrier_type) {
   case EpisodeOpen::tag:
-    decoded = decode_v1_record<EpisodeOpen>(frame, record);
+    decoded = decode_v1_record<EpisodeOpen>(payload, payload_size, record);
     break;
   case EpisodeHeartbeat::tag:
-    decoded = decode_v1_record<EpisodeHeartbeat>(frame, record);
+    decoded = decode_v1_record<EpisodeHeartbeat>(payload, payload_size, record);
     break;
   case EpisodeFrameAttached::tag:
-    decoded = decode_v1_record<EpisodeFrameAttached>(frame, record);
+    decoded = decode_v1_record<EpisodeFrameAttached>(payload, payload_size, record);
     break;
   case EpisodeRefAttached::tag:
-    decoded = decode_v1_record<EpisodeRefAttached>(frame, record);
+    decoded = decode_v1_record<EpisodeRefAttached>(payload, payload_size, record);
     break;
   case EpisodeClosed::tag:
-    decoded = decode_v1_record<EpisodeClosed>(frame, record);
+    decoded = decode_v1_record<EpisodeClosed>(payload, payload_size, record);
     break;
   case EpisodeRootCommitted::tag:
-    decoded = decode_v1_record<EpisodeRootCommitted>(frame, record);
+    decoded = decode_v1_record<EpisodeRootCommitted>(payload, payload_size, record);
     break;
   default:
     break;
   }
   if (!decoded) {
     episode_manifest_unknown_record unknown{};
-    unknown.carrier_type = frame->carrier_type();
-    if (frame->data_length() >= sizeof(uint32_t)) {
+    unknown.carrier_type = carrier_type;
+    if (payload_size >= sizeof(uint32_t)) {
       // Every v1 record starts with a uint32 schema_version; reading that
       // prefix is safe even when the rest of the layout is unknown.
-      unknown.schema_version = *static_cast<const uint32_t *>(frame->data_address());
+      std::memcpy(&unknown.schema_version, payload, sizeof(uint32_t));
       unknown.unknown_version = unknown.schema_version > EPISODE_MANIFEST_SCHEMA_VERSION;
     }
     record.body = unknown;
   }
   return record;
+}
+
+episode_manifest_record decode_record(const frame_ptr &frame) {
+  return decode_record_body(frame->carrier_type(), frame->frame_uid(), frame->gen_time(), frame->data_address(),
+                            frame->data_length());
 }
 
 uint64_t record_episode_id(const episode_manifest_record &record) {
@@ -869,6 +885,34 @@ episode_content_root_verification verify_episode_content_root(const episode_curr
 std::string episode_manifest_writer_lock_path(const std::string &runtime_dir) {
   const auto location = manifest_location(runtime_dir);
   return (fs::path(location->locator->layout_dir(location, enums::layout::JOURNAL, true)) / "writer.lock").string();
+}
+
+episode_manifest_record decode_episode_manifest_record(int32_t carrier_type, uint64_t manifest_frame_uid,
+                                                       int64_t manifest_gen_time, const void *payload,
+                                                       size_t payload_size) {
+  return decode_record_body(carrier_type, manifest_frame_uid, manifest_gen_time, payload, payload_size);
+}
+
+episode_manifest_fold fold_episode_manifest_records(const std::vector<episode_manifest_record> &records) {
+  episode_manifest_fold fold;
+  for (const auto &record : records) {
+    fold_into(fold, record);
+  }
+  return fold;
+}
+
+episode_manifest_fold fold_episode_manifest_records_until(const std::vector<episode_manifest_record> &records,
+                                                          uint64_t manifest_frame_uid) {
+  episode_manifest_fold fold;
+  fold.cut_found = false;
+  for (const auto &record : records) {
+    fold_into(fold, record);
+    if (record.manifest_frame_uid == manifest_frame_uid) {
+      fold.cut_found = true;
+      break;
+    }
+  }
+  return fold;
 }
 
 episode_manifest_store::episode_manifest_store(std::string runtime_dir) : runtime_dir_(std::move(runtime_dir)) {}
