@@ -142,6 +142,14 @@ assessment, or close work without hand-authoring low-level declarations. GUI
 and agent surfaces consume the same domain objects, QueryDefinitions, and
 assessment contracts; no GUI-private database owns Mission state.
 
+A first-time user does not need an Atlas-style Markdown repository or a fully
+formed Mission. **Start managing agent work** explicitly selects a Personal
+Agent Workspace at `~/.kungfu`; its first managed run lazily initializes the
+fact world and appears in an unassigned Agent Work Inbox. Kungfu can establish
+exact attribution only for managed or explicitly integrated runs. Imported
+external traces remain observed or ambiguous, and purpose-bound fitness stays
+insufficient until the work is attached to a declared purpose.
+
 ## Authority and Atlas dogfood
 
 Kungfu already ships a read-only Atlas import profile. It records content-
@@ -207,10 +215,11 @@ export consumer. Long-lived dual writes with two authorities are forbidden.
 
 ## Storage and portability
 
-Workspace state lives under the resolved workspace `.kungfu/`; personal or
-machine state uses the resolved runtime home. Journal records, Episodes,
-schemas, payloads, saved queries, assessment Episodes, TrustReports, and
-observer metadata share that authority.
+Project workspace state lives under its resolved `<project>/.kungfu/`; the
+explicit Personal Agent Workspace lives at `~/.kungfu`. Machine fallback and
+`~/.kungfu-config` remain separate service/config homes. Journal records,
+Episodes, schemas, payloads, saved queries, assessment Episodes, TrustReports,
+and observer metadata belong to the selected fact-world authority.
 
 Desktop remembers the last selected workspace under `KF_CONFIG_HOME`, but that
 registry is only global GUI session state. Opening a directory remains

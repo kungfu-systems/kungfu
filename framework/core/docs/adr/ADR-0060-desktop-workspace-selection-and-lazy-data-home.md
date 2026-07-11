@@ -17,7 +17,7 @@ ai_provenance:
   invisible_context_boundary: Did not inspect private Atlas bodies, credentials, provider payloads, or hidden model state
 ---
 
-# ADR-0060: Desktop selects one workspace and initializes its `.kungfu` data home lazily
+# ADR-0060: Desktop selects one explicit workspace and initializes its data home lazily
 
 - Status: proposed
 - Date: 2026-07-11
@@ -37,11 +37,13 @@ falls back to Electron `userData/runtime`, while Work Dashboard immediately
 renders Mission/Go lists and authoring forms against whichever runtime home was
 inherited.
 
-This breaks the intended product model. A user should be able to open a real
-workspace such as `~/Code/atlas`, return to it on the next launch, and see the
-Mission Control view backed by that workspace's `.kungfu`. Opening a directory
-must remain read-only: it must not create `.kungfu`, journals, runtime files, or
-Git ignore changes merely because the user inspected a project.
+This breaks the intended product model in two directions. A user should be able
+to open a real workspace such as `~/Code/atlas`, return to it on the next
+launch, and see the Mission Control view backed by that workspace's `.kungfu`.
+A first-time user with no repository must also be able to start managing agent
+work without preparing Markdown, Git, or a Mission hierarchy first. Opening a
+directory or merely launching the product must remain read-only: neither action
+may create a fact world merely because it was inspected.
 
 Saved Query Catalog makes the boundary load-bearing. Its QueryDefinition and
 ViewSpec revisions are already journal-backed in the selected runtime data
@@ -52,9 +54,11 @@ GUI preference file without losing their declaration, cut, and schema context.
 
 ### 1. Workspace root and data home are distinct identities
 
-Desktop selects a canonical **workspace root**. Its candidate Kungfu data home
-is `<workspace-root>/.kungfu`. Symlinks are resolved for identity, while the
-user-facing path may retain the path the user selected.
+Desktop selects one explicit workspace identity with kind `project` or
+`personal`. A project has a canonical **workspace root** and candidate data
+home `<workspace-root>/.kungfu`. The Personal Agent Workspace has no project
+root and uses the canonical data home `~/.kungfu`. Symlinks are resolved for
+identity, while the user-facing path may retain the path the user selected.
 
 The product exports both identities before creating a renderer:
 
@@ -63,6 +67,10 @@ KF_WORKSPACE_ROOT=<canonical workspace root>
 KF_HOME=<workspace root>/.kungfu
 KF_RUNTIME_DIR=<workspace root>/.kungfu/runtime
 ```
+
+For the Personal Agent Workspace, `KF_HOME=~/.kungfu` and
+`KF_RUNTIME_DIR=~/.kungfu/runtime`; `KF_WORKSPACE_ROOT` is absent and the
+registry-provided workspace kind supplies the product identity.
 
 `KF_WORKSPACE_ROOT` is a product/session selector. `KF_HOME` remains the data
 home selector. Callers must not pass a project root to `-H` and hope every layer
@@ -74,7 +82,8 @@ Selecting or reopening a workspace performs only path validation, capability
 discovery, and inspection of whether `.kungfu` already exists. It does not
 create the data home.
 
-When `.kungfu` is absent, Desktop enters `selected-uninitialized` state. It
+When the selected data home is absent, Desktop enters
+`selected-uninitialized` state. It
 must not call runtime joins, generate skill/runtime files, ensure a coordinator,
 or construct a storage handle against the candidate path. The first operation
 that would change the workspace fact world passes through one
@@ -85,6 +94,8 @@ that would change the workspace fact world passes through one
 - import Atlas or materialize a Mission/Episode/fact bundle;
 - save a QueryDefinition/ViewSpec revision;
 - record an Episode, fact material, source, or assessment.
+- start a Kungfu-managed agent run whose receipts will enter the Personal Agent
+  Workspace inbox.
 
 Read-only Mission/Go inspection, workspace probing, config inspection, bundle
 validation, and query planning do not initialize the workspace.
@@ -108,7 +119,27 @@ in-process native capability boundary and prevents live handles, subprocess
 environment, terminal hosts, and coordinator leases from spanning two fact
 worlds. A later multi-workspace process model requires a separate ADR.
 
-### 4. The last workspace is global product state, not a workspace fact
+### 4. First install offers an explicit Personal Agent Workspace
+
+When no registry exists, Desktop offers **Start managing agent work** as the
+recommended path and **Open existing project** as the project path. The first
+choice selects the Personal Agent Workspace candidate; installation, launch,
+and selection alone do not create `~/.kungfu`. Its first managed run or other
+fact-bearing write passes through `ensureWorkspaceDataHome(reason)`.
+
+The Personal workspace may begin with an Agent Work Inbox and no Mission. In
+that state Kungfu records what happened and what the evidence establishes, but
+reports purpose-bound fitness as insufficient until a Mission/Go or explicit
+purpose is attached. Attaching purpose later adds a relationship without
+rewriting the original Episode identity or capture time.
+
+Agent attribution remains bounded by integration evidence: a Kungfu-managed
+run may establish exact supervisor/run identity; CLI/API/skill use establishes
+explicit sourced receipts; after-the-fact external imports remain observed or
+ambiguous. The product must not infer exact causality from unrelated files or
+process presence.
+
+### 5. The last workspace is global product state, not a workspace fact
 
 Desktop persists a versioned registry at:
 
@@ -117,7 +148,8 @@ Desktop persists a versioned registry at:
 ```
 
 The registry contains the last selected canonical root, bounded recent roots,
-display paths, and non-authoritative availability metadata. It contains no
+display paths, workspace kind (`personal` or `project`), and non-authoritative
+availability metadata. It contains no
 Mission bodies, Go state, facts, proofs, or imported Atlas payloads. A missing
 or inaccessible last workspace degrades to the workspace chooser; it never
 falls through to a different fact world silently.
@@ -125,18 +157,20 @@ falls through to a different fact world silently.
 Dynamic recent paths do not belong in the declarative `config.json` preference
 override. They are user-level GUI session state under the same config home.
 
-### 5. Local state has three standard homes
+### 6. Local state has four standard homes
 
 | Home | Owns | Must not own |
 | --- | --- | --- |
-| `<workspace>/.kungfu` | declarations, admitted facts, Episodes, payloads, source registry, Mission/Go/claim/decision facts, assessments, TrustReports, saved queries, observer metadata, rebuildable workspace projections and coordinator state | global recent workspaces, installed-product preferences |
+| `~/.kungfu` Personal Agent Workspace | explicitly personal/cross-project Missions, unassigned Agent Work Inbox Episodes, admitted facts, proof, assessments, decisions, saved queries, projections and coordinator state | global preferences, implicit project facts, machine caches |
+| `<project>/.kungfu` | project declarations, admitted facts, Episodes, payloads, source registry, Mission/Go/claim/decision facts, assessments, TrustReports, saved queries, observer metadata, rebuildable projections and coordinator state | global recent workspaces, installed-product preferences, implicit Personal facts |
 | `~/.kungfu-config` (or `KF_CONFIG_HOME`) | user preferences, global trust/extension/skill policy, installed kfx/skill metadata, recent/last workspace registry, per-user supervisor routing state | workspace Mission/Go facts, saved query revisions, proof or imported Atlas bodies |
 | platform machine fallback selected by `KF_HOME` | no-workspace runtime support, caches, service state, explicitly machine-scoped facts | an implicit merged Mission world for all projects |
 
-`~/.kungfu` has no implicit default role. It is not a config compatibility path
-and Desktop does not silently merge it with an opened workspace. A future
-explicit **Personal Workspace** may select `~/.kungfu` as its data root, but it
-must be created and opened deliberately like any other workspace.
+`~/.kungfu` has one precise role: the explicitly selected Personal Agent
+Workspace. It is not a config compatibility path or machine fallback, and
+Desktop never silently merges it with an opened project workspace. Missions,
+Episodes, or saved queries move between fact worlds only through explicit full
+or thin bundle export/import; no dual write is introduced.
 
 Global installation and workspace participation remain distinct. The config
 home may contain an installed kfx/skill package and user default policy; the
@@ -144,7 +178,7 @@ workspace pins the exact version, enablement/grant, declaration, and receipt
 that participated in its fact world. A global update cannot reinterpret an
 older workspace cut.
 
-### 6. Existing workspace data loads without re-import
+### 7. Existing workspace data loads without re-import
 
 When the selected `.kungfu` exists, Desktop opens that data root and rebuilds
 projections as needed. A completed Atlas import, native Mission, Go, assessment,
@@ -156,7 +190,7 @@ Mission Home may offer **Import Atlas facts**. The action is explicit and is a
 write intent, so it passes through lazy initialization. Import freshness and
 source coordinates remain visible after completion.
 
-### 7. GUI and agents use the same workspace contract
+### 8. GUI and agents use the same workspace contract
 
 The installed CLI/API must expose machine-readable workspace selection and
 inspection, including at least:
@@ -166,6 +200,7 @@ kungfu workspace inspect <path> --json
 kungfu workspace list --json
 kungfu workspace current --json
 kungfu workspace select <path> --json
+kungfu workspace select-personal --json
 ```
 
 Intent-level write commands accept an explicit workspace root or use ordinary
@@ -177,6 +212,8 @@ home, whether initialization occurred, and the resulting fact/episode identity.
 
 - The installed product can dogfood real repositories without a special dev
   launcher or manual environment variables.
+- A first-time user can capture and manage agent work before owning a repository
+  or fully articulating a Mission, without the product inventing purpose.
 - Reopening Desktop returns to the last workspace and the same Mission Control
   fact world.
 - Read-only inspection cannot dirty a repository.
@@ -203,10 +240,25 @@ home, whether initialization occurred, and the resulting fact/episode identity.
   native handles, coordinator leases, subprocess environment, and terminal
   hosts would otherwise risk crossing authority boundaries.
 - **Restore `~/.kungfu` as an ambiguous global default.** Rejected because it
-  collapses config, personal facts, machine state, and project facts again.
+  collapses config, personal facts, machine state, and project facts again. The
+  accepted Personal Agent Workspace gives this path one explicit role instead.
+- **Require a repository or Mission before tracking agent work.** Rejected
+  because sidecar adoption must precede project formalization; the inbox can
+  preserve evidence while fitness remains honestly insufficient.
+- **Passively claim exact attribution for any local agent.** Rejected because
+  process/file proximity does not establish causal responsibility.
 
 ## Acceptance gates
 
+- Installing and launching Desktop with no registry creates neither
+  `~/.kungfu` nor a project `.kungfu`.
+- Choosing **Start managing agent work** and performing the first managed run
+  initializes only `~/.kungfu`, returns a receipt, and shows the Episode in an
+  unassigned inbox without inventing a Mission.
+- Attaching that Episode to a later Mission preserves its identity and original
+  capture boundary.
+- External activity without a Kungfu integration receipt cannot be presented
+  as exact attribution.
 - Opening a Git workspace with no `.kungfu` leaves the filesystem unchanged.
 - The first Mission/Go/import/saved-query write creates exactly that
   workspace's data home and returns an initialization receipt.
@@ -218,6 +270,8 @@ home, whether initialization occurred, and the resulting fact/episode identity.
 - Deleting rebuildable projections does not delete Missions, assessments, or
   saved-query revisions.
 - GUI and CLI report the same canonical workspace root and data home.
+- A full Personal-to-project bundle transfer preserves declared roots without
+  creating shared or dual-write authority.
 
 ## Residual risk
 
@@ -228,3 +282,6 @@ home, whether initialization occurred, and the resulting fact/episode identity.
 - Controlled relaunch needs clear unsaved-dialog handling and lease release.
 - Recent workspace paths can be sensitive metadata; the registry remains local,
   bounded, and outside portable Mission bundles.
+- A personal inbox can become a dumping ground unless retention, assignment,
+  and degraded-evidence states remain visible; those policies require product
+  qualification rather than silent cleanup.
