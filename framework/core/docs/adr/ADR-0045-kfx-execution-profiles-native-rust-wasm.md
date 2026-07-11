@@ -229,17 +229,18 @@ macOS arm64, Linux x64, and Windows x64 pass the native budgets using the same
 probe schema; the dedicated PR matrix guards the platform builds and cut-proof.
 This does not start the WASM spike or change the KFX manifest/contract.
 
-The WASM half now has a preliminary macOS ARM64 implementation and evidence in
+The WASM half now has a three-platform spike implementation and evidence in
 [`docs/libwasm-embedding-membrane-spike.md`](../../../../docs/libwasm-embedding-membrane-spike.md).
 One C++ host passes the existing v1 embedding table to replaceable Wasmtime
 46.0.1 and Wasmer 7.2.0 Rust cdylibs. Both execute identical core-Wasm bytes,
 cross libkungfu once per batch, copy each payload byte once into fixed guest
 linear memory, contain traps/panics, and pass the warm latency, copy-throughput,
-and idle-instance budgets locally. The report also separates cold
-compile/instantiate cost and adapter file size from warm-call and per-instance
-measurements. This is not yet a completed WASM gate: Linux/Windows evidence,
-equivalent Wasmer CPU metering, and the later WIT Component Model layer remain
-open. The KFX manifest/contract remains unchanged.
+and idle-instance budgets on macOS ARM64, Linux x64, and Windows x64. The report
+also separates cold compile/instantiate cost and adapter file size from
+warm-call and per-instance measurements. This closes the bounded shared-membrane
+spike, not the production WASM profile: equivalent Wasmer CPU metering and the
+later WIT Component Model, admission, limit, and receipt layers remain open.
+The KFX manifest/contract remains unchanged.
 
 ## Contract obligations
 
