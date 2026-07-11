@@ -537,6 +537,30 @@ def _marker_card(payload, source):
     }
 
 
+def _load_projection_payload(runtime_dir, data_dir, descriptor):
+    payload, _ = payloads.load_payload_descriptor(data_dir, descriptor)
+    if payload is not None:
+        return payload
+    # A materialized home (episode bundle import --execute, ADR-0053) holds
+    # the payload bytes only in the provider content store — the same backend
+    # episode fsck resolves refs through. The atlas store mirror is the
+    # import-side original and is legitimately absent there.
+    digest = str((descriptor or {}).get("hash") or "")
+    if not digest:
+        return None
+    from kungfu.storage import content_store
+
+    try:
+        raw = content_store.get(
+            runtime_dir,
+            content_store.PAYLOADS_NAMESPACE,
+            f"{payloads.CONTENT_HASH_ALGORITHM_SHA256}:{digest}",
+        )
+        return json.loads(bytes(raw).decode("utf-8"))
+    except (RuntimeError, ValueError, UnicodeDecodeError):
+        return None
+
+
 def load(runtime_dir):
     """Fold the latest COMPLETED import batch into a projection dict.
 
@@ -566,7 +590,7 @@ def load(runtime_dir):
             batch = batches.get(import_id)
             descriptor = envelope.get("payload")
             descriptor = descriptor if isinstance(descriptor, dict) else {}
-            source_payload, _ = payloads.load_payload_descriptor(data_dir, descriptor)
+            source_payload = _load_projection_payload(runtime_dir, data_dir, descriptor)
             if batch is not None and source_payload is not None:
                 card = _mission_card(source_payload)
                 batch["missions"][card["mission_id"]] = card
@@ -574,7 +598,7 @@ def load(runtime_dir):
             batch = batches.get(import_id)
             descriptor = envelope.get("payload")
             descriptor = descriptor if isinstance(descriptor, dict) else {}
-            source_payload, _ = payloads.load_payload_descriptor(data_dir, descriptor)
+            source_payload = _load_projection_payload(runtime_dir, data_dir, descriptor)
             if batch is not None and source_payload is not None:
                 card = _goal_card(source_payload)
                 batch["goals"][card["goal_id"]] = card
@@ -584,7 +608,7 @@ def load(runtime_dir):
             descriptor = descriptor if isinstance(descriptor, dict) else {}
             source = envelope.get("source")
             source = source if isinstance(source, dict) else {}
-            source_payload, _ = payloads.load_payload_descriptor(data_dir, descriptor)
+            source_payload = _load_projection_payload(runtime_dir, data_dir, descriptor)
             if batch is not None and source_payload is not None:
                 card = _marker_card(source_payload, source)
                 batch["markers"][card["branch"]] = card

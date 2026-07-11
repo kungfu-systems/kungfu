@@ -311,6 +311,13 @@ def repair(
     default="jsonl",
     help="export format; bundle-json is available for --scope source",
 )
+@click.option(
+    "--thin",
+    "thin",
+    is_flag=True,
+    help="episode scope only: receipt-only bundle without owned frame and "
+    "payload bytes",
+)
 @click.option("--out", "out_path", type=str, required=True, help="output path")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @storage_command_context
@@ -323,6 +330,7 @@ def export(
     from_time,
     until,
     format_,
+    thin,
     out_path,
     as_json,
 ):
@@ -359,6 +367,7 @@ def export(
                     out_path,
                     episode_id=episode_id,
                     range_filter=_range_filter(since, from_time, until),
+                    thin=thin,
                 )
             elif format_ == "bundle-json":
                 _require_source(storage_source_id)
@@ -390,20 +399,42 @@ def export(
 @click.option(
     "--no-verify", "no_verify", is_flag=True, help="skip manifest verification"
 )
+@click.option(
+    "--execute",
+    "execute",
+    is_flag=True,
+    help="episode bundles only: materialize owned frames and payloads, then "
+    "replay manifest records; default validates without writing",
+)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @storage_command_context
-def import_cmd(ctx, from_path, no_verify, as_json):
+def import_cmd(ctx, from_path, no_verify, execute, as_json):
     from kungfu.storage import service
 
     try:
         with open(from_path, encoding="utf-8") as f:
             bundle = json.load(f)
-        result = service.import_bundle(ctx.runtime_dir, bundle, verify=not no_verify)
+        episode_bundle = bundle.get("schema") == "kungfu.storage.episode-bundle/v1"
+        if execute and not episode_bundle:
+            click.echo("[storage] --execute applies to episode bundles only", err=True)
+            sys.exit(1)
+        result = service.import_bundle(
+            ctx.runtime_dir, bundle, verify=not no_verify, execute=execute
+        )
     except (OSError, ValueError) as e:
         click.echo(f"[storage] {e}", err=True)
         sys.exit(1)
     if as_json:
         _echo_json(result)
+        return
+    if episode_bundle:
+        status = result.get("status", "unknown")
+        click.echo(
+            f"[storage] episode {result.get('episode_id')} import "
+            f"{'ok' if result.get('ok') else 'failed'}: {status}"
+        )
+        if not result.get("ok"):
+            sys.exit(1)
         return
     click.echo(
         f"[storage] imported {result['records']} records for {result['source_id']}"

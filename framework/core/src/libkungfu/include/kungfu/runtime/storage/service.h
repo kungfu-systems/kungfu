@@ -638,11 +638,46 @@ struct storage_export_bundle_result {
   std::vector<storage_export_record_view> records = {};
 };
 
+// ADR-0053: the bytes an Episode owns travel with its bundle. A frame is
+// carried whole (header + payload) because the header holds writer-local
+// fields (frame_uid, trigger provenance) no claim covers and the claimed
+// frame checksum recomputes over exactly these bytes.
+struct episode_frame_material {
+  uint64_t frame_uid = 0;
+  int64_t gen_time = 0;
+  int32_t carrier_type = 0;
+  uint32_t frame_length = 0;
+  uint32_t data_length = 0;
+  std::string bytes = {};
+};
+
+struct episode_journal_material {
+  std::string role = {};
+  std::string namespace_ = {};
+  std::string name = {};
+  std::string mode = {};
+  uint32_t seed = 0;
+  uint32_t location_uid = 0;
+  uint32_t dest = 0;
+  std::vector<episode_frame_material> frames = {};
+};
+
+struct episode_ref_payload_material {
+  std::string ref_hash = {};
+  uint64_t byte_len = 0;
+  std::string bytes = {};
+};
+
 struct storage_episode_bundle_result {
   std::string bundle_id = {};
   uint64_t episode_id = 0;
   yijinjing::storage::episode_current_view manifest = {};
   yijinjing::storage::episode_causal_graph causal_graph = {};
+  bool self_contained = false;
+  std::vector<episode_journal_material> journals = {};
+  std::vector<episode_ref_payload_material> ref_payloads = {};
+  uint64_t material_missing_frame_count = 0;
+  uint64_t material_missing_ref_payload_count = 0;
 };
 
 struct storage_import_bundle_request {

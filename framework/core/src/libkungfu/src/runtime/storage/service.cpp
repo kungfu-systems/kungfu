@@ -4,6 +4,7 @@
 #include <kungfu/runtime/storage/service.h>
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <charconv>
 #include <cstdlib>
@@ -62,6 +63,83 @@ template <size_t N> void assign_fixed(kungfu::array<char, N> &target, const std:
   std::fill(std::begin(target.value), std::end(target.value), '\0');
   const auto length = std::min(value.size(), N - 1);
   std::copy_n(value.data(), length, target.value);
+}
+
+// ADR-0053: frame bytes cross the JSON edge as base64. The codec lives here
+// because the edge is the only place binary material meets JSON.
+inline constexpr const char *BASE64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+std::string base64_encode(const std::string &raw) {
+  std::string encoded;
+  encoded.reserve((raw.size() + 2) / 3 * 4);
+  size_t index = 0;
+  while (index + 3 <= raw.size()) {
+    const uint32_t chunk = (static_cast<uint8_t>(raw[index]) << 16u) | (static_cast<uint8_t>(raw[index + 1]) << 8u) |
+                           static_cast<uint8_t>(raw[index + 2]);
+    encoded.push_back(BASE64_ALPHABET[(chunk >> 18u) & 0x3Fu]);
+    encoded.push_back(BASE64_ALPHABET[(chunk >> 12u) & 0x3Fu]);
+    encoded.push_back(BASE64_ALPHABET[(chunk >> 6u) & 0x3Fu]);
+    encoded.push_back(BASE64_ALPHABET[chunk & 0x3Fu]);
+    index += 3;
+  }
+  const auto remaining = raw.size() - index;
+  if (remaining == 1) {
+    const uint32_t chunk = static_cast<uint8_t>(raw[index]) << 16u;
+    encoded.push_back(BASE64_ALPHABET[(chunk >> 18u) & 0x3Fu]);
+    encoded.push_back(BASE64_ALPHABET[(chunk >> 12u) & 0x3Fu]);
+    encoded.push_back('=');
+    encoded.push_back('=');
+  } else if (remaining == 2) {
+    const uint32_t chunk = (static_cast<uint8_t>(raw[index]) << 16u) | (static_cast<uint8_t>(raw[index + 1]) << 8u);
+    encoded.push_back(BASE64_ALPHABET[(chunk >> 18u) & 0x3Fu]);
+    encoded.push_back(BASE64_ALPHABET[(chunk >> 12u) & 0x3Fu]);
+    encoded.push_back(BASE64_ALPHABET[(chunk >> 6u) & 0x3Fu]);
+    encoded.push_back('=');
+  }
+  return encoded;
+}
+
+std::string base64_decode(const std::string &encoded) {
+  static const auto reverse = [] {
+    std::array<int8_t, 256> table{};
+    table.fill(-1);
+    for (int i = 0; i < 64; ++i) {
+      table[static_cast<uint8_t>(BASE64_ALPHABET[i])] = static_cast<int8_t>(i);
+    }
+    return table;
+  }();
+  if (encoded.size() % 4 != 0) {
+    throw std::invalid_argument("base64 payload length must be a multiple of 4");
+  }
+  std::string raw;
+  raw.reserve(encoded.size() / 4 * 3);
+  for (size_t index = 0; index < encoded.size(); index += 4) {
+    uint32_t chunk = 0;
+    int padding = 0;
+    for (size_t offset = 0; offset < 4; ++offset) {
+      const auto symbol = static_cast<uint8_t>(encoded[index + offset]);
+      if (symbol == '=') {
+        if (index + 4 != encoded.size() || offset < 2) {
+          throw std::invalid_argument("base64 padding is malformed");
+        }
+        ++padding;
+        chunk <<= 6u;
+        continue;
+      }
+      if (padding > 0 || reverse[symbol] < 0) {
+        throw std::invalid_argument("base64 payload contains an invalid symbol");
+      }
+      chunk = (chunk << 6u) | static_cast<uint32_t>(reverse[symbol]);
+    }
+    raw.push_back(static_cast<char>((chunk >> 16u) & 0xFFu));
+    if (padding < 2) {
+      raw.push_back(static_cast<char>((chunk >> 8u) & 0xFFu));
+    }
+    if (padding < 1) {
+      raw.push_back(static_cast<char>(chunk & 0xFFu));
+    }
+  }
+  return raw;
 }
 
 const char *source_kind_text(yy_enums::SourceKind kind) {
@@ -2060,14 +2138,112 @@ nlohmann::json episode_fsck_impl(const storage_service_options &options) {
   return render_storage_fsck_result(default_storage_service().fsck(parse_storage_fsck_request(options)));
 }
 
+// ADR-0053: collect the bytes the Episode owns — whole frames from the
+// claimed event journals, payload bytes from the content store — so the
+// bundle is a migration/recovery unit, not a receipt listing. Material the
+// source itself no longer has is counted, never invented.
+void collect_episode_bundle_material(const storage_service_options &options, storage_episode_bundle_result &bundle) {
+  namespace yjj = kungfu::yijinjing;
+  bundle.self_contained = true;
+
+  std::map<std::pair<uint32_t, uint32_t>, std::vector<uint64_t>> wanted_by_journal;
+  std::map<std::pair<uint32_t, uint32_t>, std::unordered_set<uint64_t>> seen_by_journal;
+  for (const auto index : bundle.manifest.frame_indices) {
+    const auto &claim = std::get<yjj::types::EpisodeFrameAttached>(bundle.manifest.records.at(index).body);
+    if (claim.frame_uid == 0) {
+      continue;
+    }
+    const auto key = std::make_pair(claim.source, claim.dest);
+    if (seen_by_journal[key].insert(claim.frame_uid).second) {
+      wanted_by_journal[key].push_back(claim.frame_uid);
+    }
+  }
+
+  auto locator = std::make_shared<yjj::data::locator>(options.runtime_dir, yy_enums::mode::LIVE);
+  std::unordered_map<uint32_t, yjj::data::location_ptr> locations_by_uid;
+  for (const auto &location : locator->list_locations("*", "*", "*", "*")) {
+    locations_by_uid.emplace(location->uid, location);
+  }
+
+  for (const auto &[journal_key, frame_uids] : wanted_by_journal) {
+    const auto location_iter = locations_by_uid.find(journal_key.first);
+    if (location_iter == locations_by_uid.end()) {
+      bundle.material_missing_frame_count += frame_uids.size();
+      continue;
+    }
+    const auto &location = location_iter->second;
+    episode_journal_material journal{};
+    journal.role = yy_enums::get_location_role_name(location->role);
+    journal.namespace_ = location->namespace_;
+    journal.name = location->name;
+    journal.mode = yy_enums::get_mode_name(location->mode);
+    journal.seed = location->seed;
+    journal.location_uid = location->uid;
+    journal.dest = journal_key.second;
+    std::unordered_set<uint64_t> wanted(frame_uids.begin(), frame_uids.end());
+    if (!location->locator->list_page_id(location, journal.dest).empty()) {
+      auto reader = std::make_shared<yjj::journal::reader>(true, false, std::make_shared<yjj::journal::bus>(false));
+      reader->join(location, journal.dest, 0);
+      while (reader->data_available()) {
+        const auto frame = reader->current_frame();
+        const auto wanted_iter = wanted.find(frame->frame_uid());
+        if (wanted_iter != wanted.end()) {
+          episode_frame_material material{};
+          material.frame_uid = frame->frame_uid();
+          material.gen_time = frame->gen_time();
+          material.carrier_type = frame->carrier_type();
+          material.frame_length = static_cast<uint32_t>(frame->frame_length());
+          material.data_length = frame->data_length();
+          material.bytes.assign(reinterpret_cast<const char *>(frame->address()), frame->frame_length());
+          journal.frames.push_back(std::move(material));
+          wanted.erase(wanted_iter);
+        }
+        reader->next();
+      }
+    }
+    bundle.material_missing_frame_count += wanted.size();
+    if (!journal.frames.empty()) {
+      bundle.journals.push_back(std::move(journal));
+    }
+  }
+
+  const auto provider = shared_provider(options);
+  std::unordered_set<std::string> exported_hashes;
+  for (const auto index : bundle.manifest.ref_indices) {
+    const auto &claim = std::get<yjj::types::EpisodeRefAttached>(bundle.manifest.records.at(index).body);
+    if (claim.ref_kind != yy_enums::EpisodeRefKind::Payload) {
+      continue;
+    }
+    const auto ref_hash = fixed_string(claim.ref_hash);
+    if (ref_hash.empty() || !exported_hashes.insert(ref_hash).second) {
+      continue;
+    }
+    const auto separator = ref_hash.find(':');
+    const auto digest = separator == std::string::npos ? ref_hash : ref_hash.substr(separator + 1);
+    if (digest.empty() || !provider->payload_exists(digest)) {
+      ++bundle.material_missing_ref_payload_count;
+      continue;
+    }
+    episode_ref_payload_material material{};
+    material.ref_hash = ref_hash;
+    material.bytes = provider->read_payload(digest);
+    material.byte_len = material.bytes.size();
+    bundle.ref_payloads.push_back(std::move(material));
+  }
+}
+
 storage_episode_bundle_result episode_export_bundle_typed_impl(const storage_service_options &options) {
   if (options.episode_id == 0) {
     throw std::invalid_argument("episode_id is required for episode export");
   }
   const auto scoped = episode_ref_store(options);
   const auto inspected = scoped.store.inspect_typed(options.episode_id);
-  return {"episode:" + std::to_string(options.episode_id), options.episode_id, inspected.episode,
-          inspected.causal_graph};
+  storage_episode_bundle_result bundle{"episode:" + std::to_string(options.episode_id), options.episode_id,
+                                       inspected.episode, inspected.causal_graph};
+  if (!bool_or(options.operation_options, "thin", false)) {
+    collect_episode_bundle_material(options, bundle);
+  }
+  return bundle;
 }
 
 nlohmann::json fsck_impl(const storage_service_options &options);
@@ -2354,6 +2530,56 @@ storage_episode_bundle_result parse_storage_episode_bundle(const nlohmann::json 
       dependency.ref_hash = text_or(value, "ref_hash");
     parsed.causal_graph.dependencies.push_back(std::move(dependency));
   }
+  // ADR-0053 material sections. Decoded frame bytes are validated against
+  // their own header here, so a malformed or truncated bundle fails at the
+  // edge instead of reaching a journal writer.
+  parsed.self_contained = bool_or(bundle, "self_contained", false);
+  for (const auto &value : array_or_empty(bundle, "journals")) {
+    episode_journal_material journal{};
+    const auto location = object_or_empty(value, "location");
+    journal.role = text_or(location, "role");
+    journal.namespace_ = text_or(location, "namespace");
+    journal.name = text_or(location, "name");
+    journal.mode = text_or(location, "mode", "live");
+    journal.seed = uint32_or(location, "seed");
+    journal.location_uid = uint32_or(location, "uid");
+    journal.dest = uint32_or(value, "dest");
+    for (const auto &row : array_or_empty(value, "frames")) {
+      episode_frame_material frame{};
+      frame.frame_uid = uint64_or(row, "frame_uid");
+      frame.gen_time = int64_or(row, "gen_time");
+      frame.carrier_type = static_cast<int32_t>(int64_or(row, "carrier_type"));
+      frame.frame_length = uint32_or(row, "frame_length");
+      frame.data_length = uint32_or(row, "data_length");
+      frame.bytes = base64_decode(text_or(row, "bytes"));
+      if (frame.bytes.size() != frame.frame_length ||
+          frame.bytes.size() < sizeof(kungfu::yijinjing::types::frame_header)) {
+        throw std::invalid_argument("episode_bundle_frame_bytes_malformed");
+      }
+      const auto &header = *reinterpret_cast<const kungfu::yijinjing::types::frame_header *>(frame.bytes.data());
+      if (header.length != frame.frame_length || header.frame_uid != frame.frame_uid ||
+          header.gen_time != frame.gen_time || header.carrier_type != frame.carrier_type ||
+          header.length < header.header_length ||
+          static_cast<uint32_t>(header.length - header.header_length) != frame.data_length) {
+        throw std::invalid_argument("episode_bundle_frame_header_mismatch");
+      }
+      journal.frames.push_back(std::move(frame));
+    }
+    parsed.journals.push_back(std::move(journal));
+  }
+  for (const auto &value : array_or_empty(bundle, "ref_payloads")) {
+    episode_ref_payload_material payload{};
+    payload.ref_hash = text_or(value, "ref_hash");
+    payload.bytes = base64_decode(text_or(value, "bytes"));
+    payload.byte_len = payload.bytes.size();
+    if (uint64_or(value, "byte_len", payload.byte_len) != payload.byte_len) {
+      throw std::invalid_argument("episode_bundle_ref_payload_malformed");
+    }
+    parsed.ref_payloads.push_back(std::move(payload));
+  }
+  const auto material = object_or_empty(bundle, "material");
+  parsed.material_missing_frame_count = uint64_or(material, "missing_frame_count");
+  parsed.material_missing_ref_payload_count = uint64_or(material, "missing_ref_payload_count");
   return parsed;
 }
 
@@ -2447,6 +2673,174 @@ nlohmann::json episode_apply_record(const storage_service_options &options,
       record.body);
 }
 
+// ADR-0053 shared materializer: land the bundle's owned bytes in the
+// destination data root. Frames append verbatim (the existing copy_frame
+// primitive preserves the whole header, frame_uid included, and publishes
+// last per ADR-0001); payloads write through the hash-addressed content
+// store. Only missing facts are added — an existing frame with different
+// bytes, or an append that would break journal time order, is an honest
+// conflict, never an overwrite.
+nlohmann::json materialize_episode_bundle_material(const storage_service_options &options,
+                                                   const storage_episode_bundle_result &bundle, bool write) {
+  namespace yjj = kungfu::yijinjing;
+  nlohmann::json applied = nlohmann::json::array();
+  nlohmann::json skipped = nlohmann::json::array();
+  nlohmann::json rejected = nlohmann::json::array();
+
+  auto locator = std::make_shared<yjj::data::locator>(options.runtime_dir, yy_enums::mode::LIVE);
+  for (const auto &journal : bundle.journals) {
+    const auto seed = journal.seed == 0 ? KUNGFU_HASH_SEED : journal.seed;
+    const auto location = yjj::data::location::make_shared(yy_enums::get_mode_by_name(journal.mode),
+                                                           yy_enums::get_location_role_by_name(journal.role),
+                                                           journal.namespace_, journal.name, locator, seed);
+    if (location->uid != journal.location_uid) {
+      rejected.push_back({{"kind", "frame_bytes"},
+                          {"reason", "episode_bundle_location_uid_mismatch"},
+                          {"location", location->uname},
+                          {"claimed_uid", journal.location_uid},
+                          {"actual_uid", location->uid}});
+      continue;
+    }
+
+    std::unordered_map<uint64_t, const episode_frame_material *> material_by_uid;
+    for (const auto &frame : journal.frames) {
+      material_by_uid.emplace(frame.frame_uid, &frame);
+    }
+    std::unordered_map<uint64_t, bool> existing_identical;
+    int64_t last_gen_time = 0;
+    bool journal_has_frames = false;
+    if (!locator->list_page_id(location, journal.dest).empty()) {
+      auto reader = std::make_shared<yjj::journal::reader>(true, false, std::make_shared<yjj::journal::bus>(false));
+      reader->join(location, journal.dest, 0);
+      while (reader->data_available()) {
+        const auto frame = reader->current_frame();
+        journal_has_frames = true;
+        last_gen_time = frame->gen_time();
+        const auto material_iter = material_by_uid.find(frame->frame_uid());
+        if (material_iter != material_by_uid.end() && existing_identical.count(frame->frame_uid()) == 0) {
+          const auto &material = *material_iter->second;
+          const bool identical = material.bytes.size() == static_cast<size_t>(frame->frame_length()) &&
+                                 std::memcmp(material.bytes.data(), reinterpret_cast<const void *>(frame->address()),
+                                             material.bytes.size()) == 0;
+          existing_identical.emplace(frame->frame_uid(), identical);
+        }
+        reader->next();
+      }
+    }
+
+    std::vector<const episode_frame_material *> to_append;
+    bool journal_rejected = false;
+    int64_t previous_gen_time = 0;
+    for (const auto &frame : journal.frames) {
+      const auto existing_iter = existing_identical.find(frame.frame_uid);
+      if (existing_iter != existing_identical.end()) {
+        if (existing_iter->second) {
+          skipped.push_back({{"kind", "frame_bytes"}, {"reason", "already_present"}, {"frame_uid", frame.frame_uid}});
+        } else {
+          rejected.push_back({{"kind", "frame_bytes"},
+                              {"reason", "episode_frame_conflict"},
+                              {"frame_uid", frame.frame_uid},
+                              {"location", location->uname},
+                              {"dest", journal.dest}});
+          journal_rejected = true;
+        }
+        continue;
+      }
+      if (!to_append.empty() && frame.gen_time < previous_gen_time) {
+        rejected.push_back({{"kind", "frame_bytes"},
+                            {"reason", "episode_bundle_frames_unordered"},
+                            {"frame_uid", frame.frame_uid},
+                            {"location", location->uname},
+                            {"dest", journal.dest}});
+        journal_rejected = true;
+        continue;
+      }
+      to_append.push_back(&frame);
+      previous_gen_time = frame.gen_time;
+    }
+    if (journal_has_frames && !to_append.empty() && last_gen_time > to_append.front()->gen_time) {
+      for (const auto *frame : to_append) {
+        rejected.push_back({{"kind", "frame_bytes"},
+                            {"reason", "episode_frame_order_conflict"},
+                            {"frame_uid", frame->frame_uid},
+                            {"location", location->uname},
+                            {"dest", journal.dest},
+                            {"journal_last_gen_time", last_gen_time},
+                            {"frame_gen_time", frame->gen_time}});
+      }
+      continue;
+    }
+    if (journal_rejected) {
+      // The journal-level facts are already reported; still land the clean
+      // missing frames only when nothing in this journal conflicts.
+      continue;
+    }
+    if (to_append.empty()) {
+      continue;
+    }
+    if (!write) {
+      for (const auto *frame : to_append) {
+        applied.push_back({{"kind", "frame_bytes"},
+                           {"frame_uid", frame->frame_uid},
+                           {"location", location->uname},
+                           {"dest", journal.dest},
+                           {"dry_run", true}});
+      }
+      continue;
+    }
+    try {
+      const auto page_size = yjj::journal::page::find_page_size(location, journal.dest);
+      auto writer = yjj::journal::writer(location, journal.dest, true, std::make_shared<yjj::journal::noop_publisher>(),
+                                         false, std::make_shared<yjj::journal::bus>(false));
+      for (const auto *frame : to_append) {
+        if (frame->bytes.size() + 2 * sizeof(yjj::types::frame_header) > page_size) {
+          rejected.push_back({{"kind", "frame_bytes"},
+                              {"reason", "episode_frame_exceeds_page_size"},
+                              {"frame_uid", frame->frame_uid},
+                              {"location", location->uname},
+                              {"dest", journal.dest}});
+          continue;
+        }
+        auto overlay = std::make_shared<yjj::journal::frame>();
+        overlay->set_address(reinterpret_cast<uintptr_t>(frame->bytes.data()));
+        writer.copy_frame(overlay);
+        applied.push_back({{"kind", "frame_bytes"},
+                           {"frame_uid", frame->frame_uid},
+                           {"location", location->uname},
+                           {"dest", journal.dest}});
+      }
+    } catch (const std::exception &error) {
+      rejected.push_back(
+          {{"kind", "frame_bytes"}, {"reason", error.what()}, {"location", location->uname}, {"dest", journal.dest}});
+    }
+  }
+
+  const auto provider = shared_provider(options);
+  for (const auto &payload : bundle.ref_payloads) {
+    const auto separator = payload.ref_hash.find(':');
+    const auto algorithm = separator == std::string::npos ? std::string(yy_storage::CONTENT_HASH_ALGORITHM_SHA256)
+                                                          : payload.ref_hash.substr(0, separator);
+    const auto digest = separator == std::string::npos ? payload.ref_hash : payload.ref_hash.substr(separator + 1);
+    const auto error = yy_storage::verify_payload_ref(payload.bytes, digest, payload.bytes.size(), algorithm);
+    if (!error.empty()) {
+      rejected.push_back({{"kind", "ref_payload"}, {"reason", error}, {"ref_hash", payload.ref_hash}});
+      continue;
+    }
+    if (provider->payload_exists(digest)) {
+      skipped.push_back({{"kind", "ref_payload"}, {"reason", "already_present"}, {"ref_hash", payload.ref_hash}});
+      continue;
+    }
+    if (write) {
+      provider->write_payload(digest, payload.bytes);
+      applied.push_back({{"kind", "ref_payload"}, {"ref_hash", payload.ref_hash}});
+    } else {
+      applied.push_back({{"kind", "ref_payload"}, {"ref_hash", payload.ref_hash}, {"dry_run", true}});
+    }
+  }
+
+  return {{"applied", std::move(applied)}, {"skipped", std::move(skipped)}, {"rejected", std::move(rejected)}};
+}
+
 nlohmann::json apply_episode_bundle_material(const storage_service_options &options, const nlohmann::json &bundle,
                                              bool write) {
   auto validation_options = options;
@@ -2492,6 +2886,31 @@ nlohmann::json apply_episode_bundle_material(const storage_service_options &opti
             {"rejected", rejected}};
   }
   const auto typed_bundle = parse_storage_episode_bundle(bundle);
+  // ADR-0053: the bundle's owned bytes land before the manifest records
+  // replay, so the seal replay closes over frames that already exist and the
+  // receipt's fsck can go green in one pass.
+  const auto material = materialize_episode_bundle_material(options, typed_bundle, write);
+  for (const auto &row : array_or_empty(material, "applied")) {
+    applied.push_back(row);
+  }
+  for (const auto &row : array_or_empty(material, "skipped")) {
+    skipped.push_back(row);
+  }
+  for (const auto &row : array_or_empty(material, "rejected")) {
+    rejected.push_back(row);
+  }
+  if (write && !array_or_empty(material, "rejected").empty()) {
+    // Materialization conflicts stop the replay: sealing manifest claims over
+    // frames that did not land would fabricate a failing Episode.
+    return {{"kind", "episode_bundle"},
+            {"schema", text_or(bundle, "schema")},
+            {"episode_id", bundle_episode_id == 0 ? nlohmann::json(nullptr) : nlohmann::json(bundle_episode_id)},
+            {"validated", validated},
+            {"existing_record_keys", existing_keys},
+            {"applied", applied},
+            {"skipped", skipped},
+            {"rejected", rejected}};
+  }
   for (const auto &record : typed_bundle.manifest.records) {
     const auto key = episode_record_identity_key(record);
     const auto rendered_record = episode_record_row_json(record);
@@ -2944,9 +3363,188 @@ nlohmann::json repair_fetch_impl(const storage_service_options &options) {
                 })}};
 }
 
+// ADR-0053 import --execute: land a sealed Episode bundle in this data root.
+// Gates run in proof order — bundle self-consistency, destination identity,
+// materialization + replay, destination root against the bundle claim, and a
+// scoped verify-frames fsck — so a failed receipt names the exact broken
+// step. Writes are append-only; nothing is rolled back or overwritten.
+nlohmann::json episode_import_bundle_execute_impl(const storage_service_options &options) {
+  const auto parsed = parse_storage_episode_bundle(options.bundle);
+  if (parsed.episode_id == 0) {
+    throw std::invalid_argument("episode_bundle_episode_id_missing");
+  }
+  const auto receipt_base = [&parsed](const std::string &status, bool ok, bool accepted) {
+    return nlohmann::json{{"ok", ok},
+                          {"schema", "kungfu.storage.episode-import/v1"},
+                          {"scope", "episode"},
+                          {"episode_id", parsed.episode_id},
+                          {"dry_run", false},
+                          {"accepted", accepted},
+                          {"status", status},
+                          {"authority", "yijinjing-journal"},
+                          {"self_contained", parsed.self_contained}};
+  };
+  const auto root_json = [](const yy_storage::episode_content_root &root) {
+    return nlohmann::json{
+        {"algorithm", root.algorithm}, {"root_value", root.value}, {"covered_record_count", root.covered_record_count}};
+  };
+
+  std::optional<yijinjing::types::EpisodeRootCommitted> root_claim;
+  bool terminal_close = false;
+  for (const auto &record : parsed.manifest.records) {
+    if (const auto *close = std::get_if<yijinjing::types::EpisodeClosed>(&record.body)) {
+      if (close->status == yy_enums::EpisodeStatus::Ended || close->status == yy_enums::EpisodeStatus::Aborted) {
+        terminal_close = true;
+      }
+    } else if (const auto *root = std::get_if<yijinjing::types::EpisodeRootCommitted>(&record.body)) {
+      if (!root_claim.has_value()) {
+        root_claim = *root;
+      }
+    }
+  }
+  if (!terminal_close) {
+    auto receipt = receipt_base("failed", false, false);
+    receipt["errors"] =
+        nlohmann::json::array({{{"code", "episode_bundle_not_sealed"}, {"episode_id", parsed.episode_id}}});
+    return receipt;
+  }
+
+  // Gate 1 — the bundle proves itself: the ADR-0043 chain over its own
+  // records must reproduce the root it claims.
+  const auto bundle_computed = yy_storage::compute_episode_content_root(parsed.manifest);
+  nlohmann::json preflight = {{"computed", root_json(bundle_computed)}, {"claimed", nullptr}, {"match", nullptr}};
+  if (root_claim.has_value()) {
+    preflight["claimed"] = {{"algorithm", fixed_string(root_claim->algorithm)},
+                            {"root_value", fixed_string(root_claim->root_value)},
+                            {"covered_record_count", root_claim->covered_record_count}};
+    if (fixed_string(root_claim->algorithm) == bundle_computed.algorithm) {
+      const bool match = fixed_string(root_claim->root_value) == bundle_computed.value;
+      preflight["match"] = match;
+      if (!match) {
+        auto receipt = receipt_base("failed", false, false);
+        receipt["preflight"] = preflight;
+        receipt["errors"] =
+            nlohmann::json::array({{{"code", "episode_bundle_root_mismatch"}, {"episode_id", parsed.episode_id}}});
+        return receipt;
+      }
+    }
+  }
+
+  // Gate 2 — destination identity: same root is already-present, a different
+  // root with the same id is a refusal, never a merge (ADR-0043 equality).
+  {
+    const auto scoped = episode_ref_store(options);
+    const auto fold = scoped.store.fold_typed_records();
+    const auto iter = fold.episodes.find(parsed.episode_id);
+    if (iter != fold.episodes.end()) {
+      const auto &destination = iter->second;
+      if (!destination.closed) {
+        auto receipt = receipt_base("failed", false, false);
+        receipt["preflight"] = preflight;
+        receipt["errors"] =
+            nlohmann::json::array({{{"code", "episode_conflict_open"}, {"episode_id", parsed.episode_id}}});
+        return receipt;
+      }
+      const auto destination_computed = yy_storage::compute_episode_content_root(destination);
+      if (destination_computed.algorithm == bundle_computed.algorithm &&
+          destination_computed.value == bundle_computed.value) {
+        auto receipt = receipt_base("already_present", true, false);
+        receipt["preflight"] = preflight;
+        receipt["root"] = {{"destination_computed", root_json(destination_computed)},
+                           {"bundle_computed", root_json(bundle_computed)},
+                           {"match", true}};
+        return receipt;
+      }
+      auto receipt = receipt_base("failed", false, false);
+      receipt["preflight"] = preflight;
+      receipt["root"] = {{"destination_computed", root_json(destination_computed)},
+                         {"bundle_computed", root_json(bundle_computed)},
+                         {"match", false}};
+      receipt["errors"] =
+          nlohmann::json::array({{{"code", "episode_root_mismatch"}, {"episode_id", parsed.episode_id}}});
+      return receipt;
+    }
+  }
+
+  // Gate 3 — coverage: execute refuses to seal claims whose frame bytes do
+  // not travel with the bundle. Replaying the records anyway would fabricate
+  // a sealed Episode that fails its own fsck; a thin or incomplete bundle
+  // fails here, before anything is written.
+  {
+    std::unordered_set<uint64_t> carried;
+    for (const auto &journal : parsed.journals) {
+      for (const auto &frame : journal.frames) {
+        carried.insert(frame.frame_uid);
+      }
+    }
+    nlohmann::json uncovered = nlohmann::json::array();
+    for (const auto index : parsed.manifest.frame_indices) {
+      const auto &claim = std::get<yijinjing::types::EpisodeFrameAttached>(parsed.manifest.records.at(index).body);
+      if (claim.frame_uid != 0 && carried.count(claim.frame_uid) == 0) {
+        uncovered.push_back(claim.frame_uid);
+      }
+    }
+    if (!uncovered.empty()) {
+      auto receipt = receipt_base("failed", false, false);
+      receipt["preflight"] = preflight;
+      receipt["errors"] = nlohmann::json::array({{{"code", "episode_bundle_not_self_contained"},
+                                                  {"episode_id", parsed.episode_id},
+                                                  {"uncovered_frame_uids", uncovered}}});
+      return receipt;
+    }
+  }
+
+  // Gate 4 — land the material and replay the manifest records; the replayed
+  // seal commits the destination's own root.
+  const auto apply = apply_episode_bundle_material(options, options.bundle, /*write=*/true);
+  const bool apply_ok = array_or_empty(apply, "rejected").empty();
+
+  // Gate 5 — the destination root must reproduce the bundle's identity.
+  nlohmann::json root_report = {{"bundle_computed", root_json(bundle_computed)}};
+  bool root_ok = false;
+  {
+    const auto scoped = episode_ref_store(options);
+    const auto fold = scoped.store.fold_typed_records();
+    const auto iter = fold.episodes.find(parsed.episode_id);
+    if (iter != fold.episodes.end()) {
+      const auto &destination = iter->second;
+      const auto destination_computed = yy_storage::compute_episode_content_root(destination);
+      root_report["destination_computed"] = root_json(destination_computed);
+      if (destination.root_seen) {
+        root_report["destination_recorded"] = {{"algorithm", fixed_string(destination.root.algorithm)},
+                                               {"root_value", fixed_string(destination.root.root_value)}};
+      }
+      root_ok = destination_computed.algorithm == bundle_computed.algorithm &&
+                destination_computed.value == bundle_computed.value;
+      root_report["match"] = root_ok;
+    } else {
+      root_report["match"] = false;
+    }
+  }
+
+  // Gate 6 — scoped deep verification over what actually landed.
+  const auto fsck =
+      default_storage_service().fsck({options.runtime_dir, options.provider, options.provider_config_source,
+                                      storage_fsck_scope::Episode, "", parsed.episode_id, /*verify_frames=*/true});
+  const bool ok = apply_ok && root_ok && fsck.ok;
+  auto receipt = receipt_base(ok ? "applied" : "failed", ok, ok);
+  receipt["preflight"] = preflight;
+  receipt["apply"] = apply;
+  receipt["root"] = root_report;
+  receipt["fsck"] = render_storage_fsck_result(fsck);
+  receipt["notes"] = nlohmann::json::array({
+      "Episode bundle import --execute materializes owned frames and payloads, then replays manifest records.",
+      "Writes are append-only; conflicts are reported and never overwritten.",
+  });
+  return receipt;
+}
+
 nlohmann::json episode_import_bundle_impl(const storage_service_options &options) {
   if (!options.bundle.is_object() || text_or(options.bundle, "schema") != "kungfu.storage.episode-bundle/v1") {
     throw std::invalid_argument("episode_bundle_invalid");
+  }
+  if (!options.dry_run) {
+    return episode_import_bundle_execute_impl(options);
   }
   const auto manifest = object_or_empty(options.bundle, "manifest");
   if (manifest.empty()) {
@@ -2960,27 +3558,30 @@ nlohmann::json episode_import_bundle_impl(const storage_service_options &options
   const auto frames = array_or_empty(options.bundle, "frames");
   const auto refs = array_or_empty(options.bundle, "refs");
   const auto dependencies = array_or_empty(options.bundle, "dependencies");
-  return {{"ok", true},
-          {"schema", "kungfu.storage.episode-import/v1"},
-          {"scope", "episode"},
-          {"episode_id", uint64_or(options.bundle, "episode_id", uint64_or(manifest, "episode_id"))},
-          {"dry_run", true},
-          {"accepted", false},
-          {"status", "validated"},
-          {"authority", "yijinjing-journal"},
-          {"degraded", bool_or(options.bundle, "degraded", bool_or(causal_graph, "degraded", false))},
-          {"manifest", manifest},
-          {"causal_graph", causal_graph},
-          {"dependencies", dependencies},
-          {"records", records.size()},
-          {"frames", frames.size()},
-          {"refs", refs.size()},
-          {"dependency_count", dependencies.size()},
-          {"notes",
-           nlohmann::json::array({
-               "Episode bundle import v1 validates and preserves causal evidence without writing the local manifest.",
-               "A later repair/import stage may materialize missing frames, payloads, or dependent Episodes.",
-           })}};
+  return {
+      {"ok", true},
+      {"schema", "kungfu.storage.episode-import/v1"},
+      {"scope", "episode"},
+      {"episode_id", uint64_or(options.bundle, "episode_id", uint64_or(manifest, "episode_id"))},
+      {"dry_run", true},
+      {"accepted", false},
+      {"status", "validated"},
+      {"authority", "yijinjing-journal"},
+      {"degraded", bool_or(options.bundle, "degraded", bool_or(causal_graph, "degraded", false))},
+      {"manifest", manifest},
+      {"causal_graph", causal_graph},
+      {"dependencies", dependencies},
+      {"records", records.size()},
+      {"frames", frames.size()},
+      {"refs", refs.size()},
+      {"dependency_count", dependencies.size()},
+      {"self_contained", bool_or(options.bundle, "self_contained", false)},
+      {"material_journals", array_or_empty(options.bundle, "journals").size()},
+      {"material_ref_payloads", array_or_empty(options.bundle, "ref_payloads").size()},
+      {"notes", nlohmann::json::array({
+                    "Episode bundle import validates by default and preserves causal evidence without writing.",
+                    "Import with dry_run=false materializes owned frames and payloads, then replays manifest records.",
+                })}};
 }
 
 nlohmann::json replace_string_subtree(nlohmann::json value, const std::string &needle, const std::string &replacement) {
@@ -4495,22 +5096,59 @@ nlohmann::json render_storage_episode_bundle_result(const storage_episode_bundle
   for (const auto index : result.manifest.ref_indices)
     refs.push_back(episode_record_row_json(result.manifest.records.at(index)));
   const auto dependencies = episode_dependencies_json(result.causal_graph);
-  return {{"schema", "kungfu.storage.episode-bundle/v1"},
-          {"bundle_id", result.bundle_id},
-          {"scope", "episode"},
-          {"episode_id", result.episode_id},
-          {"authority", "yijinjing-journal"},
-          {"manifest", yy_storage::episode_summary_json(result.manifest)},
-          {"causal_graph", episode_causal_graph_json(result.causal_graph)},
-          {"records", std::move(records)},
-          {"frames", std::move(frames)},
-          {"refs", std::move(refs)},
-          {"dependencies", dependencies},
-          {"degraded", result.causal_graph.degraded},
-          {"record_count", result.manifest.records.size()},
-          {"frame_count", result.manifest.frame_indices.size()},
-          {"ref_count", result.manifest.ref_indices.size()},
-          {"dependency_count", result.causal_graph.dependencies.size()}};
+  nlohmann::json rendered = {{"schema", "kungfu.storage.episode-bundle/v1"},
+                             {"bundle_id", result.bundle_id},
+                             {"scope", "episode"},
+                             {"episode_id", result.episode_id},
+                             {"authority", "yijinjing-journal"},
+                             {"manifest", yy_storage::episode_summary_json(result.manifest)},
+                             {"causal_graph", episode_causal_graph_json(result.causal_graph)},
+                             {"records", std::move(records)},
+                             {"frames", std::move(frames)},
+                             {"refs", std::move(refs)},
+                             {"dependencies", dependencies},
+                             {"degraded", result.causal_graph.degraded},
+                             {"record_count", result.manifest.records.size()},
+                             {"frame_count", result.manifest.frame_indices.size()},
+                             {"ref_count", result.manifest.ref_indices.size()},
+                             {"dependency_count", result.causal_graph.dependencies.size()}};
+  if (!result.self_contained) {
+    return rendered;
+  }
+  // ADR-0053: the owned bytes travel with the bundle; binary material is
+  // base64 at this JSON edge only.
+  rendered["self_contained"] = true;
+  nlohmann::json journals = nlohmann::json::array();
+  for (const auto &journal : result.journals) {
+    nlohmann::json frame_rows = nlohmann::json::array();
+    for (const auto &frame : journal.frames) {
+      frame_rows.push_back({{"frame_uid", frame.frame_uid},
+                            {"gen_time", frame.gen_time},
+                            {"carrier_type", frame.carrier_type},
+                            {"frame_length", frame.frame_length},
+                            {"data_length", frame.data_length},
+                            {"bytes", base64_encode(frame.bytes)}});
+    }
+    journals.push_back({{"location",
+                         {{"role", journal.role},
+                          {"namespace", journal.namespace_},
+                          {"name", journal.name},
+                          {"mode", journal.mode},
+                          {"seed", journal.seed},
+                          {"uid", journal.location_uid}}},
+                        {"dest", journal.dest},
+                        {"frames", std::move(frame_rows)}});
+  }
+  rendered["journals"] = std::move(journals);
+  nlohmann::json ref_payloads = nlohmann::json::array();
+  for (const auto &payload : result.ref_payloads) {
+    ref_payloads.push_back(
+        {{"ref_hash", payload.ref_hash}, {"byte_len", payload.byte_len}, {"bytes", base64_encode(payload.bytes)}});
+  }
+  rendered["ref_payloads"] = std::move(ref_payloads);
+  rendered["material"] = {{"missing_frame_count", result.material_missing_frame_count},
+                          {"missing_ref_payload_count", result.material_missing_ref_payload_count}};
+  return rendered;
 }
 
 nlohmann::json storage_query_rows_json(const storage_query_rows &rows) {
