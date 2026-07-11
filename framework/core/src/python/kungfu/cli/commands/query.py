@@ -212,6 +212,165 @@ def saved_view(ctx: click.Context, file_path: str, as_json: bool) -> None:
     )
 
 
+@query.group(name="saved", help="manage workspace-local saved query assets")
+@click.help_option("-h", "--help")
+@query_command_context
+def saved_queries(ctx: click.Context) -> None:
+    del ctx
+    pass
+
+
+def _catalog_call(ctx: click.Context, action: str, **kwargs: Any) -> dict[str, Any]:
+    from kungfu.storage import service
+
+    try:
+        return service.saved_query_catalog(_runtime_dir(ctx), action, **kwargs)
+    except (RuntimeError, TypeError, ValueError) as error:
+        _fail("KF_SAVED_QUERY", str(error), exit_code=1)
+
+
+@saved_queries.command(name="list", help="list active saved queries in this workspace")
+@click.option("--include-deleted", is_flag=True)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@query_command_context
+def saved_list(ctx: click.Context, include_deleted: bool, as_json: bool) -> None:
+    del as_json
+    _echo_json(_catalog_call(ctx, "list", include_deleted=include_deleted))
+
+
+@saved_queries.command(name="import", help="create a saved query from shared JSON")
+@click.option("--file", "file_path", required=True, help="saved-view JSON path or -")
+@click.option(
+    "--id", "query_id", default="", help="stable catalog id; generated when omitted"
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@query_command_context
+def saved_import(
+    ctx: click.Context, file_path: str, query_id: str, as_json: bool
+) -> None:
+    del as_json
+    _echo_json(
+        _catalog_call(
+            ctx,
+            "put",
+            saved_view=_load_saved_view(file_path),
+            **({"query_id": query_id} if query_id else {}),
+        )
+    )
+
+
+@saved_queries.command(name="update", help="append a new revision of a saved query")
+@click.argument("query_id")
+@click.option("--file", "file_path", required=True, help="saved-view JSON path or -")
+@click.option("--expected-revision", type=click.IntRange(min=1), required=True)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@query_command_context
+def saved_update(
+    ctx: click.Context,
+    query_id: str,
+    file_path: str,
+    expected_revision: int,
+    as_json: bool,
+) -> None:
+    del as_json
+    _echo_json(
+        _catalog_call(
+            ctx,
+            "put",
+            query_id=query_id,
+            expected_revision=expected_revision,
+            saved_view=_load_saved_view(file_path),
+        )
+    )
+
+
+@saved_queries.command(name="show", help="show one current saved query entry")
+@click.argument("query_id")
+@click.option("--include-deleted", is_flag=True)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@query_command_context
+def saved_show(
+    ctx: click.Context, query_id: str, include_deleted: bool, as_json: bool
+) -> None:
+    del as_json
+    _echo_json(
+        _catalog_call(ctx, "get", query_id=query_id, include_deleted=include_deleted)
+    )
+
+
+@saved_queries.command(name="export", help="print portable saved-view JSON")
+@click.argument("query_id")
+@query_command_context
+def saved_export(ctx: click.Context, query_id: str) -> None:
+    entry = _catalog_call(ctx, "get", query_id=query_id)
+    _echo_json(entry["saved_view"])
+
+
+@saved_queries.command(name="history", help="show the complete revision history")
+@click.argument("query_id")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@query_command_context
+def saved_history(ctx: click.Context, query_id: str, as_json: bool) -> None:
+    del as_json
+    _echo_json(_catalog_call(ctx, "history", query_id=query_id))
+
+
+@saved_queries.command(name="delete", help="append a tombstone revision")
+@click.argument("query_id")
+@click.option("--expected-revision", type=click.IntRange(min=1), required=True)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@query_command_context
+def saved_delete(
+    ctx: click.Context, query_id: str, expected_revision: int, as_json: bool
+) -> None:
+    del as_json
+    _echo_json(
+        _catalog_call(
+            ctx,
+            "delete",
+            query_id=query_id,
+            expected_revision=expected_revision,
+        )
+    )
+
+
+@saved_queries.command(name="run", help="run the current saved query revision")
+@click.argument("query_id")
+@click.option(
+    "--engine",
+    type=click.Choice(["authority", "sqlite"]),
+    default="authority",
+    show_default=True,
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@query_command_context
+def saved_run(ctx: click.Context, query_id: str, engine: str, as_json: bool) -> None:
+    from kungfu.storage import service
+
+    del as_json
+    entry = _catalog_call(ctx, "get", query_id=query_id)
+    try:
+        result = service.fact_query_definition(
+            _runtime_dir(ctx), entry["saved_view"]["definition"], engine=engine
+        )
+    except (RuntimeError, TypeError, ValueError) as error:
+        _fail("KF_SAVED_QUERY_RUN", str(error), exit_code=1)
+    result["saved_query"] = {
+        "query_id": query_id,
+        "revision": entry["revision"],
+        "saved_view_hash": entry["saved_view_hash"],
+    }
+    _echo_json(result)
+
+
+@saved_queries.command(name="rebuild", help="rebuild and verify the catalog fold")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@query_command_context
+def saved_rebuild(ctx: click.Context, as_json: bool) -> None:
+    del as_json
+    _echo_json(_catalog_call(ctx, "rebuild"))
+
+
 @query.command(help="validate and canonically hash a QueryDefinition")
 @click.option(
     "--file",

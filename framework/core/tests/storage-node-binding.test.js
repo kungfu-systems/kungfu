@@ -745,6 +745,73 @@ test(
 );
 
 test(
+  'saved query catalog is journal-backed and shared across the Node edge',
+  {
+    skip:
+      nativeAvailable || process.env.KUNGFU_REQUIRE_NATIVE === '1'
+        ? false
+        : 'built kungfu_node binding is unavailable',
+  },
+  () => {
+    const runtimeDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'kf-saved-query-node-'),
+    );
+    try {
+      const examples = kungfu.runStorageServiceOperation(
+        'query_plan',
+        runtimeDir,
+        { action: 'examples' },
+      );
+      const savedView = {
+        schema: 'kungfu.query.saved-view/v1',
+        name: 'node attention',
+        definition: examples.examples[0].definition,
+        view: { kind: 'table', columns: ['episode_id', 'status'] },
+      };
+      const created = kungfu.runStorageServiceOperation(
+        'saved_query_catalog',
+        runtimeDir,
+        { action: 'put', query_id: 'node-attention', saved_view: savedView },
+      );
+      assert.equal(created.revision, 1);
+      assert.equal(created.saved_view_hash.startsWith('sha256:'), true);
+
+      savedView.view = {
+        kind: 'timeline',
+        timeField: 'begin_time',
+        labelField: 'episode_id',
+      };
+      const updated = kungfu.runStorageServiceOperation(
+        'saved_query_catalog',
+        runtimeDir,
+        {
+          action: 'put',
+          query_id: 'node-attention',
+          expected_revision: 1,
+          saved_view: savedView,
+        },
+      );
+      const listed = kungfu.runStorageServiceOperation(
+        'saved_query_catalog',
+        runtimeDir,
+        { action: 'list' },
+      );
+      const rebuilt = kungfu.runStorageServiceOperation(
+        'saved_query_catalog',
+        runtimeDir,
+        { action: 'rebuild' },
+      );
+      assert.equal(updated.revision, 2);
+      assert.equal(listed.count, 1);
+      assert.equal(listed.entries[0].saved_view.view.kind, 'timeline');
+      assert.equal(rebuilt.authority_records, 2);
+    } finally {
+      fs.rmSync(runtimeDir, { recursive: true, force: true });
+    }
+  },
+);
+
+test(
   'domain fact contract is owned by libkungfu across the Node edge',
   {
     skip:

@@ -26,6 +26,7 @@
 #include <kungfu/runtime/action_recorder.h>
 #include <kungfu/runtime/facts/fact_admission.h>
 #include <kungfu/runtime/query/fact_query.h>
+#include <kungfu/runtime/query/saved_query_catalog.h>
 #include <kungfu/runtime/storage/episode_manifest_projection.h>
 #include <kungfu/runtime/storage/manifest_catalog_projection.h>
 #include <kungfu/runtime/storage/source_registry_projection.h>
@@ -4632,6 +4633,38 @@ public:
         query::run_episode_changelog(options.runtime_dir, plan, resume_token, max_messages));
   }
 
+  [[nodiscard]] nlohmann::json saved_query_catalog(const storage_service_options &options) const {
+    const auto action = text_or(options.operation_options, "action", "list");
+    if (action == "contract") {
+      return query::saved_query_catalog_contract();
+    }
+    if (action == "put") {
+      return query::saved_query_put(options.runtime_dir, object_or_empty(options.operation_options, "saved_view"),
+                                    text_or(options.operation_options, "query_id"),
+                                    uint64_or(options.operation_options, "expected_revision"),
+                                    int64_or(options.operation_options, "system_time"));
+    }
+    if (action == "get") {
+      return query::saved_query_get(options.runtime_dir, text_or(options.operation_options, "query_id"),
+                                    bool_or(options.operation_options, "include_deleted", false));
+    }
+    if (action == "list") {
+      return query::saved_query_list(options.runtime_dir, bool_or(options.operation_options, "include_deleted", false));
+    }
+    if (action == "history") {
+      return query::saved_query_history(options.runtime_dir, text_or(options.operation_options, "query_id"));
+    }
+    if (action == "delete") {
+      return query::saved_query_delete(options.runtime_dir, text_or(options.operation_options, "query_id"),
+                                       uint64_or(options.operation_options, "expected_revision"),
+                                       int64_or(options.operation_options, "system_time"));
+    }
+    if (action == "rebuild") {
+      return query::saved_query_rebuild(options.runtime_dir);
+    }
+    throw std::invalid_argument("unsupported saved-query catalog action: " + action);
+  }
+
   [[nodiscard]] nlohmann::json fact_contract(const storage_service_options &options) const {
     (void)options;
     return facts::fact_contract_json();
@@ -5990,6 +6023,7 @@ std::vector<std::string> storage_operation_names() {
       storage_operation_name(storage_operation::QueryPlan),
       storage_operation_name(storage_operation::FactQuery),
       storage_operation_name(storage_operation::FactChangelog),
+      storage_operation_name(storage_operation::SavedQueryCatalog),
       storage_operation_name(storage_operation::FactContract),
       storage_operation_name(storage_operation::FactDeclareWorld),
       storage_operation_name(storage_operation::FactDeclareSurface),
@@ -6055,6 +6089,8 @@ std::string storage_operation_name(storage_operation operation) {
     return "fact_query";
   case storage_operation::FactChangelog:
     return "fact_changelog";
+  case storage_operation::SavedQueryCatalog:
+    return "saved_query_catalog";
   case storage_operation::FactContract:
     return "fact_contract";
   case storage_operation::FactDeclareWorld:
@@ -6164,6 +6200,9 @@ storage_operation parse_storage_operation(const std::string &operation) {
   }
   if (operation == "fact_changelog") {
     return storage_operation::FactChangelog;
+  }
+  if (operation == "saved_query_catalog") {
+    return storage_operation::SavedQueryCatalog;
   }
   if (operation == "fact_contract") {
     return storage_operation::FactContract;
@@ -6291,7 +6330,8 @@ nlohmann::json make_storage_service_request(const std::string &operation, const 
     request["kind"] = parsed_options.kind.empty() ? nlohmann::json(nullptr) : nlohmann::json(parsed_options.kind);
     request["limit"] = parsed_options.limit;
   } else if (parsed_operation == storage_operation::QueryPlan || parsed_operation == storage_operation::FactQuery ||
-             parsed_operation == storage_operation::FactChangelog) {
+             parsed_operation == storage_operation::FactChangelog ||
+             parsed_operation == storage_operation::SavedQueryCatalog) {
     request["definition"] = parsed_options.query_definition;
     request["action"] = text_or(parsed_options.operation_options, "action");
   } else if (parsed_operation == storage_operation::Layout) {
@@ -6348,6 +6388,8 @@ nlohmann::json run_storage_service_operation(const std::string &operation, const
     return storage_json_edge_service_instance().fact_query(parsed_options);
   case storage_operation::FactChangelog:
     return storage_json_edge_service_instance().fact_changelog(parsed_options);
+  case storage_operation::SavedQueryCatalog:
+    return storage_json_edge_service_instance().saved_query_catalog(parsed_options);
   case storage_operation::FactContract:
     return storage_json_edge_service_instance().fact_contract(parsed_options);
   case storage_operation::FactDeclareWorld:

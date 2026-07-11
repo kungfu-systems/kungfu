@@ -149,6 +149,26 @@ export type SavedQueryView = {
   view: QueryViewSpec;
 };
 
+export type SavedQueryEntry = {
+  schema: 'kungfu.query.saved-query-entry/v1';
+  query_id: string;
+  revision: number;
+  previous_revision: number;
+  state: 'active' | 'deleted';
+  event_id: string;
+  system_time: number;
+  saved_view_hash: string;
+  journal_frame_uid: number;
+  saved_view: SavedQueryView;
+};
+
+export type SavedQueryCatalog = {
+  schema: 'kungfu.query.saved-query-catalog/v1';
+  runtime_dir: string;
+  entries: SavedQueryEntry[];
+  count: number;
+};
+
 export type QueryChangelogState = {
   rows: Record<string, Record<string, unknown>>;
   evidence: Record<string, Record<string, unknown>>;

@@ -475,6 +475,26 @@
       "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
     },
     {
+      "id": "kungfu.query.saved-catalog",
+      "surface": "cli",
+      "name": "kungfu query saved list --json",
+      "aliases": [
+        "kungfu query saved import --file saved-view.json --json",
+        "kungfu query saved show <id> --json",
+        "kungfu query saved update <id> --expected-revision <n> --file saved-view.json --json",
+        "kungfu query saved run <id> --json",
+        "kungfu query saved export <id>",
+        "kungfu query saved history <id> --json",
+        "kungfu query saved delete <id> --expected-revision <n> --json",
+        "kungfu query saved rebuild --json"
+      ],
+      "purpose": "Manage the workspace-local journal-backed saved query catalog shared by CLI, GUI, and agents.",
+      "maturity": "experimental",
+      "visibility": "adjacent-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
       "id": "kungfu.facts.capabilities",
       "surface": "cli",
       "name": "kungfu facts capabilities",

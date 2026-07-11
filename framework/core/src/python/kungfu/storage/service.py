@@ -743,6 +743,17 @@ def fact_changelog(
     )
 
 
+def saved_query_catalog(
+    runtime_dir: str | Path, action: str = "list", **kwargs: Any
+) -> dict[str, Any]:
+    """Operate the workspace-local journal-backed saved-query catalog."""
+    return dict(
+        _runtime().run_storage_service_operation(
+            "saved_query_catalog", str(runtime_dir), {"action": action, **kwargs}
+        )
+    )
+
+
 def fact_contract(runtime_dir: str | Path = "") -> dict[str, Any]:
     """Return the C++-owned ADR-0051 declaration/admission contract."""
 

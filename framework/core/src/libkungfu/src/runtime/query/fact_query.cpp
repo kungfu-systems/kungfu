@@ -711,10 +711,11 @@ nlohmann::json query_capabilities_json() {
             {"basis_owner", "QueryDefinition"}}},
           {"execution_engines", nlohmann::json::array({"episode-authority-scan/v1", "episode-sqlite-projection/v1"})},
           {"commands", nlohmann::json::array({"capabilities", "schema", "describe", "examples", "compile-sql",
-                                              "validate", "explain", "prove", "changelog", "saved-view"})},
+                                              "validate", "explain", "prove", "changelog", "saved-view", "saved"})},
           {"limits", {{"minimum", 1}, {"maximum", 1000}}},
-          {"error_codes", nlohmann::json::array({"KF_QUERY_INPUT", "KF_QUERY_VALIDATION", "KF_QUERY_EXECUTION",
-                                                 "KF_QUERY_OUTPUT", "KF_QUERY_CHANGELOG", "KF_QUERY_VIEW"})},
+          {"error_codes",
+           nlohmann::json::array({"KF_QUERY_INPUT", "KF_QUERY_VALIDATION", "KF_QUERY_EXECUTION", "KF_QUERY_OUTPUT",
+                                  "KF_QUERY_CHANGELOG", "KF_QUERY_VIEW", "KF_SAVED_QUERY", "KF_SAVED_QUERY_RUN"})},
           {"physical_plan", {{"public", false}, {"reason", "engine-private-and-replaceable"}}}};
 }
 

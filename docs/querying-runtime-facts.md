@@ -198,6 +198,10 @@ kungfu query explain --file query.json --json
 kungfu query prove --file query.json --json
 kungfu query changelog --file query.json --max-messages 100 --json
 kungfu query saved-view --file saved-view.json --json
+kungfu query saved import --file saved-view.json --json
+kungfu query saved list --json
+kungfu query saved run <id> --json
+kungfu query saved export <id>
 kungfu storage episode rebuild-projection --json
 kungfu query prove --file query.json --engine sqlite --json
 ```
@@ -230,10 +234,13 @@ Humans can build and save queries through reference components:
 
 The System Status KFX contains table, timeline, diff, causal-graph, and
 attention references. It imports the same `kungfu.query.saved-view/v1` JSON that
-the CLI inspects. Only the QueryDefinition and thin ViewSpec are persisted in
-the browser; result rows and proof are rebuilt from the native query
-capability, and missing or unverifiable evidence remains visible in every
-view. The GUI does not open or own a database.
+the CLI inspects. The native saved-query catalog journals create, update, and
+delete revisions under the resolved workspace `.kungfu` runtime home; CLI, GUI,
+and agents address the same stable query id. Only the QueryDefinition and thin
+ViewSpec are saved. Result rows and proof are rebuilt from the native query
+capability, and missing or unverifiable evidence remains visible in every view.
+The GUI does not open or own a database, and portable sharing uses explicit
+JSON export rather than copying raw `.kungfu` storage.
 - metrics backed by inspectable QueryDefinitions.
 
 Presentation is stored separately as a ViewSpec. Changing a chart, visible

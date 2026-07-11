@@ -219,6 +219,102 @@ def test_query_cli_shares_saved_view_and_resumes_changelog(tmp_path):
     assert [message["type"] for message in resumed_value["messages"]] == ["SnapshotEnd"]
 
 
+def test_workspace_saved_query_catalog_survives_reopen_and_tracks_revisions(tmp_path):
+    home = tmp_path / "workspace" / ".kungfu"
+    runtime_dir = home / "runtime"
+    storage_service.episode_begin(runtime_dir, episode_id=2048, begin_time=1000)
+    definition = storage_service.build_fact_query_definition(episode_id=2048)
+    saved_path = tmp_path / "saved-view.json"
+    saved_view = {
+        "schema": "kungfu.query.saved-view/v1",
+        "name": "episode-2048",
+        "definition": definition,
+        "view": {"kind": "table", "columns": ["episode_id", "status"]},
+    }
+    saved_path.write_text(json.dumps(saved_view), encoding="utf-8")
+
+    created = _invoke(
+        CliRunner(),
+        home,
+        "saved",
+        "import",
+        "--id",
+        "episode-attention",
+        "--file",
+        str(saved_path),
+        "--json",
+    )
+    assert created.exit_code == 0, created.output
+    created_value = json.loads(created.output)
+    assert created_value["query_id"] == "episode-attention"
+    assert created_value["revision"] == 1
+
+    # A new CLI runner reopens the catalog from the workspace journal.
+    listed = _invoke(CliRunner(), home, "saved", "list", "--json")
+    assert listed.exit_code == 0, listed.output
+    assert json.loads(listed.output)["entries"][0]["saved_view"] == saved_view
+
+    saved_view["view"] = {
+        "kind": "timeline",
+        "timeField": "begin_time",
+        "labelField": "episode_id",
+    }
+    saved_path.write_text(json.dumps(saved_view), encoding="utf-8")
+    updated = _invoke(
+        CliRunner(),
+        home,
+        "saved",
+        "update",
+        "episode-attention",
+        "--expected-revision",
+        "1",
+        "--file",
+        str(saved_path),
+        "--json",
+    )
+    assert updated.exit_code == 0, updated.output
+    assert json.loads(updated.output)["revision"] == 2
+
+    run = _invoke(CliRunner(), home, "saved", "run", "episode-attention", "--json")
+    history = _invoke(
+        CliRunner(), home, "saved", "history", "episode-attention", "--json"
+    )
+    rebuilt = _invoke(CliRunner(), home, "saved", "rebuild", "--json")
+    assert run.exit_code == 0, run.output
+    assert json.loads(run.output)["saved_query"]["revision"] == 2
+    assert history.exit_code == 0, history.output
+    assert len(json.loads(history.output)["events"]) == 2
+    assert rebuilt.exit_code == 0, rebuilt.output
+    assert json.loads(rebuilt.output)["authority_records"] == 2
+
+    deleted = _invoke(
+        CliRunner(),
+        home,
+        "saved",
+        "delete",
+        "episode-attention",
+        "--expected-revision",
+        "2",
+        "--json",
+    )
+    assert deleted.exit_code == 0, deleted.output
+    assert json.loads(deleted.output)["state"] == "deleted"
+    assert (
+        json.loads(_invoke(CliRunner(), home, "saved", "list", "--json").output)[
+            "count"
+        ]
+        == 0
+    )
+    assert (
+        json.loads(
+            _invoke(
+                CliRunner(), home, "saved", "list", "--include-deleted", "--json"
+            ).output
+        )["count"]
+        == 1
+    )
+
+
 def test_query_cli_compiles_bounded_sql_and_runs_sqlite_engine(tmp_path):
     home = tmp_path / "home"
     runtime_dir = home / "runtime"

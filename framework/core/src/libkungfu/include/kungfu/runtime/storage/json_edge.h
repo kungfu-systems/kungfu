@@ -30,6 +30,7 @@ enum class storage_operation {
   QueryPlan,
   FactQuery,
   FactChangelog,
+  SavedQueryCatalog,
   FactContract,
   FactDeclareWorld,
   FactDeclareSurface,

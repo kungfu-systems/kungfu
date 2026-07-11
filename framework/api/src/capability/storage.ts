@@ -6,6 +6,9 @@ import type {
   QueryChangelogPage,
   QueryDefinition,
   QueryResumeToken,
+  SavedQueryCatalog,
+  SavedQueryEntry,
+  SavedQueryView,
 } from './query.js';
 import type { KfLocator, KfNativeBinding } from './types.js';
 import { resolveRuntimeDir } from './types.js';
@@ -28,6 +31,17 @@ export type Storage = {
     resumeToken?: QueryResumeToken,
     maxMessages?: number,
   ) => QueryChangelogPage;
+  savedQueries: (includeDeleted?: boolean) => SavedQueryCatalog;
+  savedQuery: (queryId: string, includeDeleted?: boolean) => SavedQueryEntry;
+  putSavedQuery: (
+    savedView: SavedQueryView,
+    queryId?: string,
+    expectedRevision?: number,
+  ) => SavedQueryEntry;
+  deleteSavedQuery: (
+    queryId: string,
+    expectedRevision: number,
+  ) => SavedQueryEntry;
 };
 
 export type OpenStorageOptions = {
@@ -67,5 +81,29 @@ export function openStorage(options: OpenStorageOptions): Storage {
         max_messages: maxMessages,
         ...(resumeToken ? { resume_token: resumeToken } : {}),
       }) as QueryChangelogPage,
+    savedQueries: (includeDeleted = false) =>
+      run('saved_query_catalog', {
+        action: 'list',
+        include_deleted: includeDeleted,
+      }) as SavedQueryCatalog,
+    savedQuery: (queryId, includeDeleted = false) =>
+      run('saved_query_catalog', {
+        action: 'get',
+        query_id: queryId,
+        include_deleted: includeDeleted,
+      }) as SavedQueryEntry,
+    putSavedQuery: (savedView, queryId = '', expectedRevision = 0) =>
+      run('saved_query_catalog', {
+        action: 'put',
+        saved_view: savedView,
+        ...(queryId ? { query_id: queryId } : {}),
+        ...(expectedRevision ? { expected_revision: expectedRevision } : {}),
+      }) as SavedQueryEntry,
+    deleteSavedQuery: (queryId, expectedRevision) =>
+      run('saved_query_catalog', {
+        action: 'delete',
+        query_id: queryId,
+        expected_revision: expectedRevision,
+      }) as SavedQueryEntry,
   };
 }

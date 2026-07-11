@@ -3,6 +3,7 @@ import {
   type QueryChangelogState,
   type QueryResumeToken,
   type QueryViewSpec,
+  type SavedQueryEntry,
   type SavedQueryView,
   applyQueryChangelogPage,
   emptyQueryChangelogState,
@@ -13,8 +14,6 @@ import {
   queryRows,
 } from '@kungfu-tech/kfx';
 import React from 'react';
-
-const SAVED_QUERY_KEY = 'kungfu.query.saved-view/v1:system-status';
 
 function cell(value: unknown): string {
   if (value === null || value === undefined) return '—';
@@ -271,12 +270,53 @@ const specs: Record<QueryViewSpec['kind'], QueryViewSpec> = {
 };
 
 export function QueryReferencePanel({ caps }: { caps: KfxCapabilities }) {
-  const [savedText, setSavedText] = React.useState(
-    () => window.localStorage.getItem(SAVED_QUERY_KEY) ?? '',
-  );
+  const [savedText, setSavedText] = React.useState('');
   const [saved, setSaved] = React.useState<SavedQueryView | null>(null);
+  const [catalog, setCatalog] = React.useState<SavedQueryEntry[]>([]);
+  const [catalogEntry, setCatalogEntry] =
+    React.useState<SavedQueryEntry | null>(null);
   const [state, setState] = React.useState(emptyQueryChangelogState);
   const [error, setError] = React.useState('');
+
+  const refreshCatalog = () => {
+    try {
+      setCatalog(caps.storage.savedQueries().entries);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    }
+  };
+
+  React.useEffect(() => {
+    try {
+      setCatalog(caps.storage.savedQueries().entries);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    }
+  }, [caps]);
+
+  const selectCatalogEntry = (queryId: string) => {
+    try {
+      const entry = caps.storage.savedQuery(queryId);
+      setCatalogEntry(entry);
+      setSaved(entry.saved_view);
+      setSavedText(JSON.stringify(entry.saved_view, null, 2));
+      setError('');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    }
+  };
+
+  const persistArtifact = (value: SavedQueryView) => {
+    const entry = caps.storage.putSavedQuery(
+      value,
+      catalogEntry?.query_id,
+      catalogEntry?.revision,
+    );
+    setCatalogEntry(entry);
+    setSaved(entry.saved_view);
+    setSavedText(JSON.stringify(entry.saved_view, null, 2));
+    refreshCatalog();
+  };
 
   const loadExample = (
     name = 'episode-head',
@@ -300,7 +340,7 @@ export function QueryReferencePanel({ caps }: { caps: KfxCapabilities }) {
         view,
       };
       const text = JSON.stringify(value, null, 2);
-      window.localStorage.setItem(SAVED_QUERY_KEY, text);
+      setCatalogEntry(null);
       setSavedText(text);
       setSaved(value);
       setError('');
@@ -312,11 +352,7 @@ export function QueryReferencePanel({ caps }: { caps: KfxCapabilities }) {
   const applyArtifact = () => {
     try {
       const value = parseSavedQueryView(JSON.parse(savedText));
-      window.localStorage.setItem(
-        SAVED_QUERY_KEY,
-        JSON.stringify(value, null, 2),
-      );
-      setSaved(value);
+      persistArtifact(value);
       setError('');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -326,10 +362,12 @@ export function QueryReferencePanel({ caps }: { caps: KfxCapabilities }) {
   const selectView = (kind: QueryViewSpec['kind']) => {
     if (!saved) return;
     const value = { ...saved, view: specs[kind] } as SavedQueryView;
-    const text = JSON.stringify(value, null, 2);
-    window.localStorage.setItem(SAVED_QUERY_KEY, text);
-    setSaved(value);
-    setSavedText(text);
+    try {
+      persistArtifact(value);
+      setError('');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    }
   };
 
   const refresh = () => {
@@ -339,7 +377,7 @@ export function QueryReferencePanel({ caps }: { caps: KfxCapabilities }) {
       let token: QueryResumeToken | undefined;
       // The reference intentionally asks the public changelog for a complete
       // bounded snapshot. Rows stay in memory; only definition + ViewSpec are
-      // persisted in localStorage.
+      // persisted in the workspace catalog.
       for (let pageCount = 0; pageCount < 100; pageCount += 1) {
         const page = caps.storage.factChangelog(saved.definition, token, 100);
         next = applyQueryChangelogPage(next, page);
@@ -364,6 +402,23 @@ export function QueryReferencePanel({ caps }: { caps: KfxCapabilities }) {
         }}
       >
         <div>
+          <label style={{ ...mono, display: 'block', marginBottom: 6 }}>
+            Workspace catalog{' '}
+            <select
+              aria-label="Workspace saved query catalog"
+              value={catalogEntry?.query_id ?? ''}
+              onChange={(event) => {
+                if (event.target.value) selectCatalogEntry(event.target.value);
+              }}
+            >
+              <option value="">New / imported artifact</option>
+              {catalog.map((entry) => (
+                <option value={entry.query_id} key={entry.query_id}>
+                  {entry.saved_view.name} · r{entry.revision}
+                </option>
+              ))}
+            </select>
+          </label>
           <textarea
             aria-label="Saved QueryDefinition and ViewSpec"
             value={savedText}
@@ -410,7 +465,31 @@ export function QueryReferencePanel({ caps }: { caps: KfxCapabilities }) {
               />
             </label>
             <button type="button" onClick={applyArtifact}>
-              Apply artifact
+              {catalogEntry ? 'Save revision' : 'Save to workspace'}
+            </button>
+            <button
+              type="button"
+              disabled={!catalogEntry}
+              onClick={() => {
+                if (!catalogEntry) return;
+                try {
+                  caps.storage.deleteSavedQuery(
+                    catalogEntry.query_id,
+                    catalogEntry.revision,
+                  );
+                  setCatalogEntry(null);
+                  setSaved(null);
+                  setSavedText('');
+                  refreshCatalog();
+                  setError('');
+                } catch (cause) {
+                  setError(
+                    cause instanceof Error ? cause.message : String(cause),
+                  );
+                }
+              }}
+            >
+              Delete
             </button>
             <button type="button" onClick={refresh} disabled={!saved}>
               Run changelog
@@ -424,7 +503,7 @@ export function QueryReferencePanel({ caps }: { caps: KfxCapabilities }) {
             }}
           >
             {error ||
-              'Persisted locally: QueryDefinition + ViewSpec only; rows and proof are rebuilt.'}
+              'Persisted in workspace .kungfu: QueryDefinition + ViewSpec only; rows and proof are rebuilt.'}
           </div>
         </div>
         <div>

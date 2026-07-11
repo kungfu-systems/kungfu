@@ -913,6 +913,28 @@
       "residualRisk": []
     },
     {
+      "id": "kungfu.query.saved-catalog",
+      "kind": "cli",
+      "name": "kungfu query saved list --json",
+      "state": "declared",
+      "detected": true,
+      "enforced": false,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "kfd1Basis": {
+        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+        "digest": "sha256:3c78c292c4c7876494ab7601f1b451454732e38634eea6a573fa5dcac5855e5c"
+      },
+      "kfd2Trust": {
+        "status": "release-passport-required",
+        "trustImpact": "query-release-passport-for-final-trust",
+        "residualRisk": []
+      },
+      "residualRisk": []
+    },
+    {
       "id": "kungfu.query.saved-view",
       "kind": "cli",
       "name": "kungfu query saved-view --file saved-view.json --json",

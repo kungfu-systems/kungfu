@@ -24,6 +24,16 @@ configure_file(
   @ONLY
 )
 
+# Saved query catalog facts share the ActionEnvelope and Episode substrates but
+# keep an independent FlatBuffers schema authority.
+file(READ "${PROJECT_SOURCE_DIR}/schemas/saved_query_catalog_event.fbs" SAVED_QUERY_CATALOG_EVENT_FBS)
+file(MAKE_DIRECTORY "${KUNGFU_GENERATED_INCLUDE_DIR}/kungfu/runtime/query")
+configure_file(
+  "${PROJECT_SOURCE_DIR}/schemas/saved_query_catalog_schema.h.in"
+  "${KUNGFU_GENERATED_INCLUDE_DIR}/kungfu/runtime/query/saved_query_catalog_schema.h"
+  @ONLY
+)
+
 # this directory holds the libkungfu runtime layer above the standalone
 # yijinjing journal core, so the source GLOB needs no exclusion list beyond the
 # state-cache/optim split

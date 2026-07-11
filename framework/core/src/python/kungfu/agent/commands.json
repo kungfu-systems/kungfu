@@ -278,6 +278,60 @@
       "purpose": "Inspect the same QueryDefinition and presentation-only ViewSpec artifact used by the GUI."
     },
     {
+      "apiId": "kungfu.query.saved-catalog",
+      "name": "kungfu query saved list --json",
+      "maturity": "experimental",
+      "purpose": "Discover the workspace-local journal-backed saved query catalog shared with the GUI."
+    },
+    {
+      "apiId": "kungfu.query.saved-catalog",
+      "name": "kungfu query saved import --file saved-view.json --json",
+      "maturity": "experimental",
+      "purpose": "Create a durable workspace saved query from the portable saved-view artifact."
+    },
+    {
+      "apiId": "kungfu.query.saved-catalog",
+      "name": "kungfu query saved show <id> --json",
+      "maturity": "experimental",
+      "purpose": "Inspect the current definition, view, revision, and content hash for one saved query."
+    },
+    {
+      "apiId": "kungfu.query.saved-catalog",
+      "name": "kungfu query saved update <id> --expected-revision <n> --file saved-view.json --json",
+      "maturity": "experimental",
+      "purpose": "Append an optimistic-concurrency-checked saved query revision."
+    },
+    {
+      "apiId": "kungfu.query.saved-catalog",
+      "name": "kungfu query saved run <id> --json",
+      "maturity": "experimental",
+      "purpose": "Run the current saved query revision and bind its id, revision, and content hash to the proof result."
+    },
+    {
+      "apiId": "kungfu.query.saved-catalog",
+      "name": "kungfu query saved export <id>",
+      "maturity": "experimental",
+      "purpose": "Export portable kungfu.query.saved-view/v1 JSON without copying raw workspace storage."
+    },
+    {
+      "apiId": "kungfu.query.saved-catalog",
+      "name": "kungfu query saved history <id> --json",
+      "maturity": "experimental",
+      "purpose": "Inspect the complete create, update, and delete revision history."
+    },
+    {
+      "apiId": "kungfu.query.saved-catalog",
+      "name": "kungfu query saved delete <id> --expected-revision <n> --json",
+      "maturity": "experimental",
+      "purpose": "Append a tombstone revision without erasing prior saved query facts."
+    },
+    {
+      "apiId": "kungfu.query.saved-catalog",
+      "name": "kungfu query saved rebuild --json",
+      "maturity": "experimental",
+      "purpose": "Rebuild and verify the current catalog projection from authoritative journal events."
+    },
+    {
       "apiId": "kungfu.facts.capabilities",
       "name": "kungfu facts capabilities",
       "maturity": "experimental",

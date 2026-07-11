@@ -45,6 +45,8 @@ export type {
   QueryResumeToken,
   QueryResultSchema,
   QueryViewSpec,
+  SavedQueryCatalog,
+  SavedQueryEntry,
   SavedQueryView,
 } from '@kungfu-tech/api/capability';
 export {

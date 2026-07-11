@@ -10,8 +10,8 @@
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "ac2ca592b9547109efaa73c17247003d6692cd0c1dc043d33b4167d5897a9fd6",
-    "digest": "sha256:0f29cb763224b47017cd686c3553b3fc65e2b41a84f1e946b3d5d67b71565bb7"
+    "sha256": "dda8f4d375a522e7cc07e75c1f6cde2392fbebbb8e42f22888a7021809bddffd",
+    "digest": "sha256:2d29de79875e4c7f289acf05867d64065cc4fb72e643c70ba1a6f5c959a9b16a"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -28,7 +28,7 @@
     },
     "digest": "sha256:a86ddd8755809f5337e11023a8218d513c87d58077265007f1d207ef957f4761"
   },
-  "collaborationInterfaceDigest": "sha256:8eef5f9555e161038ca1121014f14c550ab1ec4f044e0b6e17d4ee7a5f5b05f6",
+  "collaborationInterfaceDigest": "sha256:505b3615282b6d6fd319f55e2a406090a7f1c407f244fbd7dc53621e20d3b353",
   "exposedSurfaces": [
     {
       "id": "kungfu.agent",
@@ -857,6 +857,26 @@
     {
       "id": "kungfu.query.prove",
       "name": "kungfu query prove --file query.json --json",
+      "kind": "cli",
+      "participantProfile": "agent-or-developer",
+      "state": "declared",
+      "availability": "shipped",
+      "visibility": "public",
+      "participantFacing": true,
+      "public": true,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "maturity": "experimental",
+      "declaration": {
+        "owner": "kungfu",
+        "source": "scripts/buildchain-kfd-evidence.mjs",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+      }
+    },
+    {
+      "id": "kungfu.query.saved-catalog",
+      "name": "kungfu query saved list --json",
       "kind": "cli",
       "participantProfile": "agent-or-developer",
       "state": "declared",
