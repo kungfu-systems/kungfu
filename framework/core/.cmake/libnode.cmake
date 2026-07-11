@@ -18,12 +18,9 @@ macro(use_node_addon_api)
 
   add_compile_definitions(NAPI_EXPERIMENTAL)
   add_compile_definitions(NAPI_VERSION=8)
+  # Declare the binding's exception contract explicitly; compiler.cmake owns
+  # the matching MSVC /EHsc unwind semantics for every C++ target.
   add_compile_definitions(NODE_ADDON_API_CPP_EXCEPTIONS)
-  if (MSVC)
-    # node-addon-api cannot infer exception support from MSVC unless the
-    # compiler emits standard C++ unwind semantics.
-    add_compile_options(/EHsc)
-  endif ()
 endmacro(use_node_addon_api)
 
 macro(use_libnode)

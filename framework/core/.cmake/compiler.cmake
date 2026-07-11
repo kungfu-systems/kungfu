@@ -65,7 +65,9 @@ if (APPLE)
   set(CONAN_DISABLE_CHECK_COMPILER ON)
 endif ()
 if (MSVC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP /utf-8 /permissive- /bigobj /W0 /Zc:__cplusplus")
+  # /EHsc is part of the core RAII contract: exception paths must unwind local
+  # owners (file handles, mappings, and other native resources).
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP /utf-8 /permissive- /bigobj /W0 /Zc:__cplusplus /EHsc")
   message(STATUS "CMAKE_CXX_FLAGS set to ${CMAKE_CXX_FLAGS}")
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /IGNORE:4199")
   set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} /IGNORE:4199")
