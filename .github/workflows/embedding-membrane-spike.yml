@@ -143,28 +143,37 @@ jobs:
         shell: bash
         run: cd "$SOURCE_ROOT" && ./shifu install --frozen-lockfile --no-optional
 
-      - name: Rebind frozen Python registry metadata
-        if: ${{ matrix.source_mode == 'github' }}
-        shell: bash
-        run: |
-          cd "$SOURCE_ROOT/framework/core"
-          uv_version="$(tr -d '\r\n' < ../../.uv-version)"
-          uv_bin="$HOME/.cache/kungfu/tools/uv/$uv_version/macos-aarch64/uv"
-          test -x "$uv_bin"
-          fingerprint() {
-            python3 -c 'import hashlib,json,sys,tomllib; d=tomllib.load(open(sys.argv[1],"rb")); rows=[]; [(rows.append((p.get("name"),p.get("version"),("registry" if "registry" in p.get("source",{}) else json.dumps(p.get("source",{}),sort_keys=True)),sorted([x.get("hash","") for x in ([p.get("sdist",{})] if p.get("sdist") else [])+p.get("wheels",[])])))) for p in d.get("package",[])]; print(hashlib.sha256(json.dumps(sorted(rows),separators=(",",":")).encode()).hexdigest())' "$1"
-          }
-          before="$(fingerprint uv.lock)"
-          "$uv_bin" lock --refresh --default-index https://pypi.org/simple
-          after="$(fingerprint uv.lock)"
-          test "$before" = "$after"
-
       - name: Install frozen workspace (Windows)
         if: ${{ runner.os == 'Windows' }}
         shell: pwsh
         run: |
           Set-Location $env:SOURCE_ROOT
           .\shifu.cmd install --frozen-lockfile --no-optional
+
+      - name: Rebind frozen Python registry metadata
+        if: ${{ matrix.source_mode == 'github' }}
+        shell: bash
+        run: |
+          cd "$SOURCE_ROOT/framework/core"
+          uv_version="$(tr -d '\r\n' < ../../.uv-version)"
+          uv_bin="$(command -v uv || true)"
+          if [ -z "$uv_bin" ]; then
+            case "$RUNNER_OS" in
+              Linux) uv_target="linux-x86_64"; uv_name="uv" ;;
+              macOS) uv_target="macos-$(uname -m | sed 's/arm64/aarch64/')"; uv_name="uv" ;;
+              Windows) uv_target="windows-x86_64"; uv_name="uv.exe" ;;
+            esac
+            uv_bin="$HOME/.cache/kungfu/tools/uv/$uv_version/$uv_target/$uv_name"
+          fi
+          test -x "$uv_bin"
+          python_bin="$(command -v python3 || command -v python)"
+          fingerprint() {
+            "$python_bin" -c 'import hashlib,json,sys,tomllib; d=tomllib.load(open(sys.argv[1],"rb")); rows=[]; [(rows.append((p.get("name"),p.get("version"),("registry" if "registry" in p.get("source",{}) else json.dumps(p.get("source",{}),sort_keys=True)),sorted([x.get("hash","") for x in ([p.get("sdist",{})] if p.get("sdist") else [])+p.get("wheels",[])])))) for p in d.get("package",[])]; print(hashlib.sha256(json.dumps(sorted(rows),separators=(",",":")).encode()).hexdigest())' "$1"
+          }
+          before="$(fingerprint uv.lock)"
+          "$uv_bin" lock --refresh --default-index https://pypi.org/simple
+          after="$(fingerprint uv.lock)"
+          test "$before" = "$after"
 
       - name: Generate core toolchain (POSIX)
         if: ${{ runner.os != 'Windows' }}
