@@ -22,6 +22,27 @@ inline constexpr const char *QUERY_EXPLAIN_SCHEMA_V1 = "kungfu.query.explain/v1"
 
 enum class cut_kind { Head, ManifestFrameUid };
 
+enum class admission_outcome {
+  Admitted,
+  UnregisteredSurface,
+  IncompatibleSchema,
+  AmbiguousAuthority,
+  Unverifiable,
+};
+
+struct declaration_reference {
+  std::string id = {};
+  std::string version = {};
+  std::string root = {};
+};
+
+struct admission_evidence {
+  admission_outcome outcome = admission_outcome::Unverifiable;
+  std::string fact_surface_id = {};
+  uint64_t record_count = 0;
+  std::string reason = {};
+};
+
 struct cut {
   cut_kind kind = cut_kind::Head;
   uint64_t manifest_frame_uid = 0;
@@ -39,6 +60,8 @@ struct query_policy {
 // C++-owned semantic fields; bindings translate edge JSON but do not infer a
 // second basis.
 struct query_basis {
+  declaration_reference contract_world = {};
+  std::vector<declaration_reference> fact_surfaces = {};
   std::string scope = "episode-manifest";
   uint64_t episode_id = 0;
   std::string perspective = "manifest-append-order";
@@ -92,6 +115,10 @@ struct lineage {
   nlohmann::json policy_versions = nlohmann::json::object();
   nlohmann::json time_basis = nlohmann::json::object();
   std::string determinism = "deterministic";
+  bool canonical_state = false;
+  declaration_reference contract_world_declaration = {};
+  std::vector<declaration_reference> fact_surface_declarations = {};
+  std::vector<admission_evidence> admission_outcomes = {};
   std::vector<nlohmann::json> episode_content_roots = {};
   std::vector<nlohmann::json> missing_inputs = {};
   std::vector<nlohmann::json> unverifiable_inputs = {};

@@ -437,21 +437,22 @@ test(
         runtimeDir,
         { episode_id: 901 },
       );
+      const queryExamples = kungfu.runStorageServiceOperation(
+        'query_plan',
+        runtimeDir,
+        { action: 'examples' },
+      );
+      const queryDefinition = structuredClone(
+        queryExamples.examples[0].definition,
+      );
+      queryDefinition.basis.episode_id = '901';
+      queryDefinition.basis.cut = { kind: 'head' };
+      queryDefinition.evidence = 'proof';
       const factQuery = kungfu.runStorageServiceOperation(
         'fact_query',
         runtimeDir,
         {
-          definition: {
-            schema: 'kungfu.query.definition/v1',
-            basis: {
-              scope: 'episode-manifest',
-              episode_id: '901',
-              perspective: 'manifest-append-order',
-              cut: { kind: 'head' },
-            },
-            object: 'episodes',
-            evidence: 'proof',
-          },
+          definition: queryDefinition,
         },
       );
       const queryPlan = kungfu.runStorageServiceOperation(

@@ -737,6 +737,23 @@ def test_fact_query_reproduces_head_and_historical_episode_cuts(tmp_path):
     assert historical["lineage"]["authority"]["record_count"] == 2
     assert historical["lineage"]["cut"]["resolved"] == historical_cut
     assert historical["lineage"]["determinism"] == "deterministic"
+    assert historical["lineage"]["canonical_state"] is True
+    assert (
+        historical["lineage"]["contract_world_declaration"]
+        == historical["definition"]["basis"]["contract_world"]
+    )
+    assert (
+        historical["lineage"]["fact_surface_declarations"]
+        == historical["definition"]["basis"]["fact_surfaces"]
+    )
+    assert historical["lineage"]["admission_outcomes"] == [
+        {
+            "outcome": "admitted",
+            "fact_surface_id": "kungfu.runtime.episode-manifest",
+            "record_count": 2,
+            "reason": "records satisfy the built-in typed Episode manifest declaration",
+        }
+    ]
     assert historical["lineage"]["missing_inputs"] == []
     assert historical["logical_plan"]["schema"] == "kungfu.query.logical-plan/v1"
     assert (
@@ -771,6 +788,7 @@ def test_fact_query_reproduces_head_and_historical_episode_cuts(tmp_path):
     )
     assert missing["rows"] == []
     assert missing["lineage"]["determinism"] == "unverifiable"
+    assert missing["lineage"]["canonical_state"] is False
     assert missing["lineage"]["cut"]["resolved"] == {"kind": "unresolved"}
     assert missing["lineage"]["missing_inputs"] == [
         {
@@ -780,12 +798,56 @@ def test_fact_query_reproduces_head_and_historical_episode_cuts(tmp_path):
     ]
 
 
+def test_fact_query_fails_closed_on_unregistered_or_changed_declarations(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    storage_service.episode_begin(runtime_dir, episode_id=51, begin_time=1000)
+
+    admitted = storage_service.fact_query(runtime_dir, episode_id=51)
+    capabilities = storage_service.query_plan(runtime_dir, action="capabilities")
+    builtins = capabilities["builtin_declarations"]
+
+    assert admitted["lineage"]["canonical_state"] is True
+    assert (
+        admitted["definition"]["basis"]["contract_world"]
+        == builtins["contract_world"]["reference"]
+    )
+    assert admitted["definition"]["basis"]["fact_surfaces"] == [
+        builtins["fact_surfaces"][0]["reference"]
+    ]
+
+    changed_root = json.loads(json.dumps(admitted["definition"]))
+    changed_root["basis"]["fact_surfaces"][0]["root"] = "sha256:" + "0" * 64
+    unverifiable = storage_service.fact_query_definition(runtime_dir, changed_root)
+
+    assert unverifiable["rows"] == []
+    assert unverifiable["lineage"]["canonical_state"] is False
+    assert unverifiable["lineage"]["determinism"] == "unverifiable"
+    assert unverifiable["lineage"]["admission_outcomes"][0]["outcome"] == (
+        "unverifiable"
+    )
+    assert (
+        unverifiable["lineage"]["fact_surface_declarations"][0]["root"]
+        == "sha256:" + "0" * 64
+    )
+    assert storage_service.fact_query(runtime_dir, episode_id=51) == admitted
+
+    unregistered = json.loads(json.dumps(admitted["definition"]))
+    unregistered["basis"]["fact_surfaces"][0]["id"] = "example.unknown"
+    rejected = storage_service.fact_query_definition(runtime_dir, unregistered)
+    assert rejected["rows"] == []
+    assert rejected["lineage"]["admission_outcomes"][0]["outcome"] == (
+        "unregistered-surface"
+    )
+
+
 def test_query_planner_normalizes_defaults_and_exposes_one_semantic_root(tmp_path):
     runtime_dir = tmp_path / "runtime"
     explicit = storage_service.build_fact_query_definition(episode_id=48, limit=10)
     sparse = {
         "schema": "kungfu.query.definition/v1",
         "basis": {
+            "contract_world": explicit["basis"]["contract_world"],
+            "fact_surfaces": explicit["basis"]["fact_surfaces"],
             "scope": "episode-manifest",
             "episode_id": "48",
             "perspective": "manifest-append-order",
@@ -826,10 +888,39 @@ def test_query_planner_normalizes_defaults_and_exposes_one_semantic_root(tmp_pat
     ]
     assert explanation["physical"]["engine"] == "episode-authority-scan/v1"
     assert capabilities["physical_plan"]["public"] is False
+    assert capabilities["admission_outcomes"] == [
+        "admitted",
+        "unregistered-surface",
+        "incompatible-schema",
+        "ambiguous-authority",
+        "unverifiable",
+    ]
+    assert capabilities["builtin_declarations"]["contract_world"]["reference"][
+        "root"
+    ].startswith("sha256:")
     assert capabilities["formats"] == ["json", "ndjson", "tsv"]
     assert definition_schema["$schema"].endswith("/draft/2020-12/schema")
     assert definition_schema["additionalProperties"] is False
     assert definition_schema["properties"]["basis"]["additionalProperties"] is False
+    assert "contract_world" in definition_schema["properties"]["basis"]["required"]
+    assert "fact_surfaces" in definition_schema["properties"]["basis"]["required"]
+    assert (
+        definition_schema["properties"]["basis"]["properties"]["contract_world"][
+            "additionalProperties"
+        ]
+        is False
+    )
+
+    missing_declarations = json.loads(json.dumps(sparse))
+    missing_declarations["basis"].pop("contract_world")
+    missing_declarations["basis"].pop("fact_surfaces")
+    with pytest.raises(
+        (RuntimeError, ValueError),
+        match="requires explicit contract_world and fact_surfaces declarations",
+    ):
+        storage_service.query_plan(
+            runtime_dir, action="validate", definition=missing_declarations
+        )
 
     unsupported = dict(sparse)
     unsupported["where"] = {"field": "status", "operator": "eq", "value": "ended"}
@@ -838,6 +929,21 @@ def test_query_planner_normalizes_defaults_and_exposes_one_semantic_root(tmp_pat
     ):
         storage_service.query_plan(
             runtime_dir, action="validate", definition=unsupported
+        )
+
+    invalid_declaration = json.loads(json.dumps(explicit))
+    invalid_declaration["basis"]["contract_world"] = {
+        "id": "kungfu.runtime",
+        "version": "1",
+        "root": "sha256:" + "0" * 64,
+        "latest": True,
+    }
+    with pytest.raises(
+        (RuntimeError, ValueError),
+        match="unsupported query field: definition.basis.contract_world.latest",
+    ):
+        storage_service.query_plan(
+            runtime_dir, action="validate", definition=invalid_declaration
         )
 
 

@@ -618,30 +618,15 @@ def build_fact_query_definition(
 ) -> dict[str, Any]:
     """Build the canonical edge form consumed by the C++ query planner."""
 
-    return {
-        "schema": "kungfu.query.definition/v1",
-        "basis": {
-            "scope": "episode-manifest",
-            "episode_id": _u64(episode_id),
-            "perspective": "manifest-append-order",
-            "cut": cut or {"kind": "head"},
-            "policy": {
-                "fold": "episode-manifest-fold/v1",
-                "schema": "kungfu.episode.manifest/v1",
-                "engine": "episode-authority-scan/v1",
-                "conflict": "preserve-source-claims/v1",
-                "redaction": "report-missing-evidence/v1",
-            },
-            "time_basis": {
-                "valid_time": "not-projected",
-                "system_time": "manifest-gen-time",
-                "causal_time": "manifest-order-and-episode-refs",
-            },
-        },
-        "object": "episodes",
-        "limit": limit,
-        "evidence": "proof",
-    }
+    examples = _runtime().run_storage_service_operation(
+        "query_plan", "", {"action": "examples"}
+    )
+    definition = dict(examples["examples"][0]["definition"])
+    definition["basis"] = dict(definition["basis"])
+    definition["basis"]["episode_id"] = _u64(episode_id)
+    definition["basis"]["cut"] = cut or {"kind": "head"}
+    definition["limit"] = limit
+    return definition
 
 
 def query_plan(

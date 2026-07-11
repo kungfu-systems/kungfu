@@ -48,6 +48,8 @@ def test_offline_agent_discovers_and_proves_query_in_three_commands(tmp_path):
         proof_value["lineage"]["logical_plan_hash"]
         == proof_value["logical_plan"]["logical_plan_hash"]
     )
+    assert proof_value["lineage"]["canonical_state"] is True
+    assert proof_value["lineage"]["admission_outcomes"][0]["outcome"] == "admitted"
 
 
 def test_query_cli_validate_explain_and_stream_formats_share_the_plan(tmp_path):
