@@ -36,3 +36,17 @@ endif ()
 if (NOT KF_NODE_BINDING_NAME)
   message(WARNING "Unknown node runtime ${NODE_RUNTIME}")
 endif ()
+
+# Python-free node launcher (ADR-0046 stage 3): a standalone shared library — not
+# a napi addon — exposing one C entry over node::Start so the trunk front door can
+# run the KUNGFU_AS_VARIANT=node variant without booting CPython. Built once, for
+# the node runtime; it links libnode directly and inherits the core's global
+# @loader_path/$ORIGIN rpath (compiler.cmake) to resolve the sibling libnode.
+# Windows loading is a trunk-side follow-up (the trunk only dlopens it on unix
+# today), so the launcher itself is unix-only until then.
+if ("${NODE_RUNTIME}" STREQUAL "node" AND UNIX)
+  message(STATUS "Configuring for node launcher kungfu_node_host")
+  add_library(kungfu_node_host SHARED host/kungfu_node_host.cpp)
+  set_target_properties(kungfu_node_host PROPERTIES CXX_VISIBILITY_PRESET hidden)
+  target_link_libraries(kungfu_node_host ${LIBNODE})
+endif ()

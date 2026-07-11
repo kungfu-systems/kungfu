@@ -12,6 +12,7 @@ mod doctor;
 mod envs;
 mod launch;
 mod pins;
+mod variant;
 
 use std::env;
 use std::process::exit;
@@ -40,6 +41,15 @@ envs live under <KF_HOME>/envs; the default env is named 'default'.
 const DEFAULT_ENV: &str = "default";
 
 fn main() {
+    // KUNGFU_AS_VARIANT asks this process to *be* a runtime variant (e.g. node),
+    // so it is decided before any subcommand interpretation. When the trunk can
+    // own the variant natively (node, without booting CPython) it runs it here and
+    // exits; otherwise it falls through to the normal path, where the Python
+    // variant table still handles it (ADR-0046 stage 3).
+    if let Some(code) = variant::dispatch() {
+        exit(code);
+    }
+
     let args: Vec<String> = env::args().skip(1).collect();
     // Installed as `kungfu`, this binary is the assembled product's front
     // door: the trunk keeps only the subtrees it implements (env, prewarm)

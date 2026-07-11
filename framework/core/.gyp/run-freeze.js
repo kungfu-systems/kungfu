@@ -408,6 +408,10 @@ function applyStdlibPrune(treeRoot) {
 /** @param {string} bt @param {string} distKfc */
 function copyRuntimeNative(bt, distKfc) {
   const rel = path.join(CORE, 'build', bt);
+  // libkungfu.* also stages the libkungfu-family natives (libwasm runtimes, and
+  // the Python-free node launcher libkungfu_node_host — ADR-0046 stage 3), which
+  // ship next to the front door so the trunk can dlopen the launcher and run the
+  // node variant without booting CPython.
   const wanted =
     /^(pykungfu.*\.(so|pyd)|libkungfu.*|libnode.*|libnodebuildinfo\.json)$/i;
   let n = 0;
