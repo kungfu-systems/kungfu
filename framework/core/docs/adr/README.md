@@ -19,7 +19,7 @@ A record's **Status** says where it stands:
 
 | ADR | Status | Title |
 |---|---|---|
-| [0001](ADR-0001-yijinjing-publish-barrier.md) | accepted | yijinjing journal publish protocol → `atomic_ref` release/acquire |
+| [0001](ADR-0001-yijinjing-publish-barrier.md) | accepted | yijinjing journal frame/page publish protocol → `atomic_ref` release/acquire |
 | [0002](ADR-0002-yijinjing-schema-runtime-layout.md) | superseded | historical FlatBuffers-over-POD runtime-schema decision; schema scope replaced by ADR-0047 |
 | [0003](ADR-0003-control-axis-python-coroutine-integration.md) | proposed | control axis — the Python coroutine integration layer (continue / redesign / drop) |
 | [0004](ADR-0004-control-axis-node-watcher-snapshot-model.md) | proposed | control axis — the Node watcher snapshot model |

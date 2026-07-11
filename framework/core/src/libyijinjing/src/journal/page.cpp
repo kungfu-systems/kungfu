@@ -5,85 +5,153 @@
 #include <kungfu/yijinjing/platform/mmap.h>
 #include <kungfu/yijinjing/time.h>
 
+#include <atomic>
+#include <cstddef>
+#include <filesystem>
+#include <thread>
+
 namespace kungfu::yijinjing::journal {
 
 namespace {
 constexpr uint64_t MIN_PAGE_SIZE_MB = 2;
 constexpr uint64_t DEFAULT_PAGE_SIZE_MB = 16;
+static_assert(offsetof(yijinjing::types::page_header, last_frame_position) %
+                      std::atomic_ref<uint64_t>::required_alignment ==
+                  0,
+              "page publication token must satisfy atomic_ref alignment");
+static_assert(std::atomic_ref<uint64_t>::is_always_lock_free,
+              "cross-process page publication requires lock-free uint64 atomics");
+static_assert(offsetof(yijinjing::types::page_header, status) %
+                      std::atomic_ref<yijinjing::enums::PageStatus>::required_alignment ==
+                  0,
+              "page status must satisfy atomic_ref alignment");
+static_assert(std::atomic_ref<yijinjing::enums::PageStatus>::is_always_lock_free,
+              "cross-process page status requires lock-free atomics");
 } // namespace
 using namespace yijinjing::types;
 
 page::page(data::location_ptr location, uint32_t dest_id, uint32_t page_id, size_t size, bool lazy, bool is_writing,
-           uintptr_t address)
-    : location_(std::move(location)), dest_id_(dest_id), page_id_(page_id), lazy_(lazy), size_(size),
-      is_writing_(is_writing), header_(reinterpret_cast<page_header *>(address)) {
-  assert(address > 0);
+           platform::mapped_region region)
+    : region_(std::move(region)), location_(std::move(location)), dest_id_(dest_id), page_id_(page_id),
+      is_writing_(is_writing), size_(size), header_(reinterpret_cast<page_header *>(region_.address())) {
+  (void)lazy;
+  assert(region_);
 }
 
 page::~page() {
   SPDLOG_TRACE("release page {}/{:08x}.{}.journal, is_writing_ {}", location_->uname, dest_id_, page_id_, is_writing_);
-  if (not platform::release_mmap_buffer(address(), size_, lazy_)) {
+  if (not region_.reset()) {
     SPDLOG_ERROR("can not release page {}/{:08x}.{}.journal", location_->uname, dest_id_, page_id_);
   }
 }
 
 void page::flush() {
   SPDLOG_TRACE("flush page {}/{:08x}.{}.journal", location_->uname, dest_id_, page_id_);
-  if (not platform::flush_mmap_buffer(address(), size_, lazy_)) {
+  if (not region_.flush()) {
     SPDLOG_ERROR("can not flush page {}/{:08x}.{}.journal", location_->uname, dest_id_, page_id_);
   }
 }
 
 void page::set_last_frame_position(uint64_t position) {
-  const_cast<page_header *>(header_)->last_frame_position = position;
+  std::atomic_ref<uint64_t>(const_cast<page_header *>(header_)->last_frame_position)
+      .store(position, std::memory_order_release);
 }
 
 void page::enable_page() {
   if (is_writing_) {
-    const_cast<page_header *>(header_)->status = yijinjing::enums::PageStatus::Normal;
+    publish_status(yijinjing::enums::PageStatus::Normal);
   }
 }
 
+uint64_t page::acquire_last_frame_position() const {
+  return std::atomic_ref<uint64_t>(const_cast<page_header *>(header_)->last_frame_position)
+      .load(std::memory_order_acquire);
+}
+
+yijinjing::enums::PageStatus page::acquire_status() const {
+  return std::atomic_ref<yijinjing::enums::PageStatus>(const_cast<page_header *>(header_)->status)
+      .load(std::memory_order_acquire);
+}
+
+void page::publish_status(yijinjing::enums::PageStatus status) {
+  std::atomic_ref<yijinjing::enums::PageStatus>(const_cast<page_header *>(header_)->status)
+      .store(status, std::memory_order_release);
+}
+
+uintptr_t page::address_border() const {
+  if (header_->page_size < sizeof(frame_header) || header_->page_size > size_) {
+    throw journal_error("page border exceeds mapped region for " +
+                        resolve_page_path(location_, dest_id_, page_id_, false));
+  }
+  return address() + header_->page_size - sizeof(frame_header);
+}
+
+uint64_t page::get_body_size() const {
+  if (header_->page_header_length > size_) {
+    throw journal_error("page header exceeds mapped region for " +
+                        resolve_page_path(location_, dest_id_, page_id_, false));
+  }
+  return size_ - header_->page_header_length;
+}
+
+uintptr_t page::first_frame_address() const {
+  if (header_->page_header_length > size_ || size_ - header_->page_header_length < sizeof(frame_header)) {
+    throw journal_error("first frame exceeds mapped region for " +
+                        resolve_page_path(location_, dest_id_, page_id_, false));
+  }
+  return address() + header_->page_header_length;
+}
+
+uintptr_t page::last_frame_address() const {
+  const auto position = acquire_last_frame_position();
+  if (position > size_ || size_ - position < sizeof(frame_header)) {
+    throw journal_error("last frame exceeds mapped region for " +
+                        resolve_page_path(location_, dest_id_, page_id_, false));
+  }
+  return address() + position;
+}
+
+int64_t page::end_time() const {
+  return reinterpret_cast<yijinjing::types::frame_header *>(last_frame_address())->gen_time;
+}
+
 page_ptr page::load(const data::location_ptr &location, uint32_t dest_id, uint64_t page_size, uint32_t page_id,
-                    bool is_writing, bool lazy, bool pre_open) {
-  std::string path = get_page_path(location, dest_id, page_id);
-  uintptr_t address = platform::load_mmap_buffer(path, page_size, is_writing, lazy);
-
-  if (address == 0) {
-    throw journal_error("unable to load page for " + path);
+                    bool is_writing, bool lazy, bool pre_open, bool allow_create) {
+  if (page_size < sizeof(page_header) + 2 * sizeof(frame_header)) {
+    throw journal_error("page size is too small for page and frame publication headers");
   }
+  const bool may_initialize = is_writing || allow_create;
+  std::string path = resolve_page_path(location, dest_id, page_id, may_initialize);
+  auto region = may_initialize ? platform::mapped_region::map_writable(path, page_size, lazy)
+                               : platform::mapped_region::map_existing(path, page_size, false, lazy);
 
-  if (pre_open and not is_writing and lazy) {
-    return std::shared_ptr<page>(new page(location, dest_id, page_id, page_size, lazy, is_writing, address));
-  }
-
-  auto header = reinterpret_cast<page_header *>(address);
-  bool is_virgin_page = header->last_frame_position == 0;
+  auto header = reinterpret_cast<page_header *>(region.address());
+  auto loaded_page =
+      std::shared_ptr<page>(new page(location, dest_id, page_id, page_size, lazy, is_writing, std::move(region)));
+  bool is_virgin_page = loaded_page->acquire_last_frame_position() == 0;
   SPDLOG_TRACE("load page {}/{:08x}.{}.journal lazy {} size {} is_writing {} is_virgin_page {}", location->uname,
                dest_id, page_id, lazy, page_size, is_writing, is_virgin_page);
 
-  if (is_writing or not lazy) {
+  if (may_initialize) {
     if (is_virgin_page) {
       header->version = __JOURNAL_VERSION__;
       header->page_header_length = sizeof(page_header);
       header->page_size = page_size;
       header->frame_header_length = sizeof(frame_header);
-      header->last_frame_position = header->page_header_length;
-    }
-
-    if (pre_open && is_virgin_page) {
-      header->status = yijinjing::enums::PageStatus::PreOpen;
+      loaded_page->publish_status(pre_open ? yijinjing::enums::PageStatus::PreOpen
+                                           : yijinjing::enums::PageStatus::Normal);
+      loaded_page->set_last_frame_position(header->page_header_length);
     } else if (not pre_open) {
-      header->status = yijinjing::enums::PageStatus::Normal;
+      loaded_page->publish_status(yijinjing::enums::PageStatus::Normal);
     }
   }
 
   int64_t nano = time::now_in_nano();
-  while (header->version != __JOURNAL_VERSION__ or header->page_header_length != sizeof(page_header) or
-         header->page_size != page_size) {
+  while (loaded_page->acquire_last_frame_position() == 0) {
     if (time::now_in_nano() - nano > 10 * time_unit::NANOSECONDS_PER_SECOND) {
-      break;
+      throw journal_error("timed out waiting for page initialization: " + path);
     }
+    std::this_thread::yield();
   }
 
   if (header->version != __JOURNAL_VERSION__) {
@@ -94,6 +162,11 @@ page_ptr page::load(const data::location_ptr &location, uint32_t dest_id, uint64
     uint32_t l = header->page_header_length;
     throw journal_error(fmt::format("{} header length mismatch, required {}, found {}", path, sizeof(page_header), l));
   }
+  if (header->frame_header_length != sizeof(frame_header)) {
+    uint32_t l = header->frame_header_length;
+    throw journal_error(
+        fmt::format("{} frame header length mismatch, required {}, found {}", path, sizeof(frame_header), l));
+  }
   if (header->page_size != page_size) {
     uint64_t s = header->page_size;
     throw journal_error(fmt::format(
@@ -101,11 +174,17 @@ page_ptr page::load(const data::location_ptr &location, uint32_t dest_id, uint64
         page_size, s, location->uname, path, dest_id, page_id, is_writing));
   }
 
-  if (header->status != yijinjing::enums::PageStatus::Normal && !pre_open) {
+  const auto last_frame_position = loaded_page->acquire_last_frame_position();
+  if (last_frame_position < header->page_header_length || last_frame_position > page_size - sizeof(frame_header)) {
+    throw journal_error(fmt::format("{} invalid last frame position {}, page header {}, page size {}", path,
+                                    last_frame_position, header->page_header_length, page_size));
+  }
+
+  if (loaded_page->acquire_status() != yijinjing::enums::PageStatus::Normal && !pre_open) {
     SPDLOG_WARN("page is still preopen status");
   }
 
-  return std::shared_ptr<page>(new page(location, dest_id, page_id, page_size, lazy, is_writing, address));
+  return loaded_page;
 }
 
 page_ptr page::load_header_and_1st_frame_header(const data::location_ptr &location, uint32_t dest_id, uint32_t page_id,
@@ -113,24 +192,36 @@ page_ptr page::load_header_and_1st_frame_header(const data::location_ptr &locati
   uint32_t page_header_size = sizeof(page_header);
   uint32_t frame_header_size = sizeof(frame_header);
   uint32_t sliced_page_size = page_header_size + frame_header_size;
-  std::string path = get_page_path(location, dest_id, page_id);
-  uintptr_t address = platform::load_mmap_buffer(path, sliced_page_size, is_writing, lazy);
+  std::string path = resolve_page_path(location, dest_id, page_id, is_writing);
+  auto region = is_writing ? platform::mapped_region::map_writable(path, sliced_page_size, lazy)
+                           : platform::mapped_region::map_existing(path, sliced_page_size, false, lazy);
 
-  if (address == 0) {
-    throw journal_error("unable to load page for " + path);
-  }
-
-  auto header = reinterpret_cast<page_header *>(address);
-  if (header->last_frame_position == 0) {
+  auto header = reinterpret_cast<page_header *>(region.address());
+  auto loaded_page = std::shared_ptr<page>(
+      new page(location, dest_id, page_id, sliced_page_size, lazy, is_writing, std::move(region)));
+  if (loaded_page->acquire_last_frame_position() == 0) {
     SPDLOG_WARN("open a page never loaded : {}", path);
   }
 
-  return std::shared_ptr<page>(new page(location, dest_id, page_id, sliced_page_size, lazy, is_writing, address));
+  if (header->page_header_length != sizeof(page_header) || header->frame_header_length != sizeof(frame_header) ||
+      header->page_size < sliced_page_size) {
+    throw journal_error("invalid sliced page header for " + path);
+  }
+
+  return loaded_page;
 }
 
 std::string page::get_page_path(const data::location_ptr &location, uint32_t dest_id, uint32_t page_id) {
+  return resolve_page_path(location, dest_id, page_id, true);
+}
+
+std::string page::resolve_page_path(const data::location_ptr &location, uint32_t dest_id, uint32_t page_id,
+                                    bool create_not_exist) {
   auto page_name = fmt::format("{:08x}.{}", dest_id, page_id);
-  return location->locator->layout_file(location, yijinjing::enums::layout::JOURNAL, page_name);
+  auto dir = location->locator->layout_dir(location, yijinjing::enums::layout::JOURNAL, create_not_exist);
+  return (std::filesystem::path(dir) /
+          fmt::format("{}.{}", page_name, yijinjing::enums::get_layout_name(yijinjing::enums::layout::JOURNAL)))
+      .string();
 }
 
 uint32_t page::find_page_id(const data::location_ptr &location, uint32_t dest_id, int64_t time) {
@@ -143,9 +234,9 @@ uint32_t page::find_page_id(const data::location_ptr &location, uint32_t dest_id
   }
   for (int i = static_cast<int>(page_ids.size()) - 1; i >= 0; i--) {
     auto loaded_page = page::load_header_and_1st_frame_header(location, dest_id, page_ids[i], false, true);
-    const auto &loaded_page_header = loaded_page->header_;
-    if (loaded_page_header->last_frame_position != 0 &&
-        loaded_page_header->status != yijinjing::enums::PageStatus::PreOpen &&
+    const auto *loaded_page_header = loaded_page->header_;
+    if (loaded_page->acquire_last_frame_position() != 0 &&
+        loaded_page->acquire_status() != yijinjing::enums::PageStatus::PreOpen &&
         loaded_page_header->version == __JOURNAL_VERSION__ && loaded_page->begin_time() < time) {
       return page_ids[i];
     }

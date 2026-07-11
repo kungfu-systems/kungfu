@@ -1,9 +1,9 @@
-# ADR-0001: yijinjing journal frame-publish protocol → `atomic_ref` release/acquire
+# ADR-0001: yijinjing journal frame/page publish protocol → `atomic_ref` release/acquire
 
 - Status: accepted (implemented on this line; ARM adversarial stress test + in-tree compile both pass — see "Gate outcome")
 - Date: 2026-06-23
 - Category: (b) improvement + latent bug (concurrency correctness)
-- Subsystem: yijinjing journal — single-writer / multi-reader, mmap `MAP_SHARED` cross-process frame bus
+- Subsystem: yijinjing journal — single-writer / multi-reader, mmap `MAP_SHARED` cross-process page/frame bus
 - Related: independent of schema ownership (historical ADR-0002, current
   ADR-0047); this change touches only publish synchronization, not schema or
   on-disk layout
@@ -20,6 +20,12 @@ ordinary reads/writes" to **`std::atomic_ref` release/acquire**:
 - Reader side: read `length` with `memory_order_acquire` as the "is there a new
   frame" gate (`frame::acquire_length` → `frame::has_data`); only after the gate
   holds may it read payload / gen_time / frame_uid.
+- Page initialization uses the same one-token rule. The initializer writes the
+  immutable `page_header` facts and initial status first, then stores
+  `page_header::last_frame_position` with release. Existing-only readers map
+  without create/grow authority, acquire that token before reading the other
+  header fields, and reject mismatched lengths, page size, or out-of-range
+  offsets before payload access. `status` transitions also use release/acquire.
 
 ## Context
 
@@ -77,6 +83,9 @@ stale frame**.
 - **Binary / on-disk format unchanged**: `length` is still the same offset, same
   width uint32; dropping `volatile` does not change size or alignment. The byte
   contract for cross-language / cross-process readers is unchanged.
+- `page_header::last_frame_position` remains a `uint64_t` at offset 24 and is
+  now the page-initialization publication token. No page or frame field is
+  added, removed, widened, or reordered.
 - **Alignment verified**: on non-Windows targets `KF_DEFINE_PACK_TYPE` lands on
   `__attribute__((aligned(8)))` (not byte-packed); `length` is the first field
   (offset 0), and the frame start address is always 8-byte aligned
@@ -149,3 +158,5 @@ prevent lapping):
 - `framework/core/src/libkungfu/include/kungfu/yijinjing schema/types.h` (frame_header: drop volatile)
 - `framework/core/src/libyijinjing/include/kungfu/yijinjing/journal/frame.h` (acquire/publish/copy)
 - `framework/core/src/libyijinjing/src/journal/writer.cpp` (close_frame_lock_free / copy_frame)
+- `framework/core/src/libyijinjing/src/journal/page.cpp` (page initialization/status publication and bounds validation)
+- `framework/core/src/libyijinjing/src/util/mmap.cpp` (move-only mapping ownership and existing-only reader mapping)

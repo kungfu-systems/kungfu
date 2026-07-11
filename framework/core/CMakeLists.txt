@@ -57,6 +57,10 @@ option(NNG_TOOLS "" OFF)
 option(NNG_ENABLE_NNGCAT "" OFF)
 option(KUNGFU_WITH_DEBUG_EXAMPLE "" OFF)
 option(KUNGFU_WITH_SLICES "build the capability slices (minimal standalone proofs, see slices/README.md)" OFF)
+option(KUNGFU_WITH_CORE_TESTS "build native yijinjing correctness tests" ON)
+if(KUNGFU_WITH_CORE_TESTS)
+  enable_testing()
+endif()
 
 ##########################################################################
 
@@ -84,6 +88,7 @@ endif()
 ##########################################################################
 
 # journal core static library; libkungfu links it, minimal tools can link it alone
+set(YIJINJING_BUILD_TESTS ${KUNGFU_WITH_CORE_TESTS})
 add_subdirectory(src/libyijinjing)
 
 if (NOT DEFINED ENV{KUNGFU_BUILD_SKIP_LIBKUNGFU} OR NOT $ENV{KUNGFU_BUILD_SKIP_LIBKUNGFU})

@@ -111,7 +111,7 @@ void journal::preload_next_page() {
   std::lock_guard<std::recursive_mutex> lk(load_page_mtx_);
   if ((not low_latency_ or not page_) or                                                   //
       (preload_page_ and preload_page_->get_page_id() == page_->get_page_id() + 1) or      //
-      (page_->header_->status == yijinjing::enums::PageStatus::PreOpen) or                 //
+      page_->is_pre_open() or                                                              //
       (not page::check_page_existed(location_, page_->dest_id_, page_->get_page_id() + 1)) //
   ) {
     return;
@@ -130,7 +130,7 @@ void journal::try_load_next_extra_page() {
     return;
   }
   pre_create_page_ =
-      page::load(location_, dest_id_, page_->get_page_size(), page_->get_page_id() + 1, false, lazy_, true);
+      page::load(location_, dest_id_, page_->get_page_size(), page_->get_page_id() + 1, false, lazy_, true, true);
 }
 
 void journal::release_page() {

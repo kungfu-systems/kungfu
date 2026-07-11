@@ -60,6 +60,14 @@ target_link_libraries(yijinjing PUBLIC
   nlohmann_json::nlohmann_json
   xxHash::xxhash)
 
+option(YIJINJING_BUILD_TESTS "build yijinjing native correctness tests" OFF)
+if(YIJINJING_BUILD_TESTS)
+  add_executable(yijinjing_mmap_tests tests/mmap_tests.cpp)
+  target_link_libraries(yijinjing_mmap_tests PRIVATE yijinjing)
+  target_compile_features(yijinjing_mmap_tests PRIVATE cxx_std_23)
+  add_test(NAME yijinjing_mmap_tests COMMAND yijinjing_mmap_tests)
+endif()
+
 if(DEFINED COMPILER_OPTIMIZE_ON_OPTIONS AND NOT "${COMPILER_OPTIMIZE_ON_OPTIONS}" STREQUAL "")
   target_compile_options(yijinjing PRIVATE "$<$<CONFIG:Release>:${COMPILER_OPTIMIZE_ON_OPTIONS}>")
 endif()

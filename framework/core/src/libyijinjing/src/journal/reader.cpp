@@ -159,7 +159,7 @@ uint64_t reader::find_page_size(const data::location_ptr &location, uint32_t des
   auto page_size = page->get_page_size();
   if (page_size == 0) {
     const std::string msg = fmt::format("open a page never init page_header for {}", location->uname,
-                                        page::get_page_path(location, dest_id, page_id));
+                                        page::resolve_page_path(location, dest_id, page_id, false));
     SPDLOG_ERROR(msg);
     throw journal_error(msg);
   }
