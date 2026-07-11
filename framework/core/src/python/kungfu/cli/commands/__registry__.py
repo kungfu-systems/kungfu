@@ -1,6 +1,7 @@
 #  SPDX-License-Identifier: Apache-2.0
 
 from . import engage
+from . import env
 from . import journal
 from . import cockpit
 from . import trace
@@ -25,6 +26,7 @@ from . import master
 
 __all__ = [
     "engage",
+    "env",
     "journal",
     "cockpit",
     "trace",

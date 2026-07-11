@@ -21,10 +21,15 @@
 # This script is a thin shim in front of the native launcher (crates/shifu, a
 # self-contained Rust binary — see docs/rust-adoption.md). Resolution order:
 #   1. SHIFU_BIN            explicit binary override
-#   2. user-global cached binary  ${XDG_CACHE_HOME:-~/.cache}/kungfu/shifu/<version>/
-#   3. fnm + uv already installed -> proven in-script bootstrap below (no new network deps);
+#   2. dev machines (cargo + git) -> source-fresh cache slot
+#                                    .../kungfu/shifu/<version>-<launcher-src-sha>/,
+#                                    rebuilt whenever the launcher source moves (dirty
+#                                    trees rebuild every call), so a checkout always
+#                                    runs its own code, not the last release
+#   3. user-global cached binary  ${XDG_CACHE_HOME:-~/.cache}/kungfu/shifu/<version>/
+#   4. fnm + uv already installed -> proven in-script bootstrap below (no new network deps);
 #                                    force the native path instead with SHIFU_NATIVE=1
-#   4. fresh machine              -> download the prebuilt binary pinned by crates/shifu/Cargo.toml
+#   5. fresh machine              -> download the prebuilt binary pinned by crates/shifu/Cargo.toml
 #                                    (SHIFU_DIST_MIRROR overrides the base URL), or
 #                                    `cargo build` when a Rust toolchain is present
 #
@@ -83,6 +88,41 @@ kungfu_native_binname() {
   esac
 }
 
+# Paths (relative to the repo root) whose history keys the source-fresh cache
+# slot: the launcher binary is built from exactly these.
+KUNGFU_LAUNCHER_SRC="crates/shifu crates/shifu-core crates/Cargo.toml crates/Cargo.lock"
+
+# Last commit touching the launcher source (plus a -dirty marker for local
+# edits), or empty when cargo/git cannot answer — the caller then falls back
+# to the release-pinned slot.
+kungfu_src_fingerprint() {
+  command -v cargo >/dev/null 2>&1 || return 0
+  command -v git >/dev/null 2>&1 || return 0
+  # shellcheck disable=SC2086
+  _sha="$(git log -1 --format=%h -- $KUNGFU_LAUNCHER_SRC 2>/dev/null || true)"
+  [ -n "$_sha" ] || return 0
+  # shellcheck disable=SC2086
+  if [ -n "$(git status --porcelain -- $KUNGFU_LAUNCHER_SRC 2>/dev/null)" ]; then
+    _sha="${_sha}-dirty"
+  fi
+  echo "$_sha"
+}
+
+# Build the launcher from the checkout source into $1. The cargo target dir
+# lives in the user cache, keyed per checkout, so read-only-locked checkouts
+# (and worktrees sharing a cache) build without touching the repo tree.
+kungfu_native_build() {
+  _dest="$1"
+  _tgt="${XDG_CACHE_HOME:-$HOME/.cache}/kungfu/shifu/cargo-target/$(printf %s "$PWD" | cksum | cut -d' ' -f1)"
+  mkdir -p "$(dirname "$_dest")" "$_tgt"
+  if CARGO_TARGET_DIR="$_tgt" cargo build --release --locked --manifest-path crates/Cargo.toml -p shifu >&2; then
+    _built="$_tgt/release/$(kungfu_native_binname "$(kungfu_native_platform)")"
+    cp "$_built" "${_dest}.tmp" && chmod +x "${_dest}.tmp" && mv "${_dest}.tmp" "$_dest" && return 0
+    rm -f "${_dest}.tmp"
+  fi
+  return 1
+}
+
 # Try to place the native launcher at $1 (version $2). Best-effort: returns
 # non-zero on failure so the caller can fall back to the in-script bootstrap.
 kungfu_native_acquire() {
@@ -123,7 +163,34 @@ if [ "${SHIFU_NATIVE:-}" != "0" ]; then
     exec "${SHIFU_BIN}" "$@"
   fi
   kungfu_ver="$(kungfu_native_version)"
-  kungfu_bin="${XDG_CACHE_HOME:-$HOME/.cache}/kungfu/shifu/${kungfu_ver}/$(kungfu_native_binname "$(kungfu_native_platform)")"
+  kungfu_cache_root="${XDG_CACHE_HOME:-$HOME/.cache}/kungfu/shifu"
+  kungfu_binname="$(kungfu_native_binname "$(kungfu_native_platform)")"
+
+  # Source freshness (dev machines): with cargo + git present the cache slot
+  # is content-addressed by the last commit touching the launcher source, so
+  # the checkout's current code — not the last release, whose pin does not
+  # move between releases — answers. A dirty launcher tree rebuilds on every
+  # call (cargo's own freshness check keeps repeats fast). Machines without
+  # cargo keep the release-pinned path below unchanged.
+  kungfu_src="$(kungfu_src_fingerprint)"
+  if [ -n "$kungfu_src" ] && [ -n "$kungfu_ver" ]; then
+    kungfu_dev_dir="${kungfu_cache_root}/${kungfu_ver}-${kungfu_src}"
+    kungfu_dev_bin="${kungfu_dev_dir}/${kungfu_binname}"
+    case "$kungfu_src" in
+      *-dirty) ;; # local edits: always rebuild
+      *) if [ -x "$kungfu_dev_bin" ]; then exec "$kungfu_dev_bin" "$@"; fi ;;
+    esac
+    if kungfu_native_build "$kungfu_dev_bin"; then
+      # Retire older source-keyed slots; the release-pinned slot stays.
+      for _slot in "${kungfu_cache_root}/${kungfu_ver}-"*; do
+        [ -d "$_slot" ] && [ "$_slot" != "$kungfu_dev_dir" ] && rm -rf "$_slot"
+      done
+      exec "$kungfu_dev_bin" "$@"
+    fi
+    echo "shifu: source build failed; falling back to the release-pinned launcher" >&2
+  fi
+
+  kungfu_bin="${kungfu_cache_root}/${kungfu_ver}/${kungfu_binname}"
   if [ -x "$kungfu_bin" ]; then
     exec "$kungfu_bin" "$@"
   fi

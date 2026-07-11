@@ -24,7 +24,7 @@ for published frames and remains useful for reader filtering, frame validation,
 and fsck/export metadata.
 
 `carrier_type` is not a business event name. In v4, business semantics live in
-the action envelope:
+the `.fbs`-owned action envelope. Its edge JSON rendering is:
 
 ```json
 {
@@ -33,6 +33,10 @@ the action envelope:
   "schema_ref": {"id": "kungfu.atlas.GoalSnapshot", "version": 1}
 }
 ```
+
+The JSON object is not the on-journal schema. ADR-0047 requires the current
+pre-release JSON/base64 implementation to migrate to `ActionEnvelope.fbs`
+before the stable v4 baseline.
 
 ## v4 Allocations
 

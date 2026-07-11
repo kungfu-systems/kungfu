@@ -40,8 +40,11 @@ All in-repo Rust lives in one cargo workspace:
 ```text
 crates/
   Cargo.toml          # workspace; shared release profile (size-optimized, stripped)
-  shifu/        # first member: the launcher
+  shifu/              # first member: the launcher (binary)
     Cargo.toml        # per-component version = its release pin
+    src/
+  shifu-core/         # the shifu role as a library (bootstrap + probe); unpublished
+    Cargo.toml        # own version, NOT lerna-synced — no release pin surface
     src/
 ```
 
@@ -69,7 +72,15 @@ the component's case for existing.
    ABI for in-process embedding. Kungfu does not maintain infrastructure for
    this mode: it reintroduces the FFI seam the boundaries above exclude. A
    component that truly needs it must argue its own case and bring its own
-   binding/build wiring in review.
+   binding/build wiring in review. Argued cases on record: the host trunk —
+   [ADR-0046](../framework/core/docs/adr/ADR-0046-rust-host-trunk-and-assembled-runtime.md)
+   (accepted; init + control plane only, hot paths never cross the seam) —
+   and, proposed, the extension-side surfaces of
+   [ADR-0045](../framework/core/docs/adr/ADR-0045-kfx-execution-profiles-native-rust-wasm.md)
+   (the `kungfu-kfx` safe wrapper over the core's one versioned C ABI, and
+   the bounded `libwasm` component host). Both sides converge on the same
+   discipline: libkungfu owns one C embedding membrane and every in-process
+   consumer wraps it, rather than each consumer growing a private seam.
 3. **Artifact (natural).** Anything produced *by* a Rust tool (reports, data
    files, archives) is consumed like any other artifact; nothing Rust-specific
    applies downstream.
@@ -93,6 +104,20 @@ The paved road for mode 1, as implemented for the launcher:
   configurable per environment through the user-global `build-local.env`
   (`SHIFU_DIST_MIRROR`, and `KUNGFU_FNM_DIST_MIRROR` /
   `KUNGFU_UV_DIST_MIRROR` for the launcher's own tool bootstrap).
+- **Source freshness (dev machines)** — the release pin only moves when a
+  release is cut, so on machines with cargo + git the shims content-address
+  the cache slot by the last commit touching the launcher source
+  (`<version>-<src-sha>`, built out-of-tree so read-only checkouts work) and
+  rebuild whenever it moves; a dirty launcher tree rebuilds on every call. A
+  checkout therefore always runs its own launcher code, never the last
+  release. Machines without cargo keep the release-pinned path untouched.
+- **Self-update** — `shifu self-update` refreshes an installed binary in
+  place (answered before delegation, so it acts on the copy you invoked):
+  inside a checkout it rebuilds from source (or fetches the pinned release
+  when cargo is absent), outside one it requires an explicit
+  `--version <v>`; release downloads are verified against the release's
+  `SHA256SUMS` and the swap is a rename dance that restores the old binary
+  on failure. Shim-cache slots refuse it — the shim owns their lifecycle.
 - **Fallback** — when no release asset is reachable, the shims build from
   source if cargo is present, then fall back to the legacy in-script path, so
   no machine class is stranded.
@@ -124,6 +149,20 @@ this discipline exists to prevent.
 
 ## Worked example: the launcher
 
+> 功夫练不下去的时候，你去找的那个人就是师傅。
+> *When your kungfu fails you, the one you turn to is your shifu.*
+
+The name states the role: shifu appears wherever kungfu cannot help itself —
+before the toolchain exists, when the environment is broken, when the
+repository itself still needs fetching. A self-hosting system (see
+[ADR-0009](../framework/core/docs/adr/ADR-0009-load-bearing-self-bootstrap.md))
+needs exactly one such fixed point outside its own loop, and that fixed point
+must itself be beyond needing help — which is why the launcher's
+zero-dependency, std-only, weld-as-little-as-possible discipline
+([ADR-0044](../framework/core/docs/adr/ADR-0044-shifu-delegation-protocol.md))
+is constitutive, not aesthetic: the helper of last resort cannot afford to
+need one.
+
 `crates/shifu` replaces the platform-split entrypoint logic (sh + cmd +
 per-platform special-casing) with one binary that:
 
@@ -150,7 +189,12 @@ per-platform special-casing) with one binary that:
   (plus the checkout's current branch for the repo role);
 - `shifu clone [path]` fetches the repository itself and `shifu doctor`
   checks the development environment (install pointers for the heavyweight
-  prerequisites it deliberately does not manage). Together with delegation
+  prerequisites it deliberately does not manage); `shifu promote` installs
+  the freshest built dev product from the user-global build stash (successful
+  desktop builds register themselves there, so a cleaned worktree cannot
+  strand its build) and `shifu builds` lists that stash — the jurisdiction
+  siblings of clone: clone acquires the repository, promote acquires the
+  product. Together with delegation
   this makes an installed shifu a self-sufficient bootstrap core: install
   once, clone anywhere, and every capability that can evolve lives in the
   repo — the binary never needs re-installing to pick up new launcher
@@ -166,3 +210,31 @@ It scores three yeses: it *is* the process boundary in front of everything
 else; it needs to exist before node/python are provisioned, which only a
 self-contained binary can do; and it is a thin dispatcher that changes rarely
 because build logic stays declarative in the repo.
+
+### The role as a library: shifu-core
+
+The launcher is only the first bearer of the shifu role — the product's Rust
+trunk is the queued second
+([ADR-0046](../framework/core/docs/adr/ADR-0046-rust-host-trunk-and-assembled-runtime.md):
+stage 1 shares the bootstrap leg for its lazy pinned-uv fetch, stage 3
+consumes the rest). So the parts of the role every bearer needs live in
+`crates/shifu-core`, an unpublished workspace library, and each new appearance
+of the role adds a probe or a tool spec instead of re-implementing downloads
+and checklists. Two legs, one discipline each:
+
+- **bootstrap** — acquire pinned tools. `FetchSpec`/`fetch` is the engine
+  (exact version + URL, optional pinned SHA-256 verified before the cache is
+  touched, user-global cache placement); `Tool` is the launcher-flavored front
+  end (repo pin files, env overrides, mirror envs, release asset naming). A
+  failed fetch is a named error carrying the exact URL, the expected checksum,
+  and the mirror override to set — self-diagnosing by construction.
+- **probe** — declarative environment checks (`label / probe / required /
+  hint / repair_cmd`), findings rendered by a shared reporter. Reports, never
+  repairs: a probe that knows the exact fix names it in `repair_cmd`, printed
+  next to the failure; executing it stays a human decision. The dev doctor is
+  the first consumer, including the seed probes with which the bootstrap leg
+  diagnoses itself (cache health, mirror reachability, pin-vs-cache bite).
+
+Distribution-wise the library is deliberately invisible: never published,
+never tagged, no shim, version not lerna-synced — the launcher's release pin
+surface stays exactly one crate wide.

@@ -1,6 +1,8 @@
 # ADR-0002: yijinjing schema serialization — a FlatBuffers runtime schema over the zero-copy POD layout
 
-- Status: accepted (implemented; merged into `dev/v4/v4.0`)
+- Status: superseded in schema scope by
+  [ADR-0047](ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md); the
+  `nanomsg` to `nng` transport migration remains historical fact
 - Date: 2026-06-24
 - Category: (b) improvement — data-axis modernization
 - Subsystem: `kungfu/yijinjing/schema` + `yijinjing` journal / cross-process wire
@@ -9,6 +11,18 @@
   independent of [ADR-0001](ADR-0001-yijinjing-publish-barrier.md) (publish
   barrier — that ADR changed only the publish-synchronization semantics, not the
   schema or on-disk format).
+
+## Supersession note
+
+This record preserves the decision and implementation claim made in June 2026.
+It is no longer the current schema-authority model. The live kernel remained a
+Hana-described fixed-layout POD closed set, while FlatBuffers became the
+open/domain substrate. ADR-0047 makes that split explicit and rejects the idea
+that one FlatBuffers schema owns or overlays the POD layout.
+
+Read the sections below as historical context. Do not use them to introduce a
+FlatBuffers dependency into `libyijinjing`, generate a parallel `.fbs` schema
+for a Hana kernel record, or route a closed POD projection through `.bfbs`.
 
 ## Decision
 

@@ -1353,6 +1353,12 @@ def test_atlas_import_persists_generic_source_manifest(tmp_path):
 
 def test_storage_fsck_reports_degraded_status_for_recorded_payload_states(tmp_path):
     runtime_dir = tmp_path / "runtime"
+    # The repairable scenario: the manifest honestly records the body missing,
+    # while a copy still exists in the local store (lost and found). Producers
+    # never serialize non-present bodies, so the material is seeded explicitly.
+    lost_raw = payloads.canonical_json_bytes({"body": "lost"})
+    lost_hash = payloads.payload_hash(lost_raw)
+    storage_service.write_payload_bytes(runtime_dir, lost_hash, lost_raw)
     storage_service.write_synthetic_source(
         runtime_dir,
         source_id="degraded-synth",
@@ -1371,7 +1377,8 @@ def test_storage_fsck_reports_degraded_status_for_recorded_payload_states(tmp_pa
                 "source_id": "note-missing",
                 "source_path": "notes/m.json",
                 "source_time": "2026-07-08T00:00:00Z",
-                "payload": {"body": "lost"},
+                "payload_hash": lost_hash,
+                "byte_len": len(lost_raw),
                 "payload_state": "missing",
             },
             {
@@ -1379,7 +1386,6 @@ def test_storage_fsck_reports_degraded_status_for_recorded_payload_states(tmp_pa
                 "source_id": "note-redacted",
                 "source_path": "notes/r.json",
                 "source_time": "2026-07-09T00:00:00Z",
-                "payload": {"body": "sensitive"},
                 "payload_state": "redacted",
             },
         ],
@@ -1465,6 +1471,177 @@ def test_storage_fsck_reports_degraded_status_for_recorded_payload_states(tmp_pa
     healthy = storage_service.fsck(healthy_dir, source_id="healthy-synth")
     assert healthy["ok"]
     assert healthy["status"] == "ok"
+
+
+def test_payload_state_producer_export_import_round_trip(tmp_path):
+    # Producer contract (ADR-0018 security boundary over the ADR-0037 record
+    # face): redacted/absent bodies are never stored or read, missing exports
+    # its honest gap, and all four states survive a cross-store round trip
+    # with the sync root intact.
+    runtime_a = tmp_path / "runtime-a"
+    redacted_hash = payloads.payload_hash(b"sensitive-material-never-stored")
+    accepted = storage_service.write_synthetic_source(
+        runtime_a,
+        source_id="four-state",
+        manifest_id="imp-four-state",
+        source_head="head-1",
+        records=[
+            {
+                "kind": "note",
+                "source_id": "note-present",
+                "source_path": "notes/p.json",
+                "source_time": "2026-07-07T00:00:00Z",
+                "payload": {"body": "public"},
+            },
+            {
+                "kind": "note",
+                "source_id": "note-redacted",
+                "source_path": "notes/r.json",
+                "source_time": "2026-07-08T00:00:00Z",
+                "payload_hash": redacted_hash,
+                "byte_len": 32,
+                "payload_state": "redacted",
+            },
+            {
+                "kind": "note",
+                "source_id": "note-absent",
+                "source_path": "notes/a.json",
+                "source_time": "2026-07-09T00:00:00Z",
+                "payload_state": "absent",
+            },
+            {
+                "kind": "note",
+                "source_id": "note-missing",
+                "source_path": "notes/m.json",
+                "source_time": "2026-07-10T00:00:00Z",
+                "payload_state": "missing",
+            },
+        ],
+    )
+    states = {
+        entry["source_id"]: entry["payload_state"] for entry in accepted["entries"]
+    }
+    assert states == {
+        "note-present": "present",
+        "note-redacted": "redacted",
+        "note-absent": "absent",
+        "note-missing": "missing",
+    }
+    by_id = {entry["source_id"]: entry for entry in accepted["entries"]}
+    # redacted may carry the pre-withholding identity; absent carries none
+    assert by_id["note-redacted"]["payload_hash"] == redacted_hash
+    assert by_id["note-absent"]["payload_hash"] == ""
+    # no body ever lands in the store for withheld states
+    assert not storage_service.payload_path(runtime_a, redacted_hash).exists()
+
+    report = storage_service.fsck(runtime_a, source_id="four-state")
+    assert report["ok"]
+    assert report["status"] == "degraded"  # only the missing body degrades
+    withheld = {
+        warning["subject"]: warning["intentional"]
+        for warning in report["warnings"]
+        if warning["code"] == "payload_not_present"
+    }
+    assert withheld == {
+        "note:note-redacted": True,
+        "note:note-absent": True,
+        "note:note-missing": False,
+    }
+
+    bundle = storage_service.build_export_bundle(runtime_a, source_id="four-state")
+    exported = {row["source_id"]: row for row in bundle["records"]}
+    assert exported["note-present"]["payload"] == {"body": "public"}
+    assert exported["note-redacted"]["payload"] is None
+    assert exported["note-absent"]["payload"] is None
+    assert exported["note-missing"]["payload"] is None
+    assert exported["note-redacted"]["payload_state"] == "redacted"
+
+    runtime_b = tmp_path / "runtime-b"
+    imported = storage_service.import_bundle(runtime_b, bundle)
+    assert imported["ok"]
+    manifest_a = storage_service.load_latest_manifest(runtime_a, "four-state")
+    manifest_b = storage_service.load_latest_manifest(runtime_b, "four-state")
+    assert manifest_a["sync_root"] == manifest_b["sync_root"]
+    report_b = storage_service.fsck(runtime_b, source_id="four-state")
+    assert report_b["ok"]
+    assert report_b["status"] == "degraded"
+
+    verify = storage_service.verify_local_sync(runtime_b, source_id="four-state")
+    assert verify["ok"]
+    assert verify["sync_roots_match"]
+
+
+def test_atlas_producer_enrich_and_write_honor_withheld_states(tmp_path):
+    store = tmp_path / "store"
+    redacted_hash = payloads.payload_hash(b"secret-source-body")
+    records = [
+        {
+            "kind": "goal",
+            "source_id": "goal-open",
+            "source_path": "goals/open.json",
+            "source_time": "2026-07-09T00:00:00Z",
+            "schema_version": 1,
+            "payload": {"goal_id": "goal-open", "title": "open"},
+        },
+        {
+            "kind": "goal",
+            "source_id": "goal-secret",
+            "source_path": "goals/secret.json",
+            "source_time": "2026-07-09T01:00:00Z",
+            "schema_version": 1,
+            "payload_state": payloads.PAYLOAD_STATE_REDACTED,
+            "payload_hash": redacted_hash,
+            "byte_len": 18,
+        },
+        {
+            "kind": "marker",
+            "source_id": "marker-gone",
+            "source_path": "markers/gone.json",
+            "source_time": "2026-07-09T02:00:00Z",
+            "schema_version": 1,
+            "payload_state": payloads.PAYLOAD_STATE_ABSENT,
+        },
+    ]
+
+    enriched = payloads.enrich_source_records(records)
+    by_id = {row["source_id"]: row for row in enriched}
+    assert "payload" not in by_id["goal-secret"]
+    assert "payload" not in by_id["marker-gone"]
+    assert by_id["goal-secret"]["payload_hash"] == redacted_hash
+    assert by_id["marker-gone"]["payload_hash"] == ""
+    assert by_id["marker-gone"]["byte_len"] == 0
+
+    manifest = payloads.write_import_payloads(
+        store,
+        import_id="imp-withheld",
+        repo_root=str(tmp_path),
+        repo_head="head-1",
+        source_records=enriched,
+        counts={},
+    )
+    states = {
+        entry["source_id"]: entry["payload_state"] for entry in manifest["entries"]
+    }
+    assert states["goal-secret"] == "redacted"
+    assert states["marker-gone"] == "absent"
+    # the withheld body never lands in the adapter store either
+    assert not payloads.payload_path(store, redacted_hash).exists()
+
+    report = payloads.fsck_import(store)
+    assert report["ok"]
+    warned = {
+        (warning["kind"], warning["source_id"])
+        for warning in report["warnings"]
+        if warning["code"] == "payload_not_present"
+    }
+    assert ("goal", "goal-secret") in warned
+    assert ("marker", "marker-gone") in warned
+
+    exported = payloads.export_records(store)
+    rows = {row["source_id"]: row for row in exported}
+    assert rows["goal-open"]["payload"] == {"goal_id": "goal-open", "title": "open"}
+    assert rows["goal-secret"]["payload"] is None
+    assert rows["marker-gone"]["payload"] is None
 
 
 def test_source_registry_records_round_trip_through_journal(tmp_path):

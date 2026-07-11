@@ -11,6 +11,11 @@ on:
   # Manual runs validate lifecycle changes (e.g. the ./shifu entrypoint
   # switch) on the full platform matrix without waiting for an alpha PR.
   workflow_dispatch:
+    inputs:
+      buildchain-ref:
+        description: "Temporary Buildchain train or exact SHA for trusted manual validation"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -20,9 +25,10 @@ permissions:
 
 jobs:
   build:
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v2
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v2-alpha
     secrets: inherit
     with:
+      buildchain-ref: ${{ inputs.buildchain-ref || '' }}
       runner-preset: kungfu-v4-self-hosted
       artifact-name: kungfu
       artifact-paths: |

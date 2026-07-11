@@ -994,6 +994,14 @@ nlohmann::json manifest_catalog_store::fsck(const std::string &source_id, conten
              {"intentional", intentional}});
         continue;
       }
+      if (digest.empty()) {
+        errors.push_back({{"code", "payload_missing"},
+                          {"source_id", current_source_id},
+                          {"kind", fixed_string(entry_record->kind)},
+                          {"entry_source_id", fixed_string(entry_record->entry_source_id)},
+                          {"payload_hash", digest}});
+        continue;
+      }
       const auto verified = store.verify("payloads", make_content_hash(digest));
       if (!verified.ok()) {
         errors.push_back(

@@ -39,9 +39,12 @@ mod doctor;
 mod envfile;
 #[cfg(windows)]
 mod msvc;
-mod style;
+mod promote;
+mod self_update;
 mod tools;
 mod util;
+
+use shifu_core::style;
 
 /// Rich subcommands handled by the L2 node implementation (shifu.mjs),
 /// mirroring the sh / cmd entrypoints. Everything else goes to corepack pnpm.
@@ -51,6 +54,12 @@ fn print_usage() {
     println!(
         "\u{1f94b} {}",
         style::bold("shifu - the kungfu development/build launcher (pinned-toolchain entrypoint)")
+    );
+    println!(
+        "   {}",
+        style::dim(
+            "\u{201c}When your kungfu fails you, the one you turn to is your shifu.\u{201d}"
+        )
     );
     println!();
     println!("{}", style::cyan("Usage:"));
@@ -77,6 +86,13 @@ fn print_usage() {
     );
     println!("  shifu --version | -v | -V  launcher version and build identity");
     println!("  shifu self-version         this binary's version, machine readable");
+    println!("  shifu self-update          refresh this installed binary in place");
+    println!(
+        "                             {}",
+        style::dim("(from checkout source, or --version <v> for a release)")
+    );
+    println!("  shifu promote [--launch]   install the freshest built dev kungfu");
+    println!("  shifu builds               list registered dev builds");
     println!("  shifu help                 pnpm's own help (tasks are pnpm scripts)");
     println!();
     println!(
@@ -114,21 +130,44 @@ fn main() {
 
     let is_version = matches!(first, Some("--version") | Some("-v") | Some("-V"));
     let is_doctor = first == Some("doctor");
+    let is_self_update = first == Some("self-update");
+    // Product-stash verbs work outside a checkout too: the stash is
+    // user-global precisely so a cleaned worktree cannot strand its build.
+    let is_promote = first == Some("promote");
+    let is_builds = first == Some("builds");
+    let lenient = is_version || is_doctor || is_self_update || is_promote || is_builds;
 
-    let root = find_repo_root(is_version || is_doctor);
+    let root = find_repo_root(lenient);
 
     if is_version {
         println!("{}", version_line(root.as_deref()));
     }
+    // User-global config loads unconditionally (rootless verbs read it too);
+    // the repo-root override only exists inside a checkout.
+    envfile::load(root.as_deref());
     if let Some(root) = root.as_deref() {
-        envfile::load(root);
+        // self-update answers for THIS binary (never delegated): delegation
+        // would replace the process with the checkout's launcher, while the
+        // update must act on the binary the user invoked.
+        if is_self_update {
+            self_update::run(Some(root), &args[1..]);
+        }
         maybe_delegate_to_repo_entrypoint(root, &args);
     }
     if is_version {
         exit(0);
     }
+    if is_self_update {
+        self_update::run(None, &args[1..]);
+    }
     if is_doctor {
         doctor::run(root.as_deref());
+    }
+    if is_promote {
+        promote::run_promote(&args[1..]);
+    }
+    if is_builds {
+        promote::run_builds();
     }
     let root = root.expect("strict repo discovery cannot return None");
 
@@ -207,7 +246,7 @@ fn version_line(root: Option<&Path>) -> String {
         if let (Ok(exe), Some(root)) = (env::current_exe(), root) {
             let exe = exe.canonicalize().unwrap_or(exe);
             let root = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
-            is_repo = exe.starts_with(&root);
+            is_repo = exe.starts_with(root);
         }
     }
     let role = if is_repo {

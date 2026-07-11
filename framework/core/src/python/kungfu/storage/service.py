@@ -789,10 +789,20 @@ def write_synthetic_source(
 ) -> dict[str, Any]:
     entries = []
     for index, record in enumerate(records):
-        payload = record.get("payload", record)
-        raw = canonical_json_bytes(payload)
-        digest = payload_hash(raw)
-        write_payload_bytes(runtime_dir, digest, raw)
+        state = str(record.get("payload_state") or PAYLOAD_STATE_PRESENT)
+        if state == PAYLOAD_STATE_PRESENT:
+            payload = record.get("payload", record)
+            raw = canonical_json_bytes(payload)
+            digest = payload_hash(raw)
+            write_payload_bytes(runtime_dir, digest, raw)
+            byte_len = len(raw)
+        else:
+            # Honest non-present states never serialize a body. A redacted
+            # entry may carry the hash/length computed before withholding;
+            # an absent entry carries neither; a recorded-missing entry keeps
+            # whatever identity is known for the lost body.
+            digest = str(record.get("payload_hash") or "")
+            byte_len = int(record.get("byte_len") or 0)
         entries.append(
             {
                 "kind": str(record.get("kind") or "record"),
@@ -804,10 +814,8 @@ def write_synthetic_source(
                 "schema_version": int(record.get("schema_version") or 1),
                 "content_type": CONTENT_TYPE_JSON,
                 "payload_hash": digest,
-                "byte_len": len(raw),
-                "payload_state": str(
-                    record.get("payload_state") or PAYLOAD_STATE_PRESENT
-                ),
+                "byte_len": byte_len,
+                "payload_state": state,
             }
         )
     return accept_manifest(

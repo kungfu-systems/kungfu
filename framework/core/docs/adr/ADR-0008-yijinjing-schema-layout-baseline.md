@@ -5,6 +5,7 @@
 - Category: (b) mechanism / governance — data-format baseline
 - Subsystem: yijinjing schema + yijinjing journal
 - Related: [ADR-0002](ADR-0002-yijinjing-schema-runtime-layout.md),
+  [ADR-0047](ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md),
   [ADR-0001](ADR-0001-yijinjing-publish-barrier.md),
   [`docs/version-release-design.md`](../../../../docs/version-release-design.md),
   [`docs/versioning.md`](../../../../docs/versioning.md)
@@ -14,10 +15,12 @@
 Kungfu v4 starts from a greenfield schema baseline, then treats that baseline as
 the compatibility root for v4 and later.
 
-The v4 runtime fact schema lives under `kungfu/yijinjing/schema`. That schema
-layout is the cross-language and on-journal binary contract for closed runtime
-facts. C++, Python, and Node bind to that same core contract; they must not
-define separate schema semantics in their binding layers.
+The v4 closed runtime fact schema lives under `kungfu/yijinjing/schema`. Its
+Hana-described POD layout is the cross-language and on-journal binary contract
+for closed runtime facts. C++, Python, and Node bind to that same core contract;
+they must not define separate schema semantics in their binding layers. Open and
+domain facts are governed separately by their `.fbs` owner under ADR-0047; they
+do not overlay or redefine the closed POD layout.
 
 Pre-v4 journals, trading-era public APIs, removed product-domain tables, and old
 package names are not compatibility targets. If a user needs old data later, the
@@ -52,7 +55,8 @@ language-neutral schema membrane. The load-bearing contract is:
 
 - journal frames are published by yijinjing;
 - closed runtime fact layouts are declared in `kungfu/yijinjing/schema`;
-- business meaning travels through the v4 action envelope where appropriate;
+- open business meaning travels through the `.fbs`-owned v4 action envelope
+  where appropriate;
 - Python and Node bindings expose the C++ core, not independent schemas.
 
 This is simpler, more honest, and easier to verify than pretending the v4 line

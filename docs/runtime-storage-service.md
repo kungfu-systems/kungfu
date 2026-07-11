@@ -122,7 +122,7 @@ the same C++ service and must not manage RocksDB handles or provider-specific
 retry policy themselves.
 
 The C++ contract surface under `<kungfu/yijinjing/storage...>` is the Hana-core
-kernel record vocabulary (ADR-0037) plus the content-addressed body store:
+kernel record vocabulary (ADR-0037/0047) plus the content-addressed body store:
 
 | Header | Contract role |
 | --- | --- |
@@ -489,8 +489,9 @@ the workspace root as:
 `kungfu storage layout --json` is the v1 inspection surface for this resolved
 layout. It enters through the C++ `kungfu.runtime.storage-service/v1` operation
 `layout`, so Python, Node, CLI, and GUI code can inspect the same paths without
-redefining path rules. The returned JSON is an inspection contract, not a fact
-source: Episode authority remains the yijinjing manifest journal, source
+redefining path rules. The returned JSON is a CLI/adapter inspection projection,
+not a fact source or the semantic C++ service contract: Episode authority
+remains the yijinjing manifest journal, source
 authority remains accepted manifests plus content-addressed payloads, and
 SQLite/RocksDB remain provider/projection implementation details behind the
 storage service API.
@@ -509,9 +510,12 @@ projection drift (degraded, never failed — a rebuild restores the view).
 through `libkungfu` (`kungfu.runtime.storage-service/v1` operation `query`)
 instead of letting Python, Node, CLI, or GUI code read SQLite directly. The
 query surface supports `sources`, `manifests`, and `entries`, source filtering,
-entry-kind filtering, ISO time ranges, and a bounded limit. It returns JSON
-rows folded by the C++ service from the journals — the authority — while the
-SQLite files serve external SQL tooling.
+entry-kind filtering, ISO time ranges, and a bounded limit. The current
+pre-release service returns JSON rows folded from the authoritative journals.
+ADR-0047 requires the semantic service and Hana/`sqlite_orm` query path to
+return typed rows/views internally, with JSON produced only by the CLI/binding
+edge adapter. The SQLite files remain rebuildable projections and may serve
+external SQL tooling; they never become authority.
 
 The user-facing generic commands are:
 
@@ -645,12 +649,54 @@ Storage service operations must preserve these boundaries:
   explicit import boundary;
 - projections are disposable, payloads referenced by retained events are not.
 
+### Payload State Encoding
+
+The four-state payload encoding is decided and producer-facing (it closed the
+former open decision):
+
+- The state lives on the kernel manifest entry record
+  (`ManifestEntryRecorded.payload_state`, POD enum `PayloadState`:
+  `present=1, redacted=2, absent=3, missing=4`) and participates in the
+  sync-root entry commitment, so a state can never be rewritten without
+  changing the manifest's proof.
+- `present`: the body is stored content-addressed; `payload_hash` and
+  `byte_len` are required and verified by fsck.
+- `redacted`: a sensitive body deliberately withheld at the adapter edge
+  (ADR-0018 security boundary). The body is never serialized or stored — no
+  raw secret can reach the payload store, manifest, or journal. The entry may
+  carry the hash/length the producer computed before withholding, or leave
+  them empty. fsck reports `intentional=true` and does not degrade.
+- `absent`: the source confirmed the body does not exist. `payload_hash` is
+  empty and `byte_len` is zero. fsck reports `intentional=true` and does not
+  degrade.
+- `missing`: the body was expected but is lost. fsck degrades the verdict.
+- Export carries every entry with its recorded state. `redacted` and `absent`
+  bodies are never read; a `missing` body is attempted so a lost-and-found
+  copy becomes repair material, otherwise the honest gap is exported as a
+  body-less record. Import accepts the entries verbatim, so the states and
+  the sync root survive cross-store round trips.
+- Producers enter through `enrich_source_records` / `write_import_payloads`
+  (Python adapter edge) or the acceptance input document directly: a record
+  marked `payload_state=redacted|absent` is never serialized and never
+  written to the store.
+
 ## Open Decisions
 
-- First payload backend: RocksDB, content-addressed files, SQLite blob table, or
-  a hybrid.
-- Exact encoding for present/redacted/absent/missing payload state.
-- Exact source registry schema.
+Decided since this list was first drafted (kept here so the history of the
+question is visible):
+
+- ~~First payload backend~~ — decided: the content-addressed file store is the
+  default provider and RocksDB is the optional engine-backed provider, both
+  behind the same immutable content-store contract (ADR-0040).
+- ~~Exact source registry schema~~ — decided: the source registry is the
+  Hana-core kernel journal family `SourceRegistered` / `SourceHeadUpdated` /
+  `AcceptedRangeRecorded` (ADR-0037), folded into the current view with a
+  rebuildable SQLite projection.
+- ~~Exact payload state encoding~~ — decided: see "Payload State Encoding"
+  above.
+
+Still open:
+
 - How channel requests map to range/session/hash inventory across machines.
 - Whether `compact` ships as one command first, or later after `checkpoint`,
   `gc`, and `rebuild-index` are boring.

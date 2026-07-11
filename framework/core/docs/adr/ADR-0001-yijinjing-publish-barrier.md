@@ -4,7 +4,9 @@
 - Date: 2026-06-23
 - Category: (b) improvement + latent bug (concurrency correctness)
 - Subsystem: yijinjing journal — single-writer / multi-reader, mmap `MAP_SHARED` cross-process frame bus
-- Related: independent of ADR-0002 (yijinjing schema hana→FlatBuffers); this change touches only the publish-synchronization semantics, not the schema or on-disk format
+- Related: independent of schema ownership (historical ADR-0002, current
+  ADR-0047); this change touches only publish synchronization, not schema or
+  on-disk layout
 
 ## Decision
 

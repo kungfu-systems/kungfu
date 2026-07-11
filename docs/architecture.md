@@ -32,10 +32,11 @@ friction and maintenance burden*, not chase convergence for its own sake.
 ## The polyglot membrane
 
 At the bottom sits one C++ core, `libkungfu` above the `yijinjing` journal and
-runtime schema. C++, Python, and Node do not each reimplement it — they are
-thin bindings over the *same in-process* core, reading the *same* journal bytes
-with no serialization on the hot path. That shared, zero-copy, cross-language
-surface is the membrane:
+schema authority layer. C++, Python, and Node do not each reimplement it — they
+are thin bindings over the *same in-process* core. Closed kernel records read
+the *same* POD journal bytes with no serialization on the hot path. Open/domain
+payloads remain declared cross-language FlatBuffers rather than becoming
+language-local objects. That shared membrane is:
 
 ```
    C++ app / kfx        Python  (py_kungfu)      Node  (kungfu_node.node)
@@ -53,11 +54,29 @@ surface is the membrane:
                             └────────────────┘
 ```
 
-The layout *is* the wire format (see
+For closed kernel facts, the POD layout *is* the wire format (see
 [ADR-0008](../framework/core/docs/adr/ADR-0008-yijinjing-schema-layout-baseline.md)
-and [`contracts.md`](contracts.md)); the binding boundaries are detailed in
-[`adapters.md`](adapters.md). Everything below is how this core is layered
-into a platform.
+and [`contracts.md`](contracts.md)). Open/domain facts use `.fbs` as their
+schema owner. [ADR-0047](../framework/core/docs/adr/ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md)
+defines the exclusive ownership rule and the derived view, opaque body, JSON,
+and SQLite boundaries; the binding boundaries are detailed in
+[`adapters.md`](adapters.md). Everything below is how this core is layered into
+a platform.
+
+### Schema authority: two substrates, one owner per fact
+
+Persisted structured facts belong to exactly one substrate:
+
+- **Hana closed-set POD** — fixed-layout, mmap-safe kernel facts with stable
+  `carrier_type` identities and compile-time Hana-to-`sqlite_orm` projections.
+- **FlatBuffers open/domain schemas** — KFX and evolving cross-language facts
+  owned by `.fbs`, with `.bfbs` reflection projections behind `kungfu::view`.
+
+Typed service results and fold views are derived API objects, not a third
+persistence schema. Large files and model/source bodies are opaque
+content-addressed bytes described by typed metadata. JSON is an adapter,
+CLI/export, diagnostic, or rendering boundary; it is not the core service or
+journal contract.
 
 ## Layers
 

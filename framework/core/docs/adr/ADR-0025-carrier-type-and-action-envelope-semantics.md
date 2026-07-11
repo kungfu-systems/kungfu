@@ -2,7 +2,20 @@
 
 ## Status
 
-accepted
+accepted; wire representation amended by
+[ADR-0047](ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md)
+
+## Representation amendment
+
+The generic carrier and semantic vocabulary in this ADR stand. The JSON object
+shown below is now the **edge JSON rendering** of the logical envelope, not its
+authoritative on-journal schema.
+
+ADR-0047 assigns the action envelope to the FlatBuffers open layer. Before the
+stable v4 baseline, the current JSON/base64 implementation must migrate to a
+declared `ActionEnvelope.fbs`; the nested payload is carried as bytes with an
+encoding and schema reference, without base64 on the binary journal path.
+Current pre-release JSON-envelope journals remain non-compatibility targets.
 
 ## Context
 
@@ -29,7 +42,7 @@ Rename the journal header field and public low-level APIs from `msg_type` to
 `carrier_type`.
 
 Use `carrier_type=1000` as the generic Kungfu action carrier. Business facts
-must put semantics in `kungfu.action-envelope/v1`:
+must put semantics in `kungfu.action-envelope/v1`. Its edge JSON rendering is:
 
 ```json
 {

@@ -1,19 +1,20 @@
 ---
-status: draft
+status: active
 period: 2026-07-10
 theme: kfx-execution-profiles
 doc_type: architecture-decision
 source_level: local-files + official-upstream
-confidence: medium
+confidence: high
 sensitivity: public
 evidence_grade: B
-review_state: unreviewed
+review_state: user-reviewed
 last_reviewed: 2026-07-10
 ---
 
 # ADR-0045: KFX execution profiles — Rust-primary native, WebAssembly components, managed runtimes, and subprocesses
 
-- Status: proposed
+- Status: accepted (design ratified 2026-07-10; implementation remains gated
+  by the native ABI and WASM spikes below)
 - Date: 2026-07-10
 - Category: extension contract / runtime placement / language policy
 - Subsystem: `framework/kfx`, `framework/api`, the libkungfu polyglot membrane,
@@ -22,7 +23,9 @@ last_reviewed: 2026-07-10
   [ADR-0013](ADR-0013-cli-runtime-extension-isolation-trusted-channel.md),
   [ADR-0014](ADR-0014-extension-execution-contract-uniform-capability-surface.md),
   [ADR-0017](ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md),
-  [ADR-0022](ADR-0022-core-action-recording-surface.md), and
+  [ADR-0022](ADR-0022-core-action-recording-surface.md),
+  [ADR-0046](ADR-0046-rust-host-trunk-and-assembled-runtime.md) (the host
+  trunk is the prospective second consumer of the one C ABI decided here), and
   [`docs/rust-adoption.md`](../../../../docs/rust-adoption.md)
 
 ## Question
@@ -123,7 +126,7 @@ future component API or a footprint/startup spike clearly wins. Absence from a
 reviewed public API is not treated as proof that Wasmer can never support the
 Component Model.
 
-## Proposed decision
+## Decision
 
 ### 1. Define four execution profiles, not four trust tiers
 
@@ -149,6 +152,11 @@ WASI; it is its own pure-component form.
 1. **One C ABI is the source of truth.** The C++ core owns a versioned table of
    opaque handles, fixed-width scalar/POD types, lifecycle functions, error
    codes, and capability entrypoints. No C++ or Rust ABI crosses the boundary.
+   This ABI has a second consumer already queued: the host trunk
+   ([ADR-0046](ADR-0046-rust-host-trunk-and-assembled-runtime.md)) plans to
+   route its embedding seam through the same membrane rather than a parallel
+   exported-C++ contract — one more reason no single consumer's convenience
+   may leak language-specific types across it.
 2. **Two thin language layers wrap the same ABI.** An official `kungfu-kfx`
    crate contains the unsafe calls and exposes a safe Rust API. A C++ header
    provides RAII/convenience over the same C functions. Neither layer owns
@@ -245,17 +253,22 @@ contract; the profile selects the transport and data representation beneath it.
 5. **Authoring UX:** scaffold and documentation may recommend Rust only after
    the ABI/conformance suite is green; C++ remains available.
 
-## Decision points for the maintainer
+## Ratification
 
-1. Accept “execution profile” as a separate axis from facet and trust tier?
-2. Accept Rust as the preferred native authoring UX after the five gates, while
-   keeping C++ supported and the core in C++?
-3. Allow the bounded `libwasm` Rust-host exception, or require Wasmtime through
-   its C API despite current Component Model gaps?
-4. Accept Wasmtime as the provisional engine and Wasmer as a measured fallback?
-5. Run the native ABI spike first (historical demand) or the WASM spike first
-   (safer third-party ecosystem)? This proposal recommends the native ABI first
-   because both profiles need a clear host capability membrane.
+The maintainer ratified all five decision points on 2026-07-10:
+
+1. `execution profile` is a separate axis from facet and trust tier;
+2. Rust becomes the preferred native authoring UX only after the five gates,
+   while C++ remains supported and the core remains C++;
+3. the bounded `libwasm` Rust-host exception is allowed behind a small C ABI,
+   subject to a spike proving that the maintenance boundary stays bounded;
+4. Wasmtime is the provisional primary engine and Wasmer remains a measured
+   fallback; and
+5. the native ABI spike runs before the WASM spike, with both profiles sharing
+   one explicit host capability membrane.
+
+Ratification does not authorize implementation, change the current KFX
+contract, or claim that any spike gate has passed.
 
 ## Kill or archive conditions
 

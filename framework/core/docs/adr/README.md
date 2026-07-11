@@ -12,13 +12,15 @@ A record's **Status** says where it stands:
 - **proposed** — an open design question recorded for traceability; the decision
   is not yet made. These are deliberately written down before they are resolved
   so the question, and its current progress, are visible rather than implicit.
+- **superseded** — retained as historical decision evidence, but replaced for
+  current design by the ADR it names.
 
 ## Index
 
 | ADR | Status | Title |
 |---|---|---|
 | [0001](ADR-0001-yijinjing-publish-barrier.md) | accepted | yijinjing journal publish protocol → `atomic_ref` release/acquire |
-| [0002](ADR-0002-yijinjing-schema-runtime-layout.md) | accepted | yijinjing schema serialization → a FlatBuffers runtime schema over the zero-copy POD layout |
+| [0002](ADR-0002-yijinjing-schema-runtime-layout.md) | superseded | historical FlatBuffers-over-POD runtime-schema decision; schema scope replaced by ADR-0047 |
 | [0003](ADR-0003-control-axis-python-coroutine-integration.md) | proposed | control axis — the Python coroutine integration layer (continue / redesign / drop) |
 | [0004](ADR-0004-control-axis-node-watcher-snapshot-model.md) | proposed | control axis — the Node watcher snapshot model |
 | [0005](ADR-0005-control-event-axis-modernization-assessment.md) | proposed | control / event axis modernization — a meta-assessment |
@@ -60,15 +62,19 @@ A record's **Status** says where it stands:
 | [0042](ADR-0042-episode-atomic-safety-and-qualification.md) | proposed | Episode is the atomic safety and fault-containment unit, qualified by evidence under load |
 | [0043](ADR-0043-episode-identity-sealed-content-root.md) | proposed | Episode identity is two layers — a local coordinate plus a sealed content root committed in the manifest |
 | [0044](ADR-0044-shifu-delegation-protocol.md) | accepted | The shifu delegation protocol — what installed binaries bake in forever |
-| [0045](ADR-0045-kfx-execution-profiles-native-rust-wasm.md) | proposed | KFX execution profiles — Rust-primary native, WebAssembly components, managed runtimes, and subprocesses |
+| [0045](ADR-0045-kfx-execution-profiles-native-rust-wasm.md) | accepted | KFX execution profiles — Rust-primary native, WebAssembly components, managed runtimes, and subprocesses |
+| [0046](ADR-0046-rust-host-trunk-and-assembled-runtime.md) | accepted | Rust host trunk, layered CLI, and the assembled runtime distribution |
+| [0047](ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md) | accepted; staged | authoritative structured facts have one schema owner — Hana POD or FlatBuffers |
 
 ## Reading by theme
 
 - **Data axis (the journal & type system)** — [0001](ADR-0001-yijinjing-publish-barrier.md)
-  (publish synchronization), [0002](ADR-0002-yijinjing-schema-runtime-layout.md)
-  (FlatBuffers runtime schema), [0008](ADR-0008-yijinjing-schema-layout-baseline.md)
-  (the layout as true invariant and its evolution policy). This axis is
-  schema-driven and codegen-validated.
+  (publish synchronization), [0008](ADR-0008-yijinjing-schema-layout-baseline.md)
+  (the closed POD layout as a compatibility invariant), and
+  [0047](ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md) (one schema
+  owner per structured fact: Hana POD closed set or FlatBuffers open layer).
+  [0002](ADR-0002-yijinjing-schema-runtime-layout.md) is retained as the
+  superseded historical decision that preceded this split.
 - **Control / event axis** — [0003](ADR-0003-control-axis-python-coroutine-integration.md)
   (Python coroutine integration), [0004](ADR-0004-control-axis-node-watcher-snapshot-model.md)
   (Node watcher snapshot model), with [0005](ADR-0005-control-event-axis-modernization-assessment.md)
@@ -148,12 +154,21 @@ A record's **Status** says where it stands:
   [0037](ADR-0037-storage-records-hana-core-kernel-metadata.md) (the ADR-0018
   storage-service record family — source registry, import/export manifest,
   fsck report, accepted range — are Hana-core kernel metadata like the Episode
-  manifest of ADR-0034, journal-backed and delta-append; the current JSON
-  service surface and unconsumed heap structs are retired to an edge projection,
-  and payload bodies are opaque content-addressed bytes, not `.json` text), and
+  manifest of ADR-0034, journal-backed and delta-append; JSON file authorities
+  and unconsumed heap structs are retired, the remaining JSON-shaped semantic
+  service interface is staged for typed conversion, and payload bodies are
+  opaque content-addressed bytes, not `.json` text), and
+  [0047](ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md) (the
+  system-wide schema authority rule, typed-view/opaque-body boundaries, JSON
+  edge-only policy, and exclusive Hana/FlatBuffers SQLite projection paths), and
   [0042](ADR-0042-episode-atomic-safety-and-qualification.md) (Episode atomic
   safety as evidence-bounded capability, graceful degradation, monotonic repair,
   fault containment, and qualification under scale).
+- **Host & distribution** — [0044](ADR-0044-shifu-delegation-protocol.md)
+  (what installed launcher binaries bake in forever) and
+  [0046](ADR-0046-rust-host-trunk-and-assembled-runtime.md) (the target host
+  topology: Rust trunk over satellite runtimes, the CLI layering law, and the
+  assembled exact-runtime distribution contract that retires the freezer).
 - **Cross-cutting principle** — [0009](ADR-0009-load-bearing-self-bootstrap.md)
   (load-bearing self-bootstrap), which also names the general law that
   [`docs/architecture.md` § The build dogfoods the SDK](../../../../docs/architecture.md)
