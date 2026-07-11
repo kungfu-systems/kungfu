@@ -27,6 +27,18 @@
       "lib/pkgconfig",
       "bin/python3-config",
       "bin/python3.13-config"
+    ],
+    "linux": [
+      "lib/tcl9.0",
+      "lib/tk9.0",
+      "lib/tcl9",
+      "lib/itcl4.3.5",
+      "lib/thread3.0.4",
+      "lib/libtcl9.0.so",
+      "lib/libtcl9tk9.0.so",
+      "lib/pkgconfig",
+      "bin/python3-config",
+      "bin/python3.13-config"
     ]
   }
 }

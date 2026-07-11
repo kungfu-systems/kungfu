@@ -40,12 +40,12 @@ function buildType() {
 }
 
 function freezer() {
-  // ADR-0046 stage 2 rolls out platform by platform: macOS ships the
-  // assembled runtime; Linux/Windows keep nuitka until their legs land.
+  // ADR-0046 stage 2 rolls out platform by platform: macOS and Linux ship
+  // the assembled runtime; Windows keeps nuitka until its leg lands.
   // An explicit config value still selects any leg on any platform.
   const explicit = shell.getConfigValue('freezer');
   if (explicit) return explicit;
-  return process.platform === 'darwin' ? 'assemble' : 'nuitka';
+  return process.platform === 'win32' ? 'nuitka' : 'assemble';
 }
 
 // kungfu.spec datas 引用 build/include 与 build/libs（仅 pyinstaller 路径需要）。
@@ -332,7 +332,11 @@ function pbsKey(pin) {
     );
     process.exit(1);
   }
-  return `cpython-${pin}-${osName}-${arch}-none`;
+  // The trailing segment is the key's libc field: none on macOS/Windows,
+  // gnu on Linux (the product targets glibc). Keep identical to the trunk's
+  // python_request (crates/trunk/src/envs.rs).
+  const libc = process.platform === 'linux' ? 'gnu' : 'none';
+  return `cpython-${pin}-${osName}-${arch}-${libc}`;
 }
 
 // PYTHON_PIN comes from the product pins manifest — the same single source the

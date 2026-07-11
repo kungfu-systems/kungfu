@@ -161,12 +161,21 @@ fn run_uv(uv: &Path, args: &[&str], context: &str) -> Result<(), String> {
 /// load-bearing: a bare version lets uv satisfy the request with a
 /// wrong-arch interpreter already sitting in the shared store (runnable via
 /// Rosetta on macOS), and every wheel install then fails on platform tags.
+/// The trailing segment is the key's libc field: none on macOS/Windows,
+/// gnu on Linux (the product targets glibc) — a `-none` request simply does
+/// not exist for linux and uv refuses it by name.
 fn python_request(pins: &Pins) -> String {
+    let libc = if cfg!(target_os = "linux") {
+        "gnu"
+    } else {
+        "none"
+    };
     format!(
-        "cpython-{}-{}-{}-none",
+        "cpython-{}-{}-{}-{}",
         pins.python_pin,
         env::consts::OS,
-        env::consts::ARCH
+        env::consts::ARCH,
+        libc
     )
 }
 
