@@ -20,9 +20,9 @@
 //   ./shifu verify --help
 //
 // Assertion targets (all grounded in the build scripts, not guessed):
-//   - framework/core/dist/kungfu/                     freeze artifact directory (run-freeze.js renameSync target)
+//   - framework/core/dist/kungfu/                     product core dist (run-freeze.js target; frozen or assembled form)
 //   - framework/core/dist/kungfu/kungfu[.exe]           kungfu executable (path resolved by lib/executable.js)
-//   - `kungfu --version` exits 0 and output contains the expected version   frozen Python runtime runs end to end (runtime smoke)
+//   - `kungfu --version` exits 0 and output contains the expected version   product Python runtime runs end to end (runtime smoke)
 //   - framework/gui/out/                           (--with-app) build:app electron-vite artifact
 //
 // Exit codes: all green 0; any failed assertion 1 (fail-fast prints copy-pastable troubleshooting info).
@@ -418,10 +418,10 @@ function main() {
     try {
       runPnpm('rebuild:core'); // clean + build:conan C++/wheel/native
       // Freeze before the dogfood probes: the extension build they run is
-      // `kungfu sdk kfx build`, which launches the frozen kungfu runtime — so
+      // `kungfu sdk kfx build`, which launches the product kungfu runtime — so
       // dist/kungfu must exist first. (Before the kfs→`kungfu sdk` move the
       // probe used a plain-node bin and could run pre-freeze; it can't now.)
-      runPnpm('freeze'); // nuitka → framework/core/dist/kungfu
+      runPnpm('freeze'); // platform leg (macOS assemble / others nuitka) → framework/core/dist/kungfu
       // C++ dogfood probe: compile the reference cpp kfx against the freshly
       // built libkungfu (headers + shared lib + FlatBuffers) into a native
       // module. If a core capability regresses, this build breaks here.
@@ -506,6 +506,29 @@ function main() {
         `not found ${path.relative(ROOT, kungfuBin)} (freeze first)`,
       );
       kungfuBin = null;
+    }
+    // Assembled form (ADR-0046 stage 2): when the dist carries the
+    // interpreter tree, it must be well-formed — the host marker declares
+    // the form and the tree's python3 is the real sys.executable the entry
+    // execs. A frozen dist has no python/ tree and skips this assertion.
+    const assembledTree = path.join(distDir, 'python');
+    if (fs.existsSync(assembledTree)) {
+      const required = [
+        path.join(assembledTree, 'kungfu-host.json'),
+        path.join(assembledTree, 'bin', 'python3'),
+      ];
+      const missing = required.filter((p) => !fs.existsSync(p));
+      if (!missing.length) {
+        pass(
+          'assembled runtime tree well-formed',
+          path.relative(ROOT, assembledTree),
+        );
+      } else {
+        fail(
+          'assembled runtime tree well-formed',
+          `missing ${missing.map((p) => path.relative(ROOT, p)).join(', ')}`,
+        );
+      }
     }
   } else {
     fail(

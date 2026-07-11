@@ -686,9 +686,39 @@ test(
         runtimeDir,
         { episode_id: 901 },
       );
+      const queryExamples = kungfu.runStorageServiceOperation(
+        'query_plan',
+        runtimeDir,
+        { action: 'examples' },
+      );
+      const queryDefinition = structuredClone(
+        queryExamples.examples[0].definition,
+      );
+      queryDefinition.basis.episode_id = '901';
+      queryDefinition.basis.cut = { kind: 'head' };
+      queryDefinition.evidence = 'proof';
+      const factQuery = kungfu.runStorageServiceOperation(
+        'fact_query',
+        runtimeDir,
+        {
+          definition: queryDefinition,
+        },
+      );
+      const queryPlan = kungfu.runStorageServiceOperation(
+        'query_plan',
+        runtimeDir,
+        {
+          action: 'explain',
+          definition: factQuery.definition,
+        },
+      );
       assert.equal(
         fsck.qualification.schema,
         'kungfu.episode.qualification/v1',
+      );
+      assert.equal(
+        queryPlan.logical_plan.logical_plan_hash,
+        factQuery.lineage.logical_plan_hash,
       );
       assert.equal(fsck.qualification.policy_source, 'cpp-typed-fold-fsck');
       assert.deepEqual(inspected.qualification, fsck.qualification);
@@ -700,6 +730,10 @@ test(
         fsck.qualification.safe_capabilities.includes('append'),
         false,
       );
+      assert.equal(factQuery.schema, 'kungfu.query.result/v1');
+      assert.equal(factQuery.rows[0].status, 'ended');
+      assert.equal(factQuery.lineage.authority.kind, 'yijinjing-journal');
+      assert.equal(factQuery.lineage.determinism, 'deterministic');
     } finally {
       fs.rmSync(runtimeDir, { recursive: true, force: true });
     }

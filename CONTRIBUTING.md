@@ -100,7 +100,10 @@ preceding `shifu-entry-contract: allow <reason>` comment.
 `./shifu verify` includes the bounded `mvp-smoke-v1` Episode
 qualification by default. Use `./shifu episode:qualify -- --profile
 mvp-baseline-v1` explicitly for the heavier periodic/release-readiness
-baseline; it is not run on every build.
+baseline. `./shifu episode:qualify:release` runs that complete baseline and
+seals its Trust Report into retained release evidence. The release-evidence
+path runs on alpha/release candidates and manual Build workflow dispatches, not
+on every development pull request.
 
 > Node, packages, and Electron binaries are resolved through the standard
 > `FNM_NODE_DIST_MIRROR`, `COREPACK_NPM_REGISTRY`, and `ELECTRON_MIRROR`

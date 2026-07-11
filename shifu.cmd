@@ -20,10 +20,14 @@ rem
 rem This script is a thin shim in front of the native launcher (crates\shifu,
 rem a self-contained Rust binary -- see docs/rust-adoption.md). Resolution order:
 rem   1. SHIFU_BIN            explicit binary override
-rem   2. user-global cached binary  %USERPROFILE%\.cache\kungfu\shifu\<version>\
-rem   3. fnm + uv already installed -> proven in-script bootstrap below
+rem   2. dev machines (cargo + git) -> source-fresh cache slot
+rem                                    ...\kungfu\shifu\<version>-<launcher-src-sha>\,
+rem                                    rebuilt whenever the launcher source moves, so a
+rem                                    checkout always runs its own code, not the last release
+rem   3. user-global cached binary  %USERPROFILE%\.cache\kungfu\shifu\<version>\
+rem   4. fnm + uv already installed -> proven in-script bootstrap below
 rem                                    (force native instead with SHIFU_NATIVE=1)
-rem   4. fresh machine              -> download the prebuilt binary pinned by
+rem   5. fresh machine              -> download the prebuilt binary pinned by
 rem                                    crates\shifu\Cargo.toml (SHIFU_DIST_MIRROR
 rem                                    overrides the base URL), or cargo build from source
 rem The native launcher bootstraps fnm + uv itself when missing (prebuilt binaries),
@@ -64,6 +68,53 @@ set "_KFC_CACHE=%USERPROFILE%\.cache"
 if defined XDG_CACHE_HOME set "_KFC_CACHE=%XDG_CACHE_HOME%"
 set "_KFC_BIN=%_KFC_CACHE%\kungfu\shifu\%_KFC_VER%\shifu.exe"
 
+rem Source freshness (dev machines): with cargo + git the cache slot is
+rem content-addressed by the last commit touching the launcher source, so the
+rem checkout's current code - not the last release, whose pin does not move
+rem between releases - answers. Dirty launcher trees rebuild on every call
+rem (cargo's own freshness check keeps repeats fast). Machines without cargo
+rem keep the release-pinned path below unchanged.
+where cargo >nul 2>nul || goto pinslot
+where git >nul 2>nul || goto pinslot
+if not defined _KFC_VER goto pinslot
+set "_KFC_SRC="
+rem rev-list instead of log --format: a percent format inside a for /f
+rem backquote command gets percent-processed again by the child cmd, so git
+rem receives a literal %h and fails; rev-list needs no format at all.
+for /f "usebackq" %%s in (`git rev-list -1 --abbrev-commit HEAD -- crates/shifu crates/shifu-core crates/Cargo.toml crates/Cargo.lock 2^>nul`) do set "_KFC_SRC=%%s"
+if not defined _KFC_SRC goto pinslot
+set "_KFC_DIRTY="
+for /f "usebackq delims=" %%s in (`git status --porcelain -- crates/shifu crates/shifu-core crates/Cargo.toml crates/Cargo.lock 2^>nul`) do set "_KFC_DIRTY=1"
+if defined _KFC_DIRTY set "_KFC_SRC=%_KFC_SRC%-dirty"
+set "_KFC_DEVDIR=%_KFC_CACHE%\kungfu\shifu\%_KFC_VER%-%_KFC_SRC%"
+set "_KFC_DEVBIN=%_KFC_DEVDIR%\shifu.exe"
+if not defined _KFC_DIRTY if exist "%_KFC_DEVBIN%" (
+  "%_KFC_DEVBIN%" %*
+  exit /b !errorlevel!
+)
+rem Build with an out-of-repo target dir (keyed per checkout) so read-only
+rem checkouts build too.
+set "_KFC_TGTKEY=%CD:\=_%"
+set "_KFC_TGTKEY=%_KFC_TGTKEY::=%"
+set "_KFC_TGT=%_KFC_CACHE%\kungfu\shifu\cargo-target\%_KFC_TGTKEY%"
+echo shifu: building launcher from source ^(cargo build --release^) 1>&2
+set "CARGO_TARGET_DIR=%_KFC_TGT%"
+cargo build --release --locked --manifest-path crates\Cargo.toml -p shifu 1>&2 && (
+  set "CARGO_TARGET_DIR="
+  if not exist "%_KFC_DEVDIR%" mkdir "%_KFC_DEVDIR%" >nul 2>nul
+  copy /y "%_KFC_TGT%\release\shifu.exe" "%_KFC_DEVBIN%" >nul && (
+    rem Retire older source-keyed slots; the release-pinned slot stays.
+    for /d %%d in ("%_KFC_CACHE%\kungfu\shifu\%_KFC_VER%-*") do (
+      if /i not "%%~fd"=="%_KFC_DEVDIR%" rd /s /q "%%~fd" >nul 2>nul
+    )
+    "%_KFC_DEVBIN%" %*
+    exit /b !errorlevel!
+  )
+)
+set "CARGO_TARGET_DIR="
+echo shifu: source build failed; falling back to the release-pinned launcher 1>&2
+
+:pinslot
 if exist "%_KFC_BIN%" (
   "%_KFC_BIN%" %*
   exit /b !errorlevel!

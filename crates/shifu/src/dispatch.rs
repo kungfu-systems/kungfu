@@ -15,7 +15,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::{tools, util};
+use crate::{registrar, tools, util};
 
 pub fn run_pnpm(root: &Path, args: &[String]) -> ! {
     let fnm = tools::ensure_tool(&tools::FNM, root);
@@ -39,7 +39,25 @@ pub fn run_pnpm(root: &Path, args: &[String]) -> ! {
         .env("SHIFU_ENTRYPOINT", "1")
         .current_dir(root);
     prepend_child_path(&mut cmd, tool_dirs_for_child(&fnm, &uv));
-    util::exec_or_exit(cmd)
+
+    // Tasks with a KFD-declared registration plan need the launcher alive
+    // after the task: run them spawned (Windows semantics everywhere) and
+    // register on success. Everything else keeps the exec fast path.
+    let plan = args
+        .first()
+        .and_then(|task| registrar::plan_for_task(root, task));
+    let Some(plan) = plan else {
+        util::exec_or_exit(cmd)
+    };
+    match cmd.status() {
+        Ok(status) => {
+            if status.success() {
+                registrar::register(root, &plan);
+            }
+            std::process::exit(status.code().unwrap_or(1));
+        }
+        Err(e) => util::die(&format!("failed to run {:?}: {e}", cmd.get_program())),
+    }
 }
 
 pub fn delegate_l2(root: &Path, args: &[String]) -> ! {

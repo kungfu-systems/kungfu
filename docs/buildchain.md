@@ -28,9 +28,27 @@ under those pinned tools.
 | `libkungfu` (C++ core: yijinjing schema + journal) | `framework/core/src` | CMake + Conan 2; build orchestration in `framework/core/.gyp/` |
 | Python binding (`py_kungfu`) | `framework/core/src/bindings/python` | pybind11, built under the pinned CPython |
 | Node addon (`kungfu_node.node`) | `framework/core/src/bindings/node` | N-API via the `.gyp` build |
-| `kungfu` (the frozen runtime) | the above + embedded Python/Node runtimes | `./shifu freeze` |
-| distributable products | frozen runtime + GUI/TUI/CLI + all product-declared first-party kfx | `./shifu dist` |
+| `kungfu` (the product runtime) | the above + the Python/Node runtimes | `./shifu freeze` — on macOS this assembles the complete pinned CPython tree next to the entry (ADR-0046 stage 2); on Linux/Windows it still Nuitka-freezes until those platform legs land |
+| distributable products | product runtime + GUI/TUI/CLI + all product-declared first-party kfx | `./shifu dist` |
 | product loops | SDK-distributed GUI/TUI/CLI dev/build verbs | single kfx: `kungfu sdk product gui dev`; product assembly: `kungfu sdk product gui dist`; repo dogfood via `./shifu product ...` |
+
+## Freeze retirement ledger (macOS exited 2026-07-11)
+
+ADR-0046 stage 2 retires freezing platform by platform. What remains of the
+freeze machinery, and why, while the window is open:
+
+| Leg | Status | Retires when |
+|---|---|---|
+| `run-freeze.js` nuitka leg + the `nuitka-project` header in `kungfu_cli.py` (the `nofollow-import` list) | **kept** — Linux/Windows still freeze | the last frozen platform exits |
+| `run-freeze.js` pyinstaller fallback leg | **kept but off every default**; no platform selects it | with the nuitka leg — retire both together |
+| `conanfile.py` legacy freeze path (its `freezer` option + PyInstaller import) | **dead code** — freeze left conan in the conan2 migration; the option is no longer passed by the build chain | first conanfile cleanup touching that section |
+| `engage nuitka` / `engage pdm` bridges | **kept, deliberately** — their consumer is the Python-AOT kfx build contract (`kungfu sdk kfx build` for py extensions), not the freeze chain; retirement follows the ADR-0045 execution-profile line, not this ledger |
+| Nuitka / PyInstaller pins in `uv.lock` dev deps | **kept** — the frozen platforms and the engage bridge still resolve them | with their last consumer above |
+
+The assembled form's own policy record is
+[ADR-0050](../framework/core/docs/adr/ADR-0050-assembled-runtime-stdlib-pruning-policy.md)
+(stdlib pruning); the target architecture is
+[ADR-0046](../framework/core/docs/adr/ADR-0046-rust-host-trunk-and-assembled-runtime.md).
 
 ## Where the prebuilt binaries come from
 

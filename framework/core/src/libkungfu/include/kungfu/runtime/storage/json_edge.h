@@ -27,6 +27,8 @@ enum class storage_operation {
   CompactPlan,
   VerifySync,
   Query,
+  QueryPlan,
+  FactQuery,
   Layout,
   EpisodeBegin,
   EpisodeHeartbeat,
@@ -62,6 +64,7 @@ struct storage_service_options {
   nlohmann::json bundle = nlohmann::json::object();
   nlohmann::json manifest = nlohmann::json::object();
   nlohmann::json operation_options = nlohmann::json::object();
+  nlohmann::json query_definition = nlohmann::json::object();
   std::string query = {};
   std::string kind = {};
   uint64_t episode_id = 0;

@@ -23,6 +23,7 @@
 #include <vector>
 
 #include <kungfu/runtime/action_recorder.h>
+#include <kungfu/runtime/query/fact_query.h>
 #include <kungfu/runtime/storage/episode_manifest_projection.h>
 #include <kungfu/runtime/storage/manifest_catalog_projection.h>
 #include <kungfu/runtime/storage/source_registry_projection.h>
@@ -3943,6 +3944,52 @@ public:
     return workspace_episode_layout_json(default_storage_service().layout(request));
   }
 
+  [[nodiscard]] nlohmann::json query_plan(const storage_service_options &options) const {
+    const auto action = text_or(options.operation_options, "action", "validate");
+    if (action == "capabilities") {
+      return query::query_capabilities_json();
+    }
+    if (action == "schema") {
+      return query::query_definition_schema_json();
+    }
+    if (action == "describe") {
+      return query::query_object_description_json(text_or(options.operation_options, "object", "episodes"));
+    }
+    if (action == "examples") {
+      return query::query_examples_json();
+    }
+
+    const auto definition = query::parse_query_definition(options.query_definition);
+    const auto plan = query::plan_query(definition);
+    if (action == "validate") {
+      return {{"schema", query::QUERY_VALIDATION_SCHEMA_V1},
+              {"ok", true},
+              {"definition", query::query_definition_json(definition)},
+              {"query_definition_hash", plan.query_definition_hash},
+              {"logical_plan_hash", plan.logical_plan_hash}};
+    }
+    if (action == "explain") {
+      return {{"schema", query::QUERY_EXPLAIN_SCHEMA_V1},
+              {"definition", query::query_definition_json(definition)},
+              {"logical_plan", query::logical_plan_json(plan)},
+              {"physical",
+               {{"engine", "episode-authority-scan/v1"},
+                {"bounded", true},
+                {"limit", definition.limit},
+                {"cost",
+                 {{"class", "bounded-authority-scan"},
+                  {"upper_bound_rows", definition.limit},
+                  {"authority_records", "runtime-dependent"}}}}}};
+    }
+    throw std::invalid_argument("unsupported query planner action: " + action);
+  }
+
+  [[nodiscard]] nlohmann::json fact_query(const storage_service_options &options) const {
+    const auto definition = query::parse_query_definition(options.query_definition);
+    const auto plan = query::plan_query(definition);
+    return query::query_result_json(query::run_episode_authority_scan(options.runtime_dir, plan));
+  }
+
   [[nodiscard]] nlohmann::json episode_begin(const storage_service_options &options) const {
     return episode_record_body_json(
         episode_store(options).begin(parse_episode_begin_options(options.operation_options)));
@@ -4395,50 +4442,6 @@ nlohmann::json episode_record_row_json(const yy_storage::episode_manifest_record
   return row;
 }
 
-nlohmann::json episode_summary_json(const yy_storage::episode_current_view &view) {
-  nlohmann::json summary = nlohmann::json::object();
-  if (view.opened) {
-    summary = episode_record_body_json(view.open);
-    summary["manifest_frame_uid"] = view.open_manifest_frame_uid;
-    summary["manifest_gen_time"] = view.open_manifest_gen_time;
-  }
-  if (view.heartbeat_seen) {
-    summary["update_time"] = view.update_time;
-  }
-  if (view.last_frame_uid_seen) {
-    summary["last_frame_uid"] = view.last_frame_uid;
-  }
-  if (view.closed) {
-    summary["status"] = episode_status_text(view.close.status);
-    summary["end_time"] = view.close.end_time;
-    summary["reason"] = std::string(view.close.reason.value);
-  }
-  summary["schema"] = yy_storage::EPISODE_MANIFEST_SCHEMA_V1;
-  summary["episode_id"] = view.episode_id;
-  summary["opened"] = view.opened;
-  summary["closed"] = view.closed;
-  summary["record_count"] = view.records.size();
-  summary["frame_count"] = view.frame_indices.size();
-  summary["ref_count"] = view.ref_indices.size();
-  size_t payload_ref_count = 0;
-  size_t schema_ref_count = 0;
-  for (size_t position = 0; position < view.ref_indices.size(); ++position) {
-    const auto kind = view.ref_at(position).ref_kind;
-    payload_ref_count += kind == yy_enums::EpisodeRefKind::Payload ? 1 : 0;
-    schema_ref_count += kind == yy_enums::EpisodeRefKind::Schema ? 1 : 0;
-  }
-  summary["payload_ref_count"] = payload_ref_count;
-  summary["schema_ref_count"] = schema_ref_count;
-  if (view.root_seen) {
-    summary["content_root"] = std::string(view.root.root_value.value);
-    summary["content_root_algorithm"] = std::string(view.root.algorithm.value);
-  }
-  if (!summary.contains("status")) {
-    summary["status"] = view.opened ? "open" : "dangling";
-  }
-  return summary;
-}
-
 nlohmann::json episode_dependency_json(const yy_storage::episode_dependency &dependency) {
   nlohmann::json rendered = {{"kind", dependency.kind}, {"role", dependency.role}, {"status", dependency.status}};
   if (dependency.episode_id.has_value())
@@ -4497,7 +4500,7 @@ nlohmann::json render_storage_episode_bundle_result(const storage_episode_bundle
           {"scope", "episode"},
           {"episode_id", result.episode_id},
           {"authority", "yijinjing-journal"},
-          {"manifest", episode_summary_json(result.manifest)},
+          {"manifest", yy_storage::episode_summary_json(result.manifest)},
           {"causal_graph", episode_causal_graph_json(result.causal_graph)},
           {"records", std::move(records)},
           {"frames", std::move(frames)},
@@ -4551,7 +4554,7 @@ nlohmann::json storage_query_rows_json(const storage_query_rows &rows) {
                                 {"storage_source_id", row.storage_source_id},
                                 {"manifest_id", row.manifest_id}});
           } else if constexpr (std::is_same_v<rows_t, std::vector<yy_storage::episode_current_view>>) {
-            rendered.push_back(episode_summary_json(row));
+            rendered.push_back(yy_storage::episode_summary_json(row));
           } else {
             rendered.push_back(episode_record_row_json(row));
           }
@@ -5238,6 +5241,8 @@ std::vector<std::string> storage_operation_names() {
       storage_operation_name(storage_operation::CompactPlan),
       storage_operation_name(storage_operation::VerifySync),
       storage_operation_name(storage_operation::Query),
+      storage_operation_name(storage_operation::QueryPlan),
+      storage_operation_name(storage_operation::FactQuery),
       storage_operation_name(storage_operation::Layout),
       storage_operation_name(storage_operation::EpisodeBegin),
       storage_operation_name(storage_operation::EpisodeHeartbeat),
@@ -5247,6 +5252,8 @@ std::vector<std::string> storage_operation_names() {
       storage_operation_name(storage_operation::EpisodeAttachRef),
       storage_operation_name(storage_operation::EpisodeList),
       storage_operation_name(storage_operation::EpisodeInspect),
+      storage_operation_name(storage_operation::EpisodeRecover),
+      storage_operation_name(storage_operation::EpisodeProjectionRebuild),
       storage_operation_name(storage_operation::SourceRegister),
       storage_operation_name(storage_operation::SourceUpdateHead),
       storage_operation_name(storage_operation::SourceRecordAcceptedRange),
@@ -5283,6 +5290,10 @@ std::string storage_operation_name(storage_operation operation) {
     return "verify_sync";
   case storage_operation::Query:
     return "query";
+  case storage_operation::QueryPlan:
+    return "query_plan";
+  case storage_operation::FactQuery:
+    return "fact_query";
   case storage_operation::Layout:
     return "layout";
   case storage_operation::EpisodeBegin:
@@ -5360,6 +5371,12 @@ storage_operation parse_storage_operation(const std::string &operation) {
   if (operation == "query") {
     return storage_operation::Query;
   }
+  if (operation == "query_plan") {
+    return storage_operation::QueryPlan;
+  }
+  if (operation == "fact_query") {
+    return storage_operation::FactQuery;
+  }
   if (operation == "layout") {
     return storage_operation::Layout;
   }
@@ -5432,6 +5449,7 @@ storage_service_options parse_storage_service_options(const std::string &runtime
   parsed.bundle = object_or_empty(options, "bundle");
   parsed.manifest = object_or_empty(options, "manifest");
   parsed.operation_options = options;
+  parsed.query_definition = object_or_empty(options, "definition");
   parsed.query = text_or(options, "query", "entries");
   parsed.kind = text_or(options, "kind");
   parsed.episode_id = uint64_or(options, "episode_id");
@@ -5448,6 +5466,9 @@ nlohmann::json make_storage_service_request(const std::string &operation, const 
     request["query"] = parsed_options.query;
     request["kind"] = parsed_options.kind.empty() ? nlohmann::json(nullptr) : nlohmann::json(parsed_options.kind);
     request["limit"] = parsed_options.limit;
+  } else if (parsed_operation == storage_operation::QueryPlan || parsed_operation == storage_operation::FactQuery) {
+    request["definition"] = parsed_options.query_definition;
+    request["action"] = text_or(parsed_options.operation_options, "action");
   } else if (parsed_operation == storage_operation::Layout) {
     request["runtime_home"] = runtime_home_path(parsed_options).string();
     request["runtime_home_source"] = runtime_home_source(parsed_options);
@@ -5496,6 +5517,10 @@ nlohmann::json run_storage_service_operation(const std::string &operation, const
     return storage_json_edge_service_instance().verify_sync(parsed_options);
   case storage_operation::Query:
     return render_storage_query_result(default_storage_service().query(parse_storage_query_request(parsed_options)));
+  case storage_operation::QueryPlan:
+    return storage_json_edge_service_instance().query_plan(parsed_options);
+  case storage_operation::FactQuery:
+    return storage_json_edge_service_instance().fact_query(parsed_options);
   case storage_operation::Layout:
     return storage_json_edge_service_instance().layout(parsed_options);
   case storage_operation::EpisodeBegin:

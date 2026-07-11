@@ -36,6 +36,13 @@ pub fn kungfu_cache_dir() -> PathBuf {
     xdg_dir("XDG_CACHE_HOME", ".cache").join("kungfu")
 }
 
+/// Platform tag naming what this process runs on, `<os>-<arch>` in
+/// std::env::consts vocabulary (e.g. `macos-aarch64`). Cache layouts key on
+/// it so artifacts for different targets never share a slot.
+pub fn os_arch() -> String {
+    format!("{}-{}", env::consts::OS, env::consts::ARCH)
+}
+
 /// Resolve a command name against PATH (honoring PATHEXT on Windows).
 /// Equivalent to `command -v` / `where`, without spawning a process.
 pub fn find_on_path(name: &str) -> Option<PathBuf> {

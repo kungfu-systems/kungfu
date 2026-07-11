@@ -26,6 +26,12 @@ namespace kungfu::yijinjing::storage {
 
 [[nodiscard]] nlohmann::json render_episode_fsck_result(const episode_fsck_result &result);
 
+// Stable edge projections shared by storage list/inspect and the fact-query
+// authority scan so those readers cannot silently derive different semantics.
+[[nodiscard]] nlohmann::json episode_summary_json(const episode_current_view &view);
+
+[[nodiscard]] nlohmann::json episode_content_root_json(const episode_current_view &view, size_t unknown_record_count);
+
 class content_store;
 
 class episode_manifest_store {
@@ -71,6 +77,11 @@ public:
   // Fold the journal into the typed current views (the canonical in-memory
   // derivation shared by list/inspect/fsck and future projection/query).
   [[nodiscard]] episode_manifest_fold fold_typed_records() const;
+
+  // Historical reference fold: admit records in manifest append order through
+  // the exact frame uid (inclusive). The uid is a stable token, not a sortable
+  // time value. cut_found is false when the requested token is absent.
+  [[nodiscard]] episode_manifest_fold fold_typed_records_until(uint64_t manifest_frame_uid) const;
 
   // Edge projections over the typed fold. JSON is produced here and only here.
   [[nodiscard]] nlohmann::json list(uint64_t location_uid = 0, uint64_t limit = 100) const;

@@ -391,6 +391,8 @@ importers:
         specifier: ^8.0.0
         version: 8.9.0
 
+  framework/sdk: {}
+
   framework/gui:
     dependencies:
       '@kungfu-tech/api':

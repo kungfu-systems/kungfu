@@ -28,8 +28,7 @@
     "build_type": "Release",
     "log_level": "trace",
     "python_version": "3.13",
-    "node_version": "22.22.3",
-    "freezer": "nuitka"
+    "node_version": "22.22.3"
   },
   "binary": {
     "module_name": "kungfu_node",
@@ -57,7 +56,7 @@
     "format:cpp": "node .gyp/run-format-cpp.js src",
     "format:python": "node .gyp/run-format-python.js . src src/*/*.spec .*/*.py",
     "kungfu": "node lib/kungfu-cli.js",
-    "test:tooling": "node --test tests/shell-exit-code.test.js",
+    "test:tooling": "node --test tests/shell-exit-code.test.js tests/episode-release-evidence.test.mjs",
     "test:storage-binding": "node --test tests/storage-node-binding.test.js",
     "dev:kungfu": "uv run --frozen python .devtools/kungfu_cli.py"
   },

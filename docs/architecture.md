@@ -17,12 +17,16 @@ This is the first of two coupled first principles; the second — *reality sets 
 test, not the product* — and how the architecture follows from both are set out
 in [`design-philosophy.md`](design-philosophy.md).
 
-Kungfu absorbs toolchain and runtime complexity into the product so that its
-users do not have to assemble it themselves. The `kungfu` runtime embeds both a
-Python and a Node runtime and bridges a full Python development lifecycle —
-dependency management, formatting, and ahead-of-time compilation — so most
-extension development needs no separately installed language runtimes or package
-managers.
+Kungfu absorbs toolchain and runtime complexity into the product layer that
+needs it so users do not have to assemble that layer themselves. The assembled
+`kungfu` runtime embeds both a Python and a Node runtime and bridges a full
+Python development lifecycle — dependency management, formatting, and
+ahead-of-time compilation — so most extension development needs no separately
+installed language runtimes or package managers. This does not make the
+assembled runtime the minimum adoption unit: `libkungfu`, ecosystem SDKs, the
+standalone CLI/TUI, and the GUI retain independently qualified product
+closures. See [`product-layers.md`](product-layers.md) and
+[ADR-0049](../framework/core/docs/adr/ADR-0049-layer-complete-products-and-domain-neutral-core.md).
 
 This is a deliberate trade: the project carries the complexity so the user does
 not. It stays sustainable only while the absorbed tooling rests on mainstream,
@@ -84,6 +88,12 @@ Kungfu is a platform plus a minimal reference application — the editor-platfor
 model: the core provides capability; products are built on top. The packages
 group into the following layers.
 
+The source tree is integrated; distribution is layered. Each official layer
+must be independently useful and independently removable within its declared
+contract. Higher layers add convenience, never authority. The three
+application horizons that keep the core vocabulary honest are documented in
+[`domain-horizons.md`](domain-horizons.md).
+
 ### Runtime and core — `framework/core` (`@kungfu-tech/core`)
 
 The foundation: the `yijinjing` append-only journal runtime and schema layout in
@@ -128,8 +138,7 @@ producing packaged artifacts (the `kungfu sdk` subcommand).
 
 ### Reference surfaces
 
-Two minimal reference UIs over the same capability SDK — demonstrators, not the
-product:
+Two minimal reference UI implementations over the same capability SDK:
 
 - **GUI** — `framework/gui` (`@kungfu-tech/gui`): a desktop application
   on Electron + React, loading the native binding in-process to preserve
@@ -139,6 +148,12 @@ product:
   application. Pure Node, so it loads the binding in-process with no renderer
   boundary. See
   [ADR-0007](../framework/core/docs/adr/ADR-0007-v4-tui-platform-reference-surface.md).
+
+These framework packages are reference implementations rather than independent
+fact authorities. The released standalone CLI/TUI and GUI products that
+assemble them must still be complete within their declared adoption layers per
+ADR-0049; "reference" does not mean a user must install the full desktop
+distribution to operate Kungfu.
 
 The journal/state runtime stays in-process on the trusted path so the zero-copy
 moat is preserved. Untrusted `view` kfx are isolated by the GUI shell as

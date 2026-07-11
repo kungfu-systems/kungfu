@@ -1,3 +1,21 @@
+---
+status: draft
+period: 2026-07-10
+theme: rust-host-spike
+doc_type: analysis
+source_level: local-files
+confidence: medium
+sensitivity: internal
+evidence_grade: B
+review_state: unreviewed
+last_reviewed: 2026-07-10
+ai_provenance:
+  model_family: GPT-5
+  product: Codex
+  generated_at: 2026-07-10
+  invisible_context: exact model build and hidden reasoning unavailable
+---
+
 # Rust host shell — feasibility spike report
 
 Status: spike complete; measured facts and a staged recommendation. The
@@ -75,7 +93,7 @@ against a sibling-built core (borrowed artifacts, ABI-matched shim):
 
 | step | claim tested | result |
 |---|---|---|
-| 1 | Rust `main()` → libkungfu FFI → runtime core init (`io_device` ctor: frame dumper, kv provider, logging, sqlite) + C++ journal write→read through `io_device::open_reader` | **PASS** (2 ms) |
+| 1 | Rust `main()` → shared versioned libkungfu C ABI → safe Rust context/reader/batch wrapper → mmap-backed journal payload | **PASS** (3 ms, zero payload copy) |
 | 2 | embed python-build-standalone via `Py_Initialize` with staged `PYTHONHOME` | **PASS** (7 ms) |
 | 3 | `import pykungfu` in the embedded interpreter | **PASS** (42 ms) |
 | 4 | Python-level journal write→read roundtrip, plus cross-language readback (Python reads the frame the C++ side wrote under the same host) | **PASS** (4 ms) |
@@ -88,10 +106,9 @@ core's own flags).
 
 Notable friction found while wiring the probe, all resolved in-probe:
 
-- `journal::assemble` symbols are not exported by libkungfu.dylib (only the
-  static libyijinjing carries them); the C++ readback goes through
-  `io_device::open_reader` instead. A real host shell needs a deliberate
-  exported-surface decision for the embedding seam.
+- `journal::assemble` remains an internal C++ surface. The follow-up membrane
+  spike resolved the exported-surface decision with one versioned C ABI shared
+  by native KFX and this host. The host no longer grows a parallel C++ seam.
 - pykungfu resolves libnode/libkungfu via `@loader_path` rpath, so `import`
   works from any host as long as the natives stay colocated — the dist layout
   already guarantees that.

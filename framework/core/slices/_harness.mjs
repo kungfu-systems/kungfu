@@ -27,6 +27,7 @@ export function locate(importMetaUrl) {
 export function findBin(buildDir, name, subdir) {
   const bases = [
     path.join(buildDir, 'Release', name),
+    subdir ? path.join(buildDir, subdir, 'Release', name) : null,
     subdir ? path.join(buildDir, subdir, name) : null,
     path.join(buildDir, name),
   ].filter(Boolean);
@@ -123,7 +124,7 @@ export function assertNotContains(text, pattern, label) {
  */
 export function assertNoExtraDylibs(bin) {
   let deps = '';
-  if (has('otool')) {
+  if (process.platform === 'darwin' && has('otool')) {
     const out = run('otool', ['-L', bin]).stdout;
     deps = out
       .split('\n')
@@ -132,7 +133,7 @@ export function assertNoExtraDylibs(bin) {
       .filter(Boolean)
       .filter((d) => !/^\/usr\/lib\/(libc\+\+|libSystem|libobjc)/.test(d))
       .join('\n');
-  } else if (has('ldd')) {
+  } else if (process.platform === 'linux' && has('ldd')) {
     const out = run('ldd', [bin], { allowFail: true }).stdout;
     deps = out
       .split('\n')
@@ -145,17 +146,15 @@ export function assertNoExtraDylibs(bin) {
           ),
       )
       .join('\n');
-  } else if (has('dumpbin')) {
-    const out = run('dumpbin', ['/DEPENDENTS', bin], {
-      allowFail: true,
-    }).stdout;
+  } else if (isWin && (has('dumpbin') || has('ldd'))) {
+    const tool = has('dumpbin') ? 'dumpbin' : 'ldd';
+    const args = tool === 'dumpbin' ? ['/DEPENDENTS', bin] : [bin];
+    const out = run(tool, args, { allowFail: true }).stdout;
     deps = out
       .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => /\.dll$/i.test(l))
-      .filter(
-        (d) => !/^(KERNEL32|VCRUNTIME|api-ms-|ucrtbase|MSVCP|ntdll)/i.test(d),
-      )
+      .map(windowsDllName)
+      .filter(Boolean)
+      .filter((d) => !isWindowsSystemDll(d))
       .join('\n');
   } else {
     console.log('  (skip: no otool/ldd/dumpbin on this platform)');
@@ -165,8 +164,46 @@ export function assertNoExtraDylibs(bin) {
   console.log(`  ${path.basename(bin)}: system runtime only`);
 }
 
+export function windowsDllName(line) {
+  return line
+    .trim()
+    .split(/\s+/)[0]
+    .match(/([A-Za-z0-9_.+-]+\.dll)$/i)?.[1];
+}
+
+export function isWindowsSystemDll(dependency) {
+  const name = dependency.toLowerCase();
+  return (
+    [
+      'kernel32.dll',
+      'kernelbase.dll',
+      'msvcrt.dll',
+      'ntdll.dll',
+      'ucrtbase.dll',
+    ].includes(name) ||
+    (name.startsWith('api-ms-') && name.endsWith('.dll')) ||
+    (name.startsWith('msvcp') && name.endsWith('.dll')) ||
+    (name.startsWith('vcruntime') && name.endsWith('.dll'))
+  );
+}
+
 function has(tool) {
-  const probe = isWin ? 'where' : 'command';
-  const args = isWin ? [tool] : ['-v', tool];
-  return spawnSync(probe, args, { stdio: 'ignore' }).status === 0;
+  const extensions = isWin
+    ? ['', ...(process.env.PATHEXT || '.COM;.EXE;.BAT;.CMD').split(';')]
+    : [''];
+  for (const directory of (process.env.PATH || '').split(path.delimiter)) {
+    const base = directory.replace(/^"|"$/g, '');
+    for (const extension of extensions) {
+      try {
+        fs.accessSync(
+          path.join(base, `${tool}${extension}`),
+          fs.constants.X_OK,
+        );
+        return true;
+      } catch {
+        /* next candidate */
+      }
+    }
+  }
+  return false;
 }

@@ -306,6 +306,16 @@ function testShifuEntryContract() {
   ]);
 }
 
+function checkLayerQualification() {
+  run('ADR-0049 layer qualification harness tests', 'node', [
+    '--test',
+    path.join('tests', 'qualification', 'layers', 'run.test.mjs'),
+  ]);
+  run('ADR-0049 layer qualification harness', 'node', [
+    path.join('tests', 'qualification', 'layers', 'run.mjs'),
+  ]);
+}
+
 function checkCarrierActionEnvelope(scopeArgs = []) {
   run('carrier/action-envelope gate', 'node', [
     path.join('scripts', 'check-carrier-action-envelope.mjs'),
@@ -417,6 +427,7 @@ function checkStaged() {
 function checkShared() {
   testShifuEntryContract();
   testSchemaAuthority();
+  checkLayerQualification();
   run('tooling type check', 'pnpm', ['run', 'check:types']);
   run('SDK unit tests', 'pnpm', [
     '--filter',

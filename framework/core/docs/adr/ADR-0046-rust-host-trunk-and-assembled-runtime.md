@@ -17,7 +17,9 @@
   delegation; the trunk is its runtime sibling);
   [ADR-0045](ADR-0045-kfx-execution-profiles-native-rust-wasm.md) (extension
   execution profiles; both ADRs draw on the same Rust line, at different
-  layers: 0045 places extensions, this ADR places the host).
+  layers: 0045 places extensions, this ADR places the host);
+  [ADR-0050](ADR-0050-assembled-runtime-stdlib-pruning-policy.md) (the
+  stage-2 stdlib pruning policy, the own record stage 2 calls for).
 
 ## Question
 
@@ -195,6 +197,12 @@ compiled with the core, so C++ linkage is safe there in a way it never is for
 extensions) or where measured evidence justifies a trunk-only surface. Two
 permanently parallel embedding contracts on one core is the drift this
 paragraph exists to forbid.
+
+The 2026-07-10 native membrane spike exercises that default before Stage 3:
+the existing Rust host probe now consumes the same v1 context/reader/batch
+table as the dynamically loaded native KFX probe. The result is recorded in
+[`docs/libkungfu-embedding-membrane-spike.md`](../../../../docs/libkungfu-embedding-membrane-spike.md).
+It is feasibility evidence only and does not authorize or begin Stage 3.
 
 ## Alternatives considered
 

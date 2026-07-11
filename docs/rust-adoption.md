@@ -104,6 +104,29 @@ The paved road for mode 1, as implemented for the launcher:
   configurable per environment through the user-global `build-local.env`
   (`SHIFU_DIST_MIRROR`, and `KUNGFU_FNM_DIST_MIRROR` /
   `KUNGFU_UV_DIST_MIRROR` for the launcher's own tool bootstrap).
+- **Source freshness (dev machines)** — the release pin only moves when a
+  release is cut, so on machines with cargo + git the shims content-address
+  the cache slot by the last commit touching the launcher source
+  (`<version>-<src-sha>`, built out-of-tree so read-only checkouts work) and
+  rebuild whenever it moves; a dirty launcher tree rebuilds on every call. A
+  checkout therefore always runs its own launcher code, never the last
+  release. Machines without cargo keep the release-pinned path untouched.
+- **Self-update** — `shifu self-update` refreshes an installed binary in
+  place (answered before delegation, so it acts on the copy you invoked).
+  Sources, in order: an explicit `--version <v>` fetches that release asset
+  (verified against the release's `SHA256SUMS`) — also the road back to the
+  official build; inside a checkout it rebuilds from the checkout's current
+  source; outside one it takes the newest local build slot the shim produced
+  (the binary that drove the last build, surviving its worktree), printing
+  that binary's full identity line before the swap. Every replacement first
+  archives the outgoing binary under a generations ledger
+  (`KUNGFU_SHIFU_GENERATIONS_KEEP`, default 3): `--list` shows it,
+  `--rollback` restores the previous generation — reversibly, since the
+  current binary is archived in turn. `shifu --version` names each binary's
+  build channel (`release` = CI release asset, `source` = any local build),
+  so which supply chain you are running is never a guess. The swap is a
+  rename dance that restores the old binary on failure; shim-cache slots
+  refuse the verb — the shim owns their lifecycle.
 - **Fallback** — when no release asset is reachable, the shims build from
   source if cargo is present, then fall back to the legacy in-script path, so
   no machine class is stranded.
@@ -175,7 +198,12 @@ per-platform special-casing) with one binary that:
   (plus the checkout's current branch for the repo role);
 - `shifu clone [path]` fetches the repository itself and `shifu doctor`
   checks the development environment (install pointers for the heavyweight
-  prerequisites it deliberately does not manage). Together with delegation
+  prerequisites it deliberately does not manage); `shifu promote` installs
+  the freshest built dev product from the user-global build stash (successful
+  desktop builds register themselves there, so a cleaned worktree cannot
+  strand its build) and `shifu builds` lists that stash — the jurisdiction
+  siblings of clone: clone acquires the repository, promote acquires the
+  product. Together with delegation
   this makes an installed shifu a self-sufficient bootstrap core: install
   once, clone anywhere, and every capability that can evolve lives in the
   repo — the binary never needs re-installing to pick up new launcher
@@ -219,3 +247,41 @@ and checklists. Two legs, one discipline each:
 Distribution-wise the library is deliberately invisible: never published,
 never tagged, no shim, version not lerna-synced — the launcher's release pin
 surface stays exactly one crate wide.
+
+### KFD-declared build registration
+
+`shifu builds` / `shifu promote` consume a user-global build stash, and the
+stash is fed by declaration, not by script. A repo that wants its builds
+registered states the facts in its Buildchain-managed KFD-3 surface registry
+(`.buildchain/kfd/kfd-3/surfaces.json`), on the surface that produces the
+artifact:
+
+```json
+"distribution": {
+  "registrar": "shifu",
+  "tasks": ["dist", "package"],
+  "artifacts": [
+    { "kind": "app", "platform": "macos", "pathGlob": "product/dist/desktop/mac*/*.app" },
+    { "kind": "installer", "platform": "windows", "pathGlob": "product/dist/desktop/*.exe" },
+    { "kind": "appimage", "platform": "linux", "pathGlob": "product/dist/desktop/*.AppImage" }
+  ]
+}
+```
+
+When a task named in a declaration succeeds under the launcher, shifu reads
+the declaration back (`crates/shifu/src/registrar.rs`), resolves the host
+platform's artifact, verifies it (a pinned `sha256` must match; for dev
+builds, whose content is only known after the build, the computed hash of a
+file artifact is recorded for provenance), and stashes it in the registry
+that `builds` / `promote` already read. Registration is advisory: a build
+that succeeded is never failed by its own bookkeeping — every problem is a
+named warning and the task's exit code passes through.
+
+The division of labor is deliberate. Build logic stays declarative in the
+repo; what the launcher carries is the one thing repo scripts cannot do for
+themselves: outlive the build. Worktrees are temporary, so the stash is
+user-global and the registrar runs in the process that survives the task —
+which is also why onboarding a new repo costs zero scripts: declare the
+artifacts in the KFD registry and the installed launcher does the rest. The
+KFD registry was already the repo's fact ledger; letting the recorded facts
+drive distribution is the same load-bearing member carrying one more load.

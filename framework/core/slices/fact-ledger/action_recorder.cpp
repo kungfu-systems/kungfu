@@ -47,8 +47,8 @@ std::string payload_hash(const std::vector<uint8_t> &bytes, std::size_t length) 
 }
 
 uint64_t frame_checksum(const schema::types::frame_header &header, const std::vector<uint8_t> &bytes,
-                        std::size_t length) {
-  return action::checksum_frame(header, bytes.data(), static_cast<uint32_t>(length));
+                        std::size_t length, const std::string &algorithm) {
+  return action::checksum_frame(header, bytes.data(), static_cast<uint32_t>(length), algorithm);
 }
 
 void fail(const std::string &message) { std::cerr << "fact_ledger_action_recorder: " << message << "\n"; }
@@ -96,15 +96,16 @@ int main(int argc, char **argv) {
     const auto &bytes = frames[i].second;
     const auto expected_parent = i == 0 ? 0 : receipts[i - 1].frame_uid;
 
-    if (receipt.frame_uid != header.frame_uid || receipt.msg_type != header.msg_type ||
+    if (receipt.frame_uid != header.frame_uid || receipt.carrier_type != header.carrier_type ||
         receipt.gen_time != header.gen_time || receipt.stream_id != header.stream_id ||
         receipt.trigger_frame_uid != header.trigger_frame_uid || receipt.trigger_frame_uid != expected_parent ||
         receipt.data_length != payloads[i].size() || bytes.size() < payloads[i].size() ||
         !padding_is_zero(bytes, payloads[i].size()) ||
         payload_hash(bytes, payloads[i].size()) != payload_hash(payloads[i], payloads[i].size()) ||
-        receipt.integrity_version != 1 ||
-        receipt.payload_checksum != action::checksum_payload(bytes.data(), static_cast<uint32_t>(payloads[i].size())) ||
-        receipt.frame_checksum != frame_checksum(header, bytes, payloads[i].size())) {
+        receipt.integrity_version != action::DEFAULT_FRAME_INTEGRITY_VERSION ||
+        receipt.payload_checksum != action::checksum_payload(bytes.data(), static_cast<uint32_t>(payloads[i].size()),
+                                                             receipt.checksum_algorithm) ||
+        receipt.frame_checksum != frame_checksum(header, bytes, payloads[i].size(), receipt.checksum_algorithm)) {
       fail("receipt/readback mismatch at step " + std::to_string(i));
       return 1;
     }
@@ -112,7 +113,8 @@ int main(int argc, char **argv) {
 
   auto tampered = frames[0].second;
   tampered[0] ^= 0x01;
-  if (receipts[0].frame_checksum == frame_checksum(frames[0].first, tampered, payloads[0].size())) {
+  if (receipts[0].frame_checksum ==
+      frame_checksum(frames[0].first, tampered, payloads[0].size(), receipts[0].checksum_algorithm)) {
     fail("frame checksum did not detect payload mutation");
     return 1;
   }

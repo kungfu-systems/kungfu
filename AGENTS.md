@@ -57,7 +57,13 @@ tests. `check:all` exists for whole-tree cleanup once the lint baseline is clean
 `verify` is the runtime/product done-check: it asserts the build artifacts and
 runs a `kungfu` runtime smoke plus the `mvp-smoke-v1` Episode qualification,
 rather than trusting a "looks built" impression. The larger Episode baseline
-remains an explicit periodic/release-readiness command.
+remains an explicit periodic/release-readiness command:
+
+```sh
+./shifu episode:qualify:release
+```
+
+It emits a self-contained evidence envelope; it is not a per-PR gate.
 
 ## Proposing changes
 

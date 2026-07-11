@@ -6,6 +6,7 @@ import sqlite3
 from datetime import datetime, timezone
 
 import kungfu
+import pytest
 
 from kungfu.atlas import importer, payloads
 from kungfu.atlas import CARRIER_ATLAS_ACTION
@@ -502,6 +503,8 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
         "compact_plan",
         "verify_sync",
         "query",
+        "query_plan",
+        "fact_query",
         "layout",
         "episode_begin",
         "episode_heartbeat",
@@ -509,8 +512,10 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
         "episode_abort",
         "episode_attach_frame",
         "episode_attach_ref",
+        "episode_recover",
         "episode_list",
         "episode_inspect",
+        "episode_projection_rebuild",
         "source_register",
         "source_update_head",
         "source_record_accepted_range",
@@ -1001,6 +1006,279 @@ def test_episode_manifest_v1_is_yijinjing_backed_and_fscked(tmp_path):
     assert bundle["dependencies"][0]["status"] == "declared_external"
     assert bundle["record_count"] == 5
     assert bundle["frame_count"] == 1
+
+
+def test_fact_query_reproduces_head_and_historical_episode_cuts(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    opened = storage_service.episode_begin(
+        runtime_dir,
+        episode_id=1048,
+        title="query basis proof",
+        actor="pytest",
+        source="adr-0048-q0",
+        begin_time=1000,
+    )
+    attached = storage_service.episode_attach_frame(
+        runtime_dir,
+        episode_id=1048,
+        frame_uid=2001,
+        trigger_frame_uid=0,
+        stream_id=48,
+        gen_time=1100,
+        carrier_type=10803,
+        source=1,
+        dest=0,
+        data_length=12,
+        integrity_version=2,
+        payload_checksum=123,
+        frame_checksum=456,
+    )
+    storage_service.episode_end(
+        runtime_dir,
+        episode_id=1048,
+        end_time=1200,
+        last_frame_uid=2001,
+        frame_count=1,
+        reason="done",
+    )
+
+    records = storage_service.episode_inspect(runtime_dir, episode_id=1048)["records"]
+    attached_record = next(
+        record
+        for record in records
+        if record["record_kind"] == "episode_frame_attached"
+    )
+    historical_cut = {
+        "kind": "manifest_frame_uid",
+        "manifest_frame_uid": str(attached_record["manifest_frame_uid"]),
+    }
+    historical = storage_service.fact_query(
+        runtime_dir, episode_id=1048, cut=historical_cut
+    )
+    repeated = storage_service.fact_query(
+        runtime_dir, episode_id=1048, cut=historical_cut
+    )
+    head = storage_service.fact_query(runtime_dir, episode_id=1048)
+
+    assert opened["episode_id"] == attached["episode_id"]
+    assert historical == repeated
+    assert historical["schema"] == "kungfu.query.result/v1"
+    assert historical["definition"]["schema"] == "kungfu.query.definition/v1"
+    assert historical["definition"]["basis"]["cut"] == historical_cut
+    assert historical["rows"][0]["status"] == "open"
+    assert historical["rows"][0]["content_root_status"] == "undefined"
+    assert historical["lineage"]["authority"]["kind"] == "yijinjing-journal"
+    assert historical["lineage"]["authority"]["record_count"] == 2
+    assert historical["lineage"]["cut"]["resolved"] == historical_cut
+    assert historical["lineage"]["determinism"] == "deterministic"
+    assert historical["lineage"]["canonical_state"] is True
+    assert (
+        historical["lineage"]["contract_world_declaration"]
+        == historical["definition"]["basis"]["contract_world"]
+    )
+    assert (
+        historical["lineage"]["fact_surface_declarations"]
+        == historical["definition"]["basis"]["fact_surfaces"]
+    )
+    assert historical["lineage"]["admission_outcomes"] == [
+        {
+            "outcome": "admitted",
+            "fact_surface_id": "kungfu.runtime.episode-manifest",
+            "record_count": 2,
+            "reason": "records satisfy the built-in typed Episode manifest declaration",
+        }
+    ]
+    assert historical["lineage"]["missing_inputs"] == []
+    assert historical["logical_plan"]["schema"] == "kungfu.query.logical-plan/v1"
+    assert (
+        historical["lineage"]["logical_plan_hash"]
+        == historical["logical_plan"]["logical_plan_hash"]
+    )
+    assert set(historical["lineage"]["time_basis"]) == {
+        "valid_time",
+        "system_time",
+        "causal_time",
+    }
+    assert historical["lineage"]["time_basis"]["valid_time"] == "not-projected"
+    assert (
+        historical["lineage"]["policy_versions"]["engine"]
+        == "episode-authority-scan/v1"
+    )
+
+    assert head["definition"]["basis"]["cut"] == {"kind": "head"}
+    assert head["rows"][0]["status"] == "ended"
+    assert head["rows"][0]["content_root_status"] == "verified"
+    assert head["result_hash"] != historical["result_hash"]
+    assert head["lineage"]["cut"]["resolved"]["kind"] == "manifest_frame_uid"
+    assert head["lineage"]["episode_content_roots"][0]["status"] == "verified"
+
+    missing = storage_service.fact_query(
+        runtime_dir,
+        episode_id=1048,
+        cut={
+            "kind": "manifest_frame_uid",
+            "manifest_frame_uid": "18446744073709551615",
+        },
+    )
+    assert missing["rows"] == []
+    assert missing["lineage"]["determinism"] == "unverifiable"
+    assert missing["lineage"]["canonical_state"] is False
+    assert missing["lineage"]["cut"]["resolved"] == {"kind": "unresolved"}
+    assert missing["lineage"]["missing_inputs"] == [
+        {
+            "kind": "manifest_cut",
+            "manifest_frame_uid": "18446744073709551615",
+        }
+    ]
+
+
+def test_fact_query_fails_closed_on_unregistered_or_changed_declarations(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    storage_service.episode_begin(runtime_dir, episode_id=51, begin_time=1000)
+
+    admitted = storage_service.fact_query(runtime_dir, episode_id=51)
+    capabilities = storage_service.query_plan(runtime_dir, action="capabilities")
+    builtins = capabilities["builtin_declarations"]
+
+    assert admitted["lineage"]["canonical_state"] is True
+    assert (
+        admitted["definition"]["basis"]["contract_world"]
+        == builtins["contract_world"]["reference"]
+    )
+    assert admitted["definition"]["basis"]["fact_surfaces"] == [
+        builtins["fact_surfaces"][0]["reference"]
+    ]
+
+    changed_root = json.loads(json.dumps(admitted["definition"]))
+    changed_root["basis"]["fact_surfaces"][0]["root"] = "sha256:" + "0" * 64
+    unverifiable = storage_service.fact_query_definition(runtime_dir, changed_root)
+
+    assert unverifiable["rows"] == []
+    assert unverifiable["lineage"]["canonical_state"] is False
+    assert unverifiable["lineage"]["determinism"] == "unverifiable"
+    assert unverifiable["lineage"]["admission_outcomes"][0]["outcome"] == (
+        "unverifiable"
+    )
+    assert (
+        unverifiable["lineage"]["fact_surface_declarations"][0]["root"]
+        == "sha256:" + "0" * 64
+    )
+    assert storage_service.fact_query(runtime_dir, episode_id=51) == admitted
+
+    unregistered = json.loads(json.dumps(admitted["definition"]))
+    unregistered["basis"]["fact_surfaces"][0]["id"] = "example.unknown"
+    rejected = storage_service.fact_query_definition(runtime_dir, unregistered)
+    assert rejected["rows"] == []
+    assert rejected["lineage"]["admission_outcomes"][0]["outcome"] == (
+        "unregistered-surface"
+    )
+
+
+def test_query_planner_normalizes_defaults_and_exposes_one_semantic_root(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    explicit = storage_service.build_fact_query_definition(episode_id=48, limit=10)
+    sparse = {
+        "schema": "kungfu.query.definition/v1",
+        "basis": {
+            "contract_world": explicit["basis"]["contract_world"],
+            "fact_surfaces": explicit["basis"]["fact_surfaces"],
+            "scope": "episode-manifest",
+            "episode_id": "48",
+            "perspective": "manifest-append-order",
+            "cut": {"kind": "head"},
+        },
+        "object": "episodes",
+        "limit": 10,
+    }
+
+    explicit_validation = storage_service.query_plan(
+        runtime_dir, action="validate", definition=explicit
+    )
+    sparse_validation = storage_service.query_plan(
+        runtime_dir, action="validate", definition=sparse
+    )
+    explanation = storage_service.query_plan(
+        runtime_dir, action="explain", definition=sparse
+    )
+    capabilities = storage_service.query_plan(runtime_dir, action="capabilities")
+    definition_schema = storage_service.query_plan(runtime_dir, action="schema")
+
+    assert explicit_validation == sparse_validation
+    assert explicit_validation["schema"] == "kungfu.query.validation/v1"
+    assert explicit_validation["ok"] is True
+    assert (
+        explanation["logical_plan"]["logical_plan_hash"]
+        == explicit_validation["logical_plan_hash"]
+    )
+    assert [
+        operator["kind"] for operator in explanation["logical_plan"]["operators"]
+    ] == [
+        "authority_scan",
+        "filter",
+        "order",
+        "limit",
+        "project",
+        "evidence",
+    ]
+    assert explanation["physical"]["engine"] == "episode-authority-scan/v1"
+    assert capabilities["physical_plan"]["public"] is False
+    assert capabilities["admission_outcomes"] == [
+        "admitted",
+        "unregistered-surface",
+        "incompatible-schema",
+        "ambiguous-authority",
+        "unverifiable",
+    ]
+    assert capabilities["builtin_declarations"]["contract_world"]["reference"][
+        "root"
+    ].startswith("sha256:")
+    assert capabilities["formats"] == ["json", "ndjson", "tsv"]
+    assert definition_schema["$schema"].endswith("/draft/2020-12/schema")
+    assert definition_schema["additionalProperties"] is False
+    assert definition_schema["properties"]["basis"]["additionalProperties"] is False
+    assert "contract_world" in definition_schema["properties"]["basis"]["required"]
+    assert "fact_surfaces" in definition_schema["properties"]["basis"]["required"]
+    assert (
+        definition_schema["properties"]["basis"]["properties"]["contract_world"][
+            "additionalProperties"
+        ]
+        is False
+    )
+
+    missing_declarations = json.loads(json.dumps(sparse))
+    missing_declarations["basis"].pop("contract_world")
+    missing_declarations["basis"].pop("fact_surfaces")
+    with pytest.raises(
+        (RuntimeError, ValueError),
+        match="requires explicit contract_world and fact_surfaces declarations",
+    ):
+        storage_service.query_plan(
+            runtime_dir, action="validate", definition=missing_declarations
+        )
+
+    unsupported = dict(sparse)
+    unsupported["where"] = {"field": "status", "operator": "eq", "value": "ended"}
+    with pytest.raises(
+        (RuntimeError, ValueError), match="unsupported query field: definition.where"
+    ):
+        storage_service.query_plan(
+            runtime_dir, action="validate", definition=unsupported
+        )
+
+    invalid_declaration = json.loads(json.dumps(explicit))
+    invalid_declaration["basis"]["contract_world"] = {
+        "id": "kungfu.runtime",
+        "version": "1",
+        "root": "sha256:" + "0" * 64,
+        "latest": True,
+    }
+    with pytest.raises(
+        (RuntimeError, ValueError),
+        match="unsupported query field: definition.basis.contract_world.latest",
+    ):
+        storage_service.query_plan(
+            runtime_dir, action="validate", definition=invalid_declaration
+        )
 
 
 # A well-formed digest whose bytes were never published: stage 4 resolves

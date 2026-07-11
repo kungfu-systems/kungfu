@@ -376,6 +376,7 @@ def write_import_payloads(
     source_type: str = "atlas",
     range_filter: dict[str, Any] | None = None,
     action_receipts: dict[tuple[str, str], dict[str, Any]] | None = None,
+    episode_id: int = 0,
 ) -> dict[str, Any]:
     store_dir = Path(store_dir)
     entries = []
@@ -408,6 +409,11 @@ def write_import_payloads(
     manifest = {
         "schema": "kungfu.atlas-import/v1",
         "import_id": import_id,
+        # Bidirectional index with the Episode manifest journal: the Episode
+        # source field carries "atlas:<import_id>" and this names the Episode
+        # that sealed the batch. Zero means the batch predates Episode
+        # association.
+        "episode_id": episode_id,
         "storage_source_id": storage_source_id,
         "source_type": source_type,
         "repo_root": repo_root,

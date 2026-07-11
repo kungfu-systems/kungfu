@@ -16,6 +16,7 @@ PROJECTION_SOURCE_REGISTRY = "source-registry-sqlite"
 PROJECTION_MANIFEST_CATALOG = "manifest-catalog-sqlite"
 PROJECTION_ATLAS_JOURNAL_FOLD = "atlas-journal-fold"
 RUNTIME_STORAGE_SERVICE_SCHEMA = "kungfu.runtime.storage-service/v1"
+EPISODE_MANIFEST_SCHEMA = "kungfu.episode.manifest/v1"
 
 
 def _runtime():
@@ -34,6 +35,43 @@ def _binding_json(value: Any) -> Any:
     if isinstance(value, int) and not isinstance(value, bool) and value > 2**63 - 1:
         return str(value)
     return value
+
+
+def _episode_record_edge(record: dict[str, Any]) -> dict[str, Any]:
+    """Project one typed Hana record into the established Python edge shape."""
+
+    body = dict(record["body"])
+    if "root_value" in body:
+        kind = "episode_root_committed"
+    elif "reason" in body:
+        kind = "episode_closed"
+        body["status"] = {2: "ended", 3: "aborted", 4: "tombstoned"}.get(
+            body["status"], "unknown"
+        )
+    elif "ref_kind" in body:
+        kind = "episode_ref_attached"
+        body["ref_kind"] = {
+            1: "input_frame",
+            2: "payload",
+            3: "schema",
+            4: "episode",
+        }.get(body["ref_kind"], "unknown")
+    elif "frame_uid" in body:
+        kind = "episode_frame_attached"
+    elif "note" in body:
+        kind = "episode_heartbeat"
+    elif "parent_episode_id" in body:
+        kind = "episode_open"
+        body["status"] = "open"
+    else:
+        kind = "unknown"
+    return {
+        "schema": EPISODE_MANIFEST_SCHEMA,
+        "record_kind": kind,
+        **body,
+        "manifest_frame_uid": record["manifest_frame_uid"],
+        "manifest_gen_time": record["manifest_gen_time"],
+    }
 
 
 def service_capabilities() -> dict[str, Any]:
@@ -591,10 +629,79 @@ def episode_list(
 
 
 def episode_inspect(runtime_dir: str | Path, *, episode_id: int) -> dict[str, Any]:
-    return dict(
+    result = dict(
         _runtime().storage_episode_inspect_typed(
             str(runtime_dir), episode_id=episode_id
         )
+    )
+    # Preserve the established Python edge shape while the semantic service
+    # remains fully typed: the authoritative records live in episode.records.
+    result.setdefault(
+        "records",
+        [_episode_record_edge(record) for record in result["episode"]["records"]],
+    )
+    return result
+
+
+def build_fact_query_definition(
+    *, episode_id: int = 0, cut: dict[str, Any] | None = None, limit: int = 100
+) -> dict[str, Any]:
+    """Build the canonical edge form consumed by the C++ query planner."""
+
+    examples = _runtime().run_storage_service_operation(
+        "query_plan", "", {"action": "examples"}
+    )
+    definition = dict(examples["examples"][0]["definition"])
+    definition["basis"] = dict(definition["basis"])
+    definition["basis"]["episode_id"] = _u64(episode_id)
+    definition["basis"]["cut"] = cut or {"kind": "head"}
+    definition["limit"] = limit
+    return definition
+
+
+def query_plan(
+    runtime_dir: str | Path,
+    *,
+    action: str,
+    definition: dict[str, Any] | None = None,
+    object_name: str = "episodes",
+) -> dict[str, Any]:
+    """Use the C++-owned ADR-0048 planner and discovery contract."""
+
+    options: dict[str, Any] = {"action": action, "object": object_name}
+    if definition is not None:
+        options["definition"] = definition
+    return dict(
+        _runtime().run_storage_service_operation(
+            "query_plan", str(runtime_dir), options
+        )
+    )
+
+
+def fact_query_definition(
+    runtime_dir: str | Path, definition: dict[str, Any]
+) -> dict[str, Any]:
+    """Plan and execute a QueryDefinition through the authority-scan oracle."""
+
+    return dict(
+        _runtime().run_storage_service_operation(
+            "fact_query", str(runtime_dir), {"definition": definition}
+        )
+    )
+
+
+def fact_query(
+    runtime_dir: str | Path,
+    *,
+    episode_id: int = 0,
+    cut: dict[str, Any] | None = None,
+    limit: int = 100,
+) -> dict[str, Any]:
+    """Run the ADR-0048 Episode authority-scan reference query."""
+
+    return fact_query_definition(
+        runtime_dir,
+        build_fact_query_definition(episode_id=episode_id, cut=cut, limit=limit),
     )
 
 

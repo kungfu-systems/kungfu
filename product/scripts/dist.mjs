@@ -590,6 +590,32 @@ function assertCoreFrozen() {
   if (!fs.existsSync(kungfuBin)) {
     throw new Error(`freeze did not produce ${rel(kungfuBin)}`);
   }
+  // Assembled form (ADR-0046 stage 2): when the dist carries the interpreter
+  // tree, it must be well-formed — the host marker declares the form and the
+  // tree's python3 is the real sys.executable the entry execs.
+  const tree = path.join(CORE_DIST, 'python');
+  if (fs.existsSync(tree)) {
+    for (const required of [
+      path.join(tree, 'kungfu-host.json'),
+      path.join(tree, 'bin', 'python3'),
+    ]) {
+      if (!fs.existsSync(required)) {
+        throw new Error(`assembled runtime tree incomplete: ${rel(required)}`);
+      }
+    }
+  }
+  // The product install surface (`kungfu env`) resolves the pykungfu wheel
+  // from dist/kungfu/wheels. A bare dev freeze only warns when the wheel is
+  // missing; the product chain must not ship without it.
+  const wheels = path.join(CORE_DIST, 'wheels');
+  const hasWheel =
+    fs.existsSync(wheels) &&
+    fs.readdirSync(wheels).some((f) => f.endsWith('.whl'));
+  if (!hasWheel) {
+    throw new Error(
+      `no pykungfu wheel under ${rel(wheels)}; the install surface would ship unusable`,
+    );
+  }
 }
 
 // ADR-0046 stage 1: kungfu-trunk (the product trunk carrying the kungfu-owned
@@ -1067,6 +1093,9 @@ function main() {
           },
         );
         stageDesktopRelease();
+        // Build registration (for `shifu builds` / `shifu promote`) is not a
+        // build step: the launcher reads the KFD-3 distribution declaration
+        // and stashes the artifact after this task exits successfully.
       }
       if (wantsCli()) {
         buildCliProduct();

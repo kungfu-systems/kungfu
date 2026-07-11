@@ -115,6 +115,28 @@ class ImportStore:
             "journal_payload_hash": payloads.payload_hash(data),
         }
 
+    def _attach_frame(self, episode_id, location_uid, receipt):
+        # The frame was already written once by this store's recorder; the
+        # Episode manifest only attaches the receipt (ADR-0033 v1 keeps mmap
+        # pages byte-compatible, association lives in EpisodeFrameAttached).
+        storage_service.episode_attach_frame(
+            self.runtime_dir,
+            episode_id=episode_id,
+            location_uid=location_uid,
+            frame_uid=int(receipt["frame_uid"]),
+            trigger_frame_uid=int(receipt["trigger_frame_uid"]),
+            stream_id=int(receipt["stream_id"]),
+            gen_time=int(receipt["gen_time"]),
+            trigger_time=int(receipt["trigger_time"]),
+            carrier_type=int(receipt["carrier_type"]),
+            source=int(receipt["source"]),
+            dest=int(receipt["dest"]),
+            data_length=int(receipt["data_length"]),
+            integrity_version=int(receipt["integrity_version"]),
+            payload_checksum=int(receipt["payload_checksum"]),
+            frame_checksum=int(receipt["frame_checksum"]),
+        )
+
     def run_import(
         self,
         repo_root,
@@ -130,88 +152,160 @@ class ImportStore:
             importer.read_control_plane_with_sources(repo_root, window=range_filter)
         )
         enriched_records = payloads.enrich_source_records(source_records)
-        action_receipts = {}
-        self._append_envelope(
-            payloads.build_action_envelope(
-                import_id=import_id,
-                storage_source_id=storage_source_id,
-                source_type="atlas",
-                action_type=ACTION_IMPORT_BEGIN,
-                batch={
-                    "repo_root": repo_root,
-                    "repo_head": repo_head,
-                    "schema_version": SCHEMA_VERSION,
-                },
-            )
+        # One import batch = one sealed Episode: ImportBegin, every snapshot
+        # frame, and ImportEnd are attached to one Episode so the batch gets a
+        # verifiable boundary (fsck verify_frames) and the qualification
+        # contract applies. No heartbeats: a batch is a short-lived
+        # single-writer burst, and the begin/attach/end records already carry
+        # its progress evidence; EpisodeHeartbeat exists for long-running
+        # lifecycles that need liveness between frames.
+        location_uid = int(_location(self.runtime_dir).uid)
+        begun = storage_service.episode_begin(
+            self.runtime_dir,
+            title=f"atlas import {import_id}",
+            actor=storage_source_id,
+            source=f"atlas:{import_id}",
+            location_uid=location_uid,
         )
-        for entry in enriched_records:
-            action_type = payloads.action_type_for_kind(str(entry.get("kind") or ""))
+        episode_id = int(begun["episode_id"])
+        frame_count = 0
+        last_frame_uid = 0
+        try:
             receipt = self._append_envelope(
                 payloads.build_action_envelope(
                     import_id=import_id,
                     storage_source_id=storage_source_id,
                     source_type="atlas",
-                    action_type=action_type,
-                    source={
-                        "kind": entry.get("kind"),
-                        "source_id": entry.get("source_id"),
-                        "source_path": entry.get("source_path"),
-                        "source_time": entry.get("source_time"),
-                        "schema_version": entry.get("schema_version"),
-                    },
-                    payload={
-                        "content_type": entry.get(
-                            "content_type", payloads.CONTENT_TYPE_JSON
-                        ),
-                        "hash_algorithm": payloads.CONTENT_HASH_ALGORITHM_SHA256,
-                        "hash": entry.get("payload_hash"),
-                        "byte_len": entry.get("byte_len"),
-                        "state": entry.get(
-                            "payload_state", payloads.PAYLOAD_STATE_PRESENT
-                        ),
+                    action_type=ACTION_IMPORT_BEGIN,
+                    batch={
+                        "repo_root": repo_root,
+                        "repo_head": repo_head,
+                        "schema_version": SCHEMA_VERSION,
                     },
                 )
             )
-            action_receipts[
-                (str(entry.get("kind") or ""), str(entry.get("source_id") or ""))
-            ] = receipt
-        self._append_envelope(
-            payloads.build_action_envelope(
+            self._attach_frame(episode_id, location_uid, receipt)
+            frame_count += 1
+            last_frame_uid = int(receipt["frame_uid"])
+            action_receipts = {}
+            for entry in enriched_records:
+                action_type = payloads.action_type_for_kind(
+                    str(entry.get("kind") or "")
+                )
+                receipt = self._append_envelope(
+                    payloads.build_action_envelope(
+                        import_id=import_id,
+                        storage_source_id=storage_source_id,
+                        source_type="atlas",
+                        action_type=action_type,
+                        source={
+                            "kind": entry.get("kind"),
+                            "source_id": entry.get("source_id"),
+                            "source_path": entry.get("source_path"),
+                            "source_time": entry.get("source_time"),
+                            "schema_version": entry.get("schema_version"),
+                        },
+                        payload={
+                            "content_type": entry.get(
+                                "content_type", payloads.CONTENT_TYPE_JSON
+                            ),
+                            "hash_algorithm": payloads.CONTENT_HASH_ALGORITHM_SHA256,
+                            "hash": entry.get("payload_hash"),
+                            "byte_len": entry.get("byte_len"),
+                            "state": entry.get(
+                                "payload_state", payloads.PAYLOAD_STATE_PRESENT
+                            ),
+                        },
+                    )
+                )
+                self._attach_frame(episode_id, location_uid, receipt)
+                frame_count += 1
+                last_frame_uid = int(receipt["frame_uid"])
+                action_receipts[
+                    (str(entry.get("kind") or ""), str(entry.get("source_id") or ""))
+                ] = receipt
+            receipt = self._append_envelope(
+                payloads.build_action_envelope(
+                    import_id=import_id,
+                    storage_source_id=storage_source_id,
+                    source_type="atlas",
+                    action_type=ACTION_IMPORT_END,
+                    batch={
+                        "missions": len(missions),
+                        "goals": len(goals),
+                        "markers": len(markers),
+                        "warnings": len(warnings),
+                    },
+                )
+            )
+            self._attach_frame(episode_id, location_uid, receipt)
+            frame_count += 1
+            last_frame_uid = int(receipt["frame_uid"])
+            manifest = payloads.write_import_payloads(
+                self.store_dir(),
                 import_id=import_id,
-                storage_source_id=storage_source_id,
-                source_type="atlas",
-                action_type=ACTION_IMPORT_END,
-                batch={
+                repo_root=repo_root,
+                repo_head=repo_head,
+                source_records=enriched_records,
+                counts={
                     "missions": len(missions),
                     "goals": len(goals),
                     "markers": len(markers),
-                    "warnings": len(warnings),
                 },
+                storage_source_id=storage_source_id,
+                source_type="atlas",
+                range_filter=range_filter,
+                action_receipts=action_receipts,
+                episode_id=episode_id,
             )
-        )
-        manifest = payloads.write_import_payloads(
-            self.store_dir(),
-            import_id=import_id,
-            repo_root=repo_root,
-            repo_head=repo_head,
-            source_records=enriched_records,
-            counts={
-                "missions": len(missions),
-                "goals": len(goals),
-                "markers": len(markers),
-            },
-            storage_source_id=storage_source_id,
-            source_type="atlas",
-            range_filter=range_filter,
-            action_receipts=action_receipts,
-        )
-        _mirror_generic_payloads(
-            self.runtime_dir, self.store_dir(), manifest.get("entries", [])
-        )
-        storage_service.accept_manifest(self.runtime_dir, manifest["storage_manifest"])
-        self.emit_manifest()
+            _mirror_generic_payloads(
+                self.runtime_dir, self.store_dir(), manifest.get("entries", [])
+            )
+            # ADR-0041 stage 4 order: the mirror above publishes the payload
+            # bytes into the provider content store first, then each ref
+            # claims their identity; episode fsck resolves refs by ref_hash
+            # through that same store. Only present payloads have published
+            # bytes; redacted/absent stay in the import manifest inventory.
+            attached_digests = set()
+            for entry in manifest.get("entries", []):
+                if entry.get("payload_state") != payloads.PAYLOAD_STATE_PRESENT:
+                    continue
+                digest = str(entry.get("payload_hash") or "")
+                if not digest or digest in attached_digests:
+                    continue
+                attached_digests.add(digest)
+                storage_service.episode_attach_ref(
+                    self.runtime_dir,
+                    episode_id=episode_id,
+                    location_uid=location_uid,
+                    ref_kind="payload",
+                    ref_id=str(entry.get("source_path") or digest),
+                    ref_hash=f"{payloads.CONTENT_HASH_ALGORITHM_SHA256}:{digest}",
+                )
+            storage_service.accept_manifest(
+                self.runtime_dir, manifest["storage_manifest"]
+            )
+            self.emit_manifest()
+            storage_service.episode_end(
+                self.runtime_dir,
+                episode_id=episode_id,
+                location_uid=location_uid,
+                last_frame_uid=last_frame_uid,
+                frame_count=frame_count,
+            )
+        except BaseException as error:
+            storage_service.episode_abort(
+                self.runtime_dir,
+                episode_id=episode_id,
+                location_uid=location_uid,
+                last_frame_uid=last_frame_uid,
+                frame_count=frame_count,
+                reason=f"{type(error).__name__}: {error}"[:256],
+            )
+            raise
         return {
             "import_id": import_id,
+            "episode_id": episode_id,
             "storage_source_id": storage_source_id,
             "source_type": "atlas",
             "repo_root": repo_root,
@@ -516,6 +610,7 @@ def status(runtime_dir):
         "ok": projection is not None,
         "scope": "atlas",
         "import_id": manifest.get("import_id"),
+        "episode_id": manifest.get("episode_id", 0),
         "storage_source_id": manifest.get("storage_source_id", "atlas"),
         "source_type": manifest.get("source_type", "atlas"),
         "range": manifest.get("range"),

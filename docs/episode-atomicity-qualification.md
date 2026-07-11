@@ -392,6 +392,15 @@ The baseline may be split into separate invocations when runtime is long, but
 each report must retain the exact profile, seed, source revision, and completed
 scenario list.
 
+`scenario_timeout_seconds` is an execution watchdog that prevents an abandoned
+runner from surviving indefinitely; it is not a throughput or latency SLO. The
+baseline allows up to two hours for one process on a loaded qualification host.
+Forward progress remains a hard semantic gate independently: a worker that
+makes no successful progress for the profile's `progress_timeout_ms` fails even
+when the outer execution watchdog has not expired. When the outer watchdog does
+expire, the complete `uv`/Python process tree is terminated and the evidence is
+not qualified.
+
 As of 2026-07-10, `./shifu verify` runs `mvp-smoke-v1` by default. The
 declared Buildchain `verify` lifecycle and the alpha/release `verify --fuzz`
 workflow therefore inherit the same Episode correctness gate. The explicit
@@ -414,9 +423,11 @@ The following conditions fail the profile regardless of throughput:
 - the emitted Trust Report does not validate against its versioned schema.
 
 The first baseline records performance observations without inventing an
-absolute throughput or latency SLO. OOM, timeout, or loss of forward progress is
-an availability failure. After repeatable baselines exist, numerical SLOs may be
-added to a new profile version without changing ADR-0042.
+absolute throughput or latency SLO. OOM or loss of forward progress is an
+availability failure. Expiry of the outer execution watchdog makes a run
+inconclusive and therefore not qualified; it is not evidence that a public
+performance SLO was violated. After repeatable baselines exist, numerical SLOs
+may be added to a new profile version without changing ADR-0042.
 
 The v0 report sets the Episode query profile to
 `episode-manifest-direct`. The current Episode query path reads the manifest
@@ -492,7 +503,7 @@ checking, and model checking cannot replace ASan/UBSan coverage.
 | Event | Required tier |
 | --- | --- |
 | Episode/manifest PR | semantic smoke plus affected deterministic fault fixtures |
-| Alpha/release candidate | heavy tier, sanitizer corpus, bounded generated campaign |
+| Alpha/release candidate | heavy tier, sanitizer corpus, bounded generated campaign, retained release-evidence envelope |
 | Production-profile claim | full named qualification and soak on declared hardware/backend |
 | New backend or publication protocol | rerun relevant full profile; do not inherit evidence automatically |
 | New schema/capability contract | version oracle/profile and rerun compatibility plus qualification |
@@ -564,6 +575,46 @@ dimensions. Every dimension is `passed`, `failed`, or `not_exercised`; only
 profile-required `passed` dimensions contribute to `qualified=true`. The v1
 schema remains available for historical baseline reports and is not
 reinterpreted as Semantic v1 evidence.
+
+### Release Evidence v1
+
+Trust Report v2 describes what one harness invocation observed. A release
+candidate additionally needs durable provenance that prevents a valid report
+from being detached from the source, profile, runtime, or platform that
+produced it. The release-readiness command is:
+
+```sh
+./shifu episode:qualify:release -- --output \
+  product/release/qualification/episode-release-evidence.json
+```
+
+It always runs the complete canonical `mvp-baseline-v1` profile in `all` mode
+and emits `kungfu.episode.release-evidence/v1`. The envelope embeds the Trust
+Report and records:
+
+- source commit, tree and clean-worktree fact;
+- canonical profile document and digest;
+- Shifu provenance, pinned and observed toolchain versions;
+- platform and non-identifying hardware facts;
+- a digest manifest of the native runtime artifacts under test;
+- local or GitHub Actions provenance;
+- explicit hard-gate rows and a digest over the complete envelope.
+
+The verdict is `qualified` only when the harness exits successfully, source is
+clean, the report and workload name the canonical baseline, every expected
+scenario passes, all correctness counters are zero, fresh-process/fsck/recovery
+coverage passes, the oracle checked histories, every required semantic
+dimension has executed passing cases, and native runtime artifacts were bound.
+The verifier recomputes these rows instead of trusting stored booleans.
+
+Throughput, latency, disk, RSS and descriptor observations are retained for
+trend comparison. Release Evidence v1 deliberately adopts no absolute
+performance SLO, and it preserves the Trust Report gaps for payload volume,
+dependency DAG scale, distributed writers, fleet capacity and long soak.
+
+The existing Buildchain `Build` workflow runs this after the heavy verify path
+for alpha/release candidates and manual dispatches, then retains the envelope
+with the platform product artifacts. It is not added to every development PR.
 
 ## First implementation slices
 

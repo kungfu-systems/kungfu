@@ -144,6 +144,10 @@ struct episode_manifest_fold {
   size_t total_record_count = 0;
   size_t unknown_record_count = 0;
   size_t unfolded_record_count = 0;
+  uint64_t first_manifest_frame_uid = 0;
+  uint64_t last_manifest_frame_uid = 0;
+  int64_t last_manifest_gen_time = 0;
+  bool cut_found = true;
 };
 
 struct episode_fsck_issue {

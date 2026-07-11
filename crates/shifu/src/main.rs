@@ -39,6 +39,9 @@ mod doctor;
 mod envfile;
 #[cfg(windows)]
 mod msvc;
+mod promote;
+mod registrar;
+mod self_update;
 mod tools;
 mod util;
 
@@ -84,6 +87,17 @@ fn print_usage() {
     );
     println!("  shifu --version | -v | -V  launcher version and build identity");
     println!("  shifu self-version         this binary's version, machine readable");
+    println!("  shifu self-update          refresh this installed binary in place");
+    println!(
+        "                             {}",
+        style::dim("(checkout source > local build slot; --version <v> for a")
+    );
+    println!(
+        "                             {}",
+        style::dim("release; --list generations; --rollback one step back)")
+    );
+    println!("  shifu promote [--launch]   install the freshest built dev kungfu");
+    println!("  shifu builds               list registered dev builds");
     println!("  shifu help                 pnpm's own help (tasks are pnpm scripts)");
     println!();
     println!(
@@ -121,21 +135,44 @@ fn main() {
 
     let is_version = matches!(first, Some("--version") | Some("-v") | Some("-V"));
     let is_doctor = first == Some("doctor");
+    let is_self_update = first == Some("self-update");
+    // Product-stash verbs work outside a checkout too: the stash is
+    // user-global precisely so a cleaned worktree cannot strand its build.
+    let is_promote = first == Some("promote");
+    let is_builds = first == Some("builds");
+    let lenient = is_version || is_doctor || is_self_update || is_promote || is_builds;
 
-    let root = find_repo_root(is_version || is_doctor);
+    let root = find_repo_root(lenient);
 
     if is_version {
         println!("{}", version_line(root.as_deref()));
     }
+    // User-global config loads unconditionally (rootless verbs read it too);
+    // the repo-root override only exists inside a checkout.
+    envfile::load(root.as_deref());
     if let Some(root) = root.as_deref() {
-        envfile::load(root);
+        // self-update answers for THIS binary (never delegated): delegation
+        // would replace the process with the checkout's launcher, while the
+        // update must act on the binary the user invoked.
+        if is_self_update {
+            self_update::run(Some(root), &args[1..]);
+        }
         maybe_delegate_to_repo_entrypoint(root, &args);
     }
     if is_version {
         exit(0);
     }
+    if is_self_update {
+        self_update::run(None, &args[1..]);
+    }
     if is_doctor {
         doctor::run(root.as_deref());
+    }
+    if is_promote {
+        promote::run_promote(&args[1..]);
+    }
+    if is_builds {
+        promote::run_builds();
     }
     let root = root.expect("strict repo discovery cannot return None");
 
@@ -226,9 +263,10 @@ fn version_line(root: Option<&Path>) -> String {
         "installed".to_string()
     };
     format!(
-        "shifu {} (git {}, {role})",
+        "shifu {} (git {}, {}, {role})",
         env!("CARGO_PKG_VERSION"),
         env!("SHIFU_GIT_SHA"),
+        env!("SHIFU_BUILD_CHANNEL"),
     )
 }
 

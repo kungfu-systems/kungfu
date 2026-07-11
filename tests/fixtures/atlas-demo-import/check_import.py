@@ -5,7 +5,12 @@
 # stays authoritative). Runs inside the dev kfc environment (needs pykungfu).
 #
 # Usage: check_import.py <runtime-dir> <latest-import-id>
+#
+# The episode section is destructive at its end (it deletes the import event
+# journal to prove sealed-episode fsck catches the loss), so it must stay the
+# last section and the fixture must not reuse the runtime afterwards.
 
+import glob
 import hashlib
 import json
 import os
@@ -184,6 +189,100 @@ if os.path.exists(payload_manifest_path):
 
     fsck = store.fsck(runtime_dir)
     check("atlas store fsck passes", fsck.get("ok"), json.dumps(fsck.get("errors")))
+
+# ── episode: one import batch = one sealed Episode ────────────────────────
+from kungfu.storage import service as storage_service  # noqa: E402
+
+listed = storage_service.episode_list(runtime_dir, limit=0).get("episodes", [])
+atlas_episodes = [
+    row for row in listed if str(row.get("source") or "").startswith("atlas:imp")
+]
+check(
+    "one sealed episode per import batch",
+    len(atlas_episodes) == 2
+    and all(row.get("status") == "ended" for row in atlas_episodes),
+    f"got {[(row.get('episode_id'), row.get('status')) for row in atlas_episodes]}",
+)
+
+episode_id = 0
+if os.path.exists(payload_manifest_path):
+    episode_id = int(payload_manifest.get("episode_id") or 0)
+    check("manifest names the sealing episode", episode_id > 0, f"got {episode_id}")
+check(
+    "store status names the sealing episode",
+    store.status(runtime_dir).get("episode_id") == episode_id,
+)
+
+if episode_id:
+    inspected = storage_service.episode_inspect(runtime_dir, episode_id=episode_id)
+    episode = inspected.get("episode", {})
+    check(
+        "episode source names the import",
+        episode.get("source") == f"atlas:{latest_import_id}",
+        f"got {episode.get('source')}",
+    )
+    attached = inspected.get("frames", [])
+    check(
+        "episode frames == batch frames (begin + snapshots + end)",
+        len(attached) == len(entries) + 2,
+        f"got {len(attached)}, want {len(entries) + 2}",
+    )
+    payload_refs = [
+        ref for ref in inspected.get("refs", []) if ref.get("ref_kind") == "payload"
+    ]
+    present_hashes = {
+        entry.get("payload_hash")
+        for entry in entries
+        if entry.get("payload_state") == "present" and entry.get("payload_hash")
+    }
+    check(
+        "episode payload refs cover distinct present payloads",
+        len(payload_refs) == len(present_hashes),
+        f"got {len(payload_refs)}, want {len(present_hashes)}",
+    )
+
+    report = storage_service.fsck(
+        runtime_dir, episode_id=episode_id, verify_frames=True
+    )
+    check(
+        "episode fsck verify_frames green",
+        report.get("ok") is True and report.get("degraded") is False,
+        json.dumps(report.get("errors", []) + report.get("warnings", []))[:300],
+    )
+    check(
+        "every batch frame receipt verified",
+        report.get("checked", {}).get("episode_frames_verified") == len(entries) + 2,
+        f"got {report.get('checked', {}).get('episode_frames_verified')}",
+    )
+    qualification = report.get("qualification", {})
+    check(
+        "sealed batch qualifies for replay/depend_on",
+        "replay" in qualification.get("safe_capabilities", [])
+        and "depend_on" in qualification.get("safe_capabilities", []),
+        f"got {qualification.get('safe_capabilities')}",
+    )
+
+    # ── negative (destructive, keep last): losing the event journal must ──
+    # fail the sealed episode instead of passing silently — the exact P10
+    # blind spot: manifest present, projected journal page gone.
+    pages = glob.glob(
+        os.path.join(
+            runtime_dir, "journal", "**", "atlas", "import", "**", "*.journal"
+        ),
+        recursive=True,
+    )
+    check("import event journal pages found", len(pages) > 0)
+    for page in pages:
+        os.remove(page)
+    report = storage_service.fsck(
+        runtime_dir, episode_id=episode_id, verify_frames=True
+    )
+    codes = {error.get("code") for error in report.get("errors", [])}
+    check(
+        "sealed episode fails fsck after journal loss",
+        report.get("ok") is False and "episode_attached_frame_missing" in codes,
+        f"ok={report.get('ok')} codes={sorted(codes)}",
+    )
 
 print(f"[atlas-demo-import] {len(failures)} failure(s)")
 sys.exit(1 if failures else 0)

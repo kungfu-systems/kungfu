@@ -47,16 +47,19 @@ def _runtime_violation(
     frozen: bool,
     base_prefix: str,
     running_version: str,
+    assembled: bool = False,
 ) -> str | None:
     """Judge interpreter blessedness; None means blessed.
 
     Pure so both verdicts unit-test without staging real interpreters. The
-    frozen host is blessed by construction. A satellite is blessed when its
-    feature version matches the one the binding was built for and it runs
-    from a kungfu-managed python-build-standalone install (whose prefix
-    directory is named cpython-<version>-<platform>).
+    frozen host is blessed by construction, and so is the assembled host —
+    the shipped python-build-standalone tree IS the product runtime
+    (ADR-0046 stage 2). A satellite is blessed when its feature version
+    matches the one the binding was built for and it runs from a
+    kungfu-managed python-build-standalone install (whose prefix directory
+    is named cpython-<version>-<platform>).
     """
-    if frozen:
+    if frozen or assembled:
         return None
     expected_feature = ".".join(python_version.split(".")[:2])
     running_feature = ".".join(running_version.split(".")[:2])
@@ -90,12 +93,15 @@ def _verify_blessed_runtime(binding: Any) -> None:
             python_version = json.load(build_info_file).get("pythonVersion", "")
     except OSError:
         return  # no buildinfo (bare dev build) — nothing to judge against
+    from kungfu import host
+
     running = ".".join(str(v) for v in sys.version_info[:3])
     violation = _runtime_violation(
         python_version,
         frozen="__compiled__" in globals() or bool(getattr(sys, "frozen", False)),
         base_prefix=sys.base_prefix,
         running_version=running,
+        assembled=host.host_form() == host.FORM_ASSEMBLED,
     )
     if violation:
         raise WrongRuntimeError(

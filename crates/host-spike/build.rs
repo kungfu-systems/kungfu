@@ -21,6 +21,7 @@ use std::process::Command;
 
 fn main() {
     println!("cargo:rerun-if-changed=shim/host_shim.cpp");
+    println!("cargo:rerun-if-changed=src/embedding.rs");
     println!("cargo:rerun-if-env-changed=KF_SPIKE_SIBLING_CORE");
     println!("cargo:rerun-if-env-changed=KF_SPIKE_NATIVE_DIR");
     println!("cargo:rerun-if-env-changed=KF_SPIKE_PYTHON_HOME");
@@ -32,7 +33,9 @@ fn main() {
         .map(PathBuf::from)
         .unwrap_or_else(|_| manifest.join("../../framework/core"))
         .canonicalize()
-        .expect("sibling core not found; set KF_SPIKE_SIBLING_CORE to a fully built framework/core");
+        .expect(
+            "sibling core not found; set KF_SPIKE_SIBLING_CORE to a fully built framework/core",
+        );
 
     let native_dir = env::var("KF_SPIKE_NATIVE_DIR")
         .map(PathBuf::from)
@@ -44,8 +47,9 @@ fn main() {
     let ccj = core.join("build/compile_commands.json");
     let text = fs::read_to_string(&ccj)
         .unwrap_or_else(|_| panic!("{} missing; build the sibling core first", ccj.display()));
-    let command = io_cpp_command(&text)
-        .expect("compile_commands.json has no io/io.cpp entry; is the sibling core fully configured?");
+    let command = io_cpp_command(&text).expect(
+        "compile_commands.json has no io/io.cpp entry; is the sibling core fully configured?",
+    );
     let flags = shim_flags(&command);
 
     let shim_src = manifest.join("shim/host_shim.cpp");
@@ -90,13 +94,22 @@ fn main() {
     println!("cargo:rustc-link-search=native={}", native_dir.display());
     println!("cargo:rustc-link-lib=dylib=kungfu");
     println!("cargo:rustc-link-arg=-Wl,-rpath,{}", native_dir.display());
-    println!("cargo:rustc-link-search=native={}", python_lib_dir.display());
+    println!(
+        "cargo:rustc-link-search=native={}",
+        python_lib_dir.display()
+    );
     println!("cargo:rustc-link-lib=dylib={}", python_link_name);
     println!("cargo:rustc-link-lib=dylib=c++");
 
     // Bake the resolved defaults into the binary; runtime env still overrides.
-    println!("cargo:rustc-env=KF_SPIKE_PYTHON_HOME={}", python_home.display());
-    println!("cargo:rustc-env=KF_SPIKE_NATIVE_DIR={}", native_dir.display());
+    println!(
+        "cargo:rustc-env=KF_SPIKE_PYTHON_HOME={}",
+        python_home.display()
+    );
+    println!(
+        "cargo:rustc-env=KF_SPIKE_NATIVE_DIR={}",
+        native_dir.display()
+    );
 }
 
 /// Pull the `command` string of the io/io.cpp entry out of compile_commands.json.
@@ -107,7 +120,10 @@ fn io_cpp_command(text: &str) -> Option<String> {
     for line in text.lines() {
         let trimmed = line.trim();
         if let Some(rest) = trimmed.strip_prefix("\"command\":") {
-            last_command = rest.trim().strip_prefix('"').and_then(|s| s.rfind('"').map(|i| &s[..i]));
+            last_command = rest
+                .trim()
+                .strip_prefix('"')
+                .and_then(|s| s.rfind('"').map(|i| &s[..i]));
         }
         if trimmed.starts_with("\"file\":") && trimmed.contains("io/io.cpp") {
             return last_command.map(unescape_json);
@@ -156,8 +172,12 @@ fn shim_flags(command: &str) -> Vec<String> {
             "-o" | "-c" => {
                 i += 1; // skip the value / handled by us
             }
-            _ if t.starts_with("-I") || t.starts_with("-D") || t.starts_with("-std=") || t.starts_with("-W")
-                || t == "-fPIC" => {
+            _ if t.starts_with("-I")
+                || t.starts_with("-D")
+                || t.starts_with("-std=")
+                || t.starts_with("-W")
+                || t == "-fPIC" =>
+            {
                 flags.push(t.to_string());
             }
             _ => {}
@@ -169,7 +189,9 @@ fn shim_flags(command: &str) -> Vec<String> {
 
 fn run(cmd: &mut Command) {
     let rendered = format!("{:?}", cmd);
-    let status = cmd.status().unwrap_or_else(|e| panic!("failed to spawn {rendered}: {e}"));
+    let status = cmd
+        .status()
+        .unwrap_or_else(|e| panic!("failed to spawn {rendered}: {e}"));
     if !status.success() {
         panic!("command failed ({status}): {rendered}");
     }
