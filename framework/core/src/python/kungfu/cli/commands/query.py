@@ -56,6 +56,33 @@ def _runtime_dir(ctx: click.Context) -> str:
     return str(ctx.__dict__["runtime_dir"])
 
 
+def _load_json_object(file_path: str, label: str) -> dict[str, Any]:
+    value = _load_definition(file_path)
+    if not isinstance(value, dict):
+        _fail("KF_QUERY_INPUT", f"{label} must be a JSON object")
+    return value
+
+
+def _load_saved_view(file_path: str) -> dict[str, Any]:
+    value = _load_json_object(file_path, "saved query view")
+    if value.get("schema") != "kungfu.query.saved-view/v1":
+        _fail("KF_QUERY_VIEW", "unsupported saved query view schema")
+    if not isinstance(value.get("name"), str) or not value["name"]:
+        _fail("KF_QUERY_VIEW", "saved query view requires a name")
+    definition = value.get("definition")
+    view = value.get("view")
+    if not isinstance(definition, dict):
+        _fail("KF_QUERY_VIEW", "saved query view requires a QueryDefinition")
+    if not isinstance(view, dict) or view.get("kind") not in {
+        "table",
+        "timeline",
+        "diff",
+        "causal-graph",
+    }:
+        _fail("KF_QUERY_VIEW", "saved query view requires a supported ViewSpec")
+    return value
+
+
 def _planner_call(ctx: click.Context, action: str, **kwargs: Any) -> dict[str, Any]:
     from kungfu.storage import service
 
@@ -159,6 +186,33 @@ def describe(ctx: click.Context, object_name: str, as_json: bool) -> None:
 def examples(ctx: click.Context, as_json: bool) -> None:
     del as_json
     _echo_json(_planner_call(ctx, "examples"))
+
+
+@query.command(
+    name="saved-view", help="inspect a shared QueryDefinition + ViewSpec artifact"
+)
+@click.option(
+    "--file", "file_path", required=True, help="kungfu.query.saved-view/v1 JSON path"
+)
+@click.option(
+    "--json", "as_json", is_flag=True, help="machine-readable output (default)"
+)
+@query_command_context
+def saved_view(ctx: click.Context, file_path: str, as_json: bool) -> None:
+    del as_json
+    value = _load_saved_view(file_path)
+    validation = _planner_call(ctx, "validate", definition=value["definition"])
+    _echo_json(
+        {
+            "schema": "kungfu.query.saved-view-inspection/v1",
+            "ok": True,
+            "name": value["name"],
+            "definition": validation["definition"],
+            "query_definition_hash": validation["query_definition_hash"],
+            "logical_plan_hash": validation["logical_plan_hash"],
+            "view": value["view"],
+        }
+    )
 
 
 @query.command(help="validate and canonically hash a QueryDefinition")
@@ -302,3 +356,50 @@ def prove(
         _emit_tsv(result)
     else:
         _echo_json(result)
+
+
+@query.command(help="read one resumable page of the proof-carrying changelog")
+@click.option(
+    "--file",
+    "file_path",
+    required=True,
+    help="head-cut QueryDefinition JSON path or - for stdin",
+)
+@click.option(
+    "--resume-file",
+    default=None,
+    help="resume-token JSON path returned by an earlier page",
+)
+@click.option(
+    "--max-messages",
+    type=click.IntRange(min=1, max=10000),
+    default=100,
+    show_default=True,
+)
+@click.option(
+    "--json", "as_json", is_flag=True, help="machine-readable output (default)"
+)
+@query_command_context
+def changelog(
+    ctx: click.Context,
+    file_path: str,
+    resume_file: str | None,
+    max_messages: int,
+    as_json: bool,
+) -> None:
+    from kungfu.storage import service
+
+    del as_json
+    resume_token = (
+        _load_json_object(resume_file, "resume token") if resume_file else None
+    )
+    try:
+        result = service.fact_changelog(
+            _runtime_dir(ctx),
+            _load_definition(file_path),
+            resume_token=resume_token,
+            max_messages=max_messages,
+        )
+    except (RuntimeError, TypeError, ValueError) as error:
+        _fail("KF_QUERY_CHANGELOG", str(error), exit_code=1)
+    _echo_json(result)

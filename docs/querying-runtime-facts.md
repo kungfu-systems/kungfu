@@ -7,9 +7,9 @@ of truth.
 This document describes the target service contract accepted by
 [ADR-0048](../framework/core/docs/adr/ADR-0048-runtime-fact-query-semantics-and-changelog.md).
 The implementation is staged. QueryDefinition planning, proof-bearing Episode
-queries, the agent CLI, a bounded SQL compiler, and journal/SQLite conformance
-ship today. Changelogs, broad SQL, temporal patterns, and visual builders
-remain later slices.
+queries, the agent CLI, a bounded SQL compiler, journal/SQLite conformance, a
+resumable changelog, and table/timeline/diff/causal-graph reference views ship
+today. Broad SQL and temporal patterns remain later slices.
 
 ## The query basis
 
@@ -132,6 +132,15 @@ This allows a GUI, agent, or external consumer to distinguish:
 - the connection resumed successfully;
 - updates were missed and recovery is required.
 
+The current Episode implementation returns deterministic bounded pages. A
+resume token pins the shared QueryDefinition and logical-plan hashes, the
+source and target frontiers (opaque frame UID plus monotonic authority-record
+count), both result hashes, the batch id, and the next message index. Reconnect
+re-runs the exact authority cuts before continuing.
+Message ids are stable within a batch, so replay is idempotent; a consumer that
+cannot reproduce a pinned result receives `Gap` and must request a new full
+snapshot. The token is integrity-hashed and cannot be moved to another query.
+
 NDJSON is the intended CLI stream representation. Bulk tabular results may use
 Apache Arrow, while ADBC or Flight SQL may provide external database adapters.
 None of those representations becomes fact authority.
@@ -149,6 +158,8 @@ kungfu query compile-sql --file basis.json \
 kungfu query validate --file query.json --json
 kungfu query explain --file query.json --json
 kungfu query prove --file query.json --json
+kungfu query changelog --file query.json --max-messages 100 --json
+kungfu query saved-view --file saved-view.json --json
 kungfu storage episode rebuild-projection --json
 kungfu query prove --file query.json --engine sqlite --json
 ```
@@ -178,6 +189,13 @@ Humans can build and save queries through reference components:
 - before/after diffs;
 - causal graphs and evidence drill-down;
 - temporal pattern builders;
+
+The System Status KFX contains the initial table, timeline, diff, and causal
+graph references. It imports the same `kungfu.query.saved-view/v1` JSON that
+the CLI inspects. Only the QueryDefinition and thin ViewSpec are persisted in
+the browser; result rows and proof are rebuilt from the native query
+capability, and missing or unverifiable evidence remains visible in every
+view. The GUI does not open or own a database.
 - metrics backed by inspectable QueryDefinitions.
 
 Presentation is stored separately as a ViewSpec. Changing a chart, visible

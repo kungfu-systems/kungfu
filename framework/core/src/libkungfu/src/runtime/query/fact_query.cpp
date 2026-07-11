@@ -6,6 +6,7 @@
 #include <cctype>
 #include <charconv>
 #include <initializer_list>
+#include <map>
 #include <regex>
 #include <stdexcept>
 #include <string>
@@ -486,6 +487,15 @@ nlohmann::json query_capabilities_json() {
                                                   {"declaration", episode_fact_surface_declaration_payload()}}})}}},
       {"formats", nlohmann::json::array({"json", "ndjson", "tsv"})},
       {"frontends", nlohmann::json::array({"query-definition", "bounded-sql"})},
+      {"continuous",
+       {{"schema", QUERY_CHANGELOG_SCHEMA_V1},
+        {"resume_token_schema", QUERY_RESUME_TOKEN_SCHEMA_V1},
+        {"messages", nlohmann::json::array({"SnapshotBegin", "RowUpsert", "RowRetract", "Progress", "SchemaChange",
+                                            "SnapshotEnd", "Gap"})},
+        {"ordering", "batch-index"},
+        {"replay", "message-idempotent"},
+        {"backpressure", "bounded-pages"}}},
+      {"saved_view_schema", QUERY_VIEW_SCHEMA_V1},
       {"sql",
        {{"object", "episodes"},
         {"accepted", nlohmann::json::array(
@@ -496,10 +506,10 @@ nlohmann::json query_capabilities_json() {
         {"basis_owner", "QueryDefinition"}}},
       {"execution_engines", nlohmann::json::array({"episode-authority-scan/v1", "episode-sqlite-projection/v1"})},
       {"commands", nlohmann::json::array({"capabilities", "schema", "describe", "examples", "compile-sql", "validate",
-                                          "explain", "prove"})},
+                                          "explain", "prove", "changelog", "saved-view"})},
       {"limits", {{"minimum", 1}, {"maximum", 1000}}},
-      {"error_codes",
-       nlohmann::json::array({"KF_QUERY_INPUT", "KF_QUERY_VALIDATION", "KF_QUERY_EXECUTION", "KF_QUERY_OUTPUT"})},
+      {"error_codes", nlohmann::json::array({"KF_QUERY_INPUT", "KF_QUERY_VALIDATION", "KF_QUERY_EXECUTION",
+                                             "KF_QUERY_OUTPUT", "KF_QUERY_CHANGELOG", "KF_QUERY_VIEW"})},
       {"physical_plan", {{"public", false}, {"reason", "engine-private-and-replaceable"}}}};
 }
 
@@ -644,6 +654,353 @@ nlohmann::json query_result_json(const query_result &result) {
             {"episode_content_roots", roots},
             {"missing_inputs", missing},
             {"unverifiable_inputs", unverifiable}}}};
+}
+
+namespace {
+
+nlohmann::json frontier_json(const query_frontier &frontier) {
+  if (frontier.kind == frontier_kind::Empty) {
+    return {{"kind", "empty"}, {"record_count", "0"}};
+  }
+  return {{"kind", "manifest_frame_uid"},
+          {"manifest_frame_uid", std::to_string(frontier.manifest_frame_uid)},
+          {"record_count", std::to_string(frontier.record_count)}};
+}
+
+query_frontier parse_frontier(const nlohmann::json &value, const char *path) {
+  reject_unknown_fields(value, {"kind", "manifest_frame_uid", "record_count"}, path);
+  const auto kind = optional_text(value, "kind");
+  if (kind == "empty") {
+    if (value.contains("manifest_frame_uid")) {
+      throw std::invalid_argument(std::string(path) + " empty frontier must not carry manifest_frame_uid");
+    }
+    return {};
+  }
+  if (kind == "manifest_frame_uid") {
+    return {frontier_kind::ManifestFrameUid, optional_uint64(value, "manifest_frame_uid"),
+            optional_uint64(value, "record_count")};
+  }
+  throw std::invalid_argument(std::string(path) + " kind must be empty or manifest_frame_uid");
+}
+
+query_frontier result_frontier(const query_result &result) {
+  const auto &resolved = result.proof.cut.at("resolved");
+  const auto kind = optional_text(resolved, "kind");
+  if (kind == "empty") {
+    return {};
+  }
+  if (kind == "manifest_frame_uid") {
+    return {frontier_kind::ManifestFrameUid, optional_uint64(resolved, "manifest_frame_uid"),
+            optional_uint64(result.proof.authority, "record_count")};
+  }
+  throw std::runtime_error("query result has no resumable frontier");
+}
+
+nlohmann::json result_frontier_evidence_json(const query_result &result) {
+  auto value = result.proof.cut.at("resolved");
+  value["record_count"] = std::to_string(optional_uint64(result.proof.authority, "record_count"));
+  return value;
+}
+
+bool same_frontier(const query_frontier &left, const query_frontier &right) {
+  return left.kind == right.kind &&
+         (left.kind == frontier_kind::Empty ||
+          (left.manifest_frame_uid == right.manifest_frame_uid && left.record_count == right.record_count));
+}
+
+bool frontier_regressed(const query_frontier &from, const query_frontier &target) {
+  return target.record_count < from.record_count;
+}
+
+nlohmann::json resume_token_payload_json(const query_resume_token &token) {
+  return {{"schema", token.schema},
+          {"definition", query_definition_json(token.definition)},
+          {"query_definition_hash", token.query_definition_hash},
+          {"logical_plan_hash", token.logical_plan_hash},
+          {"from", frontier_json(token.from)},
+          {"from_result_hash", token.from_result_hash},
+          {"target", frontier_json(token.target)},
+          {"target_result_hash", token.target_result_hash},
+          {"next_message_index", token.next_message_index},
+          {"batch_id", token.batch_id}};
+}
+
+void seal_resume_token(query_resume_token &token) { token.token_hash = json_hash(resume_token_payload_json(token)); }
+
+std::string changelog_batch_id(const logical_plan &plan, const query_frontier &from,
+                               const std::string &from_result_hash, const query_frontier &target,
+                               const std::string &target_result_hash) {
+  return json_hash({{"query_definition_hash", plan.query_definition_hash},
+                    {"logical_plan_hash", plan.logical_plan_hash},
+                    {"from", frontier_json(from)},
+                    {"from_result_hash", from_result_hash},
+                    {"target", frontier_json(target)},
+                    {"target_result_hash", target_result_hash}});
+}
+
+query_result run_at_frontier(const std::string &runtime_dir, const query_definition &definition,
+                             const query_frontier &frontier) {
+  auto bounded = definition;
+  bounded.basis.selected_cut.kind = cut_kind::ManifestFrameUid;
+  bounded.basis.selected_cut.manifest_frame_uid =
+      frontier.kind == frontier_kind::Empty ? 0 : frontier.manifest_frame_uid;
+  return run_episode_authority_scan(runtime_dir, plan_query(bounded));
+}
+
+std::string row_key(const nlohmann::json &row) {
+  if (!row.is_object() || !row.contains("episode_id")) {
+    throw std::runtime_error("episode changelog row has no episode_id key");
+  }
+  const auto &value = row.at("episode_id");
+  if (value.is_string()) {
+    return value.get<std::string>();
+  }
+  if (value.is_number_unsigned()) {
+    return std::to_string(value.get<uint64_t>());
+  }
+  if (value.is_number_integer() && value.get<int64_t>() >= 0) {
+    return std::to_string(value.get<int64_t>());
+  }
+  throw std::runtime_error("episode changelog key must be an unsigned integer");
+}
+
+std::map<std::string, nlohmann::json> rows_by_key(const query_result &result) {
+  std::map<std::string, nlohmann::json> rows;
+  for (const auto &row : result.rows) {
+    const auto key = row_key(row);
+    if (!rows.emplace(key, row).second) {
+      throw std::runtime_error("episode changelog contains duplicate key " + key);
+    }
+  }
+  return rows;
+}
+
+nlohmann::json evidence_reference(const query_result &result, const nlohmann::json &row) {
+  return {{"episode_id", row_key(row)},
+          {"content_root", row.value("content_root", nlohmann::json(nullptr))},
+          {"content_root_status", row.value("content_root_status", "unverifiable")},
+          {"canonical_state", result.proof.canonical_state},
+          {"determinism", result.proof.determinism},
+          {"missing_inputs", result.proof.missing_inputs},
+          {"unverifiable_inputs", result.proof.unverifiable_inputs}};
+}
+
+nlohmann::json changelog_payload_json(const changelog_payload &payload) {
+  return std::visit(
+      [](const auto &message) -> nlohmann::json {
+        using message_type = std::decay_t<decltype(message)>;
+        if constexpr (std::is_same_v<message_type, snapshot_begin>) {
+          return {
+              {"type", "SnapshotBegin"},
+              {"basis", query_definition_json(query_definition{QUERY_DEFINITION_SCHEMA_V1, message.basis})["basis"]},
+              {"result_schema", result_schema_json(message.schema)}};
+        } else if constexpr (std::is_same_v<message_type, row_upsert>) {
+          return {{"type", "RowUpsert"},
+                  {"key", message.key},
+                  {"row", message.row},
+                  {"evidence_ref", message.evidence_ref}};
+        } else if constexpr (std::is_same_v<message_type, row_retract>) {
+          return {{"type", "RowRetract"},
+                  {"key", message.key},
+                  {"before_hash", message.before_hash},
+                  {"evidence_ref", message.evidence_ref}};
+        } else if constexpr (std::is_same_v<message_type, progress>) {
+          return {
+              {"type", "Progress"}, {"frontier", frontier_json(message.frontier)}, {"watermark", message.watermark}};
+        } else if constexpr (std::is_same_v<message_type, schema_change>) {
+          return {{"type", "SchemaChange"},
+                  {"old_schema", result_schema_json(message.old_schema)},
+                  {"new_schema", result_schema_json(message.new_schema)},
+                  {"compatibility", message.compatibility}};
+        } else if constexpr (std::is_same_v<message_type, snapshot_end>) {
+          return {{"type", "SnapshotEnd"},
+                  {"result_hash", message.result_hash},
+                  {"frontier", frontier_json(message.frontier)}};
+        } else {
+          return {{"type", "Gap"},
+                  {"expected", message.expected},
+                  {"observed", message.observed},
+                  {"recovery_hint", message.recovery_hint}};
+        }
+      },
+      payload);
+}
+
+} // namespace
+
+query_resume_token parse_query_resume_token(const nlohmann::json &value) {
+  reject_unknown_fields(value,
+                        {"schema", "definition", "query_definition_hash", "logical_plan_hash", "from",
+                         "from_result_hash", "target", "target_result_hash", "next_message_index", "batch_id",
+                         "token_hash"},
+                        "resume_token");
+  query_resume_token token;
+  token.schema = optional_text(value, "schema");
+  if (token.schema != QUERY_RESUME_TOKEN_SCHEMA_V1) {
+    throw std::invalid_argument("unsupported query resume token schema");
+  }
+  token.definition = parse_query_definition(value.at("definition"));
+  token.query_definition_hash = optional_text(value, "query_definition_hash");
+  token.logical_plan_hash = optional_text(value, "logical_plan_hash");
+  token.from = parse_frontier(value.at("from"), "resume_token.from");
+  token.from_result_hash = optional_text(value, "from_result_hash");
+  token.target = parse_frontier(value.at("target"), "resume_token.target");
+  token.target_result_hash = optional_text(value, "target_result_hash");
+  token.next_message_index = optional_uint64(value, "next_message_index");
+  token.batch_id = optional_text(value, "batch_id");
+  token.token_hash = optional_text(value, "token_hash");
+  if (token.batch_id.empty() || token.token_hash.empty() ||
+      token.token_hash != json_hash(resume_token_payload_json(token))) {
+    throw std::invalid_argument("query resume token integrity check failed");
+  }
+  return token;
+}
+
+nlohmann::json query_resume_token_json(const query_resume_token &token) {
+  auto value = resume_token_payload_json(token);
+  value["token_hash"] = token.token_hash;
+  return value;
+}
+
+nlohmann::json changelog_page_json(const changelog_page &page) {
+  auto messages = nlohmann::json::array();
+  for (const auto &message : page.messages) {
+    auto value = changelog_payload_json(message.payload);
+    value["message_id"] = message.message_id;
+    value["index"] = message.index;
+    messages.push_back(std::move(value));
+  }
+  return {{"schema", page.schema},
+          {"batch_id", page.batch_id},
+          {"messages", std::move(messages)},
+          {"resume_token", query_resume_token_json(page.resume_token)},
+          {"complete", page.complete}};
+}
+
+changelog_page run_episode_changelog(const std::string &runtime_dir, const logical_plan &plan,
+                                     const nlohmann::json &resume_token, uint64_t max_messages) {
+  if (plan.definition.basis.selected_cut.kind != cut_kind::Head) {
+    throw std::invalid_argument("continuous query requires a head cut");
+  }
+  if (max_messages == 0 || max_messages > 10000) {
+    throw std::invalid_argument("max_messages must be between 1 and 10000");
+  }
+
+  const auto current = run_episode_authority_scan(runtime_dir, plan);
+  const auto current_frontier = result_frontier(current);
+  query_resume_token cursor;
+  bool continuing_batch = false;
+  if (resume_token.is_object() && !resume_token.empty()) {
+    cursor = parse_query_resume_token(resume_token);
+    const auto token_plan = plan_query(cursor.definition);
+    if (token_plan.query_definition_hash != plan.query_definition_hash ||
+        token_plan.logical_plan_hash != plan.logical_plan_hash ||
+        query_definition_json(cursor.definition) != query_definition_json(plan.definition)) {
+      throw std::invalid_argument("query resume token belongs to a different QueryDefinition");
+    }
+    continuing_batch = cursor.next_message_index != 0 || !same_frontier(cursor.from, cursor.target) ||
+                       cursor.from_result_hash != cursor.target_result_hash;
+  } else {
+    cursor.definition = plan.definition;
+    cursor.query_definition_hash = plan.query_definition_hash;
+    cursor.logical_plan_hash = plan.logical_plan_hash;
+  }
+
+  const auto from = cursor.from;
+  const auto from_hash = cursor.from_result_hash;
+  const auto target = continuing_batch ? cursor.target : current_frontier;
+  const auto target_hash = continuing_batch ? cursor.target_result_hash : current.result_hash;
+  const auto batch_id = changelog_batch_id(plan, from, from_hash, target, target_hash);
+
+  std::vector<changelog_message> all;
+  auto append = [&](changelog_payload payload) {
+    const auto index = static_cast<uint64_t>(all.size());
+    all.push_back({json_hash({{"batch_id", batch_id}, {"index", index}}), index, std::move(payload)});
+  };
+  auto gap_page = [&](nlohmann::json expected, nlohmann::json observed) {
+    append(gap{std::move(expected), std::move(observed), "discard-token-and-request-full-snapshot"});
+  };
+
+  query_result prior;
+  bool valid = true;
+  if (!from_hash.empty()) {
+    prior = run_at_frontier(runtime_dir, plan.definition, from);
+    if (prior.result_hash != from_hash) {
+      gap_page({{"frontier", frontier_json(from)}, {"result_hash", from_hash}},
+               {{"frontier", result_frontier_evidence_json(prior)}, {"result_hash", prior.result_hash}});
+      valid = false;
+    }
+  } else {
+    prior.definition = plan.definition;
+    prior.plan = plan;
+    prior.row_schema = plan.row_schema;
+    prior.result_hash =
+        json_hash({{"result_schema", result_schema_json(plan.row_schema)}, {"rows", nlohmann::json::array()}});
+  }
+
+  query_result target_result;
+  if (valid) {
+    target_result =
+        same_frontier(target, current_frontier) ? current : run_at_frontier(runtime_dir, plan.definition, target);
+    if (frontier_regressed(from, target) || target_result.result_hash != target_hash) {
+      gap_page(
+          {{"frontier", frontier_json(target)}, {"result_hash", target_hash}},
+          {{"frontier", result_frontier_evidence_json(target_result)}, {"result_hash", target_result.result_hash}});
+      valid = false;
+    }
+  }
+
+  if (valid) {
+    const auto prior_rows = rows_by_key(prior);
+    const auto target_rows = rows_by_key(target_result);
+    if (from_hash.empty()) {
+      append(snapshot_begin{plan.definition.basis, target_result.row_schema});
+    } else if (result_schema_json(prior.row_schema) != result_schema_json(target_result.row_schema)) {
+      append(schema_change{prior.row_schema, target_result.row_schema, "consumer-must-revalidate"});
+    }
+    for (const auto &[key, row] : prior_rows) {
+      if (!target_rows.contains(key)) {
+        append(row_retract{key, json_hash(row), evidence_reference(prior, row)});
+      }
+    }
+    for (const auto &[key, row] : target_rows) {
+      const auto previous = prior_rows.find(key);
+      if (previous == prior_rows.end() || previous->second != row) {
+        append(row_upsert{key, row, evidence_reference(target_result, row)});
+      }
+    }
+    if (from_hash.empty()) {
+      append(snapshot_end{target_result.result_hash, target});
+    } else {
+      append(progress{target, {{"kind", "authority-frontier"}, {"inclusive", true}}});
+    }
+  }
+
+  const auto begin = valid ? std::min<uint64_t>(cursor.next_message_index, all.size()) : 0;
+  const auto end = std::min<uint64_t>(all.size(), begin + max_messages);
+  changelog_page page;
+  page.batch_id = batch_id;
+  page.messages.insert(page.messages.end(), all.begin() + static_cast<std::ptrdiff_t>(begin),
+                       all.begin() + static_cast<std::ptrdiff_t>(end));
+  page.complete = !valid || end == all.size();
+  page.resume_token.definition = plan.definition;
+  page.resume_token.query_definition_hash = plan.query_definition_hash;
+  page.resume_token.logical_plan_hash = plan.logical_plan_hash;
+  page.resume_token.batch_id = batch_id;
+  if (page.complete && valid) {
+    page.resume_token.from = target;
+    page.resume_token.from_result_hash = target_hash;
+    page.resume_token.target = target;
+    page.resume_token.target_result_hash = target_hash;
+  } else {
+    page.resume_token.from = from;
+    page.resume_token.from_result_hash = from_hash;
+    page.resume_token.target = target;
+    page.resume_token.target_result_hash = target_hash;
+    page.resume_token.next_message_index = end;
+  }
+  seal_resume_token(page.resume_token);
+  return page;
 }
 
 static query_result run_episode_fold(const logical_plan &plan, const yy_storage::episode_manifest_fold &fold,

@@ -4624,6 +4624,15 @@ public:
     throw std::invalid_argument("query engine must be authority or sqlite");
   }
 
+  [[nodiscard]] nlohmann::json fact_changelog(const storage_service_options &options) const {
+    const auto definition = query::parse_query_definition(options.query_definition);
+    const auto plan = query::plan_query(definition);
+    const auto resume_token = object_or_empty(options.operation_options, "resume_token");
+    const auto max_messages = uint64_or(options.operation_options, "max_messages", 100);
+    return query::changelog_page_json(
+        query::run_episode_changelog(options.runtime_dir, plan, resume_token, max_messages));
+  }
+
   [[nodiscard]] nlohmann::json fact_contract(const storage_service_options &options) const {
     (void)options;
     return facts::fact_contract_json();
@@ -5945,6 +5954,7 @@ std::vector<std::string> storage_operation_names() {
       storage_operation_name(storage_operation::Query),
       storage_operation_name(storage_operation::QueryPlan),
       storage_operation_name(storage_operation::FactQuery),
+      storage_operation_name(storage_operation::FactChangelog),
       storage_operation_name(storage_operation::FactContract),
       storage_operation_name(storage_operation::FactDeclareWorld),
       storage_operation_name(storage_operation::FactDeclareSurface),
@@ -6001,6 +6011,8 @@ std::string storage_operation_name(storage_operation operation) {
     return "query_plan";
   case storage_operation::FactQuery:
     return "fact_query";
+  case storage_operation::FactChangelog:
+    return "fact_changelog";
   case storage_operation::FactContract:
     return "fact_contract";
   case storage_operation::FactDeclareWorld:
@@ -6093,6 +6105,9 @@ storage_operation parse_storage_operation(const std::string &operation) {
   }
   if (operation == "fact_query") {
     return storage_operation::FactQuery;
+  }
+  if (operation == "fact_changelog") {
+    return storage_operation::FactChangelog;
   }
   if (operation == "fact_contract") {
     return storage_operation::FactContract;
@@ -6198,7 +6213,8 @@ nlohmann::json make_storage_service_request(const std::string &operation, const 
     request["query"] = parsed_options.query;
     request["kind"] = parsed_options.kind.empty() ? nlohmann::json(nullptr) : nlohmann::json(parsed_options.kind);
     request["limit"] = parsed_options.limit;
-  } else if (parsed_operation == storage_operation::QueryPlan || parsed_operation == storage_operation::FactQuery) {
+  } else if (parsed_operation == storage_operation::QueryPlan || parsed_operation == storage_operation::FactQuery ||
+             parsed_operation == storage_operation::FactChangelog) {
     request["definition"] = parsed_options.query_definition;
     request["action"] = text_or(parsed_options.operation_options, "action");
   } else if (parsed_operation == storage_operation::Layout) {
@@ -6253,6 +6269,8 @@ nlohmann::json run_storage_service_operation(const std::string &operation, const
     return storage_json_edge_service_instance().query_plan(parsed_options);
   case storage_operation::FactQuery:
     return storage_json_edge_service_instance().fact_query(parsed_options);
+  case storage_operation::FactChangelog:
+    return storage_json_edge_service_instance().fact_changelog(parsed_options);
   case storage_operation::FactContract:
     return storage_json_edge_service_instance().fact_contract(parsed_options);
   case storage_operation::FactDeclareWorld:

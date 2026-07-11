@@ -2,6 +2,11 @@
 // The native binding owns every semantic operation; this handle only gives
 // higher layers a typed, injected expression of that existing contract.
 
+import type {
+  QueryChangelogPage,
+  QueryDefinition,
+  QueryResumeToken,
+} from './query.js';
 import type { KfLocator, KfNativeBinding } from './types.js';
 import { resolveRuntimeDir } from './types.js';
 
@@ -16,6 +21,13 @@ export type Storage = {
   fsck: () => StorageValue;
   repairPlan: () => StorageValue;
   exportBundle: (sourceId?: string) => StorageValue;
+  queryExamples: () => StorageValue;
+  factQuery: (definition: QueryDefinition) => StorageValue;
+  factChangelog: (
+    definition: QueryDefinition,
+    resumeToken?: QueryResumeToken,
+    maxMessages?: number,
+  ) => QueryChangelogPage;
 };
 
 export type OpenStorageOptions = {
@@ -47,5 +59,13 @@ export function openStorage(options: OpenStorageOptions): Storage {
     repairPlan: () => run('repair_plan', { dryRun: true }),
     exportBundle: (sourceId = '') =>
       run('export_bundle', sourceId ? { sourceId } : {}),
+    queryExamples: () => run('query_plan', { action: 'examples' }),
+    factQuery: (definition) => run('fact_query', { definition }),
+    factChangelog: (definition, resumeToken, maxMessages = 100) =>
+      run('fact_changelog', {
+        definition,
+        max_messages: maxMessages,
+        ...(resumeToken ? { resume_token: resumeToken } : {}),
+      }) as QueryChangelogPage,
   };
 }

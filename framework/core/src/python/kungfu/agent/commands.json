@@ -266,6 +266,18 @@
       "purpose": "Execute the same planner through the semantic Episode shortcut."
     },
     {
+      "apiId": "kungfu.query.changelog",
+      "name": "kungfu query changelog --file query.json --json",
+      "maturity": "experimental",
+      "purpose": "Read a bounded resumable page of the typed proof-carrying changelog."
+    },
+    {
+      "apiId": "kungfu.query.saved-view",
+      "name": "kungfu query saved-view --file saved-view.json --json",
+      "maturity": "experimental",
+      "purpose": "Inspect the same QueryDefinition and presentation-only ViewSpec artifact used by the GUI."
+    },
+    {
       "apiId": "kungfu.facts.capabilities",
       "name": "kungfu facts capabilities",
       "maturity": "experimental",

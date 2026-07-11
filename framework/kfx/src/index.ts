@@ -37,6 +37,21 @@ export type {
   TerminalSession,
   TerminalSpawnOptions,
   TerminalStatus,
+  QueryChangelogMessage,
+  QueryChangelogPage,
+  QueryChangelogState,
+  QueryDefinition,
+  QueryFrontier,
+  QueryResumeToken,
+  QueryResultSchema,
+  QueryViewSpec,
+  SavedQueryView,
+} from '@kungfu-tech/api/capability';
+export {
+  applyQueryChangelogPage,
+  emptyQueryChangelogState,
+  parseSavedQueryView,
+  queryRows,
 } from '@kungfu-tech/api/capability';
 
 // ── capability surface ────────────────────────────────────────────────────

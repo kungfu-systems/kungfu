@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <string>
+#include <variant>
 #include <vector>
 
 #include <nlohmann/json.hpp>
@@ -19,6 +20,9 @@ inline constexpr const char *QUERY_RESULT_ROW_SCHEMA_V1 = "kungfu.query.episode-
 inline constexpr const char *QUERY_CAPABILITIES_SCHEMA_V1 = "kungfu.query.capabilities/v1";
 inline constexpr const char *QUERY_VALIDATION_SCHEMA_V1 = "kungfu.query.validation/v1";
 inline constexpr const char *QUERY_EXPLAIN_SCHEMA_V1 = "kungfu.query.explain/v1";
+inline constexpr const char *QUERY_CHANGELOG_SCHEMA_V1 = "kungfu.query.changelog/v1";
+inline constexpr const char *QUERY_RESUME_TOKEN_SCHEMA_V1 = "kungfu.query.resume-token/v1";
+inline constexpr const char *QUERY_VIEW_SCHEMA_V1 = "kungfu.query.saved-view/v1";
 
 enum class cut_kind { Head, ManifestFrameUid };
 
@@ -137,6 +141,88 @@ struct query_result {
   std::string result_hash = {};
 };
 
+enum class frontier_kind { Empty, ManifestFrameUid };
+
+struct query_frontier {
+  frontier_kind kind = frontier_kind::Empty;
+  uint64_t manifest_frame_uid = 0;
+  uint64_t record_count = 0;
+};
+
+// A resume token names both ends of one deterministic changelog batch. A
+// reconnect re-runs those exact cuts and verifies their result hashes before
+// continuing at next_message_index; no GUI cache or server-side cursor owns
+// query truth.
+struct query_resume_token {
+  std::string schema = QUERY_RESUME_TOKEN_SCHEMA_V1;
+  query_definition definition = {};
+  std::string query_definition_hash = {};
+  std::string logical_plan_hash = {};
+  query_frontier from = {};
+  std::string from_result_hash = {};
+  query_frontier target = {};
+  std::string target_result_hash = {};
+  uint64_t next_message_index = 0;
+  std::string batch_id = {};
+  std::string token_hash = {};
+};
+
+struct snapshot_begin {
+  query_basis basis = {};
+  result_schema schema = {};
+};
+
+struct row_upsert {
+  std::string key = {};
+  nlohmann::json row = nlohmann::json::object();
+  nlohmann::json evidence_ref = nlohmann::json::object();
+};
+
+struct row_retract {
+  std::string key = {};
+  std::string before_hash = {};
+  nlohmann::json evidence_ref = nlohmann::json::object();
+};
+
+struct progress {
+  query_frontier frontier = {};
+  nlohmann::json watermark = nlohmann::json::object();
+};
+
+struct schema_change {
+  result_schema old_schema = {};
+  result_schema new_schema = {};
+  std::string compatibility = "unknown";
+};
+
+struct snapshot_end {
+  std::string result_hash = {};
+  query_frontier frontier = {};
+};
+
+struct gap {
+  nlohmann::json expected = nlohmann::json::object();
+  nlohmann::json observed = nlohmann::json::object();
+  std::string recovery_hint = "request-full-snapshot";
+};
+
+using changelog_payload =
+    std::variant<snapshot_begin, row_upsert, row_retract, progress, schema_change, snapshot_end, gap>;
+
+struct changelog_message {
+  std::string message_id = {};
+  uint64_t index = 0;
+  changelog_payload payload = snapshot_begin{};
+};
+
+struct changelog_page {
+  std::string schema = QUERY_CHANGELOG_SCHEMA_V1;
+  std::string batch_id = {};
+  std::vector<changelog_message> messages = {};
+  query_resume_token resume_token = {};
+  bool complete = false;
+};
+
 [[nodiscard]] query_definition parse_query_definition(const nlohmann::json &value);
 
 [[nodiscard]] nlohmann::json query_definition_json(const query_definition &definition);
@@ -158,6 +244,16 @@ struct query_result {
 [[nodiscard]] nlohmann::json query_examples_json();
 
 [[nodiscard]] nlohmann::json query_result_json(const query_result &result);
+
+[[nodiscard]] query_resume_token parse_query_resume_token(const nlohmann::json &value);
+
+[[nodiscard]] nlohmann::json query_resume_token_json(const query_resume_token &token);
+
+[[nodiscard]] nlohmann::json changelog_page_json(const changelog_page &page);
+
+[[nodiscard]] changelog_page run_episode_changelog(const std::string &runtime_dir, const logical_plan &plan,
+                                                   const nlohmann::json &resume_token = nlohmann::json::object(),
+                                                   uint64_t max_messages = 100);
 
 [[nodiscard]] query_result run_episode_authority_scan(const std::string &runtime_dir, const logical_plan &plan);
 

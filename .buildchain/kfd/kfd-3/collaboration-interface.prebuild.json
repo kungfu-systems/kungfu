@@ -5,16 +5,16 @@
   "witnessKind": "prebuild",
   "supportLevel": "release",
   "source": {
-    "cwd": "/Users/dkr/Worktrees/kungfu/feature/adr0051-fact-admission",
-    "sourceSha": "cd2e3d95094e3e9a726453aa5a948334d90f4291",
+    "cwd": "/Users/dkr/Worktrees/kungfu/feature/adr0048-q3-changelog-gui",
+    "sourceSha": "716a6c2f16990de852f7fd553aa6fc20f4671559",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-    "registryDigest": "sha256:6a8c59dbfec53dd48fa14a95e09dea9d1e27ffc62c9fc536ff6ec43c8a3309d4"
+    "registryDigest": "sha256:0f29cb763224b47017cd686c3553b3fc65e2b41a84f1e946b3d5d67b71565bb7"
   },
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "a6458ae33277c9df79b82770a70e949df8785cd10888c40a5596ee9f579a0ba7",
-    "digest": "sha256:6a8c59dbfec53dd48fa14a95e09dea9d1e27ffc62c9fc536ff6ec43c8a3309d4"
+    "sha256": "ac2ca592b9547109efaa73c17247003d6692cd0c1dc043d33b4167d5897a9fd6",
+    "digest": "sha256:0f29cb763224b47017cd686c3553b3fc65e2b41a84f1e946b3d5d67b71565bb7"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -34,7 +34,7 @@
   "expectedArtifactVerification": {
     "command": "node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json"
   },
-  "collaborationInterfaceDigest": "sha256:0f2ca460793f176850c543539e448e21632f18143d4a68c96138de6b46bd591e",
+  "collaborationInterfaceDigest": "sha256:8eef5f9555e161038ca1121014f14c550ab1ec4f044e0b6e17d4ee7a5f5b05f6",
   "collaborationInterface": {
     "schemaVersion": 1,
     "contract": "kungfu-buildchain-kfd-3-surface-registry",
@@ -805,6 +805,26 @@
         }
       },
       {
+        "id": "kungfu.query.changelog",
+        "name": "kungfu query changelog --file query.json --json",
+        "kind": "cli",
+        "participantProfile": "agent-or-developer",
+        "state": "declared",
+        "availability": "shipped",
+        "visibility": "public",
+        "participantFacing": true,
+        "public": true,
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+        "maturity": "experimental",
+        "declaration": {
+          "owner": "kungfu",
+          "source": "scripts/buildchain-kfd-evidence.mjs",
+          "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+        }
+      },
+      {
         "id": "kungfu.query.describe",
         "name": "kungfu query describe episodes --json",
         "kind": "cli",
@@ -867,6 +887,26 @@
       {
         "id": "kungfu.query.prove",
         "name": "kungfu query prove --file query.json --json",
+        "kind": "cli",
+        "participantProfile": "agent-or-developer",
+        "state": "declared",
+        "availability": "shipped",
+        "visibility": "public",
+        "participantFacing": true,
+        "public": true,
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+        "maturity": "experimental",
+        "declaration": {
+          "owner": "kungfu",
+          "source": "scripts/buildchain-kfd-evidence.mjs",
+          "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+        }
+      },
+      {
+        "id": "kungfu.query.saved-view",
+        "name": "kungfu query saved-view --file saved-view.json --json",
         "kind": "cli",
         "participantProfile": "agent-or-developer",
         "state": "declared",
@@ -1447,8 +1487,8 @@
     ],
     "audit": {
       "status": "passed",
-      "declared": 68,
-      "artifactPublic": 68,
+      "declared": 70,
+      "artifactPublic": 70,
       "policy": {
         "sourceOfTruth": ".buildchain/kfd/kfd-3/surfaces.json",
         "detectedButUnregistered": "product-specific-audit",
@@ -2205,6 +2245,26 @@
       }
     },
     {
+      "id": "kungfu.query.changelog",
+      "name": "kungfu query changelog --file query.json --json",
+      "kind": "cli",
+      "participantProfile": "agent-or-developer",
+      "state": "declared",
+      "availability": "shipped",
+      "visibility": "public",
+      "participantFacing": true,
+      "public": true,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "maturity": "experimental",
+      "declaration": {
+        "owner": "kungfu",
+        "source": "scripts/buildchain-kfd-evidence.mjs",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+      }
+    },
+    {
       "id": "kungfu.query.describe",
       "name": "kungfu query describe episodes --json",
       "kind": "cli",
@@ -2267,6 +2327,26 @@
     {
       "id": "kungfu.query.prove",
       "name": "kungfu query prove --file query.json --json",
+      "kind": "cli",
+      "participantProfile": "agent-or-developer",
+      "state": "declared",
+      "availability": "shipped",
+      "visibility": "public",
+      "participantFacing": true,
+      "public": true,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "maturity": "experimental",
+      "declaration": {
+        "owner": "kungfu",
+        "source": "scripts/buildchain-kfd-evidence.mjs",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+      }
+    },
+    {
+      "id": "kungfu.query.saved-view",
+      "name": "kungfu query saved-view --file saved-view.json --json",
       "kind": "cli",
       "participantProfile": "agent-or-developer",
       "state": "declared",

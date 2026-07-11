@@ -1,6 +1,7 @@
 import type { KfxCapabilities, Shell } from '@kungfu-tech/kfx';
 import { headingStyle, mono, panelStyle } from '@kungfu-tech/kfx';
 import React from 'react';
+import { QueryReferencePanel } from './query-reference';
 
 // System kfx: system status. Runtime facts (master liveness, versions,
 // binding exports, runtime home) plus the core schema type registry — the
@@ -284,6 +285,7 @@ function SystemStatusView({
           {storageResult}
         </pre>
       </section>
+      <QueryReferencePanel caps={caps} />
     </div>
   );
 }

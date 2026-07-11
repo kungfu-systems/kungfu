@@ -521,6 +521,7 @@ def test_runtime_storage_service_surface_is_bound_from_libkungfu(tmp_path):
         "query",
         "query_plan",
         "fact_query",
+        "fact_changelog",
         "fact_contract",
         "fact_declare_world",
         "fact_declare_surface",
@@ -1414,6 +1415,84 @@ def test_domain_fact_admission_replays_declaration_history_and_observation_lifec
     assert all(event["episode_id"] for event in head["observation_history"])
     assert head["proof"]["schema_owner"] == "flatbuffers"
     assert head["proof"]["schema_root"].startswith("sha256:")
+
+
+def test_fact_changelog_resumes_pages_without_loss_or_duplication(tmp_path):
+    runtime_dir = tmp_path / "runtime"
+    storage_service.episode_begin(
+        runtime_dir, episode_id=8048, title="changelog", begin_time=1000
+    )
+    definition = storage_service.build_fact_query_definition(episode_id=8048)
+
+    first = storage_service.fact_changelog(runtime_dir, definition, max_messages=2)
+    assert first["schema"] == "kungfu.query.changelog/v1"
+    assert first["complete"] is False
+    assert [message["type"] for message in first["messages"]] == [
+        "SnapshotBegin",
+        "RowUpsert",
+    ]
+    assert len({message["message_id"] for message in first["messages"]}) == 2
+    assert int(first["resume_token"]["target"]["record_count"]) >= 1
+
+    tampered = json.loads(json.dumps(first["resume_token"]))
+    tampered["next_message_index"] += 1
+    with pytest.raises((RuntimeError, ValueError), match="integrity check failed"):
+        storage_service.fact_changelog(
+            runtime_dir, definition, resume_token=tampered, max_messages=2
+        )
+
+    second = storage_service.fact_changelog(
+        runtime_dir,
+        definition,
+        resume_token=first["resume_token"],
+        max_messages=2,
+    )
+    assert second["batch_id"] == first["batch_id"]
+    assert second["complete"] is True
+    assert [message["type"] for message in second["messages"]] == ["SnapshotEnd"]
+    assert [message["index"] for message in first["messages"] + second["messages"]] == [
+        0,
+        1,
+        2,
+    ]
+
+    steady = second["resume_token"]
+    unchanged = storage_service.fact_changelog(
+        runtime_dir, definition, resume_token=steady
+    )
+    assert unchanged["complete"] is True
+    assert [message["type"] for message in unchanged["messages"]] == ["Progress"]
+
+    storage_service.episode_end(
+        runtime_dir,
+        episode_id=8048,
+        end_time=1200,
+        reason="done",
+    )
+    changed = storage_service.fact_changelog(
+        runtime_dir, definition, resume_token=steady, max_messages=1
+    )
+    replay = storage_service.fact_changelog(
+        runtime_dir, definition, resume_token=steady, max_messages=1
+    )
+    assert changed == replay
+    assert changed["complete"] is False
+    assert changed["messages"][0]["type"] == "RowUpsert"
+    assert changed["messages"][0]["row"]["status"] == "ended"
+    assert changed["messages"][0]["evidence_ref"]["content_root_status"] in {
+        "verified",
+        "undefined",
+    }
+
+    finished = storage_service.fact_changelog(
+        runtime_dir,
+        definition,
+        resume_token=changed["resume_token"],
+        max_messages=10,
+    )
+    assert finished["complete"] is True
+    assert [message["type"] for message in finished["messages"]] == ["Progress"]
+    assert finished["messages"][0]["frontier"]["kind"] == "manifest_frame_uid"
 
 
 def test_query_planner_normalizes_defaults_and_exposes_one_semantic_root(tmp_path):

@@ -720,6 +720,28 @@ def fact_query(
     )
 
 
+def fact_changelog(
+    runtime_dir: str | Path,
+    definition: dict[str, Any],
+    *,
+    resume_token: dict[str, Any] | None = None,
+    max_messages: int = 100,
+) -> dict[str, Any]:
+    """Read one deterministic page of the ADR-0048 proof changelog."""
+
+    options: dict[str, Any] = {
+        "definition": definition,
+        "max_messages": max_messages,
+    }
+    if resume_token is not None:
+        options["resume_token"] = resume_token
+    return dict(
+        _runtime().run_storage_service_operation(
+            "fact_changelog", str(runtime_dir), options
+        )
+    )
+
+
 def fact_contract(runtime_dir: str | Path = "") -> dict[str, Any]:
     """Return the C++-owned ADR-0051 declaration/admission contract."""
 
