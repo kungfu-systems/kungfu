@@ -122,7 +122,10 @@ def decode_action_envelope(
             3: "content-reference",
             4: "opaque",
         }
-        payload["encoding"] = names.get(payload.get("encoding"), "none")
+        encoding = payload.get("encoding")
+        payload["encoding"] = (
+            names.get(encoding, "none") if isinstance(encoding, int) else "none"
+        )
         payload["data"] = bytes(payload.get("data") or b"")
     return envelope
 
