@@ -246,21 +246,30 @@ uint32_t page::find_page_id(const data::location_ptr &location, uint32_t dest_id
     return page_ids.front();
   }
 
+  const auto is_before_target = [&](size_t index) {
+    auto loaded_page =
+        page::load_header_and_1st_frame_header(location, dest_id, page_ids[index], page_open_policy::header_probe());
+    const auto *loaded_page_header = loaded_page->header_;
+    return loaded_page->acquire_last_frame_position() != 0 &&
+           loaded_page->acquire_status() != yijinjing::enums::PageStatus::PreOpen &&
+           loaded_page_header->version == __JOURNAL_VERSION__ && loaded_page->begin_time() < time;
+  };
+
+  // Most live seeks target the tail. Preserve that one-probe path before using
+  // ordered lookup for older history.
+  if (is_before_target(page_ids.size() - 1)) {
+    return page_ids.back();
+  }
+
   // Page begin times are append-only and therefore ordered with page ids.
   // Probe the upper bound instead of mapping every newer page header. Pre-open
   // pages form an ineligible suffix and naturally move the bound left.
   size_t lower = 0;
-  size_t upper = page_ids.size();
+  size_t upper = page_ids.size() - 1;
   uint32_t candidate = page_ids.front();
   while (lower < upper) {
     const size_t middle = lower + (upper - lower) / 2;
-    auto loaded_page =
-        page::load_header_and_1st_frame_header(location, dest_id, page_ids[middle], page_open_policy::header_probe());
-    const auto *loaded_page_header = loaded_page->header_;
-    const bool eligible = loaded_page->acquire_last_frame_position() != 0 &&
-                          loaded_page->acquire_status() != yijinjing::enums::PageStatus::PreOpen &&
-                          loaded_page_header->version == __JOURNAL_VERSION__ && loaded_page->begin_time() < time;
-    if (eligible) {
+    if (is_before_target(middle)) {
       candidate = page_ids[middle];
       lower = middle + 1;
     } else {
