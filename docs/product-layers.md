@@ -108,6 +108,13 @@ The standard native package includes or resolves a default local provider and
 the contract/schema artifacts required by that loop. A storage interface with
 no usable default implementation is not a complete native product.
 
+The stable native boundary is the versioned C table in
+`kungfu/native_storage.h`. Requests and responses are UTF-8 JSON edge
+projections over the existing runtime storage service; they are not a second
+storage model. Result bytes are borrowed from a single-thread-affine context
+until explicit release, and unsupported ABI versions, operations, busy state,
+invalid input, and core failures have distinct status codes.
+
 ## What the format/spec must mean
 
 The `.kungfu` format/spec is the smallest portability boundary. Independent

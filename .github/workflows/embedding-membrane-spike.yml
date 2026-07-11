@@ -9,8 +9,11 @@ on:
     paths:
       - "framework/core/src/libkungfu/include/kungfu/embedding.h"
       - "framework/core/src/libkungfu/include/kungfu/embedding.hpp"
+      - "framework/core/src/libkungfu/include/kungfu/native_storage.h"
       - "framework/core/src/libkungfu/src/runtime/embedding.cpp"
+      - "framework/core/src/libkungfu/src/runtime/native_storage.cpp"
       - "framework/core/slices/shared-embedding-membrane/**"
+      - "framework/core/slices/native-storage-closure/**"
       - "framework/core/slices/CMakeLists.txt"
       - ".github/workflows/embedding-membrane-spike.yml"
 
@@ -169,7 +172,7 @@ jobs:
           Set-Location $env:SOURCE_ROOT
           .\shifu.cmd --filter @kungfu-tech/core configure
 
-      - name: Build and run shared membrane consumers
+      - name: Build and run native membrane consumers
         shell: bash
         run: |
           cd "$SOURCE_ROOT"
@@ -186,7 +189,7 @@ jobs:
             -DKUNGFU_WITH_SLICES=ON
           # shifu-entry-contract: allow the isolated spike targets are not product-level Shifu tasks
           cmake --build framework/core/build --config Release --parallel 2 \
-            --target shared_embedding_host shared_embedding_native_kfx
+            --target shared_embedding_host shared_embedding_native_kfx native_storage_closure_host
           if [ "$RUNNER_OS" = "macOS" ]; then
             test "$(uname -m)" = "arm64"
           fi
@@ -195,3 +198,5 @@ jobs:
           sleep 60
           # shifu-entry-contract: allow the spike harness must inspect platform-specific binaries directly
           node framework/core/slices/shared-embedding-membrane/run.mjs framework/core/build
+          # shifu-entry-contract: allow the native closure harness must inspect platform-specific binaries directly
+          node framework/core/slices/native-storage-closure/run.mjs framework/core/build

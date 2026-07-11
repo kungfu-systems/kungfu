@@ -27,6 +27,14 @@ temporary projection with the GUI package omitted, and resolves it again. It
 proves only the source-level dependency boundary: it does not claim that the
 packaged CLI already passes clean-install or runtime qualification.
 
+The `libkungfu` row is qualified by the native-storage capability slice rather
+than by a workspace-package projection. `./shifu verify --full` builds a native
+consumer with both language bindings disabled, then creates and reopens a
+`.kungfu` workspace and completes Episode, head/historical query, fsck, and
+export through the versioned C ABI. The dedicated three-platform native CI job
+runs the same fixture and rejects Python, Node, Rust-host, Electron, and external
+database dependencies in the consumer binary.
+
 `./shifu check` runs this harness as a lightweight source gate. Later artifact
 goals can add installed-artifact probes and release evidence without turning
 this directory into another release orchestrator.

@@ -218,7 +218,15 @@ function walkPackageJson(dir, result) {
   if (!fs.existsSync(dir)) return;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     if (
-      ['node_modules', 'dist', 'build', 'out', 'release'].includes(entry.name)
+      [
+        'node_modules',
+        '.venv',
+        '.deps',
+        'dist',
+        'build',
+        'out',
+        'release',
+      ].includes(entry.name)
     )
       continue;
     const target = path.join(dir, entry.name);

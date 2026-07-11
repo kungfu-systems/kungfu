@@ -33,7 +33,7 @@
     {
       "id": "libkungfu",
       "layer": "libkungfu native core",
-      "artifact_status": "staged",
+      "artifact_status": "passing",
       "workspace_package": null,
       "declared_closure": "Create or open .kungfu, append and seal an Episode, query, fsck, and export without a language host.",
       "required_capabilities": ["record", "episode", "query", "fsck", "export"],
