@@ -621,6 +621,18 @@ function assertCoreFrozen() {
       }
     }
   }
+  // The product install surface (`kungfu env`) resolves the pykungfu wheel
+  // from dist/kungfu/wheels. A bare dev freeze only warns when the wheel is
+  // missing; the product chain must not ship without it.
+  const wheels = path.join(CORE_DIST, 'wheels');
+  const hasWheel =
+    fs.existsSync(wheels) &&
+    fs.readdirSync(wheels).some((f) => f.endsWith('.whl'));
+  if (!hasWheel) {
+    throw new Error(
+      `no pykungfu wheel under ${rel(wheels)}; the install surface would ship unusable`,
+    );
+  }
 }
 
 // ADR-0046 stage 1: kungfu-trunk (the product trunk carrying the kungfu-owned
