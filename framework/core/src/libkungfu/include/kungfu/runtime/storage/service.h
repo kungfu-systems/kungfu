@@ -368,6 +368,58 @@ struct storage_fsck_result {
   std::vector<storage_fsck_issue> issues = {};
 };
 
+struct storage_repair_plan_request {
+  std::string runtime_dir = {};
+  std::string provider = {};
+  std::string provider_config_source = {};
+  storage_fsck_scope scope = storage_fsck_scope::All;
+  std::string source_id = {};
+  uint64_t episode_id = 0;
+  bool verify_frames = false;
+  bool dry_run = true;
+};
+
+struct storage_repair_subject {
+  std::optional<uint64_t> episode_id = {};
+  std::optional<uint64_t> dependency_episode_id = {};
+  std::optional<uint64_t> frame_uid = {};
+  std::optional<uint64_t> dependent_frame_uid = {};
+  std::optional<std::string> ref_id = {};
+  std::optional<std::string> ref_hash = {};
+  std::optional<std::string> source_id = {};
+  std::optional<std::string> subject = {};
+  std::optional<std::string> state = {};
+  std::optional<std::string> path = {};
+  std::optional<std::string> payload_hash = {};
+};
+
+struct storage_repair_candidate_view {
+  std::string code = {};
+  std::string issue_code = {};
+  std::string kind = {};
+  std::string role = {};
+  std::string action = {};
+  bool safe_to_apply = false;
+  std::vector<std::string> required_inputs = {};
+  storage_repair_subject subject = {};
+  storage_fsck_issue issue = {};
+};
+
+struct storage_repair_plan_result {
+  bool ok = true;
+  storage_fsck_scope scope = storage_fsck_scope::All;
+  std::optional<std::string> source_id = {};
+  std::optional<uint64_t> episode_id = {};
+  bool dry_run = true;
+  bool plan_only = true;
+  std::string status = "ok";
+  bool degraded = false;
+  std::vector<storage_repair_candidate_view> candidates = {};
+  std::vector<storage_fsck_issue> unsupported = {};
+  storage_fsck_result fsck = {};
+  std::vector<std::string> notes = {};
+};
+
 struct storage_status_request {
   std::string runtime_dir = {};
   std::string provider = {};
@@ -500,6 +552,8 @@ public:
   [[nodiscard]] virtual storage_status_result status(const storage_status_request &request) const = 0;
 
   [[nodiscard]] virtual storage_fsck_result fsck(const storage_fsck_request &request) const = 0;
+
+  [[nodiscard]] virtual storage_repair_plan_result repair_plan(const storage_repair_plan_request &request) const = 0;
 
   [[nodiscard]] virtual storage_query_result query(const storage_query_request &request) const = 0;
 

@@ -89,6 +89,10 @@ struct storage_service_options {
 
 [[nodiscard]] nlohmann::json render_storage_fsck_result(const storage_fsck_result &result);
 
+[[nodiscard]] storage_repair_plan_request parse_storage_repair_plan_request(const storage_service_options &options);
+
+[[nodiscard]] nlohmann::json render_storage_repair_plan_result(const storage_repair_plan_result &result);
+
 [[nodiscard]] storage_gc_plan_request parse_storage_gc_plan_request(const storage_service_options &options);
 
 [[nodiscard]] nlohmann::json render_storage_gc_plan_result(const storage_gc_plan_result &result);

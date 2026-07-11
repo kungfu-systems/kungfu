@@ -1624,26 +1624,6 @@ std::optional<episode_repair_descriptor> episode_repair_descriptor_for_issue(con
   return std::nullopt;
 }
 
-// Repair-plan compatibility still consumes edge JSON warnings outside the
-// typed Episode qualification path. Keep that parser at the edge until the
-// repair operation family receives its own typed request/result migration.
-std::optional<episode_repair_descriptor> episode_repair_descriptor_for_issue(const nlohmann::json &issue) {
-  const auto code = text_or(issue, "code");
-  if (code == "episode_dependency_missing")
-    return episode_repair_descriptor{"fetch_episode", {"source_or_episode_bundle"}};
-  if (code == "episode_root_trigger_frame_missing" || code == "episode_trigger_frame_missing")
-    return episode_repair_descriptor{"fetch_frame_or_declare_external_input", {"source_or_episode_bundle"}};
-  if (code == "episode_payload_ref_missing" || code == "episode_payload_ref_hash_mismatch")
-    return episode_repair_descriptor{"fetch_payload_by_hash", {"payload_store_or_episode_bundle"}};
-  if (code == "episode_attached_frame_missing")
-    return episode_repair_descriptor{"fetch_frame", {"source_or_episode_bundle"}};
-  if (code == "episode_projection_absent" || code == "episode_projection_drift")
-    return episode_repair_descriptor{"rebuild_projection", {}};
-  if (code == "payload_not_present" && !bool_or(issue, "intentional", true))
-    return episode_repair_descriptor{"fetch_payload_by_hash", {"source_or_bundle"}};
-  return std::nullopt;
-}
-
 std::string episode_issue_evidence(const std::string &code) {
   if (code.rfind("episode_payload_ref_", 0) == 0) {
     return "content";
@@ -2050,30 +2030,54 @@ nlohmann::json episode_import_bundle_impl(const storage_service_options &options
 nlohmann::json accept_storage_manifest_impl(const std::string &runtime_dir, const nlohmann::json &input);
 nlohmann::json export_bundle_generic_impl(const storage_service_options &options, bool record_receipt);
 
-nlohmann::json repair_candidate_common(const nlohmann::json &warning, const std::string &code, const std::string &kind,
-                                       const std::string &role, const std::string &action,
-                                       nlohmann::json required_inputs) {
-  nlohmann::json candidate = {
-      {"code", code},           {"issue_code", text_or(warning, "code")},
-      {"kind", kind},           {"role", role},
-      {"action", action},       {"suggested_action", action},
-      {"safe_to_apply", false}, {"requires", std::move(required_inputs)},
-      {"warning", warning},
-  };
-  for (const auto *field : {"episode_id", "dependency_episode_id", "frame_uid", "dependent_frame_uid", "ref_id",
-                            "ref_hash", "source_id", "subject", "state", "path", "payload_hash"}) {
-    if (warning.contains(field) && !warning.at(field).is_null()) {
-      candidate[field] = warning.at(field);
-    }
-  }
-  return candidate;
+storage_repair_subject repair_subject(const storage_fsck_issue &issue) {
+  return std::visit(
+      [](const auto &detail) {
+        using detail_t = std::decay_t<decltype(detail)>;
+        storage_repair_subject subject{};
+        if constexpr (std::is_same_v<detail_t, storage_fsck_cross_issue>) {
+          subject.source_id = detail.source_id;
+          subject.path = detail.path;
+          subject.payload_hash = detail.payload_hash;
+        } else if constexpr (std::is_same_v<detail_t, yy_storage::manifest_catalog_fsck_issue>) {
+          subject.source_id = detail.source_id;
+          subject.subject = detail.subject;
+          subject.state = detail.state;
+          subject.payload_hash = detail.payload_hash;
+        } else if constexpr (std::is_same_v<detail_t, yy_storage::episode_fsck_issue>) {
+          subject.episode_id = detail.episode_id;
+          subject.dependency_episode_id = detail.dependency_episode_id;
+          subject.frame_uid = detail.frame_uid;
+          subject.dependent_frame_uid = detail.dependent_frame_uid;
+          subject.ref_id = detail.ref_id;
+          subject.ref_hash = detail.ref_hash;
+        }
+        return subject;
+      },
+      issue.detail);
 }
 
-nlohmann::json repair_candidate_from_warning(const nlohmann::json &warning) {
-  const auto code = text_or(warning, "code");
-  const auto descriptor = episode_repair_descriptor_for_issue(warning);
+std::optional<episode_repair_descriptor> repair_descriptor_for_issue(const storage_fsck_issue &issue) {
+  const auto &code = issue.code;
+  if (code == "episode_dependency_missing")
+    return episode_repair_descriptor{"fetch_episode", {"source_or_episode_bundle"}};
+  if (code == "episode_root_trigger_frame_missing" || code == "episode_trigger_frame_missing")
+    return episode_repair_descriptor{"fetch_frame_or_declare_external_input", {"source_or_episode_bundle"}};
+  if (code == "episode_payload_ref_missing" || code == "episode_payload_ref_hash_mismatch")
+    return episode_repair_descriptor{"fetch_payload_by_hash", {"payload_store_or_episode_bundle"}};
+  if (code == "payload_not_present") {
+    const auto *detail = std::get_if<yy_storage::manifest_catalog_fsck_issue>(&issue.detail);
+    if (detail != nullptr && !detail->intentional.value_or(true))
+      return episode_repair_descriptor{"fetch_payload_by_hash", {"source_or_bundle"}};
+  }
+  return std::nullopt;
+}
+
+std::optional<storage_repair_candidate_view> repair_candidate_from_issue(const storage_fsck_issue &issue) {
+  const auto &code = issue.code;
+  const auto descriptor = repair_descriptor_for_issue(issue);
   if (!descriptor.has_value()) {
-    return nullptr;
+    return std::nullopt;
   }
   std::string candidate_code;
   std::string kind;
@@ -2081,7 +2085,8 @@ nlohmann::json repair_candidate_from_warning(const nlohmann::json &warning) {
   if (code == "episode_dependency_missing") {
     candidate_code = "repair_episode_dependency";
     kind = "episode";
-    role = text_or(warning, "role", "ref");
+    const auto *detail = std::get_if<yy_storage::episode_fsck_issue>(&issue.detail);
+    role = detail == nullptr ? "ref" : detail->role.value_or("ref");
   } else if (code == "episode_root_trigger_frame_missing") {
     candidate_code = "repair_episode_root_trigger_frame";
     kind = "frame";
@@ -2101,53 +2106,59 @@ nlohmann::json repair_candidate_from_warning(const nlohmann::json &warning) {
   } else {
     // Projection repair is exposed by the qualification contract through the
     // dedicated rebuild operation, not as a storage repair-plan bundle row.
-    return nullptr;
+    return std::nullopt;
   }
-  return repair_candidate_common(warning, candidate_code, kind, role, descriptor->action,
-                                 nlohmann::json(descriptor->required_inputs));
+  return storage_repair_candidate_view{
+      candidate_code,        code, kind, role, descriptor->action, false, descriptor->required_inputs,
+      repair_subject(issue), issue};
+}
+
+storage_repair_plan_result repair_plan_typed_impl(const storage_repair_plan_request &request) {
+  if (!request.dry_run) {
+    throw std::invalid_argument("storage_repair_requires_dry_run");
+  }
+  storage_repair_plan_result result{};
+  result.scope = request.scope;
+  if (!request.source_id.empty())
+    result.source_id = request.source_id;
+  if (request.episode_id != 0)
+    result.episode_id = request.episode_id;
+  result.fsck =
+      default_storage_service().fsck({request.runtime_dir, request.provider, request.provider_config_source,
+                                      request.scope, request.source_id, request.episode_id, request.verify_frames});
+  // Preserve the public plan ordering: degraded/fetchable warnings first,
+  // then sealed-Episode errors whose missing facts can be supplied. Repair
+  // fetch uses this order to prefer donor evidence before a local bundle that
+  // merely repeats the broken payload/ref claim.
+  for (const auto &issue : result.fsck.issues) {
+    if (issue.severity == "error")
+      continue;
+    const auto candidate = repair_candidate_from_issue(issue);
+    if (candidate.has_value())
+      result.candidates.push_back(*candidate);
+    else
+      result.unsupported.push_back(issue);
+  }
+  for (const auto &issue : result.fsck.issues) {
+    if (issue.severity != "error")
+      continue;
+    const auto candidate = repair_candidate_from_issue(issue);
+    if (candidate.has_value())
+      result.candidates.push_back(*candidate);
+  }
+  result.ok = result.fsck.ok;
+  result.status = result.fsck.status;
+  result.degraded = result.fsck.degraded;
+  result.notes = {
+      "Repair plan v1 is read-only and never fetches, deletes, compacts, or mutates storage.",
+      "Candidates describe missing facts that a future importer or remote sync source may provide.",
+  };
+  return result;
 }
 
 nlohmann::json repair_plan_impl(const storage_service_options &options) {
-  if (!options.dry_run) {
-    throw std::invalid_argument("storage_repair_requires_dry_run");
-  }
-  const auto report = fsck_impl(options);
-  nlohmann::json candidates = nlohmann::json::array();
-  nlohmann::json unsupported = nlohmann::json::array();
-  for (const auto &warning : array_or_empty(report, "warnings")) {
-    const auto candidate = repair_candidate_from_warning(warning);
-    if (candidate.is_null()) {
-      unsupported.push_back(warning);
-    } else {
-      candidates.push_back(candidate);
-    }
-  }
-  // Sealed-Episode payload-ref issues are errors (the seal is falsified), and
-  // they are exactly the issues repair material can satisfy; other error
-  // codes are structural manifest defects, not fetchable facts.
-  for (const auto &error : array_or_empty(report, "errors")) {
-    const auto candidate = repair_candidate_from_warning(error);
-    if (!candidate.is_null()) {
-      candidates.push_back(candidate);
-    }
-  }
-  return {{"ok", report.value("ok", false)},
-          {"schema", "kungfu.storage.repair-plan/v1"},
-          {"scope", report.value("scope", options.scope.empty() ? "all" : options.scope)},
-          {"source_id", report.contains("source_id") ? report.at("source_id") : nlohmann::json(nullptr)},
-          {"episode_id", report.contains("episode_id") ? report.at("episode_id") : nlohmann::json(nullptr)},
-          {"dry_run", true},
-          {"plan_only", true},
-          {"status", report.value("status", report.value("ok", false) ? "ok" : "failed")},
-          {"degraded", report.value("degraded", false)},
-          {"candidate_count", candidates.size()},
-          {"candidates", candidates},
-          {"unsupported", unsupported},
-          {"fsck", report},
-          {"notes", nlohmann::json::array({
-                        "Repair plan v1 is read-only and never fetches, deletes, compacts, or mutates storage.",
-                        "Candidates describe missing facts that a future importer or remote sync source may provide.",
-                    })}};
+  return render_storage_repair_plan_result(
+      default_storage_service().repair_plan(parse_storage_repair_plan_request(options)));
 }
 
 bool episode_record_kind_supported(const std::string &kind) {
@@ -3682,6 +3693,10 @@ public:
     return fsck_typed_impl(request);
   }
 
+  [[nodiscard]] storage_repair_plan_result repair_plan(const storage_repair_plan_request &request) const override {
+    return repair_plan_typed_impl(request);
+  }
+
   [[nodiscard]] storage_query_result query(const storage_query_request &request) const override {
     return query_journal_projection(request);
   }
@@ -4025,6 +4040,12 @@ storage_fsck_request parse_storage_fsck_request(const storage_service_options &o
   return request;
 }
 
+storage_repair_plan_request parse_storage_repair_plan_request(const storage_service_options &options) {
+  const auto fsck = parse_storage_fsck_request(options);
+  return {fsck.runtime_dir, fsck.provider,   fsck.provider_config_source, fsck.scope,
+          fsck.source_id,   fsck.episode_id, fsck.verify_frames,          options.dry_run};
+}
+
 nlohmann::json render_storage_fsck_issue(const storage_fsck_issue &issue, storage_fsck_scope scope) {
   auto rendered = std::visit(
       [&issue, scope](const auto &detail) {
@@ -4179,6 +4200,64 @@ nlohmann::json render_storage_fsck_result(const storage_fsck_result &result) {
       report["projections"].push_back(projection_status_json(projection));
   }
   return report;
+}
+
+nlohmann::json render_storage_repair_plan_result(const storage_repair_plan_result &result) {
+  const auto render_subject = [](nlohmann::json &candidate, const storage_repair_subject &subject) {
+    if (subject.episode_id.has_value())
+      candidate["episode_id"] = *subject.episode_id;
+    if (subject.dependency_episode_id.has_value())
+      candidate["dependency_episode_id"] = *subject.dependency_episode_id;
+    if (subject.frame_uid.has_value())
+      candidate["frame_uid"] = *subject.frame_uid;
+    if (subject.dependent_frame_uid.has_value())
+      candidate["dependent_frame_uid"] = *subject.dependent_frame_uid;
+    if (subject.ref_id.has_value())
+      candidate["ref_id"] = *subject.ref_id;
+    if (subject.ref_hash.has_value())
+      candidate["ref_hash"] = *subject.ref_hash;
+    if (subject.source_id.has_value())
+      candidate["source_id"] = *subject.source_id;
+    if (subject.subject.has_value())
+      candidate["subject"] = *subject.subject;
+    if (subject.state.has_value())
+      candidate["state"] = *subject.state;
+    if (subject.path.has_value())
+      candidate["path"] = *subject.path;
+    if (subject.payload_hash.has_value())
+      candidate["payload_hash"] = *subject.payload_hash;
+  };
+  nlohmann::json candidates = nlohmann::json::array();
+  for (const auto &item : result.candidates) {
+    nlohmann::json candidate = {{"code", item.code},
+                                {"issue_code", item.issue_code},
+                                {"kind", item.kind},
+                                {"role", item.role},
+                                {"action", item.action},
+                                {"suggested_action", item.action},
+                                {"safe_to_apply", item.safe_to_apply},
+                                {"requires", item.required_inputs},
+                                {"warning", render_storage_fsck_issue(item.issue, result.scope)}};
+    render_subject(candidate, item.subject);
+    candidates.push_back(std::move(candidate));
+  }
+  nlohmann::json unsupported = nlohmann::json::array();
+  for (const auto &issue : result.unsupported)
+    unsupported.push_back(render_storage_fsck_issue(issue, result.scope));
+  return {{"ok", result.ok},
+          {"schema", "kungfu.storage.repair-plan/v1"},
+          {"scope", storage_fsck_scope_name(result.scope)},
+          {"source_id", result.source_id.has_value() ? nlohmann::json(*result.source_id) : nlohmann::json(nullptr)},
+          {"episode_id", result.episode_id.has_value() ? nlohmann::json(*result.episode_id) : nlohmann::json(nullptr)},
+          {"dry_run", result.dry_run},
+          {"plan_only", result.plan_only},
+          {"status", result.status},
+          {"degraded", result.degraded},
+          {"candidate_count", candidates.size()},
+          {"candidates", std::move(candidates)},
+          {"unsupported", std::move(unsupported)},
+          {"fsck", render_storage_fsck_result(result.fsck)},
+          {"notes", result.notes}};
 }
 
 storage_query_request parse_storage_query_request(const storage_service_options &options) {
