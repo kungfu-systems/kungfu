@@ -1,5 +1,5 @@
 ---
-status: active
+status: accepted
 period: 2026-07-10
 theme: kfx-execution-profiles
 doc_type: architecture-decision
@@ -13,8 +13,8 @@ last_reviewed: 2026-07-11
 
 # ADR-0045: KFX execution profiles — Rust-primary native, WebAssembly components, managed runtimes, and subprocesses
 
-- Status: accepted (design ratified 2026-07-10; implementation remains gated
-  by the native ABI and WASM spikes below)
+- Status: accepted and implemented (design ratified 2026-07-10; native and
+  WASM spikes plus the governed production runtime completed by 2026-07-11)
 - Date: 2026-07-10
 - Category: extension contract / runtime placement / language policy
 - Subsystem: `framework/kfx`, `framework/api`, the libkungfu polyglot membrane,
@@ -229,7 +229,7 @@ macOS arm64, Linux x64, and Windows x64 pass the native budgets using the same
 probe schema; the dedicated PR matrix guards the platform builds and cut-proof.
 This does not start the WASM spike or change the KFX manifest/contract.
 
-The WASM half now has a three-platform spike implementation and evidence in
+The WASM half has a three-platform spike implementation and evidence in
 [`docs/libwasm-embedding-membrane-spike.md`](../../../../docs/libwasm-embedding-membrane-spike.md).
 One C++ host passes the existing v1 embedding table to replaceable Wasmtime
 46.0.1 and Wasmer 7.2.0 Rust cdylibs. Both execute identical core-Wasm bytes,
@@ -238,13 +238,24 @@ linear memory, contain traps/panics, and pass the warm latency, copy-throughput,
 and idle-instance budgets on macOS ARM64, Linux x64, and Windows x64. The report
 also separates cold compile/instantiate cost and adapter file size from
 warm-call and per-instance measurements. This closes the bounded shared-membrane
-spike, not the production WASM profile: equivalent Wasmer CPU metering and the
-later WIT Component Model, admission, limit, and receipt layers remain open.
-The KFX manifest/contract remains unchanged.
+spike.
+
+[ADR-0054](ADR-0054-libwasm-production-runtime-and-release.md) subsequently
+closed the production gates. It added equivalent Wasmtime fuel and Wasmer
+metering, the versioned `kungfu:journal/batch@1.0.0` WIT world with an
+engine-neutral core-Wasm lowering, explicit KFX capability grants, pre-execution
+admission and post-execution receipts, bounded resource enforcement, default
+build/freeze/package ownership, compatibility evidence, deletion gates, and
+installed-artifact qualification. macOS ARM64, Linux x64, and Windows x64 all
+passed the production metering and execution matrix in run `29145827046`.
+
+Component Model parity is now a replaceable future adapter, not an unfinished
+launch gate for this ADR. It must preserve the same versioned world and cannot
+silently replace or mutate the shipped core-Wasm v1 contract.
 
 ## Contract obligations
 
-Any future manifest schema for these profiles must make the following facts
+The production manifest schema for these profiles makes the following facts
 machine-readable without letting the package grant itself authority:
 
 - artifact kind, profile, runtime, entry, target triple/component world, and ABI
@@ -255,24 +266,30 @@ machine-readable without letting the package grant itself authority:
 - lifecycle and failure receipts;
 - explicit copy/zero-copy semantics for every journal-facing capability.
 
-The current `kungfu-kfx.contract.json` is unchanged by this ADR. Adding these
-fields is a separate KFD-1 contract change after the profile decision and
-spikes. The existing uniform asynchronous capability surface remains the author
-contract; the profile selects the transport and data representation beneath it.
+`kungfu-kfx.contract.json` now carries the WASM declaration added under
+ADR-0054, while the caller supplies explicit grants and the native host rechecks
+the admitted contract. That addition was treated as a KFD-1 minor-version
+candidate rather than being hidden inside the original design-only change. The
+existing uniform asynchronous capability surface remains the author contract;
+the profile selects the transport and data representation beneath it.
 
 ## Delivery sequence
 
-1. **Decision gate:** approve, revise, or reject the four-profile vocabulary
-   and Rust-primary native policy.
-2. **Native ABI spike:** lifecycle + one read-only batched journal capability;
-   generate the Rust safe wrapper and C++ convenience header from one reviewed
-   C surface. Do not modify the memory-safety core.
-3. **WASM spike:** one Wasmtime component with no ambient WASI rights, the same
-   read-only capability, the three-platform benchmark, footprint, and receipts.
-4. **Contract proposal:** only after both spikes, propose the minimal manifest
-   version and KFD-1 version impact.
-5. **Authoring UX:** scaffold and documentation may recommend Rust only after
-   the ABI/conformance suite is green; C++ remains available.
+1. **Decision gate — complete:** the maintainer ratified the four-profile
+   vocabulary and Rust-primary native policy on 2026-07-10.
+2. **Native ABI spike — complete:** lifecycle plus one read-only batched journal
+   capability, with the Rust safe wrapper and C++ convenience header generated
+   from one reviewed C surface. The shared membrane and three-platform evidence
+   landed without changing memory-safety core ownership.
+3. **WASM spike — complete:** the bounded dual-engine spike proved the same
+   read-only capability, no ambient WASI rights, three-platform budgets,
+   footprint, trap containment, and engine replacement. ADR-0054 then selected
+   the versioned core-Wasm lowering for production before Component Model parity.
+4. **Contract proposal — complete:** ADR-0054 added the minimal WASM manifest,
+   ABI/world versions, grants, limits, receipts, and KFD-1 version impact.
+5. **Authoring UX — complete for this decision:** Rust is the preferred native
+   authoring policy only behind the green C ABI/conformance gates; C++ remains
+   supported and the core remains C++.
 
 ## Ratification
 
@@ -288,8 +305,11 @@ The maintainer ratified all five decision points on 2026-07-10:
 5. the native ABI spike runs before the WASM spike, with both profiles sharing
    one explicit host capability membrane.
 
-Ratification does not authorize implementation, change the current KFX
-contract, or claim that any spike gate has passed.
+At ratification time, this decision did not by itself authorize implementation,
+change the KFX contract, or claim that a spike gate had passed. The later native
+and WASM spike changes and ADR-0054 production integration supplied those
+separate approvals and evidence; this historical authority boundary remains
+important even though the delivery sequence is now complete.
 
 ## Kill or archive conditions
 
@@ -304,11 +324,15 @@ contract, or claim that any spike gate has passed.
   embedding surface cannot meet the three-platform contract, or another engine
   wins the same evidence suite materially.
 
-## Explicitly out of scope
+## Scope boundary of the original decision
 
-- Changing `kungfu-kfx.contract.json` or any runtime loader.
-- Adding a Rust binding crate, C ABI, Wasmtime/Wasmer dependency, or `.wasm`
-  build pipeline.
-- Rewriting the C++ journal/storage core or moving action-recording semantics
-  out of the core.
-- Claiming native fault isolation or WASM zero-copy journal access.
+The ratification commit itself deliberately made none of the implementation
+changes below. They were later authorized and delivered through the native/WASM
+spikes and ADR-0054 rather than being smuggled into this decision record:
+
+- changing `kungfu-kfx.contract.json` or a runtime loader;
+- adding a Rust binding crate, C ABI, Wasmtime/Wasmer dependency, or `.wasm`
+  build pipeline;
+- rewriting the C++ journal/storage core or moving action-recording semantics
+  out of the core;
+- claiming native fault isolation or WASM zero-copy journal access.
