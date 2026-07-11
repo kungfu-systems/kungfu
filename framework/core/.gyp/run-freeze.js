@@ -133,12 +133,18 @@ function copyPdbSibling(binPath, destDir) {
 
 /** @param {string} bt */
 function copyAppNative(bt) {
-  const rel = path.join(CORE, 'build', bt);
+  const buildDirs = [path.join(CORE, 'build', bt)];
+  // CMake's Ninja layout places Windows addons directly under build/, while
+  // POSIX layouts place them under build/<type>. Keep freeze aligned with the
+  // staging search contract in run-build.js.
+  if (isWin) buildDirs.push(path.join(CORE, 'build'));
   const distKfc = path.join(CORE, 'dist', 'kungfu');
   let n = 0;
   for (const f of APP_NATIVE) {
-    const from = path.join(rel, f);
-    if (!fs.existsSync(from)) continue;
+    const from = buildDirs
+      .map((dir) => path.join(dir, f))
+      .find((candidate) => fs.existsSync(candidate));
+    if (!from) continue;
     fs.copyFileSync(from, path.join(distKfc, f));
     copyPdbSibling(from, distKfc);
     n++;
