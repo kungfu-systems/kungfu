@@ -104,9 +104,15 @@ def status(ctx, scope, storage_source_id, as_json):
 )
 @click.option("--source", "storage_source_id", type=str, default=None)
 @click.option("--episode-id", type=int, default=0)
+@click.option(
+    "--verify-frames",
+    is_flag=True,
+    help="episode scope only: re-read claimed event journals and verify each "
+    "attached frame receipt (presence, header, checksums)",
+)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @storage_command_context
-def fsck(ctx, scope, storage_source_id, episode_id, as_json):
+def fsck(ctx, scope, storage_source_id, episode_id, verify_frames, as_json):
     if scope == "atlas":
         from kungfu.atlas import store
 
@@ -119,10 +125,14 @@ def fsck(ctx, scope, storage_source_id, episode_id, as_json):
                 "[storage] --episode-id is required for --scope episode", err=True
             )
             sys.exit(2)
+        if verify_frames and scope != "episode":
+            click.echo("[storage] --verify-frames requires --scope episode", err=True)
+            sys.exit(2)
         result = service.fsck(
             ctx.runtime_dir,
             source_id=storage_source_id if scope == "source" else None,
             episode_id=episode_id if scope == "episode" else None,
+            verify_frames=verify_frames,
         )
     if as_json:
         _echo_json(result)
