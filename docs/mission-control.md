@@ -121,8 +121,12 @@ it evaluates declared criteria against available facts.
 
 The GUI follows progressive disclosure:
 
-1. **Mission Home** — intent, stage, progress assessment, active Go work,
-   decisions required, drift, and next responsibility.
+1. **Mission Home** — the five-question workspace home: intent, material events,
+   evidence at the selected cut, purpose-bound fitness, and next responsibility.
+   Mission/Go creation lives in compact top-bar actions and modal/drawer flows,
+   not expanded forms on the default canvas. The complete workspace product
+   behavior is defined in
+   [Mission Control Workspace Product Design](mission-control-workspaces.md).
 2. **Go Board** — delegated work grouped by responsibility state, not a generic
    kanban status string.
 3. **Observer Timeline** — accepted sources, cut/frontier, causal order,
@@ -207,6 +211,13 @@ Workspace state lives under the resolved workspace `.kungfu/`; personal or
 machine state uses the resolved runtime home. Journal records, Episodes,
 schemas, payloads, saved queries, assessment Episodes, TrustReports, and
 observer metadata share that authority.
+
+Desktop remembers the last selected workspace under `KF_CONFIG_HOME`, but that
+registry is only global GUI session state. Opening a directory remains
+read-only; `.kungfu` initializes on the first operation that changes the
+workspace fact world. [ADR-0060](../framework/core/docs/adr/ADR-0060-desktop-workspace-selection-and-lazy-data-home.md)
+defines the lifecycle and prevents recent-workspace convenience from becoming
+Mission authority.
 
 A full bundle carries the bounded content closure needed for offline replay and
 proof. A thin bundle carries declared roots and references and reports missing

@@ -28,7 +28,8 @@ and the map routes a question to whichever doc answers it.
 | Why is it built this way? What is load-bearing? | [`design-philosophy.md`](design-philosophy.md) | why | stable |
 | Why compare Kungfu to SQLite, Git, and a flight recorder — and why is it neither observability nor blockchain? | [`design-philosophy.md`](design-philosophy.md#the-missing-infrastructure-layer-runtime-facts) | why | stable |
 | Why does Kungfu start from accountability? | [`facts-before-trust.md`](facts-before-trust.md) | why | stable |
-| How do Missions, delegated Go work, runtime facts, proof, and decisions become one product? | [`mission-control.md`](mission-control.md) + [ADR-0059](../framework/core/docs/adr/ADR-0059-mission-control-mission-go-responsibility-model.md) | why, use, verify | draft · Atlas bridge, native Go, completion claim, proof/assessment, and dashboard dogfood slice implemented |
+| How do Missions, delegated Go work, runtime facts, proof, and decisions become one product? | [`mission-control.md`](mission-control.md) + [`mission-control-workspaces.md`](mission-control-workspaces.md) + [ADR-0059](../framework/core/docs/adr/ADR-0059-mission-control-mission-go-responsibility-model.md) | why, use, verify | draft · mechanisms implemented; workspace product composition and five-question Mission Home designed |
+| How does Desktop open and remember a workspace without creating `.kungfu` on read? | [`mission-control-workspaces.md`](mission-control-workspaces.md) + [ADR-0060](../framework/core/docs/adr/ADR-0060-desktop-workspace-selection-and-lazy-data-home.md) | why, use, verify | proposed · product design complete; implementation sliced |
 | Why does the commercial product lead with Cost/State/Proof, and what does that profile guarantee? | [`cost-state-proof-profile.md`](cost-state-proof-profile.md) | why, use, verify | draft · first progress and completion qualification implemented |
 | Why this versioning / release design (don't replace it naively)? | [`version-release-design.md`](version-release-design.md) | why | stable |
 | When must a change open a minor or major (and when must it not)? | [`versioning.md`](versioning.md) (rule: KFD-1, adopted by ADR-0010) | verify | stable |
@@ -104,7 +105,8 @@ route to the row that answers them:
 - **Mission Control / Mission / Go / delegated responsibility / progress drift /
   completion claim / Atlas bridge / Cost State Proof / cost management profile**
   → *how Missions and delegated work become one proof-backed product*
-  ([`mission-control.md`](mission-control.md)), then *what the first commercial
+  ([`mission-control.md`](mission-control.md)), *how the workspace product and
+  five-question Mission Home behave* ([`mission-control-workspaces.md`](mission-control-workspaces.md)), then *what the first commercial
   profile packages* ([`cost-state-proof-profile.md`](cost-state-proof-profile.md))
   and [ADR-0059](../framework/core/docs/adr/ADR-0059-mission-control-mission-go-responsibility-model.md).
 - **SQLite / Git for runs / flight recorder / runtime fact infrastructure /
@@ -147,9 +149,12 @@ route to the row that answers them:
 - **config / `.kungfu` / `~/.kungfu-config` / `KF_CONFIG_HOME` / `KF_HOME` / UI font / UI scale /
   shortcuts / agent entrypoint** → *Kungfu config* ([`config.md`](config.md)).
 - **workspace data home / `.kungfu/` / data root / Git worktree data /
-  machine fallback / config home rename** → *Kungfu config*
+  machine fallback / config home rename / Open Workspace / recent workspace /
+  lazy initialization** → *Kungfu config and Desktop workspace product*
   ([`config.md`](config.md)) and
-  [ADR-0035](../framework/core/docs/adr/ADR-0035-workspace-local-kungfu-data-home.md).
+  [`mission-control-workspaces.md`](mission-control-workspaces.md),
+  [ADR-0035](../framework/core/docs/adr/ADR-0035-workspace-local-kungfu-data-home.md),
+  and [ADR-0060](../framework/core/docs/adr/ADR-0060-desktop-workspace-selection-and-lazy-data-home.md).
 - **supervisor / per-user supervisor / workspace coordinator / data-root coordinator /
   coordinator singleton / live registry / idle shutdown / daemonless storage** →
   *Kungfu supervisor and coordinator service* ([`runtime-service.md`](runtime-service.md))

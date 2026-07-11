@@ -77,6 +77,7 @@ A record's **Status** says where it stands:
 | [0057](ADR-0057-domain-neutral-live-runtime-terminology.md) | accepted | live runtime internals use reactor, peer, and coordinator; the public command is `kungfu runtime` |
 | [0058](ADR-0058-yijinjing-explicit-mapping-policies.md) | accepted | yijinjing mmap behavior uses explicit access, creation, residency, and durability policies |
 | [0059](ADR-0059-mission-control-mission-go-responsibility-model.md) | accepted | Mission Control composes Mission and Go responsibility over runtime facts; Atlas starts as a bridged authority |
+| [0060](ADR-0060-desktop-workspace-selection-and-lazy-data-home.md) | proposed | Desktop selects and remembers one workspace while creating its `.kungfu` data home only on write intent |
 
 ## Reading by theme
 
@@ -187,7 +188,10 @@ A record's **Status** says where it stands:
   equivalent process/thread executors), and
   [0059](ADR-0059-mission-control-mission-go-responsibility-model.md) (the
   Mission/Go responsibility domain, Atlas bridge authority, and Cost/State/Proof
-  profile composition), and
+  profile composition),
+  [0060](ADR-0060-desktop-workspace-selection-and-lazy-data-home.md) (Desktop
+  workspace selection, global recent-workspace state, and write-intent-bound
+  `.kungfu` initialization), and
   [0055](ADR-0055-retire-journal-session-and-separate-runtime-state-from-projection.md)
   (Episode replaces the retired Session replay anchor), and
   [0056](ADR-0056-retire-legacy-journal-cli-lifecycle-tools.md) (journal
