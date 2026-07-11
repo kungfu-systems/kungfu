@@ -12,12 +12,18 @@
 #include <fstream>
 #include <functional>
 #include <iostream>
+#include <iterator>
 #include <stdexcept>
 #include <string>
 #include <thread>
 #include <type_traits>
 
-#ifndef _WINDOWS
+#ifdef _WINDOWS
+#include <windows.h>
+#else
+#include <csignal>
+#include <sys/mman.h>
+#include <sys/resource.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #endif
@@ -66,6 +72,17 @@ void require_throws(const std::function<void()> &fn, const std::string &message)
     return;
   }
   throw std::runtime_error(message);
+}
+
+size_t process_resource_count() {
+#ifdef _WINDOWS
+  DWORD count = 0;
+  require(GetProcessHandleCount(GetCurrentProcess(), &count) != 0, "failed to count process handles");
+  return count;
+#else
+  const auto fd_root = fs::exists("/proc/self/fd") ? fs::path("/proc/self/fd") : fs::path("/dev/fd");
+  return static_cast<size_t>(std::distance(fs::directory_iterator(fd_root), fs::directory_iterator{}));
+#endif
 }
 
 auto make_location(const fs::path &root) {
@@ -125,6 +142,68 @@ void test_mapped_region_move_ownership() {
   require(*reinterpret_cast<const uint64_t *>(reader.address()) == UINT64_C(0x1020304050607080),
           "mapped payload changed across release/reopen");
 }
+
+void test_mapping_error_paths_release_resources() {
+  temp_tree tree;
+  const auto truncated = tree.root() / "truncated.journal";
+  {
+    std::ofstream stream(truncated, std::ios::binary);
+    stream << "short";
+  }
+
+  require_throws([&] { (void)mapped_region::map_existing(truncated.string(), 4096); },
+                 "resource-count warmup unexpectedly mapped a truncated file");
+  const auto before = process_resource_count();
+  for (int i = 0; i < 8; ++i) {
+    require_throws([&] { (void)mapped_region::map_existing(truncated.string(), 4096); },
+                   "repeated truncated mapping unexpectedly succeeded");
+  }
+  const auto after = process_resource_count();
+  require(after <= before + 1, "failing mappings leaked file descriptors or handles");
+
+  const auto stale_path = tree.root() / "stale.journal";
+  auto stale = mapped_region::map_writable(stale_path.string(), 4096);
+#ifdef _WINDOWS
+  require(UnmapViewOfFile(reinterpret_cast<void *>(stale.address())) != 0,
+          "failed to inject an already-unmapped Windows view");
+#else
+  require(munmap(reinterpret_cast<void *>(stale.address()), stale.size()) == 0,
+          "failed to inject an already-unmapped POSIX region");
+#endif
+  require(!stale.flush(), "flush unexpectedly succeeded for an already-unmapped region");
+  (void)stale.reset();
+  require(!stale, "failed cleanup retained stale mapping ownership");
+}
+
+#ifndef _WINDOWS
+void test_resize_budget_failure_releases_file() {
+  temp_tree tree;
+  const auto path = tree.root() / "limited.journal";
+  std::cout.flush();
+  std::cerr.flush();
+  const pid_t child = fork();
+  require(child >= 0, "fork failed for resize-budget test");
+  if (child == 0) {
+    std::signal(SIGXFSZ, SIG_IGN);
+    const rlimit limit{1024, 1024};
+    if (setrlimit(RLIMIT_FSIZE, &limit) != 0) {
+      _exit(2);
+    }
+    try {
+      (void)mapped_region::map_writable(path.string(), 4096);
+      _exit(3);
+    } catch (...) {
+      std::error_code error;
+      const auto size = fs::exists(path, error) ? fs::file_size(path, error) : 0;
+      _exit(!error && size <= 1024 ? 0 : 4);
+    }
+  }
+
+  int status = 0;
+  require(waitpid(child, &status, 0) == child && WIFEXITED(status) && WEXITSTATUS(status) == 0,
+          "resize-budget failure was not handled without file growth");
+}
+#endif
 
 void test_page_reader_does_not_create_layout() {
   temp_tree tree;
@@ -229,6 +308,10 @@ int main() {
       {"wire layout invariants", test_wire_layout_invariants},
       {"existing mapping never creates or grows", test_existing_mapping_never_creates_or_grows},
       {"mapped region move ownership", test_mapped_region_move_ownership},
+      {"mapping error paths release resources", test_mapping_error_paths_release_resources},
+#ifndef _WINDOWS
+      {"resize budget failure releases file", test_resize_budget_failure_releases_file},
+#endif
       {"page reader does not create layout", test_page_reader_does_not_create_layout},
       {"corrupt page offsets fail before payload access", test_corrupt_page_offsets_fail_before_payload_access},
       {"corrupt page header facts are rejected", test_corrupt_page_header_facts_are_rejected},
