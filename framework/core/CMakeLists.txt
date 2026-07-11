@@ -91,6 +91,11 @@ if (NOT DEFINED ENV{KUNGFU_BUILD_SKIP_LIBKUNGFU} OR NOT $ENV{KUNGFU_BUILD_SKIP_L
   add_subdirectory(src/libkungfu)
 endif()
 
+if (TARGET ${LIBKUNGFU_NAME})
+  message(STATUS "Enabled production libwasm runtime")
+  add_subdirectory(src/libwasm)
+endif()
+
 if (NOT DEFINED ENV{KUNGFU_BUILD_SKIP_KUNGFU_NODE} OR NOT $ENV{KUNGFU_BUILD_SKIP_KUNGFU_NODE})
   message(STATUS "Enabled kungfu_node")
   add_subdirectory(src/bindings/node)

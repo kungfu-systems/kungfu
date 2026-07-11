@@ -18,6 +18,11 @@ import {
 } from '@kungfu-tech/buildchain/logging';
 import { extractTarGz, extractZip, writeTarGz, writeZip } from './archive.mjs';
 import { writeCompatibilityManifest } from './compatibility.mjs';
+import {
+  assertLibwasmArtifact,
+  runLibwasmArtifactSelfTest,
+  runLibwasmExecutionQualification,
+} from './libwasm-artifact.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -621,6 +626,9 @@ function assertCoreFrozen() {
       `no pykungfu wheel under ${rel(wheels)}; the install surface would ship unusable`,
     );
   }
+  assertLibwasmArtifact(CORE_DIST);
+  runLibwasmArtifactSelfTest(CORE_DIST);
+  runLibwasmExecutionQualification(CORE_DIST);
 }
 
 // ADR-0046 stage 1: kungfu-trunk (the product trunk carrying the kungfu-owned

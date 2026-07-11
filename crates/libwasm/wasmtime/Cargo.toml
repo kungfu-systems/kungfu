@@ -1,27 +1,29 @@
 # SPDX-License-Identifier: Apache-2.0
 
 [package]
-name = "kungfu-libwasm-wasmer-spike"
-version = "0.0.0"
+name = "kungfu-libwasm-wasmtime"
+version = "4.0.0-alpha.0"
 edition = "2021"
 license = "Apache-2.0"
 publish = false
 
 [lib]
-name = "kf_libwasm_wasmer_spike"
+name = "kungfu_libwasm_wasmtime"
 path = "../src/lib.rs"
 crate-type = ["cdylib"]
 
 [workspace]
 
 [features]
-default = ["wasmer-engine"]
+default = ["production", "wasmtime-engine"]
+production = []
 wasmtime-engine = []
 wasmer-engine = []
 
 [dependencies]
-wasmer = { version = "=7.2.0", default-features = false, features = ["sys", "cranelift"] }
-wasmer-middlewares = "=7.2.0"
+sha2 = "=0.10.9"
+wasmparser = "=0.240.0"
+wasmtime = { version = "=46.0.1", default-features = false, features = ["cranelift", "runtime", "std"] }
 wat = "1"
 
 [target.'cfg(windows)'.dependencies]

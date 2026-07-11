@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.kfx.contract/v1",
   "id": "kungfu-kfx",
-  "version": 1,
+  "version": 2,
   "weldedSurface": "kfx-contract",
   "description": "Single source for KFX package manifests, discovery rules, trust inputs, and build detection.",
   "contractSchema": {
@@ -326,6 +326,90 @@
                       "minLength": 1
                     },
                     "uniqueItems": true
+                  }
+                }
+              },
+              "wasm": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "world",
+                  "entry",
+                  "sha256",
+                  "capabilities",
+                  "engine",
+                  "fallback",
+                  "limits"
+                ],
+                "properties": {
+                  "world": {
+                    "type": "string",
+                    "const": "kungfu:journal/batch@1.0.0"
+                  },
+                  "entry": {
+                    "type": "string",
+                    "pattern": "^(?!.*\\.\\.)(?!/)[A-Za-z0-9._/-]+\\.wasm$"
+                  },
+                  "sha256": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  "capabilities": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "journal.read.batch"
+                      ]
+                    },
+                    "minItems": 1,
+                    "uniqueItems": true
+                  },
+                  "engine": {
+                    "type": "string",
+                    "const": "wasmtime"
+                  },
+                  "fallback": {
+                    "type": "string",
+                    "const": "wasmer"
+                  },
+                  "limits": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "fuel",
+                      "memoryPages",
+                      "batchFrames",
+                      "moduleBytes",
+                      "outputBytes"
+                    ],
+                    "properties": {
+                      "fuel": {
+                        "type": "integer",
+                        "minimum": 1000,
+                        "maximum": 1000000000
+                      },
+                      "memoryPages": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 256
+                      },
+                      "batchFrames": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 4096
+                      },
+                      "moduleBytes": {
+                        "type": "integer",
+                        "minimum": 8,
+                        "maximum": 16777216
+                      },
+                      "outputBytes": {
+                        "type": "integer",
+                        "minimum": 8,
+                        "maximum": 4096
+                      }
+                    }
                   }
                 }
               }

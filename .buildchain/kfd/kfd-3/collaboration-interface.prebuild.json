@@ -5,8 +5,8 @@
   "witnessKind": "prebuild",
   "supportLevel": "release",
   "source": {
-    "cwd": "/Users/dkr/Worktrees/kungfu/feature/adr0048-q3-changelog-gui",
-    "sourceSha": "716a6c2f16990de852f7fd553aa6fc20f4671559",
+    "cwd": "/Users/dkr/Worktrees/kungfu/feature/libwasm-production-build-release",
+    "sourceSha": "4f1881520a53c6401becdcab11700ffa1af7c356",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
     "registryDigest": "sha256:0f29cb763224b47017cd686c3553b3fc65e2b41a84f1e946b3d5d67b71565bb7"
   },

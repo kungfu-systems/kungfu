@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//! Bounded Rust-host exception for the ADR-0045 libwasm spike.
-//!
-//! The public surface is a small C ABI. Engine SDK types, panics, and raw
-//! libkungfu handles never cross it. Both engines execute the same core-Wasm
-//! bytes and receive journal data only after one explicit host-to-linear-memory
-//! copy per batch.
+// Bounded Rust-host exception for the ADR-0045 libwasm spike.
+//
+// The public surface is a small C ABI. Engine SDK types, panics, and raw
+// libkungfu handles never cross it. Both engines execute the same core-Wasm
+// bytes and receive journal data only after one explicit host-to-linear-memory
+// copy per batch.
 
 use std::ffi::{c_char, c_void, CStr};
 use std::panic::{catch_unwind, AssertUnwindSafe};
@@ -390,6 +390,10 @@ struct WasmtimeGuest {
 #[cfg(feature = "wasmtime-engine")]
 impl WasmtimeGuest {
     fn new(wasm: &[u8]) -> Result<Self, i32> {
+        Self::new_with_fuel(wasm, 100_000_000)
+    }
+
+    fn new_with_fuel(wasm: &[u8], fuel: u64) -> Result<Self, i32> {
         let compile_start = Instant::now();
         let mut config = wasmtime::Config::new();
         config.consume_fuel(true);
@@ -399,7 +403,7 @@ impl WasmtimeGuest {
         let baseline = resident_bytes();
         let instantiate_start = Instant::now();
         let mut store = wasmtime::Store::new(&engine, ());
-        store.set_fuel(100_000_000).map_err(|_| ENGINE_ERROR)?;
+        store.set_fuel(fuel).map_err(|_| ENGINE_ERROR)?;
         let instance =
             wasmtime::Instance::new(&mut store, &module, &[]).map_err(|_| ENGINE_ERROR)?;
         let memory = instance
@@ -472,6 +476,7 @@ impl GuestEngine for WasmtimeGuest {
     fn cold_instantiate_ns(&self) -> u64 {
         self.instantiate_ns
     }
+
 }
 
 #[cfg(feature = "wasmer-engine")]
@@ -489,8 +494,19 @@ struct WasmerGuest {
 #[cfg(feature = "wasmer-engine")]
 impl WasmerGuest {
     fn new(wasm: &[u8]) -> Result<Self, i32> {
+        Self::new_with_fuel(wasm, 100_000_000)
+    }
+
+    fn new_with_fuel(wasm: &[u8], fuel: u64) -> Result<Self, i32> {
+        use std::sync::Arc;
+        use wasmer::sys::{CompilerConfig, Cranelift, EngineBuilder};
+        use wasmer_middlewares::Metering;
+
         let compile_start = Instant::now();
-        let mut store = wasmer::Store::default();
+        let metering = Arc::new(Metering::new(fuel, |_| 1));
+        let mut compiler = Cranelift::default();
+        compiler.push_middleware(metering);
+        let mut store = wasmer::Store::new(EngineBuilder::new(compiler));
         let module = wasmer::Module::new(&store, wasm).map_err(|_| ENGINE_ERROR)?;
         let compile_ns = compile_start.elapsed().as_nanos() as u64;
         let baseline = resident_bytes();
@@ -571,6 +587,7 @@ impl GuestEngine for WasmerGuest {
     fn cold_instantiate_ns(&self) -> u64 {
         self.instantiate_ns
     }
+
 }
 
 fn percentile(values: &mut [u64], percentile: usize) -> u64 {

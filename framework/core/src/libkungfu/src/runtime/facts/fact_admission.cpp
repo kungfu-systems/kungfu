@@ -308,6 +308,9 @@ std::vector<fact_record> read_events(const std::string &runtime_dir, int64_t cut
   auto locator = std::make_shared<yy::data::locator>(runtime_dir);
   auto location = yy::data::location::make_shared(yy::enums::mode::LIVE, yy::enums::location_role::SYSTEM,
                                                   FACT_NAMESPACE, FACT_NAME, locator);
+  if (locator->list_page_id(location, yy::data::location::PUBLIC).empty()) {
+    return records;
+  }
   try {
     yy::journal::assemble reader(location, yy::data::location::PUBLIC, yy::enums::AssembleMode::Channel, 0);
     while (reader.data_available()) {

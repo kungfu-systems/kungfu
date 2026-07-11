@@ -184,7 +184,10 @@ A record's **Status** says where it stands:
   (what installed launcher binaries bake in forever) and
   [0046](ADR-0046-rust-host-trunk-and-assembled-runtime.md) (the target host
   topology: Rust trunk over satellite runtimes, the CLI layering law, and the
-  assembled exact-runtime distribution contract that retires the freezer).
+  assembled exact-runtime distribution contract that retires the freezer), and
+  [0054](ADR-0054-libwasm-production-runtime-and-release.md) (the governed
+  dual-engine WASM runtime, explicit capability grant, fact receipts, and
+  release artifact qualification contract).
 - **Cross-cutting principle** — [0009](ADR-0009-load-bearing-self-bootstrap.md)
   (load-bearing self-bootstrap), which also names the general law that
   [`docs/architecture.md` § The build dogfoods the SDK](../../../../docs/architecture.md)

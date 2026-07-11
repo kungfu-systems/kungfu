@@ -17,6 +17,16 @@ on:
       - "framework/core/slices/libwasm-shared-membrane/**"
       - "framework/core/slices/CMakeLists.txt"
       - "crates/libwasm-spike/**"
+      - "crates/libwasm/**"
+      - "framework/core/src/libwasm/**"
+      - "framework/core/.gyp/run-freeze.js"
+      - "framework/core/conanfile.py"
+      - "framework/kfx/kungfu-kfx.contract.json"
+      - "product/scripts/libwasm-artifact.mjs"
+      - "product/scripts/compatibility.mjs"
+      - "product/scripts/compatibility.test.mjs"
+      - "product/scripts/dist.mjs"
+      - "scripts/verify.mjs"
       - ".github/workflows/embedding-membrane-spike.yml"
 
 permissions:
@@ -213,7 +223,8 @@ jobs:
           # shifu-entry-contract: allow the isolated spike targets are not product-level Shifu tasks
           cmake --build framework/core/build --config Release --parallel 2 \
             --target shared_embedding_host shared_embedding_native_kfx \
-              native_storage_closure_host libwasm_shared_membrane_host
+              native_storage_closure_host libwasm_shared_membrane_host \
+              kungfu_libwasm_self_test
           if [ "$RUNNER_OS" = "macOS" ]; then
             test "$(uname -m)" = "arm64"
           fi

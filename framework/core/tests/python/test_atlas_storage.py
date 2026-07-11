@@ -1270,6 +1270,17 @@ def test_fact_query_fails_closed_on_unregistered_or_changed_declarations(tmp_pat
     )
 
 
+def test_domain_fact_state_is_empty_before_the_admission_journal_exists(tmp_path):
+    state = storage_service.fact_state(tmp_path / "runtime")
+
+    assert state["declarations"] == {
+        "contract_world": None,
+        "fact_surface": None,
+    }
+    assert state["canonical_facts"] == []
+    assert state["observation_history"] == []
+
+
 def test_domain_fact_admission_replays_declaration_history_and_observation_lifecycle(
     tmp_path,
 ):

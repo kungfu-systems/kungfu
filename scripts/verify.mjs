@@ -38,6 +38,11 @@ import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  assertLibwasmArtifact,
+  runLibwasmArtifactSelfTest,
+  runLibwasmExecutionQualification,
+} from '../product/scripts/libwasm-artifact.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -489,6 +494,25 @@ function main() {
     pass('dist/kungfu directory exists', path.relative(ROOT, distDir));
     for (const artifact of contractArtifacts()) {
       assertContractArtifact(distDir, artifact);
+    }
+    try {
+      const files = assertLibwasmArtifact(distDir);
+      pass('production libwasm artifact', `${files.length} required files`);
+      const receipt = runLibwasmArtifactSelfTest(distDir);
+      pass(
+        'production libwasm metering',
+        `wasmtime=${receipt.engines.wasmtime.status} wasmer=${receipt.engines.wasmer.status}`,
+      );
+      const executions = runLibwasmExecutionQualification(distDir);
+      pass(
+        'production libwasm execution receipts',
+        `wasmtime=${executions.wasmtime.frame_count} wasmer=${executions.wasmer.frame_count}`,
+      );
+    } catch (error) {
+      fail(
+        'production libwasm artifact',
+        error instanceof Error ? error.message : String(error),
+      );
     }
     kungfuBin = path.join(distDir, isWin ? 'kungfu.exe' : 'kungfu');
     if (fs.existsSync(kungfuBin) && fs.statSync(kungfuBin).isFile()) {

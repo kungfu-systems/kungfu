@@ -165,6 +165,57 @@ function copyAppNative(bt) {
   console.log(`[freeze] 补拷 app native：${n}/${APP_NATIVE.length} 项`);
 }
 
+function copyLibwasmRuntime() {
+  const buildDir = path.join(CORE, 'build');
+  const distKfc = path.join(CORE, 'dist', 'kungfu');
+  const hostName = isWin ? 'kungfu-wasm-host.exe' : 'kungfu-wasm-host';
+  const host = findFileShallow(
+    buildDir,
+    isWin ? /^kungfu-wasm-host\.exe$/i : /^kungfu-wasm-host$/,
+  );
+  const adapterPatterns = isWin
+    ? [/^kungfu_libwasm_wasmtime\.dll$/i, /^kungfu_libwasm_wasmer\.dll$/i]
+    : process.platform === 'darwin'
+      ? [
+          /^libkungfu_libwasm_wasmtime\.dylib$/,
+          /^libkungfu_libwasm_wasmer\.dylib$/,
+        ]
+      : [/^libkungfu_libwasm_wasmtime\.so$/, /^libkungfu_libwasm_wasmer\.so$/];
+  const adapters = adapterPatterns.map((pattern) =>
+    findFileShallow(buildDir, pattern),
+  );
+  if (!host || adapters.some((value) => !value)) {
+    throw new Error(
+      'production libwasm runtime is incomplete; rebuild core before freeze',
+    );
+  }
+  const runtimeDir = path.join(distKfc, 'libwasm');
+  fs.mkdirSync(runtimeDir, { recursive: true });
+  fs.copyFileSync(host, path.join(distKfc, hostName));
+  for (const adapter of adapters) {
+    if (!adapter) {
+      throw new Error('production libwasm adapter disappeared during staging');
+    }
+    fs.copyFileSync(adapter, path.join(runtimeDir, path.basename(adapter)));
+    copyPdbSibling(adapter, runtimeDir);
+  }
+  const libwasmRoot = path.join(CORE, '..', '..', 'crates', 'libwasm');
+  fs.copyFileSync(
+    path.join(libwasmRoot, 'contract.json'),
+    path.join(runtimeDir, 'contract.json'),
+  );
+  fs.cpSync(path.join(libwasmRoot, 'wit'), path.join(runtimeDir, 'wit'), {
+    recursive: true,
+  });
+  const includeDir = path.join(runtimeDir, 'include', 'kungfu');
+  fs.mkdirSync(includeDir, { recursive: true });
+  fs.copyFileSync(
+    path.join(CORE, 'src', 'libwasm', 'include', 'kungfu', 'libwasm.h'),
+    path.join(includeDir, 'libwasm.h'),
+  );
+  console.log('[freeze] production libwasm host + dual-engine adapters staged');
+}
+
 // BFS 查 build 树里首个匹配文件（返回最浅一份，避开 obj/临时深目录里的副本）。
 /**
  * @param {string} root
@@ -300,6 +351,7 @@ function freezeNuitka(bt) {
 
   copyAppNative(bt);
   copyPyBindingWin(bt);
+  copyLibwasmRuntime();
   copyConfigContract();
   if (isWin) verifyWindowsSymbols(path.join(CORE, 'dist', 'kungfu'));
   console.log('[freeze] ✅ dist/kungfu 就绪（nuitka 扁平产物 + app native）');
@@ -548,6 +600,7 @@ function assembleTree(bt) {
 
   copyRuntimeNative(bt, distKfc);
   copyAppNative(bt);
+  copyLibwasmRuntime();
   copyConfigContract();
   stageEntry(distKfc);
   console.log(
@@ -616,6 +669,7 @@ function freezePyinstaller(bt) {
     },
   );
   promote();
+  copyLibwasmRuntime();
   copyConfigContract();
   if (isWin) verifyWindowsSymbols(path.join(CORE, 'dist', 'kungfu'));
   console.log(

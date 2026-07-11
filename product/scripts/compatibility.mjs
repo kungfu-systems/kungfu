@@ -69,6 +69,16 @@ export function buildCompatibilityManifest({ root, includeGui }) {
       root,
       'framework/core/dist/kungfu/kungfubuildinfo.json',
     ),
+    libwasm_abi: component(
+      root,
+      'framework/core/src/libwasm/include/kungfu/libwasm.h',
+    ),
+    libwasm_contract: component(root, 'crates/libwasm/contract.json'),
+    libwasm_runtime: component(
+      root,
+      'framework/core/dist/kungfu/libwasm',
+      'tree',
+    ),
     sdk_contract: component(root, 'framework/sdk/kungfu-storage.contract.json'),
     sdk_fixture: component(
       root,
