@@ -170,8 +170,12 @@ jobs:
           fi
           test -x "$uv_bin"
           fingerprint() {
-            sed -E 's#source = \{ registry = "[^"]+" \}#source = { registry = "<registry>" }#' "$1" |
-              git hash-object --stdin
+            {
+              grep -E '^(\[\[package\]\]|name = |version = |source = )' "$1" |
+                sed -E 's#source = \{ registry = "[^"]+" \}#source = { registry = "<registry>" }#'
+              grep -E '^(sdist = |[[:space:]]+\{ url = ).*hash = ' "$1" |
+                sed -E 's#.*hash = "([^"]+)".*#hash = "\1"#'
+            } | git hash-object --stdin
           }
           before="$(fingerprint uv.lock)"
           "$uv_bin" lock --refresh --default-index https://pypi.org/simple
