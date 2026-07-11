@@ -10,9 +10,9 @@
 #include <vector>
 
 #include <kungfu/runtime/storage/projection_types.h>
-#include <kungfu/yijinjing/storage/episode_manifest.h>
-#include <kungfu/yijinjing/storage/manifest_catalog.h>
-#include <kungfu/yijinjing/storage/source_registry.h>
+#include <kungfu/yijinjing/storage/episode_manifest_types.h>
+#include <kungfu/yijinjing/storage/manifest_catalog_types.h>
+#include <kungfu/yijinjing/storage/source_registry_types.h>
 
 namespace kungfu::runtime::storage_service_api {
 
