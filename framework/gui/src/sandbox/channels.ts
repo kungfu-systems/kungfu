@@ -40,3 +40,12 @@ export const WINDOW_CHROME_CONTROL_CHANNEL = 'kf-window-chrome:control';
 export const WINDOW_CHROME_STATE_CHANNEL = 'kf-window-chrome:state';
 
 export const RUNTIME_STATUS_GET_CHANNEL = 'kf-runtime-status:get';
+
+// renderer <-> main: Desktop Workspace chooser/switcher. Selection is a
+// global-config convenience record; fact-bearing data remains in the selected
+// Home or project workspace and switching relaunches the single-workspace app.
+export const WORKSPACE_GET_CHANNEL = 'kf-workspace:get';
+export const WORKSPACE_OPEN_CHANNEL = 'kf-workspace:open';
+export const WORKSPACE_SELECT_HOME_CHANNEL = 'kf-workspace:select-home';
+export const WORKSPACE_SELECT_RECENT_CHANNEL = 'kf-workspace:select-recent';
+export const WORKSPACE_CREATE_MISSION_CHANNEL = 'kf-workspace:create-mission';

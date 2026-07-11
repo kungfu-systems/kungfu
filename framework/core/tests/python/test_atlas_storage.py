@@ -629,6 +629,24 @@ def test_mission_control_native_go_completion_claim_fails_closed_then_passes(
     assert cli_report["assessment_key"] == completed["assessment_key"]
 
 
+def test_native_only_workspace_keeps_optional_atlas_projection_stdout_clean(
+    tmp_path, capfd
+):
+    runtime_dir = tmp_path / "runtime"
+    mission_control.create_mission(
+        str(runtime_dir),
+        mission_id="native-only",
+        title="Native only",
+        intent="Keep JSON output machine-readable without an Atlas import",
+        actor="test-user",
+        actor_type="user",
+    )
+
+    assert atlas_store.load(str(runtime_dir)) is None
+    captured = capfd.readouterr()
+    assert captured.out == ""
+
+
 def test_native_mission_full_bundle_roundtrip_and_thin_degraded_import(tmp_path):
     source = tmp_path / "source-runtime"
     destination = tmp_path / "destination-runtime"

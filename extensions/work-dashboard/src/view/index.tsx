@@ -316,7 +316,9 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
   const [info, setInfo] = React.useState<AtlasImportInfo | null>(() =>
     atlas.importInfo(),
   );
-  const [selectedMission, setSelectedMission] = React.useState<string>('all');
+  const [selectedMission, setSelectedMission] = React.useState<string>(() =>
+    missions.length ? missions[0].mission_id : 'all',
+  );
   const [statusFilter, setStatusFilter] = React.useState<string>('all');
   const [selectedGoal, setSelectedGoal] = React.useState<string | null>(null);
   const [message, setMessage] = React.useState<string>('');
@@ -336,6 +338,9 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
   const [evidenceEpisodes, setEvidenceEpisodes] = React.useState('');
   const [bundlePath, setBundlePath] = React.useState('');
   const [importBundlePath, setImportBundlePath] = React.useState('');
+  const [actionPanel, setActionPanel] = React.useState<
+    'mission' | 'go' | 'import' | 'bundle' | 'claim' | null
+  >(null);
   const actor = 'work-dashboard';
 
   const reload = React.useCallback(() => {
@@ -404,6 +409,7 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
       setNewMissionId('');
       setNewMissionTitle('');
       setNewMissionIntent('');
+      setActionPanel(null);
     } catch (error) {
       setMessage((error as Error).message);
     }
@@ -464,6 +470,7 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
       setNewGoalId('');
       setNewGoalTitle('');
       setNewGoalObjective('');
+      setActionPanel(null);
     } catch (error) {
       setMessage((error as Error).message);
     }
@@ -511,296 +518,350 @@ function AtlasProjectionView({ atlas }: { atlas: Atlas }) {
     visibleGoals.find((goal) => goal.goal_id === selectedGoal) ??
     allGoals.find((goal) => goal.goal_id === selectedGoal) ??
     null;
-  const goalCounts = new Map<string, number>();
-  for (const goal of allGoals) {
+  const currentMission =
+    missions.find((mission) => mission.mission_id === selectedMission) ?? null;
+  const missionGoals = allGoals.filter(
+    (goal) => goal.mission_id === selectedMission,
+  );
+  const missionGoalCounts = new Map<string, number>();
+  for (const goal of missionGoals) {
     const status = goal.status ?? 'unknown';
-    goalCounts.set(status, (goalCounts.get(status) ?? 0) + 1);
+    missionGoalCounts.set(status, (missionGoalCounts.get(status) ?? 0) + 1);
   }
+  const statusSummary = [...missionGoalCounts.entries()]
+    .map(([status, count]) => `${status}=${count}`)
+    .join(' · ');
+  const fiveAnswers = [
+    {
+      question: 'What are we trying to achieve?',
+      answer: currentMission
+        ? `${currentMission.title ?? currentMission.mission_id} — ${currentMission.intent ?? 'intent not declared'}${currentMission.stage_name ? ` · stage ${currentMission.stage_name}` : ''}`
+        : 'Not yet declared. Create or import a Mission.',
+    },
+    {
+      question: 'What actually happened?',
+      answer: missionGoals.length
+        ? `${missionGoals.length} Go(s) at this cut${statusSummary ? ` · ${statusSummary}` : ''}`
+        : 'No admitted Go activity is visible at this cut.',
+    },
+    {
+      question: 'What does the evidence establish at this cut?',
+      answer: trustReport
+        ? `${trustReport.state.canonical_state ? 'canonical' : 'degraded'} cut · ${trustReport.findings.length} finding(s) · proof ${trustReport.query_proof_root.slice(-12)}`
+        : trustError || 'No purpose-bound assessment is available yet.',
+    },
+    {
+      question: 'Is delegated work still fit for purpose?',
+      answer: trustReport
+        ? `${trustReport.fitness} · assessment ${trustReport.assessment.state} · residual limits ${trustReport.known_limits.length}`
+        : 'insufficient — select a Mission and assess the current cut.',
+    },
+    {
+      question: 'Who should act next?',
+      answer:
+        currentGoal?.next_action ??
+        currentMission?.next_action ??
+        (trustReport?.fitness === 'fit'
+          ? 'Continue under the current purpose and evidence boundary.'
+          : 'User or agent should adjust, supply evidence, or record a decision.'),
+    },
+  ];
 
   return (
-    <div style={{ display: 'flex', gap: 12, height: '100%', minHeight: 0 }}>
-      <section style={{ ...panelStyle, width: 440, flexShrink: 0 }}>
-        <h2 style={headingStyle}>Mission Control</h2>
-        <div style={{ ...mono, color: '#858585', marginBottom: 8 }}>
-          Atlas bridge + Kungfu-native facts · authority remains explicit
-        </div>
-        <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-          <input
-            value={repoRoot}
-            placeholder="Atlas repo path"
-            onChange={(e) => setRepoRoot(e.target.value)}
-            style={{
-              ...mono,
-              flex: 1,
-              minWidth: 0,
-              border: '1px solid #3c3c3c',
-              borderRadius: 4,
-              background: '#1e1e1e',
-              color: '#cccccc',
-              padding: '4px 6px',
-            }}
-          />
-          <SmallButton onClick={importNow}>import</SmallButton>
+    <div
+      style={{
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+        height: '100%',
+        minHeight: 0,
+      }}
+    >
+      <section style={{ ...panelStyle, flexShrink: 0 }}>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <select
+            aria-label="Mission"
+            value={selectedMission}
+            onChange={(event) => setSelectedMission(event.target.value)}
+            style={{ ...mono, minWidth: 240, padding: '4px 6px' }}
+          >
+            <option value="all">No Mission selected</option>
+            {missions.map((mission) => (
+              <option key={mission.mission_id} value={mission.mission_id}>
+                {mission.title ?? mission.mission_id}
+              </option>
+            ))}
+          </select>
+          <SmallButton onClick={() => setActionPanel('mission')}>
+            + Mission
+          </SmallButton>
+          <SmallButton onClick={() => setActionPanel('go')}>+ Go</SmallButton>
+          <SmallButton onClick={() => setActionPanel('import')}>
+            Import
+          </SmallButton>
+          <SmallButton onClick={() => setActionPanel('bundle')}>
+            Bundle
+          </SmallButton>
           <SmallButton onClick={reload}>refresh</SmallButton>
+          {info && (
+            <span style={{ ...mono, color: '#858585' }}>
+              {info.missions}M · {info.goals}G · {info.markers} markers
+            </span>
+          )}
         </div>
-        {info && (
-          <div style={{ ...mono, color: '#9cdcfe', marginBottom: 6 }}>
-            {info.missions} missions · {info.goals} goals · {info.markers}{' '}
-            markers
-          </div>
-        )}
         {message && (
-          <div style={{ ...mono, color: '#dcdcaa', marginBottom: 8 }}>
+          <div style={{ ...mono, color: '#dcdcaa', marginTop: 5 }}>
             {message}
           </div>
         )}
-        <div
+      </section>
+
+      <div style={{ display: 'flex', gap: 8, flex: 1, minHeight: 0 }}>
+        <main style={{ flex: 1, minWidth: 0, overflow: 'auto' }}>
+          <section style={{ ...panelStyle, marginBottom: 8 }}>
+            <h2 style={headingStyle}>Mission Home · current cut</h2>
+            {fiveAnswers.map((row) => (
+              <div
+                key={row.question}
+                style={{
+                  padding: '8px 0',
+                  borderBottom: '1px solid #333333',
+                }}
+              >
+                <div style={{ ...mono, color: '#9cdcfe', marginBottom: 3 }}>
+                  {row.question}
+                </div>
+                <div style={{ ...mono, color: '#cccccc' }}>{row.answer}</div>
+              </div>
+            ))}
+          </section>
+          <MissionTrustPanel report={trustReport} error={trustError} />
+          {(completionReport || completionError) && (
+            <MissionTrustPanel
+              title="Completion TrustReport"
+              report={completionReport}
+              error={completionError}
+            />
+          )}
+        </main>
+
+        <aside
           style={{
-            display: 'grid',
-            gap: 5,
-            marginBottom: 10,
-            padding: 8,
-            border: '1px solid #3c3c3c',
-            borderRadius: 4,
+            ...panelStyle,
+            width: 360,
+            flexShrink: 0,
+            overflow: 'auto',
           }}
         >
-          <h2 style={headingStyle}>Create native Mission</h2>
-          <TextInput
-            value={newMissionId}
-            placeholder="stable Mission id"
-            onChange={setNewMissionId}
-          />
-          <TextInput
-            value={newMissionTitle}
-            placeholder="title"
-            onChange={setNewMissionTitle}
-          />
-          <TextInput
-            value={newMissionIntent}
-            placeholder="long-running intent"
-            onChange={setNewMissionIntent}
-          />
-          <SmallButton onClick={createMissionNow}>create Mission</SmallButton>
-        </div>
-        <div
-          style={{
-            display: 'grid',
-            gap: 5,
-            marginBottom: 10,
-            padding: 8,
-            border: '1px solid #3c3c3c',
-            borderRadius: 4,
-          }}
-        >
-          <h2 style={headingStyle}>Portable Mission bundle</h2>
-          <TextInput
-            value={bundlePath}
-            placeholder="export path (.json)"
-            onChange={setBundlePath}
-          />
-          <div style={{ display: 'flex', gap: 5 }}>
-            <SmallButton onClick={() => exportMissionNow('full')}>
-              export full
-            </SmallButton>
-            <SmallButton onClick={() => exportMissionNow('thin')}>
-              export thin
-            </SmallButton>
-          </div>
-          <TextInput
-            value={importBundlePath}
-            placeholder="import bundle path"
-            onChange={setImportBundlePath}
-          />
-          <div style={{ display: 'flex', gap: 5 }}>
-            <SmallButton onClick={() => importMissionNow(false)}>
-              validate
-            </SmallButton>
-            <SmallButton onClick={() => importMissionNow(true)}>
-              materialize
-            </SmallButton>
-          </div>
-        </div>
-        {selectedMission !== 'all' && (
+          <h2 style={headingStyle}>Go summary · {visibleGoals.length}</h2>
           <div
             style={{
-              display: 'grid',
-              gap: 5,
-              marginBottom: 10,
-              padding: 8,
-              border: '1px solid #3c3c3c',
-              borderRadius: 4,
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 4,
+              marginBottom: 8,
             }}
           >
-            <h2 style={headingStyle}>Create native Go</h2>
-            <TextInput
-              value={newGoalId}
-              placeholder="stable Go id"
-              onChange={setNewGoalId}
-            />
-            <TextInput
-              value={newGoalTitle}
-              placeholder="title"
-              onChange={setNewGoalTitle}
-            />
-            <TextInput
-              value={newGoalObjective}
-              placeholder="bounded objective"
-              onChange={setNewGoalObjective}
-            />
-            <SmallButton onClick={createGoNow}>create Go</SmallButton>
+            <SmallButton
+              active={statusFilter === 'all'}
+              onClick={() => setStatusFilter('all')}
+            >
+              all {missionGoals.length}
+            </SmallButton>
+            {ATLAS_GOAL_STATUSES.map((status) => (
+              <SmallButton
+                key={status}
+                active={statusFilter === status}
+                onClick={() => setStatusFilter(status)}
+              >
+                {status} {missionGoalCounts.get(status) ?? 0}
+              </SmallButton>
+            ))}
           </div>
-        )}
-        <h2 style={headingStyle}>Missions · {missions.length}</h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <button
-            type="button"
-            onClick={() => setSelectedMission('all')}
-            style={{
-              ...mono,
-              border: 'none',
-              borderRadius: 4,
-              cursor: 'pointer',
-              background: selectedMission === 'all' ? '#04395e' : 'transparent',
-              color: '#cccccc',
-              padding: '4px 8px',
-              textAlign: 'left',
-            }}
-          >
-            all missions
-          </button>
-          {missions.map((mission) => (
+          {visibleGoals.map((goal) => (
             <button
-              key={mission.mission_id}
+              key={goal.goal_id}
               type="button"
-              onClick={() => setSelectedMission(mission.mission_id)}
+              onClick={() => setSelectedGoal(goal.goal_id)}
               style={{
                 ...mono,
+                display: 'block',
+                width: '100%',
+                padding: '5px 7px',
                 border: 'none',
                 borderRadius: 4,
-                cursor: 'pointer',
                 background:
-                  selectedMission === mission.mission_id
-                    ? '#04395e'
-                    : 'transparent',
+                  selectedGoal === goal.goal_id ? '#04395e' : 'transparent',
                 color: '#cccccc',
-                padding: '4px 8px',
                 textAlign: 'left',
+                cursor: 'pointer',
               }}
             >
-              <span style={{ color: '#4ec9b0' }}>{mission.mission_id}</span>
-              <div style={{ color: '#858585', fontSize: 11 }}>
-                {mission.title ?? ''} {mission.stage_name ?? ''}
-              </div>
+              [{goal.status ?? 'unknown'}] {goal.title ?? goal.goal_id}
             </button>
           ))}
-        </div>
-      </section>
-      <section style={{ ...panelStyle, width: 440, flexShrink: 0 }}>
-        <h2 style={headingStyle}>Goals · {visibleGoals.length}</h2>
-        <div
-          style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}
-        >
-          <SmallButton
-            active={statusFilter === 'all'}
-            onClick={() => setStatusFilter('all')}
-          >
-            all {allGoals.length}
-          </SmallButton>
-          {ATLAS_GOAL_STATUSES.map((status) => (
-            <SmallButton
-              key={status}
-              active={statusFilter === status}
-              onClick={() => setStatusFilter(status)}
-            >
-              {status} {goalCounts.get(status) ?? 0}
-            </SmallButton>
-          ))}
-        </div>
-        {visibleGoals.length ? (
-          <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-            {visibleGoals.map((goal) => (
-              <li key={goal.goal_id}>
-                <button
-                  type="button"
-                  onClick={() => setSelectedGoal(goal.goal_id)}
-                  style={{
-                    ...mono,
-                    display: 'block',
-                    width: '100%',
-                    textAlign: 'left',
-                    padding: '4px 8px',
-                    border: 'none',
-                    borderRadius: 4,
-                    cursor: 'pointer',
-                    background:
-                      selectedGoal === goal.goal_id ? '#04395e' : 'transparent',
-                    color: '#cccccc',
-                  }}
-                >
-                  <span style={{ color: '#9cdcfe' }}>
-                    [{goal.status ?? 'unknown'}]
-                  </span>{' '}
-                  {goal.title ?? goal.goal_id}
-                  <div style={{ color: '#858585', fontSize: 11 }}>
-                    {goal.goal_id}
-                  </div>
-                </button>
-              </li>
+          {currentGoal && (
+            <div style={{ marginTop: 8 }}>
+              <AtlasGoalDetail goal={currentGoal} />
+              <SmallButton onClick={() => setActionPanel('claim')}>
+                claim completion
+              </SmallButton>
+            </div>
+          )}
+          <details style={{ marginTop: 12 }}>
+            <summary style={{ ...mono, color: '#858585', cursor: 'pointer' }}>
+              Mission directory · {missions.length}
+            </summary>
+            {missions.map((mission) => (
+              <button
+                key={mission.mission_id}
+                type="button"
+                onClick={() => setSelectedMission(mission.mission_id)}
+                style={{
+                  ...mono,
+                  display: 'block',
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#cccccc',
+                  padding: '4px 0',
+                  cursor: 'pointer',
+                }}
+              >
+                {mission.title ?? mission.mission_id}
+              </button>
             ))}
-          </ul>
-        ) : (
-          <div style={{ ...mono, color: '#6a6a6a' }}>
-            no imported goals match this filter
-          </div>
-        )}
-        {selectedGoal && selectedMission !== 'all' && (
-          <div
-            style={{
-              display: 'grid',
-              gap: 5,
-              marginTop: 10,
-              padding: 8,
-              border: '1px solid #3c3c3c',
-              borderRadius: 4,
-            }}
-          >
-            <h2 style={headingStyle}>Claim completion</h2>
-            <TextInput
-              value={claimStatement}
-              placeholder="what this Go establishes"
-              onChange={setClaimStatement}
-            />
-            <TextInput
-              value={evidenceEpisodes}
-              placeholder="evidence Episode ids, comma-separated"
-              onChange={setEvidenceEpisodes}
-            />
-            <SmallButton onClick={claimAndAssessNow}>
-              claim and assess
+          </details>
+        </aside>
+      </div>
+
+      {actionPanel && (
+        <section
+          style={{
+            ...panelStyle,
+            position: 'absolute',
+            top: 48,
+            right: 0,
+            zIndex: 20,
+            width: 380,
+            display: 'grid',
+            gap: 6,
+            boxShadow: '0 16px 50px rgba(0,0,0,0.55)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <h2 style={headingStyle}>{actionPanel}</h2>
+            <SmallButton onClick={() => setActionPanel(null)}>
+              close
             </SmallButton>
           </div>
-        )}
-      </section>
-      <div
-        style={{
-          display: 'flex',
-          flex: 1,
-          minWidth: 0,
-          minHeight: 0,
-          flexDirection: 'column',
-          gap: 12,
-        }}
-      >
-        <MissionTrustPanel report={trustReport} error={trustError} />
-        {(completionReport || completionError) && (
-          <MissionTrustPanel
-            title="Completion TrustReport"
-            report={completionReport}
-            error={completionError}
-          />
-        )}
-        <AtlasGoalDetail goal={currentGoal} />
-      </div>
+          {actionPanel === 'mission' && (
+            <>
+              <TextInput
+                value={newMissionId}
+                placeholder="stable Mission id"
+                onChange={setNewMissionId}
+              />
+              <TextInput
+                value={newMissionTitle}
+                placeholder="title"
+                onChange={setNewMissionTitle}
+              />
+              <TextInput
+                value={newMissionIntent}
+                placeholder="long-running intent"
+                onChange={setNewMissionIntent}
+              />
+              <SmallButton onClick={createMissionNow}>
+                create Mission
+              </SmallButton>
+            </>
+          )}
+          {actionPanel === 'go' && (
+            <>
+              <div style={{ ...mono, color: '#858585' }}>
+                Mission:{' '}
+                {selectedMission === 'all'
+                  ? 'select one first'
+                  : selectedMission}
+              </div>
+              <TextInput
+                value={newGoalId}
+                placeholder="stable Go id"
+                onChange={setNewGoalId}
+              />
+              <TextInput
+                value={newGoalTitle}
+                placeholder="title"
+                onChange={setNewGoalTitle}
+              />
+              <TextInput
+                value={newGoalObjective}
+                placeholder="bounded objective"
+                onChange={setNewGoalObjective}
+              />
+              <SmallButton onClick={createGoNow}>create Go</SmallButton>
+            </>
+          )}
+          {actionPanel === 'import' && (
+            <>
+              <TextInput
+                value={repoRoot}
+                placeholder="Atlas repo path"
+                onChange={setRepoRoot}
+              />
+              <SmallButton onClick={importNow}>import Atlas</SmallButton>
+            </>
+          )}
+          {actionPanel === 'bundle' && (
+            <>
+              <TextInput
+                value={bundlePath}
+                placeholder="export path (.json)"
+                onChange={setBundlePath}
+              />
+              <div style={{ display: 'flex', gap: 5 }}>
+                <SmallButton onClick={() => exportMissionNow('full')}>
+                  export full
+                </SmallButton>
+                <SmallButton onClick={() => exportMissionNow('thin')}>
+                  export thin
+                </SmallButton>
+              </div>
+              <TextInput
+                value={importBundlePath}
+                placeholder="import bundle path"
+                onChange={setImportBundlePath}
+              />
+              <div style={{ display: 'flex', gap: 5 }}>
+                <SmallButton onClick={() => importMissionNow(false)}>
+                  validate
+                </SmallButton>
+                <SmallButton onClick={() => importMissionNow(true)}>
+                  materialize
+                </SmallButton>
+              </div>
+            </>
+          )}
+          {actionPanel === 'claim' && (
+            <>
+              <TextInput
+                value={claimStatement}
+                placeholder="what this Go establishes"
+                onChange={setClaimStatement}
+              />
+              <TextInput
+                value={evidenceEpisodes}
+                placeholder="evidence Episode ids, comma-separated"
+                onChange={setEvidenceEpisodes}
+              />
+              <SmallButton onClick={claimAndAssessNow}>
+                claim and assess
+              </SmallButton>
+            </>
+          )}
+        </section>
+      )}
     </div>
   );
 }
@@ -1154,9 +1215,17 @@ function WorkDashboardView({
   caps: KfxCapabilities;
   shell: Shell;
 }) {
-  const [view, setView] = React.useState<'work' | 'atlas'>(
-    shell.params?.view === 'atlas' ? 'atlas' : 'work',
-  );
+  const [view, setView] = React.useState<'work' | 'atlas'>(() => {
+    if (shell.params?.view === 'atlas') return 'atlas';
+    if (!caps.atlas) return 'work';
+    try {
+      return caps.atlas.importInfo() || caps.atlas.missions().length
+        ? 'atlas'
+        : 'work';
+    } catch {
+      return 'work';
+    }
+  });
   const [items, setItems] = React.useState<WorkItem[]>(() => caps.work.items());
   const [filter, setFilter] = React.useState<string>('all');
   const [selected, setSelected] = React.useState<string | null>(

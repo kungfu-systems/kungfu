@@ -36,6 +36,11 @@ import {
   WINDOW_CHROME_CONTROL_CHANNEL,
   WINDOW_CHROME_GET_CHANNEL,
   WINDOW_CHROME_STATE_CHANNEL,
+  WORKSPACE_CREATE_MISSION_CHANNEL,
+  WORKSPACE_GET_CHANNEL,
+  WORKSPACE_OPEN_CHANNEL,
+  WORKSPACE_SELECT_HOME_CHANNEL,
+  WORKSPACE_SELECT_RECENT_CHANNEL,
 } from '../../sandbox/channels';
 import {
   loadKungfuConfig,
@@ -435,9 +440,11 @@ function ShellTitleBar({
   commandText,
   commandOptions,
   settingsOpen,
+  workspaceLabel,
   onCommandChange,
   onCommandSubmit,
   onOpenSettings,
+  onOpenWorkspace,
   onWindowControl,
 }: {
   chrome: WindowChromeConfig;
@@ -445,9 +452,11 @@ function ShellTitleBar({
   commandText: string;
   commandOptions: { id: string; title: string }[];
   settingsOpen: boolean;
+  workspaceLabel: string;
   onCommandChange: (value: string) => void;
   onCommandSubmit: () => void;
   onOpenSettings: () => void;
+  onOpenWorkspace: () => void;
   onWindowControl: (control: WindowChromeControl) => void;
 }) {
   const dragRegion: ElectronChromeStyle = {
@@ -579,6 +588,29 @@ function ShellTitleBar({
       >
         <button
           type="button"
+          aria-label="Open workspace switcher"
+          title={workspaceLabel}
+          onClick={onOpenWorkspace}
+          style={{
+            ...interactiveRegion,
+            ...mono,
+            maxWidth: 180,
+            height: 28,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            border: '1px solid #3c3c3c',
+            borderRadius: 6,
+            cursor: 'pointer',
+            background: '#252526',
+            color: '#9cdcfe',
+            padding: '0 8px',
+          }}
+        >
+          {workspaceLabel}
+        </button>
+        <button
+          type="button"
           aria-label="Open settings"
           onClick={onOpenSettings}
           style={{
@@ -619,6 +651,173 @@ function ShellTitleBar({
   );
 }
 
+type WorkspaceSnapshot = {
+  current: {
+    workspaceId: string;
+    workspaceKind: 'home' | 'project';
+    workspaceRoot: string | null;
+    displayPath: string;
+    dataHome: string;
+    state: 'ready' | 'selected-uninitialized' | 'unavailable';
+    diagnosis: string;
+  };
+  recent: Array<{
+    workspace_id?: string;
+    workspace_kind?: 'home' | 'project';
+    workspace_root?: string | null;
+    display_path?: string;
+    data_home?: string;
+  }>;
+};
+
+function workspaceIpc() {
+  const ipcRenderer = (
+    window.require('electron') as {
+      ipcRenderer: {
+        invoke: (channel: string, payload?: unknown) => Promise<unknown>;
+      };
+    }
+  ).ipcRenderer;
+  return {
+    get: () =>
+      ipcRenderer.invoke(WORKSPACE_GET_CHANNEL) as Promise<WorkspaceSnapshot>,
+    open: () => ipcRenderer.invoke(WORKSPACE_OPEN_CHANNEL),
+    home: () => ipcRenderer.invoke(WORKSPACE_SELECT_HOME_CHANNEL),
+    recent: (workspaceId: string) =>
+      ipcRenderer.invoke(WORKSPACE_SELECT_RECENT_CHANNEL, { workspaceId }),
+    createMission: (missionId: string, title: string, intent: string) =>
+      ipcRenderer.invoke(WORKSPACE_CREATE_MISSION_CHANNEL, {
+        missionId,
+        title,
+        intent,
+      }),
+  };
+}
+
+function WorkspacePanel() {
+  const bridge = React.useMemo(workspaceIpc, []);
+  const [snapshot, setSnapshot] = React.useState<WorkspaceSnapshot | null>(
+    null,
+  );
+  const [error, setError] = React.useState<string | null>(null);
+  const [missionId, setMissionId] = React.useState('');
+  const [missionTitle, setMissionTitle] = React.useState('');
+  const [missionIntent, setMissionIntent] = React.useState('');
+  React.useEffect(() => {
+    void bridge
+      .get()
+      .then(setSnapshot)
+      .catch((e) => setError((e as Error).message));
+  }, [bridge]);
+  const run = (action: () => Promise<unknown>) => {
+    setError(null);
+    void action().catch((e) => setError((e as Error).message));
+  };
+  return (
+    <section style={{ ...panelStyle, width: 'min(680px, 100%)' }}>
+      <h2 style={{ margin: '0 0 8px', fontSize: 15 }}>Workspace</h2>
+      {snapshot && (
+        <div style={{ ...mono, color: '#9cdcfe', marginBottom: 10 }}>
+          {snapshot.current.displayPath} · {snapshot.current.state}
+          {snapshot.current.diagnosis ? ` · ${snapshot.current.diagnosis}` : ''}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+        <button
+          type="button"
+          onClick={() => run(bridge.open)}
+          style={{ ...mono, padding: '6px 10px' }}
+        >
+          Open Workspace…
+        </button>
+        <button
+          type="button"
+          onClick={() => run(bridge.home)}
+          style={{ ...mono, padding: '6px 10px' }}
+        >
+          Use Home Workspace
+        </button>
+      </div>
+      <div style={{ ...mono, color: '#858585', marginBottom: 6 }}>
+        Opening or selecting is read-only. The first fact-bearing action creates
+        the selected `.kungfu` data home.
+      </div>
+      {snapshot?.current.state === 'selected-uninitialized' && (
+        <div
+          style={{
+            display: 'grid',
+            gap: 5,
+            padding: 8,
+            marginBottom: 10,
+            border: '1px solid #3c3c3c',
+            borderRadius: 5,
+          }}
+        >
+          <div style={{ ...mono, color: '#9cdcfe' }}>
+            First fact-bearing action · Create Mission
+          </div>
+          <input
+            value={missionId}
+            placeholder="stable Mission id"
+            onChange={(event) => setMissionId(event.target.value)}
+            style={{ ...mono, padding: '5px 7px' }}
+          />
+          <input
+            value={missionTitle}
+            placeholder="Mission title"
+            onChange={(event) => setMissionTitle(event.target.value)}
+            style={{ ...mono, padding: '5px 7px' }}
+          />
+          <input
+            value={missionIntent}
+            placeholder="What are we trying to achieve?"
+            onChange={(event) => setMissionIntent(event.target.value)}
+            style={{ ...mono, padding: '5px 7px' }}
+          />
+          <button
+            type="button"
+            onClick={() =>
+              run(() =>
+                bridge.createMission(missionId, missionTitle, missionIntent),
+              )
+            }
+            style={{ ...mono, padding: '6px 10px' }}
+          >
+            Create Mission and initialize Workspace
+          </button>
+        </div>
+      )}
+      {snapshot?.recent.map((recent) => (
+        <button
+          key={recent.workspace_id}
+          type="button"
+          disabled={
+            recent.workspace_kind === 'project' && !recent.workspace_root
+          }
+          onClick={() =>
+            recent.workspace_id &&
+            run(() => bridge.recent(recent.workspace_id as string))
+          }
+          style={{
+            ...mono,
+            display: 'block',
+            width: '100%',
+            padding: '5px 7px',
+            border: 'none',
+            background: 'transparent',
+            color: '#cccccc',
+            textAlign: 'left',
+            cursor: 'pointer',
+          }}
+        >
+          {recent.display_path || recent.workspace_root || 'Home Workspace'}
+        </button>
+      ))}
+      {error && <div style={{ ...mono, color: '#f48771' }}>{error}</div>}
+    </section>
+  );
+}
+
 function App() {
   const [runtime] = React.useState(bootRuntime);
   const [loaded] = React.useState<KfxLoadResult>(() =>
@@ -633,6 +832,7 @@ function App() {
   );
   const [params, setParams] = React.useState<Record<string, string>>({});
   const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const [workspaceOpen, setWorkspaceOpen] = React.useState(false);
   const [commandText, setCommandText] = React.useState('');
   const [windowChrome, controlWindow] = useWindowChrome();
   const [config, setConfig] = React.useState<KungfuResolvedConfig | null>(null);
@@ -1359,9 +1559,10 @@ function App() {
 
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && settingsOpen) {
+      if (event.key === 'Escape' && (settingsOpen || workspaceOpen)) {
         event.preventDefault();
         setSettingsOpen(false);
+        setWorkspaceOpen(false);
         return;
       }
       if (event.key === ',' && (event.metaKey || event.ctrlKey)) {
@@ -1371,7 +1572,29 @@ function App() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [settingsOpen]);
+  }, [settingsOpen, workspaceOpen]);
+
+  const workspaceOverlay = workspaceOpen ? (
+    <div
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) setWorkspaceOpen(false);
+      }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1100,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+        background: 'rgba(0, 0, 0, 0.5)',
+        boxSizing: 'border-box',
+      }}
+    >
+      <WorkspacePanel />
+    </div>
+  ) : null;
 
   const settingsOverlay = settingsOpen ? (
     <div
@@ -1492,9 +1715,13 @@ function App() {
         commandText={commandText}
         commandOptions={commandOptions}
         settingsOpen={settingsOpen}
+        workspaceLabel={
+          window.process.env.KF_WORKSPACE_DISPLAY_PATH || 'Home Workspace'
+        }
         onCommandChange={setCommandText}
         onCommandSubmit={submitCommand}
         onOpenSettings={() => setSettingsOpen(true)}
+        onOpenWorkspace={() => setWorkspaceOpen(true)}
         onWindowControl={controlWindow}
       />
       <div style={chromeBodyStyle}>
@@ -1620,14 +1847,29 @@ function App() {
             </div>
           </div>
         ) : (
-          <p style={{ ...mono, color: '#f48771' }}>
-            {window.process.env.KF_WORKSPACE_STATE === 'selected-uninitialized'
-              ? 'Workspace selected but not initialized — the first fact-bearing action will create its .kungfu data home.'
-              : 'binding unavailable — set KFE_PATH to a built kungfu_electron.node'}
-          </p>
+          <div
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {window.process.env.KF_WORKSPACE_STATE ===
+              'selected-uninitialized' ||
+            window.process.env.KF_WORKSPACE_STATE === 'unavailable' ? (
+              <WorkspacePanel />
+            ) : (
+              <p style={{ ...mono, color: '#f48771' }}>
+                binding unavailable — set KFE_PATH to a built
+                kungfu_electron.node
+              </p>
+            )}
+          </div>
         )}
       </div>
       {notificationToasts}
+      {workspaceOverlay}
       {settingsOverlay}
       {statusBar}
     </div>

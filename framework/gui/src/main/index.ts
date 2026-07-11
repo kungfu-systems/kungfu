@@ -28,6 +28,11 @@ import {
   WINDOW_CHROME_CONTROL_CHANNEL,
   WINDOW_CHROME_GET_CHANNEL,
   WINDOW_CHROME_STATE_CHANNEL,
+  WORKSPACE_CREATE_MISSION_CHANNEL,
+  WORKSPACE_GET_CHANNEL,
+  WORKSPACE_OPEN_CHANNEL,
+  WORKSPACE_SELECT_HOME_CHANNEL,
+  WORKSPACE_SELECT_RECENT_CHANNEL,
 } from '../sandbox/channels';
 import {
   firstPartyManifestPath,
@@ -47,7 +52,11 @@ import {
   bindElectronTerminalHost,
   createMainTerminalHost,
 } from './terminal-host';
-import { resolveLastDesktopWorkspace } from './workspace-selection';
+import {
+  defaultHomeDesktopWorkspace,
+  listRecentDesktopWorkspaces,
+  resolveLastDesktopWorkspace,
+} from './workspace-selection';
 
 const PRODUCT_NAME = 'Kungfu Episodes';
 
@@ -119,17 +128,20 @@ if (
   !process.env.KF_HOME &&
   !process.env.KF_RUNTIME_DIR
 ) {
-  const selected = resolveLastDesktopWorkspace(defaultConfigHome());
-  if (selected) {
-    process.env.KF_WORKSPACE_ID = selected.workspaceId;
-    process.env.KF_WORKSPACE_KIND = selected.workspaceKind;
-    process.env.KF_WORKSPACE_ROOT = selected.workspaceRoot || '';
-    process.env.KF_WORKSPACE_DISPLAY_PATH = selected.displayPath;
-    process.env.KF_WORKSPACE_RESOLUTION_REASON = selected.resolutionReason;
-    process.env.KF_WORKSPACE_STATE = selected.state;
-    process.env.KF_HOME = selected.dataHome;
-    process.env.KF_RUNTIME_DIR = selected.runtimeDir;
-  }
+  const configHome = defaultConfigHome();
+  process.env.KF_CONFIG_HOME = configHome;
+  const selected =
+    resolveLastDesktopWorkspace(configHome) ??
+    defaultHomeDesktopWorkspace(app.getPath('home'));
+  process.env.KF_WORKSPACE_ID = selected.workspaceId;
+  process.env.KF_WORKSPACE_KIND = selected.workspaceKind;
+  process.env.KF_WORKSPACE_ROOT = selected.workspaceRoot || '';
+  process.env.KF_WORKSPACE_DISPLAY_PATH = selected.displayPath;
+  process.env.KF_WORKSPACE_RESOLUTION_REASON = selected.resolutionReason;
+  process.env.KF_WORKSPACE_STATE = selected.state;
+  process.env.KF_WORKSPACE_DIAGNOSIS = selected.diagnosis || '';
+  process.env.KF_HOME = selected.dataHome;
+  process.env.KF_RUNTIME_DIR = selected.runtimeDir;
 }
 
 if (
@@ -143,8 +155,12 @@ if (
     : 'selected-uninitialized';
 }
 
-const workspaceRuntimeReady =
-  process.env.KF_WORKSPACE_STATE !== 'selected-uninitialized';
+// Explicit instance/runtime homes are compatibility execution roots rather
+// than Desktop project selections. Preserve their existing eager-runtime
+// behavior while the Workspace product path remains lazy.
+process.env.KF_WORKSPACE_STATE = process.env.KF_WORKSPACE_STATE || 'ready';
+
+const workspaceRuntimeReady = process.env.KF_WORKSPACE_STATE === 'ready';
 
 type WindowChromePlatform = 'darwin' | 'win32' | 'linux' | 'other';
 type WindowChromeMode = 'native' | 'integrated' | 'custom';
@@ -693,6 +709,126 @@ ipcMain.handle(WINDOW_CHROME_CONTROL_CHANNEL, (event, payload) => {
 });
 
 ipcMain.handle(RUNTIME_STATUS_GET_CHANNEL, () => readRuntimeStatus());
+
+function workspaceSnapshot() {
+  return {
+    current: {
+      workspaceId: process.env.KF_WORKSPACE_ID || '',
+      workspaceKind: process.env.KF_WORKSPACE_KIND || 'home',
+      workspaceRoot: process.env.KF_WORKSPACE_ROOT || null,
+      displayPath: process.env.KF_WORKSPACE_DISPLAY_PATH || 'Home Workspace',
+      dataHome: process.env.KF_HOME || '',
+      state: process.env.KF_WORKSPACE_STATE || 'unavailable',
+      diagnosis: process.env.KF_WORKSPACE_DIAGNOSIS || '',
+    },
+    recent: listRecentDesktopWorkspaces(defaultConfigHome()),
+  };
+}
+
+function relaunchWithWorkspaceSelection(args: string[]) {
+  const out = execFileSync(kungfuBinPath(), args, {
+    env: { ...process.env, KF_CONFIG_HOME: defaultConfigHome() },
+    timeout: 10000,
+  });
+  const selected = JSON.parse(out.toString());
+  setImmediate(() => {
+    app.relaunch();
+    app.exit(0);
+  });
+  return { ok: true, selected };
+}
+
+ipcMain.handle(WORKSPACE_GET_CHANNEL, () => workspaceSnapshot());
+ipcMain.handle(WORKSPACE_SELECT_HOME_CHANNEL, () =>
+  relaunchWithWorkspaceSelection(['workspace', 'select-home', '--json']),
+);
+ipcMain.handle(WORKSPACE_OPEN_CHANNEL, async () => {
+  const result = await dialog.showOpenDialog({
+    title: 'Open Kungfu Workspace',
+    properties: ['openDirectory'],
+  });
+  if (result.canceled || !result.filePaths[0]) return { ok: false };
+  return relaunchWithWorkspaceSelection([
+    'workspace',
+    'select',
+    result.filePaths[0],
+    '--json',
+  ]);
+});
+ipcMain.handle(WORKSPACE_SELECT_RECENT_CHANNEL, (_event, payload) => {
+  const workspaceId = String(
+    (payload as { workspaceId?: unknown })?.workspaceId || '',
+  );
+  const selected = listRecentDesktopWorkspaces(defaultConfigHome()).find(
+    (item) => item.workspace_id === workspaceId,
+  );
+  if (!selected) throw new Error('recent workspace was not found');
+  if (selected.workspace_kind === 'home') {
+    return relaunchWithWorkspaceSelection([
+      'workspace',
+      'select-home',
+      '--json',
+    ]);
+  }
+  if (!selected.workspace_root || !existsSync(selected.workspace_root)) {
+    throw new Error('recent project workspace is unavailable');
+  }
+  return relaunchWithWorkspaceSelection([
+    'workspace',
+    'select',
+    selected.workspace_root,
+    '--json',
+  ]);
+});
+ipcMain.handle(WORKSPACE_CREATE_MISSION_CHANNEL, (_event, payload) => {
+  const input = payload as {
+    missionId?: unknown;
+    title?: unknown;
+    intent?: unknown;
+  };
+  const missionId = String(input.missionId || '').trim();
+  const title = String(input.title || '').trim();
+  const intent = String(input.intent || '').trim();
+  if (!missionId || !title || !intent) {
+    throw new Error('Mission id, title, and intent are required');
+  }
+  const ensureArgs = ['workspace', 'ensure'];
+  if (process.env.KF_WORKSPACE_KIND === 'home') ensureArgs.push('--home');
+  else if (process.env.KF_WORKSPACE_ROOT)
+    ensureArgs.push(process.env.KF_WORKSPACE_ROOT);
+  else throw new Error('selected project workspace root is unavailable');
+  ensureArgs.push('--reason', 'create-mission', '--json');
+  execFileSync(kungfuBinPath(), ensureArgs, {
+    env: process.env,
+    timeout: 10000,
+  });
+  const out = execFileSync(
+    kungfuBinPath(),
+    [
+      'atlas',
+      'create-mission',
+      missionId,
+      '--title',
+      title,
+      '--intent',
+      intent,
+      '--actor',
+      'desktop-user',
+      '--actor-type',
+      'user',
+      '--status',
+      'active',
+      '--json',
+    ],
+    { env: process.env, timeout: 15000 },
+  );
+  const receipt = JSON.parse(out.toString());
+  setImmediate(() => {
+    app.relaunch();
+    app.exit(0);
+  });
+  return { ok: true, receipt };
+});
 
 // Application menu with the VS Code-style "Install 'kungfu' Command in PATH"
 // action, so a real user who installed Kungfu Episodes.app can use `kungfu` in a shell.

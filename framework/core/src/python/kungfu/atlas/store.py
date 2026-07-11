@@ -46,6 +46,16 @@ def _location(runtime_dir):
     )
 
 
+def _journal_exists(runtime_dir):
+    journal_dir = os.path.join(
+        os.fspath(runtime_dir), "journal", "system", ATLAS_GROUP, ATLAS_NAME, "live"
+    )
+    try:
+        return any(name.endswith(".journal") for name in os.listdir(journal_dir))
+    except OSError:
+        return False
+
+
 def store_dir(runtime_dir):
     return os.path.join(runtime_dir, "atlas", "store")
 
@@ -392,6 +402,12 @@ class ImportStore:
 
 def read_frames(runtime_dir):
     """All import action frames in gen_time order: (gen_time, action_type, envelope)."""
+    # Native assemble logs a missing page to stdout before raising.  Besides
+    # being noisy, that corrupts every `--json` command in a native-Mission-only
+    # workspace.  Absence of the optional Atlas import journal is an ordinary
+    # empty projection, so detect it before crossing the native boundary.
+    if not _journal_exists(runtime_dir):
+        return []
     location = _location(runtime_dir)
     frames = []
     try:
@@ -483,6 +499,8 @@ def _checksum_frame(
 
 def read_action_frame_index(runtime_dir):
     """Action frame identity index keyed by (frame_uid, gen_time)."""
+    if not _journal_exists(runtime_dir):
+        return {}
     location = _location(runtime_dir)
     index = {}
     try:

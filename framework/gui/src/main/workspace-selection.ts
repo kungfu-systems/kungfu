@@ -5,7 +5,7 @@ import path from 'node:path';
 
 const REGISTRY_SCHEMA = 'kungfu.workspace.registry/v1';
 
-type RegistryWorkspace = {
+export type RegistryWorkspace = {
   workspace_id?: string;
   workspace_kind?: 'home' | 'project';
   workspace_root?: string | null;
@@ -26,8 +26,9 @@ export type DesktopWorkspaceSelection = {
   displayPath: string;
   dataHome: string;
   runtimeDir: string;
-  state: 'ready' | 'selected-uninitialized';
-  resolutionReason: 'last-workspace-registry';
+  state: 'ready' | 'selected-uninitialized' | 'unavailable';
+  resolutionReason: 'last-workspace-registry' | 'home-fallback';
+  diagnosis?: string;
 };
 
 export function workspaceRegistryPath(configHome: string): string {
@@ -65,13 +66,10 @@ export function resolveLastDesktopWorkspace(
   const workspaceRoot = selected.workspace_root
     ? canonicalPath(selected.workspace_root)
     : null;
-  if (
-    selected.workspace_kind === 'project' &&
-    (!workspaceRoot || !existsSync(workspaceRoot))
-  ) {
-    return null;
-  }
   const dataHome = canonicalPath(selected.data_home);
+  const unavailable =
+    selected.workspace_kind === 'project' &&
+    (!workspaceRoot || !existsSync(workspaceRoot));
   return {
     workspaceId: selected.workspace_id,
     workspaceKind: selected.workspace_kind,
@@ -79,9 +77,49 @@ export function resolveLastDesktopWorkspace(
     displayPath: selected.display_path || workspaceRoot || dataHome,
     dataHome,
     runtimeDir: path.join(dataHome, 'runtime'),
-    state: existsSync(dataHome) ? 'ready' : 'selected-uninitialized',
+    state: unavailable
+      ? 'unavailable'
+      : existsSync(dataHome)
+        ? 'ready'
+        : 'selected-uninitialized',
     resolutionReason: 'last-workspace-registry',
+    ...(unavailable
+      ? { diagnosis: 'The last project workspace path is unavailable.' }
+      : {}),
   };
+}
+
+export function defaultHomeDesktopWorkspace(
+  userHome: string,
+): DesktopWorkspaceSelection {
+  const dataHome = path.join(canonicalPath(userHome), '.kungfu');
+  return {
+    workspaceId: 'home',
+    workspaceKind: 'home',
+    workspaceRoot: null,
+    displayPath: 'Home Workspace',
+    dataHome,
+    runtimeDir: path.join(dataHome, 'runtime'),
+    state: existsSync(dataHome) ? 'ready' : 'selected-uninitialized',
+    resolutionReason: 'home-fallback',
+  };
+}
+
+export function listRecentDesktopWorkspaces(
+  configHome: string,
+): RegistryWorkspace[] {
+  const registryPath = workspaceRegistryPath(configHome);
+  if (!existsSync(registryPath)) return [];
+  try {
+    const registry = JSON.parse(
+      readFileSync(registryPath, 'utf8'),
+    ) as WorkspaceRegistry;
+    return registry.schema === REGISTRY_SCHEMA && Array.isArray(registry.recent)
+      ? registry.recent
+      : [];
+  } catch {
+    return [];
+  }
 }
 
 function canonicalPath(value: string): string {
