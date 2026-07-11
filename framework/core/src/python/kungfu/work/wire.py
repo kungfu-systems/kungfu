@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from kungfu.action_envelope import (
     CARRIER_ACTION_ENVELOPE,
     build_action_envelope,
@@ -13,14 +15,19 @@ from kungfu.action_envelope import (
 from kungfu.work import ACTION_SCHEMA_REFS
 
 
-def wrap_event(action_type: str, payload: bytes) -> tuple[int, bytes]:
+def build_event_envelope(action_type: str, payload: bytes) -> dict[str, Any]:
     schema_ref = ACTION_SCHEMA_REFS.get(action_type, {"id": action_type, "version": 1})
-    envelope = build_action_envelope(
+    return build_action_envelope(
         action_type=action_type,
         schema_ref=schema_ref,
         payload=flatbuffer_payload(payload),
     )
-    return CARRIER_ACTION_ENVELOPE, encode_action_envelope(envelope)
+
+
+def wrap_event(action_type: str, payload: bytes) -> tuple[int, bytes]:
+    return CARRIER_ACTION_ENVELOPE, encode_action_envelope(
+        build_event_envelope(action_type, payload)
+    )
 
 
 def unwrap_event(

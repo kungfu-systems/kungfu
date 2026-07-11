@@ -128,6 +128,21 @@ export type KfNativeFrame = {
   dataBytes: () => Uint8Array;
 };
 
+export type KfActionEnvelope = {
+  version: number;
+  action_type: string;
+  schema_ref: { id: string; version: number };
+  payload?: {
+    encoding: number;
+    data: Uint8Array;
+    hash_algorithm: string;
+    hash: string;
+    byte_len: bigint;
+    content_type: string;
+    state: string;
+  };
+};
+
 export type KfNativeBinding = {
   Schema?: new () => {
     types: Record<string, () => Record<string, unknown>>;
@@ -168,6 +183,16 @@ export type KfNativeBinding = {
         chainToLast?: boolean;
       },
     ) => LedgerRecord;
+    recordAction: (
+      value: Record<string, unknown>,
+      options?: {
+        genTime?: bigint | number;
+        triggerTime?: bigint | number;
+        parentFrameUid?: bigint | number;
+        streamId?: bigint | number;
+        chainToLast?: boolean;
+      },
+    ) => LedgerRecord;
     mark: (
       carrierType: number,
       options?: {
@@ -180,6 +205,7 @@ export type KfNativeBinding = {
     ) => LedgerRecord;
     lastFrameUid: () => bigint;
   };
+  decodeActionEnvelope: (value: Uint8Array) => KfActionEnvelope | null;
   SessionStore: new (
     location: Record<string, string>,
     runtimeDir: string,

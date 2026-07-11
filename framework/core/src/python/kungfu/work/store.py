@@ -38,7 +38,7 @@ from kungfu.work import (
     SCHEMA_VERSION,
     events,
 )
-from kungfu.work.wire import unwrap_event, wrap_event
+from kungfu.work.wire import build_event_envelope, unwrap_event
 from kungfu.work.fb.ArtifactRecorded import ArtifactRecorded
 from kungfu.work.fb.CheckpointRecorded import CheckpointRecorded
 from kungfu.work.fb.DecisionRecorded import DecisionRecorded
@@ -100,18 +100,12 @@ class WorkStore:
     def __init__(self, runtime_dir):
         self.runtime_dir = runtime_dir
         self.location = _location(runtime_dir)
-        # keep every piece alive on self — the writer borrows them without
-        # owning their lifetime (same as the Rewind supervisor)
-        self.publisher = yjj.noop_publisher()
-        self.bus = yjj.bus(False)
-        self.writer = yjj.writer(
-            self.location, PUBLIC_DEST, True, self.publisher, False, self.bus, 0
+        self.recorder = yjj.action_recorder(
+            runtime_dir, WORK_GROUP, WORK_NAME, PUBLIC_DEST, 0
         )
 
     def _append(self, action_type, data):
-        # the binding takes the payload as a byte sequence (list[int])
-        carrier_type, envelope = wrap_event(action_type, data)
-        self.writer.write_bytes(0, carrier_type, list(envelope), len(envelope))
+        self.recorder.record_action(build_event_envelope(action_type, data))
 
     def create(self, title, kind, summary):
         work_id = new_work_id()

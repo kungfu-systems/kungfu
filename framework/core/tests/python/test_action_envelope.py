@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 import kungfu
@@ -12,9 +14,16 @@ from kungfu.action_envelope import (
     decode_flatbuffer_payload,
     encode_action_envelope,
     flatbuffer_payload,
+    parse_action_envelope_edge_json,
+    render_action_envelope_edge_json,
 )
 from kungfu.rewind.wire import unwrap_event as unwrap_rewind_event
 from kungfu.rewind.wire import wrap_event as wrap_rewind_event
+from kungfu.rewind import replay as rewind_replay
+from kungfu.rewind import reporting as rewind_reporting
+from kungfu.rewind.export import export_run, open_export
+from kungfu.storage import service as storage_service
+from kungfu.work.store import WorkStore, load as load_work
 from kungfu.work.wire import unwrap_event as unwrap_work_event
 from kungfu.work.wire import wrap_event as wrap_work_event
 
@@ -62,6 +71,21 @@ def test_binary_action_envelope_rejects_corruption_and_hash_mismatch():
         encode_action_envelope(invalid)
 
 
+def test_json_is_an_explicit_verified_edge_projection_only():
+    encoded = encode_action_envelope(_fixture())
+    rendered = render_action_envelope_edge_json(encoded)
+    edge = json.loads(rendered)
+
+    assert edge["schema"] == "kungfu.action-envelope/v1"
+    assert edge["payload"]["content_transfer_encoding"] == "base64"
+    assert edge["payload"]["data"] == "cGF5bG9hZA=="
+    assert parse_action_envelope_edge_json(rendered) == encoded
+
+    edge["payload"]["data"] = "not-base64!"
+    with pytest.raises(ValueError, match="base64"):
+        parse_action_envelope_edge_json(json.dumps(edge))
+
+
 @pytest.mark.parametrize(
     ("wrap", "unwrap", "action_type"),
     [
@@ -96,3 +120,58 @@ def test_cpp_action_recorder_writes_binary_raw_carrier(tmp_path):
     decoded = decode_action_envelope(frames[0][1])
     assert decoded is not None
     assert decoded["action_type"] == "rewind.model.response"
+
+
+def test_work_store_uses_native_action_recorder_and_binary_fold(tmp_path):
+    store = WorkStore(str(tmp_path))
+    work_id = store.create("typed envelope", "test", "native recorder")
+    store.checkpoint(work_id, "binary")
+
+    item = load_work(str(tmp_path))[work_id]
+    assert item["title"] == "typed envelope"
+    assert item["checkpoints"][0]["note"] == "binary"
+
+
+def test_rewind_replay_export_and_fsck_accept_binary_envelopes(tmp_path):
+    runtime_dir = str(tmp_path / "runtime")
+    run_id = "binary-rewind"
+    rewind_reporting.begin_run(
+        runtime_dir,
+        run_id=run_id,
+        provider="test",
+        cwd=None,
+        work_id=None,
+    )
+    rewind_reporting.end_run(
+        runtime_dir,
+        run_id=run_id,
+        status="succeeded",
+        exit_code=0,
+    )
+
+    count, differences = rewind_replay.verify(
+        runtime_dir,
+        run_id,
+        rewind_reporting.bundle_dir(runtime_dir, run_id),
+    )
+    assert count == 2
+    assert differences == []
+
+    episodes = storage_service.episode_list(runtime_dir)["episodes"]
+    episode = next(
+        row for row in episodes if row["open"]["source"] == f"rewind:{run_id}"
+    )
+    report = storage_service.fsck(
+        runtime_dir, episode_id=int(episode["episode_id"]), verify_frames=True
+    )
+    assert report["ok"] is True
+
+    archive = export_run(runtime_dir, run_id, str(tmp_path / "run.rewind.zip"))
+    opened_run_id, opened_runtime = open_export(archive, str(tmp_path / "opened"))
+    opened_count, opened_differences = rewind_replay.verify(
+        opened_runtime,
+        opened_run_id,
+        rewind_reporting.bundle_dir(opened_runtime, opened_run_id),
+    )
+    assert opened_count == 2
+    assert opened_differences == []

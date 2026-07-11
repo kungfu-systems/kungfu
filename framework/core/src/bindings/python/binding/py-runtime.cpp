@@ -7,7 +7,6 @@
 #include <nlohmann/json.hpp>
 #include <pybind11/stl.h>
 
-#include <kungfu/runtime/action_envelope_reflection.h>
 #include <kungfu/runtime/action_recorder.h>
 #include <kungfu/runtime/cache/profile.h>
 #include <kungfu/runtime/index/session.h>
@@ -42,6 +41,7 @@ using namespace kungfu::runtime::nanomsg;
 using namespace kungfu::runtime::practice;
 
 namespace py = pybind11;
+using namespace pybind11::literals;
 
 namespace {
 
@@ -227,6 +227,53 @@ kungfu::view::action::envelope action_envelope_from_py(const py::dict &object) {
                                   dict_number<uint64_t>(value, "byte_len"),
                                   dict_string(value, "content_type"),
                                   dict_string(value, "state")};
+  }
+  return result;
+}
+
+py::dict action_envelope_to_py(const kungfu::view::action::envelope &value) {
+  py::dict result;
+  result["version"] = value.version;
+  result["action_type"] = value.action_type;
+  result["schema_ref"] = py::dict("id"_a = value.schema_ref.id, "version"_a = value.schema_ref.version);
+  if (value.actor.has_value()) {
+    result["actor"] =
+        py::dict("id"_a = value.actor->id, "kind"_a = value.actor->kind,
+                 "storage_source_id"_a = value.actor->storage_source_id, "source_type"_a = value.actor->source_type);
+  }
+  if (value.session.has_value()) {
+    result["session"] = py::dict("run_id"_a = value.session->run_id, "import_id"_a = value.session->import_id);
+  }
+  if (value.source.has_value()) {
+    result["source"] =
+        py::dict("kind"_a = value.source->kind, "source_id"_a = value.source->source_id,
+                 "source_path"_a = value.source->source_path, "source_time"_a = value.source->source_time,
+                 "schema_version"_a = value.source->schema_version);
+  }
+  if (value.batch.has_value()) {
+    result["batch"] = py::dict("repo_root"_a = value.batch->repo_root, "repo_head"_a = value.batch->repo_head,
+                               "schema_version"_a = value.batch->schema_version, "missions"_a = value.batch->missions,
+                               "goals"_a = value.batch->goals, "markers"_a = value.batch->markers,
+                               "warnings"_a = value.batch->warnings);
+  }
+  if (value.journal.has_value()) {
+    result["journal"] = py::dict(
+        "frame_uid"_a = value.journal->frame_uid, "trigger_frame_uid"_a = value.journal->trigger_frame_uid,
+        "stream_id"_a = value.journal->stream_id, "gen_time"_a = value.journal->gen_time,
+        "trigger_time"_a = value.journal->trigger_time, "carrier_type"_a = value.journal->carrier_type,
+        "source"_a = value.journal->source, "initial_source"_a = value.journal->initial_source,
+        "dest"_a = value.journal->dest, "data_length"_a = value.journal->data_length,
+        "data_type"_a = value.journal->data_type, "integrity_version"_a = value.journal->integrity_version,
+        "checksum_algorithm"_a = value.journal->checksum_algorithm,
+        "payload_checksum"_a = value.journal->payload_checksum, "frame_checksum"_a = value.journal->frame_checksum);
+  }
+  if (value.payload.has_value()) {
+    result["payload"] = py::dict(
+        "encoding"_a = static_cast<uint8_t>(value.payload->encoding),
+        "data"_a = py::bytes(reinterpret_cast<const char *>(value.payload->data.data()), value.payload->data.size()),
+        "hash_algorithm"_a = value.payload->hash_algorithm, "hash"_a = value.payload->hash,
+        "byte_len"_a = value.payload->byte_len, "content_type"_a = value.payload->content_type,
+        "state"_a = value.payload->state);
   }
   return result;
 }
@@ -1014,7 +1061,9 @@ void bind(pybind11::module &&m) {
       [](py::bytes value) -> py::object {
         const auto bytes = value.cast<std::string>();
         const auto decoded = view::action::decode(reinterpret_cast<const uint8_t *>(bytes.data()), bytes.size());
-        return decoded.has_value() ? hana_view_to_py(*decoded) : py::none();
+        if (!decoded.has_value())
+          return py::none();
+        return action_envelope_to_py(*decoded);
       },
       py::arg("value"));
 

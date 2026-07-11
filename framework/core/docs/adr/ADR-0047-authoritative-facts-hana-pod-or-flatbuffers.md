@@ -137,9 +137,11 @@ payload as bytes plus an encoding and schema reference. JSON/base64 is an edge
 rendering or interchange form, not the authoritative on-journal envelope and
 not an internal transport between bindings and the C++ core.
 
-The current Python JSON/base64 envelope implementation is explicitly
-transitional until that migration lands. Pre-migration v4 dogfood journals are
-not compatibility targets, consistent with ADR-0025.
+That migration now exists as `ActionEnvelope.fbs`, the `KFAE` verifier/view,
+and the shared C++ action recorder with thin Python/Node adapters. Named edge
+helpers may render/import JSON/base64, but first-party journal readers and
+writers use the binary membrane. Pre-migration v4 dogfood journals remain
+outside the compatibility target, consistent with ADR-0025.
 
 ## Relation to earlier ADRs
 

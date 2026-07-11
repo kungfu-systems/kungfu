@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 from typing import Any
 
@@ -123,3 +125,54 @@ def decode_action_envelope(
         payload["encoding"] = names.get(payload.get("encoding"), "none")
         payload["data"] = bytes(payload.get("data") or b"")
     return envelope
+
+
+def render_action_envelope_edge_json(
+    value: bytes | bytearray | memoryview | dict[str, Any],
+) -> str:
+    """Render a verified envelope for a true JSON interchange/debug edge."""
+
+    if isinstance(value, dict):
+        envelope = decode_action_envelope(encode_action_envelope(value))
+    else:
+        envelope = decode_action_envelope(value)
+    if envelope is None:
+        raise ValueError("invalid Kungfu action envelope")
+    edge = dict(envelope)
+    payload = edge.get("payload")
+    if isinstance(payload, dict):
+        payload = dict(payload)
+        data = bytes(payload.get("data") or b"")
+        payload["data"] = base64.b64encode(data).decode("ascii")
+        payload["content_transfer_encoding"] = "base64"
+        edge["payload"] = payload
+    return canonical_json_bytes(edge).decode("utf-8")
+
+
+def parse_action_envelope_edge_json(value: str | bytes) -> bytes:
+    """Parse edge JSON and re-enter the authoritative FlatBuffers verifier."""
+
+    try:
+        edge = json.loads(value)
+    except (TypeError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError("invalid action envelope edge JSON") from error
+    if not isinstance(edge, dict) or edge.get("schema") != ACTION_ENVELOPE_SCHEMA:
+        raise ValueError("not a Kungfu action envelope edge projection")
+    payload = edge.get("payload")
+    if isinstance(payload, dict):
+        payload = dict(payload)
+        transfer = payload.pop("content_transfer_encoding", None)
+        data = payload.get("data")
+        if data not in (None, ""):
+            if transfer != "base64" or not isinstance(data, str):
+                raise ValueError("action envelope edge payload must use base64")
+            try:
+                payload["data"] = base64.b64decode(data, validate=True)
+            except (ValueError, binascii.Error) as error:
+                raise ValueError(
+                    "invalid action envelope edge payload base64"
+                ) from error
+        else:
+            payload["data"] = b""
+        edge["payload"] = payload
+    return encode_action_envelope(edge)

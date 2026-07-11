@@ -91,40 +91,24 @@ export type OpenWorkOptions = {
 
 const str = (value: string | null | undefined) => value ?? undefined;
 
-type ActionEnvelope = {
-  schema?: string;
-  action_type?: string;
-  payload?: {
-    encoding?: string;
-    content_transfer_encoding?: string;
-    data?: string;
-  };
-};
-
-function decodeEnvelope(bytes: Uint8Array): {
+function decodeEnvelope(
+  binding: KfNativeBinding,
+  bytes: Uint8Array,
+): {
   actionType: string;
   payload: Uint8Array;
 } | null {
-  const jsonText = Buffer.from(bytes).toString('utf8').replace(/\0+$/u, '');
-  if (!jsonText) return null;
-  let envelope: ActionEnvelope;
-  try {
-    envelope = JSON.parse(jsonText) as ActionEnvelope;
-  } catch {
-    return null;
-  }
+  const envelope = binding.decodeActionEnvelope(bytes);
   if (
-    envelope.schema !== 'kungfu.action-envelope/v1' ||
-    typeof envelope.action_type !== 'string' ||
-    envelope.payload?.encoding !== 'flatbuffers' ||
-    envelope.payload.content_transfer_encoding !== 'base64' ||
-    typeof envelope.payload.data !== 'string'
+    envelope === null ||
+    envelope.payload?.encoding !== 1 ||
+    !(envelope.payload.data instanceof Uint8Array)
   ) {
     return null;
   }
   return {
     actionType: envelope.action_type,
-    payload: new Uint8Array(Buffer.from(envelope.payload.data, 'base64')),
+    payload: envelope.payload.data,
   };
 }
 
@@ -154,7 +138,7 @@ export function openWork(options: OpenWorkOptions): Work {
     while (assemble.dataAvailable()) {
       const frame = assemble.currentFrame();
       if (frame.carrierType() === ACTION_ENVELOPE_CARRIER) {
-        const event = decodeEnvelope(frame.dataBytes());
+        const event = decodeEnvelope(binding, frame.dataBytes());
         if (event?.actionType.startsWith('work.')) {
           frames.push({
             genTime: frame.genTime(),
