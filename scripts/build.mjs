@@ -158,7 +158,11 @@ function assertCoreRuntime() {
     'config',
     'kungfu-kfx.contract.json',
   );
-  for (const file of [kungfuBin, electronBinding, nodeBinding, kfxContract]) {
+  // Windows deliberately builds the Electron runtime under kungfu_node.node:
+  // the Node-runtime pass skips the addon there, so there is only one ABI
+  // artifact to assert. POSIX builds retain distinct Node/Electron bindings.
+  const bindings = isWin ? [nodeBinding] : [electronBinding, nodeBinding];
+  for (const file of [kungfuBin, ...bindings, kfxContract]) {
     if (!fs.existsSync(file)) {
       throw new Error(`build did not produce ${rel(file)}`);
     }
