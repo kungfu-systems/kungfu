@@ -11,6 +11,14 @@ import type {
   AtlasMission,
   AtlasMissionControlReport,
   WorkItem,
+  WorkspaceActionPreview,
+  WorkspaceActionReceipt,
+  WorkspaceActionVerification,
+  WorkspaceAdvice,
+  WorkspaceAuthorization,
+  WorkspaceGuidance,
+  WorkspaceGuidanceInspection,
+  WorkspaceGuidanceIntent,
 } from '@kungfu-tech/api/capability';
 import { WORK_STATUS_NAMES } from '@kungfu-tech/api/capability';
 import type { KfxCapabilities, Shell } from '@kungfu-tech/kfx';
@@ -907,8 +915,207 @@ function DetailView({
   );
 }
 
-function AgentWorkInboxSummary({ items }: { items: WorkItem[] }) {
-  if (!items.length) return null;
+function WorkspaceGuidancePanel({
+  workspace,
+}: {
+  workspace: WorkspaceGuidance;
+}) {
+  const [source, setSource] = React.useState(workspace.workspaceRoot);
+  const [inspection, setInspection] =
+    React.useState<WorkspaceGuidanceInspection | null>(null);
+  const [advice, setAdvice] = React.useState<WorkspaceAdvice | null>(null);
+  const [intent, setIntent] = React.useState<WorkspaceGuidanceIntent>(
+    'create-project-workspace',
+  );
+  const [preview, setPreview] = React.useState<WorkspaceActionPreview | null>(
+    null,
+  );
+  const [authorization, setAuthorization] =
+    React.useState<WorkspaceAuthorization | null>(null);
+  const [receipt, setReceipt] = React.useState<WorkspaceActionReceipt | null>(
+    null,
+  );
+  const [verification, setVerification] =
+    React.useState<WorkspaceActionVerification | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const resetAfterAdvice = () => {
+    setPreview(null);
+    setAuthorization(null);
+    setReceipt(null);
+    setVerification(null);
+  };
+  const inspectNow = () => {
+    try {
+      const nextInspection = workspace.inspect(source);
+      const nextAdvice = workspace.advise(source);
+      setInspection(nextInspection);
+      setAdvice(nextAdvice);
+      setIntent(nextAdvice.recommended_intent ?? 'keep-home');
+      resetAfterAdvice();
+      setError(null);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+  const previewNow = () => {
+    try {
+      setPreview(workspace.preview(source, intent));
+      setAuthorization(null);
+      setReceipt(null);
+      setVerification(null);
+      setError(null);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+  const authorizeNow = (decision: 'approve' | 'deny') => {
+    if (!preview) return;
+    try {
+      setAuthorization(
+        workspace.authorize(
+          source,
+          intent,
+          preview.preview_id,
+          decision,
+          'work-dashboard-user',
+        ),
+      );
+      setReceipt(null);
+      setVerification(null);
+      setError(null);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+  const applyNow = () => {
+    if (!authorization || authorization.decision !== 'approve') return;
+    try {
+      setReceipt(workspace.apply(source, authorization.authorization_id));
+      setVerification(null);
+      setError(null);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+  const verifyNow = () => {
+    if (!receipt) return;
+    try {
+      setVerification(workspace.verify(receipt.receipt_id));
+      setError(null);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gap: 5,
+        marginTop: 8,
+        paddingTop: 8,
+        borderTop: '1px solid #3c3c3c',
+      }}
+    >
+      <div style={{ display: 'flex', gap: 5 }}>
+        <TextInput
+          value={source}
+          placeholder="source directory to inspect"
+          onChange={setSource}
+        />
+        <SmallButton onClick={inspectNow}>inspect + advise</SmallButton>
+      </div>
+      {inspection && advice && (
+        <div style={{ ...mono, color: '#cccccc' }}>
+          <span style={{ color: '#9cdcfe' }}>{advice.state}</span> ·{' '}
+          {advice.reason_codes.join(', ')} · captures{' '}
+          {inspection.unassigned_capture_count} · cut{' '}
+          {inspection.cut_id.slice(-12)}
+        </div>
+      )}
+      {advice && (
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+          {advice.options.map((option) => (
+            <SmallButton
+              key={option}
+              active={intent === option}
+              onClick={() => {
+                setIntent(option);
+                resetAfterAdvice();
+              }}
+            >
+              {option}
+            </SmallButton>
+          ))}
+          <SmallButton onClick={previewNow}>preview effects</SmallButton>
+        </div>
+      )}
+      {preview && (
+        <div style={{ ...mono, color: '#ce9178' }}>
+          effects: {preview.effects.map((effect) => effect.effect).join(', ')} ·
+          skips Git/network · authorization {preview.authorization_class}
+          <div style={{ display: 'flex', gap: 5, marginTop: 5 }}>
+            <SmallButton onClick={() => authorizeNow('approve')}>
+              approve exact preview
+            </SmallButton>
+            <SmallButton onClick={() => authorizeNow('deny')}>deny</SmallButton>
+          </div>
+        </div>
+      )}
+      {authorization && (
+        <div style={{ ...mono, color: '#dcdcaa' }}>
+          authorization {authorization.decision} ·{' '}
+          {authorization.authorization_id.slice(-12)}{' '}
+          {authorization.decision === 'approve' && (
+            <SmallButton onClick={applyNow}>
+              apply authorized action
+            </SmallButton>
+          )}
+        </div>
+      )}
+      {receipt && (
+        <div style={{ ...mono, color: '#4ec9b0' }}>
+          receipt {receipt.receipt_id.slice(-12)} · reused=
+          {String(receipt.reused)}{' '}
+          <SmallButton onClick={verifyNow}>verify receipt</SmallButton>
+        </div>
+      )}
+      {verification && (
+        <div
+          style={{ ...mono, color: verification.ok ? '#4ec9b0' : '#f48771' }}
+        >
+          verification {verification.ok ? 'passed' : 'failed'}
+          {verification.errors.length
+            ? ` · ${verification.errors.join(', ')}`
+            : ''}
+        </div>
+      )}
+      {error && <div style={{ ...mono, color: '#f48771' }}>{error}</div>}
+    </div>
+  );
+}
+
+function AgentWorkInboxSummary({
+  items,
+  workspace,
+}: {
+  items: WorkItem[];
+  workspace?: WorkspaceGuidance;
+}) {
+  if (!items.length) {
+    if (!workspace) return null;
+    return (
+      <section style={{ ...panelStyle, marginBottom: 8 }}>
+        <h2 style={headingStyle}>Workspace guidance</h2>
+        <div style={{ ...mono, color: '#858585' }}>
+          Inspect a source without changing it, then review and authorize exact
+          effects.
+        </div>
+        <WorkspaceGuidancePanel workspace={workspace} />
+      </section>
+    );
+  }
   const evidenceCount = items.reduce(
     (count, item) => count + item.runs.length + item.artifacts.length,
     0,
@@ -935,6 +1142,7 @@ function AgentWorkInboxSummary({ items }: { items: WorkItem[] }) {
           <span style={{ color: '#cccccc' }}>{answer}</span>
         </div>
       ))}
+      {workspace && <WorkspaceGuidancePanel workspace={workspace} />}
     </section>
   );
 }
@@ -1016,21 +1224,26 @@ function WorkDashboardView({
   }
 
   return (
-    <div style={{ height: '100%', minHeight: 0 }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        minHeight: 0,
+      }}
+    >
       <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
         <SmallButton active onClick={() => setView('work')}>
           work
         </SmallButton>
         <SmallButton onClick={() => setView('atlas')}>atlas</SmallButton>
       </div>
-      <AgentWorkInboxSummary items={inboxItems} />
+      <AgentWorkInboxSummary items={inboxItems} workspace={caps.workspace} />
       <div
         style={{
           display: 'flex',
           gap: 12,
-          height: inboxItems.length
-            ? 'calc(100% - 190px)'
-            : 'calc(100% - 32px)',
+          flex: 1,
           minHeight: 0,
         }}
       >

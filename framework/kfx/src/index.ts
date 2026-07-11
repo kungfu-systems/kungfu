@@ -17,6 +17,7 @@ import type {
   Storage,
   Terminal,
   Work,
+  WorkspaceGuidance,
 } from '@kungfu-tech/api/capability';
 import Ajv2020 from 'ajv/dist/2020.js';
 import type React from 'react';
@@ -66,6 +67,7 @@ export type KfxCapabilities = {
   terminal: Terminal;
   work: Work;
   atlas?: Atlas;
+  workspace?: WorkspaceGuidance;
 };
 
 export type KfxCapabilityKey = keyof KfxCapabilities;

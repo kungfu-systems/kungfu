@@ -46,6 +46,31 @@ Use the modes this way:
   `kungfu remote` is experimental and does not merge remote facts into local
   authoritative truth.
 
+Workspace targeting is command-sensitive. Independent agent commands never
+inherit Desktop recents. Inspect first; only capture-only managed runs and
+Episode imports may use Home automatically when no project is discovered:
+
+```sh
+kungfu workspace inspect --home --json
+kungfu managed-run --provider <provider> --prompt <task>
+kungfu storage import --from <episode-bundle.json> --execute --json
+```
+
+Project-workspace guidance follows one bounded protocol. Preserve the returned
+identities exactly; authorization for workspace creation never authorizes Git
+mutation, attachment, source-authority changes, or publication:
+
+```sh
+kungfu workspace advise --home --source <path> --json
+kungfu workspace preview --home --source <path> --intent create-project-workspace --json
+kungfu workspace authorize --home --source <path> --intent create-project-workspace --preview-id <id> --decision approve --authorized-by <actor> --json
+kungfu workspace apply --home --source <path> --authorization-id <id> --json
+kungfu workspace verify --home --receipt-id <id> --json
+```
+
+If relevant capture facts change after authorization, `apply` rejects the
+stale preview. Recompute advice and preview instead of widening the old grant.
+
 When the user asks to sync an Atlas-style control-plane repo into Kungfu,
 snapshot it and verify the projection with:
 

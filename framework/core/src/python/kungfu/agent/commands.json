@@ -89,7 +89,61 @@
       "apiId": "kungfu.managed-run.start",
       "name": "kungfu managed-run --provider <provider> --prompt <task>",
       "maturity": "experimental",
-      "purpose": "Run a provider CLI under Kungfu supervision, skill context, and cost/audit capture."
+      "purpose": "Run a provider CLI under Kungfu supervision and capture it into an explicit, discovered, or no-project Home workspace with a receipt."
+    },
+    {
+      "apiId": "kungfu.managed-run.start",
+      "name": "kungfu managed-run --provider <provider> --prompt <task> [--workspace <path>|--home-workspace]",
+      "maturity": "experimental",
+      "purpose": "Run a provider CLI with an explicit Home or project target when ambient discovery should not decide."
+    },
+    {
+      "apiId": "kungfu.workspace.inspect",
+      "name": "kungfu workspace inspect --home --json",
+      "maturity": "experimental",
+      "purpose": "Inspect a Home or project workspace candidate without initializing it."
+    },
+    {
+      "apiId": "kungfu.workspace.advise",
+      "name": "kungfu workspace advise --home --source <path> --json",
+      "maturity": "experimental",
+      "purpose": "Return deterministic evidence-backed project-workspace advice without changing state."
+    },
+    {
+      "apiId": "kungfu.workspace.preview",
+      "name": "kungfu workspace preview --home --source <path> --intent create-project-workspace --json",
+      "maturity": "experimental",
+      "purpose": "Preview exact workspace effects, skipped Git effects, freshness cut, and authorization class."
+    },
+    {
+      "apiId": "kungfu.workspace.authorize",
+      "name": "kungfu workspace authorize --home --source <path> --intent create-project-workspace --preview-id <id> --decision approve --authorized-by <actor> --json",
+      "maturity": "experimental",
+      "purpose": "Record one bounded decision for the exact current preview; mismatched or stale agent input fails closed."
+    },
+    {
+      "apiId": "kungfu.workspace.apply",
+      "name": "kungfu workspace apply --home --source <path> --authorization-id <id> --json",
+      "maturity": "experimental",
+      "purpose": "Execute one approved idempotent workspace intent and reject stale previews or denied authority."
+    },
+    {
+      "apiId": "kungfu.workspace.verify",
+      "name": "kungfu workspace verify --home --receipt-id <id> --json",
+      "maturity": "experimental",
+      "purpose": "Verify a workspace action receipt against its authorization and resulting filesystem effects."
+    },
+    {
+      "apiId": "kungfu.storage.episode-import",
+      "name": "kungfu storage import --from <episode-bundle.json> --execute --json",
+      "maturity": "experimental",
+      "purpose": "Validate then capture an Episode into an explicit, discovered, or no-project Home workspace and return its Inbox receipt."
+    },
+    {
+      "apiId": "kungfu.storage.episode-import",
+      "name": "kungfu storage import --from <episode-bundle.json> --execute [--workspace <path>|--home-workspace] --json",
+      "maturity": "experimental",
+      "purpose": "Capture an Episode with an explicit Home or project target when ambient discovery should not decide."
     },
     {
       "apiId": "kungfu.work.create",

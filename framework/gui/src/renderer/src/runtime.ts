@@ -14,6 +14,7 @@ import {
   type Terminal,
   type TmuxBinding,
   type Work,
+  type WorkspaceGuidance,
   managedTmuxSocket,
   openAtlas,
   openDomainState,
@@ -23,6 +24,7 @@ import {
   openStorage,
   openTerminal,
   openWork,
+  openWorkspaceGuidance,
 } from '@kungfu-tech/api/capability';
 import { type IpcRendererLike, createTerminalProxy } from './terminal-proxy';
 
@@ -125,6 +127,7 @@ export type Runtime = {
   terminal: Terminal | null;
   work: Work | null;
   atlas: Atlas | null;
+  workspace: WorkspaceGuidance | null;
 };
 
 function readSchemaTypes(
@@ -162,6 +165,7 @@ export function bootRuntime(): Runtime {
     terminal: null,
     work: null,
     atlas: null,
+    workspace: null,
   };
   if (env.KF_WORKSPACE_STATE === 'selected-uninitialized') {
     return {
@@ -238,7 +242,7 @@ export function bootRuntime(): Runtime {
         options: { encoding: 'utf8'; env: Record<string, string | undefined> },
       ) => string;
     };
-    const atlas = openAtlas({
+    const cliOptions = {
       runtimeDir,
       execFileSync: childProcess.execFileSync,
       env: window.process.env as Record<string, string | undefined>,
@@ -249,7 +253,9 @@ export function bootRuntime(): Runtime {
           bindingDir,
           process.platform === 'win32' ? 'kungfu.exe' : 'kungfu',
         ),
-    });
+    };
+    const atlas = openAtlas(cliOptions);
+    const workspace = openWorkspaceGuidance(cliOptions);
     const remoteWork = openRemoteWork({
       binding,
       locator: { runtimeDir },
@@ -300,6 +306,7 @@ export function bootRuntime(): Runtime {
       terminal,
       work,
       atlas,
+      workspace,
     };
   } catch (e) {
     return { ...base, ok: false, message: (e as Error).message };

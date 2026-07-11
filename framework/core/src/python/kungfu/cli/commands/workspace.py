@@ -14,6 +14,15 @@ from kungfu.workspace import (
     load_workspace_registry,
     select_workspace,
 )
+from kungfu.workspace_guidance import (
+    WorkspaceGuidanceError,
+    advise_workspace,
+    authorize_workspace_action,
+    execute_workspace_action,
+    inspect_guidance,
+    preview_workspace_action,
+    verify_workspace_action,
+)
 
 
 def _json(payload):
@@ -27,6 +36,13 @@ def _identity_or_error(path: str | None, home: bool):
             "no project workspace was discovered; pass a path or --home"
         )
     return identity
+
+
+def _guidance_error(error: WorkspaceGuidanceError, as_json: bool):
+    if as_json:
+        _json(error.diagnosis)
+        raise click.exceptions.Exit(2) from error
+    raise click.ClickException(str(error)) from error
 
 
 @kfc.group(
@@ -113,3 +129,149 @@ def ensure(path, home, reason, as_json):
         _json(payload)
         return
     click.echo("initialized" if payload["initialized"] else "already initialized")
+
+
+@workspace.command(name="inspect-guidance", help="inspect project-gravity facts")
+@click.argument("path", required=False)
+@click.option("--home", is_flag=True, help="inspect guidance from Home")
+@click.option("--source", required=True, type=click.Path(file_okay=False))
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+def inspect_guidance_cmd(path, home, source, as_json):
+    try:
+        payload = inspect_guidance(_identity_or_error(path, home), source_path=source)
+    except WorkspaceGuidanceError as error:
+        _guidance_error(error, as_json)
+    if as_json:
+        _json(payload)
+        return
+    click.echo(
+        f"cut {payload['cut_id']} · captures {payload['unassigned_capture_count']}"
+    )
+
+
+@workspace.command(help="produce bounded project-workspace advice")
+@click.argument("path", required=False)
+@click.option("--home", is_flag=True, help="advise from Home")
+@click.option("--source", required=True, type=click.Path(file_okay=False))
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+def advise(path, home, source, as_json):
+    try:
+        payload = advise_workspace(
+            inspect_guidance(_identity_or_error(path, home), source_path=source)
+        )
+    except WorkspaceGuidanceError as error:
+        _guidance_error(error, as_json)
+    if as_json:
+        _json(payload)
+        return
+    click.echo(f"{payload['state']} · {', '.join(payload['reason_codes'])}")
+
+
+@workspace.command(help="preview exact effects and required authorization")
+@click.argument("path", required=False)
+@click.option("--home", is_flag=True, help="preview from Home")
+@click.option("--source", required=True, type=click.Path(file_okay=False))
+@click.option(
+    "--intent",
+    required=True,
+    type=click.Choice(["create-project-workspace", "keep-home", "suppress-source"]),
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+def preview(path, home, source, intent, as_json):
+    try:
+        identity = _identity_or_error(path, home)
+        payload = preview_workspace_action(
+            advise_workspace(inspect_guidance(identity, source_path=source)), intent
+        )
+    except WorkspaceGuidanceError as error:
+        _guidance_error(error, as_json)
+    if as_json:
+        _json(payload)
+        return
+    click.echo(
+        f"{payload['preview_id']} · authorization={payload['authorization_class']}"
+    )
+
+
+@workspace.command(help="record a bounded decision for one exact preview")
+@click.argument("path", required=False)
+@click.option("--home", is_flag=True, help="record the decision in Home")
+@click.option("--source", required=True, type=click.Path(file_okay=False))
+@click.option(
+    "--intent",
+    required=True,
+    type=click.Choice(["create-project-workspace", "keep-home", "suppress-source"]),
+)
+@click.option("--preview-id", required=True)
+@click.option("--decision", required=True, type=click.Choice(["approve", "deny"]))
+@click.option("--authorized-by", required=True)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+def authorize(
+    path,
+    home,
+    source,
+    intent,
+    preview_id,
+    decision,
+    authorized_by,
+    as_json,
+):
+    try:
+        identity = _identity_or_error(path, home)
+        current_preview = preview_workspace_action(
+            advise_workspace(inspect_guidance(identity, source_path=source)), intent
+        )
+        payload = authorize_workspace_action(
+            identity,
+            current_preview,
+            expected_preview_id=preview_id,
+            decision=decision,
+            authorized_by=authorized_by,
+        )
+    except WorkspaceGuidanceError as error:
+        _guidance_error(error, as_json)
+    if as_json:
+        _json(payload)
+        return
+    click.echo(f"{payload['authorization_id']} · {payload['decision']}")
+
+
+@workspace.command(help="execute one authorized idempotent workspace intent")
+@click.argument("path", required=False)
+@click.option("--home", is_flag=True, help="read authorization from Home")
+@click.option("--source", required=True, type=click.Path(file_okay=False))
+@click.option("--authorization-id", required=True)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+def apply(path, home, source, authorization_id, as_json):
+    try:
+        payload = execute_workspace_action(
+            _identity_or_error(path, home),
+            source_path=source,
+            authorization_id=authorization_id,
+        )
+    except WorkspaceGuidanceError as error:
+        _guidance_error(error, as_json)
+    if as_json:
+        _json(payload)
+        return
+    click.echo(f"{payload['receipt_id']} · reused={payload['reused']}")
+
+
+@workspace.command(help="verify an action receipt against current effects")
+@click.argument("path", required=False)
+@click.option("--home", is_flag=True, help="read the receipt from Home")
+@click.option("--receipt-id", required=True)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+def verify(path, home, receipt_id, as_json):
+    try:
+        payload = verify_workspace_action(_identity_or_error(path, home), receipt_id)
+    except WorkspaceGuidanceError as error:
+        _guidance_error(error, as_json)
+    if as_json:
+        _json(payload)
+        if not payload["ok"]:
+            raise click.exceptions.Exit(1)
+        return
+    click.echo("verified" if payload["ok"] else "verification failed")
+    if not payload["ok"]:
+        raise click.exceptions.Exit(1)
