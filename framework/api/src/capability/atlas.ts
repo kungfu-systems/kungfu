@@ -1,4 +1,4 @@
-import type { SavedQueryView } from './query';
+import type { SavedQueryView } from './query.js';
 
 // Mission Control capability handle over the `kungfu atlas` pre-release CLI.
 // Atlas remains authority for imported facts; native Mission/Go/claim writes
