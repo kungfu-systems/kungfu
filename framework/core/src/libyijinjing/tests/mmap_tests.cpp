@@ -2,6 +2,7 @@
 
 #include <kungfu/yijinjing/common.h>
 #include <kungfu/yijinjing/journal/journal.h>
+#include <kungfu/yijinjing/journal/layout_fingerprint.h>
 #include <kungfu/yijinjing/journal/page.h>
 #include <kungfu/yijinjing/platform/mmap.h>
 #include <kungfu/yijinjing/schema/core.h>
@@ -34,6 +35,7 @@ using kungfu::yijinjing::data::location;
 using kungfu::yijinjing::data::locator;
 using kungfu::yijinjing::enums::location_role;
 using kungfu::yijinjing::enums::mode;
+using kungfu::yijinjing::journal::journal_format_epoch;
 using kungfu::yijinjing::journal::page;
 using kungfu::yijinjing::journal::page_open_policy;
 using kungfu::yijinjing::journal::page_precreation;
@@ -109,7 +111,7 @@ void create_seek_page(const kungfu::yijinjing::data::location_ptr &loc, uint32_t
   const auto path = page::get_page_path(loc, location::PUBLIC, page_id);
   auto region = mapped_region::map(path, TEST_PAGE_SIZE, mapping_policy::write_create_or_grow());
   auto *header = reinterpret_cast<page_header *>(region.address());
-  header->version = __JOURNAL_VERSION__;
+  header->version = journal_format_epoch;
   header->page_header_length = sizeof(page_header);
   header->page_size = TEST_PAGE_SIZE;
   header->frame_header_length = sizeof(frame_header);
@@ -311,7 +313,7 @@ void test_corrupt_page_offsets_fail_before_payload_access() {
   const auto path = create_page_path(loc);
   auto region = mapped_region::map(path, TEST_PAGE_SIZE, mapping_policy::write_create_or_grow());
   auto *header = reinterpret_cast<page_header *>(region.address());
-  header->version = __JOURNAL_VERSION__;
+  header->version = journal_format_epoch;
   header->page_header_length = sizeof(page_header);
   header->page_size = TEST_PAGE_SIZE;
   header->frame_header_length = sizeof(frame_header);
@@ -340,7 +342,7 @@ void test_corrupt_page_header_facts_are_rejected() {
     const auto path = create_page_path(loc);
     auto region = mapped_region::map(path, TEST_PAGE_SIZE, mapping_policy::write_create_or_grow());
     auto *header = reinterpret_cast<page_header *>(region.address());
-    header->version = __JOURNAL_VERSION__;
+    header->version = journal_format_epoch;
     header->page_header_length = sizeof(page_header);
     header->page_size = TEST_PAGE_SIZE;
     header->frame_header_length = sizeof(frame_header);
@@ -386,7 +388,7 @@ void test_page_header_publication() {
           "initializer process failed");
 #endif
 
-  require(reader->get_version() == __JOURNAL_VERSION__, "reader observed an unpublished page version");
+  require(reader->get_version() == journal_format_epoch, "reader observed an unpublished page version");
   require(reader->get_page_size() == TEST_PAGE_SIZE, "reader observed an unpublished page size");
   require(reader->first_frame_address() > reader->address(), "reader observed an invalid first-frame address");
 }

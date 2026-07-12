@@ -8,6 +8,7 @@
 #include <kungfu/yijinjing/common.h>
 #include <kungfu/yijinjing/journal/assemble.h>
 #include <kungfu/yijinjing/journal/bus.h>
+#include <kungfu/yijinjing/journal/layout_fingerprint.h>
 #include <kungfu/yijinjing/time.h>
 #include <unordered_set>
 
@@ -242,16 +243,16 @@ std::vector<std::pair<yijinjing::types::frame_header, std::vector<uint8_t>>> ass
   std::vector<std::pair<yijinjing::types::frame_header, std::vector<uint8_t>>> v{};
   while (data_available() and current_frame()->gen_time() < end_time) {
     if (carrier_type == 0 or
-        current_frame()->carrier_type() == carrier_type && current_page()->get_version() == __JOURNAL_VERSION__) {
+        current_frame()->carrier_type() == carrier_type && current_page()->get_version() == journal_format_epoch) {
       const frame_header &head = *reinterpret_cast<frame_header *>(current_frame()->address());
       std::vector<uint8_t> bytes{current_frame()->data_as_bytes(),
                                  current_frame()->data_as_bytes() + current_frame()->data_length()};
       v.emplace_back(head, bytes);
     }
 
-    if (current_page()->get_version() != __JOURNAL_VERSION__) {
+    if (current_page()->get_version() != journal_format_epoch) {
       SPDLOG_WARN("journal version mismatch, expect {}, got {}, page_id {}, location uid {} location name {}",
-                  __JOURNAL_VERSION__, current_page()->get_version(), current_page()->get_page_id(),
+                  journal_format_epoch, current_page()->get_version(), current_page()->get_page_id(),
                   current_page()->get_location()->uid, current_page()->get_location()->uname);
     }
 

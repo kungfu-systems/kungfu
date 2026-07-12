@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <kungfu/common.h>
+#include <kungfu/yijinjing/journal/layout_fingerprint.h>
 #include <kungfu/yijinjing/journal/page.h>
 #include <kungfu/yijinjing/platform/mmap.h>
 #include <kungfu/yijinjing/time.h>
@@ -27,6 +28,9 @@ static_assert(offsetof(yijinjing::types::page_header, status) %
               "page status must satisfy atomic_ref alignment");
 static_assert(std::atomic_ref<yijinjing::enums::PageStatus>::is_always_lock_free,
               "cross-process page status requires lock-free atomics");
+// ADR-0062: the container epoch is derived from the header layout at compile
+// time; force its evaluation here so a malformed derivation fails the build.
+static_assert(journal_format_epoch != 0u, "journal format epoch must be a non-zero compile-time constant");
 } // namespace
 using namespace yijinjing::types;
 
@@ -132,7 +136,7 @@ page_ptr page::load(const data::location_ptr &location, uint32_t dest_id, uint64
 
   if (may_initialize) {
     if (is_virgin_page) {
-      header->version = __JOURNAL_VERSION__;
+      header->version = journal_format_epoch;
       header->page_header_length = sizeof(page_header);
       header->page_size = page_size;
       header->frame_header_length = sizeof(frame_header);
@@ -152,9 +156,9 @@ page_ptr page::load(const data::location_ptr &location, uint32_t dest_id, uint64
     std::this_thread::yield();
   }
 
-  if (header->version != __JOURNAL_VERSION__) {
+  if (header->version != journal_format_epoch) {
     uint32_t v = header->version;
-    throw journal_error(fmt::format("{} version mismatch, required {}, found {}", path, __JOURNAL_VERSION__, v));
+    throw journal_error(fmt::format("{} version mismatch, required {}, found {}", path, journal_format_epoch, v));
   }
   if (header->page_header_length != sizeof(page_header)) {
     uint32_t l = header->page_header_length;
@@ -252,7 +256,7 @@ uint32_t page::find_page_id(const data::location_ptr &location, uint32_t dest_id
     const auto *loaded_page_header = loaded_page->header_;
     return loaded_page->acquire_last_frame_position() != 0 &&
            loaded_page->acquire_status() != yijinjing::enums::PageStatus::PreOpen &&
-           loaded_page_header->version == __JOURNAL_VERSION__ && loaded_page->begin_time() < time;
+           loaded_page_header->version == journal_format_epoch && loaded_page->begin_time() < time;
   };
 
   // Most live seeks target the tail. Preserve that one-probe path before using
