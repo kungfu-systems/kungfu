@@ -78,7 +78,65 @@ def _load_saved_view(file_path: str) -> dict[str, Any]:
         "mission-control",
     }:
         _fail("KF_QUERY_VIEW", "saved query view requires a supported ViewSpec")
+    goal_cards = view.get("goalCards")
+    if goal_cards is not None:
+        if view.get("kind") != "mission-control":
+            _fail("KF_QUERY_VIEW", "goalCards is only valid for Mission Control")
+        _validate_goal_card_query(goal_cards)
     return value
+
+
+def _validate_goal_card_query(value: Any) -> None:
+    if not isinstance(value, dict) or value.get("schema") != (
+        "kungfu.mission-control.goal-card-query/v1"
+    ):
+        _fail("KF_QUERY_VIEW", "unsupported goalCards schema")
+    arrays = {
+        "sections": {"attention", "in-motion", "delegated", "closed"},
+        "statuses": None,
+        "trust": {"established", "partial", "attention", "stale", "unknown"},
+        "actors": None,
+        "tracks": None,
+        "roles": None,
+        "importance": None,
+        "stages": None,
+    }
+    for field, allowed in arrays.items():
+        items = value.get(field)
+        if (
+            not isinstance(items, list)
+            or len(items) > 256
+            or not all(isinstance(item, str) for item in items)
+        ):
+            _fail("KF_QUERY_VIEW", f"goalCards.{field} must be a string array")
+        if allowed is not None and any(item not in allowed for item in items):
+            _fail("KF_QUERY_VIEW", f"goalCards.{field} contains an unsupported value")
+    if not isinstance(value.get("text"), str):
+        _fail("KF_QUERY_VIEW", "goalCards.text must be a string")
+    updated_days = value.get("updatedWithinDays")
+    if updated_days is not None and (
+        not isinstance(updated_days, (int, float)) or updated_days < 0
+    ):
+        _fail("KF_QUERY_VIEW", "goalCards.updatedWithinDays must be non-negative")
+    if value.get("hasChildren") not in {"all", "yes", "no"}:
+        _fail("KF_QUERY_VIEW", "goalCards.hasChildren is unsupported")
+    if value.get("closed") not in {"include", "exclude", "only"}:
+        _fail("KF_QUERY_VIEW", "goalCards.closed is unsupported")
+    if not isinstance(value.get("hideClosedChildren"), bool):
+        _fail("KF_QUERY_VIEW", "goalCards.hideClosedChildren must be a boolean")
+    sort = value.get("sort")
+    if not isinstance(sort, dict) or sort.get("field") not in {
+        "decision-priority",
+        "updated",
+        "importance",
+        "trust-risk",
+        "next-actor",
+        "lifecycle",
+        "name",
+    }:
+        _fail("KF_QUERY_VIEW", "goalCards.sort.field is unsupported")
+    if sort.get("direction") not in {"asc", "desc"}:
+        _fail("KF_QUERY_VIEW", "goalCards.sort.direction is unsupported")
 
 
 def _planner_call(ctx: click.Context, action: str, **kwargs: Any) -> dict[str, Any]:

@@ -54,35 +54,41 @@ const fakeCaps = {
   atlas: {
     runtimeDir: '/tmp/kungfu-runtime',
     defaultRepoRoot: '/tmp/atlas',
-    importInfo: () => ({
-      import_id: 'fixture-import',
-      repo_root: '/tmp/atlas',
-      missions: 1,
-      goals: 2,
-      markers: 3,
+    currentDashboard: () => ({
+      schema: 'kungfu.mission-control.dashboard-snapshot/v1',
+      cut: { kind: 'system_time', system_time: '2026-07-12T12:00:00Z' },
+      freshness: { status: 'fresh', basis: 'request-cut' },
+      import_info: {
+        import_id: 'fixture-import',
+        repo_root: '/tmp/atlas',
+        missions: 1,
+        goals: 2,
+        markers: 3,
+      },
+      missions: [
+        {
+          mission_id: 'mission-fixture',
+          title: 'Fixture Mission',
+          stage_name: 'dogfood',
+        },
+      ],
+      goals: [
+        {
+          goal_id: 'goal-fixture-active',
+          status: 'active',
+          title: 'Active fixture goal',
+          mission_id: 'mission-fixture',
+          next_action: 'verify atlas tab',
+        },
+        {
+          goal_id: 'goal-fixture-ready',
+          status: 'ready',
+          title: 'Ready fixture goal',
+          mission_id: 'mission-fixture',
+        },
+      ],
     }),
-    missions: () => [
-      {
-        mission_id: 'mission-fixture',
-        title: 'Fixture Mission',
-        stage_name: 'dogfood',
-      },
-    ],
-    goals: () => [
-      {
-        goal_id: 'goal-fixture-active',
-        status: 'active',
-        title: 'Active fixture goal',
-        mission_id: 'mission-fixture',
-        next_action: 'verify atlas tab',
-      },
-      {
-        goal_id: 'goal-fixture-ready',
-        status: 'ready',
-        title: 'Ready fixture goal',
-        mission_id: 'mission-fixture',
-      },
-    ],
+    dashboard: async () => null,
     importRepo: () => ({
       import_id: 'fixture-import-2',
       repo_root: '/tmp/atlas',
@@ -95,6 +101,9 @@ const fakeCaps = {
     goal: () => null,
     markers: () => [],
   },
+  storage: {
+    savedQueries: () => ({ entries: [] }),
+  },
 };
 
 const fakeShell = {
@@ -105,6 +114,35 @@ const fakeShell = {
 
 const capabilityModule = {
   WORK_STATUS_NAMES: ['active', 'blocked', 'waiting', 'ready', 'done'],
+  DEFAULT_GOAL_CARD_QUERY: {
+    schema: 'kungfu.mission-control.goal-card-query/v1',
+    text: '',
+    sections: [],
+    statuses: [],
+    trust: [],
+    actors: [],
+    tracks: [],
+    roles: [],
+    importance: [],
+    stages: [],
+    updatedWithinDays: null,
+    hasChildren: 'all',
+    closed: 'include',
+    hideClosedChildren: false,
+    sort: { field: 'decision-priority', direction: 'desc' },
+  },
+  emptyQueryChangelogState: () => ({
+    rows: {},
+    evidence: {},
+    changes: {},
+    appliedMessageIds: [],
+    resultSchema: null,
+    frontier: { kind: 'empty', record_count: '0' },
+    resultHash: '',
+    gap: null,
+  }),
+  applyQueryChangelogPage: (state) => state,
+  parseGoalCardQuerySpec: (value) => value,
 };
 
 const module = { exports: {} };
@@ -129,14 +167,12 @@ const html = ReactDomServer.renderToStaticMarkup(
 );
 
 for (const needle of [
-  'Atlas projection',
-  'mission-fixture',
   'Fixture Mission',
-  'goal-fixture-active',
   'Active fixture goal',
-  '1 missions',
-  '2 goals',
-  '3 markers',
+  'Search Go cards',
+  'Decision priority',
+  'Save workspace view',
+  'mission-control.goal-cards.',
 ]) {
   if (!html.includes(needle)) fail(`rendered Atlas tab missing ${needle}`);
 }

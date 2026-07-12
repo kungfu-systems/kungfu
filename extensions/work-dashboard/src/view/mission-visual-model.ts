@@ -2,6 +2,7 @@ import type {
   AtlasGoal,
   AtlasMission,
   AtlasMissionControlReport,
+  GoalCardQuerySpec,
 } from '@kungfu-tech/api/capability';
 
 export const MISSION_CONTROL_VISUAL_SPEC = {
@@ -207,6 +208,7 @@ export type GoalCluster = {
   parent: AtlasGoal;
   members: GoalClusterMember[];
   section: GoalSection;
+  matchCount?: number;
 };
 
 const CLOSED_STATUSES = new Set(['completed', 'done', 'merged', 'archived']);
@@ -308,6 +310,218 @@ export function buildGoalClusters(
     .sort((left, right) => left.goal_id.localeCompare(right.goal_id))
     .forEach(appendCluster);
   return clusters;
+}
+
+function isClosedGoal(goal: AtlasGoal): boolean {
+  return Boolean(goal.archived || CLOSED_STATUSES.has(goal.status ?? ''));
+}
+
+function goalSearchText(goal: AtlasGoal): string {
+  return [
+    goal.goal_id,
+    goal.title,
+    goal.summary,
+    goal.mission_why_matters,
+    goal.next_action,
+    goal.owner_agent,
+    goal.mission_track,
+    goal.mission_role,
+    goal.mission_stage,
+    goal.status,
+  ]
+    .filter(Boolean)
+    .join('\n')
+    .toLocaleLowerCase();
+}
+
+function includesOrEmpty(values: string[], actual = ''): boolean {
+  return values.length === 0 || values.includes(actual);
+}
+
+function memberMatches(
+  goal: AtlasGoal,
+  query: GoalCardQuerySpec,
+  trustByGoal: Readonly<Record<string, VisualTrustState>>,
+  asOfMs: number,
+): boolean {
+  const closed = isClosedGoal(goal);
+  if (query.closed === 'exclude' && closed) return false;
+  if (query.closed === 'only' && !closed) return false;
+  if (
+    query.text.trim() &&
+    !goalSearchText(goal).includes(query.text.trim().toLocaleLowerCase())
+  ) {
+    return false;
+  }
+  if (!includesOrEmpty(query.statuses, goal.status)) return false;
+  if (!includesOrEmpty(query.trust, trustByGoal[goal.goal_id] ?? 'unknown')) {
+    return false;
+  }
+  if (!includesOrEmpty(query.actors, goal.owner_agent)) return false;
+  if (!includesOrEmpty(query.tracks, goal.mission_track)) return false;
+  if (!includesOrEmpty(query.roles, goal.mission_role)) return false;
+  if (!includesOrEmpty(query.importance, goal.mission_importance)) return false;
+  if (!includesOrEmpty(query.stages, goal.mission_stage)) return false;
+  if (query.updatedWithinDays !== null) {
+    const updated = Date.parse(goal.updated_at ?? '');
+    const windowMs = query.updatedWithinDays * 86_400_000;
+    if (!Number.isFinite(updated) || updated < asOfMs - windowMs) return false;
+  }
+  return true;
+}
+
+const SECTION_PRIORITY: Record<GoalSection, number> = {
+  attention: 4,
+  'in-motion': 3,
+  delegated: 2,
+  closed: 1,
+};
+const IMPORTANCE_PRIORITY: Record<string, number> = {
+  high: 3,
+  medium: 2,
+  low: 1,
+};
+const TRUST_RISK_PRIORITY: Record<VisualTrustState, number> = {
+  attention: 5,
+  stale: 4,
+  unknown: 3,
+  partial: 2,
+  established: 1,
+};
+
+function clusterImportance(cluster: GoalCluster): number {
+  return Math.max(
+    0,
+    ...cluster.members.map(
+      ({ goal }) => IMPORTANCE_PRIORITY[goal.mission_importance ?? ''] ?? 0,
+    ),
+  );
+}
+
+function clusterTrustRisk(
+  cluster: GoalCluster,
+  trustByGoal: Readonly<Record<string, VisualTrustState>>,
+): number {
+  return Math.max(
+    0,
+    ...cluster.members.map(
+      ({ goal }) => TRUST_RISK_PRIORITY[trustByGoal[goal.goal_id] ?? 'unknown'],
+    ),
+  );
+}
+
+function clusterUpdated(cluster: GoalCluster): number {
+  return Math.max(
+    0,
+    ...cluster.members.map(
+      ({ goal }) => Date.parse(goal.updated_at ?? '') || 0,
+    ),
+  );
+}
+
+function compareText(left: string, right: string): number {
+  return left.localeCompare(right, undefined, { numeric: true });
+}
+
+function compareClusters(
+  left: GoalCluster,
+  right: GoalCluster,
+  query: GoalCardQuerySpec,
+  trustByGoal: Readonly<Record<string, VisualTrustState>>,
+): number {
+  const direction = query.sort.direction === 'desc' ? -1 : 1;
+  let value = 0;
+  switch (query.sort.field) {
+    case 'decision-priority': {
+      const fields: Array<[number, number]> = [
+        [SECTION_PRIORITY[left.section], SECTION_PRIORITY[right.section]],
+        [
+          clusterTrustRisk(left, trustByGoal),
+          clusterTrustRisk(right, trustByGoal),
+        ],
+        [clusterImportance(left), clusterImportance(right)],
+        [clusterUpdated(left), clusterUpdated(right)],
+      ];
+      for (const [leftValue, rightValue] of fields) {
+        if (leftValue !== rightValue)
+          return (leftValue - rightValue) * direction;
+      }
+      break;
+    }
+    case 'updated':
+      value = clusterUpdated(left) - clusterUpdated(right);
+      break;
+    case 'importance':
+      value = clusterImportance(left) - clusterImportance(right);
+      break;
+    case 'trust-risk':
+      value =
+        clusterTrustRisk(left, trustByGoal) -
+        clusterTrustRisk(right, trustByGoal);
+      break;
+    case 'next-actor':
+      value = compareText(
+        left.parent.owner_agent ?? '',
+        right.parent.owner_agent ?? '',
+      );
+      break;
+    case 'lifecycle':
+      value = SECTION_PRIORITY[left.section] - SECTION_PRIORITY[right.section];
+      break;
+    case 'name':
+      value = compareText(
+        left.parent.title || left.parent.goal_id,
+        right.parent.title || right.parent.goal_id,
+      );
+      break;
+  }
+  return value === 0 ? compareText(left.key, right.key) : value * direction;
+}
+
+export function queryGoalClusters(
+  goals: AtlasGoal[],
+  query: GoalCardQuerySpec,
+  trustByGoal: Readonly<Record<string, VisualTrustState>> = {},
+  asOfMs = Date.now(),
+): GoalCluster[] {
+  const clusters = buildGoalClusters(goals, trustByGoal);
+  return clusters
+    .filter(
+      (cluster) =>
+        query.sections.length === 0 || query.sections.includes(cluster.section),
+    )
+    .filter((cluster) => {
+      const hasChildren = cluster.members.length > 1;
+      return (
+        query.hasChildren === 'all' ||
+        (query.hasChildren === 'yes' && hasChildren) ||
+        (query.hasChildren === 'no' && !hasChildren)
+      );
+    })
+    .map((cluster) => {
+      const matching = cluster.members.filter(({ goal }) =>
+        memberMatches(goal, query, trustByGoal, asOfMs),
+      );
+      if (matching.length === 0) return null;
+      const parentMatches = matching.some(
+        ({ goal }) => goal.goal_id === cluster.parent.goal_id,
+      );
+      let members = parentMatches ? cluster.members : matching;
+      if (!parentMatches) {
+        members = [
+          cluster.members[0],
+          ...members.filter(({ depth }) => depth > 0),
+        ];
+      }
+      if (query.hideClosedChildren) {
+        members = members.filter(
+          ({ goal, depth }) => depth === 0 || !isClosedGoal(goal),
+        );
+      }
+      return { ...cluster, members, matchCount: matching.length };
+    })
+    .filter((cluster): cluster is GoalCluster => cluster !== null)
+    .sort((left, right) => compareClusters(left, right, query, trustByGoal));
 }
 
 export function missionIntent(mission: AtlasMission | null): string {

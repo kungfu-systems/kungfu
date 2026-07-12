@@ -2,9 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  DEFAULT_GOAL_CARD_QUERY,
   type QueryChangelogPage,
   applyQueryChangelogPage,
   emptyQueryChangelogState,
+  parseGoalCardQuerySpec,
   parseSavedQueryView,
 } from '../src/capability/query.ts';
 
@@ -198,4 +200,53 @@ test('saved Mission Control view preserves query ownership', () => {
 
   assert.equal(saved.view.kind, 'mission-control');
   assert.equal(saved.definition.object, 'fact-state');
+});
+
+test('saved Mission Control view validates and preserves a goal-card query', () => {
+  const goalCards = {
+    ...DEFAULT_GOAL_CARD_QUERY,
+    text: 'release',
+    sections: ['attention'] as const,
+    trust: ['stale'] as const,
+    sort: { field: 'trust-risk' as const, direction: 'desc' as const },
+  };
+  const parsed = parseGoalCardQuerySpec(goalCards);
+  assert.equal(parsed.schema, 'kungfu.mission-control.goal-card-query/v1');
+  assert.deepEqual(parsed.sections, ['attention']);
+
+  const saved = parseSavedQueryView({
+    schema: 'kungfu.query.saved-view/v1',
+    name: 'Release attention',
+    definition: {
+      schema: 'kungfu.query.definition/v1',
+      basis: { cut: { kind: 'head' } },
+      object: 'fact-state',
+      subject_keys: ['atlas:mission-a'],
+      limit: 1,
+      evidence: 'proof',
+    },
+    view: {
+      kind: 'mission-control',
+      profileId: 'kungfu.mission-control',
+      profileVersion: '1',
+      questionId: 'observed-progress',
+      reducer: 'kungfu.mission-control.reducer/v1',
+      goalCards,
+    },
+  });
+  assert.equal(saved.view.kind, 'mission-control');
+  if (saved.view.kind === 'mission-control') {
+    assert.equal(saved.view.goalCards?.sort.field, 'trust-risk');
+  }
+});
+
+test('goal-card query rejects unknown trust states', () => {
+  assert.throws(
+    () =>
+      parseGoalCardQuerySpec({
+        ...DEFAULT_GOAL_CARD_QUERY,
+        trust: ['inherited'],
+      }),
+    /unsupported trust state/,
+  );
 });

@@ -392,6 +392,9 @@ project `<workspace>/.kungfu`—and its current storage choice is correct:
 - the Mission Home's built-in five-question profile is shipped product logic,
   not a mutable saved query;
 - user-customized Mission views may be saved into that workspace's catalog;
+- the Mission Go-card field persists its versioned filter, sort, hierarchy, and
+  closed-child policy as a Mission Control ViewSpec, while QueryDefinition still
+  owns the fact world and cut;
 - moving a saved view uses explicit JSON export/import or a containing portable
   bundle, never a global catalog that silently follows every workspace.
 
@@ -473,9 +476,12 @@ is not the enforcement boundary.
    after admission the responsibility and next-action sections update.
 11. Save a custom evidence view: it appears in Atlas's Saved Query Catalog but
    not another workspace.
-12. Export a Home Mission as a full bundle and import it into Atlas: the
+12. Filter the Go-card field to high-importance attention work, sort by trust
+   risk, and save the workspace view. Update the same saved query through the
+   CLI: the open GUI adopts the new revision on refresh without restarting.
+13. Export a Home Mission as a full bundle and import it into Atlas: the
    declared roots persist, while no global/project shared authority is created.
-13. Switch workspace: the old coordinator lease and runtime handles are gone;
+14. Switch workspace: the old coordinator lease and runtime handles are gone;
    no old Mission is visible.
 
 ## Explicit non-goals for the first release

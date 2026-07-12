@@ -5,10 +5,12 @@ import type {
   AtlasGoal,
   AtlasMissionControlReport,
 } from '@kungfu-tech/api/capability';
+import { DEFAULT_GOAL_CARD_QUERY } from '../../../framework/api/src/capability/query.ts';
 import {
   MISSION_CONTROL_VISUAL_SPEC,
   buildGoalClusters,
   deriveTrustVisual,
+  queryGoalClusters,
   responsibilityActions,
 } from '../src/view/mission-visual-model.ts';
 
@@ -118,6 +120,103 @@ test('parent and descendants occupy one cluster and a blocked child propagates a
     ],
   );
   assert.equal(clusters[0].section, 'attention');
+});
+
+test('goal-card query retains the parent for a matching child and hides closed siblings', () => {
+  const clusters = queryGoalClusters(
+    [
+      goal('parent', {
+        title: 'Parent delivery',
+        mission_importance: 'medium',
+      }),
+      goal('closed-child', {
+        title: 'Old work',
+        mission_parent_goal: 'parent',
+        status: 'completed',
+      }),
+      goal('risk-child', {
+        title: 'Release evidence gap',
+        mission_parent_goal: 'parent',
+        status: 'blocked',
+        mission_importance: 'high',
+      }),
+    ],
+    {
+      ...DEFAULT_GOAL_CARD_QUERY,
+      text: 'evidence gap',
+      hideClosedChildren: true,
+    },
+  );
+
+  assert.equal(clusters.length, 1);
+  assert.equal(clusters[0].section, 'attention');
+  assert.equal(clusters[0].matchCount, 1);
+  assert.deepEqual(
+    clusters[0].members.map(({ goal: row }) => row.goal_id),
+    ['parent', 'risk-child'],
+  );
+});
+
+test('decision priority sorts propagated trust risk before ordinary active work', () => {
+  const clusters = queryGoalClusters(
+    [
+      goal('ordinary', {
+        title: 'Ordinary active work',
+        updated_at: '2026-07-12T08:00:00Z',
+      }),
+      goal('risk-parent', {
+        title: 'Risk cluster',
+        updated_at: '2026-07-11T08:00:00Z',
+      }),
+      goal('risk-child', {
+        mission_parent_goal: 'risk-parent',
+        status: 'paused',
+      }),
+    ],
+    DEFAULT_GOAL_CARD_QUERY,
+    { 'risk-child': 'stale' },
+    Date.parse('2026-07-12T10:00:00Z'),
+  );
+
+  assert.deepEqual(
+    clusters.map((cluster) => cluster.key),
+    ['risk-parent', 'ordinary'],
+  );
+});
+
+test('structured filters combine actor, status, hierarchy, and cut-relative time', () => {
+  const clusters = queryGoalClusters(
+    [
+      goal('parent', {
+        owner_agent: 'codex',
+        updated_at: '2026-07-12T08:00:00Z',
+      }),
+      goal('child', {
+        owner_agent: 'codex',
+        mission_parent_goal: 'parent',
+        updated_at: '2026-07-12T09:00:00Z',
+      }),
+      goal('other', {
+        owner_agent: 'claude',
+        updated_at: '2026-07-01T09:00:00Z',
+      }),
+    ],
+    {
+      ...DEFAULT_GOAL_CARD_QUERY,
+      statuses: ['active'],
+      actors: ['codex'],
+      updatedWithinDays: 1,
+      hasChildren: 'yes',
+    },
+    {},
+    Date.parse('2026-07-12T10:00:00Z'),
+  );
+
+  assert.deepEqual(
+    clusters.map((cluster) => cluster.key),
+    ['parent'],
+  );
+  assert.equal(clusters[0].matchCount, 2);
 });
 
 test('trust remains unknown without a purpose-bound report and maps explicit report state', () => {

@@ -2,6 +2,7 @@ import type {
   AtlasGoal,
   AtlasMission,
   AtlasMissionControlReport,
+  GoalCardQuerySpec,
 } from '@kungfu-tech/api/capability';
 import { mono, panelStyle } from '@kungfu-tech/kfx';
 import React from 'react';
@@ -11,11 +12,11 @@ import {
   MISSION_CONTROL_VISUAL_SPEC,
   type TrustVisual,
   type VisualTrustState,
-  buildGoalClusters,
   deriveTrustVisual,
   goalStatusGlyph,
   missionIntent,
   missionStage,
+  queryGoalClusters,
   responsibilityActions,
 } from './mission-visual-model';
 
@@ -613,9 +614,12 @@ function GoalCard({
               cursor: 'pointer',
             }}
           >
-            {expanded ? '▾' : '▸'} {children.length} child Go
+            {expanded ? '▾' : '▸'} {children.length} visible child Go
             {children.length === 1 ? '' : 's'} · {completed}/
             {cluster.members.length} closed
+            {cluster.matchCount !== undefined
+              ? ` · ${cluster.matchCount} matched`
+              : ''}
           </button>
           {expanded && (
             <div style={{ padding: '5px 8px 8px', background: '#121820' }}>
@@ -672,18 +676,101 @@ export function GoalCardField({
   goals,
   selectedGoalId,
   trustByGoal,
+  query,
+  asOfTime,
+  savedViewId,
+  saveState,
+  onQueryChange,
+  onSave,
   onSelectGoal,
 }: {
   goals: AtlasGoal[];
   selectedGoalId: string | null;
   trustByGoal: Readonly<Record<string, VisualTrustState>>;
+  query: GoalCardQuerySpec;
+  asOfTime: string;
+  savedViewId: string;
+  saveState: string;
+  onQueryChange: (query: GoalCardQuerySpec) => void;
+  onSave: () => void;
   onSelectGoal: (goalId: string) => void;
 }) {
   const [expanded, setExpanded] = React.useState<Set<string>>(() => new Set());
   const clusters = React.useMemo(
-    () => buildGoalClusters(goals, trustByGoal),
-    [goals, trustByGoal],
+    () =>
+      queryGoalClusters(
+        goals,
+        query,
+        trustByGoal,
+        Date.parse(asOfTime) || Date.now(),
+      ),
+    [goals, query, trustByGoal, asOfTime],
   );
+  const optionValues = React.useMemo(() => {
+    const values = (field: keyof AtlasGoal) =>
+      [
+        ...new Set(
+          goals.map((goal) => String(goal[field] ?? '')).filter(Boolean),
+        ),
+      ].sort();
+    return {
+      statuses: values('status'),
+      actors: values('owner_agent'),
+      tracks: values('mission_track'),
+      roles: values('mission_role'),
+      importance: values('mission_importance'),
+      stages: values('mission_stage'),
+    };
+  }, [goals]);
+  const update = (patch: Partial<GoalCardQuerySpec>) =>
+    onQueryChange({ ...query, ...patch });
+  const toggleSection = (section: GoalSection) =>
+    update({
+      sections: query.sections.includes(section)
+        ? query.sections.filter((value) => value !== section)
+        : [...query.sections, section],
+    });
+  const activeFilterCount = [
+    query.text.trim(),
+    ...query.sections,
+    ...query.statuses,
+    ...query.trust,
+    ...query.actors,
+    ...query.tracks,
+    ...query.roles,
+    ...query.importance,
+    ...query.stages,
+    query.updatedWithinDays === null ? '' : String(query.updatedWithinDays),
+    query.hasChildren === 'all' ? '' : query.hasChildren,
+    query.closed === 'include' ? '' : query.closed,
+    query.hideClosedChildren ? 'hide-closed-children' : '',
+  ].filter(Boolean).length;
+  const single = (
+    field: 'statuses' | 'actors' | 'tracks' | 'roles' | 'importance' | 'stages',
+    value: string,
+  ) =>
+    update({ [field]: value ? [value] : [] } as Pick<
+      GoalCardQuerySpec,
+      typeof field
+    >);
+  const reset = () =>
+    onQueryChange({
+      schema: 'kungfu.mission-control.goal-card-query/v1',
+      text: '',
+      sections: [],
+      statuses: [],
+      trust: [],
+      actors: [],
+      tracks: [],
+      roles: [],
+      importance: [],
+      stages: [],
+      updatedWithinDays: null,
+      hasChildren: 'all',
+      closed: 'include',
+      hideClosedChildren: false,
+      sort: { field: 'decision-priority', direction: 'desc' },
+    });
   const toggle = (key: string) => {
     setExpanded((current) => {
       const next = new Set(current);
@@ -703,6 +790,223 @@ export function GoalCardField({
   }
   return (
     <div style={{ display: 'grid', gap: 14 }}>
+      <section
+        aria-label="Go card query controls"
+        style={{
+          display: 'grid',
+          gap: 8,
+          padding: 10,
+          border: `1px solid ${COLORS.border}`,
+          borderRadius: 10,
+          background: COLORS.panel,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 6,
+            alignItems: 'center',
+          }}
+        >
+          <input
+            aria-label="Search Go cards"
+            value={query.text}
+            placeholder="Search Go cards"
+            onChange={(event) => update({ text: event.target.value })}
+            style={{
+              ...mono,
+              flex: '1 1 220px',
+              minWidth: 140,
+              border: `1px solid ${COLORS.border}`,
+              borderRadius: 6,
+              background: COLORS.canvas,
+              color: COLORS.text,
+              padding: '6px 8px',
+            }}
+          />
+          {(Object.keys(SECTION_META) as GoalSection[]).map((section) => (
+            <button
+              key={section}
+              type="button"
+              onClick={() => toggleSection(section)}
+              style={compactButton(query.sections.includes(section))}
+            >
+              {SECTION_META[section].glyph} {SECTION_META[section].label}
+            </button>
+          ))}
+          <select
+            aria-label="Sort Go cards"
+            value={query.sort.field}
+            onChange={(event) =>
+              update({
+                sort: {
+                  field: event.target
+                    .value as GoalCardQuerySpec['sort']['field'],
+                  direction: event.target.value === 'name' ? 'asc' : 'desc',
+                },
+              })
+            }
+            style={{ ...compactButton(), background: COLORS.canvas }}
+          >
+            <option value="decision-priority">Decision priority</option>
+            <option value="updated">Recently updated</option>
+            <option value="importance">Importance</option>
+            <option value="trust-risk">Trust risk</option>
+            <option value="next-actor">Next actor</option>
+            <option value="lifecycle">Lifecycle</option>
+            <option value="name">Name</option>
+          </select>
+          <button
+            type="button"
+            title="Reverse sort direction"
+            aria-label={`Sort ${query.sort.direction === 'asc' ? 'ascending' : 'descending'}`}
+            onClick={() =>
+              update({
+                sort: {
+                  ...query.sort,
+                  direction: query.sort.direction === 'asc' ? 'desc' : 'asc',
+                },
+              })
+            }
+            style={compactButton()}
+          >
+            {query.sort.direction === 'asc' ? '↑' : '↓'}
+          </button>
+        </div>
+        <details>
+          <summary style={{ ...mono, color: COLORS.muted, cursor: 'pointer' }}>
+            Filters {activeFilterCount ? `· ${activeFilterCount} active` : ''}
+          </summary>
+          <div
+            style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}
+          >
+            {(
+              [
+                ['statuses', 'Status', optionValues.statuses],
+                ['actors', 'Actor', optionValues.actors],
+                ['tracks', 'Track', optionValues.tracks],
+                ['roles', 'Role', optionValues.roles],
+                ['importance', 'Importance', optionValues.importance],
+                ['stages', 'Stage', optionValues.stages],
+              ] as const
+            ).map(([field, label, values]) => (
+              <select
+                key={field}
+                aria-label={`Filter by ${label}`}
+                value={query[field][0] ?? ''}
+                onChange={(event) => single(field, event.target.value)}
+                style={{ ...compactButton(), background: COLORS.canvas }}
+              >
+                <option value="">All {label.toLocaleLowerCase()}</option>
+                {values.map((value) => (
+                  <option key={value} value={value}>
+                    {value}
+                  </option>
+                ))}
+              </select>
+            ))}
+            <select
+              aria-label="Filter by KFD-2 trust"
+              value={query.trust[0] ?? ''}
+              onChange={(event) =>
+                update({
+                  trust: event.target.value
+                    ? [event.target.value as VisualTrustState]
+                    : [],
+                })
+              }
+              style={{ ...compactButton(), background: COLORS.canvas }}
+            >
+              <option value="">All KFD-2</option>
+              {Object.keys(TRUST_COLORS).map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Filter by updated time"
+              value={query.updatedWithinDays ?? ''}
+              onChange={(event) =>
+                update({
+                  updatedWithinDays: event.target.value
+                    ? Number(event.target.value)
+                    : null,
+                })
+              }
+              style={{ ...compactButton(), background: COLORS.canvas }}
+            >
+              <option value="">Any update time</option>
+              <option value="1">Updated 24h</option>
+              <option value="7">Updated 7d</option>
+              <option value="14">Updated 14d</option>
+              <option value="30">Updated 30d</option>
+            </select>
+            <select
+              aria-label="Filter by child relationship"
+              value={query.hasChildren}
+              onChange={(event) =>
+                update({
+                  hasChildren: event.target
+                    .value as GoalCardQuerySpec['hasChildren'],
+                })
+              }
+              style={{ ...compactButton(), background: COLORS.canvas }}
+            >
+              <option value="all">Any hierarchy</option>
+              <option value="yes">Has children</option>
+              <option value="no">No children</option>
+            </select>
+            <select
+              aria-label="Filter closed Go cards"
+              value={query.closed}
+              onChange={(event) =>
+                update({
+                  closed: event.target.value as GoalCardQuerySpec['closed'],
+                })
+              }
+              style={{ ...compactButton(), background: COLORS.canvas }}
+            >
+              <option value="include">Include closed</option>
+              <option value="exclude">Exclude closed</option>
+              <option value="only">Closed only</option>
+            </select>
+            <label style={{ ...mono, color: COLORS.muted, padding: '5px 2px' }}>
+              <input
+                type="checkbox"
+                checked={query.hideClosedChildren}
+                onChange={(event) =>
+                  update({ hideClosedChildren: event.target.checked })
+                }
+              />{' '}
+              Hide closed children
+            </label>
+          </div>
+        </details>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 6,
+            alignItems: 'center',
+          }}
+        >
+          <span style={{ ...mono, color: COLORS.muted }}>
+            {clusters.length} cluster{clusters.length === 1 ? '' : 's'} ·{' '}
+            {savedViewId}
+          </span>
+          <button type="button" onClick={onSave} style={compactButton(true)}>
+            Save workspace view
+          </button>
+          <button type="button" onClick={reset} style={compactButton()}>
+            Reset
+          </button>
+          {saveState && (
+            <span style={{ ...mono, color: COLORS.green }}>{saveState}</span>
+          )}
+        </div>
+      </section>
       {(Object.keys(SECTION_META) as GoalSection[]).map((section) => {
         const rows = clusters.filter((cluster) => cluster.section === section);
         if (!rows.length) return null;

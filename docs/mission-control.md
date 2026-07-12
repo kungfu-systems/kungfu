@@ -206,6 +206,18 @@ agent can inspect, run, export, or fork them with `kungfu query saved ...` and
 the GUI can manage the same revisions. Rows, proof, and resume tokens remain
 rebuildable runtime state rather than portable authority.
 
+The visual Go-card field adds a versioned
+`kungfu.mission-control.goal-card-query/v1` presentation query to that same
+saved-view artifact. It can combine text, lifecycle, KFD-2 state, actor, track,
+role, importance, stage, update window, hierarchy, and closed-work filters, then
+sort parent-child clusters by decision priority, freshness, importance, trust
+risk, next actor, lifecycle, or name. A matching child retains its parent
+context, while child risk still promotes the cluster. The query changes which
+already-proved Go rows are shown; it does not change the QueryDefinition cut,
+KFD-2 result, or proof. GUI changes are saved in the selected workspace
+catalog, and agents use the existing `kungfu query saved import|update|export`
+surface to operate the same view without rebuilding Kungfu.
+
 Mission Home now resumes the fact-state changelog with stable logical fact
 keys and a system-time frontier. A correction to one source claim is therefore
 an upsert of that claim, not a retract plus an unrelated identity. The desktop

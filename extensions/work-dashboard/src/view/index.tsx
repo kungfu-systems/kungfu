@@ -11,6 +11,7 @@ import type {
   AtlasImportInfo,
   AtlasMission,
   AtlasMissionControlReport,
+  GoalCardQuerySpec,
   QueryChangelogState,
   QueryResumeToken,
   Storage,
@@ -25,9 +26,11 @@ import type {
   WorkspaceGuidanceIntent,
 } from '@kungfu-tech/api/capability';
 import {
+  DEFAULT_GOAL_CARD_QUERY,
   WORK_STATUS_NAMES,
   applyQueryChangelogPage,
   emptyQueryChangelogState,
+  parseGoalCardQuerySpec,
 } from '@kungfu-tech/api/capability';
 import type { KfxCapabilities, Shell } from '@kungfu-tech/kfx';
 import { headingStyle, mono, panelStyle } from '@kungfu-tech/kfx';
@@ -58,6 +61,15 @@ const STATUS_COLORS: Record<string, string> = {
   ready: '#9cdcfe',
   done: '#6a6a6a',
 };
+
+function goalCardSavedViewId(missionId: string): string {
+  let hash = 2166136261;
+  for (const character of missionId) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `mission-control.goal-cards.${(hash >>> 0).toString(16)}`;
+}
 
 function statusName(item: WorkItem): string {
   return item.status !== undefined ? WORK_STATUS_NAMES[item.status] : 'unknown';
@@ -360,6 +372,16 @@ function AtlasProjectionView({
   const [displayMode, setDisplayMode] = React.useState<'visual' | 'audit'>(
     'visual',
   );
+  const [goalCardQuery, setGoalCardQuery] = React.useState<GoalCardQuerySpec>(
+    () => ({
+      ...DEFAULT_GOAL_CARD_QUERY,
+      sort: { ...DEFAULT_GOAL_CARD_QUERY.sort },
+    }),
+  );
+  const [goalCardSaveState, setGoalCardSaveState] = React.useState('');
+  const [catalogRefreshGeneration, setCatalogRefreshGeneration] =
+    React.useState(0);
+  const goalCardSavedRevision = React.useRef({ id: '', revision: 0 });
   const [message, setMessage] = React.useState<string>('');
   const [trustReport, setTrustReport] =
     React.useState<AtlasMissionControlReport | null>(null);
@@ -515,9 +537,107 @@ function AtlasProjectionView({
     void refreshAssessment();
   }, [refreshAssessment]);
 
+  const goalCardViewId =
+    selectedMission === 'all'
+      ? 'mission-control.goal-cards'
+      : goalCardSavedViewId(selectedMission);
+
+  React.useEffect(() => {
+    void catalogRefreshGeneration;
+    if (selectedMission === 'all') return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      try {
+        const entry = storage
+          .savedQueries()
+          .entries.find((candidate) => candidate.query_id === goalCardViewId);
+        if (cancelled) return;
+        if (!entry) {
+          if (goalCardSavedRevision.current.id !== goalCardViewId) {
+            goalCardSavedRevision.current = { id: goalCardViewId, revision: 0 };
+            setGoalCardQuery({
+              ...DEFAULT_GOAL_CARD_QUERY,
+              sort: { ...DEFAULT_GOAL_CARD_QUERY.sort },
+            });
+            setGoalCardSaveState('not saved');
+          }
+          return;
+        }
+        if (
+          goalCardSavedRevision.current.id === goalCardViewId &&
+          goalCardSavedRevision.current.revision === entry.revision
+        ) {
+          return;
+        }
+        const view = entry.saved_view.view;
+        if (view.kind !== 'mission-control' || !view.goalCards) return;
+        setGoalCardQuery(parseGoalCardQuerySpec(view.goalCards));
+        goalCardSavedRevision.current = {
+          id: goalCardViewId,
+          revision: entry.revision,
+        };
+        setGoalCardSaveState(`revision ${entry.revision}`);
+      } catch (error) {
+        if (!cancelled)
+          setGoalCardSaveState(`degraded · ${(error as Error).message}`);
+      }
+    }, 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [storage, selectedMission, goalCardViewId, catalogRefreshGeneration]);
+
+  const saveGoalCardView = React.useCallback(() => {
+    const definition =
+      trustReport?.query_profile?.views[0]?.saved_view.definition;
+    if (!definition || selectedMission === 'all') {
+      setGoalCardSaveState('select an assessed Mission first');
+      return;
+    }
+    try {
+      const current = goalCardSavedRevision.current;
+      const missionTitle =
+        missions.find((mission) => mission.mission_id === selectedMission)
+          ?.title || selectedMission;
+      const entry = storage.putSavedQuery(
+        {
+          schema: 'kungfu.query.saved-view/v1',
+          name: `${missionTitle} · Go cards`,
+          definition,
+          view: {
+            kind: 'mission-control',
+            profileId: 'kungfu.mission-control',
+            profileVersion: '1',
+            questionId: 'observed-progress',
+            reducer: 'kungfu.mission-control.reducer/v1',
+            goalCards: goalCardQuery,
+          },
+        },
+        goalCardViewId,
+        current.id === goalCardViewId ? current.revision : 0,
+      );
+      goalCardSavedRevision.current = {
+        id: goalCardViewId,
+        revision: entry.revision,
+      };
+      setGoalCardSaveState(`saved revision ${entry.revision}`);
+    } catch (error) {
+      setGoalCardSaveState(`save failed · ${(error as Error).message}`);
+    }
+  }, [
+    storage,
+    trustReport,
+    selectedMission,
+    missions,
+    goalCardQuery,
+    goalCardViewId,
+  ]);
+
   const refreshAll = React.useCallback(() => {
     dashboardRefresh.request();
     void refreshAssessment();
+    setCatalogRefreshGeneration((current) => current + 1);
   }, [dashboardRefresh, refreshAssessment]);
 
   React.useEffect(() => shell.onRefresh(refreshAll), [shell, refreshAll]);
@@ -807,6 +927,15 @@ function AtlasProjectionView({
               goals={missionGoals}
               selectedGoalId={selectedGoal}
               trustByGoal={goalTrustById}
+              query={goalCardQuery}
+              asOfTime={dashboardCut}
+              savedViewId={goalCardViewId}
+              saveState={goalCardSaveState}
+              onQueryChange={(query) => {
+                setGoalCardQuery(query);
+                setGoalCardSaveState('unsaved');
+              }}
+              onSave={saveGoalCardView}
               onSelectGoal={setSelectedGoal}
             />
           </div>
