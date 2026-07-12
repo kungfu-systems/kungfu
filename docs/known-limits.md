@@ -75,6 +75,14 @@ compaction for that growing index are not yet qualified; this is deliberately
 kept behind the test-only boundary rather than weakened to last-request-only
 deduplication.
 
+A state-service-owned snapshot-through-T plus replay-after-T implementation now
+exists for checkpoint-covered KFDL records in tests. Its binary integrity,
+schema/cut checks, required/optional/none peer outcomes, deterministic rebuild,
+and projection-failure isolation are implementation evidence only. The actual
+production state schemas still use the coordinator-triggered compatibility
+restore; business joins/restore cutover and public projection capability remain
+pending.
+
 SQLite WAL, a mapped-region flush, or a resident process is not a substitute for
 that evidence. See [Strong durability and crash recovery](durability-and-crash-recovery.md)
 for the current status and [ADR-0068](../framework/core/docs/adr/ADR-0068-tiered-durability-and-crash-recovery.md)

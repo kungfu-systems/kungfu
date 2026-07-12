@@ -56,7 +56,7 @@ Non-goals for the first implementation:
 | frame integrity | CRC32C receipt metadata and container-epoch contracts exist | detects classes of corruption; does not create durability |
 | content objects | immutable store can request sync-on-publish | useful backend primitive, not a journal-wide guarantee |
 | projections | source, manifest, Episode, and state SQLite stores use WAL and are rebuildable; several use synchronous mode off | query accelerator, never durability authority |
-| live topology | coordinator owns `state_cache`, joins business streams, stores/restores state | compatibility implementation to be split |
+| live topology | coordinator calls an in-process state-service boundary that owns `state_cache`; coordinator still triggers compatibility restore and joins business streams | ownership split implemented; bootstrap/business-join cutover remains |
 | Episode | typed manifests, qualification/capability/repair slices and fault matrix exist | semantic recovery boundary is staged, not fully durability-qualified |
 
 The migration begins from this behavior. It does not relabel existing success as
@@ -352,6 +352,30 @@ Duplicate boundary delivery must be harmless and tested. Peers declare:
 - `required`: do not start active work without a qualified snapshot/cut;
 - `optional`: start with explicit degraded/lag status;
 - `none`: no state bootstrap.
+
+### Current shadow snapshot/replay substrate
+
+The first implementation is a state-service-owned, test-only binary projection
+snapshot. It is intentionally separate from SQLite and from the mmap hot path.
+The snapshot binds projection name/schema, source qualification profile, stream id, container epoch,
+`through_position T`, deterministically ordered key/value state, and a SHA-256
+over the complete encoded body. It is atomically replaced only after the new
+body is complete; a failed projector leaves the previous readable snapshot in
+place.
+
+Bootstrap validates the snapshot integrity, schema, stream epoch, and that `T`
+is present in the checkpoint-covered KFDL chain. It restores state through `T`
+and applies records strictly after `T`, rejecting any gap. Repeated bootstrap
+is idempotent. The resulting status reports the durable and projection
+watermarks, lag, rebuild state, and typed error. Deleting a projection makes a
+required peer refuse startup until the same durable chain deterministically
+rebuilds it; an optional peer reports degraded rather than silently starting
+with current-state claims.
+
+This slice proves the new boundary and its restart/failure semantics but does
+not yet replace the production coordinator-triggered compatibility restore.
+That switch remains gated on a typed projector for the actual state schemas,
+shadow equality, rollback evidence, and the later qualified durable profile.
 
 ## 8. Failure behavior
 

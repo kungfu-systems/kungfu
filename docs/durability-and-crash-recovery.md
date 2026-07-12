@@ -69,6 +69,16 @@ position, carrier, and payload after reopen.
 It accepts success receipts only under `test/*` qualification fixtures; this
 is implementation evidence, not a production durability claim.
 
+A test-only projection bootstrap substrate now consumes only those verified,
+checkpoint-covered KFDL records. It writes a versioned binary snapshot through
+logical position `T`, verifies its SHA-256 integrity and projection schema after
+restart, and replays strictly after `T`. Required peers fail closed when the
+snapshot/cut is absent or invalid; optional peers report degraded state; peers
+declaring no state dependency remain independent. Projection corruption or a
+failed rebuild does not advance its watermark and does not block durable ingest.
+This is shadow/cutover evidence: the production coordinator compatibility
+restore remains active and public durable profiles remain disabled.
+
 Do not interpret `MAP_SHARED`, `msync`, `FlushViewOfFile`, SQLite WAL, process
 residency, or a successful write call as a power-loss guarantee. A guarantee is
 made only by a named profile with retained qualification evidence.
@@ -150,9 +160,10 @@ one Episode must not silently invalidate unrelated Episodes.
 | C. Unified position, watermark, and receipt vocabulary | **implemented (contract-only)** | C++ owns stable stream positions, four typed watermarks, named profiles, receipts/errors, deduplication, and explicit unknown outcomes; Python/Node expose typed edge adapters, while current behavior remains `visible` only and rejects stronger profiles |
 | D. State-service separation and durable ingest | **partially implemented** | coordinator no longer owns the projection store directly; the in-process state-service boundary has independent lifecycle, shadow comparison, and single-host owner/writer fencing. Moving business-journal ingestion out of coordinator and persisting raw facts before projection remain pending |
 | E. Independent KFDL segment/checkpoint backend | **implemented (test-only shadow)** | append-only binary records, SHA-256 coverage, rollover, dual-slot atomic checkpoint, explicit data/checkpoint/directory barriers, persisted request deduplication, cooperative deadline/unknown handling, typed service-unavailable, fenced generations, fail-stop unknown append sessions, and retained tails; production profiles remain disabled |
-| F. Local strong-durability qualification | **not implemented** | qualify `durable_group` and `durable_sync` across macOS, Linux, and Windows with crash, torn-write, ENOSPC, ordering, recovery, and profile-registry evidence |
-| G. Single-host end-to-end performance release gate | **planned** | after correctness passes, qualify absolute latency, throughput, long-tail, resource, replay, recovery, and restore ceilings without weakening semantics |
-| H. Replication and HA | **future** | add a separate replicated watermark and policy only after local durability is trustworthy |
+| F. Snapshot-through-T projection bootstrap | **implemented (test-only shadow)** | versioned binary snapshot, integrity/schema/cut verification, strict replay-after-T, typed required/optional/none outcomes, deterministic rebuild, independent projection watermark, and state-service ownership; production bootstrap cutover remains pending |
+| G. Local strong-durability qualification | **not implemented** | qualify `durable_group` and `durable_sync` across macOS, Linux, and Windows with crash, torn-write, ENOSPC, ordering, recovery, and profile-registry evidence |
+| H. Single-host end-to-end performance release gate | **planned** | after correctness passes, qualify absolute latency, throughput, long-tail, resource, replay, recovery, and restore ceilings without weakening semantics |
+| I. Replication and HA | **future** | add a separate replicated watermark and policy only after local durability is trustworthy |
 
 Until Stage F passes for a named platform/filesystem/profile, public product
 language must continue to say that power-loss durability is not claimed.

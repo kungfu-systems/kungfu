@@ -9,6 +9,7 @@
 #include <kungfu/runtime/common.h>
 #include <kungfu/runtime/durable_ingest.h>
 #include <kungfu/runtime/io.h>
+#include <kungfu/runtime/projection_bootstrap.h>
 #include <kungfu/yijinjing/ownership.h>
 #include <kungfu/yijinjing/schema/core.h>
 
@@ -52,6 +53,16 @@ public:
                                                                   durability::durability_profile profile,
                                                                   durability::barrier_options options = {});
   [[nodiscard]] durability::ingest_status durable_shadow_status(uint64_t stream_id, uint64_t container_epoch) const;
+
+  void open_projection_shadow(projection_options options, durable_projector projector);
+  [[nodiscard]] projection_snapshot
+  rebuild_projection_shadow(uint64_t stream_id, uint64_t container_epoch, const std::string &projection_name,
+                            std::optional<durability::stream_position> through = std::nullopt);
+  [[nodiscard]] bootstrap_result bootstrap_projection_shadow(uint64_t stream_id, uint64_t container_epoch,
+                                                             const std::string &projection_name,
+                                                             peer_state_requirement requirement);
+  [[nodiscard]] projection_status projection_shadow_status(uint64_t stream_id, uint64_t container_epoch,
+                                                           const std::string &projection_name) const;
 
 private:
   struct impl;

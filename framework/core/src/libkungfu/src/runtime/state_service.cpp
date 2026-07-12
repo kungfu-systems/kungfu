@@ -6,6 +6,7 @@
 #include <map>
 #include <mutex>
 #include <stdexcept>
+#include <tuple>
 #include <utility>
 
 #include <kungfu/runtime/state_cache/manager.h>
@@ -29,6 +30,25 @@ durability::barrier_result unavailable_barrier(uint64_t request_id, durability::
   return result;
 }
 
+bootstrap_result unavailable_bootstrap(const std::string &message, peer_state_requirement requirement) {
+  bootstrap_result result;
+  if (requirement == peer_state_requirement::None) {
+    result.outcome = bootstrap_outcome::Ready;
+    result.message = "peer_declares_no_state_requirement";
+    result.status.available = true;
+    return result;
+  }
+  result.outcome =
+      requirement == peer_state_requirement::Required ? bootstrap_outcome::Refused : bootstrap_outcome::Degraded;
+  result.error = projection_error::ServiceUnavailable;
+  result.message = message;
+  result.status.available = false;
+  result.status.rebuild_state = "unavailable";
+  result.status.last_error = projection_error::ServiceUnavailable;
+  result.status.last_error_message = message;
+  return result;
+}
+
 } // namespace
 
 struct service::impl {
@@ -48,6 +68,7 @@ struct service::impl {
   yijinjing::ownership::lease ownership;
   state_cache::manager manager;
   std::map<std::pair<uint64_t, uint64_t>, std::unique_ptr<durability::durable_ingest_log>> durable_shadows;
+  std::map<std::tuple<uint64_t, uint64_t, std::string>, std::unique_ptr<projection_bootstrap_store>> projection_shadows;
   mutable std::mutex durable_shadows_mutex;
 };
 
@@ -147,6 +168,64 @@ durability::ingest_status service::durable_shadow_status(uint64_t stream_id, uin
   const auto found = impl_->durable_shadows.find({stream_id, container_epoch});
   if (found == impl_->durable_shadows.end()) {
     throw std::logic_error("durable shadow stream epoch is not open");
+  }
+  return found->second->status();
+}
+
+void service::open_projection_shadow(projection_options options, durable_projector projector) {
+  impl_->require_write_authority();
+  if (std::filesystem::absolute(options.data_root).lexically_normal() !=
+      std::filesystem::absolute(impl_->ownership.status().data_root).lexically_normal()) {
+    throw std::invalid_argument("projection shadow data root does not match state service ownership");
+  }
+  std::lock_guard lock(impl_->durable_shadows_mutex);
+  const auto durable = impl_->durable_shadows.find({options.stream_id, options.container_epoch});
+  if (durable == impl_->durable_shadows.end()) {
+    throw std::logic_error("projection shadow requires an open durable shadow");
+  }
+  options.source_qualification_profile = durable->second->status().qualification_profile;
+  const auto key = std::make_tuple(options.stream_id, options.container_epoch, options.projection_name);
+  if (impl_->projection_shadows.contains(key)) {
+    throw std::logic_error("projection shadow is already open");
+  }
+  impl_->projection_shadows.emplace(
+      key, std::make_unique<projection_bootstrap_store>(std::move(options), std::move(projector)));
+}
+
+projection_snapshot service::rebuild_projection_shadow(uint64_t stream_id, uint64_t container_epoch,
+                                                       const std::string &projection_name,
+                                                       std::optional<durability::stream_position> through) {
+  impl_->require_write_authority();
+  std::lock_guard lock(impl_->durable_shadows_mutex);
+  const auto durable = impl_->durable_shadows.find({stream_id, container_epoch});
+  const auto projection = impl_->projection_shadows.find({stream_id, container_epoch, projection_name});
+  if (durable == impl_->durable_shadows.end() || projection == impl_->projection_shadows.end()) {
+    throw std::logic_error("projection shadow or durable shadow is not open");
+  }
+  return projection->second->rebuild(durable->second->read_durable_records(), through);
+}
+
+bootstrap_result service::bootstrap_projection_shadow(uint64_t stream_id, uint64_t container_epoch,
+                                                      const std::string &projection_name,
+                                                      peer_state_requirement requirement) {
+  if (!impl_->ownership.owns() || !impl_->manager.running()) {
+    return unavailable_bootstrap("state_service_not_running_or_fenced", requirement);
+  }
+  std::lock_guard lock(impl_->durable_shadows_mutex);
+  const auto durable = impl_->durable_shadows.find({stream_id, container_epoch});
+  const auto projection = impl_->projection_shadows.find({stream_id, container_epoch, projection_name});
+  if (durable == impl_->durable_shadows.end() || projection == impl_->projection_shadows.end()) {
+    return unavailable_bootstrap("projection_shadow_or_durable_shadow_not_open", requirement);
+  }
+  return projection->second->bootstrap(durable->second->read_durable_records(), requirement);
+}
+
+projection_status service::projection_shadow_status(uint64_t stream_id, uint64_t container_epoch,
+                                                    const std::string &projection_name) const {
+  std::lock_guard lock(impl_->durable_shadows_mutex);
+  const auto found = impl_->projection_shadows.find({stream_id, container_epoch, projection_name});
+  if (found == impl_->projection_shadows.end()) {
+    throw std::logic_error("projection shadow is not open");
   }
   return found->second->status();
 }

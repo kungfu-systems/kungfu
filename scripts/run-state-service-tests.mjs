@@ -7,6 +7,29 @@ import path from 'node:path';
 import process from 'node:process';
 import { setTimeout as delay } from 'node:timers/promises';
 
+const buildDir = path.join(process.cwd(), 'framework', 'core', 'build');
+// shifu-entry-contract: build the exact native target instead of trusting a stale binary
+const build = spawnSync(
+  'cmake',
+  [
+    '--build',
+    buildDir,
+    '--config',
+    'Release',
+    '--target',
+    'kungfu_state_service_contract_tests',
+  ],
+  { cwd: process.cwd(), stdio: 'inherit' },
+);
+if (build.error || build.status !== 0) {
+  if (build.error)
+    console.error(`[state-service-test] build: ${build.error.message}`);
+  console.error(
+    '[state-service-test] target build failed; run ./shifu build:core to configure the core tree',
+  );
+  process.exit(build.status ?? 2);
+}
+
 const executable =
   process.platform === 'win32'
     ? 'kungfu_state_service_contract_tests.exe'
@@ -19,6 +42,22 @@ const testBinary = candidates.find((candidate) => fs.existsSync(candidate));
 if (!testBinary) {
   console.error(
     '[state-service-test] binary not found; run ./shifu build:core first',
+  );
+  process.exit(2);
+}
+
+const nativeSources = [
+  'framework/core/src/libkungfu/include/kungfu/runtime/state_service.h',
+  'framework/core/src/libkungfu/src/runtime/state_service.cpp',
+  'framework/core/src/libkungfu/tests/state_service_contract_tests.cpp',
+].map((source) => path.join(process.cwd(), source));
+const binaryMtime = fs.statSync(testBinary).mtimeMs;
+const newerSource = nativeSources.find(
+  (source) => fs.statSync(source).mtimeMs > binaryMtime,
+);
+if (newerSource) {
+  console.error(
+    `[state-service-test] refusing stale binary; newer source: ${path.relative(process.cwd(), newerSource)}`,
   );
   process.exit(2);
 }
