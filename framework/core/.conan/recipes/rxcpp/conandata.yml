@@ -7,3 +7,6 @@ patches:
     - patch_file: "patches/0001-fix-notification-assignment.patch"
       patch_description: "make notification values assignable under GCC 14"
       patch_type: "portability"
+    - patch_file: "patches/0002-replace-deprecated-aligned-storage.patch"
+      patch_description: "replace std::aligned_storage (deprecated in C++23) with an alignas byte buffer in maybe<T>"
+      patch_type: "portability"
