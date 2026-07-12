@@ -110,7 +110,7 @@ private:
 
   static constexpr auto is_static_data = []() {
     return rx::filter([&](const event_ptr &event) {
-      return yijinjing::StaticDataTags.find(event->carrier_type()) != yijinjing::StaticDataTags.end();
+      return yijinjing::contains_tag(yijinjing::StaticDataTags, event->carrier_type());
     });
   };
 
@@ -145,7 +145,7 @@ private:
   template <typename DataType> void UpdateLedger(const boost::hana::basic_type<DataType> &type) {
     using DataTypeMap = std::unordered_map<uint64_t, state<DataType>>;
     auto &target_map = const_cast<DataTypeMap &>(data_bank_[type]);
-    auto is_static_data_type = yijinjing::StaticDataTags.find(DataType::tag) != yijinjing::StaticDataTags.end();
+    auto is_static_data_type = yijinjing::contains_tag(yijinjing::StaticDataTags, DataType::tag);
     auto count = 0;
     auto iter = target_map.begin();
     while (iter != target_map.end()) {

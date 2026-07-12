@@ -7,9 +7,10 @@
 #ifndef KUNGFU_YIJINJING_SCHEMA_REGISTRY_H
 #define KUNGFU_YIJINJING_SCHEMA_REGISTRY_H
 
+#include <algorithm>
+#include <array>
 #include <deque>
 #include <kungfu/yijinjing/schema/types.h>
-#include <set>
 
 #define TYPE_PAIR(DataType) boost::hana::make_pair(HANA_STR(#DataType), boost::hana::type_c<types::DataType>)
 
@@ -210,6 +211,9 @@ static_assert(decltype(boost::hana::length(SourceRegistryDataTypes))::value == 3
 static_assert(decltype(boost::hana::length(ManifestCatalogDataTypes))::value == 4);
 static_assert(decltype(boost::hana::length(EpisodeManifestDataTypes))::value == 6);
 
+// ADR-0065: intentionally empty placeholders. No static/statistic data types are
+// registered yet, but the state-cache restore paths (manager.cpp) consume these
+// sets, so they must stay defined rather than be removed.
 constexpr auto StaticDataTypes = boost::hana::make_map();
 constexpr auto StatisticDataTypes = boost::hana::make_map();
 
@@ -217,18 +221,26 @@ template <typename T> constexpr bool is_in_types(auto types) { return boost::han
 
 template <typename DataType> constexpr bool is_profile_data() { return is_in_types<DataType>(ProfileDataTypes); };
 
-const auto build_data_set = [](auto types) {
-  std::set<int32_t> s;
+// ADR-0065: the tag sets are compile-time sorted arrays, not runtime std::set
+// globals -- no static-init cost, and membership is a constexpr binary search.
+template <typename Types> constexpr auto build_tag_set(Types types) {
+  constexpr std::size_t n = decltype(boost::hana::length(types))::value;
+  std::array<int32_t, n> tags{};
+  std::size_t i = 0;
   boost::hana::for_each(types, [&](auto it) {
     using DataType = typename decltype(+boost::hana::second(it))::type;
-    s.emplace(DataType::tag);
+    tags[i++] = DataType::tag;
   });
-  return s;
-};
+  std::sort(tags.begin(), tags.end());
+  return tags;
+}
 
-const auto AllTypesTags = build_data_set(AllTypes);
-const auto ProfileDataTags = build_data_set(ProfileDataTypes);
-const auto StaticDataTags = build_data_set(StaticDataTypes);
+template <std::size_t N> constexpr bool contains_tag(const std::array<int32_t, N> &tags, int32_t tag) {
+  return std::binary_search(tags.begin(), tags.end(), tag);
+}
+
+inline constexpr auto AllTypesTags = build_tag_set(AllTypes);
+inline constexpr auto StaticDataTags = build_tag_set(StaticDataTypes);
 
 constexpr auto build_data_map = [](auto types) {
   auto maps = boost::hana::transform(boost::hana::values(types), [](auto value) {

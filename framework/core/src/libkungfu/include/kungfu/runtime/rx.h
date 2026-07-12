@@ -40,8 +40,7 @@ static constexpr auto instanceof =
     []() { return filter([](const event_ptr &event) { return dynamic_cast<EventType *>(event.get()) != nullptr; }); };
 
 static constexpr auto is_custom_event = [](const event_ptr &event) -> bool {
-  return event->carrier_type() > 0 and
-         yijinjing::AllTypesTags.find(event->carrier_type()) == yijinjing::AllTypesTags.end();
+  return event->carrier_type() > 0 and not yijinjing::contains_tag(yijinjing::AllTypesTags, event->carrier_type());
 };
 
 static constexpr auto is_custom = []() {
