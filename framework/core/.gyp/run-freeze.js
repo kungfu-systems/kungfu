@@ -252,8 +252,19 @@ function copyPyBindingWin(bt) {
   const dll = fs.existsSync(btDll)
     ? btDll
     : findFileShallow(buildDir, /^libnode\.dll$/i);
+  // Python-free node launcher (ADR-0046 stage 3, Phase B): a plain SHARED lib
+  // (no `.node` suffix). MSVC/cmake-js emits kungfu_node_host.dll at the build
+  // root next to the .node addons and pykungfu.pyd; check the multi-config
+  // build/<bt> subdir first (where libnode.dll lands) for resilience, then the
+  // root. The trunk LoadLibraryW's it next to the exe for KUNGFU_AS_VARIANT=node
+  // (variant.rs); absent → the Python variant path still runs node, so staging is
+  // a fast-path, not a requirement.
+  const btHost = path.join(buildDir, bt, 'kungfu_node_host.dll');
+  const host = fs.existsSync(btHost)
+    ? btHost
+    : findFileShallow(buildDir, /^kungfu_node_host\.dll$/i);
   let n = 0;
-  for (const src of [pyd, dll]) {
+  for (const src of [pyd, dll, host]) {
     if (!src) continue;
     fs.copyFileSync(src, path.join(distKfc, path.basename(src)));
     n++;
@@ -261,8 +272,13 @@ function copyPyBindingWin(bt) {
   // pykungfu.pdb ships the symbols for the python binding + statically-linked
   // core; libnode.dll is third-party and carries no PDB of ours.
   if (pyd) copyPdbSibling(pyd, distKfc);
+  if (host) copyPdbSibling(host, distKfc);
   if (!pyd) console.error('[freeze] Win 警告：build 树未找到 pykungfu*.pyd');
   if (!dll) console.error('[freeze] Win 警告：build 树未找到 libnode.dll');
+  if (!host)
+    console.error(
+      '[freeze] Win 提示：build 树未找到 kungfu_node_host.dll（node 变体将回退 Python 路径）',
+    );
   console.log(`[freeze] Win：补拷 python binding → dist/kungfu：${n} 项`);
 }
 

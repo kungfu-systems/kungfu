@@ -42,9 +42,16 @@ endif ()
 # run the KUNGFU_AS_VARIANT=node variant without booting CPython. Built once, for
 # the node runtime; it links libnode directly and inherits the core's global
 # @loader_path/$ORIGIN rpath (compiler.cmake) to resolve the sibling libnode.
-# Windows loading is a trunk-side follow-up (the trunk only dlopens it on unix
-# today), so the launcher itself is unix-only until then.
-if ("${NODE_RUNTIME}" STREQUAL "node" AND UNIX)
+#
+# Built on unix (.dylib/.so) and Windows (kungfu_node_host.dll — MSVC gives a
+# SHARED lib no `lib` prefix). The host is an embedder, so on Windows it links the
+# real libnode import lib (${LIBNODE}=libnode -> libnode.lib in LIBNODE_LIB_DIR),
+# not a delay-loaded node.exe like the napi addons — no delayimp needed. The C
+# entry is __declspec(dllexport)-ready (host/kungfu_node_host.cpp), the strip is
+# unix-guarded, and CXX_VISIBILITY_PRESET is a no-op under MSVC, so the body is
+# portable as-is. The trunk loads it via LoadLibraryW on Windows (variant.rs); at
+# load time Windows resolves the sibling libnode.dll from the exe directory.
+if ("${NODE_RUNTIME}" STREQUAL "node" AND (UNIX OR WIN32))
   message(STATUS "Configuring for node launcher kungfu_node_host")
   add_library(kungfu_node_host SHARED host/kungfu_node_host.cpp)
   set_target_properties(kungfu_node_host PROPERTIES CXX_VISIBILITY_PRESET hidden)
