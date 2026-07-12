@@ -44,20 +44,21 @@ int64_t time::now_in_nano() {
 }
 
 uint32_t time::nano_hashed(int64_t nano_time) {
-  return kungfu::hash_32((const unsigned char *)&nano_time, sizeof(nano_time));
+  return kungfu::fast_hash_32((const unsigned char *)&nano_time, sizeof(nano_time));
 }
 
 int64_t time::next_minute(int64_t nanotime) {
   return nanotime - nanotime % time_unit::NANOSECONDS_PER_MINUTE + time_unit::NANOSECONDS_PER_MINUTE;
 }
 
-int64_t time::next_trading_day_end(int64_t nanotime) {
+int64_t time::next_session_boundary(int64_t nanotime) {
   int64_t end_offset = 16 * time_unit::NANOSECONDS_PER_HOUR;
-  int64_t trading_day = nanotime - ((nanotime + time_unit::UTC_OFFSET) % time_unit::NANOSECONDS_PER_DAY) + end_offset;
-  if (trading_day < now_in_nano()) {
-    trading_day += time_unit::NANOSECONDS_PER_DAY;
+  int64_t session_boundary =
+      nanotime - ((nanotime + time_unit::UTC_OFFSET) % time_unit::NANOSECONDS_PER_DAY) + end_offset;
+  if (session_boundary < now_in_nano()) {
+    session_boundary += time_unit::NANOSECONDS_PER_DAY;
   }
-  return trading_day;
+  return session_boundary;
 }
 
 int64_t time::calendar_day_start(int64_t nanotime) {
@@ -66,10 +67,12 @@ int64_t time::calendar_day_start(int64_t nanotime) {
 
 int64_t time::today_start() { return calendar_day_start(time::now_in_nano()); }
 
-int64_t time::trading_day_start() { return next_trading_day_end(time::now_in_nano()) - time_unit::NANOSECONDS_PER_DAY; }
+int64_t time::session_window_start() {
+  return next_session_boundary(time::now_in_nano()) - time_unit::NANOSECONDS_PER_DAY;
+}
 
-int64_t time::restore_start() {
-  int64_t start = trading_day_start();
+int64_t time::history_window_start() {
+  int64_t start = session_window_start();
   if (start > today_start()) {
     start -= time_unit::NANOSECONDS_PER_DAY;
   }

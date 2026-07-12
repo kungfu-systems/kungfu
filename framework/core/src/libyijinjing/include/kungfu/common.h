@@ -23,7 +23,7 @@
 
 //------------------------------------------------------------------------
 // workaround for using c++20 with hana-1.7.0@conan-center
-#if defined(_WINDOWS) && (_MSVC_LANG > 201704L)
+#if defined(_WIN32) && (_MSVC_LANG > 201704L)
 namespace std {
 template <typename T> struct is_literal_type {};
 } // namespace std
@@ -45,19 +45,23 @@ using namespace boost::hana::literals;
 
 //------------------------------------------------------------------------
 // pack struct for fixing data length in journal
-#ifdef _WINDOWS
+#ifdef _WIN32
+#define KF_EMPTY_BASES __declspec(empty_bases)
+#define KF_ALIGN_8 __declspec(align(8))
 #define KF_PACK_TYPE_BEGIN __pragma(pack(push, 8))
 #define KF_PACK_TYPE_END                                                                                               \
   ;                                                                                                                    \
   __pragma(pack(pop))
 #else
+#define KF_EMPTY_BASES
+#define KF_ALIGN_8
 #define KF_PACK_TYPE_BEGIN
 #define KF_PACK_TYPE_END __attribute__((aligned(8)));
 #endif
 //------------------------------------------------------------------------
 
 #define KF_DEFINE_DATA_TYPE(NAME, TAG, PRIMARY_KEYS, TIMESTAMP_KEY, ...)                                               \
-  struct NAME : public kungfu::data<NAME> {                                                                            \
+  struct KF_EMPTY_BASES KF_ALIGN_8 NAME : public kungfu::data<NAME> {                                                  \
     static constexpr int32_t tag = TAG;                                                                                \
     static constexpr auto type_name = HANA_STR(#NAME);                                                                 \
     static constexpr auto primary_keys = PRIMARY_KEYS;                                                                 \
@@ -111,7 +115,13 @@ using namespace boost::hana::literals;
   DECLARE_PTR(X) /** forward defile smart ptr */
 
 namespace kungfu {
-uint32_t hash_32(const unsigned char *key, int32_t length);
+uint32_t fast_hash_32(const unsigned char *key, int32_t length);
+
+inline std::string public_field_name(const char *name) {
+  return std::string(name) == "namespace_" ? "namespace" : name;
+}
+
+inline std::string legacy_field_name(const char *name) { return std::string(name) == "namespace_" ? "group" : name; }
 
 template <typename V, size_t N, typename = void> struct array_to_string;
 
@@ -131,7 +141,7 @@ template <typename V, size_t N> struct array_to_string<V, N, std::enable_if_t<no
   };
 };
 
-// 安全定长字符串拷贝（跨平台）。替代此前 _WINDOWS 下全局 `#define strcpy/strncpy → _s 安全版`：
+// 安全定长字符串拷贝（跨平台）。替代此前 Windows 下全局 `#define strcpy/strncpy → _s 安全版`：
 // 旧宏会污染随后 include 的系统/三方头里的 strcpy/strncpy（如 <tchar.h> 内联 _strncpy_l），
 // 且对裸指针目标用 sizeof(指针) 取容量会误判。此函数显式传 size，限定在 dest[0,size) 内：
 // 从 src 复制至多 min(count,size) 个非 NUL 字节，余下补 '\0'（与定长字段语义一致，不依赖 NUL 结尾）。
@@ -152,7 +162,7 @@ inline void copy_string(char *dest, size_t size, const char *src, size_t count) 
 }
 
 KF_PACK_TYPE_BEGIN
-template <typename T, size_t N> struct array {
+template <typename T, size_t N> struct KF_ALIGN_8 array {
   static constexpr size_t length = N;
   using element_type = T;
   using type = T[N];
@@ -297,7 +307,9 @@ template <typename T> struct hash<T, std::enable_if_t<std::is_integral_v<T> and 
 };
 
 template <typename T> struct hash<T, std::enable_if_t<std::is_pointer_v<T>>> {
-  uint64_t operator()(const T &value) { return hash_32(reinterpret_cast<const unsigned char *>(value), sizeof(value)); }
+  uint64_t operator()(const T &value) {
+    return fast_hash_32(reinterpret_cast<const unsigned char *>(value), sizeof(value));
+  }
 };
 
 template <typename T> struct hash<T, std::enable_if_t<is_enum_class_v<T>>> {
@@ -306,19 +318,19 @@ template <typename T> struct hash<T, std::enable_if_t<is_enum_class_v<T>>> {
 
 template <> struct hash<std::string> {
   uint64_t operator()(const std::string &value) {
-    return hash_32(reinterpret_cast<const unsigned char *>(value.c_str()), value.length());
+    return fast_hash_32(reinterpret_cast<const unsigned char *>(value.c_str()), value.length());
   }
 };
 
 template <size_t N> struct hash<array<char, N>> {
   uint64_t operator()(const array<char, N> &value) {
-    return hash_32(reinterpret_cast<const unsigned char *>(value.value), strlen(value));
+    return fast_hash_32(reinterpret_cast<const unsigned char *>(value.value), strlen(value));
   }
 };
 
 template <typename T, size_t N> struct hash<array<T, N>> {
   uint64_t operator()(const array<T, N> &value) {
-    return hash_32(reinterpret_cast<const unsigned char *>(value.value), sizeof(value));
+    return fast_hash_32(reinterpret_cast<const unsigned char *>(value.value), sizeof(value));
   }
 };
 
@@ -360,9 +372,12 @@ template <typename DataType> struct data {
     boost::hana::for_each(boost::hana::accessors<DataType>(), [&, this](auto it) {
       auto name = boost::hana::first(it);
       auto accessor = boost::hana::second(it);
-      if (not jobj.contains(name.c_str()))
+      auto public_name = public_field_name(name.c_str());
+      auto legacy_name = legacy_field_name(name.c_str());
+      const auto *field_name = jobj.contains(public_name) ? &public_name : &legacy_name;
+      if (not jobj.contains(*field_name))
         return;
-      auto &j = jobj[name.c_str()];
+      auto &j = jobj[*field_name];
       auto &v = accessor(*const_cast<DataType *>(reinterpret_cast<const DataType *>(this)));
       restore_from_json(j, v);
     });
@@ -373,7 +388,8 @@ template <typename DataType> struct data {
     boost::hana::for_each(boost::hana::accessors<DataType>(), [&, this](auto it) {
       auto name = boost::hana::first(it);
       auto accessor = boost::hana::second(it);
-      j[name.c_str()] = accessor(*reinterpret_cast<const DataType *>(this));
+      auto public_name = public_field_name(name.c_str());
+      j[public_name] = accessor(*reinterpret_cast<const DataType *>(this));
     });
     return j;
   }
@@ -430,7 +446,7 @@ struct event {
 
   [[nodiscard]] virtual int64_t trigger_time() const = 0;
 
-  [[nodiscard]] virtual int32_t msg_type() const = 0;
+  [[nodiscard]] virtual int32_t carrier_type() const = 0;
 
   [[nodiscard]] virtual uint32_t source() const = 0;
 

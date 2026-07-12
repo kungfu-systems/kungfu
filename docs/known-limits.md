@@ -7,30 +7,32 @@ guaranteed, its current status, and where it is tracked.
 
 This document is curated from the project's own decision records and is kept
 current; if a limit here is resolved, the entry moves to a guarantee elsewhere
-(and links back). See the [documentation map](MAP.md) for how this fits the rest
-of the docs.
+(and links back). Use the [documentation guide](README.md) for the curated
+reader path and the [documentation map](MAP.md) for exhaustive lookup.
 
-## Compatibility governance is designed, not yet enforced
+## v4 schema compatibility enforcement is designed, not yet complete
 
-The longfist binary layout is the real compatibility contract, and the policy for
-how it may evolve is decided
-([ADR-0008](../framework/core/docs/adr/ADR-0008-longfist-schema-evolution-and-minor-maintenance.md)).
+The yijinjing schema layout is the v4 compatibility root. Kungfu does not promise
+compatibility with v1/v2/v3 layouts, old trading-era APIs, or removed package
+names. From the first stable v4 baseline onward, released v4+ data must not be
+silently stranded by schema changes; [ADR-0008](../framework/core/docs/adr/ADR-0008-yijinjing-schema-layout-baseline.md)
+defines that boundary.
 What is **not yet built**:
 
 - a CI check that blocks breaking schema changes (modifying an existing field,
-  renumbering);
-- a "load only if runtime ≥ schema" gate;
-- per-minor compatibility-window declarations;
-- a cold-path replay cross-version decode test baseline.
+  renumbering) after the stable v4 baseline;
+- a runtime/schema load gate for released v4+ schema epochs;
+- v4+ compatibility-window declarations;
+- a cold-path replay/import/export cross-version test baseline for v4+ data.
 
 So today the invariant exists physically (zero-copy layout), but the *enforcement*
-that would let an external consumer rely on a stated compatibility window is
-pending. Treat compatibility promises as per-minor and verify against the layout,
-not against a version number alone.
+that will make the post-stable v4 compatibility promise mechanically checkable
+is pending. Before v4 stable, verify against the current layout; after v4 stable,
+schema changes need an explicit compatibility or migration path.
 
 ## The control / event axis is unmodernized, with open questions
 
-v4 de-risked the data axis (longfist → FlatBuffers, transport modernization). The
+v4 de-risked the data axis (declared schema layout, transport modernization). The
 control and event axes carry recorded, **unscheduled** design questions:
 
 - the Python coroutine integration couples to private `asyncio` internals and is
@@ -46,6 +48,65 @@ control and event axes carry recorded, **unscheduled** design questions:
 These are identified and tracked, not silently shipped. They do not affect the
 data-plane correctness covered by
 [ADR-0001](../framework/core/docs/adr/ADR-0001-yijinjing-publish-barrier.md).
+
+## End-to-end power-loss durability is designed, not yet qualified
+
+Kungfu currently qualifies release/acquire publication and cross-process
+visibility for the mmap journal. It does **not** yet guarantee that every frame
+reported as written will survive sudden power loss. The current production mmap
+policy rejects unqualified `asynchronous` and `durable` modes rather than
+silently treating OS writeback as a durability contract.
+
+The KFDL append/checkpoint backend is implemented only as a test-qualified
+shadow component. What is **not yet built or qualified for production**:
+
+- activation of KFDL ingestion as a dedicated service independent of
+  coordinator and projection lifecycle;
+- stable durable/projection watermarks and producer-visible durability receipts;
+- `durable_group` and `durable_sync` end-to-end profiles;
+- deterministic recovery of an acknowledged frontier across journal, Episode,
+  payload, and checkpoint boundaries;
+- retained power-loss, torn-write, ENOSPC, ordering, and repeated-recovery
+  evidence for macOS, Linux, and Windows.
+
+The shadow checkpoint currently carries the complete successful request-id
+index for its stream epoch so restart deduplication is exact. Retention and
+compaction for that growing index are not yet qualified; this is deliberately
+kept behind the test-only boundary rather than weakened to last-request-only
+deduplication.
+
+A state-service-owned snapshot-through-T plus replay-after-T implementation now
+exists for checkpoint-covered KFDL records in tests. Its binary integrity,
+schema/cut checks, required/optional/none peer outcomes, deterministic rebuild,
+and projection-failure isolation are implementation evidence only. The actual
+production state schemas still use the coordinator-triggered compatibility
+restore; business joins/restore cutover and public projection capability remain
+pending.
+
+SQLite WAL, a mapped-region flush, or a resident process is not a substitute for
+that evidence. See [Strong durability and crash recovery](durability-and-crash-recovery.md)
+for the current status and [ADR-0068](../framework/core/docs/adr/ADR-0068-tiered-durability-and-crash-recovery.md)
+for the staged architecture.
+
+Institutions considering Kungfu as a local system of record should use the
+[Single-host institutional trust profile](single-host-institutional-trust.md)
+as the adoption checklist. Until the named durability profile and exact
+platform/filesystem/device envelope have retained passing evidence, the
+institutional status remains evaluation or controlled shadow operation.
+
+## The single-host end-to-end performance release gate is not yet qualified
+
+The existing mmap qualification measures component behavior and prevents
+speculative policy tuning. It does not establish a product-level latency,
+throughput, resource, replay, recovery, or restore SLO for the complete
+single-host institutional profile.
+
+The [Single-host end-to-end performance qualification](single-host-performance-qualification.md)
+now defines that post-correctness release gate. Its versioned absolute
+thresholds, harness, sustained-load tier, retained reports, and product
+capability integration remain to be implemented. Aeron IPC and Aeron Archive
+may be used as declared reference comparators, but Kungfu currently makes no
+`Aeron-class`, equivalence, compatibility, or superiority claim.
 
 ## The GitHub build-and-release path is still being brought up
 
@@ -74,6 +135,52 @@ What is **not yet guaranteed**:
   provider CLI details, or development worktree paths.
 
 Treat these as usable pre-release slices, not a finished shell promise.
+
+## Ecosystem SDK qualification is source-complete on one platform, not released
+
+Python `kungfu-storage`, Node `@kungfu-tech/storage`, and the Rust
+`kungfu-sdk` crate are thin adapters over the same versioned libkungfu storage
+contract. Their shared clean-environment fixture has exact-artifact Darwin ARM64
+evidence for Episode lifecycle, head/historical query, fsck, and export without
+sibling SDKs or the GUI.
+
+What is **not yet guaranteed**:
+
+- publication of those package names to PyPI, npm, or crates.io;
+- equivalent exact-artifact reports for Linux x64 and Windows x64;
+- a cross-platform peak-resident-memory measurement in the one-shot SDK gate;
+- a stable compatibility promise before the v4 release channel promotes them.
+
+The artifact matrix therefore keeps all three ecosystem SDK rows `staged` even
+when a source-built qualification report passes on a named platform.
+
+## Runtime storage service is designed, not complete
+
+Kungfu has the grounded pieces for a local runtime fact ledger: append-only
+journals, frame provenance, location/channel runtime identity, portable export
+direction, schema registry direction, SQLite projections, and a first
+Atlas-scoped payload import/fsck/export/verify loop. The unified storage service
+described in [`runtime-storage-service.md`](runtime-storage-service.md) is still
+staged.
+
+What is **not yet guaranteed**:
+
+- large payload bodies are not yet uniformly stored behind hash-addressed
+  references across every runtime scope;
+- generic `kungfu source sync` across machines by range/Episode/hash inventory;
+- complete `storage fsck` coverage for all journal, payload, manifest, schema,
+  projection, and remote cursor classes;
+- range/Episode/hash import-export is not yet the remote sync substrate;
+- destructive-safe `gc` / `compact` with archive and rollback reporting;
+- repair of arbitrary journal corruption;
+- an authority migration path where an imported source becomes the single source
+  of truth.
+
+Treat current Storage/Episode query, export, fsck, repair, GC-plan, compaction-
+plan, Atlas storage, and source import/export slices as proof surfaces for the
+storage contract, not as a completed distributed storage protocol. Legacy
+loose-file journal archive/clean commands are retired; this release deliberately
+has no destructive retention command.
 
 ## KFX runtime confinement is staged
 

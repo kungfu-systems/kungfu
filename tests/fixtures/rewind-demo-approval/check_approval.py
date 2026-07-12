@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 #
-# Assertions for the approval bridge (msg_type 30009). Proves that a human
+# Assertions for the approval bridge. Proves that a human
 # control decision on a managed run becomes a journal fact AND yields the right
 # process control action, without a real terminal or the native journal writer.
 #
@@ -12,13 +12,14 @@
 #   3. response strings are caller-overridable (providers differ);
 #   4. the pinned rewind_events.bfbs carries the ApprovalDecision shape, so the
 #      fact decodes from a bundle by reflection alone;
-#   5. the msg_type is registered and SCHEMA_VERSION bumped.
+#   5. the action_type is registered and SCHEMA_VERSION bumped.
 #
 # Needs flatbuffers (run under `uv run --frozen python`), not pykungfu: it stubs
 # only the top-level kungfu package, like the cost-wire fixture.
 #
 # Usage: check_approval.py <fixture-dir>
 
+import hashlib
 import os
 import sys
 import types
@@ -31,17 +32,30 @@ core_src = os.path.abspath(
 )
 sys.path.insert(0, core_src)
 
+
+def _stub_sha256_value(payload, algorithm="sha256"):
+    # bundle.emit hashes the schema blob through kungfu.content_hash, which
+    # dispatches to the native binding. This fixture runs without pykungfu,
+    # so the stub answers only the sha256 default the binding would compute.
+    if algorithm != "sha256":
+        raise ValueError(f"stub binding only hashes sha256, got {algorithm}")
+    return hashlib.sha256(bytes(payload)).hexdigest()
+
+
 if "kungfu" not in sys.modules:
     _m = types.ModuleType("kungfu")
     _m.__path__ = [os.path.join(core_src, "kungfu")]
     _m.schema_data_path = lambda module_file, name: os.path.join(
         os.path.dirname(module_file), name
     )
+    _m.__binding__ = types.SimpleNamespace(
+        runtime=types.SimpleNamespace(compute_content_hash_value=_stub_sha256_value)
+    )
     sys.modules["kungfu"] = _m
 
 from kungfu.rewind import (  # noqa: E402
-    MSG_APPROVAL_DECISION,
-    MSG_TYPE_NAMES,
+    ACTION_APPROVAL_DECISION,
+    ACTION_TYPE_NAMES,
     SCHEMA_VERSION,
     approvals,
     bundle,
@@ -61,28 +75,23 @@ def check(name, ok, detail=""):
 def sink():
     events = []
 
-    def emit(msg_type, data):
-        events.append((msg_type, bytes(data)))
+    def emit(action_type, data):
+        events.append((action_type, bytes(data)))
 
     return emit, events
 
 
 def only(events):
     assert len(events) == 1, f"expected 1 event, got {len(events)}"
-    msg_type, payload = events[0]
-    assert msg_type == MSG_APPROVAL_DECISION
+    action_type, payload = events[0]
+    assert action_type == ACTION_APPROVAL_DECISION
     return FbApproval.GetRootAs(payload, 0)
 
 
 # --- registration and version -----------------------------------------------
 check(
-    "MSG_APPROVAL_DECISION is 30009",
-    MSG_APPROVAL_DECISION == 30009,
-    str(MSG_APPROVAL_DECISION),
-)
-check(
-    "30009 registered as ApprovalDecision",
-    MSG_TYPE_NAMES.get(MSG_APPROVAL_DECISION) == "ApprovalDecision",
+    "rewind.approval.decision registered as ApprovalDecision",
+    ACTION_TYPE_NAMES.get(ACTION_APPROVAL_DECISION) == "ApprovalDecision",
 )
 check("SCHEMA_VERSION bumped to 3", SCHEMA_VERSION == 3, str(SCHEMA_VERSION))
 
@@ -180,7 +189,7 @@ if obj is not None:
     ):
         check(f"bfbs ApprovalDecision.{required}", required in field_names)
 
-# --- bundle binds 30009 at version 3 ----------------------------------------
+# --- bundle binds rewind.approval.decision at version 3 ---------------------
 import json  # noqa: E402
 import tempfile  # noqa: E402
 
@@ -190,17 +199,17 @@ manifest_path = bundle.emit(
     "/fake/journal/root",
     {
         "mode": "LIVE",
-        "category": "SYSTEM",
-        "group": "rewind",
+        "role": "SYSTEM",
+        "namespace": "rewind",
         "name": "run-1",
         "dest": 0,
     },
 )
 with open(manifest_path) as f:
     manifest = json.load(f)
-binding = manifest.get("schema_bindings", {}).get(str(MSG_APPROVAL_DECISION), {})
+binding = manifest.get("schema_bindings", {}).get(ACTION_APPROVAL_DECISION, {})
 check(
-    "manifest binds 30009 -> ApprovalDecision",
+    "manifest binds rewind.approval.decision -> ApprovalDecision",
     binding.get("name") == "ApprovalDecision",
 )
 check("manifest binding schema_version 3", binding.get("schema_version") == 3)

@@ -1,0 +1,228 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Embedding membrane spikes
+
+on:
+  pull_request:
+    branches:
+      - dev/v*/v*
+    paths:
+      - "framework/core/src/libkungfu/include/kungfu/embedding.h"
+      - "framework/core/src/libkungfu/include/kungfu/embedding.hpp"
+      - "framework/core/src/libkungfu/include/kungfu/native_storage.h"
+      - "framework/core/src/libkungfu/src/runtime/embedding.cpp"
+      - "framework/core/src/libkungfu/src/runtime/native_storage.cpp"
+      - "framework/core/slices/shared-embedding-membrane/**"
+      - "framework/core/slices/native-storage-closure/**"
+      - "framework/core/slices/libwasm-shared-membrane/**"
+      - "framework/core/slices/CMakeLists.txt"
+      - "crates/libwasm-spike/**"
+      - "crates/libwasm/**"
+      - "framework/core/src/libwasm/**"
+      - "framework/core/.gyp/run-freeze.js"
+      - "framework/core/conanfile.py"
+      - "framework/kfx/kungfu-kfx.contract.json"
+      - "product/scripts/libwasm-artifact.mjs"
+      - "product/scripts/compatibility.mjs"
+      - "product/scripts/compatibility.test.mjs"
+      - "product/scripts/dist.mjs"
+      - "scripts/qualify-embedding-membranes.mjs"
+      - "scripts/verify.mjs"
+      - "package.json"
+      - ".github/workflows/embedding-membrane-spike.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  source-delta:
+    name: Prepare immutable source delta
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    env:
+      MIRROR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Checkout immutable PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Pack tree-verified source delta
+        run: |
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          git fetch --no-tags --depth=1 origin "$MIRROR_BASE_SHA"
+          mkdir -p "${RUNNER_TEMP}/embedding-source-delta"
+          git diff --binary "$MIRROR_BASE_SHA" "$SOURCE_SHA" \
+            > "${RUNNER_TEMP}/embedding-source-delta/source.patch"
+          git rev-parse "${SOURCE_SHA}^{tree}" \
+            > "${RUNNER_TEMP}/embedding-source-delta/source-tree-sha"
+          test -s "${RUNNER_TEMP}/embedding-source-delta/source.patch"
+
+      - name: Upload source delta
+        uses: actions/upload-artifact@v4
+        with:
+          name: embedding-source-delta-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/embedding-source-delta
+          if-no-files-found: error
+          retention-days: 1
+
+  native-membrane:
+    name: ${{ matrix.name }}
+    # Keep executable source-delta handling restricted to same-repo PRs.
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    needs: source-delta
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x64
+            runner: '"ubuntu-24.04"'
+            source_mode: github
+          - name: macOS ARM64
+            runner: '"macos-15"'
+            source_mode: github
+          - name: Windows x64
+            runner: '"windows-2022"'
+            source_mode: github
+    runs-on: ${{ fromJSON(matrix.runner) }}
+    env:
+      KUNGFU_BUILDCHAIN_NO_OPTIONAL: "1"
+      KUNGFU_BUILDCHAIN_SOURCE_BUILD: "1"
+      KUNGFU_BUILD_SKIP_KUNGFU_NODE: "1"
+      KUNGFU_BUILD_SKIP_PYKUNGFU: "1"
+      SHIFU_NATIVE: "1"
+      SHIFU_REQUIRE_MSVC: "1"
+      MIRROR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      MIRROR_REF: refs/heads/dev/v4/v4.0
+      MIRROR_URL: http://192.168.100.222:8088/git-mirrors/kungfu.git
+      SOURCE_MODE: ${{ matrix.source_mode }}
+      SOURCE_ROOT: source-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v6.4.0
+        with:
+          node-version: "24"
+
+      - name: Select Linux qualification compiler
+        if: ${{ runner.os == 'Linux' }}
+        shell: bash
+        run: |
+          gcc-14 --version
+          g++-14 --version
+          echo "CC=gcc-14" >> "$GITHUB_ENV"
+          echo "CXX=g++-14" >> "$GITHUB_ENV"
+
+      - name: Expose Git Bash on Windows
+        if: ${{ runner.os == 'Windows' }}
+        shell: pwsh
+        run: '"C:\Program Files\Git\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append'
+
+      - name: Download immutable source delta
+        uses: actions/download-artifact@v4
+        with:
+          name: embedding-source-delta-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/embedding-source-delta
+
+      # Prefer the LAN mirror for the pinned dev base. Its branch tip may
+      # advance or briefly lag after the PR event, so fall back to fetching the
+      # immutable base SHA from GitHub and compare Git tree ids before executing
+      # any source from the PR.
+      - name: Reconstruct and verify immutable PR head
+        shell: bash
+        run: |
+          git init "$SOURCE_ROOT"
+          if [ "$SOURCE_MODE" = "mirror" ]; then
+            git -C "$SOURCE_ROOT" remote add mirror "$MIRROR_URL"
+            git -C "$SOURCE_ROOT" fetch --no-tags mirror \
+              "+${MIRROR_REF}:refs/embedding/base"
+          fi
+          if [ "$SOURCE_MODE" = "github" ] || \
+            ! git -C "$SOURCE_ROOT" cat-file -e \
+              "${MIRROR_BASE_SHA}^{commit}" 2>/dev/null; then
+            git -C "$SOURCE_ROOT" remote add github \
+              "https://github.com/${GITHUB_REPOSITORY}.git"
+            git -C "$SOURCE_ROOT" fetch --no-tags --depth=1 github \
+              "$MIRROR_BASE_SHA"
+          fi
+          git -C "$SOURCE_ROOT" checkout --detach "$MIRROR_BASE_SHA"
+          git -C "$SOURCE_ROOT" apply --index --binary \
+            "${RUNNER_TEMP}/embedding-source-delta/source.patch"
+          expected_tree="$(tr -d '\r\n' \
+            < "${RUNNER_TEMP}/embedding-source-delta/source-tree-sha")"
+          test "$(git -C "$SOURCE_ROOT" write-tree)" = "$expected_tree"
+          test -f "$SOURCE_ROOT/shifu"
+
+      - name: Verify pinned spike Rust toolchain
+        shell: bash
+        run: |
+          cd "$SOURCE_ROOT/crates/libwasm-spike"
+          rustc --version
+          cargo --version
+
+      - name: Install frozen workspace (POSIX)
+        if: ${{ runner.os != 'Windows' }}
+        shell: bash
+        run: cd "$SOURCE_ROOT" && ./shifu install --frozen-lockfile --no-optional
+
+      - name: Install frozen workspace (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        shell: pwsh
+        run: |
+          Set-Location $env:SOURCE_ROOT
+          .\shifu.cmd install --frozen-lockfile --no-optional
+
+      - name: Rebind frozen Python registry metadata
+        if: ${{ matrix.source_mode == 'github' }}
+        shell: bash
+        run: |
+          cd "$SOURCE_ROOT/framework/core"
+          uv_version="$(tr -d '\r\n' < ../../.uv-version)"
+          uv_bin="$(command -v uv || true)"
+          if [ -z "$uv_bin" ]; then
+            case "$RUNNER_OS" in
+              Linux) uv_target="linux-x86_64"; uv_name="uv" ;;
+              macOS) uv_target="macos-$(uname -m | sed 's/arm64/aarch64/')"; uv_name="uv" ;;
+              Windows) uv_target="windows-x86_64"; uv_name="uv.exe" ;;
+            esac
+            uv_bin="$HOME/.cache/kungfu/tools/uv/$uv_version/$uv_target/$uv_name"
+          fi
+          test -x "$uv_bin"
+          fingerprint() {
+            {
+              grep -E '^(\[\[package\]\]|name = |version = |source = )' "$1" |
+                sed -E 's#source = \{ registry = "[^"]+" \}#source = { registry = "<registry>" }#'
+              grep -E '^(sdist = |[[:space:]]+\{ url = ).*hash = ' "$1" |
+                sed -E 's#.*hash = "([^"]+)".*#hash = "\1"#'
+            } | git hash-object --stdin
+          }
+          before="$(fingerprint uv.lock)"
+          "$uv_bin" lock --refresh --default-index https://pypi.org/simple
+          after="$(fingerprint uv.lock)"
+          test "$before" = "$after"
+
+      - name: Generate core toolchain (POSIX)
+        if: ${{ runner.os != 'Windows' }}
+        shell: bash
+        run: cd "$SOURCE_ROOT" && ./shifu --filter @kungfu-tech/core configure
+
+      - name: Generate core toolchain (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        shell: pwsh
+        run: |
+          Set-Location $env:SOURCE_ROOT
+          .\shifu.cmd --filter @kungfu-tech/core configure
+
+      - name: Build and run membrane consumers (POSIX)
+        if: ${{ runner.os != 'Windows' }}
+        shell: bash
+        run: cd "$SOURCE_ROOT" && ./shifu qualify:embedding-membranes
+
+      - name: Build and run membrane consumers (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        shell: pwsh
+        run: |
+          Set-Location $env:SOURCE_ROOT
+          .\shifu.cmd qualify:embedding-membranes

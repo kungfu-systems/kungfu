@@ -1,0 +1,7198 @@
+// SPDX-License-Identifier: Apache-2.0
+
+#include <kungfu/runtime/storage/json_edge.h>
+#include <kungfu/runtime/storage/service.h>
+
+#include <algorithm>
+#include <array>
+#include <atomic>
+#include <charconv>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <functional>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <optional>
+#include <random>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
+#include <kungfu/runtime/action_recorder.h>
+#include <kungfu/runtime/facts/fact_admission.h>
+#include <kungfu/runtime/query/fact_query.h>
+#include <kungfu/runtime/query/saved_query_catalog.h>
+#include <kungfu/runtime/storage/episode_manifest_projection.h>
+#include <kungfu/runtime/storage/manifest_catalog_projection.h>
+#include <kungfu/runtime/storage/source_registry_projection.h>
+#include <kungfu/runtime/trust/assessment_runtime.h>
+#include <kungfu/yijinjing/storage/content_hash.h>
+#include <kungfu/yijinjing/storage/content_store.h>
+#include <kungfu/yijinjing/storage/episode_manifest.h>
+#include <kungfu/yijinjing/storage/manifest_catalog.h>
+#include <kungfu/yijinjing/storage/source_registry.h>
+#include <kungfu/yijinjing/storage/sync_root.h>
+#include <kungfu/yijinjing/time.h>
+#include <rocksdb/db.h>
+#include <rocksdb/iterator.h>
+#include <sqlite3.h>
+
+namespace kungfu::runtime::storage_service_api {
+
+namespace fs = std::filesystem;
+namespace yy_storage = kungfu::yijinjing::storage;
+namespace yy_enums = kungfu::yijinjing::enums;
+
+namespace {
+
+inline constexpr const char *PAYLOAD_STATE_PRESENT = "present";
+inline constexpr const char *PAYLOAD_STATE_REDACTED = "redacted";
+inline constexpr const char *PAYLOAD_STATE_ABSENT = "absent";
+inline constexpr const char *CONTENT_TYPE_JSON = "application/json";
+
+nlohmann::json content_result_json(const yy_storage::content_store_result &result);
+
+template <size_t N> std::string fixed_string(const kungfu::array<char, N> &value) {
+  size_t length = 0;
+  while (length < N && value.value[length] != '\0') {
+    ++length;
+  }
+  return std::string(value.value, length);
+}
+
+template <size_t N> void assign_fixed(kungfu::array<char, N> &target, const std::string &value) {
+  kungfu::copy_string(target, value.c_str());
+}
+
+// ADR-0053: frame bytes cross the JSON edge as base64. The codec lives here
+// because the edge is the only place binary material meets JSON.
+inline constexpr const char *BASE64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+std::string base64_encode(const std::string &raw) {
+  std::string encoded;
+  encoded.reserve((raw.size() + 2) / 3 * 4);
+  size_t index = 0;
+  while (index + 3 <= raw.size()) {
+    const uint32_t chunk = (static_cast<uint8_t>(raw[index]) << 16u) | (static_cast<uint8_t>(raw[index + 1]) << 8u) |
+                           static_cast<uint8_t>(raw[index + 2]);
+    encoded.push_back(BASE64_ALPHABET[(chunk >> 18u) & 0x3Fu]);
+    encoded.push_back(BASE64_ALPHABET[(chunk >> 12u) & 0x3Fu]);
+    encoded.push_back(BASE64_ALPHABET[(chunk >> 6u) & 0x3Fu]);
+    encoded.push_back(BASE64_ALPHABET[chunk & 0x3Fu]);
+    index += 3;
+  }
+  const auto remaining = raw.size() - index;
+  if (remaining == 1) {
+    const uint32_t chunk = static_cast<uint8_t>(raw[index]) << 16u;
+    encoded.push_back(BASE64_ALPHABET[(chunk >> 18u) & 0x3Fu]);
+    encoded.push_back(BASE64_ALPHABET[(chunk >> 12u) & 0x3Fu]);
+    encoded.push_back('=');
+    encoded.push_back('=');
+  } else if (remaining == 2) {
+    const uint32_t chunk = (static_cast<uint8_t>(raw[index]) << 16u) | (static_cast<uint8_t>(raw[index + 1]) << 8u);
+    encoded.push_back(BASE64_ALPHABET[(chunk >> 18u) & 0x3Fu]);
+    encoded.push_back(BASE64_ALPHABET[(chunk >> 12u) & 0x3Fu]);
+    encoded.push_back(BASE64_ALPHABET[(chunk >> 6u) & 0x3Fu]);
+    encoded.push_back('=');
+  }
+  return encoded;
+}
+
+std::string base64_decode(const std::string &encoded) {
+  static const auto reverse = [] {
+    std::array<int8_t, 256> table{};
+    table.fill(-1);
+    for (int i = 0; i < 64; ++i) {
+      table[static_cast<uint8_t>(BASE64_ALPHABET[i])] = static_cast<int8_t>(i);
+    }
+    return table;
+  }();
+  if (encoded.size() % 4 != 0) {
+    throw std::invalid_argument("base64 payload length must be a multiple of 4");
+  }
+  std::string raw;
+  raw.reserve(encoded.size() / 4 * 3);
+  for (size_t index = 0; index < encoded.size(); index += 4) {
+    uint32_t chunk = 0;
+    int padding = 0;
+    for (size_t offset = 0; offset < 4; ++offset) {
+      const auto symbol = static_cast<uint8_t>(encoded[index + offset]);
+      if (symbol == '=') {
+        if (index + 4 != encoded.size() || offset < 2) {
+          throw std::invalid_argument("base64 padding is malformed");
+        }
+        ++padding;
+        chunk <<= 6u;
+        continue;
+      }
+      if (padding > 0 || reverse[symbol] < 0) {
+        throw std::invalid_argument("base64 payload contains an invalid symbol");
+      }
+      chunk = (chunk << 6u) | static_cast<uint32_t>(reverse[symbol]);
+    }
+    raw.push_back(static_cast<char>((chunk >> 16u) & 0xFFu));
+    if (padding < 2) {
+      raw.push_back(static_cast<char>((chunk >> 8u) & 0xFFu));
+    }
+    if (padding < 1) {
+      raw.push_back(static_cast<char>(chunk & 0xFFu));
+    }
+  }
+  return raw;
+}
+
+const char *source_kind_text(yy_enums::SourceKind kind) {
+  switch (kind) {
+  case yy_enums::SourceKind::Local:
+    return "local";
+  case yy_enums::SourceKind::ImportedBundle:
+    return "imported_bundle";
+  case yy_enums::SourceKind::KungfuRuntime:
+    return "kungfu_runtime";
+  case yy_enums::SourceKind::Adapter:
+    return "adapter";
+  }
+  return "unknown";
+}
+
+const char *payload_state_text(yy_enums::PayloadState state) {
+  switch (state) {
+  case yy_enums::PayloadState::Present:
+    return PAYLOAD_STATE_PRESENT;
+  case yy_enums::PayloadState::Redacted:
+    return PAYLOAD_STATE_REDACTED;
+  case yy_enums::PayloadState::Absent:
+    return PAYLOAD_STATE_ABSENT;
+  case yy_enums::PayloadState::Missing:
+    return "missing";
+  }
+  return "missing";
+}
+inline constexpr const char *PROJECTION_SOURCE_REGISTRY = "source-registry-sqlite";
+inline constexpr const char *PROJECTION_MANIFEST_CATALOG = "manifest-catalog-sqlite";
+inline constexpr const char *PROVIDER_FILE = "content-addressed-file";
+inline constexpr const char *PROVIDER_ROCKSDB = "rocksdb";
+inline constexpr const char *ENV_STORAGE_PROVIDER = "KUNGFU_STORAGE_PROVIDER";
+
+struct provider_selection {
+  std::string name = {};
+  std::string source = {};
+};
+
+struct stored_payload {
+  std::string digest = {};
+  std::string uri = {};
+  uint64_t bytes = 0;
+};
+
+std::string text_or(const nlohmann::json &object, const std::string &field, const std::string &fallback = {}) {
+  if (!object.is_object() || !object.contains(field)) {
+    return fallback;
+  }
+  const auto &value = object.at(field);
+  if (value.is_string()) {
+    return value.get<std::string>();
+  }
+  if (value.is_null()) {
+    return fallback;
+  }
+  return value.dump(-1, ' ', false);
+}
+
+std::string required_text(const nlohmann::json &object, const std::string &field) {
+  const auto value = text_or(object, field);
+  if (value.empty()) {
+    throw std::invalid_argument(field + " is required");
+  }
+  return value;
+}
+
+nlohmann::json object_or_empty(const nlohmann::json &object, const std::string &field);
+nlohmann::json array_or_empty(const nlohmann::json &object, const std::string &field);
+
+bool managed_json_type_matches(const nlohmann::json &value, const std::string &type) {
+  if (type == "object")
+    return value.is_object();
+  if (type == "array")
+    return value.is_array();
+  if (type == "string")
+    return value.is_string();
+  if (type == "boolean")
+    return value.is_boolean();
+  if (type == "integer")
+    return value.is_number_integer() || value.is_number_unsigned();
+  if (type == "number")
+    return value.is_number();
+  if (type == "null")
+    return value.is_null();
+  return false;
+}
+
+void validate_managed_json_value(const nlohmann::json &schema, const nlohmann::json &value, const std::string &path) {
+  const auto type = text_or(schema, "type");
+  if (type.empty() || !managed_json_type_matches(value, type)) {
+    throw std::invalid_argument("fact payload schema validation failed at " + path + ": expected " +
+                                (type.empty() ? "declared type" : type));
+  }
+  if (type == "object") {
+    const auto properties = object_or_empty(schema, "properties");
+    for (const auto &required : array_or_empty(schema, "required")) {
+      if (!required.is_string() || !value.contains(required.get<std::string>())) {
+        throw std::invalid_argument("fact payload schema validation failed at " + path + ": missing required " +
+                                    (required.is_string() ? required.get<std::string>() : std::string("field")));
+      }
+    }
+    for (auto iter = value.begin(); iter != value.end(); ++iter) {
+      if (!properties.contains(iter.key())) {
+        if (schema.value("additionalProperties", true) == false) {
+          throw std::invalid_argument("fact payload schema validation failed at " + path + ": unexpected " +
+                                      iter.key());
+        }
+        continue;
+      }
+      validate_managed_json_value(properties.at(iter.key()), iter.value(), path + "." + iter.key());
+    }
+  } else if (type == "array" && schema.contains("items") && schema.at("items").is_object()) {
+    for (size_t index = 0; index < value.size(); ++index) {
+      validate_managed_json_value(schema.at("items"), value.at(index), path + "[" + std::to_string(index) + "]");
+    }
+  }
+}
+
+bool bool_or(const nlohmann::json &object, const std::string &field, bool fallback) {
+  if (!object.is_object() || !object.contains(field)) {
+    return fallback;
+  }
+  const auto &value = object.at(field);
+  return value.is_boolean() ? value.get<bool>() : fallback;
+}
+
+nlohmann::json object_or_empty(const nlohmann::json &object, const std::string &field) {
+  if (!object.is_object() || !object.contains(field) || !object.at(field).is_object()) {
+    return nlohmann::json::object();
+  }
+  return object.at(field);
+}
+
+nlohmann::json array_or_empty(const nlohmann::json &object, const std::string &field) {
+  if (!object.is_object() || !object.contains(field) || !object.at(field).is_array()) {
+    return nlohmann::json::array();
+  }
+  return object.at(field);
+}
+
+std::string canonical_json(const nlohmann::json &value) { return value.dump(-1, ' ', false); }
+
+uint64_t uint64_or(const nlohmann::json &object, const std::string &field, uint64_t fallback = 0) {
+  if (!object.is_object() || !object.contains(field)) {
+    return fallback;
+  }
+  const auto &value = object.at(field);
+  if (value.is_number_unsigned()) {
+    return value.get<uint64_t>();
+  }
+  if (value.is_number_integer()) {
+    return static_cast<uint64_t>(value.get<int64_t>());
+  }
+  if (value.is_string()) {
+    const auto text = value.get<std::string>();
+    uint64_t parsed = 0;
+    const auto *begin = text.data();
+    const auto *end = begin + text.size();
+    const auto [ptr, error] = std::from_chars(begin, end, parsed);
+    if (error == std::errc{} && ptr == end) {
+      return parsed;
+    }
+  }
+  return fallback;
+}
+
+int64_t int64_or(const nlohmann::json &object, const std::string &field, int64_t fallback = 0) {
+  if (!object.is_object() || !object.contains(field)) {
+    return fallback;
+  }
+  const auto &value = object.at(field);
+  if (value.is_number_integer()) {
+    return value.get<int64_t>();
+  }
+  if (value.is_number_unsigned()) {
+    return static_cast<int64_t>(value.get<uint64_t>());
+  }
+  return fallback;
+}
+
+uint32_t uint32_or(const nlohmann::json &object, const std::string &field, uint32_t fallback = 0) {
+  return static_cast<uint32_t>(uint64_or(object, field, fallback));
+}
+
+int32_t int32_or(const nlohmann::json &object, const std::string &field, int32_t fallback = 0) {
+  return static_cast<int32_t>(int64_or(object, field, fallback));
+}
+
+yy_enums::EpisodeStatus episode_status_or(const nlohmann::json &object, const std::string &field,
+                                          yy_enums::EpisodeStatus fallback) {
+  const auto value = text_or(object, field);
+  if (value.empty() || value == "ended" || value == "end" || value == "Ended") {
+    return fallback;
+  }
+  if (value == "aborted" || value == "abort" || value == "Aborted") {
+    return yy_enums::EpisodeStatus::Aborted;
+  }
+  if (value == "tombstoned" || value == "tombstone" || value == "Tombstoned") {
+    return yy_enums::EpisodeStatus::Tombstoned;
+  }
+  if (value == "open" || value == "Open") {
+    return yy_enums::EpisodeStatus::Open;
+  }
+  return fallback;
+}
+
+yy_enums::EpisodeRefKind episode_ref_kind_or(const nlohmann::json &object, const std::string &field,
+                                             yy_enums::EpisodeRefKind fallback) {
+  const auto value = text_or(object, field);
+  if (value.empty() || value == "input_frame" || value == "input" || value == "InputFrame") {
+    return fallback;
+  }
+  if (value == "payload" || value == "Payload") {
+    return yy_enums::EpisodeRefKind::Payload;
+  }
+  if (value == "schema" || value == "Schema") {
+    return yy_enums::EpisodeRefKind::Schema;
+  }
+  if (value == "episode" || value == "Episode") {
+    return yy_enums::EpisodeRefKind::Episode;
+  }
+  return fallback;
+}
+
+yy_storage::episode_manifest_store episode_store(const storage_service_options &options) {
+  return yy_storage::episode_manifest_store(options.runtime_dir);
+}
+
+yy_storage::episode_begin_options parse_episode_begin_options(const nlohmann::json &value) {
+  yy_storage::episode_begin_options parsed{};
+  parsed.episode_id = uint64_or(value, "episode_id");
+  parsed.parent_episode_id = uint64_or(value, "parent_episode_id");
+  parsed.root_trigger_frame_uid = uint64_or(value, "root_trigger_frame_uid");
+  parsed.location_uid = uint32_or(value, "location_uid");
+  parsed.begin_time = int64_or(value, "begin_time");
+  parsed.title = text_or(value, "title");
+  parsed.actor = text_or(value, "actor");
+  parsed.source = text_or(value, "source");
+  return parsed;
+}
+
+yy_storage::episode_heartbeat_options parse_episode_heartbeat_options(const nlohmann::json &value) {
+  yy_storage::episode_heartbeat_options parsed{};
+  parsed.episode_id = uint64_or(value, "episode_id");
+  parsed.location_uid = uint32_or(value, "location_uid");
+  parsed.update_time = int64_or(value, "update_time");
+  parsed.last_frame_uid = uint64_or(value, "last_frame_uid");
+  parsed.frame_count = uint64_or(value, "frame_count");
+  parsed.note = text_or(value, "note");
+  return parsed;
+}
+
+yy_storage::episode_close_options parse_episode_close_options(const nlohmann::json &value,
+                                                              yy_enums::EpisodeStatus fallback_status) {
+  yy_storage::episode_close_options parsed{};
+  parsed.episode_id = uint64_or(value, "episode_id");
+  parsed.location_uid = uint32_or(value, "location_uid");
+  parsed.status = episode_status_or(value, "status", fallback_status);
+  parsed.end_time = int64_or(value, "end_time");
+  parsed.last_frame_uid = uint64_or(value, "last_frame_uid");
+  parsed.frame_count = uint64_or(value, "frame_count");
+  parsed.reason = text_or(value, "reason");
+  return parsed;
+}
+
+yy_storage::episode_frame_attach_options parse_episode_frame_attach_options(const nlohmann::json &value) {
+  yy_storage::episode_frame_attach_options parsed{};
+  parsed.episode_id = uint64_or(value, "episode_id");
+  parsed.location_uid = uint32_or(value, "location_uid");
+  parsed.frame_uid = uint64_or(value, "frame_uid");
+  parsed.trigger_frame_uid = uint64_or(value, "trigger_frame_uid");
+  parsed.stream_id = uint64_or(value, "stream_id");
+  parsed.gen_time = int64_or(value, "gen_time");
+  parsed.trigger_time = int64_or(value, "trigger_time");
+  parsed.carrier_type = int32_or(value, "carrier_type");
+  parsed.source = uint32_or(value, "source");
+  parsed.dest = uint32_or(value, "dest");
+  parsed.data_length = uint32_or(value, "data_length");
+  parsed.integrity_version = uint32_or(value, "integrity_version");
+  parsed.payload_checksum = uint64_or(value, "payload_checksum");
+  parsed.frame_checksum = uint64_or(value, "frame_checksum");
+  return parsed;
+}
+
+yy_storage::episode_ref_attach_options parse_episode_ref_attach_options(const nlohmann::json &value) {
+  yy_storage::episode_ref_attach_options parsed{};
+  parsed.episode_id = uint64_or(value, "episode_id");
+  parsed.location_uid = uint32_or(value, "location_uid");
+  parsed.ref_kind = episode_ref_kind_or(value, "ref_kind", yy_enums::EpisodeRefKind::InputFrame);
+  parsed.ref_uid = uint64_or(value, "ref_uid");
+  parsed.update_time = int64_or(value, "update_time");
+  parsed.ref_id = text_or(value, "ref_id");
+  parsed.ref_hash = text_or(value, "ref_hash");
+  return parsed;
+}
+
+yy_storage::episode_recover_options parse_episode_recover_options(const nlohmann::json &value) {
+  yy_storage::episode_recover_options parsed{};
+  parsed.episode_id = uint64_or(value, "episode_id");
+  parsed.location_uid = uint32_or(value, "location_uid");
+  parsed.end_time = int64_or(value, "end_time");
+  parsed.reason = text_or(value, "reason");
+  return parsed;
+}
+
+yy_enums::SourceKind source_kind_or(const nlohmann::json &object, const std::string &field,
+                                    yy_enums::SourceKind fallback) {
+  const auto value = text_or(object, field);
+  if (value == "imported_bundle" || value == "ImportedBundle") {
+    return yy_enums::SourceKind::ImportedBundle;
+  }
+  if (value == "kungfu_runtime" || value == "KungfuRuntime") {
+    return yy_enums::SourceKind::KungfuRuntime;
+  }
+  if (value == "adapter" || value == "Adapter") {
+    return yy_enums::SourceKind::Adapter;
+  }
+  if (value == "local" || value == "Local") {
+    return yy_enums::SourceKind::Local;
+  }
+  return fallback;
+}
+
+yy_enums::SourceVerificationStatus source_verification_status_or(const nlohmann::json &object, const std::string &field,
+                                                                 yy_enums::SourceVerificationStatus fallback) {
+  const auto value = text_or(object, field);
+  if (value == "degraded" || value == "Degraded") {
+    return yy_enums::SourceVerificationStatus::Degraded;
+  }
+  if (value == "failed" || value == "Failed") {
+    return yy_enums::SourceVerificationStatus::Failed;
+  }
+  if (value == "ok" || value == "Ok") {
+    return yy_enums::SourceVerificationStatus::Ok;
+  }
+  return fallback;
+}
+
+yy_storage::source_registry_store source_registry_store(const storage_service_options &options) {
+  return yy_storage::source_registry_store(options.runtime_dir);
+}
+
+yy_storage::source_register_options parse_source_register_options(const nlohmann::json &value) {
+  yy_storage::source_register_options parsed{};
+  parsed.source_id = text_or(value, "source_id");
+  parsed.kind = source_kind_or(value, "kind", yy_enums::SourceKind::Local);
+  parsed.coordinate = text_or(value, "coordinate");
+  parsed.head = text_or(value, "head");
+  parsed.location_uid = uint32_or(value, "location_uid");
+  parsed.register_time = int64_or(value, "register_time");
+  return parsed;
+}
+
+yy_storage::source_head_update_options parse_source_head_update_options(const nlohmann::json &value) {
+  yy_storage::source_head_update_options parsed{};
+  parsed.source_id = text_or(value, "source_id");
+  parsed.location_uid = uint32_or(value, "location_uid");
+  parsed.update_time = int64_or(value, "update_time");
+  parsed.first_frame_uid = uint64_or(value, "first_frame_uid");
+  parsed.last_frame_uid = uint64_or(value, "last_frame_uid");
+  parsed.since = int64_or(value, "since");
+  parsed.until = int64_or(value, "until");
+  parsed.head = text_or(value, "head");
+  parsed.inventory_hash_algo = text_or(value, "inventory_hash_algo");
+  parsed.inventory_hash = text_or(value, "inventory_hash");
+  return parsed;
+}
+
+yy_storage::accepted_range_options parse_accepted_range_options(const nlohmann::json &value) {
+  yy_storage::accepted_range_options parsed{};
+  parsed.source_id = text_or(value, "source_id");
+  parsed.manifest_id = text_or(value, "manifest_id");
+  parsed.location_uid = uint32_or(value, "location_uid");
+  parsed.accept_time = int64_or(value, "accept_time");
+  parsed.first_frame_uid = uint64_or(value, "first_frame_uid");
+  parsed.last_frame_uid = uint64_or(value, "last_frame_uid");
+  parsed.since = int64_or(value, "since");
+  parsed.until = int64_or(value, "until");
+  parsed.status = source_verification_status_or(value, "status", yy_enums::SourceVerificationStatus::Ok);
+  return parsed;
+}
+
+fs::path root_dir(const std::string &runtime_dir) { return fs::path(runtime_dir) / "storage"; }
+
+fs::path payload_root(const std::string &runtime_dir) { return root_dir(runtime_dir) / "payloads"; }
+
+fs::path rocksdb_root(const std::string &runtime_dir) { return root_dir(runtime_dir) / "rocksdb"; }
+
+fs::path projection_root(const std::string &runtime_dir) { return root_dir(runtime_dir) / "projections"; }
+
+fs::path payload_path(const std::string &runtime_dir, const std::string &digest) {
+  // ADR-0037: payload bodies are opaque content-addressed bytes. The file is
+  // named by the content hash alone, with no format-implying extension — the
+  // body format is orthogonal to the record schema, which commits to the body
+  // by hash, length, and payload state (content_type is record metadata).
+  return payload_root(runtime_dir) / digest.substr(0, std::min<size_t>(2, digest.size())) / digest;
+}
+
+fs::path absolute_normalized(fs::path path) { return fs::absolute(std::move(path)).lexically_normal(); }
+
+fs::path runtime_home_path(const storage_service_options &options) {
+  const auto explicit_runtime_home = text_or(options.operation_options, "runtime_home");
+  if (!explicit_runtime_home.empty()) {
+    return absolute_normalized(explicit_runtime_home);
+  }
+  const auto runtime = absolute_normalized(options.runtime_dir);
+  return runtime.filename() == "runtime" ? runtime.parent_path() : runtime;
+}
+
+std::string runtime_home_source(const storage_service_options &options) {
+  return text_or(options.operation_options, "runtime_home").empty() ? "inferred-from-runtime-dir" : "option";
+}
+
+std::string optional_absolute_path(const nlohmann::json &object, const std::string &field) {
+  const auto value = text_or(object, field);
+  return value.empty() ? std::string{} : absolute_normalized(value).string();
+}
+
+std::vector<fs::path> all_payload_paths(const std::string &runtime_dir);
+std::string payload_digest_from_path(const fs::path &path);
+
+void write_json_file(const fs::path &path, const nlohmann::json &data) {
+  fs::create_directories(path.parent_path());
+  std::ofstream output(path, std::ios::trunc);
+  if (!output) {
+    throw std::runtime_error("failed to write JSON file: " + path.string());
+  }
+  output << data.dump(2, ' ', false) << '\n';
+}
+
+std::string read_bytes(const fs::path &path) {
+  std::ifstream input(path, std::ios::binary);
+  if (!input) {
+    throw std::runtime_error("failed to read payload: " + path.string());
+  }
+  return std::string(std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>());
+}
+
+void write_bytes(const fs::path &path, const std::string &raw) {
+  fs::create_directories(path.parent_path());
+  std::ofstream output(path, std::ios::binary | std::ios::trunc);
+  if (!output) {
+    throw std::runtime_error("failed to write payload: " + path.string());
+  }
+  output.write(raw.data(), static_cast<std::streamsize>(raw.size()));
+}
+
+std::string normalized_provider_name(const std::string &provider) {
+  if (provider.empty() || provider == "file" || provider == PROVIDER_FILE) {
+    return PROVIDER_FILE;
+  }
+  if (provider == "rocks" || provider == PROVIDER_ROCKSDB) {
+    return PROVIDER_ROCKSDB;
+  }
+  throw std::invalid_argument("unsupported storage provider: " + provider);
+}
+
+provider_selection select_provider(std::string provider) {
+  if (provider.empty()) {
+    if (const char *env_provider = std::getenv(ENV_STORAGE_PROVIDER); env_provider != nullptr) {
+      provider = env_provider;
+      return {normalized_provider_name(provider), "env:" + std::string(ENV_STORAGE_PROVIDER)};
+    }
+    return {PROVIDER_FILE, "default"};
+  }
+  return {normalized_provider_name(provider), "option"};
+}
+
+std::string storage_uri(const std::string &provider, const std::string &runtime_dir, const std::string &key) {
+  if (provider == PROVIDER_ROCKSDB) {
+    return std::string("rocksdb://") + rocksdb_root(runtime_dir).string() + "#" + key;
+  }
+  return key;
+}
+
+class storage_provider {
+public:
+  virtual ~storage_provider() = default;
+
+  [[nodiscard]] virtual std::string name() const = 0;
+  [[nodiscard]] virtual storage_provider_layout_view layout() const = 0;
+  [[nodiscard]] virtual storage_provider_runtime_view runtime() const = 0;
+  [[nodiscard]] virtual bool payload_exists(const std::string &digest) const = 0;
+  [[nodiscard]] virtual std::string read_payload(const std::string &digest) const = 0;
+  virtual void write_payload(const std::string &digest, const std::string &raw) const = 0;
+  [[nodiscard]] virtual std::vector<stored_payload> all_payloads() const = 0;
+  // ADR-0040: the immutable content store this provider publishes payload
+  // bytes through. Injected into kernel fsck/inspect so payload-ref
+  // resolution reads the same backend that owns the bytes.
+  [[nodiscard]] virtual yy_storage::content_store &content_store() const = 0;
+};
+
+class file_storage_provider : public storage_provider {
+public:
+  explicit file_storage_provider(std::string runtime_dir) : runtime_dir_(std::move(runtime_dir)) {}
+
+  [[nodiscard]] std::string name() const override { return PROVIDER_FILE; }
+
+  [[nodiscard]] storage_provider_layout_view layout() const override {
+    return {{},
+            "journal/system/storage/manifest-catalog/live/*.journal",
+            "storage/manifests/<hash-prefix>/<sha256>",
+            "storage/payloads/<hash-prefix>/<sha256>"};
+  }
+
+  [[nodiscard]] storage_provider_runtime_view runtime() const override {
+    return {"stateless-filesystem", "process-cached", "per filesystem operation", false, true};
+  }
+
+  [[nodiscard]] bool payload_exists(const std::string &digest) const override {
+    return fs::exists(payload_path(runtime_dir_, digest));
+  }
+
+  [[nodiscard]] std::string read_payload(const std::string &digest) const override {
+    return read_bytes(payload_path(runtime_dir_, digest));
+  }
+
+  void write_payload(const std::string &digest, const std::string &raw) const override {
+    // ADR-0040: publish through the immutable content store (atomic
+    // tmp+rename, digest checked against the bytes) instead of a bare file
+    // write; the store's layout is byte-compatible with payload_path.
+    const auto result = content_store_.put_if_absent("payloads", raw, yy_storage::make_content_hash(digest));
+    if (!result.ok()) {
+      throw std::runtime_error("failed to publish payload " + digest + ": " +
+                               yy_storage::content_store_error_name(result.error) +
+                               (result.message.empty() ? "" : " (" + result.message + ")"));
+    }
+  }
+
+  [[nodiscard]] yy_storage::content_store &content_store() const override { return content_store_; }
+
+  [[nodiscard]] std::vector<stored_payload> all_payloads() const override {
+    std::vector<stored_payload> result;
+    for (const auto &path : all_payload_paths(runtime_dir_)) {
+      result.push_back({payload_digest_from_path(path), path.string(), fs::file_size(path)});
+    }
+    return result;
+  }
+
+private:
+  std::string runtime_dir_;
+  mutable yy_storage::file_content_store content_store_{root_dir(runtime_dir_).string()};
+};
+
+// ADR-0040: the RocksDB-backed content store lives in the runtime/provider
+// layer and implements the yijinjing contract over the provider's single
+// long-lived engine handle (decision 6). Keys are "<namespace>/<digest>",
+// bare lowercase hex. The store never owns the handle: the provider does,
+// and multi-process ownership of one database path is rejected by the
+// engine's own lock. Values are written through the WAL in one atomic key
+// write, so a torn object is never visible under a digest; identical-bytes
+// races on the same key are benign under content identity.
+class rocksdb_content_store : public yy_storage::content_store {
+public:
+  // Returns a shared handle so an in-flight operation keeps its engine alive
+  // across a concurrent readonly-to-readwrite upgrade in the provider.
+  using engine_opener = std::function<std::shared_ptr<rocksdb::DB>(bool write)>;
+
+  explicit rocksdb_content_store(engine_opener open) : open_(std::move(open)) {}
+
+  [[nodiscard]] yy_storage::content_store_capabilities capabilities() const override {
+    yy_storage::content_store_capabilities caps{};
+    caps.profile = "kungfu-rocksdb/v1";
+    caps.hash_algorithm = yy_storage::CONTENT_HASH_ALGORITHM_SHA256;
+    caps.max_object_size = 0;
+    caps.atomic_put_if_absent = true;
+    caps.verified_reads = true;
+    caps.durability = write_options_.sync ? "fsync-per-write" : "wal-os-buffered";
+    caps.visibility = "publish-then-visible";
+    caps.concurrency = "multi-writer-single-process";
+    return caps;
+  }
+
+  [[nodiscard]] yy_storage::content_store_result put_if_absent(const std::string &content_namespace, const void *data,
+                                                               size_t size,
+                                                               const yy_storage::content_hash &expected) override {
+    yy_storage::content_store_result result{};
+    if (!yy_storage::is_valid_content_namespace(content_namespace)) {
+      result.error = yy_storage::content_store_error::InvalidArgument;
+      result.message = "invalid content namespace: " + content_namespace;
+      return result;
+    }
+    if (size > 0 && data == nullptr) {
+      result.error = yy_storage::content_store_error::InvalidArgument;
+      result.message = "null data with non-zero size";
+      return result;
+    }
+    const auto digest = yy_storage::compute_content_hash(data, size, yy_storage::CONTENT_HASH_ALGORITHM_SHA256);
+    if (!expected.empty()) {
+      result.error = yy_storage::validate_content_digest(expected, digest.algorithm, result.message);
+      if (result.error != yy_storage::content_store_error::Ok) {
+        return result;
+      }
+      if (expected.value != digest.value) {
+        result.error = yy_storage::content_store_error::HashMismatch;
+        result.message = "bytes hash to " + digest.value + ", caller declared " + expected.value;
+        return result;
+      }
+    }
+    result.hash = digest;
+    result.byte_length = size;
+    auto db = open_(true);
+    if (!db) {
+      result.error = yy_storage::content_store_error::IoError;
+      result.message = "cannot open storage engine for write";
+      return result;
+    }
+    const auto key = object_key(content_namespace, digest.value);
+    std::string existing;
+    auto status = db->Get(read_options_, key, &existing);
+    if (status.ok()) {
+      if (existing.size() != size) {
+        result.error = yy_storage::content_store_error::CorruptObject;
+        result.message = "existing object holds " + std::to_string(existing.size()) + " bytes, content is " +
+                         std::to_string(size) + " bytes; run verify";
+        return result;
+      }
+      result.existed = true;
+      return result;
+    }
+    if (!status.IsNotFound()) {
+      result.error = yy_storage::content_store_error::IoError;
+      result.message = "engine read failed: " + status.ToString();
+      return result;
+    }
+    status = db->Put(write_options_, key, rocksdb::Slice(static_cast<const char *>(data), size));
+    if (!status.ok()) {
+      result.error = yy_storage::content_store_error::IoError;
+      result.message = "engine write failed: " + status.ToString();
+      return result;
+    }
+    return result;
+  }
+
+  using yy_storage::content_store::put_if_absent;
+
+  [[nodiscard]] bool has(const std::string &content_namespace, const yy_storage::content_hash &hash) const override {
+    if (!yy_storage::is_valid_content_namespace(content_namespace)) {
+      return false;
+    }
+    std::string message;
+    if (yy_storage::validate_content_digest(hash, yy_storage::CONTENT_HASH_ALGORITHM_SHA256, message) !=
+        yy_storage::content_store_error::Ok) {
+      return false;
+    }
+    auto db = open_(false);
+    if (!db) {
+      return false;
+    }
+    std::string existing;
+    return db->Get(read_options_, object_key(content_namespace, hash.value), &existing).ok();
+  }
+
+  [[nodiscard]] yy_storage::content_store_result verify(const std::string &content_namespace,
+                                                        const yy_storage::content_hash &hash) const override {
+    yy_storage::content_store_result result{};
+    std::string bytes;
+    result.error = load_object(content_namespace, hash, bytes, result.message);
+    if (result.error != yy_storage::content_store_error::Ok) {
+      return result;
+    }
+    result.hash = yy_storage::make_content_hash(hash.value, yy_storage::CONTENT_HASH_ALGORITHM_SHA256);
+    result.byte_length = bytes.size();
+    if (!yy_storage::verify_content_hash(bytes, result.hash)) {
+      result.error = yy_storage::content_store_error::CorruptObject;
+      result.message = "stored bytes do not hash to " + result.hash.value;
+    }
+    return result;
+  }
+
+  [[nodiscard]] yy_storage::content_get_result get(const std::string &content_namespace,
+                                                   const yy_storage::content_hash &hash) const override {
+    yy_storage::content_get_result result{};
+    std::string bytes;
+    result.error = load_object(content_namespace, hash, bytes, result.message);
+    if (result.error != yy_storage::content_store_error::Ok) {
+      return result;
+    }
+    result.hash = yy_storage::make_content_hash(hash.value, yy_storage::CONTENT_HASH_ALGORITHM_SHA256);
+    if (!yy_storage::verify_content_hash(bytes, result.hash)) {
+      result.error = yy_storage::content_store_error::CorruptObject;
+      result.message = "stored bytes do not hash to " + result.hash.value;
+      return result;
+    }
+    result.bytes = std::move(bytes);
+    return result;
+  }
+
+private:
+  [[nodiscard]] static std::string object_key(const std::string &content_namespace, const std::string &digest) {
+    return content_namespace + "/" + digest;
+  }
+
+  [[nodiscard]] yy_storage::content_store_error load_object(const std::string &content_namespace,
+                                                            const yy_storage::content_hash &hash, std::string &bytes,
+                                                            std::string &message) const {
+    if (!yy_storage::is_valid_content_namespace(content_namespace)) {
+      message = "invalid content namespace: " + content_namespace;
+      return yy_storage::content_store_error::InvalidArgument;
+    }
+    const auto digest_error =
+        yy_storage::validate_content_digest(hash, yy_storage::CONTENT_HASH_ALGORITHM_SHA256, message);
+    if (digest_error != yy_storage::content_store_error::Ok) {
+      return digest_error;
+    }
+    auto db = open_(false);
+    if (!db) {
+      message = "no storage engine at this runtime dir";
+      return yy_storage::content_store_error::NotFound;
+    }
+    const auto status = db->Get(read_options_, object_key(content_namespace, hash.value), &bytes);
+    if (status.IsNotFound()) {
+      message = "no object under " + object_key(content_namespace, hash.value);
+      return yy_storage::content_store_error::NotFound;
+    }
+    if (!status.ok()) {
+      message = "engine read failed: " + status.ToString();
+      return yy_storage::content_store_error::IoError;
+    }
+    return yy_storage::content_store_error::Ok;
+  }
+
+  engine_opener open_;
+  rocksdb::ReadOptions read_options_ = [] {
+    rocksdb::ReadOptions options;
+    options.fill_cache = false;
+    return options;
+  }();
+  rocksdb::WriteOptions write_options_ = {};
+};
+
+class rocksdb_storage_provider : public storage_provider {
+public:
+  explicit rocksdb_storage_provider(std::string runtime_dir)
+      : runtime_dir_(std::move(runtime_dir)), content_store_([this](bool write) { return open(write); }) {}
+
+  [[nodiscard]] std::string name() const override { return PROVIDER_ROCKSDB; }
+
+  [[nodiscard]] storage_provider_layout_view layout() const override {
+    return {"storage/rocksdb", "journal/system/storage/manifest-catalog/live/*.journal", "manifests/<sha256>",
+            "payloads/<sha256>"};
+  }
+
+  [[nodiscard]] storage_provider_runtime_view runtime() const override {
+    std::lock_guard<std::mutex> lock(db_mutex_);
+    return {"provider-instance-owned",
+            "process-cached",
+            db_ ? (db_writable_ ? "open-readwrite" : "open-readonly") : "closed",
+            false,
+            true,
+            read_options_.fill_cache,
+            write_options_.sync};
+  }
+
+  [[nodiscard]] bool payload_exists(const std::string &digest) const override {
+    return content_store_.has("payloads", yy_storage::make_content_hash(digest));
+  }
+
+  [[nodiscard]] std::string read_payload(const std::string &digest) const override {
+    // verified read through the content store: corrupt bytes never come back
+    auto result = content_store_.get("payloads", yy_storage::make_content_hash(digest));
+    if (!result.ok()) {
+      throw std::runtime_error("failed to read payload " + digest + ": " +
+                               yy_storage::content_store_error_name(result.error) +
+                               (result.message.empty() ? "" : " (" + result.message + ")"));
+    }
+    return std::move(result.bytes);
+  }
+
+  void write_payload(const std::string &digest, const std::string &raw) const override {
+    const auto result = content_store_.put_if_absent("payloads", raw, yy_storage::make_content_hash(digest));
+    if (!result.ok()) {
+      throw std::runtime_error("failed to publish payload " + digest + ": " +
+                               yy_storage::content_store_error_name(result.error) +
+                               (result.message.empty() ? "" : " (" + result.message + ")"));
+    }
+  }
+
+  [[nodiscard]] std::vector<stored_payload> all_payloads() const override {
+    std::vector<stored_payload> result;
+    for_each("payloads/", [&](const std::string &key, const std::string &raw) {
+      result.push_back({key.substr(std::string("payloads/").size()), uri_for(key), raw.size()});
+    });
+    std::sort(result.begin(), result.end(),
+              [](const stored_payload &lhs, const stored_payload &rhs) { return lhs.digest < rhs.digest; });
+    return result;
+  }
+
+  [[nodiscard]] yy_storage::content_store &content_store() const override { return content_store_; }
+
+private:
+  [[nodiscard]] std::string uri_for(const std::string &key) const {
+    return storage_uri(PROVIDER_ROCKSDB, runtime_dir_, key);
+  }
+
+  // Lazily opens the engine and hands back a shared handle. RocksDB is
+  // thread-safe through one handle, so concurrent operations share it; the
+  // readonly-to-readwrite upgrade swaps in a fresh handle while in-flight
+  // readers finish on the old one (a readonly open holds no engine lock).
+  // Readonly opens still never create the database; only writes do.
+  [[nodiscard]] std::shared_ptr<rocksdb::DB> open(bool write) const {
+    std::lock_guard<std::mutex> lock(db_mutex_);
+    if (db_) {
+      if (!write || db_writable_) {
+        return db_;
+      }
+      db_.reset();
+      db_writable_ = false;
+    }
+    rocksdb::DB *raw = nullptr;
+    rocksdb::Options options;
+    options.create_if_missing = write;
+    options.error_if_exists = false;
+    rocksdb::Status status;
+    if (write) {
+      fs::create_directories(rocksdb_root(runtime_dir_));
+      status = rocksdb::DB::Open(options, rocksdb_root(runtime_dir_).string(), &raw);
+    } else {
+      if (!fs::exists(rocksdb_root(runtime_dir_))) {
+        return {};
+      }
+      status = rocksdb::DB::OpenForReadOnly(options, rocksdb_root(runtime_dir_).string(), &raw);
+    }
+    if (!status.ok()) {
+      throw std::runtime_error("rocksdb_open_failed: " + status.ToString());
+    }
+    db_ = std::shared_ptr<rocksdb::DB>(raw);
+    db_writable_ = write;
+    return db_;
+  }
+
+  [[nodiscard]] bool get(const std::string &key, std::string &value) const {
+    auto db = open(false);
+    if (!db) {
+      return false;
+    }
+    const auto status = db->Get(read_options_, key, &value);
+    if (status.IsNotFound()) {
+      return false;
+    }
+    if (!status.ok()) {
+      throw std::runtime_error("rocksdb_read_failed: " + key + ": " + status.ToString());
+    }
+    return true;
+  }
+
+  void put(const std::string &key, const std::string &value) const {
+    auto db = open(true);
+    const auto status = db->Put(write_options_, key, value);
+    if (!status.ok()) {
+      throw std::runtime_error("rocksdb_write_failed: " + key + ": " + status.ToString());
+    }
+  }
+
+  template <typename Fn> void for_each(const std::string &prefix, Fn fn) const {
+    auto db = open(false);
+    if (!db) {
+      return;
+    }
+    std::unique_ptr<rocksdb::Iterator> it(db->NewIterator(read_options_));
+    for (it->Seek(prefix); it->Valid(); it->Next()) {
+      const auto key = it->key().ToString();
+      if (!key.starts_with(prefix)) {
+        break;
+      }
+      fn(key, it->value().ToString());
+    }
+    if (!it->status().ok()) {
+      throw std::runtime_error("rocksdb_iterate_failed: " + it->status().ToString());
+    }
+  }
+
+  std::string runtime_dir_;
+  mutable rocksdb_content_store content_store_;
+  mutable std::mutex db_mutex_;
+  mutable std::shared_ptr<rocksdb::DB> db_ = {};
+  mutable bool db_writable_ = false;
+  rocksdb::ReadOptions read_options_ = [] {
+    rocksdb::ReadOptions options;
+    options.fill_cache = false;
+    return options;
+  }();
+  rocksdb::WriteOptions write_options_ = {};
+};
+
+std::unique_ptr<storage_provider> make_provider(const std::string &provider_name, const std::string &runtime_dir) {
+  if (provider_name == PROVIDER_ROCKSDB) {
+    return std::make_unique<rocksdb_storage_provider>(runtime_dir);
+  }
+  return std::make_unique<file_storage_provider>(runtime_dir);
+}
+
+// ADR-0040 decision 6: the per-operation provider open/close was a lifecycle
+// artifact, not an engine limit. One long-lived provider per (canonical
+// runtime dir, provider) is shared by every operation in this process, so
+// concurrent facade/service calls share one engine handle instead of racing
+// for the engine lock. Entries live until process exit: the touched
+// (runtime dir, provider) set is small, an evicted-then-reused handle would
+// reintroduce the open/close races this cache removes, and a background
+// eviction thread is out of scope by design. The engine's own lock keeps
+// rejecting a second process on the same database path — holding the write
+// handle for the process lifetime is that decision made visible, and reactor's
+// location-metadata engine lives under layout::MAP, a disjoint path from
+// this provider's storage/rocksdb, so no path ever has two in-process owners.
+class provider_cache {
+public:
+  static provider_cache &instance() {
+    // Intentionally leaked: cached engine handles must not run destructors
+    // during static teardown (RocksDB aborts once its lock infrastructure is
+    // torn down first). Never closing on exit loses nothing under the
+    // declared contract — publication is WAL-ordered, so exit-without-close
+    // is exactly the crash-safety case the backend already commits to.
+    static auto *cache = new provider_cache();
+    return *cache;
+  }
+
+  [[nodiscard]] std::shared_ptr<storage_provider> acquire(const std::string &runtime, const std::string &provider) {
+    const auto selection = select_provider(provider);
+    const auto runtime_dir = absolute_normalized(runtime).string();
+    const auto key = selection.name + "|" + runtime_dir;
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (const auto it = providers_.find(key); it != providers_.end()) {
+      hits_.fetch_add(1, std::memory_order_relaxed);
+      return it->second;
+    }
+    misses_.fetch_add(1, std::memory_order_relaxed);
+    return providers_.emplace(key, make_provider(selection.name, runtime_dir)).first->second;
+  }
+
+  [[nodiscard]] storage_provider_cache_view stats() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return {"process", providers_.size(), hits_.load(std::memory_order_relaxed),
+            misses_.load(std::memory_order_relaxed)};
+  }
+
+private:
+  provider_cache() = default;
+
+  mutable std::mutex mutex_;
+  std::unordered_map<std::string, std::shared_ptr<storage_provider>> providers_;
+  std::atomic<uint64_t> hits_{0};
+  std::atomic<uint64_t> misses_{0};
+};
+
+nlohmann::json provider_runtime_json(const storage_provider_runtime_view &runtime) {
+  nlohmann::json rendered = {{"lifecycle", runtime.lifecycle},
+                             {"instance_lifecycle", runtime.instance_lifecycle},
+                             {"handle", runtime.handle},
+                             {"readonly_open_creates_backend", runtime.readonly_open_creates_backend},
+                             {"write_open_creates_backend", runtime.write_open_creates_backend}};
+  if (runtime.read_fill_cache.has_value()) {
+    rendered["read_options"] = {{"fill_cache", *runtime.read_fill_cache}};
+  }
+  if (runtime.write_sync.has_value()) {
+    rendered["write_options"] = {{"sync", *runtime.write_sync}};
+  }
+  return rendered;
+}
+
+nlohmann::json provider_layout_json(const storage_provider_layout_view &layout) {
+  nlohmann::json rendered = {{"manifest_catalog_journal", layout.manifest_catalog_journal},
+                             {"manifest_entries", layout.manifest_entries},
+                             {"payloads", layout.payloads}};
+  if (layout.database.has_value()) {
+    rendered["database"] = *layout.database;
+  }
+  return rendered;
+}
+
+nlohmann::json provider_cache_json(const storage_provider_cache_view &cache) {
+  return {{"lifecycle", cache.lifecycle}, {"entries", cache.entries}, {"hits", cache.hits}, {"misses", cache.misses}};
+}
+
+std::shared_ptr<storage_provider> shared_provider(const storage_service_options &options) {
+  return provider_cache::instance().acquire(options.runtime_dir, options.provider);
+}
+
+std::shared_ptr<storage_provider> shared_provider(const std::string &runtime_dir) {
+  return provider_cache::instance().acquire(runtime_dir, {});
+}
+
+// Bundle a provider with an episode store wired to its content store, so
+// payload-ref resolution reads the same backend that published the bytes
+// (ADR-0040); the provider member keeps the injected store alive.
+struct episode_store_with_provider {
+  std::shared_ptr<storage_provider> provider;
+  yy_storage::episode_manifest_store store;
+};
+
+episode_store_with_provider episode_ref_store(const storage_service_options &options) {
+  auto provider = shared_provider(options);
+  auto store = yy_storage::episode_manifest_store(options.runtime_dir);
+  store.set_content_store(&provider->content_store());
+  return {std::move(provider), std::move(store)};
+}
+
+episode_store_with_provider episode_ref_store(const storage_fsck_request &request) {
+  auto provider = provider_cache::instance().acquire(request.runtime_dir, request.provider);
+  auto store = yy_storage::episode_manifest_store(request.runtime_dir);
+  store.set_content_store(&provider->content_store());
+  return {std::move(provider), std::move(store)};
+}
+
+storage_layout_result workspace_episode_layout_typed(const storage_layout_request &request,
+                                                     const storage_provider &provider) {
+  const auto runtime = absolute_normalized(request.runtime_dir);
+  const auto home = request.runtime_home.empty() ? (runtime.filename() == "runtime" ? runtime.parent_path() : runtime)
+                                                 : absolute_normalized(request.runtime_home);
+  const auto journal_dir = runtime / "journal";
+  const auto storage_dir = runtime / "storage";
+  const auto episode_manifest_dir =
+      journal_dir / "system" / yy_storage::EPISODE_MANIFEST_NAMESPACE / yy_storage::EPISODE_MANIFEST_NAME / "live";
+  const auto manifest_catalog_journal_dir =
+      journal_dir / "system" / yy_storage::MANIFEST_CATALOG_NAMESPACE / yy_storage::MANIFEST_CATALOG_NAME / "live";
+  const auto source_registry_journal_dir =
+      journal_dir / "system" / yy_storage::SOURCE_REGISTRY_NAMESPACE / yy_storage::SOURCE_REGISTRY_NAME / "live";
+  const auto manifest_entries_pattern = storage_dir / "manifests" / "<hash-prefix>" / "<sha256>";
+  const auto payload_pattern = storage_dir / "payloads" / "<hash-prefix>" / "<sha256>";
+
+  storage_layout_result result{};
+  result.runtime_home = home.string();
+  result.workspace_data_home = home.string();
+  result.runtime_home_source = request.runtime_home.empty() ? "inferred-from-runtime-dir" : "option";
+  result.runtime_dir = runtime.string();
+  result.runtime_dir_is_standard_child = runtime.filename() == "runtime";
+  result.config_home = request.config_home.empty() ? std::string{} : absolute_normalized(request.config_home).string();
+  result.provider = provider.name();
+  result.provider_layout = provider.layout();
+  result.provider_runtime = provider.runtime();
+  result.provider_cache = provider_cache::instance().stats();
+  result.paths = {home.string(),
+                  runtime.string(),
+                  (home / "dataset").string(),
+                  (home / "inbox").string(),
+                  journal_dir.string(),
+                  storage_dir.string(),
+                  (source_registry_journal_dir / "*.journal").string(),
+                  (manifest_catalog_journal_dir / "*.journal").string(),
+                  manifest_entries_pattern.string(),
+                  payload_pattern.string(),
+                  rocksdb_root(runtime.string()).string(),
+                  source_registry_projection(runtime.string()).sqlite_path(),
+                  manifest_catalog_projection(runtime.string()).sqlite_path(),
+                  episode_manifest_dir.string(),
+                  (episode_manifest_dir / "*.journal").string(),
+                  (runtime / "coordinator").string(),
+                  (runtime / "remotes" / "<source-id>" / "runtime").string(),
+                  (runtime / "atlas" / "store").string()};
+  result.episodes = {"yijinjing-journal",
+                     yy_storage::EPISODE_MANIFEST_SCHEMA_V1,
+                     yy_storage::EPISODE_MANIFEST_NAMESPACE,
+                     yy_storage::EPISODE_MANIFEST_NAME,
+                     (episode_manifest_dir / "*.journal").string(),
+                     {"episodes", "episode_records", "episode_frames", "episode_refs"},
+                     "kungfu.storage.episode-bundle/v1"};
+  result.ownership = {"append-only yijinjing frames owned by the resolved runtime",
+                      "append-only yijinjing manifest records; not loose JSON authority",
+                      "runtime storage service area for content-addressed bodies, provider databases, and projections",
+                      "append-only yijinjing source-registry kernel records; the source catalog",
+                      "append-only yijinjing manifest-catalog kernel records; the import/export/cursor authority",
+                      "content-addressed accepted entries documents committed by the manifest records",
+                      "provider-owned content-addressed payload bodies",
+                      "derived rebuildable SQLite projection over the source-registry journal",
+                      "derived rebuildable SQLite projection over the manifest-catalog journal",
+                      "optional provider-owned large-payload/key-value backend",
+                      "user config home; intentionally outside workspace data"};
+  result.notes = {
+      "This layout describes the resolved local data root; it is an inspection contract, not a second fact source.",
+      "Episode authority remains the yijinjing manifest journal under the runtime journal tree.",
+      "Provider-specific paths are implementation details behind the runtime storage service API."};
+  return result;
+}
+
+nlohmann::json workspace_episode_layout_json(const storage_layout_result &result) {
+  return {{"schema", result.schema},
+          {"owner", result.owner},
+          {"layout_version", result.layout_version},
+          {"runtime_home", result.runtime_home},
+          {"workspace_data_home", result.workspace_data_home},
+          {"runtime_home_source", result.runtime_home_source},
+          {"runtime_dir", result.runtime_dir},
+          {"runtime_dir_is_standard_child", result.runtime_dir_is_standard_child},
+          {"config_home", result.config_home},
+          {"provider", result.provider},
+          {"provider_layout", provider_layout_json(result.provider_layout)},
+          {"provider_runtime", provider_runtime_json(result.provider_runtime)},
+          {"provider_cache", provider_cache_json(result.provider_cache)},
+          {"paths",
+           {{"data_home", result.paths.data_home},
+            {"runtime_dir", result.paths.runtime_dir},
+            {"dataset_dir", result.paths.dataset_dir},
+            {"inbox_dir", result.paths.inbox_dir},
+            {"journal_dir", result.paths.journal_dir},
+            {"storage_dir", result.paths.storage_dir},
+            {"source_registry_journal", result.paths.source_registry_journal},
+            {"manifest_catalog_journal", result.paths.manifest_catalog_journal},
+            {"manifest_entries", result.paths.manifest_entries},
+            {"payloads", result.paths.payloads},
+            {"rocksdb", result.paths.rocksdb},
+            {"source_registry_projection", result.paths.source_registry_projection},
+            {"manifest_catalog_projection", result.paths.manifest_catalog_projection},
+            {"episode_manifest_journal_dir", result.paths.episode_manifest_journal_dir},
+            {"episode_manifest_journal", result.paths.episode_manifest_journal},
+            {"coordinator_state", result.paths.coordinator_state},
+            {"remote_mirrors", result.paths.remote_mirrors},
+            {"atlas_store", result.paths.atlas_store}}},
+          {"episodes",
+           {{"authority", result.episodes.authority},
+            {"schema", result.episodes.schema},
+            {"manifest_namespace", result.episodes.manifest_namespace},
+            {"manifest_name", result.episodes.manifest_name},
+            {"manifest_journal", result.episodes.manifest_journal},
+            {"query_tables", result.episodes.query_tables},
+            {"export_schema", result.episodes.export_schema}}},
+          {"ownership",
+           {{"journal_dir", result.ownership.journal_dir},
+            {"episode_manifest_journal", result.ownership.episode_manifest_journal},
+            {"storage_dir", result.ownership.storage_dir},
+            {"source_registry_journal", result.ownership.source_registry_journal},
+            {"manifest_catalog_journal", result.ownership.manifest_catalog_journal},
+            {"manifest_entries", result.ownership.manifest_entries},
+            {"payloads", result.ownership.payloads},
+            {"source_registry_projection", result.ownership.source_registry_projection},
+            {"manifest_catalog_projection", result.ownership.manifest_catalog_projection},
+            {"rocksdb", result.ownership.rocksdb},
+            {"config_home", result.ownership.config_home}}},
+          {"notes", result.notes}};
+}
+
+nlohmann::json entries_for_manifest(const nlohmann::json &manifest, const nlohmann::json &range_filter = {}) {
+  auto entries = array_or_empty(manifest, "entries");
+  if (range_filter.is_object() && !range_filter.empty()) {
+    entries = yy_storage::filter_storage_manifest_entries(entries, range_filter);
+  }
+  nlohmann::json result = nlohmann::json::array();
+  for (const auto &entry : entries) {
+    if (entry.is_object()) {
+      result.push_back(entry);
+    }
+  }
+  return result;
+}
+
+std::vector<fs::path> all_payload_paths(const std::string &runtime_dir) {
+  std::vector<fs::path> paths;
+  const auto root = payload_root(runtime_dir);
+  if (!fs::exists(root)) {
+    return paths;
+  }
+  for (const auto &prefix : fs::directory_iterator(root)) {
+    if (!prefix.is_directory()) {
+      continue;
+    }
+    for (const auto &entry : fs::directory_iterator(prefix.path())) {
+      // Payload bodies are opaque content-addressed files named by hash, with no
+      // extension (ADR-0037); every regular file under a prefix is a body.
+      if (entry.is_regular_file()) {
+        paths.emplace_back(entry.path());
+      }
+    }
+  }
+  std::sort(paths.begin(), paths.end());
+  return paths;
+}
+
+std::string payload_digest_from_path(const fs::path &path) {
+  // Bodies are named by the full content hash with no extension; the whole
+  // filename is the digest.
+  return path.filename().string();
+}
+
+yy_storage::manifest_catalog_store catalog_store(const std::string &runtime_dir) {
+  return yy_storage::manifest_catalog_store(runtime_dir);
+}
+
+yy_storage::source_registry_store registry_store(const std::string &runtime_dir) {
+  return yy_storage::source_registry_store(runtime_dir);
+}
+
+nlohmann::json load_latest_manifest_impl(const std::string &runtime_dir, const storage_provider &provider,
+                                         const std::string &source_id) {
+  return catalog_store(runtime_dir).latest_manifest(source_id, provider.content_store());
+}
+
+storage_projection_status_view source_registry_projection_status(const std::string &runtime_dir) {
+  const auto projection = source_registry_projection(runtime_dir);
+  return {PROJECTION_SOURCE_REGISTRY, projection.sqlite_path(), true, projection.verify_typed()};
+}
+
+storage_projection_status_view manifest_catalog_projection_status(const std::string &runtime_dir) {
+  const auto projection = manifest_catalog_projection(runtime_dir);
+  return {PROJECTION_MANIFEST_CATALOG, projection.sqlite_path(), true, projection.verify_typed()};
+}
+
+nlohmann::json projection_verification_json(const storage_projection_verify_result &report) {
+  nlohmann::json rendered = {{"ok", report.ok},
+                             {"status", report.status},
+                             {"schema", report.schema},
+                             {"runtime_dir", report.runtime_dir},
+                             {"authority", report.authority},
+                             {"projection_present", report.projection_present}};
+  if (!report.note.empty()) {
+    rendered["note"] = report.note;
+  }
+  if (report.projection_present) {
+    rendered["degraded"] = report.degraded;
+    rendered["drift"] = nlohmann::json::array();
+    for (const auto &item : report.drift) {
+      rendered["drift"].push_back({{"table", item.table},
+                                   {"projection_rows", item.projection_rows},
+                                   {"journal_distinct", item.journal_distinct},
+                                   {"reason", item.reason},
+                                   {"projection_digest", item.projection_digest},
+                                   {"journal_digest", item.journal_digest}});
+    }
+    rendered["rows"] = nlohmann::json::object();
+    for (const auto &item : report.rows) {
+      rendered["rows"][item.table] = item.count;
+    }
+    rendered["journal_distinct"] = nlohmann::json::object();
+    for (const auto &item : report.journal_distinct) {
+      rendered["journal_distinct"][item.table] = item.count;
+    }
+  }
+  return rendered;
+}
+
+nlohmann::json projection_rebuild_json(const storage_projection_rebuild_result &result) {
+  nlohmann::json rows = nlohmann::json::object();
+  nlohmann::json journal_records = nlohmann::json::object();
+  for (const auto &item : result.rows)
+    rows[item.table] = item.count;
+  for (const auto &item : result.journal_records)
+    journal_records[item.table] = item.count;
+  return {{"ok", result.ok},
+          {"schema", result.schema},
+          {"runtime_dir", result.runtime_dir},
+          {"authority", result.authority},
+          {"projection", result.projection},
+          {"sqlite_path", result.sqlite_path},
+          {"rows", std::move(rows)},
+          {"journal_records", std::move(journal_records)}};
+}
+
+nlohmann::json episode_projection_rebuild_json(const storage_projection_rebuild_result &result) {
+  auto rendered = projection_rebuild_json(result);
+  uint64_t journal_records = 0;
+  uint64_t unknown_records_skipped = 0;
+  for (const auto &item : result.journal_records) {
+    if (item.table == "episode_manifest_records")
+      journal_records = item.count;
+    if (item.table == "unknown_records_skipped")
+      unknown_records_skipped = item.count;
+  }
+  rendered["journal_records"] = journal_records;
+  rendered["query_records"] = result.query_records;
+  rendered["unknown_records_skipped"] = unknown_records_skipped;
+  return rendered;
+}
+
+nlohmann::json projection_status_json(const storage_projection_status_view &status) {
+  auto rendered = projection_verification_json(status.verification);
+  rendered["name"] = status.name;
+  rendered["path"] = status.path;
+  rendered["rebuildable"] = status.rebuildable;
+  return rendered;
+}
+
+const char *verification_status_text(yy_enums::SourceVerificationStatus status) {
+  switch (status) {
+  case yy_enums::SourceVerificationStatus::Ok:
+    return "ok";
+  case yy_enums::SourceVerificationStatus::Degraded:
+    return "degraded";
+  case yy_enums::SourceVerificationStatus::Failed:
+    return "failed";
+  }
+  return "failed";
+}
+
+storage_query_result query_journal_projection(const storage_query_request &request) {
+  storage_query_result result{};
+  result.query = request.query;
+  result.limit = request.limit;
+  result.range = request.range;
+  if (!request.entry_kind.empty()) {
+    result.entry_kind = request.entry_kind;
+  }
+
+  const bool episode_query =
+      request.query == storage_query_kind::Episodes || request.query == storage_query_kind::EpisodeRecords ||
+      request.query == storage_query_kind::EpisodeFrames || request.query == storage_query_kind::EpisodeRefs;
+  if (episode_query) {
+    result.scope = "episode";
+    if (request.episode_id != 0) {
+      result.episode_id = request.episode_id;
+    }
+    result.projection_name = "episode-manifest";
+    result.projection_schema = yy_storage::EPISODE_MANIFEST_SCHEMA_V1;
+    result.rebuildable = false;
+
+    const auto fold = yy_storage::episode_manifest_store(request.runtime_dir).fold_typed_records();
+    if (request.query == storage_query_kind::Episodes) {
+      std::vector<yy_storage::episode_current_view> rows;
+      if (request.episode_id != 0) {
+        const auto iter = fold.episodes.find(request.episode_id);
+        if (iter != fold.episodes.end()) {
+          rows.push_back(iter->second);
+        }
+      } else {
+        for (auto iter = fold.episodes.rbegin(); iter != fold.episodes.rend(); ++iter) {
+          rows.push_back(iter->second);
+          if (request.limit != 0 && rows.size() >= request.limit) {
+            break;
+          }
+        }
+      }
+      result.rows = std::move(rows);
+      return result;
+    }
+
+    if (request.episode_id == 0) {
+      throw std::invalid_argument("episode_id is required for " + storage_query_kind_name(request.query));
+    }
+    const auto iter = fold.episodes.find(request.episode_id);
+    if (iter == fold.episodes.end()) {
+      result.ok = false;
+      result.errors.push_back({"episode_missing", request.episode_id});
+      result.rows = std::vector<yy_storage::episode_manifest_record>{};
+      return result;
+    }
+    const auto &view = iter->second;
+    std::vector<yy_storage::episode_manifest_record> rows;
+    if (request.query == storage_query_kind::EpisodeRecords) {
+      rows = view.records;
+    } else {
+      const auto &indices = request.query == storage_query_kind::EpisodeFrames ? view.frame_indices : view.ref_indices;
+      rows.reserve(indices.size());
+      for (const auto index : indices) {
+        rows.push_back(view.records.at(index));
+      }
+    }
+    if (request.limit != 0 && rows.size() > request.limit) {
+      rows.resize(request.limit);
+    }
+    result.rows = std::move(rows);
+    return result;
+  }
+
+  result.scope = request.source_id.empty() ? "all" : "source";
+  if (!request.source_id.empty()) {
+    result.source_id = request.source_id;
+  }
+  result.projection_name = "manifest-catalog";
+  result.projection_schema = yy_storage::MANIFEST_CATALOG_SCHEMA_V1;
+  result.rebuildable = true;
+
+  // Generic storage queries serve straight from the typed kernel journal
+  // records. SQLite remains a derived projection used for parity/SQL access,
+  // never the authority or an intermediate JSON query substrate.
+  const auto records = catalog_store(request.runtime_dir).read_typed_records();
+  const auto limit = request.limit == 0 ? uint64_t{1000} : std::min<uint64_t>(request.limit, 1000);
+  std::map<uint64_t, std::vector<size_t>> manifests_by_source;
+  for (size_t index = 0; index < records.manifests.size(); ++index) {
+    manifests_by_source[records.manifests[index].source_uid].push_back(index);
+  }
+
+  if (request.query == storage_query_kind::Sources) {
+    std::vector<storage_source_query_row> rows;
+    for (const auto &[source_uid, indices] : manifests_by_source) {
+      const auto &latest = records.manifests.at(indices.back());
+      const auto source_id = std::string(latest.source_id.value);
+      if (!request.source_id.empty() && source_id != request.source_id) {
+        continue;
+      }
+      uint64_t export_count = 0;
+      for (const auto &receipt : records.exports) {
+        export_count += receipt.source_uid == source_uid ? 1 : 0;
+      }
+      rows.push_back({source_uid,
+                      source_id,
+                      std::string(latest.source_type.value),
+                      std::string(latest.source_coordinate.value),
+                      std::string(latest.manifest_id.value),
+                      std::string(latest.source_head.value),
+                      latest.accept_time,
+                      latest.entry_count,
+                      {std::string(latest.sync_root_algo.value), std::string(latest.sync_root_value.value)},
+                      indices.size(),
+                      export_count});
+      if (rows.size() >= limit) {
+        break;
+      }
+    }
+    result.rows = std::move(rows);
+    return result;
+  }
+
+  if (request.query == storage_query_kind::Manifests) {
+    std::vector<storage_manifest_query_row> rows;
+    for (const auto &[source_uid, indices] : manifests_by_source) {
+      (void)source_uid;
+      const auto source_id = std::string(records.manifests.at(indices.back()).source_id.value);
+      if (!request.source_id.empty() && source_id != request.source_id) {
+        continue;
+      }
+      for (const auto index : indices) {
+        const auto &record = records.manifests.at(index);
+        rows.push_back({source_id,
+                        std::string(record.manifest_id.value),
+                        record.accept_time,
+                        record.entry_count,
+                        std::string(record.entries_hash.value),
+                        {std::string(record.sync_root_algo.value), std::string(record.sync_root_value.value)},
+                        verification_status_text(record.status)});
+        if (rows.size() >= limit) {
+          break;
+        }
+      }
+      if (rows.size() >= limit) {
+        break;
+      }
+    }
+    result.rows = std::move(rows);
+    return result;
+  }
+
+  if (request.query != storage_query_kind::Entries) {
+    throw std::invalid_argument("unsupported storage query: " + storage_query_kind_name(request.query));
+  }
+  std::unordered_map<uint64_t, size_t> latest_by_manifest_uid;
+  for (size_t index = 0; index < records.manifests.size(); ++index) {
+    latest_by_manifest_uid[records.manifests[index].manifest_uid] = index;
+  }
+  std::vector<storage_entry_query_row> rows;
+  for (const auto &record : records.entries) {
+    const auto header_iter = latest_by_manifest_uid.find(record.manifest_uid);
+    if (header_iter == latest_by_manifest_uid.end()) {
+      continue;
+    }
+    const auto &header = records.manifests.at(header_iter->second);
+    if (record.accept_time != header.accept_time) {
+      continue;
+    }
+    storage_entry_query_row row{std::string(record.kind.value),
+                                std::string(record.entry_source_id.value),
+                                std::string(record.source_path.value),
+                                std::string(record.source_time.value),
+                                record.entry_schema_version,
+                                std::string(record.content_type.value),
+                                std::string(record.payload_hash.value),
+                                record.byte_len,
+                                payload_state_text(record.payload_state),
+                                record.entry_index,
+                                record.accept_time,
+                                std::string(header.source_id.value),
+                                std::string(header.manifest_id.value)};
+    if (!request.source_id.empty() && row.storage_source_id != request.source_id) {
+      continue;
+    }
+    if (!request.entry_kind.empty() && row.kind != request.entry_kind) {
+      continue;
+    }
+    if ((!request.range.since.empty() || !request.range.until.empty()) && row.source_time.empty()) {
+      continue;
+    }
+    if (!request.range.since.empty() && row.source_time < request.range.since) {
+      continue;
+    }
+    if (!request.range.until.empty() && row.source_time > request.range.until) {
+      continue;
+    }
+    rows.push_back(std::move(row));
+    if (rows.size() >= limit) {
+      break;
+    }
+  }
+  result.rows = std::move(rows);
+  return result;
+}
+
+// Stage 3 deep verification (ADR-0041 point 4, ADR-0023/0028): re-open the
+// event journals the manifest claims frames from and verify each attached
+// frame receipt against the actual frame — presence, header fields, and the
+// recomputed payload/frame checksums. Opt-in via the fsck "verify_frames"
+// option because it reads every referenced journal. A sealed (Ended) Episode
+// with a missing or mismatched frame is failed; an open/aborted Episode is
+// degraded with the exact missing side reported.
+episode_frame_verification verify_episode_frame_claims(const storage_fsck_request &request) {
+  namespace yjj = kungfu::yijinjing;
+  episode_frame_verification result;
+  const auto fold = yy_storage::episode_manifest_store(request.runtime_dir).fold_typed_records();
+
+  auto locator = std::make_shared<yjj::data::locator>(request.runtime_dir, yy_enums::mode::LIVE);
+  std::unordered_map<uint32_t, yjj::data::location_ptr> locations_by_uid;
+  for (const auto &location : locator->list_locations("*", "*", "*", "*")) {
+    locations_by_uid.emplace(location->uid, location);
+  }
+
+  struct claim_context {
+    uint64_t episode_id = 0;
+    bool sealed = false;
+    yjj::types::EpisodeFrameAttached claim = {};
+  };
+  std::map<std::pair<uint32_t, uint32_t>, std::vector<claim_context>> journals;
+  for (const auto &[episode_id, view] : fold.episodes) {
+    if (request.episode_id != 0 && episode_id != request.episode_id) {
+      continue;
+    }
+    const bool sealed = view.closed && view.close.status == yy_enums::EpisodeStatus::Ended;
+    for (size_t position = 0; position < view.frame_indices.size(); ++position) {
+      const auto &claim = view.frame_at(position);
+      if (claim.frame_uid == 0) {
+        continue;
+      }
+      journals[{claim.source, claim.dest}].push_back({episode_id, sealed, claim});
+    }
+  }
+
+  auto report_presence_issue = [&result](bool sealed, episode_frame_verification_issue issue) {
+    if (sealed) {
+      result.errors.push_back(std::move(issue));
+    } else {
+      result.warnings.push_back(std::move(issue));
+      result.degraded = true;
+    }
+  };
+
+  for (auto &[journal_key, claims] : journals) {
+    const auto source_uid = journal_key.first;
+    const auto dest_uid = journal_key.second;
+    const auto location_iter = locations_by_uid.find(source_uid);
+    if (location_iter == locations_by_uid.end()) {
+      for (const auto &context : claims) {
+        episode_frame_verification_issue issue{};
+        issue.code = "episode_frame_location_unknown";
+        issue.episode_id = context.episode_id;
+        issue.frame_uid = context.claim.frame_uid;
+        issue.location_uid = source_uid;
+        report_presence_issue(context.sealed, std::move(issue));
+      }
+      continue;
+    }
+    const auto &location = location_iter->second;
+
+    std::unordered_map<uint64_t, std::vector<const claim_context *>> wanted;
+    for (const auto &context : claims) {
+      wanted[context.claim.frame_uid].push_back(&context);
+    }
+
+    std::unordered_set<uint64_t> found;
+    if (!location->locator->list_page_id(location, dest_uid).empty()) {
+      auto reader = std::make_shared<yjj::journal::reader>(true, false, std::make_shared<yjj::journal::bus>(false));
+      reader->join(location, dest_uid, 0);
+      while (reader->data_available()) {
+        const auto frame = reader->current_frame();
+        const auto wanted_iter = wanted.find(frame->frame_uid());
+        if (wanted_iter != wanted.end() && found.insert(frame->frame_uid()).second) {
+          const auto &header = *reinterpret_cast<const yjj::types::frame_header *>(frame->address());
+          const auto *payload = static_cast<const uint8_t *>(frame->data_address());
+          for (const auto *context : wanted_iter->second) {
+            const auto &claim = context->claim;
+            std::vector<episode_frame_field_mismatch> fields;
+            if (header.carrier_type != claim.carrier_type) {
+              fields.push_back({"carrier_type", int64_t{claim.carrier_type}, int64_t{header.carrier_type}});
+            }
+            if (header.gen_time != claim.gen_time) {
+              fields.push_back({"gen_time", claim.gen_time, header.gen_time});
+            }
+            if (header.trigger_frame_uid != claim.trigger_frame_uid) {
+              fields.push_back({"trigger_frame_uid", claim.trigger_frame_uid, header.trigger_frame_uid});
+            }
+            if (frame->data_length() < claim.data_length) {
+              fields.push_back({"data_length", uint64_t{claim.data_length}, uint64_t{frame->data_length()}});
+            }
+            if (!fields.empty()) {
+              episode_frame_verification_issue issue{};
+              issue.code = "episode_attached_frame_mismatch";
+              issue.episode_id = context->episode_id;
+              issue.frame_uid = claim.frame_uid;
+              issue.fields = std::move(fields);
+              result.errors.push_back(std::move(issue));
+              continue;
+            }
+            if (claim.integrity_version == 0) {
+              ++result.verified;
+              continue;
+            }
+            std::string algorithm;
+            try {
+              algorithm = action::frame_checksum_algorithm_for_integrity_version(claim.integrity_version);
+            } catch (const std::exception &) {
+              episode_frame_verification_issue issue{};
+              issue.code = "episode_frame_integrity_version_unknown";
+              issue.episode_id = context->episode_id;
+              issue.frame_uid = claim.frame_uid;
+              issue.integrity_version = claim.integrity_version;
+              report_presence_issue(context->sealed, std::move(issue));
+              continue;
+            }
+            const auto payload_checksum = action::checksum_payload(payload, claim.data_length, algorithm);
+            const auto frame_checksum = action::checksum_frame(header, payload, claim.data_length, algorithm);
+            if (payload_checksum != claim.payload_checksum || frame_checksum != claim.frame_checksum) {
+              episode_frame_verification_issue issue{};
+              issue.code = "episode_attached_frame_checksum_mismatch";
+              issue.episode_id = context->episode_id;
+              issue.frame_uid = claim.frame_uid;
+              issue.claimed_payload_checksum = claim.payload_checksum;
+              issue.actual_payload_checksum = payload_checksum;
+              issue.claimed_frame_checksum = claim.frame_checksum;
+              issue.actual_frame_checksum = frame_checksum;
+              result.errors.push_back(std::move(issue));
+              continue;
+            }
+            ++result.verified;
+          }
+        }
+        reader->next();
+      }
+    }
+    for (const auto &context : claims) {
+      if (found.count(context.claim.frame_uid) == 0) {
+        episode_frame_verification_issue issue{};
+        issue.code = "episode_attached_frame_missing";
+        issue.episode_id = context.episode_id;
+        issue.frame_uid = context.claim.frame_uid;
+        issue.location_uid = context.claim.source;
+        issue.dest = context.claim.dest;
+        report_presence_issue(context.sealed, std::move(issue));
+      }
+    }
+  }
+  return result;
+}
+
+nlohmann::json render_episode_frame_verification_issue(const episode_frame_verification_issue &issue) {
+  nlohmann::json row = {{"code", issue.code}, {"episode_id", issue.episode_id}, {"frame_uid", issue.frame_uid}};
+  if (issue.location_uid.has_value())
+    row["location_uid"] = *issue.location_uid;
+  if (issue.dest.has_value())
+    row["dest"] = *issue.dest;
+  if (issue.integrity_version.has_value())
+    row["integrity_version"] = *issue.integrity_version;
+  if (!issue.fields.empty()) {
+    row["fields"] = nlohmann::json::array();
+    for (const auto &field : issue.fields) {
+      const auto render_value = [](const episode_frame_field_value &value) {
+        return std::visit([](const auto item) { return nlohmann::json(item); }, value);
+      };
+      row["fields"].push_back(
+          {{"field", field.field}, {"claimed", render_value(field.claimed)}, {"actual", render_value(field.actual)}});
+    }
+  }
+  if (issue.claimed_payload_checksum.has_value()) {
+    row["claimed_payload_checksum"] = *issue.claimed_payload_checksum;
+  }
+  if (issue.actual_payload_checksum.has_value())
+    row["actual_payload_checksum"] = *issue.actual_payload_checksum;
+  if (issue.claimed_frame_checksum.has_value())
+    row["claimed_frame_checksum"] = *issue.claimed_frame_checksum;
+  if (issue.actual_frame_checksum.has_value())
+    row["actual_frame_checksum"] = *issue.actual_frame_checksum;
+  return row;
+}
+
+struct episode_repair_descriptor {
+  std::string action = {};
+  std::vector<std::string> required_inputs = {};
+};
+
+std::optional<episode_repair_descriptor> episode_repair_descriptor_for_issue(const episode_qualification_issue &issue) {
+  const auto &code = issue.code;
+  if (code == "episode_dependency_missing") {
+    return episode_repair_descriptor{"fetch_episode", {"source_or_episode_bundle"}};
+  }
+  if (code == "episode_root_trigger_frame_missing" || code == "episode_trigger_frame_missing") {
+    return episode_repair_descriptor{"fetch_frame_or_declare_external_input", {"source_or_episode_bundle"}};
+  }
+  if (code == "episode_payload_ref_missing" || code == "episode_payload_ref_hash_mismatch") {
+    return episode_repair_descriptor{"fetch_payload_by_hash", {"payload_store_or_episode_bundle"}};
+  }
+  if (code == "episode_attached_frame_missing") {
+    return episode_repair_descriptor{"fetch_frame", {"source_or_episode_bundle"}};
+  }
+  if (code == "episode_projection_absent" || code == "episode_projection_drift") {
+    return episode_repair_descriptor{"rebuild_projection", {}};
+  }
+  return std::nullopt;
+}
+
+std::string episode_issue_evidence(const std::string &code) {
+  if (code.rfind("episode_payload_ref_", 0) == 0) {
+    return "content";
+  }
+  if (code.rfind("episode_attached_frame_", 0) == 0 || code == "episode_frame_location_unknown" ||
+      code == "episode_frame_integrity_version_unknown") {
+    return "frames";
+  }
+  if (code == "episode_dependency_missing" || code == "episode_root_trigger_frame_missing" ||
+      code == "episode_trigger_frame_missing") {
+    return "causal_closure";
+  }
+  if (code.rfind("episode_projection_", 0) == 0) {
+    return "projection";
+  }
+  return "manifest_integrity";
+}
+
+void append_unique(std::vector<std::string> &values, const std::string &value) {
+  if (std::find(values.begin(), values.end(), value) == values.end()) {
+    values.push_back(value);
+  }
+}
+
+episode_qualification_evidence *find_episode_evidence(episode_qualification_result &result, const std::string &name) {
+  const auto iter = std::find_if(result.evidence.begin(), result.evidence.end(),
+                                 [&name](const auto &entry) { return entry.name == name; });
+  return iter == result.evidence.end() ? nullptr : &*iter;
+}
+
+const episode_qualification_evidence *find_episode_evidence(const episode_qualification_result &result,
+                                                            const std::string &name) {
+  const auto iter = std::find_if(result.evidence.begin(), result.evidence.end(),
+                                 [&name](const auto &entry) { return entry.name == name; });
+  return iter == result.evidence.end() ? nullptr : &*iter;
+}
+
+episode_qualification_capability make_episode_capability(const std::string &name,
+                                                         std::vector<std::pair<std::string, bool>> requirements) {
+  episode_qualification_capability capability;
+  capability.name = name;
+  capability.safe = true;
+  for (const auto &[requirement, satisfied] : requirements) {
+    capability.required_evidence.push_back(requirement);
+    if (!satisfied) {
+      capability.safe = false;
+      capability.blocked_by.push_back(requirement);
+    }
+  }
+  return capability;
+}
+
+episode_qualification_result make_episode_qualification(uint64_t episode_id,
+                                                        const yy_storage::episode_fsck_result &manifest_report,
+                                                        const episode_frame_verification *frame_verification,
+                                                        const storage_projection_verify_result &projection) {
+  episode_qualification_result result;
+  result.episode_id = episode_id;
+  result.status = manifest_report.status;
+  const bool exists = manifest_report.episode.has_value();
+  const auto lifecycle = [](const yy_storage::episode_current_view &episode) {
+    if (!episode.opened)
+      return std::string("dangling");
+    if (!episode.closed)
+      return std::string("open");
+    switch (episode.close.status) {
+    case yy_enums::EpisodeStatus::Ended:
+      return std::string("ended");
+    case yy_enums::EpisodeStatus::Aborted:
+      return std::string("aborted");
+    case yy_enums::EpisodeStatus::Tombstoned:
+      return std::string("tombstoned");
+    default:
+      return std::string("unknown");
+    }
+  };
+  result.lifecycle = exists ? lifecycle(*manifest_report.episode) : "missing";
+  const auto frame_count = exists ? manifest_report.episode->frame_indices.size() : size_t{0};
+  size_t payload_ref_count = 0;
+  size_t schema_ref_count = 0;
+  if (exists) {
+    for (size_t position = 0; position < manifest_report.episode->ref_indices.size(); ++position) {
+      const auto kind = manifest_report.episode->ref_at(position).ref_kind;
+      payload_ref_count += kind == yy_enums::EpisodeRefKind::Payload ? 1 : 0;
+      schema_ref_count += kind == yy_enums::EpisodeRefKind::Schema ? 1 : 0;
+    }
+  }
+  const bool frames_checked = frame_verification != nullptr;
+
+  result.evidence = {
+      {"manifest_records", exists ? "verified" : "failed", {}},
+      {"manifest_integrity", exists ? "verified" : "failed", {}},
+      {"causal_closure", exists ? "verified" : "failed", {}},
+      {"content", payload_ref_count == 0 ? "not_applicable" : "verified", {}},
+      {"frames", frame_count == 0 ? "not_applicable" : (frames_checked ? "verified" : "not_checked"), {}},
+      {"schemas", schema_ref_count == 0 ? "not_applicable" : "not_checked", {}},
+      {"projection", "not_checked", {}},
+  };
+
+  const auto add_issue = [&result](auto detail, const std::string &severity) {
+    episode_qualification_issue issue;
+    issue.severity = severity;
+    issue.code = detail.code;
+    issue.evidence = episode_issue_evidence(issue.code);
+    issue.detail = std::move(detail);
+    result.issues.push_back(issue);
+    if (auto *evidence = find_episode_evidence(result, issue.evidence); evidence != nullptr) {
+      append_unique(evidence->issue_codes, issue.code);
+      if (severity == "error") {
+        evidence->state = "failed";
+      } else if (severity == "warning" && evidence->state != "failed") {
+        evidence->state = "degraded";
+      }
+    }
+  };
+  for (const auto &error : manifest_report.errors) {
+    add_issue(error, "error");
+  }
+  for (const auto &warning : manifest_report.warnings) {
+    add_issue(warning, "warning");
+  }
+  if (frame_verification != nullptr) {
+    for (const auto &error : frame_verification->errors) {
+      add_issue(error, "error");
+    }
+    for (const auto &warning : frame_verification->warnings) {
+      add_issue(warning, "warning");
+    }
+  }
+
+  const auto &projection_status = projection.status;
+  if (auto *evidence = find_episode_evidence(result, "projection"); evidence != nullptr) {
+    if (!exists) {
+      evidence->state = "not_applicable";
+    } else if (projection_status == "ok") {
+      evidence->state = "verified";
+    } else if (projection_status == "absent") {
+      evidence->state = "missing";
+      auto issue = projection;
+      issue.status = "absent";
+      episode_qualification_issue qualification_issue{"info", "episode_projection_absent", "projection",
+                                                      std::move(issue)};
+      result.issues.push_back(std::move(qualification_issue));
+      append_unique(evidence->issue_codes, "episode_projection_absent");
+    } else if (projection_status == "degraded") {
+      evidence->state = "degraded";
+      result.issues.push_back({"warning", "episode_projection_drift", "projection", projection});
+      append_unique(evidence->issue_codes, "episode_projection_drift");
+    } else {
+      evidence->state = "failed";
+      result.issues.push_back({"error", "episode_projection_unavailable", "projection", projection});
+      append_unique(evidence->issue_codes, "episode_projection_unavailable");
+    }
+  }
+
+  const bool frame_failed = frame_verification != nullptr && !frame_verification->errors.empty();
+  const bool degraded = manifest_report.degraded || (frame_verification != nullptr && frame_verification->degraded) ||
+                        projection_status == "degraded";
+  result.status = (!manifest_report.ok || frame_failed) ? "failed" : (degraded ? "degraded" : "ok");
+
+  const auto state = [&result](const std::string &name) {
+    const auto *evidence = find_episode_evidence(result, name);
+    return evidence == nullptr ? std::string("missing") : evidence->state;
+  };
+  const auto verified = [&state](const std::string &name) { return state(name) == "verified"; };
+  const auto verified_or_not_applicable = [&state](const std::string &name) {
+    const auto value = state(name);
+    return value == "verified" || value == "not_applicable";
+  };
+  const bool records_readable = verified("manifest_records");
+  const bool manifest_valid = verified("manifest_integrity");
+  result.capabilities = {
+      make_episode_capability("inspect", {{"manifest_records=verified", records_readable}}),
+      make_episode_capability("fsck", {{"manifest_records=verified", records_readable}}),
+      make_episode_capability("export_evidence", {{"manifest_records=verified", records_readable}}),
+      make_episode_capability("plan_repair", {{"manifest_records=verified", records_readable}}),
+      make_episode_capability("rebuild_projection", {{"manifest_records=verified", records_readable},
+                                                     {"manifest_integrity=verified", manifest_valid}}),
+      make_episode_capability("append", {{"lifecycle=open", result.lifecycle == "open"},
+                                         {"manifest_records=verified", records_readable},
+                                         {"manifest_integrity=verified", manifest_valid}}),
+      make_episode_capability("replay", {{"lifecycle=ended", result.lifecycle == "ended"},
+                                         {"manifest_records=verified", records_readable},
+                                         {"manifest_integrity=verified", manifest_valid},
+                                         {"causal_closure=verified", verified("causal_closure")},
+                                         {"content=verified|not_applicable", verified_or_not_applicable("content")},
+                                         {"frames=verified|not_applicable", verified_or_not_applicable("frames")},
+                                         {"schemas=verified|not_applicable", verified_or_not_applicable("schemas")}}),
+      make_episode_capability("depend_on",
+                              {{"lifecycle=ended", result.lifecycle == "ended"},
+                               {"manifest_records=verified", records_readable},
+                               {"manifest_integrity=verified", manifest_valid},
+                               {"causal_closure=verified", verified("causal_closure")},
+                               {"content=verified|not_applicable", verified_or_not_applicable("content")},
+                               {"frames=verified|not_applicable", verified_or_not_applicable("frames")},
+                               {"schemas=verified|not_applicable", verified_or_not_applicable("schemas")}}),
+  };
+
+  for (const auto &issue : result.issues) {
+    const auto descriptor = episode_repair_descriptor_for_issue(issue);
+    if (!descriptor.has_value()) {
+      continue;
+    }
+    episode_repair_subject subject{};
+    std::visit(
+        [&subject](const auto &detail) {
+          using detail_t = std::decay_t<decltype(detail)>;
+          if constexpr (std::is_same_v<detail_t, yy_storage::episode_fsck_issue>) {
+            subject.episode_id = detail.episode_id;
+            subject.dependency_episode_id = detail.dependency_episode_id;
+            subject.frame_uid = detail.frame_uid;
+            subject.dependent_frame_uid = detail.dependent_frame_uid;
+            subject.ref_id = detail.ref_id;
+            subject.ref_hash = detail.ref_hash;
+            subject.role = detail.role;
+          } else if constexpr (std::is_same_v<detail_t, episode_frame_verification_issue>) {
+            subject.episode_id = detail.episode_id;
+            subject.frame_uid = detail.frame_uid;
+          }
+        },
+        issue.detail);
+    result.repair_prerequisites.push_back({issue.code, descriptor->action, descriptor->required_inputs, subject});
+  }
+  return result;
+}
+
+nlohmann::json episode_qualification_issue_detail_json(const episode_qualification_issue &issue) {
+  return std::visit(
+      [&issue](const auto &detail) {
+        using detail_t = std::decay_t<decltype(detail)>;
+        if constexpr (std::is_same_v<detail_t, yy_storage::episode_fsck_issue>) {
+          return yy_storage::render_episode_fsck_issue(detail);
+        } else if constexpr (std::is_same_v<detail_t, episode_frame_verification_issue>) {
+          return render_episode_frame_verification_issue(detail);
+        } else {
+          nlohmann::json rendered = {{"code", issue.code}, {"status", detail.status}};
+          if (issue.code == "episode_projection_drift") {
+            rendered["drift"] = nlohmann::json::array();
+            for (const auto &item : detail.drift) {
+              rendered["drift"].push_back({{"table", item.table},
+                                           {"projection_rows", item.projection_rows},
+                                           {"journal_distinct", item.journal_distinct},
+                                           {"reason", item.reason},
+                                           {"projection_digest", item.projection_digest},
+                                           {"journal_digest", item.journal_digest}});
+            }
+          }
+          return rendered;
+        }
+      },
+      issue.detail);
+}
+
+nlohmann::json episode_repair_subject_json(const episode_repair_subject &subject) {
+  nlohmann::json rendered = nlohmann::json::object();
+  if (subject.episode_id.has_value())
+    rendered["episode_id"] = *subject.episode_id;
+  if (subject.dependency_episode_id.has_value())
+    rendered["dependency_episode_id"] = *subject.dependency_episode_id;
+  if (subject.frame_uid.has_value())
+    rendered["frame_uid"] = *subject.frame_uid;
+  if (subject.dependent_frame_uid.has_value())
+    rendered["dependent_frame_uid"] = *subject.dependent_frame_uid;
+  if (subject.ref_id.has_value())
+    rendered["ref_id"] = *subject.ref_id;
+  if (subject.ref_hash.has_value())
+    rendered["ref_hash"] = *subject.ref_hash;
+  if (subject.role.has_value())
+    rendered["role"] = *subject.role;
+  return rendered;
+}
+
+nlohmann::json episode_qualification_json(const episode_qualification_result &result) {
+  nlohmann::json evidence = nlohmann::json::object();
+  for (const auto &entry : result.evidence) {
+    evidence[entry.name] = {{"state", entry.state}, {"issue_codes", entry.issue_codes}};
+  }
+  nlohmann::json issues = nlohmann::json::array();
+  for (const auto &issue : result.issues) {
+    issues.push_back({{"severity", issue.severity},
+                      {"code", issue.code},
+                      {"evidence", issue.evidence},
+                      {"detail", episode_qualification_issue_detail_json(issue)}});
+  }
+  nlohmann::json capabilities = nlohmann::json::array();
+  nlohmann::json safe_capabilities = nlohmann::json::array();
+  nlohmann::json contractions = nlohmann::json::array();
+  for (const auto &capability : result.capabilities) {
+    capabilities.push_back({{"name", capability.name},
+                            {"safe", capability.safe},
+                            {"requires", capability.required_evidence},
+                            {"blocked_by", capability.blocked_by}});
+    if (capability.safe) {
+      safe_capabilities.push_back(capability.name);
+    } else {
+      contractions.push_back({{"capability", capability.name}, {"blocked_by", capability.blocked_by}});
+    }
+  }
+  nlohmann::json repair_prerequisites = nlohmann::json::array();
+  for (const auto &prerequisite : result.repair_prerequisites) {
+    repair_prerequisites.push_back({{"issue_code", prerequisite.issue_code},
+                                    {"action", prerequisite.action},
+                                    {"required_inputs", prerequisite.required_inputs},
+                                    {"subject", episode_repair_subject_json(prerequisite.subject)}});
+  }
+  return {{"schema", EPISODE_QUALIFICATION_SCHEMA_V1},
+          {"policy_source", "cpp-typed-fold-fsck"},
+          {"episode_id", result.episode_id},
+          {"lifecycle", result.lifecycle},
+          {"status", result.status},
+          {"evidence", evidence},
+          {"issues", issues},
+          {"capabilities", capabilities},
+          {"safe_capabilities", safe_capabilities},
+          {"contractions", contractions},
+          {"repair_prerequisites", repair_prerequisites}};
+}
+
+storage_fsck_result episode_fsck_typed_impl(const storage_fsck_request &request) {
+  storage_fsck_result result{};
+  result.scope = storage_fsck_scope::Episode;
+  if (request.episode_id != 0)
+    result.episode_id = request.episode_id;
+
+  const auto scoped = episode_ref_store(request);
+  result.episode_manifest = scoped.store.fsck_typed(request.episode_id);
+  result.checked.episode_manifest_records = result.episode_manifest.episode_manifest_records;
+  result.checked.episodes = result.episode_manifest.episodes;
+  result.checked.projection_indexes = 1;
+  for (const auto &error : result.episode_manifest.errors)
+    result.issues.push_back({"error", error.code, "episode-manifest", error});
+  for (const auto &warning : result.episode_manifest.warnings)
+    result.issues.push_back({"warning", warning.code, "episode-manifest", warning});
+
+  const auto projection = episode_manifest_projection(request.runtime_dir);
+  storage_projection_status_view projection_status{"episode-manifest-sqlite", projection.sqlite_path(), true,
+                                                   projection.verify_typed()};
+  if (projection_status.verification.status == "degraded") {
+    result.degraded = true;
+    result.issues.push_back({"warning", "projection_drift", projection_status.name, projection_status});
+  } else if (projection_status.verification.status == "absent") {
+    result.issues.push_back({"warning", "projection_absent", projection_status.name, projection_status});
+  }
+  result.projections.push_back(projection_status);
+
+  if (request.verify_frames) {
+    result.frame_verification = verify_episode_frame_claims(request);
+    result.checked.episode_frames_verified = result.frame_verification->verified;
+    result.degraded = result.degraded || result.frame_verification->degraded;
+    for (const auto &error : result.frame_verification->errors)
+      result.issues.push_back({"error", error.code, "episode-frames", error});
+    for (const auto &warning : result.frame_verification->warnings)
+      result.issues.push_back({"warning", warning.code, "episode-frames", warning});
+  }
+  result.degraded = result.degraded || result.episode_manifest.degraded;
+  result.ok = std::none_of(result.issues.begin(), result.issues.end(),
+                           [](const auto &issue) { return issue.severity == "error"; });
+  result.status = !result.ok ? "failed" : (result.degraded ? "degraded" : "ok");
+  if (request.episode_id != 0) {
+    result.qualification =
+        make_episode_qualification(request.episode_id, result.episode_manifest,
+                                   result.frame_verification.has_value() ? &*result.frame_verification : nullptr,
+                                   result.projections.front().verification);
+  }
+  return result;
+}
+
+nlohmann::json episode_fsck_impl(const storage_service_options &options) {
+  return render_storage_fsck_result(default_storage_service().fsck(parse_storage_fsck_request(options)));
+}
+
+// ADR-0053: collect the bytes the Episode owns — whole frames from the
+// claimed event journals, payload bytes from the content store — so the
+// bundle is a migration/recovery unit, not a receipt listing. Material the
+// source itself no longer has is counted, never invented.
+void collect_episode_bundle_material(const storage_service_options &options, storage_episode_bundle_result &bundle) {
+  namespace yjj = kungfu::yijinjing;
+  bundle.self_contained = true;
+
+  std::map<std::pair<uint32_t, uint32_t>, std::vector<uint64_t>> wanted_by_journal;
+  std::map<std::pair<uint32_t, uint32_t>, std::unordered_set<uint64_t>> seen_by_journal;
+  for (const auto index : bundle.manifest.frame_indices) {
+    const auto &claim = std::get<yjj::types::EpisodeFrameAttached>(bundle.manifest.records.at(index).body);
+    if (claim.frame_uid == 0) {
+      continue;
+    }
+    const auto key = std::make_pair(claim.source, claim.dest);
+    if (seen_by_journal[key].insert(claim.frame_uid).second) {
+      wanted_by_journal[key].push_back(claim.frame_uid);
+    }
+  }
+
+  auto locator = std::make_shared<yjj::data::locator>(options.runtime_dir, yy_enums::mode::LIVE);
+  std::unordered_map<uint32_t, yjj::data::location_ptr> locations_by_uid;
+  for (const auto &location : locator->list_locations("*", "*", "*", "*")) {
+    locations_by_uid.emplace(location->uid, location);
+  }
+
+  for (const auto &[journal_key, frame_uids] : wanted_by_journal) {
+    const auto location_iter = locations_by_uid.find(journal_key.first);
+    if (location_iter == locations_by_uid.end()) {
+      bundle.material_missing_frame_count += frame_uids.size();
+      continue;
+    }
+    const auto &location = location_iter->second;
+    episode_journal_material journal{};
+    journal.role = yy_enums::get_location_role_name(location->role);
+    journal.namespace_ = location->namespace_;
+    journal.name = location->name;
+    journal.mode = yy_enums::get_mode_name(location->mode);
+    journal.seed = location->seed;
+    journal.location_uid = location->uid;
+    journal.dest = journal_key.second;
+    std::unordered_set<uint64_t> wanted(frame_uids.begin(), frame_uids.end());
+    if (!location->locator->list_page_id(location, journal.dest).empty()) {
+      auto reader = std::make_shared<yjj::journal::reader>(true, false, std::make_shared<yjj::journal::bus>(false));
+      reader->join(location, journal.dest, 0);
+      while (reader->data_available()) {
+        const auto frame = reader->current_frame();
+        const auto wanted_iter = wanted.find(frame->frame_uid());
+        if (wanted_iter != wanted.end()) {
+          episode_frame_material material{};
+          material.frame_uid = frame->frame_uid();
+          material.gen_time = frame->gen_time();
+          material.carrier_type = frame->carrier_type();
+          material.frame_length = static_cast<uint32_t>(frame->frame_length());
+          material.data_length = frame->data_length();
+          material.bytes.assign(reinterpret_cast<const char *>(frame->address()), frame->frame_length());
+          journal.frames.push_back(std::move(material));
+          wanted.erase(wanted_iter);
+        }
+        reader->next();
+      }
+    }
+    bundle.material_missing_frame_count += wanted.size();
+    if (!journal.frames.empty()) {
+      bundle.journals.push_back(std::move(journal));
+    }
+  }
+
+  const auto provider = shared_provider(options);
+  std::unordered_set<std::string> exported_hashes;
+  for (const auto index : bundle.manifest.ref_indices) {
+    const auto &claim = std::get<yjj::types::EpisodeRefAttached>(bundle.manifest.records.at(index).body);
+    if (claim.ref_kind != yy_enums::EpisodeRefKind::Payload && claim.ref_kind != yy_enums::EpisodeRefKind::Schema) {
+      continue;
+    }
+    const auto content_namespace =
+        claim.ref_kind == yy_enums::EpisodeRefKind::Schema ? std::string("schemas") : std::string("payloads");
+    const auto ref_hash = fixed_string(claim.ref_hash);
+    const auto content_key = content_namespace + "\n" + ref_hash;
+    if (ref_hash.empty() || !exported_hashes.insert(content_key).second) {
+      continue;
+    }
+    yy_storage::content_hash parsed_hash{};
+    try {
+      parsed_hash = ref_hash.find(':') == std::string::npos ? yy_storage::make_content_hash(ref_hash)
+                                                            : yy_storage::parse_content_hash(ref_hash);
+    } catch (const std::exception &) {
+      ++bundle.material_missing_ref_payload_count;
+      continue;
+    }
+    const auto stored = provider->content_store().get(content_namespace, parsed_hash);
+    if (!stored.ok()) {
+      ++bundle.material_missing_ref_payload_count;
+      continue;
+    }
+    episode_ref_payload_material material{};
+    material.content_namespace = content_namespace;
+    material.ref_hash = ref_hash;
+    material.bytes = stored.bytes;
+    material.byte_len = material.bytes.size();
+    bundle.ref_payloads.push_back(std::move(material));
+  }
+}
+
+storage_episode_bundle_result episode_export_bundle_typed_impl(const storage_service_options &options) {
+  if (options.episode_id == 0) {
+    throw std::invalid_argument("episode_id is required for episode export");
+  }
+  const auto scoped = episode_ref_store(options);
+  const auto inspected = scoped.store.inspect_typed(options.episode_id);
+  storage_episode_bundle_result bundle{"episode:" + std::to_string(options.episode_id), options.episode_id,
+                                       inspected.episode, inspected.causal_graph};
+  if (!bool_or(options.operation_options, "thin", false)) {
+    collect_episode_bundle_material(options, bundle);
+  }
+  return bundle;
+}
+
+nlohmann::json fsck_impl(const storage_service_options &options);
+nlohmann::json episode_import_bundle_impl(const storage_service_options &options);
+nlohmann::json accept_storage_manifest_impl(const std::string &runtime_dir, const nlohmann::json &input);
+nlohmann::json export_bundle_generic_impl(const storage_service_options &options, bool record_receipt);
+nlohmann::json render_manifest_entry_view(const yy_storage::manifest_entry_view &entry);
+nlohmann::json render_manifest_document(const yy_storage::manifest_document_view &manifest);
+nlohmann::json render_storage_export_bundle_result(const storage_export_bundle_result &result);
+storage_export_bundle_result parse_storage_export_bundle(const nlohmann::json &bundle);
+nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeOpen &record);
+nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeHeartbeat &record);
+nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeFrameAttached &record);
+nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeRefAttached &record);
+nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeClosed &record);
+nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeRootCommitted &record);
+nlohmann::json render_episode_close_write_result(const yy_storage::episode_close_write_result &result);
+nlohmann::json render_episode_recover_result(const yy_storage::episode_recover_result &result);
+nlohmann::json episode_record_row_json(const yy_storage::episode_manifest_record &record);
+nlohmann::json render_storage_episode_bundle_result(const storage_episode_bundle_result &result);
+
+nlohmann::json episode_export_bundle_impl(const storage_service_options &options) {
+  return render_storage_episode_bundle_result(episode_export_bundle_typed_impl(options));
+}
+
+storage_repair_subject repair_subject(const storage_fsck_issue &issue) {
+  return std::visit(
+      [](const auto &detail) {
+        using detail_t = std::decay_t<decltype(detail)>;
+        storage_repair_subject subject{};
+        if constexpr (std::is_same_v<detail_t, storage_fsck_cross_issue>) {
+          subject.source_id = detail.source_id;
+          subject.path = detail.path;
+          subject.payload_hash = detail.payload_hash;
+        } else if constexpr (std::is_same_v<detail_t, yy_storage::manifest_catalog_fsck_issue>) {
+          subject.source_id = detail.source_id;
+          subject.subject = detail.subject;
+          subject.state = detail.state;
+          subject.payload_hash = detail.payload_hash;
+        } else if constexpr (std::is_same_v<detail_t, yy_storage::episode_fsck_issue>) {
+          subject.episode_id = detail.episode_id;
+          subject.dependency_episode_id = detail.dependency_episode_id;
+          subject.frame_uid = detail.frame_uid;
+          subject.dependent_frame_uid = detail.dependent_frame_uid;
+          subject.ref_id = detail.ref_id;
+          subject.ref_hash = detail.ref_hash;
+        }
+        return subject;
+      },
+      issue.detail);
+}
+
+std::optional<episode_repair_descriptor> repair_descriptor_for_issue(const storage_fsck_issue &issue) {
+  const auto &code = issue.code;
+  if (code == "episode_dependency_missing")
+    return episode_repair_descriptor{"fetch_episode", {"source_or_episode_bundle"}};
+  if (code == "episode_root_trigger_frame_missing" || code == "episode_trigger_frame_missing")
+    return episode_repair_descriptor{"fetch_frame_or_declare_external_input", {"source_or_episode_bundle"}};
+  if (code == "episode_payload_ref_missing" || code == "episode_payload_ref_hash_mismatch")
+    return episode_repair_descriptor{"fetch_payload_by_hash", {"payload_store_or_episode_bundle"}};
+  if (code == "payload_not_present") {
+    const auto *detail = std::get_if<yy_storage::manifest_catalog_fsck_issue>(&issue.detail);
+    if (detail != nullptr && !detail->intentional.value_or(true))
+      return episode_repair_descriptor{"fetch_payload_by_hash", {"source_or_bundle"}};
+  }
+  return std::nullopt;
+}
+
+std::optional<storage_repair_candidate_view> repair_candidate_from_issue(const storage_fsck_issue &issue) {
+  const auto &code = issue.code;
+  const auto descriptor = repair_descriptor_for_issue(issue);
+  if (!descriptor.has_value()) {
+    return std::nullopt;
+  }
+  std::string candidate_code;
+  std::string kind;
+  std::string role;
+  if (code == "episode_dependency_missing") {
+    candidate_code = "repair_episode_dependency";
+    kind = "episode";
+    const auto *detail = std::get_if<yy_storage::episode_fsck_issue>(&issue.detail);
+    role = detail == nullptr ? "ref" : detail->role.value_or("ref");
+  } else if (code == "episode_root_trigger_frame_missing") {
+    candidate_code = "repair_episode_root_trigger_frame";
+    kind = "frame";
+    role = "root_trigger";
+  } else if (code == "episode_trigger_frame_missing") {
+    candidate_code = "repair_episode_trigger_frame";
+    kind = "frame";
+    role = "trigger";
+  } else if (code == "episode_payload_ref_missing" || code == "episode_payload_ref_hash_mismatch") {
+    candidate_code = "repair_episode_payload_ref";
+    kind = "payload";
+    role = "payload_ref";
+  } else if (code == "payload_not_present") {
+    candidate_code = "repair_source_payload";
+    kind = "payload";
+    role = "source_record";
+  } else {
+    // Projection repair is exposed by the qualification contract through the
+    // dedicated rebuild operation, not as a storage repair-plan bundle row.
+    return std::nullopt;
+  }
+  return storage_repair_candidate_view{
+      candidate_code,        code, kind, role, descriptor->action, false, descriptor->required_inputs,
+      repair_subject(issue), issue};
+}
+
+storage_repair_plan_result repair_plan_typed_impl(const storage_repair_plan_request &request) {
+  if (!request.dry_run) {
+    throw std::invalid_argument("storage_repair_requires_dry_run");
+  }
+  storage_repair_plan_result result{};
+  result.scope = request.scope;
+  if (!request.source_id.empty())
+    result.source_id = request.source_id;
+  if (request.episode_id != 0)
+    result.episode_id = request.episode_id;
+  result.fsck =
+      default_storage_service().fsck({request.runtime_dir, request.provider, request.provider_config_source,
+                                      request.scope, request.source_id, request.episode_id, request.verify_frames});
+  // Preserve the public plan ordering: degraded/fetchable warnings first,
+  // then sealed-Episode errors whose missing facts can be supplied. Repair
+  // fetch uses this order to prefer donor evidence before a local bundle that
+  // merely repeats the broken payload/ref claim.
+  for (const auto &issue : result.fsck.issues) {
+    if (issue.severity == "error")
+      continue;
+    const auto candidate = repair_candidate_from_issue(issue);
+    if (candidate.has_value())
+      result.candidates.push_back(*candidate);
+    else
+      result.unsupported.push_back(issue);
+  }
+  for (const auto &issue : result.fsck.issues) {
+    if (issue.severity != "error")
+      continue;
+    const auto candidate = repair_candidate_from_issue(issue);
+    if (candidate.has_value())
+      result.candidates.push_back(*candidate);
+  }
+  result.ok = result.fsck.ok;
+  result.status = result.fsck.status;
+  result.degraded = result.fsck.degraded;
+  result.notes = {
+      "Repair plan v1 is read-only and never fetches, deletes, compacts, or mutates storage.",
+      "Candidates describe missing facts that a future importer or remote sync source may provide.",
+  };
+  return result;
+}
+
+nlohmann::json repair_plan_impl(const storage_service_options &options) {
+  return render_storage_repair_plan_result(
+      default_storage_service().repair_plan(parse_storage_repair_plan_request(options)));
+}
+
+yy_storage::episode_manifest_record parse_episode_bundle_record(const nlohmann::json &value) {
+  yy_storage::episode_manifest_record parsed{};
+  parsed.manifest_frame_uid = uint64_or(value, "manifest_frame_uid");
+  parsed.manifest_gen_time = int64_or(value, "manifest_gen_time");
+  const auto kind = text_or(value, "record_kind");
+  const auto schema_version = uint32_or(value, "schema_version", 1);
+  if (kind == "episode_open") {
+    const auto options = parse_episode_begin_options(value);
+    yijinjing::types::EpisodeOpen record{};
+    record.schema_version = schema_version;
+    record.episode_id = options.episode_id;
+    record.parent_episode_id = options.parent_episode_id;
+    record.root_trigger_frame_uid = options.root_trigger_frame_uid;
+    record.location_uid = options.location_uid;
+    record.begin_time = options.begin_time;
+    assign_fixed(record.title, options.title);
+    assign_fixed(record.actor, options.actor);
+    assign_fixed(record.source, options.source);
+    parsed.body = record;
+  } else if (kind == "episode_heartbeat") {
+    const auto options = parse_episode_heartbeat_options(value);
+    yijinjing::types::EpisodeHeartbeat record{};
+    record.schema_version = schema_version;
+    record.episode_id = options.episode_id;
+    record.location_uid = options.location_uid;
+    record.update_time = options.update_time;
+    record.last_frame_uid = options.last_frame_uid;
+    record.frame_count = options.frame_count;
+    assign_fixed(record.note, options.note);
+    parsed.body = record;
+  } else if (kind == "episode_frame_attached") {
+    const auto options = parse_episode_frame_attach_options(value);
+    yijinjing::types::EpisodeFrameAttached record{};
+    record.schema_version = schema_version;
+    record.episode_id = options.episode_id;
+    record.location_uid = options.location_uid;
+    record.frame_uid = options.frame_uid;
+    record.trigger_frame_uid = options.trigger_frame_uid;
+    record.stream_id = options.stream_id;
+    record.gen_time = options.gen_time;
+    record.trigger_time = options.trigger_time;
+    record.carrier_type = options.carrier_type;
+    record.source = options.source;
+    record.dest = options.dest;
+    record.data_length = options.data_length;
+    record.integrity_version = options.integrity_version;
+    record.payload_checksum = options.payload_checksum;
+    record.frame_checksum = options.frame_checksum;
+    parsed.body = record;
+  } else if (kind == "episode_ref_attached") {
+    const auto options = parse_episode_ref_attach_options(value);
+    yijinjing::types::EpisodeRefAttached record{};
+    record.schema_version = schema_version;
+    record.episode_id = options.episode_id;
+    record.location_uid = options.location_uid;
+    record.ref_kind = options.ref_kind;
+    record.ref_uid = options.ref_uid;
+    record.update_time = options.update_time;
+    assign_fixed(record.ref_id, options.ref_id);
+    assign_fixed(record.ref_hash, options.ref_hash);
+    parsed.body = record;
+  } else if (kind == "episode_closed") {
+    const auto options = parse_episode_close_options(value, yy_enums::EpisodeStatus::Ended);
+    yijinjing::types::EpisodeClosed record{};
+    record.schema_version = schema_version;
+    record.episode_id = options.episode_id;
+    record.location_uid = options.location_uid;
+    record.status = options.status;
+    record.end_time = options.end_time;
+    record.last_frame_uid = options.last_frame_uid;
+    record.frame_count = options.frame_count;
+    assign_fixed(record.reason, options.reason);
+    parsed.body = record;
+  } else if (kind == "episode_root_committed") {
+    yijinjing::types::EpisodeRootCommitted record{};
+    record.schema_version = schema_version;
+    record.episode_id = uint64_or(value, "episode_id");
+    record.location_uid = uint32_or(value, "location_uid");
+    record.commit_time = int64_or(value, "commit_time");
+    record.covered_record_count = uint32_or(value, "covered_record_count");
+    assign_fixed(record.algorithm, text_or(value, "algorithm"));
+    assign_fixed(record.root_value, text_or(value, "root_value"));
+    parsed.body = record;
+  } else {
+    throw std::invalid_argument("unsupported episode record kind: " + kind);
+  }
+  return parsed;
+}
+
+storage_episode_bundle_result parse_storage_episode_bundle(const nlohmann::json &bundle) {
+  storage_episode_bundle_result parsed{};
+  parsed.bundle_id = text_or(bundle, "bundle_id");
+  parsed.episode_id = uint64_or(bundle, "episode_id", uint64_or(object_or_empty(bundle, "manifest"), "episode_id"));
+  parsed.manifest.episode_id = parsed.episode_id;
+  for (const auto &value : array_or_empty(bundle, "records")) {
+    auto record = parse_episode_bundle_record(value);
+    const auto index = parsed.manifest.records.size();
+    if (std::holds_alternative<yijinjing::types::EpisodeFrameAttached>(record.body))
+      parsed.manifest.frame_indices.push_back(index);
+    if (std::holds_alternative<yijinjing::types::EpisodeRefAttached>(record.body))
+      parsed.manifest.ref_indices.push_back(index);
+    parsed.manifest.records.push_back(std::move(record));
+  }
+  const auto graph = object_or_empty(bundle, "causal_graph");
+  parsed.causal_graph.schema = text_or(graph, "schema", "kungfu.episode.causal-graph/v1");
+  parsed.causal_graph.episode_id = uint64_or(graph, "episode_id", parsed.episode_id);
+  parsed.causal_graph.frame_count = uint64_or(graph, "frame_count", parsed.manifest.frame_indices.size());
+  parsed.causal_graph.degraded = bool_or(graph, "degraded", bool_or(bundle, "degraded", false));
+  for (const auto &edge : array_or_empty(graph, "edges")) {
+    parsed.causal_graph.edges.push_back({uint64_or(edge, "from_frame_uid"), uint64_or(edge, "to_frame_uid")});
+  }
+  for (const auto &value : array_or_empty(bundle, "dependencies")) {
+    yy_storage::episode_dependency dependency{};
+    dependency.kind = text_or(value, "kind");
+    dependency.role = text_or(value, "role");
+    dependency.status = text_or(value, "status");
+    if (value.contains("episode_id"))
+      dependency.episode_id = uint64_or(value, "episode_id");
+    if (value.contains("frame_uid"))
+      dependency.frame_uid = uint64_or(value, "frame_uid");
+    if (value.contains("dependent_frame_uid"))
+      dependency.dependent_frame_uid = uint64_or(value, "dependent_frame_uid");
+    if (value.contains("ref_uid"))
+      dependency.ref_uid = uint64_or(value, "ref_uid");
+    if (value.contains("ref_id"))
+      dependency.ref_id = text_or(value, "ref_id");
+    if (value.contains("ref_hash"))
+      dependency.ref_hash = text_or(value, "ref_hash");
+    parsed.causal_graph.dependencies.push_back(std::move(dependency));
+  }
+  // ADR-0053 material sections. Decoded frame bytes are validated against
+  // their own header here, so a malformed or truncated bundle fails at the
+  // edge instead of reaching a journal writer.
+  parsed.self_contained = bool_or(bundle, "self_contained", false);
+  for (const auto &value : array_or_empty(bundle, "journals")) {
+    episode_journal_material journal{};
+    const auto location = object_or_empty(value, "location");
+    journal.role = text_or(location, "role");
+    journal.namespace_ = text_or(location, "namespace");
+    journal.name = text_or(location, "name");
+    journal.mode = text_or(location, "mode", "live");
+    journal.seed = uint32_or(location, "seed");
+    journal.location_uid = uint32_or(location, "uid");
+    journal.dest = uint32_or(value, "dest");
+    for (const auto &row : array_or_empty(value, "frames")) {
+      episode_frame_material frame{};
+      frame.frame_uid = uint64_or(row, "frame_uid");
+      frame.gen_time = int64_or(row, "gen_time");
+      frame.carrier_type = static_cast<int32_t>(int64_or(row, "carrier_type"));
+      frame.frame_length = uint32_or(row, "frame_length");
+      frame.data_length = uint32_or(row, "data_length");
+      frame.bytes = base64_decode(text_or(row, "bytes"));
+      if (frame.bytes.size() != frame.frame_length ||
+          frame.bytes.size() < sizeof(kungfu::yijinjing::types::frame_header)) {
+        throw std::invalid_argument("episode_bundle_frame_bytes_malformed");
+      }
+      const auto &header = *reinterpret_cast<const kungfu::yijinjing::types::frame_header *>(frame.bytes.data());
+      if (header.length != frame.frame_length || header.frame_uid != frame.frame_uid ||
+          header.gen_time != frame.gen_time || header.carrier_type != frame.carrier_type ||
+          header.length < header.header_length ||
+          static_cast<uint32_t>(header.length - header.header_length) != frame.data_length) {
+        throw std::invalid_argument("episode_bundle_frame_header_mismatch");
+      }
+      journal.frames.push_back(std::move(frame));
+    }
+    parsed.journals.push_back(std::move(journal));
+  }
+  for (const auto &value : array_or_empty(bundle, "ref_payloads")) {
+    episode_ref_payload_material payload{};
+    payload.content_namespace = text_or(value, "content_namespace", "payloads");
+    payload.ref_hash = text_or(value, "ref_hash");
+    payload.bytes = base64_decode(text_or(value, "bytes"));
+    payload.byte_len = payload.bytes.size();
+    if (uint64_or(value, "byte_len", payload.byte_len) != payload.byte_len) {
+      throw std::invalid_argument("episode_bundle_ref_payload_malformed");
+    }
+    parsed.ref_payloads.push_back(std::move(payload));
+  }
+  std::unordered_map<std::string, std::string> expected_ref_namespaces;
+  for (const auto &record : array_or_empty(bundle, "records")) {
+    if (text_or(record, "record_kind") != "episode_ref_attached")
+      continue;
+    const auto ref_kind = text_or(record, "ref_kind");
+    if (ref_kind == "schema") {
+      expected_ref_namespaces[text_or(record, "ref_hash")] = "schemas";
+    } else if (ref_kind == "payload") {
+      expected_ref_namespaces[text_or(record, "ref_hash")] = "payloads";
+    }
+  }
+  for (const auto &payload : parsed.ref_payloads) {
+    const auto expected = expected_ref_namespaces.find(payload.ref_hash);
+    if (expected == expected_ref_namespaces.end() || expected->second != payload.content_namespace) {
+      throw std::invalid_argument("episode_bundle_ref_payload_namespace_mismatch");
+    }
+  }
+  const auto material = object_or_empty(bundle, "material");
+  parsed.material_missing_frame_count = uint64_or(material, "missing_frame_count");
+  parsed.material_missing_ref_payload_count = uint64_or(material, "missing_ref_payload_count");
+  return parsed;
+}
+
+bool episode_record_kind_supported(const std::string &kind) {
+  return kind == "episode_open" || kind == "episode_heartbeat" || kind == "episode_frame_attached" ||
+         kind == "episode_ref_attached" || kind == "episode_closed" || kind == "episode_root_committed";
+}
+
+std::string episode_record_kind(const yy_storage::episode_manifest_record &record) {
+  return std::visit(
+      [](const auto &body) -> std::string {
+        using body_t = std::decay_t<decltype(body)>;
+        if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeOpen>)
+          return "episode_open";
+        if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeHeartbeat>)
+          return "episode_heartbeat";
+        if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeFrameAttached>)
+          return "episode_frame_attached";
+        if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeRefAttached>)
+          return "episode_ref_attached";
+        if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeClosed>)
+          return "episode_closed";
+        if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeRootCommitted>)
+          return "episode_root_committed";
+        return "unknown";
+      },
+      record.body);
+}
+
+std::string episode_record_identity_key(const yy_storage::episode_manifest_record &record) {
+  return std::visit(
+      [](const auto &body) -> std::string {
+        using body_t = std::decay_t<decltype(body)>;
+        if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeOpen>) {
+          return "episode_open:" + std::to_string(body.episode_id);
+        } else if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeHeartbeat>) {
+          return "episode_heartbeat:" + std::to_string(body.episode_id) + ":" + std::to_string(body.update_time);
+        } else if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeFrameAttached>) {
+          return "episode_frame_attached:" + std::to_string(body.episode_id) + ":" + std::to_string(body.frame_uid);
+        } else if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeRefAttached>) {
+          return "episode_ref_attached:" + std::to_string(body.episode_id) + ":" +
+                 std::to_string(static_cast<int32_t>(body.ref_kind)) + ":" + std::to_string(body.ref_uid) + ":" +
+                 fixed_string(body.ref_id) + ":" + fixed_string(body.ref_hash);
+        } else if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeClosed>) {
+          return "episode_closed:" + std::to_string(body.episode_id);
+        } else if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeRootCommitted>) {
+          return "episode_root_committed:" + std::to_string(body.episode_id);
+        } else {
+          return "unknown:" + std::to_string(body.carrier_type) + ":" + std::to_string(body.schema_version);
+        }
+      },
+      record.body);
+}
+
+nlohmann::json episode_apply_record(const storage_service_options &options,
+                                    const yy_storage::episode_manifest_record &record) {
+  return std::visit(
+      [&options](const auto &body) -> nlohmann::json {
+        using body_t = std::decay_t<decltype(body)>;
+        const auto store = episode_store(options);
+        if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeOpen>) {
+          return episode_record_body_json(store.begin(
+              {body.episode_id, body.parent_episode_id, body.root_trigger_frame_uid, body.location_uid, body.begin_time,
+               fixed_string(body.title), fixed_string(body.actor), fixed_string(body.source)}));
+        } else if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeHeartbeat>) {
+          return episode_record_body_json(
+              store.heartbeat({body.episode_id, body.location_uid, body.update_time, body.last_frame_uid,
+                               body.frame_count, fixed_string(body.note)}));
+        } else if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeFrameAttached>) {
+          return episode_record_body_json(store.attach_frame(
+              {body.episode_id, body.location_uid, body.frame_uid, body.trigger_frame_uid, body.stream_id,
+               body.gen_time, body.trigger_time, body.carrier_type, body.source, body.dest, body.data_length,
+               body.integrity_version, body.payload_checksum, body.frame_checksum}));
+        } else if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeRefAttached>) {
+          return episode_record_body_json(
+              store.attach_ref({body.episode_id, body.location_uid, body.ref_kind, body.ref_uid, body.update_time,
+                                fixed_string(body.ref_id), fixed_string(body.ref_hash)}));
+        } else if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeClosed>) {
+          const yy_storage::episode_close_options close{
+              body.episode_id,  body.location_uid,        body.status, body.end_time, body.last_frame_uid,
+              body.frame_count, fixed_string(body.reason)};
+          return render_episode_close_write_result(body.status == yy_enums::EpisodeStatus::Aborted ? store.abort(close)
+                                                                                                   : store.end(close));
+        } else if constexpr (std::is_same_v<body_t, yijinjing::types::EpisodeRootCommitted>) {
+          auto row = episode_record_body_json(body);
+          row["applied"] = "source_identity_claim";
+          return row;
+        }
+        return nullptr;
+      },
+      record.body);
+}
+
+// ADR-0053 shared materializer: land the bundle's owned bytes in the
+// destination data root. Frames append verbatim (the existing copy_frame
+// primitive preserves the whole header, frame_uid included, and publishes
+// last per ADR-0001); payloads write through the hash-addressed content
+// store. Only missing facts are added — an existing frame with different
+// bytes, or an append that would break journal time order, is an honest
+// conflict, never an overwrite.
+nlohmann::json materialize_episode_bundle_material(const storage_service_options &options,
+                                                   const storage_episode_bundle_result &bundle, bool write) {
+  namespace yjj = kungfu::yijinjing;
+  nlohmann::json applied = nlohmann::json::array();
+  nlohmann::json skipped = nlohmann::json::array();
+  nlohmann::json rejected = nlohmann::json::array();
+
+  auto locator = std::make_shared<yjj::data::locator>(options.runtime_dir, yy_enums::mode::LIVE);
+  for (const auto &journal : bundle.journals) {
+    const auto seed = journal.seed == 0 ? KUNGFU_HASH_SEED : journal.seed;
+    const auto location = yjj::data::location::make_shared(yy_enums::get_mode_by_name(journal.mode),
+                                                           yy_enums::get_location_role_by_name(journal.role),
+                                                           journal.namespace_, journal.name, locator, seed);
+    if (location->uid != journal.location_uid) {
+      rejected.push_back({{"kind", "frame_bytes"},
+                          {"reason", "episode_bundle_location_uid_mismatch"},
+                          {"location", location->uname},
+                          {"claimed_uid", journal.location_uid},
+                          {"actual_uid", location->uid}});
+      continue;
+    }
+
+    std::unordered_map<uint64_t, const episode_frame_material *> material_by_uid;
+    for (const auto &frame : journal.frames) {
+      material_by_uid.emplace(frame.frame_uid, &frame);
+    }
+    std::unordered_map<uint64_t, bool> existing_identical;
+    int64_t last_gen_time = 0;
+    bool journal_has_frames = false;
+    if (!locator->list_page_id(location, journal.dest).empty()) {
+      auto reader = std::make_shared<yjj::journal::reader>(true, false, std::make_shared<yjj::journal::bus>(false));
+      reader->join(location, journal.dest, 0);
+      while (reader->data_available()) {
+        const auto frame = reader->current_frame();
+        journal_has_frames = true;
+        last_gen_time = frame->gen_time();
+        const auto material_iter = material_by_uid.find(frame->frame_uid());
+        if (material_iter != material_by_uid.end() && existing_identical.count(frame->frame_uid()) == 0) {
+          const auto &material = *material_iter->second;
+          const bool identical = material.bytes.size() == static_cast<size_t>(frame->frame_length()) &&
+                                 std::memcmp(material.bytes.data(), reinterpret_cast<const void *>(frame->address()),
+                                             material.bytes.size()) == 0;
+          existing_identical.emplace(frame->frame_uid(), identical);
+        }
+        reader->next();
+      }
+    }
+
+    std::vector<const episode_frame_material *> to_append;
+    bool journal_rejected = false;
+    int64_t previous_gen_time = 0;
+    for (const auto &frame : journal.frames) {
+      const auto existing_iter = existing_identical.find(frame.frame_uid);
+      if (existing_iter != existing_identical.end()) {
+        if (existing_iter->second) {
+          skipped.push_back({{"kind", "frame_bytes"}, {"reason", "already_present"}, {"frame_uid", frame.frame_uid}});
+        } else {
+          rejected.push_back({{"kind", "frame_bytes"},
+                              {"reason", "episode_frame_conflict"},
+                              {"frame_uid", frame.frame_uid},
+                              {"location", location->uname},
+                              {"dest", journal.dest}});
+          journal_rejected = true;
+        }
+        continue;
+      }
+      if (!to_append.empty() && frame.gen_time < previous_gen_time) {
+        rejected.push_back({{"kind", "frame_bytes"},
+                            {"reason", "episode_bundle_frames_unordered"},
+                            {"frame_uid", frame.frame_uid},
+                            {"location", location->uname},
+                            {"dest", journal.dest}});
+        journal_rejected = true;
+        continue;
+      }
+      to_append.push_back(&frame);
+      previous_gen_time = frame.gen_time;
+    }
+    if (journal_has_frames && !to_append.empty() && last_gen_time > to_append.front()->gen_time) {
+      for (const auto *frame : to_append) {
+        rejected.push_back({{"kind", "frame_bytes"},
+                            {"reason", "episode_frame_order_conflict"},
+                            {"frame_uid", frame->frame_uid},
+                            {"location", location->uname},
+                            {"dest", journal.dest},
+                            {"journal_last_gen_time", last_gen_time},
+                            {"frame_gen_time", frame->gen_time}});
+      }
+      continue;
+    }
+    if (journal_rejected) {
+      // The journal-level facts are already reported; still land the clean
+      // missing frames only when nothing in this journal conflicts.
+      continue;
+    }
+    if (to_append.empty()) {
+      continue;
+    }
+    if (!write) {
+      for (const auto *frame : to_append) {
+        applied.push_back({{"kind", "frame_bytes"},
+                           {"frame_uid", frame->frame_uid},
+                           {"location", location->uname},
+                           {"dest", journal.dest},
+                           {"dry_run", true}});
+      }
+      continue;
+    }
+    try {
+      const auto page_size = yjj::journal::page::find_page_size(location, journal.dest);
+      auto writer = yjj::journal::writer(location, journal.dest, true, std::make_shared<yjj::journal::noop_publisher>(),
+                                         false, std::make_shared<yjj::journal::bus>(false));
+      for (const auto *frame : to_append) {
+        if (frame->bytes.size() + 2 * sizeof(yjj::types::frame_header) > page_size) {
+          rejected.push_back({{"kind", "frame_bytes"},
+                              {"reason", "episode_frame_exceeds_page_size"},
+                              {"frame_uid", frame->frame_uid},
+                              {"location", location->uname},
+                              {"dest", journal.dest}});
+          continue;
+        }
+        auto overlay = std::make_shared<yjj::journal::frame>();
+        overlay->set_address(reinterpret_cast<uintptr_t>(frame->bytes.data()));
+        writer.copy_frame(overlay);
+        applied.push_back({{"kind", "frame_bytes"},
+                           {"frame_uid", frame->frame_uid},
+                           {"location", location->uname},
+                           {"dest", journal.dest}});
+      }
+    } catch (const std::exception &error) {
+      rejected.push_back(
+          {{"kind", "frame_bytes"}, {"reason", error.what()}, {"location", location->uname}, {"dest", journal.dest}});
+    }
+  }
+
+  const auto provider = shared_provider(options);
+  for (const auto &payload : bundle.ref_payloads) {
+    const auto separator = payload.ref_hash.find(':');
+    const auto algorithm = separator == std::string::npos ? std::string(yy_storage::CONTENT_HASH_ALGORITHM_SHA256)
+                                                          : payload.ref_hash.substr(0, separator);
+    const auto digest = separator == std::string::npos ? payload.ref_hash : payload.ref_hash.substr(separator + 1);
+    const auto error = yy_storage::verify_payload_ref(payload.bytes, digest, payload.bytes.size(), algorithm);
+    if (!error.empty()) {
+      rejected.push_back({{"kind", "ref_payload"}, {"reason", error}, {"ref_hash", payload.ref_hash}});
+      continue;
+    }
+    const auto expected = yy_storage::content_hash{algorithm, digest};
+    if (provider->content_store().has(payload.content_namespace, expected)) {
+      skipped.push_back({{"kind", "ref_payload"},
+                         {"content_namespace", payload.content_namespace},
+                         {"reason", "already_present"},
+                         {"ref_hash", payload.ref_hash}});
+      continue;
+    }
+    if (write) {
+      const auto stored = provider->content_store().put_if_absent(payload.content_namespace, payload.bytes, expected);
+      if (!stored.ok()) {
+        rejected.push_back({{"kind", "ref_payload"},
+                            {"content_namespace", payload.content_namespace},
+                            {"reason", stored.message},
+                            {"ref_hash", payload.ref_hash}});
+        continue;
+      }
+      applied.push_back(
+          {{"kind", "ref_payload"}, {"content_namespace", payload.content_namespace}, {"ref_hash", payload.ref_hash}});
+    } else {
+      applied.push_back({{"kind", "ref_payload"},
+                         {"content_namespace", payload.content_namespace},
+                         {"ref_hash", payload.ref_hash},
+                         {"dry_run", true}});
+    }
+  }
+
+  return {{"applied", std::move(applied)}, {"skipped", std::move(skipped)}, {"rejected", std::move(rejected)}};
+}
+
+nlohmann::json apply_episode_bundle_material(const storage_service_options &options, const nlohmann::json &bundle,
+                                             bool write) {
+  auto validation_options = options;
+  validation_options.scope = "episode";
+  validation_options.dry_run = true;
+  validation_options.bundle = bundle;
+  const auto validated = episode_import_bundle_impl(validation_options);
+  const auto bundle_episode_id =
+      uint64_or(bundle, "episode_id", uint64_or(object_or_empty(bundle, "manifest"), "episode_id"));
+  nlohmann::json existing_keys = nlohmann::json::array();
+  std::vector<std::string> seen;
+  if (bundle_episode_id != 0) {
+    const auto scoped = episode_ref_store(options);
+    const auto fold = scoped.store.fold_typed_records();
+    const auto iter = fold.episodes.find(bundle_episode_id);
+    if (iter != fold.episodes.end()) {
+      for (const auto &existing : iter->second.records) {
+        const auto key = episode_record_identity_key(existing);
+        seen.push_back(key);
+        existing_keys.push_back(key);
+      }
+    }
+  }
+  nlohmann::json applied = nlohmann::json::array();
+  nlohmann::json skipped = nlohmann::json::array();
+  nlohmann::json rejected = nlohmann::json::array();
+  for (const auto &record : array_or_empty(bundle, "records")) {
+    const auto kind = text_or(record, "record_kind");
+    if (kind.empty()) {
+      rejected.push_back({{"kind", "episode_record"}, {"reason", "record_kind_missing"}, {"record", record}});
+    } else if (!episode_record_kind_supported(kind)) {
+      rejected.push_back({{"kind", "episode_record"}, {"reason", "unsupported_record_kind"}, {"record_kind", kind}});
+    }
+  }
+  if (!rejected.empty()) {
+    return {{"kind", "episode_bundle"},
+            {"schema", text_or(bundle, "schema")},
+            {"episode_id", bundle_episode_id == 0 ? nlohmann::json(nullptr) : nlohmann::json(bundle_episode_id)},
+            {"validated", validated},
+            {"existing_record_keys", existing_keys},
+            {"applied", applied},
+            {"skipped", skipped},
+            {"rejected", rejected}};
+  }
+  const auto typed_bundle = parse_storage_episode_bundle(bundle);
+  // ADR-0053: the bundle's owned bytes land before the manifest records
+  // replay, so the seal replay closes over frames that already exist and the
+  // receipt's fsck can go green in one pass.
+  const auto material = materialize_episode_bundle_material(options, typed_bundle, write);
+  for (const auto &row : array_or_empty(material, "applied")) {
+    applied.push_back(row);
+  }
+  for (const auto &row : array_or_empty(material, "skipped")) {
+    skipped.push_back(row);
+  }
+  for (const auto &row : array_or_empty(material, "rejected")) {
+    rejected.push_back(row);
+  }
+  if (write && !array_or_empty(material, "rejected").empty()) {
+    // Materialization conflicts stop the replay: sealing manifest claims over
+    // frames that did not land would fabricate a failing Episode.
+    return {{"kind", "episode_bundle"},
+            {"schema", text_or(bundle, "schema")},
+            {"episode_id", bundle_episode_id == 0 ? nlohmann::json(nullptr) : nlohmann::json(bundle_episode_id)},
+            {"validated", validated},
+            {"existing_record_keys", existing_keys},
+            {"applied", applied},
+            {"skipped", skipped},
+            {"rejected", rejected}};
+  }
+  for (const auto &record : typed_bundle.manifest.records) {
+    const auto key = episode_record_identity_key(record);
+    const auto rendered_record = episode_record_row_json(record);
+    if (std::find(seen.begin(), seen.end(), key) != seen.end()) {
+      skipped.push_back({{"kind", "episode_record"}, {"reason", "already_present"}, {"record", rendered_record}});
+      continue;
+    }
+    const auto kind = episode_record_kind(record);
+    if (write) {
+      const auto written = episode_apply_record(options, record);
+      if (written.is_null()) {
+        rejected.push_back({{"kind", "episode_record"}, {"reason", "unsupported_record_kind"}, {"record_kind", kind}});
+        continue;
+      }
+      applied.push_back({{"kind", "episode_record"}, {"record_kind", kind}, {"record", written}});
+    } else {
+      applied.push_back(
+          {{"kind", "episode_record"}, {"record_kind", kind}, {"record", rendered_record}, {"dry_run", true}});
+    }
+  }
+  return {{"kind", "episode_bundle"},
+          {"schema", text_or(bundle, "schema")},
+          {"episode_id", bundle_episode_id == 0 ? nlohmann::json(nullptr) : nlohmann::json(bundle_episode_id)},
+          {"validated", validated},
+          {"existing_record_keys", existing_keys},
+          {"applied", applied},
+          {"skipped", skipped},
+          {"rejected", rejected}};
+}
+
+nlohmann::json apply_source_bundle_material(const storage_service_options &options,
+                                            const storage_export_bundle_result &bundle, bool write) {
+  const auto source_id = options.source_id.empty() ? bundle.source_id : options.source_id;
+  if (source_id.empty()) {
+    throw std::invalid_argument("repair_apply_source_id_required");
+  }
+  const auto provider = provider_cache::instance().acquire(options.runtime_dir, options.provider);
+  auto manifest = catalog_store(options.runtime_dir).latest_manifest_typed(source_id, provider->content_store());
+  if (!manifest.has_value()) {
+    throw std::runtime_error("manifest not found: " + source_id);
+  }
+  nlohmann::json applied = nlohmann::json::array();
+  nlohmann::json skipped = nlohmann::json::array();
+  nlohmann::json rejected = nlohmann::json::array();
+  bool manifest_changed = false;
+  for (const auto &record : bundle.records) {
+    if (!record.payload_json.has_value()) {
+      skipped.push_back({{"kind", "payload"},
+                         {"reason", "payload_missing_in_material"},
+                         {"record", render_manifest_entry_view(record.entry)}});
+      continue;
+    }
+    const auto &raw = *record.payload_json;
+    auto digest = record.entry.payload_hash;
+    if (digest.empty()) {
+      digest = yy_storage::compute_content_hash_value(raw, yy_storage::CONTENT_HASH_ALGORITHM_SHA256);
+    }
+    const auto error =
+        yy_storage::verify_payload_ref(raw, digest, raw.size(), yy_storage::CONTENT_HASH_ALGORITHM_SHA256);
+    if (!error.empty()) {
+      rejected.push_back({{"kind", "payload"}, {"reason", error}, {"payload_hash", digest}});
+      continue;
+    }
+    bool matched = false;
+    for (auto &entry : manifest->entries) {
+      if (entry.payload_hash != digest) {
+        continue;
+      }
+      matched = true;
+      if (entry.payload_state == yy_enums::PayloadState::Present && provider->payload_exists(digest)) {
+        skipped.push_back({{"kind", "payload"}, {"reason", "already_present"}, {"payload_hash", digest}});
+        continue;
+      }
+      if (entry.payload_state == yy_enums::PayloadState::Redacted ||
+          entry.payload_state == yy_enums::PayloadState::Absent) {
+        skipped.push_back({{"kind", "payload"}, {"reason", "intentional_non_present_state"}, {"payload_hash", digest}});
+        continue;
+      }
+      if (write) {
+        provider->write_payload(digest, raw);
+      }
+      entry.payload_state = yy_enums::PayloadState::Present;
+      entry.byte_len = raw.size();
+      if (entry.content_type.empty()) {
+        entry.content_type = CONTENT_TYPE_JSON;
+      }
+      manifest_changed = true;
+      applied.push_back({{"kind", "payload"},
+                         {"payload_hash", digest},
+                         {"subject", entry.kind + ":" + entry.source_id},
+                         {"dry_run", !write}});
+    }
+    if (!matched) {
+      rejected.push_back({{"kind", "payload"}, {"reason", "manifest_entry_missing"}, {"payload_hash", digest}});
+    }
+  }
+  nlohmann::json accepted = nullptr;
+  if (write && manifest_changed) {
+    manifest->manifest_id += ".repair";
+    manifest->sync_root = {};
+    const auto accepted_view =
+        catalog_store(options.runtime_dir).accept_manifest_typed(*manifest, provider->content_store());
+    accepted = render_manifest_document(accepted_view);
+    const auto registry = registry_store(options.runtime_dir);
+    yy_storage::source_head_update_options head{};
+    head.source_id = accepted_view.source_id;
+    head.head = accepted_view.source_head;
+    head.inventory_hash_algo = accepted_view.sync_root.algorithm;
+    head.inventory_hash = accepted_view.sync_root.value;
+    (void)registry.update_head(head);
+    yy_storage::accepted_range_options range{};
+    range.source_id = accepted_view.source_id;
+    range.manifest_id = accepted_view.manifest_id;
+    (void)registry.record_accepted_range(range);
+  }
+  return {{"kind", "source_bundle"},
+          {"schema", yy_storage::STORAGE_EXPORT_BUNDLE_SCHEMA_V1},
+          {"source_id", source_id},
+          {"manifest_changed", manifest_changed},
+          {"accepted_manifest", accepted},
+          {"applied", applied},
+          {"skipped", skipped},
+          {"rejected", rejected}};
+}
+
+nlohmann::json repair_apply_impl(const storage_service_options &options) {
+  const auto write = !options.dry_run;
+  auto plan_options = options;
+  plan_options.dry_run = true;
+  const auto plan = repair_plan_impl(plan_options);
+  auto material = options.bundle;
+  if (material.empty()) {
+    material = object_or_empty(options.operation_options, "repair_input");
+  }
+  if (material.empty()) {
+    material = object_or_empty(options.operation_options, "material");
+  }
+  if (material.empty()) {
+    throw std::invalid_argument("repair_apply_material_required");
+  }
+  nlohmann::json groups = nlohmann::json::array();
+  const auto apply_one = [&](const nlohmann::json &item) {
+    const auto schema = text_or(item, "schema");
+    if (schema == "kungfu.storage.episode-bundle/v1") {
+      return apply_episode_bundle_material(options, item, write);
+    }
+    if (schema == yy_storage::STORAGE_EXPORT_BUNDLE_SCHEMA_V1) {
+      return apply_source_bundle_material(options, parse_storage_export_bundle(item), write);
+    }
+    return nlohmann::json{{"kind", "unknown"},
+                          {"schema", schema},
+                          {"rejected", nlohmann::json::array({{{"reason", "unsupported_material_schema"}}})}};
+  };
+  if (material.contains("episode_bundles") || material.contains("source_bundles")) {
+    for (const auto &bundle : array_or_empty(material, "episode_bundles")) {
+      groups.push_back(apply_one(bundle));
+    }
+    for (const auto &bundle : array_or_empty(material, "source_bundles")) {
+      groups.push_back(apply_one(bundle));
+    }
+  } else {
+    groups.push_back(apply_one(material));
+  }
+  size_t applied_count = 0;
+  size_t skipped_count = 0;
+  size_t rejected_count = 0;
+  for (const auto &group : groups) {
+    applied_count += array_or_empty(group, "applied").size();
+    skipped_count += array_or_empty(group, "skipped").size();
+    rejected_count += array_or_empty(group, "rejected").size();
+  }
+  return {{"ok", rejected_count == 0},
+          {"schema", "kungfu.storage.repair-apply/v1"},
+          {"scope", options.scope.empty() ? "all" : options.scope},
+          {"source_id", options.source_id.empty() ? nlohmann::json(nullptr) : nlohmann::json(options.source_id)},
+          {"episode_id", options.episode_id == 0 ? nlohmann::json(nullptr) : nlohmann::json(options.episode_id)},
+          {"dry_run", options.dry_run},
+          {"applied", write},
+          {"status", rejected_count == 0 ? (write ? "applied" : "validated") : "rejected"},
+          {"plan", plan},
+          {"groups", groups},
+          {"applied_count", applied_count},
+          {"skipped_count", skipped_count},
+          {"rejected_count", rejected_count},
+          {"notes", nlohmann::json::array({
+                        "Repair apply v1 only consumes locally supplied material.",
+                        "It never fetches remote data, deletes, compacts, or garbage-collects storage.",
+                    })}};
+}
+
+struct repair_evidence_runtime {
+  std::string source = {};
+  fs::path runtime_dir = {};
+};
+
+std::string normalized_runtime_key(const fs::path &path) {
+  std::error_code ec;
+  auto normalized = fs::weakly_canonical(path, ec);
+  if (ec) {
+    normalized = fs::absolute(path, ec);
+  }
+  return normalized.lexically_normal().string();
+}
+
+void push_evidence_runtime(std::vector<repair_evidence_runtime> &runtimes, const std::string &source,
+                           const fs::path &runtime_dir) {
+  if (runtime_dir.empty()) {
+    return;
+  }
+  const auto key = normalized_runtime_key(runtime_dir);
+  for (const auto &existing : runtimes) {
+    if (normalized_runtime_key(existing.runtime_dir) == key) {
+      return;
+    }
+  }
+  runtimes.push_back({source, runtime_dir});
+}
+
+std::vector<repair_evidence_runtime> repair_evidence_runtimes(const storage_service_options &options) {
+  std::vector<repair_evidence_runtime> runtimes;
+  push_evidence_runtime(runtimes, "local-runtime", options.runtime_dir);
+  const auto remotes_dir = fs::path(options.runtime_dir) / "remotes";
+  std::error_code ec;
+  if (fs::exists(remotes_dir, ec) && fs::is_directory(remotes_dir, ec)) {
+    for (const auto &entry : fs::directory_iterator(remotes_dir, ec)) {
+      if (ec) {
+        break;
+      }
+      if (!entry.is_directory(ec)) {
+        continue;
+      }
+      const auto runtime_dir = entry.path() / "runtime";
+      if (fs::exists(runtime_dir, ec) && fs::is_directory(runtime_dir, ec)) {
+        push_evidence_runtime(runtimes, "remote-mirror:" + entry.path().filename().string(), runtime_dir);
+      }
+    }
+  }
+  for (const auto &extra : array_or_empty(options.operation_options, "candidate_runtime_dirs")) {
+    if (extra.is_string()) {
+      push_evidence_runtime(runtimes, "explicit-runtime", extra.get<std::string>());
+    }
+  }
+  return runtimes;
+}
+
+bool source_bundle_has_payload(const storage_export_bundle_result &bundle, const std::string &payload_hash) {
+  if (payload_hash.empty()) {
+    return !bundle.records.empty();
+  }
+  return std::any_of(bundle.records.begin(), bundle.records.end(), [&payload_hash](const auto &record) {
+    return record.entry.payload_hash == payload_hash && record.payload_json.has_value();
+  });
+}
+
+bool episode_bundle_has_frame(const storage_episode_bundle_result &bundle, uint64_t frame_uid) {
+  if (frame_uid == 0) {
+    return !bundle.manifest.records.empty();
+  }
+  for (size_t position = 0; position < bundle.manifest.frame_indices.size(); ++position) {
+    if (bundle.manifest.frame_at(position).frame_uid == frame_uid) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool episode_bundle_has_ref_hash(const storage_episode_bundle_result &bundle, const std::string &ref_hash) {
+  if (ref_hash.empty()) {
+    return !bundle.manifest.records.empty();
+  }
+  for (size_t position = 0; position < bundle.manifest.ref_indices.size(); ++position) {
+    if (fixed_string(bundle.manifest.ref_at(position).ref_hash) == ref_hash) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool episode_bundle_satisfies_candidate(const storage_repair_candidate_view &candidate,
+                                        const storage_episode_bundle_result &bundle) {
+  if (candidate.code == "repair_episode_root_trigger_frame" || candidate.code == "repair_episode_trigger_frame") {
+    return episode_bundle_has_frame(bundle, candidate.subject.frame_uid.value_or(0));
+  }
+  if (candidate.code == "repair_episode_payload_ref") {
+    return episode_bundle_has_ref_hash(bundle, candidate.subject.ref_hash.value_or(""));
+  }
+  if (candidate.code == "repair_episode_dependency") {
+    const auto dependency_episode_id = candidate.subject.dependency_episode_id.value_or(0);
+    return dependency_episode_id == 0 || bundle.episode_id == dependency_episode_id;
+  }
+  return false;
+}
+
+void push_unique_bundle(nlohmann::json &bundles, std::vector<std::string> &seen, const nlohmann::json &bundle) {
+  const auto key = text_or(bundle, "schema") + ":" + text_or(bundle, "bundle_id", canonical_json(bundle));
+  if (std::find(seen.begin(), seen.end(), key) != seen.end()) {
+    return;
+  }
+  seen.push_back(key);
+  bundles.push_back(bundle);
+}
+
+nlohmann::json repair_fetch_impl(const storage_service_options &options) {
+  if (!options.dry_run) {
+    throw std::invalid_argument("storage_repair_fetch_is_read_only");
+  }
+  auto plan_options = options;
+  plan_options.dry_run = true;
+  const auto typed_plan = repair_plan_typed_impl(parse_storage_repair_plan_request(plan_options));
+  const auto plan = render_storage_repair_plan_result(typed_plan);
+  const auto runtimes = repair_evidence_runtimes(options);
+  nlohmann::json material = {
+      {"schema", "kungfu.storage.repair-material/v1"},
+      {"generated_by", "kungfu.storage.repair-fetch/v1"},
+      {"episode_bundles", nlohmann::json::array()},
+      {"source_bundles", nlohmann::json::array()},
+  };
+  std::vector<std::string> seen_episode_bundles;
+  std::vector<std::string> seen_source_bundles;
+  nlohmann::json matched = nlohmann::json::array();
+  nlohmann::json skipped = nlohmann::json::array();
+  nlohmann::json missing = nlohmann::json::array();
+
+  const auto rendered_candidates = array_or_empty(plan, "candidates");
+  for (size_t candidate_index = 0; candidate_index < typed_plan.candidates.size(); ++candidate_index) {
+    const auto &candidate = typed_plan.candidates[candidate_index];
+    const auto &rendered_candidate = rendered_candidates.at(candidate_index);
+    bool found = false;
+    if (candidate.code == "repair_source_payload") {
+      const auto source_id = candidate.subject.source_id.value_or(options.source_id);
+      const auto payload_hash = candidate.subject.payload_hash.value_or("");
+      for (const auto &runtime : runtimes) {
+        try {
+          auto candidate_options = options;
+          candidate_options.runtime_dir = runtime.runtime_dir.string();
+          candidate_options.scope = "source";
+          candidate_options.source_id = source_id;
+          const auto bundle = default_storage_service().export_bundle(
+              {candidate_options.runtime_dir, candidate_options.provider, candidate_options.source_id, {}, false});
+          if (!source_bundle_has_payload(bundle, payload_hash)) {
+            skipped.push_back({{"candidate", rendered_candidate},
+                               {"evidence_source", runtime.source},
+                               {"runtime_dir", runtime.runtime_dir.string()},
+                               {"reason", "payload_not_in_bundle"}});
+            continue;
+          }
+          push_unique_bundle(material["source_bundles"], seen_source_bundles,
+                             render_storage_export_bundle_result(bundle));
+          matched.push_back({{"candidate", rendered_candidate},
+                             {"evidence_source", runtime.source},
+                             {"runtime_dir", runtime.runtime_dir.string()},
+                             {"material", "source_bundle"}});
+          found = true;
+          break;
+        } catch (const std::exception &e) {
+          skipped.push_back({{"candidate", rendered_candidate},
+                             {"evidence_source", runtime.source},
+                             {"runtime_dir", runtime.runtime_dir.string()},
+                             {"reason", e.what()}});
+        }
+      }
+    } else if (candidate.kind == "episode" || candidate.kind == "frame" ||
+               candidate.code == "repair_episode_payload_ref") {
+      std::vector<uint64_t> episode_ids;
+      const auto requested_episode_id = candidate.subject.episode_id.value_or(options.episode_id);
+      if (requested_episode_id != 0) {
+        episode_ids.push_back(requested_episode_id);
+      }
+      const auto dependency_episode_id = candidate.subject.dependency_episode_id.value_or(0);
+      if (dependency_episode_id != 0 &&
+          std::find(episode_ids.begin(), episode_ids.end(), dependency_episode_id) == episode_ids.end()) {
+        episode_ids.push_back(dependency_episode_id);
+      }
+      for (const auto &runtime : runtimes) {
+        for (const auto episode_id : episode_ids) {
+          try {
+            auto candidate_options = options;
+            candidate_options.runtime_dir = runtime.runtime_dir.string();
+            candidate_options.scope = "episode";
+            candidate_options.episode_id = episode_id;
+            const auto bundle = episode_export_bundle_typed_impl(candidate_options);
+            if (!episode_bundle_satisfies_candidate(candidate, bundle)) {
+              skipped.push_back({{"candidate", rendered_candidate},
+                                 {"evidence_source", runtime.source},
+                                 {"runtime_dir", runtime.runtime_dir.string()},
+                                 {"episode_id", episode_id},
+                                 {"reason", "episode_evidence_not_in_bundle"}});
+              continue;
+            }
+            push_unique_bundle(material["episode_bundles"], seen_episode_bundles,
+                               render_storage_episode_bundle_result(bundle));
+            matched.push_back({{"candidate", rendered_candidate},
+                               {"evidence_source", runtime.source},
+                               {"runtime_dir", runtime.runtime_dir.string()},
+                               {"episode_id", episode_id},
+                               {"material", "episode_bundle"}});
+            found = true;
+            break;
+          } catch (const std::exception &e) {
+            skipped.push_back({{"candidate", rendered_candidate},
+                               {"evidence_source", runtime.source},
+                               {"runtime_dir", runtime.runtime_dir.string()},
+                               {"episode_id", episode_id},
+                               {"reason", e.what()}});
+          }
+        }
+        if (found) {
+          break;
+        }
+      }
+    }
+    if (!found) {
+      missing.push_back(rendered_candidate);
+    }
+  }
+
+  const auto written = !options.artifact_uri.empty();
+  if (written) {
+    write_json_file(options.artifact_uri, material);
+  }
+  return {
+      {"ok", missing.empty()},
+      {"schema", "kungfu.storage.repair-fetch/v1"},
+      {"scope", options.scope.empty() ? "all" : options.scope},
+      {"source_id", options.source_id.empty() ? nlohmann::json(nullptr) : nlohmann::json(options.source_id)},
+      {"episode_id", options.episode_id == 0 ? nlohmann::json(nullptr) : nlohmann::json(options.episode_id)},
+      {"dry_run", true},
+      {"read_only", true},
+      {"artifact_uri", options.artifact_uri.empty() ? nlohmann::json(nullptr) : nlohmann::json(options.artifact_uri)},
+      {"written", written},
+      {"plan", plan},
+      {"evidence_runtimes",
+       [&] {
+         nlohmann::json rows = nlohmann::json::array();
+         for (const auto &runtime : runtimes) {
+           rows.push_back({{"source", runtime.source}, {"runtime_dir", runtime.runtime_dir.string()}});
+         }
+         return rows;
+       }()},
+      {"material", material},
+      {"matched", matched},
+      {"matched_count", matched.size()},
+      {"skipped", skipped},
+      {"missing", missing},
+      {"missing_count", missing.size()},
+      {"notes", nlohmann::json::array({
+                    "Repair fetch v1 only searches local runtime evidence and registered remote mirror runtimes.",
+                    "It writes a local material artifact only when artifact_uri/--out is explicitly supplied.",
+                    "It never applies material, deletes, compacts, garbage-collects, or performs network fetch.",
+                })}};
+}
+
+// ADR-0053 import --execute: land a sealed Episode bundle in this data root.
+// Gates run in proof order — bundle self-consistency, destination identity,
+// materialization + replay, destination root against the bundle claim, and a
+// scoped verify-frames fsck — so a failed receipt names the exact broken
+// step. Writes are append-only; nothing is rolled back or overwritten.
+nlohmann::json episode_import_bundle_execute_impl(const storage_service_options &options) {
+  const auto parsed = parse_storage_episode_bundle(options.bundle);
+  if (parsed.episode_id == 0) {
+    throw std::invalid_argument("episode_bundle_episode_id_missing");
+  }
+  const auto receipt_base = [&parsed](const std::string &status, bool ok, bool accepted) {
+    return nlohmann::json{{"ok", ok},
+                          {"schema", "kungfu.storage.episode-import/v1"},
+                          {"scope", "episode"},
+                          {"episode_id", parsed.episode_id},
+                          {"dry_run", false},
+                          {"accepted", accepted},
+                          {"status", status},
+                          {"authority", "yijinjing-journal"},
+                          {"self_contained", parsed.self_contained}};
+  };
+  const auto root_json = [](const yy_storage::episode_content_root &root) {
+    return nlohmann::json{
+        {"algorithm", root.algorithm}, {"root_value", root.value}, {"covered_record_count", root.covered_record_count}};
+  };
+
+  std::optional<yijinjing::types::EpisodeRootCommitted> root_claim;
+  bool terminal_close = false;
+  for (const auto &record : parsed.manifest.records) {
+    if (const auto *close = std::get_if<yijinjing::types::EpisodeClosed>(&record.body)) {
+      if (close->status == yy_enums::EpisodeStatus::Ended || close->status == yy_enums::EpisodeStatus::Aborted) {
+        terminal_close = true;
+      }
+    } else if (const auto *root = std::get_if<yijinjing::types::EpisodeRootCommitted>(&record.body)) {
+      if (!root_claim.has_value()) {
+        root_claim = *root;
+      }
+    }
+  }
+  if (!terminal_close) {
+    auto receipt = receipt_base("failed", false, false);
+    receipt["errors"] =
+        nlohmann::json::array({{{"code", "episode_bundle_not_sealed"}, {"episode_id", parsed.episode_id}}});
+    return receipt;
+  }
+
+  // Gate 1 — the bundle proves itself: the ADR-0043 chain over its own
+  // records must reproduce the root it claims.
+  const auto bundle_computed = yy_storage::compute_episode_content_root(parsed.manifest);
+  nlohmann::json preflight = {{"computed", root_json(bundle_computed)}, {"claimed", nullptr}, {"match", nullptr}};
+  if (root_claim.has_value()) {
+    preflight["claimed"] = {{"algorithm", fixed_string(root_claim->algorithm)},
+                            {"root_value", fixed_string(root_claim->root_value)},
+                            {"covered_record_count", root_claim->covered_record_count}};
+    if (fixed_string(root_claim->algorithm) == bundle_computed.algorithm) {
+      const bool match = fixed_string(root_claim->root_value) == bundle_computed.value;
+      preflight["match"] = match;
+      if (!match) {
+        auto receipt = receipt_base("failed", false, false);
+        receipt["preflight"] = preflight;
+        receipt["errors"] =
+            nlohmann::json::array({{{"code", "episode_bundle_root_mismatch"}, {"episode_id", parsed.episode_id}}});
+        return receipt;
+      }
+    }
+  }
+
+  // Gate 2 — destination identity: same root is already-present, a different
+  // root with the same id is a refusal, never a merge (ADR-0043 equality).
+  {
+    const auto scoped = episode_ref_store(options);
+    const auto fold = scoped.store.fold_typed_records();
+    const auto iter = fold.episodes.find(parsed.episode_id);
+    if (iter != fold.episodes.end()) {
+      const auto &destination = iter->second;
+      if (!destination.closed) {
+        auto receipt = receipt_base("failed", false, false);
+        receipt["preflight"] = preflight;
+        receipt["errors"] =
+            nlohmann::json::array({{{"code", "episode_conflict_open"}, {"episode_id", parsed.episode_id}}});
+        return receipt;
+      }
+      const auto destination_computed = yy_storage::compute_episode_content_root(destination);
+      if (destination_computed.algorithm == bundle_computed.algorithm &&
+          destination_computed.value == bundle_computed.value) {
+        auto receipt = receipt_base("already_present", true, false);
+        receipt["preflight"] = preflight;
+        receipt["root"] = {{"destination_computed", root_json(destination_computed)},
+                           {"bundle_computed", root_json(bundle_computed)},
+                           {"match", true}};
+        return receipt;
+      }
+      auto receipt = receipt_base("failed", false, false);
+      receipt["preflight"] = preflight;
+      receipt["root"] = {{"destination_computed", root_json(destination_computed)},
+                         {"bundle_computed", root_json(bundle_computed)},
+                         {"match", false}};
+      receipt["errors"] =
+          nlohmann::json::array({{{"code", "episode_root_mismatch"}, {"episode_id", parsed.episode_id}}});
+      return receipt;
+    }
+  }
+
+  // Gate 3 — coverage: execute refuses to seal claims whose frame bytes do
+  // not travel with the bundle. Replaying the records anyway would fabricate
+  // a sealed Episode that fails its own fsck; a thin or incomplete bundle
+  // fails here, before anything is written.
+  {
+    std::unordered_set<uint64_t> carried;
+    for (const auto &journal : parsed.journals) {
+      for (const auto &frame : journal.frames) {
+        carried.insert(frame.frame_uid);
+      }
+    }
+    nlohmann::json uncovered = nlohmann::json::array();
+    for (const auto index : parsed.manifest.frame_indices) {
+      const auto &claim = std::get<yijinjing::types::EpisodeFrameAttached>(parsed.manifest.records.at(index).body);
+      if (claim.frame_uid != 0 && carried.count(claim.frame_uid) == 0) {
+        uncovered.push_back(claim.frame_uid);
+      }
+    }
+    if (!uncovered.empty()) {
+      auto receipt = receipt_base("failed", false, false);
+      receipt["preflight"] = preflight;
+      receipt["errors"] = nlohmann::json::array({{{"code", "episode_bundle_not_self_contained"},
+                                                  {"episode_id", parsed.episode_id},
+                                                  {"uncovered_frame_uids", uncovered}}});
+      return receipt;
+    }
+  }
+
+  // Gate 4 — land the material and replay the manifest records; the replayed
+  // seal commits the destination's own root.
+  const auto apply = apply_episode_bundle_material(options, options.bundle, /*write=*/true);
+  const bool apply_ok = array_or_empty(apply, "rejected").empty();
+
+  // Gate 5 — the destination root must reproduce the bundle's identity.
+  nlohmann::json root_report = {{"bundle_computed", root_json(bundle_computed)}};
+  bool root_ok = false;
+  {
+    const auto scoped = episode_ref_store(options);
+    const auto fold = scoped.store.fold_typed_records();
+    const auto iter = fold.episodes.find(parsed.episode_id);
+    if (iter != fold.episodes.end()) {
+      const auto &destination = iter->second;
+      const auto destination_computed = yy_storage::compute_episode_content_root(destination);
+      root_report["destination_computed"] = root_json(destination_computed);
+      if (destination.root_seen) {
+        root_report["destination_recorded"] = {{"algorithm", fixed_string(destination.root.algorithm)},
+                                               {"root_value", fixed_string(destination.root.root_value)}};
+      }
+      root_ok = destination_computed.algorithm == bundle_computed.algorithm &&
+                destination_computed.value == bundle_computed.value;
+      root_report["match"] = root_ok;
+    } else {
+      root_report["match"] = false;
+    }
+  }
+
+  // Gate 6 — scoped deep verification over what actually landed.
+  const auto fsck =
+      default_storage_service().fsck({options.runtime_dir, options.provider, options.provider_config_source,
+                                      storage_fsck_scope::Episode, "", parsed.episode_id, /*verify_frames=*/true});
+  const bool ok = apply_ok && root_ok && fsck.ok;
+  auto receipt = receipt_base(ok ? "applied" : "failed", ok, ok);
+  receipt["preflight"] = preflight;
+  receipt["apply"] = apply;
+  receipt["root"] = root_report;
+  receipt["fsck"] = render_storage_fsck_result(fsck);
+  receipt["notes"] = nlohmann::json::array({
+      "Episode bundle import --execute materializes owned frames and payloads, then replays manifest records.",
+      "Writes are append-only; conflicts are reported and never overwritten.",
+  });
+  return receipt;
+}
+
+nlohmann::json episode_import_bundle_impl(const storage_service_options &options) {
+  if (!options.bundle.is_object() || text_or(options.bundle, "schema") != "kungfu.storage.episode-bundle/v1") {
+    throw std::invalid_argument("episode_bundle_invalid");
+  }
+  if (!options.dry_run) {
+    return episode_import_bundle_execute_impl(options);
+  }
+  // Dry-run is the import gate, not a shape-only preview. Decode the complete
+  // typed bundle so frame headers, byte lengths, and ref namespaces are
+  // checked before any multi-Episode caller is allowed to start writing.
+  const auto parsed = parse_storage_episode_bundle(options.bundle);
+  const auto manifest = object_or_empty(options.bundle, "manifest");
+  if (manifest.empty()) {
+    throw std::invalid_argument("episode_bundle_manifest_missing");
+  }
+  const auto causal_graph = object_or_empty(options.bundle, "causal_graph");
+  if (causal_graph.empty()) {
+    throw std::invalid_argument("episode_bundle_causal_graph_missing");
+  }
+  const auto records = array_or_empty(options.bundle, "records");
+  const auto frames = array_or_empty(options.bundle, "frames");
+  const auto refs = array_or_empty(options.bundle, "refs");
+  const auto dependencies = array_or_empty(options.bundle, "dependencies");
+  return {
+      {"ok", true},
+      {"schema", "kungfu.storage.episode-import/v1"},
+      {"scope", "episode"},
+      {"episode_id", parsed.episode_id},
+      {"dry_run", true},
+      {"accepted", false},
+      {"status", "validated"},
+      {"authority", "yijinjing-journal"},
+      {"degraded", bool_or(options.bundle, "degraded", bool_or(causal_graph, "degraded", false))},
+      {"manifest", manifest},
+      {"causal_graph", causal_graph},
+      {"dependencies", dependencies},
+      {"records", records.size()},
+      {"frames", frames.size()},
+      {"refs", refs.size()},
+      {"dependency_count", dependencies.size()},
+      {"self_contained", bool_or(options.bundle, "self_contained", false)},
+      {"material_journals", array_or_empty(options.bundle, "journals").size()},
+      {"material_ref_payloads", array_or_empty(options.bundle, "ref_payloads").size()},
+      {"notes", nlohmann::json::array({
+                    "Episode bundle import validates by default and preserves causal evidence without writing.",
+                    "Import with dry_run=false materializes owned frames and payloads, then replays manifest records.",
+                })}};
+}
+
+nlohmann::json replace_string_subtree(nlohmann::json value, const std::string &needle, const std::string &replacement) {
+  if (needle.empty()) {
+    return value;
+  }
+  if (value.is_string()) {
+    auto text = value.get<std::string>();
+    size_t pos = 0;
+    while ((pos = text.find(needle, pos)) != std::string::npos) {
+      text.replace(pos, needle.size(), replacement);
+      pos += replacement.size();
+    }
+    return text;
+  }
+  if (value.is_array()) {
+    for (auto &item : value) {
+      item = replace_string_subtree(item, needle, replacement);
+    }
+    return value;
+  }
+  if (value.is_object()) {
+    for (auto &[_, item] : value.items()) {
+      item = replace_string_subtree(item, needle, replacement);
+    }
+    return value;
+  }
+  return value;
+}
+
+storage_source_registry_view source_registry_status_view(const yy_storage::source_registry_current_view &source) {
+  storage_source_registry_view result{};
+  result.source_uid = source.source_uid;
+  result.registered = source.registered;
+  result.record_count = source.records.size();
+  result.accepted_range_count = source.accepted_range_indices.size();
+  if (source.registered) {
+    result.source_id = fixed_string(source.registration.source_id);
+    result.kind = source_kind_text(source.registration.kind);
+    result.coordinate = fixed_string(source.registration.coordinate);
+    result.head = source.current_head;
+    result.location_uid = source.registration.location_uid;
+    result.register_time = source.registration.register_time;
+  }
+  if (source.head_update_seen) {
+    result.current_range =
+        storage_frame_range_view{source.head_update.first_frame_uid, source.head_update.last_frame_uid,
+                                 source.head_update.since, source.head_update.until};
+    result.inventory_hash = storage_sync_root_view{fixed_string(source.head_update.inventory_hash_algo),
+                                                   fixed_string(source.head_update.inventory_hash)};
+    result.update_time = source.head_update.update_time;
+  }
+  return result;
+}
+
+storage_accepted_range_view accepted_range_status_view(const yijinjing::types::ImportManifestAccepted &manifest) {
+  return {fixed_string(manifest.source_id),
+          fixed_string(manifest.manifest_id),
+          {fixed_string(manifest.range_since), fixed_string(manifest.range_until)},
+          fixed_string(manifest.source_head),
+          {fixed_string(manifest.sync_root_algo), fixed_string(manifest.sync_root_value)},
+          manifest.entry_count,
+          verification_status_text(manifest.status)};
+}
+
+storage_cursor_view cursor_status_view(const yijinjing::types::ChannelCursorUpdated &cursor) {
+  return {fixed_string(cursor.source_id),
+          fixed_string(cursor.manifest_id),
+          fixed_string(cursor.source_head),
+          {fixed_string(cursor.range_since), fixed_string(cursor.range_until)},
+          {fixed_string(cursor.sync_root_algo), fixed_string(cursor.sync_root_value)},
+          cursor.entry_count};
+}
+
+nlohmann::json source_registry_record_json(const yijinjing::types::SourceRegistered &record) {
+  return {{"schema", yy_storage::SOURCE_REGISTRY_SCHEMA_V1},
+          {"record_kind", "source_registered"},
+          {"schema_version", record.schema_version},
+          {"source_uid", record.source_uid},
+          {"source_id", fixed_string(record.source_id)},
+          {"kind", source_kind_text(record.kind)},
+          {"coordinate", fixed_string(record.coordinate)},
+          {"head", fixed_string(record.head)},
+          {"location_uid", record.location_uid},
+          {"register_time", record.register_time}};
+}
+
+nlohmann::json source_registry_record_json(const yijinjing::types::SourceHeadUpdated &record) {
+  return {{"schema", yy_storage::SOURCE_REGISTRY_SCHEMA_V1},
+          {"record_kind", "source_head_updated"},
+          {"schema_version", record.schema_version},
+          {"source_uid", record.source_uid},
+          {"location_uid", record.location_uid},
+          {"update_time", record.update_time},
+          {"head", fixed_string(record.head)},
+          {"range",
+           {{"first_frame_uid", record.first_frame_uid},
+            {"last_frame_uid", record.last_frame_uid},
+            {"since", record.since},
+            {"until", record.until}}},
+          {"inventory_hash",
+           {{"algorithm", fixed_string(record.inventory_hash_algo)}, {"value", fixed_string(record.inventory_hash)}}}};
+}
+
+nlohmann::json source_registry_record_json(const yijinjing::types::AcceptedRangeRecorded &record) {
+  return {{"schema", yy_storage::SOURCE_REGISTRY_SCHEMA_V1},
+          {"record_kind", "accepted_range_recorded"},
+          {"schema_version", record.schema_version},
+          {"source_uid", record.source_uid},
+          {"manifest_uid", record.manifest_uid},
+          {"source_id", fixed_string(record.source_id)},
+          {"manifest_id", fixed_string(record.manifest_id)},
+          {"location_uid", record.location_uid},
+          {"accept_time", record.accept_time},
+          {"range",
+           {{"first_frame_uid", record.first_frame_uid},
+            {"last_frame_uid", record.last_frame_uid},
+            {"since", record.since},
+            {"until", record.until}}},
+          {"status", verification_status_text(record.status)}};
+}
+
+storage_status_result status_typed_impl(const storage_status_request &request) {
+  const auto selection = select_provider(request.provider);
+  const auto provider = provider_cache::instance().acquire(request.runtime_dir, selection.name);
+  storage_status_result result{};
+  result.backend = provider->name();
+  result.provider = provider->name();
+  result.provider_config_source =
+      request.provider_config_source.empty() ? selection.source : request.provider_config_source;
+  result.provider_runtime = provider->runtime();
+  result.scope = request.source_id.empty() ? "all" : "source";
+  if (!request.source_id.empty()) {
+    result.source_id = request.source_id;
+  }
+
+  const auto source_fold = registry_store(request.runtime_dir).fold_typed_records();
+  for (const auto &[source_uid, source] : source_fold.sources) {
+    (void)source_uid;
+    auto view = source_registry_status_view(source);
+    if (request.source_id.empty() || view.source_id == request.source_id) {
+      result.sources.push_back(std::move(view));
+    }
+  }
+  result.ok = request.source_id.empty() || !result.sources.empty();
+
+  const auto catalog = catalog_store(request.runtime_dir).read_typed_records();
+  std::unordered_map<uint64_t, const yijinjing::types::ImportManifestAccepted *> latest_manifests;
+  std::unordered_map<uint64_t, const yijinjing::types::ChannelCursorUpdated *> latest_cursors;
+  for (const auto &manifest : catalog.manifests) {
+    latest_manifests[manifest.source_uid] = &manifest;
+  }
+  for (const auto &cursor : catalog.cursors) {
+    latest_cursors[cursor.source_uid] = &cursor;
+  }
+
+  for (const auto &source : result.sources) {
+    storage_source_status_view status{};
+    status.source_id = source.source_id;
+    status.source = source;
+    const auto manifest_iter = latest_manifests.find(source.source_uid);
+    if (manifest_iter == latest_manifests.end()) {
+      status.reason = "manifest_missing";
+      result.source_status.push_back(std::move(status));
+      continue;
+    }
+
+    const auto &manifest = *manifest_iter->second;
+    status.ok = true;
+    status.manifest_id = fixed_string(manifest.manifest_id);
+    status.source_type = fixed_string(manifest.source_type);
+    status.source_head = fixed_string(manifest.source_head);
+    status.accepted_range = accepted_range_status_view(manifest);
+    status.sync_root =
+        storage_sync_root_view{fixed_string(manifest.sync_root_algo), fixed_string(manifest.sync_root_value)};
+    status.entries = manifest.entry_count;
+    status.payload_inventory = manifest.entry_count;
+
+    std::unordered_set<std::string> schema_keys;
+    for (const auto &entry : catalog.entries) {
+      if (entry.manifest_uid != manifest.manifest_uid || entry.accept_time != manifest.accept_time ||
+          entry.entry_schema_version == 0) {
+        continue;
+      }
+      schema_keys.insert(fixed_string(entry.kind) + ":" + std::to_string(entry.entry_schema_version));
+    }
+    status.schema_inventory = schema_keys.size();
+
+    if (const auto cursor_iter = latest_cursors.find(source.source_uid); cursor_iter != latest_cursors.end()) {
+      status.accepted_cursor = cursor_status_view(*cursor_iter->second);
+    }
+    const auto source_type = *status.source_type;
+    status.source_record =
+        storage_manifest_source_view{status.source_id,
+                                     source_type,
+                                     source_type == "atlas" ? "adapter" : "local",
+                                     fixed_string(manifest.source_coordinate),
+                                     *status.source_head,
+                                     {fixed_string(manifest.range_since), fixed_string(manifest.range_until)},
+                                     fixed_string(manifest.sync_root_value),
+                                     *status.accepted_range,
+                                     *status.manifest_id};
+    result.source_status.push_back(std::move(status));
+  }
+
+  result.projections = {source_registry_projection_status(request.runtime_dir),
+                        manifest_catalog_projection_status(request.runtime_dir)};
+  result.provider_cache = provider_cache::instance().stats();
+  return result;
+}
+
+std::vector<std::string> referenced_payload_hashes(const std::string &runtime_dir, const std::string &source_id = {}) {
+  return catalog_store(runtime_dir).referenced_payload_hashes(source_id);
+}
+
+std::pair<nlohmann::json, std::string> load_payload_impl(const storage_provider &provider,
+                                                         const nlohmann::json &entry) {
+  const auto digest = text_or(entry, "payload_hash");
+  if (digest.empty() || !provider.payload_exists(digest)) {
+    // An empty digest can never resolve to a body (and must not reach the
+    // hash primitives, which reject empty values).
+    return {nullptr, "payload_missing"};
+  }
+  const auto raw = provider.read_payload(digest);
+  if (!entry.contains("byte_len") ||
+      !entry.at("byte_len").is_number_unsigned() && !entry.at("byte_len").is_number_integer()) {
+    return {nullptr, "byte_len_mismatch"};
+  }
+  const auto expected_len = entry.at("byte_len").get<uint64_t>();
+  const auto error =
+      yy_storage::verify_payload_ref(raw, digest, expected_len, yy_storage::CONTENT_HASH_ALGORITHM_SHA256);
+  if (!error.empty()) {
+    return {nullptr, error};
+  }
+  try {
+    auto payload = nlohmann::json::parse(raw);
+    return {payload, {}};
+  } catch (const nlohmann::json::exception &) {
+    return {nullptr, "payload_decode_error"};
+  }
+}
+
+storage_fsck_result fsck_typed_impl(const storage_fsck_request &request) {
+  if (request.scope == storage_fsck_scope::Episode)
+    return episode_fsck_typed_impl(request);
+
+  storage_fsck_result result{};
+  result.scope = request.source_id.empty() ? storage_fsck_scope::All : storage_fsck_scope::Source;
+  if (!request.source_id.empty())
+    result.source_id = request.source_id;
+  result.checked.projection_indexes = 2;
+
+  const auto status =
+      status_typed_impl({request.runtime_dir, request.provider, request.provider_config_source, request.source_id});
+  std::vector<storage_source_registry_view> sources;
+  for (const auto &source : status.sources) {
+    if (source.registered)
+      sources.push_back(source);
+  }
+  result.checked.sources = sources.size();
+  if (!request.source_id.empty() && sources.empty()) {
+    storage_fsck_cross_issue detail{};
+    detail.source_id = request.source_id;
+    result.issues.push_back({"error", "source_missing", "source-registry", detail});
+    result.ok = false;
+    result.status = "failed";
+    return result;
+  }
+
+  result.source_registry = registry_store(request.runtime_dir).fsck_typed(request.source_id);
+  for (const auto &error : result.source_registry.errors) {
+    if (error.code != "source_missing")
+      result.issues.push_back({"error", error.code, "source-registry", error});
+  }
+  for (const auto &warning : result.source_registry.warnings)
+    result.issues.push_back({"warning", warning.code, "source-registry", warning});
+
+  const auto catalog_records = catalog_store(request.runtime_dir).read_typed_records();
+  std::unordered_map<uint64_t, const yijinjing::types::ImportManifestAccepted *> latest_manifests;
+  for (const auto &manifest : catalog_records.manifests)
+    latest_manifests[manifest.source_uid] = &manifest;
+  uint64_t sources_with_manifests = 0;
+  for (const auto &source : sources) {
+    const auto iter = latest_manifests.find(source.source_uid);
+    if (iter == latest_manifests.end()) {
+      storage_fsck_cross_issue detail{};
+      detail.source_id = source.source_id;
+      result.issues.push_back({"error", "manifest_missing", "manifest-catalog", detail});
+      continue;
+    }
+    ++sources_with_manifests;
+    const auto catalog_head = fixed_string(iter->second->source_head);
+    if (source.head.has_value() && !source.head->empty() && *source.head != catalog_head) {
+      storage_fsck_cross_issue detail{};
+      detail.source_id = source.source_id;
+      detail.expected = catalog_head;
+      detail.actual = *source.head;
+      result.issues.push_back({"error", "source_registry_drift", "source-registry", detail});
+    }
+    result.checked.accepted_ranges += source.accepted_range_count;
+  }
+  result.checked.source_records = sources_with_manifests;
+
+  auto provider = provider_cache::instance().acquire(request.runtime_dir, request.provider);
+  if (sources_with_manifests > 0 || request.source_id.empty()) {
+    result.manifest_catalog =
+        catalog_store(request.runtime_dir).fsck_typed(request.source_id, provider->content_store());
+    for (const auto &error : result.manifest_catalog->errors) {
+      if (error.code != "source_missing")
+        result.issues.push_back({"error", error.code, "manifest-catalog", error});
+    }
+    for (const auto &warning : result.manifest_catalog->warnings)
+      result.issues.push_back({"warning", warning.code, "manifest-catalog", warning});
+    result.degraded = result.degraded || result.manifest_catalog->degraded;
+    result.checked.manifests = result.manifest_catalog->manifests;
+    result.checked.manifest_entries = result.manifest_catalog->manifest_entries;
+    result.checked.payloads = result.manifest_catalog->payloads;
+    result.checked.entries_documents = result.manifest_catalog->entries_documents;
+  }
+
+  if (request.source_id.empty()) {
+    const auto referenced = referenced_payload_hashes(request.runtime_dir);
+    for (const auto &payload : provider->all_payloads()) {
+      if (std::find(referenced.begin(), referenced.end(), payload.digest) == referenced.end()) {
+        ++result.checked.orphan_payloads;
+        storage_fsck_cross_issue detail{};
+        detail.path = payload.uri;
+        detail.payload_hash = payload.digest;
+        result.issues.push_back({"warning", "orphan_payload", "content-store", detail});
+      }
+    }
+  }
+
+  const auto scoped = episode_ref_store(request);
+  result.episode_manifest = scoped.store.fsck_typed();
+  result.checked.episode_manifest_records = result.episode_manifest.episode_manifest_records;
+  result.checked.episodes = result.episode_manifest.episodes;
+  for (const auto &error : result.episode_manifest.errors)
+    result.issues.push_back({"error", error.code, "episode-manifest", error});
+  for (const auto &warning : result.episode_manifest.warnings)
+    result.issues.push_back({"warning", warning.code, "episode-manifest", warning});
+  result.degraded = result.degraded || result.episode_manifest.degraded;
+
+  result.projections = {source_registry_projection_status(request.runtime_dir),
+                        manifest_catalog_projection_status(request.runtime_dir)};
+  for (const auto &projection : result.projections) {
+    if (projection.verification.status == "absent") {
+      result.issues.push_back({"warning", "projection_absent", projection.name, projection});
+    } else if (projection.verification.status == "degraded") {
+      result.degraded = true;
+      result.issues.push_back({"warning", "projection_drift", projection.name, projection});
+    }
+  }
+  result.ok = std::none_of(result.issues.begin(), result.issues.end(),
+                           [](const auto &issue) { return issue.severity == "error"; });
+  result.status = !result.ok ? "failed" : (result.degraded ? "degraded" : "ok");
+  return result;
+}
+
+nlohmann::json fsck_impl(const storage_service_options &options) {
+  return render_storage_fsck_result(default_storage_service().fsck(parse_storage_fsck_request(options)));
+}
+
+storage_rebuild_index_result rebuild_index_typed_impl(const storage_rebuild_index_request &request) {
+  // ADR-0037 (final slice): rebuild the derived SQLite projections from the
+  // kernel journals through the Hana closed-set -> SQLite path. The journals
+  // are the authority; there is no JSON registry to regenerate any more.
+  storage_rebuild_index_result result{};
+  result.scope = request.source_id.empty() ? "all" : "source";
+  if (!request.source_id.empty()) {
+    result.source_id = request.source_id;
+  }
+  result.dry_run = request.dry_run;
+  result.written = !request.dry_run;
+  const auto plan_one = [&](const char *name, auto &&projection) {
+    auto verify = projection.verify_typed();
+    const bool needs_write = verify.status != "ok" || !verify.projection_present;
+    result.would_write = result.would_write || needs_write;
+    if (request.dry_run) {
+      result.projections.push_back({name, true, false, needs_write, std::move(verify)});
+      return;
+    }
+    auto rebuilt = projection.rebuild_typed();
+    if (!rebuilt.ok) {
+      result.errors.push_back({"projection_rebuild_failed", std::string(name), {}});
+    }
+    result.projections.push_back({name, false, true, true, std::move(rebuilt)});
+  };
+  plan_one(PROJECTION_SOURCE_REGISTRY, source_registry_projection(request.runtime_dir));
+  plan_one(PROJECTION_MANIFEST_CATALOG, manifest_catalog_projection(request.runtime_dir));
+  const auto sources = registry_store(request.runtime_dir).fold_typed_records();
+  result.sources_rebuilt = sources.sources.size();
+  if (!request.source_id.empty()) {
+    const auto found = std::any_of(sources.sources.begin(), sources.sources.end(), [&](const auto &item) {
+      return item.second.registered && fixed_string(item.second.registration.source_id) == request.source_id;
+    });
+    if (!found) {
+      result.errors.push_back({"source_missing", {}, request.source_id});
+    }
+  }
+  result.ok = result.errors.empty();
+  if (!request.dry_run) {
+    result.would_write = true;
+  }
+  return result;
+}
+
+nlohmann::json rebuild_index_impl(const storage_service_options &options) {
+  return render_storage_rebuild_index_result(
+      default_storage_service().rebuild_index(parse_storage_rebuild_index_request(options)));
+}
+
+storage_gc_plan_result gc_plan_typed_impl(const storage_gc_plan_request &request) {
+  if (!request.dry_run) {
+    throw std::invalid_argument("storage_gc_requires_dry_run");
+  }
+  const auto provider = provider_cache::instance().acquire(request.runtime_dir, request.provider);
+  const auto referenced = referenced_payload_hashes(request.runtime_dir, request.source_id);
+  const auto payloads = provider->all_payloads();
+  storage_gc_plan_result result{};
+  result.scope = request.source_id.empty() ? "all" : "source";
+  if (!request.source_id.empty()) {
+    result.source_id = request.source_id;
+  }
+  result.payloads_scanned = payloads.size();
+  result.referenced_payloads = referenced.size();
+  for (const auto &payload : payloads) {
+    const auto digest = payload.digest;
+    if (std::find(referenced.begin(), referenced.end(), digest) != referenced.end()) {
+      continue;
+    }
+    result.candidate_bytes += payload.bytes;
+    result.candidates.push_back({digest, payload.uri, payload.bytes, request.source_id.empty()});
+  }
+  result.notes = {"No payloads were deleted.",
+                  request.source_id.empty()
+                      ? "All-scope candidates are unreferenced by retained storage manifests."
+                      : "Source scope candidates are not globally safe to delete because the interim payload store "
+                        "is shared."};
+  return result;
+}
+
+nlohmann::json gc_plan_impl(const storage_service_options &options) {
+  return render_storage_gc_plan_result(default_storage_service().gc_plan(parse_storage_gc_plan_request(options)));
+}
+
+storage_compact_plan_result compact_plan_typed_impl(const storage_compact_plan_request &request) {
+  if (!request.dry_run) {
+    throw std::invalid_argument("storage_compact_requires_dry_run");
+  }
+  storage_compact_plan_result result{};
+  result.scope = request.source_id.empty() ? "all" : "source";
+  if (!request.source_id.empty()) {
+    result.source_id = request.source_id;
+  }
+  result.rebuild_index = rebuild_index_typed_impl({request.runtime_dir, request.source_id, true});
+  result.gc = gc_plan_typed_impl({request.runtime_dir, request.provider, request.source_id, true});
+
+  const auto catalog = catalog_store(request.runtime_dir).read_typed_records();
+  std::map<uint64_t, std::vector<const yijinjing::types::ImportManifestAccepted *>> manifests_by_source;
+  for (const auto &manifest : catalog.manifests) {
+    manifests_by_source[manifest.source_uid].push_back(&manifest);
+  }
+  for (const auto &[source_uid, manifests] : manifests_by_source) {
+    (void)source_uid;
+    const auto current_source_id = fixed_string(manifests.back()->source_id);
+    if (!request.source_id.empty() && current_source_id != request.source_id) {
+      continue;
+    }
+    for (const auto *manifest : manifests) {
+      result.retained_manifests.push_back(
+          {current_source_id,
+           fixed_string(manifest->manifest_id),
+           manifest->entry_count,
+           {fixed_string(manifest->sync_root_algo), fixed_string(manifest->sync_root_value)}});
+    }
+  }
+  result.projection_compact = {PROJECTION_MANIFEST_CATALOG,
+                               manifest_catalog_projection(request.runtime_dir).sqlite_path(), "rebuild-and-vacuum",
+                               true, true};
+  const auto provider = provider_cache::instance().acquire(request.runtime_dir, request.provider);
+  result.unsupported = {{"history-archive", "archive bundles are not implemented in this slice"},
+                        {"backend-compact", provider->name() == PROVIDER_ROCKSDB
+                                                ? "RocksDB compaction is not destructive-history compact"
+                                                : "the file backend has no backend compaction"}};
+  result.notes = {"No manifests, payloads, journal frames, or projections were rewritten.",
+                  "This is a reviewable compaction plan, not destructive compaction."};
+  result.ok = result.rebuild_index.ok && result.gc.ok;
+  return result;
+}
+
+nlohmann::json compact_plan_impl(const storage_service_options &options) {
+  return render_storage_compact_plan_result(
+      default_storage_service().compact_plan(parse_storage_compact_plan_request(options)));
+}
+
+// Accept one import manifest into the kernel journals: the manifest-catalog
+// records (header + per-entry deltas + channel cursor, entries document
+// committed into the content store) plus the source-registry alignment
+// (register-once, head update, accepted range). Returns the accepted
+// manifest JSON edge.
+nlohmann::json accept_storage_manifest_impl(const std::string &runtime_dir, const nlohmann::json &input) {
+  auto parsed = parse_storage_export_bundle({{"manifest", input}});
+  (void)default_storage_service().import_bundle({runtime_dir, {}, std::move(parsed), false});
+  const auto provider = provider_cache::instance().acquire(runtime_dir, {});
+  const auto source_id = text_or(input, "source_id", text_or(input, "storage_source_id", "local"));
+  const auto accepted = catalog_store(runtime_dir).latest_manifest_typed(source_id, provider->content_store());
+  if (!accepted.has_value()) {
+    throw std::runtime_error("accepted manifest not found");
+  }
+  return render_manifest_document(*accepted);
+}
+
+nlohmann::json render_manifest_entry_view(const yy_storage::manifest_entry_view &entry) {
+  nlohmann::json rendered = {{"kind", entry.kind},
+                             {"source_id", entry.source_id},
+                             {"source_path", entry.source_path},
+                             {"source_time", entry.source_time},
+                             {"schema_version", entry.schema_version},
+                             {"content_type", entry.content_type},
+                             {"payload_hash", entry.payload_hash},
+                             {"byte_len", entry.byte_len},
+                             {"payload_state", payload_state_text(entry.payload_state)}};
+  if (entry.action_json.has_value()) {
+    rendered["action"] = nlohmann::json::parse(*entry.action_json);
+  }
+  return rendered;
+}
+
+nlohmann::json render_sync_root(const yy_storage::manifest_sync_root_view &root) {
+  return {{"schema", yy_storage::SYNC_ROOT_SCHEMA_V1},
+          {"scope", yy_storage::SYNC_ROOT_SCOPE_ATLAS_IMPORT_MANIFEST},
+          {"proof", yy_storage::SYNC_ROOT_PROOF_LINEAR_CHAIN_V1},
+          {"algorithm", root.algorithm},
+          {"value", root.value},
+          {"entry_count", root.entry_count},
+          {"initial", yy_storage::SYNC_ROOT_INITIAL_SHA256},
+          {"ordering",
+           {{"policy", yy_storage::SYNC_ROOT_ORDERING_POLICY_MANIFEST_ENTRY_SORT_V1},
+            {"fields", {"kind", "source_id", "source_path"}}}}};
+}
+
+nlohmann::json render_manifest_document(const yy_storage::manifest_document_view &manifest) {
+  nlohmann::json entries = nlohmann::json::array();
+  for (const auto &entry : manifest.entries) {
+    entries.push_back(render_manifest_entry_view(entry));
+  }
+  auto range = nlohmann::json::object();
+  if (!manifest.range_since.empty()) {
+    range["since"] = manifest.range_since;
+  }
+  if (!manifest.range_until.empty()) {
+    range["until"] = manifest.range_until;
+  }
+  const auto sync_root = render_sync_root(manifest.sync_root);
+  auto source =
+      nlohmann::json{{"schema", yy_storage::STORAGE_SOURCE_RECORD_SCHEMA_V1},
+                     {"source_id", manifest.source_id},
+                     {"type", manifest.source_type},
+                     {"kind", manifest.source_type == "atlas" ? "adapter" : "local"},
+                     {"coordinate", manifest.source_coordinate},
+                     {"current_head",
+                      {{"head", manifest.source_head}, {"range", range}, {"inventory_hash", manifest.sync_root.value}}},
+                     {"last_manifest_id", manifest.manifest_id},
+                     {"updated_at", ""}};
+  auto accepted = nlohmann::json{{"schema", yy_storage::STORAGE_ACCEPTED_RANGE_SCHEMA_V1},
+                                 {"source_id", manifest.source_id},
+                                 {"manifest_id", manifest.manifest_id},
+                                 {"range", range},
+                                 {"source_head", manifest.source_head},
+                                 {"sync_root", sync_root},
+                                 {"entry_count", manifest.entries.size()},
+                                 {"status", "ok"}};
+  source["accepted_ranges"] = nlohmann::json::array({accepted});
+  return {{"schema", yy_storage::STORAGE_IMPORT_MANIFEST_SCHEMA_V1},
+          {"authority", "yijinjing-journal"},
+          {"manifest_id", manifest.manifest_id},
+          {"scope", manifest.scope},
+          {"source", source},
+          {"source_id", manifest.source_id},
+          {"source_type", manifest.source_type},
+          {"source_head", manifest.source_head},
+          {"range", range},
+          {"counts", {{"records", manifest.entries.size()}}},
+          {"entries", entries},
+          {"payload_inventory", yy_storage::build_storage_payload_inventory(entries)},
+          {"schema_inventory", yy_storage::build_storage_schema_inventory(entries)},
+          {"accepted_ranges", nlohmann::json::array({accepted})},
+          {"sync_root", sync_root},
+          {"idempotency_key", manifest.source_id + ":" + manifest.manifest_id}};
+}
+
+nlohmann::json render_storage_export_bundle_result(const storage_export_bundle_result &result) {
+  const auto manifest = render_manifest_document(result.manifest);
+  nlohmann::json records = nlohmann::json::array();
+  for (const auto &record : result.records) {
+    auto row = render_manifest_entry_view(record.entry);
+    row["scope"] = result.manifest.scope;
+    row["manifest_id"] = result.manifest.manifest_id;
+    row["storage_source_id"] = result.manifest.source_id;
+    row["source_type"] = result.manifest.source_type;
+    row["source_head"] = result.manifest.source_head;
+    row["payload"] =
+        record.payload_json.has_value() ? nlohmann::json::parse(*record.payload_json) : nlohmann::json(nullptr);
+    records.push_back(std::move(row));
+  }
+  auto payload_inventory = yy_storage::build_storage_payload_inventory(manifest.at("entries"));
+  payload_inventory["exported_records"] = records.size();
+  return {{"schema", yy_storage::STORAGE_EXPORT_BUNDLE_SCHEMA_V1},
+          {"bundle_id", result.bundle_id},
+          {"source_id", result.source_id},
+          {"manifest", manifest},
+          {"records", records},
+          {"payload_inventory", payload_inventory},
+          {"schema_inventory", manifest.at("schema_inventory")},
+          {"accepted_ranges", manifest.at("accepted_ranges")},
+          {"sync_root", manifest.at("sync_root")}};
+}
+
+storage_export_bundle_result export_bundle_typed_impl(const storage_export_bundle_request &request) {
+  const auto provider = provider_cache::instance().acquire(request.runtime_dir, request.provider);
+  auto manifest =
+      catalog_store(request.runtime_dir).latest_manifest_typed(request.source_id, provider->content_store());
+  if (!manifest.has_value()) {
+    throw std::runtime_error("manifest not found: " + request.source_id);
+  }
+  if (!request.range.since.empty() || !request.range.until.empty()) {
+    std::vector<yy_storage::manifest_entry_view> filtered;
+    for (const auto &entry : manifest->entries) {
+      if (entry.source_time.empty()) {
+        continue;
+      }
+      if (!request.range.since.empty() && entry.source_time < request.range.since) {
+        continue;
+      }
+      if (!request.range.until.empty() && entry.source_time > request.range.until) {
+        continue;
+      }
+      filtered.push_back(entry);
+    }
+    manifest->entries = std::move(filtered);
+    manifest->range_since = request.range.since;
+    manifest->range_until = request.range.until;
+    manifest->sync_root = yy_storage::compute_manifest_sync_root(manifest->entries);
+  }
+
+  storage_export_bundle_result result{};
+  result.bundle_id = manifest->source_id + ":" + manifest->manifest_id;
+  result.source_id = manifest->source_id;
+  result.manifest = *manifest;
+  for (const auto &entry : manifest->entries) {
+    storage_export_record_view record{};
+    record.entry = entry;
+    const auto withheld = entry.payload_state == yy_enums::PayloadState::Redacted ||
+                          entry.payload_state == yy_enums::PayloadState::Absent;
+    if (!withheld && !entry.payload_hash.empty() && provider->payload_exists(entry.payload_hash)) {
+      const auto raw = provider->read_payload(entry.payload_hash);
+      const auto error = yy_storage::verify_payload_ref(raw, entry.payload_hash, entry.byte_len);
+      if (error.empty()) {
+        record.payload_json = raw;
+      } else if (entry.payload_state == yy_enums::PayloadState::Present) {
+        throw std::runtime_error(error + ": " + entry.kind + ":" + entry.source_id);
+      }
+    } else if (!withheld && entry.payload_state == yy_enums::PayloadState::Present) {
+      throw std::runtime_error("payload_missing: " + entry.kind + ":" + entry.source_id);
+    }
+    result.records.push_back(std::move(record));
+  }
+  std::sort(result.records.begin(), result.records.end(), [](const auto &lhs, const auto &rhs) {
+    return std::tie(lhs.entry.kind, lhs.entry.source_id, lhs.entry.source_path) <
+           std::tie(rhs.entry.kind, rhs.entry.source_id, rhs.entry.source_path);
+  });
+  if (request.record_receipt) {
+    catalog_store(request.runtime_dir)
+        .record_export_typed(result.manifest, result.records.size(), request.range.since, request.range.until);
+  }
+  return result;
+}
+
+nlohmann::json export_bundle_generic_impl(const storage_service_options &options, bool record_receipt) {
+  return render_storage_export_bundle_result(
+      default_storage_service().export_bundle({options.runtime_dir,
+                                               options.provider,
+                                               options.source_id,
+                                               {text_or(options.range, "since"), text_or(options.range, "until")},
+                                               record_receipt}));
+}
+
+yy_enums::PayloadState parse_payload_state_text(const std::string &state) {
+  if (state == PAYLOAD_STATE_PRESENT) {
+    return yy_enums::PayloadState::Present;
+  }
+  if (state == PAYLOAD_STATE_REDACTED) {
+    return yy_enums::PayloadState::Redacted;
+  }
+  if (state == PAYLOAD_STATE_ABSENT) {
+    return yy_enums::PayloadState::Absent;
+  }
+  return yy_enums::PayloadState::Missing;
+}
+
+yy_storage::manifest_entry_view parse_manifest_entry_view(const nlohmann::json &entry) {
+  yy_storage::manifest_entry_view parsed{};
+  parsed.kind = text_or(entry, "kind");
+  parsed.source_id = text_or(entry, "source_id");
+  parsed.source_path = text_or(entry, "source_path");
+  parsed.source_time = text_or(entry, "source_time");
+  parsed.schema_version = entry.value("schema_version", uint32_t{0});
+  parsed.content_type = text_or(entry, "content_type");
+  parsed.payload_hash = text_or(entry, "payload_hash");
+  parsed.byte_len = entry.value("byte_len", uint64_t{0});
+  parsed.payload_state = parse_payload_state_text(text_or(entry, "payload_state", "missing"));
+  if (entry.contains("action") && entry.at("action").is_object()) {
+    parsed.action_json = canonical_json(entry.at("action"));
+  }
+  return parsed;
+}
+
+storage_export_bundle_result parse_storage_export_bundle(const nlohmann::json &bundle) {
+  if (!bundle.is_object()) {
+    throw std::invalid_argument("bundle_manifest_missing");
+  }
+  const auto manifest_edge = object_or_empty(bundle, "manifest");
+  if (manifest_edge.empty()) {
+    throw std::invalid_argument("bundle_manifest_missing");
+  }
+  storage_export_bundle_result parsed{};
+  parsed.bundle_id = text_or(bundle, "bundle_id");
+  parsed.source_id = text_or(bundle, "source_id");
+  auto &manifest = parsed.manifest;
+  manifest.manifest_id = text_or(manifest_edge, "manifest_id");
+  manifest.scope = text_or(manifest_edge, "scope");
+  manifest.source_id = text_or(manifest_edge, "source_id", text_or(manifest_edge, "storage_source_id", "local"));
+  manifest.source_type = text_or(manifest_edge, "source_type");
+  manifest.source_head = text_or(manifest_edge, "source_head");
+  manifest.source_coordinate =
+      text_or(object_or_empty(manifest_edge, "source"), "coordinate", text_or(manifest_edge, "source_coordinate"));
+  const auto range = object_or_empty(manifest_edge, "range");
+  manifest.range_since = text_or(range, "since");
+  manifest.range_until = text_or(range, "until");
+  for (const auto &entry : array_or_empty(manifest_edge, "entries")) {
+    if (!entry.is_object()) {
+      throw std::invalid_argument("bundle_manifest_invalid: manifest_entries_invalid");
+    }
+    manifest.entries.push_back(parse_manifest_entry_view(entry));
+  }
+  const auto root = object_or_empty(manifest_edge, "sync_root");
+  manifest.sync_root = {text_or(root, "algorithm"), text_or(root, "value"), root.value("entry_count", uint64_t{0})};
+  for (const auto &record : array_or_empty(bundle, "records")) {
+    if (!record.is_object()) {
+      continue;
+    }
+    storage_export_record_view row{};
+    row.entry = parse_manifest_entry_view(record);
+    if (record.contains("payload") && !record.at("payload").is_null()) {
+      row.payload_json = canonical_json(record.at("payload"));
+    }
+    parsed.records.push_back(std::move(row));
+  }
+  return parsed;
+}
+
+storage_import_bundle_result import_bundle_typed_impl(const storage_import_bundle_request &request) {
+  const auto &manifest = request.bundle.manifest;
+  if (manifest.manifest_id.empty())
+    throw std::invalid_argument("bundle_manifest_invalid: missing_field: manifest_id");
+  if (manifest.source_id.empty())
+    throw std::invalid_argument("bundle_manifest_invalid: missing_field: source_id");
+  if (request.verify) {
+    const auto expected = yy_storage::compute_manifest_sync_root(manifest.entries);
+    if (expected.algorithm != manifest.sync_root.algorithm || expected.value != manifest.sync_root.value ||
+        expected.entry_count != manifest.sync_root.entry_count) {
+      throw std::invalid_argument("bundle_manifest_invalid: sync_root_mismatch");
+    }
+  }
+  const auto provider = provider_cache::instance().acquire(request.runtime_dir, request.provider);
+  for (const auto &record : request.bundle.records) {
+    if (!record.payload_json.has_value()) {
+      continue;
+    }
+    if (record.entry.payload_state == yy_enums::PayloadState::Redacted ||
+        record.entry.payload_state == yy_enums::PayloadState::Absent) {
+      continue;
+    }
+    auto digest = record.entry.payload_hash;
+    if (digest.empty()) {
+      digest = yy_storage::compute_content_hash_value(*record.payload_json, yy_storage::CONTENT_HASH_ALGORITHM_SHA256);
+    }
+    const auto error = yy_storage::verify_payload_ref(*record.payload_json, digest, record.payload_json->size());
+    if (!error.empty()) {
+      throw std::invalid_argument("storage_payload_invalid: " + error);
+    }
+    provider->write_payload(digest, *record.payload_json);
+  }
+
+  const auto accepted = catalog_store(request.runtime_dir).accept_manifest_typed(manifest, provider->content_store());
+  const auto registry = registry_store(request.runtime_dir);
+  bool registered = false;
+  for (const auto &[source_uid, source] : registry.fold_typed_records().sources) {
+    (void)source_uid;
+    if (source.registered && fixed_string(source.registration.source_id) == accepted.source_id) {
+      registered = true;
+      break;
+    }
+  }
+  if (!registered) {
+    yy_storage::source_register_options reg{};
+    reg.source_id = accepted.source_id;
+    reg.kind = accepted.source_type == "atlas" ? yy_enums::SourceKind::Adapter : yy_enums::SourceKind::Local;
+    reg.coordinate = accepted.source_coordinate;
+    reg.head = accepted.source_head;
+    (void)registry.register_source(reg);
+  }
+  yy_storage::source_head_update_options head{};
+  head.source_id = accepted.source_id;
+  head.head = accepted.source_head;
+  head.inventory_hash_algo = accepted.sync_root.algorithm;
+  head.inventory_hash = accepted.sync_root.value;
+  (void)registry.update_head(head);
+  yy_storage::accepted_range_options range{};
+  range.source_id = accepted.source_id;
+  range.manifest_id = accepted.manifest_id;
+  (void)registry.record_accepted_range(range);
+  return {true, "source", accepted.source_id, accepted.manifest_id, request.bundle.records.size()};
+}
+
+nlohmann::json render_storage_import_bundle_result(const storage_import_bundle_result &result) {
+  return {{"ok", result.ok},
+          {"scope", result.scope},
+          {"source_id", result.source_id},
+          {"manifest_id", result.manifest_id},
+          {"records", result.records}};
+}
+
+storage_verify_sync_result verify_sync_typed_impl(const storage_verify_sync_request &request) {
+  storage_verify_sync_result result{};
+  result.source_id = request.source_id;
+  result.source_fsck =
+      default_storage_service().fsck({request.runtime_dir, request.provider, request.provider_config_source,
+                                      storage_fsck_scope::Source, request.source_id, 0, false});
+  if (!result.source_fsck.ok) {
+    result.ok = false;
+    return result;
+  }
+
+  const auto bundle =
+      default_storage_service().export_bundle({request.runtime_dir, request.provider, request.source_id, {}, false});
+  result.exported_records = bundle.records.size();
+  result.local_sync_root = {bundle.manifest.sync_root.algorithm, bundle.manifest.sync_root.value};
+  const auto temp_root = fs::temp_directory_path() / ("kungfu-storage-sync-" + std::to_string(std::random_device{}()) +
+                                                      "-" + std::to_string(std::random_device{}()));
+  result.imported_runtime_dir = temp_root.string();
+  try {
+    result.import = default_storage_service().import_bundle({temp_root.string(), request.provider, bundle, true});
+    result.imported_fsck =
+        default_storage_service().fsck({temp_root.string(), request.provider, request.provider_config_source,
+                                        storage_fsck_scope::Source, request.source_id, 0, false});
+    const auto imported_provider = provider_cache::instance().acquire(temp_root.string(), request.provider);
+    const auto imported =
+        catalog_store(temp_root.string()).latest_manifest_typed(request.source_id, imported_provider->content_store());
+    if (imported.has_value()) {
+      result.imported_sync_root = {imported->sync_root.algorithm, imported->sync_root.value};
+    }
+    fs::remove_all(temp_root);
+  } catch (...) {
+    fs::remove_all(temp_root);
+    throw;
+  }
+  result.sync_roots_match = result.local_sync_root.algorithm == result.imported_sync_root.algorithm &&
+                            result.local_sync_root.value == result.imported_sync_root.value;
+  result.ok = result.imported_fsck.ok && result.sync_roots_match;
+  return result;
+}
+
+nlohmann::json render_storage_verify_sync_result(const storage_verify_sync_result &result) {
+  if (!result.source_fsck.ok) {
+    return {{"ok", false},
+            {"scope", "source"},
+            {"source_id", result.source_id},
+            {"errors", nlohmann::json::array({{{"code", "source_fsck_failed"},
+                                               {"fsck", render_storage_fsck_result(result.source_fsck)}}})}};
+  }
+  auto imported_fsck = render_storage_fsck_result(result.imported_fsck);
+  imported_fsck = replace_string_subtree(imported_fsck, result.imported_runtime_dir, "<sync-runtime>");
+  return {{"ok", result.ok},
+          {"scope", result.scope},
+          {"source_id", result.source_id},
+          {"exported_records", result.exported_records},
+          {"import", render_storage_import_bundle_result(result.import)},
+          {"local_sync_root",
+           render_sync_root({result.local_sync_root.algorithm, result.local_sync_root.value, result.exported_records})},
+          {"imported_sync_root", render_sync_root({result.imported_sync_root.algorithm, result.imported_sync_root.value,
+                                                   result.exported_records})},
+          {"sync_roots_match", result.sync_roots_match},
+          {"source_fsck", render_storage_fsck_result(result.source_fsck)},
+          {"imported_fsck", imported_fsck}};
+}
+
+class file_storage_json_edge_service {
+public:
+  [[nodiscard]] nlohmann::json status(const storage_service_options &options) const {
+    return render_storage_status_result(default_storage_service().status(parse_storage_status_request(options)));
+  }
+
+  [[nodiscard]] nlohmann::json fsck(const storage_service_options &options) const { return fsck_impl(options); }
+
+  [[nodiscard]] nlohmann::json repair_plan(const storage_service_options &options) const {
+    return repair_plan_impl(options);
+  }
+
+  [[nodiscard]] nlohmann::json repair_fetch(const storage_service_options &options) const {
+    return repair_fetch_impl(options);
+  }
+
+  [[nodiscard]] nlohmann::json repair_apply(const storage_service_options &options) const {
+    return repair_apply_impl(options);
+  }
+
+  [[nodiscard]] nlohmann::json export_bundle(const storage_service_options &options) const {
+    if (options.scope == "episode") {
+      return episode_export_bundle_impl(options);
+    }
+    // The public export operation records the export-bundle receipt; internal
+    // read-only exports (verify_sync round trips, repair-fetch evidence scans
+    // over mirror runtimes) call the impl without the receipt.
+    return export_bundle_generic_impl(options, /*record_receipt=*/true);
+  }
+
+  [[nodiscard]] nlohmann::json import_bundle(const storage_service_options &options) const {
+    if (!options.bundle.is_object()) {
+      throw std::invalid_argument("bundle_manifest_missing");
+    }
+    if (options.scope == "episode" || text_or(options.bundle, "schema") == "kungfu.storage.episode-bundle/v1") {
+      return episode_import_bundle_impl(options);
+    }
+    return render_storage_import_bundle_result(default_storage_service().import_bundle(
+        {options.runtime_dir, options.provider, parse_storage_export_bundle(options.bundle), options.verify}));
+  }
+
+  [[nodiscard]] nlohmann::json rebuild_index(const storage_service_options &options) const {
+    return rebuild_index_impl(options);
+  }
+
+  [[nodiscard]] nlohmann::json gc_plan(const storage_service_options &options) const { return gc_plan_impl(options); }
+
+  [[nodiscard]] nlohmann::json compact_plan(const storage_service_options &options) const {
+    return compact_plan_impl(options);
+  }
+
+  [[nodiscard]] nlohmann::json verify_sync(const storage_service_options &options) const {
+    return render_storage_verify_sync_result(default_storage_service().verify_sync(
+        {options.runtime_dir, options.provider, options.provider_config_source, options.source_id}));
+  }
+
+  [[nodiscard]] nlohmann::json layout(const storage_service_options &options) const {
+    storage_layout_request request{};
+    request.runtime_dir = options.runtime_dir;
+    request.runtime_home = text_or(options.operation_options, "runtime_home");
+    request.config_home = text_or(options.operation_options, "config_home");
+    request.provider = options.provider;
+    return workspace_episode_layout_json(default_storage_service().layout(request));
+  }
+
+  [[nodiscard]] nlohmann::json query_plan(const storage_service_options &options) const {
+    const auto action = text_or(options.operation_options, "action", "validate");
+    if (action == "capabilities") {
+      return query::query_capabilities_json();
+    }
+    if (action == "schema") {
+      return query::query_definition_schema_json();
+    }
+    if (action == "describe") {
+      return query::query_object_description_json(text_or(options.operation_options, "object", "episodes"));
+    }
+    if (action == "examples") {
+      return query::query_examples_json();
+    }
+
+    auto definition = query::parse_query_definition(options.query_definition);
+    if (action == "compile-sql") {
+      if (options.query.empty()) {
+        throw std::invalid_argument("compile-sql requires a non-empty SQL query");
+      }
+      definition = query::compile_episode_sql(options.query, definition);
+    }
+    const auto plan = query::plan_query(definition);
+    if (action == "compile-sql") {
+      return {{"schema", "kungfu.query.sql-compilation/v1"},
+              {"sql", options.query},
+              {"definition", query::query_definition_json(definition)},
+              {"logical_plan", query::logical_plan_json(plan)},
+              {"query_definition_hash", plan.query_definition_hash},
+              {"logical_plan_hash", plan.logical_plan_hash}};
+    }
+    if (action == "validate") {
+      return {{"schema", query::QUERY_VALIDATION_SCHEMA_V1},
+              {"ok", true},
+              {"definition", query::query_definition_json(definition)},
+              {"query_definition_hash", plan.query_definition_hash},
+              {"logical_plan_hash", plan.logical_plan_hash}};
+    }
+    if (action == "explain") {
+      const auto engine = text_or(options.operation_options, "engine", "authority");
+      if (engine != "authority" && engine != "sqlite") {
+        throw std::invalid_argument("query engine must be authority or sqlite");
+      }
+      const auto authority_engine =
+          definition.object == "fact-state" ? "fact-authority-scan/v1" : "episode-authority-scan/v1";
+      if (definition.object == "fact-state" && engine == "sqlite") {
+        throw std::invalid_argument("object=fact-state currently supports only the authority engine");
+      }
+      return {{"schema", query::QUERY_EXPLAIN_SCHEMA_V1},
+              {"definition", query::query_definition_json(definition)},
+              {"logical_plan", query::logical_plan_json(plan)},
+              {"physical",
+               {{"engine", engine == "authority" ? authority_engine : "episode-sqlite-projection/v1"},
+                {"bounded", true},
+                {"limit", definition.limit},
+                {"cost",
+                 {{"class", engine == "authority" ? "bounded-authority-scan" : "bounded-sqlite-projection"},
+                  {"upper_bound_rows", definition.limit},
+                  {"authority_records", "runtime-dependent"}}}}}};
+    }
+    throw std::invalid_argument("unsupported query planner action: " + action);
+  }
+
+  [[nodiscard]] nlohmann::json fact_query(const storage_service_options &options) const {
+    const auto definition = query::parse_query_definition(options.query_definition);
+    const auto plan = query::plan_query(definition);
+    const auto engine = text_or(options.operation_options, "engine", "authority");
+    if (engine == "authority") {
+      if (definition.object == "fact-state") {
+        return query::query_result_json(query::run_fact_state_authority_scan(options.runtime_dir, plan));
+      }
+      return query::query_result_json(query::run_episode_authority_scan(options.runtime_dir, plan));
+    }
+    if (engine == "sqlite") {
+      if (definition.object != "episodes") {
+        throw std::invalid_argument("object=fact-state currently supports only the authority engine");
+      }
+      return query::query_result_json(query::run_episode_sqlite_projection(options.runtime_dir, plan));
+    }
+    throw std::invalid_argument("query engine must be authority or sqlite");
+  }
+
+  [[nodiscard]] nlohmann::json fact_changelog(const storage_service_options &options) const {
+    const auto definition = query::parse_query_definition(options.query_definition);
+    const auto plan = query::plan_query(definition);
+    const auto resume_token = object_or_empty(options.operation_options, "resume_token");
+    const auto max_messages = uint64_or(options.operation_options, "max_messages", 100);
+    return query::changelog_page_json(
+        query::run_query_changelog(options.runtime_dir, plan, resume_token, max_messages));
+  }
+
+  [[nodiscard]] nlohmann::json saved_query_catalog(const storage_service_options &options) const {
+    const auto action = text_or(options.operation_options, "action", "list");
+    if (action == "contract") {
+      return query::saved_query_catalog_contract();
+    }
+    if (action == "put") {
+      return query::saved_query_put(options.runtime_dir, object_or_empty(options.operation_options, "saved_view"),
+                                    text_or(options.operation_options, "query_id"),
+                                    uint64_or(options.operation_options, "expected_revision"),
+                                    int64_or(options.operation_options, "system_time"));
+    }
+    if (action == "get") {
+      return query::saved_query_get(options.runtime_dir, text_or(options.operation_options, "query_id"),
+                                    bool_or(options.operation_options, "include_deleted", false));
+    }
+    if (action == "list") {
+      return query::saved_query_list(options.runtime_dir, bool_or(options.operation_options, "include_deleted", false));
+    }
+    if (action == "history") {
+      return query::saved_query_history(options.runtime_dir, text_or(options.operation_options, "query_id"));
+    }
+    if (action == "delete") {
+      return query::saved_query_delete(options.runtime_dir, text_or(options.operation_options, "query_id"),
+                                       uint64_or(options.operation_options, "expected_revision"),
+                                       int64_or(options.operation_options, "system_time"));
+    }
+    if (action == "rebuild") {
+      return query::saved_query_rebuild(options.runtime_dir);
+    }
+    throw std::invalid_argument("unsupported saved-query catalog action: " + action);
+  }
+
+  [[nodiscard]] nlohmann::json fact_contract(const storage_service_options &options) const {
+    (void)options;
+    return facts::fact_contract_json();
+  }
+
+  [[nodiscard]] nlohmann::json fact_declare_world(const storage_service_options &options) const {
+    return facts::declare_contract_world(options.runtime_dir, object_or_empty(options.operation_options, "declaration"),
+                                         int64_or(options.operation_options, "system_time"));
+  }
+
+  [[nodiscard]] nlohmann::json fact_declare_surface(const storage_service_options &options) const {
+    return facts::declare_fact_surface(options.runtime_dir, object_or_empty(options.operation_options, "declaration"),
+                                       int64_or(options.operation_options, "system_time"));
+  }
+
+  [[nodiscard]] nlohmann::json fact_observe(const storage_service_options &options) const {
+    return facts::record_observation(options.runtime_dir, object_or_empty(options.operation_options, "observation"),
+                                     int64_or(options.operation_options, "system_time"));
+  }
+
+  [[nodiscard]] nlohmann::json fact_state(const storage_service_options &options) const {
+    return facts::query_fact_state(options.runtime_dir, int64_or(options.operation_options, "cut_system_time"),
+                                   text_or(options.operation_options, "subject_key"));
+  }
+
+  [[nodiscard]] nlohmann::json fact_library_contract(const storage_service_options &options) const {
+    (void)options;
+    return {
+        {"schema", "kungfu.facts.library-contract/v1"},
+        {"owner", "libkungfu"},
+        {"authority", "yijinjing-journal"},
+        {"content_store", {{"schemas", "schemas"}, {"payloads", "payloads"}}},
+        {"schema_validation",
+         {{"profile", "json-schema-object-subset/v1"},
+          {"keywords", nlohmann::json::array({"type", "properties", "required", "items", "additionalProperties"})}}},
+        {"semantic_profile",
+         {{"id", "declared-facts-v1"},
+          {"identity_policy", "subject-key/v1"},
+          {"valid_time_policy", "explicit-range/v1"},
+          {"system_time_policy", "journal-event-time/v1"},
+          {"causal_time_policy", "event-parent/v1"},
+          {"reducer_policy", "latest-admitted-per-source/v1"},
+          {"correction_policy", "explicit-target/v1"},
+          {"retraction_policy", "explicit-target/v1"},
+          {"conflict_policy", "preserve-source-claims/v1"},
+          {"redaction_policy", "hash-and-ref/v1"},
+          {"compatibility_policy", "exact-schema-root/v1"}}},
+        {"operations", nlohmann::json::array({"type-create", "type-list", "material-put", "material-list"})},
+        {"portability", {{"full", "owned schema and payload bytes"}, {"thin", "declared refs only"}}},
+        {"known_limits", nlohmann::json::array({"one fixed semantic profile", "bounded JSON Schema object subset",
+                                                "no mutable global-latest workspace binding"})}};
+  }
+
+  [[nodiscard]] nlohmann::json fact_type_list(const storage_service_options &options) const {
+    const auto state =
+        facts::query_fact_state(options.runtime_dir, int64_or(options.operation_options, "cut_system_time"));
+    const auto catalog = object_or_empty(state, "catalog");
+    return {{"schema", "kungfu.facts.type-catalog/v1"},
+            {"scope", text_or(options.operation_options, "scope", "selected-data-root")},
+            {"semantic_profile", "declared-facts-v1"},
+            {"contract_worlds", array_or_empty(catalog, "contract_worlds")},
+            {"fact_types", array_or_empty(catalog, "fact_surfaces")},
+            {"proof", state.at("proof")}};
+  }
+
+  [[nodiscard]] nlohmann::json fact_type_create(const storage_service_options &options) const {
+    const auto definition = object_or_empty(options.operation_options, "definition");
+    const auto type_id = required_text(definition, "id");
+    const auto version = required_text(definition, "version");
+    const auto sources = array_or_empty(definition, "source_authorities");
+    if (sources.empty()) {
+      throw std::invalid_argument("source_authorities requires at least one source id");
+    }
+    const auto schema = object_or_empty(definition, "schema");
+    if (schema.empty()) {
+      throw std::invalid_argument("schema must be a non-empty JSON object");
+    }
+    if (text_or(schema, "type") != "object") {
+      throw std::invalid_argument("managed fact schema must use the supported top-level object profile");
+    }
+    const auto raw_schema = canonical_json(schema);
+    const auto schema_hash = yy_storage::format_content_hash(yy_storage::compute_content_hash(raw_schema));
+    const auto effective_from =
+        int64_or(definition, "effective_from",
+                 int64_or(options.operation_options, "system_time", kungfu::yijinjing::time::now_in_nano()));
+    const auto effective_until = int64_or(definition, "effective_until");
+    const auto world_id = text_or(definition, "contract_world_id", type_id + ".world");
+
+    const auto existing = fact_type_list(options);
+    const auto provider = shared_provider(options);
+    nlohmann::json world_reference;
+    for (const auto &world : array_or_empty(existing, "contract_worlds")) {
+      if (text_or(world, "id") == world_id && text_or(world, "version") == version) {
+        world_reference = {{"id", world.at("id")}, {"version", world.at("version")}, {"root", world.at("root")}};
+        break;
+      }
+    }
+    for (const auto &type : array_or_empty(existing, "fact_types")) {
+      if (text_or(type, "id") == type_id && text_or(type, "version") == version) {
+        if (text_or(type, "schema_owner_root") != schema_hash) {
+          throw std::invalid_argument("fact type version already exists with a different schema root");
+        }
+        if (canonical_json(array_or_empty(type, "source_authorities")) != canonical_json(sources) ||
+            text_or(object_or_empty(type, "contract_world"), "id") != world_id) {
+          throw std::invalid_argument("fact type version already exists with a different immutable definition");
+        }
+        const auto stored =
+            provider->content_store().put_if_absent("schemas", raw_schema, yy_storage::parse_content_hash(schema_hash));
+        if (!stored.ok()) {
+          throw std::runtime_error("fact schema store failed: " + stored.message);
+        }
+        return {{"schema", "kungfu.facts.type-write/v1"},
+                {"ok", true},
+                {"status", "already_present"},
+                {"definition", type},
+                {"schema_hash", schema_hash},
+                {"schema_store", content_result_json(stored)}};
+      }
+    }
+
+    const auto stored =
+        provider->content_store().put_if_absent("schemas", raw_schema, yy_storage::parse_content_hash(schema_hash));
+    if (!stored.ok()) {
+      throw std::runtime_error("fact schema store failed: " + stored.message);
+    }
+    nlohmann::json world_receipt = nullptr;
+    if (world_reference.is_null() || world_reference.empty()) {
+      world_receipt = facts::declare_contract_world(options.runtime_dir,
+                                                    {{"id", world_id},
+                                                     {"version", version},
+                                                     {"effective_from", effective_from},
+                                                     {"effective_until", effective_until},
+                                                     {"fact_surface_ids", nlohmann::json::array({type_id})}},
+                                                    effective_from);
+      world_reference = world_receipt.at("reference");
+    }
+    nlohmann::json surface = {{"id", type_id},
+                              {"version", version},
+                              {"contract_world", world_reference},
+                              {"effective_from", effective_from},
+                              {"effective_until", effective_until},
+                              {"schema_owner_root", schema_hash},
+                              {"source_authorities", sources},
+                              {"identity_policy", "subject-key/v1"},
+                              {"valid_time_policy", "explicit-range/v1"},
+                              {"system_time_policy", "journal-event-time/v1"},
+                              {"causal_time_policy", "event-parent/v1"},
+                              {"reducer_policy", "latest-admitted-per-source/v1"},
+                              {"correction_policy", "explicit-target/v1"},
+                              {"retraction_policy", "explicit-target/v1"},
+                              {"conflict_policy", "preserve-source-claims/v1"},
+                              {"redaction_policy", "hash-and-ref/v1"},
+                              {"compatibility_policy", "exact-schema-root/v1"},
+                              {"known_limits", nlohmann::json::array({"declared-facts-v1 fixed semantic profile"})}};
+    const auto receipt = facts::declare_fact_surface(options.runtime_dir, surface, effective_from, schema_hash);
+    return {{"schema", "kungfu.facts.type-write/v1"},
+            {"ok", true},
+            {"status", "created"},
+            {"definition", receipt.at("declaration")},
+            {"schema_hash", schema_hash},
+            {"schema_store", content_result_json(stored)},
+            {"world", world_receipt},
+            {"receipt", receipt}};
+  }
+
+  [[nodiscard]] nlohmann::json fact_material_put(const storage_service_options &options) const {
+    const auto material = object_or_empty(options.operation_options, "material");
+    const auto type_id = required_text(material, "type_id");
+    const auto type_version = required_text(material, "type_version");
+    const auto source_id = required_text(material, "source_id");
+    const auto subject_key = required_text(material, "subject_key");
+    if (!material.contains("payload") || !material.at("payload").is_object()) {
+      throw std::invalid_argument("payload must be a JSON object");
+    }
+    const auto types = fact_type_list(options);
+    nlohmann::json selected;
+    for (const auto &type : array_or_empty(types, "fact_types")) {
+      if (text_or(type, "id") == type_id && text_or(type, "version") == type_version) {
+        selected = type;
+        break;
+      }
+    }
+    if (selected.is_null() || selected.empty()) {
+      throw std::invalid_argument("fact type version is not registered in the selected data root");
+    }
+    const auto provider = shared_provider(options);
+    const auto schema_hash = required_text(selected, "schema_owner_root");
+    const auto stored_schema = provider->content_store().get("schemas", yy_storage::parse_content_hash(schema_hash));
+    if (!stored_schema.ok()) {
+      throw std::runtime_error("fact type schema content is unavailable: " + schema_hash);
+    }
+    const auto schema = nlohmann::json::parse(stored_schema.bytes);
+    validate_managed_json_value(schema, material.at("payload"), "$");
+    const auto raw_payload = canonical_json(material.at("payload"));
+    const auto payload_hash = yy_storage::format_content_hash(yy_storage::compute_content_hash(raw_payload));
+    const auto stored =
+        provider->content_store().put_if_absent("payloads", raw_payload, yy_storage::parse_content_hash(payload_hash));
+    if (!stored.ok()) {
+      throw std::runtime_error("fact payload store failed: " + stored.message);
+    }
+    const auto system_time = int64_or(options.operation_options, "system_time", kungfu::yijinjing::time::now_in_nano());
+    auto observation_id = text_or(material, "observation_id");
+    if (observation_id.empty()) {
+      const auto identity = canonical_json({{"type_id", type_id},
+                                            {"type_version", type_version},
+                                            {"source_id", source_id},
+                                            {"subject_key", subject_key},
+                                            {"payload_hash", payload_hash},
+                                            {"system_time", system_time}});
+      const auto identity_hash = yy_storage::compute_content_hash(identity).value;
+      observation_id = "obs-" + identity_hash.substr(0, 24);
+    }
+    const auto world = object_or_empty(selected, "contract_world");
+    nlohmann::json observation = {{"observation_id", observation_id},
+                                  {"contract_world_id", required_text(world, "id")},
+                                  {"fact_surface_id", type_id},
+                                  {"schema_owner_root", required_text(selected, "schema_owner_root")},
+                                  {"source_id", source_id},
+                                  {"subject_key", subject_key},
+                                  {"valid_from", int64_or(material, "valid_from", system_time)},
+                                  {"valid_until", int64_or(material, "valid_until")},
+                                  {"payload_hash", payload_hash},
+                                  {"payload_ref", "content:payloads/" + payload_hash},
+                                  {"action", text_or(material, "action", "assert")},
+                                  {"target_observation_id", text_or(material, "target_observation_id")}};
+    const auto receipt = facts::record_observation(options.runtime_dir, observation, system_time, payload_hash);
+    return {{"schema", "kungfu.facts.material-write/v1"},
+            {"ok", receipt.at("admission").at("outcome") == "admitted"},
+            {"payload_hash", payload_hash},
+            {"payload_store", content_result_json(stored)},
+            {"receipt", receipt}};
+  }
+
+  [[nodiscard]] nlohmann::json fact_material_list(const storage_service_options &options) const {
+    auto state = facts::query_fact_state(options.runtime_dir, int64_or(options.operation_options, "cut_system_time"),
+                                         text_or(options.operation_options, "subject_key"));
+    const auto type_id = text_or(options.operation_options, "type_id");
+    auto filter = [&type_id](nlohmann::json rows) {
+      if (type_id.empty())
+        return rows;
+      nlohmann::json selected = nlohmann::json::array();
+      for (const auto &row : rows) {
+        if (text_or(row, "fact_surface_id") == type_id)
+          selected.push_back(row);
+      }
+      return selected;
+    };
+    state["canonical_facts"] = filter(array_or_empty(state, "canonical_facts"));
+    state["observation_history"] = filter(array_or_empty(state, "observation_history"));
+    nlohmann::json payloads = nlohmann::json::object();
+    const auto provider = shared_provider(options);
+    for (const auto &row : state.at("observation_history")) {
+      const auto hash_text = text_or(row, "payload_hash");
+      if (hash_text.empty() || payloads.contains(hash_text))
+        continue;
+      const auto stored = provider->content_store().get("payloads", yy_storage::parse_content_hash(hash_text));
+      if (stored.ok()) {
+        payloads[hash_text] = nlohmann::json::parse(stored.bytes);
+      }
+    }
+    return {{"schema", "kungfu.facts.material-catalog/v1"},
+            {"type_id", type_id.empty() ? nlohmann::json(nullptr) : nlohmann::json(type_id)},
+            {"state", state},
+            {"payloads", payloads}};
+  }
+
+  [[nodiscard]] nlohmann::json fact_library_export(const storage_service_options &options) const {
+    std::vector<uint64_t> episode_ids;
+    std::unordered_set<uint64_t> seen;
+    const auto push_episode = [&episode_ids, &seen](uint64_t episode_id) {
+      if (episode_id != 0 && seen.insert(episode_id).second)
+        episode_ids.push_back(episode_id);
+    };
+    const auto types = fact_type_list(options);
+    for (const auto &world : array_or_empty(types, "contract_worlds"))
+      push_episode(uint64_or(world, "episode_id"));
+    for (const auto &type : array_or_empty(types, "fact_types"))
+      push_episode(uint64_or(type, "episode_id"));
+    const auto materials = fact_material_list(options);
+    const auto state = object_or_empty(materials, "state");
+    for (const auto &row : array_or_empty(state, "observation_history"))
+      push_episode(uint64_or(row, "episode_id"));
+    const auto assessments = trust::list_assessments(options.runtime_dir);
+    for (const auto &row : array_or_empty(assessments, "assessments")) {
+      push_episode(uint64_or(row, "parent_episode_id"));
+      push_episode(uint64_or(row, "assessment_episode_id"));
+    }
+    nlohmann::json bundles = nlohmann::json::array();
+    uint64_t missing_frame_count = 0;
+    uint64_t missing_ref_payload_count = 0;
+    bool episodes_self_contained = true;
+    for (const auto episode_id : episode_ids) {
+      auto export_options = options;
+      export_options.scope = "episode";
+      export_options.episode_id = episode_id;
+      export_options.operation_options["episode_id"] = episode_id;
+      auto rendered = render_storage_episode_bundle_result(episode_export_bundle_typed_impl(export_options));
+      const auto material = object_or_empty(rendered, "material");
+      missing_frame_count += uint64_or(material, "missing_frame_count");
+      missing_ref_payload_count += uint64_or(material, "missing_ref_payload_count");
+      episodes_self_contained = episodes_self_contained && bool_or(rendered, "self_contained", false);
+      bundles.push_back(std::move(rendered));
+    }
+    const auto thin = bool_or(options.operation_options, "thin", false);
+    const auto self_contained = !thin && episodes_self_contained;
+    return {{"schema", "kungfu.facts.library-bundle/v1"},
+            {"mode", thin ? "thin" : "full"},
+            {"self_contained", self_contained},
+            {"semantic_profile", "declared-facts-v1"},
+            {"episode_count", bundles.size()},
+            {"material",
+             {{"missing_frame_count", missing_frame_count}, {"missing_ref_payload_count", missing_ref_payload_count}}},
+            {"episodes", bundles},
+            {"catalog", types},
+            {"assessments", assessments}};
+  }
+
+  [[nodiscard]] nlohmann::json fact_library_import(const storage_service_options &options) const {
+    const auto bundle = object_or_empty(options.operation_options, "library_bundle");
+    if (text_or(bundle, "schema") != "kungfu.facts.library-bundle/v1") {
+      throw std::invalid_argument("fact_library_bundle_invalid");
+    }
+    const auto dry_run = bool_or(options.operation_options, "dry_run", true);
+    nlohmann::json preflight_receipts = nlohmann::json::array();
+    bool ok = true;
+    for (const auto &episode : array_or_empty(bundle, "episodes")) {
+      auto import_options = options;
+      import_options.scope = "episode";
+      import_options.bundle = episode;
+      import_options.dry_run = true;
+      const auto receipt = episode_import_bundle_impl(import_options);
+      ok = ok && receipt.value("ok", false);
+      preflight_receipts.push_back(receipt);
+    }
+    if (dry_run || !ok) {
+      return {{"schema", "kungfu.facts.library-import/v1"},
+              {"ok", ok},
+              {"dry_run", true},
+              {"source_mode", text_or(bundle, "mode")},
+              {"receipt_count", preflight_receipts.size()},
+              {"receipts", preflight_receipts}};
+    }
+    nlohmann::json receipts = nlohmann::json::array();
+    for (const auto &episode : array_or_empty(bundle, "episodes")) {
+      auto import_options = options;
+      import_options.scope = "episode";
+      import_options.bundle = episode;
+      import_options.dry_run = false;
+      const auto receipt = episode_import_bundle_impl(import_options);
+      ok = ok && receipt.value("ok", false);
+      receipts.push_back(receipt);
+      if (!receipt.value("ok", false))
+        break;
+    }
+    return {{"schema", "kungfu.facts.library-import/v1"},
+            {"ok", ok},
+            {"dry_run", false},
+            {"source_mode", text_or(bundle, "mode")},
+            {"receipt_count", receipts.size()},
+            {"receipts", receipts},
+            {"preflight_receipts", preflight_receipts}};
+  }
+
+  [[nodiscard]] nlohmann::json assessment_contract(const storage_service_options &options) const {
+    (void)options;
+    return trust::assessment_contract_json();
+  }
+
+  [[nodiscard]] nlohmann::json assessment_request(const storage_service_options &options) const {
+    return trust::request_assessment(options.runtime_dir, object_or_empty(options.operation_options, "request"),
+                                     int64_or(options.operation_options, "system_time"));
+  }
+
+  [[nodiscard]] nlohmann::json assessment_execute(const storage_service_options &options) const {
+    return trust::execute_assessment(options.runtime_dir, text_or(options.operation_options, "assessment_key"),
+                                     text_or(options.operation_options, "executor_profile", "process"),
+                                     int64_or(options.operation_options, "system_time"));
+  }
+
+  [[nodiscard]] nlohmann::json assessment_status(const storage_service_options &options) const {
+    return trust::query_assessment(options.runtime_dir, text_or(options.operation_options, "assessment_key"));
+  }
+
+  [[nodiscard]] nlohmann::json assessment_list(const storage_service_options &options) const {
+    return trust::list_assessments(options.runtime_dir);
+  }
+
+  [[nodiscard]] nlohmann::json assessment_invalidate(const storage_service_options &options) const {
+    return trust::invalidate_assessment(options.runtime_dir, text_or(options.operation_options, "assessment_key"),
+                                        text_or(options.operation_options, "changed_root"),
+                                        text_or(options.operation_options, "reason"),
+                                        int64_or(options.operation_options, "system_time"));
+  }
+
+  [[nodiscard]] nlohmann::json trust_require(const storage_service_options &options) const {
+    return trust::require_trust(options.runtime_dir, text_or(options.operation_options, "assessment_key"),
+                                text_or(options.operation_options, "purpose"));
+  }
+
+  [[nodiscard]] nlohmann::json episode_begin(const storage_service_options &options) const {
+    return episode_record_body_json(
+        episode_store(options).begin(parse_episode_begin_options(options.operation_options)));
+  }
+
+  [[nodiscard]] nlohmann::json episode_heartbeat(const storage_service_options &options) const {
+    return episode_record_body_json(
+        episode_store(options).heartbeat(parse_episode_heartbeat_options(options.operation_options)));
+  }
+
+  [[nodiscard]] nlohmann::json episode_end(const storage_service_options &options) const {
+    return render_episode_close_write_result(episode_store(options).end(
+        parse_episode_close_options(options.operation_options, yy_enums::EpisodeStatus::Ended)));
+  }
+
+  [[nodiscard]] nlohmann::json episode_abort(const storage_service_options &options) const {
+    return render_episode_close_write_result(episode_store(options).abort(
+        parse_episode_close_options(options.operation_options, yy_enums::EpisodeStatus::Aborted)));
+  }
+
+  [[nodiscard]] nlohmann::json episode_attach_frame(const storage_service_options &options) const {
+    return episode_record_body_json(
+        episode_store(options).attach_frame(parse_episode_frame_attach_options(options.operation_options)));
+  }
+
+  [[nodiscard]] nlohmann::json episode_attach_ref(const storage_service_options &options) const {
+    return episode_record_body_json(
+        episode_store(options).attach_ref(parse_episode_ref_attach_options(options.operation_options)));
+  }
+
+  [[nodiscard]] nlohmann::json episode_list(const storage_service_options &options) const {
+    return episode_store(options).list(uint64_or(options.operation_options, "location_uid"), options.limit);
+  }
+
+  [[nodiscard]] nlohmann::json episode_inspect(const storage_service_options &options) const {
+    auto inspected = episode_ref_store(options).store.inspect(options.episode_id);
+    auto qualification_options = options;
+    qualification_options.scope = "episode";
+    const auto fsck = default_storage_service().fsck(parse_storage_fsck_request(qualification_options));
+    if (fsck.qualification.has_value())
+      inspected["qualification"] = episode_qualification_json(*fsck.qualification);
+    return inspected;
+  }
+
+  [[nodiscard]] nlohmann::json episode_recover(const storage_service_options &options) const {
+    return render_episode_recover_result(
+        episode_store(options).recover(parse_episode_recover_options(options.operation_options)));
+  }
+
+  [[nodiscard]] nlohmann::json episode_projection_rebuild(const storage_service_options &options) const {
+    return episode_projection_rebuild_json(episode_manifest_projection(options.runtime_dir).rebuild_typed());
+  }
+
+  [[nodiscard]] nlohmann::json source_register(const storage_service_options &options) const {
+    return source_registry_record_json(
+        source_registry_store(options).register_source(parse_source_register_options(options.operation_options)));
+  }
+
+  [[nodiscard]] nlohmann::json source_update_head(const storage_service_options &options) const {
+    return source_registry_record_json(
+        source_registry_store(options).update_head(parse_source_head_update_options(options.operation_options)));
+  }
+
+  [[nodiscard]] nlohmann::json source_record_accepted_range(const storage_service_options &options) const {
+    return source_registry_record_json(
+        source_registry_store(options).record_accepted_range(parse_accepted_range_options(options.operation_options)));
+  }
+
+  [[nodiscard]] nlohmann::json source_list(const storage_service_options &options) const {
+    return source_registry_store(options).list();
+  }
+
+  [[nodiscard]] nlohmann::json source_inspect(const storage_service_options &options) const {
+    return source_registry_store(options).inspect(text_or(options.operation_options, "source_id", options.source_id));
+  }
+
+  [[nodiscard]] nlohmann::json source_registry_fsck(const storage_service_options &options) const {
+    const auto source_id = text_or(options.operation_options, "source_id", options.source_id);
+    const auto journal = source_registry_store(options).fsck_typed(source_id);
+    const auto render_issue = [](const yy_storage::source_registry_fsck_issue &issue) {
+      nlohmann::json row = {{"code", issue.code}};
+      if (issue.source_uid.has_value())
+        row["source_uid"] = *issue.source_uid;
+      if (issue.source_id.has_value())
+        row["source_id"] = *issue.source_id;
+      if (issue.count.has_value())
+        row["count"] = *issue.count;
+      return row;
+    };
+    nlohmann::json errors = nlohmann::json::array();
+    for (const auto &issue : journal.errors)
+      errors.push_back(render_issue(issue));
+    nlohmann::json warnings = nlohmann::json::array();
+    for (const auto &issue : journal.warnings)
+      warnings.push_back(render_issue(issue));
+    const auto projection = source_registry_projection(options.runtime_dir).verify_typed();
+    // ADR-0037: fsck verifies journal + projection. The journal is the
+    // authority; a rebuildable projection that has drifted from it is degraded,
+    // not failed.
+    const bool projection_degraded = projection.status == "degraded";
+    return {{"ok", journal.ok && !projection_degraded},
+            {"status", !journal.ok ? "failed" : (projection_degraded ? "degraded" : "ok")},
+            {"schema", journal.schema},
+            {"runtime_dir", journal.runtime_dir},
+            {"authority", journal.authority},
+            {"errors", std::move(errors)},
+            {"warnings", std::move(warnings)},
+            {"checked", {{"source_registry_records", journal.source_registry_records}, {"sources", journal.sources}}},
+            {"projection", projection_verification_json(projection)}};
+  }
+
+  [[nodiscard]] nlohmann::json source_registry_rebuild(const storage_service_options &options) const {
+    return projection_rebuild_json(source_registry_projection(options.runtime_dir).rebuild_typed());
+  }
+};
+
+class file_storage_service : public storage_service {
+public:
+  [[nodiscard]] storage_status_result status(const storage_status_request &request) const override {
+    return status_typed_impl(request);
+  }
+
+  [[nodiscard]] storage_layout_result layout(const storage_layout_request &request) const override {
+    const auto provider = provider_cache::instance().acquire(request.runtime_dir, request.provider);
+    return workspace_episode_layout_typed(request, *provider);
+  }
+
+  [[nodiscard]] storage_fsck_result fsck(const storage_fsck_request &request) const override {
+    return fsck_typed_impl(request);
+  }
+
+  [[nodiscard]] storage_repair_plan_result repair_plan(const storage_repair_plan_request &request) const override {
+    return repair_plan_typed_impl(request);
+  }
+
+  [[nodiscard]] storage_query_result query(const storage_query_request &request) const override {
+    return query_journal_projection(request);
+  }
+
+  [[nodiscard]] storage_gc_plan_result gc_plan(const storage_gc_plan_request &request) const override {
+    return gc_plan_typed_impl(request);
+  }
+
+  [[nodiscard]] storage_rebuild_index_result
+  rebuild_index(const storage_rebuild_index_request &request) const override {
+    return rebuild_index_typed_impl(request);
+  }
+
+  [[nodiscard]] storage_compact_plan_result compact_plan(const storage_compact_plan_request &request) const override {
+    return compact_plan_typed_impl(request);
+  }
+
+  [[nodiscard]] storage_export_bundle_result
+  export_bundle(const storage_export_bundle_request &request) const override {
+    return export_bundle_typed_impl(request);
+  }
+
+  [[nodiscard]] storage_import_bundle_result
+  import_bundle(const storage_import_bundle_request &request) const override {
+    return import_bundle_typed_impl(request);
+  }
+
+  [[nodiscard]] storage_verify_sync_result verify_sync(const storage_verify_sync_request &request) const override {
+    return verify_sync_typed_impl(request);
+  }
+
+  [[nodiscard]] yijinjing::types::EpisodeOpen
+  episode_begin(const storage_episode_begin_request &request) const override {
+    return yy_storage::episode_manifest_store(request.runtime_dir).begin(request.options);
+  }
+
+  [[nodiscard]] yijinjing::types::EpisodeHeartbeat
+  episode_heartbeat(const storage_episode_heartbeat_request &request) const override {
+    return yy_storage::episode_manifest_store(request.runtime_dir).heartbeat(request.options);
+  }
+
+  [[nodiscard]] yijinjing::types::EpisodeFrameAttached
+  episode_attach_frame(const storage_episode_frame_attach_request &request) const override {
+    return yy_storage::episode_manifest_store(request.runtime_dir).attach_frame(request.options);
+  }
+
+  [[nodiscard]] yijinjing::types::EpisodeRefAttached
+  episode_attach_ref(const storage_episode_ref_attach_request &request) const override {
+    return yy_storage::episode_manifest_store(request.runtime_dir).attach_ref(request.options);
+  }
+
+  [[nodiscard]] yy_storage::episode_close_write_result
+  episode_end(const storage_episode_close_request &request) const override {
+    return yy_storage::episode_manifest_store(request.runtime_dir).end(request.options);
+  }
+
+  [[nodiscard]] yy_storage::episode_close_write_result
+  episode_abort(const storage_episode_close_request &request) const override {
+    return yy_storage::episode_manifest_store(request.runtime_dir).abort(request.options);
+  }
+
+  [[nodiscard]] yy_storage::episode_recover_result
+  episode_recover(const storage_episode_recover_request &request) const override {
+    return yy_storage::episode_manifest_store(request.runtime_dir).recover(request.options);
+  }
+
+  [[nodiscard]] storage_projection_rebuild_result
+  episode_projection_rebuild(const storage_episode_projection_rebuild_request &request) const override {
+    return episode_manifest_projection(request.runtime_dir).rebuild_typed();
+  }
+
+  [[nodiscard]] storage_episode_list_result episode_list(const storage_episode_list_request &request) const override {
+    const auto fold = yy_storage::episode_manifest_store(request.runtime_dir).fold_typed_records();
+    storage_episode_list_result result{};
+    result.runtime_dir = request.runtime_dir;
+    result.unknown_record_count = static_cast<uint64_t>(fold.unknown_record_count);
+    for (auto iter = fold.episodes.rbegin(); iter != fold.episodes.rend(); ++iter) {
+      const auto &view = iter->second;
+      const auto location_uid = view.opened ? view.open.location_uid : uint32_t{0};
+      if (request.location_uid != 0 && request.location_uid != location_uid)
+        continue;
+      result.episodes.push_back(view);
+      if (request.limit != 0 && result.episodes.size() >= request.limit)
+        break;
+    }
+    return result;
+  }
+
+  [[nodiscard]] storage_episode_inspect_result
+  episode_inspect(const storage_episode_inspect_request &request) const override {
+    const auto inspected = yy_storage::episode_manifest_store(request.runtime_dir).inspect_typed(request.episode_id);
+    storage_fsck_request fsck_request{};
+    fsck_request.runtime_dir = request.runtime_dir;
+    fsck_request.scope = storage_fsck_scope::Episode;
+    fsck_request.episode_id = request.episode_id;
+    const auto fsck_result = fsck(fsck_request);
+    return {true,
+            request.runtime_dir,
+            "yijinjing-journal",
+            inspected.episode,
+            inspected.content_root,
+            inspected.causal_graph,
+            inspected.unknown_record_count,
+            fsck_result.qualification};
+  }
+
+  [[nodiscard]] yijinjing::types::SourceRegistered
+  source_register(const storage_source_register_request &request) const override {
+    return yy_storage::source_registry_store(request.runtime_dir).register_source(request.options);
+  }
+
+  [[nodiscard]] yijinjing::types::SourceHeadUpdated
+  source_update_head(const storage_source_head_update_request &request) const override {
+    return yy_storage::source_registry_store(request.runtime_dir).update_head(request.options);
+  }
+
+  [[nodiscard]] yijinjing::types::AcceptedRangeRecorded
+  source_record_accepted_range(const storage_source_accepted_range_request &request) const override {
+    return yy_storage::source_registry_store(request.runtime_dir).record_accepted_range(request.options);
+  }
+
+  [[nodiscard]] storage_source_list_result source_list(const storage_source_list_request &request) const override {
+    const auto fold = yy_storage::source_registry_store(request.runtime_dir).fold_typed_records();
+    storage_source_list_result result{};
+    result.runtime_dir = request.runtime_dir;
+    result.unknown_record_count = static_cast<uint64_t>(fold.unknown_record_count);
+    result.sources.reserve(fold.sources.size());
+    for (const auto &[source_uid, source] : fold.sources) {
+      (void)source_uid;
+      result.sources.push_back(source);
+    }
+    return result;
+  }
+
+  [[nodiscard]] storage_source_inspect_result
+  source_inspect(const storage_source_inspect_request &request) const override {
+    const auto store = yy_storage::source_registry_store(request.runtime_dir);
+    const auto source = store.inspect_typed(request.source_id);
+    if (!source.has_value())
+      throw std::invalid_argument("source not found: " + request.source_id);
+    const auto fold = store.fold_typed_records();
+    return {true, request.runtime_dir, "yijinjing-journal", *source, static_cast<uint64_t>(fold.unknown_record_count)};
+  }
+
+  [[nodiscard]] storage_source_registry_fsck_result
+  source_registry_fsck(const storage_source_registry_fsck_request &request) const override {
+    const auto journal = yy_storage::source_registry_store(request.runtime_dir).fsck_typed(request.source_id);
+    const auto projection = source_registry_projection(request.runtime_dir).verify_typed();
+    const bool projection_degraded = projection.status == "degraded";
+    return {journal.ok && !projection_degraded, !journal.ok ? "failed" : (projection_degraded ? "degraded" : "ok"),
+            journal, projection};
+  }
+
+  [[nodiscard]] storage_projection_rebuild_result
+  source_registry_rebuild(const storage_source_registry_rebuild_request &request) const override {
+    return source_registry_projection(request.runtime_dir).rebuild_typed();
+  }
+};
+
+const file_storage_service &typed_storage_service_instance() {
+  static const file_storage_service service;
+  return service;
+}
+
+const file_storage_json_edge_service &storage_json_edge_service_instance() {
+  static const file_storage_json_edge_service service;
+  return service;
+}
+
+const char *episode_status_text(yy_enums::EpisodeStatus status) {
+  switch (status) {
+  case yy_enums::EpisodeStatus::Open:
+    return "open";
+  case yy_enums::EpisodeStatus::Ended:
+    return "ended";
+  case yy_enums::EpisodeStatus::Aborted:
+    return "aborted";
+  case yy_enums::EpisodeStatus::Tombstoned:
+    return "tombstoned";
+  }
+  return "unknown";
+}
+
+const char *episode_ref_kind_text(yy_enums::EpisodeRefKind kind) {
+  switch (kind) {
+  case yy_enums::EpisodeRefKind::InputFrame:
+    return "input_frame";
+  case yy_enums::EpisodeRefKind::Payload:
+    return "payload";
+  case yy_enums::EpisodeRefKind::Schema:
+    return "schema";
+  case yy_enums::EpisodeRefKind::Episode:
+    return "episode";
+  }
+  return "unknown";
+}
+
+template <typename T> nlohmann::json episode_base_record_json(const char *kind, const T &record) {
+  return {{"schema", yy_storage::EPISODE_MANIFEST_SCHEMA_V1},
+          {"record_kind", kind},
+          {"schema_version", record.schema_version},
+          {"episode_id", record.episode_id},
+          {"location_uid", record.location_uid}};
+}
+
+nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeOpen &record) {
+  auto row = episode_base_record_json("episode_open", record);
+  row["status"] = episode_status_text(yy_enums::EpisodeStatus::Open);
+  row["parent_episode_id"] = record.parent_episode_id;
+  row["root_trigger_frame_uid"] = record.root_trigger_frame_uid;
+  row["begin_time"] = record.begin_time;
+  row["title"] = std::string(record.title.value);
+  row["actor"] = std::string(record.actor.value);
+  row["source"] = std::string(record.source.value);
+  return row;
+}
+
+nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeHeartbeat &record) {
+  auto row = episode_base_record_json("episode_heartbeat", record);
+  row["update_time"] = record.update_time;
+  row["last_frame_uid"] = record.last_frame_uid;
+  row["frame_count"] = record.frame_count;
+  row["note"] = std::string(record.note.value);
+  return row;
+}
+
+nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeFrameAttached &record) {
+  auto row = episode_base_record_json("episode_frame_attached", record);
+  row["frame_uid"] = record.frame_uid;
+  row["trigger_frame_uid"] = record.trigger_frame_uid;
+  row["stream_id"] = record.stream_id;
+  row["gen_time"] = record.gen_time;
+  row["trigger_time"] = record.trigger_time;
+  row["carrier_type"] = record.carrier_type;
+  row["source"] = record.source;
+  row["dest"] = record.dest;
+  row["data_length"] = record.data_length;
+  row["integrity_version"] = record.integrity_version;
+  row["payload_checksum"] = record.payload_checksum;
+  row["frame_checksum"] = record.frame_checksum;
+  return row;
+}
+
+nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeRefAttached &record) {
+  auto row = episode_base_record_json("episode_ref_attached", record);
+  row["ref_kind"] = episode_ref_kind_text(record.ref_kind);
+  row["ref_uid"] = record.ref_uid;
+  row["update_time"] = record.update_time;
+  row["ref_id"] = std::string(record.ref_id.value);
+  row["ref_hash"] = std::string(record.ref_hash.value);
+  return row;
+}
+
+nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeClosed &record) {
+  auto row = episode_base_record_json("episode_closed", record);
+  row["status"] = episode_status_text(record.status);
+  row["end_time"] = record.end_time;
+  row["last_frame_uid"] = record.last_frame_uid;
+  row["frame_count"] = record.frame_count;
+  row["reason"] = std::string(record.reason.value);
+  return row;
+}
+
+nlohmann::json episode_record_body_json(const yijinjing::types::EpisodeRootCommitted &record) {
+  auto row = episode_base_record_json("episode_root_committed", record);
+  row["commit_time"] = record.commit_time;
+  row["covered_record_count"] = record.covered_record_count;
+  row["algorithm"] = std::string(record.algorithm.value);
+  row["root_value"] = std::string(record.root_value.value);
+  return row;
+}
+
+nlohmann::json render_episode_close_write_result(const yy_storage::episode_close_write_result &result) {
+  auto rendered = episode_record_body_json(result.close);
+  if (result.content_root.has_value()) {
+    rendered["content_root"] = episode_record_body_json(*result.content_root);
+  }
+  return rendered;
+}
+
+nlohmann::json render_episode_recover_result(const yy_storage::episode_recover_result &result) {
+  nlohmann::json recovered = nlohmann::json::array();
+  for (const auto &item : result.recovered)
+    recovered.push_back(render_episode_close_write_result(item));
+  nlohmann::json skipped = nlohmann::json::array();
+  for (const auto &item : result.skipped_open)
+    skipped.push_back({{"episode_id", item.episode_id}, {"location_uid", item.location_uid}});
+  return {{"ok", true},
+          {"schema", yy_storage::EPISODE_MANIFEST_SCHEMA_V1},
+          {"runtime_dir", result.runtime_dir},
+          {"authority", "yijinjing-journal"},
+          {"recovered", std::move(recovered)},
+          {"recovered_count", result.recovered.size()},
+          {"skipped_open", std::move(skipped)},
+          {"skipped_count", result.skipped_open.size()}};
+}
+
+nlohmann::json episode_record_row_json(const yy_storage::episode_manifest_record &record) {
+  auto row = std::visit(
+      [&record](const auto &body) -> nlohmann::json {
+        using body_t = std::decay_t<decltype(body)>;
+        if constexpr (std::is_same_v<body_t, yy_storage::episode_manifest_unknown_record>) {
+          return {{"schema", yy_storage::EPISODE_MANIFEST_SCHEMA_V1},
+                  {"record_kind", "unknown"},
+                  {"carrier_type", body.carrier_type},
+                  {"frame_uid", record.manifest_frame_uid},
+                  {"gen_time", record.manifest_gen_time}};
+        } else {
+          return episode_record_body_json(body);
+        }
+      },
+      record.body);
+  row["manifest_frame_uid"] = record.manifest_frame_uid;
+  row["manifest_gen_time"] = record.manifest_gen_time;
+  return row;
+}
+
+nlohmann::json episode_dependency_json(const yy_storage::episode_dependency &dependency) {
+  nlohmann::json rendered = {{"kind", dependency.kind}, {"role", dependency.role}, {"status", dependency.status}};
+  if (dependency.episode_id.has_value())
+    rendered["episode_id"] = *dependency.episode_id;
+  if (dependency.frame_uid.has_value())
+    rendered["frame_uid"] = *dependency.frame_uid;
+  if (dependency.dependent_frame_uid.has_value())
+    rendered["dependent_frame_uid"] = *dependency.dependent_frame_uid;
+  if (dependency.ref_uid.has_value())
+    rendered["ref_uid"] = *dependency.ref_uid;
+  if (dependency.ref_id.has_value())
+    rendered["ref_id"] = *dependency.ref_id;
+  if (dependency.ref_hash.has_value())
+    rendered["ref_hash"] = *dependency.ref_hash;
+  return rendered;
+}
+
+nlohmann::json episode_dependencies_json(const yy_storage::episode_causal_graph &graph) {
+  nlohmann::json rendered = nlohmann::json::array();
+  for (const auto &dependency : graph.dependencies)
+    rendered.push_back(episode_dependency_json(dependency));
+  return rendered;
+}
+
+nlohmann::json episode_causal_graph_json(const yy_storage::episode_causal_graph &graph) {
+  nlohmann::json edges = nlohmann::json::array();
+  for (const auto &edge : graph.edges) {
+    edges.push_back({{"kind", "frame_trigger"},
+                     {"scope", "internal"},
+                     {"from_frame_uid", edge.from_frame_uid},
+                     {"to_frame_uid", edge.to_frame_uid}});
+  }
+  return {{"schema", graph.schema},
+          {"episode_id", graph.episode_id},
+          {"frame_count", graph.frame_count},
+          {"edge_count", graph.edges.size()},
+          {"dependency_count", graph.dependencies.size()},
+          {"degraded", graph.degraded},
+          {"edges", std::move(edges)},
+          {"dependencies", episode_dependencies_json(graph)}};
+}
+
+nlohmann::json render_storage_episode_bundle_result(const storage_episode_bundle_result &result) {
+  nlohmann::json records = nlohmann::json::array();
+  for (const auto &record : result.manifest.records)
+    records.push_back(episode_record_row_json(record));
+  nlohmann::json frames = nlohmann::json::array();
+  for (const auto index : result.manifest.frame_indices)
+    frames.push_back(episode_record_row_json(result.manifest.records.at(index)));
+  nlohmann::json refs = nlohmann::json::array();
+  for (const auto index : result.manifest.ref_indices)
+    refs.push_back(episode_record_row_json(result.manifest.records.at(index)));
+  const auto dependencies = episode_dependencies_json(result.causal_graph);
+  nlohmann::json rendered = {{"schema", "kungfu.storage.episode-bundle/v1"},
+                             {"bundle_id", result.bundle_id},
+                             {"scope", "episode"},
+                             {"episode_id", result.episode_id},
+                             {"authority", "yijinjing-journal"},
+                             {"manifest", yy_storage::episode_summary_json(result.manifest)},
+                             {"causal_graph", episode_causal_graph_json(result.causal_graph)},
+                             {"records", std::move(records)},
+                             {"frames", std::move(frames)},
+                             {"refs", std::move(refs)},
+                             {"dependencies", dependencies},
+                             {"degraded", result.causal_graph.degraded},
+                             {"record_count", result.manifest.records.size()},
+                             {"frame_count", result.manifest.frame_indices.size()},
+                             {"ref_count", result.manifest.ref_indices.size()},
+                             {"dependency_count", result.causal_graph.dependencies.size()}};
+  if (!result.self_contained) {
+    return rendered;
+  }
+  // ADR-0053: the owned bytes travel with the bundle; binary material is
+  // base64 at this JSON edge only.
+  rendered["self_contained"] = true;
+  nlohmann::json journals = nlohmann::json::array();
+  for (const auto &journal : result.journals) {
+    nlohmann::json frame_rows = nlohmann::json::array();
+    for (const auto &frame : journal.frames) {
+      frame_rows.push_back({{"frame_uid", frame.frame_uid},
+                            {"gen_time", frame.gen_time},
+                            {"carrier_type", frame.carrier_type},
+                            {"frame_length", frame.frame_length},
+                            {"data_length", frame.data_length},
+                            {"bytes", base64_encode(frame.bytes)}});
+    }
+    journals.push_back({{"location",
+                         {{"role", journal.role},
+                          {"namespace", journal.namespace_},
+                          {"name", journal.name},
+                          {"mode", journal.mode},
+                          {"seed", journal.seed},
+                          {"uid", journal.location_uid}}},
+                        {"dest", journal.dest},
+                        {"frames", std::move(frame_rows)}});
+  }
+  rendered["journals"] = std::move(journals);
+  nlohmann::json ref_payloads = nlohmann::json::array();
+  for (const auto &payload : result.ref_payloads) {
+    ref_payloads.push_back({{"content_namespace", payload.content_namespace},
+                            {"ref_hash", payload.ref_hash},
+                            {"byte_len", payload.byte_len},
+                            {"bytes", base64_encode(payload.bytes)}});
+  }
+  rendered["ref_payloads"] = std::move(ref_payloads);
+  rendered["material"] = {{"missing_frame_count", result.material_missing_frame_count},
+                          {"missing_ref_payload_count", result.material_missing_ref_payload_count}};
+  return rendered;
+}
+
+nlohmann::json storage_query_rows_json(const storage_query_rows &rows) {
+  return std::visit(
+      [](const auto &typed_rows) {
+        using rows_t = std::decay_t<decltype(typed_rows)>;
+        nlohmann::json rendered = nlohmann::json::array();
+        for (const auto &row : typed_rows) {
+          if constexpr (std::is_same_v<rows_t, std::vector<storage_source_query_row>>) {
+            rendered.push_back({{"source_uid", row.source_uid},
+                                {"source_id", row.source_id},
+                                {"source_type", row.source_type},
+                                {"coordinate", row.coordinate},
+                                {"manifest_id", row.manifest_id},
+                                {"source_head", row.source_head},
+                                {"accept_time", row.accept_time},
+                                {"entry_count", row.entry_count},
+                                {"sync_root", {{"algorithm", row.sync_root.algorithm}, {"value", row.sync_root.value}}},
+                                {"manifest_count", row.manifest_count},
+                                {"export_count", row.export_count}});
+          } else if constexpr (std::is_same_v<rows_t, std::vector<storage_manifest_query_row>>) {
+            rendered.push_back({{"manifest_id", row.manifest_id},
+                                {"accept_time", row.accept_time},
+                                {"entry_count", row.entry_count},
+                                {"entries_hash", row.entries_hash},
+                                {"sync_root", {{"algorithm", row.sync_root.algorithm}, {"value", row.sync_root.value}}},
+                                {"status", row.status},
+                                {"source_id", row.source_id}});
+          } else if constexpr (std::is_same_v<rows_t, std::vector<storage_entry_query_row>>) {
+            rendered.push_back({{"kind", row.kind},
+                                {"source_id", row.source_id},
+                                {"source_path", row.source_path},
+                                {"source_time", row.source_time},
+                                {"schema_version", row.schema_version},
+                                {"content_type", row.content_type},
+                                {"payload_hash", row.payload_hash},
+                                {"byte_len", row.byte_len},
+                                {"payload_state", row.payload_state},
+                                {"entry_index", row.entry_index},
+                                {"accept_time", row.accept_time},
+                                {"storage_source_id", row.storage_source_id},
+                                {"manifest_id", row.manifest_id}});
+          } else if constexpr (std::is_same_v<rows_t, std::vector<yy_storage::episode_current_view>>) {
+            rendered.push_back(yy_storage::episode_summary_json(row));
+          } else {
+            rendered.push_back(episode_record_row_json(row));
+          }
+        }
+        return rendered;
+      },
+      rows);
+}
+
+nlohmann::json make_request(storage_operation operation, const storage_service_options &options) {
+  return {
+      {"schema", RUNTIME_STORAGE_SERVICE_SCHEMA_V1},
+      {"owner", RUNTIME_STORAGE_SERVICE_OWNER},
+      {"operation", storage_operation_name(operation)},
+      {"runtime_dir", options.runtime_dir},
+      {"provider", options.provider},
+      {"provider_config_source", options.provider_config_source},
+      {"scope", options.scope},
+      {"source_id", options.source_id},
+      {"dry_run", options.dry_run},
+      {"verify", options.verify},
+      {"range", options.range},
+      {"artifact_uri", options.artifact_uri},
+  };
+}
+
+} // namespace
+
+size_t storage_query_result::row_count() const {
+  return std::visit([](const auto &typed_rows) { return typed_rows.size(); }, rows);
+}
+
+std::string storage_query_kind_name(storage_query_kind kind) {
+  switch (kind) {
+  case storage_query_kind::Sources:
+    return "sources";
+  case storage_query_kind::Manifests:
+    return "manifests";
+  case storage_query_kind::Entries:
+    return "entries";
+  case storage_query_kind::Episodes:
+    return "episodes";
+  case storage_query_kind::EpisodeRecords:
+    return "episode_records";
+  case storage_query_kind::EpisodeFrames:
+    return "episode_frames";
+  case storage_query_kind::EpisodeRefs:
+    return "episode_refs";
+  }
+  throw std::invalid_argument("unknown storage query kind");
+}
+
+storage_query_kind parse_storage_query_kind(const std::string &kind) {
+  const auto normalized = kind.empty() ? std::string("entries") : kind;
+  if (normalized == "sources") {
+    return storage_query_kind::Sources;
+  }
+  if (normalized == "manifests") {
+    return storage_query_kind::Manifests;
+  }
+  if (normalized == "entries") {
+    return storage_query_kind::Entries;
+  }
+  if (normalized == "episodes") {
+    return storage_query_kind::Episodes;
+  }
+  if (normalized == "episode_records") {
+    return storage_query_kind::EpisodeRecords;
+  }
+  if (normalized == "episode_frames") {
+    return storage_query_kind::EpisodeFrames;
+  }
+  if (normalized == "episode_refs") {
+    return storage_query_kind::EpisodeRefs;
+  }
+  throw std::invalid_argument("unsupported storage query: " + normalized);
+}
+
+const storage_service &default_storage_service() { return typed_storage_service_instance(); }
+
+std::string storage_fsck_scope_name(storage_fsck_scope scope) {
+  switch (scope) {
+  case storage_fsck_scope::All:
+    return "all";
+  case storage_fsck_scope::Source:
+    return "source";
+  case storage_fsck_scope::Episode:
+    return "episode";
+  }
+  return "all";
+}
+
+storage_fsck_request parse_storage_fsck_request(const storage_service_options &options) {
+  storage_fsck_request request{};
+  request.runtime_dir = options.runtime_dir;
+  request.provider = options.provider;
+  request.provider_config_source = options.provider_config_source;
+  request.source_id = options.source_id;
+  request.episode_id = options.episode_id;
+  request.verify_frames = bool_or(options.operation_options, "verify_frames", false);
+  request.scope = options.scope == "episode"
+                      ? storage_fsck_scope::Episode
+                      : (options.source_id.empty() ? storage_fsck_scope::All : storage_fsck_scope::Source);
+  return request;
+}
+
+storage_repair_plan_request parse_storage_repair_plan_request(const storage_service_options &options) {
+  const auto fsck = parse_storage_fsck_request(options);
+  return {fsck.runtime_dir, fsck.provider,   fsck.provider_config_source, fsck.scope,
+          fsck.source_id,   fsck.episode_id, fsck.verify_frames,          options.dry_run};
+}
+
+nlohmann::json render_storage_fsck_issue(const storage_fsck_issue &issue, storage_fsck_scope scope) {
+  auto rendered = std::visit(
+      [&issue, scope](const auto &detail) {
+        using detail_t = std::decay_t<decltype(detail)>;
+        if constexpr (std::is_same_v<detail_t, storage_fsck_cross_issue>) {
+          nlohmann::json row = {{"code", issue.code}};
+          if (detail.source_id.has_value())
+            row["source_id"] = *detail.source_id;
+          if (detail.path.has_value())
+            row["path"] = *detail.path;
+          if (detail.payload_hash.has_value())
+            row["payload_hash"] = *detail.payload_hash;
+          if (detail.expected.has_value())
+            row["expected"] = *detail.expected;
+          if (detail.actual.has_value())
+            row["actual"] = *detail.actual;
+          if (detail.reason.has_value())
+            row["reason"] = *detail.reason;
+          return row;
+        } else if constexpr (std::is_same_v<detail_t, yy_storage::source_registry_fsck_issue>) {
+          nlohmann::json row = {{"code", detail.code}, {"projection", "source-registry"}};
+          if (detail.source_uid.has_value())
+            row["source_uid"] = *detail.source_uid;
+          if (detail.source_id.has_value())
+            row["source_id"] = *detail.source_id;
+          if (detail.count.has_value())
+            row["count"] = *detail.count;
+          return row;
+        } else if constexpr (std::is_same_v<detail_t, yy_storage::manifest_catalog_fsck_issue>) {
+          nlohmann::json row = {{"code", detail.code}};
+          if (detail.source_id.has_value())
+            row["source_id"] = *detail.source_id;
+          if (detail.manifest_id.has_value())
+            row["manifest_id"] = *detail.manifest_id;
+          if (detail.error.has_value())
+            row["error"] = *detail.error;
+          if (detail.subject.has_value())
+            row["subject"] = *detail.subject;
+          if (detail.payload_hash.has_value())
+            row["payload_hash"] = *detail.payload_hash;
+          if (detail.state.has_value())
+            row["state"] = *detail.state;
+          if (detail.kind.has_value())
+            row["kind"] = *detail.kind;
+          if (detail.entry_source_id.has_value())
+            row["entry_source_id"] = *detail.entry_source_id;
+          if (detail.manifest_uid.has_value())
+            row["manifest_uid"] = *detail.manifest_uid;
+          if (detail.entry_index.has_value())
+            row["entry_index"] = *detail.entry_index;
+          if (detail.expected.has_value())
+            row["expected"] = *detail.expected;
+          if (detail.actual.has_value())
+            row["actual"] = *detail.actual;
+          if (detail.expected_text.has_value())
+            row["expected"] = *detail.expected_text;
+          if (detail.actual_text.has_value())
+            row["actual"] = *detail.actual_text;
+          if (detail.intentional.has_value())
+            row["intentional"] = *detail.intentional;
+          return row;
+        } else if constexpr (std::is_same_v<detail_t, yy_storage::episode_fsck_issue>) {
+          auto row = yy_storage::render_episode_fsck_issue(detail);
+          if (scope != storage_fsck_scope::Episode)
+            row["projection"] = "episode-manifest";
+          return row;
+        } else if constexpr (std::is_same_v<detail_t, episode_frame_verification_issue>) {
+          return render_episode_frame_verification_issue(detail);
+        } else {
+          nlohmann::json row = {{"code", issue.code}, {"projection", detail.name}, {"path", detail.path}};
+          if (issue.code == "projection_absent") {
+            row["reason"] = "projection is derived and can be rebuilt";
+          } else {
+            row["drift"] = nlohmann::json::array();
+            for (const auto &drift : detail.verification.drift) {
+              row["drift"].push_back({{"table", drift.table},
+                                      {"projection_rows", drift.projection_rows},
+                                      {"journal_distinct", drift.journal_distinct},
+                                      {"reason", drift.reason},
+                                      {"projection_digest", drift.projection_digest},
+                                      {"journal_digest", drift.journal_digest}});
+            }
+          }
+          return row;
+        }
+      },
+      issue.detail);
+  return rendered;
+}
+
+nlohmann::json render_storage_fsck_result(const storage_fsck_result &result) {
+  nlohmann::json errors = nlohmann::json::array();
+  nlohmann::json warnings = nlohmann::json::array();
+  for (const auto &issue : result.issues) {
+    auto rendered = render_storage_fsck_issue(issue, result.scope);
+    (issue.severity == "error" ? errors : warnings).push_back(std::move(rendered));
+  }
+  nlohmann::json checked = {{"sources", result.checked.sources},
+                            {"manifests", result.checked.manifests},
+                            {"accepted_ranges", result.checked.accepted_ranges},
+                            {"source_records", result.checked.source_records},
+                            {"projection_indexes", result.checked.projection_indexes},
+                            {"orphan_payloads", result.checked.orphan_payloads},
+                            {"episode_manifest_records", result.checked.episode_manifest_records},
+                            {"episodes", result.checked.episodes}};
+  if (result.scope == storage_fsck_scope::Episode) {
+    checked["payloads"] = 0;
+    checked["schemas"] = 0;
+    checked["sqlite_projection_rows"] = 0;
+  } else {
+    checked["manifest_entries"] = result.checked.manifest_entries;
+    checked["payloads"] = result.checked.payloads;
+    checked["entries_documents"] = result.checked.entries_documents;
+  }
+  if (result.frame_verification.has_value())
+    checked["episode_frames_verified"] = result.checked.episode_frames_verified;
+
+  nlohmann::json report = {{"ok", result.ok},
+                           {"status", result.status},
+                           {"scope", storage_fsck_scope_name(result.scope)},
+                           {"degraded", result.degraded},
+                           {"errors", std::move(errors)},
+                           {"warnings", std::move(warnings)},
+                           {"checked", std::move(checked)},
+                           {"episode_manifest", yy_storage::render_episode_fsck_result(result.episode_manifest)}};
+  if (result.scope == storage_fsck_scope::Episode) {
+    report["episode_id"] = result.episode_id.has_value() ? nlohmann::json(*result.episode_id) : nlohmann::json(nullptr);
+    const auto &projection = result.projections.front();
+    report["episode_projection"] = projection_verification_json(projection.verification);
+    report["projections"] = nlohmann::json::array({{{"name", "episode-manifest"},
+                                                    {"schema", yy_storage::EPISODE_MANIFEST_SCHEMA_V1},
+                                                    {"authority", "yijinjing-journal"},
+                                                    {"path", "journal/system/storage/episode-manifest/live/*.journal"},
+                                                    {"rebuildable", false}},
+                                                   {{"name", "episode-manifest-sqlite"},
+                                                    {"schema", EPISODE_MANIFEST_PROJECTION_SCHEMA_V1},
+                                                    {"authority", "yijinjing-journal"},
+                                                    {"path", "storage/projections/episode-manifest.sqlite"},
+                                                    {"rebuildable", true}}});
+    report["repair_policy"] = {{"mode", "plan-fetch-apply"},
+                               {"auto_repair", false},
+                               {"destructive", false},
+                               {"projection_rebuild",
+                                {{"authority", "yijinjing-journal"},
+                                 {"projection", "sqlite"},
+                                 {"operation", "episode_projection_rebuild"},
+                                 {"rebuildable", true}}}};
+    if (result.qualification.has_value())
+      report["qualification"] = episode_qualification_json(*result.qualification);
+  } else {
+    report["source_id"] = result.source_id.has_value() ? nlohmann::json(*result.source_id) : nlohmann::json(nullptr);
+    report["authority"] = result.authority;
+    report["projections"] = nlohmann::json::array();
+    for (const auto &projection : result.projections)
+      report["projections"].push_back(projection_status_json(projection));
+  }
+  return report;
+}
+
+nlohmann::json render_storage_repair_plan_result(const storage_repair_plan_result &result) {
+  const auto render_subject = [](nlohmann::json &candidate, const storage_repair_subject &subject) {
+    if (subject.episode_id.has_value())
+      candidate["episode_id"] = *subject.episode_id;
+    if (subject.dependency_episode_id.has_value())
+      candidate["dependency_episode_id"] = *subject.dependency_episode_id;
+    if (subject.frame_uid.has_value())
+      candidate["frame_uid"] = *subject.frame_uid;
+    if (subject.dependent_frame_uid.has_value())
+      candidate["dependent_frame_uid"] = *subject.dependent_frame_uid;
+    if (subject.ref_id.has_value())
+      candidate["ref_id"] = *subject.ref_id;
+    if (subject.ref_hash.has_value())
+      candidate["ref_hash"] = *subject.ref_hash;
+    if (subject.source_id.has_value())
+      candidate["source_id"] = *subject.source_id;
+    if (subject.subject.has_value())
+      candidate["subject"] = *subject.subject;
+    if (subject.state.has_value())
+      candidate["state"] = *subject.state;
+    if (subject.path.has_value())
+      candidate["path"] = *subject.path;
+    if (subject.payload_hash.has_value())
+      candidate["payload_hash"] = *subject.payload_hash;
+  };
+  nlohmann::json candidates = nlohmann::json::array();
+  for (const auto &item : result.candidates) {
+    nlohmann::json candidate = {{"code", item.code},
+                                {"issue_code", item.issue_code},
+                                {"kind", item.kind},
+                                {"role", item.role},
+                                {"action", item.action},
+                                {"suggested_action", item.action},
+                                {"safe_to_apply", item.safe_to_apply},
+                                {"requires", item.required_inputs},
+                                {"warning", render_storage_fsck_issue(item.issue, result.scope)}};
+    render_subject(candidate, item.subject);
+    candidates.push_back(std::move(candidate));
+  }
+  nlohmann::json unsupported = nlohmann::json::array();
+  for (const auto &issue : result.unsupported)
+    unsupported.push_back(render_storage_fsck_issue(issue, result.scope));
+  return {{"ok", result.ok},
+          {"schema", "kungfu.storage.repair-plan/v1"},
+          {"scope", storage_fsck_scope_name(result.scope)},
+          {"source_id", result.source_id.has_value() ? nlohmann::json(*result.source_id) : nlohmann::json(nullptr)},
+          {"episode_id", result.episode_id.has_value() ? nlohmann::json(*result.episode_id) : nlohmann::json(nullptr)},
+          {"dry_run", result.dry_run},
+          {"plan_only", result.plan_only},
+          {"status", result.status},
+          {"degraded", result.degraded},
+          {"candidate_count", candidates.size()},
+          {"candidates", std::move(candidates)},
+          {"unsupported", std::move(unsupported)},
+          {"fsck", render_storage_fsck_result(result.fsck)},
+          {"notes", result.notes}};
+}
+
+storage_query_request parse_storage_query_request(const storage_service_options &options) {
+  storage_query_request request{};
+  request.runtime_dir = options.runtime_dir;
+  request.provider = options.provider;
+  request.provider_config_source = options.provider_config_source;
+  request.source_id = options.source_id;
+  request.entry_kind = options.kind;
+  request.range.since = text_or(options.range, "since");
+  request.range.until = text_or(options.range, "until");
+  request.query = parse_storage_query_kind(options.query);
+  request.episode_id = options.episode_id;
+  request.limit = options.limit;
+  return request;
+}
+
+storage_status_request parse_storage_status_request(const storage_service_options &options) {
+  return {options.runtime_dir, options.provider, options.provider_config_source, options.source_id};
+}
+
+storage_gc_plan_request parse_storage_gc_plan_request(const storage_service_options &options) {
+  return {options.runtime_dir, options.provider, options.source_id, options.dry_run};
+}
+
+nlohmann::json render_storage_gc_plan_result(const storage_gc_plan_result &result) {
+  nlohmann::json candidates = nlohmann::json::array();
+  for (const auto &candidate : result.candidates) {
+    candidates.push_back({{"payload_hash", candidate.payload_hash},
+                          {"path", candidate.uri},
+                          {"bytes", candidate.bytes},
+                          {"safe_to_delete", candidate.safe_to_delete}});
+  }
+  return {{"ok", result.ok},
+          {"scope", result.scope},
+          {"source_id", result.source_id.has_value() ? nlohmann::json(*result.source_id) : nlohmann::json(nullptr)},
+          {"dry_run", result.dry_run},
+          {"payloads_scanned", result.payloads_scanned},
+          {"referenced_payloads", result.referenced_payloads},
+          {"candidate_count", result.candidates.size()},
+          {"candidate_bytes", result.candidate_bytes},
+          {"candidates", std::move(candidates)},
+          {"notes", result.notes}};
+}
+
+storage_rebuild_index_request parse_storage_rebuild_index_request(const storage_service_options &options) {
+  return {options.runtime_dir, options.source_id, options.dry_run};
+}
+
+nlohmann::json render_storage_rebuild_index_result(const storage_rebuild_index_result &result) {
+  nlohmann::json projections = nlohmann::json::array();
+  for (const auto &action : result.projections) {
+    auto rendered = std::visit(
+        [](const auto &detail) {
+          using detail_t = std::decay_t<decltype(detail)>;
+          nlohmann::json row = {{"ok", detail.ok},
+                                {"schema", detail.schema},
+                                {"runtime_dir", detail.runtime_dir},
+                                {"authority", detail.authority}};
+          if constexpr (std::is_same_v<detail_t, storage_projection_verify_result>) {
+            row["status"] = detail.status;
+            row["projection_present"] = detail.projection_present;
+            if (!detail.note.empty()) {
+              row["note"] = detail.note;
+            }
+            if (detail.projection_present) {
+              row["degraded"] = detail.degraded;
+              row["drift"] = nlohmann::json::array();
+              for (const auto &drift : detail.drift) {
+                row["drift"].push_back({{"table", drift.table},
+                                        {"projection_rows", drift.projection_rows},
+                                        {"journal_distinct", drift.journal_distinct},
+                                        {"reason", drift.reason},
+                                        {"projection_digest", drift.projection_digest},
+                                        {"journal_digest", drift.journal_digest}});
+              }
+              row["rows"] = nlohmann::json::object();
+              for (const auto &count : detail.rows) {
+                row["rows"][count.table] = count.count;
+              }
+              row["journal_distinct"] = nlohmann::json::object();
+              for (const auto &count : detail.journal_distinct) {
+                row["journal_distinct"][count.table] = count.count;
+              }
+            }
+          } else {
+            row["projection"] = detail.projection;
+            row["sqlite_path"] = detail.sqlite_path;
+            row["rows"] = nlohmann::json::object();
+            for (const auto &count : detail.rows) {
+              row["rows"][count.table] = count.count;
+            }
+            row["journal_records"] = nlohmann::json::object();
+            for (const auto &count : detail.journal_records) {
+              row["journal_records"][count.table] = count.count;
+            }
+          }
+          return row;
+        },
+        action.detail);
+    rendered["name"] = action.name;
+    rendered["dry_run"] = action.dry_run;
+    rendered["written"] = action.written;
+    if (action.dry_run) {
+      rendered["would_write"] = action.would_write;
+    }
+    projections.push_back(std::move(rendered));
+  }
+  nlohmann::json errors = nlohmann::json::array();
+  for (const auto &error : result.errors) {
+    nlohmann::json row = {{"code", error.code}};
+    if (error.projection.has_value()) {
+      row["projection"] = *error.projection;
+    }
+    if (error.source_id.has_value()) {
+      row["source_id"] = *error.source_id;
+    }
+    errors.push_back(std::move(row));
+  }
+  return {{"ok", result.ok},
+          {"scope", result.scope},
+          {"source_id", result.source_id.has_value() ? nlohmann::json(*result.source_id) : nlohmann::json(nullptr)},
+          {"authority", result.authority},
+          {"rebuilt_from", result.rebuilt_from},
+          {"projections", std::move(projections)},
+          {"dry_run", result.dry_run},
+          {"would_write", result.would_write},
+          {"written", result.written},
+          {"sources_rebuilt", result.sources_rebuilt},
+          {"errors", std::move(errors)}};
+}
+
+storage_compact_plan_request parse_storage_compact_plan_request(const storage_service_options &options) {
+  return {options.runtime_dir, options.provider, options.source_id, options.dry_run};
+}
+
+nlohmann::json render_storage_compact_plan_result(const storage_compact_plan_result &result) {
+  nlohmann::json retained_manifests = nlohmann::json::array();
+  for (const auto &manifest : result.retained_manifests) {
+    retained_manifests.push_back({{"source_id", manifest.source_id},
+                                  {"manifest_id", manifest.manifest_id},
+                                  {"entries", manifest.entries},
+                                  {"sync_root",
+                                   {{"schema", yy_storage::SYNC_ROOT_SCHEMA_V1},
+                                    {"scope", yy_storage::SYNC_ROOT_SCOPE_ATLAS_IMPORT_MANIFEST},
+                                    {"proof", yy_storage::SYNC_ROOT_PROOF_LINEAR_CHAIN_V1},
+                                    {"algorithm", manifest.sync_root.algorithm},
+                                    {"value", manifest.sync_root.value},
+                                    {"entry_count", manifest.entries},
+                                    {"initial", yy_storage::SYNC_ROOT_INITIAL_SHA256},
+                                    {"ordering",
+                                     {{"policy", yy_storage::SYNC_ROOT_ORDERING_POLICY_MANIFEST_ENTRY_SORT_V1},
+                                      {"fields", nlohmann::json::array({"kind", "source_id", "source_path"})}}}}}});
+  }
+  nlohmann::json unsupported = nlohmann::json::array();
+  for (const auto &action : result.unsupported) {
+    unsupported.push_back({{"name", action.name}, {"reason", action.reason}});
+  }
+  return {
+      {"ok", result.ok},
+      {"scope", result.scope},
+      {"source_id", result.source_id.has_value() ? nlohmann::json(*result.source_id) : nlohmann::json(nullptr)},
+      {"dry_run", result.dry_run},
+      {"retained_manifests", std::move(retained_manifests)},
+      {"rebuild_index", render_storage_rebuild_index_result(result.rebuild_index)},
+      {"gc", render_storage_gc_plan_result(result.gc)},
+      {"projection_compact",
+       {{"name", result.projection_compact.name},
+        {"path", result.projection_compact.path},
+        {"action", result.projection_compact.action},
+        {"dry_run", result.projection_compact.dry_run},
+        {"rebuildable", result.projection_compact.rebuildable}}},
+      {"unsupported", std::move(unsupported)},
+      {"notes", result.notes},
+  };
+}
+
+nlohmann::json render_storage_status_result(const storage_status_result &result) {
+  const auto range_json = [](const storage_time_range &range) {
+    nlohmann::json rendered = nlohmann::json::object();
+    if (!range.since.empty()) {
+      rendered["since"] = range.since;
+    }
+    if (!range.until.empty()) {
+      rendered["until"] = range.until;
+    }
+    return rendered;
+  };
+  const auto sync_root_json = [](const storage_sync_root_view &root) {
+    return nlohmann::json{{"algorithm", root.algorithm}, {"value", root.value}};
+  };
+  const auto proof_root_json = [&sync_root_json](const storage_sync_root_view &root, uint64_t entry_count) {
+    auto rendered = sync_root_json(root);
+    rendered["schema"] = yy_storage::SYNC_ROOT_SCHEMA_V1;
+    rendered["scope"] = yy_storage::SYNC_ROOT_SCOPE_ATLAS_IMPORT_MANIFEST;
+    rendered["proof"] = yy_storage::SYNC_ROOT_PROOF_LINEAR_CHAIN_V1;
+    rendered["entry_count"] = entry_count;
+    rendered["initial"] = yy_storage::SYNC_ROOT_INITIAL_SHA256;
+    rendered["ordering"] = {{"policy", yy_storage::SYNC_ROOT_ORDERING_POLICY_MANIFEST_ENTRY_SORT_V1},
+                            {"fields", nlohmann::json::array({"kind", "source_id", "source_path"})}};
+    return rendered;
+  };
+  const auto accepted_range_json = [&range_json, &proof_root_json](const storage_accepted_range_view &range) {
+    return nlohmann::json{{"schema", yy_storage::STORAGE_ACCEPTED_RANGE_SCHEMA_V1},
+                          {"source_id", range.source_id},
+                          {"manifest_id", range.manifest_id},
+                          {"range", range_json(range.range)},
+                          {"source_head", range.source_head},
+                          {"sync_root", proof_root_json(range.sync_root, range.entry_count)},
+                          {"entry_count", range.entry_count},
+                          {"status", range.status}};
+  };
+  const auto source_json = [](const storage_source_registry_view &source) {
+    nlohmann::json rendered = {{"schema", yy_storage::SOURCE_REGISTRY_SCHEMA_V1},
+                               {"source_uid", source.source_uid},
+                               {"source_id", source.source_id},
+                               {"registered", source.registered},
+                               {"record_count", source.record_count},
+                               {"accepted_range_count", source.accepted_range_count}};
+    if (source.registered) {
+      rendered["kind"] = *source.kind;
+      rendered["coordinate"] = *source.coordinate;
+      rendered["head"] = *source.head;
+      rendered["location_uid"] = *source.location_uid;
+      rendered["register_time"] = *source.register_time;
+    }
+    if (source.current_range.has_value()) {
+      const auto &range = *source.current_range;
+      rendered["current_range"] = {{"first_frame_uid", range.first_frame_uid},
+                                   {"last_frame_uid", range.last_frame_uid},
+                                   {"since", range.since},
+                                   {"until", range.until}};
+      rendered["inventory_hash"] = {{"algorithm", source.inventory_hash->algorithm},
+                                    {"value", source.inventory_hash->value}};
+      rendered["update_time"] = *source.update_time;
+    }
+    return rendered;
+  };
+
+  nlohmann::json sources = nlohmann::json::array();
+  for (const auto &source : result.sources) {
+    sources.push_back(source_json(source));
+  }
+  nlohmann::json projections = nlohmann::json::array();
+  for (const auto &projection : result.projections) {
+    projections.push_back(projection_status_json(projection));
+  }
+  nlohmann::json source_status = nlohmann::json::array();
+  for (const auto &status : result.source_status) {
+    nlohmann::json row = {{"source_id", status.source_id}, {"ok", status.ok}, {"authority", result.authority}};
+    if (!status.ok) {
+      row["reason"] = *status.reason;
+      row["source"] = source_json(status.source);
+      source_status.push_back(std::move(row));
+      continue;
+    }
+    row["manifest_id"] = *status.manifest_id;
+    row["source_type"] = *status.source_type;
+    row["source_head"] = *status.source_head;
+    row["accepted_ranges"] = nlohmann::json::array({accepted_range_json(*status.accepted_range)});
+    if (status.accepted_cursor.has_value()) {
+      const auto &cursor = *status.accepted_cursor;
+      row["accepted_cursor"] = {{"schema", yy_storage::STORAGE_CHANNEL_CURSOR_SCHEMA_V1},
+                                {"source_id", cursor.source_id},
+                                {"manifest_id", cursor.manifest_id},
+                                {"source_head", cursor.source_head},
+                                {"range", range_json(cursor.range)},
+                                {"sync_root", sync_root_json(cursor.sync_root)},
+                                {"entry_count", cursor.entry_count}};
+    } else {
+      row["accepted_cursor"] = nullptr;
+    }
+    row["sync_root"] = proof_root_json(*status.sync_root, status.entries);
+    row["entries"] = status.entries;
+    row["payload_inventory"] = status.payload_inventory;
+    row["schema_inventory"] = status.schema_inventory;
+    const auto &record = *status.source_record;
+    row["source_record"] = {{"schema", yy_storage::STORAGE_SOURCE_RECORD_SCHEMA_V1},
+                            {"source_id", record.source_id},
+                            {"type", record.source_type},
+                            {"kind", record.kind},
+                            {"coordinate", record.coordinate},
+                            {"current_head",
+                             {{"head", record.source_head},
+                              {"range", range_json(record.range)},
+                              {"inventory_hash", record.inventory_hash}}},
+                            {"accepted_ranges", nlohmann::json::array({accepted_range_json(record.accepted_range)})},
+                            {"last_manifest_id", record.manifest_id},
+                            {"updated_at", ""}};
+    source_status.push_back(std::move(row));
+  }
+
+  return {{"ok", result.ok},
+          {"backend", result.backend},
+          {"provider", result.provider},
+          {"provider_config_source", result.provider_config_source},
+          {"provider_runtime", provider_runtime_json(result.provider_runtime)},
+          {"provider_cache", provider_cache_json(result.provider_cache)},
+          {"scope", result.scope},
+          {"source_id", result.source_id.has_value() ? nlohmann::json(*result.source_id) : nlohmann::json(nullptr)},
+          {"authority", result.authority},
+          {"sources", std::move(sources)},
+          {"source_count", result.sources.size()},
+          {"projections", std::move(projections)},
+          {"source_status", std::move(source_status)}};
+}
+
+nlohmann::json render_storage_query_result(const storage_query_result &result) {
+  auto rows = storage_query_rows_json(result.rows);
+  nlohmann::json rendered = {{"ok", result.ok},
+                             {"scope", result.scope},
+                             {"projection",
+                              {{"name", result.projection_name},
+                               {"schema", result.projection_schema},
+                               {"authority", result.authority},
+                               {"rebuildable", result.rebuildable}}},
+                             {"query", storage_query_kind_name(result.query)},
+                             {"limit", result.limit},
+                             {"rows", std::move(rows)},
+                             {"row_count", result.row_count()}};
+  const bool episode_query =
+      result.query == storage_query_kind::Episodes || result.query == storage_query_kind::EpisodeRecords ||
+      result.query == storage_query_kind::EpisodeFrames || result.query == storage_query_kind::EpisodeRefs;
+  if (episode_query) {
+    rendered["episode_id"] =
+        result.episode_id.has_value() ? nlohmann::json(*result.episode_id) : nlohmann::json(nullptr);
+  } else {
+    rendered["source_id"] = result.source_id.has_value() ? nlohmann::json(*result.source_id) : nlohmann::json(nullptr);
+    rendered["kind"] = result.entry_kind.has_value() ? nlohmann::json(*result.entry_kind) : nlohmann::json(nullptr);
+    nlohmann::json range = nlohmann::json::object();
+    if (!result.range.since.empty()) {
+      range["since"] = result.range.since;
+    }
+    if (!result.range.until.empty()) {
+      range["until"] = result.range.until;
+    }
+    rendered["range"] = std::move(range);
+  }
+  if (!result.errors.empty()) {
+    rendered["errors"] = nlohmann::json::array();
+    for (const auto &error : result.errors) {
+      nlohmann::json row = {{"code", error.code}};
+      if (error.episode_id.has_value()) {
+        row["episode_id"] = *error.episode_id;
+      }
+      rendered["errors"].push_back(std::move(row));
+    }
+  }
+  return rendered;
+}
+
+std::vector<std::string> storage_operation_names() {
+  return {
+      storage_operation_name(storage_operation::Status),
+      storage_operation_name(storage_operation::Fsck),
+      storage_operation_name(storage_operation::RepairPlan),
+      storage_operation_name(storage_operation::RepairFetch),
+      storage_operation_name(storage_operation::RepairApply),
+      storage_operation_name(storage_operation::ExportBundle),
+      storage_operation_name(storage_operation::ImportBundle),
+      storage_operation_name(storage_operation::RebuildIndex),
+      storage_operation_name(storage_operation::GcPlan),
+      storage_operation_name(storage_operation::CompactPlan),
+      storage_operation_name(storage_operation::VerifySync),
+      storage_operation_name(storage_operation::Query),
+      storage_operation_name(storage_operation::QueryPlan),
+      storage_operation_name(storage_operation::FactQuery),
+      storage_operation_name(storage_operation::FactChangelog),
+      storage_operation_name(storage_operation::SavedQueryCatalog),
+      storage_operation_name(storage_operation::FactContract),
+      storage_operation_name(storage_operation::FactDeclareWorld),
+      storage_operation_name(storage_operation::FactDeclareSurface),
+      storage_operation_name(storage_operation::FactObserve),
+      storage_operation_name(storage_operation::FactState),
+      storage_operation_name(storage_operation::FactLibraryContract),
+      storage_operation_name(storage_operation::FactTypeCreate),
+      storage_operation_name(storage_operation::FactTypeList),
+      storage_operation_name(storage_operation::FactMaterialPut),
+      storage_operation_name(storage_operation::FactMaterialList),
+      storage_operation_name(storage_operation::FactLibraryExport),
+      storage_operation_name(storage_operation::FactLibraryImport),
+      storage_operation_name(storage_operation::AssessmentContract),
+      storage_operation_name(storage_operation::AssessmentRequest),
+      storage_operation_name(storage_operation::AssessmentExecute),
+      storage_operation_name(storage_operation::AssessmentStatus),
+      storage_operation_name(storage_operation::AssessmentList),
+      storage_operation_name(storage_operation::AssessmentInvalidate),
+      storage_operation_name(storage_operation::TrustRequire),
+      storage_operation_name(storage_operation::Layout),
+      storage_operation_name(storage_operation::EpisodeBegin),
+      storage_operation_name(storage_operation::EpisodeHeartbeat),
+      storage_operation_name(storage_operation::EpisodeEnd),
+      storage_operation_name(storage_operation::EpisodeAbort),
+      storage_operation_name(storage_operation::EpisodeAttachFrame),
+      storage_operation_name(storage_operation::EpisodeAttachRef),
+      storage_operation_name(storage_operation::EpisodeList),
+      storage_operation_name(storage_operation::EpisodeInspect),
+      storage_operation_name(storage_operation::EpisodeRecover),
+      storage_operation_name(storage_operation::EpisodeProjectionRebuild),
+      storage_operation_name(storage_operation::SourceRegister),
+      storage_operation_name(storage_operation::SourceUpdateHead),
+      storage_operation_name(storage_operation::SourceRecordAcceptedRange),
+      storage_operation_name(storage_operation::SourceList),
+      storage_operation_name(storage_operation::SourceInspect),
+      storage_operation_name(storage_operation::SourceRegistryFsck),
+      storage_operation_name(storage_operation::SourceRegistryRebuild),
+  };
+}
+
+std::string storage_operation_name(storage_operation operation) {
+  switch (operation) {
+  case storage_operation::Status:
+    return "status";
+  case storage_operation::Fsck:
+    return "fsck";
+  case storage_operation::RepairPlan:
+    return "repair_plan";
+  case storage_operation::RepairFetch:
+    return "repair_fetch";
+  case storage_operation::RepairApply:
+    return "repair_apply";
+  case storage_operation::ExportBundle:
+    return "export_bundle";
+  case storage_operation::ImportBundle:
+    return "import_bundle";
+  case storage_operation::RebuildIndex:
+    return "rebuild_index";
+  case storage_operation::GcPlan:
+    return "gc_plan";
+  case storage_operation::CompactPlan:
+    return "compact_plan";
+  case storage_operation::VerifySync:
+    return "verify_sync";
+  case storage_operation::Query:
+    return "query";
+  case storage_operation::QueryPlan:
+    return "query_plan";
+  case storage_operation::FactQuery:
+    return "fact_query";
+  case storage_operation::FactChangelog:
+    return "fact_changelog";
+  case storage_operation::SavedQueryCatalog:
+    return "saved_query_catalog";
+  case storage_operation::FactContract:
+    return "fact_contract";
+  case storage_operation::FactDeclareWorld:
+    return "fact_declare_world";
+  case storage_operation::FactDeclareSurface:
+    return "fact_declare_surface";
+  case storage_operation::FactObserve:
+    return "fact_observe";
+  case storage_operation::FactState:
+    return "fact_state";
+  case storage_operation::FactLibraryContract:
+    return "fact_library_contract";
+  case storage_operation::FactTypeCreate:
+    return "fact_type_create";
+  case storage_operation::FactTypeList:
+    return "fact_type_list";
+  case storage_operation::FactMaterialPut:
+    return "fact_material_put";
+  case storage_operation::FactMaterialList:
+    return "fact_material_list";
+  case storage_operation::FactLibraryExport:
+    return "fact_library_export";
+  case storage_operation::FactLibraryImport:
+    return "fact_library_import";
+  case storage_operation::AssessmentContract:
+    return "assessment_contract";
+  case storage_operation::AssessmentRequest:
+    return "assessment_request";
+  case storage_operation::AssessmentExecute:
+    return "assessment_execute";
+  case storage_operation::AssessmentStatus:
+    return "assessment_status";
+  case storage_operation::AssessmentList:
+    return "assessment_list";
+  case storage_operation::AssessmentInvalidate:
+    return "assessment_invalidate";
+  case storage_operation::TrustRequire:
+    return "trust_require";
+  case storage_operation::Layout:
+    return "layout";
+  case storage_operation::EpisodeBegin:
+    return "episode_begin";
+  case storage_operation::EpisodeHeartbeat:
+    return "episode_heartbeat";
+  case storage_operation::EpisodeEnd:
+    return "episode_end";
+  case storage_operation::EpisodeAbort:
+    return "episode_abort";
+  case storage_operation::EpisodeAttachFrame:
+    return "episode_attach_frame";
+  case storage_operation::EpisodeAttachRef:
+    return "episode_attach_ref";
+  case storage_operation::EpisodeList:
+    return "episode_list";
+  case storage_operation::EpisodeInspect:
+    return "episode_inspect";
+  case storage_operation::EpisodeRecover:
+    return "episode_recover";
+  case storage_operation::EpisodeProjectionRebuild:
+    return "episode_projection_rebuild";
+  case storage_operation::SourceRegister:
+    return "source_register";
+  case storage_operation::SourceUpdateHead:
+    return "source_update_head";
+  case storage_operation::SourceRecordAcceptedRange:
+    return "source_record_accepted_range";
+  case storage_operation::SourceList:
+    return "source_list";
+  case storage_operation::SourceInspect:
+    return "source_inspect";
+  case storage_operation::SourceRegistryFsck:
+    return "source_registry_fsck";
+  case storage_operation::SourceRegistryRebuild:
+    return "source_registry_rebuild";
+  }
+  throw std::invalid_argument("unknown storage operation");
+}
+
+storage_operation parse_storage_operation(const std::string &operation) {
+  if (operation == "status") {
+    return storage_operation::Status;
+  }
+  if (operation == "fsck") {
+    return storage_operation::Fsck;
+  }
+  if (operation == "repair_plan") {
+    return storage_operation::RepairPlan;
+  }
+  if (operation == "repair_fetch") {
+    return storage_operation::RepairFetch;
+  }
+  if (operation == "repair_apply") {
+    return storage_operation::RepairApply;
+  }
+  if (operation == "export_bundle") {
+    return storage_operation::ExportBundle;
+  }
+  if (operation == "import_bundle") {
+    return storage_operation::ImportBundle;
+  }
+  if (operation == "rebuild_index") {
+    return storage_operation::RebuildIndex;
+  }
+  if (operation == "gc_plan") {
+    return storage_operation::GcPlan;
+  }
+  if (operation == "compact_plan") {
+    return storage_operation::CompactPlan;
+  }
+  if (operation == "verify_sync") {
+    return storage_operation::VerifySync;
+  }
+  if (operation == "query") {
+    return storage_operation::Query;
+  }
+  if (operation == "query_plan") {
+    return storage_operation::QueryPlan;
+  }
+  if (operation == "fact_query") {
+    return storage_operation::FactQuery;
+  }
+  if (operation == "fact_changelog") {
+    return storage_operation::FactChangelog;
+  }
+  if (operation == "saved_query_catalog") {
+    return storage_operation::SavedQueryCatalog;
+  }
+  if (operation == "fact_contract") {
+    return storage_operation::FactContract;
+  }
+  if (operation == "fact_declare_world") {
+    return storage_operation::FactDeclareWorld;
+  }
+  if (operation == "fact_declare_surface") {
+    return storage_operation::FactDeclareSurface;
+  }
+  if (operation == "fact_observe") {
+    return storage_operation::FactObserve;
+  }
+  if (operation == "fact_state") {
+    return storage_operation::FactState;
+  }
+  if (operation == "fact_library_contract") {
+    return storage_operation::FactLibraryContract;
+  }
+  if (operation == "fact_type_create") {
+    return storage_operation::FactTypeCreate;
+  }
+  if (operation == "fact_type_list") {
+    return storage_operation::FactTypeList;
+  }
+  if (operation == "fact_material_put") {
+    return storage_operation::FactMaterialPut;
+  }
+  if (operation == "fact_material_list") {
+    return storage_operation::FactMaterialList;
+  }
+  if (operation == "fact_library_export") {
+    return storage_operation::FactLibraryExport;
+  }
+  if (operation == "fact_library_import") {
+    return storage_operation::FactLibraryImport;
+  }
+  if (operation == "assessment_contract") {
+    return storage_operation::AssessmentContract;
+  }
+  if (operation == "assessment_request") {
+    return storage_operation::AssessmentRequest;
+  }
+  if (operation == "assessment_execute") {
+    return storage_operation::AssessmentExecute;
+  }
+  if (operation == "assessment_status") {
+    return storage_operation::AssessmentStatus;
+  }
+  if (operation == "assessment_list") {
+    return storage_operation::AssessmentList;
+  }
+  if (operation == "assessment_invalidate") {
+    return storage_operation::AssessmentInvalidate;
+  }
+  if (operation == "trust_require") {
+    return storage_operation::TrustRequire;
+  }
+  if (operation == "layout") {
+    return storage_operation::Layout;
+  }
+  if (operation == "episode_begin") {
+    return storage_operation::EpisodeBegin;
+  }
+  if (operation == "episode_heartbeat") {
+    return storage_operation::EpisodeHeartbeat;
+  }
+  if (operation == "episode_end") {
+    return storage_operation::EpisodeEnd;
+  }
+  if (operation == "episode_abort") {
+    return storage_operation::EpisodeAbort;
+  }
+  if (operation == "episode_attach_frame") {
+    return storage_operation::EpisodeAttachFrame;
+  }
+  if (operation == "episode_attach_ref") {
+    return storage_operation::EpisodeAttachRef;
+  }
+  if (operation == "episode_list") {
+    return storage_operation::EpisodeList;
+  }
+  if (operation == "episode_inspect") {
+    return storage_operation::EpisodeInspect;
+  }
+  if (operation == "episode_recover") {
+    return storage_operation::EpisodeRecover;
+  }
+  if (operation == "episode_projection_rebuild") {
+    return storage_operation::EpisodeProjectionRebuild;
+  }
+  if (operation == "source_register") {
+    return storage_operation::SourceRegister;
+  }
+  if (operation == "source_update_head") {
+    return storage_operation::SourceUpdateHead;
+  }
+  if (operation == "source_record_accepted_range") {
+    return storage_operation::SourceRecordAcceptedRange;
+  }
+  if (operation == "source_list") {
+    return storage_operation::SourceList;
+  }
+  if (operation == "source_inspect") {
+    return storage_operation::SourceInspect;
+  }
+  if (operation == "source_registry_fsck") {
+    return storage_operation::SourceRegistryFsck;
+  }
+  if (operation == "source_registry_rebuild") {
+    return storage_operation::SourceRegistryRebuild;
+  }
+  throw std::invalid_argument("unsupported storage operation: " + operation);
+}
+
+storage_service_options parse_storage_service_options(const std::string &runtime_dir, const nlohmann::json &options) {
+  storage_service_options parsed;
+  parsed.runtime_dir = runtime_dir;
+  const auto selected_provider = select_provider(text_or(options, "provider"));
+  parsed.provider = selected_provider.name;
+  parsed.provider_config_source = selected_provider.source;
+  parsed.scope = text_or(options, "scope", "all");
+  parsed.source_id = text_or(options, "source_id");
+  parsed.dry_run = bool_or(options, "dry_run", true);
+  parsed.verify = bool_or(options, "verify", true);
+  parsed.range = object_or_empty(options, "range");
+  parsed.artifact_uri = text_or(options, "artifact_uri");
+  parsed.bundle = object_or_empty(options, "bundle");
+  parsed.manifest = object_or_empty(options, "manifest");
+  parsed.operation_options = options;
+  parsed.query_definition = object_or_empty(options, "definition");
+  parsed.query = text_or(options, "query", "entries");
+  parsed.kind = text_or(options, "kind");
+  parsed.episode_id = uint64_or(options, "episode_id");
+  parsed.limit = uint64_or(options, "limit", 100);
+  return parsed;
+}
+
+nlohmann::json make_storage_service_request(const std::string &operation, const std::string &runtime_dir,
+                                            const nlohmann::json &options) {
+  const auto parsed_operation = parse_storage_operation(operation);
+  const auto parsed_options = parse_storage_service_options(runtime_dir, options);
+  auto request = make_request(parsed_operation, parsed_options);
+  if (parsed_operation == storage_operation::Query) {
+    request["query"] = parsed_options.query;
+    request["kind"] = parsed_options.kind.empty() ? nlohmann::json(nullptr) : nlohmann::json(parsed_options.kind);
+    request["limit"] = parsed_options.limit;
+  } else if (parsed_operation == storage_operation::QueryPlan || parsed_operation == storage_operation::FactQuery ||
+             parsed_operation == storage_operation::FactChangelog ||
+             parsed_operation == storage_operation::SavedQueryCatalog) {
+    request["definition"] = parsed_options.query_definition;
+    request["action"] = text_or(parsed_options.operation_options, "action");
+  } else if (parsed_operation == storage_operation::Layout) {
+    request["runtime_home"] = runtime_home_path(parsed_options).string();
+    request["runtime_home_source"] = runtime_home_source(parsed_options);
+    request["config_home"] = optional_absolute_path(parsed_options.operation_options, "config_home");
+  }
+  if (parsed_options.episode_id != 0) {
+    request["episode_id"] = parsed_options.episode_id;
+  }
+  if (parsed_operation == storage_operation::EpisodeList) {
+    request["location_uid"] = uint64_or(options, "location_uid");
+    request["limit"] = parsed_options.limit;
+  } else if (parsed_operation == storage_operation::EpisodeInspect) {
+    request["episode_id"] = uint64_or(options, "episode_id");
+  } else if (storage_operation_name(parsed_operation).rfind("episode_", 0) == 0) {
+    request["episode"] = parsed_options.operation_options;
+  }
+  return request;
+}
+
+nlohmann::json run_storage_service_operation(const std::string &operation, const std::string &runtime_dir,
+                                             const nlohmann::json &options) {
+  const auto parsed_operation = parse_storage_operation(operation);
+  const auto parsed_options = parse_storage_service_options(runtime_dir, options);
+  switch (parsed_operation) {
+  case storage_operation::Status:
+    return storage_json_edge_service_instance().status(parsed_options);
+  case storage_operation::Fsck:
+    return storage_json_edge_service_instance().fsck(parsed_options);
+  case storage_operation::RepairPlan:
+    return storage_json_edge_service_instance().repair_plan(parsed_options);
+  case storage_operation::RepairFetch:
+    return storage_json_edge_service_instance().repair_fetch(parsed_options);
+  case storage_operation::RepairApply:
+    return storage_json_edge_service_instance().repair_apply(parsed_options);
+  case storage_operation::ExportBundle:
+    return storage_json_edge_service_instance().export_bundle(parsed_options);
+  case storage_operation::ImportBundle:
+    return storage_json_edge_service_instance().import_bundle(parsed_options);
+  case storage_operation::RebuildIndex:
+    return storage_json_edge_service_instance().rebuild_index(parsed_options);
+  case storage_operation::GcPlan:
+    return storage_json_edge_service_instance().gc_plan(parsed_options);
+  case storage_operation::CompactPlan:
+    return storage_json_edge_service_instance().compact_plan(parsed_options);
+  case storage_operation::VerifySync:
+    return storage_json_edge_service_instance().verify_sync(parsed_options);
+  case storage_operation::Query:
+    return render_storage_query_result(default_storage_service().query(parse_storage_query_request(parsed_options)));
+  case storage_operation::QueryPlan:
+    return storage_json_edge_service_instance().query_plan(parsed_options);
+  case storage_operation::FactQuery:
+    return storage_json_edge_service_instance().fact_query(parsed_options);
+  case storage_operation::FactChangelog:
+    return storage_json_edge_service_instance().fact_changelog(parsed_options);
+  case storage_operation::SavedQueryCatalog:
+    return storage_json_edge_service_instance().saved_query_catalog(parsed_options);
+  case storage_operation::FactContract:
+    return storage_json_edge_service_instance().fact_contract(parsed_options);
+  case storage_operation::FactDeclareWorld:
+    return storage_json_edge_service_instance().fact_declare_world(parsed_options);
+  case storage_operation::FactDeclareSurface:
+    return storage_json_edge_service_instance().fact_declare_surface(parsed_options);
+  case storage_operation::FactObserve:
+    return storage_json_edge_service_instance().fact_observe(parsed_options);
+  case storage_operation::FactState:
+    return storage_json_edge_service_instance().fact_state(parsed_options);
+  case storage_operation::FactLibraryContract:
+    return storage_json_edge_service_instance().fact_library_contract(parsed_options);
+  case storage_operation::FactTypeCreate:
+    return storage_json_edge_service_instance().fact_type_create(parsed_options);
+  case storage_operation::FactTypeList:
+    return storage_json_edge_service_instance().fact_type_list(parsed_options);
+  case storage_operation::FactMaterialPut:
+    return storage_json_edge_service_instance().fact_material_put(parsed_options);
+  case storage_operation::FactMaterialList:
+    return storage_json_edge_service_instance().fact_material_list(parsed_options);
+  case storage_operation::FactLibraryExport:
+    return storage_json_edge_service_instance().fact_library_export(parsed_options);
+  case storage_operation::FactLibraryImport:
+    return storage_json_edge_service_instance().fact_library_import(parsed_options);
+  case storage_operation::AssessmentContract:
+    return storage_json_edge_service_instance().assessment_contract(parsed_options);
+  case storage_operation::AssessmentRequest:
+    return storage_json_edge_service_instance().assessment_request(parsed_options);
+  case storage_operation::AssessmentExecute:
+    return storage_json_edge_service_instance().assessment_execute(parsed_options);
+  case storage_operation::AssessmentStatus:
+    return storage_json_edge_service_instance().assessment_status(parsed_options);
+  case storage_operation::AssessmentList:
+    return storage_json_edge_service_instance().assessment_list(parsed_options);
+  case storage_operation::AssessmentInvalidate:
+    return storage_json_edge_service_instance().assessment_invalidate(parsed_options);
+  case storage_operation::TrustRequire:
+    return storage_json_edge_service_instance().trust_require(parsed_options);
+  case storage_operation::Layout:
+    return storage_json_edge_service_instance().layout(parsed_options);
+  case storage_operation::EpisodeBegin:
+    return storage_json_edge_service_instance().episode_begin(parsed_options);
+  case storage_operation::EpisodeHeartbeat:
+    return storage_json_edge_service_instance().episode_heartbeat(parsed_options);
+  case storage_operation::EpisodeEnd:
+    return storage_json_edge_service_instance().episode_end(parsed_options);
+  case storage_operation::EpisodeAbort:
+    return storage_json_edge_service_instance().episode_abort(parsed_options);
+  case storage_operation::EpisodeAttachFrame:
+    return storage_json_edge_service_instance().episode_attach_frame(parsed_options);
+  case storage_operation::EpisodeAttachRef:
+    return storage_json_edge_service_instance().episode_attach_ref(parsed_options);
+  case storage_operation::EpisodeList:
+    return storage_json_edge_service_instance().episode_list(parsed_options);
+  case storage_operation::EpisodeInspect:
+    return storage_json_edge_service_instance().episode_inspect(parsed_options);
+  case storage_operation::EpisodeRecover:
+    return storage_json_edge_service_instance().episode_recover(parsed_options);
+  case storage_operation::EpisodeProjectionRebuild:
+    return storage_json_edge_service_instance().episode_projection_rebuild(parsed_options);
+  case storage_operation::SourceRegister:
+    return storage_json_edge_service_instance().source_register(parsed_options);
+  case storage_operation::SourceUpdateHead:
+    return storage_json_edge_service_instance().source_update_head(parsed_options);
+  case storage_operation::SourceRecordAcceptedRange:
+    return storage_json_edge_service_instance().source_record_accepted_range(parsed_options);
+  case storage_operation::SourceList:
+    return storage_json_edge_service_instance().source_list(parsed_options);
+  case storage_operation::SourceInspect:
+    return storage_json_edge_service_instance().source_inspect(parsed_options);
+  case storage_operation::SourceRegistryFsck:
+    return storage_json_edge_service_instance().source_registry_fsck(parsed_options);
+  case storage_operation::SourceRegistryRebuild:
+    return storage_json_edge_service_instance().source_registry_rebuild(parsed_options);
+  }
+  throw std::invalid_argument("unknown storage operation");
+}
+
+nlohmann::json accept_storage_manifest(const std::string &runtime_dir, const nlohmann::json &manifest) {
+  return accept_storage_manifest_impl(runtime_dir, manifest);
+}
+
+nlohmann::json load_storage_latest_manifest(const std::string &runtime_dir, const std::string &source_id) {
+  const auto provider = shared_provider(runtime_dir);
+  return load_latest_manifest_impl(runtime_dir, *provider, source_id);
+}
+
+nlohmann::json export_storage_records(const std::string &runtime_dir, const std::string &source_id,
+                                      const nlohmann::json &range) {
+  const auto provider = shared_provider(runtime_dir);
+  const auto manifest = load_latest_manifest_impl(runtime_dir, *provider, source_id);
+  if (manifest.is_null()) {
+    throw std::runtime_error("manifest not found: " + source_id);
+  }
+  nlohmann::json records = nlohmann::json::array();
+  for (const auto &entry : entries_for_manifest(manifest, range)) {
+    auto row = entry;
+    row["scope"] = text_or(manifest, "scope");
+    row["manifest_id"] = text_or(manifest, "manifest_id");
+    row["storage_source_id"] = source_id;
+    row["source_type"] = text_or(manifest, "source_type");
+    row["source_head"] = text_or(manifest, "source_head");
+    const auto state = text_or(entry, "payload_state", PAYLOAD_STATE_PRESENT);
+    if (state == PAYLOAD_STATE_REDACTED || state == PAYLOAD_STATE_ABSENT) {
+      row["payload"] = nullptr;
+    } else if (state != PAYLOAD_STATE_PRESENT) {
+      auto [payload, error] = load_payload_impl(*provider, entry);
+      row["payload"] = error.empty() ? payload : nlohmann::json(nullptr);
+    } else {
+      auto [payload, error] = load_payload_impl(*provider, entry);
+      if (!error.empty()) {
+        throw std::runtime_error(error + ": " + text_or(entry, "kind") + ":" + text_or(entry, "source_id"));
+      }
+      row["payload"] = payload;
+    }
+    records.push_back(row);
+  }
+  std::sort(records.begin(), records.end(), [](const nlohmann::json &lhs, const nlohmann::json &rhs) {
+    return std::make_tuple(text_or(lhs, "kind"), text_or(lhs, "source_id"), text_or(lhs, "source_path")) <
+           std::make_tuple(text_or(rhs, "kind"), text_or(rhs, "source_id"), text_or(rhs, "source_path"));
+  });
+  return records;
+}
+
+std::string write_storage_payload_bytes(const std::string &runtime_dir, const std::string &digest,
+                                        const std::string &raw) {
+  const auto error = yy_storage::verify_payload_ref(raw, digest, raw.size(), yy_storage::CONTENT_HASH_ALGORITHM_SHA256);
+  if (!error.empty()) {
+    throw std::invalid_argument("storage_payload_invalid: " + error);
+  }
+  const auto provider = shared_provider(runtime_dir);
+  provider->write_payload(digest, raw);
+  return provider->name() == PROVIDER_ROCKSDB ? storage_uri(PROVIDER_ROCKSDB, runtime_dir, "payloads/" + digest)
+                                              : payload_path(runtime_dir, digest).string();
+}
+
+namespace {
+
+nlohmann::json content_result_json(const yy_storage::content_store_result &result) {
+  return {{"ok", result.ok()},
+          {"error", yy_storage::content_store_error_name(result.error)},
+          {"hash", {{"algorithm", result.hash.algorithm}, {"value", result.hash.value}}},
+          {"byte_length", result.byte_length},
+          {"existed", result.existed},
+          {"message", result.message}};
+}
+
+// Accept "<algo>:<hex>" or bare hex, mirroring the kernel's ref resolution.
+bool parse_content_hash_text(const std::string &text, yy_storage::content_hash &hash, std::string &message) {
+  try {
+    hash = text.find(':') != std::string::npos ? yy_storage::parse_content_hash(text)
+                                               : yy_storage::make_content_hash(text);
+    return true;
+  } catch (const std::exception &e) {
+    message = e.what();
+    return false;
+  }
+}
+
+nlohmann::json invalid_content_hash_json(const std::string &message) {
+  yy_storage::content_store_result result{};
+  result.error = yy_storage::content_store_error::InvalidArgument;
+  result.message = message;
+  return content_result_json(result);
+}
+
+} // namespace
+
+// ADR-0040 content-store facade: one immutable contract routed through the
+// provider selected for this runtime dir, so file and engine-backed profiles
+// serve Python/Node through the same vocabulary as C++.
+nlohmann::json content_store_put_if_absent(const std::string &runtime_dir, const std::string &content_namespace,
+                                           const std::string &raw, const std::string &expected_hash) {
+  yy_storage::content_hash expected{};
+  if (!expected_hash.empty()) {
+    std::string message;
+    if (!parse_content_hash_text(expected_hash, expected, message)) {
+      return invalid_content_hash_json(message);
+    }
+  }
+  const auto provider = shared_provider(runtime_dir);
+  return content_result_json(provider->content_store().put_if_absent(content_namespace, raw, expected));
+}
+
+bool content_store_has(const std::string &runtime_dir, const std::string &content_namespace,
+                       const std::string &content_hash_text) {
+  yy_storage::content_hash hash{};
+  std::string message;
+  if (!parse_content_hash_text(content_hash_text, hash, message)) {
+    return false;
+  }
+  const auto provider = shared_provider(runtime_dir);
+  return provider->content_store().has(content_namespace, hash);
+}
+
+nlohmann::json content_store_verify(const std::string &runtime_dir, const std::string &content_namespace,
+                                    const std::string &content_hash_text) {
+  yy_storage::content_hash hash{};
+  std::string message;
+  if (!parse_content_hash_text(content_hash_text, hash, message)) {
+    return invalid_content_hash_json(message);
+  }
+  const auto provider = shared_provider(runtime_dir);
+  return content_result_json(provider->content_store().verify(content_namespace, hash));
+}
+
+std::string content_store_get(const std::string &runtime_dir, const std::string &content_namespace,
+                              const std::string &content_hash_text) {
+  yy_storage::content_hash hash{};
+  std::string message;
+  if (!parse_content_hash_text(content_hash_text, hash, message)) {
+    throw std::invalid_argument("content_store_get: " + message);
+  }
+  const auto provider = shared_provider(runtime_dir);
+  auto result = provider->content_store().get(content_namespace, hash);
+  if (!result.ok()) {
+    throw std::runtime_error(std::string("content_store_get_failed: ") +
+                             yy_storage::content_store_error_name(result.error) +
+                             (result.message.empty() ? "" : ": " + result.message));
+  }
+  return std::move(result.bytes);
+}
+
+nlohmann::json content_store_capabilities(const std::string &runtime_dir) {
+  const auto provider = shared_provider(runtime_dir);
+  const auto caps = provider->content_store().capabilities();
+  return {{"provider", provider->name()},
+          {"profile", caps.profile},
+          {"hash_algorithm", caps.hash_algorithm},
+          {"max_object_size", caps.max_object_size},
+          {"atomic_put_if_absent", caps.atomic_put_if_absent},
+          {"verified_reads", caps.verified_reads},
+          {"durability", caps.durability},
+          {"visibility", caps.visibility},
+          {"concurrency", caps.concurrency}};
+}
+
+nlohmann::json storage_service_capabilities() {
+  const auto provider = select_provider({});
+  return {
+      {"schema", RUNTIME_STORAGE_SERVICE_SCHEMA_V1},
+      {"owner", RUNTIME_STORAGE_SERVICE_OWNER},
+      {"operations", storage_operation_names()},
+      {"backend", provider.name},
+      {"provider", provider.name},
+      {"provider_config_source", provider.source},
+      {"providers", nlohmann::json::array({
+                        {{"name", PROVIDER_FILE},
+                         {"default", provider.name == PROVIDER_FILE},
+                         {"selected", provider.name == PROVIDER_FILE},
+                         {"layout", provider_layout_json(file_storage_provider("").layout())},
+                         {"runtime", provider_runtime_json(file_storage_provider("").runtime())}},
+                        {{"name", PROVIDER_ROCKSDB},
+                         {"default", provider.name == PROVIDER_ROCKSDB},
+                         {"selected", provider.name == PROVIDER_ROCKSDB},
+                         {"layout", provider_layout_json(rocksdb_storage_provider("").layout())},
+                         {"runtime", provider_runtime_json(rocksdb_storage_provider("").runtime())}},
+                    })},
+      {"projections",
+       nlohmann::json::array(
+           {{{"name", "source-registry"},
+             {"schema", yy_storage::SOURCE_REGISTRY_SCHEMA_V1},
+             {"authority", "yijinjing-journal"},
+             {"path", "journal/system/storage/source-registry/live/*.journal"},
+             {"rebuildable", false}},
+            {{"name", PROJECTION_SOURCE_REGISTRY},
+             {"schema", SOURCE_REGISTRY_PROJECTION_SCHEMA_V1},
+             {"authority", "derived"},
+             {"path", "storage/projections/source-registry.sqlite"},
+             {"rebuildable", true}},
+            {{"name", "manifest-catalog"},
+             {"schema", yy_storage::MANIFEST_CATALOG_SCHEMA_V1},
+             {"authority", "yijinjing-journal"},
+             {"path", "journal/system/storage/manifest-catalog/live/*.journal"},
+             {"export_schema", yy_storage::STORAGE_EXPORT_BUNDLE_SCHEMA_V1},
+             {"rebuildable", false}},
+            {{"name", PROJECTION_MANIFEST_CATALOG},
+             {"schema", MANIFEST_CATALOG_PROJECTION_SCHEMA_V1},
+             {"authority", "derived"},
+             {"path", "storage/projections/manifest-catalog.sqlite"},
+             {"rebuildable", true}},
+            {{"name", "episode-manifest"},
+             {"schema", yy_storage::EPISODE_MANIFEST_SCHEMA_V1},
+             {"authority", "yijinjing-journal"},
+             {"path", "journal/system/storage/episode-manifest/live/*.journal"},
+             {"query_tables", nlohmann::json::array({"episodes", "episode_records", "episode_frames", "episode_refs"})},
+             {"export_schema", "kungfu.storage.episode-bundle/v1"},
+             {"rebuildable", false}},
+            {{"name", "domain-fact-admission"},
+             {"schema", facts::DOMAIN_FACT_EVENT_SCHEMA_V1},
+             {"authority", "yijinjing-journal"},
+             {"path", "journal/system/facts/admission/live/*.journal"},
+             {"contract", facts::fact_contract_json()},
+             {"rebuildable", false}}})},
+      {"notes",
+       nlohmann::json::array({
+           "The runtime storage service surface and providers are owned by libkungfu.",
+           "Provider selection is an implementation option; product semantics remain storage-service operations.",
+           "Python and Node should remain binding, CLI, or UI layers over this service.",
+       })},
+  };
+}
+
+} // namespace kungfu::runtime::storage_service_api

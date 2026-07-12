@@ -5,11 +5,12 @@ accountability stance behind the product, see
 [`facts-before-trust.md`](facts-before-trust.md); for the two first principles
 the whole design follows from, see
 [`design-philosophy.md`](design-philosophy.md); for the vocabulary
-(`kungfu`/`kfx`/`skill`/`sdk`, `libkungfu`, `longfist`, `yijinjing`, …) see
-[`concepts.md`](concepts.md); for the data-plane concepts
-(journal, zero-copy, replay) see the [README](../README.md); for build and
-contribution see [CONTRIBUTING](../CONTRIBUTING.md); for specific decisions see
-the [ADRs](../framework/core/docs/adr).
+(`kungfu`/`kfx`/`skill`/`sdk`, `libkungfu`, `yijinjing`, schema, …) see
+[`concepts.md`](concepts.md); for the Episode-centered public model see
+[`the-episode.md`](the-episode.md); for journal, frame, zero-copy, and Replay
+mechanics see [`event-model.md`](event-model.md); for build and contribution see
+[CONTRIBUTING](../CONTRIBUTING.md); for specific decisions see the
+[ADRs](../framework/core/docs/adr).
 
 ## Guiding principle: the machine adapts to the person
 
@@ -17,12 +18,16 @@ This is the first of two coupled first principles; the second — *reality sets 
 test, not the product* — and how the architecture follows from both are set out
 in [`design-philosophy.md`](design-philosophy.md).
 
-Kungfu absorbs toolchain and runtime complexity into the product so that its
-users do not have to assemble it themselves. The `kungfu` runtime embeds both a
-Python and a Node runtime and bridges a full Python development lifecycle —
-dependency management, formatting, and ahead-of-time compilation — so most
-extension development needs no separately installed language runtimes or package
-managers.
+Kungfu absorbs toolchain and runtime complexity into the product layer that
+needs it so users do not have to assemble that layer themselves. The assembled
+`kungfu` runtime embeds both a Python and a Node runtime and bridges a full
+Python development lifecycle — dependency management, formatting, and
+ahead-of-time compilation — so most extension development needs no separately
+installed language runtimes or package managers. This does not make the
+assembled runtime the minimum adoption unit: `libkungfu`, ecosystem SDKs, the
+standalone CLI/TUI, and the GUI retain independently qualified product
+closures. See [`product-layers.md`](product-layers.md) and
+[ADR-0049](../framework/core/docs/adr/ADR-0049-layer-complete-products-and-domain-neutral-core.md).
 
 This is a deliberate trade: the project carries the complexity so the user does
 not. It stays sustainable only while the absorbed tooling rests on mainstream,
@@ -31,11 +36,12 @@ friction and maintenance burden*, not chase convergence for its own sake.
 
 ## The polyglot membrane
 
-At the bottom sits one C++ core, `libkungfu` (the `longfist` type system + the
-`yijinjing` journal). C++, Python, and Node do not each reimplement it — they are
-thin bindings over the *same in-process* core, reading the *same* journal bytes
-with no serialization on the hot path. That shared, zero-copy, cross-language
-surface is the membrane:
+At the bottom sits one C++ core, `libkungfu` above the `yijinjing` journal and
+schema authority layer. C++, Python, and Node do not each reimplement it — they
+are thin bindings over the *same in-process* core. Closed kernel records read
+the *same* POD journal bytes with no serialization on the hot path. Open/domain
+payloads remain declared cross-language FlatBuffers rather than becoming
+language-local objects. That shared membrane is:
 
 ```
    C++ app / kfx        Python  (py_kungfu)      Node  (kungfu_node.node)
@@ -44,7 +50,7 @@ surface is the membrane:
         └──────────────┬──────┴───────────┬──────────────┘
                 ┌───────┴───────────────────┴───────┐
                 │  libkungfu                          │
-                │  longfist (layout) + yijinjing (journal)
+                │  yijinjing (journal + schema layout)
                 └───────────────────┬─────────────────┘
                                     │  mmap MAP_SHARED
                             ┌───────┴────────┐
@@ -53,11 +59,29 @@ surface is the membrane:
                             └────────────────┘
 ```
 
-The layout *is* the wire format (see
-[ADR-0008](../framework/core/docs/adr/ADR-0008-longfist-schema-evolution-and-minor-maintenance.md)
-and [`contracts.md`](contracts.md)); the binding boundaries are detailed in
-[`adapters.md`](adapters.md). Everything below is how this core is layered
-into a platform.
+For closed kernel facts, the POD layout *is* the wire format (see
+[ADR-0008](../framework/core/docs/adr/ADR-0008-yijinjing-schema-layout-baseline.md)
+and [`contracts.md`](contracts.md)). Open/domain facts use `.fbs` as their
+schema owner. [ADR-0047](../framework/core/docs/adr/ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md)
+defines the exclusive ownership rule and the derived view, opaque body, JSON,
+and SQLite boundaries; the binding boundaries are detailed in
+[`adapters.md`](adapters.md). Everything below is how this core is layered into
+a platform.
+
+### Schema authority: two substrates, one owner per fact
+
+Persisted structured facts belong to exactly one substrate:
+
+- **Hana closed-set POD** — fixed-layout, mmap-safe kernel facts with stable
+  `carrier_type` identities and compile-time Hana-to-`sqlite_orm` projections.
+- **FlatBuffers open/domain schemas** — KFX and evolving cross-language facts
+  owned by `.fbs`, with `.bfbs` reflection projections behind `kungfu::view`.
+
+Typed service results and fold views are derived API objects, not a third
+persistence schema. Large files and model/source bodies are opaque
+content-addressed bytes described by typed metadata. JSON is an adapter,
+CLI/export, diagnostic, or rendering boundary; it is not the core service or
+journal contract.
 
 ## Layers
 
@@ -65,12 +89,18 @@ Kungfu is a platform plus a minimal reference application — the editor-platfor
 model: the core provides capability; products are built on top. The packages
 group into the following layers.
 
+The source tree is integrated; distribution is layered. Each official layer
+must be independently useful and independently removable within its declared
+contract. Higher layers add convenience, never authority. The three
+application horizons that keep the core vocabulary honest are documented in
+[`domain-horizons.md`](domain-horizons.md).
+
 ### Runtime and core — `framework/core` (`@kungfu-tech/core`)
 
-The foundation: the `longfist` type system and the `yijinjing` append-only
-journal runtime in C++, with Python and Node (N-API) bindings, exposed zero-copy
-in-process. It also produces the `kungfu` runtime, which embeds the Python and
-Node runtimes and bridges the development toolchain; it is the base for
+The foundation: the `yijinjing` append-only journal runtime and schema layout in
+C++, with Python and Node (N-API) bindings, exposed zero-copy in-process. It
+also produces the `kungfu` runtime, which embeds the Python and Node runtimes
+and bridges the development toolchain; it is the base for
 operator-facing surfaces such as `kungfu cockpit`, managed runs, skill context
 injection, and the richer end-user shell as it matures.
 
@@ -109,8 +139,7 @@ producing packaged artifacts (the `kungfu sdk` subcommand).
 
 ### Reference surfaces
 
-Two minimal reference UIs over the same capability SDK — demonstrators, not the
-product:
+Two minimal reference UI implementations over the same capability SDK:
 
 - **GUI** — `framework/gui` (`@kungfu-tech/gui`): a desktop application
   on Electron + React, loading the native binding in-process to preserve
@@ -120,6 +149,12 @@ product:
   application. Pure Node, so it loads the binding in-process with no renderer
   boundary. See
   [ADR-0007](../framework/core/docs/adr/ADR-0007-v4-tui-platform-reference-surface.md).
+
+These framework packages are reference implementations rather than independent
+fact authorities. The released standalone CLI/TUI and GUI products that
+assemble them must still be complete within their declared adoption layers per
+ADR-0049; "reference" does not mean a user must install the full desktop
+distribution to operate Kungfu.
 
 The journal/state runtime stays in-process on the trusted path so the zero-copy
 moat is preserved. Untrusted `view` kfx are isolated by the GUI shell as
@@ -158,25 +193,33 @@ read, report structured work facts, trace an existing command, run a managed
 provider session, or handle remote evidence. The pack is exposed through
 `kungfu agent brief`, `kungfu agent capabilities --json`, and
 `kungfu agent choose-mode --json`, and it ships with provider-specific
-`SKILL.md` files that can be previewed before explicit installation.
+`SKILL.md` files that can be previewed before explicit installation. The
+agent-facing control surface is declared in `kfd3_api.registry.json`; the Click
+runtime commands under `kungfu agent` anchor to that registry with explicit
+KFD-3 API ids, while `commands.json`, the brief, and provider skills are
+registry projections.
 
 This pack is not another authority layer. It records current commands, maturity
 labels, safety boundaries, and examples so Electron, standalone CLI, npm, and
 PyPI installs do not depend on stale external notes. Future Homebrew, winget,
 container, and kfx channels must pass the same pack validation before claiming
-agent-ready packaging.
+agent-ready packaging. `kungfu agent verify --json` is the installed-runtime
+closure check: it validates the registry shape, confirms the `kungfu agent`
+command tree has no unanchored runtime commands, and checks the command catalog
+does not expose commands outside the declared registry.
 
-### Distribution — `artifact` (`@kungfu-tech/artifact-kungfu`)
+### Distribution — `product` (`@kungfu-tech/product-kungfu`)
 
 The dogfood installer: it bundles the runtime, both reference UIs, the SDK and
-all first-party kfx declared by `artifact/package.json` into one package.
-Installing it yields the reference GUI and TUI, the `kungfu` shell, and the SDK
-for zero-setup extension and product development. `./kungfu-code dist` is the
-single source-to-installer command; its outputs live under `artifact/dist`.
+all first-party kfx declared by `product/package.json` into desktop and CLI
+products. Installing the desktop product yields the reference GUI and TUI, the
+`kungfu` shell, and the SDK for zero-setup extension and product development.
+`./shifu dist` is the single source-to-product command; its outputs live
+under `product/release`.
 
-### Build tooling — `kungfu-code`
+### Build tooling — `shifu`
 
-Build-time only: `./kungfu-code` is the development orchestrator that pins the
+Build-time only: `./shifu` is the development orchestrator that pins the
 toolchain (Node via fnm, Python via uv, the package manager via Corepack) so a
 fresh clone builds with one command.
 
@@ -196,14 +239,14 @@ exercises a distinct extension path:
 - a C++ extension, against the `libkungfu` API directly;
 - a JavaScript / TypeScript extension.
 
-`artifact` closes the loop at the top: assembling it is the real test that the
-SDK can package a complete application from the runtime, the reference surfaces
-and the extensions. Trading-specific reference extensions from earlier versions
-are being retired, and their coverage role is being handed to neutral
-replacements that exercise the same paths. The C++ path is covered by
+`product` closes the loop at the top: assembling it is the real test that the
+SDK can package complete desktop and CLI products from the runtime, the
+reference surfaces and the extensions. Trading-specific reference extensions
+from earlier versions are being retired, and their coverage role is being
+handed to neutral replacements that exercise the same paths. The C++ path is covered by
 [`examples/probe-cpp`](../examples/probe-cpp): a neutral probe that compiles
-against the `libkungfu` API and its FlatBuffers data structures into a native
-module (`kungfu sdk kfx build` drives CMake through the core toolchain). The Python
+against the `libkungfu` API and the public `yijinjing/schema` headers into a
+native module (`kungfu sdk kfx build` drives CMake through the core toolchain). The Python
 ahead-of-time path is covered by
 [`examples/probe-python`](../examples/probe-python): a neutral probe whose
 dependency is installed with `kungfu engage pdm` and whose module is
@@ -218,7 +261,7 @@ build` bundles with esbuild.
 
 ```
 framework/    platform + contracts you build ON (imported as a dependency)
-  core        runtime + core (C++ longfist / yijinjing, bindings, kungfu)
+  core        runtime + core (C++ yijinjing schema/journal, bindings, kungfu)
   api         capability SDK and host/guest capability relay
   kfx         extension package/facet/trust contract
   skill       Kungfu Skill schemas, fixtures and catalog/context helpers
@@ -229,8 +272,8 @@ developer/    build tooling you build WITH (invoked, a devDependency)
   sdk         application / extension / skill SDK — the `kungfu sdk` subcommand
 extensions/   kfx plugins (reference extensions)
 examples/     samples and build-coverage probes
-artifact      dogfood installer (assembles the above)
-kungfu-code   build orchestrator (pins the toolchain)
+product       dogfood desktop and CLI products (assemble the above)
+shifu   build orchestrator (pins the toolchain)
 ```
 
 ### Where a new package goes
@@ -247,7 +290,8 @@ others invoke):
 - **`extensions/`** — a kfx plugin built on the extension contract.
 - **`examples/`** — a sample or a build-coverage probe: it demonstrates or
   exercises the platform but is not shipped as a product.
-- **`artifact`** — the assembly that bundles the platform into an installer.
+- **`product`** — the assembly that bundles the platform into distributable
+  desktop and CLI products.
 
 By this rule a format spec is a contract, so it lives in `framework`; the `sdk`
 build CLI is a tool, so it lives in `developer` — even when that leaves a single

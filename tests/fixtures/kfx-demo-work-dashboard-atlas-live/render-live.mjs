@@ -30,7 +30,7 @@ const require = createRequire(
 );
 
 if (!fs.existsSync(bin)) {
-  fail('kungfu CLI is not frozen (run ./kungfu-code freeze first)');
+  fail('kungfu CLI is not frozen (run ./shifu freeze first)');
 }
 if (!fs.existsSync(bundlePath)) {
   fail('work-dashboard is not built (run kungfu sdk kfx build first)');
@@ -46,6 +46,7 @@ const imported = atlas.importRepo(sampleRoot);
 if (imported.missions !== 1 || imported.goals !== 2 || imported.markers !== 1) {
   fail(`unexpected import counts: ${JSON.stringify(imported)}`);
 }
+await atlas.dashboard();
 
 const React = require('react');
 const ReactDomServer = require('react-dom/server');

@@ -1,190 +1,168 @@
-# Kungfu Rewind — record an agent run, then open it
+# Rewind an Episode
 
-> Pre-release. Rewind is the local agent flight recorder built on the kungfu
-> runtime: one command wraps an **unmodified** agent run, every model call and
-> tool call lands in one local journal, and you re-open the run afterwards —
-> in the desktop app or from the command line. Nothing is uploaded anywhere.
+Rewind is the user-facing operation of reopening an **Episode** for causal
+inspection, verification, proof, and recovery. It is one operation over
+Kungfu's execution infrastructure, not the identity of the whole product and
+not a synonym for recording an agent run.
 
-This page is the complete path: install → capture → diagnose → replay →
-clean up. It assumes nothing beyond a shell.
-
-## Install
-
-Release binaries are not published yet. Two paths today:
-
-**Desktop app (macOS arm64)** — build the installer once from a workspace:
-
-```sh
-./kungfu-code dist
+```text
+Rewind an Episode.
+Replay its Facts.
+Recover only to a proven frontier.
+Never repeat external side effects implicitly.
 ```
 
-This produces `artifact/dist/Kungfu-<version>-arm64.dmg` (and a zip).
-Mount, drag `Kungfu.app` to Applications, launch. The app is self-contained:
-the kungfu runtime and first-party kfx ship inside it. Pre-release builds are
-unsigned: on first launch use right-click → Open, or `xattr -d com.apple.quarantine
-/Applications/Kungfu.app`. Point it at a home with
-`KF_RUNTIME_DIR=<home-dir>/runtime`. Linux (AppImage/deb) and Windows (nsis)
-use the same electron-builder config and get wired up with signing in the
-release pipeline (next gate).
+This page explains that contract and the current pre-release agent-work capture
+slice that exercises it.
 
-**CLI (pre-release: from a built workspace)** — install `fnm` and `uv` once
-(see [CONTRIBUTING](../CONTRIBUTING.md)), then:
+## Rewind, Replay, Recovery, and re-execution
 
-```sh
-git clone git@github.com:kungfu-systems/kungfu.git
-cd kungfu
-./kungfu-code sync && ./kungfu-code build
-```
+These operations have different authority:
 
-Everything below runs from the repository root. `kungfu` is the
-runtime CLI; the desktop app is the reference GUI.
+| Operation | Meaning | Boundary |
+| --- | --- | --- |
+| **Replay** | reconstruct recorded Facts and derived state under declared runtime semantics | fidelity is limited to the capture boundary and retained evidence |
+| **Rewind** | reopen an Episode at a reproducible Cut to inspect its causal chain, verify evidence, and understand what happened | defaults to forensic inspection; it does not create new Facts about the outside world |
+| **Recovery** | validate retained authority, identify the last proven frontier, classify an uncertain tail, and rebuild Projections | restart alone is not proof of recovery |
+| **re-execution** | perform actions again against a live or simulated environment | must be an explicit mode with declared side-effect, consent, and idempotency policy |
 
-## Capture a run
+[ADR-0020](../framework/core/docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md)
+is the load-bearing boundary: Kungfu records the causal action chain and its
+evidence, not a complete snapshot of the outside world. A model call, tool
+invocation, payment, message, deployment, or device command is never repeated
+merely because a reader opened Rewind.
 
-Wrap any command. The traced program needs **no code changes and no SDK** —
-the only contact surface is the environment the supervisor injects. In a
-workspace build, run the CLI from `framework/core`:
+For crash and power-loss semantics, use
+[Strong Durability and Crash Recovery](durability-and-crash-recovery.md).
 
-```sh
-cd framework/core
-uv run --frozen python .devtools/kfc.py -H <home-dir> \
-  trace -- python3 my_agent.py
-```
+## What an Episode contributes
 
-- `<home-dir>` is where the run store lives (any directory you own).
-- `trace` assigns the run id and prints it on the `[rewind] run <id> starts`
-  line — note it down, the diagnosis commands take it via `--run`.
-- `trace` exits with the traced program's own exit code, so it drops into
-  scripts and CI without changing failure semantics.
-- Model calls are captured at the wire: the supervisor points
-  `OPENAI_BASE_URL` / `ANTHROPIC_BASE_URL` at a local proxy and forwards to
-  the upstream your run would have used anyway — it reads your environment's
-  own base-url variables before overriding them for the child, falling back
-  to the providers' official endpoints. Request/response bodies are recorded;
-  **headers are never captured** (that is where API keys live).
-- Tool calls, results, errors and retries are captured in-process by hooks
-  injected through `PYTHONPATH` (python) and `NODE_OPTIONS` (node). A process
-  spawned inside a tool inherits its causal parent — one chain, across
-  runtimes, in one journal. The hook carries an adapter table that patches a
-  framework's tool seam once it imports — **LangChain is captured unmodified**
-  (its `BaseTool.run` seam, covering `.invoke` / `.ainvoke` / agent tool
-  nodes); the demo toolkit stands in for frameworks the table does not yet
-  know.
-- A run writes two things under `<home-dir>/runtime`: the journal itself
-  (under `journal/system/rewind/<run-id>/` — the recorded frames) and the
-  trace bundle (under `rewind/<run-id>/bundle/` — the schema blob + manifest
-  that make the journal decodable without this runtime).
+A run is an execution coordinate. An Episode is the stable semantic object that
+binds the work to:
 
-## Diagnose from the command line
+- typed Facts and their provenance;
+- Artifacts and external references;
+- causal frame relationships;
+- its Manifest, lifecycle, and content root;
+- Receipts and applicable Watermarks;
+- declaration and schema roots needed to decode the record;
+- Cuts, Proof, and known missing or unverifiable material.
+
+Rewind should therefore start from Episode identity and retained authority.
+Profile-specific coordinates such as an agent `run_id` may help locate an
+Episode, but they do not replace it.
+
+Inspect the current Episode surface with:
 
 ```sh
-# from framework/core, same -H <home-dir> as the capture:
-
-# the causal tree: model spans, tool spans (cross-runtime nested),
-# retries, per-span latency, failed nodes with their error detail
-uv run --frozen python .devtools/kfc.py -H <home-dir> rewind show --run <run-id>
-
-# prove the record self-describes: decode every frame two independent
-# ways (native accessors vs the bundle's reflection schema) and diff
-uv run --frozen python .devtools/kfc.py -H <home-dir> rewind verify --run <run-id>
+kungfu storage episode list --json
+kungfu storage episode inspect --episode-id <episode-id> --json
+kungfu storage fsck --scope episode --episode-id <episode-id> --verify-frames --json
 ```
 
-(In a packaged install these are just `kungfu rewind show` / `kungfu rewind
-verify`; the long prefix is the workspace-build spelling.)
+SQLite rows and GUI models may make that inspection convenient. They remain
+rebuildable Projections, not a second Episode authority.
 
-`show` answers the first diagnosis questions in one screen: which step failed
-(✗ with the error detail inline), how long each step took, and how the run
-ended. Full input/output bodies live in the app's node pane; the CLI shows
-them only as far as the error message carries them. `verify` is forensic
-replay: the journal is re-read on the same runtime that recorded it, and the
-trace bundle alone must reproduce every fact — tampering or schema drift
-fails loudly.
+## Current agent-work capture slice
 
-## Share a run — export, open anywhere
-
-A run exports into one portable file (journal + the self-describing bundle),
-and that file re-opens anywhere — offline, no services, even after the
-original home is gone:
+The current pre-release `trace` adapter wraps a command, assigns a `run_id`,
+records model/tool/action Facts, and creates one Episode whose source is
+`rewind:<run-id>`. It also emits a self-describing trace bundle containing the
+schema material needed to decode the captured action Facts.
 
 ```sh
-# pack:  <run-id>.rewind.zip
-uv run --frozen python .devtools/kfc.py -H <home-dir> rewind export --run <run-id>
-
-# open anywhere: extract, verify the record end to end, print the causal tree
-uv run --frozen python .devtools/kfc.py -H <anything> rewind open <file.rewind.zip>
+kungfu trace -- python3 my_agent.py
 ```
 
-`open` refuses quietly wrong data: the archive's record must pass the same
-two-path verification as a local run before anything is shown.
+The traced process needs no Kungfu SDK call. Python and Node instrumentation is
+injected into the child process, while provider traffic is routed through the
+local capture supervisor. This is a useful Agent Work profile adapter; it is
+not the definition of an Episode and it does not capture every possible fact
+about the outside world.
 
-## Diagnose in the app
+Capture is sensitive by nature. Request, response, tool input, and tool output
+bodies may contain private data. Provider credentials remain in headers and
+are not intentionally recorded, but users must still apply their own data,
+retention, redaction, and provider-compliance policies. Default capture and
+inspection are local; the model request still reaches the upstream provider the
+original command selected.
+
+## Forensic inspection of a captured Episode
+
+The current capture adapter retains `run_id` commands for its profile-specific
+view:
 
 ```sh
-KF_RUNTIME_DIR=<home-dir>/runtime ./kungfu-code app
+kungfu rewind show --run <run-id>
+kungfu rewind verify --run <run-id>
 ```
 
-The **Rewind** tab (first in the left nav) shows three panes:
+`show` reconstructs the captured action tree. `verify` compares native decoding
+with reflection decoding through the run's bound schema bundle. A passing
+result proves that those decode paths agree for the retained trace Facts; it is
+not a universal proof that every outside-world effect was captured or that the
+underlying storage met an unqualified durability profile.
 
-- **runs** — every recorded run; ● red means the run had errors.
-- **trace** — the causal tree. Failed nodes are marked ✗; a tool executed in
-  another runtime (e.g. a node tool called from python) nests under its
-  caller, because both runtimes wrote the same journal.
-- **node** — select any node: status, latency, tokens, the error, and the
-  full input/output bodies, pretty-printed.
+The desktop reference surface can render the same profile-specific run and
+action details. Its panes are views over the retained Facts, not the authority
+for them.
 
-The 2-minute drill for "why did my run fail": open the run with the red dot →
-follow the ✗ down the tree → read the node's `error` and `input`. That is the
-whole workflow.
+## Portable evidence
 
-## Delete a run / privacy
-
-A run is files under `<home-dir>/runtime` — delete the run's directories and
-it is gone:
+The trace adapter can package its run-specific journal and self-describing
+bundle, then reopen and verify that package elsewhere:
 
 ```sh
-rm -r <home-dir>/runtime/journal/system/rewind/<run-id> \
-      <home-dir>/runtime/rewind/<run-id>
+kungfu rewind export --run <run-id> --out <run-id>.rewind.zip
+kungfu rewind open <run-id>.rewind.zip
 ```
 
-Default mode never uploads anything: capture, storage, diagnosis and replay
-are all local. The proxy only talks to the model upstream your run already
-used.
+The domain-neutral Episode surface also supports a self-contained storage
+bundle:
 
-## Demos
+```sh
+kungfu storage export --scope episode --episode-id <episode-id> \
+  --format bundle-json --out <episode-id>.json --json
+```
 
-Deterministic end-to-end demos live under `tests/fixtures/` and double as
-release gates (`./kungfu-code verify --full` runs them all):
+The two formats currently serve different surfaces. A `.rewind.zip` preserves
+the agent-work trace adapter's profile bundle; an Episode storage bundle
+preserves the domain-neutral Episode closure. Do not infer that one format has
+all guarantees of the other without checking its manifest and qualification
+evidence.
 
-| Demo | Shows |
-| --- | --- |
-| `rewind-demo-happy/` | capture basics + a flaky tool that retries and recovers |
-| `rewind-demo-tool-failure/` | a tool failing for real: ✗ node, error detail, non-zero exit |
-| `rewind-demo-model-drift/` | the model picks a tool that does not exist — the drift is visible in the model node's output, and the consequence in the failing step after it |
-| `rewind-demo-cross-runtime/` | python agent → node tool, one causal chain in one journal |
-| `rewind-demo-forensic-replay/` | re-open + two-path verify + tamper rejection |
-| `rewind-demo-export/` | export one portable file, delete the original, open + verify elsewhere |
+## Recovery is a separate decision
 
-Each runs standalone: `tests/fixtures/<name>/run.sh`.
+After a crash, Rewind can help inspect an interrupted Episode, but it must not
+declare recovery from visual plausibility. Recovery must establish the selected
+durability profile, last proven Watermark, uncertain or corrupt tail, required
+repair or quarantine, rebuilt Projection frontier, and capabilities that remain
+safe.
 
-## Known limits (pre-release)
+Use the read-only repair plan before any mutation:
 
-- Installers are built-from-workspace, macOS arm64 only, unsigned. The
-  Linux/Windows targets and signing/notarization belong to the release
-  pipeline — the next gate before public artifacts.
-- On macOS, run the workspace CLI from `framework/core` with
-  `DYLD_FALLBACK_LIBRARY_PATH=<repo>/framework/core/dist/kungfu` exported: the
-  dev-python binding resolves `libnode` relative to the executable, and shell
-  wrappers strip `DYLD_*` across re-exec, so exporting it in your own shell
-  right before the command is the reliable spelling.
-- The CLI tree does not yet label which runtime executed each node (the
-  cross-runtime nesting itself is recorded and shown; the per-node runtime
-  tag is a schema addition on the list).
-- Streaming (SSE) model responses are captured verbatim, not parsed into
-  token/usage facts.
-- Replay is forensic (re-open, walk, verify); deterministic re-execution is a
-  later differentiator gate.
-- Framework auto-instrumentation ships with a real LangChain adapter (and the
-  demo toolkit for the seam shape); further frameworks grow in the same adapter
-  table. The LangChain adapter wraps the synchronous `BaseTool.run` funnel,
-  which also carries `.invoke` and `.ainvoke` for ordinary tools; a tool whose
-  execution runs *only* through the async `_arun` path is not yet covered.
+```sh
+kungfu storage repair --scope episode --episode-id <episode-id> \
+  --plan --dry-run --json
+```
+
+Current strong power-loss recovery remains staged and explicitly unqualified;
+see [Known Limits](known-limits.md). Rewind does not upgrade that maturity.
+
+## Current maturity
+
+The source tree contains executable fixtures for trace capture, Episode
+attachment, causal rendering, independent decode verification, tamper
+rejection, export/open, cross-runtime edges, managed runs, approvals, and cost
+Facts. The fixtures live under `tests/fixtures/rewind-demo-*` and use `run.mjs`
+drivers.
+
+This is pre-release evidence, not a polished one-command install or a claim of
+complete framework coverage. Current limits include partial framework
+instrumentation, profile-specific `run_id` commands beside the Episode-native
+storage surface, raw streaming capture in some paths, sensitive-body policy
+remaining operator-owned, and re-execution deliberately not being a default
+mode.
+
+Go next to [The Episode](the-episode.md), [Event Model](event-model.md),
+[Vocabulary](vocabulary.md), and [Known Limits](known-limits.md).

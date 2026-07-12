@@ -6,9 +6,9 @@
 ## Why this document exists
 
 At a glance the version/release setup looks like ordinary boilerplate: `lerna` plus a few
-thin GitHub workflows that delegate to `kungfu-systems/workflows` and
-`kungfu-systems/action-bump-version`. It is easy to read the code in seconds and conclude
-"this is replaceable scaffolding — just swap it for changesets / semantic-release."
+thin GitHub workflows that delegate release-candidate build and promotion to Buildchain.
+It is easy to read the code in seconds and conclude "this is replaceable scaffolding —
+just swap it for changesets / semantic-release."
 
 That conclusion is wrong, and the reason it is wrong is **not in the code** — it is in the
 *orchestration intent*, which no single file reveals. This document records that intent so
@@ -17,7 +17,7 @@ the mechanism is not mistaken for replaceable boilerplate.
 ## Core principle: the machine fits the human
 
 Version management here is designed around **human cognition**, not tool convenience. The
-governing constraint (see the `action-bump-version` README):
+governing constraint inherited from the original channel-based release machinery is:
 
 > Contributors are generally not fluent with git / npm / lerna / GitHub internals. The
 > pipeline must not require any of them to perform high-level tool operations. Releasing
@@ -94,58 +94,57 @@ the "must not make a mistake" pressure from any individual. Developers have more
 unilateral authority — and that constraint deliberately includes the maintainers
 themselves.
 
-## The tag itself projects a deeper invariant: the longfist layout
+## The tag itself projects a deeper invariant: the yijinjing schema layout
 
 Point 2 said the `package.json` version is a downstream projection of the git tag. The tag
 is not the bottom of that chain. For a system whose product *is* a zero-copy, cross-language,
-on-disk journal, the real compatibility contract is the **longfist binary layout** — the
-in-memory and on-journal representation that C++, Python, and Node read without parsing. A
-git tag, a floating channel ref, and a `package.json` version are all projections of "which
-longfist layout this artifact speaks."
+on-disk journal, the real compatibility contract is the **yijinjing schema binary layout** —
+the in-memory and on-journal representation that C++, Python, and Node read without parsing.
+A git tag, a floating channel ref, and a `package.json` version are all projections of "which
+yijinjing schema layout this artifact speaks."
 
 The two contracts fail differently. A version-string drift is cosmetic (point 2). A
-longfist-layout change is not: because the layout *is* the ABI (zero-copy means the struct
+yijinjing-schema-layout change is not: because the layout *is* the ABI (zero-copy means the struct
 memory order is the wire order), a consumer compiled against one layout cannot read another
 by comparing version numbers or by feature detection — only by speaking the same layout, or
 by an explicit, evolution-aware decode in a non-zero-copy path. The layout is therefore the
 invariant the version machinery exists to protect; the release-line refs are how that
 protection is published and audited, not the thing being protected. How that invariant may
-evolve, and how old journals stay replayable, is its own decision — see
-[ADR-0008](../framework/core/docs/adr/ADR-0008-longfist-schema-evolution-and-minor-maintenance.md).
+evolve, and how released v4+ journals stay replayable, is its own decision — see
+[ADR-0008](../framework/core/docs/adr/ADR-0008-yijinjing-schema-layout-baseline.md).
 
-## Minor lines are long-lived and are never force-retired
+## Stable v4 schema epochs must stay maintainable
 
-A minor line (`v1.0`, `v1.1`, …) is not a release window that closes; it is a long-running
-product train that can accrue many patches (`v1.0.0` … `v1.0.1234`). A production release
-closes one patch and opens the next on the *same* line; it never means "this minor is done."
+A released v4 schema epoch is not a disposable implementation detail. Once a v4
+line is stable, users may have journals, exports, extensions, and runtime facts
+written against that layout. A production release closes one patch and opens the
+next on the *same* line; it never means "this schema epoch no longer matters."
 This follows from the invariant above, not from taste.
 
-**Why the mechanism must keep every minor maintainable.** Each minor line pins a longfist
-layout epoch. Because the layout is the ABI, a deployment running the `v1.0` layout cannot be
-transparently migrated to a newer layout the way a source-distributed or self-describing-file
-system can re-read old data: zero-copy is precisely the refusal to pay that translation on
-the hot path. The consequence is structural — kungfu cannot rely on "one latest binary reads
-all past layouts" for its hot path, so it must be able to keep an old layout epoch (an old
-minor line) alive and patchable in parallel with newer lines. The channel topology already
-provides this: each `{channel}/v{major}/v{major}.{minor}` line is an independent branch set,
-so a fix on `v1.0` never has to touch `v3.x`. (The persisted/replay path bounds the cost:
-there FlatBuffers' additive schema evolution lets a newer reader decode an older layout off
-the hot path — see ADR-0008.)
+**Why the mechanism must keep stable v4 epochs maintainable.** Each released
+minor line can pin a yijinjing schema layout epoch. Because the layout is the
+ABI, a hot-path reader cannot transparently negotiate arbitrary layouts the way a
+self-describing file reader can. Zero-copy is precisely the refusal to pay that
+translation on the hot path. The consequence is structural: Kungfu must either
+keep the released epoch patchable or provide an explicit cold-path migration /
+decode route for v4+ data. The channel topology provides the branch isolation;
+ADR-0008 defines the v4 baseline boundary.
 
-**What the mechanism guarantees, and what it does not.** The mechanism guarantees the
-*possibility* of perpetual support for any minor that still has users: it must never
-*foreclose* the ability to maintain an old line. Who performs that maintenance, and whether
-it is free, is a separate, allocatable question — it may be the core team under a paid
-support tier, a third party, or the users themselves. The design constraint is only that the
-toolchain not close that road. Keeping a minor maintainable-by-anyone requires:
+**What the mechanism guarantees, and what it does not.** The mechanism does not
+promise compatibility with pre-v4 layouts or APIs. It does guarantee that, once
+v4 is stable, the project cannot silently strand v4+ users by changing the
+schema without a maintenance or migration path. Who performs long-term
+maintenance, and whether it is free, is a separate, allocatable question. The
+design constraint is that the toolchain not close the road. Keeping a v4+ epoch
+maintainable requires:
 
-- **branch isolation** — a fix on an old line does not require rebasing onto newer lines
+- **branch isolation** — a fix on a released line does not require rebasing onto newer lines
   (satisfied by the channel topology);
 - **a permissive license** — anyone holding the code may take on the burden (satisfied,
   Apache-2.0);
-- **a self-consistent layout world** — a deployment on one minor is not forced to interop
-  with another minor's layout (satisfied by per-minor layout pinning);
-- **reproducible builds from self-archivable inputs** — an old line must still build years
+- **a self-consistent layout world** — a deployment on one released schema epoch is not forced to interop
+  with another epoch's layout on the hot path;
+- **reproducible builds from self-archivable inputs** — a released line must still build years
   later without depending on a service that may be gone; this is the standing requirement
   behind the build mirror/cache work, and the parts that lean on third-party-controlled
   substrate (vendor SDKs, hosted runner images) are where it is only partially met;
@@ -201,14 +200,13 @@ If a candidate cannot preserve all four, it is a downgrade for this project, how
 
 ## Pointers
 
-- Thin workflows:
-  `.github/workflows/{bump-major-version,bump-minor-version,release-new-version,release-verify}.yml`
-  → reusable workflows in `kungfu-systems/workflows`.
-- Bump / release / publish logic and branch-protection setup:
-  `kungfu-systems/action-bump-version` (its README documents the full channel rules and the
-  original design goals).
+- Active Buildchain workflows:
+  `.github/workflows/buildchain-validate.yml`, `.github/workflows/build.yml`, and
+  `.github/workflows/release-new-version.yml`.
+- Release-candidate build and promotion logic:
+  `kungfu-systems/buildchain` reusable workflows and release-passport tooling.
 - Build & toolchain dependencies: see [`CONTRIBUTING.md`](../CONTRIBUTING.md)
   (a dedicated source-to-binary `buildchain` doc is planned — see [`MAP.md`](MAP.md)).
-- The compatibility invariant below the tag (longfist layout), its schema-evolution policy,
-  and the minor-maintenance rationale:
-  `framework/core/docs/adr/ADR-0008-longfist-schema-evolution-and-minor-maintenance.md`.
+- The compatibility invariant below the tag (yijinjing schema layout), its v4+
+  schema-evolution policy, and the stable-epoch maintenance rationale:
+  `framework/core/docs/adr/ADR-0008-yijinjing-schema-layout-baseline.md`.

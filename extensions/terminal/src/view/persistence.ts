@@ -17,8 +17,8 @@ import type { DomainState, KfLocation } from '@kungfu-tech/kfx';
 
 // One JSON blob, addressed like shell state (system/shell/…/live).
 export const WORKSPACE_LOCATION: KfLocation = {
-  category: 'system',
-  group: 'shell',
+  role: 'system',
+  namespace: 'shell',
   name: 'terminal-workspace',
   mode: 'live',
 };
@@ -150,8 +150,8 @@ export function loadWorkspaceLayout(domain: DomainState): WorkspaceLayout {
       .configs()
       .find(
         (row) =>
-          row.location.category === WORKSPACE_LOCATION.category &&
-          row.location.group === WORKSPACE_LOCATION.group &&
+          row.location.role === WORKSPACE_LOCATION.role &&
+          row.location.namespace === WORKSPACE_LOCATION.namespace &&
           row.location.name === WORKSPACE_LOCATION.name,
       );
     return entry ? parseWorkspaceLayout(entry.value) : emptyLayout();

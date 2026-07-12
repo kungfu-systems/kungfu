@@ -26,7 +26,7 @@ function resolveBindingDir(moduleName) {
   if (descriptor) {
     try {
       const platformPackage = require(descriptor.name);
-      if (platformPackage && platformPackage.bindingDir) {
+      if (platformPackage?.bindingDir) {
         return platformPackage.bindingDir;
       }
     } catch (e) {
@@ -45,7 +45,7 @@ function resolveBindingDir(moduleName) {
  * public factory API this module hands to callers, not the addon internals.
  * @returns {Record<string, any>}
  */
-module.exports = function () {
+module.exports = () => {
   /** @type {any} */
   const binding = (() => {
     try {
@@ -75,68 +75,94 @@ module.exports = function () {
   return {
     _binding: binding,
     hash: binding.hash,
+    computeContentHashValue: binding.computeContentHashValue,
+    computeContentHash: binding.computeContentHash,
+    parseContentHash: binding.parseContentHash,
+    formatContentHash: binding.formatContentHash,
+    verifyContentHash: binding.verifyContentHash,
     formatTime: binding.formatTime,
     formatStringToHashHex: binding.formatStringToHashHex,
     parseTime: binding.parseTime,
+    encodeActionEnvelope: binding.encodeActionEnvelope,
+    decodeActionEnvelope: binding.decodeActionEnvelope,
+    verifyFlatbufferPayload: binding.verifyFlatbufferPayload,
+    ACTION_ENVELOPE_CARRIER_TYPE: binding.ACTION_ENVELOPE_CARRIER_TYPE,
+    /**
+     * @param {string} runtimeDir
+     * @param {string} namespace
+     * @param {string} name
+     * @param {number} [destId]
+     * @param {number|bigint} [streamId]
+     * @returns {any}
+     */
+    ActionRecorder: (runtimeDir, namespace, name, destId, streamId) =>
+      new binding.ActionRecorder(runtimeDir, namespace, name, destId, streamId),
+    durabilityVisibleReceiptTyped: binding.durabilityVisibleReceiptTyped,
+    storageServiceCapabilities: binding.storageServiceCapabilities,
+    storageStatusTyped: binding.storageStatusTyped,
+    storageQueryTyped: binding.storageQueryTyped,
+    storageGcPlanTyped: binding.storageGcPlanTyped,
+    storageRebuildIndexTyped: binding.storageRebuildIndexTyped,
+    storageCompactPlanTyped: binding.storageCompactPlanTyped,
+    storageFsckTyped: binding.storageFsckTyped,
+    storageRepairPlanTyped: binding.storageRepairPlanTyped,
+    storageEpisodeBeginTyped: binding.storageEpisodeBeginTyped,
+    storageEpisodeHeartbeatTyped: binding.storageEpisodeHeartbeatTyped,
+    storageEpisodeAttachFrameTyped: binding.storageEpisodeAttachFrameTyped,
+    storageEpisodeAttachRefTyped: binding.storageEpisodeAttachRefTyped,
+    storageEpisodeCloseTyped: binding.storageEpisodeCloseTyped,
+    storageEpisodeRecoverTyped: binding.storageEpisodeRecoverTyped,
+    storageEpisodeProjectionRebuildTyped:
+      binding.storageEpisodeProjectionRebuildTyped,
+    storageEpisodeListTyped: binding.storageEpisodeListTyped,
+    storageEpisodeInspectTyped: binding.storageEpisodeInspectTyped,
+    storageSourceRegisterTyped: binding.storageSourceRegisterTyped,
+    storageSourceUpdateHeadTyped: binding.storageSourceUpdateHeadTyped,
+    storageSourceRecordAcceptedRangeTyped:
+      binding.storageSourceRecordAcceptedRangeTyped,
+    storageSourceListTyped: binding.storageSourceListTyped,
+    storageSourceInspectTyped: binding.storageSourceInspectTyped,
+    storageSourceRegistryFsckTyped: binding.storageSourceRegistryFsckTyped,
+    storageSourceRegistryRebuildTyped:
+      binding.storageSourceRegistryRebuildTyped,
+    storageLayoutTyped: binding.storageLayoutTyped,
+    makeStorageServiceRequest: binding.makeStorageServiceRequest,
+    runStorageServiceOperation: binding.runStorageServiceOperation,
+    acceptStorageManifest: binding.acceptStorageManifest,
+    loadStorageLatestManifest: binding.loadStorageLatestManifest,
+    exportStorageRecords: binding.exportStorageRecords,
+    writeStoragePayloadBytes: binding.writeStoragePayloadBytes,
+    contentStorePutIfAbsent: binding.contentStorePutIfAbsent,
+    contentStoreHas: binding.contentStoreHas,
+    contentStoreVerify: binding.contentStoreVerify,
+    contentStoreGet: binding.contentStoreGet,
+    contentStoreCapabilities: binding.contentStoreCapabilities,
     pyExec: binding.pyExec,
     pyEval: binding.pyEval,
     pyEvalFile: binding.pyEvalFile,
     shutdown: binding.shutdown,
-    Longfist: () => new binding.Longfist(),
+    Schema: () => new binding.Schema(),
     /**
      * @param {any} arg a single location or an array of locations
      * @param {string} [mode]
-     * @param {string} [category]
-     * @param {string} [group]
+     * @param {string} [role]
+     * @param {string} [namespace]
      * @param {string} [name]
      * @returns {any}
      */
-    Assemble: function (
-      arg,
-      mode = '*',
-      category = '*',
-      group = '*',
-      name = '*',
-    ) {
+    Assemble: (arg, mode = '*', role = '*', namespace = '*', name = '*') => {
       if (Array.isArray(arg)) {
-        return new binding.Assemble(arg, mode, category, group, name);
-      } else {
-        return new binding.Assemble([arg], mode, category, group, name);
+        return new binding.Assemble(arg, mode, role, namespace, name);
       }
+      return new binding.Assemble([arg], mode, role, namespace, name);
     },
 
     /** @param {any} home @returns {any} */
-    History: function (home) {
-      return new binding.History(home);
-    },
+    History: (home) => new binding.History(home),
     /** @param {any} home @returns {any} */
-    ConfigStore: function (home) {
-      return new binding.ConfigStore(home);
-    },
-    /** @param {any} home @returns {any} */
-    RiskSettingStore: function (home) {
-      return new binding.RiskSettingStore(home);
-    },
-    /** @param {any} home @returns {any} */
-    CommissionStore: function (home) {
-      return new binding.CommissionStore(home);
-    },
-    /** @param {any} home @returns {any} */
-    BasketStore: function (home) {
-      return new binding.BasketStore(home);
-    },
-    /** @param {any} home @returns {any} */
-    BasketInstrumentStore: function (home) {
-      return new binding.BasketInstrumentStore(home);
-    },
+    ConfigStore: (home) => new binding.ConfigStore(home),
     /** @param {any} location @param {any} home @returns {any} */
-    SessionStore: function (location, home) {
-      return new binding.SessionStore(location, home);
-    },
-    /** @param {any} location @param {any} home @returns {any} */
-    IODevice: function (location, home) {
-      return new binding.IODevice(location, home);
-    },
+    IODevice: (location, home) => new binding.IODevice(location, home),
     /**
      * @param {any} location
      * @param {any} home
@@ -146,41 +172,27 @@ module.exports = function () {
      * @param {number} end
      * @returns {any}
      */
-    tracer: function (location, home, read, write, begin, end) {
-      return new binding.Tracer(location, home, read, write, begin, end);
-    },
+    tracer: (location, home, read, write, begin, end) =>
+      new binding.Tracer(location, home, read, write, begin, end),
 
     /**
      * @param {any} home
      * @param {string} name
      * @param {boolean} [bypassRestore]
-     * @param {boolean} [bypassAccounting]
-     * @param {boolean} [bypassTradingData]
-     * @param {boolean} [refreshTradingDataBeforeSync]
-     * @param {boolean} [bypassRefreshBook]
      * @param {number} [millisecondsSleepAfterStep]
      * @returns {any}
      */
-    watcher: function (
+    watcher: (
       home,
       name,
       bypassRestore = false,
-      bypassAccounting = false,
-      bypassTradingData = false,
-      refreshTradingDataBeforeSync = false,
-      bypassRefreshBook = false,
       millisecondsSleepAfterStep = 50,
-    ) {
-      return new binding.Watcher(
+    ) =>
+      new binding.Watcher(
         home,
         name,
         bypassRestore,
-        bypassAccounting,
-        bypassTradingData,
-        refreshTradingDataBeforeSync,
-        bypassRefreshBook,
         millisecondsSleepAfterStep,
-      );
-    },
+      ),
   };
 };
