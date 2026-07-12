@@ -101,7 +101,8 @@ jobs:
       SHIFU_REQUIRE_MSVC: "1"
       CARGO_HTTP_TIMEOUT: "120"
       CARGO_NET_RETRY: "5"
-      KF_LIBWASM_CARGO_REGISTRY: "sparse+https://index.crates.io/"
+      # Empty selects Cargo's built-in crates.io source on hosted runners.
+      KF_LIBWASM_CARGO_REGISTRY: ""
       MIRROR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
       MIRROR_REF: refs/heads/dev/v4/v4.0
       MIRROR_URL: http://192.168.100.222:8088/git-mirrors/kungfu.git
