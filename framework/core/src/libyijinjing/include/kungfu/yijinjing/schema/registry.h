@@ -239,8 +239,27 @@ template <std::size_t N> constexpr bool contains_tag(const std::array<int32_t, N
   return std::binary_search(tags.begin(), tags.end(), tag);
 }
 
+// ADR-0067: carrier_type tag uniqueness is a compile-time invariant. Each POD
+// type declares an explicit, hand-allocated, stable tag -- the on-wire,
+// cross-language, persisted type ID -- so it must never depend on declaration
+// order and can never be auto-generated. But nothing guarded against two types
+// sharing a tag: the registry map is keyed by type name and build_tag_set sorts
+// without a distinctness check, so a duplicate compiled silently. build_tag_set
+// returns the tags sorted, so an adjacent-equal scan proves global distinctness.
+// The machine guards uniqueness; it does not assign the tag.
+template <std::size_t N> constexpr bool all_tags_distinct(const std::array<int32_t, N> &sorted_tags) {
+  for (std::size_t i = 1; i < N; ++i) {
+    if (sorted_tags[i] == sorted_tags[i - 1]) {
+      return false;
+    }
+  }
+  return true;
+}
+
 inline constexpr auto AllTypesTags = build_tag_set(AllTypes);
 inline constexpr auto StaticDataTags = build_tag_set(StaticDataTypes);
+
+static_assert(all_tags_distinct(AllTypesTags), "duplicate carrier_type tag in AllTypes (ADR-0067)");
 
 constexpr auto build_data_map = [](auto types) {
   auto maps = boost::hana::transform(boost::hana::values(types), [](auto value) {
