@@ -110,9 +110,11 @@ truth continue to use their existing Core schema owners under ADR-0047.
 ### 4. Core computes the installed Profile root
 
 The source document binds every artifact hash but does not self-declare its own
-authority. During a later install/qualification stage, Core will compute one
+authority. Core computes one
 canonical `profile_suite_root` from the validated manifest and complete content
-closure. Lifecycle facts bind Profile id, version, root, member roots,
+closure. The root binds the exact embedded KFX source-contract root, verified
+facet bytes, and externally resolved canonical roots for every required and
+optional Suite member. Lifecycle facts bind Profile id, version, root, member roots,
 contract-world roots, granted permissions, qualification result, and runtime
 compatibility.
 
@@ -132,8 +134,8 @@ The lifecycle distinguishes:
 A workspace may activate multiple compatible Profiles. Changing GUI focus
 does not deactivate facts or policies owned by another active Profile.
 
-This ADR defines those states but does not claim their runtime implementation
-has shipped in this stage.
+Core now records these lifecycle states. GUI focus remains a later product
+concern and is deliberately absent from the lifecycle fold.
 
 ### 6. Agent-first is the v1 authoring path
 
@@ -229,9 +231,17 @@ historical interpretation without rebuilding Kungfu.
 
 ## Current implementation status
 
-S0 is implemented by the KFX contract v3 additive surface, shared Python/Node
-validators, CLI schema discovery, and retained Week/Day positive/negative
-fixtures. Profile root calculation, lifecycle facts, installed Agent SDK,
-Profile Manager, Mission Control migration, and product qualification remain
-future stages. A valid Profile document currently proves contract conformance,
-not installation, activation, or trust.
+S0 and S1 are implemented. The KFX contract v3 additive surface, shared
+Python/Node validators, CLI schema discovery, and retained Week/Day fixtures
+own the source contract. Core embeds that exact contract, verifies the complete
+facet closure and explicit member roots, computes `profile_suite_root`, and
+records Installed, Qualified, Activated, Superseded, RolledBack, and Removed
+facts through ActionEnvelope + Episode. Python, Node, and `kungfu kfx profile`
+use the same storage-service operation and fail-closed plan/apply receipts.
+
+S1 qualification is deliberately limited to source-contract, content-closure,
+and runtime-contract checks that Core can execute itself. The installed Agent
+SDK, semantic fixture harness, Profile Manager, Mission Control migration,
+portable export/import, and open-Profile release qualification remain future
+stages. A schema-valid source still proves no lifecycle state; only journal
+facts and receipts establish installation, qualification, or activation.

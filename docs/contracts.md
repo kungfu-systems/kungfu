@@ -112,7 +112,9 @@ Python CLI (`kungfu kfx`), Skill dependency binding, and frozen products read
 that contract rather than carrying separate manifest shapes. The same source
 owns `profileSuiteSchema`: KFX Suites may bind a
 `kungfu.profile-suite/v1` semantic closure without introducing another schema
-or trust authority.
+or trust authority. Libkungfu embeds this exact document at build time, records
+its canonical root in Profile closure/lifecycle evidence, and evaluates
+`profileSuiteSchema` before lifecycle normalization.
 
 The contract carries `contractSchema`, `packageManifestSchema`,
 `profileSuiteSchema`, and `firstPartyManifestSchema`. A package can still use

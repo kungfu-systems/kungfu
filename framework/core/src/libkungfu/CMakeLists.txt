@@ -14,6 +14,16 @@ configure_file(
   @ONLY
 )
 
+# Embed the exact KFX contract document as the sole Profile JSON schema owner.
+# Core validates its profileSuiteSchema before applying lifecycle semantics.
+file(READ "${PROJECT_SOURCE_DIR}/../../../kfx/kungfu-kfx.contract.json" KFX_CONTRACT_JSON)
+file(MAKE_DIRECTORY "${KUNGFU_GENERATED_INCLUDE_DIR}/kungfu/runtime/profile")
+configure_file(
+  "${PROJECT_SOURCE_DIR}/schemas/profile_source_contract.h.in"
+  "${KUNGFU_GENERATED_INCLUDE_DIR}/kungfu/runtime/profile/profile_source_contract.h"
+  @ONLY
+)
+
 # ADR-0052 assessment jobs use an independent FlatBuffers authority while
 # sharing the ActionEnvelope and Episode substrates with ADR-0051.
 file(READ "${PROJECT_SOURCE_DIR}/schemas/assessment_event.fbs" ASSESSMENT_EVENT_FBS)
@@ -31,6 +41,15 @@ file(MAKE_DIRECTORY "${KUNGFU_GENERATED_INCLUDE_DIR}/kungfu/runtime/query")
 configure_file(
   "${PROJECT_SOURCE_DIR}/schemas/saved_query_catalog_schema.h.in"
   "${KUNGFU_GENERATED_INCLUDE_DIR}/kungfu/runtime/query/saved_query_catalog_schema.h"
+  @ONLY
+)
+
+# ADR-0069 Profile Suite lifecycle facts use the same ActionEnvelope/Episode
+# substrate while retaining an independent typed event authority.
+file(READ "${PROJECT_SOURCE_DIR}/schemas/profile_lifecycle_event.fbs" PROFILE_LIFECYCLE_EVENT_FBS)
+configure_file(
+  "${PROJECT_SOURCE_DIR}/schemas/profile_lifecycle_schema.h.in"
+  "${KUNGFU_GENERATED_INCLUDE_DIR}/kungfu/runtime/profile/profile_lifecycle_schema.h"
   @ONLY
 )
 
@@ -107,6 +126,11 @@ if(KUNGFU_WITH_CORE_TESTS)
   target_link_libraries(kungfu_crash_recovery_tests PRIVATE ${LIBKUNGFU_NAME} Threads::Threads)
   target_compile_features(kungfu_crash_recovery_tests PRIVATE cxx_std_20)
   add_test(NAME kungfu_crash_recovery_tests COMMAND kungfu_crash_recovery_tests)
+
+  add_executable(kungfu_profile_lifecycle_tests tests/profile_lifecycle_tests.cpp)
+  target_link_libraries(kungfu_profile_lifecycle_tests PRIVATE ${LIBKUNGFU_NAME} Threads::Threads)
+  target_compile_features(kungfu_profile_lifecycle_tests PRIVATE cxx_std_20)
+  add_test(NAME kungfu_profile_lifecycle_tests COMMAND kungfu_profile_lifecycle_tests)
 endif()
 
 # Windows AppContainer guest launcher (ADR-0014) lives in the runtime sandbox

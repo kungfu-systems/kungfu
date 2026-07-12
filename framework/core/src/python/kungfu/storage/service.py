@@ -754,6 +754,17 @@ def saved_query_catalog(
     )
 
 
+def profile_lifecycle(
+    runtime_dir: str | Path, action: str = "list", **kwargs: Any
+) -> dict[str, Any]:
+    """Operate the Core-owned journal-backed Profile Suite lifecycle."""
+    return dict(
+        _runtime().run_storage_service_operation(
+            "profile_lifecycle", str(runtime_dir), {"action": action, **kwargs}
+        )
+    )
+
+
 def fact_contract(runtime_dir: str | Path = "") -> dict[str, Any]:
     """Return the C++-owned ADR-0051 declaration/admission contract."""
 

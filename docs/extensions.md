@@ -114,9 +114,27 @@ schema with:
 kungfu kfx profile-schema --json
 ```
 
-Schema-valid means the Profile source closure is well formed. It does not mean
-the Profile is installed, qualified, activated, trusted, or compatible with a
-workspace; those lifecycle states are staged by
+Schema-valid means the Profile source closure is well formed. Core lifecycle
+operations additionally require one canonical `sha256:...` content root for
+every Suite member. Agents can inspect and preview without mutation, then
+apply the exact plan with an authorization id:
+
+```sh
+kungfu -H <home> kfx profile inspect profile.json \
+  --member-root contract=sha256:<64-hex> \
+  --member-root actions=sha256:<64-hex>
+kungfu -H <home> kfx profile plan install --profile-path profile.json \
+  --member-root contract=sha256:<64-hex> \
+  --member-root actions=sha256:<64-hex> > install-plan.json
+kungfu -H <home> kfx profile apply install-plan.json \
+  --authorization-id <decision-or-approval-id>
+kungfu -H <home> kfx profile list
+```
+
+The actual keys must exactly match the Profile's required and optional member
+set. `plan` is read-only; `apply` recomputes the plan and refuses artifact,
+member-root, permission, lifecycle-basis, or runtime drift. A lifecycle receipt
+does not by itself establish KFD-2 trust for a domain claim; see
 [ADR-0069](../framework/core/docs/adr/ADR-0069-agent-first-kfx-profile-suite-runtime.md).
 
 ## The build contract

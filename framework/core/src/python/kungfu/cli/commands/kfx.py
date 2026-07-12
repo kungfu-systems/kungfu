@@ -22,6 +22,7 @@ from pathlib import Path
 from kungfu import kfx_contract
 from kungfu.cli.commands import kfc, PrioritizedCommandGroup
 from kungfu.rewind import first_party
+from kungfu.storage import service as storage_service
 
 kfx_command_context = kfc.pass_context()
 
@@ -363,6 +364,191 @@ def profile_schema(ctx, as_json):
         click.echo(json.dumps(data, indent=2, sort_keys=True))
         return
     click.echo(json.dumps(data, indent=2, sort_keys=True))
+
+
+@kfx.group(
+    name="profile", help="inspect and operate Core-owned Profile Suite lifecycle facts"
+)
+@click.help_option("-h", "--help")
+@kfx_command_context
+def profile_group(ctx):
+    pass
+
+
+def _profile_json(value):
+    click.echo(json.dumps(value, indent=2, sort_keys=True))
+
+
+def _profile_member_roots(values):
+    roots = {}
+    for value in values:
+        key, separator, root = value.partition("=")
+        if not separator or not key or not root:
+            raise click.BadParameter(
+                "member roots use KEY=sha256:...", param_hint="--member-root"
+            )
+        if key in roots:
+            raise click.BadParameter(
+                f"duplicate member root: {key}", param_hint="--member-root"
+            )
+        roots[key] = root
+    return roots
+
+
+@profile_group.command(
+    name="contract", help="print the Profile lifecycle runtime contract"
+)
+@kfx_command_context
+def profile_contract(ctx):
+    _profile_json(storage_service.profile_lifecycle(ctx.runtime_dir, "contract"))
+
+
+@profile_group.command(
+    name="inspect", help="verify a Profile document and its complete content closure"
+)
+@click.argument(
+    "profile_path", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option(
+    "--member-root",
+    "member_roots",
+    multiple=True,
+    required=True,
+    help="KEY=sha256:... member content root",
+)
+@kfx_command_context
+def profile_inspect(ctx, profile_path, member_roots):
+    try:
+        _profile_json(
+            storage_service.profile_lifecycle(
+                ctx.runtime_dir,
+                "inspect",
+                profile_path=str(profile_path.resolve()),
+                member_roots=_profile_member_roots(member_roots),
+            )
+        )
+    except (RuntimeError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
+
+
+@profile_group.command(
+    name="plan", help="preview a fail-closed Profile lifecycle change"
+)
+@click.argument(
+    "action",
+    type=click.Choice(
+        ["install", "qualify", "activate", "upgrade", "rollback", "remove"]
+    ),
+)
+@click.option(
+    "--profile-path", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option("--profile-id", type=str)
+@click.option("--target-root", type=str)
+@click.option("--expected-current-root", type=str)
+@click.option(
+    "--grant", "grants", multiple=True, help="permission to grant during activation"
+)
+@click.option(
+    "--member-root",
+    "member_roots",
+    multiple=True,
+    help="KEY=sha256:... member content root",
+)
+@kfx_command_context
+def profile_plan(
+    ctx,
+    action,
+    profile_path,
+    profile_id,
+    target_root,
+    expected_current_root,
+    grants,
+    member_roots,
+):
+    request = {"action": action}
+    if profile_path is not None:
+        request["profile_path"] = str(profile_path.resolve())
+    if profile_id:
+        request["profile_id"] = profile_id
+    if target_root:
+        request["target_root"] = target_root
+    if expected_current_root:
+        request["expected_current_root"] = expected_current_root
+    if grants:
+        request["granted_permissions"] = list(grants)
+    if member_roots:
+        request["member_roots"] = _profile_member_roots(member_roots)
+    try:
+        _profile_json(
+            storage_service.profile_lifecycle(ctx.runtime_dir, "plan", request=request)
+        )
+    except (RuntimeError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
+
+
+@profile_group.command(
+    name="apply", help="apply an authorized, still-current Profile lifecycle plan"
+)
+@click.argument(
+    "plan_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option("--authorization-id", required=True, type=str)
+@kfx_command_context
+def profile_apply(ctx, plan_file, authorization_id):
+    try:
+        plan = json.loads(plan_file.read_text(encoding="utf-8"))
+        _profile_json(
+            storage_service.profile_lifecycle(
+                ctx.runtime_dir,
+                "apply",
+                plan=plan,
+                authorization_id=authorization_id,
+            )
+        )
+    except (OSError, json.JSONDecodeError, RuntimeError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
+
+
+@profile_group.command(name="list", help="list current Profile lifecycle state")
+@click.option("--include-removed", is_flag=True)
+@kfx_command_context
+def profile_list(ctx, include_removed):
+    _profile_json(
+        storage_service.profile_lifecycle(
+            ctx.runtime_dir, "list", include_removed=include_removed
+        )
+    )
+
+
+@profile_group.command(name="get", help="show one current Profile state")
+@click.argument("profile_id", type=str)
+@click.option("--include-removed", is_flag=True)
+@click.option("--cut-system-time", type=int, default=0)
+@kfx_command_context
+def profile_get(ctx, profile_id, include_removed, cut_system_time):
+    _profile_json(
+        storage_service.profile_lifecycle(
+            ctx.runtime_dir,
+            "get",
+            profile_id=profile_id,
+            include_removed=include_removed,
+            cut_system_time=cut_system_time,
+        )
+    )
+
+
+@profile_group.command(
+    name="history", help="show append-only lifecycle facts for one Profile"
+)
+@click.argument("profile_id", type=str)
+@kfx_command_context
+def profile_history(ctx, profile_id):
+    _profile_json(
+        storage_service.profile_lifecycle(
+            ctx.runtime_dir, "history", profile_id=profile_id
+        )
+    )
 
 
 @kfx.command(help="inspect and validate a kfx package manifest")

@@ -54,6 +54,9 @@ The installed runtime is also self-describing through `kungfu agent brief`,
   contracts.
 - [Extensions](extensions.md) and [kfx Topology](kfx-topology.md) — package,
   trust, host, and capability boundaries.
+- [KFX Profile Suite Lifecycle](profile-lifecycle.md) — content roots,
+  append-only lifecycle facts, plans, authorization, receipts, and current
+  product limits for user-defined domain Profiles.
 - [Kungfu Skills](skills.md) — the agent-facing capability layer above `kfx`.
 - [Querying Runtime Facts](querying-runtime-facts.md) — Cuts, lineage,
   historical queries, and proof-carrying results.

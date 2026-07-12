@@ -65,6 +65,10 @@ export type Storage = {
     queryId: string,
     expectedRevision: number,
   ) => SavedQueryEntry;
+  profileLifecycle: (
+    action: string,
+    options?: Record<string, unknown>,
+  ) => StorageValue;
   factLibraryContract: () => StorageValue;
   factTypes: () => StorageValue;
   createFactType: (
@@ -145,6 +149,8 @@ export function openStorage(options: OpenStorageOptions): Storage {
         query_id: queryId,
         expected_revision: expectedRevision,
       }) as SavedQueryEntry,
+    profileLifecycle: (action, values = {}) =>
+      run('profile_lifecycle', { action, ...values }),
     factLibraryContract: () => run('fact_library_contract'),
     factTypes: () => run('fact_type_list'),
     createFactType: (definition, systemTime = 0) =>
