@@ -59,6 +59,47 @@ test('product observability ignores errors from sibling components', () => {
   assert.equal(report.summary.eventCount, names.length);
 });
 
+test('product observability ignores same-component errors from prior runs', () => {
+  const events = [
+    {
+      contract: 'kungfu-buildchain-log-event',
+      timestamp: '2026-07-12T00:00:00.000Z',
+      level: 'error',
+      source: 'user',
+      component: 'kungfu-product',
+      event: 'product.dist.error',
+      phase: 'package',
+    },
+    ...[
+      ['product.dist.start', 'prepare'],
+      ['product.kfx.dependencies.declared', 'dependencies'],
+      ['product.dependencies.sync.start', 'dependencies'],
+      ['product.core.rebuild.start', 'core'],
+      ['product.core.freeze.start', 'core'],
+      ['product.extensions.build.start', 'extensions'],
+      ['product.ui.bundle.start', 'ui'],
+      ['product.desktop.electron-builder.start', 'package'],
+      ['product.cli.archive.start', 'package'],
+      ['product.cli.smoke.start', 'package'],
+      ['product.cli.smoke.end', 'package'],
+      ['product.dist.end', 'package'],
+    ].map(([event, phase]) => ({
+      contract: 'kungfu-buildchain-log-event',
+      timestamp: '2026-07-12T00:01:00.000Z',
+      level: 'info',
+      source: 'user',
+      component: 'kungfu-product',
+      event,
+      phase,
+    })),
+  ];
+
+  const report = verifyProductObservabilityEvents(events, 'all', 1);
+  assert.equal(report.ok, true);
+  assert.equal(report.summary.errorCount, 0);
+  assert.equal(report.summary.eventCount, 12);
+});
+
 test('electron before-pack uses a file URL only on Windows', () => {
   const entryPath = new URL(
     '../../framework/gui/scripts/gen-first-party-manifest.mjs',

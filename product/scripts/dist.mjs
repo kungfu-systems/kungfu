@@ -58,6 +58,9 @@ const buildchainLogger = createBuildchainLogger({
     package: '@kungfu-tech/product-kungfu',
   },
 });
+const buildchainLogEventStartIndex = buildchainLogger.path
+  ? readBuildchainLogEvents(buildchainLogger.path).length
+  : 0;
 
 const parsedArgs = parseArgs(process.argv.slice(2));
 const builderArgs = parsedArgs.builderArgs;
@@ -1397,7 +1400,11 @@ function main() {
   );
 }
 
-export function verifyProductObservabilityEvents(events, target = 'all') {
+export function verifyProductObservabilityEvents(
+  events,
+  target = 'all',
+  startIndex = 0,
+) {
   const requiredEvents = [
     'product.dist.start',
     'product.kfx.dependencies.declared',
@@ -1414,7 +1421,9 @@ export function verifyProductObservabilityEvents(events, target = 'all') {
     requiredEvents.push('product.cli.smoke.start');
   }
   return verifyBuildchainLogEvents({
-    events: events.filter((event) => event.component === 'kungfu-product'),
+    events: events
+      .slice(startIndex)
+      .filter((event) => event.component === 'kungfu-product'),
     minEvents: 12,
     requireComponents: ['kungfu-product'],
     requirePhases: [
@@ -1436,6 +1445,7 @@ function verifyObservability() {
   const report = verifyProductObservabilityEvents(
     readBuildchainLogEvents(buildchainLogger.path),
     productTarget,
+    buildchainLogEventStartIndex,
   );
   if (!report.ok) {
     throw new Error(
