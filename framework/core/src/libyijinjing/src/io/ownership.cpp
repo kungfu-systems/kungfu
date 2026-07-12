@@ -330,6 +330,7 @@ const char *scope_name(scope value) noexcept {
   return "unknown";
 }
 
+lease::lease() noexcept = default;
 lease::lease(std::unique_ptr<impl> impl) noexcept : impl_(std::move(impl)) {}
 lease::lease(lease &&other) noexcept = default;
 lease &lease::operator=(lease &&other) noexcept = default;

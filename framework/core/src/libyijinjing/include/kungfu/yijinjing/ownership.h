@@ -34,7 +34,7 @@ public:
 
 class lease {
 public:
-  lease() noexcept = default;
+  lease() noexcept;
   lease(lease &&other) noexcept;
   lease &operator=(lease &&other) noexcept;
   lease(const lease &) = delete;
