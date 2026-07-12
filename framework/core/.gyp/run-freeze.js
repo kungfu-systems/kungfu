@@ -263,8 +263,17 @@ function copyPyBindingWin(bt) {
   const host = fs.existsSync(btHost)
     ? btHost
     : findFileShallow(buildDir, /^kungfu_node_host\.dll$/i);
+  // Single-export embedding membrane DLL (ADR-0046 stage 3, Phase B2): a SHARED
+  // lib that exports only kungfu_embedding_get_api, which the product trunk links
+  // (import lib) so `doctor` works on Windows where the core is STATIC. MSVC emits
+  // kungfu_embedding.dll at the build root (ARCHIVE/RUNTIME_OUTPUT_DIRECTORY =
+  // KUNGFU_BUILD_DIR); check build/<bt> first for resilience, then the root.
+  const btEmb = path.join(buildDir, bt, 'kungfu_embedding.dll');
+  const emb = fs.existsSync(btEmb)
+    ? btEmb
+    : findFileShallow(buildDir, /^kungfu_embedding\.dll$/i);
   let n = 0;
-  for (const src of [pyd, dll, host]) {
+  for (const src of [pyd, dll, host, emb]) {
     if (!src) continue;
     fs.copyFileSync(src, path.join(distKfc, path.basename(src)));
     n++;
@@ -273,11 +282,16 @@ function copyPyBindingWin(bt) {
   // core; libnode.dll is third-party and carries no PDB of ours.
   if (pyd) copyPdbSibling(pyd, distKfc);
   if (host) copyPdbSibling(host, distKfc);
+  if (emb) copyPdbSibling(emb, distKfc);
   if (!pyd) console.error('[freeze] Win 警告：build 树未找到 pykungfu*.pyd');
   if (!dll) console.error('[freeze] Win 警告：build 树未找到 libnode.dll');
   if (!host)
     console.error(
       '[freeze] Win 提示：build 树未找到 kungfu_node_host.dll（node 变体将回退 Python 路径）',
+    );
+  if (!emb)
+    console.error(
+      '[freeze] Win 警告：build 树未找到 kungfu_embedding.dll（doctor 将回退 stub）',
     );
   console.log(`[freeze] Win：补拷 python binding → dist/kungfu：${n} 项`);
 }
@@ -597,28 +611,35 @@ function generateHelpManifest(pythonExe, distKfc) {
 // yields a runnable assembled dist; dist.mjs stageTrunk later re-stages
 // kungfu-trunk and asserts pins consistency at the product stage — same
 // commit, same profile, same binary.
-// ADR-0046 stage 3 productionization: the product trunk links libkungfu and
-// ships the real embedding-backed `doctor` on POSIX (--features embedding).
-// Windows embedding linking is not wired yet (crates/trunk/build.rs panics on
-// windows), so the Windows product trunk stays the coreless stub until that
-// follow-up lands — the trunk's doctor/help/variant paths all fall back
-// gracefully when the core is absent, so keeping Windows featureless is
-// zero-regression. The native dir (framework/core/build/<bt>, already populated
-// with libkungfu.* by the time assemble runs) is passed explicitly so build.rs
-// never has to guess a relative path that could fail canonicalize under CI.
+// ADR-0046 stage 3 productionization: the product trunk links the embedding
+// membrane and ships the real embedding-backed `doctor` on every platform
+// (--features embedding). POSIX links the SHARED libkungfu directly from
+// build/<bt>; Windows links the single-export kungfu_embedding.dll import lib
+// (Phase B2) from the build root, where MSVC archives colocate. The native dir is
+// passed explicitly so build.rs never has to guess a relative path that could
+// fail canonicalize under CI.
 /** @param {string} distKfc @param {string} bt */
 function stageEntry(distKfc, bt) {
   const crates = path.join(CORE, '..', '..', 'crates');
-  const cargoArgs = ['build', '--release', '-p', 'kungfu-trunk'];
-  const runOpts = { cwd: crates, env: process.env };
-  if (!isWin) {
-    cargoArgs.push('--features', 'embedding');
-    runOpts.env = {
+  const cargoArgs = [
+    'build',
+    '--release',
+    '-p',
+    'kungfu-trunk',
+    '--features',
+    'embedding',
+  ];
+  const runOpts = {
+    cwd: crates,
+    env: {
       ...process.env,
-      KF_TRUNK_NATIVE_DIR: path.join(CORE, 'build', bt),
+      // Windows: kungfu_embedding.lib at the build root; POSIX: libkungfu.* under build/<bt>.
+      KF_TRUNK_NATIVE_DIR: isWin
+        ? path.join(CORE, 'build')
+        : path.join(CORE, 'build', bt),
       KF_TRUNK_BUILD_TYPE: bt,
-    };
-  }
+    },
+  };
   shell.run('cargo', cargoArgs, true, runOpts);
   const built = path.join(
     crates,

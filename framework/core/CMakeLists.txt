@@ -92,6 +92,14 @@ if (TARGET ${LIBKUNGFU_NAME})
   add_subdirectory(src/libwasm)
 endif()
 
+# ADR-0046 stage 3 (Phase B2): Windows-only single-export embedding DLL so the
+# trunk can link the embedding membrane where the core is STATIC/unexported. On
+# POSIX the trunk links the SHARED libkungfu directly, so this is Windows-only.
+if (WIN32 AND TARGET ${LIBKUNGFU_NAME})
+  message(STATUS "Enabled kungfu_embedding (Windows single-export membrane DLL)")
+  add_subdirectory(src/libembedding)
+endif()
+
 if (NOT DEFINED ENV{KUNGFU_BUILD_SKIP_KUNGFU_NODE} OR NOT $ENV{KUNGFU_BUILD_SKIP_KUNGFU_NODE})
   message(STATUS "Enabled kungfu_node")
   add_subdirectory(src/bindings/node)

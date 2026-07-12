@@ -641,33 +641,33 @@ function assertCoreFrozen() {
 // runtime-pins manifest. UV_VERSION in the manifest must equal the repo's
 // .uv-version so the product and the dev launcher pull the same pinned uv.
 function stageTrunk() {
-  // ADR-0046 stage 3 productionization: link libkungfu and ship the real
-  // embedding-backed doctor on POSIX. Windows stays featureless (build.rs
-  // panics on windows until the static-link follow-up lands); the trunk falls
-  // back gracefully when the core is absent, so that is zero-regression. The
-  // product core is rebuilt (Release) before this stage, so the native dir is
-  // populated; pass it explicitly so build.rs never guesses.
-  const cargoArgs = ['build', '--release', '-p', 'kungfu-trunk'];
+  // ADR-0046 stage 3 productionization: link the embedding membrane and ship the
+  // real embedding-backed doctor on every platform. POSIX links the SHARED
+  // libkungfu from build/<type>; Windows links the single-export
+  // kungfu_embedding.dll import lib (Phase B2) from the build root, where MSVC
+  // archives colocate. The product core is rebuilt (Release) before this stage,
+  // so the native dir is populated; pass it explicitly so build.rs never guesses.
+  const buildType = process.env.KF_TRUNK_BUILD_TYPE || 'Release';
+  const coreBuild = path.join(ROOT, 'framework', 'core', 'build');
+  const cargoArgs = [
+    'build',
+    '--release',
+    '-p',
+    'kungfu-trunk',
+    '--features',
+    'embedding',
+  ];
   const runOpts = {
     cwd: CRATES_DIR,
     phase: 'core',
     event: 'product.core.trunk',
-  };
-  if (!isWin) {
-    const buildType = process.env.KF_TRUNK_BUILD_TYPE || 'Release';
-    cargoArgs.push('--features', 'embedding');
-    runOpts.env = {
+    env: {
       ...process.env,
-      KF_TRUNK_NATIVE_DIR: path.join(
-        ROOT,
-        'framework',
-        'core',
-        'build',
-        buildType,
-      ),
+      // Windows: kungfu_embedding.lib at the build root; POSIX: libkungfu.* under build/<type>.
+      KF_TRUNK_NATIVE_DIR: isWin ? coreBuild : path.join(coreBuild, buildType),
       KF_TRUNK_BUILD_TYPE: buildType,
-    };
-  }
+    },
+  };
   run('build kungfu-trunk', 'cargo', cargoArgs, runOpts);
   const trunkBin = path.join(
     CRATES_DIR,
