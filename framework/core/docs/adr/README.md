@@ -102,6 +102,7 @@ compound implementation notes to the index Status column.
 | [0068](ADR-0068-tiered-durability-and-crash-recovery.md) | accepted | tiered durability separates hot mmap visibility, durable fact admission, rebuildable projections, and later replication |
 | [0069](ADR-0069-agent-first-kfx-profile-suite-runtime.md) | accepted | Agent-first KFX Profile Suites carry domain semantics over a domain-neutral Core |
 | [0070](ADR-0070-peer-communication-primitives-layering.md) | accepted | peer communication primitives are layered (channel routing vs outlet output); Band renamed Outlet; off-thread writing decoupled and establish-channel unification deferred, trigger-gated |
+| [0071](ADR-0071-cli-language-split-and-membrane-diagnostic-surface.md) | accepted | CLI language fit is decided by where the work lives and what the embedding membrane reaches, not clap-vs-click; substrate diagnostics (fsck/verify) belong in Rust via a grown read-only membrane surface, not per-command rewrites; product/UI/orchestration stays Python |
 
 ## Reading by theme
 
