@@ -7,6 +7,8 @@
 #ifndef KUNGFU_RUNTIME_LIVE_REACTOR_H
 #define KUNGFU_RUNTIME_LIVE_REACTOR_H
 
+#include <atomic>
+
 #include <kungfu/runtime/common.h>
 
 #include <kungfu/runtime/io.h>
@@ -190,6 +192,7 @@ protected:
   std::set<std::string> location_uid64s_ = {};
 
   rx::connectable_observable<event_ptr> events_ = {};
+  rx::loop_error_state_ptr loop_error_state_ = std::make_shared<rx::loop_error_state>();
 
   const yijinjing::data::location_ptr coordinator_home_location_;
   const yijinjing::data::location_ptr coordinator_cmd_location_;
@@ -241,6 +244,8 @@ protected:
 
   void cleanup_reader_disjoin();
 
+  [[nodiscard]] std::exception_ptr get_loop_error() const { return loop_error_state_->first_error(); }
+
 protected:
   kungfu::runtime::io_device_ptr io_device_;
   rx::composite_subscription cs_;
@@ -259,9 +264,9 @@ protected:
   std::set<yijinjing::data::location_ptr> disjoin_locations_ = {};
   std::set<std::pair<yijinjing::data::location_ptr, uint32_t>> disjoin_channels_ = {};
 
-  volatile bool continual_ = true;
-  volatile bool live_ = false;
-  volatile uint32_t step_limit_ = 0;
+  std::atomic_bool continual_{true};
+  std::atomic_bool live_{false};
+  std::atomic_uint32_t step_limit_{0};
 
   void produce(const rx::subscriber<event_ptr> &sb);
 

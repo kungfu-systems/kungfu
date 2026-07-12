@@ -387,6 +387,7 @@ public:
 
 void bind(pybind11::module &&m) {
   ensure_sqlite_initilize();
+  py::register_exception<replay_exhausted>(m, "ReplayExhaustedError", PyExc_RuntimeError);
 
   // nanosecond-time related
   m.def("now_in_nano", &yijinjing::time::now_in_nano);

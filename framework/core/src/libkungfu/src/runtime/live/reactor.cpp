@@ -111,6 +111,9 @@ reactor::reactor(kungfu::runtime::io_device_ptr io_device)
 }
 
 reactor::~reactor() {
+  signal_stop();
+  cs_.unsubscribe();
+  loop_error_state_.reset();
   {
     std::lock_guard<std::mutex> lock(writers_mtx_);
     writers_.clear();
@@ -130,14 +133,10 @@ reactor::~reactor() {
 bool reactor::is_usable() { return io_device_->is_usable(); }
 
 bool reactor::setup() {
+  loop_error_state_->reset();
   io_device_->setup();
   SPDLOG_DEBUG("io setup done");
-  // A subscriber error must stop this loop, not SIGINT the whole process
-  // from the middle of a dispatch: signal_stop() lets produce() complete so
-  // hosts (run(), the node uv loop, the python coroutine loop) unwind
-  // cleanly. The error handler runs on the pump thread, so no extra
-  // synchronization is needed here.
-  rx::loop_interrupter() = [this]() { signal_stop(); };
+  rx::loop_error_scope error_scope(loop_error_state_);
   events_ = observable<>::create<event_ptr>([this](auto &s) { delegate_produce(this, s); }) | holdon();
   now_ = get_begin_time();
   react();
@@ -163,7 +162,9 @@ void reactor::pre_setup() {
 void reactor::step(uint32_t step_limit) {
   continual_ = false;
   step_limit_ = step_limit;
+  rx::loop_error_scope error_scope(loop_error_state_);
   events_.connect(cs_);
+  loop_error_state_->rethrow_if_error();
 }
 
 void reactor::run(uint32_t step_limit) {
@@ -174,18 +175,25 @@ void reactor::run(uint32_t step_limit) {
   setup();
   SPDLOG_DEBUG("live runtime setup done");
   continual_ = true;
-  events_.connect(cs_);
+  {
+    rx::loop_error_scope error_scope(loop_error_state_);
+    events_.connect(cs_);
+  }
   on_exit();
+  loop_error_state_->rethrow_if_error();
   SPDLOG_INFO("[{:08x}] {} done", get_home_uid(), get_home_uname());
 }
 
-bool reactor::is_live() const { return live_; }
+bool reactor::is_live() const { return live_ and not loop_error_state_->stop_requested(); }
 
 bool reactor::is_low_latency() const { return io_device_->is_low_latency(); }
 
 const bus_ptr &reactor::get_bus() const { return io_device_->get_bus(); }
 
-void reactor::signal_stop() { live_ = false; }
+void reactor::signal_stop() {
+  loop_error_state_->request_stop();
+  live_ = false;
+}
 
 int64_t reactor::now() const { return now_; }
 
@@ -505,13 +513,14 @@ void reactor::require_write_to_band(int64_t trigger_time, uint32_t source_id,
 void reactor::produce(const rx::subscriber<event_ptr> &sb) {
   try {
     do {
-      live_ = drain(sb) && live_;
+      live_ = drain(sb) && live_ && not loop_error_state_->stop_requested();
       on_active();
       cleanup_reader_disjoin(); // subclass may call disjoin in on_active
     } while (continual_ and live_);
   } catch (...) {
     live_ = false;
     sb.on_error(std::current_exception());
+    return;
   }
   if (not live_) {
     sb.on_completed();

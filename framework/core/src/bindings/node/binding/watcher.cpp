@@ -9,6 +9,8 @@
 #include "history.h"
 #include <kungfu/runtime/state_cache/manager.h>
 #include <sstream>
+#include <typeinfo>
+#include <utility>
 
 using namespace kungfu::rx;
 using namespace kungfu::yijinjing;
@@ -391,7 +393,23 @@ void Watcher::StartWorker() {
           watcher->step(STEP_INTERVAL);
         }
       } catch (const std::exception &ex) {
+        if (watcher->get_loop_error()) {
+          SPDLOG_ERROR("watcher event loop failed: {}", ex.what());
+          watcher->RecordWorkerError(std::current_exception());
+          watcher->signal_stop();
+          watcher->uv_work_live_ = false;
+          break;
+        }
         SPDLOG_ERROR("watcher worker error, backing off: {}", ex.what());
+      } catch (...) {
+        if (watcher->get_loop_error()) {
+          SPDLOG_ERROR("watcher event loop failed with a non-standard exception");
+          watcher->RecordWorkerError(std::current_exception());
+          watcher->signal_stop();
+          watcher->uv_work_live_ = false;
+          break;
+        }
+        SPDLOG_ERROR("watcher worker got a transient non-standard error, backing off");
       }
       std::this_thread::sleep_for(std::chrono::microseconds(watcher->milliseconds_sleep_after_step_));
     }
@@ -401,31 +419,74 @@ void Watcher::StartWorker() {
   };
   auto after = [](uv_work_t *req, int status) {
     SPDLOG_INFO("Watcher uv loop completed");
-    // have to be at this position, for deleting old journal securitily
-    auto &info = *static_cast<Napi::CallbackInfo *>(req->data);
-    Napi::HandleScope scope(info.Env());
-
     auto watcher = static_cast<Watcher *>(req->data);
+    if (auto error = watcher->TakeWorkerError()) {
+      auto env = watcher->ledger_ref_.Env();
+      try {
+        std::rethrow_exception(error);
+      } catch (const yijinjing::journal::replay_exhausted &ex) {
+        auto js_error = Napi::Error::New(env, ex.what());
+        js_error.Value().Set("name", Napi::String::New(env, "ReplayExhaustedError"));
+        js_error.Value().Set("carrierType", Napi::Number::New(env, ex.carrier_type()));
+        js_error.Value().Set("triggerTime", Napi::BigInt::New(env, ex.trigger_time()));
+        js_error.ThrowAsJavaScriptException();
+      } catch (const std::exception &ex) {
+        auto js_error = Napi::Error::New(env, ex.what());
+        js_error.Value().Set("name", Napi::String::New(env, "KungfuRuntimeError"));
+        js_error.Value().Set("nativeType", Napi::String::New(env, typeid(ex).name()));
+        js_error.ThrowAsJavaScriptException();
+      } catch (...) {
+        Napi::Error::New(env, "kungfu watcher failed with a non-standard exception").ThrowAsJavaScriptException();
+      }
+      watcher->Unref();
+      return;
+    }
+    // have to be at this position, for deleting old journal securitily
+    auto env = watcher->ledger_ref_.Env();
+    Napi::HandleScope scope(env);
+
     if (watcher->quit_) {
       SPDLOG_INFO("watcher quit");
+      watcher->Unref();
       return;
     } else {
       // Wait until the coordinator is fully down before reconnecting.
       std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 
-    watcher->AfterCoordinatorDown(info);
+    watcher->AfterCoordinatorDown(env);
     watcher->set_begin_time(yijinjing::time::now_in_nano());
     SPDLOG_INFO("Restart watcher uv loop");
     // The coordinator may quit while the watcher is running; restart the UV
     // loop after its deregistration has been observed.
-    watcher->StartWorker();
+    try {
+      watcher->StartWorker();
+    } catch (const Napi::Error &error) {
+      error.ThrowAsJavaScriptException();
+    } catch (const std::exception &error) {
+      Napi::Error::New(watcher->ledger_ref_.Env(), error.what()).ThrowAsJavaScriptException();
+    }
+    watcher->Unref();
   };
 
-  uv_queue_work(uv_default_loop(), &uv_work_, worker, after);
+  Ref();
+  const auto rc = uv_queue_work(uv_default_loop(), &uv_work_, worker, after);
+  if (rc != 0) {
+    Unref();
+    uv_work_live_ = false;
+    throw Napi::Error::New(ledger_ref_.Env(), fmt::format("failed to queue watcher worker: {}", uv_strerror(rc)));
+  }
 }
 
 void Watcher::CancelWorker() { uv_work_live_ = false; }
+
+void Watcher::RecordWorkerError(const std::exception_ptr &error) {
+  if (not worker_error_) {
+    worker_error_ = error;
+  }
+}
+
+std::exception_ptr Watcher::TakeWorkerError() { return std::exchange(worker_error_, nullptr); }
 
 void Watcher::Quit(const Napi::CallbackInfo &info) {
   RequestDeregister();
@@ -444,15 +505,14 @@ void Watcher::RequestDeregister() {
   SPDLOG_INFO("RequestDeregister");
 }
 
-void Watcher::AfterCoordinatorDown(const Napi::CallbackInfo &info) {
+void Watcher::AfterCoordinatorDown(Napi::Env env) {
   SPDLOG_INFO("after coordinator down");
-  Napi::HandleScope scope(info.Env());
   // disjoin(get_coordinator_command_uid());
   reader_->clear();
   writers_.clear();
   band_writers_.clear();
-  serialize::InitObjectReference(info, app_states_ref_);
-  serialize::InitStateMap(info, ledger_ref_, "ledger");
+  serialize::InitObjectReference(env, app_states_ref_);
+  serialize::InitStateMap(env, ledger_ref_, "ledger");
 }
 
 bool Watcher::is_reactable(const event_ptr &event) { return not is_custom_event(event); }

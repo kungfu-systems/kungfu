@@ -5,9 +5,13 @@
 
 #include <kungfu/runtime/common.h>
 
-#include <csignal>
+#include <atomic>
+#include <exception>
 #include <functional>
+#include <memory>
+#include <mutex>
 #include <rxcpp/rx.hpp>
+#include <typeinfo>
 
 #include <kungfu/common.h>
 #include <kungfu/runtime/util/stacktrace.h>
@@ -97,33 +101,92 @@ template <typename... Ts> constexpr decltype(auto) while_to(Ts... arg) {
   return lambda_filter_any<Ts...>(&event::dest)(arg...);
 }
 
-// How a subscriber error takes the event loop down. The loop owner (reactor)
-// installs a structured stop at setup, so an error ends the pump cleanly —
-// produce() completes, hosts unwind, destructors run — instead of raising a
-// process-wide SIGINT from the middle of a dispatch. The SIGINT default only
-// covers rx usage outside a reactor-owned loop. Failing loud stays: routing
-// chains are load-bearing, and a silently dead chain is worse than a dead
-// loop.
-inline std::function<void()> &loop_interrupter() {
-  static std::function<void()> interrupter = []() { raise(SIGINT); };
-  return interrupter;
-}
+class loop_error_state {
+public:
+  void reset() {
+    std::lock_guard<std::mutex> lock(error_mtx_);
+    first_error_ = nullptr;
+    stop_requested_.store(false, std::memory_order_release);
+  }
 
-static constexpr auto interrupt_on_error = [](const std::exception_ptr &e) {
+  void request_stop() noexcept { stop_requested_.store(true, std::memory_order_release); }
+
+  [[nodiscard]] bool record_error(const std::exception_ptr &error) {
+    bool recorded = false;
+    {
+      std::lock_guard<std::mutex> lock(error_mtx_);
+      if (not first_error_) {
+        first_error_ = error;
+        recorded = true;
+      }
+    }
+    request_stop();
+    return recorded;
+  }
+
+  [[nodiscard]] bool stop_requested() const noexcept { return stop_requested_.load(std::memory_order_acquire); }
+
+  [[nodiscard]] std::exception_ptr first_error() const {
+    std::lock_guard<std::mutex> lock(error_mtx_);
+    return first_error_;
+  }
+
+  void rethrow_if_error() const {
+    if (auto error = first_error()) {
+      std::rethrow_exception(error);
+    }
+  }
+
+private:
+  std::atomic_bool stop_requested_{false};
+  mutable std::mutex error_mtx_;
+  std::exception_ptr first_error_ = nullptr;
+};
+
+using loop_error_state_ptr = std::shared_ptr<loop_error_state>;
+
+inline thread_local std::weak_ptr<loop_error_state> current_loop_error_state = {};
+
+class loop_error_scope {
+public:
+  explicit loop_error_scope(const loop_error_state_ptr &state) : previous_(current_loop_error_state) {
+    current_loop_error_state = state;
+  }
+
+  loop_error_scope(const loop_error_scope &) = delete;
+  loop_error_scope &operator=(const loop_error_scope &) = delete;
+
+  ~loop_error_scope() { current_loop_error_state = previous_; }
+
+private:
+  std::weak_ptr<loop_error_state> previous_;
+};
+
+inline void report_subscriber_error(const std::weak_ptr<loop_error_state> &owner, const std::exception_ptr &error) {
+  auto state = owner.lock();
+  if (not state) {
+    std::rethrow_exception(error);
+  }
+  if (not state->record_error(error)) {
+    return;
+  }
   try {
-    std::rethrow_exception(e);
+    std::rethrow_exception(error);
   } catch (const rx::empty_error &ex) {
     SPDLOG_WARN("{}", ex.what());
   } catch (const std::exception &ex) {
     SPDLOG_CRITICAL("event loop interrupted by rx:subscriber error {}: {}", typeid(ex).name(), ex.what());
     runtime::util::print_stack_trace();
+  } catch (...) {
+    SPDLOG_CRITICAL("event loop interrupted by non-standard rx:subscriber error");
+    runtime::util::print_stack_trace();
   }
-  loop_interrupter()();
-};
+}
 
-template <class Arg>
-static constexpr auto $(Arg an) -> decltype(subscribe<event_ptr>(std::forward<Arg>(an), interrupt_on_error)) {
-  return subscribe<event_ptr>(std::forward<Arg>(an), interrupt_on_error);
+template <class Arg> static auto $(Arg an) {
+  auto owner = current_loop_error_state;
+  return subscribe<event_ptr>(std::forward<Arg>(an),
+                              [owner](const std::exception_ptr &error) { report_subscriber_error(owner, error); });
 }
 
 template <class... ArgN>

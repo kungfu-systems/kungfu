@@ -70,6 +70,7 @@
     "kfd2:claims:check": "node scripts/require-shifu.mjs kfd2:claims:check && buildchain kfd 2 product-claims check",
     "check:types": "node scripts/require-shifu.mjs check:types && tsc -p tsconfig.tools.json",
     "test:mmap": "node scripts/require-shifu.mjs test:mmap && node scripts/run-mmap-tests.mjs",
+    "test:runtime-errors": "node scripts/require-shifu.mjs test:runtime-errors && node scripts/run-runtime-error-tests.mjs",
     "qualify:mmap": "node scripts/require-shifu.mjs qualify:mmap && node scripts/run-mmap-qualification.mjs",
     "qualify:cpp-modules": "node scripts/require-shifu.mjs qualify:cpp-modules && node scripts/run-cpp-modules-qualification.mjs",
     "version": "node scripts/sync-shifu-version.mjs && git add crates/shifu/Cargo.toml crates/Cargo.lock",

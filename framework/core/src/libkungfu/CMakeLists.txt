@@ -76,6 +76,14 @@ target_include_directories(${LIBKUNGFU_NAME} SYSTEM PUBLIC ${LIBKUNGFU_SQLITE_OR
 target_link_libraries(${LIBKUNGFU_NAME} PUBLIC yijinjing ${CONAN_LIBS} PRIVATE kungfu_compile_contract)
 kungfu_strip_release_local_symbols(${LIBKUNGFU_NAME})
 
+if(KUNGFU_WITH_CORE_TESTS)
+  find_package(Threads REQUIRED)
+  add_executable(kungfu_runtime_error_tests tests/runtime_error_tests.cpp)
+  target_link_libraries(kungfu_runtime_error_tests PRIVATE ${LIBKUNGFU_NAME} Threads::Threads)
+  target_compile_features(kungfu_runtime_error_tests PRIVATE cxx_std_20)
+  add_test(NAME kungfu_runtime_error_tests COMMAND kungfu_runtime_error_tests)
+endif()
+
 # Windows AppContainer guest launcher (ADR-0014) lives in the runtime sandbox
 # layer, not the standalone yijinjing core.
 if(WIN32)

@@ -66,7 +66,7 @@ public:
 
   void Quit(const Napi::CallbackInfo &info);
 
-  void AfterCoordinatorDown(const Napi::CallbackInfo &info);
+  void AfterCoordinatorDown(Napi::Env env);
 
   void RequestDeregister();
 
@@ -96,6 +96,7 @@ private:
   uv_work_t uv_work_ = {};
   bool uv_work_live_ = false;
   bool quit_ = false;
+  std::exception_ptr worker_error_ = nullptr;
 
   Napi::ObjectReference ledger_ref_;
   Napi::ObjectReference app_states_ref_;
@@ -135,6 +136,10 @@ private:
   void StartWorker();
 
   void CancelWorker();
+
+  void RecordWorkerError(const std::exception_ptr &error);
+
+  std::exception_ptr TakeWorkerError();
 
   uint64_t MakeInstructionUID(yijinjing::journal::writer_ptr &writer, uint32_t dest, uint32_t client_id = 0) {
     uint64_t id_left = (uint64_t)(client_id xor dest) << 32u;
