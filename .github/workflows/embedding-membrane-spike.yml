@@ -12,6 +12,7 @@ on:
       - "framework/core/src/libkungfu/include/kungfu/native_storage.h"
       - "framework/core/src/libkungfu/src/runtime/embedding.cpp"
       - "framework/core/src/libkungfu/src/runtime/native_storage.cpp"
+      - "framework/core/src/libkungfu/include/kungfu/runtime/durable_ingest.h"
       - "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp"
       - "framework/core/src/libkungfu/include/kungfu/yijinjing/ownership.h"
       - "framework/core/src/libkungfu/src/yijinjing/ownership.cpp"
