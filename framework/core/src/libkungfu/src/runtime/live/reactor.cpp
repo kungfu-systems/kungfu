@@ -396,8 +396,11 @@ bool reactor::check_location_live(uint32_t source_id, uint32_t dest_id) const {
 
 void reactor::add_location(int64_t, const location_ptr &location) {
   location_uid64s_.insert(std::to_string(location->uid64));
-  bool write_rocks = locations_.try_emplace(location->uid, location).second |
-                     location64s_.try_emplace(location->uid64, location).second;
+  // Both maps must be updated unconditionally; evaluate each try_emplace before
+  // combining so the second insert is never short-circuited away.
+  bool inserted_uid = locations_.try_emplace(location->uid, location).second;
+  bool inserted_uid64 = location64s_.try_emplace(location->uid64, location).second;
+  bool write_rocks = inserted_uid || inserted_uid64;
   if (write_rocks) {
     write_location_to_rocksdb(location);
   }
@@ -722,9 +725,10 @@ void reactor::put_peer_kv(const std::string &key, const std::string &value) cons
 }
 
 void reactor::ensure_coordinator_rocksdb() {
-  static const std::string coordinator_db_dir = get_locator()->layout_dir(get_coordinator_home_location(), layout::MAP);
   try {
-    get_coordinator_rocksdb();
+    // Probe only: force-open the coordinator rocksdb and discard the handle.
+    // If it is not yet open this throws, and the catch block opens/clears it.
+    (void)get_coordinator_rocksdb();
   } catch (const std::exception &e) {
     SPDLOG_DEBUG("catch exception: {}", e.what());
     std::lock_guard<std::mutex> lk(coordinator_db_mtx_);

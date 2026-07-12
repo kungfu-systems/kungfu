@@ -35,7 +35,10 @@ socket::socket(protocol p, int buffer_size) : protocol_(p), buf_size_(buffer_siz
     rc = nng_sub0_open(&sock_);
     break;
   default:
+    // Unsupported protocol must fail deterministically: rc is only assigned in
+    // the cases above, so falling through here would read an uninitialized rc.
     SPDLOG_ERROR("unsupportted protocol {}", int(p));
+    throw nn_exception(NNG_ENOTSUP);
   }
 
   if (rc != 0) {
