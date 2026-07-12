@@ -12,6 +12,8 @@ on:
       - "framework/core/src/libkungfu/include/kungfu/native_storage.h"
       - "framework/core/src/libkungfu/src/runtime/embedding.cpp"
       - "framework/core/src/libkungfu/src/runtime/native_storage.cpp"
+      - "framework/core/src/libkungfu/include/kungfu/yijinjing/ownership.h"
+      - "framework/core/src/libkungfu/src/yijinjing/ownership.cpp"
       - "framework/core/slices/shared-embedding-membrane/**"
       - "framework/core/slices/native-storage-closure/**"
       - "framework/core/slices/libwasm-shared-membrane/**"
