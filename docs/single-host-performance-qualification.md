@@ -24,6 +24,38 @@ correct but operationally unusable from being admitted as an institutional
 local runtime ledger, while preventing benchmark pressure from weakening
 durability, recovery, or agent-ledger semantics.
 
+## Why this gate is different
+
+Most observability pipelines optimize telemetry ingestion so recording does
+not slow the observed application. That is the right boundary when a delayed
+or missing trace reduces dashboard completeness but does not change the
+authority of the work itself.
+
+Kungfu's institutional profile has a different job: selected agent facts are
+load-bearing ledger records. A false acknowledgement, a lost terminal fact, an
+unrecoverable position, or a projection that silently changes meaning can alter
+what an institution believes happened, what may safely resume, and which claim
+is supported by evidence.
+
+> **Kungfu's release gate asks not only how fast agent facts are recorded, but
+> whether their visibility, durability, recovery, and meaning remain valid
+> under load.**
+
+Those four words are separate obligations:
+
+- **visibility** — the declared readers observe the complete fact at the
+  declared position, without reorder or partial publication;
+- **durability** — a receipt never claims more than the qualified local
+  persistence frontier has established;
+- **recovery** — restart reconciles the same frontier, reports any uncertain
+  tail, and neither loses acknowledged facts nor invents new ones;
+- **meaning** — typed facts, Episode state, causal relationships, capability
+  decisions, and projections still resolve to the same semantic cut.
+
+This is why the gate measures long-tail latency, throughput, lag, replay,
+recovery, and restore together with semantic violations. A path that is fast
+only because it weakens one of these obligations fails qualification.
+
 The gate is **planned, not yet passed**. No current release claims an
 end-to-end performance profile for `durable_group` or `durable_sync`.
 
