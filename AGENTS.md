@@ -21,8 +21,8 @@ restating them.
 One entrypoint runs every task under the pinned toolchain. Do not invoke pnpm,
 node, conan, or cmake directly — go through it:
 
-```sh docs-exec=shifu-self-version
-./shifu self-version
+```sh docs-exec=shifu-version
+./shifu --version
 ```
 
 ```sh

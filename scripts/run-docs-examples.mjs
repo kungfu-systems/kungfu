@@ -19,7 +19,7 @@ try {
       encoding: 'utf8',
       timeout: example.timeoutMs,
       shell: false,
-      env: { ...process.env, NO_COLOR: '1' },
+      env: { ...process.env, NO_COLOR: '1', SHIFU_NATIVE: '0' },
     });
     if (result.error)
       throw new Error(`${example.id} could not run: ${result.error.message}`);
