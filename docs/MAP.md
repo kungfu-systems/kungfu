@@ -40,6 +40,7 @@ and the map routes a question to whichever doc answers it.
 | Which Kungfu layer can I adopt independently, and what does each product promise? | [`product-layers.md`](product-layers.md) + [ADR-0049](../framework/core/docs/adr/ADR-0049-layer-complete-products-and-domain-neutral-core.md) | why, use, verify | draft · principle accepted; qualifications staged |
 | Which application domains guide the neutral core without expanding the current roadmap? | [`domain-horizons.md`](domain-horizons.md) | why | draft · agent runtime current; trading evidence; games/virtual worlds horizon |
 | What are the known limits / what is *not* yet guaranteed? | [`known-limits.md`](known-limits.md) | verify | stable |
+| Can my institution use Kungfu as an authoritative local ledger on one host, and what evidence and controls are required? | [`single-host-institutional-trust.md`](single-host-institutional-trust.md) | use, verify | draft · evaluation/shadow use only; strong local durability qualification pending |
 | Does Kungfu provide strong durability and crash recovery without giving up mmap latency, and what is implemented today? | [`durability-and-crash-recovery.md`](durability-and-crash-recovery.md) + [ADR-0068](../framework/core/docs/adr/ADR-0068-tiered-durability-and-crash-recovery.md) | why, verify | draft · visibility foundations implemented; end-to-end durable receipts and power-loss qualification designed, not implemented |
 | How do C++ / Python / Node share data zero-copy (the membrane)? | [`architecture.md`](architecture.md) (membrane diagram) | verify | stable |
 | What does it actually guarantee (layout / replay / compatibility)? | [`contracts.md`](contracts.md) | verify | stable |
@@ -145,6 +146,11 @@ route to the row that answers them:
   guarantees now and the staged strong-durability design*
   ([`durability-and-crash-recovery.md`](durability-and-crash-recovery.md)) and
   [ADR-0068](../framework/core/docs/adr/ADR-0068-tiered-durability-and-crash-recovery.md).
+- **institution / institutional adoption / local ledger / system of record /
+  production approval / single host / RPO / restore drill** → *whether an
+  institution can adopt Kungfu as an authoritative local ledger, what evidence
+  is required, and which controls remain operator-owned*
+  ([`single-host-institutional-trust.md`](single-host-institutional-trust.md)).
 - **lightweight / too heavy / minimal install / independent package / libkungfu
   only / CLI without GUI / layer deletion / assembled runtime** → *which
   Kungfu should I start with* ([`choose-your-kungfu.md`](choose-your-kungfu.md)),

@@ -73,6 +73,12 @@ that evidence. See [Strong durability and crash recovery](durability-and-crash-r
 for the current status and [ADR-0068](../framework/core/docs/adr/ADR-0068-tiered-durability-and-crash-recovery.md)
 for the staged architecture.
 
+Institutions considering Kungfu as a local system of record should use the
+[Single-host institutional trust profile](single-host-institutional-trust.md)
+as the adoption checklist. Until the named durability profile and exact
+platform/filesystem/device envelope have retained passing evidence, the
+institutional status remains evaluation or controlled shadow operation.
+
 ## The GitHub build-and-release path is still being brought up
 
 The release mechanism is designed and has a long tag history, but the current v4

@@ -26,6 +26,11 @@ This page is the short, public contract. It states the target, the design, and
 the implementation stage without requiring a reader to reconstruct the answer
 from ADRs or source code.
 
+Institutions evaluating Kungfu as an authoritative local ledger should also
+read the [Single-host institutional trust profile](single-host-institutional-trust.md),
+which translates this technical contract into an adoption decision, required
+evidence, operator responsibilities, and explicit non-claims.
+
 ## Current answer
 
 **Today, Kungfu qualifies cross-process journal visibility and deterministic
@@ -153,6 +158,9 @@ qualify another.
 
 ## Detailed records
 
+- [Single-host institutional trust profile](single-host-institutional-trust.md)
+  defines the first institutional deployment envelope, adoption gates,
+  evidence requirements, operator responsibilities, and non-claims.
 - [ADR-0068](../framework/core/docs/adr/ADR-0068-tiered-durability-and-crash-recovery.md)
   fixes the authority, watermarks, receipts, service boundaries, and staged
   adoption decision.
