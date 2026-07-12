@@ -202,6 +202,8 @@ right document, and is readable by both people and agents.
 - [Kungfu Skills](docs/skills.md) — design target for Kungfu Skills:
   `SKILL.md` as the minimal source, compact agent catalog injection,
   Node/Python manage modes, and kfx dependency composition.
+- [Shifu](docs/shifu/README.md) — development/build execution, versioned cache
+  profiles, machine-readable schemas, and Shifu-specific decisions.
 - [Contributing to Kungfu](CONTRIBUTING.md) — toolchain, build, conventions, releases.
 - [License Policy](LICENSE-POLICY.md) — project licensing, DCO-based
   contributions, third-party notice policy, and commercial boundary.
@@ -215,8 +217,8 @@ right document, and is readable by both people and agents.
 - [Security Policy](SECURITY.md) — how to report vulnerabilities privately.
 - [Version & Release Mechanism — Design Rationale](docs/version-release-design.md) — versioning
   and release mechanism rationale.
-- [Architecture Decision Records](framework/core/docs/adr) — architecture decision
-  records.
+- [Architecture Decision Records](framework/core/docs/adr) — Kungfu Core
+  decisions; [Shifu ADRs](docs/shifu/adr/README.md) track Shifu-owned decisions.
 
 ## Feedback & support
 

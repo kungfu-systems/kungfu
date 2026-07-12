@@ -1,0 +1,59 @@
+{
+  "schema": "shifu.cache-contract/v1",
+  "id": "shifu-cache",
+  "version": 1,
+  "status": "development",
+  "owner": "shifu",
+  "description": "Canonical contract manifest for Shifu post-checkout cache profiles and resolution evidence.",
+  "authority": {
+    "profileSchema": "docs/shifu/schema/cache-profile-v1.schema.json",
+    "resolutionSchema": "docs/shifu/schema/cache-resolution-v1.schema.json",
+    "decision": "docs/shifu/adr/SHIFU-ADR-0001-cache-profile-contract-and-ownership.md"
+  },
+  "schemaIds": {
+    "profile": "https://libkungfu.dev/schemas/shifu/cache-profile-v1.schema.json",
+    "resolution": "https://libkungfu.dev/schemas/shifu/cache-resolution-v1.schema.json"
+  },
+  "compatibility": {
+    "identity": "schema field plus major version",
+    "unknownFields": "rejected",
+    "additiveOptionalFields": "compatible within v1",
+    "newRequiredFields": "requires v2",
+    "removedOrReinterpretedFields": "requires v2"
+  },
+  "ownership": {
+    "buildchain": [
+      "workflow policy",
+      "runner routing",
+      "locked source checkout",
+      "release evidence"
+    ],
+    "shifu": [
+      "post-checkout cache profile schema",
+      "cache resolution",
+      "tool bindings",
+      "non-secret resolution evidence"
+    ],
+    "inventoryController": [
+      "private cache inventory",
+      "per-principal profile generation",
+      "approved projection targets"
+    ]
+  },
+  "security": {
+    "embeddedSecrets": "forbidden",
+    "endpointUserInfo": "forbidden",
+    "endpointQueryAndFragment": "forbidden",
+    "evidenceRedaction": "credentials-userinfo-query-fragment"
+  },
+  "integrity": {
+    "profileDigest": "sha256-of-source-profile-bytes",
+    "schemaOutput": "exact-checked-in-bytes"
+  },
+  "commands": {
+    "contract": "shifu cache contract",
+    "profileSchema": "shifu cache schema profile",
+    "resolutionSchema": "shifu cache schema resolution",
+    "repositoryCheck": "./shifu check"
+  }
+}

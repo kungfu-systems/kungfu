@@ -230,6 +230,8 @@ A record's **Status** says where it stands:
   [0054](ADR-0054-libwasm-production-runtime-and-release.md) (the governed
   dual-engine WASM runtime, explicit capability grant, fact receipts, and
   release artifact qualification contract).
+  Shifu-owned decisions that are not Kungfu Core decisions use the independent
+  [`SHIFU-ADR-*` registry](../../../../docs/shifu/adr/README.md).
 - **Cross-cutting principle** — [0009](ADR-0009-load-bearing-self-bootstrap.md)
   (load-bearing self-bootstrap), which also names the general law that
   [`docs/architecture.md` § The build dogfoods the SDK](../../../../docs/architecture.md)

@@ -187,9 +187,10 @@ per-platform special-casing) with one binary that:
   `.node-version`, and dispatches every task to the
   corepack-pinned pnpm (with a `pnpm -> corepack pnpm` shim so repo scripts
   spawning bare `pnpm` work without `corepack enable`);
-- delegates the rich subcommands (`build` / `rebuild` / `proxy` / `config`) to
-  the node L2 implementation (`shifu.mjs`), keeping config management in
-  one place;
+- delegates the rich subcommands (`build` / `rebuild` / `cache` / `proxy` /
+  `config`) to the node L2 implementation (`shifu.mjs`), keeping cache-contract
+  discovery and config management in one place; the cache contract and
+  Shifu-specific decision trail start at [`docs/shifu/`](shifu/README.md);
 - on Windows, loads the MSVC environment (vswhere → `vcvars64.bat`) when
   `cl.exe` is absent;
 - when installed outside the repo (e.g. `cargo install --path crates/shifu

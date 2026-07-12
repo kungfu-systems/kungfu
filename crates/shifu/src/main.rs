@@ -7,7 +7,7 @@
 //
 //   shifu <any pnpm task/args>    run the task under the pinned toolchain
 //   shifu build | rebuild         rich subcommands -> delegated to L2 node
-//   shifu proxy | config ...      (shifu.mjs), not passed to pnpm
+//   shifu cache | proxy | config  (shifu.mjs), not passed to pnpm
 //   shifu --version | -v | -V     launcher version + build identity
 //   shifu self-version            this binary's crate version (machine readable)
 //   shifu / -h / --help           launcher usage (pnpm's own help: `shifu help`)
@@ -49,11 +49,11 @@ use shifu_core::style;
 
 /// Rich subcommands handled by the L2 node implementation (shifu.mjs),
 /// mirroring the sh / cmd entrypoints. Everything else goes to corepack pnpm.
-const L2_SUBCOMMANDS: &[&str] = &["build", "rebuild", "proxy", "config"];
+const L2_SUBCOMMANDS: &[&str] = &["build", "rebuild", "cache", "proxy", "config"];
 
 #[cfg(any(windows, test))]
 fn command_requires_msvc(command: Option<&str>) -> bool {
-    !matches!(command, Some("proxy" | "config"))
+    !matches!(command, Some("cache" | "proxy" | "config"))
 }
 
 fn print_usage() {
@@ -79,6 +79,7 @@ fn print_usage() {
         style::dim("missing prerequisites bootstrap automatically)")
     );
     println!("  shifu build | rebuild      bootstrap build (rebuild clears generated outputs)");
+    println!("  shifu cache ...            inspect the versioned cache contract and schemas");
     println!("  shifu proxy | config ...   manage local mirror/cache config (build-local.env)");
     println!("  shifu clone [path]         clone the kungfu repository (default: current dir;");
     println!(
@@ -423,5 +424,6 @@ mod tests {
         assert!(command_requires_msvc(Some("qualify:mmap")));
         assert!(!command_requires_msvc(Some("proxy")));
         assert!(!command_requires_msvc(Some("config")));
+        assert!(!command_requires_msvc(Some("cache")));
     }
 }

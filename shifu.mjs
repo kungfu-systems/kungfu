@@ -7,7 +7,7 @@
 //   L1  shifu (sh)        bootstrap simple commands: load env / check fnm+uv / pin node / run pnpm,
 //                               and delegate rich subcommands (proxy/config…) to this file.
 //   L2  shifu.mjs (node)  rich commands available once fnm is installed (node implementation, pure builtins, no deps).
-//                               currently: bootstrap build/rebuild and local cache/mirror proxy config management.
+//                               currently: bootstrap build/rebuild, cache contract discovery, and local mirror config.
 //   L3  (future) TUI            reuse kungfu's own TUI infrastructure / build-artifact runtime; directly import
 //                               the readConfig/setKey config helpers below instead of reimplementing them.
 //
@@ -47,6 +47,29 @@ const CONFIG_FILE = path.join(
   'build-local.env',
 );
 const TEMPLATE = path.join(__dirname, 'build-local.env.example');
+const CACHE_CONTRACT = path.join(
+  __dirname,
+  'docs',
+  'shifu',
+  'cache-contract.json',
+);
+/** @type {Record<string, string>} */
+const CACHE_SCHEMAS = {
+  profile: path.join(
+    __dirname,
+    'docs',
+    'shifu',
+    'schema',
+    'cache-profile-v1.schema.json',
+  ),
+  resolution: path.join(
+    __dirname,
+    'docs',
+    'shifu',
+    'schema',
+    'cache-resolution-v1.schema.json',
+  ),
+};
 
 // ── Reusable config read/write module (an L3 TUI can require this file directly) ──────────────
 function readRaw() {
@@ -153,6 +176,35 @@ function runBuildCommand(cmd, rest) {
   process.exit(r.status ?? 1);
 }
 
+function cacheHelp() {
+  console.error(`shifu cache — inspect the versioned cache contract owned by this checkout
+  cache contract            print the canonical contract manifest
+  cache schema profile      print the cache-profile JSON Schema
+  cache schema resolution   print the resolution-evidence JSON Schema
+
+The output is the exact checked-in JSON. Private inventories generate profile
+instances; they do not change or get embedded in this contract.`);
+}
+
+/** @param {string[]} argv */
+function runCacheCommand(argv) {
+  const sub = argv[0] || 'help';
+  if (sub === 'contract' && argv.length === 1) {
+    process.stdout.write(fs.readFileSync(CACHE_CONTRACT));
+    return;
+  }
+  if (sub === 'schema' && argv.length === 2 && CACHE_SCHEMAS[argv[1]]) {
+    process.stdout.write(fs.readFileSync(CACHE_SCHEMAS[argv[1]]));
+    return;
+  }
+  if (sub === 'help' || sub === '-h' || sub === '--help') {
+    cacheHelp();
+    return;
+  }
+  cacheHelp();
+  process.exitCode = 2;
+}
+
 function main() {
   const argv = process.argv.slice(2);
   const cmd = argv[0];
@@ -160,9 +212,13 @@ function main() {
     runBuildCommand(cmd, argv.slice(1));
     return;
   }
+  if (cmd === 'cache') {
+    runCacheCommand(argv.slice(1));
+    return;
+  }
   if (cmd !== 'proxy' && cmd !== 'config') {
     console.error(
-      `shifu.mjs: unknown command ${cmd || '(empty)'} (supported: build/rebuild/proxy/config)`,
+      `shifu.mjs: unknown command ${cmd || '(empty)'} (supported: build/rebuild/cache/proxy/config)`,
     );
     process.exit(2);
   }

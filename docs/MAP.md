@@ -62,6 +62,7 @@ and the map routes a question to whichever doc answers it.
 | What Python runtime ships inside the product, and what was pruned from it? | [ADR-0050](../framework/core/docs/adr/ADR-0050-assembled-runtime-stdlib-pruning-policy.md) + [`buildchain.md`](buildchain.md) | why, verify | stable |
 | When (and when not) does a component get written in Rust, and how is one added? | [`rust-adoption.md`](rust-adoption.md) | why, use | stable |
 | What must never change about the `shifu` entrypoints (and why)? | [ADR-0044](../framework/core/docs/adr/ADR-0044-shifu-delegation-protocol.md) | why, verify | stable |
+| How does Shifu consume a central cache profile, who owns the schema, and how can a local binary expose it? | [`shifu/`](shifu/README.md) + [`shifu/cache-contract.json`](shifu/cache-contract.json) + [SHIFU-ADR-0001](shifu/adr/SHIFU-ADR-0001-cache-profile-contract-and-ownership.md) | why, use, verify | development · schema, fixtures, discovery, and repository conformance implemented |
 | Where does a release binary come from, and how do I verify it? | `provenance.md` | verify | blocked · needs release infra |
 | What gates must a release pass? | `provenance.md` + [`version-release-design.md`](version-release-design.md) | verify | partial |
 | How do KFD-1/2/3 become SDK scaffolds and future release-gate evidence? | [`kfd-native-sdk-release-gates.md`](kfd-native-sdk-release-gates.md) | use, verify | draft |
@@ -150,6 +151,9 @@ route to the row that answers them:
   ([`buildchain.md`](buildchain.md)) and [`../CONTRIBUTING.md`](../CONTRIBUTING.md).
   (A one-command run-it path is planned — see the build/release work tracked
   in [`known-limits.md`](known-limits.md).)
+- **Shifu cache / central cache / cache profile / mirror schema / runner cache /
+  inventory projection / local Shifu binary** → *how Shifu cache policy is owned,
+  projected, discovered, and verified* ([`shifu/`](shifu/README.md)).
 - **N-API / pybind11 / bindings / FFI** → *adapter boundaries*
   ([`adapters.md`](adapters.md)).
 - **KFX / source authority / frozen first-party set / content pin /

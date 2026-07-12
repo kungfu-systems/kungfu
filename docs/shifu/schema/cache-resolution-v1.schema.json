@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/cache-resolution-v1.schema.json",
+  "title": "Shifu Cache Resolution Evidence v1",
+  "description": "A redacted receipt describing how Shifu resolved a cache profile for one execution.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "profile", "execution", "services", "redaction"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri-reference"
+    },
+    "schema": {
+      "const": "shifu.cache-resolution/v1"
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "revision", "digest"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "digest": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "platform", "scope", "resolvedAt"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "platform": {
+          "enum": [
+            "darwin-arm64",
+            "darwin-x64",
+            "linux-arm64",
+            "linux-x64",
+            "windows-arm64",
+            "windows-x64"
+          ]
+        },
+        "scope": {
+          "enum": ["development", "self-hosted-runner", "ci", "release"]
+        },
+        "resolvedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "services": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/id"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/serviceResolution"
+      }
+    },
+    "redaction": {
+      "const": "credentials-userinfo-query-fragment"
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-z0-9](?:[a-z0-9._:-]*[a-z0-9])?$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "httpUrl": {
+      "type": "string",
+      "pattern": "^https?://[^/?#@\\s]+(?::[0-9]{1,5})?(?:/[^?#\\s]*)?$"
+    },
+    "selectedEndpoint": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "url"],
+          "properties": {
+            "type": {
+              "const": "http"
+            },
+            "url": {
+              "$ref": "#/$defs/httpUrl"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "pathDigest"],
+          "properties": {
+            "type": {
+              "const": "local-path"
+            },
+            "pathDigest": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        }
+      ]
+    },
+    "serviceResolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outcome",
+        "selected",
+        "fallbackUsed",
+        "verification",
+        "durationMs",
+        "reason"
+      ],
+      "properties": {
+        "outcome": {
+          "enum": [
+            "hit",
+            "miss",
+            "fallback",
+            "bypass",
+            "unavailable",
+            "failed"
+          ]
+        },
+        "selected": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/selectedEndpoint"
+            }
+          ]
+        },
+        "fallbackUsed": {
+          "type": "boolean"
+        },
+        "verification": {
+          "enum": ["passed", "failed", "not-applicable", "not-run"]
+        },
+        "durationMs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 512
+        }
+      }
+    }
+  }
+}

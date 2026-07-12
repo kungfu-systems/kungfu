@@ -115,6 +115,8 @@ on every development pull request.
 > Node, packages, and Electron binaries are resolved through the standard
 > `FNM_NODE_DIST_MIRROR`, `COREPACK_NPM_REGISTRY`, and `ELECTRON_MIRROR`
 > environment variables; set these to point at a specific mirror if needed.
+> For generated development/runner cache profiles and the versioned contract,
+> see [`docs/shifu/`](docs/shifu/).
 
 ## Code style
 

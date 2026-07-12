@@ -41,6 +41,8 @@ bootstraps the pinned toolchain automatically (node via
 `~/.cache/kungfu`. An fnm / uv you
 already have on PATH is used as-is; Buildchain remains pin-first. See
 [`docs/rust-adoption.md`](docs/rust-adoption.md) for how the launcher works.
+For versioned cache policy and machine-readable schema discovery, see
+[`docs/shifu/`](docs/shifu/).
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full toolchain, repository
 layout, and code style.
