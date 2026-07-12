@@ -1,0 +1,25 @@
+{
+  "name": "@kungfu-tech/kfx-suite-mission-control",
+  "version": "4.0.0-alpha.0",
+  "description": "First-party Mission Control semantic Profile Suite",
+  "license": "Apache-2.0",
+  "private": true,
+  "dependencies": {
+    "@kungfu-tech/kfx-view-work-dashboard": "workspace:*"
+  },
+  "kungfuConfig": {
+    "key": "kungfu.mission-control",
+    "name": "Mission Control",
+    "suite": {
+      "title": "Mission Control",
+      "members": [
+        "mission-control-contract",
+        "mission-control-actions",
+        "mission-control-assessment",
+        "mission-control-views",
+        "work-dashboard"
+      ],
+      "profile": "profile.json"
+    }
+  }
+}

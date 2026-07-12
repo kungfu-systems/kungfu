@@ -1,0 +1,87 @@
+{
+  "schema": "kungfu.profile-suite/v1",
+  "id": "kungfu.mission-control",
+  "title": "Mission Control",
+  "version": "3.0.0",
+  "members": {
+    "required": [
+      "mission-control-actions",
+      "mission-control-assessment",
+      "mission-control-contract",
+      "mission-control-views"
+    ],
+    "optional": [
+      "work-dashboard"
+    ]
+  },
+  "kfd1": {
+    "contractWorld": {
+      "path": "contracts/world.json",
+      "sha256": "228775af169185bb7184b34c77b5a7e48b6ed94f5b8faf9365156ec79e69aecf"
+    },
+    "factSurfaces": [
+      {
+        "path": "contracts/facts.json",
+        "sha256": "8fa3bce070556405ccd2e3ad280ad06f9a1a2799c2bd2c82b9dcad35722e8372"
+      }
+    ],
+    "reducers": [
+      {
+        "path": "reducers/five-questions.json",
+        "sha256": "3e7b84e412ec659cba9fe65a5268c8eed0bdffe31a007aaf6151b332ec221427"
+      }
+    ],
+    "compatibility": {
+      "path": "compatibility/v3.json",
+      "sha256": "8779f18d0655935fb33767b90ceaad4e9cf3d90e3fb80e71b8add65db41d5390"
+    }
+  },
+  "kfd2": {
+    "claims": [
+      {
+        "path": "claims/claims.json",
+        "sha256": "dc2152c334e1a9391588305b76163051dbd8976b66904f025eb0d91bfeacf912"
+      }
+    ],
+    "purposes": [
+      "handoff",
+      "operator-review"
+    ],
+    "policies": [
+      {
+        "path": "assessments/policies.json",
+        "sha256": "6adc6ed29864573913da6147c7b7c70c619d6c9c496746c32f6510a7c6d996dd"
+      }
+    ]
+  },
+  "actions": {
+    "registry": {
+      "path": "actions/registry.json",
+      "sha256": "c39874b40d2e2ebcfaa41168b52c6b3cf6537dbf210ffb867d5b5e8281c742c6"
+    }
+  },
+  "views": {
+    "registry": {
+      "path": "views/registry.json",
+      "sha256": "d85f51c14030f076feeffb00a27f66f6661eb4f0a695175b1663e7af57350dbf"
+    }
+  },
+  "migrations": {
+    "registry": {
+      "path": "migrations/registry.json",
+      "sha256": "4ad1842a26c87b0b31247905caae2099e800c90a9d17bcc0916fcb3e740a6cc2"
+    }
+  },
+  "permissions": {
+    "registry": {
+      "path": "permissions.json",
+      "sha256": "d81d7d3d7b5561b1d53930d42c7fa9f34446e5008f9180430ee0d525b6c7142b"
+    }
+  },
+  "qualification": {
+    "profile": {
+      "path": "qualification/profile.json",
+      "sha256": "be38f3c31182245d19d05aa0e71bc1245fc3caf453c4ab84cd55512aaf2f3cfa"
+    }
+  }
+}

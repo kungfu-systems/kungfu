@@ -1,0 +1,61 @@
+{
+  "schema": "kungfu.profile-actions/v1",
+  "actions": [
+    {
+      "id": "create-mission",
+      "title": "Create Mission fact",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "authorityClass": "mission-fact-author",
+      "requiredCapabilities": [
+        "storage"
+      ],
+      "effects": [
+        "append-admitted-fact",
+        "seal-episode"
+      ]
+    },
+    {
+      "id": "create-go",
+      "title": "Create Go fact",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "authorityClass": "mission-fact-author",
+      "requiredCapabilities": [
+        "storage"
+      ],
+      "effects": [
+        "append-admitted-fact",
+        "seal-episode"
+      ]
+    },
+    {
+      "id": "claim-completion",
+      "title": "Record completion claim",
+      "runner": "kfx-member",
+      "operation": "mission-control-actions",
+      "authorityClass": "claim-author",
+      "requiredCapabilities": [
+        "storage"
+      ],
+      "effects": [
+        "append-admitted-claim",
+        "seal-episode"
+      ]
+    },
+    {
+      "id": "assess-progress",
+      "title": "Assess Mission progress",
+      "runner": "kfx-member",
+      "operation": "mission-control-assessment",
+      "authorityClass": "profile-assessment-operator",
+      "requiredCapabilities": [
+        "storage"
+      ],
+      "effects": [
+        "request-assessment",
+        "seal-trust-report"
+      ]
+    }
+  ]
+}

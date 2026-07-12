@@ -1,0 +1,20 @@
+{
+  "schema": "kungfu.profile-fact-surfaces/v1",
+  "surfaces": [
+    {
+      "id": "kungfu.mission-control.mission",
+      "schema": "kungfu.mission-control.mission/v3",
+      "title": "Mission"
+    },
+    {
+      "id": "kungfu.mission-control.go",
+      "schema": "kungfu.mission-control.go/v3",
+      "title": "Go"
+    },
+    {
+      "id": "kungfu.mission-control.completion-claim",
+      "schema": "kungfu.mission-control.completion-claim/v3",
+      "title": "Completion claim"
+    }
+  ]
+}

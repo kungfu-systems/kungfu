@@ -1,0 +1,16 @@
+{
+  "schema": "kungfu.profile-reducer/v1",
+  "id": "kungfu.mission-control.five-questions",
+  "version": "1",
+  "member": "mission-control-views",
+  "input": "resolved ADR-0048 fact-state plus purpose-bound ADR-0052 TrustReport",
+  "questions": [
+    "mission-intent",
+    "observed-progress",
+    "evidence-at-cut",
+    "fitness-for-purpose",
+    "next-responsibility"
+  ],
+  "authority": "presentation-only",
+  "persistsSavedQueries": false
+}

@@ -164,6 +164,12 @@ importers:
 
   extensions/langchain-adapter: {}
 
+  extensions/mission-control:
+    dependencies:
+      '@kungfu-tech/kfx-view-work-dashboard':
+        specifier: workspace:*
+        version: link:../work-dashboard
+
   extensions/rewind-inspector:
     dependencies:
       '@kungfu-tech/api':

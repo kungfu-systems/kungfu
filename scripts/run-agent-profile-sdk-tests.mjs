@@ -39,6 +39,14 @@ const result = spawnSync(
       'python',
       'test_profile_composition.py',
     ),
+    path.join(
+      root,
+      'framework',
+      'core',
+      'tests',
+      'python',
+      'test_mission_control_profile.py',
+    ),
     '-q',
   ],
   {

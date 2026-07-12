@@ -815,12 +815,14 @@ def package_content_root(package_dir: str | Path) -> str:
     rows = []
     for path in root.rglob("*"):
         relative = path.relative_to(root)
+        if any(part in _IGNORED_PARTS for part in relative.parts):
+            continue
         if path.is_symlink():
             raise ProfileSdkError(
                 "member-package-symlink",
                 f"KFX member package closure cannot contain symlinks: {relative}",
             )
-        if not path.is_file() or any(part in _IGNORED_PARTS for part in relative.parts):
+        if not path.is_file():
             continue
         data = path.read_bytes()
         rows.append(

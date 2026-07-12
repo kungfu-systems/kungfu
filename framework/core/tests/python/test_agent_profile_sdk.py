@@ -137,6 +137,18 @@ def test_member_package_symlink_fails_closed(tmp_path):
         raise AssertionError("symlinked member material was accepted")
 
 
+def test_member_package_ignores_dependency_directory_symlinks(tmp_path):
+    source, _ = create_source(tmp_path)
+    member = source / "members" / "example-week-day-contract"
+    dependencies = member / "node_modules"
+    dependencies.mkdir()
+    (dependencies / "dependency").symlink_to(tmp_path)
+
+    result = profile_sdk.validate_source(source, tmp_path / "runtime")
+
+    assert result["ok"] is True
+
+
 def test_cli_installed_flow_plans_then_applies_core_lifecycle(tmp_path):
     source, _ = create_source(tmp_path)
     home = tmp_path / "home"

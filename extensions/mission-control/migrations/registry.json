@@ -1,0 +1,13 @@
+{
+  "schema": "kungfu.profile-migrations/v1",
+  "mode": "additive",
+  "migrations": [
+    {
+      "id": "mission-control-v3-reader",
+      "from": "kungfu.mission-control/v3",
+      "to": "kungfu.mission-control/v3+profile",
+      "factRewrite": false,
+      "activation": "explicit"
+    }
+  ]
+}

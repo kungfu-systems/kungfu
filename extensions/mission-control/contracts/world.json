@@ -1,0 +1,14 @@
+{
+  "schema": "kungfu.profile-contract-world/v1",
+  "profileId": "kungfu.mission-control",
+  "identityAuthority": "declared-source-owner",
+  "contractWorld": {
+    "id": "kungfu.mission-control",
+    "version": "3",
+    "factSurfaceIds": [
+      "kungfu.mission-control.mission",
+      "kungfu.mission-control.go",
+      "kungfu.mission-control.completion-claim"
+    ]
+  }
+}
