@@ -6,10 +6,11 @@ accountability stance behind the product, see
 the whole design follows from, see
 [`design-philosophy.md`](design-philosophy.md); for the vocabulary
 (`kungfu`/`kfx`/`skill`/`sdk`, `libkungfu`, `yijinjing`, schema, …) see
-[`concepts.md`](concepts.md); for the data-plane concepts
-(journal, zero-copy, replay) see the [README](../README.md); for build and
-contribution see [CONTRIBUTING](../CONTRIBUTING.md); for specific decisions see
-the [ADRs](../framework/core/docs/adr).
+[`concepts.md`](concepts.md); for the Episode-centered public model see
+[`the-episode.md`](the-episode.md); for journal, frame, zero-copy, and Replay
+mechanics see [`event-model.md`](event-model.md); for build and contribution see
+[CONTRIBUTING](../CONTRIBUTING.md); for specific decisions see the
+[ADRs](../framework/core/docs/adr).
 
 ## Guiding principle: the machine adapts to the person
 

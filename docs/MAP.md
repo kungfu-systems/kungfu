@@ -1,15 +1,18 @@
 # Documentation Map
 
-Start here. Find the question you have; follow it to the document that answers
-it. This map is meant to be readable by both a person skimming for the right doc
-and an agent grounding a specific claim — it is the audit path to the question
-behind all the others: *why can I trust this complex thing?*
+This is Kungfu's exhaustive question and evidence index. It is optimized for a
+person or agent grounding one specific claim, not for reading from top to
+bottom. If you are new to Kungfu, start with the curated
+[Documentation Guide](README.md), then return here when you need the complete
+audit path behind a question.
 
 Each row carries a **plane** — *why* (intent / rationale), *verify* (trust the
 running artifact), *use* (consume / extend) — and a **status**:
 
-- `stable` — current and holds.
+- `stable` or `current` — current guidance or contract; guarantees remain
+  limited by the status named in the document.
 - `draft` — exists, rough or incomplete.
+- `proposed` — a designed target that is not yet the current product contract.
 - `to write` — planned; the material exists (pointer given) but is not yet a
   single doc.
 - `blocked` — waits on the build/release infrastructure; cannot be written
@@ -22,10 +25,11 @@ and the map routes a question to whichever doc answers it.
 
 | Your question | Document | Plane | Status |
 |---|---|---|---|
+| Which documentation route should I follow for my job? | [`README.md`](README.md) | use | current |
 | What is kungfu, in one idea? | [`../README.md`](../README.md) | — | stable |
 | Why is Episode the flagship object for real-world execution, and how do Facts, Receipts, Cuts, Claims, and Decisions fit around it? | [`the-episode.md`](the-episode.md) + [`vocabulary.md`](vocabulary.md) | why, use | current · vocabulary contract; guarantees remain maturity-scoped |
 | Do I need the whole Kungfu App, or which smaller product should I start with? | [`choose-your-kungfu.md`](choose-your-kungfu.md) | use | draft · adoption contract accepted; artifacts qualify independently in stages |
-| What do the terms mean (`kungfu` / `yijinjing` / journal / schema …)? | [`concepts.md`](concepts.md) | use | stable |
+| What do the implementation terms mean (`kungfu` / `yijinjing` / journal / schema …)? | [`concepts.md`](concepts.md) | use | stable |
 | Why is it built this way? What is load-bearing? | [`design-philosophy.md`](design-philosophy.md) | why | stable |
 | Why compare Kungfu to SQLite, Git, and a flight recorder — and why is it neither observability nor blockchain? | [`design-philosophy.md`](design-philosophy.md#the-missing-infrastructure-layer-runtime-facts) | why | stable |
 | Why does Kungfu start from accountability? | [`facts-before-trust.md`](facts-before-trust.md) | why | stable |
@@ -48,7 +52,7 @@ and the map routes a question to whichever doc answers it.
 | What does it actually guarantee (layout / replay / compatibility)? | [`contracts.md`](contracts.md) | verify | stable |
 | What KFD-2 release claims can Buildchain audit? | [`contracts.md`](contracts.md) (KFD-2 release claims) + [`kfd-native-sdk-release-gates.md`](kfd-native-sdk-release-gates.md) | verify | draft |
 | What is the event / journal / replay model? | [`event-model.md`](event-model.md) | use | stable |
-| What does Rewind replay, and what must it never silently re-execute? | [ADR-0020](../framework/core/docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md) + [`rewind.md`](rewind.md) | why, verify | stable |
+| What do Rewind, Replay, Recovery, and explicit re-execution mean, and where are their authority boundaries? | [`rewind.md`](rewind.md) + [ADR-0020](../framework/core/docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md) | why, use, verify | current contract · agent-work capture slice remains pre-release |
 | How does Kungfu persist user facts, sync sources, and maintain storage over time? | [`runtime-storage-service.md`](runtime-storage-service.md) | use, verify | draft |
 | How do my domain facts enter Kungfu's declared fact world, remain replayable, and become eligible for trust assessment? | [`fact-surface-admission.md`](fact-surface-admission.md) + [ADR-0051](../framework/core/docs/adr/ADR-0051-kfd-contract-world-fact-admission-and-trust.md) | why, use, verify | draft · semantics accepted; implementation staged |
 | How do I manage a long-running Mission, delegate Go work, inspect Cost/State/Proof, and move the evidence to another data root? | [`mission-control.md`](mission-control.md) + [ADR-0059](../framework/core/docs/adr/ADR-0059-mission-control-mission-go-responsibility-model.md) | why, use, verify | pre-release · native authoring and local full/thin bundle roundtrip implemented |
@@ -71,7 +75,7 @@ and the map routes a question to whichever doc answers it.
 | What gates must a release pass? | `provenance.md` + [`version-release-design.md`](version-release-design.md) | verify | partial |
 | How do KFD-1/2/3 become SDK scaffolds and future release-gate evidence? | [`kfd-native-sdk-release-gates.md`](kfd-native-sdk-release-gates.md) | use, verify | draft |
 | If kungfu itself misbehaves, how do I localize it? | [`debugging.md`](debugging.md) | verify | stable |
-| How do I record an agent run and find why it failed (Rewind)? | [`rewind.md`](rewind.md) | use | stable · pre-release install path |
+| How does the current agent-work capture adapter create an Episode and provide a run-specific forensic view? | [`rewind.md`](rewind.md) | use, verify | pre-release · executable source fixtures, not the identity of the whole product |
 | What should an installed agent read first, which mode should it choose, and is the agent-facing control surface closed? | installed pack: `kungfu agent brief`, `kungfu agent capabilities --json`, `kungfu agent choose-mode --json`, `kungfu agent verify --json` | use, verify | stable |
 | How do I write an extension (`kfx`)? | [`extensions.md`](extensions.md) | use | stable · view kfx; runtime facets mid-migration |
 | Where is global config, and how do agents read it? | [`config.md`](config.md) | use | draft |
@@ -232,6 +236,9 @@ route to the row that answers them:
 
 ## How this map is maintained
 
+- The curated [`README.md`](README.md) owns reader routes and document roles;
+  this file owns exhaustive question and keyword lookup. Do not turn either one
+  into a duplicate of the other.
 - A document becomes a row here the moment it is *named*, even before it exists —
   so the gap is visible (`to write` / `blocked`), not hidden.
 - A row's status must never claim more than the artifact delivers. A document
@@ -240,3 +247,6 @@ route to the row that answers them:
 - `why` documents explain intent and may be read as narrative; `verify` and
   `use` documents are reference paths and should state, per claim, *what it
   guarantees → where to verify → current maturity*.
+- Public URLs remain stable until an automated link check and a compatibility
+  path exist for a physical move. Spike reports remain research evidence; their
+  resulting ADRs and current architecture documents own operative guidance.

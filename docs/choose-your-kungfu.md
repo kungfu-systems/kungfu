@@ -127,6 +127,9 @@ layer should be named as such rather than hidden behind the full App.
 
 ## Go deeper
 
+- [Documentation Guide](README.md) routes each reader to the shortest useful
+  path through Kungfu's public model, operation guides, and qualification
+  evidence.
 - [Product Layers](product-layers.md) defines each
   product closure and its deletion/qualification tests.
 - [Architecture](architecture.md) explains how the source tree and runtime are

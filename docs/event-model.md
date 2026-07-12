@@ -127,16 +127,17 @@ accepted ranges, and observer projection metadata over wall-clock order alone.
 Two observers may keep different stable projections of concurrent facts; the
 view is trustworthy when its policy is explicit and reproducible.
 
-As the storage layer becomes Episode-aware, replay and inspection should select
-Episodes first and then walk the closed frame-level causal chains inside them.
+Episode-aware replay and inspection select Episodes first and then walk the
+closed frame-level causal chains inside them.
 Cross-Episode influence should appear as declared Episode dependencies, not as
 an undeclared frame-level chain that silently leaves the selected object.
 
-For agent runs, replay is layered. Forensic replay reopens, decodes, verifies,
-and walks the recorded causal tree without re-executing external effects.
-Mocked replay may substitute recorded receipts for external calls. Any replay
-mode that can repeat real-world side effects must be explicit and confirmed.
-This boundary is pinned by
+For Episodes created by the Agent Work capture profile, Replay is layered.
+Forensic Replay reopens, decodes, verifies, and walks the recorded causal tree
+without re-executing external effects. Mocked Replay may substitute recorded
+Receipts for external calls. Any mode that can repeat real-world side effects
+must be explicit and confirmed. Rewind is the user-facing reopening operation;
+it is not a synonym for re-execution. This boundary is pinned by
 [ADR-0020](../framework/core/docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md).
 
 Source: the replay path in

@@ -7,8 +7,8 @@ guaranteed, its current status, and where it is tracked.
 
 This document is curated from the project's own decision records and is kept
 current; if a limit here is resolved, the entry moves to a guarantee elsewhere
-(and links back). See the [documentation map](MAP.md) for how this fits the rest
-of the docs.
+(and links back). Use the [documentation guide](README.md) for the curated
+reader path and the [documentation map](MAP.md) for exhaustive lookup.
 
 ## v4 schema compatibility enforcement is designed, not yet complete
 
@@ -159,10 +159,10 @@ What is **not yet guaranteed**:
 
 - large payload bodies are not yet uniformly stored behind hash-addressed
   references across every runtime scope;
-- generic `kungfu source sync` across machines by range/session/hash inventory;
+- generic `kungfu source sync` across machines by range/Episode/hash inventory;
 - complete `storage fsck` coverage for all journal, payload, manifest, schema,
   projection, and remote cursor classes;
-- range/session/hash import-export is not yet the remote sync substrate;
+- range/Episode/hash import-export is not yet the remote sync substrate;
 - destructive-safe `gc` / `compact` with archive and rollback reporting;
 - repair of arbitrary journal corruption;
 - an authority migration path where an imported source becomes the single source

@@ -702,7 +702,7 @@ question is visible):
 
 Still open:
 
-- How channel requests map to range/session/hash inventory across machines.
+- How channel requests map to range/Episode/hash inventory across machines.
 - Whether `compact` ships as one command first, or later after `checkpoint`,
   `gc`, and `rebuild-index` are boring.
 - How much Atlas profile semantics should remain `atlas/*` versus become a
@@ -717,5 +717,5 @@ building blocks. The Atlas scope now has a concrete payload import, fsck,
 export, source-verify, and generic source-manifest loop. Kungfu also has a
 non-Atlas source fixture and generic bundle import/export proof. Kungfu still
 does not claim that it can repair arbitrary journal corruption, safely compact
-user data, run range/session/hash remote sync, or replace Atlas or any other
+user data, run range/Episode/hash remote sync, or replace Atlas or any other
 external source as an authority source.

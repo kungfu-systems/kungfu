@@ -1,9 +1,10 @@
-# Concepts
+# Implementation Concepts
 
-The vocabulary used across kungfu's documentation and code, in one place. Most of
-the coined names share the `kf` prefix, which simply stands for *kungfu*. For how
-these pieces are layered see [`architecture.md`](architecture.md); for the
-principles behind them see [`design-philosophy.md`](design-philosophy.md).
+The product names, repository components, and runtime terms used across Kungfu's
+documentation and code. Most of the coined names share the `kf` prefix, which
+simply stands for *kungfu*. For how these pieces are layered see
+[`architecture.md`](architecture.md); for the principles behind them see
+[`design-philosophy.md`](design-philosophy.md).
 
 This page indexes product names, implementation components, and runtime terms.
 For the public execution language centered on Episode — Fact, Artifact,

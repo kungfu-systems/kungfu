@@ -6,11 +6,11 @@ restating them.
 
 ## Are you using Kungfu, or building it?
 
-- **Using Kungfu** — install it, capture / inspect / replay a run, operate it:
-  start at the documentation map, [`docs/MAP.md`](docs/MAP.md). It routes any
-  question ("what does it guarantee", "how do I localize a failure", "what is the
-  journal / replay model") to the document that answers it, and is written to be
-  read by both people and agents. In an installed runtime, agents should first
+- **Using Kungfu** — install it, inspect / replay / rewind Episodes, or operate
+  it: start at the curated documentation guide,
+  [`docs/README.md`](docs/README.md). Use the exhaustive
+  [`docs/MAP.md`](docs/MAP.md) when you need to ground one specific question or
+  claim. In an installed runtime, agents should first
   read the local pack with `kungfu agent brief` and choose a mode with
   `kungfu agent choose-mode --json`.
 - **Building or contributing to this repo** — read the rest of this file, then
@@ -92,5 +92,7 @@ It emits a self-contained evidence envelope; it is not a per-PR gate.
   attribution.
 - Prefer the smallest change that holds, and keep documentation in sync with
   behavior.
-- [`docs/MAP.md`](docs/MAP.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md) are the
-  sources of truth; when this summary and they disagree, follow them.
+- [`docs/README.md`](docs/README.md), [`docs/MAP.md`](docs/MAP.md), and
+  [`CONTRIBUTING.md`](CONTRIBUTING.md) route to the relevant sources of truth;
+  when this summary and a canonical document disagree, follow the canonical
+  document.
