@@ -217,27 +217,52 @@ protected:
 
   void reader_join(uint32_t source_id, uint32_t dest_id, int64_t from_time, uint64_t page_size = 0);
 
-  std::function<rx::observable<event_ptr>(rx::observable<event_ptr>)> timer(int64_t nanotime, int32_t timer_id) {
-    enable_timer(timer_id);
+  // --- journal-time timer helpers (shared by timer / time_interval / timeout) ---
+  // Ask the coordinator, via a TimeRequest, for a Time event at base_time + duration.
+  void send_time_request(int32_t timer_id, int64_t base_time, int64_t duration_ns) {
     auto writer = get_writer(get_coordinator_command_uid());
-    int64_t duration_ns = nanotime - now();
     yijinjing::types::TimeRequest &r = writer->open_data<yijinjing::types::TimeRequest>(now());
     r.id = timer_id;
-    r.base_time = now();
+    r.base_time = base_time;
     r.duration = duration_ns;
     r.repeat = 1;
     r.location_uid = get_live_home_uid();
     writer->close_data();
+  }
+
+  // Enable the timer and arm its first tick at now() + duration.
+  void arm_timer(int32_t timer_id, int64_t duration_ns) {
+    enable_timer(timer_id);
+    send_time_request(timer_id, now(), duration_ns);
     timer_checkpoints_[timer_id] = now();
+  }
+
+  // Drop all state for a timer once it has fired or been disabled.
+  void disarm_timer(int32_t timer_id) {
+    timer_checkpoints_.erase(timer_id);
+    timers_.erase(timer_id);
+  }
+
+  // True when a Time event has reached this timer's checkpoint. Uses find, not
+  // operator[], so a missing checkpoint never silently re-inserts a zero deadline.
+  bool timer_due(const event_ptr &event, int32_t timer_id, int64_t duration_ns) const {
+    if (event->carrier_type() != yijinjing::types::Time::tag) {
+      return false;
+    }
+    auto it = timer_checkpoints_.find(timer_id);
+    return it != timer_checkpoints_.end() and event->gen_time() >= it->second + duration_ns;
+  }
+
+  std::function<rx::observable<event_ptr>(rx::observable<event_ptr>)> timer(int64_t nanotime, int32_t timer_id) {
+    int64_t duration_ns = nanotime - now();
+    arm_timer(timer_id, duration_ns);
     return [&, duration_ns, timer_id](const rx::observable<event_ptr> &src) {
       return events_ | rx::filter([&, duration_ns, timer_id](const event_ptr &event) {
-               return (event->carrier_type() == yijinjing::types::Time::tag &&
-                       event->gen_time() >= timer_checkpoints_[timer_id] + duration_ns);
+               return timer_due(event, timer_id, duration_ns);
              }) |
              rx::first() | rx::filter([&, timer_id](const event_ptr &) {
-               timer_checkpoints_.erase(timer_id);
                bool enabled = is_timer_enabled(timer_id);
-               timers_.erase(timer_id);
+               disarm_timer(timer_id);
                if (not enabled) {
                  SPDLOG_WARN("timer for timer_id {} is disabled", timer_id);
                }
@@ -248,43 +273,26 @@ protected:
 
   template <typename Duration, typename Enabled = rx::is_duration<Duration>>
   std::function<rx::observable<event_ptr>(rx::observable<event_ptr>)> time_interval(Duration &&d, int32_t timer_id) {
-    enable_timer(timer_id);
     auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(d).count();
-    auto writer = get_writer(get_coordinator_command_uid());
-    yijinjing::types::TimeRequest &r = writer->open_data<yijinjing::types::TimeRequest>(now());
-    r.id = timer_id;
-    r.base_time = now();
-    r.duration = duration_ns;
-    r.repeat = 1;
-    r.location_uid = get_live_home_uid();
-    writer->close_data();
-    timer_checkpoints_[timer_id] = now();
+    arm_timer(timer_id, duration_ns);
     return [&, duration_ns, timer_id](const rx::observable<event_ptr> &src) {
       return events_ | rx::take_until(events_ | rx::filter([&, timer_id](const event_ptr &event) {
                                         bool enabled = is_timer_enabled(timer_id);
                                         if (not enabled) {
                                           SPDLOG_WARN("interval timer for timer_id {} is disabled", timer_id);
-                                          timers_.erase(timer_id);
-                                          timer_checkpoints_.erase(timer_id);
+                                          disarm_timer(timer_id);
                                         }
                                         return not enabled;
                                       })) |
              rx::filter([&, duration_ns, timer_id](const event_ptr &event) {
-               if (event->carrier_type() == yijinjing::types::Time::tag &&
-                   event->gen_time() >= timer_checkpoints_[timer_id] + duration_ns) {
-                 auto writer = get_writer(get_coordinator_command_uid());
-                 yijinjing::types::TimeRequest &r = writer->open_data<yijinjing::types::TimeRequest>(now());
-                 r.id = timer_id;
-                 r.base_time = timer_checkpoints_[timer_id] + duration_ns;
-                 r.duration = duration_ns;
-                 r.repeat = 1;
-                 r.location_uid = get_live_home_uid();
-                 writer->close_data();
-                 timer_checkpoints_[timer_id] = timer_checkpoints_[timer_id] + duration_ns;
-                 return true;
-               } else {
+               if (not timer_due(event, timer_id, duration_ns)) {
                  return false;
                }
+               // periodic: re-arm the next tick and advance the checkpoint by one duration
+               int64_t next_base = timer_checkpoints_[timer_id] + duration_ns;
+               send_time_request(timer_id, next_base, duration_ns);
+               timer_checkpoints_[timer_id] = next_base;
+               return true;
              });
     };
   }
@@ -298,39 +306,24 @@ protected:
   // on_active instead.
   template <typename Duration, typename Enabled = rx::is_duration<Duration>>
   std::function<rx::observable<event_ptr>(rx::observable<event_ptr>)> timeout(Duration &&d, int32_t timer_id) {
-    enable_timer(timer_id);
     auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(d).count();
-    auto writer = get_writer(get_coordinator_command_uid());
-    yijinjing::types::TimeRequest &r = writer->open_data<yijinjing::types::TimeRequest>(now());
-    r.id = timer_id;
-    r.base_time = now();
-    r.duration = duration_ns;
-    r.repeat = 1;
-    r.location_uid = get_live_home_uid();
-    writer->close_data();
-    timer_checkpoints_[timer_id] = now();
+    arm_timer(timer_id, duration_ns);
     return [&, duration_ns, timer_id](const rx::observable<event_ptr> &src) {
       return (src | rx::take_until(events_ | rx::filter([&, timer_id](const event_ptr &event) {
                                      return not is_timer_enabled(timer_id);
                                    })) |
               rx::filter([&, duration_ns, timer_id](const event_ptr &event) {
-                if (event->carrier_type() != yijinjing::types::Time::tag) {
-                  auto writer = get_writer(get_coordinator_command_uid());
-                  yijinjing::types::TimeRequest &r = writer->open_data<yijinjing::types::TimeRequest>(now());
-                  r.id = timer_id;
-                  r.base_time = now();
-                  r.duration = duration_ns;
-                  r.repeat = 1;
-                  r.location_uid = get_live_home_uid();
-                  writer->close_data();
-                  timer_checkpoints_[timer_id] = now();
-                  return true;
-                } else {
+                if (event->carrier_type() == yijinjing::types::Time::tag) {
                   return false;
                 }
+                // any non-Time activity resets the idle deadline
+                send_time_request(timer_id, now(), duration_ns);
+                timer_checkpoints_[timer_id] = now();
+                return true;
               }))
           .merge(events_ | rx::filter([&, duration_ns, timer_id](const event_ptr &event) {
-                   if (event->gen_time() >= timer_checkpoints_[timer_id] + duration_ns) {
+                   auto it = timer_checkpoints_.find(timer_id);
+                   if (it != timer_checkpoints_.end() and event->gen_time() >= it->second + duration_ns) {
                      throw rx::timeout_error("timeout");
                    }
                    return false;
