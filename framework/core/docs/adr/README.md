@@ -103,6 +103,7 @@ compound implementation notes to the index Status column.
 | [0069](ADR-0069-agent-first-kfx-profile-suite-runtime.md) | accepted | Agent-first KFX Profile Suites carry domain semantics over a domain-neutral Core |
 | [0070](ADR-0070-peer-communication-primitives-layering.md) | accepted | peer communication primitives are layered (channel routing vs outlet output); Band renamed Outlet; off-thread writing decoupled and establish-channel unification deferred, trigger-gated |
 | [0071](ADR-0071-cli-language-split-and-membrane-diagnostic-surface.md) | accepted | CLI language fit is decided by where the work lives and what the embedding membrane reaches, not clap-vs-click; substrate diagnostics (fsck/verify) belong in Rust via a grown read-only membrane surface, not per-command rewrites; product/UI/orchestration stays Python |
+| [0072](ADR-0072-frame-identity-layering-journal-local-vs-ledger-global.md) | proposed | frame identity is layered: frame_uid stays journal-local (fixing the deterministic page-8-bit wrap), while permanent ledger-global uniqueness is the Episode content root + structural stream_position (stream_id, container_epoch, sequence), not a widened probabilistic frame_uid |
 
 ## Reading by theme
 
