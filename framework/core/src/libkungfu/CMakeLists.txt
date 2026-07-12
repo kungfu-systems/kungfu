@@ -78,6 +78,11 @@ kungfu_strip_release_local_symbols(${LIBKUNGFU_NAME})
 
 if(KUNGFU_WITH_CORE_TESTS)
   find_package(Threads REQUIRED)
+  add_executable(kungfu_durability_contract_tests tests/durability_contract_tests.cpp)
+  target_link_libraries(kungfu_durability_contract_tests PRIVATE ${LIBKUNGFU_NAME})
+  target_compile_features(kungfu_durability_contract_tests PRIVATE cxx_std_20)
+  add_test(NAME kungfu_durability_contract_tests COMMAND kungfu_durability_contract_tests)
+
   add_executable(kungfu_runtime_error_tests tests/runtime_error_tests.cpp)
   target_link_libraries(kungfu_runtime_error_tests PRIVATE ${LIBKUNGFU_NAME} Threads::Threads)
   target_compile_features(kungfu_runtime_error_tests PRIVATE cxx_std_20)

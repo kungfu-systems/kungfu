@@ -126,7 +126,7 @@ one Episode must not silently invalidate unrelated Episodes.
 |---|---|---|
 | A. Visibility and integrity foundations | **implemented** | release/acquire publication, explicit mmap policy, frame integrity, typed journal records, rebuildable projections |
 | B. Episode and storage safety model | **staged** | typed Episode fold, fsck/repair/capability reporting and fault qualification exist in slices; the complete contract remains under qualification |
-| C. Unified position, watermark, and receipt vocabulary | **designed** | stable stream positions and `visible`/`durable`/`projection` receipts must be added without changing hot-path schemas accidentally |
+| C. Unified position, watermark, and receipt vocabulary | **implemented (contract-only)** | C++ owns stable stream positions, four typed watermarks, named profiles, receipts/errors, deduplication, and explicit unknown outcomes; Python/Node expose typed edge adapters, while current behavior remains `visible` only and rejects stronger profiles |
 | D. Independent durable ingest and projection services | **designed** | move business-journal consumption out of the coordinator; persist raw facts before projecting them |
 | E. Local strong-durability qualification | **not implemented** | qualify `durable_group` and `durable_sync` across macOS, Linux, and Windows with crash, torn-write, ENOSPC, ordering, and recovery evidence |
 | F. Replication and HA | **future** | add a separate replicated watermark and policy only after local durability is trustworthy |

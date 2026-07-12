@@ -97,6 +97,7 @@ module.exports = () => {
      */
     ActionRecorder: (runtimeDir, namespace, name, destId, streamId) =>
       new binding.ActionRecorder(runtimeDir, namespace, name, destId, streamId),
+    durabilityVisibleReceiptTyped: binding.durabilityVisibleReceiptTyped,
     storageServiceCapabilities: binding.storageServiceCapabilities,
     storageStatusTyped: binding.storageStatusTyped,
     storageQueryTyped: binding.storageQueryTyped,

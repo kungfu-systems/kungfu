@@ -737,6 +737,59 @@ interface ActionRecordReceipt {
   frameChecksum: bigint;
 }
 
+type DurabilityProfile =
+  | 'visible'
+  | 'durable_group'
+  | 'durable_sync'
+  | 'replicated';
+
+type DurabilityReceiptStatus = 'succeeded' | 'failed' | 'unknown';
+
+type DurabilityError =
+  | 'none'
+  | 'invalid_request'
+  | 'unsupported_profile'
+  | 'timeout'
+  | 'service_unavailable'
+  | 'conflicting_request_id'
+  | 'position_epoch_mismatch'
+  | 'watermark_regression'
+  | 'frontier_not_established'
+  | 'frontier_ahead_of_dependency';
+
+interface StreamPosition {
+  stream_id: bigint;
+  container_epoch: bigint;
+  sequence: bigint;
+  frame_uid: bigint;
+}
+
+interface DurabilityReceipt {
+  schema: 'kungfu.durability.receipt/v1';
+  request_id: bigint;
+  position: StreamPosition;
+  requested_profile: DurabilityProfile;
+  achieved_profile: DurabilityProfile | null;
+  visible_watermark: StreamPosition | null;
+  durable_watermark: StreamPosition | null;
+  projection_watermark: StreamPosition | null;
+  replicated_watermark: StreamPosition | null;
+  barrier_id: bigint;
+  completed_at: bigint;
+  status: DurabilityReceiptStatus;
+  error: DurabilityError;
+}
+
+interface DurabilityVisibleReceiptOptions {
+  request_id: bigint | number;
+  stream_id: bigint | number;
+  container_epoch: bigint | number;
+  sequence: bigint | number;
+  frame_uid: bigint | number;
+  requested_profile?: DurabilityProfile;
+  completed_at?: bigint | number;
+}
+
 interface ActionRecorder {
   recordAction(
     value: ActionEnvelope,
@@ -761,6 +814,9 @@ interface KungfuRuntime {
     destId?: number,
     streamId?: bigint | number,
   ): ActionRecorder;
+  durabilityVisibleReceiptTyped(
+    options: DurabilityVisibleReceiptOptions,
+  ): DurabilityReceipt;
   storageStatusTyped(
     runtimeDir: string,
     sourceId?: string,

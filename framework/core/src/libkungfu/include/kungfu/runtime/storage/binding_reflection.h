@@ -5,11 +5,16 @@
 
 #include <boost/hana/adapt_struct.hpp>
 
+#include <kungfu/runtime/durability.h>
 #include <kungfu/runtime/storage/service.h>
 
 // Owned API views use Hana field reflection without acquiring a carrier tag,
 // packed layout, mmap lifetime, or journal-schema promise. This is the typed
 // polyglot membrane; KF_DEFINE_* remains the closed-set POD admission path.
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::durability::stream_position, stream_id, container_epoch, sequence, frame_uid);
+BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::durability::durability_receipt_view, schema, request_id, position,
+                        requested_profile, achieved_profile, visible_watermark, durable_watermark, projection_watermark,
+                        replicated_watermark, barrier_id, completed_at, status, error);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_projection_count, table, count);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_projection_drift, table, projection_rows,
                         journal_distinct, reason, projection_digest, journal_digest);

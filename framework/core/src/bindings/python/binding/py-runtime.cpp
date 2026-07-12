@@ -8,6 +8,7 @@
 #include <pybind11/stl.h>
 
 #include <kungfu/runtime/action_recorder.h>
+#include <kungfu/runtime/durability.h>
 #include <kungfu/runtime/io.h>
 #include <kungfu/runtime/live/coordinator.h>
 #include <kungfu/runtime/live/peer.h>
@@ -388,6 +389,21 @@ public:
 void bind(pybind11::module &&m) {
   ensure_sqlite_initilize();
   py::register_exception<replay_exhausted>(m, "ReplayExhaustedError", PyExc_RuntimeError);
+
+  m.def(
+      "durability_visible_receipt_typed",
+      [](uint64_t request_id, uint64_t stream_id, uint64_t container_epoch, uint64_t sequence, uint64_t frame_uid,
+         const std::string &requested_profile, int64_t completed_at) {
+        runtime::durability::durability_request request{
+            request_id,
+            {stream_id, container_epoch, sequence, frame_uid},
+            runtime::durability::parse_durability_profile(requested_profile),
+        };
+        return hana_view_to_py(
+            runtime::durability::make_receipt_view(runtime::durability::make_visible_receipt(request, completed_at)));
+      },
+      py::arg("request_id"), py::arg("stream_id"), py::arg("container_epoch"), py::arg("sequence"),
+      py::arg("frame_uid"), py::arg("requested_profile") = "visible", py::arg("completed_at") = 0);
 
   // nanosecond-time related
   m.def("now_in_nano", &yijinjing::time::now_in_nano);

@@ -43,6 +43,7 @@ decltype(__pfnDliNotifyHook2) __pfnDliNotifyHook2 = load_exe_hook;
 #endif // _MSC_VER
 
 #include <kungfu/common.h>
+#include <kungfu/runtime/durability.h>
 #include <kungfu/runtime/io.h>
 #include <kungfu/runtime/storage/binding_reflection.h>
 #include <kungfu/runtime/storage/hana_view.h>
@@ -373,11 +374,36 @@ uint32_t Uint32Option(const Napi::Object &options, const char *name) {
 }
 
 int64_t Int64Option(const Napi::Object &options, const char *name) {
-  return options.Has(name) ? options.Get(name).ToNumber().Int64Value() : 0;
+  if (!options.Has(name))
+    return 0;
+  const auto value = options.Get(name);
+  if (value.IsBigInt()) {
+    bool lossless = false;
+    const auto result = value.As<Napi::BigInt>().Int64Value(&lossless);
+    if (!lossless)
+      throw Napi::RangeError::New(options.Env(), std::string(name) + " must fit in a signed 64-bit integer");
+    return result;
+  }
+  return value.ToNumber().Int64Value();
 }
 
 std::string StringOption(const Napi::Object &options, const char *name) {
   return options.Has(name) && options.Get(name).IsString() ? options.Get(name).As<Napi::String>().Utf8Value() : "";
+}
+
+Napi::Value DurabilityVisibleReceiptTyped(const Napi::CallbackInfo &info) {
+  if (!IsValid(info, 0, &Napi::Value::IsObject))
+    throw Napi::TypeError::New(info.Env(), "durabilityVisibleReceiptTyped(options)");
+  const auto options = info[0].As<Napi::Object>();
+  const auto requested_profile = StringOption(options, "requested_profile");
+  runtime::durability::durability_request request{
+      Uint64Option(info.Env(), options, "request_id"),
+      {Uint64Option(info.Env(), options, "stream_id"), Uint64Option(info.Env(), options, "container_epoch"),
+       Uint64Option(info.Env(), options, "sequence"), Uint64Option(info.Env(), options, "frame_uid")},
+      runtime::durability::parse_durability_profile(requested_profile.empty() ? "visible" : requested_profile),
+  };
+  return HanaViewToValue(info.Env(), runtime::durability::make_receipt_view(runtime::durability::make_visible_receipt(
+                                         request, Int64Option(options, "completed_at"))));
 }
 
 Napi::Value StorageEpisodeBeginTyped(const Napi::CallbackInfo &info) {
@@ -856,6 +882,7 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
   exports.Set("formatContentHash", Napi::Function::New(env, FormatContentHash));
   exports.Set("verifyContentHash", Napi::Function::New(env, VerifyContentHash));
   exports.Set("storageServiceCapabilities", Napi::Function::New(env, StorageServiceCapabilities));
+  exports.Set("durabilityVisibleReceiptTyped", Napi::Function::New(env, DurabilityVisibleReceiptTyped));
   exports.Set("storageStatusTyped", Napi::Function::New(env, StorageStatusTyped));
   exports.Set("storageQueryTyped", Napi::Function::New(env, StorageQueryTyped));
   exports.Set("storageGcPlanTyped", Napi::Function::New(env, StorageGcPlanTyped));
