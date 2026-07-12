@@ -12,8 +12,8 @@ import { checkShifuCacheContract } from './check-shifu-cache-contract.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SHIFU_MJS = path.join(ROOT, 'shifu.mjs');
 
-test('cache contract schemas accept valid fixtures and reject unsafe policy', () => {
-  assert.deepEqual(checkShifuCacheContract(ROOT), {
+test('cache contract schemas accept valid fixtures and reject unsafe policy', async () => {
+  assert.deepEqual(await checkShifuCacheContract(ROOT), {
     contract: 'docs/shifu/cache-contract.json',
     profileSchema: 'docs/shifu/schema/cache-profile-v1.schema.json',
     resolutionSchema: 'docs/shifu/schema/cache-resolution-v1.schema.json',

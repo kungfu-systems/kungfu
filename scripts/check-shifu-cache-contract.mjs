@@ -6,7 +6,6 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import Ajv2020 from 'ajv/dist/2020.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SHIFU_DOCS = path.join(ROOT, 'docs', 'shifu');
@@ -15,7 +14,23 @@ const CONTRACT_PATH = path.join(SHIFU_DOCS, 'cache-contract.json');
 const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
 const rel = (file) => path.relative(ROOT, file).split(path.sep).join('/');
 
-function ajv2020() {
+// ajv is a devDependency (root package.json), present in CI and after a full
+// `pnpm install`, but a freshly created git worktree has no node_modules yet.
+// Load it lazily so a missing setup dependency degrades to a skip of the schema
+// checks instead of crashing the whole pre-commit gate — the same "a setup gap
+// must not block a commit" rule the hook shim already follows. The structural and
+// private-IP leak checks below do not need ajv and always run; CI (with ajv
+// installed) still enforces the full schema/fixture validation.
+async function loadAjv2020() {
+  try {
+    return (await import('ajv/dist/2020.js')).default;
+  } catch (err) {
+    if (err && err.code === 'ERR_MODULE_NOT_FOUND') return null;
+    throw err;
+  }
+}
+
+function ajv2020(Ajv2020) {
   const ajv = new Ajv2020({ allErrors: true, strict: false });
   ajv.addFormat('date-time', (value) => {
     const parsed = Date.parse(value);
@@ -40,7 +55,7 @@ function validateOrThrow(validate, value, label) {
   throw new Error(`${label} does not satisfy its schema: ${details}`);
 }
 
-export function checkShifuCacheContract(root = ROOT) {
+export async function checkShifuCacheContract(root = ROOT) {
   const contractPath = path.join(root, rel(CONTRACT_PATH));
   const contract = readJson(contractPath);
   assert.equal(contract.schema, 'shifu.cache-contract/v1');
@@ -74,35 +89,48 @@ export function checkShifuCacheContract(root = ROOT) {
     );
   }
 
-  const ajv = ajv2020();
-  const validateProfile = ajv.compile(profileSchema);
-  const validateResolution = ajv.compile(resolutionSchema);
   const exampleDir = path.join(root, 'docs', 'shifu', 'examples');
-  for (const name of [
-    'development.cache-profile.json',
-    'self-hosted-runner.cache-profile.json',
-  ]) {
+  const Ajv2020 = await loadAjv2020();
+  let validFixtures = 0;
+  let rejectedFixtures = 0;
+  if (Ajv2020) {
+    const ajv = ajv2020(Ajv2020);
+    const validateProfile = ajv.compile(profileSchema);
+    const validateResolution = ajv.compile(resolutionSchema);
+    for (const name of [
+      'development.cache-profile.json',
+      'self-hosted-runner.cache-profile.json',
+    ]) {
+      validateOrThrow(
+        validateProfile,
+        readJson(path.join(exampleDir, name)),
+        name,
+      );
+    }
     validateOrThrow(
-      validateProfile,
-      readJson(path.join(exampleDir, name)),
-      name,
+      validateResolution,
+      readJson(path.join(exampleDir, 'cache-resolution.json')),
+      'cache-resolution.json',
     );
-  }
-  validateOrThrow(
-    validateResolution,
-    readJson(path.join(exampleDir, 'cache-resolution.json')),
-    'cache-resolution.json',
-  );
+    validFixtures = 3;
 
-  for (const name of [
-    'embedded-credential.cache-profile.json',
-    'required-with-fallback.cache-profile.json',
-  ]) {
-    const fixture = readJson(path.join(exampleDir, 'invalid', name));
-    assert.equal(
-      validateProfile(fixture),
-      false,
-      `negative fixture unexpectedly passed: ${name}`,
+    for (const name of [
+      'embedded-credential.cache-profile.json',
+      'required-with-fallback.cache-profile.json',
+    ]) {
+      const fixture = readJson(path.join(exampleDir, 'invalid', name));
+      assert.equal(
+        validateProfile(fixture),
+        false,
+        `negative fixture unexpectedly passed: ${name}`,
+      );
+    }
+    rejectedFixtures = 2;
+  } else {
+    console.warn(
+      '[shifu-cache] ajv not installed; skipped schema/fixture validation ' +
+        '(structural + private-IP leak checks still ran). Run `pnpm install` to ' +
+        'enable it locally; CI enforces the full schema/fixture validation.',
     );
   }
 
@@ -119,17 +147,20 @@ export function checkShifuCacheContract(root = ROOT) {
     contract: rel(contractPath),
     profileSchema: rel(profilePath),
     resolutionSchema: rel(resolutionPath),
-    validFixtures: 3,
-    rejectedFixtures: 2,
+    validFixtures,
+    rejectedFixtures,
   };
 }
 
-function main() {
-  const result = checkShifuCacheContract();
+async function main() {
+  const result = await checkShifuCacheContract();
   console.log(
     `[shifu-cache] contract=${result.contract} valid=${result.validFixtures} rejected=${result.rejectedFixtures}`,
   );
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
-  main();
+  main().catch((err) => {
+    console.error(err?.stack || String(err));
+    process.exit(1);
+  });
