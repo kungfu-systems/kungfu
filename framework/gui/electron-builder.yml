@@ -1,5 +1,5 @@
 appId: com.kungfu.app
-productName: Kungfu
+productName: Kungfu Episodes
 # asar:false so the native binding (.node) and kungfu dylibs can be require()d
 # directly from Resources/kungfu at runtime.
 asar: false
@@ -29,6 +29,9 @@ extraResources:
   # kungfu's embedded Node (libnode) via `kungfu cockpit`.
   - from: ../tui/dist
     to: tui
+  # Tray/menu-bar icon assets used by the resident GUI control surface.
+  - from: public/logo
+    to: logo
 mac:
   # dir = the pack verb's unpacked app (fast, CI-friendly); dmg + zip = the
   # dist verb's installable artifacts. Unsigned pre-release (identity: null):
@@ -53,7 +56,7 @@ linux:
     - AppImage
 win:
   # nsis = the dist verb's Windows installer; dir = the fast unpacked app.
-  # executableName defaults to productName (Kungfu), already a valid file name.
+  # executableName defaults to productName (Kungfu Episodes), already a valid file name.
   target:
     - dir
     - nsis

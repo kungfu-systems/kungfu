@@ -20,7 +20,7 @@ principles**. This document states them and shows how the architecture falls out
 of them, so you can understand *why* kungfu is built the way it is, not just
 *what* it contains.
 
-For the vocabulary used below (`kungfu`, `sdk`, `libkungfu`, `longfist`, journal,
+For the vocabulary used below (`kungfu`, `sdk`, `libkungfu`, `yijinjing`, journal,
 zero-copy, …), see [`concepts.md`](concepts.md); for how the pieces are layered,
 see [`architecture.md`](architecture.md); for specific decisions and their
 rationale, see the [ADRs](../framework/core/docs/adr). For the public product
@@ -33,6 +33,114 @@ practical need — inspect an agent run, verify an extension, understand a relea
 recover a failed workflow — should naturally move through local facts,
 responsibility state, and proof-backed control decisions because that is the
 simplest reliable way the product works.
+
+## The missing infrastructure layer: runtime facts
+
+Kungfu is runtime fact infrastructure for the agent era. Its design target can
+be located with three coordinates:
+
+```text
+shape:     SQLite
+semantics: Git, but for runs rather than source code
+mission:   a flight recorder with a qualification layer
+```
+
+In one sentence: **Kungfu aims to do for what actually happened during a run
+what Git did for source history, while fitting into each language ecosystem the
+way SQLite does.** The comparison describes the product's intended shape and
+responsibility; it is not a shortcut around evidence. Current guarantees and
+maturity remain grounded in [`contracts.md`](contracts.md) and
+[`known-limits.md`](known-limits.md).
+
+### Shaped like SQLite: embedded where the facts happen
+
+SQLite is useful without requiring a database service to be deployed first. It
+travels as a library, speaks through native language bindings, and writes at the
+place where the application already runs. Kungfu follows that shape for runtime
+facts: the fact source should live beside the work, not begin as a remote sample
+sent to a mandatory service.
+
+The intended adoption test is deliberately concrete: each supported ecosystem
+should offer a five-minute `hello Episode` path with no action outside that
+ecosystem. A Python or Node user should encounter a native package and native
+API, not a foreign platform ceremony. Rust may add another native surface when
+it earns its place, but it must not create another definition of causality,
+receipts, manifests, or replay. Native surfaces are the reach; the C++ core and
+declared schema are the semantic weight-bearing layer.
+
+### Git semantics, applied to runs
+
+Source code already has a first-class history object: a Git commit is bounded,
+independently addressable, durable under pressure, and meaningful inside an
+explicit trust boundary. Agent work needs an equivalent unit for execution
+history. In Kungfu that unit is the
+[`Episode`](episode-object-model.md): a bounded causal segment whose facts,
+payload commitments, provenance, dependencies, and verification roots can be
+inspected as one object.
+
+The analogy is semantic, not literal. An Episode is not a commit, and replaying
+a run is not checking out a tree. The useful correspondence is that a run stops
+being an expendable stream of logs and becomes an object that can be named,
+verified, exported, imported, compared, and projected into a reproducible
+timeline under a declared policy. Git also demonstrates the adoption property:
+developers do not change programming languages to use source history. Runtime
+fact semantics should be just as language-neutral.
+
+### A flight recorder, with qualification
+
+A flight recorder preserves the evidence needed to reconstruct and attribute
+what happened. Kungfu adds an active semantic layer: it should also be able to
+qualify whether the declared evidence boundary is intact and which claims that
+evidence can support. Recording, replay, attribution, `fsck`, manifests,
+receipts, and qualification belong to one responsibility chain.
+
+This does not mean recording every bit of machine state or claiming that every
+external side effect can be replayed. The trust boundary must be explicit. If
+required evidence is absent or unverifiable, the honest result is a contracted
+capability or failed qualification, not a confident reconstruction assembled
+from guesses.
+
+### Two deliberate non-identities
+
+The distinctions below are more important than the analogies because they
+prevent the product from collapsing into an already named category.
+
+**Kungfu is not observability.** OpenTelemetry, monitoring systems, and tracing
+services are excellent at answering operational questions from telemetry. They
+may sample, aggregate, or optimize for dashboards and fleet-scale diagnosis.
+Kungfu's ledger has a different duty: preserve the declared, correctness-relevant
+facts as a locally owned and checkable object. Monitoring asks, "How does the
+system appear to be behaving?" A runtime fact ledger asks, "What accepted facts
+show what happened, what can be reproduced, and who or what was responsible?"
+The two can interoperate; one should not be mislabeled as the other.
+
+**Kungfu is not a blockchain.** Both domains use words such as *ledger*,
+*integrity*, and *trust*, but they solve different problems. A blockchain
+coordinates consensus among parties that do not share an authority. Kungfu
+records and verifies agent work for participants who need factual provenance
+and accountability. It needs strict semantics, integrity checks, and explicit
+source boundaries — not a consensus machine, a token, or a globally replicated
+chain.
+
+### Why this layer becomes necessary now
+
+Code has Git. Data has databases. Metrics and traces have observability
+systems. Execution itself rarely became a first-class durable object because a
+traditional program's behavior was largely derived from code plus inputs; logs
+were often enough to investigate the exceptions.
+
+Agent work changes that premise. A run may depend on model behavior, context,
+tool results, permissions, approvals, randomness, external systems, and choices
+made during execution. The source code no longer determines the action history
+by itself. **What actually happened** therefore becomes a first-class object
+that must be recorded, replayed within declared limits, and qualified in its own
+right.
+
+That requirement determines the architecture. Facts must be captured where the
+work happens, under runtime-native semantics, before they are reduced to remote
+telemetry or a model's summary. The ecosystem surface can be polyglot; the
+causal, manifest, receipt, and trust semantics cannot fork by language. This is
+the empty layer Kungfu is built to occupy.
 
 ## Principle 1 — The machine adapts to the person
 
@@ -96,7 +204,7 @@ run through the same interface a user runs through (the TUI even boots through
 where most usability failure actually lives.
 
 This is why kungfu carries `gui`/`tui` in the same repository even though the core
-advantage is the zero-copy core (`libkungfu`) and the `longfist` layout. It looks like
+advantage is the zero-copy core (`libkungfu`) and the `yijinjing` schema layout. It looks like
 monorepo bloat; it is the price of keeping the maker honest about the user's
 felt experience. The criterion it implies: **a component earns its place in the
 bootstrap when it extends the chain to a real user-facing surface** — otherwise it
@@ -121,12 +229,14 @@ for a production incident that a convenient platform would never trigger.
 
 ### A declared, published contract
 
-`longfist` is a declared schema generated for C++, Python, and Node, not a C++
-internal secret. Because the contract is published and the maker's own build
-consumes it, contract failures surface at the SDK boundary the maker themselves
-uses — not when an external consumer cannot read the data. See
-[ADR-0002](../framework/core/docs/adr/ADR-0002-longfist-flatbuffers-runtime-schema.md)
-and [ADR-0008](../framework/core/docs/adr/ADR-0008-longfist-schema-evolution-and-minor-maintenance.md).
+Kungfu's data plane carries declared schema authority exposed to C++, Python,
+and Node, not a language-local secret. Closed `yijinjing` kernel facts are Hana-described POD; open
+and domain facts are `.fbs`-owned, and each structured fact has exactly one
+owner. Because those contracts are published and the maker's own build consumes
+them, contract failures surface at the SDK boundary the maker themselves uses —
+not when an external consumer cannot read the data. ADR-0047 defines the current
+split; ADR-0008 defines the closed layout invariant, while superseded ADR-0002
+preserves the earlier migration history.
 
 ## The two principles are one stance
 
@@ -139,6 +249,13 @@ of you before any user hit it.
 Every ADR is a decision in service of these two principles. Reading the
 [ADRs](../framework/core/docs/adr) in that light shows the architecture as a
 single, coherent answer rather than a sequence of unrelated calls.
+
+For distributed timelines, the same stance means Kungfu does not pretend to own
+an impossible global clock. It records facts, causality, source provenance, and
+the observer policy used to project concurrent facts into a stable view. The
+load-bearing truth is not "this wall-clock order is reality"; it is "this view
+can be reproduced from declared facts and policy." See
+[ADR-0021](../framework/core/docs/adr/ADR-0021-observer-relative-timeline-projection.md).
 
 ## One move, used everywhere
 
@@ -158,11 +275,12 @@ no way to fake it:
   reveal ([ADR-0001](../framework/core/docs/adr/ADR-0001-yijinjing-publish-barrier.md)).
 - *"It's compatible"* → the layout *is* the ABI, a physical fact, not a version
   number to compare
-  ([ADR-0008](../framework/core/docs/adr/ADR-0008-longfist-schema-evolution-and-minor-maintenance.md)).
+  ([ADR-0008](../framework/core/docs/adr/ADR-0008-yijinjing-schema-layout-baseline.md)).
 - *"This release is good"* → an un-cheatable pipeline decides, not any one person,
   not even the maintainers ([version & release design](version-release-design.md)).
-- *"The contract holds"* → it is a declared schema that the maker's own build
-  consumes ([ADR-0002](../framework/core/docs/adr/ADR-0002-longfist-flatbuffers-runtime-schema.md)).
+- *"The contract holds"* → every structured fact has one declared schema owner
+  that the maker's own build consumes
+  ([ADR-0047](../framework/core/docs/adr/ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md)).
 - *"It's easy to set up"* → the runtime physically absorbs the toolchain, so
   zero-setup is true rather than promised (Principle 1).
 

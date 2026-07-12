@@ -5,6 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
+  '@kungfu-tech/buildchain>@kungfu-tech/kfd': 1.0.0-alpha.21
   node-gyp: ^13.0.0
   cosmiconfig>js-yaml: 4.3.0
   lerna>js-yaml: 4.3.0
@@ -31,6 +32,9 @@ importers:
       '@biomejs/biome':
         specifier: 1.9.4
         version: 1.9.4
+      '@kungfu-tech/buildchain':
+        specifier: 2.12.1-alpha.4
+        version: 2.12.1-alpha.4
       '@types/fs-extra':
         specifier: ^11.0.4
         version: 11.0.4
@@ -40,63 +44,18 @@ importers:
       '@types/npmlog':
         specifier: ^7.0.0
         version: 7.0.0
+      ajv:
+        specifier: 8.20.0
+        version: 8.20.0
       typescript:
         specifier: ^5.6.0
         version: 5.9.3
 
-  artifact:
-    dependencies:
-      '@kungfu-tech/core':
-        specifier: workspace:*
-        version: link:../framework/core
-      '@kungfu-tech/gui':
-        specifier: workspace:*
-        version: link:../framework/gui
-      '@kungfu-tech/kfx-adapter-langchain':
-        specifier: workspace:*
-        version: link:../extensions/langchain-adapter
-      '@kungfu-tech/kfx-suite-system':
-        specifier: workspace:*
-        version: link:../extensions/system
-      '@kungfu-tech/kfx-view-config-manager':
-        specifier: workspace:*
-        version: link:../extensions/config-manager
-      '@kungfu-tech/kfx-view-journal-manager':
-        specifier: workspace:*
-        version: link:../extensions/journal-manager
-      '@kungfu-tech/kfx-view-kfx-manager':
-        specifier: workspace:*
-        version: link:../extensions/system/kfx-manager
-      '@kungfu-tech/kfx-view-rewind-inspector':
-        specifier: workspace:*
-        version: link:../extensions/rewind-inspector
-      '@kungfu-tech/kfx-view-settings':
-        specifier: workspace:*
-        version: link:../extensions/system/settings
-      '@kungfu-tech/kfx-view-skill-manager':
-        specifier: workspace:*
-        version: link:../extensions/system/skill-manager
-      '@kungfu-tech/kfx-view-status':
-        specifier: workspace:*
-        version: link:../extensions/system/status
-      '@kungfu-tech/kfx-view-terminal':
-        specifier: workspace:*
-        version: link:../extensions/terminal
-      '@kungfu-tech/kfx-view-work-dashboard':
-        specifier: workspace:*
-        version: link:../extensions/work-dashboard
-      '@kungfu-tech/sdk':
-        specifier: workspace:*
-        version: link:../developer/sdk
-      '@kungfu-tech/tui':
-        specifier: workspace:*
-        version: link:../framework/tui
-
   developer/sdk:
     dependencies:
       '@kungfu-tech/buildchain':
-        specifier: 2.8.0
-        version: 2.8.0
+        specifier: 2.11.14-alpha.0
+        version: 2.11.14-alpha.0
       '@kungfu-tech/core':
         specifier: workspace:*
         version: link:../../framework/core
@@ -104,8 +63,8 @@ importers:
         specifier: workspace:*
         version: link:../../framework/gui
       '@kungfu-tech/kfd':
-        specifier: 1.0.0-alpha.2
-        version: 1.0.0-alpha.2
+        specifier: 1.0.0-alpha.21
+        version: 1.0.0-alpha.21
       '@kungfu-tech/tui':
         specifier: workspace:*
         version: link:../../framework/tui
@@ -135,6 +94,25 @@ importers:
         version: link:../../developer/sdk
 
   extensions/config-manager:
+    dependencies:
+      '@kungfu-tech/api':
+        specifier: workspace:*
+        version: link:../../framework/api
+      '@kungfu-tech/kfx':
+        specifier: workspace:*
+        version: link:../../framework/kfx
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+    devDependencies:
+      '@kungfu-tech/sdk':
+        specifier: workspace:*
+        version: link:../../developer/sdk
+      '@types/react':
+        specifier: ^18.3.3
+        version: 18.3.31
+
+  extensions/fact-manager:
     dependencies:
       '@kungfu-tech/api':
         specifier: workspace:*
@@ -417,8 +395,8 @@ importers:
         version: 1.3.0
     devDependencies:
       '@kungfu-tech/libnode':
-        specifier: 22.22.3-kf.1
-        version: 22.22.3-kf.1
+        specifier: 22.22.3-kf.3-alpha.16
+        version: 22.22.3-kf.3-alpha.16
       '@mapbox/node-pre-gyp':
         specifier: ^2.0.3
         version: 2.0.3(encoding@0.1.13)
@@ -480,6 +458,9 @@ importers:
       rimraf:
         specifier: ^5.0.0
         version: 5.0.10
+      tsx:
+        specifier: ^4.19.0
+        version: 4.22.4
       typescript:
         specifier: ^5.5.4
         version: 5.9.3
@@ -505,6 +486,8 @@ importers:
       typescript:
         specifier: ^5.5.4
         version: 5.9.3
+
+  framework/sdk: {}
 
   framework/skill:
     dependencies:
@@ -561,6 +544,61 @@ importers:
       typescript:
         specifier: ^5.6.0
         version: 5.9.3
+
+  product:
+    dependencies:
+      '@kungfu-tech/core':
+        specifier: workspace:*
+        version: link:../framework/core
+      '@kungfu-tech/gui':
+        specifier: workspace:*
+        version: link:../framework/gui
+      '@kungfu-tech/kfx-adapter-langchain':
+        specifier: workspace:*
+        version: link:../extensions/langchain-adapter
+      '@kungfu-tech/kfx-suite-system':
+        specifier: workspace:*
+        version: link:../extensions/system
+      '@kungfu-tech/kfx-view-config-manager':
+        specifier: workspace:*
+        version: link:../extensions/config-manager
+      '@kungfu-tech/kfx-view-fact-manager':
+        specifier: workspace:*
+        version: link:../extensions/fact-manager
+      '@kungfu-tech/kfx-view-journal-manager':
+        specifier: workspace:*
+        version: link:../extensions/journal-manager
+      '@kungfu-tech/kfx-view-kfx-manager':
+        specifier: workspace:*
+        version: link:../extensions/system/kfx-manager
+      '@kungfu-tech/kfx-view-rewind-inspector':
+        specifier: workspace:*
+        version: link:../extensions/rewind-inspector
+      '@kungfu-tech/kfx-view-settings':
+        specifier: workspace:*
+        version: link:../extensions/system/settings
+      '@kungfu-tech/kfx-view-skill-manager':
+        specifier: workspace:*
+        version: link:../extensions/system/skill-manager
+      '@kungfu-tech/kfx-view-status':
+        specifier: workspace:*
+        version: link:../extensions/system/status
+      '@kungfu-tech/kfx-view-terminal':
+        specifier: workspace:*
+        version: link:../extensions/terminal
+      '@kungfu-tech/kfx-view-work-dashboard':
+        specifier: workspace:*
+        version: link:../extensions/work-dashboard
+      '@kungfu-tech/sdk':
+        specifier: workspace:*
+        version: link:../developer/sdk
+      '@kungfu-tech/tui':
+        specifier: workspace:*
+        version: link:../framework/tui
+    devDependencies:
+      '@kungfu-tech/buildchain':
+        specifier: 2.11.14-alpha.0
+        version: 2.11.14-alpha.0
 
 packages:
 
@@ -1275,31 +1313,36 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@kungfu-tech/buildchain@2.8.0':
-    resolution: {integrity: sha512-xvukZHbaRQNQF+5Bbayd+AF7QkKH/2kJR9YLsckdMnNBm/x2K1gaLYUmpWZL0T8ftVbPFYS5q8yZxVeTr6jjxA==}
+  '@kungfu-tech/buildchain@2.11.14-alpha.0':
+    resolution: {integrity: sha512-l3gov3Rf7y61O7B5aFXrRCPpcqs29973MWN7uqcTyjg/2BpyzYApAeookFTUyG+2+OjoL4bzeHA9dQnSvA3c6w==}
     engines: {node: '>=22.14.0'}
     hasBin: true
 
-  '@kungfu-tech/kfd@1.0.0-alpha.2':
-    resolution: {integrity: sha512-LJ/mBkBrgWI8WqOFiJa6Ppz59zuYP/KZxbkLRhg+IwAYjvu4Wkn7cn1OMmwdSRdPU7N6ROlsRlnEkHRa0knR7g==}
+  '@kungfu-tech/buildchain@2.12.1-alpha.4':
+    resolution: {integrity: sha512-Y8ONa44fNbJDXBs/lYcx5snriG5tygaKeGQljqGFOPeyWBjXi+tS3RaPANrPTyLEeutMir/vaCFeIlFzdokX/w==}
+    engines: {node: '>=22.14.0'}
+    hasBin: true
 
-  '@kungfu-tech/libnode-darwin-arm64@22.22.3-kf.1':
-    resolution: {integrity: sha512-IJpMSrcxs77vw/unEbI6v0a6BrArQjC9/ZLDW+WKn9Kzk7ZXcBKz3N/F7exldwc67n7R4tp0wOSIGcwjs75M2A==}
+  '@kungfu-tech/kfd@1.0.0-alpha.21':
+    resolution: {integrity: sha512-lsr3aJ93pUaO9gxnGBsrTJkTkvpIHPHp9Rxug7WvdS4Zkte3AdFvyCl1DgwQN+/38FAXf8fBozyGkHxxXaN7Dg==}
+
+  '@kungfu-tech/libnode-darwin-arm64@22.22.3-kf.3-alpha.16':
+    resolution: {integrity: sha512-arC7Vm85nBSRS4Vj5L5RL4XXb5c4xrLmldcf+zA0Qs0d01GW0ZHecthZTK/vf/syFtb4u1CFoHBviOwT3YFazQ==}
     cpu: [arm64]
     os: [darwin]
 
-  '@kungfu-tech/libnode-linux-x64@22.22.3-kf.1':
-    resolution: {integrity: sha512-z2lYmVslpiAfsuUEBQRdLU6mXLZm2KKGIJ59noA72m8Re/ewTZpB82I9ZDZBsOdRHKCDKzJ96vszJbuKMikS9A==}
+  '@kungfu-tech/libnode-linux-x64@22.22.3-kf.3-alpha.16':
+    resolution: {integrity: sha512-jDhw9oYYA4nHG9nYotDs05IYqKWtBfrybDb4mgbfZlwLPRXBU5b+XEQzT7rUm2H0CDydhBnnIyrZ/TPvyqhD4g==}
     cpu: [x64]
     os: [linux]
 
-  '@kungfu-tech/libnode-win32-x64@22.22.3-kf.1':
-    resolution: {integrity: sha512-6m/+IjHFyxOzAbMTscApRB5uXbWIJiJ/vvCFrEw5ETF2vjW8KJa287tJp5NIufg1tALCLnArAqf8VxXjHnWFdw==}
+  '@kungfu-tech/libnode-win32-x64@22.22.3-kf.3-alpha.16':
+    resolution: {integrity: sha512-z7NWb8hGXqiEgAqUINr8hkiqJR/VCmo5v0yI4xdRVwQ3caLr785IRfihGHgw8jrs4z8izaoJ+E7p34iy+RM51A==}
     cpu: [x64]
     os: [win32]
 
-  '@kungfu-tech/libnode@22.22.3-kf.1':
-    resolution: {integrity: sha512-4KpxBhR6lzdxIwoapTGn3CmTA1lISNGqiiNIdXHT1yJWlM5S4tGnF4N6+CAjkv+PUP7M8wSPTRGSgMDmd4bpDA==}
+  '@kungfu-tech/libnode@22.22.3-kf.3-alpha.16':
+    resolution: {integrity: sha512-tctyKXMn4hXWaExDER2OBc+C6C/YPoiirxue8RxYaTpbJz0/KGxK7rIUPwVzK15/UY/FsWgJuXAy6KQzgPdYVw==}
 
   '@malept/cross-spawn-promise@2.0.0':
     resolution: {integrity: sha512-1DpKU0Z5ThltBwjNySMC14g0CkbyhCaz9FkhxqNsZI6uAPJXFS8cMXlBKo26FJ8ZuW6S9GCMcR9IO5k2X5/9Fg==}
@@ -4397,6 +4440,7 @@ packages:
   tsx@4.22.4:
     resolution: {integrity: sha512-X8EX+XV4QR5xCsrgxaED954zTDfY8KqlDtskKEL0cHhyS/P8b4IFOvGDQpsC9Q1XnLq915wEfwwY/zzskCtmhg==}
     engines: {node: '>=18.0.0'}
+    hasBin: true
 
   tuf-js@4.1.0:
     resolution: {integrity: sha512-50QV99kCKH5P/Vs4E2Gzp7BopNV+KzTXqWeaxrfu5IQJBOULRsTIS9seSsOVT8ZnGXzCyx55nYWAi4qJzpZKEQ==}
@@ -5323,27 +5367,32 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@kungfu-tech/buildchain@2.8.0':
+  '@kungfu-tech/buildchain@2.11.14-alpha.0':
     dependencies:
-      '@kungfu-tech/kfd': 1.0.0-alpha.2
+      '@kungfu-tech/kfd': 1.0.0-alpha.21
       smol-toml: 1.7.0
 
-  '@kungfu-tech/kfd@1.0.0-alpha.2': {}
+  '@kungfu-tech/buildchain@2.12.1-alpha.4':
+    dependencies:
+      '@kungfu-tech/kfd': 1.0.0-alpha.21
+      smol-toml: 1.7.0
 
-  '@kungfu-tech/libnode-darwin-arm64@22.22.3-kf.1':
+  '@kungfu-tech/kfd@1.0.0-alpha.21': {}
+
+  '@kungfu-tech/libnode-darwin-arm64@22.22.3-kf.3-alpha.16':
     optional: true
 
-  '@kungfu-tech/libnode-linux-x64@22.22.3-kf.1':
+  '@kungfu-tech/libnode-linux-x64@22.22.3-kf.3-alpha.16':
     optional: true
 
-  '@kungfu-tech/libnode-win32-x64@22.22.3-kf.1':
+  '@kungfu-tech/libnode-win32-x64@22.22.3-kf.3-alpha.16':
     optional: true
 
-  '@kungfu-tech/libnode@22.22.3-kf.1':
+  '@kungfu-tech/libnode@22.22.3-kf.3-alpha.16':
     optionalDependencies:
-      '@kungfu-tech/libnode-darwin-arm64': 22.22.3-kf.1
-      '@kungfu-tech/libnode-linux-x64': 22.22.3-kf.1
-      '@kungfu-tech/libnode-win32-x64': 22.22.3-kf.1
+      '@kungfu-tech/libnode-darwin-arm64': 22.22.3-kf.3-alpha.16
+      '@kungfu-tech/libnode-linux-x64': 22.22.3-kf.3-alpha.16
+      '@kungfu-tech/libnode-win32-x64': 22.22.3-kf.3-alpha.16
 
   '@malept/cross-spawn-promise@2.0.0':
     dependencies:

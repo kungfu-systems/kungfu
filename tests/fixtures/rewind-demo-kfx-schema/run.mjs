@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// kfx open-layer fixture (S5): a kfx compiles its own `.fbs` at runtime, registers
-// the schema into the traced run, and emits an event of its own msg_type. The
-// event lands in the journal, the schema binds into the bundle under the kfx band
-// (40000-49999), and it decodes by reflection with no generated accessor — the
-// run-internal proof of the native-compile open layer. Asserted by check_capture.py.
+// kfx action-envelope fixture (S5): a kfx compiles its own `.fbs` at runtime,
+// registers the schema into the traced run, and emits an event of its own
+// action_type. The event lands in the journal, the schema binds into the bundle,
+// and it decodes by reflection with no generated accessor. Asserted by
+// check_capture.py.
 // Requires the core dev environment (built dist/kungfu, whose python has flatbuffers).
 //
 // Usage: node tests/fixtures/rewind-demo-kfx-schema/run.mjs

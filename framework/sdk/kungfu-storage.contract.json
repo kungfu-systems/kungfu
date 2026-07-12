@@ -1,0 +1,31 @@
+{
+  "schema": "kungfu.storage-sdk.contract/v1",
+  "native_abi": {
+    "id": "kungfu/native_storage.h",
+    "version": 1,
+    "sha256": "7090c1cbc10829f8e9815ae6f0c580b12295841258df083cc3a67af9c787b513"
+  },
+  "semantic_fixture": {
+    "id": "kungfu.layer-qualification.sdk-semantic-fixture/v1",
+    "sha256": "6df951f789d617856cf33c1ca2b8654c7b6cabbfaa487e9c899c6d538c437b6e"
+  },
+  "operations": [
+    "episode_begin",
+    "episode_end",
+    "fact_query",
+    "fsck",
+    "export_bundle",
+    "fact_contract",
+    "fact_declare_world",
+    "fact_declare_surface",
+    "fact_observe",
+    "fact_state",
+    "assessment_contract",
+    "assessment_request",
+    "assessment_execute",
+    "assessment_status",
+    "assessment_list",
+    "assessment_invalidate",
+    "trust_require"
+  ]
+}

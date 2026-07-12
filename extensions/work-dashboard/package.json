@@ -45,7 +45,8 @@
         "capabilities": [
           "ledger",
           "work",
-          "atlas"
+          "atlas",
+          "workspace"
         ]
       }
     }

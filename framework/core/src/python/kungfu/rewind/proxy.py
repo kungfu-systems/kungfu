@@ -25,7 +25,7 @@ import urllib.request
 import uuid
 from typing import Any, Callable
 
-from kungfu.rewind import MSG_MODEL_REQUEST, MSG_MODEL_RESPONSE
+from kungfu.rewind import ACTION_MODEL_REQUEST, ACTION_MODEL_RESPONSE
 from kungfu.rewind import events
 from kungfu.rewind.fb.CallStatus import CallStatus
 from kungfu.rewind.fb.CaptureLayer import CaptureLayer
@@ -62,7 +62,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             pass
 
         proxy.sink(
-            MSG_MODEL_REQUEST,
+            ACTION_MODEL_REQUEST,
             events.model_request(
                 run_id=proxy.run_id,
                 span_id=span_id,
@@ -116,7 +116,7 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             pass
 
         proxy.sink(
-            MSG_MODEL_RESPONSE,
+            ACTION_MODEL_RESPONSE,
             events.model_response(
                 run_id=proxy.run_id,
                 span_id=span_id,
@@ -143,7 +143,7 @@ class ModelWireProxy:
     def __init__(
         self,
         run_id: str,
-        sink: Callable[[int, bytes], None],
+        sink: Callable[[str, bytes], None],
         upstreams: dict[str, str] | None = None,
         timeout: int = 600,
     ) -> None:

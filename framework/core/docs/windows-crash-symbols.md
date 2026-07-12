@@ -17,8 +17,8 @@ ship without PDBs of ours.
 
 ## Why
 
-When a native crash reaches the yijinjing stackwalker (an access violation in the
-`hero::produce` event loop, or a C++ exception escaping into `std::terminate` in
+When a native crash reaches the runtime stackwalker (an access violation in the
+`reactor::produce` event loop, or a C++ exception escaping into `std::terminate` in
 the node binding), the walker resolves each frame through DbgHelp. On Windows,
 unlike Linux/macOS, the binary carries **no** symbol table — the function names
 and source lines live only in the PDB.
@@ -29,7 +29,7 @@ and source lines live only in the PDB.
   recoverable offline (see below), but the on-box report is not directly
   readable.
 
-The C++ core (`libkungfu` / `libyijinjing`, including the stackwalker itself) is
+The C++ native core (`libkungfu` plus the linked `libyijinjing` journal core) is
 linked **statically** into `kungfu_node.node` / `pykungfu.pyd` on Windows, so
 those two PDBs cover the whole native surface — there is no separate
 `libkungfu.dll` PDB to ship.
@@ -62,7 +62,7 @@ keep PDBs archived per release so past crash reports stay decodable.
 
 ## Minidump companion (`.dmp`)
 
-On a real fault (the SEH `__except` in `hero::produce` and the
+On a real fault (the SEH `__except` in `reactor::produce` and the
 `SetUnhandledExceptionFilter` backstop, both of which carry an exception
 context), the crash handler writes a **minidump** alongside the text report, in
 the same directory (`$KF_HOME/logview`), with the same `<pid>_<ts>` stem. The

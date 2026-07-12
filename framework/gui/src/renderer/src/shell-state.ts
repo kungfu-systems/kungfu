@@ -6,8 +6,8 @@ import type { DomainState } from '@kungfu-tech/api/capability';
 import type { ProfileManifest, ShellState } from '@kungfu-tech/kfx';
 
 export const SHELL_STATE_LOCATION = {
-  category: 'system',
-  group: 'shell',
+  role: 'system',
+  namespace: 'shell',
   name: 'state',
   mode: 'live',
 } as const;
@@ -27,6 +27,7 @@ export const PROFILES: ProfileManifest[] = [
       'terminal',
       'journal-manager',
       'config-manager',
+      'fact-manager',
     ],
     defaultView: 'work-dashboard',
   },
@@ -42,6 +43,7 @@ export const DEFAULT_STATE: ShellState = {
   profileId: 'default',
   disabledKfx: [],
   disabledSuites: [],
+  sidebarCollapsed: false,
   settings: {},
 };
 
@@ -55,8 +57,8 @@ export function loadShellState(domain: DomainState): ShellState {
       .configs()
       .find(
         (row) =>
-          row.location.category === SHELL_STATE_LOCATION.category &&
-          row.location.group === SHELL_STATE_LOCATION.group &&
+          row.location.role === SHELL_STATE_LOCATION.role &&
+          row.location.namespace === SHELL_STATE_LOCATION.namespace &&
           row.location.name === SHELL_STATE_LOCATION.name,
       );
     if (!entry) return DEFAULT_STATE;
@@ -72,6 +74,10 @@ export function loadShellState(domain: DomainState): ShellState {
           : DEFAULT_STATE.profileId,
       disabledKfx: strings(parsed.disabledKfx),
       disabledSuites: strings(parsed.disabledSuites),
+      sidebarCollapsed:
+        typeof parsed.sidebarCollapsed === 'boolean'
+          ? parsed.sidebarCollapsed
+          : DEFAULT_STATE.sidebarCollapsed,
       settings:
         parsed.settings && typeof parsed.settings === 'object'
           ? Object.fromEntries(

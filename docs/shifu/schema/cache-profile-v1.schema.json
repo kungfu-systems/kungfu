@@ -1,0 +1,455 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/cache-profile-v1.schema.json",
+  "title": "Shifu Cache Profile v1",
+  "description": "A secret-free projection that tells Shifu how to resolve post-checkout development and build caches.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "profileId",
+    "revision",
+    "generatedAt",
+    "authority",
+    "subject",
+    "policy",
+    "services",
+    "evidence"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri-reference"
+    },
+    "schema": {
+      "const": "shifu.cache-profile/v1"
+    },
+    "profileId": {
+      "$ref": "#/$defs/id"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "authority": {
+      "$ref": "#/$defs/authority"
+    },
+    "subject": {
+      "$ref": "#/$defs/subject"
+    },
+    "policy": {
+      "$ref": "#/$defs/policy"
+    },
+    "services": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "$ref": "#/$defs/id"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/service"
+      }
+    },
+    "evidence": {
+      "$ref": "#/$defs/evidencePolicy"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "policy": {
+            "properties": {
+              "allowPublicFallback": {
+                "const": false
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "policy": {
+            "properties": {
+              "onUnavailable": {
+                "not": {
+                  "const": "fallback"
+                }
+              }
+            }
+          },
+          "services": {
+            "additionalProperties": {
+              "properties": {
+                "fallback": {
+                  "properties": {
+                    "mode": {
+                      "not": {
+                        "const": "upstream"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "policy": {
+            "properties": {
+              "mode": {
+                "const": "require"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "services": {
+            "additionalProperties": {
+              "properties": {
+                "fallback": {
+                  "properties": {
+                    "mode": {
+                      "const": "fail"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-z0-9](?:[a-z0-9._:-]*[a-z0-9])?$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "httpUrl": {
+      "type": "string",
+      "pattern": "^https?://[^/?#@\\s]+(?::[0-9]{1,5})?(?:/[^?#\\s]*)?$"
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner", "sourceRef", "sourceDigest"],
+      "properties": {
+        "owner": {
+          "$ref": "#/$defs/id"
+        },
+        "sourceRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "sourceDigest": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["principal", "platforms", "scopes"],
+      "properties": {
+        "principal": {
+          "$ref": "#/$defs/id"
+        },
+        "host": {
+          "$ref": "#/$defs/id"
+        },
+        "platforms": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "darwin-arm64",
+              "darwin-x64",
+              "linux-arm64",
+              "linux-x64",
+              "windows-arm64",
+              "windows-x64"
+            ]
+          }
+        },
+        "scopes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["development", "self-hosted-runner", "ci", "release"]
+          }
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "onUnavailable",
+        "allowPublicFallback",
+        "secretPolicy"
+      ],
+      "properties": {
+        "mode": {
+          "enum": ["off", "prefer", "require"]
+        },
+        "onUnavailable": {
+          "enum": ["bypass", "fallback", "fail"]
+        },
+        "allowPublicFallback": {
+          "type": "boolean"
+        },
+        "secretPolicy": {
+          "const": "references-only"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "require"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "onUnavailable": {
+                "const": "fail"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "endpoint": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "url"],
+          "properties": {
+            "type": {
+              "const": "http"
+            },
+            "url": {
+              "$ref": "#/$defs/httpUrl"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "path"],
+          "properties": {
+            "type": {
+              "const": "local-path"
+            },
+            "path": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            }
+          }
+        }
+      ]
+    },
+    "binding": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "key", "valueFrom"],
+          "properties": {
+            "kind": {
+              "const": "environment"
+            },
+            "key": {
+              "type": "string",
+              "pattern": "^[A-Z][A-Z0-9_]*$"
+            },
+            "valueFrom": {
+              "enum": ["endpoint.url", "endpoint.path"]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "key", "valueFrom"],
+          "properties": {
+            "kind": {
+              "enum": ["argument", "config-key"]
+            },
+            "key": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "valueFrom": {
+              "enum": ["endpoint.url", "endpoint.path"]
+            }
+          }
+        }
+      ]
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method"],
+      "properties": {
+        "method": {
+          "enum": [
+            "upstream-checksum",
+            "sha256-manifest",
+            "signature",
+            "tool-native",
+            "transport-only",
+            "none"
+          ]
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "method": {
+                "const": "none"
+              }
+            }
+          },
+          "then": {
+            "required": ["rationale"]
+          }
+        }
+      ]
+    },
+    "service": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "endpoint",
+        "bindings",
+        "fallback",
+        "verification"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "distribution",
+            "package-registry",
+            "source-index",
+            "artifact-cache",
+            "compiler-cache",
+            "generic-download"
+          ]
+        },
+        "mode": {
+          "enum": ["off", "prefer", "require"]
+        },
+        "endpoint": {
+          "$ref": "#/$defs/endpoint"
+        },
+        "bindings": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/binding"
+          }
+        },
+        "fallback": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode"],
+          "properties": {
+            "mode": {
+              "enum": ["upstream", "bypass", "fail"]
+            },
+            "upstreamUrl": {
+              "$ref": "#/$defs/httpUrl"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "mode": {
+                    "const": "upstream"
+                  }
+                }
+              },
+              "then": {
+                "required": ["upstreamUrl"]
+              }
+            }
+          ]
+        },
+        "verification": {
+          "$ref": "#/$defs/verification"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": ["mode"],
+            "properties": {
+              "mode": {
+                "const": "require"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "fallback": {
+                "properties": {
+                  "mode": {
+                    "const": "fail"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "evidencePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "redaction"],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "redaction": {
+          "const": "credentials-userinfo-query-fragment"
+        }
+      }
+    }
+  }
+}
