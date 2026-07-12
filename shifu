@@ -176,6 +176,22 @@ if [ "${1:-}" = "cache" ]; then
   fi
 fi
 
+# The read-only documentation gate must not enter pnpm with the checkout as its
+# working directory: pnpm creates transient _tmp_* files even when modules live
+# elsewhere. Select the pinned Node directly; the runner builds any cold tool
+# cache from a writable manifest mirror outside the checkout.
+if [ "${1:-}" = "docs:check:readonly" ]; then
+  if command -v fnm >/dev/null 2>&1; then
+    fnm install >/dev/null 2>&1 || true
+    exec fnm exec --using-file -- node ./scripts/run-docs-readonly.mjs
+  elif command -v node >/dev/null 2>&1; then
+    exec node ./scripts/run-docs-readonly.mjs
+  else
+    echo "shifu: docs:check:readonly needs node — install fnm or any system node" >&2
+    exit 127
+  fi
+fi
+
 if [ "${SHIFU_NATIVE:-}" != "0" ]; then
   if [ -n "${SHIFU_BIN:-}" ] && [ -x "${SHIFU_BIN}" ]; then
     exec "${SHIFU_BIN}" "$@"

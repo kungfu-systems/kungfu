@@ -52,22 +52,40 @@ function registry() {
       roots: ['README.md', 'docs'],
       retiredPhrases: [
         {
+          id: 'old-positioning',
           text: 'old positioning',
           level: 'error',
+          promotion: {
+            status: 'required',
+            negativeFixture: true,
+            baselineFindings: 0,
+          },
           message: 'Use the Episode-centered positioning.',
         },
       ],
       preferredTerms: [
         {
+          id: 'trustreport-spelling',
           pattern: '\\b[Tt]rust[ -][Rr]eport\\b',
           replacement: 'TrustReport',
           level: 'warning',
+          promotion: {
+            status: 'advisory',
+            negativeFixture: false,
+            baselineFindings: 0,
+          },
         },
       ],
       claimGuards: [
         {
+          id: 'absolute-crash-safe',
           pattern: '(?i)\\bKungfu is crash-safe\\b',
           level: 'warning',
+          promotion: {
+            status: 'advisory',
+            negativeFixture: false,
+            baselineFindings: 0,
+          },
           message: 'Name the qualified profile.',
         },
       ],

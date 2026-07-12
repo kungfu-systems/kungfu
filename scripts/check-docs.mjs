@@ -4,27 +4,44 @@
 
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-
-import GithubSlugger from 'github-slugger';
-import MarkdownIt from 'markdown-it';
 
 import { validateVocabularyContract } from './vocabulary-contract.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const MODULES = process.env.KUNGFU_DOCS_MODULES;
+const requireFrom = createRequire(
+  MODULES
+    ? path.join(path.resolve(MODULES), '..', 'package.json')
+    : import.meta.url,
+);
+const GithubSlugger = (
+  await import(pathToFileURL(requireFrom.resolve('github-slugger')).href)
+).default;
+const MarkdownIt = (
+  await import(pathToFileURL(requireFrom.resolve('markdown-it')).href)
+).default;
 const DEFAULT_CONTRACT = 'docs.contract.json';
 const MARKDOWN = new MarkdownIt({ html: true, linkify: false });
 const EXTERNAL_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
+const SAFE_EXAMPLE_COMMANDS = new Set([
+  JSON.stringify(['./shifu', 'self-version']),
+  JSON.stringify(['./shifu', '--version']),
+]);
 
 /** @typedef {{code: string, file: string, line: number, message: string}} Finding */
 /** @typedef {{href: string, line: number}} Link */
-/** @typedef {{rel: string, text: string, anchors: Set<string>, links: Link[]}} Document */
+/** @typedef {{id: string, line: number, source: string}} ExecutableExample */
+/** @typedef {{rel: string, text: string, anchors: Set<string>, links: Link[], examples: ExecutableExample[]}} Document */
 /**
  * @typedef {{
  *   schemaVersion: number,
  *   requiredFiles?: string[],
- *   requiredPointers?: {from: string, to: string}[]
+ *   requiredPointers?: {from: string, to: string}[],
+ *   publication?: {roots: string[], include: string[], allowedOrphans?: string[]},
+ *   executableExamples?: {id: string, file: string, command: string[], stdoutPattern?: string, timeoutMs?: number}[]
  * }} DocsContract
  */
 
@@ -90,6 +107,7 @@ export function parseDocument(rel, text) {
   const tokens = MARKDOWN.parse(text, {});
   const anchors = new Set();
   const links = [];
+  const examples = [];
   const slugger = new GithubSlugger();
 
   for (let index = 0; index < tokens.length; index += 1) {
@@ -97,6 +115,15 @@ export function parseDocument(rel, text) {
     if (token.type === 'heading_open') {
       const inline = tokens[index + 1];
       anchors.add(slugger.slug(headingText(inline?.children || [])));
+    }
+    if (token.type === 'fence') {
+      const match = /(?:^|\s)docs-exec=([a-z0-9][a-z0-9-]*)\b/.exec(token.info);
+      if (match)
+        examples.push({
+          id: match[1],
+          line: (token.map?.[0] ?? 0) + 1,
+          source: token.content.trim(),
+        });
     }
     if (token.type !== 'inline') continue;
     const line = (token.map?.[0] ?? 0) + 1;
@@ -122,7 +149,7 @@ export function parseDocument(rel, text) {
     links.push({ href: match[1], line: lineAt(text, match.index || 0) });
   }
 
-  return { rel, text, anchors, links };
+  return { rel, text, anchors, links, examples };
 }
 
 /** @param {string} root @param {string} contractPath */
@@ -130,7 +157,7 @@ export function readContract(root = ROOT, contractPath = DEFAULT_CONTRACT) {
   const contract = JSON.parse(
     fs.readFileSync(path.join(root, contractPath), 'utf8'),
   );
-  if (contract.schemaVersion !== 1) {
+  if (contract.schemaVersion !== 2) {
     throw new Error(
       `${contractPath}: unsupported schemaVersion ${String(contract.schemaVersion)}`,
     );
@@ -284,6 +311,132 @@ export function checkDocs(options = {}) {
         line: 1,
         message: `required documentation pointer is missing: ${pointer.to}`,
       });
+    }
+  }
+
+  const declaredExamples = new Map(
+    (contract.executableExamples || []).map((example) => [example.id, example]),
+  );
+  const observedExamples = new Map();
+  for (const document of documents.values()) {
+    for (const example of document.examples) {
+      if (observedExamples.has(example.id)) {
+        findings.push({
+          code: 'executable-example-duplicate',
+          file: document.rel,
+          line: example.line,
+          message: `duplicate executable example id: ${example.id}`,
+        });
+        continue;
+      }
+      observedExamples.set(example.id, { ...example, file: document.rel });
+      const declaration = declaredExamples.get(example.id);
+      if (!declaration) {
+        findings.push({
+          code: 'executable-example-undeclared',
+          file: document.rel,
+          line: example.line,
+          message: `executable example is not declared in ${DEFAULT_CONTRACT}: ${example.id}`,
+        });
+      } else if (
+        declaration.file !== document.rel ||
+        declaration.command.join(' ') !== example.source
+      ) {
+        findings.push({
+          code: 'executable-example-drift',
+          file: document.rel,
+          line: example.line,
+          message: `executable example differs from its safe command contract: ${example.id}`,
+        });
+      }
+    }
+  }
+  for (const declaration of declaredExamples.values()) {
+    if (!observedExamples.has(declaration.id))
+      findings.push({
+        code: 'executable-example-missing',
+        file: declaration.file,
+        line: 1,
+        message: `declared executable example is missing: ${declaration.id}`,
+      });
+    if (
+      !Array.isArray(declaration.command) ||
+      !declaration.command.length ||
+      !Number.isInteger(declaration.timeoutMs) ||
+      declaration.timeoutMs < 100 ||
+      declaration.timeoutMs > 30000
+    )
+      findings.push({
+        code: 'executable-example-contract',
+        file: DEFAULT_CONTRACT,
+        line: 1,
+        message: `invalid bounded command contract: ${declaration.id}`,
+      });
+    else if (!SAFE_EXAMPLE_COMMANDS.has(JSON.stringify(declaration.command)))
+      findings.push({
+        code: 'executable-example-unsafe',
+        file: DEFAULT_CONTRACT,
+        line: 1,
+        message: `command is not in the side-effect-free documentation allowlist: ${declaration.id}`,
+      });
+    if (declaration.stdoutPattern) {
+      try {
+        new RegExp(declaration.stdoutPattern);
+      } catch {
+        findings.push({
+          code: 'executable-example-contract',
+          file: DEFAULT_CONTRACT,
+          line: 1,
+          message: `invalid stdoutPattern: ${declaration.id}`,
+        });
+      }
+    }
+  }
+
+  const publication = contract.publication;
+  if (publication) {
+    const included = new Set(
+      files.filter((rel) =>
+        publication.include.some(
+          (entry) => rel === entry || rel.startsWith(`${entry}/`),
+        ),
+      ),
+    );
+    const allowed = new Set(publication.allowedOrphans || []);
+    const reachable = new Set(
+      publication.roots.filter((rel) => included.has(rel)),
+    );
+    const queue = [...reachable];
+    while (queue.length) {
+      const sourceRel = queue.shift();
+      const source = documents.get(sourceRel);
+      for (const link of source?.links || []) {
+        const local = resolveLocal(root, sourceRel, link.href);
+        if (!local) continue;
+        const targetRel = relativeInside(root, local.target);
+        if (targetRel && included.has(targetRel) && !reachable.has(targetRel)) {
+          reachable.add(targetRel);
+          queue.push(targetRel);
+        }
+      }
+    }
+    for (const rel of included) {
+      if (!reachable.has(rel) && !allowed.has(rel))
+        findings.push({
+          code: 'publication-orphan',
+          file: rel,
+          line: 1,
+          message: 'public document is unreachable from every publication root',
+        });
+    }
+    for (const rel of allowed) {
+      if (!included.has(rel) || reachable.has(rel))
+        findings.push({
+          code: 'publication-orphan-exception',
+          file: DEFAULT_CONTRACT,
+          line: 1,
+          message: `stale or invalid allowed orphan: ${rel}`,
+        });
     }
   }
 

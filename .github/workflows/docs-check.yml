@@ -11,9 +11,14 @@ on:
       - ".markdownlint-cli2.mjs"
       - "docs.contract.json"
       - "docs/vocabulary.registry.json"
+      - "docs/toolchain.contract.json"
       - "scripts/check-docs.mjs"
       - "scripts/check-docs.test.mjs"
+      - "scripts/check-docs-toolchain.mjs"
+      - "scripts/check-docs-toolchain.test.mjs"
       - "scripts/run-docs-check.mjs"
+      - "scripts/run-docs-examples.mjs"
+      - "scripts/run-docs-readonly.mjs"
       - "scripts/run-docs-prose-check.mjs"
       - "scripts/vocabulary-contract.mjs"
       - "scripts/vocabulary-contract.test.mjs"
@@ -31,19 +36,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v7.0.0
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
-      - name: Install root documentation tools
-        run: ./shifu install --frozen-lockfile --filter @kungfu-tech/workspaces
-
-      - name: Check Markdown documentation
-        run: ./shifu docs:check
+      - name: Check Markdown documentation from external tool cache
+        env:
+          KUNGFU_DOCS_TOOL_CACHE: ${{ runner.temp }}/kungfu-docs-tools
+        run: ./shifu docs:check:readonly
 
       - name: Enforce objective prose contracts
         run: ./shifu docs:prose:required
 
       - name: Report advisory prose policy
-        continue-on-error: true
-        run: ./shifu docs:prose
+        env:
+          KUNGFU_VALE_REPORT: ${{ runner.temp }}/kungfu-vale-report.json
+        run: ./shifu docs:prose -- --github-annotations

@@ -77,6 +77,14 @@ not match `docs_url_base`. Contributors should enter through `./shifu`, as
 described in the repository [CONTRIBUTING guide](../../CONTRIBUTING.md), rather
 than invoking the package manager directly.
 
+The currently published skeleton surfaces are indexed here so a consumer can
+reach every page from this package entrypoint:
+
+- [Format overview](docs/overview.md)
+- [CLI handbook](docs/handbooks/cli.md)
+- [Node handbook](docs/handbooks/node.md)
+- [Python handbook](docs/handbooks/python.md)
+
 This is a **walking skeleton**: the pipeline produces and gates a real bundle,
 but with minimal content. Only `categories.format_spec` carries real prose
 (`docs/format-spec.md`), but that prose remains a non-normative historical 0.1

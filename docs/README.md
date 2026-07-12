@@ -139,7 +139,8 @@ the reader route changes.
 
 Repository validation makes this boundary executable. Run
 `./shifu docs:check` for Markdown structure, every local target and cross-file
-anchor, canonical entrypoint pointers, and consistency between the public
+anchor, publication reachability, bounded executable examples, canonical
+entrypoint pointers, and consistency between the public
 Vocabulary reference and its machine-readable registry. Run
 `./shifu docs:prose` to apply the generated Vale policy for canonical names,
 retired positioning, preferred terms, and load-bearing guarantee language.
@@ -151,3 +152,8 @@ policy; generated Vale files are disposable projections of that registry.
 External URL health is deliberately separate because remote availability is
 not a deterministic property of a commit; maintainers use
 `./shifu docs:check:external`, backed by the scheduled Lychee workflow.
+For a cold or read-only source checkout, `./shifu docs:check:readonly` keeps
+lock-derived documentation modules in the user cache and verifies that the
+source tree does not change. Immutable Action SHAs, the Vale container digest,
+and audited release-archive checksums live in
+[`toolchain.contract.json`](toolchain.contract.json).

@@ -150,12 +150,20 @@ health:
 
 ```sh
 ./shifu docs:check          # Markdown structure, local graph, topology, and vocabulary registry
+./shifu docs:check:readonly # same gate with lock-keyed tools outside the checkout
 ./shifu docs:prose          # full advisory + required prose policy through Vale
 ./shifu docs:prose:required # objective prose rules that block pull requests
 ./shifu docs:check:external # external URLs through Lychee (local Lychee or Docker required)
 ```
 
-`docs:check` runs in pre-commit and documentation pull requests. It checks the
+`docs:check` runs in pre-commit and documentation pull requests. Opt-in fences
+marked `docs-exec=<stable-id>` are welded to bounded argv/timeout/output
+contracts in `docs.contract.json`; unregistered or drifting examples fail, and
+the registered commands execute without a shell. The same contract declares
+publication roots and governed paths, so an unreachable public page or stale
+orphan exception also fails.
+
+It checks the
 whole Markdown graph so deleting or renaming a target cannot evade a
 changed-file filter. The intentionally small Markdownlint rule baseline lives
 in `.markdownlint-cli2.mjs`; do not enable a style rule by rewriting unrelated
@@ -170,9 +178,18 @@ Vale configuration is generated into a temporary directory from that registry;
 there is no committed second copy of the prose rules. `docs:prose:required`
 enforces objective `error` rules. `docs:prose` also reports `warning` rules, but
 those remain advisory while maintainers qualify their false-positive rate.
-Both commands require Vale 3.14.2 or Docker; the container fallback is pinned by
-multi-platform image digest. Add or promote a rule only with a negative fixture
-and a clean governed-document baseline.
+Both commands run Vale 3.14.2 through the immutable multi-platform container
+digest in `docs/toolchain.contract.json`. Advisory runs emit line annotations,
+a GitHub job summary, and an optional `KUNGFU_VALE_REPORT` JSON report. Rule
+metadata records stable ids and promotion evidence; an error rule is rejected
+unless it is required, has a negative fixture, and declares a clean baseline.
+
+`docs:check:readonly` installs only the lock-derived documentation modules into
+`~/.cache/kungfu/docs-tools/<digest>` (or `KUNGFU_DOCS_TOOL_CACHE`) and proves
+that the checkout status is unchanged. Documentation workflows remain on one
+GitHub-hosted Ubuntu runner; they do not consume the native Buildchain matrix.
+The toolchain contract also pins every documentation Action by commit SHA and
+records Vale release-archive checksums for audited non-container distribution.
 
 External sites are nondeterministic, so they do not block pull requests. The
 scheduled `Docs External Links` workflow runs the pinned Lychee release with

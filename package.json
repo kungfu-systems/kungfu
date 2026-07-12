@@ -32,6 +32,7 @@
     "check:entry-contract": "node scripts/require-shifu.mjs check:entry-contract && node scripts/check-shifu-entry-contract.mjs",
     "check:shifu-cache-contract": "node scripts/require-shifu.mjs check:shifu-cache-contract && node scripts/check-shifu-cache-contract.mjs",
     "docs:check": "node scripts/require-shifu.mjs docs:check && node scripts/run-docs-check.mjs",
+    "docs:check:readonly": "node scripts/require-shifu.mjs docs:check:readonly && node scripts/run-docs-readonly.mjs",
     "docs:prose": "node scripts/require-shifu.mjs docs:prose && node scripts/run-docs-prose-check.mjs",
     "docs:prose:required": "node scripts/require-shifu.mjs docs:prose:required && node scripts/run-docs-prose-check.mjs --required",
     "docs:check:external": "node scripts/require-shifu.mjs docs:check:external && node scripts/run-docs-external-check.mjs",

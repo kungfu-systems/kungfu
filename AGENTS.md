@@ -21,6 +21,10 @@ restating them.
 One entrypoint runs every task under the pinned toolchain. Do not invoke pnpm,
 node, conan, or cmake directly — go through it:
 
+```sh docs-exec=shifu-self-version
+./shifu self-version
+```
+
 ```sh
 ./shifu doctor    # check the development environment (install pointers)
 ./shifu sync      # install JS dependencies (frozen lockfile)

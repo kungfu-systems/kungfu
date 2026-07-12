@@ -7,6 +7,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const MODULES =
+  process.env.KUNGFU_DOCS_MODULES || path.join(ROOT, 'node_modules');
 
 /** @param {string} label @param {string[]} args */
 function run(label, args) {
@@ -27,7 +29,7 @@ function run(label, args) {
 
 try {
   run('Markdown structure', [
-    path.join('node_modules', 'markdownlint-cli2', 'markdownlint-cli2-bin.mjs'),
+    path.join(MODULES, 'markdownlint-cli2', 'markdownlint-cli2-bin.mjs'),
   ]);
   run('local links, anchors, and contracts', [
     path.join('scripts', 'check-docs.mjs'),
@@ -36,7 +38,12 @@ try {
     '--test',
     path.join('scripts', 'check-docs.test.mjs'),
     path.join('scripts', 'vocabulary-contract.test.mjs'),
+    path.join('scripts', 'check-docs-toolchain.test.mjs'),
   ]);
+  run('immutable documentation toolchain', [
+    path.join('scripts', 'check-docs-toolchain.mjs'),
+  ]);
+  run('executable examples', [path.join('scripts', 'run-docs-examples.mjs')]);
   console.log('[docs] deterministic documentation gate passed');
 } catch (error) {
   console.error(

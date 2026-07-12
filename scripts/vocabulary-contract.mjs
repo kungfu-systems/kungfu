@@ -209,9 +209,29 @@ export function validateVocabularyContract(options = {}) {
     ['preferred term', registry.prosePolicy?.preferredTerms || []],
     ['claim guard', registry.prosePolicy?.claimGuards || []],
   ]) {
+    const ids = new Set();
     for (const rule of rules) {
+      if (!rule.id || ids.has(rule.id))
+        add('prose-policy-id', `${kind} needs a unique stable id`);
+      ids.add(rule.id);
       if (!LEVELS.has(rule.level))
         add('prose-policy-level', `${kind} has invalid level: ${rule.level}`);
+      const promotion = rule.promotion;
+      if (!promotion || !['advisory', 'required'].includes(promotion.status))
+        add(
+          'prose-policy-promotion',
+          `${kind} ${rule.id || ''} needs promotion status`,
+        );
+      if (
+        rule.level === 'error' &&
+        (promotion?.status !== 'required' ||
+          promotion?.negativeFixture !== true ||
+          promotion?.baselineFindings !== 0)
+      )
+        add(
+          'prose-policy-promotion',
+          `${kind} ${rule.id || ''} cannot be error without a negative fixture and clean baseline`,
+        );
       const pattern = 'pattern' in rule ? rule.pattern : regexEscape(rule.text);
       try {
         validatePattern(pattern);
@@ -325,5 +345,12 @@ export function writeValeProjection(destination, options = {}) {
   return {
     config: path.join(destination, '.vale.ini'),
     files: proseFiles(root, registry),
+    requiredFixtures: registry.prosePolicy.retiredPhrases
+      .map((rule, index) => ({
+        rule,
+        style: `Kungfu.RetiredPhrase${index + 1}`,
+      }))
+      .filter(({ rule }) => rule.level === 'error')
+      .map(({ rule, style }) => ({ id: rule.id, text: rule.text, style })),
   };
 }

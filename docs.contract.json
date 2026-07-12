@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "requiredFiles": [
     "README.md",
     "AGENTS.md",
@@ -27,6 +27,20 @@
     {
       "from": "AGENTS.md",
       "to": "docs/MAP.md"
+    }
+  ],
+  "publication": {
+    "roots": ["README.md", "AGENTS.md", "CONTRIBUTING.md", "framework/spec/README.md"],
+    "include": ["README.md", "AGENTS.md", "CONTRIBUTING.md", "docs", "framework/spec"],
+    "allowedOrphans": []
+  },
+  "executableExamples": [
+    {
+      "id": "shifu-self-version",
+      "file": "AGENTS.md",
+      "command": ["./shifu", "self-version"],
+      "stdoutPattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?\\n?$",
+      "timeoutMs": 10000
     }
   ]
 }

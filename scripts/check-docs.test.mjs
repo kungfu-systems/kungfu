@@ -26,9 +26,15 @@ function fixture(files) {
 }
 
 const contract = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   requiredFiles: ['README.md', 'docs/guide.md'],
   requiredPointers: [{ from: 'README.md', to: 'docs/guide.md' }],
+  publication: {
+    roots: ['README.md'],
+    include: ['README.md', 'docs'],
+    allowedOrphans: [],
+  },
+  executableExamples: [],
 };
 
 function run(files) {
@@ -107,4 +113,56 @@ test('rejects repository-escaping local links', () => {
     'docs/guide.md': '# Guide\n',
   });
   assert.ok(findings.some((finding) => finding.code === 'outside-root'));
+});
+
+test('rejects unreachable public documents', () => {
+  const findings = run({
+    'README.md': '# Home\n\n[Guide](docs/guide.md)\n',
+    'docs/guide.md': '# Guide\n',
+    'docs/orphan.md': '# Orphan\n',
+  });
+  assert.ok(findings.some((finding) => finding.code === 'publication-orphan'));
+});
+
+test('rejects undeclared executable examples', () => {
+  const root = fixture({
+    'README.md': '# Home\n\n[Guide](docs/guide.md)\n',
+    'docs/guide.md': '# Guide\n\n```sh docs-exec=unsafe\n./shifu fix\n```\n',
+  });
+  const findings = checkDocs({
+    root,
+    files: ['README.md', 'docs/guide.md'],
+    contract,
+    vocabularyRegistry: false,
+  });
+  assert.ok(
+    findings.some(
+      (finding) => finding.code === 'executable-example-undeclared',
+    ),
+  );
+});
+
+test('rejects declared executable examples outside the safe argv allowlist', () => {
+  const unsafe = structuredClone(contract);
+  unsafe.executableExamples = [
+    {
+      id: 'unsafe',
+      file: 'docs/guide.md',
+      command: ['./shifu', 'fix'],
+      timeoutMs: 1000,
+    },
+  ];
+  const root = fixture({
+    'README.md': '# Home\n\n[Guide](docs/guide.md)\n',
+    'docs/guide.md': '# Guide\n\n```sh docs-exec=unsafe\n./shifu fix\n```\n',
+  });
+  const findings = checkDocs({
+    root,
+    files: ['README.md', 'docs/guide.md'],
+    contract: unsafe,
+    vocabularyRegistry: false,
+  });
+  assert.ok(
+    findings.some((finding) => finding.code === 'executable-example-unsafe'),
+  );
 });
