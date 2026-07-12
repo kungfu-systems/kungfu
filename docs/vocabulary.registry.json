@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "canonicalReference": "docs/vocabulary.md",
+  "layers": [
+    {
+      "id": "flagship",
+      "heading": "Flagship object",
+      "terms": [{ "name": "Episode" }]
+    },
+    {
+      "id": "evidence",
+      "heading": "Core evidence and commitment",
+      "terms": [
+        { "name": "Fact" },
+        { "name": "Artifact" },
+        { "name": "Manifest" },
+        { "name": "Receipt" }
+      ]
+    },
+    {
+      "id": "coordinates",
+      "heading": "Coordinates and perspective",
+      "terms": [
+        { "name": "Source" },
+        { "name": "Observer" },
+        { "name": "Cut" },
+        { "name": "Watermark" }
+      ]
+    },
+    {
+      "id": "trust",
+      "heading": "Derivation, trust, and action",
+      "terms": [
+        { "name": "Projection" },
+        { "name": "Timeline" },
+        { "name": "Claim" },
+        { "name": "Proof" },
+        { "name": "Purpose" },
+        {
+          "name": "TrustReport",
+          "caseForms": ["TrustReport", "TrustReports"]
+        },
+        { "name": "Decision" }
+      ]
+    },
+    {
+      "id": "operations",
+      "heading": "Operations",
+      "terms": [
+        { "name": "Replay" },
+        { "name": "Rewind" },
+        { "name": "Recovery" }
+      ]
+    }
+  ],
+  "domainProfiles": [
+    {
+      "name": "Agent Work",
+      "terms": [
+        "Mission",
+        "Go",
+        "Responsibility State",
+        "Cost/State/Proof",
+        "Completion Claim",
+        "Handoff",
+        "Agent Work Inbox"
+      ],
+      "core": false
+    },
+    { "name": "Quantitative trading", "terms": [], "core": false },
+    { "name": "Games and virtual worlds", "terms": [], "core": false }
+  ],
+  "prosePolicy": {
+    "roots": [
+      "README.md",
+      "AGENTS.md",
+      "CONTRIBUTING.md",
+      "docs",
+      "framework/spec"
+    ],
+    "retiredPhrases": [
+      {
+        "text": "record an agent run, then open it",
+        "level": "error",
+        "message": "Rewind is Episode-centered; the former run-viewer positioning is retired."
+      },
+      {
+        "text": "becomes Episode-aware",
+        "level": "error",
+        "message": "The current product already uses Episodes; future-tense migration wording is stale."
+      }
+    ],
+    "preferredTerms": [
+      {
+        "pattern": "\\b[Tt]rust[ -][Rr]eports?\\b",
+        "replacement": "TrustReport",
+        "level": "warning"
+      }
+    ],
+    "claimGuards": [
+      {
+        "pattern": "(?i)\\bKungfu (?:guarantees|provides) (?:zero data loss|strong durability)\\b",
+        "level": "warning",
+        "message": "Name the implemented and qualified durability profile instead of making an absolute guarantee."
+      },
+      {
+        "pattern": "(?i)\\bKungfu is (?:crash-safe|production-ready|Aeron-equivalent|Aeron-compatible)\\b",
+        "level": "warning",
+        "message": "Separate design intent, implementation, qualification, and released guarantees."
+      },
+      {
+        "pattern": "(?i)\\bfaster than Aeron\\b",
+        "level": "warning",
+        "message": "Use retained, semantically comparable qualification evidence instead of an absolute product comparison."
+      }
+    ]
+  }
+}

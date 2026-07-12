@@ -10,6 +10,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import GithubSlugger from 'github-slugger';
 import MarkdownIt from 'markdown-it';
 
+import { validateVocabularyContract } from './vocabulary-contract.mjs';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEFAULT_CONTRACT = 'docs.contract.json';
 const MARKDOWN = new MarkdownIt({ html: true, linkify: false });
@@ -22,8 +24,7 @@ const EXTERNAL_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
  * @typedef {{
  *   schemaVersion: number,
  *   requiredFiles?: string[],
- *   requiredPointers?: {from: string, to: string}[],
- *   retiredPhrases?: {text: string, roots: string[], reason: string}[]
+ *   requiredPointers?: {from: string, to: string}[]
  * }} DocsContract
  */
 
@@ -137,11 +138,6 @@ export function readContract(root = ROOT, contractPath = DEFAULT_CONTRACT) {
   return /** @type {DocsContract} */ (contract);
 }
 
-/** @param {string} rel @param {string[]} roots */
-function inRoots(rel, roots) {
-  return roots.some((root) => rel === root || rel.startsWith(`${root}/`));
-}
-
 /** @param {string} root @param {string} sourceRel @param {string} href */
 function resolveLocal(root, sourceRel, href) {
   const trimmed = href.trim().replace(/^<|>$/g, '');
@@ -188,7 +184,7 @@ function hasExactCase(root, absolute) {
 }
 
 /**
- * @param {{root?: string, files?: string[], contract?: DocsContract}} options
+ * @param {{root?: string, files?: string[], contract?: DocsContract, vocabularyRegistry?: object | false}} options
  * @returns {Finding[]}
  */
 export function checkDocs(options = {}) {
@@ -198,7 +194,13 @@ export function checkDocs(options = {}) {
   /** @type {Map<string, Document>} */
   const documents = new Map();
   /** @type {Finding[]} */
-  const findings = [];
+  const findings =
+    options.vocabularyRegistry === false
+      ? []
+      : validateVocabularyContract({
+          root,
+          registry: /** @type {any} */ (options.vocabularyRegistry),
+        });
 
   for (const rel of files) {
     const text = fs.readFileSync(path.join(root, rel), 'utf8');
@@ -281,21 +283,6 @@ export function checkDocs(options = {}) {
         file: pointer.from,
         line: 1,
         message: `required documentation pointer is missing: ${pointer.to}`,
-      });
-    }
-  }
-
-  for (const retired of contract.retiredPhrases || []) {
-    const needle = retired.text.toLocaleLowerCase('en-US');
-    for (const document of documents.values()) {
-      if (!inRoots(document.rel, retired.roots)) continue;
-      const index = document.text.toLocaleLowerCase('en-US').indexOf(needle);
-      if (index < 0) continue;
-      findings.push({
-        code: 'retired-phrase',
-        file: document.rel,
-        line: lineAt(document.text, index),
-        message: `${JSON.stringify(retired.text)} is retired: ${retired.reason}`,
       });
     }
   }

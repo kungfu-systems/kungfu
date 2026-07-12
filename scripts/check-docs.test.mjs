@@ -29,13 +29,6 @@ const contract = {
   schemaVersion: 1,
   requiredFiles: ['README.md', 'docs/guide.md'],
   requiredPointers: [{ from: 'README.md', to: 'docs/guide.md' }],
-  retiredPhrases: [
-    {
-      text: 'old product sentence',
-      roots: ['README.md', 'docs'],
-      reason: 'fixture retirement',
-    },
-  ],
 };
 
 function run(files) {
@@ -46,6 +39,7 @@ function run(files) {
       .filter((file) => /\.(?:md|markdown)$/i.test(file))
       .sort(),
     contract,
+    vocabularyRegistry: false,
   });
 }
 
@@ -104,14 +98,6 @@ test('rejects missing canonical entry pointers', () => {
     'docs/guide.md': '# Guide\n',
   });
   assert.ok(findings.some((finding) => finding.code === 'required-pointer'));
-});
-
-test('rejects retired product positioning only in governed roots', () => {
-  const findings = run({
-    'README.md': '# Home\n\n[Guide](docs/guide.md)\n',
-    'docs/guide.md': '# Guide\n\nOld product sentence.\n',
-  });
-  assert.ok(findings.some((finding) => finding.code === 'retired-phrase'));
 });
 
 test('rejects repository-escaping local links', () => {

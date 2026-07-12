@@ -137,7 +137,7 @@ route to the row that answers them:
   historical runtime facts* ([`querying-runtime-facts.md`](querying-runtime-facts.md))
   and [ADR-0048](../framework/core/docs/adr/ADR-0048-runtime-fact-query-semantics-and-changelog.md).
 - **contract world / fact surface / fact admission / user facts / domain facts /
-  KFD-1 facts / KFD-2 trust report** -> *how domain facts enter Kungfu and become
+  KFD-1 facts / KFD-2 TrustReport** -> *how domain facts enter Kungfu and become
   eligible for trust assessment* ([`fact-surface-admission.md`](fact-surface-admission.md))
   and [ADR-0051](../framework/core/docs/adr/ADR-0051-kfd-contract-world-fact-admission-and-trust.md).
 - **KFD-2 assessment / TrustReport refresh / claim trigger / assessment worker /
@@ -212,7 +212,7 @@ route to the row that answers them:
   rebuild** → *runtime storage service*
   ([`runtime-storage-service.md`](runtime-storage-service.md)).
 - **episode / causal segment / causal closure / atomic safety / graceful
-  degradation / capability contraction / qualification / Trust Report /
+  degradation / capability contraction / qualification / TrustReport /
   lifecycle unit / run slice / export unit / import unit / tombstone / episode
   manifest / episode fsck** →
   *Episode object model* ([`episode-object-model.md`](episode-object-model.md))

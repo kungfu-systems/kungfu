@@ -10,9 +10,13 @@ on:
       - "**/*.md"
       - ".markdownlint-cli2.mjs"
       - "docs.contract.json"
+      - "docs/vocabulary.registry.json"
       - "scripts/check-docs.mjs"
       - "scripts/check-docs.test.mjs"
       - "scripts/run-docs-check.mjs"
+      - "scripts/run-docs-prose-check.mjs"
+      - "scripts/vocabulary-contract.mjs"
+      - "scripts/vocabulary-contract.test.mjs"
       - "scripts/check.mjs"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -36,3 +40,10 @@ jobs:
 
       - name: Check Markdown documentation
         run: ./shifu docs:check
+
+      - name: Enforce objective prose contracts
+        run: ./shifu docs:prose:required
+
+      - name: Report advisory prose policy
+        continue-on-error: true
+        run: ./shifu docs:prose

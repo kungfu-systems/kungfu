@@ -5,6 +5,14 @@ execution. Start with [The Episode](the-episode.md) for the narrative and return
 here when an API, document, extension, or product surface needs the precise
 term.
 
+[`vocabulary.registry.json`](vocabulary.registry.json) is the machine-readable
+authority for canonical core-term spelling and layer membership, domain-profile
+classification, governed public prose, and executable language policy. This
+document remains the normative human-readable definition and boundary
+reference. `./shifu docs:check` rejects disagreement between the registry and
+the core headings below; `./shifu docs:prose` derives its Vale configuration
+from the registry instead of maintaining another rule copy.
+
 The hierarchy is intentional:
 
 ```text

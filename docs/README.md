@@ -139,7 +139,15 @@ the reader route changes.
 
 Repository validation makes this boundary executable. Run
 `./shifu docs:check` for Markdown structure, every local target and cross-file
-anchor, canonical entrypoint pointers, and explicitly retired product wording.
+anchor, canonical entrypoint pointers, and consistency between the public
+Vocabulary reference and its machine-readable registry. Run
+`./shifu docs:prose` to apply the generated Vale policy for canonical names,
+retired positioning, preferred terms, and load-bearing guarantee language.
+Objective prose errors block pull requests through `docs:prose:required`;
+warning-level policy remains advisory until its false-positive behavior is
+qualified. `docs.contract.json` owns document topology, while
+[`vocabulary.registry.json`](vocabulary.registry.json) owns executable language
+policy; generated Vale files are disposable projections of that registry.
 External URL health is deliberately separate because remote availability is
 not a deterministic property of a commit; maintainers use
 `./shifu docs:check:external`, backed by the scheduled Lychee workflow.

@@ -35,6 +35,7 @@ try {
   run('negative fixtures', [
     '--test',
     path.join('scripts', 'check-docs.test.mjs'),
+    path.join('scripts', 'vocabulary-contract.test.mjs'),
   ]);
   console.log('[docs] deterministic documentation gate passed');
 } catch (error) {

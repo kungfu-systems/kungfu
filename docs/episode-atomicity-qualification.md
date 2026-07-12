@@ -293,7 +293,7 @@ The repository command is:
 ```
 
 Generated runtime homes and reports default to an operating-system temporary
-directory and are not checked in. `--report <path>` selects a Trust Report
+directory and are not checked in. `--report <path>` selects a TrustReport
 destination, and `--keep-runtime` retains the generated runtime home for
 diagnosis. CI may upload the report as an evidence artifact.
 
@@ -350,7 +350,7 @@ bounded exponential backoff with seed-derived jitter only to that exact error.
 The profile records the initial delay, cap, retry limit, and progress deadline.
 Every other exception is immediately unexpected.
 
-The Trust Report separates at least:
+The TrustReport separates at least:
 
 ```text
 successful_appends
@@ -420,7 +420,7 @@ The following conditions fail the profile regardless of throughput:
 - fresh-process readback differs from the writer-process result;
 - a worker crashes, deadlocks, exhausts retries, exceeds the no-progress
   deadline, or reports an exception other than the declared busy result;
-- the emitted Trust Report does not validate against its versioned schema.
+- the emitted TrustReport does not validate against its versioned schema.
 
 The first baseline records performance observations without inventing an
 absolute throughput or latency SLO. OOM or loss of forward progress is an
@@ -486,7 +486,7 @@ Prefer five separable components:
    boundaries.
 4. **Oracle/verifier** — compares authority, typed fold, fsck, capabilities,
    projections, bundles, and recovery with the independent model.
-5. **Reporter** — emits the machine-readable Trust Report and a short human
+5. **Reporter** — emits the machine-readable TrustReport and a short human
    summary.
 
 Python may orchestrate qualification, generation, and reporting, but must not
@@ -514,7 +514,7 @@ correctness gate always blocks the corresponding trust claim; a missed
 performance SLO blocks only the profile whose SLO was missed, unless safety was
 compromised.
 
-## Episode Trust Report
+## Episode TrustReport
 
 Each run records at least:
 
@@ -570,7 +570,7 @@ descriptions. Reports are evidence artifacts, not authority facts inside an
 Episode. A human summary must link the exact report rather than restate only the
 best throughput number.
 
-Trust Report v2 replaces v1's ambiguous semantic zero counters with evidence
+TrustReport v2 replaces v1's ambiguous semantic zero counters with evidence
 dimensions. Every dimension is `passed`, `failed`, or `not_exercised`; only
 profile-required `passed` dimensions contribute to `qualified=true`. The v1
 schema remains available for historical baseline reports and is not
@@ -578,7 +578,7 @@ reinterpreted as Semantic v1 evidence.
 
 ### Release Evidence v1
 
-Trust Report v2 describes what one harness invocation observed. A release
+TrustReport v2 describes what one harness invocation observed. A release
 candidate additionally needs durable provenance that prevents a valid report
 from being detached from the source, profile, runtime, or platform that
 produced it. The release-readiness command is:
@@ -609,7 +609,7 @@ The verifier recomputes these rows instead of trusting stored booleans.
 
 Throughput, latency, disk, RSS and descriptor observations are retained for
 trend comparison. Release Evidence v1 deliberately adopts no absolute
-performance SLO, and it preserves the Trust Report gaps for payload volume,
+performance SLO, and it preserves the TrustReport gaps for payload volume,
 dependency DAG scale, distributed writers, fleet capacity and long soak.
 
 The existing Buildchain `Build` workflow runs this after the heavy verify path
@@ -624,7 +624,7 @@ with the platform product artifacts. It is not added to every development PR.
    corpus.
 4. Add generated DAG and recovery properties with reproducible seeds.
 5. Add a metadata-scale driver, then realistic payload and multi-process modes.
-6. Emit the versioned Trust Report and run the first single-node baseline
+6. Emit the versioned TrustReport and run the first single-node baseline
    without treating its numbers as a support promise.
 
 ## First development baseline (2026-07-10)

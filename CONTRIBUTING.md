@@ -108,7 +108,7 @@ preceding `shifu-entry-contract: allow <reason>` comment.
 qualification by default. Use `./shifu episode:qualify -- --profile
 mvp-baseline-v1` explicitly for the heavier periodic/release-readiness
 baseline. `./shifu episode:qualify:release` runs that complete baseline and
-seals its Trust Report into retained release evidence. The release-evidence
+seals its TrustReport into retained release evidence. The release-evidence
 path runs on alpha/release candidates and manual Build workflow dispatches, not
 on every development pull request.
 
@@ -149,7 +149,9 @@ Documentation has a deterministic gate separate from network-dependent URL
 health:
 
 ```sh
-./shifu docs:check          # Markdown structure, local targets/anchors, and product-doc contracts
+./shifu docs:check          # Markdown structure, local graph, topology, and vocabulary registry
+./shifu docs:prose          # full advisory + required prose policy through Vale
+./shifu docs:prose:required # objective prose rules that block pull requests
 ./shifu docs:check:external # external URLs through Lychee (local Lychee or Docker required)
 ```
 
@@ -157,8 +159,20 @@ health:
 whole Markdown graph so deleting or renaming a target cannot evade a
 changed-file filter. The intentionally small Markdownlint rule baseline lives
 in `.markdownlint-cli2.mjs`; do not enable a style rule by rewriting unrelated
-documents. Canonical entrypoints and retired product wording live in
-`docs.contract.json` and require negative-fixture coverage when extended.
+documents. `docs.contract.json` owns only required documents and navigation
+pointers. [`docs/vocabulary.registry.json`](docs/vocabulary.registry.json) is
+the executable source for canonical term spelling and layers, governed public
+files, retired wording, preferred terminology, and load-bearing claim guards.
+The deterministic check verifies that its core terms remain aligned with
+[`docs/vocabulary.md`](docs/vocabulary.md).
+
+Vale configuration is generated into a temporary directory from that registry;
+there is no committed second copy of the prose rules. `docs:prose:required`
+enforces objective `error` rules. `docs:prose` also reports `warning` rules, but
+those remain advisory while maintainers qualify their false-positive rate.
+Both commands require Vale 3.14.2 or Docker; the container fallback is pinned by
+multi-platform image digest. Add or promote a rule only with a negative fixture
+and a clean governed-document baseline.
 
 External sites are nondeterministic, so they do not block pull requests. The
 scheduled `Docs External Links` workflow runs the pinned Lychee release with

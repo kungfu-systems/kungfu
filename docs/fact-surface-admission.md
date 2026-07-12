@@ -67,7 +67,7 @@ CLI, GUI, historical cuts, and proof-carrying results.
 
 ## Assess trust for a purpose
 
-KFD-2 evaluates a claim over the admitted facts. A trust report binds the claim
+KFD-2 evaluates a claim over the admitted facts. A TrustReport binds the claim
 to its declaration roots, Episode/query proof, responsibility, validation,
 known gaps, and residual risk. Trust is therefore inspectable and purpose-bound,
 not a boolean copied onto every row.

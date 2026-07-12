@@ -54,6 +54,7 @@ layout, and code style.
 ./shifu verify          # assert existing build artifacts (quick)
 ./shifu verify --full   # rebuild + freeze, then assert (slow; needs the full toolchain)
 ./shifu docs:check      # deterministic Markdown, local-link, anchor, and docs-contract gate
+./shifu docs:prose      # advisory vocabulary and load-bearing prose policy
 ```
 
 `check` is the source-quality gate for changed files plus shared type/tooling
@@ -70,9 +71,12 @@ remains an explicit periodic/release-readiness command:
 It emits a self-contained evidence envelope; it is not a per-PR gate.
 
 `docs:check` is the same deterministic gate used by documentation pull
-requests and pre-commit checks. Network-dependent URL validation is kept out of
-that path; maintainers can run `./shifu docs:check:external`, and CI runs the
-same Lychee configuration on a schedule.
+requests and pre-commit checks. It also verifies that the public Vocabulary
+reference matches its machine-readable registry. `docs:prose` projects the
+registry into Vale and reports both required rules and advisory terminology or
+claim-language findings; CI blocks only on `docs:prose:required`. Network-dependent
+URL validation remains separate in `docs:check:external`, and CI runs the same
+Lychee configuration on a schedule.
 
 ## Proposing changes
 

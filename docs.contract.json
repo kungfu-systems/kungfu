@@ -28,17 +28,5 @@
       "from": "AGENTS.md",
       "to": "docs/MAP.md"
     }
-  ],
-  "retiredPhrases": [
-    {
-      "text": "record an agent run, then open it",
-      "roots": ["README.md", "AGENTS.md", "CONTRIBUTING.md", "docs", "framework/spec"],
-      "reason": "Rewind is Episode-centered; the former run-viewer positioning is retired."
-    },
-    {
-      "text": "becomes Episode-aware",
-      "roots": ["README.md", "AGENTS.md", "CONTRIBUTING.md", "docs", "framework/spec"],
-      "reason": "The current product already uses Episodes; future-tense migration wording is stale."
-    }
   ]
 }
