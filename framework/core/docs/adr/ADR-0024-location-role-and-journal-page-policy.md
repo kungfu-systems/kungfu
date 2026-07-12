@@ -1,3 +1,13 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0024
+decision_status: accepted
+implementation_status: unknown
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
 # ADR-0024: location role replaces trading category and journal page size is storage policy
 
 - Status: accepted

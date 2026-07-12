@@ -1,13 +1,16 @@
 ---
-status: draft
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0060
+decision_status: proposed
+implementation_status: not-started
+review_state: unreviewed
+sensitivity: public
+sources: [local-files, user-consensus]
 period: 2026-07-11
 theme: kungfu-workspace-product
-doc_type: decision
-source_level: user-consensus-and-local-files
 confidence: high
-sensitivity: public
 evidence_grade: B
-review_state: unreviewed
 last_reviewed: 2026-07-11
 ai_provenance:
   model_family: GPT-5

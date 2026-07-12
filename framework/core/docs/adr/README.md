@@ -1,3 +1,11 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+document_status: active
+doc_type: adr-index
+review_state: unreviewed
+sensitivity: public
+---
+
 # Architecture Decision Records
 
 This directory records the significant architecture and design decisions behind
@@ -15,6 +23,12 @@ A record's **Status** says where it stands:
 - **superseded** — retained as historical decision evidence, but replaced for
   current design by the ADR it names.
 
+ADR frontmatter is the machine authority. The body status and this index are
+human-readable projections checked by `./shifu docs:check`. Decision state,
+implementation state, and review state are separate fields; see the
+[Document Metadata Contract](../../../../docs/document-metadata.md). Do not add
+compound implementation notes to the index Status column.
+
 ## Index
 
 | ADR | Status | Title |
@@ -26,12 +40,12 @@ A record's **Status** says where it stands:
 | [0005](ADR-0005-control-event-axis-modernization-assessment.md) | proposed | control / event axis modernization — a meta-assessment |
 | [0006](ADR-0006-v4-frontend-platform-architecture.md) | accepted | v4 frontend = platform (capability SDK + loose kfx contract) + minimal reference app |
 | [0007](ADR-0007-v4-tui-platform-reference-surface.md) | accepted | v4 TUI = the platform's second reference surface |
-| [0008](ADR-0008-yijinjing-schema-layout-baseline.md) | proposed | yijinjing schema binary layout as the true compatibility invariant; schema-evolution policy |
+| [0008](ADR-0008-yijinjing-schema-layout-baseline.md) | accepted | yijinjing schema binary layout as the true compatibility invariant; schema-evolution policy |
 | [0009](ADR-0009-load-bearing-self-bootstrap.md) | accepted | load-bearing self-bootstrap — the adoption path is the validation path |
 | [0010](ADR-0010-adopt-kfd-1-release-versioning.md) | accepted | adopt KFD-1 — welded-surface registers decide patch, minor, and major |
 | [0011](ADR-0011-v4-capability-sdk-contract.md) | accepted | v4 capability SDK contract — two vocabulary domains, runtime-tier declaration, five consumer-driven handles |
 | [0013](ADR-0013-cli-runtime-extension-isolation-trusted-channel.md) | proposed | extension isolation and the trusted channel on the runtime plane — trust by verifiable origin, default-deny OS sandbox, zero-copy only for the trusted channel |
-| [0014](ADR-0014-extension-execution-contract-uniform-capability-surface.md) | proposed | the extension execution contract — one uniform capability surface across trust tiers, restriction as transparent interception, a binding-less guest host |
+| [0014](ADR-0014-extension-execution-contract-uniform-capability-surface.md) | accepted | the extension execution contract — one uniform capability surface across trust tiers, restriction as transparent interception, a binding-less guest host |
 | [0015](ADR-0015-kungfu-skill-agent-context-layer.md) | accepted | Kungfu Skill as the agent context layer above kfx |
 | [0016](ADR-0016-managed-session-host-placement.md) | accepted | managed session host placement — move the durable session host to main so multiple OS windows share it |
 | [0017](ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md) | proposed | dual-host kfx loading — a host-agnostic load plan shared by GUI and CLI, and the background `service` facet as the first OS-sandbox caller |
@@ -53,10 +67,10 @@ A record's **Status** says where it stands:
 | [0033](ADR-0033-episode-causal-segment-object.md) | accepted | Episode is the first-class causal segment object |
 | [0034](ADR-0034-yijinjing-episode-manifest-journal.md) | accepted | Episode manifest records live in the yijinjing journal format |
 | [0035](ADR-0035-workspace-local-kungfu-data-home.md) | accepted | Workspace-local `.kungfu` is the default fact ledger home |
-| [0036](ADR-0036-supervisor-and-workspace-master-topology.md) | superseded by 0057 | Established the per-user supervisor and per-data-root coordinator topology |
+| [0036](ADR-0036-supervisor-and-workspace-master-topology.md) | superseded | Established the per-user supervisor and per-data-root coordinator topology |
 | [0037](ADR-0037-storage-records-hana-core-kernel-metadata.md) | accepted | ADR-0018 storage-service records are Hana-core kernel metadata; JSON is an edge projection, not the contract |
 | [0038](ADR-0038-location-namespace-terminology.md) | accepted | Location middle identity segment is namespace |
-| [0039](ADR-0039-unified-view-interface-encapsulates-flatbuffers.md) | proposed | a single kungfu view interface is the sole FlatBuffers access point; raw FB is not called elsewhere |
+| [0039](ADR-0039-unified-view-interface-encapsulates-flatbuffers.md) | accepted | a single kungfu view interface is the sole FlatBuffers access point; raw FB is not called elsewhere |
 | [0040](ADR-0040-runtime-fact-ledger-content-addressed-kv.md) | proposed | a first-class content-addressed store is a runtime fact-ledger primitive, with mutable KV and fleet topology kept as separate capabilities |
 | [0041](ADR-0041-episode-manifest-first-class-journal-structure.md) | proposed | the Episode manifest is the object's trust boundary — POD journal records, one typed fold, and JSON at the edge |
 | [0042](ADR-0042-episode-atomic-safety-and-qualification.md) | proposed | Episode is the atomic safety and fault-containment unit, qualified by evidence under load |
@@ -64,12 +78,12 @@ A record's **Status** says where it stands:
 | [0044](ADR-0044-shifu-delegation-protocol.md) | accepted | The shifu delegation protocol — what installed binaries bake in forever |
 | [0045](ADR-0045-kfx-execution-profiles-native-rust-wasm.md) | accepted | KFX execution profiles — Rust-primary native, WebAssembly components, managed runtimes, and subprocesses |
 | [0046](ADR-0046-rust-host-trunk-and-assembled-runtime.md) | accepted | Rust host trunk, layered CLI, and the assembled runtime distribution |
-| [0047](ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md) | accepted; staged | authoritative structured facts have one schema owner — Hana POD or FlatBuffers |
-| [0048](ADR-0048-runtime-fact-query-semantics-and-changelog.md) | accepted; staged | runtime fact queries use explicit bases, one logical plan, and a proof-carrying changelog |
-| [0049](ADR-0049-layer-complete-products-and-domain-neutral-core.md) | accepted; staged | every product layer is independently complete and the core remains domain-neutral |
+| [0047](ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md) | accepted | authoritative structured facts have one schema owner — Hana POD or FlatBuffers |
+| [0048](ADR-0048-runtime-fact-query-semantics-and-changelog.md) | accepted | runtime fact queries use explicit bases, one logical plan, and a proof-carrying changelog |
+| [0049](ADR-0049-layer-complete-products-and-domain-neutral-core.md) | accepted | every product layer is independently complete and the core remains domain-neutral |
 | [0050](ADR-0050-assembled-runtime-stdlib-pruning-policy.md) | accepted | stdlib pruning policy for the assembled runtime — family-level subtraction, declarative fail-closed manifest |
-| [0051](ADR-0051-kfd-contract-world-fact-admission-and-trust.md) | accepted; staged | KFD contract worlds govern fact admission, historical interpretation, and trust assessment |
-| [0052](ADR-0052-kfd2-assessment-lifecycle-and-executors.md) | accepted; staged | KFD-2 assessments are claim-triggered jobs coordinated by the workspace coordinator |
+| [0051](ADR-0051-kfd-contract-world-fact-admission-and-trust.md) | accepted | KFD contract worlds govern fact admission, historical interpretation, and trust assessment |
+| [0052](ADR-0052-kfd2-assessment-lifecycle-and-executors.md) | accepted | KFD-2 assessments are claim-triggered jobs coordinated by the workspace coordinator |
 | [0053](ADR-0053-self-contained-episode-bundles.md) | proposed | Episode bundles carry their owned bytes, and import materializes them |
 | [0054](ADR-0054-libwasm-production-runtime-and-release.md) | accepted | libwasm is a governed product runtime, not a copied spike library |
 | [0055](ADR-0055-retire-journal-session-and-separate-runtime-state-from-projection.md) | accepted | retire journal Session; separate live state from schema projections |
@@ -79,14 +93,14 @@ A record's **Status** says where it stands:
 | [0059](ADR-0059-mission-control-mission-go-responsibility-model.md) | accepted | Mission Control composes Mission and Go responsibility over runtime facts; Atlas starts as a bridged authority |
 | [0060](ADR-0060-desktop-workspace-selection-and-lazy-data-home.md) | proposed | Desktop and CLI select Home or a project workspace and create its data home only on qualified write intent |
 | [0061](ADR-0061-agent-mediated-guidance-is-a-first-class-product-interface.md) | proposed | Agent-mediated guidance is a first-class interface over shared advice, preview, authorization, action, and receipt contracts |
-| [0062](ADR-0062-journal-container-epoch-and-offline-conversion.md) | accepted; implemented | the journal container epoch is derived from its layout; cross-epoch replay is deferred offline conversion, not an online adapter |
+| [0062](ADR-0062-journal-container-epoch-and-offline-conversion.md) | accepted | the journal container epoch is derived from its layout; cross-epoch replay is deferred offline conversion, not an online adapter |
 | [0063](ADR-0063-yijinjing-concurrency-and-lifetime-contract.md) | proposed | yijinjing separates lock-free publication from cursor, write, and page-lifetime ownership |
 | [0064](ADR-0064-runtime-error-propagation-and-stop-ownership.md) | proposed | runtime libraries propagate structured errors; loop owners decide how execution stops |
 | [0065](ADR-0065-schema-registry-consolidation.md) | proposed | the schema type registry has one authoritative set and trait-derived subsets; numeric tag comments retired; `msg_type` vocabulary finished except the frozen v1 embedding ABI |
 | [0066](ADR-0066-native-cpp-toolchain-contract-and-modules-hold.md) | accepted | native compilers share one C++ contract; modules remain qualification-only |
-| [0067](ADR-0067-schema-registry-compile-time-contract-welds.md) | accepted; not yet implemented | schema contract invariants welded at compile time — `carrier_type` tag uniqueness and payload layout↔`schema_version` binding (reusing the ADR-0062 fingerprint) |
-| [0068](ADR-0068-tiered-durability-and-crash-recovery.md) | accepted; staged | tiered durability separates hot mmap visibility, durable fact admission, rebuildable projections, and later replication |
-| [0069](ADR-0069-agent-first-kfx-profile-suite-runtime.md) | accepted; staged | Agent-first KFX Profile Suites carry domain semantics over a domain-neutral Core |
+| [0067](ADR-0067-schema-registry-compile-time-contract-welds.md) | accepted | schema contract invariants welded at compile time — `carrier_type` tag uniqueness and payload layout↔`schema_version` binding (reusing the ADR-0062 fingerprint) |
+| [0068](ADR-0068-tiered-durability-and-crash-recovery.md) | accepted | tiered durability separates hot mmap visibility, durable fact admission, rebuildable projections, and later replication |
+| [0069](ADR-0069-agent-first-kfx-profile-suite-runtime.md) | accepted | Agent-first KFX Profile Suites carry domain semantics over a domain-neutral Core |
 
 ## Reading by theme
 

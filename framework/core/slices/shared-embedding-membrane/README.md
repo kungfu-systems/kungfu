@@ -1,13 +1,14 @@
 ---
-status: active
+metadata_schema: kungfu.document-metadata/v1
+document_status: active
+doc_type: analysis
+review_state: self-reviewed
+sensitivity: internal
+sources: [local-files]
 period: 2026-07-10
 theme: libkungfu-shared-embedding-membrane
-doc_type: analysis
-source_level: local-files
 confidence: high
-sensitivity: internal
 evidence_grade: A
-review_state: self-reviewed
 last_reviewed: 2026-07-11
 ai_provenance:
   model_family: GPT-5

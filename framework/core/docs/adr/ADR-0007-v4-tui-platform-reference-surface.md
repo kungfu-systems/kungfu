@@ -1,3 +1,13 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0007
+decision_status: accepted
+implementation_status: not-started
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
 # ADR-0007: v4 TUI = the platform's second reference surface (shell-native, zero-copy, React/Ink)
 
 - Status: accepted (decision 2026-06-29: Ink / React stack). Implementation pending; coexistence

@@ -1,13 +1,16 @@
 ---
-status: draft
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0042
+decision_status: proposed
+implementation_status: not-started
+review_state: self-reviewed
+sensitivity: public
+sources: [local-files, user-consensus]
 period: 2026-07-10
 theme: episode-atomic-safety
-doc_type: architecture-decision
-source_level: user-consensus + local-files
 confidence: high
-sensitivity: public
 evidence_grade: B
-review_state: self-reviewed
 last_reviewed: 2026-07-10
 ai_provenance:
   model_family: GPT-5

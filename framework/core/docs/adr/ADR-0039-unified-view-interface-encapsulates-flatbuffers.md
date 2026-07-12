@@ -1,3 +1,13 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0039
+decision_status: accepted
+implementation_status: unknown
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
 # ADR-0039: a single kungfu view interface is the sole FlatBuffers access point; raw FB is not called elsewhere
 
 - Status: accepted

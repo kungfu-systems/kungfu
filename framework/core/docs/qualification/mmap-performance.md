@@ -1,13 +1,14 @@
 ---
-status: draft
+metadata_schema: kungfu.document-metadata/v1
+document_status: draft
+doc_type: qualification-contract
+review_state: self-reviewed
+sensitivity: public
+sources: [local-files, user-decision]
 period: 2026-07-11
 theme: yijinjing-mmap-performance-qualification
-doc_type: qualification-contract
-source_level: local-files + user-decision
 confidence: high
-sensitivity: public
 evidence_grade: B
-review_state: self-reviewed
 last_reviewed: 2026-07-11
 ai_provenance:
   model_family: GPT-5

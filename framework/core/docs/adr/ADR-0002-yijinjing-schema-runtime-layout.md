@@ -1,3 +1,13 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0002
+decision_status: superseded
+implementation_status: not-applicable
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
 # ADR-0002: yijinjing schema serialization — a FlatBuffers runtime schema over the zero-copy POD layout
 
 - Status: superseded in schema scope by

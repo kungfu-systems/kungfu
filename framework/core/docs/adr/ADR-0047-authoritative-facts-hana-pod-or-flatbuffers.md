@@ -1,3 +1,13 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0047
+decision_status: accepted
+implementation_status: implemented
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
 # ADR-0047: authoritative structured facts have one schema owner — Hana POD or FlatBuffers
 
 - Status: accepted; implemented and enforced

@@ -1,3 +1,13 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0013
+decision_status: proposed
+implementation_status: not-started
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
 # ADR-0013: extension isolation and the trusted channel on the runtime plane
 
 - Status: proposed (design accepted 2026-07-04; implementation deferred to a

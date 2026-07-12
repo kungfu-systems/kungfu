@@ -1,13 +1,14 @@
 ---
-status: draft
+metadata_schema: kungfu.document-metadata/v1
+document_status: draft
+doc_type: design-reference
+review_state: unreviewed
+sensitivity: public
+sources: [local-files]
 period: ongoing
 theme: shifu-cache-profiles
-doc_type: design-reference
-source_level: local-files
 confidence: high
-sensitivity: public
 evidence_grade: B
-review_state: unreviewed
 last_reviewed: 2026-07-12
 ---
 

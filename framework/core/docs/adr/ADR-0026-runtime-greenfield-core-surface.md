@@ -1,3 +1,13 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0026
+decision_status: accepted
+implementation_status: unknown
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
 # ADR-0026: runtime exposes a greenfield core surface, not trading typed helpers
 
 ## Status

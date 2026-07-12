@@ -1,13 +1,14 @@
 ---
-status: draft
+metadata_schema: kungfu.document-metadata/v1
+document_status: draft
+doc_type: product-design
+review_state: unreviewed
+sensitivity: public
+sources: [local-files, user-consensus]
 period: 2026-07-11
 theme: kungfu-mission-control-workspaces
-doc_type: product-design
-source_level: user-consensus-and-local-files
 confidence: high
-sensitivity: public
 evidence_grade: B
-review_state: unreviewed
 last_reviewed: 2026-07-11
 ai_provenance:
   model_family: GPT-5

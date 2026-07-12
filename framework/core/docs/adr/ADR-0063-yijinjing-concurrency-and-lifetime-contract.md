@@ -1,3 +1,13 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0063
+decision_status: proposed
+implementation_status: not-started
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
 # ADR-0063: yijinjing separates lock-free publication from cursor, write, and page-lifetime ownership
 
 - Status: proposed

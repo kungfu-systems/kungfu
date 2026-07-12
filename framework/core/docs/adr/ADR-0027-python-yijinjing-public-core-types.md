@@ -1,3 +1,13 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0027
+decision_status: accepted
+implementation_status: unknown
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
 # ADR-0027: Python yijinjing schema exposes only core public runtime types
 
 ## Status

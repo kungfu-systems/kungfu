@@ -1,3 +1,13 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0003
+decision_status: proposed
+implementation_status: not-started
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
 # ADR-0003: control axis — the Python coroutine integration layer (continue / redesign / drop)
 
 - Status: proposed (open design question; under evaluation, not scheduled)

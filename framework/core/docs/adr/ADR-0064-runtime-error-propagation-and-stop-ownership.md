@@ -1,3 +1,13 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0064
+decision_status: proposed
+implementation_status: not-started
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
 # ADR-0064: runtime libraries propagate structured errors; loop owners decide how execution stops
 
 - Status: proposed

@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 1,
+  "metadataSchema": "kungfu.document-metadata/v1",
+  "sourceKinds": [
+    "architecture-decisions",
+    "executable-probe",
+    "local-files",
+    "official-upstream",
+    "public-reference-systems",
+    "user-consensus",
+    "user-decision"
+  ],
+  "externalFrontmatterSchemas": [
+    {
+      "id": "github-issue-template",
+      "patterns": ["^\\.github/ISSUE_TEMPLATE/.*\\.md$"]
+    },
+    {
+      "id": "kungfu-skill",
+      "patterns": ["(^|/)SKILL\\.md$"]
+    }
+  ],
+  "profiles": [
+    {
+      "id": "architecture-decision",
+      "patterns": [
+        "^framework/core/docs/adr/ADR-[0-9]{4}-.*\\.md$",
+        "^docs/shifu/adr/SHIFU-ADR-[0-9]{4}-.*\\.md$"
+      ],
+      "frontmatterRequired": true,
+      "required": [
+        "metadata_schema",
+        "doc_type",
+        "adr_id",
+        "decision_status",
+        "implementation_status",
+        "review_state",
+        "sensitivity"
+      ],
+      "constants": {
+        "metadata_schema": "kungfu.document-metadata/v1",
+        "doc_type": "architecture-decision",
+        "sensitivity": "public"
+      },
+      "enums": {
+        "decision_status": ["proposed", "accepted", "superseded"],
+        "implementation_status": [
+          "not-started",
+          "partial",
+          "staged",
+          "implemented",
+          "not-applicable",
+          "unknown"
+        ],
+        "review_state": [
+          "legacy-unreviewed",
+          "unreviewed",
+          "self-reviewed",
+          "maintainer-reviewed"
+        ]
+      },
+      "forbidden": ["status", "document_status", "source_level"]
+    },
+    {
+      "id": "adr-index",
+      "files": [
+        "framework/core/docs/adr/README.md",
+        "docs/shifu/adr/README.md"
+      ],
+      "frontmatterRequired": true,
+      "required": [
+        "metadata_schema",
+        "doc_type",
+        "document_status",
+        "review_state",
+        "sensitivity"
+      ],
+      "constants": {
+        "metadata_schema": "kungfu.document-metadata/v1",
+        "doc_type": "adr-index",
+        "document_status": "active",
+        "sensitivity": "public"
+      },
+      "enums": {
+        "review_state": ["unreviewed", "self-reviewed", "maintainer-reviewed"]
+      },
+      "forbidden": ["status", "decision_status", "source_level"]
+    },
+    {
+      "id": "public-document",
+      "files": ["README.md", "AGENTS.md", "CONTRIBUTING.md"],
+      "patterns": ["^docs/.*\\.md$", "^framework/spec/.*\\.md$"],
+      "frontmatterRequired": true,
+      "required": [
+        "metadata_schema",
+        "doc_type",
+        "document_status",
+        "review_state",
+        "sensitivity"
+      ],
+      "constants": {
+        "metadata_schema": "kungfu.document-metadata/v1",
+        "sensitivity": "public"
+      },
+      "enums": {
+        "document_status": ["draft", "active", "stable", "deprecated", "archived"],
+        "review_state": ["unreviewed", "self-reviewed", "maintainer-reviewed"]
+      },
+      "forbidden": ["status", "decision_status", "source_level"]
+    },
+    {
+      "id": "repository-document",
+      "patterns": [".*"],
+      "frontmatterRequired": false,
+      "required": [
+        "metadata_schema",
+        "doc_type",
+        "document_status",
+        "review_state",
+        "sensitivity"
+      ],
+      "constants": {
+        "metadata_schema": "kungfu.document-metadata/v1"
+      },
+      "enums": {
+        "document_status": ["draft", "active", "stable", "deprecated", "archived"],
+        "review_state": ["unreviewed", "self-reviewed", "maintainer-reviewed"],
+        "sensitivity": ["public", "internal"]
+      },
+      "forbidden": ["status", "decision_status", "source_level"]
+    }
+  ],
+  "adrRegistries": [
+    {
+      "index": "framework/core/docs/adr/README.md",
+      "recordPattern": "^framework/core/docs/adr/(ADR-[0-9]{4})-.*\\.md$"
+    },
+    {
+      "index": "docs/shifu/adr/README.md",
+      "recordPattern": "^docs/shifu/adr/(SHIFU-ADR-[0-9]{4})-.*\\.md$"
+    }
+  ]
+}

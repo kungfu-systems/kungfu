@@ -1,3 +1,13 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0052
+decision_status: accepted
+implementation_status: implemented
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
 # ADR-0052: KFD-2 assessments are claim-triggered jobs coordinated by the workspace coordinator
 
 - Status: accepted; initial runtime implemented

@@ -1,13 +1,14 @@
 ---
-status: draft
+metadata_schema: kungfu.document-metadata/v1
+document_status: draft
+doc_type: analysis
+review_state: unreviewed
+sensitivity: public
+sources: [local-files]
 period: 2026-07-10
 theme: rust-host-spike
-doc_type: analysis
-source_level: local-files
 confidence: medium
-sensitivity: internal
 evidence_grade: B
-review_state: unreviewed
 last_reviewed: 2026-07-10
 ai_provenance:
   model_family: GPT-5

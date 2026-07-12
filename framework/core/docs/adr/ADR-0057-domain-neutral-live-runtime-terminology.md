@@ -1,13 +1,16 @@
 ---
-status: accepted
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0057
+decision_status: accepted
+implementation_status: implemented
+review_state: maintainer-reviewed
+sensitivity: public
+sources: [local-files, user-decision]
 period: 2026-07-11
 theme: domain-neutral-live-runtime-terminology
-doc_type: architecture-decision
-source_level: local-files + user-decision
 confidence: high
-sensitivity: public
 evidence_grade: A
-review_state: user-reviewed
 last_reviewed: 2026-07-11
 ---
 

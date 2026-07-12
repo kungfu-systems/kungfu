@@ -1,3 +1,13 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0006
+decision_status: accepted
+implementation_status: partial
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
 # ADR-0006: v4 frontend = platform (capability SDK + loose kfx contract) + minimal reference app
 
 - Status: accepted (foundation phase; coexistence empirically validated, see "Gate outcome")

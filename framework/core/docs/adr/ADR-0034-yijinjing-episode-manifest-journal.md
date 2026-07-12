@@ -1,3 +1,13 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0034
+decision_status: accepted
+implementation_status: unknown
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
 # ADR-0034: Episode manifest records live in the yijinjing journal format
 
 - Status: accepted

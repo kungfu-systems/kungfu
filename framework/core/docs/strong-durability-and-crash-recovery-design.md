@@ -1,13 +1,14 @@
 ---
-status: draft
+metadata_schema: kungfu.document-metadata/v1
+document_status: draft
+doc_type: design
+review_state: self-reviewed
+sensitivity: public
+sources: [local-files, user-consensus]
 period: 2026-07-12
 theme: strong-durability-and-crash-recovery
-doc_type: design
-source_level: user-consensus + local-files
 confidence: high
-sensitivity: public
 evidence_grade: B
-review_state: self-reviewed
 last_reviewed: 2026-07-12
 ai_provenance:
   model_family: GPT-5

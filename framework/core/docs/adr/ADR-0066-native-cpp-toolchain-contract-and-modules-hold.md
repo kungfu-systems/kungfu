@@ -1,13 +1,16 @@
 ---
-status: accepted
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0066
+decision_status: accepted
+implementation_status: unknown
+review_state: self-reviewed
+sensitivity: public
+sources: [local-files]
 period: ongoing
 theme: kungfu-cpp-modernization
-doc_type: decision
-source_level: local-files
 confidence: high
-sensitivity: public
 evidence_grade: A
-review_state: self-reviewed
 last_reviewed: 2026-07-12
 ai_provenance:
   model_family: GPT-5

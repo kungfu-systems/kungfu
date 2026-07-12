@@ -1,3 +1,11 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+document_status: active
+doc_type: public-document
+review_state: unreviewed
+sensitivity: public
+---
+
 # Contributing to Kungfu
 
 Thanks for your interest in Kungfu. This guide covers how to build the project,
@@ -168,7 +176,12 @@ whole Markdown graph so deleting or renaming a target cannot evade a
 changed-file filter. The intentionally small Markdownlint rule baseline lives
 in `.markdownlint-cli2.mjs`; do not enable a style rule by rewriting unrelated
 documents. `docs.contract.json` owns only required documents and navigation
-pointers. [`docs/vocabulary.registry.json`](docs/vocabulary.registry.json) is
+pointers. [`docs/document-metadata.contract.json`](docs/document-metadata.contract.json)
+owns typed frontmatter profiles and makes ADR body/index status checked
+projections of ADR metadata; see
+[`docs/document-metadata.md`](docs/document-metadata.md). GitHub issue templates
+and Kungfu Skills retain their independently consumed frontmatter schemas.
+[`docs/vocabulary.registry.json`](docs/vocabulary.registry.json) is
 the executable source for canonical term spelling and layers, governed public
 files, retired wording, preferred terminology, and load-bearing claim guards.
 The deterministic check verifies that its core terms remain aligned with

@@ -5,8 +5,8 @@
   "witnessKind": "prebuild",
   "supportLevel": "release",
   "source": {
-    "cwd": "/Users/dkr/Worktrees/kungfu/feature/home-workspace-agent-guidance",
-    "sourceSha": "caa70020c244e327fa9ce61b5f892d41429d5f15",
+    "cwd": "/Users/dkr/Worktrees/kungfu/feature/document-metadata-contract",
+    "sourceSha": "3d45ed9b89349bdfde4f52c663108186b5402122",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
     "registryDigest": "sha256:710a7f091e6f42a2059d2b617a417650fc7894e6ba80e3c456530460b755fd02"
   },

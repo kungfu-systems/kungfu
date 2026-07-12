@@ -1,3 +1,11 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+document_status: active
+doc_type: public-document
+review_state: unreviewed
+sensitivity: public
+---
+
 # Cost/State/Proof profile
 
 Cost/State/Proof is the first commercial profile of Kungfu Mission Control. It

@@ -1,3 +1,11 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+document_status: active
+doc_type: public-document
+review_state: unreviewed
+sensitivity: public
+---
+
 # Kungfu Skills
 
 Kungfu Skills are the agent-facing capability layer above kfx. A skill teaches

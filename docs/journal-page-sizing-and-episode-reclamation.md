@@ -1,3 +1,11 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+document_status: active
+doc_type: public-document
+review_state: unreviewed
+sensitivity: public
+---
+
 # Design note: journal page sizing, max-frame, and Episode-aware reclamation
 
 - Status: design judgment (note, not a decision record)

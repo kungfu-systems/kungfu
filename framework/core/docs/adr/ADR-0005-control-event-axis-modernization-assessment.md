@@ -1,6 +1,16 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0005
+decision_status: proposed
+implementation_status: partial
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
 # ADR-0005: control / event axis modernization — a meta-assessment
 
-- Status: partially decided (2026-07-03: the reactive event layer is **frozen
+- Status: proposed; partially decided (2026-07-03: the reactive event layer is **frozen
   for v4** — see the decision below; ADR-0003 and ADR-0004 remain open)
 - Date: 2026-06-30
 - Category: (b) improvement — meta design question for v4 scope

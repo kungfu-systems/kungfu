@@ -1,13 +1,14 @@
 ---
-status: draft
+metadata_schema: kungfu.document-metadata/v1
+document_status: draft
+doc_type: analysis
+review_state: unreviewed
+sensitivity: public
+sources: [executable-probe, local-files, official-upstream]
 period: 2026-07-11
 theme: libwasm-shared-embedding-membrane
-doc_type: analysis
-source_level: local-files + official-upstream + executable-probe
 confidence: high
-sensitivity: public
 evidence_grade: B
-review_state: unreviewed
 last_reviewed: 2026-07-11
 ai_provenance:
   model_family: GPT-5

@@ -1,13 +1,14 @@
 ---
-status: draft
+metadata_schema: kungfu.document-metadata/v1
+document_status: draft
+doc_type: verification-design
+review_state: self-reviewed
+sensitivity: public
+sources: [local-files, user-consensus]
 period: ongoing
 theme: episode-atomicity-qualification
-doc_type: verification-design
-source_level: user-consensus + local-files
 confidence: medium-high
-sensitivity: public
 evidence_grade: B
-review_state: self-reviewed
 last_reviewed: 2026-07-10
 ai_provenance:
   model_family: GPT-5

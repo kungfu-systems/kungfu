@@ -1,3 +1,13 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0067
+decision_status: accepted
+implementation_status: not-started
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
 # ADR-0067: schema-registry contract invariants are welded at compile time — tag uniqueness and payload layout↔version binding
 
 - Status: accepted; not yet implemented

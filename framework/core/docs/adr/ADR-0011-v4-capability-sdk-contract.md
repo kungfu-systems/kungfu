@@ -1,3 +1,13 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0011
+decision_status: accepted
+implementation_status: implemented
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
 # ADR-0011: v4 capability SDK contract — first cut
 
 - Status: accepted (contract ratified and implemented 2026-07-02: the

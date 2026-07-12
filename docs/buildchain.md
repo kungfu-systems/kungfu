@@ -1,3 +1,11 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+document_status: active
+doc_type: public-document
+review_state: unreviewed
+sensitivity: public
+---
+
 # Buildchain — from source to binary
 
 How source becomes the binaries you run, and where each binary comes from. This

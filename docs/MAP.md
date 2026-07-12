@@ -1,3 +1,11 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+document_status: active
+doc_type: public-document
+review_state: unreviewed
+sensitivity: public
+---
+
 # Documentation Map
 
 This is Kungfu's exhaustive question and evidence index. It is optimized for a
@@ -41,6 +49,7 @@ and the map routes a question to whichever doc answers it.
 | Why this versioning / release design (don't replace it naively)? | [`version-release-design.md`](version-release-design.md) | why | stable |
 | When must a change open a minor or major (and when must it not)? | [`versioning.md`](versioning.md) (rule: KFD-1, adopted by ADR-0010) | verify | stable |
 | Why was a past decision made? | [`../framework/core/docs/adr/`](../framework/core/docs/adr) | why | stable |
+| Which frontmatter fields are authoritative, and how are ADR status projections checked? | [`document-metadata.md`](document-metadata.md) | use, verify | stable · executable contract |
 | How is the repository layered? | [`architecture.md`](architecture.md) | use | stable |
 | Which Kungfu layer can I adopt independently, and what does each product promise? | [`product-layers.md`](product-layers.md) + [ADR-0049](../framework/core/docs/adr/ADR-0049-layer-complete-products-and-domain-neutral-core.md) | why, use, verify | draft · principle accepted; qualifications staged |
 | Which application domains guide the neutral core without expanding the current roadmap? | [`domain-horizons.md`](domain-horizons.md) | why | draft · agent runtime current; trading evidence; games/virtual worlds horizon |

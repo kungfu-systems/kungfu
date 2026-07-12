@@ -1,3 +1,13 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0062
+decision_status: accepted
+implementation_status: implemented
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
 # ADR-0062: the journal container epoch is derived from its layout, and cross-epoch replay is offline conversion
 
 - Status: accepted; implemented

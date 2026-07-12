@@ -1,13 +1,14 @@
 ---
-status: draft
+metadata_schema: kungfu.document-metadata/v1
+document_status: draft
+doc_type: design
+review_state: unreviewed
+sensitivity: internal
+sources: [local-files]
 period: 2026-07-08
 theme: kungfu-v4-carrier-type-registry
-doc_type: design
-source_level: local-files
 confidence: high
-sensitivity: internal
 evidence_grade: B
-review_state: active
 last_reviewed: 2026-07-11
 ai_provenance:
   generated_by: Codex

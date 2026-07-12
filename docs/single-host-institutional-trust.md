@@ -1,13 +1,14 @@
 ---
-status: draft
+metadata_schema: kungfu.document-metadata/v1
+document_status: draft
+doc_type: adoption-contract
+review_state: self-reviewed
+sensitivity: public
+sources: [architecture-decisions, local-files]
 period: 2026-07-12
 theme: single-host-institutional-trust
-doc_type: adoption-contract
-source_level: local-files + architecture-decisions
 confidence: high
-sensitivity: public
 evidence_grade: B
-review_state: self-reviewed
 last_reviewed: 2026-07-12
 ai_provenance:
   model_family: GPT-5

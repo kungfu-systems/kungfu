@@ -46,6 +46,7 @@ function run(files) {
       .sort(),
     contract,
     vocabularyRegistry: false,
+    metadataContract: false,
   });
 }
 
@@ -134,6 +135,7 @@ test('rejects undeclared executable examples', () => {
     files: ['README.md', 'docs/guide.md'],
     contract,
     vocabularyRegistry: false,
+    metadataContract: false,
   });
   assert.ok(
     findings.some(
@@ -161,6 +163,7 @@ test('rejects declared executable examples outside the safe argv allowlist', () 
     files: ['README.md', 'docs/guide.md'],
     contract: unsafe,
     vocabularyRegistry: false,
+    metadataContract: false,
   });
   assert.ok(
     findings.some((finding) => finding.code === 'executable-example-unsafe'),

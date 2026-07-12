@@ -37,6 +37,7 @@ try {
   run('negative fixtures', [
     '--test',
     path.join('scripts', 'check-docs.test.mjs'),
+    path.join('scripts', 'document-metadata-contract.test.mjs'),
     path.join('scripts', 'vocabulary-contract.test.mjs'),
     path.join('scripts', 'check-docs-toolchain.test.mjs'),
   ]);

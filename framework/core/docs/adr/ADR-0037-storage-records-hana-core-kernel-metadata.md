@@ -1,3 +1,13 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0037
+decision_status: accepted
+implementation_status: implemented
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
 # ADR-0037: ADR-0018 storage-service records are Hana-core kernel metadata; JSON is an edge projection, not the contract
 
 - Status: accepted; record/journal/projection and typed service migration delivered

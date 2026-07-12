@@ -1,13 +1,16 @@
 ---
-status: accepted
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0045
+decision_status: accepted
+implementation_status: implemented
+review_state: maintainer-reviewed
+sensitivity: public
+sources: [local-files, official-upstream]
 period: 2026-07-10
 theme: kfx-execution-profiles
-doc_type: architecture-decision
-source_level: local-files + official-upstream
 confidence: high
-sensitivity: public
 evidence_grade: B
-review_state: user-reviewed
 last_reviewed: 2026-07-11
 ---
 

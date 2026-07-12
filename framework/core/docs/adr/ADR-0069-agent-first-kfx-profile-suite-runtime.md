@@ -1,13 +1,16 @@
 ---
-status: accepted
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0069
+decision_status: accepted
+implementation_status: staged
+review_state: self-reviewed
+sensitivity: public
+sources: [local-files, user-consensus]
 period: 2026-07-13
 theme: agent-first-kfx-profile-suite-runtime
-doc_type: architecture-decision
-source_level: user-consensus + local-files
 confidence: high
-sensitivity: public
 evidence_grade: B
-review_state: self-reviewed
 last_reviewed: 2026-07-13
 ai_provenance:
   model_family: GPT-5

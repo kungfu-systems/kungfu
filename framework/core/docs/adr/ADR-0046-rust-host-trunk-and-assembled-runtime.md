@@ -1,3 +1,13 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0046
+decision_status: accepted
+implementation_status: staged
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
 # ADR-0046: Rust host trunk, layered CLI, and the assembled runtime distribution
 
 - Status: accepted (target architecture; adoption is staged — see "Adoption

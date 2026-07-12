@@ -1,3 +1,13 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0059
+decision_status: accepted
+implementation_status: implemented
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
 # ADR-0059: Mission Control composes Mission and Go responsibility over runtime facts
 
 - Status: accepted; initial Atlas Mission/Go admission implemented; query and

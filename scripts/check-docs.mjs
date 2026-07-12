@@ -8,6 +8,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { validateDocumentMetadata } from './document-metadata-contract.mjs';
 import { validateVocabularyContract } from './vocabulary-contract.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -211,7 +212,7 @@ function hasExactCase(root, absolute) {
 }
 
 /**
- * @param {{root?: string, files?: string[], contract?: DocsContract, vocabularyRegistry?: object | false}} options
+ * @param {{root?: string, files?: string[], contract?: DocsContract, vocabularyRegistry?: object | false, metadataContract?: object | false}} options
  * @returns {Finding[]}
  */
 export function checkDocs(options = {}) {
@@ -228,6 +229,16 @@ export function checkDocs(options = {}) {
           root,
           registry: /** @type {any} */ (options.vocabularyRegistry),
         });
+
+  if (options.metadataContract !== false) {
+    findings.push(
+      ...validateDocumentMetadata({
+        root,
+        files,
+        contract: /** @type {any} */ (options.metadataContract),
+      }),
+    );
+  }
 
   for (const rel of files) {
     const text = fs.readFileSync(path.join(root, rel), 'utf8');

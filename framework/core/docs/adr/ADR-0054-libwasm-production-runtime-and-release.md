@@ -1,13 +1,16 @@
 ---
-status: accepted
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0054
+decision_status: accepted
+implementation_status: unknown
+review_state: maintainer-reviewed
+sensitivity: public
+sources: [executable-probe, local-files, official-upstream]
 period: 2026-07-11
 theme: libwasm-production-runtime
-doc_type: architecture-decision
-source_level: local-files + executable-probe + official-upstream
 confidence: high
-sensitivity: public
 evidence_grade: B
-review_state: user-reviewed
 last_reviewed: 2026-07-11
 ai_provenance:
   model_family: GPT-5
