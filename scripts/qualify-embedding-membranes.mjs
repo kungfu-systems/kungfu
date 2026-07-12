@@ -11,6 +11,8 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const core = path.join(root, 'framework', 'core');
 const build = path.join(core, 'build');
+const cargoRegistry =
+  process.env.KF_LIBWASM_CARGO_REGISTRY ?? 'sparse+https://rsproxy.cn/index/';
 const python = path.join(
   core,
   '.venv',
@@ -57,7 +59,7 @@ run('cmake', [
   '-DCMAKE_BUILD_TYPE=Release',
   `-DPYTHON_EXECUTABLE=${cmakePath(python)}`,
   '-DKUNGFU_WITH_SLICES=ON',
-  '-DKF_LIBWASM_CARGO_REGISTRY=sparse+https://rsproxy.cn/index/',
+  `-DKF_LIBWASM_CARGO_REGISTRY=${cargoRegistry}`,
 ]);
 run('cmake', [
   '--build',
