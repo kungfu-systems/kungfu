@@ -27,10 +27,14 @@ const ENV_VARIANT_KEY: &str = "KUNGFU_AS_VARIANT";
 
 /// The standalone node-host library the product ships next to this binary; it
 /// exports the C entry `kungfu_node_run` (a thin wrapper over node::Start).
+/// Note the Windows name has no `lib` prefix: MSVC `add_library(... SHARED)`
+/// produces `kungfu_node_host.dll`, not `libkungfu_node_host.dll`.
 #[cfg(target_os = "macos")]
 const NODE_HOST_LIB: &str = "libkungfu_node_host.dylib";
 #[cfg(all(unix, not(target_os = "macos")))]
 const NODE_HOST_LIB: &str = "libkungfu_node_host.so";
+#[cfg(windows)]
+const NODE_HOST_LIB: &str = "kungfu_node_host.dll";
 
 /// If this process was asked to be a variant the trunk can own natively, run it
 /// to completion and return `Some(exit_code)`. Return `None` to fall through to
@@ -40,6 +44,47 @@ pub fn dispatch() -> Option<i32> {
         Some("node") => run_node(),
         _ => None,
     }
+}
+
+/// The C entry the node-host exports: `int kungfu_node_run(int argc, char **argv)`.
+#[cfg(any(unix, windows))]
+type NodeRunFn = extern "C" fn(std::ffi::c_int, *mut *mut std::ffi::c_char) -> std::ffi::c_int;
+
+/// Build heap-owned, mutable UTF-8 argv copies and hand them to the node-host
+/// entry. node::Start owns the process for its lifetime and may permute argv, so
+/// the copies must be heap-owned (argv[0] = program name, matching sys.argv). The
+/// copies are reclaimed only if node::Start returns rather than exiting the
+/// process itself. Shared by every platform loader so the argv contract lives in
+/// one place.
+#[cfg(any(unix, windows))]
+fn invoke_node(run: NodeRunFn) -> i32 {
+    use std::ffi::{c_char, c_int, CString};
+
+    let mut argv: Vec<*mut c_char> = env::args_os()
+        .map(|arg| {
+            CString::new(os_arg_bytes(&arg))
+                .unwrap_or_default()
+                .into_raw()
+        })
+        .collect();
+    let argc = argv.len() as c_int;
+    let code = run(argc, argv.as_mut_ptr());
+    for ptr in argv {
+        unsafe { drop(CString::from_raw(ptr)) };
+    }
+    code as i32
+}
+
+/// argv bytes for the node-host: raw bytes on unix (exact), lossy UTF-8 on
+/// Windows (args arrive as UTF-16; node itself works in UTF-8 argv).
+#[cfg(unix)]
+fn os_arg_bytes(arg: &std::ffi::OsStr) -> Vec<u8> {
+    use std::os::unix::ffi::OsStrExt;
+    arg.as_bytes().to_vec()
+}
+#[cfg(windows)]
+fn os_arg_bytes(arg: &std::ffi::OsStr) -> Vec<u8> {
+    arg.to_string_lossy().into_owned().into_bytes()
 }
 
 #[cfg(unix)]
@@ -71,30 +116,54 @@ fn run_node() -> Option<i32> {
     if entry.is_null() {
         return None;
     }
-    // int kungfu_node_run(int argc, char **argv)
-    let run: extern "C" fn(c_int, *mut *mut c_char) -> c_int =
-        unsafe { std::mem::transmute(entry) };
-
-    // node::Start owns the process for its lifetime and may permute argv, so hand
-    // it heap-owned, mutable copies (argv[0] = program name, matching sys.argv).
-    let mut argv: Vec<*mut c_char> = env::args_os()
-        .map(|arg| CString::new(arg.as_bytes()).unwrap_or_default().into_raw())
-        .collect();
-    let argc = argv.len() as c_int;
-    let code = run(argc, argv.as_mut_ptr());
-
-    // Reclaim the argv copies (reached only if node::Start returns rather than
-    // exiting the process itself).
-    for ptr in argv {
-        unsafe { drop(CString::from_raw(ptr)) };
-    }
-    Some(code as i32)
+    let run: NodeRunFn = unsafe { std::mem::transmute(entry) };
+    Some(invoke_node(run))
 }
 
-#[cfg(not(unix))]
+#[cfg(windows)]
 fn run_node() -> Option<i32> {
-    // Windows native node-host loading is a follow-up (LoadLibrary/GetProcAddress);
-    // until then fall through to the Python variant path, the current behavior.
+    use std::ffi::{c_char, c_void, CString};
+    use std::os::windows::ffi::OsStrExt;
+
+    // Win32 loader entry points from kernel32; std-only, no crate dependency.
+    // `extern "system"` is the stdcall/x64 ABI these use.
+    extern "system" {
+        fn LoadLibraryW(lp_lib_file_name: *const u16) -> *mut c_void;
+        fn GetProcAddress(h_module: *mut c_void, lp_proc_name: *const c_char) -> *mut c_void;
+    }
+
+    // The host DLL ships next to this binary (dist/kungfu); the exe directory is
+    // on the default DLL search path. If we cannot resolve our own path, fall
+    // through rather than guess.
+    let exe = env::current_exe().ok()?;
+    let lib_path = exe.parent()?.join(NODE_HOST_LIB);
+    // LoadLibraryW wants a NUL-terminated wide string.
+    let wide: Vec<u16> = lib_path
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+
+    // Absent library → not the product build → fall through to the Python path.
+    let handle = unsafe { LoadLibraryW(wide.as_ptr()) };
+    if handle.is_null() {
+        return None;
+    }
+    let symbol = CString::new("kungfu_node_run").unwrap();
+    let entry = unsafe { GetProcAddress(handle, symbol.as_ptr()) };
+    if entry.is_null() {
+        return None;
+    }
+    let run: NodeRunFn = unsafe { std::mem::transmute(entry) };
+    // Deliberately no FreeLibrary: node::Start owns the process and normally exits
+    // it; on the rare return the process is ending anyway.
+    Some(invoke_node(run))
+}
+
+#[cfg(not(any(unix, windows)))]
+fn run_node() -> Option<i32> {
+    // No native loader for this platform → fall through to the Python variant
+    // path, the current behavior.
     None
 }
 
