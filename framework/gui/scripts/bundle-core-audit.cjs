@@ -181,7 +181,7 @@ if (require.main === module) {
   const appDir = explicit ? resolveExplicitApp(explicit) : findDefaultApp();
   if (!appDir) {
     console.error(
-      'usage: node scripts/bundle-core-audit.cjs [--prune] <Kungfu.app>',
+      'usage: node scripts/bundle-core-audit.cjs [--prune] <Kungfu Episodes.app>',
     );
     process.exit(2);
   }

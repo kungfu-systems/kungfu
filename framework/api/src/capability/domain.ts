@@ -6,9 +6,9 @@ import {
   type KfLocation,
   type KfLocator,
   type KfNativeBinding,
-  categoryName,
   modeName,
   resolveRuntimeDir,
+  roleName,
 } from './types.js';
 
 export type ConfigEntry = {
@@ -37,8 +37,8 @@ export function openDomainState(options: OpenDomainStateOptions): DomainState {
   const configs = (): ConfigEntry[] =>
     Object.values(store.getAllConfig()).map((row) => ({
       location: {
-        category: categoryName(row.category as number),
-        group: String(row.group),
+        role: roleName(row.role as number),
+        namespace: String((row.namespace ?? row.group) as string),
         name: String(row.name),
         mode: modeName(row.mode as number),
       },
@@ -47,8 +47,8 @@ export function openDomainState(options: OpenDomainStateOptions): DomainState {
 
   const setConfig = (location: KfLocation, value: string): boolean =>
     store.setConfig(
-      String(location.category),
-      location.group,
+      String(location.role),
+      location.namespace,
       location.name,
       String(location.mode),
       value,
@@ -56,20 +56,20 @@ export function openDomainState(options: OpenDomainStateOptions): DomainState {
 
   const removeConfig = (location: KfLocation): boolean =>
     store.removeConfig(
-      String(location.category),
-      location.group,
+      String(location.role),
+      location.namespace,
       location.name,
       String(location.mode),
     );
 
   const locations = (): KfLocation[] => {
     const io = new binding.IODevice(
-      { category: 'system', group: 'capability', name: 'domain', mode: 'live' },
+      { role: 'system', namespace: 'capability', name: 'domain', mode: 'live' },
       runtimeDir,
     );
     return Object.values(io.getAllLocations()).map((row) => ({
-      category: String(row.category),
-      group: String(row.group),
+      role: String(row.role),
+      namespace: String(row.namespace ?? row.group),
       name: String(row.name),
       mode: String(row.mode),
     }));

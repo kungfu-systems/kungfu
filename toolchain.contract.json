@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "project_cpp_standard": 23,
+    "public_yijinjing_cpp_standard": 20,
+    "cpp_extensions": false,
+    "generator": "Ninja",
+    "production_compilers": {
+      "macos": "AppleClang",
+      "linux": "GNU",
+      "windows": "MSVC"
+    },
+    "secondary_compilers": {
+      "linux": "Clang",
+      "windows": "ClangCl"
+    }
+  },
+  "minimum": {
+    "cmake": "3.28.0",
+    "ninja": "1.11.1",
+    "conan": "2.29.1",
+    "apple_clang": "17.0.0",
+    "gcc": "14.0.0",
+    "clang": "18.0.0",
+    "msvc": "19.40.0"
+  },
+  "qualified_2026_07_12": {
+    "macos": {
+      "compiler": "AppleClang 21.0.0",
+      "stdlib": "libc++",
+      "cmake": "4.3.2",
+      "ninja": "1.13.0",
+      "sdk": "macOS 26.5"
+    },
+    "linux": {
+      "compiler": "GCC 14 qualification target",
+      "secondary": "Clang 18.1.3",
+      "stdlib": "libstdc++",
+      "cmake": "3.28.3",
+      "ninja": "1.11.1",
+      "os": "Ubuntu 24.04.4 LTS"
+    },
+    "windows": {
+      "compiler": "MSVC 19.51.36248",
+      "secondary": "clang-cl 22.1.7",
+      "runtime": "MSVC DLL CRT",
+      "cmake": "4.3.3",
+      "ninja": "1.13.2",
+      "sdk": "Windows SDK 10.0.26100.0"
+    }
+  }
+}

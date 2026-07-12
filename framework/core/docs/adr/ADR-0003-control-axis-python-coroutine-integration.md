@@ -3,16 +3,16 @@
 - Status: proposed (open design question; under evaluation, not scheduled)
 - Date: 2026-06-30
 - Category: (b) improvement + latent fragility — control-axis design question
-- Subsystem: Python binding — `coloop.py` (`KungfuEventLoop`), the fusion of the
+- Subsystem: Python binding — `event_loop.py` (`LiveEventLoop`), the fusion of the
   engine's single-threaded loop with Python `asyncio`
 - Related: aggregated with [ADR-0004](ADR-0004-control-axis-node-watcher-snapshot-model.md)
   into the meta-assessment [ADR-0005](ADR-0005-control-event-axis-modernization-assessment.md);
-  orthogonal to the data-axis work in [ADR-0002](ADR-0002-longfist-flatbuffers-runtime-schema.md).
+  orthogonal to the data-axis work in [ADR-0002](ADR-0002-yijinjing-schema-runtime-layout.md).
 
 ## Context
 
 The Python side integrates coroutines by fusing the engine's single-threaded
-loop with `asyncio`: `KungfuEventLoop` (in `coloop.py`) implements
+loop with `asyncio`: `LiveEventLoop` (in `event_loop.py`) implements
 `asyncio.AbstractEventLoop` so that a single thread runs both the engine's event
 stepping and Python coroutine scheduling, rather than running an `asyncio` loop
 on a separate thread. The design goal — one thread, no cross-thread handoff
@@ -53,5 +53,5 @@ Record the question rather than pre-empt it. The choices:
 ## Status / progress
 
 Incomplete and not scheduled. The current behaviour and the coupling points are
-visible in `coloop.py`. This ADR exists to make the design question explicit and
+visible in `event_loop.py`. This ADR exists to make the design question explicit and
 traceable; it does not yet commit to an option.

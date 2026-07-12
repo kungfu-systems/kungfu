@@ -67,3 +67,7 @@ the content grows behind it.
   this interface — treat as versioned.
 - The site is a pure consumer: no spec truth lives in the site repo. Rendered
   HTML and any re-emitted machine artifacts are derived from this bundle.
+- Binding handbooks should describe Python and Node storage APIs as shims over
+  the same `libkungfu` runtime storage service. Do not document separate
+  language-owned storage semantics for fsck, import/export, rebuild, GC,
+  compact, or sync verification.

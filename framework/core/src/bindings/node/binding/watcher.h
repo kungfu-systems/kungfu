@@ -14,18 +14,15 @@
 #include "io.h"
 #include "journal.h"
 #include "operators.h"
-// tracing-foundation Phase 1(goal 2026-06-25):wingchun(book/broker)已脱出。
-// 交易记账(bookkeeper/Book/SilentAutoClient/BookListener)随之移除,留 Phase 2「喂 agent 事件」新 Watcher 重建。
-#include <kungfu/yijinjing/cache/runtime.h>
-#include <kungfu/yijinjing/practice/apprentice.h>
+#include <kungfu/runtime/live/peer.h>
+#include <kungfu/runtime/state_cache/model.h>
 
 namespace kungfu::node {
 constexpr uint64_t ID_TRANC = 0x00000000FFFFFFFF;
 constexpr uint32_t PAGE_ID_MASK = 0x80000000;
 constexpr uint32_t TRANSFER_STATIC_DATA_LIMIT = 2000;
-constexpr uint32_t TRANSFER_TRADING_DATA_LIMIT = 2000;
 
-class Watcher : public Napi::ObjectWrap<Watcher>, public practice::apprentice {
+class Watcher : public Napi::ObjectWrap<Watcher>, public runtime::live::peer {
 public:
   explicit Watcher(const Napi::CallbackInfo &info);
 
@@ -43,8 +40,6 @@ public:
 
   Napi::Value GetAppStates(const Napi::CallbackInfo &info);
 
-  Napi::Value GetStrategyStates(const Napi::CallbackInfo &info);
-
   Napi::Value Now(const Napi::CallbackInfo &info);
 
   Napi::Value IsUsable(const Napi::CallbackInfo &info);
@@ -55,31 +50,13 @@ public:
 
   Napi::Value RequestStop(const Napi::CallbackInfo &info);
 
-  Napi::Value RequestPosition(const Napi::CallbackInfo &info);
-
   Napi::Value PublishState(const Napi::CallbackInfo &info);
 
   Napi::Value IsReadyToInteract(const Napi::CallbackInfo &info);
 
   Napi::Value IssueCustomData(const Napi::CallbackInfo &info);
 
-  Napi::Value IssueBlockMessage(const Napi::CallbackInfo &info);
-
-  Napi::Value IssueOrderTrigger(const Napi::CallbackInfo &info);
-
-  Napi::Value IssueOrder(const Napi::CallbackInfo &info);
-
-  Napi::Value IssueAlgoOrder(const Napi::CallbackInfo &info);
-
   Napi::Value IssueMark(const Napi::CallbackInfo &info);
-
-  Napi::Value CancelOrder(const Napi::CallbackInfo &info);
-
-  Napi::Value CancelAlgoOrder(const Napi::CallbackInfo &info);
-
-  Napi::Value CancelOrderTrigger(const Napi::CallbackInfo &info);
-
-  Napi::Value ToggleAlgoOrder(const Napi::CallbackInfo &info);
 
   Napi::Value Start(const Napi::CallbackInfo &info);
 
@@ -89,7 +66,7 @@ public:
 
   void Quit(const Napi::CallbackInfo &info);
 
-  void AfterMasterDown(const Napi::CallbackInfo &info);
+  void AfterCoordinatorDown(const Napi::CallbackInfo &info);
 
   void RequestDeregister();
 
@@ -99,15 +76,9 @@ public:
 
   bool is_reactable(const event_ptr &event) override;
 
-  void drain_from_trading_data_reader(uint32_t step_limit = 0);
-
   bool is_step_continually();
 
 protected:
-  const bool bypass_accounting_;
-  const bool bypass_trading_data_;
-  const bool refresh_trading_data_before_sync_;
-  const bool bypass_refresh_book_;
   const int milliseconds_sleep_after_step_;
   std::mutex feed_mutex_;
 
@@ -128,45 +99,18 @@ private:
 
   Napi::ObjectReference ledger_ref_;
   Napi::ObjectReference app_states_ref_;
-  Napi::ObjectReference strategy_states_ref_;
   Napi::ObjectReference config_ref_;
   serialize::JsUpdateState update_ledger;
   serialize::JsResetCache reset_cache;
-  cache::bank data_bank_;
-  cache::bank trading_data_bank_;
-  cache::deque_bank trading_data_cached_bank_;
-  std::vector<kungfu::state<longfist::types::CacheReset>> reset_cache_states_;
-  std::unordered_map<uint32_t, int> broker_states_map_ = {};
-  std::unordered_map<uint32_t, longfist::types::StrategyStateUpdate> strategy_states_map_ = {};
+  runtime::state_cache::bank data_bank_;
+  std::vector<kungfu::state<yijinjing::types::CacheReset>> reset_cache_states_;
 
-  yijinjing::journal::reader_ptr trading_data_reader_; // order, trade, orderStat
-  uint32_t trading_data_count_by_step_ = 0;
-
-  typedef longfist::enums::mode mode;
-  typedef longfist::enums::category category;
-
-  static constexpr auto bypass = [](practice::apprentice *app, bool bypass_quotes) {
-    return rx::filter([&](const event_ptr &event) {
-      return not(app->get_location(event->source())->category == longfist::enums::category::MD and
-                 event->msg_type() != longfist::types::Instrument::tag and bypass_quotes);
-    });
-  };
-
-  static constexpr auto is_trading_data = []() {
-    return rx::filter([&](const event_ptr &event) {
-      return longfist::RefreshRequiredDataTags.find(event->msg_type()) != longfist::RefreshRequiredDataTags.end();
-    });
-  };
-
-  static constexpr auto not_trading_data = []() {
-    return rx::filter([&](const event_ptr &event) {
-      return longfist::RefreshRequiredDataTags.find(event->msg_type()) == longfist::RefreshRequiredDataTags.end();
-    });
-  };
+  typedef yijinjing::enums::mode mode;
+  typedef yijinjing::enums::location_role role;
 
   static constexpr auto is_static_data = []() {
     return rx::filter([&](const event_ptr &event) {
-      return longfist::StaticDataTags.find(event->msg_type()) != longfist::StaticDataTags.end();
+      return yijinjing::contains_tag(yijinjing::StaticDataTags, event->carrier_type());
     });
   };
 
@@ -174,36 +118,15 @@ private:
 
   yijinjing::data::location_ptr FindLocation(const Napi::CallbackInfo &info);
 
-  void InspectChannel(int64_t trigger_time, const longfist::types::Channel &channel);
+  void InspectChannel(int64_t trigger_time, const yijinjing::types::Channel &channel);
 
-  void MonitorMarketData(int64_t trigger_time, const yijinjing::data::location_ptr &md_location);
+  void OnRegister(int64_t trigger_time, const yijinjing::types::Register &register_data);
 
-  void OnRegister(int64_t trigger_time, const longfist::types::Register &register_data);
-
-  void OnDeregister(int64_t trigger_time, const longfist::types::Deregister &deregister_data);
-
-  template <typename DataType>
-  void UpdateBrokerOperatorState(uint32_t source_id, uint32_t dest_id, const DataType &state) {
-    auto source_location = get_location(state.location_uid);
-    if (source_location->category == category::TD or source_location->category == category::MD or
-        source_location->category == category::OPERATOR) {
-      broker_states_map_.insert_or_assign(source_location->uid, int(state.state));
-    }
-  };
-
-  void UpdateStrategyState(uint32_t strategy_uid, const longfist::types::StrategyStateUpdate &state);
+  void OnDeregister(int64_t trigger_time, const yijinjing::types::Deregister &deregister_data);
 
   void SyncLedger();
 
-  void TryRefreshTradingData();
-
-  void SyncTradingData();
-
-  void SyncTradingDataFromCached();
-
   void SyncAppStates();
-
-  void SyncStrategyStates();
 
   void UpdateEventCache(const event_ptr &event);
 
@@ -212,8 +135,6 @@ private:
   void StartWorker();
 
   void CancelWorker();
-
-  void ResetTradingDataCount() { trading_data_count_by_step_ = 0; };
 
   uint64_t MakeInstructionUID(yijinjing::journal::writer_ptr &writer, uint32_t dest, uint32_t client_id = 0) {
     uint64_t id_left = (uint64_t)(client_id xor dest) << 32u;
@@ -224,7 +145,7 @@ private:
   template <typename DataType> void UpdateLedger(const boost::hana::basic_type<DataType> &type) {
     using DataTypeMap = std::unordered_map<uint64_t, state<DataType>>;
     auto &target_map = const_cast<DataTypeMap &>(data_bank_[type]);
-    auto is_static_data_type = longfist::StaticDataTags.find(DataType::tag) != longfist::StaticDataTags.end();
+    auto is_static_data_type = yijinjing::contains_tag(yijinjing::StaticDataTags, DataType::tag);
     auto count = 0;
     auto iter = target_map.begin();
     while (iter != target_map.end()) {
@@ -238,16 +159,14 @@ private:
     }
   }
 
-  // tracing-foundation Phase 1:UpdateTradingData / UpdateTradingDataFromCacheD(交易 longfist 类型已移出
-  // StateDataTypes 闭集,trading_data_bank_ 无法 at_key)已移除;交易数据 sync 留 Phase 2 新 Watcher。
-
   template <typename Instruction>
   Napi::Value InteractWithLocation(const Napi::CallbackInfo &info, const Napi::Object &instruction_object) {
     try {
       auto target_location = IODevice::ExtractLocation(info, 1, get_locator());
 
-      if (target_location->category == longfist::enums::category::SYSTEM && target_location->group == "master") {
-        target_location = master_cmd_location_;
+      if (target_location->role == yijinjing::enums::location_role::SYSTEM &&
+          runtime::live::is_coordinator_wire_namespace(target_location->namespace_)) {
+        target_location = coordinator_cmd_location_;
       }
 
       if (not is_location_live(target_location->uid) or not has_writer(target_location->uid)) {

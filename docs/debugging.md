@@ -9,29 +9,32 @@ component reads and writes the same append-only journal
 (see [`event-model.md`](event-model.md)), most "kungfu is broken" questions reduce
 to "what is actually in the journal?" — which you can inspect directly.
 
-## Inspect the journal
+## Inspect recorded facts
 
-`kungfu` exposes a `journal` command group (implemented in
-[`console/commands/journal.py`](../framework/core/src/python/kungfu/cli/commands/journal.py)):
+Journal pages are the data plane, but their lifecycle is exposed through typed
+Episode and Storage surfaces rather than loose-file journal commands:
 
-- **List recorded sessions** — `kungfu journal sessions` (sortable, multiple
-  table formats). Tells you what was recorded, when, and by which source.
-- **Show a session's frames** — `kungfu journal show -i <session_id>`, selecting
-  input or output frames, with `-o <file>.csv` to export. This is how you see the
-  exact frames a component produced or consumed — the direct answer to "did the
-  data actually flow?"
-- **Rebuild / update the index** — if `sessions` looks wrong or incomplete, the
-  index can be rebuilt from the journal files.
+```sh
+kungfu storage query --table episodes --scope all --json
+kungfu storage query --table episode_frames --scope episode \
+  --episode-id <episode-id> --json
+kungfu query prove --episode-id <episode-id> --json
+kungfu storage fsck --scope episode --episode-id <episode-id> \
+  --verify-frames --json
+```
 
-Filters (`--mode`, `--category`, `--group`, `--name`) scope the view to the part
-of the system you are investigating.
+The first two commands inspect the rebuildable SQLite projection. `query prove`
+folds the declared authority by default and returns proof lineage. `storage
+fsck --verify-frames` re-reads the Episode's claimed journal frames and verifies
+their receipts. The Journal reference view exposes the same Episode anchors and
+in-process ledger capability for interactive inspection.
 
 ## Reproduce with replay
 
 Because live and replay run on the **same runtime** (see
-[`contracts.md`](contracts.md)), a misbehavior recorded in a journal can be
-re-run rather than reproduced by guesswork. Replay the recorded session and watch
-the same code path execute against the same frames.
+[`contracts.md`](contracts.md)), a misbehavior recorded in an Episode can be
+re-run rather than reproduced by guesswork. Replay the retained Episode and
+watch the same code path execute against the same frames.
 
 ## Read the logs
 
@@ -44,7 +47,7 @@ moment that produced it.
 
 | Symptom | Where to look first |
 |---|---|
-| A reader sees no / stale / torn data | The publish/visibility contract is [ADR-0001](../framework/core/docs/adr/ADR-0001-yijinjing-publish-barrier.md); first confirm with `kungfu journal show` whether the frame is in the journal at all. |
+| A reader sees no / stale / torn data | The publish/visibility contract is [ADR-0001](../framework/core/docs/adr/ADR-0001-yijinjing-publish-barrier.md); inspect the Episode with `kungfu query prove`, then verify attached frames with `kungfu storage fsck --verify-frames`. |
 | Data is there but a language binding reads it wrong | The adapter boundary — see [`adapters.md`](adapters.md); the layout is the contract ([`contracts.md`](contracts.md)). |
 | Replay diverges from live | Determinism boundary — see [`contracts.md`](contracts.md) and `known-limits` on cross-version/cross-machine reproduction. |
 | Build / runtime won't start | The build path — see [`buildchain.md`](buildchain.md). |

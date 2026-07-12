@@ -1,0 +1,135 @@
+{
+  "schema": "kungfu.layer-qualification.matrix/v1",
+  "adr": "framework/core/docs/adr/ADR-0049-layer-complete-products-and-domain-neutral-core.md",
+  "status_vocabulary": [
+    "absent",
+    "staged",
+    "passing",
+    "failing",
+    "unverifiable"
+  ],
+  "budget_dimensions": [
+    "dependency_count",
+    "installed_size_bytes",
+    "cold_start_ms",
+    "resident_runtime_count",
+    "resident_memory_bytes",
+    "onboarding_concept_count"
+  ],
+  "artifacts": [
+    {
+      "id": "format-spec",
+      "layer": ".kungfu format and spec",
+      "artifact_status": "staged",
+      "workspace_package": null,
+      "declared_closure": "Open, inspect, verify, and preserve declared unknowns without a GUI.",
+      "required_capabilities": ["open", "inspect", "verify", "preserve_unknowns"],
+      "forbidden_dependencies": ["@kungfu-tech/gui", "electron"],
+      "onboarding": {
+        "commands": [],
+        "concepts": ["workspace", "fact", "schema", "verification"]
+      }
+    },
+    {
+      "id": "libkungfu",
+      "layer": "libkungfu native core",
+      "artifact_status": "passing",
+      "workspace_package": null,
+      "declared_closure": "Create or open .kungfu, append and seal an Episode, query, fsck, and export without a language host.",
+      "required_capabilities": ["record", "episode", "query", "fsck", "export"],
+      "forbidden_dependencies": ["@kungfu-tech/gui", "electron", "python", "node", "rust-host"],
+      "onboarding": {
+        "commands": [],
+        "concepts": ["workspace", "episode", "query", "verification", "export"]
+      }
+    },
+    {
+      "id": "pypi-sdk",
+      "layer": "PyPI SDK",
+      "artifact_status": "staged",
+      "workspace_package": null,
+      "declared_closure": "Install in a clean Python environment and run the shared semantic fixture without sibling SDKs.",
+      "required_capabilities": ["discover", "record", "query", "verify", "export"],
+      "forbidden_dependencies": ["@kungfu-tech/gui", "@kungfu-tech/tui", "npm-sdk", "cargo-sdk"],
+      "onboarding": {
+        "commands": ["pip install kungfu-storage"],
+        "concepts": ["workspace", "episode", "capability", "verification"]
+      }
+    },
+    {
+      "id": "npm-sdk",
+      "layer": "npm SDK",
+      "artifact_status": "staged",
+      "workspace_package": "@kungfu-tech/storage",
+      "declared_closure": "Install in a clean Node environment and run the shared semantic fixture without sibling SDKs.",
+      "required_capabilities": ["discover", "record", "query", "verify", "export"],
+      "forbidden_dependencies": ["@kungfu-tech/gui", "@kungfu-tech/tui", "pypi-sdk", "cargo-sdk"],
+      "onboarding": {
+        "commands": ["npm install @kungfu-tech/storage"],
+        "concepts": ["workspace", "episode", "capability", "verification"]
+      }
+    },
+    {
+      "id": "cargo-sdk",
+      "layer": "Cargo SDK",
+      "artifact_status": "staged",
+      "workspace_package": null,
+      "declared_closure": "Install in a clean Rust environment and run the shared semantic fixture without sibling SDKs.",
+      "required_capabilities": ["discover", "record", "query", "verify", "export"],
+      "forbidden_dependencies": ["@kungfu-tech/gui", "@kungfu-tech/tui", "pypi-sdk", "npm-sdk"],
+      "onboarding": {
+        "commands": ["cargo add kungfu-sdk"],
+        "concepts": ["workspace", "episode", "capability", "verification"]
+      }
+    },
+    {
+      "id": "cli-tui",
+      "layer": "Kungfu CLI and TUI",
+      "artifact_status": "staged",
+      "workspace_package": "@kungfu-tech/tui",
+      "declared_closure": "Install a headless artifact and complete init, record, query, verify, export, and agent discovery without Electron.",
+      "required_capabilities": ["init", "record", "query", "verify", "export", "agent_discovery"],
+      "forbidden_dependencies": ["@kungfu-tech/gui", "electron"],
+      "onboarding": {
+        "commands": ["kungfu agent brief", "kungfu agent choose-mode --json"],
+        "concepts": ["workspace", "episode", "mode", "verification", "export"]
+      }
+    },
+    {
+      "id": "gui",
+      "layer": "Kungfu GUI",
+      "artifact_status": "staged",
+      "workspace_package": "@kungfu-tech/gui",
+      "declared_closure": "Complete human visual workflows through public contracts and uninstall without changing .kungfu authority.",
+      "required_capabilities": ["inspect", "timeline", "query", "repair", "export"],
+      "forbidden_dependencies": [],
+      "onboarding": {
+        "commands": ["open Kungfu Episodes"],
+        "concepts": ["workspace", "episode", "timeline", "query", "verification"]
+      }
+    },
+    {
+      "id": "assembled-distribution",
+      "layer": "assembled distribution",
+      "artifact_status": "staged",
+      "workspace_package": "@kungfu-tech/product-kungfu",
+      "declared_closure": "Install compatible official layers together without replacing any lower-layer qualification.",
+      "required_capabilities": ["install", "compatibility", "cli", "gui", "sdk"],
+      "forbidden_dependencies": [],
+      "onboarding": {
+        "commands": ["install Kungfu", "kungfu agent brief"],
+        "concepts": ["workspace", "episode", "surface", "mode", "verification"]
+      }
+    }
+  ],
+  "deletion_fixtures": [
+    {
+      "id": "remove-gui-preserves-cli-runtime-closure",
+      "root_artifact": "cli-tui",
+      "root_package": "@kungfu-tech/tui",
+      "removed_packages": ["@kungfu-tech/gui"],
+      "forbidden_external_dependencies": ["electron"],
+      "claim_boundary": "The source-level CLI/TUI runtime workspace closure remains resolvable when the GUI workspace package is absent. This does not claim that a packaged CLI artifact already passes clean-install or runtime smoke qualification."
+    }
+  ]
+}

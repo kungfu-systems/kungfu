@@ -11,9 +11,10 @@
 #include "data_table.h"
 
 #include <kungfu/common.h>
-#include <kungfu/longfist/longfist.h>
-#include <kungfu/yijinjing/cache/backend.h>
-#include <kungfu/yijinjing/practice/apprentice.h>
+#include <kungfu/runtime/live/peer.h>
+#include <kungfu/runtime/projection/hana_sqlite.h>
+#include <kungfu/runtime/state_cache/store.h>
+#include <kungfu/yijinjing/schema/registry.h>
 #include <kungfu/yijinjing/time.h>
 
 namespace kungfu::node::serialize {
@@ -32,9 +33,10 @@ public:
     });
     boost::hana::for_each(boost::hana::accessors<DataType>(), [&](auto it) {
       auto name = boost::hana::first(it);
+      auto public_name = kungfu::public_field_name(name.c_str());
       auto accessor = boost::hana::second(it);
       using ValueType = std::decay_t<std::invoke_result_t<decltype(accessor), const DataType &>>;
-      InitValue<ValueType>(object, name.c_str());
+      InitValue<ValueType>(object, public_name.c_str());
     });
     return object;
   }
@@ -100,8 +102,9 @@ public:
   template <typename DataType> void operator()(const DataType &data, Napi::Object &object) {
     boost::hana::for_each(boost::hana::accessors<DataType>(), [&](auto it) {
       auto name = boost::hana::first(it);
+      auto public_name = kungfu::public_field_name(name.c_str());
       auto accessor = boost::hana::second(it);
-      Set(object, name.c_str(), accessor(data));
+      Set(object, public_name.c_str(), accessor(data));
     });
   }
 
@@ -206,9 +209,12 @@ public:
   template <typename DataType> void operator()(const Napi::Object &object, DataType &data) {
     boost::hana::for_each(boost::hana::accessors<DataType>(), [&](auto it) {
       auto name = boost::hana::first(it);
+      auto public_name = kungfu::public_field_name(name.c_str());
+      auto legacy_name = kungfu::legacy_field_name(name.c_str());
+      const auto field_name = object.Has(public_name) ? public_name : legacy_name;
       auto accessor = boost::hana::second(it);
       using ValueType = std::decay_t<std::invoke_result_t<decltype(accessor), const DataType &>>;
-      Get(const_cast<ValueType &>(accessor(data)), name.c_str(), object);
+      Get(const_cast<ValueType &>(accessor(data)), field_name.c_str(), object);
     });
   }
 
@@ -308,19 +314,19 @@ public:
     auto locator = location_->locator;
 
     for (auto dest : locator->list_location_dest_by_db(location_)) {
-      auto db_file = locator->layout_file(location_, longfist::enums::layout::SQLITE, fmt::format("{:08x}", dest));
-      auto storage = cache::make_storage_ptr(db_file, longfist::StateDataTypes);
+      auto db_file = locator->layout_file(location_, yijinjing::enums::layout::SQLITE, fmt::format("{:08x}", dest));
+      auto storage = runtime::projection::make_storage_ptr(db_file, yijinjing::StateDataTypes);
       if (sync_schema) {
         storage->sync_schema();
       }
 
-      boost::hana::for_each(longfist::StateDataTypes, [&](auto it) {
+      boost::hana::for_each(yijinjing::StateDataTypes, [&](auto it) {
         using DataType = typename decltype(+boost::hana::second(it))::type;
         if constexpr (type_belong_to<DataType, Ts...>()) {
           return;
         }
 
-        for (const auto &data : cache::time_spec<DataType>::get_all(storage, from, to)) {
+        for (const auto &data : runtime::state_cache::time_spec<DataType>::get_all(storage, from, to)) {
           try {
             set(data, state_, source, dest, now);
           } catch (const std::exception &e) {
@@ -358,32 +364,30 @@ private:
 
 class JsPublishState {
 public:
-  JsPublishState(practice::apprentice &app, Napi::ObjectReference &state);
+  JsPublishState(runtime::live::peer &app, Napi::ObjectReference &state);
 
   void operator()(Napi::Object object);
 
 private:
-  practice::apprentice &app_;
+  runtime::live::peer &app_;
   Napi::ObjectReference &state_;
   JsGet get = {};
 };
 
 class JsResetCache {
 public:
-  JsResetCache(practice::apprentice &app, Napi::ObjectReference &state);
+  JsResetCache(runtime::live::peer &app, Napi::ObjectReference &state);
 
-  void operator()(const state<longfist::types::CacheReset> &state);
+  void operator()(const state<yijinjing::types::CacheReset> &state);
 
 private:
-  practice::apprentice &app_;
+  runtime::live::peer &app_;
   Napi::ObjectReference &state_;
 };
 
 void InitObjectReference(const Napi::CallbackInfo &info, Napi::ObjectReference &data);
 
 void InitStateMap(const Napi::CallbackInfo &info, Napi::ObjectReference &state, const std::string &name);
-
-void RefreshTradingDataInStateMap(Napi::ObjectReference &state, const std::string &name);
 } // namespace kungfu::node::serialize
 
 #endif // KUNGFU_NODE_SERIALIZE_H

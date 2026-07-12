@@ -31,8 +31,8 @@
 
 using namespace kungfu::yijinjing;
 using kungfu::slices::sha256;
-namespace longfist = kungfu::longfist;
-using longfist::enums::FrameDataType;
+namespace schema = kungfu::yijinjing;
+using schema::enums::FrameDataType;
 
 namespace {
 // docs/msg-type-ranges.md, capability-slice range
@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
   const std::string bfbs_path = argv[4];
 
   auto locator = std::make_shared<data::locator>(root);
-  auto location = data::location::make_shared(longfist::enums::mode::LIVE, longfist::enums::category::SYSTEM,
+  auto location = data::location::make_shared(schema::enums::mode::LIVE, schema::enums::location_role::SYSTEM,
                                               "schema_registry_slice", "producer", locator);
   auto bus = std::make_shared<journal::bus>(false);
   auto publisher = std::make_shared<journal::noop_publisher>();
@@ -89,8 +89,8 @@ int main(int argc, char **argv) {
     if (version == 1) {
       fbb.Finish(slices::demo::v1::CreateSmokeEventDirect(fbb, static_cast<uint32_t>(i), kind_for(i).c_str()));
     } else {
-      fbb.Finish(slices::demo::v2::CreateSmokeEventDirect(fbb, static_cast<uint32_t>(i), kind_for(i).c_str(),
-                                                          "added in v2"));
+      fbb.Finish(
+          slices::demo::v2::CreateSmokeEventDirect(fbb, static_cast<uint32_t>(i), kind_for(i).c_str(), "added in v2"));
     }
     append(MSG_DEMO_FB, FrameDataType::Raw, fbb.GetBufferPointer(), fbb.GetSize());
   }
@@ -117,8 +117,8 @@ int main(int argc, char **argv) {
       {"source",
        {{"root", root},
         {"mode", "LIVE"},
-        {"category", "SYSTEM"},
-        {"group", "schema_registry_slice"},
+        {"role", "SYSTEM"},
+        {"namespace", "schema_registry_slice"},
         {"name", "producer"},
         {"dest", data::location::PUBLIC}}},
       {"hash_algorithm", "sha256"},
@@ -128,18 +128,16 @@ int main(int argc, char **argv) {
           {"name", "SmokeEvent"},
           {"schema_version", version},
           {"schema_hash", schema_hash}}},
-        {std::to_string(MSG_DEMO_JSON),
-         {{"schema_kind", "json"}, {"name", "RunSummary"}, {"schema_version", 1}}}}},
-      {"capture_boundary",
-       "schema bindings cover this run's FB and Json events only; legacy closed-set POD frames "
-       "are not decodable from the bundle and are out of scope by design"},
+        {std::to_string(MSG_DEMO_JSON), {{"schema_kind", "json"}, {"name", "RunSummary"}, {"schema_version", 1}}}}},
+      {"capture_boundary", "schema bindings cover this run's FB and Json events only; legacy closed-set POD frames "
+                           "are not decodable from the bundle and are out of scope by design"},
   };
   {
     std::ofstream out(bundle / "manifest.json");
     out << manifest.dump(2) << std::endl;
   }
 
-  std::cout << "OK: wrote " << FB_EVENT_COUNT << " FB events (schema v" << version
-            << ", hash " << schema_hash.substr(0, 12) << "...) + 1 Json event; bundle at " << bundle << std::endl;
+  std::cout << "OK: wrote " << FB_EVENT_COUNT << " FB events (schema v" << version << ", hash "
+            << schema_hash.substr(0, 12) << "...) + 1 Json event; bundle at " << bundle << std::endl;
   return 0;
 }

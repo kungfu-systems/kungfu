@@ -22,18 +22,25 @@ One entrypoint runs every task under the pinned toolchain. Do not invoke pnpm,
 node, conan, or cmake directly — go through it:
 
 ```sh
-./kungfu-code sync      # install JS dependencies (frozen lockfile)
-./kungfu-code build     # build all workspaces (C++ core + bindings + app)
-./kungfu-code product gui dev   # run the reference GUI through the product loop
-./kungfu-code dist      # build the distributable artifact under artifact/dist
-./kungfu-code <task>    # any pnpm task, run under the pinned node
+./shifu doctor    # check the development environment (install pointers)
+./shifu sync      # install JS dependencies (frozen lockfile)
+./shifu build     # build all workspaces (C++ core + bindings + app)
+./shifu rebuild   # clear generated build outputs, then run build
+./shifu check     # changed-scope read-only quality gate (lint/type/tests)
+./shifu fix       # explicit formatting / safe auto-fixes for changed files
+./shifu product gui dev   # run the reference GUI through the product loop
+./shifu product cli dist  # build the CLI product archive
+./shifu dist      # build distributable products under product/release
+./shifu <task>    # any pnpm task, run under the pinned node
 ```
 
-One-time prerequisites (install once; node, the package manager, and the Python
-interpreter then resolve automatically):
-
-- [fnm](https://github.com/Schniz/fnm) — pins node via `.node-version`
-- [uv](https://docs.astral.sh/uv/) — manages the Python toolchain
+There is nothing to preinstall beyond `curl`: on first run `./shifu`
+bootstraps the pinned toolchain automatically (node via
+[fnm](https://github.com/Schniz/fnm) and `.node-version`, python via
+[uv](https://docs.astral.sh/uv/), and Buildchain via `.buildchain-version`) into
+`~/.cache/kungfu`. An fnm / uv you
+already have on PATH is used as-is; Buildchain remains pin-first. See
+[`docs/rust-adoption.md`](docs/rust-adoption.md) for how the launcher works.
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full toolchain, repository
 layout, and code style.
@@ -41,12 +48,23 @@ layout, and code style.
 ## Checking your work is green
 
 ```sh
-./kungfu-code verify          # assert existing build artifacts (quick)
-./kungfu-code verify --full   # rebuild + freeze, then assert (slow; needs the full toolchain)
+./shifu check           # changed-scope lint, typecheck and unit/tooling tests
+./shifu verify          # assert existing build artifacts (quick)
+./shifu verify --full   # rebuild + freeze, then assert (slow; needs the full toolchain)
 ```
 
-`verify` is the single done-check: it asserts the build artifacts and runs a
-`kungfu` runtime smoke, rather than trusting a "looks built" impression.
+`check` is the source-quality gate for changed files plus shared type/tooling
+tests. `check:all` exists for whole-tree cleanup once the lint baseline is clean.
+`verify` is the runtime/product done-check: it asserts the build artifacts and
+runs a `kungfu` runtime smoke plus the `mvp-smoke-v1` Episode qualification,
+rather than trusting a "looks built" impression. The larger Episode baseline
+remains an explicit periodic/release-readiness command:
+
+```sh
+./shifu episode:qualify:release
+```
+
+It emits a self-contained evidence envelope; it is not a per-PR gate.
 
 ## Proposing changes
 
