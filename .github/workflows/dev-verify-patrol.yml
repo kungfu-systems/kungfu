@@ -47,6 +47,10 @@ jobs:
       platforms-json: >-
         [{"id":"linux-x64","name":"Linux x64",
         "runner":"[\"self-hosted\",\"Linux\",\"X64\",\"kungfu-build-v4-linux-x64\"]"}]
+      # The lifecycle forces native execution after the checkout-owned cache
+      # profile is applied. Build the launcher from this source revision so a
+      # stale release slot cannot reinterpret newer Shifu verbs as pnpm tasks.
+      setup-rust: true
       artifact-name: kungfu-dev-verify
       shifu-cache-profile-ref: ${{ vars.SHIFU_CACHE_PROFILE_REF }}
       shifu-cache-profile-digest: ${{ vars.SHIFU_CACHE_PROFILE_DIGEST }}
