@@ -4,8 +4,11 @@ import hashlib
 import json
 
 import pytest
+from click.testing import CliRunner
 
 from kungfu import profile_composition, profile_sdk
+from kungfu.cli.commands import __registry__  # noqa: F401
+from kungfu.cli.commands import kfc
 from kungfu.storage import service as storage_service
 
 
@@ -144,3 +147,42 @@ def test_query_plan_requires_exact_active_root_and_delegates_to_adr0048(tmp_path
     assert plan["schema"] == "kungfu.profile-query-plan/v1"
     assert plan["profileRevision"] == 3
     assert plan["corePlan"]["schema"] == "kungfu.query.explain/v1"
+
+
+def test_installed_cli_catalog_and_query_plan_share_roots(tmp_path):
+    source = _source(tmp_path)
+    home = tmp_path / "home"
+    _activate(source, home / "runtime")
+    runner = CliRunner()
+
+    catalog_result = runner.invoke(
+        kfc,
+        [
+            "--home",
+            str(home),
+            "profile",
+            "catalog",
+            str(source),
+            "--require-active",
+            "--json",
+        ],
+    )
+    planned = runner.invoke(
+        kfc,
+        [
+            "--home",
+            str(home),
+            "profile",
+            "query-plan",
+            str(source),
+            "week-table",
+            "--json",
+        ],
+    )
+
+    assert catalog_result.exit_code == 0, catalog_result.output
+    assert planned.exit_code == 0, planned.output
+    catalog_payload = json.loads(catalog_result.output)
+    plan_payload = json.loads(planned.output)
+    assert plan_payload["catalogRoot"] == catalog_payload["catalogRoot"]
+    assert plan_payload["profileSuiteRoot"] == catalog_payload["profileSuiteRoot"]

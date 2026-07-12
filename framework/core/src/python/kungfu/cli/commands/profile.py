@@ -5,7 +5,7 @@ from pathlib import Path
 
 import click
 
-from kungfu import profile_sdk
+from kungfu import profile_composition, profile_sdk
 from kungfu.cli.commands import kfc, PrioritizedCommandGroup
 from kungfu.storage import service as storage_service
 
@@ -255,6 +255,56 @@ def diff(ctx, left, right, as_json):
 @profile_context
 def actions(ctx, source, as_json):
     _json(_run(lambda: profile_sdk.action_catalog(source, ctx.runtime_dir)))
+
+
+@profile.command(help="compose exact-root fact, claim, policy and view bindings")
+@click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--require-active", is_flag=True)
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def catalog(ctx, source, require_active, as_json):
+    _json(
+        _run(
+            lambda: profile_composition.catalog(
+                source, ctx.runtime_dir, require_active=require_active
+            )
+        )
+    )
+
+
+@profile.command(name="query-plan", help="plan a contributed view through ADR-0048")
+@click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.argument("view_id")
+@click.option("--out", type=click.Path(dir_okay=False, path_type=Path))
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def query_plan(ctx, source, view_id, out, as_json):
+    payload = _run(
+        lambda: profile_composition.query_plan(source, ctx.runtime_dir, view_id)
+    )
+    if out:
+        out.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+        payload["queryPlanPath"] = str(out.resolve())
+    _json(payload)
+
+
+@profile.command(name="query-run", help="execute a still-current Profile query plan")
+@click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.argument(
+    "plan_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def query_run(ctx, source, plan_file, as_json):
+    _json(
+        _run(
+            lambda: profile_composition.execute_query(
+                source, ctx.runtime_dir, _load_json(plan_file)
+            )
+        )
+    )
 
 
 @profile.command(help="plan or invoke a declarative Profile action")
