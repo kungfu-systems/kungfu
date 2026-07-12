@@ -37,6 +37,12 @@ import {
 import type { KfxCapabilities, Shell } from '@kungfu-tech/kfx';
 import { headingStyle, mono, panelStyle } from '@kungfu-tech/kfx';
 import React from 'react';
+import {
+  dashboardMetricVisuals,
+  dashboardSnapshotVisual,
+  missionControlProfileVisual,
+  profileApprovalVisual,
+} from './dashboard-status';
 import { createLatestRefresh } from './latest-refresh';
 import {
   GoalCardField,
@@ -94,17 +100,20 @@ function SmallButton({
   disabled = false,
   children,
   onClick,
+  title,
 }: {
   active?: boolean;
   disabled?: boolean;
   children: React.ReactNode;
   onClick: () => void;
+  title?: string;
 }) {
   return (
     <button
       type="button"
       disabled={disabled}
       onClick={onClick}
+      title={title}
       style={{
         ...mono,
         padding: '3px 8px',
@@ -382,6 +391,7 @@ function AtlasProjectionView({
   const [profileSetupPlan, setProfileSetupPlan] =
     React.useState<ProfileLifecyclePlan | null>(null);
   const [profileSetupActor, setProfileSetupActor] = React.useState('');
+  const profileSetupActorInput = React.useRef<HTMLInputElement>(null);
   const [profileSetupBusy, setProfileSetupBusy] = React.useState(false);
   const [selectedMission, setSelectedMission] = React.useState<string>(() =>
     missions.length ? missions[0].mission_id : 'all',
@@ -562,12 +572,12 @@ function AtlasProjectionView({
   }, [profile, profileSetup]);
 
   const approveProfileSetup = React.useCallback(async () => {
-    if (
-      !profile ||
-      !profileSetup ||
-      !profileSetupPlan ||
-      !profileSetupActor.trim()
-    ) {
+    if (!profileSetupActor.trim()) {
+      setMessage('Enter the workspace owner identity to authorize this plan.');
+      profileSetupActorInput.current?.focus();
+      return;
+    }
+    if (!profile || !profileSetup || !profileSetupPlan) {
       return;
     }
     setProfileSetupBusy(true);
@@ -952,6 +962,16 @@ function AtlasProjectionView({
     missionGoalCounts.set(status, (missionGoalCounts.get(status) ?? 0) + 1);
   }
   const fiveAnswers = trustReport?.query_profile?.answers ?? [];
+  const snapshotVisual = dashboardSnapshotVisual({
+    error: dashboardError,
+    refreshing: dashboardRefreshing,
+    cut: dashboardCut,
+  });
+  const profileVisual = missionControlProfileVisual(profileStatus);
+  const approvalVisual = profileApprovalVisual({
+    actor: profileSetupActor,
+    busy: profileSetupBusy,
+  });
 
   return (
     <div
@@ -1014,34 +1034,59 @@ function AtlasProjectionView({
           </SmallButton>
           <SmallButton onClick={refreshAll}>refresh</SmallButton>
           {info && (
-            <span style={{ ...mono, color: '#858585' }}>
-              {info.missions}M · {info.goals}G · {info.markers} markers
+            <span
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}
+            >
+              {dashboardMetricVisuals(info).map((metric) => (
+                <span
+                  key={metric.glyph}
+                  aria-label={metric.title}
+                  title={metric.title}
+                  style={{
+                    ...mono,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    width: metric.width,
+                    flex: `0 0 ${metric.width}px`,
+                    color: '#858585',
+                    fontVariantNumeric: 'tabular-nums',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <span aria-hidden="true">{metric.glyph}</span>
+                  {metric.value}
+                </span>
+              ))}
             </span>
           )}
           <span
+            aria-label={snapshotVisual.title}
+            title={snapshotVisual.title}
             style={{
               ...mono,
-              color: dashboardError ? '#f48771' : '#6a6a6a',
+              display: 'inline-flex',
+              justifyContent: 'center',
+              width: 24,
+              flex: '0 0 24px',
+              color: snapshotVisual.color,
             }}
           >
-            {dashboardError
-              ? `snapshot degraded · ${dashboardError}`
-              : dashboardRefreshing
-                ? 'snapshot refreshing · current view remains interactive'
-                : dashboardCut
-                  ? `snapshot cut ${dashboardCut.slice(-12)}`
-                  : 'snapshot pending'}
+            <span aria-hidden="true">{snapshotVisual.glyph}</span>
           </span>
           <span
+            aria-label={profileVisual.title}
+            title={profileVisual.title}
             style={{
               ...mono,
-              color: profileStatus.includes(' · suite ')
-                ? '#4ec9b0'
-                : '#dcdcaa',
+              display: 'inline-flex',
+              justifyContent: 'center',
+              width: 38,
+              flex: '0 0 38px',
+              color: profileVisual.color,
             }}
-            title="Exact active Profile Suite, catalog and member closure"
           >
-            {profileStatus}
+            <span aria-hidden="true">{profileVisual.glyph}</span>
           </span>
           {profileSetup ? (
             <SmallButton
@@ -1079,6 +1124,9 @@ function AtlasProjectionView({
             <label style={{ display: 'block', marginTop: 6 }}>
               authorized by{' '}
               <input
+                ref={profileSetupActorInput}
+                aria-label="Workspace owner identity"
+                title="Identity authorizing this exact Profile lifecycle plan"
                 value={profileSetupActor}
                 onChange={(event) => setProfileSetupActor(event.target.value)}
                 placeholder="workspace owner identity"
@@ -1086,10 +1134,11 @@ function AtlasProjectionView({
               />
             </label>
             <SmallButton
-              disabled={profileSetupBusy || !profileSetupActor.trim()}
+              disabled={approvalVisual.disabled}
+              title={approvalVisual.title}
               onClick={() => void approveProfileSetup()}
             >
-              approve exact plan
+              {approvalVisual.label}
             </SmallButton>{' '}
             <SmallButton
               disabled={profileSetupBusy}
