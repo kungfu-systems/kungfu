@@ -541,7 +541,7 @@ function assembleTree(bt) {
   copyAppNative(bt);
   copyLibwasmRuntime();
   copyConfigContract();
-  stageEntry(distKfc);
+  stageEntry(distKfc, bt);
   generateHelpManifest(layout.python, distKfc);
   console.log(
     '[freeze] ✅ dist/kungfu assembled (interpreter tree + flat natives + ' +
@@ -580,12 +580,29 @@ function generateHelpManifest(pythonExe, distKfc) {
 // yields a runnable assembled dist; dist.mjs stageTrunk later re-stages
 // kungfu-trunk and asserts pins consistency at the product stage — same
 // commit, same profile, same binary.
-/** @param {string} distKfc */
-function stageEntry(distKfc) {
+// ADR-0046 stage 3 productionization: the product trunk links libkungfu and
+// ships the real embedding-backed `doctor` on POSIX (--features embedding).
+// Windows embedding linking is not wired yet (crates/trunk/build.rs panics on
+// windows), so the Windows product trunk stays the coreless stub until that
+// follow-up lands — the trunk's doctor/help/variant paths all fall back
+// gracefully when the core is absent, so keeping Windows featureless is
+// zero-regression. The native dir (framework/core/build/<bt>, already populated
+// with libkungfu.* by the time assemble runs) is passed explicitly so build.rs
+// never has to guess a relative path that could fail canonicalize under CI.
+/** @param {string} distKfc @param {string} bt */
+function stageEntry(distKfc, bt) {
   const crates = path.join(CORE, '..', '..', 'crates');
-  shell.run('cargo', ['build', '--release', '-p', 'kungfu-trunk'], true, {
-    cwd: crates,
-  });
+  const cargoArgs = ['build', '--release', '-p', 'kungfu-trunk'];
+  const runOpts = { cwd: crates };
+  if (!isWin) {
+    cargoArgs.push('--features', 'embedding');
+    runOpts.env = {
+      ...process.env,
+      KF_TRUNK_NATIVE_DIR: path.join(CORE, 'build', bt),
+      KF_TRUNK_BUILD_TYPE: bt,
+    };
+  }
+  shell.run('cargo', cargoArgs, true, runOpts);
   const built = path.join(
     crates,
     'target',
