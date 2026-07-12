@@ -1,0 +1,59 @@
+schema = 1
+
+# Kungfu monorepo onboarding to buildchain v2.
+# Stage 1: declare version-state and lifecycle, validated in CI by
+# actions/validate-config@v2 (no lifecycle execution yet).
+#
+# Version single source of truth is lerna.json; per-package package.json
+# versions are propagated by lerna. How buildchain version-state interacts with
+# lerna propagation is wired in a later stage (bump/publish).
+
+[version]
+required = true
+strategy = "semver"
+next = "auto"
+
+[[version.files]]
+type = "json"
+path = "lerna.json"
+key = "version"
+
+# Lifecycle commands run through ./shifu, the pinned-toolchain entrypoint.
+# One command on every platform: stages run under bash (Git Bash on Windows
+# runners), where the shim resolves the native launcher — cached binary, then
+# prebuilt release download, then cargo, then the in-script bootstrap (the
+# runner preset's own fnm/uv) as the last fallback. The launcher bootstraps
+# missing prerequisites and loads the MSVC environment on Windows itself.
+[lifecycle.env]
+KUNGFU_BUILDCHAIN_NO_OPTIONAL = "1"
+KUNGFU_BUILDCHAIN_SOURCE_BUILD = "1"
+# Exercise the native launcher path in CI (dogfood; regressions fail here first).
+SHIFU_NATIVE = "1"
+# Fail fast on Windows when MSVC cannot be located (no-op elsewhere).
+SHIFU_REQUIRE_MSVC = "1"
+
+[lifecycle.install]
+shell = "bash"
+command = "./shifu doctor && ./shifu install --frozen-lockfile --no-optional"
+
+[lifecycle.build]
+shell = "bash"
+command = "./shifu dist"
+
+[lifecycle.verify]
+shell = "bash"
+command = "./shifu verify"
+
+[lifecycle.publish]
+# shifu-entry-contract: allow Buildchain publish adapter bootstraps before repository lifecycle dispatch
+command = "node scripts/buildchain-custom-publish-evidence.mjs"
+
+[badges]
+release_passport = "https://github.com/kungfu-systems/kungfu/releases/latest/download/buildchain.release.json"
+kfd_standards = "developer/sdk/node_modules/@kungfu-tech/kfd/standards.json"
+kfd_1 = "declared"
+kfd_2 = "declared"
+kfd_3 = "declared"
+kfd_4 = "declared"
+platforms = ["macOS", "Linux", "Windows"]
+workflows = ["buildchain-validate.yml", "dco.yml"]

@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# host-spike — feasibility probe for a Rust host shell in front of libkungfu.
+#
+# NOT a product component: it is excluded from the crates/ workspace (see
+# crates/Cargo.toml), never enters CI or the release matrix, and consumes a
+# sibling worktree's prebuilt core artifacts instead of building the core.
+# See README.md next to this file for the probe chain and how to run it.
+
+[package]
+name = "host-spike"
+version = "0.0.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+
+# Deliberately standalone: keep the probe out of the shifu CI workspace gate.
+[workspace]
+
+[dependencies]
+# The embedding FFI seam now lives in the shared kungfu-embedding crate (RFC
+# framework/core/docs/embedding-contract-face.md D7 — one membrane wrapper, not a
+# copy per consumer). host-spike links the sibling core in its own build.rs, which
+# resolves the extern symbol the shared rlib leaves deferred. Otherwise std-only,
+# matching the repo's Rust dependency discipline; the C++ shim is compiled by
+# build.rs shelling out to the system compiler.
+kungfu-embedding = { path = "../kungfu-embedding" }

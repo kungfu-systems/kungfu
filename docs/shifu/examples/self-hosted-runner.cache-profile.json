@@ -1,0 +1,93 @@
+{
+  "$schema": "../schema/cache-profile-v1.schema.json",
+  "schema": "shifu.cache-profile/v1",
+  "profileId": "example.runner.linux",
+  "revision": 3,
+  "generatedAt": "2026-07-12T00:00:00Z",
+  "authority": {
+    "owner": "example-inventory",
+    "sourceRef": "inventory/cache-services.json@revision-9",
+    "sourceDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+  },
+  "subject": {
+    "principal": "runner:example-linux",
+    "host": "host:example-linux",
+    "platforms": ["linux-x64"],
+    "scopes": ["self-hosted-runner", "ci"]
+  },
+  "policy": {
+    "mode": "require",
+    "onUnavailable": "fail",
+    "allowPublicFallback": false,
+    "secretPolicy": "references-only"
+  },
+  "services": {
+    "npm-registry": {
+      "kind": "package-registry",
+      "mode": "require",
+      "endpoint": {
+        "type": "http",
+        "url": "https://cache.example.invalid/npm/"
+      },
+      "bindings": [
+        {
+          "kind": "environment",
+          "key": "COREPACK_NPM_REGISTRY",
+          "valueFrom": "endpoint.url"
+        }
+      ],
+      "fallback": {
+        "mode": "fail"
+      },
+      "verification": {
+        "method": "tool-native"
+      }
+    },
+    "python-index": {
+      "kind": "package-registry",
+      "mode": "require",
+      "endpoint": {
+        "type": "http",
+        "url": "https://cache.example.invalid/pypi/simple/"
+      },
+      "bindings": [
+        {
+          "kind": "environment",
+          "key": "UV_DEFAULT_INDEX",
+          "valueFrom": "endpoint.url"
+        }
+      ],
+      "fallback": {
+        "mode": "fail"
+      },
+      "verification": {
+        "method": "tool-native"
+      }
+    },
+    "buildchain-distribution": {
+      "kind": "distribution",
+      "mode": "require",
+      "endpoint": {
+        "type": "http",
+        "url": "https://cache.example.invalid/buildchain/"
+      },
+      "bindings": [
+        {
+          "kind": "environment",
+          "key": "KUNGFU_BUILDCHAIN_DIST_MIRROR",
+          "valueFrom": "endpoint.url"
+        }
+      ],
+      "fallback": {
+        "mode": "fail"
+      },
+      "verification": {
+        "method": "sha256-manifest"
+      }
+    }
+  },
+  "evidence": {
+    "enabled": true,
+    "redaction": "credentials-userinfo-query-fragment"
+  }
+}

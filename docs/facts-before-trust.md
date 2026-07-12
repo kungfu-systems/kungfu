@@ -1,15 +1,18 @@
 # Facts Before Trust
 
-Kungfu starts from a simple rule:
+Kungfu starts from the rule KFD makes explicit:
 
 ```text
-Do not ask users to trust a claim when the system can produce a fact.
+A load-bearing claim should never stand alone. Bind it to a verifiable source,
+artifact, manifest, or runtime receipt before treating it as trusted state.
 ```
 
-That rule is why Kungfu is journal-first. It is why replay runs on the same
-runtime as live. It is why known limits are written down instead of hidden. It
-is why release, provenance, extension trust, and agent-facing skills are treated
-as part of the product rather than paperwork around it.
+That rule is the concrete form of facts before trust: do not ask users to trust
+a claim when the system can produce a fact. It is why Kungfu is journal-first.
+It is why replay runs on the same runtime as live. It is why known limits are
+written down instead of hidden. It is why release, provenance, extension trust,
+and agent-facing skills are treated as part of the product rather than
+paperwork around it.
 
 Kungfu is built for work where claims are not enough:
 
@@ -147,7 +150,7 @@ the demo.
 This principle shows up in several concrete places:
 
 - `yijinjing` journals are the append-first fact layer.
-- `longfist` schemas make the binary layout a declared contract.
+- `yijinjing` schema makes the binary layout a declared contract.
 - replay reuses the live runtime instead of inventing a separate replay story.
 - `docs/contracts.md` states guarantees with maturity and verification paths.
 - `docs/known-limits.md` names what is not yet guaranteed.

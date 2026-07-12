@@ -119,20 +119,20 @@ def retry(span_id, retry_of_span_id, attempt, reason=None):
     )
 
 
-# ── kfx open-layer events ───────────────────────────────────────────
+# ── kfx action-envelope events ──────────────────────────────────────
 #
 # A kfx extension (not the traced agent — kfx code opts into kungfu) compiles
-# its own `.fbs` and emits events of its own msg_type. It registers the schema
-# once so the run's bundle can bind msg_type -> the `.bfbs`, then emits event
+# its own `.fbs` and emits events of its own action_type. It registers the schema
+# once so the run's bundle can bind action_type -> the `.bfbs`, then emits event
 # payloads it built with its own accessors. Bytes are base64 over the JSON
 # channel; the supervisor writes the frames and the schema bindings.
 
 
-def kfx_schema(msg_type, name, bfbs, tier="trusted"):
+def kfx_schema(action_type, name, bfbs, tier="trusted"):
     emit(
         {
             "event": "kfx_schema",
-            "msg_type": int(msg_type),
+            "action_type": str(action_type),
             "name": name,
             "tier": tier,
             "bfbs_b64": base64.b64encode(bytes(bfbs)).decode(),
@@ -140,11 +140,11 @@ def kfx_schema(msg_type, name, bfbs, tier="trusted"):
     )
 
 
-def kfx_event(msg_type, payload):
+def kfx_event(action_type, payload):
     emit(
         {
             "event": "kfx_event",
-            "msg_type": int(msg_type),
+            "action_type": str(action_type),
             "payload_b64": base64.b64encode(bytes(payload)).decode(),
         }
     )

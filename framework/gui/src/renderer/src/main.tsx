@@ -12,9 +12,16 @@ import * as capability from '@kungfu-tech/api/capability';
 import type {
   KfxCapabilities,
   KfxEntry,
+  KungfuConfigValue,
+  KungfuResolvedConfig,
   SessionWindowRecord,
   Shell,
+  ShellCommand,
+  ShellNotification,
+  ShellNotificationInput,
   ShellState,
+  StatusBarItem,
+  StatusBarSeverity,
 } from '@kungfu-tech/kfx';
 import { mono, panelStyle } from '@kungfu-tech/kfx';
 import React from 'react';
@@ -22,14 +29,32 @@ import * as ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import * as jsxRuntime from 'react/jsx-runtime';
 import {
+  RUNTIME_STATUS_GET_CHANNEL,
   SESSION_WINDOW_OPEN_CHANNEL,
   SESSION_WINDOW_RESTORE_CHANNEL,
   SESSION_WINDOW_SNAPSHOT_CHANNEL,
+  WINDOW_CHROME_CONTROL_CHANNEL,
+  WINDOW_CHROME_GET_CHANNEL,
+  WINDOW_CHROME_STATE_CHANNEL,
+  WORKSPACE_CREATE_MISSION_CHANNEL,
+  WORKSPACE_GET_CHANNEL,
+  WORKSPACE_OPEN_CHANNEL,
+  WORKSPACE_SELECT_HOME_CHANNEL,
+  WORKSPACE_SELECT_RECENT_CHANNEL,
 } from '../../sandbox/channels';
+import {
+  loadKungfuConfig,
+  normalizedUiConfig,
+  resolvedMonoFontFamily,
+  resolvedUiFontFamily,
+  setKungfuConfigValue,
+  unsetKungfuConfigValue,
+} from './gui-config';
 import { type KfxLoadResult, loadKfx } from './kfx-loader';
 import { type Runtime, bootRuntime } from './runtime';
 import { sandboxClient } from './sandbox-client';
 import {
+  DEFAULT_STATE,
   PROFILES,
   loadShellState,
   profileById,
@@ -82,9 +107,11 @@ function subsetCaps(runtime: Runtime, entry: KfxEntry): KfxCapabilities | null {
     ledger: runtime.ledger,
     domain: runtime.domain,
     rewind: runtime.rewind,
+    storage: runtime.storage,
     terminal: runtime.terminal,
     work: runtime.work,
     atlas: runtime.atlas,
+    workspace: runtime.workspace,
   } as Record<string, unknown>;
   const subset: Record<string, unknown> = {};
   for (const key of entry.capabilities) {
@@ -109,9 +136,11 @@ function sandboxSubset(
     ledger: runtime.ledger,
     domain: runtime.domain,
     rewind: runtime.rewind,
+    storage: runtime.storage,
     terminal: runtime.terminal,
     work: runtime.work,
     atlas: runtime.atlas,
+    workspace: runtime.workspace,
   };
   const subset: Record<string, Record<string, unknown>> = {};
   for (const key of entry.capabilities) {
@@ -177,26 +206,649 @@ function SandboxSlot({
   return <div ref={ref} style={{ width: '100%', height: '100%' }} />;
 }
 
+function statusColor(severity: StatusBarSeverity | undefined): string {
+  if (severity === 'ok') return '#4ec9b0';
+  if (severity === 'warning') return '#dcdcaa';
+  if (severity === 'error') return '#f48771';
+  return '#cccccc';
+}
+
+type RuntimeStatusPayload = {
+  status?: string;
+  configHome?: string;
+  dataRoot?: string;
+  runtimeDir?: string;
+  lifecycle?: {
+    state?: string;
+    healthy?: boolean;
+    warnings?: string[];
+  };
+  supervisor?: { pid?: number | null; running?: boolean };
+  coordinator?: { pid?: number | null; running?: boolean };
+  route?: { routeId?: string; registered?: boolean; stale?: boolean };
+  routes?: { count?: number; staleCount?: number };
+  assessments?: {
+    assessment_count?: number;
+    counts?: Record<string, number>;
+    assessments?: Array<{
+      state?: string;
+      assessment_key?: string;
+      request?: { claim_id?: string; purpose?: string };
+      report?: { residual_risks?: string[]; query_proof_root?: string };
+    }>;
+  };
+};
+
+type RuntimeStatusResult = {
+  ok: boolean;
+  payload: RuntimeStatusPayload | null;
+  error: string;
+  updatedAt: number;
+};
+
+function runtimeStatusText(status: RuntimeStatusResult | null): string {
+  if (!status) return 'runtime checking';
+  if (!status.ok || !status.payload) return 'runtime unavailable';
+  const lifecycle = status.payload.lifecycle?.state || status.payload.status;
+  if (lifecycle === 'stale-route') return 'runtime stale route';
+  if (lifecycle === 'degraded') return 'runtime degraded';
+  if (lifecycle === 'dead') return 'runtime dead pid';
+  if (lifecycle === 'orphan-coordinator') return 'runtime orphan';
+  const supervisor = status.payload.supervisor?.running;
+  const runtime = status.payload.coordinator?.running;
+  if (supervisor && runtime) return 'runtime live';
+  if (supervisor) return 'runtime starting';
+  if (runtime) return 'runtime orphan';
+  return 'runtime offline';
+}
+
+function supervisorStatusText(status: RuntimeStatusResult | null): string {
+  if (!status) return 'supervisor checking';
+  if (!status.ok || !status.payload) return 'supervisor unavailable';
+  const lifecycle = status.payload.lifecycle?.state || status.payload.status;
+  if (lifecycle === 'dead') return 'supervisor dead pid';
+  if (lifecycle === 'stale-route') return 'supervisor stale route';
+  return status.payload.supervisor?.running
+    ? 'supervisor live'
+    : 'supervisor stopped';
+}
+
+function statusTooltip(status: RuntimeStatusResult | null): string {
+  if (!status) return 'Supervisor/runtime status is being checked';
+  if (!status.ok || !status.payload)
+    return status.error || 'Status unavailable';
+  const payload = status.payload;
+  return [
+    `Status: ${payload.status || '-'}`,
+    `Lifecycle: ${payload.lifecycle?.state || '-'}`,
+    `Warnings: ${payload.lifecycle?.warnings?.join(', ') || '-'}`,
+    `Config: ${payload.configHome || '-'}`,
+    `Data root: ${payload.dataRoot || '-'}`,
+    `Runtime: ${payload.runtimeDir || '-'}`,
+    `Route: ${payload.route?.routeId || '-'}${
+      payload.route?.registered ? ' registered' : ' not registered'
+    }${payload.route?.stale ? ' stale' : ''}`,
+    `Stale routes: ${String(payload.routes?.staleCount ?? 0)}`,
+  ].join('\n');
+}
+
+function trustStatusText(status: RuntimeStatusResult | null): string {
+  const assessments = status?.payload?.assessments;
+  if (!assessments) return 'trust unavailable';
+  const counts = assessments.counts ?? {};
+  const blocked =
+    (counts.stale ?? 0) +
+    (counts['insufficient-evidence'] ?? 0) +
+    (counts.conflicted ?? 0) +
+    (counts.unverifiable ?? 0) +
+    (counts['failed-retryable'] ?? 0);
+  if (blocked > 0) return `trust blocked ${String(blocked)}`;
+  if ((counts.pending ?? 0) + (counts.running ?? 0) > 0)
+    return `trust pending ${String((counts.pending ?? 0) + (counts.running ?? 0))}`;
+  return `trust fresh ${String(counts.fresh ?? 0)}`;
+}
+
+function trustTooltip(status: RuntimeStatusResult | null): string {
+  const assessments = status?.payload?.assessments?.assessments;
+  if (!assessments) return 'Assessment subscription is unavailable';
+  if (assessments.length === 0) return 'No load-bearing claims assessed';
+  return assessments
+    .map((assessment) => {
+      const request = assessment.request ?? {};
+      const risks = assessment.report?.residual_risks?.join('; ') || '-';
+      return `${assessment.state || '-'}: ${request.claim_id || '-'} for ${
+        request.purpose || '-'
+      }\nresidual risk: ${risks}\nproof: ${
+        assessment.report?.query_proof_root || '-'
+      }`;
+    })
+    .join('\n\n');
+}
+
+function notificationColor(level: ShellNotification['level']): string {
+  if (level === 'success') return '#4ec9b0';
+  if (level === 'warning') return '#dcdcaa';
+  if (level === 'error') return '#f48771';
+  return '#9cdcfe';
+}
+
+let notificationSeq = 0;
+function notificationId(): string {
+  notificationSeq += 1;
+  return (
+    globalThis.crypto?.randomUUID?.() ?? `n-${Date.now()}-${notificationSeq}`
+  );
+}
+
+type WindowChromeControl = 'minimize' | 'toggle-maximize' | 'close';
+type WindowChromeConfig = {
+  platform: 'darwin' | 'win32' | 'linux' | 'other';
+  mode: 'native' | 'integrated' | 'custom';
+  customControls: boolean;
+  draggable: boolean;
+  trafficLightInset: number;
+  controlInset: number;
+  maximized: boolean;
+  fullscreen: boolean;
+};
+type ElectronChromeStyle = React.CSSProperties & {
+  WebkitAppRegion?: 'drag' | 'no-drag';
+};
+
+const defaultWindowChrome: WindowChromeConfig = {
+  platform: 'other',
+  mode: 'native',
+  customControls: false,
+  draggable: false,
+  trafficLightInset: 0,
+  controlInset: 0,
+  maximized: false,
+  fullscreen: false,
+};
+
+function readWindowChromeEnv(): WindowChromeConfig {
+  try {
+    const raw = window.process?.env?.KF_WINDOW_CHROME;
+    if (!raw) return defaultWindowChrome;
+    return { ...defaultWindowChrome, ...JSON.parse(raw) };
+  } catch {
+    return defaultWindowChrome;
+  }
+}
+
+function useWindowChrome(): [
+  WindowChromeConfig,
+  (control: WindowChromeControl) => void,
+] {
+  const [chrome, setChrome] =
+    React.useState<WindowChromeConfig>(readWindowChromeEnv);
+  React.useEffect(() => {
+    type ChromeIpc = {
+      invoke: (channel: string, payload?: unknown) => Promise<unknown>;
+      on: (
+        channel: string,
+        listener: (event: unknown, payload: unknown) => void,
+      ) => void;
+      removeListener: (
+        channel: string,
+        listener: (event: unknown, payload: unknown) => void,
+      ) => void;
+    };
+    let ipc: ChromeIpc | null = null;
+    try {
+      ipc = (window.require('electron') as { ipcRenderer: ChromeIpc })
+        .ipcRenderer;
+    } catch {
+      ipc = null;
+    }
+    if (!ipc) return;
+    void ipc.invoke(WINDOW_CHROME_GET_CHANNEL).then((next) => {
+      setChrome((current) => ({ ...current, ...(next as object) }));
+    });
+    const handler = (_event: unknown, payload: unknown) => {
+      setChrome((current) => ({ ...current, ...(payload as object) }));
+    };
+    ipc.on(WINDOW_CHROME_STATE_CHANNEL, handler);
+    return () => ipc?.removeListener(WINDOW_CHROME_STATE_CHANNEL, handler);
+  }, []);
+
+  const control = React.useCallback((next: WindowChromeControl) => {
+    try {
+      const ipc = (
+        window.require('electron') as {
+          ipcRenderer: {
+            invoke: (channel: string, payload: unknown) => Promise<unknown>;
+          };
+        }
+      ).ipcRenderer;
+      void ipc
+        .invoke(WINDOW_CHROME_CONTROL_CHANNEL, { control: next })
+        .then((state) =>
+          setChrome((current) => ({ ...current, ...(state as object) })),
+        );
+    } catch {
+      // Browser previews have no Electron window to control.
+    }
+  }, []);
+
+  return [chrome, control];
+}
+
+function ShellTitleBar({
+  chrome,
+  activeTitle,
+  commandText,
+  commandOptions,
+  settingsOpen,
+  workspaceLabel,
+  onCommandChange,
+  onCommandSubmit,
+  onOpenSettings,
+  onOpenWorkspace,
+  onWindowControl,
+}: {
+  chrome: WindowChromeConfig;
+  activeTitle: string;
+  commandText: string;
+  commandOptions: { id: string; title: string }[];
+  settingsOpen: boolean;
+  workspaceLabel: string;
+  onCommandChange: (value: string) => void;
+  onCommandSubmit: () => void;
+  onOpenSettings: () => void;
+  onOpenWorkspace: () => void;
+  onWindowControl: (control: WindowChromeControl) => void;
+}) {
+  const dragRegion: ElectronChromeStyle = {
+    WebkitAppRegion: chrome.draggable ? 'drag' : undefined,
+  };
+  const interactiveRegion: ElectronChromeStyle = {
+    WebkitAppRegion: 'no-drag',
+  };
+  const leftInset =
+    chrome.mode === 'integrated' ? Math.max(84, chrome.trafficLightInset) : 12;
+  const rightInset = chrome.customControls
+    ? Math.max(138, chrome.controlInset)
+    : 12;
+  const controlButton = (
+    control: WindowChromeControl,
+    label: string,
+    ariaLabel: string,
+    danger = false,
+  ) => (
+    <button
+      type="button"
+      aria-label={ariaLabel}
+      onClick={() => onWindowControl(control)}
+      style={{
+        ...interactiveRegion,
+        width: 46,
+        height: 34,
+        border: 'none',
+        borderRadius: 0,
+        cursor: 'pointer',
+        background: 'transparent',
+        color: danger ? '#ffffff' : '#cccccc',
+        fontSize: 14,
+      }}
+      onMouseEnter={(event) => {
+        event.currentTarget.style.background = danger ? '#c42b1c' : '#343434';
+      }}
+      onMouseLeave={(event) => {
+        event.currentTarget.style.background = 'transparent';
+      }}
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <header
+      style={{
+        ...dragRegion,
+        height: 42,
+        flexShrink: 0,
+        display: 'grid',
+        gridTemplateColumns: `${leftInset}px minmax(160px, 1fr) auto ${rightInset}px`,
+        alignItems: 'center',
+        background: '#1e1e1e',
+        borderBottom: '1px solid #2d2d2d',
+        userSelect: 'none',
+      }}
+    >
+      <div />
+      <div
+        style={{
+          minWidth: 0,
+          display: 'grid',
+          gridTemplateColumns: 'minmax(120px, 220px) minmax(180px, 520px)',
+          alignItems: 'center',
+          gap: 12,
+        }}
+      >
+        <div
+          title={activeTitle}
+          style={{
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            fontSize: 12,
+            color: '#9cdcfe',
+            fontWeight: 600,
+          }}
+        >
+          Kungfu Episodes
+        </div>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            onCommandSubmit();
+          }}
+          style={{
+            ...interactiveRegion,
+            minWidth: 0,
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
+          <input
+            aria-label="Search views"
+            list="kf-shell-command-options"
+            value={commandText}
+            onChange={(event) => onCommandChange(event.target.value)}
+            placeholder="Search"
+            style={{
+              width: '100%',
+              height: 26,
+              border: '1px solid #3c3c3c',
+              borderRadius: 6,
+              boxSizing: 'border-box',
+              background: '#252526',
+              color: '#cccccc',
+              padding: '0 10px',
+              outline: 'none',
+              fontSize: 12,
+            }}
+          />
+          <datalist id="kf-shell-command-options">
+            {commandOptions.map((option) => (
+              <option key={option.id} value={option.title} />
+            ))}
+          </datalist>
+        </form>
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          gap: 6,
+          paddingRight: 8,
+        }}
+      >
+        <button
+          type="button"
+          aria-label="Open workspace switcher"
+          title={workspaceLabel}
+          onClick={onOpenWorkspace}
+          style={{
+            ...interactiveRegion,
+            ...mono,
+            maxWidth: 180,
+            height: 28,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            border: '1px solid #3c3c3c',
+            borderRadius: 6,
+            cursor: 'pointer',
+            background: '#252526',
+            color: '#9cdcfe',
+            padding: '0 8px',
+          }}
+        >
+          {workspaceLabel}
+        </button>
+        <button
+          type="button"
+          aria-label="Open settings"
+          onClick={onOpenSettings}
+          style={{
+            ...interactiveRegion,
+            ...mono,
+            width: 30,
+            height: 28,
+            border: '1px solid #3c3c3c',
+            borderRadius: 6,
+            cursor: 'pointer',
+            background: settingsOpen ? '#04395e' : '#252526',
+            color: settingsOpen ? '#9cdcfe' : '#cccccc',
+            fontSize: 16,
+            lineHeight: '24px',
+          }}
+        >
+          ⚙
+        </button>
+      </div>
+      <div
+        style={{
+          ...interactiveRegion,
+          height: '100%',
+          display: chrome.customControls ? 'flex' : 'none',
+          alignItems: 'stretch',
+          justifyContent: 'flex-end',
+        }}
+      >
+        {controlButton('minimize', '—', 'Minimize window')}
+        {controlButton(
+          'toggle-maximize',
+          chrome.maximized ? '❐' : '□',
+          chrome.maximized ? 'Restore window' : 'Maximize window',
+        )}
+        {controlButton('close', '×', 'Close window', true)}
+      </div>
+    </header>
+  );
+}
+
+type WorkspaceSnapshot = {
+  current: {
+    workspaceId: string;
+    workspaceKind: 'home' | 'project';
+    workspaceRoot: string | null;
+    displayPath: string;
+    dataHome: string;
+    state: 'ready' | 'selected-uninitialized' | 'unavailable';
+    diagnosis: string;
+  };
+  recent: Array<{
+    workspace_id?: string;
+    workspace_kind?: 'home' | 'project';
+    workspace_root?: string | null;
+    display_path?: string;
+    data_home?: string;
+  }>;
+};
+
+function workspaceIpc() {
+  const ipcRenderer = (
+    window.require('electron') as {
+      ipcRenderer: {
+        invoke: (channel: string, payload?: unknown) => Promise<unknown>;
+      };
+    }
+  ).ipcRenderer;
+  return {
+    get: () =>
+      ipcRenderer.invoke(WORKSPACE_GET_CHANNEL) as Promise<WorkspaceSnapshot>,
+    open: () => ipcRenderer.invoke(WORKSPACE_OPEN_CHANNEL),
+    home: () => ipcRenderer.invoke(WORKSPACE_SELECT_HOME_CHANNEL),
+    recent: (workspaceId: string) =>
+      ipcRenderer.invoke(WORKSPACE_SELECT_RECENT_CHANNEL, { workspaceId }),
+    createMission: (missionId: string, title: string, intent: string) =>
+      ipcRenderer.invoke(WORKSPACE_CREATE_MISSION_CHANNEL, {
+        missionId,
+        title,
+        intent,
+      }),
+  };
+}
+
+function WorkspacePanel() {
+  const bridge = React.useMemo(workspaceIpc, []);
+  const [snapshot, setSnapshot] = React.useState<WorkspaceSnapshot | null>(
+    null,
+  );
+  const [error, setError] = React.useState<string | null>(null);
+  const [missionId, setMissionId] = React.useState('');
+  const [missionTitle, setMissionTitle] = React.useState('');
+  const [missionIntent, setMissionIntent] = React.useState('');
+  React.useEffect(() => {
+    void bridge
+      .get()
+      .then(setSnapshot)
+      .catch((e) => setError((e as Error).message));
+  }, [bridge]);
+  const run = (action: () => Promise<unknown>) => {
+    setError(null);
+    void action().catch((e) => setError((e as Error).message));
+  };
+  return (
+    <section style={{ ...panelStyle, width: 'min(680px, 100%)' }}>
+      <h2 style={{ margin: '0 0 8px', fontSize: 15 }}>Workspace</h2>
+      {snapshot && (
+        <div style={{ ...mono, color: '#9cdcfe', marginBottom: 10 }}>
+          {snapshot.current.displayPath} · {snapshot.current.state}
+          {snapshot.current.diagnosis ? ` · ${snapshot.current.diagnosis}` : ''}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+        <button
+          type="button"
+          onClick={() => run(bridge.open)}
+          style={{ ...mono, padding: '6px 10px' }}
+        >
+          Open Workspace…
+        </button>
+        <button
+          type="button"
+          onClick={() => run(bridge.home)}
+          style={{ ...mono, padding: '6px 10px' }}
+        >
+          Use Home Workspace
+        </button>
+      </div>
+      <div style={{ ...mono, color: '#858585', marginBottom: 6 }}>
+        Opening or selecting is read-only. The first fact-bearing action creates
+        the selected `.kungfu` data home.
+      </div>
+      {snapshot?.current.state === 'selected-uninitialized' && (
+        <div
+          style={{
+            display: 'grid',
+            gap: 5,
+            padding: 8,
+            marginBottom: 10,
+            border: '1px solid #3c3c3c',
+            borderRadius: 5,
+          }}
+        >
+          <div style={{ ...mono, color: '#9cdcfe' }}>
+            First fact-bearing action · Create Mission
+          </div>
+          <input
+            value={missionId}
+            placeholder="stable Mission id"
+            onChange={(event) => setMissionId(event.target.value)}
+            style={{ ...mono, padding: '5px 7px' }}
+          />
+          <input
+            value={missionTitle}
+            placeholder="Mission title"
+            onChange={(event) => setMissionTitle(event.target.value)}
+            style={{ ...mono, padding: '5px 7px' }}
+          />
+          <input
+            value={missionIntent}
+            placeholder="What are we trying to achieve?"
+            onChange={(event) => setMissionIntent(event.target.value)}
+            style={{ ...mono, padding: '5px 7px' }}
+          />
+          <button
+            type="button"
+            onClick={() =>
+              run(() =>
+                bridge.createMission(missionId, missionTitle, missionIntent),
+              )
+            }
+            style={{ ...mono, padding: '6px 10px' }}
+          >
+            Create Mission and initialize Workspace
+          </button>
+        </div>
+      )}
+      {snapshot?.recent.map((recent) => (
+        <button
+          key={recent.workspace_id}
+          type="button"
+          disabled={
+            recent.workspace_kind === 'project' && !recent.workspace_root
+          }
+          onClick={() =>
+            recent.workspace_id &&
+            run(() => bridge.recent(recent.workspace_id as string))
+          }
+          style={{
+            ...mono,
+            display: 'block',
+            width: '100%',
+            padding: '5px 7px',
+            border: 'none',
+            background: 'transparent',
+            color: '#cccccc',
+            textAlign: 'left',
+            cursor: 'pointer',
+          }}
+        >
+          {recent.display_path || recent.workspace_root || 'Home Workspace'}
+        </button>
+      ))}
+      {error && <div style={{ ...mono, color: '#f48771' }}>{error}</div>}
+    </section>
+  );
+}
+
 function App() {
   const [runtime] = React.useState(bootRuntime);
   const [loaded] = React.useState<KfxLoadResult>(() =>
     loadKfx(window.process.env, SHARED_MODULES),
   );
   const [state, setState] = React.useState<ShellState>(() =>
-    runtime.domain
-      ? loadShellState(runtime.domain)
-      : {
-          profileId: 'default',
-          disabledKfx: [],
-          disabledSuites: [],
-          settings: {},
-        },
+    runtime.domain ? loadShellState(runtime.domain) : DEFAULT_STATE,
   );
   const profile = profileById(state.profileId);
   const [active, setActive] = React.useState(
     () => window.process.env.KFE_INITIAL_VIEW || profile.defaultView,
   );
   const [params, setParams] = React.useState<Record<string, string>>({});
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
+  const [workspaceOpen, setWorkspaceOpen] = React.useState(false);
+  const [commandText, setCommandText] = React.useState('');
+  const [windowChrome, controlWindow] = useWindowChrome();
+  const [config, setConfig] = React.useState<KungfuResolvedConfig | null>(null);
+  const [configError, setConfigError] = React.useState('');
+  const [runtimeLive, setRuntimeLive] = React.useState(
+    () => runtime.ledger?.health().live ?? false,
+  );
+  const [runtimeStatus, setRuntimeStatus] =
+    React.useState<RuntimeStatusResult | null>(null);
+  const [statusBarItems, setStatusBarItems] = React.useState<
+    Record<string, StatusBarItem>
+  >({});
+  const [notifications, setNotifications] = React.useState<ShellNotification[]>(
+    [],
+  );
+  const notificationTimers = React.useRef(new Map<string, number>());
 
   // shared refresh bus: one shell-owned timer, kfx subscribe
   const subscribers = React.useRef(new Set<() => void>());
@@ -206,6 +858,69 @@ function App() {
     }, 5000);
     return () => clearInterval(timer);
   }, []);
+
+  React.useEffect(() => {
+    const refresh = () =>
+      setRuntimeLive(runtime.ledger?.health().live ?? false);
+    refresh();
+    const timer = setInterval(refresh, 5000);
+    return () => clearInterval(timer);
+  }, [runtime.ledger]);
+
+  React.useEffect(() => {
+    type RuntimeStatusIpc = {
+      invoke: (channel: string) => Promise<RuntimeStatusResult>;
+    };
+    let ipc: RuntimeStatusIpc | null = null;
+    try {
+      ipc = (window.require('electron') as { ipcRenderer: RuntimeStatusIpc })
+        .ipcRenderer;
+    } catch {
+      ipc = null;
+    }
+    if (!ipc) return;
+    let cancelled = false;
+    const refresh = () => {
+      void ipc
+        .invoke(RUNTIME_STATUS_GET_CHANNEL)
+        .then((next) => {
+          if (!cancelled) setRuntimeStatus(next);
+        })
+        .catch((e: unknown) => {
+          if (cancelled) return;
+          setRuntimeStatus({
+            ok: false,
+            payload: null,
+            error: e instanceof Error ? e.message : String(e),
+            updatedAt: Date.now(),
+          });
+        });
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  React.useEffect(
+    () => () => {
+      for (const timer of notificationTimers.current.values()) {
+        window.clearTimeout(timer);
+      }
+      notificationTimers.current.clear();
+    },
+    [],
+  );
+
+  const openKfx = React.useCallback(
+    (kfxId: string, nextParams?: Record<string, string>) => {
+      setParams(nextParams ?? {});
+      setActive(kfxId);
+    },
+    [],
+  );
 
   const updateState = React.useCallback(
     (patch: Partial<ShellState>) => {
@@ -217,6 +932,130 @@ function App() {
     },
     [runtime.domain],
   );
+
+  const reloadConfig = React.useCallback(() => {
+    try {
+      setConfig(loadKungfuConfig());
+      setConfigError('');
+    } catch (e) {
+      setConfig(null);
+      setConfigError((e as Error).message);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    reloadConfig();
+  }, [reloadConfig]);
+
+  const updateConfigValue = React.useCallback(
+    (key: string, value: KungfuConfigValue) => {
+      try {
+        setConfig(setKungfuConfigValue(key, value));
+        setConfigError('');
+      } catch (e) {
+        setConfigError((e as Error).message);
+        throw e;
+      }
+    },
+    [],
+  );
+
+  const removeConfigValue = React.useCallback((key: string) => {
+    try {
+      setConfig(unsetKungfuConfigValue(key));
+      setConfigError('');
+    } catch (e) {
+      setConfigError((e as Error).message);
+      throw e;
+    }
+  }, []);
+
+  const setStatusBarItem = React.useCallback((item: StatusBarItem) => {
+    if (!item.id) throw new Error('statusBar item id is required');
+    if (!item.text) throw new Error('statusBar item text is required');
+    setStatusBarItems((current) => ({
+      ...current,
+      [item.id]: {
+        ...item,
+        side: item.side ?? 'left',
+        priority: item.priority ?? 0,
+        severity: item.severity ?? 'info',
+      },
+    }));
+  }, []);
+
+  const clearStatusBarItem = React.useCallback((id: string) => {
+    setStatusBarItems((current) => {
+      const next = { ...current };
+      delete next[id];
+      return next;
+    });
+  }, []);
+
+  const dismissNotification = React.useCallback((id: string) => {
+    const timer = notificationTimers.current.get(id);
+    if (timer !== undefined) {
+      window.clearTimeout(timer);
+      notificationTimers.current.delete(id);
+    }
+    setNotifications((current) => current.filter((item) => item.id !== id));
+  }, []);
+
+  const runShellCommand = React.useCallback(
+    (command: ShellCommand | undefined) => {
+      if (!command) return;
+      if (command.kind === 'open-kfx') {
+        openKfx(command.kfxId, command.params);
+        return;
+      }
+      if (command.kind === 'open-settings') {
+        setSettingsOpen(true);
+        return;
+      }
+      if (command.kind === 'dismiss-notification') {
+        dismissNotification(command.notificationId);
+      }
+    },
+    [dismissNotification, openKfx],
+  );
+
+  const showNotification = React.useCallback(
+    (input: ShellNotificationInput) => {
+      const id = notificationId();
+      const item: ShellNotification = {
+        id,
+        level: input.level ?? 'info',
+        title: input.title,
+        message: input.message,
+        timeoutMs: input.timeoutMs ?? 6000,
+        actions: input.actions ?? [],
+        createdAt: Date.now(),
+      };
+      setNotifications((current) => [item, ...current].slice(0, 5));
+      if (item.timeoutMs !== 0) {
+        const timer = window.setTimeout(
+          () => dismissNotification(id),
+          item.timeoutMs,
+        );
+        notificationTimers.current.set(id, timer);
+      }
+      return id;
+    },
+    [dismissNotification],
+  );
+
+  const uiConfig = normalizedUiConfig(config);
+
+  React.useEffect(() => {
+    try {
+      const electron = window.require('electron') as {
+        webFrame?: { setZoomFactor: (factor: number) => void };
+      };
+      electron.webFrame?.setZoomFactor(uiConfig.scale);
+    } catch {
+      // non-electron tests or previews keep CSS sizing without webFrame zoom
+    }
+  }, [uiConfig.scale]);
 
   const settingFallbacks: Record<string, string> = Object.fromEntries(
     loaded.entries.flatMap((entry) =>
@@ -305,10 +1144,7 @@ function App() {
   }, []);
 
   const shell: Shell = {
-    open: (kfxId, nextParams) => {
-      setParams(nextParams ?? {});
-      setActive(kfxId);
-    },
+    open: openKfx,
     params,
     onRefresh: (fn) => {
       subscribers.current.add(fn);
@@ -317,15 +1153,27 @@ function App() {
     setting: (key) => state.settings[key] ?? settingFallbacks[key] ?? '',
     updateState,
     state,
+    statusBar: {
+      set: setStatusBarItem,
+      clear: clearStatusBarItem,
+    },
+    notify: showNotification,
+    dismissNotification,
+    config,
+    configError,
+    reloadConfig,
+    setConfigValue: updateConfigValue,
+    unsetConfigValue: removeConfigValue,
     info: {
       ok: runtime.ok,
       message: runtime.message,
       runtimeDir: runtime.runtimeDir,
       kungfuVersion: runtime.kungfuVersion,
+      runtimeStatus,
       buildInfo: runtime.buildInfo,
       skillManager: runtime.skillManager,
       exports: runtime.exports,
-      longfistTypes: runtime.longfistTypes,
+      schemaTypes: runtime.schemaTypes,
     },
     registry: loaded.entries,
     suites: loaded.suites,
@@ -333,29 +1181,45 @@ function App() {
     ...sessionWindowShell,
   };
 
+  const sidebarCollapsed = state.sidebarCollapsed;
+  const toggleSidebar = React.useCallback(() => {
+    updateState({ sidebarCollapsed: !sidebarCollapsed });
+  }, [sidebarCollapsed, updateState]);
   const navButton = (id: string, title: string) => (
     <button
       key={id}
       type="button"
       onClick={() => shell.open(id)}
+      title={sidebarCollapsed ? title : undefined}
+      aria-label={title}
       style={{
         ...mono,
-        display: 'block',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
         width: '100%',
-        textAlign: 'left',
-        padding: '6px 10px',
+        height: sidebarCollapsed ? 32 : undefined,
+        minHeight: 32,
+        textAlign: sidebarCollapsed ? 'center' : 'left',
+        padding: sidebarCollapsed ? 0 : '6px 10px',
         border: 'none',
-        borderRadius: 4,
+        borderRadius: 5,
         cursor: 'pointer',
         background: activeKfx?.id === id ? '#04395e' : 'transparent',
         color: activeKfx?.id === id ? '#9cdcfe' : '#cccccc',
+        overflow: 'hidden',
       }}
     >
-      {title}
+      {sidebarCollapsed ? title.trim().slice(0, 1).toUpperCase() : title}
     </button>
   );
 
   const caps = activeKfx ? subsetCaps(runtime, activeKfx) : null;
+  const settingsKfx =
+    enabled.find((k) => k.id === 'settings') ??
+    loaded.entries.find((k) => k.id === 'settings') ??
+    null;
+  const settingsCaps = settingsKfx ? subsetCaps(runtime, settingsKfx) : null;
   const suiteTitle = (entry: KfxEntry) =>
     entry.suite ? (loaded.suites[entry.suite]?.title ?? entry.suite) : null;
   const plain = enabled.filter((k) => !k.suite);
@@ -366,102 +1230,648 @@ function App() {
     group.push(entry);
     suiteGroups.set(entry.suite, group);
   }
+  const commandOptions = enabled.map((entry) => ({
+    id: entry.id,
+    title: entry.title,
+  }));
+  const submitCommand = React.useCallback(() => {
+    const query = commandText.trim().toLowerCase();
+    if (!query) return;
+    const match =
+      enabled.find((entry) => entry.title.toLowerCase() === query) ??
+      enabled.find((entry) => entry.id.toLowerCase() === query) ??
+      enabled.find((entry) => entry.title.toLowerCase().includes(query)) ??
+      enabled.find((entry) => entry.id.toLowerCase().includes(query));
+    if (!match) {
+      showNotification({
+        level: 'info',
+        title: 'No matching view',
+        message: commandText,
+      });
+      return;
+    }
+    openKfx(match.id);
+    setCommandText('');
+  }, [commandText, enabled, openKfx, showNotification]);
 
-  return (
-    <div
-      style={{
-        fontFamily: 'system-ui, sans-serif',
-        color: '#cccccc',
-        background: '#1e1e1e',
-        height: '100vh',
-        margin: 0,
-        padding: 16,
-        boxSizing: 'border-box',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 12,
-      }}
-    >
-      <header style={{ display: 'flex', alignItems: 'baseline', gap: 16 }}>
-        <h1 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>
-          Kungfu v4 reference app
-        </h1>
-        <span style={{ ...mono, color: runtime.ok ? '#4ec9b0' : '#f48771' }}>
-          {runtime.ok ? '●' : '○'} {runtime.message}
+  const supervisorRunning =
+    runtimeStatus?.payload?.supervisor?.running === true;
+  const coordinatorRunning =
+    runtimeStatus?.payload?.coordinator?.running === true ||
+    (!runtimeStatus?.ok && runtimeLive);
+  const lifecycleState =
+    runtimeStatus?.payload?.lifecycle?.state || runtimeStatus?.payload?.status;
+  const lifecycleHealthy = runtimeStatus?.payload?.lifecycle?.healthy === true;
+  const lifecycleDegraded =
+    lifecycleState === 'stale-route' ||
+    lifecycleState === 'degraded' ||
+    lifecycleState === 'dead' ||
+    lifecycleState === 'orphan-coordinator';
+  const runtimeSeverity: StatusBarSeverity = lifecycleHealthy
+    ? 'ok'
+    : lifecycleDegraded || supervisorRunning
+      ? 'warning'
+      : 'error';
+  const trustCounts = runtimeStatus?.payload?.assessments?.counts ?? {};
+  const trustBlocked =
+    (trustCounts.stale ?? 0) +
+    (trustCounts['insufficient-evidence'] ?? 0) +
+    (trustCounts.conflicted ?? 0) +
+    (trustCounts.unverifiable ?? 0) +
+    (trustCounts['failed-retryable'] ?? 0);
+  const trustPending = (trustCounts.pending ?? 0) + (trustCounts.running ?? 0);
+  const systemStatusItems: StatusBarItem[] = [
+    {
+      id: 'system.supervisor',
+      text: supervisorStatusText(runtimeStatus),
+      icon: supervisorRunning ? '●' : '○',
+      severity:
+        lifecycleState === 'dead'
+          ? 'error'
+          : supervisorRunning
+            ? 'ok'
+            : 'warning',
+      side: 'left',
+      priority: -110,
+      tooltip: statusTooltip(runtimeStatus),
+      command: { kind: 'open-kfx', kfxId: 'status' },
+    },
+    {
+      id: 'system.coordinator',
+      text: runtimeStatusText(runtimeStatus),
+      icon: coordinatorRunning ? '●' : '○',
+      severity: runtimeSeverity,
+      side: 'left',
+      priority: -100,
+      tooltip: statusTooltip(runtimeStatus),
+      command: { kind: 'open-kfx', kfxId: 'status' },
+    },
+    {
+      id: 'system.runtime',
+      text: runtime.message || (runtime.ok ? 'runtime ready' : 'runtime down'),
+      icon: runtime.ok ? '●' : '○',
+      severity: runtime.ok ? 'ok' : 'error',
+      side: 'left',
+      priority: -90,
+      tooltip: 'Runtime binding status',
+      command: { kind: 'open-kfx', kfxId: 'status' },
+    },
+    {
+      id: 'system.trust',
+      text: trustStatusText(runtimeStatus),
+      icon: trustBlocked > 0 ? '!' : trustPending > 0 ? '◐' : '✓',
+      severity:
+        trustBlocked > 0 ? 'error' : trustPending > 0 ? 'warning' : 'ok',
+      side: 'left',
+      priority: -85,
+      tooltip: trustTooltip(runtimeStatus),
+      command: { kind: 'open-kfx', kfxId: 'status' },
+    },
+    {
+      id: 'system.profile',
+      text: `profile: ${profile.id}`,
+      side: 'right',
+      priority: 90,
+      tooltip: 'Active profile',
+      command: { kind: 'open-settings' },
+    },
+    {
+      id: 'system.kfx-count',
+      text: `${enabled.length} kfx`,
+      side: 'right',
+      priority: 100,
+      tooltip: 'Loaded extension views',
+      command: { kind: 'open-kfx', kfxId: 'kfx-manager' },
+    },
+  ];
+
+  const allStatusItems = [
+    ...systemStatusItems,
+    ...Object.values(statusBarItems),
+  ].sort(
+    (a, b) => (a.priority ?? 0) - (b.priority ?? 0) || a.id.localeCompare(b.id),
+  );
+
+  const renderStatusItem = (item: StatusBarItem) => {
+    const color = statusColor(item.severity);
+    const content = (
+      <>
+        {item.icon ? <span style={{ color }}>{item.icon}</span> : null}
+        <span
+          style={{
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {item.text}
         </span>
-        <span style={{ ...mono, color: '#6a6a6a' }}>profile: {profile.id}</span>
-      </header>
-      {runtime.ok ? (
-        <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>
-          <nav style={{ width: 150, flexShrink: 0 }}>
-            {plain.map((k) => navButton(k.id, k.title))}
-            {[...suiteGroups.entries()].map(([key, group]) => (
-              <React.Fragment key={key}>
-                <div
-                  style={{
-                    ...mono,
-                    color: '#6a6a6a',
-                    margin: '12px 0 4px',
-                    fontSize: 10,
-                  }}
-                >
-                  {suiteTitle(group[0]) ?? key}
+      </>
+    );
+    const style: React.CSSProperties = {
+      ...mono,
+      height: 24,
+      maxWidth: 260,
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 5,
+      padding: '0 8px',
+      boxSizing: 'border-box',
+      border: 'none',
+      borderRadius: 0,
+      background: 'transparent',
+      color: '#ffffff',
+      cursor: item.command ? 'pointer' : 'default',
+      overflow: 'hidden',
+      flexShrink: 0,
+    };
+    if (!item.command) {
+      return (
+        <span key={item.id} title={item.tooltip} style={style}>
+          {content}
+        </span>
+      );
+    }
+    return (
+      <button
+        key={item.id}
+        type="button"
+        title={item.tooltip}
+        onClick={() => runShellCommand(item.command)}
+        style={style}
+      >
+        {content}
+      </button>
+    );
+  };
+
+  const notificationToasts =
+    notifications.length > 0 ? (
+      <div
+        aria-live="polite"
+        style={{
+          position: 'fixed',
+          right: 16,
+          bottom: 36,
+          zIndex: 900,
+          width: 'min(360px, calc(100vw - 32px))',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          pointerEvents: 'none',
+        }}
+      >
+        {notifications.map((item) => (
+          <section
+            key={item.id}
+            style={{
+              border: '1px solid #3c3c3c',
+              borderLeft: `3px solid ${notificationColor(item.level)}`,
+              borderRadius: 6,
+              background: '#252526',
+              boxShadow: '0 12px 36px rgba(0, 0, 0, 0.36)',
+              pointerEvents: 'auto',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 8,
+                padding: '10px 10px 8px 12px',
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>
+                  {item.title}
                 </div>
-                {group.map((k) => navButton(k.id, k.title))}
-              </React.Fragment>
-            ))}
-            {loaded.failures.length > 0 && (
-              <div
+                {item.message ? (
+                  <div
+                    style={{
+                      ...mono,
+                      marginTop: 4,
+                      color: '#cccccc',
+                      whiteSpace: 'pre-wrap',
+                    }}
+                  >
+                    {item.message}
+                  </div>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                aria-label="Dismiss notification"
+                onClick={() => dismissNotification(item.id)}
                 style={{
                   ...mono,
-                  color: '#f48771',
-                  marginTop: 12,
-                  fontSize: 10,
+                  width: 22,
+                  height: 22,
+                  border: 'none',
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  background: 'transparent',
+                  color: '#cccccc',
                 }}
               >
-                {loaded.failures.length} kfx failed to load
-              </div>
-            )}
-          </nav>
-          <div style={{ flex: 1, minHeight: 0 }}>
-            {activeKfx && activeKfx.tier === 'sandboxed-ipc' ? (
-              // isolated third-party view: embedded, not mounted here
-              <KfxErrorBoundary kfxId={activeKfx.id}>
-                <SandboxSlot
-                  key={activeKfx.id}
-                  entry={activeKfx}
-                  caps={sandboxSubset(runtime, activeKfx)}
-                />
-              </KfxErrorBoundary>
-            ) : activeKfx && caps ? (
-              <KfxErrorBoundary kfxId={activeKfx.id}>
-                <activeKfx.View caps={caps} shell={shell} />
-              </KfxErrorBoundary>
-            ) : (
-              <section style={panelStyle}>
-                <div style={{ ...mono, color: '#f48771' }}>
-                  no kfx available
-                  {loaded.entries.length === 0
-                    ? ' — no extensions found on the extension path'
-                    : ` for view "${active}"`}
-                </div>
-                {loaded.failures.map((failure) => (
-                  <div
-                    key={failure.dir}
-                    style={{ ...mono, color: '#858585', marginTop: 4 }}
+                ×
+              </button>
+            </div>
+            {item.actions && item.actions.length > 0 ? (
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: 8,
+                  padding: '0 10px 10px 12px',
+                }}
+              >
+                {item.actions.map((action) => (
+                  <button
+                    key={action.id}
+                    type="button"
+                    onClick={() => runShellCommand(action.command)}
+                    style={{
+                      ...mono,
+                      border: '1px solid #3c3c3c',
+                      borderRadius: 4,
+                      cursor: 'pointer',
+                      background: '#1e1e1e',
+                      color: '#cccccc',
+                      padding: '4px 8px',
+                    }}
                   >
-                    {failure.dir}: {failure.error}
-                  </div>
+                    {action.label}
+                  </button>
                 ))}
-              </section>
+              </div>
+            ) : null}
+          </section>
+        ))}
+      </div>
+    ) : null;
+
+  const statusBar = (
+    <footer
+      style={{
+        width: '100%',
+        height: 24,
+        padding: '0 8px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+        flexShrink: 0,
+        overflow: 'hidden',
+        boxSizing: 'border-box',
+        borderTop: '1px solid #0e639c',
+        background: '#007acc',
+        color: '#ffffff',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          overflow: 'hidden',
+          minWidth: 0,
+        }}
+      >
+        {allStatusItems
+          .filter((item) => (item.side ?? 'left') === 'left')
+          .map(renderStatusItem)}
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          overflow: 'hidden',
+          minWidth: 0,
+        }}
+      >
+        {allStatusItems
+          .filter((item) => item.side === 'right')
+          .map(renderStatusItem)}
+      </div>
+    </footer>
+  );
+
+  React.useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && (settingsOpen || workspaceOpen)) {
+        event.preventDefault();
+        setSettingsOpen(false);
+        setWorkspaceOpen(false);
+        return;
+      }
+      if (event.key === ',' && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
+        setSettingsOpen((open) => !open);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [settingsOpen, workspaceOpen]);
+
+  const workspaceOverlay = workspaceOpen ? (
+    <div
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) setWorkspaceOpen(false);
+      }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1100,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+        background: 'rgba(0, 0, 0, 0.5)',
+        boxSizing: 'border-box',
+      }}
+    >
+      <WorkspacePanel />
+    </div>
+  ) : null;
+
+  const settingsOverlay = settingsOpen ? (
+    <div
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) setSettingsOpen(false);
+      }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+        background: 'rgba(0, 0, 0, 0.42)',
+        boxSizing: 'border-box',
+      }}
+    >
+      <dialog
+        open
+        aria-label="Settings"
+        style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 'min(980px, 100%)',
+          maxHeight: 'min(720px, calc(100vh - 48px))',
+          minHeight: 420,
+          margin: 0,
+          padding: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          border: '1px solid #3c3c3c',
+          borderRadius: 8,
+          background: '#252526',
+          boxShadow: '0 20px 80px rgba(0, 0, 0, 0.45)',
+        }}
+      >
+        <header
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '12px 14px',
+            borderBottom: '1px solid #3c3c3c',
+          }}
+        >
+          <div style={{ fontSize: 14, fontWeight: 600 }}>Settings</div>
+          <button
+            type="button"
+            aria-label="Close settings"
+            onClick={() => setSettingsOpen(false)}
+            style={{
+              ...mono,
+              width: 28,
+              height: 28,
+              border: '1px solid #3c3c3c',
+              borderRadius: 6,
+              cursor: 'pointer',
+              background: '#1e1e1e',
+              color: '#cccccc',
+            }}
+          >
+            ×
+          </button>
+        </header>
+        <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: 14 }}>
+          {settingsKfx && settingsCaps ? (
+            <KfxErrorBoundary kfxId={settingsKfx.id}>
+              <settingsKfx.View caps={settingsCaps} shell={shell} />
+            </KfxErrorBoundary>
+          ) : (
+            <div style={{ ...mono, color: '#f48771' }}>
+              settings kfx unavailable
+            </div>
+          )}
+        </div>
+      </dialog>
+    </div>
+  ) : null;
+
+  const appStyle = {
+    '--kf-ui-font-family': resolvedUiFontFamily(uiConfig.fontFamily),
+    '--kf-mono-font-family': resolvedMonoFontFamily(uiConfig.fontFamily),
+    '--kf-font-size': `${uiConfig.fontSize}px`,
+    fontFamily: 'var(--kf-ui-font-family)',
+    fontSize: 'var(--kf-font-size)',
+    color: '#cccccc',
+    background: '#1e1e1e',
+    width: '100%',
+    height: '100%',
+    margin: 0,
+    boxSizing: 'border-box',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+  } as React.CSSProperties;
+
+  const chromeBodyStyle = {
+    flex: 1,
+    minHeight: 0,
+    padding: '14px 16px 12px',
+    boxSizing: 'border-box',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 12,
+    overflow: 'hidden',
+  } as React.CSSProperties;
+
+  return (
+    <div style={appStyle}>
+      <ShellTitleBar
+        chrome={windowChrome}
+        activeTitle={activeKfx?.title ?? 'Kungfu Episodes'}
+        commandText={commandText}
+        commandOptions={commandOptions}
+        settingsOpen={settingsOpen}
+        workspaceLabel={
+          window.process.env.KF_WORKSPACE_DISPLAY_PATH || 'Home Workspace'
+        }
+        onCommandChange={setCommandText}
+        onCommandSubmit={submitCommand}
+        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenWorkspace={() => setWorkspaceOpen(true)}
+        onWindowControl={controlWindow}
+      />
+      <div style={chromeBodyStyle}>
+        {runtime.ok ? (
+          <div
+            style={{
+              display: 'flex',
+              gap: 12,
+              flex: 1,
+              minHeight: 0,
+              overflow: 'hidden',
+            }}
+          >
+            <nav
+              aria-label="Views"
+              style={{
+                width: sidebarCollapsed ? 44 : 150,
+                flexShrink: 0,
+                minHeight: 0,
+                overflow: 'auto',
+                overflowX: 'hidden',
+                transition: 'width 120ms ease',
+              }}
+            >
+              <button
+                type="button"
+                aria-label={
+                  sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'
+                }
+                title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                onClick={toggleSidebar}
+                style={{
+                  ...mono,
+                  width: '100%',
+                  height: 32,
+                  marginBottom: 8,
+                  border: '1px solid #3c3c3c',
+                  borderRadius: 5,
+                  cursor: 'pointer',
+                  background: '#252526',
+                  color: '#cccccc',
+                  fontSize: 14,
+                }}
+              >
+                {sidebarCollapsed ? '›' : '‹'}
+              </button>
+              {plain.map((k) => navButton(k.id, k.title))}
+              {[...suiteGroups.entries()].map(([key, group]) => (
+                <React.Fragment key={key}>
+                  {sidebarCollapsed ? (
+                    <div
+                      aria-hidden="true"
+                      style={{
+                        height: 1,
+                        margin: '10px 6px 6px',
+                        background: '#3c3c3c',
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        ...mono,
+                        color: '#6a6a6a',
+                        margin: '12px 0 4px',
+                        fontSize: 10,
+                      }}
+                    >
+                      {suiteTitle(group[0]) ?? key}
+                    </div>
+                  )}
+                  {group.map((k) => navButton(k.id, k.title))}
+                </React.Fragment>
+              ))}
+              {loaded.failures.length > 0 && (
+                <div
+                  title={`${loaded.failures.length} kfx failed to load`}
+                  style={{
+                    ...mono,
+                    color: '#f48771',
+                    marginTop: 12,
+                    fontSize: 10,
+                    textAlign: sidebarCollapsed ? 'center' : 'left',
+                  }}
+                >
+                  {sidebarCollapsed
+                    ? '!'
+                    : `${loaded.failures.length} kfx failed to load`}
+                </div>
+              )}
+            </nav>
+            <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+              {activeKfx && activeKfx.tier === 'sandboxed-ipc' ? (
+                // isolated third-party view: embedded, not mounted here
+                <KfxErrorBoundary kfxId={activeKfx.id}>
+                  <SandboxSlot
+                    key={activeKfx.id}
+                    entry={activeKfx}
+                    caps={sandboxSubset(runtime, activeKfx)}
+                  />
+                </KfxErrorBoundary>
+              ) : activeKfx && caps ? (
+                <KfxErrorBoundary kfxId={activeKfx.id}>
+                  <activeKfx.View caps={caps} shell={shell} />
+                </KfxErrorBoundary>
+              ) : (
+                <section style={panelStyle}>
+                  <div style={{ ...mono, color: '#f48771' }}>
+                    no kfx available
+                    {loaded.entries.length === 0
+                      ? ' — no extensions found on the extension path'
+                      : ` for view "${active}"`}
+                  </div>
+                  {loaded.failures.map((failure) => (
+                    <div
+                      key={failure.dir}
+                      style={{ ...mono, color: '#858585', marginTop: 4 }}
+                    >
+                      {failure.dir}: {failure.error}
+                    </div>
+                  ))}
+                </section>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {window.process.env.KF_WORKSPACE_STATE ===
+              'selected-uninitialized' ||
+            window.process.env.KF_WORKSPACE_STATE === 'unavailable' ? (
+              <WorkspacePanel />
+            ) : (
+              <p style={{ ...mono, color: '#f48771' }}>
+                binding unavailable — set KFE_PATH to a built
+                kungfu_electron.node
+              </p>
             )}
           </div>
-        </div>
-      ) : (
-        <p style={{ ...mono, color: '#f48771' }}>
-          binding unavailable — set KFE_PATH to a built kungfu_electron.node
-        </p>
-      )}
+        )}
+      </div>
+      {notificationToasts}
+      {workspaceOverlay}
+      {settingsOverlay}
+      {statusBar}
     </div>
   );
 }

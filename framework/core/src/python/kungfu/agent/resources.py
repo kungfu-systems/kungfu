@@ -5,21 +5,25 @@ import sys
 from importlib import resources
 from pathlib import Path
 
+from kungfu import host
+
 _PACKAGE = "kungfu.agent"
 
 
 def pack_root():
-    frozen = _frozen_pack_root()
-    if frozen is not None:
-        return frozen
+    shipped = _shipped_pack_root()
+    if shipped is not None:
+        return shipped
     return resources.files(_PACKAGE)
 
 
-def _frozen_pack_root():
+def _shipped_pack_root():
+    # A product build ships the pack at the dist root; argv0 stays as a
+    # fallback for entries relocated next to the pack (app Resources).
     candidates = []
-    executable = getattr(sys, "executable", "")
-    if executable:
-        candidates.append(Path(executable).resolve().parent / "agent")
+    root = host.product_root()
+    if root is not None:
+        candidates.append(root / "agent")
     argv0 = sys.argv[0] if sys.argv else ""
     if argv0:
         candidates.append(Path(argv0).resolve().parent / "agent")
@@ -39,6 +43,14 @@ def index():
 
 def commands():
     return _read_json("commands.json")
+
+
+def registry():
+    return _read_json("kfd3_api.registry.json")
+
+
+def registry_schema():
+    return _read_json("kfd3_api.schema.json")
 
 
 def document_text(name):

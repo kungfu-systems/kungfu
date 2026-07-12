@@ -10,15 +10,15 @@
 #include "common.h"
 #include "operators.h"
 
-#include <kungfu/yijinjing/io.h>
+#include <kungfu/runtime/io.h>
+#include <kungfu/runtime/journal/tracer.h>
 #include <kungfu/yijinjing/journal/assemble.h>
 #include <kungfu/yijinjing/journal/journal.h>
-#include <kungfu/yijinjing/journal/tracer.h>
 #include <kungfu/yijinjing/log.h>
 #include <kungfu/yijinjing/time.h>
 
 namespace kungfu::node {
-class Tracer : public Napi::ObjectWrap<Tracer>, public yijinjing::journal::tracer {
+class Tracer : public Napi::ObjectWrap<Tracer>, public runtime::journal::tracer {
 
 public:
   explicit Tracer(const Napi::CallbackInfo &info);
@@ -61,13 +61,21 @@ public:
 
   Napi::Value TriggerTime(const Napi::CallbackInfo &info);
 
-  Napi::Value MsgType(const Napi::CallbackInfo &info);
+  Napi::Value FrameUid(const Napi::CallbackInfo &info);
+
+  Napi::Value TriggerFrameUid(const Napi::CallbackInfo &info);
+
+  Napi::Value StreamId(const Napi::CallbackInfo &info);
+
+  Napi::Value CarrierType(const Napi::CallbackInfo &info);
 
   Napi::Value Source(const Napi::CallbackInfo &info);
 
   Napi::Value Dest(const Napi::CallbackInfo &info);
 
   Napi::Value InitialSource(const Napi::CallbackInfo &info);
+
+  Napi::Value DataType(const Napi::CallbackInfo &info);
 
   Napi::Value Data(const Napi::CallbackInfo &info);
 
@@ -115,7 +123,7 @@ public:
   static Napi::Value NewInstance(Napi::Value arg);
 
 private:
-  yijinjing::io_device_ptr io_device_;
+  kungfu::runtime::io_device_ptr io_device_;
   static Napi::FunctionReference constructor;
   static void cleanup() {
     SPDLOG_INFO("Reader reset");

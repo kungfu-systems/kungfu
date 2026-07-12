@@ -98,6 +98,40 @@ reference the event carries** (plus the manifest checksum). This always holds.
 It does **not** mean two runs produce byte-identical bundles — that is a separate
 property, not part of this guarantee.
 
+## Source Sync Vocabulary
+
+The format is not Git, but it needs Git-like portability: a runtime must be able
+to fetch facts from another source, verify them, and accept them into its local
+ledger without making that remote directory a separate authority island.
+
+These terms are normative at the semantic level:
+
+| Term | Meaning |
+| --- | --- |
+| **source** | A logical fact provider: local profile, imported bundle, remote Kungfu runtime, or adapter. |
+| **location** | The runtime address/identity for a source or destination process, profile, or node. |
+| **channel** | The transport edge used to request a range, fetch payloads, export, import, or repair missing material. It is not authority. |
+| **range selector** | A bounded request by event range, wall-clock-like logical time, session, cursor, or hash anchor. |
+| **hash inventory** | The list of content commitments that lets a receiver verify payload and schema material before or after transfer. |
+| **manifest** | The accept boundary: source metadata, capture boundary, range, payload inventory, schema inventory, checksums, and projection watermarks. |
+| **accepted segment** | The local record that a manifest-backed range has been verified and admitted into the receiver's fact ledger. |
+| **fsck report** | A read-only verification report over journal topology, payload hashes, schema presence, manifests, projections, source heads, and accepted ranges. |
+
+The portable authority boundary is therefore:
+
+```text
+source + location
+  -> channel request(range selector)
+  -> manifest + hash inventory
+  -> payload/schema material
+  -> accepted segment
+```
+
+After acceptance, the imported facts are part of the receiver's ledger with
+source provenance attached. The receiver may project them differently under its
+own observer policy, but it must not silently treat an unverified mirror or
+transport cache as authoritative.
+
 ## Version axes
 
 - **Spec version** (`0.1`) — the authoritative contract, declared in the
@@ -119,6 +153,9 @@ by its owning part, without changing the guarantees above:
 - Byte/field layouts of the spine and blob references.
 - The **schema registry mechanism** (how self-describing schemas are encoded and
   versioned) — under design.
+- Concrete channel protocols, remote authentication, and conflict-resolution
+  policy. The vocabulary above reserves the slots; implementations may stage
+  support behind it.
 - Error dictionary semantics, capability tables, and conformance vectors.
 
 See the bundle manifest for the current, machine-addressable location of each.

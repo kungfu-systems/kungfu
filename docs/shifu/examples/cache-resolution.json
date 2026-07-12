@@ -1,0 +1,40 @@
+{
+  "$schema": "../schema/cache-resolution-v1.schema.json",
+  "schema": "shifu.cache-resolution/v1",
+  "profile": {
+    "id": "example.developer.macos",
+    "revision": 1,
+    "digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+  },
+  "execution": {
+    "id": "run:example-001",
+    "platform": "darwin-arm64",
+    "scope": "development",
+    "resolvedAt": "2026-07-12T00:01:00Z"
+  },
+  "services": {
+    "node-distribution": {
+      "outcome": "hit",
+      "selected": {
+        "type": "http",
+        "url": "https://cache.example.invalid/node/"
+      },
+      "fallbackUsed": false,
+      "verification": "passed",
+      "durationMs": 18,
+      "reason": "cache endpoint selected"
+    },
+    "compiler-cache": {
+      "outcome": "miss",
+      "selected": {
+        "type": "local-path",
+        "pathDigest": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+      },
+      "fallbackUsed": false,
+      "verification": "not-applicable",
+      "durationMs": 2,
+      "reason": "no matching object"
+    }
+  },
+  "redaction": "credentials-userinfo-query-fragment"
+}

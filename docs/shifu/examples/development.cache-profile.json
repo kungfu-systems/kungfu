@@ -1,0 +1,92 @@
+{
+  "$schema": "../schema/cache-profile-v1.schema.json",
+  "schema": "shifu.cache-profile/v1",
+  "profileId": "example.developer.macos",
+  "revision": 1,
+  "generatedAt": "2026-07-12T00:00:00Z",
+  "authority": {
+    "owner": "example-inventory",
+    "sourceRef": "inventory/cache-services.json@revision-7",
+    "sourceDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+  },
+  "subject": {
+    "principal": "developer:example",
+    "host": "workstation:example",
+    "platforms": ["darwin-arm64"],
+    "scopes": ["development"]
+  },
+  "policy": {
+    "mode": "prefer",
+    "onUnavailable": "fallback",
+    "allowPublicFallback": true,
+    "secretPolicy": "references-only"
+  },
+  "services": {
+    "node-distribution": {
+      "kind": "distribution",
+      "endpoint": {
+        "type": "http",
+        "url": "https://cache.example.invalid/node/"
+      },
+      "bindings": [
+        {
+          "kind": "environment",
+          "key": "FNM_NODE_DIST_MIRROR",
+          "valueFrom": "endpoint.url"
+        }
+      ],
+      "fallback": {
+        "mode": "upstream",
+        "upstreamUrl": "https://nodejs.org/dist/"
+      },
+      "verification": {
+        "method": "upstream-checksum"
+      }
+    },
+    "cargo-registry": {
+      "kind": "source-index",
+      "endpoint": {
+        "type": "http",
+        "url": "https://cache.example.invalid/cargo-index/"
+      },
+      "bindings": [
+        {
+          "kind": "environment",
+          "key": "CARGO_REGISTRIES_CRATES_IO_INDEX",
+          "valueFrom": "endpoint.url"
+        }
+      ],
+      "fallback": {
+        "mode": "upstream",
+        "upstreamUrl": "https://index.crates.io/"
+      },
+      "verification": {
+        "method": "tool-native"
+      }
+    },
+    "compiler-cache": {
+      "kind": "compiler-cache",
+      "endpoint": {
+        "type": "local-path",
+        "path": "${XDG_CACHE_HOME}/shifu/compiler"
+      },
+      "bindings": [
+        {
+          "kind": "environment",
+          "key": "SCCACHE_DIR",
+          "valueFrom": "endpoint.path"
+        }
+      ],
+      "fallback": {
+        "mode": "bypass"
+      },
+      "verification": {
+        "method": "tool-native"
+      }
+    }
+  },
+  "evidence": {
+    "enabled": true,
+    "redaction": "credentials-userinfo-query-fragment"
+  }
+}
