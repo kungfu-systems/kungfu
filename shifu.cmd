@@ -52,6 +52,10 @@ rem Mark the canonical entrypoint and keep native dispatches from re-delegating 
 set "SHIFU_FROM_SHIM=1"
 set "SHIFU_ENTRYPOINT=1"
 
+rem Cache profiles are checkout-owned L2 contracts. Resolve/apply them before
+rem native dispatch; an inner `shifu <task>` can still select the native path.
+if /i "%~1"=="cache" goto delegate
+
 rem -- Native launcher resolution ------------------------------------------------
 if "%SHIFU_NATIVE%"=="0" goto inscript
 
@@ -181,7 +185,6 @@ exit /b 0
 rem -- Delegate rich subcommands to L2 node (no pnpm, no uv). Prefer fnm node, else system node. --
 if /i "%~1"=="proxy"  goto delegate
 if /i "%~1"=="config" goto delegate
-if /i "%~1"=="cache"  goto delegate
 goto bootstrap
 
 :delegate

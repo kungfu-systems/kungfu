@@ -62,8 +62,8 @@ export function checkShifuCacheContract(root = ROOT) {
   assert.equal(resolutionSchema.$id, contract.schemaIds.resolution);
 
   const dispatchMarkers = [
-    ['shifu', 'build | rebuild | cache | proxy | config)'],
-    ['shifu.cmd', 'if /i "%~1"=="cache"  goto delegate'],
+    ['shifu', 'if [ "${1:-}" = "cache" ]; then'],
+    ['shifu.cmd', 'if /i "%~1"=="cache" goto delegate'],
     ['crates/shifu/src/main.rs', '"cache", "proxy", "config"'],
   ];
   for (const [source, marker] of dispatchMarkers) {

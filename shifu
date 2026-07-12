@@ -159,6 +159,23 @@ kungfu_load_proxy
 export SHIFU_FROM_SHIM=1
 export SHIFU_ENTRYPOINT=1
 
+# Cache profiles are a checkout-owned L2 contract. Dispatch them before the
+# native launcher even when SHIFU_NATIVE=1: the outer cache apply must resolve
+# and inject bindings first, while the child `./shifu <task>` remains free to
+# use the native launcher. Without this boundary the native task fallback sees
+# `cache` as a pnpm script and runs `pnpm cache` instead.
+if [ "${1:-}" = "cache" ]; then
+  if command -v fnm >/dev/null 2>&1; then
+    fnm install >/dev/null 2>&1 || true
+    exec fnm exec --using-file -- node ./shifu.mjs "$@"
+  elif command -v node >/dev/null 2>&1; then
+    exec node ./shifu.mjs "$@"
+  else
+    echo "shifu: cache commands need node — install fnm or any system node" >&2
+    exit 127
+  fi
+fi
+
 if [ "${SHIFU_NATIVE:-}" != "0" ]; then
   if [ -n "${SHIFU_BIN:-}" ] && [ -x "${SHIFU_BIN}" ]; then
     exec "${SHIFU_BIN}" "$@"
@@ -233,7 +250,7 @@ esac
 # prefer fnm-managed node when available (the normal path once bootstrap is ready); fall back to system node when fnm is
 # not ready, so a developer can still use L2 config first (e.g. set a mirror to in turn help fnm); error only if neither exists.
 case "${1:-}" in
-  build | rebuild | cache | proxy | config)
+  build | rebuild | proxy | config)
     if command -v fnm >/dev/null 2>&1; then
       fnm install >/dev/null 2>&1 || true
       exec fnm exec --using-file -- node ./shifu.mjs "$@"

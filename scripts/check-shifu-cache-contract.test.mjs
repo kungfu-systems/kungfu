@@ -11,6 +11,7 @@ import { checkShifuCacheContract } from './check-shifu-cache-contract.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SHIFU_MJS = path.join(ROOT, 'shifu.mjs');
+const SHIFU_SH = path.join(ROOT, 'shifu');
 
 test('cache contract schemas accept valid fixtures and reject unsafe policy', () => {
   assert.deepEqual(checkShifuCacheContract(ROOT), {
@@ -100,3 +101,17 @@ test('cache apply is transparent when no profile projection is configured', () =
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.stdout, 'cache-pass-through');
 });
+
+test(
+  'shell shim keeps cache on L2 when native task execution is forced',
+  { skip: process.platform === 'win32' },
+  () => {
+    const result = spawnSync(SHIFU_SH, ['cache', 'contract'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      env: { ...process.env, SHIFU_NATIVE: '1' },
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(JSON.parse(result.stdout).schema, 'shifu.cache-contract/v1');
+  },
+);
