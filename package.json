@@ -31,6 +31,8 @@
     "check:all": "node scripts/require-shifu.mjs check:all && node scripts/check.mjs --all",
     "check:entry-contract": "node scripts/require-shifu.mjs check:entry-contract && node scripts/check-shifu-entry-contract.mjs",
     "check:shifu-cache-contract": "node scripts/require-shifu.mjs check:shifu-cache-contract && node scripts/check-shifu-cache-contract.mjs",
+    "docs:check": "node scripts/require-shifu.mjs docs:check && node scripts/run-docs-check.mjs",
+    "docs:check:external": "node scripts/require-shifu.mjs docs:check:external && node scripts/run-docs-external-check.mjs",
     "fix": "node scripts/require-shifu.mjs fix && node scripts/fix.mjs",
     "fix:staged": "node scripts/require-shifu.mjs fix:staged && node scripts/fix.mjs --staged",
     "fix:all": "node scripts/require-shifu.mjs fix:all && node scripts/fix.mjs --all",
@@ -94,9 +96,13 @@
     "@biomejs/biome": "1.9.4",
     "@kungfu-tech/buildchain": "2.12.1-alpha.4",
     "@types/fs-extra": "^11.0.4",
+    "@types/markdown-it": "14.1.2",
     "@types/node": "^22.0.0",
     "@types/npmlog": "^7.0.0",
     "ajv": "8.20.0",
+    "github-slugger": "2.0.0",
+    "markdown-it": "14.1.0",
+    "markdownlint-cli2": "0.22.1",
     "typescript": "^5.6.0"
   }
 }

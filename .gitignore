@@ -49,6 +49,7 @@ dist/
 # Debug related
 debug-example/
 .cache/
+.lycheecache
 
 # assemble demo result
 *.csv

@@ -11,7 +11,7 @@
 
 ## Decision
 
-Adopt [KFD-1](https://github.com/kungfu-systems/kfd/blob/dev/v1/v1.0/decisions/kfd-0001-release-versioning.md)
+Adopt [KFD-1](https://github.com/kungfu-systems/kfd/blob/dev/v1/v1.0/decisions/KFD-1.md)
 as this repository's versioning rule. KFD-1 classifies every change against a
 **welded-surface register**: breaking a registered surface forces a major;
 additively evolving a surface or adding one opens a minor; a change that

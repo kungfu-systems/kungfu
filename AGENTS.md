@@ -53,6 +53,7 @@ layout, and code style.
 ./shifu check           # changed-scope lint, typecheck and unit/tooling tests
 ./shifu verify          # assert existing build artifacts (quick)
 ./shifu verify --full   # rebuild + freeze, then assert (slow; needs the full toolchain)
+./shifu docs:check      # deterministic Markdown, local-link, anchor, and docs-contract gate
 ```
 
 `check` is the source-quality gate for changed files plus shared type/tooling
@@ -67,6 +68,11 @@ remains an explicit periodic/release-readiness command:
 ```
 
 It emits a self-contained evidence envelope; it is not a per-PR gate.
+
+`docs:check` is the same deterministic gate used by documentation pull
+requests and pre-commit checks. Network-dependent URL validation is kept out of
+that path; maintainers can run `./shifu docs:check:external`, and CI runs the
+same Lychee configuration on a schedule.
 
 ## Proposing changes
 

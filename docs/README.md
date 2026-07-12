@@ -136,3 +136,10 @@ path for existing URLs, and evidence that moving files improves discovery more
 than this curated hierarchy already does. When adding or changing a public
 claim, update its canonical document first, then this guide or the Map only if
 the reader route changes.
+
+Repository validation makes this boundary executable. Run
+`./shifu docs:check` for Markdown structure, every local target and cross-file
+anchor, canonical entrypoint pointers, and explicitly retired product wording.
+External URL health is deliberately separate because remote availability is
+not a deterministic property of a commit; maintainers use
+`./shifu docs:check:external`, backed by the scheduled Lychee workflow.

@@ -401,6 +401,12 @@ function checkLiveRuntimeTerminology() {
   ]);
 }
 
+function checkDocs() {
+  run('Markdown documentation gate', 'node', [
+    path.join('scripts', 'run-docs-check.mjs'),
+  ]);
+}
+
 function checkAdrIdentities() {
   const adrDir = path.join(ROOT, 'framework', 'core', 'docs', 'adr');
   const files = fs
@@ -493,6 +499,7 @@ function checkStaged() {
   checkJournalAuthorityBoundary();
   checkLiveRuntimeTerminology();
   checkAdrIdentities();
+  checkDocs();
   const files = stagedFiles();
   if (!files.length) {
     log('[check] no staged source files');
@@ -542,6 +549,7 @@ function checkShared() {
   checkJournalAuthorityBoundary();
   checkLiveRuntimeTerminology();
   checkAdrIdentities();
+  checkDocs();
   run('journal manager type check', 'pnpm', [
     '--filter',
     '@kungfu-tech/kfx-view-journal-manager',

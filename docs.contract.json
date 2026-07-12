@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "requiredFiles": [
+    "README.md",
+    "AGENTS.md",
+    "CONTRIBUTING.md",
+    "docs/README.md",
+    "docs/MAP.md",
+    "docs/the-episode.md",
+    "docs/vocabulary.md",
+    "docs/rewind.md",
+    "docs/known-limits.md"
+  ],
+  "requiredPointers": [
+    {
+      "from": "README.md",
+      "to": "docs/README.md"
+    },
+    {
+      "from": "README.md",
+      "to": "docs/MAP.md"
+    },
+    {
+      "from": "AGENTS.md",
+      "to": "docs/README.md"
+    },
+    {
+      "from": "AGENTS.md",
+      "to": "docs/MAP.md"
+    }
+  ],
+  "retiredPhrases": [
+    {
+      "text": "record an agent run, then open it",
+      "roots": ["README.md", "AGENTS.md", "CONTRIBUTING.md", "docs", "framework/spec"],
+      "reason": "Rewind is Episode-centered; the former run-viewer positioning is retired."
+    },
+    {
+      "text": "becomes Episode-aware",
+      "roots": ["README.md", "AGENTS.md", "CONTRIBUTING.md", "docs", "framework/spec"],
+      "reason": "The current product already uses Episodes; future-tense migration wording is stale."
+    }
+  ]
+}

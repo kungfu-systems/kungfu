@@ -1,7 +1,7 @@
 # Versioning — welded surfaces and the decision log
 
 How this repository decides patch, minor, and major. The rule is
-[KFD-1](https://github.com/kungfu-systems/kfd/blob/dev/v1/v1.0/decisions/kfd-0001-release-versioning.md)
+[KFD-1](https://github.com/kungfu-systems/kfd/blob/dev/v1/v1.0/decisions/KFD-1.md)
 (adopted by [ADR-0010](../framework/core/docs/adr/ADR-0010-adopt-kfd-1-release-versioning.md));
 this document is the living register and decision log — it does not restate
 the rule. For what each surface guarantees and how to verify it, see

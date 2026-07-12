@@ -143,6 +143,28 @@ the diff, and commit again. CI should run `./shifu check` and the relevant
 build or verify command. `check:all` and `fix:all` are available for deliberate
 whole-tree lint-baseline cleanup.
 
+### Documentation checks
+
+Documentation has a deterministic gate separate from network-dependent URL
+health:
+
+```sh
+./shifu docs:check          # Markdown structure, local targets/anchors, and product-doc contracts
+./shifu docs:check:external # external URLs through Lychee (local Lychee or Docker required)
+```
+
+`docs:check` runs in pre-commit and documentation pull requests. It checks the
+whole Markdown graph so deleting or renaming a target cannot evade a
+changed-file filter. The intentionally small Markdownlint rule baseline lives
+in `.markdownlint-cli2.mjs`; do not enable a style rule by rewriting unrelated
+documents. Canonical entrypoints and retired product wording live in
+`docs.contract.json` and require negative-fixture coverage when extended.
+
+External sites are nondeterministic, so they do not block pull requests. The
+scheduled `Docs External Links` workflow runs the pinned Lychee release with
+`lychee.toml`; `./shifu docs:check:external` uses the same config through a
+local Lychee binary or its pinned Docker image.
+
 ### Scripts are JavaScript
 
 The project is managed by pnpm and runs on every platform pnpm runs on —

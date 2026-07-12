@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Docs External Links
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 18 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-external-links
+  cancel-in-progress: true
+
+jobs:
+  external-links:
+    name: External links
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Check external links
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          args: --config lychee.toml --no-progress './**/*.md'
+          fail: true
+          failIfEmpty: true
+          format: markdown
+          jobSummary: true
+          lycheeVersion: v0.24.2
+          token: ${{ secrets.GITHUB_TOKEN }}
