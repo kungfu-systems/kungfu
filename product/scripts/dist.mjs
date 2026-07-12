@@ -39,6 +39,7 @@ const EXTENSIONS_ROOT = path.join(ROOT, 'extensions');
 const ASSEMBLED_EXTENSIONS = path.join(PRODUCT_DIR, 'extensions');
 const DIST_DIR = path.join(PRODUCT_DIR, 'dist');
 const DESKTOP_DIST_DIR = path.join(DIST_DIR, 'desktop');
+const DESKTOP_AUTHORING_DIR = path.join(DIST_DIR, 'desktop-authoring');
 const CLI_DIST_DIR = path.join(DIST_DIR, 'cli');
 const RELEASE_DIR = path.join(PRODUCT_DIR, 'release');
 const DESKTOP_RELEASE_DIR = path.join(RELEASE_DIR, 'desktop');
@@ -748,6 +749,7 @@ function bundleSdkForCli(stageRoot) {
     platform: 'node',
     format: 'esm',
     target: 'node20',
+    external: ['esbuild'],
     outfile: sdkOut,
     logLevel: 'silent',
   });
@@ -757,12 +759,36 @@ function bundleSdkForCli(stageRoot) {
   );
   copyTree(path.join(SDK_DIR, 'kfd'), path.join(stageRoot, 'kfd'));
   copyTree(path.join(SDK_DIR, 'templates'), path.join(stageRoot, 'templates'));
+  const esbuildPackageJson = require.resolve('esbuild/package.json', {
+    paths: [SDK_DIR, TUI_DIR, GUI_DIR, ROOT],
+  });
+  const esbuildResolvePaths = [path.dirname(esbuildPackageJson)];
+  copySdkRuntimePackageForCli(stageRoot, 'esbuild', esbuildResolvePaths);
+  copySdkRuntimePackageForCli(
+    stageRoot,
+    `@esbuild/${process.platform}-${process.arch}`,
+    esbuildResolvePaths,
+  );
   copySdkRuntimePackageForCli(stageRoot, '@kungfu-tech/kfd');
 }
 
-function copySdkRuntimePackageForCli(stageRoot, packageName) {
+function stageDesktopAuthoringRuntime() {
+  assertSafeGeneratedDir(DESKTOP_AUTHORING_DIR);
+  fs.rmSync(DESKTOP_AUTHORING_DIR, { recursive: true, force: true });
+  fs.mkdirSync(DESKTOP_AUTHORING_DIR, { recursive: true });
+  bundleSdkForCli(DESKTOP_AUTHORING_DIR);
+  console.log(
+    `[product] staged installed Agent authoring runtime -> ${rel(DESKTOP_AUTHORING_DIR)}`,
+  );
+}
+
+function copySdkRuntimePackageForCli(
+  stageRoot,
+  packageName,
+  resolvePaths = [SDK_DIR, ROOT],
+) {
   const packageJson = require.resolve(`${packageName}/package.json`, {
-    paths: [SDK_DIR, ROOT],
+    paths: resolvePaths,
   });
   const source = path.dirname(packageJson);
   const target = path.join(
@@ -1312,6 +1338,7 @@ function main() {
         event: 'product.tui.bundle',
       });
       if (wantsDesktop()) {
+        stageDesktopAuthoringRuntime();
         runPnpm(
           'ensure electron',
           ['--filter', '@kungfu-tech/gui', 'run', 'ensure-electron'],

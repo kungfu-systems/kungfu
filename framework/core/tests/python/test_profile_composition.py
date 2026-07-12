@@ -677,6 +677,16 @@ def test_installed_cli_assessment_plan_decide_and_run(tmp_path):
     )
     query_file = tmp_path / "query-receipt.json"
     query_file.write_text(json.dumps(query))
+    observation_file = tmp_path / "independent-observation.json"
+    observation_file.write_text(
+        json.dumps(
+            {
+                "episodeRoot": "sha256:" + verified["computed"]["value"],
+                "authority": "independent-reviewer",
+                "relation": "admitted-source",
+            }
+        )
+    )
     plan_file = tmp_path / "assessment-plan.json"
     answer_file = tmp_path / "assessment-answer.json"
     runner = CliRunner()
@@ -700,6 +710,8 @@ def test_installed_cli_assessment_plan_decide_and_run(tmp_path):
             "operator-review",
             "--work-episode-id",
             str(verified["episode_id"]),
+            "--independent-observation-file",
+            str(observation_file),
             "--out",
             str(plan_file),
             "--json",
@@ -739,6 +751,9 @@ def test_installed_cli_assessment_plan_decide_and_run(tmp_path):
     assert planned.exit_code == 0, planned.output
     assert json.loads(plan_file.read_text())["claimInstanceId"] == (
         "week-progress:cli-cut"
+    )
+    assert json.loads(plan_file.read_text())["independentObservation"] == json.loads(
+        observation_file.read_text()
     )
     assert decided.exit_code == 0, decided.output
     assert executed.exit_code == 0, executed.output

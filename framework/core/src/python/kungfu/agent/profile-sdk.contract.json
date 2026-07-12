@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.agent-profile-sdk-contract/v1",
   "id": "kungfu-agent-profile-sdk",
-  "version": 3,
+  "version": 4,
   "briefSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -259,6 +259,52 @@
         }
       }
     }
+  },
+  "sourceBundleSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["schema", "mode", "selfContained", "profileId", "profileVersion", "profileSuiteRoot", "memberRoots", "entries", "bundleRoot"],
+    "properties": {
+      "schema": { "const": "kungfu.profile-source-bundle/v1" },
+      "mode": { "enum": ["full", "thin"] },
+      "selfContained": { "type": "boolean" },
+      "profileId": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+      "profileVersion": { "type": "string", "minLength": 1 },
+      "profileSuiteRoot": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+      "memberRoots": {
+        "type": "object",
+        "additionalProperties": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      },
+      "entries": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "sha256", "size"],
+          "properties": {
+            "path": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$" },
+            "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "size": { "type": "integer", "minimum": 0 },
+            "contentBase64": { "type": "string" }
+          }
+        }
+      },
+      "bundleRoot": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+    },
+    "allOf": [
+      {
+        "if": { "properties": { "mode": { "const": "full" } } },
+        "then": {
+          "properties": {
+            "selfContained": { "const": true },
+            "entries": { "items": { "required": ["contentBase64"] } }
+          }
+        },
+        "else": { "properties": { "selfContained": { "const": false } } }
+      }
+    ]
   },
   "actionRegistrySchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

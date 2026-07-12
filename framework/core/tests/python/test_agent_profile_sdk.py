@@ -2,12 +2,14 @@
 
 import hashlib
 import json
+from pathlib import Path
 
 from click.testing import CliRunner
 
 from kungfu import profile_sdk
 from kungfu.cli.commands import __registry__  # noqa: F401
 from kungfu.cli.commands import kfc
+from kungfu.storage import service as storage_service
 
 
 def brief(**changes):
@@ -33,6 +35,21 @@ def create_source(tmp_path):
     receipt = profile_sdk.apply_scaffold(plan)
     assert receipt["verified"] is True
     return source, plan
+
+
+def test_profile_resolution_skips_unreadable_unrelated_siblings(tmp_path, monkeypatch):
+    source, _ = create_source(tmp_path)
+    blocked_manifest = tmp_path / "unrelated" / "package.json"
+    blocked_manifest.parent.mkdir()
+    original_is_file = Path.is_file
+
+    def guarded_is_file(path):
+        if path == blocked_manifest:
+            raise PermissionError("unrelated sibling is not readable")
+        return original_is_file(path)
+
+    monkeypatch.setattr(Path, "is_file", guarded_is_file)
+    assert profile_sdk.validate_source(source, tmp_path / "runtime")["ok"] is True
 
 
 def test_scaffold_is_plan_first_deterministic_and_does_not_self_certify(tmp_path):
@@ -216,6 +233,114 @@ def test_cli_installed_flow_plans_then_applies_core_lifecycle(tmp_path):
     )
     assert applied.exit_code == 0, applied.output
     assert json.loads(applied.output)["state"]["state"] == "installed"
+
+
+def test_cli_exports_and_imports_profile_source_without_lifecycle_mutation(tmp_path):
+    source, _ = create_source(tmp_path)
+    home = tmp_path / "home"
+    full_path = tmp_path / "profile.full.json"
+    thin_path = tmp_path / "profile.thin.json"
+    imported_source = tmp_path / "imported-profile"
+    runner = CliRunner()
+
+    exported = runner.invoke(
+        kfc,
+        [
+            "--home",
+            str(home),
+            "profile",
+            "export",
+            str(source),
+            "--out",
+            str(full_path),
+            "--json",
+        ],
+    )
+    assert exported.exit_code == 0, exported.output
+    full = json.loads(full_path.read_text())
+    assert full["schema"] == "kungfu.profile-source-bundle/v1"
+    assert full["mode"] == "full"
+    assert all("contentBase64" in row for row in full["entries"])
+
+    planned = runner.invoke(
+        kfc,
+        [
+            "--home",
+            str(home),
+            "profile",
+            "import",
+            str(full_path),
+            "--out",
+            str(imported_source),
+            "--json",
+        ],
+    )
+    assert planned.exit_code == 0, planned.output
+    assert json.loads(planned.output)["requiresAuthorization"] is True
+    imported = runner.invoke(
+        kfc,
+        [
+            "--home",
+            str(home),
+            "profile",
+            "import",
+            str(full_path),
+            "--out",
+            str(imported_source),
+            "--execute",
+            "--authorized-by",
+            "test-owner",
+            "--json",
+        ],
+    )
+    assert imported.exit_code == 0, imported.output
+    receipt = json.loads(imported.output)
+    assert receipt["lifecycleMutation"] is False
+    assert profile_sdk.validate_source(imported_source, home / "runtime")["ok"]
+    assert (
+        storage_service.profile_lifecycle(
+            home / "runtime", "list", include_removed=True
+        )["profiles"]
+        == []
+    )
+
+    thin = runner.invoke(
+        kfc,
+        [
+            "--home",
+            str(home),
+            "profile",
+            "export",
+            str(source),
+            "--out",
+            str(thin_path),
+            "--thin",
+            "--json",
+        ],
+    )
+    assert thin.exit_code == 0, thin.output
+    assert all(
+        "contentBase64" not in row
+        for row in json.loads(thin_path.read_text())["entries"]
+    )
+    thin_import = runner.invoke(
+        kfc,
+        [
+            "--home",
+            str(home),
+            "profile",
+            "import",
+            str(thin_path),
+            "--out",
+            str(tmp_path / "thin-import"),
+            "--execute",
+            "--authorized-by",
+            "test-owner",
+            "--json",
+        ],
+    )
+    assert thin_import.exit_code == 2
+    assert json.loads(thin_import.output)["code"] == "source-import-not-ready"
 
 
 def test_lifecycle_apply_rejects_tampered_decision_answer(tmp_path):

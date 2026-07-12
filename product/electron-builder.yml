@@ -25,6 +25,14 @@ extraResources:
     to: tui
   - from: ../../product/extensions
     to: extensions
+  - from: ../../product/dist/desktop-authoring/sdk
+    to: sdk
+  - from: ../../product/dist/desktop-authoring/kfd
+    to: kfd
+  - from: ../../product/dist/desktop-authoring/templates
+    to: templates
+  - from: ../../product/dist/desktop-authoring/node_modules
+    to: node_modules
 mac:
   target:
     - dir

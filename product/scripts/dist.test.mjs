@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import { test } from 'node:test';
 import { cliArchiveBase, verifyProductObservabilityEvents } from './dist.mjs';
@@ -90,4 +91,38 @@ test('work dashboard declares the storage handle used by its query stream', () =
       'storage',
     ),
   );
+});
+
+test('desktop product carries the installed Agent authoring runtime', () => {
+  const config = fs.readFileSync(
+    new URL('../electron-builder.yml', import.meta.url),
+    'utf8',
+  );
+  for (const target of ['sdk', 'kfd', 'templates', 'node_modules']) {
+    assert.match(
+      config,
+      new RegExp(`desktop-authoring/${target}\\n\\s+to: ${target}`),
+    );
+  }
+});
+
+test('installed SDK resolves the packaged KFX contract beside its resources', () => {
+  const sdk = fs.readFileSync(
+    new URL('../../developer/sdk/src/sdk.js', import.meta.url),
+    'utf8',
+  );
+  assert.match(
+    sdk,
+    /path\.join\(SDK_ROOT, 'kungfu', 'config', KFX_CONTRACT_FILE\)/,
+  );
+});
+
+test('installed SDK keeps esbuild external and carries its native runtime', () => {
+  const dist = fs.readFileSync(new URL('./dist.mjs', import.meta.url), 'utf8');
+  assert.match(dist, /external: \['esbuild'\]/);
+  assert.match(
+    dist,
+    /copySdkRuntimePackageForCli\(stageRoot, 'esbuild', esbuildResolvePaths\)/,
+  );
+  assert.match(dist, /`@esbuild\/\$\{process\.platform\}-\$\{process\.arch\}`/);
 });

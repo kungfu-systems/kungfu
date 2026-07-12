@@ -104,6 +104,72 @@ def qualify(ctx, source, as_json):
     _json(_run(lambda: profile_sdk.qualify_source(source, ctx.runtime_dir)))
 
 
+@profile.command(
+    name="export", help="export an exact full or thin Profile source bundle"
+)
+@click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--out", required=True, type=click.Path(dir_okay=False, path_type=Path))
+@click.option(
+    "--thin", is_flag=True, help="export roots and inventory without source bytes"
+)
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def export_bundle(ctx, source, out, thin, as_json):
+    def operation():
+        if not out.parent.is_dir():
+            raise FileNotFoundError(
+                f"Profile bundle parent does not exist: {out.parent}"
+            )
+        bundle = profile_sdk.export_source_bundle(source, ctx.runtime_dir, thin=thin)
+        out.write_text(
+            json.dumps(bundle, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+        return {
+            "schema": "kungfu.profile-source-export-receipt/v1",
+            "mode": bundle["mode"],
+            "profileId": bundle["profileId"],
+            "profileSuiteRoot": bundle["profileSuiteRoot"],
+            "bundleRoot": bundle["bundleRoot"],
+            "entryCount": len(bundle["entries"]),
+            "out": str(out.resolve()),
+        }
+
+    _json(_run(operation))
+
+
+@profile.command(
+    name="import", help="plan or authorize reconstruction of a Profile source bundle"
+)
+@click.argument("bundle", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option("--out", required=True, type=click.Path(path_type=Path))
+@click.option("--execute", is_flag=True)
+@click.option("--authorized-by")
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def import_bundle(ctx, bundle, out, execute, authorized_by, as_json):
+    def operation():
+        plan = profile_sdk.source_import_plan(_load_json(bundle), out)
+        if not execute:
+            return plan
+        if not authorized_by:
+            raise profile_sdk.ProfileSdkError(
+                "decision-actor-required",
+                "--authorized-by is required to execute a Profile source import",
+            )
+        if not plan["requiresAuthorization"]:
+            raise profile_sdk.ProfileSdkError(
+                "source-import-not-ready",
+                "Profile source import needs a full bundle and an empty destination",
+                decisionCards=[plan["decisionCard"]],
+            )
+        answer = profile_sdk.answer_decision(
+            plan["decisionCard"], "approve", authorized_by
+        )
+        return profile_sdk.authorized_source_import(plan, answer)
+
+    _json(_run(operation))
+
+
 @profile.command(help="plan a Core-owned Profile lifecycle change")
 @click.argument(
     "action",
@@ -426,6 +492,11 @@ def contract_apply(ctx, plan_file, authorization_file, as_json):
 @click.option("--policy-id", required=True)
 @click.option("--purpose", required=True)
 @click.option("--work-episode-id", required=True, type=int)
+@click.option(
+    "--independent-observation-file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="independent observation bound to the verified work Episode root",
+)
 @click.option("--out", type=click.Path(dir_okay=False, path_type=Path))
 @click.option("--json", "as_json", is_flag=True)
 @profile_context
@@ -438,6 +509,7 @@ def assess_plan(
     policy_id,
     purpose,
     work_episode_id,
+    independent_observation_file,
     out,
     as_json,
 ):
@@ -451,6 +523,11 @@ def assess_plan(
             policy_id=policy_id,
             purpose=purpose,
             work_episode_id=work_episode_id,
+            independent_observation=(
+                _load_json(independent_observation_file)
+                if independent_observation_file
+                else None
+            ),
         )
     )
     if out:

@@ -2379,6 +2379,12 @@ function ancestorDirs(start) {
 function resolveKfxContractPath() {
   const explicit = process.env[KFX_CONTRACT_ENV];
   if (explicit) return path.resolve(explicit);
+  for (const candidate of [
+    path.join(SDK_ROOT, 'kungfu', 'config', KFX_CONTRACT_FILE),
+    path.join(SDK_ROOT, 'config', KFX_CONTRACT_FILE),
+  ]) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
   for (const dir of ancestorDirs(process.cwd())) {
     for (const rel of [
       path.join('framework', 'kfx', KFX_CONTRACT_FILE),

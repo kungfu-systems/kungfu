@@ -10,6 +10,7 @@ mutation to the Core service introduced by ADR-0069.
 from __future__ import annotations
 
 import hashlib
+import base64
 import json
 import os
 import re
@@ -31,6 +32,8 @@ ACTION_REGISTRY_SCHEMA = "kungfu.profile-actions/v1"
 ACTION_PLAN_SCHEMA = "kungfu.profile-action-plan/v1"
 ACTION_RECEIPT_SCHEMA = "kungfu.profile-action-receipt/v1"
 DECISION_ANSWER_SCHEMA = "kungfu.decision-answer/v1"
+SOURCE_BUNDLE_SCHEMA = "kungfu.profile-source-bundle/v1"
+SOURCE_IMPORT_PLAN_SCHEMA = "kungfu.profile-source-import-plan/v1"
 
 _TOKEN = re.compile(r"^[A-Za-z0-9._-]+$")
 _IGNORED_PARTS = {".git", "node_modules", "__pycache__", ".DS_Store"}
@@ -73,6 +76,7 @@ def capabilities() -> dict[str, Any]:
             "claims": sdk_contract["claimsSchema"],
             "assessmentPolicies": sdk_contract["assessmentPoliciesSchema"],
             "views": sdk_contract["viewsSchema"],
+            "sourceBundle": sdk_contract["sourceBundleSchema"],
         },
         "sourcePlanSchema": SOURCE_PLAN_SCHEMA,
         "actionRegistrySchema": ACTION_REGISTRY_SCHEMA,
@@ -103,6 +107,8 @@ def capabilities() -> dict[str, Any]:
             "assess-run",
             "manager",
             "authorize-lifecycle",
+            "export",
+            "import",
         ],
         "customMemberBuild": {
             "command": "kungfu sdk kfx build",
@@ -455,6 +461,137 @@ def qualify_source(source: str | Path, runtime_dir: str | Path) -> dict[str, Any
         "status": "qualified-for-install-plan",
         "checks": sorted(checks),
         "evidenceScope": "source-contract/content-closure/runtime-contract",
+        "lifecycleMutation": False,
+    }
+
+
+def export_source_bundle(
+    source: str | Path, runtime_dir: str | Path, *, thin: bool = False
+) -> dict[str, Any]:
+    """Export an exact Profile source closure without lifecycle side effects."""
+
+    validated = validate_source(source, runtime_dir)
+    root = Path(validated["source"]["source"]).resolve()
+    entries = []
+    for path in _portable_source_paths(root):
+        data = path.read_bytes()
+        entry = {
+            "path": path.relative_to(root).as_posix(),
+            "sha256": _sha256(data),
+            "size": len(data),
+        }
+        if not thin:
+            entry["contentBase64"] = base64.b64encode(data).decode("ascii")
+        entries.append(entry)
+    body = {
+        "schema": SOURCE_BUNDLE_SCHEMA,
+        "mode": "thin" if thin else "full",
+        "selfContained": not thin,
+        "profileId": validated["source"]["profile"]["id"],
+        "profileVersion": validated["source"]["profile"]["version"],
+        "profileSuiteRoot": validated["inspection"]["profile_suite_root"],
+        "memberRoots": validated["source"]["memberRoots"],
+        "entries": entries,
+    }
+    body["bundleRoot"] = _root(body)
+    _validate_sdk_value("sourceBundleSchema", body, "Profile source bundle")
+    return body
+
+
+def source_import_plan(
+    bundle: Mapping[str, Any], destination: str | Path
+) -> dict[str, Any]:
+    """Plan reconstruction of source bytes; never install or activate a Profile."""
+
+    normalized = _validate_source_bundle(bundle)
+    target = Path(destination).expanduser().resolve()
+    collision = target.exists() and (not target.is_dir() or any(target.iterdir()))
+    identity = {
+        "bundle": normalized,
+        "destination": str(target),
+        "destinationCollision": collision,
+    }
+    plan = {
+        "schema": SOURCE_IMPORT_PLAN_SCHEMA,
+        "planId": _root(identity),
+        **identity,
+        "requiresAuthorization": normalized["mode"] == "full" and not collision,
+    }
+    if normalized["mode"] == "thin":
+        plan["decisionCard"] = decision_card(
+            "profile-source-material-required",
+            "Thin Profile bundles are root inventories; supply a full bundle before reconstruction.",
+            choices=["supply-full-bundle"],
+            basis={"bundleRoot": normalized["bundleRoot"]},
+            required_authority="profile-source-owner",
+            resume_command="export or obtain the exact full Profile source bundle",
+        )
+    elif collision:
+        plan["decisionCard"] = decision_card(
+            "profile-source-collision",
+            "The Profile source import destination is not empty.",
+            choices=["choose-an-empty-directory", "inspect-and-merge-manually"],
+            basis={"bundleRoot": normalized["bundleRoot"], "destination": str(target)},
+            required_authority="profile-source-owner",
+            resume_command="choose an empty destination and re-plan",
+        )
+    else:
+        plan["decisionCard"] = decision_card(
+            "profile-source-import-authorization",
+            "Authorize reconstruction of this exact Profile source closure without lifecycle activation.",
+            choices=["approve", "deny"],
+            basis={"planId": plan["planId"], "bundleRoot": normalized["bundleRoot"]},
+            required_authority="profile-source-owner",
+            resume_command="answer this card, then apply the exact source import plan",
+        )
+    return plan
+
+
+def authorized_source_import(
+    plan: Mapping[str, Any], answer: Mapping[str, Any]
+) -> dict[str, Any]:
+    if plan.get("schema") != SOURCE_IMPORT_PLAN_SCHEMA:
+        raise ProfileSdkError(
+            "source-import-plan-invalid", "Profile source import requires an exact plan"
+        )
+    refreshed = source_import_plan(
+        dict(plan.get("bundle") or {}), str(plan.get("destination") or "")
+    )
+    if refreshed["planId"] != plan.get("planId"):
+        raise ProfileSdkError(
+            "source-import-plan-stale", "Profile source bundle or destination changed"
+        )
+    if not refreshed["requiresAuthorization"]:
+        raise ProfileSdkError(
+            "source-import-not-ready",
+            "Profile source import needs a full bundle and an empty destination",
+            decisionCards=[refreshed["decisionCard"]],
+        )
+    validate_decision_answer(answer, refreshed["decisionCard"])
+    if (
+        answer.get("choice") != "approve"
+        or (answer.get("basis") or {}).get("planId") != refreshed["planId"]
+    ):
+        raise ProfileSdkError(
+            "decision-denied", "Profile source import was not approved"
+        )
+    target = Path(refreshed["destination"])
+    target.mkdir(parents=True, exist_ok=True)
+    written = []
+    for entry in refreshed["bundle"]["entries"]:
+        path = _confined(target, entry["path"])
+        path.parent.mkdir(parents=True, exist_ok=True)
+        data = base64.b64decode(entry["contentBase64"], validate=True)
+        path.write_bytes(data)
+        written.append(entry["path"])
+    return {
+        "schema": "kungfu.profile-source-import-receipt/v1",
+        "planId": refreshed["planId"],
+        "authorizationId": answer["authorizationId"],
+        "bundleRoot": refreshed["bundle"]["bundleRoot"],
+        "profileSuiteRoot": refreshed["bundle"]["profileSuiteRoot"],
+        "destination": str(target),
+        "written": written,
         "lifecycleMutation": False,
     }
 
@@ -1137,7 +1274,11 @@ def _package_dirs(suite_dir: Path) -> list[Path]:
             continue
         for candidate in [root, *[p for p in root.iterdir() if p.is_dir()]]:
             resolved = candidate.resolve()
-            if resolved not in seen and (resolved / "package.json").is_file():
+            try:
+                is_package = (resolved / "package.json").is_file()
+            except OSError:
+                is_package = False
+            if resolved not in seen and is_package:
                 seen.add(resolved)
                 result.append(resolved)
     return result
@@ -1215,6 +1356,72 @@ def _changes(
         for key in keys
         if left.get(key) != right.get(key)
     ]
+
+
+def _portable_source_paths(root: Path) -> list[Path]:
+    paths = []
+    for path in root.rglob("*"):
+        relative = path.relative_to(root)
+        if any(part in _IGNORED_PARTS for part in relative.parts):
+            continue
+        if path.is_symlink():
+            raise ProfileSdkError(
+                "source-bundle-symlink-rejected",
+                "Profile source bundles do not follow symlinks",
+                path=relative.as_posix(),
+            )
+        if path.is_file():
+            paths.append(path)
+    return sorted(paths, key=lambda path: path.relative_to(root).as_posix())
+
+
+def _validate_source_bundle(bundle: Mapping[str, Any]) -> dict[str, Any]:
+    normalized = dict(bundle)
+    _validate_sdk_value("sourceBundleSchema", normalized, "Profile source bundle")
+    expected = str(normalized.get("bundleRoot") or "")
+    body = dict(normalized)
+    body.pop("bundleRoot", None)
+    if expected != _root(body):
+        raise ProfileSdkError(
+            "source-bundle-root-mismatch", "Profile source bundle root mismatch"
+        )
+    paths = []
+    for entry in normalized["entries"]:
+        relative = str(entry["path"])
+        candidate = Path(relative)
+        if (
+            candidate.is_absolute()
+            or not relative
+            or ".." in candidate.parts
+            or any(part in _IGNORED_PARTS for part in candidate.parts)
+        ):
+            raise ProfileSdkError(
+                "source-bundle-path-invalid",
+                "Profile source bundle contains an unsafe path",
+                path=relative,
+            )
+        paths.append(relative)
+        if normalized["mode"] == "full":
+            try:
+                data = base64.b64decode(entry["contentBase64"], validate=True)
+            except (ValueError, TypeError) as error:
+                raise ProfileSdkError(
+                    "source-bundle-content-invalid",
+                    "Profile source bundle content is not canonical base64",
+                    path=relative,
+                ) from error
+            if len(data) != entry["size"] or _sha256(data) != entry["sha256"]:
+                raise ProfileSdkError(
+                    "source-bundle-content-mismatch",
+                    "Profile source bundle content does not match its inventory",
+                    path=relative,
+                )
+    if paths != sorted(set(paths)):
+        raise ProfileSdkError(
+            "source-bundle-inventory-invalid",
+            "Profile source bundle paths must be unique and sorted",
+        )
+    return normalized
 
 
 def _confined(root: Path, relative: str) -> Path:
