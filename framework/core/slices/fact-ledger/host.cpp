@@ -45,7 +45,7 @@ constexpr int32_t MSG_ACT = 20013;
 // consumer can group a bundle by run.
 constexpr uint64_t STREAM_ID = 1;
 
-int32_t msg_type_for_step(std::size_t step) {
+int32_t carrier_type_for_step(std::size_t step) {
   switch (step % 3) {
   case 0:
     return MSG_OBSERVE;
@@ -114,7 +114,7 @@ int main(int argc, char **argv) {
     bus->set_trigger_frame_uid(prev_uid);
 
     const int64_t gen_time = time::now_in_nano();
-    auto frame = writer->open_frame(/*trigger_time=*/prev_gen_time, msg_type_for_step(i), body.size(), STREAM_ID);
+    auto frame = writer->open_frame(/*trigger_time=*/prev_gen_time, carrier_type_for_step(i), body.size(), STREAM_ID);
     frame->set_data_type(FrameDataType::Json);
     std::memcpy(const_cast<void *>(frame->data_address()), body.data(), body.size());
 

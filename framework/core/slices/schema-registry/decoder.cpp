@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
       const std::string hash = entry.at("schema_hash");
       b.bfbs = read_file(bundle / "schemas" / (hash + ".bfbs"));
       if (sha256::hex(b.bfbs) != hash) {
-        std::cerr << "FAIL: schema blob hash mismatch for msg_type " << key << "\n";
+        std::cerr << "FAIL: schema blob hash mismatch for carrier_type " << key << "\n";
         return 1;
       }
       b.schema = reflection::GetSchema(b.bfbs.c_str());
@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
     auto frame = reader.current_frame();
     const auto it = bindings.find(frame->carrier_type());
     if (it == bindings.end()) {
-      std::cerr << "FAIL: no schema binding for msg_type " << frame->carrier_type() << "\n";
+      std::cerr << "FAIL: no schema binding for carrier_type " << frame->carrier_type() << "\n";
       return 1;
     }
     const Binding &b = it->second;
@@ -140,7 +140,7 @@ int main(int argc, char **argv) {
 
     nlohmann::json line = {
         {"seq", count},
-        {"msg_type", frame->carrier_type()},
+        {"carrier_type", frame->carrier_type()},
         {"type_name", b.name},
         {"schema_kind", b.kind},
         {"schema_version", b.version},

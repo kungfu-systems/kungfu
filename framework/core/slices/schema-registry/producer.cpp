@@ -72,10 +72,10 @@ int main(int argc, char **argv) {
 
   uint64_t prev_uid = 0;
   int64_t prev_gen_time = 0;
-  auto append = [&](int32_t msg_type, FrameDataType data_type, const void *bytes, std::size_t len) {
+  auto append = [&](int32_t carrier_type, FrameDataType data_type, const void *bytes, std::size_t len) {
     bus->set_trigger_frame_uid(prev_uid);
     const int64_t gen_time = time::now_in_nano();
-    auto frame = writer->open_frame(prev_gen_time, msg_type, len, STREAM_ID);
+    auto frame = writer->open_frame(prev_gen_time, carrier_type, len, STREAM_ID);
     frame->set_data_type(data_type);
     std::memcpy(const_cast<void *>(frame->data_address()), bytes, len);
     prev_uid = writer->current_frame_uid();
@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
     out.write(bfbs.data(), static_cast<std::streamsize>(bfbs.size()));
   }
 
-  // Run manifest with the per-run schema bindings. One msg_type binds to one
+  // Run manifest with the per-run schema bindings. One carrier_type binds to one
   // schema per run; evolution happens between runs.
   nlohmann::json manifest = {
       {"spec_version", "0.1"},
