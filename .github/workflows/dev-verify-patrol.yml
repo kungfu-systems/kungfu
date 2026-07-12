@@ -36,7 +36,7 @@ permissions:
 
 jobs:
   verify:
-    uses: kungfu-systems/buildchain/.github/workflows/build.yml@v2
+    uses: kungfu-systems/buildchain/.github/workflows/build.yml@train/v2/v2.3/shifu-cache-profile-passthrough
     secrets: inherit
     with:
       buildchain-ref: ${{ inputs.buildchain-ref || '' }}
