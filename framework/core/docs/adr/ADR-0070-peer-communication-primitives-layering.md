@@ -4,6 +4,9 @@ doc_type: architecture-decision
 adr_id: ADR-0070
 decision_status: accepted
 implementation_status: partial
+implementation_commits: [c42600c3d93ee18ac8e1381fa204592eeaedc44e]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/723]
+qualification_refs: [scripts/check-live-runtime-terminology.mjs]
 review_state: maintainer-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
