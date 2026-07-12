@@ -48,6 +48,9 @@ public:
   void open_durable_shadow(durability::ingest_options options);
   void append_durable_shadow(const durability::stream_position &position, int32_t carrier_type,
                              const std::string &payload, const yijinjing::ownership::evidence &writer_generation);
+  void append_durable_shadow(const durability::stream_position &position, int32_t carrier_type,
+                             const durability::durable_frame_context &frame, const std::string &payload,
+                             const yijinjing::ownership::evidence &writer_generation);
   [[nodiscard]] durability::barrier_result barrier_durable_shadow(uint64_t stream_id, uint64_t container_epoch,
                                                                   uint64_t request_id,
                                                                   durability::durability_profile profile,

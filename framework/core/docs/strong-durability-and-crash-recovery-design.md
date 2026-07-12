@@ -268,12 +268,19 @@ an additional offline decoder; shadow comparison and qualification must prove
 that this copy neither loses nor invents a typed frame before it can become an
 authority boundary.
 
-KFDL v1 is an internal binary container, not JSON and not a replacement schema
+KFDL v2 is an internal binary container, not JSON and not a replacement schema
 owner for journal facts. A segment header binds stream id, container epoch, and
 segment id. Each record binds logical position, carrier type, owner/writer
-generation, payload length, payload SHA-256, and a SHA-256 over record metadata
-plus payload. Active segments append only; rollover renames a barrier-covered
+generation, the frame context needed by existing state schemas (`gen_time`,
+`trigger_time`, `source`, `dest`, `data_type`, `initial_source`, and
+`trigger_frame_uid`), payload length, payload SHA-256, and a SHA-256 over record
+metadata plus payload. Active segments append only; rollover renames a barrier-covered
 active segment to an immutable sealed name and synchronizes the directory.
+
+The earlier test-only KFDL v1 omitted that frame context. It could prove payload
+identity but could not reconstruct `state<DataType>` routing and update time
+without guessing from a live journal. V2 supersedes it before production
+qualification; no stable or public v1 compatibility claim exists.
 
 Checkpoint publication uses two alternating binary slots. A barrier performs:
 
@@ -296,7 +303,7 @@ qualification fixtures. Production filesystem/device profiles remain
 fail-closed until the qualification card installs a verified profile registry;
 passing an arbitrary profile string cannot enable product durability.
 
-KFDL v1 checkpoints also carry the successful request-id index for the stream
+KFDL v2 checkpoints also carry the successful request-id index for the stream
 epoch, not only the most recent request. Restart therefore returns the original
 receipt for any checkpoint-covered retry and rejects conflicting reuse; falling
 back to an older checkpoint naturally drops requests whose barrier is no longer
@@ -372,10 +379,19 @@ required peer refuse startup until the same durable chain deterministically
 rebuilds it; an optional peer reports degraded rather than silently starting
 with current-state claims.
 
-This slice proves the new boundary and its restart/failure semantics but does
-not yet replace the production coordinator-triggered compatibility restore.
-That switch remains gated on a typed projector for the actual state schemas,
-shadow equality, rollback evidence, and the later qualified durable profile.
+The shadow projector now iterates the authoritative Hana `StateDataTypes`
+closed set rather than maintaining a second type roster. Known records are
+decoded with the existing Raw/JSON payload contract, keyed by type plus
+`DataType::uid()`, and retain the existing `state<DataType>` source,
+destination, update-time, and data semantics. The qualification fixture covers
+all current state types, replacement by uid, equality with the compatibility
+bank at the same durable cut, malformed-record fail-closed behavior, and
+retention of the previous snapshot as rollback evidence.
+
+This slice still does not replace the production coordinator-triggered
+compatibility restore. That switch remains gated on wiring this projector into
+the production bootstrap authority, removing the business restore/join bridge,
+and the later qualified durable profile.
 
 ## 8. Failure behavior
 

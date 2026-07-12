@@ -86,6 +86,9 @@ void test_group_barrier_survives_verified_restart() {
             "receipt omitted its qualification profile");
   }
   durable_ingest_log reopened(options(tree.root()));
+  require(reopened.status().segment_schema == DURABLE_SEGMENT_SCHEMA_V2 &&
+              reopened.status().checkpoint_schema == DURABLE_CHECKPOINT_SCHEMA_V2,
+          "restart did not report the KFDL v2 segment/checkpoint schemas");
   require(reopened.status().durable_watermark == position(2), "verified restart lost durable watermark");
   require(reopened.status().unacknowledged_tail_bytes == 0, "verified restart invented a tail");
 }
@@ -579,20 +582,28 @@ void test_published_hot_frame_matches_inspected_durable_record_after_restart() {
   require(published.has_data() && published.stream_id() == 7, "hot-path fixture did not publish a complete frame");
   const stream_position hot_position{published.stream_id(), 11, 1, published.frame_uid()};
   const auto hot_payload = published.data_as_string();
+  const durable_frame_context hot_context{published.gen_time(),
+                                          published.trigger_time(),
+                                          published.source(),
+                                          published.dest(),
+                                          static_cast<int32_t>(published.data_type()),
+                                          published.initial_source(),
+                                          published.trigger_frame_uid()};
   auto shadow_options = options(tree.root());
   shadow_options.writer_resource_id = hot_writer.ownership_status().resource_id;
   {
     durable_ingest_log log(shadow_options);
-    log.append(hot_position, published.carrier_type(), published.data_address(), published.data_length(), service,
-               hot_writer.ownership_status());
+    log.append(hot_position, published.carrier_type(), hot_context, published.data_address(), published.data_length(),
+               service, hot_writer.ownership_status());
     require(log.barrier(548, durability_profile::DurableGroup, service).receipt.status == receipt_status::Succeeded,
             "published hot frame did not cross the shadow barrier");
   }
   durable_ingest_log reopened(shadow_options);
   const auto records = reopened.read_durable_records();
   require(records.size() == 1 && records.front().position == hot_position &&
-              records.front().carrier_type == published.carrier_type() && records.front().payload == hot_payload,
-          "restart inspection did not match the published hot frame position/carrier/payload");
+              records.front().carrier_type == published.carrier_type() && records.front().frame == hot_context &&
+              records.front().payload == hot_payload,
+          "restart inspection did not match the published hot frame context/position/carrier/payload");
 }
 
 void test_state_service_owns_shadow_ingest_lifecycle() {

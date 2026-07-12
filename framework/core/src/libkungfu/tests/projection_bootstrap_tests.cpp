@@ -3,7 +3,9 @@
 #include <kungfu/runtime/io.h>
 #include <kungfu/runtime/projection_bootstrap.h>
 #include <kungfu/runtime/state_service.h>
+#include <kungfu/runtime/typed_state_projection.h>
 #include <kungfu/yijinjing/ownership.h>
+#include <kungfu/yijinjing/schema/registry.h>
 
 #include <chrono>
 #include <filesystem>
@@ -19,13 +21,17 @@ using kungfu::runtime::durability::durable_record;
 using kungfu::runtime::durability::ingest_options;
 using kungfu::runtime::durability::receipt_status;
 using kungfu::runtime::durability::stream_position;
+using kungfu::runtime::state_cache::bank;
 using kungfu::runtime::state_service::bootstrap_outcome;
+using kungfu::runtime::state_service::make_typed_state_projector;
 using kungfu::runtime::state_service::peer_state_requirement;
 using kungfu::runtime::state_service::projection_bootstrap_store;
 using kungfu::runtime::state_service::projection_error;
 using kungfu::runtime::state_service::projection_mutation;
 using kungfu::runtime::state_service::projection_options;
 using kungfu::runtime::state_service::service;
+using kungfu::runtime::state_service::typed_state_image;
+using kungfu::runtime::state_service::TYPED_STATE_PROJECTION_SCHEMA_V1;
 using kungfu::yijinjing::data::location;
 using kungfu::yijinjing::data::locator;
 using kungfu::yijinjing::enums::location_role;
@@ -67,6 +73,18 @@ durable_record record(uint64_t sequence, std::string payload) {
 
 std::vector<durable_record> records() {
   return {record(1, "alpha=one"), record(2, "alpha=two"), record(3, "beta=three")};
+}
+
+template <typename DataType>
+durable_record state_record(uint64_t sequence, uint32_t source, uint32_t dest, int64_t gen_time, const DataType &data) {
+  durable_record value;
+  value.position = {71, 5, sequence, 1000 + sequence};
+  value.carrier_type = DataType::tag;
+  value.frame = {
+      gen_time, gen_time - 1,  source, dest, static_cast<int32_t>(kungfu::yijinjing::enums::FrameDataType::Json),
+      source,   900 + sequence};
+  value.payload = data.to_string();
+  return value;
 }
 
 std::optional<projection_mutation> key_value_projector(const durable_record &input) {
@@ -216,6 +234,79 @@ void test_failed_rebuild_preserves_previous_readable_snapshot() {
           "failed rebuild destroyed the previous readable snapshot");
 }
 
+void test_actual_state_data_types_match_compatibility_state_at_the_same_cut() {
+  temp_tree tree;
+  kungfu::yijinjing::types::Config config;
+  config.location_uid = 42;
+  config.namespace_ = "strategy";
+  config.name = "alpha";
+  config.value = "first";
+  kungfu::yijinjing::types::TimeKeyValue time_value;
+  time_value.update_time = 200;
+  time_value.key = "clock";
+  time_value.value = "open";
+  kungfu::yijinjing::types::OperatorStateUpdate operator_state;
+  operator_state.update_time = 300;
+  operator_state.location_uid = 42;
+  operator_state.value = "running";
+  kungfu::yijinjing::types::TimeValue timeline_value;
+  timeline_value.update_time = 400;
+  timeline_value.tag_a = "session";
+  timeline_value.value = "ready";
+
+  auto config_first = state_record(1, 10, 20, 100, config);
+  config.value = "second";
+  auto config_second = state_record(2, 10, 20, 101, config);
+  auto time = state_record(3, 11, 21, 200, time_value);
+  auto operator_update = state_record(4, 12, 22, 300, operator_state);
+  auto timeline = state_record(5, 13, 23, 400, timeline_value);
+  const std::vector<durable_record> durable{config_first, config_second, time, operator_update, timeline};
+
+  bank compatibility;
+  compatibility << kungfu::state<kungfu::yijinjing::types::Config>(10, 20, 101, config);
+  compatibility << kungfu::state<kungfu::yijinjing::types::TimeKeyValue>(11, 21, 200, time_value);
+  compatibility << kungfu::state<kungfu::yijinjing::types::OperatorStateUpdate>(12, 22, 300, operator_state);
+  compatibility << kungfu::state<kungfu::yijinjing::types::TimeValue>(13, 23, 400, timeline_value);
+
+  auto typed_options = options(tree.root(), TYPED_STATE_PROJECTION_SCHEMA_V1);
+  typed_options.projection_name = "actual-state-data-types";
+  projection_bootstrap_store store(typed_options, make_typed_state_projector());
+  const auto snapshot = store.rebuild(durable);
+  require(snapshot.state.size() == decltype(boost::hana::length(kungfu::yijinjing::StateDataTypes))::value,
+          "typed-state fixture no longer covers the complete StateDataTypes roster");
+  require(snapshot.state == typed_state_image(compatibility),
+          "typed durable projection diverged from compatibility StateDataTypes semantics");
+  require(snapshot.through_position == durable.back().position,
+          "typed-state equality was not bound to the durable cut");
+}
+
+void test_actual_typed_projector_fails_closed_and_preserves_rollback_snapshot() {
+  temp_tree tree;
+  kungfu::yijinjing::types::Config config;
+  config.location_uid = 42;
+  config.namespace_ = "strategy";
+  config.name = "alpha";
+  config.value = "good";
+  const auto good = state_record(1, 10, 20, 100, config);
+  auto malformed = state_record(2, 10, 20, 101, config);
+  malformed.payload = "not-json";
+
+  auto typed_options = options(tree.root(), TYPED_STATE_PROJECTION_SCHEMA_V1);
+  typed_options.projection_name = "actual-state-data-types";
+  projection_bootstrap_store store(typed_options, make_typed_state_projector());
+  const auto rollback = store.rebuild({good});
+  bool failed = false;
+  try {
+    (void)store.rebuild({good, malformed});
+  } catch (const std::exception &) {
+    failed = true;
+  }
+  require(failed, "malformed known StateDataType did not fail closed");
+  const auto retained = store.load_snapshot();
+  require(retained.integrity_sha256 == rollback.integrity_sha256 && retained.state == rollback.state,
+          "failed typed-state rebuild destroyed the rollback snapshot");
+}
+
 void test_state_service_owns_projection_shadow_and_stopped_service_is_unavailable() {
   temp_tree tree;
   auto page_locator = std::make_shared<locator>(tree.root().string());
@@ -277,6 +368,10 @@ int run_tests() {
        test_deleted_projection_rebuilds_deterministically_from_durable_records},
       {"gapped durable input never advances projection", test_gap_never_becomes_a_projection_watermark},
       {"failed rebuild preserves the previous snapshot", test_failed_rebuild_preserves_previous_readable_snapshot},
+      {"actual StateDataTypes match compatibility state at one cut",
+       test_actual_state_data_types_match_compatibility_state_at_the_same_cut},
+      {"actual typed projector fails closed and preserves rollback",
+       test_actual_typed_projector_fails_closed_and_preserves_rollback_snapshot},
       {"state service owns projection shadow and fails closed when stopped",
        test_state_service_owns_projection_shadow_and_stopped_service_is_unavailable},
   };

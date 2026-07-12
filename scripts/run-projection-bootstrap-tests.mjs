@@ -46,6 +46,8 @@ if (!testBinary) {
 const sources = [
   'framework/core/src/libkungfu/include/kungfu/runtime/projection_bootstrap.h',
   'framework/core/src/libkungfu/src/runtime/projection_bootstrap.cpp',
+  'framework/core/src/libkungfu/include/kungfu/runtime/typed_state_projection.h',
+  'framework/core/src/libkungfu/src/runtime/typed_state_projection.cpp',
   'framework/core/src/libkungfu/include/kungfu/runtime/state_service.h',
   'framework/core/src/libkungfu/src/runtime/state_service.cpp',
   'framework/core/src/libkungfu/tests/projection_bootstrap_tests.cpp',

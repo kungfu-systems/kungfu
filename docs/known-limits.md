@@ -57,7 +57,7 @@ reported as written will survive sudden power loss. The current production mmap
 policy rejects unqualified `asynchronous` and `durable` modes rather than
 silently treating OS writeback as a durability contract.
 
-The KFDL append/checkpoint backend is implemented only as a test-qualified
+The KFDL v2 append/checkpoint backend is implemented only as a test-qualified
 shadow component. What is **not yet built or qualified for production**:
 
 - activation of KFDL ingestion as a dedicated service independent of
@@ -78,10 +78,12 @@ deduplication.
 A state-service-owned snapshot-through-T plus replay-after-T implementation now
 exists for checkpoint-covered KFDL records in tests. Its binary integrity,
 schema/cut checks, required/optional/none peer outcomes, deterministic rebuild,
-and projection-failure isolation are implementation evidence only. The actual
-production state schemas still use the coordinator-triggered compatibility
-restore; business joins/restore cutover and public projection capability remain
-pending.
+and projection-failure isolation are implementation evidence only. A test-only
+projector now covers the actual Hana `StateDataTypes` closed set and proves
+same-cut equality with the compatibility state bank plus rollback on malformed
+known records. Production bootstrap still uses the coordinator-triggered
+compatibility restore; business joins/restore cutover and public projection
+capability remain pending.
 
 SQLite WAL, a mapped-region flush, or a resident process is not a substitute for
 that evidence. See [Strong durability and crash recovery](durability-and-crash-recovery.md)

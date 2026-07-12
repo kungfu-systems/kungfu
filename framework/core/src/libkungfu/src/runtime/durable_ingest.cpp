@@ -34,12 +34,12 @@ using yijinjing::ownership::lease;
 using yijinjing::ownership::scope;
 using yijinjing::storage::compute_content_hash_value;
 
-constexpr std::array<char, 8> SEGMENT_MAGIC{'K', 'F', 'D', 'L', 'S', 'E', 'G', '1'};
-constexpr std::array<char, 8> RECORD_MAGIC{'K', 'F', 'D', 'L', 'R', 'E', 'C', '1'};
-constexpr std::array<char, 8> CHECKPOINT_MAGIC{'K', 'F', 'D', 'L', 'C', 'P', '0', '1'};
-constexpr uint32_t FORMAT_VERSION = 1;
+constexpr std::array<char, 8> SEGMENT_MAGIC{'K', 'F', 'D', 'L', 'S', 'E', 'G', '2'};
+constexpr std::array<char, 8> RECORD_MAGIC{'K', 'F', 'D', 'L', 'R', 'E', 'C', '2'};
+constexpr std::array<char, 8> CHECKPOINT_MAGIC{'K', 'F', 'D', 'L', 'C', 'P', '0', '2'};
+constexpr uint32_t FORMAT_VERSION = 2;
 constexpr uint64_t SEGMENT_HEADER_SIZE = 40;
-constexpr uint64_t RECORD_HEADER_SIZE = 204;
+constexpr uint64_t RECORD_HEADER_SIZE = 244;
 
 void append_u32(std::string &out, uint32_t value) {
   for (unsigned shift = 0; shift < 32; shift += 8) {
@@ -404,8 +404,9 @@ std::string segment_header(uint64_t segment_id, uint64_t stream_id, uint64_t epo
   return header;
 }
 
-std::string encode_record(const stream_position &position, int32_t carrier_type, const void *payload,
-                          size_t payload_size, uint64_t owner_generation, uint64_t writer_generation) {
+std::string encode_record(const stream_position &position, int32_t carrier_type, const durable_frame_context &frame,
+                          const void *payload, size_t payload_size, uint64_t owner_generation,
+                          uint64_t writer_generation) {
   if (payload_size > std::numeric_limits<uint64_t>::max() - RECORD_HEADER_SIZE) {
     throw std::invalid_argument("durable_payload_too_large");
   }
@@ -418,6 +419,13 @@ std::string encode_record(const stream_position &position, int32_t carrier_type,
   append_u64(header, position.sequence);
   append_u64(header, position.frame_uid);
   append_u32(header, static_cast<uint32_t>(carrier_type));
+  append_u64(header, static_cast<uint64_t>(frame.gen_time));
+  append_u64(header, static_cast<uint64_t>(frame.trigger_time));
+  append_u32(header, frame.source);
+  append_u32(header, frame.dest);
+  append_u32(header, static_cast<uint32_t>(frame.data_type));
+  append_u32(header, frame.initial_source);
+  append_u64(header, frame.trigger_frame_uid);
   append_u64(header, owner_generation);
   append_u64(header, writer_generation);
   header += sha256(payload_bytes);
@@ -471,6 +479,14 @@ stream_position verify_segment_prefix(const fs::path &path, uint64_t segment_id,
     position.sequence = read_u64(bytes, offset);
     position.frame_uid = read_u64(bytes, offset);
     const auto carrier_type = static_cast<int32_t>(read_u32(bytes, offset));
+    durable_frame_context frame;
+    frame.gen_time = static_cast<int64_t>(read_u64(bytes, offset));
+    frame.trigger_time = static_cast<int64_t>(read_u64(bytes, offset));
+    frame.source = read_u32(bytes, offset);
+    frame.dest = read_u32(bytes, offset);
+    frame.data_type = static_cast<int32_t>(read_u32(bytes, offset));
+    frame.initial_source = read_u32(bytes, offset);
+    frame.trigger_frame_uid = read_u64(bytes, offset);
     const auto owner_generation = read_u64(bytes, offset);
     const auto writer_generation = read_u64(bytes, offset);
     const auto payload_hash = bytes.substr(offset, 64);
@@ -484,7 +500,7 @@ stream_position verify_segment_prefix(const fs::path &path, uint64_t segment_id,
       throw std::runtime_error("durable_record_identity_order_or_checksum_invalid");
     }
     if (records != nullptr) {
-      records->push_back({segment_id, record_start, record_size, position, carrier_type, owner_generation,
+      records->push_back({segment_id, record_start, record_size, position, carrier_type, frame, owner_generation,
                           writer_generation, payload_hash, record_hash, payload});
     }
     offset += payload_size;
@@ -768,8 +784,8 @@ struct durable_ingest_log::impl {
     validate_owner(service_owner, scope::DataRootService, root);
   }
 
-  void append(const stream_position &position, int32_t carrier_type, const void *payload, size_t payload_size,
-              const lease &service_owner, const evidence &writer_generation) {
+  void append(const stream_position &position, int32_t carrier_type, const durable_frame_context &frame,
+              const void *payload, size_t payload_size, const lease &service_owner, const evidence &writer_generation) {
     std::lock_guard lock(mutex);
     if (!current_status.available) {
       throw std::logic_error("durable_ingest_is_unavailable");
@@ -801,7 +817,7 @@ struct durable_ingest_log::impl {
     const auto append_start_offset = active_size;
     try {
       inject(ingest_fault_point::BeforeRecordWrite);
-      const auto record = encode_record(position, carrier_type, payload, payload_size,
+      const auto record = encode_record(position, carrier_type, frame, payload, payload_size,
                                         service_owner.status().generation, writer_generation.generation);
       native_file file(active_path, false);
       file.write(record);
@@ -1070,12 +1086,24 @@ durable_ingest_log::~durable_ingest_log() = default;
 
 void durable_ingest_log::append(const stream_position &position, int32_t carrier_type, const void *payload,
                                 size_t payload_size, const lease &service_owner, const lease &writer_owner) {
-  impl_->append(position, carrier_type, payload, payload_size, service_owner, writer_owner.status());
+  append(position, carrier_type, durable_frame_context{}, payload, payload_size, service_owner, writer_owner);
+}
+
+void durable_ingest_log::append(const stream_position &position, int32_t carrier_type,
+                                const durable_frame_context &frame, const void *payload, size_t payload_size,
+                                const lease &service_owner, const lease &writer_owner) {
+  impl_->append(position, carrier_type, frame, payload, payload_size, service_owner, writer_owner.status());
 }
 
 void durable_ingest_log::append(const stream_position &position, int32_t carrier_type, const void *payload,
                                 size_t payload_size, const lease &service_owner, const evidence &writer_generation) {
-  impl_->append(position, carrier_type, payload, payload_size, service_owner, writer_generation);
+  append(position, carrier_type, durable_frame_context{}, payload, payload_size, service_owner, writer_generation);
+}
+
+void durable_ingest_log::append(const stream_position &position, int32_t carrier_type,
+                                const durable_frame_context &frame, const void *payload, size_t payload_size,
+                                const lease &service_owner, const evidence &writer_generation) {
+  impl_->append(position, carrier_type, frame, payload, payload_size, service_owner, writer_generation);
 }
 
 barrier_result durable_ingest_log::barrier(uint64_t request_id, durability_profile profile, const lease &service_owner,

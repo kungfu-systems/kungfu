@@ -140,13 +140,20 @@ void service::open_durable_shadow(durability::ingest_options options) {
 void service::append_durable_shadow(const durability::stream_position &position, int32_t carrier_type,
                                     const std::string &payload,
                                     const yijinjing::ownership::evidence &writer_generation) {
+  append_durable_shadow(position, carrier_type, durability::durable_frame_context{}, payload, writer_generation);
+}
+
+void service::append_durable_shadow(const durability::stream_position &position, int32_t carrier_type,
+                                    const durability::durable_frame_context &frame, const std::string &payload,
+                                    const yijinjing::ownership::evidence &writer_generation) {
   impl_->require_write_authority();
   std::lock_guard lock(impl_->durable_shadows_mutex);
   const auto found = impl_->durable_shadows.find({position.stream_id, position.container_epoch});
   if (found == impl_->durable_shadows.end()) {
     throw std::logic_error("durable shadow stream epoch is not open");
   }
-  found->second->append(position, carrier_type, payload.data(), payload.size(), impl_->ownership, writer_generation);
+  found->second->append(position, carrier_type, frame, payload.data(), payload.size(), impl_->ownership,
+                        writer_generation);
 }
 
 durability::barrier_result service::barrier_durable_shadow(uint64_t stream_id, uint64_t container_epoch,

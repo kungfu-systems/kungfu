@@ -16,8 +16,8 @@
 
 namespace kungfu::runtime::durability {
 
-inline constexpr const char *DURABLE_SEGMENT_SCHEMA_V1 = "kungfu.durable-segment/v1";
-inline constexpr const char *DURABLE_CHECKPOINT_SCHEMA_V1 = "kungfu.durable-checkpoint/v1";
+inline constexpr const char *DURABLE_SEGMENT_SCHEMA_V2 = "kungfu.durable-segment/v2";
+inline constexpr const char *DURABLE_CHECKPOINT_SCHEMA_V2 = "kungfu.durable-checkpoint/v2";
 
 enum class ingest_fault_point : uint8_t {
   BeforeRecordWrite,
@@ -56,8 +56,8 @@ struct ingest_options {
 };
 
 struct ingest_status {
-  std::string segment_schema = DURABLE_SEGMENT_SCHEMA_V1;
-  std::string checkpoint_schema = DURABLE_CHECKPOINT_SCHEMA_V1;
+  std::string segment_schema = DURABLE_SEGMENT_SCHEMA_V2;
+  std::string checkpoint_schema = DURABLE_CHECKPOINT_SCHEMA_V2;
   uint64_t active_segment_id = 1;
   uint64_t durable_chain_start_segment_id = 0;
   uint64_t durable_segment_id = 0;
@@ -91,12 +91,27 @@ struct barrier_result {
   std::string message = {};
 };
 
+// The logical frame context needed to reconstruct existing state<DataType>
+// routing and ordering without depending on a live mmap frame address.
+struct durable_frame_context {
+  int64_t gen_time = 0;
+  int64_t trigger_time = 0;
+  uint32_t source = 0;
+  uint32_t dest = 0;
+  int32_t data_type = 0;
+  uint32_t initial_source = 0;
+  uint64_t trigger_frame_uid = 0;
+
+  friend bool operator==(const durable_frame_context &, const durable_frame_context &) = default;
+};
+
 struct durable_record {
   uint64_t segment_id = 0;
   uint64_t segment_offset = 0;
   uint64_t record_size = 0;
   stream_position position = {};
   int32_t carrier_type = 0;
+  durable_frame_context frame = {};
   uint64_t owner_generation = 0;
   uint64_t writer_generation = 0;
   std::string payload_sha256 = {};
@@ -118,17 +133,33 @@ public:
 
   void append(const stream_position &position, int32_t carrier_type, const void *payload, size_t payload_size,
               const yijinjing::ownership::lease &service_owner, const yijinjing::ownership::lease &writer_owner);
+  void append(const stream_position &position, int32_t carrier_type, const durable_frame_context &frame,
+              const void *payload, size_t payload_size, const yijinjing::ownership::lease &service_owner,
+              const yijinjing::ownership::lease &writer_owner);
   void append(const stream_position &position, int32_t carrier_type, const void *payload, size_t payload_size,
               const yijinjing::ownership::lease &service_owner,
+              const yijinjing::ownership::evidence &writer_generation);
+  void append(const stream_position &position, int32_t carrier_type, const durable_frame_context &frame,
+              const void *payload, size_t payload_size, const yijinjing::ownership::lease &service_owner,
               const yijinjing::ownership::evidence &writer_generation);
   void append(const stream_position &position, int32_t carrier_type, const std::string &payload,
               const yijinjing::ownership::lease &service_owner, const yijinjing::ownership::lease &writer_owner) {
     append(position, carrier_type, payload.data(), payload.size(), service_owner, writer_owner);
   }
+  void append(const stream_position &position, int32_t carrier_type, const durable_frame_context &frame,
+              const std::string &payload, const yijinjing::ownership::lease &service_owner,
+              const yijinjing::ownership::lease &writer_owner) {
+    append(position, carrier_type, frame, payload.data(), payload.size(), service_owner, writer_owner);
+  }
   void append(const stream_position &position, int32_t carrier_type, const std::string &payload,
               const yijinjing::ownership::lease &service_owner,
               const yijinjing::ownership::evidence &writer_generation) {
     append(position, carrier_type, payload.data(), payload.size(), service_owner, writer_generation);
+  }
+  void append(const stream_position &position, int32_t carrier_type, const durable_frame_context &frame,
+              const std::string &payload, const yijinjing::ownership::lease &service_owner,
+              const yijinjing::ownership::evidence &writer_generation) {
+    append(position, carrier_type, frame, payload.data(), payload.size(), service_owner, writer_generation);
   }
 
   [[nodiscard]] barrier_result barrier(uint64_t request_id, durability_profile profile,
