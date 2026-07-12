@@ -1,6 +1,6 @@
 # ADR-0062: the journal container epoch is derived from its layout, and cross-epoch replay is offline conversion
 
-- Status: accepted; not yet implemented
+- Status: accepted; implemented
 - Date: 2026-07-11
 - Category: (b) mechanism / governance — data-format enforcement
 - Subsystem: `libyijinjing` journal (`page_header` / `frame_header`), yijinjing schema
@@ -201,6 +201,30 @@ exchange here — reliability over cleverness, mechanism over discipline.
 - Existing container invariants remain: the `page.cpp` alignment / lock-free
   `static_assert`s and the `page::load` runtime `*_length` / `page_size` checks
   are unchanged.
+
+## Implementation
+
+Landed on `dev/v4/v4.0` in two changes: the derived epoch (`journal_format_epoch`
+in `journal/layout_fingerprint.h`, replacing the `__JOURNAL_VERSION__` macro), and
+the removal of the now-unreachable `assemble::read_bytes` cross-epoch branch. The
+verification items are discharged:
+
+- The build-time check holds: a `static_assert` beside the `page.cpp` container
+  invariants forces epoch evaluation, and
+  `test_corrupt_page_header_facts_are_rejected` gained a `version` case proving
+  `page::load` rejects a mismatched epoch.
+- Gap (2) is discharged by exhaustive enumeration rather than a live harness:
+  every assignment to a reader's current page in `journal.cpp` originates from
+  `page::load`, which throws on an epoch mismatch, so a mismatched page can never
+  reach the assembler. A live "reader reaches the branch" harness is impossible
+  precisely because `page::load` refuses the page first.
+- Cross-platform identity holds by construction: every `page_header` /
+  `frame_header` field is fixed-width (`uint32_t`, `uint64_t`, `int32_t`,
+  `int64_t`, and `PageStatus` / `FrameDataType`, both `: int8_t`), so
+  `sizeof` / `alignof` and the derived epoch are platform-invariant. Linux CI
+  builds and runs the fingerprint constexpr green as second-compiler evidence. If
+  a future field adopts a platform-variable type (pointer, `long`, unfixed enum),
+  this invariant breaks and must be re-established.
 
 ## Replacement Criteria
 

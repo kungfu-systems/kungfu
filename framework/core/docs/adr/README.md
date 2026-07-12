@@ -79,7 +79,7 @@ A record's **Status** says where it stands:
 | [0059](ADR-0059-mission-control-mission-go-responsibility-model.md) | accepted | Mission Control composes Mission and Go responsibility over runtime facts; Atlas starts as a bridged authority |
 | [0060](ADR-0060-desktop-workspace-selection-and-lazy-data-home.md) | proposed | Desktop and CLI select Home or a project workspace and create its data home only on qualified write intent |
 | [0061](ADR-0061-agent-mediated-guidance-is-a-first-class-product-interface.md) | proposed | Agent-mediated guidance is a first-class interface over shared advice, preview, authorization, action, and receipt contracts |
-| [0062](ADR-0062-journal-container-epoch-and-offline-conversion.md) | accepted; not yet implemented | the journal container epoch is derived from its layout; cross-epoch replay is deferred offline conversion, not an online adapter |
+| [0062](ADR-0062-journal-container-epoch-and-offline-conversion.md) | accepted; implemented | the journal container epoch is derived from its layout; cross-epoch replay is deferred offline conversion, not an online adapter |
 
 ## Reading by theme
 
