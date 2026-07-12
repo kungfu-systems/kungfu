@@ -58,6 +58,7 @@ struct durability_receipt {
   std::optional<stream_position> projection_watermark = std::nullopt;
   std::optional<stream_position> replicated_watermark = std::nullopt;
   uint64_t barrier_id = 0;
+  std::string qualification_profile = {};
   int64_t completed_at = 0;
   receipt_status status = receipt_status::Unknown;
   durability_error_code error = durability_error_code::None;
@@ -76,6 +77,7 @@ struct durability_receipt_view {
   std::optional<stream_position> projection_watermark = std::nullopt;
   std::optional<stream_position> replicated_watermark = std::nullopt;
   uint64_t barrier_id = 0;
+  std::string qualification_profile = {};
   int64_t completed_at = 0;
   std::string status = {};
   std::string error = {};

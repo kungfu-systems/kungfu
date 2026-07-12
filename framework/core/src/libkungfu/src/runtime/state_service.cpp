@@ -2,12 +2,34 @@
 
 #include <kungfu/runtime/state_service.h>
 
+#include <filesystem>
+#include <map>
+#include <mutex>
 #include <stdexcept>
 #include <utility>
 
 #include <kungfu/runtime/state_cache/manager.h>
 
 namespace kungfu::runtime::state_service {
+
+namespace {
+
+durability::barrier_result unavailable_barrier(uint64_t request_id, durability::durability_profile profile,
+                                               const std::string &message) {
+  durability::barrier_result result;
+  result.receipt.request_id = request_id;
+  result.receipt.requested_profile = profile;
+  result.receipt.status = durability::receipt_status::Unknown;
+  result.receipt.error = durability::durability_error_code::ServiceUnavailable;
+  result.error = durability::ingest_error::ServiceUnavailable;
+  result.message = message;
+  result.status.available = false;
+  result.status.last_error = durability::ingest_error::ServiceUnavailable;
+  result.status.last_error_message = message;
+  return result;
+}
+
+} // namespace
 
 struct service::impl {
   explicit impl(const io_device_ptr &io_device)
@@ -25,6 +47,8 @@ struct service::impl {
 
   yijinjing::ownership::lease ownership;
   state_cache::manager manager;
+  std::map<std::pair<uint64_t, uint64_t>, std::unique_ptr<durability::durable_ingest_log>> durable_shadows;
+  mutable std::mutex durable_shadows_mutex;
 };
 
 service::service(const io_device_ptr &io_device) : impl_(std::make_unique<impl>(io_device)) {}
@@ -76,6 +100,55 @@ void service::pause_projection(bool pause) {
 void service::ingest(const event_ptr &event) {
   impl_->require_write_authority();
   impl_->manager.feed(event);
+}
+
+void service::open_durable_shadow(durability::ingest_options options) {
+  impl_->require_write_authority();
+  if (std::filesystem::absolute(options.data_root).lexically_normal() !=
+      std::filesystem::absolute(impl_->ownership.status().data_root).lexically_normal()) {
+    throw std::invalid_argument("durable shadow data root does not match state service ownership");
+  }
+  std::lock_guard lock(impl_->durable_shadows_mutex);
+  const auto key = std::make_pair(options.stream_id, options.container_epoch);
+  if (impl_->durable_shadows.contains(key)) {
+    throw std::logic_error("durable shadow stream epoch is already open");
+  }
+  impl_->durable_shadows.emplace(key, std::make_unique<durability::durable_ingest_log>(std::move(options)));
+}
+
+void service::append_durable_shadow(const durability::stream_position &position, int32_t carrier_type,
+                                    const std::string &payload,
+                                    const yijinjing::ownership::evidence &writer_generation) {
+  impl_->require_write_authority();
+  std::lock_guard lock(impl_->durable_shadows_mutex);
+  const auto found = impl_->durable_shadows.find({position.stream_id, position.container_epoch});
+  if (found == impl_->durable_shadows.end()) {
+    throw std::logic_error("durable shadow stream epoch is not open");
+  }
+  found->second->append(position, carrier_type, payload.data(), payload.size(), impl_->ownership, writer_generation);
+}
+
+durability::barrier_result service::barrier_durable_shadow(uint64_t stream_id, uint64_t container_epoch,
+                                                           uint64_t request_id, durability::durability_profile profile,
+                                                           durability::barrier_options options) {
+  if (!impl_->ownership.owns() || !impl_->manager.running()) {
+    return unavailable_barrier(request_id, profile, "state_service_not_running_or_fenced");
+  }
+  std::lock_guard lock(impl_->durable_shadows_mutex);
+  const auto found = impl_->durable_shadows.find({stream_id, container_epoch});
+  if (found == impl_->durable_shadows.end()) {
+    return unavailable_barrier(request_id, profile, "durable_shadow_stream_epoch_not_open");
+  }
+  return found->second->barrier(request_id, profile, impl_->ownership, options);
+}
+
+durability::ingest_status service::durable_shadow_status(uint64_t stream_id, uint64_t container_epoch) const {
+  std::lock_guard lock(impl_->durable_shadows_mutex);
+  const auto found = impl_->durable_shadows.find({stream_id, container_epoch});
+  if (found == impl_->durable_shadows.end()) {
+    throw std::logic_error("durable shadow stream epoch is not open");
+  }
+  return found->second->status();
 }
 
 } // namespace kungfu::runtime::state_service

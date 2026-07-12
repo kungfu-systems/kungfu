@@ -7,6 +7,7 @@
 #include <cctype>
 #include <cerrno>
 #include <filesystem>
+#include <fstream>
 #include <mutex>
 #include <set>
 #include <utility>
@@ -110,6 +111,34 @@ prior_evidence parse_prior(const std::string &raw) noexcept {
   } catch (...) {
     return {};
   }
+}
+
+evidence parse_evidence(const std::string &raw) {
+  const auto value = nlohmann::json::parse(raw);
+  if (value.value("schema", "") != OWNERSHIP_EVIDENCE_SCHEMA_V1 || value.value("scope", "") != "stream_writer" ||
+      value.value("state", "") != "owned") {
+    throw busy_error("ownership_not_active: writer evidence is not owned");
+  }
+  evidence result;
+  result.schema = OWNERSHIP_EVIDENCE_SCHEMA_V1;
+  result.ownership_scope = scope::StreamWriter;
+  result.data_root = value.at("data_root").get<std::string>();
+  result.resource_id = value.at("resource_id").get<std::string>();
+  result.generation = value.at("generation").get<uint64_t>();
+  result.fence_token = value.at("fence_token").get<std::string>();
+  result.owner_pid = value.at("owner_pid").get<uint64_t>();
+  result.acquired_at = value.at("acquired_at").get<int64_t>();
+  result.recovered_stale_owner = value.value("recovered_stale_owner", false);
+  result.owned = true;
+  return result;
+}
+
+std::string read_path(const std::string &path) {
+  std::ifstream input(path, std::ios::binary);
+  if (!input) {
+    throw std::runtime_error("ownership_io_error: cannot read " + path);
+  }
+  return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
 }
 
 class local_reservation {
@@ -321,6 +350,57 @@ const evidence &lease::status() const {
     throw std::logic_error("ownership lease is empty");
   }
   return impl_->value;
+}
+
+evidence inspect_active_stream_writer(const std::string &data_root, const std::string &resource_id) {
+  validate_input(scope::StreamWriter, data_root, resource_id);
+  const auto path = normalized_path(lock_path(scope::StreamWriter, data_root, resource_id));
+  bool held_locally = false;
+  {
+    std::lock_guard<std::mutex> lock(local_owners_mutex);
+    held_locally = local_owners.contains(path);
+  }
+  if (!held_locally) {
+#ifdef _WIN32
+    const auto handle =
+        CreateFileW(fs::path(path).wstring().c_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                    nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (handle == INVALID_HANDLE_VALUE) {
+      throw std::runtime_error("ownership_io_error: cannot inspect " + path);
+    }
+    OVERLAPPED overlapped{};
+    if (LockFileEx(handle, LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY, 0, 1, 0, &overlapped) != 0) {
+      UnlockFileEx(handle, 0, 1, 0, &overlapped);
+      CloseHandle(handle);
+      throw busy_error("ownership_not_active: no live writer owns " + path);
+    }
+    const auto error = GetLastError();
+    CloseHandle(handle);
+    if (error != ERROR_LOCK_VIOLATION && error != ERROR_IO_PENDING) {
+      throw std::system_error(static_cast<int>(error), std::system_category(), "inspect writer ownership");
+    }
+#else
+    const auto fd = ::open(path.c_str(), O_RDWR | O_CLOEXEC);
+    if (fd < 0) {
+      throw std::runtime_error("ownership_io_error: cannot inspect " + path);
+    }
+    if (::flock(fd, LOCK_EX | LOCK_NB) == 0) {
+      ::flock(fd, LOCK_UN);
+      ::close(fd);
+      throw busy_error("ownership_not_active: no live writer owns " + path);
+    }
+    const auto error = errno;
+    ::close(fd);
+    if (error != EWOULDBLOCK && error != EAGAIN) {
+      throw std::system_error(error, std::generic_category(), "inspect writer ownership");
+    }
+#endif
+  }
+  auto result = parse_evidence(read_path(path));
+  if (normalized_path(result.data_root) != normalized_path(data_root) || result.resource_id != resource_id) {
+    throw busy_error("ownership_not_active: writer evidence identity mismatch");
+  }
+  return result;
 }
 
 } // namespace kungfu::yijinjing::ownership

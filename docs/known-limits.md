@@ -57,16 +57,23 @@ reported as written will survive sudden power loss. The current production mmap
 policy rejects unqualified `asynchronous` and `durable` modes rather than
 silently treating OS writeback as a durability contract.
 
-What is **not yet built or qualified**:
+The KFDL append/checkpoint backend is implemented only as a test-qualified
+shadow component. What is **not yet built or qualified for production**:
 
-- a dedicated durable-ingest service independent of coordinator and projection
-  lifecycle;
+- activation of KFDL ingestion as a dedicated service independent of
+  coordinator and projection lifecycle;
 - stable durable/projection watermarks and producer-visible durability receipts;
 - `durable_group` and `durable_sync` end-to-end profiles;
 - deterministic recovery of an acknowledged frontier across journal, Episode,
   payload, and checkpoint boundaries;
 - retained power-loss, torn-write, ENOSPC, ordering, and repeated-recovery
   evidence for macOS, Linux, and Windows.
+
+The shadow checkpoint currently carries the complete successful request-id
+index for its stream epoch so restart deduplication is exact. Retention and
+compaction for that growing index are not yet qualified; this is deliberately
+kept behind the test-only boundary rather than weakened to last-request-only
+deduplication.
 
 SQLite WAL, a mapped-region flush, or a resident process is not a substitute for
 that evidence. See [Strong durability and crash recovery](durability-and-crash-recovery.md)

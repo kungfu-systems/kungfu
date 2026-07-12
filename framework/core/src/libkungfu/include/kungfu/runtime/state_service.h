@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <kungfu/runtime/common.h>
+#include <kungfu/runtime/durable_ingest.h>
 #include <kungfu/runtime/io.h>
 #include <kungfu/yijinjing/ownership.h>
 #include <kungfu/yijinjing/schema/core.h>
@@ -42,6 +43,15 @@ public:
   void cache_reset(const event_ptr &event);
   void pause_projection(bool pause);
   void ingest(const event_ptr &event);
+
+  void open_durable_shadow(durability::ingest_options options);
+  void append_durable_shadow(const durability::stream_position &position, int32_t carrier_type,
+                             const std::string &payload, const yijinjing::ownership::evidence &writer_generation);
+  [[nodiscard]] durability::barrier_result barrier_durable_shadow(uint64_t stream_id, uint64_t container_epoch,
+                                                                  uint64_t request_id,
+                                                                  durability::durability_profile profile,
+                                                                  durability::barrier_options options = {});
+  [[nodiscard]] durability::ingest_status durable_shadow_status(uint64_t stream_id, uint64_t container_epoch) const;
 
 private:
   struct impl;

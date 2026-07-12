@@ -56,6 +56,12 @@ private:
 
 [[nodiscard]] const char *scope_name(scope value) noexcept;
 
+// Diagnostic attestation for a trusted single-host service. The caller
+// supplies the generation/token carried out-of-band with a frame; this probe
+// verifies that the matching writer lock is live when the frame is admitted.
+// It is not an authentication boundary against a malicious local process.
+[[nodiscard]] evidence inspect_active_stream_writer(const std::string &data_root, const std::string &resource_id);
+
 } // namespace kungfu::yijinjing::ownership
 
 #endif // KUNGFU_YIJINJING_OWNERSHIP_H

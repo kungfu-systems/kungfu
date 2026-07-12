@@ -327,6 +327,8 @@ public:
 
   [[nodiscard]] page_ptr get_current_page() const { return journal_->page_; }
 
+  [[nodiscard]] const ownership::evidence &ownership_status() const { return writer_lease_.status(); }
+
   virtual uint64_t current_frame_uid();
 
   [[nodiscard]] virtual frame_transaction reserve_frame(int64_t trigger_time, int32_t carrier_type, size_t length,

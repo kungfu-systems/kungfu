@@ -143,6 +143,7 @@ durability_receipt_view make_receipt_view(const durability_receipt &receipt) {
           receipt.projection_watermark,
           receipt.replicated_watermark,
           receipt.barrier_id,
+          receipt.qualification_profile,
           receipt.completed_at,
           receipt_status_name(receipt.status),
           durability_error_name(receipt.error)};
@@ -160,6 +161,7 @@ nlohmann::json render_durability_receipt(const durability_receipt &receipt) {
           {"projection_watermark", position_json(view.projection_watermark)},
           {"replicated_watermark", position_json(view.replicated_watermark)},
           {"barrier_id", std::to_string(view.barrier_id)},
+          {"qualification_profile", view.qualification_profile},
           {"completed_at", std::to_string(view.completed_at)},
           {"status", view.status},
           {"error", view.error}};

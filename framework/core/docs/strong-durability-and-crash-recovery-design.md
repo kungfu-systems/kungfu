@@ -257,6 +257,75 @@ offline inspectability. The choice is subordinate to these invariants:
 Native mmap `durable` mode may later optimize a supported backend, but the
 receipt protocol remains above it so callers do not depend on one OS primitive.
 
+### First backend decision: independent KFDL container
+
+The first implementation uses an independent, versioned KFDL append container
+instead of copying yijinjing mmap page bytes. This keeps synchronous I/O off the
+visible publication path, gives recovery a compact logical-position record,
+and makes checkpoint ordering explicit without making page paths or offsets
+semantic identity. The cost is a second sequential write in durable modes and
+an additional offline decoder; shadow comparison and qualification must prove
+that this copy neither loses nor invents a typed frame before it can become an
+authority boundary.
+
+KFDL v1 is an internal binary container, not JSON and not a replacement schema
+owner for journal facts. A segment header binds stream id, container epoch, and
+segment id. Each record binds logical position, carrier type, owner/writer
+generation, payload length, payload SHA-256, and a SHA-256 over record metadata
+plus payload. Active segments append only; rollover renames a barrier-covered
+active segment to an immutable sealed name and synchronizes the directory.
+
+Checkpoint publication uses two alternating binary slots. A barrier performs:
+
+1. append all complete records without synchronizing the mmap hot path;
+2. synchronize the active KFDL segment;
+3. write and synchronize the next checkpoint temporary file;
+4. atomically replace its selected slot; and
+5. synchronize the containing directory.
+
+Only after step 5 may a success receipt expose the barrier id, durable
+watermark, and exact qualification profile. Failure before publication leaves
+bytes as an unacknowledged tail. Failure after atomic replacement but before
+the final directory barrier returns `unknown`; restart verifies both slots and
+selects the greatest valid barrier. If it falls back to an older slot, all
+later bytes and segments remain physically retained and a fresh active segment
+is created rather than overwriting the tail.
+
+The current implementation accepts success only for explicit `test/*`
+qualification fixtures. Production filesystem/device profiles remain
+fail-closed until the qualification card installs a verified profile registry;
+passing an arbitrary profile string cannot enable product durability.
+
+KFDL v1 checkpoints also carry the successful request-id index for the stream
+epoch, not only the most recent request. Restart therefore returns the original
+receipt for any checkpoint-covered retry and rejects conflicting reuse; falling
+back to an older checkpoint naturally drops requests whose barrier is no longer
+provable. This correctness-first index is currently unbounded and remains a
+test-only shadow cost until compaction/retention policy is qualified.
+
+Each checkpoint names the first segment in its covered chain. Restart verifies
+every sealed segment from that id through the checkpoint segment, including
+cross-segment position continuity and record/payload hashes. Older segments
+excluded after an unknown initial append remain tail evidence rather than being
+silently promoted into a later durable chain. The same verified decoder exposes
+checkpoint-covered records for offline inspection and shadow comparison; it
+never returns unknown-tail records as durable input.
+
+Checkpoint selection validates both slot bytes and their covered segment chain.
+If the newest candidate disagrees with data, restart falls back to the greatest
+older candidate whose entire chain is provable. If checkpoint evidence exists
+but no candidate is provable, the shadow log remains inspectable but unavailable
+for append/barrier until the recovery engine applies an explicit policy.
+
+An append whose completion cannot be proved poisons that open ingest session.
+It cannot accept another append or barrier until restart isolates the observed
+bytes as an unacknowledged tail and opens a fresh segment. A failure known to
+occur before any record byte is written remains retryable. Barrier deadlines are
+cooperative: expiry before barrier I/O is a typed failed request; expiry after
+data or checkpoint I/O begins is `unknown` and must be reconciled with the same
+request id. A stopped or fenced state service returns typed
+`service_unavailable` rather than a success or silent downgrade.
+
 ## 7. Projection and bootstrap
 
 Projection reads from the durable stream by default. A low-latency speculative

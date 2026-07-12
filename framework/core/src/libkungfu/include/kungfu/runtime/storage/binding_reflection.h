@@ -14,7 +14,7 @@
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::durability::stream_position, stream_id, container_epoch, sequence, frame_uid);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::durability::durability_receipt_view, schema, request_id, position,
                         requested_profile, achieved_profile, visible_watermark, durable_watermark, projection_watermark,
-                        replicated_watermark, barrier_id, completed_at, status, error);
+                        replicated_watermark, barrier_id, qualification_profile, completed_at, status, error);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_projection_count, table, count);
 BOOST_HANA_ADAPT_STRUCT(kungfu::runtime::storage_service_api::storage_projection_drift, table, projection_rows,
                         journal_distinct, reason, projection_digest, journal_digest);
