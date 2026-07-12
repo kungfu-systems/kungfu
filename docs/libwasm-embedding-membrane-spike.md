@@ -10,12 +10,6 @@ theme: libwasm-shared-embedding-membrane
 confidence: high
 evidence_grade: B
 last_reviewed: 2026-07-11
-ai_provenance:
-  model_family: GPT-5
-  product: Codex
-  generated_at: 2026-07-11
-  visible_context: ADR-0045, the merged libkungfu embedding membrane, official Wasmtime and Wasmer Rust APIs, and run 29138796710 on macOS ARM64, Linux x64, and Windows x64
-  invisible_context_boundary: Exact hidden model build and unimplemented production admission, receipt, WIT, and Wasmer CPU-metering behavior are unknown
 ---
 
 # libwasm shared embedding membrane spike

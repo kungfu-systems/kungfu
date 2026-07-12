@@ -10,11 +10,6 @@ theme: single-host-performance-qualification
 confidence: high
 evidence_grade: B
 last_reviewed: 2026-07-12
-ai_provenance:
-  model_family: GPT-5
-  product: Codex
-  generated_at: 2026-07-12
-  invisible_context_boundary: Future implementation results, qualification hardware, retained benchmark evidence, and third-party product changes are unknown
 ---
 
 # Single-host end-to-end performance qualification

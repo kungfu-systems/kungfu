@@ -12,12 +12,6 @@ theme: episode-atomic-safety
 confidence: high
 evidence_grade: B
 last_reviewed: 2026-07-10
-ai_provenance:
-  model_family: GPT-5
-  product: Codex
-  generated_at: 2026-07-10
-  visible_context: User discussion, ADR-0033, ADR-0034, ADR-0040, ADR-0041, the Episode object model, and current v1 degraded/repair tests
-  invisible_context_boundary: Exact model build and hidden system implementation are unknown
 ---
 
 # ADR-0042: Episode is the atomic safety and fault-containment unit, qualified by evidence under load

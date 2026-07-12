@@ -75,7 +75,7 @@ private:
 
   void pong(const event_ptr &event);
 
-  void on_request_write_to_band(const event_ptr &event);
+  void on_request_write_to_outlet(const event_ptr &event);
 
   void on_request_write_to(const event_ptr &event);
 

@@ -1,11 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: active
-doc_type: public-document
-review_state: unreviewed
-sensitivity: public
----
-
 # Contributing to Kungfu
 
 Thanks for your interest in Kungfu. This guide covers how to build the project,
@@ -38,7 +30,11 @@ package manager (pnpm via Corepack), and the Python environment (via
 [uv](https://docs.astral.sh/uv/)), plus the Buildchain binary pinned by
 `.buildchain-version`. They are bootstrapped automatically when needed. User
 fnm / uv installations remain eligible; Buildchain is pin-first so a global
-version cannot silently replace the repository's reproducible build input.
+version cannot silently replace the repository's reproducible build input. If
+the local or runner controller projects `SHIFU_CACHE_PROFILE_REF` together with
+`SHIFU_CACHE_PROFILE_DIGEST`, ordinary `./shifu <task>` commands automatically
+run under that resolved cache profile. Public clones with neither value keep
+the normal upstream path; partial projection fails closed.
 
 Run `./shifu doctor` to check your environment: it reports every required
 tool with a version line or an install pointer (and exits non-zero when a
@@ -177,7 +173,10 @@ changed-file filter. The intentionally small Markdownlint rule baseline lives
 in `.markdownlint-cli2.mjs`; do not enable a style rule by rewriting unrelated
 documents. `docs.contract.json` owns only required documents and navigation
 pointers. [`docs/document-metadata.contract.json`](docs/document-metadata.contract.json)
-owns typed frontmatter profiles and makes ADR body/index status checked
+routes each governed document to inline, registry, or external metadata;
+[`docs/document-metadata.registry.json`](docs/document-metadata.registry.json)
+keeps public entry and guide metadata out of the rendered page. The same gate
+makes ADR body/index status and immutable implementation references checked
 projections of ADR metadata; see
 [`docs/document-metadata.md`](docs/document-metadata.md). GitHub issue templates
 and Kungfu Skills retain their independently consumed frontmatter schemas.

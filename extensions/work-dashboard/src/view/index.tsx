@@ -13,6 +13,7 @@ import type {
   AtlasMissionControlReport,
   GoalCardQuerySpec,
   Profile,
+  ProfileLifecyclePlan,
   QueryChangelogState,
   QueryResumeToken,
   Storage,
@@ -43,6 +44,10 @@ import {
   MissionSituationOverview,
 } from './mission-visual';
 import { deriveTrustVisual } from './mission-visual-model';
+import {
+  type MissionControlProfileSetupStep,
+  missionControlProfileSetupStep,
+} from './profile-setup';
 
 const STATUS_ORDER = ['active', 'blocked', 'waiting', 'ready', 'done'] as const;
 const ATLAS_GOAL_STATUSES = [
@@ -86,25 +91,28 @@ function StatusBadge({ name }: { name: string }) {
 
 function SmallButton({
   active = false,
+  disabled = false,
   children,
   onClick,
 }: {
   active?: boolean;
+  disabled?: boolean;
   children: React.ReactNode;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
+      disabled={disabled}
       onClick={onClick}
       style={{
         ...mono,
         padding: '3px 8px',
         border: active ? '1px solid #2d8fcc' : '1px solid #3c3c3c',
         borderRadius: 4,
-        cursor: 'pointer',
+        cursor: disabled ? 'default' : 'pointer',
         background: active ? '#04395e' : 'transparent',
-        color: active ? '#9cdcfe' : '#cccccc',
+        color: disabled ? '#6a6a6a' : active ? '#9cdcfe' : '#cccccc',
       }}
     >
       {children}
@@ -369,6 +377,12 @@ function AtlasProjectionView({
       ? 'Mission Control Profile pending'
       : 'Profile capability unavailable',
   );
+  const [profileSetup, setProfileSetup] =
+    React.useState<MissionControlProfileSetupStep | null>(null);
+  const [profileSetupPlan, setProfileSetupPlan] =
+    React.useState<ProfileLifecyclePlan | null>(null);
+  const [profileSetupActor, setProfileSetupActor] = React.useState('');
+  const [profileSetupBusy, setProfileSetupBusy] = React.useState(false);
   const [selectedMission, setSelectedMission] = React.useState<string>(() =>
     missions.length ? missions[0].mission_id : 'all',
   );
@@ -479,6 +493,7 @@ function AtlasProjectionView({
   const refreshProfileStatus = React.useCallback(async () => {
     if (!profile) {
       setProfileStatus('Profile capability unavailable');
+      setProfileSetup(null);
       return;
     }
     try {
@@ -486,14 +501,29 @@ function AtlasProjectionView({
       const current = manager.profiles.find(
         (candidate) => candidate.profileId === 'kungfu.mission-control',
       );
+      let discovery = null;
+      if (!current || !current.source) {
+        try {
+          discovery = await profile.discoverAsync('kungfu.mission-control');
+        } catch {
+          discovery = null;
+        }
+      }
+      const setup = missionControlProfileSetupStep(current ?? null, discovery);
+      setProfileSetup(setup);
       if (!current) {
-        setProfileStatus('Mission Control Profile not installed');
+        setProfileStatus(
+          setup
+            ? 'Mission Control setup required · install'
+            : 'Mission Control Profile not installed · source unavailable',
+        );
       } else if (current.health !== 'active' || !current.catalog) {
         const diagnosis = current.diagnostics[0]?.message;
         setProfileStatus(
-          `Mission Control Profile ${current.lifecycleState}/${current.health}${diagnosis ? ` · ${diagnosis}` : ''}`,
+          `Mission Control setup required · ${setup?.action ?? `${current.lifecycleState}/${current.health}`}${diagnosis ? ` · ${diagnosis}` : ''}`,
         );
       } else {
+        setProfileSetupPlan(null);
         const contract = current.source
           ? await profile.contractPlanAsync(current.source)
           : null;
@@ -508,9 +538,65 @@ function AtlasProjectionView({
         }
       }
     } catch (error) {
+      setProfileSetup(null);
       setProfileStatus(`Profile degraded · ${(error as Error).message}`);
     }
   }, [profile]);
+
+  const reviewProfileSetup = React.useCallback(async () => {
+    if (!profile || !profileSetup) return;
+    setProfileSetupBusy(true);
+    try {
+      setProfileSetupPlan(
+        await profile.lifecyclePlanAsync(
+          profileSetup.action,
+          profileSetup.source,
+        ),
+      );
+      setMessage('Review the exact Profile lifecycle plan before approval.');
+    } catch (error) {
+      setMessage(`Profile setup failed · ${(error as Error).message}`);
+    } finally {
+      setProfileSetupBusy(false);
+    }
+  }, [profile, profileSetup]);
+
+  const approveProfileSetup = React.useCallback(async () => {
+    if (
+      !profile ||
+      !profileSetup ||
+      !profileSetupPlan ||
+      !profileSetupActor.trim()
+    ) {
+      return;
+    }
+    setProfileSetupBusy(true);
+    try {
+      await profile.authorizeLifecycleAsync(
+        profileSetup.action,
+        profileSetup.source,
+        String(profileSetupPlan.corePlan.plan_id ?? ''),
+        'approve',
+        profileSetupActor.trim(),
+      );
+      setProfileSetupPlan(null);
+      setProfileSetupActor('');
+      setMessage(
+        `Mission Control ${profileSetup.action} applied · review the next explicit lifecycle gate.`,
+      );
+      await refreshProfileStatus();
+    } catch (error) {
+      setMessage(`Profile setup failed · ${(error as Error).message}`);
+    } finally {
+      setProfileSetupBusy(false);
+    }
+  }, [
+    profile,
+    profileSetup,
+    profileSetupPlan,
+    profileSetupActor,
+    refreshProfileStatus,
+  ]);
 
   React.useEffect(() => {
     void refreshProfileStatus();
@@ -957,7 +1043,62 @@ function AtlasProjectionView({
           >
             {profileStatus}
           </span>
+          {profileSetup ? (
+            <SmallButton
+              disabled={profileSetupBusy}
+              onClick={() => void reviewProfileSetup()}
+            >
+              {profileSetupBusy ? 'planning…' : `review ${profileSetup.action}`}
+            </SmallButton>
+          ) : null}
         </div>
+        {profileSetupPlan && profileSetup ? (
+          <div
+            style={{
+              ...mono,
+              border: '1px solid #dcdcaa',
+              padding: 8,
+              marginTop: 8,
+            }}
+          >
+            <strong style={{ color: '#dcdcaa' }}>
+              Decision required · {profileSetup.action}
+            </strong>
+            <div>plan {String(profileSetupPlan.corePlan.plan_id ?? '—')}</div>
+            <div>{String(profileSetupPlan.decisionCard.question ?? '')}</div>
+            <div style={{ color: '#ce9178' }}>
+              effects {JSON.stringify(profileSetupPlan.corePlan.effects ?? [])}
+            </div>
+            <div style={{ color: '#858585' }}>
+              authority{' '}
+              {String(
+                profileSetupPlan.decisionCard.requiredAuthority ??
+                  'workspace-profile-operator',
+              )}
+            </div>
+            <label style={{ display: 'block', marginTop: 6 }}>
+              authorized by{' '}
+              <input
+                value={profileSetupActor}
+                onChange={(event) => setProfileSetupActor(event.target.value)}
+                placeholder="workspace owner identity"
+                style={{ ...mono, minWidth: 220 }}
+              />
+            </label>
+            <SmallButton
+              disabled={profileSetupBusy || !profileSetupActor.trim()}
+              onClick={() => void approveProfileSetup()}
+            >
+              approve exact plan
+            </SmallButton>{' '}
+            <SmallButton
+              disabled={profileSetupBusy}
+              onClick={() => setProfileSetupPlan(null)}
+            >
+              dismiss
+            </SmallButton>
+          </div>
+        ) : null}
         {message && (
           <div style={{ ...mono, color: '#dcdcaa', marginTop: 5 }}>
             {message}

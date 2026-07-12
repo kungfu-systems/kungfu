@@ -1,17 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: draft
-doc_type: design-reference
-review_state: unreviewed
-sensitivity: public
-sources: [local-files]
-period: ongoing
-theme: shifu-cache-profiles
-confidence: high
-evidence_grade: B
-last_reviewed: 2026-07-12
----
-
 # Shifu cache profiles
 
 A cache profile is a generated, secret-free instruction set for one principal,
@@ -125,7 +111,17 @@ upstreams. A local controller may project the pair into the user-global
 `build-local.env`; Shifu still resolves the profile at execution time and does
 not turn that environment file into another field authority.
 
+When either projected value is visible, the normal `./shifu <task>` entrypoint
+automatically enters `cache apply` before running an ordinary task. The resolver
+therefore rejects a partial pair instead of silently bypassing policy. The
+managed child receives `SHIFU_CACHE_ACTIVE=1`, which prevents recursive
+application when it re-enters `./shifu`. Cache/configuration/bootstrap control
+verbs remain direct, and an explicit `./shifu cache apply -- COMMAND` remains
+available for overrides and diagnosis.
+
 For CI, Buildchain accepts only the opaque reference and digest and forwards
 them to lifecycle commands. It does not fetch or parse the profile. The
-consumer lifecycle invokes `shifu cache apply`, so the pinned Shifu checkout
-remains the only component that interprets fields and writes the receipt.
+consumer lifecycle may continue to invoke `shifu cache apply` explicitly; the
+cache control verb and active-child fuse prevent double application. The pinned
+Shifu checkout remains the only component that interprets fields and writes the
+receipt.

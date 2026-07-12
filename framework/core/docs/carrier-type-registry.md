@@ -10,12 +10,6 @@ theme: kungfu-v4-carrier-type-registry
 confidence: high
 evidence_grade: B
 last_reviewed: 2026-07-11
-ai_provenance:
-  generated_by: Codex
-  product: Codex CLI
-  generated_at: 2026-07-08T12:20:00+08:00
-  visible_context: local Kungfu source tree and current user consensus
-  invisible_context: exact model build and hidden system implementation are unknown
 ---
 
 # Carrier Type Registry

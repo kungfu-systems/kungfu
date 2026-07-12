@@ -1,11 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: active
-doc_type: public-document
-review_state: unreviewed
-sensitivity: public
----
-
 # KFD-2 trust assessment in a live workspace
 
 Kungfu records work continuously, but it does not run a full trust analysis

@@ -1,11 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: active
-doc_type: public-document
-review_state: unreviewed
-sensitivity: public
----
-
 # libkungfu portable format surface
 
 This package is the pre-release aggregation surface for a portable Kungfu fact

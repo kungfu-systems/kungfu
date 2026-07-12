@@ -1,11 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: active
-doc_type: public-document
-review_state: unreviewed
-sensitivity: public
----
-
 # Kungfu Documentation
 
 Kungfu is execution infrastructure for real-world agent work. Its flagship
@@ -108,8 +100,8 @@ design target into a production guarantee.
   channel intent, and release mechanics.
 - [Shifu Documentation](shifu/README.md) — development/build execution and
   versioned cache contracts.
-- [Document Metadata Contract](document-metadata.md) — typed frontmatter,
-  lifecycle axes, ADR projections, and schema exemptions.
+- [Document Metadata Contract](document-metadata.md) — reader-hidden public
+  metadata, inline engineering evidence, lifecycle axes, and ADR projections.
 - [Core ADRs](../framework/core/docs/adr/) — load-bearing decisions.
 - [Documentation Map](MAP.md) — the complete question and keyword index.
 
@@ -163,8 +155,10 @@ retired positioning, preferred terms, and load-bearing guarantee language.
 Objective prose errors block pull requests through `docs:prose:required`;
 warning-level policy remains advisory until its false-positive behavior is
 qualified. `docs.contract.json` owns document topology,
-[`document-metadata.contract.json`](document-metadata.contract.json) owns typed
-frontmatter and ADR projections, while
+[`document-metadata.contract.json`](document-metadata.contract.json) owns
+metadata routing and ADR projections;
+[`document-metadata.registry.json`](document-metadata.registry.json) keeps
+public entry and guide metadata out of rendered pages, while
 [`vocabulary.registry.json`](vocabulary.registry.json) owns executable language
 policy; generated Vale files are disposable projections of that registry.
 External URL health is deliberately separate because remote availability is

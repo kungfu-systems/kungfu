@@ -1,11 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: active
-doc_type: public-document
-review_state: unreviewed
-sensitivity: public
----
-
 # Querying runtime facts
 
 Kungfu's runtime fact ledger is designed to answer both current-state and

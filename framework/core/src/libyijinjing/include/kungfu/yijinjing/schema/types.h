@@ -216,22 +216,22 @@ KF_DEFINE_PACK_TYPE(                                            //
     (uint32_t, dest_id)                                         //
 );
 
-KF_DEFINE_DATA_TYPE(                                          //
-    RequestWriteToBand, 10307, PK(location_uid), PERPETUAL(), //
-    (uint64_t, uid64),                                        //
-    (uint32_t, location_uid),                                 //
-    (enums::location_role, role),                             //
-    (enums::mode, mode),                                      //
-    (std::string, namespace_),                                //
-    (std::string, name),                                      //
-    (uint32_t, seed),                                         //
-    (uint64_t, page_size)                                     //
+KF_DEFINE_DATA_TYPE(                                            //
+    RequestWriteToOutlet, 10307, PK(location_uid), PERPETUAL(), //
+    (uint64_t, uid64),                                          //
+    (uint32_t, location_uid),                                   //
+    (enums::location_role, role),                               //
+    (enums::mode, mode),                                        //
+    (std::string, namespace_),                                  //
+    (std::string, name),                                        //
+    (uint32_t, seed),                                           //
+    (uint64_t, page_size)                                       //
 );
 
-KF_DEFINE_PACK_TYPE(                                  //
-    Band, 10308, PK(source_id, dest_id), PERPETUAL(), //
-    (uint32_t, source_id),                            //
-    (uint32_t, dest_id)                               //
+KF_DEFINE_PACK_TYPE(                                    //
+    Outlet, 10308, PK(source_id, dest_id), PERPETUAL(), //
+    (uint32_t, source_id),                              //
+    (uint32_t, dest_id)                                 //
 );
 
 KF_DEFINE_PACK_TYPE(                                           //

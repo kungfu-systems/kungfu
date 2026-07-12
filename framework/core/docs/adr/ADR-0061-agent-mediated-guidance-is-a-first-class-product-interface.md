@@ -12,12 +12,6 @@ theme: kungfu-agent-mediated-product
 confidence: high
 evidence_grade: B
 last_reviewed: 2026-07-11
-ai_provenance:
-  model_family: GPT-5
-  product: Codex
-  generated_at: 2026-07-11
-  visible_context: User product principle, Mission Control workspace design, Shifu delegation protocol, KFD-3, and current GUI/CLI parity contracts
-  invisible_context_boundary: Did not inspect private provider sessions, credentials, hidden prompts, or hidden model state
 ---
 
 # ADR-0061: Agent-mediated guidance is a first-class product interface

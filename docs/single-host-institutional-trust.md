@@ -1,22 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: draft
-doc_type: adoption-contract
-review_state: self-reviewed
-sensitivity: public
-sources: [architecture-decisions, local-files]
-period: 2026-07-12
-theme: single-host-institutional-trust
-confidence: high
-evidence_grade: B
-last_reviewed: 2026-07-12
-ai_provenance:
-  model_family: GPT-5
-  product: Codex
-  generated_at: 2026-07-12
-  invisible_context_boundary: Exact hidden model build, untested hardware behavior, future qualification results, and institution-specific controls are unknown
----
-
 # Single-host institutional trust profile
 
 This page is for an institution deciding whether Kungfu can serve as a local

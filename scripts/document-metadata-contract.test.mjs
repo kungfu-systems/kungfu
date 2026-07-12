@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import childProcess from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -28,13 +29,20 @@ function fixture(files) {
 const contract = {
   schemaVersion: 1,
   metadataSchema: 'kungfu.document-metadata/v1',
+  metadataRegistry: 'docs/document-metadata.registry.json',
+  optionalFields: [
+    'implementation_commits',
+    'implementation_prs',
+    'closure_commit',
+    'qualification_refs',
+  ],
   sourceKinds: ['local-files'],
   externalFrontmatterSchemas: [{ id: 'skill', patterns: ['(^|/)SKILL\\.md$'] }],
   profiles: [
     {
       id: 'architecture-decision',
+      metadataMode: 'inline',
       patterns: ['^adr/(ADR-[0-9]{4})-.*\\.md$'],
-      frontmatterRequired: true,
       required: [
         'metadata_schema',
         'doc_type',
@@ -51,15 +59,15 @@ const contract = {
       },
       enums: {
         decision_status: ['proposed', 'accepted', 'superseded'],
-        implementation_status: ['unknown'],
+        implementation_status: ['unknown', 'implemented', 'not-started'],
         review_state: ['legacy-unreviewed'],
       },
       forbidden: ['status'],
     },
     {
       id: 'adr-index',
+      metadataMode: 'inline',
       files: ['adr/README.md'],
-      frontmatterRequired: true,
       required: [
         'metadata_schema',
         'doc_type',
@@ -78,8 +86,8 @@ const contract = {
     },
     {
       id: 'public-document',
+      metadataMode: 'registry',
       files: ['README.md'],
-      frontmatterRequired: true,
       required: [
         'metadata_schema',
         'doc_type',
@@ -99,8 +107,8 @@ const contract = {
     },
     {
       id: 'repository-document',
+      metadataMode: 'inline-optional',
       patterns: ['.*'],
-      frontmatterRequired: false,
       required: [],
       forbidden: ['status'],
     },
@@ -111,6 +119,18 @@ const contract = {
       recordPattern: '^adr/(ADR-[0-9]{4})-.*\\.md$',
     },
   ],
+  adrEvidence: {
+    commitFields: ['implementation_commits'],
+    pullRequestFields: ['implementation_prs'],
+    closureCommitField: 'closure_commit',
+    qualificationRefField: 'qualification_refs',
+    statusesRequiringImplementationEvidence: ['implemented'],
+    statusesRequiringClosure: ['implemented'],
+    statusesForbiddingEvidence: ['not-started'],
+    pullRequestPattern:
+      '^https://github\\.com/kungfu-systems/kungfu/pull/[0-9]+$',
+    legacyEvidenceExemptions: {},
+  },
 };
 
 const publicHeader = `---
@@ -137,35 +157,165 @@ review_state: legacy-unreviewed
 sensitivity: public
 ---`;
 
-function run(files) {
-  const root = fixture(files);
+function run(files, documents = {}) {
+  const root = fixture({
+    ...files,
+    'docs/document-metadata.registry.json': `${JSON.stringify(
+      {
+        schemaVersion: 1,
+        metadataSchema: 'kungfu.document-metadata/v1',
+        documents,
+      },
+      null,
+      2,
+    )}\n`,
+  });
   return validateDocumentMetadata({
     root,
-    files: Object.keys(files).sort(),
+    files: Object.keys(files)
+      .filter((file) => file.endsWith('.md'))
+      .sort(),
     contract,
   });
 }
 
-test('accepts typed public metadata and aligned ADR projections', () => {
-  const findings = run({
-    'README.md': `${publicHeader}\n\n# Home\n`,
-    'adr/README.md': `${indexHeader}\n\n# ADRs\n\n| ADR | Status | Title |\n|---|---|---|\n| [ADR-0001](ADR-0001-example.md) | accepted | Example |\n`,
-    'adr/ADR-0001-example.md': `${adrHeader}\n\n# ADR-0001: Example\n\n- Status: accepted\n`,
+function git(root, args) {
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')),
+  );
+  return childProcess
+    .execFileSync('git', args, {
+      cwd: root,
+      encoding: 'utf8',
+      env,
+    })
+    .trim();
+}
+
+function evidenceFixture(status = 'implemented') {
+  const root = fixture({
+    'seed.txt': 'implementation\n',
+    'docs/document-metadata.registry.json': `${JSON.stringify({
+      schemaVersion: 1,
+      metadataSchema: 'kungfu.document-metadata/v1',
+      documents: {},
+    })}\n`,
   });
+  git(root, ['init', '-q']);
+  git(root, ['config', 'user.name', 'Test']);
+  git(root, ['config', 'user.email', 'test@example.com']);
+  git(root, ['add', 'seed.txt']);
+  git(root, ['-c', 'core.hooksPath=/dev/null', 'commit', '-q', '-m', 'seed']);
+  const commit = git(root, ['rev-parse', 'HEAD']);
+  const file = 'adr/ADR-0001-example.md';
+  const text = `${adrHeader.replace(
+    'implementation_status: unknown',
+    `implementation_status: ${status}\nimplementation_commits: [${commit}]\nclosure_commit: ${commit}`,
+  )}\n\n# ADR-0001: Example\n\n- Status: accepted\n`;
+  fs.mkdirSync(path.join(root, 'adr'), { recursive: true });
+  fs.writeFileSync(path.join(root, file), text);
+  return { root, file, commit };
+}
+
+test('accepts typed public metadata and aligned ADR projections', () => {
+  const findings = run(
+    {
+      'README.md': '# Home\n',
+      'adr/README.md': `${indexHeader}\n\n# ADRs\n\n| ADR | Status | Title |\n|---|---|---|\n| [ADR-0001](ADR-0001-example.md) | accepted | Example |\n`,
+      'adr/ADR-0001-example.md': `${adrHeader}\n\n# ADR-0001: Example\n\n- Status: accepted\n`,
+    },
+    {
+      'README.md': {
+        metadata_schema: 'kungfu.document-metadata/v1',
+        document_status: 'active',
+        doc_type: 'public-document',
+        review_state: 'unreviewed',
+        sensitivity: 'public',
+      },
+    },
+  );
   assert.deepEqual(findings, []);
 });
 
-test('rejects missing required public frontmatter', () => {
+test('rejects missing required public registry metadata', () => {
   const findings = run({ 'README.md': '# Home\n' });
-  assert.ok(findings.some((finding) => finding.code === 'metadata-required'));
+  assert.ok(
+    findings.some((finding) => finding.code === 'metadata-registry-required'),
+  );
 });
 
 test('rejects the ambiguous legacy status field', () => {
-  const findings = run({
-    'README.md': `${publicHeader.replace('document_status: active', 'status: active')}\n\n# Home\n`,
-  });
+  const findings = run(
+    {
+      'README.md': '# Home\n',
+    },
+    {
+      'README.md': {
+        metadata_schema: 'kungfu.document-metadata/v1',
+        status: 'active',
+        doc_type: 'public-document',
+        review_state: 'unreviewed',
+        sensitivity: 'public',
+      },
+    },
+  );
   assert.ok(
     findings.some((finding) => finding.code === 'metadata-forbidden-field'),
+  );
+});
+
+test('rejects visible frontmatter when the registry is authoritative', () => {
+  const findings = run(
+    { 'README.md': `${publicHeader}\n\n# Home\n` },
+    {
+      'README.md': {
+        metadata_schema: 'kungfu.document-metadata/v1',
+        document_status: 'active',
+        doc_type: 'public-document',
+        review_state: 'unreviewed',
+        sensitivity: 'public',
+      },
+    },
+  );
+  assert.ok(
+    findings.some((finding) => finding.code === 'metadata-authority-duplicate'),
+  );
+});
+
+test('rejects undeclared maintenance attribution in registry metadata', () => {
+  const findings = run(
+    { 'README.md': '# Home\n' },
+    {
+      'README.md': {
+        metadata_schema: 'kungfu.document-metadata/v1',
+        document_status: 'active',
+        doc_type: 'public-document',
+        review_state: 'unreviewed',
+        sensitivity: 'public',
+        generation_attribution: 'automated',
+      },
+    },
+  );
+  assert.ok(
+    findings.some((finding) => finding.code === 'metadata-unknown-field'),
+  );
+});
+
+test('rejects orphaned registry entries', () => {
+  const findings = run(
+    {},
+    {
+      'missing.md': {
+        metadata_schema: 'kungfu.document-metadata/v1',
+        document_status: 'active',
+        doc_type: 'public-document',
+        review_state: 'unreviewed',
+        sensitivity: 'public',
+      },
+    },
+  );
+  assert.ok(
+    findings.some((finding) => finding.code === 'metadata-registry-orphan'),
   );
 });
 
@@ -200,4 +350,64 @@ test('preserves independently consumed frontmatter schemas', () => {
     'skills/demo/SKILL.md': '---\nkey: demo\ntriggers: [demo]\n---\n\n# Demo\n',
   });
   assert.deepEqual(findings, []);
+});
+
+test('accepts reachable full-SHA implementation and closure evidence', () => {
+  const { root, file } = evidenceFixture();
+  const findings = validateDocumentMetadata({ root, files: [file], contract });
+  assert.deepEqual(findings, []);
+});
+
+test('rejects malformed implementation commit evidence', () => {
+  const { root, file, commit } = evidenceFixture();
+  const target = path.join(root, file);
+  fs.writeFileSync(
+    target,
+    fs.readFileSync(target, 'utf8').replace(commit, commit.slice(0, 12)),
+  );
+  const findings = validateDocumentMetadata({ root, files: [file], contract });
+  assert.ok(findings.some((finding) => finding.code === 'adr-evidence-commit'));
+});
+
+test('rejects implementation evidence on a not-started ADR', () => {
+  const { root, file } = evidenceFixture('not-started');
+  const findings = validateDocumentMetadata({ root, files: [file], contract });
+  assert.ok(
+    findings.some((finding) => finding.code === 'adr-evidence-contradiction'),
+  );
+});
+
+test('rejects pull-request evidence outside the canonical repository', () => {
+  const { root, file } = evidenceFixture();
+  const target = path.join(root, file);
+  fs.writeFileSync(
+    target,
+    fs
+      .readFileSync(target, 'utf8')
+      .replace(
+        /^closure_commit:/m,
+        'implementation_prs: [https://github.com/example/fork/pull/1]\nclosure_commit:',
+      ),
+  );
+  const findings = validateDocumentMetadata({ root, files: [file], contract });
+  assert.ok(findings.some((finding) => finding.code === 'adr-evidence-pr'));
+});
+
+test('rejects a legacy exemption after evidence becomes complete', () => {
+  const { root, file } = evidenceFixture();
+  const exempted = {
+    ...contract,
+    adrEvidence: {
+      ...contract.adrEvidence,
+      legacyEvidenceExemptions: { 'ADR-0001': 'legacy debt' },
+    },
+  };
+  const findings = validateDocumentMetadata({
+    root,
+    files: [file],
+    contract: exempted,
+  });
+  assert.ok(
+    findings.some((finding) => finding.code === 'adr-evidence-exemption-stale'),
+  );
 });

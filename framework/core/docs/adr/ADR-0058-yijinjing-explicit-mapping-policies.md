@@ -4,6 +4,10 @@ doc_type: architecture-decision
 adr_id: ADR-0058
 decision_status: accepted
 implementation_status: implemented
+implementation_commits: [5d4240edde731e857ec4ca8fba8dead7104e0b9b, 81f6b61ca3fbf75399c49b32f75310c25e52962d]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/599]
+closure_commit: 81f6b61ca3fbf75399c49b32f75310c25e52962d
+qualification_refs: [framework/core/docs/qualification/mmap-performance.md]
 review_state: maintainer-reviewed
 sensitivity: public
 sources: [local-files, user-decision]

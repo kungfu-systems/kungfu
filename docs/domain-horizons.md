@@ -1,11 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: active
-doc_type: public-document
-review_state: unreviewed
-sensitivity: public
----
-
 # Domain horizons for the runtime-fact core
 
 Kungfu's current product focus is accountable agent runtime. Its native core is

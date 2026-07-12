@@ -4,6 +4,9 @@ doc_type: architecture-decision
 adr_id: ADR-0001
 decision_status: accepted
 implementation_status: implemented
+implementation_commits: [879e7acfeb23be6c82cd17f1563f9ae412f06a03]
+closure_commit: edbcab6980f402b5403fefaf863924c645fdb6be
+qualification_refs: [framework/core/src/libyijinjing/tests/mmap_tests.cpp]
 review_state: legacy-unreviewed
 sensitivity: public
 ---
