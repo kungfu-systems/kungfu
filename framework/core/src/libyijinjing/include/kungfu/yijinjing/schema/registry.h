@@ -156,52 +156,85 @@ constexpr auto CorePublicStateDataTypes = boost::hana::make_map( //
     TYPE_PAIR(TimeKeyValue)                                      // 10602
 );
 
-constexpr auto ProfileDataTypes = boost::hana::make_map( //
-    TYPE_PAIR(Config),                                   // 10201
-    TYPE_PAIR(Location)                                  // 10205
+// ADR-0065: the pure-category subsets below are derived from one authoritative
+// membership table, not hand-listed. Each type declares its category flags once
+// and hana::filter produces each subset, so a type can no longer drift between a
+// subset and its list. schema/core.h stays neutral -- membership is a registry
+// concern, not a POD-layout one. (AllTypes / has_data / CorePublic* structural
+// subsets are a separate follow-up.)
+namespace membership {
+constexpr int state = 1 << 0;
+constexpr int profile = 1 << 1;
+constexpr int source_registry = 1 << 2;
+constexpr int manifest_catalog = 1 << 3;
+constexpr int episode_manifest = 1 << 4;
+
+template <typename T, int Flags>
+constexpr auto entry = boost::hana::make_pair(boost::hana::type_c<T>, boost::hana::int_c<Flags>);
+
+constexpr auto table = boost::hana::make_tuple(             //
+    entry<types::OperatorStateUpdate, state>,               //
+    entry<types::Config, state | profile>,                  //
+    entry<types::TimeValue, state>,                         //
+    entry<types::TimeKeyValue, state>,                      //
+    entry<types::Location, profile>,                        //
+    entry<types::SourceRegistered, source_registry>,        //
+    entry<types::SourceHeadUpdated, source_registry>,       //
+    entry<types::AcceptedRangeRecorded, source_registry>,   //
+    entry<types::ImportManifestAccepted, manifest_catalog>, //
+    entry<types::ManifestEntryRecorded, manifest_catalog>,  //
+    entry<types::ExportBundleRecorded, manifest_catalog>,   //
+    entry<types::ChannelCursorUpdated, manifest_catalog>,   //
+    entry<types::EpisodeOpen, episode_manifest>,            //
+    entry<types::EpisodeHeartbeat, episode_manifest>,       //
+    entry<types::EpisodeFrameAttached, episode_manifest>,   //
+    entry<types::EpisodeRefAttached, episode_manifest>,     //
+    entry<types::EpisodeClosed, episode_manifest>,          //
+    entry<types::EpisodeRootCommitted, episode_manifest>    //
 );
 
-constexpr auto StateDataTypes = boost::hana::make_map( //
-    TYPE_PAIR(OperatorStateUpdate),                    // 10105
-    TYPE_PAIR(Config),                                 // 10201
-    TYPE_PAIR(TimeValue),                              // 10601
-    TYPE_PAIR(TimeKeyValue)                            // 10602
-);
+// Produce a subset in the same shape as a TYPE_PAIR make_map: (type_name -> type).
+template <int Flag> constexpr auto derive() {
+  auto filtered = boost::hana::filter(
+      table, [](auto e) { return (boost::hana::second(e) & boost::hana::int_c<Flag>) != boost::hana::int_c<0>; });
+  auto pairs = boost::hana::transform(filtered, [](auto e) {
+    using T = typename decltype(+boost::hana::first(e))::type;
+    return boost::hana::make_pair(T::type_name, boost::hana::first(e));
+  });
+  return boost::hana::unpack(pairs, boost::hana::make_map);
+}
+} // namespace membership
+
+constexpr auto ProfileDataTypes = membership::derive<membership::profile>();
+
+constexpr auto StateDataTypes = membership::derive<membership::state>();
 
 // ADR-0037: the source-registry kernel records project to SQLite through the
 // same compile-time Hana closed-set -> SQLite column path (projection::make_storage_ptr)
 // used by the profile/state caches, not a hand-written raw-SQL
 // projection that serves the JSON manifest layer.
-constexpr auto SourceRegistryDataTypes = boost::hana::make_map( //
-    TYPE_PAIR(SourceRegistered),                                // 10901
-    TYPE_PAIR(SourceHeadUpdated),                               // 10902
-    TYPE_PAIR(AcceptedRangeRecorded)                            // 10903
-);
+constexpr auto SourceRegistryDataTypes = membership::derive<membership::source_registry>();
 
 // ADR-0037 (final slice): the manifest-catalog record family — import-manifest
 // acceptance, per-entry deltas, export-bundle receipts, and channel cursors —
 // as a Hana closed set for the rebuildable SQLite projection
 // (projection::make_storage_ptr), the same path the source-registry projection
 // uses. The manifest-catalog journal stays the authority.
-constexpr auto ManifestCatalogDataTypes = boost::hana::make_map( //
-    TYPE_PAIR(ImportManifestAccepted),                           // 10904
-    TYPE_PAIR(ManifestEntryRecorded),                            // 10905
-    TYPE_PAIR(ExportBundleRecorded),                             // 10906
-    TYPE_PAIR(ChannelCursorUpdated)                              // 10907
-);
+constexpr auto ManifestCatalogDataTypes = membership::derive<membership::manifest_catalog>();
 
 // ADR-0041: the Episode manifest record family as a Hana closed set for the
 // rebuildable SQLite projection (projection::make_storage_ptr), the same path the
 // source-registry projection uses. The manifest journal stays the authority;
 // this set only feeds derived, rebuildable views.
-constexpr auto EpisodeManifestDataTypes = boost::hana::make_map( //
-    TYPE_PAIR(EpisodeOpen),                                      // 10801
-    TYPE_PAIR(EpisodeHeartbeat),                                 // 10802
-    TYPE_PAIR(EpisodeFrameAttached),                             // 10803
-    TYPE_PAIR(EpisodeRefAttached),                               // 10804
-    TYPE_PAIR(EpisodeClosed),                                    // 10805
-    TYPE_PAIR(EpisodeRootCommitted)                              // 10806 (ADR-0043)
-);
+constexpr auto EpisodeManifestDataTypes = membership::derive<membership::episode_manifest>();
+
+// ADR-0065 regression guard: a category's membership must change deliberately.
+// Adding or removing a member updates the table above and the expected count here.
+static_assert(decltype(boost::hana::length(StateDataTypes))::value == 4);
+static_assert(decltype(boost::hana::length(ProfileDataTypes))::value == 2);
+static_assert(decltype(boost::hana::length(SourceRegistryDataTypes))::value == 3);
+static_assert(decltype(boost::hana::length(ManifestCatalogDataTypes))::value == 4);
+static_assert(decltype(boost::hana::length(EpisodeManifestDataTypes))::value == 6);
 
 constexpr auto StaticDataTypes = boost::hana::make_map();
 constexpr auto StatisticDataTypes = boost::hana::make_map();
