@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <array>
 #include <deque>
+#include <kungfu/yijinjing/journal/layout_fingerprint.h>
 #include <kungfu/yijinjing/schema/types.h>
 
 #define TYPE_PAIR(DataType) boost::hana::make_pair(HANA_STR(#DataType), boost::hana::type_c<types::DataType>)
@@ -210,6 +211,74 @@ static_assert(decltype(boost::hana::length(ProfileDataTypes))::value == 2);
 static_assert(decltype(boost::hana::length(SourceRegistryDataTypes))::value == 3);
 static_assert(decltype(boost::hana::length(ManifestCatalogDataTypes))::value == 4);
 static_assert(decltype(boost::hana::length(EpisodeManifestDataTypes))::value == 6);
+
+// ADR-0067: each versioned manifest POD record's payload layout is welded to its
+// schema_version by a paired compile-time assert. The read path validates size
+// and version (payload_size >= sizeof(T), schema_version <= known max) but not
+// layout: a size-preserving, version-unchanged change -- reusing a field, an
+// equal-width retype, a same-width reorder -- passes both checks and is silently
+// misread. Binding layout_fingerprint<T>() (ADR-0062) to a checked-in expected
+// value tied to the type's current schema_version turns any such change into a
+// build failure, forcing a deliberate version-binding update.
+//
+// schema_version stays an explicit, legible, hand-chosen integer (option B): it
+// is read-dispatched and cross-version meaningful, so -- unlike the machine-only
+// container epoch (ADR-0062) -- it must not be derived from the fingerprint. The
+// expected values below are per (type, current schema_version), all == 1 today;
+// at the first stable release this graduates to the append-only
+// {(type, version) -> fingerprint} ledger (ADR-0067 option ii) that forces a
+// version bump mechanically rather than by convention.
+namespace manifest_layout_welds {
+// The primary template is intentionally undefined: a type that joins a derived
+// manifest subset but is not registered below trips an incomplete-type error in
+// the coverage guard, so a new versioned record cannot ship unwelded.
+template <typename DataType> struct expected_fingerprint;
+
+#define KF_MANIFEST_LAYOUT_WELD(DataType, Fingerprint)                                                                  \
+  template <> struct expected_fingerprint<types::DataType> {                                                            \
+    static constexpr uint64_t value = (Fingerprint);                                                                    \
+  };                                                                                                                    \
+  static_assert(journal::layout_fingerprint_detail::layout_fingerprint<types::DataType>() == (Fingerprint),            \
+                #DataType " manifest layout changed without updating its schema_version fingerprint (ADR-0067)")
+
+// Episode manifest family (EPISODE_MANIFEST_SCHEMA_VERSION == 1).
+KF_MANIFEST_LAYOUT_WELD(EpisodeOpen, 0x7e2a06636f04f207ull);
+KF_MANIFEST_LAYOUT_WELD(EpisodeHeartbeat, 0x3fd295814b8d2f1bull);
+KF_MANIFEST_LAYOUT_WELD(EpisodeFrameAttached, 0xe0671485211028a3ull);
+KF_MANIFEST_LAYOUT_WELD(EpisodeRefAttached, 0xa52acfa727a396d3ull);
+KF_MANIFEST_LAYOUT_WELD(EpisodeClosed, 0x8029b5210399344cull);
+KF_MANIFEST_LAYOUT_WELD(EpisodeRootCommitted, 0x4e546d6d936d8a3cull);
+
+// Source-registry family (SOURCE_REGISTRY_SCHEMA_VERSION == 1).
+KF_MANIFEST_LAYOUT_WELD(SourceRegistered, 0xd4fe79ed51e22f34ull);
+KF_MANIFEST_LAYOUT_WELD(SourceHeadUpdated, 0x9d4927d86359738cull);
+KF_MANIFEST_LAYOUT_WELD(AcceptedRangeRecorded, 0x53869eec80f897c2ull);
+
+// Manifest-catalog family (MANIFEST_CATALOG_SCHEMA_VERSION == 1).
+KF_MANIFEST_LAYOUT_WELD(ImportManifestAccepted, 0x8885754e0e5f3503ull);
+KF_MANIFEST_LAYOUT_WELD(ManifestEntryRecorded, 0xb36c14f76998c279ull);
+KF_MANIFEST_LAYOUT_WELD(ExportBundleRecorded, 0x309393e82b01644dull);
+KF_MANIFEST_LAYOUT_WELD(ChannelCursorUpdated, 0x89a5446eeb0c8255ull);
+
+#undef KF_MANIFEST_LAYOUT_WELD
+
+// Coverage guard: every member of the three derived manifest subsets must be
+// registered above. An unregistered member makes expected_fingerprint<DataType>
+// an incomplete type here and fails the build, so the enumeration cannot drift
+// out of sync with the welds.
+template <typename Subset> constexpr bool all_layouts_welded(Subset subset) {
+  bool welded = true;
+  boost::hana::for_each(subset, [&](auto it) {
+    using DataType = typename decltype(+boost::hana::second(it))::type;
+    welded = welded && (journal::layout_fingerprint_detail::layout_fingerprint<DataType>() ==
+                        expected_fingerprint<DataType>::value);
+  });
+  return welded;
+}
+static_assert(all_layouts_welded(EpisodeManifestDataTypes), "episode-manifest layout weld incomplete (ADR-0067)");
+static_assert(all_layouts_welded(SourceRegistryDataTypes), "source-registry layout weld incomplete (ADR-0067)");
+static_assert(all_layouts_welded(ManifestCatalogDataTypes), "manifest-catalog layout weld incomplete (ADR-0067)");
+} // namespace manifest_layout_welds
 
 // ADR-0065: intentionally empty placeholders. No static/statistic data types are
 // registered yet, but the state-cache restore paths (manager.cpp) consume these
