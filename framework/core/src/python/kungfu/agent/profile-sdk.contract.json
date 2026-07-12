@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.agent-profile-sdk-contract/v1",
   "id": "kungfu-agent-profile-sdk",
-  "version": 1,
+  "version": 2,
   "briefSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -90,6 +90,110 @@
       "requiredAuthority": { "type": "string", "minLength": 1 },
       "basis": { "type": "object" },
       "authorityVerification": { "const": "external-policy-required" }
+    }
+  },
+  "factSurfacesSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["schema", "surfaces"],
+    "properties": {
+      "schema": { "const": "kungfu.profile-fact-surfaces/v1" },
+      "surfaces": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "schema"],
+          "properties": {
+            "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+            "schema": { "type": "string", "pattern": "^[A-Za-z0-9._/-]+$" },
+            "title": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    }
+  },
+  "claimsSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["schema", "claims"],
+    "properties": {
+      "schema": { "const": "kungfu.profile-claims/v1" },
+      "evidenceStrength": { "enum": ["reported-with-references", "independently-observed"] },
+      "claims": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "type", "factSurfaces"],
+          "properties": {
+            "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+            "type": { "type": "string", "pattern": "^[A-Za-z0-9._/-]+$" },
+            "factSurfaces": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" } }
+          }
+        }
+      }
+    }
+  },
+  "assessmentPoliciesSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["schema", "policies"],
+    "properties": {
+      "schema": { "const": "kungfu.profile-assessment-policies/v1" },
+      "policies": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "version", "claimId", "purposes", "requiredEvidence", "responsibility", "residualRisks"],
+          "properties": {
+            "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+            "version": { "type": "string", "minLength": 1 },
+            "claimId": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+            "purposes": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" } },
+            "requiredEvidence": { "type": "array", "uniqueItems": true, "items": { "enum": ["query-proof", "sealed-work-episode", "canonical-facts", "independent-observation"] } },
+            "responsibility": { "type": "string", "minLength": 1 },
+            "residualRisks": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+            ,"executorProfile": { "enum": ["inline", "thread", "process"] }
+          }
+        }
+      }
+    }
+  },
+  "viewsSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["schema", "views"],
+    "properties": {
+      "schema": { "const": "kungfu.profile-views/v1" },
+      "views": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "title", "factSurfaces", "definition", "view"],
+          "properties": {
+            "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+            "title": { "type": "string", "minLength": 1 },
+            "factSurfaces": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" } },
+            "definition": { "type": "object", "required": ["schema"], "properties": { "schema": { "const": "kungfu.query.definition/v1" } } },
+            "view": {
+              "oneOf": [
+                { "type": "object", "additionalProperties": false, "required": ["kind", "columns"], "properties": { "kind": { "const": "table" }, "columns": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } } } },
+                { "type": "object", "additionalProperties": false, "required": ["kind", "timeField", "labelField"], "properties": { "kind": { "const": "timeline" }, "timeField": { "type": "string", "minLength": 1 }, "laneField": { "type": "string", "minLength": 1 }, "labelField": { "type": "string", "minLength": 1 } } },
+                { "type": "object", "additionalProperties": false, "required": ["kind", "keyField", "fields"], "properties": { "kind": { "const": "diff" }, "keyField": { "type": "string", "minLength": 1 }, "fields": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } } } },
+                { "type": "object", "additionalProperties": false, "required": ["kind", "idField", "parentField", "labelField"], "properties": { "kind": { "const": "causal-graph" }, "idField": { "type": "string", "minLength": 1 }, "parentField": { "type": "string", "minLength": 1 }, "labelField": { "type": "string", "minLength": 1 } } },
+                { "type": "object", "additionalProperties": false, "required": ["kind", "partitionField", "repeatField", "elapsedField", "attributionField", "evidenceField"], "properties": { "kind": { "const": "attention" }, "partitionField": { "type": "string", "minLength": 1 }, "repeatField": { "type": "string", "minLength": 1 }, "elapsedField": { "type": "string", "minLength": 1 }, "attributionField": { "type": "string", "minLength": 1 }, "evidenceField": { "type": "string", "minLength": 1 } } }
+              ]
+            }
+          }
+        }
+      }
     }
   },
   "actionRegistrySchema": {

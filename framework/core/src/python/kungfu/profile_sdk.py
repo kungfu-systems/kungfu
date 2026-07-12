@@ -67,6 +67,10 @@ def capabilities() -> dict[str, Any]:
             "decisionCard": sdk_contract["decisionCardSchema"],
             "decisionAnswer": sdk_contract["decisionAnswerSchema"],
             "actionRegistry": sdk_contract["actionRegistrySchema"],
+            "factSurfaces": sdk_contract["factSurfacesSchema"],
+            "claims": sdk_contract["claimsSchema"],
+            "assessmentPolicies": sdk_contract["assessmentPoliciesSchema"],
+            "views": sdk_contract["viewsSchema"],
         },
         "sourcePlanSchema": SOURCE_PLAN_SCHEMA,
         "actionRegistrySchema": ACTION_REGISTRY_SCHEMA,
@@ -87,6 +91,11 @@ def capabilities() -> dict[str, Any]:
             "actions",
             "invoke-plan",
             "invoke",
+            "catalog",
+            "query-plan",
+            "query-run",
+            "assess-plan",
+            "assess-run",
         ],
         "customMemberBuild": {
             "command": "kungfu sdk kfx build",
@@ -124,6 +133,20 @@ def examples() -> dict[str, Any]:
             "kungfu profile plan install ./week-day --json",
         ],
     }
+
+
+def validate_contract_artifact(schema_key: str, value: Any, label: str) -> None:
+    """Validate an Agent Profile SDK edge artifact against the installed pack."""
+
+    _validate_sdk_value(schema_key, value, label)
+
+
+def validate_decision_answer(
+    answer: Mapping[str, Any], card: Mapping[str, Any]
+) -> None:
+    """Verify an external decision answer against one exact installed card."""
+
+    _validate_decision_answer(answer, card)
 
 
 def scaffold_plan(brief: Mapping[str, Any], out: str | Path) -> dict[str, Any]:

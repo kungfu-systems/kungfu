@@ -20,7 +20,14 @@ from kungfu.storage import service as storage_service
 
 CATALOG_SCHEMA = "kungfu.profile-composition/v1"
 QUERY_PLAN_SCHEMA = "kungfu.profile-query-plan/v1"
+ASSESSMENT_PLAN_SCHEMA = "kungfu.profile-assessment-plan/v1"
 _GENERIC_VIEWS = {"table", "timeline", "diff", "causal-graph", "attention"}
+_ARTIFACT_SCHEMA_KEYS = {
+    "kungfu.profile-fact-surfaces/v1": "factSurfacesSchema",
+    "kungfu.profile-claims/v1": "claimsSchema",
+    "kungfu.profile-assessment-policies/v1": "assessmentPoliciesSchema",
+    "kungfu.profile-views/v1": "viewsSchema",
+}
 
 
 def catalog(
@@ -128,9 +135,209 @@ def execute_query(
         "profileSuiteRoot": refreshed["profileSuiteRoot"],
         "catalogRoot": refreshed["catalogRoot"],
         "viewId": refreshed["view"]["id"],
-        "queryDefinitionRoot": result.get("query_definition_hash"),
-        "queryProofRoot": (result.get("lineage") or {}).get("proof_hash"),
+        "queryDefinitionRoot": result.get("query_definition_root"),
+        "queryProofRoot": result.get("query_proof_root"),
         "result": result,
+    }
+
+
+def assessment_plan(
+    source: str | Path,
+    runtime_dir: str | Path,
+    query_receipt: Mapping[str, Any],
+    *,
+    claim_id: str,
+    policy_id: str,
+    purpose: str,
+    work_episode_id: int,
+) -> dict[str, Any]:
+    composed = catalog(source, runtime_dir, require_active=True)
+    claim = _by_id(composed["claims"], claim_id, "claim")
+    policy = _by_id(composed["policies"], policy_id, "assessment policy")
+    if policy["claimId"] != claim_id or purpose not in policy["purposes"]:
+        _fail(
+            "assessment-binding-mismatch",
+            "assessment policy does not bind the requested claim and purpose",
+        )
+    if query_receipt.get("schema") != "kungfu.profile-query-receipt/v1":
+        _fail("query-receipt-invalid", "assessment requires a Profile query receipt")
+    if (
+        query_receipt.get("profileSuiteRoot") != composed["profileSuiteRoot"]
+        or query_receipt.get("catalogRoot") != composed["catalogRoot"]
+    ):
+        _fail("query-receipt-stale", "query receipt belongs to another Profile cut")
+    result = query_receipt.get("result") or {}
+    lineage = result.get("lineage") or {}
+    root = _episode_root(lineage, work_episode_id)
+    missing = _missing_evidence(policy["requiredEvidence"], result, lineage, root)
+    if missing:
+        _fail(
+            "assessment-evidence-unavailable",
+            "declared assessment evidence is not established at this cut",
+            missingEvidence=missing,
+            profileSuiteRoot=composed["profileSuiteRoot"],
+            queryProofRoot=query_receipt.get("queryProofRoot"),
+        )
+    request = {
+        "claim_id": claim["id"],
+        "claim_type": claim["type"],
+        "purpose": purpose,
+        "work_episode_id": work_episode_id,
+        "work_episode_root": root,
+        "query_definition_root": query_receipt["queryDefinitionRoot"],
+        "query_proof_root": query_receipt["queryProofRoot"],
+        "contract_world": lineage["contract_world_declaration"],
+        "fact_surfaces": lineage["fact_surface_declarations"],
+        "policy": {
+            "id": policy["id"],
+            "version": policy["version"],
+            "root": _root(policy),
+        },
+        "evidence": _evidence_summary(result, lineage),
+        "deadline": 0,
+        "responsibility": policy["responsibility"],
+        "residual_risks": policy["residualRisks"],
+    }
+    identity = {
+        "catalogRoot": composed["catalogRoot"],
+        "profileSuiteRoot": composed["profileSuiteRoot"],
+        "profileRevision": composed["profileRevision"],
+        "source": str(Path(source).resolve()),
+        "queryReceipt": dict(query_receipt),
+        "request": request,
+        "executorProfile": policy.get("executorProfile", "thread"),
+    }
+    plan = {"schema": ASSESSMENT_PLAN_SCHEMA, "planId": _root(identity), **identity}
+    plan["decisionCard"] = profile_sdk.decision_card(
+        "profile-assessment-authorization",
+        f"Authorize assessment of {claim_id} for {purpose} at the exact query cut.",
+        choices=["approve", "deny"],
+        basis={
+            "planId": plan["planId"],
+            "profileSuiteRoot": composed["profileSuiteRoot"],
+            "queryProofRoot": request["query_proof_root"],
+        },
+        required_authority="profile-assessment-operator",
+        resume_command="answer this card, then run kungfu profile assess-run with the exact plan",
+    )
+    return plan
+
+
+def authorized_assessment_execute(
+    runtime_dir: str | Path,
+    plan: Mapping[str, Any],
+    answer: Mapping[str, Any],
+) -> dict[str, Any]:
+    if plan.get("schema") != ASSESSMENT_PLAN_SCHEMA:
+        _fail("assessment-plan-invalid", "assessment execution requires an exact plan")
+    refreshed = assessment_plan(
+        str(plan.get("source") or ""),
+        runtime_dir,
+        dict(plan.get("queryReceipt") or {}),
+        claim_id=str((plan.get("request") or {}).get("claim_id") or ""),
+        policy_id=str(
+            ((plan.get("request") or {}).get("policy") or {}).get("id") or ""
+        ),
+        purpose=str((plan.get("request") or {}).get("purpose") or ""),
+        work_episode_id=int((plan.get("request") or {}).get("work_episode_id") or 0),
+    )
+    if refreshed["planId"] != plan.get("planId"):
+        _fail("assessment-plan-stale", "Profile or assessment inputs changed")
+    card = plan.get("decisionCard") or {}
+    profile_sdk.validate_decision_answer(answer, card)
+    if answer.get("choice") != "approve" or (answer.get("basis") or {}).get(
+        "planId"
+    ) != plan.get("planId"):
+        _fail("decision-denied", "assessment plan was not approved")
+    requested = storage_service.assessment_request(runtime_dir, dict(plan["request"]))
+    assessed = storage_service.assessment_execute(
+        runtime_dir,
+        requested["assessment_key"],
+        executor_profile=str(plan["executorProfile"]),
+    )
+    return {
+        "schema": "kungfu.profile-assessment-receipt/v1",
+        "planId": plan["planId"],
+        "authorizationId": answer["authorizationId"],
+        "profileSuiteRoot": plan["profileSuiteRoot"],
+        "catalogRoot": plan["catalogRoot"],
+        "assessment": assessed,
+    }
+
+
+def _episode_root(lineage: Mapping[str, Any], episode_id: int) -> str:
+    for row in lineage.get("episode_content_roots") or []:
+        if (
+            str(row.get("episode_id")) != str(episode_id)
+            or str(row.get("status")).lower() != "verified"
+        ):
+            continue
+        computed = row.get("computed")
+        if isinstance(computed, str) and computed.startswith("sha256:"):
+            return computed
+        if (
+            isinstance(computed, Mapping)
+            and computed.get("algorithm") == "sha256"
+            and isinstance(computed.get("value"), str)
+            and len(computed["value"]) == 64
+        ):
+            return "sha256:" + computed["value"]
+    _fail(
+        "work-episode-unverified",
+        "selected work Episode has no verified content root at this query cut",
+        workEpisodeId=episode_id,
+        availableEpisodeRoots=lineage.get("episode_content_roots") or [],
+    )
+
+
+def _missing_evidence(
+    required: list[str],
+    result: Mapping[str, Any],
+    lineage: Mapping[str, Any],
+    work_episode_root: str,
+) -> list[str]:
+    missing = []
+    if "query-proof" in required and not str(
+        result.get("query_proof_root") or ""
+    ).startswith("sha256:"):
+        missing.append("query-proof")
+    if "sealed-work-episode" in required and not work_episode_root.startswith(
+        "sha256:"
+    ):
+        missing.append("sealed-work-episode")
+    if "canonical-facts" in required and (
+        not lineage.get("canonical_state") or int(result.get("row_count") or 0) == 0
+    ):
+        missing.append("canonical-facts")
+    if "independent-observation" in required:
+        missing.append("independent-observation")
+    return missing
+
+
+def _evidence_summary(
+    result: Mapping[str, Any], lineage: Mapping[str, Any]
+) -> dict[str, int]:
+    counts = {
+        "admitted": 0,
+        "unregistered-surface": 0,
+        "incompatible-schema": 0,
+        "ambiguous-authority": 0,
+    }
+    for row in lineage.get("admission_outcomes") or []:
+        outcome = str(row.get("outcome") or "")
+        if outcome in counts:
+            counts[outcome] += int(row.get("record_count") or 0)
+    return {
+        "canonical_fact_count": (
+            int(result.get("row_count") or 0) if lineage.get("canonical_state") else 0
+        ),
+        "conflict_count": len(lineage.get("conflicts") or []),
+        "admitted_count": counts["admitted"],
+        "unregistered_surface_count": counts["unregistered-surface"],
+        "incompatible_schema_count": counts["incompatible-schema"],
+        "ambiguous_authority_count": counts["ambiguous-authority"],
+        "unverifiable_count": len(lineage.get("unverifiable_inputs") or [])
+        + len(lineage.get("missing_inputs") or []),
     }
 
 
@@ -245,6 +452,9 @@ def _read_typed_ref(
             f"Profile artifact must use {schema}",
             observed=value.get("schema"),
         )
+    profile_sdk.validate_contract_artifact(
+        _ARTIFACT_SCHEMA_KEYS[schema], value, f"Profile composition artifact {schema}"
+    )
     return value
 
 

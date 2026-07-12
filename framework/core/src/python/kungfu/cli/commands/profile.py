@@ -307,6 +307,71 @@ def query_run(ctx, source, plan_file, as_json):
     )
 
 
+@profile.command(name="assess-plan", help="plan a purpose-bound ADR-0052 assessment")
+@click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.argument(
+    "query_receipt", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option("--claim-id", required=True)
+@click.option("--policy-id", required=True)
+@click.option("--purpose", required=True)
+@click.option("--work-episode-id", required=True, type=int)
+@click.option("--out", type=click.Path(dir_okay=False, path_type=Path))
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def assess_plan(
+    ctx,
+    source,
+    query_receipt,
+    claim_id,
+    policy_id,
+    purpose,
+    work_episode_id,
+    out,
+    as_json,
+):
+    payload = _run(
+        lambda: profile_composition.assessment_plan(
+            source,
+            ctx.runtime_dir,
+            _load_json(query_receipt),
+            claim_id=claim_id,
+            policy_id=policy_id,
+            purpose=purpose,
+            work_episode_id=work_episode_id,
+        )
+    )
+    if out:
+        out.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+        payload["assessmentPlanPath"] = str(out.resolve())
+    _json(payload)
+
+
+@profile.command(name="assess-run", help="execute an approved, current assessment plan")
+@click.argument(
+    "plan_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option(
+    "--authorization-file",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def assess_run(ctx, plan_file, authorization_file, as_json):
+    _json(
+        _run(
+            lambda: profile_composition.authorized_assessment_execute(
+                ctx.runtime_dir,
+                _load_json(plan_file),
+                _load_json(authorization_file),
+            )
+        )
+    )
+
+
 @profile.command(help="plan or invoke a declarative Profile action")
 @click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
 @click.argument("action_id")
