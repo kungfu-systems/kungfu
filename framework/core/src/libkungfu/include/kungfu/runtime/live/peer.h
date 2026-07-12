@@ -289,6 +289,13 @@ protected:
     };
   }
 
+  // Deterministic, replayable business timeout for use AFTER the peer is live.
+  // It drives off journal Time events from the coordinator, so it is only valid
+  // once the coordinator serves this peer's TimeRequest. It must NOT be used for
+  // the register handshake: during the handshake the peer is not yet live and
+  // coordinator::on_time_request drops its TimeRequest, so the deadline would
+  // never fire. The register handshake uses a wall-clock deadline checked from
+  // on_active instead.
   template <typename Duration, typename Enabled = rx::is_duration<Duration>>
   std::function<rx::observable<event_ptr>(rx::observable<event_ptr>)> timeout(Duration &&d, int32_t timer_id) {
     enable_timer(timer_id);
@@ -334,7 +341,13 @@ protected:
 private:
   resource_manager manager_;
   bool started_ = false;
+  bool registered_ = false;
   int64_t checkin_time_ = INT64_MIN;
+  // Wall-clock deadline (ns) for the LIVE register handshake. The handshake runs
+  // before the peer is live, so the coordinator's journal time service does not
+  // serve it; on_active checks this against wall-clock on the observer
+  // recv_timeout heartbeat instead of a background rx::timeout thread.
+  int64_t register_deadline_ = INT64_MAX;
   int32_t timer_usage_count_{0};
   const std::string arguments_ = {};
   std::unordered_map<int, int64_t> timer_checkpoints_ = {};

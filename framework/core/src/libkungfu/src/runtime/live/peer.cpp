@@ -123,27 +123,22 @@ void peer::react() {
   }
 
   if (get_io_device()->get_home()->mode == mode::LIVE) {
+    // Deterministic, thread-free register handshake timeout. The peer is not yet
+    // live during the handshake, so the coordinator's journal time service does
+    // not serve it; instead of a background rx::timeout thread we set a
+    // wall-clock deadline that on_active checks on the observer recv_timeout
+    // heartbeat.
+    register_deadline_ =
+        yijinjing::time::now_in_nano() + REGISTER_TIMEOUT_SECONDS * yijinjing::time_unit::NANOSECONDS_PER_SECOND;
+
     auto self_register_event = events_ | skip_until(events_ | is(Register::tag) | filter([&](const event_ptr &event) {
                                                       auto uid = event->data<Register>().location_uid;
                                                       return uid == get_live_home_uid();
                                                     })) |
                                first();
 
-    self_register_event | rx::timeout(seconds(REGISTER_TIMEOUT_SECONDS), observe_on_new_thread()) |
-        $(
-            [&](const event_ptr &event) {
-              // this subscriber will quit when register is done, no worry for performance.
-            },
-            [&](std::exception_ptr e) {
-              try {
-                std::rethrow_exception(e);
-              } catch (const timeout_error &ex) {
-                SPDLOG_ERROR("peer register timeout");
-                reactor::signal_stop();
-              }
-            });
-
     self_register_event | $([&](const event_ptr &event) {
+      registered_ = true;
       auto data = event->data<Register>();
       checkin_time_ = data.checkin_time;
       // in case operation-system time change, begin_time_ mismatch clock of coordinator, keep using event->gen_time()
@@ -185,7 +180,20 @@ void peer::react() {
   }
 }
 
-void peer::on_active() {}
+void peer::on_active() {
+  // Register handshake timeout, checked on the recv_timeout heartbeat: on_active
+  // is driven by produce() even when the coordinator is silent, so this is the
+  // one live path during a stalled handshake. Wall-clock, because the peer has
+  // no trustworthy journal time before it is live.
+  if (registered_ or get_io_device()->get_home()->mode != mode::LIVE) {
+    return;
+  }
+  if (yijinjing::time::now_in_nano() >= register_deadline_) {
+    registered_ = true; // report once and stop checking
+    SPDLOG_ERROR("peer register timeout");
+    reactor::signal_stop();
+  }
+}
 
 void peer::on_frame() {
   // request_write_to the dest which from try_write_to
