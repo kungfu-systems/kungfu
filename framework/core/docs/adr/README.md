@@ -101,6 +101,7 @@ compound implementation notes to the index Status column.
 | [0067](ADR-0067-schema-registry-compile-time-contract-welds.md) | accepted | schema contract invariants welded at compile time — `carrier_type` tag uniqueness and payload layout↔`schema_version` binding (reusing the ADR-0062 fingerprint) |
 | [0068](ADR-0068-tiered-durability-and-crash-recovery.md) | accepted | tiered durability separates hot mmap visibility, durable fact admission, rebuildable projections, and later replication |
 | [0069](ADR-0069-agent-first-kfx-profile-suite-runtime.md) | accepted | Agent-first KFX Profile Suites carry domain semantics over a domain-neutral Core |
+| [0070](ADR-0070-peer-communication-primitives-layering.md) | proposed | peer communication primitives are layered (channel routing vs outlet output); Band renamed Outlet; off-thread writing decoupled and establish-channel unification deferred, trigger-gated |
 
 ## Reading by theme
 
