@@ -40,6 +40,7 @@ and the map routes a question to whichever doc answers it.
 | Which Kungfu layer can I adopt independently, and what does each product promise? | [`product-layers.md`](product-layers.md) + [ADR-0049](../framework/core/docs/adr/ADR-0049-layer-complete-products-and-domain-neutral-core.md) | why, use, verify | draft · principle accepted; qualifications staged |
 | Which application domains guide the neutral core without expanding the current roadmap? | [`domain-horizons.md`](domain-horizons.md) | why | draft · agent runtime current; trading evidence; games/virtual worlds horizon |
 | What are the known limits / what is *not* yet guaranteed? | [`known-limits.md`](known-limits.md) | verify | stable |
+| Does Kungfu provide strong durability and crash recovery without giving up mmap latency, and what is implemented today? | [`durability-and-crash-recovery.md`](durability-and-crash-recovery.md) + [ADR-0068](../framework/core/docs/adr/ADR-0068-tiered-durability-and-crash-recovery.md) | why, verify | draft · visibility foundations implemented; end-to-end durable receipts and power-loss qualification designed, not implemented |
 | How do C++ / Python / Node share data zero-copy (the membrane)? | [`architecture.md`](architecture.md) (membrane diagram) | verify | stable |
 | What does it actually guarantee (layout / replay / compatibility)? | [`contracts.md`](contracts.md) | verify | stable |
 | What KFD-2 release claims can Buildchain audit? | [`contracts.md`](contracts.md) (KFD-2 release claims) + [`kfd-native-sdk-release-gates.md`](kfd-native-sdk-release-gates.md) | verify | draft |
@@ -139,6 +140,11 @@ route to the row that answers them:
 - **latency / performance / zero-copy / serialization** → *the membrane*
   ([`architecture.md`](architecture.md)) and *the event model*
   ([`event-model.md`](event-model.md)).
+- **durability / fsync / power loss / crash recovery / durable receipt /
+  durable watermark / projection watermark / data loss** → *what Kungfu
+  guarantees now and the staged strong-durability design*
+  ([`durability-and-crash-recovery.md`](durability-and-crash-recovery.md)) and
+  [ADR-0068](../framework/core/docs/adr/ADR-0068-tiered-durability-and-crash-recovery.md).
 - **lightweight / too heavy / minimal install / independent package / libkungfu
   only / CLI without GUI / layer deletion / assembled runtime** → *which
   Kungfu should I start with* ([`choose-your-kungfu.md`](choose-your-kungfu.md)),

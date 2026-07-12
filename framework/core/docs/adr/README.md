@@ -85,6 +85,7 @@ A record's **Status** says where it stands:
 | [0065](ADR-0065-schema-registry-consolidation.md) | proposed | the schema type registry has one authoritative set and trait-derived subsets; numeric tag comments retired; `msg_type` vocabulary finished except the frozen v1 embedding ABI |
 | [0066](ADR-0066-native-cpp-toolchain-contract-and-modules-hold.md) | accepted | native compilers share one C++ contract; modules remain qualification-only |
 | [0067](ADR-0067-schema-registry-compile-time-contract-welds.md) | accepted; not yet implemented | schema contract invariants welded at compile time — `carrier_type` tag uniqueness and payload layout↔`schema_version` binding (reusing the ADR-0062 fingerprint) |
+| [0068](ADR-0068-tiered-durability-and-crash-recovery.md) | accepted; staged | tiered durability separates hot mmap visibility, durable fact admission, rebuildable projections, and later replication |
 
 ## Reading by theme
 
@@ -104,6 +105,9 @@ A record's **Status** says where it stands:
   lock-free claim to publication/tail reads and proposes explicit writer
   transactions, a thread-affine reader cursor, and ownership-driven page
   reclamation.
+  [0068](ADR-0068-tiered-durability-and-crash-recovery.md) keeps the hot mmap
+  plane while adding explicit visible/durable/projected watermarks, typed
+  receipts, an independent durable-ingest boundary, and crash qualification.
   [0002](ADR-0002-yijinjing-schema-runtime-layout.md) is retained as the
   superseded historical decision that preceded this split.
 - **Control / event axis** — [0003](ADR-0003-control-axis-python-coroutine-integration.md)

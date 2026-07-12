@@ -14,6 +14,11 @@ journal maintenance commands, Atlas import, source sync, remote sync, and the
 missing storage operations such as `fsck`, import/export, garbage collection,
 and compaction.
 
+The separate [Strong durability and crash recovery](durability-and-crash-recovery.md)
+contract defines when a published fact is merely visible, durably acknowledged,
+projected, or later replicated. This storage-service document must not imply
+power-loss durability beyond the profiles qualified there.
+
 The architectural decisions are recorded in
 [`ADR-0018`](../framework/core/docs/adr/ADR-0018-runtime-storage-service-architecture.md)
 for the local runtime storage service and

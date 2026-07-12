@@ -199,6 +199,9 @@ right document, and is readable by both people and agents.
   from accountability: facts before trust, local proof before control.
 - [Architecture](docs/architecture.md) — how the repository is layered
   (runtime, capability SDK, application SDK, reference surfaces) and why.
+- [Strong Durability and Crash Recovery](docs/durability-and-crash-recovery.md)
+  — the target, design, current implementation stage, and explicit power-loss
+  non-claims for mmap journals, durable receipts, and recovery.
 - [Kungfu Skills](docs/skills.md) — design target for Kungfu Skills:
   `SKILL.md` as the minimal source, compact agent catalog injection,
   Node/Python manage modes, and kfx dependency composition.

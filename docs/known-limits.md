@@ -49,6 +49,30 @@ These are identified and tracked, not silently shipped. They do not affect the
 data-plane correctness covered by
 [ADR-0001](../framework/core/docs/adr/ADR-0001-yijinjing-publish-barrier.md).
 
+## End-to-end power-loss durability is designed, not yet qualified
+
+Kungfu currently qualifies release/acquire publication and cross-process
+visibility for the mmap journal. It does **not** yet guarantee that every frame
+reported as written will survive sudden power loss. The current production mmap
+policy rejects unqualified `asynchronous` and `durable` modes rather than
+silently treating OS writeback as a durability contract.
+
+What is **not yet built or qualified**:
+
+- a dedicated durable-ingest service independent of coordinator and projection
+  lifecycle;
+- stable durable/projection watermarks and producer-visible durability receipts;
+- `durable_group` and `durable_sync` end-to-end profiles;
+- deterministic recovery of an acknowledged frontier across journal, Episode,
+  payload, and checkpoint boundaries;
+- retained power-loss, torn-write, ENOSPC, ordering, and repeated-recovery
+  evidence for macOS, Linux, and Windows.
+
+SQLite WAL, a mapped-region flush, or a resident process is not a substitute for
+that evidence. See [Strong durability and crash recovery](durability-and-crash-recovery.md)
+for the current status and [ADR-0068](../framework/core/docs/adr/ADR-0068-tiered-durability-and-crash-recovery.md)
+for the staged architecture.
+
 ## The GitHub build-and-release path is still being brought up
 
 The release mechanism is designed and has a long tag history, but the current v4
