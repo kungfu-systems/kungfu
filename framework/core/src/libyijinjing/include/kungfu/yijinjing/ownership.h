@@ -51,7 +51,7 @@ public:
 private:
   struct impl;
   explicit lease(std::unique_ptr<impl> impl) noexcept;
-  std::unique_ptr<impl> impl_ = {};
+  std::unique_ptr<impl> impl_;
 };
 
 [[nodiscard]] const char *scope_name(scope value) noexcept;

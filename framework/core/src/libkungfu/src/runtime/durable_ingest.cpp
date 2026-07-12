@@ -76,7 +76,7 @@ uint64_t read_u64(const std::string &bytes, size_t &offset) {
 }
 
 void append_string(std::string &out, const std::string &value) {
-  if (value.size() > std::numeric_limits<uint32_t>::max()) {
+  if (value.size() > (std::numeric_limits<uint32_t>::max)()) {
     throw std::invalid_argument("durable_string_too_large");
   }
   append_u32(out, static_cast<uint32_t>(value.size()));
@@ -142,7 +142,7 @@ public:
     size_t offset = 0;
     while (offset < bytes.size()) {
 #ifdef _WIN32
-      const auto remaining = std::min<size_t>(bytes.size() - offset, std::numeric_limits<DWORD>::max());
+      const auto remaining = (std::min<size_t>)(bytes.size() - offset, (std::numeric_limits<DWORD>::max)());
       DWORD written = 0;
       if (WriteFile(handle_, bytes.data() + offset, static_cast<DWORD>(remaining), &written, nullptr) == 0 ||
           written == 0) {
@@ -317,7 +317,7 @@ std::string encode_checkpoint(const checkpoint &value) {
   append_string(body, value.writer_fence);
   append_string(body, value.qualification_profile);
   append_string(body, value.durability_profile);
-  if (value.completed_requests.size() > std::numeric_limits<uint32_t>::max()) {
+  if (value.completed_requests.size() > (std::numeric_limits<uint32_t>::max)()) {
     throw std::invalid_argument("durable_completed_request_index_too_large");
   }
   append_u32(body, static_cast<uint32_t>(value.completed_requests.size()));
@@ -407,7 +407,7 @@ std::string segment_header(uint64_t segment_id, uint64_t stream_id, uint64_t epo
 std::string encode_record(const stream_position &position, int32_t carrier_type, const durable_frame_context &frame,
                           const void *payload, size_t payload_size, uint64_t owner_generation,
                           uint64_t writer_generation) {
-  if (payload_size > std::numeric_limits<uint64_t>::max() - RECORD_HEADER_SIZE) {
+  if (payload_size > (std::numeric_limits<uint64_t>::max)() - RECORD_HEADER_SIZE) {
     throw std::invalid_argument("durable_payload_too_large");
   }
   const std::string payload_bytes(static_cast<const char *>(payload), payload_size);
@@ -638,7 +638,7 @@ struct durable_ingest_log::impl {
         continue;
       }
       try {
-        result = std::max(result, std::stoull(name.substr(prefix.size(), name.size() - prefix.size() - 5)));
+        result = (std::max)(result, std::stoull(name.substr(prefix.size(), name.size() - prefix.size() - 5)));
       } catch (...) {
       }
     }
@@ -720,7 +720,7 @@ struct durable_ingest_log::impl {
       current_status.unacknowledged_tail_bytes =
           earlier_segment_bytes(durable_checkpoint.chain_start_segment_id) + checkpoint_or_later_tail;
       if (checkpoint_or_later_tail > 0 || checkpoint_segment.filename().string().starts_with("sealed-")) {
-        create_segment(std::max(max_segment_id, durable_checkpoint.segment_id) + 1);
+        create_segment((std::max)(max_segment_id, durable_checkpoint.segment_id) + 1);
         return;
       }
       active_path = checkpoint_segment;
