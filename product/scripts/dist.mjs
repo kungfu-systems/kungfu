@@ -1291,6 +1291,11 @@ function main() {
         'freeze core runtime',
         ['--filter', '@kungfu-tech/core', 'run', 'freeze'],
         {
+          // The product must ship the native host; a missing one is a hard error
+          // here rather than a silent fall back to the slow Python node path /
+          // doctor stub (ADR-0046 S3). Dev `pnpm run freeze` leaves this unset and
+          // keeps warn-only.
+          env: { ...process.env, KF_REQUIRE_NATIVE_HOST: '1' },
           phase: 'core',
           event: 'product.core.freeze',
         },

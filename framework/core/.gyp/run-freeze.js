@@ -23,6 +23,14 @@ const { shell } = require('../lib');
 
 const CORE = path.resolve(__dirname, '..'); // framework/core
 const isWin = process.platform === 'win32';
+// Product builds (dist.mjs) set this so a missing native host is a hard error,
+// not a warning: the core is always built for the node runtime, so the host
+// (libkungfu_node_host.* / kungfu_node_host.dll, and kungfu_embedding.dll on
+// Windows) must ship, or the product silently falls back to the slow Python node
+// path / the doctor stub (ADR-0046 S3 productization gap). A bare `pnpm run
+// freeze` (dev) leaves it unset and keeps the warn-only behavior — a dev assemble
+// without a built host is legitimate.
+const requireNativeHost = process.env.KF_REQUIRE_NATIVE_HOST === '1';
 const { copyContractArtifacts } = require(
   path.join(CORE, '..', '..', 'scripts', 'contract-registry.cjs'),
 );
@@ -285,14 +293,30 @@ function copyPyBindingWin(bt) {
   if (emb) copyPdbSibling(emb, distKfc);
   if (!pyd) console.error('[freeze] Win 警告：build 树未找到 pykungfu*.pyd');
   if (!dll) console.error('[freeze] Win 警告：build 树未找到 libnode.dll');
-  if (!host)
+  // Product builds must ship both Windows native hosts, or the trunk silently
+  // degrades: no kungfu_node_host.dll → KUNGFU_AS_VARIANT=node falls back to the
+  // slow Python path; no kungfu_embedding.dll → doctor is the coreless stub (and
+  // the trunk's --features embedding link would later fail cryptically anyway).
+  // Dev (bare `pnpm run freeze`) keeps warn-only.
+  const missing = [];
+  if (!host) {
+    missing.push('kungfu_node_host.dll（node 变体会回退 Python 路径）');
+  }
+  if (!emb) {
+    missing.push('kungfu_embedding.dll（doctor 会回退 stub）');
+  }
+  if (missing.length) {
+    const label = requireNativeHost ? '错误' : '提示';
     console.error(
-      '[freeze] Win 提示：build 树未找到 kungfu_node_host.dll（node 变体将回退 Python 路径）',
+      `[freeze] Win ${label}：build 树未找到 ${missing.join('、')}`,
     );
-  if (!emb)
-    console.error(
-      '[freeze] Win 警告：build 树未找到 kungfu_embedding.dll（doctor 将回退 stub）',
-    );
+    if (requireNativeHost) {
+      console.error(
+        '[freeze] Win：产品构建要求原生 host（core 应以 node runtime 构建产出）。',
+      );
+      process.exit(1);
+    }
+  }
   console.log(`[freeze] Win：补拷 python binding → dist/kungfu：${n} 项`);
 }
 
@@ -446,13 +470,24 @@ function copyRuntimeNative(bt, distKfc) {
   const wanted =
     /^(pykungfu.*\.(so|pyd)|libkungfu.*|libnode.*|libnodebuildinfo\.json)$/i;
   let n = 0;
+  let hostStaged = false;
   for (const f of fs.readdirSync(rel)) {
     if (!wanted.test(f)) continue;
+    if (/^libkungfu_node_host\./i.test(f)) hostStaged = true;
     fs.copyFileSync(path.join(rel, f), path.join(distKfc, f));
     n++;
   }
   if (!n) {
     console.error(`[freeze] assemble: no runtime natives under build/${bt}`);
+    process.exit(1);
+  }
+  // Product builds must ship the Python-free node launcher; the core is built for
+  // the node runtime, so its absence means the host build silently failed and the
+  // node variant would fall back to the slow Python path.
+  if (requireNativeHost && !hostStaged) {
+    console.error(
+      `[freeze] assemble: 产品构建要求原生 node-host（libkungfu_node_host.*），但 build/${bt} 未找到——core 应以 node runtime 构建产出它；缺席会让 KUNGFU_AS_VARIANT=node 退回慢 Python 路径。`,
+    );
     process.exit(1);
   }
   console.log(`[freeze] assemble: staged ${n} runtime natives`);
