@@ -55,6 +55,30 @@ jobs:
         with:
           version: ${{ steps.uv.outputs.version }}
 
+      - name: Rebind frozen registry metadata to public PyPI
+        shell: bash
+        # The committed uv.lock pins artifact URLs to the office devpi mirror
+        # (192.168.100.222:3141), a LAN pull-through cache that GitHub-hosted
+        # runners cannot reach, so a raw `uv sync --frozen` fails with a tcp
+        # connect error. Re-resolve the same packages against public PyPI and
+        # assert the fingerprint is unchanged (same names, versions and hashes;
+        # only the index host differs) before the frozen sync. This mirrors the
+        # embedding-membrane spike workflow. The office LAN fast path is
+        # untouched because only this GitHub-hosted CI job rebinds.
+        run: |
+          fingerprint() {
+            {
+              grep -E '^(\[\[package\]\]|name = |version = |source = )' "$1" |
+                sed -E 's#source = \{ registry = "[^"]+" \}#source = { registry = "<registry>" }#'
+              grep -E '^(sdist = |[[:space:]]+\{ url = ).*hash = ' "$1" |
+                sed -E 's#.*hash = "([^"]+)".*#hash = "\1"#'
+            } | git hash-object --stdin
+          }
+          before="$(fingerprint uv.lock)"
+          uv lock --refresh --default-index https://pypi.org/simple
+          after="$(fingerprint uv.lock)"
+          test "$before" = "$after"
+
       - name: Sync Python environment (frozen)
         shell: bash
         run: uv sync --frozen
