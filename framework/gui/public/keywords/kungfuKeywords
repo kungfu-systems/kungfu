@@ -323,7 +323,7 @@ RequestReadFromSync
 RequestWriteTo
 Channel
 ChannelRequest
-Band
+Outlet
 RequestReadFromOthers
 TimeRequest
 TimeReset
@@ -340,7 +340,7 @@ Config
 RiskSetting
 Location
 Basket
-RequestWriteToBand
+RequestWriteToOutlet
 TimeValue
 TimeKeyValue
 run

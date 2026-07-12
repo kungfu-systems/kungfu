@@ -510,7 +510,7 @@ void Watcher::AfterCoordinatorDown(Napi::Env env) {
   // disjoin(get_coordinator_command_uid());
   reader_->clear();
   writers_.clear();
-  band_writers_.clear();
+  off_thread_writers_.clear();
   serialize::InitObjectReference(env, app_states_ref_);
   serialize::InitStateMap(env, ledger_ref_, "ledger");
 }

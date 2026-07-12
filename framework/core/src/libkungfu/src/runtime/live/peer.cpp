@@ -60,16 +60,16 @@ void peer::request_write_to(int64_t trigger_time, uint32_t dest_id, uint64_t pag
   require_write_to(trigger_time, get_coordinator_command_uid(), dest_id, page_size);
 }
 
-void peer::request_write_to_band(int64_t trigger_time, const location_ptr &location, uint64_t page_size) {
-  require_write_to_band(trigger_time, get_coordinator_command_uid(), location, page_size);
+void peer::request_write_to_outlet(int64_t trigger_time, const location_ptr &location, uint64_t page_size) {
+  require_write_to_outlet(trigger_time, get_coordinator_command_uid(), location, page_size);
 }
 
-uint32_t peer::request_band(const std::string &band_name, uint64_t page_size) {
+uint32_t peer::request_outlet(const std::string &outlet_name, uint64_t page_size) {
   auto io_device = get_io_device();
   auto home = io_device->get_live_home();
-  auto band_location = location::make_shared(home->mode, home->role, home->namespace_, band_name, get_locator());
-  request_write_to_band(now(), band_location, page_size);
-  return band_location->uid;
+  auto outlet_location = location::make_shared(home->mode, home->role, home->namespace_, outlet_name, get_locator());
+  request_write_to_outlet(now(), outlet_location, page_size);
+  return outlet_location->uid;
 }
 
 int32_t peer::add_timer(int64_t nanotime, const std::function<void(const event_ptr &)> &callback) {
@@ -113,9 +113,9 @@ void peer::react() {
     events_ | is(RequestReadFromPublic::tag) | $$(on_read_from_public(event));
     events_ | is(RequestReadFromSync::tag) | $$(on_read_from_sync(event));
     events_ | is(RequestWriteTo::tag) | $$(on_write_to(event));
-    events_ | is(RequestWriteToBand::tag) | $$(on_write_to_band(event));
+    events_ | is(RequestWriteToOutlet::tag) | $$(on_write_to_outlet(event));
     events_ | is(Channel::tag) | $$(register_channel(event->gen_time(), event->data<Channel>()));
-    events_ | is(Band::tag) | $$(register_band(event->gen_time(), event->data<Band>()));
+    events_ | is(Outlet::tag) | $$(register_outlet(event->gen_time(), event->data<Outlet>()));
     events_ | is(RequestStop::tag) | to(get_live_home_uid()) | $$(signal_stop());
     events_ | take_until(events_ | is(RequestStart::tag)) | $$(manager::feed_state_data(event, state_bank_));
     events_ | is(Deregister::tag) | $$(on_deregister(event));
@@ -228,7 +228,7 @@ void peer::on_deregister(const event_ptr &event) {
     disjoin(get_location(location_uid));
   }
   deregister_channel(location_uid);
-  deregister_band(location_uid);
+  deregister_outlet(location_uid);
   deregister_location(event->trigger_time(), location_uid);
 }
 
@@ -263,14 +263,14 @@ void peer::on_write_to(const event_ptr &event) {
   }
 }
 
-void peer::on_write_to_band(const event_ptr &event) {
-  const auto &request = event->data<RequestWriteToBand>();
-  SPDLOG_DEBUG("RequestWriteToBand: {}", request.to_string());
+void peer::on_write_to_outlet(const event_ptr &event) {
+  const auto &request = event->data<RequestWriteToOutlet>();
+  SPDLOG_DEBUG("RequestWriteToOutlet: {}", request.to_string());
   auto dest_id = request.location_uid;
   auto page_size = request.page_size;
-  std::lock_guard<std::mutex> lk(band_mtx_);
-  if (band_writers_.find(dest_id) == band_writers_.end()) {
-    band_writers_.emplace(dest_id, get_io_device()->open_writer(dest_id, page_size));
+  std::lock_guard<std::mutex> lk(off_thread_mtx_);
+  if (off_thread_writers_.find(dest_id) == off_thread_writers_.end()) {
+    off_thread_writers_.emplace(dest_id, get_io_device()->open_writer(dest_id, page_size));
   }
 }
 

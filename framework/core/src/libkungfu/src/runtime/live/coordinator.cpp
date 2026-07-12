@@ -145,7 +145,7 @@ void coordinator::deregister_peer(int64_t trigger_time, uint32_t peer_location_u
   SPDLOG_DEBUG("location: {}", location->to_string());
   SPDLOG_INFO("peer {} gone", location->uname);
   deregister_channel(peer_location_uid);
-  deregister_band(peer_location_uid);
+  deregister_outlet(peer_location_uid);
   deregister_location(trigger_time, peer_location_uid);
   disjoin(location);
   {
@@ -167,7 +167,7 @@ void coordinator::on_request_deregister(const event_ptr &event) {
 
 void coordinator::react() {
   events_ | is(RequestWriteTo::tag) | $$(on_request_write_to(event));
-  events_ | is(RequestWriteToBand::tag) | $$(on_request_write_to_band(event));
+  events_ | is(RequestWriteToOutlet::tag) | $$(on_request_write_to_outlet(event));
   events_ | is(RequestReadFrom::tag) | $$(on_request_read_from(event));
   events_ | is(RequestReadFromPublic::tag) | $$(on_request_read_from_public(event));
   events_ | is(RequestReadFromSync::tag) | $$(on_request_read_from_sync(event));
@@ -260,8 +260,8 @@ void coordinator::feed(const event_ptr &event) {
 
 void coordinator::pong(const event_ptr &) { get_io_device()->get_publisher()->publish("{}"); }
 
-void coordinator::on_request_write_to_band(const event_ptr &event) {
-  const RequestWriteToBand &request = event->data<RequestWriteToBand>();
+void coordinator::on_request_write_to_outlet(const event_ptr &event) {
+  const RequestWriteToOutlet &request = event->data<RequestWriteToOutlet>();
   auto trigger_time = event->gen_time();
   auto peer_uid = event->source();
   auto home = get_io_device()->get_home();
@@ -273,26 +273,26 @@ void coordinator::on_request_write_to_band(const event_ptr &event) {
   reader_->join(target_location, location::PUBLIC, trigger_time, 1);
   disjoin(target_location);
 
-  // notify others band location, but it represents a simulation location, no register, only location
+  // notify others outlet location, but it represents a simulation location, no register, only location
   try_add_location(now(), target_location);
   get_writer(location::PUBLIC)->write(now(), dynamic_cast<Location &>(*target_location));
 
-  SPDLOG_DEBUG("on_request_write_to_band for {} to {}, dirname {}", get_location_uname(peer_uid), request.name,
+  SPDLOG_DEBUG("on_request_write_to_outlet for {} to {}, dirname {}", get_location_uname(peer_uid), request.name,
                dirname);
   if (not is_location_live(peer_uid)) {
     return;
   }
 
-  // State storage must be ready before the channel/band request is published.
+  // State storage must be ready before the channel/outlet request is published.
   // slowly
   state_service_.ensure_storage(get_location(peer_uid), request.location_uid);
   reader_->join(get_location(peer_uid), request.location_uid, trigger_time, page_size);
-  require_write_to_band(trigger_time, peer_uid, target_location, page_size);
-  Band band = {};
-  band.source_id = peer_uid;
-  band.dest_id = target_location->location_uid;
-  register_band(trigger_time, band);
-  get_writer(location::PUBLIC)->write(trigger_time, band);
+  require_write_to_outlet(trigger_time, peer_uid, target_location, page_size);
+  Outlet outlet = {};
+  outlet.source_id = peer_uid;
+  outlet.dest_id = target_location->location_uid;
+  register_outlet(trigger_time, outlet);
+  get_writer(location::PUBLIC)->write(trigger_time, outlet);
 }
 
 void coordinator::on_request_write_to(const event_ptr &event) {
@@ -304,7 +304,7 @@ void coordinator::on_request_write_to(const event_ptr &event) {
     return;
   }
 
-  // State storage must be ready before the channel/band request is published.
+  // State storage must be ready before the channel/outlet request is published.
   // slowly
   state_service_.ensure_storage(get_location(peer_uid), request.dest_id);
   reader_->join(get_location(peer_uid), request.dest_id, trigger_time, request.page_size);
@@ -330,7 +330,7 @@ void coordinator::on_request_read_from(const event_ptr &event) {
     return;
   }
 
-  // State storage must be ready before the channel/band request is published.
+  // State storage must be ready before the channel/outlet request is published.
   // slowly
   state_service_.ensure_storage(get_location(request.source_id), peer_uid);
   reader_->join(get_location(request.source_id), peer_uid, trigger_time, request.page_size);
@@ -420,7 +420,7 @@ void coordinator::write_channels(int64_t trigger_time, const writer_ptr &writer)
 }
 
 void coordinator::write_bands(int64_t trigger_time, const writer_ptr &writer) {
-  for (const auto &item : get_bands()) {
+  for (const auto &item : get_outlets()) {
     writer->write(trigger_time, item.second);
   }
 }

@@ -46,8 +46,8 @@ constexpr auto AllTypes = boost::hana::make_map( //
     TYPE_PAIR(RequestWriteTo),                   // 10304
     TYPE_PAIR(Channel),                          // 10305
     TYPE_PAIR(ChannelRequest),                   // 10306
-    TYPE_PAIR(RequestWriteToBand),               // 10307
-    TYPE_PAIR(Band),                             // 10308
+    TYPE_PAIR(RequestWriteToOutlet),             // 10307
+    TYPE_PAIR(Outlet),                           // 10308
     TYPE_PAIR(RequestReadFromOthers),            // 10309
     TYPE_PAIR(TimeRequest),                      // 10501
     TYPE_PAIR(TimeReset),                        // 10502
@@ -99,8 +99,8 @@ constexpr auto CorePublicDataTypes = boost::hana::make_map( //
     TYPE_PAIR(RequestWriteTo),                              // 10304
     TYPE_PAIR(Channel),                                     // 10305
     TYPE_PAIR(ChannelRequest),                              // 10306
-    TYPE_PAIR(RequestWriteToBand),                          // 10307
-    TYPE_PAIR(Band),                                        // 10308
+    TYPE_PAIR(RequestWriteToOutlet),                        // 10307
+    TYPE_PAIR(Outlet),                                      // 10308
     TYPE_PAIR(RequestReadFromOthers),                       // 10309
     TYPE_PAIR(TimeRequest),                                 // 10501
     TYPE_PAIR(TimeReset),                                   // 10502
