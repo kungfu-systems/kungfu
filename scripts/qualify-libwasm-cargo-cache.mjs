@@ -100,6 +100,7 @@ try {
   const results = [];
   for (const engine of ['wasmtime', 'wasmer']) {
     const manifest = path.join(crateRoot, engine, 'Cargo.toml');
+    const manifestDir = path.dirname(manifest);
     const artifact = path.join(
       caches.get(engine).directory,
       'release',
@@ -109,11 +110,16 @@ try {
       ...process.env,
       CARGO_TARGET_DIR: caches.get(engine).directory,
     };
+    const cargoIdentity = run(cargo, ['-Vv'], {
+      capture: true,
+      cwd: manifestDir,
+    }).stdout.split(/\r?\n/)[0];
     const first = run(
       cargo,
       ['build', '--release', '--locked', '--manifest-path', manifest],
       {
         capture: true,
+        cwd: manifestDir,
         env,
       },
     );
@@ -126,6 +132,7 @@ try {
       ['build', '--release', '--locked', '--manifest-path', manifest],
       {
         capture: true,
+        cwd: manifestDir,
         env,
       },
     );
@@ -144,6 +151,7 @@ try {
     );
     results.push({
       engine,
+      cargo: cargoIdentity,
       cache_key: caches.get(engine).key,
       cache_dir: caches.get(engine).directory,
       first_ms: Math.round(first.elapsedMs),
