@@ -4,6 +4,11 @@ This is the **connection contract** between the monorepo and the docs site. The
 site depends on exactly one thing: the **manifest** of this package. It must not
 vendor, submodule, or otherwise reach into the monorepo for spec content.
 
+> **Pre-release contract.** This page defines the intended package boundary; it
+> does not assert that `@kungfu-tech/spec` is currently published or that the
+> bundled Spec 0.1 prose is normative. Test consumers against an exact
+> source-built package until release evidence says otherwise.
+
 ## 1. Pin the package
 
 ```jsonc

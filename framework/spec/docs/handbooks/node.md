@@ -1,57 +1,24 @@
-# Node handbook
+# Node SDK handbook
 
-> Pre-release (spec 0.1) · minimal recipe. The generated API reference (from the
-> TypeScript types) is planned; signatures below are illustrative until it lands
-> — check the reference page for authoritative names.
+> **Staged surface.** The Node `@kungfu-tech/storage` source adapter and shared
+> Episode/query/fsck/export fixture exist, but the package is not yet a
+> published cross-platform release. There is no stable public `ledger()` API,
+> and this handbook deliberately does not invent one.
 
-Embed fact-ledger recording in a Node or TypeScript script. Local-first,
-in-process, no account or network.
+Node is a thin N-API binding over the same versioned `libkungfu` storage
+contract used by the native and Python surfaces. It must not redefine Episode
+identity, causality, Cuts, query meaning, repair semantics, or Proof.
 
-## Install
+Current evidence and adoption boundaries:
 
-```bash
-pnpm add @kungfu-tech/api
-```
+- [Product Layers](../../../../docs/product-layers.md) — ecosystem package
+  qualification and availability.
+- [Adapters](../../../../docs/adapters.md) — the N-API/native membrane.
+- [Episode Object Model](../../../../docs/episode-object-model.md) — semantic
+  authority.
+- [SDK layer qualification](../../../../tests/qualification/layers/README.md) —
+  the shared source and exact-artifact fixtures.
 
-## Import
-
-```js
-const kungfu = require('@kungfu-tech/api');
-```
-
-```ts
-import * as kungfu from '@kungfu-tech/api';
-```
-
-## Produce and read a record (shape of use)
-
-The Node binding writes the same portable bundle described in the
-[format spec](../../spec/): append events with their causal parent, then read
-them back with no runtime dependency.
-
-```js
-const kungfu = require('@kungfu-tech/api');
-
-// open a ledger location (local-first; no account/network)
-const ledger = kungfu.ledger('./runs/session-1');
-
-// append a fact, carrying its causal parent
-const e1 = ledger.append({ kind: 'note', payload: { msg: 'started' } });
-ledger.append({ kind: 'note', payload: { msg: 'step done' }, causedBy: e1 });
-
-// read the ordered, causal record back
-for (const event of ledger.read()) {
-  console.log(event.kind, event.payload);
-}
-```
-
-The exact method names are being finalized against the real binding and will be
-published in the generated reference. What is stable is the *shape*: open a local
-ledger, append facts with a causal parent, read them back verifiably.
-
-## Planned
-
-- Generated API reference from the TypeScript types (authoritative signatures;
-  drift = build fail).
-- `--json` provenance emitting the authoritative `docs_url` for the installed
-  version.
+Until a published artifact and generated API reference exist, use the source
+tree and qualification reports for evaluation. Do not copy illustrative method
+names from older drafts into application code.

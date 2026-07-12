@@ -8,6 +8,15 @@ deliberately landed first, as a skeleton, so the generating flows (core /
 toolchain / node / python) and the downstream site all agree on one contract
 before any content exists.
 
+> **Pre-release walking skeleton.** The manifest contract and aggregation
+> pipeline are active. The bundled format prose is still the historical 0.1
+> draft and is not the current normative `.kungfu` semantic contract. It
+> predates the Episode-centered object model and is retained as an explicit
+> draft input, not as implementation guidance. Current public semantics live in
+> [`docs/the-episode.md`](../../docs/the-episode.md),
+> [`docs/episode-object-model.md`](../../docs/episode-object-model.md), and
+> [`docs/event-model.md`](../../docs/event-model.md).
+
 ## What this package is
 
 - The **single connection protocol** between the kungfu monorepo (the single
@@ -24,7 +33,7 @@ before any content exists.
 | --- | --- | --- |
 | kungfu software version | `4.0.0-alpha.0` | software release (lerna single source) |
 | this package's version | `4.0.0-alpha.0` | **pickup coordinate** (reproducible pin; tracks lerna) |
-| **spec / format version** | **`1.0`** | **the authoritative contract** (declared in the manifest, independent of the above) |
+| **spec / format version** | **`0.1`** | pre-release draft coordinate declared in the manifest; no stable format compatibility claim yet |
 
 Consumers render and route off `spec_version`, never off the npm package
 version. The format identity (`format_namespace`) is **domain-free** on purpose:
@@ -58,22 +67,21 @@ runtime contract, not as independent Python or Node storage models. Storage
 backends such as the content-addressed file provider or RocksDB provider are
 runtime implementation choices behind that contract.
 
-## Scripts (skeleton placeholders)
+## Build and verify the skeleton
 
-- `pnpm --filter @kungfu-tech/spec run build` → `scripts/aggregate.js`: builds a
-  real, schema-valid bundle into `dist/` (`manifest.json` + the six category
-  payloads + three handbook payloads) from `spec.meta.json`, `package.json`, and
-  `docs/format-spec.md`.
-- `pnpm --filter @kungfu-tech/spec run verify` → `scripts/verify.js`: the
-  **integration drift gate**, active. Fails the build if the produced bundle
-  drifts from the manifest contract (missing/extra fields, domain-embedded
-  `format_namespace`, a referenced payload path that does not exist, or a
-  `spec_version` not routed into `docs_url_base`).
+The repository-level `./shifu build` path invokes `scripts/aggregate.js` to
+produce a schema-valid bundle in `dist/`. The package's `scripts/verify.js` is
+the active integration drift gate: it rejects manifest shape drift, missing
+payloads, a domain-embedded `format_namespace`, or a `spec_version` that does
+not match `docs_url_base`. Contributors should enter through `./shifu`, as
+described in the repository [CONTRIBUTING guide](../../CONTRIBUTING.md), rather
+than invoking the package manager directly.
 
 This is a **walking skeleton**: the pipeline produces and gates a real bundle,
 but with minimal content. Only `categories.format_spec` carries real prose
-(`docs/format-spec.md`); the five machine categories and three handbooks are
-minimal stubs, each tagged in the manifest with its owning package. See
+(`docs/format-spec.md`), but that prose remains a non-normative historical 0.1
+draft. The five machine categories and three handbooks are minimal or staged
+surfaces, each tagged in the manifest with its owning package. See
 [CONSUMING.md](CONSUMING.md) for how `site-libkungfu-dev` consumes the bundle.
 
 ## Not done here (follow-ups)

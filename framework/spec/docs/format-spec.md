@@ -1,5 +1,16 @@
 # Kungfu Fact-Ledger Format — Spec 0.1 (pre-release draft)
 
+> **Historical walking-skeleton input, not the current normative `.kungfu`
+> contract.** This draft predates the Episode-centered object model and remains
+> bundled only so the manifest/aggregation pipeline has explicit versioned
+> input. Do not implement a reader or make a compatibility claim from this
+> prose. Current semantic authority lives in
+> [`docs/the-episode.md`](../../../docs/the-episode.md),
+> [`docs/episode-object-model.md`](../../../docs/episode-object-model.md), and
+> [`docs/event-model.md`](../../../docs/event-model.md). A future format
+> decision must reconcile and replace this draft before the format is promoted
+> as normative.
+
 - **Format namespace:** `libkungfu:fact-ledger` (stable, domain-free identity)
 - **Spec version:** `0.1`
 - **Status:** pre-release draft. A version below `1.0` is **not a publishable
@@ -111,7 +122,7 @@ These terms are normative at the semantic level:
 | **source** | A logical fact provider: local profile, imported bundle, remote Kungfu runtime, or adapter. |
 | **location** | The runtime address/identity for a source or destination process, profile, or node. |
 | **channel** | The transport edge used to request a range, fetch payloads, export, import, or repair missing material. It is not authority. |
-| **range selector** | A bounded request by event range, wall-clock-like logical time, session, cursor, or hash anchor. |
+| **range selector** | A bounded request by event range, Episode, logical time, cursor, or hash anchor. |
 | **hash inventory** | The list of content commitments that lets a receiver verify payload and schema material before or after transfer. |
 | **manifest** | The accept boundary: source metadata, capture boundary, range, payload inventory, schema inventory, checksums, and projection watermarks. |
 | **accepted segment** | The local record that a manifest-backed range has been verified and admitted into the receiver's fact ledger. |

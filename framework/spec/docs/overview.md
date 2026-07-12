@@ -1,37 +1,44 @@
-# libkungfu
+# libkungfu portable format surface
 
-**An open, portable format for fact ledgers — and the agent-facing surface for
-working with them.**
+This package is the pre-release aggregation surface for a portable Kungfu fact
+artifact. It proves that one versioned manifest can route a consumer to format
+prose, schemas, capabilities, conformance material, and language handbooks.
 
-libkungfu is the open standard behind kungfu's runtime fact ledger: an ordered,
-append-only, causally-linked record of events that can be opened and verified
-**without the runtime that produced it, and without any particular library**.
-The format is the product. Reference libraries are a convenience, not a
-requirement and not a trust root — anyone can write a conforming reader from the
-spec alone.
+> **Walking-skeleton status.** The manifest pipeline is active, but the bundled
+> Spec 0.1 prose predates Kungfu's Episode-centered object model and is not the
+> current normative `.kungfu` contract. The language handbooks are staged and
+> must not invent APIs or availability ahead of their owning packages.
 
-Born in a production, low-latency trading core, its first-class use today is
-giving **agent runtimes** a record they cannot misreport: what an agent read,
-called, and decided, captured as facts you can replay and verify.
+The current public object is the **Episode**: a bounded causal unit whose Facts,
+Artifacts, Manifest, Receipts, dependencies, and verification roots can be
+inspected, sealed, exported, replayed, recovered, and used to support
+Decisions. Portable format work must preserve that authority rather than
+creating a second run-, session-, library-, or website-owned truth.
 
-> **Pre-release (spec 0.1).** This surface is a working draft. The format may
-> change without compatibility guarantees until 1.0.
+## Start with current authority
 
-## Start here
+- [The Episode](../../../docs/the-episode.md) — public execution model.
+- [Episode Object Model](../../../docs/episode-object-model.md) — lifecycle,
+  manifest authority, portability, and maturity.
+- [Event Model](../../../docs/event-model.md) — journal, frames, schemas, and
+  Replay mechanics.
+- [Product Layers](../../../docs/product-layers.md) — the staged `.kungfu`
+  format/spec product boundary.
+- [Known Limits](../../../docs/known-limits.md) — absent release and
+  compatibility guarantees.
 
-- **[Format spec](spec/)** — what a bundle is: the guarantees, the four-part
-  anatomy, how it stays verifiable and portable.
-- **Handbooks** — get an agent working against kungfu, per runtime:
-  - **[kungfu (CLI)](handbooks/cli/)** — produce and inspect ledgers from the
-    command line with `kungfu`.
-  - **[Python](handbooks/python/)** — embed recording in a Python script.
-  - **[Node](handbooks/node/)** — embed recording in a Node/TypeScript script.
-- **Reference** — machine-addressable data: schema registry, error dictionary,
-  capabilities, conformance vectors and map. (Growing; see each page.)
+## Bundle inputs
 
-## Why a format, not a library
+- [Format Spec 0.1 draft](format-spec.md) — retained historical input for the
+  walking skeleton; explicitly non-normative.
+- [Kungfu CLI handbook](handbooks/cli.md) — current source-backed command
+  routes and maturity.
+- [Python SDK handbook](handbooks/python.md) and
+  [Node SDK handbook](handbooks/node.md) — staged ecosystem surfaces without
+  illustrative fictional APIs.
 
-The hard value — open five years from now, verify on another machine, trust the
-bytes without trusting a vendor — lives in the *format*, not in any language
-binding. libkungfu is designed format-first: the write API, read API, CLI, and
-tools are all producers and consumers of one specified, versioned artifact.
+The format remains valuable because portable evidence should outlive a runtime,
+library, UI, or documentation host. That goal does not make the current 0.1
+draft a stable compatibility promise. Promotion requires a dedicated format
+decision, a complete schema and conformance contract, executable readers, and
+retained cross-version evidence.

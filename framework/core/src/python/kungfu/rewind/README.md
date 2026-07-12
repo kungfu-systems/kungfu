@@ -21,7 +21,7 @@ writes every event as an open-layer journal frame:
 | action envelope | `CostSnapshot` | normalized token/cost usage with attribution + confidence |
 | action envelope | `ApprovalDecision` | human approve/deny/interrupt/resume decision, linked to run_id |
 
-Allocation is recorded in [`docs/carrier-type-registry.md`](../../../../../../docs/carrier-type-registry.md);
+Allocation is recorded in [`docs/carrier-type-registry.md`](../../../../docs/carrier-type-registry.md);
 the schema surface is registered in [`docs/versioning.md`](../../../../../../docs/versioning.md).
 
 ## How the minimal facts are carried
