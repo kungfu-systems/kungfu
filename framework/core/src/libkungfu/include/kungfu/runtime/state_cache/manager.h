@@ -30,6 +30,12 @@ public:
 
   ~manager();
 
+  void start();
+
+  void stop();
+
+  [[nodiscard]] bool running() const noexcept { return worker_running_.load(); }
+
   template <typename DataType> std::vector<DataType> get_all(const DataType &) { return profile_.get_all(DataType{}); }
 
   void restore_profile(const yijinjing::data::location_ptr &location, const yijinjing::journal::writer_ptr &writer);
@@ -104,6 +110,7 @@ private:
   std::mutex profile_store_mutex_;
   std::atomic<bool> m_quit_ = false;
   std::atomic_bool storage_pause_ = false;
+  std::atomic_bool worker_running_ = false;
 
   yijinjing::data::location_ptr ledger_home_location_;
 

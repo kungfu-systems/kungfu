@@ -18,7 +18,9 @@ inline size_t verify_cpu_word_length(size_t length) {
 
 writer::writer(const data::location_ptr &location, uint32_t dest_id, publisher_ptr publisher, bool low_latency,
                const bus_ptr &bus, const journal_ptr &journal, int64_t begin_time)
-    : frame_id_base_(static_cast<uint64_t>(location->uid xor dest_id) << 32u), journal_(journal),
+    : writer_lease_(ownership::lease::acquire_stream_writer(location->locator->get_root(),
+                                                            fmt::format("{:08x}.{:08x}", location->uid, dest_id))),
+      journal_(journal), frame_id_base_(static_cast<uint64_t>(location->uid xor dest_id) << 32u),
       publisher_(std::move(publisher)), size_to_write_(0), last_gen_time_(0),
       writer_start_time_32int_(time::nano_hashed(time::now_in_nano())) {
   (void)low_latency;

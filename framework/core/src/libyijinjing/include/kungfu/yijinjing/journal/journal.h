@@ -9,6 +9,7 @@
 #include <kungfu/yijinjing/journal/common.h>
 #include <kungfu/yijinjing/journal/frame.h>
 #include <kungfu/yijinjing/journal/page.h>
+#include <kungfu/yijinjing/ownership.h>
 #include <kungfu/yijinjing/schema/core.h>
 #include <kungfu/yijinjing/time.h>
 #include <mutex>
@@ -452,6 +453,7 @@ public:
   }
 
 protected:
+  ownership::lease writer_lease_;
   journal_ptr journal_;
   std::timed_mutex writer_mtx_ = {};
   const uint64_t frame_id_base_;

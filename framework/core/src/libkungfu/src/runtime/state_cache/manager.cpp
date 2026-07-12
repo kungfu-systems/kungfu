@@ -37,7 +37,6 @@ manager::manager(const kungfu::runtime::io_device_ptr &io_device)
     try {
       open_layer_ = std::make_unique<projection::open_layer_projector>();
       auto n = open_layer_->setup(schemas_dir, std::string(schemas_dir) + "/open_layer.db");
-      open_layer_->start_worker(); // 后台异步批量 flush，feed() 不在 reader 热路径同步写 sqlite
       SPDLOG_INFO("open-layer projector enabled: {} type(s) from {}", n, schemas_dir);
     } catch (const std::exception &e) {
       SPDLOG_ERROR("open-layer projector setup failed, disabled: {}", e.what());
@@ -46,8 +45,27 @@ manager::manager(const kungfu::runtime::io_device_ptr &io_device)
   }
 }
 
-manager::~manager() {
+manager::~manager() { stop(); }
 
+void manager::start() {
+  if (worker_running_.exchange(true)) {
+    return;
+  }
+  m_quit_ = false;
+  storage_pause_ = false;
+  if (open_layer_) {
+    open_layer_->start_worker();
+  }
+  store_profile_worker_ = std::thread(&manager::do_store_profile_feeds, this);
+  if (not bypass_cached_) {
+    store_states_worker_ = std::thread(&manager::do_store_states_feeds, this);
+  }
+}
+
+void manager::stop() {
+  if (not worker_running_.exchange(false)) {
+    return;
+  }
   m_quit_ = true;
 
   if (store_states_worker_.joinable()) {
@@ -56,6 +74,9 @@ manager::~manager() {
 
   if (store_profile_worker_.joinable()) {
     store_profile_worker_.join();
+  }
+  if (open_layer_) {
+    open_layer_->stop_worker();
   }
 }
 
@@ -258,19 +279,13 @@ void manager::feed(const event_ptr &event) {
   }
 }
 
-void manager::run_store_workers() {
-  store_profile_worker_ = std::thread(&manager::do_store_profile_feeds, this);
-
-  if (not bypass_cached_) {
-    store_states_worker_ = std::thread(&manager::do_store_states_feeds, this);
-  }
-}
+void manager::run_store_workers() { start(); }
 
 void manager::do_store_states_feeds() {
   while (!m_quit_) {
     std::this_thread::sleep_for(std::chrono::milliseconds(STORE_INTERVAL));
     if (storage_pause_) {
-      return;
+      continue;
     }
 
     store_states_feeds();
@@ -282,7 +297,7 @@ void manager::do_store_profile_feeds() {
   while (!m_quit_) {
     std::this_thread::sleep_for(std::chrono::milliseconds(STORE_INTERVAL));
     if (storage_pause_) {
-      return;
+      continue;
     }
 
     store_profile_feeds();

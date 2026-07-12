@@ -100,6 +100,51 @@ The coordinator subscribes to control-plane streams needed for membership and
 topology. It authorizes/discovers business streams but does not consume all of
 their payloads merely to build state.
 
+### Current separation and single-host fencing slice
+
+The first migration slice keeps the state service in the coordinator process
+but removes direct `state_cache::manager` ownership from the coordinator. The
+service owns projection construction, start/stop, ingestion, restore, and
+status. Its lifecycle is independently testable and rejects mutation before
+start or after stop.
+
+Before opening projection storage, the service acquires an exclusive OS file
+lock under the resolved data root. Every physical source/destination journal
+writer acquires the same kind of exclusive lock for its stream resource before
+it can issue a business write. The evidence records a monotonically increasing
+generation, a new fence token, owner PID, acquisition time, and whether the
+prior owner ended without a clean release. Process-local reservations close
+the same-process gap where platform file-lock semantics may otherwise permit a
+duplicate owner.
+
+These locks implement the trusted single-host envelope only. The PID is
+diagnostic, never the authority: possession of the live OS lock is required.
+The JSON lock record and its `fsync`/`FlushFileBuffers` are operational fencing
+evidence, not a durability receipt, durable watermark, network lease, or
+defence against a malicious host administrator. A corrupt evidence record may
+lose historical generation continuity and must not be used to claim a durable
+fact frontier.
+
+The compatibility/split shadow comparator keys observations by logical stream
+position and compares caller-supplied state digests. It reports duplicate,
+missing, unequal, and equal observations and can restore its diagnostic state
+after restart. Shadow equality does not make projection authoritative and does
+not advance any durability watermark.
+
+The in-process compatibility bridge may be deleted only when all of these gates
+are mechanically evidenced:
+
+1. business-stream joins and projection ownership have moved out of the
+   coordinator;
+2. split-path shadow comparison is converged across duplicate, missing,
+   restart, and equality fixtures;
+3. all state mutations require a current data-root ownership generation and
+   stream writes require a current writer fence;
+4. peer registration, visible-state restore, and control-plane behavior pass
+   the retained characterization suite; and
+5. durable ingest and projection recovery have independent qualified restart
+   paths.
+
 ## 4. Typed contract
 
 The exact Hana records and public SDK names are decided in the implementation

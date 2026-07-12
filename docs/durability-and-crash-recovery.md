@@ -47,6 +47,10 @@ The foundations are implemented:
 - frame checksums, typed journal authority, rebuildable SQLite projections,
   content-addressed payload storage, and Episode recovery/qualification
   surfaces exist in staged form.
+- coordinator calls now cross an explicit state-service boundary with an
+  independently controlled projection lifecycle; one active service per data
+  root and one writer per physical stream journal are fail-closed through
+  local generation/fence evidence.
 
 The end-to-end strong-durability path is **designed but not implemented**. In
 particular, Kungfu does not yet have a dedicated durable-ingest service, a
@@ -132,7 +136,7 @@ one Episode must not silently invalidate unrelated Episodes.
 | A. Visibility and integrity foundations | **implemented** | release/acquire publication, explicit mmap policy, frame integrity, typed journal records, rebuildable projections |
 | B. Episode and storage safety model | **staged** | typed Episode fold, fsck/repair/capability reporting and fault qualification exist in slices; the complete contract remains under qualification |
 | C. Unified position, watermark, and receipt vocabulary | **implemented (contract-only)** | C++ owns stable stream positions, four typed watermarks, named profiles, receipts/errors, deduplication, and explicit unknown outcomes; Python/Node expose typed edge adapters, while current behavior remains `visible` only and rejects stronger profiles |
-| D. Independent durable ingest and projection services | **designed** | move business-journal consumption out of the coordinator; persist raw facts before projecting them |
+| D. State-service separation and durable ingest | **partially implemented** | coordinator no longer owns the projection store directly; the in-process state-service boundary has independent lifecycle, shadow comparison, and single-host owner/writer fencing. Moving business-journal ingestion out of coordinator and persisting raw facts before projection remain pending |
 | E. Local strong-durability qualification | **not implemented** | qualify `durable_group` and `durable_sync` across macOS, Linux, and Windows with crash, torn-write, ENOSPC, ordering, and recovery evidence |
 | F. Single-host end-to-end performance release gate | **planned** | after correctness passes, qualify absolute latency, throughput, long-tail, resource, replay, recovery, and restore ceilings without weakening semantics |
 | G. Replication and HA | **future** | add a separate replicated watermark and policy only after local durability is trustworthy |

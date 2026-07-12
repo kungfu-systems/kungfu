@@ -15,7 +15,6 @@ using namespace kungfu::rx;
 using namespace kungfu::yijinjing;
 using namespace kungfu::yijinjing::types;
 using namespace kungfu::yijinjing::enums;
-using namespace kungfu::runtime::state_cache;
 using namespace kungfu::yijinjing::data;
 using namespace kungfu::runtime::journal;
 
@@ -25,14 +24,14 @@ coordinator::coordinator(const location_ptr &home, bool low_latency)
     : coordinator(std::make_shared<kungfu::runtime::io_device_coordinator>(home, low_latency)) {}
 
 coordinator::coordinator(const kungfu::runtime::io_device_ptr &io_device)
-    : reactor(io_device), last_check_(0), state_cache_(io_device) {}
+    : reactor(io_device), last_check_(0), state_service_(io_device) {}
 
 void coordinator::pre_setup() {
   reactor::pre_setup();
-  for (const auto &peer_location : state_cache_.get_all(Location{})) {
+  for (const auto &peer_location : state_service_.locations()) {
     add_location(begin_time_, location::make_shared(peer_location, get_locator()));
   }
-  for (const auto &config : state_cache_.get_all(Config{})) {
+  for (const auto &config : state_service_.configs()) {
     try_add_location(begin_time_, location::make_shared(config, get_locator()));
   }
 
@@ -41,10 +40,11 @@ void coordinator::pre_setup() {
     std::lock_guard<std::mutex> lock(writers_mtx_);
     writers_.insert_or_assign(location::PUBLIC, std::move(public_writer));
   }
-  state_cache_.run_store_workers();
+  state_service_.start();
 }
 
 void coordinator::on_exit() {
+  state_service_.stop();
   notify_deregister_on_exit();
   notify_coordinator_deregister_on_exit();
 }
@@ -119,9 +119,9 @@ void coordinator::register_peer(const event_ptr &event) {
   require_write_to(event->gen_time(), peer_location->uid, location::SYNC);
   require_write_to(event->gen_time(), peer_location->uid, coordinator_cmd_location->uid);
 
-  state_cache_.reset_cache_shift(peer_location);
-  state_cache_.try_ensure_cached_storage(peer_location, location::PUBLIC);
-  state_cache_.restore(peer_location, peer_cmd_writer);
+  state_service_.reset_cache_shift(peer_location);
+  state_service_.ensure_storage(peer_location, location::PUBLIC);
+  state_service_.restore(peer_location, peer_cmd_writer);
 
   write_time_reset(event->gen_time(), peer_cmd_writer);
   peer_cmd_writer->mark(yijinjing::time::now_in_nano(), RequestStart::tag);
@@ -188,9 +188,9 @@ void coordinator::react() {
   events_ | is(Location::tag) | $$(on_new_location(event));
   events_ | is(Register::tag) | $$(register_peer(event));
   events_ | is(Ping::tag) | $$(pong(event));
-  events_ | is(CacheReset::tag) | $([&](const event_ptr &event) { state_cache_.cache_reset(event); });
-  events_ | is(CachedPause::tag) | $$(state_cache_.switch_feed_storage(true));
-  events_ | is(CachedResume::tag) | $$(state_cache_.switch_feed_storage(false));
+  events_ | is(CacheReset::tag) | $([&](const event_ptr &event) { state_service_.cache_reset(event); });
+  events_ | is(CachedPause::tag) | $$(state_service_.pause_projection(true));
+  events_ | is(CachedResume::tag) | $$(state_service_.pause_projection(false));
   events_ | instanceof<yijinjing::journal::frame>() | $$(feed(event));
 
   // have to be at bottom of react, for avoid event still required after reader disjoin
@@ -232,7 +232,7 @@ void coordinator::handle_timer_tasks() {
 void coordinator::try_add_location(int64_t trigger_time, const location_ptr &peer_location) {
   if (not has_location(peer_location->uid)) {
     add_location(trigger_time, peer_location);
-    state_cache_.feed_profile(dynamic_cast<Location &>(*peer_location));
+    state_service_.record_location(dynamic_cast<Location &>(*peer_location));
   }
 }
 
@@ -255,7 +255,7 @@ void coordinator::feed(const event_ptr &event) {
     return;
   }
 
-  state_cache_.feed(event);
+  state_service_.ingest(event);
 }
 
 void coordinator::pong(const event_ptr &) { get_io_device()->get_publisher()->publish("{}"); }
@@ -285,7 +285,7 @@ void coordinator::on_request_write_to_band(const event_ptr &event) {
 
   // State storage must be ready before the channel/band request is published.
   // slowly
-  state_cache_.try_ensure_cached_storage(get_location(peer_uid), request.location_uid);
+  state_service_.ensure_storage(get_location(peer_uid), request.location_uid);
   reader_->join(get_location(peer_uid), request.location_uid, trigger_time, page_size);
   require_write_to_band(trigger_time, peer_uid, target_location, page_size);
   Band band = {};
@@ -306,7 +306,7 @@ void coordinator::on_request_write_to(const event_ptr &event) {
 
   // State storage must be ready before the channel/band request is published.
   // slowly
-  state_cache_.try_ensure_cached_storage(get_location(peer_uid), request.dest_id);
+  state_service_.ensure_storage(get_location(peer_uid), request.dest_id);
   reader_->join(get_location(peer_uid), request.dest_id, trigger_time, request.page_size);
   require_write_to(trigger_time, peer_uid, request.dest_id, request.page_size);
 
@@ -332,7 +332,7 @@ void coordinator::on_request_read_from(const event_ptr &event) {
 
   // State storage must be ready before the channel/band request is published.
   // slowly
-  state_cache_.try_ensure_cached_storage(get_location(request.source_id), peer_uid);
+  state_service_.ensure_storage(get_location(request.source_id), peer_uid);
   reader_->join(get_location(request.source_id), peer_uid, trigger_time, request.page_size);
   require_write_to(trigger_time, request.source_id, peer_uid, request.page_size);
   require_read_from(trigger_time, peer_uid, request.source_id, request.from_time, request.page_size);
@@ -366,7 +366,7 @@ void coordinator::on_channel_request(const event_ptr &event) {
   const Channel &channel = event->data<Channel>();
   auto trigger_time = event->gen_time();
   if (is_location_live(channel.source_id) and not has_channel(channel.source_id, channel.dest_id)) {
-    state_cache_.try_ensure_cached_storage(get_location(channel.source_id), channel.dest_id);
+    state_service_.ensure_storage(get_location(channel.source_id), channel.dest_id);
     reader_->join(get_location(channel.source_id), channel.dest_id, trigger_time);
     require_write_to(trigger_time, channel.source_id, channel.dest_id);
     register_channel(trigger_time, channel);
