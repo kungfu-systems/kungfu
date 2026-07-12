@@ -1,0 +1,7 @@
+# Canonical contract bytes are hashed and compared byte-for-byte. Keep their
+# line endings independent of the checkout platform.
+framework/config/*.contract.json text eol=lf
+framework/kfx/*.contract.json text eol=lf
+framework/skill/*.contract.json text eol=lf
+framework/contract/*.json text eol=lf
+framework/core/stubs/**/*.pyi text eol=lf

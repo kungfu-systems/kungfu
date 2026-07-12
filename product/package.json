@@ -1,0 +1,58 @@
+{
+  "name": "@kungfu-tech/product-kungfu",
+  "homepage": "https://kungfu.tech",
+  "author": {
+    "name": "Kungfu",
+    "email": "info@kungfu.link"
+  },
+  "version": "4.0.0-alpha.0",
+  "description": "Kungfu Product — the dogfood assembly: desktop and CLI products with the bundled runtime, terminal surface, SDK and all first-party kfx as runnable packageable surfaces.",
+  "license": "Apache-2.0",
+  "private": true,
+  "kungfuProduct": {
+    "type": "product",
+    "displayName": "Kungfu Episodes",
+    "extensions": "dependencies",
+    "surfaces": [
+      "gui",
+      "tui",
+      "cli"
+    ]
+  },
+  "scripts": {
+    "dev": "pnpm --filter @kungfu-tech/gui run dev",
+    "app": "pnpm --filter @kungfu-tech/gui run start",
+    "build": "node scripts/dist.mjs --product desktop --dir",
+    "package": "node scripts/dist.mjs --product desktop --dir",
+    "dist": "node scripts/dist.mjs",
+    "dist:desktop": "node scripts/dist.mjs --product desktop",
+    "dist:cli": "node scripts/dist.mjs --product cli",
+    "product": "node scripts/product.mjs",
+    "cli": "pnpm --filter @kungfu-tech/tui run dev",
+    "clean": "node -e \"fs.rmSync('dist',{recursive:true,force:true});fs.rmSync('extensions',{recursive:true,force:true})\" && pnpm --filter @kungfu-tech/gui run clean"
+  },
+  "dependencies": {
+    "@kungfu-tech/core": "workspace:*",
+    "@kungfu-tech/gui": "workspace:*",
+    "@kungfu-tech/kfx-adapter-langchain": "workspace:*",
+    "@kungfu-tech/kfx-suite-system": "workspace:*",
+    "@kungfu-tech/kfx-view-config-manager": "workspace:*",
+    "@kungfu-tech/kfx-view-fact-manager": "workspace:*",
+    "@kungfu-tech/kfx-view-journal-manager": "workspace:*",
+    "@kungfu-tech/kfx-view-kfx-manager": "workspace:*",
+    "@kungfu-tech/kfx-view-rewind-inspector": "workspace:*",
+    "@kungfu-tech/kfx-view-settings": "workspace:*",
+    "@kungfu-tech/kfx-view-skill-manager": "workspace:*",
+    "@kungfu-tech/kfx-view-status": "workspace:*",
+    "@kungfu-tech/kfx-view-terminal": "workspace:*",
+    "@kungfu-tech/kfx-view-work-dashboard": "workspace:*",
+    "@kungfu-tech/sdk": "workspace:*",
+    "@kungfu-tech/tui": "workspace:*"
+  },
+  "repository": {
+    "url": "https://github.com/kungfu-systems/kungfu.git"
+  },
+  "devDependencies": {
+    "@kungfu-tech/buildchain": "2.11.14-alpha.0"
+  }
+}

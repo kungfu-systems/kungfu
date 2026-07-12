@@ -9,7 +9,9 @@
 
 #include <kungfu/yijinjing/common.h>
 
-#define __JOURNAL_VERSION__ 4
+// ADR-0062: the journal container format epoch is no longer a hand-maintained
+// integer. It is derived from the page_header/frame_header layout in
+// <kungfu/yijinjing/journal/layout_fingerprint.h> as `journal_format_epoch`.
 
 namespace kungfu::yijinjing::journal {
 

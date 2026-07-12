@@ -13,7 +13,27 @@ description = "Kungfu Core Library"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Kungfu", email = "info@kungfu.link" }]
 requires-python = ">=3.13,<3.14"
+# [project].dependencies 就是 wheel 的 install_requires(setup.py 读 [project])：
+# 只放 kungfu 包运行时真正 import 的东西——安装 kungfu wheel 的卫星环境不应被拖进
+# conan/ruff/nuitka 整套构建工具链。工具链/引擎桥/历史种子在 [dependency-groups] dev
+# (uv sync/run 默认安装 dev 组,开发与构建视图不变)。
 dependencies = [
+    # Console
+    "click~=8.1.7",
+    "jsonschema~=4.25.0",
+    "psutil~=6.1.0",
+    "tabulate~=0.9.0",
+    # Rewind capture events (FlatBuffers python runtime, pure python)
+    "flatbuffers>=25.2,<26",
+]
+
+[project.urls]
+homepage = "https://kungfu.tech"
+repository = "https://github.com/kungfu-systems/kungfu.git"
+
+[dependency-groups]
+# 开发/构建工具链——本地与 CI 的 uv sync/run 默认安装,不进 wheel install_requires。
+dev = [
     # Compiler / checkers
     "ruff~=0.15.0",
     # static type checker — gradual baseline (see [tool.mypy]); run via
@@ -24,24 +44,30 @@ dependencies = [
     # (==) because a version bump changes C++ formatting output; an exact pin keeps
     # the result byte-identical across machines instead of the ambient system one.
     "clang-format==20.1.8",
+    # Native build orchestrator. run-conan.js invokes `uv run --frozen conan`;
+    # keep Conan in the locked uv environment instead of relying on runner-global tools.
+    "conan>=2.22,<3.0.0",
+    # cmake-js configures the core addon with `-G Ninja`; make the build tool
+    # part of the uv environment so Windows CI does not depend on runner-global ninja.
+    "ninja>=1.13,<2.0",
     # Regenerate the native pykungfu .pyi stubs as a build step (.gyp/gen-stubs.js
     # after the addon compiles + libnode colocates) so committed stubs/ track the
     # C++ binding instead of drifting. Type-check env uses the committed text stubs.
     "pybind11-stubgen~=2.5",
+    # Freezer 分发链已退役(2026-07-11, ADR-0046 stage 2 收口)：pyinstaller pin 一并移除；
+    # nuitka pin 保留,仅供 `engage nuitka` 桥(ADR-0045 py-AOT kfx build)使用。
     "nuitka~=4.1.0",
+    # engage bridges (pdm/scons/nuitka — ADR-0046 收敛方向,随桥退役一并退出)
     "pdm~=2.28.0",
     "pdm-pep517~=1.1.0",
     "scons~=4.8.0",
     "tomli-w~=1.0.0",
     "tomlkit~=0.13.0",
-    # Console
-    "click~=8.1.7",
-    "jsonschema~=4.25.0",
-    "psutil~=6.1.0",
-    "tabulate~=0.9.0",
+    # Tests
+    "pytest>=9.0.3,<10.0.0",
+    # 以下为历史 Pipfile/poetry 种子(kungfu 包代码无 import;保守保留在 dev,
+    # 待各自消费者证伪后再逐批退役):
     "wcmatch~=10.0.0",
-    # Rewind capture events (FlatBuffers python runtime, pure python)
-    "flatbuffers>=25.2,<26",
     # Numeric
     "numpy~=2.1.0",
     "pandas~=2.2.0",
@@ -59,7 +85,6 @@ dependencies = [
     "packaging",
     "platformdirs",
     "pluggy",
-    "pytest>=9.0.3,<10.0.0",
     "railroad-diagrams",
     "shellingham",
     "zipp",
@@ -86,15 +111,9 @@ dependencies = [
     "secretstorage==3.3.3 ; sys_platform == 'linux'",
 ]
 
-[project.urls]
-homepage = "https://kungfu.tech"
-repository = "https://github.com/kungfu-systems/kungfu.git"
-
-[dependency-groups]
-dev = ["pyinstaller~=6.11.0"]
-
 # python 预检：ruff（S1 = ruff format，替代 black；line-length 88 对齐 black 默认风格）。
-# ruff check（lint）留 S2 评估后再启用，当前不开 lint。
+# ruff check（lint）已在 staged + changed-scope 门启用（scripts/check.mjs，select E/F 见
+# [tool.ruff.lint]）；whole-tree 门（check:all）暂缓，待现存 lint 基线清零后再纳入。
 [tool.ruff]
 line-length = 88
 target-version = "py313"
@@ -144,7 +163,7 @@ ignore_errors = true
 # standalone 解释器,freeze 行为可复现。
 python-preference = "only-managed"
 # pypi index 不在仓内硬编码(开源安全,避免内网/镜像耦合)：走用户全局 ~/.config/uv/uv.toml 的
-# index-url,或环境变量 UV_DEFAULT_INDEX(可由 kungfu-code 的 cache-proxy 配置统一提供);
+# index-url,或环境变量 UV_DEFAULT_INDEX(可由 shifu 的 cache-proxy 配置统一提供);
 # 二者皆未配置则用官方 PyPI。需要 CN 镜像/局域网 devpi 时在用户侧配置,不污染本仓。
 
 # S1 阶段 B：脱 poetry-core，单一真相源收敛到 [project]/[tool.uv]。

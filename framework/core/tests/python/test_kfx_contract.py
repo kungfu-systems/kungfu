@@ -28,6 +28,36 @@ def test_kfx_package_manifest_schema_accepts_python_aot_probe():
     assert kfx_contract.package_kind(manifest) == "python-aot"
 
 
+def test_kfx_package_manifest_schema_accepts_bounded_wasm_profile():
+    manifest = {
+        "name": "example-wasm",
+        "version": "1.0.0",
+        "kungfuConfig": {
+            "key": "example-wasm",
+            "config": {
+                "wasm": {
+                    "world": "kungfu:journal/batch@1.0.0",
+                    "entry": "dist/guest.wasm",
+                    "sha256": "a" * 64,
+                    "capabilities": ["journal.read.batch"],
+                    "engine": "wasmtime",
+                    "fallback": "wasmer",
+                    "limits": {
+                        "fuel": 100000,
+                        "memoryPages": 32,
+                        "batchFrames": 16,
+                        "moduleBytes": 1048576,
+                        "outputBytes": 64,
+                    },
+                }
+            },
+        },
+    }
+
+    kfx_contract.validate_package_manifest(manifest)
+    assert kfx_contract.package_kind(manifest) == "wasm"
+
+
 def test_kfx_package_manifest_schema_rejects_invalid_view_capabilities(tmp_path):
     package_dir = tmp_path / "bad-view"
     package_dir.mkdir()

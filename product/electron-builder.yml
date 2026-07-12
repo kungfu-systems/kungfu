@@ -1,0 +1,43 @@
+appId: com.kungfu.app
+productName: Kungfu Episodes
+directories:
+  output: ../../product/dist/desktop
+# asar:false so the native binding (.node), kungfu dylibs, and bundled first-party
+# kfx can be loaded directly from Resources.
+asar: false
+npmRebuild: false
+beforePack: ./scripts/before-pack.cjs
+afterPack: ./scripts/after-pack.cjs
+files:
+  - out/**/*
+  - package.json
+  - "!node_modules/@kungfu-tech/core{,/**}"
+  - "!node_modules/@kungfu-tech/**/node_modules/@kungfu-tech/core{,/**}"
+  - "!node_modules/@kungfu-tech/**/.venv{,/**}"
+  - "!node_modules/@kungfu-tech/**/build{,/**}"
+  - "!node_modules/@kungfu-tech/**/dist/kungfu{,/**}"
+extraResources:
+  - from: ../core/dist/kungfu
+    to: kungfu
+  - from: resources/cli
+    to: cli
+  - from: ../tui/dist
+    to: tui
+  - from: ../../product/extensions
+    to: extensions
+mac:
+  target:
+    - dir
+    - dmg
+    - zip
+  identity: null
+linux:
+  executableName: kungfu
+  category: Finance
+  target:
+    - dir
+    - AppImage
+win:
+  target:
+    - dir
+    - nsis

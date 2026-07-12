@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
-import hashlib
 import json
 import os
 import sys
@@ -22,9 +21,10 @@ import uuid
 from typing import Any, Callable
 
 import kungfu
+from kungfu.content_hash import compute_content_hash_value
 from kungfu.rewind import (
-    MSG_RUN_BEGIN,
-    MSG_RUN_END,
+    ACTION_RUN_BEGIN,
+    ACTION_RUN_END,
     SCHEMA_VERSION,
     bundle,
     events,
@@ -32,6 +32,12 @@ from kungfu.rewind import (
 )
 from kungfu.rewind.cost import confidence_for, discover_provider
 from kungfu.rewind.fb.RunStatus import RunStatus
+from kungfu.storage.episode_lifecycle import RuntimeEpisodeLifecycle
+from kungfu.workspace import (
+    WorkspaceTarget,
+    prepare_workspace_write,
+    record_workspace_capture,
+)
 from kungfu.skill import (
     build_skill_context,
     context_file_from_env,
@@ -44,9 +50,6 @@ from kungfu.skill import (
     write_audit_document,
 )
 
-lf = kungfu.__binding__.longfist
-yjj = kungfu.__binding__.yijinjing
-
 
 @dataclass
 class ManagedRunCliReport:
@@ -58,16 +61,7 @@ class ManagedRunCliReport:
     response_doc: dict[str, Any]
     skill_audit_path: str | None
     skill_audit_doc: dict[str, Any] | None
-
-
-def _open_journal(runtime_dir: str, run_id: str) -> Any:
-    loc = yjj.locator(runtime_dir)
-    location = yjj.location(
-        lf.enums.mode.LIVE, lf.enums.category.SYSTEM, "rewind", run_id, loc
-    )
-    pub = yjj.noop_publisher()
-    bus = yjj.bus(False)
-    return yjj.writer(location, 0, True, pub, False, bus, 0)
+    workspace_receipt: dict[str, Any] | None
 
 
 def _rule(label: str = "") -> str:
@@ -91,6 +85,7 @@ def run_and_report(
     print_response: bool = False,
     report_callback: Callable[[ManagedRunCliReport], None] | None = None,
     quiet: bool = False,
+    workspace_target: WorkspaceTarget | None = None,
 ) -> int:
     """Run one managed provider run on a journal under runtime_dir and print its
     cost. Returns the provider's exit code. Shared by the `kungfu managed-run`
@@ -111,8 +106,32 @@ def run_and_report(
         return 2
     # discover_provider sets path together with found; the guard above proves it
     assert disc.path is not None
+    workspace_receipt = None
+    if workspace_target is not None:
+        workspace_receipt = prepare_workspace_write(workspace_target, "managed-run")
+        runtime_dir = workspace_target.runtime_dir
+        home = workspace_target.identity.data_home
+        if skill_context_env is not None:
+            skill_context_env = {
+                **skill_context_env,
+                "KF_HOME": home,
+                "KF_RUNTIME_DIR": runtime_dir,
+                "KF_WORKSPACE_ID": workspace_target.identity.workspace_id,
+                "KF_WORKSPACE_KIND": workspace_target.identity.workspace_kind,
+            }
+            if workspace_target.identity.workspace_root:
+                skill_context_env["KF_WORKSPACE_ROOT"] = (
+                    workspace_target.identity.workspace_root
+                )
     if not quiet:
         print(f"  binary  {disc.path}  ({disc.path_class}, {disc.version})")
+        if workspace_receipt is not None:
+            print(
+                "  workspace  "
+                f"{workspace_receipt['workspace_id']}  "
+                f"association={workspace_receipt['association']}  "
+                f"reason={workspace_receipt['resolution_reason']}"
+            )
     prompt_for_provider = prompt
     envelope = None
     skill_audit_events: list[Any] = []
@@ -154,35 +173,54 @@ def run_and_report(
             )
         print("  running the provider under management …\n")
 
-    writer = _open_journal(runtime_dir, run_id)
+    episode = RuntimeEpisodeLifecycle(
+        runtime_dir=runtime_dir,
+        namespace="rewind",
+        name=run_id,
+        title=f"managed run {run_id}",
+        actor=provider,
+        source=f"rewind:{run_id}",
+    )
 
-    def emit(msg_type: int, data: bytes) -> None:
-        writer.write_bytes(0, msg_type, list(data), len(data))
+    def emit(action_type: str, data: bytes) -> None:
+        episode.record_event(action_type, data, run_id=run_id)
 
-    emit(
-        MSG_RUN_BEGIN,
-        events.run_begin(
+    try:
+        emit(
+            ACTION_RUN_BEGIN,
+            events.run_begin(
+                run_id=run_id,
+                command=f"{provider} managed-run",
+                runtime=sys.platform,
+                supervisor_version=kungfu.__version__,
+                schema_version=SCHEMA_VERSION,
+            ),
+        )
+
+        result = managed_run.run_managed(
+            provider,
+            disc.path,
+            prompt_for_provider,
+            emit=emit,
             run_id=run_id,
-            command=f"{provider} managed-run",
-            runtime=sys.platform,
-            supervisor_version=kungfu.__version__,
-            schema_version=SCHEMA_VERSION,
-        ),
-    )
+            work_id=work_id,
+        )
 
-    result = managed_run.run_managed(
-        provider,
-        disc.path,
-        prompt_for_provider,
-        emit=emit,
-        run_id=run_id,
-        work_id=work_id,
-    )
+        status = RunStatus.Succeeded if result.exit_code == 0 else RunStatus.Failed
+        emit(ACTION_RUN_END, events.run_end(run_id, status, result.exit_code))
+    except Exception as exc:
+        episode.close(ok=False, reason=f"managed-run exception: {exc}")
+        raise
 
-    status = RunStatus.Succeeded if result.exit_code == 0 else RunStatus.Failed
-    emit(MSG_RUN_END, events.run_end(run_id, status, result.exit_code))
-    # frames are written straight to the memory-mapped journal page, so they
-    # persist without an explicit flush; the writer releases at function end.
+    if workspace_target is not None and workspace_receipt is not None:
+        workspace_receipt = record_workspace_capture(
+            workspace_target,
+            workspace_receipt,
+            [
+                {"kind": "run", "id": run_id},
+                {"kind": "episode", "id": str(episode.episode_id)},
+            ],
+        )
 
     bundle_dir = os.path.join(runtime_dir, "rewind", run_id, "bundle")
     os.makedirs(bundle_dir, exist_ok=True)
@@ -195,12 +233,14 @@ def run_and_report(
         "text": result.response_text,
         "body": json.loads(result.response_body) if result.response_body else None,
         "error": result.response_error,
+        "workspace": workspace_receipt,
     }
     with open(response_path, "w", encoding="utf-8") as f:
         json.dump(response_doc, f, ensure_ascii=False, indent=2)
         f.write("\n")
     with open(response_path, "rb") as rf:
-        response_hash = hashlib.sha256(rf.read()).hexdigest()
+        response_hash = compute_content_hash_value(rf.read())
+    episode.attach_payload_ref(response_path, content_hash=response_hash)
     skill_audit_doc = None
     skill_audit_path = None
     skill_audit_hash = None
@@ -221,7 +261,8 @@ def run_and_report(
             "sha256": response_hash,
             "text_known": result.response_text is not None,
             "error_known": result.response_error is not None,
-        }
+        },
+        **({"workspace": workspace_receipt} if workspace_receipt else {}),
     }
     if skill_audit_doc:
         extra["skill_audit"] = {
@@ -236,12 +277,17 @@ def run_and_report(
         runtime_dir,
         {
             "mode": "LIVE",
-            "category": "SYSTEM",
-            "group": "rewind",
+            "role": "SYSTEM",
+            "namespace": "rewind",
             "name": run_id,
             "dest": 0,
         },
         extra=extra,
+    )
+    episode.attach_payload_ref(manifest)
+    episode.close(
+        ok=status == RunStatus.Succeeded,
+        reason=f"managed-run exit_code={result.exit_code}",
     )
     report = ManagedRunCliReport(
         provider=provider,
@@ -252,6 +298,7 @@ def run_and_report(
         response_doc=response_doc,
         skill_audit_path=skill_audit_path,
         skill_audit_doc=skill_audit_doc,
+        workspace_receipt=workspace_receipt,
     )
     if report_callback is not None:
         report_callback(report)
@@ -281,14 +328,14 @@ def run_and_report(
         print(
             f"  attribution  {snap.attribution.value}   confidence {confidence_for(snap.attribution)}{ambiguous}"
         )
-        print("  event        CostSnapshot (msg_type 30008) written to the journal")
+        print("  event        rewind.cost.snapshot written to the journal")
     else:
         print(
             f"  no cost reported   emitted={result.emitted}  exit={result.exit_code}"
             + (f"  error={result.error}" if result.error else "")
         )
     print(_rule("response"))
-    print("  event        ModelResponse (msg_type 30004) written to the journal")
+    print("  event        rewind.model.response written to the journal")
     print(f"  response     {response_path}")
     if result.response_text:
         first_line = result.response_text.splitlines()[0]

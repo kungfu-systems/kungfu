@@ -18,6 +18,7 @@
   "main": "src/sdk.js",
   "files": [
     "src",
+    "kfd",
     "templates",
     "README.md"
   ],
@@ -25,10 +26,10 @@
     "build": "node --check src/sdk.js && node --test tests/*.test.mjs"
   },
   "dependencies": {
-    "@kungfu-tech/buildchain": "2.8.0",
+    "@kungfu-tech/buildchain": "2.11.14-alpha.0",
     "@kungfu-tech/core": "workspace:*",
     "@kungfu-tech/gui": "workspace:*",
-    "@kungfu-tech/kfd": "1.0.0-alpha.2",
+    "@kungfu-tech/kfd": "1.0.0-alpha.21",
     "@kungfu-tech/tui": "workspace:*",
     "ajv": "^8.20.0",
     "esbuild": "^0.28.1"

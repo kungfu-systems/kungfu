@@ -42,7 +42,8 @@
       "view": {
         "title": "Status",
         "capabilities": [
-          "ledger"
+          "ledger",
+          "storage"
         ],
         "system": true
       }

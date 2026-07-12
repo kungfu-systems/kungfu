@@ -3,9 +3,9 @@
 - Status: accepted
 - Date: 2026-07-02
 - Category: (principle) version governance — adoption of an organization-wide rule
-- Subsystem: whole repository (release lines, longfist layout, capability SDK, kfx contract, kfc CLI)
-- Related: generalizes [ADR-0008](ADR-0008-longfist-schema-evolution-and-minor-maintenance.md)
-  (the longfist layout as the true invariant) from one surface to a register of
+- Subsystem: whole repository (release lines, yijinjing schema layout, capability SDK, kfx contract, kfc CLI)
+- Related: generalizes [ADR-0008](ADR-0008-yijinjing-schema-layout-baseline.md)
+  (the yijinjing schema layout as the true invariant) from one surface to a register of
   surfaces; complements `docs/version-release-design.md` (the mechanism that
   opens and maintains lines; KFD-1 decides *when* a line must or must not open).
 
@@ -25,7 +25,7 @@ is not restated here.
 
 ## Context
 
-ADR-0008 already established that the longfist binary layout is the true
+ADR-0008 already established that the yijinjing schema binary layout is the true
 compatibility invariant beneath the tag, and that minor lines pin layout
 epochs. It answered "what happens when the layout changes" but left open what
 a breaking change to any *other* contract surface — the capability SDK, the
@@ -36,8 +36,8 @@ covers all of them uniformly.
 
 ## Consequences
 
-- The longfist layout keeps its ADR-0008 semantics as the register entry
-  `longfist-layout`; nothing about hot-path pinning or cold-path additive
+- The yijinjing schema layout keeps its ADR-0008 semantics as the register entry
+  `yijinjing-schema-layout`; nothing about hot-path pinning or cold-path additive
   evolution changes.
 - Breaking the capability SDK or the kfx contract without touching the layout
   is now, explicitly, a major.

@@ -2,7 +2,7 @@
 // @ts-check
 
 const fse = require('fs-extra');
-const path = require('path');
+const path = require('node:path');
 const { shell } = require('../lib');
 
 /** @param {string[]} cmd */
@@ -14,16 +14,40 @@ function conan(cmd) {
   });
 }
 
+function ensureBuildchainConanProfile() {
+  if (process.env.KUNGFU_BUILDCHAIN_SOURCE_BUILD !== '1') {
+    return;
+  }
+  const env = { NODE_GYP_RUN: 'on', ...process.env };
+  const existing = shell.runAndCollect(
+    'uv',
+    ['run', '--frozen', 'conan', 'profile', 'path', 'default'],
+    { env, silent: true },
+  );
+  if (existing.status === 0) {
+    return;
+  }
+  shell.run(
+    'uv',
+    ['run', '--frozen', 'conan', 'profile', 'detect', '--force'],
+    true,
+    {
+      env,
+    },
+  );
+}
+
 function getNodeVersionOptions() {
   const packageJson = fse.readJsonSync(
     path.resolve(path.dirname(__dirname), 'package.json'),
   );
   // electron 从 devDependencies 读并去掉 ^/~ 前缀；node_version 从 config 读
   // (v4 起 @kungfu-tech/libnode 不再列为 devDep，dev 走 npm link，见 docs/conan2-migration.md)。
-  const electronVersion = String(
-    packageJson.devDependencies['electron'],
-  ).replace(/^[\^~]/, '');
-  const nodeVersion = packageJson.config['node_version'];
+  const electronVersion = String(packageJson.devDependencies.electron).replace(
+    /^[\^~]/,
+    '',
+  );
+  const nodeVersion = packageJson.config.node_version;
   return [
     '-o',
     `electron_version=${electronVersion}`,
@@ -41,7 +65,7 @@ function makeConanSetting(name) {
 
 /** @param {string[]} names */
 function makeConanSettings(names) {
-  return names.map(makeConanSetting).flat();
+  return names.flatMap(makeConanSetting);
 }
 
 // Windows 端口固化：conan profile detect 在 MSVC 上把 compiler.cppstd 探成 14，
@@ -60,16 +84,20 @@ function makeConanOption(name) {
 
 /** @param {string[]} names */
 function makeConanOptions(names) {
-  return names.map(makeConanOption).flat().concat(getNodeVersionOptions());
+  return names.flatMap(makeConanOption).concat(getNodeVersionOptions());
 }
 
 // conan2：-if/-bf → --output-folder；arch 是 setting 由 profile 自测，不再作 -o 选项。
+// freezer 不再透传给 conan：freeze 已迁出 conan（Stage C → run-freeze.js），
+// conanfile 的 freezer option 只喂 conan2 下不可达的遗留 package() 路径；产品
+// 形态选择（含 macOS 平台默认 assemble）完全由 run-freeze.js 决定。
 function conanInstall() {
+  ensureBuildchainConanProfile();
   const settings = [
     ...makeConanSettings(['build_type']),
     ...platformConanSettings(),
   ];
-  const options = makeConanOptions(['log_level', 'freezer']);
+  const options = makeConanOptions(['log_level']);
   conan([
     'install',
     '.',
@@ -86,20 +114,20 @@ function conanBuild() {
     ...makeConanSettings(['build_type']),
     ...platformConanSettings(),
   ];
-  const options = makeConanOptions(['log_level', 'freezer']);
+  const options = makeConanOptions(['log_level']);
   conan(['build', '.', '--output-folder', 'build', ...settings, ...options]);
 }
 
 // conan2 移除了独立的 `conan package` 本地命令(package() 经 conan create/export-pkg 触发)。
 // Stage C 决定 freeze 脱离 conan：kfc 的 freeze→dist/kungfu 已迁到独立入口 `.gyp/run-freeze.js`
-// (pnpm freeze → ./kungfu-code freeze)，见 docs/conan2-migration.md。此处 `package` 子命令
+// (pnpm freeze → ./shifu freeze)，见 docs/conan2-migration.md。此处 `package` 子命令
 // 仅保留 conan build(编译)语义，不再承担 freeze。
 function conanPackage() {
   const settings = [
     ...makeConanSettings(['build_type']),
     ...platformConanSettings(),
   ];
-  const options = makeConanOptions(['log_level', 'freezer']);
+  const options = makeConanOptions(['log_level']);
   conan(['build', '.', '--output-folder', 'build', ...settings, ...options]);
 }
 

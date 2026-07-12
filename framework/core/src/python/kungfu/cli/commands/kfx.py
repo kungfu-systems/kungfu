@@ -10,11 +10,14 @@
 # packages) install the same way; members are installed individually.
 
 import click
+import hashlib
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tarfile
+from pathlib import Path
 
 from kungfu import kfx_contract
 from kungfu.cli.commands import kfc, PrioritizedCommandGroup
@@ -77,7 +80,59 @@ def _trust_notice(manifest):
         )
     elif "adapter" in config:
         lines.append("[kfx]   adapter may inject into traced runs (in-process)")
+    if "wasm" in config:
+        lines.append(
+            "[kfx]   wasm is VM-confined, but every declared host capability "
+            "still requires an explicit run-time grant"
+        )
     return lines
+
+
+def _wasm_run_spec(package_dir, manifest, grants):
+    config = (manifest.get("kungfuConfig") or {}).get("config") or {}
+    wasm = config.get("wasm")
+    if not isinstance(wasm, dict):
+        raise ValueError("package has no kungfuConfig.config.wasm facet")
+    declared = set(wasm.get("capabilities") or [])
+    granted = set(grants)
+    if granted != declared:
+        missing = sorted(declared - granted)
+        extra = sorted(granted - declared)
+        detail = ", ".join(
+            part
+            for part in [
+                f"missing grants: {', '.join(missing)}" if missing else "",
+                f"undeclared grants: {', '.join(extra)}" if extra else "",
+            ]
+            if part
+        )
+        raise ValueError(
+            "manifest declarations do not grant authority; pass one explicit "
+            f"--grant per declared capability ({detail})"
+        )
+    root = Path(package_dir).resolve()
+    module = (root / str(wasm["entry"])).resolve()
+    if root not in module.parents or not module.is_file():
+        raise ValueError("wasm entry must be a file inside the installed package")
+    actual_hash = hashlib.sha256(module.read_bytes()).hexdigest()
+    if actual_hash != wasm["sha256"]:
+        raise ValueError("wasm entry SHA-256 does not match package.json")
+    return wasm, module
+
+
+def _libwasm_host():
+    name = "kungfu-wasm-host.exe" if os.name == "nt" else "kungfu-wasm-host"
+    candidates = [
+        os.environ.get("KUNGFU_LIBWASM_HOST"),
+        str(Path(sys.executable).resolve().parent / name),
+    ]
+    for candidate in candidates:
+        if candidate and os.path.isfile(candidate):
+            return candidate
+    raise ValueError(
+        "kungfu-wasm-host is not installed next to the runtime; this artifact "
+        "does not carry the production libwasm closure"
+    )
 
 
 @kfx.command(help="install a kfx package (npm pack tgz, or a package directory)")
@@ -177,6 +232,73 @@ def list_installed(ctx, as_json):
                 f"{row['key']}  {row['package']}@{row['version']}  "
                 f"({row['kind']}, {trust})"
             )
+
+
+@kfx.command(
+    "run-wasm",
+    help="run an installed wasm kfx through the admitted production runtime",
+)
+@click.argument("key", type=str)
+@click.option(
+    "--grant",
+    "grants",
+    multiple=True,
+    type=click.Choice(["journal.read.batch"]),
+    help="explicit host capability consent; repeat for every declared capability",
+)
+@click.option("--source-namespace", required=True)
+@click.option("--source-name", required=True)
+@click.option(
+    "--engine",
+    type=click.Choice(["auto", "wasmtime", "wasmer"]),
+    default="auto",
+    show_default=True,
+)
+@kfx_command_context
+def run_wasm(ctx, key, grants, source_namespace, source_name, engine):
+    package_dir = os.path.join(_install_root(ctx), key)
+    try:
+        manifest = _read_manifest_from_dir(package_dir)
+        wasm, module = _wasm_run_spec(package_dir, manifest, grants)
+        host = _libwasm_host()
+    except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+        raise click.ClickException(str(error)) from error
+    limits = wasm["limits"]
+    command = [
+        host,
+        "--runtime-dir",
+        str(ctx.runtime_dir),
+        "--module",
+        str(module),
+        "--expected-sha256",
+        wasm["sha256"],
+        "--world",
+        wasm["world"],
+        "--capabilities",
+        "1",
+        "--fuel",
+        str(limits["fuel"]),
+        "--memory-pages",
+        str(limits["memoryPages"]),
+        "--batch-frames",
+        str(limits["batchFrames"]),
+        "--module-bytes",
+        str(limits["moduleBytes"]),
+        "--output-bytes",
+        str(limits["outputBytes"]),
+        "--source-namespace",
+        source_namespace,
+        "--source-name",
+        source_name,
+        "--engine",
+        engine,
+    ]
+    result = subprocess.run(command, text=True, capture_output=True, check=False)
+    if result.stdout:
+        click.echo(result.stdout.rstrip())
+    if result.returncode != 0:
+        message = result.stderr.strip() or f"libwasm host exited {result.returncode}"
+        raise click.ClickException(message)
 
 
 @kfx.command(help="remove an installed kfx by its key")

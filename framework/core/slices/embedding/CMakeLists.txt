@@ -6,7 +6,7 @@
 #
 # Deliberately NOT wired into slices/CMakeLists.txt: the proof is that this
 # project configures and builds against src/libyijinjing alone, with no help
-# from the kungfu parent build. run.sh configures it from scratch in a
+# from the kungfu parent build. run.mjs configures it from scratch in a
 # throwaway build directory; the embedder provides its own dependencies
 # (here: the conan toolchain, as any conan-using embedder would).
 
