@@ -170,6 +170,14 @@ importers:
         specifier: workspace:*
         version: link:../work-dashboard
 
+  extensions/mission-control/mission-control-actions: {}
+
+  extensions/mission-control/mission-control-assessment: {}
+
+  extensions/mission-control/mission-control-contract: {}
+
+  extensions/mission-control/mission-control-views: {}
+
   extensions/rewind-inspector:
     dependencies:
       '@kungfu-tech/api':
@@ -574,6 +582,21 @@ importers:
       '@kungfu-tech/kfx-adapter-langchain':
         specifier: workspace:*
         version: link:../extensions/langchain-adapter
+      '@kungfu-tech/kfx-mission-control-actions':
+        specifier: workspace:*
+        version: link:../extensions/mission-control/mission-control-actions
+      '@kungfu-tech/kfx-mission-control-assessment':
+        specifier: workspace:*
+        version: link:../extensions/mission-control/mission-control-assessment
+      '@kungfu-tech/kfx-mission-control-contract':
+        specifier: workspace:*
+        version: link:../extensions/mission-control/mission-control-contract
+      '@kungfu-tech/kfx-mission-control-views':
+        specifier: workspace:*
+        version: link:../extensions/mission-control/mission-control-views
+      '@kungfu-tech/kfx-suite-mission-control':
+        specifier: workspace:*
+        version: link:../extensions/mission-control
       '@kungfu-tech/kfx-suite-system':
         specifier: workspace:*
         version: link:../extensions/system

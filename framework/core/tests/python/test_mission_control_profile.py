@@ -47,19 +47,46 @@ def test_first_party_mission_control_suite_closes_and_activates(tmp_path):
 
     runtime = tmp_path / "active-runtime"
     _activate(SOURCE, runtime)
+    discovered = profile_sdk.discover_source(
+        "kungfu.mission-control", runtime, search_roots=[SOURCE.parent]
+    )
+    assert discovered["source"] == str(SOURCE.resolve())
     catalog = profile_composition.catalog(SOURCE, runtime, require_active=True)
     managed = profile_composition.manager(runtime)["profiles"][0]
+    contract = profile_composition.contract_materialization_plan(SOURCE, runtime)
+    assert [operation["kind"] for operation in contract["operations"]] == [
+        "declare-contract-world",
+        "declare-fact-surface",
+        "declare-fact-surface",
+        "declare-fact-surface",
+    ]
+    receipt = profile_composition.authorized_contract_materialize(
+        runtime,
+        contract,
+        profile_sdk.answer_decision(contract["decisionCard"], "approve", "test-owner"),
+    )
 
     assert catalog["activeExactRoot"] is True
-    assert catalog["views"] == []
-    assert [row["code"] for row in catalog["diagnostics"]] == ["no-contributed-views"]
+    assert {row["id"] for row in catalog["views"]} == {
+        "mission-state",
+        "mission-timeline",
+        "mission-diff",
+        "mission-causal-graph",
+        "mission-attention",
+    }
+    assert catalog["diagnostics"] == []
     assert managed["health"] == "active"
     assert managed["profileSuiteRoot"] == catalog["profileSuiteRoot"]
+    assert receipt["status"] == "materialized"
+    assert (
+        profile_composition.contract_materialization_plan(SOURCE, runtime)["operations"]
+        == []
+    )
 
 
 def test_first_party_mission_control_suite_rejects_missing_member(tmp_path):
     source = _copy_source(tmp_path)
-    shutil.rmtree(source / "members" / "mission-control-actions")
+    shutil.rmtree(source / "mission-control-actions")
 
     with pytest.raises(profile_sdk.ProfileSdkError) as raised:
         profile_sdk.resolve_source(source)

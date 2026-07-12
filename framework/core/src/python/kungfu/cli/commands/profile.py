@@ -64,6 +64,14 @@ def examples(ctx, as_json):
     _json(profile_sdk.examples())
 
 
+@profile.command(help="discover one installed Profile Suite by semantic id")
+@click.argument("profile_id")
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def discover(ctx, profile_id, as_json):
+    _json(_run(lambda: profile_sdk.discover_source(profile_id, ctx.runtime_dir)))
+
+
 @profile.command(help="plan or write a deterministic Profile Suite source tree")
 @click.argument("brief", type=click.Path(exists=True, dir_okay=False, path_type=Path))
 @click.option("--out", required=True, type=click.Path(path_type=Path))
@@ -312,12 +320,26 @@ def catalog(ctx, source, require_active, as_json):
 @profile.command(name="query-plan", help="plan a contributed view through ADR-0048")
 @click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
 @click.argument("view_id")
+@click.option(
+    "--resolution-file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="member-resolved bindings and QueryDefinition for a query family",
+)
 @click.option("--out", type=click.Path(dir_okay=False, path_type=Path))
 @click.option("--json", "as_json", is_flag=True)
 @profile_context
-def query_plan(ctx, source, view_id, out, as_json):
+def query_plan(ctx, source, view_id, resolution_file, out, as_json):
     payload = _run(
-        lambda: profile_composition.query_plan(source, ctx.runtime_dir, view_id)
+        lambda: (
+            profile_composition.resolved_query_plan(
+                source,
+                ctx.runtime_dir,
+                view_id,
+                _load_json(resolution_file),
+            )
+            if resolution_file
+            else profile_composition.query_plan(source, ctx.runtime_dir, view_id)
+        )
     )
     if out:
         out.write_text(
@@ -344,12 +366,63 @@ def query_run(ctx, source, plan_file, as_json):
     )
 
 
+@profile.command(
+    name="contract-plan",
+    help="plan active Profile declarations into the workspace Fact Library",
+)
+@click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--out", type=click.Path(dir_okay=False, path_type=Path))
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def contract_plan(ctx, source, out, as_json):
+    payload = _run(
+        lambda: profile_composition.contract_materialization_plan(
+            source, ctx.runtime_dir
+        )
+    )
+    if out:
+        out.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+        payload["contractPlanPath"] = str(out.resolve())
+    _json(payload)
+
+
+@profile.command(
+    name="contract-apply",
+    help="apply an approved, still-current Profile contract plan",
+)
+@click.argument(
+    "plan_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option(
+    "--authorization-file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def contract_apply(ctx, plan_file, authorization_file, as_json):
+    _json(
+        _run(
+            lambda: profile_composition.authorized_contract_materialize(
+                ctx.runtime_dir,
+                _load_json(plan_file),
+                _load_json(authorization_file) if authorization_file else None,
+            )
+        )
+    )
+
+
 @profile.command(name="assess-plan", help="plan a purpose-bound ADR-0052 assessment")
 @click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
 @click.argument(
     "query_receipt", type=click.Path(exists=True, dir_okay=False, path_type=Path)
 )
 @click.option("--claim-id", required=True)
+@click.option(
+    "--claim-instance-id",
+    help="runtime claim identity; defaults to the declared claim id",
+)
 @click.option("--policy-id", required=True)
 @click.option("--purpose", required=True)
 @click.option("--work-episode-id", required=True, type=int)
@@ -361,6 +434,7 @@ def assess_plan(
     source,
     query_receipt,
     claim_id,
+    claim_instance_id,
     policy_id,
     purpose,
     work_episode_id,
@@ -373,6 +447,7 @@ def assess_plan(
             ctx.runtime_dir,
             _load_json(query_receipt),
             claim_id=claim_id,
+            claim_instance_id=claim_instance_id,
             policy_id=policy_id,
             purpose=purpose,
             work_episode_id=work_episode_id,

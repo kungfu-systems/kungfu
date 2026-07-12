@@ -17,7 +17,7 @@
   "kfd1": {
     "contractWorld": {
       "path": "contracts/world.json",
-      "sha256": "228775af169185bb7184b34c77b5a7e48b6ed94f5b8faf9365156ec79e69aecf"
+      "sha256": "498c26181a2a7fdc57e189336fb1aa4e41c4e9d0d6ae5cb2acb3ce9da6842c98"
     },
     "factSurfaces": [
       {
@@ -63,7 +63,7 @@
   "views": {
     "registry": {
       "path": "views/registry.json",
-      "sha256": "d85f51c14030f076feeffb00a27f66f6661eb4f0a695175b1663e7af57350dbf"
+      "sha256": "0f790db6cdbd6725e52f2fa13aac83d368b22e49e0d3033bac49cd7330388b9d"
     }
   },
   "migrations": {

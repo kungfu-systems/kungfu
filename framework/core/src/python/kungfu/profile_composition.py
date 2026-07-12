@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -20,10 +21,13 @@ from kungfu.storage import service as storage_service
 
 CATALOG_SCHEMA = "kungfu.profile-composition/v1"
 QUERY_PLAN_SCHEMA = "kungfu.profile-query-plan/v1"
+RESOLVED_QUERY_PLAN_SCHEMA = "kungfu.profile-resolved-query-plan/v1"
 ASSESSMENT_PLAN_SCHEMA = "kungfu.profile-assessment-plan/v1"
+CONTRACT_PLAN_SCHEMA = "kungfu.profile-contract-plan/v1"
 MANAGER_SCHEMA = "kungfu.profile-manager/v1"
 _GENERIC_VIEWS = {"table", "timeline", "diff", "causal-graph", "attention"}
 _ARTIFACT_SCHEMA_KEYS = {
+    "kungfu.profile-contract-world/v1": "contractWorldSchema",
     "kungfu.profile-fact-surfaces/v1": "factSurfacesSchema",
     "kungfu.profile-claims/v1": "claimsSchema",
     "kungfu.profile-assessment-policies/v1": "assessmentPoliciesSchema",
@@ -172,6 +176,12 @@ def query_plan(
 ) -> dict[str, Any]:
     composed = catalog(source, runtime_dir, require_active=True)
     view = _by_id(composed["views"], view_id, "view")
+    if "definition" not in view:
+        _fail(
+            "query-family-resolution-required",
+            "view requires a member-resolved query definition",
+            view=view_id,
+        )
     core = storage_service.query_plan(
         runtime_dir, action="explain", definition=view["definition"]
     )
@@ -185,21 +195,82 @@ def query_plan(
     return {"schema": QUERY_PLAN_SCHEMA, "planId": _root(identity), **identity}
 
 
+def resolved_query_plan(
+    source: str | Path,
+    runtime_dir: str | Path,
+    view_id: str,
+    resolution: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Bind one member-resolved QueryDefinition to an exact active family."""
+
+    composed = catalog(source, runtime_dir, require_active=True)
+    view = _by_id(composed["views"], view_id, "view")
+    family = view.get("queryFamily")
+    if not isinstance(family, Mapping):
+        _fail("query-family-required", "view does not declare a runtime query family")
+    _validate_query_resolution(family, resolution)
+    member = str(family["member"])
+    member_root = composed["memberRoots"].get(member)
+    if not member_root:
+        _fail(
+            "query-resolver-member-unavailable",
+            "query family resolver is not in the exact Suite closure",
+            member=member,
+        )
+    definition = dict(resolution["definition"])
+    _validate_resolved_definition(view, definition)
+    core = storage_service.query_plan(
+        runtime_dir, action="explain", definition=definition
+    )
+    normalized = {
+        "schema": "kungfu.profile-query-resolution/v1",
+        "familyId": family["id"],
+        "bindings": dict(resolution["bindings"]),
+        "definition": definition,
+    }
+    identity = {
+        "catalogRoot": composed["catalogRoot"],
+        "profileSuiteRoot": composed["profileSuiteRoot"],
+        "profileRevision": composed["profileRevision"],
+        "view": view,
+        "resolverMember": member,
+        "resolverMemberRoot": member_root,
+        "resolution": normalized,
+        "corePlan": core,
+    }
+    return {
+        "schema": RESOLVED_QUERY_PLAN_SCHEMA,
+        "planId": _root(identity),
+        **identity,
+    }
+
+
 def execute_query(
     source: str | Path,
     runtime_dir: str | Path,
     plan: Mapping[str, Any],
 ) -> dict[str, Any]:
-    if plan.get("schema") != QUERY_PLAN_SCHEMA:
+    if plan.get("schema") not in {QUERY_PLAN_SCHEMA, RESOLVED_QUERY_PLAN_SCHEMA}:
         _fail("query-plan-invalid", "execute requires a Profile query plan")
-    refreshed = query_plan(
-        source, runtime_dir, str((plan.get("view") or {}).get("id") or "")
-    )
+    if plan.get("schema") == RESOLVED_QUERY_PLAN_SCHEMA:
+        refreshed = resolved_query_plan(
+            source,
+            runtime_dir,
+            str((plan.get("view") or {}).get("id") or ""),
+            dict(plan.get("resolution") or {}),
+        )
+    else:
+        refreshed = query_plan(
+            source, runtime_dir, str((plan.get("view") or {}).get("id") or "")
+        )
     if refreshed.get("planId") != plan.get("planId"):
         _fail("query-plan-stale", "Profile, lifecycle state or query plan changed")
-    result = storage_service.fact_query_definition(
-        runtime_dir, dict(refreshed["view"]["definition"])
+    definition = (
+        refreshed["resolution"]["definition"]
+        if refreshed["schema"] == RESOLVED_QUERY_PLAN_SCHEMA
+        else refreshed["view"]["definition"]
     )
+    result = storage_service.fact_query_definition(runtime_dir, dict(definition))
     return {
         "schema": "kungfu.profile-query-receipt/v1",
         "planId": refreshed["planId"],
@@ -212,15 +283,100 @@ def execute_query(
     }
 
 
+def compose_query_receipt(
+    source: str | Path,
+    runtime_dir: str | Path,
+    view_id: str,
+    receipts: list[Mapping[str, Any]],
+    result: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Bind a domain reducer's composite result to exact public subreceipts."""
+
+    if len(receipts) == 1:
+        receipt = dict(receipts[0])
+        if receipt.get("result") != result:
+            _fail(
+                "query-composition-result-mismatch",
+                "single query receipt result changed during composition",
+            )
+        return receipt
+    composed = catalog(source, runtime_dir, require_active=True)
+    view = _by_id(composed["views"], view_id, "view")
+    if not receipts:
+        _fail("query-composition-empty", "query composition requires subreceipts")
+    for receipt in receipts:
+        if (
+            receipt.get("schema") != "kungfu.profile-query-receipt/v1"
+            or receipt.get("profileSuiteRoot") != composed["profileSuiteRoot"]
+            or receipt.get("catalogRoot") != composed["catalogRoot"]
+            or receipt.get("viewId") != view_id
+        ):
+            _fail(
+                "query-composition-receipt-mismatch",
+                "query subreceipt belongs to another Profile, catalog or view",
+            )
+    expected = sorted(
+        (
+            str(receipt.get("queryDefinitionRoot") or ""),
+            str(receipt.get("queryProofRoot") or ""),
+            str((receipt.get("result") or {}).get("result_hash") or ""),
+        )
+        for receipt in receipts
+    )
+    actual = sorted(
+        (
+            str(row.get("query_definition_root") or ""),
+            str(row.get("query_proof_root") or ""),
+            str(row.get("result_hash") or ""),
+        )
+        for row in (result.get("lineage") or {}).get("subqueries") or []
+    )
+    if expected != actual:
+        _fail(
+            "query-composition-proof-mismatch",
+            "composite result does not bind every public subreceipt",
+        )
+    identity = {
+        "profileSuiteRoot": composed["profileSuiteRoot"],
+        "catalogRoot": composed["catalogRoot"],
+        "view": view,
+        "subreceiptPlanIds": [receipt.get("planId") for receipt in receipts],
+        "queryDefinitionRoot": result.get("query_definition_root"),
+        "queryProofRoot": result.get("query_proof_root"),
+        "resultHash": result.get("result_hash"),
+    }
+    return {
+        "schema": "kungfu.profile-query-receipt/v1",
+        "planId": _root(identity),
+        "profileSuiteRoot": composed["profileSuiteRoot"],
+        "catalogRoot": composed["catalogRoot"],
+        "viewId": view_id,
+        "queryDefinitionRoot": result["query_definition_root"],
+        "queryProofRoot": result["query_proof_root"],
+        "result": dict(result),
+        "subreceipts": [
+            {
+                "planId": receipt.get("planId"),
+                "queryDefinitionRoot": receipt.get("queryDefinitionRoot"),
+                "queryProofRoot": receipt.get("queryProofRoot"),
+            }
+            for receipt in receipts
+        ],
+    }
+
+
 def assessment_plan(
     source: str | Path,
     runtime_dir: str | Path,
     query_receipt: Mapping[str, Any],
     *,
     claim_id: str,
+    claim_instance_id: str | None = None,
     policy_id: str,
     purpose: str,
     work_episode_id: int,
+    independent_observation: Mapping[str, Any] | None = None,
+    executor_profile: str | None = None,
 ) -> dict[str, Any]:
     composed = catalog(source, runtime_dir, require_active=True)
     claim = _by_id(composed["claims"], claim_id, "claim")
@@ -238,9 +394,35 @@ def assessment_plan(
     ):
         _fail("query-receipt-stale", "query receipt belongs to another Profile cut")
     result = query_receipt.get("result") or {}
+    if query_receipt.get("queryDefinitionRoot") != result.get(
+        "query_definition_root"
+    ) or query_receipt.get("queryProofRoot") != result.get("query_proof_root"):
+        _fail(
+            "query-receipt-root-mismatch",
+            "Profile query receipt roots do not match the bound Core result",
+        )
     lineage = result.get("lineage") or {}
-    root = _episode_root(lineage, work_episode_id)
-    missing = _missing_evidence(policy["requiredEvidence"], result, lineage, root)
+    try:
+        root = _episode_root(lineage, work_episode_id)
+    except profile_sdk.ProfileSdkError:
+        observation = independent_observation or {}
+        if observation.get("relation") != "observed-work":
+            raise
+        root = _verified_runtime_episode_root(runtime_dir, work_episode_id)
+        if observation.get("episodeRoot") != root:
+            _fail(
+                "independent-observation-root-mismatch",
+                "independent work Episode root does not match Core verification",
+                workEpisodeId=str(work_episode_id),
+                verifiedEpisodeRoot=root,
+            )
+    missing = _missing_evidence(
+        policy["requiredEvidence"],
+        result,
+        lineage,
+        root,
+        independent_observation,
+    )
     if missing:
         _fail(
             "assessment-evidence-unavailable",
@@ -249,11 +431,22 @@ def assessment_plan(
             profileSuiteRoot=composed["profileSuiteRoot"],
             queryProofRoot=query_receipt.get("queryProofRoot"),
         )
+    instance_id = str(claim_instance_id or claim["id"]).strip()
+    if not instance_id:
+        _fail("claim-instance-required", "assessment claim instance id is empty")
+    executor = str(executor_profile or policy.get("executorProfile") or "thread")
+    if executor not in {"inline", "thread", "process"}:
+        _fail(
+            "assessment-executor-invalid",
+            "assessment executor profile must be inline, thread, or process",
+        )
     request = {
-        "claim_id": claim["id"],
+        "claim_id": instance_id,
         "claim_type": claim["type"],
         "purpose": purpose,
-        "work_episode_id": work_episode_id,
+        # Episode ids are uint64 in Core and can exceed the signed range used by
+        # the Python/C++ JSON bridge. Their canonical API representation is text.
+        "work_episode_id": str(work_episode_id),
         "work_episode_root": root,
         "query_definition_root": query_receipt["queryDefinitionRoot"],
         "query_proof_root": query_receipt["queryProofRoot"],
@@ -275,13 +468,16 @@ def assessment_plan(
         "profileRevision": composed["profileRevision"],
         "source": str(Path(source).resolve()),
         "queryReceipt": dict(query_receipt),
+        "independentObservation": dict(independent_observation or {}),
+        "claimTypeId": claim["id"],
+        "claimInstanceId": instance_id,
         "request": request,
-        "executorProfile": policy.get("executorProfile", "thread"),
+        "executorProfile": executor,
     }
     plan = {"schema": ASSESSMENT_PLAN_SCHEMA, "planId": _root(identity), **identity}
     plan["decisionCard"] = profile_sdk.decision_card(
         "profile-assessment-authorization",
-        f"Authorize assessment of {claim_id} for {purpose} at the exact query cut.",
+        f"Authorize assessment of {instance_id} as {claim_id} for {purpose} at the exact query cut.",
         choices=["approve", "deny"],
         basis={
             "planId": plan["planId"],
@@ -305,12 +501,15 @@ def authorized_assessment_execute(
         str(plan.get("source") or ""),
         runtime_dir,
         dict(plan.get("queryReceipt") or {}),
-        claim_id=str((plan.get("request") or {}).get("claim_id") or ""),
+        claim_id=str(plan.get("claimTypeId") or ""),
+        claim_instance_id=str(plan.get("claimInstanceId") or ""),
         policy_id=str(
             ((plan.get("request") or {}).get("policy") or {}).get("id") or ""
         ),
         purpose=str((plan.get("request") or {}).get("purpose") or ""),
         work_episode_id=int((plan.get("request") or {}).get("work_episode_id") or 0),
+        independent_observation=dict(plan.get("independentObservation") or {}),
+        executor_profile=str(plan.get("executorProfile") or "thread"),
     )
     if refreshed["planId"] != plan.get("planId"):
         _fail("assessment-plan-stale", "Profile or assessment inputs changed")
@@ -336,6 +535,131 @@ def authorized_assessment_execute(
     }
 
 
+def contract_materialization_plan(
+    source: str | Path, runtime_dir: str | Path
+) -> dict[str, Any]:
+    """Plan explicit ADR-0051 declarations from one active Profile closure."""
+
+    composed = catalog(source, runtime_dir, require_active=True)
+    validated = profile_sdk.validate_source(source, runtime_dir)
+    inspection = validated["inspection"]
+    artifact = _read_typed_ref(
+        inspection,
+        inspection["profile"]["kfd1"]["contractWorld"],
+        "kungfu.profile-contract-world/v1",
+    )
+    _validate_contract_material(inspection["profile"], composed, artifact)
+    current = storage_service.fact_type_list(runtime_dir)
+    operations = _contract_operations(artifact, current)
+    identity = {
+        "source": str(Path(source).resolve()),
+        "catalogRoot": composed["catalogRoot"],
+        "profileSuiteRoot": composed["profileSuiteRoot"],
+        "profileRevision": composed["profileRevision"],
+        "factCatalogRoot": _root(current),
+        "contract": artifact,
+        "operations": operations,
+    }
+    plan = {
+        "schema": CONTRACT_PLAN_SCHEMA,
+        "planId": _root(identity),
+        **identity,
+        "requiresAuthorization": bool(operations),
+    }
+    if operations:
+        plan["decisionCard"] = profile_sdk.decision_card(
+            "profile-contract-materialization",
+            "Authorize these exact Profile declarations in the workspace Fact Library.",
+            choices=["approve", "deny"],
+            basis={
+                "planId": plan["planId"],
+                "profileSuiteRoot": plan["profileSuiteRoot"],
+                "factCatalogRoot": plan["factCatalogRoot"],
+                "operations": operations,
+            },
+            required_authority="workspace-fact-contract-owner",
+            resume_command="answer this card, then apply the exact Profile contract plan",
+        )
+    return plan
+
+
+def authorized_contract_materialize(
+    runtime_dir: str | Path,
+    plan: Mapping[str, Any],
+    answer: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    if plan.get("schema") != CONTRACT_PLAN_SCHEMA:
+        _fail(
+            "contract-plan-invalid", "materialization requires a Profile contract plan"
+        )
+    refreshed = contract_materialization_plan(
+        str(plan.get("source") or ""), runtime_dir
+    )
+    if refreshed["planId"] != plan.get("planId"):
+        _fail("contract-plan-stale", "Profile or Fact Library declarations changed")
+    if refreshed["operations"]:
+        if not isinstance(answer, Mapping):
+            _fail(
+                "contract-authorization-required",
+                "contract plan requires a decision answer",
+            )
+        card = plan.get("decisionCard") or {}
+        profile_sdk.validate_decision_answer(answer, card)
+        if answer.get("choice") != "approve" or (answer.get("basis") or {}).get(
+            "planId"
+        ) != plan.get("planId"):
+            _fail("decision-denied", "contract materialization was not approved")
+    system_time = time.time_ns()
+    receipts = []
+    contract = dict(refreshed["contract"])
+    for index, operation in enumerate(refreshed["operations"]):
+        at = system_time + index
+        if operation["kind"] == "declare-contract-world":
+            world = contract["contractWorld"]
+            receipts.append(
+                storage_service.fact_declare_contract_world(
+                    runtime_dir,
+                    {
+                        "id": world["id"],
+                        "version": world["version"],
+                        "effective_from": at,
+                        "effective_until": 0,
+                        "fact_surface_ids": world["factSurfaceIds"],
+                    },
+                    system_time=at,
+                )
+            )
+        elif operation["kind"] == "declare-fact-surface":
+            surface = next(
+                row for row in contract["factSurfaces"] if row["id"] == operation["id"]
+            )
+            receipts.append(
+                storage_service.fact_type_create(
+                    runtime_dir,
+                    {
+                        "id": surface["id"],
+                        "version": surface["version"],
+                        "contract_world_id": surface["contractWorldId"],
+                        "source_authorities": surface["sourceAuthorities"],
+                        "schema": surface["schema"],
+                        "effective_from": at,
+                        "effective_until": 0,
+                    },
+                    system_time=at,
+                )
+            )
+    return {
+        "schema": "kungfu.profile-contract-receipt/v1",
+        "planId": refreshed["planId"],
+        "profileSuiteRoot": refreshed["profileSuiteRoot"],
+        "catalogRoot": refreshed["catalogRoot"],
+        "authorizationId": (answer or {}).get("authorizationId"),
+        "status": "materialized" if receipts else "current",
+        "receipts": receipts,
+        "factCatalog": storage_service.fact_type_list(runtime_dir),
+    }
+
+
 def _episode_root(lineage: Mapping[str, Any], episode_id: int) -> str:
     for row in lineage.get("episode_content_roots") or []:
         if (
@@ -358,6 +682,41 @@ def _episode_root(lineage: Mapping[str, Any], episode_id: int) -> str:
         "selected work Episode has no verified content root at this query cut",
         workEpisodeId=episode_id,
         availableEpisodeRoots=lineage.get("episode_content_roots") or [],
+    )
+
+
+def _verified_runtime_episode_root(runtime_dir: str | Path, episode_id: int) -> str:
+    verified = storage_service.fsck(
+        runtime_dir, episode_id=episode_id, verify_frames=True
+    )
+    if not verified.get("ok"):
+        _fail(
+            "independent-work-episode-unverified",
+            "independent work Episode failed Core frame verification",
+            workEpisodeId=str(episode_id),
+        )
+    inspected = storage_service.episode_inspect(runtime_dir, episode_id=episode_id)
+    candidates = [
+        inspected.get("content_root") or {},
+        ((inspected.get("episode") or {}).get("root") or {}),
+    ]
+    for candidate in candidates:
+        if not isinstance(candidate, Mapping):
+            continue
+        raw = str(
+            candidate.get("computed")
+            or candidate.get("root_value")
+            or candidate.get("value")
+            or ""
+        )
+        if raw.startswith("sha256:") and len(raw) == 71:
+            return raw
+        if len(raw) == 64:
+            return "sha256:" + raw
+    _fail(
+        "independent-work-episode-root-missing",
+        "independent work Episode has no verified content root",
+        workEpisodeId=str(episode_id),
     )
 
 
@@ -401,6 +760,7 @@ def _missing_evidence(
     result: Mapping[str, Any],
     lineage: Mapping[str, Any],
     work_episode_root: str,
+    independent_observation: Mapping[str, Any] | None,
 ) -> list[str]:
     missing = []
     if "query-proof" in required and not str(
@@ -416,7 +776,13 @@ def _missing_evidence(
     ):
         missing.append("canonical-facts")
     if "independent-observation" in required:
-        missing.append("independent-observation")
+        observation = independent_observation or {}
+        if (
+            observation.get("episodeRoot") != work_episode_root
+            or not str(observation.get("authority") or "").strip()
+            or observation.get("relation") not in {"admitted-source", "observed-work"}
+        ):
+            missing.append("independent-observation")
     return missing
 
 
@@ -490,13 +856,37 @@ def _validate_artifacts(
             )
     for view in views.values():
         definition = view.get("definition")
+        family = view.get("queryFamily")
         spec = view.get("view")
-        if (
-            not isinstance(definition, Mapping)
-            or definition.get("schema") != "kungfu.query.definition/v1"
-        ):
+        if isinstance(definition, Mapping):
+            if definition.get("schema") != "kungfu.query.definition/v1":
+                _fail(
+                    "view-query-invalid",
+                    "view requires a QueryDefinition",
+                    view=view["id"],
+                )
+        elif isinstance(family, Mapping):
+            members = set(
+                profile["members"]["required"] + profile["members"]["optional"]
+            )
+            if family.get("member") not in members:
+                _fail(
+                    "query-resolver-member-unresolved",
+                    "query family references an undeclared Suite member",
+                    view=view["id"],
+                )
+            names = [row.get("name") for row in family.get("bindings") or []]
+            if len(names) != len(set(names)):
+                _fail(
+                    "query-family-binding-duplicate",
+                    "query family binding names must be unique",
+                    view=view["id"],
+                )
+        else:
             _fail(
-                "view-query-invalid", "view requires a QueryDefinition", view=view["id"]
+                "view-query-invalid",
+                "view requires a QueryDefinition or query family",
+                view=view["id"],
             )
         refs = _strings(view.get("factSurfaces"), "view.factSurfaces")
         if not refs or set(refs) - surface_ids:
@@ -511,6 +901,192 @@ def _validate_artifacts(
                 "Profile composition requires a generic ViewSpec",
                 view=view["id"],
             )
+
+
+def _validate_query_resolution(
+    family: Mapping[str, Any], resolution: Mapping[str, Any]
+) -> None:
+    if set(resolution) != {"schema", "familyId", "bindings", "definition"}:
+        _fail(
+            "query-resolution-invalid",
+            "query resolution has an unexpected shape",
+        )
+    if (
+        resolution.get("schema") != "kungfu.profile-query-resolution/v1"
+        or resolution.get("familyId") != family.get("id")
+        or not isinstance(resolution.get("bindings"), Mapping)
+        or not isinstance(resolution.get("definition"), Mapping)
+    ):
+        _fail(
+            "query-resolution-invalid",
+            "query resolution does not bind the declared family",
+        )
+    declared = {str(row["name"]): row for row in family.get("bindings") or []}
+    supplied = dict(resolution["bindings"])
+    unknown = sorted(set(supplied) - set(declared))
+    missing = sorted(
+        name
+        for name, row in declared.items()
+        if row.get("required") and name not in supplied
+    )
+    invalid = []
+    python_types = {"string": str, "integer": int, "boolean": bool}
+    for name, value in supplied.items():
+        expected = python_types.get(str(declared.get(name, {}).get("type") or ""))
+        if expected is None or type(value) is not expected:
+            invalid.append(name)
+    if unknown or missing or invalid:
+        _fail(
+            "query-binding-invalid",
+            "resolved bindings do not satisfy the query family",
+            unknownBindings=unknown,
+            missingBindings=missing,
+            invalidBindings=sorted(invalid),
+        )
+
+
+def _validate_resolved_definition(
+    view: Mapping[str, Any], definition: Mapping[str, Any]
+) -> None:
+    if definition.get("schema") != "kungfu.query.definition/v1":
+        _fail(
+            "resolved-query-definition-invalid",
+            "query family must resolve a QueryDefinition",
+        )
+    basis = definition.get("basis") or {}
+    declarations = basis.get("fact_surfaces") or []
+    resolved = {
+        str(row.get("id") or row.get("fact_surface_id") or "")
+        for row in declarations
+        if isinstance(row, Mapping)
+    }
+    resolved.discard("")
+    declared = set(view.get("factSurfaces") or [])
+    if not resolved or resolved != declared:
+        _fail(
+            "resolved-query-surface-mismatch",
+            "resolved query must bind exactly the view fact surfaces",
+            declaredFactSurfaces=sorted(declared),
+            resolvedFactSurfaces=sorted(resolved),
+        )
+
+
+def _validate_contract_material(
+    profile: Mapping[str, Any],
+    composed: Mapping[str, Any],
+    artifact: Mapping[str, Any],
+) -> None:
+    if artifact.get("profileId") != profile.get("id"):
+        _fail(
+            "contract-profile-mismatch",
+            "contract material belongs to another Profile",
+        )
+    world = artifact["contractWorld"]
+    declarations = _unique_rows(artifact["factSurfaces"], "contract fact surface")
+    catalog_ids = {row["id"] for row in composed["factSurfaces"]}
+    if set(world["factSurfaceIds"]) != catalog_ids or set(declarations) != catalog_ids:
+        _fail(
+            "contract-surface-mismatch",
+            "contract material must bind every declared Profile fact surface exactly once",
+        )
+    for surface in declarations.values():
+        if surface["contractWorldId"] != world["id"]:
+            _fail(
+                "contract-world-mismatch",
+                "fact surface points at another contract world",
+                factSurface=surface["id"],
+            )
+
+
+def _contract_operations(
+    artifact: Mapping[str, Any], current: Mapping[str, Any]
+) -> list[dict[str, str]]:
+    world = artifact["contractWorld"]
+    same_world = [
+        row
+        for row in current.get("contract_worlds") or []
+        if row.get("id") == world["id"] and row.get("version") == world["version"]
+    ]
+    other_world = [
+        row
+        for row in current.get("contract_worlds") or []
+        if row.get("id") == world["id"] and row.get("version") != world["version"]
+    ]
+    if len(same_world) > 1:
+        _fail("contract-world-ambiguous", "contract world is declared more than once")
+    if not same_world and other_world:
+        _fail(
+            "contract-version-migration-required",
+            "another contract-world version exists; explicit migration is required",
+            existingVersions=sorted(str(row.get("version")) for row in other_world),
+            requestedVersion=world["version"],
+        )
+    if same_world and set(same_world[0].get("fact_surface_ids") or []) != set(
+        world["factSurfaceIds"]
+    ):
+        _fail(
+            "contract-world-incompatible",
+            "existing contract world has another fact-surface register",
+        )
+    operations = []
+    if not same_world:
+        operations.append(
+            {
+                "kind": "declare-contract-world",
+                "id": world["id"],
+                "version": world["version"],
+            }
+        )
+    current_types = current.get("fact_types") or []
+    for surface in artifact["factSurfaces"]:
+        same = [
+            row
+            for row in current_types
+            if row.get("id") == surface["id"]
+            and row.get("version") == surface["version"]
+        ]
+        other = [
+            row
+            for row in current_types
+            if row.get("id") == surface["id"]
+            and row.get("version") != surface["version"]
+        ]
+        if len(same) > 1:
+            _fail(
+                "fact-surface-ambiguous",
+                "fact surface is declared more than once",
+                factSurface=surface["id"],
+            )
+        if not same and other:
+            _fail(
+                "fact-surface-migration-required",
+                "another fact-surface version exists; explicit migration is required",
+                factSurface=surface["id"],
+            )
+        if same:
+            row = same[0]
+            contract = row.get("contract_world") or {}
+            if (
+                sorted(row.get("source_authorities") or [])
+                != sorted(surface["sourceAuthorities"])
+                or row.get("schema_owner_root") != _root(surface["schema"])
+                or contract.get("id") != world["id"]
+                or contract.get("version") != world["version"]
+            ):
+                _fail(
+                    "fact-surface-incompatible",
+                    "existing fact surface differs from the Profile declaration",
+                    factSurface=surface["id"],
+                )
+        else:
+            operations.append(
+                {
+                    "kind": "declare-fact-surface",
+                    "id": surface["id"],
+                    "version": surface["version"],
+                }
+            )
+    return operations
 
 
 def _diagnostics(

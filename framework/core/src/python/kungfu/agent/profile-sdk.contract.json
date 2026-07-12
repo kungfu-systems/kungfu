@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.agent-profile-sdk-contract/v1",
   "id": "kungfu-agent-profile-sdk",
-  "version": 2,
+  "version": 3,
   "briefSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -92,6 +92,43 @@
       "authorityVerification": { "const": "external-policy-required" }
     }
   },
+  "contractWorldSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["schema", "profileId", "identityAuthority", "contractWorld", "factSurfaces"],
+    "properties": {
+      "schema": { "const": "kungfu.profile-contract-world/v1" },
+      "profileId": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+      "identityAuthority": { "type": "string", "minLength": 1 },
+      "contractWorld": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "version", "factSurfaceIds"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+          "version": { "type": "string", "minLength": 1 },
+          "factSurfaceIds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" } }
+        }
+      },
+      "factSurfaces": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "version", "contractWorldId", "sourceAuthorities", "schema"],
+          "properties": {
+            "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+            "version": { "type": "string", "minLength": 1 },
+            "contractWorldId": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+            "sourceAuthorities": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" } },
+            "schema": { "type": "object" }
+          }
+        }
+      }
+    }
+  },
   "factSurfacesSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -176,12 +213,39 @@
         "items": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["id", "title", "factSurfaces", "definition", "view"],
+          "required": ["id", "title", "factSurfaces", "view"],
+          "oneOf": [
+            { "required": ["definition"], "not": { "required": ["queryFamily"] } },
+            { "required": ["queryFamily"], "not": { "required": ["definition"] } }
+          ],
           "properties": {
             "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
             "title": { "type": "string", "minLength": 1 },
             "factSurfaces": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" } },
             "definition": { "type": "object", "required": ["schema"], "properties": { "schema": { "const": "kungfu.query.definition/v1" } } },
+            "queryFamily": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "member", "resolutionMode", "bindings"],
+              "properties": {
+                "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+                "member": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+                "resolutionMode": { "const": "member-resolved-definition" },
+                "bindings": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["name", "type", "required"],
+                    "properties": {
+                      "name": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+                      "type": { "enum": ["string", "integer", "boolean"] },
+                      "required": { "type": "boolean" }
+                    }
+                  }
+                }
+              }
+            },
             "view": {
               "oneOf": [
                 { "type": "object", "additionalProperties": false, "required": ["kind", "columns"], "properties": { "kind": { "const": "table" }, "columns": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } } } },

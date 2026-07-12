@@ -248,13 +248,26 @@ test('next actor is projected from the query answer rather than component infere
         profile_hash: 'sha256:profile',
         profile: {
           id: 'kungfu.mission-control',
-          version: '1',
-          reducer: 'kungfu.mission-control.reducer/v1',
+          version: '3.0.0',
+          reducer: 'kungfu.mission-control.five-questions',
+          profile_suite_root: 'sha256:suite',
+          catalog_root: 'sha256:catalog',
+          member_roots: {},
         },
         mission_subject: 'atlas:mission-a',
         query_definition_root: 'sha256:definition',
         query_proof_root: 'sha256:proof',
         result_hash: 'sha256:result',
+        query_receipt: {
+          schema: 'kungfu.profile-query-receipt/v1',
+          planId: 'sha256:plan',
+          profileSuiteRoot: 'sha256:suite',
+          catalogRoot: 'sha256:catalog',
+          viewId: 'mission-state-table',
+          queryDefinitionRoot: 'sha256:definition',
+          queryProofRoot: 'sha256:proof',
+          result: {},
+        },
         views: [],
         answers: [
           {

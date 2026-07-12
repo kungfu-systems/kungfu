@@ -1,4 +1,4 @@
-import type { SavedQueryView } from './query.js';
+import type { QueryDefinition } from './query.js';
 
 // Mission Control capability handle over the `kungfu atlas` pre-release CLI.
 // Atlas remains authority for imported facts; native Mission/Go/claim writes
@@ -122,19 +122,34 @@ export type AtlasMissionControlReport = {
     profile_hash: string;
     profile: {
       id: 'kungfu.mission-control';
-      version: '1';
-      reducer: 'kungfu.mission-control.reducer/v1';
+      version: '3.0.0';
+      reducer: 'kungfu.mission-control.five-questions';
+      profile_suite_root: string;
+      catalog_root: string;
+      member_roots: Record<string, string>;
     };
     mission_subject: string;
     query_definition_root: string;
     query_proof_root: string;
     result_hash: string;
+    query_receipt: {
+      schema: 'kungfu.profile-query-receipt/v1';
+      planId: string;
+      profileSuiteRoot: string;
+      catalogRoot: string;
+      viewId: string;
+      queryDefinitionRoot: string;
+      queryProofRoot: string;
+      result: Record<string, unknown>;
+    };
     views: Array<{
-      question_id: string;
-      query_id: string;
-      revision: number;
-      saved_view_hash: string;
-      saved_view: SavedQueryView;
+      view_id: string;
+      title: string;
+      fact_surfaces: string[];
+      query_family?: Record<string, unknown>;
+      view: {
+        kind: 'table' | 'timeline' | 'diff' | 'causal-graph' | 'attention';
+      };
     }>;
     answers: Array<{
       question_id: string;
@@ -149,6 +164,19 @@ export type AtlasMissionControlReport = {
     reused?: boolean;
     report?: { purpose?: string; residual_risks?: string[] };
   };
+  assessment_plan?: {
+    schema: 'kungfu.profile-assessment-plan/v1';
+    planId: string;
+    profileSuiteRoot: string;
+    catalogRoot: string;
+  } | null;
+  assessment_receipt?: {
+    schema: 'kungfu.profile-assessment-receipt/v1';
+    planId: string;
+    authorizationId: string;
+    profileSuiteRoot: string;
+    catalogRoot: string;
+  } | null;
   profile: {
     schema: 'kungfu.profile.delegated-work-cost-state-proof/v1';
     profile_hash: string;
@@ -210,6 +238,9 @@ export type AtlasMissionControlReport = {
   state: {
     mission_subject: string;
     canonical_state: boolean;
+    definition: QueryDefinition;
+    profile_suite_root: string;
+    catalog_root: string;
     cut: { declared?: unknown; resolved?: unknown };
     mission?: { payload?: { record?: AtlasMission } } | null;
     goals: Array<{ payload?: { record?: AtlasGoal } }>;
@@ -321,11 +352,11 @@ export type Atlas = {
   mission: (missionId: string) => AtlasMissionDetail | null;
   assessMission: (
     missionId: string,
-    options?: { source?: string; purpose?: string },
+    options?: { source?: string; purpose?: string; authorizedBy?: string },
   ) => AtlasMissionControlReport;
   assessMissionAsync: (
     missionId: string,
-    options?: { source?: string; purpose?: string },
+    options?: { source?: string; purpose?: string; authorizedBy?: string },
   ) => Promise<AtlasMissionControlReport>;
   createMission: (
     missionId: string,
@@ -371,12 +402,12 @@ export type Atlas = {
   assessCompletion: (
     missionId: string,
     goalId: string,
-    options?: { source?: string; purpose?: string },
+    options?: { source?: string; purpose?: string; authorizedBy?: string },
   ) => AtlasMissionControlReport;
   assessCompletionAsync: (
     missionId: string,
     goalId: string,
-    options?: { source?: string; purpose?: string },
+    options?: { source?: string; purpose?: string; authorizedBy?: string },
   ) => Promise<AtlasMissionControlReport>;
   goals: (filter?: AtlasGoalFilter) => AtlasGoal[];
   goal: (goalId: string) => AtlasGoal | null;
@@ -516,12 +547,14 @@ export function openAtlas(options: OpenAtlasOptions): Atlas {
       const args = ['atlas', 'assess-mission', missionId, '--json'];
       if (assessment.source) args.push('--source', assessment.source);
       if (assessment.purpose) args.push('--purpose', assessment.purpose);
+      args.push('--authorized-by', assessment.authorizedBy ?? 'kungfu-api');
       return runJson<AtlasMissionControlReport>(args);
     },
     assessMissionAsync: (missionId, assessment = {}) => {
       const args = ['atlas', 'assess-mission', missionId, '--json'];
       if (assessment.source) args.push('--source', assessment.source);
       if (assessment.purpose) args.push('--purpose', assessment.purpose);
+      args.push('--authorized-by', assessment.authorizedBy ?? 'kungfu-api');
       return runJsonAsync<AtlasMissionControlReport>(args);
     },
     createMission: (missionId, input) => {
@@ -609,12 +642,14 @@ export function openAtlas(options: OpenAtlasOptions): Atlas {
       const args = ['atlas', 'assess-completion', missionId, goalId, '--json'];
       if (assessment.source) args.push('--source', assessment.source);
       if (assessment.purpose) args.push('--purpose', assessment.purpose);
+      args.push('--authorized-by', assessment.authorizedBy ?? 'kungfu-api');
       return runJson<AtlasMissionControlReport>(args);
     },
     assessCompletionAsync: (missionId, goalId, assessment = {}) => {
       const args = ['atlas', 'assess-completion', missionId, goalId, '--json'];
       if (assessment.source) args.push('--source', assessment.source);
       if (assessment.purpose) args.push('--purpose', assessment.purpose);
+      args.push('--authorized-by', assessment.authorizedBy ?? 'kungfu-api');
       return runJsonAsync<AtlasMissionControlReport>(args);
     },
     goals: (filter = {}) => {

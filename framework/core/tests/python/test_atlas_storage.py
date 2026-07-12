@@ -6,17 +6,42 @@ import os
 import sqlite3
 import subprocess
 from datetime import datetime, timezone
+from pathlib import Path
 
 import kungfu
 import pytest
 
-from kungfu import runtime_service
+from kungfu import profile_composition, profile_sdk, runtime_service
 from kungfu.atlas import importer, mission_bundle, mission_control, payloads
 from kungfu.atlas import store as atlas_store
 from kungfu.atlas import CARRIER_ATLAS_ACTION
 from kungfu.rewind import reporting as rewind_reporting
 from kungfu.sources import store as source_store
 from kungfu.storage import service as storage_service
+
+
+MISSION_PROFILE_SOURCE = (
+    Path(__file__).resolve().parents[4] / "extensions" / "mission-control"
+)
+
+
+def _activate_mission_profile(runtime_dir, *, materialize=True):
+    for action in ("install", "qualify", "activate"):
+        plan = profile_sdk.lifecycle_plan(runtime_dir, action, MISSION_PROFILE_SOURCE)[
+            "corePlan"
+        ]
+        profile_sdk.lifecycle_apply(runtime_dir, plan, f"test:{action}")
+    contract = profile_composition.contract_materialization_plan(
+        MISSION_PROFILE_SOURCE, runtime_dir
+    )
+    if materialize and contract["operations"]:
+        profile_composition.authorized_contract_materialize(
+            runtime_dir,
+            contract,
+            profile_sdk.answer_decision(
+                contract["decisionCard"], "approve", "test-owner"
+            ),
+        )
 
 
 def _write_json(path, data):
@@ -278,6 +303,7 @@ def test_atlas_source_records_filter_by_window(tmp_path):
 def test_atlas_import_admits_mission_and_go_into_shared_fact_state(tmp_path):
     repo = tmp_path / "atlas"
     runtime_dir = tmp_path / "runtime"
+    _activate_mission_profile(runtime_dir)
     _atlas_fixture(repo)
 
     first = atlas_store.ImportStore(runtime_dir).run_import(str(repo))
@@ -345,6 +371,7 @@ def test_atlas_import_admits_mission_and_go_into_shared_fact_state(tmp_path):
 def test_mission_control_queries_and_assesses_progress_at_pinned_cuts(tmp_path):
     repo = tmp_path / "atlas"
     runtime_dir = tmp_path / "runtime"
+    _activate_mission_profile(runtime_dir)
     _atlas_fixture(repo)
     atlas_store.ImportStore(runtime_dir).run_import(str(repo))
 
@@ -431,13 +458,23 @@ def test_mission_control_queries_and_assesses_progress_at_pinned_cuts(tmp_path):
     assert profile["proof"]["assessment_report_hash"] == first_report["report_hash"]
     query_profile = first_report["query_profile"]
     assert query_profile["schema"] == "kungfu.mission-control.query-profile/v1"
-    assert query_profile["profile"]["reducer"] == ("kungfu.mission-control.reducer/v1")
+    assert query_profile["profile"]["reducer"] == (
+        "kungfu.mission-control.five-questions"
+    )
+    assert (
+        query_profile["profile"]["profile_suite_root"]
+        == first_state["profile_suite_root"]
+    )
+    assert query_profile["profile"]["catalog_root"] == first_state["catalog_root"]
     assert len(query_profile["views"]) == 5
     assert len(query_profile["answers"]) == 5
-    assert all(
-        view["saved_view"]["view"]["kind"] == "mission-control"
-        for view in query_profile["views"]
-    )
+    assert {view["view"]["kind"] for view in query_profile["views"]} == {
+        "table",
+        "timeline",
+        "diff",
+        "causal-graph",
+        "attention",
+    }
     next_answer = next(
         answer
         for answer in query_profile["answers"]
@@ -448,22 +485,14 @@ def test_mission_control_queries_and_assesses_progress_at_pinned_cuts(tmp_path):
     assert next_answer["data"]["declared_actions"][0]["source"] == ("go.next_action")
     assert "Continue under" not in next_answer["summary"]
     catalog = storage_service.saved_query_catalog(runtime_dir)
-    assert len(catalog["entries"]) == 5
-    assert all(
-        entry["saved_view"]["definition"]
-        == query_profile["views"][0]["saved_view"]["definition"]
-        for entry in catalog["entries"]
-    )
+    assert catalog["entries"] == []
     repeated = mission_control.assess_progress(str(runtime_dir), mission_id="mission-a")
     assert repeated["assessment_key"] == first_report["assessment_key"]
     assert repeated["assessment"]["reused"] is True
-    assert [view["revision"] for view in repeated["query_profile"]["views"]] == [
-        1,
-        1,
-        1,
-        1,
-        1,
-    ]
+    assert (
+        repeated["query_profile"]["profile"]["profile_suite_root"]
+        == (query_profile["profile"]["profile_suite_root"])
+    )
 
     from click.testing import CliRunner
     from kungfu.cli.commands import __registry__  # noqa: F401
@@ -528,6 +557,7 @@ def test_mission_control_native_go_completion_claim_fails_closed_then_passes(
 ):
     repo = tmp_path / "atlas"
     runtime_dir = tmp_path / "runtime"
+    _activate_mission_profile(runtime_dir)
     _atlas_fixture(repo)
     atlas_store.ImportStore(runtime_dir).run_import(str(repo))
 
@@ -698,6 +728,7 @@ def test_native_only_workspace_keeps_optional_atlas_projection_stdout_clean(
     tmp_path, capfd
 ):
     runtime_dir = tmp_path / "runtime"
+    _activate_mission_profile(runtime_dir)
     mission_control.create_mission(
         str(runtime_dir),
         mission_id="native-only",
@@ -716,6 +747,10 @@ def test_native_mission_full_bundle_roundtrip_and_thin_degraded_import(tmp_path)
     source = tmp_path / "source-runtime"
     destination = tmp_path / "destination-runtime"
     thin_destination = tmp_path / "thin-destination-runtime"
+    inactive_destination = tmp_path / "inactive-destination-runtime"
+    _activate_mission_profile(source)
+    _activate_mission_profile(destination, materialize=False)
+    _activate_mission_profile(thin_destination, materialize=False)
 
     created = mission_control.create_mission(
         str(source),
@@ -786,17 +821,47 @@ def test_native_mission_full_bundle_roundtrip_and_thin_degraded_import(tmp_path)
         str(source), mission_id="native-mission", mode="thin"
     )
     assert full["status"] == "portable", full["closure"]
+    assert full["schema"] == "kungfu.mission-control.bundle/v2"
+    assert full["profile"]["id"] == "kungfu.mission-control"
+    assert full["profile"]["version"] == "3.0.0"
+    assert full["profile"]["suite_root"].startswith("sha256:")
+    assert full["profile"]["catalog_root"].startswith("sha256:")
+    assert set(full["profile"]["member_roots"]) == {
+        "mission-control-actions",
+        "mission-control-assessment",
+        "mission-control-contract",
+        "mission-control-views",
+        "work-dashboard",
+    }
+    assert set(full["profile"]["policy_roots"]) == {
+        "mission-progress-policy",
+        "task-completion-policy",
+    }
+    assert full["profile"]["query_receipt_root"].startswith("sha256:")
     assert full["closure"]["full_closure"] is True
     assert full["closure"]["source_provenance_included"] is False
     assert thin["status"] == "degraded"
     assert thin["closure"]["full_closure"] is False
     assert all(not row["self_contained"] for row in thin["episodes"])
 
+    with pytest.raises(profile_sdk.ProfileSdkError) as inactive:
+        mission_bundle.import_mission_bundle(
+            str(inactive_destination), full, execute=True
+        )
+    assert inactive.value.diagnosis["code"] == "profile-not-active"
+    assert (
+        storage_service.profile_lifecycle(
+            inactive_destination, "list", include_removed=True
+        )["profiles"]
+        == []
+    )
+
     imported = mission_bundle.import_mission_bundle(
         str(destination), full, execute=True
     )
     assert imported["status"] == "imported", imported
     assert imported["accepted"] is True
+    assert imported["profile_verification"]["ok"] is True
     assert imported["state_verification"]["ok"] is True
     assert mission_control.list_missions(str(destination))[0]["mission_id"] == (
         "native-mission"
@@ -876,6 +941,7 @@ def test_native_mission_full_bundle_roundtrip_and_thin_degraded_import(tmp_path)
 def test_mission_control_batches_large_mission_state_queries(tmp_path):
     repo = tmp_path / "atlas"
     runtime_dir = tmp_path / "runtime"
+    _activate_mission_profile(runtime_dir)
     _atlas_fixture(repo)
     for index in range(260):
         _write_json(
@@ -912,6 +978,11 @@ def test_mission_control_legacy_data_root_requires_explicit_migration(
     tmp_path, legacy_version
 ):
     runtime_dir = tmp_path / "runtime"
+    for action in ("install", "qualify", "activate"):
+        plan = profile_sdk.lifecycle_plan(runtime_dir, action, MISSION_PROFILE_SOURCE)[
+            "corePlan"
+        ]
+        profile_sdk.lifecycle_apply(runtime_dir, plan, f"test:{action}")
     storage_service.fact_declare_contract_world(
         runtime_dir,
         {
@@ -927,7 +998,7 @@ def test_mission_control_legacy_data_root_requires_explicit_migration(
         system_time=100,
     )
 
-    with pytest.raises(RuntimeError, match="explicit migration or re-import"):
+    with pytest.raises(profile_sdk.ProfileSdkError, match="explicit migration"):
         mission_control.create_go(
             str(runtime_dir),
             mission_id="mission-a",

@@ -69,16 +69,17 @@ def emit_manifest(
     *,
     capture_mode: str = "reported",
     extra: dict[str, Any] | None = None,
+    episode_id: int | None = None,
 ) -> str:
     target = bundle_dir(runtime_dir, run_id)
     os.makedirs(target, exist_ok=True)
-    episode_id = _episode(runtime_dir, run_id).episode_id
+    resolved_episode_id = episode_id or _episode(runtime_dir, run_id).episode_id
     manifest_extra = {
         "fact_bridge": {
             "schema": "kungfu.fact-bridge/v1",
             "capture_mode": capture_mode,
             "source": "reported",
-            "episode_id": str(episode_id),
+            "episode_id": str(resolved_episode_id),
         }
     }
     if extra:
@@ -132,6 +133,7 @@ def begin_run(
         runtime_dir,
         run_id,
         extra={"provider": provider, "work_id": work_id, "cwd": cwd},
+        episode_id=episode.episode_id,
     )
     episode.attach_payload_ref(manifest)
     return manifest
@@ -144,7 +146,12 @@ def end_run(runtime_dir: str, *, run_id: str, status: str, exit_code: int) -> st
         events.run_end(run_id, RUN_STATUS_BY_NAME[status], exit_code),
         run_id=run_id,
     )
-    manifest = emit_manifest(runtime_dir, run_id, extra={"status": status})
+    manifest = emit_manifest(
+        runtime_dir,
+        run_id,
+        extra={"status": status},
+        episode_id=episode.episode_id,
+    )
     episode.attach_payload_ref(manifest)
     episode.close(ok=status == "succeeded", reason=f"reported-run {status}")
     return manifest

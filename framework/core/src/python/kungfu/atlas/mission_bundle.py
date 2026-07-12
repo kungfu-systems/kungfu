@@ -6,10 +6,12 @@ import json
 from pathlib import Path
 from typing import Any
 
+from kungfu import profile_composition, profile_sdk
 from kungfu.atlas import mission_control
 from kungfu.storage import service as storage_service
 
-BUNDLE_SCHEMA = "kungfu.mission-control.bundle/v1"
+BUNDLE_SCHEMA = "kungfu.mission-control.bundle/v2"
+LEGACY_BUNDLE_SCHEMA = "kungfu.mission-control.bundle/v1"
 BUNDLE_MODES = ("full", "thin")
 
 
@@ -54,6 +56,46 @@ def _material_missing(bundle: dict[str, Any]) -> int:
     return int(material.get("missing_frame_count") or 0) + int(
         material.get("missing_ref_payload_count") or 0
     )
+
+
+def _active_profile_binding(runtime_dir: str) -> dict[str, Any]:
+    discovered = mission_control.mission_control_profile_source(runtime_dir)
+    catalog = profile_composition.catalog(
+        discovered["source"], runtime_dir, require_active=True
+    )
+    return {
+        "id": catalog["profileId"],
+        "version": catalog["profileVersion"],
+        "suite_root": catalog["profileSuiteRoot"],
+        "catalog_root": catalog["catalogRoot"],
+        "member_roots": catalog["memberRoots"],
+        "policy_roots": {
+            row["id"]: _root(row) for row in catalog.get("policies") or []
+        },
+    }
+
+
+def _verify_profile_binding(runtime_dir: str, bundle: dict[str, Any]) -> dict[str, Any]:
+    expected = bundle.get("profile") or {}
+    current = _active_profile_binding(runtime_dir)
+    fields = (
+        "id",
+        "version",
+        "suite_root",
+        "catalog_root",
+        "member_roots",
+        "policy_roots",
+    )
+    mismatches = [name for name in fields if expected.get(name) != current.get(name)]
+    if mismatches:
+        raise profile_sdk.ProfileSdkError(
+            "mission-bundle-profile-mismatch",
+            "Mission bundle belongs to another active Profile closure",
+            mismatches=mismatches,
+            expected=expected,
+            current=current,
+        )
+    return current
 
 
 def build_mission_bundle(
@@ -165,6 +207,16 @@ def build_mission_bundle(
         and all(entry["self_contained"] for entry in entries)
     )
     source_provenance = any("source-provenance" in entry["roles"] for entry in entries)
+    profile_binding = _active_profile_binding(runtime_dir)
+    query_receipt = state["profile_query_receipt"]
+    profile_binding.update(
+        {
+            "query_receipt_root": _root(query_receipt),
+            "query_definition_root": query_receipt["queryDefinitionRoot"],
+            "query_proof_root": query_receipt["queryProofRoot"],
+            "result_hash": query_receipt["result"]["result_hash"],
+        }
+    )
     body = {
         "schema": BUNDLE_SCHEMA,
         "mode": mode,
@@ -174,6 +226,7 @@ def build_mission_bundle(
             state["mission"].get("payload", {}).get("record", {}).get("mission_id")
             or mission_id
         ),
+        "profile": profile_binding,
         "contract": {
             "world": state["definition"]["basis"]["contract_world"],
             "fact_surfaces": state["definition"]["basis"]["fact_surfaces"],
@@ -264,8 +317,10 @@ def import_mission_bundle(
 ) -> dict[str, Any]:
     """Verify a Mission bundle and optionally materialize a full closure."""
 
-    if bundle.get("schema") != BUNDLE_SCHEMA:
+    schema = str(bundle.get("schema") or "")
+    if schema not in {BUNDLE_SCHEMA, LEGACY_BUNDLE_SCHEMA}:
         raise ValueError(f"unsupported Mission bundle schema: {bundle.get('schema')}")
+    legacy = schema == LEGACY_BUNDLE_SCHEMA
     mode = str(bundle.get("mode") or "")
     if mode not in BUNDLE_MODES:
         raise ValueError("Mission bundle mode must be full or thin")
@@ -273,6 +328,12 @@ def import_mission_bundle(
     computed_root = _bundle_root(bundle)
     if not expected_root or expected_root != computed_root:
         raise ValueError("Mission bundle root mismatch")
+    profile_verification = None
+    if not legacy:
+        profile_verification = {
+            "ok": True,
+            "active": _verify_profile_binding(runtime_dir, bundle),
+        }
     entries = list(bundle.get("episodes") or [])
     if int(bundle.get("closure", {}).get("episode_count") or 0) != len(entries):
         raise ValueError("Mission bundle episode inventory count mismatch")
@@ -286,7 +347,9 @@ def import_mission_bundle(
             raise ValueError("Mission bundle Episode root mismatch")
 
     receipts = []
-    materialize = execute and mode == "full"
+    # v1 remains readable for audit, but it cannot be executed because it does
+    # not bind the Profile Suite, member, catalog, or policy closure.
+    materialize = execute and mode == "full" and not legacy
     for entry in sorted(
         entries, key=lambda row: (int(row.get("order_time") or 0), row["episode_id"])
     ):
@@ -337,7 +400,7 @@ def import_mission_bundle(
     )
     if accepted:
         status = "imported"
-    elif not execute:
+    elif not execute or legacy:
         status = "validated"
     else:
         status = "degraded"
@@ -350,15 +413,21 @@ def import_mission_bundle(
         "mission_subject": bundle["mission_subject"],
         "bundle_id": bundle["bundle_id"],
         "bundle_root": computed_root,
+        "profile_verification": profile_verification,
         "episode_count": len(entries),
         "missing_material_count": missing_material_count,
         "missing_episodes": bundle.get("closure", {}).get("missing_episodes", []),
         "state_verification": state_verification,
         "receipts": receipts,
         "diagnosis": (
-            "thin bundles preserve roots and references but require a full bundle "
-            "before Mission state can be materialized"
-            if execute and mode == "thin"
+            (
+                "v1 bundles are audit-readable but cannot be materialized because "
+                "they do not bind an exact Profile closure"
+                if legacy and execute
+                else "thin bundles preserve roots and references but require a "
+                "full bundle before Mission state can be materialized"
+            )
+            if (legacy and execute) or (execute and mode == "thin")
             else ""
         ),
     }

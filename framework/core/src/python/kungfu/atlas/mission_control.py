@@ -16,6 +16,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from kungfu import profile_composition, profile_sdk
 from kungfu.rewind import ACTION_COST_SNAPSHOT
 from kungfu.rewind import replay as rewind_replay
 from kungfu.storage import service as storage_service
@@ -37,8 +38,8 @@ PROGRESS_PURPOSE = "operator-review"
 COST_STATE_PROOF_PROFILE_ID = "kungfu.profile.delegated-work-cost-state-proof"
 COST_STATE_PROOF_PROFILE_VERSION = "1"
 MISSION_CONTROL_PROFILE_ID = "kungfu.mission-control"
-MISSION_CONTROL_PROFILE_VERSION = "1"
-MISSION_CONTROL_REDUCER = "kungfu.mission-control.reducer/v1"
+MISSION_CONTROL_PROFILE_VERSION = "3.0.0"
+MISSION_CONTROL_REDUCER = "kungfu.mission-control.five-questions"
 MISSION_CONTROL_QUESTIONS = (
     ("mission-intent", "What are we trying to achieve?"),
     ("observed-progress", "What actually happened?"),
@@ -186,68 +187,43 @@ def _source_time_nanos(value: Any, fallback: int) -> int:
         return fallback
 
 
-def _ensure_contract(runtime_dir: str, system_time: int) -> dict[str, Any]:
-    catalog = storage_service.fact_type_list(runtime_dir)
-    legacy_worlds = [
-        world
-        for world in catalog.get("contract_worlds", [])
-        if world.get("id") == CONTRACT_WORLD_ID
-        and world.get("version") in LEGACY_CONTRACT_VERSIONS
-    ]
-    worlds = [
-        world
-        for world in catalog.get("contract_worlds", [])
-        if world.get("id") == CONTRACT_WORLD_ID
-        and world.get("version") == CONTRACT_VERSION
-    ]
-    if len(worlds) > 1:
-        raise RuntimeError("mission-control contract world is ambiguous")
-    if not worlds and legacy_worlds:
-        raise RuntimeError(
-            "mission-control v1/v2 data requires explicit migration or re-import "
-            "into a clean pre-release data root before v3 native Mission operations"
-        )
-    if worlds:
-        declared = set(worlds[0].get("fact_surface_ids") or [])
-        if declared != set(FACT_SURFACES):
-            raise RuntimeError(
-                "mission-control contract world has an incompatible surface register"
-            )
-    else:
-        storage_service.fact_declare_contract_world(
-            runtime_dir,
-            {
-                "id": CONTRACT_WORLD_ID,
-                "version": CONTRACT_VERSION,
-                "effective_from": system_time,
-                "effective_until": 0,
-                "fact_surface_ids": list(FACT_SURFACES),
-            },
-            system_time=system_time,
-        )
+def mission_control_profile_source(runtime_dir: str) -> dict[str, Any]:
+    return profile_sdk.discover_source(MISSION_CONTROL_PROFILE_ID, runtime_dir)
 
-    created = {}
-    kind_by_surface = {
-        MISSION_SURFACE_ID: "mission",
-        GO_SURFACE_ID: "goal",
-        CLAIM_SURFACE_ID: "claim",
-    }
-    for offset, surface_id in enumerate(FACT_SURFACES, start=1):
-        kind = kind_by_surface[surface_id]
-        created[kind] = storage_service.fact_type_create(
-            runtime_dir,
-            {
-                "id": surface_id,
-                "version": CONTRACT_VERSION,
-                "contract_world_id": CONTRACT_WORLD_ID,
-                "source_authorities": SURFACE_AUTHORITIES[surface_id],
-                "schema": _record_schema(kind),
-                "effective_from": system_time + offset,
-                "effective_until": 0,
-            },
-            system_time=system_time + offset,
+
+def _profile_context(runtime_dir: str) -> dict[str, Any]:
+    discovered = mission_control_profile_source(runtime_dir)
+    source = discovered["source"]
+    composed = profile_composition.catalog(source, runtime_dir, require_active=True)
+    materialization = profile_composition.contract_materialization_plan(
+        source, runtime_dir
+    )
+    if materialization["operations"]:
+        raise profile_sdk.ProfileSdkError(
+            "profile-contract-not-materialized",
+            "Mission Control requires an approved Profile contract plan before facts can be read or written",
+            profileId=MISSION_CONTROL_PROFILE_ID,
+            profileSuiteRoot=composed["profileSuiteRoot"],
+            decisionCards=[materialization["decisionCard"]],
+            contractPlan=materialization,
         )
-    return created
+    return {
+        "source": source,
+        "catalog": composed,
+        "contractPlan": materialization,
+    }
+
+
+def _ensure_contract(runtime_dir: str, system_time: int = 0) -> dict[str, Any]:
+    context = _profile_context(runtime_dir)
+    return {
+        "schema": "kungfu.mission-control.profile-contract/v1",
+        "status": "current",
+        "profile_id": MISSION_CONTROL_PROFILE_ID,
+        "profile_suite_root": context["catalog"]["profileSuiteRoot"],
+        "catalog_root": context["catalog"]["catalogRoot"],
+        "source": context["source"],
+    }
 
 
 def admit_import(
@@ -465,6 +441,7 @@ def build_state_query(
 ) -> dict[str, Any]:
     """Build the ADR-0048 query shared by CLI, API, and GUI."""
 
+    _ensure_contract(runtime_dir)
     mission_subject, subjects, _ = _selected_subjects(
         runtime_dir,
         mission_id=mission_id,
@@ -504,6 +481,9 @@ def build_state_query(
         "evidence": "proof",
         "mission_control": {
             "mission_subject": mission_subject,
+            "mission_id": mission_id,
+            "storage_source_id": storage_source_id,
+            "cut_system_time": cut_system_time,
             "selection": "admitted-payload-links/v1",
         },
     }
@@ -520,15 +500,46 @@ def _batched_state_query(
 ) -> dict[str, Any]:
     """Run one logical Mission query through bounded ADR-0048 subqueries."""
 
+    context = _profile_context(runtime_dir)
     subjects = list(definition["subject_keys"])
     results = []
+    receipts = []
     for offset in range(0, len(subjects), 256):
         query = _runtime_query_definition(definition)
         query["subject_keys"] = subjects[offset : offset + 256]
         query["limit"] = len(query["subject_keys"])
-        results.append(storage_service.fact_query_definition(runtime_dir, query))
+        resolution = {
+            "schema": "kungfu.profile-query-resolution/v1",
+            "familyId": "mission-state-at-cut",
+            "bindings": {
+                "missionId": definition["mission_control"]["mission_id"],
+                "storageSourceId": definition["mission_control"]["storage_source_id"],
+                **(
+                    {"cutSystemTime": definition["mission_control"]["cut_system_time"]}
+                    if definition["mission_control"]["cut_system_time"]
+                    else {}
+                ),
+            },
+            "definition": query,
+        }
+        plan = profile_composition.resolved_query_plan(
+            context["source"], runtime_dir, "mission-state", resolution
+        )
+        receipt = profile_composition.execute_query(
+            context["source"], runtime_dir, plan
+        )
+        results.append(receipt["result"])
+        receipts.append(receipt)
     if len(results) == 1:
-        return results[0]
+        composed_receipt = profile_composition.compose_query_receipt(
+            context["source"], runtime_dir, "mission-state", receipts, results[0]
+        )
+        return {
+            **results[0],
+            "profile_query_receipt": composed_receipt,
+            "profile_suite_root": context["catalog"]["profileSuiteRoot"],
+            "catalog_root": context["catalog"]["catalogRoot"],
+        }
 
     def merged_rows(key: str) -> list[dict[str, Any]]:
         by_value = {}
@@ -590,7 +601,7 @@ def _batched_state_query(
     result_hash = _sha256_root(
         {"query_definition_root": query_definition_root, "subqueries": subqueries}
     )
-    return {
+    composite_result = {
         "definition": composite_definition,
         "logical_plan": {
             "engine": "mission-control-batched-fact-state/v1",
@@ -608,6 +619,15 @@ def _batched_state_query(
         "result_hash": result_hash,
         "rows": rows,
         "lineage": lineage,
+    }
+    composed_receipt = profile_composition.compose_query_receipt(
+        context["source"], runtime_dir, "mission-state", receipts, composite_result
+    )
+    return {
+        **composite_result,
+        "profile_query_receipt": composed_receipt,
+        "profile_suite_root": context["catalog"]["profileSuiteRoot"],
+        "catalog_root": context["catalog"]["catalogRoot"],
     }
 
 
@@ -656,6 +676,9 @@ def query_state(
         "query_definition_root": result["query_definition_root"],
         "query_proof_root": result["query_proof_root"],
         "result_hash": result["result_hash"],
+        "profile_suite_root": result["profile_suite_root"],
+        "catalog_root": result["catalog_root"],
+        "profile_query_receipt": result["profile_query_receipt"],
         "cut": result["lineage"]["cut"],
         "canonical_state": result["lineage"]["canonical_state"],
         "lineage": result["lineage"],
@@ -1486,72 +1509,40 @@ def build_mission_control_query_profile(
     findings: list[str],
     known_limits: list[str],
 ) -> dict[str, Any]:
-    """Resolve and persist the five built-in views over one canonical query."""
+    """Reduce one public Profile query receipt into the five Mission questions."""
 
     definition = _runtime_query_definition(state["definition"])
     if definition.get("schema") != "kungfu.query.definition/v1":
         raise RuntimeError(
             "Mission Control profile requires one portable QueryDefinition"
         )
-    mission_hash = _sha256_root(state["mission_subject"])[7:19]
-    declared_cut = definition.get("basis", {}).get("cut", {})
-    cut_key = (
-        "head"
-        if declared_cut.get("kind") == "head"
-        else _sha256_root(declared_cut)[7:19]
-    )
-    current = {
-        str(entry.get("query_id") or ""): entry
-        for entry in storage_service.saved_query_catalog(runtime_dir).get("entries", [])
-    }
-    views = []
-    for question_id, question in MISSION_CONTROL_QUESTIONS:
-        query_id = f"mission-control.{question_id}.{mission_hash}.{cut_key}"
-        saved_view = {
-            "schema": "kungfu.query.saved-view/v1",
-            "name": question,
-            "definition": definition,
-            "view": {
-                "kind": "mission-control",
-                "profileId": MISSION_CONTROL_PROFILE_ID,
-                "profileVersion": MISSION_CONTROL_PROFILE_VERSION,
-                "questionId": question_id,
-                "reducer": MISSION_CONTROL_REDUCER,
-            },
+    context = _profile_context(runtime_dir)
+    catalog = context["catalog"]
+    views = [
+        {
+            "view_id": row["id"],
+            "title": row["title"],
+            "fact_surfaces": row["factSurfaces"],
+            "query_family": row.get("queryFamily"),
+            "view": row["view"],
         }
-        entry = current.get(query_id)
-        if entry is None or entry.get("saved_view") != saved_view:
-            entry = storage_service.saved_query_catalog(
-                runtime_dir,
-                "put",
-                query_id=query_id,
-                saved_view=saved_view,
-                **(
-                    {"expected_revision": int(entry["revision"])}
-                    if entry is not None
-                    else {}
-                ),
-            )
-        views.append(
-            {
-                "question_id": question_id,
-                "query_id": query_id,
-                "revision": int(entry["revision"]),
-                "saved_view_hash": str(entry["saved_view_hash"]),
-                "saved_view": entry["saved_view"],
-            }
-        )
+        for row in catalog["views"]
+    ]
     profile = {
         "schema": "kungfu.mission-control.query-profile/v1",
         "profile": {
             "id": MISSION_CONTROL_PROFILE_ID,
             "version": MISSION_CONTROL_PROFILE_VERSION,
             "reducer": MISSION_CONTROL_REDUCER,
+            "profile_suite_root": catalog["profileSuiteRoot"],
+            "catalog_root": catalog["catalogRoot"],
+            "member_roots": catalog["memberRoots"],
         },
         "mission_subject": state["mission_subject"],
         "query_definition_root": state["query_definition_root"],
         "query_proof_root": state["query_proof_root"],
         "result_hash": state["result_hash"],
+        "query_receipt": state["profile_query_receipt"],
         "views": views,
         "answers": _mission_control_answers(
             state,
@@ -1599,6 +1590,41 @@ def _progress_fitness(
     return "warning", findings + ["no Go carries a recognized progress state"]
 
 
+def _execute_profile_assessment(
+    runtime_dir: str,
+    *,
+    source: str,
+    query_receipt: dict[str, Any],
+    claim_type_id: str,
+    claim_instance_id: str,
+    policy_id: str,
+    purpose: str,
+    work_episode_id: int,
+    independent_observation: dict[str, Any],
+    executor_profile: str,
+    authorized_by: str,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    plan = profile_composition.assessment_plan(
+        source,
+        runtime_dir,
+        query_receipt,
+        claim_id=claim_type_id,
+        claim_instance_id=claim_instance_id,
+        policy_id=policy_id,
+        purpose=purpose,
+        work_episode_id=work_episode_id,
+        independent_observation=independent_observation,
+        executor_profile=executor_profile,
+    )
+    authorization = profile_sdk.answer_decision(
+        plan["decisionCard"], "approve", authorized_by
+    )
+    receipt = profile_composition.authorized_assessment_execute(
+        runtime_dir, plan, authorization
+    )
+    return plan, authorization, receipt
+
+
 def assess_progress(
     runtime_dir: str,
     *,
@@ -1607,6 +1633,7 @@ def assess_progress(
     purpose: str = PROGRESS_PURPOSE,
     cut_system_time: int = 0,
     executor_profile: str = "thread",
+    authorized_by: str = "kungfu-mission-control",
 ) -> dict[str, Any]:
     """Persist and expose the first purpose-bound Mission progress report."""
 
@@ -1618,6 +1645,7 @@ def assess_progress(
     )
     if not state["rows"]:
         raise ValueError("Mission progress assessment requires admitted facts")
+    context = _profile_context(runtime_dir)
     work_row = max(state["rows"], key=lambda row: int(row["system_time"]))
     work_episode_id = str(work_row["episode_id"])
     root_rows = {
@@ -1633,36 +1661,26 @@ def assess_progress(
         "purpose": purpose,
         "query_result_hash": state["result_hash"],
     }
-    policy_ref = {
-        "id": PROGRESS_POLICY["id"],
-        "version": PROGRESS_POLICY["version"],
-        "root": _sha256_root(PROGRESS_POLICY),
-    }
-    request = {
-        "claim_id": f"mission-progress-{_sha256_root(claim_basis)[7:31]}",
-        "claim_type": PROGRESS_CLAIM,
-        "purpose": purpose,
-        "work_episode_id": work_episode_id,
-        "work_episode_root": work_episode_root,
-        "query_definition_root": state["query_definition_root"],
-        "query_proof_root": state["query_proof_root"],
-        "contract_world": state["definition"]["basis"]["contract_world"],
-        "fact_surfaces": state["definition"]["basis"]["fact_surfaces"],
-        "policy": policy_ref,
-        "evidence": _assessment_evidence(state),
-        "deadline": 0,
-        "responsibility": "Atlas source authority; libkungfu proof and assessment",
-        "residual_risks": [
-            "Atlas remains authoritative in bridge mode",
-            "source status is evidence, not universal external truth",
-        ],
-    }
-    requested = storage_service.assessment_request(runtime_dir, request)
-    assessed = storage_service.assessment_execute(
+    claim_instance_id = f"mission-progress-{_sha256_root(claim_basis)[7:31]}"
+    plan, authorization, receipt = _execute_profile_assessment(
         runtime_dir,
-        requested["assessment_key"],
+        source=context["source"],
+        query_receipt=state["profile_query_receipt"],
+        claim_type_id=PROGRESS_CLAIM,
+        claim_instance_id=claim_instance_id,
+        policy_id="mission-progress-policy",
+        purpose=purpose,
+        work_episode_id=int(work_episode_id),
+        independent_observation={
+            "episodeRoot": work_episode_root,
+            "authority": "admitted-source",
+            "relation": "admitted-source",
+        },
         executor_profile=executor_profile,
+        authorized_by=authorized_by,
     )
+    assessed = receipt["assessment"]
+    request = plan["request"]
     fitness, findings = _progress_fitness(state, assessed["state"])
     report_hash = assessed.get("report", {}).get("report_hash")
     query_profile = build_mission_control_query_profile(
@@ -1676,7 +1694,7 @@ def assess_progress(
     return {
         "schema": "kungfu.mission-control.trust-report/v1",
         "claim": {
-            "id": request["claim_id"],
+            "id": claim_instance_id,
             "type": PROGRESS_CLAIM,
             "purpose": purpose,
         },
@@ -1685,6 +1703,9 @@ def assess_progress(
         "known_limits": request["residual_risks"],
         "state": state,
         "assessment": assessed,
+        "assessment_plan": plan,
+        "assessment_authorization": authorization,
+        "assessment_receipt": receipt,
         "assessment_key": assessed["assessment_key"],
         "report_hash": report_hash,
         "query_definition_root": state["query_definition_root"],
@@ -1708,6 +1729,7 @@ def assess_completion(
     purpose: str = COMPLETION_PURPOSE,
     cut_system_time: int = 0,
     executor_profile: str = "thread",
+    authorized_by: str = "kungfu-mission-control",
 ) -> dict[str, Any]:
     """Assess one explicit completion claim against independent Episode proof."""
 
@@ -1737,6 +1759,7 @@ def assess_completion(
     ]
     if not claims:
         raise ValueError(f"completion claim not found for Go: {goal_id}")
+    context = _profile_context(runtime_dir)
     claim = max(claims, key=lambda row: int(row["system_time"]))
     claim_record = claim["payload"]["record"]
     verified_evidence = []
@@ -1785,39 +1808,70 @@ def assess_completion(
         "verified_evidence": verified_evidence,
         "invalid_evidence": invalid_evidence,
     }
-    policy_ref = {
-        "id": COMPLETION_POLICY["id"],
-        "version": COMPLETION_POLICY["version"],
-        "root": _sha256_root(COMPLETION_POLICY),
-    }
-    request = {
-        "claim_id": claim_record["claim_id"],
-        "claim_type": COMPLETION_CLAIM,
-        "purpose": purpose,
-        "work_episode_id": work_episode_id,
-        "work_episode_root": work_episode_root,
-        "query_definition_root": state["query_definition_root"],
-        "query_proof_root": _sha256_root(composite_proof),
-        "contract_world": state["definition"]["basis"]["contract_world"],
-        "fact_surfaces": state["definition"]["basis"]["fact_surfaces"],
-        "policy": policy_ref,
-        "evidence": evidence,
-        "deadline": 0,
-        "responsibility": (
-            "claimant asserts completion; Episode sources establish work evidence; "
-            "libkungfu verifies and assesses"
-        ),
-        "residual_risks": [
-            "completion is fit only for the declared purpose",
-            "claimant self-report is not independent completion authority",
-        ],
-    }
-    requested = storage_service.assessment_request(runtime_dir, request)
-    assessed = storage_service.assessment_execute(
-        runtime_dir,
-        requested["assessment_key"],
-        executor_profile=executor_profile,
-    )
+    assessment_plan = None
+    assessment_authorization = None
+    assessment_receipt = None
+    if verified_evidence:
+        assessment_plan, assessment_authorization, assessment_receipt = (
+            _execute_profile_assessment(
+                runtime_dir,
+                source=context["source"],
+                query_receipt=state["profile_query_receipt"],
+                claim_type_id=COMPLETION_CLAIM,
+                claim_instance_id=claim_record["claim_id"],
+                policy_id="task-completion-policy",
+                purpose=purpose,
+                work_episode_id=int(work_episode_id),
+                independent_observation={
+                    "episodeRoot": work_episode_root,
+                    "authority": "sealed-work-episode",
+                    "relation": "observed-work",
+                },
+                executor_profile=executor_profile,
+                authorized_by=authorized_by,
+            )
+        )
+        assessed = assessment_receipt["assessment"]
+        request = assessment_plan["request"]
+    else:
+        # Compatibility projection for an explicitly unproved completion claim.
+        # The public Profile plan correctly refuses to manufacture independent
+        # evidence; Core records the resulting insufficient state so existing
+        # Mission Control cuts remain inspectable.
+        declared_claim = next(
+            row for row in context["catalog"]["claims"] if row["id"] == COMPLETION_CLAIM
+        )
+        declared_policy = next(
+            row
+            for row in context["catalog"]["policies"]
+            if row["id"] == "task-completion-policy"
+        )
+        request = {
+            "claim_id": claim_record["claim_id"],
+            "claim_type": declared_claim["type"],
+            "purpose": purpose,
+            "work_episode_id": work_episode_id,
+            "work_episode_root": work_episode_root,
+            "query_definition_root": state["query_definition_root"],
+            "query_proof_root": _sha256_root(composite_proof),
+            "contract_world": state["definition"]["basis"]["contract_world"],
+            "fact_surfaces": state["definition"]["basis"]["fact_surfaces"],
+            "policy": {
+                "id": declared_policy["id"],
+                "version": declared_policy["version"],
+                "root": _sha256_root(declared_policy),
+            },
+            "evidence": evidence,
+            "deadline": 0,
+            "responsibility": declared_policy["responsibility"],
+            "residual_risks": declared_policy["residualRisks"],
+        }
+        requested = storage_service.assessment_request(runtime_dir, request)
+        assessed = storage_service.assessment_execute(
+            runtime_dir,
+            requested["assessment_key"],
+            executor_profile=executor_profile,
+        )
     if not verified_evidence:
         fitness = "insufficient"
     else:
@@ -1849,6 +1903,9 @@ def assess_completion(
         "known_limits": request["residual_risks"],
         "state": state,
         "assessment": assessed,
+        "assessment_plan": assessment_plan,
+        "assessment_authorization": assessment_authorization,
+        "assessment_receipt": assessment_receipt,
         "assessment_key": assessed["assessment_key"],
         "report_hash": report_hash,
         "query_definition_root": state["query_definition_root"],

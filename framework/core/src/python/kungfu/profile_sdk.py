@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any, Mapping
@@ -67,6 +68,7 @@ def capabilities() -> dict[str, Any]:
             "decisionCard": sdk_contract["decisionCardSchema"],
             "decisionAnswer": sdk_contract["decisionAnswerSchema"],
             "actionRegistry": sdk_contract["actionRegistrySchema"],
+            "contractWorld": sdk_contract["contractWorldSchema"],
             "factSurfaces": sdk_contract["factSurfacesSchema"],
             "claims": sdk_contract["claimsSchema"],
             "assessmentPolicies": sdk_contract["assessmentPoliciesSchema"],
@@ -78,6 +80,7 @@ def capabilities() -> dict[str, Any]:
         "operations": [
             "capabilities",
             "examples",
+            "discover",
             "scaffold",
             "validate",
             "qualify",
@@ -94,6 +97,8 @@ def capabilities() -> dict[str, Any]:
             "catalog",
             "query-plan",
             "query-run",
+            "contract-plan",
+            "contract-apply",
             "assess-plan",
             "assess-run",
             "manager",
@@ -134,6 +139,86 @@ def examples() -> dict[str, Any]:
             "kungfu profile qualify ./week-day --json",
             "kungfu profile plan install ./week-day --json",
         ],
+    }
+
+
+def discover_source(
+    profile_id: str,
+    runtime_dir: str | Path = "",
+    *,
+    search_roots: list[str | Path] | None = None,
+) -> dict[str, Any]:
+    """Resolve one Profile Suite by semantic id across installed extension roots."""
+
+    roots = [Path(value).expanduser() for value in (search_roots or [])]
+    if not search_roots:
+        roots.extend(
+            Path(value).expanduser()
+            for value in os.environ.get("KF_EXTENSION_PATH", "").split(os.pathsep)
+            if value
+        )
+        if runtime_dir:
+            roots.append(Path(runtime_dir).expanduser().resolve().parent / "extensions")
+        for parent in Path(__file__).resolve().parents:
+            candidate = parent / "extensions"
+            if candidate.is_dir():
+                roots.append(candidate)
+                break
+    matches = []
+    seen = set()
+    for root in roots:
+        resolved_root = root.resolve()
+        if resolved_root in seen or not resolved_root.is_dir():
+            continue
+        seen.add(resolved_root)
+        candidates = [resolved_root]
+        candidates.extend(path for path in resolved_root.iterdir() if path.is_dir())
+        for parent in list(candidates[1:]):
+            candidates.extend(path for path in parent.iterdir() if path.is_dir())
+        for candidate in candidates:
+            manifest_path = candidate / "package.json"
+            if not manifest_path.is_file():
+                continue
+            try:
+                manifest = kfx_contract.read_manifest_from_dir(str(candidate))
+                suite = (manifest.get("kungfuConfig") or {}).get("suite") or {}
+                profile_path = _confined(candidate, str(suite.get("profile") or ""))
+                profile = json.loads(profile_path.read_text(encoding="utf-8"))
+            except (OSError, ValueError, json.JSONDecodeError):
+                continue
+            if profile.get("id") == profile_id:
+                matches.append(candidate.resolve())
+    unique = sorted(set(matches), key=lambda path: str(path).encode("utf-8"))
+    if len(unique) != 1:
+        raise ProfileSdkError(
+            "profile-source-unresolved" if not unique else "profile-source-ambiguous",
+            "Profile source must resolve exactly once across extension roots",
+            profileId=profile_id,
+            searchRoots=[str(path.resolve()) for path in roots],
+            matches=[str(path) for path in unique],
+            decisionCards=[
+                decision_card(
+                    "profile-source-selection",
+                    "Select one exact Profile Suite source.",
+                    choices=["supply-source-path", "repair-extension-roots"],
+                    basis={
+                        "profileId": profile_id,
+                        "matches": [str(path) for path in unique],
+                    },
+                    required_authority="workspace-profile-operator",
+                    resume_command="rerun with one exact Profile source path",
+                )
+            ],
+        )
+    resolved = resolve_source(unique[0])
+    return {
+        "schema": "kungfu.profile-source-discovery/v1",
+        "profileId": profile_id,
+        "source": str(unique[0]),
+        "profileSuiteRoot": validate_source(unique[0], runtime_dir)["inspection"][
+            "profile_suite_root"
+        ],
+        "memberRoots": resolved["memberRoots"],
     }
 
 

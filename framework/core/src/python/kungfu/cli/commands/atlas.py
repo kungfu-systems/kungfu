@@ -342,6 +342,7 @@ def import_info(ctx, as_json):
     type=click.Choice(["inline", "thread", "process"]),
     default="thread",
 )
+@click.option("--authorized-by", default="kungfu-cli", show_default=True)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @atlas_command_context
 def assess_mission(
@@ -351,6 +352,7 @@ def assess_mission(
     purpose,
     cut_system_time,
     executor_profile,
+    authorized_by,
     as_json,
 ):
     from kungfu.atlas import mission_control
@@ -363,6 +365,7 @@ def assess_mission(
             purpose=purpose,
             cut_system_time=cut_system_time,
             executor_profile=executor_profile,
+            authorized_by=authorized_by,
         )
     except (RuntimeError, ValueError) as error:
         click.echo(f"[atlas] Mission assessment failed: {error}", err=True)
@@ -640,6 +643,7 @@ def claim_completion_cmd(
     type=click.Choice(["inline", "thread", "process"]),
     default="thread",
 )
+@click.option("--authorized-by", default="kungfu-cli", show_default=True)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @atlas_command_context
 def assess_completion_cmd(
@@ -650,6 +654,7 @@ def assess_completion_cmd(
     purpose,
     cut_system_time,
     executor_profile,
+    authorized_by,
     as_json,
 ):
     from kungfu.atlas import mission_control
@@ -663,6 +668,7 @@ def assess_completion_cmd(
             purpose=purpose,
             cut_system_time=cut_system_time,
             executor_profile=executor_profile,
+            authorized_by=authorized_by,
         )
     except (RuntimeError, ValueError) as error:
         click.echo(f"[atlas] completion assessment failed: {error}", err=True)

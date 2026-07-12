@@ -112,6 +112,117 @@ def _source(tmp_path, *, unknown_view_surface=False, unsupported_view_schema=Fal
     return source
 
 
+def _dynamic_source(tmp_path):
+    source = _source(tmp_path)
+    profile_path = source / "profile.json"
+    profile = json.loads(profile_path.read_text())
+    _write_artifact(
+        source,
+        profile,
+        "contracts/world.json",
+        {
+            "schema": "kungfu.profile-contract-world/v1",
+            "profileId": "example.week-day",
+            "identityAuthority": "workspace-owner",
+            "contractWorld": {
+                "id": "example.week-day",
+                "version": "1",
+                "factSurfaceIds": ["work-item"],
+            },
+            "factSurfaces": [
+                {
+                    "id": "work-item",
+                    "version": "1",
+                    "contractWorldId": "example.week-day",
+                    "sourceAuthorities": ["workspace-owner"],
+                    "schema": {
+                        "type": "object",
+                        "properties": {"status": {"type": "string"}},
+                        "required": ["status"],
+                        "additionalProperties": False,
+                    },
+                }
+            ],
+        },
+        profile["kfd1"]["contractWorld"],
+    )
+    _write_artifact(
+        source,
+        profile,
+        "views/registry.json",
+        {
+            "schema": "kungfu.profile-views/v1",
+            "views": [
+                {
+                    "id": "week-table",
+                    "title": "Week table",
+                    "factSurfaces": ["work-item"],
+                    "queryFamily": {
+                        "id": "week-at-cut",
+                        "member": "example-week-day-contract",
+                        "resolutionMode": "member-resolved-definition",
+                        "bindings": [
+                            {
+                                "name": "weekId",
+                                "type": "string",
+                                "required": True,
+                            }
+                        ],
+                    },
+                    "view": {"kind": "table", "columns": ["subject_key"]},
+                }
+            ],
+        },
+        profile["views"]["registry"],
+    )
+    profile_path.write_text(json.dumps(profile, indent=2, sort_keys=True) + "\n")
+    return source
+
+
+def _fact_state_definition(runtime, subject_key):
+    catalog = storage_service.fact_type_list(runtime)
+    world = next(
+        row for row in catalog["contract_worlds"] if row["id"] == "example.week-day"
+    )
+    surface = next(row for row in catalog["fact_types"] if row["id"] == "work-item")
+    return {
+        "schema": "kungfu.query.definition/v1",
+        "basis": {
+            "contract_world": {
+                "id": world["id"],
+                "version": world["version"],
+                "root": world["root"],
+            },
+            "fact_surfaces": [
+                {
+                    "id": surface["id"],
+                    "version": surface["version"],
+                    "root": surface["root"],
+                }
+            ],
+            "scope": "domain-fact-ledger",
+            "perspective": "system-time-then-observation-id",
+            "cut": {"kind": "head"},
+            "policy": {
+                "fold": "latest-admitted-per-source/v1",
+                "schema": "kungfu.facts.domain-fact-event/v1",
+                "engine": "fact-authority-scan/v1",
+                "conflict": "preserve-source-claims/v1",
+                "redaction": "hash-and-ref/v1",
+            },
+            "time_basis": {
+                "valid_time": "explicit",
+                "system_time": "event",
+                "causal_time": "event-parent",
+            },
+        },
+        "object": "fact-state",
+        "subject_keys": [subject_key],
+        "limit": 1,
+        "evidence": "proof",
+    }
+
+
 def _activate(source, runtime):
     for action in ["install", "qualify", "activate"]:
         plan = profile_sdk.lifecycle_plan(runtime, action, source)["corePlan"]
@@ -264,6 +375,254 @@ def test_query_receipt_preserves_core_definition_and_proof_roots(tmp_path):
     assert receipt["queryProofRoot"].startswith("sha256:")
 
 
+def test_non_mission_profile_resolves_query_materializes_contract_and_binds_claim_instance(
+    tmp_path,
+):
+    source = _dynamic_source(tmp_path)
+    runtime = tmp_path / "runtime"
+    _activate(source, runtime)
+
+    assert storage_service.fact_type_list(runtime)["contract_worlds"] == []
+    contract_plan = profile_composition.contract_materialization_plan(source, runtime)
+    assert contract_plan["requiresAuthorization"] is True
+    assert [row["kind"] for row in contract_plan["operations"]] == [
+        "declare-contract-world",
+        "declare-fact-surface",
+    ]
+    contract_answer = profile_sdk.answer_decision(
+        contract_plan["decisionCard"], "approve", "test-owner"
+    )
+    contract_receipt = profile_composition.authorized_contract_materialize(
+        runtime, contract_plan, contract_answer
+    )
+    assert contract_receipt["status"] == "materialized"
+    assert (
+        profile_composition.contract_materialization_plan(source, runtime)["operations"]
+        == []
+    )
+
+    written = storage_service.fact_material_put(
+        runtime,
+        {
+            "type_id": "work-item",
+            "type_version": "1",
+            "source_id": "workspace-owner",
+            "subject_key": "week-1",
+            "payload": {"status": "active"},
+            "observation_id": "week-1-active",
+            "action": "assert",
+            "valid_until": 0,
+        },
+    )
+    assert written["receipt"]["admission"]["outcome"] == "admitted"
+    resolution = {
+        "schema": "kungfu.profile-query-resolution/v1",
+        "familyId": "week-at-cut",
+        "bindings": {"weekId": "week-1"},
+        "definition": _fact_state_definition(runtime, "week-1"),
+    }
+    query_plan = profile_composition.resolved_query_plan(
+        source, runtime, "week-table", resolution
+    )
+    query = profile_composition.execute_query(source, runtime, query_plan)
+    assert query_plan["resolverMemberRoot"].startswith("sha256:")
+    assert query["result"]["row_count"] == 1
+
+    verified = next(
+        row
+        for row in query["result"]["lineage"]["episode_content_roots"]
+        if row["status"] == "verified"
+    )
+    tampered_receipt = json.loads(json.dumps(query))
+    tampered_receipt["queryProofRoot"] = "sha256:" + "0" * 64
+    with pytest.raises(profile_sdk.ProfileSdkError) as receipt_drift:
+        profile_composition.assessment_plan(
+            source,
+            runtime,
+            tampered_receipt,
+            claim_id="week-progress",
+            claim_instance_id="week-progress:tampered",
+            policy_id="week-progress-policy",
+            purpose="operator-review",
+            work_episode_id=int(verified["episode_id"]),
+        )
+    assert receipt_drift.value.diagnosis["code"] == "query-receipt-root-mismatch"
+    assessment = profile_composition.assessment_plan(
+        source,
+        runtime,
+        query,
+        claim_id="week-progress",
+        claim_instance_id="week-progress:week-1",
+        policy_id="week-progress-policy",
+        purpose="operator-review",
+        work_episode_id=int(verified["episode_id"]),
+    )
+    assert assessment["claimTypeId"] == "week-progress"
+    assert assessment["claimInstanceId"] == "week-progress:week-1"
+    assert assessment["request"]["claim_id"] == "week-progress:week-1"
+    answer = profile_sdk.answer_decision(
+        assessment["decisionCard"], "approve", "test-operator"
+    )
+    receipt = profile_composition.authorized_assessment_execute(
+        runtime, assessment, answer
+    )
+    assert receipt["assessment"]["assessment_key"].startswith("sha256:")
+
+
+def test_resolved_query_rejects_binding_and_surface_drift(tmp_path):
+    source = _dynamic_source(tmp_path)
+    runtime = tmp_path / "runtime"
+    _activate(source, runtime)
+    contract_plan = profile_composition.contract_materialization_plan(source, runtime)
+    profile_composition.authorized_contract_materialize(
+        runtime,
+        contract_plan,
+        profile_sdk.answer_decision(
+            contract_plan["decisionCard"], "approve", "test-owner"
+        ),
+    )
+    definition = _fact_state_definition(runtime, "week-1")
+
+    with pytest.raises(profile_sdk.ProfileSdkError) as missing:
+        profile_composition.resolved_query_plan(
+            source,
+            runtime,
+            "week-table",
+            {
+                "schema": "kungfu.profile-query-resolution/v1",
+                "familyId": "week-at-cut",
+                "bindings": {},
+                "definition": definition,
+            },
+        )
+    assert missing.value.diagnosis["code"] == "query-binding-invalid"
+
+    definition["basis"]["fact_surfaces"] = []
+    with pytest.raises(profile_sdk.ProfileSdkError) as surface:
+        profile_composition.resolved_query_plan(
+            source,
+            runtime,
+            "week-table",
+            {
+                "schema": "kungfu.profile-query-resolution/v1",
+                "familyId": "week-at-cut",
+                "bindings": {"weekId": "week-1"},
+                "definition": definition,
+            },
+        )
+    assert surface.value.diagnosis["code"] == "resolved-query-surface-mismatch"
+
+
+def test_installed_cli_contract_and_resolved_query_share_public_receipts(tmp_path):
+    source = _dynamic_source(tmp_path)
+    home = tmp_path / "home"
+    runtime = home / "runtime"
+    _activate(source, runtime)
+    runner = CliRunner()
+    contract_file = tmp_path / "contract-plan.json"
+    contract_answer_file = tmp_path / "contract-answer.json"
+
+    planned = runner.invoke(
+        kfc,
+        [
+            "--home",
+            str(home),
+            "profile",
+            "contract-plan",
+            str(source),
+            "--out",
+            str(contract_file),
+            "--json",
+        ],
+    )
+    assert planned.exit_code == 0, planned.output
+    contract_plan = json.loads(contract_file.read_text())
+    contract_answer_file.write_text(
+        json.dumps(
+            profile_sdk.answer_decision(
+                contract_plan["decisionCard"], "approve", "test-owner"
+            )
+        )
+    )
+    applied = runner.invoke(
+        kfc,
+        [
+            "--home",
+            str(home),
+            "profile",
+            "contract-apply",
+            str(contract_file),
+            "--authorization-file",
+            str(contract_answer_file),
+            "--json",
+        ],
+    )
+    assert applied.exit_code == 0, applied.output
+    assert json.loads(applied.output)["status"] == "materialized"
+
+    storage_service.fact_material_put(
+        runtime,
+        {
+            "type_id": "work-item",
+            "type_version": "1",
+            "source_id": "workspace-owner",
+            "subject_key": "week-1",
+            "payload": {"status": "active"},
+            "observation_id": "week-1-active",
+            "action": "assert",
+            "valid_until": 0,
+        },
+    )
+    resolution_file = tmp_path / "resolution.json"
+    resolution_file.write_text(
+        json.dumps(
+            {
+                "schema": "kungfu.profile-query-resolution/v1",
+                "familyId": "week-at-cut",
+                "bindings": {"weekId": "week-1"},
+                "definition": _fact_state_definition(runtime, "week-1"),
+            }
+        )
+    )
+    query_plan_file = tmp_path / "query-plan.json"
+    query_plan_result = runner.invoke(
+        kfc,
+        [
+            "--home",
+            str(home),
+            "profile",
+            "query-plan",
+            str(source),
+            "week-table",
+            "--resolution-file",
+            str(resolution_file),
+            "--out",
+            str(query_plan_file),
+            "--json",
+        ],
+    )
+    assert query_plan_result.exit_code == 0, query_plan_result.output
+    query_result = runner.invoke(
+        kfc,
+        [
+            "--home",
+            str(home),
+            "profile",
+            "query-run",
+            str(source),
+            str(query_plan_file),
+            "--json",
+        ],
+    )
+    assert query_result.exit_code == 0, query_result.output
+    query = json.loads(query_result.output)
+    assert query["result"]["row_count"] == 1
+    assert (
+        query["profileSuiteRoot"]
+        == json.loads(query_plan_result.output)["profileSuiteRoot"]
+    )
+
+
 def test_assessment_plan_binds_verified_episode_query_proof_and_decision(tmp_path):
     source = _source(tmp_path)
     runtime = tmp_path / "runtime"
@@ -333,6 +692,8 @@ def test_installed_cli_assessment_plan_decide_and_run(tmp_path):
             str(query_file),
             "--claim-id",
             "week-progress",
+            "--claim-instance-id",
+            "week-progress:cli-cut",
             "--policy-id",
             "week-progress-policy",
             "--purpose",
@@ -376,6 +737,9 @@ def test_installed_cli_assessment_plan_decide_and_run(tmp_path):
     )
 
     assert planned.exit_code == 0, planned.output
+    assert json.loads(plan_file.read_text())["claimInstanceId"] == (
+        "week-progress:cli-cut"
+    )
     assert decided.exit_code == 0, decided.output
     assert executed.exit_code == 0, executed.output
     assert json.loads(executed.output)["assessment"]["assessment_key"].startswith(

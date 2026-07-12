@@ -16,7 +16,17 @@ export type ProfileView = {
   id: string;
   title: string;
   factSurfaces: string[];
-  definition: QueryDefinition;
+  definition?: QueryDefinition;
+  queryFamily?: {
+    id: string;
+    member: string;
+    resolutionMode: 'member-resolved-definition';
+    bindings: Array<{
+      name: string;
+      type: 'string' | 'integer' | 'boolean';
+      required: boolean;
+    }>;
+  };
   view: Exclude<QueryViewSpec, { kind: 'mission-control' }>;
 };
 
@@ -90,6 +100,16 @@ export type ProfileLifecycleReceipt = {
   verified: boolean;
 };
 
+export type ProfileContractPlan = {
+  schema: 'kungfu.profile-contract-plan/v1';
+  planId: string;
+  profileSuiteRoot: string;
+  catalogRoot: string;
+  operations: Array<Record<string, unknown>>;
+  requiresAuthorization: boolean;
+  decisionCard: Record<string, unknown>;
+};
+
 export type Profile = {
   runtimeDir: string;
   manager: () => ProfileManagerProjection;
@@ -104,6 +124,8 @@ export type Profile = {
   ) => Promise<ProfileCompositionCatalog>;
   queryPlan: (source: string, viewId: string) => ProfileQueryPlan;
   queryPlanAsync: (source: string, viewId: string) => Promise<ProfileQueryPlan>;
+  contractPlan: (source: string) => ProfileContractPlan;
+  contractPlanAsync: (source: string) => Promise<ProfileContractPlan>;
   lifecyclePlan: (
     action: 'install' | 'qualify' | 'activate' | 'upgrade',
     source: string,
@@ -189,6 +211,10 @@ export function openProfile(options: OpenProfileOptions): Profile {
       run<ProfileQueryPlan>(['query-plan', source, viewId]),
     queryPlanAsync: (source, viewId) =>
       runAsync<ProfileQueryPlan>(['query-plan', source, viewId]),
+    contractPlan: (source) =>
+      run<ProfileContractPlan>(['contract-plan', source]),
+    contractPlanAsync: (source) =>
+      runAsync<ProfileContractPlan>(['contract-plan', source]),
     lifecyclePlan: (action, source) =>
       run<ProfileLifecyclePlan>(['plan', action, source]),
     lifecyclePlanAsync: (action, source) =>

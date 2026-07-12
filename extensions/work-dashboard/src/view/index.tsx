@@ -12,6 +12,7 @@ import type {
   AtlasMission,
   AtlasMissionControlReport,
   GoalCardQuerySpec,
+  Profile,
   QueryChangelogState,
   QueryResumeToken,
   Storage,
@@ -336,10 +337,12 @@ function AtlasUnavailableView() {
 
 function AtlasProjectionView({
   atlas,
+  profile,
   shell,
   storage,
 }: {
   atlas: Atlas;
+  profile?: Profile;
   shell: Shell;
   storage: Storage;
 }) {
@@ -361,6 +364,11 @@ function AtlasProjectionView({
     initialDashboard === null,
   );
   const [dashboardError, setDashboardError] = React.useState('');
+  const [profileStatus, setProfileStatus] = React.useState(
+    profile
+      ? 'Mission Control Profile pending'
+      : 'Profile capability unavailable',
+  );
   const [selectedMission, setSelectedMission] = React.useState<string>(() =>
     missions.length ? missions[0].mission_id : 'all',
   );
@@ -468,9 +476,49 @@ function AtlasProjectionView({
     return () => dashboardRefresh.dispose();
   }, [dashboardRefresh]);
 
+  const refreshProfileStatus = React.useCallback(async () => {
+    if (!profile) {
+      setProfileStatus('Profile capability unavailable');
+      return;
+    }
+    try {
+      const manager = await profile.managerAsync();
+      const current = manager.profiles.find(
+        (candidate) => candidate.profileId === 'kungfu.mission-control',
+      );
+      if (!current) {
+        setProfileStatus('Mission Control Profile not installed');
+      } else if (current.health !== 'active' || !current.catalog) {
+        const diagnosis = current.diagnostics[0]?.message;
+        setProfileStatus(
+          `Mission Control Profile ${current.lifecycleState}/${current.health}${diagnosis ? ` · ${diagnosis}` : ''}`,
+        );
+      } else {
+        const contract = current.source
+          ? await profile.contractPlanAsync(current.source)
+          : null;
+        if (contract?.operations.length) {
+          setProfileStatus(
+            `Profile contract needs approval · ${contract.operations.length} operation(s) · plan ${contract.planId.slice(-12)}`,
+          );
+        } else {
+          setProfileStatus(
+            `Profile ${current.profileVersion} · suite ${current.profileSuiteRoot.slice(-12)} · catalog ${current.catalog.catalogRoot.slice(-12)}`,
+          );
+        }
+      }
+    } catch (error) {
+      setProfileStatus(`Profile degraded · ${(error as Error).message}`);
+    }
+  }, [profile]);
+
+  React.useEffect(() => {
+    void refreshProfileStatus();
+  }, [refreshProfileStatus]);
+
   const advanceQueryStream = React.useCallback(
     async (report: AtlasMissionControlReport, request: number) => {
-      const definition = report.query_profile?.views[0]?.saved_view.definition;
+      const definition = report.state.definition;
       if (!definition)
         throw new Error('Mission Control query profile has no view');
       const sameDefinition =
@@ -589,8 +637,7 @@ function AtlasProjectionView({
   }, [storage, selectedMission, goalCardViewId, catalogRefreshGeneration]);
 
   const saveGoalCardView = React.useCallback(() => {
-    const definition =
-      trustReport?.query_profile?.views[0]?.saved_view.definition;
+    const definition = trustReport?.state.definition;
     if (!definition || selectedMission === 'all') {
       setGoalCardSaveState('select an assessed Mission first');
       return;
@@ -608,9 +655,9 @@ function AtlasProjectionView({
           view: {
             kind: 'mission-control',
             profileId: 'kungfu.mission-control',
-            profileVersion: '1',
+            profileVersion: '3.0.0',
             questionId: 'observed-progress',
-            reducer: 'kungfu.mission-control.reducer/v1',
+            reducer: 'kungfu.mission-control.five-questions',
             goalCards: goalCardQuery,
           },
         },
@@ -637,8 +684,9 @@ function AtlasProjectionView({
   const refreshAll = React.useCallback(() => {
     dashboardRefresh.request();
     void refreshAssessment();
+    void refreshProfileStatus();
     setCatalogRefreshGeneration((current) => current + 1);
-  }, [dashboardRefresh, refreshAssessment]);
+  }, [dashboardRefresh, refreshAssessment, refreshProfileStatus]);
 
   React.useEffect(() => shell.onRefresh(refreshAll), [shell, refreshAll]);
 
@@ -898,6 +946,17 @@ function AtlasProjectionView({
                   ? `snapshot cut ${dashboardCut.slice(-12)}`
                   : 'snapshot pending'}
           </span>
+          <span
+            style={{
+              ...mono,
+              color: profileStatus.includes(' · suite ')
+                ? '#4ec9b0'
+                : '#dcdcaa',
+            }}
+            title="Exact active Profile Suite, catalog and member closure"
+          >
+            {profileStatus}
+          </span>
         </div>
         {message && (
           <div style={{ ...mono, color: '#dcdcaa', marginTop: 5 }}>
@@ -948,7 +1007,11 @@ function AtlasProjectionView({
               {trustReport?.query_profile && (
                 <div style={{ ...mono, color: '#858585', marginBottom: 5 }}>
                   profile {trustReport.query_profile.profile.version} ·{' '}
-                  {trustReport.query_profile.views.length} saved views · proof{' '}
+                  {trustReport.query_profile.views.length} Profile views · suite{' '}
+                  {trustReport.query_profile.profile.profile_suite_root.slice(
+                    -12,
+                  )}
+                  {' · '}proof{' '}
                   {trustReport.query_profile.query_proof_root.slice(-12)}
                 </div>
               )}
@@ -1633,6 +1696,7 @@ function WorkDashboardView({
         {atlas ? (
           <AtlasProjectionView
             atlas={atlas}
+            profile={caps.profile}
             shell={shell}
             storage={caps.storage}
           />
