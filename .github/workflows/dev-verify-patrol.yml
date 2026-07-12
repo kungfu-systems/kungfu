@@ -48,6 +48,8 @@ jobs:
         [{"id":"linux-x64","name":"Linux x64",
         "runner":"[\"self-hosted\",\"Linux\",\"X64\",\"kungfu-build-v4-linux-x64\"]"}]
       artifact-name: kungfu-dev-verify
+      shifu-cache-profile-ref: ${{ vars.SHIFU_CACHE_PROFILE_REF }}
+      shifu-cache-profile-digest: ${{ vars.SHIFU_CACHE_PROFILE_DIGEST }}
       artifact-paths: |
         product/release
       expected-artifacts-json: >-
@@ -68,7 +70,7 @@ jobs:
       # match the .buildchain/buildchain.toml stages.
       verify-command: >-
         bash -c "KUNGFU_BUILDCHAIN_NO_OPTIONAL=1 KUNGFU_BUILDCHAIN_SOURCE_BUILD=1
-        SHIFU_NATIVE=1 ./shifu verify --full"
+        SHIFU_NATIVE=1 ./shifu cache apply -- ./shifu verify --full"
 
   # Keep one tracking issue in sync with the patrol result: open or refresh it
   # when dev is red, close it when dev returns to green. This is the standing

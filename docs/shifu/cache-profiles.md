@@ -79,7 +79,7 @@ a new major schema rather than silent reinterpretation. Resolution evidence
 binds the SHA-256 of the exact source profile bytes, avoiding an implicit second
 canonical JSON renderer.
 
-## Local-development consumption before publication
+## Runtime consumption
 
 An inventory controller can pin a local Kungfu checkout or a locally built
 Shifu binary, obtain the schema through `shifu cache schema profile`, validate
@@ -87,7 +87,33 @@ the generated instance, and project it to an approved local configuration
 surface. This makes dogfood independent of npm/alpha publication while keeping
 the exact Shifu source revision auditable.
 
-The current slice establishes discovery, schema, examples, and repository
-conformance. Automatic profile application and provider-specific config writers
-are follow-up execution work; until they exist, existing `build-local.env`
-bindings remain the compatible consumption edge.
+`shifu cache validate profile FILE` runs the Shifu-owned runtime validator.
+`shifu cache resolve` loads a local/file/http(s) reference, verifies the digest
+of the exact bytes, checks platform and scope applicability, and emits a
+schema-versioned redacted receipt. `shifu cache apply -- COMMAND` performs the
+same resolution and supplies supported environment bindings only to that child
+process. Unsupported argument/config bindings, protected environment keys,
+secret-like keys, unsafe URLs, applicability drift, and digest drift fail
+closed.
+
+The default reference and digest come from
+`SHIFU_CACHE_PROFILE_REF` and `SHIFU_CACHE_PROFILE_DIGEST`. They may also be
+passed explicitly:
+
+```sh
+./shifu cache apply \
+  --profile https://cache.example.invalid/profiles/development.json \
+  --digest sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef \
+  -- ./shifu check
+```
+
+Both values must be present together. When both are absent, `cache apply` is a
+transparent pass-through so public clones and forks continue to use normal
+upstreams. A local controller may project the pair into the user-global
+`build-local.env`; Shifu still resolves the profile at execution time and does
+not turn that environment file into another field authority.
+
+For CI, Buildchain accepts only the opaque reference and digest and forwards
+them to lifecycle commands. It does not fetch or parse the profile. The
+consumer lifecycle invokes `shifu cache apply`, so the pinned Shifu checkout
+remains the only component that interprets fields and writes the receipt.

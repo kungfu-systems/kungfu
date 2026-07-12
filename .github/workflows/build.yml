@@ -60,8 +60,8 @@ jobs:
       verify-command: >-
         bash -c "KUNGFU_BUILDCHAIN_NO_OPTIONAL=1 KUNGFU_BUILDCHAIN_SOURCE_BUILD=1
         SHIFU_NATIVE=1 SHIFU_REQUIRE_MSVC=1 KUNGFU_FUZZ_SECONDS=90
-        ./shifu verify --fuzz &&
-        ./shifu episode:qualify:release -- --output
+        ./shifu cache apply -- ./shifu verify --fuzz &&
+        ./shifu cache apply -- ./shifu episode:qualify:release -- --output
         product/release/qualification/episode-release-evidence.json"
       release-candidate: true
       publish-channel: ${{ startsWith(github.base_ref, 'release/') && 'release' || 'alpha' }}
@@ -72,6 +72,8 @@ jobs:
       checkout-cache-reference-repository-template: ${{ vars.BUILDCHAIN_CHECKOUT_CACHE_REFERENCE_REPOSITORY_TEMPLATE }}
       checkout-cache-fallback: github
       checkout-cache-timeout-seconds: 60
+      shifu-cache-profile-ref: ${{ vars.SHIFU_CACHE_PROFILE_REF }}
+      shifu-cache-profile-digest: ${{ vars.SHIFU_CACHE_PROFILE_DIGEST }}
       buildchain-contract-lock-path: .buildchain/contract-lock.json
       buildchain-contract-compatibility-policy: major-compatible
       buildchain-contract-drift-issue-mode: compatible-and-breaking

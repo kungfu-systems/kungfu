@@ -54,6 +54,9 @@
     "contract": "shifu cache contract",
     "profileSchema": "shifu cache schema profile",
     "resolutionSchema": "shifu cache schema resolution",
+    "validateProfile": "shifu cache validate profile FILE",
+    "resolveProfile": "shifu cache resolve --profile REF --digest SHA256",
+    "applyProfile": "shifu cache apply --profile REF --digest SHA256 -- COMMAND",
     "repositoryCheck": "./shifu check"
   }
 }

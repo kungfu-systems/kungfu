@@ -39,10 +39,15 @@ package:
 ./shifu cache contract
 ./shifu cache schema profile
 ./shifu cache schema resolution
+./shifu cache validate profile path/to/cache-profile.json
+./shifu cache resolve --profile path/to/cache-profile.json --digest sha256:...
+./shifu cache apply --profile path/to/cache-profile.json --digest sha256:... -- ./shifu check
 ```
 
-The commands print the exact checked-in JSON. Consumers should pin the checkout
-or binary source revision when they use the result as a generation input.
+The contract and schema discovery commands print the exact checked-in JSON.
+Consumers should pin the checkout or binary source revision when they use the
+result as a generation input. Runtime validate/resolve/apply commands consume
+profile instances and never modify the checked-in contract.
 
 ## Boundary
 

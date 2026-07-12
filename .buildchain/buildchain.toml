@@ -34,15 +34,15 @@ SHIFU_REQUIRE_MSVC = "1"
 
 [lifecycle.install]
 shell = "bash"
-command = "./shifu doctor && ./shifu install --frozen-lockfile --no-optional"
+command = "./shifu cache apply -- bash -c './shifu doctor && ./shifu install --frozen-lockfile --no-optional'"
 
 [lifecycle.build]
 shell = "bash"
-command = "./shifu dist"
+command = "./shifu cache apply -- ./shifu dist"
 
 [lifecycle.verify]
 shell = "bash"
-command = "./shifu verify"
+command = "./shifu cache apply -- ./shifu verify"
 
 [lifecycle.publish]
 # shifu-entry-contract: allow Buildchain publish adapter bootstraps before repository lifecycle dispatch

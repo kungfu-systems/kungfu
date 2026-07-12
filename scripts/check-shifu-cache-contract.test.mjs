@@ -57,3 +57,46 @@ test('unknown cache schema fails with usage', () => {
   assert.equal(result.status, 2);
   assert.match(result.stderr, /cache schema profile/);
 });
+
+test('shifu validates a profile through its runtime authority', () => {
+  const profile = path.join(
+    ROOT,
+    'docs',
+    'shifu',
+    'examples',
+    'development.cache-profile.json',
+  );
+  const result = spawnSync(
+    process.execPath,
+    [SHIFU_MJS, 'cache', 'validate', 'profile', profile],
+    { cwd: ROOT, encoding: 'utf8' },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).valid, true);
+});
+
+test('cache apply is transparent when no profile projection is configured', () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      SHIFU_MJS,
+      'cache',
+      'apply',
+      '--',
+      process.execPath,
+      '-e',
+      'process.stdout.write("cache-pass-through")',
+    ],
+    {
+      cwd: ROOT,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        SHIFU_CACHE_PROFILE_REF: '',
+        SHIFU_CACHE_PROFILE_DIGEST: '',
+      },
+    },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, 'cache-pass-through');
+});
