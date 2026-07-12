@@ -8,7 +8,7 @@ sensitivity: public
 
 # KFX Profile Suite lifecycle
 
-The S1 Profile lifecycle turns a schema-valid `kungfu.profile-suite/v1`
+The Profile lifecycle turns a schema-valid `kungfu.profile-suite/v1`
 document into append-only workspace facts without making Profile JSON, a GUI,
 or an extension package a runtime authority.
 
@@ -76,13 +76,37 @@ Use `kungfu profile --help` for the plan-first Agent interface, or
 --cut-system-time` reads the historical fold; `history` retains lifecycle facts
 after rollback or removal.
 
+## Composition and coexistence
+
+Activation does not silently materialize KFD-1 declarations. The public
+Profile contract plan is separately authorized and then uses the existing
+contract-world and fact-surface admission authority. Views resolve through
+ADR-0048 QueryDefinitions; KFD-2 claims resolve through ADR-0052 assessment
+plans. Exact Suite, catalog, member, policy, definition, proof, Episode, and
+claim-instance roots remain visible in plans and receipts.
+
+Mission Control is a first-party `kungfu.profile-suite/v1`, not a privileged
+Core path. It can coexist with independently authored Profiles in one runtime.
+Profile activation is not GUI focus, and removing a Profile does not delete its
+admitted facts or historical lifecycle events.
+
+Source portability also remains separate from lifecycle. Full Profile bundles
+can reconstruct exact source bytes and thin bundles can verify roots and file
+inventory. Import writes source into an empty destination only; it does not
+install, qualify, activate, grant permissions, admit evidence, or assert trust.
+Fact Library bundles carry admitted evidence through their own authority.
+
 ## Current boundary
 
-This is the generic artifact/lifecycle runtime, not the complete Profile
-product. The installed Agent SDK now provides discovery, deterministic
-scaffolding, member resolution, source validation/qualification, semantic
-diffs, decision cards, and the bounded action seam. Profile export/import,
-Profile Manager GUI, generic domain rendering, Mission Control migration,
-semantic fixture execution, and Week/Day release qualification remain later
-stages. A lifecycle receipt proves the recorded transition and bound closure,
-not the truth of a domain claim or fitness for a user's purpose.
+The installed Agent SDK, runtime-discovered GUI Profile Manager, generic view
+composition, Mission Control reference Suite, and independent Week/Day/Action
+qualification are implemented. The current product claim is pre-release and
+qualified on macOS ARM64; it is not yet a cross-platform stable compatibility
+promise, marketplace, no-code ontology builder, remote Profile registry, or
+cryptographic actor-identity system.
+
+A lifecycle receipt proves the recorded transition and bound closure. A query
+receipt proves the answer at its declared cut. An assessment receipt proves the
+specified claim/purpose/evidence evaluation. None of those receipts alone
+proves that a user's source assertion is universal external truth or that a
+domain action achieved its real-world purpose.

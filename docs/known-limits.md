@@ -228,30 +228,42 @@ So "sandboxed" should be read as a precise tier/property for the relevant host
 and facet, not as a blanket statement that every extension form is safely
 contained.
 
-## Profile Suites have a Core lifecycle, not yet the complete product platform
+## Profile Suites are qualified pre-release, not a universal workflow builder
 
 [ADR-0069](../framework/core/docs/adr/ADR-0069-agent-first-kfx-profile-suite-runtime.md)
 adds `kungfu.profile-suite/v1`, shared validation, content-bound facets, and
 installed CLI schema discovery to the KFX contract.
 
-Core now computes a content-bound Profile root and records append-only install,
+Core computes a content-bound Profile root and records append-only install,
 qualification, activation, supersession, rollback, and removal facts. The
-Python/Node bindings and `kungfu kfx profile` CLI share one plan/apply service.
+installed Agent SDK adds deterministic scaffold/validation, semantic diff,
+full/thin source portability, declarative actions, KFD-1 contract composition,
+ADR-0048 query families, and ADR-0052 purpose-bound assessment. Mission Control
+uses that public path, and an independently authored Week/Day/Action Suite has
+qualified coexistence, rollback, removal/reinstall, and portable evidence on
+macOS ARM64.
 
 What is **not yet guaranteed**:
 
-- an installed Agent SDK that scaffolds or executes Profile actions;
 - semantic qualification checks beyond Core's source-contract, content-closure,
   and runtime-contract policy;
-- runtime-discovered GUI Profile Manager or generic Profile rendering;
-- Mission Control migration to the public Profile path;
-- third-party Profile coexistence, portability, or historical-cut
-  compatibility claims.
+- equivalent frozen-product qualification on Linux x64 and Windows x64;
+- a stable compatibility promise before the v4 release channel promotes this
+  surface;
+- a no-code Profile/ontology builder, marketplace, remote registry, or automatic
+  acquisition of third-party Profile members;
+- cryptographic verification that the actor named in a decision answer owns the
+  declared authority;
+- arbitrary executable Profile logic outside the existing KFX facet,
+  capability, and confinement boundaries;
+- reconstruction from a thin bundle, which intentionally contains roots and
+  inventory rather than source, payload, schema, or frame bytes.
 
 A schema-valid Profile proves only that its declared source closure satisfies
-the current contract. Lifecycle receipts prove the specific Core transition;
-they do not prove that domain actions executed correctly or that KFD-2 trust is
-established for a user's purpose.
+the current contract. Lifecycle receipts prove a specific Core transition;
+query and assessment receipts add cut- and purpose-bound evidence. They do not
+turn a source assertion into universal external truth or prove that a real-world
+action achieved the user's intended outcome.
 
 ## Kungfu Skills have a first slice, not a marketplace
 
