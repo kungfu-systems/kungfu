@@ -10,27 +10,29 @@ current; if a limit here is resolved, the entry moves to a guarantee elsewhere
 (and links back). See the [documentation map](MAP.md) for how this fits the rest
 of the docs.
 
-## Compatibility governance is designed, not yet enforced
+## v4 schema compatibility enforcement is designed, not yet complete
 
-The longfist binary layout is the real compatibility contract, and the policy for
-how it may evolve is decided
-([ADR-0008](../framework/core/docs/adr/ADR-0008-longfist-schema-evolution-and-minor-maintenance.md)).
+The yijinjing schema layout is the v4 compatibility root. Kungfu does not promise
+compatibility with v1/v2/v3 layouts, old trading-era APIs, or removed package
+names. From the first stable v4 baseline onward, released v4+ data must not be
+silently stranded by schema changes; [ADR-0008](../framework/core/docs/adr/ADR-0008-yijinjing-schema-layout-baseline.md)
+defines that boundary.
 What is **not yet built**:
 
 - a CI check that blocks breaking schema changes (modifying an existing field,
-  renumbering);
-- a "load only if runtime ≥ schema" gate;
-- per-minor compatibility-window declarations;
-- a cold-path replay cross-version decode test baseline.
+  renumbering) after the stable v4 baseline;
+- a runtime/schema load gate for released v4+ schema epochs;
+- v4+ compatibility-window declarations;
+- a cold-path replay/import/export cross-version test baseline for v4+ data.
 
 So today the invariant exists physically (zero-copy layout), but the *enforcement*
-that would let an external consumer rely on a stated compatibility window is
-pending. Treat compatibility promises as per-minor and verify against the layout,
-not against a version number alone.
+that will make the post-stable v4 compatibility promise mechanically checkable
+is pending. Before v4 stable, verify against the current layout; after v4 stable,
+schema changes need an explicit compatibility or migration path.
 
 ## The control / event axis is unmodernized, with open questions
 
-v4 de-risked the data axis (longfist → FlatBuffers, transport modernization). The
+v4 de-risked the data axis (declared schema layout, transport modernization). The
 control and event axes carry recorded, **unscheduled** design questions:
 
 - the Python coroutine integration couples to private `asyncio` internals and is
@@ -74,6 +76,52 @@ What is **not yet guaranteed**:
   provider CLI details, or development worktree paths.
 
 Treat these as usable pre-release slices, not a finished shell promise.
+
+## Ecosystem SDK qualification is source-complete on one platform, not released
+
+Python `kungfu-storage`, Node `@kungfu-tech/storage`, and the Rust
+`kungfu-sdk` crate are thin adapters over the same versioned libkungfu storage
+contract. Their shared clean-environment fixture has exact-artifact Darwin ARM64
+evidence for Episode lifecycle, head/historical query, fsck, and export without
+sibling SDKs or the GUI.
+
+What is **not yet guaranteed**:
+
+- publication of those package names to PyPI, npm, or crates.io;
+- equivalent exact-artifact reports for Linux x64 and Windows x64;
+- a cross-platform peak-resident-memory measurement in the one-shot SDK gate;
+- a stable compatibility promise before the v4 release channel promotes them.
+
+The artifact matrix therefore keeps all three ecosystem SDK rows `staged` even
+when a source-built qualification report passes on a named platform.
+
+## Runtime storage service is designed, not complete
+
+Kungfu has the grounded pieces for a local runtime fact ledger: append-only
+journals, frame provenance, location/channel runtime identity, portable export
+direction, schema registry direction, SQLite projections, and a first
+Atlas-scoped payload import/fsck/export/verify loop. The unified storage service
+described in [`runtime-storage-service.md`](runtime-storage-service.md) is still
+staged.
+
+What is **not yet guaranteed**:
+
+- large payload bodies are not yet uniformly stored behind hash-addressed
+  references across every runtime scope;
+- generic `kungfu source sync` across machines by range/session/hash inventory;
+- complete `storage fsck` coverage for all journal, payload, manifest, schema,
+  projection, and remote cursor classes;
+- range/session/hash import-export is not yet the remote sync substrate;
+- destructive-safe `gc` / `compact` with archive and rollback reporting;
+- repair of arbitrary journal corruption;
+- an authority migration path where an imported source becomes the single source
+  of truth.
+
+Treat current Storage/Episode query, export, fsck, repair, GC-plan, compaction-
+plan, Atlas storage, and source import/export slices as proof surfaces for the
+storage contract, not as a completed distributed storage protocol. Legacy
+loose-file journal archive/clean commands are retired; this release deliberately
+has no destructive retention command.
 
 ## KFX runtime confinement is staged
 

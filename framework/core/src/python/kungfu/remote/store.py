@@ -17,7 +17,7 @@ import tarfile
 from pathlib import Path
 from typing import Any
 
-SYNC_DIRS = ("journal", "rewind", "work")
+SYNC_DIRS = ("journal", "rewind", "work", "storage")
 LOCAL_HOSTS = {"", "local", "localhost", "127.0.0.1", "::1"}
 
 
@@ -301,7 +301,7 @@ def sync_source(runtime_dir: str, source_id: str) -> dict[str, Any]:
         "copied": copied,
         "capture_boundary": (
             "remote facts stay source-scoped under remotes/<source-id>/runtime; "
-            "journal/rewind/work are mirrored but not merged into the local "
+            "journal/rewind/work/storage are mirrored but not merged into the local "
             "authoritative runtime"
         ),
     }

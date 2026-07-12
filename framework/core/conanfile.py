@@ -49,12 +49,12 @@ class KungfuCoreConan(ConanFile):
         "spdlog/1.14.1",
         "tabulate/1.4",
         "rocksdb/6.29.5",
+        "xxhash/0.8.3",
         "pybind11/2.13.6",
         "gtest/1.14.0",
     ]
     options = {
         "log_level": ["trace", "debug", "info", "warning", "error", "critical"],
-        "freezer": ["nuitka", "pyinstaller"],
         "node_version": ["ANY"],
         "electron_version": ["ANY"],
         "vs_toolset": ["auto", "ClangCL"],
@@ -87,7 +87,6 @@ class KungfuCoreConan(ConanFile):
         "gtest/*:disable_pthreads": False,
         # 自身 options
         "log_level": "info",
-        "freezer": "pyinstaller",
         "node_version": "ANY",
         "electron_version": "ANY",
         # clang 已知问题:
@@ -109,7 +108,6 @@ class KungfuCoreConan(ConanFile):
         "dist/*",
     )
     conanfile_dir = path.dirname(path.realpath(__file__))
-    pyi_hooks_dir = path.join(conanfile_dir, "src", "python", "pyi-hooks")
     build_info_file = "kungfubuildinfo.json"
     build_dir = path.join(conanfile_dir, "build")
     dist_dir = path.join(conanfile_dir, "dist")
@@ -120,6 +118,10 @@ class KungfuCoreConan(ConanFile):
             self.options.rm_safe("vs_toolset")
 
     def configure(self):
+        # The Conan package-id and CMake language mode must describe the same
+        # contract.  Previously Conan selected gnu17 and CMake silently changed
+        # it to C++23, allowing incompatible dependency binaries to share a key.
+        self.settings.compiler.cppstd = "23"
         if _detected_os() != "Windows":
             # 与历史一致：非 Windows 用 libstdc++（注：旧码写 libstdc++，conan2 profile 通常
             # 用 libstdc++11；此处沿用 profile 设定，不在 recipe 强行覆盖以免与 LAN 缓存包不一致）。
@@ -131,6 +133,9 @@ class KungfuCoreConan(ConanFile):
         tc = CMakeToolchain(self, generator="Ninja")
         # 把自身 options 透传给 CMake（主 CMakeLists 用 ${CONAN_LIBS} 桥接 + SPDLOG 等级）。
         tc.variables["SPDLOG_LOG_LEVEL_COMPILE"] = self.__spdlog_level()
+        tc.variables["CMAKE_CXX_STANDARD"] = 23
+        tc.variables["CMAKE_CXX_STANDARD_REQUIRED"] = True
+        tc.variables["CMAKE_CXX_EXTENSIONS"] = False
         tc.generate()
         if self.gyp_call:
             self.__touch_lockfile()
@@ -147,12 +152,11 @@ class KungfuCoreConan(ConanFile):
         build_type = self.__get_build_type()
         if self.gyp_call:
             self.__clean_dist_dir()
-            self.__run_freeze(build_type)
             self.__show_build_info(build_type)
         else:
             src = self.conanfile_dir
             # 头文件按 target 归属分布在各库目录下，打包时合并成单一 include 树
-            for lib in ("libyijinjing", "libkungfu"):
+            for lib in ("libyijinjing", "libkungfu", "libwasm"):
                 copy(
                     self,
                     "*",
@@ -321,6 +325,12 @@ class KungfuCoreConan(ConanFile):
         elif runtime == "node":
             environ["KUNGFU_BUILD_SKIP_KUNGFU_NODE"] = "on"
             environ["KUNGFU_BUILD_SKIP_PYKUNGFU"] = "on"
+            cargo_registry = os.environ.get("KF_LIBWASM_CARGO_REGISTRY", "")
+            cargo_registry_option = (
+                [f"-DKF_LIBWASM_CARGO_REGISTRY={cargo_registry}"]
+                if cargo_registry
+                else []
+            )
             self.__run_cmake(
                 "-S",
                 ".." if self.gyp_call else ".",
@@ -328,6 +338,7 @@ class KungfuCoreConan(ConanFile):
                 "../build" if self.gyp_call else ".",
                 "-DCMAKE_BUILD_TYPE=Release",
                 f"-DSPDLOG_LOG_LEVEL_COMPILE={self.__spdlog_level()}",
+                *cargo_registry_option,
             )
             self.__run_cmake("--build", ".", "--config", "Release", *parallel_opt)
 
@@ -359,15 +370,8 @@ class KungfuCoreConan(ConanFile):
             self.output.error(f"pnpm exec {args} failed with return code {rc}")
             sys.exit(rc)
 
-    def __run_pnpm_script(self, *args):
-        pnpm = "pnpm" if _detected_os() != "Windows" else "pnpm.cmd"
-        rc = subprocess.Popen([shutil.which(pnpm), "run", *args]).wait()
-        if rc != 0:
-            self.output.error(f"pnpm run {args} failed with return code {rc}")
-            sys.exit(rc)
-
     def __parallel_jobs(self):
-        # 并行编译度优先取环境变量 KUNGFU_BUILD_JOBS（由 kungfu-code 的 build-local.env 在各机
+        # 并行编译度优先取环境变量 KUNGFU_BUILD_JOBS（由 shifu 的 build-local.env 在各机
         # 统一配置,仓内不硬编码);其次 conan conf tools.build:jobs;最后回退 os.cpu_count()。
         # kungfu 开 -flto + 重模板,单路峰值约 2GB,大核机（如 agent-120 32 线程）默认满并行会
         # 撑爆内存换页 thrash,故需可按机封顶。
@@ -426,6 +430,12 @@ class KungfuCoreConan(ConanFile):
         # conan2：把生成的 conan_toolchain.cmake 透传给 cmake-js，让 conan 依赖(CMakeDeps)与
         # cmake-js 的 runtime headers 共存(取代 conan1 的 conanbuildinfo.cmake 自动注入)。
         toolchain = path.join(self.generators_folder, "conan_toolchain.cmake")
+        cargo_registry = os.environ.get("KF_LIBWASM_CARGO_REGISTRY", "")
+        cargo_registry_option = (
+            [f"--CDKF_LIBWASM_CARGO_REGISTRY={cargo_registry}"]
+            if cargo_registry
+            else []
+        )
         return (
             [
                 "cmake-js",
@@ -441,6 +451,7 @@ class KungfuCoreConan(ConanFile):
                 f"--CDSPDLOG_LOG_LEVEL_COMPILE={log_level}",
                 f"--CDCMAKE_BUILD_PARALLEL_LEVEL={parallel_level}",
             ]
+            + cargo_registry_option
             + build_option
             + debug_option
             + [cmd]
@@ -455,47 +466,3 @@ class KungfuCoreConan(ConanFile):
         if machine in ("arm64", "aarch64", "armv8"):
             return "arm64"
         return "x64"
-
-    def __run_pyinstaller(self, build_type):
-        pathlib.Path(self.__get_build_info_path(build_type)).touch()
-        cwd = os.getcwd()
-        try:
-            os.chdir(path.pardir)
-            from PyInstaller import __main__ as freezer
-
-            freezer.run(
-                [
-                    f"--workpath={path.join('.', 'build')}",
-                    f"--distpath={path.join('.', 'dist')}",
-                    "--clean",
-                    "--noconfirm",
-                    path.join(".", "src", "python", "kungfu.spec"),
-                ]
-            )
-        finally:
-            os.chdir(cwd)
-
-        self.output.success("PyInstaller done")
-
-    def __run_nuitka(self, build_type):
-        cwd = os.getcwd()
-        try:
-            os.chdir(path.pardir)
-            self.__run_pnpm_script(
-                "nuitka",
-                "--output-dir=build",
-                path.join("src", "python", "kungfu_cli.py"),
-            )
-        finally:
-            os.chdir(cwd)
-
-        kungfu_dist_dir = path.join(self.build_dir, "kungfu_cli.dist")
-        shutil.copytree(build_type, kungfu_dist_dir)
-        shutil.rmtree(self.kungfu_dir, ignore_errors=True)
-        shutil.move(kungfu_dist_dir, self.kungfu_dir)
-        self.output.success("Nuitka done")
-
-    def __run_freeze(self, build_type):
-        os.environ["KUNGFU_PYI_HOOKS_PATH"] = self.pyi_hooks_dir
-        freeze = {"pyinstaller": self.__run_pyinstaller, "nuitka": self.__run_nuitka}
-        freeze[str(self.options.freezer)](build_type)

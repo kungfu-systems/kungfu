@@ -1,0 +1,14 @@
+# Source and configuration text is canonical LF on every build host. This keeps
+# formatter results and generated evidence independent of core.autocrlf.
+* text=auto eol=lf
+
+# Canonical contract bytes are hashed and compared byte-for-byte. Keep their
+# line endings independent of the checkout platform.
+framework/config/*.contract.json text eol=lf
+framework/kfx/*.contract.json text eol=lf
+framework/skill/*.contract.json text eol=lf
+framework/contract/*.json text eol=lf
+framework/core/stubs/**/*.pyi text eol=lf
+# Conan recipe revisions hash exported source bytes. Keep the audited recipe
+# and patches identical on autocrlf Windows checkouts as well as POSIX hosts.
+framework/core/.conan/recipes/** text eol=lf

@@ -44,3 +44,9 @@ def test_untrusted_adapter_is_refused(tmp_path, monkeypatch):
 def test_trusted_adapter_may_inject(tmp_path, monkeypatch):
     out = _notice(tmp_path, monkeypatch, "a", "adapter", ["a"])
     assert "first-party" in out and "may inject" in out
+
+
+def test_wasm_requires_explicit_capability_grant(tmp_path, monkeypatch):
+    out = _notice(tmp_path, monkeypatch, "portable", "wasm", [])
+    assert "VM-confined" in out
+    assert "explicit run-time grant" in out

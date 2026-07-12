@@ -1,0 +1,3 @@
+--kfd-2-claim-json .buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json
+--kfd-2-claim-json .buildchain/kfd/kfd-2/claims/codex-report-receipts.json
+--kfd-2-claim-json .buildchain/kfd/kfd-2/claims/remote-fact-boundary.json

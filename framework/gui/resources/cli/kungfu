@@ -2,7 +2,7 @@
 # kungfu — CLI wrapper installed into PATH by the Kungfu app.
 #
 # The app's "Install 'kungfu' Command in PATH" action symlinks
-#   /usr/local/bin/kungfu -> <Kungfu.app>/Contents/Resources/cli/kungfu
+#   /usr/local/bin/kungfu -> <Kungfu Episodes.app>/Contents/Resources/cli/kungfu
 # This script resolves its own real location through that symlink, finds the
 # bundled frozen runtime sitting next to it (../kungfu/kungfu), and execs it.
 # The frozen binary is self-contained (its dylibs load via @loader_path), so the

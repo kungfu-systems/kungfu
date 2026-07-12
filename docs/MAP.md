@@ -23,25 +23,51 @@ and the map routes a question to whichever doc answers it.
 | Your question | Document | Plane | Status |
 |---|---|---|---|
 | What is kungfu, in one idea? | [`../README.md`](../README.md) | — | stable |
-| What do the terms mean (`kungfu` / `longfist` / journal …)? | [`concepts.md`](concepts.md) | use | stable |
+| Do I need the whole Kungfu App, or which smaller product should I start with? | [`choose-your-kungfu.md`](choose-your-kungfu.md) | use | draft · adoption contract accepted; artifacts qualify independently in stages |
+| What do the terms mean (`kungfu` / `yijinjing` / journal / schema …)? | [`concepts.md`](concepts.md) | use | stable |
 | Why is it built this way? What is load-bearing? | [`design-philosophy.md`](design-philosophy.md) | why | stable |
+| Why compare Kungfu to SQLite, Git, and a flight recorder — and why is it neither observability nor blockchain? | [`design-philosophy.md`](design-philosophy.md#the-missing-infrastructure-layer-runtime-facts) | why | stable |
 | Why does Kungfu start from accountability? | [`facts-before-trust.md`](facts-before-trust.md) | why | stable |
+| How do Missions, delegated Go work, runtime facts, proof, and decisions become one product? | [`mission-control.md`](mission-control.md) + [`mission-control-workspaces.md`](mission-control-workspaces.md) + [ADR-0059](../framework/core/docs/adr/ADR-0059-mission-control-mission-go-responsibility-model.md) | why, use, verify | draft · mechanisms implemented; workspace product composition and five-question Mission Home designed |
+| How does Desktop open and remember a workspace without creating `.kungfu` on read? | [`mission-control-workspaces.md`](mission-control-workspaces.md) + [ADR-0060](../framework/core/docs/adr/ADR-0060-desktop-workspace-selection-and-lazy-data-home.md) | why, use, verify | proposed · product design complete; implementation sliced |
+| How can a first-time user manage agent work without a repository or predeclared Mission? | [`mission-control-workspaces.md`](mission-control-workspaces.md) + [ADR-0060](../framework/core/docs/adr/ADR-0060-desktop-workspace-selection-and-lazy-data-home.md) | why, use, verify | proposed · Home Workspace and unassigned inbox designed |
+| Why is agent-mediated guidance a first-class product interface rather than a later CLI integration? | [ADR-0061](../framework/core/docs/adr/ADR-0061-agent-mediated-guidance-is-a-first-class-product-interface.md) + [`mission-control-workspaces.md`](mission-control-workspaces.md) | why, use, verify | proposed · dual-first advice/action/receipt contract designed |
+| Why does the commercial product lead with Cost/State/Proof, and what does that profile guarantee? | [`cost-state-proof-profile.md`](cost-state-proof-profile.md) | why, use, verify | draft · first progress and completion qualification implemented |
 | Why this versioning / release design (don't replace it naively)? | [`version-release-design.md`](version-release-design.md) | why | stable |
 | When must a change open a minor or major (and when must it not)? | [`versioning.md`](versioning.md) (rule: KFD-1, adopted by ADR-0010) | verify | stable |
 | Why was a past decision made? | [`../framework/core/docs/adr/`](../framework/core/docs/adr) | why | stable |
 | How is the repository layered? | [`architecture.md`](architecture.md) | use | stable |
+| Which Kungfu layer can I adopt independently, and what does each product promise? | [`product-layers.md`](product-layers.md) + [ADR-0049](../framework/core/docs/adr/ADR-0049-layer-complete-products-and-domain-neutral-core.md) | why, use, verify | draft · principle accepted; qualifications staged |
+| Which application domains guide the neutral core without expanding the current roadmap? | [`domain-horizons.md`](domain-horizons.md) | why | draft · agent runtime current; trading evidence; games/virtual worlds horizon |
 | What are the known limits / what is *not* yet guaranteed? | [`known-limits.md`](known-limits.md) | verify | stable |
 | How do C++ / Python / Node share data zero-copy (the membrane)? | [`architecture.md`](architecture.md) (membrane diagram) | verify | stable |
 | What does it actually guarantee (layout / replay / compatibility)? | [`contracts.md`](contracts.md) | verify | stable |
+| What KFD-2 release claims can Buildchain audit? | [`contracts.md`](contracts.md) (KFD-2 release claims) + [`kfd-native-sdk-release-gates.md`](kfd-native-sdk-release-gates.md) | verify | draft |
 | What is the event / journal / replay model? | [`event-model.md`](event-model.md) | use | stable |
+| What does Rewind replay, and what must it never silently re-execute? | [ADR-0020](../framework/core/docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md) + [`rewind.md`](rewind.md) | why, verify | stable |
+| How does Kungfu persist user facts, sync sources, and maintain storage over time? | [`runtime-storage-service.md`](runtime-storage-service.md) | use, verify | draft |
+| How do my domain facts enter Kungfu's declared fact world, remain replayable, and become eligible for trust assessment? | [`fact-surface-admission.md`](fact-surface-admission.md) + [ADR-0051](../framework/core/docs/adr/ADR-0051-kfd-contract-world-fact-admission-and-trust.md) | why, use, verify | draft · semantics accepted; implementation staged |
+| How do I manage a long-running Mission, delegate Go work, inspect Cost/State/Proof, and move the evidence to another data root? | [`mission-control.md`](mission-control.md) + [ADR-0059](../framework/core/docs/adr/ADR-0059-mission-control-mission-go-responsibility-model.md) | why, use, verify | pre-release · native authoring and local full/thin bundle roundtrip implemented |
+| When does KFD-2 assess a claim, what does the workspace coordinator do, and how do Desktop processes and embedded threads share the model? | [`kfd2-trust-assessment.md`](kfd2-trust-assessment.md) + [ADR-0052](../framework/core/docs/adr/ADR-0052-kfd2-assessment-lifecycle-and-executors.md) | why, use, verify | draft · semantics accepted; implementation staged |
+| How do I query current or historical runtime facts, and what proves the answer? | [`querying-runtime-facts.md`](querying-runtime-facts.md) + [ADR-0048](../framework/core/docs/adr/ADR-0048-runtime-fact-query-semantics-and-changelog.md) | use, verify | draft · semantics accepted; implementation staged |
+| What is an Episode, why is it the atomic trust boundary, and how is that claim qualified under faults and load? | [`episode-object-model.md`](episode-object-model.md) + [`episode-atomicity-qualification.md`](episode-atomicity-qualification.md) + [ADR-0033](../framework/core/docs/adr/ADR-0033-episode-causal-segment-object.md) + [ADR-0034](../framework/core/docs/adr/ADR-0034-yijinjing-episode-manifest-journal.md) + [ADR-0042](../framework/core/docs/adr/ADR-0042-episode-atomic-safety-and-qualification.md) | why, use, verify | draft |
+| What is the supervisor/coordinator topology, and how can the coordinator stay alive after the GUI closes? | [`runtime-service.md`](runtime-service.md) + [ADR-0036](../framework/core/docs/adr/ADR-0036-supervisor-and-workspace-master-topology.md) | use, verify | draft |
+| How can a multi-machine timeline stay stable without one global clock? | [ADR-0021](../framework/core/docs/adr/ADR-0021-observer-relative-timeline-projection.md) + [`event-model.md`](event-model.md) | why, verify | stable |
+| Where must action-recording semantics live across C++ / Python / Node? | [ADR-0022](../framework/core/docs/adr/ADR-0022-core-action-recording-surface.md) + [`event-model.md`](event-model.md) | why, use | stable |
+| What is a location role, and why does it not decide journal page size? | [ADR-0024](../framework/core/docs/adr/ADR-0024-location-role-and-journal-page-policy.md) + [`event-model.md`](event-model.md) | why, use | stable |
 | Where are the Python / Node / framework adapter boundaries? | [`adapters.md`](adapters.md) | use | stable |
+| How do I install Python packages (pandas/torch-class) into Kungfu's runtime? | [`python-environments.md`](python-environments.md) + [ADR-0046](../framework/core/docs/adr/ADR-0046-rust-host-trunk-and-assembled-runtime.md) | use | stable |
 | How do I go from source to a binary? | [`buildchain.md`](buildchain.md) (+ [`../CONTRIBUTING.md`](../CONTRIBUTING.md)) | use | stable |
+| Which C++ compiler/tool versions are supported, and why are Modules not in production? | [`cpp-toolchain.md`](cpp-toolchain.md) + [ADR-0066](../framework/core/docs/adr/ADR-0066-native-cpp-toolchain-contract-and-modules-hold.md) | why, use, verify | stable · machine contract and removable qualification slice implemented |
+| What Python runtime ships inside the product, and what was pruned from it? | [ADR-0050](../framework/core/docs/adr/ADR-0050-assembled-runtime-stdlib-pruning-policy.md) + [`buildchain.md`](buildchain.md) | why, verify | stable |
+| When (and when not) does a component get written in Rust, and how is one added? | [`rust-adoption.md`](rust-adoption.md) | why, use | stable |
+| What must never change about the `shifu` entrypoints (and why)? | [ADR-0044](../framework/core/docs/adr/ADR-0044-shifu-delegation-protocol.md) | why, verify | stable |
 | Where does a release binary come from, and how do I verify it? | `provenance.md` | verify | blocked · needs release infra |
 | What gates must a release pass? | `provenance.md` + [`version-release-design.md`](version-release-design.md) | verify | partial |
 | How do KFD-1/2/3 become SDK scaffolds and future release-gate evidence? | [`kfd-native-sdk-release-gates.md`](kfd-native-sdk-release-gates.md) | use, verify | draft |
 | If kungfu itself misbehaves, how do I localize it? | [`debugging.md`](debugging.md) | verify | stable |
 | How do I record an agent run and find why it failed (Rewind)? | [`rewind.md`](rewind.md) | use | stable · pre-release install path |
-| What should an installed agent read first, and which mode should it choose? | installed pack: `kungfu agent brief`, `kungfu agent capabilities --json`, `kungfu agent choose-mode --json` | use | stable |
+| What should an installed agent read first, which mode should it choose, and is the agent-facing control surface closed? | installed pack: `kungfu agent brief`, `kungfu agent capabilities --json`, `kungfu agent choose-mode --json`, `kungfu agent verify --json` | use, verify | stable |
 | How do I write an extension (`kfx`)? | [`extensions.md`](extensions.md) | use | stable · view kfx; runtime facets mid-migration |
 | Where is global config, and how do agents read it? | [`config.md`](config.md) | use | draft |
 | How is a kfx loaded, trusted, and confined? (the topology) | [`kfx-topology.md`](kfx-topology.md) (design: ADR-0017; trust boundary ADR-0013; uniform capability surface ADR-0014) | use | draft · load plan + `service` facet proposed |
@@ -57,15 +83,69 @@ route to the row that answers them:
   actually guarantee* ([`contracts.md`](contracts.md)) and *why was a decision
   made* ([ADR-0001](../framework/core/docs/adr/ADR-0001-yijinjing-publish-barrier.md)).
 - **thread-safety / concurrency / single-writer multi-reader / lock-free** →
-  *what does it actually guarantee* ([`contracts.md`](contracts.md)).
+  *what does it actually guarantee* ([`contracts.md`](contracts.md)) and *where
+  should writer, reader-cursor, and page-lifetime ownership end*
+  ([ADR-0063](../framework/core/docs/adr/ADR-0063-yijinjing-concurrency-and-lifetime-contract.md),
+  proposed).
+- **SIGINT / replay exhaustion / subscriber error / loop stop / embedding error**
+  → *who owns error propagation and process lifetime*
+  ([ADR-0064](../framework/core/docs/adr/ADR-0064-runtime-error-propagation-and-stop-ownership.md),
+  proposed).
 - **determinism / reproducibility / record-and-replay** → *what does it actually
   guarantee* ([`contracts.md`](contracts.md)) and *the event / journal / replay
   model* ([`event-model.md`](event-model.md)).
+- **agent action timeline / causal action chain / forensic replay / mocked
+  replay / external side effects / rewind replay boundary** → *what does Rewind
+  replay, and what must it never silently re-execute*
+  ([ADR-0020](../framework/core/docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md)).
+- **action recorder / action recording / Python recorder / Node recorder /
+  JS recorder / C++ recorder / polyglot action surface / binding-only logic** →
+  *where must action-recording semantics live across C++ / Python / Node*
+  ([ADR-0022](../framework/core/docs/adr/ADR-0022-core-action-recording-surface.md)).
+- **location role / source / sink / actor / service / journal page size /
+  mmap size / storage policy** → *what is a location role, and why does it not
+  decide journal page size*
+  ([ADR-0024](../framework/core/docs/adr/ADR-0024-location-role-and-journal-page-policy.md)).
+- **observer-relative timeline / timeline projection / source priority /
+  global clock / multi-machine ordering / perspective / concurrent facts** →
+  *how can a multi-machine timeline stay stable without one global clock*
+  ([ADR-0021](../framework/core/docs/adr/ADR-0021-observer-relative-timeline-projection.md)).
 - **accountability / facts before trust / local proof before control** → *why
   does Kungfu start from accountability* ([`facts-before-trust.md`](facts-before-trust.md)).
+- **Mission Control / Mission / Go / delegated responsibility / progress drift /
+  completion claim / Atlas bridge / Cost State Proof / cost management profile**
+  → *how Missions and delegated work become one proof-backed product*
+  ([`mission-control.md`](mission-control.md)), *how the workspace product and
+  five-question Mission Home behave* ([`mission-control-workspaces.md`](mission-control-workspaces.md)), then *what the first commercial
+  profile packages* ([`cost-state-proof-profile.md`](cost-state-proof-profile.md))
+  and [ADR-0059](../framework/core/docs/adr/ADR-0059-mission-control-mission-go-responsibility-model.md).
+- **SQLite / Git for runs / flight recorder / runtime fact infrastructure /
+  observability / OpenTelemetry / blockchain / polyglot semantic core** → *why
+  Kungfu occupies a distinct runtime-fact layer*
+  ([`design-philosophy.md`](design-philosophy.md#the-missing-infrastructure-layer-runtime-facts)).
+- **query / SQL / historical state / time travel / temporal pattern / CEP /
+  changelog / proof / lineage / QueryDefinition** → *how do I query current or
+  historical runtime facts* ([`querying-runtime-facts.md`](querying-runtime-facts.md))
+  and [ADR-0048](../framework/core/docs/adr/ADR-0048-runtime-fact-query-semantics-and-changelog.md).
+- **contract world / fact surface / fact admission / user facts / domain facts /
+  KFD-1 facts / KFD-2 trust report** -> *how domain facts enter Kungfu and become
+  eligible for trust assessment* ([`fact-surface-admission.md`](fact-surface-admission.md))
+  and [ADR-0051](../framework/core/docs/adr/ADR-0051-kfd-contract-world-fact-admission-and-trust.md).
+- **KFD-2 assessment / TrustReport refresh / claim trigger / assessment worker /
+  Assessment Episode / process assessor / thread assessor** -> *when and where
+  trust is assessed* ([`kfd2-trust-assessment.md`](kfd2-trust-assessment.md))
+  and [ADR-0052](../framework/core/docs/adr/ADR-0052-kfd2-assessment-lifecycle-and-executors.md).
 - **latency / performance / zero-copy / serialization** → *the membrane*
   ([`architecture.md`](architecture.md)) and *the event model*
   ([`event-model.md`](event-model.md)).
+- **lightweight / too heavy / minimal install / independent package / libkungfu
+  only / CLI without GUI / layer deletion / assembled runtime** → *which
+  Kungfu should I start with* ([`choose-your-kungfu.md`](choose-your-kungfu.md)),
+  then *what does each layer guarantee* ([`product-layers.md`](product-layers.md))
+  and [ADR-0049](../framework/core/docs/adr/ADR-0049-layer-complete-products-and-domain-neutral-core.md).
+- **quant trading / agent runtime / games / virtual reality / virtual worlds /
+  domain-neutral core / future application horizon** →
+  [`domain-horizons.md`](domain-horizons.md).
 - **how do I run it / get started / install** → *source to a binary*
   ([`buildchain.md`](buildchain.md)) and [`../CONTRIBUTING.md`](../CONTRIBUTING.md).
   (A one-command run-it path is planned — see the build/release work tracked
@@ -76,14 +156,46 @@ route to the row that answers them:
   capability relay / sandboxed view / OS sandbox / service facet / planKfx** →
   *kfx topology* ([`kfx-topology.md`](kfx-topology.md)) and *extensions*
   ([`extensions.md`](extensions.md)).
-- **config / `~/.kungfu` / `KF_CONFIG_HOME` / `KF_HOME` / UI font / UI scale /
+- **config / `.kungfu` / `~/.kungfu-config` / `KF_CONFIG_HOME` / `KF_HOME` / UI font / UI scale /
   shortcuts / agent entrypoint** → *Kungfu config* ([`config.md`](config.md)).
+- **workspace data home / `.kungfu/` / data root / Git worktree data /
+  machine fallback / Home Workspace / Agent Work Inbox / config home
+  rename / Open Workspace / recent workspace / lazy initialization** → *Kungfu
+  config and Desktop workspace product*
+  ([`config.md`](config.md)) and
+  [`mission-control-workspaces.md`](mission-control-workspaces.md),
+  [ADR-0035](../framework/core/docs/adr/ADR-0035-workspace-local-kungfu-data-home.md),
+  and [ADR-0060](../framework/core/docs/adr/ADR-0060-desktop-workspace-selection-and-lazy-data-home.md).
+- **agent-mediated guidance / dual-first UX / advice / impact preview /
+  authorization / execution receipt / stale advice / agent-operable product** →
+  *Mission Control workspace product* ([`mission-control-workspaces.md`](mission-control-workspaces.md))
+  and [ADR-0061](../framework/core/docs/adr/ADR-0061-agent-mediated-guidance-is-a-first-class-product-interface.md).
+- **supervisor / per-user supervisor / workspace coordinator / data-root coordinator /
+  coordinator singleton / live registry / idle shutdown / daemonless storage** →
+  *Kungfu supervisor and coordinator service* ([`runtime-service.md`](runtime-service.md))
+  and [ADR-0036](../framework/core/docs/adr/ADR-0036-supervisor-and-workspace-master-topology.md).
 - **SKILL.md / agent skill / skill catalog / context injection / Node manager /
   Python manager / skill audit / skill-manager view / kfx dependency binding** →
   *agent-facing Kungfu Skill* ([`skills.md`](skills.md)).
 - **agent onboarding / mode selection / choose-mode / report mode / trace mode /
   managed-run / remote sync / local agent facts** → the installed Agent
   Onboarding Pack (`kungfu agent brief`, `kungfu agent capabilities --json`).
+- **runtime storage / source sync / location / channel / payload store / blob
+  store / fsck / compact / garbage collection / range export / projection
+  rebuild** → *runtime storage service*
+  ([`runtime-storage-service.md`](runtime-storage-service.md)).
+- **episode / causal segment / causal closure / atomic safety / graceful
+  degradation / capability contraction / qualification / Trust Report /
+  lifecycle unit / run slice / export unit / import unit / tombstone / episode
+  manifest / episode fsck** →
+  *Episode object model* ([`episode-object-model.md`](episode-object-model.md))
+  plus [`episode-atomicity-qualification.md`](episode-atomicity-qualification.md),
+  [ADR-0033](../framework/core/docs/adr/ADR-0033-episode-causal-segment-object.md),
+  and [ADR-0042](../framework/core/docs/adr/ADR-0042-episode-atomic-safety-and-qualification.md).
+- **episode manifest journal / manifest record / manifest delta / manifest
+  authority / yijinjing manifest / Hana manifest / JSON manifest** → *Episode
+  object model* ([`episode-object-model.md`](episode-object-model.md)) and
+  [ADR-0034](../framework/core/docs/adr/ADR-0034-yijinjing-episode-manifest-journal.md).
 - **signature / checksum / supply chain / SBOM** → *verify a release binary*
   (`provenance.md`, `blocked` — see [`known-limits.md`](known-limits.md)).
 - **KFD / SDK scaffold / release gate evidence / contract scaffold / fact

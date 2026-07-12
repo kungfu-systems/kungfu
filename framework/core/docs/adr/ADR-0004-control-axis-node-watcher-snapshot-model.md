@@ -6,7 +6,7 @@
 - Subsystem: Node binding — `watcher.cpp` / `watcher.h`
 - Related: aggregated with [ADR-0003](ADR-0003-control-axis-python-coroutine-integration.md)
   into the meta-assessment [ADR-0005](ADR-0005-control-event-axis-modernization-assessment.md);
-  orthogonal to the data-axis work in [ADR-0002](ADR-0002-longfist-flatbuffers-runtime-schema.md).
+  orthogonal to the data-axis work in [ADR-0002](ADR-0002-yijinjing-schema-runtime-layout.md).
 
 ## Context
 

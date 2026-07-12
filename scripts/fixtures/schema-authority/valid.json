@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "authorities": [
+    {"identity":"kernel.source","owner":"hana","symbol":"SourceDataTypes","declaration":"source.h","projection_route":"hana-sqlite-orm"},
+    {"identity":"open.event","owner":"flatbuffers","declaration":"event.fbs","derived_schema":"event.bfbs","projection_route":"flatbuffers-bfbs"}
+  ],
+  "non_authorities": [
+    {"identity":"kernel.source.view","kind":"typed-view","derives_from":"kernel.source","reason":"derived binding view"},
+    {"identity":"payload.bytes","kind":"opaque-body","reason":"opaque content-addressed bytes"}
+  ],
+  "json_edges": [
+    {"path":"json_edge.h","surface":"public-edge","direction":"foreign-ingress","reason":"foreign JSON input","remove_when":"foreign protocol is retired"}
+  ]
+}

@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
-import sys
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator
+
+from kungfu import host
+from kungfu.content_hash import compute_content_hash
 
 
 REGISTRY_SCHEMA = "kungfu.contract-registry/v1"
@@ -28,11 +29,11 @@ def resolve_registry_path(
     if explicit:
         return os.path.abspath(os.path.expanduser(explicit))
 
-    executable_candidate = (
-        Path(sys.executable).resolve().parent / "config" / REGISTRY_FILE
-    )
-    if executable_candidate.is_file():
-        return str(executable_candidate)
+    root = host.product_root()
+    if root is not None:
+        product_candidate = root / "config" / REGISTRY_FILE
+        if product_candidate.is_file():
+            return str(product_candidate)
 
     for start in [Path(__file__).resolve(), Path.cwd().resolve()]:
         for directory in [start, *start.parents]:
@@ -92,9 +93,11 @@ def resolve_contract_path(
         return os.path.abspath(os.path.expanduser(explicit))
 
     artifact = Path(str(entry["artifact"]))
-    executable_candidate = Path(sys.executable).resolve().parent / artifact
-    if executable_candidate.is_file():
-        return str(executable_candidate)
+    root = host.product_root()
+    if root is not None:
+        product_candidate = root / artifact
+        if product_candidate.is_file():
+            return str(product_candidate)
 
     source = Path(str(entry["source"]))
     for start in [Path(__file__).resolve(), Path.cwd().resolve()]:
@@ -132,7 +135,7 @@ def load_contract(
 def contract_hash(surface: str, contract_path: str | None = None) -> str:
     path = resolve_contract_path(surface, contract_path)
     with open(path, "rb") as f:
-        return "sha256:" + hashlib.sha256(f.read()).hexdigest()
+        return compute_content_hash(f.read())
 
 
 def contract_metadata(

@@ -127,6 +127,44 @@ manifest, extension root and install lifecycle, but different loaders. Full
 contract in [`../../../docs/extensions.md`](../../../docs/extensions.md);
 `extensions/langchain-adapter` is the first adapter facet.
 
+## Shell chrome
+
+The GUI shell owns the application chrome around the active view. A view can ask
+for chrome changes through the typed `Shell` object from `@kungfu-tech/kfx`, but
+it never receives a DOM slot or an arbitrary callback injection point.
+
+Persistent status goes through:
+
+```ts
+shell.statusBar.set({
+  id: 'my-kfx.sync',
+  text: 'sync ready',
+  side: 'left',
+  severity: 'ok',
+  command: { kind: 'open-kfx', kfxId: 'my-kfx' },
+});
+shell.statusBar.clear('my-kfx.sync');
+```
+
+Transient user-facing messages go through:
+
+```ts
+const id = shell.notify({
+  level: 'info',
+  title: 'Import complete',
+  message: '42 records updated',
+  timeoutMs: 6000,
+});
+shell.dismissNotification(id);
+```
+
+Commands are declarative and shell-interpreted (`open-kfx`, `open-settings`,
+`dismiss-notification`). That keeps system chrome under shell ownership while
+still giving first-party/system kfx a stable notification surface. Sandboxed
+views currently receive inert shell-chrome methods because the sandbox bridge
+only relays declared capabilities; a future shell bridge must be explicit IPC,
+not shared renderer callbacks.
+
 ## Trust tiers (ADR-0011 / ADR-0013 / ADR-0014)
 
 A view runs at one of two tiers; `resolveRuntimeTier` and the source-authority

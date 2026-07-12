@@ -1,0 +1,206 @@
+# ADR-0036: Per-user supervisor manages per-data-root masters
+
+- Status: superseded by [ADR-0057](ADR-0057-domain-neutral-live-runtime-terminology.md)
+- Date: 2026-07-09
+- Category: (architecture) live runtime coordination, process topology, and
+  workspace master lifecycle
+- Subsystem: supervisor, master, CLI, GUI, TUI, location registry, channel
+  routing, runtime storage service, and workspace data-root discovery.
+- Related: ADR-0018 defines the runtime storage service. ADR-0019 defines
+  source sync over location and channel. ADR-0033 defines Episode as the
+  first-class causal segment object. ADR-0034 defines the yijinjing-backed
+  Episode manifest journal. ADR-0035 defines workspace-local `.kungfu/` as the
+  default fact-ledger home. [`docs/runtime-service.md`](../../../../docs/runtime-service.md)
+  documents the operator-facing service surface.
+
+> Historical note: this decision established the two-level process topology.
+> ADR-0057 retains that topology but replaces its stylized runtime vocabulary.
+> The terms below are preserved to make the original decision auditable; they
+> are not the canonical names for new code or operator surfaces.
+
+## Context
+
+Kungfu now treats durable facts as data-root scoped. A workspace `.kungfu/`
+home, or the machine fallback selected by `KF_HOME`, contains the journals,
+Episode manifest journal, payload store, projections, and source registry for
+that fact world.
+
+At the same time, Kungfu has live runtime concepts that are not just files:
+locations, channels, active actors, subscriptions, health, and GUI/TUI/CLI
+routing. Those concepts need a live coordinator when a user wants real-time
+discovery or supervision.
+
+Requiring every user or agent to manually run `kungfu start master` before a
+CLI command is a poor interface. Making one global master own every workspace
+would also be wrong: it would collapse independent `.kungfu/` fact ledgers back
+into one machine-wide world and make Git-worktree dogfood collide.
+
+The architecture therefore needs two layers:
+
+- a user-level process that is easy for CLI/GUI/TUI entrypoints to find; and
+- a data-root-level master that coordinates one Kungfu fact world.
+
+## Decision
+
+Kungfu uses the following terminology:
+
+| Name | Scope | Responsibility |
+| --- | --- | --- |
+| `supervisor` | one per OS user/session | Process manager and router. It owns no workspace facts. It starts, discovers, health-checks, and stops workspace masters. |
+| `master` | one per resolved Kungfu data root | Live coordinator for one fact ledger. It owns location/channel registry, active actor supervision, subscriptions, live projections, and the master lifecycle Episode for that data root. |
+| durable storage | one per resolved Kungfu data root | Source of truth: yijinjing journals, Episode manifest journal, payload store, and rebuildable projections. |
+
+The workspace-level live coordinator keeps the existing Kungfu term `master`.
+The user-level process is called `supervisor`. Do not call the per-user process
+`master`, and do not make a workspace master responsible for unrelated data
+roots.
+
+The normal live command path is:
+
+```text
+CLI / GUI / TUI
+  -> resolve Kungfu data root
+  -> contact per-user supervisor
+  -> supervisor ensure_master(data_root)
+  -> command talks to that data-root master
+```
+
+If the supervisor is not running, a product entrypoint may start it. If a
+command only needs daemonless storage operations, it may bypass live master
+routing and write or inspect the data-root storage directly.
+
+The supervisor tracks masters by canonical data-root identity, not by current
+working directory string. It should normalize symlinks and workspace discovery
+results so repeated commands for the same `.kungfu/` home converge on the same
+master.
+
+## Process and runtime state
+
+Supervisor state belongs under the user config/runtime area, because it is a
+user-level router. The exact platform path can vary, but the logical state is:
+
+```text
+<KF_CONFIG_HOME>/runtime/supervisor/
+```
+
+Workspace master state belongs under the resolved data root, because it is tied
+to that fact ledger:
+
+```text
+<kungfu-data-root>/runtime/master/
+```
+
+The supervisor state may include its lock, pid, socket, log, and a small routing
+cache. A workspace master state directory may include its lock, pid, socket,
+heartbeat, log, and live projection state. Durable facts remain outside those
+process-control files in journals, manifest journals, payload stores, and
+projections.
+
+## Lifecycle semantics
+
+The supervisor keeps a registry of live workspace masters and uses leases to
+decide whether a master is still active. Lease sources include:
+
+- CLI commands;
+- GUI windows;
+- TUI sessions;
+- actor processes;
+- maintenance jobs;
+- subscriptions and watchers.
+
+An active actor count is not enough. A GUI subscription or maintenance export
+can keep a master useful even when no user actor is currently writing frames.
+
+When a master has no active leases and the idle grace period has elapsed, the
+supervisor may ask it to shut down gracefully. A graceful shutdown should:
+
+- flush and close live projections;
+- seal or record the master lifecycle Episode where applicable;
+- close sockets;
+- release locks;
+- leave durable journals, manifests, payloads, and projections intact.
+
+If the supervisor crashes, existing masters may keep running temporarily. A
+restarted supervisor can rediscover healthy masters from their runtime state or
+clear stale pid/socket/lock files after verifying that the recorded process is
+gone.
+
+## Masterless storage mode
+
+Kungfu storage is not daemon-owned. The durable fact ledger is the storage
+itself, not the live master process.
+
+Therefore, a local process may operate without a live master when it only needs
+to:
+
+- append or seal its own Episode records;
+- write payloads through the storage provider;
+- export a range or Episode bundle;
+- run fsck or compact-style maintenance over closed data;
+- rebuild projections offline.
+
+In masterless mode, the process does not get live discovery, real-time channel
+routing, supervised actor registry, subscription fan-out, or cross-process
+health. It is a local storage operation with fewer coordination guarantees.
+
+## Consequences
+
+- CLI usage can remain simple. A command can route through the supervisor and
+  get the correct workspace master without forcing users to start one manually.
+- Multiple workspaces and Git worktrees can have independent masters and
+  independent fact ledgers on the same machine.
+- The per-user supervisor can provide health checks and idle shutdown without
+  becoming the source of truth for any workspace.
+- The master remains a live coordination service, not a storage authority. This
+  keeps import/export/fsck/sync compatible with future distributed storage and
+  Episode bundle workflows.
+- GUI close semantics are clearer: closing a window releases the GUI lease; it
+  does not necessarily stop the workspace master or supervisor.
+
+## First delivery
+
+This ADR records the architecture decision and updates documentation.
+
+Implementation work remains separate:
+
+- introduce a user-level supervisor command/service surface;
+- update the existing `kungfu master ...` surface so it targets the resolved
+  data-root master;
+- add `ensure_master(data_root)` routing between CLI/GUI/TUI and the supervisor;
+- move master runtime files under the resolved data root;
+- add lease and heartbeat records for GUI/TUI/CLI/actor/maintenance users;
+- define stale runtime-state recovery and idle graceful shutdown behavior.
+
+## Explicitly out of scope
+
+- Remote cluster consensus or conflict resolution.
+- A universal global clock.
+- Making the supervisor store or own workspace facts.
+- Requiring a live master for closed-data fsck/export.
+- Removing the `master` term from Kungfu's workspace-level live coordinator.
+
+## Alternatives considered
+
+- **Require users to start a master manually.** Rejected. It makes CLI and
+  agent workflows brittle and turns a runtime detail into daily user overhead.
+- **Use one machine-wide master for every workspace.** Rejected. It conflicts
+  with workspace-local `.kungfu/` fact ledgers and makes independent worktrees
+  collide.
+- **Call the user-level process master and invent a new workspace term.**
+  Rejected. `master` is already the Kungfu term for the live coordinator. The
+  new layer is more accurately a supervisor.
+- **Make all storage writes go through master.** Rejected. It would make
+  closed-data maintenance, import/export, and future distributed bundle
+  workflows depend on a daemon even though the storage layer is already the
+  durable truth.
+
+## Residual risk
+
+- Supervisor routing must canonicalize data roots carefully. Symlinked
+  workspaces, nested repositories, and explicit `KF_HOME` values can otherwise
+  produce duplicate masters.
+- Masterless writes need clear locking and fsck rules so they do not corrupt an
+  active writer's open Episode.
+- The CLI surface currently uses `kungfu master ...` for both service and
+  runtime operations. Implementation should preserve a clean user experience
+  while making the internal split explicit.

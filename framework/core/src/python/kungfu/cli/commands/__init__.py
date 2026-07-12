@@ -7,10 +7,54 @@ import os
 import typing
 from click.globals import get_current_context
 from functools import update_wrapper
-from kungfu.config import default_runtime_home
+from kungfu.config import default_config_home, default_runtime_home
 
 # click 8.1.7+ 移除了私有 TypeVar F；CLI 仅用于装饰器类型标注，改本地定义不依赖 click 内部符号。
 CLI = typing.TypeVar("CLI", bound=typing.Callable[..., typing.Any])
+
+
+def initialize_runtime_context(ctx) -> None:
+    """Materialize the legacy runtime context after an intent has selected it."""
+    os.environ["KF_CONFIG_HOME"] = ctx.config_home
+    os.environ["KF_HOME"] = ctx.home
+    os.environ["KF_LOG_LEVEL"] = ctx.log_level
+
+    def ensure_dir(path):
+        if not os.path.exists(path):
+            os.makedirs(path)
+        return path
+
+    ctx.runtime_dir = ensure_dir(ctx.runtime_dir)
+    os.environ["KF_RUNTIME_DIR"] = ctx.runtime_dir
+    ctx.dataset_dir = ensure_dir(ctx.dataset_dir)
+    ctx.backtest_dir = ensure_dir(ctx.backtest_dir)
+    ctx.inbox_dir = ensure_dir(ctx.inbox_dir)
+
+    lf = kungfu.__binding__.yijinjing
+    yjj = kungfu.__binding__.runtime
+    ctx.runtime_locator = yjj.locator(ctx.runtime_dir)
+    ctx.backtest_locator = yjj.locator(lf.enums.mode.BACKTEST)
+    ctx.config_location = yjj.location(
+        lf.enums.mode.LIVE,
+        lf.enums.location_role.SYSTEM,
+        "etc",
+        "kungfu",
+        ctx.runtime_locator,
+    )
+    ctx.console_location = yjj.location(
+        lf.enums.mode.LIVE,
+        lf.enums.location_role.SYSTEM,
+        "service",
+        "console",
+        ctx.runtime_locator,
+    )
+    ctx.index_location = yjj.location(
+        lf.enums.mode.LIVE,
+        lf.enums.location_role.SYSTEM,
+        "journal",
+        "index",
+        ctx.runtime_locator,
+    )
 
 
 class PrioritizedCommandGroup(click.Group):
@@ -91,11 +135,11 @@ class PrioritizedCommandGroup(click.Group):
 
                 for key in [
                     "name",
+                    "config_home",
                     "home",
                     "extension_path",
                     "log_level",
                     "runtime_dir",
-                    "archive_dir",
                     "dataset_dir",
                     "inbox_dir",
                     "runtime_locator",
@@ -155,60 +199,31 @@ def kfc(ctx, home, extension_path, log_level, name, stage, env_verify_location):
 
     runtime_dir_override = os.environ.get("KF_RUNTIME_DIR") if not home else None
     home = default_runtime_home() if not home else home
+    config_home = default_config_home()
     ctx.extension_path = extension_path
-
-    os.environ["KF_HOME"] = ctx.home = home
-    os.environ["KF_LOG_LEVEL"] = ctx.log_level = log_level
-
-    def ensure_dir(ctx, name):
-        target = os.path.join(ctx.home, name)
-        if not os.path.exists(target):
-            os.makedirs(target)
-        return target
-
-    if runtime_dir_override:
-        ctx.runtime_dir = os.path.abspath(os.path.expanduser(runtime_dir_override))
-        if not os.path.exists(ctx.runtime_dir):
-            os.makedirs(ctx.runtime_dir)
-    else:
-        ctx.runtime_dir = ensure_dir(ctx, "runtime")
-    os.environ["KF_RUNTIME_DIR"] = ctx.runtime_dir
-    ctx.archive_dir = ensure_dir(ctx, "archive")
-    ctx.dataset_dir = ensure_dir(ctx, "dataset")
-    ctx.backtest_dir = ensure_dir(ctx, "backtest")
-    ctx.inbox_dir = ensure_dir(ctx, "inbox")
-
-    lf = kungfu.__binding__.longfist
-    yjj = kungfu.__binding__.yijinjing
-
-    # have to keep locator alive from python side
-    # https://github.com/pybind/pybind11/issues/1546
-    ctx.runtime_locator = yjj.locator(ctx.runtime_dir)
-    ctx.backtest_locator = yjj.locator(lf.enums.mode.BACKTEST)
-    ctx.config_location = yjj.location(
-        lf.enums.mode.LIVE,
-        lf.enums.category.SYSTEM,
-        "etc",
-        "kungfu",
-        ctx.runtime_locator,
+    ctx.config_home = config_home
+    ctx.home = home
+    ctx.log_level = log_level
+    ctx.runtime_dir = os.path.abspath(
+        os.path.expanduser(runtime_dir_override or os.path.join(ctx.home, "runtime"))
     )
-    ctx.console_location = yjj.location(
-        lf.enums.mode.LIVE,
-        lf.enums.category.SYSTEM,
-        "service",
-        "console",
-        ctx.runtime_locator,
-    )
-    ctx.index_location = yjj.location(
-        lf.enums.mode.LIVE,
-        lf.enums.category.SYSTEM,
-        "journal",
-        "index",
-        ctx.runtime_locator,
-    )
+    ctx.dataset_dir = os.path.join(ctx.home, "dataset")
+    ctx.backtest_dir = os.path.join(ctx.home, "backtest")
+    ctx.inbox_dir = os.path.join(ctx.home, "inbox")
+    ctx.runtime_locator = None
+    ctx.backtest_locator = None
+    ctx.config_location = None
+    ctx.console_location = None
+    ctx.index_location = None
+    ctx.name = name or ctx.invoked_subcommand
+    ctx.stage = stage or "prod"
 
-    ctx.name = name if name else ctx.invoked_subcommand
-    ctx.stage = stage if stage else "prod"
+    # Workspace discovery and selection are control-plane operations. They must
+    # be able to inspect an uninitialized candidate without the root callback
+    # creating directories or rewriting the caller's resolution evidence first.
+    if ctx.invoked_subcommand in {"workspace", "managed-run", "storage"}:
+        return
+    initialize_runtime_context(ctx)
 
     if ctx.invoked_subcommand is None:
         click.echo(kfc.get_help(ctx))

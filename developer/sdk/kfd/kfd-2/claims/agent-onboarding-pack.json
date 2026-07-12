@@ -1,0 +1,119 @@
+{
+  "id": "agent-onboarding-pack",
+  "public": true,
+  "claim": "Kungfu releases declare an installed agent onboarding pack with machine-readable command and mode metadata, safety boundaries, examples, and verifier coverage.",
+  "sourceBindings": [
+    {
+      "role": "claim-source",
+      "kind": "file",
+      "path": "framework/core/src/python/kungfu/agent/index.json",
+      "sha256": "c6ba4dd9b1c3e97bd6e7853555e4534ed5cdcfdea8fda0d3798a7a545331c62c"
+    }
+  ],
+  "machineEvidence": [
+    {
+      "type": "file",
+      "pointer": {
+        "kind": "file",
+        "path": "framework/core/src/python/kungfu/agent/commands.json",
+        "sha256": "63d9ba733a9a77ce5b6de4725146c7756ca320d6195f79d7b691d582c73ad9d4"
+      },
+      "description": "Machine-readable command catalog and mode maturity metadata."
+    },
+    {
+      "type": "file",
+      "pointer": {
+        "kind": "file",
+        "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
+        "sha256": "51f32b7c4b5e1eb49cf05a4386b1134c8f019aca984c6a7842b8bec5f972bee2"
+      },
+      "description": "Human and agent-readable mode selection rules."
+    },
+    {
+      "type": "file",
+      "pointer": {
+        "kind": "file",
+        "path": "framework/core/src/python/kungfu/agent/safety.md",
+        "sha256": "7d79f580d229ff16821568b5200746cc17abd68fa7ec533ca8ff2c49b7e7e8c7"
+      },
+      "description": "Fact labels and safety boundaries for observed, reported, imported, and remote evidence."
+    },
+    {
+      "type": "file",
+      "pointer": {
+        "kind": "file",
+        "path": "scripts/verify-agent-pack.mjs",
+        "sha256": "5939f9bc8a6c37c9712db5d31c84b08cbf60416e0a1c5437460629000d3aa4c0"
+      },
+      "description": "Read-only verifier for installed agent pack completeness and command/doc consistency."
+    }
+  ],
+  "hashes": {
+    "registrySha256": "5e686417b7bb43116755ccf2e1ccc001ce4c1fe7706d062ebc2bdf776925b4c6",
+    "sourceSha256": "c6ba4dd9b1c3e97bd6e7853555e4534ed5cdcfdea8fda0d3798a7a545331c62c",
+    "evidenceSha256": [
+      {
+        "path": "framework/core/src/python/kungfu/agent/commands.json",
+        "sha256": "63d9ba733a9a77ce5b6de4725146c7756ca320d6195f79d7b691d582c73ad9d4"
+      },
+      {
+        "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
+        "sha256": "51f32b7c4b5e1eb49cf05a4386b1134c8f019aca984c6a7842b8bec5f972bee2"
+      },
+      {
+        "path": "framework/core/src/python/kungfu/agent/safety.md",
+        "sha256": "7d79f580d229ff16821568b5200746cc17abd68fa7ec533ca8ff2c49b7e7e8c7"
+      },
+      {
+        "path": "scripts/verify-agent-pack.mjs",
+        "sha256": "5939f9bc8a6c37c9712db5d31c84b08cbf60416e0a1c5437460629000d3aa4c0"
+      }
+    ],
+    "artifactSha256": [
+      {
+        "path": "framework/core/src/python/kungfu/agent/index.json",
+        "sha256": "c6ba4dd9b1c3e97bd6e7853555e4534ed5cdcfdea8fda0d3798a7a545331c62c"
+      },
+      {
+        "path": "framework/core/src/python/kungfu/agent/commands.json",
+        "sha256": "63d9ba733a9a77ce5b6de4725146c7756ca320d6195f79d7b691d582c73ad9d4"
+      }
+    ]
+  },
+  "artifacts": [
+    {
+      "name": "agent-pack-index",
+      "path": "framework/core/src/python/kungfu/agent/index.json",
+      "sha256": "c6ba4dd9b1c3e97bd6e7853555e4534ed5cdcfdea8fda0d3798a7a545331c62c",
+      "expectedPackagePath": "kungfu/agent/index.json"
+    },
+    {
+      "name": "agent-command-catalog",
+      "path": "framework/core/src/python/kungfu/agent/commands.json",
+      "sha256": "63d9ba733a9a77ce5b6de4725146c7756ca320d6195f79d7b691d582c73ad9d4",
+      "expectedPackagePath": "kungfu/agent/commands.json"
+    }
+  ],
+  "verification": {
+    "result": "passed",
+    "command": "node scripts/verify-agent-pack.mjs && pnpm exec buildchain kfd 2 product-claims check",
+    "expectedResult": "pass"
+  },
+  "auditBoundary": {
+    "scope": "The committed agent onboarding pack files listed in this claim and the verifier checks that enumerate required docs, skills, command catalog entries, safety labels, package data, GUI hint, and TUI hint.",
+    "enumerability": "closed-world",
+    "exclusions": [
+      "Provider CLI behavior outside Kungfu",
+      "User-specific bootstrap policy files under local home directories",
+      "Runtime data and receipts produced after installation"
+    ]
+  },
+  "responsibility": {
+    "sourceOwner": "kungfu",
+    "verificationOwner": "kungfu verify",
+    "releaseDecisionOwner": "kungfu release maintainer",
+    "escalation": "Downgrade the claim if the pack verifier fails or a new public agent command is added without command catalog coverage."
+  },
+  "residualRisk": [],
+  "canonicalStatus": "audited"
+}
