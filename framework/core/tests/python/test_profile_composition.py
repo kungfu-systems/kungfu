@@ -32,7 +32,7 @@ def _write_artifact(source, profile, path, value, ref):
     ref["sha256"] = hashlib.sha256(data).hexdigest()
 
 
-def _source(tmp_path, *, unknown_view_surface=False):
+def _source(tmp_path, *, unknown_view_surface=False, unsupported_view_schema=False):
     source = tmp_path / "profile"
     profile_sdk.apply_scaffold(profile_sdk.scaffold_plan(_brief(), source))
     profile_path = source / "profile.json"
@@ -89,7 +89,11 @@ def _source(tmp_path, *, unknown_view_surface=False):
         profile,
         "views/registry.json",
         {
-            "schema": "kungfu.profile-views/v1",
+            "schema": (
+                "example.private-views/v1"
+                if unsupported_view_schema
+                else "kungfu.profile-views/v1"
+            ),
             "views": [
                 {
                     "id": "week-table",
@@ -132,6 +136,15 @@ def test_catalog_rejects_cross_profile_view_surface_reference(tmp_path):
         profile_composition.catalog(source, tmp_path / "runtime")
 
     assert raised.value.diagnosis["code"] == "view-surface-unresolved"
+
+
+def test_catalog_rejects_uninstalled_artifact_schema(tmp_path):
+    source = _source(tmp_path, unsupported_view_schema=True)
+
+    with pytest.raises(profile_sdk.ProfileSdkError) as raised:
+        profile_composition.catalog(source, tmp_path / "runtime")
+
+    assert raised.value.diagnosis["code"] == "composition-schema-unsupported"
 
 
 def test_query_plan_requires_exact_active_root_and_delegates_to_adr0048(tmp_path):

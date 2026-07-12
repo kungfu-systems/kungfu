@@ -31,11 +31,28 @@ def catalog(
     profile = inspection["profile"]
     artifacts = {
         "factSurfaces": _merge_refs(
-            inspection, profile["kfd1"]["factSurfaces"], "surfaces"
+            inspection,
+            profile["kfd1"]["factSurfaces"],
+            "surfaces",
+            "kungfu.profile-fact-surfaces/v1",
         ),
-        "claims": _merge_refs(inspection, profile["kfd2"]["claims"], "claims"),
-        "policies": _merge_refs(inspection, profile["kfd2"]["policies"], "policies"),
-        "views": _read_ref(inspection, profile["views"]["registry"]).get("views"),
+        "claims": _merge_refs(
+            inspection,
+            profile["kfd2"]["claims"],
+            "claims",
+            "kungfu.profile-claims/v1",
+        ),
+        "policies": _merge_refs(
+            inspection,
+            profile["kfd2"]["policies"],
+            "policies",
+            "kungfu.profile-assessment-policies/v1",
+        ),
+        "views": _read_typed_ref(
+            inspection,
+            profile["views"]["registry"],
+            "kungfu.profile-views/v1",
+        ).get("views"),
     }
     for name, value in artifacts.items():
         if not isinstance(value, list):
@@ -218,12 +235,28 @@ def _read_ref(inspection: Mapping[str, Any], ref: Mapping[str, Any]) -> dict[str
     return value
 
 
+def _read_typed_ref(
+    inspection: Mapping[str, Any], ref: Mapping[str, Any], schema: str
+) -> dict[str, Any]:
+    value = _read_ref(inspection, ref)
+    if value.get("schema") != schema:
+        _fail(
+            "composition-schema-unsupported",
+            f"Profile artifact must use {schema}",
+            observed=value.get("schema"),
+        )
+    return value
+
+
 def _merge_refs(
-    inspection: Mapping[str, Any], refs: list[Mapping[str, Any]], field: str
+    inspection: Mapping[str, Any],
+    refs: list[Mapping[str, Any]],
+    field: str,
+    schema: str,
 ) -> list[Any]:
     rows = []
     for ref in refs:
-        value = _read_ref(inspection, ref).get(field)
+        value = _read_typed_ref(inspection, ref, schema).get(field)
         if not isinstance(value, list):
             _fail(
                 "composition-artifact-invalid",
