@@ -38,7 +38,11 @@ package manager (pnpm via Corepack), and the Python environment (via
 [uv](https://docs.astral.sh/uv/)), plus the Buildchain binary pinned by
 `.buildchain-version`. They are bootstrapped automatically when needed. User
 fnm / uv installations remain eligible; Buildchain is pin-first so a global
-version cannot silently replace the repository's reproducible build input.
+version cannot silently replace the repository's reproducible build input. If
+the local or runner controller projects `SHIFU_CACHE_PROFILE_REF` together with
+`SHIFU_CACHE_PROFILE_DIGEST`, ordinary `./shifu <task>` commands automatically
+run under that resolved cache profile. Public clones with neither value keep
+the normal upstream path; partial projection fails closed.
 
 Run `./shifu doctor` to check your environment: it reports every required
 tool with a version line or an install pointer (and exits non-zero when a

@@ -198,6 +198,23 @@ echo shifu %_KFC_VER% ^(script^)
 exit /b 0
 
 :richcheck
+rem Native dispatch owns automatic cache application when available. Mirror the
+rem same once-only behavior here for the in-script fallback. A partial pair is
+rem intentionally forwarded so the Shifu resolver fails closed.
+if "%SHIFU_CACHE_ACTIVE%"=="1" goto richdispatch
+if not defined SHIFU_CACHE_PROFILE_REF if not defined SHIFU_CACHE_PROFILE_DIGEST goto richdispatch
+if /i "%~1"=="cache"       goto richdispatch
+if /i "%~1"=="proxy"       goto richdispatch
+if /i "%~1"=="config"      goto richdispatch
+if /i "%~1"=="clone"       goto richdispatch
+if /i "%~1"=="self-update" goto richdispatch
+if /i "%~1"=="self-version" goto richdispatch
+if /i "%~1"=="promote"     goto richdispatch
+if /i "%~1"=="builds"      goto richdispatch
+call "%~f0" cache apply -- shifu.cmd %*
+exit /b !errorlevel!
+
+:richdispatch
 rem -- Delegate rich subcommands to L2 node (no pnpm, no uv). Prefer fnm node, else system node. --
 if /i "%~1"=="proxy"  goto delegate
 if /i "%~1"=="config" goto delegate

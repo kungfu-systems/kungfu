@@ -261,6 +261,19 @@ case "${1:-}" in
     ;;
 esac
 
+# The native launcher owns this path when available, including cold bootstrap.
+# Reproduce the same contract only for the in-script fallback: a projected
+# profile wraps an ordinary task exactly once, while either half of a partial
+# pair still reaches the resolver and fails closed. SHIFU_CACHE_ACTIVE is set
+# only on the managed child by the Shifu cache runtime.
+if [ "${SHIFU_CACHE_ACTIVE:-}" != "1" ] \
+  && { [ -n "${SHIFU_CACHE_PROFILE_REF:-}" ] || [ -n "${SHIFU_CACHE_PROFILE_DIGEST:-}" ]; }; then
+  case "${1:-}" in
+    cache | proxy | config | clone | self-update | self-version | promote | builds | -h | --help | -v | -V | --version) ;;
+    *) exec ./shifu cache apply -- ./shifu "$@" ;;
+  esac
+fi
+
 # ── In-script bootstrap (requires fnm + uv installed once) ───────────────────
 # Rich subcommands delegate to L2 node (not passed to pnpm). L2 is pure node builtins and version-agnostic:
 # prefer fnm-managed node when available (the normal path once bootstrap is ready); fall back to system node when fnm is

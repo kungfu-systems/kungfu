@@ -54,7 +54,10 @@ bootstraps the pinned toolchain automatically (node via
 already have on PATH is used as-is; Buildchain remains pin-first. See
 [`docs/rust-adoption.md`](docs/rust-adoption.md) for how the launcher works.
 For versioned cache policy and machine-readable schema discovery, see
-[`docs/shifu/`](docs/shifu/).
+[`docs/shifu/`](docs/shifu/). When a controller projects both
+`SHIFU_CACHE_PROFILE_REF` and `SHIFU_CACHE_PROFILE_DIGEST`, ordinary
+`./shifu <task>` invocations automatically resolve and apply that profile once;
+the explicit `./shifu cache ...` control surface remains outside the wrapper.
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full toolchain, repository
 layout, and code style.
