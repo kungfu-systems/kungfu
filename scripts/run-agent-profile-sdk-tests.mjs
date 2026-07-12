@@ -31,6 +31,14 @@ const result = spawnSync(
       'python',
       'test_agent_profile_sdk.py',
     ),
+    path.join(
+      root,
+      'framework',
+      'core',
+      'tests',
+      'python',
+      'test_profile_composition.py',
+    ),
     '-q',
   ],
   {
