@@ -332,6 +332,7 @@ void test_corrupt_page_header_facts_are_rejected() {
     std::function<void(page_header &)> corrupt;
   };
   const corrupt_case cases[] = {
+      {"version", [](page_header &header) { header.version = journal_format_epoch + 1u; }},
       {"page header length", [](page_header &header) { header.page_header_length = sizeof(page_header) + 8; }},
       {"frame header length", [](page_header &header) { header.frame_header_length = sizeof(frame_header) - 8; }},
       {"page size", [](page_header &header) { header.page_size = TEST_PAGE_SIZE + 4096; }},
