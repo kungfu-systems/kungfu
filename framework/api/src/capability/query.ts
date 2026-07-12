@@ -189,6 +189,11 @@ export type QueryViewSpec =
   | AttentionViewSpec
   | MissionControlViewSpec;
 
+export type GenericQueryViewSpec = Exclude<
+  QueryViewSpec,
+  MissionControlViewSpec
+>;
+
 export type SavedQueryView = {
   schema: 'kungfu.query.saved-view/v1';
   name: string;

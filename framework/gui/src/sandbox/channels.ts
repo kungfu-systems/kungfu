@@ -45,6 +45,7 @@ export const RUNTIME_STATUS_GET_CHANNEL = 'kf-runtime-status:get';
 // renderer keeps native runtime access, but process startup and JSON reads must
 // not block Chromium's event loop.
 export const ATLAS_CLI_EXEC_CHANNEL = 'kf-atlas-cli:exec';
+export const PROFILE_CLI_EXEC_CHANNEL = 'kf-profile-cli:exec';
 
 // main -> shell renderer: refresh product data without reloading the renderer.
 // The renderer owns native runtime handles, so Electron's page reload is not a

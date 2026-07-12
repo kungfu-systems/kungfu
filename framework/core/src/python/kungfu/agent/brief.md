@@ -110,6 +110,9 @@ kungfu profile scaffold brief.json --out ./my-profile --json
 kungfu profile validate ./my-profile --json
 kungfu profile qualify ./my-profile --json
 kungfu profile plan install ./my-profile --json
+kungfu profile manager --json
+kungfu profile catalog ./my-profile --require-active --json
+kungfu profile query-plan ./my-profile <view-id> --json
 ```
 
 The Profile layer computes member roots from package bytes and delegates all
@@ -117,6 +120,9 @@ lifecycle state to Core. Decision cards are open questions, not authorization;
 after an answer, produce a fresh plan and apply it with the resulting external
 authorization identity. Optional code members build with
 `kungfu sdk kfx build` and do not require rebuilding Kungfu.
+The Profile Manager GUI reads the same manager projection and previews the same
+decision card. Its apply path re-plans against the reviewed plan id; GUI focus
+does not activate a Profile and removing a Profile does not delete facts.
 
 Bootstrap surfaces are local and explicit:
 

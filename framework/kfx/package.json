@@ -10,6 +10,10 @@
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./query-view": "./src/query-view.tsx"
+  },
   "repository": {
     "url": "https://github.com/kungfu-systems/kungfu.git"
   },

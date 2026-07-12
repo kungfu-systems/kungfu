@@ -23,6 +23,7 @@ import {
   DESTROY_CHANNEL,
   ENSURE_CHANNEL,
   HIDE_CHANNEL,
+  PROFILE_CLI_EXEC_CHANNEL,
   RUNTIME_STATUS_GET_CHANNEL,
   SET_BOUNDS_CHANNEL,
   SHELL_REFRESH_CHANNEL,
@@ -45,6 +46,7 @@ import {
   installKungfuCliToPath,
   uninstallKungfuCliFromPath,
 } from './installCli';
+import { executeProfileCli } from './profile-cli';
 import { type Rect, SandboxManager } from './sandbox-manager';
 import { bindSessionWindows } from './session-windows-host';
 import {
@@ -680,6 +682,13 @@ ipcMain.on(DESTROY_CHANNEL, (_event, payload) => {
 
 ipcMain.handle(ATLAS_CLI_EXEC_CHANNEL, (_event, payload) =>
   executeAtlasCli(payload, {
+    bin: kungfuBinPath(),
+    env: process.env,
+    execFile,
+  }),
+);
+ipcMain.handle(PROFILE_CLI_EXEC_CHANNEL, (_event, payload) =>
+  executeProfileCli(payload, {
     bin: kungfuBinPath(),
     env: process.env,
     execFile,

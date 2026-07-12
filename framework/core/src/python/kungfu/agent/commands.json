@@ -612,6 +612,48 @@
       "name": "kungfu profile invoke <source> <action> [--execute --plan-file <plan.json> --authorization-file <answer.json>] --json",
       "maturity": "experimental",
       "purpose": "Plan first, then invoke a supported confined Profile action with freshness and authorization checks."
+    },
+    {
+      "apiId": "kungfu.profile.manager",
+      "name": "kungfu profile manager --json",
+      "maturity": "experimental",
+      "purpose": "Project Core lifecycle state, current source health, permissions, qualification, diagnostics, and contributed views without creating a GUI registry."
+    },
+    {
+      "apiId": "kungfu.profile.composition",
+      "name": "kungfu profile catalog <source> [--require-active] --json",
+      "maturity": "experimental",
+      "purpose": "Join exact-root fact surfaces, claims, assessment policies, and generic views over the current Profile lifecycle cut."
+    },
+    {
+      "apiId": "kungfu.profile.composition",
+      "name": "kungfu profile query-plan <source> <view-id> --json",
+      "maturity": "experimental",
+      "purpose": "Plan a contributed generic view through the existing ADR-0048 query authority."
+    },
+    {
+      "apiId": "kungfu.profile.composition",
+      "name": "kungfu profile query-run <source> <plan.json> --json",
+      "maturity": "experimental",
+      "purpose": "Re-plan and execute a still-current contributed query through the existing ADR-0048 proof path."
+    },
+    {
+      "apiId": "kungfu.profile.assessment",
+      "name": "kungfu profile assess-plan <source> <query-receipt.json> --claim-id <id> --policy-id <id> --purpose <purpose> --work-episode-id <id> --json",
+      "maturity": "experimental",
+      "purpose": "Bind an exact query cut, claim, purpose, evidence policy, and verified work Episode into an ADR-0052 decision-gated assessment plan."
+    },
+    {
+      "apiId": "kungfu.profile.assessment",
+      "name": "kungfu profile assess-run <plan.json> --authorization-file <answer.json> --json",
+      "maturity": "experimental",
+      "purpose": "Re-plan and execute an externally authorized, still-current ADR-0052 Profile assessment."
+    },
+    {
+      "apiId": "kungfu.profile.lifecycle",
+      "name": "kungfu profile authorize-lifecycle <action> <source> --expected-plan-id <id> --choice approve --authorized-by <actor> --json",
+      "maturity": "experimental",
+      "purpose": "Re-plan and apply only the exact Profile lifecycle plan already reviewed by the operator; drift fails closed."
     }
   ],
   "modes": {

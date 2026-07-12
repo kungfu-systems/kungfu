@@ -14,6 +14,7 @@ export * from './atlas.js';
 export * from './workspace.js';
 export * from './storage.js';
 export * from './query.js';
+export * from './profile.js';
 
 // The runtime-plane trust boundary (ADR-0013 / ADR-0014): the OS-sandbox
 // launcher, the child-process relay transport, the Node child-side guest proxy,

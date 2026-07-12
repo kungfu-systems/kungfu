@@ -13,6 +13,7 @@ import type {
   Atlas,
   DomainState,
   Ledger,
+  Profile,
   Rewind,
   Storage,
   Terminal,
@@ -43,9 +44,13 @@ export type {
   QueryChangelogState,
   QueryDefinition,
   QueryFrontier,
+  GenericQueryViewSpec,
   QueryResumeToken,
   QueryResultSchema,
   QueryViewSpec,
+  ManagedProfile,
+  ProfileLifecyclePlan,
+  ProfileManagerProjection,
   SavedQueryCatalog,
   SavedQueryEntry,
   SavedQueryView,
@@ -67,6 +72,7 @@ export type KfxCapabilities = {
   terminal: Terminal;
   work: Work;
   atlas?: Atlas;
+  profile?: Profile;
   workspace?: WorkspaceGuidance;
 };
 

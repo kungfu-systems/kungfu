@@ -193,6 +193,36 @@ def apply(ctx, plan_file, authorization_file, as_json):
     )
 
 
+@profile.command(
+    name="authorize-lifecycle",
+    help="re-plan and apply one exact approved Profile lifecycle change",
+)
+@click.argument(
+    "action", type=click.Choice(["install", "qualify", "activate", "upgrade"])
+)
+@click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--expected-plan-id", required=True)
+@click.option("--choice", required=True, type=click.Choice(["approve", "deny"]))
+@click.option("--authorized-by", required=True)
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def authorize_lifecycle(
+    ctx, action, source, expected_plan_id, choice, authorized_by, as_json
+):
+    _json(
+        _run(
+            lambda: profile_sdk.authorize_current_lifecycle(
+                ctx.runtime_dir,
+                action,
+                source,
+                expected_plan_id,
+                choice,
+                authorized_by,
+            )
+        )
+    )
+
+
 @profile.command(name="list", help="list Core-owned current Profile state")
 @click.option("--include-removed", is_flag=True)
 @click.option("--json", "as_json", is_flag=True)
@@ -203,6 +233,13 @@ def list_profiles(ctx, include_removed, as_json):
             ctx.runtime_dir, "list", include_removed=include_removed
         )
     )
+
+
+@profile.command(help="project lifecycle, source health and composition catalogs")
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def manager(ctx, as_json):
+    _json(_run(lambda: profile_composition.manager(ctx.runtime_dir)))
 
 
 @profile.command(help="inspect a source closure or current Profile state")

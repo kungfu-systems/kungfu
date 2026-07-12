@@ -5,7 +5,7 @@
     "email": "info@kungfu.link"
   },
   "version": "4.0.0-alpha.0",
-  "description": "Kungfu view extension: Kfx",
+  "description": "Kungfu system view: Profile lifecycle, composition and KFX runtime manager",
   "license": "Apache-2.0",
   "main": "package.json",
   "repository": {
@@ -37,11 +37,13 @@
   },
   "kungfuConfig": {
     "key": "kfx-manager",
-    "name": "Kfx",
+    "name": "Profiles",
     "config": {
       "view": {
-        "title": "Kfx",
-        "capabilities": [],
+        "title": "Profiles",
+        "capabilities": [
+          "profile"
+        ],
         "system": true
       }
     }

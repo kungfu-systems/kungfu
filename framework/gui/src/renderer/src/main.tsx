@@ -113,6 +113,7 @@ function subsetCaps(runtime: Runtime, entry: KfxEntry): KfxCapabilities | null {
     terminal: runtime.terminal,
     work: runtime.work,
     atlas: runtime.atlas,
+    profile: runtime.profile,
     workspace: runtime.workspace,
   } as Record<string, unknown>;
   const subset: Record<string, unknown> = {};
@@ -142,6 +143,7 @@ function sandboxSubset(
     terminal: runtime.terminal,
     work: runtime.work,
     atlas: runtime.atlas,
+    profile: runtime.profile,
     workspace: runtime.workspace,
   };
   const subset: Record<string, Record<string, unknown>> = {};
@@ -1154,13 +1156,15 @@ function App() {
     };
   }, []);
 
+  const subscribeRefresh = React.useCallback((fn: () => void) => {
+    subscribers.current.add(fn);
+    return () => subscribers.current.delete(fn);
+  }, []);
+
   const shell: Shell = {
     open: openKfx,
     params,
-    onRefresh: (fn) => {
-      subscribers.current.add(fn);
-      return () => subscribers.current.delete(fn);
-    },
+    onRefresh: subscribeRefresh,
     setting: (key) => state.settings[key] ?? settingFallbacks[key] ?? '',
     updateState,
     state,

@@ -96,6 +96,8 @@ def capabilities() -> dict[str, Any]:
             "query-run",
             "assess-plan",
             "assess-run",
+            "manager",
+            "authorize-lifecycle",
         ],
         "customMemberBuild": {
             "command": "kungfu sdk kfx build",
@@ -463,6 +465,29 @@ def authorized_lifecycle_apply(
     return lifecycle_apply(
         runtime_dir, core_plan, str(answer.get("authorizationId") or "")
     )
+
+
+def authorize_current_lifecycle(
+    runtime_dir: str | Path,
+    action: str,
+    source: str | Path,
+    expected_plan_id: str,
+    choice: str,
+    authorized_by: str,
+) -> dict[str, Any]:
+    """Re-plan an exact source cut, then answer and apply its installed card."""
+
+    plan = lifecycle_plan(runtime_dir, action, source)
+    actual = str((plan.get("corePlan") or {}).get("plan_id") or "")
+    if not expected_plan_id or actual != expected_plan_id:
+        raise ProfileSdkError(
+            "lifecycle-plan-stale",
+            "Profile lifecycle plan changed; review a new decision card",
+            expectedPlanId=expected_plan_id,
+            actualPlanId=actual,
+        )
+    answer = answer_decision(plan["decisionCard"], choice, authorized_by)
+    return authorized_lifecycle_apply(runtime_dir, plan, answer)
 
 
 def semantic_diff(left: str | Path, right: str | Path) -> dict[str, Any]:

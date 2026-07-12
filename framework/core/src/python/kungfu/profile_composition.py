@@ -21,6 +21,7 @@ from kungfu.storage import service as storage_service
 CATALOG_SCHEMA = "kungfu.profile-composition/v1"
 QUERY_PLAN_SCHEMA = "kungfu.profile-query-plan/v1"
 ASSESSMENT_PLAN_SCHEMA = "kungfu.profile-assessment-plan/v1"
+MANAGER_SCHEMA = "kungfu.profile-manager/v1"
 _GENERIC_VIEWS = {"table", "timeline", "diff", "causal-graph", "attention"}
 _ARTIFACT_SCHEMA_KEYS = {
     "kungfu.profile-fact-surfaces/v1": "factSurfacesSchema",
@@ -92,6 +93,76 @@ def catalog(
     }
     payload["catalogRoot"] = _root(payload)
     return payload
+
+
+def manager(runtime_dir: str | Path) -> dict[str, Any]:
+    """Project lifecycle and current source health without owning either."""
+
+    lifecycle = storage_service.profile_lifecycle(
+        runtime_dir, "list", include_removed=True
+    )
+    profiles = []
+    for state in lifecycle.get("profiles") or []:
+        source = _source_directory(state)
+        projected = {
+            "profileId": state.get("profile_id"),
+            "profileVersion": state.get("profile_version"),
+            "profileSuiteRoot": state.get("profile_suite_root"),
+            "profileRevision": state.get("revision"),
+            "lifecycleState": state.get("state"),
+            "activated": bool(state.get("activated")),
+            "removed": bool(state.get("removed")),
+            "grantedPermissions": state.get("granted_permissions") or [],
+            "qualification": state.get("qualification") or {},
+            "availableRoots": state.get("available_roots", 0),
+            "source": str(source) if source else None,
+            "health": "removed" if state.get("removed") else "unavailable",
+            "catalog": None,
+            "diagnostics": [],
+        }
+        if state.get("removed"):
+            projected["diagnostics"] = [
+                _diagnostic(
+                    "profile-removed",
+                    "Profile lifecycle state is removed; facts remain intact.",
+                )
+            ]
+        elif source is None:
+            projected["diagnostics"] = [
+                _diagnostic(
+                    "profile-source-unavailable",
+                    "Recorded Profile source package is no longer available.",
+                )
+            ]
+        else:
+            try:
+                composed = catalog(source, runtime_dir)
+                projected["catalog"] = composed
+                projected["health"] = (
+                    "active" if composed["activeExactRoot"] else "inactive"
+                )
+                projected["diagnostics"] = composed["diagnostics"]
+            except profile_sdk.ProfileSdkError as error:
+                projected["health"] = "degraded"
+                projected["diagnostics"] = [error.diagnosis]
+            except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as error:
+                projected["health"] = "degraded"
+                projected["diagnostics"] = [
+                    _diagnostic("profile-source-invalid", str(error))
+                ]
+        profiles.append(projected)
+    return {
+        "schema": MANAGER_SCHEMA,
+        "runtimeDir": lifecycle.get("runtime_dir", str(runtime_dir)),
+        "cutSystemTime": lifecycle.get("cut_system_time", 0),
+        "profiles": profiles,
+        "count": len(profiles),
+        "knownLimits": [
+            "GUI focus is shell state and is not Profile activation.",
+            "A removed Profile does not delete admitted facts.",
+            "Mutation requires an exact plan and external decision authorization.",
+        ],
+    }
 
 
 def query_plan(
@@ -290,6 +361,41 @@ def _episode_root(lineage: Mapping[str, Any], episode_id: int) -> str:
     )
 
 
+def _source_directory(state: Mapping[str, Any]) -> Path | None:
+    closure = (state.get("latest_event") or {}).get("closure") or {}
+    raw_profile_path = closure.get("profile_path")
+    if not isinstance(raw_profile_path, str) or not raw_profile_path:
+        return None
+    profile_path = Path(raw_profile_path).expanduser().resolve()
+    current = profile_path.parent
+    for _ in range(16):
+        manifest_path = current / "package.json"
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            suite = (manifest.get("kungfuConfig") or {}).get("suite") or {}
+            relative = suite.get("profile")
+            if (
+                isinstance(relative, str)
+                and (current / relative).resolve() == profile_path
+            ):
+                return current
+        except (OSError, json.JSONDecodeError, AttributeError):
+            pass
+        if current.parent == current:
+            break
+        current = current.parent
+    return None
+
+
+def _diagnostic(code: str, message: str) -> dict[str, Any]:
+    return {
+        "schema": profile_sdk.DIAGNOSIS_SCHEMA,
+        "ok": False,
+        "code": code,
+        "message": message,
+    }
+
+
 def _missing_evidence(
     required: list[str],
     result: Mapping[str, Any],
@@ -414,9 +520,25 @@ def _diagnostics(
     packages = source.get("memberPackages") or {}
     for name, path in sorted(packages.items()):
         if not Path(str(path)).exists():
-            diagnostics.append({"code": "member-unavailable", "member": name})
+            diagnostics.append(
+                {
+                    **_diagnostic(
+                        "member-unavailable",
+                        "Declared KFX member package is no longer available.",
+                    ),
+                    "member": name,
+                }
+            )
     if not artifacts["views"]:
-        diagnostics.append({"code": "no-contributed-views", "severity": "info"})
+        diagnostics.append(
+            {
+                "schema": profile_sdk.DIAGNOSIS_SCHEMA,
+                "ok": True,
+                "code": "no-contributed-views",
+                "message": "Profile does not contribute a generic ViewSpec.",
+                "severity": "info",
+            }
+        )
     return diagnostics
 
 
