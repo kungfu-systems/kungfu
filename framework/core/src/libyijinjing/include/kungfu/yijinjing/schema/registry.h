@@ -66,44 +66,18 @@ constexpr auto AllTypes = boost::hana::make_map( //
     TYPE_PAIR(ChannelCursorUpdated)              // 10907
 );
 
-constexpr auto AllDataTypes = boost::hana::make_map( //
-    TYPE_PAIR(frame_header),                         // 0
-    TYPE_PAIR(page_header),                          // 1
-    TYPE_PAIR(SyntheticData),                        // 601
-    TYPE_PAIR(OutputKey),                            // 701
-    TYPE_PAIR(Register),                             // 10101
-    TYPE_PAIR(Deregister),                           // 10102
-    TYPE_PAIR(OperatorStateUpdate),                  // 10105
-    TYPE_PAIR(Config),                               // 10201
-    TYPE_PAIR(Location),                             // 10205
-    TYPE_PAIR(CacheReset),                           // 10208
-    TYPE_PAIR(RequestCachedDone),                    // 10209
-    TYPE_PAIR(RequestReadFrom),                      // 10301
-    TYPE_PAIR(RequestReadFromPublic),                // 10302
-    TYPE_PAIR(RequestReadFromSync),                  // 10303
-    TYPE_PAIR(RequestWriteTo),                       // 10304
-    TYPE_PAIR(Channel),                              // 10305
-    TYPE_PAIR(ChannelRequest),                       // 10306
-    TYPE_PAIR(RequestWriteToBand),                   // 10307
-    TYPE_PAIR(Band),                                 // 10308
-    TYPE_PAIR(RequestReadFromOthers),                // 10309
-    TYPE_PAIR(TimeRequest),                          // 10501
-    TYPE_PAIR(TimeReset),                            // 10502
-    TYPE_PAIR(TimeValue),                            // 10601
-    TYPE_PAIR(TimeKeyValue),                         // 10602
-    TYPE_PAIR(EpisodeOpen),                          // 10801
-    TYPE_PAIR(EpisodeHeartbeat),                     // 10802
-    TYPE_PAIR(EpisodeFrameAttached),                 // 10803
-    TYPE_PAIR(EpisodeRefAttached),                   // 10804
-    TYPE_PAIR(EpisodeClosed),                        // 10805
-    TYPE_PAIR(SourceRegistered),                     // 10901
-    TYPE_PAIR(SourceHeadUpdated),                    // 10902
-    TYPE_PAIR(AcceptedRangeRecorded),                // 10903
-    TYPE_PAIR(ImportManifestAccepted),               // 10904
-    TYPE_PAIR(ManifestEntryRecorded),                // 10905
-    TYPE_PAIR(ExportBundleRecorded),                 // 10906
-    TYPE_PAIR(ChannelCursorUpdated)                  // 10907
-);
+// ADR-0065: AllDataTypes is the data-carrying subset of the AllTypes roster,
+// derived from the struct-level has_data trait rather than re-listed. Mark types
+// (has_data == false: PageEnd, Ping, Pong, RequestStart, ...) drop out
+// automatically. (This is an internal set; public bindings use CorePublic*.)
+constexpr auto AllDataTypes =
+    boost::hana::unpack(boost::hana::filter(boost::hana::to_tuple(AllTypes),
+                                            [](auto pair) {
+                                              using DataType = typename decltype(+boost::hana::second(pair))::type;
+                                              return boost::hana::bool_c<DataType::has_data>;
+                                            }),
+                        boost::hana::make_map);
+static_assert(decltype(boost::hana::length(AllDataTypes))::value == 36);
 
 constexpr auto CorePublicDataTypes = boost::hana::make_map( //
     TYPE_PAIR(frame_header),                                // 0
