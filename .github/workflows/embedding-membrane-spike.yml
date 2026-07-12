@@ -98,6 +98,8 @@ jobs:
       KUNGFU_BUILD_SKIP_PYKUNGFU: "1"
       SHIFU_NATIVE: "1"
       SHIFU_REQUIRE_MSVC: "1"
+      CARGO_HTTP_TIMEOUT: "120"
+      CARGO_NET_RETRY: "5"
       MIRROR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
       MIRROR_REF: refs/heads/dev/v4/v4.0
       MIRROR_URL: http://192.168.100.222:8088/git-mirrors/kungfu.git

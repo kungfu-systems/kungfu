@@ -638,7 +638,9 @@ struct durable_ingest_log::impl {
         continue;
       }
       try {
-        result = (std::max)(result, std::stoull(name.substr(prefix.size(), name.size() - prefix.size() - 5)));
+        result =
+            (std::max)(result,
+                       static_cast<uint64_t>(std::stoull(name.substr(prefix.size(), name.size() - prefix.size() - 5))));
       } catch (...) {
       }
     }
