@@ -134,7 +134,8 @@ one Episode must not silently invalidate unrelated Episodes.
 | C. Unified position, watermark, and receipt vocabulary | **implemented (contract-only)** | C++ owns stable stream positions, four typed watermarks, named profiles, receipts/errors, deduplication, and explicit unknown outcomes; Python/Node expose typed edge adapters, while current behavior remains `visible` only and rejects stronger profiles |
 | D. Independent durable ingest and projection services | **designed** | move business-journal consumption out of the coordinator; persist raw facts before projecting them |
 | E. Local strong-durability qualification | **not implemented** | qualify `durable_group` and `durable_sync` across macOS, Linux, and Windows with crash, torn-write, ENOSPC, ordering, and recovery evidence |
-| F. Replication and HA | **future** | add a separate replicated watermark and policy only after local durability is trustworthy |
+| F. Single-host end-to-end performance release gate | **planned** | after correctness passes, qualify absolute latency, throughput, long-tail, resource, replay, recovery, and restore ceilings without weakening semantics |
+| G. Replication and HA | **future** | add a separate replicated watermark and policy only after local durability is trustworthy |
 
 Until Stage E passes for a named platform/filesystem/profile, public product
 language must continue to say that power-loss durability is not claimed.
@@ -156,11 +157,22 @@ durability report must cover, for its declared platform and storage profile:
 Evidence is profile-scoped. Passing one filesystem or host does not silently
 qualify another.
 
+Correctness qualification is necessary but not sufficient for institutional
+release admission. The independent
+[Single-host end-to-end performance qualification](single-host-performance-qualification.md)
+must then prove the declared operational envelope. Its release authority comes
+from Kungfu's frozen absolute thresholds and retained evidence; Aeron IPC and
+Aeron Archive may be reported as reference comparators but do not define the
+pass/fail contract.
+
 ## Detailed records
 
 - [Single-host institutional trust profile](single-host-institutional-trust.md)
   defines the first institutional deployment envelope, adoption gates,
   evidence requirements, operator responsibilities, and non-claims.
+- [Single-host end-to-end performance qualification](single-host-performance-qualification.md)
+  defines the post-correctness release gate and the strict boundary for any
+  Aeron comparison.
 - [ADR-0068](../framework/core/docs/adr/ADR-0068-tiered-durability-and-crash-recovery.md)
   fixes the authority, watermarks, receipts, service boundaries, and staged
   adoption decision.

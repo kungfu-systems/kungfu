@@ -205,6 +205,9 @@ right document, and is readable by both people and agents.
 - [Single-Host Institutional Trust Profile](docs/single-host-institutional-trust.md)
   — the adoption decision, qualified deployment envelope, evidence, operator
   responsibilities, and non-claims for using Kungfu as a local runtime ledger.
+- [Single-Host End-to-End Performance Qualification](docs/single-host-performance-qualification.md)
+  — the post-correctness release gate, absolute performance evidence contract,
+  and strict boundary for informative Aeron comparisons.
 - [Kungfu Skills](docs/skills.md) — design target for Kungfu Skills:
   `SKILL.md` as the minimal source, compact agent catalog injection,
   Node/Python manage modes, and kfx dependency composition.

@@ -41,6 +41,7 @@ and the map routes a question to whichever doc answers it.
 | Which application domains guide the neutral core without expanding the current roadmap? | [`domain-horizons.md`](domain-horizons.md) | why | draft · agent runtime current; trading evidence; games/virtual worlds horizon |
 | What are the known limits / what is *not* yet guaranteed? | [`known-limits.md`](known-limits.md) | verify | stable |
 | Can my institution use Kungfu as an authoritative local ledger on one host, and what evidence and controls are required? | [`single-host-institutional-trust.md`](single-host-institutional-trust.md) | use, verify | draft · evaluation/shadow use only; strong local durability qualification pending |
+| What end-to-end performance gate must the single-host institutional profile pass, and how may Aeron be used as a comparator? | [`single-host-performance-qualification.md`](single-host-performance-qualification.md) | verify | draft · contract defined; thresholds, harness, and retained reports not implemented |
 | Does Kungfu provide strong durability and crash recovery without giving up mmap latency, and what is implemented today? | [`durability-and-crash-recovery.md`](durability-and-crash-recovery.md) + [ADR-0068](../framework/core/docs/adr/ADR-0068-tiered-durability-and-crash-recovery.md) | why, verify | draft · visibility foundations implemented; end-to-end durable receipts and power-loss qualification designed, not implemented |
 | How do C++ / Python / Node share data zero-copy (the membrane)? | [`architecture.md`](architecture.md) (membrane diagram) | verify | stable |
 | What does it actually guarantee (layout / replay / compatibility)? | [`contracts.md`](contracts.md) | verify | stable |
@@ -151,6 +152,11 @@ route to the row that answers them:
   institution can adopt Kungfu as an authoritative local ledger, what evidence
   is required, and which controls remain operator-owned*
   ([`single-host-institutional-trust.md`](single-host-institutional-trust.md)).
+- **performance qualification / release gate / p99 / p99.9 / throughput /
+  backpressure / soak / Aeron comparison / Aeron-class** → *which absolute
+  performance and regression evidence admits the single-host institutional
+  profile, and why Aeron is informative rather than release authority*
+  ([`single-host-performance-qualification.md`](single-host-performance-qualification.md)).
 - **lightweight / too heavy / minimal install / independent package / libkungfu
   only / CLI without GUI / layer deletion / assembled runtime** → *which
   Kungfu should I start with* ([`choose-your-kungfu.md`](choose-your-kungfu.md)),

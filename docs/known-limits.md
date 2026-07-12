@@ -79,6 +79,20 @@ as the adoption checklist. Until the named durability profile and exact
 platform/filesystem/device envelope have retained passing evidence, the
 institutional status remains evaluation or controlled shadow operation.
 
+## The single-host end-to-end performance release gate is not yet qualified
+
+The existing mmap qualification measures component behavior and prevents
+speculative policy tuning. It does not establish a product-level latency,
+throughput, resource, replay, recovery, or restore SLO for the complete
+single-host institutional profile.
+
+The [Single-host end-to-end performance qualification](single-host-performance-qualification.md)
+now defines that post-correctness release gate. Its versioned absolute
+thresholds, harness, sustained-load tier, retained reports, and product
+capability integration remain to be implemented. Aeron IPC and Aeron Archive
+may be used as declared reference comparators, but Kungfu currently makes no
+`Aeron-class`, equivalence, compatibility, or superiority claim.
+
 ## The GitHub build-and-release path is still being brought up
 
 The release mechanism is designed and has a long tag history, but the current v4

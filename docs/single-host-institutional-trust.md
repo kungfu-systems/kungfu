@@ -27,6 +27,7 @@ with the operator.
 It is not a certification, procurement promise, or substitute for an
 institution's own risk assessment. Technical details remain authoritative in
 [Strong durability and crash recovery](durability-and-crash-recovery.md),
+[Single-host end-to-end performance qualification](single-host-performance-qualification.md),
 [Known Limits](known-limits.md), and the linked architecture decisions.
 
 ## Current decision
@@ -124,6 +125,9 @@ the exact deployment envelope:
 6. schema/version compatibility and migration evidence for the intended
    retention period;
 7. release provenance for the exact binaries being admitted.
+8. a passing Single-Host Performance Profile report covering absolute
+   latency/throughput/resource thresholds, regression ceilings, long-tail
+   behavior, sustained load, replay, recovery, and restore time.
 
 Missing or stale evidence is a failed adoption gate, not an invitation to infer
 the guarantee from `mmap`, `fsync`, SQLite WAL, process residency, or a
@@ -172,8 +176,8 @@ implied by the local durability design.
 |---|---|---|
 | Engineering evaluation | API, integration, replay, and fault-model review | current limits accepted; no authoritative production claim |
 | Shadow operation | record a copy of work whose authority remains elsewhere | operational monitoring and recovery rehearsal in place |
-| Limited authoritative pilot | bounded institution-selected facts on one qualified host | named durable profile implemented; exact envelope qualified; backup/restore drill passed |
-| Authoritative local ledger | institution-approved production scope | all applicable evidence above retained, independently reviewed, and continuously monitored |
+| Limited authoritative pilot | bounded institution-selected facts on one qualified host | named durable profile implemented; exact correctness envelope qualified; backup/restore drill passed; performance candidate characterized |
+| Authoritative local ledger | institution-approved production scope | correctness and Single-Host Performance Profile release gates passed; all applicable evidence above retained, independently reviewed, and continuously monitored |
 
 The current project state is between engineering evaluation and controlled
 shadow operation. Later implementation work must update this page from retained
@@ -184,6 +188,9 @@ evidence; it must not advance the adoption status from design intent alone.
 - [Strong durability and crash recovery](durability-and-crash-recovery.md) —
   durability profiles, watermarks, service boundaries, recovery contract, and
   implementation stages.
+- [Single-host end-to-end performance qualification](single-host-performance-qualification.md)
+  — absolute release thresholds, end-to-end workloads, retained evidence, and
+  the informative Aeron comparison boundary.
 - [Known Limits](known-limits.md) — current non-guarantees across durability,
   compatibility, release provenance, and product completeness.
 - [Runtime storage service](runtime-storage-service.md) — authoritative records,
