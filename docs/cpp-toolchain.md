@@ -66,6 +66,28 @@ without changing Cargo package identity. For example:
 KF_LIBWASM_CARGO_REGISTRY=sparse+https://rsproxy.cn/index/ ./shifu build:core
 ```
 
+Cargo downloads remain shared through `CARGO_HOME`, but Wasmtime and Wasmer
+keep independent workspaces, lockfiles, and target directories. Their target
+directories live under
+`${KF_LIBWASM_CARGO_TARGET_ROOT:-${XDG_CACHE_HOME:-~/.cache}/kungfu/libwasm/cargo-target}`
+and are keyed by the source checkout, actual Cargo/rustc identity and target,
+release profile, and engine lockfile. Consequently, separate CMake build trees
+from the same checkout reuse compiled dependencies, while separate worktrees,
+engines, toolchains, targets, profiles, or lockfiles cannot collide. Each CMake
+tree receives its own staged copy of the adapter library. The two heavy engine
+builds are serialized inside one CMake graph; Cargo's target-directory lock is
+the cross-graph concurrency boundary.
+
+Shifu loads `KF_LIBWASM_CARGO_TARGET_ROOT` from `build-local.env` when a managed
+machine or Buildchain runner needs a dedicated local cache volume. It is a
+transport/performance override only: package identity and correctness never
+depend on the internal registry or on a pre-existing target cache.
+
+Run `./shifu qualify:libwasm-cache` to build both production adapters twice,
+verify that the warm pass compiles no crates, and compare the two CMake-style
+staged artifact hashes. The command prints the resolved per-engine keys and
+target directories as machine-readable JSON.
+
 The build exports Kungfu's pinned RxCpp 4.1.1 Conan recipe before dependency
 resolution. Its single portability patch makes the notification payloads
 assignable, matching their declared assignment operators and allowing the

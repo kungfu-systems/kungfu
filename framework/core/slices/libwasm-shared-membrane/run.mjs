@@ -48,8 +48,7 @@ const adapter = (engine) =>
     buildDir,
     'slices',
     'libwasm-shared-membrane',
-    `cargo-target-${engine}`,
-    'release',
+    'cargo-stage',
     `${prefix}kf_libwasm_${engine}_spike${suffix}`,
   );
 const wasmtime = adapter('wasmtime');

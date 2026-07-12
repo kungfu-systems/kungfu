@@ -72,6 +72,7 @@
     "test:mmap": "node scripts/require-shifu.mjs test:mmap && node scripts/run-mmap-tests.mjs",
     "qualify:mmap": "node scripts/require-shifu.mjs qualify:mmap && node scripts/run-mmap-qualification.mjs",
     "qualify:cpp-modules": "node scripts/require-shifu.mjs qualify:cpp-modules && node scripts/run-cpp-modules-qualification.mjs",
+    "qualify:libwasm-cache": "node scripts/require-shifu.mjs qualify:libwasm-cache && node scripts/qualify-libwasm-cargo-cache.mjs",
     "version": "node scripts/sync-shifu-version.mjs && git add crates/shifu/Cargo.toml crates/Cargo.lock",
     "prepare": "node scripts/install-hooks.mjs",
     "hooks:install": "node scripts/require-shifu.mjs hooks:install && node scripts/install-hooks.mjs --force"

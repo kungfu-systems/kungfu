@@ -9,6 +9,7 @@ include(${PROJECT_SOURCE_DIR}/.cmake/editor.cmake)
 include(${PROJECT_SOURCE_DIR}/.cmake/compiler.cmake)
 include(${PROJECT_SOURCE_DIR}/.cmake/toolchain-contract.cmake)
 include(${PROJECT_SOURCE_DIR}/.cmake/libnode.cmake)
+include(${PROJECT_SOURCE_DIR}/.cmake/libwasm-cargo-cache.cmake)
 
 ##########################################################################
 # conan 2：依赖经 CMakeToolchain(工具链) + CMakeDeps(find_package 目标) 提供，
