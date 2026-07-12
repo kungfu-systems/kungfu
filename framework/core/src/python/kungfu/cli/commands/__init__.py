@@ -141,6 +141,7 @@ class PrioritizedCommandGroup(click.Group):
                     "log_level",
                     "runtime_dir",
                     "dataset_dir",
+                    "backtest_dir",
                     "inbox_dir",
                     "runtime_locator",
                     "backtest_locator",
