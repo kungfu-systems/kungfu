@@ -80,6 +80,7 @@
     "test:state-service": "node scripts/require-shifu.mjs test:state-service && node scripts/run-state-service-tests.mjs",
     "test:kfx-profile-suite": "node scripts/require-shifu.mjs test:kfx-profile-suite && node scripts/run-kfx-profile-suite-tests.mjs",
     "test:profile-lifecycle": "node scripts/require-shifu.mjs test:profile-lifecycle && node scripts/run-profile-lifecycle-tests.mjs",
+    "test:agent-profile-sdk": "node scripts/require-shifu.mjs test:agent-profile-sdk && node scripts/run-agent-profile-sdk-tests.mjs",
     "schema:profile-lifecycle": "node scripts/require-shifu.mjs schema:profile-lifecycle && node scripts/generate-profile-lifecycle-schema.mjs",
     "test:durable-ingest": "node scripts/require-shifu.mjs test:durable-ingest && node scripts/run-durable-ingest-tests.mjs",
     "test:projection-bootstrap": "node scripts/require-shifu.mjs test:projection-bootstrap && node scripts/run-projection-bootstrap-tests.mjs",

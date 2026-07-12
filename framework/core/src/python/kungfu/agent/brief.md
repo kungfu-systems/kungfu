@@ -98,6 +98,26 @@ The pack is included by the Electron artifact, the standalone CLI, npm
 `@kungfu-tech/core`, and the PyPI wheel. Future Homebrew, winget, container, and
 kfx packaging must keep the same pack validation gate before claiming support.
 
+Profile authoring is also agent-first. Discover the installed contract before
+generating source; scaffold is plan-only unless `--execute` is explicit, and
+identity, authority, evidence, migration, and permission choices are never
+self-certified by generated files:
+
+```sh
+kungfu profile capabilities --json
+kungfu profile examples --json
+kungfu profile scaffold brief.json --out ./my-profile --json
+kungfu profile validate ./my-profile --json
+kungfu profile qualify ./my-profile --json
+kungfu profile plan install ./my-profile --json
+```
+
+The Profile layer computes member roots from package bytes and delegates all
+lifecycle state to Core. Decision cards are open questions, not authorization;
+after an answer, produce a fresh plan and apply it with the resulting external
+authorization identity. Optional code members build with
+`kungfu sdk kfx build` and do not require rebuilding Kungfu.
+
 Bootstrap surfaces are local and explicit:
 
 ```sh

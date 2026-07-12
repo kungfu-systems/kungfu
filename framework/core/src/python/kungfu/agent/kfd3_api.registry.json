@@ -805,6 +805,81 @@
       "visibility": "adjacent-agent",
       "anchor": { "kind": "catalog" },
       "projections": ["commands.json", "agent-pack-doc"]
+    },
+    {
+      "id": "kungfu.profile.discovery",
+      "surface": "cli",
+      "name": "kungfu profile capabilities --json",
+      "aliases": ["kungfu profile examples --json"],
+      "purpose": "Discover the installed Profile authoring and runtime contract without repository access.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.profile.scaffold",
+      "surface": "cli",
+      "name": "kungfu profile scaffold <brief.json> --out <dir> [--execute] --json",
+      "purpose": "Plan or explicitly write deterministic Profile source while surfacing load-bearing choices as decision cards.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.profile.source",
+      "surface": "cli",
+      "name": "kungfu profile validate <source> --json",
+      "aliases": ["kungfu profile qualify <source> --json"],
+      "purpose": "Resolve KFX members and validate or qualify the exact source closure against installed authorities.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.profile.lifecycle",
+      "surface": "cli",
+      "name": "kungfu profile plan <action> [source] --json",
+      "aliases": ["kungfu profile decide <plan.json> --choice <choice> --authorized-by <actor> --json", "kungfu profile apply <plan.json> --authorization-file <answer.json> --json"],
+      "purpose": "Project Core lifecycle plans and apply only an explicitly authorized, still-current plan.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.profile.read",
+      "surface": "cli",
+      "name": "kungfu profile list --json",
+      "aliases": ["kungfu profile inspect <source-or-profile-id> --json", "kungfu profile history <profile-id> --json"],
+      "purpose": "Read resolved source closures and Core-owned current or historical Profile state.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.profile.diff",
+      "surface": "cli",
+      "name": "kungfu profile diff <left> <right> --json",
+      "purpose": "Classify semantic changes between two exact Profile source closures.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.profile.action",
+      "surface": "cli",
+      "name": "kungfu profile actions <source> --json",
+      "aliases": ["kungfu profile invoke <source> <action> [--execute --plan-file <plan.json> --authorization-file <answer.json>] --json"],
+      "purpose": "Inspect, plan, and invoke supported declarative Profile actions without bypassing activation, capability, or authorization checks.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog" },
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
     }
   ],
   "witness": {

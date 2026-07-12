@@ -53,6 +53,10 @@ def registry_schema():
     return _read_json("kfd3_api.schema.json")
 
 
+def profile_sdk_contract():
+    return _read_json("profile-sdk.contract.json")
+
+
 def document_text(name):
     return (pack_root() / name).read_text(encoding="utf-8")
 

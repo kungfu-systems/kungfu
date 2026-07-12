@@ -1,19 +1,9 @@
 ---
-status: draft
-period: 2026-07-13
-theme: kfx-profile-lifecycle
-doc_type: product-contract
-source_level: local-files + architecture-decision
-confidence: high
-sensitivity: public
-evidence_grade: A
+metadata_schema: kungfu.document-metadata/v1
+document_status: draft
+doc_type: public-document
 review_state: self-reviewed
-last_reviewed: 2026-07-13
-ai_provenance:
-  model_family: GPT-5
-  product: Codex
-  generated_at: 2026-07-13
-  invisible_context_boundary: Later Agent SDK, GUI, portability, and semantic qualification behavior are not implemented here
+sensitivity: public
 ---
 
 # KFX Profile Suite lifecycle
@@ -26,9 +16,11 @@ or an extension package a runtime authority.
 
 Core embeds the exact `kungfu-kfx.contract.json` document and validates its
 `profileSuiteSchema`. Inspection then verifies every referenced artifact's
-SHA-256 and confines real paths to the Profile package directory. The caller
-must also supply one canonical `sha256:...` root for every required and
-optional Suite member; missing, extra, malformed, or changed roots fail closed.
+SHA-256 and confines real paths to the Profile package directory. Core requires
+one canonical `sha256:...` root for every required and optional Suite member.
+The low-level API accepts those roots explicitly; the installed Agent Profile
+SDK resolves them from exact package bytes. Missing, extra, duplicate,
+malformed, or changed roots fail closed.
 
 Core computes `profile_suite_root` over:
 
@@ -79,15 +71,18 @@ authorization id, recomputes the plan, and rejects any change in source bytes,
 member roots, current lifecycle basis, permissions, target runtime, or plan
 identity.
 
-Use `kungfu kfx profile --help` for the installed CLI. `get
+Use `kungfu profile --help` for the plan-first Agent interface, or
+`kungfu kfx profile --help` for the low-level lifecycle surface. `get
 --cut-system-time` reads the historical fold; `history` retains lifecycle facts
 after rollback or removal.
 
 ## Current boundary
 
 This is the generic artifact/lifecycle runtime, not the complete Profile
-product. It does not yet provide scaffolding, semantic fixture execution,
-Profile export/import, Profile Manager GUI, generic domain rendering, Mission
-Control migration, or Week/Day release qualification. A lifecycle receipt
-proves the recorded transition and bound closure, not the truth of a domain
-claim or fitness for a user's purpose.
+product. The installed Agent SDK now provides discovery, deterministic
+scaffolding, member resolution, source validation/qualification, semantic
+diffs, decision cards, and the bounded action seam. Profile export/import,
+Profile Manager GUI, generic domain rendering, Mission Control migration,
+semantic fixture execution, and Week/Day release qualification remain later
+stages. A lifecycle receipt proves the recorded transition and bound closure,
+not the truth of a domain claim or fitness for a user's purpose.

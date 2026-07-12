@@ -25,6 +25,7 @@ from . import sdk
 from . import kfd
 from . import runtime
 from . import workspace
+from . import profile
 
 __all__ = [
     "engage",
@@ -52,4 +53,5 @@ __all__ = [
     "kfd",
     "runtime",
     "workspace",
+    "profile",
 ]

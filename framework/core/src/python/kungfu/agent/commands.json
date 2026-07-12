@@ -528,6 +528,90 @@
       "name": "kungfu kfx install <source>",
       "maturity": "stable",
       "purpose": "Install a kfx package through the trust disclosure path."
+    },
+    {
+      "apiId": "kungfu.profile.discovery",
+      "name": "kungfu profile capabilities --json",
+      "maturity": "experimental",
+      "purpose": "Discover the installed Profile schema, lifecycle authority, examples, supported operations, and custom-member build seam."
+    },
+    {
+      "apiId": "kungfu.profile.discovery",
+      "name": "kungfu profile examples --json",
+      "maturity": "experimental",
+      "purpose": "Read an installed structured brief and Profile authoring flow without repository access."
+    },
+    {
+      "apiId": "kungfu.profile.scaffold",
+      "name": "kungfu profile scaffold <brief.json> --out <dir> [--execute] --json",
+      "maturity": "experimental",
+      "purpose": "Plan or explicitly write a deterministic Profile Suite source tree; unresolved semantics become decision cards."
+    },
+    {
+      "apiId": "kungfu.profile.source",
+      "name": "kungfu profile validate <source> --json",
+      "maturity": "experimental",
+      "purpose": "Resolve every Suite member exactly once, compute package roots, and ask Core to verify the complete source closure."
+    },
+    {
+      "apiId": "kungfu.profile.source",
+      "name": "kungfu profile qualify <source> --json",
+      "maturity": "experimental",
+      "purpose": "Run only the installed source-contract, content-closure, and runtime-contract qualification checks."
+    },
+    {
+      "apiId": "kungfu.profile.lifecycle",
+      "name": "kungfu profile plan <action> [source] --json",
+      "maturity": "experimental",
+      "purpose": "Project a Core-owned lifecycle plan plus a stable authorization decision card."
+    },
+    {
+      "apiId": "kungfu.profile.lifecycle",
+      "name": "kungfu profile decide <plan.json> --choice <choice> --authorized-by <actor> --json",
+      "maturity": "experimental",
+      "purpose": "Answer one exact decision card without treating the Agent or generated Profile as authority."
+    },
+    {
+      "apiId": "kungfu.profile.lifecycle",
+      "name": "kungfu profile apply <plan.json> --authorization-file <answer.json> --json",
+      "maturity": "experimental",
+      "purpose": "Apply an approved, still-current Core Profile lifecycle plan whose answer binds the exact card and plan root."
+    },
+    {
+      "apiId": "kungfu.profile.read",
+      "name": "kungfu profile list --json",
+      "maturity": "experimental",
+      "purpose": "List the Core-owned current Profile fold."
+    },
+    {
+      "apiId": "kungfu.profile.read",
+      "name": "kungfu profile inspect <source-or-profile-id> --json",
+      "maturity": "experimental",
+      "purpose": "Inspect either a resolved source closure or a Core-owned current Profile state."
+    },
+    {
+      "apiId": "kungfu.profile.read",
+      "name": "kungfu profile history <profile-id> --json",
+      "maturity": "experimental",
+      "purpose": "Read append-only Core Profile lifecycle facts."
+    },
+    {
+      "apiId": "kungfu.profile.diff",
+      "name": "kungfu profile diff <left> <right> --json",
+      "maturity": "experimental",
+      "purpose": "Classify display, content, permission, authority, evidence, and migration changes between exact source closures."
+    },
+    {
+      "apiId": "kungfu.profile.action",
+      "name": "kungfu profile actions <source> --json",
+      "maturity": "experimental",
+      "purpose": "List declarative actions bound to an exact Profile source root."
+    },
+    {
+      "apiId": "kungfu.profile.action",
+      "name": "kungfu profile invoke <source> <action> [--execute --plan-file <plan.json> --authorization-file <answer.json>] --json",
+      "maturity": "experimental",
+      "purpose": "Plan first, then invoke a supported confined Profile action with freshness and authorization checks."
     }
   ],
   "modes": {
