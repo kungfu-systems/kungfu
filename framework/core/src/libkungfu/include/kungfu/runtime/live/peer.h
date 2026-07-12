@@ -64,10 +64,10 @@ public:
 
   void request_write_to(int64_t trigger_time, uint32_t dest_id, uint64_t page_size = 0);
 
-  void request_write_to_band(int64_t trigger_time, const yijinjing::data::location_ptr &location,
-                             uint64_t page_size = 0);
+  void request_write_to_outlet(int64_t trigger_time, const yijinjing::data::location_ptr &location,
+                               uint64_t page_size = 0);
 
-  uint32_t request_band(const std::string &band_name, uint64_t page_size = 0);
+  uint32_t request_outlet(const std::string &outlet_name, uint64_t page_size = 0);
 
   int32_t add_timer(int64_t nanotime, const std::function<void(const event_ptr &)> &callback);
 
@@ -209,7 +209,7 @@ protected:
 
   virtual void on_write_to(const event_ptr &event);
 
-  virtual void on_write_to_band(const event_ptr &event);
+  virtual void on_write_to_outlet(const event_ptr &event);
 
   int get_observer_recv_timeout() const;
 

@@ -2,7 +2,9 @@
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -12,6 +14,109 @@ import { checkShifuCacheContract } from './check-shifu-cache-contract.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SHIFU_MJS = path.join(ROOT, 'shifu.mjs');
 const SHIFU_SH = path.join(ROOT, 'shifu');
+
+function platformId() {
+  if (process.platform === 'darwin') return `darwin-${process.arch}`;
+  if (process.platform === 'win32') return `windows-${process.arch}`;
+  return `${process.platform}-${process.arch}`;
+}
+
+function shellHarness(t) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'shifu-auto-cache-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const bin = path.join(root, 'bin');
+  fs.mkdirSync(bin);
+  const fnm = path.join(bin, 'fnm');
+  fs.writeFileSync(
+    fnm,
+    `#!/bin/sh
+printf '%s\\n' "$*" >> "$SHIFU_TEST_TRACE"
+if [ "$1" = install ]; then exit 0; fi
+if [ "$1" = exec ]; then
+  shift
+  [ "\${1:-}" = --using-file ] && shift
+  [ "\${1:-}" = -- ] && shift
+  if [ "\${1:-}" = node ]; then shift; exec "$SHIFU_TEST_NODE" "$@"; fi
+  if [ "\${1:-}" = corepack ] && [ "\${2:-}" = pnpm ]; then
+    shift 2
+    printf 'active=%s\\nregistry=%s\\nargs=%s\\n' "$SHIFU_CACHE_ACTIVE" "$COREPACK_NPM_REGISTRY" "$*" > "$SHIFU_TEST_EVIDENCE"
+    exit 0
+  fi
+fi
+exit 64
+`,
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(path.join(bin, 'uv'), '#!/bin/sh\nexit 0\n', {
+    mode: 0o755,
+  });
+  const profile = {
+    $schema: 'https://libkungfu.dev/schemas/shifu/cache-profile-v1.schema.json',
+    schema: 'shifu.cache-profile/v1',
+    profileId: 'test.auto-apply',
+    revision: 1,
+    generatedAt: '2026-07-13T00:00:00Z',
+    authority: {
+      owner: 'test',
+      sourceRef: 'test/auto-apply',
+      sourceDigest: `sha256:${'1'.repeat(64)}`,
+    },
+    subject: {
+      principal: 'test:developer',
+      platforms: [platformId()],
+      scopes: ['development', 'self-hosted-runner', 'ci'],
+    },
+    policy: {
+      mode: 'require',
+      onUnavailable: 'fail',
+      allowPublicFallback: false,
+      secretPolicy: 'references-only',
+    },
+    services: {
+      npm: {
+        kind: 'package-registry',
+        mode: 'require',
+        endpoint: { type: 'http', url: 'http://cache.example.invalid/npm/' },
+        bindings: [
+          {
+            kind: 'environment',
+            key: 'COREPACK_NPM_REGISTRY',
+            valueFrom: 'endpoint.url',
+          },
+        ],
+        fallback: { mode: 'fail' },
+        verification: { method: 'tool-native' },
+      },
+    },
+    evidence: {
+      enabled: true,
+      redaction: 'credentials-userinfo-query-fragment',
+    },
+  };
+  const raw = `${JSON.stringify(profile, null, 2)}\n`;
+  const profilePath = path.join(root, 'profile.json');
+  fs.writeFileSync(profilePath, raw);
+  return {
+    root,
+    trace: path.join(root, 'trace.txt'),
+    evidence: path.join(root, 'evidence.txt'),
+    receipt: path.join(root, 'receipt.json'),
+    profilePath,
+    digest: `sha256:${crypto.createHash('sha256').update(raw).digest('hex')}`,
+    env: {
+      ...process.env,
+      HOME: root,
+      XDG_CONFIG_HOME: path.join(root, 'config'),
+      PATH: `${bin}${path.delimiter}${process.env.PATH || ''}`,
+      SHIFU_NATIVE: '0',
+      SHIFU_TEST_NODE: process.execPath,
+      SHIFU_TEST_TRACE: path.join(root, 'trace.txt'),
+      SHIFU_TEST_EVIDENCE: path.join(root, 'evidence.txt'),
+      SHIFU_CACHE_RECEIPT: path.join(root, 'receipt.json'),
+      SHIFU_CACHE_SCOPE: 'development',
+    },
+  };
+}
 
 test('cache contract schemas accept valid fixtures and reject unsafe policy', async () => {
   assert.deepEqual(await checkShifuCacheContract(ROOT), {
@@ -113,5 +218,101 @@ test(
     });
     assert.equal(result.status, 0, result.stderr);
     assert.equal(JSON.parse(result.stdout).schema, 'shifu.cache-contract/v1');
+  },
+);
+
+test(
+  'ordinary shell task auto-applies a projected profile exactly once',
+  { skip: process.platform === 'win32' },
+  (t) => {
+    const fixture = shellHarness(t);
+    const result = spawnSync(SHIFU_SH, ['test:auto-cache', '--flag'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      env: {
+        ...fixture.env,
+        SHIFU_CACHE_ACTIVE: '',
+        SHIFU_CACHE_PROFILE_REF: fixture.profilePath,
+        SHIFU_CACHE_PROFILE_DIGEST: fixture.digest,
+      },
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(fs.readFileSync(fixture.evidence, 'utf8'), /active=1/);
+    assert.match(
+      fs.readFileSync(fixture.evidence, 'utf8'),
+      /registry=http:\/\/cache\.example\.invalid\/npm\//,
+    );
+    assert.match(
+      fs.readFileSync(fixture.evidence, 'utf8'),
+      /args=test:auto-cache --flag/,
+    );
+    const applications = fs
+      .readFileSync(fixture.trace, 'utf8')
+      .split('\n')
+      .filter((line) => line.includes('shifu.mjs cache apply'));
+    assert.equal(applications.length, 1);
+    assert.equal(
+      JSON.parse(fs.readFileSync(fixture.receipt, 'utf8')).profile.id,
+      'test.auto-apply',
+    );
+  },
+);
+
+test(
+  'active child and absent projection bypass automatic cache application',
+  { skip: process.platform === 'win32' },
+  (t) => {
+    for (const [label, projection] of [
+      [
+        'active',
+        {
+          SHIFU_CACHE_ACTIVE: '1',
+          SHIFU_CACHE_PROFILE_REF: 'profile.json',
+          SHIFU_CACHE_PROFILE_DIGEST: 'sha256:abc',
+        },
+      ],
+      [
+        'absent',
+        {
+          SHIFU_CACHE_ACTIVE: '',
+          SHIFU_CACHE_PROFILE_REF: '',
+          SHIFU_CACHE_PROFILE_DIGEST: '',
+        },
+      ],
+    ]) {
+      const fixture = shellHarness(t);
+      const result = spawnSync(SHIFU_SH, [`test:${label}`], {
+        cwd: ROOT,
+        encoding: 'utf8',
+        env: { ...fixture.env, ...projection },
+      });
+      assert.equal(result.status, 0, result.stderr);
+      const trace = fs.readFileSync(fixture.trace, 'utf8');
+      assert.doesNotMatch(trace, /shifu\.mjs cache apply/);
+    }
+  },
+);
+
+test(
+  'partial projection reaches the resolver and fails closed',
+  { skip: process.platform === 'win32' },
+  (t) => {
+    const fixture = shellHarness(t);
+    const result = spawnSync(SHIFU_SH, ['test:partial'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      env: {
+        ...fixture.env,
+        SHIFU_CACHE_ACTIVE: '',
+        SHIFU_CACHE_PROFILE_REF: fixture.profilePath,
+        SHIFU_CACHE_PROFILE_DIGEST: '',
+      },
+    });
+    assert.equal(result.status, 1);
+    assert.match(
+      result.stderr,
+      /profile reference and digest must be supplied together/,
+    );
+    assert.equal(fs.existsSync(fixture.evidence), false);
   },
 );

@@ -1,11 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: draft
-doc_type: public-document
-review_state: self-reviewed
-sensitivity: public
----
-
 # Agent-first Profile authoring
 
 An installed Kungfu product can author and operate a KFX Profile Suite without

@@ -119,8 +119,8 @@ reactor::~reactor() {
     writers_.clear();
   }
   {
-    std::lock_guard<std::mutex> lock(band_mtx_);
-    band_writers_.clear();
+    std::lock_guard<std::mutex> lock(off_thread_mtx_);
+    off_thread_writers_.clear();
   }
   reader_.reset();
   io_device_.reset();
@@ -227,7 +227,7 @@ uint32_t reactor::get_live_home_uid() const { return get_io_device()->get_live_h
 reader_ptr reactor::get_reader() const { return reader_; }
 
 bool reactor::has_writer(uint32_t dest_id) const {
-  if (util::get_thread_id() != main_thread_id_ and has_band_writer(dest_id)) {
+  if (util::get_thread_id() != main_thread_id_ and has_off_thread_writer(dest_id)) {
     return true;
   }
   std::lock_guard<std::mutex> lock(writers_mtx_);
@@ -237,15 +237,15 @@ bool reactor::has_writer(uint32_t dest_id) const {
 writer_ptr reactor::get_writer(uint32_t dest_id) const {
   if (util::get_thread_id() != main_thread_id_) {
     try {
-      return get_band_writer(dest_id);
+      return get_off_thread_writer(dest_id);
     } catch (const std::exception &e) {
-      SPDLOG_WARN("Unexpected exception by get_band_writer for dest_id {}:{}, {}", dest_id, get_location_uname(dest_id),
-                  e.what());
+      SPDLOG_WARN("Unexpected exception by get_off_thread_writer for dest_id {}:{}, {}", dest_id,
+                  get_location_uname(dest_id), e.what());
     }
   } else {
-    std::lock_guard<std::mutex> lock(band_mtx_);
-    auto band_writer = band_writers_.find(dest_id);
-    if (band_writer != band_writers_.end()) {
+    std::lock_guard<std::mutex> lock(off_thread_mtx_);
+    auto band_writer = off_thread_writers_.find(dest_id);
+    if (band_writer != off_thread_writers_.end()) {
       return band_writer->second;
     }
   }
@@ -259,17 +259,17 @@ writer_ptr reactor::get_writer(uint32_t dest_id) const {
   return writer->second;
 }
 
-bool reactor::has_band_writer(uint32_t dest_id) const {
-  std::lock_guard<std::mutex> lk(band_mtx_);
-  return band_writers_.find(dest_id) != band_writers_.end();
+bool reactor::has_off_thread_writer(uint32_t dest_id) const {
+  std::lock_guard<std::mutex> lk(off_thread_mtx_);
+  return off_thread_writers_.find(dest_id) != off_thread_writers_.end();
 }
 
-writer_ptr reactor::get_band_writer(uint32_t dest_id) const {
-  std::lock_guard<std::mutex> lk(band_mtx_);
-  if (band_writers_.find(dest_id) == band_writers_.end()) {
-    SPDLOG_ERROR("no band writer for {}", get_location_uname(dest_id));
+writer_ptr reactor::get_off_thread_writer(uint32_t dest_id) const {
+  std::lock_guard<std::mutex> lk(off_thread_mtx_);
+  if (off_thread_writers_.find(dest_id) == off_thread_writers_.end()) {
+    SPDLOG_ERROR("no outlet writer for {}", get_location_uname(dest_id));
   }
-  return band_writers_.at(dest_id);
+  return off_thread_writers_.at(dest_id);
 }
 
 WriterMap reactor::get_writers() const {
@@ -279,8 +279,8 @@ WriterMap reactor::get_writers() const {
     snapshot = writers_;
   }
   {
-    std::lock_guard<std::mutex> lock(band_mtx_);
-    snapshot.insert(band_writers_.begin(), band_writers_.end());
+    std::lock_guard<std::mutex> lock(off_thread_mtx_);
+    snapshot.insert(off_thread_writers_.begin(), off_thread_writers_.end());
   }
   return snapshot;
 }
@@ -336,20 +336,22 @@ const std::unordered_map<uint32_t, yijinjing::types::Register> &reactor::get_reg
 
 const std::unordered_map<uint32_t, yijinjing::data::location_ptr> &reactor::get_locations() const { return locations_; }
 
-bool reactor::has_band(uint32_t source, uint32_t dest) const { return has_band(make_source_dest_hash(source, dest)); }
-
-bool reactor::has_band(uint64_t hash) const { return bands_.find(hash) != bands_.end(); }
-
-const yijinjing::types::Band &reactor::get_band(uint32_t source, uint32_t dest) const {
-  return get_band(make_source_dest_hash(source, dest));
+bool reactor::has_outlet(uint32_t source, uint32_t dest) const {
+  return has_outlet(make_source_dest_hash(source, dest));
 }
 
-const yijinjing::types::Band &reactor::get_band(uint64_t hash) const {
-  assert(has_band(hash));
-  return bands_.at(hash);
+bool reactor::has_outlet(uint64_t hash) const { return outlets_.find(hash) != outlets_.end(); }
+
+const yijinjing::types::Outlet &reactor::get_outlet(uint32_t source, uint32_t dest) const {
+  return get_outlet(make_source_dest_hash(source, dest));
 }
 
-const std::unordered_map<uint64_t, yijinjing::types::Band> &reactor::get_bands() const { return bands_; }
+const yijinjing::types::Outlet &reactor::get_outlet(uint64_t hash) const {
+  assert(has_outlet(hash));
+  return outlets_.at(hash);
+}
+
+const std::unordered_map<uint64_t, yijinjing::types::Outlet> &reactor::get_outlets() const { return outlets_; }
 
 void reactor::on_notify() {}
 
@@ -450,29 +452,29 @@ void reactor::deregister_channel(uint32_t source_id) {
   }
 }
 
-void reactor::register_band(int64_t, const Band &band) {
-  uint64_t band_uid = make_source_dest_hash(band.source_id, band.dest_id);
-  auto result = bands_.try_emplace(band_uid, band);
+void reactor::register_outlet(int64_t, const Outlet &outlet) {
+  uint64_t outlet_uid = make_source_dest_hash(outlet.source_id, outlet.dest_id);
+  auto result = outlets_.try_emplace(outlet_uid, outlet);
   if (result.second) {
-    auto source_uname = get_location_uname(band.source_id);
-    auto dest_uname = get_location_uname(band.dest_id);
-    SPDLOG_TRACE("band [{:08x}] {} -> {} up", band_uid, source_uname, dest_uname);
+    auto source_uname = get_location_uname(outlet.source_id);
+    auto dest_uname = get_location_uname(outlet.dest_id);
+    SPDLOG_TRACE("outlet [{:08x}] {} -> {} up", outlet_uid, source_uname, dest_uname);
   }
 }
 
-void reactor::deregister_band(uint32_t source_id) {
-  auto band_it = bands_.begin();
-  while (band_it != bands_.end()) {
-    if (band_it->second.source_id == source_id) {
-      const auto &band_uid = band_it->first;
-      const auto &band = band_it->second;
-      auto source_uname = get_location_uname(band.source_id);
-      auto dest_uname = get_location_uname(band.dest_id);
-      SPDLOG_TRACE("band [{:08x}] {} -> {} down", band_uid, source_uname, dest_uname);
-      band_it = bands_.erase(band_it);
+void reactor::deregister_outlet(uint32_t source_id) {
+  auto outlet_it = outlets_.begin();
+  while (outlet_it != outlets_.end()) {
+    if (outlet_it->second.source_id == source_id) {
+      const auto &outlet_uid = outlet_it->first;
+      const auto &outlet = outlet_it->second;
+      auto source_uname = get_location_uname(outlet.source_id);
+      auto dest_uname = get_location_uname(outlet.dest_id);
+      SPDLOG_TRACE("outlet [{:08x}] {} -> {} down", outlet_uid, source_uname, dest_uname);
+      outlet_it = outlets_.erase(outlet_it);
       continue;
     }
-    band_it++;
+    outlet_it++;
   }
 }
 
@@ -504,11 +506,11 @@ void reactor::require_write_to(int64_t trigger_time, uint32_t source_id, uint32_
   writer->close_data();
 }
 
-void reactor::require_write_to_band(int64_t trigger_time, uint32_t source_id,
-                                    const yijinjing::data::location_ptr &location, uint64_t page_size) const {
+void reactor::require_write_to_outlet(int64_t trigger_time, uint32_t source_id,
+                                      const yijinjing::data::location_ptr &location, uint64_t page_size) const {
   auto writer = get_writer(source_id);
-  RequestWriteToBand msg = {};
-  location->to<RequestWriteToBand>(msg);
+  RequestWriteToOutlet msg = {};
+  location->to<RequestWriteToOutlet>(msg);
   msg.page_size = page_size;
   writer->write(trigger_time, msg);
 }

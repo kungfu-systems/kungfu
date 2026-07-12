@@ -1,11 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: active
-doc_type: public-document
-review_state: unreviewed
-sensitivity: public
----
-
 # Adapters — language and framework boundaries
 
 Where the boundaries are between the C++ core and the languages that consume it,

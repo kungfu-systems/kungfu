@@ -1,17 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: draft
-doc_type: documentation-map
-review_state: unreviewed
-sensitivity: public
-sources: [local-files]
-period: ongoing
-theme: shifu
-confidence: high
-evidence_grade: B
-last_reviewed: 2026-07-12
----
-
 # Shifu
 
 Shifu is Kungfu's development and build execution tool. It opens a checkout,

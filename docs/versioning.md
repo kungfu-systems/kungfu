@@ -1,11 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: active
-doc_type: public-document
-review_state: unreviewed
-sensitivity: public
----
-
 # Versioning — welded surfaces and the decision log
 
 How this repository decides patch, minor, and major. The rule is
@@ -44,6 +36,7 @@ registered surface was touched.
 
 | Date | Action | Line | Faces | Class | Rationale | PR |
 |---|---|---|---|---|---|---|
+| 2026-07-13 | update | — | shifu-launcher | additive | Make an Atlas-projected cache profile effective at the ordinary `./shifu <task>` entrypoint on native and script-fallback launchers. Shifu wraps tasks once, uses `SHIFU_CACHE_ACTIVE=1` as the recursion fuse, fails closed on a partial ref/digest pair, and keeps cache/config/bootstrap control verbs direct. Public clones with no projection and Buildchain's explicit cache lifecycle retain their existing behavior | — |
 | 2026-07-13 | update | — | kungfu-cli, capability-sdk-api, journal-replayability | additive | Add ADR-0069 S1's domain-neutral Profile lifecycle: exact embedded KFX source-contract validation, explicit member/content closure roots, Core-computed `profile_suite_root`, typed Installed/Qualified/Activated/Superseded/RolledBack/Removed ActionEnvelope + Episode facts, historical folds, permission/runtime checks, stale-safe plan/apply receipts, and shared Python/Node/CLI access. Qualification is limited to Core-executable closure/runtime checks; Agent SDK, GUI, portability, Mission migration, and open-Profile release claims remain staged. Pre-release, no line open | — |
 | 2026-07-13 | update | — | kfx-contract, kungfu-cli | additive | Add ADR-0069's `kungfu.profile-suite/v1` semantic closure to the existing KFX contract authority: a Suite-relative Profile binding, content-hashed KFD/action/view/migration/permission/qualification references, shared Python/Node validation, negative fixtures, and installed CLI schema discovery. This is the S0 source contract only; lifecycle roots, activation, Mission Control migration, and open Profile release claims remain staged. Pre-release, no line open | — |
 | 2026-07-12 | update | — | capability-sdk-api, journal-replayability | additive | Add deterministic degraded-tail quarantine preview and byte-verified retained-evidence packages with typed idempotent maintenance receipts. Apply revalidates the complete source digest and requires exclusive local ownership; it never mutates source KFDL bytes or claims a qualified durability barrier. Also move the ownership lease default constructor out of line so the existing pimpl compiles under GCC 14 without changing ownership semantics | — |

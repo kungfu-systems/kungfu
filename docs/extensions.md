@@ -1,11 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: active
-doc_type: public-document
-review_state: unreviewed
-sensitivity: public
----
-
 # Extensions (kfx)
 
 How to write, build and install a kungfu extension. This is the

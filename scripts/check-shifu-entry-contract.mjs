@@ -153,8 +153,11 @@ export function checkRoot(root = ROOT) {
     ['AGENTS.md', 'Do not invoke pnpm,'],
     ['AGENTS.md', './shifu build'],
     ['shifu', 'export SHIFU_ENTRYPOINT=1'],
+    ['shifu', 'SHIFU_CACHE_ACTIVE'],
     ['shifu.cmd', 'set "SHIFU_ENTRYPOINT=1"'],
+    ['shifu.cmd', 'SHIFU_CACHE_ACTIVE'],
     ['crates/shifu/src/dispatch.rs', '"SHIFU_ENTRYPOINT", "1"'],
+    ['crates/shifu/src/main.rs', 'should_auto_apply_cache'],
     ['scripts/verify.mjs', 'check-shifu-entry-contract.mjs'],
   ];
   for (const [rel, marker] of markerFiles) {

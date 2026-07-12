@@ -73,6 +73,20 @@ export type ProfileManagerProjection = {
   knownLimits: string[];
 };
 
+export type ProfileSourceDiscovery = {
+  schema: 'kungfu.profile-source-discovery/v1';
+  profileId: string;
+  profileSuiteRoot: string;
+  memberRoots: Record<string, string>;
+  source: string;
+};
+
+export type ProfileLifecycleAction =
+  | 'install'
+  | 'qualify'
+  | 'activate'
+  | 'upgrade';
+
 export type ProfileQueryPlan = {
   schema: 'kungfu.profile-query-plan/v1';
   planId: string;
@@ -112,6 +126,8 @@ export type ProfileContractPlan = {
 
 export type Profile = {
   runtimeDir: string;
+  discover: (profileId: string) => ProfileSourceDiscovery;
+  discoverAsync: (profileId: string) => Promise<ProfileSourceDiscovery>;
   manager: () => ProfileManagerProjection;
   managerAsync: () => Promise<ProfileManagerProjection>;
   catalog: (
@@ -127,15 +143,15 @@ export type Profile = {
   contractPlan: (source: string) => ProfileContractPlan;
   contractPlanAsync: (source: string) => Promise<ProfileContractPlan>;
   lifecyclePlan: (
-    action: 'install' | 'qualify' | 'activate' | 'upgrade',
+    action: ProfileLifecycleAction,
     source: string,
   ) => ProfileLifecyclePlan;
   lifecyclePlanAsync: (
-    action: 'install' | 'qualify' | 'activate' | 'upgrade',
+    action: ProfileLifecycleAction,
     source: string,
   ) => Promise<ProfileLifecyclePlan>;
   authorizeLifecycleAsync: (
-    action: 'install' | 'qualify' | 'activate' | 'upgrade',
+    action: ProfileLifecycleAction,
     source: string,
     expectedPlanId: string,
     choice: 'approve' | 'deny',
@@ -201,6 +217,10 @@ export function openProfile(options: OpenProfileOptions): Profile {
   ];
   return {
     runtimeDir: options.runtimeDir,
+    discover: (profileId) =>
+      run<ProfileSourceDiscovery>(['discover', profileId]),
+    discoverAsync: (profileId) =>
+      runAsync<ProfileSourceDiscovery>(['discover', profileId]),
     manager: () => run<ProfileManagerProjection>(['manager']),
     managerAsync: () => runAsync<ProfileManagerProjection>(['manager']),
     catalog: (source, requireActive = false) =>

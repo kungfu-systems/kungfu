@@ -12,11 +12,6 @@ theme: kungfu-cpp-modernization
 confidence: high
 evidence_grade: A
 last_reviewed: 2026-07-12
-ai_provenance:
-  model_family: GPT-5
-  product: Codex
-  generated_at: 2026-07-12
-  invisible_context: not asserted
 ---
 
 # ADR-0066: native compilers share one C++ contract; modules remain qualification-only

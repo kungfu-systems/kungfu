@@ -12,12 +12,6 @@ theme: libwasm-production-runtime
 confidence: high
 evidence_grade: B
 last_reviewed: 2026-07-11
-ai_provenance:
-  model_family: GPT-5
-  product: Codex
-  generated_at: 2026-07-11
-  visible_context: ADR-0045, the merged dual-engine spike, Kungfu fact admission, the product assembly path, and Wasmer 7.2 metering middleware
-  invisible_context_boundary: Future engine releases and unobserved release-candidate behavior remain outside this decision
 ---
 
 # ADR-0054: libwasm is a governed product runtime, not a copied spike library

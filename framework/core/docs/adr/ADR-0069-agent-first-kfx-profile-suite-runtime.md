@@ -12,11 +12,6 @@ theme: agent-first-kfx-profile-suite-runtime
 confidence: high
 evidence_grade: B
 last_reviewed: 2026-07-13
-ai_provenance:
-  model_family: GPT-5
-  product: Codex
-  generated_at: 2026-07-13
-  invisible_context_boundary: Exact future runtime behavior, third-party Profile designs, and unqualified compatibility claims are unknown
 ---
 
 # ADR-0069: Agent-first KFX Profile Suites carry domain semantics over a domain-neutral Core

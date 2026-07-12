@@ -1,7 +1,7 @@
 from __future__ import annotations
 import pykungfu.yijinjing.enums
 import typing
-__all__: list[str] = ['AcceptedRangeRecorded', 'Band', 'CacheReset', 'Channel', 'ChannelCursorUpdated', 'ChannelRequest', 'Config', 'Deregister', 'EpisodeClosed', 'EpisodeFrameAttached', 'EpisodeHeartbeat', 'EpisodeOpen', 'EpisodeRefAttached', 'ExportBundleRecorded', 'ImportManifestAccepted', 'Location', 'ManifestEntryRecorded', 'OperatorStateUpdate', 'OutputKey', 'Register', 'RequestCachedDone', 'RequestReadFrom', 'RequestReadFromOthers', 'RequestReadFromPublic', 'RequestReadFromSync', 'RequestWriteTo', 'RequestWriteToBand', 'SourceHeadUpdated', 'SourceRegistered', 'SyntheticData', 'TimeKeyValue', 'TimeRequest', 'TimeReset', 'TimeValue', 'frame_header', 'page_header']
+__all__: list[str] = ['AcceptedRangeRecorded', 'Outlet', 'CacheReset', 'Channel', 'ChannelCursorUpdated', 'ChannelRequest', 'Config', 'Deregister', 'EpisodeClosed', 'EpisodeFrameAttached', 'EpisodeHeartbeat', 'EpisodeOpen', 'EpisodeRefAttached', 'ExportBundleRecorded', 'ImportManifestAccepted', 'Location', 'ManifestEntryRecorded', 'OperatorStateUpdate', 'OutputKey', 'Register', 'RequestCachedDone', 'RequestReadFrom', 'RequestReadFromOthers', 'RequestReadFromPublic', 'RequestReadFromSync', 'RequestWriteTo', 'RequestWriteToOutlet', 'SourceHeadUpdated', 'SourceRegistered', 'SyntheticData', 'TimeKeyValue', 'TimeRequest', 'TimeReset', 'TimeValue', 'frame_header', 'page_header']
 class AcceptedRangeRecorded:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 10903
@@ -34,12 +34,12 @@ class AcceptedRangeRecorded:
     @property
     def __uid__(self) -> int:
         ...
-class Band:
+class Outlet:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 10308
     dest_id: int
     source_id: int
-    def __eq__(self, arg0: Band) -> bool:
+    def __eq__(self, arg0: Outlet) -> bool:
         ...
     def __hash__(self) -> int:
         ...
@@ -711,7 +711,7 @@ class RequestWriteTo:
     @property
     def __uid__(self) -> int:
         ...
-class RequestWriteToBand:
+class RequestWriteToOutlet:
     __has_data__: typing.ClassVar[bool] = True
     __tag__: typing.ClassVar[int] = 10307
     location_uid: int
@@ -722,7 +722,7 @@ class RequestWriteToBand:
     role: pykungfu.yijinjing.enums.location_role
     seed: int
     uid64: int
-    def __eq__(self, arg0: RequestWriteToBand) -> bool:
+    def __eq__(self, arg0: RequestWriteToOutlet) -> bool:
         ...
     def __hash__(self) -> int:
         ...

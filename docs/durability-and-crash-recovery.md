@@ -1,22 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: draft
-doc_type: capability-overview
-review_state: self-reviewed
-sensitivity: public
-sources: [architecture-decisions, local-files]
-period: 2026-07-12
-theme: strong-durability-and-crash-recovery
-confidence: high
-evidence_grade: B
-last_reviewed: 2026-07-12
-ai_provenance:
-  model_family: GPT-5
-  product: Codex
-  generated_at: 2026-07-12
-  invisible_context_boundary: Exact hidden model build, untested hardware behavior, and future implementation results are unknown
----
-
 # Strong durability and crash recovery
 
 Kungfu's target is unusual but deliberate: preserve the low-latency and

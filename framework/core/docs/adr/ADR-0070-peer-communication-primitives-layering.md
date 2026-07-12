@@ -2,9 +2,12 @@
 metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ADR-0070
-decision_status: proposed
-implementation_status: not-started
-review_state: self-reviewed
+decision_status: accepted
+implementation_status: partial
+implementation_commits: [c42600c3d93ee18ac8e1381fa204592eeaedc44e]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/723]
+qualification_refs: [scripts/check-live-runtime-terminology.mjs]
+review_state: maintainer-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
 period: 2026-07-13
@@ -16,7 +19,7 @@ last_reviewed: 2026-07-13
 
 # ADR-0070: peer communication primitives — layering and domain-neutral channel/outlet naming
 
-- Status: proposed; not started
+- Status: accepted; phase 1 implemented (naming + layering); phases 2/3 deferred
 - Date: 2026-07-13
 - Category: runtime architecture / communication primitives / naming
 - Related: [ADR-0057](ADR-0057-domain-neutral-live-runtime-terminology.md)
@@ -100,7 +103,7 @@ flow establishing an account<->strategy edge) was retired.
 
 ## Decision
 
-### Phase 1 — naming and layering (proposed to accept now; documentation-first)
+### Phase 1 — naming and layering (accepted; implemented)
 
 Low risk, no behavior change. It removes the cognitive debt that makes these
 primitives read as trading leftovers.

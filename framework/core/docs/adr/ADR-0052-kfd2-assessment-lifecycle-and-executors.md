@@ -4,6 +4,9 @@ doc_type: architecture-decision
 adr_id: ADR-0052
 decision_status: accepted
 implementation_status: implemented
+implementation_commits: [68dc33a3f3daa56ac1893f9e8671575c6e85f9a8]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/568]
+closure_commit: 68dc33a3f3daa56ac1893f9e8671575c6e85f9a8
 review_state: legacy-unreviewed
 sensitivity: public
 ---

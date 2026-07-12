@@ -4,6 +4,10 @@ doc_type: architecture-decision
 adr_id: ADR-0045
 decision_status: accepted
 implementation_status: implemented
+implementation_commits: [28dd60daead399122aefdfd72d160fe18d382509, 7033137ccd75d794ded69f14ed16e250fdb0ecdb]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/583]
+closure_commit: 765e7d5af654729585c83b3e1fd8a49e25b9ee8c
+qualification_refs: [docs/libwasm-embedding-membrane-spike.md]
 review_state: maintainer-reviewed
 sensitivity: public
 sources: [local-files, official-upstream]
