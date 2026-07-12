@@ -1,11 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: draft
-doc_type: public-document
-review_state: self-reviewed
-sensitivity: public
----
-
 # KFX Profile Suite lifecycle
 
 The Profile lifecycle turns a schema-valid `kungfu.profile-suite/v1`

@@ -1,22 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: active
-doc_type: reference
-review_state: self-reviewed
-sensitivity: public
-sources: [local-files]
-period: ongoing
-theme: kungfu-cpp-toolchain
-confidence: high
-evidence_grade: A
-last_reviewed: 2026-07-12
-ai_provenance:
-  model_family: GPT-5
-  product: Codex
-  generated_at: 2026-07-12
-  invisible_context: not asserted
----
-
 # C++ toolchain contract
 
 Kungfu uses one native build contract, not one compiler binary on every

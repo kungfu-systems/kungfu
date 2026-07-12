@@ -1,11 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: active
-doc_type: public-document
-review_state: unreviewed
-sensitivity: public
----
-
 # AGENTS.md
 
 This file orients coding agents (and people) working with this repository. It is

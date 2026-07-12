@@ -1,6 +1,21 @@
 {
   "schemaVersion": 1,
   "metadataSchema": "kungfu.document-metadata/v1",
+  "metadataRegistry": "docs/document-metadata.registry.json",
+  "optionalFields": [
+    "sources",
+    "last_reviewed",
+    "period",
+    "theme",
+    "confidence",
+    "evidence_grade",
+    "review_refs",
+    "open_questions",
+    "implementation_commits",
+    "implementation_prs",
+    "closure_commit",
+    "qualification_refs"
+  ],
   "sourceKinds": [
     "architecture-decisions",
     "executable-probe",
@@ -23,11 +38,11 @@
   "profiles": [
     {
       "id": "architecture-decision",
+      "metadataMode": "inline",
       "patterns": [
         "^framework/core/docs/adr/ADR-[0-9]{4}-.*\\.md$",
         "^docs/shifu/adr/SHIFU-ADR-[0-9]{4}-.*\\.md$"
       ],
-      "frontmatterRequired": true,
       "required": [
         "metadata_schema",
         "doc_type",
@@ -63,11 +78,11 @@
     },
     {
       "id": "adr-index",
+      "metadataMode": "inline",
       "files": [
         "framework/core/docs/adr/README.md",
         "docs/shifu/adr/README.md"
       ],
-      "frontmatterRequired": true,
       "required": [
         "metadata_schema",
         "doc_type",
@@ -87,10 +102,44 @@
       "forbidden": ["status", "decision_status", "source_level"]
     },
     {
+      "id": "engineering-evidence",
+      "metadataMode": "inline",
+      "files": [
+        "crates/host-spike/README.md",
+        "docs/episode-atomicity-qualification.md",
+        "docs/libkungfu-embedding-membrane-spike.md",
+        "docs/libwasm-embedding-membrane-spike.md",
+        "docs/rust-host-spike.md",
+        "docs/single-host-performance-qualification.md",
+        "framework/core/docs/carrier-type-registry.md",
+        "framework/core/docs/qualification/mmap-performance.md",
+        "framework/core/docs/strong-durability-and-crash-recovery-design.md",
+        "framework/core/slices/libwasm-shared-membrane/README.md",
+        "framework/core/slices/native-storage-closure/README.md",
+        "framework/core/slices/shared-embedding-membrane/README.md"
+      ],
+      "required": [
+        "metadata_schema",
+        "doc_type",
+        "document_status",
+        "review_state",
+        "sensitivity"
+      ],
+      "constants": {
+        "metadata_schema": "kungfu.document-metadata/v1"
+      },
+      "enums": {
+        "document_status": ["draft", "active", "stable", "deprecated", "archived"],
+        "review_state": ["unreviewed", "self-reviewed", "maintainer-reviewed"],
+        "sensitivity": ["public", "internal"]
+      },
+      "forbidden": ["status", "decision_status", "source_level"]
+    },
+    {
       "id": "public-document",
+      "metadataMode": "registry",
       "files": ["README.md", "AGENTS.md", "CONTRIBUTING.md"],
       "patterns": ["^docs/.*\\.md$", "^framework/spec/.*\\.md$"],
-      "frontmatterRequired": true,
       "required": [
         "metadata_schema",
         "doc_type",
@@ -110,8 +159,8 @@
     },
     {
       "id": "repository-document",
+      "metadataMode": "inline-optional",
       "patterns": [".*"],
-      "frontmatterRequired": false,
       "required": [
         "metadata_schema",
         "doc_type",
@@ -139,5 +188,26 @@
       "index": "docs/shifu/adr/README.md",
       "recordPattern": "^docs/shifu/adr/(SHIFU-ADR-[0-9]{4})-.*\\.md$"
     }
-  ]
+  ],
+  "adrEvidence": {
+    "commitFields": ["implementation_commits"],
+    "pullRequestFields": ["implementation_prs"],
+    "closureCommitField": "closure_commit",
+    "qualificationRefField": "qualification_refs",
+    "statusesRequiringImplementationEvidence": ["partial", "staged", "implemented"],
+    "statusesRequiringClosure": ["implemented"],
+    "statusesForbiddingEvidence": ["not-started", "not-applicable"],
+    "pullRequestPattern": "^https://github\\.com/kungfu-systems/kungfu/pull/[0-9]+$",
+    "legacyEvidenceExemptions": {
+      "SHIFU-ADR-0001": "Partial cache-profile rollout predates immutable evidence capture.",
+      "ADR-0005": "Partial modernization assessment needs a dedicated history reconstruction.",
+      "ADR-0006": "Frontend platform implementation spans legacy history not yet reconstructed.",
+      "ADR-0009": "Self-bootstrap evolved across several renames and needs semantic history review.",
+      "ADR-0046": "Rust host trunk is staged; qualification evidence remains distributed across spike history.",
+      "ADR-0048": "Runtime fact query work is staged and awaiting evidence consolidation.",
+      "ADR-0049": "Layer-complete product work is staged and awaiting evidence consolidation.",
+      "ADR-0068": "Durability work is staged across a planned card series and is not closed.",
+      "ADR-0069": "The agent-first profile suite is staged and awaiting end-to-end qualification."
+    }
+  }
 }

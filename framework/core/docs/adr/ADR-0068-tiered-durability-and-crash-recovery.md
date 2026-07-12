@@ -12,11 +12,6 @@ theme: tiered-durability-and-crash-recovery
 confidence: high
 evidence_grade: B
 last_reviewed: 2026-07-12
-ai_provenance:
-  model_family: GPT-5
-  product: Codex
-  generated_at: 2026-07-12
-  invisible_context_boundary: Exact hidden model build, future implementation behavior, and unqualified device guarantees are unknown
 ---
 
 # ADR-0068: tiered durability separates hot visibility, durable fact admission, projections, and replication

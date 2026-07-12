@@ -3,14 +3,18 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ADR-0067
 decision_status: accepted
-implementation_status: not-started
+implementation_status: implemented
+implementation_commits: [7ebd631147fe9e1094b0a345ebf19551f97ced09, a6d3b4ef0cff62baf68374acb29f069fc0fcec74]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/660]
+closure_commit: a6d3b4ef0cff62baf68374acb29f069fc0fcec74
+qualification_refs: [framework/core/src/libyijinjing/include/kungfu/yijinjing/schema/registry.h]
 review_state: legacy-unreviewed
 sensitivity: public
 ---
 
 # ADR-0067: schema-registry contract invariants are welded at compile time — tag uniqueness and payload layout↔version binding
 
-- Status: accepted; not yet implemented
+- Status: accepted; implemented
 - Date: 2026-07-12
 - Category: (b) mechanism / governance — schema contract enforcement
 - Subsystem: `libyijinjing` schema (`schema/registry.h`, `schema/types.h`), storage manifest records

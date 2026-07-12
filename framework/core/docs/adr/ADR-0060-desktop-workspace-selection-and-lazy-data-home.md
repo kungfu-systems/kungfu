@@ -12,12 +12,6 @@ theme: kungfu-workspace-product
 confidence: high
 evidence_grade: B
 last_reviewed: 2026-07-11
-ai_provenance:
-  model_family: GPT-5
-  product: Codex
-  generated_at: 2026-07-11
-  visible_context: User workspace and Mission Control requirements, ADR-0035, ADR-0059, current GUI boot/runtime code, Saved Query Catalog implementation, Atlas dogfood behavior
-  invisible_context_boundary: Did not inspect private Atlas bodies, credentials, provider payloads, or hidden model state
 ---
 
 # ADR-0060: Desktop selects one explicit workspace and initializes its data home lazily

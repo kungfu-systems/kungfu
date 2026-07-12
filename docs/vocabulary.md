@@ -1,11 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: active
-doc_type: public-document
-review_state: unreviewed
-sensitivity: public
----
-
 # Kungfu Vocabulary Reference
 
 This reference defines the public language Kungfu uses for real-world

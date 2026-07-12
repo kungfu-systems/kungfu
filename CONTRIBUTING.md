@@ -1,11 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: active
-doc_type: public-document
-review_state: unreviewed
-sensitivity: public
----
-
 # Contributing to Kungfu
 
 Thanks for your interest in Kungfu. This guide covers how to build the project,
@@ -177,7 +169,10 @@ changed-file filter. The intentionally small Markdownlint rule baseline lives
 in `.markdownlint-cli2.mjs`; do not enable a style rule by rewriting unrelated
 documents. `docs.contract.json` owns only required documents and navigation
 pointers. [`docs/document-metadata.contract.json`](docs/document-metadata.contract.json)
-owns typed frontmatter profiles and makes ADR body/index status checked
+routes each governed document to inline, registry, or external metadata;
+[`docs/document-metadata.registry.json`](docs/document-metadata.registry.json)
+keeps public entry and guide metadata out of the rendered page. The same gate
+makes ADR body/index status and immutable implementation references checked
 projections of ADR metadata; see
 [`docs/document-metadata.md`](docs/document-metadata.md). GitHub issue templates
 and Kungfu Skills retain their independently consumed frontmatter schemas.

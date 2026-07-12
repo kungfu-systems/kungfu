@@ -1,11 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: active
-doc_type: public-document
-review_state: unreviewed
-sensitivity: public
----
-
 # Rust adoption paradigm
 
 Kungfu treats Rust as a **first-class option**, not a migration target: the

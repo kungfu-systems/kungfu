@@ -10,12 +10,6 @@ theme: episode-atomicity-qualification
 confidence: medium-high
 evidence_grade: B
 last_reviewed: 2026-07-10
-ai_provenance:
-  model_family: GPT-5
-  product: Codex
-  generated_at: 2026-07-10
-  visible_context: ADR-0042 design discussion, current Episode v1 implementation/tests, and Kungfu fuzz/verification conventions
-  invisible_context_boundary: The current harness and first local single-node baselines are visible; no multi-platform CI result, fleet-scale run, payload-volume qualification, or industrial soak is available yet
 ---
 
 # Episode Atomicity Qualification

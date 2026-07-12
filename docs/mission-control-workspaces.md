@@ -1,23 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: draft
-doc_type: product-design
-review_state: unreviewed
-sensitivity: public
-sources: [local-files, user-consensus]
-period: 2026-07-11
-theme: kungfu-mission-control-workspaces
-confidence: high
-evidence_grade: B
-last_reviewed: 2026-07-11
-ai_provenance:
-  model_family: GPT-5
-  product: Codex
-  generated_at: 2026-07-11
-  visible_context: User product requirements, Atlas Mission working model, ADR-0035, ADR-0048, ADR-0051, ADR-0052, ADR-0059, Work Dashboard source, config and product launcher code, Saved Query Catalog source
-  invisible_context_boundary: Did not inspect private Atlas document bodies, provider payloads, credentials, or hidden model state
----
-
 # Mission Control Workspace Product Design
 
 ## Product outcome

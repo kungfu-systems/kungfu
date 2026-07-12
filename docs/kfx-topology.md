@@ -1,11 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: active
-doc_type: public-document
-review_state: unreviewed
-sensitivity: public
----
-
 # kfx topology — how a kfx is loaded, trusted, confined, and connected
 
 This page is the mental model behind [`extensions.md`](extensions.md). That page

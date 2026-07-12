@@ -10,11 +10,6 @@ theme: rust-host-spike
 confidence: medium
 evidence_grade: B
 last_reviewed: 2026-07-10
-ai_provenance:
-  model_family: GPT-5
-  product: Codex
-  generated_at: 2026-07-10
-  invisible_context: exact model build and hidden reasoning unavailable
 ---
 
 # Rust host shell — feasibility spike report

@@ -1,11 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: active
-doc_type: public-document
-review_state: unreviewed
-sensitivity: public
----
-
 # Versioning — welded surfaces and the decision log
 
 How this repository decides patch, minor, and major. The rule is

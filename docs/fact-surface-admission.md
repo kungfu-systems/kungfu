@@ -1,11 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: active
-doc_type: public-document
-review_state: unreviewed
-sensitivity: public
----
-
 # Bringing domain facts into Kungfu
 
 Kungfu can preserve and query facts from a product, user, extension, or domain

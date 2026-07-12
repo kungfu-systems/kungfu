@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
+import childProcess from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,7 +16,7 @@ const DEFAULT_CONTRACT = 'docs/document-metadata.contract.json';
  *   id: string,
  *   files?: string[],
  *   patterns?: string[],
- *   frontmatterRequired: boolean,
+ *   metadataMode: 'inline' | 'registry' | 'inline-optional',
  *   required: string[],
  *   constants?: Record<string, string>,
  *   enums?: Record<string, string[]>,
@@ -26,12 +27,27 @@ const DEFAULT_CONTRACT = 'docs/document-metadata.contract.json';
  * @typedef {{
  *   schemaVersion: number,
  *   metadataSchema: string,
+ *   metadataRegistry: string,
+ *   optionalFields?: string[],
  *   sourceKinds?: string[],
  *   externalFrontmatterSchemas: {id: string, patterns: string[]}[],
  *   profiles: MetadataProfile[],
- *   adrRegistries: {index: string, recordPattern: string}[]
+ *   adrRegistries: {index: string, recordPattern: string}[],
+ *   adrEvidence?: {
+ *     commitFields: string[],
+ *     pullRequestFields: string[],
+ *     closureCommitField: string,
+ *     qualificationRefField: string,
+ *     statusesRequiringImplementationEvidence: string[],
+ *     statusesRequiringClosure: string[],
+ *     statusesForbiddingEvidence: string[],
+ *     pullRequestPattern: string,
+ *     legacyEvidenceExemptions: Record<string, string>
+ *   }
  * }} MetadataContract
  */
+
+/** @typedef {{schemaVersion: number, metadataSchema: string, documents: Record<string, Record<string, string | string[]>>}} MetadataRegistry */
 
 /** @param {string} value */
 function parseScalar(value) {
@@ -86,6 +102,24 @@ export function readMetadataContract(
   return /** @type {MetadataContract} */ (contract);
 }
 
+/** @param {string} root @param {MetadataContract} contract */
+function readMetadataRegistry(root, contract) {
+  const registry = JSON.parse(
+    fs.readFileSync(path.join(root, contract.metadataRegistry), 'utf8'),
+  );
+  if (
+    registry.schemaVersion !== 1 ||
+    registry.metadataSchema !== contract.metadataSchema ||
+    typeof registry.documents !== 'object' ||
+    Array.isArray(registry.documents)
+  ) {
+    throw new Error(
+      `${contract.metadataRegistry}: invalid document metadata registry`,
+    );
+  }
+  return /** @type {MetadataRegistry} */ (registry);
+}
+
 /** @param {string} rel @param {{files?: string[], patterns?: string[]}} rule */
 function matches(rel, rule) {
   return (
@@ -128,6 +162,250 @@ function indexStatuses(text) {
   return result;
 }
 
+/** @param {Map<string, {value: unknown, line: number}>} fields @param {MetadataProfile} profile @param {MetadataContract} contract @param {string} rel @param {Finding[]} findings */
+function validateFields(fields, profile, contract, rel, findings) {
+  const allowed = new Set([
+    ...profile.required,
+    ...Object.keys(profile.constants || {}),
+    ...Object.keys(profile.enums || {}),
+    ...(contract.optionalFields || []),
+  ]);
+  for (const [key, field] of fields) {
+    if (!allowed.has(key)) {
+      findings.push({
+        code: 'metadata-unknown-field',
+        file: rel,
+        line: field.line,
+        message: `metadata field is not declared by the contract: ${key}`,
+      });
+    }
+  }
+  for (const key of profile.required) {
+    if (!fields.has(key)) {
+      findings.push({
+        code: 'metadata-required-field',
+        file: rel,
+        line: 1,
+        message: `${profile.id} requires metadata field ${key}`,
+      });
+    }
+  }
+  for (const key of profile.forbidden || []) {
+    const field = fields.get(key);
+    if (field) {
+      findings.push({
+        code: 'metadata-forbidden-field',
+        file: rel,
+        line: field.line,
+        message: `${profile.id} forbids ambiguous legacy field ${key}`,
+      });
+    }
+  }
+  for (const [key, expected] of Object.entries(profile.constants || {})) {
+    const field = fields.get(key);
+    if (field && field.value !== expected) {
+      findings.push({
+        code: 'metadata-constant',
+        file: rel,
+        line: field.line,
+        message: `${key} must be ${expected} for ${profile.id}`,
+      });
+    }
+  }
+  for (const [key, allowed] of Object.entries(profile.enums || {})) {
+    const field = fields.get(key);
+    if (field && !allowed.includes(/** @type {string} */ (field.value))) {
+      findings.push({
+        code: 'metadata-enum',
+        file: rel,
+        line: field.line,
+        message: `${key} must be one of: ${allowed.join(', ')}`,
+      });
+    }
+  }
+}
+
+/** @param {Record<string, unknown>} values */
+function registryFields(values) {
+  return new Map(
+    Object.entries(values).map(([key, value]) => [key, { value, line: 1 }]),
+  );
+}
+
+function isolatedGitEnvironment() {
+  return Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')),
+  );
+}
+
+/** @param {string} root @param {string} commit */
+function validateReachableCommit(root, commit) {
+  if (!/^[0-9a-f]{40}$/.test(commit))
+    return 'must be a full 40-character lowercase Git SHA';
+  const exists = childProcess.spawnSync(
+    'git',
+    ['cat-file', '-e', `${commit}^{commit}`],
+    { cwd: root, env: isolatedGitEnvironment(), stdio: 'ignore' },
+  );
+  if (exists.status !== 0) return 'does not identify a commit in this checkout';
+  const reachable = childProcess.spawnSync(
+    'git',
+    ['merge-base', '--is-ancestor', commit, 'HEAD'],
+    { cwd: root, env: isolatedGitEnvironment(), stdio: 'ignore' },
+  );
+  return reachable.status === 0
+    ? null
+    : 'is not reachable from the checked-out mainline history';
+}
+
+/** @param {string} value @param {string} field @param {string} rel @param {number} line @param {string} root @param {Finding[]} findings */
+function checkCommit(value, field, rel, line, root, findings) {
+  const problem = validateReachableCommit(root, value);
+  if (problem) {
+    findings.push({
+      code: 'adr-evidence-commit',
+      file: rel,
+      line,
+      message: `${field} ${value} ${problem}`,
+    });
+  }
+}
+
+/** @param {Map<string, {value: unknown, line: number}>} fields @param {string} rel @param {string} root @param {MetadataContract} contract @param {Finding[]} findings */
+function validateAdrEvidence(fields, rel, root, contract, findings) {
+  const evidence = contract.adrEvidence;
+  if (!evidence) return;
+  const id = String(fields.get('adr_id')?.value || '');
+  const status = String(fields.get('implementation_status')?.value || '');
+  const exemption = evidence.legacyEvidenceExemptions[id];
+  const commits = fields.get(evidence.commitFields[0]);
+  const prs = fields.get(evidence.pullRequestFields[0]);
+  const closure = fields.get(evidence.closureCommitField);
+  const qualifications = fields.get(evidence.qualificationRefField);
+  const present = [commits, prs, closure, qualifications].some(Boolean);
+  const evidenceComplete =
+    (commits || prs) &&
+    (!evidence.statusesRequiringClosure.includes(status) || closure);
+
+  if (
+    exemption &&
+    (!evidence.statusesRequiringImplementationEvidence.includes(status) ||
+      evidenceComplete)
+  ) {
+    findings.push({
+      code: 'adr-evidence-exemption-stale',
+      file: rel,
+      line: 1,
+      message: `legacy evidence exemption for ${id} is no longer needed`,
+    });
+  }
+
+  if (
+    evidence.statusesRequiringImplementationEvidence.includes(status) &&
+    !commits &&
+    !prs &&
+    !exemption
+  ) {
+    findings.push({
+      code: 'adr-evidence-required',
+      file: rel,
+      line: 1,
+      message: `${status} requires implementation_commits or implementation_prs`,
+    });
+  }
+  if (
+    evidence.statusesRequiringClosure.includes(status) &&
+    !closure &&
+    !exemption
+  ) {
+    findings.push({
+      code: 'adr-closure-required',
+      file: rel,
+      line: 1,
+      message: `${status} requires closure_commit`,
+    });
+  }
+  if (evidence.statusesForbiddingEvidence.includes(status) && present) {
+    findings.push({
+      code: 'adr-evidence-contradiction',
+      file: rel,
+      line: 1,
+      message: `${status} cannot declare implementation evidence`,
+    });
+  }
+
+  for (const field of [commits, prs, qualifications]) {
+    if (field && !Array.isArray(field.value)) {
+      findings.push({
+        code: 'adr-evidence-list',
+        file: rel,
+        line: field.line,
+        message: 'ADR evidence collections must be inline YAML lists',
+      });
+    }
+  }
+  if (Array.isArray(commits?.value)) {
+    for (const commit of commits.value)
+      checkCommit(
+        String(commit),
+        evidence.commitFields[0],
+        rel,
+        commits.line,
+        root,
+        findings,
+      );
+  }
+  if (closure) {
+    checkCommit(
+      String(closure.value),
+      evidence.closureCommitField,
+      rel,
+      closure.line,
+      root,
+      findings,
+    );
+  }
+  const prPattern = new RegExp(evidence.pullRequestPattern);
+  if (Array.isArray(prs?.value)) {
+    for (const pr of prs.value) {
+      if (!prPattern.test(String(pr))) {
+        findings.push({
+          code: 'adr-evidence-pr',
+          file: rel,
+          line: prs.line,
+          message: `implementation_prs must use a stable kungfu-systems/kungfu PR URL: ${String(pr)}`,
+        });
+      }
+    }
+  }
+  if (Array.isArray(qualifications?.value)) {
+    for (const reference of qualifications.value) {
+      const value = String(reference);
+      if (value.startsWith('commit:')) {
+        checkCommit(
+          value.slice('commit:'.length),
+          evidence.qualificationRefField,
+          rel,
+          qualifications.line,
+          root,
+          findings,
+        );
+      } else if (
+        path.isAbsolute(value) ||
+        value.split('/').includes('..') ||
+        !fs.existsSync(path.join(root, value))
+      ) {
+        findings.push({
+          code: 'adr-evidence-qualification',
+          file: rel,
+          line: qualifications.line,
+          message: `qualification_refs must be an existing repository-relative path or commit:<sha>: ${value}`,
+        });
+      }
+    }
+  }
+}
+
 /**
  * @param {{root?: string, files: string[], contract?: MetadataContract}} options
  * @returns {Finding[]}
@@ -138,6 +416,10 @@ export function validateDocumentMetadata(options) {
   /** @type {Finding[]} */
   const findings = [];
   const documents = new Map();
+  const metadataRegistry = readMetadataRegistry(root, contract);
+  const registered = metadataRegistry.documents;
+  const fileSet = new Set(options.files);
+  const adrIds = new Set();
 
   for (const rel of options.files) {
     const text = fs.readFileSync(path.join(root, rel), 'utf8');
@@ -145,6 +427,15 @@ export function validateDocumentMetadata(options) {
     if (
       contract.externalFrontmatterSchemas.some((schema) => matches(rel, schema))
     ) {
+      if (registered[rel]) {
+        findings.push({
+          code: 'metadata-authority-duplicate',
+          file: rel,
+          line: 1,
+          message:
+            'external-schema document cannot also use the Kungfu metadata registry',
+        });
+      }
       continue;
     }
     const profile = contract.profiles.find((candidate) =>
@@ -160,18 +451,50 @@ export function validateDocumentMetadata(options) {
       continue;
     }
     const frontmatter = parseFrontmatter(text);
-    if (!frontmatter) {
-      if (profile.frontmatterRequired) {
+    const registryEntry = registered[rel];
+    if (profile.metadataMode === 'registry') {
+      if (frontmatter) {
         findings.push({
-          code: 'metadata-required',
+          code: 'metadata-authority-duplicate',
           file: rel,
           line: 1,
-          message: `frontmatter required by ${profile.id} profile`,
+          message: `${profile.id} metadata belongs in ${contract.metadataRegistry}, not visible frontmatter`,
         });
       }
+      if (!registryEntry) {
+        findings.push({
+          code: 'metadata-registry-required',
+          file: rel,
+          line: 1,
+          message: `${profile.id} requires one entry in ${contract.metadataRegistry}`,
+        });
+        continue;
+      }
+    } else if (registryEntry) {
+      findings.push({
+        code: 'metadata-authority-duplicate',
+        file: rel,
+        line: 1,
+        message: `${profile.id} metadata must be inline and cannot also appear in the registry`,
+      });
+    }
+    if (profile.metadataMode === 'inline' && !frontmatter) {
+      findings.push({
+        code: 'metadata-required',
+        file: rel,
+        line: 1,
+        message: `frontmatter required by ${profile.id} profile`,
+      });
       continue;
     }
-    if (frontmatter.malformed) {
+    if (
+      profile.metadataMode === 'inline-optional' &&
+      !frontmatter &&
+      !registryEntry
+    ) {
+      continue;
+    }
+    if (frontmatter?.malformed) {
       findings.push({
         code: 'metadata-malformed',
         file: rel,
@@ -180,7 +503,7 @@ export function validateDocumentMetadata(options) {
       });
       continue;
     }
-    for (const duplicate of frontmatter.duplicates || []) {
+    for (const duplicate of frontmatter?.duplicates || []) {
       findings.push({
         code: 'metadata-duplicate',
         file: rel,
@@ -188,50 +511,26 @@ export function validateDocumentMetadata(options) {
         message: `duplicate frontmatter field: ${duplicate.key}`,
       });
     }
-    for (const key of profile.required) {
-      if (!frontmatter.fields.has(key)) {
-        findings.push({
-          code: 'metadata-required-field',
-          file: rel,
-          line: 1,
-          message: `${profile.id} requires frontmatter field ${key}`,
-        });
-      }
+    const fields = registryEntry
+      ? registryFields(registryEntry)
+      : frontmatter?.fields || new Map();
+    const headerText = frontmatter
+      ? text
+          .split(/\r?\n/)
+          .slice(1, frontmatter.endLine - 1)
+          .join('\n')
+      : '';
+    if (/^\s+[a-z][a-z0-9_]*\s*:/m.test(headerText)) {
+      findings.push({
+        code: 'metadata-nested-field',
+        file: rel,
+        line: 1,
+        message:
+          'Kungfu metadata is flat; nested maintenance or generation attribution is not allowed',
+      });
     }
-    for (const key of profile.forbidden || []) {
-      const field = frontmatter.fields.get(key);
-      if (field) {
-        findings.push({
-          code: 'metadata-forbidden-field',
-          file: rel,
-          line: field.line,
-          message: `${profile.id} forbids ambiguous legacy field ${key}`,
-        });
-      }
-    }
-    for (const [key, expected] of Object.entries(profile.constants || {})) {
-      const field = frontmatter.fields.get(key);
-      if (field && field.value !== expected) {
-        findings.push({
-          code: 'metadata-constant',
-          file: rel,
-          line: field.line,
-          message: `${key} must be ${expected} for ${profile.id}`,
-        });
-      }
-    }
-    for (const [key, allowed] of Object.entries(profile.enums || {})) {
-      const field = frontmatter.fields.get(key);
-      if (field && !allowed.includes(/** @type {string} */ (field.value))) {
-        findings.push({
-          code: 'metadata-enum',
-          file: rel,
-          line: field.line,
-          message: `${key} must be one of: ${allowed.join(', ')}`,
-        });
-      }
-    }
-    const sources = frontmatter.fields.get('sources');
+    validateFields(fields, profile, contract, rel, findings);
+    const sources = fields.get('sources');
     if (sources) {
       const allowed = contract.sourceKinds || [];
       if (!Array.isArray(sources.value)) {
@@ -259,7 +558,8 @@ export function validateDocumentMetadata(options) {
       const expectedId = /\/(SHIFU-ADR-[0-9]{4}|ADR-[0-9]{4})-/.exec(
         `/${rel}`,
       )?.[1];
-      const id = frontmatter.fields.get('adr_id');
+      const id = fields.get('adr_id');
+      if (id) adrIds.add(String(id.value));
       if (id && id.value !== expectedId) {
         findings.push({
           code: 'adr-id-drift',
@@ -269,22 +569,46 @@ export function validateDocumentMetadata(options) {
         });
       }
       const visible = visibleDecisionStatus(text);
-      const decision = frontmatter.fields.get('decision_status');
+      const decision = fields.get('decision_status');
       if (!visible) {
         findings.push({
           code: 'adr-status-projection',
           file: rel,
-          line: frontmatter.endLine + 1,
+          line: (frontmatter?.endLine || 1) + 1,
           message: 'ADR body must project a visible decision status',
         });
       } else if (decision && visible !== decision.value) {
         findings.push({
           code: 'adr-status-drift',
           file: rel,
-          line: frontmatter.endLine + 1,
+          line: (frontmatter?.endLine || 1) + 1,
           message: `visible status ${visible} differs from decision_status ${String(decision.value)}`,
         });
       }
+      validateAdrEvidence(fields, rel, root, contract, findings);
+    }
+  }
+
+  for (const rel of Object.keys(registered)) {
+    if (!fileSet.has(rel)) {
+      findings.push({
+        code: 'metadata-registry-orphan',
+        file: contract.metadataRegistry,
+        line: 1,
+        message: `registry entry has no tracked Markdown document: ${rel}`,
+      });
+    }
+  }
+  for (const id of Object.keys(
+    contract.adrEvidence?.legacyEvidenceExemptions || {},
+  )) {
+    if (!adrIds.has(id)) {
+      findings.push({
+        code: 'adr-evidence-exemption-orphan',
+        file: DEFAULT_CONTRACT,
+        line: 1,
+        message: `legacy evidence exemption has no ADR record: ${id}`,
+      });
     }
   }
 

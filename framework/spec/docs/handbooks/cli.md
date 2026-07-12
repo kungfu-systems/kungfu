@@ -1,11 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: active
-doc_type: public-document
-review_state: unreviewed
-sensitivity: public
----
-
 # Kungfu CLI handbook
 
 > **Pre-release source guidance.** Public CLI artifacts are not yet a polished

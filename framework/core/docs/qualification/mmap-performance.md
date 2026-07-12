@@ -10,11 +10,6 @@ theme: yijinjing-mmap-performance-qualification
 confidence: high
 evidence_grade: B
 last_reviewed: 2026-07-11
-ai_provenance:
-  model_family: GPT-5
-  product: Codex
-  generated_at: 2026-07-11
-  invisible_context_boundary: No credentials, private journals, or hidden provider state were read
 ---
 
 # yijinjing mmap performance qualification

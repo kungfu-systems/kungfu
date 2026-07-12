@@ -1,22 +1,3 @@
----
-metadata_schema: kungfu.document-metadata/v1
-document_status: draft
-doc_type: product-design
-review_state: unreviewed
-sensitivity: public
-sources: [local-files, user-consensus]
-period: 2026-07-12
-theme: kungfu-mission-control
-confidence: high
-evidence_grade: B
-last_reviewed: 2026-07-12
-ai_provenance:
-  model_family: GPT-5
-  product: Codex
-  generated_at: 2026-07-12
-  unavailable_details: exact model checkpoint and hidden runtime parameters
----
-
 # Kungfu Mission Control
 
 Kungfu Mission Control is the local-first responsibility layer that connects a

@@ -10,11 +10,6 @@ theme: libkungfu-shared-embedding-membrane
 confidence: high
 evidence_grade: A
 last_reviewed: 2026-07-11
-ai_provenance:
-  model_family: GPT-5
-  product: Codex
-  generated_at: 2026-07-10
-  invisible_context: exact model build and hidden reasoning unavailable
 ---
 
 # Shared embedding membrane spike
