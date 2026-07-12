@@ -82,7 +82,14 @@ route to the row that answers them:
   actually guarantee* ([`contracts.md`](contracts.md)) and *why was a decision
   made* ([ADR-0001](../framework/core/docs/adr/ADR-0001-yijinjing-publish-barrier.md)).
 - **thread-safety / concurrency / single-writer multi-reader / lock-free** →
-  *what does it actually guarantee* ([`contracts.md`](contracts.md)).
+  *what does it actually guarantee* ([`contracts.md`](contracts.md)) and *where
+  should writer, reader-cursor, and page-lifetime ownership end*
+  ([ADR-0063](../framework/core/docs/adr/ADR-0063-yijinjing-concurrency-and-lifetime-contract.md),
+  proposed).
+- **SIGINT / replay exhaustion / subscriber error / loop stop / embedding error**
+  → *who owns error propagation and process lifetime*
+  ([ADR-0064](../framework/core/docs/adr/ADR-0064-runtime-error-propagation-and-stop-ownership.md),
+  proposed).
 - **determinism / reproducibility / record-and-replay** → *what does it actually
   guarantee* ([`contracts.md`](contracts.md)) and *the event / journal / replay
   model* ([`event-model.md`](event-model.md)).

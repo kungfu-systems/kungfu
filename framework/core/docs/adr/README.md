@@ -80,6 +80,8 @@ A record's **Status** says where it stands:
 | [0060](ADR-0060-desktop-workspace-selection-and-lazy-data-home.md) | proposed | Desktop and CLI select Home or a project workspace and create its data home only on qualified write intent |
 | [0061](ADR-0061-agent-mediated-guidance-is-a-first-class-product-interface.md) | proposed | Agent-mediated guidance is a first-class interface over shared advice, preview, authorization, action, and receipt contracts |
 | [0062](ADR-0062-journal-container-epoch-and-offline-conversion.md) | accepted; implemented | the journal container epoch is derived from its layout; cross-epoch replay is deferred offline conversion, not an online adapter |
+| [0063](ADR-0063-yijinjing-concurrency-and-lifetime-contract.md) | proposed | yijinjing separates lock-free publication from cursor, write, and page-lifetime ownership |
+| [0064](ADR-0064-runtime-error-propagation-and-stop-ownership.md) | proposed | runtime libraries propagate structured errors; loop owners decide how execution stops |
 
 ## Reading by theme
 
@@ -95,12 +97,20 @@ A record's **Status** says where it stands:
   journal container epoch from the page/frame header layout itself, so an
   unversioned layout change cannot ship, and keeps cross-epoch replay off the hot
   path as deferred offline conversion.
+  [0063](ADR-0063-yijinjing-concurrency-and-lifetime-contract.md) narrows the
+  lock-free claim to publication/tail reads and proposes explicit writer
+  transactions, a thread-affine reader cursor, and ownership-driven page
+  reclamation.
   [0002](ADR-0002-yijinjing-schema-runtime-layout.md) is retained as the
   superseded historical decision that preceded this split.
 - **Control / event axis** — [0003](ADR-0003-control-axis-python-coroutine-integration.md)
   (Python coroutine integration), [0004](ADR-0004-control-axis-node-watcher-snapshot-model.md)
   (Node watcher snapshot model), with [0005](ADR-0005-control-event-axis-modernization-assessment.md)
   the meta-assessment of whether v4 should touch this axis at all.
+  [0064](ADR-0064-runtime-error-propagation-and-stop-ownership.md) proposes the
+  narrower correctness boundary that libraries propagate structured errors and
+  each loop owner controls stopping, without reopening ADR-0005's frozen Rx
+  routing/fan-out decision.
 - **Frontend platform** — [0006](ADR-0006-v4-frontend-platform-architecture.md)
   (platform + reference app), [0007](ADR-0007-v4-tui-platform-reference-surface.md)
   (the TUI reference surface).
