@@ -350,6 +350,21 @@ def schema(ctx, as_json):
     click.echo(json.dumps(data, indent=2, sort_keys=True))
 
 
+@kfx.command(name="profile-schema", help="print the KFX Profile Suite JSON schema")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfx_command_context
+def profile_schema(ctx, as_json):
+    try:
+        data = kfx_contract.profile_suite_schema()
+    except (OSError, ValueError, json.JSONDecodeError) as e:
+        click.echo(f"[kfx] failed to load Profile Suite schema: {e}", err=True)
+        sys.exit(1)
+    if as_json:
+        click.echo(json.dumps(data, indent=2, sort_keys=True))
+        return
+    click.echo(json.dumps(data, indent=2, sort_keys=True))
+
+
 @kfx.command(help="inspect and validate a kfx package manifest")
 @click.argument("source", type=click.Path(exists=True))
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")

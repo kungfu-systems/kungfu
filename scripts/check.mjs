@@ -556,6 +556,10 @@ function checkShared() {
     'run',
     'check',
   ]);
+  run('KFX Profile Suite contract tests', 'pnpm', [
+    'run',
+    'test:kfx-profile-suite',
+  ]);
   checkLayerQualification();
   run('tooling type check', 'pnpm', ['run', 'check:types']);
   run('SDK unit tests', 'pnpm', [

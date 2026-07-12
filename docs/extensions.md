@@ -25,7 +25,13 @@ Three words carry the model — keep them apart:
   of a built package is its complete, offline install unit.
 - **suite** — a group of kfx distributed and operated together (navigation
   grouping, enable/disable as a unit, lockstep versioning). Membership is
-  npm `dependencies`; the manifest lists member keys.
+  npm `dependencies`; the manifest lists member keys. A Suite may additionally
+  bind a Profile document, making it one semantic and lifecycle closure while
+  its members retain separate trust and capability boundaries.
+- **Profile** — a user-visible domain model and operating protocol such as
+  Mission/Go or Week/Day/Action. A Profile is declared by a KFX Suite; Kungfu
+  Core still owns fact admission, assessment, query, timeline, and lifecycle
+  authority.
 
 The word *bundle* is reserved for the self-describing trace/export package
 (see [`rewind.md`](rewind.md)) and is never used for kfx groups.
@@ -93,12 +99,25 @@ extension project's installed `node_modules/@kungfu-tech/kfx` package:
 | `config.adapter.entry` | Adapter source per runtime, relative to the package root (e.g. `{ "python": "src/adapter/python/index.py" }`). An adapter ships source — there is no bundle step. |
 | `config.adapter.capabilities` | Capture-side capabilities the adapter needs; the same permission seam as a view's `capabilities` (reserved for enforcement). |
 | `suite.title`, `suite.members` | Marks a suite package; `members` lists member `key`s. Members arrive as their own packages (npm `dependencies`) and install individually. |
+| `suite.profile` | Optional relative path to a `kungfu.profile-suite/v1` document. Parent traversal and absolute paths are rejected. The document binds required/optional members and every KFD/action/view/migration/permission/qualification artifact by path and SHA-256. |
 
 The manifest is a welded surface. Do not invent fields: `kungfu kfx install`,
 `kungfu kfx inspect`, `@kungfu-tech/kfx`, the GUI/TUI loaders, Skill dependency
 binding, and frozen artifact verification all validate against the same KFX
 contract. The `service` facet is present in the contract as a draft facet while
 ADR-0017's process-hosting path hardens.
+
+The same contract also carries `profileSuiteSchema`. Inspect the exact installed
+schema with:
+
+```sh
+kungfu kfx profile-schema --json
+```
+
+Schema-valid means the Profile source closure is well formed. It does not mean
+the Profile is installed, qualified, activated, trusted, or compatible with a
+workspace; those lifecycle states are staged by
+[ADR-0069](../framework/core/docs/adr/ADR-0069-agent-first-kfx-profile-suite-runtime.md).
 
 ## The build contract
 

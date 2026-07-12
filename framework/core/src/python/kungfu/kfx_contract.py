@@ -53,6 +53,14 @@ def package_manifest_schema(
     return copy.deepcopy(load_contract(contract_path, env=env)["packageManifestSchema"])
 
 
+def profile_suite_schema(
+    contract_path: str | None = None,
+    *,
+    env: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    return copy.deepcopy(load_contract(contract_path, env=env)["profileSuiteSchema"])
+
+
 def validate_package_manifest(
     manifest: dict[str, Any],
     *,
@@ -64,6 +72,36 @@ def validate_package_manifest(
         contract.get("packageManifestSchema"),
         "package manifest",
     )
+
+
+def validate_profile_suite(
+    profile: dict[str, Any],
+    *,
+    contract: dict[str, Any] | None = None,
+    suite_members: list[str] | None = None,
+) -> None:
+    contract = load_contract() if contract is None else contract
+    _validate_with_schema(
+        profile,
+        contract.get("profileSuiteSchema"),
+        "Profile Suite",
+    )
+    members = profile.get("members") or {}
+    required = members.get("required") or []
+    optional = members.get("optional") or []
+    overlap = sorted(set(required) & set(optional))
+    if overlap:
+        raise ValueError(
+            "kfx Profile Suite validation failed: members cannot be both "
+            f"required and optional: {', '.join(overlap)}"
+        )
+    if suite_members is not None and set(required) | set(optional) != set(
+        suite_members
+    ):
+        raise ValueError(
+            "kfx Profile Suite validation failed: profile members must match "
+            "kungfuConfig.suite.members"
+        )
 
 
 def validate_first_party_manifest(

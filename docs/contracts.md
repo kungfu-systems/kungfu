@@ -109,19 +109,23 @@ rules have one machine-readable contract source:
 [`kungfu-kfx.contract.json`](../framework/kfx/kungfu-kfx.contract.json).
 Node hosts (`@kungfu-tech/kfx`, GUI, TUI, first-party manifest generation), the
 Python CLI (`kungfu kfx`), Skill dependency binding, and frozen products read
-that contract rather than carrying separate manifest shapes.
+that contract rather than carrying separate manifest shapes. The same source
+owns `profileSuiteSchema`: KFX Suites may bind a
+`kungfu.profile-suite/v1` semantic closure without introducing another schema
+or trust authority.
 
-The contract carries `contractSchema`, `packageManifestSchema`, and
-`firstPartyManifestSchema`. A package can still use current compatibility
-surfaces such as `kungfuBuild.python` or a package-root `CMakeLists.txt`, but
-the accepted manifest envelope and kind classification are described by this
-contract, not by ad hoc consumers.
+The contract carries `contractSchema`, `packageManifestSchema`,
+`profileSuiteSchema`, and `firstPartyManifestSchema`. A package can still use
+current compatibility surfaces such as `kungfuBuild.python` or a package-root
+`CMakeLists.txt`, but the accepted manifest envelope and kind classification
+are described by this contract, not by ad hoc consumers.
 
 **Verify.** Run:
 
 ```sh
 kungfu kfx contract --json
 kungfu kfx schema --json
+kungfu kfx profile-schema --json
 kungfu kfx inspect <package-dir-or-tgz> --json
 ./shifu verify
 ```

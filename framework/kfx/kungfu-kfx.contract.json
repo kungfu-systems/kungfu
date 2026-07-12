@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.kfx.contract/v1",
   "id": "kungfu-kfx",
-  "version": 2,
+  "version": 3,
   "weldedSurface": "kfx-contract",
   "description": "Single source for KFX package manifests, discovery rules, trust inputs, and build detection.",
   "contractSchema": {
@@ -18,6 +18,7 @@
       "resolution",
       "knownCapabilities",
       "packageManifestSchema",
+      "profileSuiteSchema",
       "firstPartyManifestSchema"
     ],
     "properties": {
@@ -101,6 +102,9 @@
       "packageManifestSchema": {
         "type": "object"
       },
+      "profileSuiteSchema": {
+        "type": "object"
+      },
       "firstPartyManifestSchema": {
         "type": "object"
       }
@@ -175,6 +179,11 @@
                   "minLength": 1
                 },
                 "uniqueItems": true
+              },
+              "profile": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$"
               }
             }
           },
@@ -424,6 +433,193 @@
           "python": {
             "type": "object",
             "additionalProperties": true
+          }
+        }
+      }
+    }
+  },
+  "profileSuiteSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://kungfu.link/schema/profile-suite-v1.json",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema",
+      "id",
+      "title",
+      "version",
+      "members",
+      "kfd1",
+      "kfd2",
+      "actions",
+      "views",
+      "migrations",
+      "permissions",
+      "qualification"
+    ],
+    "properties": {
+      "schema": {
+        "type": "string",
+        "const": "kungfu.profile-suite/v1"
+      },
+      "id": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$"
+      },
+      "title": {
+        "type": "string",
+        "minLength": 1
+      },
+      "version": {
+        "type": "string",
+        "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+      },
+      "members": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "required",
+          "optional"
+        ],
+        "properties": {
+          "required": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/memberKey"
+            }
+          },
+          "optional": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/memberKey"
+            }
+          }
+        }
+      },
+      "kfd1": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contractWorld",
+          "factSurfaces",
+          "reducers",
+          "compatibility"
+        ],
+        "properties": {
+          "contractWorld": {
+            "$ref": "#/$defs/contentRef"
+          },
+          "factSurfaces": {
+            "$ref": "#/$defs/nonEmptyContentRefs"
+          },
+          "reducers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/contentRef"
+            }
+          },
+          "compatibility": {
+            "$ref": "#/$defs/contentRef"
+          }
+        }
+      },
+      "kfd2": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "claims",
+          "purposes",
+          "policies"
+        ],
+        "properties": {
+          "claims": {
+            "$ref": "#/$defs/nonEmptyContentRefs"
+          },
+          "purposes": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9._-]+$"
+            }
+          },
+          "policies": {
+            "$ref": "#/$defs/nonEmptyContentRefs"
+          }
+        }
+      },
+      "actions": {
+        "$ref": "#/$defs/registryFacet"
+      },
+      "views": {
+        "$ref": "#/$defs/registryFacet"
+      },
+      "migrations": {
+        "$ref": "#/$defs/registryFacet"
+      },
+      "permissions": {
+        "$ref": "#/$defs/registryFacet"
+      },
+      "qualification": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "profile"
+        ],
+        "properties": {
+          "profile": {
+            "$ref": "#/$defs/contentRef"
+          }
+        }
+      }
+    },
+    "$defs": {
+      "memberKey": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._-]+$"
+      },
+      "contentRef": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "sha256"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      },
+      "nonEmptyContentRefs": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "$ref": "#/$defs/contentRef"
+        }
+      },
+      "registryFacet": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "registry"
+        ],
+        "properties": {
+          "registry": {
+            "$ref": "#/$defs/contentRef"
           }
         }
       }

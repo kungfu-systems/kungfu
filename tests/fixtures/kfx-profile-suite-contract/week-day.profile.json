@@ -1,0 +1,90 @@
+{
+  "schema": "kungfu.profile-suite/v1",
+  "id": "example.week-day",
+  "title": "Week / Day",
+  "version": "1.0.0",
+  "members": {
+    "required": [
+      "week-day-contract",
+      "week-day-actions",
+      "week-day-assessment"
+    ],
+    "optional": [
+      "week-day-dashboard"
+    ]
+  },
+  "kfd1": {
+    "contractWorld": {
+      "path": "contracts/world.json",
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    "factSurfaces": [
+      {
+        "path": "contracts/week.json",
+        "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+      },
+      {
+        "path": "contracts/day.json",
+        "sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+      }
+    ],
+    "reducers": [
+      {
+        "path": "reducers/current-plan.json",
+        "sha256": "4444444444444444444444444444444444444444444444444444444444444444"
+      }
+    ],
+    "compatibility": {
+      "path": "compatibility/v1.json",
+      "sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+    }
+  },
+  "kfd2": {
+    "claims": [
+      {
+        "path": "claims/action-completed.json",
+        "sha256": "6666666666666666666666666666666666666666666666666666666666666666"
+      }
+    ],
+    "purposes": [
+      "operator-review",
+      "handoff"
+    ],
+    "policies": [
+      {
+        "path": "assessments/action-completed.json",
+        "sha256": "7777777777777777777777777777777777777777777777777777777777777777"
+      }
+    ]
+  },
+  "actions": {
+    "registry": {
+      "path": "actions/registry.json",
+      "sha256": "8888888888888888888888888888888888888888888888888888888888888888"
+    }
+  },
+  "views": {
+    "registry": {
+      "path": "views/registry.json",
+      "sha256": "9999999999999999999999999999999999999999999999999999999999999999"
+    }
+  },
+  "migrations": {
+    "registry": {
+      "path": "migrations/registry.json",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  },
+  "permissions": {
+    "registry": {
+      "path": "permissions.json",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  },
+  "qualification": {
+    "profile": {
+      "path": "qualification/profile.json",
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    }
+  }
+}

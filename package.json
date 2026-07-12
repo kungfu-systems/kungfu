@@ -78,6 +78,7 @@
     "test:mmap": "node scripts/require-shifu.mjs test:mmap && node scripts/run-mmap-tests.mjs",
     "test:durability-contract": "node scripts/require-shifu.mjs test:durability-contract && node scripts/run-durability-contract-tests.mjs",
     "test:state-service": "node scripts/require-shifu.mjs test:state-service && node scripts/run-state-service-tests.mjs",
+    "test:kfx-profile-suite": "node scripts/require-shifu.mjs test:kfx-profile-suite && node scripts/run-kfx-profile-suite-tests.mjs",
     "test:durable-ingest": "node scripts/require-shifu.mjs test:durable-ingest && node scripts/run-durable-ingest-tests.mjs",
     "test:projection-bootstrap": "node scripts/require-shifu.mjs test:projection-bootstrap && node scripts/run-projection-bootstrap-tests.mjs",
     "test:crash-recovery": "node scripts/require-shifu.mjs test:crash-recovery && node scripts/run-crash-recovery-tests.mjs",

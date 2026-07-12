@@ -1,0 +1,36 @@
+[
+  {
+    "id": "unknown-top-level-field",
+    "operation": "set",
+    "path": ["authorityOverride"],
+    "value": true,
+    "match": "Additional properties are not allowed"
+  },
+  {
+    "id": "missing-kfd2",
+    "operation": "remove",
+    "path": ["kfd2"],
+    "match": "'kfd2' is a required property"
+  },
+  {
+    "id": "content-path-escape",
+    "operation": "set",
+    "path": ["kfd1", "contractWorld", "path"],
+    "value": "../outside.json",
+    "match": "does not match"
+  },
+  {
+    "id": "malformed-content-hash",
+    "operation": "set",
+    "path": ["actions", "registry", "sha256"],
+    "value": "sha256:not-a-content-root",
+    "match": "does not match"
+  },
+  {
+    "id": "member-in-required-and-optional",
+    "operation": "set",
+    "path": ["members", "optional"],
+    "value": ["week-day-contract"],
+    "match": "both required and optional"
+  }
+]

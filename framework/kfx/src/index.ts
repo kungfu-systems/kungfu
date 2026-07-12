@@ -218,6 +218,39 @@ export type KfxServiceDecl = {
 export type KfxSuiteDecl = {
   title: string;
   members: string[];
+  // Optional relative path to the suite's domain-semantic closure. The
+  // document is validated against profileSuiteSchema; its installed root and
+  // lifecycle facts remain Core-owned.
+  profile?: string;
+};
+
+export type KfxProfileSuiteContentRef = {
+  path: string;
+  sha256: string;
+};
+
+export type KfxProfileSuite = {
+  schema: 'kungfu.profile-suite/v1';
+  id: string;
+  title: string;
+  version: string;
+  members: { required: string[]; optional: string[] };
+  kfd1: {
+    contractWorld: KfxProfileSuiteContentRef;
+    factSurfaces: KfxProfileSuiteContentRef[];
+    reducers: KfxProfileSuiteContentRef[];
+    compatibility: KfxProfileSuiteContentRef;
+  };
+  kfd2: {
+    claims: KfxProfileSuiteContentRef[];
+    purposes: string[];
+    policies: KfxProfileSuiteContentRef[];
+  };
+  actions: { registry: KfxProfileSuiteContentRef };
+  views: { registry: KfxProfileSuiteContentRef };
+  migrations: { registry: KfxProfileSuiteContentRef };
+  permissions: { registry: KfxProfileSuiteContentRef };
+  qualification: { profile: KfxProfileSuiteContentRef };
 };
 
 // ── load plan: host-agnostic discovery + decision (ADR-0017) ──────────────
@@ -482,6 +515,15 @@ export function kfxPackageManifestSchema(
   );
 }
 
+export function kfxProfileSuiteSchema(
+  env: Record<string, string | undefined>,
+  deps: KfxPlanDeps,
+): Record<string, unknown> {
+  return structuredClone(
+    objectValue(loadKfxContract(env, deps).profileSuiteSchema) ?? {},
+  );
+}
+
 export function validateKfxPackageManifest(
   manifest: unknown,
   contract: KfxContract,
@@ -491,6 +533,40 @@ export function validateKfxPackageManifest(
     objectValue(contract.packageManifestSchema) ?? {},
     'KFX package manifest',
   );
+}
+
+export function validateKfxProfileSuite(
+  profile: unknown,
+  contract: KfxContract,
+  suiteMembers?: string[],
+): void {
+  validateJsonSchema(
+    profile,
+    objectValue(contract.profileSuiteSchema) ?? {},
+    'KFX Profile Suite',
+  );
+  const members = objectValue(objectValue(profile)?.members);
+  const required = Array.isArray(members?.required)
+    ? (members.required as string[])
+    : [];
+  const optional = Array.isArray(members?.optional)
+    ? (members.optional as string[])
+    : [];
+  const overlap = required.filter((member) => optional.includes(member));
+  if (overlap.length) {
+    throw new Error(
+      `KFX Profile Suite validation failed: members cannot be both required and optional: ${overlap.join(', ')}`,
+    );
+  }
+  if (suiteMembers) {
+    const declared = [...new Set([...required, ...optional])].sort();
+    const packaged = [...new Set(suiteMembers)].sort();
+    if (JSON.stringify(declared) !== JSON.stringify(packaged)) {
+      throw new Error(
+        'KFX Profile Suite validation failed: profile members must match kungfuConfig.suite.members',
+      );
+    }
+  }
 }
 
 function validateFirstPartyManifest(

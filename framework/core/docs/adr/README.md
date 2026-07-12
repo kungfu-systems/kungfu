@@ -86,6 +86,7 @@ A record's **Status** says where it stands:
 | [0066](ADR-0066-native-cpp-toolchain-contract-and-modules-hold.md) | accepted | native compilers share one C++ contract; modules remain qualification-only |
 | [0067](ADR-0067-schema-registry-compile-time-contract-welds.md) | accepted; not yet implemented | schema contract invariants welded at compile time — `carrier_type` tag uniqueness and payload layout↔`schema_version` binding (reusing the ADR-0062 fingerprint) |
 | [0068](ADR-0068-tiered-durability-and-crash-recovery.md) | accepted; staged | tiered durability separates hot mmap visibility, durable fact admission, rebuildable projections, and later replication |
+| [0069](ADR-0069-agent-first-kfx-profile-suite-runtime.md) | accepted; staged | Agent-first KFX Profile Suites carry domain semantics over a domain-neutral Core |
 
 ## Reading by theme
 
@@ -136,6 +137,9 @@ A record's **Status** says where it stands:
   [0045](ADR-0045-kfx-execution-profiles-native-rust-wasm.md) proposes the
   orthogonal execution-profile axis: Rust-primary native, WASM components,
   managed runtimes, and subprocesses, without weakening the trust decision.
+  [0069](ADR-0069-agent-first-kfx-profile-suite-runtime.md) adds the
+  domain-semantic Profile closure without giving Suite members authority over
+  fact admission, assessment truth, or their own lifecycle.
 - **Agent capability layer** — [0015](ADR-0015-kungfu-skill-agent-context-layer.md)
   (Kungfu Skill as the agent-facing layer above kfx: `SKILL.md` as the minimum
   valid source, compact catalog injection, Node/Python manage modes, and kfx

@@ -214,6 +214,26 @@ So "sandboxed" should be read as a precise tier/property for the relevant host
 and facet, not as a blanket statement that every extension form is safely
 contained.
 
+## Profile Suites currently have a source contract, not a shipped lifecycle
+
+[ADR-0069](../framework/core/docs/adr/ADR-0069-agent-first-kfx-profile-suite-runtime.md)
+adds `kungfu.profile-suite/v1`, shared validation, content-bound facets, and
+installed CLI schema discovery to the KFX contract.
+
+What is **not yet guaranteed**:
+
+- Profile root calculation or journal-backed install, qualification,
+  activation, upgrade, rollback, and removal facts;
+- an installed Agent SDK that scaffolds or executes Profile actions;
+- runtime-discovered GUI Profile Manager or generic Profile rendering;
+- Mission Control migration to the public Profile path;
+- third-party Profile coexistence, portability, or historical-cut
+  compatibility claims.
+
+A schema-valid Profile proves only that its declared source closure satisfies
+the current contract. It is not evidence that Kungfu installed, trusted,
+activated, executed, or assessed that Profile.
+
 ## Kungfu Skills have a first slice, not a marketplace
 
 Kungfu Skills are accepted as the agent-facing context layer above kfx
