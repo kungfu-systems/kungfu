@@ -95,7 +95,20 @@ void journal::load_page(uint32_t page_id) {
         page_ = std::move(preload_page_);
         page_->enable_page();
       } else {
-        page_ = page::load(location_, dest_id_, page_size_, page_id, policy_.current_page);
+        // A coordinator reader joins a freshly-registered peer's PUBLIC / SYNC /
+        // command journals (coordinator::register_peer) before that peer has
+        // opened its own writers, so the page may not exist yet. Create it here
+        // — the "create sync journal" intent at the register site — rather than
+        // failing the read-only open. The peer subsequently opens the same page
+        // as a writer. Guarded so only the coordinator reader
+        // (precreation == coordinator) and only a genuinely missing page take
+        // this path; normal readers and existing pages are unaffected.
+        auto page_policy = policy_.current_page;
+        if (policy_.precreation == page_precreation::coordinator and
+            not page::check_page_existed(location_, dest_id_, page_id)) {
+          page_policy = page_open_policy::coordinator_precreate();
+        }
+        page_ = page::load(location_, dest_id_, page_size_, page_id, page_policy);
       }
     }
     frame_->set_address(page_->first_frame_address());
