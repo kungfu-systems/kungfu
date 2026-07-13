@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0068
 decision_status: accepted
 implementation_status: staged
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/668, https://github.com/kungfu-systems/kungfu/pull/673, https://github.com/kungfu-systems/kungfu/pull/682, https://github.com/kungfu-systems/kungfu/pull/687, https://github.com/kungfu-systems/kungfu/pull/691, https://github.com/kungfu-systems/kungfu/pull/693, https://github.com/kungfu-systems/kungfu/pull/697, https://github.com/kungfu-systems/kungfu/pull/701, https://github.com/kungfu-systems/kungfu/pull/705, https://github.com/kungfu-systems/kungfu/pull/754, https://github.com/kungfu-systems/kungfu/pull/770, https://github.com/kungfu-systems/kungfu/pull/782]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/668, https://github.com/kungfu-systems/kungfu/pull/673, https://github.com/kungfu-systems/kungfu/pull/682, https://github.com/kungfu-systems/kungfu/pull/687, https://github.com/kungfu-systems/kungfu/pull/691, https://github.com/kungfu-systems/kungfu/pull/693, https://github.com/kungfu-systems/kungfu/pull/697, https://github.com/kungfu-systems/kungfu/pull/701, https://github.com/kungfu-systems/kungfu/pull/705, https://github.com/kungfu-systems/kungfu/pull/754, https://github.com/kungfu-systems/kungfu/pull/770, https://github.com/kungfu-systems/kungfu/pull/783]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
