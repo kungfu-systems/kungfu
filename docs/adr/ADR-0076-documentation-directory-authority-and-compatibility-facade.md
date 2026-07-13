@@ -3,7 +3,10 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ADR-0076
 decision_status: accepted
-implementation_status: not-started
+implementation_status: implemented
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/745]
+closure_pr: https://github.com/kungfu-systems/kungfu/pull/745
+qualification_refs: [docs.contract.json, scripts/check-docs.test.mjs, scripts/document-metadata-contract.test.mjs]
 review_state: maintainer-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -16,7 +19,7 @@ last_reviewed: 2026-07-13
 
 # ADR-0076: Documentation directory authority and compatibility facade
 
-- Status: accepted
+- Status: accepted and implemented
 - Date: 2026-07-13
 - Scope: public documentation topology, navigation authority, metadata routing,
   publication reachability, and inbound-link compatibility
@@ -94,3 +97,8 @@ Implementation qualification must prove document conservation, direct
 canonical navigation, old-path compatibility, metadata authority uniqueness,
 publication reachability, and negative fixtures for flat placement, redirect
 chains, and canonical-to-redirect links.
+
+PR [#745](https://github.com/kungfu-systems/kungfu/pull/745) implements the
+canonical moves, section indexes, typed compatibility facade, metadata routing,
+publication graph, and negative placement/redirect fixtures. The deterministic
+documentation gate is the retained qualification surface.
