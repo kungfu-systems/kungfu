@@ -36,7 +36,6 @@ both frontmatter and the registry, and stale registry entries fail the gate.
 | public document | registry | repository entry documents, `docs/`, and `framework/spec/` | document lifecycle, type, review state, and public sensitivity |
 | architecture decision | inline | canonical `docs/adr/` Core and Shifu records | ADR id, decision and implementation state, review state, evidence, and public sensitivity |
 | ADR index | inline | canonical `docs/adr/README.md` registry | active index identity and review state; every row must match record metadata |
-| ADR redirect | inline | legacy Core and Shifu ADR paths | deprecated redirect identity plus one `moved_to` target; decision fields are forbidden |
 | engineering evidence | inline | selected spikes, qualification contracts, and implementation slices | local audit context for a bounded engineering claim |
 | repository document | inline optional | other tracked Markdown that declares Kungfu metadata | the base document lifecycle profile |
 | external schema | external | issue templates and Kungfu Skills | the schema owned by their consumer, not this contract |
@@ -118,12 +117,11 @@ registry status cell.
 
 `ADR-*` and `SHIFU-ADR-*` are equal architecture records. The prefix identifies
 Kungfu versus Shifu ownership and lets the Shifu history move independently if
-needed; it does not change metadata, evidence, review, or release gates. Files
-under the former `framework/core/docs/adr/` and `docs/shifu/adr/` roots are
-compatibility redirects. Their contract forbids `adr_id`, decision state, and
-implementation state so an old URL cannot become a second authority.
-Negative fixtures also prove that a new canonical record, with or without
-architecture-decision metadata, cannot be admitted under either retired root.
+needed; it does not change metadata, evidence, review, or release gates. The
+former `framework/core/docs/` and `docs/shifu/adr/` roots are retired and must
+contain no Markdown. They do not carry redirects or compatibility metadata.
+Negative fixtures prove that any new Markdown, including a fully formed
+architecture decision, is rejected under either retired root.
 
 Run `./shifu adr:audit -- --json` to inspect every lifecycle and evidence state.
 The normal audit fails on structural contradictions. `--strict` also fails on
@@ -139,7 +137,7 @@ An implementation state is a claim, so ADRs may bind it to immutable evidence:
 implementation_commits: [68dc33a3f3daa56ac1893f9e8671575c6e85f9a8]
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/123]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/123
-qualification_refs: [framework/core/docs/qualification/mmap-performance.md]
+qualification_refs: [docs/qualification/mmap-performance.md]
 ```
 
 - `implementation_commits` contains full 40-character SHAs for implementation

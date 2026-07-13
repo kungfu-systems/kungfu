@@ -4,7 +4,7 @@
 // embedding membrane.
 //
 // This is the trunk's first FFI consumer of the libkungfu embedding C ABI (RFC
-// framework/core/docs/embedding-contract-face.md): it negotiates the v1 table,
+// docs/architecture/embedding-contract-face.md): it negotiates the v1 table,
 // opens a context on the runtime root, and reports capabilities plus, optionally,
 // a bounded journal read probe. It is read-only by construction (RFC D5): the
 // wrapper exposes only context/reader/read_batch, so `doctor` cannot write, and

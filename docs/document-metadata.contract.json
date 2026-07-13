@@ -16,7 +16,6 @@
     "closure_commit",
     "closure_pr",
     "qualification_refs",
-    "moved_to",
     "supersedes",
     "superseded_by"
   ],
@@ -108,38 +107,6 @@
       "forbidden": ["status", "decision_status", "source_level"]
     },
     {
-      "id": "adr-redirect",
-      "metadataMode": "inline",
-      "patterns": [
-        "^framework/core/docs/adr/.*\\.md$",
-        "^docs/shifu/adr/.*\\.md$"
-      ],
-      "required": [
-        "metadata_schema",
-        "doc_type",
-        "document_status",
-        "review_state",
-        "sensitivity",
-        "moved_to"
-      ],
-      "constants": {
-        "metadata_schema": "kungfu.document-metadata/v1",
-        "doc_type": "adr-redirect",
-        "document_status": "deprecated",
-        "sensitivity": "public"
-      },
-      "enums": {
-        "review_state": ["self-reviewed", "maintainer-reviewed"]
-      },
-      "forbidden": [
-        "status",
-        "decision_status",
-        "implementation_status",
-        "adr_id",
-        "source_level"
-      ]
-    },
-    {
       "id": "engineering-evidence",
       "metadataMode": "inline",
       "files": [
@@ -149,9 +116,9 @@
         "docs/research/libwasm-embedding-membrane-spike.md",
         "docs/research/rust-host-spike.md",
         "docs/qualification/single-host-performance-qualification.md",
-        "framework/core/docs/carrier-type-registry.md",
-        "framework/core/docs/qualification/mmap-performance.md",
-        "framework/core/docs/strong-durability-and-crash-recovery-design.md",
+        "docs/architecture/carrier-type-registry.md",
+        "docs/architecture/strong-durability-and-crash-recovery-design.md",
+        "docs/qualification/mmap-performance.md",
         "framework/core/slices/libwasm-shared-membrane/README.md",
         "framework/core/slices/native-storage-closure/README.md",
         "framework/core/slices/shared-embedding-membrane/README.md"

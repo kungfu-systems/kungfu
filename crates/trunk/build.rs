@@ -4,7 +4,7 @@
 //
 // It is a no-op unless the `embedding` feature is on. With the feature, it links
 // libkungfu so the trunk can FFI into the embedding membrane (RFC
-// framework/core/docs/embedding-contract-face.md D2/D6): the trunk is the
+// docs/architecture/embedding-contract-face.md D2/D6): the trunk is the
 // first-party consumer, compiled against the same core it ships next to. Coreless
 // builds — the workspace CI gate, a dev checkout without a built core — keep the
 // feature off and link nothing, so the rlib-only members and the frozen-host

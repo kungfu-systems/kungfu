@@ -254,12 +254,7 @@ if (
     const metadataContract = readMetadataContract(ROOT);
     const files = markdownFiles(ROOT);
     const adrPaths = new Set(
-      files.filter(
-        (file) =>
-          file.startsWith('docs/adr/') ||
-          file.startsWith('framework/core/docs/adr/') ||
-          file.startsWith('docs/shifu/adr/'),
-      ),
+      files.filter((file) => file.startsWith('docs/adr/')),
     );
     const structuralFindings = validateDocumentMetadata({
       root: ROOT,

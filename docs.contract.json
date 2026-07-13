@@ -67,6 +67,7 @@
   "hierarchy": {
     "root": "docs",
     "entryFiles": ["docs/README.md", "docs/MAP.md"],
+    "forbiddenMarkdownRoots": ["framework/core/docs", "docs/shifu/adr"],
     "canonicalDirectories": [
       "docs/adr",
       "docs/architecture",
@@ -82,8 +83,7 @@
   "publication": {
     "roots": ["README.md", "AGENTS.md", "CONTRIBUTING.md", "framework/spec/README.md"],
     "include": ["README.md", "AGENTS.md", "CONTRIBUTING.md", "docs", "framework/spec"],
-    "allowedOrphans": [],
-    "allowedOrphanDocumentTypes": ["adr-redirect"]
+    "allowedOrphans": []
   },
   "executableExamples": [
     {

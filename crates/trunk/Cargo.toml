@@ -28,7 +28,7 @@ repository.workspace = true
 # gate; a dev checkout without a built core). The product build turns it on to
 # link libkungfu and light up the read-only physical inspection (`doctor`)
 # through the embedding membrane — the trunk as the membrane's first-party
-# consumer (RFC framework/core/docs/embedding-contract-face.md D2/D6), compiled
+# consumer (RFC docs/architecture/embedding-contract-face.md D2/D6), compiled
 # against the same core it ships next to.
 embedding = ["dep:kungfu-embedding"]
 

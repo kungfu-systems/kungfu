@@ -7,7 +7,7 @@ implementation_status: implemented
 implementation_commits: [5d4240edde731e857ec4ca8fba8dead7104e0b9b, 81f6b61ca3fbf75399c49b32f75310c25e52962d]
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/599]
 closure_commit: 81f6b61ca3fbf75399c49b32f75310c25e52962d
-qualification_refs: [framework/core/docs/qualification/mmap-performance.md]
+qualification_refs: [docs/qualification/mmap-performance.md]
 review_state: maintainer-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -26,7 +26,7 @@ last_reviewed: 2026-07-11
 - Related: [ADR-0001](ADR-0001-yijinjing-publish-barrier.md),
   [ADR-0024](ADR-0024-location-role-and-journal-page-policy.md), and
   [ADR-0057](ADR-0057-domain-neutral-live-runtime-terminology.md)
-- Qualification: [mmap performance](../../framework/core/docs/qualification/mmap-performance.md)
+- Qualification: [mmap performance](../qualification/mmap-performance.md)
 
 ## Context
 

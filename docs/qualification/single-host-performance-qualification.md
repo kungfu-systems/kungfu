@@ -238,7 +238,7 @@ unmatched environment removes the claim rather than substituting a generic
 - [Strong durability and crash recovery](durability-and-crash-recovery.md)
   defines the receipt, watermark, service, and recovery semantics that this
   gate must preserve.
-- [yijinjing mmap performance qualification](../../framework/core/docs/qualification/mmap-performance.md)
+- [yijinjing mmap performance qualification](mmap-performance.md)
   qualifies component-level mmap policies and regressions; it does not replace
   this product-level end-to-end gate.
 - [Episode atomicity qualification](episode-atomicity-qualification.md)

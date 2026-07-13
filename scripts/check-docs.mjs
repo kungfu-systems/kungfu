@@ -8,10 +8,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import {
-  parseFrontmatter,
-  validateDocumentMetadata,
-} from './document-metadata-contract.mjs';
+import { validateDocumentMetadata } from './document-metadata-contract.mjs';
 import { validateVocabularyContract } from './vocabulary-contract.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -44,8 +41,8 @@ const SAFE_EXAMPLE_COMMANDS = new Set([
  *   schemaVersion: number,
  *   requiredFiles?: string[],
  *   requiredPointers?: {from: string, to: string}[],
- *   hierarchy?: {root: string, entryFiles: string[], canonicalDirectories: string[]},
- *   publication?: {roots: string[], include: string[], allowedOrphans?: string[], allowedOrphanDocumentTypes?: string[]},
+ *   hierarchy?: {root: string, entryFiles: string[], canonicalDirectories: string[], forbiddenMarkdownRoots?: string[]},
+ *   publication?: {roots: string[], include: string[], allowedOrphans?: string[]},
  *   executableExamples?: {id: string, file: string, command: string[], stdoutPattern?: string, timeoutMs?: number}[]
  * }} DocsContract
  */
@@ -254,6 +251,22 @@ export function checkDocs(options = {}) {
     const hierarchyRoot = hierarchy.root.replace(/\/$/, '');
     const entries = new Set(hierarchy.entryFiles || []);
     const canonicalDirectories = hierarchy.canonicalDirectories || [];
+    const forbiddenMarkdownRoots = (hierarchy.forbiddenMarkdownRoots || []).map(
+      (directory) => directory.replace(/\/$/, ''),
+    );
+    for (const rel of files) {
+      const retiredRoot = forbiddenMarkdownRoots.find(
+        (directory) => rel === directory || rel.startsWith(`${directory}/`),
+      );
+      if (retiredRoot) {
+        findings.push({
+          code: 'documentation-retired-root',
+          file: rel,
+          line: 1,
+          message: `Markdown is forbidden under retired documentation root: ${retiredRoot}`,
+        });
+      }
+    }
     for (const rel of files.filter(
       (file) => file.startsWith(`${hierarchyRoot}/`) || file === hierarchyRoot,
     )) {
@@ -453,7 +466,6 @@ export function checkDocs(options = {}) {
       ),
     );
     const allowed = new Set(publication.allowedOrphans || []);
-    const allowedTypes = new Set(publication.allowedOrphanDocumentTypes || []);
     const reachable = new Set(
       publication.roots.filter((rel) => included.has(rel)),
     );
@@ -472,15 +484,7 @@ export function checkDocs(options = {}) {
       }
     }
     for (const rel of included) {
-      const frontmatter = parseFrontmatter(documents.get(rel)?.text || '');
-      const documentType = String(
-        frontmatter?.fields.get('doc_type')?.value || '',
-      );
-      if (
-        !reachable.has(rel) &&
-        !allowed.has(rel) &&
-        !allowedTypes.has(documentType)
-      )
+      if (!reachable.has(rel) && !allowed.has(rel))
         findings.push({
           code: 'publication-orphan',
           file: rel,

@@ -125,29 +125,6 @@ test('rejects unreachable public documents', () => {
   assert.ok(findings.some((finding) => finding.code === 'publication-orphan'));
 });
 
-test('allows unreachable documents only through a typed compatibility profile', () => {
-  const typed = structuredClone(contract);
-  typed.publication.allowedOrphanDocumentTypes = ['adr-redirect'];
-  const root = fixture({
-    'README.md': '# Home\n\n[Guide](docs/guide.md)\n',
-    'docs/guide.md': '# Guide\n',
-    'docs/redirect.md': `---
-doc_type: adr-redirect
----
-
-# Moved
-`,
-  });
-  const findings = checkDocs({
-    root,
-    files: ['README.md', 'docs/guide.md', 'docs/redirect.md'],
-    contract: typed,
-    vocabularyRegistry: false,
-    metadataContract: false,
-  });
-  assert.deepEqual(findings, []);
-});
-
 test('enforces a canonical docs hierarchy with entry-only root Markdown', () => {
   const hierarchical = structuredClone(contract);
   hierarchical.requiredFiles = ['README.md', 'docs/README.md'];
@@ -209,6 +186,39 @@ test('rejects every undeclared root Markdown document', () => {
       (finding) => finding.code === 'documentation-hierarchy-root',
     ).length,
     2,
+  );
+});
+
+test('rejects Markdown under every retired documentation root', () => {
+  const hierarchical = structuredClone(contract);
+  hierarchical.hierarchy = {
+    root: 'docs',
+    entryFiles: [],
+    canonicalDirectories: ['docs/guides'],
+    forbiddenMarkdownRoots: ['framework/core/docs', 'docs/shifu/adr'],
+  };
+  const files = {
+    'README.md': '# Home\n\n[Guide](docs/guide.md)\n',
+    'docs/guide.md': '# Guide\n',
+    'framework/core/docs/design.md': '# Retired Core document\n',
+    'docs/shifu/adr/SHIFU-ADR-0100-example.md': '# Retired Shifu ADR\n',
+  };
+  const root = fixture(files);
+  const findings = checkDocs({
+    root,
+    files: Object.keys(files).sort(),
+    contract: hierarchical,
+    vocabularyRegistry: false,
+    metadataContract: false,
+  });
+  assert.deepEqual(
+    findings
+      .filter((finding) => finding.code === 'documentation-retired-root')
+      .map((finding) => finding.file),
+    [
+      'docs/shifu/adr/SHIFU-ADR-0100-example.md',
+      'framework/core/docs/design.md',
+    ],
   );
 });
 

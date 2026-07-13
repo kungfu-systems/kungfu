@@ -55,9 +55,9 @@ no single deterministic inventory of historical debt and stable blockers.
 - The namespace expresses ownership and future portability, not governance
   rank. Both namespaces pass one metadata, evidence, dev, alpha, and stable
   contract.
-- The former roots contain typed compatibility redirects only. Redirects must
-  name their canonical target and are forbidden from declaring `adr_id`,
-  decision state, implementation state, or release authority.
+- The former `framework/core/docs/` and `docs/shifu/adr/` roots are retired.
+  They contain no Markdown, including redirects, and the documentation gate
+  rejects any attempt to recreate a document beneath either path.
 - Decision lifecycle states are `proposed`, `accepted`, `superseded`,
   `rejected`, and `withdrawn`. Terminal states use
   `implementation_status: not-applicable`.
@@ -78,8 +78,8 @@ only through reviewable Git, PR, test, and qualification reconstruction.
 - Readers and tools have one stable architecture entrypoint.
 - Shifu remains independently identifiable without becoming a second-class
   decision system.
-- Existing repository and inbound GitHub links continue to resolve while old
-  paths cannot silently regain authority.
+- The repository carries one source path for each architecture decision; old
+  source paths do not silently regain authority.
 - Stable readiness can be inspected at any time, including before real release
   channels exist, without weakening the exact-release waiver mechanism.
 - The current debt inventory may be large. That is an honest migration result,
@@ -91,8 +91,7 @@ only through reviewable Git, PR, test, and qualification reconstruction.
 The deterministic gate proves:
 
 - canonical Core and Shifu records are governed by the same contract;
-- redirect files cannot become a second authority;
+- every Markdown file under either retired root is rejected;
 - reciprocal acyclic supersession is accepted and invalid graphs are rejected;
 - structural, strict, and stable audit dispositions remain distinct;
-- the Markdown publication graph accepts unreachable compatibility pages only
-  when their typed metadata marks them as ADR redirects.
+- the Markdown publication graph has no compatibility-page exception.

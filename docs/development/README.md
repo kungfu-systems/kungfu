@@ -10,3 +10,4 @@ workflow starts in the repository [CONTRIBUTING guide](../../CONTRIBUTING.md).
 - [Versioning](versioning.md)
 - [Version and Release Design](version-release-design.md)
 - [Document Metadata Contract](document-metadata.md)
+- [Windows Crash Symbols](windows-crash-symbols.md)

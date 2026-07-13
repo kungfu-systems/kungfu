@@ -2,7 +2,7 @@
 #
 # kungfu-embedding — the safe Rust face of the libkungfu embedding C ABI.
 #
-# RFC framework/core/docs/embedding-contract-face.md D7: the one shared borrowing
+# RFC docs/architecture/embedding-contract-face.md D7: the one shared borrowing
 # layer over the versioned `kungfu_embedding_get_api` + `kf_embedding_api_v1`
 # membrane (ADR-0045 gate 1 / ADR-0046 decision 5). Both the product trunk
 # (crates/trunk, this stage) and the future native-authoring crate (kungfu-kfx,

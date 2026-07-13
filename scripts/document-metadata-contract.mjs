@@ -547,28 +547,6 @@ export function validateDocumentMetadata(options) {
       });
     }
     validateFields(fields, profile, contract, rel, findings);
-    if (profile.id === 'adr-redirect') {
-      const movedTo = String(fields.get('moved_to')?.value || '');
-      const canonicalDirectory = path.posix.dirname(
-        contract.adrRegistries[0]?.index || 'docs/adr/README.md',
-      );
-      const expected = `${canonicalDirectory}/${path.basename(rel)}`;
-      if (movedTo !== expected) {
-        findings.push({
-          code: 'adr-redirect-target',
-          file: rel,
-          line: fields.get('moved_to')?.line || 1,
-          message: `ADR redirect must target its canonical record: ${expected}`,
-        });
-      } else if (!fileSet.has(movedTo)) {
-        findings.push({
-          code: 'adr-redirect-missing',
-          file: rel,
-          line: fields.get('moved_to')?.line || 1,
-          message: `ADR redirect target is not a tracked Markdown document: ${movedTo}`,
-        });
-      }
-    }
     const sources = fields.get('sources');
     if (sources) {
       const allowed = contract.sourceKinds || [];

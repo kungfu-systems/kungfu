@@ -214,7 +214,7 @@ pass/fail contract.
 - [ADR-0068](../adr/ADR-0068-tiered-durability-and-crash-recovery.md)
   fixes the authority, watermarks, receipts, service boundaries, and staged
   adoption decision.
-- [Strong-durability design](../../framework/core/docs/strong-durability-and-crash-recovery-design.md)
+- [Strong-durability design](../architecture/strong-durability-and-crash-recovery-design.md)
   defines the component contracts, recovery state machine, failure behavior,
   migration plan, and qualification work.
 - [ADR-0058](../adr/ADR-0058-yijinjing-explicit-mapping-policies.md)

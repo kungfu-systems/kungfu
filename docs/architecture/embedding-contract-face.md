@@ -5,15 +5,15 @@
 - Date: 2026-07-11
 - Scope: the libkungfu embedding surface the Rust host trunk consumes, and its
   convergence with the ADR-0045 gate-1 versioned C ABI
-- Discharges: [ADR-0046](../../../docs/adr/ADR-0046-rust-host-trunk-and-assembled-runtime.md)
+- Discharges: [ADR-0046](../adr/ADR-0046-rust-host-trunk-and-assembled-runtime.md)
   decision 5 (lines 181–205) — "which symbols constitute that surface is decided
   when stage 3 lands, recorded against this ADR"; the independent RFC ADR-0046
   requires for the embedding contract face (drift-prevention is the point).
-- Related: [ADR-0045](../../../docs/adr/ADR-0045-kfx-execution-profiles-native-rust-wasm.md)
+- Related: [ADR-0045](../adr/ADR-0045-kfx-execution-profiles-native-rust-wasm.md)
   gate 1 (the C ABI the trunk is named as second consumer of);
-  [`docs/research/libkungfu-embedding-membrane-spike.md`](../../../docs/research/libkungfu-embedding-membrane-spike.md)
+  [`docs/research/libkungfu-embedding-membrane-spike.md`](../research/libkungfu-embedding-membrane-spike.md)
   (the 3-platform feasibility evidence this RFC stands on);
-  [`docs/research/rust-host-spike.md`](../../../docs/research/rust-host-spike.md) Part 3.3
+  [`docs/research/rust-host-spike.md`](../research/rust-host-spike.md) Part 3.3
   (the 17 host-assumption seams Stage 3 neutralizes).
 
 ## Question

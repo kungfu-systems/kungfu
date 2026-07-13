@@ -3,7 +3,7 @@
 //! Safe Rust wrapper over the libkungfu embedding C ABI.
 //!
 //! This is the one shared borrowing layer required by the Stage 3 embedding
-//! contract RFC (`framework/core/docs/embedding-contract-face.md`, decision D7):
+//! contract RFC (`docs/architecture/embedding-contract-face.md`, decision D7):
 //! a single membrane (`kungfu_embedding_get_api` + the `kf_embedding_api_v*`
 //! table, mirrored from `framework/core/src/libkungfu/include/kungfu/embedding.h`)
 //! consumed by two callers — the product trunk (`crates/trunk`) and the future

@@ -100,10 +100,10 @@ recorded coverage gap unless a suitable runner is available.
 
 ### macOS baseline 01
 
-- Evidence: [`mmap-macos-arm64-f857fa162-baseline-01.json`](mmap-macos-arm64-f857fa162-baseline-01.json)
+- Evidence: [`mmap-macos-arm64-f857fa162-baseline-01.json`](evidence/mmap/mmap-macos-arm64-f857fa162-baseline-01.json)
 - Git head: `f857fa162b0cf21fbe157ceb38bc81a674aebc94`
 - Command: `./shifu qualify:mmap -- --profile baseline --output
-  framework/core/docs/qualification/mmap-macos-arm64-f857fa162-baseline-01.json`
+  docs/qualification/evidence/mmap/mmap-macos-arm64-f857fa162-baseline-01.json`
 - Host: Darwin 25.5.0, arm64 `Mac13,2`, 20 hardware threads, 16 KiB OS
   pages, Apple Clang 21, C++23.
 - Integrity: all written data frames were read back at 8, 32, and 128 journal
@@ -132,7 +132,7 @@ Current classification:
 
 ### Linux baseline 01
 
-- Evidence: [`mmap-linux-x86_64-bc3dcb7d2-baseline-01.json`](mmap-linux-x86_64-bc3dcb7d2-baseline-01.json)
+- Evidence: [`mmap-linux-x86_64-bc3dcb7d2-baseline-01.json`](evidence/mmap/mmap-linux-x86_64-bc3dcb7d2-baseline-01.json)
 - Git head: `bc3dcb7d2976dadb9651b9e4ad115257720d9d75`
 - Command: `./shifu qualify:mmap -- --profile baseline --output
   /tmp/mmap-linux-x86_64-bc3dcb7d2-baseline-01.json`
@@ -158,7 +158,7 @@ single-host suspicion to the first controlled production candidate.
 - Candidate: tail fast path plus binary upper-bound probes over append-ordered
   page begin times.
 - Candidate head: `4a36ae5ea4662ed78be500530e2335e35d8644e0`.
-- Retained evidence: [`mmap-macos-arm64-4a36ae5ea-candidate-01.json`](mmap-macos-arm64-4a36ae5ea-candidate-01.json).
+- Retained evidence: [`mmap-macos-arm64-4a36ae5ea-candidate-01.json`](evidence/mmap/mmap-macos-arm64-4a36ae5ea-candidate-01.json).
 - Rollback: revert `4a36ae5ea` and `60a3d5cf2`; no journal bytes, page names,
   persisted metadata, or public API changed.
 
@@ -186,7 +186,7 @@ pages:
 | late | 0.120-0.127 ms | 0.117-0.119 ms | no regression |
 
 Retained Linux candidate evidence:
-[`mmap-linux-x86_64-285158703-candidate-01.json`](mmap-linux-x86_64-285158703-candidate-01.json).
+[`mmap-linux-x86_64-285158703-candidate-01.json`](evidence/mmap/mmap-linux-x86_64-285158703-candidate-01.json).
 The full agent-120 product rebuild also completed with both production libwasm
 engines using the repository-pinned rustup 1.95.0 toolchain.
 
