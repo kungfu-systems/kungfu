@@ -148,9 +148,22 @@ When either projected value is visible, the normal `./shifu <task>` entrypoint
 automatically enters `cache apply` before running an ordinary task. The resolver
 therefore rejects a partial pair instead of silently bypassing policy. The
 managed child receives `SHIFU_CACHE_ACTIVE=1`, which prevents recursive
-application when it re-enters `./shifu`. Cache/configuration/bootstrap control
-verbs remain direct, and an explicit `./shifu cache apply -- COMMAND` remains
-available for overrides and diagnosis.
+application when it re-enters `./shifu`. `shifu gate run` is an execution verb,
+so it enters `cache apply` once before the Gate executor starts and every
+task-backed gate inherits the same bindings, disposable configuration, and
+exclusive Conan storage lock. Gate contract/schema/plan/receipt inspection and
+other cache/configuration/bootstrap control verbs remain direct.
+
+Cache execution context has three states. An absent context follows the
+projected profile and may enter `cache apply`; `SHIFU_CACHE_ACTIVE=1` means an
+outer Shifu execution already owns the bindings and lock; the internal
+`SHIFU_CACHE_BYPASS=source-acceptance` marker means the build-free source gate
+is deliberately cache-independent. The bypass never claims that cache was
+applied, and only that exact internal value is recognized. Cache profiles
+cannot inject either context key. Independent processes still contend for the
+exclusive Conan storage lock and fail closed; re-entry only reuses an outer
+execution that it actually inherits. An explicit
+`./shifu cache apply -- COMMAND` remains available for overrides and diagnosis.
 
 For CI, Buildchain accepts only the opaque reference and digest and forwards
 them to lifecycle commands. It does not fetch or parse the profile. The

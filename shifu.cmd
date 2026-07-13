@@ -62,8 +62,26 @@ set "SHIFU_ENTRYPOINT=1"
 rem Cache profiles are checkout-owned L2 contracts. Resolve/apply them before
 rem native dispatch; an inner `shifu <task>` can still select the native path.
 if /i "%~1"=="cache" goto delegate
+if /i "%~1"=="check:source" goto sourceacceptance
 if /i "%~1"=="docs:check:readonly" goto docsreadonly
 if /i "%~1"=="adr:release:gate" goto adrrelease
+
+:sourceacceptance
+rem shifu-cache-entry: source-acceptance-bypass
+if /i not "%~1"=="check:source" goto native
+set "SHIFU_CACHE_BYPASS=source-acceptance"
+shift
+where fnm >nul 2>nul && (
+  fnm install >nul 2>nul
+  fnm exec --using-file -- node "%~dp0scripts\source-acceptance.mjs" %*
+  exit /b !errorlevel!
+)
+where node >nul 2>nul && (
+  node "%~dp0scripts\source-acceptance.mjs" %*
+  exit /b !errorlevel!
+)
+echo shifu: check:source needs node -- install fnm or any system node 1>&2
+exit /b 127
 
 :docsreadonly
 if /i not "%~1"=="docs:check:readonly" goto native
@@ -246,9 +264,11 @@ rem Native dispatch owns automatic cache application when available. Mirror the
 rem same once-only behavior here for the in-script fallback. A partial pair is
 rem intentionally forwarded so the Shifu resolver fails closed.
 if "%SHIFU_CACHE_ACTIVE%"=="1" goto richdispatch
+if "%SHIFU_CACHE_BYPASS%"=="source-acceptance" goto richdispatch
 if not defined SHIFU_CACHE_PROFILE_REF if not defined SHIFU_CACHE_PROFILE_DIGEST goto richdispatch
 if /i "%~1"=="cache"       goto richdispatch
-if /i "%~1"=="gate"        goto richdispatch
+if /i "%~1"=="gate" if /i not "%~2"=="run" goto richdispatch
+rem shifu-cache-entry: gate-run-outer-apply
 if /i "%~1"=="proxy"       goto richdispatch
 if /i "%~1"=="config"      goto richdispatch
 if /i "%~1"=="clone"       goto richdispatch

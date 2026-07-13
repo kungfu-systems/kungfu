@@ -99,6 +99,13 @@ registered KFD-1 version decision process.
   partitions runner storage, holds an exclusive execution lock, and emits only
   path digests. This preserves warm binaries without turning a user's
   persistent Conan home into a controller surface.
+- Cache-managed task re-entry inherits the outer execution context instead of
+  resolving the profile or acquiring the Conan lock again. `gate run` owns one
+  outer apply boundary for all task-backed gates. The build-free source
+  acceptance gate uses a distinct internal bypass marker, so it cannot be
+  mistaken for evidence that cache was applied. Unknown bypass values do not
+  weaken automatic application, and truly independent processes still fail
+  closed on the exclusive lock.
 - Recipe source acquisition may be projected as a checksum-backed generic
   download binding. The recipe remains responsible for enforcing its SHA256;
   Shifu selects transport and never manufactures a mutable source checkout.

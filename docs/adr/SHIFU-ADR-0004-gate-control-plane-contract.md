@@ -70,6 +70,13 @@ digests, platform, capabilities, required action coverage, artifact presence,
 and redacted evidence pointers. Child output and inherited environment values
 are not receipt fields.
 
+When a cache profile is projected, `gate run` enters Shifu cache application
+once at this outer execution boundary. Task actions inherit the active cache
+context, disposable tool configuration, and Conan storage lock; they do not
+resolve or apply the profile again. Read-only Gate inspection remains outside
+that boundary, and build-free source acceptance uses a distinct cache-bypass
+context rather than pretending cache was applied.
+
 Qualification is recomputed, not trusted: it requires a clean Git revision, a
 current profile plan and gate definitions, and complete passing coverage for
 every required action. Advisory failures remain visible without blocking

@@ -122,6 +122,7 @@ exit 64
       SHIFU_TEST_EVIDENCE: path.join(root, 'evidence.txt'),
       SHIFU_CACHE_RECEIPT: path.join(root, 'receipt.json'),
       SHIFU_CACHE_SCOPE: 'development',
+      SHIFU_CACHE_BYPASS: '',
     },
   };
 }
@@ -640,6 +641,44 @@ test(
 );
 
 test(
+  'shell gate run applies a projected profile once at the outer boundary',
+  { skip: process.platform === 'win32' },
+  (t) => {
+    const fixture = shellHarness(t);
+    const result = spawnSync(
+      SHIFU_SH,
+      [
+        'gate',
+        'run',
+        'fixture.prepare',
+        '--registry',
+        'docs/shifu/examples/gates/execution.gate-registry.json',
+        '--json',
+      ],
+      {
+        cwd: ROOT,
+        encoding: 'utf8',
+        env: {
+          ...fixture.env,
+          SHIFU_CACHE_ACTIVE: '',
+          SHIFU_CACHE_PROFILE_REF: fixture.profilePath,
+          SHIFU_CACHE_PROFILE_DIGEST: fixture.digest,
+        },
+      },
+    );
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(JSON.parse(result.stdout).status, 'pass');
+    const trace = fs.readFileSync(fixture.trace, 'utf8');
+    assert.equal(
+      trace.split('\n').filter((line) => line.includes('shifu.mjs cache apply'))
+        .length,
+      1,
+    );
+    assert.match(trace, /shifu\.mjs gate run fixture\.prepare/);
+  },
+);
+
+test(
   'active child and absent projection bypass automatic cache application',
   { skip: process.platform === 'win32' },
   (t) => {
@@ -658,6 +697,15 @@ test(
           SHIFU_CACHE_ACTIVE: '',
           SHIFU_CACHE_PROFILE_REF: '',
           SHIFU_CACHE_PROFILE_DIGEST: '',
+        },
+      ],
+      [
+        'source-bypass',
+        {
+          SHIFU_CACHE_ACTIVE: '',
+          SHIFU_CACHE_BYPASS: 'source-acceptance',
+          SHIFU_CACHE_PROFILE_REF: 'profile.json',
+          SHIFU_CACHE_PROFILE_DIGEST: 'sha256:abc',
         },
       ],
     ]) {

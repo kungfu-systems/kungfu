@@ -204,6 +204,8 @@ export SHIFU_ENTRYPOINT=1
 # Source acceptance is a GitHub-hosted, build-free gate. Dispatch it before
 # native launcher resolution so SHIFU_NATIVE=1 cannot compile the launcher.
 if [ "${1:-}" = "check:source" ]; then
+  # shifu-cache-entry: source-acceptance-bypass
+  export SHIFU_CACHE_BYPASS=source-acceptance
   shift
   if command -v node >/dev/null 2>&1; then
     exec node ./scripts/source-acceptance.mjs "$@"
@@ -337,9 +339,16 @@ esac
 # pair still reaches the resolver and fails closed. SHIFU_CACHE_ACTIVE is set
 # only on the managed child by the Shifu cache runtime.
 if [ "${SHIFU_CACHE_ACTIVE:-}" != "1" ] \
+  && [ "${SHIFU_CACHE_BYPASS:-}" != "source-acceptance" ] \
   && { [ -n "${SHIFU_CACHE_PROFILE_REF:-}" ] || [ -n "${SHIFU_CACHE_PROFILE_DIGEST:-}" ]; }; then
   case "${1:-}" in
-    cache | gate | proxy | config | clone | self-update | self-version | promote | builds | -h | --help | -v | -V | --version) ;;
+    gate)
+      # shifu-cache-entry: gate-run-outer-apply
+      if [ "${2:-}" = "run" ]; then
+        exec ./shifu cache apply -- ./shifu "$@"
+      fi
+      ;;
+    cache | proxy | config | clone | self-update | self-version | promote | builds | -h | --help | -v | -V | --version) ;;
     *) exec ./shifu cache apply -- ./shifu "$@" ;;
   esac
 fi

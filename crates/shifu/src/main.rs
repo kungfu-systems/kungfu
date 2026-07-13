@@ -51,6 +51,7 @@ use shifu_core::style;
 /// Rich subcommands handled by the L2 node implementation (shifu.mjs),
 /// mirroring the sh / cmd entrypoints. Everything else goes to corepack pnpm.
 const L2_SUBCOMMANDS: &[&str] = &["build", "rebuild", "cache", "proxy", "config", "gate"];
+const SOURCE_ACCEPTANCE_CACHE_BYPASS: &str = "source-acceptance";
 
 #[cfg(any(windows, test))]
 fn command_requires_msvc(command: Option<&str>) -> bool {
@@ -59,12 +60,20 @@ fn command_requires_msvc(command: Option<&str>) -> bool {
 
 fn should_auto_apply_cache(
     command: Option<&str>,
+    gate_subcommand: Option<&str>,
     profile_ref: &str,
     profile_digest: &str,
     cache_active: &str,
+    cache_bypass: &str,
 ) -> bool {
-    if cache_active == "1" || (profile_ref.is_empty() && profile_digest.is_empty()) {
+    if cache_active == "1"
+        || cache_bypass == SOURCE_ACCEPTANCE_CACHE_BYPASS
+        || (profile_ref.is_empty() && profile_digest.is_empty())
+    {
         return false;
+    }
+    if command == Some("gate") {
+        return gate_subcommand == Some("run");
     }
     !matches!(
         command,
@@ -72,7 +81,6 @@ fn should_auto_apply_cache(
             "cache"
                 | "proxy"
                 | "config"
-                | "gate"
                 | "clone"
                 | "self-update"
                 | "self-version"
@@ -243,9 +251,13 @@ fn main() {
     // still fails closed. Control/bootstrap verbs stay outside this boundary.
     if should_auto_apply_cache(
         first,
+        (first == Some("gate"))
+            .then(|| args.get(1).map(String::as_str))
+            .flatten(),
         &env::var("SHIFU_CACHE_PROFILE_REF").unwrap_or_default(),
         &env::var("SHIFU_CACHE_PROFILE_DIGEST").unwrap_or_default(),
         &env::var("SHIFU_CACHE_ACTIVE").unwrap_or_default(),
+        &env::var("SHIFU_CACHE_BYPASS").unwrap_or_default(),
     ) {
         // The managed child re-enters through the canonical script. Pin it to
         // this already-running launcher so a dirty development checkout does
@@ -500,28 +512,64 @@ mod tests {
     fn projected_cache_wraps_tasks_once_and_keeps_control_verbs_direct() {
         assert!(should_auto_apply_cache(
             Some("build"),
+            None,
             "profile.json",
             "sha256:abc",
+            "",
             ""
         ));
         assert!(should_auto_apply_cache(
             Some("check"),
+            None,
             "profile.json",
+            "",
+            "",
+            ""
+        ));
+        assert!(should_auto_apply_cache(
+            Some("gate"),
+            Some("run"),
+            "profile.json",
+            "sha256:abc",
             "",
             ""
         ));
         assert!(!should_auto_apply_cache(
             Some("build"),
+            None,
             "profile.json",
             "sha256:abc",
-            "1"
+            "1",
+            ""
         ));
-        assert!(!should_auto_apply_cache(Some("build"), "", "", ""));
+        assert!(!should_auto_apply_cache(
+            Some("build"),
+            None,
+            "profile.json",
+            "sha256:abc",
+            "",
+            "source-acceptance"
+        ));
+        assert!(should_auto_apply_cache(
+            Some("build"),
+            None,
+            "profile.json",
+            "sha256:abc",
+            "",
+            "unrecognized-bypass"
+        ));
+        assert!(!should_auto_apply_cache(
+            Some("build"),
+            None,
+            "",
+            "",
+            "",
+            ""
+        ));
         for command in [
             "cache",
             "config",
             "proxy",
-            "gate",
             "clone",
             "self-update",
             "self-version",
@@ -532,8 +580,22 @@ mod tests {
         ] {
             assert!(!should_auto_apply_cache(
                 Some(command),
+                None,
                 "profile.json",
                 "sha256:abc",
+                "",
+                ""
+            ));
+        }
+        for subcommand in [
+            "contract", "schema", "validate", "matrix", "plan", "receipt",
+        ] {
+            assert!(!should_auto_apply_cache(
+                Some("gate"),
+                Some(subcommand),
+                "profile.json",
+                "sha256:abc",
+                "",
                 ""
             ));
         }

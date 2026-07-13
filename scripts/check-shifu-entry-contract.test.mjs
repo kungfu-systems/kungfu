@@ -2,6 +2,7 @@
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -44,6 +45,24 @@ test('allows one explicitly justified implementation command', () => {
 
 test('current participant surfaces satisfy the contract', () => {
   assert.deepEqual(checkRoot(ROOT), []);
+});
+
+test('cache execution boundaries distinguish gate run and source acceptance', () => {
+  const posix = fs.readFileSync(path.join(ROOT, 'shifu'), 'utf8');
+  const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
+  const native = fs.readFileSync(
+    path.join(ROOT, 'crates', 'shifu', 'src', 'main.rs'),
+    'utf8',
+  );
+
+  for (const entrypoint of [posix, windows]) {
+    assert.match(entrypoint, /SHIFU_CACHE_BYPASS/);
+    assert.match(entrypoint, /source-acceptance/);
+    assert.match(entrypoint, /shifu-cache-entry: source-acceptance-bypass/);
+    assert.match(entrypoint, /shifu-cache-entry: gate-run-outer-apply/);
+  }
+  assert.match(native, /gate_subcommand/);
+  assert.match(native, /cache_bypass/);
 });
 
 test('runtime guard rejects a direct task and accepts Shifu provenance', () => {

@@ -39,6 +39,7 @@ const BLOCKED_ENV_KEYS = new Set([
   'CONAN_HOME',
   'KF_LIBWASM_CARGO_REGISTRY',
   'SHIFU_CACHE_ACTIVE',
+  'SHIFU_CACHE_BYPASS',
   'SHIFU_CARGO_ORIGINAL_PATH',
   'SHIFU_CARGO_REGISTRY',
   'SHIFU_CARGO_SOURCE_NAME',
@@ -1085,6 +1086,7 @@ export async function applyCacheProfile({
       ...boundEnv,
       ...uvOverlay.env,
       SHIFU_CACHE_ACTIVE: '1',
+      SHIFU_CACHE_BYPASS: '',
     };
     result = spawnChild(command, args, {
       cwd,

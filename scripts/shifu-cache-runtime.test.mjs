@@ -7,6 +7,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import Ajv2020 from 'ajv/dist/2020.js';
 
@@ -17,6 +18,8 @@ import {
   sha256,
   validateProfileBytes,
 } from './shifu-cache-runtime.mjs';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const platform =
   process.platform === 'darwin'
@@ -261,6 +264,12 @@ test('fails closed on digest mismatch and secret-like environment keys', () => {
   const unsafe = profile();
   unsafe.services['npm-registry'].bindings[0].key = 'CACHE_AUTH_TOKEN';
   assert.throws(() => validateProfileBytes(bytes(unsafe)), /secret-like/);
+  const forgedContext = profile();
+  forgedContext.services['npm-registry'].bindings[0].key = 'SHIFU_CACHE_BYPASS';
+  assert.throws(
+    () => validateProfileBytes(bytes(forgedContext)),
+    /environment binding key is protected/,
+  );
 });
 
 test('rejects endpoint credentials, query strings, and unknown fields', () => {
@@ -755,6 +764,112 @@ test('cache apply cleans config overlays after a failing child', async (t) => {
   );
   assert.equal(fs.existsSync(storage), true);
   assert.equal(fs.existsSync(path.join(storage, '.shifu-conan.lock')), false);
+});
+
+test('outer cache apply owns the Conan lock across nested Gate task re-entry', async (t) => {
+  const directory = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'shifu-cache-gate-reentry-'),
+  );
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const root = path.join(directory, 'checkout');
+  const xdgCache = path.join(directory, 'cache');
+  const outputPath = path.join(directory, 'nested.json');
+  const profilePath = path.join(directory, 'profile.json');
+  const childPath = path.join(directory, 'run-gate.mjs');
+  const nestedPath = path.join(directory, 'nested-shifu.mjs');
+  const registryPath = path.join(
+    ROOT,
+    'docs/shifu/examples/gates/execution.gate-registry.json',
+  );
+  const storage = path.join(
+    xdgCache,
+    'kungfu',
+    'conan',
+    'workhub-v1',
+    'development',
+  );
+  const lock = path.join(storage, '.shifu-conan.lock');
+  fs.mkdirSync(root, { recursive: true });
+  const raw = bytes(toolConfigProfile());
+  fs.writeFileSync(profilePath, raw);
+  fs.writeFileSync(
+    nestedPath,
+    `import fs from 'node:fs';
+const active = process.env.SHIFU_CACHE_ACTIVE || '';
+const lock = process.env.SHIFU_REENTRY_LOCK;
+if (active !== '1') {
+  try {
+    fs.closeSync(fs.openSync(lock, 'wx'));
+  } catch (error) {
+    process.stderr.write(\`nested cache apply collided with outer lock: \${error.code}\\n\`);
+    process.exit(23);
+  }
+}
+fs.writeFileSync(process.env.SHIFU_REENTRY_OUTPUT, JSON.stringify({
+  active,
+  bypass: process.env.SHIFU_CACHE_BYPASS || '',
+  conanHome: process.env.CONAN_HOME || '',
+  lockHeld: fs.existsSync(lock),
+}));
+`,
+  );
+  if (process.platform === 'win32') {
+    fs.writeFileSync(
+      path.join(root, 'shifu.cmd'),
+      `@echo off\r\n"${process.execPath}" "${nestedPath}" %*\r\n`,
+    );
+  } else {
+    fs.writeFileSync(
+      path.join(root, 'shifu'),
+      `#!/bin/sh\nexec "${process.execPath}" "${nestedPath}" "$@"\n`,
+      { mode: 0o755 },
+    );
+  }
+  const executorUrl = pathToFileURL(
+    path.join(ROOT, 'scripts/shifu-gate-executor.mjs'),
+  ).href;
+  const runtimeUrl = pathToFileURL(
+    path.join(ROOT, 'scripts/shifu-gate-runtime.mjs'),
+  ).href;
+  fs.writeFileSync(
+    childPath,
+    `import fs from 'node:fs';
+import { executeGateRun } from ${JSON.stringify(executorUrl)};
+import { validateGateRegistryBytes } from ${JSON.stringify(runtimeUrl)};
+const loaded = validateGateRegistryBytes(fs.readFileSync(${JSON.stringify(registryPath)}));
+if (loaded.issues.length) throw new Error(JSON.stringify(loaded.issues));
+const receipt = await executeGateRun(loaded.registry, {
+  root: ${JSON.stringify(root)},
+  registryRef: 'fixture.gate-registry.json',
+  registryDigest: loaded.digest,
+  explicitGates: ['fixture.task-dogfood'],
+  source: { sha: '${'a'.repeat(40)}', dirty: false },
+  writer: process.stderr,
+});
+process.exit(receipt.ok ? 0 : 1);
+`,
+  );
+  const status = await applyCacheProfile({
+    reference: profilePath,
+    expectedDigest: sha256(raw),
+    scope: 'development',
+    command: process.execPath,
+    args: [childPath],
+    cwd: root,
+    env: {
+      ...process.env,
+      XDG_CACHE_HOME: xdgCache,
+      SHIFU_REENTRY_LOCK: lock,
+      SHIFU_REENTRY_OUTPUT: outputPath,
+    },
+  });
+  assert.equal(status, 0);
+  const nested = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
+  assert.equal(nested.active, '1');
+  assert.equal(nested.bypass, '');
+  assert.match(nested.conanHome, /shifu-cache-overlay-.*conan-home/);
+  assert.equal(nested.lockHeld, true);
+  assert.equal(fs.existsSync(lock), false);
 });
 
 test('cache apply fails closed when managed Conan storage is already in use', async (t) => {
