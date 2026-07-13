@@ -2638,7 +2638,7 @@ storage_episode_bundle_result parse_storage_episode_bundle(const nlohmann::json 
         throw std::invalid_argument("episode_bundle_frame_bytes_malformed");
       }
       const auto &header = *reinterpret_cast<const kungfu::yijinjing::types::frame_header *>(frame.bytes.data());
-      if (header.length != frame.frame_length || header.frame_uid != frame.frame_uid ||
+      if (header.length != frame.frame_length || header.journal_frame_uid != frame.frame_uid ||
           header.gen_time != frame.gen_time || header.carrier_type != frame.carrier_type ||
           header.length < header.header_length ||
           static_cast<uint32_t>(header.length - header.header_length) != frame.data_length) {

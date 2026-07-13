@@ -9,8 +9,14 @@
 namespace kungfu::yijinjing::journal {
 using namespace yijinjing::types;
 
-constexpr uint32_t PAGE_ID_TRANC = 0xFF000000;
-constexpr uint32_t FRAME_ID_TRANC = 0x00FFFFFF;
+// ADR-0072 Phase 1: journal_frame_uid layout. The high 32 bits carry the full
+// page_id and the low 32 bits carry the in-page frame number. Both are
+// persistently monotonic on disk, so the pair is deterministically unique
+// within one journal -- no probabilistic salt, no wrap. 32 bits for the frame
+// number is far above any realistic per-page frame count (a 16 MB page caps at
+// ~2^18 frames), so the low word never overflows into the page_id word.
+constexpr unsigned FRAME_UID_PAGE_ID_SHIFT = 32u;
+constexpr uint64_t FRAME_UID_FRAME_NB_MASK = 0x00000000FFFFFFFFull;
 
 inline size_t verify_cpu_word_length(size_t length) {
   return ((length + (sizeof(uintptr_t) - 1)) & ~(sizeof(uintptr_t) - 1));
@@ -20,9 +26,7 @@ writer::writer(const data::location_ptr &location, uint32_t dest_id, publisher_p
                const bus_ptr &bus, const journal_ptr &journal, int64_t begin_time)
     : writer_lease_(ownership::lease::acquire_stream_writer(location->locator->get_root(),
                                                             fmt::format("{:08x}.{:08x}", location->uid, dest_id))),
-      journal_(journal), frame_id_base_(static_cast<uint64_t>(location->uid xor dest_id) << 32u),
-      publisher_(std::move(publisher)), size_to_write_(0), last_gen_time_(0),
-      writer_start_time_32int_(time::nano_hashed(time::now_in_nano())) {
+      journal_(journal), publisher_(std::move(publisher)), size_to_write_(0), last_gen_time_(0) {
   (void)low_latency;
   (void)bus;
   journal_->seek_to_time(begin_time);
@@ -74,10 +78,16 @@ writer::writer(const data::location_ptr &location, uint32_t dest_id, bool lazy, 
 }
 
 uint64_t writer::current_frame_uid() {
-  uint32_t page_part = (journal_->page_->page_id_ << 24u) & PAGE_ID_TRANC;
-  uint32_t frame_part = journal_->page_frame_nb_ & FRAME_ID_TRANC;
-  // frame_id_base is used for get account id while canceling order
-  return frame_id_base_ | ((page_part | frame_part) xor writer_start_time_32int_);
+  // ADR-0072 Phase 1: structural, journal-local identity. (page_id, frame_nb)
+  // is deterministically unique within one journal because page_id is monotonic
+  // across the journal and frame_nb is monotonic within a page. This replaces
+  // the old encoding whose 8-bit page slot wrapped deterministically past 4 GB
+  // (256 x 16 MB) and whose 32-bit session salt was only probabilistically
+  // unique. Cross-journal / permanent identity is not this id's job (ADR-0072
+  // layer 2: Episode content root + stream_position).
+  const uint64_t page_id = journal_->page_->page_id_;
+  const uint64_t frame_nb = journal_->page_frame_nb_ & FRAME_UID_FRAME_NB_MASK;
+  return (page_id << FRAME_UID_PAGE_ID_SHIFT) | frame_nb;
 }
 
 writer::frame_transaction::frame_transaction(writer &owner, struct frame *frame, bool replay) noexcept

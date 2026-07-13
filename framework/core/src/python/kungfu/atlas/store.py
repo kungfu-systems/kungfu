@@ -481,7 +481,7 @@ def _checksum_frame(
         ("I", int(header.dest)),
         ("b", int(_frame_data_type_value(header))),
         ("I", int(header.initial_source)),
-        ("Q", int(header.frame_uid)),
+        ("Q", int(header.journal_frame_uid)),
         ("Q", int(header.trigger_frame_uid)),
         ("Q", int(header.stream_id)),
         ("I", int(payload_length)),
@@ -508,8 +508,8 @@ def read_action_frame_index(runtime_dir):
             CARRIER_ATLAS_ACTION
         ):
             data = bytes(frame_payload)
-            index[(header.frame_uid, header.gen_time)] = {
-                "frame_uid": header.frame_uid,
+            index[(header.journal_frame_uid, header.gen_time)] = {
+                "frame_uid": header.journal_frame_uid,
                 "trigger_frame_uid": header.trigger_frame_uid,
                 "stream_id": header.stream_id,
                 "gen_time": header.gen_time,

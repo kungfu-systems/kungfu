@@ -241,8 +241,14 @@ KF_DEFINE_PACK_TYPE(                                           //
     (enums::FrameDataType, data_type),                         //
     /** the real writer of this frame */                       //
     (uint32_t, initial_source),                                //
-    /** key of frame */                                        //
-    (uint64_t, frame_uid),                                     //
+    /** ADR-0072: journal-local frame identity. Deterministically unique       //
+     *  within one journal: the high 32 bits are the full page_id and the low   //
+     *  32 bits are the in-page frame number, both persistently monotonic on    //
+     *  disk. It is NOT a cross-journal or permanent global id -- that is the    //
+     *  Episode content root + stream_position layer (ADR-0043/ADR-0068).       //
+     *  Renamed from `frame_uid` to version the wire semantics per ADR-0062     //
+     *  rule 4 (this advances journal_format_epoch). */                        //
+    (uint64_t, journal_frame_uid),                             //
     /** current_frame of reader when generate this frame */    //
     (uint64_t, trigger_frame_uid),                             //
     /** stream_id */                                           //

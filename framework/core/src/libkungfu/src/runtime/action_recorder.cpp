@@ -151,7 +151,7 @@ uint64_t checksum_frame(const yijinjing::types::frame_header &header, const uint
     const auto data_type = static_cast<int8_t>(header.data_type);
     checksum_crc32c_scalar(state, data_type);
     checksum_crc32c_scalar(state, header.initial_source);
-    checksum_crc32c_scalar(state, header.frame_uid);
+    checksum_crc32c_scalar(state, header.journal_frame_uid);
     checksum_crc32c_scalar(state, header.trigger_frame_uid);
     checksum_crc32c_scalar(state, header.stream_id);
     checksum_crc32c_scalar(state, payload_length);
@@ -174,7 +174,7 @@ uint64_t checksum_frame(const yijinjing::types::frame_header &header, const uint
   const auto data_type = static_cast<int8_t>(header.data_type);
   checksum_scalar(state, data_type);
   checksum_scalar(state, header.initial_source);
-  checksum_scalar(state, header.frame_uid);
+  checksum_scalar(state, header.journal_frame_uid);
   checksum_scalar(state, header.trigger_frame_uid);
   checksum_scalar(state, header.stream_id);
   checksum_scalar(state, payload_length);
@@ -235,7 +235,7 @@ record_receipt action_recorder::record_payload(int32_t carrier_type, const uint8
   auto checksum_header = *reinterpret_cast<const yijinjing::types::frame_header *>(frame->address());
   checksum_header.length = checksum_header.header_length + align_frame_payload_length(payload_length);
   checksum_header.gen_time = gen_time;
-  checksum_header.frame_uid = frame_uid;
+  checksum_header.journal_frame_uid = frame_uid;
   checksum_header.trigger_frame_uid = parent_frame_uid;
   const auto checksum_algorithm = frame_checksum_algorithm_for_integrity_version(DEFAULT_FRAME_INTEGRITY_VERSION);
   const auto payload_checksum = checksum_payload(payload, payload_length, checksum_algorithm);

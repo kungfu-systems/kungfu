@@ -96,7 +96,7 @@ int main(int argc, char **argv) {
     const auto &bytes = frames[i].second;
     const auto expected_parent = i == 0 ? 0 : receipts[i - 1].frame_uid;
 
-    if (receipt.frame_uid != header.frame_uid || receipt.carrier_type != header.carrier_type ||
+    if (receipt.frame_uid != header.journal_frame_uid || receipt.carrier_type != header.carrier_type ||
         receipt.gen_time != header.gen_time || receipt.stream_id != header.stream_id ||
         receipt.trigger_frame_uid != header.trigger_frame_uid || receipt.trigger_frame_uid != expected_parent ||
         receipt.data_length != payloads[i].size() || bytes.size() < payloads[i].size() ||
