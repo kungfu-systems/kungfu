@@ -43,7 +43,140 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use shifu_core::{bootstrap, host, json, style};
 
-const KFD3_REGISTRY: &str = ".buildchain/kfd/kfd-3/surfaces.json";
+/// The buildchain self-describe contract shifu asks for the repo's KFD-3
+/// registry location. shifu holds no copy of that layout path: the layout is
+/// buildchain's to define, so shifu asks the pinned `buildchain` binary
+/// (`buildchain layout --json`) and reads `kfd.registries."kfd-3".path` back.
+/// The two welded surfaces are the `.buildchain-version` pin name and this
+/// verb; see docs/rust-adoption.md and the contract registry.
+const LAYOUT_DISCOVERY_CONTRACT: &str = "kungfu-buildchain-layout-discovery";
+
+/// Locate the repo's KFD-3 surface registry by asking buildchain, caching the
+/// answer per (repo, buildchain version). Returns the absolute registry path,
+/// or None when the repo is not buildchain-managed (no `.buildchain-version`
+/// pin) or buildchain is not already available on this advisory hot path.
+///
+/// There is deliberately no hardcoded fallback path: a repo with a KFD-3
+/// registry is by definition buildchain-managed, so the single source of truth
+/// is buildchain's own answer, never a shifu-side copy that could silently
+/// drift when buildchain moves the layout.
+fn resolve_kfd3_registry(root: &Path) -> Option<PathBuf> {
+    // Not buildchain-managed → no registry, no registration (the common,
+    // silent case, same as a repo without a registry today).
+    if !root.join(bootstrap::BUILDCHAIN.pin_file()).is_file() {
+        return None;
+    }
+    let version = bootstrap::BUILDCHAIN.version(root);
+    if let Some(rel) = read_layout_cache(root, &version) {
+        return Some(root.join(rel));
+    }
+    // Registration is advisory, so path resolution must not add a network
+    // fetch to ordinary dispatch: resolve only from an already-available
+    // buildchain (PATH/cache), never a forced download. The answer is cached,
+    // so the ask happens at most once per buildchain version.
+    let buildchain = bootstrap::find_tool(&bootstrap::BUILDCHAIN, root)?;
+    let rel = query_layout_registry(&buildchain, root)?;
+    write_layout_cache(root, &version, &rel);
+    Some(root.join(rel))
+}
+
+/// Ask `buildchain layout --json` where the KFD-3 registry lives. Returns the
+/// repo-relative path, or None on any failure (advisory: never blocks).
+fn query_layout_registry(buildchain: &Path, root: &Path) -> Option<String> {
+    let out = Command::new(buildchain)
+        .arg("layout")
+        .arg("--json")
+        .arg("--cwd")
+        .arg(root)
+        .current_dir(root)
+        .output()
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let doc = json::parse(&String::from_utf8_lossy(&out.stdout)).ok()?;
+    let contract = doc.str_of("contract");
+    if contract != LAYOUT_DISCOVERY_CONTRACT {
+        warn(&format!(
+            "buildchain layout returned contract {contract:?} (expected \
+             {LAYOUT_DISCOVERY_CONTRACT}); builds will not be registered"
+        ));
+        return None;
+    }
+    let rel = doc
+        .get("kfd")
+        .and_then(|kfd| kfd.get("registries"))
+        .and_then(|reg| reg.get("kfd-3"))
+        .map(|k3| k3.str_of("path"))
+        .unwrap_or("");
+    (!rel.is_empty()).then(|| rel.to_string())
+}
+
+/// Cache file for a resolved layout answer, namespaced per buildchain version.
+/// The file records the root and version it was resolved for so a hash
+/// collision (or a moved checkout) reads as a miss, never a wrong path.
+fn layout_cache_path(root: &Path, version: &str) -> PathBuf {
+    let key = fnv1a_hex(root.to_string_lossy().as_bytes());
+    host::kungfu_cache_dir()
+        .join("shifu")
+        .join("layout")
+        .join(version)
+        .join(format!("{key}.json"))
+}
+
+fn read_layout_cache(root: &Path, version: &str) -> Option<String> {
+    let doc = json::parse(&fs::read_to_string(layout_cache_path(root, version)).ok()?).ok()?;
+    if doc.str_of("root") != root.to_string_lossy() || doc.str_of("version") != version {
+        return None;
+    }
+    let rel = doc.str_of("registryPath");
+    (!rel.is_empty()).then(|| rel.to_string())
+}
+
+fn write_layout_cache(root: &Path, version: &str, rel: &str) {
+    let path = layout_cache_path(root, version);
+    if let Some(parent) = path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    let body = format!(
+        "{{\"root\":{},\"version\":{},\"registryPath\":{}}}\n",
+        json_string(&root.to_string_lossy()),
+        json_string(version),
+        json_string(rel),
+    );
+    let _ = fs::write(path, body);
+}
+
+/// Minimal JSON string encoding for the cache file (paths can contain
+/// backslashes and quotes on Windows).
+fn json_string(value: &str) -> String {
+    let mut out = String::with_capacity(value.len() + 2);
+    out.push('"');
+    for ch in value.chars() {
+        match ch {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c => out.push(c),
+        }
+    }
+    out.push('"');
+    out
+}
+
+/// FNV-1a 64-bit, hex — a fast, dependency-free cache-key hash. Not
+/// cryptographic; the cache file's stored root/version make any collision a
+/// harmless miss.
+fn fnv1a_hex(bytes: &[u8]) -> String {
+    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+    for &b in bytes {
+        hash ^= b as u64;
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    format!("{hash:016x}")
+}
 
 pub struct DistributionPlan {
     product_id: String,
@@ -66,22 +199,46 @@ struct DeclaredArtifact {
 /// parsed gets a named warning: a declared intent we cannot read is worth a
 /// line, but never worth blocking the task.
 pub fn plan_for_task(root: &Path, task: &str) -> Option<DistributionPlan> {
-    let path = root.join(KFD3_REGISTRY);
-    let text = fs::read_to_string(&path).ok()?;
+    let path = resolve_kfd3_registry(root)?;
+    plan_at(root, &path, task)
+}
+
+/// Parse a distribution plan from a specific registry path. Split from
+/// `plan_for_task` so parsing is exercised without a live buildchain to answer
+/// the layout query.
+fn plan_at(root: &Path, path: &Path, task: &str) -> Option<DistributionPlan> {
+    // The registry path relative to the repo, for messages and the
+    // self-attestation check below.
+    let rel = path
+        .strip_prefix(root)
+        .unwrap_or(path)
+        .to_string_lossy()
+        .into_owned();
+    let text = fs::read_to_string(path).ok()?;
     let doc = match json::parse(&text) {
         Ok(doc) => doc,
         Err(e) => {
             warn(&format!(
-                "cannot read {KFD3_REGISTRY} ({e}); builds will not be registered"
+                "cannot read {rel} ({e}); builds will not be registered"
             ));
             return None;
         }
     };
+    // Self-attestation: the registry declares its own path; if buildchain
+    // answered a different location the two have drifted — worth a named line
+    // (never blocks: buildchain's answer is authoritative for where we read).
+    let declared = doc.str_of("registryPath");
+    if !declared.is_empty() && declared != rel {
+        warn(&format!(
+            "buildchain resolved the KFD-3 registry at {rel} but it self-declares \
+             registryPath {declared}; the layout has drifted"
+        ));
+    }
     let product_id = {
         let id = doc.get("product").map(|p| p.str_of("id")).unwrap_or("");
         if id.is_empty() {
             warn(&format!(
-                "{KFD3_REGISTRY} has no product.id; builds will not be registered"
+                "{rel} has no product.id; builds will not be registered"
             ));
             return None;
         }
@@ -476,7 +633,7 @@ mod tests {
         fs::create_dir_all(root.join("out")).unwrap();
         fs::write(root.join("out/app.bin"), b"artifact-bytes").unwrap();
 
-        let plan = plan_for_task(&root, "dist").expect("plan");
+        let plan = plan_at(&root, &kfd.join("surfaces.json"), "dist").expect("plan");
         register(&root, &plan);
 
         let registry = cache.join("kungfu/product").join(host::os_arch());
@@ -494,6 +651,25 @@ mod tests {
         assert!(meta.contains(
             "KUNGFU_BUILD_SHA256='6521df166eb07efaf36eba5b6bedefd9d6a252e9c80bab1c99653700ec71473c'"
         ));
+
+        // Layout-answer cache round-trip. This lives inside the single test
+        // that owns XDG_CACHE_HOME (its writes land in the isolated cache);
+        // running it here keeps env mutation from racing the parallel suite.
+        assert!(read_layout_cache(&root, "2.12.1-alpha.4").is_none());
+        write_layout_cache(
+            &root,
+            "2.12.1-alpha.4",
+            ".buildchain/kfd/kfd-3/surfaces.json",
+        );
+        assert_eq!(
+            read_layout_cache(&root, "2.12.1-alpha.4").as_deref(),
+            Some(".buildchain/kfd/kfd-3/surfaces.json")
+        );
+        // A different pinned version is a distinct cache slot (a miss), and a
+        // different root never reads another root's answer.
+        assert!(read_layout_cache(&root, "2.13.0").is_none());
+        assert!(read_layout_cache(&root.join("other"), "2.12.1-alpha.4").is_none());
+
         env::remove_var("XDG_CACHE_HOME");
         let _ = fs::remove_dir_all(&root);
     }
@@ -551,14 +727,29 @@ mod tests {
             ),
         )
         .unwrap();
-        let plan = plan_for_task(&dir, "dist").expect("plan for dist");
+        let reg = kfd.join("surfaces.json");
+        let plan = plan_at(&dir, &reg, "dist").expect("plan for dist");
         assert_eq!(plan.product_id, "kungfu");
         assert_eq!(plan.surface_id, "kungfu.product.release-build");
         assert_eq!(plan.artifacts.len(), 1);
         assert_eq!(plan.artifacts[0].path_glob, "out/*.bin");
-        assert!(plan_for_task(&dir, "package").is_some());
-        assert!(plan_for_task(&dir, "verify").is_none());
+        assert!(plan_at(&dir, &reg, "package").is_some());
+        assert!(plan_at(&dir, &reg, "verify").is_none());
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn fnv1a_is_deterministic_and_distinguishes_inputs() {
+        assert_eq!(fnv1a_hex(b"/a/b"), fnv1a_hex(b"/a/b"));
+        assert_ne!(fnv1a_hex(b"/a/b"), fnv1a_hex(b"/a/c"));
+        assert_eq!(fnv1a_hex(b"").len(), 16);
+    }
+
+    #[test]
+    fn json_string_escapes_backslashes_and_quotes() {
+        assert_eq!(json_string(r"C:\repo"), r#""C:\\repo""#);
+        assert_eq!(json_string(r#"a"b"#), r#""a\"b""#);
+        assert_eq!(json_string("plain"), r#""plain""#);
     }
 
     #[test]
