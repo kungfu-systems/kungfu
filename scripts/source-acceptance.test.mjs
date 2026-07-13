@@ -34,6 +34,14 @@ test('Conan recipe Python is linted without widening into the product type basel
   assert.ok(!labels.includes('Python type baseline'));
 });
 
+test('RocksDB source archive keeps an explicit tar filename', () => {
+  const recipe = fs.readFileSync(
+    path.join(ROOT, 'framework/core/.conan/recipes/rocksdb/conanfile.py'),
+    'utf8',
+  );
+  assert.match(recipe, /filename="rocksdb-source\.tar\.gz"/);
+});
+
 test('source plan cannot enter build, compiler, artifact, or release lifecycles', () => {
   const plan = sourceAcceptancePlan(['scripts/example.mjs']);
   const commands = plan

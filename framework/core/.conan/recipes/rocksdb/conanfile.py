@@ -101,6 +101,7 @@ class RocksDBConan(ConanFile):
         get(
             self,
             url=os.getenv("KUNGFU_CONAN_ROCKSDB_SOURCE_URL", source["url"]),
+            filename="rocksdb-source.tar.gz",
             sha256=source["sha256"],
             strip_root=True,
         )
