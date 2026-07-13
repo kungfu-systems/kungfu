@@ -50,6 +50,17 @@ test('reusable workflow is bound to source mode and the protected alpha channel'
   assert.doesNotMatch(workflow, /self-hosted/);
 });
 
+test('the native membrane matrix is a promotion gate, not a dev PR gate', () => {
+  const workflow = fs.readFileSync(
+    path.join(ROOT, '.github/workflows/embedding-membrane-spike.yml'),
+    'utf8',
+  );
+  const branchBlock = workflow.match(/branches:\n((?:\s+- .+\n)+)/)?.[1] || '';
+  assert.match(branchBlock, /alpha\/v\*\/v\*/);
+  assert.match(branchBlock, /release\/v\*\/v\*/);
+  assert.doesNotMatch(branchBlock, /dev\/v\*\/v\*/);
+});
+
 test('documentation lint excludes the checked-out Buildchain runtime', async () => {
   const config = await import('../.markdownlint-cli2.mjs');
   assert.ok(config.default.globs.includes('!.buildchain/runtime/**'));
