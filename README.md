@@ -1,25 +1,30 @@
 # Kungfu
 
+Kungfu is a local-first runtime that records real-world agent work and verifies
+what actually got done. It works alongside the agents and execution surfaces
+you already use.
+
+> **Never Guess. Facts Unfold.**
+
+**Status: Coming soon.**
+
 <!-- buildchain:badges:start -->
 [![KFD-1: declared](https://buildchain.libkungfu.dev/badges/v1/kfd-1/declared.svg)](https://github.com/kungfu-systems/kungfu/releases/latest/download/buildchain.release.json)
 [![KFD-2: declared](https://buildchain.libkungfu.dev/badges/v1/kfd-2/declared.svg)](https://github.com/kungfu-systems/kungfu/releases/latest/download/buildchain.release.json)
 [![KFD-3: declared](https://buildchain.libkungfu.dev/badges/v1/kfd-3/declared.svg)](https://github.com/kungfu-systems/kungfu/releases/latest/download/buildchain.release.json)
+[![KFD-4: declared](https://buildchain.libkungfu.dev/badges/v1/kfd-4/declared.svg)](https://github.com/kungfu-systems/kungfu/releases/latest/download/buildchain.release.json)
 [![Buildchain Release Passport: declared](https://buildchain.libkungfu.dev/badges/v1/buildchain-release-passport/declared.svg)](https://github.com/kungfu-systems/kungfu/releases/latest/download/buildchain.release.json)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-0969da.svg)](https://github.com/kungfu-systems/kungfu/blob/HEAD/LICENSE)
 [![Platform: macOS | Linux | Windows](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-6e7781.svg)](https://github.com/kungfu-systems/kungfu/releases/latest/download/buildchain.release.json)
-[![Buildchain Validate](https://github.com/kungfu-systems/kungfu/actions/workflows/buildchain-validate.yml/badge.svg)](https://github.com/kungfu-systems/kungfu/actions/workflows/buildchain-validate.yml)
 [![Source Acceptance](https://github.com/kungfu-systems/kungfu/actions/workflows/source-acceptance.yml/badge.svg)](https://github.com/kungfu-systems/kungfu/actions/workflows/source-acceptance.yml)
+[![Buildchain Validate](https://github.com/kungfu-systems/kungfu/actions/workflows/buildchain-validate.yml/badge.svg)](https://github.com/kungfu-systems/kungfu/actions/workflows/buildchain-validate.yml)
 [![DCO](https://github.com/kungfu-systems/kungfu/actions/workflows/dco.yml/badge.svg)](https://github.com/kungfu-systems/kungfu/actions/workflows/dco.yml)
 <!-- buildchain:badges:end -->
 
-![Status: Coming soon](https://img.shields.io/badge/status-coming%20soon-orange.svg)
-
-Kungfu is local-first execution infrastructure for real-world agent work. It
-turns execution into **Episodes**: bounded causal units whose Facts, Artifacts,
-Receipts, dependencies, and verification roots can be inspected, sealed,
-exported, replayed, recovered, and used to support Decisions.
-
-> **Never Guess. Facts Unfold.**
+Kungfu turns execution into **Episodes**, bounded causal units that bind Facts,
+Artifacts, Receipts, dependencies, and verification roots into one inspectable
+record. Episodes can be sealed, exported, and replayed to support recovery and
+evidence-based Decisions.
 
 ```text
 Real-world work happens in Episodes.
@@ -27,11 +32,11 @@ Facts are authoritative. Projections are rebuildable.
 Claims require Proof before they support Decisions.
 ```
 
-The open monorepo contains the low-latency runtime, CLI and TUI, desktop GUI,
-language bindings, SDKs, extension system, product assembly, and their shared
-qualification contracts. The user-facing distribution is named **Kungfu
-Episodes**; the runtime, command, SDKs, and extension system use the Kungfu,
-`libkungfu`, and `kfx` names.
+This open monorepo contains the low-latency runtime, CLI and TUI, desktop GUI,
+language bindings, SDKs, extension system, product assembly, and the shared
+qualification contracts that keep them aligned. The user-facing distribution
+is named **Kungfu Episodes**; the runtime, command, SDKs, and extension system
+use the Kungfu, `libkungfu`, and `kfx` names.
 
 ## Why an Episode?
 
@@ -50,15 +55,15 @@ process, UI, mutable database row, or provider session the authority. Read
 [The Episode](docs/concepts/the-episode.md) for the narrative and
 [Vocabulary](docs/concepts/vocabulary.md) for the precise public terms.
 
-## What you can build and inspect
+## What Kungfu lets you do
 
 - Record typed runtime Facts in an append-only journal with explicit schema
   ownership and provenance.
 - Inspect Episodes, causal Timelines, Artifacts, Receipts, Cuts, Watermarks, and
   rebuildable Projections.
+- Query current and historical fact state with proof and lineage attached.
 - Replay recorded Facts, Rewind an Episode for forensic inspection, and qualify
   Recovery without silently repeating external side effects.
-- Query current and historical fact state with proof and lineage attached.
 - Embed `libkungfu`, use one ecosystem SDK, add a `kfx`, or assemble a complete
   application without adopting every higher layer.
 - Qualify visibility, durability, recovery, and meaning as one end-to-end
@@ -135,13 +140,14 @@ connection to the product's fact-first design.
 
 Kungfu v4 is **Coming soon**. Source-built capabilities and qualification
 slices exist, but public packaging, cross-platform evidence, strong
-power-loss durability, and the institutional profile remain staged where the
-linked evidence says so.
+power-loss durability, and the institutional profile remain staged unless the
+linked evidence says otherwise.
 
 Design intent, implemented behavior, qualified guarantees, and released
 artifacts are deliberately distinct. Before relying on a claim, check
-[Contracts](docs/qualification/contracts.md), [Known Limits](docs/qualification/known-limits.md), and the
-applicable retained qualification evidence.
+[Contracts](docs/qualification/contracts.md),
+[Known Limits](docs/qualification/known-limits.md), and the applicable retained
+qualification evidence.
 
 ## Project links
 

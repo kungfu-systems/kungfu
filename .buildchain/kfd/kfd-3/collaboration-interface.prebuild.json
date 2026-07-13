@@ -5,16 +5,16 @@
   "witnessKind": "prebuild",
   "supportLevel": "release",
   "source": {
-    "cwd": "/Users/dkr/Worktrees/kungfu/docs/docs-directory-hierarchy",
-    "sourceSha": "9767a5c0e6d245d31621dacba17afde6c91003f4",
+    "cwd": "/Users/dkr/Worktrees/kungfu/feature/profile-kfd3-badge-agent-status",
+    "sourceSha": "afec2c6bc5a7017920c0a12401c0461d9eaf04de",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-    "registryDigest": "sha256:6f9269cdf112d9e3620523a94a6f59d2a2d7d1737124b91783aead0a752faa24"
+    "registryDigest": "sha256:8905961fd705da6a0e7fc37793f0d7a669da0bf7cfce0bab3e20a52c4bc14dd1"
   },
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "91a1834bffe506c8441fd346d9bde560ded1518ff7479ba58a9eef446ea163f2",
-    "digest": "sha256:6f9269cdf112d9e3620523a94a6f59d2a2d7d1737124b91783aead0a752faa24"
+    "sha256": "8b218deb8ef2026c4f227a9c97ebae20a4cf7b0da74f077c10662b0b39046ba6",
+    "digest": "sha256:8905961fd705da6a0e7fc37793f0d7a669da0bf7cfce0bab3e20a52c4bc14dd1"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -34,7 +34,7 @@
   "expectedArtifactVerification": {
     "command": "node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json"
   },
-  "collaborationInterfaceDigest": "sha256:422e526497783da6fba46ab18dd94e4b2d9980e2e1933219a1a1e1ddc2936421",
+  "collaborationInterfaceDigest": "sha256:59a7ac3b073d9e326fe563684f1b7392eb50e727a60d5ac7ed6eec5befa1dbca",
   "collaborationInterface": {
     "schemaVersion": 1,
     "contract": "kungfu-buildchain-kfd-3-surface-registry",
@@ -363,7 +363,7 @@
       {
         "id": "kungfu.atlas.assess-mission",
         "name": "kungfu atlas assess-mission <mission-id> --json",
-        "kind": "cli",
+        "kind": "cli-api-gui",
         "participantProfile": "agent-or-developer",
         "state": "declared",
         "availability": "shipped",
@@ -383,7 +383,7 @@
       {
         "id": "kungfu.atlas.claim-completion",
         "name": "kungfu atlas claim-completion <mission-id> <goal-id> --statement <statement> --actor <actor> --evidence-episode <id> --json",
-        "kind": "cli",
+        "kind": "cli-api-gui",
         "participantProfile": "agent-or-developer",
         "state": "declared",
         "availability": "shipped",
@@ -403,7 +403,7 @@
       {
         "id": "kungfu.atlas.create-go",
         "name": "kungfu atlas create-go <mission-id> <goal-id> --title <title> --objective <objective> --actor <actor> --json",
-        "kind": "cli",
+        "kind": "cli-api-gui",
         "participantProfile": "agent-or-developer",
         "state": "declared",
         "availability": "shipped",
@@ -423,7 +423,7 @@
       {
         "id": "kungfu.atlas.create-mission",
         "name": "kungfu atlas create-mission <mission-id> --title <title> --intent <intent> --actor <actor> --json",
-        "kind": "cli",
+        "kind": "cli-api-gui",
         "participantProfile": "agent-or-developer",
         "state": "declared",
         "availability": "shipped",
@@ -1167,7 +1167,7 @@
       },
       {
         "id": "kungfu.profile.kfd3-qualification",
-        "name": "kungfu profile kfd3-qualify <source> --json",
+        "name": "kungfu profile kfd3-status <source> --json",
         "kind": "cli-api-gui",
         "participantProfile": "agent-or-developer",
         "state": "declared",
@@ -2484,7 +2484,7 @@
     {
       "id": "kungfu.atlas.assess-mission",
       "name": "kungfu atlas assess-mission <mission-id> --json",
-      "kind": "cli",
+      "kind": "cli-api-gui",
       "participantProfile": "agent-or-developer",
       "state": "declared",
       "availability": "shipped",
@@ -2504,7 +2504,7 @@
     {
       "id": "kungfu.atlas.claim-completion",
       "name": "kungfu atlas claim-completion <mission-id> <goal-id> --statement <statement> --actor <actor> --evidence-episode <id> --json",
-      "kind": "cli",
+      "kind": "cli-api-gui",
       "participantProfile": "agent-or-developer",
       "state": "declared",
       "availability": "shipped",
@@ -2524,7 +2524,7 @@
     {
       "id": "kungfu.atlas.create-go",
       "name": "kungfu atlas create-go <mission-id> <goal-id> --title <title> --objective <objective> --actor <actor> --json",
-      "kind": "cli",
+      "kind": "cli-api-gui",
       "participantProfile": "agent-or-developer",
       "state": "declared",
       "availability": "shipped",
@@ -2544,7 +2544,7 @@
     {
       "id": "kungfu.atlas.create-mission",
       "name": "kungfu atlas create-mission <mission-id> --title <title> --intent <intent> --actor <actor> --json",
-      "kind": "cli",
+      "kind": "cli-api-gui",
       "participantProfile": "agent-or-developer",
       "state": "declared",
       "availability": "shipped",
@@ -3288,7 +3288,7 @@
     },
     {
       "id": "kungfu.profile.kfd3-qualification",
-      "name": "kungfu profile kfd3-qualify <source> --json",
+      "name": "kungfu profile kfd3-status <source> --json",
       "kind": "cli-api-gui",
       "participantProfile": "agent-or-developer",
       "state": "declared",

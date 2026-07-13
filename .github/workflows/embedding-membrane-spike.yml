@@ -218,11 +218,13 @@ jobs:
       - name: Build and run membrane consumers (POSIX)
         if: ${{ runner.os != 'Windows' }}
         shell: bash
-        run: cd "$SOURCE_ROOT" && ./shifu qualify:embedding-membranes
+        run: >-
+          cd "$SOURCE_ROOT" && ./shifu gate run embedding.membranes
+          --capability native-toolchain --capability rust
 
       - name: Build and run membrane consumers (Windows)
         if: ${{ runner.os == 'Windows' }}
         shell: pwsh
         run: |
           Set-Location $env:SOURCE_ROOT
-          .\shifu.cmd qualify:embedding-membranes
+          .\shifu.cmd gate run embedding.membranes --capability native-toolchain --capability rust

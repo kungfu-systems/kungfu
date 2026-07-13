@@ -1,0 +1,41 @@
+{
+  "schema": "shifu.gate-contract/v1",
+  "owner": "shifu",
+  "decision": "docs/adr/SHIFU-ADR-0004-gate-control-plane-contract.md",
+  "authority": {
+    "registrySchema": "docs/shifu/schema/gate-registry-v1.schema.json",
+    "planSchema": "docs/shifu/schema/gate-plan-v1.schema.json",
+    "receiptSchema": "docs/shifu/schema/gate-receipt-v1.schema.json"
+  },
+  "schemaIds": {
+    "registry": "https://libkungfu.dev/schemas/shifu/gate-registry-v1.schema.json",
+    "plan": "https://libkungfu.dev/schemas/shifu/gate-plan-v1.schema.json",
+    "receipt": "https://libkungfu.dev/schemas/shifu/gate-receipt-v1.schema.json"
+  },
+  "defaultRegistry": "shifu.gates.json",
+  "environment": {
+    "registry": "SHIFU_GATE_REGISTRY"
+  },
+  "commands": {
+    "contract": "shifu gate contract",
+    "registrySchema": "shifu gate schema registry",
+    "planSchema": "shifu gate schema plan",
+    "receiptSchema": "shifu gate schema receipt",
+    "validate": "shifu gate validate [--registry FILE|-] [--json]",
+    "list": "shifu gate list [--registry FILE] [--json]",
+    "show": "shifu gate show GATE [--registry FILE] [--json]",
+    "explain": "shifu gate explain GATE [--profile PROFILE] [--registry FILE] [--json]",
+    "matrix": "shifu gate matrix [--registry FILE] [--json]",
+    "plan": "shifu gate plan PROFILE [--include-advisory] [--gate GATE] [--platform PLATFORM] [--registry FILE] [--json]",
+    "runGates": "shifu gate run GATE... [--capability CAP] [--registry FILE] [--receipt FILE] [--json]",
+    "runProfile": "shifu gate run --profile PROFILE [--include-advisory] [--capability CAP] [--registry FILE] [--receipt FILE] [--json]",
+    "validateReceipt": "shifu gate receipt validate FILE [--registry FILE] [--json]"
+  },
+  "compatibility": {
+    "unknownFields": "reject",
+    "missingProfileDecision": "reject",
+    "legacyTaskEntrypoints": "unchanged",
+    "explicitRuns": "diagnostic-non-qualifying",
+    "qualification": "clean-source-current-definition-complete-required-coverage"
+  }
+}

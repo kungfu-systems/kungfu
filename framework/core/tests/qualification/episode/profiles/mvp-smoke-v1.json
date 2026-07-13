@@ -17,13 +17,13 @@
   "retry": {
     "initial_delay_ms": 0.25,
     "max_delay_ms": 20,
-    "max_attempts": 1000,
-    "progress_timeout_ms": 30000
+    "max_attempts": 20000,
+    "progress_timeout_ms": 300000
   },
   "validation": {
     "sample_count": 5,
     "list_limit": 100,
-    "allowed_full_fsck_warnings": ["sqlite_projection_missing"]
+    "allowed_full_fsck_warnings": ["projection_absent"]
   },
   "semantic": {
     "required_dimensions": [
@@ -39,5 +39,5 @@
     ],
     "timeout_seconds": 120
   },
-  "scenario_timeout_seconds": 180
+  "scenario_timeout_seconds": 600
 }

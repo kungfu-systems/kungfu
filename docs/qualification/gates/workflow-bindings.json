@@ -1,0 +1,250 @@
+{
+  "schema": "kungfu.gate-workflow-bindings/v1",
+  "registry": "shifu.gates.json",
+  "bindings": [
+    {
+      "id": "dev-source",
+      "execution": "controller",
+      "workflow": ".github/workflows/source-acceptance.yml",
+      "job": "source-acceptance",
+      "profiles": [
+        "dev-pr"
+      ],
+      "gates": [
+        "gate.catalog",
+        "source.acceptance"
+      ],
+      "activation": "dev pull request",
+      "requiredSnippets": [
+        "- dev/v*/v*",
+        "mode: source"
+      ]
+    },
+    {
+      "id": "dev-adr",
+      "execution": "gate",
+      "workflow": ".github/workflows/adr-release-gate.yml",
+      "job": "adr-release",
+      "profiles": [
+        "dev-pr"
+      ],
+      "gates": [
+        "governance.adr-delivery"
+      ],
+      "activation": "dev pull request",
+      "requiredSnippets": [
+        "./shifu gate run governance.adr-delivery"
+      ]
+    },
+    {
+      "id": "dev-docs",
+      "execution": "gate",
+      "workflow": ".github/workflows/docs-check.yml",
+      "job": "docs-check",
+      "profiles": [
+        "dev-pr"
+      ],
+      "gates": [
+        "docs.contracts",
+        "docs.prose"
+      ],
+      "activation": "dev pull request touching declared documentation paths",
+      "requiredSnippets": [
+        "./shifu gate run docs.prose"
+      ]
+    },
+    {
+      "id": "all-pr-dco",
+      "execution": "controller",
+      "workflow": ".github/workflows/dco.yml",
+      "job": "signoff",
+      "profiles": [
+        "dev-pr",
+        "alpha-pr",
+        "release-pr"
+      ],
+      "gates": [
+        "governance.dco"
+      ],
+      "activation": "all pull requests",
+      "requiredSnippets": [
+        "Missing DCO sign-off",
+        "Signed-off-by:"
+      ]
+    },
+    {
+      "id": "channel-buildchain-config",
+      "execution": "controller",
+      "workflow": ".github/workflows/buildchain-validate.yml",
+      "job": "validate",
+      "profiles": [
+        "dev-pr",
+        "alpha-pr",
+        "release-pr"
+      ],
+      "gates": [
+        "governance.buildchain-config"
+      ],
+      "activation": "pull request or channel push",
+      "requiredSnippets": [
+        "require-lifecycle-stages: \"install,check,build,verify\""
+      ]
+    },
+    {
+      "id": "channel-promotion-rehearsal",
+      "execution": "gate",
+      "workflow": ".github/workflows/buildchain-validate.yml",
+      "job": "promotion-rehearsal",
+      "profiles": [
+        "dev-pr",
+        "alpha-pr",
+        "release-pr"
+      ],
+      "gates": [
+        "governance.promotion-rehearsal"
+      ],
+      "activation": "pull request or channel push",
+      "requiredSnippets": [
+        "./shifu gate run governance.promotion-rehearsal"
+      ]
+    },
+    {
+      "id": "shifu-workspace",
+      "execution": "gate",
+      "workflow": ".github/workflows/shifu-ci.yml",
+      "job": "check",
+      "profiles": [
+        "dev-pr",
+        "alpha-pr",
+        "release-pr"
+      ],
+      "gates": [
+        "shifu.workspace"
+      ],
+      "activation": "channel pull request touching crates/**",
+      "requiredSnippets": [
+        "macos-14",
+        "ubuntu-22.04",
+        "windows-2022",
+        "./shifu gate run shifu.workspace"
+      ]
+    },
+    {
+      "id": "dev-heavy-patrol",
+      "execution": "gate",
+      "workflow": ".github/workflows/dev-verify-patrol.yml",
+      "job": "verify",
+      "profiles": [
+        "dev-patrol"
+      ],
+      "gates": [
+        "gate.catalog",
+        "product.verify-full"
+      ],
+      "activation": "daily or manual on dev",
+      "requiredSnippets": [
+        "./shifu gate run product.verify-full",
+        "kungfu-build-v4-linux-x64"
+      ]
+    },
+    {
+      "id": "dev-external-links",
+      "execution": "controller",
+      "workflow": ".github/workflows/docs-external-links.yml",
+      "job": "external-links",
+      "profiles": [
+        "dev-patrol"
+      ],
+      "gates": [
+        "docs.contracts",
+        "docs.external-links"
+      ],
+      "activation": "daily or manual",
+      "requiredSnippets": [
+        "lycheeverse/lychee-action",
+        "failIfEmpty: true"
+      ]
+    },
+    {
+      "id": "channel-heavy-build",
+      "execution": "controller",
+      "workflow": ".github/workflows/build.yml",
+      "job": "build",
+      "profiles": [
+        "alpha-pr",
+        "release-pr"
+      ],
+      "gates": [
+        "gate.catalog",
+        "governance.adr-delivery",
+        "product.distribution",
+        "product.verify-fuzz",
+        "episode.smoke",
+        "episode.release"
+      ],
+      "activation": "alpha or release pull request",
+      "requiredSnippets": [
+        "runner-preset: kungfu-v4-self-hosted",
+        "./shifu cache apply -- ./shifu verify --fuzz",
+        "./shifu cache apply -- ./shifu episode:qualify:release",
+        "./shifu cache apply -- ./shifu adr:release:gate"
+      ]
+    },
+    {
+      "id": "channel-membranes",
+      "execution": "gate",
+      "workflow": ".github/workflows/embedding-membrane-spike.yml",
+      "job": "native-membrane",
+      "profiles": [
+        "alpha-pr",
+        "release-pr"
+      ],
+      "gates": [
+        "embedding.membranes"
+      ],
+      "activation": "same-repo channel PR touching membrane paths",
+      "requiredSnippets": [
+        "Linux x64",
+        "macOS ARM64",
+        "Windows x64",
+        "./shifu gate run embedding.membranes"
+      ]
+    },
+    {
+      "id": "release-rehearsal",
+      "execution": "gate",
+      "workflow": ".github/workflows/release-new-version.yml",
+      "job": "promotion-contract",
+      "profiles": [
+        "release-promotion"
+      ],
+      "gates": [
+        "gate.catalog",
+        "governance.promotion-rehearsal"
+      ],
+      "activation": "merged alpha or release pull request",
+      "requiredSnippets": [
+        "./shifu gate run governance.promotion-rehearsal"
+      ]
+    },
+    {
+      "id": "release-admission",
+      "execution": "controller",
+      "workflow": ".github/workflows/release-new-version.yml",
+      "job": "promote",
+      "profiles": [
+        "release-promotion"
+      ],
+      "gates": [
+        "governance.buildchain-config",
+        "release.artifact-admission"
+      ],
+      "activation": "merged alpha or release pull request",
+      "requiredSnippets": [
+        "required-status-check: build",
+        "required-artifact-count: 3",
+        "release-passport: true"
+      ]
+    }
+  ]
+}

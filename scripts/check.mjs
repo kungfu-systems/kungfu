@@ -346,6 +346,26 @@ function testShifuCacheContract() {
   ]);
 }
 
+function checkShifuGateContract() {
+  run('Shifu Gate contract gate', 'node', [
+    path.join('scripts', 'check-shifu-gate-contract.mjs'),
+  ]);
+}
+
+function testShifuGateContract() {
+  run('Shifu Gate contract tests', 'node', [
+    '--test',
+    path.join('scripts', 'shifu-gate-runtime.test.mjs'),
+    path.join('scripts', 'shifu-gate-executor.test.mjs'),
+  ]);
+}
+
+function checkKungfuGateCatalog() {
+  run('Kungfu Gate catalog gate', 'node', [
+    path.join('scripts', 'check-kungfu-gate-catalog.mjs'),
+  ]);
+}
+
 function checkLayerQualification() {
   run('ADR-0049 layer qualification harness tests', 'node', [
     '--test',
@@ -360,6 +380,20 @@ function checkLayerQualification() {
   run('ADR-0049 surface source contract', 'node', [
     path.join('tests', 'qualification', 'layers', 'surfaces', 'run.mjs'),
     '--validate-only',
+  ]);
+}
+
+function checkDurabilityQualification() {
+  run('ADR-0068 durability qualification harness tests', 'node', [
+    '--test',
+    path.join(
+      'framework',
+      'core',
+      'tests',
+      'qualification',
+      'durability',
+      'run.test.mjs',
+    ),
   ]);
 }
 
@@ -494,6 +528,8 @@ function checkStaged() {
   checkShifuVersionSync();
   checkShifuEntryContract();
   checkShifuCacheContract();
+  checkShifuGateContract();
+  checkKungfuGateCatalog();
   checkCarrierActionEnvelope(['--staged']);
   checkRuntimeGreenfield(['--staged']);
   checkSchemaAuthority();
@@ -546,6 +582,8 @@ function checkStaged() {
 function checkShared() {
   testShifuEntryContract();
   testShifuCacheContract();
+  testShifuGateContract();
+  checkKungfuGateCatalog();
   testSchemaAuthority();
   checkJournalAuthorityBoundary();
   checkLiveRuntimeTerminology();
@@ -562,6 +600,7 @@ function checkShared() {
     'test:kfx-profile-suite',
   ]);
   checkLayerQualification();
+  checkDurabilityQualification();
   run('tooling type check', 'pnpm', ['run', 'check:types']);
   run('SDK unit tests', 'pnpm', [
     '--filter',

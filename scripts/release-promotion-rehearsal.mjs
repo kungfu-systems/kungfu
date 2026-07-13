@@ -107,7 +107,7 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   );
   requirePattern(
     preflight,
-    /\.\/shifu release:promotion:rehearse --[\s\S]*--event "\$GITHUB_EVENT_PATH"/,
+    /\.\/shifu gate run governance\.promotion-rehearsal/,
     findings,
     'promotion contract preflight must execute the current merged PR event',
   );
@@ -179,7 +179,7 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   );
   requirePattern(
     rehearsal,
-    /\.\/shifu release:promotion:rehearse --/,
+    /\.\/shifu gate run governance\.promotion-rehearsal/,
     findings,
     'Buildchain validation workflow must execute the promotion rehearsal',
   );

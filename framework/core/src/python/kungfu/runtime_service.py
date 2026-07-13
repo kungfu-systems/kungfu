@@ -17,6 +17,7 @@ from xml.sax.saxutils import escape as xml_escape
 import kungfu
 from kungfu import host
 from kungfu.storage import service as storage_service
+from pykungfu.runtime import coordinator as NativeCoordinator
 
 lf = kungfu.__binding__.yijinjing
 yjj = kungfu.__binding__.runtime
@@ -514,7 +515,7 @@ def repair_route_state(
     return repairs
 
 
-class Coordinator(yjj.coordinator):
+class Coordinator(NativeCoordinator):
     def __init__(self, home: str, runtime_dir: str, low_latency: bool = False) -> None:
         locator = yjj.locator(runtime_dir)
         location = yjj.location(

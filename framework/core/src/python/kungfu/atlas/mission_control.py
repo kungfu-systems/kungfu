@@ -1451,7 +1451,7 @@ def _mission_control_answers(
         responsibility_state = "needs-decision"
 
     proof_suffix = str(state.get("query_proof_root") or "")[-12:]
-    answers_by_id = {
+    answers_by_id: dict[str, dict[str, Any]] = {
         "mission-intent": {
             "status": "declared" if mission else "missing",
             "summary": intent,

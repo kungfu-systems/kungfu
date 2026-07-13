@@ -83,6 +83,22 @@ export type ProfileApplicationIntent = {
   requiredCapabilities: string[];
   missingCapabilities: string[];
   material: true;
+  protocol:
+    | {
+        inspect: 'profile.intent.inspect';
+        advise: 'profile.intent.advise';
+        preview: 'profile.intent.plan';
+        authorize: 'profile.decide';
+        execute: 'profile.intent.apply';
+        receipt: 'profile.intent.receipt';
+        verify: 'profile.intent.verify';
+      }
+    | {
+        mode: 'shared-api';
+        apiId: string;
+        guiMember: string;
+        guiMethod: string;
+      };
   action: Record<string, unknown>;
   inspectView: ProfileView;
   verifyView: ProfileView;
@@ -116,13 +132,44 @@ export type ProfileApplicationProjection = {
   qualified: boolean;
   qualification: {
     qualified: boolean;
-    status: 'not-qualified' | 'qualification-failed' | 'qualified';
+    current: boolean;
+    status: 'qualified' | 'untested' | 'stale' | 'failed' | 'testing';
     reason?: string;
     receiptId?: string;
     witnessId?: string;
     evidenceScope?: string[];
     diagnosis?: Record<string, unknown>;
+    qualificationSource?: 'local' | 'release';
+    issuer?: { type: 'local' | 'release'; name: string };
+    policyVersion?: string;
+    runtimeContractRoot?: string;
+    nextActions: Array<{ action: string; requiresApproval: boolean }>;
   };
+};
+
+export type ProfileKfd3Status =
+  ProfileApplicationProjection['qualification'] & {
+    schema: 'kungfu.profile-kfd3-status/v1';
+    profileId: string;
+    profileSuiteRoot: string;
+    activeExactRoot: boolean;
+  };
+
+export type ProfileKfd3QualificationPlan = {
+  schema: 'kungfu.profile-kfd3-qualification-plan/v1';
+  planId: string;
+  profileId: string;
+  profileSuiteRoot: string;
+  collaborationRoot: string;
+  closureRoot: string;
+  profileRevision: number;
+  runtimeContractRoot: string;
+  intentIds: string[];
+  policyVersion: string;
+  probes: string[];
+  sideEffects: string[];
+  requiresAuthorization: true;
+  decisionCard: Record<string, unknown>;
 };
 
 export type ProfileKfd3QualificationReceipt = {
@@ -133,6 +180,8 @@ export type ProfileKfd3QualificationReceipt = {
   collaborationRoot: string;
   closureRoot: string;
   profileRevision: number;
+  runtimeContract: string;
+  qualificationSource: 'local' | 'release';
   qualified: true;
   evidenceScope: string[];
   witness: {
@@ -240,6 +289,16 @@ export type Profile = {
   managerAsync: () => Promise<ProfileManagerProjection>;
   application: (source: string) => ProfileApplicationProjection;
   applicationAsync: (source: string) => Promise<ProfileApplicationProjection>;
+  kfd3Status: (source: string) => ProfileKfd3Status;
+  kfd3StatusAsync: (source: string) => Promise<ProfileKfd3Status>;
+  kfd3Plan: (source: string) => ProfileKfd3QualificationPlan;
+  kfd3PlanAsync: (source: string) => Promise<ProfileKfd3QualificationPlan>;
+  authorizeKfd3Async: (
+    source: string,
+    expectedPlanId: string,
+    choice: 'approve' | 'deny',
+    authorizedBy: string,
+  ) => Promise<ProfileKfd3QualificationReceipt>;
   qualifyKfd3: (source: string) => ProfileKfd3QualificationReceipt;
   qualifyKfd3Async: (
     source: string,
@@ -357,6 +416,24 @@ export function openProfile(options: OpenProfileOptions): Profile {
       run<ProfileApplicationProjection>(['application', source]),
     applicationAsync: (source) =>
       runAsync<ProfileApplicationProjection>(['application', source]),
+    kfd3Status: (source) => run<ProfileKfd3Status>(['kfd3-status', source]),
+    kfd3StatusAsync: (source) =>
+      runAsync<ProfileKfd3Status>(['kfd3-status', source]),
+    kfd3Plan: (source) =>
+      run<ProfileKfd3QualificationPlan>(['kfd3-plan', source]),
+    kfd3PlanAsync: (source) =>
+      runAsync<ProfileKfd3QualificationPlan>(['kfd3-plan', source]),
+    authorizeKfd3Async: (source, expectedPlanId, choice, authorizedBy) =>
+      runAsync<ProfileKfd3QualificationReceipt>([
+        'kfd3-authorize',
+        source,
+        '--expected-plan-id',
+        expectedPlanId,
+        '--choice',
+        choice,
+        '--authorized-by',
+        authorizedBy,
+      ]),
     qualifyKfd3: (source) =>
       run<ProfileKfd3QualificationReceipt>(['kfd3-qualify', source]),
     qualifyKfd3Async: (source) =>

@@ -30,10 +30,7 @@ jobs:
           persist-credentials: false
 
       - name: Rehearse the Kungfu promotion contract
-        run: >-
-          ./shifu release:promotion:rehearse --
-          --event "$GITHUB_EVENT_PATH"
-          --report product/release/qualification/release-promotion-rehearsal.json
+        run: ./shifu gate run governance.promotion-rehearsal
 
   promote:
     needs: promotion-contract

@@ -121,6 +121,12 @@ busy result and applies the profile's bounded backoff. An exhausted retry,
 unexpected exception, count mismatch, fsck failure, recovery of an unexpected
 open Episode, or fresh-process mismatch fails the scenario.
 
+The smoke profile budgets are cross-platform correctness ceilings, not latency
+targets. They must accommodate a serialized durable writer on the slowest
+qualified local filesystem while remaining bounded by both per-worker progress
+and whole-scenario timeouts. Observed throughput and latency stay in the Trust
+Report and do not become an implicit pass condition.
+
 ## Files
 
 - `run.mjs` owns profiles, worker processes, timeouts, aggregation, and reports.

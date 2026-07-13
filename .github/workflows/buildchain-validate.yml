@@ -35,5 +35,4 @@ jobs:
           fetch-depth: 0
       - name: Rehearse alpha and stable promotion contracts
         run: >-
-          ./shifu release:promotion:rehearse --
-          --report product/release/qualification/release-promotion-rehearsal.json
+          ./shifu gate run governance.promotion-rehearsal

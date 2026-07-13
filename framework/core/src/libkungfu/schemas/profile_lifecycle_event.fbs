@@ -11,7 +11,8 @@ enum ProfileLifecycleKind : byte {
   Activated = 2,
   Superseded = 3,
   RolledBack = 4,
-  Removed = 5
+  Removed = 5,
+  Kfd3Qualified = 6
 }
 
 table ProfileLifecycleEvent {

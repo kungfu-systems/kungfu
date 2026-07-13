@@ -88,10 +88,11 @@ std::vector<std::pair<std::string, std::string>> recursive_file_bytes(const fs::
   return result;
 }
 
-void begin_episode(const fs::path &root, uint64_t episode_id) {
+void begin_episode(const fs::path &root, uint64_t episode_id, uint64_t parent_episode_id = 0) {
   storage_episode_begin_request request{};
   request.runtime_dir = root.string();
   request.options.episode_id = episode_id;
+  request.options.parent_episode_id = parent_episode_id;
   request.options.location_uid = 1;
   request.options.begin_time = 1000 + static_cast<int64_t>(episode_id);
   request.options.title = "crash-recovery-fixture";
@@ -168,6 +169,10 @@ const episode_qualification_capability &capability(const episode_qualification_r
   return *found;
 }
 
+bool has_issue(const episode_qualification_result &qualification, const std::string &code) {
+  return std::ranges::any_of(qualification.issues, [&code](const auto &candidate) { return candidate.code == code; });
+}
+
 void test_clean_frontier_is_ready_and_repeatable() {
   temp_tree tree;
   fixture_owners owners(tree.root());
@@ -211,6 +216,9 @@ void test_complete_unknown_tail_is_degraded_without_promotion() {
               report.durable_record_count == 1 && report.unacknowledged_tail_bytes > 0 &&
               report.unacknowledged_tail_integrity == tail_integrity::CompleteRecords,
           "complete unknown tail was promoted, hidden, or misclassified");
+  const restart_progress ready_until_projection{true, true, true, false};
+  require(!authorize_restart(report, recovery_component::Peers, ready_until_projection).allowed,
+          "degraded recovery authorized required peers");
 }
 
 void test_interrupted_episode_reuses_typed_qualification_without_mutation() {
@@ -233,7 +241,7 @@ void test_interrupted_episode_reuses_typed_qualification_without_mutation() {
   require(first == repeated, "interrupted Episode fold was not deterministic");
   require(recursive_file_bytes(tree.root()) == before, "interrupted Episode inspection mutated the data root");
   require(first.outcome == recovery_outcome::Degraded && first.episode_unknown_record_count == 0 &&
-              first.interrupted_episodes.size() == 1,
+              first.interrupted_episodes.size() == 1 && first.episode_findings == first.interrupted_episodes,
           "interrupted Episode was not classified as degraded retained evidence");
   const auto &qualification = first.interrupted_episodes.front();
   require(qualification.episode_id == 41 && qualification.lifecycle == "open" && qualification.status == "ok",
@@ -278,6 +286,36 @@ void test_closed_episode_does_not_degrade_recovery() {
   const auto report = recovery_engine(options(tree.root())).inspect();
   require(report.outcome == recovery_outcome::Ready && report.interrupted_episodes.empty(),
           "closed Episode was misclassified as interrupted recovery evidence");
+  require(report.episode_findings.empty(), "healthy closed Episode leaked into recovery findings");
+}
+
+void test_closed_dependency_failure_is_contained_and_named() {
+  temp_tree tree;
+  {
+    fixture_owners owners(tree.root());
+    durable_ingest_log log(options(tree.root()));
+    log.append(position(1), 1001, "durable", owners.service, owners.writer);
+    require(log.barrier(11, durability_profile::DurableGroup, owners.service, owners.writer).receipt.status ==
+                receipt_status::Succeeded,
+            "dependency fixture barrier failed");
+  }
+  begin_episode(tree.root(), 46, 999);
+  end_episode(tree.root(), 46);
+  begin_episode(tree.root(), 47);
+  end_episode(tree.root(), 47);
+
+  const auto degraded = recovery_engine(options(tree.root())).inspect();
+  require(degraded.outcome == recovery_outcome::Degraded && degraded.interrupted_episodes.empty() &&
+              degraded.episode_findings.size() == 1 && degraded.episode_findings.front().episode_id == 46 &&
+              degraded.episode_findings.front().status == "degraded" &&
+              has_issue(degraded.episode_findings.front(), "episode_dependency_missing"),
+          "closed dependency damage was hidden, misnamed, or spread to an independent Episode");
+
+  begin_episode(tree.root(), 999);
+  end_episode(tree.root(), 999);
+  const auto healed = recovery_engine(options(tree.root())).inspect();
+  require(healed.outcome == recovery_outcome::Ready && healed.episode_findings.empty(),
+          "resolving the named dependency did not restore the contained recovery result");
 }
 
 void test_torn_tail_is_degraded_and_frontier_stays_at_checkpoint() {
@@ -321,6 +359,9 @@ void test_no_provable_checkpoint_is_blocked() {
   require(report.outcome == recovery_outcome::Blocked && !report.durable_frontier.has_value() &&
               report.evidence_error == ingest_error::CheckpointCorrupt && !report.mutation_performed,
           "unprovable checkpoint evidence did not block startup recovery");
+  const restart_progress supervisor_only{true, false, false, false};
+  require(!authorize_restart(report, recovery_component::StateService, supervisor_only).allowed,
+          "blocked recovery authorized the state service");
 }
 
 void test_quarantine_preview_and_apply_retain_exact_evidence_idempotently() {
@@ -397,6 +438,44 @@ void test_quarantine_requires_exclusive_ownership() {
   require(receipt.status == maintenance_status::Rejected && !receipt.mutation_performed &&
               receipt.error.starts_with("ownership_busy:"),
           "quarantine bypassed an active data-root or writer owner");
+}
+
+void test_quarantine_resumes_exact_partial_package_and_rejects_extra_files() {
+  temp_tree tree;
+  {
+    fixture_owners owners(tree.root());
+    durable_ingest_log log(options(tree.root()));
+    log.append(position(1), 1001, "durable", owners.service, owners.writer);
+    require(log.barrier(12, durability_profile::DurableGroup, owners.service, owners.writer).receipt.status ==
+                receipt_status::Succeeded,
+            "partial quarantine fixture barrier failed");
+    log.append(position(2), 1001, "interrupted-tail", owners.service, owners.writer);
+  }
+
+  recovery_engine engine(options(tree.root()));
+  const auto preview = engine.preview_quarantine();
+  require(preview.has_value() && preview->files.size() >= 2,
+          "partial quarantine fixture produced insufficient retained files");
+  const auto source = tree.root() / "durable" / "streams" / "7" / "11";
+  const auto package = tree.root() / "durable" / "quarantine" / "7" / "11" / preview->plan_id;
+  fs::create_directories(package);
+  fs::copy_file(source / preview->files.front().name, package / preview->files.front().name);
+  std::ofstream(package / (preview->files[1].name + ".pending"), std::ios::binary | std::ios::trunc)
+      << "interrupted-copy";
+
+  const auto resumed = engine.quarantine(*preview);
+  require(resumed.status == maintenance_status::Completed && resumed.mutation_performed && resumed.error.empty(),
+          "quarantine did not resume an exact partial retained-evidence package");
+  require(
+      std::ranges::none_of(fs::directory_iterator(package),
+                           [](const auto &entry) { return entry.path().filename().string().ends_with(".pending"); }),
+      "quarantine completion left an interrupted pending file behind");
+
+  std::ofstream(package / "foreign-evidence", std::ios::binary | std::ios::trunc) << "not-in-preview";
+  const auto rejected = engine.quarantine(*preview);
+  require(rejected.status == maintenance_status::Rejected && !rejected.mutation_performed &&
+              rejected.error == "recovery_quarantine_partial_package_invalid",
+          "quarantine accepted or rewrote a completed package with extra evidence");
 }
 
 void test_consistent_backup_rejects_unacknowledged_tail() {
@@ -553,9 +632,85 @@ void test_consistent_backup_empty_root_restore_and_projection_rebuild() {
           "completed restore receipt hid later authoritative file corruption");
 }
 
+void create_whole_data_root_fixture(const fs::path &root) {
+  fs::create_directories(root);
+  fixture_owners owners(root);
+  durable_ingest_log log(options(root));
+  log.append(position(1), 1001, "alpha=whole-root", owners.service, owners.writer);
+  require(log.barrier(13, durability_profile::DurableGroup, owners.service, owners.writer).receipt.status ==
+              receipt_status::Succeeded,
+          "whole-data-root fixture barrier failed");
+  begin_episode(root, 61);
+  end_episode(root, 61);
+  projection_bootstrap_store projection(recovery_projection_options(root), recovery_projector);
+  (void)projection.rebuild(log.read_durable_records());
+}
+
+void verify_whole_data_root_fixture(const fs::path &root) {
+  const auto report = recovery_engine(options(root)).inspect();
+  require(report.outcome == recovery_outcome::Ready && report.durable_frontier == position(1) &&
+              report.durable_record_count == 1 && report.interrupted_episodes.empty() &&
+              report.episode_findings.empty() &&
+              report.restart_order == std::vector<std::string>{"supervisor", "state_service", "projection", "peers"},
+          "fresh process did not recover the whole data root to its verified frontier");
+
+  restart_progress progress;
+  require(!authorize_restart(report, recovery_component::StateService, progress).allowed &&
+              authorize_restart(report, recovery_component::Supervisor, progress).allowed,
+          "restart gate did not require supervisor verification first");
+  progress.supervisor_verified = true;
+  require(!authorize_restart(report, recovery_component::Projection, progress).allowed &&
+              authorize_restart(report, recovery_component::StateService, progress).allowed,
+          "restart gate did not require the state service before projection");
+
+  durable_ingest_log reopened_log(options(root));
+  const auto records = reopened_log.read_durable_records();
+  require(records.size() == 1 && records.front().position == position(1) &&
+              records.front().payload == "alpha=whole-root",
+          "fresh state service did not reopen the durable fact at the report frontier");
+  storage_fsck_request episode_request{};
+  episode_request.runtime_dir = root.string();
+  episode_request.scope = storage_fsck_scope::Episode;
+  episode_request.episode_id = 61;
+  episode_request.verify_frames = true;
+  const auto episode = default_storage_service().fsck(episode_request);
+  require(episode.qualification.has_value() && episode.qualification->lifecycle == "ended" &&
+              episode.qualification->status == "ok",
+          "fresh state service did not preserve the sealed Episode identity");
+  progress.state_service_ready = true;
+  require(!authorize_restart(report, recovery_component::Peers, progress).allowed &&
+              authorize_restart(report, recovery_component::Projection, progress).allowed,
+          "restart gate did not require projection readiness before peers");
+
+  projection_bootstrap_store projection(recovery_projection_options(root), recovery_projector);
+  const auto bootstrap = projection.bootstrap(records, peer_state_requirement::Required);
+  require(bootstrap.outcome == bootstrap_outcome::Ready && bootstrap.state.at("alpha") == "whole-root" &&
+              bootstrap.status.projection_watermark == position(1),
+          "fresh projection did not reopen at the whole-data-root durable cut");
+  progress.projection_ready = true;
+  require(authorize_restart(report, recovery_component::Peers, progress).allowed,
+          "restart gate refused peers after the verified ordered recovery sequence");
+}
+
 } // namespace
 
-int main() {
+int main(int argc, char **argv) {
+  try {
+    if (argc == 3 && std::string(argv[1]) == "--create-whole-data-root-fixture") {
+      create_whole_data_root_fixture(argv[2]);
+      return 0;
+    }
+    if (argc == 3 && std::string(argv[1]) == "--verify-whole-data-root-fixture") {
+      verify_whole_data_root_fixture(argv[2]);
+      return 0;
+    }
+    if (argc != 1) {
+      return 64;
+    }
+  } catch (const std::exception &error) {
+    std::cerr << error.what() << '\n';
+    return 1;
+  }
   const std::pair<const char *, void (*)()> tests[] = {
       {"clean frontier is ready and repeatable", test_clean_frontier_is_ready_and_repeatable},
       {"complete unknown tail is degraded without promotion", test_complete_unknown_tail_is_degraded_without_promotion},
@@ -563,12 +718,15 @@ int main() {
        test_interrupted_episode_reuses_typed_qualification_without_mutation},
       {"invalid interrupted Episode blocks recovery", test_invalid_interrupted_episode_blocks_recovery},
       {"closed Episode does not degrade recovery", test_closed_episode_does_not_degrade_recovery},
+      {"closed dependency failure is contained and named", test_closed_dependency_failure_is_contained_and_named},
       {"torn tail is degraded at checkpoint frontier", test_torn_tail_is_degraded_and_frontier_stays_at_checkpoint},
       {"no provable checkpoint is blocked", test_no_provable_checkpoint_is_blocked},
       {"quarantine retains exact evidence idempotently",
        test_quarantine_preview_and_apply_retain_exact_evidence_idempotently},
       {"quarantine rejects a stale preview", test_quarantine_rejects_stale_preview},
       {"quarantine requires exclusive ownership", test_quarantine_requires_exclusive_ownership},
+      {"quarantine resumes exact partial packages and rejects extras",
+       test_quarantine_resumes_exact_partial_package_and_rejects_extra_files},
       {"consistent backup rejects unacknowledged tail", test_consistent_backup_rejects_unacknowledged_tail},
       {"consistent backup rejects missing Episode payload", test_consistent_backup_rejects_missing_episode_payload},
       {"consistent backup restores empty root and rebuilds projection",

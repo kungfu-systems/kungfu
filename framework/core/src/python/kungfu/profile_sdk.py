@@ -14,6 +14,7 @@ import base64
 import json
 import os
 import re
+import sys
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -39,6 +40,8 @@ INTENT_PLAN_SCHEMA = "kungfu.profile-intent-plan/v1"
 INTENT_RECEIPT_SCHEMA = "kungfu.profile-intent-receipt/v1"
 KFD3_QUALIFICATION_RECEIPT_SCHEMA = "kungfu.profile-kfd3-qualification-receipt/v1"
 KFD3_WITNESS_SCHEMA = "kungfu.profile-kfd3-witness/v1"
+KFD3_QUALIFICATION_PLAN_SCHEMA = "kungfu.profile-kfd3-qualification-plan/v1"
+KFD3_RELEASE_MANIFEST_SCHEMA = "kungfu.system-profile-kfd3-manifest/v1"
 
 _TOKEN = re.compile(r"^[A-Za-z0-9._-]+$")
 _IGNORED_PARTS = {".git", "node_modules", "__pycache__", ".DS_Store"}
@@ -98,6 +101,9 @@ def capabilities() -> dict[str, Any]:
             "qualify",
             "collaboration",
             "application",
+            "kfd3-status",
+            "kfd3-plan",
+            "kfd3-authorize",
             "kfd3-qualify",
             "kfd3-verify",
             "intent-inspect",
@@ -506,25 +512,13 @@ def application(
         )
     qualification_status: dict[str, Any] = {
         "qualified": False,
-        "status": "not-qualified",
-        "reason": "Profile must be active at this exact root before KFD-3 qualification",
+        "status": "untested",
+        "current": False,
+        "reason": "Profile KFD-3 qualification has not been tested",
+        "nextActions": [],
     }
-    if include_qualification and active_exact_root:
-        try:
-            earned = qualify_kfd3(source, runtime_dir)
-            qualification_status = {
-                "qualified": True,
-                "status": "qualified",
-                "receiptId": earned["receiptId"],
-                "witnessId": earned["witness"]["witnessId"],
-                "evidenceScope": earned["evidenceScope"],
-            }
-        except ProfileSdkError as error:
-            qualification_status = {
-                "qualified": False,
-                "status": "qualification-failed",
-                "diagnosis": error.diagnosis,
-            }
+    if include_qualification:
+        qualification_status = kfd3_status(source, runtime_dir)
     return {
         "schema": "kungfu.profile-application/v1",
         "profileId": profile["id"],
@@ -858,8 +852,121 @@ def _profile_facet_audit(resolved: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def qualify_kfd3(source: str | Path, runtime_dir: str | Path) -> dict[str, Any]:
-    """Earn a deterministic KFD-3 receipt and scoped witness for one active root."""
+def _shared_api_release_audit(
+    projection: Mapping[str, Any], resolved: Mapping[str, Any]
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Prove first-party GUI/Agent parity through the installed API authority."""
+
+    from kungfu.agent.kfd3 import registry
+
+    apis = {row.get("id"): row for row in registry().get("apis", [])}
+    probes = []
+    failures = []
+    for intent in projection["intents"]:
+        protocol = intent.get("protocol") or {}
+        api_id = protocol.get("apiId") if protocol.get("mode") == "shared-api" else None
+        api = apis.get(api_id)
+        projections = set((api or {}).get("projections") or [])
+        gui_member = str(protocol.get("guiMember") or "")
+        gui_method = str(protocol.get("guiMethod") or "")
+        gui_package = Path(
+            str((resolved.get("memberPackages") or {}).get(gui_member, ""))
+        )
+        gui_manifest = (
+            kfx_contract.read_manifest_from_dir(str(gui_package))
+            if gui_package.is_dir()
+            else {}
+        )
+        view = ((gui_manifest.get("kungfuConfig") or {}).get("config") or {}).get(
+            "view"
+        ) or {}
+        bundle = gui_package / str(view.get("entry") or "dist/view/index.js")
+        source_view = gui_package / "src" / "view" / "index.tsx"
+        projection_path = bundle if bundle.is_file() else source_view
+        projection_kind = "built-view-bundle" if bundle.is_file() else "source-view"
+        projection_data = (
+            projection_path.read_bytes() if projection_path.is_file() else b""
+        )
+        gui_bound = bool(
+            projection_data
+            and re.search(
+                rb"\." + re.escape(gui_method.encode("utf-8")) + rb"\s*\(",
+                projection_data,
+            )
+        )
+        matched = bool(
+            api
+            and api.get("surface") == "cli-api-gui"
+            and "work-dashboard-gui" in projections
+            and "provider-skill" in projections
+            and gui_bound
+        )
+        if not matched:
+            failures.append(
+                {
+                    "intentId": intent["id"],
+                    "apiId": api_id,
+                    "guiMember": gui_member,
+                    "guiMethod": gui_method,
+                    "reason": "shared API lacks a bound GUI method or matching Agent projection",
+                }
+            )
+            continue
+        probes.append(
+            {
+                "intentId": intent["id"],
+                "apiId": api_id,
+                "surface": "cli-api-gui",
+                "humanProjection": "work-dashboard-gui",
+                "agentProjection": "provider-skill",
+                "guiMember": gui_member,
+                "guiMethod": gui_method,
+                "guiProjectionRoot": "sha256:" + _sha256(projection_data),
+                "guiProjectionKind": projection_kind,
+                "matched": True,
+            }
+        )
+    if failures:
+        raise ProfileSdkError(
+            "kfd3-release-api-parity-failed",
+            "one or more first-party intents lack the same GUI and Agent API surface",
+            failures=failures,
+        )
+    facets = []
+    executable_count = 0
+    for key, package_dir in sorted(
+        {
+            "suite": Path(str(resolved["source"])),
+            **{
+                str(key): Path(str(path))
+                for key, path in (resolved.get("memberPackages") or {}).items()
+            },
+        }.items()
+    ):
+        manifest = kfx_contract.read_manifest_from_dir(str(package_dir))
+        config = (manifest.get("kungfuConfig") or {}).get("config") or {}
+        for facet in ("view", "adapter", "service", "wasm"):
+            if config.get(facet) is not None:
+                executable_count += 1
+                facets.append({"packageKey": key, "facet": facet})
+    return (
+        {
+            "passed": True,
+            "policy": "release-owned-shared-api-parity/v1",
+            "customViews": facets,
+            "executableFacetCount": executable_count,
+        },
+        probes,
+    )
+
+
+def _earn_kfd3(
+    source: str | Path,
+    runtime_dir: str | Path,
+    *,
+    qualification_source: str,
+) -> dict[str, Any]:
+    """Run the KFD-3 probes and return a receipt for the next lifecycle revision."""
 
     validated = validate_source(source, runtime_dir)
     resolved = validated["source"]
@@ -870,7 +977,7 @@ def qualify_kfd3(source: str | Path, runtime_dir: str | Path) -> dict[str, Any]:
             "KFD-3 qualification requires a content-bound collaboration facet",
         )
     projection = application(source, runtime_dir, include_qualification=False)
-    if not projection["activeExactRoot"]:
+    if qualification_source == "local" and not projection["activeExactRoot"]:
         raise ProfileSdkError(
             "kfd3-active-root-required",
             "KFD-3 qualification requires the exact Profile root to be active",
@@ -880,44 +987,47 @@ def qualify_kfd3(source: str | Path, runtime_dir: str | Path) -> dict[str, Any]:
             "kfd3-intent-probe-required",
             "KFD-3 qualification requires at least one material intent probe",
         )
-    unsupported = [
-        row["id"]
-        for row in projection["intents"]
-        if row["action"]["runner"] != "profile-lifecycle"
-        or row["action"]["operation"] not in {"qualify", "activate", "remove"}
-    ]
-    if unsupported:
-        raise ProfileSdkError(
-            "kfd3-action-runtime-unqualified",
-            "one or more material intents do not resolve to an executable confined runtime",
-            intentIds=unsupported,
-        )
     authority = _agent_interface_authority()
-    no_bypass = _profile_facet_audit(resolved)
-    probes = []
-    for intent in projection["intents"]:
-        human_plan = intent_plan(source, runtime_dir, intent["id"], {})
-        agent_plan = intent_plan(source, runtime_dir, intent["id"], {})
-        matched = (
-            human_plan["planId"] == agent_plan["planId"]
-            and human_plan["actionPlanId"] == agent_plan["actionPlanId"]
-            and human_plan["closureRoot"] == agent_plan["closureRoot"]
-        )
-        if not matched:
+    if qualification_source == "release":
+        no_bypass, probes = _shared_api_release_audit(projection, resolved)
+    else:
+        unsupported = [
+            row["id"]
+            for row in projection["intents"]
+            if row["action"]["runner"] != "profile-lifecycle"
+            or row["action"]["operation"] not in {"qualify", "activate", "remove"}
+        ]
+        if unsupported:
             raise ProfileSdkError(
-                "kfd3-dual-client-drift",
-                "Human and Agent probes produced different exact plans",
-                intentId=intent["id"],
+                "kfd3-action-runtime-unqualified",
+                "one or more material intents do not resolve to an executable confined runtime",
+                intentIds=unsupported,
             )
-        probes.append(
-            {
-                "intentId": intent["id"],
-                "humanPlanId": human_plan["planId"],
-                "agentPlanId": agent_plan["planId"],
-                "actionPlanId": human_plan["actionPlanId"],
-                "matched": True,
-            }
-        )
+        no_bypass = _profile_facet_audit(resolved)
+        probes = []
+        for intent in projection["intents"]:
+            human_plan = intent_plan(source, runtime_dir, intent["id"], {})
+            agent_plan = intent_plan(source, runtime_dir, intent["id"], {})
+            matched = (
+                human_plan["planId"] == agent_plan["planId"]
+                and human_plan["actionPlanId"] == agent_plan["actionPlanId"]
+                and human_plan["closureRoot"] == agent_plan["closureRoot"]
+            )
+            if not matched:
+                raise ProfileSdkError(
+                    "kfd3-dual-client-drift",
+                    "Human and Agent probes produced different exact plans",
+                    intentId=intent["id"],
+                )
+            probes.append(
+                {
+                    "intentId": intent["id"],
+                    "humanPlanId": human_plan["planId"],
+                    "agentPlanId": agent_plan["planId"],
+                    "actionPlanId": human_plan["actionPlanId"],
+                    "matched": True,
+                }
+            )
     inventory = {
         "intentIds": sorted(row["id"] for row in projection["intents"]),
         "actionIds": sorted(row["actionId"] for row in projection["intents"]),
@@ -935,8 +1045,13 @@ def qualify_kfd3(source: str | Path, runtime_dir: str | Path) -> dict[str, Any]:
         "profileSuiteRoot": projection["profileSuiteRoot"],
         "collaborationRoot": projection["collaborationRoot"],
         "closureRoot": projection["closureRoot"],
-        "profileRevision": projection["profileRevision"],
+        "profileRevision": (
+            1
+            if qualification_source == "release"
+            else int(projection["profileRevision"] or 0) + 1
+        ),
         "runtimeContract": "kungfu.profile-lifecycle/v1",
+        "qualificationSource": qualification_source,
         "authority": authority,
         "surfaceInventory": inventory,
         "noBypass": no_bypass,
@@ -946,8 +1061,16 @@ def qualify_kfd3(source: str | Path, runtime_dir: str | Path) -> dict[str, Any]:
             "installed-agent-interface-closure",
             "profile-content-closure",
             "public-surface-inventory",
-            "custom-view-no-bypass",
-            "dual-client-exact-plan",
+            (
+                "release-owned-shared-api-parity"
+                if qualification_source == "release"
+                else "custom-view-no-bypass"
+            ),
+            (
+                "gui-agent-api-registry-match"
+                if qualification_source == "release"
+                else "dual-client-exact-plan"
+            ),
         ],
     }
     receipt = {
@@ -981,6 +1104,336 @@ def qualify_kfd3(source: str | Path, runtime_dir: str | Path) -> dict[str, Any]:
     return result
 
 
+def build_kfd3_release_manifest(
+    sources: list[str | Path], runtime_dir: str | Path
+) -> dict[str, Any]:
+    """Run factory qualification and emit exact-root release receipts."""
+
+    entries = []
+    for source in sources:
+        receipt = _earn_kfd3(source, runtime_dir, qualification_source="release")
+        entries.append(
+            {
+                "profileId": receipt["profileId"],
+                "profileSuiteRoot": receipt["profileSuiteRoot"],
+                "receipt": receipt,
+            }
+        )
+    entries.sort(key=lambda row: (row["profileId"], row["profileSuiteRoot"]))
+    identity = {"schema": KFD3_RELEASE_MANIFEST_SCHEMA, "entries": entries}
+    return {**identity, "manifestRoot": _root(identity)}
+
+
+def _release_qualification_receipt(
+    profile_id: str, profile_suite_root: str
+) -> dict[str, Any] | None:
+    paths = []
+    explicit = os.environ.get("KF_PROFILE_KFD3_MANIFEST")
+    if explicit:
+        paths.append(Path(explicit))
+    first_party = os.environ.get("KF_FIRST_PARTY_MANIFEST")
+    if first_party:
+        paths.append(Path(first_party).with_name("profile-kfd3.json"))
+    paths.append(Path(sys.executable).resolve().with_name("profile-kfd3.json"))
+    seen = set()
+    fallback = None
+    for path in paths:
+        resolved = path.expanduser().resolve()
+        if resolved in seen or not resolved.is_file():
+            continue
+        seen.add(resolved)
+        try:
+            manifest = json.loads(resolved.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if manifest.get("schema") != KFD3_RELEASE_MANIFEST_SCHEMA:
+            continue
+        identity = {"schema": manifest["schema"], "entries": manifest.get("entries")}
+        if manifest.get("manifestRoot") != _root(identity):
+            continue
+        for entry in manifest.get("entries") or []:
+            if entry.get("profileId") != profile_id:
+                continue
+            receipt = dict(entry.get("receipt") or {})
+            if entry.get("profileSuiteRoot") == profile_suite_root:
+                return receipt
+            fallback = receipt
+    return fallback
+
+
+def _validate_kfd3_receipt_integrity(receipt: Mapping[str, Any]) -> None:
+    identity_keys = [
+        "profileId",
+        "profileSuiteRoot",
+        "collaborationRoot",
+        "closureRoot",
+        "profileRevision",
+        "runtimeContract",
+        "qualificationSource",
+        "authority",
+        "surfaceInventory",
+        "noBypass",
+        "clientProbes",
+        "knownLimits",
+        "evidenceScope",
+    ]
+    identity = {key: receipt.get(key) for key in identity_keys}
+    if receipt.get("receiptId") != _root(identity):
+        raise ProfileSdkError(
+            "kfd3-receipt-identity-invalid",
+            "KFD-3 receipt id does not bind its qualification evidence",
+        )
+    witness = receipt.get("witness") or {}
+    witness_identity = {
+        "profileId": receipt.get("profileId"),
+        "profileSuiteRoot": receipt.get("profileSuiteRoot"),
+        "collaborationRoot": receipt.get("collaborationRoot"),
+        "closureRoot": receipt.get("closureRoot"),
+        "qualificationReceiptId": receipt.get("receiptId"),
+        "authorityRegistryRoot": (receipt.get("authority") or {}).get("registryRoot"),
+        "claim": "profile-collaboration-closure-qualified",
+    }
+    if witness.get("witnessId") != _root(witness_identity):
+        raise ProfileSdkError(
+            "kfd3-witness-identity-invalid",
+            "KFD-3 witness id does not bind the receipt and authority roots",
+        )
+
+
+def kfd3_status(source: str | Path, runtime_dir: str | Path) -> dict[str, Any]:
+    """Return the machine-readable qualification state without running probes."""
+
+    validated = validate_source(source, runtime_dir)
+    inspection = validated["inspection"]
+    closure = validated["collaboration"]
+    profile_id = inspection["profile"]["id"]
+    try:
+        state = storage_service.profile_lifecycle(
+            runtime_dir, "get", profile_id=profile_id, include_removed=True
+        )
+    except ValueError as error:
+        if not str(error).startswith("Profile not found:"):
+            raise
+        state = None
+    active_exact_root = bool(
+        state
+        and state.get("activated")
+        and state.get("profile_suite_root") == inspection["profile_suite_root"]
+    )
+    receipt = (state or {}).get("kfd3_qualification") or {}
+    if not receipt:
+        receipt = (
+            _release_qualification_receipt(profile_id, inspection["profile_suite_root"])
+            or {}
+        )
+    base = {
+        "schema": "kungfu.profile-kfd3-status/v1",
+        "profileId": profile_id,
+        "profileSuiteRoot": inspection["profile_suite_root"],
+        "qualified": False,
+        "current": False,
+        "activeExactRoot": active_exact_root,
+        "receiptId": receipt.get("receiptId"),
+        "witnessId": (receipt.get("witness") or {}).get("witnessId"),
+        "qualificationSource": receipt.get("qualificationSource"),
+    }
+    if not closure["declared"]:
+        return {
+            **base,
+            "status": "failed",
+            "reason": closure["reason"],
+            "nextActions": [],
+        }
+    if not active_exact_root:
+        return {
+            **base,
+            "status": "stale" if receipt else "untested",
+            "reason": "Profile must be active at this exact root before KFD-3 qualification",
+            "nextActions": [{"action": "profile.activate", "requiresApproval": True}],
+        }
+    if not receipt:
+        release_only = bool(closure["intents"]) and all(
+            (row.get("protocol") or {}).get("mode") == "shared-api"
+            for row in closure["intents"]
+        )
+        return {
+            **base,
+            "status": "untested",
+            "reason": (
+                "No factory KFD-3 release receipt exists for this exact system Profile root"
+                if release_only
+                else "No KFD-3 qualification receipt exists for this exact Profile root"
+            ),
+            "nextActions": (
+                [{"action": "product.verify-release", "requiresApproval": False}]
+                if release_only
+                else [
+                    {"action": "profile.kfd3.plan", "requiresApproval": False},
+                    {"action": "profile.kfd3.qualify", "requiresApproval": True},
+                ]
+            ),
+        }
+    try:
+        _validate_sdk_value(
+            "kfd3QualificationReceiptSchema",
+            receipt,
+            "stored KFD-3 qualification receipt",
+        )
+        _validate_kfd3_receipt_integrity(receipt)
+    except ProfileSdkError as error:
+        return {
+            **base,
+            "status": "failed",
+            "reason": "Stored KFD-3 qualification receipt is invalid",
+            "diagnosis": error.diagnosis,
+            "nextActions": [{"action": "profile.kfd3.plan", "requiresApproval": False}],
+        }
+    authority = _agent_interface_authority()
+    current = bool(
+        receipt.get("profileId") == profile_id
+        and receipt.get("profileSuiteRoot") == inspection["profile_suite_root"]
+        and receipt.get("collaborationRoot") == closure["collaborationRoot"]
+        and receipt.get("closureRoot") == closure["closureRoot"]
+        and (receipt.get("authority") or {}).get("registryRoot")
+        == authority["registryRoot"]
+    )
+    if not current:
+        return {
+            **base,
+            "status": "stale",
+            "reason": "Profile or KFD-3 Runtime contract changed after qualification",
+            "nextActions": [
+                {"action": "profile.kfd3.plan", "requiresApproval": False},
+                {"action": "profile.kfd3.qualify", "requiresApproval": True},
+            ],
+        }
+    return {
+        **base,
+        "status": "qualified",
+        "qualified": True,
+        "current": True,
+        "issuer": {
+            "type": receipt["qualificationSource"],
+            "name": (
+                "Kungfu release qualification"
+                if receipt["qualificationSource"] == "release"
+                else "Kungfu local qualification"
+            ),
+        },
+        "policyVersion": "kfd3-profile-collaboration/v1",
+        "runtimeContractRoot": authority["registryRoot"],
+        "evidenceScope": receipt["evidenceScope"],
+        "nextActions": [{"action": "profile.kfd3.verify", "requiresApproval": False}],
+    }
+
+
+def kfd3_qualification_plan(
+    source: str | Path, runtime_dir: str | Path
+) -> dict[str, Any]:
+    """Describe the exact probes without executing or persisting them."""
+
+    projection = application(source, runtime_dir, include_qualification=False)
+    if not projection["activeExactRoot"]:
+        raise ProfileSdkError(
+            "kfd3-active-root-required",
+            "KFD-3 qualification requires the exact Profile root to be active",
+        )
+    identity = {
+        "profileId": projection["profileId"],
+        "profileSuiteRoot": projection["profileSuiteRoot"],
+        "collaborationRoot": projection["collaborationRoot"],
+        "closureRoot": projection["closureRoot"],
+        "profileRevision": projection["profileRevision"],
+        "runtimeContractRoot": _agent_interface_authority()["registryRoot"],
+        "intentIds": sorted(row["id"] for row in projection["intents"]),
+        "policyVersion": "kfd3-profile-collaboration/v1",
+    }
+    plan_id = _root(identity)
+    card = decision_card(
+        "profile-kfd3-qualification",
+        "Run the exact KFD-3 dual-client and no-bypass probes for this Profile root.",
+        choices=["approve", "deny"],
+        basis={"planId": plan_id, **identity},
+        required_authority="workspace-profile-operator",
+        resume_command="kungfu profile kfd3-authorize <source> --expected-plan-id <id> --choice approve --authorized-by <actor> --json",
+    )
+    return {
+        "schema": KFD3_QUALIFICATION_PLAN_SCHEMA,
+        "planId": plan_id,
+        **identity,
+        "probes": [
+            "profile-content-closure",
+            "application-authority",
+            "public-surface-inventory",
+            "custom-view-no-bypass",
+            "dual-client-exact-plan",
+        ],
+        "sideEffects": ["append Kfd3Qualified lifecycle fact after all probes pass"],
+        "requiresAuthorization": True,
+        "decisionCard": card,
+    }
+
+
+def qualify_kfd3(
+    source: str | Path,
+    runtime_dir: str | Path,
+    *,
+    authorization_id: str = "kfd3-cli-explicit",
+    qualification_source: str = "local",
+) -> dict[str, Any]:
+    """Run probes once and persist the earned receipt in the lifecycle journal."""
+
+    status = kfd3_status(source, runtime_dir)
+    if status["qualified"]:
+        if status.get("qualificationSource") == "release":
+            receipt = _release_qualification_receipt(
+                status["profileId"], status["profileSuiteRoot"]
+            )
+            if receipt:
+                return receipt
+        else:
+            state = storage_service.profile_lifecycle(
+                runtime_dir, "get", profile_id=status["profileId"]
+            )
+            return dict(state["kfd3_qualification"])
+    receipt = _earn_kfd3(source, runtime_dir, qualification_source=qualification_source)
+    core_plan = lifecycle_plan(
+        runtime_dir, "kfd3-qualify", source, qualification=receipt
+    )["corePlan"]
+    lifecycle_apply(runtime_dir, core_plan, authorization_id)
+    return receipt
+
+
+def authorize_kfd3_qualification(
+    source: str | Path,
+    runtime_dir: str | Path,
+    expected_plan_id: str,
+    choice: str,
+    authorized_by: str,
+) -> dict[str, Any]:
+    """Execute one reviewed KFD-3 plan and persist its exact-root receipt."""
+
+    plan = kfd3_qualification_plan(source, runtime_dir)
+    if plan["planId"] != expected_plan_id:
+        raise ProfileSdkError(
+            "kfd3-plan-stale",
+            "Profile or Runtime contract changed after KFD-3 planning",
+            expectedPlanId=expected_plan_id,
+            actualPlanId=plan["planId"],
+        )
+    answer = answer_decision(plan["decisionCard"], choice, authorized_by)
+    if answer["choice"] != "approve":
+        raise ProfileSdkError(
+            "kfd3-qualification-denied", "KFD-3 qualification was denied"
+        )
+    return qualify_kfd3(
+        source,
+        runtime_dir,
+        authorization_id=answer["authorizationId"],
+        qualification_source="local",
+    )
+
+
 def verify_kfd3(
     source: str | Path, runtime_dir: str | Path, receipt: Mapping[str, Any]
 ) -> dict[str, Any]:
@@ -991,7 +1444,27 @@ def verify_kfd3(
         dict(receipt),
         "KFD-3 qualification receipt",
     )
-    current = qualify_kfd3(source, runtime_dir)
+    status = kfd3_status(source, runtime_dir)
+    if not status["qualified"]:
+        raise ProfileSdkError(
+            "kfd3-qualification-not-current",
+            "Profile has no current KFD-3 qualification receipt",
+            status=status,
+        )
+    if status.get("qualificationSource") == "release":
+        current = _release_qualification_receipt(
+            status["profileId"], status["profileSuiteRoot"]
+        )
+    else:
+        state = storage_service.profile_lifecycle(
+            runtime_dir, "get", profile_id=status["profileId"]
+        )
+        current = dict(state["kfd3_qualification"])
+    if not current:
+        raise ProfileSdkError(
+            "kfd3-qualification-not-current",
+            "Profile has no current KFD-3 qualification receipt",
+        )
     if dict(receipt) != current:
         raise ProfileSdkError(
             "kfd3-qualification-stale-or-tampered",
@@ -1644,7 +2117,7 @@ def _validate_decision_answer(
 
 def package_content_root(package_dir: str | Path) -> str:
     root = Path(package_dir).resolve()
-    rows = []
+    rows: list[dict[str, Any]] = []
     for path in root.rglob("*"):
         relative = path.relative_to(root)
         if any(part in _IGNORED_PARTS for part in relative.parts):

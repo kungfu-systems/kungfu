@@ -210,8 +210,9 @@ void validate_backup_bundle(const recovery_backup_bundle &bundle) {
       bundle.source_report.evidence_error != durability::ingest_error::None ||
       !bundle.source_report.evidence_message.empty() || !bundle.source_report.qualification_passed ||
       bundle.source_report.episode_unknown_record_count != 0 || !bundle.source_report.interrupted_episodes.empty() ||
-      bundle.source_report.mutation_performed || bundle.source_report.restart_order != restart_order ||
-      bundle.lost_visible_tail_bytes != 0 || bundle.rpo_boundary != "through-checkpoint-covered-durable-frontier" ||
+      !bundle.source_report.episode_findings.empty() || bundle.source_report.mutation_performed ||
+      bundle.source_report.restart_order != restart_order || bundle.lost_visible_tail_bytes != 0 ||
+      bundle.rpo_boundary != "through-checkpoint-covered-durable-frontier" ||
       bundle.qualification_profile != bundle.source_report.qualification_profile ||
       !bundle.projection_rebuild_required) {
     throw std::runtime_error("recovery_backup_bundle_identity_invalid");
@@ -421,7 +422,9 @@ std::string receipt_bytes(const quarantine_preview &preview) {
 }
 
 bool retained_package_matches(const fs::path &package, const quarantine_preview &preview) {
+  std::set<std::string> expected_files = {"receipt.txt"};
   for (const auto &file : preview.files) {
+    expected_files.insert(file.name);
     const auto retained = package / file.name;
     if (!fs::is_regular_file(retained) || fs::file_size(retained) != file.size ||
         digest(read_bytes(retained)) != file.sha256) {
@@ -429,7 +432,37 @@ bool retained_package_matches(const fs::path &package, const quarantine_preview 
     }
   }
   const auto receipt = package / "receipt.txt";
-  return fs::is_regular_file(receipt) && read_bytes(receipt) == receipt_bytes(preview);
+  if (!fs::is_regular_file(receipt) || read_bytes(receipt) != receipt_bytes(preview)) {
+    return false;
+  }
+  return std::ranges::all_of(fs::directory_iterator(package), [&expected_files](const auto &entry) {
+    return !entry.is_symlink() && entry.is_regular_file() && expected_files.contains(entry.path().filename().string());
+  });
+}
+
+bool valid_partial_retained_package(const fs::path &package, const quarantine_preview &preview) {
+  std::set<std::string> expected_files;
+  std::set<std::string> pending_files = {"receipt.txt.pending"};
+  for (const auto &file : preview.files) {
+    expected_files.insert(file.name);
+    pending_files.insert(file.name + ".pending");
+  }
+  for (const auto &entry : fs::directory_iterator(package)) {
+    if (entry.is_symlink() || !entry.is_regular_file()) {
+      return false;
+    }
+    const auto name = entry.path().filename().string();
+    if (pending_files.contains(name)) {
+      continue;
+    }
+    const auto expected = std::find_if(preview.files.begin(), preview.files.end(),
+                                       [&name](const auto &file) { return file.name == name; });
+    if (!expected_files.contains(name) || expected == preview.files.end() ||
+        fs::file_size(entry.path()) != expected->size || digest(read_bytes(entry.path())) != expected->sha256) {
+      return false;
+    }
+  }
+  return true;
 }
 
 } // namespace
@@ -466,7 +499,7 @@ recovery_report recovery_engine::inspect() const {
     const auto episodes = storage.episode_list(storage_episode_list_request{options_.data_root, 0, 0});
     report.episode_unknown_record_count = episodes.unknown_record_count;
     for (const auto &episode : episodes.episodes) {
-      if (!episode.opened || episode.closed) {
+      if (!episode.opened) {
         continue;
       }
       storage_fsck_request request{};
@@ -478,7 +511,12 @@ recovery_report recovery_engine::inspect() const {
       if (!fsck.qualification.has_value()) {
         throw std::runtime_error("recovery_episode_qualification_missing");
       }
-      report.interrupted_episodes.push_back(*fsck.qualification);
+      if (!episode.closed) {
+        report.interrupted_episodes.push_back(*fsck.qualification);
+      }
+      if (!episode.closed || fsck.qualification->status != "ok") {
+        report.episode_findings.push_back(*fsck.qualification);
+      }
     }
     report.completed_phases.push_back(recovery_phase::Verify);
     report.completed_phases.push_back(recovery_phase::Select);
@@ -486,11 +524,11 @@ recovery_report recovery_engine::inspect() const {
 
     const bool episode_blocked =
         report.episode_unknown_record_count != 0 ||
-        std::any_of(report.interrupted_episodes.begin(), report.interrupted_episodes.end(),
+        std::any_of(report.episode_findings.begin(), report.episode_findings.end(),
                     [](const auto &qualification) { return qualification.status == "failed"; });
     const bool episode_degraded =
-        !report.interrupted_episodes.empty() ||
-        std::any_of(report.interrupted_episodes.begin(), report.interrupted_episodes.end(),
+        !report.episode_findings.empty() ||
+        std::any_of(report.episode_findings.begin(), report.episode_findings.end(),
                     [](const auto &qualification) { return qualification.status == "degraded"; });
     if (!status.available || episode_blocked ||
         (!status.durable_watermark.has_value() && status.last_error == ingest_error::CheckpointCorrupt)) {
@@ -545,6 +583,7 @@ std::optional<quarantine_preview> recovery_engine::preview_quarantine() const {
 maintenance_receipt recovery_engine::quarantine(const quarantine_preview &preview) const {
   maintenance_receipt receipt;
   receipt.plan_id = preview.plan_id;
+  bool mutated = false;
   try {
     const auto current = preview_quarantine();
     if (!current.has_value() || !(*current == preview) || preview.plan_id.empty()) {
@@ -574,25 +613,34 @@ maintenance_receipt recovery_engine::quarantine(const quarantine_preview &previe
       return receipt;
     }
 
-    fs::create_directories(package);
+    if (fs::is_directory(package) && !valid_partial_retained_package(package, preview)) {
+      receipt.error = "recovery_quarantine_partial_package_invalid";
+      return receipt;
+    }
+
+    mutated = fs::create_directories(package) || mutated;
     for (const auto &file : preview.files) {
       const auto retained = package / file.name;
+      const auto temporary = package / (file.name + ".pending");
+      std::error_code ignored;
+      mutated = fs::remove(temporary, ignored) || mutated;
       if (fs::is_regular_file(retained) && fs::file_size(retained) == file.size &&
           digest(read_bytes(retained)) == file.sha256) {
         continue;
       }
-      const auto temporary = package / (file.name + ".pending");
-      std::error_code ignored;
-      fs::remove(temporary, ignored);
       fs::copy_file(source / file.name, temporary, fs::copy_options::overwrite_existing);
       if (fs::file_size(temporary) != file.size || digest(read_bytes(temporary)) != file.sha256) {
         throw std::runtime_error("recovery_quarantine_copy_mismatch");
       }
       fs::remove(retained, ignored);
       fs::rename(temporary, retained);
+      mutated = true;
     }
     const auto receipt_path = package / "receipt.txt";
     const auto temporary_receipt = package / "receipt.txt.pending";
+    std::error_code ignored;
+    mutated = fs::remove(temporary_receipt, ignored) || mutated;
+    mutated = true;
     {
       std::ofstream output(temporary_receipt, std::ios::binary | std::ios::trunc);
       output << receipt_bytes(preview);
@@ -601,16 +649,16 @@ maintenance_receipt recovery_engine::quarantine(const quarantine_preview &previe
         throw std::runtime_error("recovery_quarantine_receipt_write_failed");
       }
     }
-    std::error_code ignored;
     fs::remove(receipt_path, ignored);
     fs::rename(temporary_receipt, receipt_path);
     if (!retained_package_matches(package, preview)) {
       throw std::runtime_error("recovery_quarantine_package_verification_failed");
     }
     receipt.status = maintenance_status::Completed;
-    receipt.mutation_performed = true;
+    receipt.mutation_performed = mutated;
     return receipt;
   } catch (const std::exception &error) {
+    receipt.mutation_performed = mutated;
     receipt.error = error.what();
     return receipt;
   }
@@ -629,6 +677,9 @@ backup_export_result recovery_engine::export_consistent_backup() const {
     const auto first_report = inspect();
     if (first_report.outcome != recovery_outcome::Ready || !first_report.durable_frontier.has_value() ||
         first_report.unacknowledged_tail_bytes != 0) {
+      if (first_report.episode_unknown_record_count != 0 || !first_report.episode_findings.empty()) {
+        (void)capture_episode_identities(options_.data_root);
+      }
       throw std::runtime_error("recovery_backup_source_not_ready");
     }
     const auto root = fs::absolute(options_.data_root).lexically_normal();
@@ -815,6 +866,54 @@ const char *maintenance_status_name(maintenance_status status) noexcept {
     return "rejected";
   }
   return "rejected";
+}
+
+const char *recovery_component_name(recovery_component component) noexcept {
+  switch (component) {
+  case recovery_component::Supervisor:
+    return "supervisor";
+  case recovery_component::StateService:
+    return "state_service";
+  case recovery_component::Projection:
+    return "projection";
+  case recovery_component::Peers:
+    return "peers";
+  }
+  return "supervisor";
+}
+
+restart_authorization authorize_restart(const recovery_report &report, recovery_component component,
+                                        const restart_progress &progress) {
+  restart_authorization decision{false, component, {}};
+  const std::vector<recovery_phase> completed_phases = {recovery_phase::Discover, recovery_phase::Verify,
+                                                        recovery_phase::Select, recovery_phase::Classify,
+                                                        recovery_phase::Report};
+  const std::vector<std::string> restart_order = {"supervisor", "state_service", "projection", "peers"};
+  const bool report_complete = report.schema == RECOVERY_REPORT_SCHEMA_V1 &&
+                               report.completed_phases == completed_phases && report.restart_order == restart_order;
+  switch (component) {
+  case recovery_component::Supervisor:
+    decision.allowed = report_complete && !progress.supervisor_verified && !progress.state_service_ready &&
+                       !progress.projection_ready && !progress.peers_started;
+    decision.reason = decision.allowed ? "" : "recovery_restart_supervisor_report_or_progress_invalid";
+    break;
+  case recovery_component::StateService:
+    decision.allowed = report_complete && report.outcome != recovery_outcome::Blocked && progress.supervisor_verified &&
+                       !progress.state_service_ready && !progress.projection_ready && !progress.peers_started;
+    decision.reason = decision.allowed ? "" : "recovery_restart_state_service_not_authorized";
+    break;
+  case recovery_component::Projection:
+    decision.allowed = report_complete && report.outcome != recovery_outcome::Blocked && progress.supervisor_verified &&
+                       progress.state_service_ready && !progress.projection_ready && !progress.peers_started;
+    decision.reason = decision.allowed ? "" : "recovery_restart_projection_not_authorized";
+    break;
+  case recovery_component::Peers:
+    decision.allowed = report_complete && report.outcome == recovery_outcome::Ready && progress.supervisor_verified &&
+                       progress.state_service_ready && progress.projection_ready && !progress.peers_started;
+    decision.reason = decision.allowed ? "" : "recovery_restart_peers_not_authorized";
+    break;
+  }
+  return decision;
 }
 
 } // namespace kungfu::runtime::recovery

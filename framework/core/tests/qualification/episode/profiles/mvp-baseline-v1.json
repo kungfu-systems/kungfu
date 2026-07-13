@@ -23,7 +23,7 @@
   "validation": {
     "sample_count": 7,
     "list_limit": 100,
-    "allowed_full_fsck_warnings": ["sqlite_projection_missing"]
+    "allowed_full_fsck_warnings": ["projection_absent"]
   },
   "semantic": {
     "required_dimensions": [

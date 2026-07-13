@@ -8,6 +8,7 @@ import {
   type ManagedProfile,
   type ProfileApplicationProjection,
   type ProfileIntentPlan,
+  type ProfileKfd3QualificationPlan,
   type ProfileLifecyclePlan,
   type ProfileManagerProjection,
   headingStyle,
@@ -29,12 +30,21 @@ function shortRoot(value: string | null | undefined): string {
   return value.length > 24 ? `${value.slice(0, 16)}…${value.slice(-6)}` : value;
 }
 
+const kfd3Badge = {
+  qualified: '🛡️',
+  untested: '◇',
+  stale: '△',
+  failed: '✕',
+  testing: '⏳',
+} as const;
+
 function ProfileCard({
   managed,
   application,
   applicationError,
   planning,
   onPlan,
+  onKfd3Plan,
   onIntentPlan,
 }: {
   managed: ManagedProfile;
@@ -42,6 +52,7 @@ function ProfileCard({
   applicationError?: string;
   planning: boolean;
   onPlan: (action: 'qualify' | 'activate', source: string) => void;
+  onKfd3Plan: (source: string) => void;
   onIntentPlan: (source: string, intentId: string) => void;
 }) {
   const next =
@@ -113,7 +124,7 @@ function ProfileCard({
             <span
               title={
                 application.qualified
-                  ? `KFD-3 witness ${application.qualification.witnessId}`
+                  ? `${application.qualification.issuer?.name ?? 'KFD-3 qualification'} · profile ${application.profileSuiteRoot} · runtime ${application.qualification.runtimeContractRoot} · receipt ${application.qualification.receiptId}`
                   : application.qualification.reason ||
                     String(
                       application.qualification.diagnosis?.message ||
@@ -121,27 +132,55 @@ function ProfileCard({
                     )
               }
             >
-              {application.qualified ? '🛡️ KFD-3 qualified' : '◌ KFD-3 declared'}
+              {kfd3Badge[application.qualification.status]} KFD-3
             </span>
           </div>
+          {application.qualification.status !== 'qualified' &&
+          application.activeExactRoot &&
+          application.qualification.nextActions.some(
+            (next) => next.action === 'profile.kfd3.qualify',
+          ) ? (
+            <button
+              type="button"
+              disabled={planning}
+              title="Review the exact probes before running KFD-3 qualification"
+              onClick={() => onKfd3Plan(application.source)}
+              style={{ ...mono, marginTop: 8, marginRight: 8 }}
+            >
+              Test KFD-3
+            </button>
+          ) : null}
           {application.intents.map((intent) => (
             <button
               key={intent.id}
               type="button"
               disabled={
-                planning ||
-                !application.activeExactRoot ||
-                intent.missingCapabilities.length > 0
+                'mode' in intent.protocol &&
+                intent.protocol.mode === 'shared-api'
+                  ? true
+                  : planning ||
+                    !application.activeExactRoot ||
+                    intent.missingCapabilities.length > 0
               }
               title={
-                intent.missingCapabilities.length
-                  ? `Missing: ${intent.missingCapabilities.join(', ')}`
-                  : `${intent.requiredAuthority} · inspect → advise → preview → authorize → execute → receipt → verify`
+                'mode' in intent.protocol &&
+                intent.protocol.mode === 'shared-api'
+                  ? `${intent.protocol.apiId} · the Product GUI and Agent CLI use this same capability API`
+                  : intent.missingCapabilities.length
+                    ? `Missing: ${intent.missingCapabilities.join(', ')}`
+                    : `${intent.requiredAuthority} · inspect → advise → preview → authorize → execute → receipt → verify`
               }
-              onClick={() => onIntentPlan(application.source, intent.id)}
+              onClick={() => {
+                if (!('mode' in intent.protocol)) {
+                  onIntentPlan(application.source, intent.id);
+                }
+              }}
               style={{ ...mono, marginTop: 8, marginRight: 8 }}
             >
-              {intent.title}
+              {'mode' in intent.protocol &&
+              intent.protocol.mode === 'shared-api'
+                ? `↗ ${intent.title}`
+                : intent.title}
             </button>
           ))}
         </div>
@@ -199,6 +238,10 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
     plan: ProfileIntentPlan;
     source: string;
     intentId: string;
+  } | null>(null);
+  const [pendingKfd3, setPendingKfd3] = React.useState<{
+    plan: ProfileKfd3QualificationPlan;
+    source: string;
   } | null>(null);
   const [authorizedBy, setAuthorizedBy] = React.useState('');
   const profile =
@@ -288,6 +331,42 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
         intentId,
       });
       setError('');
+    } catch (reason) {
+      setError((reason as Error).message);
+    } finally {
+      setPlanning(false);
+    }
+  };
+
+  const previewKfd3 = async (source: string) => {
+    if (!caps.profile) return;
+    setPlanning(true);
+    try {
+      setPendingKfd3({
+        plan: await caps.profile.kfd3PlanAsync(source),
+        source,
+      });
+      setError('');
+    } catch (reason) {
+      setError((reason as Error).message);
+    } finally {
+      setPlanning(false);
+    }
+  };
+
+  const approveKfd3 = async () => {
+    if (!caps.profile || !pendingKfd3 || !authorizedBy.trim()) return;
+    setPlanning(true);
+    try {
+      await caps.profile.authorizeKfd3Async(
+        pendingKfd3.source,
+        pendingKfd3.plan.planId,
+        'approve',
+        authorizedBy.trim(),
+      );
+      setPendingKfd3(null);
+      await refresh();
+      shell.notify({ level: 'success', title: '🛡️ KFD-3 qualification earned' });
     } catch (reason) {
       setError((reason as Error).message);
     } finally {
@@ -389,6 +468,7 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
             applicationError={applicationErrors[managed.profileId]}
             planning={planning}
             onPlan={(action, source) => void previewPlan(action, source)}
+            onKfd3Plan={(source) => void previewKfd3(source)}
             onIntentPlan={(source, intentId) =>
               void previewIntent(source, intentId)
             }
@@ -405,6 +485,49 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
           </div>
         ) : null}
       </div>
+      {pendingKfd3 ? (
+        <div
+          style={{
+            ...mono,
+            border: '1px solid #dcdcaa',
+            padding: 10,
+            marginBottom: 12,
+          }}
+        >
+          <strong style={{ color: '#dcdcaa' }}>◇ KFD-3 test plan</strong>
+          <div>profile {shortRoot(pendingKfd3.plan.profileSuiteRoot)}</div>
+          <div>runtime {shortRoot(pendingKfd3.plan.runtimeContractRoot)}</div>
+          <div>plan {shortRoot(pendingKfd3.plan.planId)}</div>
+          <div style={{ color: '#858585' }}>
+            {pendingKfd3.plan.probes.join(' · ')}
+          </div>
+          <label style={{ display: 'block', marginTop: 8 }}>
+            authorized by{' '}
+            <input
+              value={authorizedBy}
+              onChange={(event) => setAuthorizedBy(event.target.value)}
+              placeholder="workspace profile operator"
+              style={{ ...mono, minWidth: 220 }}
+            />
+          </label>
+          <button
+            type="button"
+            disabled={planning || !authorizedBy.trim()}
+            onClick={() => void approveKfd3()}
+            style={{ ...mono, marginTop: 8, marginRight: 8 }}
+          >
+            Run exact test plan
+          </button>
+          <button
+            type="button"
+            disabled={planning}
+            onClick={() => setPendingKfd3(null)}
+            style={{ ...mono, marginTop: 8 }}
+          >
+            Dismiss
+          </button>
+        </div>
+      ) : null}
       {pending ? (
         <div
           style={{

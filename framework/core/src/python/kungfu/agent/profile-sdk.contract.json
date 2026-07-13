@@ -323,18 +323,33 @@
             "requiredCapabilities": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" } },
             "material": { "const": true },
             "protocol": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": ["inspect", "advise", "preview", "authorize", "execute", "receipt", "verify"],
-              "properties": {
-                "inspect": { "const": "profile.intent.inspect" },
-                "advise": { "const": "profile.intent.advise" },
-                "preview": { "const": "profile.intent.plan" },
-                "authorize": { "const": "profile.decide" },
-                "execute": { "const": "profile.intent.apply" },
-                "receipt": { "const": "profile.intent.receipt" },
-                "verify": { "const": "profile.intent.verify" }
-              }
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["inspect", "advise", "preview", "authorize", "execute", "receipt", "verify"],
+                  "properties": {
+                    "inspect": { "const": "profile.intent.inspect" },
+                    "advise": { "const": "profile.intent.advise" },
+                    "preview": { "const": "profile.intent.plan" },
+                    "authorize": { "const": "profile.decide" },
+                    "execute": { "const": "profile.intent.apply" },
+                    "receipt": { "const": "profile.intent.receipt" },
+                    "verify": { "const": "profile.intent.verify" }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["mode", "apiId", "guiMember", "guiMethod"],
+                  "properties": {
+                    "mode": { "const": "shared-api" },
+                    "apiId": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+                    "guiMember": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+                    "guiMethod": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" }
+                  }
+                }
+              ]
             }
           }
         }
@@ -383,7 +398,7 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "additionalProperties": false,
-    "required": ["schema", "receiptId", "profileId", "profileSuiteRoot", "collaborationRoot", "closureRoot", "profileRevision", "runtimeContract", "authority", "surfaceInventory", "noBypass", "clientProbes", "knownLimits", "evidenceScope", "qualified", "witness"],
+    "required": ["schema", "receiptId", "profileId", "profileSuiteRoot", "collaborationRoot", "closureRoot", "profileRevision", "runtimeContract", "qualificationSource", "authority", "surfaceInventory", "noBypass", "clientProbes", "knownLimits", "evidenceScope", "qualified", "witness"],
     "properties": {
       "schema": { "const": "kungfu.profile-kfd3-qualification-receipt/v1" },
       "receiptId": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
@@ -393,6 +408,7 @@
       "closureRoot": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
       "profileRevision": { "type": "integer", "minimum": 1 },
       "runtimeContract": { "const": "kungfu.profile-lifecycle/v1" },
+      "qualificationSource": { "enum": ["local", "release"] },
       "authority": {
         "type": "object",
         "additionalProperties": false,
@@ -432,9 +448,9 @@
         "required": ["passed", "policy", "customViews", "executableFacetCount"],
         "properties": {
           "passed": { "const": true },
-          "policy": { "const": "generic-renderer-or-capability-free-sandboxed-view/v1" },
+          "policy": { "enum": ["generic-renderer-or-capability-free-sandboxed-view/v1", "release-owned-shared-api-parity/v1"] },
           "customViews": { "type": "array", "items": { "type": "object" } },
-          "executableFacetCount": { "const": 0 }
+          "executableFacetCount": { "type": "integer", "minimum": 0 }
         }
       },
       "clientProbes": {
@@ -443,12 +459,20 @@
         "items": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["intentId", "humanPlanId", "agentPlanId", "actionPlanId", "matched"],
+          "required": ["intentId", "matched"],
           "properties": {
             "intentId": { "type": "string", "minLength": 1 },
             "humanPlanId": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
             "agentPlanId": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
             "actionPlanId": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+            "apiId": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+            "surface": { "const": "cli-api-gui" },
+            "humanProjection": { "const": "work-dashboard-gui" },
+            "agentProjection": { "const": "provider-skill" },
+            "guiMember": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+            "guiMethod": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+            "guiProjectionRoot": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+            "guiProjectionKind": { "enum": ["built-view-bundle", "source-view"] },
             "matched": { "const": true }
           }
         }

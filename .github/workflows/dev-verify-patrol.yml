@@ -74,7 +74,8 @@ jobs:
       # match the .buildchain/buildchain.toml stages.
       verify-command: >-
         bash -c "KUNGFU_BUILDCHAIN_NO_OPTIONAL=1 KUNGFU_BUILDCHAIN_SOURCE_BUILD=1
-        SHIFU_NATIVE=1 ./shifu cache apply -- ./shifu verify --full"
+        SHIFU_NATIVE=1 ./shifu cache apply -- ./shifu gate run product.verify-full
+        --capability native-toolchain --capability product-artifacts"
 
   # Keep one tracking issue in sync with the patrol result: open or refresh it
   # when dev is red, close it when dev returns to green. This is the standing

@@ -58,13 +58,10 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
-      - name: Check Markdown documentation from external tool cache
+      - name: Run blocking documentation Gate closure
         env:
           KUNGFU_DOCS_TOOL_CACHE: ${{ runner.temp }}/kungfu-docs-tools
-        run: ./shifu docs:check:readonly
-
-      - name: Enforce objective prose contracts
-        run: ./shifu docs:prose:required
+        run: ./shifu gate run docs.prose
 
       - name: Report advisory prose policy
         env:

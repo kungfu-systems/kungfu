@@ -116,7 +116,9 @@ kungfu profile intent plan ./my-profile <intent-id> --json
 kungfu profile intent authorize ./my-profile <intent-id> --expected-plan-id <id> --choice approve --authorized-by <actor> --json
 kungfu profile intent apply plan.json --authorization-file answer.json --json
 kungfu profile intent verify ./my-profile receipt.json --json
-kungfu profile kfd3-qualify ./my-profile --json
+kungfu profile kfd3-status ./my-profile --json
+kungfu profile kfd3-plan ./my-profile --json
+kungfu profile kfd3-authorize ./my-profile --expected-plan-id <id> --choice approve --authorized-by <actor> --json
 kungfu profile kfd3-verify ./my-profile receipt.json --json
 kungfu profile qualify ./my-profile --json
 kungfu profile plan install ./my-profile --json
@@ -136,10 +138,13 @@ known limits. `profile collaboration` audits action/view/authority/capability
 closure and reports `declared-closed`, but it remains `qualified: false` until
 Kungfu has produced the runtime probes and KFD-3 witness; schema validity,
 KFD-1/KFD-2 qualification, and KFD-3 qualification are separate states. The
-`kfd3-qualify` command earns a deterministic receipt only for an exact active
-root after installed Agent-interface closure, custom-view no-bypass, and
-Human/Agent exact-plan probes pass. A Profile cannot supply that receipt or
-witness in its own source tree.
+`kfd3-status` never runs probes: it returns the shared machine state, issuer,
+receipt coordinates, and next actions used by the GUI badge. `kfd3-plan`
+previews the exact probe set, and `kfd3-authorize` earns and journals a
+deterministic receipt only for an exact active root after installed
+Agent-interface closure, custom-view no-bypass, and Human/Agent exact-plan
+probes pass. A Profile cannot supply that receipt or witness in its own source
+tree.
 The generic Profile Manager calls these same installed application commands.
 Its intent card is a visual projection of the same Profile/collaboration roots,
 decision card, action receipt, and verification result; GUI focus or custom

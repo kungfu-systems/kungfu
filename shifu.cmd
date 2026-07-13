@@ -15,7 +15,7 @@ rem ============================================================================
 rem
 rem Aligns with the macOS/Linux shifu (sh):
 rem   shifu app | shifu build:core | shifu <any pnpm task>
-rem   shifu cache / proxy / config   rich subcommands -> delegated to L2 node (not pnpm)
+rem   shifu cache / gate / proxy / config   rich subcommands -> delegated to L2 node (not pnpm)
 rem
 rem This script is a thin shim in front of the native launcher (crates\shifu,
 rem a self-contained Rust binary -- see docs/development/rust-adoption.md). Resolution order:
@@ -225,6 +225,7 @@ if "%~1"=="" (
   echo   shifu ^<task^> [args...]     run any pnpm task under the pinned toolchain
   echo   shifu build ^| rebuild      bootstrap build ^(rebuild clears generated outputs^)
   echo   shifu cache ...            inspect the versioned cache contract and schemas
+  echo   shifu gate ...             inspect and plan registered project gates
   echo   shifu proxy ^| config ...   manage local mirror/cache config
   echo   shifu --version            launcher version; shifu help for pnpm's own help
   echo.
@@ -247,6 +248,7 @@ rem intentionally forwarded so the Shifu resolver fails closed.
 if "%SHIFU_CACHE_ACTIVE%"=="1" goto richdispatch
 if not defined SHIFU_CACHE_PROFILE_REF if not defined SHIFU_CACHE_PROFILE_DIGEST goto richdispatch
 if /i "%~1"=="cache"       goto richdispatch
+if /i "%~1"=="gate"        goto richdispatch
 if /i "%~1"=="proxy"       goto richdispatch
 if /i "%~1"=="config"      goto richdispatch
 if /i "%~1"=="clone"       goto richdispatch
@@ -261,6 +263,7 @@ exit /b !errorlevel!
 rem -- Delegate rich subcommands to L2 node (no pnpm, no uv). Prefer fnm node, else system node. --
 if /i "%~1"=="proxy"  goto delegate
 if /i "%~1"=="config" goto delegate
+if /i "%~1"=="gate"   goto delegate
 goto bootstrap
 
 :delegate

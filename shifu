@@ -17,6 +17,7 @@
 #   ./shifu <any pnpm task/args>
 #   ./shifu rebuild      # rich subcommand: clear generated outputs, then bootstrap build
 #   ./shifu cache ...    # rich subcommand: inspect the cache contract and schemas
+#   ./shifu gate ...     # rich subcommand: inspect and plan project gates
 #   ./shifu proxy ...    # rich subcommand: manage local cache/mirror proxy config (delegated to L2 node, not passed to pnpm)
 #
 # This script is a thin shim in front of the native launcher (crates/shifu, a
@@ -317,6 +318,7 @@ case "${1:-}" in
     echo "  ./shifu <task> [args...]     run any pnpm task under the pinned toolchain"
     echo "  ./shifu build | rebuild      bootstrap build (rebuild clears generated outputs)"
     echo "  ./shifu cache ...            inspect the versioned cache contract and schemas"
+    echo "  ./shifu gate ...             inspect and plan registered project gates"
     echo "  ./shifu proxy | config ...   manage local mirror/cache config"
     echo "  ./shifu --version            launcher version; ./shifu help for pnpm's own help"
     echo ""
@@ -337,7 +339,7 @@ esac
 if [ "${SHIFU_CACHE_ACTIVE:-}" != "1" ] \
   && { [ -n "${SHIFU_CACHE_PROFILE_REF:-}" ] || [ -n "${SHIFU_CACHE_PROFILE_DIGEST:-}" ]; }; then
   case "${1:-}" in
-    cache | proxy | config | clone | self-update | self-version | promote | builds | -h | --help | -v | -V | --version) ;;
+    cache | gate | proxy | config | clone | self-update | self-version | promote | builds | -h | --help | -v | -V | --version) ;;
     *) exec ./shifu cache apply -- ./shifu "$@" ;;
   esac
 fi
@@ -347,7 +349,7 @@ fi
 # prefer fnm-managed node when available (the normal path once bootstrap is ready); fall back to system node when fnm is
 # not ready, so a developer can still use L2 config first (e.g. set a mirror to in turn help fnm); error only if neither exists.
 case "${1:-}" in
-  build | rebuild | proxy | config)
+  build | rebuild | gate | proxy | config)
     if command -v fnm >/dev/null 2>&1; then
       fnm install >/dev/null 2>&1 || true
       exec fnm exec --using-file -- node ./shifu.mjs "$@"

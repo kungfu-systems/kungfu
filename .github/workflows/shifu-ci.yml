@@ -15,6 +15,10 @@ on:
       - release/v*/v*
     paths:
       - "crates/**"
+      - "scripts/check-shifu-workspace.mjs"
+      - "scripts/shifu-gate-*.mjs"
+      - "package.json"
+      - "shifu.gates.json"
       - ".github/workflows/shifu-ci.yml"
 
 permissions:
@@ -32,23 +36,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - name: Toolchain versions
-        run: rustc --version && cargo --version
-      - name: Format
-        run: cargo fmt --all --check
-        working-directory: crates
-      - name: Clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
-        working-directory: crates
-      - name: Test
-        run: cargo test --workspace
-        working-directory: crates
-      - name: Build (release)
-        run: cargo build --workspace --release
-        working-directory: crates
-      - name: Launcher smoke (self-version)
+      - uses: actions/setup-node@v6.4.0
+        with:
+          node-version: 24
+      - name: Run Shifu workspace Gate (POSIX)
         if: runner.os != 'Windows'
-        run: ./crates/target/release/shifu self-version
-      - name: Launcher smoke (self-version, Windows)
+        run: ./shifu gate run shifu.workspace --capability rust
+      - name: Run Shifu workspace Gate (Windows)
         if: runner.os == 'Windows'
-        run: .\crates\target\release\shifu.exe self-version
+        run: .\shifu.cmd gate run shifu.workspace --capability rust

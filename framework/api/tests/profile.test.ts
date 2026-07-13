@@ -46,6 +46,8 @@ test('Profile plans preserve source and exact active-root intent', () => {
   profile.discover('kungfu.mission-control');
   profile.queryPlan('/suite', 'week-table');
   profile.application('/suite');
+  profile.kfd3Status('/suite');
+  profile.kfd3Plan('/suite');
   profile.qualifyKfd3('/suite');
   profile.intentPlan('/suite', 'complete-day');
   profile.lifecyclePlan('install', '/suite');
@@ -55,9 +57,43 @@ test('Profile plans preserve source and exact active-root intent', () => {
     ['profile', 'discover', 'kungfu.mission-control', '--json'],
     ['profile', 'query-plan', '/suite', 'week-table', '--json'],
     ['profile', 'application', '/suite', '--json'],
+    ['profile', 'kfd3-status', '/suite', '--json'],
+    ['profile', 'kfd3-plan', '/suite', '--json'],
     ['profile', 'kfd3-qualify', '/suite', '--json'],
     ['profile', 'intent', 'plan', '/suite', 'complete-day', '--json'],
     ['profile', 'plan', 'install', '/suite', '--json'],
+  ]);
+});
+
+test('Profile KFD-3 authorization binds the reviewed plan and actor', async () => {
+  const calls: string[][] = [];
+  const profile = openProfile({
+    runtimeDir: '/runtime',
+    execFileSync: () => '{}',
+    execFile: async (_file, args) => {
+      calls.push(args);
+      return '{}';
+    },
+  });
+
+  await profile.authorizeKfd3Async(
+    '/suite',
+    'sha256:reviewed',
+    'approve',
+    'workspace-owner',
+  );
+
+  assert.deepEqual(calls[0], [
+    'profile',
+    'kfd3-authorize',
+    '/suite',
+    '--expected-plan-id',
+    'sha256:reviewed',
+    '--choice',
+    'approve',
+    '--authorized-by',
+    'workspace-owner',
+    '--json',
   ]);
 });
 

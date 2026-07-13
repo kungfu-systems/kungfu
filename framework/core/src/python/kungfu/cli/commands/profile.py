@@ -124,6 +124,85 @@ def kfd3_qualify(ctx, source, as_json):
 
 
 @profile.command(
+    name="kfd3-status",
+    help="inspect the current exact-root KFD-3 qualification without running probes",
+)
+@click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def kfd3_status(ctx, source, as_json):
+    _json(_run(lambda: profile_sdk.kfd3_status(source, ctx.runtime_dir)))
+
+
+@profile.command(
+    name="kfd3-plan",
+    help="preview the exact KFD-3 probes without executing them",
+)
+@click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def kfd3_plan(ctx, source, as_json):
+    _json(_run(lambda: profile_sdk.kfd3_qualification_plan(source, ctx.runtime_dir)))
+
+
+@profile.command(
+    name="kfd3-authorize",
+    help="authorize and execute one still-current KFD-3 qualification plan",
+)
+@click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--expected-plan-id", required=True)
+@click.option("--choice", required=True, type=click.Choice(["approve", "deny"]))
+@click.option("--authorized-by", required=True)
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def kfd3_authorize(ctx, source, expected_plan_id, choice, authorized_by, as_json):
+    _json(
+        _run(
+            lambda: profile_sdk.authorize_kfd3_qualification(
+                source,
+                ctx.runtime_dir,
+                expected_plan_id,
+                choice,
+                authorized_by,
+            )
+        )
+    )
+
+
+@profile.command(
+    name="kfd3-release-build",
+    help="run factory qualification and write an exact-root system Profile manifest",
+)
+@click.argument(
+    "sources",
+    nargs=-1,
+    required=True,
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+)
+@click.option("--out", required=True, type=click.Path(dir_okay=False, path_type=Path))
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def kfd3_release_build(ctx, sources, out, as_json):
+    def operation():
+        manifest = profile_sdk.build_kfd3_release_manifest(
+            list(sources), ctx.runtime_dir
+        )
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(
+            json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+        return {
+            "schema": "kungfu.system-profile-kfd3-build-receipt/v1",
+            "out": str(out.resolve()),
+            "manifestRoot": manifest["manifestRoot"],
+            "profiles": [row["profileId"] for row in manifest["entries"]],
+            "verified": True,
+        }
+
+    _json(_run(operation))
+
+
+@profile.command(
     name="kfd3-verify",
     help="verify a KFD-3 qualification receipt against the current earned cut",
 )

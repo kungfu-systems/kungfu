@@ -478,16 +478,26 @@ def test_kfd3_qualification_earns_receipt_and_witness_for_exact_active_root(
         core_plan = profile_sdk.lifecycle_plan(runtime, action, source)["corePlan"]
         profile_sdk.lifecycle_apply(runtime, core_plan, f"test:{action}")
 
-    receipt = profile_sdk.qualify_kfd3(source, runtime)
+    before = profile_sdk.application(source, runtime)
+    plan = profile_sdk.kfd3_qualification_plan(source, runtime)
+    assert before["qualification"]["status"] == "untested"
+    assert plan["requiresAuthorization"] is True
+    assert profile_sdk.kfd3_status(source, runtime)["status"] == "untested"
+    receipt = profile_sdk.authorize_kfd3_qualification(
+        source, runtime, plan["planId"], "approve", "test-owner"
+    )
     projected = profile_sdk.application(source, runtime)
 
     assert receipt["schema"] == "kungfu.profile-kfd3-qualification-receipt/v1"
     assert receipt["qualified"] is True
+    assert receipt["qualificationSource"] == "local"
     assert receipt["noBypass"]["passed"] is True
     assert receipt["clientProbes"][0]["matched"] is True
     assert receipt["witness"]["qualificationReceiptId"] == receipt["receiptId"]
     assert receipt["witness"]["issuer"] == "kungfu-profile-runtime"
     assert projected["qualified"] is True
+    assert projected["qualification"]["status"] == "qualified"
+    assert projected["qualification"]["issuer"]["type"] == "local"
     assert projected["qualification"]["witnessId"] == receipt["witness"]["witnessId"]
     assert profile_sdk.verify_kfd3(source, runtime, receipt)["verified"] is True
 
@@ -516,6 +526,41 @@ def test_kfd3_qualification_earns_receipt_and_witness_for_exact_active_root(
         assert error.diagnosis["code"] == "kfd3-qualification-stale-or-tampered"
     else:
         raise AssertionError("tampered KFD-3 receipt was verified")
+
+
+def test_system_profile_release_receipt_is_exact_root_and_shared_with_status(
+    tmp_path, monkeypatch
+):
+    repo = Path(__file__).resolve().parents[4]
+    source = repo / "extensions" / "mission-control"
+    runtime = tmp_path / "runtime"
+    manifest = profile_sdk.build_kfd3_release_manifest([source], runtime)
+    receipt = manifest["entries"][0]["receipt"]
+
+    assert receipt["profileId"] == "kungfu.mission-control"
+    assert receipt["qualificationSource"] == "release"
+    assert receipt["noBypass"]["policy"] == "release-owned-shared-api-parity/v1"
+    assert len(receipt["clientProbes"]) == 4
+    assert all(row["matched"] for row in receipt["clientProbes"])
+
+    manifest_path = tmp_path / "profile-kfd3.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.setenv("KF_PROFILE_KFD3_MANIFEST", str(manifest_path))
+    for action in ["install", "qualify", "activate"]:
+        core_plan = profile_sdk.lifecycle_plan(runtime, action, source)["corePlan"]
+        profile_sdk.lifecycle_apply(runtime, core_plan, f"test:{action}")
+
+    status = profile_sdk.kfd3_status(source, runtime)
+    assert status["status"] == "qualified"
+    assert status["qualificationSource"] == "release"
+    assert status["issuer"]["type"] == "release"
+    assert status["receiptId"] == receipt["receiptId"]
+    assert profile_sdk.verify_kfd3(source, runtime, receipt)["verified"] is True
+
+    tampered = json.loads(json.dumps(manifest))
+    tampered["entries"][0]["profileSuiteRoot"] = "sha256:" + "0" * 64
+    manifest_path.write_text(json.dumps(tampered), encoding="utf-8")
+    assert profile_sdk.kfd3_status(source, runtime)["status"] == "untested"
 
 
 def test_kfd3_qualification_rejects_custom_view_mutation_boundary(tmp_path):
@@ -659,8 +704,7 @@ def test_kfd3_receipt_survives_portable_import_and_invalidates_on_upgrade(
     profile_sdk.lifecycle_apply(runtime_b, rollback, "portable-b:rollback")
     rolled_back = profile_sdk.qualify_kfd3(source, runtime_b)
     assert rolled_back["profileSuiteRoot"] == receipt_b["profileSuiteRoot"]
-    assert rolled_back["receiptId"] != receipt_b["receiptId"]
-    assert rolled_back["profileRevision"] > receipt_b["profileRevision"]
+    assert rolled_back["receiptId"] == receipt_b["receiptId"]
 
 
 def test_missing_member_fails_with_stable_decision_card(tmp_path):

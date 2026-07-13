@@ -2,6 +2,7 @@
 
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 
@@ -73,4 +74,28 @@ if (result.error || result.status !== 0) {
     console.error(`[crash-recovery-test] ${result.error.message}`);
   process.exit(result.status ?? 1);
 }
-console.log('[crash-recovery-test] read-only state machine passed');
+
+const restartRoot = fs.mkdtempSync(
+  path.join(os.tmpdir(), 'kungfu-crash-recovery-process-restart-'),
+);
+try {
+  for (const mode of [
+    '--create-whole-data-root-fixture',
+    '--verify-whole-data-root-fixture',
+  ]) {
+    const child = spawnSync(testBinary, [mode, restartRoot], {
+      cwd: process.cwd(),
+      stdio: 'inherit',
+    });
+    if (child.error || child.status !== 0) {
+      if (child.error)
+        console.error(`[crash-recovery-test] ${mode}: ${child.error.message}`);
+      process.exit(child.status ?? 2);
+    }
+  }
+  console.log('[crash-recovery-test] whole-data-root process restart passed');
+} finally {
+  fs.rmSync(restartRoot, { recursive: true, force: true });
+}
+
+console.log('[crash-recovery-test] recovery completion contracts passed');

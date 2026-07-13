@@ -663,6 +663,24 @@
     },
     {
       "apiId": "kungfu.profile.kfd3-qualification",
+      "name": "kungfu profile kfd3-status <source> --json",
+      "maturity": "experimental",
+      "purpose": "Read qualified, untested, stale, failed, or testing state plus receipt provenance and machine-readable next actions without running qualification probes."
+    },
+    {
+      "apiId": "kungfu.profile.kfd3-qualification",
+      "name": "kungfu profile kfd3-plan <source> --json",
+      "maturity": "experimental",
+      "purpose": "Preview exact content, Runtime-contract, no-bypass, and dual-client probes without executing them."
+    },
+    {
+      "apiId": "kungfu.profile.kfd3-qualification",
+      "name": "kungfu profile kfd3-authorize <source> --expected-plan-id <id> --choice approve --authorized-by <actor> --json",
+      "maturity": "experimental",
+      "purpose": "Execute one reviewed current plan and append its exact-root receipt to the Core-owned Profile lifecycle journal."
+    },
+    {
+      "apiId": "kungfu.profile.kfd3-qualification",
       "name": "kungfu profile kfd3-qualify <source> --json",
       "maturity": "experimental",
       "purpose": "Audit the active Profile's public closure, custom-view no-bypass boundary, and dual-client exact plans, then emit a Kungfu-owned KFD-3 receipt and witness."
@@ -671,7 +689,7 @@
       "apiId": "kungfu.profile.kfd3-qualification",
       "name": "kungfu profile kfd3-verify <source> <receipt.json> --json",
       "maturity": "experimental",
-      "purpose": "Re-run qualification and reject a stale or tampered receipt or witness."
+      "purpose": "Verify a supplied receipt against the current journal-backed qualification state and reject stale or tampered evidence."
     },
     {
       "apiId": "kungfu.profile.manager",

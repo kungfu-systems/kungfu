@@ -317,13 +317,13 @@
     },
     {
       "id": "kungfu.atlas.create-mission",
-      "surface": "cli",
+      "surface": "cli-api-gui",
       "name": "kungfu atlas create-mission <mission-id> --title <title> --intent <intent> --actor <actor> --json",
       "purpose": "Create a Kungfu-native long-running Mission in the shared Fact Library.",
       "maturity": "experimental",
-      "visibility": "adjacent-agent",
+      "visibility": "public-agent",
       "anchor": { "kind": "catalog" },
-      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill", "work-dashboard-gui"]
     },
     {
       "id": "kungfu.atlas.export-mission",
@@ -347,33 +347,33 @@
     },
     {
       "id": "kungfu.atlas.assess-mission",
-      "surface": "cli",
+      "surface": "cli-api-gui",
       "name": "kungfu atlas assess-mission <mission-id> --json",
       "purpose": "Query admitted Mission/Go facts and persist a purpose-bound progress TrustReport.",
       "maturity": "experimental",
-      "visibility": "adjacent-agent",
+      "visibility": "public-agent",
       "anchor": { "kind": "catalog" },
-      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill", "work-dashboard-gui"]
     },
     {
       "id": "kungfu.atlas.create-go",
-      "surface": "cli",
+      "surface": "cli-api-gui",
       "name": "kungfu atlas create-go <mission-id> <goal-id> --title <title> --objective <objective> --actor <actor> --json",
       "purpose": "Create a Kungfu-native Go linked to an admitted Mission without writing back to the bridged source.",
       "maturity": "experimental",
-      "visibility": "adjacent-agent",
+      "visibility": "public-agent",
       "anchor": { "kind": "catalog" },
-      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill", "work-dashboard-gui"]
     },
     {
       "id": "kungfu.atlas.claim-completion",
-      "surface": "cli",
+      "surface": "cli-api-gui",
       "name": "kungfu atlas claim-completion <mission-id> <goal-id> --statement <statement> --actor <actor> --evidence-episode <id> --json",
       "purpose": "Record an explicit completion claim with independently verifiable Episode evidence.",
       "maturity": "experimental",
-      "visibility": "adjacent-agent",
+      "visibility": "public-agent",
       "anchor": { "kind": "catalog" },
-      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill", "work-dashboard-gui"]
     },
     {
       "id": "kungfu.atlas.assess-completion",
@@ -905,9 +905,9 @@
     {
       "id": "kungfu.profile.kfd3-qualification",
       "surface": "cli-api-gui",
-      "name": "kungfu profile kfd3-qualify <source> --json",
-      "aliases": ["kungfu profile kfd3-verify <source> <receipt.json> --json"],
-      "purpose": "Earn a scoped Profile KFD-3 receipt and witness only after installed authority, public-surface, no-bypass, and dual-client probes pass.",
+      "name": "kungfu profile kfd3-status <source> --json",
+      "aliases": ["kungfu profile kfd3-plan <source> --json", "kungfu profile kfd3-authorize <source> --expected-plan-id <id> --choice approve --authorized-by <actor> --json", "kungfu profile kfd3-qualify <source> --json", "kungfu profile kfd3-verify <source> <receipt.json> --json"],
+      "purpose": "Read exact-root qualification without running probes, or explicitly review, authorize, persist, and verify a scoped KFD-3 receipt and witness.",
       "maturity": "experimental",
       "visibility": "public-agent",
       "anchor": { "kind": "catalog" },

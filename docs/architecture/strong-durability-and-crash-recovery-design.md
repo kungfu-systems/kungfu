@@ -467,6 +467,20 @@ typed state, cut, and integrity hash must equal the source backup cut. This is
 an in-process typed contract, not yet an external archive format or production
 backup command.
 
+The recovery-completion slice also closes three local semantic gaps. Inspection
+qualifies every known Episode and emits `episode_findings` for either an open
+Episode or a sealed Episode whose typed qualification is not `ok`; a missing
+dependency therefore degrades only the named dependent Episode and does not
+mislabel it as interrupted or spread failure to an independent Episode. A pure
+restart authorization gate requires supervisor verification, state-service
+readiness, and projection readiness in that order, and permits required peers
+only for a `READY` report. A fresh-process fixture creates durable facts, a
+sealed Episode, and a projection in one process, then reopens and verifies the
+whole data root through that gate in another. Quarantine publication accepts
+only exact partial files or known `.pending` files, resumes them idempotently,
+and rejects unexpected retained-package entries before mutation. These remain
+test-only single-host contracts and do not replace platform qualification.
+
 ## 10. Migration from coordinator-owned state cache
 
 1. **Contract-only slice** — add typed positions/status/receipts and adapters;

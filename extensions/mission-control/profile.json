@@ -66,6 +66,12 @@
       "sha256": "0f790db6cdbd6725e52f2fa13aac83d368b22e49e0d3033bac49cd7330388b9d"
     }
   },
+  "kfd3": {
+    "collaboration": {
+      "path": "collaboration/interface.json",
+      "sha256": "25d55057f3e4dde6d594c76ab35854a8a0fb895b535c4688768a6b69264ec260"
+    }
+  },
   "migrations": {
     "registry": {
       "path": "migrations/registry.json",

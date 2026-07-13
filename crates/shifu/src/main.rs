@@ -7,7 +7,7 @@
 //
 //   shifu <any pnpm task/args>    run the task under the pinned toolchain
 //   shifu build | rebuild         rich subcommands -> delegated to L2 node
-//   shifu cache | proxy | config  (shifu.mjs), not passed to pnpm
+//   shifu cache | gate | proxy | config  (shifu.mjs), not passed to pnpm
 //   shifu --version | -v | -V     launcher version + build identity
 //   shifu self-version            this binary's crate version (machine readable)
 //   shifu / -h / --help           launcher usage (pnpm's own help: `shifu help`)
@@ -50,11 +50,11 @@ use shifu_core::style;
 
 /// Rich subcommands handled by the L2 node implementation (shifu.mjs),
 /// mirroring the sh / cmd entrypoints. Everything else goes to corepack pnpm.
-const L2_SUBCOMMANDS: &[&str] = &["build", "rebuild", "cache", "proxy", "config"];
+const L2_SUBCOMMANDS: &[&str] = &["build", "rebuild", "cache", "proxy", "config", "gate"];
 
 #[cfg(any(windows, test))]
 fn command_requires_msvc(command: Option<&str>) -> bool {
-    !matches!(command, Some("cache" | "proxy" | "config"))
+    !matches!(command, Some("cache" | "gate" | "proxy" | "config"))
 }
 
 fn should_auto_apply_cache(
@@ -72,6 +72,7 @@ fn should_auto_apply_cache(
             "cache"
                 | "proxy"
                 | "config"
+                | "gate"
                 | "clone"
                 | "self-update"
                 | "self-version"
@@ -121,6 +122,7 @@ fn print_usage() {
     );
     println!("  shifu build | rebuild      bootstrap build (rebuild clears generated outputs)");
     println!("  shifu cache ...            inspect the versioned cache contract and schemas");
+    println!("  shifu gate ...             inspect and plan registered project gates");
     println!("  shifu proxy | config ...   manage local mirror/cache config (build-local.env)");
     println!("  shifu clone [path]         clone the kungfu repository (default: current dir;");
     println!(
@@ -491,6 +493,7 @@ mod tests {
         assert!(!command_requires_msvc(Some("proxy")));
         assert!(!command_requires_msvc(Some("config")));
         assert!(!command_requires_msvc(Some("cache")));
+        assert!(!command_requires_msvc(Some("gate")));
     }
 
     #[test]
@@ -518,6 +521,7 @@ mod tests {
             "cache",
             "config",
             "proxy",
+            "gate",
             "clone",
             "self-update",
             "self-version",

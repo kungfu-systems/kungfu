@@ -19,6 +19,7 @@ inline constexpr const char *RECOVERY_BACKUP_SCHEMA_V1 = "kungfu.recovery-backup
 enum class recovery_phase : uint8_t { Discover, Verify, Select, Classify, Report };
 enum class recovery_outcome : uint8_t { Ready, Degraded, Blocked };
 enum class maintenance_status : uint8_t { Completed, AlreadyCompleted, Rejected };
+enum class recovery_component : uint8_t { Supervisor, StateService, Projection, Peers };
 
 struct retained_evidence_file {
   std::string name = {};
@@ -90,6 +91,10 @@ struct recovery_report {
   bool qualification_passed = false;
   uint64_t episode_unknown_record_count = 0;
   std::vector<storage_service_api::episode_qualification_result> interrupted_episodes = {};
+  // Open Episodes and sealed Episodes whose typed qualification is not ok.
+  // This keeps cross-Episode dependency damage visible without misnaming a
+  // sealed finding as an interrupted Episode.
+  std::vector<storage_service_api::episode_qualification_result> episode_findings = {};
   bool mutation_performed = false;
   std::vector<std::string> restart_order = {"supervisor", "state_service", "projection", "peers"};
 
@@ -135,6 +140,19 @@ struct restore_receipt {
   std::string error = {};
 };
 
+struct restart_progress {
+  bool supervisor_verified = false;
+  bool state_service_ready = false;
+  bool projection_ready = false;
+  bool peers_started = false;
+};
+
+struct restart_authorization {
+  bool allowed = false;
+  recovery_component component = recovery_component::Supervisor;
+  std::string reason = {};
+};
+
 class recovery_engine {
 public:
   explicit recovery_engine(durability::ingest_options options);
@@ -169,6 +187,14 @@ private:
 [[nodiscard]] const char *recovery_outcome_name(recovery_outcome outcome) noexcept;
 [[nodiscard]] const char *recovery_phase_name(recovery_phase phase) noexcept;
 [[nodiscard]] const char *maintenance_status_name(maintenance_status status) noexcept;
+[[nodiscard]] const char *recovery_component_name(recovery_component component) noexcept;
+
+// Pure fail-closed gate for the local restart order recorded in the recovery
+// report. Callers advance restart_progress only after the named component has
+// actually reached its ready condition. Required peers are authorized only by
+// a READY report and a verified projection.
+[[nodiscard]] restart_authorization authorize_restart(const recovery_report &report, recovery_component component,
+                                                      const restart_progress &progress);
 
 } // namespace kungfu::runtime::recovery
 

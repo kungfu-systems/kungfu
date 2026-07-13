@@ -25,5 +25,4 @@ jobs:
 
       - name: Verify ADR delivery intent
         run: >-
-          ./shifu adr:release:gate -- --github-event
-          --report product/release/qualification/adr-release-admissibility.json
+          ./shifu gate run governance.adr-delivery

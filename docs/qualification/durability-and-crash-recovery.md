@@ -35,11 +35,15 @@ The foundations are implemented:
   local generation/fence evidence.
 
 The end-to-end strong-durability path is **staged but not activated or
-qualified**. Test-only implementations exist for durable ingest, receipts,
-projection bootstrap, crash classification, and backup/restore, but Kungfu does
-not yet expose a production durable-ingest service, producer-visible durable
-acknowledgement, or crash-qualified durable watermark across the journal,
-Episode manifest, and projections.
+power-loss qualified**. Test-only implementations exist for durable ingest,
+receipts, projection bootstrap, crash classification, and backup/restore. A
+versioned local qualification harness now produces separate `durable_group`
+and `durable_sync` process-crash reports for named macOS/APFS, Linux/ext4, and
+Windows/NTFS profiles. Its schema makes power-loss and production-profile
+eligibility false by construction. Kungfu still does not expose a production
+durable-ingest service, producer-visible durable acknowledgement, or a
+power-loss-qualified durable watermark across the journal, Episode manifest,
+and projections.
 
 An independent KFDL v2 segment/checkpoint backend now exists in test-only shadow
 form. It verifies logical position and SHA-256 records across restart, preserves
@@ -100,6 +104,17 @@ progress, publishes a receipt last, and then requires projection rebuild. The
 fixture proves the restored durable frontier, records, Episode identities, and
 rebuilt projection state/cut/hash equal the backup cut. This is not yet an
 external archive format, operator command, or qualified backup procedure.
+
+The test-only completion fixture now reopens the whole data root in a fresh
+process and executes the declared restart gate: supervisor report verification,
+state-service durable/Episode reopen, projection bootstrap, then required-peer
+authorization. `BLOCKED` recovery cannot start the state service, and
+`DEGRADED` recovery cannot authorize required peers. Recovery also reports a
+sealed Episode with a missing dependency as a named `episode_findings` entry
+while leaving an independent Episode unaffected; this composes the existing
+typed Episode qualification that is checked against the independent semantic
+oracle. Interrupted quarantine package publication resumes only exact files or
+known pending files and rejects extra evidence before mutation.
 
 Do not interpret `MAP_SHARED`, `msync`, `FlushViewOfFile`, SQLite WAL, process
 residency, or a successful write call as a power-loss guarantee. A guarantee is
@@ -183,7 +198,7 @@ one Episode must not silently invalidate unrelated Episodes.
 | D. State-service separation and durable ingest | **partially implemented** | coordinator no longer owns the projection store directly; the in-process state-service boundary has independent lifecycle, shadow comparison, and single-host owner/writer fencing. Moving business-journal ingestion out of coordinator and persisting raw facts before projection remain pending |
 | E. Independent KFDL segment/checkpoint backend | **implemented (test-only shadow)** | append-only binary records, SHA-256 coverage, rollover, dual-slot atomic checkpoint, explicit data/checkpoint/directory barriers, persisted request deduplication, cooperative deadline/unknown handling, typed service-unavailable, fenced generations, fail-stop unknown append sessions, and retained tails; production profiles remain disabled |
 | F. Snapshot-through-T projection bootstrap | **implemented (test-only shadow)** | versioned binary snapshot, integrity/schema/cut verification, strict replay-after-T, typed required/optional/none outcomes, deterministic rebuild, independent projection watermark, and state-service ownership; production bootstrap cutover remains pending |
-| G. Local strong-durability qualification | **not implemented** | qualify `durable_group` and `durable_sync` across macOS, Linux, and Windows with crash, torn-write, ENOSPC, ordering, recovery, and profile-registry evidence |
+| G. Local strong-durability qualification | **partially implemented** | versioned named-platform process-crash profiles, report schema, raw evidence retention, and fail-closed Shifu harness are implemented; retained three-platform reports and disposable volume/VM/device power-loss evidence remain pending |
 | H. Single-host end-to-end performance release gate | **planned** | after correctness passes, qualify absolute latency, throughput, long-tail, resource, replay, recovery, and restore ceilings without weakening semantics |
 | I. Replication and HA | **future** | add a separate replicated watermark and policy only after local durability is trustworthy |
 

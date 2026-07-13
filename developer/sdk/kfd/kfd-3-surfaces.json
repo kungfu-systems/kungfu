@@ -371,7 +371,7 @@
     {
       "id": "kungfu.atlas.assess-mission",
       "name": "kungfu atlas assess-mission <mission-id> --json",
-      "kind": "cli",
+      "kind": "cli-api-gui",
       "participantProfile": "agent-or-developer",
       "state": "declared",
       "availability": "shipped",
@@ -391,7 +391,7 @@
     {
       "id": "kungfu.atlas.claim-completion",
       "name": "kungfu atlas claim-completion <mission-id> <goal-id> --statement <statement> --actor <actor> --evidence-episode <id> --json",
-      "kind": "cli",
+      "kind": "cli-api-gui",
       "participantProfile": "agent-or-developer",
       "state": "declared",
       "availability": "shipped",
@@ -411,7 +411,7 @@
     {
       "id": "kungfu.atlas.create-go",
       "name": "kungfu atlas create-go <mission-id> <goal-id> --title <title> --objective <objective> --actor <actor> --json",
-      "kind": "cli",
+      "kind": "cli-api-gui",
       "participantProfile": "agent-or-developer",
       "state": "declared",
       "availability": "shipped",
@@ -431,7 +431,7 @@
     {
       "id": "kungfu.atlas.create-mission",
       "name": "kungfu atlas create-mission <mission-id> --title <title> --intent <intent> --actor <actor> --json",
-      "kind": "cli",
+      "kind": "cli-api-gui",
       "participantProfile": "agent-or-developer",
       "state": "declared",
       "availability": "shipped",
@@ -1175,7 +1175,7 @@
     },
     {
       "id": "kungfu.profile.kfd3-qualification",
-      "name": "kungfu profile kfd3-qualify <source> --json",
+      "name": "kungfu profile kfd3-status <source> --json",
       "kind": "cli-api-gui",
       "participantProfile": "agent-or-developer",
       "state": "declared",

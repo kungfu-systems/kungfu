@@ -21,7 +21,7 @@ matches your job, then go deeper only when you need to.
 | [Development](development/README.md) | build, toolchain, versioning, release, and documentation governance |
 | [Research](research/README.md) | measured options and spikes that inform, but do not replace, decisions |
 | [Architecture Decisions](adr/README.md) | accepted and proposed load-bearing decisions with lifecycle evidence |
-| [Shifu](shifu/README.md) | development entrypoint and cache-profile contracts |
+| [Shifu](shifu/README.md) | development entrypoint, cache profiles, artifacts, and Gate contracts |
 
 ## Understand Kungfu
 

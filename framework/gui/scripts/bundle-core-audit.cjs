@@ -90,6 +90,7 @@ function auditPackagedApp(appDir, options = {}) {
     'kungfu',
     'kungfu_electron.node',
     'libkungfu.dylib',
+    'profile-kfd3.json',
   ]) {
     const p = path.join(runtimeDir, required);
     if (!exists(p)) throw new Error(`missing runtime file: ${p}`);

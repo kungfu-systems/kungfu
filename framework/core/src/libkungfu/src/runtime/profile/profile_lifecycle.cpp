@@ -54,6 +54,7 @@ struct root_state {
   bool qualified = false;
   bool activated = false;
   nlohmann::json qualification = nlohmann::json::object();
+  nlohmann::json kfd3_qualification = nlohmann::json::object();
   nlohmann::json granted_permissions = nlohmann::json::array();
 };
 
@@ -597,6 +598,9 @@ std::map<std::string, profile_state> fold_profiles(const std::vector<lifecycle_r
       state.current_root = root;
       root_entry.qualified = true;
       root_entry.qualification = nlohmann::json::parse(text_or(record.event, "qualification_json", "{}"));
+    } else if (kind == "Kfd3Qualified") {
+      state.current_root = root;
+      root_entry.kfd3_qualification = nlohmann::json::parse(text_or(record.event, "qualification_json", "{}"));
     } else if (kind == "Activated") {
       state.current_root = root;
       state.removed = false;
@@ -668,6 +672,7 @@ nlohmann::json render_state(const profile_state &state) {
           {"removed", state.removed},
           {"granted_permissions", root.granted_permissions},
           {"qualification", root.qualification},
+          {"kfd3_qualification", root.kfd3_qualification},
           {"available_roots", state.roots.size()},
           {"latest_event", render_event(state.latest)}};
 }
@@ -798,7 +803,7 @@ nlohmann::json profile_lifecycle_contract() {
           {"event_schema", PROFILE_LIFECYCLE_EVENT_V1},
           {"root", "Core-computed canonical sha256 over normalized Profile and verified content closure"},
           {"states", {"installed", "qualified", "activated", "removed"}},
-          {"facts", {"Installed", "Qualified", "Activated", "Superseded", "RolledBack", "Removed"}},
+          {"facts", {"Installed", "Qualified", "Activated", "Superseded", "RolledBack", "Removed", "Kfd3Qualified"}},
           {"operations", {"contract", "inspect", "plan", "apply", "get", "list", "history"}},
           {"journal", {{"namespace", PROFILE_NAMESPACE}, {"name", PROFILE_JOURNAL_NAME}}},
           {"projection", "deterministic-in-memory-fold/v1"},
@@ -848,7 +853,8 @@ nlohmann::json plan_profile_lifecycle(const std::string &runtime_dir, const nloh
   if (!request.is_object())
     throw std::invalid_argument("Profile lifecycle request must be an object");
   const auto action_name = required_text(request, "action");
-  const std::set<std::string> supported{"install", "qualify", "activate", "upgrade", "rollback", "remove"};
+  const std::set<std::string> supported{"install",  "qualify", "activate",    "upgrade",
+                                        "rollback", "remove",  "kfd3-qualify"};
   if (!supported.contains(action_name))
     throw std::invalid_argument("unsupported Profile lifecycle action: " + action_name);
 
@@ -856,7 +862,8 @@ nlohmann::json plan_profile_lifecycle(const std::string &runtime_dir, const nloh
   nlohmann::json normalized_request = {{"action", action_name}};
   nlohmann::json inspection;
   std::string profile_id;
-  if (action_name == "install" || action_name == "qualify" || action_name == "activate" || action_name == "upgrade") {
+  if (action_name == "install" || action_name == "qualify" || action_name == "activate" || action_name == "upgrade" ||
+      action_name == "kfd3-qualify") {
     if (!request.contains("member_roots"))
       throw std::invalid_argument("member_roots is required");
     inspection = inspect_profile(required_text(request, "profile_path"), request.at("member_roots"));
@@ -912,6 +919,25 @@ nlohmann::json plan_profile_lifecycle(const std::string &runtime_dir, const nloh
     normalized_request["granted_permissions"] = permissions;
     effects.push_back(
         {{"kind", "Activated"}, {"profile_suite_root", current_root}, {"granted_permissions", permissions}});
+  } else if (action_name == "kfd3-qualify") {
+    if (!exists || found->second.removed || current_root != inspection.at("profile_suite_root").get<std::string>()) {
+      throw std::invalid_argument("KFD-3 qualification requires the exact current Profile root");
+    }
+    const auto root_found = found->second.roots.find(current_root);
+    if (root_found == found->second.roots.end() || !root_found->second.activated) {
+      throw std::invalid_argument("KFD-3 qualification requires an active Profile root");
+    }
+    if (!request.contains("qualification") || !request.at("qualification").is_object()) {
+      throw std::invalid_argument("KFD-3 qualification receipt is required");
+    }
+    qualification = request.at("qualification");
+    if (text_or(qualification, "schema") != "kungfu.profile-kfd3-qualification-receipt/v1" ||
+        !qualification.value("qualified", false) || text_or(qualification, "profileId") != profile_id ||
+        text_or(qualification, "profileSuiteRoot") != current_root) {
+      throw std::invalid_argument("KFD-3 qualification receipt does not bind the exact Profile root");
+    }
+    normalized_request["qualification"] = qualification;
+    effects.push_back({{"kind", "Kfd3Qualified"}, {"profile_suite_root", current_root}});
   } else if (action_name == "upgrade") {
     if (!exists || found->second.removed)
       throw std::invalid_argument("upgrade requires an installed Profile");

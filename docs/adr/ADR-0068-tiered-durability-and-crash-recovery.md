@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0068
 decision_status: accepted
 implementation_status: staged
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/668, https://github.com/kungfu-systems/kungfu/pull/673, https://github.com/kungfu-systems/kungfu/pull/682, https://github.com/kungfu-systems/kungfu/pull/687, https://github.com/kungfu-systems/kungfu/pull/691, https://github.com/kungfu-systems/kungfu/pull/693, https://github.com/kungfu-systems/kungfu/pull/697, https://github.com/kungfu-systems/kungfu/pull/701, https://github.com/kungfu-systems/kungfu/pull/705, https://github.com/kungfu-systems/kungfu/pull/754]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/668, https://github.com/kungfu-systems/kungfu/pull/673, https://github.com/kungfu-systems/kungfu/pull/682, https://github.com/kungfu-systems/kungfu/pull/687, https://github.com/kungfu-systems/kungfu/pull/691, https://github.com/kungfu-systems/kungfu/pull/693, https://github.com/kungfu-systems/kungfu/pull/697, https://github.com/kungfu-systems/kungfu/pull/701, https://github.com/kungfu-systems/kungfu/pull/705, https://github.com/kungfu-systems/kungfu/pull/754, https://github.com/kungfu-systems/kungfu/pull/770]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -249,10 +249,27 @@ hashes, and restores idempotently into an empty data root before requiring an
 explicit projection rebuild. Recovery inspection is deterministic and does not
 silently abort, resume, repair, or promote uncertain facts.
 
+The test-only recovery completion contract additionally reopens the whole data
+root in a fresh process, mechanically authorizes supervisor -> state service ->
+projection -> required peers, retains sealed cross-Episode dependency failures
+as named findings without contaminating independent Episodes, and resumes only
+exact interrupted quarantine packages. Episode capability truth remains owned
+by the existing typed qualification and its independent semantic oracle rather
+than being duplicated in recovery.
+
+A versioned, dry-run-first local qualification harness now binds process-crash
+evidence to the exact source revision, clean tree, platform/filesystem profile,
+toolchain, fault matrix, and Shifu command surface. It retains separate
+`durable_group` and `durable_sync` reports plus raw logs. The named macOS/APFS
+and Linux/ext4 profiles have passed this process envelope; Windows/NTFS remains
+unqualified until its exact Core dependency profile builds and both reports
+pass. The report schema fixes power-loss qualification and production-profile
+eligibility to false, so these results cannot activate a stronger public claim.
+
 The production mmap claim remains `demand + visibility`. The backup/restore
 round trip and projection cut equality are implementation evidence, not an
 operator-facing backup format or qualified power-loss guarantee. Production
 bootstrap authority cutover, external-backup serialization/operations, named
-platform/filesystem qualification, and the public durability product contract
-remain pending. In particular, process-kill and cross-platform CI evidence do
-not establish sudden-power-loss durability.
+three-platform qualification, and the public durability product contract remain
+pending. In particular, process-kill and local cross-platform evidence do not
+establish sudden-power-loss durability.

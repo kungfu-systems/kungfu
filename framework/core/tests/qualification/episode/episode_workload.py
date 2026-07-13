@@ -355,6 +355,32 @@ def _issue(code: str, **detail: Any) -> dict[str, Any]:
     return {"code": code, **detail}
 
 
+def _issues(report: dict[str, Any], severity: str) -> list[dict[str, Any]]:
+    return [
+        issue for issue in report.get("issues", []) if issue.get("severity") == severity
+    ]
+
+
+def _episode_probe_view(episode: dict[str, Any]) -> dict[str, Any]:
+    opened = episode.get("open", {})
+    close = episode.get("close", {})
+    status = {2: "ended", 3: "aborted", 4: "tombstoned"}.get(
+        close.get("status"), "open"
+    )
+    return {
+        "episode_id": episode.get("episode_id"),
+        "title": opened.get("title"),
+        "actor": opened.get("actor"),
+        "source": opened.get("source"),
+        "status": status,
+        "opened": episode.get("opened"),
+        "closed": episode.get("closed"),
+        "record_count": len(episode.get("records", [])),
+        "frame_count": episode.get("unique_frame_count"),
+        "ref_count": len(episode.get("ref_indices", [])),
+    }
+
+
 def run_probe(args: argparse.Namespace) -> dict[str, Any]:
     service = _load_service()
     runtime_dir = Path(args.runtime_dir)
@@ -365,19 +391,20 @@ def run_probe(args: argparse.Namespace) -> dict[str, Any]:
         lambda: service.episode_list(runtime_dir, limit=args.list_limit)
     )
     expected_page_count = min(args.list_limit, args.expected_count)
-    if int(page.get("episode_count", -1)) != expected_page_count:
+    page_count = len(page.get("episodes", []))
+    if page_count != expected_page_count:
         errors.append(
             _issue(
                 "list_page_count_mismatch",
                 expected=expected_page_count,
-                actual=page.get("episode_count"),
+                actual=page_count,
             )
         )
 
     all_episodes, list_all_ms = _timed(
         lambda: service.episode_list(runtime_dir, limit=0)
     )
-    actual_count = int(all_episodes.get("episode_count", -1))
+    actual_count = len(all_episodes.get("episodes", []))
     if actual_count != args.expected_count:
         errors.append(
             _issue(
@@ -387,7 +414,7 @@ def run_probe(args: argparse.Namespace) -> dict[str, Any]:
             )
         )
     semantic_record_count = sum(
-        int(row.get("record_count", 0)) for row in all_episodes.get("episodes", [])
+        len(row.get("records", [])) for row in all_episodes.get("episodes", [])
     )
     # ADR-0043: every sealed Episode carries open + close + the root
     # committed at seal
@@ -419,7 +446,7 @@ def run_probe(args: argparse.Namespace) -> dict[str, Any]:
             )
         )
         inspect_latency.append(latency)
-        episode = inspected.get("episode", {})
+        episode = _episode_probe_view(inspected.get("episode", {}))
         expected_subset = {
             "episode_id": expected["episode_id"],
             "title": expected["title"],
@@ -461,14 +488,24 @@ def run_probe(args: argparse.Namespace) -> dict[str, Any]:
             )
         )
         episode_fsck_latency.append(latency)
-        if not episode_fsck.get("ok") or episode_fsck.get("warnings"):
+        episode_errors = _issues(episode_fsck, "error")
+        episode_warnings = _issues(episode_fsck, "warning")
+        unexpected_episode_warnings = sorted(
+            {
+                str(issue.get("code"))
+                for issue in episode_warnings
+                if str(issue.get("code")) not in args.allowed_warning
+            }
+        )
+        if not episode_fsck.get("ok") or unexpected_episode_warnings:
             errors.append(
                 _issue(
                     "episode_fsck_failed",
                     episode_id=expected["episode_id"],
                     status=episode_fsck.get("status"),
-                    errors=episode_fsck.get("errors", []),
-                    warnings=episode_fsck.get("warnings", []),
+                    errors=episode_errors,
+                    warnings=episode_warnings,
+                    unexpected_warnings=unexpected_episode_warnings,
                 )
             )
 
@@ -491,27 +528,29 @@ def run_probe(args: argparse.Namespace) -> dict[str, Any]:
                 actual=manifest_frame_count,
             )
         )
-    warning_codes = sorted(
-        str(row.get("code")) for row in full_fsck.get("warnings", [])
-    )
+    full_errors = _issues(full_fsck, "error")
+    full_warnings = _issues(full_fsck, "warning")
+    warning_codes = sorted(str(row.get("code")) for row in full_warnings)
     unexpected_warnings = sorted(set(warning_codes) - set(args.allowed_warning))
     if not full_fsck.get("ok") or unexpected_warnings:
         errors.append(
             _issue(
                 "full_fsck_failed",
                 status=full_fsck.get("status"),
-                errors=full_fsck.get("errors", []),
+                errors=full_errors,
                 unexpected_warnings=unexpected_warnings,
             )
         )
 
     recovery, recovery_ms = _timed(lambda: service.episode_recover(runtime_dir))
-    if int(recovery.get("recovered_count", -1)) != 0:
+    recovered_count = len(recovery.get("recovered", []))
+    skipped_count = len(recovery.get("skipped_open", []))
+    if recovered_count != 0:
         errors.append(
             _issue(
                 "unexpected_recovery",
                 expected=0,
-                actual=recovery.get("recovered_count"),
+                actual=recovered_count,
                 recovered=recovery.get("recovered", []),
             )
         )
@@ -544,8 +583,8 @@ def run_probe(args: argparse.Namespace) -> dict[str, Any]:
             "warning_codes": warning_codes,
         },
         "recovery": {
-            "recovered_count": recovery.get("recovered_count"),
-            "skipped_count": recovery.get("skipped_count"),
+            "recovered_count": recovered_count,
+            "skipped_count": skipped_count,
         },
         "resources": {
             **_disk_observation(runtime_dir),

@@ -52,17 +52,6 @@ type QualificationReceipt = {
   }>;
 };
 const env = { ...runtimeEnv, KF_RUNTIME_DIR: context.runtime };
-const agentReceipt = JSON.parse(
-  execFileSync(
-    python,
-    ['-m', 'kungfu', 'profile', 'kfd3-qualify', context.source, '--json'],
-    {
-      encoding: 'utf8',
-      env,
-    },
-  ),
-) as QualificationReceipt;
-
 const execSync = (
   file: string,
   args: string[],
@@ -83,9 +72,22 @@ const human = openProfile({
   env,
   execFileSync: execSync,
 });
+// Capture the Human plan at the same lifecycle cut used by the Agent CLI
+// qualification probes. Qualification itself advances the Profile revision,
+// so an exact plan created afterwards is intentionally different and stale.
+const humanPlan = human.intentPlan(context.source, context.intentId);
+const agentReceipt = JSON.parse(
+  execFileSync(
+    python,
+    ['-m', 'kungfu', 'profile', 'kfd3-qualify', context.source, '--json'],
+    {
+      encoding: 'utf8',
+      env,
+    },
+  ),
+) as QualificationReceipt;
 const humanReceipt = human.qualifyKfd3(context.source);
 const application = human.application(context.source);
-const humanPlan = human.intentPlan(context.source, context.intentId);
 
 assert.equal(context.profileId, 'example.week-day');
 assert.equal(agentReceipt.profileSuiteRoot, context.profileSuiteRoot);

@@ -237,9 +237,19 @@ records Installed, Qualified, Activated, Superseded, RolledBack, and Removed
 facts through ActionEnvelope + Episode. Python, Node, and `kungfu kfx profile`
 use the same storage-service operation and fail-closed plan/apply receipts.
 
-S1 qualification is deliberately limited to source-contract, content-closure,
-and runtime-contract checks that Core can execute itself. The installed Agent
-SDK, semantic fixture harness, Profile Manager, Mission Control migration,
-portable export/import, and open-Profile release qualification remain future
-stages. A schema-valid source still proves no lifecycle state; only journal
-facts and receipts establish installation, qualification, or activation.
+The first S2 product slice is also implemented. The installed Agent SDK exposes
+Profile application, status, exact qualification plans, explicit authorization,
+receipts, and verification. Profile Manager projects the same machine state as
+an Emoji badge and never runs qualification probes merely by rendering a
+Profile. Mission Control declares its collaboration interface through the
+public Profile Suite path; the Product build issues a release-owned KFD-3
+receipt only after binding the Suite closure, Agent API registry, and Work
+Dashboard GUI projection. User Profiles earn the same receipt schema and badge
+semantics through the journal-backed lifecycle authority.
+
+The stage remains incomplete: Week/Day coexistence, portable export/import,
+upgrade and rollback qualification, broader Mission Control migration, and
+frozen-product qualification on every supported platform are still open. A
+schema-valid source or editable Profile declaration proves no lifecycle or
+KFD-3 state; only an exact-root release receipt or an authorized journal fact
+can establish the current badge.

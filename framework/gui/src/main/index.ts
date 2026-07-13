@@ -278,6 +278,13 @@ if (!process.env.KF_FIRST_PARTY_MANIFEST && workspaceRuntimeReady) {
     process.env.KF_FIRST_PARTY_MANIFEST = manifestPath;
   }
 }
+if (!process.env.KF_PROFILE_KFD3_MANIFEST && app.isPackaged) {
+  process.env.KF_PROFILE_KFD3_MANIFEST = path.join(
+    process.resourcesPath,
+    'kungfu',
+    'profile-kfd3.json',
+  );
+}
 
 if (
   !process.env.KF_SKILL_CONTEXT_FILE &&

@@ -245,6 +245,22 @@ void test_lifecycle_plan_apply_fold_and_history() {
   require(profile::get_profile(runtime.string(), "example.week-day").at("state") == "activated",
           "activated state did not fold");
 
+  const auto active_root = profile::get_profile(runtime.string(), "example.week-day").at("profile_suite_root");
+  const nlohmann::json kfd3_receipt = {{"schema", "kungfu.profile-kfd3-qualification-receipt/v1"},
+                                       {"receiptId", "sha256:kfd3"},
+                                       {"profileId", "example.week-day"},
+                                       {"profileSuiteRoot", active_root},
+                                       {"qualified", true}};
+  const auto kfd3_plan = plan(runtime, {{"action", "kfd3-qualify"},
+                                        {"profile_path", v1.profile_path.string()},
+                                        {"member_roots", roots_v1},
+                                        {"qualification", kfd3_receipt}});
+  require(kfd3_plan.at("effects").at(0).at("kind") == "Kfd3Qualified",
+          "KFD-3 qualification preview omitted its typed effect");
+  apply(runtime, kfd3_plan, 325);
+  require(profile::get_profile(runtime.string(), "example.week-day").at("kfd3_qualification") == kfd3_receipt,
+          "KFD-3 qualification receipt did not fold for the exact root");
+
   const auto second_profile = write_package(tree.root() / "second", "1.0.0", "-second", "example.task-job");
   apply(runtime,
         plan(runtime, {{"action", "install"},
@@ -282,7 +298,7 @@ void test_lifecycle_plan_apply_fold_and_history() {
   const auto removed = profile::get_profile(runtime.string(), "example.week-day", true);
   require(removed.at("state") == "removed", "removal fact did not fold");
   const auto history = profile::profile_history(runtime.string(), "example.week-day");
-  require(history.at("events").size() == 8, "append-only lifecycle history lost facts");
+  require(history.at("events").size() == 9, "append-only lifecycle history lost facts");
 }
 
 void test_stale_plan_and_wrong_runtime_fail_closed() {

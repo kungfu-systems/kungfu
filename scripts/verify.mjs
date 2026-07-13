@@ -308,6 +308,22 @@ function main() {
         'bash scripts must be Node (.mjs) so the gate runs on Windows too',
     );
 
+  // ── Stage 0aa: Kungfu Gate catalog (read-only) ───────────────────
+  console.log('\\n[verify] stage 0aa: Kungfu Gate catalog');
+  const gateCatalog = spawnSync(
+    process.execPath,
+    [path.join(__dirname, 'check-kungfu-gate-catalog.mjs')],
+    { encoding: 'utf8' },
+  );
+  if (gateCatalog.status === 0)
+    pass('Kungfu Gate catalog', 'registry, docs, matrix and workflows align');
+  else
+    fail(
+      'Kungfu Gate catalog',
+      outputTail(gateCatalog.stdout, gateCatalog.stderr, 8) ||
+        `exit ${exitLabel(gateCatalog.status, gateCatalog.signal)}`,
+    );
+
   // ── Stage 0b: python type check (read-only) ───────────────────────
   // Gradual mypy baseline: annotated modules are type-checked, the un-annotated
   // bulk is skipped, and a small snapshot of pre-existing errors is ignored (see

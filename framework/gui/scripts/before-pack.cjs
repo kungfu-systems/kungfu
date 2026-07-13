@@ -17,15 +17,20 @@ function esmEntrypointArgs(entryPath) {
 }
 
 exports.default = async function beforePack() {
-  const gen = path.join(__dirname, 'gen-first-party-manifest.mjs');
   const tsxLoader = require.resolve('tsx/esm');
-  const result = spawnSync(
-    process.execPath,
-    ['--import', tsxLoader, ...esmEntrypointArgs(gen)],
-    { stdio: 'inherit' },
-  );
-  if (result.status !== 0) {
-    throw new Error('failed to bake the first-party manifest before pack');
+  for (const [script, label] of [
+    ['gen-first-party-manifest.mjs', 'first-party manifest'],
+    ['gen-system-profile-kfd3.mjs', 'system Profile KFD-3 manifest'],
+  ]) {
+    const gen = path.join(__dirname, script);
+    const result = spawnSync(
+      process.execPath,
+      ['--import', tsxLoader, ...esmEntrypointArgs(gen)],
+      { stdio: 'inherit' },
+    );
+    if (result.status !== 0) {
+      throw new Error(`failed to bake the ${label} before pack`);
+    }
   }
 };
 
