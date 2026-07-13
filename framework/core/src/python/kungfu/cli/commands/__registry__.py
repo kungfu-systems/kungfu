@@ -26,6 +26,7 @@ from . import kfd
 from . import runtime
 from . import workspace
 from . import profile
+from . import lock
 
 __all__ = [
     "engage",
@@ -54,4 +55,5 @@ __all__ = [
     "runtime",
     "workspace",
     "profile",
+    "lock",
 ]
