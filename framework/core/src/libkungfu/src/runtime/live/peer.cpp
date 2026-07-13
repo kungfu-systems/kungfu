@@ -207,6 +207,13 @@ void peer::on_react() {}
 
 void peer::on_start() {}
 
+void peer::observe(int32_t carrier_type, const std::function<void(const event_ptr &)> &callback) {
+  // Same shape as the built-in react() subscriptions, but the handler is
+  // supplied by the caller (e.g. a Python subclass). Capture the callback by
+  // value so it outlives this call and lives for the reactor's lifetime.
+  events_ | is(carrier_type) | $([callback](const event_ptr &event) { callback(event); });
+}
+
 void peer::on_register(int64_t trigger_time, const Register &register_data) {
   register_location(trigger_time, register_data);
 }

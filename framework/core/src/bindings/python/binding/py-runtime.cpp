@@ -5,6 +5,7 @@
 #include <limits>
 
 #include <nlohmann/json.hpp>
+#include <pybind11/functional.h>
 #include <pybind11/stl.h>
 
 #include <kungfu/runtime/action_recorder.h>
@@ -384,6 +385,13 @@ public:
   using peer::peer;
 
   void on_exit() override { PYBIND11_OVERLOAD_PURE(void, peer, on_exit); }
+
+  // The react hook: a Python subclass overrides on_react() to install frame
+  // subscriptions via observe(), and on_start() to run once the peer is live.
+  // Base peer provides empty impls, so these are OVERLOAD (not PURE).
+  void on_react() override { PYBIND11_OVERLOAD(void, peer, on_react); }
+
+  void on_start() override { PYBIND11_OVERLOAD(void, peer, on_start); }
 };
 
 void bind(pybind11::module &&m) {
@@ -1352,6 +1360,14 @@ void bind(pybind11::module &&m) {
       .def("is_started", &peer::is_started)
       .def("has_writer", &peer::has_writer)
       .def("get_writer", &peer::get_writer)
+      .def("observe", &peer::observe, py::arg("carrier_type"), py::arg("callback"))
+      .def("request_read_from", &peer::request_read_from, py::arg("trigger_time"), py::arg("source_id"),
+           py::arg("from_time"), py::arg("page_size") = 0)
+      .def("request_read_from_public", &peer::request_read_from_public, py::arg("trigger_time"), py::arg("source_id"),
+           py::arg("from_time"), py::arg("page_size") = 0)
+      .def("request_write_to", &peer::request_write_to, py::arg("trigger_time"), py::arg("dest_id"),
+           py::arg("page_size") = 0)
+      .def("get_public_writer", &peer::get_public_writer)
       .def("on_exit", &peer::on_exit);
 }
 } // namespace kungfu::runtime
