@@ -4,8 +4,8 @@ doc_type: architecture-decision
 adr_id: ADR-0076
 decision_status: accepted
 implementation_status: implemented
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/745]
-closure_pr: https://github.com/kungfu-systems/kungfu/pull/745
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/745, https://github.com/kungfu-systems/kungfu/pull/746]
+closure_pr: https://github.com/kungfu-systems/kungfu/pull/746
 qualification_refs: [docs.contract.json, scripts/check-docs.test.mjs, scripts/document-metadata-contract.test.mjs]
 review_state: maintainer-reviewed
 sensitivity: public
@@ -93,6 +93,8 @@ and negative fixtures for every undeclared root Markdown path.
 
 PR [#745](https://github.com/kungfu-systems/kungfu/pull/745) implements the
 canonical moves, section indexes, metadata routing, publication graph, and
-negative placement fixtures. The follow-up implementation removes the
-speculative compatibility facade and makes the root rule absolute. The
-deterministic documentation gate is the retained qualification surface.
+initial placement fixtures. PR
+[#746](https://github.com/kungfu-systems/kungfu/pull/746) removes the
+speculative compatibility facade, makes the root rule absolute, and strengthens
+the retired ADR-root fixtures. The deterministic documentation gate is the
+retained qualification surface.
