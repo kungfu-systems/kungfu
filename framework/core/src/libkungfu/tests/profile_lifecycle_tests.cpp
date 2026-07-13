@@ -123,6 +123,7 @@ package_fixture write_package(const fs::path &root, const std::string &version, 
       {"migrations", {{"registry", ref("migrations/registry.json")}}},
       {"permissions", {{"registry", ref("permissions.json")}}},
       {"qualification", {{"profile", ref("qualification/profile.json")}}},
+      {"experience", {{"homeView", "week-day-dashboard"}}},
   };
   const auto profile_path = root / "profile.json";
   write_text(profile_path, document.dump(2));
@@ -170,6 +171,8 @@ void test_inspection_is_content_bound_and_confined() {
   require(first.at("closure").at("source_contract").at("root") ==
               profile::profile_lifecycle_contract().at("source_contract_root"),
           "Profile root did not bind the exact KFX source contract");
+  require(first.at("profile").at("experience").at("homeView") == "week-day-dashboard",
+          "Profile authority did not preserve the declared home view");
   require_invalid([&] { (void)profile::inspect_profile(fixture.profile_path.string(), nlohmann::json::object()); },
                   "unbound Suite member roots were accepted");
   auto changed_members = member_roots();
@@ -190,6 +193,14 @@ void test_inspection_is_content_bound_and_confined() {
   write_text(escaped.profile_path, document.dump(2));
   require_invalid([&] { (void)profile::inspect_profile(escaped.profile_path.string(), member_roots()); },
                   "parent traversal was accepted");
+
+  const auto invalid_experience = write_package(tree.root() / "invalid-experience", "1.0.0");
+  std::ifstream invalid_input(invalid_experience.profile_path);
+  auto invalid_document = nlohmann::json::parse(invalid_input);
+  invalid_document["experience"]["homeView"] = "unrelated-dashboard";
+  write_text(invalid_experience.profile_path, invalid_document.dump(2));
+  require_invalid([&] { (void)profile::inspect_profile(invalid_experience.profile_path.string(), member_roots()); },
+                  "home view outside the Profile Suite was accepted");
 }
 
 void test_optional_kfd3_collaboration_is_content_bound() {

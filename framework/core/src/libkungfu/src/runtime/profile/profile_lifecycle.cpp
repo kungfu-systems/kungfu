@@ -350,7 +350,7 @@ nlohmann::json normalize_profile(const nlohmann::json &input) {
   require_exact_keys(input,
                      {"schema", "id", "title", "version", "members", "kfd1", "kfd2", "actions", "views", "migrations",
                       "permissions", "qualification"},
-                     {"kfd3"});
+                     {"kfd3", "experience"});
   if (required_text(input, "schema") != PROFILE_SCHEMA_V1) {
     throw std::invalid_argument("Profile must use kungfu.profile-suite/v1");
   }
@@ -366,6 +366,16 @@ nlohmann::json normalize_profile(const nlohmann::json &input) {
   for (const auto &member : required_members) {
     if (std::binary_search(optional_members.begin(), optional_members.end(), member)) {
       throw std::invalid_argument("required and optional Profile members overlap");
+    }
+  }
+  std::string home_view;
+  if (input.contains("experience")) {
+    const auto &experience = input.at("experience");
+    require_exact_keys(experience, {"homeView"});
+    home_view = required_text(experience, "homeView");
+    if (!std::binary_search(required_members.begin(), required_members.end(), home_view) &&
+        !std::binary_search(optional_members.begin(), optional_members.end(), home_view)) {
+      throw std::invalid_argument("experience.homeView must be a Profile member");
     }
   }
 
@@ -404,6 +414,9 @@ nlohmann::json normalize_profile(const nlohmann::json &input) {
     const auto &kfd3 = input.at("kfd3");
     require_exact_keys(kfd3, {"collaboration"});
     normalized["kfd3"] = {{"collaboration", normalize_ref(kfd3.at("collaboration"))}};
+  }
+  if (!home_view.empty()) {
+    normalized["experience"] = {{"homeView", home_view}};
   }
   return normalized;
 }
