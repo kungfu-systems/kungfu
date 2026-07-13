@@ -61,8 +61,23 @@ const LAYOUT_DISCOVERY_CONTRACT: &str = "kungfu-buildchain-layout-discovery";
 /// is buildchain's own answer, never a shifu-side copy that could silently
 /// drift when buildchain moves the layout.
 fn resolve_kfd3_registry(root: &Path) -> Option<PathBuf> {
-    // Not buildchain-managed → no registry, no registration (the common,
-    // silent case, same as a repo without a registry today).
+    // Registration is advisory, so path resolution must not add a network
+    // fetch to ordinary dispatch: resolve only from an already-available
+    // buildchain (PATH/cache), never a forced download.
+    resolve_kfd3_registry_with(root, Acquire::CachedOnly)
+}
+
+/// How to obtain the buildchain binary when the layout answer is not yet
+/// cached: the advisory dispatch hot path stays cache-only, while a deliberate
+/// serve-downstream jurisdiction check may fetch the pinned release.
+enum Acquire {
+    CachedOnly,
+    Fetch,
+}
+
+fn resolve_kfd3_registry_with(root: &Path, acquire: Acquire) -> Option<PathBuf> {
+    // Not buildchain-managed → no registry (the common, silent case, same as a
+    // repo without a registry today).
     if !root.join(bootstrap::BUILDCHAIN.pin_file()).is_file() {
         return None;
     }
@@ -70,14 +85,50 @@ fn resolve_kfd3_registry(root: &Path) -> Option<PathBuf> {
     if let Some(rel) = read_layout_cache(root, &version) {
         return Some(root.join(rel));
     }
-    // Registration is advisory, so path resolution must not add a network
-    // fetch to ordinary dispatch: resolve only from an already-available
-    // buildchain (PATH/cache), never a forced download. The answer is cached,
-    // so the ask happens at most once per buildchain version.
-    let buildchain = bootstrap::find_tool(&bootstrap::BUILDCHAIN, root)?;
+    // The answer is cached, so the ask happens at most once per buildchain
+    // version regardless of which acquisition strategy resolved it.
+    let buildchain = match acquire {
+        Acquire::CachedOnly => bootstrap::find_tool(&bootstrap::BUILDCHAIN, root)?,
+        Acquire::Fetch => bootstrap::ensure_tool(&bootstrap::BUILDCHAIN, root).ok()?,
+    };
     let rel = query_layout_registry(&buildchain, root)?;
     write_layout_cache(root, &version, &rel);
     Some(root.join(rel))
+}
+
+/// Whether this repo explicitly declares shifu as its KFD-3 distribution
+/// registrar — the jurisdiction signal that makes a non-kungfu,
+/// buildchain-managed repo one that shifu serves. A `.buildchain-version` pin
+/// alone is not enough (a KFD file is not the same as opting into shifu), so a
+/// stray buildchain repo cannot have its management silently claimed. Reads
+/// the registry buildchain points to, fetching the pinned binary if needed
+/// (this is the deliberate serve-downstream context, not the hot path).
+pub fn declares_shifu_jurisdiction(root: &Path) -> bool {
+    let Some(path) = resolve_kfd3_registry_with(root, Acquire::Fetch) else {
+        return false;
+    };
+    let Ok(text) = fs::read_to_string(&path) else {
+        return false;
+    };
+    match json::parse(&text) {
+        Ok(doc) => registry_declares_shifu(&doc),
+        Err(_) => false,
+    }
+}
+
+/// Pure jurisdiction test over a parsed registry: any surface whose
+/// distribution names shifu as registrar.
+fn registry_declares_shifu(doc: &json::Json) -> bool {
+    doc.get("surfaces")
+        .and_then(json::Json::as_array)
+        .unwrap_or(&[])
+        .iter()
+        .any(|surface| {
+            surface
+                .get("distribution")
+                .map(|dist| dist.str_of("registrar") == "shifu")
+                .unwrap_or(false)
+        })
 }
 
 /// Ask `buildchain layout --json` where the KFD-3 registry lives. Returns the
@@ -699,6 +750,23 @@ mod tests {
     fn quoting_strips_single_quotes() {
         assert_eq!(quote("a'b"), "'ab'");
         assert_eq!(quote("plain"), "'plain'");
+    }
+
+    #[test]
+    fn jurisdiction_requires_an_explicit_shifu_registrar() {
+        let shifu =
+            json::parse(r#"{"surfaces": [{"distribution": {"registrar": "shifu"}}]}"#).unwrap();
+        assert!(registry_declares_shifu(&shifu));
+        // A KFD registry that names some other registrar, or none, is not
+        // shifu's to claim.
+        let other =
+            json::parse(r#"{"surfaces": [{"distribution": {"registrar": "someone-else"}}]}"#)
+                .unwrap();
+        assert!(!registry_declares_shifu(&other));
+        let bare = json::parse(r#"{"surfaces": [{"id": "x"}]}"#).unwrap();
+        assert!(!registry_declares_shifu(&bare));
+        let empty = json::parse(r#"{"product": {"id": "x"}}"#).unwrap();
+        assert!(!registry_declares_shifu(&empty));
     }
 
     #[test]

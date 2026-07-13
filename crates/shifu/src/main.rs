@@ -458,8 +458,39 @@ fn is_repo_root(dir: &Path) -> bool {
     dir.join("shifu").is_file() && dir.join("shifu.cmd").is_file()
 }
 
+/// Nearest ancestor (inclusive) that is a kungfu bootstrap repo root.
+fn find_kungfu_root(start: &Path) -> Option<PathBuf> {
+    start
+        .ancestors()
+        .find(|dir| is_repo_root(dir))
+        .map(Path::to_path_buf)
+}
+
+/// Nearest ancestor (inclusive) that is a buildchain-managed repo declaring
+/// shifu as its KFD-3 registrar. The `.buildchain-version` pin narrows the
+/// walk with a cheap existence check; recognition still requires the explicit
+/// jurisdiction declaration (read via buildchain), so a stray buildchain repo
+/// that never opted into shifu is not claimed.
+fn find_buildchain_managed_root(start: &Path) -> Option<PathBuf> {
+    start
+        .ancestors()
+        .filter(|dir| dir.join(tools::BUILDCHAIN.pin_file()).is_file())
+        .find(|dir| registrar::declares_shifu_jurisdiction(dir))
+        .map(Path::to_path_buf)
+}
+
+/// Locate the repository root, two-level. Level 1 is a kungfu bootstrap repo —
+/// the welded `shifu`/`shifu.cmd` entrypoint pair (ADR-0044), which delegates
+/// to its own repo-pinned launcher. Level 2, reached only for real dispatch,
+/// is a buildchain-managed repo that declares shifu as its KFD-3 registrar: it
+/// has no in-repo entrypoint to spawn, so the installed binary serves it
+/// directly (delegation no-ops when the pair is absent, then `run_pnpm` runs
+/// the declared task).
+///
 /// With `lenient` (used by --version and doctor), failing to find a repo
-/// returns None instead of dying — those verbs are useful outside a checkout.
+/// returns None instead of dying — those verbs are useful rootless, and they
+/// deliberately skip the Level-2 check so a version print never triggers a
+/// buildchain acquisition.
 fn find_repo_root(lenient: bool) -> Option<PathBuf> {
     if let Some(explicit) = env::var_os("SHIFU_ROOT") {
         let root = PathBuf::from(explicit);
@@ -472,29 +503,54 @@ fn find_repo_root(lenient: bool) -> Option<PathBuf> {
         ));
     }
     let start = env::current_dir().unwrap_or_else(|e| util::die(&format!("cannot read cwd: {e}")));
-    let mut dir = start.as_path();
-    loop {
-        if is_repo_root(dir) {
-            return Some(dir.to_path_buf());
-        }
-        match dir.parent() {
-            Some(parent) => dir = parent,
-            None => {
-                if lenient {
-                    return None;
-                }
-                util::die(
-                    "not inside a kungfu repository (no shifu.mjs found walking up from the \
-                     current directory; set SHIFU_ROOT to override)",
-                )
-            }
+    if let Some(root) = find_kungfu_root(&start) {
+        return Some(root);
+    }
+    if !lenient {
+        if let Some(root) = find_buildchain_managed_root(&start) {
+            return Some(root);
         }
     }
+    if lenient {
+        return None;
+    }
+    util::die(
+        "not inside a kungfu repository (no shifu/shifu.cmd entrypoint pair, and no \
+         buildchain-managed repo declaring shifu, walking up from the current \
+         directory; set SHIFU_ROOT to override)",
+    )
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{auto_apply_args, command_requires_msvc, should_auto_apply_cache};
+    use super::{
+        auto_apply_args, command_requires_msvc, find_kungfu_root, is_repo_root,
+        should_auto_apply_cache,
+    };
+    use std::fs;
+
+    #[test]
+    fn kungfu_root_needs_the_welded_entrypoint_pair() {
+        let base = shifu_core::host::unique_temp_dir("shifu-root").unwrap();
+        let repo = base.join("repo");
+        let nested = repo.join("a/b");
+        fs::create_dir_all(&nested).unwrap();
+
+        // No entrypoint pair anywhere → no kungfu root.
+        assert!(find_kungfu_root(&nested).is_none());
+        // A lone `shifu` file is not enough (a stray file must not be a root).
+        fs::write(repo.join("shifu"), "x").unwrap();
+        assert!(!is_repo_root(&repo));
+        assert!(find_kungfu_root(&nested).is_none());
+        // Both welded files → the nested cwd resolves up to the repo root.
+        fs::write(repo.join("shifu.cmd"), "x").unwrap();
+        assert!(is_repo_root(&repo));
+        assert_eq!(
+            find_kungfu_root(&nested).unwrap().canonicalize().unwrap(),
+            repo.canonicalize().unwrap()
+        );
+        let _ = fs::remove_dir_all(&base);
+    }
 
     #[test]
     fn compiler_environment_precedes_every_build_capable_dispatch() {
