@@ -2,8 +2,9 @@
 metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ADR-0072
-decision_status: proposed
-implementation_status: not-started
+decision_status: accepted
+implementation_status: partial
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/740]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -16,7 +17,7 @@ last_reviewed: 2026-07-13
 
 # ADR-0072: frame identity layering — journal-local frame uid, ledger-global stream position
 
-- Status: proposed; not started
+- Status: accepted; Phase 1 implemented (Phase 2 pending)
 - Date: 2026-07-13
 - Category: runtime architecture / journal identity / durability
 - Related: [ADR-0062](ADR-0062-journal-container-epoch-and-offline-conversion.md)
@@ -104,6 +105,11 @@ The container stays a short-lived substrate as
 This resolves the tension without overturning the epoch mechanism.
 
 ### Phase 1 — make `frame_uid` deterministically journal-local (pre-stable window)
+
+Status: implemented in `dev/v4/v4.0`. `writer::current_frame_uid()` now encodes
+`(page_id << 32) | in-page frame_nb`; the `frame_header` field `frame_uid` was
+renamed to `journal_frame_uid`, advancing `journal_format_epoch`. Phase 2 (the
+authoritative ledger-global identity) is still pending.
 
 The page 8-bit wrap is a real, deterministic bug once a journal is long-lived.
 Restructure `frame_uid`'s low bits to a structural, collision-free encoding
