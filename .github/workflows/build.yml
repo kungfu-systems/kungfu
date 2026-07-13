@@ -62,7 +62,10 @@ jobs:
         SHIFU_NATIVE=1 SHIFU_REQUIRE_MSVC=1 KUNGFU_FUZZ_SECONDS=90
         ./shifu cache apply -- ./shifu verify --fuzz &&
         ./shifu cache apply -- ./shifu episode:qualify:release -- --output
-        product/release/qualification/episode-release-evidence.json"
+        product/release/qualification/episode-release-evidence.json &&
+        ./shifu cache apply -- ./shifu adr:release:gate -- --github-event
+        --allow-non-pr --report
+        product/release/qualification/adr-release-admissibility.json"
       release-candidate: true
       publish-channel: ${{ startsWith(github.base_ref, 'release/') && 'release' || 'alpha' }}
       artifact-transfer-mode: s3-to-github-artifacts

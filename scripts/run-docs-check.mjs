@@ -36,10 +36,16 @@ try {
   ]);
   run('negative fixtures', [
     '--test',
+    path.join('scripts', 'adr-release-gate.test.mjs'),
+    path.join('scripts', 'release-promotion-rehearsal.test.mjs'),
     path.join('scripts', 'check-docs.test.mjs'),
     path.join('scripts', 'document-metadata-contract.test.mjs'),
     path.join('scripts', 'vocabulary-contract.test.mjs'),
     path.join('scripts', 'check-docs-toolchain.test.mjs'),
+  ]);
+  run('ADR release contract', [
+    path.join('scripts', 'adr-release-gate.mjs'),
+    '--contract-only',
   ]);
   run('immutable documentation toolchain', [
     path.join('scripts', 'check-docs-toolchain.mjs'),

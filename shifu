@@ -192,6 +192,22 @@ if [ "${1:-}" = "docs:check:readonly" ]; then
   fi
 fi
 
+# ADR release admission is a pure-Node policy gate. Keep it on the canonical
+# Shifu entrypoint while bypassing pnpm/workspace installation so every dev PR
+# gets a genuinely lightweight check.
+if [ "${1:-}" = "adr:release:gate" ]; then
+  shift
+  if command -v fnm >/dev/null 2>&1; then
+    fnm install >/dev/null 2>&1 || true
+    exec fnm exec --using-file -- node ./scripts/adr-release-gate.mjs "$@"
+  elif command -v node >/dev/null 2>&1; then
+    exec node ./scripts/adr-release-gate.mjs "$@"
+  else
+    echo "shifu: adr:release:gate needs node — install fnm or any system node" >&2
+    exit 127
+  fi
+fi
+
 if [ "${SHIFU_NATIVE:-}" != "0" ]; then
   if [ -n "${SHIFU_BIN:-}" ] && [ -x "${SHIFU_BIN}" ]; then
     exec "${SHIFU_BIN}" "$@"

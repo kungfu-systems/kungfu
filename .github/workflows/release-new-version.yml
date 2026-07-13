@@ -16,7 +16,27 @@ permissions:
   id-token: write
 
 jobs:
+  promotion-contract:
+    if: ${{ github.event.pull_request.merged == true }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout immutable promotion result
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Rehearse the Kungfu promotion contract
+        run: >-
+          ./shifu release:promotion:rehearse --
+          --event "$GITHUB_EVENT_PATH"
+          --report product/release/qualification/release-promotion-rehearsal.json
+
   promote:
+    needs: promotion-contract
     if: ${{ github.event.pull_request.merged == true }}
     uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@v2
     with:

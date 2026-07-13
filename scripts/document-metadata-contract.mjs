@@ -280,12 +280,17 @@ function validateAdrEvidence(fields, rel, root, contract, findings) {
   const exemption = evidence.legacyEvidenceExemptions[id];
   const commits = fields.get(evidence.commitFields[0]);
   const prs = fields.get(evidence.pullRequestFields[0]);
-  const closure = fields.get(evidence.closureCommitField);
+  const closureCommit = fields.get(evidence.closureCommitField);
+  const closurePr = fields.get(evidence.closurePullRequestField);
   const qualifications = fields.get(evidence.qualificationRefField);
-  const present = [commits, prs, closure, qualifications].some(Boolean);
+  const present = [commits, prs, closureCommit, closurePr, qualifications].some(
+    Boolean,
+  );
   const evidenceComplete =
     (commits || prs) &&
-    (!evidence.statusesRequiringClosure.includes(status) || closure);
+    (!evidence.statusesRequiringClosure.includes(status) ||
+      closureCommit ||
+      closurePr);
 
   if (
     exemption &&
@@ -315,14 +320,15 @@ function validateAdrEvidence(fields, rel, root, contract, findings) {
   }
   if (
     evidence.statusesRequiringClosure.includes(status) &&
-    !closure &&
+    !closureCommit &&
+    !closurePr &&
     !exemption
   ) {
     findings.push({
       code: 'adr-closure-required',
       file: rel,
       line: 1,
-      message: `${status} requires closure_commit`,
+      message: `${status} requires closure_commit or closure_pr`,
     });
   }
   if (evidence.statusesForbiddingEvidence.includes(status) && present) {
@@ -355,12 +361,12 @@ function validateAdrEvidence(fields, rel, root, contract, findings) {
         findings,
       );
   }
-  if (closure) {
+  if (closureCommit) {
     checkCommit(
-      String(closure.value),
+      String(closureCommit.value),
       evidence.closureCommitField,
       rel,
-      closure.line,
+      closureCommit.line,
       root,
       findings,
     );
@@ -377,6 +383,14 @@ function validateAdrEvidence(fields, rel, root, contract, findings) {
         });
       }
     }
+  }
+  if (closurePr && !prPattern.test(String(closurePr.value))) {
+    findings.push({
+      code: 'adr-evidence-pr',
+      file: rel,
+      line: closurePr.line,
+      message: `closure_pr must use a stable kungfu-systems/kungfu PR URL: ${String(closurePr.value)}`,
+    });
   }
   if (Array.isArray(qualifications?.value)) {
     for (const reference of qualifications.value) {

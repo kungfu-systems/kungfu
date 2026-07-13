@@ -89,6 +89,11 @@ Lychee configuration on a schedule.
 
 - Open pull requests against the relevant `dev/*` channel branch (see
   [`CONTRIBUTING.md`](CONTRIBUTING.md) → "Branches, pull requests & releases").
+- Preserve the PR template's `kungfu-adr-release:v1` manifest. A feature PR must
+  declare a bounded `stage-ready` or `implemented` delivery against accepted
+  ADRs; do not use commit messages as implementation authority. Alpha and
+  stable promotion semantics live in
+  [`docs/version-release-design.md`](docs/version-release-design.md).
 - Write commit messages and PR descriptions in English, using lightweight
   [Conventional Commits](https://www.conventionalcommits.org/)
   (`type(scope): summary`).

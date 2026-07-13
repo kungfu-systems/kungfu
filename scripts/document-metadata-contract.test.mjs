@@ -34,6 +34,7 @@ const contract = {
     'implementation_commits',
     'implementation_prs',
     'closure_commit',
+    'closure_pr',
     'qualification_refs',
   ],
   sourceKinds: ['local-files'],
@@ -123,6 +124,7 @@ const contract = {
     commitFields: ['implementation_commits'],
     pullRequestFields: ['implementation_prs'],
     closureCommitField: 'closure_commit',
+    closurePullRequestField: 'closure_pr',
     qualificationRefField: 'qualification_refs',
     statusesRequiringImplementationEvidence: ['implemented'],
     statusesRequiringClosure: ['implemented'],
@@ -356,6 +358,38 @@ test('accepts reachable full-SHA implementation and closure evidence', () => {
   const { root, file } = evidenceFixture();
   const findings = validateDocumentMetadata({ root, files: [file], contract });
   assert.deepEqual(findings, []);
+});
+
+test('accepts stable PR implementation and closure evidence', () => {
+  const { root, file } = evidenceFixture();
+  const target = path.join(root, file);
+  fs.writeFileSync(
+    target,
+    fs
+      .readFileSync(target, 'utf8')
+      .replace(
+        /^implementation_commits:.*\nclosure_commit:.*$/m,
+        'implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/731]\nclosure_pr: https://github.com/kungfu-systems/kungfu/pull/731',
+      ),
+  );
+  const findings = validateDocumentMetadata({ root, files: [file], contract });
+  assert.deepEqual(findings, []);
+});
+
+test('rejects closure PR evidence outside the canonical repository', () => {
+  const { root, file } = evidenceFixture();
+  const target = path.join(root, file);
+  fs.writeFileSync(
+    target,
+    fs
+      .readFileSync(target, 'utf8')
+      .replace(
+        /^closure_commit:.*$/m,
+        'closure_pr: https://github.com/example/fork/pull/1',
+      ),
+  );
+  const findings = validateDocumentMetadata({ root, files: [file], contract });
+  assert.ok(findings.some((finding) => finding.code === 'adr-evidence-pr'));
 });
 
 test('rejects malformed implementation commit evidence', () => {

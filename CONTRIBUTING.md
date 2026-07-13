@@ -251,10 +251,19 @@ dev/<major>/<version>  →  alpha/<major>/<version>  →  release/<major>/<versi
 ```
 
 - Open pull requests against the relevant `dev/*` branch.
+- Keep exactly one `kungfu-adr-release:v1` block from the pull-request
+  template. Feature branches must declare `stage-ready` or `implemented`
+  delivery intent and reference accepted ADRs; fixes and chores with no
+  architecture impact use `adr-neutral` with a reason. This declares delivery
+  scope, not semantic-version impact.
 - Merging into `alpha/*` and `release/*` triggers the version-bump and release
   workflows, which tag the release and move the moving major tag.
 - See [`docs/version-release-design.md`](docs/version-release-design.md) for the
-  rationale behind the versioning and release mechanism.
+  rationale behind versioning and the dev/alpha/stable ADR admissibility
+  contract. Alpha promotions settle changed ADR progress after full Buildchain
+  qualification. Stable promotions block every unimplemented or unqualified
+  accepted ADR unless the exact release carries an explicitly reviewed admin
+  waiver.
 
 ## License
 

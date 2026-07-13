@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: ADR Release Gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+    branches:
+      - dev/v*/v*
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  adr-release:
+    name: Dev delivery intent
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout immutable PR head
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify ADR delivery intent
+        run: >-
+          ./shifu adr:release:gate -- --github-event
+          --report product/release/qualification/adr-release-admissibility.json

@@ -56,6 +56,7 @@ rem Cache profiles are checkout-owned L2 contracts. Resolve/apply them before
 rem native dispatch; an inner `shifu <task>` can still select the native path.
 if /i "%~1"=="cache" goto delegate
 if /i "%~1"=="docs:check:readonly" goto docsreadonly
+if /i "%~1"=="adr:release:gate" goto adrrelease
 
 :docsreadonly
 if /i not "%~1"=="docs:check:readonly" goto native
@@ -69,6 +70,21 @@ where node >nul 2>nul && (
   exit /b !errorlevel!
 )
 echo shifu: docs:check:readonly needs node -- install fnm or any system node 1>&2
+exit /b 127
+
+:adrrelease
+if /i not "%~1"=="adr:release:gate" goto native
+shift
+where fnm >nul 2>nul && (
+  fnm install >nul 2>nul
+  fnm exec --using-file -- node "%~dp0scripts\adr-release-gate.mjs" %*
+  exit /b !errorlevel!
+)
+where node >nul 2>nul && (
+  node "%~dp0scripts\adr-release-gate.mjs" %*
+  exit /b !errorlevel!
+)
+echo shifu: adr:release:gate needs node -- install fnm or any system node 1>&2
 exit /b 127
 
 rem -- Native launcher resolution ------------------------------------------------

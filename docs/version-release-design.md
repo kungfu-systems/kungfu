@@ -47,13 +47,15 @@ judgment is hidden inside an action the developer already performs** (advancing 
 next channel). No changeset files, no commit-message conventions, no manual `version`
 command.
 
-**The pipeline is asymmetric by design.** `dev` is the developer's free zone — feature
-branches merge straight into `dev/v{major}/v{major}.{minor}` with no channel gate (branch
-protection on `dev` requires no review). The un-cheatable trust pipeline and the
-weak-centralization described below begin only at `dev → alpha`, where the first
-real-binary prerelease is produced. This deliberately separates *development freedom* (fast
-iteration inside dev) from *release rigor* (everything from alpha onward is gated):
-**getting to the point of freezing is free; the freeze itself is strict.**
+**The pipeline is asymmetric by design.** `dev` remains the fast integration
+zone: it runs a lightweight source and ADR-delivery gate rather than the full
+three-platform release build. Feature PRs must nevertheless arrive in a bounded
+state (`stage-ready` or an `implemented` candidate); ordinary non-architecture
+fixes use an explicit ADR-neutral path. The expensive, un-cheatable trust
+pipeline and weak-centralization described below begin at `dev → alpha`, where
+the first real-binary prerelease is produced. This separates *fast development
+integration* from *release qualification* without allowing half-described
+architecture work to accumulate silently.
 
 **2. The git tag is the artifact; the `package.json` version is a downstream projection.**
 What carries meaning is the tag — an immutable object pinning a commit, representing "this
@@ -157,6 +159,133 @@ This places kungfu's version strategy in the lineage of long-tail industrial mai
 rather than the forced-EOL model of developer-tooling releases. The mechanism's job is to
 keep that option open; it does not, by itself, decide who pays to use it.
 
+## ADR implementation and release admissibility
+
+Channel promotion is also the settlement mechanism for ADR implementation
+truth. The three channels deliberately answer different questions:
+
+| Boundary | Question | Machine result |
+|---|---|---|
+| feature → `dev` | Is this change a coherent integration unit? | `stage-ready`, `implemented` candidate, or explicit ADR-neutral non-feature change |
+| `dev` → `alpha` | What ADR progress did this fully built candidate establish? | progress settlement matching changed ADR projections, or explicit no-progress reason |
+| `alpha` → `release` | Is every accepted architecture obligation accounted for? | implemented and qualified, not applicable, or exact-release admin waiver |
+
+The PR template carries exactly one JSON manifest inside the
+`kungfu-adr-release:v1` marker. Version intent still comes from branch direction;
+the manifest does **not** ask a contributor to choose major/minor/patch. It
+declares the architecture delivery boundary that the PR already claims to
+cross.
+
+### Development manifests
+
+A feature PR uses `dev-delivery`:
+
+```json
+{
+  "schema": "kungfu.adr-release-pr/v1",
+  "kind": "dev-delivery",
+  "intent": "stage-ready",
+  "adrs": ["ADR-0068"],
+  "summary": "Complete the bounded projection durability stage",
+  "verification": ["durability contract tests"]
+}
+```
+
+`stage-ready` is a PR integration disposition, not the ADR value `staged`. An
+ADR may remain `partial` after a coherent stage lands. `implemented` means the
+development branch contains an implementation-complete candidate; alpha still
+settles the claim after full qualification.
+
+Non-feature work uses `adr-neutral` with a meaningful reason. Feature branches
+cannot use that form, and an ADR-neutral PR cannot modify ADR records.
+
+### Alpha settlement manifests
+
+The promotion PR lists the ADR projections established by the complete dev
+delta:
+
+```json
+{
+  "schema": "kungfu.adr-release-pr/v1",
+  "kind": "alpha-settlement",
+  "progress": [
+    {
+      "adr": "ADR-0068",
+      "to": "staged",
+      "summary": "All durability stages are integrated; release qualification remains"
+    }
+  ]
+}
+```
+
+If the promotion contains fixes only, it uses
+`no_adr_progress_reason` instead of an empty or misleading progress list. The
+Buildchain candidate job runs this settlement gate after the full build and
+release qualification and retains the resulting report beside the other
+qualification evidence.
+
+### Stable admission and waivers
+
+A stable PR declares the exact candidate version:
+
+```json
+{
+  "schema": "kungfu.adr-release-pr/v1",
+  "kind": "stable-admission",
+  "release": "4.0.0"
+}
+```
+
+The gate enumerates every accepted Core and Shifu ADR. `implemented` requires
+qualification references; `not-applicable` is admitted; every other state is a
+blocker unless `docs/adr-release-waivers.json` contains a waiver for the exact
+release and exact blocker conditions. A waiver records reason, risk,
+mitigation, an allowlisted release administrator, the current stable PR, and an
+expiry equal to that release. The waiver ledger has a dedicated CODEOWNER, so a
+GitHub admin bypass or an unreviewed field edit is not a waiver. Waivers appear
+in `kungfu.adr-release-report/v1` and never roll forward automatically.
+
+The machine guarantees that stable has no *unaccounted* accepted decision. It
+does not replace semantic review: reviewers decide whether code fulfills the
+ADR and whether residual risk deserves a waiver. See
+[ADR-0073](../framework/core/docs/adr/ADR-0073-buildchain-adr-release-admissibility.md)
+and the [document metadata contract](document-metadata.md).
+
+### Side-effect-free promotion rehearsal
+
+Kungfu does not need to publish an alpha or stable release to test its side of
+the promotion contract. `./shifu release:promotion:rehearse` executes committed
+positive and fail-closed fixtures for both channels, validates the real GitHub
+workflow wiring and immutable Buildchain contract locks, checks every declared
+release-passport input, and reports current stable ADR readiness. The command
+also proves that tracked files, branches, and tags remain unchanged. It never
+receives release credentials and contains no version bump, tag, push, package
+publish, or GitHub Release operation.
+
+The ordinary `Buildchain Validate` workflow runs this rehearsal on a
+GitHub-hosted runner after Buildchain configuration validation. On a future
+merged alpha or stable promotion PR, `Release - New Version` runs the same
+rehearsal against the actual immutable PR event before the Buildchain reusable
+promotion job. Buildchain promotion has an explicit `needs` edge to that
+preflight, so contract drift or ADR-admission failure blocks publication before
+release credentials are exposed to the reusable job.
+
+This boundary is deliberately precise. The rehearsal proves Kungfu's event,
+evidence, channel routing, Buildchain lock, and workflow-consumer contract. It
+does not claim to execute or emulate Buildchain's internal publication engine;
+the first controlled alpha remains the black-box integration proof for that
+implementation.
+
+For a local report:
+
+```bash
+./shifu release:promotion:rehearse -- \
+  --report product/release/qualification/release-promotion-rehearsal.json
+```
+
+The report schema is `kungfu.release-promotion-rehearsal/v1`; its executable
+contract is `docs/release-promotion-rehearsal.contract.json`.
+
 ## Why not changesets / semantic-release / standard tools
 
 All mainstream version tools share one hidden axiom: **version intent must be explicitly
@@ -188,8 +317,10 @@ the following — most standard tools silently drop them:
 
 1. **Binary ⊗ freeze atomicity** — a tag must still guarantee the matching prebuilt
    binaries are produced and distributed, not left to a separate, driftable step.
-2. **Zero developer declaration** — version intent inferred from the workflow developers
-   already perform, not hand-written per change.
+2. **Zero developer version declaration** — version intent remains inferred
+   from branch flow. A bounded ADR delivery declaration may describe
+   architecture progress, but it must not ask contributors to choose semantic
+   version impact.
 3. **Un-cheatable pipeline** — release-worthiness enforced by non-bypassable gates, not by
    judgment or honor.
 4. **Weak-centralization** — no single actor can unilaterally cut a release; a release is

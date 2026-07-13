@@ -14,6 +14,7 @@
     "implementation_commits",
     "implementation_prs",
     "closure_commit",
+    "closure_pr",
     "qualification_refs"
   ],
   "sourceKinds": [
@@ -193,6 +194,7 @@
     "commitFields": ["implementation_commits"],
     "pullRequestFields": ["implementation_prs"],
     "closureCommitField": "closure_commit",
+    "closurePullRequestField": "closure_pr",
     "qualificationRefField": "qualification_refs",
     "statusesRequiringImplementationEvidence": ["partial", "staged", "implemented"],
     "statusesRequiringClosure": ["implemented"],
