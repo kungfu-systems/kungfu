@@ -9,7 +9,7 @@ review_state: maintainer-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
 theme: agent-coordination-on-live-runtime
-last_reviewed: 2026-07-13
+last_reviewed: 2026-07-14
 ---
 
 # ADR-0077: agent coordination on the live runtime — same-host locks, signals, and audited Episodes
@@ -89,10 +89,22 @@ Build agent coordination as a live-runtime consumer on the existing substrate,
   crash-safe auto-release via holder-pid liveness, and Episode audit of each
   run's wait/acquire/release. The stdlib lock is dependency-free and tested
   cross-process; the audit and CLI run on a local core build.
-- **Deferred to a follow-up.** The journal-native arbiter that replaces the
-  waiter's short poll with a `coloop` coroutine awaiting a grant frame, and the
-  instruct-injection path — both share the arbiter-peer machinery and land
-  together. Cross-host coordination and hard confinement remain out of scope.
+- **Runtime plumbing (this increment).** The live-runtime primitives the
+  journal-native arbiter is built on: a Python-overridable peer react hook
+  (`on_react`/`on_start` trampolines plus `observe(carrier_type, callback)` and
+  the `request_read_from` / `request_write_to` / `get_public_writer` bindings),
+  so a live consumer written outside C++ can react to journal frames without a
+  bespoke C++ reactor subclass; and a coordinator-side fix so a peer that has
+  just registered no longer crashes the coordinator when its PUBLIC / SYNC /
+  command journals do not yet exist — the coordinator reader creates the missing
+  page instead of failing the read-only open. Both are validated on a local core
+  build (nine native journal / durability / crash-recovery tests plus a
+  three-process live peer round-trip); they carry no in-tree consumer yet.
+- **Deferred to a follow-up.** The arbiter peer itself — the in-memory lock
+  table that consumes the react hook, replacing the waiter's short poll with a
+  grant frame awaited over the live stream — and the instruct-injection path.
+  Both build directly on the runtime plumbing above. Cross-host coordination and
+  hard confinement remain out of scope.
 
 ### Architecture — reuse vs build
 
