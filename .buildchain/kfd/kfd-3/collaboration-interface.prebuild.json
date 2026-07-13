@@ -6,7 +6,7 @@
   "supportLevel": "release",
   "source": {
     "cwd": "/Users/dkr/Worktrees/kungfu/docs/docs-directory-hierarchy",
-    "sourceSha": "e76271230bf17fc9a70a4404be138bb46c423a80",
+    "sourceSha": "9767a5c0e6d245d31621dacba17afde6c91003f4",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
     "registryDigest": "sha256:6f9269cdf112d9e3620523a94a6f59d2a2d7d1737124b91783aead0a752faa24"
   },
