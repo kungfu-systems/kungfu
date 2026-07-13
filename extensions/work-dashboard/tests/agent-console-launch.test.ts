@@ -81,7 +81,7 @@ test('Agent Console refuses a Profile whose exact root is not active', async () 
         }),
       ),
     ),
-    /exact root is not active/,
+    /update requires approval in Work Dashboard/,
   );
 });
 

@@ -51,7 +51,7 @@ function ProfileCard({
   application?: ProfileApplicationProjection;
   applicationError?: string;
   planning: boolean;
-  onPlan: (action: 'qualify' | 'activate', source: string) => void;
+  onPlan: (action: 'qualify' | 'activate' | 'upgrade', source: string) => void;
   onKfd3Plan: (source: string) => void;
   onIntentPlan: (source: string, intentId: string) => void;
 }) {
@@ -60,7 +60,11 @@ function ProfileCard({
       ? 'qualify'
       : managed.lifecycleState === 'qualified'
         ? 'activate'
-        : null;
+        : managed.lifecycleState === 'activated' &&
+            managed.catalog &&
+            !managed.catalog.activeExactRoot
+          ? 'upgrade'
+          : null;
   return (
     <article
       style={{
@@ -230,7 +234,7 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
   const [loading, setLoading] = React.useState(true);
   const [pending, setPending] = React.useState<{
     plan: ProfileLifecyclePlan;
-    action: 'qualify' | 'activate';
+    action: 'qualify' | 'activate' | 'upgrade';
     source: string;
   } | null>(null);
   const [planning, setPlanning] = React.useState(false);
@@ -302,7 +306,7 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
   }, [onRefresh, refresh]);
 
   const previewPlan = async (
-    action: 'qualify' | 'activate',
+    action: 'qualify' | 'activate' | 'upgrade',
     source: string,
   ) => {
     if (!caps.profile) return;

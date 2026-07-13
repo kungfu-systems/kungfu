@@ -16,12 +16,17 @@ export async function resolveMissionControlProfileRoot(
   if (!current) {
     throw new Error('Mission Control Profile is not installed');
   }
+  if (current.catalog && !current.catalog.activeExactRoot) {
+    throw new Error(
+      'Mission Control Profile update requires approval in Work Dashboard',
+    );
+  }
   if (
     current.health !== 'active' ||
-    !current.catalog?.activeExactRoot ||
+    !current.catalog ||
     !current.profileSuiteRoot
   ) {
-    throw new Error('Mission Control Profile exact root is not active');
+    throw new Error('Mission Control Profile setup is not complete');
   }
   return current.profileSuiteRoot;
 }

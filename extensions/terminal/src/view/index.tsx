@@ -48,6 +48,10 @@ import { FitAddon } from '@xterm/addon-fit';
 import { Terminal as XTerm } from '@xterm/xterm';
 import React from 'react';
 import {
+  availableAgentRuntimeProfiles,
+  rememberDiscoveredAgentRuntimeProfile,
+} from './agent-runtime-catalog';
+import {
   type PersistedWindow,
   type WorkConsoleRegistry,
   type WorkspaceLayout,
@@ -60,19 +64,6 @@ import {
 
 async function resolve<T>(value: T | Promise<T>): Promise<T> {
   return await value;
-}
-
-function availableProfiles(catalog: AgentRuntimeCatalog | null) {
-  if (!catalog) return [];
-  const rows = [...catalog.configured];
-  const ids = new Set(rows.map((profile) => profile.id));
-  for (const candidate of catalog.discovered) {
-    if (!ids.has(candidate.profile.id)) rows.push(candidate.profile);
-  }
-  const preferred = catalog.defaultProfileId ?? catalog.recommendedProfileId;
-  return rows.sort((left, right) =>
-    left.id === preferred ? -1 : right.id === preferred ? 1 : 0,
-  );
 }
 
 // A tmux-safe run identity minted GUI-side. It becomes the session runId, the
@@ -554,12 +545,20 @@ function LauncherStrip({
   profiles,
   bindingLabel,
   busy,
+  loaded,
+  error,
   onLaunch,
+  onRetry,
+  onConfigure,
 }: {
   profiles: AgentRuntimeProfile[];
   bindingLabel: string;
   busy: boolean;
+  loaded: boolean;
+  error: string;
   onLaunch: (profile: AgentRuntimeProfile) => void;
+  onRetry: () => void;
+  onConfigure: () => void;
 }) {
   return (
     <div
@@ -599,10 +598,30 @@ function LauncherStrip({
           <span style={{ color: '#5bbf6a', fontWeight: 600 }}>+</span>
         </button>
       ))}
-      {profiles.length === 0 && (
-        <span style={{ ...mono, fontSize: 11, color: '#dcdcaa' }}>
-          Configure Codex or Claude in Settings → Agents
+      {profiles.length === 0 && busy && (
+        <span style={{ ...mono, fontSize: 11, color: '#858585' }}>
+          Detecting Codex and Claude…
         </span>
+      )}
+      {profiles.length === 0 && !busy && error && (
+        <>
+          <span style={{ ...mono, fontSize: 11, color: '#f48771' }}>
+            Agent detection failed · {error}
+          </span>
+          <button type="button" onClick={onRetry} style={iconButtonStyle}>
+            Retry
+          </button>
+        </>
+      )}
+      {profiles.length === 0 && loaded && !busy && !error && (
+        <span style={{ ...mono, fontSize: 11, color: '#dcdcaa' }}>
+          No Codex or Claude executable detected
+        </span>
+      )}
+      {profiles.length === 0 && loaded && !busy && !error && (
+        <button type="button" onClick={onConfigure} style={iconButtonStyle}>
+          Configure Agent
+        </button>
       )}
     </div>
   );
@@ -706,7 +725,8 @@ function SessionWorkspace({
   const [catalog, setCatalog] = React.useState<AgentRuntimeCatalog | null>(
     null,
   );
-  const [catalogBusy, setCatalogBusy] = React.useState(false);
+  const [catalogBusy, setCatalogBusy] = React.useState(true);
+  const [catalogError, setCatalogError] = React.useState('');
   const [consoleRegistry, setConsoleRegistry] =
     React.useState<WorkConsoleRegistry>(() =>
       domain
@@ -743,8 +763,9 @@ function SessionWorkspace({
     setCatalogBusy(true);
     try {
       setCatalog(await caps.agentRuntime.list());
+      setCatalogError('');
     } catch (error) {
-      setNotice(`Agent Runtime catalog failed: ${(error as Error).message}`);
+      setCatalogError((error as Error).message);
     } finally {
       setCatalogBusy(false);
     }
@@ -752,7 +773,13 @@ function SessionWorkspace({
 
   React.useEffect(() => {
     void refreshCatalog();
-    return shell.onRefresh(() => void refreshCatalog());
+    const offRefresh = shell.onRefresh(() => void refreshCatalog());
+    const onFocus = () => void refreshCatalog();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      offRefresh();
+      window.removeEventListener('focus', onFocus);
+    };
   }, [refreshCatalog, shell]);
 
   const panedIds = React.useMemo(
@@ -1001,6 +1028,20 @@ function SessionWorkspace({
 
   const launch = React.useCallback(
     async (profile: AgentRuntimeProfile) => {
+      if (profile.source === 'discovered' && caps.agentRuntime) {
+        try {
+          await rememberDiscoveredAgentRuntimeProfile(
+            caps.agentRuntime,
+            profile,
+          );
+          setCatalog(await caps.agentRuntime.list());
+          setCatalogError('');
+        } catch (error) {
+          setNotice(
+            `Using detected ${profile.label}; could not remember it: ${(error as Error).message}`,
+          );
+        }
+      }
       const runId = mintRunId();
       const attemptId = `attempt:${runId}`;
       const workRef = await workRefFromShell(shell);
@@ -1119,7 +1160,7 @@ function SessionWorkspace({
         };
       });
     },
-    [caps.terminal, shell, workspaceId],
+    [caps.agentRuntime, caps.terminal, shell, workspaceId],
   );
 
   const markAttempt = React.useCallback(
@@ -1246,18 +1287,22 @@ function SessionWorkspace({
       }}
     >
       <LauncherStrip
-        profiles={availableProfiles(catalog)}
+        profiles={availableAgentRuntimeProfiles(catalog)}
         bindingLabel={
           shell.params?.workEntityId
             ? `Go · ${shell.params.workEntityId}`
             : 'Workspace assistant'
         }
         busy={catalogBusy}
+        loaded={catalog !== null}
+        error={catalogError}
         onLaunch={(profile) => {
           void launch(profile).catch((error) =>
             setNotice(`Agent launch failed: ${(error as Error).message}`),
           );
         }}
+        onRetry={() => void refreshCatalog()}
+        onConfigure={() => shell.open('settings')}
       />
       {panes.length > 0 && (
         <div

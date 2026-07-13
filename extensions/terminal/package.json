@@ -22,7 +22,8 @@
   ],
   "scripts": {
     "build": "kungfu sdk kfx build",
-    "clean": "kungfu sdk kfx clean"
+    "clean": "kungfu sdk kfx clean",
+    "test": "node --test tests/*.test.ts"
   },
   "dependencies": {
     "@kungfu-tech/api": "workspace:*",

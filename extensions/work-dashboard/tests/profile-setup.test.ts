@@ -59,6 +59,34 @@ test('Mission Control setup preserves explicit lifecycle gates', () => {
   );
 });
 
+test('a promoted factory Profile exposes the exact upgrade gate', () => {
+  assert.deepEqual(
+    missionControlProfileSetupStep(
+      managed('activated', {
+        health: 'inactive',
+        catalog: {
+          schema: 'kungfu.profile-composition/v1',
+          profileId: 'kungfu.mission-control',
+          profileVersion: '3.0.0',
+          profileSuiteRoot: 'sha256:promoted-source',
+          profileRevision: 2,
+          activeExactRoot: false,
+          memberRoots: {},
+          purposes: [],
+          factSurfaces: [],
+          claims: [],
+          policies: [],
+          views: [],
+          diagnostics: [],
+          catalogRoot: 'sha256:catalog',
+        },
+      }),
+      discovery,
+    ),
+    { action: 'upgrade', source: discovery.source },
+  );
+});
+
 test('removed Mission Control can be explicitly reinstalled', () => {
   assert.deepEqual(
     missionControlProfileSetupStep(
