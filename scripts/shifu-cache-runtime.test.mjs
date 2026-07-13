@@ -115,6 +115,41 @@ function toolConfigProfile() {
         fallback: { mode: 'fail' },
         verification: { method: 'tool-native' },
       },
+      'conan-storage': {
+        kind: 'artifact-cache',
+        mode: 'require',
+        endpoint: {
+          type: 'local-path',
+          path: '${SHIFU_CACHE_HOME}/conan/workhub-v1',
+        },
+        bindings: [
+          {
+            kind: 'config-key',
+            key: 'conan.cache.storage',
+            name: 'workhub-v1',
+            valueFrom: 'endpoint.path',
+          },
+        ],
+        fallback: { mode: 'fail' },
+        verification: { method: 'tool-native' },
+      },
+      'rocksdb-source': {
+        kind: 'generic-download',
+        mode: 'require',
+        endpoint: {
+          type: 'http',
+          url: 'http://cache.example.invalid/sources/rocksdb.tar.gz',
+        },
+        bindings: [
+          {
+            kind: 'environment',
+            key: 'KUNGFU_CONAN_ROCKSDB_SOURCE_URL',
+            valueFrom: 'endpoint.url',
+          },
+        ],
+        fallback: { mode: 'fail' },
+        verification: { method: 'sha256-manifest' },
+      },
     },
   });
 }
@@ -537,6 +572,14 @@ test('cache apply overrides Cargo and isolates Conan without mutating persistent
   const outputPath = path.join(directory, 'child.json');
   const receiptPath = path.join(directory, 'receipt.json');
   const fakeCargoArgsPath = path.join(directory, 'fake-cargo-args.json');
+  const xdgCache = path.join(directory, 'cache');
+  const conanStorage = path.join(
+    xdgCache,
+    'kungfu',
+    'conan',
+    'workhub-v1',
+    'development',
+  );
   const fakeBin = path.join(directory, 'fake-bin');
   fs.mkdirSync(fakeBin);
   const fakeCargoModule = path.join(fakeBin, 'fake-cargo.mjs');
@@ -568,8 +611,13 @@ test('cache apply overrides Cargo and isolates Conan without mutating persistent
     'conanHome: process.env.CONAN_HOME,',
     'wrapperDir: process.env.PATH.split(path.delimiter)[0],',
     "conanRemotes: JSON.parse(fs.readFileSync(path.join(process.env.CONAN_HOME, 'remotes.json'), 'utf8')),",
+    "conanGlobal: fs.readFileSync(path.join(process.env.CONAN_HOME, 'global.conf'), 'utf8'),",
+    'rocksdbSource: process.env.KUNGFU_CONAN_ROCKSDB_SOURCE_URL,',
     'managedConan: process.env.SHIFU_CACHE_MANAGED_CONAN,',
+    `storageMarker: ${JSON.stringify(path.join(conanStorage, 'packages', 'marker'))},`,
     '}));',
+    `fs.mkdirSync(${JSON.stringify(path.join(conanStorage, 'packages'))}, {recursive: true});`,
+    `fs.writeFileSync(${JSON.stringify(path.join(conanStorage, 'packages', 'marker'))}, 'warm');`,
   ].join('');
   const status = await applyCacheProfile({
     reference: profilePath,
@@ -582,6 +630,7 @@ test('cache apply overrides Cargo and isolates Conan without mutating persistent
       ...process.env,
       CARGO_HOME: persistentCargo,
       CONAN_HOME: persistentConan,
+      XDG_CACHE_HOME: xdgCache,
       FAKE_CARGO_ARGS: fakeCargoArgsPath,
       PATH: `${fakeBin}${path.delimiter}${process.env.PATH || ''}`,
     },
@@ -608,6 +657,17 @@ test('cache apply overrides Cargo and isolates Conan without mutating persistent
   });
   assert.equal(child.managedConan, '1');
   assert.equal(
+    child.rocksdbSource,
+    'http://cache.example.invalid/sources/rocksdb.tar.gz',
+  );
+  assert.match(
+    child.conanGlobal,
+    new RegExp(
+      `core\\.cache:storage_path = ${path.join(conanStorage, 'packages').replaceAll('\\\\', '\\\\')}`,
+    ),
+  );
+  assert.equal(fs.readFileSync(child.storageMarker, 'utf8'), 'warm');
+  assert.equal(
     fs.readFileSync(path.join(persistentCargo, 'config.toml'), 'utf8'),
     cargoSentinel,
   );
@@ -618,21 +678,49 @@ test('cache apply overrides Cargo and isolates Conan without mutating persistent
   assert.equal(fs.existsSync(child.wrapperDir), false);
   assert.equal(fs.existsSync(child.conanHome), false);
 
+  const warmPath = path.join(directory, 'warm.txt');
+  const warmStatus = await applyCacheProfile({
+    reference: profilePath,
+    expectedDigest: sha256(raw),
+    scope: 'development',
+    command: process.execPath,
+    args: [
+      '-e',
+      `const fs=require('node:fs');fs.writeFileSync(${JSON.stringify(warmPath)},fs.readFileSync(${JSON.stringify(path.join(conanStorage, 'packages', 'marker'))},'utf8'))`,
+    ],
+    env: { ...process.env, XDG_CACHE_HOME: xdgCache },
+  });
+  assert.equal(warmStatus, 0);
+  assert.equal(fs.readFileSync(warmPath, 'utf8'), 'warm');
+
   const receipt = JSON.parse(fs.readFileSync(receiptPath, 'utf8'));
-  for (const service of Object.values(receipt.services)) {
-    assert.deepEqual(service.application.bindingKinds, ['config-key']);
+  for (const [serviceId, service] of Object.entries(receipt.services)) {
+    assert.deepEqual(
+      service.application.bindingKinds,
+      serviceId === 'rocksdb-source' ? ['environment'] : ['config-key'],
+    );
     assert.equal(service.application.scope, 'child-process');
     assert.equal(
       service.application.persistentConfig,
       'not-read-or-written-by-shifu',
     );
-    assert.equal(service.application.overlayCleanup, 'completed');
+    assert.equal(
+      service.application.overlayCleanup,
+      serviceId === 'rocksdb-source' ? 'not-applicable' : 'completed',
+    );
   }
   assert.doesNotMatch(
     JSON.stringify(receipt),
     /persistent-cargo|persistent-conan/,
   );
   assert.doesNotMatch(JSON.stringify(receipt), /shifu-cache-overlay-/);
+  assert.deepEqual(receipt.services['conan-storage'].application.conanStorage, {
+    mode: 'persistent-host-local',
+    namespace: 'workhub-v1',
+    pathDigest: sha256(Buffer.from(conanStorage)),
+    partitionDigest: sha256(Buffer.from('development')),
+    lock: 'released',
+  });
 });
 
 test('cache apply cleans config overlays after a failing child', async (t) => {
@@ -643,6 +731,7 @@ test('cache apply cleans config overlays after a failing child', async (t) => {
   const raw = bytes(toolConfigProfile());
   const profilePath = path.join(directory, 'profile.json');
   const outputPath = path.join(directory, 'child.json');
+  const xdgCache = path.join(directory, 'cache');
   fs.writeFileSync(profilePath, raw);
   const script = `const path = require('node:path'); require('node:fs').writeFileSync(${JSON.stringify(outputPath)}, JSON.stringify({wrapperDir: process.env.PATH.split(path.delimiter)[0], conanHome: process.env.CONAN_HOME})); process.exit(17)`;
   const status = await applyCacheProfile({
@@ -651,11 +740,54 @@ test('cache apply cleans config overlays after a failing child', async (t) => {
     scope: 'development',
     command: process.execPath,
     args: ['-e', script],
+    env: { ...process.env, XDG_CACHE_HOME: xdgCache },
   });
   assert.equal(status, 17);
   const child = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
   assert.equal(fs.existsSync(child.wrapperDir), false);
   assert.equal(fs.existsSync(child.conanHome), false);
+  const storage = path.join(
+    xdgCache,
+    'kungfu',
+    'conan',
+    'workhub-v1',
+    'development',
+  );
+  assert.equal(fs.existsSync(storage), true);
+  assert.equal(fs.existsSync(path.join(storage, '.shifu-conan.lock')), false);
+});
+
+test('cache apply fails closed when managed Conan storage is already in use', async (t) => {
+  const directory = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'shifu-cache-conan-lock-'),
+  );
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const xdgCache = path.join(directory, 'cache');
+  const storage = path.join(
+    xdgCache,
+    'kungfu',
+    'conan',
+    'workhub-v1',
+    'development',
+  );
+  fs.mkdirSync(storage, { recursive: true });
+  const lock = path.join(storage, '.shifu-conan.lock');
+  fs.writeFileSync(lock, '{"sentinel":true}\n');
+  const raw = bytes(toolConfigProfile());
+  const profilePath = path.join(directory, 'profile.json');
+  fs.writeFileSync(profilePath, raw);
+  await assert.rejects(
+    applyCacheProfile({
+      reference: profilePath,
+      expectedDigest: sha256(raw),
+      scope: 'development',
+      command: process.execPath,
+      args: ['-e', 'process.exit(0)'],
+      env: { ...process.env, XDG_CACHE_HOME: xdgCache },
+    }),
+    /managed Conan storage is already in use/,
+  );
+  assert.equal(fs.readFileSync(lock, 'utf8'), '{"sentinel":true}\n');
 });
 
 test('cache apply is a transparent pass-through when no profile is configured', async (t) => {

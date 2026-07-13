@@ -1,8 +1,9 @@
 sources:
   "6.29.5":
-    url: "https://github.com/facebook/rocksdb.git"
+    url: "https://codeload.github.com/facebook/rocksdb/tar.gz/da11a59034584ea2d0911268b8136e5249d6b692"
     tag: "v6.29.5"
     commit: "da11a59034584ea2d0911268b8136e5249d6b692"
+    sha256: "60cb39e36c463d5c725f3ef254b0ebbaca29ec1a6a3036623bc8aa63746a42a9"
 patches:
   "6.29.5":
     - patch_file: "patches/0001-add-include-cstdint-for-gcc-13.patch"

@@ -11,11 +11,11 @@ from conan.tools.files import (
     apply_conandata_patches,
     collect_libs,
     copy,
+    get,
     rm,
     rmdir,
 )
 from conan.tools.microsoft import is_msvc, is_msvc_static_runtime
-from conan.tools.scm import Git
 
 
 required_conan_version = ">=2.0"
@@ -98,16 +98,12 @@ class RocksDBConan(ConanFile):
 
     def source(self):
         source = self.conan_data["sources"][self.version]
-        git = Git(self)
-        git.clone(
-            source["url"],
-            target=".",
-            args=["--depth", "1", "--branch", source["tag"]],
+        get(
+            self,
+            url=os.getenv("KUNGFU_CONAN_ROCKSDB_SOURCE_URL", source["url"]),
+            sha256=source["sha256"],
+            strip_root=True,
         )
-        if git.get_commit() != source["commit"]:
-            raise ConanInvalidConfiguration(
-                f"RocksDB source commit does not match {source['commit']}"
-            )
 
     def generate(self):
         tc = CMakeToolchain(self)

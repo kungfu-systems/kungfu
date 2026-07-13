@@ -99,6 +99,7 @@ export function sourceAcceptancePlan(files) {
         'scripts/check-shifu-entry-contract.test.mjs',
         'scripts/check-shifu-cache-contract.test.mjs',
         'scripts/shifu-cache-runtime.test.mjs',
+        'scripts/shifu-conan-publish.test.mjs',
         'scripts/shifu-uv-cache-adapter.test.mjs',
         'scripts/check-schema-authority.test.mjs',
       ],
@@ -137,23 +138,29 @@ export function sourceAcceptancePlan(files) {
         command: 'ruff',
         args: ['check', '--force-exclude', ...python],
       },
-      {
-        label: 'Python type baseline',
-        command: 'mypy',
-        args: [
-          '--config-file',
-          'framework/core/pyproject.toml',
-          'framework/core/src/python/kungfu',
-        ],
-        env: {
-          ...process.env,
-          MYPY_CACHE_DIR: path.join(
-            process.env.RUNNER_TEMP || '/tmp',
-            'kungfu-source-mypy',
-          ),
-        },
-      },
     );
+  }
+
+  const typedPython = python.filter((file) =>
+    file.startsWith('framework/core/src/python/'),
+  );
+  if (typedPython.length) {
+    plan.push({
+      label: 'Python type baseline',
+      command: 'mypy',
+      args: [
+        '--config-file',
+        'framework/core/pyproject.toml',
+        'framework/core/src/python/kungfu',
+      ],
+      env: {
+        ...process.env,
+        MYPY_CACHE_DIR: path.join(
+          process.env.RUNNER_TEMP || '/tmp',
+          'kungfu-source-mypy',
+        ),
+      },
+    });
   }
 
   const cpp = files.filter((file) => CPP.test(file));

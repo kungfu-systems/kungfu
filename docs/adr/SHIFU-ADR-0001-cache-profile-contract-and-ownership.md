@@ -11,7 +11,7 @@ period: ongoing
 theme: shifu-cache-profile-contract
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-12
+last_reviewed: 2026-07-13
 ---
 
 # SHIFU-ADR-0001: Cache profile contract and ownership
@@ -93,6 +93,20 @@ registered KFD-1 version decision process.
   command-line config, while Conan remote selection uses a disposable
   `CONAN_HOME`. Shifu does not read, merge, or overwrite user configuration;
   the managed aliases and endpoints cannot silently drift from the profile.
+- Conan configuration and Conan storage have separate lifecycles. The temporary
+  `CONAN_HOME` contains only execution policy, while `conan.cache.storage`
+  selects a profile-owned, host-local persistent package/download root. Shifu
+  partitions runner storage, holds an exclusive execution lock, and emits only
+  path digests. This preserves warm binaries without turning a user's
+  persistent Conan home into a controller surface.
+- Recipe source acquisition may be projected as a checksum-backed generic
+  download binding. The recipe remains responsible for enforcing its SHA256;
+  Shifu selects transport and never manufactures a mutable source checkout.
+- Hosted recipe/binary publication is a separate administrative execution
+  under the same Shifu profile. It uses Conan's remote-scoped authentication
+  environment variables outside Buildchain, validates the detected platform,
+  and uploads an exact package list; the ordinary Buildchain interface remains
+  only profile reference plus digest.
 - A future Shifu repository extraction can move this ADR registry and contract
   together without renumbering Kungfu Core ADRs.
 

@@ -80,16 +80,27 @@ of the exact bytes, checks platform and scope applicability, and emits a
 schema-versioned redacted receipt. `shifu cache apply -- COMMAND` performs the
 same resolution and supplies supported bindings only to that child process.
 Environment bindings remain child-only. The reserved
-`cargo.source.crates-io` and `conan.remote.conancenter` config keys create
+`cargo.source.crates-io`, `conan.remote.conancenter`, and
+`conan.cache.storage` config keys create
 child-scoped overlays without modifying persistent Cargo/Conan configuration.
 Cargo is invoked through a temporary PATH wrapper that supplies highest-priority
 `--config` source replacement values; Cargo may still perform its normal
 hierarchical config discovery, but the managed source alias and endpoint are
 overridden by the profile. Conan receives a disposable `CONAN_HOME` containing
 only the managed remote plus an explicitly declared development fallback, if
-any; Kungfu detects a default compiler profile inside that isolated home. Both
-temporary overlays are removed after the child exits, including non-zero exits.
-The nested libwasm Cargo invocation inherits the same wrapper.
+any. When storage is selected, its `global.conf` points package and download
+data at a profile-owned host-local cache under `${SHIFU_CACHE_HOME}`.
+Development and named runner partitions do not share one mutable Conan database,
+and an exclusive lock fails closed on concurrent use. The persistent storage
+survives the task; the temporary policy overlay and lock do not. Kungfu detects
+a default compiler profile inside the isolated home. Both temporary overlays
+are removed after the child exits, including non-zero exits. The nested
+libwasm Cargo invocation inherits the same wrapper.
+
+Checksum-backed recipe sources use ordinary environment bindings. Shifu may
+select a mirrored archive URL, but the Conan recipe owns and enforces the same
+SHA256 for mirrored and public fallback transport. A receipt records binding
+selection and hashed storage identity, never the local cache path.
 
 For a selected Python index, an environment binding alone is insufficient:
 frozen uv locks contain exact registry artifact URLs. Shifu therefore copies
@@ -147,6 +158,26 @@ consumer lifecycle may continue to invoke `shifu cache apply` explicitly; the
 cache control verb and active-child fuse prevent double application. The pinned
 Shifu checkout remains the only component that interprets fields and writes the
 receipt.
+
+Hosted binary publication is an administrative Shifu execution, not a
+Buildchain lifecycle input. `scripts/shifu-conan-publish.mjs` provides a
+dry-run-first matrix for Mac arm64, Linux GCC 14 x64, and Windows MSVC x64. The
+execute path must run inside one `shifu cache apply`, detects and validates the
+ephemeral Conan profile, creates the pinned RocksDB recipe, selects only the
+binary matching that profile, authenticates with Conan's remote-scoped
+environment variables, uploads that exact package list, and reads it back.
+Publisher credentials remain in the operator or CI secret surface and are
+never added to the cache profile, Buildchain arguments, or Shifu receipt.
+
+```sh
+node scripts/shifu-conan-publish.mjs --matrix-entry macos-arm64
+node scripts/shifu-conan-publish.mjs --matrix-entry linux-gcc14-x64
+node scripts/shifu-conan-publish.mjs --matrix-entry windows-msvc-x64
+```
+
+The inventory controller owns host routing and the approval to add `--execute`;
+normal builds consume the hosted repository anonymously and never receive the
+publisher identity.
 
 ## Developer operations
 

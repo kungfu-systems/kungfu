@@ -191,9 +191,24 @@
             },
             "toolEvidence": {
               "$ref": "#/$defs/uvToolEvidence"
+            },
+            "conanStorage": {
+              "$ref": "#/$defs/conanStorageEvidence"
             }
           }
         }
+      }
+    },
+    "conanStorageEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "namespace", "pathDigest", "partitionDigest", "lock"],
+      "properties": {
+        "mode": {"const": "persistent-host-local"},
+        "namespace": {"$ref": "#/$defs/id"},
+        "pathDigest": {"$ref": "#/$defs/sha256"},
+        "partitionDigest": {"$ref": "#/$defs/sha256"},
+        "lock": {"enum": ["acquired", "released"]}
       }
     },
     "uvToolEvidence": {
