@@ -697,7 +697,7 @@ function sdkAndProductSurfaces() {
       // onboards its artifacts by stating them here.
       distribution: {
         registrar: 'shifu',
-        tasks: ['dist', 'package'],
+        tasks: ['dist', 'dist:dir', 'package'],
         artifacts: [
           {
             kind: 'app',

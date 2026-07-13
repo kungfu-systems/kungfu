@@ -9,7 +9,7 @@
 //
 //   "distribution": {
 //     "registrar": "shifu",
-//     "tasks": ["dist", "package"],
+//     "tasks": ["dist", "dist:dir", "package"],
 //     "artifacts": [
 //       {"kind": "app", "platform": "macos", "pathGlob": "product/dist/desktop/mac*/*.app"},
 //       {"kind": "installer", "platform": "windows", "pathGlob": "product/dist/desktop/*.exe"},

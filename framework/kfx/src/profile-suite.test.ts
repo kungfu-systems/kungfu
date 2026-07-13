@@ -73,6 +73,18 @@ test('Node validates the complete Week/Day Profile Suite closure', () => {
   ]);
 });
 
+test('Node keeps a Profile without a KFD-3 facet valid but not KFD-3 declared', () => {
+  const profile = structuredClone(validProfile);
+  assert.equal(Reflect.deleteProperty(profile, 'kfd3'), true);
+  validateKfxProfileSuite(profile, contract, [
+    'week-day-contract',
+    'week-day-actions',
+    'week-day-assessment',
+    'week-day-dashboard',
+  ]);
+  assert.equal(profile.kfd3, undefined);
+});
+
 for (const fixture of invalidCases) {
   test(`Node rejects Profile Suite fixture: ${fixture.id}`, () => {
     const profile = structuredClone(validProfile);

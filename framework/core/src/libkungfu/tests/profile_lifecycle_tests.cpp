@@ -143,6 +143,15 @@ void rewrite_bound_artifact(const fs::path &profile_path, const std::string &rel
   write_text(profile_path, document.dump(2));
 }
 
+void attach_kfd3_collaboration(const fs::path &profile_path, const std::string &value) {
+  const auto relative = std::string("collaboration/interface.json");
+  write_text(profile_path.parent_path() / relative, value);
+  std::ifstream input(profile_path);
+  auto document = nlohmann::json::parse(input);
+  document["kfd3"] = {{"collaboration", {{"path", relative}, {"sha256", sha256(value)}}}};
+  write_text(profile_path, document.dump(2));
+}
+
 nlohmann::json plan(const fs::path &runtime, const nlohmann::json &request) {
   return profile::plan_profile_lifecycle(runtime.string(), request);
 }
@@ -181,6 +190,22 @@ void test_inspection_is_content_bound_and_confined() {
   write_text(escaped.profile_path, document.dump(2));
   require_invalid([&] { (void)profile::inspect_profile(escaped.profile_path.string(), member_roots()); },
                   "parent traversal was accepted");
+}
+
+void test_optional_kfd3_collaboration_is_content_bound() {
+  temp_tree tree;
+  const auto fixture = write_package(tree.root() / "package", "1.0.0");
+  const auto collaboration = R"({"schema":"kungfu.profile-collaboration/v1"})";
+  attach_kfd3_collaboration(fixture.profile_path, collaboration);
+
+  const auto inspection = profile::inspect_profile(fixture.profile_path.string(), member_roots());
+  require(inspection.at("profile").at("kfd3").at("collaboration").at("path") == "collaboration/interface.json",
+          "KFD-3 collaboration authority was not preserved");
+  require(inspection.at("artifacts").size() == 13, "KFD-3 collaboration artifact was not in content closure");
+
+  write_text(fixture.profile_path.parent_path() / "collaboration" / "interface.json", "drift");
+  require_invalid([&] { (void)profile::inspect_profile(fixture.profile_path.string(), member_roots()); },
+                  "KFD-3 collaboration artifact hash drift was accepted");
 }
 
 void test_lifecycle_plan_apply_fold_and_history() {
@@ -321,6 +346,7 @@ void test_incompatible_runtime_and_unsupported_qualification_fail_closed() {
 int run_tests() {
   const std::pair<const char *, void (*)()> tests[] = {
       {"inspection is deterministic, content-bound, and confined", test_inspection_is_content_bound_and_confined},
+      {"optional KFD-3 collaboration is content-bound", test_optional_kfd3_collaboration_is_content_bound},
       {"lifecycle plans, receipts, folds, history, and cuts", test_lifecycle_plan_apply_fold_and_history},
       {"stale and cross-runtime plans fail closed", test_stale_plan_and_wrong_runtime_fail_closed},
       {"runtime and qualification inputs fail closed",

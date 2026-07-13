@@ -6,6 +6,8 @@
 import {
   type KfxViewProps,
   type ManagedProfile,
+  type ProfileApplicationProjection,
+  type ProfileIntentPlan,
   type ProfileLifecyclePlan,
   type ProfileManagerProjection,
   headingStyle,
@@ -29,12 +31,18 @@ function shortRoot(value: string | null | undefined): string {
 
 function ProfileCard({
   managed,
+  application,
+  applicationError,
   planning,
   onPlan,
+  onIntentPlan,
 }: {
   managed: ManagedProfile;
+  application?: ProfileApplicationProjection;
+  applicationError?: string;
   planning: boolean;
   onPlan: (action: 'qualify' | 'activate', source: string) => void;
+  onIntentPlan: (source: string, intentId: string) => void;
 }) {
   const next =
     managed.lifecycleState === 'installed'
@@ -80,6 +88,64 @@ function ProfileCard({
           ? 'recorded'
           : 'not recorded'}
       </div>
+      {applicationError ? (
+        <div style={{ ...mono, color: '#f48771', marginTop: 8 }}>
+          Application projection unavailable: {applicationError}
+        </div>
+      ) : null}
+      {application ? (
+        <div
+          style={{
+            borderTop: '1px solid #3c3c3c',
+            marginTop: 10,
+            paddingTop: 10,
+          }}
+        >
+          <div style={{ color: '#dcdcaa' }}>{application.value.summary}</div>
+          <div style={{ ...mono, color: '#858585', marginTop: 4 }}>
+            {application.participants
+              .map((participant) => `${participant.kind}:${participant.title}`)
+              .join(' · ')}
+          </div>
+          <div style={{ ...mono, color: '#858585' }}>
+            {application.constraints.length} constraints ·{' '}
+            {application.knownLimits.length} known limits ·{' '}
+            <span
+              title={
+                application.qualified
+                  ? `KFD-3 witness ${application.qualification.witnessId}`
+                  : application.qualification.reason ||
+                    String(
+                      application.qualification.diagnosis?.message ||
+                        'qualification not earned',
+                    )
+              }
+            >
+              {application.qualified ? '🛡️ KFD-3 qualified' : '◌ KFD-3 declared'}
+            </span>
+          </div>
+          {application.intents.map((intent) => (
+            <button
+              key={intent.id}
+              type="button"
+              disabled={
+                planning ||
+                !application.activeExactRoot ||
+                intent.missingCapabilities.length > 0
+              }
+              title={
+                intent.missingCapabilities.length
+                  ? `Missing: ${intent.missingCapabilities.join(', ')}`
+                  : `${intent.requiredAuthority} · inspect → advise → preview → authorize → execute → receipt → verify`
+              }
+              onClick={() => onIntentPlan(application.source, intent.id)}
+              style={{ ...mono, marginTop: 8, marginRight: 8 }}
+            >
+              {intent.title}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <div style={{ ...mono, color: '#cccccc' }}>
         views:{' '}
         {managed.catalog?.views.map((view) => view.title).join(', ') ||
@@ -116,6 +182,12 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
     null,
   );
   const [error, setError] = React.useState('');
+  const [applications, setApplications] = React.useState<
+    Record<string, ProfileApplicationProjection>
+  >({});
+  const [applicationErrors, setApplicationErrors] = React.useState<
+    Record<string, string>
+  >({});
   const [loading, setLoading] = React.useState(true);
   const [pending, setPending] = React.useState<{
     plan: ProfileLifecyclePlan;
@@ -123,6 +195,11 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
     source: string;
   } | null>(null);
   const [planning, setPlanning] = React.useState(false);
+  const [pendingIntent, setPendingIntent] = React.useState<{
+    plan: ProfileIntentPlan;
+    source: string;
+    intentId: string;
+  } | null>(null);
   const [authorizedBy, setAuthorizedBy] = React.useState('');
   const profile =
     shell.profiles.find((p) => p.id === shell.state.profileId) ??
@@ -133,7 +210,41 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
     if (!caps.profile) return;
     setLoading(true);
     try {
-      setManager(await caps.profile.managerAsync());
+      const next = await caps.profile.managerAsync();
+      setManager(next);
+      const rows = await Promise.all(
+        next.profiles
+          .filter((managed) => managed.source)
+          .map(async (managed) => {
+            try {
+              return {
+                profileId: managed.profileId,
+                application: await caps.profile?.applicationAsync(
+                  managed.source as string,
+                ),
+              };
+            } catch (reason) {
+              return {
+                profileId: managed.profileId,
+                error: (reason as Error).message,
+              };
+            }
+          }),
+      );
+      setApplications(
+        Object.fromEntries(
+          rows
+            .filter((row) => row.application)
+            .map((row) => [row.profileId, row.application]),
+        ) as Record<string, ProfileApplicationProjection>,
+      );
+      setApplicationErrors(
+        Object.fromEntries(
+          rows
+            .filter((row) => row.error)
+            .map((row) => [row.profileId, row.error]),
+        ) as Record<string, string>,
+      );
       setError('');
     } catch (reason) {
       setError((reason as Error).message);
@@ -160,6 +271,49 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
         source,
       });
       setError('');
+    } catch (reason) {
+      setError((reason as Error).message);
+    } finally {
+      setPlanning(false);
+    }
+  };
+
+  const previewIntent = async (source: string, intentId: string) => {
+    if (!caps.profile) return;
+    setPlanning(true);
+    try {
+      setPendingIntent({
+        plan: await caps.profile.intentPlanAsync(source, intentId),
+        source,
+        intentId,
+      });
+      setError('');
+    } catch (reason) {
+      setError((reason as Error).message);
+    } finally {
+      setPlanning(false);
+    }
+  };
+
+  const approveIntent = async () => {
+    if (!caps.profile || !pendingIntent || !authorizedBy.trim()) return;
+    setPlanning(true);
+    try {
+      const receipt = await caps.profile.authorizeIntentAsync(
+        pendingIntent.source,
+        pendingIntent.intentId,
+        pendingIntent.plan.planId,
+        'approve',
+        authorizedBy.trim(),
+      );
+      setPendingIntent(null);
+      await refresh();
+      shell.notify({
+        level: receipt.verification?.verified ? 'success' : 'warning',
+        title: receipt.verification?.verified
+          ? 'Intent receipt verified'
+          : 'Intent executed; verification incomplete',
+      });
     } catch (reason) {
       setError((reason as Error).message);
     } finally {
@@ -231,8 +385,13 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
           <ProfileCard
             key={managed.profileId}
             managed={managed}
+            application={applications[managed.profileId]}
+            applicationError={applicationErrors[managed.profileId]}
             planning={planning}
             onPlan={(action, source) => void previewPlan(action, source)}
+            onIntentPlan={(source, intentId) =>
+              void previewIntent(source, intentId)
+            }
           />
         ))}
         {!loading && manager?.count === 0 ? (
@@ -290,6 +449,49 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
             type="button"
             disabled={planning}
             onClick={() => setPending(null)}
+            style={{ ...mono, marginTop: 8 }}
+          >
+            Dismiss
+          </button>
+        </div>
+      ) : null}
+      {pendingIntent ? (
+        <div
+          style={{
+            ...mono,
+            border: '1px solid #dcdcaa',
+            padding: 10,
+            marginBottom: 12,
+          }}
+        >
+          <strong style={{ color: '#dcdcaa' }}>Intent decision required</strong>
+          <div>intent {pendingIntent.intentId}</div>
+          <div>plan {pendingIntent.plan.planId}</div>
+          <div style={{ color: '#858585' }}>
+            This exact plan is shared with the Agent CLI. Apply re-plans, emits
+            a receipt, and verifies the same Profile and collaboration roots.
+          </div>
+          <label style={{ display: 'block', marginTop: 8 }}>
+            authorized by{' '}
+            <input
+              value={authorizedBy}
+              onChange={(event) => setAuthorizedBy(event.target.value)}
+              placeholder="declared authority identity"
+              style={{ ...mono, minWidth: 220 }}
+            />
+          </label>
+          <button
+            type="button"
+            disabled={planning || !authorizedBy.trim()}
+            onClick={() => void approveIntent()}
+            style={{ ...mono, marginTop: 8, marginRight: 8 }}
+          >
+            Approve exact intent
+          </button>
+          <button
+            type="button"
+            disabled={planning}
+            onClick={() => setPendingIntent(null)}
             style={{ ...mono, marginTop: 8 }}
           >
             Dismiss

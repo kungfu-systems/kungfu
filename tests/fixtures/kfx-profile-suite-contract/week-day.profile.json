@@ -57,6 +57,12 @@
       }
     ]
   },
+  "kfd3": {
+    "collaboration": {
+      "path": "collaboration/interface.json",
+      "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    }
+  },
   "actions": {
     "registry": {
       "path": "actions/registry.json",

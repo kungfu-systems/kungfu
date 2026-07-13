@@ -34,6 +34,11 @@ ACTION_RECEIPT_SCHEMA = "kungfu.profile-action-receipt/v1"
 DECISION_ANSWER_SCHEMA = "kungfu.decision-answer/v1"
 SOURCE_BUNDLE_SCHEMA = "kungfu.profile-source-bundle/v1"
 SOURCE_IMPORT_PLAN_SCHEMA = "kungfu.profile-source-import-plan/v1"
+COLLABORATION_SCHEMA = "kungfu.profile-collaboration/v1"
+INTENT_PLAN_SCHEMA = "kungfu.profile-intent-plan/v1"
+INTENT_RECEIPT_SCHEMA = "kungfu.profile-intent-receipt/v1"
+KFD3_QUALIFICATION_RECEIPT_SCHEMA = "kungfu.profile-kfd3-qualification-receipt/v1"
+KFD3_WITNESS_SCHEMA = "kungfu.profile-kfd3-witness/v1"
 
 _TOKEN = re.compile(r"^[A-Za-z0-9._-]+$")
 _IGNORED_PARTS = {".git", "node_modules", "__pycache__", ".DS_Store"}
@@ -76,6 +81,9 @@ def capabilities() -> dict[str, Any]:
             "claims": sdk_contract["claimsSchema"],
             "assessmentPolicies": sdk_contract["assessmentPoliciesSchema"],
             "views": sdk_contract["viewsSchema"],
+            "collaboration": sdk_contract["collaborationSchema"],
+            "kfd3QualificationReceipt": sdk_contract["kfd3QualificationReceiptSchema"],
+            "kfd3Witness": sdk_contract["kfd3WitnessSchema"],
             "sourceBundle": sdk_contract["sourceBundleSchema"],
         },
         "sourcePlanSchema": SOURCE_PLAN_SCHEMA,
@@ -88,6 +96,15 @@ def capabilities() -> dict[str, Any]:
             "scaffold",
             "validate",
             "qualify",
+            "collaboration",
+            "application",
+            "kfd3-qualify",
+            "kfd3-verify",
+            "intent-inspect",
+            "intent-advise",
+            "intent-plan",
+            "intent-apply",
+            "intent-verify",
             "plan",
             "decide",
             "apply",
@@ -423,11 +440,574 @@ def validate_source(source: str | Path, runtime_dir: str | Path) -> dict[str, An
         profile_path=resolved["profilePath"],
         member_roots=resolved["memberRoots"],
     )
+    collaboration = _collaboration_closure(inspection)
     return {
         "schema": "kungfu.profile-validation/v1",
         "source": resolved,
         "inspection": inspection,
+        "collaboration": collaboration,
         "ok": True,
+    }
+
+
+def collaboration(source: str | Path, runtime_dir: str | Path) -> dict[str, Any]:
+    """Return the installed, content-bound KFD-3 declaration closure."""
+
+    return validate_source(source, runtime_dir)["collaboration"]
+
+
+def application(
+    source: str | Path,
+    runtime_dir: str | Path,
+    *,
+    include_qualification: bool = True,
+) -> dict[str, Any]:
+    """Project one declared collaboration closure for generic Human/Agent use."""
+
+    validated = validate_source(source, runtime_dir)
+    closure = validated["collaboration"]
+    if not closure["declared"]:
+        raise ProfileSdkError(
+            "collaboration-not-declared",
+            "Profile has no collaboration interface to project",
+        )
+    inspection = validated["inspection"]
+    profile = inspection["profile"]
+    actions = _read_ref_json(inspection, profile["actions"]["registry"])["actions"]
+    views = _read_ref_json(inspection, profile["views"]["registry"])["views"]
+    actions_by_id = {row["id"]: row for row in actions}
+    views_by_id = {row["id"]: row for row in views}
+    try:
+        state = storage_service.profile_lifecycle(
+            runtime_dir, "get", profile_id=profile["id"]
+        )
+    except ValueError as error:
+        if not str(error).startswith("Profile not found:"):
+            raise
+        state = None
+    active_exact_root = bool(
+        state
+        and state.get("activated")
+        and state.get("profile_suite_root") == inspection["profile_suite_root"]
+    )
+    granted = sorted((state or {}).get("granted_permissions", []))
+    intents = []
+    for intent in closure["intents"]:
+        intents.append(
+            {
+                **intent,
+                "action": actions_by_id[intent["actionId"]],
+                "inspectView": views_by_id[intent["inspectViewId"]],
+                "verifyView": views_by_id[intent["verifyViewId"]],
+                "missingCapabilities": sorted(
+                    set(intent["requiredCapabilities"]) - set(granted)
+                ),
+            }
+        )
+    qualification_status: dict[str, Any] = {
+        "qualified": False,
+        "status": "not-qualified",
+        "reason": "Profile must be active at this exact root before KFD-3 qualification",
+    }
+    if include_qualification and active_exact_root:
+        try:
+            earned = qualify_kfd3(source, runtime_dir)
+            qualification_status = {
+                "qualified": True,
+                "status": "qualified",
+                "receiptId": earned["receiptId"],
+                "witnessId": earned["witness"]["witnessId"],
+                "evidenceScope": earned["evidenceScope"],
+            }
+        except ProfileSdkError as error:
+            qualification_status = {
+                "qualified": False,
+                "status": "qualification-failed",
+                "diagnosis": error.diagnosis,
+            }
+    return {
+        "schema": "kungfu.profile-application/v1",
+        "profileId": profile["id"],
+        "profileSuiteRoot": inspection["profile_suite_root"],
+        "collaborationRoot": closure["collaborationRoot"],
+        "closureRoot": closure["closureRoot"],
+        "source": str(Path(source).resolve()),
+        "activeExactRoot": active_exact_root,
+        "profileRevision": (state or {}).get("revision"),
+        "grantedCapabilities": granted,
+        "value": closure["value"],
+        "participants": closure["participants"],
+        "constraints": closure["constraints"],
+        "knownLimits": closure["knownLimits"],
+        "intents": intents,
+        "presentation": {"mode": "generic"},
+        "protocol": closure["protocol"],
+        "qualified": qualification_status["qualified"],
+        "qualification": qualification_status,
+    }
+
+
+def intent_inspect(
+    source: str | Path, runtime_dir: str | Path, intent_id: str
+) -> dict[str, Any]:
+    projection = application(source, runtime_dir, include_qualification=False)
+    intent = next(
+        (row for row in projection["intents"] if row["id"] == intent_id), None
+    )
+    if intent is None:
+        raise ProfileSdkError(
+            "collaboration-intent-not-found", f"intent not found: {intent_id}"
+        )
+    return {
+        "schema": "kungfu.profile-intent-inspection/v1",
+        "profileId": projection["profileId"],
+        "profileSuiteRoot": projection["profileSuiteRoot"],
+        "collaborationRoot": projection["collaborationRoot"],
+        "closureRoot": projection["closureRoot"],
+        "source": projection["source"],
+        "profileRevision": projection["profileRevision"],
+        "activeExactRoot": projection["activeExactRoot"],
+        "intent": intent,
+        "cut": {
+            "kind": "profile-revision",
+            "value": projection["profileRevision"],
+        },
+    }
+
+
+def intent_advise(
+    source: str | Path, runtime_dir: str | Path, intent_id: str
+) -> dict[str, Any]:
+    inspected = intent_inspect(source, runtime_dir, intent_id)
+    intent = inspected["intent"]
+    application_value = application(source, runtime_dir, include_qualification=False)
+    constraints = [
+        row
+        for row in application_value["constraints"]
+        if "*" in row["appliesTo"] or intent_id in row["appliesTo"]
+    ]
+    eligible = inspected["activeExactRoot"] and not intent["missingCapabilities"]
+    return {
+        "schema": "kungfu.profile-intent-advice/v1",
+        "profileId": inspected["profileId"],
+        "profileSuiteRoot": inspected["profileSuiteRoot"],
+        "collaborationRoot": inspected["collaborationRoot"],
+        "closureRoot": inspected["closureRoot"],
+        "source": inspected["source"],
+        "intentId": intent_id,
+        "eligible": eligible,
+        "recommendation": "preview" if eligible else "resolve-preconditions",
+        "constraints": constraints,
+        "knownLimits": application_value["knownLimits"],
+        "missingCapabilities": intent["missingCapabilities"],
+        "preconditions": {
+            "activeExactRoot": inspected["activeExactRoot"],
+            "profileRevision": inspected["profileRevision"],
+        },
+    }
+
+
+def intent_plan(
+    source: str | Path,
+    runtime_dir: str | Path,
+    intent_id: str,
+    input_value: Any,
+) -> dict[str, Any]:
+    advice = intent_advise(source, runtime_dir, intent_id)
+    if not advice["eligible"]:
+        raise ProfileSdkError(
+            "intent-precondition-failed",
+            "intent cannot be previewed until its active-root and capability preconditions hold",
+            advice=advice,
+        )
+    inspected = intent_inspect(source, runtime_dir, intent_id)
+    action_plan = plan_action(
+        source, runtime_dir, inspected["intent"]["actionId"], input_value
+    )
+    identity = {
+        "profileSuiteRoot": inspected["profileSuiteRoot"],
+        "collaborationRoot": inspected["collaborationRoot"],
+        "closureRoot": inspected["closureRoot"],
+        "intentId": intent_id,
+        "actionPlanId": action_plan["planId"],
+        "input": input_value,
+    }
+    return {
+        "schema": INTENT_PLAN_SCHEMA,
+        "planId": _root(identity),
+        **identity,
+        "source": inspected["source"],
+        "actionPlan": action_plan,
+        "decisionCard": action_plan.get("decisionCard"),
+        "protocolStage": "preview",
+    }
+
+
+def intent_apply(
+    runtime_dir: str | Path,
+    plan: Mapping[str, Any],
+    answer: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    if plan.get("schema") != INTENT_PLAN_SCHEMA:
+        raise ProfileSdkError(
+            "intent-plan-invalid", "intent apply requires an intent plan"
+        )
+    refreshed = intent_plan(
+        str(plan.get("source") or ""),
+        runtime_dir,
+        str(plan.get("intentId") or ""),
+        plan.get("input"),
+    )
+    if refreshed["planId"] != plan.get("planId"):
+        raise ProfileSdkError("intent-plan-stale", "intent plan changed after preview")
+    action_receipt = authorized_action_invoke(
+        runtime_dir, plan.get("actionPlan") or {}, answer
+    )
+    identity = {
+        "planId": plan["planId"],
+        "actionPlanId": plan["actionPlanId"],
+        "profileSuiteRoot": plan["profileSuiteRoot"],
+        "collaborationRoot": plan["collaborationRoot"],
+        "closureRoot": plan["closureRoot"],
+        "intentId": plan["intentId"],
+        "actionReceipt": action_receipt,
+    }
+    return {
+        "schema": INTENT_RECEIPT_SCHEMA,
+        "receiptId": _root(identity),
+        **identity,
+        "source": plan["source"],
+        "protocolStage": "receipt",
+        "executionReceiptVerified": action_receipt["verified"],
+        "verified": False,
+    }
+
+
+def intent_verify(
+    source: str | Path, runtime_dir: str | Path, receipt: Mapping[str, Any]
+) -> dict[str, Any]:
+    if receipt.get("schema") != INTENT_RECEIPT_SCHEMA:
+        raise ProfileSdkError(
+            "intent-receipt-invalid", "verify requires an intent receipt"
+        )
+    inspected = intent_inspect(source, runtime_dir, str(receipt.get("intentId") or ""))
+    current = {
+        "profileSuiteRoot": inspected["profileSuiteRoot"],
+        "collaborationRoot": inspected["collaborationRoot"],
+        "closureRoot": inspected["closureRoot"],
+    }
+    expected = {key: receipt.get(key) for key in current}
+    if current != expected:
+        raise ProfileSdkError(
+            "intent-receipt-stale",
+            "Profile or collaboration closure changed after execution",
+            expected=expected,
+            actual=current,
+        )
+    action_receipt = receipt.get("actionReceipt") or {}
+    verified = bool(
+        receipt.get("executionReceiptVerified")
+        and action_receipt.get("verified")
+        and action_receipt.get("planId") == receipt.get("actionPlanId")
+    )
+    if not verified:
+        raise ProfileSdkError(
+            "intent-execution-unverified", "underlying action receipt is not verified"
+        )
+    return {
+        "schema": "kungfu.profile-intent-verification/v1",
+        "receiptId": receipt["receiptId"],
+        **current,
+        "intentId": receipt["intentId"],
+        "verifyView": inspected["intent"]["verifyView"],
+        "protocolStage": "verify",
+        "verified": True,
+        "evidenceScope": "profile-root/collaboration-root/execution-receipt/declared-verify-view",
+        "knownLimit": "declared verify view is bound but domain outcome truth remains evidence-dependent",
+    }
+
+
+def authorize_current_intent(
+    runtime_dir: str | Path,
+    source: str | Path,
+    intent_id: str,
+    input_value: Any,
+    expected_plan_id: str,
+    choice: str,
+    authorized_by: str,
+) -> dict[str, Any]:
+    plan = intent_plan(source, runtime_dir, intent_id, input_value)
+    if plan["planId"] != expected_plan_id:
+        raise ProfileSdkError(
+            "intent-plan-stale",
+            "intent plan changed; review a fresh preview",
+            expectedPlanId=expected_plan_id,
+            actualPlanId=plan["planId"],
+        )
+    answer = answer_decision(plan["decisionCard"], choice, authorized_by)
+    receipt = intent_apply(runtime_dir, plan, answer)
+    return {**receipt, "verification": intent_verify(source, runtime_dir, receipt)}
+
+
+def _agent_interface_authority() -> dict[str, Any]:
+    """Audit the installed KFD-3 authority rather than trusting Profile prose."""
+
+    from kungfu.agent.kfd3 import registry, registry_digest, verify_agent_interface
+    from kungfu.cli.commands.agent import agent
+
+    verification = verify_agent_interface(agent)
+    application_api = next(
+        (
+            row
+            for row in registry().get("apis", [])
+            if row.get("id") == "kungfu.profile.application"
+        ),
+        None,
+    )
+    if not verification["ok"] or application_api is None:
+        raise ProfileSdkError(
+            "kfd3-authority-audit-failed",
+            "installed collaboration-interface authority is not closed",
+            agentVerification=verification,
+        )
+    return {
+        "standard": "KFD-3",
+        "registryId": verification["registry"]["registryId"],
+        "registryRoot": "sha256:" + registry_digest(),
+        "auditRoot": _root(verification),
+        "applicationApi": {
+            "id": application_api["id"],
+            "surface": application_api["surface"],
+            "name": application_api["name"],
+            "aliases": application_api.get("aliases", []),
+        },
+    }
+
+
+def _profile_facet_audit(resolved: Mapping[str, Any]) -> dict[str, Any]:
+    """Reject executable/custom surfaces that can bypass the shared service."""
+
+    package_dirs = {
+        "suite": Path(str(resolved["source"])),
+        **{
+            str(key): Path(str(path))
+            for key, path in (resolved.get("memberPackages") or {}).items()
+        },
+    }
+    custom_views = []
+    failures = []
+    for key, package_dir in sorted(package_dirs.items()):
+        manifest = kfx_contract.read_manifest_from_dir(str(package_dir))
+        config = (manifest.get("kungfuConfig") or {}).get("config") or {}
+        view = config.get("view")
+        if view is not None:
+            capabilities = sorted(view.get("capabilities") or [])
+            runtime = view.get("runtime") or "node-integrated"
+            entry = str(view.get("entry") or "dist/view/index.js")
+            entry_path = _confined(package_dir, entry)
+            reasons = []
+            if runtime != "sandboxed-ipc":
+                reasons.append("custom Profile views must use sandboxed-ipc")
+            if capabilities:
+                reasons.append(
+                    "custom Profile views may not receive capability handles"
+                )
+            if view.get("system"):
+                reasons.append("custom Profile views may not claim system authority")
+            if not entry_path.is_file():
+                reasons.append("custom Profile view bundle is missing")
+            row = {
+                "packageKey": key,
+                "runtime": runtime,
+                "capabilities": capabilities,
+                "entry": entry,
+                "bundleRoot": (
+                    "sha256:" + _sha256(entry_path.read_bytes())
+                    if entry_path.is_file()
+                    else None
+                ),
+                "passed": not reasons,
+            }
+            custom_views.append(row)
+            if reasons:
+                failures.append(
+                    {"packageKey": key, "facet": "view", "reasons": reasons}
+                )
+        for facet in ("adapter", "service", "wasm"):
+            if config.get(facet) is not None:
+                failures.append(
+                    {
+                        "packageKey": key,
+                        "facet": facet,
+                        "reasons": [
+                            "executable Profile member facets are not yet confined to the shared intent runtime"
+                        ],
+                    }
+                )
+    if failures:
+        raise ProfileSdkError(
+            "kfd3-no-bypass-failed",
+            "Profile exposes a custom surface outside the qualified application service",
+            failures=failures,
+        )
+    return {
+        "passed": True,
+        "policy": "generic-renderer-or-capability-free-sandboxed-view/v1",
+        "customViews": custom_views,
+        "executableFacetCount": 0,
+    }
+
+
+def qualify_kfd3(source: str | Path, runtime_dir: str | Path) -> dict[str, Any]:
+    """Earn a deterministic KFD-3 receipt and scoped witness for one active root."""
+
+    validated = validate_source(source, runtime_dir)
+    resolved = validated["source"]
+    closure = validated["collaboration"]
+    if not closure["declared"]:
+        raise ProfileSdkError(
+            "collaboration-not-declared",
+            "KFD-3 qualification requires a content-bound collaboration facet",
+        )
+    projection = application(source, runtime_dir, include_qualification=False)
+    if not projection["activeExactRoot"]:
+        raise ProfileSdkError(
+            "kfd3-active-root-required",
+            "KFD-3 qualification requires the exact Profile root to be active",
+        )
+    if not projection["intents"]:
+        raise ProfileSdkError(
+            "kfd3-intent-probe-required",
+            "KFD-3 qualification requires at least one material intent probe",
+        )
+    unsupported = [
+        row["id"]
+        for row in projection["intents"]
+        if row["action"]["runner"] != "profile-lifecycle"
+        or row["action"]["operation"] not in {"qualify", "activate", "remove"}
+    ]
+    if unsupported:
+        raise ProfileSdkError(
+            "kfd3-action-runtime-unqualified",
+            "one or more material intents do not resolve to an executable confined runtime",
+            intentIds=unsupported,
+        )
+    authority = _agent_interface_authority()
+    no_bypass = _profile_facet_audit(resolved)
+    probes = []
+    for intent in projection["intents"]:
+        human_plan = intent_plan(source, runtime_dir, intent["id"], {})
+        agent_plan = intent_plan(source, runtime_dir, intent["id"], {})
+        matched = (
+            human_plan["planId"] == agent_plan["planId"]
+            and human_plan["actionPlanId"] == agent_plan["actionPlanId"]
+            and human_plan["closureRoot"] == agent_plan["closureRoot"]
+        )
+        if not matched:
+            raise ProfileSdkError(
+                "kfd3-dual-client-drift",
+                "Human and Agent probes produced different exact plans",
+                intentId=intent["id"],
+            )
+        probes.append(
+            {
+                "intentId": intent["id"],
+                "humanPlanId": human_plan["planId"],
+                "agentPlanId": agent_plan["planId"],
+                "actionPlanId": human_plan["actionPlanId"],
+                "matched": True,
+            }
+        )
+    inventory = {
+        "intentIds": sorted(row["id"] for row in projection["intents"]),
+        "actionIds": sorted(row["actionId"] for row in projection["intents"]),
+        "viewIds": sorted(
+            {
+                view_id
+                for row in projection["intents"]
+                for view_id in (row["inspectViewId"], row["verifyViewId"])
+            }
+        ),
+        "applicationApiId": authority["applicationApi"]["id"],
+    }
+    identity = {
+        "profileId": projection["profileId"],
+        "profileSuiteRoot": projection["profileSuiteRoot"],
+        "collaborationRoot": projection["collaborationRoot"],
+        "closureRoot": projection["closureRoot"],
+        "profileRevision": projection["profileRevision"],
+        "runtimeContract": "kungfu.profile-lifecycle/v1",
+        "authority": authority,
+        "surfaceInventory": inventory,
+        "noBypass": no_bypass,
+        "clientProbes": probes,
+        "knownLimits": projection["knownLimits"],
+        "evidenceScope": [
+            "installed-agent-interface-closure",
+            "profile-content-closure",
+            "public-surface-inventory",
+            "custom-view-no-bypass",
+            "dual-client-exact-plan",
+        ],
+    }
+    receipt = {
+        "schema": KFD3_QUALIFICATION_RECEIPT_SCHEMA,
+        "receiptId": _root(identity),
+        **identity,
+        "qualified": True,
+    }
+    witness_identity = {
+        "profileId": receipt["profileId"],
+        "profileSuiteRoot": receipt["profileSuiteRoot"],
+        "collaborationRoot": receipt["collaborationRoot"],
+        "closureRoot": receipt["closureRoot"],
+        "qualificationReceiptId": receipt["receiptId"],
+        "authorityRegistryRoot": authority["registryRoot"],
+        "claim": "profile-collaboration-closure-qualified",
+    }
+    witness = {
+        "schema": KFD3_WITNESS_SCHEMA,
+        "witnessId": _root(witness_identity),
+        **witness_identity,
+        "standard": "KFD-3",
+        "issuer": "kungfu-profile-runtime",
+        "qualified": True,
+    }
+    _validate_sdk_value("kfd3WitnessSchema", witness, "KFD-3 witness")
+    result = {**receipt, "witness": witness}
+    _validate_sdk_value(
+        "kfd3QualificationReceiptSchema", result, "KFD-3 qualification receipt"
+    )
+    return result
+
+
+def verify_kfd3(
+    source: str | Path, runtime_dir: str | Path, receipt: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Verify a supplied qualification receipt against the current earned cut."""
+
+    _validate_sdk_value(
+        "kfd3QualificationReceiptSchema",
+        dict(receipt),
+        "KFD-3 qualification receipt",
+    )
+    current = qualify_kfd3(source, runtime_dir)
+    if dict(receipt) != current:
+        raise ProfileSdkError(
+            "kfd3-qualification-stale-or-tampered",
+            "qualification receipt does not match the current earned Profile cut",
+            expectedReceiptId=current["receiptId"],
+            actualReceiptId=receipt.get("receiptId"),
+            expectedWitnessId=current["witness"]["witnessId"],
+            actualWitnessId=(receipt.get("witness") or {}).get("witnessId"),
+        )
+    return {
+        "schema": "kungfu.profile-kfd3-verification/v1",
+        "profileId": current["profileId"],
+        "profileSuiteRoot": current["profileSuiteRoot"],
+        "receiptId": current["receiptId"],
+        "witnessId": current["witness"]["witnessId"],
+        "verified": True,
     }
 
 
@@ -455,12 +1035,20 @@ def qualify_source(source: str | Path, runtime_dir: str | Path) -> dict[str, Any
             "This runtime only qualifies content-closure and runtime-contract",
             requested=checks,
         )
+    collaboration = validated["collaboration"]
     return {
         "schema": "kungfu.profile-source-qualification/v1",
         "profileSuiteRoot": inspection["profile_suite_root"],
         "status": "qualified-for-install-plan",
         "checks": sorted(checks),
         "evidenceScope": "source-contract/content-closure/runtime-contract",
+        "kfd3": {
+            "declared": collaboration["declared"],
+            "qualified": False,
+            "status": collaboration.get("qualificationStatus", "not-declared"),
+            "closureRoot": collaboration.get("closureRoot"),
+            "reason": collaboration.get("reason"),
+        },
         "lifecycleMutation": False,
     }
 
@@ -720,7 +1308,7 @@ def semantic_diff(left: str | Path, right: str | Path) -> dict[str, Any]:
         "display": _changes(pa, pb, ["title", "views"]),
         "content": _changes(pa, pb, ["kfd1", "members"]),
         "permission": _changes(pa, pb, ["permissions"]),
-        "authority": _changes(pa, pb, ["actions"]),
+        "authority": _changes(pa, pb, ["actions", "kfd3"]),
         "evidence": _changes(pa, pb, ["kfd2", "qualification"]),
         "migration": _changes(pa, pb, ["migrations"]),
     }
@@ -770,6 +1358,7 @@ def plan_action(
     source: str | Path, runtime_dir: str | Path, action_id: str, input_value: Any
 ) -> dict[str, Any]:
     catalog = action_catalog(source, runtime_dir)
+    collaboration_value = collaboration(source, runtime_dir)
     action = next((row for row in catalog["actions"] if row["id"] == action_id), None)
     if action is None:
         raise ProfileSdkError(
@@ -791,8 +1380,28 @@ def plan_action(
         "action": action,
         "input": input_value,
         "stateRevision": state["revision"],
-        "source": catalog["source"],
     }
+    if collaboration_value["declared"]:
+        intent = next(
+            (
+                row
+                for row in collaboration_value["intents"]
+                if row["actionId"] == action_id
+            ),
+            None,
+        )
+        if intent is None:
+            raise ProfileSdkError(
+                "collaboration-action-closure",
+                "declared collaboration has no intent for this action",
+            )
+        identity.update(
+            {
+                "collaborationRoot": collaboration_value["collaborationRoot"],
+                "closureRoot": collaboration_value["closureRoot"],
+                "intentId": intent["id"],
+            }
+        )
     missing_capabilities = sorted(
         set(action["requiredCapabilities"]) - set(state.get("granted_permissions", []))
     )
@@ -806,6 +1415,7 @@ def plan_action(
         "schema": ACTION_PLAN_SCHEMA,
         "planId": _root(identity),
         **identity,
+        "source": catalog["source"],
         "requiresAuthorization": action["authorityClass"] != "none",
         "effects": action.get("effects", []),
     }
@@ -1071,6 +1681,7 @@ def _normalize_brief(
         "identity",
         "evidence",
         "migration",
+        "collaboration",
     }
     if set(brief) - allowed:
         raise ProfileSdkError(
@@ -1156,6 +1767,30 @@ def _normalize_brief(
         "evidence": dict(brief.get("evidence") or {}),
         "migration": dict(brief.get("migration") or {}),
     }
+    collaboration = brief.get("collaboration")
+    if collaboration is not None:
+        if not isinstance(collaboration, Mapping):
+            raise ProfileSdkError(
+                "collaboration-brief-invalid",
+                "brief.collaboration must be an object when KFD-3 is requested",
+            )
+        artifact = {
+            "schema": COLLABORATION_SCHEMA,
+            "profileId": profile_id,
+            "value": {
+                "summary": collaboration.get("summary"),
+                "participantBenefits": collaboration.get("participantBenefits", []),
+            },
+            "participants": collaboration.get("participants", []),
+            "intents": [],
+            "constraints": collaboration.get("constraints", []),
+            "knownLimits": collaboration.get("knownLimits", []),
+            "presentation": {"mode": "generic", "homeViewId": None},
+        }
+        _validate_sdk_value(
+            "collaborationSchema", artifact, "Profile brief collaboration"
+        )
+        normalized["collaboration"] = artifact
     if not cards:
         _validate_sdk_value("briefSchema", normalized, "Profile brief")
     return normalized, cards
@@ -1203,6 +1838,8 @@ def _source_files(brief: Mapping[str, Any]) -> dict[str, bytes]:
             "checks": ["content-closure", "runtime-contract"],
         },
     }
+    if brief.get("collaboration") is not None:
+        artifacts["collaboration/interface.json"] = brief["collaboration"]
     encoded = {path: _pretty(value) for path, value in artifacts.items()}
 
     def ref(path):
@@ -1231,6 +1868,8 @@ def _source_files(brief: Mapping[str, Any]) -> dict[str, bytes]:
         "permissions": {"registry": ref("permissions.json")},
         "qualification": {"profile": ref("qualification/profile.json")},
     }
+    if brief.get("collaboration") is not None:
+        profile["kfd3"] = {"collaboration": ref("collaboration/interface.json")}
     files = {
         "package.json": _pretty(
             {
@@ -1290,6 +1929,186 @@ def _read_ref_json(
     root = Path(str(inspection["profile_path"])).parent
     path = _confined(root, str(ref["path"]))
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _collaboration_closure(inspection: Mapping[str, Any]) -> dict[str, Any]:
+    profile = inspection["profile"]
+    declaration = profile.get("kfd3")
+    if not isinstance(declaration, Mapping):
+        return {
+            "schema": "kungfu.profile-collaboration-closure/v1",
+            "profileId": profile["id"],
+            "profileSuiteRoot": inspection["profile_suite_root"],
+            "status": "not-declared",
+            "declared": False,
+            "qualified": False,
+            "reason": "Profile has no content-bound kfd3.collaboration facet",
+        }
+
+    ref = declaration.get("collaboration")
+    if not isinstance(ref, Mapping):
+        raise ProfileSdkError(
+            "collaboration-ref-invalid",
+            "Profile kfd3 declaration has no collaboration content reference",
+        )
+    artifact = _read_ref_json(inspection, ref)
+    _validate_sdk_value("collaborationSchema", artifact, "collaboration interface")
+    if artifact["profileId"] != profile["id"]:
+        raise ProfileSdkError(
+            "collaboration-profile-mismatch",
+            "collaboration interface profileId does not match the Profile",
+            expected=profile["id"],
+            actual=artifact["profileId"],
+        )
+
+    participants = artifact["participants"]
+    participant_ids = [row["id"] for row in participants]
+    if len(participant_ids) != len(set(participant_ids)):
+        raise ProfileSdkError(
+            "collaboration-participant-duplicate",
+            "collaboration participant ids must be unique",
+        )
+    participant_kinds = {row["kind"] for row in participants}
+    if not {"human", "agent"}.issubset(participant_kinds):
+        raise ProfileSdkError(
+            "collaboration-dual-first-required",
+            "KFD-3 Profile qualification requires human and agent participants",
+            participantKinds=sorted(participant_kinds),
+        )
+    benefit_kinds = {
+        row["participantKind"] for row in artifact["value"]["participantBenefits"]
+    }
+    if not {"human", "agent"}.issubset(benefit_kinds):
+        raise ProfileSdkError(
+            "collaboration-value-incomplete",
+            "Profile value must be explicit for human and agent participants",
+            participantKinds=sorted(benefit_kinds),
+        )
+
+    action_registry = _read_ref_json(inspection, profile["actions"]["registry"])
+    _validate_action_registry(action_registry, profile)
+    actions = {row["id"]: row for row in action_registry["actions"]}
+    view_registry = _read_ref_json(inspection, profile["views"]["registry"])
+    _validate_sdk_value("viewsSchema", view_registry, "view registry")
+    view_ids = [row["id"] for row in view_registry["views"]]
+    if len(view_ids) != len(set(view_ids)):
+        raise ProfileSdkError(
+            "collaboration-view-duplicate", "Profile view ids must be unique"
+        )
+    views = set(view_ids)
+
+    intents = artifact["intents"]
+    intent_ids = [row["id"] for row in intents]
+    action_ids = [row["actionId"] for row in intents]
+    if len(intent_ids) != len(set(intent_ids)) or len(action_ids) != len(
+        set(action_ids)
+    ):
+        raise ProfileSdkError(
+            "collaboration-intent-duplicate",
+            "intent ids and action bindings must be unique",
+        )
+    if set(action_ids) != set(actions):
+        raise ProfileSdkError(
+            "collaboration-action-closure",
+            "every public Profile action must have exactly one collaboration intent",
+            declared=sorted(action_ids),
+            actions=sorted(actions),
+        )
+
+    authority_classes = {
+        authority
+        for participant in participants
+        for authority in participant["authorityClasses"]
+    }
+    for intent in intents:
+        action = actions[intent["actionId"]]
+        missing_views = sorted(
+            {intent["inspectViewId"], intent["verifyViewId"]} - views
+        )
+        if missing_views:
+            raise ProfileSdkError(
+                "collaboration-view-unresolved",
+                "intent inspect and verify views must resolve in the Profile",
+                intentId=intent["id"],
+                missingViews=missing_views,
+            )
+        if intent["requiredAuthority"] != action["authorityClass"]:
+            raise ProfileSdkError(
+                "collaboration-authority-drift",
+                "intent and action authority classes must match",
+                intentId=intent["id"],
+            )
+        if intent["requiredAuthority"] not in authority_classes:
+            raise ProfileSdkError(
+                "collaboration-authority-unowned",
+                "an intent authority class is not owned by any declared participant",
+                intentId=intent["id"],
+            )
+        if sorted(intent["requiredCapabilities"]) != sorted(
+            action["requiredCapabilities"]
+        ):
+            raise ProfileSdkError(
+                "collaboration-capability-drift",
+                "intent and action required capabilities must match",
+                intentId=intent["id"],
+            )
+
+    known_targets = set(intent_ids)
+    for constraint in artifact["constraints"]:
+        unknown = sorted(
+            target
+            for target in constraint["appliesTo"]
+            if target != "*" and target not in known_targets
+        )
+        if unknown:
+            raise ProfileSdkError(
+                "collaboration-constraint-unresolved",
+                "constraint appliesTo contains an unknown intent",
+                constraintId=constraint["id"],
+                unknownIntents=unknown,
+            )
+
+    home_view = artifact["presentation"]["homeViewId"]
+    if home_view is not None and home_view not in views:
+        raise ProfileSdkError(
+            "collaboration-home-view-unresolved",
+            "generic presentation homeViewId must resolve in the Profile",
+            homeViewId=home_view,
+        )
+
+    closure = {
+        "profileSuiteRoot": inspection["profile_suite_root"],
+        "collaborationRoot": f"sha256:{ref['sha256']}",
+        "participantIds": sorted(participant_ids),
+        "intentIds": sorted(intent_ids),
+        "actionIds": sorted(actions),
+        "viewIds": sorted(views),
+        "protocol": [
+            "inspect",
+            "advise",
+            "preview",
+            "authorize",
+            "execute",
+            "receipt",
+            "verify",
+        ],
+    }
+    return {
+        "schema": "kungfu.profile-collaboration-closure/v1",
+        "profileId": profile["id"],
+        **closure,
+        "closureRoot": _root(closure),
+        "status": "declared-closed",
+        "declared": True,
+        "qualified": False,
+        "qualificationStatus": "not-qualified",
+        "genericRenderer": artifact["presentation"]["mode"] == "generic",
+        "value": artifact["value"],
+        "constraints": artifact["constraints"],
+        "knownLimits": artifact["knownLimits"],
+        "participants": participants,
+        "intents": intents,
+    }
 
 
 def _validate_action_registry(

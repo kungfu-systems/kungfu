@@ -96,6 +96,184 @@ def validate(ctx, source, as_json):
     _json(_run(lambda: profile_sdk.validate_source(source, ctx.runtime_dir)))
 
 
+@profile.command(help="inspect the content-bound Profile collaboration closure")
+@click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def collaboration(ctx, source, as_json):
+    _json(_run(lambda: profile_sdk.collaboration(source, ctx.runtime_dir)))
+
+
+@profile.command(help="project a declared Profile for the generic Human/Agent renderer")
+@click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def application(ctx, source, as_json):
+    _json(_run(lambda: profile_sdk.application(source, ctx.runtime_dir)))
+
+
+@profile.command(
+    name="kfd3-qualify",
+    help="audit no-bypass and dual-client closure, then emit a Kungfu-owned witness",
+)
+@click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def kfd3_qualify(ctx, source, as_json):
+    _json(_run(lambda: profile_sdk.qualify_kfd3(source, ctx.runtime_dir)))
+
+
+@profile.command(
+    name="kfd3-verify",
+    help="verify a KFD-3 qualification receipt against the current earned cut",
+)
+@click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.argument(
+    "receipt_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def kfd3_verify(ctx, source, receipt_file, as_json):
+    _json(
+        _run(
+            lambda: profile_sdk.verify_kfd3(
+                source, ctx.runtime_dir, _load_json(receipt_file)
+            )
+        )
+    )
+
+
+@profile.group(help="run the shared Profile intent application protocol")
+@click.help_option("-h", "--help")
+@profile_context
+def intent(ctx):
+    pass
+
+
+@intent.command(name="inspect", help="inspect one intent at an exact Profile cut")
+@click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.argument("intent_id")
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def intent_inspect(ctx, source, intent_id, as_json):
+    _json(_run(lambda: profile_sdk.intent_inspect(source, ctx.runtime_dir, intent_id)))
+
+
+@intent.command(
+    name="advise", help="project constraints and preconditions for one intent"
+)
+@click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.argument("intent_id")
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def intent_advise(ctx, source, intent_id, as_json):
+    _json(_run(lambda: profile_sdk.intent_advise(source, ctx.runtime_dir, intent_id)))
+
+
+@intent.command(name="plan", help="preview one still-unexecuted intent")
+@click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.argument("intent_id")
+@click.option(
+    "--input",
+    "input_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option("--out", type=click.Path(dir_okay=False, path_type=Path))
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def intent_plan(ctx, source, intent_id, input_path, out, as_json):
+    payload = _run(
+        lambda: profile_sdk.intent_plan(
+            source,
+            ctx.runtime_dir,
+            intent_id,
+            _load_json(input_path) if input_path else {},
+        )
+    )
+    if out:
+        out.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+        payload["intentPlanPath"] = str(out.resolve())
+    _json(payload)
+
+
+@intent.command(
+    name="authorize",
+    help="re-plan, authorize, execute, receipt and verify one exact intent",
+)
+@click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.argument("intent_id")
+@click.option(
+    "--input",
+    "input_path",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option("--expected-plan-id", required=True)
+@click.option("--choice", required=True, type=click.Choice(["approve", "deny"]))
+@click.option("--authorized-by", required=True)
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def intent_authorize(
+    ctx, source, intent_id, input_path, expected_plan_id, choice, authorized_by, as_json
+):
+    _json(
+        _run(
+            lambda: profile_sdk.authorize_current_intent(
+                ctx.runtime_dir,
+                source,
+                intent_id,
+                _load_json(input_path) if input_path else {},
+                expected_plan_id,
+                choice,
+                authorized_by,
+            )
+        )
+    )
+
+
+@intent.command(name="apply", help="execute an authorized, still-current intent plan")
+@click.argument(
+    "plan_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option(
+    "--authorization-file",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def intent_apply(ctx, plan_file, authorization_file, as_json):
+    _json(
+        _run(
+            lambda: profile_sdk.intent_apply(
+                ctx.runtime_dir,
+                _load_json(plan_file),
+                _load_json(authorization_file),
+            )
+        )
+    )
+
+
+@intent.command(
+    name="verify", help="verify an intent receipt against the current declared closure"
+)
+@click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
+@click.argument(
+    "receipt_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option("--json", "as_json", is_flag=True)
+@profile_context
+def intent_verify(ctx, source, receipt_file, as_json):
+    _json(
+        _run(
+            lambda: profile_sdk.intent_verify(
+                source, ctx.runtime_dir, _load_json(receipt_file)
+            )
+        )
+    )
+
+
 @profile.command(help="run the installed source qualification checks")
 @click.argument("source", type=click.Path(exists=True, file_okay=False, path_type=Path))
 @click.option("--json", "as_json", is_flag=True)

@@ -45,13 +45,76 @@ test('Profile plans preserve source and exact active-root intent', () => {
   profile.catalog('/suite', true);
   profile.discover('kungfu.mission-control');
   profile.queryPlan('/suite', 'week-table');
+  profile.application('/suite');
+  profile.qualifyKfd3('/suite');
+  profile.intentPlan('/suite', 'complete-day');
   profile.lifecyclePlan('install', '/suite');
 
   assert.deepEqual(calls, [
     ['profile', 'catalog', '/suite', '--require-active', '--json'],
     ['profile', 'discover', 'kungfu.mission-control', '--json'],
     ['profile', 'query-plan', '/suite', 'week-table', '--json'],
+    ['profile', 'application', '/suite', '--json'],
+    ['profile', 'kfd3-qualify', '/suite', '--json'],
+    ['profile', 'intent', 'plan', '/suite', 'complete-day', '--json'],
     ['profile', 'plan', 'install', '/suite', '--json'],
+  ]);
+});
+
+test('Profile KFD-3 verification uses the installed receipt verifier', async () => {
+  const calls: string[][] = [];
+  const profile = openProfile({
+    runtimeDir: '/runtime',
+    execFileSync: () => '{}',
+    execFile: async (_file, args) => {
+      calls.push(args);
+      return '{}';
+    },
+  });
+
+  await profile.verifyKfd3Async('/suite', '/tmp/receipt.json');
+
+  assert.deepEqual(calls[0], [
+    'profile',
+    'kfd3-verify',
+    '/suite',
+    '/tmp/receipt.json',
+    '--json',
+  ]);
+});
+
+test('Profile intent authorization re-plans the same shared application path', async () => {
+  const calls: string[][] = [];
+  const profile = openProfile({
+    runtimeDir: '/runtime',
+    execFileSync: () => '{}',
+    execFile: async (_file, args) => {
+      calls.push(args);
+      return '{}';
+    },
+  });
+
+  await profile.authorizeIntentAsync(
+    '/suite',
+    'complete-day',
+    'sha256:reviewed',
+    'approve',
+    'workspace-owner',
+  );
+
+  assert.deepEqual(calls[0], [
+    'profile',
+    'intent',
+    'authorize',
+    '/suite',
+    'complete-day',
+    '--expected-plan-id',
+    'sha256:reviewed',
+    '--choice',
+    'approve',
+    '--authorized-by',
+    'workspace-owner',
+    '--json',
   ]);
 });
 

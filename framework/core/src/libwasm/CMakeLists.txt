@@ -1,5 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
+# Shifu cache projection intentionally gives Cargo a short-lived wrapper path.
+# CMake persists find_program results, so discard a wrapper that disappeared
+# with the previous overlay before resolving the current command environment.
+if(KF_LIBWASM_CARGO AND NOT EXISTS "${KF_LIBWASM_CARGO}")
+  unset(KF_LIBWASM_CARGO CACHE)
+endif()
 find_program(KF_LIBWASM_CARGO cargo REQUIRED)
 set(KF_LIBWASM_CARGO_REGISTRY_DEFAULT "")
 if(DEFINED ENV{KF_LIBWASM_CARGO_REGISTRY})

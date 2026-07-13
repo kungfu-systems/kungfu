@@ -27,6 +27,20 @@
     "match": "does not match"
   },
   {
+    "id": "malformed-kfd3-collaboration-hash",
+    "operation": "set",
+    "path": ["kfd3", "collaboration", "sha256"],
+    "value": "not-a-content-hash",
+    "match": "does not match"
+  },
+  {
+    "id": "unknown-kfd3-authority-field",
+    "operation": "set",
+    "path": ["kfd3", "authorityOverride"],
+    "value": true,
+    "match": "Additional properties are not allowed"
+  },
+  {
     "id": "member-in-required-and-optional",
     "operation": "set",
     "path": ["members", "optional"],

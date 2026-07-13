@@ -346,8 +346,10 @@ nlohmann::json normalize_refs(const nlohmann::json &value, const char *field, bo
 
 nlohmann::json normalize_profile(const nlohmann::json &input) {
   validate_source_contract(input);
-  require_exact_keys(input, {"schema", "id", "title", "version", "members", "kfd1", "kfd2", "actions", "views",
-                             "migrations", "permissions", "qualification"});
+  require_exact_keys(input,
+                     {"schema", "id", "title", "version", "members", "kfd1", "kfd2", "actions", "views", "migrations",
+                      "permissions", "qualification"},
+                     {"kfd3"});
   if (required_text(input, "schema") != PROFILE_SCHEMA_V1) {
     throw std::invalid_argument("Profile must use kungfu.profile-suite/v1");
   }
@@ -378,25 +380,31 @@ nlohmann::json normalize_profile(const nlohmann::json &input) {
   const auto &qualification = input.at("qualification");
   require_exact_keys(qualification, {"profile"});
 
-  return {{"schema", PROFILE_SCHEMA_V1},
-          {"id", profile_id},
-          {"title", title},
-          {"version", version},
-          {"members", {{"required", required_members}, {"optional", optional_members}}},
-          {"kfd1",
-           {{"contractWorld", normalize_ref(kfd1.at("contractWorld"))},
-            {"factSurfaces", normalize_refs(kfd1.at("factSurfaces"), "kfd1.factSurfaces", true)},
-            {"reducers", normalize_refs(kfd1.at("reducers"), "kfd1.reducers", false)},
-            {"compatibility", normalize_ref(kfd1.at("compatibility"))}}},
-          {"kfd2",
-           {{"claims", normalize_refs(kfd2.at("claims"), "kfd2.claims", true)},
-            {"purposes", normalize_tokens(kfd2.at("purposes"), "kfd2.purposes", true)},
-            {"policies", normalize_refs(kfd2.at("policies"), "kfd2.policies", true)}}},
-          {"actions", registry(input.at("actions"))},
-          {"views", registry(input.at("views"))},
-          {"migrations", registry(input.at("migrations"))},
-          {"permissions", registry(input.at("permissions"))},
-          {"qualification", {{"profile", normalize_ref(qualification.at("profile"))}}}};
+  nlohmann::json normalized = {{"schema", PROFILE_SCHEMA_V1},
+                               {"id", profile_id},
+                               {"title", title},
+                               {"version", version},
+                               {"members", {{"required", required_members}, {"optional", optional_members}}},
+                               {"kfd1",
+                                {{"contractWorld", normalize_ref(kfd1.at("contractWorld"))},
+                                 {"factSurfaces", normalize_refs(kfd1.at("factSurfaces"), "kfd1.factSurfaces", true)},
+                                 {"reducers", normalize_refs(kfd1.at("reducers"), "kfd1.reducers", false)},
+                                 {"compatibility", normalize_ref(kfd1.at("compatibility"))}}},
+                               {"kfd2",
+                                {{"claims", normalize_refs(kfd2.at("claims"), "kfd2.claims", true)},
+                                 {"purposes", normalize_tokens(kfd2.at("purposes"), "kfd2.purposes", true)},
+                                 {"policies", normalize_refs(kfd2.at("policies"), "kfd2.policies", true)}}},
+                               {"actions", registry(input.at("actions"))},
+                               {"views", registry(input.at("views"))},
+                               {"migrations", registry(input.at("migrations"))},
+                               {"permissions", registry(input.at("permissions"))},
+                               {"qualification", {{"profile", normalize_ref(qualification.at("profile"))}}}};
+  if (input.contains("kfd3")) {
+    const auto &kfd3 = input.at("kfd3");
+    require_exact_keys(kfd3, {"collaboration"});
+    normalized["kfd3"] = {{"collaboration", normalize_ref(kfd3.at("collaboration"))}};
+  }
+  return normalized;
 }
 
 nlohmann::json normalize_member_roots(const nlohmann::json &profile, const nlohmann::json &input) {
@@ -445,6 +453,8 @@ std::vector<nlohmann::json> profile_refs(const nlohmann::json &profile) {
   collect_ref(profile.at("migrations").at("registry"), refs);
   collect_ref(profile.at("permissions").at("registry"), refs);
   collect_ref(profile.at("qualification").at("profile"), refs);
+  if (profile.contains("kfd3"))
+    collect_ref(profile.at("kfd3").at("collaboration"), refs);
   std::sort(refs.begin(), refs.end(), [](const auto &left, const auto &right) {
     return left.at("path").template get<std::string>() < right.at("path").template get<std::string>();
   });

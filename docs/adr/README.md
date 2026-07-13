@@ -144,6 +144,7 @@ implemented and qualified or explicitly waived for that release.
 | [0072](ADR-0072-frame-identity-layering-journal-local-vs-ledger-global.md) | accepted | frame identity is layered: frame_uid stays journal-local (fixing the deterministic page-8-bit wrap), while permanent ledger-global uniqueness is the Episode content root + structural stream_position (stream_id, container_epoch, sequence), not a widened probabilistic frame_uid |
 | [0073](ADR-0073-buildchain-adr-release-admissibility.md) | accepted | Buildchain promotion is the settlement boundary for ADR implementation truth: dev declares bounded delivery, alpha settles qualified progress, and stable admits no unaccounted accepted decision |
 | [0074](ADR-0074-canonical-adr-authority-and-lifecycle-audit.md) | accepted | `docs/adr/` is the sole Core and Shifu decision authority, with typed redirects and executable lifecycle, evidence, and release audit |
+| [0075](ADR-0075-profile-level-kfd3-qualification.md) | accepted | conforming Profile Suites declare a content-bound collaboration facet; Kungfu projects and qualifies one shared Human/Agent protocol instead of making each Profile reimplement KFD-3 |
 | [SHIFU-0001](SHIFU-ADR-0001-cache-profile-contract-and-ownership.md) | accepted | Cache profiles are Shifu-owned contracts; inventories project instances and Buildchain owns process |
 | [SHIFU-0002](SHIFU-ADR-0002-local-artifact-catalog-and-safe-promotion.md) | accepted | Shifu and Kungfu product artifacts share provenance-aware, Git-safe local promotion semantics |
 

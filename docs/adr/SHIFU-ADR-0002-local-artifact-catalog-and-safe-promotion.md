@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: SHIFU-ADR-0002
 decision_status: accepted
 implementation_status: partial
-implementation_commits: [c0ae2970240ce3bb2ff2320065797899e28a69ea, 1935a89c8dcb0418cdf587a0007dcd135d2230c7]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/743]
 review_state: unreviewed
 sensitivity: public
 sources: [local-files, user-consensus]

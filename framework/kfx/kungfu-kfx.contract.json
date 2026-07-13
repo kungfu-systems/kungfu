@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.kfx.contract/v1",
   "id": "kungfu-kfx",
-  "version": 3,
+  "version": 4,
   "weldedSurface": "kfx-contract",
   "description": "Single source for KFX package manifests, discovery rules, trust inputs, and build detection.",
   "contractSchema": {
@@ -551,6 +551,18 @@
           },
           "policies": {
             "$ref": "#/$defs/nonEmptyContentRefs"
+          }
+        }
+      },
+      "kfd3": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "collaboration"
+        ],
+        "properties": {
+          "collaboration": {
+            "$ref": "#/$defs/contentRef"
           }
         }
       },

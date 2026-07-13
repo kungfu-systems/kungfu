@@ -555,6 +555,12 @@
     },
     {
       "apiId": "kungfu.profile.source",
+      "name": "kungfu profile collaboration <source> --json",
+      "maturity": "experimental",
+      "purpose": "Inspect the content-bound Human and Agent collaboration declaration, closure root, constraints, known limits, and qualification boundary."
+    },
+    {
+      "apiId": "kungfu.profile.source",
       "name": "kungfu profile qualify <source> --json",
       "maturity": "experimental",
       "purpose": "Run only the installed source-contract, content-closure, and runtime-contract qualification checks."
@@ -612,6 +618,60 @@
       "name": "kungfu profile invoke <source> <action> [--execute --plan-file <plan.json> --authorization-file <answer.json>] --json",
       "maturity": "experimental",
       "purpose": "Plan first, then invoke a supported confined Profile action with freshness and authorization checks."
+    },
+    {
+      "apiId": "kungfu.profile.application",
+      "name": "kungfu profile application <source> --json",
+      "maturity": "experimental",
+      "purpose": "Project the content-bound generic Human/Agent application model for one Profile."
+    },
+    {
+      "apiId": "kungfu.profile.application",
+      "name": "kungfu profile intent inspect <source> <intent-id> --json",
+      "maturity": "experimental",
+      "purpose": "Inspect one declared intent, its view, and exact Profile revision cut."
+    },
+    {
+      "apiId": "kungfu.profile.application",
+      "name": "kungfu profile intent advise <source> <intent-id> --json",
+      "maturity": "experimental",
+      "purpose": "Project current constraints, known limits, capabilities, and preconditions without mutating state."
+    },
+    {
+      "apiId": "kungfu.profile.application",
+      "name": "kungfu profile intent plan <source> <intent-id> --json",
+      "maturity": "experimental",
+      "purpose": "Preview an intent bound to the Profile root, collaboration root, revision, action, and decision card."
+    },
+    {
+      "apiId": "kungfu.profile.application",
+      "name": "kungfu profile intent authorize <source> <intent-id> --expected-plan-id <id> --choice approve --authorized-by <actor> --json",
+      "maturity": "experimental",
+      "purpose": "Re-plan, authorize, execute, emit a receipt, and verify the same exact intent reviewed by Human or Agent clients."
+    },
+    {
+      "apiId": "kungfu.profile.application",
+      "name": "kungfu profile intent apply <plan.json> --authorization-file <answer.json> --json",
+      "maturity": "experimental",
+      "purpose": "Execute an authorized intent plan only while its Profile, collaboration, closure, revision, action, and input identities remain current."
+    },
+    {
+      "apiId": "kungfu.profile.application",
+      "name": "kungfu profile intent verify <source> <receipt.json> --json",
+      "maturity": "experimental",
+      "purpose": "Verify an execution receipt against the current Profile and collaboration closures while preserving the domain-truth known limit."
+    },
+    {
+      "apiId": "kungfu.profile.kfd3-qualification",
+      "name": "kungfu profile kfd3-qualify <source> --json",
+      "maturity": "experimental",
+      "purpose": "Audit the active Profile's public closure, custom-view no-bypass boundary, and dual-client exact plans, then emit a Kungfu-owned KFD-3 receipt and witness."
+    },
+    {
+      "apiId": "kungfu.profile.kfd3-qualification",
+      "name": "kungfu profile kfd3-verify <source> <receipt.json> --json",
+      "maturity": "experimental",
+      "purpose": "Re-run qualification and reject a stale or tampered receipt or witness."
     },
     {
       "apiId": "kungfu.profile.manager",

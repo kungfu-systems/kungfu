@@ -49,6 +49,10 @@ export type {
   QueryResultSchema,
   QueryViewSpec,
   ManagedProfile,
+  ProfileApplicationProjection,
+  ProfileKfd3QualificationReceipt,
+  ProfileKfd3Verification,
+  ProfileIntentPlan,
   ProfileLifecyclePlan,
   ProfileManagerProjection,
   SavedQueryCatalog,
@@ -252,6 +256,10 @@ export type KfxProfileSuite = {
     purposes: string[];
     policies: KfxProfileSuiteContentRef[];
   };
+  // Optional because existing Profile Suites remain valid KFD-1/KFD-2
+  // closures. Only Profiles that bind this facet can request KFD-3
+  // qualification from the runtime.
+  kfd3?: { collaboration: KfxProfileSuiteContentRef };
   actions: { registry: KfxProfileSuiteContentRef };
   views: { registry: KfxProfileSuiteContentRef };
   migrations: { registry: KfxProfileSuiteContentRef };

@@ -73,6 +73,114 @@ export type ProfileManagerProjection = {
   knownLimits: string[];
 };
 
+export type ProfileApplicationIntent = {
+  id: string;
+  title: string;
+  actionId: string;
+  inspectViewId: string;
+  verifyViewId: string;
+  requiredAuthority: string;
+  requiredCapabilities: string[];
+  missingCapabilities: string[];
+  material: true;
+  action: Record<string, unknown>;
+  inspectView: ProfileView;
+  verifyView: ProfileView;
+};
+
+export type ProfileApplicationProjection = {
+  schema: 'kungfu.profile-application/v1';
+  profileId: string;
+  profileSuiteRoot: string;
+  collaborationRoot: string;
+  closureRoot: string;
+  source: string;
+  activeExactRoot: boolean;
+  profileRevision: number | null;
+  grantedCapabilities: string[];
+  value: {
+    summary: string;
+    participantBenefits: Array<Record<string, unknown>>;
+  };
+  participants: Array<{
+    id: string;
+    kind: 'human' | 'agent' | 'operator' | 'service';
+    title: string;
+    authorityClasses: string[];
+  }>;
+  constraints: Array<Record<string, unknown>>;
+  knownLimits: Array<Record<string, unknown>>;
+  intents: ProfileApplicationIntent[];
+  presentation: { mode: 'generic' };
+  protocol: string[];
+  qualified: boolean;
+  qualification: {
+    qualified: boolean;
+    status: 'not-qualified' | 'qualification-failed' | 'qualified';
+    reason?: string;
+    receiptId?: string;
+    witnessId?: string;
+    evidenceScope?: string[];
+    diagnosis?: Record<string, unknown>;
+  };
+};
+
+export type ProfileKfd3QualificationReceipt = {
+  schema: 'kungfu.profile-kfd3-qualification-receipt/v1';
+  receiptId: string;
+  profileId: string;
+  profileSuiteRoot: string;
+  collaborationRoot: string;
+  closureRoot: string;
+  profileRevision: number;
+  qualified: true;
+  evidenceScope: string[];
+  witness: {
+    schema: 'kungfu.profile-kfd3-witness/v1';
+    witnessId: string;
+    qualificationReceiptId: string;
+    qualified: true;
+  };
+};
+
+export type ProfileKfd3Verification = {
+  schema: 'kungfu.profile-kfd3-verification/v1';
+  profileId: string;
+  profileSuiteRoot: string;
+  receiptId: string;
+  witnessId: string;
+  verified: true;
+};
+
+export type ProfileIntentPlan = {
+  schema: 'kungfu.profile-intent-plan/v1';
+  planId: string;
+  profileSuiteRoot: string;
+  collaborationRoot: string;
+  closureRoot: string;
+  intentId: string;
+  actionPlanId: string;
+  source: string;
+  actionPlan: Record<string, unknown>;
+  decisionCard: Record<string, unknown>;
+  protocolStage: 'preview';
+};
+
+export type ProfileIntentReceipt = {
+  schema: 'kungfu.profile-intent-receipt/v1';
+  receiptId: string;
+  planId: string;
+  actionPlanId: string;
+  intentId: string;
+  verified: false;
+  executionReceiptVerified: boolean;
+  verification: {
+    schema: 'kungfu.profile-intent-verification/v1';
+    receiptId: string;
+    verified: true;
+  };
+};
+
 export type ProfileSourceDiscovery = {
   schema: 'kungfu.profile-source-discovery/v1';
   profileId: string;
@@ -130,6 +238,28 @@ export type Profile = {
   discoverAsync: (profileId: string) => Promise<ProfileSourceDiscovery>;
   manager: () => ProfileManagerProjection;
   managerAsync: () => Promise<ProfileManagerProjection>;
+  application: (source: string) => ProfileApplicationProjection;
+  applicationAsync: (source: string) => Promise<ProfileApplicationProjection>;
+  qualifyKfd3: (source: string) => ProfileKfd3QualificationReceipt;
+  qualifyKfd3Async: (
+    source: string,
+  ) => Promise<ProfileKfd3QualificationReceipt>;
+  verifyKfd3Async: (
+    source: string,
+    receiptPath: string,
+  ) => Promise<ProfileKfd3Verification>;
+  intentPlan: (source: string, intentId: string) => ProfileIntentPlan;
+  intentPlanAsync: (
+    source: string,
+    intentId: string,
+  ) => Promise<ProfileIntentPlan>;
+  authorizeIntentAsync: (
+    source: string,
+    intentId: string,
+    expectedPlanId: string,
+    choice: 'approve' | 'deny',
+    authorizedBy: string,
+  ) => Promise<ProfileIntentReceipt>;
   catalog: (
     source: string,
     requireActive?: boolean,
@@ -223,6 +353,39 @@ export function openProfile(options: OpenProfileOptions): Profile {
       runAsync<ProfileSourceDiscovery>(['discover', profileId]),
     manager: () => run<ProfileManagerProjection>(['manager']),
     managerAsync: () => runAsync<ProfileManagerProjection>(['manager']),
+    application: (source) =>
+      run<ProfileApplicationProjection>(['application', source]),
+    applicationAsync: (source) =>
+      runAsync<ProfileApplicationProjection>(['application', source]),
+    qualifyKfd3: (source) =>
+      run<ProfileKfd3QualificationReceipt>(['kfd3-qualify', source]),
+    qualifyKfd3Async: (source) =>
+      runAsync<ProfileKfd3QualificationReceipt>(['kfd3-qualify', source]),
+    verifyKfd3Async: (source, receiptPath) =>
+      runAsync<ProfileKfd3Verification>(['kfd3-verify', source, receiptPath]),
+    intentPlan: (source, intentId) =>
+      run<ProfileIntentPlan>(['intent', 'plan', source, intentId]),
+    intentPlanAsync: (source, intentId) =>
+      runAsync<ProfileIntentPlan>(['intent', 'plan', source, intentId]),
+    authorizeIntentAsync: (
+      source,
+      intentId,
+      expectedPlanId,
+      choice,
+      authorizedBy,
+    ) =>
+      runAsync<ProfileIntentReceipt>([
+        'intent',
+        'authorize',
+        source,
+        intentId,
+        '--expected-plan-id',
+        expectedPlanId,
+        '--choice',
+        choice,
+        '--authorized-by',
+        authorizedBy,
+      ]),
     catalog: (source, requireActive = false) =>
       run<ProfileCompositionCatalog>(catalogArgs(source, requireActive)),
     catalogAsync: (source, requireActive = false) =>

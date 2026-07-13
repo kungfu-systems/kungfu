@@ -170,8 +170,9 @@ typedef int32_t(KF_EMBEDDING_CALL *kf_embedding_reader_read_batch_v1_fn)(kf_embe
 typedef int32_t(KF_EMBEDDING_CALL *kf_embedding_reader_release_batch_v1_fn)(kf_embedding_reader *reader,
                                                                             uint64_t token);
 typedef int32_t(KF_EMBEDDING_CALL *kf_embedding_reader_close_v1_fn)(kf_embedding_reader *reader);
-typedef int32_t(KF_EMBEDDING_CALL *kf_embedding_storage_fsck_v1_fn)(
-    kf_embedding_context *context, const kf_embedding_storage_fsck_request_v1 *request, kf_embedding_report_v1 *out_report);
+typedef int32_t(KF_EMBEDDING_CALL *kf_embedding_storage_fsck_v1_fn)(kf_embedding_context *context,
+                                                                    const kf_embedding_storage_fsck_request_v1 *request,
+                                                                    kf_embedding_report_v1 *out_report);
 typedef int32_t(KF_EMBEDDING_CALL *kf_embedding_report_release_v1_fn)(kf_embedding_report_v1 *report);
 
 typedef struct kf_embedding_api_v1 {

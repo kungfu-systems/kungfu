@@ -258,12 +258,12 @@ const kf_embedding_api_v1 API_V1 = {KF_EMBEDDING_ABI_V1, sizeof(kf_embedding_api
 
 constexpr uint64_t CAPABILITIES_V2 = CAPABILITIES | KF_EMBEDDING_CAP_STORAGE_DIAGNOSTICS;
 
-const kf_embedding_api_v2 API_V2 = {KF_EMBEDDING_ABI_V2, sizeof(kf_embedding_api_v2),
-                                    CAPABILITIES_V2,     context_open,
+const kf_embedding_api_v2 API_V2 = {KF_EMBEDDING_ABI_V2,  sizeof(kf_embedding_api_v2),
+                                    CAPABILITIES_V2,      context_open,
                                     context_capabilities, context_close,
-                                    reader_open,         reader_read_batch,
+                                    reader_open,          reader_read_batch,
                                     reader_release_batch, reader_close,
-                                    storage_fsck,        report_release};
+                                    storage_fsck,         report_release};
 
 } // namespace
 
