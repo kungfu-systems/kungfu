@@ -17,14 +17,14 @@ creating a second run-, session-, library-, or website-owned truth.
 
 ## Start with current authority
 
-- [The Episode](../../../docs/the-episode.md) — public execution model.
-- [Episode Object Model](../../../docs/episode-object-model.md) — lifecycle,
+- [The Episode](../../../docs/concepts/the-episode.md) — public execution model.
+- [Episode Object Model](../../../docs/concepts/episode-object-model.md) — lifecycle,
   manifest authority, portability, and maturity.
-- [Event Model](../../../docs/event-model.md) — journal, frames, schemas, and
+- [Event Model](../../../docs/architecture/event-model.md) — journal, frames, schemas, and
   Replay mechanics.
-- [Product Layers](../../../docs/product-layers.md) — the staged `.kungfu`
+- [Product Layers](../../../docs/concepts/product-layers.md) — the staged `.kungfu`
   format/spec product boundary.
-- [Known Limits](../../../docs/known-limits.md) — absent release and
+- [Known Limits](../../../docs/qualification/known-limits.md) — absent release and
   compatibility guarantees.
 
 ## Bundle inputs

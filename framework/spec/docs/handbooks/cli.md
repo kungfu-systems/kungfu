@@ -3,7 +3,7 @@
 > **Pre-release source guidance.** Public CLI artifacts are not yet a polished
 > one-command install. Command names below are backed by the current source;
 > availability and release guarantees remain scoped by
-> [Known Limits](../../../../docs/known-limits.md).
+> [Known Limits](../../../../docs/qualification/known-limits.md).
 
 The `kungfu` command operates the runtime fact ledger. Episode is the semantic
 object; `trace` and `rewind --run` are current Agent Work profile adapters, not
@@ -36,7 +36,7 @@ kungfu rewind verify --run <run-id>
 ```
 
 Rewind is forensic reopening. It never silently repeats external side effects.
-See [Rewind an Episode](../../../../docs/rewind.md) for the distinction between
+See [Rewind an Episode](../../../../docs/guides/rewind.md) for the distinction between
 Replay, Rewind, Recovery, and explicit re-execution.
 
 The former `kungfu journal` maintenance command is retired. Storage, Episode,

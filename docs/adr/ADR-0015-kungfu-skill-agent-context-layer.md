@@ -24,7 +24,7 @@ sensitivity: public
 - Related: ADR-0011 defines the v4 capability SDK contract and runtime-tier
   declaration. ADR-0013 defines extension isolation and the trusted channel on
   the runtime plane. ADR-0014 defines the uniform capability surface across
-  extension trust tiers. `docs/extensions.md` defines kfx packages, facets and
+  extension trust tiers. `docs/architecture/extensions.md` defines kfx packages, facets and
   suites; this ADR defines the layer above them.
 
 ## Context

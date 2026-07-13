@@ -25,7 +25,7 @@ last_reviewed: 2026-07-13
 - Related: [ADR-0009](ADR-0009-load-bearing-self-bootstrap.md) makes the
   adoption path the validation path; [ADR-0010](ADR-0010-adopt-kfd-1-release-versioning.md)
   binds welded surfaces to release versioning; the
-  [document metadata contract](../document-metadata.md) separates
+  [document metadata contract](../development/document-metadata.md) separates
   decision, implementation, and review state.
 
 ## Context

@@ -21,7 +21,7 @@ sensitivity: public
   source sync over location and channel. ADR-0033 defines Episode as the
   first-class causal segment object. ADR-0034 defines the yijinjing-backed
   Episode manifest journal. ADR-0035 defines workspace-local `.kungfu/` as the
-  default fact-ledger home. [`docs/runtime-service.md`](../runtime-service.md)
+  default fact-ledger home. [`docs/architecture/runtime-service.md`](../architecture/runtime-service.md)
   documents the operator-facing service surface.
 
 > Historical note: this decision established the two-level process topology.

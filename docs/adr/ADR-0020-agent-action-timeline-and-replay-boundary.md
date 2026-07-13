@@ -18,8 +18,8 @@ sensitivity: public
   source sync, payload evidence, and future replay modes.
 - Related: ADR-0018 defines the runtime storage service. ADR-0019 defines
   Git-like source sync over Kungfu `location` and `channel`.
-  [`docs/event-model.md`](../event-model.md) describes frames,
-  causal links, and replay. [`docs/rewind.md`](../rewind.md)
+  [`docs/architecture/event-model.md`](../architecture/event-model.md) describes frames,
+  causal links, and replay. [`docs/guides/rewind.md`](../guides/rewind.md)
   describes the current pre-release record/open/verify workflow.
 
 ## Context

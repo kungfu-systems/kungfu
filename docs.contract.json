@@ -6,10 +6,17 @@
     "CONTRIBUTING.md",
     "docs/README.md",
     "docs/MAP.md",
-    "docs/the-episode.md",
-    "docs/vocabulary.md",
-    "docs/rewind.md",
-    "docs/known-limits.md"
+    "docs/architecture/README.md",
+    "docs/concepts/README.md",
+    "docs/development/README.md",
+    "docs/guides/README.md",
+    "docs/profiles/README.md",
+    "docs/qualification/README.md",
+    "docs/research/README.md",
+    "docs/concepts/the-episode.md",
+    "docs/concepts/vocabulary.md",
+    "docs/guides/rewind.md",
+    "docs/qualification/known-limits.md"
   ],
   "requiredPointers": [
     {
@@ -27,13 +34,57 @@
     {
       "from": "AGENTS.md",
       "to": "docs/MAP.md"
+    },
+    {
+      "from": "docs/README.md",
+      "to": "docs/architecture/README.md"
+    },
+    {
+      "from": "docs/README.md",
+      "to": "docs/concepts/README.md"
+    },
+    {
+      "from": "docs/README.md",
+      "to": "docs/development/README.md"
+    },
+    {
+      "from": "docs/README.md",
+      "to": "docs/guides/README.md"
+    },
+    {
+      "from": "docs/README.md",
+      "to": "docs/profiles/README.md"
+    },
+    {
+      "from": "docs/README.md",
+      "to": "docs/qualification/README.md"
+    },
+    {
+      "from": "docs/README.md",
+      "to": "docs/research/README.md"
     }
   ],
+  "hierarchy": {
+    "root": "docs",
+    "entryFiles": ["docs/README.md", "docs/MAP.md"],
+    "canonicalDirectories": [
+      "docs/adr",
+      "docs/architecture",
+      "docs/concepts",
+      "docs/development",
+      "docs/guides",
+      "docs/profiles",
+      "docs/qualification",
+      "docs/research",
+      "docs/shifu"
+    ],
+    "redirectDocumentType": "document-redirect"
+  },
   "publication": {
     "roots": ["README.md", "AGENTS.md", "CONTRIBUTING.md", "framework/spec/README.md"],
     "include": ["README.md", "AGENTS.md", "CONTRIBUTING.md", "docs", "framework/spec"],
     "allowedOrphans": [],
-    "allowedOrphanDocumentTypes": ["adr-redirect"]
+    "allowedOrphanDocumentTypes": ["adr-redirect", "document-redirect"]
   },
   "executableExamples": [
     {

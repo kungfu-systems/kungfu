@@ -28,7 +28,7 @@ A record's **Status** says where it stands:
 ADR frontmatter is the machine authority. The body status and this index are
 human-readable projections checked by `./shifu docs:check`. Decision state,
 implementation state, and review state are separate fields; see the
-[Document Metadata Contract](../document-metadata.md). Do not add
+[Document Metadata Contract](../development/document-metadata.md). Do not add
 compound implementation notes to the index Status column.
 
 All records in this directory carry equal governance weight. `ADR-*` identifies
@@ -145,6 +145,7 @@ implemented and qualified or explicitly waived for that release.
 | [0073](ADR-0073-buildchain-adr-release-admissibility.md) | accepted | Buildchain promotion is the settlement boundary for ADR implementation truth: dev declares bounded delivery, alpha settles qualified progress, and stable admits no unaccounted accepted decision |
 | [0074](ADR-0074-canonical-adr-authority-and-lifecycle-audit.md) | accepted | `docs/adr/` is the sole Core and Shifu decision authority, with typed redirects and executable lifecycle, evidence, and release audit |
 | [0075](ADR-0075-profile-level-kfd3-qualification.md) | accepted | conforming Profile Suites declare a content-bound collaboration facet; Kungfu projects and qualifies one shared Human/Agent protocol instead of making each Profile reimplement KFD-3 |
+| [0076](ADR-0076-documentation-directory-authority-and-compatibility-facade.md) | accepted | canonical public documentation is organized by maintenance authority; typed root redirects preserve inbound paths without becoming a second content authority |
 | [SHIFU-0001](SHIFU-ADR-0001-cache-profile-contract-and-ownership.md) | accepted | Cache profiles are Shifu-owned contracts; inventories project instances and Buildchain owns process |
 | [SHIFU-0002](SHIFU-ADR-0002-local-artifact-catalog-and-safe-promotion.md) | accepted | Shifu and Kungfu product artifacts share provenance-aware, Git-safe local promotion semantics |
 
@@ -303,7 +304,7 @@ implemented and qualified or explicitly waived for that release.
   `SHIFU-ADR-*` namespace in this same registry.
 - **Cross-cutting principle** — [0009](ADR-0009-load-bearing-self-bootstrap.md)
   (load-bearing self-bootstrap), which also names the general law that
-  [`docs/architecture.md` § The build dogfoods the SDK](../architecture.md)
+  [`docs/architecture/overview.md` § The build dogfoods the SDK](../architecture/overview.md)
   is one instance of, and
   [0049](ADR-0049-layer-complete-products-and-domain-neutral-core.md) (the
   independent adoption closure, downward dependency, layer-deletion, and
@@ -311,36 +312,36 @@ implemented and qualified or explicitly waived for that release.
 
 ## Related design documents
 
-- [`docs/architecture.md`](../architecture.md) — how the repository
+- [`docs/architecture/overview.md`](../architecture/overview.md) — how the repository
   is layered and the principle that shapes it.
-- [`docs/version-release-design.md`](../version-release-design.md) —
+- [`docs/development/version-release-design.md`](../development/version-release-design.md) —
   the versioning / release mechanism rationale, and the compatibility invariant
   below the tag.
-- [`docs/skills.md`](../skills.md) — the user-facing and
+- [`docs/architecture/skills.md`](../architecture/skills.md) — the user-facing and
   implementation-facing design for Kungfu Skills.
-- [`docs/runtime-storage-service.md`](../runtime-storage-service.md) —
+- [`docs/architecture/runtime-storage-service.md`](../architecture/runtime-storage-service.md) —
   the staged storage command surface, fsck/export path, and source-adapter
   direction.
-- [`docs/episode-object-model.md`](../episode-object-model.md) —
+- [`docs/concepts/episode-object-model.md`](../concepts/episode-object-model.md) —
   the Episode object model, causal closure invariant, and storage migration
   direction.
-- [`docs/journal-page-sizing-and-episode-reclamation.md`](../journal-page-sizing-and-episode-reclamation.md) —
+- [`docs/research/journal-page-sizing-and-episode-reclamation.md`](../research/journal-page-sizing-and-episode-reclamation.md) —
   the design judgment constraining the future Episode-aware physical layout:
   page-size variation only for max-frame, packing over per-Episode pages, and
   tombstone-then-cold-path GC (ADR-0033/0034, ADR-0055/0056).
-- [`docs/episode-atomicity-qualification.md`](../episode-atomicity-qualification.md) —
+- [`docs/qualification/episode-atomicity-qualification.md`](../qualification/episode-atomicity-qualification.md) —
   the evolving semantic oracle, fault matrix, scale tiers, metrics, and Episode
   Trust Report design required by ADR-0042.
-- [`docs/querying-runtime-facts.md`](../querying-runtime-facts.md) —
+- [`docs/guides/querying-runtime-facts.md`](../guides/querying-runtime-facts.md) —
   the staged human and agent service surface defined by ADR-0048.
-- [`docs/fact-surface-admission.md`](../fact-surface-admission.md) —
+- [`docs/guides/fact-surface-admission.md`](../guides/fact-surface-admission.md) —
   how product and user facts enter a KFD-declared contract world and become
   eligible for historical query and trust assessment.
-- [`docs/kfd2-trust-assessment.md`](../kfd2-trust-assessment.md) —
+- [`docs/qualification/kfd2-trust-assessment.md`](../qualification/kfd2-trust-assessment.md) —
   when KFD-2 runs, how the workspace coordinator coordinates it, and how Desktop and
   embedded executors share one contract.
-- [`docs/product-layers.md`](../product-layers.md) — independent
+- [`docs/concepts/product-layers.md`](../concepts/product-layers.md) — independent
   adoption products and their qualification boundaries.
-- [`docs/domain-horizons.md`](../domain-horizons.md) — the
+- [`docs/concepts/domain-horizons.md`](../concepts/domain-horizons.md) — the
   quantitative-trading, agent-runtime, and games/virtual-world architecture
   horizons.

@@ -22,9 +22,9 @@ function fixture() {
     path.join(os.tmpdir(), 'kungfu-vocabulary-contract-'),
   );
   roots.push(root);
-  fs.mkdirSync(path.join(root, 'docs'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'docs', 'concepts'), { recursive: true });
   fs.writeFileSync(
-    path.join(root, 'docs', 'vocabulary.md'),
+    path.join(root, 'docs', 'concepts', 'vocabulary.md'),
     '# Vocabulary\n\n## Flagship object\n\n### Episode\n\n## Operations\n\n### Rewind\n\n## Domain profiles\n',
   );
   fs.writeFileSync(path.join(root, 'README.md'), '# Home\n');
@@ -34,7 +34,7 @@ function fixture() {
 function registry() {
   return {
     schemaVersion: 1,
-    canonicalReference: 'docs/vocabulary.md',
+    canonicalReference: 'docs/concepts/vocabulary.md',
     layers: [
       {
         id: 'flagship',
@@ -104,7 +104,7 @@ test('accepts a registry aligned with the public vocabulary reference', () => {
 test('rejects canonical heading drift', () => {
   const root = fixture();
   fs.writeFileSync(
-    path.join(root, 'docs', 'vocabulary.md'),
+    path.join(root, 'docs', 'concepts', 'vocabulary.md'),
     '# Vocabulary\n\n## Flagship object\n\n### Run\n\n## Operations\n\n### Rewind\n\n## Domain profiles\n',
   );
   const findings = validateVocabularyContract({ root, registry: registry() });

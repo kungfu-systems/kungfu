@@ -140,15 +140,44 @@
       ]
     },
     {
+      "id": "document-redirect",
+      "metadataMode": "inline",
+      "patterns": ["^docs/(?!README\\.md$|MAP\\.md$)[^/]+\\.md$"],
+      "required": [
+        "metadata_schema",
+        "doc_type",
+        "document_status",
+        "review_state",
+        "sensitivity",
+        "moved_to"
+      ],
+      "constants": {
+        "metadata_schema": "kungfu.document-metadata/v1",
+        "doc_type": "document-redirect",
+        "document_status": "deprecated",
+        "sensitivity": "public"
+      },
+      "enums": {
+        "review_state": ["self-reviewed", "maintainer-reviewed"]
+      },
+      "forbidden": [
+        "status",
+        "decision_status",
+        "implementation_status",
+        "adr_id",
+        "source_level"
+      ]
+    },
+    {
       "id": "engineering-evidence",
       "metadataMode": "inline",
       "files": [
         "crates/host-spike/README.md",
-        "docs/episode-atomicity-qualification.md",
-        "docs/libkungfu-embedding-membrane-spike.md",
-        "docs/libwasm-embedding-membrane-spike.md",
-        "docs/rust-host-spike.md",
-        "docs/single-host-performance-qualification.md",
+        "docs/qualification/episode-atomicity-qualification.md",
+        "docs/research/libkungfu-embedding-membrane-spike.md",
+        "docs/research/libwasm-embedding-membrane-spike.md",
+        "docs/research/rust-host-spike.md",
+        "docs/qualification/single-host-performance-qualification.md",
         "framework/core/docs/carrier-type-registry.md",
         "framework/core/docs/qualification/mmap-performance.md",
         "framework/core/docs/strong-durability-and-crash-recovery-design.md",

@@ -85,7 +85,7 @@ def _docs_context():
             },
             {
                 "name": "agent-first global config",
-                "url": "https://github.com/kungfu-tech/kungfu/blob/dev/v3/docs/config.md",
+                "url": "https://github.com/kungfu-tech/kungfu/blob/dev/v3/docs/guides/config.md",
             },
         ],
     }

@@ -5,9 +5,9 @@
 > bundled only so the manifest/aggregation pipeline has explicit versioned
 > input. Do not implement a reader or make a compatibility claim from this
 > prose. Current semantic authority lives in
-> [`docs/the-episode.md`](../../../docs/the-episode.md),
-> [`docs/episode-object-model.md`](../../../docs/episode-object-model.md), and
-> [`docs/event-model.md`](../../../docs/event-model.md). A future format
+> [`docs/concepts/the-episode.md`](../../../docs/concepts/the-episode.md),
+> [`docs/concepts/episode-object-model.md`](../../../docs/concepts/episode-object-model.md), and
+> [`docs/architecture/event-model.md`](../../../docs/architecture/event-model.md). A future format
 > decision must reconcile and replace this draft before the format is promoted
 > as normative.
 

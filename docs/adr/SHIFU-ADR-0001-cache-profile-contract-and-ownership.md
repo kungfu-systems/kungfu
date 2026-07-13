@@ -21,7 +21,7 @@ last_reviewed: 2026-07-12
 - Scope: Shifu execution and toolchain cache policy
 - Related: Kungfu Core [ADR-0044](./ADR-0044-shifu-delegation-protocol.md)
   and the KFD-1 welded `shifu-launcher` surface in
-  [`docs/versioning.md`](../versioning.md)
+  [`docs/development/versioning.md`](../development/versioning.md)
 
 ## Context
 

@@ -6,7 +6,7 @@ the ones the app ships with — is a package under `extensions/`, independently
 developed, built, verified and distributed. This page is the internal
 contract note for that GUI split. For the broader package topology — runtime
 facets, source-authority trust, the OS-sandbox plane, and the proposed service
-facet — see [`../../../docs/kfx-topology.md`](../../../docs/kfx-topology.md).
+facet — see [`../../../docs/architecture/kfx-topology.md`](../../../docs/architecture/kfx-topology.md).
 The kfx contract is deliberately NOT a published API yet: it grows from real
 consumers (the shipped packages are the first ones), and it is kept
 externalizable so publishing it later is a move, not a rewrite.
@@ -103,7 +103,7 @@ kfx manager and Status are ordinary view packages marked `system: true`
 everything else. Parts of a composite module do not wire to each other —
 they share journal facts; a suite carries identity and versioning, never RPC
 topology. The word *bundle* is reserved for the self-describing trace/export
-package (see `docs/rewind.md`) and must not be used for kfx groups.
+package (see `docs/guides/rewind.md`) and must not be used for kfx groups.
 
 ## Profiles (v1)
 
@@ -124,7 +124,7 @@ runtime, and injects the adapter source into the traced child, where the
 dependency-free capture hook loads it. So "installable kfx package" spans both
 planes — a GUI view and a capture-side adapter share one package model,
 manifest, extension root and install lifecycle, but different loaders. Full
-contract in [`../../../docs/extensions.md`](../../../docs/extensions.md);
+contract in [`../../../docs/architecture/extensions.md`](../../../docs/architecture/extensions.md);
 `extensions/langchain-adapter` is the first adapter facet.
 
 ## Shell chrome

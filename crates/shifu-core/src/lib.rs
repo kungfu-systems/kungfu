@@ -22,7 +22,7 @@
 //               human (or explicit verb) decision, never a doctor side effect.
 //
 // std-only on purpose, like the launcher: the helper of last resort cannot
-// afford dependencies of its own (docs/rust-adoption.md).
+// afford dependencies of its own (docs/development/rust-adoption.md).
 
 pub mod bootstrap;
 pub mod host;

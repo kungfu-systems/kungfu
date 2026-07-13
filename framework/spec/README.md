@@ -13,9 +13,9 @@ before any content exists.
 > draft and is not the current normative `.kungfu` semantic contract. It
 > predates the Episode-centered object model and is retained as an explicit
 > draft input, not as implementation guidance. Current public semantics live in
-> [`docs/the-episode.md`](../../docs/the-episode.md),
-> [`docs/episode-object-model.md`](../../docs/episode-object-model.md), and
-> [`docs/event-model.md`](../../docs/event-model.md).
+> [`docs/concepts/the-episode.md`](../../docs/concepts/the-episode.md),
+> [`docs/concepts/episode-object-model.md`](../../docs/concepts/episode-object-model.md), and
+> [`docs/architecture/event-model.md`](../../docs/architecture/event-model.md).
 
 ## What this package is
 

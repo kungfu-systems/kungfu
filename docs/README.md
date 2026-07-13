@@ -9,37 +9,51 @@ This page is the curated route through the documentation. It is intentionally
 shorter than the exhaustive [Documentation Map](MAP.md): choose the route that
 matches your job, then go deeper only when you need to.
 
+## Browse by responsibility
+
+| Section | What it owns |
+| --- | --- |
+| [Concepts](concepts/README.md) | Episode, vocabulary, principles, implementation concepts, and product layers |
+| [Guides](guides/README.md) | task-oriented selection, operation, inspection, and extension |
+| [Architecture](architecture/README.md) | current runtime, service, adapter, SDK, and extension structure |
+| [Profiles](profiles/README.md) | concrete agent-work and application profiles above the neutral core |
+| [Qualification](qualification/README.md) | guarantees, limits, retained evidence, and institutional adoption |
+| [Development](development/README.md) | build, toolchain, versioning, release, and documentation governance |
+| [Research](research/README.md) | measured options and spikes that inform, but do not replace, decisions |
+| [Architecture Decisions](adr/README.md) | accepted and proposed load-bearing decisions with lifecycle evidence |
+| [Shifu](shifu/README.md) | development entrypoint and cache-profile contracts |
+
 ## Understand Kungfu
 
 Read these in order for the product model:
 
-1. [The Episode](the-episode.md) — why real-world work needs a stable object
+1. [The Episode](concepts/the-episode.md) — why real-world work needs a stable object
    beyond a run, process, log, trace, workflow, or chat session.
-2. [Facts Before Trust](facts-before-trust.md) — why evidence, responsibility,
+2. [Facts Before Trust](concepts/facts-before-trust.md) — why evidence, responsibility,
    and local proof come before control decisions.
-3. [Design Philosophy](design-philosophy.md) — the principles and trade-offs
+3. [Design Philosophy](concepts/design-philosophy.md) — the principles and trade-offs
    behind the architecture.
-4. [Vocabulary Reference](vocabulary.md) — canonical definitions for Episode,
+4. [Vocabulary Reference](concepts/vocabulary.md) — canonical definitions for Episode,
    Fact, Artifact, Receipt, Cut, Watermark, Projection, Timeline, Claim, Proof,
    TrustReport, Decision, Replay, Rewind, and Recovery.
-5. [Known Limits](known-limits.md) — what is not yet implemented, qualified, or
+5. [Known Limits](qualification/known-limits.md) — what is not yet implemented, qualified, or
    released.
 
-Use [Implementation Concepts](concepts.md) when you need repository and runtime
+Use [Implementation Concepts](concepts/implementation-concepts.md) when you need repository and runtime
 names such as `kungfu`, `libkungfu`, `yijinjing`, `kfx`, Hana POD, and
 FlatBuffers. Those terms describe the implementation; they do not replace the
 public execution vocabulary.
 
 ## Try or operate Kungfu
 
-- [Choose Your Kungfu](choose-your-kungfu.md) — select the smallest complete
+- [Choose Your Kungfu](guides/choose-your-kungfu.md) — select the smallest complete
   product surface for your job.
-- [Rewind an Episode](rewind.md) — distinguish Rewind, Replay, Recovery, and
+- [Rewind an Episode](guides/rewind.md) — distinguish Rewind, Replay, Recovery, and
   explicit re-execution; use the current agent-work capture slice.
-- [Configuration](config.md) — understand workspace, user, and machine data
+- [Configuration](guides/config.md) — understand workspace, user, and machine data
   homes.
-- [Debugging](debugging.md) — localize failures in the runtime and build.
-- [Python Environments](python-environments.md) — manage packages inside the
+- [Debugging](guides/debugging.md) — localize failures in the runtime and build.
+- [Python Environments](guides/python-environments.md) — manage packages inside the
   assembled runtime.
 
 The installed runtime is also self-describing through `kungfu agent brief`,
@@ -47,40 +61,40 @@ The installed runtime is also self-describing through `kungfu agent brief`,
 
 ## Embed or extend Kungfu
 
-- [Architecture](architecture.md) — runtime and repository layers.
-- [Event Model](event-model.md) — journal, frames, schema ownership, and Replay.
-- [Adapters](adapters.md) — C++, Python, Node, and framework boundaries.
-- [Product Layers](product-layers.md) — independent adoption and qualification
+- [Architecture](architecture/overview.md) — runtime and repository layers.
+- [Event Model](architecture/event-model.md) — journal, frames, schema ownership, and Replay.
+- [Adapters](architecture/adapters.md) — C++, Python, Node, and framework boundaries.
+- [Product Layers](concepts/product-layers.md) — independent adoption and qualification
   contracts.
-- [Extensions](extensions.md) and [kfx Topology](kfx-topology.md) — package,
+- [Extensions](architecture/extensions.md) and [kfx Topology](architecture/kfx-topology.md) — package,
   trust, host, and capability boundaries.
-- [KFX Profile Suite Lifecycle](profile-lifecycle.md) — content roots,
+- [KFX Profile Suite Lifecycle](profiles/profile-lifecycle.md) — content roots,
   append-only lifecycle facts, plans, authorization, receipts, and current
   product limits for user-defined domain Profiles.
-- [Agent-first Profile Authoring](profile-authoring.md) — scaffold, build,
+- [Agent-first Profile Authoring](profiles/profile-authoring.md) — scaffold, build,
   compose, assess, export, import, and operate a user-specified KFD-1/KFD-2
   Profile without rebuilding Kungfu.
-- [Kungfu Skills](skills.md) — the agent-facing capability layer above `kfx`.
-- [Querying Runtime Facts](querying-runtime-facts.md) — Cuts, lineage,
+- [Kungfu Skills](architecture/skills.md) — the agent-facing capability layer above `kfx`.
+- [Querying Runtime Facts](guides/querying-runtime-facts.md) — Cuts, lineage,
   historical queries, and proof-carrying results.
-- [Bringing Domain Facts Into Kungfu](fact-surface-admission.md) — declaration,
+- [Bringing Domain Facts Into Kungfu](guides/fact-surface-admission.md) — declaration,
   admission, correction, and trust eligibility.
 
 ## Evaluate Kungfu for institutional use
 
 Start with the decision document, then follow its evidence chain:
 
-1. [Single-host Institutional Trust Profile](single-host-institutional-trust.md)
+1. [Single-host Institutional Trust Profile](qualification/single-host-institutional-trust.md)
    — current adoption status, deployment envelope, evidence, controls, and
    operator responsibilities.
-2. [Strong Durability and Crash Recovery](durability-and-crash-recovery.md) —
+2. [Strong Durability and Crash Recovery](qualification/durability-and-crash-recovery.md) —
    the design, current stage, Receipts, Watermarks, and power-loss non-claims.
-3. [Contracts](contracts.md) — verifiable guarantees and their maturity.
-4. [Known Limits](known-limits.md) — unresolved qualification and release gaps.
-5. [Single-host End-to-End Performance Qualification](single-host-performance-qualification.md)
+3. [Contracts](qualification/contracts.md) — verifiable guarantees and their maturity.
+4. [Known Limits](qualification/known-limits.md) — unresolved qualification and release gaps.
+5. [Single-host End-to-End Performance Qualification](qualification/single-host-performance-qualification.md)
    — the release gate that preserves visibility, durability, recovery, and
    meaning under load.
-6. [Episode Atomicity Qualification](episode-atomicity-qualification.md) — the
+6. [Episode Atomicity Qualification](qualification/episode-atomicity-qualification.md) — the
    fault and load evidence contract for Episode closure.
 
 Kungfu v4 currently supports engineering evaluation and controlled shadow use
@@ -91,16 +105,16 @@ design target into a production guarantee.
 
 - [Contributing](../CONTRIBUTING.md) — build, style, tests, DCO, and pull
   requests.
-- [Buildchain](buildchain.md) and [C++ Toolchain](cpp-toolchain.md) — source to
+- [Buildchain](development/buildchain.md) and [C++ Toolchain](development/cpp-toolchain.md) — source to
   binary and the native compiler contract.
-- [Rust Adoption](rust-adoption.md) — where Rust is an option and where it is
+- [Rust Adoption](development/rust-adoption.md) — where Rust is an option and where it is
   not the migration target.
-- [Versioning](versioning.md) and
-  [Version/Release Design](version-release-design.md) — welded surfaces,
+- [Versioning](development/versioning.md) and
+  [Version/Release Design](development/version-release-design.md) — welded surfaces,
   channel intent, and release mechanics.
 - [Shifu Documentation](shifu/README.md) — development/build execution and
   versioned cache contracts.
-- [Document Metadata Contract](document-metadata.md) — reader-hidden public
+- [Document Metadata Contract](development/document-metadata.md) — reader-hidden public
   metadata, inline engineering evidence, lifecycle axes, and ADR projections.
 - [Architecture decisions](adr/) — one canonical registry for load-bearing
   Kungfu and Shifu decisions.
@@ -125,9 +139,9 @@ maturity; ADRs own why a load-bearing decision was made.
 
 Mission, Go, Cost/State/Proof, and Mission Control belong to the current Agent
 Work profile. They are important product-design terms, but they do not redefine
-the domain-neutral Episode core. See [Domain Horizons](domain-horizons.md),
-[Mission Control](mission-control.md), and
-[Mission Control Workspace Design](mission-control-workspaces.md).
+the domain-neutral Episode core. See [Domain Horizons](concepts/domain-horizons.md),
+[Mission Control](profiles/mission-control.md), and
+[Mission Control Workspace Design](profiles/mission-control-workspaces.md).
 
 Spike reports such as the Rust host and embedding-membrane studies are retained
 as research evidence. Read their resulting ADRs and current architecture docs
@@ -139,12 +153,18 @@ Use [MAP.md](MAP.md) when you need every question, keyword, planned document,
 or evidence route. The Map is optimized for lookup and audit, not for reading
 from top to bottom.
 
-Public document URLs remain stable in this documentation phase. Later physical
-reorganization should happen only with automated link checking, a compatibility
-path for existing URLs, and evidence that moving files improves discovery more
-than this curated hierarchy already does. When adding or changing a public
-claim, update its canonical document first, then this guide or the Map only if
-the reader route changes.
+Canonical documents live in the responsibility directories listed above.
+`docs/README.md` and `docs/MAP.md` are the only canonical Markdown entry files
+at the root. The former flat paths remain temporarily as typed compatibility
+redirects for existing inbound links; they carry no metadata or content
+authority, and canonical documents must link directly to canonical targets.
+
+Place a new document in the section that owns its long-term maintenance
+question, add it to that section's `README.md`, and update this guide or the Map
+only when the reader route changes. Do not add a new root-level canonical page.
+Research belongs in `research/` until an ADR or current architecture document
+adopts its result; profile-specific semantics belong in `profiles/`, not in the
+domain-neutral concepts layer.
 
 Repository validation makes this boundary executable. Run
 `./shifu docs:check` for Markdown structure, every local target and cross-file
@@ -155,7 +175,9 @@ Vocabulary reference and its machine-readable registry. Run
 retired positioning, preferred terms, and load-bearing guarantee language.
 Objective prose errors block pull requests through `docs:prose:required`;
 warning-level policy remains advisory until its false-positive behavior is
-qualified. `docs.contract.json` owns document topology,
+qualified. `docs.contract.json` owns the directory taxonomy, stable entry
+files, compatibility-document type, publication topology, and executable
+examples;
 [`document-metadata.contract.json`](document-metadata.contract.json) owns
 metadata routing and ADR projections;
 [`document-metadata.registry.json`](document-metadata.registry.json) keeps

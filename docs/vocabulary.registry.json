@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "canonicalReference": "docs/vocabulary.md",
+  "canonicalReference": "docs/concepts/vocabulary.md",
   "layers": [
     {
       "id": "flagship",

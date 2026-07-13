@@ -920,12 +920,12 @@
       "detected": true,
       "enforced": false,
       "sourcePath": "framework/gui/src/main/index.ts",
-      "artifactPath": "docs/runtime-service.md",
+      "artifactPath": "docs/architecture/runtime-service.md",
       "kfd1Basis": {
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
         "sourcePath": "framework/gui/src/main/index.ts",
-        "artifactPath": "docs/runtime-service.md",
-        "digest": "sha256:cdfc149ff0ae8a385d311acbe190017a109b51faa66f3eeced24ba05f7413844"
+        "artifactPath": "docs/architecture/runtime-service.md",
+        "digest": "sha256:f82def30b3959cb0ecc8982a980a33f91fe01d63d58374030fc3da83b2ece060"
       },
       "kfd2Trust": {
         "status": "release-passport-required",

@@ -16,7 +16,7 @@ sensitivity: public
 - Subsystem: whole repository (release lines, yijinjing schema layout, capability SDK, kfx contract, kfc CLI)
 - Related: generalizes [ADR-0008](ADR-0008-yijinjing-schema-layout-baseline.md)
   (the yijinjing schema layout as the true invariant) from one surface to a register of
-  surfaces; complements `docs/version-release-design.md` (the mechanism that
+  surfaces; complements `docs/development/version-release-design.md` (the mechanism that
   opens and maintains lines; KFD-1 decides *when* a line must or must not open).
 
 ## Decision
@@ -29,7 +29,7 @@ touches no registered surface is a patch regardless of size; an unclassifiable
 change means the register itself is deficient and must be fixed first.
 
 This repository's living register and decision log are kept in
-[`docs/versioning.md`](../versioning.md). This ADR is the
+[`docs/development/versioning.md`](../development/versioning.md). This ADR is the
 immutable adoption record; the rule text itself lives in the KFD registry and
 is not restated here.
 
@@ -54,7 +54,7 @@ covers all of them uniformly.
 - Feature volume no longer has version semantics: features ride patches on the
   current line unless a registered surface changed.
 - Line openings and register changes must be recorded in the decision log in
-  `docs/versioning.md`; patches stay silent by design.
+  `docs/development/versioning.md`; patches stay silent by design.
 
 ## Reversibility
 

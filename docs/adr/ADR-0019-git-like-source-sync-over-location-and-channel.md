@@ -18,7 +18,7 @@ sensitivity: public
   and export, `location` / `channel` runtime concepts, Atlas source adapter, and
   future remote Kungfu sync.
 - Related: ADR-0018 decides the local runtime storage service contract.
-  [`docs/runtime-storage-service.md`](../runtime-storage-service.md)
+  [`docs/architecture/runtime-storage-service.md`](../architecture/runtime-storage-service.md)
   is the companion reference page. The existing journal/event model documents
   frame `source`, `dest`, `initial_source`, `frame_uid`, and stream routing.
 

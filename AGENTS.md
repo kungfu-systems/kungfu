@@ -44,7 +44,7 @@ bootstraps the pinned toolchain automatically (node via
 [uv](https://docs.astral.sh/uv/), and Buildchain via `.buildchain-version`) into
 `~/.cache/kungfu`. An fnm / uv you
 already have on PATH is used as-is; Buildchain remains pin-first. See
-[`docs/rust-adoption.md`](docs/rust-adoption.md) for how the launcher works.
+[`docs/development/rust-adoption.md`](docs/development/rust-adoption.md) for how the launcher works.
 For versioned cache policy and machine-readable schema discovery, see
 [`docs/shifu/`](docs/shifu/). When a controller projects both
 `SHIFU_CACHE_PROFILE_REF` and `SHIFU_CACHE_PROFILE_DIGEST`, ordinary
@@ -103,7 +103,7 @@ the stable-admission obligation without publishing a release.
   declare a bounded `stage-ready` or `implemented` delivery against accepted
   ADRs; do not use commit messages as implementation authority. Alpha and
   stable promotion semantics live in
-  [`docs/version-release-design.md`](docs/version-release-design.md).
+  [`docs/development/version-release-design.md`](docs/development/version-release-design.md).
 - Write commit messages and PR descriptions in English, using lightweight
   [Conventional Commits](https://www.conventionalcommits.org/)
   (`type(scope): summary`).

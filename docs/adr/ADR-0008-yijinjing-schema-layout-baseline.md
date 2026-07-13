@@ -17,8 +17,8 @@ sensitivity: public
 - Related: [ADR-0002](ADR-0002-yijinjing-schema-runtime-layout.md),
   [ADR-0047](ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md),
   [ADR-0001](ADR-0001-yijinjing-publish-barrier.md),
-  [`docs/version-release-design.md`](../version-release-design.md),
-  [`docs/versioning.md`](../versioning.md)
+  [`docs/development/version-release-design.md`](../development/version-release-design.md),
+  [`docs/development/versioning.md`](../development/versioning.md)
 
 ## Decision
 
@@ -47,7 +47,7 @@ hidden adapters for v1/v2/v3, but it also must not silently strand v4-era data.
 The version and release mechanism protects the current registered surfaces, not
 pre-v4 historical ones. A release tag says which v4 schema baseline the artifact
 speaks. Before the first v4 stable release, breaking schema cleanups are allowed
-when they simplify the baseline and are recorded in `docs/versioning.md`. After a
+when they simplify the baseline and are recorded in `docs/development/versioning.md`. After a
 surface is released as stable, changes follow the registered-surface rules in
 KFD-1 and must include an explicit v4+ compatibility or migration story.
 
@@ -95,7 +95,7 @@ The current baseline is enforced by:
 - `scripts/check-runtime-greenfield.mjs`;
 - `framework/core/src/libyijinjing/check-deps.mjs`;
 - the C++/Python/Node build and generated stubs;
-- `docs/versioning.md`, which records registered surface changes.
+- `docs/development/versioning.md`, which records registered surface changes.
 
 ## Replacement Criteria
 

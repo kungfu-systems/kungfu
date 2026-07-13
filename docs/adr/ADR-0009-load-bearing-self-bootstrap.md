@@ -16,17 +16,17 @@ sensitivity: public
   one-time build step.
 - Date: 2026-06-30
 - Category: (principle) product-layer first principle — names and generalizes
-  the property that "the build dogfoods the SDK" (`docs/architecture.md`) was a
+  the property that "the build dogfoods the SDK" (`docs/architecture/overview.md`) was a
   single instance of.
 - Subsystem: whole product — runtime (`framework/core`/`kungfu`), capability SDK
   (`framework/api`), application SDK (`developer/sdk`/`kungfu sdk`), reference surfaces
   (`framework/gui`, `framework/tui`), distribution (`artifact`).
 - Related: the dynamic counterpart to the version mechanism's
-  weak-centralization (`docs/version-release-design.md` — "un-cheatable
+  weak-centralization (`docs/development/version-release-design.md` — "un-cheatable
   pipeline", "weak-centralization"); shares the yijinjing schema-as-true-invariant
   ordering with [ADR-0008](ADR-0008-yijinjing-schema-layout-baseline.md);
-  the build-layer instance is [`docs/architecture.md` § The build dogfoods the
-  SDK](../architecture.md).
+  the build-layer instance is [`docs/architecture/overview.md` § The build dogfoods the
+  SDK](../architecture/overview.md).
 
 ## Decision
 
@@ -48,7 +48,7 @@ inseparable clauses:
    trust). The energy that keeps the core healthy therefore comes from **use**,
    not from **discipline** — which is why it does not decay.
 
-The machine-fits-human principle (`docs/architecture.md`) is the user-facing
+The machine-fits-human principle (`docs/architecture/overview.md`) is the user-facing
 *promise*; this ADR is the engine that makes the promise **un-fakeable and
 self-sustaining**.
 
@@ -81,7 +81,7 @@ literal mechanism of its aliveness, not a metaphor.
 
 Read it as an energy account, against this project's real constraint (a
 junior-heavy, high-turnover contributor pool — see
-`docs/version-release-design.md`):
+`docs/development/version-release-design.md`):
 
 - **Discipline** is a scarce energy source that *decays* with turnover. A core
   maintained by discipline alone eventually loses its supply.
@@ -98,9 +98,9 @@ mechanism that supplies its own energy.
 
 | Existing principle | Relationship |
 |---|---|
-| "The build dogfoods the SDK" (`docs/architecture.md`) | A single **instance** of this principle at the build layer. This ADR is its general law; that section is now read as one consequence. |
+| "The build dogfoods the SDK" (`docs/architecture/overview.md`) | A single **instance** of this principle at the build layer. This ADR is its general law; that section is now read as one consequence. |
 | Adoption-path identity | The **structural clause** above. On its own it is only an architecture diagram — it needs the dynamic clause to explain why the arrangement produces anything. |
-| Weak-centralization / un-cheatable pipeline (`docs/version-release-design.md`) | A **sibling** in the same family — *replace trust/judgment with structure* — applied to a different object: that one governs release-worthiness, this one governs capability health and the energy of its upkeep. |
+| Weak-centralization / un-cheatable pipeline (`docs/development/version-release-design.md`) | A **sibling** in the same family — *replace trust/judgment with structure* — applied to a different object: that one governs release-worthiness, this one governs capability health and the energy of its upkeep. |
 | yijinjing schema layout as true invariant ([ADR-0008](ADR-0008-yijinjing-schema-layout-baseline.md)) | Supplies the **safety ordering** this principle depends on (see boundary 2): the rings everything bootstraps onto are the ones that change least. |
 
 ## Instances in the repository today

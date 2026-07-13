@@ -28,7 +28,7 @@ sensitivity: public
   yijinjing surface to core public runtime types; ADR-0033/0034 make Episode and
   the Episode manifest journal yijinjing-native kernel facts; ADR-0035 fixes the
   workspace-local `.kungfu` home. Companion reference:
-  [`docs/runtime-storage-service.md`](../runtime-storage-service.md).
+  [`docs/architecture/runtime-storage-service.md`](../architecture/runtime-storage-service.md).
 
 ## Context
 

@@ -20,7 +20,7 @@ sensitivity: public
 - Related: ADR-0018 defines the runtime storage service. ADR-0019 defines
   Git-like source sync over Kungfu `location` and `channel`. ADR-0020 defines
   the agent action timeline and replay boundary.
-  [`docs/event-model.md`](../event-model.md) describes frames,
+  [`docs/architecture/event-model.md`](../architecture/event-model.md) describes frames,
   causal links, and replay.
 
 ## Context

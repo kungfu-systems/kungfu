@@ -30,7 +30,7 @@ last_reviewed: 2026-07-10
   recorded in
   [`framework/core/docs/episode-manifest-trust-boundary.md`](../../framework/core/docs/episode-manifest-trust-boundary.md).
   The executable qualification design lives in
-  [`docs/episode-atomicity-qualification.md`](../episode-atomicity-qualification.md).
+  [`docs/qualification/episode-atomicity-qualification.md`](../qualification/episode-atomicity-qualification.md).
 
 ## Context
 
@@ -232,7 +232,7 @@ become support promises until explicitly adopted.
 
 The stable requirements live in this ADR. Workload distributions, scale tiers,
 fault matrices, commands, SLOs, and report schema evolve in
-`docs/episode-atomicity-qualification.md` without rewriting this decision.
+`docs/qualification/episode-atomicity-qualification.md` without rewriting this decision.
 
 ## Consequences
 

@@ -153,7 +153,7 @@ fn print_usage() {
         style::cyan("Common tasks:")
     );
     println!(
-        "{} AGENTS.md (build), docs/rust-adoption.md (how this launcher works)",
+        "{} AGENTS.md (build), docs/development/rust-adoption.md (how this launcher works)",
         style::cyan("Docs:")
     );
 }

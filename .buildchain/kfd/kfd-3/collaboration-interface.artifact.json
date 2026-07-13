@@ -861,8 +861,8 @@
       "participantFacing": true,
       "public": true,
       "sourcePath": "framework/gui/src/main/index.ts",
-      "evidencePath": "docs/runtime-service.md",
-      "artifactPath": "docs/runtime-service.md",
+      "evidencePath": "docs/architecture/runtime-service.md",
+      "artifactPath": "docs/architecture/runtime-service.md",
       "maturity": "draft",
       "declaration": {
         "owner": "kungfu",

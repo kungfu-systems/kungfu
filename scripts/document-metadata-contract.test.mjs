@@ -121,9 +121,31 @@ const contract = {
       forbidden: ['adr_id', 'decision_status', 'implementation_status'],
     },
     {
+      id: 'document-redirect',
+      metadataMode: 'inline',
+      patterns: ['^docs/[^/]+\\.md$'],
+      required: [
+        'metadata_schema',
+        'doc_type',
+        'document_status',
+        'review_state',
+        'sensitivity',
+        'moved_to',
+      ],
+      constants: {
+        metadata_schema: 'kungfu.document-metadata/v1',
+        doc_type: 'document-redirect',
+        document_status: 'deprecated',
+        sensitivity: 'public',
+      },
+      enums: { review_state: ['self-reviewed'] },
+      forbidden: ['adr_id', 'decision_status', 'implementation_status'],
+    },
+    {
       id: 'public-document',
       metadataMode: 'registry',
       files: ['README.md'],
+      patterns: ['^docs/.+\\.md$'],
       required: [
         'metadata_schema',
         'doc_type',
@@ -291,6 +313,80 @@ moved_to: adr/ADR-0001-example.md
 `,
   });
   assert.deepEqual(findings, []);
+});
+
+test('accepts a document redirect to canonical content below a docs section', () => {
+  const findings = run(
+    {
+      'docs/guide.md': `---
+metadata_schema: kungfu.document-metadata/v1
+document_status: deprecated
+doc_type: document-redirect
+review_state: self-reviewed
+sensitivity: public
+moved_to: docs/guides/guide.md
+---
+
+# Guide moved
+`,
+      'docs/guides/guide.md': '# Guide\n',
+    },
+    {
+      'docs/guides/guide.md': {
+        metadata_schema: 'kungfu.document-metadata/v1',
+        document_status: 'active',
+        doc_type: 'public-document',
+        review_state: 'unreviewed',
+        sensitivity: 'public',
+      },
+    },
+  );
+  assert.deepEqual(findings, []);
+});
+
+test('rejects missing, flat, and chained document redirect targets', () => {
+  const findings = run({
+    'docs/flat.md': `---
+metadata_schema: kungfu.document-metadata/v1
+document_status: deprecated
+doc_type: document-redirect
+review_state: self-reviewed
+sensitivity: public
+moved_to: docs/missing.md
+---
+
+# Flat
+`,
+    'docs/chain.md': `---
+metadata_schema: kungfu.document-metadata/v1
+document_status: deprecated
+doc_type: document-redirect
+review_state: self-reviewed
+sensitivity: public
+moved_to: docs/guides/redirect.md
+---
+
+# Chain
+`,
+    'docs/guides/redirect.md': `---
+metadata_schema: kungfu.document-metadata/v1
+document_status: deprecated
+doc_type: document-redirect
+review_state: self-reviewed
+sensitivity: public
+moved_to: docs/guides/guide.md
+---
+
+# Redirect
+`,
+    'docs/guides/guide.md': `${publicHeader}\n\n# Guide\n`,
+  });
+  assert.ok(
+    findings.some((finding) => finding.code === 'document-redirect-target'),
+  );
+  assert.ok(
+    findings.some((finding) => finding.code === 'document-redirect-chain'),
+  );
 });
 
 test('accepts reciprocal acyclic ADR supersession metadata', () => {

@@ -8,7 +8,7 @@
 //
 // 冻结腿（nuitka/pyinstaller）已于 2026-07-11 退役（ADR-0046 stage 2 收口：
 // macOS→Linux→Windows 全部组装完整 CPython 树，Windows 为最后一块平台）；去留记账
-// 见 docs/buildchain.md「Freeze retirement ledger」。
+// 见 docs/development/buildchain.md「Freeze retirement ledger」。
 //
 // - assemble（唯一产物腿，见 ADR-0046 与本文件 assemble 段注释）：宿主运行一棵完整精确的
 //   CPython 树。dist/kungfu 保持扁平根（natives/contract/wheels），并在 dist/kungfu/python
@@ -46,7 +46,7 @@ function buildType() {
 function freezer() {
   // ADR-0046 stage 2 rolled out platform by platform and is now complete:
   // macOS, Linux, and Windows all ship the assembled runtime. The frozen legs
-  // retire with this last platform (docs/buildchain.md「Freeze retirement
+  // retire with this last platform (docs/development/buildchain.md「Freeze retirement
   // ledger」). An explicit config value can still select any surviving leg.
   const explicit = shell.getConfigValue('freezer');
   if (explicit) return explicit;

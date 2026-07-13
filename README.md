@@ -44,8 +44,8 @@ object needed to answer:
 
 An Episode gives those questions one stable semantic boundary without making a
 process, UI, mutable database row, or provider session the authority. Read
-[The Episode](docs/the-episode.md) for the narrative and
-[Vocabulary](docs/vocabulary.md) for the precise public terms.
+[The Episode](docs/concepts/the-episode.md) for the narrative and
+[Vocabulary](docs/concepts/vocabulary.md) for the precise public terms.
 
 ## What you can build and inspect
 
@@ -64,10 +64,10 @@ process, UI, mutable database row, or provider session the authority. Read
 ## Start here
 
 - **New to Kungfu:** use the curated [Documentation Guide](docs/README.md).
-- **Choosing a product layer:** read [Choose Your Kungfu](docs/choose-your-kungfu.md).
+- **Choosing a product layer:** read [Choose Your Kungfu](docs/guides/choose-your-kungfu.md).
 - **Evaluating trust or production use:** begin with
-  [Known Limits](docs/known-limits.md) and the
-  [Single-host institutional trust profile](docs/single-host-institutional-trust.md).
+  [Known Limits](docs/qualification/known-limits.md) and the
+  [Single-host institutional trust profile](docs/qualification/single-host-institutional-trust.md).
 - **Looking up one exact question:** use the exhaustive
   [Documentation Map](docs/MAP.md).
 - **Contributing:** read [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -101,7 +101,7 @@ cd kungfu
 | independent preservation and inspection | `.kungfu` format/spec |
 
 Higher layers add convenience; they do not become a second authority over the
-Facts. [Product Layers](docs/product-layers.md) defines the independent
+Facts. [Product Layers](docs/concepts/product-layers.md) defines the independent
 qualification contract behind these choices.
 
 ## Architecture at a glance
@@ -114,8 +114,8 @@ format, not a third journal schema.
 Live work and Replay use the same frame and runtime semantics. SQLite and GUI
 models are rebuildable Projections over journal-backed authority. The runtime,
 capability SDK, application SDK, reference surfaces, and product assembly remain
-separate layers with explicit contracts. See [Architecture](docs/architecture.md)
-and [Event Model](docs/event-model.md).
+separate layers with explicit contracts. See [Architecture](docs/architecture/overview.md)
+and [Event Model](docs/architecture/event-model.md).
 
 ## Status and guarantees
 
@@ -126,7 +126,7 @@ linked evidence says so.
 
 Design intent, implemented behavior, qualified guarantees, and released
 artifacts are deliberately distinct. Before relying on a claim, check
-[Contracts](docs/contracts.md), [Known Limits](docs/known-limits.md), and the
+[Contracts](docs/qualification/contracts.md), [Known Limits](docs/qualification/known-limits.md), and the
 applicable retained qualification evidence.
 
 ## Project links

@@ -37,63 +37,147 @@
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
-    "docs/adapters.md": {
+    "docs/architecture/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "documentation-section",
+      "review_state": "self-reviewed",
+      "sensitivity": "public"
+    },
+    "docs/architecture/adapters.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "public-document",
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
-    "docs/architecture.md": {
+    "docs/architecture/event-model.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "public-document",
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
-    "docs/buildchain.md": {
+    "docs/architecture/extensions.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "public-document",
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
-    "docs/choose-your-kungfu.md": {
+    "docs/architecture/kfx-topology.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "public-document",
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
-    "docs/concepts.md": {
+    "docs/architecture/overview.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "public-document",
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
-    "docs/config.md": {
+    "docs/architecture/runtime-service.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "public-document",
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
-    "docs/contracts.md": {
+    "docs/architecture/runtime-storage-service.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "public-document",
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
-    "docs/cost-state-proof-profile.md": {
+    "docs/architecture/skills.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "public-document",
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
-    "docs/cpp-toolchain.md": {
+    "docs/concepts/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "documentation-section",
+      "review_state": "self-reviewed",
+      "sensitivity": "public"
+    },
+    "docs/concepts/design-philosophy.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/concepts/domain-horizons.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/concepts/episode-object-model.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/concepts/facts-before-trust.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/concepts/implementation-concepts.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/concepts/product-layers.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/concepts/the-episode.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/concepts/vocabulary.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/development/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "documentation-section",
+      "review_state": "self-reviewed",
+      "sensitivity": "public"
+    },
+    "docs/development/buildchain.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/development/cpp-toolchain.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "reference",
@@ -108,21 +192,7 @@
       "evidence_grade": "A",
       "last_reviewed": "2026-07-12"
     },
-    "docs/debugging.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "public-document",
-      "review_state": "unreviewed",
-      "sensitivity": "public"
-    },
-    "docs/design-philosophy.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "public-document",
-      "review_state": "unreviewed",
-      "sensitivity": "public"
-    },
-    "docs/document-metadata.md": {
+    "docs/development/document-metadata.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "reference",
@@ -134,100 +204,98 @@
       ],
       "last_reviewed": "2026-07-13"
     },
-    "docs/domain-horizons.md": {
+    "docs/development/rust-adoption.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "public-document",
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
-    "docs/durability-and-crash-recovery.md": {
+    "docs/development/version-release-design.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "draft",
-      "doc_type": "capability-overview",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/development/versioning.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "unreviewed",
+      "sensitivity": "public"
+    },
+    "docs/guides/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "documentation-section",
       "review_state": "self-reviewed",
-      "sensitivity": "public",
-      "sources": [
-        "architecture-decisions",
-        "local-files"
-      ],
-      "period": "2026-07-12",
-      "theme": "strong-durability-and-crash-recovery",
-      "confidence": "high",
-      "evidence_grade": "B",
-      "last_reviewed": "2026-07-12"
+      "sensitivity": "public"
     },
-    "docs/episode-object-model.md": {
+    "docs/guides/choose-your-kungfu.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "public-document",
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
-    "docs/event-model.md": {
+    "docs/guides/config.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "public-document",
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
-    "docs/extensions.md": {
+    "docs/guides/debugging.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "public-document",
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
-    "docs/fact-surface-admission.md": {
+    "docs/guides/fact-surface-admission.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "public-document",
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
-    "docs/facts-before-trust.md": {
+    "docs/guides/python-environments.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "public-document",
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
-    "docs/journal-page-sizing-and-episode-reclamation.md": {
+    "docs/guides/querying-runtime-facts.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "public-document",
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
-    "docs/kfd-native-sdk-release-gates.md": {
+    "docs/guides/rewind.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "public-document",
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
-    "docs/kfd2-trust-assessment.md": {
+    "docs/profiles/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "documentation-section",
+      "review_state": "self-reviewed",
+      "sensitivity": "public"
+    },
+    "docs/profiles/cost-state-proof-profile.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "public-document",
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
-    "docs/kfx-topology.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "public-document",
-      "review_state": "unreviewed",
-      "sensitivity": "public"
-    },
-    "docs/known-limits.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "public-document",
-      "review_state": "unreviewed",
-      "sensitivity": "public"
-    },
-    "docs/mission-control-workspaces.md": {
+    "docs/profiles/mission-control-workspaces.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "draft",
       "doc_type": "product-design",
@@ -243,7 +311,7 @@
       "evidence_grade": "B",
       "last_reviewed": "2026-07-11"
     },
-    "docs/mission-control.md": {
+    "docs/profiles/mission-control.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "draft",
       "doc_type": "product-design",
@@ -259,63 +327,95 @@
       "evidence_grade": "B",
       "last_reviewed": "2026-07-12"
     },
-    "docs/product-layers.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "public-document",
-      "review_state": "unreviewed",
-      "sensitivity": "public"
-    },
-    "docs/profile-authoring.md": {
+    "docs/profiles/profile-authoring.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "draft",
       "doc_type": "public-document",
       "review_state": "self-reviewed",
       "sensitivity": "public"
     },
-    "docs/profile-lifecycle.md": {
+    "docs/profiles/profile-lifecycle.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "draft",
       "doc_type": "public-document",
       "review_state": "self-reviewed",
       "sensitivity": "public"
     },
-    "docs/python-environments.md": {
+    "docs/qualification/README.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "documentation-section",
+      "review_state": "self-reviewed",
+      "sensitivity": "public"
+    },
+    "docs/qualification/contracts.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "public-document",
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
-    "docs/querying-runtime-facts.md": {
+    "docs/qualification/durability-and-crash-recovery.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "capability-overview",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files"
+      ],
+      "period": "2026-07-12",
+      "theme": "strong-durability-and-crash-recovery",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-12"
+    },
+    "docs/qualification/kfd-native-sdk-release-gates.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "public-document",
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
-    "docs/rewind.md": {
+    "docs/qualification/kfd2-trust-assessment.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "public-document",
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
-    "docs/runtime-service.md": {
+    "docs/qualification/known-limits.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "public-document",
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
-    "docs/runtime-storage-service.md": {
+    "docs/qualification/single-host-institutional-trust.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "adoption-contract",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files"
+      ],
+      "period": "2026-07-12",
+      "theme": "single-host-institutional-trust",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-12"
+    },
+    "docs/research/README.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
-      "doc_type": "public-document",
-      "review_state": "unreviewed",
+      "doc_type": "documentation-section",
+      "review_state": "self-reviewed",
       "sensitivity": "public"
     },
-    "docs/rust-adoption.md": {
+    "docs/research/journal-page-sizing-and-episode-reclamation.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "public-document",
@@ -351,57 +451,6 @@
       "confidence": "high",
       "evidence_grade": "B",
       "last_reviewed": "2026-07-12"
-    },
-    "docs/single-host-institutional-trust.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "draft",
-      "doc_type": "adoption-contract",
-      "review_state": "self-reviewed",
-      "sensitivity": "public",
-      "sources": [
-        "architecture-decisions",
-        "local-files"
-      ],
-      "period": "2026-07-12",
-      "theme": "single-host-institutional-trust",
-      "confidence": "high",
-      "evidence_grade": "B",
-      "last_reviewed": "2026-07-12"
-    },
-    "docs/skills.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "public-document",
-      "review_state": "unreviewed",
-      "sensitivity": "public"
-    },
-    "docs/the-episode.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "public-document",
-      "review_state": "unreviewed",
-      "sensitivity": "public"
-    },
-    "docs/version-release-design.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "public-document",
-      "review_state": "unreviewed",
-      "sensitivity": "public"
-    },
-    "docs/versioning.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "public-document",
-      "review_state": "unreviewed",
-      "sensitivity": "public"
-    },
-    "docs/vocabulary.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "public-document",
-      "review_state": "unreviewed",
-      "sensitivity": "public"
     },
     "framework/spec/CONSUMING.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
@@ -454,4 +503,3 @@
     }
   }
 }
-

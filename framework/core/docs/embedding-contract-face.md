@@ -11,9 +11,9 @@
   requires for the embedding contract face (drift-prevention is the point).
 - Related: [ADR-0045](../../../docs/adr/ADR-0045-kfx-execution-profiles-native-rust-wasm.md)
   gate 1 (the C ABI the trunk is named as second consumer of);
-  [`docs/libkungfu-embedding-membrane-spike.md`](../../../docs/libkungfu-embedding-membrane-spike.md)
+  [`docs/research/libkungfu-embedding-membrane-spike.md`](../../../docs/research/libkungfu-embedding-membrane-spike.md)
   (the 3-platform feasibility evidence this RFC stands on);
-  [`docs/rust-host-spike.md`](../../../docs/rust-host-spike.md) Part 3.3
+  [`docs/research/rust-host-spike.md`](../../../docs/research/rust-host-spike.md) Part 3.3
   (the 17 host-assumption seams Stage 3 neutralizes).
 
 ## Question
@@ -59,7 +59,7 @@ artifact today:
   (`extern "C" { fn kungfu_embedding_get_api(…) }`) + safe borrowing wrapper;
   `crates/host-spike/build.rs:93–96` links the core. (This crate is
   workspace-excluded; the seam is proven but not yet in `crates/trunk`.)
-- **Spike evidence** (`docs/libkungfu-embedding-membrane-spike.md`): one
+- **Spike evidence** (`docs/research/libkungfu-embedding-membrane-spike.md`): one
   core-owned versioned C ABI, two consumers, measured on macOS/Linux/Windows
   release with `payload_bytes_copied == 0`, control p99 ≤ 1 us, 4 KiB batch
   p99 ≤ 5 us. Platform ownership decided: no second facade DLL — macOS/Linux

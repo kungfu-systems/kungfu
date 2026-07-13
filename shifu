@@ -20,7 +20,7 @@
 #   ./shifu proxy ...    # rich subcommand: manage local cache/mirror proxy config (delegated to L2 node, not passed to pnpm)
 #
 # This script is a thin shim in front of the native launcher (crates/shifu, a
-# self-contained Rust binary — see docs/rust-adoption.md). Resolution order:
+# self-contained Rust binary — see docs/development/rust-adoption.md). Resolution order:
 #   1. SHIFU_BIN            explicit binary override
 #   2. dev machines (cargo + git) -> source-fresh cache slot
 #                                    .../kungfu/shifu/<version>-<launcher-src-sha>/,

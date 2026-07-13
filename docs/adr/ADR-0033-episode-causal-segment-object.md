@@ -20,9 +20,9 @@ sensitivity: public
   action timeline and replay boundary. ADR-0021 defines observer-relative
   timeline projection. ADR-0032 defines the generic source service v1. ADR-0034
   defines the yijinjing-backed Episode manifest journal.
-  [`docs/episode-object-model.md`](../episode-object-model.md)
+  [`docs/concepts/episode-object-model.md`](../concepts/episode-object-model.md)
   is the companion design document, and
-  [`docs/journal-page-sizing-and-episode-reclamation.md`](../journal-page-sizing-and-episode-reclamation.md)
+  [`docs/research/journal-page-sizing-and-episode-reclamation.md`](../research/journal-page-sizing-and-episode-reclamation.md)
   is the design note constraining page sizing and Episode-aware reclamation.
 
 ## Context

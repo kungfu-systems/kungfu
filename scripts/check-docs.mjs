@@ -44,6 +44,7 @@ const SAFE_EXAMPLE_COMMANDS = new Set([
  *   schemaVersion: number,
  *   requiredFiles?: string[],
  *   requiredPointers?: {from: string, to: string}[],
+ *   hierarchy?: {root: string, entryFiles: string[], canonicalDirectories: string[], redirectDocumentType: string},
  *   publication?: {roots: string[], include: string[], allowedOrphans?: string[], allowedOrphanDocumentTypes?: string[]},
  *   executableExamples?: {id: string, file: string, command: string[], stdoutPattern?: string, timeoutMs?: number}[]
  * }} DocsContract
@@ -248,6 +249,47 @@ export function checkDocs(options = {}) {
     documents.set(rel, parseDocument(rel, text));
   }
 
+  const hierarchy = contract.hierarchy;
+  if (hierarchy) {
+    const hierarchyRoot = hierarchy.root.replace(/\/$/, '');
+    const entries = new Set(hierarchy.entryFiles || []);
+    const canonicalDirectories = hierarchy.canonicalDirectories || [];
+    const redirectType = hierarchy.redirectDocumentType;
+    for (const rel of files.filter(
+      (file) => file.startsWith(`${hierarchyRoot}/`) || file === hierarchyRoot,
+    )) {
+      const document = documents.get(rel);
+      const documentType = String(
+        parseFrontmatter(document?.text || '')?.fields.get('doc_type')?.value ||
+          '',
+      );
+      if (path.posix.dirname(rel) === hierarchyRoot) {
+        if (!entries.has(rel) && documentType !== redirectType) {
+          findings.push({
+            code: 'documentation-hierarchy-root',
+            file: rel,
+            line: 1,
+            message: `root Markdown must be a declared entry or ${redirectType} compatibility document`,
+          });
+        }
+        continue;
+      }
+      if (
+        !canonicalDirectories.some(
+          (directory) => rel === directory || rel.startsWith(`${directory}/`),
+        )
+      ) {
+        findings.push({
+          code: 'documentation-hierarchy-directory',
+          file: rel,
+          line: 1,
+          message:
+            'canonical documentation is outside the declared directory taxonomy',
+        });
+      }
+    }
+  }
+
   for (const rel of contract.requiredFiles || []) {
     if (!fs.existsSync(path.join(root, rel))) {
       findings.push({
@@ -290,6 +332,26 @@ export function checkDocs(options = {}) {
           message: `local link path casing does not match the repository: ${link.href}`,
         });
         continue;
+      }
+      if (hierarchy && /\.(?:md|markdown)$/i.test(targetRel)) {
+        const sourceType = String(
+          parseFrontmatter(document.text)?.fields.get('doc_type')?.value || '',
+        );
+        const targetText = fs.readFileSync(local.target, 'utf8');
+        const targetType = String(
+          parseFrontmatter(targetText)?.fields.get('doc_type')?.value || '',
+        );
+        if (
+          sourceType !== hierarchy.redirectDocumentType &&
+          targetType === hierarchy.redirectDocumentType
+        ) {
+          findings.push({
+            code: 'documentation-redirect-hop',
+            file: document.rel,
+            line: link.line,
+            message: `canonical documents must link directly to the moved target, not ${targetRel}`,
+          });
+        }
       }
       if (!local.fragment || !/\.(?:md|markdown)$/i.test(targetRel)) continue;
       let target = documents.get(targetRel);

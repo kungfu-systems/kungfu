@@ -23,7 +23,7 @@ kungfu sdk product cli dist      # build a distributable CLI product
 ```
 
 It also scaffolds view extensions (kfx) — installable view packages the
-reference shell discovers and mounts (see `docs/extensions.md` in the
+reference shell discovers and mounts (see `docs/architecture/extensions.md` in the
 repository root for the contract):
 
 ```sh

@@ -672,7 +672,7 @@ function sdkAndProductSurfaces() {
       name: 'Kungfu GUI menu-bar/system-tray runtime residency controls',
       kind: 'gui',
       sourcePath: 'framework/gui/src/main/index.ts',
-      evidencePath: 'docs/runtime-service.md',
+      evidencePath: 'docs/architecture/runtime-service.md',
       maturity: 'draft',
     }),
     fileSurface({

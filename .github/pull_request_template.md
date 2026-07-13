@@ -15,7 +15,7 @@ Write the description in English. Sign commits with the DCO (git commit -s).
 
 Keep exactly one machine-readable block below. Select the shape for the PR's
 target channel and replace the example values. See
-`docs/version-release-design.md` for the contract and management intent.
+`docs/development/version-release-design.md` for the contract and management intent.
 
 <!-- kungfu-adr-release:v1
 {

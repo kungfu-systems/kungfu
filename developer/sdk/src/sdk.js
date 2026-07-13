@@ -2303,8 +2303,8 @@ function contractAdd(surfaceArg, options) {
       verify: `kungfu sdk contract adopt ${surface} --source ${source} --json`,
       renderCheck: `kungfu sdk contract render ${surface} --check --json`,
       evidence: `kungfu sdk contract evidence ${surface} --json`,
-      versioning: `register welded surface ${surface}-contract in docs/versioning.md`,
-      knownLimits: `record maturity and limits for ${surface}-contract in docs/known-limits.md`,
+      versioning: `register welded surface ${surface}-contract in docs/development/versioning.md`,
+      knownLimits: `record maturity and limits for ${surface}-contract in docs/qualification/known-limits.md`,
     },
   };
   if (options.json) {

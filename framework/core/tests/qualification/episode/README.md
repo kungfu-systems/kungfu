@@ -1,7 +1,7 @@
 # Episode Qualification Harness
 
 This directory implements the executable scale v0 and Semantic v1 slices of
-[`docs/episode-atomicity-qualification.md`](../../../../../docs/episode-atomicity-qualification.md).
+[`docs/qualification/episode-atomicity-qualification.md`](../../../../../docs/qualification/episode-atomicity-qualification.md).
 It exercises the shipped Python facade backed by the C++ Episode manifest
 implementation; it does not parse or mutate journal bytes itself.
 

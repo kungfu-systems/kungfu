@@ -18,7 +18,7 @@ rem   shifu app | shifu build:core | shifu <any pnpm task>
 rem   shifu cache / proxy / config   rich subcommands -> delegated to L2 node (not pnpm)
 rem
 rem This script is a thin shim in front of the native launcher (crates\shifu,
-rem a self-contained Rust binary -- see docs/rust-adoption.md). Resolution order:
+rem a self-contained Rust binary -- see docs/development/rust-adoption.md). Resolution order:
 rem   1. SHIFU_BIN            explicit binary override
 rem   2. dev machines (cargo + git) -> source-fresh cache slot
 rem                                    ...\kungfu\shifu\<version>-<launcher-src-sha>\,

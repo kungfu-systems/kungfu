@@ -11,10 +11,10 @@ causality, Cuts, query meaning, repair semantics, or Proof.
 
 Current evidence and adoption boundaries:
 
-- [Product Layers](../../../../docs/product-layers.md) — ecosystem package
+- [Product Layers](../../../../docs/concepts/product-layers.md) — ecosystem package
   qualification and availability.
-- [Adapters](../../../../docs/adapters.md) — the pybind11/native membrane.
-- [Episode Object Model](../../../../docs/episode-object-model.md) — semantic
+- [Adapters](../../../../docs/architecture/adapters.md) — the pybind11/native membrane.
+- [Episode Object Model](../../../../docs/concepts/episode-object-model.md) — semantic
   authority.
 - [SDK layer qualification](../../../../tests/qualification/layers/README.md) —
   the shared source and exact-artifact fixtures.

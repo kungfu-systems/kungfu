@@ -18,7 +18,7 @@ sensitivity: public
   contract, product launchers, CLI, GUI, and agent workflows.
 - Related: ADR-0018 defines the runtime storage service. ADR-0033 defines
   Episode as the first-class causal segment object. ADR-0034 defines the
-  yijinjing-backed Episode manifest journal. [`docs/config.md`](../config.md)
+  yijinjing-backed Episode manifest journal. [`docs/guides/config.md`](../guides/config.md)
   documents the user-facing home layout.
 
 ## Context
