@@ -151,7 +151,7 @@ export function plan(matrixEntry, remote = 'workhub-conan') {
       `conan list ${ROCKSDB_PACKAGE_PATTERN} --filter-profile default`,
       `conan remote auth ${remote} --force --strict`,
       `conan upload --list <exact-package-list> --remote ${remote} --check --confirm`,
-      `conan list ${ROCKSDB_PACKAGE_PATTERN} --remote ${remote} and assert exact package revisions`,
+      `conan list <each-exact-package-revision> --remote ${remote} and assert read-back`,
     ],
     buildchainInputs: ['SHIFU_CACHE_PROFILE_REF', 'SHIFU_CACHE_PROFILE_DIGEST'],
     publisherSecretInBuildchain: false,
@@ -208,25 +208,17 @@ export function execute({ matrixEntry, remote }) {
       '--check',
       '--confirm',
     ]);
-    const remoteRefs = new Set(
-      packageRevisionRefs(
+    const missing = expectedRefs.filter((reference) => {
+      const remoteRefs = packageRevisionRefs(
         JSON.parse(
           conanCommand(
-            [
-              'list',
-              ROCKSDB_PACKAGE_PATTERN,
-              '--remote',
-              remote,
-              '--format=json',
-            ],
+            ['list', reference, '--remote', remote, '--format=json'],
             { capture: true },
           ),
         ),
-      ),
-    );
-    const missing = expectedRefs.filter(
-      (reference) => !remoteRefs.has(reference),
-    );
+      );
+      return !remoteRefs.includes(reference);
+    });
     if (missing.length > 0)
       fail(`remote read-back missing package revisions: ${missing.join(', ')}`);
   } finally {
