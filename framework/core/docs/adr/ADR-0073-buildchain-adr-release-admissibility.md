@@ -4,9 +4,9 @@ doc_type: architecture-decision
 adr_id: ADR-0073
 decision_status: accepted
 implementation_status: implemented
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/731]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/731, https://github.com/kungfu-systems/kungfu/pull/737]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/731
-qualification_refs: [scripts/adr-release-gate.test.mjs]
+qualification_refs: [scripts/adr-release-gate.test.mjs, scripts/release-promotion-rehearsal.test.mjs]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -104,6 +104,12 @@ The contract is `docs/adr-release.contract.json`. Pull requests carry one JSON
 manifest inside the `kungfu-adr-release:v1` marker. The validator emits a
 `kungfu.adr-release-report/v1` report containing admitted, waived, blocked, and
 invalid records.
+
+`docs/release-promotion-rehearsal.contract.json` extends that authority to the
+consumer wiring around Buildchain. Its side-effect-free rehearsal validates
+alpha/stable positive and negative fixtures, immutable Buildchain locks,
+release-passport evidence, and the dependency edge that prevents promotion
+before Kungfu admission succeeds. It does not emulate Buildchain publication.
 
 The gates establish process truth:
 

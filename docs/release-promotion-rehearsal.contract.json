@@ -1,0 +1,56 @@
+{
+  "schema": "kungfu.release-promotion-rehearsal-contract/v1",
+  "workflows": {
+    "build": ".github/workflows/build.yml",
+    "promotion": ".github/workflows/release-new-version.yml",
+    "validation": ".github/workflows/buildchain-validate.yml"
+  },
+  "buildchain": {
+    "alpha": {
+      "workflow_ref": "v2-alpha",
+      "contract_lock": ".buildchain/alpha-contract-lock.json",
+      "publish_channel": "alpha",
+      "publish_dist_tag": "alpha"
+    },
+    "stable": {
+      "workflow_ref": "v2",
+      "contract_lock": ".buildchain/contract-lock.json",
+      "publish_channel": "release",
+      "publish_dist_tag": "latest"
+    },
+    "required_status_check": "build",
+    "required_artifact_count": 3,
+    "required_surfaces": [
+      "reusable-build",
+      "release-candidate-promote",
+      "release-passport-schema",
+      "kfd-1-release-gate",
+      "kfd-2-release-trust-passport-audit",
+      "kfd-3-collaboration-interface-release-gate"
+    ]
+  },
+  "evidence": {
+    "publish_command": "node scripts/buildchain-custom-publish-evidence.mjs",
+    "kfd_1_witnesses": [
+      ".buildchain/kfd/kfd-1/contract-world.witness.json"
+    ],
+    "kfd_2_claims": [
+      ".buildchain/kfd/kfd-2/claims/agent-onboarding-pack.json",
+      ".buildchain/kfd/kfd-2/claims/codex-report-receipts.json",
+      ".buildchain/kfd/kfd-2/claims/remote-fact-boundary.json"
+    ],
+    "kfd_3_prebuild_witnesses": [
+      ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json"
+    ],
+    "kfd_3_artifact_verify_command": "node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json"
+  },
+  "safety": {
+    "forbidden_commands": [
+      "git tag",
+      "git push",
+      "npm publish",
+      "pnpm publish",
+      "gh release create"
+    ]
+  }
+}
