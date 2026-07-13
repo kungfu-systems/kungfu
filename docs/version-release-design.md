@@ -251,6 +251,41 @@ ADR and whether residual risk deserves a waiver. See
 [ADR-0073](../framework/core/docs/adr/ADR-0073-buildchain-adr-release-admissibility.md)
 and the [document metadata contract](document-metadata.md).
 
+### Side-effect-free promotion rehearsal
+
+Kungfu does not need to publish an alpha or stable release to test its side of
+the promotion contract. `./shifu release:promotion:rehearse` executes committed
+positive and fail-closed fixtures for both channels, validates the real GitHub
+workflow wiring and immutable Buildchain contract locks, checks every declared
+release-passport input, and reports current stable ADR readiness. The command
+also proves that tracked files, branches, and tags remain unchanged. It never
+receives release credentials and contains no version bump, tag, push, package
+publish, or GitHub Release operation.
+
+The ordinary `Buildchain Validate` workflow runs this rehearsal on a
+GitHub-hosted runner after Buildchain configuration validation. On a future
+merged alpha or stable promotion PR, `Release - New Version` runs the same
+rehearsal against the actual immutable PR event before the Buildchain reusable
+promotion job. Buildchain promotion has an explicit `needs` edge to that
+preflight, so contract drift or ADR-admission failure blocks publication before
+release credentials are exposed to the reusable job.
+
+This boundary is deliberately precise. The rehearsal proves Kungfu's event,
+evidence, channel routing, Buildchain lock, and workflow-consumer contract. It
+does not claim to execute or emulate Buildchain's internal publication engine;
+the first controlled alpha remains the black-box integration proof for that
+implementation.
+
+For a local report:
+
+```bash
+./shifu release:promotion:rehearse -- \
+  --report product/release/qualification/release-promotion-rehearsal.json
+```
+
+The report schema is `kungfu.release-promotion-rehearsal/v1`; its executable
+contract is `docs/release-promotion-rehearsal.contract.json`.
+
 ## Why not changesets / semantic-release / standard tools
 
 All mainstream version tools share one hidden axiom: **version intent must be explicitly

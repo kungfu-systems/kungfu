@@ -37,6 +37,7 @@
     "docs:prose:required": "node scripts/require-shifu.mjs docs:prose:required && node scripts/run-docs-prose-check.mjs --required",
     "docs:check:external": "node scripts/require-shifu.mjs docs:check:external && node scripts/run-docs-external-check.mjs",
     "adr:release:gate": "node scripts/require-shifu.mjs adr:release:gate && node scripts/adr-release-gate.mjs",
+    "release:promotion:rehearse": "node scripts/require-shifu.mjs release:promotion:rehearse && node scripts/release-promotion-rehearsal.mjs",
     "fix": "node scripts/require-shifu.mjs fix && node scripts/fix.mjs",
     "fix:staged": "node scripts/require-shifu.mjs fix:staged && node scripts/fix.mjs --staged",
     "fix:all": "node scripts/require-shifu.mjs fix:all && node scripts/fix.mjs --all",
