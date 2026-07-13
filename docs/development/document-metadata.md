@@ -122,6 +122,8 @@ needed; it does not change metadata, evidence, review, or release gates. Files
 under the former `framework/core/docs/adr/` and `docs/shifu/adr/` roots are
 compatibility redirects. Their contract forbids `adr_id`, decision state, and
 implementation state so an old URL cannot become a second authority.
+Negative fixtures also prove that a new canonical record, with or without
+architecture-decision metadata, cannot be admitted under either retired root.
 
 Run `./shifu adr:audit -- --json` to inspect every lifecycle and evidence state.
 The normal audit fails on structural contradictions. `--strict` also fails on

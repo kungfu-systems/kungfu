@@ -102,7 +102,11 @@ const contract = {
     {
       id: 'adr-redirect',
       metadataMode: 'inline',
-      patterns: ['^legacy/adr/.*\\.md$'],
+      patterns: [
+        '^legacy/adr/.*\\.md$',
+        '^framework/core/docs/adr/.*\\.md$',
+        '^docs/shifu/adr/.*\\.md$',
+      ],
       required: [
         'metadata_schema',
         'doc_type',
@@ -408,6 +412,47 @@ implementation_status: implemented
   assert.ok(findings.some((finding) => finding.code === 'adr-redirect-target'));
   assert.ok(
     findings.some((finding) => finding.code === 'metadata-forbidden-field'),
+  );
+});
+
+test('rejects new canonical ADRs under both retired authority roots', () => {
+  const corePath = 'framework/core/docs/adr/ADR-0100-new-core-record.md';
+  const shifuPath = 'docs/shifu/adr/SHIFU-ADR-0100-new-shifu-record.md';
+  const findings = run({
+    [corePath]: `---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0100
+decision_status: proposed
+implementation_status: not-started
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
+# ADR-0100: New core record
+
+- Status: proposed
+`,
+    [shifuPath]: '# SHIFU-ADR-0100: New Shifu record\n',
+  });
+  assert.ok(
+    findings.some(
+      (finding) =>
+        finding.file === corePath && finding.code === 'metadata-constant',
+    ),
+  );
+  assert.ok(
+    findings.some(
+      (finding) =>
+        finding.file === corePath &&
+        finding.code === 'metadata-forbidden-field',
+    ),
+  );
+  assert.ok(
+    findings.some(
+      (finding) =>
+        finding.file === shifuPath && finding.code === 'metadata-required',
+    ),
   );
 });
 
