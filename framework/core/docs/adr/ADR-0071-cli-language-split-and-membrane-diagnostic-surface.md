@@ -3,7 +3,8 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ADR-0071
 decision_status: accepted
-implementation_status: not-started
+implementation_status: partial
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/735]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -163,8 +164,12 @@ schema-compile as read-only entries), then putting thin Rust CLIs over it. That:
 
 ## Follow-up
 
-- Implementation of Bucket A (grow the membrane's read-only diagnostic surface,
-  then ship a Rust `fsck` / `storage verify`) is tracked as an Atlas go card,
-  not scoped in this ADR.
+- Bucket A first stage delivered: the embedding membrane grew a versioned v2
+  table exposing a read-only `storage_fsck` diagnostic entry (reusing the native
+  C++ `storage_service::fsck` verbatim, no CPython on the path), and a Rust
+  `kungfu fsck` consumer landed over it, behind the `embedding` feature with a
+  graceful coreless fallback — `doctor`'s sibling. This is a bounded stage:
+  `verify` / `gc-plan` / `repair-plan` diagnostic entries and the Windows DLL
+  runtime smoke remain follow-ups, so the ADR is `partial`, not `implemented`.
 - Bucket B is measurement-gated; open a separate item only if a real workload
   shows the CPython fold is felt.
