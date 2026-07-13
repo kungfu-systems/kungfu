@@ -187,17 +187,29 @@ function loadProfile(options) {
   return profile;
 }
 
-function runtimeEnv() {
-  const dist = path.join(coreDir, 'dist', 'kungfu');
-  const env = { ...process.env };
-  const key =
-    process.platform === 'darwin'
+export function episodeRuntimeEnv(
+  platform = process.platform,
+  baseEnv = process.env,
+  dist = path.join(coreDir, 'dist', 'kungfu'),
+) {
+  const env = { ...baseEnv };
+  const libraryKey =
+    platform === 'darwin'
       ? 'DYLD_FALLBACK_LIBRARY_PATH'
-      : process.platform === 'win32'
+      : platform === 'win32'
         ? 'PATH'
         : 'LD_LIBRARY_PATH';
-  env[key] = env[key] ? `${dist}${path.delimiter}${env[key]}` : dist;
+  const key =
+    platform === 'win32'
+      ? Object.keys(env).find((name) => name.toUpperCase() === 'PATH') || 'Path'
+      : libraryKey;
+  const delimiter = platform === 'win32' ? ';' : path.delimiter;
+  env[key] = env[key] ? `${dist}${delimiter}${env[key]}` : dist;
   return env;
+}
+
+function runtimeEnv() {
+  return episodeRuntimeEnv();
 }
 
 function assertNativeBinding() {
@@ -900,4 +912,6 @@ async function main() {
   process.exitCode = selectedExecutionOk && schemaValidation.ok ? 0 : 1;
 }
 
-await main();
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  await main();
+}
