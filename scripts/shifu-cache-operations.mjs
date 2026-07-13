@@ -249,31 +249,100 @@ export function cacheStatus({ configFile, receiptPath, env = process.env }) {
   };
 }
 
-async function probeHttp(url, timeoutMs) {
-  const started = Date.now();
-  try {
-    const response = await fetch(url, {
-      method: 'HEAD',
-      redirect: 'manual',
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    return {
-      state:
-        response.status >= 200 && response.status < 500
-          ? 'reachable'
-          : 'failed',
-      method: 'HEAD',
-      durationMs: Date.now() - started,
-      status: response.status,
-    };
-  } catch (error) {
-    return {
-      state: 'failed',
-      durationMs: Date.now() - started,
-      method: 'HEAD',
-      reason: error?.name === 'TimeoutError' ? 'timeout' : 'request-failed',
-    };
+const DEFAULT_PROBE_ATTEMPTS = 2;
+const DEFAULT_PROBE_RETRY_DELAY_MS = 100;
+const PYTHON_INDEX_TIMEOUT_MS = 5000;
+
+function sleep(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function serviceProbe(serviceId, profileService, selected, fallbackTimeoutMs) {
+  const policy = profileService?.verification?.probe || {};
+  let url = selected.url;
+  let target = 'endpoint';
+  if (policy.path) {
+    url = new URL(policy.path, selected.url).toString();
+    target = 'same-origin-path';
+  } else if (serviceId === 'python-index') {
+    const parsed = new URL(selected.url);
+    if (/\/(?:[^/]+\/){2}\+simple\/?$/.test(parsed.pathname)) {
+      url = new URL('/+api', selected.url).toString();
+      target = 'provider-health';
+    }
   }
+  return {
+    url,
+    target,
+    timeoutMs:
+      policy.timeoutMs ||
+      (serviceId === 'python-index'
+        ? Math.max(fallbackTimeoutMs, PYTHON_INDEX_TIMEOUT_MS)
+        : fallbackTimeoutMs),
+    attempts: policy.attempts || DEFAULT_PROBE_ATTEMPTS,
+    retryDelayMs: policy.retryDelayMs ?? DEFAULT_PROBE_RETRY_DELAY_MS,
+  };
+}
+
+export async function probeHttp(
+  url,
+  {
+    timeoutMs,
+    attempts = DEFAULT_PROBE_ATTEMPTS,
+    retryDelayMs = DEFAULT_PROBE_RETRY_DELAY_MS,
+    target = 'endpoint',
+    request = fetch,
+  },
+) {
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > 30_000)
+    throw new RangeError(
+      'probe timeoutMs must be an integer from 100 to 30000',
+    );
+  if (!Number.isInteger(attempts) || attempts < 1 || attempts > 3)
+    throw new RangeError('probe attempts must be an integer from 1 to 3');
+  if (
+    !Number.isInteger(retryDelayMs) ||
+    retryDelayMs < 0 ||
+    retryDelayMs > 2_000
+  )
+    throw new RangeError(
+      'probe retryDelayMs must be an integer from 0 to 2000',
+    );
+  const started = Date.now();
+  let evidence;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const response = await request(url, {
+        method: 'HEAD',
+        redirect: 'manual',
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      evidence = {
+        state:
+          response.status >= 200 && response.status < 500
+            ? 'reachable'
+            : 'failed',
+        method: 'HEAD',
+        status: response.status,
+      };
+    } catch (error) {
+      evidence = {
+        state: 'failed',
+        method: 'HEAD',
+        reason: error?.name === 'TimeoutError' ? 'timeout' : 'request-failed',
+      };
+    }
+    if (evidence.state === 'reachable' || attempt === attempts)
+      return {
+        ...evidence,
+        durationMs: Date.now() - started,
+        attempts: attempt,
+        timeoutMs,
+        target,
+      };
+    if (retryDelayMs > 0) await sleep(retryDelayMs);
+  }
+  throw new Error('unreachable probe state');
 }
 
 function redactedError(error, configuration) {
@@ -309,16 +378,25 @@ export async function cacheDoctor({
     const reachable = {};
     if (probe) {
       const results = await Promise.all(
-        Object.entries(resolved.receipt.services).map(async ([id, service]) => [
-          id,
-          service.selected?.type === 'http'
-            ? await probeHttp(service.selected.url, timeoutMs)
-            : {
-                state: 'not-applicable',
-                method: 'none',
-                durationMs: 0,
-              },
-        ]),
+        Object.entries(resolved.receipt.services).map(async ([id, service]) => {
+          if (service.selected?.type === 'http') {
+            const probeOptions = serviceProbe(
+              id,
+              resolved.profile.services[id],
+              service.selected,
+              timeoutMs,
+            );
+            return [id, await probeHttp(probeOptions.url, probeOptions)];
+          }
+          return [
+            id,
+            {
+              state: 'not-applicable',
+              method: 'none',
+              durationMs: 0,
+            },
+          ];
+        }),
       );
       Object.assign(reachable, Object.fromEntries(results));
     }

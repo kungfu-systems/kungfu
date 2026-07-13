@@ -192,7 +192,17 @@ cache infrastructure:
 
 `status` reads only the local projection and resolution receipt. It performs no
 network I/O. `doctor` resolves the pinned profile and verifies its digest;
-`--probe` additionally performs bounded HTTP `HEAD` checks. Diagnostics keep
+`--probe` additionally performs bounded HTTP `HEAD` checks. Each HTTP service
+may declare `verification.probe.path`, `timeoutMs`, `attempts`, and
+`retryDelayMs`; the path is same-origin and attempts are capped at three.
+Without an explicit policy, Shifu makes two attempts and uses the command
+timeout, except that Python indexes receive a five-second floor. A devpi
+`/<user>/<index>/+simple/` endpoint is probed through its lightweight `+api`
+root instead of downloading or waiting on the package index listing. Only
+timeouts, transport failures, and HTTP 5xx responses are retried; a persistent
+failure remains `degraded`. Probe evidence records target class, timeout,
+attempt count, status, and duration without recording the endpoint URL.
+Diagnostics keep
 `configured`, `resolved`, `reachable`, `effective`, and `hit` separate. A
 successful resolution receipt proves selected bindings, not a provider cache
 hit, so `hit` remains `unproven` without provider evidence.

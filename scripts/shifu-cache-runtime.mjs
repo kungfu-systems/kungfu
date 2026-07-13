@@ -54,6 +54,14 @@ const CONFIG_KEYS = new Set([
 const SHIFU_CACHE_HOME_TOKEN = '${SHIFU_CACHE_HOME}';
 const SECRET_KEY_RE =
   /(TOKEN|SECRET|PASSWORD|CREDENTIAL|COOKIE|PRIVATE_KEY|AUTH)/;
+const VERIFICATION_METHODS = new Set([
+  'upstream-checksum',
+  'sha256-manifest',
+  'signature',
+  'tool-native',
+  'transport-only',
+  'none',
+]);
 
 export class CacheProfileError extends Error {}
 
@@ -273,6 +281,74 @@ function validateEndpoint(endpoint, serviceId) {
   return endpoint;
 }
 
+function validateVerification(verification, serviceId) {
+  const label = `services.${serviceId}.verification`;
+  assertExactKeys(
+    verification,
+    new Set(['method', 'rationale', 'probe']),
+    ['method'],
+    label,
+  );
+  assert(
+    VERIFICATION_METHODS.has(verification.method),
+    `${label}.method is invalid`,
+  );
+  if (Object.hasOwn(verification, 'rationale'))
+    assert(
+      typeof verification.rationale === 'string' &&
+        verification.rationale.length >= 1 &&
+        verification.rationale.length <= 512,
+      `${label}.rationale must contain 1-512 characters`,
+    );
+  if (verification.method === 'none') {
+    assert(
+      Object.hasOwn(verification, 'rationale'),
+      `${label}.rationale is required when method is none`,
+    );
+    assert(
+      !Object.hasOwn(verification, 'probe'),
+      `${label}.probe is incompatible with method none`,
+    );
+  }
+  if (!Object.hasOwn(verification, 'probe')) return;
+  const probe = verification.probe;
+  assertExactKeys(
+    probe,
+    new Set(['path', 'timeoutMs', 'attempts', 'retryDelayMs']),
+    [],
+    `${label}.probe`,
+  );
+  if (Object.hasOwn(probe, 'path'))
+    assert(
+      typeof probe.path === 'string' &&
+        probe.path.startsWith('/') &&
+        !probe.path.startsWith('//') &&
+        !/[?#\\]/.test(probe.path),
+      `${label}.probe.path must be a same-origin absolute path without query or fragment`,
+    );
+  if (Object.hasOwn(probe, 'timeoutMs'))
+    assert(
+      Number.isInteger(probe.timeoutMs) &&
+        probe.timeoutMs >= 100 &&
+        probe.timeoutMs <= 30_000,
+      `${label}.probe.timeoutMs must be an integer from 100 to 30000`,
+    );
+  if (Object.hasOwn(probe, 'attempts'))
+    assert(
+      Number.isInteger(probe.attempts) &&
+        probe.attempts >= 1 &&
+        probe.attempts <= 3,
+      `${label}.probe.attempts must be an integer from 1 to 3`,
+    );
+  if (Object.hasOwn(probe, 'retryDelayMs'))
+    assert(
+      Number.isInteger(probe.retryDelayMs) &&
+        probe.retryDelayMs >= 0 &&
+        probe.retryDelayMs <= 2_000,
+      `${label}.probe.retryDelayMs must be an integer from 0 to 2000`,
+    );
+}
+
 export function validateProfileBytes(
   raw,
   { expectedDigest = '', scope = '', platform = '' } = {},
@@ -475,6 +551,7 @@ export function validateProfileBytes(
         service.fallback.mode !== 'upstream',
         `service ${serviceId} cannot use public fallback`,
       );
+    validateVerification(service.verification, serviceId);
     receiptServices[serviceId] = {
       outcome: 'hit',
       selected:

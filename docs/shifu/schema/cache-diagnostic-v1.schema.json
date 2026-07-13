@@ -89,7 +89,10 @@
                   "method": { "enum": ["none", "HEAD"] },
                   "durationMs": { "type": "integer", "minimum": 0 },
                   "status": { "type": "integer", "minimum": 100, "maximum": 599 },
-                  "reason": { "enum": ["timeout", "request-failed"] }
+                  "reason": { "enum": ["timeout", "request-failed"] },
+                  "attempts": { "type": "integer", "minimum": 1, "maximum": 3 },
+                  "timeoutMs": { "type": "integer", "minimum": 100, "maximum": 30000 },
+                  "target": { "enum": ["endpoint", "same-origin-path", "provider-health"] }
                 }
               }
             ]

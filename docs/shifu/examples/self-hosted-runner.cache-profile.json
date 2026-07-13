@@ -48,7 +48,7 @@
       "mode": "require",
       "endpoint": {
         "type": "http",
-        "url": "https://cache.example.invalid/pypi/simple/"
+        "url": "https://cache.example.invalid/root/pypi/+simple/"
       },
       "bindings": [
         {
@@ -61,7 +61,13 @@
         "mode": "fail"
       },
       "verification": {
-        "method": "tool-native"
+        "method": "tool-native",
+        "probe": {
+          "path": "/+api",
+          "timeoutMs": 5000,
+          "attempts": 2,
+          "retryDelayMs": 100
+        }
       }
     },
     "cargo-registry": {

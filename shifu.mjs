@@ -219,7 +219,7 @@ function cacheHelp() {
   cache status [--json] [--receipt FILE]
                             inspect local projection and receipt without network I/O
   cache doctor [--json] [--probe] [--receipt FILE] [--timeout-ms N]
-                            resolve the profile; --probe adds bounded endpoint HEAD checks
+                            resolve the profile; --probe adds policy-aware bounded HEAD checks
   cache use --profile REF --digest SHA256 [--scope SCOPE] [--execute]
                             plan or write only Shifu's managed local config block
   cache unset [--execute]   plan or remove only Shifu's managed local config block
@@ -319,8 +319,12 @@ function parseCacheDiagnosticOptions(argv, { allowProbe = false } = {}) {
     else if (arg === '--probe' && allowProbe) options.probe = true;
     else if (arg === '--timeout-ms' && allowProbe) {
       options.timeoutMs = Number(value());
-      if (!Number.isInteger(options.timeoutMs) || options.timeoutMs < 100)
-        throw new Error('--timeout-ms must be an integer >= 100');
+      if (
+        !Number.isInteger(options.timeoutMs) ||
+        options.timeoutMs < 100 ||
+        options.timeoutMs > 30_000
+      )
+        throw new Error('--timeout-ms must be an integer from 100 to 30000');
     } else throw new Error(`unknown cache diagnostic option: ${arg}`);
   }
   return options;

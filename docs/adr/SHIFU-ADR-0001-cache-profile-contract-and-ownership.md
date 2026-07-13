@@ -107,6 +107,11 @@ registered KFD-1 version decision process.
   environment variables outside Buildchain, validates the detected platform,
   and uploads an exact package list; the ordinary Buildchain interface remains
   only profile reference plus digest.
+- Cache diagnostics use optional, same-origin per-service probe policy with
+  bounded timeout and retry limits. Provider-aware lightweight targets avoid
+  treating an expensive index listing as a health endpoint, while persistent
+  transport or server failures remain degraded and endpoint coordinates stay
+  out of diagnostic receipts.
 - A future Shifu repository extraction can move this ADR registry and contract
   together without renumbering Kungfu Core ADRs.
 

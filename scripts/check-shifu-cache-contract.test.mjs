@@ -16,6 +16,7 @@ import {
   cacheStatus,
   cacheUnset,
   cacheUse,
+  probeHttp,
 } from './shifu-cache-operations.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -359,6 +360,7 @@ test('cache doctor probes selected HTTP endpoints only when requested', async (t
   const fixture = shellHarness(t);
   const server = http.createServer((request, response) => {
     assert.equal(request.method, 'HEAD');
+    assert.equal(request.url, '/healthz');
     response.writeHead(200).end();
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -367,6 +369,12 @@ test('cache doctor probes selected HTTP endpoints only when requested', async (t
   assert.equal(typeof address, 'object');
   const profile = JSON.parse(fs.readFileSync(fixture.profilePath, 'utf8'));
   profile.services.npm.endpoint.url = `http://127.0.0.1:${address.port}/npm/`;
+  profile.services.npm.verification.probe = {
+    path: '/healthz',
+    timeoutMs: 250,
+    attempts: 3,
+    retryDelayMs: 0,
+  };
   const raw = `${JSON.stringify(profile, null, 2)}\n`;
   fs.writeFileSync(fixture.profilePath, raw);
   const digest = `sha256:${crypto.createHash('sha256').update(raw).digest('hex')}`;
@@ -385,6 +393,151 @@ test('cache doctor probes selected HTTP endpoints only when requested', async (t
   assert.equal(diagnostic.overall, 'healthy');
   assert.equal(diagnostic.probe, true);
   assert.equal(diagnostic.services.npm.reachable, 'reachable');
+  assert.deepEqual(diagnostic.services.npm.probeEvidence, {
+    state: 'reachable',
+    method: 'HEAD',
+    status: 200,
+    durationMs: diagnostic.services.npm.probeEvidence.durationMs,
+    attempts: 1,
+    timeoutMs: 250,
+    target: 'same-origin-path',
+  });
+});
+
+test('cache doctor uses the lightweight devpi API for legacy Python profiles', async (t) => {
+  const fixture = shellHarness(t);
+  const requests = [];
+  const server = http.createServer((request, response) => {
+    requests.push({ method: request.method, url: request.url });
+    response.writeHead(200).end();
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => server.close());
+  const address = server.address();
+  assert.equal(typeof address, 'object');
+  const profile = JSON.parse(fs.readFileSync(fixture.profilePath, 'utf8'));
+  profile.services = { 'python-index': profile.services.npm };
+  profile.services['python-index'].endpoint.url =
+    `http://127.0.0.1:${address.port}/root/pypi/+simple/`;
+  profile.services['python-index'].bindings[0].key = 'UV_DEFAULT_INDEX';
+  const raw = `${JSON.stringify(profile, null, 2)}\n`;
+  fs.writeFileSync(fixture.profilePath, raw);
+  const digest = `sha256:${crypto.createHash('sha256').update(raw).digest('hex')}`;
+  const configFile = path.join(fixture.root, 'build-local.env');
+  fs.writeFileSync(
+    configFile,
+    `export SHIFU_CACHE_PROFILE_REF='${fixture.profilePath}'\nexport SHIFU_CACHE_PROFILE_DIGEST='${digest}'\n`,
+  );
+
+  const diagnostic = await cacheDoctor({
+    configFile,
+    receiptPath: fixture.receipt,
+    env: {},
+    probe: true,
+    timeoutMs: 1000,
+  });
+
+  assert.equal(diagnostic.overall, 'healthy');
+  assert.deepEqual(requests, [{ method: 'HEAD', url: '/+api' }]);
+  assert.equal(
+    diagnostic.services['python-index'].probeEvidence.target,
+    'provider-health',
+  );
+  assert.equal(
+    diagnostic.services['python-index'].probeEvidence.timeoutMs,
+    5000,
+  );
+});
+
+test('HTTP probe retries a transient timeout and succeeds', async () => {
+  let requests = 0;
+  const timeout = Object.assign(new Error('timed out'), {
+    name: 'TimeoutError',
+  });
+  const evidence = await probeHttp('https://cache.example.invalid/health', {
+    timeoutMs: 100,
+    attempts: 2,
+    retryDelayMs: 0,
+    request: async () => {
+      requests += 1;
+      if (requests === 1) throw timeout;
+      return { status: 200 };
+    },
+  });
+  assert.equal(requests, 2);
+  assert.equal(evidence.state, 'reachable');
+  assert.equal(evidence.attempts, 2);
+  assert.equal(evidence.status, 200);
+});
+
+test('HTTP probe keeps persistent timeouts failed at the attempt bound', async () => {
+  let requests = 0;
+  const evidence = await probeHttp('https://cache.example.invalid/health', {
+    timeoutMs: 100,
+    attempts: 3,
+    retryDelayMs: 0,
+    request: async () => {
+      requests += 1;
+      throw Object.assign(new Error('timed out'), { name: 'TimeoutError' });
+    },
+  });
+  assert.equal(requests, 3);
+  assert.equal(evidence.state, 'failed');
+  assert.equal(evidence.reason, 'timeout');
+  assert.equal(evidence.attempts, 3);
+});
+
+test('HTTP probe retries 5xx but accepts a reachable 4xx without retry', async () => {
+  let retryableRequests = 0;
+  const recovered = await probeHttp('https://cache.example.invalid/health', {
+    timeoutMs: 100,
+    attempts: 2,
+    retryDelayMs: 0,
+    request: async () => ({
+      status: ++retryableRequests === 1 ? 503 : 204,
+    }),
+  });
+  assert.equal(retryableRequests, 2);
+  assert.equal(recovered.state, 'reachable');
+  assert.equal(recovered.attempts, 2);
+
+  let nonRetryableRequests = 0;
+  const reachable = await probeHttp('https://cache.example.invalid/missing', {
+    timeoutMs: 100,
+    attempts: 3,
+    retryDelayMs: 0,
+    request: async () => {
+      nonRetryableRequests += 1;
+      return { status: 404 };
+    },
+  });
+  assert.equal(nonRetryableRequests, 1);
+  assert.equal(reachable.state, 'reachable');
+  assert.equal(reachable.status, 404);
+});
+
+test('cache profile runtime rejects probe attempts above the schema bound', async (t) => {
+  const fixture = shellHarness(t);
+  const profile = JSON.parse(fs.readFileSync(fixture.profilePath, 'utf8'));
+  profile.services.npm.verification.probe = { attempts: 4 };
+  const raw = `${JSON.stringify(profile, null, 2)}\n`;
+  fs.writeFileSync(fixture.profilePath, raw);
+  const digest = `sha256:${crypto.createHash('sha256').update(raw).digest('hex')}`;
+  const configFile = path.join(fixture.root, 'build-local.env');
+  fs.writeFileSync(
+    configFile,
+    `export SHIFU_CACHE_PROFILE_REF='${fixture.profilePath}'\nexport SHIFU_CACHE_PROFILE_DIGEST='${digest}'\n`,
+  );
+  const diagnostic = await cacheDoctor({
+    configFile,
+    receiptPath: fixture.receipt,
+    env: {},
+  });
+  assert.equal(diagnostic.overall, 'failed');
+  assert.match(
+    diagnostic.error,
+    /probe\.attempts must be an integer from 1 to 3/,
+  );
 });
 
 test('cache status CLI emits the diagnostic receipt as JSON', (t) => {
