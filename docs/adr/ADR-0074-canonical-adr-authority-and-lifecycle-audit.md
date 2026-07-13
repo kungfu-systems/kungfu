@@ -4,8 +4,8 @@ doc_type: architecture-decision
 adr_id: ADR-0074
 decision_status: accepted
 implementation_status: implemented
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/741]
-closure_pr: https://github.com/kungfu-systems/kungfu/pull/741
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/741, https://github.com/kungfu-systems/kungfu/pull/750]
+closure_pr: https://github.com/kungfu-systems/kungfu/pull/750
 qualification_refs: [scripts/adr-audit.test.mjs, scripts/document-metadata-contract.test.mjs, scripts/check-docs.test.mjs]
 review_state: maintainer-reviewed
 sensitivity: public

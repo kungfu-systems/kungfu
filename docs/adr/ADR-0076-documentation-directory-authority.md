@@ -4,8 +4,8 @@ doc_type: architecture-decision
 adr_id: ADR-0076
 decision_status: accepted
 implementation_status: implemented
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/745, https://github.com/kungfu-systems/kungfu/pull/746]
-closure_pr: https://github.com/kungfu-systems/kungfu/pull/746
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/745, https://github.com/kungfu-systems/kungfu/pull/746, https://github.com/kungfu-systems/kungfu/pull/750]
+closure_pr: https://github.com/kungfu-systems/kungfu/pull/750
 qualification_refs: [docs.contract.json, scripts/check-docs.test.mjs, scripts/document-metadata-contract.test.mjs]
 review_state: maintainer-reviewed
 sensitivity: public
@@ -103,5 +103,8 @@ canonical moves, section indexes, metadata routing, publication graph, and
 initial placement fixtures. PR
 [#746](https://github.com/kungfu-systems/kungfu/pull/746) removes the
 speculative compatibility facade, makes the root rule absolute, and strengthens
-the retired ADR-root fixtures. The deterministic documentation gate is the
-retained qualification surface.
+the retired ADR-root fixtures. PR
+[#750](https://github.com/kungfu-systems/kungfu/pull/750) moves the remaining
+Core documents and retained qualification evidence into this taxonomy, removes
+the ADR redirect trees, and makes both retired roots fail closed. The
+deterministic documentation gate is the retained qualification surface.
