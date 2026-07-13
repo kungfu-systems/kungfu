@@ -7,7 +7,7 @@ authority: kfx packages remain the governed runtime artifacts that execute UI,
 runtime facets, and future tool surfaces.
 
 This page is the design contract for the first Kungfu Skill surface. The
-architecture decision is [ADR-0015](../framework/core/docs/adr/ADR-0015-kungfu-skill-agent-context-layer.md).
+architecture decision is [ADR-0015](./adr/ADR-0015-kungfu-skill-agent-context-layer.md).
 
 ## The model
 

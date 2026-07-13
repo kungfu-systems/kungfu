@@ -16,7 +16,7 @@ Three words carry the model — keep them apart:
   and `adapter` (a **runtime facet** — capture-side framework instrumentation
   the trace supervisor loads; the first v4 runtime facet). A background
   `service` facet is proposed by
-  [ADR-0017](../framework/core/docs/adr/ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md)
+  [ADR-0017](./adr/ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md)
   for kfx-owned long-lived processes. Older trading adapters and operators are
   a separate earlier-generation line, still mid-migration (see
   [status](#runtime-extensions-current-status)).
@@ -135,7 +135,7 @@ The actual keys must exactly match the Profile's required and optional member
 set. `plan` is read-only; `apply` recomputes the plan and refuses artifact,
 member-root, permission, lifecycle-basis, or runtime drift. A lifecycle receipt
 does not by itself establish KFD-2 trust for a domain claim; see
-[ADR-0069](../framework/core/docs/adr/ADR-0069-agent-first-kfx-profile-suite-runtime.md).
+[ADR-0069](./adr/ADR-0069-agent-first-kfx-profile-suite-runtime.md).
 
 ## The build contract
 
@@ -221,7 +221,7 @@ never to elevate. Trust is not granted because a package was found under a
 writable path or an environment-provided development root; those roots only
 control discovery. Trust comes from a source-authority verdict such as the
 frozen first-party set plus content pin described in
-[ADR-0013](../framework/core/docs/adr/ADR-0013-cli-runtime-extension-isolation-trusted-channel.md).
+[ADR-0013](./adr/ADR-0013-cli-runtime-extension-isolation-trusted-channel.md).
 
 - **node-integrated** — source-verified first-party/system views. They share the
   shell's renderer, React and capability instances.

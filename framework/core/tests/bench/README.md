@@ -2,7 +2,7 @@
 
 Measurement harness for the reactive event layer's per-frame dispatch cost —
 the evidence feed for
-[ADR-0005](../../docs/adr/ADR-0005-control-event-axis-modernization-assessment.md)
+[ADR-0005](../../../../docs/adr/ADR-0005-control-event-axis-modernization-assessment.md)
 (freeze vs. modernize the control / event axis).
 
 ## What is measured

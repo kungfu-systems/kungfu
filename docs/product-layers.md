@@ -9,7 +9,7 @@ If you are deciding what to install or embed, start with the user-facing
 [**Choose Your Kungfu**](choose-your-kungfu.md) guide. This page defines the
 technical product and qualification boundaries behind that choice.
 
-[ADR-0049](../framework/core/docs/adr/ADR-0049-layer-complete-products-and-domain-neutral-core.md)
+[ADR-0049](./adr/ADR-0049-layer-complete-products-and-domain-neutral-core.md)
 defines the architecture constraint. This page is the practical product map.
 
 ## Choose from the outside in

@@ -44,4 +44,4 @@ agent is launched.
 Python and TypeScript implementations schema-equivalent.
 
 See [`../../docs/skills.md`](../../docs/skills.md) and
-[`../core/docs/adr/ADR-0015-kungfu-skill-agent-context-layer.md`](../core/docs/adr/ADR-0015-kungfu-skill-agent-context-layer.md).
+[`../core/docs/adr/ADR-0015-kungfu-skill-agent-context-layer.md`](../../docs/adr/ADR-0015-kungfu-skill-agent-context-layer.md).

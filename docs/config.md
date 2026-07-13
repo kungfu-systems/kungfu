@@ -2,7 +2,7 @@
 
 Kungfu separates local state into workspace data, user config, and machine data
 fallback. The architecture decision is
-[ADR-0035](../framework/core/docs/adr/ADR-0035-workspace-local-kungfu-data-home.md).
+[ADR-0035](./adr/ADR-0035-workspace-local-kungfu-data-home.md).
 
 - Workspace `.kungfu/` is the default fact-ledger home when a workspace boundary
   exists. It stores Episodes, the Episode manifest journal, payload bodies,
@@ -15,7 +15,7 @@ fallback. The architecture decision is
   catalog/cache/service state, and non-workspace facts.
 
 The matching live process topology is
-[ADR-0036](../framework/core/docs/adr/ADR-0036-supervisor-and-workspace-master-topology.md):
+[ADR-0036](./adr/ADR-0036-supervisor-and-workspace-master-topology.md):
 a per-user `supervisor` is a router/process manager, while each resolved
 workspace or fallback data root can have its own `coordinator`. The supervisor may
 keep small routing/runtime state under the user config area; workspace coordinator

@@ -7,8 +7,8 @@ Closing the GUI window should not imply that the runtime stops; stopping it is
 an explicit operator action.
 
 The canonical terminology is defined by
-[ADR-0057](../framework/core/docs/adr/ADR-0057-domain-neutral-live-runtime-terminology.md);
-[ADR-0036](../framework/core/docs/adr/ADR-0036-supervisor-and-workspace-master-topology.md)
+[ADR-0057](./adr/ADR-0057-domain-neutral-live-runtime-terminology.md);
+[ADR-0036](./adr/ADR-0036-supervisor-and-workspace-master-topology.md)
 records the original topology decision.
 It defines two live process roles:
 
@@ -29,7 +29,7 @@ root. It discovers load-bearing claims, deduplicates and invalidates assessment
 requests, supervises assessor executors, and publishes TrustReport lifecycle
 updates. It does not become fact authority or embed every domain assessor. See
 [KFD-2 trust assessment in a live workspace](kfd2-trust-assessment.md) and
-[ADR-0052](../framework/core/docs/adr/ADR-0052-kfd2-assessment-lifecycle-and-executors.md).
+[ADR-0052](./adr/ADR-0052-kfd2-assessment-lifecycle-and-executors.md).
 
 ## Current CLI Surface
 

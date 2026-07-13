@@ -19,7 +19,7 @@ payload.
 (`publish_data_length()` release / `acquire_length()` acquire) and
 [`writer.cpp`](../framework/core/src/libyijinjing/src/journal/writer.cpp); and
 the decision plus reported stress-test results in
-[ADR-0001](../framework/core/docs/adr/ADR-0001-yijinjing-publish-barrier.md)
+[ADR-0001](./adr/ADR-0001-yijinjing-publish-barrier.md)
 (0 tears across hundreds of millions of reads on arm64 and x86). Note: the
 standalone stress harness that produced those numbers is not shipped in this
 repository — you can read the implementation and the reported results, but
@@ -41,7 +41,7 @@ secret.
 **Verify.** The schema headers under
 [`kungfu/yijinjing/schema`](../framework/core/src/libyijinjing/include/kungfu/yijinjing/schema),
 the Python binding under `pykungfu.yijinjing`, the Node binding exposed as
-`binding.Schema`, and [ADR-0008](../framework/core/docs/adr/ADR-0008-yijinjing-schema-layout-baseline.md).
+`binding.Schema`, and [ADR-0008](./adr/ADR-0008-yijinjing-schema-layout-baseline.md).
 
 **Maturity.** The v4 greenfield baseline is `stable` as the current contract
 root. Pre-v4 layouts are not compatibility targets. The **enforcement** that

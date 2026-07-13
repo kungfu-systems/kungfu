@@ -32,7 +32,8 @@
   "publication": {
     "roots": ["README.md", "AGENTS.md", "CONTRIBUTING.md", "framework/spec/README.md"],
     "include": ["README.md", "AGENTS.md", "CONTRIBUTING.md", "docs", "framework/spec"],
-    "allowedOrphans": []
+    "allowedOrphans": [],
+    "allowedOrphanDocumentTypes": ["adr-redirect"]
   },
   "executableExamples": [
     {

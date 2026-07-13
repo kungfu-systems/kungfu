@@ -162,6 +162,7 @@ health:
 ./shifu docs:prose          # full advisory + required prose policy through Vale
 ./shifu docs:prose:required # objective prose rules that block pull requests
 ./shifu docs:check:external # external URLs through Lychee (local Lychee or Docker required)
+./shifu adr:audit            # whole-registry ADR lifecycle/evidence inventory
 ```
 
 `docs:check` runs in pre-commit and documentation pull requests. Opt-in fences
@@ -189,6 +190,14 @@ the executable source for canonical term spelling and layers, governed public
 files, retired wording, preferred terminology, and load-bearing claim guards.
 The deterministic check verifies that its core terms remain aligned with
 [`docs/vocabulary.md`](docs/vocabulary.md).
+
+All Core and Shifu architecture decisions are canonical under
+[`docs/adr/`](docs/adr/). Their prefixes retain ownership and portability, but
+they share one metadata, evidence, dev, alpha, and stable contract. Legacy paths
+contain typed redirects only and must never regain decision or implementation
+fields. `./shifu adr:audit -- --json` reports the complete registry;
+`--strict` turns review/evidence debt into a failure, while `--release stable`
+fails on every current stable blocker without creating a release.
 
 Vale configuration is generated into a temporary directory from that registry;
 there is no committed second copy of the prose rules. `docs:prose:required`

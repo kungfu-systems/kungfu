@@ -73,10 +73,10 @@ the component's case for existing.
    this mode: it reintroduces the FFI seam the boundaries above exclude. A
    component that truly needs it must argue its own case and bring its own
    binding/build wiring in review. Argued cases on record: the host trunk —
-   [ADR-0046](../framework/core/docs/adr/ADR-0046-rust-host-trunk-and-assembled-runtime.md)
+   [ADR-0046](./adr/ADR-0046-rust-host-trunk-and-assembled-runtime.md)
    (accepted; init + control plane only, hot paths never cross the seam) —
    and, proposed, the extension-side surfaces of
-   [ADR-0045](../framework/core/docs/adr/ADR-0045-kfx-execution-profiles-native-rust-wasm.md)
+   [ADR-0045](./adr/ADR-0045-kfx-execution-profiles-native-rust-wasm.md)
    (the `kungfu-kfx` safe wrapper over the core's one versioned C ABI, and
    the bounded `libwasm` component host). Both sides converge on the same
    discipline: libkungfu owns one C embedding membrane and every in-process
@@ -164,11 +164,11 @@ this discipline exists to prevent.
 The name states the role: shifu appears wherever kungfu cannot help itself —
 before the toolchain exists, when the environment is broken, when the
 repository itself still needs fetching. A self-hosting system (see
-[ADR-0009](../framework/core/docs/adr/ADR-0009-load-bearing-self-bootstrap.md))
+[ADR-0009](./adr/ADR-0009-load-bearing-self-bootstrap.md))
 needs exactly one such fixed point outside its own loop, and that fixed point
 must itself be beyond needing help — which is why the launcher's
 zero-dependency, std-only, weld-as-little-as-possible discipline
-([ADR-0044](../framework/core/docs/adr/ADR-0044-shifu-delegation-protocol.md))
+([ADR-0044](./adr/ADR-0044-shifu-delegation-protocol.md))
 is constitutive, not aesthetic: the helper of last resort cannot afford to
 need one.
 
@@ -216,7 +216,7 @@ per-platform special-casing) with one binary that:
   assuming what it is implemented in, and carry a two-fuse anti-loop guard
   (`SHIFU_FROM_SHIM` / `SHIFU_DELEGATED`) — so the handover survives any
   toolchain evolution, including one that retires node. Protocol authority:
-  [ADR-0044](../framework/core/docs/adr/ADR-0044-shifu-delegation-protocol.md).
+  [ADR-0044](./adr/ADR-0044-shifu-delegation-protocol.md).
 
 It scores three yeses: it *is* the process boundary in front of everything
 else; it needs to exist before node/python are provisioned, which only a
@@ -227,7 +227,7 @@ because build logic stays declarative in the repo.
 
 The launcher is only the first bearer of the shifu role — the product's Rust
 trunk is the queued second
-([ADR-0046](../framework/core/docs/adr/ADR-0046-rust-host-trunk-and-assembled-runtime.md):
+([ADR-0046](./adr/ADR-0046-rust-host-trunk-and-assembled-runtime.md):
 stage 1 shares the bootstrap leg for its lazy pinned-uv fetch, stage 3
 consumes the rest). So the parts of the role every bearer needs live in
 `crates/shifu-core`, an unpublished workspace library, and each new appearance

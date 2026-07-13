@@ -408,28 +408,28 @@ function checkDocs() {
 }
 
 function checkAdrIdentities() {
-  const adrDir = path.join(ROOT, 'framework', 'core', 'docs', 'adr');
+  const adrDir = path.join(ROOT, 'docs', 'adr');
   const files = fs
     .readdirSync(adrDir)
-    .filter((file) => /^ADR-\d{4}-.+\.md$/.test(file))
+    .filter((file) => /^(?:SHIFU-)?ADR-\d{4}-.+\.md$/.test(file))
     .sort();
   /** @type {Map<string, string[]>} */
   const byId = new Map();
   /** @type {string[]} */
   const errors = [];
   for (const file of files) {
-    const id = file.slice(4, 8);
+    const id = /^(?:SHIFU-)?ADR-\d{4}/.exec(file)?.[0] || '';
     const siblings = byId.get(id) || [];
     siblings.push(file);
     byId.set(id, siblings);
     const text = fs.readFileSync(path.join(adrDir, file), 'utf8');
-    if (!text.includes(`# ADR-${id}:`)) {
-      errors.push(`${file} heading does not match ADR-${id}`);
+    if (!text.includes(`# ${id}:`)) {
+      errors.push(`${file} heading does not match ${id}`);
     }
   }
   for (const [id, siblings] of byId) {
     if (siblings.length > 1) {
-      errors.push(`ADR-${id} is duplicated: ${siblings.join(', ')}`);
+      errors.push(`${id} is duplicated: ${siblings.join(', ')}`);
     }
   }
   if (errors.length) {

@@ -113,7 +113,7 @@ by an explicit, evolution-aware decode in a non-zero-copy path. The layout is th
 invariant the version machinery exists to protect; the release-line refs are how that
 protection is published and audited, not the thing being protected. How that invariant may
 evolve, and how released v4+ journals stay replayable, is its own decision — see
-[ADR-0008](../framework/core/docs/adr/ADR-0008-yijinjing-schema-layout-baseline.md).
+[ADR-0008](./adr/ADR-0008-yijinjing-schema-layout-baseline.md).
 
 ## Stable v4 schema epochs must stay maintainable
 
@@ -245,10 +245,17 @@ expiry equal to that release. The waiver ledger has a dedicated CODEOWNER, so a
 GitHub admin bypass or an unreviewed field edit is not a waiver. Waivers appear
 in `kungfu.adr-release-report/v1` and never roll forward automatically.
 
+Both namespaces are canonical in [`docs/adr/`](adr/) and pass the same gate;
+Shifu ownership is not a release exemption. Before preparing a stable
+promotion, run `./shifu adr:audit -- --release stable` for a side-effect-free
+inventory of every admitted and blocked record. The command does not apply
+waivers because waivers are exact-release, reviewed PR evidence; the promotion
+gate remains their authority.
+
 The machine guarantees that stable has no *unaccounted* accepted decision. It
 does not replace semantic review: reviewers decide whether code fulfills the
 ADR and whether residual risk deserves a waiver. See
-[ADR-0073](../framework/core/docs/adr/ADR-0073-buildchain-adr-release-admissibility.md)
+[ADR-0073](./adr/ADR-0073-buildchain-adr-release-admissibility.md)
 and the [document metadata contract](document-metadata.md).
 
 ### Side-effect-free promotion rehearsal
@@ -340,4 +347,4 @@ If a candidate cannot preserve all four, it is a downgrade for this project, how
   (a dedicated source-to-binary `buildchain` doc is planned — see [`MAP.md`](MAP.md)).
 - The compatibility invariant below the tag (yijinjing schema layout), its v4+
   schema-evolution policy, and the stable-epoch maintenance rationale:
-  `framework/core/docs/adr/ADR-0008-yijinjing-schema-layout-baseline.md`.
+  `docs/adr/ADR-0008-yijinjing-schema-layout-baseline.md`.

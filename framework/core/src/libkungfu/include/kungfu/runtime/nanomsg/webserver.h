@@ -47,7 +47,7 @@ template <typename T> struct nng_data {
     header->dest = 0;
     header->data_type = kungfu::yijinjing::enums::FrameDataType::Raw;
     header->initial_source = 0;
-    header->frame_uid = 0;
+    header->journal_frame_uid = 0;
     header->trigger_frame_uid = 0;
     header->stream_id = stream_id;
   }

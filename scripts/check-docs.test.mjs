@@ -125,6 +125,29 @@ test('rejects unreachable public documents', () => {
   assert.ok(findings.some((finding) => finding.code === 'publication-orphan'));
 });
 
+test('allows unreachable documents only through a typed compatibility profile', () => {
+  const typed = structuredClone(contract);
+  typed.publication.allowedOrphanDocumentTypes = ['adr-redirect'];
+  const root = fixture({
+    'README.md': '# Home\n\n[Guide](docs/guide.md)\n',
+    'docs/guide.md': '# Guide\n',
+    'docs/redirect.md': `---
+doc_type: adr-redirect
+---
+
+# Moved
+`,
+  });
+  const findings = checkDocs({
+    root,
+    files: ['README.md', 'docs/guide.md', 'docs/redirect.md'],
+    contract: typed,
+    vocabularyRegistry: false,
+    metadataContract: false,
+  });
+  assert.deepEqual(findings, []);
+});
+
 test('rejects undeclared executable examples', () => {
   const root = fixture({
     'README.md': '# Home\n\n[Guide](docs/guide.md)\n',

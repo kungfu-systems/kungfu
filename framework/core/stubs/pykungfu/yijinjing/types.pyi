@@ -928,10 +928,10 @@ class frame_header:
     carrier_type: int
     data_type: pykungfu.yijinjing.enums.FrameDataType
     dest: int
-    frame_uid: int
     gen_time: int
     header_length: int
     initial_source: int
+    journal_frame_uid: int
     length: int
     source: int
     stream_id: int

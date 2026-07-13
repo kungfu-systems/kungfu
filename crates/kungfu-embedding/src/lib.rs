@@ -4,11 +4,17 @@
 //!
 //! This is the one shared borrowing layer required by the Stage 3 embedding
 //! contract RFC (`framework/core/docs/embedding-contract-face.md`, decision D7):
-//! a single membrane (`kungfu_embedding_get_api` + the `kf_embedding_api_v1`
+//! a single membrane (`kungfu_embedding_get_api` + the `kf_embedding_api_v*`
 //! table, mirrored from `framework/core/src/libkungfu/include/kungfu/embedding.h`)
 //! consumed by two callers — the product trunk (`crates/trunk`) and the future
 //! native-authoring crate (`kungfu-kfx`, ADR-0045 gate 2). There is exactly one
 //! copy of the FFI seam, here.
+//!
+//! The table is version-negotiated: v1 exposes journal batch-read + capability
+//! negotiation; v2 (ADR-0071 Bucket A) appends a read-only substrate-diagnostic
+//! surface ([`Context::storage_fsck`]) after a byte-identical v1 prefix.
+//! [`Context::open`] negotiates v2 first and falls back to v1, so a v1-only core
+//! still yields a working journal-read context.
 //!
 //! # ABI fidelity
 //!
@@ -45,6 +51,11 @@ use std::slice;
 /// The frozen v1 ABI version negotiated through [`kungfu_embedding_get_api`].
 pub const ABI_V1: u32 = 1;
 
+/// The v2 ABI version: v1 plus the read-only substrate-diagnostic surface
+/// (`storage_fsck`). [`Context::open`] negotiates v2 first and falls back to v1,
+/// so a v1-only core still yields a working journal-read context.
+pub const ABI_V2: u32 = 2;
+
 /// Maximum frames a single `read_batch` call may return (`KF_EMBEDDING_MAX_BATCH_FRAMES`).
 pub const MAX_BATCH_FRAMES: u32 = 4096;
 
@@ -56,6 +67,13 @@ pub const CAP_READ_JOURNAL_BATCH: u64 = 1 << 0;
 
 /// Capability bit: batch payloads are zero-copy mmap views (`KF_EMBEDDING_CAP_MMAP_PAYLOAD_VIEW`).
 pub const CAP_MMAP_PAYLOAD_VIEW: u64 = 1 << 1;
+
+/// Capability bit: read-only substrate diagnostics reachable without CPython
+/// (`KF_EMBEDDING_CAP_STORAGE_DIAGNOSTICS`).
+pub const CAP_STORAGE_DIAGNOSTICS: u64 = 1 << 2;
+
+/// Report blob format tag: UTF-8 JSON (`KF_EMBEDDING_REPORT_FORMAT_JSON`).
+pub const REPORT_FORMAT_JSON: u32 = 1;
 
 const OK: i32 = 0;
 
@@ -115,6 +133,36 @@ struct BatchV1 {
     token: u64,
 }
 
+/// v2: a read-only storage fsck request (mirrors `kf_embedding_storage_fsck_request_v1`).
+#[repr(C)]
+#[derive(Clone, Copy)]
+struct StorageFsckRequestV1 {
+    struct_size: u32,
+    scope: u32,
+    runtime_dir: *const c_char,
+    provider: *const c_char,
+    provider_config_source: *const c_char,
+    source_id: *const c_char,
+    episode_id: u64,
+    verify_frames: u32,
+    reserved: u32,
+}
+
+/// v2: an owned diagnostic report blob (mirrors `kf_embedding_report_v1`). The
+/// `data` bytes and their backing `owner` are freed by `report_release`.
+#[repr(C)]
+#[derive(Clone, Copy)]
+struct ReportV1 {
+    struct_size: u32,
+    format: u32,
+    ok: u8,
+    degraded: u8,
+    reserved0: [u8; 2],
+    data: *const u8,
+    data_size: u64,
+    owner: *mut c_void,
+}
+
 type ContextOpen = unsafe extern "C" fn(*const ContextConfigV1, *mut *mut c_void) -> i32;
 type ContextCapabilities = unsafe extern "C" fn(*const c_void, *mut u64) -> i32;
 type ContextClose = unsafe extern "C" fn(*mut c_void) -> i32;
@@ -122,6 +170,9 @@ type ReaderOpen = unsafe extern "C" fn(*mut c_void, *const LocationV1, *mut *mut
 type ReaderReadBatch = unsafe extern "C" fn(*mut c_void, u32, *mut BatchV1) -> i32;
 type ReaderReleaseBatch = unsafe extern "C" fn(*mut c_void, u64) -> i32;
 type ReaderClose = unsafe extern "C" fn(*mut c_void) -> i32;
+type StorageFsck =
+    unsafe extern "C" fn(*mut c_void, *const StorageFsckRequestV1, *mut ReportV1) -> i32;
+type ReportRelease = unsafe extern "C" fn(*mut ReportV1) -> i32;
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -138,13 +189,50 @@ struct ApiV1 {
     reader_close: ReaderClose,
 }
 
+/// The v2 table: a byte-identical v1 prefix followed by the diagnostic pointers.
+#[repr(C)]
+#[derive(Clone, Copy)]
+struct ApiV2 {
+    abi_version: u32,
+    struct_size: u32,
+    capabilities: u64,
+    context_open: ContextOpen,
+    context_capabilities: ContextCapabilities,
+    context_close: ContextClose,
+    reader_open: ReaderOpen,
+    reader_read_batch: ReaderReadBatch,
+    reader_release_batch: ReaderReleaseBatch,
+    reader_close: ReaderClose,
+    storage_fsck: StorageFsck,
+    report_release: ReportRelease,
+}
+
+impl ApiV2 {
+    /// The v1 view of this table's shared prefix.
+    fn as_v1(&self) -> ApiV1 {
+        ApiV1 {
+            abi_version: self.abi_version,
+            struct_size: self.struct_size,
+            capabilities: self.capabilities,
+            context_open: self.context_open,
+            context_capabilities: self.context_capabilities,
+            context_close: self.context_close,
+            reader_open: self.reader_open,
+            reader_read_batch: self.reader_read_batch,
+            reader_release_batch: self.reader_release_batch,
+            reader_close: self.reader_close,
+        }
+    }
+}
+
 extern "C" {
     /// The only link-visible bootstrap: negotiates version + table size and fills
-    /// `out_api`. Supplied by libkungfu at final link (see the crate docs).
+    /// `out_api` (a `kf_embedding_api_v{requested_version}`). Supplied by libkungfu
+    /// at final link (see the crate docs).
     fn kungfu_embedding_get_api(
         requested_version: u32,
         caller_struct_size: u32,
-        out_api: *mut ApiV1,
+        out_api: *mut c_void,
     ) -> i32;
 }
 
@@ -203,6 +291,14 @@ fn cstr(value: &str, field: &'static str) -> Result<CString, EmbeddingError> {
     CString::new(value).map_err(|_| EmbeddingError::NulInString(field))
 }
 
+fn opt_cstr(value: Option<&str>, field: &'static str) -> Result<Option<CString>, EmbeddingError> {
+    value.map(|v| cstr(v, field)).transpose()
+}
+
+fn opt_ptr(value: &Option<CString>) -> *const c_char {
+    value.as_ref().map_or(std::ptr::null(), |c| c.as_ptr())
+}
+
 fn api_v1() -> Result<ApiV1, EmbeddingError> {
     let mut api = std::mem::MaybeUninit::<ApiV1>::uninit();
     // SAFETY: the negotiator fills `out_api` only on OK, and we pass our own
@@ -211,7 +307,7 @@ fn api_v1() -> Result<ApiV1, EmbeddingError> {
         kungfu_embedding_get_api(
             ABI_V1,
             std::mem::size_of::<ApiV1>() as u32,
-            api.as_mut_ptr(),
+            api.as_mut_ptr().cast(),
         )
     };
     status(result)?;
@@ -221,6 +317,50 @@ fn api_v1() -> Result<ApiV1, EmbeddingError> {
         return Err(EmbeddingError::IncompatibleTable);
     }
     Ok(api)
+}
+
+fn api_v2() -> Result<ApiV2, EmbeddingError> {
+    let mut api = std::mem::MaybeUninit::<ApiV2>::uninit();
+    // SAFETY: the negotiator fills `out_api` only on OK; we pass our own struct
+    // size so a v1-only core rejects v2 with UnsupportedVersion.
+    let result = unsafe {
+        kungfu_embedding_get_api(
+            ABI_V2,
+            std::mem::size_of::<ApiV2>() as u32,
+            api.as_mut_ptr().cast(),
+        )
+    };
+    status(result)?;
+    // SAFETY: OK from the negotiator means the table is initialized.
+    let api = unsafe { api.assume_init() };
+    if api.abi_version != ABI_V2 || api.struct_size < std::mem::size_of::<ApiV2>() as u32 {
+        return Err(EmbeddingError::IncompatibleTable);
+    }
+    Ok(api)
+}
+
+/// Negotiate the richest table the core offers: v2 (with diagnostics) if
+/// available, otherwise fall back to v1. Only `UnsupportedVersion` triggers the
+/// fallback; any other error is surfaced.
+fn negotiate() -> Result<(ApiV1, Option<Diagnostics>), EmbeddingError> {
+    match api_v2() {
+        Ok(v2) => Ok((
+            v2.as_v1(),
+            Some(Diagnostics {
+                storage_fsck: v2.storage_fsck,
+                report_release: v2.report_release,
+            }),
+        )),
+        Err(EmbeddingError::UnsupportedVersion) => Ok((api_v1()?, None)),
+        Err(other) => Err(other),
+    }
+}
+
+/// The v2 diagnostic function pointers, present only when v2 was negotiated.
+#[derive(Clone, Copy)]
+struct Diagnostics {
+    storage_fsck: StorageFsck,
+    report_release: ReportRelease,
 }
 
 // ── typed enums ──
@@ -297,6 +437,11 @@ impl Capabilities {
     pub fn mmap_payload_view(self) -> bool {
         self.0 & CAP_MMAP_PAYLOAD_VIEW != 0
     }
+
+    /// Whether the read-only substrate-diagnostic surface (fsck) is reachable.
+    pub fn storage_diagnostics(self) -> bool {
+        self.0 & CAP_STORAGE_DIAGNOSTICS != 0
+    }
 }
 
 // ── config ──
@@ -360,18 +505,78 @@ impl<'a> Location<'a> {
     }
 }
 
+// ── storage diagnostics (v2) ──
+
+/// Which slice of a runtime an fsck covers (`kf_embedding_storage_fsck_scope`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum StorageFsckScope {
+    /// `KF_EMBEDDING_FSCK_SCOPE_ALL` — the whole runtime.
+    #[default]
+    All,
+    /// `KF_EMBEDDING_FSCK_SCOPE_SOURCE` — one source.
+    Source,
+    /// `KF_EMBEDDING_FSCK_SCOPE_EPISODE` — one episode of one source.
+    Episode,
+}
+
+impl StorageFsckScope {
+    fn as_u32(self) -> u32 {
+        match self {
+            Self::All => 0,
+            Self::Source => 1,
+            Self::Episode => 2,
+        }
+    }
+}
+
+/// A read-only storage fsck request. Optional fields map to nullable C strings.
+#[derive(Clone, Copy, Debug)]
+pub struct StorageFsckRequest<'a> {
+    /// The runtime root to check (the `--runtime-dir`).
+    pub runtime_dir: &'a str,
+    /// Storage provider name (`None` for the runtime default).
+    pub provider: Option<&'a str>,
+    /// Where the provider config came from (`None` for the default).
+    pub provider_config_source: Option<&'a str>,
+    /// Which slice to check.
+    pub scope: StorageFsckScope,
+    /// The source id for `Source`/`Episode` scope.
+    pub source_id: Option<&'a str>,
+    /// The episode id for `Episode` scope.
+    pub episode_id: u64,
+    /// Whether to verify journal frame integrity (heavier).
+    pub verify_frames: bool,
+}
+
+impl<'a> StorageFsckRequest<'a> {
+    /// An `All`-scope request over `runtime_dir` with defaults elsewhere.
+    pub fn new(runtime_dir: &'a str) -> Self {
+        Self {
+            runtime_dir,
+            provider: None,
+            provider_config_source: None,
+            scope: StorageFsckScope::All,
+            source_id: None,
+            episode_id: 0,
+            verify_frames: false,
+        }
+    }
+}
+
 // ── handles ──
 
 /// An open embedding context: a live view into a kungfu runtime root.
 pub struct Context {
     api: ApiV1,
+    diagnostics: Option<Diagnostics>,
     raw: *mut c_void,
 }
 
 impl Context {
-    /// Negotiate the v1 table and open a context for `config`.
+    /// Negotiate the richest table the core offers (v2 with diagnostics, else v1)
+    /// and open a context for `config`.
     pub fn open(config: &ContextConfig) -> Result<Self, EmbeddingError> {
-        let api = api_v1()?;
+        let (api, diagnostics) = negotiate()?;
         let root = cstr(config.root, "root")?;
         let namespace = cstr(config.host_namespace, "host_namespace")?;
         let name = cstr(config.host_name, "host_name")?;
@@ -391,7 +596,57 @@ impl Context {
         let mut raw = std::ptr::null_mut();
         // SAFETY: the CStrings outlive the call; `raw_config` points at live memory.
         status(unsafe { (api.context_open)(&raw_config, &mut raw) })?;
-        Ok(Self { api, raw })
+        Ok(Self {
+            api,
+            diagnostics,
+            raw,
+        })
+    }
+
+    /// Run a read-only storage fsck over `request.runtime_dir`, returning the
+    /// report (JSON detail plus an `ok`/`degraded` verdict). This is the
+    /// `doctor`-class path: it reuses the C++ `storage_service::fsck` through the
+    /// membrane and needs no CPython, so it works when the Python runtime is down.
+    ///
+    /// Returns [`EmbeddingError::UnsupportedVersion`] if the core only offers v1
+    /// (no diagnostic surface).
+    pub fn storage_fsck(&self, request: &StorageFsckRequest) -> Result<FsckReport, EmbeddingError> {
+        let diagnostics = self.diagnostics.ok_or(EmbeddingError::UnsupportedVersion)?;
+
+        let runtime_dir = cstr(request.runtime_dir, "runtime_dir")?;
+        let provider = opt_cstr(request.provider, "provider")?;
+        let provider_config_source =
+            opt_cstr(request.provider_config_source, "provider_config_source")?;
+        let source_id = opt_cstr(request.source_id, "source_id")?;
+
+        let raw_request = StorageFsckRequestV1 {
+            struct_size: std::mem::size_of::<StorageFsckRequestV1>() as u32,
+            scope: request.scope.as_u32(),
+            runtime_dir: runtime_dir.as_ptr(),
+            provider: opt_ptr(&provider),
+            provider_config_source: opt_ptr(&provider_config_source),
+            source_id: opt_ptr(&source_id),
+            episode_id: request.episode_id,
+            verify_frames: u32::from(request.verify_frames),
+            reserved: 0,
+        };
+        let mut raw_report = ReportV1 {
+            struct_size: std::mem::size_of::<ReportV1>() as u32,
+            format: 0,
+            ok: 0,
+            degraded: 0,
+            reserved0: [0; 2],
+            data: std::ptr::null(),
+            data_size: 0,
+            owner: std::ptr::null_mut(),
+        };
+        // SAFETY: the CStrings outlive the call; `self.raw` is a live context;
+        // `raw_report` points at live stack memory.
+        status(unsafe { (diagnostics.storage_fsck)(self.raw, &raw_request, &mut raw_report) })?;
+        Ok(FsckReport {
+            release: diagnostics.report_release,
+            raw: raw_report,
+        })
     }
 
     /// The capabilities this specific context can service.
@@ -578,6 +833,58 @@ impl Drop for Batch<'_, '_> {
     }
 }
 
+/// An owned storage fsck report. Holds the core-owned report blob until dropped,
+/// when it returns the blob through `report_release`. The `ok`/`degraded` verdict
+/// is typed, so a caller can decide an exit code without parsing the JSON.
+pub struct FsckReport {
+    release: ReportRelease,
+    raw: ReportV1,
+}
+
+impl FsckReport {
+    /// Whether the runtime passed the check.
+    pub fn ok(&self) -> bool {
+        self.raw.ok != 0
+    }
+
+    /// Whether the check ran but the runtime is degraded.
+    pub fn degraded(&self) -> bool {
+        self.raw.degraded != 0
+    }
+
+    /// Whether the report blob is UTF-8 JSON.
+    pub fn is_json(&self) -> bool {
+        self.raw.format == REPORT_FORMAT_JSON
+    }
+
+    /// The raw report blob (JSON bytes for the current core). Empty if the core
+    /// returned no payload.
+    pub fn bytes(&self) -> &[u8] {
+        if self.raw.data.is_null() || self.raw.data_size == 0 {
+            &[]
+        } else {
+            // SAFETY: the core guarantees `data`/`data_size` describe a live blob
+            // owned by this report until `report_release` (called on drop).
+            unsafe { slice::from_raw_parts(self.raw.data, self.raw.data_size as usize) }
+        }
+    }
+
+    /// The report blob as UTF-8, or a UTF-8 error if the bytes are not valid text.
+    pub fn as_str(&self) -> Result<&str, std::str::Utf8Error> {
+        std::str::from_utf8(self.bytes())
+    }
+}
+
+impl Drop for FsckReport {
+    fn drop(&mut self) {
+        if !self.raw.owner.is_null() {
+            // SAFETY: `raw` owns a live report blob issued by `storage_fsck`.
+            let result = unsafe { (self.release)(&mut self.raw) };
+            debug_assert_eq!(result, OK);
+        }
+    }
+}
+
 // ── compile-time ABI layout guards (mirror embedding.h; 64-bit targets) ──
 //
 // kungfu ships on 64-bit platforms only (arm64 / x86-64), so the raw structs
@@ -598,6 +905,12 @@ mod layout_guards {
     const _: () = assert!(align_of::<BatchV1>() == 8);
     const _: () = assert!(size_of::<ApiV1>() == 72);
     const _: () = assert!(align_of::<ApiV1>() == 8);
+    const _: () = assert!(size_of::<StorageFsckRequestV1>() == 56);
+    const _: () = assert!(align_of::<StorageFsckRequestV1>() == 8);
+    const _: () = assert!(size_of::<ReportV1>() == 40);
+    const _: () = assert!(align_of::<ReportV1>() == 8);
+    const _: () = assert!(size_of::<ApiV2>() == 88);
+    const _: () = assert!(align_of::<ApiV2>() == 8);
 }
 
 #[cfg(test)]
@@ -640,6 +953,37 @@ mod tests {
         assert!(caps.mmap_payload_view());
         assert_eq!(caps.bits(), 3);
         assert!(!Capabilities(0).read_journal_batch());
+        assert!(!caps.storage_diagnostics());
+        assert!(Capabilities(CAP_STORAGE_DIAGNOSTICS).storage_diagnostics());
+    }
+
+    #[test]
+    fn fsck_scope_maps_to_abi_values() {
+        assert_eq!(StorageFsckScope::All.as_u32(), 0);
+        assert_eq!(StorageFsckScope::Source.as_u32(), 1);
+        assert_eq!(StorageFsckScope::Episode.as_u32(), 2);
+        assert_eq!(StorageFsckScope::default(), StorageFsckScope::All);
+    }
+
+    #[test]
+    fn fsck_request_defaults() {
+        let req = StorageFsckRequest::new("/rt");
+        assert_eq!(req.runtime_dir, "/rt");
+        assert_eq!(req.scope, StorageFsckScope::All);
+        assert!(req.provider.is_none());
+        assert!(!req.verify_frames);
+        assert_eq!(req.episode_id, 0);
+    }
+
+    #[test]
+    fn opt_cstr_handles_none_and_nul() {
+        assert!(matches!(opt_cstr(None, "provider"), Ok(None)));
+        assert!(matches!(opt_cstr(Some("ok"), "provider"), Ok(Some(_))));
+        assert_eq!(
+            opt_cstr(Some("a\0b"), "provider"),
+            Err(EmbeddingError::NulInString("provider"))
+        );
+        assert!(opt_ptr(&None).is_null());
     }
 
     #[test]

@@ -83,7 +83,7 @@ struct frame : event {
 
   [[nodiscard]] bool is_json() const override { return data_type() == yijinjing::enums::FrameDataType::Json; }
 
-  [[nodiscard]] uint64_t frame_uid() const override { return header_->frame_uid; }
+  [[nodiscard]] uint64_t frame_uid() const override { return header_->journal_frame_uid; }
 
   [[nodiscard]] uint64_t trigger_frame_uid() const override { return header_->trigger_frame_uid; }
 
@@ -131,7 +131,7 @@ struct frame : event {
 
   void set_dest(uint32_t dest) { header_->dest = dest; }
 
-  void set_frame_uid(uint64_t frame_uid) { header_->frame_uid = frame_uid; }
+  void set_frame_uid(uint64_t frame_uid) { header_->journal_frame_uid = frame_uid; }
 
   void set_trigger_frame_uid(uint64_t trigger_frame_uid) { header_->trigger_frame_uid = trigger_frame_uid; }
 

@@ -15,7 +15,7 @@ last_reviewed: 2026-07-10
 # Episode Atomicity Qualification
 
 This document is the living verification design for
-[ADR-0042](../framework/core/docs/adr/ADR-0042-episode-atomic-safety-and-qualification.md).
+[ADR-0042](./adr/ADR-0042-episode-atomic-safety-and-qualification.md).
 It defines how Kungfu should accumulate evidence that Episode is a trustworthy
 atomic safety and fault-containment boundary. ADR-0042 owns the stable semantics;
 this document owns the evolving workload, fault matrix, scale tiers, metrics,

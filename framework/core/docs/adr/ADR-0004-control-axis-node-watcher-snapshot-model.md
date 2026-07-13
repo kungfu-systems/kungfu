@@ -1,64 +1,15 @@
 ---
 metadata_schema: kungfu.document-metadata/v1
-doc_type: architecture-decision
-adr_id: ADR-0004
-decision_status: proposed
-implementation_status: not-started
-review_state: legacy-unreviewed
+document_status: deprecated
+doc_type: adr-redirect
+review_state: self-reviewed
 sensitivity: public
+moved_to: docs/adr/ADR-0004-control-axis-node-watcher-snapshot-model.md
 ---
 
-# ADR-0004: control axis — the Node watcher snapshot model
+# ADR-0004-control-axis-node-watcher-snapshot-model moved
 
-- Status: proposed (open design question; triggered by state scale, not current)
-- Date: 2026-06-30
-- Category: (b) improvement — control-axis design question, scale-triggered
-- Subsystem: Node binding — `watcher.cpp` / `watcher.h`
-- Related: aggregated with [ADR-0003](ADR-0003-control-axis-python-coroutine-integration.md)
-  into the meta-assessment [ADR-0005](ADR-0005-control-event-axis-modernization-assessment.md);
-  orthogonal to the data-axis work in [ADR-0002](ADR-0002-yijinjing-schema-runtime-layout.md).
-
-## Context
-
-The Node `watcher` decouples the UI from the journal stream on purpose: it
-offloads journal consumption to a libuv worker thread and the main thread pulls a
-periodic (~1s) state snapshot, rather than pushing every frame at the renderer.
-This is the **strategically correct** shape — a fast journal stream cannot
-overwhelm the UI, and the renderer sees a steady, bounded update rate. The model
-is correct at current scale and is not a present problem.
-
-Two implementation considerations become relevant only as **state size** grows:
-
-1. **Long-lived work on the libuv threadpool.** Driving the consumer via
-   `uv_queue_work` runs a long-lived task on a pool sized for short work items,
-   occupying a threadpool slot for the process lifetime.
-2. **Whole-snapshot copy under lock.** Producing each snapshot by copying the
-   entire state under a lock is `O(total state)`; a long lock hold can
-   backpressure readers. This is a *state-scale* consideration — it is triggered
-   by state size and real-time fidelity needs, **not** by event rate, and not at
-   today's scale.
-
-## The open decision
-
-Record the evolution path rather than commit prematurely, since the trigger is
-scale, not the present:
-
-- a **dedicated thread** for the consumer instead of a libuv threadpool slot;
-- a **dirty-key diff** instead of a full-state copy per snapshot;
-- a **double-buffered snapshot pointer** or **lock-free SPSC handoff** to remove
-  the under-lock whole-snapshot copy from the reader's path.
-
-## Evaluation axes
-
-1. **Trigger threshold** — at what state size / fidelity requirement the current
-   model's lock hold or threadpool occupancy actually bites.
-2. **Complexity cost** — the added concurrency surface of diffing /
-   double-buffering / lock-free handoff versus the current simple copy.
-3. **UI fidelity** — whether a higher update rate is wanted at all, or whether
-   the bounded ~1s snapshot is the right product behaviour regardless.
-
-## Status / progress
-
-Identified, not scheduled. The current model is correct at current scale; this
-ADR captures the scale-triggered design question so it is traceable before it
-becomes urgent.
+This path is retained for inbound-link compatibility. The authoritative record
+now lives in the [ADR-0004-control-axis-node-watcher-snapshot-model](../../../../docs/adr/ADR-0004-control-axis-node-watcher-snapshot-model.md). Decision status,
+implementation evidence, and release obligations are read only from that
+canonical document.

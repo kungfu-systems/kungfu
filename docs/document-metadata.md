@@ -34,8 +34,9 @@ both frontmatter and the registry, and stale registry entries fail the gate.
 | Profile | Mode | Coverage | Required authority |
 | --- | --- | --- | --- |
 | public document | registry | repository entry documents, `docs/`, and `framework/spec/` | document lifecycle, type, review state, and public sensitivity |
-| architecture decision | inline | Core and Shifu ADR records | ADR id, decision and implementation state, review state, evidence, and public sensitivity |
-| ADR index | inline | Core and Shifu ADR registries | active index identity and review state; every row must match record metadata |
+| architecture decision | inline | canonical `docs/adr/` Core and Shifu records | ADR id, decision and implementation state, review state, evidence, and public sensitivity |
+| ADR index | inline | canonical `docs/adr/README.md` registry | active index identity and review state; every row must match record metadata |
+| ADR redirect | inline | legacy Core and Shifu ADR paths | deprecated redirect identity plus one `moved_to` target; decision fields are forbidden |
 | engineering evidence | inline | selected spikes, qualification contracts, and implementation slices | local audit context for a bounded engineering claim |
 | repository document | inline optional | other tracked Markdown that declares Kungfu metadata | the base document lifecycle profile |
 | external schema | external | issue templates and Kungfu Skills | the schema owned by their consumer, not this contract |
@@ -51,8 +52,8 @@ some files and decision state in others.
 
 - `document_status` describes a non-ADR document: `draft`, `active`, `stable`,
   `deprecated`, or `archived`.
-- `decision_status` describes an ADR decision: `proposed`, `accepted`, or
-  `superseded`.
+- `decision_status` describes an ADR decision: `proposed`, `accepted`,
+  `superseded`, `rejected`, or `withdrawn`.
 - `implementation_status` describes the implementation separately:
   `not-started`, `partial`, `staged`, `implemented`, `not-applicable`, or
   `unknown`.
@@ -62,6 +63,13 @@ some files and decision state in others.
 `unknown` and `legacy-unreviewed` are deliberate evidence boundaries. Do not
 invent implementation completion, review, dates, or sources to make an older
 file look complete.
+
+Terminal decision states are explicit. `superseded` points to its replacement
+through `superseded_by`; the replacement declares the reciprocal `supersedes`
+edge. `rejected` means the proposal was considered and declined; `withdrawn`
+means its sponsor removed it before acceptance. All three use
+`implementation_status: not-applicable`. The gate rejects missing targets,
+one-sided edges, self-reference, and supersession cycles.
 
 ## Sources and public maintenance boundary
 
@@ -74,8 +82,9 @@ part of the public product contract.
 
 ## ADR projection rule
 
-ADR frontmatter is the machine authority. The visible body status and registry
-table remain useful to readers, but they are checked projections:
+ADR frontmatter under [`docs/adr/`](adr/) is the machine authority. The visible
+body status and registry table remain useful to readers, but they are checked
+projections:
 
 ```yaml
 metadata_schema: kungfu.document-metadata/v1
@@ -91,6 +100,19 @@ The body must visibly project the same decision status. The ADR registry must
 contain the record and show the same canonical decision status. Implementation
 detail belongs in `implementation_status` and the ADR body, not in a compound
 registry status cell.
+
+`ADR-*` and `SHIFU-ADR-*` are equal architecture records. The prefix identifies
+Kungfu versus Shifu ownership and lets the Shifu history move independently if
+needed; it does not change metadata, evidence, review, or release gates. Files
+under the former `framework/core/docs/adr/` and `docs/shifu/adr/` roots are
+compatibility redirects. Their contract forbids `adr_id`, decision state, and
+implementation state so an old URL cannot become a second authority.
+
+Run `./shifu adr:audit -- --json` to inspect every lifecycle and evidence state.
+The normal audit fails on structural contradictions. `--strict` also fails on
+explicit governance debt such as unknown implementation, legacy review, or
+missing qualification. `--release stable` evaluates all accepted records as
+stable obligations without publishing or mutating release state.
 
 ## ADR implementation evidence
 

@@ -20,7 +20,7 @@ execution; Shifu owns how the task is executed after source checkout.
   governs `cache status` and `cache doctor` output.
 - [`schema/cache-config-plan-v1.schema.json`](schema/cache-config-plan-v1.schema.json)
   governs dry-run and executed `cache use/unset` receipts.
-- [Shifu ADRs](adr/README.md) contain Shifu-specific decisions in an independent
+- [Shifu ADRs](../adr/README.md) contain Shifu-specific decisions in an independent
   `SHIFU-ADR-*` namespace.
 
 The checked-out Shifu exposes these sources without requiring a published

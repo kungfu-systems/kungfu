@@ -10,6 +10,7 @@
 
 mod doctor;
 mod envs;
+mod fsck;
 mod help;
 mod launch;
 mod pins;
@@ -33,6 +34,9 @@ usage:
                                                run a command inside an env (default: python)
   kungfu-trunk prewarm                         pre-fetch the pinned uv + satellite CPython
   kungfu-trunk doctor [--read <ns> <name>]     read-only runtime inspection via the
+                                               embedding membrane (product build)
+  kungfu-trunk fsck [--runtime-dir <dir>] [--source <id>] [--episode <id>]
+                                               read-only storage integrity check via the
                                                embedding membrane (product build)
   kungfu-trunk --version | --help
 
@@ -77,6 +81,7 @@ fn main() {
             Some("env") => dispatch_env(&args[1..]),
             Some("prewarm") => envs::prewarm(),
             Some("doctor") => doctor::run(&args[1..]),
+            Some("fsck") => fsck::run(&args[1..]),
             _ => launch::launch(&args),
         };
         if let Err(msg) = result {
@@ -89,6 +94,7 @@ fn main() {
         Some("env") => dispatch_env(&args[1..]),
         Some("prewarm") => envs::prewarm(),
         Some("doctor") => doctor::run(&args[1..]),
+        Some("fsck") => fsck::run(&args[1..]),
         Some("--version" | "-V" | "version") => {
             println!("kungfu-trunk {}", env!("CARGO_PKG_VERSION"));
             Ok(())

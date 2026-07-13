@@ -187,7 +187,7 @@ struct nanomsg_json : event {
 
   [[nodiscard]] bool is_json() const override { return data_type() == yijinjing::enums::FrameDataType::Json; }
 
-  [[nodiscard]] uint64_t frame_uid() const override { return header_.frame_uid; }
+  [[nodiscard]] uint64_t frame_uid() const override { return header_.journal_frame_uid; }
 
   [[nodiscard]] uint64_t trigger_frame_uid() const override { return header_.trigger_frame_uid; }
 

@@ -1,0 +1,133 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0030
+decision_status: accepted
+implementation_status: unknown
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
+# ADR-0030: manifest-scoped sync root v1
+
+- Status: accepted
+- Date: 2026-07-08
+- Category: (architecture) storage integrity and source sync
+- Subsystem: Atlas import manifests, storage export, storage fsck, future
+  source sync over location/channel.
+- Related: ADR-0018 defines the runtime storage service. ADR-0019 defines
+  Git-like source sync over `location` and `channel`. ADR-0021 defines
+  observer-relative timeline projection. ADR-0028 separates hash surfaces.
+  ADR-0029 defines CRC32C frame receipt checksums.
+
+## Context
+
+Kungfu now has two lower integrity layers:
+
+- content hashes use algorithm-tagged SHA-256 content identity;
+- frame receipt checksums use versioned non-keyed corruption detectors.
+
+Neither layer is enough to prove that a portable segment has not been
+reordered, had entries removed, or had manifest metadata rewritten. The next
+source-sync step needs a root commitment that binds the payload references,
+source coordinates, action envelope metadata, and frame receipt evidence into
+one verifiable segment.
+
+This must not imply a universal wall clock. ADR-0021 already decides that
+multi-machine ordering is observer-relative: facts and accepted ranges are
+verifiable, while concurrent cross-source ordering is a declared projection
+policy.
+
+## Decision
+
+The first sync-root implementation is manifest-scoped:
+
+```text
+schema = "kungfu.sync-root/v1"
+scope = "atlas.import.manifest"
+proof = "linear-chain-v1"
+algorithm = "sha256"
+```
+
+The root is a linear hash chain over the manifest entries in the existing
+manifest entry order:
+
+```text
+initial = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+entry_hash[i] = sha256(canonical_json(entry_commitment[i]))
+root[i] = sha256(canonical_json({
+  "schema": "kungfu.sync-chain-link/v1",
+  "index": i,
+  "previous": root[i - 1],
+  "entry": entry_hash[i]
+}))
+```
+
+The entry commitment includes source coordinates, source time, schema version,
+payload hash and byte length, payload state, content type, and the action
+envelope when present. Because the action envelope includes journal receipt
+metadata, the sync root indirectly binds frame uid, carrier type, frame
+checksum metadata, and payload checksum metadata without treating CRC32C as a
+trust primitive.
+
+`storage fsck --scope atlas` recomputes the root from the manifest and fails if
+the `sync_root` object is missing, malformed, or mismatched. `storage export`
+reports the root for the exported segment. Range-limited exports compute a root
+for the exported entry subset, while the full import manifest keeps the root for
+the accepted import segment.
+
+## Observer-relative metadata
+
+The v1 root records only the deterministic local manifest entry ordering policy:
+
+```text
+ordering.policy = "manifest-entry-sort-v1"
+ordering.fields = ["kind", "source_id", "source_path"]
+```
+
+This is sufficient for the first Atlas source-adapter proof. Future
+multi-source sync must add projection policy metadata for observer-relative
+timeline replay:
+
+- `view_id`
+- `observer_location`
+- `source_priority`
+- `policy_version`
+- `accepted_ranges`
+- `tie_breaker`
+
+Those fields belong to the timeline/projection root or accepted-segment
+metadata, not to this narrow Atlas import manifest root.
+
+## Consequences
+
+- Export/import/fsck can verify that a local Atlas import segment still matches
+  its manifest commitment.
+- Missing root data, reordered entries, changed source metadata, changed
+  payload references, or changed action receipt metadata become fsck failures.
+- The implementation remains local and does not require wall-clock consensus,
+  remote transport, conflict resolution, compaction, deletion, signatures, or
+  authentication.
+- The first proof is not journal-native. A future journal trailer or page/root
+  migration can consume this commitment format without forcing this card to
+  change the frame header.
+
+## Alternatives considered
+
+- **Make frame CRC32C the trust proof.** Rejected. CRC32C is a corruption
+  detector; a writer that can rewrite bytes can rewrite a non-keyed checksum.
+- **Add a journal-native trailer now.** Deferred. Trailer layout is a format
+  migration and should be designed separately from the first manifest proof.
+- **Use a Merkle tree immediately.** Deferred. A Merkle tree is useful for
+  partial proofs, but the first dogfood slice needs a simple, deterministic
+  segment root that export/import/fsck can verify locally.
+- **Store a signed root.** Deferred. Signatures and MACs require key management,
+  identity, rotation, and trust policy. This ADR records tamper evidence against
+  uncoordinated mutation, not authenticity or non-repudiation.
+
+## Residual risk
+
+- SHA-256 root commitments are not identity or authorship proofs.
+- Range-limited export roots are segment roots, not authority-root changes.
+- Without remote transport and conflict policy, this remains a local proof
+  surface rather than full multi-machine sync.

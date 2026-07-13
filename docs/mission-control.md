@@ -87,10 +87,10 @@ and responsibility graph whose roots and cuts remain inspectable.
 | KFD-3 | Give people and agents first-class GUI and CLI/API participation over the same facts, choices, constraints, and receipts. |
 | KFD-4 | Declare the observer, accepted sources and ranges, projection policy, causal constraints, and degraded state of every mixed-source timeline. |
 
-[ADR-0051](../framework/core/docs/adr/ADR-0051-kfd-contract-world-fact-admission-and-trust.md)
-connects declarations to admission. [ADR-0048](../framework/core/docs/adr/ADR-0048-runtime-fact-query-semantics-and-changelog.md)
+[ADR-0051](./adr/ADR-0051-kfd-contract-world-fact-admission-and-trust.md)
+connects declarations to admission. [ADR-0048](./adr/ADR-0048-runtime-fact-query-semantics-and-changelog.md)
 reconstructs current or historical state under an explicit basis.
-[ADR-0052](../framework/core/docs/adr/ADR-0052-kfd2-assessment-lifecycle-and-executors.md)
+[ADR-0052](./adr/ADR-0052-kfd2-assessment-lifecycle-and-executors.md)
 turns load-bearing claims into durable assessment jobs and TrustReports.
 
 ## The operating loop
@@ -148,7 +148,7 @@ preview, authorization, execution, receipt, and verification semantics. The
 agent explains the options and may execute an authorized intent; its prose
 cannot create facts or expand authority. A minimal direct GUI remains available
 for the same decisions and recovery path. This product principle is fixed by
-[ADR-0061](../framework/core/docs/adr/ADR-0061-agent-mediated-guidance-is-a-first-class-product-interface.md).
+[ADR-0061](./adr/ADR-0061-agent-mediated-guidance-is-a-first-class-product-interface.md).
 
 A first-time user does not need an Atlas-style Markdown repository or a fully
 formed Mission. **Start managing agent work** selects the logical Home Workspace
@@ -262,7 +262,7 @@ and observer metadata belong to the selected fact-world authority.
 Desktop remembers the last selected workspace under `KF_CONFIG_HOME`, but that
 registry is only global GUI session state. Opening a directory remains
 read-only; `.kungfu` initializes on the first operation that changes the
-workspace fact world. [ADR-0060](../framework/core/docs/adr/ADR-0060-desktop-workspace-selection-and-lazy-data-home.md)
+workspace fact world. [ADR-0060](./adr/ADR-0060-desktop-workspace-selection-and-lazy-data-home.md)
 defines the lifecycle and prevents recent-workspace convenience from becoming
 Mission authority.
 

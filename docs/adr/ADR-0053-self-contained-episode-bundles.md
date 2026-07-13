@@ -1,0 +1,223 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0053
+decision_status: proposed
+implementation_status: not-started
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
+# ADR-0053: Episode bundles carry their owned bytes, and import materializes them
+
+- Status: proposed
+- Date: 2026-07-11
+- Category: (architecture) Episode export/import — what a
+  `kungfu.storage.episode-bundle/v1` document must carry for a sealed Episode
+  to be moved between data roots, and what `storage import --execute` is
+  allowed to write when it lands one.
+- Subsystem: the `libkungfu` runtime storage service Episode export / import /
+  repair operations, the storage CLI, and the yijinjing event journals the
+  bundle's frame claims point at.
+- Related: ADR-0033 requires "export must include journal, payload manifest,
+  schemas, and verification metadata"; ADR-0041 makes the manifest journal the
+  trust boundary with JSON confined to the edge; ADR-0042 defines capability
+  qualification over honest evidence; ADR-0043 defines sealed-Episode content
+  identity (the root) and explicitly defers "export/import bundle format
+  changes" to this decision; ADR-0040 provides the content-addressed payload
+  store; ADR-0023/0028 define frame checksums and content hashes; ADR-0001
+  defines the frame publication protocol the materializer must respect.
+
+## Context
+
+A sealed Episode's manifest records claims about material the Episode owns:
+`EpisodeFrameAttached` receipts naming event-journal frames by
+`(source, dest, frame_uid)` with checksums, and `EpisodeRefAttached` receipts
+naming content-store payloads by hash. The bundle exported for that Episode
+carries the claims — and none of the claimed bytes:
+
+- `episode_export_bundle` returns the manifest records, causal graph, and
+  receipt rows only.
+- `episode_import_bundle` is validate-only: it inspects the document and
+  writes nothing (`dry_run: true`, `accepted: false`), by design pending this
+  ADR.
+- In a fresh data root the imported Episode therefore has no event-journal
+  pages and no payload bytes. Every projection folded from those journals is
+  empty, and `fsck --verify-frames` reports every sealed frame claim as
+  `episode_attached_frame_missing`.
+
+Stress-testing the import workflow across two data roots reproduced this
+end-to-end: record-level import reports success while every folded projection
+in the destination stays empty. Until the bundle carries the owned bytes and
+import can land them, a bundle is not a migration or recovery unit — which is
+exactly the roadmap claim it exists to serve.
+
+Three facts constrain any fix:
+
+1. `frame_uid` is a writer-local artifact (page/frame counters XOR the
+   writer's start time). Re-writing a frame through a normal writer in the
+   destination assigns a new uid, breaking every claim match — and `frame_uid`
+   is a covered field of the ADR-0043 root, so identity would change too.
+2. The frame-attach claim covers only part of the frame header
+   (`trigger_time`, `stream_id`, `initial_source`, `data_type` are not
+   claimed), while the claimed `frame_checksum` covers the header. A frame
+   reconstructed from the claim alone cannot be byte-faithful.
+3. ADR-0043 defines equality as verbatim migration: re-appending the same
+   claim records byte-for-byte yields the same root. Import must therefore
+   preserve claims — and the frames they commit to — verbatim, or it creates
+   a new identity.
+
+## Decision
+
+### 1. The bundle carries its owned bytes: whole frames, plus ref payloads
+
+`kungfu.storage.episode-bundle/v1` gains two optional sections, additively
+(the schema id does not change; JSON stays edge-only per ADR-0041 — the typed
+result struct gains fields and the edge renders/parses them):
+
+```jsonc
+{
+  "schema": "kungfu.storage.episode-bundle/v1",
+  "self_contained": true,
+  "journals": [
+    {
+      "location": {"role": "system", "namespace": "atlas", "name": "import",
+                   "mode": "live", "seed": 0, "uid": 123456},
+      "dest": 0,
+      "frames": [
+        {"frame_uid": 7, "gen_time": 1699999, "carrier_type": 30010,
+         "frame_length": 128, "data_length": 64,
+         "bytes": "<base64 of the whole frame: header + payload>"}
+      ]
+    }
+  ],
+  "ref_payloads": [
+    {"ref_hash": "sha256:ab...", "byte_len": 512, "bytes": "<base64>"}
+  ],
+  "material": {"missing_frame_count": 0, "missing_ref_payload_count": 0}
+}
+```
+
+- **Whole frame bytes (header + payload), grouped by the owning journal.**
+  This is the only byte-faithful form (constraints 1 and 2): the header
+  carries `frame_uid`, `gen_time`, `trigger_frame_uid`, and the unclaimed
+  fields verbatim, and the claimed checksums recompute over exactly these
+  bytes. It is the physical realization of ADR-0043's verbatim migration.
+- **Ref payload bytes by content hash.** Episode fsck resolves payload refs
+  through the ADR-0040 content store; a destination without the bytes cannot
+  go green. Only payloads the source store actually has are exported;
+  redacted/absent stay absent — the bundle reports what it could not carry in
+  `material`, it never invents bytes (ADR-0042 honesty).
+- **Export is self-contained by default.** `--thin` keeps the receipt-only
+  form for diagnostics. Repair-fetch reuses the same export path, so repair
+  material gains the bytes with no separate format.
+
+### 2. Import `--execute` materializes into the original journals
+
+`storage import --execute` on an episode bundle lands the material in the
+destination data root. Validate-only remains the default invocation.
+
+- **Frames go back to their original `(location, dest)` journal** in LIVE
+  mode, reconstructed from the bundle's location coordinates (uid is the
+  uname hash, deterministic across roots, and is verified against the claim).
+  Replaying into a different journal would renumber the claims — a new
+  identity, which ADR-0043 rules out.
+- **The write primitive is the existing verbatim frame append**
+  (`writer::copy_frame` over a frame overlay pointing at the decoded bytes).
+  It preserves the full header including `frame_uid` and publishes the frame
+  last per ADR-0001. No journal-kernel change is required.
+- **Idempotence and conflicts, in order:**
+  1. *Bundle pre-flight*: recompute the ADR-0043 chain over the bundle's own
+     records and compare with the bundle's `episode_root_committed` claim.
+     A corrupted or tampered bundle fails before anything is written.
+  2. *Destination identity*: if the destination already has this
+     `episode_id`, compare computed roots. Equal → `already_present`, no
+     writes. Different → `episode_root_mismatch`, refuse — import never
+     merges two identities. A still-open destination Episode is a conflict.
+  3. *Frame level*: a frame already present with identical bytes is skipped;
+     the same `frame_uid` with different bytes is `episode_frame_conflict`.
+     Appending into a non-empty journal is allowed only when journal time
+     order is preserved (`last existing gen_time <= first appended
+     gen_time`); otherwise `episode_frame_order_conflict`. Materialization
+     only adds missing facts — it never overwrites, reorders, or deletes.
+  4. *Payload level*: content-store writes are hash-addressed and verified
+     against the bytes before writing, so they are naturally idempotent;
+     hash mismatches are rejected.
+- **Records replay through the manifest store** (existing repair-apply path
+  with its identity-key dedup), after the frames and payloads land. The
+  destination's own seal path commits its root; import then compares the
+  destination root against the bundle's claim and fails the receipt on
+  mismatch — the final proof that materialization was faithful. The receipt
+  embeds a scoped `fsck --verify-frames` result.
+- Writes are append-only; a failed receipt reports exactly what landed. There
+  is no rollback that deletes journal content.
+
+### 3. Repair-apply shares the materializer
+
+`repair_apply` consumes the same episode-bundle material. The frame and
+payload materializers are one implementation with two entrances: import
+(whole-Episode landing) and repair-apply (plan-candidate healing). Frame
+candidates (`repair_episode_root_trigger_frame`, `repair_episode_trigger_frame`)
+become actually repairable for the first time, because fetched bundles now
+carry the bytes.
+
+## Consequences
+
+- A sealed Episode bundle is finally a migration/recovery unit: export in one
+  data root, import `--execute` in a fresh root, and the destination folds
+  the same projections, verifies the same root, and passes
+  `fsck --verify-frames`.
+- Re-importing the same bundle is a no-op by root equality; divergent
+  same-id Episodes are refused, never merged.
+- Bundles grow by the owned bytes (base64, ~4/3 of raw). For very large
+  Episodes an inline-JSON bundle is a known limit; a streamed or sidecar
+  form is future work and does not change these semantics.
+- Verbatim replay reproduces the root only within one manifest
+  `schema_version`: the store stamps the current version on replayed records,
+  so a cross-version import surfaces as a root mismatch instead of silently
+  producing a false identity. This is reported, not hidden.
+- Journals whose pages already contain unrelated later frames cannot accept
+  older missing frames (order conflict). This is honest v1 behavior; such
+  roots need repair at the page level, which stays out of scope.
+
+## Explicitly out of scope
+
+- Cross-machine transport and remote sync (the bundle is the unit they will
+  move; the moving is a separate line).
+- Source-bundle (`manifest-catalog`) format changes.
+- Backfill for Episodes sealed before ADR-0043 roots existed.
+- Streaming/sidecar bundle forms for very large Episodes.
+- Page-level repair of order-conflicted journals.
+
+## Alternatives considered
+
+- **Payload-only bytes, header reconstructed from the claim.** Rejected: the
+  claim does not cover the full header (constraint 2), and the claimed
+  `frame_checksum` covers header bytes, so reconstruction cannot be proven
+  faithful.
+- **Content-store refs for frames with a blob sidecar.** Rejected: frames are
+  not content-addressed objects (ADR-0040's store fronts payloads); forcing
+  them in creates a second identity system, and the bundle stops being one
+  self-contained document — the product claim this ADR exists to close.
+- **Replay frames through a normal writer into a fresh journal.** Rejected:
+  new `frame_uid`s break every claim and change the root — renumbering is a
+  new identity by ADR-0043's construction.
+- **Schema bump to `/v2`.** Rejected: the sections are additive, JSON is
+  edge-only, and every existing consumer tolerates absent sections; a bump
+  would force dual-schema handling everywhere for no semantic gain. A thin
+  bundle fed to `--execute` fails honestly with the unmaterializable claims
+  listed.
+- **Allowing out-of-order appends on conflict.** Rejected: readers seek by
+  time; an out-of-order journal corrupts the very projections import exists
+  to restore.
+
+## First delivery (thin slice)
+
+1. Typed material sections on the episode bundle result, export collection
+   (default on, `--thin` opt-out), and the JSON edge render/parse pair.
+2. Import `--execute`: pre-flight, identity gate, shared frame/payload
+   materializer, record replay, root comparison, embedded scoped fsck.
+3. Repair-apply consuming material sections through the same materializer.
+4. Fixtures: fresh-root roundtrip (projections equal, fsck green), re-import
+   no-op, tampered-bytes rejection, same-id different-root rejection, order
+   conflict rejection.

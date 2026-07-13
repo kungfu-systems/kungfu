@@ -136,5 +136,5 @@ layer should be named as such rather than hidden behind the full App.
   layered.
 - [Known limits](known-limits.md) separates current guarantees from staged
   work.
-- [ADR-0049](../framework/core/docs/adr/ADR-0049-layer-complete-products-and-domain-neutral-core.md)
+- [ADR-0049](./adr/ADR-0049-layer-complete-products-and-domain-neutral-core.md)
   is the load-bearing architecture decision behind this guide.

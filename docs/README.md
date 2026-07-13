@@ -102,7 +102,8 @@ design target into a production guarantee.
   versioned cache contracts.
 - [Document Metadata Contract](document-metadata.md) — reader-hidden public
   metadata, inline engineering evidence, lifecycle axes, and ADR projections.
-- [Core ADRs](../framework/core/docs/adr/) — load-bearing decisions.
+- [Architecture decisions](adr/) — one canonical registry for load-bearing
+  Kungfu and Shifu decisions.
 - [Documentation Map](MAP.md) — the complete question and keyword index.
 
 ## Document roles and authority

@@ -91,4 +91,4 @@ The slice uses CMake `FILE_SET CXX_MODULES` and the uv-managed Ninja. It does
 not use header units or hand-authored BMI commands. Production adoption is held
 unless repeated evidence shows at least 15% improvement on two primary
 platforms without a third-platform or artifact-contract regression. See
-[ADR-0066](../framework/core/docs/adr/ADR-0066-native-cpp-toolchain-contract-and-modules-hold.md).
+[ADR-0066](./adr/ADR-0066-native-cpp-toolchain-contract-and-modules-hold.md).

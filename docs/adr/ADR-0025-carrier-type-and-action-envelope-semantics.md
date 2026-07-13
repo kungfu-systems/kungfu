@@ -1,0 +1,99 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0025
+decision_status: accepted
+implementation_status: unknown
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
+# ADR-0025: carrier type is transport metadata and business semantics live in action envelopes
+
+## Status
+
+accepted; wire representation amended by
+[ADR-0047](ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md)
+
+## Representation amendment
+
+The generic carrier and semantic vocabulary in this ADR stand. The JSON object
+shown below is now the **edge JSON rendering** of the logical envelope, not its
+authoritative on-journal schema.
+
+ADR-0047 assigns the action envelope to the FlatBuffers open layer. The
+pre-stable migration is implemented by `ActionEnvelope.fbs`: the nested payload
+is carried as bytes with an encoding and schema reference, without base64 on
+the binary journal path. Pre-migration JSON-envelope journals remain
+non-compatibility targets.
+
+## Context
+
+Kungfu v4 is no longer extending the trading-era model where every product fact
+gets a numeric `msg_type`. That pattern was useful for low-latency compiled
+market data and trading events, but it is the wrong abstraction for agent
+actions:
+
+- the number is opaque across Python, Node, and C++;
+- new first-party and KFX features can accidentally copy the `300xx` / `400xx`
+  open-layer allocation pattern;
+- a header integer cannot carry schema identity, version, source, actor,
+  session, or other action metadata;
+- business meaning in the frame header makes export/fsck/sync couple to local
+  allocation history instead of a portable action vocabulary.
+
+The frame header still needs a positive low-level classifier for reader
+filtering, frame validation, and storage inspection. That field is transport
+metadata, not a business event name.
+
+## Decision
+
+Rename the journal header field and public low-level APIs from `msg_type` to
+`carrier_type`.
+
+Use `carrier_type=1000` as the generic Kungfu action carrier. Business facts
+must put semantics in `kungfu.action-envelope/v1`. Its edge JSON rendering is:
+
+```json
+{
+  "schema": "kungfu.action-envelope/v1",
+  "action_type": "rewind.model.response",
+  "schema_ref": {"id": "kungfu.rewind.ModelResponse", "version": 3},
+  "payload": {"encoding": "flatbuffers", "content_transfer_encoding": "base64"}
+}
+```
+
+Migrate the first-party business domains to this rule:
+
+- Atlas import snapshots use `atlas.*` action types.
+- Rewind capture facts use `rewind.*` action types.
+- Work dashboard facts use `work.*` action types.
+- KFX dynamic schemas bind by `action_type`, not by a private numeric range.
+
+The C++ core remains the polyglot membrane. Python and Node bindings expose the
+renamed `carrier_type` API and call into the C++ writer/reader; they do not own
+separate causality, writer, checksum, or receipt semantics.
+
+## Consequences
+
+- Export, fsck, and GUI projections can dispatch on stable action names and
+  schema refs instead of private numeric allocations.
+- The frame header stays compact and useful for low-level filtering.
+- Existing v4 pre-release journals written with pre-envelope `300xx` / `301xx`
+  Rewind/Work facts are intentionally not compatibility targets.
+- New business code must not add `MSG_* = 300xx/400xx` constants. The
+  `check-carrier-action-envelope` gate blocks that pattern.
+- Closed yijinjing schema/runtime tags may continue to exist as legacy/internal
+  carriers while the corresponding compiled schemas exist, but they are not the
+  v4 business event model.
+
+## Alternatives Considered
+
+- **Keep `msg_type` and document it as a carrier.** Rejected because the name
+  invites business-message allocation and makes future code copy the old
+  trading/open-layer model.
+- **Use `frame_type`.** Rejected because Kungfu already has payload encoding
+  (`data_type`) and frame structure semantics; `frame_type` is too broad.
+- **Allocate one carrier per action.** Rejected because schema/version/source
+  metadata belongs in an envelope and because the number space becomes another
+  global registry to synchronize across languages and machines.

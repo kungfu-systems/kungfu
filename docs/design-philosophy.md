@@ -23,7 +23,7 @@ of them, so you can understand *why* kungfu is built the way it is, not just
 For the vocabulary used below (`kungfu`, `sdk`, `libkungfu`, `yijinjing`, journal,
 zero-copy, …), see [`concepts.md`](concepts.md); for how the pieces are layered,
 see [`architecture.md`](architecture.md); for specific decisions and their
-rationale, see the [ADRs](../framework/core/docs/adr). For the public product
+rationale, see the [ADRs](adr/). For the public product
 stance that connects these choices to agent work, release evidence, extension
 trust, and known limits, see [`facts-before-trust.md`](facts-before-trust.md).
 
@@ -188,7 +188,7 @@ offers: the application SDK (`kungfu sdk`) runs on the `kungfu` runtime; assembl
 distribution exercises the SDK end to end. If a core capability regresses,
 **building kungfu itself fails first** — so the maker cannot ship a broken core
 without their own work stopping. This is the load-bearing self-bootstrap, set out
-in [ADR-0009](../framework/core/docs/adr/ADR-0009-load-bearing-self-bootstrap.md):
+in [ADR-0009](./adr/ADR-0009-load-bearing-self-bootstrap.md):
 the path a newcomer walks to adopt kungfu is the same path the project walks to
 validate itself.
 
@@ -222,7 +222,7 @@ publish protocol was accidentally correct on x86's strong memory ordering but
 could tear under arm64's weaker ordering — **invisible to anyone who stayed on
 x86**, and surfaced only by insisting that kungfu run on real arm64 hardware, then
 constructing a stress test that forced the rare interleaving to manifest. See
-[ADR-0001](../framework/core/docs/adr/ADR-0001-yijinjing-publish-barrier.md). The
+[ADR-0001](./adr/ADR-0001-yijinjing-publish-barrier.md). The
 general move: for failures that normal use will not reveal, **be your own
 adversary** — build the test that forces them to manifest now, rather than waiting
 for a production incident that a convenient platform would never trigger.
@@ -247,7 +247,7 @@ the machine fit you — and it is also what put a real correctness failure in fr
 of you before any user hit it.
 
 Every ADR is a decision in service of these two principles. Reading the
-[ADRs](../framework/core/docs/adr) in that light shows the architecture as a
+[ADRs](adr/) in that light shows the architecture as a
 single, coherent answer rather than a sequence of unrelated calls.
 
 For distributed timelines, the same stance means Kungfu does not pretend to own
@@ -255,7 +255,7 @@ an impossible global clock. It records facts, causality, source provenance, and
 the observer policy used to project concurrent facts into a stable view. The
 load-bearing truth is not "this wall-clock order is reality"; it is "this view
 can be reproduced from declared facts and policy." See
-[ADR-0021](../framework/core/docs/adr/ADR-0021-observer-relative-timeline-projection.md).
+[ADR-0021](./adr/ADR-0021-observer-relative-timeline-projection.md).
 
 ## One move, used everywhere
 
@@ -269,18 +269,18 @@ no way to fake it:
 
 - *"It works"* → the build runs on its own core, so a core regression makes
   building kungfu fail first
-  ([ADR-0009](../framework/core/docs/adr/ADR-0009-load-bearing-self-bootstrap.md)).
+  ([ADR-0009](./adr/ADR-0009-load-bearing-self-bootstrap.md)).
 - *"I'd know if users disliked it"* → the maker is forced into the user's seat, on
   real hardware — running on real arm64 is what surfaced a bug x86 would never
-  reveal ([ADR-0001](../framework/core/docs/adr/ADR-0001-yijinjing-publish-barrier.md)).
+  reveal ([ADR-0001](./adr/ADR-0001-yijinjing-publish-barrier.md)).
 - *"It's compatible"* → the layout *is* the ABI, a physical fact, not a version
   number to compare
-  ([ADR-0008](../framework/core/docs/adr/ADR-0008-yijinjing-schema-layout-baseline.md)).
+  ([ADR-0008](./adr/ADR-0008-yijinjing-schema-layout-baseline.md)).
 - *"This release is good"* → an un-cheatable pipeline decides, not any one person,
   not even the maintainers ([version & release design](version-release-design.md)).
 - *"The contract holds"* → every structured fact has one declared schema owner
   that the maker's own build consumes
-  ([ADR-0047](../framework/core/docs/adr/ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md)).
+  ([ADR-0047](./adr/ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md)).
 - *"It's easy to set up"* → the runtime physically absorbs the toolchain, so
   zero-setup is true rather than promised (Principle 1).
 

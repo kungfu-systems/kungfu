@@ -1,0 +1,111 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0008
+decision_status: accepted
+implementation_status: unknown
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
+# ADR-0008: yijinjing schema layout is the v4 greenfield fact contract
+
+- Status: accepted
+- Date: 2026-07-08
+- Category: (b) mechanism / governance — data-format baseline
+- Subsystem: yijinjing schema + yijinjing journal
+- Related: [ADR-0002](ADR-0002-yijinjing-schema-runtime-layout.md),
+  [ADR-0047](ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md),
+  [ADR-0001](ADR-0001-yijinjing-publish-barrier.md),
+  [`docs/version-release-design.md`](../version-release-design.md),
+  [`docs/versioning.md`](../versioning.md)
+
+## Decision
+
+Kungfu v4 starts from a greenfield schema baseline, then treats that baseline as
+the compatibility root for v4 and later.
+
+The v4 closed runtime fact schema lives under `kungfu/yijinjing/schema`. Its
+Hana-described POD layout is the cross-language and on-journal binary contract
+for closed runtime facts. C++, Python, and Node bind to that same core contract;
+they must not define separate schema semantics in their binding layers. Open and
+domain facts are governed separately by their `.fbs` owner under ADR-0047; they
+do not overlay or redefine the closed POD layout.
+
+Pre-v4 journals, trading-era public APIs, removed product-domain tables, and old
+package names are not compatibility targets. If a user needs old data later, the
+right mechanism is an explicit import/export or migration tool that produces v4
+facts.
+
+From the first stable v4 baseline onward, however, Kungfu does owe a schema
+compatibility story to v4 users. v4+ changes must preserve released v4 journals
+through a declared policy: hot-path zero-copy readers speak one schema layout
+epoch, while cold-path import/export/replay/fsck can carry explicit migrations or
+decode paths when the released layout evolves. The v4 hot path must not carry
+hidden adapters for v1/v2/v3, but it also must not silently strand v4-era data.
+
+The version and release mechanism protects the current registered surfaces, not
+pre-v4 historical ones. A release tag says which v4 schema baseline the artifact
+speaks. Before the first v4 stable release, breaking schema cleanups are allowed
+when they simplify the baseline and are recorded in `docs/versioning.md`. After a
+surface is released as stable, changes follow the registered-surface rules in
+KFD-1 and must include an explicit v4+ compatibility or migration story.
+
+## Rationale
+
+The old trading-era schema surface made too many historical concepts look like
+current product truths. Keeping aliases or compatibility shims would preserve
+exactly the vocabulary v4 is trying to remove: product-domain carrier numbers,
+typed trading helpers, profile-store tables, and binding APIs that invite future
+code to copy the wrong abstraction.
+
+Kungfu's current direction is a runtime fact ledger for agents, applications,
+extensions, storage sync, and replay. That direction needs a small, neutral,
+language-neutral schema membrane. The load-bearing contract is:
+
+- journal frames are published by yijinjing;
+- closed runtime fact layouts are declared in `kungfu/yijinjing/schema`;
+- open business meaning travels through the `.fbs`-owned v4 action envelope
+  where appropriate;
+- Python and Node bindings expose the C++ core, not independent schemas.
+
+This is simpler, more honest, and easier to verify than pretending the v4 line
+must also be a compatibility host for removed v3 product concepts.
+
+## Consequences
+
+- The pre-v4 schema package name is not a current public package, API namespace,
+  or documentation term in v4. The schema belongs to yijinjing.
+- Removed trading/product tables do not remain as public C++/Python/Node API.
+- Old carrier allocation patterns are blocked by the greenfield checks; new
+  business facts use the v4 action envelope unless a separate carrier is proven
+  necessary at the journal adapter layer.
+- Cross-language action-recording semantics remain in C++; binding layers are
+  thin surfaces over the same core behavior.
+- Migration from external or pre-v4 sources is explicit import/export work, not
+  a hidden compatibility mode in the journal hot path.
+- Compatibility for released v4+ data is real product responsibility: schema
+  changes must be additive, versioned, or paired with explicit migration/decode
+  paths.
+
+## Verification
+
+The current baseline is enforced by:
+
+- `scripts/check-runtime-greenfield.mjs`;
+- `framework/core/src/libyijinjing/check-deps.mjs`;
+- the C++/Python/Node build and generated stubs;
+- `docs/versioning.md`, which records registered surface changes.
+
+## Replacement Criteria
+
+A replacement design is acceptable only if it preserves the greenfield baseline:
+
+1. `kungfu/yijinjing/schema` remains the single C++ source of runtime fact schema
+   truth;
+2. Python and Node do not implement independent schema or causality logic;
+3. removed trading-era layouts do not reappear as public v4 APIs;
+4. pre-v4 data handling remains explicit import/export or migration work;
+5. released v4+ data is not silently stranded by schema changes;
+6. hot-path journal reads stay zero-copy and do not route through hidden
+   translation.

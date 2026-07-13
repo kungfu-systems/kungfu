@@ -9,39 +9,39 @@ makes see [`contracts.md`](contracts.md); for the design rationale see
 Every claim below can be verified against the cited source.
 
 The higher-level action-timeline decision is
-[ADR-0020](../framework/core/docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md):
+[ADR-0020](./adr/ADR-0020-agent-action-timeline-and-replay-boundary.md):
 Kungfu records the causal action chain and attached evidence, not a complete
 snapshot of the outside world.
 
 The first-class storage object for bounded causal work is an Episode:
-[ADR-0033](../framework/core/docs/adr/ADR-0033-episode-causal-segment-object.md)
+[ADR-0033](./adr/ADR-0033-episode-causal-segment-object.md)
 defines Episode as the causal-closure container and the future
 export/import/fsck/timeline-slicing unit. Raw mmap pages are append blocks;
 Episodes are the semantic objects projected into user-visible timelines.
 
 The action-recording implementation boundary is
-[ADR-0022](../framework/core/docs/adr/ADR-0022-core-action-recording-surface.md):
+[ADR-0022](./adr/ADR-0022-core-action-recording-surface.md):
 architecture-level recording semantics live in the C++ core. Python and Node may
 wrap the recorder and build payloads, but they must not own independent
 causality, writer, timeline, or receipt logic.
 
-Frame integrity starts at the same C++ boundary. [ADR-0023](../framework/core/docs/adr/ADR-0023-frame-integrity-and-msg-type-allocation-gates.md)
+Frame integrity starts at the same C++ boundary. [ADR-0023](./adr/ADR-0023-frame-integrity-and-msg-type-allocation-gates.md)
 defines the first receipt-based checksum slice and the rule that new v4 business
 facts must not allocate raw `300xx` / `400xx` `carrier_type` numbers.
-[ADR-0025](../framework/core/docs/adr/ADR-0025-carrier-type-and-action-envelope-semantics.md)
+[ADR-0025](./adr/ADR-0025-carrier-type-and-action-envelope-semantics.md)
 then completes that rename: `carrier_type` is transport metadata, and business
 semantics live in `kungfu.action-envelope/v1`.
-[ADR-0047](../framework/core/docs/adr/ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md)
+[ADR-0047](./adr/ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md)
 assigns each structured fact one schema owner: closed kernel records use Hana
 POD, while the action envelope and open/domain payloads use `.fbs`. JSON is an
 edge rendering or adapter format, not a third journal schema.
 
-Location identity uses neutral roles, not trading categories. [ADR-0024](../framework/core/docs/adr/ADR-0024-location-role-and-journal-page-policy.md)
+Location identity uses neutral roles, not trading categories. [ADR-0024](./adr/ADR-0024-location-role-and-journal-page-policy.md)
 defines `source`, `sink`, `actor`, `system`, and `service`, and keeps journal
 page sizing as storage policy rather than role-derived behavior.
 
 For multi-machine views, frame time is not treated as a universal clock.
-[ADR-0021](../framework/core/docs/adr/ADR-0021-observer-relative-timeline-projection.md)
+[ADR-0021](./adr/ADR-0021-observer-relative-timeline-projection.md)
 pins the rule: Kungfu stores causal facts, source provenance, accepted ranges,
 and payload evidence; a user-visible mixed-source timeline is a deterministic
 projection from an explicit observer policy. Causal links dominate that policy.
@@ -64,7 +64,7 @@ fields (defined in
 
 | Field | Type | Meaning |
 |---|---|---|
-| `length` | `uint32` | Total frame length (header + body). Also the **publication token** — written last with `std::atomic_ref` release, read with acquire (see [ADR-0001](../framework/core/docs/adr/ADR-0001-yijinjing-publish-barrier.md)). |
+| `length` | `uint32` | Total frame length (header + body). Also the **publication token** — written last with `std::atomic_ref` release, read with acquire (see [ADR-0001](./adr/ADR-0001-yijinjing-publish-barrier.md)). |
 | `header_length` | `uint32` | Header size. |
 | `gen_time` | `int64` | When the frame was generated (nanoseconds). |
 | `trigger_time` | `int64` | Trigger time, for latency statistics. |
@@ -94,7 +94,7 @@ is `fnv1a64`: a fast corruption detector, not a cryptographic authenticity
 proof. Content payloads and manifests use explicit content hashes such as
 `sha256`; internal yijinjing uid helpers use `fast_hash_*` / `xxh3_64` /
 `xxh3_128` and must not be treated as content hashes. The taxonomy is pinned in
-[ADR-0028](../framework/core/docs/adr/ADR-0028-hash-taxonomy-and-integrity-algorithms.md).
+[ADR-0028](./adr/ADR-0028-hash-taxonomy-and-integrity-algorithms.md).
 A full frame trailer or chain root is a future journal format surface, not
 something older journals can be assumed to contain.
 
@@ -110,7 +110,7 @@ chain reconstructable.
 
 A reader must never see a frame before its payload is fully written. The contract
 that guarantees this — and why a plain `volatile` flag was not enough on
-weak-memory (ARM) targets — is [ADR-0001](../framework/core/docs/adr/ADR-0001-yijinjing-publish-barrier.md):
+weak-memory (ARM) targets — is [ADR-0001](./adr/ADR-0001-yijinjing-publish-barrier.md):
 the writer publishes `length` last with a release store; the reader gates on
 `length` with an acquire load before reading the payload.
 
@@ -138,7 +138,7 @@ without re-executing external effects. Mocked Replay may substitute recorded
 Receipts for external calls. Any mode that can repeat real-world side effects
 must be explicit and confirmed. Rewind is the user-facing reopening operation;
 it is not a synonym for re-execution. This boundary is pinned by
-[ADR-0020](../framework/core/docs/adr/ADR-0020-agent-action-timeline-and-replay-boundary.md).
+[ADR-0020](./adr/ADR-0020-agent-action-timeline-and-replay-boundary.md).
 
 Source: the replay path in
 [`framework/core/src/libkungfu/src/runtime/`](../framework/core/src/libkungfu/src/runtime).

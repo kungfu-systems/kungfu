@@ -143,7 +143,9 @@ int main(int argc, char **argv) {
   }
 
   kf_embedding_api_v1 api{};
-  if (kungfu_embedding_get_api(KF_EMBEDDING_ABI_V1 + 1, sizeof(api), &api) != KF_EMBEDDING_UNSUPPORTED_VERSION ||
+  // A version above the highest supported table is UNSUPPORTED_VERSION; an
+  // undersized buffer for a supported version is INVALID_ARGUMENT.
+  if (kungfu_embedding_get_api(KF_EMBEDDING_ABI_V2 + 1, sizeof(api), &api) != KF_EMBEDDING_UNSUPPORTED_VERSION ||
       kungfu_embedding_get_api(KF_EMBEDDING_ABI_V1, sizeof(api) - 1, &api) != KF_EMBEDDING_INVALID_ARGUMENT) {
     std::fprintf(stderr, "ABI version/size negotiation failed\n");
     return 4;
@@ -151,6 +153,23 @@ int main(int argc, char **argv) {
   const auto api_status = kungfu_embedding_get_api(KF_EMBEDDING_ABI_V1, sizeof(api), &api);
   if (api_status != KF_EMBEDDING_OK || api.abi_version != KF_EMBEDDING_ABI_V1) {
     std::fprintf(stderr, "get_api failed: %d\n", api_status);
+    return 5;
+  }
+  // v2 (ADR-0071) negotiates the read-only diagnostic surface on top of the v1
+  // prefix. Requesting v2 into a v1-sized buffer must be rejected on size; a
+  // correctly sized v2 request must advertise the storage-diagnostics capability
+  // and populate the diagnostic pointers.
+  kf_embedding_api_v2 api_v2{};
+  if (kungfu_embedding_get_api(KF_EMBEDDING_ABI_V2, sizeof(kf_embedding_api_v1), &api_v2) !=
+      KF_EMBEDDING_INVALID_ARGUMENT) {
+    std::fprintf(stderr, "ABI v2 size negotiation failed\n");
+    return 4;
+  }
+  const auto v2_status = kungfu_embedding_get_api(KF_EMBEDDING_ABI_V2, sizeof(api_v2), &api_v2);
+  if (v2_status != KF_EMBEDDING_OK || api_v2.abi_version != KF_EMBEDDING_ABI_V2 ||
+      (api_v2.capabilities & KF_EMBEDDING_CAP_STORAGE_DIAGNOSTICS) == 0 || api_v2.storage_fsck == nullptr ||
+      api_v2.report_release == nullptr) {
+    std::fprintf(stderr, "ABI v2 negotiation failed: %d\n", v2_status);
     return 5;
   }
   if (!check_error_paths(api, argv[1])) {

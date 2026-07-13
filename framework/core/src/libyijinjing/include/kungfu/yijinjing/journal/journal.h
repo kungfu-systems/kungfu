@@ -458,11 +458,9 @@ protected:
   ownership::lease writer_lease_;
   journal_ptr journal_;
   std::timed_mutex writer_mtx_ = {};
-  const uint64_t frame_id_base_;
   publisher_ptr publisher_;
   size_t size_to_write_;
   int64_t last_gen_time_;
-  uint32_t writer_start_time_32int_;
 
   virtual void on_frame_opened(int64_t trigger_time, ::kungfu::yijinjing::journal::frame *frame);
   virtual void on_frame_closing(int64_t gen_time, ::kungfu::yijinjing::journal::frame *frame);

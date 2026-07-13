@@ -1,101 +1,15 @@
 ---
 metadata_schema: kungfu.document-metadata/v1
-doc_type: architecture-decision
-adr_id: ADR-0029
-decision_status: accepted
-implementation_status: unknown
-review_state: legacy-unreviewed
+document_status: deprecated
+doc_type: adr-redirect
+review_state: self-reviewed
 sensitivity: public
+moved_to: docs/adr/ADR-0029-frame-checksum-v2-crc32c.md
 ---
 
-# ADR-0029: frame checksum v2 uses CRC32C receipt metadata
+# ADR-0029-frame-checksum-v2-crc32c moved
 
-- Status: accepted
-- Date: 2026-07-08
-- Category: (architecture) frame integrity and fsck
-- Subsystem: libkungfu action recorder, Python/Node bindings, Atlas import
-  manifests, storage fsck/export.
-- Related: ADR-0023 defines receipt-based frame integrity. ADR-0028 separates
-  fast internal hashes, frame checksums, content hashes, and sync roots.
-
-## Context
-
-ADR-0023 introduced receipt-scoped frame integrity with
-`integrity_version=1` and algorithm label `fnv1a64`. That slice proved the
-writer/fsck path without changing `frame_header` or adding a journal trailer.
-
-After the content-hash API landed, the next checksum version needs a more
-standard accidental-corruption detector while keeping the checksum separate from
-content identity and future tamper-evident sync roots.
-
-The candidate algorithms were:
-
-- **CRC32C**: standardized, portable, low build cost, widely available in other
-  languages, good at detecting common storage and transport corruption.
-- **XXH3_64 / XXH3_128**: very fast and wider than CRC32C, but adds a new
-  dependency or vendored implementation and is less useful as a named fsck
-  baseline unless every binding deliberately carries it.
-- **BLAKE3**: strong and fast for cryptographic hashing, but introduces a real
-  dependency and overlaps with the content-hash/trust-proof vocabulary. It is
-  intentionally reserved rather than smuggled in as a frame checksum.
-
-## Decision
-
-Frame checksum v2 uses CRC32C and is labelled `crc32c`.
-
-New action-recorder receipts are produced with:
-
-```text
-integrity_version = 2
-checksum_algorithm = "crc32c"
-```
-
-The v1 algorithm label remains `fnv1a64`, and fsck verifies old receipts by
-using the algorithm implied by `integrity_version=1`.
-
-The checksum scope remains the receipt boundary used by ADR-0023:
-
-- `payload_checksum` covers the published payload bytes.
-- `frame_checksum` covers the selected scalar frame-header fields plus the same
-  payload bytes.
-- `length` remains the final publish token; no journal header or trailer layout
-  is changed by this ADR.
-
-Fsck must reject ambiguous metadata:
-
-- unknown `integrity_version`;
-- unknown `checksum_algorithm`;
-- a supported algorithm that does not match the recorded integrity version;
-- missing algorithm metadata for v2 receipts.
-
-## Consequences
-
-- Existing v1 receipts remain verifiable.
-- New manifests carry an explicit algorithm label and can fail closed when a
-  future agent or machine sees unsupported metadata.
-- CRC32C is a corruption detector, not an authenticity or tamper-evidence
-  primitive. A writer that can rewrite frame bytes can also rewrite non-keyed
-  checksum metadata.
-- The later sync-root/hash-chain work should bind frame or payload hashes into
-  a stream/session/page/manifest root. It should not reinterpret CRC32C as a
-  trust proof.
-
-## Alternatives considered
-
-- **Keep FNV-1a as the default.** Rejected. It is simple, but v2 should move to
-  a standard checksum with better ecosystem support.
-- **Use XXH3 immediately.** Deferred. It is attractive for a future high-speed
-  receipt mode, but the dependency and cross-language binding cost is not needed
-  for this slice.
-- **Use BLAKE3 for frame receipts.** Rejected for this stage. BLAKE3 belongs in
-  content-hash or trust-proof work once its dependency and manifest negotiation
-  are explicit.
-- **Change `frame_header` or add a trailer now.** Rejected. The current goal is
-  a versioned receipt checksum, not a journal-format migration.
-
-## Residual risk
-
-- CRC32C is 32-bit. It is appropriate for accidental corruption, not malicious
-  collision resistance.
-- The receipt is still only as durable as the manifest/projection layer that
-  persists it. Journal-native trailer integrity remains future work.
+This path is retained for inbound-link compatibility. The authoritative record
+now lives in the [ADR-0029-frame-checksum-v2-crc32c](../../../../docs/adr/ADR-0029-frame-checksum-v2-crc32c.md). Decision status,
+implementation evidence, and release obligations are read only from that
+canonical document.

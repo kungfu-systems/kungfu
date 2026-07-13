@@ -15,7 +15,10 @@
     "implementation_prs",
     "closure_commit",
     "closure_pr",
-    "qualification_refs"
+    "qualification_refs",
+    "moved_to",
+    "supersedes",
+    "superseded_by"
   ],
   "sourceKinds": [
     "architecture-decisions",
@@ -41,8 +44,7 @@
       "id": "architecture-decision",
       "metadataMode": "inline",
       "patterns": [
-        "^framework/core/docs/adr/ADR-[0-9]{4}-.*\\.md$",
-        "^docs/shifu/adr/SHIFU-ADR-[0-9]{4}-.*\\.md$"
+        "^docs/adr/(?:SHIFU-)?ADR-[0-9]{4}-.*\\.md$"
       ],
       "required": [
         "metadata_schema",
@@ -59,7 +61,13 @@
         "sensitivity": "public"
       },
       "enums": {
-        "decision_status": ["proposed", "accepted", "superseded"],
+        "decision_status": [
+          "proposed",
+          "accepted",
+          "superseded",
+          "rejected",
+          "withdrawn"
+        ],
         "implementation_status": [
           "not-started",
           "partial",
@@ -80,10 +88,7 @@
     {
       "id": "adr-index",
       "metadataMode": "inline",
-      "files": [
-        "framework/core/docs/adr/README.md",
-        "docs/shifu/adr/README.md"
-      ],
+      "files": ["docs/adr/README.md"],
       "required": [
         "metadata_schema",
         "doc_type",
@@ -101,6 +106,38 @@
         "review_state": ["unreviewed", "self-reviewed", "maintainer-reviewed"]
       },
       "forbidden": ["status", "decision_status", "source_level"]
+    },
+    {
+      "id": "adr-redirect",
+      "metadataMode": "inline",
+      "patterns": [
+        "^framework/core/docs/adr/.*\\.md$",
+        "^docs/shifu/adr/.*\\.md$"
+      ],
+      "required": [
+        "metadata_schema",
+        "doc_type",
+        "document_status",
+        "review_state",
+        "sensitivity",
+        "moved_to"
+      ],
+      "constants": {
+        "metadata_schema": "kungfu.document-metadata/v1",
+        "doc_type": "adr-redirect",
+        "document_status": "deprecated",
+        "sensitivity": "public"
+      },
+      "enums": {
+        "review_state": ["self-reviewed", "maintainer-reviewed"]
+      },
+      "forbidden": [
+        "status",
+        "decision_status",
+        "implementation_status",
+        "adr_id",
+        "source_level"
+      ]
     },
     {
       "id": "engineering-evidence",
@@ -182,12 +219,8 @@
   ],
   "adrRegistries": [
     {
-      "index": "framework/core/docs/adr/README.md",
-      "recordPattern": "^framework/core/docs/adr/(ADR-[0-9]{4})-.*\\.md$"
-    },
-    {
-      "index": "docs/shifu/adr/README.md",
-      "recordPattern": "^docs/shifu/adr/(SHIFU-ADR-[0-9]{4})-.*\\.md$"
+      "index": "docs/adr/README.md",
+      "recordPattern": "^docs/adr/((?:SHIFU-)?ADR-[0-9]{4})-.*\\.md$"
     }
   ],
   "adrEvidence": {

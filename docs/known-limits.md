@@ -15,7 +15,7 @@ reader path and the [documentation map](MAP.md) for exhaustive lookup.
 The yijinjing schema layout is the v4 compatibility root. Kungfu does not promise
 compatibility with v1/v2/v3 layouts, old trading-era APIs, or removed package
 names. From the first stable v4 baseline onward, released v4+ data must not be
-silently stranded by schema changes; [ADR-0008](../framework/core/docs/adr/ADR-0008-yijinjing-schema-layout-baseline.md)
+silently stranded by schema changes; [ADR-0008](./adr/ADR-0008-yijinjing-schema-layout-baseline.md)
 defines that boundary.
 What is **not yet built**:
 
@@ -37,17 +37,17 @@ control and event axes carry recorded, **unscheduled** design questions:
 
 - the Python coroutine integration couples to private `asyncio` internals and is
   incomplete
-  ([ADR-0003](../framework/core/docs/adr/ADR-0003-control-axis-python-coroutine-integration.md));
+  ([ADR-0003](./adr/ADR-0003-control-axis-python-coroutine-integration.md));
 - the Node watcher snapshot model has a state-scale consideration (a whole-state
   copy under lock) that becomes relevant at large state sizes, not at current
   scale
-  ([ADR-0004](../framework/core/docs/adr/ADR-0004-control-axis-node-watcher-snapshot-model.md));
+  ([ADR-0004](./adr/ADR-0004-control-axis-node-watcher-snapshot-model.md));
 - whether v4 should touch this axis at all is itself an open meta-decision
-  ([ADR-0005](../framework/core/docs/adr/ADR-0005-control-event-axis-modernization-assessment.md)).
+  ([ADR-0005](./adr/ADR-0005-control-event-axis-modernization-assessment.md)).
 
 These are identified and tracked, not silently shipped. They do not affect the
 data-plane correctness covered by
-[ADR-0001](../framework/core/docs/adr/ADR-0001-yijinjing-publish-barrier.md).
+[ADR-0001](./adr/ADR-0001-yijinjing-publish-barrier.md).
 
 ## End-to-end power-loss durability is designed, not yet qualified
 
@@ -101,7 +101,7 @@ remain pending.
 
 SQLite WAL, a mapped-region flush, or a resident process is not a substitute for
 that evidence. See [Strong durability and crash recovery](durability-and-crash-recovery.md)
-for the current status and [ADR-0068](../framework/core/docs/adr/ADR-0068-tiered-durability-and-crash-recovery.md)
+for the current status and [ADR-0068](./adr/ADR-0068-tiered-durability-and-crash-recovery.md)
 for the staged architecture.
 
 Institutions considering Kungfu as a local system of record should use the
@@ -201,16 +201,16 @@ has no destructive retention command.
 ## KFX runtime confinement is staged
 
 The trust boundary is decided in
-[ADR-0013](../framework/core/docs/adr/ADR-0013-cli-runtime-extension-isolation-trusted-channel.md)
+[ADR-0013](./adr/ADR-0013-cli-runtime-extension-isolation-trusted-channel.md)
 and the uniform capability surface is decided in
-[ADR-0014](../framework/core/docs/adr/ADR-0014-extension-execution-contract-uniform-capability-surface.md).
+[ADR-0014](./adr/ADR-0014-extension-execution-contract-uniform-capability-surface.md).
 The first guest-host and sandbox primitives exist, but the ecosystem-facing
 surface is still staged.
 
 What is **not yet guaranteed**:
 
 - the proposed `service` facet is not a stable published extension surface yet
-  ([ADR-0017](../framework/core/docs/adr/ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md));
+  ([ADR-0017](./adr/ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md));
 - stronger read-scope narrowing, shadow-file reconciliation, and resource
   ceilings are follow-ups beyond the permissive first delivery;
 - untrusted instrumentation adapters are refused rather than sandboxed, because
@@ -222,7 +222,7 @@ contained.
 
 ## Profile Suites are qualified pre-release, not a universal workflow builder
 
-[ADR-0069](../framework/core/docs/adr/ADR-0069-agent-first-kfx-profile-suite-runtime.md)
+[ADR-0069](./adr/ADR-0069-agent-first-kfx-profile-suite-runtime.md)
 adds `kungfu.profile-suite/v1`, shared validation, content-bound facets, and
 installed CLI schema discovery to the KFX contract.
 
@@ -260,7 +260,7 @@ action achieved the user's intended outcome.
 ## Kungfu Skills have a first slice, not a marketplace
 
 Kungfu Skills are accepted as the agent-facing context layer above kfx
-([ADR-0015](../framework/core/docs/adr/ADR-0015-kungfu-skill-agent-context-layer.md)).
+([ADR-0015](./adr/ADR-0015-kungfu-skill-agent-context-layer.md)).
 The first slices cover `SKILL.md` parsing, compact catalogs, context envelopes,
 managed-run injection, audit sidecars, SDK scaffolding, and a first skill-manager
 view.

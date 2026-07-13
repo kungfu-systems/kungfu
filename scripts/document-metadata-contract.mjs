@@ -130,7 +130,9 @@ function matches(rel, rule) {
 
 /** @param {string} value */
 function canonicalDecisionStatus(value) {
-  const match = /^(accepted|proposed|superseded)\b/i.exec(value.trim());
+  const match = /^(accepted|proposed|superseded|rejected|withdrawn)\b/i.exec(
+    value.trim(),
+  );
   return match?.[1].toLowerCase() || null;
 }
 
@@ -434,6 +436,7 @@ export function validateDocumentMetadata(options) {
   const registered = metadataRegistry.documents;
   const fileSet = new Set(options.files);
   const adrIds = new Set();
+  const adrRecords = new Map();
 
   for (const rel of options.files) {
     const text = fs.readFileSync(path.join(root, rel), 'utf8');
@@ -544,6 +547,28 @@ export function validateDocumentMetadata(options) {
       });
     }
     validateFields(fields, profile, contract, rel, findings);
+    if (profile.id === 'adr-redirect') {
+      const movedTo = String(fields.get('moved_to')?.value || '');
+      const canonicalDirectory = path.posix.dirname(
+        contract.adrRegistries[0]?.index || 'docs/adr/README.md',
+      );
+      const expected = `${canonicalDirectory}/${path.basename(rel)}`;
+      if (movedTo !== expected) {
+        findings.push({
+          code: 'adr-redirect-target',
+          file: rel,
+          line: fields.get('moved_to')?.line || 1,
+          message: `ADR redirect must target its canonical record: ${expected}`,
+        });
+      } else if (!fileSet.has(movedTo)) {
+        findings.push({
+          code: 'adr-redirect-missing',
+          file: rel,
+          line: fields.get('moved_to')?.line || 1,
+          message: `ADR redirect target is not a tracked Markdown document: ${movedTo}`,
+        });
+      }
+    }
     const sources = fields.get('sources');
     if (sources) {
       const allowed = contract.sourceKinds || [];
@@ -574,6 +599,39 @@ export function validateDocumentMetadata(options) {
       )?.[1];
       const id = fields.get('adr_id');
       if (id) adrIds.add(String(id.value));
+      const supersedesField = fields.get('supersedes');
+      const supersededByField = fields.get('superseded_by');
+      for (const [name, field] of [
+        ['supersedes', supersedesField],
+        ['superseded_by', supersededByField],
+      ]) {
+        if (field && !Array.isArray(field.value)) {
+          findings.push({
+            code: 'adr-supersession-list',
+            file: rel,
+            line: field.line,
+            message: `${name} must be an inline YAML list`,
+          });
+        }
+      }
+      if (id) {
+        adrRecords.set(String(id.value), {
+          rel,
+          decision: String(fields.get('decision_status')?.value || ''),
+          implementation: String(
+            fields.get('implementation_status')?.value || '',
+          ),
+          supersedes: Array.isArray(supersedesField?.value)
+            ? supersedesField.value.map(String)
+            : [],
+          supersededBy: Array.isArray(supersededByField?.value)
+            ? supersededByField.value.map(String)
+            : [],
+          line: id.line,
+          supersedesLine: supersedesField?.line || id.line,
+          supersededByLine: supersededByField?.line || id.line,
+        });
+      }
       if (id && id.value !== expectedId) {
         findings.push({
           code: 'adr-id-drift',
@@ -623,6 +681,97 @@ export function validateDocumentMetadata(options) {
         line: 1,
         message: `legacy evidence exemption has no ADR record: ${id}`,
       });
+    }
+  }
+
+  for (const [id, record] of adrRecords) {
+    const terminal = ['superseded', 'rejected', 'withdrawn'].includes(
+      record.decision,
+    );
+    if (terminal && record.implementation !== 'not-applicable') {
+      findings.push({
+        code: 'adr-terminal-implementation',
+        file: record.rel,
+        line: record.line,
+        message: `${record.decision} decisions require implementation_status not-applicable`,
+      });
+    }
+    if (record.decision === 'superseded' && record.supersededBy.length === 0) {
+      findings.push({
+        code: 'adr-supersession-missing',
+        file: record.rel,
+        line: record.line,
+        message: `${id} is superseded but does not declare superseded_by`,
+      });
+    }
+    if (record.decision !== 'superseded' && record.supersededBy.length > 0) {
+      findings.push({
+        code: 'adr-supersession-state',
+        file: record.rel,
+        line: record.supersededByLine,
+        message: `${id} declares superseded_by but decision_status is ${record.decision}`,
+      });
+    }
+    for (const targetId of record.supersedes) {
+      const target = adrRecords.get(targetId);
+      if (targetId === id || !target) {
+        findings.push({
+          code: 'adr-supersession-target',
+          file: record.rel,
+          line: record.supersedesLine,
+          message: `${id} supersedes invalid target ${targetId}`,
+        });
+      } else if (
+        target.decision !== 'superseded' ||
+        !target.supersededBy.includes(id)
+      ) {
+        findings.push({
+          code: 'adr-supersession-reciprocal',
+          file: record.rel,
+          line: record.supersedesLine,
+          message: `${id} -> ${targetId} must be reciprocal and target a superseded decision`,
+        });
+      }
+    }
+    for (const successorId of record.supersededBy) {
+      const successor = adrRecords.get(successorId);
+      if (
+        successorId === id ||
+        !successor ||
+        !successor.supersedes.includes(id)
+      ) {
+        findings.push({
+          code: 'adr-supersession-reciprocal',
+          file: record.rel,
+          line: record.supersededByLine,
+          message: `${id} <- ${successorId} must be reciprocal`,
+        });
+      }
+    }
+  }
+
+  const visiting = new Set();
+  const visited = new Set();
+  const visit = (id) => {
+    if (visiting.has(id)) return true;
+    if (visited.has(id)) return false;
+    visiting.add(id);
+    const cyclic = (adrRecords.get(id)?.supersedes || []).some((target) =>
+      visit(target),
+    );
+    visiting.delete(id);
+    visited.add(id);
+    return cyclic;
+  };
+  for (const [id, record] of adrRecords) {
+    if (visit(id)) {
+      findings.push({
+        code: 'adr-supersession-cycle',
+        file: record.rel,
+        line: record.line,
+        message: `ADR supersession graph contains a cycle reachable from ${id}`,
+      });
+      break;
     }
   }
 

@@ -2,13 +2,13 @@
 
 - Status: design judgment (note, not a decision record)
 - Date: 2026-07-11
-- Anchors: [ADR-0033](../framework/core/docs/adr/ADR-0033-episode-causal-segment-object.md)
-  (Episode as causal segment), [ADR-0034](../framework/core/docs/adr/ADR-0034-yijinjing-episode-manifest-journal.md)
-  (append-only manifest journal). Related: [ADR-0001](../framework/core/docs/adr/ADR-0001-yijinjing-publish-barrier.md)
-  (publish barrier), [ADR-0024](../framework/core/docs/adr/ADR-0024-location-role-and-journal-page-policy.md)
-  (page size is storage policy), [ADR-0055](../framework/core/docs/adr/ADR-0055-retire-journal-session-and-separate-runtime-state-from-projection.md)
-  / [ADR-0056](../framework/core/docs/adr/ADR-0056-retire-legacy-journal-cli-lifecycle-tools.md)
-  (journal lifecycle belongs to Storage/Episode), [ADR-0058](../framework/core/docs/adr/ADR-0058-yijinjing-explicit-mapping-policies.md)
+- Anchors: [ADR-0033](./adr/ADR-0033-episode-causal-segment-object.md)
+  (Episode as causal segment), [ADR-0034](./adr/ADR-0034-yijinjing-episode-manifest-journal.md)
+  (append-only manifest journal). Related: [ADR-0001](./adr/ADR-0001-yijinjing-publish-barrier.md)
+  (publish barrier), [ADR-0024](./adr/ADR-0024-location-role-and-journal-page-policy.md)
+  (page size is storage policy), [ADR-0055](./adr/ADR-0055-retire-journal-session-and-separate-runtime-state-from-projection.md)
+  / [ADR-0056](./adr/ADR-0056-retire-legacy-journal-cli-lifecycle-tools.md)
+  (journal lifecycle belongs to Storage/Episode), [ADR-0058](./adr/ADR-0058-yijinjing-explicit-mapping-policies.md)
   (mapping / page-open policies), and [`episode-object-model.md`](episode-object-model.md)
   (whose "Physical Shape" section names the Episode-aware physical layout as
   future work).
@@ -121,6 +121,6 @@ the max-frame bound at creation time.
   shrink, and transactional manifest-coordinate preservation.
 - The journal *container format* epoch (page/frame header layout) is governed
   separately from page sizing by
-  [ADR-0062](../framework/core/docs/adr/ADR-0062-journal-container-epoch-and-offline-conversion.md);
+  [ADR-0062](./adr/ADR-0062-journal-container-epoch-and-offline-conversion.md);
   page size is a per-page allocation parameter and is not part of the format
   epoch.
