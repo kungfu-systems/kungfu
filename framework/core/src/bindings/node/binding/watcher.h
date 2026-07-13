@@ -18,8 +18,6 @@
 #include <kungfu/runtime/state_cache/model.h>
 
 namespace kungfu::node {
-constexpr uint64_t ID_TRANC = 0x00000000FFFFFFFF;
-constexpr uint32_t PAGE_ID_MASK = 0x80000000;
 constexpr uint32_t TRANSFER_STATIC_DATA_LIMIT = 2000;
 
 class Watcher : public Napi::ObjectWrap<Watcher>, public runtime::live::peer {
@@ -140,12 +138,6 @@ private:
   void RecordWorkerError(const std::exception_ptr &error);
 
   std::exception_ptr TakeWorkerError();
-
-  uint64_t MakeInstructionUID(yijinjing::journal::writer_ptr &writer, uint32_t dest, uint32_t client_id = 0) {
-    uint64_t id_left = (uint64_t)(client_id xor dest) << 32u;
-    uint64_t id_right = (ID_TRANC & writer->current_frame_uid()) | PAGE_ID_MASK;
-    return id_left | id_right;
-  }
 
   template <typename DataType> void UpdateLedger(const boost::hana::basic_type<DataType> &type) {
     using DataTypeMap = std::unordered_map<uint64_t, state<DataType>>;
