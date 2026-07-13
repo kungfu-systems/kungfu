@@ -5,7 +5,9 @@
 #include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
 
+#include <cstdint>
 #include <sstream>
+#include <type_traits>
 
 #include <kungfu/yijinjing/schema/registry.h>
 
@@ -70,7 +72,16 @@ namespace py = pybind11;
 namespace hana = boost::hana;
 
 template <typename DataType> void bind_data_type(pybind11::module &m_types, const char *type_name) {
-  auto py_class = py::class_<DataType, std::shared_ptr<DataType>>(m_types, type_name);
+  // ADR-0078 Decision 3: frame_header opts into the Python buffer protocol so
+  // its raw struct bytes can be handed to the native checksum_frame primitive
+  // zero-copy; def_buffer below requires the py::buffer_protocol() tag here.
+  auto py_class = [&] {
+    if constexpr (std::is_same_v<DataType, kungfu::yijinjing::types::frame_header>) {
+      return py::class_<DataType, std::shared_ptr<DataType>>(m_types, type_name, py::buffer_protocol());
+    } else {
+      return py::class_<DataType, std::shared_ptr<DataType>>(m_types, type_name);
+    }
+  }();
   py_class.def(py::init<>());
   py_class.def(py::init<const std::string &>());
 
@@ -91,6 +102,21 @@ template <typename DataType> void bind_data_type(pybind11::module &m_types, cons
   py_class.def("__eq__", [&](DataType &a, DataType &b) { return a.uid() == b.uid(); });
   py_class.def("__sizeof__", [&](const DataType &target) { return sizeof(target); });
   py_class.def("__parse__", [&](DataType &target, std::string &s) { target.parse(s.c_str(), s.length()); });
+
+  // ADR-0078 Decision 3: expose the raw frame_header struct bytes as a
+  // read-only, zero-copy Python buffer so outer rings (e.g. kungfu.atlas.store)
+  // hand the header straight to the native checksum_frame primitive instead of
+  // re-packing the frame_header layout by hand. Only frame_header opts in; the
+  // buffer is readonly (checksum never writes the header) and callers must keep
+  // its lifetime bound to the synchronous checksum_frame call (a memoryview of a
+  // live header object), never store it across the header's lifetime.
+  if constexpr (std::is_same_v<DataType, kungfu::yijinjing::types::frame_header>) {
+    py_class.def_buffer([](DataType &self) -> py::buffer_info {
+      return py::buffer_info(reinterpret_cast<uint8_t *>(&self), static_cast<py::ssize_t>(sizeof(uint8_t)),
+                             py::format_descriptor<uint8_t>::format(), static_cast<py::ssize_t>(sizeof(DataType)),
+                             /*readonly=*/true);
+    });
+  }
 }
 
 void bind_types(py::module &m) {

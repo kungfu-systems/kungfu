@@ -7,7 +7,6 @@
 
 import json
 import os
-import struct
 import uuid
 
 import kungfu
@@ -432,69 +431,23 @@ def _frame_data_type_value(header):
         return 0 if name == "raw" else str(value)
 
 
-def _fnv1a64_update(state, data):
-    for value in bytes(data):
-        state ^= value
-        state = (state * 1099511628211) & 0xFFFFFFFFFFFFFFFF
-    return state
-
-
-def _crc32c_table():
-    table = []
-    for i in range(256):
-        crc = i
-        for _ in range(8):
-            crc = (crc >> 1) ^ (0x82F63B78 if crc & 1 else 0)
-        table.append(crc & 0xFFFFFFFF)
-    return table
-
-
-_CRC32C_TABLE = _crc32c_table()
-
-
-def _crc32c_update(state, data):
-    for value in bytes(data):
-        state = (state >> 8) ^ _CRC32C_TABLE[(state ^ value) & 0xFF]
-    return state & 0xFFFFFFFF
-
-
 def _checksum_payload(data, algorithm=payloads.DEFAULT_FRAME_CHECKSUM_ALGORITHM):
-    if algorithm == payloads.FRAME_CHECKSUM_ALGORITHM_CRC32C:
-        return _crc32c_update(0xFFFFFFFF, data) ^ 0xFFFFFFFF
-    return _fnv1a64_update(14695981039346656037, data)
-
-
-def _pack_scalar(fmt, value):
-    return struct.pack("<" + fmt, value)
+    # ADR-0078 Decision 3: the payload checksum is the generic whole-frame
+    # integrity primitive exposed on the runtime membrane; call it instead of
+    # re-implementing crc32c / fnv1a here.
+    return yjj.checksum_payload(data, algorithm)
 
 
 def _checksum_frame(
     header, data, payload_length, algorithm=payloads.DEFAULT_FRAME_CHECKSUM_ALGORITHM
 ):
-    fields = [
-        ("I", int(getattr(header, "length", 0))),
-        ("I", int(getattr(header, "header_length", 0))),
-        ("q", int(header.gen_time)),
-        ("q", int(header.trigger_time)),
-        ("i", int(header.carrier_type)),
-        ("I", int(header.source)),
-        ("I", int(header.dest)),
-        ("b", int(_frame_data_type_value(header))),
-        ("I", int(header.initial_source)),
-        ("Q", int(header.journal_frame_uid)),
-        ("Q", int(header.trigger_frame_uid)),
-        ("Q", int(header.stream_id)),
-        ("I", int(payload_length)),
-    ]
-    if algorithm == payloads.FRAME_CHECKSUM_ALGORITHM_CRC32C:
-        state = 0xFFFFFFFF
-        for fmt, value in fields:
-            state = _crc32c_update(state, _pack_scalar(fmt, value))
-        return _crc32c_update(state, data[:payload_length]) ^ 0xFFFFFFFF
-    state = 14695981039346656037
-    for fmt, value in fields:
-        state = _fnv1a64_update(state, _pack_scalar(fmt, value))
-    return _fnv1a64_update(state, data[:payload_length])
+    # ADR-0078 Decision 3: hand the raw frame_header bytes (zero-copy read-only
+    # buffer) and the exact payload slice to the native checksum_frame primitive
+    # instead of re-packing the frame_header layout and re-implementing the
+    # checksum here. The primitive derives payload_length from the payload
+    # buffer, so pass exactly payload_length bytes. `memoryview(header)` stays
+    # alive only for this synchronous call.
+    return yjj.checksum_frame(memoryview(header), data[:payload_length], algorithm)
 
 
 def read_action_frame_index(runtime_dir):

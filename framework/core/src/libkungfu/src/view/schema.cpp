@@ -200,19 +200,34 @@ table_codec_result schema_handle::encode_json(std::string_view json) const {
   return result;
 }
 
-table_codec_result schema_handle::decode_json(const uint8_t *buf, size_t len) const {
+table_codec_result schema_handle::decode_json(const uint8_t *buf, size_t len, bool enum_as_int,
+                                              std::string_view object_name) const {
   table_codec_result result;
-  if (!verify_table(buf, len)) {
+  if (!verify_table(buf, len, object_name)) {
     result.error = "kungfu::view: FlatBuffers table failed schema verification";
     return result;
   }
   flatbuffers::IDLOptions options;
   options.strict_json = true;
   options.output_default_scalars_in_json = true;
+  // ADR-0078 Decision 3: the generic membrane decode primitive asks for the
+  // integer enum form so its JSON matches the three reflection decoders; the
+  // domain-runtime consumers keep the default identifier form.
+  options.output_enum_identifiers = !enum_as_int;
   flatbuffers::Parser parser(options);
   if (!parser.Deserialize(schema_of(*bfbs_))) {
     result.error = "kungfu::view: cannot deserialize reflection schema";
     return result;
+  }
+  // ADR-0078 Decision 3: rewind's multi-table schema decodes a specific event
+  // table, not the .bfbs root_type. Point the parser at the named table (resolved
+  // through the same suffix-tolerant lookup as verify_table) before generating.
+  if (!object_name.empty()) {
+    const reflection::Object *object = object_of(schema_of(*bfbs_), object_name);
+    if (object == nullptr || !parser.SetRootType(object->name()->c_str())) {
+      result.error = "kungfu::view: object not found in schema: " + std::string(object_name);
+      return result;
+    }
   }
   if (const auto *error = flatbuffers::GenerateText(parser, buf, &result.json); error != nullptr) {
     result.error = error;

@@ -117,7 +117,17 @@ public:
   // returned bytes remain the persisted schema-owned payload.
   [[nodiscard]] table_codec_result encode_json(std::string_view json) const;
 
-  [[nodiscard]] table_codec_result decode_json(const uint8_t *buf, size_t len) const;
+  // ADR-0078 Decision 3: `enum_as_int` renders enum fields as their underlying
+  // integer instead of the schema identifier. The default (false) keeps the
+  // identifier form the domain-runtime decode_json consumers already rely on;
+  // the generic membrane decode primitive (decode_flatbuffer_payload_json) opts
+  // into the integer form so it matches the three reflection decoders
+  // (Python BundleDecoder, TS ReflectionDecoder, the generated accessors).
+  // `object_name` decodes a specific table instead of the .bfbs root_type,
+  // resolved through the same suffix-tolerant lookup as verify_table; empty
+  // means the root table (the existing single-root consumers).
+  [[nodiscard]] table_codec_result decode_json(const uint8_t *buf, size_t len, bool enum_as_int = false,
+                                               std::string_view object_name = {}) const;
 
 private:
   // Co-owned `.bfbs` bytes. shared_ptr<const> so copies share one immutable

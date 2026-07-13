@@ -1125,18 +1125,21 @@ void bind(pybind11::module &&m) {
   // reflection chokepoint.
   m.def(
       "decode_flatbuffer_payload_json",
-      [](py::bytes schema_bfbs, py::bytes payload) {
+      [](py::bytes schema_bfbs, py::bytes payload, const std::string &object_name) {
         const auto schema_bytes = schema_bfbs.cast<std::string>();
         const auto payload_bytes = payload.cast<std::string>();
         const auto schema = view::schema_handle::from_bytes(schema_bytes);
-        const auto result =
-            schema.decode_json(reinterpret_cast<const uint8_t *>(payload_bytes.data()), payload_bytes.size());
+        // ADR-0078 Decision 3: integer enum form so the JSON matches the three
+        // reflection decoders the outer rings de-dup against; object_name selects
+        // the event table for multi-table schemas (empty = root_type).
+        const auto result = schema.decode_json(reinterpret_cast<const uint8_t *>(payload_bytes.data()),
+                                               payload_bytes.size(), /*enum_as_int=*/true, object_name);
         if (!result.ok) {
           throw std::runtime_error("decode_flatbuffer_payload_json: " + result.error);
         }
         return result.json;
       },
-      py::arg("schema_bfbs"), py::arg("payload"));
+      py::arg("schema_bfbs"), py::arg("payload"), py::arg("object_name") = "");
 
   py::class_<action::action_recorder, action::action_recorder_ptr>(m, "action_recorder")
       .def(py::init<const std::string &, const std::string &, const std::string &, uint32_t, uint64_t>(),
