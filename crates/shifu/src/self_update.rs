@@ -294,6 +294,7 @@ struct BuildSlot {
     sha: String,
     channel: String,
     branch: String,
+    repo: String,
     worktree: String,
     build_path: String,
     built_at: String,
@@ -369,6 +370,7 @@ fn build_slots() -> Vec<BuildSlot> {
             sha: sha.clone(),
             channel,
             branch: meta_value(&dir, "KUNGFU_ARTIFACT_BRANCH"),
+            repo: meta_value(&dir, "KUNGFU_ARTIFACT_REPO"),
             worktree: meta_value(&dir, "KUNGFU_ARTIFACT_WORKTREE"),
             build_path: meta_value(&dir, "KUNGFU_ARTIFACT_BUILD_PATH"),
             built_at: meta_value(&dir, "KUNGFU_ARTIFACT_BUILT_AT"),
@@ -398,8 +400,25 @@ fn git_output(root: &Path, args: &[&str]) -> String {
 
 fn slot_relation(slot: &BuildSlot, fallback_root: Option<&Path>) -> GitRelation {
     let worktree = Path::new(&slot.worktree);
-    let repo = worktree.is_dir().then_some(worktree).or(fallback_root);
+    let canonical = Path::new(&slot.repo);
+    let repo = worktree
+        .is_dir()
+        .then_some(worktree)
+        .or(fallback_root)
+        .or_else(|| canonical.is_dir().then_some(canonical));
     repo.map(|root| git_relation(root, own_identity().1, &slot.sha))
+        .unwrap_or(GitRelation::Unknown)
+}
+
+fn generation_relation(generation: &Generation, fallback_root: Option<&Path>) -> GitRelation {
+    let worktree = Path::new(&generation.worktree);
+    let canonical = Path::new(&generation.repo);
+    worktree
+        .is_dir()
+        .then_some(worktree)
+        .or(fallback_root)
+        .or_else(|| canonical.is_dir().then_some(canonical))
+        .map(|root| git_relation(root, own_identity().1, &generation.sha))
         .unwrap_or(GitRelation::Unknown)
 }
 
@@ -407,9 +426,12 @@ fn candidate_relation(binary: &Path, source_root: Option<&Path>) -> GitRelation 
     let candidate_sha = identity_parts(binary).1;
     let parent = binary.parent().unwrap_or_else(|| Path::new(""));
     let recorded_worktree = meta_value(parent, "KUNGFU_ARTIFACT_WORKTREE");
+    let recorded_repo = meta_value(parent, "KUNGFU_ARTIFACT_REPO");
     let recorded_root = Path::new(&recorded_worktree);
+    let canonical_root = Path::new(&recorded_repo);
     source_root
         .or_else(|| recorded_root.is_dir().then_some(recorded_root))
+        .or_else(|| canonical_root.is_dir().then_some(canonical_root))
         .map(|repo| git_relation(repo, own_identity().1, &candidate_sha))
         .unwrap_or(GitRelation::Unknown)
 }
@@ -563,6 +585,16 @@ fn write_installed_receipt(binary: &Path, source_root: Option<&Path>) {
         .map(|root| git_output(root, &["symbolic-ref", "--short", "HEAD"]))
         .filter(|value| !value.is_empty())
         .unwrap_or_else(|| meta_value(parent, "KUNGFU_ARTIFACT_BRANCH"));
+    let repo = source_root
+        .map(|root| {
+            git_output(root, &["worktree", "list", "--porcelain"])
+                .lines()
+                .find_map(|line| line.strip_prefix("worktree "))
+                .unwrap_or("")
+                .to_string()
+        })
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| meta_value(parent, "KUNGFU_ARTIFACT_REPO"));
     let worktree = source_root
         .map(|root| root.display().to_string())
         .unwrap_or_else(|| meta_value(parent, "KUNGFU_ARTIFACT_WORKTREE"));
@@ -580,12 +612,14 @@ fn write_installed_receipt(binary: &Path, source_root: Option<&Path>) {
          KUNGFU_SHIFU_SHA='{}'\n\
          KUNGFU_SHIFU_CHANNEL='{}'\n\
          KUNGFU_SHIFU_BRANCH='{}'\n\
+         KUNGFU_SHIFU_REPO='{}'\n\
          KUNGFU_SHIFU_WORKTREE='{}'\n\
          KUNGFU_SHIFU_BUILD_PATH='{}'\n",
         version,
         sha,
         channel,
         branch.replace('\'', ""),
+        repo.replace('\'', ""),
         worktree.replace('\'', ""),
         build_path.replace('\'', "")
     );
@@ -603,12 +637,14 @@ fn write_generation_installed_receipt(generation: &Generation) {
          KUNGFU_SHIFU_SHA='{}'\n\
          KUNGFU_SHIFU_CHANNEL='{}'\n\
          KUNGFU_SHIFU_BRANCH='{}'\n\
+         KUNGFU_SHIFU_REPO='{}'\n\
          KUNGFU_SHIFU_WORKTREE='{}'\n\
          KUNGFU_SHIFU_BUILD_PATH='{}'\n",
         generation.version,
         generation.sha,
         generation.channel,
         generation.branch.replace('\'', ""),
+        generation.repo.replace('\'', ""),
         generation.worktree.replace('\'', ""),
         generation.build_path.replace('\'', "")
     );
@@ -640,6 +676,7 @@ struct Generation {
     sha: String,
     channel: String,
     branch: String,
+    repo: String,
     worktree: String,
     build_path: String,
     archived_at: u64,
@@ -680,6 +717,7 @@ fn generations() -> Vec<Generation> {
                 sha: get("KUNGFU_SHIFU_SHA"),
                 channel: get("KUNGFU_SHIFU_CHANNEL"),
                 branch: get("KUNGFU_SHIFU_BRANCH"),
+                repo: get("KUNGFU_SHIFU_REPO"),
                 worktree: get("KUNGFU_SHIFU_WORKTREE"),
                 build_path: get("KUNGFU_SHIFU_BUILD_PATH"),
                 archived_at: get("KUNGFU_SHIFU_ARCHIVED_AT").parse().unwrap_or(0),
@@ -707,6 +745,7 @@ fn age(archived_at: u64) -> String {
 fn archive_current(exe: &Path) {
     let (version, sha, channel) = own_identity();
     let branch = installed_provenance("KUNGFU_SHIFU_BRANCH");
+    let repo = installed_provenance("KUNGFU_SHIFU_REPO");
     let worktree = installed_provenance("KUNGFU_SHIFU_WORKTREE");
     let build_path = installed_provenance("KUNGFU_SHIFU_BUILD_PATH");
     let slot = generations_dir().join(format!("{:012}-{sha}", epoch_now()));
@@ -719,6 +758,7 @@ fn archive_current(exe: &Path) {
             format!(
                 "KUNGFU_SHIFU_VERSION='{version}'\nKUNGFU_SHIFU_SHA='{sha}'\n\
                  KUNGFU_SHIFU_CHANNEL='{channel}'\nKUNGFU_SHIFU_BRANCH='{branch}'\n\
+                 KUNGFU_SHIFU_REPO='{repo}'\n\
                  KUNGFU_SHIFU_WORKTREE='{worktree}'\n\
                  KUNGFU_SHIFU_BUILD_PATH='{build_path}'\nKUNGFU_SHIFU_ARCHIVED_AT='{}'\n\
                  KUNGFU_SHIFU_FROM='{}'\n",
@@ -781,7 +821,7 @@ fn run_list(root: Option<&Path>, options: &ListOptions) -> ! {
                 state.as_str(),
                 relation.as_str(),
                 automatic(relation, slot.valid, false),
-                json_escape(&slot.worktree),
+                json_escape(&slot.repo),
                 json_escape(&slot.worktree),
                 json_escape(&slot.build_path),
                 json_escape(&slot.binary.display().to_string()),
@@ -789,9 +829,7 @@ fn run_list(root: Option<&Path>, options: &ListOptions) -> ! {
             ));
         }
         for generation in &generations {
-            let relation = root
-                .map(|repo| git_relation(repo, sha, &generation.sha))
-                .unwrap_or(GitRelation::Unknown);
+            let relation = generation_relation(generation, root);
             rows.push(format!(
                 "    {{\"id\":\"{}\",\"kind\":\"shifu-binary\",\"version\":\"{}\",\"commit\":\"{}\",\"branch\":\"{}\",\"digest\":\"\",\"builtAt\":\"{}\",\"state\":\"rollback\",\"relation\":\"{}\",\"automatic\":false,\"rollbackOnly\":true,\"dirty\":null,\"repoPath\":\"{}\",\"worktreePath\":\"{}\",\"buildPath\":\"{}\",\"artifactPath\":\"{}\",\"pathDigest\":\"\",\"reason\":\"rollback only\"}}",
                 json_escape(
@@ -806,7 +844,7 @@ fn run_list(root: Option<&Path>, options: &ListOptions) -> ! {
                 json_escape(&generation.branch),
                 generation.archived_at,
                 relation.as_str(),
-                json_escape(&generation.worktree),
+                json_escape(&generation.repo),
                 json_escape(&generation.worktree),
                 json_escape(&generation.build_path),
                 json_escape(&generation.dir.join(binary_name()).display().to_string())
@@ -848,11 +886,12 @@ fn run_list(root: Option<&Path>, options: &ListOptions) -> ! {
             );
             if options.verbose {
                 println!(
-                    "      id={} built={} channel={}\n      artifact={}\n      worktree={}\n      build={}",
+                    "      id={} built={} channel={}\n      artifact={}\n      repo={}\n      worktree={}\n      build={}",
                     slot.id,
                     if slot.built_at.is_empty() { "unknown" } else { &slot.built_at },
                     slot.channel,
                     slot.binary.display(),
+                    if slot.repo.is_empty() { "unknown" } else { &slot.repo },
                     if slot.worktree.is_empty() { "unknown" } else { &slot.worktree },
                     if slot.build_path.is_empty() { "unknown" } else { &slot.build_path }
                 );
@@ -875,16 +914,20 @@ fn run_list(root: Option<&Path>, options: &ListOptions) -> ! {
                     },
                     options.no_truncate
                 ),
-                root.map(|repo| git_relation(repo, sha, &generation.sha).as_str())
-                    .unwrap_or("unknown"),
+                generation_relation(generation, root).as_str(),
                 style::dim(&age(generation.archived_at)),
             );
             if options.verbose {
                 println!(
-                    "      shifu {} ({})\n      artifact={}\n      worktree={}\n      build={}",
+                    "      shifu {} ({})\n      artifact={}\n      repo={}\n      worktree={}\n      build={}",
                     generation.version,
                     generation.channel,
                     generation.dir.join(binary_name()).display(),
+                    if generation.repo.is_empty() {
+                        "unknown"
+                    } else {
+                        &generation.repo
+                    },
                     if generation.worktree.is_empty() {
                         "unknown"
                     } else {
@@ -935,15 +978,10 @@ fn run_rollback(exe: &Path) -> ! {
     archive_current(exe);
     replace_binary(exe, &staging.join(binary_name()));
     write_generation_installed_receipt(&generation);
-    let relation = {
-        let repo = Path::new(&generation.worktree);
-        if generation.sha == own_identity().1 {
-            GitRelation::Same
-        } else if repo.is_dir() {
-            git_relation(repo, own_identity().1, &generation.sha)
-        } else {
-            GitRelation::Unknown
-        }
+    let relation = if generation.sha == own_identity().1 {
+        GitRelation::Same
+    } else {
+        generation_relation(&generation, None)
     };
     if let Err(error) = write_promotion_receipt(
         &host::kungfu_cache_dir().join("shifu"),

@@ -122,25 +122,28 @@ kungfu_native_build() {
       _meta="$(dirname "$_dest")/meta.env"
       _sha="$(git rev-parse HEAD 2>/dev/null || true)"
       _branch="$(git symbolic-ref --short HEAD 2>/dev/null || echo detached)"
+      _repo="$(git worktree list --porcelain 2>/dev/null | sed -n 's/^worktree //p' | head -n 1)"
       _dirty=false
       # shellcheck disable=SC2086
       [ -n "$(git status --porcelain -- $KUNGFU_LAUNCHER_SRC 2>/dev/null)" ] && _dirty=true
       # Single quotes are the meta.env delimiter; branch/path provenance is
       # diagnostic, so strip an embedded quote rather than creating code.
       _branch="$(printf %s "$_branch" | tr -d "'")"
+      _repo="$(printf %s "$_repo" | tr -d "'")"
       _worktree="$(printf %s "$PWD" | tr -d "'")"
       {
         printf "KUNGFU_ARTIFACT_SCHEMA='shifu.local-artifact/v1'\n"
         printf "KUNGFU_ARTIFACT_PRODUCT='shifu'\n"
         printf "KUNGFU_ARTIFACT_SHA='%s'\n" "$_sha"
         printf "KUNGFU_ARTIFACT_BRANCH='%s'\n" "$_branch"
+        printf "KUNGFU_ARTIFACT_REPO='%s'\n" "$_repo"
         printf "KUNGFU_ARTIFACT_WORKTREE='%s'\n" "$_worktree"
         printf "KUNGFU_ARTIFACT_BUILD_PATH='%s'\n" "$_tgt"
         printf "KUNGFU_ARTIFACT_BUILT_AT='%s'\n" "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
         printf "KUNGFU_ARTIFACT_DIRTY='%s'\n" "$_dirty"
       } > "${_meta}.tmp"
       mv "${_meta}.tmp" "$_meta"
-      unset _meta _sha _branch _dirty _worktree
+      unset _meta _sha _branch _repo _dirty _worktree
       return 0
     fi
     rm -f "${_dest}.tmp"

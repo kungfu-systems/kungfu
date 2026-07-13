@@ -141,8 +141,12 @@ cargo build --release --locked --manifest-path crates\Cargo.toml -p shifu 1>&2 &
   copy /y "%_KFC_TGT%\release\shifu.exe" "%_KFC_DEVBIN%" >nul && (
     set "_KFC_HEAD="
     set "_KFC_BRANCH=detached"
+    set "_KFC_REPO="
     for /f "usebackq" %%s in (`git rev-parse HEAD 2^>nul`) do set "_KFC_HEAD=%%s"
     for /f "usebackq" %%s in (`git symbolic-ref --short HEAD 2^>nul`) do set "_KFC_BRANCH=%%s"
+    for /f "usebackq tokens=1,*" %%a in (`git worktree list --porcelain 2^>nul`) do (
+      if "%%a"=="worktree" if not defined _KFC_REPO set "_KFC_REPO=%%b"
+    )
     set "_KFC_DIRTY_VALUE=false"
     if defined _KFC_DIRTY set "_KFC_DIRTY_VALUE=true"
     (
@@ -150,6 +154,7 @@ cargo build --release --locked --manifest-path crates\Cargo.toml -p shifu 1>&2 &
       echo KUNGFU_ARTIFACT_PRODUCT='shifu'
       echo KUNGFU_ARTIFACT_SHA='!_KFC_HEAD!'
       echo KUNGFU_ARTIFACT_BRANCH='!_KFC_BRANCH!'
+      echo KUNGFU_ARTIFACT_REPO='!_KFC_REPO!'
       echo KUNGFU_ARTIFACT_WORKTREE='!CD!'
       echo KUNGFU_ARTIFACT_BUILD_PATH='!_KFC_TGT!'
       echo KUNGFU_ARTIFACT_BUILT_AT='unknown'

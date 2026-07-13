@@ -199,6 +199,11 @@ pub fn register(root: &Path, plan: &DistributionPlan) {
     } else {
         branch
     };
+    let repo = git(root, &["worktree", "list", "--porcelain"])
+        .lines()
+        .find_map(|line| line.strip_prefix("worktree "))
+        .map(str::to_string)
+        .unwrap_or_else(|| root.display().to_string());
     let (stamp, built_at) = utc_now();
 
     let registry = registry_dir(&plan.product_id);
@@ -224,6 +229,7 @@ pub fn register(root: &Path, plan: &DistributionPlan) {
     let mut meta = vec![
         format!("KUNGFU_BUILD_SHA={}", quote(&fingerprint)),
         format!("KUNGFU_BUILD_BRANCH={}", quote(&branch)),
+        format!("KUNGFU_BUILD_REPO={}", quote(&repo)),
         format!(
             "KUNGFU_BUILD_WORKTREE={}",
             quote(&root.display().to_string())

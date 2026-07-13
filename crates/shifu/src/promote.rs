@@ -36,6 +36,7 @@ struct BuildEntry {
     name: String,
     sha: String,
     branch: String,
+    repo: String,
     worktree: String,
     built_at: String,
     kind: String,
@@ -99,6 +100,7 @@ fn entries() -> Vec<BuildEntry> {
             Some(BuildEntry {
                 sha: meta_get(&meta, "KUNGFU_BUILD_SHA"),
                 branch: meta_get(&meta, "KUNGFU_BUILD_BRANCH"),
+                repo: meta_get(&meta, "KUNGFU_BUILD_REPO"),
                 worktree: meta_get(&meta, "KUNGFU_BUILD_WORKTREE"),
                 built_at: meta_get(&meta, "KUNGFU_BUILD_TIME"),
                 kind: meta_get(&meta, "KUNGFU_BUILD_KIND"),
@@ -143,10 +145,15 @@ fn build_relation(entry: &BuildEntry, installed: &str, entry_count: usize) -> Gi
         };
     }
     let worktree = Path::new(&entry.worktree);
-    if !worktree.is_dir() {
+    let canonical = Path::new(&entry.repo);
+    let root = worktree
+        .is_dir()
+        .then_some(worktree)
+        .or_else(|| canonical.is_dir().then_some(canonical));
+    let Some(root) = root else {
         return GitRelation::Unknown;
-    }
-    git_relation(worktree, installed, &entry.sha)
+    };
+    git_relation(root, installed, &entry.sha)
 }
 
 fn build_valid(entry: &BuildEntry) -> bool {
@@ -248,7 +255,7 @@ fn print_builds_json(entries: &[BuildEntry]) {
                 relation.as_str(),
                 automatic(relation, valid, false),
                 entry.sha.ends_with("-dirty"),
-                json_escape(&entry.worktree),
+                json_escape(&entry.repo),
                 json_escape(&entry.worktree),
                 json_escape(&entry.worktree),
                 json_escape(&entry.slot.join(&entry.artifact).display().to_string()),
@@ -266,11 +273,13 @@ fn write_installed_receipt(entry: &BuildEntry, installed: &Path) {
         "KUNGFU_ARTIFACT_SCHEMA='shifu.local-artifact/v1'\n\
          KUNGFU_INSTALLED_SHA='{}'\n\
          KUNGFU_INSTALLED_BRANCH='{}'\n\
+         KUNGFU_INSTALLED_REPO='{}'\n\
          KUNGFU_INSTALLED_BUILD_ID='{}'\n\
          KUNGFU_INSTALLED_WORKTREE='{}'\n\
          KUNGFU_INSTALLED_ARTIFACT='{}'\n",
         entry.sha,
         entry.branch.replace('\'', ""),
+        entry.repo.replace('\'', ""),
         entry.name,
         entry.worktree.replace('\'', ""),
         installed.display()
@@ -291,10 +300,15 @@ fn write_installed_receipt(entry: &BuildEntry, installed: &Path) {
 /// A successful promotion is the only point where ancestry authorizes
 /// retirement. Divergent and unknown builds remain visible and manual-only.
 fn retire_superseded(promoted: &BuildEntry, entries: &[BuildEntry]) {
-    let repo = Path::new(&promoted.worktree);
-    if !repo.is_dir() {
+    let worktree = Path::new(&promoted.worktree);
+    let canonical = Path::new(&promoted.repo);
+    let repo = worktree
+        .is_dir()
+        .then_some(worktree)
+        .or_else(|| canonical.is_dir().then_some(canonical));
+    let Some(repo) = repo else {
         return;
-    }
+    };
     for entry in entries {
         if entry.name == promoted.name {
             continue;
@@ -357,7 +371,7 @@ pub fn run_builds(args: &[String]) -> ! {
                 " (worktree cleaned; stash still usable)"
             };
             println!(
-                "      id={} built={} kind={} digest={}\n      artifact={}\n      worktree={}{}",
+                "      id={} built={} kind={} digest={}\n      artifact={}\n      repo={}\n      worktree={}{}",
                 entry.name,
                 entry.built_at,
                 entry.kind,
@@ -367,6 +381,11 @@ pub fn run_builds(args: &[String]) -> ! {
                     &entry.digest
                 },
                 entry.slot.join(&entry.artifact).display(),
+                if entry.repo.is_empty() {
+                    "unknown"
+                } else {
+                    &entry.repo
+                },
                 entry.worktree,
                 worktree_state
             );
