@@ -42,7 +42,7 @@
     "name": "Terminal",
     "config": {
       "view": {
-        "title": "Terminal",
+        "title": "Agent Console",
         "capabilities": [
           "terminal",
           "domain",

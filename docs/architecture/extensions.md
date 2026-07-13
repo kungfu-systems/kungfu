@@ -59,8 +59,10 @@ my-view/
 └── src/view/index.tsx    # exports exactly one thing: the View component
 ```
 
-Launch the reference app and the view appears in navigation — the shell
-scans the install root at startup. During development, point
+Launch the reference app and the view becomes available to the command palette
+and deep links — the primary Activity Rail is reserved for the focused Profile
+Home and the fixed high-frequency product surfaces. The shell scans the install
+root at startup. During development, point
 `KF_EXTENSION_PATH` at a directory containing your package to load it from
 source builds without installing (rebuild with `pnpm build`, reload the
 app).

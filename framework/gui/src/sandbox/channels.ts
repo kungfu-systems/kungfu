@@ -52,6 +52,14 @@ export const PROFILE_CLI_EXEC_CHANNEL = 'kf-profile-cli:exec';
 // safe refresh mechanism.
 export const SHELL_REFRESH_CHANNEL = 'kf-shell:refresh';
 
+// main -> shell renderer: application menus route through the same navigation
+// state machine as the Activity Rail and KFX commands.
+export const SHELL_NAVIGATE_CHANNEL = 'kf-shell:navigate';
+export type ShellNavigateRequest =
+  | { target: 'profile-home' }
+  | { target: 'settings' }
+  | { target: 'view'; kfxId: string };
+
 // renderer <-> main: Desktop Workspace chooser/switcher. Selection is a
 // global-config convenience record; fact-bearing data remains in the selected
 // Home or project workspace and switching relaunches the single-workspace app.

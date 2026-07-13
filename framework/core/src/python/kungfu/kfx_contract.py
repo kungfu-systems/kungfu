@@ -95,6 +95,12 @@ def validate_profile_suite(
             "kfx Profile Suite validation failed: members cannot be both "
             f"required and optional: {', '.join(overlap)}"
         )
+    home_view = (profile.get("experience") or {}).get("homeView")
+    if home_view and home_view not in {*required, *optional}:
+        raise ValueError(
+            "kfx Profile Suite validation failed: experience.homeView must be "
+            "a profile member"
+        )
     if suite_members is not None and set(required) | set(optional) != set(
         suite_members
     ):

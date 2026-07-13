@@ -17,6 +17,8 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
   type KfxContract,
+  type KfxPlanDeps,
+  planKfx,
   resolveKfxProfileSuiteSource,
   validateKfxProfileSuite,
 } from './index';
@@ -50,6 +52,27 @@ const invalidCases = JSON.parse(
   path: string[];
   value?: unknown;
 }>;
+
+const planDeps: KfxPlanDeps = {
+  fs: {
+    existsSync,
+    readFileSync: (file, encoding) =>
+      readFileSync(file, encoding as BufferEncoding),
+    readdirSync: (directory, options) => readdirSync(directory, options),
+  },
+  path,
+  crypto: {
+    createHash: (algorithm) => ({
+      update: (data) => ({
+        digest: (encoding) =>
+          crypto
+            .createHash(algorithm)
+            .update(data)
+            .digest(encoding as crypto.BinaryToTextEncoding),
+      }),
+    }),
+  },
+};
 
 function applyCase(
   profile: Record<string, unknown>,
@@ -102,6 +125,43 @@ test('Node rejects Profile Suite package-member drift', () => {
       ]),
     /must match kungfuConfig\.suite\.members/,
   );
+});
+
+test('Node rejects a GUI Home outside the Profile Suite members', () => {
+  const profile = structuredClone(validProfile);
+  profile.experience = { homeView: 'unrelated-dashboard' };
+  assert.throws(
+    () => validateKfxProfileSuite(profile, contract),
+    /experience\.homeView must be a profile member/,
+  );
+});
+
+test('KFX plan projects the declared Mission Control GUI experience', () => {
+  const plan = planKfx(
+    {
+      KUNGFU_KFX_CONTRACT: path.join(
+        root,
+        'framework/kfx/kungfu-kfx.contract.json',
+      ),
+      KF_EXTENSION_PATH: path.join(root, 'extensions'),
+    },
+    planDeps,
+  );
+  const profile = plan.profiles.find(
+    (candidate) => candidate.id === 'kungfu.mission-control',
+  );
+  assert.deepEqual(profile, {
+    id: 'kungfu.mission-control',
+    title: 'Mission Control',
+    kfx: [
+      'mission-control-actions',
+      'mission-control-assessment',
+      'mission-control-contract',
+      'mission-control-views',
+      'work-dashboard',
+    ],
+    defaultView: 'work-dashboard',
+  });
 });
 
 test('Node resolves exact Suite member package roots without lifecycle authority', () => {

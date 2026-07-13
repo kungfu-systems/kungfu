@@ -265,6 +265,10 @@ export type KfxProfileSuite = {
   migrations: { registry: KfxProfileSuiteContentRef };
   permissions: { registry: KfxProfileSuiteContentRef };
   qualification: { profile: KfxProfileSuiteContentRef };
+  // Optional product-shell projection. Semantic closure and activation remain
+  // independent; this only tells a GUI which installed view represents the
+  // Profile when the user focuses it.
+  experience?: { homeView: string };
 };
 
 // ── load plan: host-agnostic discovery + decision (ADR-0017) ──────────────
@@ -408,6 +412,7 @@ export type KfxLoadPlan = {
   entries: KfxPlanEntry[];
   services: KfxServicePlanEntry[];
   suites: Record<string, KfxSuiteDecl>;
+  profiles: ProfileManifest[];
   failures: KfxPlanFailure[];
 };
 
@@ -625,6 +630,18 @@ export function validateKfxProfileSuite(
         'KFX Profile Suite validation failed: profile members must match kungfuConfig.suite.members',
       );
     }
+  }
+  const homeView = stringValue(
+    objectValue(objectValue(profile)?.experience)?.homeView,
+  );
+  if (
+    homeView &&
+    !required.includes(homeView) &&
+    !optional.includes(homeView)
+  ) {
+    throw new Error(
+      'KFX Profile Suite validation failed: experience.homeView must be a profile member',
+    );
   }
 }
 
@@ -886,8 +903,10 @@ export function planKfx(
   const entries: KfxPlanEntry[] = [];
   const services: KfxServicePlanEntry[] = [];
   const suites: Record<string, KfxSuiteDecl> = {};
+  const profiles: ProfileManifest[] = [];
   const failures: KfxPlanFailure[] = [];
   const seen = new Set<string>();
+  const seenProfiles = new Set<string>();
   let contract: KfxContract;
 
   // trust is granted by the frozen first-party set (ADR-0013), never by which
@@ -899,6 +918,7 @@ export function planKfx(
       entries,
       services,
       suites,
+      profiles,
       failures: [
         {
           dir: '<kfx-contract>',
@@ -948,6 +968,42 @@ export function planKfx(
         const config = manifest.kungfuConfig;
         if (!config?.key) continue; // not one of ours
         if (config.suite && !suites[config.key]) {
+          if (config.suite.profile) {
+            const profilePath = path.resolve(dir, config.suite.profile);
+            const suiteRoot = path.resolve(dir);
+            if (
+              profilePath !== suiteRoot &&
+              !profilePath.startsWith(`${suiteRoot}/`) &&
+              !profilePath.startsWith(`${suiteRoot}\\`)
+            ) {
+              throw new Error(
+                'KFX Profile Suite profile path escapes the package root',
+              );
+            }
+            const declaredProfile = JSON.parse(
+              fs.readFileSync(profilePath, 'utf8'),
+            ) as KfxProfileSuite;
+            validateKfxProfileSuite(
+              declaredProfile,
+              contract,
+              config.suite.members,
+            );
+            if (
+              declaredProfile.experience?.homeView &&
+              !seenProfiles.has(declaredProfile.id)
+            ) {
+              profiles.push({
+                id: declaredProfile.id,
+                title: declaredProfile.title,
+                kfx: [
+                  ...declaredProfile.members.required,
+                  ...declaredProfile.members.optional,
+                ],
+                defaultView: declaredProfile.experience.homeView,
+              });
+              seenProfiles.add(declaredProfile.id);
+            }
+          }
           suites[config.key] = config.suite;
         }
         const view = config.config?.view;
@@ -1021,7 +1077,7 @@ export function planKfx(
     }
   }
 
-  return { entries, services, suites, failures };
+  return { entries, services, suites, profiles, failures };
 }
 
 // ── runtime contract (what the shell hands a mounted view) ────────────────

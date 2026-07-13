@@ -132,8 +132,19 @@ The lifecycle distinguishes:
 A workspace may activate multiple compatible Profiles. Changing GUI focus
 does not deactivate facts or policies owned by another active Profile.
 
-Core now records these lifecycle states. GUI focus remains a later product
-concern and is deliberately absent from the lifecycle fold.
+Core records the durable lifecycle states. GUI focus remains deliberately
+absent from the lifecycle fold and lives in Shell state. A Profile Suite may
+optionally declare `experience.homeView`; discovery projects that declaration
+into the Shell's focused Profile catalog without executing Profile code. The
+focused Home leads the primary Activity Rail, followed by the fixed
+high-frequency Agent Console, Profiles, and Skills surfaces. Low-frequency
+Facts and Developer views remain installed and reachable through menus,
+commands, and deep links rather than becoming activation state.
+
+If a focused Profile's declared Home is unavailable or disabled, the Shell
+falls back visibly to Profiles. It never renders a blank first screen and
+never interprets focus as permission to hide or deactivate other installed
+Profiles.
 
 ### 6. Agent-first is the v1 authoring path
 
@@ -219,6 +230,9 @@ historical interpretation without rebuilding Kungfu.
   qualification, plan, action, diff, export/import, and diagnostics.
 - Query/assessment/view composition and Profile Manager are Profile-driven,
   with no domain noun branching in Core.
+- A Profile can declare its focused GUI Home through the shared Suite contract;
+  missing Home falls back to Profiles, and changing focus never changes
+  activation.
 
 ### S4-S6: dogfood and release gate
 
@@ -246,6 +260,14 @@ public Profile Suite path; the Product build issues a release-owned KFD-3
 receipt only after binding the Suite closure, Agent API registry, and Work
 Dashboard GUI projection. User Profiles earn the same receipt schema and badge
 semantics through the journal-backed lifecycle authority.
+
+The focused-experience slice is implemented as well. Mission Control declares
+`experience.homeView` through the same public Profile Suite contract used by
+custom Profiles. KFX discovery projects installed declarations into the Shell;
+the Activity Rail contains only Profile Home, Agent Console, Profiles, and
+Skills, while Facts and Developer surfaces remain available through menus,
+commands, status links, and deep links. Legacy hard-coded GUI Profile lists no
+longer select or deactivate installed KFX.
 
 The stage remains incomplete: Week/Day coexistence, portable export/import,
 upgrade and rollback qualification, broader Mission Control migration, and

@@ -142,6 +142,15 @@ def test_kfx_profile_suite_rejects_package_member_drift():
         )
 
 
+def test_kfx_profile_suite_rejects_home_outside_profile_members():
+    profile = copy.deepcopy(VALID_PROFILE)
+    profile["experience"] = {"homeView": "unrelated-dashboard"}
+    with pytest.raises(
+        ValueError, match="experience.homeView must be a profile member"
+    ):
+        kfx_contract.validate_profile_suite(profile)
+
+
 def test_kfx_package_manifest_schema_rejects_invalid_view_capabilities(tmp_path):
     package_dir = tmp_path / "bad-view"
     package_dir.mkdir()

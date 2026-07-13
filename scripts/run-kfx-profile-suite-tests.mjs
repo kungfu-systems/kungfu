@@ -29,6 +29,15 @@ run('Node contract fixtures', 'pnpm', [
   path.join(root, 'framework/kfx/src/profile-suite.test.ts'),
 ]);
 
+run('GUI Profile navigation projection', 'pnpm', [
+  '--filter',
+  '@kungfu-tech/tui',
+  'exec',
+  'tsx',
+  '--test',
+  path.join(root, 'framework/gui/src/navigation.test.ts'),
+]);
+
 const pythonPath = [
   path.join(root, 'framework/core/src/python'),
   process.env.PYTHONPATH,

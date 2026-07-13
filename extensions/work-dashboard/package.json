@@ -42,7 +42,7 @@
     "name": "Work dashboard",
     "config": {
       "view": {
-        "title": "Work dashboard",
+        "title": "Mission Control",
         "capabilities": [
           "ledger",
           "work",

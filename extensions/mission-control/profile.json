@@ -89,5 +89,8 @@
       "path": "qualification/profile.json",
       "sha256": "be38f3c31182245d19d05aa0e71bc1245fc3caf453c4ab84cd55512aaf2f3cfa"
     }
+  },
+  "experience": {
+    "homeView": "work-dashboard"
   }
 }

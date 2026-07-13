@@ -1,12 +1,6 @@
 import { execFile, execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-// Minimal Electron main process for the kungfu reference app.
-//
-// The C++ runtime reads configuration through std::getenv, which only sees
-// environment variables present when the process starts. The renderer process
-// is spawned by this main process, so the runtime directory must be exported
-// here, before any window (and therefore the renderer process) is created.
 import {
   BrowserWindow,
   Menu,
@@ -17,6 +11,13 @@ import {
   ipcMain,
   nativeImage,
 } from 'electron';
+// Minimal Electron main process for the kungfu reference app.
+//
+// The C++ runtime reads configuration through std::getenv, which only sees
+// environment variables present when the process starts. The renderer process
+// is spawned by this main process, so the runtime directory must be exported
+// here, before any window (and therefore the renderer process) is created.
+import { DEVELOPER_NAVIGATION, TOOLS_NAVIGATION } from '../navigation';
 
 import {
   ATLAS_CLI_EXEC_CHANNEL,
@@ -26,8 +27,10 @@ import {
   PROFILE_CLI_EXEC_CHANNEL,
   RUNTIME_STATUS_GET_CHANNEL,
   SET_BOUNDS_CHANNEL,
+  SHELL_NAVIGATE_CHANNEL,
   SHELL_REFRESH_CHANNEL,
   SHOW_CHANNEL,
+  type ShellNavigateRequest,
   WINDOW_CHROME_CONTROL_CHANNEL,
   WINDOW_CHROME_GET_CHANNEL,
   WINDOW_CHROME_STATE_CHANNEL,
@@ -865,7 +868,18 @@ ipcMain.handle(WORKSPACE_CREATE_MISSION_CHANNEL, (_event, payload) => {
 // Application menu with the VS Code-style "Install 'kungfu' Command in PATH"
 // action, so a real user who installed Kungfu Episodes.app can use `kungfu` in a shell.
 function buildMenu() {
+  const navigateShell = (request: ShellNavigateRequest) => {
+    if (shellWindow && !shellWindow.isDestroyed()) {
+      shellWindow.webContents.send(SHELL_NAVIGATE_CHANNEL, request);
+    }
+  };
   const cliSubmenu: Electron.MenuItemConstructorOptions[] = [
+    {
+      label: 'Settings…',
+      accelerator: 'CmdOrCtrl+,',
+      click: () => navigateShell({ target: 'settings' }),
+    },
+    { type: 'separator' },
     {
       label: "Install 'kungfu' Command in PATH",
       click: async () => {
@@ -927,6 +941,24 @@ function buildMenu() {
       label: 'View',
       submenu: [
         {
+          label: '🧭 Profile Home',
+          click: () => navigateShell({ target: 'profile-home' }),
+        },
+        {
+          label: '💬 Agent Console',
+          click: () => navigateShell({ target: 'view', kfxId: 'terminal' }),
+        },
+        {
+          label: '🧩 Profiles',
+          click: () => navigateShell({ target: 'view', kfxId: 'kfx-manager' }),
+        },
+        {
+          label: '🧠 Skills',
+          click: () =>
+            navigateShell({ target: 'view', kfxId: 'skill-manager' }),
+        },
+        { type: 'separator' },
+        {
           label: 'Refresh Product Data',
           accelerator: 'CmdOrCtrl+R',
           click: () => {
@@ -940,9 +972,25 @@ function buildMenu() {
         { role: 'zoomIn' },
         { role: 'zoomOut' },
         { type: 'separator' },
-        { role: 'toggleDevTools' },
-        { type: 'separator' },
         { role: 'togglefullscreen' },
+      ],
+    },
+    {
+      label: 'Tools',
+      submenu: TOOLS_NAVIGATION.map((item) => ({
+        label: `${item.icon} ${item.title}`,
+        click: () => navigateShell({ target: 'view', kfxId: item.id }),
+      })),
+    },
+    {
+      label: 'Developer',
+      submenu: [
+        ...DEVELOPER_NAVIGATION.map((item) => ({
+          label: `${item.icon} ${item.title}`,
+          click: () => navigateShell({ target: 'view', kfxId: item.id }),
+        })),
+        { type: 'separator' as const },
+        { role: 'toggleDevTools' as const },
       ],
     },
     { role: 'windowMenu' },

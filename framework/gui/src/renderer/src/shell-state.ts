@@ -3,7 +3,7 @@
 // agent APIs read and write the same configuration the GUI shows; the GUI
 // holds no private settings file.
 import type { DomainState } from '@kungfu-tech/api/capability';
-import type { ProfileManifest, ShellState } from '@kungfu-tech/kfx';
+import type { ShellState } from '@kungfu-tech/kfx';
 
 export const SHELL_STATE_LOCATION = {
   role: 'system',
@@ -12,44 +12,13 @@ export const SHELL_STATE_LOCATION = {
   mode: 'live',
 } as const;
 
-// Built-in profiles. A profile is a selection of kfx plus a default first
-// view; the default profile is the working surface, the forensics profile
-// shows the same mechanism carrying a different selection. Opinionated
-// workflow profiles arrive here without shell edits.
-export const PROFILES: ProfileManifest[] = [
-  {
-    id: 'default',
-    title: 'Default — work control plane',
-    kfx: [
-      'work-dashboard',
-      'skill-manager',
-      'rewind',
-      'terminal',
-      'journal-manager',
-      'config-manager',
-      'fact-manager',
-    ],
-    defaultView: 'work-dashboard',
-  },
-  {
-    id: 'forensics',
-    title: 'Forensics — run diagnosis first',
-    kfx: ['rewind', 'journal-manager'],
-    defaultView: 'rewind',
-  },
-];
-
 export const DEFAULT_STATE: ShellState = {
-  profileId: 'default',
+  profileId: 'kungfu.mission-control',
   disabledKfx: [],
   disabledSuites: [],
   sidebarCollapsed: false,
   settings: {},
 };
-
-export function profileById(profileId: string): ProfileManifest {
-  return PROFILES.find((p) => p.id === profileId) ?? PROFILES[0];
-}
 
 export function loadShellState(domain: DomainState): ShellState {
   try {

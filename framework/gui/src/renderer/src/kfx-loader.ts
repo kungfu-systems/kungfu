@@ -14,6 +14,7 @@ import {
   type KfxPlanDeps,
   type KfxSuiteDecl,
   type KfxViewComponent,
+  type ProfileManifest,
   planKfx,
 } from '@kungfu-tech/kfx';
 import type { KfxEntry } from '@kungfu-tech/kfx';
@@ -36,6 +37,7 @@ export type KfxLoadFailure = {
 export type KfxLoadResult = {
   entries: KfxEntry[];
   suites: Record<string, KfxSuiteDecl>;
+  profiles: ProfileManifest[];
   failures: KfxLoadFailure[];
 };
 
@@ -114,5 +116,10 @@ export function loadKfx(
       failures.push({ dir: entry.dir, error: (e as Error).message });
     }
   }
-  return { entries, suites: plan.suites, failures };
+  return {
+    entries,
+    suites: plan.suites,
+    profiles: plan.profiles,
+    failures,
+  };
 }

@@ -589,6 +589,18 @@
             "$ref": "#/$defs/contentRef"
           }
         }
+      },
+      "experience": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "homeView"
+        ],
+        "properties": {
+          "homeView": {
+            "$ref": "#/$defs/memberKey"
+          }
+        }
       }
     },
     "$defs": {

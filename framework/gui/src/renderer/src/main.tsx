@@ -29,11 +29,20 @@ import * as ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import * as jsxRuntime from 'react/jsx-runtime';
 import {
+  accessibleEntries,
+  availableProfiles,
+  focusedProfile,
+  primaryNavigation,
+  profileHomeId,
+} from '../../navigation';
+import {
   RUNTIME_STATUS_GET_CHANNEL,
   SESSION_WINDOW_OPEN_CHANNEL,
   SESSION_WINDOW_RESTORE_CHANNEL,
   SESSION_WINDOW_SNAPSHOT_CHANNEL,
+  SHELL_NAVIGATE_CHANNEL,
   SHELL_REFRESH_CHANNEL,
+  type ShellNavigateRequest,
   WINDOW_CHROME_CONTROL_CHANNEL,
   WINDOW_CHROME_GET_CHANNEL,
   WINDOW_CHROME_STATE_CHANNEL,
@@ -55,13 +64,7 @@ import {
 import { type KfxLoadResult, loadKfx } from './kfx-loader';
 import { type Runtime, bootRuntime } from './runtime';
 import { sandboxClient } from './sandbox-client';
-import {
-  DEFAULT_STATE,
-  PROFILES,
-  loadShellState,
-  profileById,
-  saveShellState,
-} from './shell-state';
+import { DEFAULT_STATE, loadShellState, saveShellState } from './shell-state';
 
 // Modules injected into every kfx bundle (the externals contract of
 // `kungfu sdk kfx build`): one React instance, one capability surface.
@@ -830,9 +833,18 @@ function App() {
   const [state, setState] = React.useState<ShellState>(() =>
     runtime.domain ? loadShellState(runtime.domain) : DEFAULT_STATE,
   );
-  const profile = profileById(state.profileId);
+  const profiles = React.useMemo(
+    () => availableProfiles(loaded.profiles),
+    [loaded.profiles],
+  );
+  const profile = focusedProfile(profiles, state.profileId);
+  const enabled = React.useMemo(
+    () => accessibleEntries(loaded.entries, state),
+    [loaded.entries, state],
+  );
   const [active, setActive] = React.useState(
-    () => window.process.env.KFE_INITIAL_VIEW || profile.defaultView,
+    () =>
+      window.process.env.KFE_INITIAL_VIEW || profileHomeId(profile, enabled),
   );
   const [params, setParams] = React.useState<Record<string, string>>({});
   const [settingsOpen, setSettingsOpen] = React.useState(false);
@@ -937,14 +949,63 @@ function App() {
 
   const updateState = React.useCallback(
     (patch: Partial<ShellState>) => {
+      const requestedProfile = patch.profileId
+        ? focusedProfile(profiles, patch.profileId)
+        : null;
+      if (requestedProfile) {
+        setParams({});
+        setActive(profileHomeId(requestedProfile, enabled));
+      }
       setState((current) => {
-        const next = { ...current, ...patch };
+        const next = {
+          ...current,
+          ...patch,
+          ...(requestedProfile ? { profileId: requestedProfile.id } : {}),
+        };
         if (runtime.domain) saveShellState(runtime.domain, next);
         return next;
       });
     },
-    [runtime.domain],
+    [enabled, profiles, runtime.domain],
   );
+
+  React.useEffect(() => {
+    if (state.profileId !== profile.id) {
+      updateState({ profileId: profile.id });
+    }
+  }, [profile.id, state.profileId, updateState]);
+
+  React.useEffect(() => {
+    type NavigationIpc = {
+      on: (
+        channel: string,
+        handler: (event: unknown, request: ShellNavigateRequest) => void,
+      ) => void;
+      removeListener: (
+        channel: string,
+        handler: (event: unknown, request: ShellNavigateRequest) => void,
+      ) => void;
+    };
+    let ipc: NavigationIpc | null = null;
+    try {
+      ipc = (window.require('electron') as { ipcRenderer: NavigationIpc })
+        .ipcRenderer;
+    } catch {
+      ipc = null;
+    }
+    if (!ipc) return;
+    const navigate = (_event: unknown, request: ShellNavigateRequest) => {
+      if (request.target === 'settings') {
+        setSettingsOpen(true);
+      } else if (request.target === 'profile-home') {
+        openKfx(profileHomeId(profile, enabled));
+      } else if (request.target === 'view') {
+        openKfx(request.kfxId);
+      }
+    };
+    ipc.on(SHELL_NAVIGATE_CHANNEL, navigate);
+    return () => ipc?.removeListener(SHELL_NAVIGATE_CHANNEL, navigate);
+  }, [enabled, openKfx, profile]);
 
   const reloadConfig = React.useCallback(() => {
     try {
@@ -1076,17 +1137,11 @@ function App() {
     ),
   );
 
-  const enabled = loaded.entries.filter(
-    (entry) =>
-      entry.system ||
-      // installed third-party views (sandboxed-ipc) are visible once installed,
-      // independent of the profile's built-in kfx list
-      entry.tier === 'sandboxed-ipc' ||
-      (profile.kfx.includes(entry.id) &&
-        !state.disabledKfx.includes(entry.id) &&
-        !(entry.suite && state.disabledSuites.includes(entry.suite))),
-  );
-  const activeKfx = enabled.find((k) => k.id === active) ?? enabled[0] ?? null;
+  const activeKfx =
+    enabled.find((k) => k.id === active) ??
+    enabled.find((k) => k.id === profileHomeId(profile, enabled)) ??
+    enabled[0] ??
+    null;
 
   // ADR-0016 stage 2/3: expose per-session OS window control to views through the
   // shell so a view stays electron-free. Present only when the flag is on and
@@ -1192,21 +1247,23 @@ function App() {
     },
     registry: loaded.entries,
     suites: loaded.suites,
-    profiles: PROFILES,
+    profiles,
     ...sessionWindowShell,
   };
 
   const sidebarCollapsed = state.sidebarCollapsed;
+  const primaryNav = primaryNavigation(profile, enabled);
   const toggleSidebar = React.useCallback(() => {
     updateState({ sidebarCollapsed: !sidebarCollapsed });
   }, [sidebarCollapsed, updateState]);
-  const navButton = (id: string, title: string) => (
+  const navButton = (item: (typeof primaryNav)[number]) => (
     <button
-      key={id}
+      key={item.id}
       type="button"
-      onClick={() => shell.open(id)}
-      title={sidebarCollapsed ? title : undefined}
-      aria-label={title}
+      onClick={() => shell.open(item.id)}
+      title={item.title}
+      aria-label={item.title}
+      aria-current={activeKfx?.id === item.id ? 'page' : undefined}
       style={{
         ...mono,
         display: 'flex',
@@ -1220,12 +1277,20 @@ function App() {
         border: 'none',
         borderRadius: 5,
         cursor: 'pointer',
-        background: activeKfx?.id === id ? '#04395e' : 'transparent',
-        color: activeKfx?.id === id ? '#9cdcfe' : '#cccccc',
+        gap: 8,
+        background: activeKfx?.id === item.id ? '#04395e' : 'transparent',
+        color: activeKfx?.id === item.id ? '#9cdcfe' : '#cccccc',
         overflow: 'hidden',
       }}
     >
-      {sidebarCollapsed ? title.trim().slice(0, 1).toUpperCase() : title}
+      <span aria-hidden="true" style={{ fontSize: 16, flexShrink: 0 }}>
+        {item.icon}
+      </span>
+      {!sidebarCollapsed && (
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {item.title}
+        </span>
+      )}
     </button>
   );
 
@@ -1235,16 +1300,6 @@ function App() {
     loaded.entries.find((k) => k.id === 'settings') ??
     null;
   const settingsCaps = settingsKfx ? subsetCaps(runtime, settingsKfx) : null;
-  const suiteTitle = (entry: KfxEntry) =>
-    entry.suite ? (loaded.suites[entry.suite]?.title ?? entry.suite) : null;
-  const plain = enabled.filter((k) => !k.suite);
-  const suiteGroups = new Map<string, KfxEntry[]>();
-  for (const entry of enabled) {
-    if (!entry.suite) continue;
-    const group = suiteGroups.get(entry.suite) ?? [];
-    group.push(entry);
-    suiteGroups.set(entry.suite, group);
-  }
   const commandOptions = enabled.map((entry) => ({
     id: entry.id,
     title: entry.title,
@@ -1308,7 +1363,7 @@ function App() {
       side: 'left',
       priority: -110,
       tooltip: statusTooltip(runtimeStatus),
-      command: { kind: 'open-kfx', kfxId: 'status' },
+      command: { kind: 'open-kfx', kfxId: 'system-status' },
     },
     {
       id: 'system.coordinator',
@@ -1318,7 +1373,7 @@ function App() {
       side: 'left',
       priority: -100,
       tooltip: statusTooltip(runtimeStatus),
-      command: { kind: 'open-kfx', kfxId: 'status' },
+      command: { kind: 'open-kfx', kfxId: 'system-status' },
     },
     {
       id: 'system.runtime',
@@ -1328,7 +1383,7 @@ function App() {
       side: 'left',
       priority: -90,
       tooltip: 'Runtime binding status',
-      command: { kind: 'open-kfx', kfxId: 'status' },
+      command: { kind: 'open-kfx', kfxId: 'system-status' },
     },
     {
       id: 'system.trust',
@@ -1339,7 +1394,7 @@ function App() {
       side: 'left',
       priority: -85,
       tooltip: trustTooltip(runtimeStatus),
-      command: { kind: 'open-kfx', kfxId: 'status' },
+      command: { kind: 'open-kfx', kfxId: 'system-status' },
     },
     {
       id: 'system.profile',
@@ -1782,33 +1837,7 @@ function App() {
               >
                 {sidebarCollapsed ? '›' : '‹'}
               </button>
-              {plain.map((k) => navButton(k.id, k.title))}
-              {[...suiteGroups.entries()].map(([key, group]) => (
-                <React.Fragment key={key}>
-                  {sidebarCollapsed ? (
-                    <div
-                      aria-hidden="true"
-                      style={{
-                        height: 1,
-                        margin: '10px 6px 6px',
-                        background: '#3c3c3c',
-                      }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        ...mono,
-                        color: '#6a6a6a',
-                        margin: '12px 0 4px',
-                        fontSize: 10,
-                      }}
-                    >
-                      {suiteTitle(group[0]) ?? key}
-                    </div>
-                  )}
-                  {group.map((k) => navButton(k.id, k.title))}
-                </React.Fragment>
-              ))}
+              {primaryNav.map(navButton)}
               {loaded.failures.length > 0 && (
                 <div
                   title={`${loaded.failures.length} kfx failed to load`}
