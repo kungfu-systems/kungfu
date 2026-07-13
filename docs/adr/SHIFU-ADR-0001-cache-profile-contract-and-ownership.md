@@ -3,8 +3,11 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: SHIFU-ADR-0001
 decision_status: accepted
-implementation_status: partial
-review_state: unreviewed
+implementation_status: implemented
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/644, https://github.com/kungfu-systems/kungfu/pull/655, https://github.com/kungfu-systems/kungfu/pull/696, https://github.com/kungfu-systems/kungfu/pull/727, https://github.com/kungfu-systems/kungfu/pull/739, https://github.com/kungfu-systems/kungfu/pull/755, https://github.com/kungfu-systems/kungfu/pull/774, https://github.com/kungfu-systems/kungfu/pull/779, https://github.com/kungfu-systems/kungfu/pull/786]
+closure_pr: https://github.com/kungfu-systems/kungfu/pull/786
+qualification_refs: [scripts/check-shifu-cache-contract.test.mjs, scripts/shifu-cache-runtime.test.mjs, scripts/shifu-uv-cache-adapter.test.mjs, scripts/shifu-conan-publish.test.mjs]
+review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
 period: ongoing
@@ -16,7 +19,7 @@ last_reviewed: 2026-07-13
 
 # SHIFU-ADR-0001: Cache profile contract and ownership
 
-- Status: accepted; development implementation
+- Status: accepted and implemented
 - Date: 2026-07-12
 - Scope: Shifu execution and toolchain cache policy
 - Related: Kungfu Core [ADR-0044](./ADR-0044-shifu-delegation-protocol.md)

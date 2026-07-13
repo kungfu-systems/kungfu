@@ -4,10 +4,10 @@ doc_type: architecture-decision
 adr_id: SHIFU-ADR-0004
 decision_status: accepted
 implementation_status: implemented
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/762, https://github.com/kungfu-systems/kungfu/pull/765, https://github.com/kungfu-systems/kungfu/pull/767, https://github.com/kungfu-systems/kungfu/pull/769, https://github.com/kungfu-systems/kungfu/pull/773, https://github.com/kungfu-systems/kungfu/pull/781]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/762, https://github.com/kungfu-systems/kungfu/pull/765, https://github.com/kungfu-systems/kungfu/pull/767, https://github.com/kungfu-systems/kungfu/pull/769, https://github.com/kungfu-systems/kungfu/pull/773, https://github.com/kungfu-systems/kungfu/pull/781, https://github.com/kungfu-systems/kungfu/pull/786]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/781
-qualification_refs: [scripts/shifu-gate-runtime.test.mjs, scripts/check-kungfu-gate-catalog.test.mjs, .github/workflows/dev-verify-patrol.yml]
-review_state: unreviewed
+qualification_refs: [scripts/shifu-gate-runtime.test.mjs, scripts/check-kungfu-gate-catalog.test.mjs, scripts/shifu-cache-runtime.test.mjs, .github/workflows/dev-verify-patrol.yml]
+review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
 period: ongoing

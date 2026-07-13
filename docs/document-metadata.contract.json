@@ -201,7 +201,6 @@
     "statusesForbiddingEvidence": ["not-started", "not-applicable"],
     "pullRequestPattern": "^https://github\\.com/kungfu-systems/kungfu/pull/[0-9]+$",
     "legacyEvidenceExemptions": {
-      "SHIFU-ADR-0001": "Partial cache-profile rollout predates immutable evidence capture.",
       "ADR-0005": "Partial modernization assessment needs a dedicated history reconstruction.",
       "ADR-0006": "Frontend platform implementation spans legacy history not yet reconstructed.",
       "ADR-0009": "Self-bootstrap evolved across several renames and needs semantic history review.",
