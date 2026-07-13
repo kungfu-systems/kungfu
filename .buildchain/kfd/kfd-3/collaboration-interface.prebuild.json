@@ -5,16 +5,16 @@
   "witnessKind": "prebuild",
   "supportLevel": "release",
   "source": {
-    "cwd": "/Users/dkr/Worktrees/kungfu/feature/profile-kfd3-qualification-s5",
-    "sourceSha": "0b73fa3e5fde5b55571746b9354df5924068f3d3",
+    "cwd": "/Users/dkr/Worktrees/kungfu/docs/docs-directory-hierarchy",
+    "sourceSha": "e76271230bf17fc9a70a4404be138bb46c423a80",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-    "registryDigest": "sha256:0f825d989935c9b386e3c34f203b6d4fd8dd2a134ed14df299a97b4f87979af5"
+    "registryDigest": "sha256:6f9269cdf112d9e3620523a94a6f59d2a2d7d1737124b91783aead0a752faa24"
   },
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "71d429b9bf117cf812315c8b0aa20db257096bd0791f5cc4b74d6bfcb3358f0b",
-    "digest": "sha256:0f825d989935c9b386e3c34f203b6d4fd8dd2a134ed14df299a97b4f87979af5"
+    "sha256": "91a1834bffe506c8441fd346d9bde560ded1518ff7479ba58a9eef446ea163f2",
+    "digest": "sha256:6f9269cdf112d9e3620523a94a6f59d2a2d7d1737124b91783aead0a752faa24"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -34,7 +34,7 @@
   "expectedArtifactVerification": {
     "command": "node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json"
   },
-  "collaborationInterfaceDigest": "sha256:fe813f8fc8420a6c27b7a49a346a9ea5f36926763b8376946a196833975f5de0",
+  "collaborationInterfaceDigest": "sha256:422e526497783da6fba46ab18dd94e4b2d9980e2e1933219a1a1e1ddc2936421",
   "collaborationInterface": {
     "schemaVersion": 1,
     "contract": "kungfu-buildchain-kfd-3-surface-registry",
