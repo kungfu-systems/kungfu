@@ -37,6 +37,7 @@ import {
 import type { KfxCapabilities, Shell } from '@kungfu-tech/kfx';
 import { headingStyle, mono, panelStyle } from '@kungfu-tech/kfx';
 import React from 'react';
+import { resolveMissionControlProfileRoot } from './agent-console-launch';
 import {
   dashboardMetricVisuals,
   dashboardSnapshotVisual,
@@ -948,31 +949,30 @@ function AtlasProjectionView({
   const currentMission =
     missions.find((mission) => mission.mission_id === selectedMission) ?? null;
   const openGoalConsole = React.useCallback(
-    (goal: AtlasGoal) => {
-      const profileRoot =
-        trustReport?.state.profile_suite_root ??
-        trustReport?.query_profile?.profile.profile_suite_root;
-      if (!profileRoot) {
-        setMessage(
-          'Run the Mission assessment first so the Console can bind the exact Profile root.',
-        );
-        return;
+    async (goal: AtlasGoal) => {
+      try {
+        const profileRoot = await resolveMissionControlProfileRoot(profile);
+        if (!mounted.current) return;
+        shell.open('terminal', {
+          workWorkspaceId:
+            (typeof process !== 'undefined'
+              ? process.env.KF_WORKSPACE_ID
+              : '') || 'home',
+          workProfileId: 'kungfu.mission-control',
+          workProfileRoot: profileRoot,
+          workEntityType: 'go',
+          workEntityId: goal.goal_id,
+          workEntity: JSON.stringify(goal),
+          workPurpose:
+            goal.next_action || goal.summary || goal.title || goal.goal_id,
+          workSystemTimeCut: dashboardCut || new Date().toISOString(),
+        });
+      } catch (error) {
+        if (!mounted.current) return;
+        setMessage(`Agent Console unavailable · ${(error as Error).message}`);
       }
-      shell.open('terminal', {
-        workWorkspaceId:
-          (typeof process !== 'undefined' ? process.env.KF_WORKSPACE_ID : '') ||
-          'home',
-        workProfileId: 'kungfu.mission-control',
-        workProfileRoot: profileRoot,
-        workEntityType: 'go',
-        workEntityId: goal.goal_id,
-        workEntity: JSON.stringify(goal),
-        workPurpose:
-          goal.next_action || goal.summary || goal.title || goal.goal_id,
-        workSystemTimeCut: dashboardCut || new Date().toISOString(),
-      });
     },
-    [dashboardCut, shell, trustReport],
+    [dashboardCut, profile, shell],
   );
   const goalTrustById = React.useMemo(
     () =>
