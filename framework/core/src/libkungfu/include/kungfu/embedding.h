@@ -29,6 +29,7 @@ extern "C" {
 
 #define KF_EMBEDDING_ABI_V1 UINT32_C(1)
 #define KF_EMBEDDING_ABI_V2 UINT32_C(2)
+#define KF_EMBEDDING_ABI_V3 UINT32_C(3)
 #define KF_EMBEDDING_MAX_BATCH_FRAMES UINT32_C(4096)
 #define KF_EMBEDDING_CONTEXT_LOW_LATENCY UINT32_C(1)
 
@@ -49,6 +50,10 @@ typedef enum kf_embedding_status {
 #define KF_EMBEDDING_CAP_MMAP_PAYLOAD_VIEW (UINT64_C(1) << 1)
 /* v2: read-only substrate diagnostics (fsck) reachable without booting CPython. */
 #define KF_EMBEDDING_CAP_STORAGE_DIAGNOSTICS (UINT64_C(1) << 2)
+/* v3 (ADR-0078): generic self-describing primitives — schema-driven frame decode
+ * and whole-frame checksum — so any consumer can decode/verify a .kungfu frame
+ * without re-implementing FlatBuffers reflection or the checksum in an outer ring. */
+#define KF_EMBEDDING_CAP_GENERIC_CODEC (UINT64_C(1) << 3)
 
 typedef enum kf_embedding_mode {
   KF_EMBEDDING_MODE_LIVE = 0,
@@ -174,6 +179,22 @@ typedef int32_t(KF_EMBEDDING_CALL *kf_embedding_storage_fsck_v1_fn)(kf_embedding
                                                                     const kf_embedding_storage_fsck_request_v1 *request,
                                                                     kf_embedding_report_v1 *out_report);
 typedef int32_t(KF_EMBEDDING_CALL *kf_embedding_report_release_v1_fn)(kf_embedding_report_v1 *report);
+/*
+ * v3 (ADR-0078) generic self-describing primitives. `decode_frame_json` decodes a
+ * `.bfbs`-schema'd frame into structured JSON (via the ADR-0039 reflection seam),
+ * returned in a `kf_embedding_report_v1` blob owned by the call (freed with
+ * `report_release`). `frame_checksum` computes the whole-frame integrity checksum
+ * (`header` must be at least a frame_header). Both are read-only and need no CPython.
+ */
+typedef int32_t(KF_EMBEDDING_CALL *kf_embedding_decode_frame_json_v1_fn)(kf_embedding_context *context,
+                                                                         const uint8_t *schema_bfbs,
+                                                                         uint64_t schema_size, const uint8_t *frame,
+                                                                         uint64_t frame_size,
+                                                                         kf_embedding_report_v1 *out_report);
+typedef int32_t(KF_EMBEDDING_CALL *kf_embedding_frame_checksum_v1_fn)(kf_embedding_context *context,
+                                                                      const uint8_t *header, uint64_t header_size,
+                                                                      const uint8_t *payload, uint64_t payload_size,
+                                                                      const char *algorithm, uint64_t *out_checksum);
 
 typedef struct kf_embedding_api_v1 {
   uint32_t abi_version;
@@ -208,6 +229,27 @@ typedef struct kf_embedding_api_v2 {
   kf_embedding_storage_fsck_v1_fn storage_fsck;
   kf_embedding_report_release_v1_fn report_release;
 } kf_embedding_api_v2;
+
+/*
+ * v3 appends the generic-codec pointers after a byte-identical v2 prefix (ADR-0078).
+ * Same version-gated growth: a v1/v2 caller keeps working unchanged against a v3 core.
+ */
+typedef struct kf_embedding_api_v3 {
+  uint32_t abi_version;
+  uint32_t struct_size;
+  uint64_t capabilities;
+  kf_embedding_context_open_v1_fn context_open;
+  kf_embedding_context_capabilities_v1_fn context_capabilities;
+  kf_embedding_context_close_v1_fn context_close;
+  kf_embedding_reader_open_v1_fn reader_open;
+  kf_embedding_reader_read_batch_v1_fn reader_read_batch;
+  kf_embedding_reader_release_batch_v1_fn reader_release_batch;
+  kf_embedding_reader_close_v1_fn reader_close;
+  kf_embedding_storage_fsck_v1_fn storage_fsck;
+  kf_embedding_report_release_v1_fn report_release;
+  kf_embedding_decode_frame_json_v1_fn decode_frame_json;
+  kf_embedding_frame_checksum_v1_fn frame_checksum;
+} kf_embedding_api_v3;
 
 /*
  * The only link-visible bootstrap. All versioned operations live in the table.

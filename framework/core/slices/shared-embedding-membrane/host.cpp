@@ -145,7 +145,7 @@ int main(int argc, char **argv) {
   kf_embedding_api_v1 api{};
   // A version above the highest supported table is UNSUPPORTED_VERSION; an
   // undersized buffer for a supported version is INVALID_ARGUMENT.
-  if (kungfu_embedding_get_api(KF_EMBEDDING_ABI_V2 + 1, sizeof(api), &api) != KF_EMBEDDING_UNSUPPORTED_VERSION ||
+  if (kungfu_embedding_get_api(KF_EMBEDDING_ABI_V3 + 1, sizeof(api), &api) != KF_EMBEDDING_UNSUPPORTED_VERSION ||
       kungfu_embedding_get_api(KF_EMBEDDING_ABI_V1, sizeof(api) - 1, &api) != KF_EMBEDDING_INVALID_ARGUMENT) {
     std::fprintf(stderr, "ABI version/size negotiation failed\n");
     return 4;
@@ -170,6 +170,22 @@ int main(int argc, char **argv) {
       (api_v2.capabilities & KF_EMBEDDING_CAP_STORAGE_DIAGNOSTICS) == 0 || api_v2.storage_fsck == nullptr ||
       api_v2.report_release == nullptr) {
     std::fprintf(stderr, "ABI v2 negotiation failed: %d\n", v2_status);
+    return 5;
+  }
+  // v3 (ADR-0078) negotiates the generic-codec surface on top of the v2 prefix: a
+  // correctly sized v3 request must advertise the generic-codec capability and
+  // populate the decode/checksum pointers.
+  kf_embedding_api_v3 api_v3{};
+  if (kungfu_embedding_get_api(KF_EMBEDDING_ABI_V3, sizeof(kf_embedding_api_v2), &api_v3) !=
+      KF_EMBEDDING_INVALID_ARGUMENT) {
+    std::fprintf(stderr, "ABI v3 size negotiation failed\n");
+    return 4;
+  }
+  const auto v3_status = kungfu_embedding_get_api(KF_EMBEDDING_ABI_V3, sizeof(api_v3), &api_v3);
+  if (v3_status != KF_EMBEDDING_OK || api_v3.abi_version != KF_EMBEDDING_ABI_V3 ||
+      (api_v3.capabilities & KF_EMBEDDING_CAP_GENERIC_CODEC) == 0 || api_v3.decode_frame_json == nullptr ||
+      api_v3.frame_checksum == nullptr) {
+    std::fprintf(stderr, "ABI v3 negotiation failed: %d\n", v3_status);
     return 5;
   }
   if (!check_error_paths(api, argv[1])) {

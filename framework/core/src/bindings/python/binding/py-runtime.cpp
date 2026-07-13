@@ -504,6 +504,21 @@ void bind(pybind11::module &&m) {
                                         static_cast<uint32_t>(view.size * view.itemsize), algorithm);
       },
       py::arg("payload"), py::arg("algorithm") = action::DEFAULT_FRAME_CHECKSUM_ALGORITHM);
+  // ADR-0078: generic whole-frame integrity primitive, so outer rings stop
+  // re-implementing the crc32c/fnv1a checksum and the frame_header layout by hand.
+  m.def(
+      "checksum_frame",
+      [](py::buffer header, py::buffer payload, const std::string &algorithm) {
+        const auto header_view = header.request();
+        if (static_cast<size_t>(header_view.size * header_view.itemsize) < sizeof(yijinjing::types::frame_header)) {
+          throw std::runtime_error("checksum_frame: header buffer smaller than frame_header");
+        }
+        const auto &frame_header = *reinterpret_cast<const yijinjing::types::frame_header *>(header_view.ptr);
+        const auto payload_view = payload.request();
+        return action::checksum_frame(frame_header, static_cast<const uint8_t *>(payload_view.ptr),
+                                      static_cast<uint32_t>(payload_view.size * payload_view.itemsize), algorithm);
+      },
+      py::arg("header"), py::arg("payload"), py::arg("algorithm") = action::DEFAULT_FRAME_CHECKSUM_ALGORITHM);
   m.attr("CONTENT_HASH_ALGORITHM_SHA256") = yijinjing::storage::CONTENT_HASH_ALGORITHM_SHA256;
   m.attr("CONTENT_HASH_ALGORITHM_BLAKE3") = yijinjing::storage::CONTENT_HASH_ALGORITHM_BLAKE3;
   m.def("is_supported_content_hash_algorithm", &yijinjing::storage::is_supported_content_hash_algorithm,
@@ -1092,6 +1107,24 @@ void bind(pybind11::module &&m) {
                                    object_name);
       },
       py::arg("schema_bfbs"), py::arg("payload"), py::arg("object_name") = "");
+  // ADR-0078: generic schema-driven frame decode primitive (`.bfbs` + frame ->
+  // structured JSON), so outer rings (rewind's BundleDecoder) stop re-implementing
+  // FlatBuffers reflection in Python. Read-only edge form behind the ADR-0039
+  // reflection chokepoint.
+  m.def(
+      "decode_flatbuffer_payload_json",
+      [](py::bytes schema_bfbs, py::bytes payload) {
+        const auto schema_bytes = schema_bfbs.cast<std::string>();
+        const auto payload_bytes = payload.cast<std::string>();
+        const auto schema = view::schema_handle::from_bytes(schema_bytes);
+        const auto result =
+            schema.decode_json(reinterpret_cast<const uint8_t *>(payload_bytes.data()), payload_bytes.size());
+        if (!result.ok) {
+          throw std::runtime_error("decode_flatbuffer_payload_json: " + result.error);
+        }
+        return result.json;
+      },
+      py::arg("schema_bfbs"), py::arg("payload"));
 
   py::class_<action::action_recorder, action::action_recorder_ptr>(m, "action_recorder")
       .def(py::init<const std::string &, const std::string &, const std::string &, uint32_t, uint64_t>(),

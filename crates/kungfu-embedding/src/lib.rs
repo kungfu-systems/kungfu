@@ -12,9 +12,13 @@
 //!
 //! The table is version-negotiated: v1 exposes journal batch-read + capability
 //! negotiation; v2 (ADR-0071 Bucket A) appends a read-only substrate-diagnostic
-//! surface ([`Context::storage_fsck`]) after a byte-identical v1 prefix.
-//! [`Context::open`] negotiates v2 first and falls back to v1, so a v1-only core
-//! still yields a working journal-read context.
+//! surface ([`Context::storage_fsck`]) after a byte-identical v1 prefix; v3
+//! (ADR-0078) appends the two generic self-describing primitives
+//! ([`Context::decode_frame_json`] + [`Context::frame_checksum`]) after a
+//! byte-identical v2 prefix, so a non-Python consumer can decode/verify a
+//! `.kungfu` frame without re-implementing FlatBuffers reflection or the
+//! checksum. [`Context::open`] negotiates v3 first and falls back to v2 then v1,
+//! so an older core still yields a working journal-read context.
 //!
 //! # ABI fidelity
 //!
@@ -52,9 +56,15 @@ use std::slice;
 pub const ABI_V1: u32 = 1;
 
 /// The v2 ABI version: v1 plus the read-only substrate-diagnostic surface
-/// (`storage_fsck`). [`Context::open`] negotiates v2 first and falls back to v1,
-/// so a v1-only core still yields a working journal-read context.
+/// (`storage_fsck`). [`Context::open`] negotiates the richest table first and
+/// falls back through v2 to v1, so a v1-only core still yields a working
+/// journal-read context.
 pub const ABI_V2: u32 = 2;
+
+/// The v3 ABI version (ADR-0078): v2 plus the two generic self-describing
+/// primitives — `decode_frame_json` and `frame_checksum`. [`Context::open`]
+/// negotiates v3 first and falls back to v2 then v1.
+pub const ABI_V3: u32 = 3;
 
 /// Maximum frames a single `read_batch` call may return (`KF_EMBEDDING_MAX_BATCH_FRAMES`).
 pub const MAX_BATCH_FRAMES: u32 = 4096;
@@ -71,6 +81,11 @@ pub const CAP_MMAP_PAYLOAD_VIEW: u64 = 1 << 1;
 /// Capability bit: read-only substrate diagnostics reachable without CPython
 /// (`KF_EMBEDDING_CAP_STORAGE_DIAGNOSTICS`).
 pub const CAP_STORAGE_DIAGNOSTICS: u64 = 1 << 2;
+
+/// Capability bit: generic self-describing primitives (schema-driven frame
+/// decode + whole-frame checksum) reachable without CPython
+/// (`KF_EMBEDDING_CAP_GENERIC_CODEC`, ADR-0078).
+pub const CAP_GENERIC_CODEC: u64 = 1 << 3;
 
 /// Report blob format tag: UTF-8 JSON (`KF_EMBEDDING_REPORT_FORMAT_JSON`).
 pub const REPORT_FORMAT_JSON: u32 = 1;
@@ -173,6 +188,21 @@ type ReaderClose = unsafe extern "C" fn(*mut c_void) -> i32;
 type StorageFsck =
     unsafe extern "C" fn(*mut c_void, *const StorageFsckRequestV1, *mut ReportV1) -> i32;
 type ReportRelease = unsafe extern "C" fn(*mut ReportV1) -> i32;
+/// v3: decode a `.bfbs`-schema'd frame into structured JSON (owned report blob,
+/// freed with `report_release`).
+type DecodeFrameJson =
+    unsafe extern "C" fn(*mut c_void, *const u8, u64, *const u8, u64, *mut ReportV1) -> i32;
+/// v3: whole-frame integrity checksum (`header` must be at least a frame_header;
+/// `algorithm` is a nullable C string).
+type FrameChecksum = unsafe extern "C" fn(
+    *mut c_void,
+    *const u8,
+    u64,
+    *const u8,
+    u64,
+    *const c_char,
+    *mut u64,
+) -> i32;
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -221,6 +251,69 @@ impl ApiV2 {
             reader_read_batch: self.reader_read_batch,
             reader_release_batch: self.reader_release_batch,
             reader_close: self.reader_close,
+        }
+    }
+
+    /// The diagnostic function pointers this table carries.
+    fn diagnostics(&self) -> Diagnostics {
+        Diagnostics {
+            storage_fsck: self.storage_fsck,
+            report_release: self.report_release,
+        }
+    }
+}
+
+/// The v3 table: a byte-identical v2 prefix followed by the generic-codec pointers.
+#[repr(C)]
+#[derive(Clone, Copy)]
+struct ApiV3 {
+    abi_version: u32,
+    struct_size: u32,
+    capabilities: u64,
+    context_open: ContextOpen,
+    context_capabilities: ContextCapabilities,
+    context_close: ContextClose,
+    reader_open: ReaderOpen,
+    reader_read_batch: ReaderReadBatch,
+    reader_release_batch: ReaderReleaseBatch,
+    reader_close: ReaderClose,
+    storage_fsck: StorageFsck,
+    report_release: ReportRelease,
+    decode_frame_json: DecodeFrameJson,
+    frame_checksum: FrameChecksum,
+}
+
+impl ApiV3 {
+    /// The v1 view of this table's shared prefix.
+    fn as_v1(&self) -> ApiV1 {
+        ApiV1 {
+            abi_version: self.abi_version,
+            struct_size: self.struct_size,
+            capabilities: self.capabilities,
+            context_open: self.context_open,
+            context_capabilities: self.context_capabilities,
+            context_close: self.context_close,
+            reader_open: self.reader_open,
+            reader_read_batch: self.reader_read_batch,
+            reader_release_batch: self.reader_release_batch,
+            reader_close: self.reader_close,
+        }
+    }
+
+    /// The diagnostic function pointers this table carries (present since v2).
+    fn diagnostics(&self) -> Diagnostics {
+        Diagnostics {
+            storage_fsck: self.storage_fsck,
+            report_release: self.report_release,
+        }
+    }
+
+    /// The generic-codec function pointers this table carries (v3).
+    fn generic_codec(&self) -> GenericCodec {
+        GenericCodec {
+            decode_frame_json: self.decode_frame_json,
+            frame_checksum: self.frame_checksum,
+            report_release: self.report_release,
         }
     }
 }
@@ -339,27 +432,54 @@ fn api_v2() -> Result<ApiV2, EmbeddingError> {
     Ok(api)
 }
 
-/// Negotiate the richest table the core offers: v2 (with diagnostics) if
-/// available, otherwise fall back to v1. Only `UnsupportedVersion` triggers the
-/// fallback; any other error is surfaced.
-fn negotiate() -> Result<(ApiV1, Option<Diagnostics>), EmbeddingError> {
-    match api_v2() {
-        Ok(v2) => Ok((
-            v2.as_v1(),
-            Some(Diagnostics {
-                storage_fsck: v2.storage_fsck,
-                report_release: v2.report_release,
-            }),
-        )),
-        Err(EmbeddingError::UnsupportedVersion) => Ok((api_v1()?, None)),
+fn api_v3() -> Result<ApiV3, EmbeddingError> {
+    let mut api = std::mem::MaybeUninit::<ApiV3>::uninit();
+    // SAFETY: the negotiator fills `out_api` only on OK; we pass our own struct
+    // size so a v1/v2-only core rejects v3 with UnsupportedVersion.
+    let result = unsafe {
+        kungfu_embedding_get_api(
+            ABI_V3,
+            std::mem::size_of::<ApiV3>() as u32,
+            api.as_mut_ptr().cast(),
+        )
+    };
+    status(result)?;
+    // SAFETY: OK from the negotiator means the table is initialized.
+    let api = unsafe { api.assume_init() };
+    if api.abi_version != ABI_V3 || api.struct_size < std::mem::size_of::<ApiV3>() as u32 {
+        return Err(EmbeddingError::IncompatibleTable);
+    }
+    Ok(api)
+}
+
+/// Negotiate the richest table the core offers: v3 (diagnostics + generic codec)
+/// if available, then v2 (diagnostics), otherwise fall back to v1. Only
+/// `UnsupportedVersion` triggers a step down; any other error is surfaced.
+fn negotiate() -> Result<(ApiV1, Option<Diagnostics>, Option<GenericCodec>), EmbeddingError> {
+    match api_v3() {
+        Ok(v3) => Ok((v3.as_v1(), Some(v3.diagnostics()), Some(v3.generic_codec()))),
+        Err(EmbeddingError::UnsupportedVersion) => match api_v2() {
+            Ok(v2) => Ok((v2.as_v1(), Some(v2.diagnostics()), None)),
+            Err(EmbeddingError::UnsupportedVersion) => Ok((api_v1()?, None, None)),
+            Err(other) => Err(other),
+        },
         Err(other) => Err(other),
     }
 }
 
-/// The v2 diagnostic function pointers, present only when v2 was negotiated.
+/// The v2 diagnostic function pointers, present only when v2+ was negotiated.
 #[derive(Clone, Copy)]
 struct Diagnostics {
     storage_fsck: StorageFsck,
+    report_release: ReportRelease,
+}
+
+/// The v3 generic-codec function pointers, present only when v3 was negotiated.
+/// Carries `report_release` too, so a [`DecodeReport`] can free its own blob.
+#[derive(Clone, Copy)]
+struct GenericCodec {
+    decode_frame_json: DecodeFrameJson,
+    frame_checksum: FrameChecksum,
     report_release: ReportRelease,
 }
 
@@ -441,6 +561,12 @@ impl Capabilities {
     /// Whether the read-only substrate-diagnostic surface (fsck) is reachable.
     pub fn storage_diagnostics(self) -> bool {
         self.0 & CAP_STORAGE_DIAGNOSTICS != 0
+    }
+
+    /// Whether the generic self-describing primitives (frame decode + checksum)
+    /// are reachable.
+    pub fn generic_codec(self) -> bool {
+        self.0 & CAP_GENERIC_CODEC != 0
     }
 }
 
@@ -569,14 +695,15 @@ impl<'a> StorageFsckRequest<'a> {
 pub struct Context {
     api: ApiV1,
     diagnostics: Option<Diagnostics>,
+    generic_codec: Option<GenericCodec>,
     raw: *mut c_void,
 }
 
 impl Context {
-    /// Negotiate the richest table the core offers (v2 with diagnostics, else v1)
-    /// and open a context for `config`.
+    /// Negotiate the richest table the core offers (v3 with diagnostics + generic
+    /// codec, then v2 with diagnostics, else v1) and open a context for `config`.
     pub fn open(config: &ContextConfig) -> Result<Self, EmbeddingError> {
-        let (api, diagnostics) = negotiate()?;
+        let (api, diagnostics, generic_codec) = negotiate()?;
         let root = cstr(config.root, "root")?;
         let namespace = cstr(config.host_namespace, "host_namespace")?;
         let name = cstr(config.host_name, "host_name")?;
@@ -599,6 +726,7 @@ impl Context {
         Ok(Self {
             api,
             diagnostics,
+            generic_codec,
             raw,
         })
     }
@@ -647,6 +775,86 @@ impl Context {
             release: diagnostics.report_release,
             raw: raw_report,
         })
+    }
+
+    /// Decode a `.bfbs`-schema'd frame into structured JSON through the ADR-0039
+    /// reflection seam, returning an owned report blob. This is generic: it needs
+    /// only the schema bytes and the frame, no domain knowledge and no CPython, so
+    /// any consumer can read a `.kungfu` frame without re-implementing FlatBuffers
+    /// reflection in an outer ring (ADR-0078).
+    ///
+    /// Returns [`EmbeddingError::UnsupportedVersion`] if the core only offers v1/v2
+    /// (no generic-codec surface), or [`EmbeddingError::CoreError`] if the frame
+    /// does not decode against the schema.
+    pub fn decode_frame_json(
+        &self,
+        schema_bfbs: &[u8],
+        frame: &[u8],
+    ) -> Result<DecodeReport, EmbeddingError> {
+        let codec = self
+            .generic_codec
+            .ok_or(EmbeddingError::UnsupportedVersion)?;
+        let mut raw_report = ReportV1 {
+            struct_size: std::mem::size_of::<ReportV1>() as u32,
+            format: 0,
+            ok: 0,
+            degraded: 0,
+            reserved0: [0; 2],
+            data: std::ptr::null(),
+            data_size: 0,
+            owner: std::ptr::null_mut(),
+        };
+        // SAFETY: `self.raw` is a live context; the slices outlive the call (the
+        // core copies the JSON out into an owned blob); `raw_report` is live stack.
+        status(unsafe {
+            (codec.decode_frame_json)(
+                self.raw,
+                schema_bfbs.as_ptr(),
+                schema_bfbs.len() as u64,
+                frame.as_ptr(),
+                frame.len() as u64,
+                &mut raw_report,
+            )
+        })?;
+        Ok(DecodeReport {
+            release: codec.report_release,
+            raw: raw_report,
+        })
+    }
+
+    /// Compute the whole-frame integrity checksum through the C++ authority
+    /// (`action::checksum_frame`), so a consumer never re-derives the frame-header
+    /// layout or the checksum polynomial itself (ADR-0078). `header` must be at
+    /// least a frame_header; `algorithm` is `None` for the core default (e.g.
+    /// crc32c), or an explicit name such as `"crc32c"` / `"fnv1a64"`.
+    ///
+    /// Returns [`EmbeddingError::UnsupportedVersion`] if the core only offers
+    /// v1/v2 (no generic-codec surface).
+    pub fn frame_checksum(
+        &self,
+        header: &[u8],
+        payload: &[u8],
+        algorithm: Option<&str>,
+    ) -> Result<u64, EmbeddingError> {
+        let codec = self
+            .generic_codec
+            .ok_or(EmbeddingError::UnsupportedVersion)?;
+        let algo = opt_cstr(algorithm, "algorithm")?;
+        let mut checksum = 0u64;
+        // SAFETY: `self.raw` is a live context; the slices and the algo CString
+        // outlive the call; `checksum` points at live stack memory.
+        status(unsafe {
+            (codec.frame_checksum)(
+                self.raw,
+                header.as_ptr(),
+                header.len() as u64,
+                payload.as_ptr(),
+                payload.len() as u64,
+                opt_ptr(&algo),
+                &mut checksum,
+            )
+        })?;
+        Ok(checksum)
     }
 
     /// The capabilities this specific context can service.
@@ -885,6 +1093,49 @@ impl Drop for FsckReport {
     }
 }
 
+/// An owned frame-decode report (ADR-0078). Holds the core-owned JSON blob until
+/// dropped, when it returns the blob through `report_release`. Unlike
+/// [`FsckReport`] there is no `degraded` verdict: `decode_frame_json` either
+/// succeeds with a JSON blob or returns an error status.
+pub struct DecodeReport {
+    release: ReportRelease,
+    raw: ReportV1,
+}
+
+impl DecodeReport {
+    /// Whether the report blob is UTF-8 JSON (always true for the current core).
+    pub fn is_json(&self) -> bool {
+        self.raw.format == REPORT_FORMAT_JSON
+    }
+
+    /// The decoded frame as raw JSON bytes. Empty if the core returned no payload.
+    pub fn bytes(&self) -> &[u8] {
+        if self.raw.data.is_null() || self.raw.data_size == 0 {
+            &[]
+        } else {
+            // SAFETY: the core guarantees `data`/`data_size` describe a live blob
+            // owned by this report until `report_release` (called on drop).
+            unsafe { slice::from_raw_parts(self.raw.data, self.raw.data_size as usize) }
+        }
+    }
+
+    /// The decoded frame as a UTF-8 JSON string, or a UTF-8 error if the bytes are
+    /// not valid text.
+    pub fn as_str(&self) -> Result<&str, std::str::Utf8Error> {
+        std::str::from_utf8(self.bytes())
+    }
+}
+
+impl Drop for DecodeReport {
+    fn drop(&mut self) {
+        if !self.raw.owner.is_null() {
+            // SAFETY: `raw` owns a live report blob issued by `decode_frame_json`.
+            let result = unsafe { (self.release)(&mut self.raw) };
+            debug_assert_eq!(result, OK);
+        }
+    }
+}
+
 // ── compile-time ABI layout guards (mirror embedding.h; 64-bit targets) ──
 //
 // kungfu ships on 64-bit platforms only (arm64 / x86-64), so the raw structs
@@ -911,6 +1162,9 @@ mod layout_guards {
     const _: () = assert!(align_of::<ReportV1>() == 8);
     const _: () = assert!(size_of::<ApiV2>() == 88);
     const _: () = assert!(align_of::<ApiV2>() == 8);
+    // v3 = v2 (88) + decode_frame_json (8) + frame_checksum (8) = 104.
+    const _: () = assert!(size_of::<ApiV3>() == 104);
+    const _: () = assert!(align_of::<ApiV3>() == 8);
 }
 
 #[cfg(test)]
@@ -955,6 +1209,9 @@ mod tests {
         assert!(!Capabilities(0).read_journal_batch());
         assert!(!caps.storage_diagnostics());
         assert!(Capabilities(CAP_STORAGE_DIAGNOSTICS).storage_diagnostics());
+        assert!(!caps.generic_codec());
+        assert!(Capabilities(CAP_GENERIC_CODEC).generic_codec());
+        assert_eq!(CAP_GENERIC_CODEC, 1 << 3);
     }
 
     #[test]
@@ -1003,5 +1260,12 @@ mod tests {
         let loc = Location::new("ns", "name");
         assert_eq!(loc.role, LocationRole::System);
         assert_eq!(loc.from_time, 0);
+    }
+
+    #[test]
+    fn abi_versions_are_monotonic() {
+        assert_eq!(ABI_V1, 1);
+        assert_eq!(ABI_V2, 2);
+        assert_eq!(ABI_V3, 3);
     }
 }

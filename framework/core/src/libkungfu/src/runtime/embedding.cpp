@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <kungfu/embedding.h>
+#include <kungfu/runtime/action_recorder.h>
 #include <kungfu/runtime/io.h>
 #include <kungfu/runtime/storage/json_edge.h>
 #include <kungfu/runtime/storage/service.h>
+#include <kungfu/view/schema.h>
 
 #include <algorithm>
 #include <cstring>
@@ -251,6 +253,54 @@ int32_t KF_EMBEDDING_CALL report_release(kf_embedding_report_v1 *report) noexcep
   });
 }
 
+int32_t KF_EMBEDDING_CALL decode_frame_json(kf_embedding_context *context, const uint8_t *schema_bfbs,
+                                            uint64_t schema_size, const uint8_t *frame, uint64_t frame_size,
+                                            kf_embedding_report_v1 *out_report) noexcept {
+  return contain_exceptions([&]() -> int32_t {
+    if (context == nullptr || schema_bfbs == nullptr || frame == nullptr || out_report == nullptr ||
+        out_report->struct_size < sizeof(*out_report) || schema_size == 0) {
+      return KF_EMBEDDING_INVALID_ARGUMENT;
+    }
+    // The context is the "membrane is live" token; decode is generic (schema + frame).
+    (void)context;
+    auto schema = kungfu::view::schema_handle::from_bytes(
+        std::string(reinterpret_cast<const char *>(schema_bfbs), static_cast<size_t>(schema_size)));
+    // decode_json is native C++ (ADR-0039 reflection), no CPython on the path.
+    auto result = schema.decode_json(frame, static_cast<size_t>(frame_size));
+    if (!result.ok) {
+      return KF_EMBEDDING_CORE_ERROR;
+    }
+    auto payload = std::make_unique<std::string>(std::move(result.json));
+    out_report->format = KF_EMBEDDING_REPORT_FORMAT_JSON;
+    out_report->ok = 1;
+    out_report->degraded = 0;
+    out_report->reserved0[0] = 0;
+    out_report->reserved0[1] = 0;
+    out_report->data = reinterpret_cast<const uint8_t *>(payload->data());
+    out_report->data_size = payload->size();
+    out_report->owner = payload.release();
+    return KF_EMBEDDING_OK;
+  });
+}
+
+int32_t KF_EMBEDDING_CALL frame_checksum(kf_embedding_context *context, const uint8_t *header, uint64_t header_size,
+                                         const uint8_t *payload, uint64_t payload_size, const char *algorithm,
+                                         uint64_t *out_checksum) noexcept {
+  return contain_exceptions([&]() -> int32_t {
+    if (context == nullptr || header == nullptr || out_checksum == nullptr ||
+        header_size < sizeof(kungfu::yijinjing::types::frame_header)) {
+      return KF_EMBEDDING_INVALID_ARGUMENT;
+    }
+    (void)context;
+    const auto &frame_header = *reinterpret_cast<const kungfu::yijinjing::types::frame_header *>(header);
+    const std::string algo =
+        algorithm != nullptr ? std::string(algorithm) : kungfu::runtime::action::DEFAULT_FRAME_CHECKSUM_ALGORITHM;
+    *out_checksum =
+        kungfu::runtime::action::checksum_frame(frame_header, payload, static_cast<uint32_t>(payload_size), algo);
+    return KF_EMBEDDING_OK;
+  });
+}
+
 const kf_embedding_api_v1 API_V1 = {KF_EMBEDDING_ABI_V1, sizeof(kf_embedding_api_v1), CAPABILITIES,
                                     context_open,        context_capabilities,        context_close,
                                     reader_open,         reader_read_batch,           reader_release_batch,
@@ -264,6 +314,16 @@ const kf_embedding_api_v2 API_V2 = {KF_EMBEDDING_ABI_V2,  sizeof(kf_embedding_ap
                                     reader_open,          reader_read_batch,
                                     reader_release_batch, reader_close,
                                     storage_fsck,         report_release};
+
+constexpr uint64_t CAPABILITIES_V3 = CAPABILITIES_V2 | KF_EMBEDDING_CAP_GENERIC_CODEC;
+
+const kf_embedding_api_v3 API_V3 = {KF_EMBEDDING_ABI_V3,  sizeof(kf_embedding_api_v3),
+                                    CAPABILITIES_V3,      context_open,
+                                    context_capabilities, context_close,
+                                    reader_open,          reader_read_batch,
+                                    reader_release_batch, reader_close,
+                                    storage_fsck,         report_release,
+                                    decode_frame_json,    frame_checksum};
 
 } // namespace
 
@@ -285,6 +345,12 @@ extern "C" KF_EMBEDDING_EXPORT int32_t KF_EMBEDDING_CALL kungfu_embedding_get_ap
       return KF_EMBEDDING_INVALID_ARGUMENT;
     }
     std::memcpy(out_api, &API_V2, sizeof(API_V2));
+    return KF_EMBEDDING_OK;
+  case KF_EMBEDDING_ABI_V3:
+    if (caller_struct_size < sizeof(kf_embedding_api_v3)) {
+      return KF_EMBEDDING_INVALID_ARGUMENT;
+    }
+    std::memcpy(out_api, &API_V3, sizeof(API_V3));
     return KF_EMBEDDING_OK;
   default:
     return KF_EMBEDDING_UNSUPPORTED_VERSION;
