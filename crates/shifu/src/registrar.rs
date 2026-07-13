@@ -252,7 +252,6 @@ pub fn register(root: &Path, plan: &DistributionPlan) {
         "\u{1f94b} {}",
         style::bold(&format!("registered build -> {}", slot.display()))
     );
-    retire_old_slots(&registry);
 }
 
 /// The kungfu product keeps its historical registry path (existing `builds` /
@@ -265,35 +264,6 @@ fn registry_dir(product_id: &str) -> PathBuf {
         base.join(product_id)
     };
     base.join(host::os_arch())
-}
-
-/// Retention: keep the newest KUNGFU_PRODUCT_BUILDS_KEEP slots (default 2).
-fn retire_old_slots(registry: &Path) {
-    let keep = env::var("KUNGFU_PRODUCT_BUILDS_KEEP")
-        .ok()
-        .and_then(|v| v.parse::<usize>().ok())
-        .filter(|&n| n >= 1)
-        .unwrap_or(2);
-    let Ok(read) = fs::read_dir(registry) else {
-        return;
-    };
-    let mut names: Vec<String> = read
-        .flatten()
-        .filter(|e| e.path().is_dir())
-        .map(|e| e.file_name().to_string_lossy().to_string())
-        .filter(|name| !name.contains(".tmp-"))
-        .filter(|name| registry.join(name).join("meta.env").is_file())
-        .collect();
-    names.sort();
-    names.reverse();
-    for name in names.iter().skip(keep) {
-        if fs::remove_dir_all(registry.join(name)).is_ok() {
-            eprintln!(
-                "   {}",
-                style::dim(&format!("retired build {name} (keep {keep})"))
-            );
-        }
-    }
 }
 
 fn warn(msg: &str) {

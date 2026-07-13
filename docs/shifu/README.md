@@ -12,6 +12,9 @@ execution; Shifu owns how the task is executed after source checkout.
 - [`cache-contract.json`](cache-contract.json) is the machine-readable contract
   manifest and the discovery root for schema paths, schema IDs, ownership, and
   compatibility rules.
+- [`artifact-contract.json`](artifact-contract.json) is the machine-readable
+  discovery root for local build provenance and safe promotion semantics shared
+  by `self-update` and `builds/promote`.
 - [`schema/cache-profile-v1.schema.json`](schema/cache-profile-v1.schema.json)
   is the single source of truth for cache profile fields.
 - [`schema/cache-resolution-v1.schema.json`](schema/cache-resolution-v1.schema.json)
@@ -39,6 +42,9 @@ package:
 ./shifu cache doctor --json [--probe]
 ./shifu cache use --profile path/to/cache-profile.json --digest sha256:... [--execute]
 ./shifu cache unset [--execute]
+./shifu artifacts contract
+./shifu artifacts schema
+./shifu artifacts receipt-schema
 ```
 
 The contract and schema discovery commands print the exact checked-in JSON.

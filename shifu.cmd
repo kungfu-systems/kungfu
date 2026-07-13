@@ -139,10 +139,25 @@ cargo build --release --locked --manifest-path crates\Cargo.toml -p shifu 1>&2 &
   set "CARGO_TARGET_DIR="
   if not exist "%_KFC_DEVDIR%" mkdir "%_KFC_DEVDIR%" >nul 2>nul
   copy /y "%_KFC_TGT%\release\shifu.exe" "%_KFC_DEVBIN%" >nul && (
-    rem Retire older source-keyed slots; the release-pinned slot stays.
-    for /d %%d in ("%_KFC_CACHE%\kungfu\shifu\%_KFC_VER%-*") do (
-      if /i not "%%~fd"=="%_KFC_DEVDIR%" rd /s /q "%%~fd" >nul 2>nul
-    )
+    set "_KFC_HEAD="
+    set "_KFC_BRANCH=detached"
+    for /f "usebackq" %%s in (`git rev-parse HEAD 2^>nul`) do set "_KFC_HEAD=%%s"
+    for /f "usebackq" %%s in (`git symbolic-ref --short HEAD 2^>nul`) do set "_KFC_BRANCH=%%s"
+    set "_KFC_DIRTY_VALUE=false"
+    if defined _KFC_DIRTY set "_KFC_DIRTY_VALUE=true"
+    (
+      echo KUNGFU_ARTIFACT_SCHEMA='shifu.local-artifact/v1'
+      echo KUNGFU_ARTIFACT_PRODUCT='shifu'
+      echo KUNGFU_ARTIFACT_SHA='!_KFC_HEAD!'
+      echo KUNGFU_ARTIFACT_BRANCH='!_KFC_BRANCH!'
+      echo KUNGFU_ARTIFACT_WORKTREE='!CD!'
+      echo KUNGFU_ARTIFACT_BUILD_PATH='!_KFC_TGT!'
+      echo KUNGFU_ARTIFACT_BUILT_AT='unknown'
+      echo KUNGFU_ARTIFACT_DIRTY='!_KFC_DIRTY_VALUE!'
+    ) > "%_KFC_DEVDIR%\meta.env.tmp"
+    move /y "%_KFC_DEVDIR%\meta.env.tmp" "%_KFC_DEVDIR%\meta.env" >nul
+    rem Source slots are catalog entries. The native catalog retires only
+    rem proven ancestors after a successful promotion.
     "%_KFC_DEVBIN%" %*
     exit /b !errorlevel!
   )

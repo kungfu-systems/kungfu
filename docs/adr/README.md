@@ -145,6 +145,7 @@ implemented and qualified or explicitly waived for that release.
 | [0073](ADR-0073-buildchain-adr-release-admissibility.md) | accepted | Buildchain promotion is the settlement boundary for ADR implementation truth: dev declares bounded delivery, alpha settles qualified progress, and stable admits no unaccounted accepted decision |
 | [0074](ADR-0074-canonical-adr-authority-and-lifecycle-audit.md) | accepted | `docs/adr/` is the sole Core and Shifu decision authority, with typed redirects and executable lifecycle, evidence, and release audit |
 | [SHIFU-0001](SHIFU-ADR-0001-cache-profile-contract-and-ownership.md) | accepted | Cache profiles are Shifu-owned contracts; inventories project instances and Buildchain owns process |
+| [SHIFU-0002](SHIFU-ADR-0002-local-artifact-catalog-and-safe-promotion.md) | accepted | Shifu and Kungfu product artifacts share provenance-aware, Git-safe local promotion semantics |
 
 ## Reading by theme
 

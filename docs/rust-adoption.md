@@ -202,9 +202,10 @@ per-platform special-casing) with one binary that:
 - `shifu clone [path]` fetches the repository itself and `shifu doctor`
   checks the development environment (install pointers for the heavyweight
   prerequisites it deliberately does not manage); `shifu promote` installs
-  the freshest built dev product from the user-global build stash (successful
-  desktop builds register themselves there, so a cleaned worktree cannot
-  strand its build) and `shifu builds` lists that stash — the jurisdiction
+  the unique Git-descendant dev product from the user-global build stash
+  (successful desktop builds register themselves there, so a cleaned worktree
+  cannot strand its build) and `shifu builds` lists provenance and Git
+  relation for that stash — the jurisdiction
   siblings of clone: clone acquires the repository, promote acquires the
   product. Together with delegation
   this makes an installed shifu a self-sufficient bootstrap core: install
@@ -260,6 +261,14 @@ stash is fed by declaration, not by script. A repo that wants its builds
 registered states the facts in its Buildchain-managed KFD-3 surface registry
 (`.buildchain/kfd/kfd-3/surfaces.json`), on the surface that produces the
 artifact:
+
+Both commands consume the same local artifact contract as `self-update`.
+Timestamp order never authorizes promotion: one unique descendant advances
+automatically, while ancestor, divergent, and unknown builds require explicit
+selection. Compact lists retain an identifying branch prefix/suffix;
+`--no-truncate`, `--verbose`, and `--json` expose progressively more local
+provenance. The exact contract and schemas are available through
+`shifu artifacts contract|schema|receipt-schema`.
 
 ```json
 "distribution": {

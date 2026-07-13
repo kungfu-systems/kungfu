@@ -34,6 +34,7 @@ use std::env;
 use std::path::{Path, PathBuf};
 use std::process::exit;
 
+mod artifact_catalog;
 mod dispatch;
 mod doctor;
 mod envfile;
@@ -140,10 +141,11 @@ fn print_usage() {
     );
     println!(
         "                             {}",
-        style::dim("release; --list generations; --rollback one step back)")
+        style::dim("release; --list provenance; --rollback one step back)")
     );
-    println!("  shifu promote [--launch]   install the freshest built dev kungfu");
-    println!("  shifu builds               list registered dev builds");
+    println!("  shifu promote [--launch]   install the unique descendant dev build");
+    println!("  shifu builds               list provenance and Git relation for dev builds");
+    println!("  shifu artifacts <verb>     print the local artifact contract or schema");
     println!("  shifu help                 pnpm's own help (tasks are pnpm scripts)");
     println!();
     println!(
@@ -186,7 +188,9 @@ fn main() {
     // user-global precisely so a cleaned worktree cannot strand its build.
     let is_promote = first == Some("promote");
     let is_builds = first == Some("builds");
-    let lenient = is_version || is_doctor || is_self_update || is_promote || is_builds;
+    let is_artifacts = first == Some("artifacts");
+    let lenient =
+        is_version || is_doctor || is_self_update || is_promote || is_builds || is_artifacts;
 
     let root = find_repo_root(lenient);
 
@@ -224,7 +228,10 @@ fn main() {
         promote::run_promote(&args[1..]);
     }
     if is_builds {
-        promote::run_builds();
+        promote::run_builds(&args[1..]);
+    }
+    if is_artifacts {
+        artifact_catalog::run_discovery(&args[1..]);
     }
     let root = root.expect("strict repo discovery cannot return None");
 

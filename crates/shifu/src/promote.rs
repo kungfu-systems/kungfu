@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// `shifu promote` / `shifu builds` — use the freshest built dev kungfu from
-// any terminal.
+// `shifu promote` / `shifu builds` — inspect and install provenance-qualified
+// dev Kungfu artifacts from any terminal.
 //
 // Builds happen in worktrees, and worktrees are temporary: the launcher
 // therefore stashes each successful build user-globally as declared by the
@@ -12,12 +12,11 @@
 //     meta.env      KEY='VALUE' lines (build-local.env shape)
 //     <artifact>    unpacked .app (mac) / nsis installer (win) / AppImage
 //
-// The newest build is the lexicographically greatest slot. `builds` lists
-// the stash; `promote` installs the newest entry — the shifu-jurisdiction
-// sibling of `clone`: clone acquires the repository, promote acquires the
-// product. Configuration rides the existing build-local.env surface:
-// KUNGFU_PRODUCT_INSTALL_DIR (install target) and, on the producer side,
-// KUNGFU_PRODUCT_BUILDS_KEEP (stash retention).
+// Slot timestamps are display provenance, never version authority. `builds`
+// classifies every entry against the installed receipt; `promote` advances
+// only to one unique Git descendant and retires proven ancestors afterward.
+// Divergent/unknown entries remain manual-only. Configuration rides the
+// existing KUNGFU_PRODUCT_INSTALL_DIR surface.
 
 use std::env;
 use std::fs;
@@ -26,6 +25,10 @@ use std::process::Command;
 
 use shifu_core::{host, style};
 
+use crate::artifact_catalog::{
+    automatic, compact_branch, git_relation, json_escape, select_unique_automatic, short_sha,
+    state_for, write_promotion_receipt, GitRelation, SelectionError,
+};
 use crate::{envfile, util};
 
 struct BuildEntry {
@@ -37,6 +40,14 @@ struct BuildEntry {
     built_at: String,
     kind: String,
     artifact: String,
+    digest: String,
+}
+
+#[derive(Default)]
+struct ListOptions {
+    verbose: bool,
+    json: bool,
+    no_truncate: bool,
 }
 
 fn registry_dir() -> PathBuf {
@@ -91,6 +102,7 @@ fn entries() -> Vec<BuildEntry> {
                 worktree: meta_get(&meta, "KUNGFU_BUILD_WORKTREE"),
                 built_at: meta_get(&meta, "KUNGFU_BUILD_TIME"),
                 kind: meta_get(&meta, "KUNGFU_BUILD_KIND"),
+                digest: meta_get(&meta, "KUNGFU_BUILD_SHA256"),
                 artifact,
                 slot,
                 name,
@@ -107,11 +119,219 @@ fn no_builds_hint() -> ! {
     ));
 }
 
-pub fn run_builds() -> ! {
+fn installed_receipt_path() -> PathBuf {
+    registry_dir().join("installed.meta.env")
+}
+
+fn installed_sha() -> String {
+    let Ok(text) = fs::read_to_string(installed_receipt_path()) else {
+        return String::new();
+    };
+    text.lines()
+        .filter_map(envfile::parse_line)
+        .find(|(key, _)| *key == "KUNGFU_INSTALLED_SHA")
+        .map(|(_, value)| value.to_string())
+        .unwrap_or_default()
+}
+
+fn build_relation(entry: &BuildEntry, installed: &str, entry_count: usize) -> GitRelation {
+    if installed.is_empty() {
+        return if entry_count == 1 {
+            GitRelation::Descendant
+        } else {
+            GitRelation::Unknown
+        };
+    }
+    let worktree = Path::new(&entry.worktree);
+    if !worktree.is_dir() {
+        return GitRelation::Unknown;
+    }
+    git_relation(worktree, installed, &entry.sha)
+}
+
+fn build_valid(entry: &BuildEntry) -> bool {
+    !entry.sha.is_empty()
+        && entry.sha != "unknown"
+        && matches!(entry.kind.as_str(), "app" | "installer" | "appimage")
+        && entry.slot.join(&entry.artifact).exists()
+}
+
+fn schema_kind(entry: &BuildEntry) -> &str {
+    if matches!(entry.kind.as_str(), "app" | "installer" | "appimage") {
+        &entry.kind
+    } else {
+        "unknown"
+    }
+}
+
+fn select_product_build<'a>(
+    entries: &'a [BuildEntry],
+    installed: &str,
+    selected: Option<&str>,
+    allow_nonlinear: bool,
+) -> &'a BuildEntry {
+    if let Some(id) = selected {
+        let matches: Vec<_> = entries
+            .iter()
+            .filter(|entry| entry.name == id || entry.name.starts_with(id))
+            .collect();
+        if matches.len() != 1 {
+            util::die(&format!(
+                "--build {id} matched {} builds; use the exact id from shifu builds",
+                matches.len()
+            ));
+        }
+        let entry = matches[0];
+        if !build_valid(entry) {
+            util::die(&format!(
+                "build {} is invalid and cannot be promoted even with an override",
+                entry.name
+            ));
+        }
+        let relation = build_relation(entry, installed, entries.len());
+        if !automatic(relation, build_valid(entry), false) && !allow_nonlinear {
+            util::die(&format!(
+                "build {} is {} and is manual-only; after review pass \
+                 --build {} --allow-nonlinear",
+                entry.name,
+                relation.as_str(),
+                entry.name
+            ));
+        }
+        return entry;
+    }
+    let dispositions: Vec<_> = entries
+        .iter()
+        .map(|entry| {
+            (
+                build_relation(entry, installed, entries.len()),
+                build_valid(entry),
+                false,
+            )
+        })
+        .collect();
+    match select_unique_automatic(&dispositions) {
+        Ok(index) => &entries[index],
+        Err(SelectionError::None) => util::die(
+            "no automatic product candidate: builds are older, divergent, or have unknown \
+             provenance; inspect shifu builds and select --build <id> --allow-nonlinear",
+        ),
+        Err(SelectionError::Ambiguous) => util::die(
+            "multiple automatic product candidates remain; inspect shifu builds and select \
+             one explicitly with --build <id>",
+        ),
+    }
+}
+
+fn print_builds_json(entries: &[BuildEntry]) {
+    let installed = installed_sha();
+    println!("{{");
+    println!("  \"schema\": \"shifu.local-artifact-catalog/v1\",");
+    println!("  \"product\": \"kungfu\",");
+    println!("  \"platform\": \"{}\",", json_escape(&host::os_arch()));
+    println!("  \"artifacts\": [");
+    let rows: Vec<_> = entries
+        .iter()
+        .map(|entry| {
+            let relation = build_relation(entry, &installed, entries.len());
+            let valid = build_valid(entry);
+            let state = state_for(relation, valid, false);
+            format!(
+                "    {{\"id\":\"{}\",\"kind\":\"{}\",\"version\":\"\",\"commit\":\"{}\",\"branch\":\"{}\",\"digest\":\"{}\",\"builtAt\":\"{}\",\"state\":\"{}\",\"relation\":\"{}\",\"automatic\":{},\"rollbackOnly\":false,\"dirty\":{},\"repoPath\":\"{}\",\"worktreePath\":\"{}\",\"buildPath\":\"{}\",\"artifactPath\":\"{}\",\"pathDigest\":\"\",\"reason\":\"{}\"}}",
+                json_escape(&entry.name),
+                json_escape(schema_kind(entry)),
+                json_escape(&entry.sha),
+                json_escape(&entry.branch),
+                json_escape(&entry.digest),
+                json_escape(&entry.built_at),
+                state.as_str(),
+                relation.as_str(),
+                automatic(relation, valid, false),
+                entry.sha.ends_with("-dirty"),
+                json_escape(&entry.worktree),
+                json_escape(&entry.worktree),
+                json_escape(&entry.worktree),
+                json_escape(&entry.slot.join(&entry.artifact).display().to_string()),
+                relation.as_str()
+            )
+        })
+        .collect();
+    println!("{}", rows.join(",\n"));
+    println!("  ]");
+    println!("}}");
+}
+
+fn write_installed_receipt(entry: &BuildEntry, installed: &Path) {
+    let text = format!(
+        "KUNGFU_ARTIFACT_SCHEMA='shifu.local-artifact/v1'\n\
+         KUNGFU_INSTALLED_SHA='{}'\n\
+         KUNGFU_INSTALLED_BRANCH='{}'\n\
+         KUNGFU_INSTALLED_BUILD_ID='{}'\n\
+         KUNGFU_INSTALLED_WORKTREE='{}'\n\
+         KUNGFU_INSTALLED_ARTIFACT='{}'\n",
+        entry.sha,
+        entry.branch.replace('\'', ""),
+        entry.name,
+        entry.worktree.replace('\'', ""),
+        installed.display()
+    );
+    let path = installed_receipt_path();
+    let staged = path.with_extension("tmp");
+    if fs::write(&staged, text).is_ok() {
+        if let Err(error) = fs::rename(&staged, &path) {
+            let _ = fs::remove_file(&staged);
+            eprintln!(
+                "   {}",
+                style::yellow(&format!("could not write promotion receipt: {error}"))
+            );
+        }
+    }
+}
+
+/// A successful promotion is the only point where ancestry authorizes
+/// retirement. Divergent and unknown builds remain visible and manual-only.
+fn retire_superseded(promoted: &BuildEntry, entries: &[BuildEntry]) {
+    let repo = Path::new(&promoted.worktree);
+    if !repo.is_dir() {
+        return;
+    }
+    for entry in entries {
+        if entry.name == promoted.name {
+            continue;
+        }
+        if git_relation(repo, &promoted.sha, &entry.sha) == GitRelation::Ancestor {
+            if let Err(error) = fs::remove_dir_all(&entry.slot) {
+                eprintln!(
+                    "   {}",
+                    style::yellow(&format!(
+                        "could not retire superseded build {}: {error}",
+                        entry.name
+                    ))
+                );
+            }
+        }
+    }
+}
+
+pub fn run_builds(args: &[String]) -> ! {
+    let mut options = ListOptions::default();
+    for arg in args {
+        match arg.as_str() {
+            "--verbose" => options.verbose = true,
+            "--json" => options.json = true,
+            "--no-truncate" => options.no_truncate = true,
+            _ => util::die("usage: shifu builds [--verbose] [--json] [--no-truncate]"),
+        }
+    }
     let entries = entries();
     if entries.is_empty() {
         no_builds_hint();
     }
+    if options.json {
+        print_builds_json(&entries);
+        std::process::exit(0);
+    }
+    let installed = installed_sha();
     println!(
         "{}",
         style::cyan(&format!(
@@ -120,25 +340,40 @@ pub fn run_builds() -> ! {
         ))
     );
     for (index, entry) in entries.iter().enumerate() {
-        let worktree_note = if Path::new(&entry.worktree).is_dir() {
-            entry.worktree.clone()
-        } else {
-            format!("{} (worktree cleaned; stash still usable)", entry.worktree)
-        };
+        let relation = build_relation(entry, &installed, entries.len());
+        let state = state_for(relation, build_valid(entry), false);
         println!(
-            "  {} {} {} @ {}",
+            "  {} {:10} {:9} {:34} {:10}",
             style::bold(&format!("[{index}]")),
-            entry.built_at,
-            style::bold(&entry.sha),
-            entry.branch,
+            state.as_str(),
+            short_sha(&entry.sha),
+            compact_branch(&entry.branch, options.no_truncate),
+            relation.as_str(),
         );
-        println!(
-            "      {}",
-            style::dim(&format!("{} - from {}", entry.artifact, worktree_note))
-        );
+        if options.verbose {
+            let worktree_state = if Path::new(&entry.worktree).is_dir() {
+                ""
+            } else {
+                " (worktree cleaned; stash still usable)"
+            };
+            println!(
+                "      id={} built={} kind={} digest={}\n      artifact={}\n      worktree={}{}",
+                entry.name,
+                entry.built_at,
+                entry.kind,
+                if entry.digest.is_empty() {
+                    "unknown"
+                } else {
+                    &entry.digest
+                },
+                entry.slot.join(&entry.artifact).display(),
+                entry.worktree,
+                worktree_state
+            );
+        }
     }
     println!(
-        "\n{} shifu promote [--launch] installs [0]",
+        "\n{} shifu promote installs the unique descendant; use --build <id> for manual selection",
         style::cyan("Next:")
     );
     std::process::exit(0)
@@ -147,18 +382,28 @@ pub fn run_builds() -> ! {
 pub fn run_promote(args: &[String]) -> ! {
     let mut launch = false;
     let mut force = false;
-    for arg in args {
+    let mut allow_nonlinear = false;
+    let mut build_arg: Option<String> = None;
+    let mut iter = args.iter();
+    while let Some(arg) = iter.next() {
         match arg.as_str() {
             "--launch" => launch = true,
             "--force" => force = true,
-            _ => util::die("usage: shifu promote [--launch] [--force]"),
+            "--allow-nonlinear" => allow_nonlinear = true,
+            "--build" => match iter.next() {
+                Some(value) => build_arg = Some(value.clone()),
+                None => util::die(PROMOTE_USAGE),
+            },
+            _ => util::die(PROMOTE_USAGE),
         }
     }
 
     let entries = entries();
-    let Some(entry) = entries.first() else {
+    if entries.is_empty() {
         no_builds_hint();
-    };
+    }
+    let installed = installed_sha();
+    let entry = select_product_build(&entries, &installed, build_arg.as_deref(), allow_nonlinear);
     eprintln!(
         "\u{1f94b} {}",
         style::bold(&format!(
@@ -179,11 +424,32 @@ pub fn run_promote(args: &[String]) -> ! {
         style::green("promoted"),
         style::bold(&installed.display().to_string())
     );
+    let previous_sha = installed_sha();
+    let relation = build_relation(entry, &previous_sha, entries.len());
+    write_installed_receipt(entry, &installed);
+    if let Err(error) = write_promotion_receipt(
+        &registry_dir(),
+        "kungfu",
+        "promote",
+        &entry.name,
+        &previous_sha,
+        &entry.sha,
+        relation,
+    ) {
+        eprintln!(
+            "   {}",
+            style::yellow(&format!("could not write promotion receipt: {error}"))
+        );
+    }
+    retire_superseded(entry, &entries);
     if launch {
         launch_product(&installed);
     }
     std::process::exit(0)
 }
+
+const PROMOTE_USAGE: &str =
+    "usage: shifu promote [--build <id> [--allow-nonlinear]] [--launch] [--force]";
 
 /// Install target: KUNGFU_PRODUCT_INSTALL_DIR > platform default (falling
 /// back to a per-user location when the default is not writable).
