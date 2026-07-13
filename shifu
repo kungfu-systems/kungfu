@@ -8,7 +8,7 @@
 # │ when delegating. Never rename, move, or remove it. Its implementation    │
 # │ may change freely (it need not stay a shell script), but any dispatch of │
 # │ a resolved native binary must keep setting SHIFU_FROM_SHIM=1.            │
-# │ framework/core/docs/adr/ADR-0044-shifu-delegation-protocol.md            │
+# │ docs/adr/ADR-0044-shifu-delegation-protocol.md            │
 # └───────────────────────────────────────────────────────────────────────────┘
 #
 # One command that runs any build/dev task under the node pinned by the repo (.node-version):

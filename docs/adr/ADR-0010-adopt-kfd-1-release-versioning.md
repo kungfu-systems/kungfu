@@ -29,7 +29,7 @@ touches no registered surface is a patch regardless of size; an unclassifiable
 change means the register itself is deficient and must be fixed first.
 
 This repository's living register and decision log are kept in
-[`docs/versioning.md`](../../../../docs/versioning.md). This ADR is the
+[`docs/versioning.md`](../versioning.md). This ADR is the
 immutable adoption record; the rule text itself lives in the KFD registry and
 is not restated here.
 

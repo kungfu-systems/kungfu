@@ -20,16 +20,16 @@ projected, or later replicated. This storage-service document must not imply
 power-loss durability beyond the profiles qualified there.
 
 The architectural decisions are recorded in
-[`ADR-0018`](../framework/core/docs/adr/ADR-0018-runtime-storage-service-architecture.md)
+[`ADR-0018`](./adr/ADR-0018-runtime-storage-service-architecture.md)
 for the local runtime storage service and
-[`ADR-0019`](../framework/core/docs/adr/ADR-0019-git-like-source-sync-over-location-and-channel.md)
+[`ADR-0019`](./adr/ADR-0019-git-like-source-sync-over-location-and-channel.md)
 for Git-like source sync over Kungfu `location` and `channel`.
-[`ADR-0032`](../framework/core/docs/adr/ADR-0032-generic-source-service-v1.md)
+[`ADR-0032`](./adr/ADR-0032-generic-source-service-v1.md)
 records the first generic source service implementation slice.
-[`ADR-0033`](../framework/core/docs/adr/ADR-0033-episode-causal-segment-object.md)
+[`ADR-0033`](./adr/ADR-0033-episode-causal-segment-object.md)
 defines Episode as the first-class causal segment object that future storage,
 sync, fsck, import/export, and timeline slicing should address directly.
-[`ADR-0034`](../framework/core/docs/adr/ADR-0034-yijinjing-episode-manifest-journal.md)
+[`ADR-0034`](./adr/ADR-0034-yijinjing-episode-manifest-journal.md)
 defines Episode manifest records as yijinjing-backed append-only journal facts,
 with JSON limited to export, import interchange, diagnostics, and folded views.
 
@@ -257,7 +257,7 @@ recorded checksum algorithm such as `fnv1a64`; yijinjing `fast_hash_*` ids are
 not valid payload or manifest hashes.
 
 The first trust-proof surface is the manifest-scoped sync root from
-[`ADR-0030`](../framework/core/docs/adr/ADR-0030-manifest-scoped-sync-root-v1.md).
+[`ADR-0030`](./adr/ADR-0030-manifest-scoped-sync-root-v1.md).
 For Atlas imports, `fsck` recomputes `kungfu.sync-root/v1` from the manifest's
 ordered entries and reports missing or mismatched root data as a storage
 failure. This root binds payload references, source coordinates, action

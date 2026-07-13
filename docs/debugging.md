@@ -47,7 +47,7 @@ moment that produced it.
 
 | Symptom | Where to look first |
 |---|---|
-| A reader sees no / stale / torn data | The publish/visibility contract is [ADR-0001](../framework/core/docs/adr/ADR-0001-yijinjing-publish-barrier.md); inspect the Episode with `kungfu query prove`, then verify attached frames with `kungfu storage fsck --verify-frames`. |
+| A reader sees no / stale / torn data | The publish/visibility contract is [ADR-0001](./adr/ADR-0001-yijinjing-publish-barrier.md); inspect the Episode with `kungfu query prove`, then verify attached frames with `kungfu storage fsck --verify-frames`. |
 | Data is there but a language binding reads it wrong | The adapter boundary — see [`adapters.md`](adapters.md); the layout is the contract ([`contracts.md`](contracts.md)). |
 | Replay diverges from live | Determinism boundary — see [`contracts.md`](contracts.md) and `known-limits` on cross-version/cross-machine reproduction. |
 | Build / runtime won't start | The build path — see [`buildchain.md`](buildchain.md). |

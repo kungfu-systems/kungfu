@@ -19,8 +19,8 @@ sensitivity: public
 - Related: [ADR-0009](ADR-0009-load-bearing-self-bootstrap.md) (the launcher is
   the outermost load-bearing ring: the path a newcomer walks to *obtain* the
   product); KFD-1 welded-surface register entry `shifu-launcher`
-  ([`docs/versioning.md`](../../../../docs/versioning.md));
-  [`docs/rust-adoption.md`](../../../../docs/rust-adoption.md) (bootstrap-core
+  ([`docs/versioning.md`](../versioning.md));
+  [`docs/rust-adoption.md`](../rust-adoption.md) (bootstrap-core
   loop)
 
 ## Context

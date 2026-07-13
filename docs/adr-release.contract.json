@@ -3,10 +3,7 @@
   "manifestSchema": "kungfu.adr-release-pr/v1",
   "manifestMarker": "kungfu-adr-release:v1",
   "repository": "kungfu-systems/kungfu",
-  "adrRoots": [
-    "framework/core/docs/adr",
-    "docs/shifu/adr"
-  ],
+  "adrRoots": ["docs/adr"],
   "dev": {
     "featureBranchPattern": "^feature/",
     "deliveryIntents": ["stage-ready", "implemented"],

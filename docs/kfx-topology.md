@@ -4,9 +4,9 @@ This page is the mental model behind [`extensions.md`](extensions.md). That page
 tells you *how to write, build and install* a kfx; this one tells you *what
 happens to it* once a host finds it — which host loads it, how the host decides
 whether to trust it, which sandbox it lands in if it isn't trusted, and how it
-talks back. The design rationale is [ADR-0017](../framework/core/docs/adr/ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md)
-(with [ADR-0013](../framework/core/docs/adr/ADR-0013-cli-runtime-extension-isolation-trusted-channel.md)
-for the trust boundary and [ADR-0014](../framework/core/docs/adr/ADR-0014-extension-execution-contract-uniform-capability-surface.md)
+talks back. The design rationale is [ADR-0017](./adr/ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md)
+(with [ADR-0013](./adr/ADR-0013-cli-runtime-extension-isolation-trusted-channel.md)
+for the trust boundary and [ADR-0014](./adr/ADR-0014-extension-execution-contract-uniform-capability-surface.md)
 for the uniform capability surface).
 
 > Status: draft — the load plan and the `service` facet are proposed
@@ -149,8 +149,8 @@ restriction narrows what a capability returns (a refused write, a refused socket
 
 - [`extensions.md`](extensions.md) — writing, building, installing a kfx (the
   *how-to*).
-- [ADR-0017](../framework/core/docs/adr/ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md)
+- [ADR-0017](./adr/ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md)
   — the design decision behind dual-host loading and the service facet.
-- [ADR-0013](../framework/core/docs/adr/ADR-0013-cli-runtime-extension-isolation-trusted-channel.md),
-  [ADR-0014](../framework/core/docs/adr/ADR-0014-extension-execution-contract-uniform-capability-surface.md)
+- [ADR-0013](./adr/ADR-0013-cli-runtime-extension-isolation-trusted-channel.md),
+  [ADR-0014](./adr/ADR-0014-extension-execution-contract-uniform-capability-surface.md)
   — the trust boundary and the uniform capability surface this builds on.

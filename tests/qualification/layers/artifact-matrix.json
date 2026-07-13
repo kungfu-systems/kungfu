@@ -1,6 +1,6 @@
 {
   "schema": "kungfu.layer-qualification.matrix/v1",
-  "adr": "framework/core/docs/adr/ADR-0049-layer-complete-products-and-domain-neutral-core.md",
+  "adr": "docs/adr/ADR-0049-layer-complete-products-and-domain-neutral-core.md",
   "status_vocabulary": [
     "absent",
     "staged",

@@ -10,7 +10,7 @@ rem they recognize a checkout and what they spawn (via cmd.exe) when
 rem delegating. Never rename, move, or remove it. Its implementation may
 rem change freely, but any dispatch of a resolved native binary must keep
 rem setting SHIFU_FROM_SHIM=1.
-rem See framework/core/docs/adr/ADR-0044-shifu-delegation-protocol.md
+rem See docs/adr/ADR-0044-shifu-delegation-protocol.md
 rem =============================================================================
 rem
 rem Aligns with the macOS/Linux shifu (sh):

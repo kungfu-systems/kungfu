@@ -5,7 +5,7 @@ Kungfu. The product manages its own exact Python runtime; every package you
 install resolves against that runtime and can read journal data through
 `pykungfu` at full zero-copy. This is a *use* reference; the architecture and
 its staged adoption live in
-[ADR-0046](../framework/core/docs/adr/ADR-0046-rust-host-trunk-and-assembled-runtime.md).
+[ADR-0046](./adr/ADR-0046-rust-host-trunk-and-assembled-runtime.md).
 
 ## The one-runtime contract
 

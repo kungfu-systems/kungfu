@@ -65,6 +65,7 @@ layout, and code style.
 ./shifu verify --full   # rebuild + freeze, then assert (slow; needs the full toolchain)
 ./shifu docs:check      # deterministic Markdown, local-link, anchor, and docs-contract gate
 ./shifu docs:prose      # advisory vocabulary and load-bearing prose policy
+./shifu adr:audit       # inspect all ADR lifecycle, evidence, and release debt
 ```
 
 `check` is the source-quality gate for changed files plus shared type/tooling
@@ -87,6 +88,12 @@ registry into Vale and reports both required rules and advisory terminology or
 claim-language findings; CI blocks only on `docs:prose:required`. Network-dependent
 URL validation remains separate in `docs:check:external`, and CI runs the same
 Lychee configuration on a schedule.
+
+Core `ADR-*` and Shifu `SHIFU-ADR-*` records share the canonical
+[`docs/adr/`](docs/adr/) registry and exactly the same machine gates. Run
+`./shifu adr:audit -- --json` for the complete status inventory,
+`--strict` to fail on review/evidence debt, or `--release stable` to exercise
+the stable-admission obligation without publishing a release.
 
 ## Proposing changes
 

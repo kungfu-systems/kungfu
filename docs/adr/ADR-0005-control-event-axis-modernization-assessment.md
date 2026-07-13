@@ -17,7 +17,7 @@ sensitivity: public
 - Subsystem: the control and event axes — Python coroutine integration
   (`event_loop.py`), the Node watcher (`watcher.cpp`), and the RxCpp-based reactive
   event layer (`yijinjing` `reactor` / `peer`). Terms `reactor` / `peer` /
-  `watcher` / `event loop` are defined in [`docs/concepts.md`](../../../../docs/concepts.md).
+  `watcher` / `event loop` are defined in [`docs/concepts.md`](../concepts.md).
 - Related: aggregates [ADR-0003](ADR-0003-control-axis-python-coroutine-integration.md)
   and [ADR-0004](ADR-0004-control-axis-node-watcher-snapshot-model.md); contrasts
   with the completed data-axis work in

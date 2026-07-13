@@ -10,7 +10,7 @@
     "resolutionSchema": "docs/shifu/schema/cache-resolution-v1.schema.json",
     "diagnosticSchema": "docs/shifu/schema/cache-diagnostic-v1.schema.json",
     "configPlanSchema": "docs/shifu/schema/cache-config-plan-v1.schema.json",
-    "decision": "docs/shifu/adr/SHIFU-ADR-0001-cache-profile-contract-and-ownership.md"
+    "decision": "docs/adr/SHIFU-ADR-0001-cache-profile-contract-and-ownership.md"
   },
   "schemaIds": {
     "profile": "https://libkungfu.dev/schemas/shifu/cache-profile-v1.schema.json",

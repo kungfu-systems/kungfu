@@ -33,7 +33,7 @@ last_reviewed: 2026-07-11
   [ADR-0022](ADR-0022-core-action-recording-surface.md),
   [ADR-0046](ADR-0046-rust-host-trunk-and-assembled-runtime.md) (the host
   trunk is the prospective second consumer of the one C ABI decided here), and
-  [`docs/rust-adoption.md`](../../../../docs/rust-adoption.md)
+  [`docs/rust-adoption.md`](../rust-adoption.md)
 
 ## Question
 
@@ -229,7 +229,7 @@ configuration as evidence rather than report a single “WASM is fast” number
 ([Wasmtime issue 8034](https://github.com/bytecodealliance/wasmtime/issues/8034)).
 
 The native half now has a provisional implementation and evidence in
-[`docs/libkungfu-embedding-membrane-spike.md`](../../../../docs/libkungfu-embedding-membrane-spike.md):
+[`docs/libkungfu-embedding-membrane-spike.md`](../libkungfu-embedding-membrane-spike.md):
 one core-owned v1 table, C++ and safe Rust wrappers, no per-frame callback,
 borrowed mmap pages with explicit batch release, and contained exceptions.
 macOS arm64, Linux x64, and Windows x64 pass the native budgets using the same
@@ -237,7 +237,7 @@ probe schema; the dedicated PR matrix guards the platform builds and cut-proof.
 This does not start the WASM spike or change the KFX manifest/contract.
 
 The WASM half has a three-platform spike implementation and evidence in
-[`docs/libwasm-embedding-membrane-spike.md`](../../../../docs/libwasm-embedding-membrane-spike.md).
+[`docs/libwasm-embedding-membrane-spike.md`](../libwasm-embedding-membrane-spike.md).
 One C++ host passes the existing v1 embedding table to replaceable Wasmtime
 46.0.1 and Wasmer 7.2.0 Rust cdylibs. Both execute identical core-Wasm bytes,
 cross libkungfu once per batch, copy each payload byte once into fixed guest

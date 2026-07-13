@@ -20,7 +20,7 @@ sensitivity: public
 - Related: ADR-0001 pins the journal publish barrier; ADR-0047 pins the
   two-substrate schema authority rule; ADR-0037 classifies storage records as
   Hana kernel metadata; ADR-0011 pins the capability SDK contract.
-  [`docs/runtime-storage-service.md`](../../../../docs/runtime-storage-service.md)
+  [`docs/runtime-storage-service.md`](../runtime-storage-service.md)
   is the companion reference page for the staged command surface, fsck/export,
   compaction, and source adapter path. ADR-0019 separately decides the
   multi-machine source sync model above this storage contract.

@@ -14,7 +14,7 @@ last_reviewed: 2026-07-12
 
 # Strong-durability and crash-recovery design
 
-This document turns [ADR-0068](adr/ADR-0068-tiered-durability-and-crash-recovery.md)
+This document turns [ADR-0068](../../../docs/adr/ADR-0068-tiered-durability-and-crash-recovery.md)
 into an implementation and qualification plan. The public, reader-first status
 is [Strong durability and crash recovery](../../../docs/durability-and-crash-recovery.md).
 

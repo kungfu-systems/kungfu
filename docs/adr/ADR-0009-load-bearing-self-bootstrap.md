@@ -26,7 +26,7 @@ sensitivity: public
   pipeline", "weak-centralization"); shares the yijinjing schema-as-true-invariant
   ordering with [ADR-0008](ADR-0008-yijinjing-schema-layout-baseline.md);
   the build-layer instance is [`docs/architecture.md` § The build dogfoods the
-  SDK](../../../../docs/architecture.md).
+  SDK](../architecture.md).
 
 ## Decision
 

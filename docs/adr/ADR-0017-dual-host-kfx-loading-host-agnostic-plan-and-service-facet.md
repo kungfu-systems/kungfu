@@ -133,7 +133,7 @@ host; a new background-service facet as the first OS-sandbox caller.**
 
 The user-facing companion — the mental model a kfx author needs (the three facet
 forms, the two hosts, discover → plan → land, and the confinement matrix) — is
-[`docs/kfx-topology.md`](../../../../docs/kfx-topology.md). This ADR is the *why*;
+[`docs/kfx-topology.md`](../kfx-topology.md). This ADR is the *why*;
 that page is the *use*.
 
 ## Scope of the first delivery

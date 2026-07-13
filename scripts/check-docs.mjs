@@ -8,7 +8,10 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { validateDocumentMetadata } from './document-metadata-contract.mjs';
+import {
+  parseFrontmatter,
+  validateDocumentMetadata,
+} from './document-metadata-contract.mjs';
 import { validateVocabularyContract } from './vocabulary-contract.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -41,7 +44,7 @@ const SAFE_EXAMPLE_COMMANDS = new Set([
  *   schemaVersion: number,
  *   requiredFiles?: string[],
  *   requiredPointers?: {from: string, to: string}[],
- *   publication?: {roots: string[], include: string[], allowedOrphans?: string[]},
+ *   publication?: {roots: string[], include: string[], allowedOrphans?: string[], allowedOrphanDocumentTypes?: string[]},
  *   executableExamples?: {id: string, file: string, command: string[], stdoutPattern?: string, timeoutMs?: number}[]
  * }} DocsContract
  */
@@ -414,6 +417,7 @@ export function checkDocs(options = {}) {
       ),
     );
     const allowed = new Set(publication.allowedOrphans || []);
+    const allowedTypes = new Set(publication.allowedOrphanDocumentTypes || []);
     const reachable = new Set(
       publication.roots.filter((rel) => included.has(rel)),
     );
@@ -432,7 +436,15 @@ export function checkDocs(options = {}) {
       }
     }
     for (const rel of included) {
-      if (!reachable.has(rel) && !allowed.has(rel))
+      const frontmatter = parseFrontmatter(documents.get(rel)?.text || '');
+      const documentType = String(
+        frontmatter?.fields.get('doc_type')?.value || '',
+      );
+      if (
+        !reachable.has(rel) &&
+        !allowed.has(rel) &&
+        !allowedTypes.has(documentType)
+      )
         findings.push({
           code: 'publication-orphan',
           file: rel,

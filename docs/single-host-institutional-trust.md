@@ -181,5 +181,5 @@ evidence; it must not advance the adoption status from design intent alone.
   containment, capability contraction, and retained qualification evidence.
 - [Contracts](contracts.md) — current layout, publication, replay, and
   compatibility contracts.
-- [ADR-0068](../framework/core/docs/adr/ADR-0068-tiered-durability-and-crash-recovery.md)
+- [ADR-0068](./adr/ADR-0068-tiered-durability-and-crash-recovery.md)
   — the authority decision for tiered durability and crash recovery.

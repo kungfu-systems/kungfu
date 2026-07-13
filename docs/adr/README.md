@@ -6,17 +6,19 @@ review_state: unreviewed
 sensitivity: public
 ---
 
-# Architecture Decision Records
+# Kungfu Architecture Decision Records
 
 This directory records the significant architecture and design decisions behind
-Kungfu. Each ADR captures not just *what* was decided but *why* — the context at
+Kungfu and its load-bearing development system. Each ADR captures not just
+*what* was decided but *why* — the context at
 the time, the alternatives weighed, and the cost of reversal — so a later reader
 can understand a design before changing it. ADRs are append-only: a decision that
 changes is superseded by a new record, not edited away.
 
 A record's **Status** says where it stands:
 
-- **accepted** — decided and (unless noted) implemented.
+- **accepted** — the decision is authoritative; implementation progress remains
+  a separate, machine-checked state.
 - **proposed** — an open design question recorded for traceability; the decision
   is not yet made. These are deliberately written down before they are resolved
   so the question, and its current progress, are visible rather than implicit.
@@ -26,8 +28,44 @@ A record's **Status** says where it stands:
 ADR frontmatter is the machine authority. The body status and this index are
 human-readable projections checked by `./shifu docs:check`. Decision state,
 implementation state, and review state are separate fields; see the
-[Document Metadata Contract](../../../../docs/document-metadata.md). Do not add
+[Document Metadata Contract](../document-metadata.md). Do not add
 compound implementation notes to the index Status column.
+
+All records in this directory carry equal governance weight. `ADR-*` identifies
+decisions owned by Kungfu's product, runtime, and Core architecture;
+`SHIFU-ADR-*` identifies decisions owned by the Shifu development and execution
+surface. The namespace expresses ownership and future portability, not a weaker
+review, evidence, or release obligation. Both namespaces pass the same metadata,
+development intent, alpha settlement, and stable admission gates.
+
+## Audit and historical reconstruction
+
+The registry is executable rather than manually summarized:
+
+```sh
+./shifu adr:audit                 # structural pass plus current debt inventory
+./shifu adr:audit -- --json       # complete machine-readable record set
+./shifu adr:audit -- --strict     # fail on review and evidence debt
+./shifu adr:audit -- --release stable # fail on every current stable blocker
+```
+
+The ordinary documentation gate runs the structural audit on every relevant
+pull request. Historical completion is intentionally a separate, reviewable
+program:
+
+1. Reconstruct `unknown` implementation states in subsystem batches from Git,
+   PR, test, and qualification evidence; never infer completion from prose.
+2. Replace each legacy evidence exemption only when immutable implementation
+   and closure evidence is complete.
+3. Bind implemented claims to qualification evidence that actually exercises
+   the accepted scope, then remove the corresponding stable blocker.
+4. Resolve `legacy-unreviewed` and `unreviewed` only through maintainer review.
+5. Use the exact-release promotion gate for waivers; the side-effect-free audit
+   reports the unwaived balance sheet and never grants an exception.
+
+This ordering keeps status debt visible without weakening ordinary development,
+while making stable publication fail closed until every accepted decision is
+implemented and qualified or explicitly waived for that release.
 
 ## Index
 
@@ -105,6 +143,7 @@ compound implementation notes to the index Status column.
 | [0071](ADR-0071-cli-language-split-and-membrane-diagnostic-surface.md) | accepted | CLI language fit is decided by where the work lives and what the embedding membrane reaches, not clap-vs-click; substrate diagnostics (fsck/verify) belong in Rust via a grown read-only membrane surface, not per-command rewrites; product/UI/orchestration stays Python |
 | [0072](ADR-0072-frame-identity-layering-journal-local-vs-ledger-global.md) | accepted | frame identity is layered: frame_uid stays journal-local (fixing the deterministic page-8-bit wrap), while permanent ledger-global uniqueness is the Episode content root + structural stream_position (stream_id, container_epoch, sequence), not a widened probabilistic frame_uid |
 | [0073](ADR-0073-buildchain-adr-release-admissibility.md) | accepted | Buildchain promotion is the settlement boundary for ADR implementation truth: dev declares bounded delivery, alpha settles qualified progress, and stable admits no unaccounted accepted decision |
+| [SHIFU-0001](SHIFU-ADR-0001-cache-profile-contract-and-ownership.md) | accepted | Cache profiles are Shifu-owned contracts; inventories project instances and Buildchain owns process |
 
 ## Reading by theme
 
@@ -257,11 +296,11 @@ compound implementation notes to the index Status column.
   [0054](ADR-0054-libwasm-production-runtime-and-release.md) (the governed
   dual-engine WASM runtime, explicit capability grant, fact receipts, and
   release artifact qualification contract).
-  Shifu-owned decisions that are not Kungfu Core decisions use the independent
-  [`SHIFU-ADR-*` registry](../../../../docs/shifu/adr/README.md).
+  Shifu-owned decisions that are not Kungfu Core decisions retain the
+  `SHIFU-ADR-*` namespace in this same registry.
 - **Cross-cutting principle** — [0009](ADR-0009-load-bearing-self-bootstrap.md)
   (load-bearing self-bootstrap), which also names the general law that
-  [`docs/architecture.md` § The build dogfoods the SDK](../../../../docs/architecture.md)
+  [`docs/architecture.md` § The build dogfoods the SDK](../architecture.md)
   is one instance of, and
   [0049](ADR-0049-layer-complete-products-and-domain-neutral-core.md) (the
   independent adoption closure, downward dependency, layer-deletion, and
@@ -269,36 +308,36 @@ compound implementation notes to the index Status column.
 
 ## Related design documents
 
-- [`docs/architecture.md`](../../../../docs/architecture.md) — how the repository
+- [`docs/architecture.md`](../architecture.md) — how the repository
   is layered and the principle that shapes it.
-- [`docs/version-release-design.md`](../../../../docs/version-release-design.md) —
+- [`docs/version-release-design.md`](../version-release-design.md) —
   the versioning / release mechanism rationale, and the compatibility invariant
   below the tag.
-- [`docs/skills.md`](../../../../docs/skills.md) — the user-facing and
+- [`docs/skills.md`](../skills.md) — the user-facing and
   implementation-facing design for Kungfu Skills.
-- [`docs/runtime-storage-service.md`](../../../../docs/runtime-storage-service.md) —
+- [`docs/runtime-storage-service.md`](../runtime-storage-service.md) —
   the staged storage command surface, fsck/export path, and source-adapter
   direction.
-- [`docs/episode-object-model.md`](../../../../docs/episode-object-model.md) —
+- [`docs/episode-object-model.md`](../episode-object-model.md) —
   the Episode object model, causal closure invariant, and storage migration
   direction.
-- [`docs/journal-page-sizing-and-episode-reclamation.md`](../../../../docs/journal-page-sizing-and-episode-reclamation.md) —
+- [`docs/journal-page-sizing-and-episode-reclamation.md`](../journal-page-sizing-and-episode-reclamation.md) —
   the design judgment constraining the future Episode-aware physical layout:
   page-size variation only for max-frame, packing over per-Episode pages, and
   tombstone-then-cold-path GC (ADR-0033/0034, ADR-0055/0056).
-- [`docs/episode-atomicity-qualification.md`](../../../../docs/episode-atomicity-qualification.md) —
+- [`docs/episode-atomicity-qualification.md`](../episode-atomicity-qualification.md) —
   the evolving semantic oracle, fault matrix, scale tiers, metrics, and Episode
   Trust Report design required by ADR-0042.
-- [`docs/querying-runtime-facts.md`](../../../../docs/querying-runtime-facts.md) —
+- [`docs/querying-runtime-facts.md`](../querying-runtime-facts.md) —
   the staged human and agent service surface defined by ADR-0048.
-- [`docs/fact-surface-admission.md`](../../../../docs/fact-surface-admission.md) —
+- [`docs/fact-surface-admission.md`](../fact-surface-admission.md) —
   how product and user facts enter a KFD-declared contract world and become
   eligible for historical query and trust assessment.
-- [`docs/kfd2-trust-assessment.md`](../../../../docs/kfd2-trust-assessment.md) —
+- [`docs/kfd2-trust-assessment.md`](../kfd2-trust-assessment.md) —
   when KFD-2 runs, how the workspace coordinator coordinates it, and how Desktop and
   embedded executors share one contract.
-- [`docs/product-layers.md`](../../../../docs/product-layers.md) — independent
+- [`docs/product-layers.md`](../product-layers.md) — independent
   adoption products and their qualification boundaries.
-- [`docs/domain-horizons.md`](../../../../docs/domain-horizons.md) — the
+- [`docs/domain-horizons.md`](../domain-horizons.md) — the
   quantitative-trading, agent-runtime, and games/virtual-world architecture
   horizons.

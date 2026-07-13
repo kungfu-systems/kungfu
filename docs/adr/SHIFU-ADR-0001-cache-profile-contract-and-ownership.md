@@ -19,9 +19,9 @@ last_reviewed: 2026-07-12
 - Status: accepted; development implementation
 - Date: 2026-07-12
 - Scope: Shifu execution and toolchain cache policy
-- Related: Kungfu Core [ADR-0044](../../../framework/core/docs/adr/ADR-0044-shifu-delegation-protocol.md)
+- Related: Kungfu Core [ADR-0044](./ADR-0044-shifu-delegation-protocol.md)
   and the KFD-1 welded `shifu-launcher` surface in
-  [`docs/versioning.md`](../../versioning.md)
+  [`docs/versioning.md`](../versioning.md)
 
 ## Context
 
@@ -47,7 +47,7 @@ tool becomes coupled to one private topology.
 
 Shifu owns one versioned cache contract with two schemas: a profile input and a
 redacted resolution receipt. Their canonical discovery root is
-[`cache-contract.json`](../cache-contract.json). Markdown explains the decision
+[`cache-contract.json`](../shifu/cache-contract.json). Markdown explains the decision
 and workflow but never duplicates the field specification.
 
 An inventory controller may maintain any private internal model. Its public

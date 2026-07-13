@@ -20,6 +20,8 @@ on:
       - "scripts/check-docs.mjs"
       - "scripts/adr-release-gate.mjs"
       - "scripts/adr-release-gate.test.mjs"
+      - "scripts/adr-audit.mjs"
+      - "scripts/adr-audit.test.mjs"
       - "scripts/release-promotion-rehearsal.mjs"
       - "scripts/release-promotion-rehearsal.test.mjs"
       - "scripts/check-docs.test.mjs"

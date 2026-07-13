@@ -52,9 +52,9 @@ gone; only the `assemble` leg ships. What was removed, and what stays and why:
 | Nuitka / PyInstaller pins in dev deps | **pyinstaller pin retired 2026-07-11**; **nuitka pin kept** — now resolved only by the `engage nuitka` bridge (ADR-0045), no longer by any freeze leg |
 
 The assembled form's own policy record is
-[ADR-0050](../framework/core/docs/adr/ADR-0050-assembled-runtime-stdlib-pruning-policy.md)
+[ADR-0050](./adr/ADR-0050-assembled-runtime-stdlib-pruning-policy.md)
 (stdlib pruning); the target architecture is
-[ADR-0046](../framework/core/docs/adr/ADR-0046-rust-host-trunk-and-assembled-runtime.md).
+[ADR-0046](./adr/ADR-0046-rust-host-trunk-and-assembled-runtime.md).
 
 ## Where the prebuilt binaries come from
 

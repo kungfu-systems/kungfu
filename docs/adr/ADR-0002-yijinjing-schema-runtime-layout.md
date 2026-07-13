@@ -4,6 +4,7 @@ doc_type: architecture-decision
 adr_id: ADR-0002
 decision_status: superseded
 implementation_status: not-applicable
+superseded_by: [ADR-0047]
 review_state: legacy-unreviewed
 sensitivity: public
 ---

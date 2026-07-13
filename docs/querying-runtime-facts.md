@@ -5,7 +5,7 @@ historical questions without promoting a cache or GUI database into the source
 of truth.
 
 This document describes the target service contract accepted by
-[ADR-0048](../framework/core/docs/adr/ADR-0048-runtime-fact-query-semantics-and-changelog.md).
+[ADR-0048](./adr/ADR-0048-runtime-fact-query-semantics-and-changelog.md).
 The implementation is staged. QueryDefinition planning, proof-bearing Episode
 queries, the agent CLI, a bounded SQL compiler, journal/SQLite conformance, a
 resumable changelog, a bounded temporal-pattern operator, and
@@ -37,7 +37,7 @@ Recording is not automatic admission. Unregistered, schema-incompatible,
 authority-ambiguous, or unverifiable observations remain inspectable for
 diagnosis, but they do not enter canonical fact state. See
 [Bringing domain facts into Kungfu](fact-surface-admission.md) and
-[ADR-0051](../framework/core/docs/adr/ADR-0051-kfd-contract-world-fact-admission-and-trust.md).
+[ADR-0051](./adr/ADR-0051-kfd-contract-world-fact-admission-and-trust.md).
 
 Queries also distinguish:
 

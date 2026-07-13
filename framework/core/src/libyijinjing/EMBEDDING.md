@@ -107,5 +107,5 @@ The typed `mapped_region::map(path, size, policy)` API is canonical. Deprecated
 temporary source adapters for existing embedders; they translate directly to a
 typed policy and do not preserve the former best-effort locking interpretation
 of `lazy`. New integrations must not use those adapters. See
-[ADR-0058](../../docs/adr/ADR-0058-yijinjing-explicit-mapping-policies.md) for
+[ADR-0058](../../../../docs/adr/ADR-0058-yijinjing-explicit-mapping-policies.md) for
 the qualification table and removal conditions.

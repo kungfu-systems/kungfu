@@ -26,7 +26,7 @@ last_reviewed: 2026-07-11
 - Related: [ADR-0001](ADR-0001-yijinjing-publish-barrier.md),
   [ADR-0024](ADR-0024-location-role-and-journal-page-policy.md), and
   [ADR-0057](ADR-0057-domain-neutral-live-runtime-terminology.md)
-- Qualification: [mmap performance](../qualification/mmap-performance.md)
+- Qualification: [mmap performance](../../framework/core/docs/qualification/mmap-performance.md)
 
 ## Context
 

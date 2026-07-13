@@ -36,6 +36,9 @@ const contract = {
     'closure_commit',
     'closure_pr',
     'qualification_refs',
+    'moved_to',
+    'supersedes',
+    'superseded_by',
   ],
   sourceKinds: ['local-files'],
   externalFrontmatterSchemas: [{ id: 'skill', patterns: ['(^|/)SKILL\\.md$'] }],
@@ -59,8 +62,19 @@ const contract = {
         sensitivity: 'public',
       },
       enums: {
-        decision_status: ['proposed', 'accepted', 'superseded'],
-        implementation_status: ['unknown', 'implemented', 'not-started'],
+        decision_status: [
+          'proposed',
+          'accepted',
+          'superseded',
+          'rejected',
+          'withdrawn',
+        ],
+        implementation_status: [
+          'unknown',
+          'implemented',
+          'not-started',
+          'not-applicable',
+        ],
         review_state: ['legacy-unreviewed'],
       },
       forbidden: ['status'],
@@ -84,6 +98,27 @@ const contract = {
       },
       enums: { review_state: ['self-reviewed'] },
       forbidden: ['status'],
+    },
+    {
+      id: 'adr-redirect',
+      metadataMode: 'inline',
+      patterns: ['^legacy/adr/.*\\.md$'],
+      required: [
+        'metadata_schema',
+        'doc_type',
+        'document_status',
+        'review_state',
+        'sensitivity',
+        'moved_to',
+      ],
+      constants: {
+        metadata_schema: 'kungfu.document-metadata/v1',
+        doc_type: 'adr-redirect',
+        document_status: 'deprecated',
+        sensitivity: 'public',
+      },
+      enums: { review_state: ['self-reviewed'] },
+      forbidden: ['adr_id', 'decision_status', 'implementation_status'],
     },
     {
       id: 'public-document',
@@ -237,6 +272,142 @@ test('accepts typed public metadata and aligned ADR projections', () => {
     },
   );
   assert.deepEqual(findings, []);
+});
+
+test('accepts a typed ADR redirect to the same canonical filename', () => {
+  const findings = run({
+    'adr/README.md': `${indexHeader}\n\n# ADRs\n\n| ADR | Status | Title |\n|---|---|---|\n| [ADR-0001](ADR-0001-example.md) | accepted | Example |\n`,
+    'adr/ADR-0001-example.md': `${adrHeader}\n\n# ADR-0001: Example\n\n- Status: accepted\n`,
+    'legacy/adr/ADR-0001-example.md': `---
+metadata_schema: kungfu.document-metadata/v1
+document_status: deprecated
+doc_type: adr-redirect
+review_state: self-reviewed
+sensitivity: public
+moved_to: adr/ADR-0001-example.md
+---
+
+# Moved
+`,
+  });
+  assert.deepEqual(findings, []);
+});
+
+test('accepts reciprocal acyclic ADR supersession metadata', () => {
+  const findings = run({
+    'adr/README.md': `${indexHeader}
+
+# ADRs
+
+| ADR | Status | Title |
+|---|---|---|
+| [ADR-0001](ADR-0001-example.md) | superseded | Old |
+| [ADR-0002](ADR-0002-replacement.md) | accepted | New |
+`,
+    'adr/ADR-0001-example.md': `---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0001
+decision_status: superseded
+implementation_status: not-applicable
+superseded_by: [ADR-0002]
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
+# ADR-0001: Old
+
+- Status: superseded
+`,
+    'adr/ADR-0002-replacement.md': `---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0002
+decision_status: accepted
+implementation_status: unknown
+supersedes: [ADR-0001]
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
+# ADR-0002: New
+
+- Status: accepted
+`,
+  });
+  assert.deepEqual(findings, []);
+});
+
+test('rejects one-sided and cyclic ADR supersession graphs', () => {
+  const findings = run({
+    'adr/README.md': `${indexHeader}
+
+# ADRs
+
+| ADR | Status | Title |
+|---|---|---|
+| [ADR-0001](ADR-0001-example.md) | superseded | One |
+| [ADR-0002](ADR-0002-example.md) | superseded | Two |
+`,
+    'adr/ADR-0001-example.md': `---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0001
+decision_status: superseded
+implementation_status: not-applicable
+supersedes: [ADR-0002]
+superseded_by: [ADR-0002]
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
+# ADR-0001: One
+
+- Status: superseded
+`,
+    'adr/ADR-0002-example.md': `---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: ADR-0002
+decision_status: superseded
+implementation_status: not-applicable
+supersedes: [ADR-0001]
+superseded_by: [ADR-0001]
+review_state: legacy-unreviewed
+sensitivity: public
+---
+
+# ADR-0002: Two
+
+- Status: superseded
+`,
+  });
+  assert.ok(
+    findings.some((finding) => finding.code === 'adr-supersession-cycle'),
+  );
+});
+
+test('rejects an ADR redirect that becomes a second authority', () => {
+  const findings = run({
+    'legacy/adr/ADR-0001-example.md': `---
+metadata_schema: kungfu.document-metadata/v1
+document_status: deprecated
+doc_type: adr-redirect
+review_state: self-reviewed
+sensitivity: public
+moved_to: adr/ADR-9999-other.md
+adr_id: ADR-0001
+decision_status: accepted
+implementation_status: implemented
+---
+
+# Moved
+`,
+  });
+  assert.ok(findings.some((finding) => finding.code === 'adr-redirect-target'));
+  assert.ok(
+    findings.some((finding) => finding.code === 'metadata-forbidden-field'),
+  );
 });
 
 test('rejects missing required public registry metadata', () => {

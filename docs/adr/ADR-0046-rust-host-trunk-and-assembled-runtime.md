@@ -17,9 +17,9 @@ sensitivity: public
   distribution contract
 - Subsystem: whole product — the process host, the CLI, runtime distribution
   and package management, the `engage` bridges, the freeze chain
-- Related: [`docs/rust-host-spike.md`](../../../../docs/rust-host-spike.md)
+- Related: [`docs/rust-host-spike.md`](../rust-host-spike.md)
   (the measured feasibility and cost evidence this decision stands on);
-  [`docs/rust-adoption.md`](../../../../docs/rust-adoption.md) (this ADR is
+  [`docs/rust-adoption.md`](../rust-adoption.md) (this ADR is
   the argued case that consumption mode 2 — cdylib/FFI embedding — demands);
   [ADR-0009](ADR-0009-load-bearing-self-bootstrap.md) (the trunk becomes the
   outermost load-bearing ring at runtime, as the launcher is at build time);
@@ -59,7 +59,7 @@ for all three, from first principles rather than from the current form.
    registration, pruned-stdlib landmines). A frozen host can never offer
    "pip anything into kungfu's runtime"; an assembled one gets it for free.
 4. **Measured, not argued.** The host-shell spike (`crates/host-spike`,
-   [`docs/rust-host-spike.md`](../../../../docs/rust-host-spike.md)) proved
+   [`docs/rust-host-spike.md`](../rust-host-spike.md)) proved
    the full fabric — libkungfu core init, embedded python-build-standalone,
    pykungfu, real journal traffic with cross-language readback, libnode
    started and returning control — runs under a Rust `main()` today. The same
@@ -211,7 +211,7 @@ paragraph exists to forbid.
 The 2026-07-10 native membrane spike exercises that default before Stage 3:
 the existing Rust host probe now consumes the same v1 context/reader/batch
 table as the dynamically loaded native KFX probe. The result is recorded in
-[`docs/libkungfu-embedding-membrane-spike.md`](../../../../docs/libkungfu-embedding-membrane-spike.md).
+[`docs/libkungfu-embedding-membrane-spike.md`](../libkungfu-embedding-membrane-spike.md).
 It is feasibility evidence only and does not authorize or begin Stage 3.
 
 ## Alternatives considered
@@ -238,7 +238,7 @@ It is feasibility evidence only and does not authorize or begin Stage 3.
 - **Rewrite the core or the domain layer in Rust.** Out of scope and against
   standing boundaries: the memory-safety core stays C++, hot paths never
   cross an FFI seam, and domain code stays in the language users extend
-  ([`docs/rust-adoption.md`](../../../../docs/rust-adoption.md)).
+  ([`docs/rust-adoption.md`](../rust-adoption.md)).
 
 ## Adoption path (each stage independently shippable)
 

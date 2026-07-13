@@ -2,11 +2,11 @@
 
 Status: accepted design direction with v1 implementation. The term and
 invariants are accepted by
-[ADR-0033](../framework/core/docs/adr/ADR-0033-episode-causal-segment-object.md).
-[ADR-0034](../framework/core/docs/adr/ADR-0034-yijinjing-episode-manifest-journal.md)
+[ADR-0033](./adr/ADR-0033-episode-causal-segment-object.md).
+[ADR-0034](./adr/ADR-0034-yijinjing-episode-manifest-journal.md)
 defines the append-only yijinjing manifest journal. The full Episode-aware
 physical journal layout is still future work.
-[ADR-0042](../framework/core/docs/adr/ADR-0042-episode-atomic-safety-and-qualification.md)
+[ADR-0042](./adr/ADR-0042-episode-atomic-safety-and-qualification.md)
 proposes Episode as the atomic safety and fault-containment unit: degradation
 preserves verified work and contracts only the capabilities that missing or
 unverifiable evidence cannot safely support. Its executable verification design

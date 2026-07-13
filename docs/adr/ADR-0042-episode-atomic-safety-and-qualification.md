@@ -28,9 +28,9 @@ last_reviewed: 2026-07-10
   store used by Episode references; ADR-0023 and ADR-0028 define frame and hash
   integrity boundaries. The ADR-0041 field map and writer/crash contract are
   recorded in
-  [`framework/core/docs/episode-manifest-trust-boundary.md`](../episode-manifest-trust-boundary.md).
+  [`framework/core/docs/episode-manifest-trust-boundary.md`](../../framework/core/docs/episode-manifest-trust-boundary.md).
   The executable qualification design lives in
-  [`docs/episode-atomicity-qualification.md`](../../../../docs/episode-atomicity-qualification.md).
+  [`docs/episode-atomicity-qualification.md`](../episode-atomicity-qualification.md).
 
 ## Context
 

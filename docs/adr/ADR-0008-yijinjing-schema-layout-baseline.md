@@ -17,8 +17,8 @@ sensitivity: public
 - Related: [ADR-0002](ADR-0002-yijinjing-schema-runtime-layout.md),
   [ADR-0047](ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md),
   [ADR-0001](ADR-0001-yijinjing-publish-barrier.md),
-  [`docs/version-release-design.md`](../../../../docs/version-release-design.md),
-  [`docs/versioning.md`](../../../../docs/versioning.md)
+  [`docs/version-release-design.md`](../version-release-design.md),
+  [`docs/versioning.md`](../versioning.md)
 
 ## Decision
 

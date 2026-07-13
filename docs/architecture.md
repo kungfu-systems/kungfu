@@ -10,7 +10,7 @@ the whole design follows from, see
 [`the-episode.md`](the-episode.md); for journal, frame, zero-copy, and Replay
 mechanics see [`event-model.md`](event-model.md); for build and contribution see
 [CONTRIBUTING](../CONTRIBUTING.md); for specific decisions see the
-[ADRs](../framework/core/docs/adr).
+[ADRs](adr/).
 
 ## Guiding principle: the machine adapts to the person
 
@@ -27,7 +27,7 @@ installed language runtimes or package managers. This does not make the
 assembled runtime the minimum adoption unit: `libkungfu`, ecosystem SDKs, the
 standalone CLI/TUI, and the GUI retain independently qualified product
 closures. See [`product-layers.md`](product-layers.md) and
-[ADR-0049](../framework/core/docs/adr/ADR-0049-layer-complete-products-and-domain-neutral-core.md).
+[ADR-0049](./adr/ADR-0049-layer-complete-products-and-domain-neutral-core.md).
 
 This is a deliberate trade: the project carries the complexity so the user does
 not. It stays sustainable only while the absorbed tooling rests on mainstream,
@@ -60,9 +60,9 @@ language-local objects. That shared membrane is:
 ```
 
 For closed kernel facts, the POD layout *is* the wire format (see
-[ADR-0008](../framework/core/docs/adr/ADR-0008-yijinjing-schema-layout-baseline.md)
+[ADR-0008](./adr/ADR-0008-yijinjing-schema-layout-baseline.md)
 and [`contracts.md`](contracts.md)). Open/domain facts use `.fbs` as their
-schema owner. [ADR-0047](../framework/core/docs/adr/ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md)
+schema owner. [ADR-0047](./adr/ADR-0047-authoritative-facts-hana-pod-or-flatbuffers.md)
 defines the exclusive ownership rule and the derived view, opaque body, JSON,
 and SQLite boundaries; the binding boundaries are detailed in
 [`adapters.md`](adapters.md). Everything below is how this core is layered into
@@ -109,7 +109,7 @@ injection, and the richer end-user shell as it matures.
 Typed, framework-neutral, publishable access to journal / state / replay over
 the in-process zero-copy binding. This is the real value of the platform — the
 surface external products consume, independent of any UI framework. See
-[ADR-0006](../framework/core/docs/adr/ADR-0006-v4-frontend-platform-architecture.md).
+[ADR-0006](./adr/ADR-0006-v4-frontend-platform-architecture.md).
 
 ### Contracts — `framework/kfx`, `framework/skill`, `framework/spec`
 
@@ -120,11 +120,11 @@ capability SDK:
   trust-tier inputs and UI tokens shared by hosts and extensions. Its current
   shipped facets include `view` and `adapter`; a background `service` facet is
   proposed in
-  [ADR-0017](../framework/core/docs/adr/ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md).
+  [ADR-0017](./adr/ADR-0017-dual-host-kfx-loading-host-agnostic-plan-and-service-facet.md).
 - `skill` is the agent-facing contract above kfx: `SKILL.md` parsing, compact
   catalogs, context envelopes, dependency binding and manager fixtures. A skill
   may reference kfx packages, but kfx remains the runtime trust artifact. See
-  [ADR-0015](../framework/core/docs/adr/ADR-0015-kungfu-skill-agent-context-layer.md).
+  [ADR-0015](./adr/ADR-0015-kungfu-skill-agent-context-layer.md).
 - `spec` is the portable fact-ledger format spec — the manifest contract plus
   the versioned spec bundle — that lets external tools decode the journal
   without the runtime.
@@ -144,11 +144,11 @@ Two minimal reference UI implementations over the same capability SDK:
 - **GUI** — `framework/gui` (`@kungfu-tech/gui`): a desktop application
   on Electron + React, loading the native binding in-process to preserve
   zero-copy. See
-  [ADR-0006](../framework/core/docs/adr/ADR-0006-v4-frontend-platform-architecture.md).
+  [ADR-0006](./adr/ADR-0006-v4-frontend-platform-architecture.md).
 - **TUI** — `framework/tui` (`@kungfu-tech/tui`): a terminal
   application. Pure Node, so it loads the binding in-process with no renderer
   boundary. See
-  [ADR-0007](../framework/core/docs/adr/ADR-0007-v4-tui-platform-reference-surface.md).
+  [ADR-0007](./adr/ADR-0007-v4-tui-platform-reference-surface.md).
 
 These framework packages are reference implementations rather than independent
 fact authorities. The released standalone CLI/TUI and GUI products that
@@ -163,9 +163,9 @@ only through an IPC relay. Runtime-plane isolation uses the same capability
 protocol over a different host/guest transport: a binding-less guest process
 talks to a trusted capability host over stdio, with the OS sandbox applied by
 the host. The trust boundary and runtime-plane isolation are pinned by
-[ADR-0013](../framework/core/docs/adr/ADR-0013-cli-runtime-extension-isolation-trusted-channel.md);
+[ADR-0013](./adr/ADR-0013-cli-runtime-extension-isolation-trusted-channel.md);
 the uniform async capability surface is pinned by
-[ADR-0014](../framework/core/docs/adr/ADR-0014-extension-execution-contract-uniform-capability-surface.md).
+[ADR-0014](./adr/ADR-0014-extension-execution-contract-uniform-capability-surface.md).
 See [`kfx-topology.md`](kfx-topology.md) for the current load/sandbox topology.
 
 ### Extensions (kfx) — `extensions/*`
@@ -229,7 +229,7 @@ The repository's own build is a closed loop that exercises Kungfu's capabilities
 end to end: if a core capability regresses, building Kungfu itself fails first.
 This is one instance of a broader product-layer principle — *the adoption path is
 the validation path, so upkeep of the core is a byproduct of use* — set out in
-[ADR-0009](../framework/core/docs/adr/ADR-0009-load-bearing-self-bootstrap.md).
+[ADR-0009](./adr/ADR-0009-load-bearing-self-bootstrap.md).
 
 The reference extensions are coverage probes for this loop, not products — each
 exercises a distinct extension path:

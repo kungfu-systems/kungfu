@@ -29,8 +29,8 @@ last_reviewed: 2026-07-13
   [ADR-0052](ADR-0052-kfd2-assessment-lifecycle-and-executors.md),
   [ADR-0059](ADR-0059-mission-control-mission-go-responsibility-model.md),
   and [ADR-0061](ADR-0061-agent-mediated-guidance-is-a-first-class-product-interface.md)
-- Contract: [`kungfu-kfx.contract.json`](../../../kfx/kungfu-kfx.contract.json)
-- Fixture: [`kfx-profile-suite-contract`](../../../../tests/fixtures/kfx-profile-suite-contract/)
+- Contract: [`kungfu-kfx.contract.json`](../../framework/kfx/kungfu-kfx.contract.json)
+- Fixture: [`kfx-profile-suite-contract`](../../tests/fixtures/kfx-profile-suite-contract)
 
 ## Context
 

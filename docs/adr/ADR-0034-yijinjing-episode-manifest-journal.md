@@ -20,9 +20,9 @@ sensitivity: public
   action-recording membrane.
   ADR-0033 defines Episode as the first-class causal segment object. ADR-0062
   governs the journal container format epoch, which is separate from page sizing.
-  [`docs/episode-object-model.md`](../../../../docs/episode-object-model.md)
+  [`docs/episode-object-model.md`](../episode-object-model.md)
   describes the Episode object model, and
-  [`docs/journal-page-sizing-and-episode-reclamation.md`](../../../../docs/journal-page-sizing-and-episode-reclamation.md)
+  [`docs/journal-page-sizing-and-episode-reclamation.md`](../journal-page-sizing-and-episode-reclamation.md)
   is the design note constraining page sizing and Episode-aware reclamation.
 
 ## Context
