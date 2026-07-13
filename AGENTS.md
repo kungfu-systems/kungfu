@@ -50,6 +50,9 @@ For versioned cache policy and machine-readable schema discovery, see
 `SHIFU_CACHE_PROFILE_REF` and `SHIFU_CACHE_PROFILE_DIGEST`, ordinary
 `./shifu <task>` invocations automatically resolve and apply that profile once;
 the explicit `./shifu cache ...` control surface remains outside the wrapper.
+Use `./shifu cache status` for local-only inspection and
+`./shifu cache doctor [--probe]` for resolution and optional reachability;
+`cache use/unset` are dry-run unless `--execute` is explicit.
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full toolchain, repository
 layout, and code style.

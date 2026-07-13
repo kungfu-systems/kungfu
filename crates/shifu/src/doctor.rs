@@ -91,6 +91,16 @@ pub fn run(root: Option<&Path>, args: &[String]) -> ! {
         probe::print_finding(&finding);
     }
 
+    println!(
+        "\n{}",
+        style::cyan("Cache profile (informational; never probes endpoints):")
+    );
+    println!(
+        "  profile projection: {} (scope {}; run `./shifu cache doctor` for details)",
+        cache_profile_state(),
+        cache_profile_scope()
+    );
+
     println!("\n{}", style::cyan("Optional:"));
     for finding in probe::run_all(vec![Probe::command_version(
         "rustc/cargo",
@@ -336,6 +346,27 @@ fn json_escape(value: &str) -> String {
         .replace('\r', "\\r")
 }
 
+fn cache_profile_state() -> &'static str {
+    let reference = std::env::var_os("SHIFU_CACHE_PROFILE_REF").is_some_and(|v| !v.is_empty());
+    let digest = std::env::var_os("SHIFU_CACHE_PROFILE_DIGEST").is_some_and(|v| !v.is_empty());
+    cache_profile_pair_state(reference, digest)
+}
+
+fn cache_profile_pair_state(reference: bool, digest: bool) -> &'static str {
+    match (reference, digest) {
+        (true, true) => "complete",
+        (false, false) => "absent",
+        _ => "partial",
+    }
+}
+
+fn cache_profile_scope() -> String {
+    std::env::var("SHIFU_CACHE_SCOPE")
+        .ok()
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| "development".into())
+}
+
 fn print_json(root: Option<&Path>) {
     let compiler = compiler_version();
     let cmake = command_version(&["cmake"]);
@@ -372,7 +403,7 @@ fn print_json(root: Option<&Path>) {
         "libstdc++"
     };
     println!(
-        "{{\"schema_version\":1,\"contract\":\"{}\",\"compiler\":\"{}\",\"standard_library\":\"{}\",\"cmake\":\"{}\",\"ninja\":\"{}\",\"conan\":\"{}\",\"linker\":\"{}\",\"cache\":\"{}\",\"sdk\":\"{}\",\"runtimes\":{{\"node\":\"{}\",\"electron\":\"{}\",\"python\":\"{}\"}}}}",
+        "{{\"schema_version\":1,\"contract\":\"{}\",\"compiler\":\"{}\",\"standard_library\":\"{}\",\"cmake\":\"{}\",\"ninja\":\"{}\",\"conan\":\"{}\",\"linker\":\"{}\",\"cache\":\"{}\",\"profile_cache\":{{\"state\":\"{}\",\"scope\":\"{}\",\"diagnostic\":\"./shifu cache doctor\"}},\"sdk\":\"{}\",\"runtimes\":{{\"node\":\"{}\",\"electron\":\"{}\",\"python\":\"{}\"}}}}",
         json_escape(&contract),
         json_escape(&compiler),
         standard_library,
@@ -381,6 +412,8 @@ fn print_json(root: Option<&Path>) {
         json_escape(&conan),
         json_escape(&linker_version()),
         json_escape(&command_version(&["sccache", "ccache"])),
+        cache_profile_state(),
+        json_escape(&cache_profile_scope()),
         json_escape(&sdk_version()),
         json_escape(&node),
         json_escape(&electron),
@@ -626,12 +659,20 @@ fn msvc_probe() -> Probe {
 
 #[cfg(test)]
 mod tests {
-    use super::version_less;
+    use super::{cache_profile_pair_state, version_less};
 
     #[test]
     fn compares_dotted_tool_versions() {
         assert!(version_less("3.27.9", "3.28.0"));
         assert!(!version_less("3.28.3", "3.28.0"));
         assert!(!version_less("4.3.2", "3.28.0"));
+    }
+
+    #[test]
+    fn classifies_cache_profile_pair() {
+        assert_eq!(cache_profile_pair_state(false, false), "absent");
+        assert_eq!(cache_profile_pair_state(true, false), "partial");
+        assert_eq!(cache_profile_pair_state(false, true), "partial");
+        assert_eq!(cache_profile_pair_state(true, true), "complete");
     }
 }

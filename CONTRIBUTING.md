@@ -41,6 +41,10 @@ tool with a version line or an install pointer (and exits non-zero when a
 required tool is missing, so it can gate scripts).
 Use `./shifu doctor --json` when a machine-readable compiler/CMake/Ninja/Conan
 fact record is needed. See [`docs/cpp-toolchain.md`](docs/cpp-toolchain.md).
+For projected dependency caches, run `./shifu cache status` first; use
+`./shifu cache doctor --probe` only when active endpoint checks are intended.
+Local `cache use/unset` changes are dry-run unless `--execute` is supplied and
+never overwrite an inventory-controller block.
 
 ## Repository layout
 

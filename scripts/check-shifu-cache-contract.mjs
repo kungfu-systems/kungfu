@@ -63,8 +63,16 @@ export async function checkShifuCacheContract(root = ROOT) {
 
   const profilePath = path.join(root, contract.authority.profileSchema);
   const resolutionPath = path.join(root, contract.authority.resolutionSchema);
+  const diagnosticPath = path.join(root, contract.authority.diagnosticSchema);
+  const configPlanPath = path.join(root, contract.authority.configPlanSchema);
   const decisionPath = path.join(root, contract.authority.decision);
-  for (const source of [profilePath, resolutionPath, decisionPath]) {
+  for (const source of [
+    profilePath,
+    resolutionPath,
+    diagnosticPath,
+    configPlanPath,
+    decisionPath,
+  ]) {
     assert.ok(
       fs.existsSync(source),
       `contract source is missing: ${rel(source)}`,
@@ -73,8 +81,12 @@ export async function checkShifuCacheContract(root = ROOT) {
 
   const profileSchema = readJson(profilePath);
   const resolutionSchema = readJson(resolutionPath);
+  const diagnosticSchema = readJson(diagnosticPath);
+  const configPlanSchema = readJson(configPlanPath);
   assert.equal(profileSchema.$id, contract.schemaIds.profile);
   assert.equal(resolutionSchema.$id, contract.schemaIds.resolution);
+  assert.equal(diagnosticSchema.$id, contract.schemaIds.diagnostic);
+  assert.equal(configPlanSchema.$id, contract.schemaIds.configPlan);
 
   const dispatchMarkers = [
     ['shifu', 'if [ "${1:-}" = "cache" ]; then'],
@@ -147,6 +159,8 @@ export async function checkShifuCacheContract(root = ROOT) {
     contract: rel(contractPath),
     profileSchema: rel(profilePath),
     resolutionSchema: rel(resolutionPath),
+    diagnosticSchema: rel(diagnosticPath),
+    configPlanSchema: rel(configPlanPath),
     validFixtures,
     rejectedFixtures,
   };
