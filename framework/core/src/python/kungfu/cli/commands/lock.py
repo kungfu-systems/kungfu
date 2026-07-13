@@ -27,6 +27,24 @@ def _lock_root(ctx):
     return Path(ctx.runtime_dir) / "coordination"
 
 
+def _open_audit(ctx, name):
+    """Best-effort Episode audit: coordination must not fail if storage is down."""
+    try:
+        from kungfu.coordination.audit import LockAudit
+
+        return LockAudit(ctx.runtime_dir, name)
+    except Exception as exc:  # noqa: BLE001 — audit is additive, never load-bearing
+        click.echo(f"[lock] audit unavailable ({exc}); proceeding without it", err=True)
+        return None
+
+
+def _safe_audit(fn):
+    try:
+        fn()
+    except Exception as exc:  # noqa: BLE001
+        click.echo(f"[lock] audit record failed ({exc})", err=True)
+
+
 @kfc.group(
     cls=PrioritizedCommandGroup,
     help_priority=5,
@@ -48,14 +66,37 @@ def lock(ctx):
 @lock_command_context
 def lock_run(ctx, name, command):
     root = _lock_root(ctx)
+    audit = _open_audit(ctx, name)
 
     def _waiting():
         click.echo(f"[lock] {name!r} held by another run; waiting …", err=True)
+        if audit:
+            _safe_audit(audit.waiting)
 
-    with locks.held(root, name, label=f"lock-run:{name}", on_wait=_waiting):
+    def _acquired(waited):
         click.echo(f"[lock] {name!r} acquired", err=True)
-        rc = subprocess.call(list(command))
-    click.echo(f"[lock] {name!r} released", err=True)
+        if audit:
+            _safe_audit(lambda: audit.acquired(waited))
+
+    def _released(released):
+        click.echo(f"[lock] {name!r} released", err=True)
+        if audit:
+            _safe_audit(lambda: audit.released(released))
+
+    rc = 1
+    try:
+        with locks.held(
+            root,
+            name,
+            label=f"lock-run:{name}",
+            on_wait=_waiting,
+            on_acquire=_acquired,
+            on_release=_released,
+        ):
+            rc = subprocess.call(list(command))
+    finally:
+        if audit:
+            _safe_audit(lambda: audit.close(ok=(rc == 0), reason=f"exit {rc}"))
     sys.exit(rc)
 
 

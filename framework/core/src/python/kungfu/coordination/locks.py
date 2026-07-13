@@ -145,13 +145,30 @@ def release(root: str | os.PathLike[str], name: str, *, pid: int | None = None) 
 
 
 @contextlib.contextmanager
-def held(root: str | os.PathLike[str], name: str, **kwargs: Any):
-    """Hold `name` for the duration of the block; always released on exit."""
-    acquire(root, name, **kwargs)
+def held(
+    root: str | os.PathLike[str],
+    name: str,
+    *,
+    on_acquire: Callable[[bool], None] | None = None,
+    on_release: Callable[[bool], None] | None = None,
+    **kwargs: Any,
+):
+    """Hold `name` for the duration of the block; always released on exit.
+
+    `on_acquire(waited)` fires once the lock is held (``waited`` is True if the
+    call blocked); `on_release(released)` fires after the release attempt. Both
+    are how a caller layers side effects such as Episode audit records onto the
+    otherwise dependency-free lock (ADR-0077).
+    """
+    waited = acquire(root, name, **kwargs)
+    if on_acquire is not None:
+        on_acquire(waited)
     try:
         yield
     finally:
-        release(root, name, pid=kwargs.get("pid"))
+        released = release(root, name, pid=kwargs.get("pid"))
+        if on_release is not None:
+            on_release(released)
 
 
 def with_lock(
