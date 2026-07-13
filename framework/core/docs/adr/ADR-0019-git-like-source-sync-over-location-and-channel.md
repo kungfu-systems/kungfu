@@ -1,0 +1,15 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+document_status: deprecated
+doc_type: adr-redirect
+review_state: self-reviewed
+sensitivity: public
+moved_to: docs/adr/ADR-0019-git-like-source-sync-over-location-and-channel.md
+---
+
+# ADR-0019-git-like-source-sync-over-location-and-channel moved
+
+This path is retained for inbound-link compatibility. The authoritative record
+now lives in the [ADR-0019-git-like-source-sync-over-location-and-channel](../../../../docs/adr/ADR-0019-git-like-source-sync-over-location-and-channel.md). Decision status,
+implementation evidence, and release obligations are read only from that
+canonical document.
