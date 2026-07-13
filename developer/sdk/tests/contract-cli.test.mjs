@@ -459,8 +459,8 @@ test('adds a new contract source and registry entry in a repo fixture', (t) => {
   assert.equal(data.fixture.schema, 'kungfu.sdk.contract-drift-fixture/v1');
   assert.match(data.fixture.hash, /^sha256:[0-9a-f]{64}$/);
   assert.match(data.next.evidence, /contract evidence demo-surface --json/);
-  assert.match(data.next.versioning, /docs\/versioning\.md/);
-  assert.match(data.next.knownLimits, /docs\/known-limits\.md/);
+  assert.match(data.next.versioning, /docs\/development\/versioning\.md/);
+  assert.match(data.next.knownLimits, /docs\/qualification\/known-limits\.md/);
   assert.match(data.contract.hash, /^sha256:[0-9a-f]{64}$/);
 
   const sourcePath = join(root, data.source);
