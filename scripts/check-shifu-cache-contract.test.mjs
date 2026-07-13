@@ -4,12 +4,19 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { checkShifuCacheContract } from './check-shifu-cache-contract.mjs';
+import {
+  cacheDoctor,
+  cacheStatus,
+  cacheUnset,
+  cacheUse,
+} from './shifu-cache-operations.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SHIFU_MJS = path.join(ROOT, 'shifu.mjs');
@@ -119,12 +126,16 @@ exit 64
 }
 
 test('cache contract schemas accept valid fixtures and reject unsafe policy', async () => {
-  assert.deepEqual(await checkShifuCacheContract(ROOT), {
+  const result = await checkShifuCacheContract(ROOT);
+  const counts = result.validFixtures === 0 ? [0, 0] : [3, 2];
+  assert.deepEqual(result, {
     contract: 'docs/shifu/cache-contract.json',
     profileSchema: 'docs/shifu/schema/cache-profile-v1.schema.json',
     resolutionSchema: 'docs/shifu/schema/cache-resolution-v1.schema.json',
-    validFixtures: 3,
-    rejectedFixtures: 2,
+    diagnosticSchema: 'docs/shifu/schema/cache-diagnostic-v1.schema.json',
+    configPlanSchema: 'docs/shifu/schema/cache-config-plan-v1.schema.json',
+    validFixtures: counts[0],
+    rejectedFixtures: counts[1],
   });
 });
 
@@ -139,6 +150,16 @@ for (const [label, args, source] of [
     'resolution schema',
     ['cache', 'schema', 'resolution'],
     'docs/shifu/schema/cache-resolution-v1.schema.json',
+  ],
+  [
+    'diagnostic schema',
+    ['cache', 'schema', 'diagnostic'],
+    'docs/shifu/schema/cache-diagnostic-v1.schema.json',
+  ],
+  [
+    'config plan schema',
+    ['cache', 'schema', 'configPlan'],
+    'docs/shifu/schema/cache-config-plan-v1.schema.json',
   ],
 ]) {
   test(`shifu exposes the exact checked-in ${label}`, () => {
@@ -205,6 +226,178 @@ test('cache apply is transparent when no profile projection is configured', () =
   );
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.stdout, 'cache-pass-through');
+});
+
+test('cache status is local-only and distinguishes absent from partial configuration', (t) => {
+  const fixture = shellHarness(t);
+  const configFile = path.join(fixture.root, 'build-local.env');
+  assert.deepEqual(
+    cacheStatus({ configFile, receiptPath: fixture.receipt, env: {} })
+      .configuration,
+    {
+      source: 'none',
+      pair: 'absent',
+      scope: 'development',
+      reference: null,
+      digest: '',
+    },
+  );
+  fs.writeFileSync(
+    configFile,
+    `export SHIFU_CACHE_PROFILE_REF='${fixture.profilePath}'\n`,
+  );
+  const partial = cacheStatus({
+    configFile,
+    receiptPath: fixture.receipt,
+    env: {},
+  });
+  assert.equal(partial.overall, 'failed');
+  assert.equal(partial.configuration.source, 'user-config');
+  assert.equal(partial.configuration.pair, 'partial');
+  assert.equal(partial.configuration.reference.type, 'local-path');
+  assert.doesNotMatch(JSON.stringify(partial), new RegExp(fixture.root));
+});
+
+test('cache use is dry-run by default and manages only its delimited block', async (t) => {
+  const fixture = shellHarness(t);
+  const configFile = path.join(fixture.root, 'build-local.env');
+  const quotedProfile = path.join(fixture.root, "profile's.json");
+  fs.copyFileSync(fixture.profilePath, quotedProfile);
+  fs.writeFileSync(configFile, "export KEEP_ME='yes'\n");
+  const options = {
+    configFile,
+    reference: quotedProfile,
+    digest: fixture.digest,
+    scope: 'development',
+  };
+  const plan = await cacheUse(options);
+  assert.equal(plan.execute, false);
+  assert.equal(plan.changed, true);
+  assert.equal(fs.readFileSync(configFile, 'utf8'), "export KEEP_ME='yes'\n");
+  assert.doesNotMatch(JSON.stringify(plan), new RegExp(fixture.root));
+
+  const applied = await cacheUse({ ...options, execute: true });
+  assert.equal(applied.backup.created, true);
+  const configured = fs.readFileSync(configFile, 'utf8');
+  assert.match(configured, /export KEEP_ME='yes'/);
+  assert.match(configured, /# shifu-cache-profile begin/);
+  assert.match(configured, /SHIFU_CACHE_PROFILE_DIGEST/);
+  assert.equal(
+    cacheStatus({ configFile, receiptPath: fixture.receipt, env: {} })
+      .configuration.source,
+    'shifu-managed',
+  );
+  assert.equal(
+    (
+      await cacheDoctor({
+        configFile,
+        receiptPath: fixture.receipt,
+        env: {},
+      })
+    ).overall,
+    'healthy',
+  );
+
+  const unsetPlan = cacheUnset({ configFile });
+  assert.equal(unsetPlan.changed, true);
+  assert.match(
+    fs.readFileSync(configFile, 'utf8'),
+    /shifu-cache-profile begin/,
+  );
+  cacheUnset({ configFile, execute: true });
+  const after = fs.readFileSync(configFile, 'utf8');
+  assert.equal(after, "export KEEP_ME='yes'\n");
+});
+
+test('cache use refuses to overwrite an Atlas controller projection', async (t) => {
+  const fixture = shellHarness(t);
+  const configFile = path.join(fixture.root, 'build-local.env');
+  fs.writeFileSync(
+    configFile,
+    '# atlas-shifu-cache-profile begin\n# atlas-shifu-cache-profile end\n',
+  );
+  assert.equal(
+    cacheStatus({
+      configFile,
+      receiptPath: fixture.receipt,
+      env: {
+        SHIFU_CACHE_PROFILE_REF: fixture.profilePath,
+        SHIFU_CACHE_PROFILE_DIGEST: fixture.digest,
+      },
+    }).configuration.source,
+    'controller-projection',
+  );
+  await assert.rejects(
+    cacheUse({
+      configFile,
+      reference: fixture.profilePath,
+      digest: fixture.digest,
+    }),
+    /controller-managed/,
+  );
+});
+
+test('cache doctor resolves configured profiles while leaving hit evidence unproven', async (t) => {
+  const fixture = shellHarness(t);
+  const configFile = path.join(fixture.root, 'build-local.env');
+  fs.writeFileSync(
+    configFile,
+    `# shifu-cache-profile begin\nexport SHIFU_CACHE_PROFILE_REF='${fixture.profilePath}'\nexport SHIFU_CACHE_PROFILE_DIGEST='${fixture.digest}'\nexport SHIFU_CACHE_SCOPE='development'\n# shifu-cache-profile end\n`,
+  );
+  const diagnostic = await cacheDoctor({
+    configFile,
+    receiptPath: fixture.receipt,
+    env: {},
+  });
+  assert.equal(diagnostic.overall, 'healthy');
+  assert.equal(diagnostic.services.npm.reachable, 'not-probed');
+  assert.equal(diagnostic.services.npm.effective, true);
+  assert.equal(diagnostic.services.npm.hit, 'unproven');
+});
+
+test('cache doctor probes selected HTTP endpoints only when requested', async (t) => {
+  const fixture = shellHarness(t);
+  const server = http.createServer((request, response) => {
+    assert.equal(request.method, 'HEAD');
+    response.writeHead(200).end();
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => server.close());
+  const address = server.address();
+  assert.equal(typeof address, 'object');
+  const profile = JSON.parse(fs.readFileSync(fixture.profilePath, 'utf8'));
+  profile.services.npm.endpoint.url = `http://127.0.0.1:${address.port}/npm/`;
+  const raw = `${JSON.stringify(profile, null, 2)}\n`;
+  fs.writeFileSync(fixture.profilePath, raw);
+  const digest = `sha256:${crypto.createHash('sha256').update(raw).digest('hex')}`;
+  const configFile = path.join(fixture.root, 'build-local.env');
+  fs.writeFileSync(
+    configFile,
+    `export SHIFU_CACHE_PROFILE_REF='${fixture.profilePath}'\nexport SHIFU_CACHE_PROFILE_DIGEST='${digest}'\n`,
+  );
+  const diagnostic = await cacheDoctor({
+    configFile,
+    receiptPath: fixture.receipt,
+    env: {},
+    probe: true,
+    timeoutMs: 1000,
+  });
+  assert.equal(diagnostic.overall, 'healthy');
+  assert.equal(diagnostic.probe, true);
+  assert.equal(diagnostic.services.npm.reachable, 'reachable');
+});
+
+test('cache status CLI emits the diagnostic receipt as JSON', (t) => {
+  const fixture = shellHarness(t);
+  const result = spawnSync(
+    process.execPath,
+    [SHIFU_MJS, 'cache', 'status', '--json'],
+    { cwd: ROOT, encoding: 'utf8', env: fixture.env },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  const diagnostic = JSON.parse(result.stdout);
+  assert.equal(diagnostic.schema, 'shifu.cache-diagnostic/v1');
+  assert.equal(diagnostic.mode, 'status');
 });
 
 test(

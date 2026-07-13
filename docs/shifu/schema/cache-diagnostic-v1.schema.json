@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/cache-diagnostic-v1.schema.json",
+  "title": "Shifu Cache Diagnostic v1",
+  "description": "Redacted local cache profile status and optional bounded reachability diagnostics.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "mode", "overall", "probe", "configuration", "profile", "receipt", "services", "redaction"],
+  "properties": {
+    "schema": { "const": "shifu.cache-diagnostic/v1" },
+    "mode": { "enum": ["status", "doctor"] },
+    "overall": { "enum": ["unconfigured", "configured", "resolved", "healthy", "degraded", "failed"] },
+    "probe": { "type": "boolean" },
+    "configuration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "pair", "scope", "reference", "digest"],
+      "properties": {
+        "source": { "enum": ["none", "environment", "user-config", "shifu-managed", "controller-projection"] },
+        "pair": { "enum": ["absent", "partial", "complete"] },
+        "scope": { "enum": ["development", "self-hosted-runner", "ci", "release"] },
+        "reference": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["type", "value"],
+              "properties": { "type": { "enum": ["http", "invalid"] }, "value": { "type": "string" } }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["type", "pathDigest"],
+              "properties": {
+                "type": { "enum": ["file", "local-path"] },
+                "pathDigest": { "$ref": "#/$defs/sha256" }
+              }
+            }
+          ]
+        },
+        "digest": { "oneOf": [{ "const": "" }, { "$ref": "#/$defs/sha256" }] }
+      }
+    },
+    "profile": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "revision", "digest"],
+          "properties": {
+            "id": { "type": "string", "minLength": 1 },
+            "revision": { "type": "integer", "minimum": 1 },
+            "digest": { "$ref": "#/$defs/sha256" }
+          }
+        }
+      ]
+    },
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "pathDigest", "resolvedAt"],
+      "properties": {
+        "state": { "enum": ["absent", "current", "stale", "invalid"] },
+        "pathDigest": { "oneOf": [{ "const": "" }, { "$ref": "#/$defs/sha256" }] },
+        "resolvedAt": { "type": "string" }
+      }
+    },
+    "services": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["configured", "resolved", "reachable", "probeEvidence", "effective", "hit", "reason"],
+        "properties": {
+          "configured": { "type": "boolean" },
+          "resolved": { "type": "boolean" },
+          "reachable": { "enum": ["not-probed", "not-applicable", "reachable", "failed"] },
+          "probeEvidence": {
+            "oneOf": [
+              { "type": "null" },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["state", "method", "durationMs"],
+                "properties": {
+                  "state": { "enum": ["not-applicable", "reachable", "failed"] },
+                  "method": { "enum": ["none", "HEAD"] },
+                  "durationMs": { "type": "integer", "minimum": 0 },
+                  "status": { "type": "integer", "minimum": 100, "maximum": 599 },
+                  "reason": { "enum": ["timeout", "request-failed"] }
+                }
+              }
+            ]
+          },
+          "effective": { "type": "boolean" },
+          "hit": { "const": "unproven" },
+          "reason": { "type": "string", "maxLength": 512 }
+        }
+      }
+    },
+    "redaction": { "const": "credentials-userinfo-query-fragment-and-local-path-digest" },
+    "error": { "type": "string", "maxLength": 1024 }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+  }
+}

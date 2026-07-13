@@ -21,6 +21,13 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
+  cacheDoctor,
+  cacheStatus,
+  cacheUnset,
+  cacheUse,
+  printDiagnostic,
+} from './scripts/shifu-cache-operations.mjs';
+import {
   applyCacheProfile,
   resolveCacheProfile,
   validateProfileBytes,
@@ -74,6 +81,20 @@ const CACHE_SCHEMAS = {
     'shifu',
     'schema',
     'cache-resolution-v1.schema.json',
+  ),
+  diagnostic: path.join(
+    __dirname,
+    'docs',
+    'shifu',
+    'schema',
+    'cache-diagnostic-v1.schema.json',
+  ),
+  configPlan: path.join(
+    __dirname,
+    'docs',
+    'shifu',
+    'schema',
+    'cache-config-plan-v1.schema.json',
   ),
 };
 
@@ -187,11 +208,20 @@ function cacheHelp() {
   cache contract            print the canonical contract manifest
   cache schema profile      print the cache-profile JSON Schema
   cache schema resolution   print the resolution-evidence JSON Schema
+  cache schema diagnostic   print the status/doctor JSON Schema
+  cache schema configPlan   print the use/unset plan JSON Schema
   cache validate profile [FILE|-] [--digest SHA256]
                             validate one profile through the Shifu runtime
   cache resolve [OPTIONS]   resolve a trusted profile and print a redacted receipt
   cache apply [OPTIONS] -- COMMAND [ARGS...]
                             apply environment bindings to one child execution
+  cache status [--json] [--receipt FILE]
+                            inspect local projection and receipt without network I/O
+  cache doctor [--json] [--probe] [--receipt FILE] [--timeout-ms N]
+                            resolve the profile; --probe adds bounded endpoint HEAD checks
+  cache use --profile REF --digest SHA256 [--scope SCOPE] [--execute]
+                            plan or write only Shifu's managed local config block
+  cache unset [--execute]   plan or remove only Shifu's managed local config block
 
 Runtime options:
   --profile REF             local path, file URL, or secret-free http(s) URL
@@ -205,7 +235,8 @@ supplying only one fails closed.
 
 Contract and schema discovery return the exact checked-in JSON. Private
 inventories generate profile instances; they do not change or get embedded in
-this contract.`);
+this contract. status/doctor distinguish configured, resolved, reachable,
+effective, and cache-hit evidence; a resolution receipt never proves a hit.`);
 }
 
 function defaultReceiptPath() {
@@ -264,6 +295,63 @@ function parseCacheRuntimeOptions(argv) {
   return options;
 }
 
+/**
+ * @param {string[]} argv
+ * @param {{allowProbe?: boolean}} [settings]
+ */
+function parseCacheDiagnosticOptions(argv, { allowProbe = false } = {}) {
+  const options = {
+    json: false,
+    probe: false,
+    receiptPath: defaultReceiptPath(),
+    timeoutMs: 3000,
+  };
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    const value = () => {
+      i += 1;
+      if (i >= argv.length) throw new Error(`${arg} requires a value`);
+      return argv[i];
+    };
+    if (arg === '--json') options.json = true;
+    else if (arg === '--receipt') options.receiptPath = value();
+    else if (arg === '--probe' && allowProbe) options.probe = true;
+    else if (arg === '--timeout-ms' && allowProbe) {
+      options.timeoutMs = Number(value());
+      if (!Number.isInteger(options.timeoutMs) || options.timeoutMs < 100)
+        throw new Error('--timeout-ms must be an integer >= 100');
+    } else throw new Error(`unknown cache diagnostic option: ${arg}`);
+  }
+  return options;
+}
+
+/** @param {string[]} argv */
+function parseCacheConfigOptions(argv) {
+  const options = {
+    reference: '',
+    digest: '',
+    scope: 'development',
+    execute: false,
+  };
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    const value = () => {
+      i += 1;
+      if (i >= argv.length) throw new Error(`${arg} requires a value`);
+      return argv[i];
+    };
+    if (arg === '--profile' || arg === '--profile-ref')
+      options.reference = value();
+    else if (arg === '--digest') options.digest = value();
+    else if (arg === '--scope') options.scope = value();
+    else if (arg === '--execute') options.execute = true;
+    else throw new Error(`unknown cache configuration option: ${arg}`);
+  }
+  if (!options.reference || !options.digest)
+    throw new Error('cache use requires --profile REF and --digest SHA256');
+  return options;
+}
+
 /** @param {string[]} argv */
 async function runCacheCommand(argv) {
   const sub = argv[0] || 'help';
@@ -309,6 +397,52 @@ async function runCacheCommand(argv) {
     const options = parseCacheRuntimeOptions(argv.slice(1));
     const status = await applyCacheProfile(options);
     process.exitCode = status;
+    return;
+  }
+  if (sub === 'status') {
+    const options = parseCacheDiagnosticOptions(argv.slice(1));
+    printDiagnostic(
+      cacheStatus({
+        configFile: CONFIG_FILE,
+        receiptPath: options.receiptPath,
+      }),
+      options.json,
+    );
+    return;
+  }
+  if (sub === 'doctor') {
+    const options = parseCacheDiagnosticOptions(argv.slice(1), {
+      allowProbe: true,
+    });
+    printDiagnostic(
+      await cacheDoctor({
+        configFile: CONFIG_FILE,
+        receiptPath: options.receiptPath,
+        probe: options.probe,
+        timeoutMs: options.timeoutMs,
+      }),
+      options.json,
+    );
+    return;
+  }
+  if (sub === 'use') {
+    const options = parseCacheConfigOptions(argv.slice(1));
+    process.stdout.write(
+      `${JSON.stringify(await cacheUse({ configFile: CONFIG_FILE, ...options }), null, 2)}\n`,
+    );
+    return;
+  }
+  if (sub === 'unset') {
+    const args = argv.slice(1);
+    if (
+      args.some((arg) => arg !== '--execute') ||
+      args.filter((arg) => arg === '--execute').length > 1
+    )
+      throw new Error('cache unset accepts only one optional --execute');
+    const execute = args.includes('--execute');
+    process.stdout.write(
+      `${JSON.stringify(cacheUnset({ configFile: CONFIG_FILE, execute }), null, 2)}\n`,
+    );
     return;
   }
   if (sub === 'help' || sub === '-h' || sub === '--help') {

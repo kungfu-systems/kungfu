@@ -8,11 +8,15 @@
   "authority": {
     "profileSchema": "docs/shifu/schema/cache-profile-v1.schema.json",
     "resolutionSchema": "docs/shifu/schema/cache-resolution-v1.schema.json",
+    "diagnosticSchema": "docs/shifu/schema/cache-diagnostic-v1.schema.json",
+    "configPlanSchema": "docs/shifu/schema/cache-config-plan-v1.schema.json",
     "decision": "docs/shifu/adr/SHIFU-ADR-0001-cache-profile-contract-and-ownership.md"
   },
   "schemaIds": {
     "profile": "https://libkungfu.dev/schemas/shifu/cache-profile-v1.schema.json",
-    "resolution": "https://libkungfu.dev/schemas/shifu/cache-resolution-v1.schema.json"
+    "resolution": "https://libkungfu.dev/schemas/shifu/cache-resolution-v1.schema.json",
+    "diagnostic": "https://libkungfu.dev/schemas/shifu/cache-diagnostic-v1.schema.json",
+    "configPlan": "https://libkungfu.dev/schemas/shifu/cache-config-plan-v1.schema.json"
   },
   "compatibility": {
     "identity": "schema field plus major version",
@@ -32,6 +36,7 @@
       "post-checkout cache profile schema",
       "cache resolution",
       "tool bindings",
+      "developer status, doctor, and bounded local configuration",
       "non-secret resolution evidence"
     ],
     "inventoryController": [
@@ -58,6 +63,10 @@
     "validateProfile": "shifu cache validate profile FILE",
     "resolveProfile": "shifu cache resolve --profile REF --digest SHA256",
     "applyProfile": "shifu cache apply --profile REF --digest SHA256 -- COMMAND",
+    "status": "shifu cache status --json",
+    "doctor": "shifu cache doctor --json [--probe]",
+    "use": "shifu cache use --profile REF --digest SHA256 [--execute]",
+    "unset": "shifu cache unset [--execute]",
     "repositoryCheck": "./shifu check"
   }
 }

@@ -125,3 +125,38 @@ consumer lifecycle may continue to invoke `shifu cache apply` explicitly; the
 cache control verb and active-child fuse prevent double application. The pinned
 Shifu checkout remains the only component that interprets fields and writes the
 receipt.
+
+## Developer operations
+
+Shifu exposes one local diagnostic surface without taking ownership of central
+cache infrastructure:
+
+```sh
+./shifu cache status --json
+./shifu cache doctor --json
+./shifu cache doctor --json --probe
+```
+
+`status` reads only the local projection and resolution receipt. It performs no
+network I/O. `doctor` resolves the pinned profile and verifies its digest;
+`--probe` additionally performs bounded HTTP `HEAD` checks. Diagnostics keep
+`configured`, `resolved`, `reachable`, `effective`, and `hit` separate. A
+successful resolution receipt proves selected bindings, not a provider cache
+hit, so `hit` remains `unproven` without provider evidence.
+
+Developers outside an inventory-controller projection can manage a bounded
+block in the user-global config:
+
+```sh
+./shifu cache use --profile path/to/profile.json --digest sha256:...
+./shifu cache use --profile path/to/profile.json --digest sha256:... --execute
+./shifu cache unset
+./shifu cache unset --execute
+```
+
+Both commands are dry-run by default. `--execute` writes or removes only the
+block delimited by `# shifu-cache-profile begin/end`, preserves unrelated
+content, creates a backup before replacing an existing file, and returns a
+redacted plan/receipt. `cache use` refuses to overwrite a controller-managed
+Atlas block. Central warming, purge, garbage collection, endpoint assignment,
+and host rollout remain inventory-controller operations.
