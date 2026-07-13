@@ -3,7 +3,8 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ADR-0077
 decision_status: accepted
-implementation_status: not-started
+implementation_status: partial
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/771]
 review_state: maintainer-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -81,6 +82,17 @@ Build agent coordination as a live-runtime consumer on the existing substrate,
 5. **First slice: a named-lock arbiter for git mainline integration** — `kungfu
    lock-acquire mainline-integration` blocks on the grant frame (zero poll) and
    takes the agent's model out of the retry loop entirely.
+
+### Delivery status (partial)
+
+- **Delivered.** A same-host named lock (`kungfu lock run NAME -- <command>`) with
+  crash-safe auto-release via holder-pid liveness, and Episode audit of each
+  run's wait/acquire/release. The stdlib lock is dependency-free and tested
+  cross-process; the audit and CLI run on a local core build.
+- **Deferred to a follow-up.** The journal-native arbiter that replaces the
+  waiter's short poll with a `coloop` coroutine awaiting a grant frame, and the
+  instruct-injection path — both share the arbiter-peer machinery and land
+  together. Cross-host coordination and hard confinement remain out of scope.
 
 ### Architecture — reuse vs build
 
