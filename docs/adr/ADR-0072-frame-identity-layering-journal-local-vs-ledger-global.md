@@ -3,8 +3,9 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: ADR-0072
 decision_status: accepted
-implementation_status: partial
+implementation_status: staged
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/740]
+qualification_refs: [framework/core/src/libkungfu/tests/durable_ingest_tests.cpp]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -17,7 +18,7 @@ last_reviewed: 2026-07-13
 
 # ADR-0072: frame identity layering — journal-local frame uid, ledger-global stream position
 
-- Status: accepted; Phase 1 implemented (Phase 2 pending)
+- Status: accepted; Phase 1 implemented, Phase 2 confirmed and documented
 - Date: 2026-07-13
 - Category: runtime architecture / journal identity / durability
 - Related: [ADR-0062](ADR-0062-journal-container-epoch-and-offline-conversion.md)
@@ -134,11 +135,60 @@ converter and become far more expensive. This is the last low-cost window.
 
 ### Phase 2 — authoritative ledger-global identity
 
-Confirm and document `stream_position` + Episode content root as the permanent
-key: pin down where `stream_id` / `container_epoch` / `sequence` are assigned so
-`sequence` is authoritatively monotonic and persistent (the durable tier already
-enforces contiguity on ingest), and state that ledger consumers key on the
-structural coordinate and the Episode root, not on `frame_uid`.
+Status: confirmed and documented in `dev/v4/v4.0`. Phase 2 is a specification
+milestone, not new runtime code: grounding the codebase showed the authoritative,
+crash-safe, monotonic assignment mechanism **already exists** in the durable tier,
+so the deliverable is to name the authority, state the contract any future
+producer must follow, and pin the guarantee with a regression test — not to build
+a second counter.
+
+**Where the coordinate is assigned.**
+
+- `stream_id` and `container_epoch` are the **container/writer identity**. They are
+  fixed when the durable stream is opened (`ingest_options.stream_id` /
+  `container_epoch`, both required non-zero) and every appended record and
+  checkpoint is validated against them (`durable_ingest`
+  rejects a mismatch). They are assigned once per stream container, upstream of
+  ingest, and never re-derived per frame.
+- `sequence` is the **monotonic ledger coordinate**, and the durable tier is its
+  single authority. The authority is the persisted `durable_watermark`: it is
+  written into the double-slot, magic + CRC + version checkpoint on every barrier
+  and restored on restart (`load_checkpoint`). On `append` the durable tier
+  computes the authoritative next value —
+  `expected = pending ? pending.sequence + 1 : durable_watermark.sequence + 1` —
+  and admits a record only when its `sequence` equals `expected` (else
+  `durable_position_gap`). Because the watermark is crash-safe and persistent,
+  assignment resumes at `watermark + 1` after a restart and a sequence at or below
+  the durable watermark can never be re-issued or regressed. This is deterministic,
+  not probabilistic.
+
+**Contract for producers.** The durable-tier watermark is authoritative. Any
+upstream producer that eventually drives live durable ingest must derive
+`sequence` from that authority (query it via `status().durable_watermark` and
+append `watermark + 1`, anchored contiguously within the `(stream_id,
+container_epoch)` container), and must **not** invent an independent counter. The
+shared `append` path deliberately stays validate-mode rather than becoming an
+assigner: it also serves byte-exact import / replay
+([ADR-0053](ADR-0053-self-contained-episode-bundles.md)), where the sequence is
+supplied by the source Episode and must be preserved exactly, so the durable tier
+validates the caller's coordinate against the authoritative watermark instead of
+overwriting it.
+
+**What ledger consumers key on.** Permanent, cross-journal identity is
+`(Episode content root, stream_position = (stream_id, container_epoch, sequence))`
+— the Episode content root ([ADR-0043](ADR-0043-episode-identity-sealed-content-root.md))
+for content-addressed membership and the structural `stream_position` for the
+monotonic coordinate. Consumers do **not** key permanence on `frame_uid`; per
+Phase 1 `frame_uid` is journal-local (in-journal lookup, `trigger_frame_uid`
+causal links, frame checksum) and the Episode manifest treats it accordingly
+(within-view dedup and causal links, never as the permanent ledger key).
+
+Regression coverage: `durable_ingest_tests.cpp`
+(`sequence assignment authority is crash-safe and monotonic (ADR-0072 Phase 2)`)
+pins that assignment resumes at `watermark + 1` across restart and that an
+already-durable sequence cannot be re-issued or regressed; existing restart,
+rollover, and sealed-segment tests cover the crash-safe persistence of the
+watermark itself.
 
 ## Alternatives considered
 
@@ -172,9 +222,14 @@ structural coordinate and the Episode root, not on `frame_uid`.
 
 - Exact Phase 1 bit layout: `page_id` and `frame_nb` widths within the 64-bit
   field (e.g. 32/32 gives 64 EB per journal), and whether any bits are reserved.
-- Where `stream_id` / `container_epoch` / `sequence` are authoritatively
+- ~~Where `stream_id` / `container_epoch` / `sequence` are authoritatively
   assigned today (durable_ingest enforces contiguity but the assigner is
   upstream) — Phase 2 must make the monotonic assignment authoritative and
-  crash-safe.
+  crash-safe.~~ Resolved in Phase 2: the durable tier's persisted
+  `durable_watermark` is the crash-safe monotonic authority for `sequence`;
+  `stream_id` / `container_epoch` are container/writer identity fixed at stream
+  open. Live producers must derive `sequence` from the watermark rather than
+  invent a counter; the shared `append` path stays validate-mode to preserve
+  byte-exact import.
 - Whether `trigger_frame_uid` causal links need any ledger-level projection to
   `stream_position` for cross-journal causality, or stay journal-local.

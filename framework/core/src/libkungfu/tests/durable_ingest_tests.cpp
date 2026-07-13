@@ -264,6 +264,58 @@ void test_position_gap_is_rejected_before_append() {
   require(refused, "position gap was appended");
 }
 
+// ADR-0072 Phase 2: the durable tier is the authoritative, crash-safe, monotonic
+// assigner of stream_position.sequence. Assignment continuity survives restart
+// (numbering resumes at the persisted durable_watermark + 1), and a sequence at
+// or below the durable watermark can never be re-issued or regressed after
+// recovery. This is what makes stream_position, not frame_uid, the permanent
+// ledger key.
+void test_sequence_assignment_authority_is_crash_safe_and_monotonic() {
+  temp_tree tree;
+  owners owner(tree.root());
+  {
+    durable_ingest_log log(options(tree.root()));
+    log.append(position(1), 1001, "one", owner.service, owner.writer);
+    log.append(position(2), 1002, "two", owner.service, owner.writer);
+    const auto barrier = log.barrier(51, durability_profile::DurableSync, owner.service, owner.writer);
+    require(barrier.receipt.status == receipt_status::Succeeded, "authority fixture barrier did not durably commit");
+  }
+  {
+    // Restart: the persisted watermark is the single assignment authority, so the
+    // next durable sequence is watermark + 1 and it commits without a gap.
+    durable_ingest_log reopened(options(tree.root()));
+    require(reopened.status().durable_watermark == position(2), "restart lost the authoritative assignment frontier");
+    reopened.append(position(3), 1003, "three", owner.service, owner.writer);
+    const auto barrier = reopened.barrier(52, durability_profile::DurableSync, owner.service, owner.writer);
+    require(barrier.receipt.status == receipt_status::Succeeded && barrier.receipt.durable_watermark == position(3),
+            "authoritative assignment did not resume monotonically at watermark + 1 after restart");
+  }
+  {
+    // Restart again: a sequence at or below the durable watermark can never be
+    // re-issued — no duplicate, no regression — while watermark + 1 is admitted.
+    durable_ingest_log reopened(options(tree.root()));
+    require(reopened.status().durable_watermark == position(3), "second restart lost the assignment frontier");
+    bool duplicate_refused = false;
+    try {
+      reopened.append(position(3), 1003, "duplicate", owner.service, owner.writer);
+    } catch (const std::logic_error &) {
+      duplicate_refused = true;
+    }
+    require(duplicate_refused, "an already-durable sequence was re-issued after restart");
+    bool regression_refused = false;
+    try {
+      reopened.append(position(1), 1001, "regress", owner.service, owner.writer);
+    } catch (const std::logic_error &) {
+      regression_refused = true;
+    }
+    require(regression_refused, "a sequence below the durable watermark was admitted after restart");
+    reopened.append(position(4), 1004, "four", owner.service, owner.writer);
+    const auto barrier = reopened.barrier(53, durability_profile::DurableSync, owner.service, owner.writer);
+    require(barrier.receipt.status == receipt_status::Succeeded && barrier.receipt.durable_watermark == position(4),
+            "authoritative next sequence (watermark + 1) was not admitted after restart");
+  }
+}
+
 void test_rollover_preserves_order_and_checkpoint() {
   temp_tree tree;
   owners owner(tree.root());
@@ -746,6 +798,8 @@ int main(int argc, char **argv) {
       {"writer may exit after active admission", test_writer_may_exit_after_admission_without_invalidating_frame},
       {"stale writer attestation is rejected at admission", test_stale_writer_attestation_is_rejected_at_admission},
       {"position gap is rejected before append", test_position_gap_is_rejected_before_append},
+      {"sequence assignment authority is crash-safe and monotonic (ADR-0072 Phase 2)",
+       test_sequence_assignment_authority_is_crash_safe_and_monotonic},
       {"rollover preserves order and checkpoint", test_rollover_preserves_order_and_checkpoint},
       {"restart verifies prior sealed segments in durable chain",
        test_restart_verifies_prior_sealed_segments_in_durable_chain},
