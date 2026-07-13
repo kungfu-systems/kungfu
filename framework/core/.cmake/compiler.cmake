@@ -79,6 +79,15 @@ if (MSVC)
   # by .gyp/verify-windows-symbols.js.
 endif ()
 
+# fmt 10.2.1's consteval format-string parser is rejected by AppleClang 21 in
+# C++23 mode. Apply the narrow compatibility flag to every Core C++ target,
+# including tests that intentionally do not link kungfu_compile_contract.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND
+   CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 21 AND
+   CMAKE_CXX_COMPILER_VERSION VERSION_LESS 22)
+  add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-DFMT_CONSTEVAL=>")
+endif()
+
 add_library(kungfu_compile_contract INTERFACE)
 target_compile_features(kungfu_compile_contract INTERFACE cxx_std_23)
 target_compile_definitions(kungfu_compile_contract INTERFACE
