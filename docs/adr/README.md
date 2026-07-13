@@ -154,6 +154,7 @@ implemented and qualified or explicitly waived for that release.
 | [SHIFU-0002](SHIFU-ADR-0002-local-artifact-catalog-and-safe-promotion.md) | accepted | Shifu and Kungfu product artifacts share provenance-aware, Git-safe local promotion semantics |
 | [SHIFU-0003](SHIFU-ADR-0003-uv-effective-lock-cache-enforcement.md) | accepted | Strict uv cache execution uses a disposable effective lock while canonical locks stay public |
 | [SHIFU-0004](SHIFU-ADR-0004-gate-control-plane-contract.md) | accepted | Shifu owns the project-independent Gate contract; projects own catalogs and explicit policy profiles |
+| [SHIFU-0005](SHIFU-ADR-0005-repo-root-discovery-and-jurisdiction.md) | accepted | Two-level repo discovery; a buildchain-managed repo joins by declaring `registrar: shifu`, and shifu asks buildchain for the KFD-3 layout instead of copying it |
 
 ## Reading by theme
 

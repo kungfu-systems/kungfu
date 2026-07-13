@@ -217,7 +217,10 @@ per-platform special-casing) with one binary that:
   assuming what it is implemented in, and carry a two-fuse anti-loop guard
   (`SHIFU_FROM_SHIM` / `SHIFU_DELEGATED`) — so the handover survives any
   toolchain evolution, including one that retires node. Protocol authority:
-  [ADR-0044](../adr/ADR-0044-shifu-delegation-protocol.md).
+  [ADR-0044](../adr/ADR-0044-shifu-delegation-protocol.md). This entrypoint-pair
+  recognition is Level 1 of a two-level discovery; a buildchain-managed repo
+  that declares shifu is served without any entrypoint files (see "Two-level
+  repository discovery" below, [SHIFU-ADR-0005](../adr/SHIFU-ADR-0005-repo-root-discovery-and-jurisdiction.md)).
 
 It scores three yeses: it *is* the process boundary in front of everything
 else; it needs to exist before node/python are provisioned, which only a
@@ -291,6 +294,15 @@ that `builds` / `promote` already read. Registration is advisory: a build
 that succeeded is never failed by its own bookkeeping — every problem is a
 named warning and the task's exit code passes through.
 
+Shifu does not hold the KFD-3 registry's path as a constant. That layout is
+Buildchain's to define, so shifu asks the repo-pinned `buildchain` binary
+(`buildchain layout --json`, contract `kungfu-buildchain-layout-discovery`) and
+reads `kfd.registries."kfd-3".path` back, caching the answer per repo and
+Buildchain version. The two seams shifu welds to are the pin file name
+`.buildchain-version` and that verb; both are contract-bound
+([`contracts.md`](../qualification/contracts.md)) so Buildchain changing either is a breaking
+change, and the path can never silently drift from a stale shifu copy.
+
 The division of labor is deliberate. Build logic stays declarative in the
 repo; what the launcher carries is the one thing repo scripts cannot do for
 themselves: outlive the build. Worktrees are temporary, so the stash is
@@ -299,3 +311,24 @@ which is also why onboarding a new repo costs zero scripts: declare the
 artifacts in the KFD registry and the installed launcher does the rest. The
 KFD registry was already the repo's fact ledger; letting the recorded facts
 drive distribution is the same load-bearing member carrying one more load.
+
+### Two-level repository discovery
+
+Onboarding a downstream repo also costs zero *executables*. Repository
+recognition is two-level ([SHIFU-ADR-0005](../adr/SHIFU-ADR-0005-repo-root-discovery-and-jurisdiction.md)):
+
+- **Level 1 — a kungfu bootstrap repo**, identified by the welded
+  `shifu` / `shifu.cmd` entrypoint pair, to which the installed binary
+  delegates (ADR-0044). Unchanged.
+- **Level 2 — a buildchain-managed repo**, reached only for real dispatch: a
+  directory carrying a `.buildchain-version` pin whose KFD-3 registry (located
+  via the layout answer above) declares `distribution.registrar = "shifu"`.
+  It has no in-repo entrypoint to spawn, so delegation no-ops and the installed
+  shifu serves it directly through the pinned toolchain.
+
+The signal that a downstream repo joins shifu's management is therefore a pure
+declaration, not two copied shell files. A `.buildchain-version` pin alone is
+not enough — the explicit `registrar: "shifu"` declaration is required, so a
+buildchain-managed repo that never opted in is not claimed. Lenient verbs
+(`--version`, `doctor`) skip the Level-2 check and stay useful rootless, so a
+version print never acquires Buildchain.

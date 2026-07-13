@@ -345,6 +345,34 @@ Buildchain 2.10 then collects:
 current surface set is agent/SDK/product focused. The Buildchain release
 passport wiring is active and is now part of `./shifu verify`.
 
+## Shifu asks Buildchain for its KFD-3 layout — two welded seams
+
+**Guarantee.** Shifu holds no copy of where a repository's KFD-3 surface
+registry lives. The location is Buildchain's to define, and shifu obtains it by
+asking the repo-pinned `buildchain` binary at runtime, not by embedding a path.
+Shifu's compiled knowledge of Buildchain is exactly two seams: the pin file name
+`.buildchain-version` and the self-describe verb `buildchain layout --json`
+(contract `kungfu-buildchain-layout-discovery`), from which shifu reads
+`kfd.registries."kfd-3".path`. Changing either seam — the pin name, the verb, or
+that contract's shape — is a breaking change and follows Buildchain's
+major-version discipline. On this basis a buildchain-managed repository can join
+shifu's management by declaring `distribution.registrar = "shifu"` in that
+registry, with no in-repo executables added.
+
+**Verify.** The consumer is `resolve_kfd3_registry` and `declares_shifu_jurisdiction`
+in [`crates/shifu/src/registrar.rs`](../../crates/shifu/src/registrar.rs) and the
+two-level `find_repo_root` in
+[`crates/shifu/src/main.rs`](../../crates/shifu/src/main.rs); the producer is
+`buildchain layout --json` (Buildchain `packages/core/buildchain-layout.js`). The
+decision and its boundaries are
+[SHIFU-ADR-0005](../adr/SHIFU-ADR-0005-repo-root-discovery-and-jurisdiction.md);
+the narrative is in [`rust-adoption.md`](../development/rust-adoption.md). Shifu reads the
+registry's own `registryPath` self-attestation back and warns on drift.
+
+**Maturity.** `development` — implemented in the launcher and unit-tested, with
+the discovery path exercised end to end against the pinned Buildchain binary; the
+downstream-repo onboarding surface is still maturing.
+
 ## The agent-first bridge is Kungfu's current KFD-3 profile
 
 **Guarantee.** The installed runtime carries a local Agent Onboarding Pack and
