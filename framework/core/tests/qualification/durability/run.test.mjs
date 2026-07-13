@@ -3,9 +3,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+import { episodeRuntimeEnv } from '../episode/run.mjs';
 import {
   evaluateQualification,
   loadProfile,
+  qualificationCommandInvocation,
   qualificationPlan,
 } from './run.mjs';
 
@@ -106,6 +108,34 @@ test('the dry run plans only local Shifu commands and makes no claim', () => {
   assert.equal(result.claims.declared_process_envelope_qualified, false);
   assert.equal(result.claims.power_loss_qualified, false);
   assert.equal(result.claims.production_profile_eligible, false);
+});
+
+test('Windows qualification commands enter Shifu through cmd.exe', () => {
+  const invocation = qualificationCommandInvocation(
+    ['shifu.cmd', 'doctor', '--json'],
+    'win32',
+    { ComSpec: 'C:\\Windows\\System32\\cmd.exe' },
+  );
+  assert.deepEqual(invocation, {
+    command: 'C:\\Windows\\System32\\cmd.exe',
+    args: ['/d', '/s', '/c', 'call shifu.cmd doctor --json'],
+  });
+  assert.deepEqual(
+    qualificationCommandInvocation(['./shifu', 'doctor', '--json'], 'linux'),
+    { command: './shifu', args: ['doctor', '--json'] },
+  );
+});
+
+test('Windows Episode workers preserve the inherited Path search list', () => {
+  const env = episodeRuntimeEnv(
+    'win32',
+    { Path: 'C:\\Users\\tester\\AppData\\Local\\Microsoft\\WinGet\\Links' },
+    'C:\\core\\dist\\kungfu',
+  );
+  assert.deepEqual(env, {
+    Path: 'C:\\core\\dist\\kungfu;C:\\Users\\tester\\AppData\\Local\\Microsoft\\WinGet\\Links',
+  });
+  assert.equal(env.PATH, undefined);
 });
 
 test('passing suites qualify only the declared process-crash envelope', () => {

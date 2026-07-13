@@ -188,9 +188,35 @@ function plannedSuite(step) {
   };
 }
 
+function cmdQuote(value) {
+  if (/^[A-Za-z0-9_./:\\-]+$/u.test(value)) return value;
+  return `"${value.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/g, '$1$1')}"`;
+}
+
+export function qualificationCommandInvocation(
+  command,
+  platform = process.platform,
+  env = process.env,
+) {
+  if (platform !== 'win32' || !/\.cmd$/iu.test(command[0])) {
+    return { command: command[0], args: command.slice(1) };
+  }
+  const executable = env.ComSpec || env.COMSPEC || 'cmd.exe';
+  const line = command.map((item) => cmdQuote(String(item))).join(' ');
+  return {
+    command: executable,
+    args: ['/d', '/s', '/c', `call ${line}`],
+  };
+}
+
 function runCommand(command, env = process.env) {
   const started = Date.now();
-  const result = spawnSync(command[0], command.slice(1), {
+  const invocation = qualificationCommandInvocation(
+    command,
+    process.platform,
+    env,
+  );
+  const result = spawnSync(invocation.command, invocation.args, {
     cwd: ROOT,
     env,
     encoding: 'utf8',

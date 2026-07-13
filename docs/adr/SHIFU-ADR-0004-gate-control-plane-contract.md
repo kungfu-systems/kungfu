@@ -3,8 +3,10 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: SHIFU-ADR-0004
 decision_status: accepted
-implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/762, https://github.com/kungfu-systems/kungfu/pull/765, https://github.com/kungfu-systems/kungfu/pull/767, https://github.com/kungfu-systems/kungfu/pull/769, https://github.com/kungfu-systems/kungfu/pull/773]
+implementation_status: implemented
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/762, https://github.com/kungfu-systems/kungfu/pull/765, https://github.com/kungfu-systems/kungfu/pull/767, https://github.com/kungfu-systems/kungfu/pull/769, https://github.com/kungfu-systems/kungfu/pull/773, https://github.com/kungfu-systems/kungfu/pull/781]
+closure_pr: https://github.com/kungfu-systems/kungfu/pull/781
+qualification_refs: [scripts/shifu-gate-runtime.test.mjs, scripts/check-kungfu-gate-catalog.test.mjs, .github/workflows/dev-verify-patrol.yml]
 review_state: unreviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -17,7 +19,7 @@ last_reviewed: 2026-07-13
 
 # SHIFU-ADR-0004: Gate control plane contract
 
-- Status: accepted; development implementation
+- Status: accepted and implemented
 - Date: 2026-07-13
 - Scope: Shifu quality and release gate declaration, explanation, planning,
   execution, and receipts
@@ -124,7 +126,12 @@ definitions. Planning and execution accept separate argv maps so a read-only
 plan does not depend on a project cache or container wrapper. Kungfu supplies
 only its profile id, runner preset, non-sensitive runtime environment, and
 opaque cache reference; Buildchain contains no Kungfu Gate ids or policy rows.
-PR 773 is the three-platform consumer canary for Buildchain PR 1152.
+PR 773 published the three-platform standing dev patrol after the consumer
+canary recorded its Linux/macOS failures and Windows Actions transport failure
+without rewriting them as passing. Buildchain then published the controller as
+stable `v2.12.2`; PR 781 pins the patrol to that release's immutable commit and
+closes the project-side rollout. Gates without a current qualification binding
+remain explicit `off` policy decisions rather than implicit omissions.
 
 ## Consequences
 

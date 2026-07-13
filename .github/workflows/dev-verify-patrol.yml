@@ -33,18 +33,16 @@ permissions:
 
 jobs:
   verify:
-    uses: kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@29a3daaf5417b138683f99a031268afd6efa9afd
+    uses: kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@0d5487b64cc4df52519e4b30492876f3819b9137
     with:
       buildchain-ref: ${{ inputs.buildchain-ref || '' }}
       gate-profile: dev-patrol
       runner-preset: kungfu-v4-self-hosted
       artifact-name: kungfu-dev-patrol-gates
-      gate-plan-command-json: >-
-        {"linux":["./shifu"],"macos":["./shifu"],"windows":["./shifu.cmd"]}
+      # Buildchain projects the cache profile as environment. Keep the Gate
+      # argv direct so the controller can append `gate plan/run ...` safely.
       gate-command-json: >-
-        {"linux":["./shifu","cache","apply","--","./shifu"],
-        "macos":["./shifu","cache","apply","--","./shifu"],
-        "windows":["./shifu.cmd","cache","apply","--","./shifu.cmd"]}
+        {"linux":["./shifu"],"macos":["./shifu"],"windows":["./shifu.cmd"]}
       gate-environment-json: >-
         {"SHIFU_NATIVE":"1","KUNGFU_BUILDCHAIN_NO_OPTIONAL":"1",
         "KUNGFU_BUILDCHAIN_SOURCE_BUILD":"1"}

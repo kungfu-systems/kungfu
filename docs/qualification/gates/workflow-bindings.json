@@ -145,7 +145,8 @@
       "requiredSnippets": [
         "gate-profile: dev-patrol",
         "runner-preset: kungfu-v4-self-hosted",
-        ".github/workflows/.gate-profile.yml@29a3daaf5417b138683f99a031268afd6efa9afd"
+        "{\"linux\":[\"./shifu\"],\"macos\":[\"./shifu\"],\"windows\":[\"./shifu.cmd\"]}",
+        ".github/workflows/.gate-profile.yml@0d5487b64cc4df52519e4b30492876f3819b9137"
       ]
     },
     {
