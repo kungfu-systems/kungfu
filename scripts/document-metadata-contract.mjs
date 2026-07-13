@@ -569,50 +569,6 @@ export function validateDocumentMetadata(options) {
         });
       }
     }
-    if (profile.id === 'document-redirect') {
-      const movedTo = String(fields.get('moved_to')?.value || '');
-      const movedToLine = fields.get('moved_to')?.line || 1;
-      const targetExists = fileSet.has(movedTo);
-      if (
-        !movedTo.startsWith('docs/') ||
-        path.posix.dirname(movedTo) === 'docs' ||
-        movedTo === rel
-      ) {
-        findings.push({
-          code: 'document-redirect-target',
-          file: rel,
-          line: movedToLine,
-          message:
-            'document redirect must target a canonical document below a docs section directory',
-        });
-      } else if (!targetExists) {
-        findings.push({
-          code: 'document-redirect-missing',
-          file: rel,
-          line: movedToLine,
-          message: `document redirect target is not a tracked Markdown document: ${movedTo}`,
-        });
-      } else {
-        const targetText =
-          documents.get(movedTo) ||
-          fs.readFileSync(path.join(root, movedTo), 'utf8');
-        const targetFrontmatter = parseFrontmatter(targetText);
-        const targetType = String(
-          registered[movedTo]?.doc_type ||
-            targetFrontmatter?.fields.get('doc_type')?.value ||
-            '',
-        );
-        if (targetType === 'document-redirect') {
-          findings.push({
-            code: 'document-redirect-chain',
-            file: rel,
-            line: movedToLine,
-            message:
-              'document redirects must point directly to canonical content',
-          });
-        }
-      }
-    }
     const sources = fields.get('sources');
     if (sources) {
       const allowed = contract.sourceKinds || [];

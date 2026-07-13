@@ -77,14 +77,13 @@
       "docs/qualification",
       "docs/research",
       "docs/shifu"
-    ],
-    "redirectDocumentType": "document-redirect"
+    ]
   },
   "publication": {
     "roots": ["README.md", "AGENTS.md", "CONTRIBUTING.md", "framework/spec/README.md"],
     "include": ["README.md", "AGENTS.md", "CONTRIBUTING.md", "docs", "framework/spec"],
     "allowedOrphans": [],
-    "allowedOrphanDocumentTypes": ["adr-redirect", "document-redirect"]
+    "allowedOrphanDocumentTypes": ["adr-redirect"]
   },
   "executableExamples": [
     {

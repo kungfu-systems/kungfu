@@ -140,35 +140,6 @@
       ]
     },
     {
-      "id": "document-redirect",
-      "metadataMode": "inline",
-      "patterns": ["^docs/(?!README\\.md$|MAP\\.md$)[^/]+\\.md$"],
-      "required": [
-        "metadata_schema",
-        "doc_type",
-        "document_status",
-        "review_state",
-        "sensitivity",
-        "moved_to"
-      ],
-      "constants": {
-        "metadata_schema": "kungfu.document-metadata/v1",
-        "doc_type": "document-redirect",
-        "document_status": "deprecated",
-        "sensitivity": "public"
-      },
-      "enums": {
-        "review_state": ["self-reviewed", "maintainer-reviewed"]
-      },
-      "forbidden": [
-        "status",
-        "decision_status",
-        "implementation_status",
-        "adr_id",
-        "source_level"
-      ]
-    },
-    {
       "id": "engineering-evidence",
       "metadataMode": "inline",
       "files": [

@@ -148,7 +148,7 @@ doc_type: adr-redirect
   assert.deepEqual(findings, []);
 });
 
-test('enforces a canonical docs hierarchy while retaining typed root redirects', () => {
+test('enforces a canonical docs hierarchy with entry-only root Markdown', () => {
   const hierarchical = structuredClone(contract);
   hierarchical.requiredFiles = ['README.md', 'docs/README.md'];
   hierarchical.requiredPointers = [{ from: 'README.md', to: 'docs/README.md' }];
@@ -156,30 +156,15 @@ test('enforces a canonical docs hierarchy while retaining typed root redirects',
     root: 'docs',
     entryFiles: ['docs/README.md'],
     canonicalDirectories: ['docs/guides'],
-    redirectDocumentType: 'document-redirect',
   };
-  hierarchical.publication.allowedOrphanDocumentTypes = ['document-redirect'];
   const root = fixture({
     'README.md': '# Home\n\n[Docs](docs/README.md)\n',
     'docs/README.md': '# Docs\n\n[Guide](guides/guide.md)\n',
     'docs/guides/guide.md': '# Guide\n',
-    'docs/guide.md': `---
-doc_type: document-redirect
----
-
-# Guide moved
-
-[Canonical](guides/guide.md)
-`,
   });
   const findings = checkDocs({
     root,
-    files: [
-      'README.md',
-      'docs/README.md',
-      'docs/guide.md',
-      'docs/guides/guide.md',
-    ],
+    files: ['README.md', 'docs/README.md', 'docs/guides/guide.md'],
     contract: hierarchical,
     vocabularyRegistry: false,
     metadataContract: false,
@@ -187,7 +172,7 @@ doc_type: document-redirect
   assert.deepEqual(findings, []);
 });
 
-test('rejects flat canonical docs and canonical links through redirects', () => {
+test('rejects every undeclared root Markdown document', () => {
   const hierarchical = structuredClone(contract);
   hierarchical.requiredFiles = ['README.md', 'docs/README.md'];
   hierarchical.requiredPointers = [{ from: 'README.md', to: 'docs/README.md' }];
@@ -195,20 +180,12 @@ test('rejects flat canonical docs and canonical links through redirects', () => 
     root: 'docs',
     entryFiles: ['docs/README.md'],
     canonicalDirectories: ['docs/guides'],
-    redirectDocumentType: 'document-redirect',
   };
   const root = fixture({
     'README.md': '# Home\n\n[Docs](docs/README.md)\n',
-    'docs/README.md': '# Docs\n\n[Old route](guide.md)\n',
+    'docs/README.md': '# Docs\n\n[Guide](guides/guide.md)\n',
     'docs/flat.md': '# Flat canonical page\n',
-    'docs/guide.md': `---
-doc_type: document-redirect
----
-
-# Guide moved
-
-[Canonical](guides/guide.md)
-`,
+    'docs/legacy.md': '# Legacy route\n',
     'docs/guides/guide.md': '# Guide\n',
   });
   const findings = checkDocs({
@@ -217,7 +194,7 @@ doc_type: document-redirect
       'README.md',
       'docs/README.md',
       'docs/flat.md',
-      'docs/guide.md',
+      'docs/legacy.md',
       'docs/guides/guide.md',
     ],
     contract: hierarchical,
@@ -227,8 +204,11 @@ doc_type: document-redirect
   assert.ok(
     findings.some((finding) => finding.code === 'documentation-hierarchy-root'),
   );
-  assert.ok(
-    findings.some((finding) => finding.code === 'documentation-redirect-hop'),
+  assert.equal(
+    findings.filter(
+      (finding) => finding.code === 'documentation-hierarchy-root',
+    ).length,
+    2,
   );
 });
 

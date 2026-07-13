@@ -11,18 +11,18 @@ review_state: maintainer-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
 period: ongoing
-theme: documentation-directory-authority-and-compatibility-facade
+theme: documentation-directory-authority
 confidence: high
 evidence_grade: A
 last_reviewed: 2026-07-13
 ---
 
-# ADR-0076: Documentation directory authority and compatibility facade
+# ADR-0076: Documentation directory authority
 
 - Status: accepted and implemented
 - Date: 2026-07-13
 - Scope: public documentation topology, navigation authority, metadata routing,
-  publication reachability, and inbound-link compatibility
+  and publication reachability
 - Related: [ADR-0074](ADR-0074-canonical-adr-authority-and-lifecycle-audit.md)
   establishes the unified architecture-decision authority used by this
   hierarchy.
@@ -36,11 +36,12 @@ every canonical page still lived directly under `docs/`. The physical layout no
 longer expressed ownership, made placement depend on maintainer memory, and
 made a directory listing harder to use as the product surface expanded.
 
-Moving files without a compatibility policy would break inbound GitHub links.
-Keeping canonical content at both old and new paths would preserve links but
-create two authorities. A hierarchy therefore needs both a canonical placement
-rule and a bounded compatibility representation that cannot regain semantic
-ownership.
+Kungfu has not published an alpha release or established an external
+documentation-path contract. Preserving speculative compatibility paths would
+therefore create a real maintenance surface for users and links that do not yet
+exist. The repository should express the intended information architecture
+directly and acquire compatibility obligations only when a released surface
+actually creates them.
 
 ## Decision
 
@@ -61,20 +62,15 @@ at the `docs/` root. Canonical documents live under responsibility directories:
 Each responsibility directory has a `README.md` index. The root guide links to
 every index, and canonical pages link directly to canonical pages.
 
-Former flat `docs/*.md` paths are temporary `document-redirect` compatibility
-documents. A redirect:
-
-- declares exactly one repository-relative `moved_to` target;
-- points directly to an existing canonical document below a section directory;
-- cannot chain through another redirect;
-- cannot carry decision, implementation, or independent lifecycle authority;
-- may remain unreachable from canonical navigation because its purpose is to
-  receive old inbound links.
+No other Markdown file may exist directly under `docs/`. Former flat paths are
+removed, not represented by redirect documents. If a future released
+publication surface establishes stable inbound URLs, redirects belong to that
+publication layer and require their own measured compatibility policy; they do
+not recreate a second Markdown surface in the source repository.
 
 `docs.contract.json` is the executable topology authority. The documentation
-gate rejects undeclared canonical directories, new flat canonical pages,
-missing section routes, invalid or stale redirects, and canonical links that
-route through the compatibility facade.
+gate rejects undeclared canonical directories, every undeclared root Markdown
+page, and missing section routes.
 
 ## Consequences
 
@@ -82,23 +78,21 @@ route through the compatibility facade.
   exhaustive question map.
 - Maintainers have a deterministic placement rule and cannot silently recreate
   the flat root.
-- Existing inbound repository links continue to resolve without creating a
-  second content or metadata authority.
-- The root directory still contains small compatibility files during the
-  transition. They are deliberately non-canonical and may be retired only when
-  a publication layer provides equivalent redirects and measured inbound-link
-  compatibility no longer requires the repository facade.
+- The repository carries no speculative redirect inventory or duplicate path
+  surface before a release creates a compatibility obligation.
+- A future release may deliberately establish stable publication URLs, but
+  that decision must define ownership, measurement, and retirement separately.
 - Moving a document now requires updating its section index and machine
   contracts, which adds bounded ceremony in exchange for long-term clarity.
 
 ## Qualification
 
 Implementation qualification must prove document conservation, direct
-canonical navigation, old-path compatibility, metadata authority uniqueness,
-publication reachability, and negative fixtures for flat placement, redirect
-chains, and canonical-to-redirect links.
+canonical navigation, metadata authority uniqueness, publication reachability,
+and negative fixtures for every undeclared root Markdown path.
 
 PR [#745](https://github.com/kungfu-systems/kungfu/pull/745) implements the
-canonical moves, section indexes, typed compatibility facade, metadata routing,
-publication graph, and negative placement/redirect fixtures. The deterministic
-documentation gate is the retained qualification surface.
+canonical moves, section indexes, metadata routing, publication graph, and
+negative placement fixtures. The follow-up implementation removes the
+speculative compatibility facade and makes the root rule absolute. The
+deterministic documentation gate is the retained qualification surface.

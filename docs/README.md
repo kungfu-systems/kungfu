@@ -154,10 +154,9 @@ or evidence route. The Map is optimized for lookup and audit, not for reading
 from top to bottom.
 
 Canonical documents live in the responsibility directories listed above.
-`docs/README.md` and `docs/MAP.md` are the only canonical Markdown entry files
-at the root. The former flat paths remain temporarily as typed compatibility
-redirects for existing inbound links; they carry no metadata or content
-authority, and canonical documents must link directly to canonical targets.
+`docs/README.md` and `docs/MAP.md` are the only Markdown files at the root.
+Kungfu has not published a documentation compatibility contract, so former
+flat paths are removed rather than retained as repository redirects.
 
 Place a new document in the section that owns its long-term maintenance
 question, add it to that section's `README.md`, and update this guide or the Map
@@ -176,8 +175,7 @@ retired positioning, preferred terms, and load-bearing guarantee language.
 Objective prose errors block pull requests through `docs:prose:required`;
 warning-level policy remains advisory until its false-positive behavior is
 qualified. `docs.contract.json` owns the directory taxonomy, stable entry
-files, compatibility-document type, publication topology, and executable
-examples;
+files, publication topology, and executable examples;
 [`document-metadata.contract.json`](document-metadata.contract.json) owns
 metadata routing and ADR projections;
 [`document-metadata.registry.json`](document-metadata.registry.json) keeps

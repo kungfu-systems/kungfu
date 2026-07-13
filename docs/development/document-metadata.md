@@ -37,7 +37,6 @@ both frontmatter and the registry, and stale registry entries fail the gate.
 | architecture decision | inline | canonical `docs/adr/` Core and Shifu records | ADR id, decision and implementation state, review state, evidence, and public sensitivity |
 | ADR index | inline | canonical `docs/adr/README.md` registry | active index identity and review state; every row must match record metadata |
 | ADR redirect | inline | legacy Core and Shifu ADR paths | deprecated redirect identity plus one `moved_to` target; decision fields are forbidden |
-| document redirect | inline | former flat `docs/*.md` compatibility paths | deprecated redirect identity plus one direct canonical `moved_to` target; semantic fields and redirect chains are forbidden |
 | engineering evidence | inline | selected spikes, qualification contracts, and implementation slices | local audit context for a bounded engineering claim |
 | repository document | inline optional | other tracked Markdown that declares Kungfu metadata | the base document lifecycle profile |
 | external schema | external | issue templates and Kungfu Skills | the schema owned by their consumer, not this contract |
@@ -46,7 +45,7 @@ The contract intentionally does not require metadata on every nested package
 README. A repository document may remain ungoverned until it needs typed
 metadata. Once it declares Kungfu metadata, it must use the current schema.
 
-## Directory authority and compatibility
+## Directory authority
 
 Canonical public documents live under the directory taxonomy declared in
 `docs.contract.json`. `docs/README.md` and `docs/MAP.md` are the only canonical
@@ -54,24 +53,12 @@ Markdown entry files at the `docs/` root. Section indexes make every canonical
 document reachable from the public graph, and the gate rejects a new flat
 canonical page or a document placed outside the declared taxonomy.
 
-The former flat paths are `document-redirect` compatibility documents. Their
-frontmatter is intentionally visible because the redirect identity is the only
-content they own:
-
-```yaml
-metadata_schema: kungfu.document-metadata/v1
-document_status: deprecated
-doc_type: document-redirect
-review_state: self-reviewed
-sensitivity: public
-moved_to: docs/concepts/the-episode.md
-```
-
-A redirect must point directly to an existing canonical document below a
-section directory. It cannot point to another redirect, carry independent
-lifecycle or decision semantics, or become a link target from canonical
-documentation. This preserves old inbound paths without making the compatibility
-facade a second navigation or metadata authority.
+Flat `docs/*.md` pages are forbidden. There is no repository compatibility
+facade: moving a document into the taxonomy removes its former path. This is
+intentional while Kungfu has no published documentation compatibility contract.
+If a future publication surface needs redirects, that surface must own and
+qualify them without recreating duplicate Markdown authorities in this
+repository.
 
 ## Separate lifecycle axes
 
