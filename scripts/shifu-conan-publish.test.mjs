@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   MATRIX,
+  packageRevisionRefs,
   parseArgs,
   plan,
   validateDetectedProfile,
@@ -70,6 +71,40 @@ test('dry-run plan keeps publisher credentials out of Buildchain', () => {
     /remote auth workhub-conan --force --strict/,
   );
   assert.doesNotMatch(JSON.stringify(output), /password/i);
+  assert.match(JSON.stringify(output), /rocksdb\/6\.29\.5#\*:\*#\*/);
+});
+
+test('package revision read-back requires exact recipe and package revisions', () => {
+  assert.deepEqual(
+    packageRevisionRefs({
+      'Local Cache': {
+        'rocksdb/6.29.5': {
+          revisions: {
+            recipeRevision: {
+              packages: {
+                packageId: {
+                  revisions: { packageRevision: { timestamp: 1 } },
+                },
+              },
+            },
+          },
+        },
+      },
+    }),
+    ['rocksdb/6.29.5#recipeRevision:packageId#packageRevision'],
+  );
+  assert.deepEqual(
+    packageRevisionRefs({
+      remote: {
+        'rocksdb/6.29.5': {
+          revisions: {
+            recipeRevision: { packages: { packageId: { info: {} } } },
+          },
+        },
+      },
+    }),
+    [],
+  );
 });
 
 test('execute fails closed outside Shifu before invoking Conan', () => {

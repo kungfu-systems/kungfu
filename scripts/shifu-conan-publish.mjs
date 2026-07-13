@@ -29,6 +29,8 @@ export const MATRIX = Object.freeze({
   },
 });
 
+const ROCKSDB_PACKAGE_PATTERN = 'rocksdb/6.29.5#*:*#*';
+
 function fail(message) {
   throw new Error(message);
 }
@@ -70,6 +72,29 @@ export function validateDetectedProfile(
       );
   }
   return settings;
+}
+
+export function packageRevisionRefs(payload) {
+  const refs = [];
+  for (const repository of Object.values(payload || {})) {
+    for (const [recipe, recipeValue] of Object.entries(repository || {})) {
+      for (const [recipeRevision, revisionValue] of Object.entries(
+        recipeValue?.revisions || {},
+      )) {
+        for (const [packageId, packageValue] of Object.entries(
+          revisionValue?.packages || {},
+        )) {
+          for (const packageRevision of Object.keys(
+            packageValue?.revisions || {},
+          ))
+            refs.push(
+              `${recipe}#${recipeRevision}:${packageId}#${packageRevision}`,
+            );
+        }
+      }
+    }
+  }
+  return refs.sort();
 }
 
 function conanCommand(args, { capture = false } = {}) {
@@ -123,10 +148,10 @@ export function plan(matrixEntry, remote = 'workhub-conan') {
     commands: [
       'conan profile detect --force (only when default is absent)',
       'conan create <rocksdb-recipe> --version 6.29.5 --build=missing',
-      'conan list rocksdb/6.29.5:* --filter-profile default',
+      `conan list ${ROCKSDB_PACKAGE_PATTERN} --filter-profile default`,
       `conan remote auth ${remote} --force --strict`,
       `conan upload --list <exact-package-list> --remote ${remote} --check --confirm`,
-      `conan list rocksdb/6.29.5:* --remote ${remote}`,
+      `conan list ${ROCKSDB_PACKAGE_PATTERN} --remote ${remote} and assert exact package revisions`,
     ],
     buildchainInputs: ['SHIFU_CACHE_PROFILE_REF', 'SHIFU_CACHE_PROFILE_DIGEST'],
     publisherSecretInBuildchain: false,
@@ -161,13 +186,18 @@ export function execute({ matrixEntry, remote }) {
     ]);
     conanCommand([
       'list',
-      'rocksdb/6.29.5:*',
+      ROCKSDB_PACKAGE_PATTERN,
       '--filter-profile',
       'default',
       '--format=json',
       '--out-file',
       packageList,
     ]);
+    const expectedRefs = packageRevisionRefs(
+      JSON.parse(fs.readFileSync(packageList, 'utf8')),
+    );
+    if (expectedRefs.length === 0)
+      fail('local package list contains no exact RocksDB package revision');
     conanCommand(['remote', 'auth', remote, '--force', '--strict']);
     conanCommand([
       'upload',
@@ -178,7 +208,27 @@ export function execute({ matrixEntry, remote }) {
       '--check',
       '--confirm',
     ]);
-    conanCommand(['list', 'rocksdb/6.29.5:*', '--remote', remote]);
+    const remoteRefs = new Set(
+      packageRevisionRefs(
+        JSON.parse(
+          conanCommand(
+            [
+              'list',
+              ROCKSDB_PACKAGE_PATTERN,
+              '--remote',
+              remote,
+              '--format=json',
+            ],
+            { capture: true },
+          ),
+        ),
+      ),
+    );
+    const missing = expectedRefs.filter(
+      (reference) => !remoteRefs.has(reference),
+    );
+    if (missing.length > 0)
+      fail(`remote read-back missing package revisions: ${missing.join(', ')}`);
   } finally {
     fs.rmSync(scratch, { recursive: true, force: true });
   }
