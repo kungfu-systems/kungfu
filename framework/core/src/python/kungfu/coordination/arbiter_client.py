@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import os
 import time
+from typing import Any
 
 import kungfu
 
@@ -32,7 +33,9 @@ from kungfu.coordination.arbiter import (
     request_payload,
 )
 
-yjj = kungfu.__binding__.runtime
+# Any so the native `yjj.peer` is usable as a base class under mypy (the
+# binding is dynamic; matches kungfu/runtime/live/peer.py).
+yjj: Any = kungfu.__binding__.runtime
 
 _STEP_SLEEP = 0.002
 

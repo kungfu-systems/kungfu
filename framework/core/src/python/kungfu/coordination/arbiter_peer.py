@@ -32,6 +32,7 @@ from __future__ import annotations
 import os
 import time
 import uuid
+from typing import Any
 
 import kungfu
 
@@ -47,7 +48,9 @@ from kungfu.coordination.arbiter import (
     parse_pid,
 )
 
-yjj = kungfu.__binding__.runtime
+# Any so the native `yjj.peer` is usable as a base class under mypy (the
+# binding is dynamic; matches kungfu/runtime/live/peer.py).
+yjj: Any = kungfu.__binding__.runtime
 
 ACTION_REAP = "coordination.lock.reap"
 
