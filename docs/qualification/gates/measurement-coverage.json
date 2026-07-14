@@ -1,0 +1,180 @@
+{
+  "schema": "kungfu.gate-measurement-coverage/v1",
+  "registry": "shifu.gates.json",
+  "baseline": {
+    "adoptedAt": "2026-07-14",
+    "unmeasuredGateIds": [
+      "docs.contracts",
+      "docs.external-links",
+      "docs.prose",
+      "durability.contracts",
+      "embedding.membranes",
+      "episode.release",
+      "episode.smoke",
+      "governance.adr-delivery",
+      "governance.buildchain-config",
+      "governance.dco",
+      "governance.promotion-rehearsal",
+      "layers.release",
+      "mmap.contracts",
+      "mmap.performance",
+      "product.distribution",
+      "product.verify-full",
+      "product.verify-fuzz",
+      "profile.agent-sdk",
+      "profile.kfd3",
+      "profile.lifecycle",
+      "profile.suite",
+      "release.artifact-admission",
+      "runtime.crash-recovery",
+      "runtime.durable-ingest",
+      "runtime.errors",
+      "runtime.projection-bootstrap",
+      "shifu.workspace",
+      "source.acceptance",
+      "source.changed-scope",
+      "source.whole-tree",
+      "state-service.contracts",
+      "toolchain.cpp-modules",
+      "toolchain.libwasm-cache"
+    ],
+    "digest": "sha256:2fc06a1263119544e4130724390f737016797de7c5df0a17cbf10ab23c024fb9"
+  },
+  "measurements": [
+    {
+      "gateId": "gate.catalog",
+      "definitionDigest": "sha256:2102f39caca0c0286084c59e552b7f42f5d6df2315adac134e5ae9d834559856",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "c4ba70d9542d42bbd75ddd9dd4c7ff079f4570fa",
+          "registryDigest": "sha256:26716c1b1979fa3789f35caf5db97dae103462a7e02aebd4f4026b0ea2923526",
+          "durationMs": 433,
+          "receipt": "docs/qualification/evidence/layer-gates/c4ba70d95/linux-x64.raw/layer-artifact-gate-receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "c4ba70d9542d42bbd75ddd9dd4c7ff079f4570fa",
+          "registryDigest": "sha256:26716c1b1979fa3789f35caf5db97dae103462a7e02aebd4f4026b0ea2923526",
+          "durationMs": 694,
+          "receipt": "docs/qualification/evidence/layer-gates/c4ba70d95/macos-arm64.raw/layer-artifact-gate-receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "c4ba70d9542d42bbd75ddd9dd4c7ff079f4570fa",
+          "registryDigest": "sha256:26716c1b1979fa3789f35caf5db97dae103462a7e02aebd4f4026b0ea2923526",
+          "durationMs": 2008,
+          "receipt": "docs/qualification/evidence/layer-gates/c4ba70d95/windows-x64.raw/layer-artifact-gate-receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "layers.contract",
+      "definitionDigest": "sha256:40f678362cf64a02f9397e05a8beaf9ef2f91becb804fb86a5bb4c54eb7b64d8",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "c4ba70d9542d42bbd75ddd9dd4c7ff079f4570fa",
+          "registryDigest": "sha256:26716c1b1979fa3789f35caf5db97dae103462a7e02aebd4f4026b0ea2923526",
+          "durationMs": 387,
+          "receipt": "docs/qualification/evidence/layer-gates/c4ba70d95/linux-x64.raw/layer-artifact-gate-receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "c4ba70d9542d42bbd75ddd9dd4c7ff079f4570fa",
+          "registryDigest": "sha256:26716c1b1979fa3789f35caf5db97dae103462a7e02aebd4f4026b0ea2923526",
+          "durationMs": 705,
+          "receipt": "docs/qualification/evidence/layer-gates/c4ba70d95/macos-arm64.raw/layer-artifact-gate-receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "c4ba70d9542d42bbd75ddd9dd4c7ff079f4570fa",
+          "registryDigest": "sha256:26716c1b1979fa3789f35caf5db97dae103462a7e02aebd4f4026b0ea2923526",
+          "durationMs": 2011,
+          "receipt": "docs/qualification/evidence/layer-gates/c4ba70d95/windows-x64.raw/layer-artifact-gate-receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "layers.format",
+      "definitionDigest": "sha256:94407629dec03f71b22a719cbc1783e0e99a3757ed2b691315a842f1e0429eda",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "c4ba70d9542d42bbd75ddd9dd4c7ff079f4570fa",
+          "registryDigest": "sha256:26716c1b1979fa3789f35caf5db97dae103462a7e02aebd4f4026b0ea2923526",
+          "durationMs": 2660,
+          "receipt": "docs/qualification/evidence/layer-gates/c4ba70d95/linux-x64.raw/layer-artifact-gate-receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "c4ba70d9542d42bbd75ddd9dd4c7ff079f4570fa",
+          "registryDigest": "sha256:26716c1b1979fa3789f35caf5db97dae103462a7e02aebd4f4026b0ea2923526",
+          "durationMs": 4787,
+          "receipt": "docs/qualification/evidence/layer-gates/c4ba70d95/macos-arm64.raw/layer-artifact-gate-receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "c4ba70d9542d42bbd75ddd9dd4c7ff079f4570fa",
+          "registryDigest": "sha256:26716c1b1979fa3789f35caf5db97dae103462a7e02aebd4f4026b0ea2923526",
+          "durationMs": 8263,
+          "receipt": "docs/qualification/evidence/layer-gates/c4ba70d95/windows-x64.raw/layer-artifact-gate-receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "layers.sdk",
+      "definitionDigest": "sha256:acb4d1bab4c7a4abbe2bf70da7797a638a3498a3c3cc51fa2e7006695adcb7ce",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "c4ba70d9542d42bbd75ddd9dd4c7ff079f4570fa",
+          "registryDigest": "sha256:26716c1b1979fa3789f35caf5db97dae103462a7e02aebd4f4026b0ea2923526",
+          "durationMs": 10505,
+          "receipt": "docs/qualification/evidence/layer-gates/c4ba70d95/linux-x64.raw/layer-artifact-gate-receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "c4ba70d9542d42bbd75ddd9dd4c7ff079f4570fa",
+          "registryDigest": "sha256:26716c1b1979fa3789f35caf5db97dae103462a7e02aebd4f4026b0ea2923526",
+          "durationMs": 14200,
+          "receipt": "docs/qualification/evidence/layer-gates/c4ba70d95/macos-arm64.raw/layer-artifact-gate-receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "c4ba70d9542d42bbd75ddd9dd4c7ff079f4570fa",
+          "registryDigest": "sha256:26716c1b1979fa3789f35caf5db97dae103462a7e02aebd4f4026b0ea2923526",
+          "durationMs": 18834,
+          "receipt": "docs/qualification/evidence/layer-gates/c4ba70d95/windows-x64.raw/layer-artifact-gate-receipt.json"
+        }
+      ]
+    },
+    {
+      "gateId": "layers.surfaces",
+      "definitionDigest": "sha256:55d5e6632cc8d9146896dcccbfe612d32ff2249b5029a08cd654f2ec51bd1e53",
+      "observations": [
+        {
+          "platform": "linux",
+          "sourceSha": "c4ba70d9542d42bbd75ddd9dd4c7ff079f4570fa",
+          "registryDigest": "sha256:26716c1b1979fa3789f35caf5db97dae103462a7e02aebd4f4026b0ea2923526",
+          "durationMs": 9979,
+          "receipt": "docs/qualification/evidence/layer-gates/c4ba70d95/linux-x64.raw/layer-artifact-gate-receipt.json"
+        },
+        {
+          "platform": "macos",
+          "sourceSha": "c4ba70d9542d42bbd75ddd9dd4c7ff079f4570fa",
+          "registryDigest": "sha256:26716c1b1979fa3789f35caf5db97dae103462a7e02aebd4f4026b0ea2923526",
+          "durationMs": 23536,
+          "receipt": "docs/qualification/evidence/layer-gates/c4ba70d95/macos-arm64.raw/layer-artifact-gate-receipt.json"
+        },
+        {
+          "platform": "windows",
+          "sourceSha": "c4ba70d9542d42bbd75ddd9dd4c7ff079f4570fa",
+          "registryDigest": "sha256:26716c1b1979fa3789f35caf5db97dae103462a7e02aebd4f4026b0ea2923526",
+          "durationMs": 32821,
+          "receipt": "docs/qualification/evidence/layer-gates/c4ba70d95/windows-x64.raw/layer-artifact-gate-receipt.json"
+        }
+      ]
+    }
+  ]
+}

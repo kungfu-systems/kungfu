@@ -13,6 +13,9 @@ explains Kungfu's current policy and does not redefine Shifu semantics.
 - [Workflow bindings](workflow-bindings.json) record how current GitHub
   workflows activate profiles and gates. Schema v2 makes direct Gate,
   Buildchain Gate-profile, and controller entries structure-checked.
+- [Measurement coverage](measurement-coverage.md) records the observed
+  per-platform `durationMs`, clean source SHA, Gate definition digest, registry
+  digest, and retained Shifu receipt for measured Gates.
 - Buildchain owns runner allocation and aggregate checks; the standing patrol
   is pinned to the immutable `v2.12.4` release commit
   `a6145efc210a961da0e5c63d7024d42061550f60`. Buildchain cannot weaken a
@@ -148,12 +151,30 @@ the Buildchain orchestration stage registers their handlers.
 3. Declare the workflow/job execution in `workflow-bindings.json`; direct Gate
    and profile ids must be statically recoverable from YAML, while every
    controller must declare one bounded adapter.
-4. Regenerate the matrix with the catalog checker write mode.
-5. Run `./shifu check:gate-catalog` and `./shifu check:source`.
-6. Treat policy-strength changes as rollout decisions, not documentation edits.
+4. For every new Gate, run the diagnostic Gate on every platform declared by
+   `platforms` from one clean source revision and retain each
+   `shifu.gate-receipt/v1` JSON under `docs/qualification/evidence/`. The
+   matching result must be attempted, passing, exit `0`, and contain the
+   current Gate definition digest and measured `durationMs`.
+5. Add the receipts and their exact source, registry, duration, and platform
+   fields to `measurement-coverage.json`. The frozen adoption baseline cannot
+   be expanded; even a new `off` Gate requires measurement coverage.
+6. Regenerate the policy and measurement tables with
+   `node scripts/check-kungfu-gate-catalog.mjs --write`.
+7. Run `./shifu check:gate-catalog` and `./shifu check:source`.
+8. Treat policy-strength changes as rollout decisions, not documentation edits.
+
+Measurements are retained observations, not live benchmarks. They do not
+change automatically after a later code commit. A Gate definition change makes
+its registered definition digest stale and fails the catalog check. An
+implementation-only change cannot be inferred from the registry, so the author
+must re-run and replace the observations whenever it can materially affect
+runtime or expected cost.
 
 The catalog meta gate checks schema and semantic validity, task existence,
 documentation anchors and required fields, the generated matrix bytes,
 structured direct/profile/controller workflow facts, adapter uniqueness and
-input contracts, and profile coverage. It proves structural consistency, not
-that a prose explanation is semantically wise.
+input contracts, profile coverage, and source-bound measurement coverage. It
+rejects missing platforms, dirty source, failed/skipped results, stale Gate
+definitions, mismatched durations, and missing receipts. It proves structural
+consistency, not that a prose explanation is semantically wise.

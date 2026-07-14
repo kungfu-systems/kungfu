@@ -524,6 +524,22 @@
       "review_state": "self-reviewed",
       "sensitivity": "public"
     },
+    "docs/qualification/gates/measurement-coverage.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-evidence-index",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "executable-probe",
+        "local-files"
+      ],
+      "period": "2026-07-14",
+      "theme": "gate-measurement-coverage",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-07-14"
+    },
     "docs/qualification/gates/native-qualification.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

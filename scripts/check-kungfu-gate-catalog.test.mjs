@@ -9,7 +9,9 @@ import { fileURLToPath } from 'node:url';
 import {
   checkKungfuGateCatalog,
   renderPolicyMatrix,
+  validateMeasurementCoverage,
 } from './check-kungfu-gate-catalog.mjs';
+import { gateDefinitionDigest, gateDigest } from './shifu-gate-runtime.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -19,6 +21,9 @@ function fixture() {
     'shifu.gates.json',
     'package.json',
     'docs/qualification/gates',
+    'docs/qualification/evidence/layer-gates/c4ba70d95/linux-x64.raw/layer-artifact-gate-receipt.json',
+    'docs/qualification/evidence/layer-gates/c4ba70d95/macos-arm64.raw/layer-artifact-gate-receipt.json',
+    'docs/qualification/evidence/layer-gates/c4ba70d95/windows-x64.raw/layer-artifact-gate-receipt.json',
     'framework/core/tests/qualification/episode/profiles',
   ]) {
     const source = path.join(ROOT, relative);
@@ -39,6 +44,22 @@ function fixture() {
     fs.copyFileSync(source, target);
   }
   return root;
+}
+
+function readMeasurementCoverage(root) {
+  return JSON.parse(
+    fs.readFileSync(
+      path.join(root, 'docs/qualification/gates/measurement-coverage.json'),
+      'utf8',
+    ),
+  );
+}
+
+function writeMeasurementCoverage(root, document) {
+  fs.writeFileSync(
+    path.join(root, 'docs/qualification/gates/measurement-coverage.json'),
+    JSON.stringify(document, null, 2),
+  );
 }
 
 test('current Kungfu catalog, docs, matrix, actions, and workflows align', () => {
@@ -86,6 +107,181 @@ test('matrix rendering is deterministic and includes every profile', () => {
   }
   assert.match(matrix, /Execution parameters/);
   assert.match(matrix, /release-candidate/);
+});
+
+test('a new Gate requires complete source-bound measurement coverage', () => {
+  const root = fixture();
+  const registry = JSON.parse(
+    fs.readFileSync(path.join(root, 'shifu.gates.json'), 'utf8'),
+  );
+  const gate = structuredClone(
+    registry.gates.find((item) => item.id === 'governance.dco'),
+  );
+  gate.id = 'governance.measurement-fixture';
+  gate.title = 'Measurement fixture';
+  gate.summary = 'Proves a new Gate cannot bypass measured evidence.';
+  registry.gates.push(gate);
+  for (const profile of registry.profiles) {
+    profile.decisions[gate.id] = {
+      mode: 'off',
+      reason: 'Measurement enforcement fixture.',
+    };
+  }
+
+  assert.ok(
+    validateMeasurementCoverage(root, registry).issues.some((issue) =>
+      issue.includes(
+        'governance.measurement-fixture: measurement record is required',
+      ),
+    ),
+  );
+  fs.writeFileSync(
+    path.join(root, 'shifu.gates.json'),
+    JSON.stringify(registry),
+  );
+  assert.ok(
+    checkKungfuGateCatalog(root).issues.some((issue) =>
+      issue.includes(
+        'governance.measurement-fixture: measurement record is required',
+      ),
+    ),
+  );
+
+  const receiptRelative =
+    'docs/qualification/evidence/fixtures/measurement-fixture.json';
+  const receiptPath = path.join(root, receiptRelative);
+  fs.mkdirSync(path.dirname(receiptPath), { recursive: true });
+  const definitionDigest = gateDefinitionDigest(gate);
+  const sourceSha = 'a'.repeat(40);
+  const registryDigest = `sha256:${'b'.repeat(64)}`;
+  fs.writeFileSync(
+    receiptPath,
+    JSON.stringify({
+      schema: 'shifu.gate-receipt/v1',
+      source: { sha: sourceSha, dirty: false },
+      registry: {
+        ref: 'shifu.gates.json',
+        digest: registryDigest,
+        projectId: 'kungfu',
+      },
+      environment: { platform: 'linux' },
+      results: [
+        {
+          gateId: gate.id,
+          definitionDigest,
+          attempted: true,
+          status: 'pass',
+          exitCode: 0,
+          durationMs: 17,
+        },
+      ],
+    }),
+  );
+  const coverage = readMeasurementCoverage(root);
+  coverage.measurements.push({
+    gateId: gate.id,
+    definitionDigest,
+    observations: [
+      {
+        platform: 'linux',
+        sourceSha,
+        registryDigest,
+        durationMs: 17,
+        receipt: receiptRelative,
+      },
+    ],
+  });
+  writeMeasurementCoverage(root, coverage);
+  assert.deepEqual(validateMeasurementCoverage(root, registry).issues, []);
+});
+
+test('the frozen unmeasured baseline cannot absorb a new Gate', () => {
+  const root = fixture();
+  const registry = JSON.parse(
+    fs.readFileSync(path.join(root, 'shifu.gates.json'), 'utf8'),
+  );
+  const coverage = readMeasurementCoverage(root);
+  coverage.baseline.unmeasuredGateIds.push('source.unmeasured-new-gate');
+  coverage.baseline.unmeasuredGateIds.sort();
+  coverage.baseline.digest = gateDigest(coverage.baseline.unmeasuredGateIds);
+  writeMeasurementCoverage(root, coverage);
+  assert.ok(
+    validateMeasurementCoverage(root, registry).issues.some((issue) =>
+      issue.includes(
+        'frozen unmeasured baseline changed; new Gates must add measurements',
+      ),
+    ),
+  );
+});
+
+test('missing platforms and stale Gate definitions fail measurement coverage', () => {
+  const platformRoot = fixture();
+  const platformRegistry = JSON.parse(
+    fs.readFileSync(path.join(platformRoot, 'shifu.gates.json'), 'utf8'),
+  );
+  const platformCoverage = readMeasurementCoverage(platformRoot);
+  platformCoverage.measurements
+    .find((record) => record.gateId === 'gate.catalog')
+    .observations.pop();
+  writeMeasurementCoverage(platformRoot, platformCoverage);
+  assert.ok(
+    validateMeasurementCoverage(platformRoot, platformRegistry).issues.some(
+      (issue) => issue.includes('gate.catalog: measured platforms'),
+    ),
+  );
+
+  const staleRoot = fixture();
+  const staleRegistry = JSON.parse(
+    fs.readFileSync(path.join(staleRoot, 'shifu.gates.json'), 'utf8'),
+  );
+  const staleCoverage = readMeasurementCoverage(staleRoot);
+  staleCoverage.measurements.find(
+    (record) => record.gateId === 'gate.catalog',
+  ).definitionDigest = `sha256:${'0'.repeat(64)}`;
+  writeMeasurementCoverage(staleRoot, staleCoverage);
+  assert.ok(
+    validateMeasurementCoverage(staleRoot, staleRegistry).issues.some((issue) =>
+      issue.includes('gate.catalog: definition digest is stale'),
+    ),
+  );
+});
+
+test('dirty, unsuccessful, and duration-drifted receipts fail measurement coverage', () => {
+  const root = fixture();
+  const registry = JSON.parse(
+    fs.readFileSync(path.join(root, 'shifu.gates.json'), 'utf8'),
+  );
+  const receiptPath = path.join(
+    root,
+    'docs/qualification/evidence/layer-gates/c4ba70d95/linux-x64.raw/layer-artifact-gate-receipt.json',
+  );
+  const receipt = JSON.parse(fs.readFileSync(receiptPath, 'utf8'));
+  receipt.source.dirty = true;
+  const result = receipt.results.find((item) => item.gateId === 'gate.catalog');
+  result.status = 'fail';
+  result.exitCode = 1;
+  result.durationMs += 1;
+  fs.writeFileSync(receiptPath, JSON.stringify(receipt));
+  const issues = validateMeasurementCoverage(root, registry).issues;
+  assert.ok(
+    issues.some((issue) =>
+      issue.includes(
+        'gate.catalog:linux: receipt must match a clean source SHA',
+      ),
+    ),
+  );
+  assert.ok(
+    issues.some((issue) =>
+      issue.includes(
+        'gate.catalog:linux: receipt result must be an attempted pass',
+      ),
+    ),
+  );
+  assert.ok(
+    issues.some((issue) =>
+      issue.includes('gate.catalog:linux: durationMs differs from the receipt'),
+    ),
+  );
 });
 
 test('matrix, gate document, and workflow drift each fail closed', () => {

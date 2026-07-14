@@ -11,14 +11,25 @@ import {
   validateControllerAdapters,
 } from './kungfu-gate-controller-adapters.mjs';
 import { scanWorkflowInvocations } from './kungfu-gate-workflow-facts.mjs';
-import { validateGateRegistry } from './shifu-gate-runtime.mjs';
+import {
+  gateDefinitionDigest,
+  gateDigest,
+  validateGateRegistry,
+} from './shifu-gate-runtime.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MATRIX = 'docs/qualification/gates/policy-matrix.md';
 const BINDINGS = 'docs/qualification/gates/workflow-bindings.json';
 const EXECUTION_PROFILES = 'docs/qualification/gates/execution-profiles.json';
+const MEASUREMENT_COVERAGE =
+  'docs/qualification/gates/measurement-coverage.json';
+const MEASUREMENT_REPORT = 'docs/qualification/gates/measurement-coverage.md';
+const MEASUREMENT_BASELINE_DIGEST =
+  'sha256:2fc06a1263119544e4130724390f737016797de7c5df0a17cbf10ab23c024fb9';
 const BEGIN = '<!-- BEGIN GENERATED GATE MATRIX -->';
 const END = '<!-- END GENERATED GATE MATRIX -->';
+const MEASUREMENT_BEGIN = '<!-- BEGIN GENERATED GATE MEASUREMENTS -->';
+const MEASUREMENT_END = '<!-- END GENERATED GATE MEASUREMENTS -->';
 const REQUIRED_DOC_FIELDS = [
   'Problem',
   'Protects',
@@ -36,6 +47,293 @@ const REQUIRED_DOC_FIELDS = [
 
 function readJson(root, relative) {
   return JSON.parse(fs.readFileSync(path.join(root, relative), 'utf8'));
+}
+
+function exactObjectKeys(value, required, prefix, issues) {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    issues.push(`[measurement] ${prefix} must be an object`);
+    return false;
+  }
+  const allowed = new Set(required);
+  for (const key of required) {
+    if (!Object.hasOwn(value, key))
+      issues.push(`[measurement] ${prefix}.${key} is required`);
+  }
+  for (const key of Object.keys(value)) {
+    if (!allowed.has(key))
+      issues.push(`[measurement] ${prefix}.${key} is not allowed`);
+  }
+  return true;
+}
+
+function safeEvidencePath(relative) {
+  return (
+    typeof relative === 'string' &&
+    relative.startsWith('docs/qualification/evidence/') &&
+    relative.endsWith('.json') &&
+    !path.isAbsolute(relative) &&
+    !relative.split('/').includes('..')
+  );
+}
+
+function sameStringSet(actual, expected) {
+  return (
+    Array.isArray(actual) &&
+    actual.length === new Set(actual).size &&
+    [...actual].sort().join('\0') === [...expected].sort().join('\0')
+  );
+}
+
+export function validateMeasurementCoverage(root, registry) {
+  const issues = [];
+  const document = readJson(root, MEASUREMENT_COVERAGE);
+  exactObjectKeys(
+    document,
+    ['schema', 'registry', 'baseline', 'measurements'],
+    'document',
+    issues,
+  );
+  if (document.schema !== 'kungfu.gate-measurement-coverage/v1')
+    issues.push('[measurement] unsupported schema');
+  if (document.registry !== 'shifu.gates.json')
+    issues.push('[measurement] registry must be shifu.gates.json');
+
+  const baseline = document.baseline;
+  if (
+    exactObjectKeys(
+      baseline,
+      ['adoptedAt', 'unmeasuredGateIds', 'digest'],
+      'baseline',
+      issues,
+    )
+  ) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(baseline.adoptedAt || ''))
+      issues.push('[measurement] baseline.adoptedAt must be YYYY-MM-DD');
+    if (
+      !Array.isArray(baseline.unmeasuredGateIds) ||
+      baseline.unmeasuredGateIds.some(
+        (gateId) => typeof gateId !== 'string' || !gateId,
+      ) ||
+      baseline.unmeasuredGateIds.length !==
+        new Set(baseline.unmeasuredGateIds).size ||
+      baseline.unmeasuredGateIds.join('\0') !==
+        [...baseline.unmeasuredGateIds].sort().join('\0')
+    ) {
+      issues.push(
+        '[measurement] baseline.unmeasuredGateIds must be unique and sorted',
+      );
+    }
+    const actualDigest = gateDigest(
+      Array.isArray(baseline.unmeasuredGateIds)
+        ? baseline.unmeasuredGateIds
+        : [],
+    );
+    if (baseline.digest !== actualDigest)
+      issues.push('[measurement] baseline.digest does not match its Gate ids');
+    if (actualDigest !== MEASUREMENT_BASELINE_DIGEST)
+      issues.push(
+        '[measurement] frozen unmeasured baseline changed; new Gates must add measurements',
+      );
+  }
+
+  const gates = new Map(registry.gates.map((gate) => [gate.id, gate]));
+  const exempt = new Set(
+    Array.isArray(baseline?.unmeasuredGateIds)
+      ? baseline.unmeasuredGateIds
+      : [],
+  );
+  const records = new Map();
+  if (!Array.isArray(document.measurements)) {
+    issues.push('[measurement] document.measurements must be an array');
+  }
+  for (const [recordIndex, record] of (Array.isArray(document.measurements)
+    ? document.measurements
+    : []
+  ).entries()) {
+    const at = `measurements[${recordIndex}]`;
+    if (
+      !exactObjectKeys(
+        record,
+        ['gateId', 'definitionDigest', 'observations'],
+        at,
+        issues,
+      )
+    )
+      continue;
+    if (records.has(record.gateId))
+      issues.push(`[measurement] duplicate Gate record '${record.gateId}'`);
+    records.set(record.gateId, record);
+    const gate = gates.get(record.gateId);
+    if (!gate) {
+      issues.push(`[measurement] unknown Gate '${record.gateId}'`);
+      continue;
+    }
+    const currentDefinitionDigest = gateDefinitionDigest(gate);
+    if (record.definitionDigest !== currentDefinitionDigest)
+      issues.push(`[measurement] ${record.gateId}: definition digest is stale`);
+    if (!Array.isArray(record.observations) || !record.observations.length) {
+      issues.push(
+        `[measurement] ${record.gateId}: observations must be a non-empty array`,
+      );
+      continue;
+    }
+    const observedPlatforms = record.observations.map(
+      (observation) => observation?.platform,
+    );
+    if (!sameStringSet(observedPlatforms, gate.platforms))
+      issues.push(
+        `[measurement] ${record.gateId}: measured platforms [${observedPlatforms.join(', ')}], expected [${gate.platforms.join(', ')}]`,
+      );
+    const sourceShas = new Set(
+      record.observations.map((observation) => observation?.sourceSha),
+    );
+    const registryDigests = new Set(
+      record.observations.map((observation) => observation?.registryDigest),
+    );
+    if (sourceShas.size !== 1 || registryDigests.size !== 1)
+      issues.push(
+        `[measurement] ${record.gateId}: all platforms must measure one source and registry revision`,
+      );
+    for (const [
+      observationIndex,
+      observation,
+    ] of record.observations.entries()) {
+      const observationAt = `${at}.observations[${observationIndex}]`;
+      if (
+        !exactObjectKeys(
+          observation,
+          ['platform', 'sourceSha', 'registryDigest', 'durationMs', 'receipt'],
+          observationAt,
+          issues,
+        )
+      )
+        continue;
+      if (!gate.platforms.includes(observation.platform))
+        issues.push(
+          `[measurement] ${record.gateId}: unsupported platform '${observation.platform}'`,
+        );
+      if (!/^[0-9a-f]{40}$/.test(observation.sourceSha || ''))
+        issues.push(
+          `[measurement] ${record.gateId}:${observation.platform}: sourceSha must be a full Git SHA`,
+        );
+      if (!/^sha256:[0-9a-f]{64}$/.test(observation.registryDigest || ''))
+        issues.push(
+          `[measurement] ${record.gateId}:${observation.platform}: registryDigest must be sha256`,
+        );
+      if (
+        !Number.isInteger(observation.durationMs) ||
+        observation.durationMs < 0
+      )
+        issues.push(
+          `[measurement] ${record.gateId}:${observation.platform}: durationMs must be a non-negative integer`,
+        );
+      if (!safeEvidencePath(observation.receipt)) {
+        issues.push(
+          `[measurement] ${record.gateId}:${observation.platform}: unsafe receipt path`,
+        );
+        continue;
+      }
+      const receiptPath = path.join(root, observation.receipt);
+      if (!fs.existsSync(receiptPath)) {
+        issues.push(
+          `[measurement] ${record.gateId}:${observation.platform}: missing ${observation.receipt}`,
+        );
+        continue;
+      }
+      let receipt;
+      try {
+        receipt = JSON.parse(fs.readFileSync(receiptPath, 'utf8'));
+      } catch {
+        issues.push(
+          `[measurement] ${record.gateId}:${observation.platform}: receipt is not valid JSON`,
+        );
+        continue;
+      }
+      if (receipt.schema !== 'shifu.gate-receipt/v1')
+        issues.push(
+          `[measurement] ${record.gateId}:${observation.platform}: unsupported receipt schema`,
+        );
+      if (
+        receipt.source?.dirty !== false ||
+        receipt.source?.sha !== observation.sourceSha
+      )
+        issues.push(
+          `[measurement] ${record.gateId}:${observation.platform}: receipt must match a clean source SHA`,
+        );
+      if (
+        receipt.registry?.ref !== 'shifu.gates.json' ||
+        receipt.registry?.projectId !== registry.project.id ||
+        receipt.registry?.digest !== observation.registryDigest
+      )
+        issues.push(
+          `[measurement] ${record.gateId}:${observation.platform}: receipt registry identity does not match`,
+        );
+      if (receipt.environment?.platform !== observation.platform)
+        issues.push(
+          `[measurement] ${record.gateId}:${observation.platform}: receipt platform does not match`,
+        );
+      const results = Array.isArray(receipt.results)
+        ? receipt.results.filter((result) => result.gateId === record.gateId)
+        : [];
+      if (results.length !== 1) {
+        issues.push(
+          `[measurement] ${record.gateId}:${observation.platform}: receipt must contain exactly one matching result`,
+        );
+        continue;
+      }
+      const result = results[0];
+      if (result.definitionDigest !== currentDefinitionDigest)
+        issues.push(
+          `[measurement] ${record.gateId}:${observation.platform}: receipt definition digest is stale`,
+        );
+      if (
+        result.attempted !== true ||
+        result.status !== 'pass' ||
+        result.exitCode !== 0
+      )
+        issues.push(
+          `[measurement] ${record.gateId}:${observation.platform}: receipt result must be an attempted pass`,
+        );
+      if (result.durationMs !== observation.durationMs)
+        issues.push(
+          `[measurement] ${record.gateId}:${observation.platform}: durationMs differs from the receipt`,
+        );
+    }
+  }
+  for (const gate of registry.gates) {
+    if (!exempt.has(gate.id) && !records.has(gate.id))
+      issues.push(
+        `[measurement] ${gate.id}: measurement record is required for every Gate outside the frozen baseline`,
+      );
+  }
+  return { issues, document };
+}
+
+export function renderMeasurementCoverage(registry, document) {
+  const records = new Map(
+    (document.measurements || []).map((record) => [record.gateId, record]),
+  );
+  const baseline = new Set(document.baseline?.unmeasuredGateIds || []);
+  const rows = registry.gates.map((gate) => {
+    const record = records.get(gate.id);
+    if (!record)
+      return `| \`${gate.id}\` | ${baseline.has(gate.id) ? 'adoption baseline' : 'missing'} | — |`;
+    const observations = record.observations
+      .map((observation) => {
+        const href = path.posix.relative(
+          'docs/qualification/gates',
+          observation.receipt,
+        );
+        return `[${observation.platform}: ${observation.durationMs} ms @ ${observation.sourceSha.slice(0, 9)}](${href})`;
+      })
+      .join('<br>');
+    return `| \`${gate.id}\` | measured | ${observations} |`;
+  });
+  return [
+    '| Gate | Coverage | Source-bound observations |',
+    '| --- | --- | --- |',
+    ...rows,
+  ].join('\n');
 }
 
 function objectFieldDrift(actual, expected, prefix) {
@@ -200,6 +498,17 @@ function replaceGeneratedMatrix(text, matrix) {
   return `${text.slice(0, start + BEGIN.length)}\n${matrix}\n${text.slice(finish)}`;
 }
 
+function replaceGeneratedMeasurements(text, measurements) {
+  const start = text.indexOf(MEASUREMENT_BEGIN);
+  const finish = text.indexOf(MEASUREMENT_END);
+  if (start < 0 || finish < 0 || finish <= start) {
+    throw new Error(
+      `missing ordered measurement markers in ${MEASUREMENT_REPORT}`,
+    );
+  }
+  return `${text.slice(0, start + MEASUREMENT_BEGIN.length)}\n${measurements}\n${text.slice(finish)}`;
+}
+
 export function checkKungfuGateCatalog(root = ROOT) {
   const issues = [];
   const registry = readJson(root, 'shifu.gates.json');
@@ -208,6 +517,24 @@ export function checkKungfuGateCatalog(root = ROOT) {
     issues.push(`[registry] ${issue.path}: ${issue.message}`);
   }
   if (validation.length) return { issues, registry };
+
+  const measurementValidation = validateMeasurementCoverage(root, registry);
+  issues.push(...measurementValidation.issues);
+  if (!measurementValidation.issues.length) {
+    const measurementReportPath = path.join(root, MEASUREMENT_REPORT);
+    const measurementReportText = fs.readFileSync(
+      measurementReportPath,
+      'utf8',
+    );
+    const expectedMeasurementReport = replaceGeneratedMeasurements(
+      measurementReportText,
+      renderMeasurementCoverage(registry, measurementValidation.document),
+    );
+    if (measurementReportText !== expectedMeasurementReport)
+      issues.push(
+        `[measurement] ${MEASUREMENT_REPORT} differs from registered measurements`,
+      );
+  }
 
   const bindingDocument = readJson(root, BINDINGS);
   const executionValidation = validateExecutionProfiles(root, bindingDocument);
@@ -504,6 +831,7 @@ export function checkKungfuGateCatalog(root = ROOT) {
 export function writePolicyMatrix(root = ROOT) {
   const registry = readJson(root, 'shifu.gates.json');
   const executionDocument = readJson(root, EXECUTION_PROFILES);
+  const measurementDocument = readJson(root, MEASUREMENT_COVERAGE);
   const file = path.join(root, MATRIX);
   const current = fs.readFileSync(file, 'utf8');
   fs.writeFileSync(
@@ -511,6 +839,15 @@ export function writePolicyMatrix(root = ROOT) {
     replaceGeneratedMatrix(
       current,
       renderPolicyMatrix(registry, executionDocument),
+    ),
+  );
+  const measurementFile = path.join(root, MEASUREMENT_REPORT);
+  const currentMeasurements = fs.readFileSync(measurementFile, 'utf8');
+  fs.writeFileSync(
+    measurementFile,
+    replaceGeneratedMeasurements(
+      currentMeasurements,
+      renderMeasurementCoverage(registry, measurementDocument),
     ),
   );
 }
@@ -524,7 +861,7 @@ function main() {
     process.exit(1);
   }
   console.log(
-    `[kungfu-gates] ${result.registry.gates.length} gates, ${result.registry.profiles.length} profiles, ${result.workflowFacts.length} structured workflow invocations aligned`,
+    `[kungfu-gates] ${result.registry.gates.length} gates, ${result.registry.profiles.length} profiles, ${result.workflowFacts.length} structured workflow invocations and measurement coverage aligned`,
   );
 }
 
