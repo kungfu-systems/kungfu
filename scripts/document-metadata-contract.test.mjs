@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import {
   validateDocumentMetadata,
@@ -13,6 +14,10 @@ import {
 } from './document-metadata-contract.mjs';
 
 const roots = [];
+const REPO_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+);
 
 afterEach(() => {
   for (const root of roots.splice(0)) fs.rmSync(root, { recursive: true });
@@ -471,7 +476,19 @@ test('accepts reachable full-SHA implementation and closure evidence', () => {
   assert.deepEqual(findings, []);
 });
 
-test('accepts evidence reachable through the active merge parent', () => {
+test('pins PR evidence reachability to the workflow base SHA', () => {
+  const workflow = fs.readFileSync(
+    path.join(REPO_ROOT, '.github/workflows/docs-check.yml'),
+    'utf8',
+  );
+  assert.match(workflow, /"scripts\/document-metadata-contract\.mjs"/);
+  assert.match(
+    workflow,
+    /KUNGFU_ADR_EVIDENCE_BASE_SHA:\s*\$\{\{ github\.event\.pull_request\.base\.sha \}\}/,
+  );
+});
+
+test('accepts a merge preview by default but rejects PR-only evidence against its base', () => {
   const root = fixture({ 'seed.txt': 'seed\n' });
   git(root, ['init', '-q']);
   git(root, ['config', 'user.name', 'Test']);
@@ -508,6 +525,11 @@ test('accepts evidence reachable through the active merge parent', () => {
 
   git(root, ['merge', '--no-commit', '--no-ff', 'evidence']);
   assert.equal(validateReachableCommit(root, evidence), null);
+  assert.match(
+    validateReachableCommit(root, evidence, base),
+    new RegExp(`is not reachable from pull-request base history ${base}`),
+  );
+  assert.equal(validateReachableCommit(root, base, base), null);
 });
 
 test('accepts stable PR implementation and closure evidence', () => {
