@@ -5,8 +5,8 @@
   "witnessKind": "prebuild",
   "supportLevel": "release",
   "source": {
-    "cwd": "/Users/dkr/Worktrees/kungfu/feature/runtime-engine-process-host",
-    "sourceSha": "a189758e2483c01cf3d986b6d45f208782dc566b",
+    "cwd": "/Users/dkr/Worktrees/kungfu/feature/runtime-capability-broker",
+    "sourceSha": "eee275a6e195a04178e6d78399866950cb1ecc0e",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
     "registryDigest": "sha256:6b8e5f64c722f6d97c5ff1f23bf5d8bd584a5358588e214424ea8cce461c5b82"
   },

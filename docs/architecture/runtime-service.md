@@ -88,6 +88,25 @@ accepts an injected assessment executor; its no-fork fixture uses no PID,
 signal, argv, environment, or subprocess authority. This seam is qualification
 evidence, not a production EmbeddedRuntimeHost.
 
+## Capability-driven Invocation
+
+The runtime contract owns the machine-readable operation inventory; Profile
+actions reference it through `runtimeOperation` instead of defining a second
+action registry. `RuntimeCapabilityBroker` turns one operation id into the same
+requirement and activation receipt vocabulary for every future product surface.
+
+Storage-only invocation is deliberately lazy: it returns a daemonless
+activation receipt and executes the durable callback without constructing a
+host. Live-required invocation constructs the configured activation client only
+at invoke time and executes the callback only when the returned handle is ready
+at a durable cut with exactly the requested capabilities and authorities.
+
+The current `ProcessRuntimeActivationClient` requests the existing process host
+but returns `readiness_not_established`; PID and health diagnostics cannot admit
+the callback. Stage 4 will replace that fail-closed boundary with
+generation-fenced recovery and cut-bound readiness. Product entrypoints remain
+stage 6 work.
+
 If the supervisor is not running, a product entrypoint may start it. If a
 command only needs closed-data storage access, it may bypass the live coordinator and
 operate directly on the resolved data-root storage.

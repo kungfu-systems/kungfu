@@ -182,13 +182,17 @@ host requires a qualified implementation.
 The current supervisor/coordinator process topology is now behind the Python
 ProcessRuntimeHost placement adapter. CoordinatorEngine provides the directly
 callable, no-fork request seam while process placement, PIDs, signals, spawning,
-and OS service diagnostics stay in the adapter. The semantic RuntimeHost
-requirement/handle adapter remains incomplete until the Core capability broker
-lands in a later delivery stage. EmbeddedRuntimeHost is a reserved non-claim:
-v1 deliberately contains no production implementation, thread model, or
-qualification claim for it. A future host must implement the same requirement,
-handle, readiness, generation, lease, receipt, and error semantics rather than
-introduce an embedded-only public path.
+and OS service diagnostics stay in the adapter. RuntimeCapabilityBroker now
+plans and atomically admits operations from the contract-owned operation
+registry. Storage-only callbacks run without constructing a host; live-required
+callbacks run only after a matching semantic ready receipt. The current process
+bridge deliberately fails closed after requesting activation because
+generation-fenced readiness at a durable cut remains stage 4 work.
+EmbeddedRuntimeHost is a reserved non-claim: v1 deliberately contains no
+production implementation, thread model, or qualification claim for it. A
+future host must implement the same requirement, handle, readiness, generation,
+lease, receipt, and error semantics rather than introduce an embedded-only
+public path.
 
 ## Current capability vocabulary
 
@@ -277,8 +281,8 @@ products copy the exact contract through the existing KFD-1 contract registry.
 ## Delivery stages
 
 1. Land this ADR, the KFD-1 contract, fixtures, and source gate.
-2. Put the current supervisor/coordinator path behind ProcessRuntimeHost. **Complete:** CoordinatorEngine supplies the no-fork request seam; ProcessRuntimeHost owns process placement. The full semantic RuntimeHost adapter remains stage 3 work.
-3. Add the Core capability broker and generation-fenced handles.
+2. Put the current supervisor/coordinator path behind ProcessRuntimeHost. **Complete:** CoordinatorEngine supplies the no-fork request seam; ProcessRuntimeHost owns process placement. The full semantic RuntimeHost adapter remains stages 3-4 work.
+3. Add the Core capability broker and generation-fenced handles. **Broker complete:** the operation registry and atomic daemonless/live admission seam are implemented; generation-fenced handles remain stage 4 work.
 4. Bind recovery and projection readiness to an exact durable cut.
 5. Add leases, idle draining, adoption, and restart recovery.
 6. Project the same contract through CLI, GUI, Python, Node, libkungfu, and KFX.

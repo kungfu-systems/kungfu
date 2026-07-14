@@ -550,6 +550,55 @@ export async function checkRuntimeContract(root = ROOT) {
   const capabilityIds = list(contract.capabilities).map((item) => item.id);
   if (new Set(capabilityIds).size !== capabilityIds.length)
     throw new Error('runtime capability ids must be unique');
+  const operationRows = list(contract.operationRegistry?.operations);
+  const operationIds = operationRows.map((item) => item.id);
+  if (
+    contract.operationRegistry?.schema !==
+    'kungfu.runtime-operation-registry/v1'
+  )
+    throw new Error('runtime operation registry schema mismatch');
+  if (new Set(operationIds).size !== operationIds.length)
+    throw new Error('runtime operation ids must be unique');
+  const operationClasses = new Set(
+    Object.keys(contract.operationClasses || {}),
+  );
+  const capabilitySet = new Set(capabilityIds);
+  const authoritySet = new Set(contract.authorities?.activation?.grants || []);
+  for (const operation of operationRows) {
+    if (!operationClasses.has(operation.operationClass))
+      throw new Error(`runtime operation class is unknown: ${operation.id}`);
+    if (
+      list(operation.requiredCapabilities).some(
+        (capability) => !capabilitySet.has(capability),
+      )
+    )
+      throw new Error(
+        `runtime operation capability is unknown: ${operation.id}`,
+      );
+    if (
+      list(operation.requestedAuthorities).some(
+        (authority) => !authoritySet.has(authority),
+      )
+    )
+      throw new Error(
+        `runtime operation authority is unknown: ${operation.id}`,
+      );
+    if (
+      operation.operationClass === 'storage-only' &&
+      (list(operation.requiredCapabilities).length ||
+        list(operation.requestedAuthorities).length)
+    )
+      throw new Error(
+        `storage-only runtime operation cannot request live authority: ${operation.id}`,
+      );
+    if (
+      operation.operationClass === 'live-required' &&
+      !list(operation.requiredCapabilities).length
+    )
+      throw new Error(
+        `live-required runtime operation needs a capability: ${operation.id}`,
+      );
+  }
   if (contract.hostKinds.publicSemanticsDependOnHostKind !== false)
     throw new Error('public runtime semantics must remain topology-neutral');
   if (

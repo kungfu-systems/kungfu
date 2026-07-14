@@ -18,6 +18,18 @@ const CONTRACT = JSON.parse(
     'utf8',
   ),
 );
+const MISSION_CONTROL_ACTIONS = JSON.parse(
+  fs.readFileSync(
+    path.join(
+      ROOT,
+      'extensions',
+      'mission-control',
+      'actions',
+      'registry.json',
+    ),
+    'utf8',
+  ),
+);
 
 test('runtime contract accepts positive fixtures and rejects all safety failures', async () => {
   const result = await checkRuntimeContract(ROOT);
@@ -79,6 +91,61 @@ test('process placement is explicit while semantic host and embedded remain non-
   );
   assert.equal(embedded.productionEligible, false);
   assert.equal(CONTRACT.hostKinds.publicSemanticsDependOnHostKind, false);
+});
+
+test('operation registry classifies daemonless and live-required work from one authority', () => {
+  const operations = new Map(
+    CONTRACT.operationRegistry.operations.map((operation) => [
+      operation.id,
+      operation,
+    ]),
+  );
+  assert.equal(
+    CONTRACT.operationRegistry.schema,
+    'kungfu.runtime-operation-registry/v1',
+  );
+  assert.deepEqual(operations.get('episode.append'), {
+    id: 'episode.append',
+    operationClass: 'storage-only',
+    requiredCapabilities: [],
+    requestedAuthorities: [],
+    recoveryGuidance:
+      'Append through the durable engine and return its receipt; do not activate a live host.',
+  });
+  assert.equal(
+    operations.get('assessment.request').operationClass,
+    'live-required',
+  );
+  assert.deepEqual(operations.get('assessment.request').requiredCapabilities, [
+    'runtime.assessment-scheduling',
+  ]);
+});
+
+test('the existing Profile action registry references the runtime operation authority', () => {
+  const operations = new Map(
+    CONTRACT.operationRegistry.operations.map((operation) => [
+      operation.id,
+      operation,
+    ]),
+  );
+  for (const action of MISSION_CONTROL_ACTIONS.actions) {
+    assert.ok(
+      operations.has(action.runtimeOperation),
+      `${action.id} references an unknown runtime operation`,
+    );
+  }
+  assert.equal(
+    MISSION_CONTROL_ACTIONS.actions.find(
+      (action) => action.id === 'create-mission',
+    ).runtimeOperation,
+    'episode.append',
+  );
+  assert.equal(
+    MISSION_CONTROL_ACTIONS.actions.find(
+      (action) => action.id === 'assess-progress',
+    ).runtimeOperation,
+    'assessment.request',
+  );
 });
 
 test('standalone readiness and lease targets enforce their local invariants', () => {

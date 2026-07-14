@@ -6,6 +6,7 @@
       "title": "Create Mission fact",
       "runner": "kfx-member",
       "operation": "mission-control-actions",
+      "runtimeOperation": "episode.append",
       "authorityClass": "mission-fact-author",
       "requiredCapabilities": [
         "storage"
@@ -20,6 +21,7 @@
       "title": "Create Go fact",
       "runner": "kfx-member",
       "operation": "mission-control-actions",
+      "runtimeOperation": "episode.append",
       "authorityClass": "mission-fact-author",
       "requiredCapabilities": [
         "storage"
@@ -34,6 +36,7 @@
       "title": "Record completion claim",
       "runner": "kfx-member",
       "operation": "mission-control-actions",
+      "runtimeOperation": "episode.append",
       "authorityClass": "claim-author",
       "requiredCapabilities": [
         "storage"
@@ -48,6 +51,7 @@
       "title": "Assess Mission progress",
       "runner": "kfx-member",
       "operation": "mission-control-assessment",
+      "runtimeOperation": "assessment.request",
       "authorityClass": "profile-assessment-operator",
       "requiredCapabilities": [
         "storage"

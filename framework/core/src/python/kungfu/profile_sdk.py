@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from kungfu import agent as agent_pack
+from kungfu import runtime_broker
 from kungfu import contract as contract_runtime
 from kungfu import kfx_contract
 from kungfu.storage import service as storage_service
@@ -2742,7 +2743,12 @@ def _validate_action_registry(
             "requiredCapabilities",
             "effects",
         }
-        if not isinstance(row, Mapping) or set(row) != required:
+        allowed = required | {"runtimeOperation"}
+        if (
+            not isinstance(row, Mapping)
+            or not required.issubset(row)
+            or not set(row).issubset(allowed)
+        ):
             raise ProfileSdkError(
                 "action-declaration-invalid",
                 "action declaration has missing or extra fields",
@@ -2752,6 +2758,14 @@ def _validate_action_registry(
                 "action-id-invalid", "action ids must be unique safe tokens"
             )
         ids.add(row["id"])
+        if row.get("runtimeOperation"):
+            try:
+                runtime_broker.operation_definition(str(row["runtimeOperation"]))
+            except (KeyError, ValueError) as error:
+                raise ProfileSdkError(
+                    "action-runtime-operation-invalid",
+                    "action runtime operation is not registered by the runtime contract",
+                ) from error
         if row["runner"] not in {"profile-lifecycle", "kfx-member"}:
             raise ProfileSdkError(
                 "action-runner-invalid", "action runner is not confined"

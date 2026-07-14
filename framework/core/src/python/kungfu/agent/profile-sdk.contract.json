@@ -577,6 +577,7 @@
             "title": { "type": "string", "minLength": 1 },
             "runner": { "enum": ["profile-lifecycle", "kfx-member"] },
             "operation": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+            "runtimeOperation": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
             "authorityClass": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
             "requiredCapabilities": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" } },
             "effects": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" } }

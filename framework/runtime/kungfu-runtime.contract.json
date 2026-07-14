@@ -16,6 +16,7 @@
       "description",
       "authorities",
       "operationClasses",
+      "operationRegistry",
       "capabilities",
       "hostKinds",
       "stateMachine",
@@ -50,6 +51,67 @@
       },
       "operationClasses": {
         "type": "object"
+      },
+      "operationRegistry": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "operations"
+        ],
+        "properties": {
+          "schema": {
+            "const": "kungfu.runtime-operation-registry/v1"
+          },
+          "operations": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "operationClass",
+                "requiredCapabilities",
+                "requestedAuthorities",
+                "recoveryGuidance"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9._-]+$"
+                },
+                "operationClass": {
+                  "enum": [
+                    "storage-only",
+                    "live-optional",
+                    "live-required"
+                  ]
+                },
+                "requiredCapabilities": {
+                  "type": "array",
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "pattern": "^runtime\\.[A-Za-z0-9._-]+$"
+                  }
+                },
+                "requestedAuthorities": {
+                  "type": "array",
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "pattern": "^runtime\\.[A-Za-z0-9._-]+$"
+                  }
+                },
+                "recoveryGuidance": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        }
       },
       "capabilities": {
         "type": "array",
@@ -125,6 +187,92 @@
       "fallback": "fail-closed",
       "rule": "The operation requires a ready handle at a durable cut and cannot silently downgrade."
     }
+  },
+  "operationRegistry": {
+    "schema": "kungfu.runtime-operation-registry/v1",
+    "operations": [
+      {
+        "id": "episode.inspect",
+        "operationClass": "storage-only",
+        "requiredCapabilities": [],
+        "requestedAuthorities": [],
+        "recoveryGuidance": "Inspect the durable Episode directly; starting a live host is forbidden."
+      },
+      {
+        "id": "episode.query",
+        "operationClass": "storage-only",
+        "requiredCapabilities": [],
+        "requestedAuthorities": [],
+        "recoveryGuidance": "Query the durable authority directly and report storage errors without activating a live host."
+      },
+      {
+        "id": "episode.append",
+        "operationClass": "storage-only",
+        "requiredCapabilities": [],
+        "requestedAuthorities": [],
+        "recoveryGuidance": "Append through the durable engine and return its receipt; do not activate a live host."
+      },
+      {
+        "id": "episode.import",
+        "operationClass": "storage-only",
+        "requiredCapabilities": [],
+        "requestedAuthorities": [],
+        "recoveryGuidance": "Validate and import through the durable engine without starting a live host."
+      },
+      {
+        "id": "episode.export",
+        "operationClass": "storage-only",
+        "requiredCapabilities": [],
+        "requestedAuthorities": [],
+        "recoveryGuidance": "Export from the durable authority without starting a live host."
+      },
+      {
+        "id": "episode.fsck",
+        "operationClass": "storage-only",
+        "requiredCapabilities": [],
+        "requestedAuthorities": [],
+        "recoveryGuidance": "Inspect and repair only through the explicit durable maintenance plan; live activation is forbidden."
+      },
+      {
+        "id": "assessment.request",
+        "operationClass": "live-required",
+        "requiredCapabilities": [
+          "runtime.assessment-scheduling"
+        ],
+        "requestedAuthorities": [
+          "runtime.capability-use"
+        ],
+        "recoveryGuidance": "Activate the workspace runtime and retry only after assessment scheduling is ready at a durable cut."
+      },
+      {
+        "id": "peer.coordinate",
+        "operationClass": "live-required",
+        "requiredCapabilities": [
+          "runtime.peer-registry",
+          "runtime.channel-routing",
+          "runtime.coordination"
+        ],
+        "requestedAuthorities": [
+          "runtime.coordinate",
+          "runtime.capability-use",
+          "runtime.lease"
+        ],
+        "recoveryGuidance": "Require one fenced ready generation before accepting peer coordination work."
+      },
+      {
+        "id": "projection.subscribe",
+        "operationClass": "live-required",
+        "requiredCapabilities": [
+          "runtime.channel-routing",
+          "runtime.live-projection"
+        ],
+        "requestedAuthorities": [
+          "runtime.capability-use",
+          "runtime.lease"
+        ],
+        "recoveryGuidance": "Wait for durable and projection cuts before accepting the subscription."
+      }
+    ]
   },
   "capabilities": [
     {
